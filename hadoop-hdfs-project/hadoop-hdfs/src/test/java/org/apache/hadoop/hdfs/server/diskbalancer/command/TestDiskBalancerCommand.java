@@ -28,12 +28,10 @@ import static org.apache.hadoop.hdfs.tools.DiskBalancerCLI.PLAN;
 import static org.apache.hadoop.hdfs.tools.DiskBalancerCLI.QUERY;
 import static org.apache.hadoop.hdfs.tools.DiskBalancerCLI.REPORT;
 import static org.apache.hadoop.hdfs.tools.DiskBalancerCLI.SKIPDATECHECK;
-import static org.hamcrest.CoreMatchers.allOf;
-import static org.hamcrest.CoreMatchers.containsString;
-import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -66,19 +64,16 @@ import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 /**
  * Tests various CLI commands of DiskBalancer.
  */
 public class TestDiskBalancerCommand {
 
-  @Rule
-  public ExpectedException thrown = ExpectedException.none();
   private MiniDFSCluster cluster;
   private URI clusterJson;
   private Configuration conf = new HdfsConfiguration();
@@ -88,7 +83,7 @@ public class TestDiskBalancerCommand {
   private final static long CAPCACITY = 300 * 1024;
   private final static long[] CAPACITIES = new long[] {CAPCACITY, CAPCACITY};
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     conf.setBoolean(DFSConfigKeys.DFS_DISK_BALANCER_ENABLED, true);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3)
@@ -99,7 +94,7 @@ public class TestDiskBalancerCommand {
         "/diskBalancer/data-cluster-64node-3disk.json").toURI();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (cluster != null) {
       // Just make sure we can shutdown datanodes.
@@ -114,7 +109,8 @@ public class TestDiskBalancerCommand {
    * Tests if it's allowed to submit and execute plan when Datanode is in status
    * other than REGULAR.
    */
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testSubmitPlanInNonRegularStatus() throws Exception {
     final int numDatanodes = 1;
     MiniDFSCluster miniCluster = null;
@@ -141,11 +137,9 @@ public class TestDiskBalancerCommand {
             planFileFullName);
         runCommand(cmdLine, hdfsConf, miniCluster);
       } catch(RemoteException e) {
-        assertThat(e.getClassName(), containsString("DiskBalancerException"));
-        assertThat(e.toString(),
-            is(allOf(
-                containsString("Datanode is in special state"),
-                containsString("Disk balancing not permitted."))));
+        assertThat(e.getClassName()).contains("DiskBalancerException");
+        assertThat(e.toString()).contains("Datanode is in special state")
+            .contains("Disk balancing not permitted.");
       }
     } finally {
       if (miniCluster != null) {
@@ -158,7 +152,8 @@ public class TestDiskBalancerCommand {
    * Tests running multiple commands under on setup. This mainly covers
    * {@link org.apache.hadoop.hdfs.server.diskbalancer.command.Command#close}
    */
-  @Test(timeout = 120000)
+  @Test
+  @Timeout(value = 120)
   public void testRunMultipleCommandsUnderOneSetup() throws Exception {
 
     final int numDatanodes = 1;
@@ -192,7 +187,8 @@ public class TestDiskBalancerCommand {
 
 
 
-  @Test(timeout = 600000)
+  @Test
+  @Timeout(value = 600)
   public void testDiskBalancerExecuteOptionPlanValidityWithException() throws
       Exception {
     final int numDatanodes = 1;
@@ -234,7 +230,8 @@ public class TestDiskBalancerCommand {
     }
   }
 
-  @Test(timeout = 600000)
+  @Test
+  @Timeout(value = 600)
   public void testDiskBalancerExecutePlanValidityWithOutUnitException()
       throws
       Exception {
@@ -277,7 +274,8 @@ public class TestDiskBalancerCommand {
     }
   }
 
-  @Test(timeout = 600000)
+  @Test
+  @Timeout(value = 600)
   public void testDiskBalancerForceExecute() throws
       Exception {
     final int numDatanodes = 1;
@@ -317,7 +315,8 @@ public class TestDiskBalancerCommand {
   }
 
 
-  @Test(timeout = 600000)
+  @Test
+  @Timeout(value = 600)
   public void testDiskBalancerExecuteOptionPlanValidity() throws Exception {
     final int numDatanodes = 1;
 
@@ -373,11 +372,9 @@ public class TestDiskBalancerCommand {
     final String planFileName = dn.getDatanodeUuid();
 
     /* verify plan command */
-    assertEquals(
-        "There must be two lines: the 1st is writing plan to...,"
-            + " the 2nd is actual full path of plan file.",
-        2, outputs.size());
-    assertThat(outputs.get(1), containsString(planFileName));
+    assertEquals(2, outputs.size(), "There must be two lines: the 1st is writing plan to...,"
+        + " the 2nd is actual full path of plan file.");
+    assertThat(outputs.get(1)).contains(planFileName);
 
     /* get full path of plan file*/
     final String planFileFullName = outputs.get(1);
@@ -385,73 +382,79 @@ public class TestDiskBalancerCommand {
   }
 
   /* test exception on invalid arguments */
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testExceptionOnInvalidArguments() throws Exception {
     final String cmdLine = "hdfs diskbalancer random1 -report random2 random3";
-    thrown.expect(HadoopIllegalArgumentException.class);
-    thrown.expectMessage(
-        "Invalid or extra Arguments: [random1, random2, random3]");
-    runCommand(cmdLine);
+    HadoopIllegalArgumentException ex = assertThrows(HadoopIllegalArgumentException.class, () -> {
+      runCommand(cmdLine);
+    });
+    assertTrue(ex.getMessage().contains(
+        "Invalid or extra Arguments: [random1, random2, random3]"));
   }
 
   /* test basic report */
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testReportSimple() throws Exception {
     final String cmdLine = "hdfs diskbalancer -report";
     final List<String> outputs = runCommand(cmdLine);
 
     assertThat(
-        outputs.get(0),
-        containsString("Processing report command"));
+        outputs.get(0)).
+        contains("Processing report command");
     assertThat(
-        outputs.get(1),
-        is(allOf(containsString("No top limit specified"),
-            containsString("using default top value"), containsString("100"))));
+        outputs.get(1))
+        .contains("No top limit specified")
+        .contains("using default top value")
+        .contains("100");
     assertThat(
-        outputs.get(2),
-        is(allOf(
-            containsString("Reporting top"),
-            containsString("64"),
-            containsString(
-                "DataNode(s) benefiting from running DiskBalancer"))));
+        outputs.get(2))
+        .contains("Reporting top")
+        .contains("64")
+        .contains("DataNode(s) benefiting from running DiskBalancer");
     assertThat(
-        outputs.get(32),
-        is(allOf(containsString("30/64 null[null:0]"),
-            containsString("a87654a9-54c7-4693-8dd9-c9c7021dc340"),
-            containsString("9 volumes with node data density 1.97"))));
+        outputs.get(32))
+        .contains("30/64 null[null:0]")
+        .contains("a87654a9-54c7-4693-8dd9-c9c7021dc340")
+        .contains("9 volumes with node data density 1.97");
 
   }
 
   /* test basic report with negative top limit */
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testReportWithNegativeTopLimit()
       throws Exception {
     final String cmdLine = "hdfs diskbalancer -report -top -32";
-    thrown.expect(java.lang.IllegalArgumentException.class);
-    thrown.expectMessage("Top limit input should be a positive numeric value");
-    runCommand(cmdLine);
+    IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> {
+      runCommand(cmdLine);
+    });
+    assertTrue(ex.getMessage().contains("Top limit input should be a positive numeric value"));
   }
   /* test less than 64 DataNode(s) as total, e.g., -report -top 32 */
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testReportLessThanTotal() throws Exception {
     final String cmdLine = "hdfs diskbalancer -report -top 32";
     final List<String> outputs = runCommand(cmdLine);
 
     assertThat(
-        outputs.get(0),
-        containsString("Processing report command"));
+        outputs.get(0))
+        .contains("Processing report command");
     assertThat(
-        outputs.get(1),
-        is(allOf(
-            containsString("Reporting top"),
-            containsString("32"),
-            containsString(
-                "DataNode(s) benefiting from running DiskBalancer"))));
-    assertThat(
-        outputs.get(31),
-        is(allOf(containsString("30/32 null[null:0]"),
-            containsString("a87654a9-54c7-4693-8dd9-c9c7021dc340"),
-            containsString("9 volumes with node data density 1.97"))));
+        outputs.get(1))
+        .contains(
+            "Reporting top",
+            "32",
+            "DataNode(s) benefiting from running DiskBalancer"
+        );
+    assertThat(outputs.get(31))
+        .contains(
+            "30/32 null[null:0]",
+            "a87654a9-54c7-4693-8dd9-c9c7021dc340",
+            "9 volumes with node data density 1.97"
+        );
   }
 
   /**
@@ -459,7 +462,8 @@ public class TestDiskBalancerCommand {
    * with a generic option 'fs'.
    * @throws Exception
    */
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testReportWithGenericOptionFS() throws Exception {
     final String topReportArg = "5";
     final String reportArgs = String.format("-%s file:%s -%s -%s %s",
@@ -468,65 +472,68 @@ public class TestDiskBalancerCommand {
     final String cmdLine = String.format("%s", reportArgs);
     final List<String> outputs = runCommand(cmdLine);
 
-    assertThat(outputs.get(0), containsString("Processing report command"));
-    assertThat(outputs.get(1),
-        is(allOf(containsString("Reporting top"), containsString(topReportArg),
-            containsString(
-                "DataNode(s) benefiting from running DiskBalancer"))));
+    assertThat(outputs.get(0)).contains("Processing report command");
+    assertThat(outputs.get(1))
+        .contains(
+            "Reporting top",
+            topReportArg,
+            "DataNode(s) benefiting from running DiskBalancer");
   }
 
   /* test more than 64 DataNode(s) as total, e.g., -report -top 128 */
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testReportMoreThanTotal() throws Exception {
     final String cmdLine = "hdfs diskbalancer -report -top 128";
     final List<String> outputs = runCommand(cmdLine);
 
     assertThat(
-        outputs.get(0),
-        containsString("Processing report command"));
-    assertThat(
-        outputs.get(1),
-        is(allOf(
-            containsString("Reporting top"),
-            containsString("64"),
-            containsString(
-                "DataNode(s) benefiting from running DiskBalancer"))));
-    assertThat(
-        outputs.get(31),
-        is(allOf(containsString("30/64 null[null:0]"),
-            containsString("a87654a9-54c7-4693-8dd9-c9c7021dc340"),
-            containsString("9 volumes with node data density 1.97"))));
-
+        outputs.get(0)).contains("Processing report command");
+    assertThat(outputs.get(1))
+        .contains(
+            "Reporting top",
+            "64",
+            "DataNode(s) benefiting from running DiskBalancer"
+        );
+    assertThat(outputs.get(31))
+        .contains(
+            "30/64 null[null:0]",
+            "a87654a9-54c7-4693-8dd9-c9c7021dc340",
+            "9 volumes with node data density 1.97"
+        );
   }
 
   /* test invalid top limit, e.g., -report -top xx */
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testReportInvalidTopLimit() throws Exception {
     final String cmdLine = "hdfs diskbalancer -report -top xx";
     final List<String> outputs = runCommand(cmdLine);
 
     assertThat(
-        outputs.get(0),
-        containsString("Processing report command"));
-    assertThat(
-        outputs.get(1),
-        is(allOf(containsString("Top limit input is not numeric"),
-            containsString("using default top value"), containsString("100"))));
-    assertThat(
-        outputs.get(2),
-        is(allOf(
-            containsString("Reporting top"),
-            containsString("64"),
-            containsString(
-                "DataNode(s) benefiting from running DiskBalancer"))));
-    assertThat(
-        outputs.get(32),
-        is(allOf(containsString("30/64 null[null:0]"),
-            containsString("a87654a9-54c7-4693-8dd9-c9c7021dc340"),
-            containsString("9 volumes with node data density 1.97"))));
+        outputs.get(0)).contains("Processing report command");
+    assertThat(outputs.get(1))
+        .contains(
+            "Top limit input is not numeric",
+            "using default top value",
+            "100"
+        );
+    assertThat(outputs.get(2))
+        .contains(
+            "Reporting top",
+            "64",
+            "DataNode(s) benefiting from running DiskBalancer"
+        );
+    assertThat(outputs.get(32))
+        .contains(
+            "30/64 null[null:0]",
+            "a87654a9-54c7-4693-8dd9-c9c7021dc340",
+            "9 volumes with node data density 1.97"
+        );
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testReportNode() throws Exception {
     final String cmdLine =
         "hdfs diskbalancer -report -node " +
@@ -534,74 +541,85 @@ public class TestDiskBalancerCommand {
     final List<String> outputs = runCommand(cmdLine);
 
     assertThat(
-        outputs.get(0),
-        containsString("Processing report command"));
-    assertThat(
-        outputs.get(1),
-        is(allOf(containsString("Reporting volume information for DataNode"),
-            containsString("a87654a9-54c7-4693-8dd9-c9c7021dc340"))));
-    assertThat(
-        outputs.get(2),
-        is(allOf(containsString("null[null:0]"),
-            containsString("a87654a9-54c7-4693-8dd9-c9c7021dc340"),
-            containsString("9 volumes with node data density 1.97"))));
-    assertThat(
-        outputs.get(3),
-        is(allOf(containsString("DISK"),
-            containsString("/tmp/disk/KmHefYNURo"),
-            containsString("0.20 used: 39160240782/200000000000"),
-            containsString("0.80 free: 160839759218/200000000000"))));
-    assertThat(
-        outputs.get(4),
-        is(allOf(containsString("DISK"),
-            containsString("/tmp/disk/Mxfcfmb24Y"),
-            containsString("0.92 used: 733099315216/800000000000"),
-            containsString("0.08 free: 66900684784/800000000000"))));
-    assertThat(
-        outputs.get(5),
-        is(allOf(containsString("DISK"),
-            containsString("/tmp/disk/xx3j3ph3zd"),
-            containsString("0.72 used: 289544224916/400000000000"),
-            containsString("0.28 free: 110455775084/400000000000"))));
-    assertThat(
-        outputs.get(6),
-        is(allOf(containsString("RAM_DISK"),
-            containsString("/tmp/disk/BoBlQFxhfw"),
-            containsString("0.60 used: 477590453390/800000000000"),
-            containsString("0.40 free: 322409546610/800000000000"))));
-    assertThat(
-        outputs.get(7),
-        is(allOf(containsString("RAM_DISK"),
-            containsString("/tmp/disk/DtmAygEU6f"),
-            containsString("0.34 used: 134602910470/400000000000"),
-            containsString("0.66 free: 265397089530/400000000000"))));
-    assertThat(
-        outputs.get(8),
-        is(allOf(containsString("RAM_DISK"),
-            containsString("/tmp/disk/MXRyYsCz3U"),
-            containsString("0.55 used: 438102096853/800000000000"),
-            containsString("0.45 free: 361897903147/800000000000"))));
-    assertThat(
-        outputs.get(9),
-        is(allOf(containsString("SSD"),
-            containsString("/tmp/disk/BGe09Y77dI"),
-            containsString("0.89 used: 890446265501/1000000000000"),
-            containsString("0.11 free: 109553734499/1000000000000"))));
-    assertThat(
-        outputs.get(10),
-        is(allOf(containsString("SSD"),
-            containsString("/tmp/disk/JX3H8iHggM"),
-            containsString("0.31 used: 2782614512957/9000000000000"),
-            containsString("0.69 free: 6217385487043/9000000000000"))));
-    assertThat(
-        outputs.get(11),
-        is(allOf(containsString("SSD"),
-            containsString("/tmp/disk/uLOYmVZfWV"),
-            containsString("0.75 used: 1509592146007/2000000000000"),
-            containsString("0.25 free: 490407853993/2000000000000"))));
+        outputs.get(0)).contains("Processing report command");
+    assertThat(outputs.get(1))
+        .contains(
+            "Reporting volume information for DataNode",
+            "a87654a9-54c7-4693-8dd9-c9c7021dc340"
+        );
+    assertThat(outputs.get(2))
+        .contains(
+            "null[null:0]",
+            "a87654a9-54c7-4693-8dd9-c9c7021dc340",
+            "9 volumes with node data density 1.97"
+        );
+    assertThat(outputs.get(3))
+        .contains(
+            "DISK",
+            "/tmp/disk/KmHefYNURo",
+            "0.20 used: 39160240782/200000000000",
+            "0.80 free: 160839759218/200000000000"
+        );
+    assertThat(outputs.get(4))
+        .contains(
+            "DISK",
+            "/tmp/disk/Mxfcfmb24Y",
+            "0.92 used: 733099315216/800000000000",
+            "0.08 free: 66900684784/800000000000"
+        );
+    assertThat(outputs.get(5))
+        .contains(
+            "DISK",
+            "/tmp/disk/xx3j3ph3zd",
+            "0.72 used: 289544224916/400000000000",
+            "0.28 free: 110455775084/400000000000"
+        );
+    assertThat(outputs.get(6))
+        .contains(
+            "RAM_DISK",
+            "/tmp/disk/BoBlQFxhfw",
+            "0.60 used: 477590453390/800000000000",
+            "0.40 free: 322409546610/800000000000"
+        );
+    assertThat(outputs.get(7))
+        .contains(
+            "RAM_DISK",
+            "/tmp/disk/DtmAygEU6f",
+            "0.34 used: 134602910470/400000000000",
+            "0.66 free: 265397089530/400000000000"
+        );
+    assertThat(outputs.get(8))
+        .contains(
+            "RAM_DISK",
+            "/tmp/disk/MXRyYsCz3U",
+            "0.55 used: 438102096853/800000000000",
+            "0.45 free: 361897903147/800000000000"
+        );
+    assertThat(outputs.get(9))
+        .contains(
+            "SSD",
+            "/tmp/disk/BGe09Y77dI",
+            "0.89 used: 890446265501/1000000000000",
+            "0.11 free: 109553734499/1000000000000"
+        );
+    assertThat(outputs.get(10))
+        .contains(
+            "SSD",
+            "/tmp/disk/JX3H8iHggM",
+            "0.31 used: 2782614512957/9000000000000",
+            "0.69 free: 6217385487043/9000000000000"
+        );
+    assertThat(outputs.get(11))
+        .contains(
+            "SSD",
+            "/tmp/disk/uLOYmVZfWV",
+            "0.75 used: 1509592146007/2000000000000",
+            "0.25 free: 490407853993/2000000000000"
+        );
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testReportNodeWithoutJson() throws Exception {
     String dataNodeUuid = cluster.getDataNodes().get(0).getDatanodeUuid();
     final String planArg = String.format("-%s -%s %s",
@@ -612,33 +630,35 @@ public class TestDiskBalancerCommand {
     List<String> outputs = runCommand(cmdLine, cluster);
 
     assertThat(
-        outputs.get(0),
-        containsString("Processing report command"));
-    assertThat(
-        outputs.get(1),
-        is(allOf(containsString("Reporting volume information for DataNode"),
-            containsString(dataNodeUuid))));
-    assertThat(
-        outputs.get(2),
-        is(allOf(containsString(dataNodeUuid),
-            containsString("2 volumes with node data density 0.00"))));
-    assertThat(
-        outputs.get(3),
-        is(allOf(containsString("DISK"),
-            containsString(new Path(cluster.getInstanceStorageDir(0, 0)
-                .getAbsolutePath()).toString()),
-            containsString("0.00"),
-            containsString("1.00"))));
-    assertThat(
-        outputs.get(4),
-        is(allOf(containsString("DISK"),
-            containsString(new Path(cluster.getInstanceStorageDir(0, 1)
-                .getAbsolutePath()).toString()),
-            containsString("0.00"),
-            containsString("1.00"))));
+        outputs.get(0)).contains("Processing report command");
+    assertThat(outputs.get(1))
+        .contains(
+            "Reporting volume information for DataNode",
+            dataNodeUuid
+        );
+    assertThat(outputs.get(2))
+        .contains(
+            dataNodeUuid,
+            "2 volumes with node data density 0.00"
+        );
+    assertThat(outputs.get(3))
+        .contains(
+            "DISK",
+            new Path(cluster.getInstanceStorageDir(0, 0).getAbsolutePath()).toString(),
+            "0.00",
+            "1.00"
+        );
+    assertThat(outputs.get(4))
+        .contains(
+            "DISK",
+            new Path(cluster.getInstanceStorageDir(0, 1).getAbsolutePath()).toString(),
+            "0.00",
+            "1.00"
+        );
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testReadClusterFromJson() throws Exception {
     ClusterConnector jsonConnector = ConnectorFactory.getCluster(clusterJson,
         conf);
@@ -649,7 +669,8 @@ public class TestDiskBalancerCommand {
   }
 
   /* test -plan  DataNodeID */
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testPlanNode() throws Exception {
     final String planArg = String.format("-%s %s", PLAN,
         cluster.getDataNodes().get(0).getDatanodeUuid());
@@ -661,7 +682,8 @@ public class TestDiskBalancerCommand {
   }
 
   /* test -plan  DataNodeID */
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testPlanJsonNode() throws Exception {
     final String planArg = String.format("-%s %s", PLAN,
         "a87654a9-54c7-4693-8dd9-c9c7021dc340");
@@ -675,7 +697,8 @@ public class TestDiskBalancerCommand {
   }
 
   /* Test that illegal arguments are handled correctly*/
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testIllegalArgument() throws Exception {
     final String planArg = String.format("-%s %s", PLAN,
         "a87654a9-54c7-4693-8dd9-c9c7021dc340");
@@ -685,39 +708,46 @@ public class TestDiskBalancerCommand {
             "hdfs diskbalancer %s -report", planArg);
     // -plan and -report cannot be used together.
     // tests the validate command line arguments function.
-    thrown.expect(java.lang.IllegalArgumentException.class);
-    runCommand(cmdLine);
+    assertThrows(java.lang.IllegalArgumentException.class, () -> {
+      runCommand(cmdLine);
+    });
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testCancelCommand() throws Exception {
     final String cancelArg = String.format("-%s %s", CANCEL, "nosuchplan");
     final String nodeArg = String.format("-%s %s", NODE,
         cluster.getDataNodes().get(0).getDatanodeUuid());
 
     // Port:Host format is expected. So cancel command will throw.
-    thrown.expect(java.lang.IllegalArgumentException.class);
-    final String cmdLine = String
-        .format(
-            "hdfs diskbalancer  %s %s", cancelArg, nodeArg);
-    runCommand(cmdLine);
+    assertThrows(java.lang.IllegalArgumentException.class, () -> {
+      final String cmdLine = String
+          .format(
+              "hdfs diskbalancer  %s %s", cancelArg, nodeArg);
+      runCommand(cmdLine);
+    });
   }
 
   /*
    Makes an invalid query attempt to non-existent Datanode.
    */
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testQueryCommand() throws Exception {
     final String queryArg = String.format("-%s %s", QUERY,
         cluster.getDataNodes().get(0).getDatanodeUuid());
-    thrown.expect(java.net.UnknownHostException.class);
-    final String cmdLine = String
-        .format(
-            "hdfs diskbalancer %s", queryArg);
-    runCommand(cmdLine);
+
+    assertThrows(java.net.UnknownHostException.class, () -> {
+      final String cmdLine = String
+          .format(
+              "hdfs diskbalancer %s", queryArg);
+      runCommand(cmdLine);
+    });
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testHelpCommand() throws Exception {
     final String helpArg = String.format("-%s", HELP);
     final String cmdLine = String
@@ -759,12 +789,10 @@ public class TestDiskBalancerCommand {
           miniCluster.getDataNodes().get(0).getDatanodeUuid()).toString();
 
       /* verify the path of plan */
-      assertEquals(
-          "There must be two lines: the 1st is writing plan to,"
-              + " the 2nd is actual full path of plan file.",
-          2, outputs.size());
-      assertThat(outputs.get(0), containsString("Writing plan to"));
-      assertThat(outputs.get(1), containsString(planFileFullName));
+      assertEquals(2, outputs.size(), "There must be two lines: the 1st is writing plan to,"
+          + " the 2nd is actual full path of plan file.");
+      assertThat(outputs.get(0)).contains("Writing plan to");
+      assertThat(outputs.get(1)).contains(planFileFullName);
     } finally {
       if (miniCluster != null) {
         miniCluster.shutdown();
@@ -834,13 +862,15 @@ public class TestDiskBalancerCommand {
           .getIpcPort(), dataNode2.getIpcPort());
       final String cmdLine = String.format("hdfs diskbalancer %s", queryArg);
       List<String> outputs = runCommand(cmdLine);
-      assertEquals(12,  outputs.size());
-      assertTrue("Expected outputs: " + outputs,
-          outputs.get(1).contains("localhost:" + dataNode1.getIpcPort()) ||
-              outputs.get(6).contains("localhost:" + dataNode1.getIpcPort()));
-      assertTrue("Expected outputs: " + outputs,
-          outputs.get(1).contains("localhost:" + dataNode2.getIpcPort()) ||
-              outputs.get(6).contains("localhost:" + dataNode2.getIpcPort()));
+      assertEquals(12, outputs.size());
+      assertTrue(
+          outputs.get(1).contains("localhost:" + dataNode1.getIpcPort())
+              || outputs.get(6).contains("localhost:" + dataNode1.getIpcPort()),
+          "Expected outputs: " + outputs);
+      assertTrue(
+          outputs.get(1).contains("localhost:" + dataNode2.getIpcPort())
+              || outputs.get(6).contains("localhost:" + dataNode2.getIpcPort()),
+          "Expected outputs: " + outputs);
     } finally {
       miniDFSCluster.shutdown();
     }
@@ -871,7 +901,8 @@ public class TestDiskBalancerCommand {
     }
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testGetNodeList() throws Exception {
     ClusterConnector jsonConnector =
         ConnectorFactory.getCluster(clusterJson, conf);
@@ -892,7 +923,8 @@ public class TestDiskBalancerCommand {
     assertEquals(nodeNum, nodeList.size());
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testReportCommandWithMultipleNodes() throws Exception {
     String dataNodeUuid1 = cluster.getDataNodes().get(0).getDatanodeUuid();
     String dataNodeUuid2 = cluster.getDataNodes().get(1).getDatanodeUuid();
@@ -905,11 +937,10 @@ public class TestDiskBalancerCommand {
 
   private void verifyOutputsOfReportCommand(List<String> outputs,
       String dataNodeUuid1, String dataNodeUuid2, boolean inputNodesStr) {
-    assertThat(outputs.get(0), containsString("Processing report command"));
+    assertThat(outputs.get(0)).contains("Processing report command");
     if (inputNodesStr) {
-      assertThat(outputs.get(1),
-          is(allOf(containsString("Reporting volume information for DataNode"),
-              containsString(dataNodeUuid1), containsString(dataNodeUuid2))));
+      assertThat(outputs.get(1)).contains("Reporting volume information for DataNode")
+          .contains(dataNodeUuid1, dataNodeUuid2);
     }
 
     // Since the order of input nodes will be disrupted when parse
@@ -920,7 +951,8 @@ public class TestDiskBalancerCommand {
         || outputs.get(6).contains(dataNodeUuid2));
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testReportCommandWithInvalidNode() throws Exception {
     String dataNodeUuid1 = cluster.getDataNodes().get(0).getDatanodeUuid();
     String invalidNode = "invalidNode";
@@ -930,21 +962,19 @@ public class TestDiskBalancerCommand {
     List<String> outputs = runCommand(cmdLine, cluster);
 
     assertThat(
-        outputs.get(0),
-        containsString("Processing report command"));
+        outputs.get(0)).contains("Processing report command");
     assertThat(
-        outputs.get(1),
-        is(allOf(containsString("Reporting volume information for DataNode"),
-            containsString(dataNodeUuid1), containsString(invalidNode))));
+        outputs.get(1)).contains("Reporting volume information for DataNode",
+        dataNodeUuid1, invalidNode);
 
     String invalidNodeInfo =
         String.format("The node(s) '%s' not found. "
-            + "Please make sure that '%s' exists in the cluster."
-            , invalidNode, invalidNode);
+            + "Please make sure that '%s' exists in the cluster.", invalidNode, invalidNode);
     assertTrue(outputs.get(2).contains(invalidNodeInfo));
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testReportCommandWithNullNodes() throws Exception {
     // don't input nodes
     final String planArg = String.format("-%s -%s ,", REPORT, NODE);
@@ -956,7 +986,8 @@ public class TestDiskBalancerCommand {
     assertTrue(outputs.get(2).contains(invalidNodeInfo));
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testReportCommandWithReadingHostFile() throws Exception {
     final String testDir = GenericTestUtils.getTestDir().getAbsolutePath();
     File includeFile = new File(testDir, "diskbalancer.include");
@@ -980,7 +1011,8 @@ public class TestDiskBalancerCommand {
     includeFile.delete();
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testReportCommandWithInvalidHostFilePath() throws Exception {
     final String testDir = GenericTestUtils.getTestDir().getAbsolutePath();
     String invalidFilePath = testDir + "/diskbalancer-invalid.include";

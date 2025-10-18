@@ -37,8 +37,8 @@ import static org.apache.hadoop.test.MetricsAsserts.assertCounterGt;
 import static org.apache.hadoop.test.MetricsAsserts.assertGauge;
 import static org.apache.hadoop.test.MetricsAsserts.assertQuantileGauges;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.DataInputStream;
 import java.io.File;
@@ -94,9 +94,10 @@ import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.MetricsAsserts;
 import org.slf4j.event.Level;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 /**
  * Test for metrics published by the Namenode
@@ -162,7 +163,7 @@ public class TestNameNodeMetrics {
     return new Path(TEST_ROOT_DIR_PATH, fileName);
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     hostsFileWriter = new HostsFileWriter();
     hostsFileWriter.initialize(CONF, "temp/decommission");
@@ -178,7 +179,7 @@ public class TestNameNodeMetrics {
     fs.setErasureCodingPolicy(ecDir, EC_POLICY.getName());
   }
   
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     MetricsSource source = DefaultMetricsSystem.instance().getSource("UgiMetrics");
     if (source != null) {
@@ -213,7 +214,8 @@ public class TestNameNodeMetrics {
    * Test that capacity metrics are exported and pass
    * basic sanity tests.
    */
-  @Test (timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testCapacityMetrics() throws Exception {
     MetricsRecordBuilder rb = getMetrics(NS_METRICS);
     long capacityTotal = MetricsAsserts.getLongGauge("CapacityTotal", rb);
@@ -443,35 +445,34 @@ public class TestNameNodeMetrics {
    */
   private void verifyAggregatedMetricsTally() throws Exception {
     BlockManagerTestUtil.updateState(bm);
-    assertEquals("Under replicated metrics not matching!",
-        namesystem.getLowRedundancyBlocks(),
-        namesystem.getUnderReplicatedBlocks());
-    assertEquals("Low redundancy metrics not matching!",
-        namesystem.getLowRedundancyBlocks(),
+    assertEquals(namesystem.getLowRedundancyBlocks(),
+        namesystem.getUnderReplicatedBlocks(),
+        "Under replicated metrics not matching!");
+    assertEquals(namesystem.getLowRedundancyBlocks(),
         namesystem.getLowRedundancyReplicatedBlocks() +
-            namesystem.getLowRedundancyECBlockGroups());
-    assertEquals("Corrupt blocks metrics not matching!",
-        namesystem.getCorruptReplicaBlocks(),
+            namesystem.getLowRedundancyECBlockGroups(),
+        "Low redundancy metrics not matching!");
+    assertEquals(namesystem.getCorruptReplicaBlocks(),
         namesystem.getCorruptReplicatedBlocks() +
-            namesystem.getCorruptECBlockGroups());
-    assertEquals("Missing blocks metrics not matching!",
-        namesystem.getMissingBlocksCount(),
+            namesystem.getCorruptECBlockGroups(),
+        "Corrupt blocks metrics not matching!");
+    assertEquals(namesystem.getMissingBlocksCount(),
         namesystem.getMissingReplicatedBlocks() +
-            namesystem.getMissingECBlockGroups());
-    assertEquals("Missing blocks with replication factor one not matching!",
-        namesystem.getMissingReplOneBlocksCount(),
-        namesystem.getMissingReplicationOneBlocks());
-    assertEquals("Blocks with badly distributed are not matching!",
-        namesystem.getBadlyDistributedBlocksCount(),
-        namesystem.getBadlyDistributedBlocks());
-    assertEquals("Bytes in future blocks metrics not matching!",
-        namesystem.getBytesInFuture(),
+            namesystem.getMissingECBlockGroups(),
+        "Missing blocks metrics not matching!");
+    assertEquals(namesystem.getMissingReplOneBlocksCount(),
+        namesystem.getMissingReplicationOneBlocks(),
+        "Missing blocks with replication factor one not matching!");
+    assertEquals(namesystem.getBadlyDistributedBlocksCount(),
+        namesystem.getBadlyDistributedBlocks(), "Blocks with badly distributed are not matching!");
+    assertEquals(namesystem.getBytesInFuture(),
         namesystem.getBytesInFutureReplicatedBlocks() +
-            namesystem.getBytesInFutureECBlockGroups());
-    assertEquals("Pending deletion blocks metrics not matching!",
-        namesystem.getPendingDeletionBlocks(),
+            namesystem.getBytesInFutureECBlockGroups(),
+        "Bytes in future blocks metrics not matching!");
+    assertEquals(namesystem.getPendingDeletionBlocks(),
         namesystem.getPendingDeletionReplicatedBlocks() +
-            namesystem.getPendingDeletionECBlocks());
+            namesystem.getPendingDeletionECBlocks(),
+        "Pending deletion blocks metrics not matching!");
   }
 
   /** Corrupt a block and ensure metrics reflects it */
@@ -567,7 +568,8 @@ public class TestNameNodeMetrics {
     verifyAggregatedMetricsTally();
   }
 
-  @Test (timeout = 90000L)
+  @Test
+  @Timeout(90)
   public void testStripedFileCorruptBlocks() throws Exception {
     final long fileLen = BLOCK_SIZE * 4;
     final Path ecFile = new Path(ecDir, "ecFile.log");
@@ -810,7 +812,8 @@ public class TestNameNodeMetrics {
    * Testing TransactionsSinceLastCheckpoint. Need a new cluster as
    * the other tests in here don't use HA. See HDFS-7501.
    */
-  @Test(timeout = 300000)
+  @Test
+  @Timeout(value = 300)
   public void testTransactionSinceLastCheckpointMetrics() throws Exception {
     Random random = new Random();
     int retryCount = 0;
@@ -845,10 +848,10 @@ public class TestNameNodeMetrics {
         HATestUtil.waitForStandbyToCatchUp(nn0, nn1);
         // Test to ensure tracking works before the first-ever
         // checkpoint.
-        assertEquals("SBN failed to track 2 transactions pre-checkpoint.",
-            4L, // 2 txns added further when catch-up is called.
+        assertEquals(4L, // 2 txns added further when catch-up is called.
             cluster2.getNameNode(1).getNamesystem()
-              .getTransactionsSinceLastCheckpoint());
+                .getTransactionsSinceLastCheckpoint(),
+            "SBN failed to track 2 transactions pre-checkpoint.");
         // Complete up to the boundary required for
         // an auto-checkpoint. Using 94 to expect fsimage
         // rounded at 100, as 4 + 94 + 2 (catch-up call) = 100.
@@ -861,19 +864,19 @@ public class TestNameNodeMetrics {
         // Test to ensure number tracks the right state of
         // uncheckpointed edits, and does not go negative
         // (as fixed in HDFS-7501).
-        assertEquals("Should be zero right after the checkpoint.",
-            0L,
+        assertEquals(0L,
             cluster2.getNameNode(1).getNamesystem()
-              .getTransactionsSinceLastCheckpoint());
+                .getTransactionsSinceLastCheckpoint(),
+            "Should be zero right after the checkpoint.");
         fs2.mkdirs(new Path("/tmp-t3"));
         fs2.mkdirs(new Path("/tmp-t4"));
         HATestUtil.waitForStandbyToCatchUp(nn0, nn1);
         // Test to ensure we track the right numbers after
         // the checkpoint resets it to zero again.
-        assertEquals("SBN failed to track 2 added txns after the ckpt.",
-            4L,
+        assertEquals(4L,
             cluster2.getNameNode(1).getNamesystem()
-              .getTransactionsSinceLastCheckpoint());
+                .getTransactionsSinceLastCheckpoint(),
+            "SBN failed to track 2 added txns after the ckpt.");
         cluster2.shutdown();
         break;
       } catch (Exception e) {
@@ -966,7 +969,8 @@ public class TestNameNodeMetrics {
    * Test metrics indicating the number of active clients and the files under
    * construction
    */
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testNumActiveClientsAndFilesUnderConstructionMetrics()
       throws Exception {
     final Path file1 = getTestPath("testFileAdd1");

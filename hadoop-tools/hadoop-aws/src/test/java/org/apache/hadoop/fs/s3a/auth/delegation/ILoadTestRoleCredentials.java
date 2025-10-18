@@ -18,12 +18,17 @@
 
 package org.apache.hadoop.fs.s3a.auth.delegation;
 
+import org.apache.hadoop.test.tags.LoadTest;
+import org.apache.hadoop.test.tags.ScaleTest;
+
 import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.DELEGATION_TOKEN_ROLE_BINDING;
 
 /**
  * This looks at the cost of assume role, to see if it is more expensive
  * than creating simple session credentials.
  */
+@LoadTest
+@ScaleTest
 public class ILoadTestRoleCredentials extends ILoadTestSessionCredentials {
 
   @Override

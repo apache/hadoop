@@ -25,7 +25,6 @@ import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 import javax.crypto.Cipher;
 import javax.crypto.spec.IvParameterSpec;
@@ -34,9 +33,8 @@ import javax.crypto.spec.SecretKeySpec;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension.EncryptedKeyVersion;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.Rule;
 import org.junit.jupiter.api.Test;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.Timeout;
 
 import static org.apache.hadoop.crypto.key.KeyProvider.KeyVersion;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
@@ -46,6 +44,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
+@Timeout(180)
 public class TestKeyProviderCryptoExtension {
 
   private static final String CIPHER = "AES";
@@ -56,9 +55,6 @@ public class TestKeyProviderCryptoExtension {
   private static KeyProviderCryptoExtension kpExt;
   private static KeyProvider.Options options;
   private static KeyVersion encryptionKey;
-
-  @Rule
-  public Timeout testTimeout = new Timeout(180000, TimeUnit.MILLISECONDS);
 
   @BeforeAll
   public static void setup() throws Exception {

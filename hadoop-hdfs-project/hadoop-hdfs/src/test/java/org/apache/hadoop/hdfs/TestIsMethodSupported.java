@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hdfs;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -45,9 +45,9 @@ import org.apache.hadoop.ipc.protocolPB.RefreshCallQueueProtocolClientSideTransl
 import org.apache.hadoop.ipc.RefreshCallQueueProtocol;
 import org.apache.hadoop.tools.GetUserMappingsProtocol;
 import org.apache.hadoop.tools.protocolPB.GetUserMappingsProtocolClientSideTranslatorPB;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test cases to verify that client side translators correctly implement the
@@ -59,7 +59,7 @@ public class TestIsMethodSupported {
   private static InetSocketAddress nnAddress = null;
   private static InetSocketAddress dnAddress = null;
   
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     cluster = (new MiniDFSCluster.Builder(conf))
         .numDataNodes(1).build();
@@ -69,7 +69,7 @@ public class TestIsMethodSupported {
                                       dn.getIpcPort());
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     if (cluster != null) {
       cluster.shutdown();

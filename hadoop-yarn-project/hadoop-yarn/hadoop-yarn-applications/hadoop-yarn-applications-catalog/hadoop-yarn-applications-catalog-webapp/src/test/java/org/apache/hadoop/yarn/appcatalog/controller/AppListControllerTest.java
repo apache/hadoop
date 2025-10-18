@@ -27,8 +27,7 @@ import org.mockito.Mockito;
 import javax.ws.rs.Path;
 import javax.ws.rs.core.Response;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.core.Is.is;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.Mockito.when;
@@ -85,12 +84,15 @@ public class AppListControllerTest {
   void testPathAnnotation() throws Exception {
     assertNotNull(this.controller.getClass()
         .getAnnotations());
-    assertThat("The controller has the annotation Path",
-        this.controller.getClass().isAnnotationPresent(Path.class));
 
-    final Path path = this.controller.getClass()
-        .getAnnotation(Path.class);
-    assertThat("The path is /app_list", path.value(), is("/app_list"));
+    assertThat(this.controller.getClass().isAnnotationPresent(Path.class))
+        .as("The controller has the annotation Path")
+            .isTrue();
+
+    final Path path = this.controller.getClass().getAnnotation(Path.class);
+    assertThat(path.value())
+        .as("The path is /app_list")
+        .isEqualTo("/app_list");
   }
 
 }

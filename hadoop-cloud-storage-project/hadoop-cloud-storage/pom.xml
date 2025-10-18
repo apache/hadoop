@@ -130,5 +130,20 @@
       <artifactId>hadoop-tos</artifactId>
       <scope>compile</scope>
     </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-gcp</artifactId>
+      <scope>compile</scope>
+      <!--
+      Exclude transitive dependencies to prevent dependency convergence
+      problems. hadoop-gcp is a self-contained shaded jar.
+      -->
+      <exclusions>
+        <exclusion>
+          <groupId>*</groupId>
+          <artifactId>*</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
   </dependencies>
 </project>

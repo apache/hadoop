@@ -19,8 +19,8 @@ package org.apache.hadoop.hdfs.server.balancer;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.times;
@@ -57,7 +57,8 @@ import org.apache.hadoop.hdfs.server.namenode.ha.ObserverReadProxyProvider;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorageReport;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.LoggerFactory;
 
 /**
@@ -104,7 +105,8 @@ public class TestBalancerWithHANameNodes {
    * it to be 30% full (with a single file replicated identically to all
    * datanodes); It then adds one new empty node and starts balancing.
    */
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testBalancerWithHANameNodes() throws Exception {
     Configuration conf = new HdfsConfiguration();
     TestBalancer.initConf(conf);
@@ -178,7 +180,8 @@ public class TestBalancerWithHANameNodes {
   /**
    * Test Balancer request Standby NameNode when enable this feature.
    */
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testBalancerRequestSBNWithHA() throws Exception {
     Configuration conf = new HdfsConfiguration();
     conf.setBoolean(DFS_NAMENODE_GETBLOCKS_CHECK_OPERATION_KEY, false);
@@ -223,7 +226,8 @@ public class TestBalancerWithHANameNodes {
   /**
    * Test Balancer with ObserverNodes.
    */
-  @Test(timeout = 120000)
+  @Test
+  @Timeout(value = 120)
   public void testBalancerWithObserver() throws Exception {
     testBalancerWithObserver(false);
   }
@@ -231,7 +235,8 @@ public class TestBalancerWithHANameNodes {
   /**
    * Test Balancer with ObserverNodes when one has failed.
    */
-  @Test(timeout = 180000)
+  @Test
+  @Timeout(value = 180)
   public void testBalancerWithObserverWithFailedNode() throws Exception {
     testBalancerWithObserver(true);
   }
@@ -291,7 +296,8 @@ public class TestBalancerWithHANameNodes {
    * from the active and standby NameNodes,
    * the results should be the same.
    */
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testGetLiveDatanodeStorageReport() throws Exception {
     Configuration conf = new HdfsConfiguration();
     TestBalancer.initConf(conf);

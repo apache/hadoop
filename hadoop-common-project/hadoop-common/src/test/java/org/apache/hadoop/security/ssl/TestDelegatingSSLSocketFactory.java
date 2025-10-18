@@ -26,7 +26,7 @@ import org.junit.jupiter.api.Test;
 import org.apache.hadoop.util.NativeCodeLoader;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
  * Tests for {@link DelegatingSSLSocketFactory}.
@@ -35,10 +35,10 @@ public class TestDelegatingSSLSocketFactory {
 
   @Test
   public void testOpenSSL() throws IOException {
-    assumeTrue("Unable to load native libraries",
-            NativeCodeLoader.isNativeCodeLoaded());
-    assumeTrue("Build was not compiled with support for OpenSSL",
-            NativeCodeLoader.buildSupportsOpenssl());
+    assumeTrue(NativeCodeLoader.isNativeCodeLoaded(),
+        "Unable to load native libraries");
+    assumeTrue(NativeCodeLoader.buildSupportsOpenssl(),
+        "Build was not compiled with support for OpenSSL");
     DelegatingSSLSocketFactory.initializeDefaultFactory(
             DelegatingSSLSocketFactory.SSLChannelMode.OpenSSL);
     assertThat(DelegatingSSLSocketFactory.getDefaultFactory()
@@ -47,8 +47,8 @@ public class TestDelegatingSSLSocketFactory {
 
   @Test
   public void testJSEENoGCMJava8() throws IOException {
-    assumeTrue("Not running on Java 8",
-            System.getProperty("java.version").startsWith("1.8"));
+    assumeTrue(System.getProperty("java.version").startsWith("1.8"),
+        "Not running on Java 8");
     DelegatingSSLSocketFactory.initializeDefaultFactory(
             DelegatingSSLSocketFactory.SSLChannelMode.Default_JSSE);
     assertThat(Arrays.stream(DelegatingSSLSocketFactory.getDefaultFactory()

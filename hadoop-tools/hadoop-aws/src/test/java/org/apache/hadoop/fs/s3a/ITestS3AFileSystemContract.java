@@ -31,6 +31,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileSystemContractBaseTest;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.test.tags.IntegrationTest;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
 
@@ -47,6 +48,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  *  Tests a live S3 system. If your keys and bucket aren't specified, all tests
  *  are marked as passed.
  */
+@IntegrationTest
 public class ITestS3AFileSystemContract extends FileSystemContractBaseTest {
 
   protected static final Logger LOG =

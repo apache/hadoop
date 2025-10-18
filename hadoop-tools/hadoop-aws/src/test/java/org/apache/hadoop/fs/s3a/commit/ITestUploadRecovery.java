@@ -29,7 +29,8 @@ import org.assertj.core.api.Assertions;
 import org.assertj.core.api.Assumptions;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -68,7 +69,7 @@ import static org.apache.hadoop.fs.s3a.test.SdkFaultInjector.setRequestFailureCo
  * Test upload recovery by injecting failures into the response chain.
  * The tests are parameterized on upload buffering.
  * <p>
- * The test case {@link #testCommitOperations(String, boolean)} is independent of this option;
+ * The test case {@link #testCommitOperations()} is independent of this option;
  * the test parameterization only runs this once.
  * A bit inelegant but as the fault injection code is shared and the problem "adjacent"
  * this isolates all forms of upload recovery into the same test class without
@@ -76,6 +77,8 @@ import static org.apache.hadoop.fs.s3a.test.SdkFaultInjector.setRequestFailureCo
  * <p>
  * Fault injection is implemented in {@link SdkFaultInjector}.
  */
+@ParameterizedClass(name="buffer={0}-commit-test={1}")
+@MethodSource("params")
 public class ITestUploadRecovery extends AbstractS3ACostTest {
 
   private static final Logger LOG =
@@ -102,22 +105,21 @@ public class ITestUploadRecovery extends AbstractS3ACostTest {
   /**
    * should the commit test be included?
    */
-  private boolean includeCommitTest;
+  private final boolean includeCommitTest;
 
   /**
    * Buffer type for this test run.
    */
-  private String buffer;
+  private final String buffer;
 
   /**
    * Parameterized test suite.
-   * @param pBuffer buffer type
-   * @param pIncludeCommitTest should the commit upload test be included?
+   * @param buffer buffer type
+   * @param includeCommitTest should the commit upload test be included?
    */
-  public void initITestUploadRecovery(final String pBuffer,
-      final boolean pIncludeCommitTest) {
-    this.includeCommitTest = pIncludeCommitTest;
-    this.buffer = pBuffer;
+  public ITestUploadRecovery(final String buffer, final boolean includeCommitTest) {
+    this.includeCommitTest = includeCommitTest;
+    this.buffer = buffer;
   }
 
   @Override
@@ -172,11 +174,8 @@ public class ITestUploadRecovery extends AbstractS3ACostTest {
   /**
    * Verify that failures of simple PUT requests can be recovered from.
    */
-  @MethodSource("params")
-  @ParameterizedTest(name = "{0}-commit-{1}")
-  public void testPutRecovery(String pBuffer,
-      boolean pIncludeCommitTest) throws Throwable {
-    initITestUploadRecovery(pBuffer, pIncludeCommitTest);
+  @Test
+  public void testPutRecovery() throws Throwable {
     describe("test put recovery");
     final S3AFileSystem fs = getFileSystem();
     final Path path = methodPath();
@@ -192,11 +191,8 @@ public class ITestUploadRecovery extends AbstractS3ACostTest {
   /**
    * Validate recovery of multipart uploads within a magic write sequence.
    */
-  @MethodSource("params")
-  @ParameterizedTest(name = "{0}-commit-{1}")
-  public void testMagicWriteRecovery(String pBuffer,
-      boolean pIncludeCommitTest) throws Throwable {
-    initITestUploadRecovery(pBuffer, pIncludeCommitTest);
+  @Test
+  public void testMagicWriteRecovery() throws Throwable {
     describe("test magic write recovery with multipart uploads");
     final S3AFileSystem fs = getFileSystem();
 
@@ -235,11 +231,8 @@ public class ITestUploadRecovery extends AbstractS3ACostTest {
   /**
    * Test the commit operations iff {@link #includeCommitTest} is true.
    */
-  @MethodSource("params")
-  @ParameterizedTest(name = "{0}-commit-{1}")
-  public void testCommitOperations(String pBuffer,
-      boolean pIncludeCommitTest) throws Throwable {
-    initITestUploadRecovery(pBuffer, pIncludeCommitTest);
+  @Test
+  public void testCommitOperations() throws Throwable {
     skipIfClientSideEncryption();
     Assumptions.assumeThat(includeCommitTest)
         .describedAs("commit test excluded")

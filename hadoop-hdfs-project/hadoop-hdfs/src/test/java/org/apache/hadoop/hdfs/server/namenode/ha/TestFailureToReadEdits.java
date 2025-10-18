@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -33,6 +33,8 @@ import java.util.Collection;
 import java.util.LinkedList;
 import java.util.Random;
 
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -53,18 +55,16 @@ import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapterMockitoUtil;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.ExitUtil.ExitException;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
 
-@RunWith(Parameterized.class)
+@MethodSource("data")
+@ParameterizedClass
 public class TestFailureToReadEdits {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestFailureToReadEdits.class);
@@ -95,7 +95,6 @@ public class TestFailureToReadEdits {
    * TODO: Enable the test cases with async edit logging on. See HDFS-12603
    * and HDFS-12660.
    */
-  @Parameters
   public static Iterable<Object[]> data() {
     return Arrays.asList(new Object[][]{
         {TestType.SHARED_DIR_HA, Boolean.FALSE},
@@ -111,7 +110,7 @@ public class TestFailureToReadEdits {
     this.useAsyncEditLogging = useAsyncEditLogging;
   }
 
-  @Before
+  @BeforeEach
   public void setUpCluster() throws Exception {
     conf = new Configuration();
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_CHECK_PERIOD_KEY, 1);
@@ -162,7 +161,7 @@ public class TestFailureToReadEdits {
     fs = HATestUtil.configureFailoverFs(cluster, conf);
   }
   
-  @After
+  @AfterEach
   public void tearDownCluster() throws Exception {
     if (fs != null) {
       fs.close();

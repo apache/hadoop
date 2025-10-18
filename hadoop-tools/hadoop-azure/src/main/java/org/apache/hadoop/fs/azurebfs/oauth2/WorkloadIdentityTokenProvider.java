@@ -20,13 +20,18 @@ package org.apache.hadoop.fs.azurebfs.oauth2;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
 import org.apache.hadoop.util.Preconditions;
+
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
 
 /**
  * Provides tokens based on Azure AD Workload Identity.
@@ -38,11 +43,73 @@ public class WorkloadIdentityTokenProvider extends AccessTokenProvider {
   private static final String EMPTY_TOKEN_FILE_ERROR = "Empty token file found at specified path: ";
   private static final String TOKEN_FILE_READ_ERROR = "Error reading token file at specified path: ";
 
+  /**
+   * Internal implementation of ClientAssertionProvider for file-based token reading.
+   * This provides backward compatibility for the file-based constructor.
+   */
+  private static class FileBasedClientAssertionProvider implements ClientAssertionProvider {
+    private final String tokenFile;
+
+    FileBasedClientAssertionProvider(String tokenFile) {
+      this.tokenFile = tokenFile;
+    }
+
+    @Override
+    public void initialize(Configuration configuration, String accountName) throws IOException {
+      // No initialization needed for file-based provider
+    }
+
+    @Override
+    public String getClientAssertion() throws IOException {
+      String clientAssertion = EMPTY_STRING;
+      try {
+        File file = new File(tokenFile);
+        clientAssertion = FileUtils.readFileToString(file, StandardCharsets.UTF_8);
+      } catch (Exception e) {
+        throw new IOException(TOKEN_FILE_READ_ERROR + tokenFile, e);
+      }
+      clientAssertion = clientAssertion.trim();
+      if (Strings.isNullOrEmpty(clientAssertion)) {
+        throw new IOException(EMPTY_TOKEN_FILE_ERROR + tokenFile);
+      }
+      return clientAssertion;
+    }
+  }
+
   private final String authEndpoint;
   private final String clientId;
-  private final String tokenFile;
+  private final ClientAssertionProvider clientAssertionProvider;
   private long tokenFetchTime = -1;
 
+  /**
+   * Constructor with custom ClientAssertionProvider.
+   * Use this for custom token retrieval mechanisms like Kubernetes Token Request API.
+   *
+   * @param authority OAuth authority URL
+   * @param tenantId Azure AD tenant ID
+   * @param clientId Azure AD client ID
+   * @param clientAssertionProvider Custom provider for client assertions
+   */
+  public WorkloadIdentityTokenProvider(final String authority, final String tenantId,
+                                       final String clientId, ClientAssertionProvider clientAssertionProvider) {
+    Preconditions.checkNotNull(authority, "authority");
+    Preconditions.checkNotNull(tenantId, "tenantId");
+    Preconditions.checkNotNull(clientId, "clientId");
+    Preconditions.checkNotNull(clientAssertionProvider, "clientAssertionProvider");
+
+    this.authEndpoint = authority + tenantId + OAUTH2_TOKEN_PATH;
+    this.clientId = clientId;
+    this.clientAssertionProvider = clientAssertionProvider;
+  }
+
+  /**
+   * Constructor with file-based token reading (backward compatibility).
+   *
+   * @param authority OAuth authority URL
+   * @param tenantId Azure AD tenant ID
+   * @param clientId Azure AD client ID
+   * @param tokenFile Path to file containing the JWT token
+   */
   public WorkloadIdentityTokenProvider(final String authority, final String tenantId,
       final String clientId, final String tokenFile) {
     Preconditions.checkNotNull(authority, "authority");
@@ -52,13 +119,13 @@ public class WorkloadIdentityTokenProvider extends AccessTokenProvider {
 
     this.authEndpoint = authority + tenantId + OAUTH2_TOKEN_PATH;
     this.clientId = clientId;
-    this.tokenFile = tokenFile;
+    this.clientAssertionProvider = new FileBasedClientAssertionProvider(tokenFile);
   }
 
   @Override
   protected AzureADToken refreshToken() throws IOException {
     LOG.debug("AADToken: refreshing token from JWT Assertion");
-    String clientAssertion = getClientAssertion();
+    String clientAssertion = clientAssertionProvider.getClientAssertion();
     AzureADToken token = getTokenUsingJWTAssertion(clientAssertion);
     tokenFetchTime = System.currentTimeMillis();
     return token;
@@ -88,31 +155,6 @@ public class WorkloadIdentityTokenProvider extends AccessTokenProvider {
     }
 
     return expiring;
-  }
-
-  /**
-   * Gets the client assertion from the token file.
-   * The token file should contain the client assertion in JWT format.
-   * It should be a String containing Base64Url encoded JSON Web Token (JWT).
-   * See <a href="https://azure.github.io/azure-workload-identity/docs/faq.html#does-workload-identity-work-in-disconnected-environments">
-   * Azure Workload Identity FAQ</a>.
-   *
-   * @return the client assertion.
-   * @throws IOException if the token file is empty.
-   */
-  private String getClientAssertion()
-      throws IOException {
-    String clientAssertion = "";
-    try {
-      File file = new File(tokenFile);
-      clientAssertion = FileUtils.readFileToString(file, "UTF-8");
-    } catch (Exception e) {
-      throw new IOException(TOKEN_FILE_READ_ERROR + tokenFile, e);
-    }
-    if (Strings.isNullOrEmpty(clientAssertion)) {
-      throw new IOException(EMPTY_TOKEN_FILE_ERROR + tokenFile);
-    }
-    return clientAssertion;
   }
 
   /**

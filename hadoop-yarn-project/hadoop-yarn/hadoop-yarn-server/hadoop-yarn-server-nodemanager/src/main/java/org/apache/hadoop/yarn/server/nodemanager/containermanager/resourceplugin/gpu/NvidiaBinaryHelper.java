@@ -34,10 +34,6 @@ import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.gpu.GpuDeviceInforma
  *
  */
 public class NvidiaBinaryHelper {
-  /**
-   * command should not run more than 10 sec.
-   */
-  private static final int MAX_EXEC_TIMEOUT_MS = 10 * 1000;
 
   /**
    * @param pathOfGpuBinary The path of the binary
@@ -47,7 +43,8 @@ public class NvidiaBinaryHelper {
    * or the output parse failed
    */
   synchronized GpuDeviceInformation getGpuDeviceInformation(
-      String pathOfGpuBinary) throws IOException, YarnException {
+      String pathOfGpuBinary, long discoveryTimeoutMs)
+      throws IOException, YarnException {
     GpuDeviceInformationParser parser = new GpuDeviceInformationParser();
 
     if (pathOfGpuBinary == null) {
@@ -57,7 +54,7 @@ public class NvidiaBinaryHelper {
     }
 
     String output = Shell.execCommand(new HashMap<>(),
-        new String[]{pathOfGpuBinary, "-x", "-q"}, MAX_EXEC_TIMEOUT_MS);
+        new String[]{pathOfGpuBinary, "-x", "-q"}, discoveryTimeoutMs);
     return parser.parseXml(output);
   }
 }

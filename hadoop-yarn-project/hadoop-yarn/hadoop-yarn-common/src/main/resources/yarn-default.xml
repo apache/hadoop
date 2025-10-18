@@ -4652,6 +4652,34 @@
 
   <property>
     <description>
+      Sets the maximum duration for executions of the discovery binary defined in
+      yarn.nodemanager.resource-plugins.gpu.path-to-discovery-executables. If
+      the binary takes longer than this amount of time to run, then the process
+      is aborted. Discovery may be attempted again, depending on
+      yarn.nodemanager.resource-plugins.gpu.discovery-max-errors.
+    </description>
+    <name>yarn.nodemanager.resource-plugins.gpu.discovery-timeout</name>
+    <value>10s</value>
+  </property>
+
+  <property>
+    <description>
+      Sets the maximum number of errors allowed from the discovery binary
+      defined in
+      yarn.nodemanager.resource-plugins.gpu.path-to-discovery-executables. If
+      the number of errors exceeds this amount, then discovery is aborted, and
+      the NodeManager will never reattempt discovery again. Errors may be either
+      non-zero exit codes returned from the binary or timeouts as defined by
+      yarn.nodemanager.resource-plugins.gpu.discovery-timeout. Set this to a
+      negative value to disable enforcement of max errors and retry continually
+      until successful.
+    </description>
+    <name>yarn.nodemanager.resource-plugins.gpu.discovery-max-errors</name>
+    <value>10</value>
+  </property>
+
+  <property>
+    <description>
       Enable additional discovery/isolation of resources on the NodeManager,
       split by comma. By default, this is empty.
       Acceptable values: { "yarn.io/gpu", "yarn.io/fpga"}.

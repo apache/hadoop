@@ -39,7 +39,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
-import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.mockito.Mockito.doReturn;
 
 import java.io.BufferedReader;
@@ -400,8 +400,8 @@ public class TestFileCreation {
       
       // verify the disk space the file occupied
       long diskSpace = dfs.getContentSummary(file1.getParent()).getLength();
-      assertEquals(fileSize, diskSpace, file1 + " should take " + fileSize + " bytes disk space " +
-          "but found to take " + diskSpace + " bytes");
+      assertEquals(fileSize, diskSpace, file1 + " should take " + fileSize + " bytes disk space "
+          + "but found to take " + diskSpace + " bytes");
       
       // Check storage usage 
       // can't check capacities for real storage since the OS file system may be changing under us.
@@ -409,7 +409,7 @@ public class TestFileCreation {
         DataNode dn = cluster.getDataNodes().get(0);
         FsDatasetSpi<?> dataset = DataNodeTestUtils.getFSDataset(dn);
         assertEquals(fileSize, dataset.getDfsUsed());
-        assertEquals(SimulatedFSDataset.DEFAULT_CAPACITY-fileSize,
+        assertEquals(SimulatedFSDataset.DEFAULT_CAPACITY - fileSize,
             dataset.getRemaining());
       }
     } finally {

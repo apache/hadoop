@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.atLeastOnce;
@@ -54,8 +54,9 @@ import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo;
 import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo.BlockStatus;
 
 import org.apache.hadoop.hdfs.server.protocol.StorageReceivedDeletedBlocks;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.mockito.Mockito;
 
 /**
@@ -82,7 +83,7 @@ public class TestIncrementalBlockReports {
   private BPServiceActor actor;   // BPSA to use for block injection.
   private String storageUuid;     // DatanodeStorage to use for block injection.
 
-  @Before
+  @BeforeEach
   public void startCluster() throws IOException {
     conf = new HdfsConfiguration();
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(DN_COUNT).build();
@@ -135,7 +136,8 @@ public class TestIncrementalBlockReports {
    * @throws InterruptedException
    * @throws IOException
    */
-  @Test (timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testReportBlockReceived() throws InterruptedException, IOException {
     try {
       DatanodeProtocolClientSideTranslatorPB nnSpy = spyOnDnCallsToNn();
@@ -162,7 +164,8 @@ public class TestIncrementalBlockReports {
    * @throws InterruptedException
    * @throws IOException
    */
-  @Test (timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testReportBlockDeleted() throws InterruptedException, IOException {
     try {
       // Trigger a block report to reset the IBR timer.
@@ -207,7 +210,8 @@ public class TestIncrementalBlockReports {
    * @throws InterruptedException
    * @throws IOException
    */
-  @Test (timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testReplaceReceivedBlock() throws InterruptedException, IOException {
     try {
       // Spy on calls from the DN to the NN
@@ -326,9 +330,9 @@ public class TestIncrementalBlockReports {
       cluster.transitionToActive(1);
       cluster.waitActive(1);
 
-      assertEquals("There should not be any corrupt replicas", 0,
-          nn2.getNamesystem().getBlockManager()
-              .numCorruptReplicas(block.getLocalBlock()));
+      assertEquals(0,
+          nn2.getNamesystem().getBlockManager().numCorruptReplicas(block.getLocalBlock()),
+          "There should not be any corrupt replicas");
     } finally {
       cluster.shutdown();
     }
@@ -409,9 +413,9 @@ public class TestIncrementalBlockReports {
       cluster.transitionToActive(1);
       cluster.waitActive(1);
 
-      assertEquals("There should not be any corrupt replicas", 0,
-          nn2.getNamesystem().getBlockManager()
-              .numCorruptReplicas(block.getLocalBlock()));
+      assertEquals(0,
+          nn2.getNamesystem().getBlockManager().numCorruptReplicas(block.getLocalBlock()),
+          "There should not be any corrupt replicas");
     } finally {
       cluster.shutdown();
     }
@@ -514,9 +518,9 @@ public class TestIncrementalBlockReports {
       cluster.transitionToActive(1);
       cluster.waitActive(1);
 
-      assertEquals("There should be 1 corrupt replica", 1,
-          nn2.getNamesystem().getBlockManager()
-              .numCorruptReplicas(block.getLocalBlock()));
+      assertEquals(1,
+          nn2.getNamesystem().getBlockManager().numCorruptReplicas(block.getLocalBlock()),
+          "There should be 1 corrupt replica");
     } finally {
       cluster.shutdown();
     }
