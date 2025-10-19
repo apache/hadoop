@@ -37,7 +37,7 @@ import org.slf4j.LoggerFactory;
 
 import static org.apache.hadoop.util.Time.now;
 
-class AbfsClientThrottlingAnalyzer implements Closeable {  
+class AbfsClientThrottlingAnalyzer implements Closeable {
   private static final Logger LOG = LoggerFactory.getLogger(
       AbfsClientThrottlingAnalyzer.class);
   private static final int MIN_ANALYSIS_PERIOD_MS = 1000;
@@ -179,7 +179,6 @@ class AbfsClientThrottlingAnalyzer implements Closeable {
  * Closes the throttling analyzer and releases associated resources.
  * This method cancels the internal timer and cleans up any pending timer tasks.
  * It is safe to call this method multiple times.
- * 
  * @throws IOException if an I/O error occurs during cleanup
  */
 @Override
