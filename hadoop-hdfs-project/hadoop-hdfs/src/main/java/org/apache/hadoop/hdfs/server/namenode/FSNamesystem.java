@@ -7174,6 +7174,11 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   public EditLogTailer getEditLogTailer() {
     return editLogTailer;
   }
+
+  @VisibleForTesting
+  public long getStandbyLastCheckpointTime() {
+    return standbyCheckpointer.getLastCheckpointTime();
+  }
   
   @VisibleForTesting
   public void setEditLogTailerForTests(EditLogTailer tailer) {

@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 
 import org.assertj.core.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.services.s3.model.S3Exception;
@@ -40,7 +41,7 @@ import org.apache.hadoop.fs.s3a.AbstractS3ATestBase;
 import org.apache.hadoop.fs.s3a.RemoteFileChangedException;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
-import org.apache.hadoop.fs.s3a.Statistic;;
+import org.apache.hadoop.fs.s3a.Statistic;
 import org.apache.hadoop.fs.s3a.statistics.BlockOutputStreamStatistics;
 
 import static org.apache.hadoop.fs.Options.CreateFileOptionKeys.FS_OPTION_CREATE_CONDITIONAL_OVERWRITE;
@@ -97,6 +98,7 @@ public class ITestS3APutIfMatchAndIfNoneMatch extends AbstractS3ATestBase {
   }
 
   @Override
+  @BeforeEach
   public void setup() throws Exception {
     super.setup();
     Configuration conf = getConfiguration();
@@ -469,8 +471,11 @@ public class ITestS3APutIfMatchAndIfNoneMatch extends AbstractS3ATestBase {
             .as("ETag should not be null after file creation")
             .isNotNull();
 
+    String updatedFileContent = "Updated content";
+    byte[] updatedData = updatedFileContent.getBytes(StandardCharsets.UTF_8);
+
     // Overwrite the file. Will update the etag, making the previously fetched etag outdated.
-    createFileWithFlags(fs, path, SMALL_FILE_BYTES, false, null);
+    createFileWithFlags(fs, path, updatedData, false, null);
 
     // overwrite file with outdated etag. Should throw RemoteFileChangedException
     RemoteFileChangedException exception = intercept(RemoteFileChangedException.class,

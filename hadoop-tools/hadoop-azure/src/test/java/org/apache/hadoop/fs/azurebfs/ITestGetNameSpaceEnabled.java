@@ -21,12 +21,10 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.UUID;
 
-import org.junit.Assume;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.assertj.core.api.Assertions;
 import org.mockito.Mockito;
 
-import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsServiceType;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
@@ -43,8 +41,11 @@ import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
 import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
 import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
 import static java.net.HttpURLConnection.HTTP_UNAVAILABLE;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_MAX_IO_RETRIES;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.accountProperty;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.ABFS_BLOB_DOMAIN_NAME;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.ABFS_DFS_DOMAIN_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_ACCOUNT_KEY;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -61,6 +62,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_CR
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_IS_HNS_ENABLED;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 /**
  * Test getIsNamespaceEnabled call.
@@ -79,26 +81,29 @@ public class ITestGetNameSpaceEnabled extends AbstractAbfsIntegrationTest {
 
   @Test
   public void testXNSAccount() throws IOException {
-    Assume.assumeTrue("Skip this test because the account being used for test is a non XNS account",
-            isUsingXNSAccount);
-    assertTrue("Expecting getIsNamespaceEnabled() return true",
-        getIsNamespaceEnabled(getFileSystem()));
+    assumeThat(isUsingXNSAccount)
+        .as("Skip this test because the account being used for test is a non XNS account")
+        .isTrue();
+    assertTrue(
+       getIsNamespaceEnabled(getFileSystem()), "Expecting getIsNamespaceEnabled() return true");
   }
 
   @Test
   public void testNonXNSAccount() throws IOException {
     assumeValidTestConfigPresent(getRawConfiguration(), FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT);
-    Assume.assumeFalse("Skip this test because the account being used for test is a XNS account",
-            isUsingXNSAccount);
-    assertFalse("Expecting getIsNamespaceEnabled() return false",
-        getIsNamespaceEnabled(getFileSystem()));
+    assumeThat(isUsingXNSAccount)
+        .as("Skip this test because the account being used for test is a XNS account")
+        .isFalse();
+    assertFalse(
+       getIsNamespaceEnabled(getFileSystem()), "Expecting getIsNamespaceEnabled() return false");
   }
 
   @Test
   public void testGetIsNamespaceEnabledWhenConfigIsTrue() throws Exception {
     assumeValidTestConfigPresent(getRawConfiguration(), FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT);
-    Assume.assumeTrue("Blob Endpoint Does not Allow FS init on HNS Account",
-        getAbfsServiceType() == AbfsServiceType.DFS);
+    assumeThat(getAbfsServiceType())
+        .as("Blob Endpoint Does not Allow FS init on HNS Account")
+        .isEqualTo(AbfsServiceType.DFS);
     AzureBlobFileSystem fs = getNewFSWithHnsConf(TRUE_STR);
     Assertions.assertThat(getIsNamespaceEnabled(fs)).describedAs(
         "getIsNamespaceEnabled should return true when the "
@@ -139,7 +144,7 @@ public class ITestGetNameSpaceEnabled extends AbstractAbfsIntegrationTest {
         this.getAccountName()), isNamespaceEnabledAccount);
     rawConfig
         .setBoolean(AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION, true);
-    rawConfig.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY,
+    rawConfig.set(FS_DEFAULT_NAME_KEY,
         getNonExistingUrl());
     return (AzureBlobFileSystem) FileSystem.get(rawConfig);
   }
@@ -315,29 +320,29 @@ public class ITestGetNameSpaceEnabled extends AbstractAbfsIntegrationTest {
     rawConfig.set(accountProperty(FS_AZURE_ACCOUNT_KEY, testAccountName), dummyAcountKey);
     rawConfig.set(accountProperty(FS_AZURE_ACCOUNT_KEY, otherAccountName), dummyAcountKey);
     // Assert that account specific config takes precedence
-    rawConfig.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY, defaultUri);
+    rawConfig.set(FS_DEFAULT_NAME_KEY, defaultUri);
     assertFileSystemInitWithExpectedHNSSettings(rawConfig, false);
     // Assert that other account still uses account agnostic config
-    rawConfig.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY, otherUri);
+    rawConfig.set(FS_DEFAULT_NAME_KEY, otherUri);
     assertFileSystemInitWithExpectedHNSSettings(rawConfig, true);
 
     // Set only the account specific config for test account
     rawConfig.set(accountProperty(FS_AZURE_ACCOUNT_IS_HNS_ENABLED, testAccountName), FALSE_STR);
     rawConfig.unset(FS_AZURE_ACCOUNT_IS_HNS_ENABLED);
     // Assert that only account specific config is enough for test account
-    rawConfig.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY, defaultUri);
+    rawConfig.set(FS_DEFAULT_NAME_KEY, defaultUri);
     assertFileSystemInitWithExpectedHNSSettings(rawConfig, false);
 
     // Set only account agnostic config
     rawConfig.set(FS_AZURE_ACCOUNT_IS_HNS_ENABLED, FALSE_STR);
     rawConfig.unset(accountProperty(FS_AZURE_ACCOUNT_IS_HNS_ENABLED, testAccountName));
-    rawConfig.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY, defaultUri);
+    rawConfig.set(FS_DEFAULT_NAME_KEY, defaultUri);
     assertFileSystemInitWithExpectedHNSSettings(rawConfig, false);
 
     // Unset both account specific and account agnostic config
     rawConfig.unset(FS_AZURE_ACCOUNT_IS_HNS_ENABLED);
     rawConfig.unset(accountProperty(FS_AZURE_ACCOUNT_IS_HNS_ENABLED, testAccountName));
-    rawConfig.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY, defaultUri);
+    rawConfig.set(FS_DEFAULT_NAME_KEY, defaultUri);
     rawConfig.set(AZURE_MAX_IO_RETRIES, "0");
     // Assert that file system init fails with UnknownHost exception as getAcl() is needed.
     try {
@@ -471,10 +476,10 @@ public class ITestGetNameSpaceEnabled extends AbstractAbfsIntegrationTest {
     rawConfig.unset(FS_AZURE_ACCOUNT_IS_HNS_ENABLED);
     rawConfig.unset(accountProperty(FS_AZURE_ACCOUNT_IS_HNS_ENABLED,
         this.getAccountName()));
-    String testAccountName = "testAccount.dfs.core.windows.net";
-    String defaultUri = this.getTestUrl().replace(this.getAccountName(), testAccountName);
+    String defaultUri = getRawConfiguration().get(FS_DEFAULT_NAME_KEY).
+        replace(ABFS_BLOB_DOMAIN_NAME, ABFS_DFS_DOMAIN_NAME);
     // Assert that account specific config takes precedence
-    rawConfig.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY, defaultUri);
+    rawConfig.set(FS_DEFAULT_NAME_KEY, defaultUri);
     return rawConfig;
   }
 

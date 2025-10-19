@@ -17,8 +17,9 @@
 
 package org.apache.hadoop.hdfs.server.datanode;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -26,11 +27,10 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import static org.apache.hadoop.security.SecurityUtilTestHelper.isExternalKdcRunning;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
+
 import org.apache.hadoop.net.NetUtils;
-import org.junit.Assume;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Test;
 import java.net.BindException;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
@@ -53,13 +53,12 @@ import java.net.ServerSocket;
  *   dfs.datanode.keytab.file
  */
 public class TestStartSecureDataNode {
-  @Rule
-  public ExpectedException thrown = ExpectedException.none();
+
   final static private int NUM_OF_DATANODES = 1;
 
   private void testExternalKdcRunning() {
     // Tests are skipped if external KDC is not running.
-    Assume.assumeTrue(isExternalKdcRunning());
+    assumeTrue(isExternalKdcRunning());
   }
 
   @Test
@@ -72,15 +71,14 @@ public class TestStartSecureDataNode {
       String nnSpnegoPrincipal =
         System.getProperty("dfs.namenode.kerberos.internal.spnego.principal");
       String nnKeyTab = System.getProperty("dfs.namenode.keytab.file");
-      assertNotNull("NameNode principal was not specified", nnPrincipal);
-      assertNotNull("NameNode SPNEGO principal was not specified",
-                    nnSpnegoPrincipal);
-      assertNotNull("NameNode keytab was not specified", nnKeyTab);
+      assertNotNull(nnPrincipal, "NameNode principal was not specified");
+      assertNotNull(nnSpnegoPrincipal, "NameNode SPNEGO principal was not specified");
+      assertNotNull(nnKeyTab, "NameNode keytab was not specified");
 
       String dnPrincipal = System.getProperty("dfs.datanode.kerberos.principal");
       String dnKeyTab = System.getProperty("dfs.datanode.keytab.file");
-      assertNotNull("DataNode principal was not specified", dnPrincipal);
-      assertNotNull("DataNode keytab was not specified", dnKeyTab);
+      assertNotNull(dnPrincipal, "DataNode principal was not specified");
+      assertNotNull(dnKeyTab, "DataNode keytab was not specified");
 
       Configuration conf = new HdfsConfiguration();
       conf.set(CommonConfigurationKeys.HADOOP_SECURITY_AUTHENTICATION,
@@ -124,13 +122,14 @@ public class TestStartSecureDataNode {
     ServerSocket ss = new ServerSocket();
     try {
       ss.bind(new InetSocketAddress("localhost", 0));
-      thrown.expect(BindException.class);
-      thrown.expectMessage("localhost/127.0.0.1:" + ss.getLocalPort());
+      BindException ex = assertThrows(BindException.class, () -> {
+        Configuration conf = new HdfsConfiguration();
+        conf.set(DFSConfigKeys.DFS_DATANODE_ADDRESS_KEY,
+            "localhost:" + ss.getLocalPort());
 
-      Configuration conf = new HdfsConfiguration();
-      conf.set(DFSConfigKeys.DFS_DATANODE_ADDRESS_KEY,
-          "localhost:" + ss.getLocalPort());
-      SecureDataNodeStarter.getSecureResources(conf);
+        SecureDataNodeStarter.getSecureResources(conf);
+      });
+      assertTrue(ex.getMessage().contains("localhost/127.0.0.1:" + ss.getLocalPort()));
     } finally {
       ss.close();
     }
@@ -148,16 +147,16 @@ public class TestStartSecureDataNode {
     ServerSocket ss = new ServerSocket();
     try {
       ss.bind(new InetSocketAddress("localhost", 0));
-      thrown.expect(BindException.class);
-      thrown.expectMessage("localhost/127.0.0.1:" + ss.getLocalPort());
+      BindException ex = assertThrows(BindException.class, () -> {
+        Configuration conf = new HdfsConfiguration();
+        conf.set(DFSConfigKeys.DFS_DATANODE_ADDRESS_KEY,
+            "localhost:" + NetUtils.getFreeSocketPort());
+        conf.set(DFSConfigKeys.DFS_DATANODE_HTTP_ADDRESS_KEY,
+            "localhost:" + ss.getLocalPort());
 
-      Configuration conf = new HdfsConfiguration();
-      conf.set(DFSConfigKeys.DFS_DATANODE_ADDRESS_KEY,
-          "localhost:" + NetUtils.getFreeSocketPort());
-      conf.set(DFSConfigKeys.DFS_DATANODE_HTTP_ADDRESS_KEY,
-          "localhost:" + ss.getLocalPort());
-
-      SecureDataNodeStarter.getSecureResources(conf);
+        SecureDataNodeStarter.getSecureResources(conf);
+      });
+      assertTrue(ex.getMessage().contains("localhost/127.0.0.1:" + ss.getLocalPort()));
     } finally {
       ss.close();
     }

@@ -47,7 +47,7 @@ import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.times;
 
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 /**
  * Test class to hold all WasbRemoteCallHelper tests.
@@ -72,8 +72,9 @@ public class ITestWasbRemoteCallHelper
     boolean useSecureMode = fs.getConf().getBoolean(KEY_USE_SECURE_MODE, false);
     boolean useAuthorization = fs.getConf()
         .getBoolean(NativeAzureFileSystem.KEY_AZURE_AUTHORIZATION, false);
-    assumeTrue(useSecureMode && useAuthorization,
-        "Test valid when both SecureMode and Authorization are enabled .. skipping");
+    assumeThat(useSecureMode && useAuthorization)
+        .as("Test valid when both SecureMode and Authorization are enabled .. skipping")
+        .isTrue();
   }
 
   /**

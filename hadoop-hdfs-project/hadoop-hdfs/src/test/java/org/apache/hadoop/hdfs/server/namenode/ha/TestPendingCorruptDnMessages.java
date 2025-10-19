@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -43,13 +43,15 @@ import org.apache.hadoop.test.GenericTestUtils;
 
 import java.util.function.Supplier;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 public class TestPendingCorruptDnMessages {
   
   private static final Path filePath = new Path("/foo.txt");
   
-  @Test (timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testChangedStorageId() throws IOException, URISyntaxException,
       InterruptedException, TimeoutException {
     HdfsConfiguration conf = new HdfsConfiguration();
@@ -110,8 +112,7 @@ public class TestPendingCorruptDnMessages {
         }
       }, 1000, 30000);
       
-      assertEquals(0, cluster.getNamesystem(1).getBlockManager()
-          .getPendingDataNodeMessageCount());
+      assertEquals(0, cluster.getNamesystem(1).getBlockManager().getPendingDataNodeMessageCount());
       
       // Now try to fail over.
       cluster.transitionToStandby(0);

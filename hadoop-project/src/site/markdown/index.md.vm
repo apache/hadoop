@@ -23,75 +23,36 @@ Overview of Changes
 Users are encouraged to read the full set of release notes.
 This page provides an overview of the major changes.
 
-Bulk Delete API
-----------------------------------------
-
-[HADOOP-18679](https://issues.apache.org/jira/browse/HADOOP-18679) Bulk Delete API.
-
-This release provides an API to perform bulk delete of files/objects
-in an object store or filesystem.
-
 New binary distribution
 -----------------------
 
-[HADOOP-19083](https://issues.apache.org/jira/browse/HADOOP-19083) provide hadoop binary tarball without aws v2 sdk
-
-Hadoop has added a new variant of the binary distribution tarball, labeled with "lean" in the file
-name. This tarball excludes the full AWS SDK v2 bundle, resulting in approximately 50% reduction in
-file size.
+As of v3.4.2, Hadoop will only be distributed with a lean tarball, which excludes the full AWS SDK v2 bundle to reduce
+overall file size. This release has been tested with AWS SDK v2 2.29.52, which can be downloaded from Maven
+[here](https://mvnrepository.com/artifact/software.amazon.awssdk/aws-sdk-java/2.29.52).
 
 S3A improvements
 ----------------
 
 **Improvement**
 
-[HADOOP-18886](https://issues.apache.org/jira/browse/HADOOP-18886) S3A: AWS SDK V2 Migration: stabilization and S3Express
+[HADOOP-19363](https://issues.apache.org/jira/browse/HADOOP-19363) S3A: Support analytics-accelerator-s3 input streams
+for parquet read performance.
 
-This release completes stabilization efforts on the AWS SDK v2 migration and support of Amazon S3
-Express One Zone storage. S3 Select is no longer supported.
-
-[HADOOP-18993](https://issues.apache.org/jira/browse/HADOOP-18993) S3A: Add option fs.s3a.classloader.isolation (#6301)
-
-This introduces configuration property `fs.s3a.classloader.isolation`, which defaults to `true`.
-Set to `false` to disable S3A classloader isolation, which can be useful for installing custom
-credential providers in user-provided jars.
-
-[HADOOP-19047](https://issues.apache.org/jira/browse/HADOOP-19047) Support InMemory Tracking Of S3A Magic Commits
-
-The S3A magic committer now supports configuration property
-`fs.s3a.committer.magic.track.commits.in.memory.enabled`. Set this to `true` to track commits in
-memory instead of on the file system, which reduces the number of remote calls.
-
-[HADOOP-19161](https://issues.apache.org/jira/browse/HADOOP-19161) S3A: option “fs.s3a.performance.flags” to take list of performance flags
-
-S3A now supports configuration property `fs.s3a.performance.flag` for controlling activation of
-multiple performance optimizations. Refer to the S3A performance documentation for details.
+[HADOOP-19256](https://issues.apache.org/jira/browse/HADOOP-19256) S3A: Adds support for S3 Conditional Writes.
 
 ABFS improvements
 -----------------
 
 **Improvement**
 
-[HADOOP-18516](https://issues.apache.org/jira/browse/HADOOP-18516) [ABFS]: Support fixed SAS token config in addition to Custom SASTokenProvider Implementation
+[HADOOP-19179](https://issues.apache.org/jira/browse/HADOOP-19179) ABFS: [FnsOverBlob] Support FNS Accounts over
+BlobEndpoint.
 
-ABFS now supports authentication via a fixed Shared Access Signature token. Refer to ABFS
-documentation of configuration property `fs.azure.sas.fixed.token` for details.
+[HADOOP-19474](https://issues.apache.org/jira/browse/HADOOP-19474)  ABFS: [FnsOverBlob] Listing Optimizations to avoid
+multiple iteration over list response.
 
-[HADOOP-19089](https://issues.apache.org/jira/browse/HADOOP-19089) [ABFS] Reverting Back Support of setXAttr() and getXAttr() on root path
-
-[HADOOP-18869](https://issues.apache.org/jira/browse/HADOOP-18869) previously implemented support for xattrs on the root path in the 3.4.0 release. Support for this has been removed in 3.4.1 to prevent the need for calling container APIs.
-
-[HADOOP-19178](https://issues.apache.org/jira/browse/HADOOP-19178) WASB Driver Deprecation and eventual removal
-
-This release announces deprecation of the WASB file system in favor of ABFS. Refer to ABFS
-documentation for additional guidance.
-
-**Bug**
-
-[HADOOP-18542](https://issues.apache.org/jira/browse/HADOOP-18542) Azure Token provider requires tenant and client IDs despite being optional
-
-It is no longer necessary to specify a tenant and client ID in configuration for MSI authentication
-when running in an Azure instance.
+[HADOOP-19543](https://issues.apache.org/jira/browse/HADOOP-19543) ABFS: [FnsOverBlob] Remove Duplicates from Blob
+Endpoint Listing Across Iterations.
 
 Transitive CVE fixes
 --------------------

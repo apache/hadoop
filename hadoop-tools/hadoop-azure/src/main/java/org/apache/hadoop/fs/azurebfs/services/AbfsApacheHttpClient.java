@@ -20,7 +20,9 @@ package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.net.URL;
 
+import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.config.RequestConfig;
@@ -64,6 +66,13 @@ final class AbfsApacheHttpClient implements Closeable {
   }
 
   /**
+   * In case, getting success response from apache client, sets the usable flag to true.
+   */
+  static void setUsable() {
+    usable = true;
+  }
+
+  /**
    * @return if ApacheHttpClient is usable.
    */
   static boolean usable() {
@@ -71,15 +80,27 @@ final class AbfsApacheHttpClient implements Closeable {
   }
 
   AbfsApacheHttpClient(DelegatingSSLSocketFactory delegatingSSLSocketFactory,
-      final int readTimeout, final KeepAliveCache keepAliveCache) {
+      final AbfsConfiguration abfsConfiguration,
+      final KeepAliveCache keepAliveCache,
+      URL baseUrl,
+      final boolean isCacheWarmupNeeded) {
     final AbfsConnectionManager connMgr = new AbfsConnectionManager(
         createSocketFactoryRegistry(
             new SSLConnectionSocketFactory(delegatingSSLSocketFactory,
                 getDefaultHostnameVerifier())),
-        new AbfsHttpClientConnectionFactory(), keepAliveCache);
+        new AbfsHttpClientConnectionFactory(), keepAliveCache,
+        abfsConfiguration, baseUrl, isCacheWarmupNeeded);
     final HttpClientBuilder builder = HttpClients.custom();
     builder.setConnectionManager(connMgr)
-        .setRequestExecutor(new AbfsManagedHttpRequestExecutor(readTimeout))
+        .setRequestExecutor(
+            // In case of Expect:100-continue, the timeout for waiting for
+            // the 100-continue response from the server is set using
+            // ExpectWaitContinueTimeout. For other requests, the read timeout
+            // is set using SocketTimeout.
+            new AbfsManagedHttpRequestExecutor(
+                abfsConfiguration.isExpectHeaderEnabled()
+                    ? abfsConfiguration.getExpect100ContinueWaitTimeout()
+                    : abfsConfiguration.getHttpReadTimeout()))
         .disableContentCompression()
         .disableRedirectHandling()
         .disableAutomaticRetries()

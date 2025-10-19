@@ -24,11 +24,17 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.DataChecksum;
-import org.junit.Assert;
 
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 import java.util.Random;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 @HdfsCompatCaseGroup(name = "File")
 public class HdfsCompatFile extends AbstractHdfsCompatCase {
@@ -53,42 +59,42 @@ public class HdfsCompatFile extends AbstractHdfsCompatCase {
   @HdfsCompatCase
   public void getFileStatus() throws IOException {
     FileStatus fileStatus = fs().getFileStatus(file);
-    Assert.assertNotNull(fileStatus);
-    Assert.assertEquals(file.getName(), fileStatus.getPath().getName());
+    assertNotNull(fileStatus);
+    assertEquals(file.getName(), fileStatus.getPath().getName());
   }
 
   @HdfsCompatCase
   public void exists() throws IOException {
-    Assert.assertTrue(fs().exists(file));
+    assertTrue(fs().exists(file));
   }
 
   @HdfsCompatCase
   public void isFile() throws IOException {
-    Assert.assertTrue(fs().isFile(file));
+    assertTrue(fs().isFile(file));
   }
 
   @HdfsCompatCase
   public void getLength() throws IOException {
-    Assert.assertEquals(FILE_LEN, fs().getLength(file));
+    assertEquals(FILE_LEN, fs().getLength(file));
   }
 
   @HdfsCompatCase(brief = "arbitrary blockSize")
   public void getBlockSize() throws IOException {
-    Assert.assertEquals(BLOCK_SIZE, fs().getBlockSize(file));
+    assertEquals(BLOCK_SIZE, fs().getBlockSize(file));
   }
 
   @HdfsCompatCase
   public void renameFile() throws IOException {
     Path dst = new Path(file.toString() + "_rename_dst");
     fs().rename(file, dst);
-    Assert.assertFalse(fs().exists(file));
-    Assert.assertTrue(fs().exists(dst));
+    assertFalse(fs().exists(file));
+    assertTrue(fs().exists(dst));
   }
 
   @HdfsCompatCase
   public void deleteFile() throws IOException {
     fs().delete(file, true);
-    Assert.assertFalse(fs().exists(file));
+    assertFalse(fs().exists(file));
   }
 
   @HdfsCompatCase
@@ -96,7 +102,7 @@ public class HdfsCompatFile extends AbstractHdfsCompatCase {
     FileSystem newFs = FileSystem.newInstance(fs().getUri(), fs().getConf());
     newFs.deleteOnExit(file);
     newFs.close();
-    Assert.assertFalse(fs().exists(file));
+    assertFalse(fs().exists(file));
   }
 
   @HdfsCompatCase
@@ -105,7 +111,7 @@ public class HdfsCompatFile extends AbstractHdfsCompatCase {
     newFs.deleteOnExit(file);
     newFs.cancelDeleteOnExit(file);
     newFs.close();
-    Assert.assertTrue(fs().exists(file));
+    assertTrue(fs().exists(file));
   }
 
   @HdfsCompatCase
@@ -117,7 +123,7 @@ public class HdfsCompatFile extends AbstractHdfsCompatCase {
       finished = fs().truncate(file, newLen);
     }
     FileStatus fileStatus = fs().getFileStatus(file);
-    Assert.assertEquals(newLen, fileStatus.getLen());
+    assertEquals(newLen, fileStatus.getLen());
   }
 
   @HdfsCompatCase
@@ -133,8 +139,8 @@ public class HdfsCompatFile extends AbstractHdfsCompatCase {
         }
     );
     FileStatus fileStatus = fs().getFileStatus(file);
-    Assert.assertEquals(owner, fileStatus.getOwner());
-    Assert.assertEquals(group, fileStatus.getGroup());
+    assertEquals(owner, fileStatus.getOwner());
+    assertEquals(group, fileStatus.getGroup());
   }
 
   @HdfsCompatCase
@@ -143,8 +149,8 @@ public class HdfsCompatFile extends AbstractHdfsCompatCase {
     final long mtime = atime - 1000;
     fs().setTimes(file, mtime, atime);
     FileStatus fileStatus = fs().getFileStatus(file);
-    Assert.assertEquals(mtime, fileStatus.getModificationTime());
-    Assert.assertEquals(atime, fileStatus.getAccessTime());
+    assertEquals(mtime, fileStatus.getModificationTime());
+    assertEquals(atime, fileStatus.getAccessTime());
   }
 
   @HdfsCompatCase
@@ -157,7 +163,7 @@ public class HdfsCompatFile extends AbstractHdfsCompatCase {
       HdfsCompatUtil.createFile(fs(), dst, 16);
       fs().concat(dst, new Path[]{src});
       FileStatus fileStatus = fs().getFileStatus(dst);
-      Assert.assertEquals(16 + 64, fileStatus.getLen());
+      assertEquals(16 + 64, fileStatus.getLen());
     } finally {
       HdfsCompatUtil.deleteQuietly(fs(), dir, true);
     }
@@ -166,29 +172,29 @@ public class HdfsCompatFile extends AbstractHdfsCompatCase {
   @HdfsCompatCase
   public void getFileChecksum() throws IOException {
     FileChecksum checksum = fs().getFileChecksum(file);
-    Assert.assertNotNull(checksum);
-    Assert.assertNotNull(checksum.getChecksumOpt());
+    assertNotNull(checksum);
+    assertNotNull(checksum.getChecksumOpt());
     DataChecksum.Type type = checksum.getChecksumOpt().getChecksumType();
-    Assert.assertNotEquals(DataChecksum.Type.NULL, type);
+    assertNotEquals(DataChecksum.Type.NULL, type);
   }
 
   @HdfsCompatCase
   public void getFileBlockLocations() throws IOException {
     BlockLocation[] locations = fs().getFileBlockLocations(file, 0, FILE_LEN);
-    Assert.assertTrue(locations.length >= 1);
+    assertTrue(locations.length >= 1);
     BlockLocation location = locations[0];
-    Assert.assertTrue(location.getLength() > 0);
+    assertTrue(location.getLength() > 0);
   }
 
   @HdfsCompatCase
   public void getReplication() throws IOException {
-    Assert.assertEquals(REPLICATION, fs().getReplication(file));
+    assertEquals(REPLICATION, fs().getReplication(file));
   }
 
   @HdfsCompatCase(brief = "arbitrary replication")
   public void setReplication() throws IOException {
     fs().setReplication(this.file, (short) 2);
-    Assert.assertEquals(2, fs().getReplication(this.file));
+    assertEquals(2, fs().getReplication(this.file));
   }
 
   @HdfsCompatCase
@@ -234,7 +240,7 @@ public class HdfsCompatFile extends AbstractHdfsCompatCase {
     fs().setPermission(file, FsPermission.createImmutable((short) 511));
     try {
       fs().access(file, FsAction.ALL);
-      Assert.fail("Should not have write permission");
+      fail("Should not have write permission");
     } catch (Throwable ignored) {
     }
   }

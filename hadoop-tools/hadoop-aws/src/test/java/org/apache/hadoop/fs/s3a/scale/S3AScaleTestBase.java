@@ -23,6 +23,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.AbstractS3ATestBase;
 import org.apache.hadoop.fs.s3a.S3ATestConstants;
 import org.apache.hadoop.fs.s3a.Statistic;
+import org.apache.hadoop.test.tags.ScaleTest;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.slf4j.Logger;
@@ -58,6 +59,7 @@ import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.lookupGaugeS
  * <i>very bad form</i> in Java code (indeed, in C++ it is actually permitted;
  * the base class implementations get invoked instead).
  */
+@ScaleTest
 public class S3AScaleTestBase extends AbstractS3ATestBase {
 
   public static final int _1KB = 1024;

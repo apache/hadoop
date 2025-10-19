@@ -18,9 +18,11 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.net.URL;
 
+import org.apache.hadoop.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,7 +39,7 @@ import static org.apache.hadoop.fs.azurebfs.utils.UriUtils.changeUrlFromDfsToBlo
  * AbfsClientHandler is a class that provides a way to get the AbfsClient
  * based on the service type.
  */
-public class AbfsClientHandler {
+public class AbfsClientHandler implements Closeable {
   public static final Logger LOG = LoggerFactory.getLogger(AbfsClientHandler.class);
 
   private AbfsServiceType defaultServiceType;
@@ -66,13 +68,16 @@ public class AbfsClientHandler {
       final SASTokenProvider sasTokenProvider,
       final EncryptionContextProvider encryptionContextProvider,
       final AbfsClientContext abfsClientContext) throws IOException {
+    // This will initialize the default and ingress service types.
+    // This is needed before creating the clients so that we can do cache warmup
+    // only for default client.
+    initServiceType(abfsConfiguration);
     this.dfsAbfsClient = createDfsClient(baseUrl, sharedKeyCredentials,
         abfsConfiguration, null, sasTokenProvider, encryptionContextProvider,
         abfsClientContext);
     this.blobAbfsClient = createBlobClient(baseUrl, sharedKeyCredentials,
         abfsConfiguration, null, sasTokenProvider, encryptionContextProvider,
         abfsClientContext);
-    initServiceType(abfsConfiguration);
   }
 
   /**
@@ -194,5 +199,10 @@ public class AbfsClientHandler {
           sasTokenProvider, encryptionContextProvider,
           abfsClientContext);
     }
+  }
+
+  @Override
+  public void close() throws IOException {
+    IOUtils.cleanupWithLogger(LOG, getDfsClient(), getBlobClient());
   }
 }

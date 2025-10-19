@@ -22,6 +22,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.net.URI;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -37,10 +38,12 @@ import java.util.stream.Collectors;
 import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.util.Sets;
 import org.assertj.core.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.io.TempDir;
-import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.ParameterizedClass;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -72,6 +75,7 @@ import org.apache.hadoop.util.DurationInfo;
 
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.disableFilesystemCaching;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.lsR;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.S3AUtils.applyLocatedFiles;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.FS_S3A_COMMITTER_STAGING_TMP_PATH;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.MAGIC_PATH_PREFIX;
@@ -80,6 +84,7 @@ import static org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants.FS_S3A_
 import static org.apache.hadoop.fs.s3a.commit.staging.Paths.getMultipartUploadCommitsDirectory;
 import static org.apache.hadoop.fs.s3a.commit.staging.StagingCommitterConstants.STAGING_UPLOADS;
 import static org.apache.hadoop.mapred.JobConf.MAPRED_TASK_ENV;
+import static org.apache.hadoop.mapreduce.lib.input.FileInputFormat.LIST_STATUS_NUM_THREADS;
 
 /**
  * Test an MR Job with all the different committers.
@@ -103,30 +108,30 @@ import static org.apache.hadoop.mapred.JobConf.MAPRED_TASK_ENV;
  *   <li>
  *     The test suites are declared to be executed in ascending order, so
  *     that for a specific binding, the order is
- *     {@link #test_000(CommitterTestBinding)},
- *     {@link #test_100(CommitterTestBinding)}
- *     {@link #test_200_execute(CommitterTestBinding, java.nio.file.Path)} and finally
- *     {@link #test_500(CommitterTestBinding)}.
+ *     {@link #test_000()},
+ *     {@link #test_100()}
+ *     {@link #test_200_execute()} and finally
+ *     {@link #test_500()}.
  *   </li>
  *   <li>
- *     {@link #test_000(CommitterTestBinding)} calls
+ *     {@link #test_000()} calls
  *     {@link CommitterTestBinding#validate()} to
  *     as to validate the state of the committer. This is primarily to
  *     verify that the binding setup mechanism is working.
  *   </li>
  *   <li>
- *     {@link #test_100(CommitterTestBinding)} is relayed to
+ *     {@link #test_100()} is relayed to
  *     {@link CommitterTestBinding#test_100()},
  *     for any preflight tests.
  *   </li>
  *   <li>
- *     The {@link #test_200_execute(CommitterTestBinding, java.nio.file.Path)}
+ *     The {@link #test_200_execute()}
  *     test runs the MR job for that
  *     particular binding with standard reporting and verification of the
  *     outcome.
  *   </li>
  *   <li>
- *     {@link #test_500(CommitterTestBinding)} test is relayed to
+ *     {@link #test_500()} test is relayed to
  *     {@link CommitterTestBinding#test_500()}, for any post-MR-job tests.
  * </ol>
  *
@@ -138,6 +143,8 @@ import static org.apache.hadoop.mapred.JobConf.MAPRED_TASK_ENV;
  * instance.
  */
 @TestMethodOrder(MethodOrderer.Alphanumeric.class)
+@ParameterizedClass(name="binding={0}")
+@MethodSource("params")
 public class ITestS3ACommitterMRJob extends AbstractYarnClusterITest {
 
   private static final Logger LOG =
@@ -159,19 +166,22 @@ public class ITestS3ACommitterMRJob extends AbstractYarnClusterITest {
   /**
    * The committer binding for this instance.
    */
-  private CommitterTestBinding committerTestBinding;
+  private final CommitterTestBinding committerTestBinding;
+
+  @TempDir
+  private java.nio.file.Path localFilesDir;
 
   /**
    * Parameterized constructor.
-   * @param pCommitterTestBinding binding for the test.
+   * @param committerTestBinding binding for the test.
    */
-  public void initITestS3ACommitterMRJob(
-      final CommitterTestBinding pCommitterTestBinding) throws Exception {
-    this.committerTestBinding = pCommitterTestBinding;
-    setup();
+  public ITestS3ACommitterMRJob(
+      final CommitterTestBinding committerTestBinding) {
+    this.committerTestBinding = committerTestBinding;
   }
 
   @Override
+  @BeforeEach
   public void setup() throws Exception {
     super.setup();
     // configure the test binding for this specific test case.
@@ -182,6 +192,9 @@ public class ITestS3ACommitterMRJob extends AbstractYarnClusterITest {
   protected Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
     disableFilesystemCaching(conf);
+    removeBaseAndBucketOverrides(conf,
+        LIST_STATUS_NUM_THREADS);
+    conf.setInt(LIST_STATUS_NUM_THREADS, 16);
     return conf;
   }
 
@@ -193,26 +206,20 @@ public class ITestS3ACommitterMRJob extends AbstractYarnClusterITest {
   /**
    * Verify that the committer binding is happy.
    */
-  @MethodSource("params")
-  @ParameterizedTest(name = "{0}")
-  public void test_000(CommitterTestBinding pCommitterTestBinding) throws Throwable {
-    initITestS3ACommitterMRJob(pCommitterTestBinding);
+  @Test
+  public void test_000() throws Throwable {
     committerTestBinding.validate();
   }
 
-  @MethodSource("params")
-  @ParameterizedTest(name = "{0}")
-  public void test_100(CommitterTestBinding pCommitterTestBinding) throws Throwable {
-    initITestS3ACommitterMRJob(pCommitterTestBinding);
+  @Test
+  public void test_100() throws Throwable {
     committerTestBinding.test_100();
   }
 
-  @MethodSource("params")
-  @ParameterizedTest(name = "{0}")
-  public void test_200_execute(CommitterTestBinding pCommitterTestBinding,
-      @TempDir java.nio.file.Path localFilesDir) throws Exception {
-    initITestS3ACommitterMRJob(pCommitterTestBinding);
+  @Test
+  public void test_200_execute() throws Exception {
     describe("Run an MR with committer %s", committerName());
+    LOG.info("Local Temp directory is {}", localFilesDir);
 
     S3AFileSystem fs = getFileSystem();
     // final dest is in S3A
@@ -255,8 +262,10 @@ public class ITestS3ACommitterMRJob extends AbstractYarnClusterITest {
     jobConf.set(FS_S3A_COMMITTER_UUID, commitUUID);
 
     mrJob.setInputFormatClass(TextInputFormat.class);
-    FileInputFormat.addInputPath(mrJob,
-        new Path(localFilesDir.getRoot().toUri()));
+
+    final URI inputPath = localFilesDir.toUri();
+    LOG.info("Job input path {}", inputPath);
+    FileInputFormat.addInputPath(mrJob, new Path(inputPath));
 
     mrJob.setMapperClass(MapClass.class);
     mrJob.setNumReduceTasks(0);
@@ -359,10 +368,8 @@ public class ITestS3ACommitterMRJob extends AbstractYarnClusterITest {
   /**
    * This is the extra test which committer test bindings can add.
    */
-  @MethodSource("params")
-  @ParameterizedTest(name = "{0}")
-  public void test_500(CommitterTestBinding pCommitterTestBinding) throws Throwable {
-    initITestS3ACommitterMRJob(pCommitterTestBinding);
+  @Test
+  public void test_500() throws Throwable {
     committerTestBinding.test_500();
   }
 
@@ -499,8 +506,7 @@ public class ITestS3ACommitterMRJob extends AbstractYarnClusterITest {
     }
 
     /**
-     * A test to run before the main
-     * {@link #test_200_execute(CommitterTestBinding, java.nio.file.Path)} test is
+     * A test to run before the main {@link #test_200_execute()} test is
      * invoked.
      * @throws Throwable failure.
      */
@@ -509,8 +515,7 @@ public class ITestS3ACommitterMRJob extends AbstractYarnClusterITest {
     }
 
     /**
-     * A test to run after the main
-     * {@link #test_200_execute(CommitterTestBinding, java.nio.file.Path)} test is
+     * A test to run after the main {@link #test_200_execute()} test is
      * invoked.
      * @throws Throwable failure.
      */
@@ -520,7 +525,7 @@ public class ITestS3ACommitterMRJob extends AbstractYarnClusterITest {
 
     /**
      * Validate the state of the binding.
-     * This is called in {@link #test_000(CommitterTestBinding)} so will
+     * This is called in {@link #test_000()} so will
      * fail independently of the other tests.
      * @throws Throwable failure.
      */

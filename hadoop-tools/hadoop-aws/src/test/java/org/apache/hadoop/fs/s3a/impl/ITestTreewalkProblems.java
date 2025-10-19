@@ -27,6 +27,7 @@ import java.util.stream.Collectors;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.opentest4j.AssertionFailedError;
 import software.amazon.awssdk.services.s3.model.MultipartUpload;
 
 import org.apache.hadoop.conf.Configuration;
@@ -316,7 +317,7 @@ public class ITestTreewalkProblems extends AbstractS3ACostTest {
           options, getConfiguration());
     } else {
       // distcp fails if uploads are visible
-      intercept(org.junit.ComparisonFailure.class, () -> {
+      intercept(AssertionFailedError.class, () -> {
         DistCpTestUtils.assertRunDistCp(DistCpConstants.SUCCESS, src.toString(), dest.toString(),
             options, getConfiguration());
       });
@@ -339,7 +340,7 @@ public class ITestTreewalkProblems extends AbstractS3ACostTest {
           options, getConfiguration());
     } else {
       // distcp fails if uploads are visible
-      intercept(org.junit.ComparisonFailure.class, () -> {
+      intercept(AssertionFailedError.class, () -> {
         DistCpTestUtils.assertRunDistCp(DistCpConstants.SUCCESS, src.toString(), dest.toString(),
             options, getConfiguration());
       });

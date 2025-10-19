@@ -28,8 +28,8 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Timeout;
-import org.junit.AssumptionViolatedException;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.opentest4j.TestAbortedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -149,7 +149,7 @@ public abstract class AbstractFSContractTestBase extends Assertions
    */
   protected void assumeEnabled() {
     if (!contract.isEnabled())
-      throw new AssumptionViolatedException("test cases disabled for " + contract);
+      throw new TestAbortedException("test cases disabled for " + contract);
   }
 
   /**

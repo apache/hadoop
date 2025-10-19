@@ -26,10 +26,10 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_IP_PROXY_USERS;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RPC_BIND_HOST_KEY;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -55,7 +55,7 @@ import org.apache.hadoop.ipc.ObserverRetryOnActiveException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
 public class TestNameNodeRpcServer {
@@ -73,8 +73,8 @@ public class TestNameNodeRpcServer {
     try {
       cluster = new MiniDFSCluster.Builder(conf).build();
       cluster.waitActive();
-      assertEquals("0.0.0.0", ((NameNodeRpcServer)cluster.getNameNodeRpc())
-          .getClientRpcServer().getListenerAddress().getHostName());
+      assertEquals("0.0.0.0", ((NameNodeRpcServer) cluster.getNameNodeRpc()).getClientRpcServer()
+          .getListenerAddress().getHostName());
     } finally {
       if (cluster != null) {
         cluster.shutdown();
@@ -240,7 +240,7 @@ public class TestNameNodeRpcServer {
           // found some other host, so things are good
           break;
         } else if (trial == ITERATIONS_TO_USE - 1) {
-          assertNotEquals("Failed to get non-node1", hosts[0], host);
+          assertNotEquals(hosts[0], host, "Failed to get non-node1");
         }
       }
       // Run as fake joe to authorize the test
@@ -252,7 +252,7 @@ public class TestNameNodeRpcServer {
       // As joe, we should get all node1.
       for (int trial = 0; trial < ITERATIONS_TO_USE; ++trial) {
         String host = getPreferredLocation(joeFs, fooName);
-        assertEquals("Trial " + trial + " failed", hosts[0], host);
+        assertEquals(hosts[0], host, "Trial " + trial + " failed");
       }
     } finally {
       CallerContext.setCurrent(original);

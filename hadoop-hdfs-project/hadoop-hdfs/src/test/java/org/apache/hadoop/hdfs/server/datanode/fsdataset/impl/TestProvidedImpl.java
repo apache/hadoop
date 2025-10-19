@@ -18,10 +18,10 @@
 package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_SCAN_PERIOD_HOURS_KEY;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -82,8 +82,8 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi.BlockIterator;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.StringUtils;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -313,7 +313,7 @@ public class TestProvidedImpl {
     }
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     datanode = mock(DataNode.class);
     storage = mock(DataStorage.class);
@@ -367,8 +367,7 @@ public class TestProvidedImpl {
   @Test
   public void testProvidedVolumeImpl() throws IOException {
 
-    assertEquals(NUM_LOCAL_INIT_VOLUMES + NUM_PROVIDED_INIT_VOLUMES,
-        getNumVolumes());
+    assertEquals(NUM_LOCAL_INIT_VOLUMES + NUM_PROVIDED_INIT_VOLUMES, getNumVolumes());
     assertEquals(NUM_PROVIDED_INIT_VOLUMES, providedVolumes.size());
     assertEquals(0, dataset.getNumFailedVolumes());
 
@@ -376,8 +375,7 @@ public class TestProvidedImpl {
       // check basic information about provided volume
       assertEquals(DFSConfigKeys.DFS_PROVIDER_STORAGEUUID_DEFAULT,
           providedVolumes.get(i).getStorageID());
-      assertEquals(StorageType.PROVIDED,
-          providedVolumes.get(i).getStorageType());
+      assertEquals(StorageType.PROVIDED, providedVolumes.get(i).getStorageType());
 
       long space = providedVolumes.get(i).getBlockPoolUsed(
               BLOCK_POOL_IDS[CHOSEN_BP_ID]);
@@ -388,9 +386,9 @@ public class TestProvidedImpl {
       providedVolumes.get(i).shutdownBlockPool(
           BLOCK_POOL_IDS[1 - CHOSEN_BP_ID], null);
       try {
-        assertEquals(0, providedVolumes.get(i)
-            .getBlockPoolUsed(BLOCK_POOL_IDS[1 - CHOSEN_BP_ID]));
-        // should not be triggered
+        assertEquals(0,
+            providedVolumes.get(i).getBlockPoolUsed(BLOCK_POOL_IDS[1 - CHOSEN_BP_ID]));
+          // should not be triggered
         assertTrue(false);
       } catch (IOException e) {
         LOG.info("Expected exception: " + e);
@@ -413,8 +411,7 @@ public class TestProvidedImpl {
           assertEquals(null, volumeMap.replicas(BLOCK_POOL_IDS[j]));
         }
       }
-      assertEquals(NUM_PROVIDED_BLKS,
-          volumeMap.replicas(BLOCK_POOL_IDS[CHOSEN_BP_ID]).size());
+      assertEquals(NUM_PROVIDED_BLKS, volumeMap.replicas(BLOCK_POOL_IDS[CHOSEN_BP_ID]).size());
     }
   }
 
@@ -499,48 +496,37 @@ public class TestProvidedImpl {
     // all these blocks can belong to the provided volume
     int blocksFound = getBlocksInProvidedVolumes(providedBasePath + "/test1/",
         expectedBlocks, minId);
-    assertEquals(
-        "Number of blocks in provided volumes should be " + expectedBlocks,
-        expectedBlocks, blocksFound);
+    assertEquals(expectedBlocks, blocksFound,
+        "Number of blocks in provided volumes should be " + expectedBlocks);
     blocksFound = getBlocksInProvidedVolumes(
         "file:/" + providedBasePath + "/test1/", expectedBlocks, minId);
-    assertEquals(
-        "Number of blocks in provided volumes should be " + expectedBlocks,
-        expectedBlocks, blocksFound);
+    assertEquals(expectedBlocks, blocksFound,
+        "Number of blocks in provided volumes should be " + expectedBlocks);
     // use a path that is entirely different from the providedBasePath
     // none of these blocks can belong to the volume
     blocksFound =
         getBlocksInProvidedVolumes("randomtest1/", expectedBlocks, minId);
-    assertEquals("Number of blocks in provided volumes should be 0", 0,
-        blocksFound);
+    assertEquals(0, blocksFound, "Number of blocks in provided volumes should be 0");
   }
 
   @Test
   public void testProvidedVolumeContainsBlock() throws URISyntaxException {
     assertEquals(true, ProvidedVolumeImpl.containsBlock(null, null));
+    assertEquals(false, ProvidedVolumeImpl.containsBlock(new URI("file:/a"), null));
+    assertEquals(true,
+        ProvidedVolumeImpl.containsBlock(new URI("file:/a/b/c/"), new URI("file:/a/b/c/d/e.file")));
+    assertEquals(true,
+        ProvidedVolumeImpl.containsBlock(new URI("/a/b/c/"), new URI("file:/a/b/c/d/e.file")));
+    assertEquals(true,
+        ProvidedVolumeImpl.containsBlock(new URI("/a/b/c"), new URI("file:/a/b/c/d/e.file")));
+    assertEquals(true,
+        ProvidedVolumeImpl.containsBlock(new URI("/a/b/c/"), new URI("/a/b/c/d/e.file")));
+    assertEquals(true,
+        ProvidedVolumeImpl.containsBlock(new URI("file:/a/b/c/"), new URI("/a/b/c/d/e.file")));
     assertEquals(false,
-        ProvidedVolumeImpl.containsBlock(new URI("file:/a"), null));
-    assertEquals(true,
-        ProvidedVolumeImpl.containsBlock(new URI("file:/a/b/c/"),
-            new URI("file:/a/b/c/d/e.file")));
-    assertEquals(true,
-        ProvidedVolumeImpl.containsBlock(new URI("/a/b/c/"),
-            new URI("file:/a/b/c/d/e.file")));
-    assertEquals(true,
-        ProvidedVolumeImpl.containsBlock(new URI("/a/b/c"),
-            new URI("file:/a/b/c/d/e.file")));
-    assertEquals(true,
-        ProvidedVolumeImpl.containsBlock(new URI("/a/b/c/"),
-            new URI("/a/b/c/d/e.file")));
-    assertEquals(true,
-        ProvidedVolumeImpl.containsBlock(new URI("file:/a/b/c/"),
-            new URI("/a/b/c/d/e.file")));
+        ProvidedVolumeImpl.containsBlock(new URI("/a/b/e"), new URI("file:/a/b/c/d/e.file")));
     assertEquals(false,
-        ProvidedVolumeImpl.containsBlock(new URI("/a/b/e"),
-            new URI("file:/a/b/c/d/e.file")));
-    assertEquals(false,
-        ProvidedVolumeImpl.containsBlock(new URI("file:/a/b/e"),
-            new URI("file:/a/b/c/d/e.file")));
+        ProvidedVolumeImpl.containsBlock(new URI("file:/a/b/e"), new URI("file:/a/b/c/d/e.file")));
     assertEquals(true,
         ProvidedVolumeImpl.containsBlock(new URI("s3a:/bucket1/dir1/"),
             new URI("s3a:/bucket1/dir1/temp.txt")));
@@ -557,31 +543,28 @@ public class TestProvidedImpl {
 
   @Test
   public void testProvidedReplicaSuffixExtraction() {
-    assertEquals("B.txt", ProvidedVolumeImpl.getSuffix(
-        new Path("file:///A/"), new Path("file:///A/B.txt")));
-    assertEquals("B/C.txt", ProvidedVolumeImpl.getSuffix(
-        new Path("file:///A/"), new Path("file:///A/B/C.txt")));
-    assertEquals("B/C/D.txt", ProvidedVolumeImpl.getSuffix(
-        new Path("file:///A/"), new Path("file:///A/B/C/D.txt")));
-    assertEquals("D.txt", ProvidedVolumeImpl.getSuffix(
-        new Path("file:///A/B/C/"), new Path("file:///A/B/C/D.txt")));
-    assertEquals("file:/A/B/C/D.txt", ProvidedVolumeImpl.getSuffix(
-        new Path("file:///X/B/C/"), new Path("file:///A/B/C/D.txt")));
-    assertEquals("D.txt", ProvidedVolumeImpl.getSuffix(
-        new Path("/A/B/C"), new Path("/A/B/C/D.txt")));
-    assertEquals("D.txt", ProvidedVolumeImpl.getSuffix(
-        new Path("/A/B/C/"), new Path("/A/B/C/D.txt")));
+    assertEquals("B.txt",
+        ProvidedVolumeImpl.getSuffix(new Path("file:///A/"), new Path("file:///A/B.txt")));
+    assertEquals("B/C.txt",
+        ProvidedVolumeImpl.getSuffix(new Path("file:///A/"), new Path("file:///A/B/C.txt")));
+    assertEquals("B/C/D.txt",
+        ProvidedVolumeImpl.getSuffix(new Path("file:///A/"), new Path("file:///A/B/C/D.txt")));
+    assertEquals("D.txt", ProvidedVolumeImpl.getSuffix(new Path("file:///A/B/C/"),
+        new Path("file:///A/B/C/D.txt")));
+    assertEquals("file:/A/B/C/D.txt", ProvidedVolumeImpl.getSuffix(new Path("file:///X/B/C/"),
+        new Path("file:///A/B/C/D.txt")));
+    assertEquals("D.txt",
+        ProvidedVolumeImpl.getSuffix(new Path("/A/B/C"), new Path("/A/B/C/D.txt")));
+    assertEquals("D.txt",
+        ProvidedVolumeImpl.getSuffix(new Path("/A/B/C/"), new Path("/A/B/C/D.txt")));
 
     assertEquals("data/current.csv", ProvidedVolumeImpl.getSuffix(
-        new Path("wasb:///users/alice/"),
-        new Path("wasb:///users/alice/data/current.csv")));
-    assertEquals("current.csv", ProvidedVolumeImpl.getSuffix(
-        new Path("wasb:///users/alice/data"),
+        new Path("wasb:///users/alice/"), new Path("wasb:///users/alice/data/current.csv")));
+    assertEquals("current.csv", ProvidedVolumeImpl.getSuffix(new Path("wasb:///users/alice/data"),
         new Path("wasb:///users/alice/data/current.csv")));
 
     assertEquals("wasb:/users/alice/data/current.csv",
-        ProvidedVolumeImpl.getSuffix(
-            new Path("wasb:///users/bob/"),
+        ProvidedVolumeImpl.getSuffix(new Path("wasb:///users/bob/"),
             new Path("wasb:///users/alice/data/current.csv")));
   }
 

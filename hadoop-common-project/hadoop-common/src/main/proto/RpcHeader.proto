@@ -95,6 +95,8 @@ message RpcRequestHeaderProto { // the header for the RpcRequest
   // The client should not interpret these bytes, but only forward bytes
   // received from RpcResponseHeaderProto.routerFederatedState.
   optional bytes routerFederatedState = 9;
+  // Authorization header for passing opaque credentials or tokens
+  optional bytes authorizationHeader = 10;
 }
 
 

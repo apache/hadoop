@@ -24,8 +24,8 @@ import java.util.Collection;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -51,7 +51,8 @@ import static org.apache.hadoop.fs.s3a.impl.InternalConstants.UPLOAD_PART_COUNT_
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.assertj.core.api.Assumptions.assumeThat;
 
-@RunWith(Parameterized.class)
+@ParameterizedClass(name="conditionalCreateEnabled-{0}")
+@MethodSource("data")
 public class ITestS3AConditionalCreateBehavior extends AbstractS3ATestBase {
 
   private static final byte[] SMALL_FILE_BYTES = dataset(TEST_FILE_LEN, 0, 255);
@@ -62,7 +63,6 @@ public class ITestS3AConditionalCreateBehavior extends AbstractS3ATestBase {
     this.conditionalCreateEnabled = conditionalCreateEnabled;
   }
 
-  @Parameterized.Parameters
   public static Collection<Object[]> data() {
     return Arrays.asList(new Object[][]{
             {true},

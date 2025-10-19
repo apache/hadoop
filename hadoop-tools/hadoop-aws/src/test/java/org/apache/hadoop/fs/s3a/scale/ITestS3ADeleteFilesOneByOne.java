@@ -20,10 +20,12 @@ package org.apache.hadoop.fs.s3a.scale;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.Constants;
+import org.apache.hadoop.test.tags.ScaleTest;
 
 /**
  * Tests file deletion with multi-delete disabled.
  */
+@ScaleTest
 public class ITestS3ADeleteFilesOneByOne extends ITestS3ADeleteManyFiles {
 
   @Override

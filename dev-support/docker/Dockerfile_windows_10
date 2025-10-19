@@ -62,8 +62,8 @@ RUN powershell Invoke-WebRequest -URI https://cdn.azul.com/zulu/bin/zulu8.62.0.1
 RUN powershell Expand-Archive -Path $Env:TEMP\zulu8.62.0.19-ca-jdk8.0.332-win_x64.zip -DestinationPath "C:\Java"
 
 # Install Apache Maven.
-RUN powershell Invoke-WebRequest -URI https://archive.apache.org/dist/maven/maven-3/3.8.8/binaries/apache-maven-3.8.8-bin.zip -OutFile $Env:TEMP\apache-maven-3.8.8-bin.zip
-RUN powershell Expand-Archive -Path $Env:TEMP\apache-maven-3.8.8-bin.zip -DestinationPath "C:\Maven"
+RUN powershell Invoke-WebRequest -URI https://archive.apache.org/dist/maven/maven-3/3.9.11/binaries/apache-maven-3.9.11-bin.zip -OutFile $Env:TEMP\apache-maven-3.9.11-bin.zip
+RUN powershell Expand-Archive -Path $Env:TEMP\apache-maven-3.9.11-bin.zip -DestinationPath "C:\Maven"
 
 # Install CMake 3.19.0.
 RUN powershell Invoke-WebRequest -URI https://cmake.org/files/v3.19/cmake-3.19.0-win64-x64.zip -OutFile $Env:TEMP\cmake-3.19.0-win64-x64.zip
@@ -74,11 +74,11 @@ RUN powershell Invoke-WebRequest -Uri https://github.com/facebook/zstd/releases/
 RUN powershell Expand-Archive -Path $Env:TEMP\zstd-v1.5.4-win64.zip -DestinationPath "C:\ZStd"
 RUN setx PATH "%PATH%;C:\ZStd"
 
-# Install libopenssl 3.1.4 needed for rsync 3.2.7.
-RUN powershell Invoke-WebRequest -Uri https://repo.msys2.org/msys/x86_64/libopenssl-3.1.4-1-x86_64.pkg.tar.zst -OutFile $Env:TEMP\libopenssl-3.1.4-1-x86_64.pkg.tar.zst
-RUN powershell zstd -d $Env:TEMP\libopenssl-3.1.4-1-x86_64.pkg.tar.zst -o $Env:TEMP\libopenssl-3.1.4-1-x86_64.pkg.tar
+# Install libopenssl 3.5.2-1 needed for rsync 3.2.7.
+RUN powershell Invoke-WebRequest -Uri https://repo.msys2.org/msys/x86_64/libopenssl-3.5.2-1-x86_64.pkg.tar.zst -OutFile $Env:TEMP\libopenssl-3.5.2-1-x86_64.pkg.tar.zst
+RUN powershell zstd -d $Env:TEMP\libopenssl-3.5.2-1-x86_64.pkg.tar.zst -o $Env:TEMP\libopenssl-3.5.2-1-x86_64.pkg.tar
 RUN powershell mkdir "C:\LibOpenSSL"
-RUN powershell tar -xvf $Env:TEMP\libopenssl-3.1.4-1-x86_64.pkg.tar -C "C:\LibOpenSSL"
+RUN powershell tar -xvf $Env:TEMP\libopenssl-3.5.2-1-x86_64.pkg.tar -C "C:\LibOpenSSL"
 
 # Install libxxhash 0.8.3 needed for rsync 3.2.7.
 RUN powershell Invoke-WebRequest -Uri https://repo.msys2.org/msys/x86_64/libxxhash-0.8.3-1-x86_64.pkg.tar.zst -OutFile $Env:TEMP\libxxhash-0.8.3-1-x86_64.pkg.tar.zst
@@ -141,7 +141,7 @@ ENV MAVEN_OPTS '-Xmx2048M -Xss128M'
 ENV IS_WINDOWS 1
 RUN setx PATH "%PATH%;%ALLUSERSPROFILE%\chocolatey\bin"
 RUN setx PATH "%PATH%;%JAVA_HOME%\bin"
-RUN setx PATH "%PATH%;C:\Maven\apache-maven-3.8.8\bin"
+RUN setx PATH "%PATH%;C:\Maven\apache-maven-3.9.11\bin"
 RUN setx PATH "%PATH%;C:\CMake\cmake-3.19.0-win64-x64\bin"
 RUN setx PATH "%PATH%;C:\ZStd"
 RUN setx PATH "%PATH%;C:\Program Files\Git\usr\bin"

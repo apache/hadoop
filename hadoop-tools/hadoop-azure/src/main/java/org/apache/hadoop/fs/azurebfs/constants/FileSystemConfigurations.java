@@ -58,6 +58,12 @@ public final class FileSystemConfigurations {
    */
   public static final int DEFAULT_HTTP_READ_TIMEOUT = 30_000; // 30 secs
 
+  /**
+   * Default value of connection request timeout to be used when 100continue is enabled.
+   * Value: {@value}.
+   */
+  public static final int DEFAULT_EXPECT_100CONTINUE_WAIT_TIMEOUT = 3_000; // 3s
+
   // Retry parameter defaults.
   public static final int DEFAULT_AZURE_OAUTH_TOKEN_FETCH_RETRY_MAX_ATTEMPTS = 5;
   public static final int DEFAULT_AZURE_OAUTH_TOKEN_FETCH_RETRY_MIN_BACKOFF_INTERVAL = 0;
@@ -75,6 +81,7 @@ public final class FileSystemConfigurations {
   public static final boolean DEFAULT_READ_SMALL_FILES_COMPLETELY = false;
   public static final boolean DEFAULT_OPTIMIZE_FOOTER_READ = true;
   public static final int DEFAULT_FOOTER_READ_BUFFER_SIZE = 512 * ONE_KB;
+  public static final boolean DEFAULT_BUFFERED_PREAD_DISABLE = false;
   public static final boolean DEFAULT_ALWAYS_READ_BUFFER_SIZE = false;
   public static final int DEFAULT_READ_AHEAD_BLOCK_SIZE = 4 * ONE_MB;
   public static final int DEFAULT_READ_AHEAD_RANGE = 64 * ONE_KB; // 64 KB
@@ -127,6 +134,14 @@ public final class FileSystemConfigurations {
   public static final long DEFAULT_SAS_TOKEN_RENEW_PERIOD_FOR_STREAMS_IN_SECONDS = 120;
 
   public static final boolean DEFAULT_ENABLE_READAHEAD = true;
+  public static final boolean DEFAULT_ENABLE_READAHEAD_V2 = false;
+  public static final int DEFAULT_READAHEAD_V2_MIN_THREAD_POOL_SIZE = -1;
+  public static final int DEFAULT_READAHEAD_V2_MAX_THREAD_POOL_SIZE = -1;
+  public static final int DEFAULT_READAHEAD_V2_MIN_BUFFER_POOL_SIZE = -1;
+  public static final int DEFAULT_READAHEAD_V2_MAX_BUFFER_POOL_SIZE = -1;
+  public static final int DEFAULT_READAHEAD_V2_EXECUTOR_SERVICE_TTL_MILLIS = 3_000;
+  public static final int DEFAULT_READAHEAD_V2_CACHED_BUFFER_TTL_MILLIS = 6_000;
+
   public static final String DEFAULT_FS_AZURE_USER_AGENT_PREFIX = EMPTY_STRING;
   public static final String DEFAULT_VALUE_UNKNOWN = "UNKNOWN";
 
@@ -138,6 +153,7 @@ public final class FileSystemConfigurations {
   public static final boolean DEFAULT_ENABLE_ABFS_RENAME_RESILIENCE = true;
   public static final boolean DEFAULT_ENABLE_PAGINATED_DELETE = false;
   public static final boolean DEFAULT_ENABLE_ABFS_CHECKSUM_VALIDATION = false;
+  public static final boolean DEFAULT_ENABLE_FULL_BLOB_ABFS_CHECKSUM_VALIDATION = false;
 
   /**
    * Limit of queued block upload operations before writes
@@ -149,6 +165,36 @@ public final class FileSystemConfigurations {
    * Length of the block ID used for appends.
    */
   public static final int BLOCK_ID_LENGTH = 60;
+
+  /**
+   * Format string for generating block IDs.
+   * Example: "%s-%06d" where %s is the stream ID and %06d is the block index.
+   */
+  public static final String BLOCK_ID_FORMAT = "%s-%06d";
+
+  /**
+   * Format string for padding block IDs.
+   * Example: "%-" specifies left alignment in the format string.
+   */
+  public static final String PADDING_FORMAT = "%-";
+
+  /**
+   * Suffix for string formatting.
+   * Example: "s" specifies the type as a string in the format string.
+   */
+  public static final String STRING_SUFFIX = "s";
+
+  /**
+   * Character used for padding spaces in block IDs.
+   * Example: ' ' represents a space character.
+   */
+  public static final char SPACE_CHARACTER = ' ';
+
+  /**
+   * Character used for padding block IDs.
+   * Example: '_' is used to replace spaces in padded block IDs.
+   */
+  public static final char PADDING_CHARACTER = '_';
 
   /**
    * Buffer blocks to disk.
@@ -174,13 +220,31 @@ public final class FileSystemConfigurations {
   public static final long THOUSAND = 1000L;
 
   public static final HttpOperationType DEFAULT_NETWORKING_LIBRARY
-      = HttpOperationType.JDK_HTTP_URL_CONNECTION;
+      = HttpOperationType.APACHE_HTTP_CLIENT;
 
   public static final int DEFAULT_APACHE_HTTP_CLIENT_MAX_IO_EXCEPTION_RETRIES = 3;
 
-  public static final long DEFAULT_HTTP_CLIENT_CONN_MAX_IDLE_TIME = 5_000L;
+  public static final int DEFAULT_APACHE_HTTP_CLIENT_MAX_CACHE_SIZE = 10;
 
-  public static final int DEFAULT_HTTP_CLIENT_CONN_MAX_CACHED_CONNECTIONS = 5;
+  public static final int MIN_APACHE_HTTP_CLIENT_MAX_CACHE_SIZE = 5;
+
+  public static final int MAX_APACHE_HTTP_CLIENT_MAX_CACHE_SIZE = 20;
+
+  public static final int DEFAULT_APACHE_HTTP_CLIENT_CACHE_WARMUP_COUNT = 5;
+
+  public static final int MAX_APACHE_HTTP_CLIENT_CACHE_WARMUP_COUNT = 5;
+
+  public static final int DEFAULT_APACHE_HTTP_CLIENT_CACHE_REFRESH_COUNT = 3;
+
+  public static final int MAX_APACHE_HTTP_CLIENT_CACHE_REFRESH_COUNT = 5;
+
+  public static final long DEFAULT_APACHE_HTTP_CLIENT_MAX_REFRESH_WAIT_TIME_MILLIS = 500L;
+
+  public static final int DEFAULT_APACHE_HTTP_CLIENT_MIN_TRIGGER_REFRESH_COUNT = 2;
+
+  public static final long DEFAULT_APACHE_HTTP_CLIENT_WARMUP_CACHE_TIMEOUT_MILLIS = 2_000L;
+
+  public static final int MAX_APACHE_HTTP_CLIENT_MIN_TRIGGER_REFRESH_COUNT = 5;
 
   public static final long DEFAULT_AZURE_BLOB_COPY_PROGRESS_WAIT_MILLIS = 1_000L;
 
@@ -199,6 +263,8 @@ public final class FileSystemConfigurations {
   public static final int DEFAULT_FS_AZURE_BLOB_DELETE_THREAD = DEFAULT_FS_AZURE_LISTING_ACTION_THREADS;
 
   public static final boolean DEFAULT_FS_AZURE_ENABLE_CLIENT_TRANSACTION_ID = true;
+
+  public static final boolean DEFAULT_FS_AZURE_ENABLE_CREATE_BLOB_IDEMPOTENCY = true;
 
   private FileSystemConfigurations() {}
 }

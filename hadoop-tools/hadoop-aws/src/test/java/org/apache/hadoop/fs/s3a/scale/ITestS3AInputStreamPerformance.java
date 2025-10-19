@@ -39,6 +39,7 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.CompressionCodecFactory;
+import org.apache.hadoop.test.tags.ScaleTest;
 import org.apache.hadoop.util.LineReader;
 
 import org.assertj.core.api.Assertions;
@@ -79,6 +80,7 @@ import static org.apache.hadoop.util.functional.FutureIO.awaitFuture;
 /**
  * Look at the performance of S3a Input Stream Reads.
  */
+@ScaleTest
 public class ITestS3AInputStreamPerformance extends S3AScaleTestBase {
   private static final Logger LOG = LoggerFactory.getLogger(
       ITestS3AInputStreamPerformance.class);
