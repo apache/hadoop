@@ -391,7 +391,7 @@ Note that the site needs to be built in a second pass after other artifacts.
 ----------------------------------------------------------------------------------
 Including Cloud Connector Dependencies in Distributions:
 
-Hadoop distributions include the hadoop modules need to work with data and services
+Hadoop distributions include the hadoop modules needed to work with data and services
 on cloud infrastructure
 
 However, dependencies are omitted for all cloud connectors except hadoop-azure
@@ -400,15 +400,14 @@ For the latter two modules, it depends on shading options.
 
 For hadoop-aws the AWS SDK bundle.jar is omitted, but everything else is included.
 
-
 Excluding the extra binaries:
-* Keeps release artifact size below the limit of the ASF distribution network
+* Keeps release artifact size below the limit of the ASF distribution network.
 * Reduces download and size overhead in docker usage.
-* Reduces the CVE attack surface
+* Reduces the CVE attack surface and audit-related complaints about those same ScVES.
 * Reduces the risk of classpath conflict.
 
 To produce a build with the specific desired dependencies, the build must be executed
-with the relevant profile of ${module}-package.
+with the relevant profile of ${module}-package alongside the -Pdist profile.
 
 For example, a build with the hadoop-aws and hadoop-azure-datalake dependencies,
 run with
