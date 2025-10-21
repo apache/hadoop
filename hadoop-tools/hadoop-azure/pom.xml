@@ -199,6 +199,13 @@
       <scope>compile</scope>
     </dependency>
 
+    <dependency>
+      <groupId>org.hdrhistogram</groupId>
+      <artifactId>HdrHistogram</artifactId>
+      <version>2.1.12</version>
+      <scope>compile</scope>
+    </dependency>
+
     <!--com.fasterxml.jackson is used by WASB, not ABFS-->
     <!--transitive dependency from Azure SDK-->
     <dependency>
