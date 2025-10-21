@@ -91,11 +91,14 @@ public class AbfsAHCHttpOperation extends AbfsHttpOperation {
    */
   private final AbfsApacheHttpClient abfsApacheHttpClient;
 
+  private final long tailLatencyMs;
+
   public AbfsAHCHttpOperation(final URL url,
       final String method,
       final List<AbfsHttpHeader> requestHeaders,
       final Duration connectionTimeout,
       final Duration readTimeout,
+      final long tailLatencyMs,
       final AbfsApacheHttpClient abfsApacheHttpClient,
       final AbfsClient abfsClient) throws IOException {
     super(LOG, url, method, requestHeaders, connectionTimeout, readTimeout,
@@ -104,6 +107,7 @@ public class AbfsAHCHttpOperation extends AbfsHttpOperation {
         || HTTP_METHOD_PATCH.equals(method)
         || HTTP_METHOD_POST.equals(method);
     this.abfsApacheHttpClient = abfsApacheHttpClient;
+    this.tailLatencyMs = tailLatencyMs;
     LOG.debug("Creating AbfsAHCHttpOperation for URL: {}, method: {}",
         url, method);
 
@@ -157,6 +161,10 @@ public class AbfsAHCHttpOperation extends AbfsHttpOperation {
   @VisibleForTesting
   AbfsManagedHttpClientContext getHttpClientContext() {
     return new AbfsManagedHttpClientContext();
+  }
+
+  long getTailLatencyMs() {
+    return tailLatencyMs;
   }
 
   /**{@inheritDoc}*/
@@ -273,7 +281,7 @@ public class AbfsAHCHttpOperation extends AbfsHttpOperation {
     try {
       LOG.debug("Executing request: {}", httpRequestBase);
       HttpResponse response = abfsApacheHttpClient.execute(httpRequestBase,
-          abfsHttpClientContext, getConnectionTimeout(), getReadTimeout());
+          abfsHttpClientContext, getConnectionTimeout(), getReadTimeout(), getTailLatencyMs());
       setConnectionTimeMs(abfsHttpClientContext.getConnectTime());
       setSendRequestTimeMs(abfsHttpClientContext.getSendTime());
       setRecvResponseTimeMs(abfsHttpClientContext.getReadTime());

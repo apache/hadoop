@@ -21,8 +21,14 @@ package org.apache.hadoop.fs.azurebfs.services;
 import java.io.Closeable;
 import java.io.IOException;
 import java.net.URL;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.TailLatencyRequestTimeoutException;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.config.RequestConfig;
@@ -134,13 +140,54 @@ final class AbfsApacheHttpClient implements Closeable {
   public HttpResponse execute(HttpRequestBase httpRequest,
       final AbfsManagedHttpClientContext abfsHttpClientContext,
       final int connectTimeout,
-      final int readTimeout) throws IOException {
+      final int readTimeout,
+      final long tailLatency) throws IOException {
+    if (tailLatency <= 0) {
+      return executeWithDeadline(httpRequest, abfsHttpClientContext,
+          connectTimeout, readTimeout, Long.MAX_VALUE);
+    }
+    return executeWithDeadline(httpRequest, abfsHttpClientContext,
+        connectTimeout, readTimeout, tailLatency);
+  }
+
+  /**
+   * Executes the HTTP request with a deadline. If the request does not complete
+   * within the deadline, it is aborted and an IOException is thrown.
+   *
+   * @param httpRequest HTTP request to execute.
+   * @param abfsHttpClientContext HttpClient context.
+   * @param connectTimeout Connection timeout.
+   * @param readTimeout Read timeout.
+   * @param deadlineMillis Deadline in milliseconds.
+   *
+   * @return HTTP response.
+   * @throws IOException network error or deadline exceeded.
+   */
+  public HttpResponse executeWithDeadline(HttpRequestBase httpRequest,
+      final AbfsManagedHttpClientContext abfsHttpClientContext,
+      final int connectTimeout,
+      final int readTimeout,
+      final long deadlineMillis) throws IOException {
+
     RequestConfig.Builder requestConfigBuilder = RequestConfig
         .custom()
         .setConnectTimeout(connectTimeout)
         .setSocketTimeout(readTimeout);
     httpRequest.setConfig(requestConfigBuilder.build());
-    return httpClient.execute(httpRequest, abfsHttpClientContext);
+
+    ExecutorService executor = Executors.newSingleThreadExecutor();
+    Future<HttpResponse> future = executor.submit(() ->
+        httpClient.execute(httpRequest, abfsHttpClientContext));
+    try {
+      return future.get(deadlineMillis, TimeUnit.MILLISECONDS);
+    } catch (TimeoutException e) {
+      httpRequest.abort();
+      throw new TailLatencyRequestTimeoutException(e);
+    } catch (Exception e) {
+      throw new IOException("Request execution with deadline failed", e);
+    } finally {
+      executor.shutdownNow();
+    }
   }
 
   /**

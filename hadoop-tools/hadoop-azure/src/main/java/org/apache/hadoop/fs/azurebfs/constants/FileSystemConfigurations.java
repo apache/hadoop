@@ -266,5 +266,15 @@ public final class FileSystemConfigurations {
 
   public static final boolean DEFAULT_FS_AZURE_ENABLE_CREATE_BLOB_IDEMPOTENCY = true;
 
+  public static final boolean DEFAULT_FS_AZURE_ENABLE_TAIL_LATENCY_TRACKER = false;
+  public static final boolean DEFAULT_FS_AZURE_ENABLE_TAIL_LATENCY_REQUEST_TIMEOUT = false;
+  public static final int DEFAULT_FS_AZURE_TAIL_LATENCY_PERCENTILE = 99;
+  public static final int DEFAULT_FS_AZURE_TAIL_LATENCY_MIN_DEVIATION = 200;
+  public static final int DEFAULT_FS_AZURE_TAIL_LATENCY_MIN_SAMPLE_SIZE = 100;
+  public static final int DEFAULT_FS_AZURE_TAIL_LATENCY_ANALYSIS_WINDOW_MILLIS = 60_000;
+  public static final int DEFAULT_FS_AZURE_TAIL_LATENCY_ANALYSIS_WINDOW_GRANULARITY = 10;
+  public static final int DEFAULT_FS_AZURE_TAIL_LATENCY_PERCENTILE_COMPUTATION_INTERVAL_MILLIS = 500;
+  public static final int DEFAULT_FS_AZURE_TAIL_LATENCY_MAX_RETRY_COUNT = 1;
+
   private FileSystemConfigurations() {}
 }

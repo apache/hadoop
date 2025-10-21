@@ -80,6 +80,8 @@ public class AbfsRestOperation {
   private final AbfsClient client;
   // Return intercept instance
   private final AbfsThrottlingIntercept intercept;
+  // Latency tracker
+  private final AbfsTailLatencyTracker tailLatencyTracker;
   // the HTTP method (PUT, PATCH, POST, GET, HEAD, or DELETE)
   private final String method;
   // full URL including query parameters
@@ -114,6 +116,7 @@ public class AbfsRestOperation {
    */
   private String failureReason;
   private AbfsRetryPolicy retryPolicy;
+  private boolean shouldTailLatencyTimeout = true;
 
   private final AbfsConfiguration abfsConfiguration;
 
@@ -233,6 +236,7 @@ public class AbfsRestOperation {
     }
     this.maxIoRetries = abfsConfiguration.getMaxIoRetries();
     this.intercept = client.getIntercept();
+    this.tailLatencyTracker = client.getLatencyTracker();
     this.abfsConfiguration = abfsConfiguration;
     this.retryPolicy = client.getExponentialRetryPolicy();
   }
@@ -520,6 +524,10 @@ public class AbfsRestOperation {
         }
       }
       if (!retryPolicy.shouldRetry(retryCount, -1)) {
+        if (retryPolicy instanceof TailLatencyRequestTimeoutRetryPolicy) {
+          shouldTailLatencyTimeout = false;
+          return false;
+        }
         updateBackoffMetrics(retryCount, httpOperation.getStatusCode());
         throw new InvalidAbfsRestOperationException(ex, retryCount);
       }
@@ -530,6 +538,11 @@ public class AbfsRestOperation {
       // Also Update in case of any unhandled exception is thrown.
       if (shouldUpdateCSTMetrics(statusCode) && !wasKnownExceptionThrown) {
         intercept.updateMetrics(operationType, httpOperation);
+      }
+
+      if (tailLatencyTracker != null && statusCode <  HttpURLConnection.HTTP_MULT_CHOICE) {
+        tailLatencyTracker.updateLatency(operationType,
+            httpOperation.getSendLatency() + httpOperation.getRecvLatency());
       }
     }
 
@@ -611,10 +624,18 @@ public class AbfsRestOperation {
 
   @VisibleForTesting
   AbfsAHCHttpOperation createAbfsAHCHttpOperation() throws IOException {
+    long tailLatency = getTailLatencyIfTimeoutEnabled();
     return new AbfsAHCHttpOperation(url, method, requestHeaders,
         Duration.ofMillis(client.getAbfsConfiguration().getHttpConnectionTimeout()),
         Duration.ofMillis(client.getAbfsConfiguration().getHttpReadTimeout()),
-        client.getAbfsApacheHttpClient(), client);
+        tailLatency, client.getAbfsApacheHttpClient(), client);
+  }
+
+  long getTailLatencyIfTimeoutEnabled() {
+    if (tailLatencyTracker != null && abfsConfiguration.isTailLatencyRequestTimeoutEnabled() && shouldTailLatencyTimeout) {
+      return (long) tailLatencyTracker.getTailLatency(this.operationType);
+    }
+    return ZERO;
   }
 
   /**

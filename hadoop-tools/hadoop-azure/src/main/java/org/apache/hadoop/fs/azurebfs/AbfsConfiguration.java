@@ -519,6 +519,42 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_FS_AZURE_ENABLE_CREATE_BLOB_IDEMPOTENCY)
   private boolean enableCreateIdempotency;
 
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ENABLE_TAIL_LATENCY_TRACKER,
+      DefaultValue = DEFAULT_FS_AZURE_ENABLE_TAIL_LATENCY_TRACKER)
+  private boolean isTailLatencyTrackerEnabled;
+
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ENABLE_TAIL_LATENCY_REQUEST_TIMEOUT,
+      DefaultValue = DEFAULT_FS_AZURE_ENABLE_TAIL_LATENCY_REQUEST_TIMEOUT)
+  private boolean isTailLatencyRequestTimeoutEnabled;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_TAIL_LATENCY_PERCENTILE,
+      DefaultValue = DEFAULT_FS_AZURE_TAIL_LATENCY_PERCENTILE)
+  private int tailLatencyPercentile;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_TAIL_LATENCY_MIN_DEVIATION,
+      DefaultValue = DEFAULT_FS_AZURE_TAIL_LATENCY_MIN_DEVIATION)
+  private int tailLatencyMinDeviation;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_TAIL_LATENCY_MIN_SAMPLE_SIZE,
+      DefaultValue = DEFAULT_FS_AZURE_TAIL_LATENCY_MIN_SAMPLE_SIZE)
+  private int tailLatencyMinSampleSize;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_TAIL_LATENCY_ANALYSIS_WINDOW_MILLIS,
+      DefaultValue = DEFAULT_FS_AZURE_TAIL_LATENCY_ANALYSIS_WINDOW_MILLIS)
+  private int tailLatencyAnalysisWindowInMillis;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_TAIL_LATENCY_ANALYSIS_WINDOW_GRANULARITY,
+      DefaultValue = DEFAULT_FS_AZURE_TAIL_LATENCY_ANALYSIS_WINDOW_GRANULARITY)
+  private int tailLatencyAnalysisWindowGranularity;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_TAIL_LATENCY_PERCENTILE_COMPUTATION_INTERVAL_MILLIS,
+      DefaultValue = DEFAULT_FS_AZURE_TAIL_LATENCY_PERCENTILE_COMPUTATION_INTERVAL_MILLIS)
+  private int tailLatencyPercentileComputationIntervalInMillis;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_TAIL_LATENCY_MAX_RETRY_COUNT,
+      DefaultValue = DEFAULT_FS_AZURE_TAIL_LATENCY_MAX_RETRY_COUNT)
+  private int tailLatencyMaxRetryCount;
+
   private String clientProvidedEncryptionKey;
   private String clientProvidedEncryptionKeySHA;
 
@@ -1823,5 +1859,42 @@ public class AbfsConfiguration{
 
   public int getBlobDeleteDirConsumptionParallelism() {
     return blobDeleteDirConsumptionParallelism;
+  }
+
+  public boolean isTailLatencyTrackerEnabled() {
+    return isTailLatencyTrackerEnabled;
+  }
+
+  public boolean isTailLatencyRequestTimeoutEnabled() {
+    return isTailLatencyRequestTimeoutEnabled && isTailLatencyTrackerEnabled
+        && getPreferredHttpOperationType().equals(HttpOperationType.APACHE_HTTP_CLIENT);
+  }
+
+  public int getTailLatencyPercentile() {
+    return tailLatencyPercentile;
+  }
+
+  public int getTailLatencyMinDeviation() {
+    return tailLatencyMinDeviation;
+  }
+
+  public int getTailLatencyMinSampleSize() {
+    return tailLatencyMinSampleSize;
+  }
+
+  public int getTailLatencyAnalysisWindowInMillis() {
+    return tailLatencyAnalysisWindowInMillis;
+  }
+
+  public int getTailLatencyPercentileComputationIntervalInMillis() {
+    return tailLatencyPercentileComputationIntervalInMillis;
+  }
+
+  public int getTailLatencyAnalysisWindowGranularity() {
+    return tailLatencyAnalysisWindowGranularity;
+  }
+
+  public int getTailLatencyMaxRetryCount() {
+    return tailLatencyMaxRetryCount;
   }
 }

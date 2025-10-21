@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * <p>
- * http://www.apache.org/licenses/LICENSE-2.0
- * <p>
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,22 +18,26 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
-public final class RetryPolicyConstants {
+import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 
-  private RetryPolicyConstants() {
+public class TailLatencyRequestTimeoutRetryPolicy extends AbfsRetryPolicy{
 
+  /**
+   * Initializes a new instance of the {@link TailLatencyRequestTimeoutRetryPolicy} class.
+   * @param conf The {@link AbfsConfiguration} from which to retrieve retry configuration.
+   */
+  public TailLatencyRequestTimeoutRetryPolicy(AbfsConfiguration conf) {
+    super(conf.getTailLatencyMaxRetryCount(), RetryPolicyConstants.TAIL_LATENCY_TIMEOUT_RETRY_POLICY_ABBREVIATION);
   }
 
   /**
-   * Constant for Exponential Retry Policy Abbreviation. {@value}
+   * Returns a constant backoff interval independent of retry count;
+   *
+   * @param retryCount The current retry attempt count.
+   * @return backoff Interval time
    */
-  public static final String EXPONENTIAL_RETRY_POLICY_ABBREVIATION= "E";
-  /**
-   * Constant for Static Retry Policy Abbreviation. {@value}
-   */
-  public static final String STATIC_RETRY_POLICY_ABBREVIATION = "S";
-  /**
-   * Constant for Static Retry Policy Abbreviation. {@value}
-   */
-  public static final String TAIL_LATENCY_TIMEOUT_RETRY_POLICY_ABBREVIATION = "T";
+  @Override
+  public long getRetryInterval(final int retryCount) {
+    return 0;
+  }
 }

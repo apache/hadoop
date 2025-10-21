@@ -16,24 +16,17 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.azurebfs.services;
+package org.apache.hadoop.fs.azurebfs.contracts.exceptions;
 
-public final class RetryPolicyConstants {
+import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_TAIL_LATENCY_REQUEST_TIMEOUT;
 
-  private RetryPolicyConstants() {
+public class TailLatencyRequestTimeoutException extends AzureBlobFileSystemException {
 
+  public TailLatencyRequestTimeoutException() {
+    super(ERR_TAIL_LATENCY_REQUEST_TIMEOUT);
   }
 
-  /**
-   * Constant for Exponential Retry Policy Abbreviation. {@value}
-   */
-  public static final String EXPONENTIAL_RETRY_POLICY_ABBREVIATION= "E";
-  /**
-   * Constant for Static Retry Policy Abbreviation. {@value}
-   */
-  public static final String STATIC_RETRY_POLICY_ABBREVIATION = "S";
-  /**
-   * Constant for Static Retry Policy Abbreviation. {@value}
-   */
-  public static final String TAIL_LATENCY_TIMEOUT_RETRY_POLICY_ABBREVIATION = "T";
+  public TailLatencyRequestTimeoutException(Exception innerException) {
+    super(ERR_TAIL_LATENCY_REQUEST_TIMEOUT, innerException);
+  }
 }
