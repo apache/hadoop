@@ -75,7 +75,7 @@ public class ITestS3AMiniYarnCluster extends AbstractS3ATestBase {
     super.setup();
     S3AFileSystem fs = getFileSystem();
     Configuration conf = getConfiguration();
-    assumeMultipartUploads(conf);
+    assumeMultipartUploads(fs.getConf());
     rootPath = path("MiniClusterWordCount");
     Path workingDir = path("working");
     fs.setWorkingDirectory(workingDir);

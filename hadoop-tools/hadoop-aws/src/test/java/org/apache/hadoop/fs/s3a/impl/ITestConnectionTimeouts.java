@@ -259,20 +259,21 @@ public class ITestConnectionTimeouts extends AbstractS3ATestBase {
 
       // and try a multipart upload to verify that its requests also outlast
       // the short requests
-      SdkFaultInjector.setRequestFailureConditions(999,
-          SdkFaultInjector::isPartUpload);
-      Path magicFile = new Path(dir, MAGIC_PATH_PREFIX + "0001/__base/file2");
-      totalSleepTime.set(0);
-      OperationDuration dur2 = new DurationInfo(LOG, "Creating File");
-      ContractTestUtils.createFile(brittleFS, magicFile, true, DATASET);
-      dur2.finished();
-      Assertions.assertThat(totalSleepTime.get())
-          .describedAs("total sleep time of magic write")
-          .isGreaterThan(0);
-      Assertions.assertThat(dur2.asDuration())
-          .describedAs("Duration of magic write")
-          .isGreaterThan(shortTimeout);
-      brittleFS.delete(dir, true);
+      if (fs.isMagicCommitEnabled()) {
+        SdkFaultInjector.setRequestFailureConditions(999,
+            SdkFaultInjector::isPartUpload);
+        Path magicFile = new Path(dir, MAGIC_PATH_PREFIX + "0001/__base/file2");
+        totalSleepTime.set(0);
+        OperationDuration dur2 = new DurationInfo(LOG, "Creating File");
+        ContractTestUtils.createFile(brittleFS, magicFile, true, DATASET);
+        dur2.finished();
+        Assertions.assertThat(totalSleepTime.get())
+            .describedAs("total sleep time of magic write")
+            .isGreaterThan(0);
+        Assertions.assertThat(dur2.asDuration())
+            .describedAs("Duration of magic write")
+            .isGreaterThan(shortTimeout);
+      }
     }
   }
 }
