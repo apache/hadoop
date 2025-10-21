@@ -58,6 +58,7 @@ import static org.apache.hadoop.fs.s3a.MultipartTestUtils.assertNoUploadsAt;
 import static org.apache.hadoop.fs.s3a.MultipartTestUtils.clearAnyUploads;
 import static org.apache.hadoop.fs.s3a.MultipartTestUtils.createMagicFile;
 import static org.apache.hadoop.fs.s3a.MultipartTestUtils.magicPath;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.assumeMultipartUploads;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.toPathList;
 import static org.apache.hadoop.fs.s3a.S3AUtils.HIDDEN_FILE_FILTER;
@@ -106,6 +107,7 @@ public class ITestTreewalkProblems extends AbstractS3ACostTest {
     final S3AFileSystem fs = getFileSystem();
     final Path path = methodPath();
     assertHasPathCapabilities(fs, path, DIRECTORY_OPERATIONS_PURGE_UPLOADS);
+    assumeMultipartUploads(fs.getConf());
     listingInconsistent = fs.hasPathCapability(path, DIRECTORY_LISTING_INCONSISTENT);
     clearAnyUploads(fs, path);
   }

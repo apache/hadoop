@@ -515,7 +515,7 @@ As of October 2025 and the 2.33.8 AWS SDK, the settings needed to interact with 
   
 ```
 
-# Google Cloud Storage through the S3A connector
+## Google Cloud Storage through the S3A connector
 
 It *is* possible to connect to google cloud storage through the S3A connector.
 However, Google provide their own [Cloud Storage connector](https://cloud.google.com/dataproc/docs/concepts/connectors/cloud-storage).
@@ -568,6 +568,12 @@ this makes renaming and deleting significantly slower.
   <property>
     <name>fs.s3a.path.style.access</name>
     <value>true</value>
+  </property>
+  
+  <property>
+    <name>fs.s3a.checksum.calculation.enabled</name>
+    <value>false</value>
+    <description>Calculate and attach a message checksum on every operation. (default: true)</description>
   </property>
   
   <property>

@@ -243,7 +243,7 @@ A credential provider listed in `fs.s3a.aws.credentials.provider` does not imple
 the interface `software.amazon.awssdk.auth.credentials.AwsCredentialsProvider`.
 
 ```
-InstantiationIOException: `s3a://stevel-gcs/': Class org.apache.hadoop.fs.s3a.S3ARetryPolicy does not implement
+InstantiationIOException: `s3a://gcs/': Class org.apache.hadoop.fs.s3a.S3ARetryPolicy does not implement
  software.amazon.awssdk.auth.credentials.AwsCredentialsProvider (configuration key fs.s3a.aws.credentials.provider)
         at org.apache.hadoop.fs.s3a.impl.InstantiationIOException.isNotInstanceOf(InstantiationIOException.java:128)
         at org.apache.hadoop.fs.s3a.S3AUtils.getInstanceFromReflection(S3AUtils.java:604)
@@ -478,6 +478,9 @@ java.nio.file.AccessDeniedException: bucket: doesBucketExist on bucket:
 
 ```
 
+If working with a third-party bucket, verify the `fs.s3a.endpoint` setting
+points to the third-party store.
+
 ###  <a name="access_denied_disabled"></a> `AccessDeniedException` All access to this object has been disabled
 
 Caller has no permission to access the bucket at all.
@@ -601,6 +604,94 @@ This happens when you're trying to read or copy files that have archive storage 
 Glacier.
 
 If you want to access the file with S3A after writes, do not set `fs.s3a.create.storage.class` to `glacier` or `deep_archive`.
+
+### <a name="SignatureDoesNotMatch"></a>`AccessDeniedException` with `SignatureDoesNotMatch` on a third party bucket.
+
+This can surface when trying to interact, especially write data, to a third-party bucket
+
+```
+ Writing Object on example-file: software.amazon.awssdk.services.s3.model.S3Exception: Invalid argument. (Service: S3, Status Code: 403, Request ID: null) (SDK Attempt Count: 1):SignatureDoesNotMatch
+```
+
+The store does not recognize checksum calculation on every operation.
+Fix: disable it by setting `fs.s3a.checksum.calculation.enabled` to `false`.
+
+```
+  <property>
+    <name>fs.s3a.checksum.calculation.enabled</name>
+    <value>false</value>
+    <description>Calculate and attach a message checksum on every operation. (default: true)</description>
+  </property>
+```
+
+Full stack
+
+```
+> bin/hadoop fs -touchz s3a://gcs/example-file
+2025-10-21 16:23:27,642 [main] WARN  s3a.S3ABlockOutputStream (S3ABlockOutputStream.java:progressChanged(1335)) - Transfer failure of block FileBlock{index=1, destFile=/tmp/hadoop-stevel/s3a/s3ablock-0001-1358390699869033998.tmp, state=Upload, dataSize=0, limit=-1}
+2025-10-21 16:23:27,645 [main] DEBUG shell.Command (Command.java:displayError(481)) - touchz failure
+java.nio.file.AccessDeniedException: example-file: Writing Object on example-file: software.amazon.awssdk.services.s3.model.S3Exception: Invalid argument. (Service: S3, Status Code: 403, Request ID: null) (SDK Attempt Count: 1):SignatureDoesNotMatch
+   at org.apache.hadoop.fs.s3a.S3AUtils.translateException(S3AUtils.java:271)
+   at org.apache.hadoop.fs.s3a.Invoker.once(Invoker.java:124)
+   at org.apache.hadoop.fs.s3a.Invoker.lambda$retry$4(Invoker.java:376)
+   at org.apache.hadoop.fs.s3a.Invoker.retryUntranslated(Invoker.java:468)
+   at org.apache.hadoop.fs.s3a.Invoker.retry(Invoker.java:372)
+   at org.apache.hadoop.fs.s3a.Invoker.retry(Invoker.java:347)
+   at org.apache.hadoop.fs.s3a.WriteOperationHelper.retry(WriteOperationHelper.java:210)
+   at org.apache.hadoop.fs.s3a.WriteOperationHelper.putObject(WriteOperationHelper.java:534)
+   at org.apache.hadoop.fs.s3a.S3ABlockOutputStream.putObject(S3ABlockOutputStream.java:726)
+   at org.apache.hadoop.fs.s3a.S3ABlockOutputStream.close(S3ABlockOutputStream.java:518)
+   at org.apache.hadoop.fs.FSDataOutputStream$PositionCache.close(FSDataOutputStream.java:77)
+   at org.apache.hadoop.fs.FSDataOutputStream.close(FSDataOutputStream.java:106)
+   at org.apache.hadoop.fs.shell.TouchCommands$Touchz.touchz(TouchCommands.java:89)
+   at org.apache.hadoop.fs.shell.TouchCommands$Touchz.processNonexistentPath(TouchCommands.java:85)
+   at org.apache.hadoop.fs.shell.Command.processArgument(Command.java:303)   
+   at org.apache.hadoop.fs.shell.Command.processArguments(Command.java:285)  
+   at org.apache.hadoop.fs.shell.FsCommand.processRawArguments(FsCommand.java:121) 
+   at org.apache.hadoop.fs.shell.Command.run(Command.java:192)
+   at org.apache.hadoop.fs.FsShell.run(FsShell.java:327)
+   at org.apache.hadoop.util.ToolRunner.run(ToolRunner.java:82)
+   at org.apache.hadoop.util.ToolRunner.run(ToolRunner.java:97)
+   at org.apache.hadoop.fs.FsShell.main(FsShell.java:390)
+Caused by: software.amazon.awssdk.services.s3.model.S3Exception: Invalid argument. (Service: S3, Status Code: 403, Request ID: null) (SDK Attempt Count: 1)  
+   at software.amazon.awssdk.services.s3.model.S3Exception$BuilderImpl.build(S3Exception.java:113) 
+   at software.amazon.awssdk.services.s3.model.S3Exception$BuilderImpl.build(S3Exception.java:61)  
+   at software.amazon.awssdk.core.internal.http.pipeline.stages.utils.RetryableStageHelper.retryPolicyDisallowedRetryException(RetryableStageHelper.java:168)
+   at software.amazon.awssdk.core.internal.http.pipeline.stages.RetryableStage.execute(RetryableStage.java:73)
+   at software.amazon.awssdk.core.internal.http.pipeline.stages.RetryableStage.execute(RetryableStage.java:36)
+   at software.amazon.awssdk.core.internal.http.pipeline.RequestPipelineBuilder$ComposingRequestPipelineStage.execute(RequestPipelineBuilder.java:206)  
+   at software.amazon.awssdk.core.internal.http.StreamManagingStage.execute(StreamManagingStage.java:53)
+   at software.amazon.awssdk.core.internal.http.StreamManagingStage.execute(StreamManagingStage.java:35)
+   at software.amazon.awssdk.core.internal.http.pipeline.stages.ApiCallTimeoutTrackingStage.executeWithTimer(ApiCallTimeoutTrackingStage.java:82)  
+   at software.amazon.awssdk.core.internal.http.pipeline.stages.ApiCallTimeoutTrackingStage.execute(ApiCallTimeoutTrackingStage.java:62)
+   at software.amazon.awssdk.core.internal.http.pipeline.stages.ApiCallTimeoutTrackingStage.execute(ApiCallTimeoutTrackingStage.java:43)
+   at software.amazon.awssdk.core.internal.http.pipeline.stages.ApiCallMetricCollectionStage.execute(ApiCallMetricCollectionStage.java:50)   
+   at software.amazon.awssdk.core.internal.http.pipeline.stages.ApiCallMetricCollectionStage.execute(ApiCallMetricCollectionStage.java:32)   
+   at software.amazon.awssdk.core.internal.http.pipeline.RequestPipelineBuilder$ComposingRequestPipelineStage.execute(RequestPipelineBuilder.java:206)  
+   at software.amazon.awssdk.core.internal.http.pipeline.RequestPipelineBuilder$ComposingRequestPipelineStage.execute(RequestPipelineBuilder.java:206)  
+   at software.amazon.awssdk.core.internal.http.pipeline.stages.ExecutionFailureExceptionReportingStage.execute(ExecutionFailureExceptionReportingStage.java:37)
+   at software.amazon.awssdk.core.internal.http.pipeline.stages.ExecutionFailureExceptionReportingStage.execute(ExecutionFailureExceptionReportingStage.java:26)
+   at software.amazon.awssdk.core.internal.http.AmazonSyncHttpClient$RequestExecutionBuilderImpl.execute(AmazonSyncHttpClient.java:210) 
+   at software.amazon.awssdk.core.internal.handler.BaseSyncClientHandler.invoke(BaseSyncClientHandler.java:103)
+   at software.amazon.awssdk.core.internal.handler.BaseSyncClientHandler.doExecute(BaseSyncClientHandler.java:173) 
+   at software.amazon.awssdk.core.internal.handler.BaseSyncClientHandler.lambda$execute$1(BaseSyncClientHandler.java:80)
+   at software.amazon.awssdk.core.internal.handler.BaseSyncClientHandler.measureApiCallSuccess(BaseSyncClientHandler.java:182)
+   at software.amazon.awssdk.core.internal.handler.BaseSyncClientHandler.execute(BaseSyncClientHandler.java:74)
+   at software.amazon.awssdk.core.client.handler.SdkSyncClientHandler.execute(SdkSyncClientHandler.java:45)  
+   at software.amazon.awssdk.awscore.client.handler.AwsSyncClientHandler.execute(AwsSyncClientHandler.java:53)
+   at software.amazon.awssdk.services.s3.DefaultS3Client.putObject(DefaultS3Client.java:11883)
+   at software.amazon.awssdk.services.s3.DelegatingS3Client.lambda$putObject$89(DelegatingS3Client.java:9716)
+   at software.amazon.awssdk.services.s3.internal.crossregion.S3CrossRegionSyncClient.invokeOperation(S3CrossRegionSyncClient.java:67)  
+   at software.amazon.awssdk.services.s3.DelegatingS3Client.putObject(DelegatingS3Client.java:9716)
+   at org.apache.hadoop.fs.s3a.S3AFileSystem.lambda$putObjectDirect$14(S3AFileSystem.java:3332)
+   at org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDurationOfSupplier(IOStatisticsBinding.java:650)
+   at org.apache.hadoop.fs.s3a.S3AFileSystem.putObjectDirect(S3AFileSystem.java:3330)
+   at org.apache.hadoop.fs.s3a.WriteOperationHelper.lambda$putObject$7(WriteOperationHelper.java:535)   
+   at org.apache.hadoop.fs.store.audit.AuditingFunctions.lambda$withinAuditSpan$0(AuditingFunctions.java:62) 
+   at org.apache.hadoop.fs.s3a.Invoker.once(Invoker.java:122)
+   ... 20 more
+   touchz: example-file: Writing Object on example-file: software.amazon.awssdk.services.s3.model.S3Exception: Invalid argument. (Service: S3, Status Code: 403, Request ID: null) (SDK Attempt Count: 1):SignatureDoesNotMatch
+```
 
 ### <a name="no_region_session_credentials"></a> "Unable to find a region via the region provider chain." when using session credentials.
 
@@ -1392,6 +1483,39 @@ connections more frequently.
 ```
 
 Something has been trying to write data to "/".
+
+### "Unable to create OutputStream with the given multipart upload and buffer configuration."
+
+This error is raised when an attemt it made to write to a store with
+`fs.s3a.multipart.uploads.enabled` set to `false` and `fs.s3a.fast.upload.buffer` set to array.
+
+This is pre-emptively disabled before a write of so much data takes place that the process runs out of heap space.
+
+If the store doesn't support multipart uploads, _use disk for buffering_.
+Nothing else is safe to use as it leads to a state where small jobs work, but those which generate large amounts of data fail.
+
+```xml
+<property>
+  <name>fs.s3a.fast.upload.buffer</name>
+  <value>disk</value>
+</property>
+```
+
+```
+org.apache.hadoop.fs.PathIOException: `s3a://gcs/a2a8c3e4-5788-40c0-ad66-fe3fe63f4507': Unable to create OutputStream with the given multipart upload and buffer configuration.
+    at org.apache.hadoop.fs.s3a.S3AUtils.validateOutputStreamConfiguration(S3AUtils.java:985)
+    at org.apache.hadoop.fs.s3a.S3AFileSystem.innerCreateFile(S3AFileSystem.java:2201)
+    at org.apache.hadoop.fs.s3a.S3AFileSystem.lambda$create$5(S3AFileSystem.java:2068)
+    at org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.invokeTrackingDuration(IOStatisticsBinding.java:546)
+    at org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.lambda$trackDurationOfOperation$5(IOStatisticsBinding.java:527)
+    at org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDuration(IOStatisticsBinding.java:448)
+    at org.apache.hadoop.fs.s3a.S3AFileSystem.trackDurationAndSpan(S3AFileSystem.java:2881)
+    at org.apache.hadoop.fs.s3a.S3AFileSystem.trackDurationAndSpan(S3AFileSystem.java:2900)
+    at org.apache.hadoop.fs.s3a.S3AFileSystem.create(S3AFileSystem.java:2067)
+    at org.apache.hadoop.fs.FileSystem.create(FileSystem.java:1233)
+    at org.apache.hadoop.fs.FileSystem.create(FileSystem.java:1210)
+    at org.apache.hadoop.fs.FileSystem.create(FileSystem.java:1091)
+```
 
 ## <a name="best"></a> Best Practises
 

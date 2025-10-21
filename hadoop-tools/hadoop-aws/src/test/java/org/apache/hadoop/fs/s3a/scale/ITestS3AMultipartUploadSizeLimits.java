@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.s3a.scale;
 import java.io.File;
 
 import org.assertj.core.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import org.apache.commons.io.FileUtils;
@@ -44,6 +45,7 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.verifyFileContents;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.writeTextFile;
 import static org.apache.hadoop.fs.s3a.Constants.MULTIPART_SIZE;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.assumeMultipartUploads;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.Statistic.INVOCATION_ABORT;
 import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_MULTIPART_UPLOAD_ABORTED;
@@ -74,6 +76,13 @@ public class ITestS3AMultipartUploadSizeLimits extends S3AScaleTestBase {
     // failures.
     configuration.setLong(UPLOAD_PART_COUNT_LIMIT, 2);
     return configuration;
+  }
+
+  @Override
+  @BeforeEach
+  public void setup() throws Exception {
+    super.setup();
+    assumeMultipartUploads(getFileSystem().getConf());
   }
 
   /**

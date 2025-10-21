@@ -66,6 +66,7 @@ import static org.apache.hadoop.fs.s3a.Constants.SIGNING_ALGORITHM_S3;
 import static org.apache.hadoop.fs.s3a.MultipartTestUtils.createMagicFile;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.disableFilesystemCaching;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfNotEnabled;
 
 /**
  * Tests for custom Signers and SignerInitializers.
@@ -129,6 +130,9 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
     super.setup();
     final S3AFileSystem fs = getFileSystem();
     final Configuration conf = fs.getConf();
+    if (bulkDelete) {
+      skipIfNotEnabled(conf, ENABLE_MULTI_DELETE, "no bulk delete");
+    }
     endpoint = conf.getTrimmed(Constants.ENDPOINT, Constants.CENTRAL_ENDPOINT);
     PATH_STYLE_ACCESS_IN_USE.set(conf.getBoolean(PATH_STYLE_ACCESS, false));
     LOG.info("Test endpoint is {}", endpoint);
@@ -212,11 +216,13 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
       ContractTestUtils.touch(fs, new Path(subdir, "file1"));
 
       // create a magic file.
-      createMagicFile(fs, subdir);
-      ContentSummary summary = fs.getContentSummary(finalPath);
-      fs.getS3AInternals().abortMultipartUploads(subdir);
-      fs.rename(subdir, new Path(finalPath, "renamed"));
-      fs.delete(finalPath, true);
+      if (fs.isMagicCommitEnabled()) {
+        createMagicFile(fs, subdir);
+        ContentSummary summary = fs.getContentSummary(finalPath);
+        fs.getS3AInternals().abortMultipartUploads(subdir);
+        fs.rename(subdir, new Path(finalPath, "renamed"));
+        fs.delete(finalPath, true);
+      }
       return fs;
     });
   }
@@ -230,12 +236,13 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
   private Configuration createTestConfig(String identifier) {
     Configuration conf = createConfiguration();
 
+    // bulk delete is not disabled; if it has been set to false by the bucket
+    // then one of the test runs will be skipped.
     removeBaseAndBucketOverrides(conf,
         CHECKSUM_ALGORITHM,
         CHECKSUM_VALIDATION,
         CUSTOM_SIGNERS,
-        SIGNING_ALGORITHM_S3,
-        ENABLE_MULTI_DELETE);
+        SIGNING_ALGORITHM_S3);
     conf.set(CUSTOM_SIGNERS,
         "CustomS3Signer:" + CustomSigner.class.getName() + ":"
             + CustomSignerInitializer.class.getName());

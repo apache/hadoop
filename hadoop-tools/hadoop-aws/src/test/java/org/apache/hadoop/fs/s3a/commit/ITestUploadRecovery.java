@@ -60,6 +60,7 @@ import static org.apache.hadoop.fs.s3a.Constants.FAST_UPLOAD_BYTEBUFFER;
 import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_PERFORMANCE;
 import static org.apache.hadoop.fs.s3a.Constants.MAX_ERROR_RETRIES;
 import static org.apache.hadoop.fs.s3a.Constants.RETRY_HTTP_5XX_ERRORS;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.assumeMultipartUploads;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.AUDIT_EXECUTION_INTERCEPTORS;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.BASE;
@@ -161,6 +162,10 @@ public class ITestUploadRecovery extends AbstractS3ACostTest {
   public void setup() throws Exception {
     SdkFaultInjector.resetFaultInjector();
     super.setup();
+    if (!FAST_UPLOAD_BUFFER_DISK.equals(buffer)) {
+      assumeMultipartUploads(getFileSystem().getConf());
+    }
+
   }
 
   @AfterEach
@@ -169,7 +174,6 @@ public class ITestUploadRecovery extends AbstractS3ACostTest {
     // safety check in case the evaluation is failing any
     // request needed in cleanup.
     SdkFaultInjector.resetFaultInjector();
-
     super.teardown();
   }
 
