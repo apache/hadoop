@@ -232,15 +232,15 @@ public class TestWebApp {
   @Test
   void testDefaultRoutes() throws Exception {
     WebApp app = WebApps.
-        $for("test", TestWebApp.class, this, "ws").
+        $for("test-default-routes", TestWebApp.class, this, "ws").
         withResourceConfig(configure()).start();
     String baseUrl = baseUrl(app);
     try {
-      assertEquals("foo", getContent(baseUrl + "test/foo").trim());
-      assertEquals("foo", getContent(baseUrl + "test/foo/index").trim());
-      assertEquals("bar", getContent(baseUrl + "test/foo/bar").trim());
-      // assertEquals("default", getContent(baseUrl + "test").trim());
-      assertEquals("default", getContent(baseUrl + "test/").trim());
+      assertEquals("foo", getContent(baseUrl + "test-default-routes/foo").trim());
+      assertEquals("foo", getContent(baseUrl + "test-default-routes/foo/index").trim());
+      assertEquals("bar", getContent(baseUrl + "test-default-routes/foo/bar").trim());
+      // assertEquals("default", getContent(baseUrl + "test-default-routes").trim());
+      assertEquals("default", getContent(baseUrl + "test-default-routes/").trim());
       // assertEquals("default", getContent(baseUrl).trim());
     } finally {
       app.stop();
@@ -260,20 +260,20 @@ public class TestWebApp {
       }
     };
 
-    WebApp app = WebApps.$for("test", this)
+    WebApp app = WebApps.$for("test-custom-routes", this)
         .withResourceConfig(configure())
         .start(newWebApp);
 
     String baseUrl = baseUrl(app);
     try {
-      assertEquals("foo", getContent(baseUrl + "test/").trim());
-      assertEquals("foo1", getContent(baseUrl + "test/1").trim());
-      assertEquals("bar", getContent(baseUrl + "test/bar/foo").trim());
-      assertEquals("default", getContent(baseUrl + "test/foo/bar").trim());
-      assertEquals("default1", getContent(baseUrl + "test/foo/1").trim());
-      assertEquals("default2", getContent(baseUrl + "test/foo/bar/2").trim());
-      assertEquals(404, getResponseCode(baseUrl));
-      assertEquals(404, getResponseCode(baseUrl + "test/goo"));
+      assertEquals("foo", getContent(baseUrl + "test-custom-routes/").trim());
+      assertEquals("foo1", getContent(baseUrl + "test-custom-routes/1").trim());
+      assertEquals("bar", getContent(baseUrl + "test-custom-routes/bar/foo").trim());
+      assertEquals("default", getContent(baseUrl + "test-custom-routes/foo/bar").trim());
+      assertEquals("default1", getContent(baseUrl + "test-custom-routes/foo/1").trim());
+      assertEquals("default2", getContent(baseUrl + "test-custom-routes/foo/bar/2").trim());
+      // assertEquals(404, getResponseCode(baseUrl));
+      assertEquals(404, getResponseCode(baseUrl + "test-custom-routes/goo"));
       assertEquals(200, getResponseCode(baseUrl + "ws/v1/test"));
       assertTrue(getContent(baseUrl + "ws/v1/test").contains("myInfo"));
     } finally {
@@ -289,21 +289,21 @@ public class TestWebApp {
       public void setup() {
         route("/:foo", FooController.class);
       }
-    };
+  };
 
-    WebApp app = WebApps.$for("test", TestWebApp.class, this, "ws")
+    WebApp app = WebApps.$for("test-encoded-urls", TestWebApp.class, this, "ws")
         .withResourceConfig(configure()).start(webApp);
     String baseUrl = baseUrl(app);
 
     try {
       // Test encoded url
       String rawPath = "localhost:8080";
-      String encodedUrl = baseUrl + "test/" +
+      String encodedUrl = baseUrl + "test-encoded-urls/" +
           URLEncoder.encode(rawPath, "UTF-8");
       assertEquals("foo" + rawPath, getContent(encodedUrl).trim());
 
       rawPath = "@;%$";
-      encodedUrl = baseUrl + "test/" +
+      encodedUrl = baseUrl + "test-encoded-urls/" +
           URLEncoder.encode(rawPath, "UTF-8");
       assertEquals("foo" + rawPath, getContent(encodedUrl).trim());
     } finally {
@@ -320,7 +320,7 @@ public class TestWebApp {
       }
     };
 
-    WebApp app = WebApps.$for("test", TestWebApp.class, this, "ws")
+    WebApp app = WebApps.$for("test-robots-txt", TestWebApp.class, this, "ws")
         .withResourceConfig(configure()).start(newWebApp);
     String baseUrl = baseUrl(app);
     try {
@@ -352,7 +352,7 @@ public class TestWebApp {
       }
     };
 
-    WebApp app = WebApps.$for("test", this)
+    WebApp app = WebApps.$for("test-yarn-webapp-context", this)
         .withResourceConfig(configure())
         .start(webApp);
     String baseUrl = baseUrl(app);
@@ -360,7 +360,7 @@ public class TestWebApp {
       // Not able to access a non-existing dir, should not redirect to foo.
       assertEquals(404, getResponseCode(baseUrl + "logs"));
       // should be able to redirect to foo.
-      assertEquals("foo", getContent(baseUrl+ "test/foo").trim());
+      assertEquals("foo", getContent(baseUrl+ "test-yarn-webapp-context/foo").trim());
     } finally {
       app.stop();
     }
