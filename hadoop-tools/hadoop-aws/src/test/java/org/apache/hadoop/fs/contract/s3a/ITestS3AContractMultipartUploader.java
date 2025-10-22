@@ -169,7 +169,9 @@ public class ITestS3AContractMultipartUploader extends
     try {
       super.testMultipartUploadAbort();
     } catch (FileNotFoundException e) {
-      LOG.info("Multipart upload not found in abort(). This is common on third-party stores: {}", e.toString());
+      LOG.info("Multipart upload not found in abort()."
+          + " This is common on third-party stores: {}",
+          e.toString());
       LOG.debug("Exception: ", e);
     }
   }

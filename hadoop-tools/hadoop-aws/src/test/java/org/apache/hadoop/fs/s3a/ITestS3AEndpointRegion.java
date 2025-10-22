@@ -536,7 +536,7 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
 
   /**
    * Skip the test if the region is null,  sa-east-1, or otherwise
-   * not compatible with the test
+   * not compatible with the test.
    */
   private void assumeCrossRegionTestSupported() throws IOException {
     final S3AFileSystem fs = getFileSystem();

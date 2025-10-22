@@ -87,7 +87,8 @@ import static org.apache.hadoop.test.LambdaTestUtils.*;
  * Tests use of assumed roles.
  * Only run if an assumed role is provided.
  * <p>
- * S3Express buckets only support access restrictions at the bucket level, rather than at paths underneath.
+ * S3Express buckets only support access restrictions at the bucket level,
+ * rather than at paths underneath.
  * All partial permission tests are disabled.
  */
 @SuppressWarnings("ThrowableNotThrown")

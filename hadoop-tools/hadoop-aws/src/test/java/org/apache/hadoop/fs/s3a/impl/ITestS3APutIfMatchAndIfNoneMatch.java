@@ -26,7 +26,6 @@ import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
-import org.opentest4j.AssertionFailedError;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 
 import org.apache.commons.io.IOUtils;
@@ -38,7 +37,6 @@ import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.s3a.AWSS3IOException;
 import org.apache.hadoop.fs.s3a.AbstractS3ATestBase;
 import org.apache.hadoop.fs.s3a.RemoteFileChangedException;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
@@ -339,7 +337,7 @@ public class ITestS3APutIfMatchAndIfNoneMatch extends AbstractS3ATestBase {
 
     expectPreconditionFailure(() ->
         createFileWithFlags(fs, testFile, MULTIPART_FILE_BYTES, true, null, true));
-    }
+  }
 
   @Test
   public void testIfNoneMatchMultipartUploadWithRaceCondition() throws Throwable {
@@ -391,7 +389,8 @@ public class ITestS3APutIfMatchAndIfNoneMatch extends AbstractS3ATestBase {
    * @param eval closure to eval
    * @throws Exception any other failure.
    */
-  private static void expectPreconditionFailure(final LambdaTestUtils.VoidCallable eval) throws Exception {
+  private static void expectPreconditionFailure(final LambdaTestUtils.VoidCallable eval)
+      throws Exception {
     RemoteFileChangedException exception = intercept(RemoteFileChangedException.class, eval);
     S3Exception s3Exception = (S3Exception) exception.getCause();
     if (!(s3Exception.statusCode() == SC_412_PRECONDITION_FAILED

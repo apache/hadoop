@@ -271,10 +271,18 @@ public interface S3ClientFactory {
       return this;
     }
 
+    /**
+     * Is this a requester pays bucket?
+     * @return true if the bucket is requester pays.
+     */
     public boolean isRequesterPays() {
       return requesterPays;
     }
 
+    /**
+     * Get the credentials.
+     * @return the credential provider.
+     */
     public AwsCredentialsProvider getCredentialSet() {
       return credentialSet;
     }
@@ -291,6 +299,10 @@ public interface S3ClientFactory {
       return this;
     }
 
+    /**
+     * Get UA suffix.
+     * @return suffix.
+     */
     public String getUserAgentSuffix() {
       return userAgentSuffix;
     }
@@ -594,10 +606,18 @@ public interface S3ClientFactory {
       return this;
     }
 
+    /**
+     * Is checksum validation on every request enabled?
+     * @return true if validation is on every request.
+     */
     public boolean isChecksumValidationEnabled() {
       return checksumValidationEnabled;
     }
 
+    /**
+     * Should MD5 headers be added?
+     * @return true to always add an MD5 header.
+     */
     public boolean isMd5HeaderEnabled() {
       return md5HeaderEnabled;
     }

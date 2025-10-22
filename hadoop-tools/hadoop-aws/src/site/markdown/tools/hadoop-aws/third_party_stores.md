@@ -55,7 +55,7 @@ path style access must also be enabled in `fs.s3a.path.style.access`.
 
 The v4 signing algorithm requires a region to be set in `fs.s3a.endpoint.region`.
 A non-empty value is generally sufficient, though some deployments may require
-a specific value. 
+a specific value.
 
 *Important:* do not use `auto` or `sdk` as these may be used
 in the future for specific region binding algorithms.
@@ -511,8 +511,6 @@ As of October 2025 and the 2.33.8 AWS SDK, the settings needed to interact with 
   <value>false</value>
   <description>Calculate and attach a message checksum on every operation. (default: true)</description>
 </property>
-
-  
 ```
 
 ## Google Cloud Storage through the S3A connector
@@ -557,25 +555,25 @@ this makes renaming and deleting significantly slower.
     <name>fs.s3a.endpoint</name>
     <value>https://storage.googleapis.com</value>
   </property>
-  
+
 
   <!-- any value except sdk, auto and ec2 is allowed here, using "gcs" is more informative -->
   <property>
     <name>fs.s3a.endpoint.region</name>
     <value>gcs</value>
   </property>
-  
+
   <property>
     <name>fs.s3a.path.style.access</name>
     <value>true</value>
   </property>
-  
+
   <property>
     <name>fs.s3a.checksum.calculation.enabled</name>
     <value>false</value>
     <description>Calculate and attach a message checksum on every operation. (default: true)</description>
   </property>
-  
+
   <property>
     <name>fs.s3a.bucket.probe</name>
     <value>0</value>
@@ -595,19 +593,17 @@ this makes renaming and deleting significantly slower.
     <name>fs.s3a.committer.magic.enabled</name>
     <value>false</value>
   </property>
-  
+
    <property>
     <name>fs.s3a.optimized.copy.from.local.enabled</name>
     <value>false</value>
   </property>
-  
+
   <!-- No support for conditional file creation -->
   <property>
     <name>fs.s3a.create.conditional.enabled</name>
     <value>false</value>
   </property>
-
-  
 </configuration>
 ```
 

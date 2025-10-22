@@ -39,8 +39,6 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.writeDataset;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_REGION;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_ACCESSPOINT_REQUIRED;
-import static org.apache.hadoop.fs.s3a.Constants.CHECKSUM_CALCULATION_ENABLED;
-import static org.apache.hadoop.fs.s3a.Constants.CHECKSUM_CALCULATION_ENABLED_DEFAULT;
 import static org.apache.hadoop.fs.s3a.Constants.ENDPOINT;
 import static org.apache.hadoop.fs.s3a.Constants.FIPS_ENDPOINT;
 import static org.apache.hadoop.fs.s3a.Constants.FS_S3A;
