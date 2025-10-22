@@ -312,8 +312,6 @@ public final class WriteThreadPoolSizeManager implements Closeable {
         newMaxPoolSize = currentPoolSize;
         LOG.debug("CPU load normal ({}). No change: current={}", cpuUtilization, currentPoolSize);
       }
-      WriteThreadPoolStats stats = getCurrentStats();
-      writeThreadPoolMetrics.update(stats);
       if (newMaxPoolSize != currentPoolSize) {
         LOG.debug("Resizing thread pool from {} to {}", currentPoolSize, newMaxPoolSize);
         adjustThreadPoolSize(newMaxPoolSize);
