@@ -24,12 +24,12 @@ import org.apache.hadoop.fs.azurebfs.enums.StatisticTypeEnum;
  * Enum representing metrics for ABFS write thread pool monitoring.
  */
 public enum AbfsWriteThreadPoolMetricsEnum {
-
   CURRENT_POOL_SIZE("CP", StatisticTypeEnum.TYPE_GAUGE),
   MAX_POOL_SIZE("MP", StatisticTypeEnum.TYPE_GAUGE),
   ACTIVE_THREADS("AT", StatisticTypeEnum.TYPE_GAUGE),
+  JVM_CPU_UTILIZATION("JvmCpu", StatisticTypeEnum.TYPE_GAUGE),
   CPU_UTILIZATION("Cpu", StatisticTypeEnum.TYPE_GAUGE),
-  MEMORY_UTILIZATION("Mem", StatisticTypeEnum.TYPE_GAUGE);
+  MEMORY_UTILIZATION("AvlMem", StatisticTypeEnum.TYPE_GAUGE);
 
   private final String name;
   private final StatisticTypeEnum statisticType;

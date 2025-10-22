@@ -83,7 +83,7 @@ public class AbfsWriteThreadPoolMetrics extends AbstractAbfsStatisticsSource {
   /**
    * Updates the thread pool metrics from the given stats.
    */
-  public void update(WriteThreadPoolSizeManager.WriteThreadPoolStats stats) {
+  public synchronized void update(WriteThreadPoolSizeManager.WriteThreadPoolStats stats) {
     if (stats == null) {
       LOG.warn("Attempted to update WriteThreadPoolMetrics with null stats");
       return;
@@ -97,7 +97,7 @@ public class AbfsWriteThreadPoolMetrics extends AbstractAbfsStatisticsSource {
     pushedOnce.set(false);
   }
 
-  public void reset() {
+  public synchronized void reset() {
     updatedAtLeastOnce.set(false);
     pushedOnce.set(false);
   }
