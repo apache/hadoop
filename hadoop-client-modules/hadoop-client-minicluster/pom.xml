@@ -730,13 +730,6 @@
                         <exclude>**/Test*.class</exclude>
                       </excludes>
                     </filter>
-                    <!-- Some of our dependencies include html, so remove it. -->
-                    <filter>
-                      <artifact>*:*</artifact>
-                      <excludes>
-                        <exclude>**/*.html</exclude>
-                      </excludes>
-                    </filter>
                     <!-- Since runtime has classes for these jars, we exclude them.
                          We still want the java services api files, since those were excluded in runtime
                       -->
