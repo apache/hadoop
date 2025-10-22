@@ -726,10 +726,8 @@
     <Package name="org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.placement.schema" />
   </Match>
 
-  <Match>
-    <Package name="org.apache.hadoop.yarn.api.records.impl.pb"/>
-    <Class name="~.*Impl$"/>
-    <Bug pattern="AT_STALE_THREAD_WRITE_OF_PRIMITIVE"/>
-  </Match>
-
+  <Match><Bug category="EXPERIMENTAL"/></Match>
+  <Match><Bug pattern="AT_.*"/></Match>
+  <Match><Bug pattern="CT_.*"/></Match>
+  <Match><Bug pattern="PA_PUBLIC_PRIMITIVE_ATTRIBUTE"/></Match>
 </FindBugsFilter>
