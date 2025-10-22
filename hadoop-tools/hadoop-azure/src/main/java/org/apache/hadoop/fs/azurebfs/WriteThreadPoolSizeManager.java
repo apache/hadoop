@@ -228,12 +228,8 @@ public final class WriteThreadPoolSizeManager implements Closeable {
         threadPoolExecutor.setCorePoolSize(newMaxPoolSize);
         threadPoolExecutor.setMaximumPoolSize(newMaxPoolSize);
       }
-      try {
-        WriteThreadPoolStats stats = getCurrentStats();
-        writeThreadPoolMetrics.update(stats);
-      } finally {
-        writeThreadPoolMetrics = new AbfsWriteThreadPoolMetrics();
-      }
+      WriteThreadPoolStats stats = getCurrentStats();
+      writeThreadPoolMetrics.update(stats);
       LOG.debug("The thread pool size is: {} ", newMaxPoolSize);
       LOG.debug("The pool size is: {} ", threadPoolExecutor.getPoolSize());
       LOG.debug("The active thread count is: {}", threadPoolExecutor.getActiveCount());
@@ -302,7 +298,6 @@ public final class WriteThreadPoolSizeManager implements Closeable {
         newMaxPoolSize = currentPoolSize;
         LOG.debug("CPU load normal ({}). No change: current={}", cpuUtilization, currentPoolSize);
       }
-
       if (newMaxPoolSize != currentPoolSize) {
         LOG.debug("Resizing thread pool from {} to {}", currentPoolSize, newMaxPoolSize);
         adjustThreadPoolSize(newMaxPoolSize);

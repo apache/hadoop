@@ -28,8 +28,10 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.azurebfs.enums.StatisticTypeEnum;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_EQUALS;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.HUNDRED_D;
+import static org.apache.hadoop.fs.azurebfs.constants.MetricsConstants.CHAR_DOLLAR;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.iostatisticsStore;
 
 import org.apache.hadoop.fs.azurebfs.enums.AbfsWriteThreadPoolMetricsEnum;
@@ -43,6 +45,7 @@ public class AbfsWriteThreadPoolMetrics extends AbstractAbfsStatisticsSource {
 
   private static final Logger LOG = LoggerFactory.getLogger(AbfsWriteThreadPoolMetrics.class);
   private final AtomicBoolean updatedAtLeastOnce = new AtomicBoolean(false);
+  private final AtomicBoolean pushedOnce = new AtomicBoolean(false);
 
   public AbfsWriteThreadPoolMetrics() {
     IOStatisticsStore ioStatisticsStore = iostatisticsStore()
@@ -91,27 +94,28 @@ public class AbfsWriteThreadPoolMetrics extends AbstractAbfsStatisticsSource {
     setMetricValue(AbfsWriteThreadPoolMetricsEnum.CPU_UTILIZATION, (stats.getCpuUtilization() * HUNDRED_D));
     setMetricValue(AbfsWriteThreadPoolMetricsEnum.MEMORY_UTILIZATION, stats.getMemoryUtilization());
     updatedAtLeastOnce.set(true);
+    pushedOnce.set(false);
   }
 
   public void reset() {
-    IOStatisticsStore ioStatisticsStore = iostatisticsStore()
-        .withGauges(getMetricNames(StatisticTypeEnum.TYPE_GAUGE))
-        .build();
-    setIOStatistics(ioStatisticsStore);
+    updatedAtLeastOnce.set(false);
+    pushedOnce.set(false);
   }
 
   @Override
   public String toString() {
-    if (!updatedAtLeastOnce.get()) {
+    if (!updatedAtLeastOnce.get() || pushedOnce.get()) {
       return EMPTY_STRING;
     }
-    StringBuilder sb = new StringBuilder("Write");
+    StringBuilder sb = new StringBuilder("WR");
+    sb.append(CHAR_EQUALS);
     for (AbfsWriteThreadPoolMetricsEnum metric : AbfsWriteThreadPoolMetricsEnum.values()) {
       sb.append(metric.getName())
-          .append("=")
+          .append(CHAR_EQUALS)
           .append(lookupGaugeValue(metric.getName()))
-          .append(" ");
+          .append(CHAR_DOLLAR);
     }
+    pushedOnce.set(true);
     return sb.toString();
   }
 }

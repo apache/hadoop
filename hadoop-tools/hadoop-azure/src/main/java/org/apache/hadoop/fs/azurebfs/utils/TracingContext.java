@@ -227,7 +227,6 @@ public class TracingContext {
           + operatedBlobCount + COLON
           + getOperationSpecificHeader(opType) + COLON
           + httpOperation.getTracingContextSuffix();
-
       metricHeader += !(metricResults.trim().isEmpty()) ? metricResults  : EMPTY_STRING;
       break;
     case TWO_ID_FORMAT:
@@ -245,7 +244,7 @@ public class TracingContext {
       listener.callTracingHeaderValidator(header, format);
     }
     if (!metricHeader.equals(EMPTY_STRING)) {
-      httpOperation.setRequestProperty(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID, header + " " + metricHeader);
+      httpOperation.setRequestProperty(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID, header + COLON + metricHeader);
     } else {
       httpOperation.setRequestProperty(
           HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID, header);
