@@ -227,7 +227,7 @@
     <swagger-annotations-version>1.5.4</swagger-annotations-version>
     <snakeyaml.version>2.0</snakeyaml.version>
     <sshd.version>2.11.0</sshd.version>
-    <hbase.version>2.6.1-hadoop3</hbase.version>
+    <hbase.version>2.6.3-hadoop3</hbase.version>
     <junit.jupiter.version>5.13.3</junit.jupiter.version>
     <junit.platform.version>1.13.3</junit.platform.version>
     <assertj.version>3.12.2</assertj.version>
@@ -1817,6 +1817,17 @@
           <exclusion>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-log4j12</artifactId>
+          </exclusion>
+        </exclusions>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hbase</groupId>
+        <artifactId>hbase-shaded-client-byo-hadoop</artifactId>
+        <version>${hbase.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>org.apache.yetus</groupId>
+            <artifactId>audience-annotations</artifactId>
           </exclusion>
         </exclusions>
       </dependency>
