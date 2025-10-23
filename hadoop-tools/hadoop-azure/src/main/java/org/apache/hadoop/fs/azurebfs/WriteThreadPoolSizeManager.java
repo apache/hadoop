@@ -88,6 +88,8 @@ public final class WriteThreadPoolSizeManager implements Closeable {
   private final AbfsConfiguration abfsConfiguration;
 
   private final AbfsWriteThreadPoolMetrics writeThreadPoolMetrics;
+  private static long lastCpuTime = 0;
+  private static long lastTime = 0;
 
   /**
    * Private constructor to initialize the write thread pool and CPU monitor executor
@@ -277,13 +279,22 @@ public final class WriteThreadPoolSizeManager implements Closeable {
   public static double getJvmCpuUtilization() {
     OperatingSystemMXBean osBean =
         (OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean();
-
-    double processCpuLoad = osBean.getProcessCpuLoad(); // 0.0 to 1.0, or negative if not available
-    if (processCpuLoad >= 0) {
-      return processCpuLoad * 100.0;
+    long cpuTime = osBean.getProcessCpuTime();
+    long now = System.nanoTime();
+    if (lastTime == 0) {
+      lastCpuTime = cpuTime;
+      lastTime = now;
+      return 0.0; // first call has no previous data
     }
-    return 0.0;
+    long elapsedCpu = cpuTime - lastCpuTime;
+    long elapsedTime = now - lastTime;
+    lastCpuTime = cpuTime;
+    lastTime = now;
+    if (elapsedTime <= 0) return 0.0;
+    double load = (elapsedCpu * 100.0) / (elapsedTime * osBean.getAvailableProcessors());
+    return Math.max(0.0, Math.min(load, 100.0));
   }
+
 
   /**
    * Dynamically adjusts the thread pool size based on current CPU utilization
