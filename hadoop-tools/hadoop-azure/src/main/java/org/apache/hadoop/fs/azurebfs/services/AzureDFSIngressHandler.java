@@ -122,7 +122,6 @@ public class AzureDFSIngressHandler extends AzureIngressHandler {
         .getAbfsWriteThreadPoolMetrics();
     if (metrics != null) {
       tracingContextAppend.setMetricResults(metrics.toString());
-      metrics.reset();
     }
     String threadIdStr = String.valueOf(Thread.currentThread().getId());
     if (tracingContextAppend.getIngressHandler().equals(EMPTY_STRING)) {

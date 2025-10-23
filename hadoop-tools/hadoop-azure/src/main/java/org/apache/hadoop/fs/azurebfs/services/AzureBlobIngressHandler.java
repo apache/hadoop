@@ -130,7 +130,6 @@ public class AzureBlobIngressHandler extends AzureIngressHandler {
         .getAbfsWriteThreadPoolMetrics();
     if (metrics != null) {
       tracingContextAppend.setMetricResults(metrics.toString());
-      metrics.reset();
     }
     try {
       LOG.trace("Starting remote write for block with ID {} and offset {}",

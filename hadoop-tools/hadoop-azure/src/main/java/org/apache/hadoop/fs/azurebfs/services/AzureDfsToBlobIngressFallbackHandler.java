@@ -115,7 +115,6 @@ public class AzureDfsToBlobIngressFallbackHandler extends AzureDFSIngressHandler
         .getAbfsWriteThreadPoolMetrics();
     if (metrics != null) {
       tracingContextAppend.setMetricResults(metrics.toString());
-      metrics.reset();
     }
     String threadIdStr = String.valueOf(Thread.currentThread().getId());
     tracingContextAppend.setIngressHandler(FALLBACK_APPEND + " T " + threadIdStr);

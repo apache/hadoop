@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.azurebfs.services;
 
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Stream;
 
 import org.slf4j.Logger;
@@ -45,7 +46,8 @@ public class AbfsWriteThreadPoolMetrics extends AbstractAbfsStatisticsSource {
 
   private static final Logger LOG = LoggerFactory.getLogger(AbfsWriteThreadPoolMetrics.class);
   private final AtomicBoolean updatedAtLeastOnce = new AtomicBoolean(false);
-  private final AtomicBoolean pushedOnce = new AtomicBoolean(false);
+  private final AtomicLong updateVersion = new AtomicLong(0);
+  private final AtomicLong lastPushedVersion = new AtomicLong(-1);
 
   public AbfsWriteThreadPoolMetrics() {
     IOStatisticsStore ioStatisticsStore = iostatisticsStore()
@@ -94,28 +96,35 @@ public class AbfsWriteThreadPoolMetrics extends AbstractAbfsStatisticsSource {
     setMetricValue(AbfsWriteThreadPoolMetricsEnum.CPU_UTILIZATION, (stats.getCpuUtilization() * HUNDRED_D));
     setMetricValue(AbfsWriteThreadPoolMetricsEnum.MEMORY_UTILIZATION, stats.getMemoryUtilization());
     updatedAtLeastOnce.set(true);
-    pushedOnce.set(false);
+    updateVersion.incrementAndGet();
   }
 
-  public synchronized void reset() {
-    updatedAtLeastOnce.set(false);
-    pushedOnce.set(false);
-  }
-
+  /**
+   * Returns metrics as a string only once per update version.
+   */
   @Override
   public String toString() {
-    if (!updatedAtLeastOnce.get() || pushedOnce.get()) {
+    if (!updatedAtLeastOnce.get()) {
       return EMPTY_STRING;
     }
-    StringBuilder sb = new StringBuilder("WR");
-    sb.append(CHAR_EQUALS);
-    for (AbfsWriteThreadPoolMetricsEnum metric : AbfsWriteThreadPoolMetricsEnum.values()) {
-      sb.append(metric.getName())
-          .append(CHAR_EQUALS)
-          .append(lookupGaugeValue(metric.getName()))
-          .append(CHAR_DOLLAR);
+    long currentVersion = updateVersion.get();
+    if (currentVersion == lastPushedVersion.get()) {
+      return EMPTY_STRING;
     }
-    pushedOnce.set(true);
-    return sb.toString();
+    synchronized (this) {
+      // double check for thread safety
+      if (currentVersion == lastPushedVersion.get()) {
+        return EMPTY_STRING;
+      }
+      StringBuilder sb = new StringBuilder("WR").append(CHAR_EQUALS);
+      for (AbfsWriteThreadPoolMetricsEnum metric : AbfsWriteThreadPoolMetricsEnum.values()) {
+        sb.append(metric.getName())
+            .append(CHAR_EQUALS)
+            .append(lookupGaugeValue(metric.getName()))
+            .append(CHAR_DOLLAR);
+      }
+      lastPushedVersion.set(currentVersion); // mark this version as pushed
+      return sb.toString();
+    }
   }
 }
