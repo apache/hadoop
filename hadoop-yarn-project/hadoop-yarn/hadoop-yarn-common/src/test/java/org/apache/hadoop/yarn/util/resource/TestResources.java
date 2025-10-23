@@ -79,11 +79,13 @@ public class TestResources {
 
   @BeforeEach
   public void setup() throws Exception {
+    unsetExtraResourceType();
     setupExtraResourceType();
   }
 
   @AfterEach
   public void teardown() {
+    unsetExtraResourceType();
     deleteResourceTypesFile();
   }
 
