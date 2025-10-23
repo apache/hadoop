@@ -36,9 +36,10 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.fusesource.leveldbjni.JniDBFactory;
 import org.iq80.leveldb.DB;
 import org.iq80.leveldb.Options;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 public class TestLeveldbRMStateStore extends RMStateStoreTestBase {
 
@@ -50,14 +51,14 @@ public class TestLeveldbRMStateStore extends RMStateStoreTestBase {
   private YarnConfiguration conf;
   private LeveldbRMStateStore stateStore = null;
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException {
     FileUtil.fullyDelete(TEST_DIR);
     conf = new YarnConfiguration();
     conf.set(YarnConfiguration.RM_LEVELDB_STORE_PATH, TEST_DIR.toString());
   }
 
-  @After
+  @AfterEach
   public void cleanup() throws IOException {
     if (stateStore != null) {
       stateStore.close();
@@ -65,25 +66,29 @@ public class TestLeveldbRMStateStore extends RMStateStoreTestBase {
     FileUtil.fullyDelete(TEST_DIR);
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testApps() throws Exception {
     LeveldbStateStoreTester tester = new LeveldbStateStoreTester();
     testRMAppStateStore(tester);
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testClientTokens() throws Exception {
     LeveldbStateStoreTester tester = new LeveldbStateStoreTester();
     testRMDTSecretManagerStateStore(tester);
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testVersion() throws Exception {
     LeveldbStateStoreTester tester = new LeveldbStateStoreTester();
     testCheckVersion(tester);
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testEpoch() throws Exception {
     conf.setLong(YarnConfiguration.RM_EPOCH, epoch);
     conf.setLong(YarnConfiguration.RM_EPOCH_RANGE, getEpochRange());
@@ -91,49 +96,57 @@ public class TestLeveldbRMStateStore extends RMStateStoreTestBase {
     testEpoch(tester);
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testAppDeletion() throws Exception {
     LeveldbStateStoreTester tester = new LeveldbStateStoreTester();
     testAppDeletion(tester);
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testDeleteStore() throws Exception {
     LeveldbStateStoreTester tester = new LeveldbStateStoreTester();
     testDeleteStore(tester);
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testRemoveApplication() throws Exception {
     LeveldbStateStoreTester tester = new LeveldbStateStoreTester();
     testRemoveApplication(tester);
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testRemoveAttempt() throws Exception {
     LeveldbStateStoreTester tester = new LeveldbStateStoreTester();
     testRemoveAttempt(tester);
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testAMTokens() throws Exception {
     LeveldbStateStoreTester tester = new LeveldbStateStoreTester();
     testAMRMTokenSecretManagerStateStore(tester);
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testReservation() throws Exception {
     LeveldbStateStoreTester tester = new LeveldbStateStoreTester();
     testReservationStateStore(tester);
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testProxyCA() throws Exception {
     LeveldbStateStoreTester tester = new LeveldbStateStoreTester();
     testProxyCA(tester);
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testCompactionCycle() {
     final DB mockdb = mock(DB.class);
     conf.setLong(YarnConfiguration.RM_LEVELDB_COMPACTION_INTERVAL_SECS, 1);

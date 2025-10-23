@@ -208,6 +208,7 @@ public class FederationClientInterceptor
   private final Clock clock = new MonotonicClock();
   private boolean returnPartialReport;
   private long submitIntervalTime;
+  private boolean allowPartialResult;
 
   @Override
   public void init(String userName) {
@@ -263,6 +264,10 @@ public class FederationClientInterceptor
     returnPartialReport = conf.getBoolean(
         YarnConfiguration.ROUTER_CLIENTRM_PARTIAL_RESULTS_ENABLED,
         YarnConfiguration.DEFAULT_ROUTER_CLIENTRM_PARTIAL_RESULTS_ENABLED);
+
+    allowPartialResult = conf.getBoolean(
+        YarnConfiguration.ROUTER_INTERCEPTOR_ALLOW_PARTIAL_RESULT_ENABLED,
+        YarnConfiguration.DEFAULT_ROUTER_INTERCEPTOR_ALLOW_PARTIAL_RESULT_ENABLED);
   }
 
   @Override
@@ -659,6 +664,19 @@ public class FederationClientInterceptor
     try {
       LOG.info("forceKillApplication {} on SubCluster {}.", applicationId, subClusterId);
       response = clientRMProxy.forceKillApplication(request);
+      // If kill home sub-cluster application is successful,
+      // we will try to kill the same application in other sub-clusters.
+      if (response != null) {
+        try {
+          ClientMethod remoteMethod = new ClientMethod("forceKillApplication",
+              new Class[]{KillApplicationRequest.class}, new Object[]{request});
+          invokeConcurrent(remoteMethod, KillApplicationResponse.class, subClusterId);
+        } catch (YarnException e) {
+          // We cannot confirm whether the application exists in other sub-clusters,
+          // so this method may throw an error, which we should ignore.
+          LOG.warn("The execution of forceKillApplication failed in the sub-cluster.", e);
+        }
+      }
     } catch (Exception e) {
       routerMetrics.incrAppsFailedKilled();
       String msg = "Unable to kill the application report.";
@@ -804,7 +822,7 @@ public class FederationClientInterceptor
       GetClusterMetricsRequest request) throws YarnException, IOException {
     if (request == null) {
       routerMetrics.incrGetClusterMetricsFailedRetrieved();
-      String msg = "Missing getApplications request.";
+      String msg = "Missing getClusterMetrics request.";
       RouterAuditLogger.logFailure(user.getShortUserName(), GET_CLUSTERMETRICS, UNKNOWN,
           TARGET_CLIENT_RM_SERVICE, msg);
       RouterServerUtil.logAndThrowException(msg, null);
@@ -829,12 +847,24 @@ public class FederationClientInterceptor
     return RouterYarnClientUtils.merge(clusterMetrics);
   }
 
-  <R> Collection<R> invokeConcurrent(ClientMethod request, Class<R> clazz)
-      throws YarnException {
-
+  <R> Collection<R> invokeConcurrent(ClientMethod request, Class<R> clazz) throws YarnException {
     // Get Active SubClusters
     Map<SubClusterId, SubClusterInfo> subClusterInfo = federationFacade.getSubClusters(true);
     Collection<SubClusterId> subClusterIds = subClusterInfo.keySet();
+    return invokeConcurrent(request, clazz, subClusterIds);
+  }
+
+  <R> Collection<R> invokeConcurrent(ClientMethod request, Class<R> clazz,
+      SubClusterId homeSubclusterId) throws YarnException {
+    // Get Active SubClusters
+    Map<SubClusterId, SubClusterInfo> subClusterInfo = federationFacade.getSubClusters(true);
+    Collection<SubClusterId> subClusterIds = subClusterInfo.keySet();
+    subClusterIds.remove(homeSubclusterId);
+    return invokeConcurrent(request, clazz, subClusterIds);
+  }
+
+  <R> Collection<R> invokeConcurrent(ClientMethod request, Class<R> clazz,
+      Collection<SubClusterId> subClusterIds) throws YarnException {
 
     List<Callable<Pair<SubClusterId, Object>>> callables = new ArrayList<>();
     List<Future<Pair<SubClusterId, Object>>> futures = new ArrayList<>();
@@ -895,8 +925,10 @@ public class FederationClientInterceptor
     // All sub-clusters return results to be considered successful,
     // otherwise an exception will be thrown.
     if (exceptions != null && !exceptions.isEmpty()) {
-      throw new YarnException("invokeConcurrent Failed = " +
-          StringUtils.join(exceptions.values(), ","));
+      if (!allowPartialResult || exceptions.keySet().size() == subClusterIds.size()) {
+        throw new YarnException("invokeConcurrent Failed = " +
+            StringUtils.join(exceptions.values(), ","));
+      }
     }
 
     // return result
@@ -1360,7 +1392,7 @@ public class FederationClientInterceptor
       GetLabelsToNodesRequest request) throws YarnException, IOException {
     if (request == null) {
       routerMetrics.incrLabelsToNodesFailedRetrieved();
-      String msg = "Missing getNodesToLabels request.";
+      String msg = "Missing getLabelsToNodes request.";
       RouterAuditLogger.logFailure(user.getShortUserName(), GET_LABELSTONODES, UNKNOWN,
           TARGET_CLIENT_RM_SERVICE, msg);
       RouterServerUtil.logAndThrowException(msg, null);
@@ -2349,5 +2381,10 @@ public class FederationClientInterceptor
   @VisibleForTesting
   public void setNumSubmitRetries(int numSubmitRetries) {
     this.numSubmitRetries = numSubmitRetries;
+  }
+
+  @VisibleForTesting
+  public void setAllowPartialResult(boolean allowPartialResult) {
+    this.allowPartialResult = allowPartialResult;
   }
 }

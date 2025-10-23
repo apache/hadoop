@@ -74,9 +74,9 @@ public class MultiNodeSorter<N extends SchedulerNode> extends AbstractService {
   }
 
   public void serviceInit(Configuration conf) throws Exception {
-    LOG.info("Initializing MultiNodeSorter=" + policySpec.getPolicyName()
+    LOG.info("Initializing MultiNodeSorter=" + policySpec.getPolicyClassName()
         + ", with sorting interval=" + policySpec.getSortingInterval());
-    initPolicy(policySpec.getPolicyName());
+    initPolicy(policySpec.getPolicyClassName());
     super.serviceInit(conf);
   }
 

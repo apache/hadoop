@@ -15,13 +15,14 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter;
 
-import static org.junit.Assert.assertEquals;
+import static org.apache.hadoop.test.MockitoUtil.verifyZeroInteractions;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
-import static org.mockito.Mockito.verifyZeroInteractions;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
@@ -41,22 +42,23 @@ import org.apache.hadoop.yarn.server.resourcemanager.placement.SecondaryGroupExi
 import org.apache.hadoop.yarn.server.resourcemanager.placement.SpecifiedPlacementRule;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.UserPlacementRule;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.placement.schema.MappingRulesDescription;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.placement.schema.Rule;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.placement.schema.Rule.FallbackResult;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.placement.schema.Rule.Policy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.placement.schema.Rule.Type;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 /**
  * Unit tests for QueuePlacementConverter.
  *
  */
-@RunWith(MockitoJUnitRunner.class)
+@ExtendWith(MockitoExtension.class)
 public class TestQueuePlacementConverter {
   private static final String DEFAULT_QUEUE = "root.default";
 
@@ -70,7 +72,7 @@ public class TestQueuePlacementConverter {
 
   private CapacitySchedulerConfiguration csConf;
 
-  @Before
+  @BeforeEach
   public void setup() {
     this.converter = new QueuePlacementConverter();
     this.csConf = new CapacitySchedulerConfiguration(
@@ -83,7 +85,7 @@ public class TestQueuePlacementConverter {
     initPlacementManagerMock(fsRule);
 
     MappingRulesDescription description = convert();
-    assertEquals("Number of rules", 1, description.getRules().size());
+    assertEquals(1, description.getRules().size(), "Number of rules");
     verifyRule(description.getRules().get(0), Policy.USER);
     verifyZeroInteractions(ruleHandler);
   }
@@ -94,7 +96,7 @@ public class TestQueuePlacementConverter {
     initPlacementManagerMock(fsRule);
 
     MappingRulesDescription description = convert();
-    assertEquals("Number of rules", 1, description.getRules().size());
+    assertEquals(1, description.getRules().size(), "Number of rules");
     verifyRule(description.getRules().get(0), Policy.SPECIFIED);
     verifyZeroInteractions(ruleHandler);
   }
@@ -106,7 +108,7 @@ public class TestQueuePlacementConverter {
 
     MappingRulesDescription description = convert();
 
-    assertEquals("Number of rules", 1, description.getRules().size());
+    assertEquals(1, description.getRules().size(), "Number of rules");
     verifyRule(description.getRules().get(0), Policy.PRIMARY_GROUP);
     verifyZeroInteractions(ruleHandler);
   }
@@ -118,7 +120,7 @@ public class TestQueuePlacementConverter {
 
     MappingRulesDescription description = convert();
 
-    assertEquals("Number of rules", 1, description.getRules().size());
+    assertEquals(1, description.getRules().size(), "Number of rules");
     verifyRule(description.getRules().get(0), Policy.SECONDARY_GROUP);
     verifyZeroInteractions(ruleHandler);
   }
@@ -131,7 +133,7 @@ public class TestQueuePlacementConverter {
 
     MappingRulesDescription description = convert();
 
-    assertEquals("Number of rules", 1, description.getRules().size());
+    assertEquals(1, description.getRules().size(), "Number of rules");
 
     verifyRule(description.getRules().get(0), Policy.CUSTOM);
     verifyZeroInteractions(ruleHandler);
@@ -145,18 +147,20 @@ public class TestQueuePlacementConverter {
 
     MappingRulesDescription description = convert();
 
-    assertEquals("Number of rules", 1, description.getRules().size());
+    assertEquals(1, description.getRules().size(), "Number of rules");
     verifyRule(description.getRules().get(0), Policy.DEFAULT_QUEUE);
     verifyZeroInteractions(ruleHandler);
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testConvertUnsupportedRule() {
-    PlacementRule rule = mock(TestPlacementRule.class);
-    initPlacementManagerMock(rule);
+    assertThrows(IllegalArgumentException.class, ()->{
+      PlacementRule rule = mock(TestPlacementRule.class);
+      initPlacementManagerMock(rule);
 
-    // throws exception
-    convert();
+      // throws exception
+      convert();
+    });
   }
 
   @Test
@@ -166,7 +170,7 @@ public class TestQueuePlacementConverter {
 
     MappingRulesDescription description = convert();
 
-    assertEquals("Number of rules", 1, description.getRules().size());
+    assertEquals(1, description.getRules().size(), "Number of rules");
     verifyRule(description.getRules().get(0), Policy.REJECT);
     verifyZeroInteractions(ruleHandler);
   }
@@ -180,7 +184,7 @@ public class TestQueuePlacementConverter {
 
     MappingRulesDescription description = convert();
 
-    assertEquals("Number of rules", 1, description.getRules().size());
+    assertEquals(1, description.getRules().size(), "Number of rules");
     verifyRule(description.getRules().get(0), Policy.PRIMARY_GROUP_USER);
     verifyZeroInteractions(ruleHandler);
   }
@@ -195,7 +199,7 @@ public class TestQueuePlacementConverter {
 
     MappingRulesDescription description = convert();
 
-    assertEquals("Number of rules", 1, description.getRules().size());
+    assertEquals(1, description.getRules().size(), "Number of rules");
     verifyRule(description.getRules().get(0), Policy.SECONDARY_GROUP_USER);
     verifyZeroInteractions(ruleHandler);
   }
@@ -211,23 +215,25 @@ public class TestQueuePlacementConverter {
 
     MappingRulesDescription description = convert();
 
-    assertEquals("Number of rules", 1, description.getRules().size());
+    assertEquals(1, description.getRules().size(), "Number of rules");
     Rule rule = description.getRules().get(0);
     verifyRule(description.getRules().get(0), Policy.USER);
-    assertEquals("Parent path", "root.abc", rule.getParentQueue());
+    assertEquals("root.abc", rule.getParentQueue(), "Parent path");
     verifyZeroInteractions(ruleHandler);
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testUnsupportedNestedParentRule() {
-    UserPlacementRule fsRule = mock(UserPlacementRule.class);
-    TestPlacementRule parent =
-        mock(TestPlacementRule.class);
-    when(fsRule.getParentRule()).thenReturn(parent);
-    initPlacementManagerMock(fsRule);
+    assertThrows(IllegalArgumentException.class, ()->{
+      UserPlacementRule fsRule = mock(UserPlacementRule.class);
+      TestPlacementRule parent =
+              mock(TestPlacementRule.class);
+      when(fsRule.getParentRule()).thenReturn(parent);
+      initPlacementManagerMock(fsRule);
 
-    // throws exception
-    convert();
+      // throws exception
+      convert();
+    });
   }
 
   @Test
@@ -241,7 +247,7 @@ public class TestQueuePlacementConverter {
 
     MappingRulesDescription description = convert();
 
-    assertEquals("Number of rules", 3, description.getRules().size());
+    assertEquals(3, description.getRules().size(), "Number of rules");
     verifyRule(description.getRules().get(0), Policy.USER);
     verifyRule(description.getRules().get(1), Policy.PRIMARY_GROUP);
     verifyRule(description.getRules().get(2), Policy.SECONDARY_GROUP);
@@ -356,7 +362,7 @@ public class TestQueuePlacementConverter {
     MappingRulesDescription desc = convertInWeightMode();
     Rule rule = desc.getRules().get(0);
 
-    assertEquals("Expected create flag", expectedFlagOnRule, rule.getCreate());
+    assertEquals(expectedFlagOnRule, rule.getCreate(), "Expected create flag");
 
     if (ruleHandlerShouldBeInvoked) {
       verify(ruleHandler).handleFSParentAndChildCreateFlagDiff(
@@ -409,7 +415,7 @@ public class TestQueuePlacementConverter {
     MappingRulesDescription desc = convertInWeightMode();
     Rule rule = desc.getRules().get(0);
 
-    assertEquals("Parent queue", "root", rule.getParentQueue());
+    assertEquals("root", rule.getParentQueue(), "Parent queue");
   }
 
   @Test
@@ -466,7 +472,7 @@ public class TestQueuePlacementConverter {
     when(fsRule.getParentRule()).thenReturn(parent);
     when(fsRule.getCreateFlag()).thenReturn(true);
     initPlacementManagerMock(fsRule);
-    csConf.setQueues("root.users", new String[] {"hadoop"});
+    csConf.setQueues(new QueuePath("root.users"), new String[] {"hadoop"});
 
     convert();
 
@@ -492,11 +498,10 @@ public class TestQueuePlacementConverter {
   }
 
   private void verifyRule(Rule rule, Policy expectedPolicy) {
-    assertEquals("Policy type", expectedPolicy, rule.getPolicy());
-    assertEquals("Match string", "*", rule.getMatches());
-    assertEquals("Fallback result",
-        FallbackResult.SKIP, rule.getFallbackResult());
-    assertEquals("Type", Type.USER, rule.getType());
+    assertEquals(expectedPolicy, rule.getPolicy(), "Policy type");
+    assertEquals("*", rule.getMatches(), "Match string");
+    assertEquals(FallbackResult.SKIP, rule.getFallbackResult(), "Fallback result");
+    assertEquals(Type.USER, rule.getType(), "Type");
   }
 
   private class TestPlacementRule extends FSPlacementRule {

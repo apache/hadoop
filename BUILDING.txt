@@ -6,8 +6,8 @@ Requirements:
 * Unix System
 * JDK 1.8
 * Maven 3.3 or later
-* Boost 1.72 (if compiling native code)
-* Protocol Buffers 3.7.1 (if compiling native code)
+* Boost 1.86.0 (if compiling native code)
+* Protocol Buffers 3.21.12 (if compiling native code)
 * CMake 3.19 or newer (if compiling native code)
 * Zlib devel (if compiling native code)
 * Cyrus SASL devel (if compiling native code)
@@ -29,7 +29,11 @@ This requires a recent version of docker (1.4.1 and higher are known to work).
 On Linux / Mac:
     Install Docker and run this command:
 
-    $ ./start-build-env.sh
+    $ ./start-build-env.sh [OS platform]
+
+   - [OS Platform] One of [rockylinux_8, debian_11, debian_12, debian_13, ubuntu_20, ubuntu_24, windows_10].
+        Default is 'ubuntu_20'.
+        Note: Currently only default ('ubuntu_20') is supported on arm machine
 
 The prompt which is then presented is located at a mounted version of the source tree
 and all required tools for testing and building have been installed and configured.
@@ -74,16 +78,16 @@ Refer to  dev-support/docker/Dockerfile):
   $ ./bootstrap
   $ make -j$(nproc)
   $ sudo make install
-* Protocol Buffers 3.7.1 (required to build native code)
-  $ curl -L -s -S https://github.com/protocolbuffers/protobuf/releases/download/v3.7.1/protobuf-java-3.7.1.tar.gz -o protobuf-3.7.1.tar.gz
-  $ mkdir protobuf-3.7-src
-  $ tar xzf protobuf-3.7.1.tar.gz --strip-components 1 -C protobuf-3.7-src && cd protobuf-3.7-src
+* Protocol Buffers 3.21.12 (required to build native code)
+  $ curl -L https://github.com/protocolbuffers/protobuf/archive/refs/tags/v3.21.12.tar.gz > protobuf-3.21.12.tar.gz
+  $ tar -zxvf protobuf-3.21.12.tar.gz && cd protobuf-3.21.12
+  $ ./autogen.sh
   $ ./configure
   $ make -j$(nproc)
   $ sudo make install
 * Boost
-  $ curl -L https://sourceforge.net/projects/boost/files/boost/1.72.0/boost_1_72_0.tar.bz2/download > boost_1_72_0.tar.bz2
-  $ tar --bzip2 -xf boost_1_72_0.tar.bz2 && cd boost_1_72_0
+  $ curl -L https://sourceforge.net/projects/boost/files/boost/1.86.0/boost_1_86_0.tar.bz2/download > boost_1_86_0.tar.bz2
+  $ tar --bzip2 -xf boost_1_86_0.tar.bz2 && cd boost_1_86_0
   $ ./bootstrap.sh --prefix=/usr/
   $ ./b2 --without-python
   $ sudo ./b2 --without-python install
@@ -163,14 +167,7 @@ Maven build goals:
  YARN Application Timeline Service V2 build options:
 
    YARN Timeline Service v.2 chooses Apache HBase as the primary backing storage. The supported
-   versions of Apache HBase are 1.7.1 (default) and 2.2.4.
-
-  * HBase 1.7.1 is used by default to build Hadoop. The official releases are ready to use if you
-    plan on running Timeline Service v2 with HBase 1.7.1.
-
-  * Use -Dhbase.profile=2.0 to build Hadoop with HBase 2.2.4. Provide this option if you plan
-    on running Timeline Service v2 with HBase 2.x.
-
+   version of Apache HBase is 2.6.1.
 
  Snappy build options:
 
@@ -282,8 +279,7 @@ Maven build goals:
    OWASP's dependency-check plugin will scan the third party dependencies
    of this project for known CVEs (security vulnerabilities against them).
    It will produce a report in target/dependency-check-report.html. To
-   invoke, run 'mvn dependency-check:aggregate'. Note that this plugin
-   requires maven 3.1.1 or greater.
+   invoke, run 'mvn dependency-check:aggregate'.
 
  PMDK library build options:
 
@@ -315,12 +311,12 @@ Controlling the redistribution of the protobuf-2.5 dependency
 
     The protobuf 2.5.0 library is used at compile time to compile the class
     org.apache.hadoop.ipc.ProtobufHelper; this class known to have been used by
-    external projects in the past. Protobuf 2.5 is not used elsewhere in
+    external projects in the past. Protobuf 2.5 is not used directly in
     the Hadoop codebase; alongside the move to Protobuf 3.x a private successor
     class, org.apache.hadoop.ipc.internal.ShadedProtobufHelper is now used.
 
     The hadoop-common module no longer exports its compile-time dependency on
-    protobuf-2.5. Hadoop distributions no longer include it.
+    protobuf-java-2.5.
     Any application declaring a dependency on hadoop-commmon will no longer get
     the artifact added to their classpath.
     If is still required, then they must explicitly declare it:
@@ -337,9 +333,13 @@ Controlling the redistribution of the protobuf-2.5 dependency
 
            -Dcommon.protobuf2.scope=compile
 
-    If this is done then protobuf-2.5.0.jar will again be exported as a
+    If this is done then protobuf-java-2.5.0.jar will again be exported as a
     hadoop-common dependency, and included in the share/hadoop/common/lib/
     directory of any Hadoop distribution built.
+
+    Note that protobuf-java-2.5.0.jar is still placed in
+    share/hadoop/yarn/timelineservice/lib; this is needed by the hbase client
+    library.
 
 ----------------------------------------------------------------------------------
 Building components separately
@@ -433,10 +433,10 @@ Installing required dependencies for clean install of macOS 10.14:
 * Install native libraries, only openssl is required to compile native code,
 you may optionally install zlib, lz4, etc.
   $ brew install openssl
-* Protocol Buffers 3.7.1 (required to compile native code)
-  $ wget https://github.com/protocolbuffers/protobuf/releases/download/v3.7.1/protobuf-java-3.7.1.tar.gz
-  $ mkdir -p protobuf-3.7 && tar zxvf protobuf-java-3.7.1.tar.gz --strip-components 1 -C protobuf-3.7
-  $ cd protobuf-3.7
+* Protocol Buffers 3.21.12 (required to compile native code)
+  $ curl -L https://github.com/protocolbuffers/protobuf/archive/refs/tags/v3.21.12.tar.gz > protobuf-3.21.12.tar.gz
+  $ tar -zxvf protobuf-3.21.12.tar.gz && cd protobuf-3.21.12
+  $ ./autogen.sh
   $ ./configure
   $ make
   $ make check
@@ -460,7 +460,7 @@ path. This is necessary at least for Homebrewed OpenSSL.
 
 ----------------------------------------------------------------------------------
 
-Building on CentOS 8
+Building on Rocky Linux 8
 
 ----------------------------------------------------------------------------------
 
@@ -472,17 +472,16 @@ Building on CentOS 8
 * Install python2 for building documentation.
   $ sudo dnf install python2
 
-* Install Protocol Buffers v3.7.1.
-  $ git clone https://github.com/protocolbuffers/protobuf
-  $ cd protobuf
-  $ git checkout v3.7.1
-  $ autoreconf -i
+* Install Protocol Buffers v3.21.12.
+  $ curl -L https://github.com/protocolbuffers/protobuf/archive/refs/tags/v3.21.12.tar.gz > protobuf-3.21.12.tar.gz
+  $ tar -zxvf protobuf-3.21.12.tar.gz && cd protobuf-3.21.12
+  $ ./autogen.sh
   $ ./configure --prefix=/usr/local
   $ make
   $ sudo make install
   $ cd ..
 
-* Install libraries provided by CentOS 8.
+* Install libraries provided by Rocky Linux 8.
   $ sudo dnf install libtirpc-devel zlib-devel lz4-devel bzip2-devel openssl-devel cyrus-sasl-devel libpmem-devel
 
 * Install GCC 9.3.0
@@ -497,9 +496,9 @@ Building on CentOS 8
   $ sudo make install
 
 * Install boost.
-  $ curl -L -o boost_1_72_0.tar.bz2 https://sourceforge.net/projects/boost/files/boost/1.72.0/boost_1_72_0.tar.bz2/download
-  $ tar xjf boost_1_72_0.tar.bz2
-  $ cd boost_1_72_0
+  $ curl -L -o boost_1_86_0.tar.bz2 https://sourceforge.net/projects/boost/files/boost/1.86.0/boost_1_86_0.tar.bz2/download
+  $ tar xjf boost_1_86_0.tar.bz2
+  $ cd boost_1_86_0
   $ ./bootstrap.sh --prefix=/usr/local
   $ ./b2
   $ sudo ./b2 install
@@ -529,9 +528,9 @@ Requirements:
 
 * Windows 10
 * JDK 1.8
-* Maven 3.0 or later (maven.apache.org)
-* Boost 1.72 (boost.org)
-* Protocol Buffers 3.7.1 (https://github.com/protocolbuffers/protobuf/releases)
+* Maven 3.3 or later (maven.apache.org)
+* Boost 1.86.0 (boost.org)
+* Protocol Buffers 3.21.12 (https://github.com/protocolbuffers/protobuf/tags)
 * CMake 3.19 or newer (cmake.org)
 * Visual Studio 2019 (visualstudio.com)
 * Windows SDK 8.1 (optional, if building CPU rate control for the container executor. Get this from
@@ -597,18 +596,16 @@ configure the bit-ness of the build, and set several optional components.
 Several tests require that the user must have the Create Symbolic Links
 privilege.
 
-To simplify the installation of Boost, Protocol buffers, OpenSSL and Zlib dependencies we can use
-vcpkg (https://github.com/Microsoft/vcpkg.git). Upon cloning the vcpkg repo, checkout the commit
-7ffa425e1db8b0c3edf9c50f2f3a0f25a324541d to get the required versions of the dependencies
-mentioned above.
-> git clone https://github.com/Microsoft/vcpkg.git
+We use vcpkg (https://github.com/microsoft/vcpkg.git) for installing Boost, Protocol buffers,
+OpenSSL and Zlib dependencies. Run the following commands to setup these dependencies.
+> git clone https://github.com/microsoft/vcpkg.git
 > cd vcpkg
-> git checkout 7ffa425e1db8b0c3edf9c50f2f3a0f25a324541d
+> git fetch --all
+> git checkout 2025.03.19
 > .\bootstrap-vcpkg.bat
-> .\vcpkg.exe install boost:x64-windows
-> .\vcpkg.exe install protobuf:x64-windows
-> .\vcpkg.exe install openssl:x64-windows
-> .\vcpkg.exe install zlib:x64-windows
+(Assuming that vcpkg was checked out at C:\vcpkg and Hadoop at C:\hadoop)
+> copy C:\hadoop\dev-support\docker\vcpkg\vcpkg.json C:\vcpkg
+> .\vcpkg.exe install --x-install-root .\installed
 
 Set the following environment variables -
 (Assuming that vcpkg was checked out at C:\vcpkg)
@@ -639,16 +636,31 @@ hadoop-dist/target upon successful build. Run these commands from an
 "x64 Native Tools Command Prompt for VS 2019" which can be found under "Visual Studio 2019" in the
 Windows start menu. If you're using the Docker image from Dockerfile_windows_10, you'll be
 logged into "x64 Native Tools Command Prompt for VS 2019" automatically when you start the
-container.
+container. The Docker image does not have a full VS install, so you need to add the
+-Dskip.platformToolsetDetection option (already included below in the examples).
 
 > set classpath=
 > set PROTOBUF_HOME=C:\vcpkg\installed\x64-windows
-> mvn clean package -Dhttps.protocols=TLSv1.2 -DskipTests -DskipDocs -Pnative-win,dist^
+> mvn clean package -Dhttps.protocols=TLSv1.2 -DskipTests -DskipDocs -Pnative-win,dist -Dskip.platformToolsetDetection^
     -Drequire.openssl -Drequire.test.libhadoop -Pyarn-ui -Dshell-executable=C:\Git\bin\bash.exe^
     -Dtar -Dopenssl.prefix=C:\vcpkg\installed\x64-windows^
     -Dcmake.prefix.path=C:\vcpkg\installed\x64-windows^
     -Dwindows.cmake.toolchain.file=C:\vcpkg\scripts\buildsystems\vcpkg.cmake -Dwindows.cmake.build.type=RelWithDebInfo^
     -Dwindows.build.hdfspp.dll=off -Dwindows.no.sasl=on -Duse.platformToolsetVersion=v142
+
+Building the release tarball:
+Assuming that we're still running in the Docker container hadoop-windows-10-builder, run the
+following command to create the Apache Hadoop release tarball -
+
+> set IS_WINDOWS=1
+> set MVN_ARGS="-Dshell-executable=C:\Git\bin\bash.exe -Dhttps.protocols=TLSv1.2 -Pnative-win -Dskip.platformToolsetDetection -Drequire.openssl -Dopenssl.prefix=C:\vcpkg\installed\x64-windows -Dcmake.prefix.path=C:\vcpkg\installed\x64-windows -Dwindows.cmake.toolchain.file=C:\vcpkg\scripts\buildsystems\vcpkg.cmake -Dwindows.cmake.build.type=RelWithDebInfo -Dwindows.build.hdfspp.dll=off -Duse.platformToolsetVersion=v142 -Dwindows.no.sasl=on -DskipTests -DskipDocs -Drequire.test.libhadoop"
+> C:\Git\bin\bash.exe C:\hadoop\dev-support\bin\create-release --mvnargs=%MVN_ARGS%
+
+Note:
+If the building fails due to an issue with long paths, rename the Hadoop root directory to just a
+letter (like 'h') and rebuild -
+
+> C:\Git\bin\bash.exe C:\h\dev-support\bin\create-release --mvnargs=%MVN_ARGS%
 
 ----------------------------------------------------------------------------------
 Building distributions:

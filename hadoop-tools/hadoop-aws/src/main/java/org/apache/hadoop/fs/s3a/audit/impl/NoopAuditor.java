@@ -47,21 +47,27 @@ public class NoopAuditor extends AbstractOperationAuditor {
    * Constructor.
    * This will be used when the auditor is created through
    * configuration and classloading.
+   * @param name  auditor name
    */
-  public NoopAuditor() {
-    this(null);
+  public NoopAuditor(String name) {
+    this(name, null);
   }
 
   /**
    * Constructor when explicitly created within
    * the {@link NoopAuditManagerS3A}.
+   * @param name  auditor name
    * @param activationCallbacks Activation callbacks.
    */
   public NoopAuditor(
-      NoopSpan.SpanActivationCallbacks activationCallbacks) {
-    super("NoopAuditor");
+      String name, NoopSpan.SpanActivationCallbacks activationCallbacks) {
+    super(name);
     this.unbondedSpan = createSpan("unbonded", null, null);
     this.activationCallbacks = activationCallbacks;
+  }
+
+  public NoopAuditor() {
+    this("NoopAuditor");
   }
 
   @Override
@@ -86,7 +92,7 @@ public class NoopAuditor extends AbstractOperationAuditor {
    */
   public static NoopAuditor createAndStartNoopAuditor(Configuration conf,
       NoopSpan.SpanActivationCallbacks activationCallbacks) {
-    NoopAuditor noop = new NoopAuditor(activationCallbacks);
+    NoopAuditor noop = new NoopAuditor("NoopAuditor", activationCallbacks);
     final OperationAuditorOptions options =
         OperationAuditorOptions.builder()
             .withConfiguration(conf)

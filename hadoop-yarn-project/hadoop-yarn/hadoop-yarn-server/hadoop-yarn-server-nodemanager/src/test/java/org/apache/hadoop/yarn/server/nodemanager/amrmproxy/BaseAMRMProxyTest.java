@@ -69,9 +69,8 @@ import org.apache.hadoop.yarn.server.nodemanager.security.NMTokenSecretManagerIn
 import org.apache.hadoop.yarn.server.nodemanager.timelineservice.NMTimelinePublisher;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.util.Records;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -89,6 +88,10 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Base class for all the AMRMProxyService test cases. It provides utility
@@ -108,16 +111,16 @@ public abstract class BaseAMRMProxyTest {
   private Context nmContext;
 
   protected MockAMRMProxyService getAMRMProxyService() {
-    Assert.assertNotNull(this.amrmProxyService);
+    assertNotNull(this.amrmProxyService);
     return this.amrmProxyService;
   }
 
   protected Context getNMContext() {
-    Assert.assertNotNull(this.nmContext);
+    assertNotNull(this.nmContext);
     return this.nmContext;
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     this.conf = createConfiguration();
     this.dispatcher = new AsyncDispatcher();
@@ -144,7 +147,7 @@ public abstract class BaseAMRMProxyTest {
     return config;
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     this.amrmProxyService.stop();
     this.amrmProxyService = null;
@@ -311,8 +314,8 @@ public abstract class BaseAMRMProxyTest {
               int index = testContexts.indexOf(testContext);
               response = new RegisterApplicationMasterResponseInfo<>(
                   registerApplicationMaster(index), testContext);
-              Assert.assertNotNull(response.getResponse());
-              Assert.assertEquals(Integer.toString(index), response.getResponse().getQueue());
+              assertNotNull(response.getResponse());
+              assertEquals(Integer.toString(index), response.getResponse().getQueue());
 
               LOG.info("Successfully registered application master with test context: {}.",
                   testContext);
@@ -325,8 +328,8 @@ public abstract class BaseAMRMProxyTest {
             return response;
           });
 
-    Assert.assertEquals("Number of responses received does not match with request",
-        testContexts.size(), responses.size());
+    assertEquals(testContexts.size(), responses.size(),
+        "Number of responses received does not match with request");
 
     Set<T> contextResponses = new TreeSet<>();
     for (RegisterApplicationMasterResponseInfo<T> item : responses) {
@@ -334,7 +337,7 @@ public abstract class BaseAMRMProxyTest {
     }
 
     for (T ep : testContexts) {
-      Assert.assertTrue(contextResponses.contains(ep));
+      assertTrue(contextResponses.contains(ep));
     }
 
     return responses;
@@ -387,7 +390,7 @@ public abstract class BaseAMRMProxyTest {
                 response = new FinishApplicationMasterResponseInfo<>(
                     finishApplicationMaster(testContexts.indexOf(testContext),
                     FinalApplicationStatus.SUCCEEDED), testContext);
-                Assert.assertNotNull(response.getResponse());
+                assertNotNull(response.getResponse());
 
                 LOG.info("Successfully finished application master with test contexts: {}.",
                     testContext);
@@ -399,18 +402,18 @@ public abstract class BaseAMRMProxyTest {
               return response;
             });
 
-    Assert.assertEquals("Number of responses received does not match with request",
-        testContexts.size(), responses.size());
+    assertEquals(testContexts.size(), responses.size(),
+        "Number of responses received does not match with request");
 
     Set<T> contextResponses = new TreeSet<>();
     for (FinishApplicationMasterResponseInfo<T> item : responses) {
-      Assert.assertNotNull(item);
-      Assert.assertNotNull(item.getResponse());
+      assertNotNull(item);
+      assertNotNull(item.getResponse());
       contextResponses.add(item.getTestContext());
     }
 
     for (T ep : testContexts) {
-      Assert.assertTrue(contextResponses.contains(ep));
+      assertTrue(contextResponses.contains(ep));
     }
 
     return responses;

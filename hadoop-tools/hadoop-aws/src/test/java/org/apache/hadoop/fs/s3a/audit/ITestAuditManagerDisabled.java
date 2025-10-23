@@ -19,7 +19,7 @@
 package org.apache.hadoop.fs.s3a.audit;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
@@ -34,10 +34,6 @@ import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.AUDIT_ENABLED;
  * Verify that audit managers are disabled if set to false.
  */
 public class ITestAuditManagerDisabled extends AbstractS3ACostTest {
-
-  public ITestAuditManagerDisabled() {
-    super(true);
-  }
 
   @Override
   public Configuration createConfiguration() {

@@ -27,7 +27,7 @@ public class ITestS3ABlockOutputByteBuffer extends ITestS3ABlockOutputArray {
   }
 
   protected S3ADataBlocks.BlockFactory createFactory(S3AFileSystem fileSystem) {
-    return new S3ADataBlocks.ByteBufferBlockFactory(fileSystem);
+    return new S3ADataBlocks.ByteBufferBlockFactory(fileSystem.createStoreContext());
   }
 
 }

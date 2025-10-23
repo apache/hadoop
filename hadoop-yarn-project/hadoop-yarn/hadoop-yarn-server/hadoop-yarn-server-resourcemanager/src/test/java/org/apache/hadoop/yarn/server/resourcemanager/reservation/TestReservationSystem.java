@@ -17,6 +17,11 @@
  *******************************************************************************/
 package org.apache.hadoop.yarn.server.resourcemanager.reservation;
 
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -32,11 +37,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedulerTestBase;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.mockito.Mockito;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.File;
 import java.io.IOException;
@@ -54,11 +57,11 @@ public class TestReservationSystem extends
   private Configuration conf;
   private RMContext mockRMContext;
 
-  public TestReservationSystem(SchedulerType type) throws IOException {
-    super(type);
+  public void initTestReservationSystem(SchedulerType type) throws IOException {
+    initParameterizedSchedulerTestBase(type);
+    setUp();
   }
 
-  @Before
   public void setUp() throws IOException {
     scheduler = initializeScheduler();
     rmContext = getRMContext();
@@ -67,7 +70,7 @@ public class TestReservationSystem extends
     DefaultMetricsSystem.setMiniClusterMode(true);
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     conf = null;
     reservationSystem = null;
@@ -77,12 +80,14 @@ public class TestReservationSystem extends
     QueueMetrics.clearQueueMetrics();
   }
 
-  @Test
-  public void testInitialize() throws IOException {
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("getParameters")
+  public void testInitialize(SchedulerType type) throws IOException {
+    initTestReservationSystem(type);
     try {
       reservationSystem.reinitialize(scheduler.getConfig(), rmContext);
     } catch (YarnException e) {
-      Assert.fail(e.getMessage());
+      fail(e.getMessage());
     }
     if (getSchedulerType().equals(SchedulerType.CAPACITY)) {
       ReservationSystemTestUtil.validateReservationQueue(reservationSystem,
@@ -94,13 +99,15 @@ public class TestReservationSystem extends
 
   }
 
-  @Test
-  public void testReinitialize() throws IOException {
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("getParameters")
+  public void testReinitialize(SchedulerType type) throws IOException {
+    initTestReservationSystem(type);
     conf = scheduler.getConfig();
     try {
       reservationSystem.reinitialize(conf, rmContext);
     } catch (YarnException e) {
-      Assert.fail(e.getMessage());
+      fail(e.getMessage());
     }
     if (getSchedulerType().equals(SchedulerType.CAPACITY)) {
       ReservationSystemTestUtil.validateReservationQueue(reservationSystem,
@@ -112,17 +119,17 @@ public class TestReservationSystem extends
 
     // Dynamically add a plan
     String newQ = "reservation";
-    Assert.assertNull(reservationSystem.getPlan(newQ));
+    assertNull(reservationSystem.getPlan(newQ));
     updateSchedulerConf(conf, newQ);
     try {
       scheduler.reinitialize(conf, rmContext);
     } catch (IOException e) {
-      Assert.fail(e.getMessage());
+      fail(e.getMessage());
     }
     try {
       reservationSystem.reinitialize(conf, rmContext);
     } catch (YarnException e) {
-      Assert.fail(e.getMessage());
+      fail(e.getMessage());
     }
     ReservationSystemTestUtil.validateReservationQueue(
         reservationSystem,
@@ -174,10 +181,10 @@ public class TestReservationSystem extends
     CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
     ReservationSystemTestUtil.setupQueueConfiguration(conf);
 
-    CapacityScheduler cs = Mockito.spy(new CapacityScheduler());
+    CapacityScheduler cs = spy(new CapacityScheduler());
     cs.setConf(conf);
     CSMaxRunningAppsEnforcer enforcer =
-        Mockito.mock(CSMaxRunningAppsEnforcer.class);
+        mock(CSMaxRunningAppsEnforcer.class);
     cs.setMaxRunningAppsEnforcer(enforcer);
 
     mockRMContext = ReservationSystemTestUtil.createRMContext(conf);
@@ -186,7 +193,7 @@ public class TestReservationSystem extends
     try {
       cs.serviceInit(conf);
     } catch (Exception e) {
-      Assert.fail(e.getMessage());
+      fail(e.getMessage());
     }
     ReservationSystemTestUtil.initializeRMContext(10, cs, mockRMContext);
     return cs;

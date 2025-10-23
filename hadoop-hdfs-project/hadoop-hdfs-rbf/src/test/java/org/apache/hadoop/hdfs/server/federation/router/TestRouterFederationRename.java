@@ -20,9 +20,9 @@ package org.apache.hadoop.hdfs.server.federation.router;
 import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.createFile;
 import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.verifyFileExists;
 import static org.apache.hadoop.test.GenericTestUtils.getMethodName;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.verify;
 
 import java.io.IOException;
@@ -45,10 +45,11 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.GroupMappingServiceProvider;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.mockito.Mockito;
 
 /**
@@ -82,17 +83,17 @@ public class TestRouterFederationRename extends TestRouterFederationRenameBase {
   private FileSystem routerFS;
   private MiniRouterDFSCluster cluster;
 
-  @BeforeClass
+  @BeforeAll
   public static void before() throws Exception {
     globalSetUp();
   }
 
-  @AfterClass
+  @AfterAll
   public static void after() {
     tearDown();
   }
 
-  @Before
+  @BeforeEach
   public void testSetup() throws Exception {
     setup();
     router = getRouterContext();
@@ -302,7 +303,8 @@ public class TestRouterFederationRename extends TestRouterFederationRenameBase {
     getRouterFileSystem().delete(new Path(renamedDir), true);
   }
 
-  @Test(timeout = 20000)
+  @Test
+  @Timeout(value = 20)
   public void testCounter() throws Exception {
     final RouterRpcServer rpcServer = router.getRouter().getRpcServer();
     List<String> nss = cluster.getNameservices();

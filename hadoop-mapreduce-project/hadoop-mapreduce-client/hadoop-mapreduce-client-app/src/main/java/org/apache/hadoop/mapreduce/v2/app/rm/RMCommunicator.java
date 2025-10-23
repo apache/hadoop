@@ -210,7 +210,7 @@ public abstract class RMCommunicator extends AbstractService
         || jobImpl.getInternalState() == JobStateInternal.ERROR) {
       finishState = FinalApplicationStatus.FAILED;
     }
-    StringBuffer sb = new StringBuffer();
+    StringBuilder sb = new StringBuilder();
     for (String s : job.getDiagnostics()) {
       sb.append(s).append("\n");
     }

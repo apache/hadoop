@@ -51,12 +51,18 @@ import org.apache.hadoop.yarn.server.AMHeartbeatRequestHandler;
 import org.apache.hadoop.yarn.server.AMRMClientRelayer;
 import org.apache.hadoop.yarn.server.MockResourceManagerFacade;
 import org.apache.hadoop.yarn.util.AsyncCallback;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Unit test for UnmanagedApplicationManager.
@@ -74,7 +80,7 @@ public class TestUnmanagedApplicationManager {
   private UnmanagedAMPoolManager uamPool;
   private ExecutorService threadpool;
 
-  @Before
+  @BeforeEach
   public void setup() {
     conf.set(YarnConfiguration.RM_CLUSTER_ID, "subclusterId");
     callback = new CountingCallback();
@@ -92,7 +98,7 @@ public class TestUnmanagedApplicationManager {
     uamPool.start();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException, InterruptedException {
     if (uam != null) {
       uam.shutDownConnections();
@@ -119,14 +125,14 @@ public class TestUnmanagedApplicationManager {
         } catch (InterruptedException e) {
         }
       }
-      Assert.assertEquals(
+      assertEquals(0, callBack.requestQueueSize,
           "Non zero pending requests when number of allocate callbacks reaches "
-              + expectCallBackCount,
-          0, callBack.requestQueueSize);
+          + expectCallBackCount);
     }
   }
 
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testBasicUsage()
       throws YarnException, IOException, InterruptedException {
 
@@ -153,7 +159,8 @@ public class TestUnmanagedApplicationManager {
   /*
    * Test re-attaching of an existing UAM. This is for HA of UAM client.
    */
-  @Test(timeout = 5000)
+  @Test
+  @Timeout(value = 5)
   public void testUAMReAttach()
       throws YarnException, IOException, InterruptedException {
 
@@ -187,7 +194,8 @@ public class TestUnmanagedApplicationManager {
         attemptId);
   }
 
-  @Test(timeout = 5000)
+  @Test
+  @Timeout(value = 5)
   public void testReRegister()
       throws YarnException, IOException, InterruptedException {
 
@@ -214,7 +222,8 @@ public class TestUnmanagedApplicationManager {
    * If register is slow, async allocate requests in the meanwhile should not
    * throw or be dropped.
    */
-  @Test(timeout = 5000)
+  @Test
+  @Timeout(value = 5)
   public void testSlowRegisterCall()
       throws YarnException, IOException, InterruptedException {
 
@@ -279,7 +288,7 @@ public class TestUnmanagedApplicationManager {
     allocateAsync(AllocateRequest.newInstance(0, 0, null, null, null), callback,
         attemptId);
 
-    Assert.assertEquals(0, callback.requestQueueSize);
+    assertEquals(0, callback.requestQueueSize);
 
     // A short wait just in case the allocates get executed
     try {
@@ -287,25 +296,30 @@ public class TestUnmanagedApplicationManager {
     } catch (InterruptedException e) {
     }
 
-    Assert.assertEquals(2, callback.callBackCount);
+    assertEquals(2, callback.callBackCount);
   }
 
-  @Test(expected = Exception.class)
+  @Test
   public void testAllocateWithoutRegister()
       throws YarnException, IOException, InterruptedException {
-    allocateAsync(AllocateRequest.newInstance(0, 0, null, null, null), callback,
-        attemptId);
+    assertThrows(Exception.class, () -> {
+      allocateAsync(AllocateRequest.newInstance(0, 0, null, null, null), callback,
+          attemptId);
+    });
   }
 
-  @Test(expected = Exception.class)
+  @Test
   public void testFinishWithoutRegister()
       throws YarnException, IOException, InterruptedException {
-    finishApplicationMaster(
-        FinishApplicationMasterRequest.newInstance(null, null, null),
-        attemptId);
+    assertThrows(Exception.class, () -> {
+      finishApplicationMaster(
+          FinishApplicationMasterRequest.newInstance(null, null, null),
+          attemptId);
+    });
   }
 
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testForceKill()
       throws YarnException, IOException, InterruptedException {
     launchUAM(attemptId);
@@ -320,12 +334,13 @@ public class TestUnmanagedApplicationManager {
 
     try {
       uam.forceKillApplication();
-      Assert.fail("Should fail because application is already killed");
+      fail("Should fail because application is already killed");
     } catch (YarnException t) {
     }
   }
 
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testShutDownConnections()
       throws YarnException, IOException, InterruptedException {
     launchUAM(attemptId);
@@ -505,30 +520,30 @@ public class TestUnmanagedApplicationManager {
         ApplicationAttemptId.newInstance(ApplicationId.newInstance(Time.now(), 1), 1);
     Token<AMRMTokenIdentifier> token1 = uamPool.launchUAM("SC-1", this.conf,
         attemptId1.getApplicationId(), "default", "test-user", "SC-HOME", true, "SC-1", null);
-    Assert.assertNotNull(token1);
+    assertNotNull(token1);
 
     ApplicationAttemptId attemptId2 =
         ApplicationAttemptId.newInstance(ApplicationId.newInstance(Time.now(), 2), 1);
     Token<AMRMTokenIdentifier> token2 = uamPool.launchUAM("SC-2", this.conf,
         attemptId2.getApplicationId(), "default", "test-user", "SC-HOME", true, "SC-2", null);
-    Assert.assertNotNull(token2);
+    assertNotNull(token2);
 
     Map<String, UnmanagedApplicationManager> unmanagedAppMasterMap =
         uamPool.getUnmanagedAppMasterMap();
-    Assert.assertNotNull(unmanagedAppMasterMap);
-    Assert.assertEquals(2, unmanagedAppMasterMap.size());
+    assertNotNull(unmanagedAppMasterMap);
+    assertEquals(2, unmanagedAppMasterMap.size());
 
     // try to stop uamPool
     uamPool.stop();
-    Assert.assertTrue(uamPool.waitForServiceToStop(2000));
+    assertTrue(uamPool.waitForServiceToStop(2000));
     // process force finish Application in a separate thread, not blocking the main thread
-    Assert.assertEquals(Service.STATE.STOPPED, uamPool.getServiceState());
+    assertEquals(Service.STATE.STOPPED, uamPool.getServiceState());
 
     // Wait for the thread to terminate, check if uamPool#unmanagedAppMasterMap is 0
     Thread finishApplicationThread = uamPool.getFinishApplicationThread();
     GenericTestUtils.waitFor(() -> !finishApplicationThread.isAlive(),
         100, 2000);
-    Assert.assertEquals(0, unmanagedAppMasterMap.size());
+    assertEquals(0, unmanagedAppMasterMap.size());
   }
 
   @Test
@@ -544,26 +559,26 @@ public class TestUnmanagedApplicationManager {
 
     Token<AMRMTokenIdentifier> token1 = uamPool.launchUAM("SC-1", this.conf,
         applicationId, "default", "test-user", "SC-HOME", true, "SC-1", appSubmissionContext);
-    Assert.assertNotNull(token1);
+    assertNotNull(token1);
 
     Map<String, UnmanagedApplicationManager> unmanagedAppMasterMap =
         uamPool.getUnmanagedAppMasterMap();
 
     UnmanagedApplicationManager uamApplicationManager = unmanagedAppMasterMap.get("SC-1");
-    Assert.assertNotNull(uamApplicationManager);
+    assertNotNull(uamApplicationManager);
 
     ApplicationSubmissionContext appSubmissionContextByUam =
         uamApplicationManager.getApplicationSubmissionContext();
 
-    Assert.assertNotNull(appSubmissionContext);
-    Assert.assertEquals(10, appSubmissionContextByUam.getPriority().getPriority());
-    Assert.assertEquals("test", appSubmissionContextByUam.getApplicationType());
-    Assert.assertEquals(1, appSubmissionContextByUam.getApplicationTags().size());
+    assertNotNull(appSubmissionContext);
+    assertEquals(10, appSubmissionContextByUam.getPriority().getPriority());
+    assertEquals("test", appSubmissionContextByUam.getApplicationType());
+    assertEquals(1, appSubmissionContextByUam.getApplicationTags().size());
 
     uamPool.stop();
     Thread finishApplicationThread = uamPool.getFinishApplicationThread();
     GenericTestUtils.waitFor(() -> !finishApplicationThread.isAlive(),
         100, 2000);
-    Assert.assertEquals(0, unmanagedAppMasterMap.size());
+    assertEquals(0, unmanagedAppMasterMap.size());
   }
 }

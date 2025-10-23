@@ -30,6 +30,7 @@ import java.net.SocketException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.Enumeration;
@@ -287,7 +288,7 @@ public class WebAppProxyServlet extends HttpServlet {
       StringBuilder sb = new StringBuilder();
       BufferedReader reader =
           new BufferedReader(
-              new InputStreamReader(req.getInputStream(), "UTF-8"));
+              new InputStreamReader(req.getInputStream(), StandardCharsets.UTF_8));
       String line;
       while ((line = reader.readLine()) != null) {
         sb.append(line);

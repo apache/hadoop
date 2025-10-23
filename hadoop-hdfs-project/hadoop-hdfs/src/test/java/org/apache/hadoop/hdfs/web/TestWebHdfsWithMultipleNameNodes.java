@@ -33,10 +33,11 @@ import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.server.namenode.web.resources.NamenodeWebHdfsMethods;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.slf4j.event.Level;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Test WebHDFS with multiple NameNodes
@@ -55,7 +56,7 @@ public class TestWebHdfsWithMultipleNameNodes {
   private static MiniDFSCluster cluster;
   private static WebHdfsFileSystem[] webhdfs;
 
-  @BeforeClass
+  @BeforeAll
   public static void setupTest() {
     setLogLevel();
     try {
@@ -84,7 +85,7 @@ public class TestWebHdfsWithMultipleNameNodes {
     }
   }
 
-  @AfterClass
+  @AfterAll
   public static void shutdownCluster() {
     if (cluster != null) {
       cluster.shutdown();
@@ -126,14 +127,14 @@ public class TestWebHdfsWithMultipleNameNodes {
     for(int i = 0; i < webhdfs.length; i++) {
       //check file length
       final long expected = writeStrings[i].length();
-      Assert.assertEquals(expected, webhdfs[i].getFileStatus(p).getLen());
+      assertEquals(expected, webhdfs[i].getFileStatus(p).getLen());
     }
 
     //test read: check file content for each namenode
     for(int i = 0; i < webhdfs.length; i++) {
       final FSDataInputStream in = webhdfs[i].open(p);
       for(int c, j = 0; (c = in.read()) != -1; j++) {
-        Assert.assertEquals(writeStrings[i].charAt(j), c);
+        assertEquals(writeStrings[i].charAt(j), c);
       }
       in.close();
     }
@@ -148,7 +149,7 @@ public class TestWebHdfsWithMultipleNameNodes {
     for(int i = 0; i < webhdfs.length; i++) {
       //check file length
       final long expected = writeStrings[i].length() + appendStrings[i].length();
-      Assert.assertEquals(expected, webhdfs[i].getFileStatus(p).getLen());
+      assertEquals(expected, webhdfs[i].getFileStatus(p).getLen());
     }
 
     //test read: check file content for each namenode
@@ -159,8 +160,8 @@ public class TestWebHdfsWithMultipleNameNodes {
         b.append((char)c);
       }
       final int wlen = writeStrings[i].length();
-      Assert.assertEquals(writeStrings[i], b.substring(0, wlen));
-      Assert.assertEquals(appendStrings[i], b.substring(wlen));
+      assertEquals(writeStrings[i], b.substring(0, wlen));
+      assertEquals(appendStrings[i], b.substring(wlen));
       in.close();
     }
   }

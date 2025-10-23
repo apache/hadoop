@@ -18,6 +18,10 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+
 import java.security.PrivilegedExceptionAction;
 
 import org.apache.hadoop.security.UserGroupInformation;
@@ -33,24 +37,23 @@ import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class TestAMRMRPCResponseId {
 
   private MockRM rm;
   ApplicationMasterService amService = null;
 
-  @Before
+  @BeforeEach
   public void setUp() {
     this.rm = new MockRM();
     rm.start();
     amService = rm.getApplicationMasterService();
   }
   
-  @After
+  @AfterEach
   public void tearDown() {
     if (rm != null) {
       this.rm.stop();
@@ -93,26 +96,26 @@ public class TestAMRMRPCResponseId {
 
     AllocateResponse response =
         allocate(attempt.getAppAttemptId(), allocateRequest);
-    Assert.assertEquals(1, response.getResponseId());
-    Assert.assertTrue(response.getAMCommand() == null);
+    assertEquals(1, response.getResponseId());
+    assertTrue(response.getAMCommand() == null);
     allocateRequest =
         AllocateRequest.newInstance(response.getResponseId(), 0F, null, null,
           null);
     
     response = allocate(attempt.getAppAttemptId(), allocateRequest);
-    Assert.assertEquals(2, response.getResponseId());
+    assertEquals(2, response.getResponseId());
     /* try resending */
     response = allocate(attempt.getAppAttemptId(), allocateRequest);
-    Assert.assertEquals(2, response.getResponseId());
+    assertEquals(2, response.getResponseId());
     
     /** try sending old request again **/
     allocateRequest = AllocateRequest.newInstance(0, 0F, null, null, null);
 
     try {
       allocate(attempt.getAppAttemptId(), allocateRequest);
-      Assert.fail();
+      fail();
     } catch (Exception e) {
-      Assert.assertTrue(e.getCause() instanceof InvalidApplicationMasterRequestException);
+      assertTrue(e.getCause() instanceof InvalidApplicationMasterRequestException);
     }
   }
 }

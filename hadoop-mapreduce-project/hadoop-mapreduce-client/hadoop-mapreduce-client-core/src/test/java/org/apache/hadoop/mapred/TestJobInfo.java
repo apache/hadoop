@@ -30,18 +30,20 @@ import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.TaskID;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.JobStatus.State;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * test class JobInfo
- * 
- * 
+ *
+ *
  */
 public class TestJobInfo {
-  @Test (timeout=5000)
+  @Test
+  @Timeout(value = 5)
   public void testJobInfo() throws IOException {
     JobID jid = new JobID("001", 1);
     Text user = new Text("User");
@@ -60,7 +62,8 @@ public class TestJobInfo {
 
   }
   
-  @Test(timeout = 5000)
+  @Test
+  @Timeout(value = 5)
   public void testTaskID() throws IOException, InterruptedException {
     JobID jobid = new JobID("1014873536921", 6);
     TaskID tid = new TaskID(jobid, TaskType.MAP, 0);

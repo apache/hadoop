@@ -18,6 +18,10 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.resource;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -29,8 +33,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -51,16 +55,14 @@ public class TestResourceProfiles {
     manager.init(conf);
     try {
       manager.getResourceProfiles();
-      Assert
-          .fail("Exception should be thrown as resource profile is not enabled"
-              + " and getResourceProfiles is invoked.");
+      fail("Exception should be thrown as resource profile is not enabled"
+          + " and getResourceProfiles is invoked.");
     } catch (YarnException ie) {
     }
     conf.setBoolean(YarnConfiguration.RM_RESOURCE_PROFILES_ENABLED, true);
     try {
       manager.init(conf);
-      Assert.fail(
-          "Exception should be thrown due to missing resource profiles file");
+      fail("Exception should be thrown due to missing resource profiles file");
     } catch (IOException ie) {
     }
     conf.set(YarnConfiguration.RM_RESOURCE_PROFILES_SOURCE_FILE,
@@ -85,10 +87,10 @@ public class TestResourceProfiles {
     for (Map.Entry<String, Resource> entry : expected.entrySet()) {
       String profile = entry.getKey();
       Resource res = entry.getValue();
-      Assert.assertTrue("Mandatory profile '" + profile + "' missing",
-          profiles.containsKey(profile));
-      Assert.assertEquals("Profile " + profile + "' resources don't match", res,
-          manager.getProfile(profile));
+      assertTrue(profiles.containsKey(profile),
+          "Mandatory profile '" + profile + "' missing");
+      assertEquals(res, manager.getProfile(profile),
+          "Profile " + profile + "' resources don't match");
     }
   }
 
@@ -105,7 +107,7 @@ public class TestResourceProfiles {
       conf.set(YarnConfiguration.RM_RESOURCE_PROFILES_SOURCE_FILE, file);
       try {
         manager.init(conf);
-        Assert.fail("Bad profile '" + file + "' is not valid");
+        fail("Bad profile '" + file + "' is not valid");
       } catch (IOException ie) {
       }
     }
@@ -130,8 +132,8 @@ public class TestResourceProfiles {
     for (Map.Entry<String, Resource> entry : expected.entrySet()) {
       String profile = entry.getKey();
       Resource res = entry.getValue();
-      Assert.assertEquals("Profile " + profile + "' resources don't match", res,
-          manager.getProfile(profile));
+      assertEquals(res, manager.getProfile(profile),
+          "Profile " + profile + "' resources don't match");
     }
   }
 
@@ -148,16 +150,17 @@ public class TestResourceProfiles {
     expected.put("default", Resource.newInstance(2048, 2));
     expected.put("maximum", Resource.newInstance(8192, 4));
 
-    Assert.assertEquals("Profile 'minimum' resources don't match",
-        expected.get("minimum"), manager.getMinimumProfile());
-    Assert.assertEquals("Profile 'default' resources don't match",
-        expected.get("default"), manager.getDefaultProfile());
-    Assert.assertEquals("Profile 'maximum' resources don't match",
-        expected.get("maximum"), manager.getMaximumProfile());
+    assertEquals(expected.get("minimum"), manager.getMinimumProfile(),
+        "Profile 'minimum' resources don't match");
+    assertEquals(expected.get("default"), manager.getDefaultProfile(),
+        "Profile 'default' resources don't match");
+    assertEquals(expected.get("maximum"), manager.getMaximumProfile(),
+        "Profile 'maximum' resources don't match");
 
   }
 
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testResourceProfilesInAMResponse() throws Exception {
     Configuration conf = new Configuration();
     MockRM rm = new MockRM(conf);
@@ -168,7 +171,7 @@ public class TestResourceProfiles {
     RMAppAttempt attempt1 = app1.getCurrentAppAttempt();
     MockAM am1 = rm.sendAMLaunched(attempt1.getAppAttemptId());
     RegisterApplicationMasterResponse resp = am1.registerAppAttempt();
-    Assert.assertEquals(0, resp.getResourceProfiles().size());
+    assertEquals(0, resp.getResourceProfiles().size());
     rm.stop();
     conf.setBoolean(YarnConfiguration.RM_RESOURCE_PROFILES_ENABLED, true);
     conf.set(YarnConfiguration.RM_RESOURCE_PROFILES_SOURCE_FILE,
@@ -181,12 +184,12 @@ public class TestResourceProfiles {
     attempt1 = app1.getCurrentAppAttempt();
     am1 = rm.sendAMLaunched(attempt1.getAppAttemptId());
     resp = am1.registerAppAttempt();
-    Assert.assertEquals(3, resp.getResourceProfiles().size());
-    Assert.assertEquals(Resource.newInstance(1024, 1),
+    assertEquals(3, resp.getResourceProfiles().size());
+    assertEquals(Resource.newInstance(1024, 1),
         resp.getResourceProfiles().get("minimum"));
-    Assert.assertEquals(Resource.newInstance(2048, 2),
+    assertEquals(Resource.newInstance(2048, 2),
         resp.getResourceProfiles().get("default"));
-    Assert.assertEquals(Resource.newInstance(8192, 4),
+    assertEquals(Resource.newInstance(8192, 4),
         resp.getResourceProfiles().get("maximum"));
     rm.stop();
   }

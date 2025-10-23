@@ -199,6 +199,11 @@ public final class RolePolicies {
   public static final String S3_RESTORE_OBJECT = "s3:RestoreObject";
 
   /**
+   * S3Express session permission; required unless sessions are disabled.
+   */
+  public static final String S3EXPRESS_CREATE_SESSION_POLICY = "s3express:CreateSession";
+
+  /**
    * Actions needed to read a file in S3 through S3A, excluding
    * SSE-KMS.
    */
@@ -219,7 +224,7 @@ public final class RolePolicies {
    */
   private static final String[] S3_ROOT_READ_OPERATIONS =
       new String[]{
-          S3_ALL_GET,
+          S3_ALL_GET
       };
 
   public static final List<String> S3_ROOT_READ_OPERATIONS_LIST =
@@ -234,7 +239,7 @@ public final class RolePolicies {
   public static final String[] S3_BUCKET_READ_OPERATIONS =
       new String[]{
           S3_ALL_GET,
-          S3_BUCKET_ALL_LIST,
+          S3_BUCKET_ALL_LIST
       };
 
   /**
@@ -248,7 +253,7 @@ public final class RolePolicies {
           S3_PUT_OBJECT,
           S3_PUT_OBJECT_ACL,
           S3_DELETE_OBJECT,
-          S3_ABORT_MULTIPART_UPLOAD,
+          S3_ABORT_MULTIPART_UPLOAD
       }));
 
   /**
@@ -276,7 +281,7 @@ public final class RolePolicies {
           S3_PUT_OBJECT,
           S3_PUT_OBJECT_ACL,
           S3_DELETE_OBJECT,
-          S3_ABORT_MULTIPART_UPLOAD,
+          S3_ABORT_MULTIPART_UPLOAD
       }));
 
   /**

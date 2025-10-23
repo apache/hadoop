@@ -17,10 +17,12 @@
  */
 package org.apache.hadoop.util;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.text.NumberFormat;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Test for FastNumberFormat
@@ -28,7 +30,8 @@ import java.text.NumberFormat;
 public class TestFastNumberFormat {
   private final int MIN_DIGITS = 6;
 
-  @Test(timeout = 1000)
+  @Test
+  @Timeout(value = 1)
   public void testLongWithPadding() throws Exception {
     NumberFormat numberFormat = NumberFormat.getInstance();
     numberFormat.setGroupingUsed(false);
@@ -39,8 +42,8 @@ public class TestFastNumberFormat {
       StringBuilder sb = new StringBuilder();
       FastNumberFormat.format(sb, l, MIN_DIGITS);
       String fastNumberStr = sb.toString();
-      Assert.assertEquals("Number formats should be equal",
-          numberFormat.format(l), fastNumberStr);
+      assertEquals(
+          numberFormat.format(l), fastNumberStr, "Number formats should be equal");
     }
   }
 }

@@ -26,10 +26,15 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.log4j.Logger;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
-import static junit.framework.TestCase.fail;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
+
+import javax.script.ScriptEngineManager;
 
 /**
  * This class tests the {@code MetricsInvariantChecker} by running it multiple
@@ -44,7 +49,13 @@ public class TestMetricsInvariantChecker {
   private MetricsInvariantChecker ic;
   private Configuration conf;
 
-  @Before
+  @BeforeAll
+  public static void checkForJavaScript() {
+    assumeFalse(new ScriptEngineManager().getEngineByName("JavaScript") == null,
+        "JavaScript engine not available (JEP 372)");
+  }
+
+  @BeforeEach
   public void setup() {
     this.metricsSystem = DefaultMetricsSystem.instance();
     JvmMetrics.initSingleton("ResourceManager", null);
@@ -61,7 +72,8 @@ public class TestMetricsInvariantChecker {
     ic.init(conf, null, null);
   }
 
-  @Test(timeout = 5000)
+  @Test
+  @Timeout(value = 5)
   public void testManyRuns() {
 
     QueueMetrics qm =

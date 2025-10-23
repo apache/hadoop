@@ -342,7 +342,7 @@ public class StandbyCheckpointer {
       throw ie;
     }
 
-    if (!ioes.isEmpty()) {
+    if (ioes.size() > activeNNAddresses.size() / 2) {
       throw MultipleIOException.createIOException(ioes);
     }
   }
@@ -373,6 +373,11 @@ public class StandbyCheckpointer {
   @VisibleForTesting
   static int getCanceledCount() {
     return canceledCount;
+  }
+
+  @VisibleForTesting
+  public long getLastCheckpointTime() {
+    return lastCheckpointTime;
   }
 
   private long countUncheckpointedTxns() {
@@ -461,7 +466,8 @@ public class StandbyCheckpointer {
           } else if (secsSinceLast >= checkpointConf.getPeriod()) {
             LOG.info("Triggering checkpoint because it has been {} seconds " +
                 "since the last checkpoint, which exceeds the configured " +
-                "interval {}", secsSinceLast, checkpointConf.getPeriod());
+                "interval {}, And now is {}, lastCheckpointTime is {}.",
+                secsSinceLast, checkpointConf.getPeriod(), now, lastCheckpointTime);
             needCheckpoint = true;
           }
 
@@ -487,8 +493,9 @@ public class StandbyCheckpointer {
               namesystem.setCreatedRollbackImages(true);
               namesystem.setNeedRollbackFsImage(false);
             }
-            lastCheckpointTime = now;
-            LOG.info("Checkpoint finished successfully.");
+            lastCheckpointTime = monotonicNow();
+            LOG.info("Checkpoint finished successfully, the lastCheckpointTime is:{}.",
+                lastCheckpointTime);
           }
         } catch (SaveNamespaceCancelledException ce) {
           LOG.info("Checkpoint was cancelled: {}", ce.getMessage());

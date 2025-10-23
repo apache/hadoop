@@ -18,13 +18,14 @@
 
 package org.apache.hadoop.fs.obs;
 
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.DelegateToFileSystem;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileContextURIBase;
 import org.apache.hadoop.fs.FileSystem;
-import org.junit.Assume;
-import org.junit.BeforeClass;
+import org.junit.jupiter.api.BeforeAll;
 
 import java.net.URI;
 
@@ -49,9 +50,9 @@ import java.net.URI;
  */
 public class TestOBSFileContextURI extends FileContextURIBase {
 
-  @BeforeClass
+  @BeforeAll
   public static void skipTestCheck() {
-    Assume.assumeTrue(OBSContract.isContractTestEnabled());
+    assumeTrue(OBSContract.isContractTestEnabled());
   }
 
   @Override
@@ -77,12 +78,12 @@ public class TestOBSFileContextURI extends FileContextURIBase {
 
   @Override
   public void testMkdirsFailsForSubdirectoryOfExistingFile() {
-    Assume.assumeTrue("unsupport.", false);
+    assumeTrue(false, "unsupport.");
   }
 
   @Override
   public void testFileStatus() {
-    Assume.assumeTrue("unsupport.", false);
+    assumeTrue(false, "unsupport.");
   }
 
 }

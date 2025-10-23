@@ -602,7 +602,7 @@ uid:gid pair will be used to launch the container's process.
 As an example of what is meant by uid:gid pair, consider the following. By
 default, in non-secure mode, YARN will launch processes as the user `nobody`
 (see the table at the bottom of
-[Using CGroups with YARN](./NodeManagerCgroups.html) for how the run as user is
+[Using Cgroups with YARN](./NodeManagerCgroups.html) for how the run as user is
 determined in non-secure mode). On CentOS based systems, the `nobody` user's uid
 is `99` and the `nobody` group is `99`. As a result, YARN will invoke runC
 with uid `99` and gid `99`. If the `nobody` user does not have the uid `99` in the
@@ -651,7 +651,7 @@ There are several challenges with this bind mount approach that need to be
 considered.
 
 1. Any users and groups defined in the image will be overwritten by the host's users and groups
-2. No users and groups can be added once the container is started, as /etc/passwd and /etc/group are immutible in the container. Do not mount these read-write as it can render the host inoperable.
+2. No users and groups can be added once the container is started, as /etc/passwd and /etc/group are immutable in the container. Do not mount these read-write as it can render the host inoperable.
 
 This approach is not recommended beyond testing given the inflexibility to
 modify running containers.

@@ -678,7 +678,7 @@ public class Fetcher<K, V> extends Thread {
   private URL getMapOutputURL(MapHost host, Collection<TaskAttemptID> maps
                               )  throws MalformedURLException {
     // Get the base url
-    StringBuffer url = new StringBuffer(host.getBaseUrl());
+    StringBuilder url = new StringBuilder(host.getBaseUrl());
     
     boolean first = true;
     for (TaskAttemptID mapId : maps) {
@@ -688,8 +688,10 @@ public class Fetcher<K, V> extends Thread {
       url.append(mapId);
       first = false;
     }
-   
-    LOG.debug("MapOutput URL for " + host + " -> " + url.toString());
+
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("MapOutput URL for " + host + " -> " + url.toString());
+    }
     return new URL(url.toString());
   }
   

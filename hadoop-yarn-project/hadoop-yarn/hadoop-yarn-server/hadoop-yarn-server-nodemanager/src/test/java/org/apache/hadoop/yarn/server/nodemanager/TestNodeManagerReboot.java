@@ -66,10 +66,13 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.Cont
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ResourceLocalizationService;
 import org.apache.hadoop.yarn.server.nodemanager.health.NodeHealthCheckerService;
 import org.apache.hadoop.yarn.util.Records;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestNodeManagerReboot {
 
@@ -86,12 +89,12 @@ public class TestNodeManagerReboot {
   static final Logger LOG =
        LoggerFactory.getLogger(TestNodeManagerReboot.class);
 
-  @Before
+  @BeforeEach
   public void setup() throws UnsupportedFileSystemException {
     localFS = FileContext.getLocalFSFileContext();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException, InterruptedException {
     localFS.delete(new Path(basedir.getPath()), true);
     if (nm != null) {
@@ -99,7 +102,8 @@ public class TestNodeManagerReboot {
     }
   }
 
-  @Test(timeout = 2000000)
+  @Test
+  @Timeout(value = 2000)
   public void testClearLocalDirWhenNodeReboot() throws IOException,
       YarnException, InterruptedException {
     nm = new MyNodeManager();
@@ -177,20 +181,17 @@ public class TestNodeManagerReboot {
       numTries++;
     }
 
-    Assert.assertEquals(ContainerState.DONE, container.getContainerState());
+    assertEquals(ContainerState.DONE, container.getContainerState());
 
-    Assert
-      .assertTrue(
+    assertTrue(numOfLocalDirs(nmLocalDir.getAbsolutePath(),
+        ContainerLocalizer.USERCACHE) > 0,
         "The container should create a subDir named currentUser: " + user
-            + "under localDir/usercache",
-        numOfLocalDirs(nmLocalDir.getAbsolutePath(),
-          ContainerLocalizer.USERCACHE) > 0);
+        + "under localDir/usercache");
 
-    Assert.assertTrue(
-      "There should be files or Dirs under nm_private when "
-          + "container is launched",
-      numOfLocalDirs(nmLocalDir.getAbsolutePath(),
-        ResourceLocalizationService.NM_PRIVATE_DIR) > 0);
+    assertTrue(numOfLocalDirs(nmLocalDir.getAbsolutePath(),
+        ResourceLocalizationService.NM_PRIVATE_DIR) > 0,
+        "There should be files or Dirs under nm_private when "
+        + "container is launched");
 
     // restart the NodeManager
     restartNM(MAX_TRIES);
@@ -237,20 +238,18 @@ public class TestNodeManagerReboot {
   }
   
   private void checkNumOfLocalDirs() throws IOException {
-    Assert
-      .assertTrue(
-        "After NM reboots, all local files should be deleted",
+    assertTrue(
         numOfLocalDirs(nmLocalDir.getAbsolutePath(),
-          ContainerLocalizer.USERCACHE) == 0
-            && numOfLocalDirs(nmLocalDir.getAbsolutePath(),
-              ContainerLocalizer.FILECACHE) == 0
-            && numOfLocalDirs(nmLocalDir.getAbsolutePath(),
-              ResourceLocalizationService.NM_PRIVATE_DIR) == 0);
-    
-    Assert
-    .assertTrue(
-      "After NM reboots, usercache_DEL_* directory should be deleted",
-      numOfUsercacheDELDirs(nmLocalDir.getAbsolutePath()) == 0);
+        ContainerLocalizer.USERCACHE) == 0
+        && numOfLocalDirs(nmLocalDir.getAbsolutePath(),
+        ContainerLocalizer.FILECACHE) == 0
+        && numOfLocalDirs(nmLocalDir.getAbsolutePath(),
+        ResourceLocalizationService.NM_PRIVATE_DIR) == 0,
+        "After NM reboots, all local files should be deleted");
+
+
+    assertTrue(numOfUsercacheDELDirs(nmLocalDir.getAbsolutePath()) == 0,
+        "After NM reboots, usercache_DEL_* directory should be deleted");
   }
   
   private int numOfLocalDirs(String localDir, String localSubDir) {

@@ -19,8 +19,9 @@ package org.apache.hadoop.yarn.server.federation.policies;
 
 import java.util.ArrayList;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Unit test for {@link FederationPolicyUtils}.
@@ -49,10 +50,9 @@ public class TestFederationPolicyUtils {
     for (i = 0; i < weights.length; i++) {
       double actualWeight = (float) result[i] / n;
       System.out.println(i + " " + actualWeight);
-      Assert.assertTrue(
+      assertTrue(Math.abs(actualWeight - expectedWeights[i]) < 0.01,
           "Index " + i + " Actual weight: " + actualWeight
-              + " expected weight: " + expectedWeights[i],
-          Math.abs(actualWeight - expectedWeights[i]) < 0.01);
+          + " expected weight: " + expectedWeights[i]);
     }
   }
 }

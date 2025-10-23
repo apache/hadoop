@@ -37,9 +37,15 @@ See the [Commands Manual](./CommandsManual.html) for generic shell options.
 appendToFile
 ------------
 
-Usage: `hadoop fs -appendToFile <localsrc> ... <dst> `
+Usage: `hadoop fs -appendToFile [-n] <localsrc> ... <dst>`
 
 Append single src, or multiple srcs from local file system to the destination file system. Also reads input from stdin and appends to destination file system.
+
+Options
+
+* The `-n` option represents that use NEW_BLOCK create flag to append file.
+
+Example:
 
 * `hadoop fs -appendToFile localfile /user/hadoop/hadoopfile`
 * `hadoop fs -appendToFile localfile1 localfile2 /user/hadoop/hadoopfile`
@@ -137,13 +143,13 @@ Usage: `hadoop fs -count [-q] [-h] [-v] [-x] [-t [<storage type>]] [-u] [-e] [-s
 
 Count the number of directories, files and bytes under the paths that match the specified file pattern. Get the quota and the usage. The output columns with -count are: DIR\_COUNT, FILE\_COUNT, CONTENT\_SIZE, PATHNAME
 
-The -u and -q options control what columns the output contains.  -q means show quotas, -u limits the output to show quotas and usage only.
+The -u and -q options control what columns the output contains.  -q means show quotas and usage, -u limits the output to show quotas only.
 
 The output columns with -count -q are: QUOTA, REMAINING\_QUOTA, SPACE\_QUOTA, REMAINING\_SPACE\_QUOTA, DIR\_COUNT, FILE\_COUNT, CONTENT\_SIZE, PATHNAME
 
 The output columns with -count -u are: QUOTA, REMAINING\_QUOTA, SPACE\_QUOTA, REMAINING\_SPACE\_QUOTA, PATHNAME
 
-The -t option shows the quota and usage for each storage type. The -t option is ignored if -u or -q option is not given. The list of possible parameters that can be used in -t option(case insensitive except the parameter ""): "", "all", "ram_disk", "ssd", "disk" or "archive".
+The -t option shows the quota and usage for each storage type. The -t option is ignored if -u or -q option is not given. The list of possible parameters that can be used in -t option(case insensitive except the parameter): "", "all", "ram_disk", "ssd", "disk" or "archive".
 
 The -h option shows sizes in human readable format.
 
@@ -289,7 +295,7 @@ rather than the default filesystem and checkpoint is created.
 For example
 
 ```
-hadoop fs -expunge --immediate -fs s3a://landsat-pds/
+hadoop fs -expunge -immediate -fs s3a://landsat-pds/
 ```
 
 Refer to the

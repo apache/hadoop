@@ -31,8 +31,10 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.Loca
 import static org.apache.hadoop.yarn.api.records.LocalResourceType.*;
 import static org.apache.hadoop.yarn.api.records.LocalResourceVisibility.*;
 
-import org.junit.Test;
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestLocalResource {
 

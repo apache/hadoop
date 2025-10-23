@@ -37,24 +37,27 @@ import org.apache.hadoop.yarn.metrics.GenericEventTypeMetrics;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager;
 import org.apache.hadoop.yarn.util.Records;
 
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestNodeManagerMetrics {
   static final int GiB = 1024; // MiB
 
   private NodeManagerMetrics metrics;
 
-  @Before
+  @BeforeEach
   public void setup() {
     DefaultMetricsSystem.initialize("NodeManager");
     DefaultMetricsSystem.setMiniClusterMode(true);
     metrics = NodeManagerMetrics.create();
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     DefaultMetricsSystem.shutdown();
   }
@@ -62,8 +65,9 @@ public class TestNodeManagerMetrics {
   @Test
   public void testReferenceOfSingletonJvmMetrics()  {
     JvmMetrics jvmMetrics = JvmMetrics.initSingleton("NodeManagerModule", null);
-    Assert.assertEquals("NodeManagerMetrics should reference the singleton" +
-        " JvmMetrics instance", jvmMetrics, metrics.getJvmMetrics());
+    assertEquals(jvmMetrics, metrics.getJvmMetrics(),
+        "NodeManagerMetrics should reference the singleton" +
+        " JvmMetrics instance");
   }
 
   @Test public void testNames() {
@@ -110,9 +114,9 @@ public class TestNodeManagerMetrics {
     // Decrease resource for a container
     metrics.changeContainer(resource, smallerResource);
 
-    Assert.assertTrue(!metrics.containerLaunchDuration.changed());
+    assertTrue(!metrics.containerLaunchDuration.changed());
     metrics.addContainerLaunchDuration(1);
-    Assert.assertTrue(metrics.containerLaunchDuration.changed());
+    assertTrue(metrics.containerLaunchDuration.changed());
 
     // Set node gpu utilization
     metrics.setNodeGpuUtilization(35.5F);
@@ -223,18 +227,18 @@ public class TestNodeManagerMetrics {
 
     String testEventTypeCountExpect =
         Long.toString(genericEventTypeMetrics.get(TestEnum.TestEventType));
-    Assert.assertNotNull(testEventTypeCountExpect);
+    assertNotNull(testEventTypeCountExpect);
     String testEventTypeCountMetric =
         genericEventTypeMetrics.getRegistry().get("TestEventType_event_count").toString();
-    Assert.assertNotNull(testEventTypeCountMetric);
-    Assert.assertEquals(testEventTypeCountExpect, testEventTypeCountMetric);
+    assertNotNull(testEventTypeCountMetric);
+    assertEquals(testEventTypeCountExpect, testEventTypeCountMetric);
 
     String testEventTypeProcessingTimeExpect =
         Long.toString(genericEventTypeMetrics.getTotalProcessingTime(TestEnum.TestEventType));
-    Assert.assertNotNull(testEventTypeProcessingTimeExpect);
+    assertNotNull(testEventTypeProcessingTimeExpect);
     String testEventTypeProcessingTimeMetric =
         genericEventTypeMetrics.getRegistry().get("TestEventType_processing_time").toString();
-    Assert.assertNotNull(testEventTypeProcessingTimeMetric);
-    Assert.assertEquals(testEventTypeProcessingTimeExpect, testEventTypeProcessingTimeMetric);
+    assertNotNull(testEventTypeProcessingTimeMetric);
+    assertEquals(testEventTypeProcessingTimeExpect, testEventTypeProcessingTimeMetric);
   }
 }

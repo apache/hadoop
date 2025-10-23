@@ -68,12 +68,14 @@ import org.apache.hadoop.yarn.webapp.log.AggregatedLogsPage;
 import org.apache.hadoop.yarn.webapp.view.BlockForTest;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock.Block;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * Test some HtmlBlock classes
@@ -87,16 +89,15 @@ public class TestBlocks {
     Task task = getTask(0);
     String taskId = task.getID().toString();
 
-    Assert.assertEquals("pull links doesn't work correctly",
-        "Task failed <a href=\"/jobhistory/task/" + taskId + "\">" +
-        taskId + "</a>"
-        , HsJobBlock.addTaskLinks("Task failed " + taskId));
+    assertEquals("Task failed <a href=\"/jobhistory/task/" + taskId + "\">" + taskId + "</a>",
+        HsJobBlock.addTaskLinks("Task failed " + taskId),
+        "pull links doesn't work correctly");
 
-    Assert.assertEquals("pull links doesn't work correctly",
-        "Task failed <a href=\"/jobhistory/task/" + taskId + "\">" +
-        taskId + "</a>\n Job failed as tasks failed. failedMaps:1 failedReduces:0"
-        , HsJobBlock.addTaskLinks("Task failed " + taskId + "\n " +
-        "Job failed as tasks failed. failedMaps:1 failedReduces:0"));
+    assertEquals("Task failed <a href=\"/jobhistory/task/" + taskId + "\">" +
+        taskId + "</a>\n Job failed as tasks failed. failedMaps:1 failedReduces:0",
+        HsJobBlock.addTaskLinks("Task failed " + taskId + "\n " +
+        "Job failed as tasks failed. failedMaps:1 failedReduces:0"),
+        "pull links doesn't work correctly");
   }
 
   /**

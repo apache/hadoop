@@ -34,9 +34,11 @@ import software.amazon.awssdk.transfer.s3.S3TransferManager;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.s3a.impl.CSEMaterials;
 import org.apache.hadoop.fs.s3a.statistics.StatisticsFromAwsSdk;
 
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_ENDPOINT;
+import static org.apache.hadoop.fs.s3a.Constants.S3EXPRESS_CREATE_SESSION_DEFAULT;
 
 /**
  * Factory for creation of {@link S3Client} client instances.
@@ -46,8 +48,6 @@ import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_ENDPOINT;
  * implementing only the deprecated method will work.
  * See https://github.com/apache/hbase-filesystem
  *
- * @deprecated This interface will be replaced by one which uses the AWS SDK V2 S3 client as part of
- * upgrading S3A to SDK V2. See HADOOP-18073.
  */
 @InterfaceAudience.LimitedPrivate("HBoss")
 @InterfaceStability.Evolving
@@ -120,6 +120,23 @@ public interface S3ClientFactory {
     private StatisticsFromAwsSdk metrics;
 
     /**
+     * Is CSE enabled?
+     * The default value is {@value}.
+     */
+    private Boolean isCSEEnabled = false;
+
+    /**
+     * KMS region.
+     * This is only used if CSE is enabled.
+     */
+    private String kmsRegion;
+
+    /**
+     * Client side encryption materials.
+     */
+    private CSEMaterials cseMaterials;
+
+    /**
      * Use (deprecated) path style access.
      */
     private boolean pathStyleAccess;
@@ -170,6 +187,25 @@ public interface S3ClientFactory {
      */
     private String region;
 
+    /**
+     * Enable S3Express create session.
+     */
+    private boolean expressCreateSession = S3EXPRESS_CREATE_SESSION_DEFAULT;
+
+    /**
+     * Enable checksum validation.
+     */
+    private boolean checksumValidationEnabled;
+
+    /**
+     * Is FIPS enabled?
+     */
+    private boolean fipsEnabled;
+
+    /**
+     * Is analytics accelerator enabled?
+     */
+    private boolean isAnalyticsAcceleratorEnabled;
 
     /**
      * List of execution interceptors to include in the chain
@@ -416,11 +452,155 @@ public interface S3ClientFactory {
     }
 
     /**
+     * Set the client side encryption flag.
+     *
+     * @param value new value
+     * @return the builder
+     */
+    public S3ClientCreationParameters withClientSideEncryptionEnabled(final boolean value) {
+      this.isCSEEnabled = value;
+      return this;
+    }
+
+    /**
+     * Set the analytics accelerator enabled flag.
+     *
+     * @param value new value
+     * @return the builder
+     */
+    public S3ClientCreationParameters withAnalyticsAcceleratorEnabled(final boolean value) {
+      this.isAnalyticsAcceleratorEnabled = value;
+      return this;
+    }
+
+    /**
+     * Set the KMS client region.
+     * This is required for CSE-KMS
+     *
+     * @param value new value
+     * @return the builder
+     */
+    public S3ClientCreationParameters withKMSRegion(final String value) {
+      this.kmsRegion = value;
+      return this;
+    }
+
+    /**
+     * Get the client side encryption flag.
+     * @return client side encryption flag
+     */
+    public boolean isClientSideEncryptionEnabled() {
+      return this.isCSEEnabled;
+    }
+
+    /**
+     * Get the analytics accelerator enabled flag.
+     * @return analytics accelerator enabled flag.
+     */
+    public boolean isAnalyticsAcceleratorEnabled() {
+      return this.isAnalyticsAcceleratorEnabled;
+    }
+
+    /**
+     * Set the client side encryption materials.
+     *
+     * @param value new value
+     * @return the builder
+     */
+    public S3ClientCreationParameters withClientSideEncryptionMaterials(final CSEMaterials value) {
+      this.cseMaterials = value;
+      return this;
+    }
+
+    /**
+     * Get the client side encryption materials.
+     * @return client side encryption materials
+     */
+    public CSEMaterials getClientSideEncryptionMaterials() {
+      return this.cseMaterials;
+    }
+
+    /**
      * Get the region.
      * @return invoker
      */
     public String getRegion() {
       return region;
+    }
+
+    /**
+     * Get the KMS region.
+     * @return Configured KMS region.
+     */
+    public String getKmsRegion() {
+      return kmsRegion;
+    }
+
+    /**
+     * Should s3express createSession be called?
+     * @return true if the client should enable createSession.
+     */
+    public boolean isExpressCreateSession() {
+      return expressCreateSession;
+    }
+
+    /**
+     * Set builder value.
+     * @param value new value
+     * @return the builder
+     */
+    public S3ClientCreationParameters withExpressCreateSession(final boolean value) {
+      expressCreateSession = value;
+      return this;
+    }
+
+    /**
+     * Set builder value.
+     * @param value new value
+     * @return the builder
+     */
+    public S3ClientCreationParameters withChecksumValidationEnabled(final boolean value) {
+      checksumValidationEnabled = value;
+      return this;
+    }
+
+    public boolean isChecksumValidationEnabled() {
+      return checksumValidationEnabled;
+    }
+
+    @Override
+    public String toString() {
+      return "S3ClientCreationParameters{" +
+          "endpoint='" + endpoint + '\'' +
+          ", pathStyleAccess=" + pathStyleAccess +
+          ", requesterPays=" + requesterPays +
+          ", userAgentSuffix='" + userAgentSuffix + '\'' +
+          ", pathUri=" + pathUri +
+          ", minimumPartSize=" + minimumPartSize +
+          ", multiPartThreshold=" + multiPartThreshold +
+          ", multipartCopy=" + multipartCopy +
+          ", region='" + region + '\'' +
+          ", expressCreateSession=" + expressCreateSession +
+          ", checksumValidationEnabled=" + checksumValidationEnabled +
+          '}';
+    }
+
+    /**
+     * Get the FIPS flag.
+     * @return is fips enabled
+     */
+    public boolean isFipsEnabled() {
+      return fipsEnabled;
+    }
+
+    /**
+     * Set builder value.
+     * @param value new value
+     * @return the builder
+     */
+    public S3ClientCreationParameters withFipsEnabled(final boolean value) {
+      fipsEnabled = value;
+      return this;
     }
   }
 }

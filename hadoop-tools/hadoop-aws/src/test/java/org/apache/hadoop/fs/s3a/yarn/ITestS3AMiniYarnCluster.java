@@ -42,7 +42,9 @@ import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.yarn.server.MiniYARNCluster;
 
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.FS_S3A_COMMITTER_NAME;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.FS_S3A_COMMITTER_STAGING_UNIQUE_FILENAMES;
@@ -66,6 +68,7 @@ public class ITestS3AMiniYarnCluster extends AbstractS3ATestBase {
     return conf;
   }
 
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     super.setup();
@@ -84,6 +87,7 @@ public class ITestS3AMiniYarnCluster extends AbstractS3ATestBase {
     yarnCluster.start();
   }
 
+  @AfterEach
   @Override
   public void teardown() throws Exception {
     if (yarnCluster != null) {
@@ -115,12 +119,12 @@ public class ITestS3AMiniYarnCluster extends AbstractS3ATestBase {
     FileOutputFormat.setOutputPath(job, output);
 
     int exitCode = (job.waitForCompletion(true) ? 0 : 1);
-    assertEquals("Returned error code.", 0, exitCode);
+    assertEquals(0, exitCode, "Returned error code.");
 
     Path success = new Path(output, _SUCCESS);
     FileStatus status = fs.getFileStatus(success);
-    assertTrue("0 byte success file - not an S3A committer " + success,
-        status.getLen() > 0);
+    assertTrue(status.getLen() > 0,
+        "0 byte success file - not an S3A committer " + success);
     SuccessData successData = SuccessData.load(fs, success);
     String commitDetails = successData.toString();
     LOG.info("Committer details \n{}", commitDetails);
@@ -142,9 +146,9 @@ public class ITestS3AMiniYarnCluster extends AbstractS3ATestBase {
     Map<String, Integer> result = new HashMap<>();
     for (String line : outputAsStr.split("\n")) {
       String[] tokens = line.split("\t");
-      assertTrue("Not enough tokens in in string \" "+ line
-            + "\" from output \"" + outputAsStr + "\"",
-          tokens.length > 1);
+      assertTrue(tokens.length > 1,
+          "Not enough tokens in in string \" "+ line
+          + "\" from output \"" + outputAsStr + "\"");
       result.put(tokens[0], Integer.parseInt(tokens[1]));
     }
     return result;

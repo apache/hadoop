@@ -30,10 +30,10 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.TestQueueMetrics;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * The test class for {@link FSQueueMetrics}.
@@ -45,7 +45,7 @@ public class TestFSQueueMetrics {
   private static final String RESOURCE_NAME = "test1";
   private static final String QUEUE_NAME = "single";
 
-  @Before
+  @BeforeEach
   public void setUp() {
     ms = new MetricsSystemImpl();
     QueueMetrics.clearQueueMetrics();
@@ -95,30 +95,22 @@ public class TestFSQueueMetrics {
         20L));
     metrics.setFairShare(res);
 
-    assertEquals(getErrorMessage("fairShareMB"),
-        2048L, metrics.getFairShareMB());
-    assertEquals(getErrorMessage("fairShareVcores"),
-        4L, metrics.getFairShareVirtualCores());
-    assertEquals(getErrorMessage("fairShareMB"),
-        2048L, metrics.getFairShare().getMemorySize());
-    assertEquals(getErrorMessage("fairShareVcores"),
-        4L, metrics.getFairShare().getVirtualCores());
-    assertEquals(getErrorMessage("fairShare for resource: " + RESOURCE_NAME),
-        20L, metrics.getFairShare().getResourceValue(RESOURCE_NAME));
+    assertEquals(2048L, metrics.getFairShareMB(), getErrorMessage("fairShareMB"));
+    assertEquals(4L, metrics.getFairShareVirtualCores(), getErrorMessage("fairShareVcores"));
+    assertEquals(2048L, metrics.getFairShare().getMemorySize(), getErrorMessage("fairShareMB"));
+    assertEquals(4L, metrics.getFairShare().getVirtualCores(), getErrorMessage("fairShareVcores"));
+    assertEquals(20L, metrics.getFairShare().getResourceValue(RESOURCE_NAME),
+        getErrorMessage("fairShare for resource: " + RESOURCE_NAME));
 
     res = Resource.newInstance(2049L, 5);
     metrics.setFairShare(res);
 
-    assertEquals(getErrorMessage("fairShareMB"),
-        2049L, metrics.getFairShareMB());
-    assertEquals(getErrorMessage("fairShareVcores"),
-        5L, metrics.getFairShareVirtualCores());
-    assertEquals(getErrorMessage("fairShareMB"),
-        2049L, metrics.getFairShare().getMemorySize());
-    assertEquals(getErrorMessage("fairShareVcores"),
-        5L, metrics.getFairShare().getVirtualCores());
-    assertEquals(getErrorMessage("fairShare for resource: " + RESOURCE_NAME),
-        0, metrics.getFairShare().getResourceValue(RESOURCE_NAME));
+    assertEquals(2049L, metrics.getFairShareMB(), getErrorMessage("fairShareMB"));
+    assertEquals(5L, metrics.getFairShareVirtualCores(), getErrorMessage("fairShareVcores"));
+    assertEquals(2049L, metrics.getFairShare().getMemorySize(), getErrorMessage("fairShareMB"));
+    assertEquals(5L, metrics.getFairShare().getVirtualCores(), getErrorMessage("fairShareVcores"));
+    assertEquals(0, metrics.getFairShare().getResourceValue(RESOURCE_NAME),
+        getErrorMessage("fairShare for resource: " + RESOURCE_NAME));
   }
 
   @Test
@@ -129,36 +121,29 @@ public class TestFSQueueMetrics {
         20L));
     metrics.setSteadyFairShare(res);
 
-    assertEquals(getErrorMessage("steadyFairShareMB"),
-        2048L, metrics.getSteadyFairShareMB());
-    assertEquals(getErrorMessage("steadyFairShareVcores"),
-        4L, metrics.getSteadyFairShareVCores());
+    assertEquals(2048L, metrics.getSteadyFairShareMB(), getErrorMessage("steadyFairShareMB"));
+    assertEquals(4L, metrics.getSteadyFairShareVCores(), getErrorMessage("steadyFairShareVcores"));
 
     Resource steadyFairShare = metrics.getSteadyFairShare();
-    assertEquals(getErrorMessage("steadyFairShareMB"),
-        2048L, steadyFairShare.getMemorySize());
-    assertEquals(getErrorMessage("steadyFairShareVcores"),
-        4L, steadyFairShare.getVirtualCores());
-    assertEquals(getErrorMessage("steadyFairShare for resource: " +
-            RESOURCE_NAME),
-        20L, steadyFairShare.getResourceValue(RESOURCE_NAME));
+    assertEquals(2048L, steadyFairShare.getMemorySize(), getErrorMessage("steadyFairShareMB"));
+    assertEquals(4L, steadyFairShare.getVirtualCores(), getErrorMessage("steadyFairShareVcores"));
+    assertEquals(20L, steadyFairShare.getResourceValue(RESOURCE_NAME),
+        getErrorMessage("steadyFairShare for resource: " +
+        RESOURCE_NAME));
 
     res = Resource.newInstance(2049L, 5);
     metrics.setSteadyFairShare(res);
 
-    assertEquals(getErrorMessage("steadyFairShareMB"),
-        2049L, metrics.getSteadyFairShareMB());
-    assertEquals(getErrorMessage("steadyFairShareVcores"),
-        5L, metrics.getSteadyFairShareVCores());
+    assertEquals(2049L, metrics.getSteadyFairShareMB(),
+        getErrorMessage("steadyFairShareMB"));
+    assertEquals(5L, metrics.getSteadyFairShareVCores(),
+        getErrorMessage("steadyFairShareVcores"));
 
     steadyFairShare = metrics.getSteadyFairShare();
-    assertEquals(getErrorMessage("steadyFairShareMB"),
-        2049L, steadyFairShare.getMemorySize());
-    assertEquals(getErrorMessage("steadyFairShareVcores"),
-        5L, steadyFairShare.getVirtualCores());
-    assertEquals(getErrorMessage("steadyFairShare for resource: " +
-            RESOURCE_NAME),
-        0, steadyFairShare.getResourceValue(RESOURCE_NAME));
+    assertEquals(2049L, steadyFairShare.getMemorySize(), getErrorMessage("steadyFairShareMB"));
+    assertEquals(5L, steadyFairShare.getVirtualCores(), getErrorMessage("steadyFairShareVcores"));
+    assertEquals(0, steadyFairShare.getResourceValue(RESOURCE_NAME),
+        getErrorMessage("steadyFairShare for resource: " + RESOURCE_NAME));
   }
 
   @Test
@@ -169,30 +154,22 @@ public class TestFSQueueMetrics {
         20L));
     metrics.setMinShare(res);
 
-    assertEquals(getErrorMessage("minShareMB"),
-        2048L, metrics.getMinShareMB());
-    assertEquals(getErrorMessage("minShareVcores"),
-        4L, metrics.getMinShareVirtualCores());
-    assertEquals(getErrorMessage("minShareMB"),
-        2048L, metrics.getMinShare().getMemorySize());
-    assertEquals(getErrorMessage("minShareVcores"),
-        4L, metrics.getMinShare().getVirtualCores());
-    assertEquals(getErrorMessage("minShare for resource: " + RESOURCE_NAME),
-        20L, metrics.getMinShare().getResourceValue(RESOURCE_NAME));
+    assertEquals(2048L, metrics.getMinShareMB(), getErrorMessage("minShareMB"));
+    assertEquals(4L, metrics.getMinShareVirtualCores(), getErrorMessage("minShareVcores"));
+    assertEquals(2048L, metrics.getMinShare().getMemorySize(), getErrorMessage("minShareMB"));
+    assertEquals(4L, metrics.getMinShare().getVirtualCores(), getErrorMessage("minShareVcores"));
+    assertEquals(20L, metrics.getMinShare().getResourceValue(RESOURCE_NAME),
+        getErrorMessage("minShare for resource: " + RESOURCE_NAME));
 
     res = Resource.newInstance(2049L, 5);
     metrics.setMinShare(res);
 
-    assertEquals(getErrorMessage("minShareMB"),
-        2049L, metrics.getMinShareMB());
-    assertEquals(getErrorMessage("minShareVcores"),
-        5L, metrics.getMinShareVirtualCores());
-    assertEquals(getErrorMessage("minShareMB"),
-        2049L, metrics.getMinShare().getMemorySize());
-    assertEquals(getErrorMessage("minShareVcores"),
-        5L, metrics.getMinShare().getVirtualCores());
-    assertEquals(getErrorMessage("minShare for resource: " + RESOURCE_NAME),
-        0, metrics.getMinShare().getResourceValue(RESOURCE_NAME));
+    assertEquals(2049L, metrics.getMinShareMB(), getErrorMessage("minShareMB"));
+    assertEquals(5L, metrics.getMinShareVirtualCores(), getErrorMessage("minShareVcores"));
+    assertEquals(2049L, metrics.getMinShare().getMemorySize(), getErrorMessage("minShareMB"));
+    assertEquals(5L, metrics.getMinShare().getVirtualCores(), getErrorMessage("minShareVcores"));
+    assertEquals(0, metrics.getMinShare().getResourceValue(RESOURCE_NAME),
+        getErrorMessage("minShare for resource: " + RESOURCE_NAME));
   }
 
   @Test
@@ -203,30 +180,22 @@ public class TestFSQueueMetrics {
         20L));
     metrics.setMaxShare(res);
 
-    assertEquals(getErrorMessage("maxShareMB"),
-        2048L, metrics.getMaxShareMB());
-    assertEquals(getErrorMessage("maxShareVcores"),
-        4L, metrics.getMaxShareVirtualCores());
-    assertEquals(getErrorMessage("maxShareMB"),
-        2048L, metrics.getMaxShare().getMemorySize());
-    assertEquals(getErrorMessage("maxShareVcores"),
-        4L, metrics.getMaxShare().getVirtualCores());
-    assertEquals(getErrorMessage("maxShare for resource: " + RESOURCE_NAME),
-        20L, metrics.getMaxShare().getResourceValue(RESOURCE_NAME));
+    assertEquals(2048L, metrics.getMaxShareMB(), getErrorMessage("maxShareMB"));
+    assertEquals(4L, metrics.getMaxShareVirtualCores(), getErrorMessage("maxShareVcores"));
+    assertEquals(2048L, metrics.getMaxShare().getMemorySize(), getErrorMessage("maxShareMB"));
+    assertEquals(4L, metrics.getMaxShare().getVirtualCores(), getErrorMessage("maxShareVcores"));
+    assertEquals(20L, metrics.getMaxShare().getResourceValue(RESOURCE_NAME),
+        getErrorMessage("maxShare for resource: " + RESOURCE_NAME));
 
     res = Resource.newInstance(2049L, 5);
     metrics.setMaxShare(res);
 
-    assertEquals(getErrorMessage("maxShareMB"),
-        2049L, metrics.getMaxShareMB());
-    assertEquals(getErrorMessage("maxShareVcores"),
-        5L, metrics.getMaxShareVirtualCores());
-    assertEquals(getErrorMessage("maxShareMB"),
-        2049L, metrics.getMaxShare().getMemorySize());
-    assertEquals(getErrorMessage("maxShareVcores"),
-        5L, metrics.getMaxShare().getVirtualCores());
-    assertEquals(getErrorMessage("maxShare for resource: " + RESOURCE_NAME),
-        0, metrics.getMaxShare().getResourceValue(RESOURCE_NAME));
+    assertEquals(2049L, metrics.getMaxShareMB(), getErrorMessage("maxShareMB"));
+    assertEquals(5L, metrics.getMaxShareVirtualCores(), getErrorMessage("maxShareVcores"));
+    assertEquals(2049L, metrics.getMaxShare().getMemorySize(), getErrorMessage("maxShareMB"));
+    assertEquals(5L, metrics.getMaxShare().getVirtualCores(), getErrorMessage("maxShareVcores"));
+    assertEquals(0, metrics.getMaxShare().getResourceValue(RESOURCE_NAME),
+        getErrorMessage("maxShare for resource: " + RESOURCE_NAME));
   }
 
   @Test
@@ -237,32 +206,25 @@ public class TestFSQueueMetrics {
         20L));
     metrics.setMaxAMShare(res);
 
-    assertEquals(getErrorMessage("maxAMShareMB"),
-        2048L, metrics.getMaxAMShareMB());
-    assertEquals(getErrorMessage("maxAMShareVcores"),
-        4L, metrics.getMaxAMShareVCores());
-    assertEquals(getErrorMessage("maxAMShareMB"),
-        2048L, metrics.getMaxAMShare().getMemorySize());
-    assertEquals(getErrorMessage("maxAMShareVcores"),
-        4L, metrics.getMaxAMShare().getVirtualCores());
-    assertEquals(getErrorMessage(
-        "maxAMShare for resource: " + RESOURCE_NAME),
-        20L, metrics.getMaxAMShare().getResourceValue(RESOURCE_NAME));
+    assertEquals(2048L, metrics.getMaxAMShareMB(), getErrorMessage("maxAMShareMB"));
+    assertEquals(4L, metrics.getMaxAMShareVCores(), getErrorMessage("maxAMShareVcores"));
+    assertEquals(2048L, metrics.getMaxAMShare().getMemorySize(),
+        getErrorMessage("maxAMShareMB"));
+    assertEquals(4L, metrics.getMaxAMShare().getVirtualCores(),
+        getErrorMessage("maxAMShareVcores"));
+    assertEquals(20L, metrics.getMaxAMShare().getResourceValue(RESOURCE_NAME),
+        getErrorMessage("maxAMShare for resource: " + RESOURCE_NAME));
 
     res = Resource.newInstance(2049L, 5);
     metrics.setMaxAMShare(res);
 
-    assertEquals(getErrorMessage("maxAMShareMB"),
-        2049L, metrics.getMaxAMShareMB());
-    assertEquals(getErrorMessage("maxAMShareVcores"),
-        5L, metrics.getMaxAMShareVCores());
-    assertEquals(getErrorMessage("maxAMShareMB"),
-        2049L, metrics.getMaxAMShare().getMemorySize());
-    assertEquals(getErrorMessage("maxAMShareVcores"),
-        5L, metrics.getMaxAMShare().getVirtualCores());
-    assertEquals(getErrorMessage(
-        "maxAMShare for resource: " + RESOURCE_NAME),
-        0, metrics.getMaxAMShare().getResourceValue(RESOURCE_NAME));
+    assertEquals(2049L, metrics.getMaxAMShareMB(), getErrorMessage("maxAMShareMB"));
+    assertEquals(5L, metrics.getMaxAMShareVCores(), getErrorMessage("maxAMShareVcores"));
+    assertEquals(2049L, metrics.getMaxAMShare().getMemorySize(), getErrorMessage("maxAMShareMB"));
+    assertEquals(5L, metrics.getMaxAMShare().getVirtualCores(),
+        getErrorMessage("maxAMShareVcores"));
+    assertEquals(0, metrics.getMaxAMShare().getResourceValue(RESOURCE_NAME),
+        getErrorMessage("maxAMShare for resource: " + RESOURCE_NAME));
   }
 
   @Test
@@ -273,42 +235,32 @@ public class TestFSQueueMetrics {
         20L));
     metrics.setAMResourceUsage(res);
 
-    assertEquals(getErrorMessage("AMResourceUsageMB"),
-        2048L, metrics.getAMResourceUsageMB());
-    assertEquals(getErrorMessage("AMResourceUsageVcores"),
-        4L, metrics.getAMResourceUsageVCores());
+    assertEquals(2048L, metrics.getAMResourceUsageMB(), getErrorMessage("AMResourceUsageMB"));
+    assertEquals(4L, metrics.getAMResourceUsageVCores(), getErrorMessage("AMResourceUsageVcores"));
 
     Resource amResourceUsage = metrics.getAMResourceUsage();
-    assertEquals(getErrorMessage("AMResourceUsageMB"),
-        2048L, amResourceUsage.getMemorySize());
-    assertEquals(getErrorMessage("AMResourceUsageVcores"),
-        4L, amResourceUsage.getVirtualCores());
-    assertEquals(getErrorMessage("AMResourceUsage for resource: " +
-            RESOURCE_NAME),
-        20L, amResourceUsage.getResourceValue(RESOURCE_NAME));
+    assertEquals(2048L, amResourceUsage.getMemorySize(), getErrorMessage("AMResourceUsageMB"));
+    assertEquals(4L, amResourceUsage.getVirtualCores(), getErrorMessage("AMResourceUsageVcores"));
+    assertEquals(20L, amResourceUsage.getResourceValue(RESOURCE_NAME),
+        getErrorMessage("AMResourceUsage for resource: " + RESOURCE_NAME));
 
     res = Resource.newInstance(2049L, 5);
     metrics.setAMResourceUsage(res);
 
-    assertEquals(getErrorMessage("AMResourceUsageMB"),
-        2049L, metrics.getAMResourceUsageMB());
-    assertEquals(getErrorMessage("AMResourceUsageVcores"),
-        5L, metrics.getAMResourceUsageVCores());
+    assertEquals(2049L, metrics.getAMResourceUsageMB(), getErrorMessage("AMResourceUsageMB"));
+    assertEquals(5L, metrics.getAMResourceUsageVCores(), getErrorMessage("AMResourceUsageVcores"));
 
     amResourceUsage = metrics.getAMResourceUsage();
-    assertEquals(getErrorMessage("AMResourceUsageMB"),
-        2049L, amResourceUsage.getMemorySize());
-    assertEquals(getErrorMessage("AMResourceUsageVcores"),
-        5L, amResourceUsage.getVirtualCores());
-    assertEquals(getErrorMessage("AMResourceUsage for resource: " +
-            RESOURCE_NAME),
-        0, amResourceUsage.getResourceValue(RESOURCE_NAME));
+    assertEquals(2049L, amResourceUsage.getMemorySize(), getErrorMessage("AMResourceUsageMB"));
+    assertEquals(5L, amResourceUsage.getVirtualCores(), getErrorMessage("AMResourceUsageVcores"));
+    assertEquals(0, amResourceUsage.getResourceValue(RESOURCE_NAME),
+        getErrorMessage("AMResourceUsage for resource: " + RESOURCE_NAME));
   }
 
   @Test
   public void testSetMaxApps() {
     FSQueueMetrics metrics = setupMetrics(RESOURCE_NAME);
     metrics.setMaxApps(25);
-    assertEquals(getErrorMessage("maxApps"), 25L, metrics.getMaxApps());
+    assertEquals(25L, metrics.getMaxApps(), getErrorMessage("maxApps"));
   }
 }

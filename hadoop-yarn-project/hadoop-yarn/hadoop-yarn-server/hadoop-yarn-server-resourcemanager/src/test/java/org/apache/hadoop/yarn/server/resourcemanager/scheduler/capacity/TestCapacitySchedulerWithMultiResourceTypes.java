@@ -56,12 +56,14 @@ import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
-import org.junit.Assert;
-import static org.junit.Assert.assertEquals;
-import org.junit.Test;
+
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -75,9 +77,13 @@ import java.util.Map;
  */
 public class TestCapacitySchedulerWithMultiResourceTypes {
   private static String RESOURCE_1 = "res1";
-
-  private static final String A_QUEUE = CapacitySchedulerConfiguration.ROOT + ".a";
-  private static final String B_QUEUE = CapacitySchedulerConfiguration.ROOT + ".b";
+  private static final String DEFAULT_PATH = CapacitySchedulerConfiguration.ROOT + ".default";
+  private static final String A_PATH = CapacitySchedulerConfiguration.ROOT + ".a";
+  private static final String B_PATH = CapacitySchedulerConfiguration.ROOT + ".b";
+  private static final QueuePath ROOT = new QueuePath(CapacitySchedulerConfiguration.ROOT);
+  private static final QueuePath DEFAULT = new QueuePath(DEFAULT_PATH);
+  private static final QueuePath A = new QueuePath(A_PATH);
+  private static final QueuePath B = new QueuePath(B_PATH);
   private static float A_CAPACITY = 50.0f;
   private static float B_CAPACITY = 50.0f;
 
@@ -116,11 +122,11 @@ public class TestCapacitySchedulerWithMultiResourceTypes {
 
     CapacitySchedulerConfiguration csconf =
         new CapacitySchedulerConfiguration();
-    csconf.setMaximumApplicationMasterResourcePerQueuePercent("root", 100.0f);
-    csconf.setMaximumAMResourcePercentPerPartition("root", "", 100.0f);
-    csconf.setMaximumApplicationMasterResourcePerQueuePercent("root.default",
+    csconf.setMaximumApplicationMasterResourcePerQueuePercent(ROOT, 100.0f);
+    csconf.setMaximumAMResourcePercentPerPartition(ROOT, "", 100.0f);
+    csconf.setMaximumApplicationMasterResourcePerQueuePercent(DEFAULT,
         100.0f);
-    csconf.setMaximumAMResourcePercentPerPartition("root.default", "", 100.0f);
+    csconf.setMaximumAMResourcePercentPerPartition(DEFAULT, "", 100.0f);
     csconf.setResourceComparator(DominantResourceCalculator.class);
     csconf.set(YarnConfiguration.RESOURCE_TYPES, RESOURCE_1);
     csconf.setInt(YarnConfiguration.RESOURCE_TYPES + "." + RESOURCE_1
@@ -137,23 +143,23 @@ public class TestCapacitySchedulerWithMultiResourceTypes {
     rm.start();
 
     CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
-    Assert.assertEquals(3333L,
+    assertEquals(3333L,
         cs.getMaximumResourceCapability().getResourceValue(RESOURCE_1));
-    Assert.assertEquals(3333L,
+    assertEquals(3333L,
         cs.getMaximumAllocation().getResourceValue(RESOURCE_1));
-    Assert.assertEquals(
+    assertEquals(
         YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
         cs.getMaximumResourceCapability()
             .getResourceValue(ResourceInformation.MEMORY_URI));
-    Assert.assertEquals(
+    assertEquals(
         YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
         cs.getMaximumAllocation()
             .getResourceValue(ResourceInformation.MEMORY_URI));
-    Assert.assertEquals(
+    assertEquals(
         YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES,
         cs.getMaximumResourceCapability()
             .getResourceValue(ResourceInformation.VCORES_URI));
-    Assert.assertEquals(
+    assertEquals(
         YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES,
         cs.getMaximumAllocation()
             .getResourceValue(ResourceInformation.VCORES_URI));
@@ -170,26 +176,26 @@ public class TestCapacitySchedulerWithMultiResourceTypes {
       exception = true;
     }
 
-    Assert.assertTrue("Should have exception in CS", exception);
+    assertTrue(exception, "Should have exception in CS");
 
     // Maximum allocation won't be updated
-    Assert.assertEquals(3333L,
+    assertEquals(3333L,
         cs.getMaximumResourceCapability().getResourceValue(RESOURCE_1));
-    Assert.assertEquals(3333L,
+    assertEquals(3333L,
         cs.getMaximumAllocation().getResourceValue(RESOURCE_1));
-    Assert.assertEquals(
+    assertEquals(
         YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
         cs.getMaximumResourceCapability()
             .getResourceValue(ResourceInformation.MEMORY_URI));
-    Assert.assertEquals(
+    assertEquals(
         YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
         cs.getMaximumAllocation()
             .getResourceValue(ResourceInformation.MEMORY_URI));
-    Assert.assertEquals(
+    assertEquals(
         YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES,
         cs.getMaximumResourceCapability()
             .getResourceValue(ResourceInformation.VCORES_URI));
-    Assert.assertEquals(
+    assertEquals(
         YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES,
         cs.getMaximumAllocation()
             .getResourceValue(ResourceInformation.VCORES_URI));
@@ -201,26 +207,26 @@ public class TestCapacitySchedulerWithMultiResourceTypes {
     cs.reinitialize(csconf, rm.getRMContext());
 
     // Maximum allocation will be updated
-    Assert.assertEquals(3334,
+    assertEquals(3334,
         cs.getMaximumResourceCapability().getResourceValue(RESOURCE_1));
 
     // Since we haven't updated the real configuration of ResourceUtils,
     // cs.getMaximumAllocation won't be updated.
-    Assert.assertEquals(3333,
+    assertEquals(3333,
         cs.getMaximumAllocation().getResourceValue(RESOURCE_1));
-    Assert.assertEquals(
+    assertEquals(
         YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
         cs.getMaximumResourceCapability()
             .getResourceValue(ResourceInformation.MEMORY_URI));
-    Assert.assertEquals(
+    assertEquals(
         YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
         cs.getMaximumAllocation()
             .getResourceValue(ResourceInformation.MEMORY_URI));
-    Assert.assertEquals(
+    assertEquals(
         YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES,
         cs.getMaximumResourceCapability()
             .getResourceValue(ResourceInformation.VCORES_URI));
-    Assert.assertEquals(
+    assertEquals(
         YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES,
         cs.getMaximumAllocation()
             .getResourceValue(ResourceInformation.VCORES_URI));
@@ -260,7 +266,7 @@ public class TestCapacitySchedulerWithMultiResourceTypes {
       exception = true;
     }
 
-    Assert.assertTrue("Should have exception in CS", exception);
+    assertTrue(exception, "Should have exception in CS");
   }
 
   @Test
@@ -271,23 +277,22 @@ public class TestCapacitySchedulerWithMultiResourceTypes {
 
     CapacitySchedulerConfiguration csConf =
         new CapacitySchedulerConfiguration();
-    csConf.setMaximumApplicationMasterResourcePerQueuePercent("root", 100.0f);
-    csConf.setMaximumAMResourcePercentPerPartition("root", "", 100.0f);
-    csConf.setMaximumApplicationMasterResourcePerQueuePercent("root.default",
+    csConf.setMaximumApplicationMasterResourcePerQueuePercent(ROOT, 100.0f);
+    csConf.setMaximumAMResourcePercentPerPartition(ROOT, "", 100.0f);
+    csConf.setMaximumApplicationMasterResourcePerQueuePercent(DEFAULT,
         100.0f);
-    csConf.setMaximumAMResourcePercentPerPartition("root.default", "", 100.0f);
+    csConf.setMaximumAMResourcePercentPerPartition(DEFAULT, "", 100.0f);
     csConf.setResourceComparator(DominantResourceCalculator.class);
     csConf.set(YarnConfiguration.RESOURCE_TYPES, ResourceInformation.GPU_URI);
 
     // Define top-level queues
-    csConf.setQueues(CapacitySchedulerConfiguration.ROOT,
-        new String[] {"a", "b"});
+    csConf.setQueues(ROOT, new String[] {"a", "b"});
 
     // Set each queue to consider 50% each.
-    csConf.setCapacity(A_QUEUE, A_CAPACITY);
-    csConf.setCapacity(B_QUEUE, B_CAPACITY);
-    csConf.setMaximumCapacity(A_QUEUE, 100.0f);
-    csConf.setUserLimitFactor(A_QUEUE, 2);
+    csConf.setCapacity(A, A_CAPACITY);
+    csConf.setCapacity(B, B_CAPACITY);
+    csConf.setMaximumCapacity(A, 100.0f);
+    csConf.setUserLimitFactor(A, 2);
 
     YarnConfiguration conf = new YarnConfiguration(csConf);
     // Don't reset resource types since we have already configured resource
@@ -323,12 +328,12 @@ public class TestCapacitySchedulerWithMultiResourceTypes {
         rm.getResourceScheduler().getNodeReport(nm1.getNodeId());
 
     // check node report
-    Assert.assertEquals(1 * GB, report_nm1.getUsedResource().getMemorySize());
-    Assert.assertEquals(9 * GB,
+    assertEquals(1 * GB, report_nm1.getUsedResource().getMemorySize());
+    assertEquals(9 * GB,
         report_nm1.getAvailableResource().getMemorySize());
-    Assert.assertEquals(0, report_nm1.getUsedResource()
+    assertEquals(0, report_nm1.getUsedResource()
         .getResourceInformation(ResourceInformation.GPU_URI).getValue());
-    Assert.assertEquals(4, report_nm1.getAvailableResource()
+    assertEquals(4, report_nm1.getAvailableResource()
         .getResourceInformation(ResourceInformation.GPU_URI).getValue());
 
     nameToValues.put(ResourceInformation.GPU_URI, "4");
@@ -341,17 +346,17 @@ public class TestCapacitySchedulerWithMultiResourceTypes {
             Priority.newInstance(1), "*", containerGpuResource, 1)), null);
     ContainerId containerId2 =
         ContainerId.newContainerId(am1.getApplicationAttemptId(), 2);
-    Assert.assertTrue(rm.waitForState(nm1, containerId2,
+    assertTrue(rm.waitForState(nm1, containerId2,
         RMContainerState.ALLOCATED));
     // Acquire this container
     am1.allocate(null, null);
 
     report_nm1 =
         rm.getResourceScheduler().getNodeReport(nm1.getNodeId());
-    Assert.assertEquals(2 * GB, report_nm1.getUsedResource().getMemorySize());
-    Assert.assertEquals(4, report_nm1.getUsedResource()
+    assertEquals(2 * GB, report_nm1.getUsedResource().getMemorySize());
+    assertEquals(4, report_nm1.getUsedResource()
         .getResourceInformation(ResourceInformation.GPU_URI).getValue());
-    Assert.assertEquals(0, report_nm1.getAvailableResource()
+    assertEquals(0, report_nm1.getAvailableResource()
         .getResourceInformation(ResourceInformation.GPU_URI).getValue());
 
     nameToValues.clear();
@@ -363,20 +368,21 @@ public class TestCapacitySchedulerWithMultiResourceTypes {
             Priority.newInstance(1), "*", containerResource, 1)), null);
     ContainerId containerId3 =
         ContainerId.newContainerId(am1.getApplicationAttemptId(), 3);
-    Assert.assertTrue(rm.waitForState(nm1, containerId3,
+    assertTrue(rm.waitForState(nm1, containerId3,
         RMContainerState.ALLOCATED));
 
     report_nm1 =
         rm.getResourceScheduler().getNodeReport(nm1.getNodeId());
-    Assert.assertEquals(3 * GB, report_nm1.getUsedResource().getMemorySize());
-    Assert.assertEquals(4, report_nm1.getUsedResource()
+    assertEquals(3 * GB, report_nm1.getUsedResource().getMemorySize());
+    assertEquals(4, report_nm1.getUsedResource()
         .getResourceInformation(ResourceInformation.GPU_URI).getValue());
-    Assert.assertEquals(0, report_nm1.getAvailableResource()
+    assertEquals(0, report_nm1.getAvailableResource()
         .getResourceInformation(ResourceInformation.GPU_URI).getValue());
   }
 
 
-  @Test(timeout = 300000)
+  @Test
+  @Timeout(value = 300)
   public void testConsumeAllExtendedResourcesWithSmallMinUserLimitPct()
       throws Exception {
     int GB = 1024;
@@ -411,14 +417,13 @@ public class TestCapacitySchedulerWithMultiResourceTypes {
     csconf.setResourceComparator(DominantResourceCalculator.class);
 
     // Define top-level queues
-    csconf.setQueues(CapacitySchedulerConfiguration.ROOT,
-        new String[] {"a", "b"});
+    csconf.setQueues(ROOT, new String[] {"a", "b"});
 
     // Set each queue to contain 50% each.
-    csconf.setCapacity(A_QUEUE, A_CAPACITY);
-    csconf.setCapacity(B_QUEUE, B_CAPACITY);
-    csconf.setMaximumCapacity(A_QUEUE, 100.0f);
-    csconf.setUserLimitFactor(A_QUEUE, 2);
+    csconf.setCapacity(A, A_CAPACITY);
+    csconf.setCapacity(B, B_CAPACITY);
+    csconf.setMaximumCapacity(A, 100.0f);
+    csconf.setUserLimitFactor(A, 2);
 
     YarnConfiguration yarnConf = new YarnConfiguration(csconf);
     // Don't reset resource types since we have already configured resource

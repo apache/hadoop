@@ -13,6 +13,11 @@
  */
 package org.apache.hadoop.security.authentication.client;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.apache.http.HttpResponse;
 import org.apache.http.auth.AuthScope;
@@ -54,8 +59,6 @@ import java.net.URL;
 import java.security.Principal;
 import java.util.EnumSet;
 import java.util.Properties;
-
-import org.junit.Assert;
 
 public class AuthenticatorTestCase {
   private Server server;
@@ -170,11 +173,11 @@ public class AuthenticatorTestCase {
     try {
       URL url = new URL(getBaseURL());
       AuthenticatedURL.Token token = new AuthenticatedURL.Token();
-      Assert.assertFalse(token.isSet());
+      assertFalse(token.isSet());
       TestConnectionConfigurator connConf = new TestConnectionConfigurator();
       AuthenticatedURL aUrl = new AuthenticatedURL(authenticator, connConf);
       HttpURLConnection conn = aUrl.openConnection(url, token);
-      Assert.assertTrue(connConf.invoked);
+      assertTrue(connConf.invoked);
       String tokenStr = token.toString();
       if (doPost) {
         conn.setRequestMethod("POST");
@@ -186,18 +189,18 @@ public class AuthenticatorTestCase {
         writer.write(POST);
         writer.close();
       }
-      Assert.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
+      assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
       if (doPost) {
         BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
         String echo = reader.readLine();
-        Assert.assertEquals(POST, echo);
-        Assert.assertNull(reader.readLine());
+        assertEquals(POST, echo);
+        assertNull(reader.readLine());
       }
       aUrl = new AuthenticatedURL();
       conn = aUrl.openConnection(url, token);
       conn.connect();
-      Assert.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
-      Assert.assertEquals(tokenStr, token.toString());
+      assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
+      assertEquals(tokenStr, token.toString());
     } finally {
       stop();
     }
@@ -233,7 +236,7 @@ public class AuthenticatorTestCase {
     try {
       response = httpClient.execute(request);
       final int httpStatus = response.getStatusLine().getStatusCode();
-      Assert.assertEquals(HttpURLConnection.HTTP_OK, httpStatus);
+      assertEquals(HttpURLConnection.HTTP_OK, httpStatus);
     } finally {
       if (response != null) EntityUtils.consumeQuietly(response.getEntity());
     }
@@ -255,7 +258,7 @@ public class AuthenticatorTestCase {
         // Important that the entity is not repeatable -- this means if
         // we have to renegotiate (e.g. b/c the cookie wasn't handled properly)
         // the test will fail.
-        Assert.assertFalse(entity.isRepeatable());
+        assertFalse(entity.isRepeatable());
         post.setEntity(entity);
         doHttpClientRequest(httpClient, post);
       }

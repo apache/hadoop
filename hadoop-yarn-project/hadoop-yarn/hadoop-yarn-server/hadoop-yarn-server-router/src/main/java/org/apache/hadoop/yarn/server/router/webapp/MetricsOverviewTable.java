@@ -18,7 +18,6 @@
 package org.apache.hadoop.yarn.server.router.webapp;
 
 import com.google.inject.Inject;
-import com.sun.jersey.api.client.Client;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -33,6 +32,7 @@ import org.apache.hadoop.yarn.server.router.webapp.dao.RouterSchedulerMetrics;
 import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
+import javax.ws.rs.client.Client;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
@@ -288,7 +288,7 @@ public class MetricsOverviewTable extends RouterBlock {
       }
     }
 
-    client.destroy();
+    client.close();
   }
 
   /**

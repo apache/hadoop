@@ -29,27 +29,31 @@ import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.lib.db.DBInputFormat.DBInputSplit;
 import org.apache.hadoop.mapreduce.lib.db.DBInputFormat.NullDBWritable;
 import org.apache.hadoop.mapreduce.lib.db.DataDrivenDBInputFormat.DataDrivenDBInputSplit;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
-import static org.junit.Assert.*;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 public class TestDbClasses {
   /**
    * test splitters from DataDrivenDBInputFormat. For different data types may
    * be different splitter
    */
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testDataDrivenDBInputFormatSplitter() {
-    DataDrivenDBInputFormat<NullDBWritable> format = new DataDrivenDBInputFormat<NullDBWritable>();
+    DataDrivenDBInputFormat<NullDBWritable> format = new DataDrivenDBInputFormat<>();
     testCommonSplitterTypes(format);
-    assertEquals(DateSplitter.class, format.getSplitter(Types.TIMESTAMP)
-        .getClass());
+    assertEquals(DateSplitter.class, format.getSplitter(Types.TIMESTAMP).getClass());
     assertEquals(DateSplitter.class, format.getSplitter(Types.DATE).getClass());
     assertEquals(DateSplitter.class, format.getSplitter(Types.TIME).getClass());
   }
 
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testDataDrivenDBInputFormat() throws Exception {
     JobContext jobContext = mock(JobContext.class);
     Configuration configuration = new Configuration();
@@ -79,7 +83,8 @@ public class TestDbClasses {
         configuration.get(DBConfiguration.INPUT_BOUNDING_QUERY));
   }
 
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testOracleDataDrivenDBInputFormat() throws Exception {
     OracleDataDrivenDBInputFormat<NullDBWritable> format = 
         new OracleDataDrivenDBInputFormatForTest();
@@ -96,7 +101,8 @@ public class TestDbClasses {
    * test generate sql script for OracleDBRecordReader.
    */
 
-  @Test(timeout = 20000)
+  @Test
+  @Timeout(value = 20)
   public void testOracleDBRecordReader() throws Exception {
     DBInputSplit splitter = new DBInputSplit(1, 10);
     Configuration configuration = new Configuration();

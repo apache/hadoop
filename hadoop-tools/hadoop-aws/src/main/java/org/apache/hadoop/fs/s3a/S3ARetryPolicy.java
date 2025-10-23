@@ -126,6 +126,11 @@ public class S3ARetryPolicy implements RetryPolicy {
   protected final RetryPolicy retryAwsClientExceptions;
 
   /**
+   * Retry policy for all http 5xx errors not handled explicitly.
+   */
+  protected final RetryPolicy http5xxRetryPolicy;
+
+  /**
    * Instantiate.
    * @param conf configuration to read.
    */
@@ -164,6 +169,13 @@ public class S3ARetryPolicy implements RetryPolicy {
     // client connectivity: fixed retries without care for idempotency
     connectivityFailure = baseExponentialRetry;
 
+    boolean retry5xxHttpErrors =
+        conf.getBoolean(RETRY_HTTP_5XX_ERRORS, DEFAULT_RETRY_HTTP_5XX_ERRORS);
+
+    http5xxRetryPolicy = retry5xxHttpErrors
+        ? retryAwsClientExceptions
+        : fail;
+
     Map<Class<? extends Exception>, RetryPolicy> policyMap =
         createExceptionMap();
     retryPolicy = retryByException(retryIdempotentCalls, policyMap);
@@ -201,13 +213,22 @@ public class S3ARetryPolicy implements RetryPolicy {
     // Treated as an immediate failure
     policyMap.put(AWSBadRequestException.class, fail);
 
+    // API call timeout.
+    policyMap.put(AWSApiCallTimeoutException.class, retryAwsClientExceptions);
+
     // use specific retry policy for aws client exceptions
     // nested IOExceptions will already have been extracted and used
     // in this map.
     policyMap.put(AWSClientIOException.class, retryAwsClientExceptions);
 
+    // Http Channel issues: treat as communication failure
+    policyMap.put(HttpChannelEOFException.class, connectivityFailure);
+
     // server didn't respond.
     policyMap.put(AWSNoResponseException.class, retryIdempotentCalls);
+
+    // range header is out of scope of object; retrying won't help
+    policyMap.put(RangeNotSatisfiableEOFException.class, fail);
 
     // should really be handled by resubmitting to new location;
     // that's beyond the scope of this retry policy
@@ -219,15 +240,13 @@ public class S3ARetryPolicy implements RetryPolicy {
     // throttled requests are can be retried, always
     policyMap.put(AWSServiceThrottledException.class, throttlePolicy);
 
-    // Status 5xx error code is an immediate failure
+    // Status 5xx error code has historically been treated as an immediate failure
     // this is sign of a server-side problem, and while
     // rare in AWS S3, it does happen on third party stores.
     // (out of disk space, etc).
     // by the time we get here, the aws sdk will have
     // already retried.
-    // there is specific handling for some 5XX codes (501, 503);
-    // this is for everything else
-    policyMap.put(AWSStatus500Exception.class, fail);
+    policyMap.put(AWSStatus500Exception.class, http5xxRetryPolicy);
 
     // subclass of AWSServiceIOException whose cause is always S3Exception
     policyMap.put(AWSS3IOException.class, retryIdempotentCalls);
@@ -248,10 +267,7 @@ public class S3ARetryPolicy implements RetryPolicy {
     policyMap.put(ConnectException.class, connectivityFailure);
 
     // this can be a sign of an HTTP connection breaking early.
-    // which can be reacted to by another attempt if the request was idempotent.
-    // But: could also be a sign of trying to read past the EOF on a GET,
-    // which isn't going to be recovered from
-    policyMap.put(EOFException.class, retryIdempotentCalls);
+    policyMap.put(EOFException.class, connectivityFailure);
 
     // object not found. 404 when not unknown bucket; 410 "gone"
     policyMap.put(FileNotFoundException.class, fail);
@@ -297,7 +313,7 @@ public class S3ARetryPolicy implements RetryPolicy {
     if (exception instanceof SdkException) {
       // update the sdk exception for the purpose of exception
       // processing.
-      ex = S3AUtils.translateException("", "", (SdkException) exception);
+      ex = S3AUtils.translateException("", "/", (SdkException) exception);
     }
     LOG.debug("Retry probe for {} with {} retries and {} failovers,"
             + " idempotent={}, due to {}",

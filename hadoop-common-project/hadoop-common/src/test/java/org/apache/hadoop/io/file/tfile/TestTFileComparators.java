@@ -17,13 +17,13 @@
 
 package org.apache.hadoop.io.file.tfile;
 
+import static org.junit.jupiter.api.Assertions.fail;
+
 import java.io.IOException;
 
-import org.junit.Assert;
-
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -58,7 +58,7 @@ public class TestTFileComparators {
   private int records1stBlock = 4480;
   private int records2ndBlock = 4263;
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     conf = new Configuration();
     path = new Path(ROOT, outputFile);
@@ -66,7 +66,7 @@ public class TestTFileComparators {
     out = fs.create(path);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     fs.delete(path, true);
   }
@@ -76,7 +76,7 @@ public class TestTFileComparators {
   public void testFailureBadComparatorNames() throws IOException {
     try {
       writer = new Writer(out, BLOCK_SIZE, compression, "badcmp", conf);
-      Assert.fail("Failed to catch unsupported comparator names");
+      fail("Failed to catch unsupported comparator names");
     }
     catch (Exception e) {
       // noop, expecting exceptions
@@ -91,7 +91,7 @@ public class TestTFileComparators {
       writer =
           new Writer(out, BLOCK_SIZE, compression,
               "jclass: some.non.existence.clazz", conf);
-      Assert.fail("Failed to catch unsupported comparator names");
+      fail("Failed to catch unsupported comparator names");
     }
     catch (Exception e) {
       // noop, expecting exceptions
@@ -106,7 +106,7 @@ public class TestTFileComparators {
       writer =
           new Writer(out, BLOCK_SIZE, compression,
               "jclass:org.apache.hadoop.io.file.tfile.Chunk", conf);
-      Assert.fail("Failed to catch unsupported comparator names");
+      fail("Failed to catch unsupported comparator names");
     }
     catch (Exception e) {
       // noop, expecting exceptions

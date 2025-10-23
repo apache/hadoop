@@ -157,6 +157,8 @@ if(CMAKE_SYSTEM_PROCESSOR MATCHES "^i.86$" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "x
   set(BULK_CRC_ARCH_SOURCE_FIlE "${SRC}/util/bulk_crc32_x86.c")
 elseif(CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64")
   set(BULK_CRC_ARCH_SOURCE_FIlE "${SRC}/util/bulk_crc32_aarch64.c")
+elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^riscv64" OR CMAKE_SYSTEM_PROCESSOR MATCHES "^riscv32")
+  set(BULK_CRC_ARCH_SOURCE_FIlE "${SRC}/util/bulk_crc32_riscv.c")
 else()
   message("No HW CRC acceleration for ${CMAKE_SYSTEM_PROCESSOR}, falling back to SW")
 endif()

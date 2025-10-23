@@ -18,6 +18,8 @@
 package org.apache.hadoop.test;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 
 public final class ReflectionUtils {
   private ReflectionUtils() {}
@@ -47,5 +49,28 @@ public final class ReflectionUtils {
     default:
       return null;
     }
+  }
+
+  public static <T> void setFinalField(
+          Class<T> type, final T obj, final String fieldName, Object value)
+          throws ReflectiveOperationException {
+    Field f = type.getDeclaredField(fieldName);
+    f.setAccessible(true);
+    Field modifiersField = ReflectionUtils.getModifiersField();
+    modifiersField.setAccessible(true);
+    modifiersField.setInt(f, f.getModifiers() & ~Modifier.FINAL);
+    f.set(obj, value);
+  }
+
+  public static Field getModifiersField() throws ReflectiveOperationException {
+    Method getDeclaredFields0 = Class.class.getDeclaredMethod("getDeclaredFields0", boolean.class);
+    getDeclaredFields0.setAccessible(true);
+    Field[] fields = (Field[]) getDeclaredFields0.invoke(Field.class, false);
+    for (Field each : fields) {
+      if ("modifiers".equals(each.getName())) {
+        return each;
+      }
+    }
+    throw new UnsupportedOperationException();
   }
 }

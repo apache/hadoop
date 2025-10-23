@@ -22,7 +22,7 @@ import java.net.URI;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FsConstants;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class TestViewFsURIs {
   @Test

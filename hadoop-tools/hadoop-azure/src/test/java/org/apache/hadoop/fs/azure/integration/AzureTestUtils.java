@@ -26,9 +26,8 @@ import java.io.OutputStreamWriter;
 import java.net.URI;
 import java.util.List;
 
-import org.junit.Assert;
-import org.junit.Assume;
-import org.junit.internal.AssumptionViolatedException;
+import org.junit.jupiter.api.Assertions;
+import org.opentest4j.TestAbortedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,8 +41,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azure.AzureBlobStorageTestAccount;
 import org.apache.hadoop.fs.azure.NativeAzureFileSystem;
 
-import static org.junit.Assume.assumeTrue;
-
 import static org.apache.hadoop.fs.azure.AzureBlobStorageTestAccount.WASB_ACCOUNT_NAME_DOMAIN_SUFFIX_REGEX;
 import static org.apache.hadoop.fs.azure.AzureBlobStorageTestAccount.WASB_TEST_ACCOUNT_NAME_WITH_DOMAIN;
 import static org.apache.hadoop.fs.azure.integration.AzureTestConstants.*;
@@ -51,12 +48,13 @@ import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_A
 import static org.apache.hadoop.test.MetricsAsserts.getLongCounter;
 import static org.apache.hadoop.test.MetricsAsserts.getLongGauge;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 /**
  * Utilities for the Azure tests. Based on {@code S3ATestUtils}, so
  * (initially) has unused method.
  */
-public final class AzureTestUtils extends Assert {
+public final class AzureTestUtils extends Assertions {
   private static final Logger LOG = LoggerFactory.getLogger(
       AzureTestUtils.class);
 
@@ -75,7 +73,7 @@ public final class AzureTestUtils extends Assert {
    * @param conf configuration
    * @return the FS
    * @throws IOException IO Problems
-   * @throws AssumptionViolatedException if the FS is not named
+   * @throws TestAbortedException if the FS is not named
    */
   public static NativeAzureFileSystem createTestFileSystem(Configuration conf)
       throws IOException {
@@ -90,7 +88,7 @@ public final class AzureTestUtils extends Assert {
     }
     if (!liveTest) {
       // Skip the test
-      throw new AssumptionViolatedException(
+      throw new TestAbortedException(
           "No test filesystem in " + TEST_FS_WASB_NAME);
     }
     NativeAzureFileSystem fs1 = new NativeAzureFileSystem();
@@ -108,7 +106,7 @@ public final class AzureTestUtils extends Assert {
    * @param conf configuration
    * @return the FS
    * @throws IOException IO Problems
-   * @throws AssumptionViolatedException if the FS is not named
+   * @throws TestAbortedException if the FS is not named
    */
   public static FileContext createTestFileContext(Configuration conf)
       throws IOException {
@@ -123,7 +121,7 @@ public final class AzureTestUtils extends Assert {
     if (!liveTest) {
       // This doesn't work with our JUnit 3 style test cases, so instead we'll
       // make this whole class not run by default
-      throw new AssumptionViolatedException("No test filesystem in "
+      throw new TestAbortedException("No test filesystem in "
           + TEST_FS_WASB_NAME);
     }
     FileContext fc = FileContext.getFileContext(testURI, conf);
@@ -343,10 +341,10 @@ public final class AzureTestUtils extends Assert {
    * @param expectedClass class
    * @param obj object to check
    */
-  public static void assertInstanceOf(Class<?> expectedClass, Object obj) {
-    Assert.assertTrue(String.format("Expected instance of class %s, but is %s.",
-        expectedClass, obj.getClass()),
-        expectedClass.isAssignableFrom(obj.getClass()));
+  public static void assertInstanceOf2(Class<?> expectedClass, Object obj) {
+    Assertions.assertTrue(
+       expectedClass.isAssignableFrom(obj.getClass()), String.format("Expected instance of class %s, but is %s.",
+        expectedClass, obj.getClass()));
   }
 
   /**
@@ -381,12 +379,12 @@ public final class AzureTestUtils extends Assert {
   public static void assertOptionEquals(Configuration conf,
       String key,
       String expected) {
-    assertEquals("Value of " + key, expected, conf.get(key));
+    assertEquals(expected, conf.get(key), "Value of " + key);
   }
 
   /**
    * Assume that a condition is met. If not: log at WARN and
-   * then throw an {@link AssumptionViolatedException}.
+   * then throw an {@link TestAbortedException}.
    * @param message message in an assumption
    * @param condition condition to probe
    */
@@ -394,7 +392,7 @@ public final class AzureTestUtils extends Assert {
     if (!condition) {
       LOG.warn(message);
     }
-    Assume.assumeTrue(message, condition);
+    assumeThat(condition).as(message).isTrue();
   }
 
   /**
@@ -445,7 +443,6 @@ public final class AzureTestUtils extends Assert {
    * field.
    * @param testAccount test account to clean up
    * @return null
-   * @throws Execption cleanup problems
    */
   public static AzureBlobStorageTestAccount cleanup(
       AzureBlobStorageTestAccount testAccount) throws Exception {
@@ -496,8 +493,10 @@ public final class AzureTestUtils extends Assert {
     if (accountName == null) {
       accountName = conf.get(WASB_TEST_ACCOUNT_NAME_WITH_DOMAIN);
     }
-    assumeTrue("Account for WASB is missing or it is not in correct format",
-            accountName != null && !accountName.endsWith(WASB_ACCOUNT_NAME_DOMAIN_SUFFIX_REGEX));
+    assumeThat(accountName)
+        .as("Account for WASB is missing or it is not in correct format")
+        .isNotNull()
+        .doesNotEndWith(WASB_ACCOUNT_NAME_DOMAIN_SUFFIX_REGEX);
     return accountName;
   }
 
@@ -551,7 +550,8 @@ public final class AzureTestUtils extends Assert {
    * Assume hierarchical namespace is disabled for test account.
    */
   public static void assumeNamespaceDisabled(Configuration conf) {
-    Assume.assumeFalse("Hierarchical namespace is enabled for test account.",
-        conf.getBoolean(FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT, false));
+    assumeThat(conf.getBoolean(FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT, false))
+        .as("Hierarchical namespace is enabled for test account.")
+        .isFalse();
   }
 }

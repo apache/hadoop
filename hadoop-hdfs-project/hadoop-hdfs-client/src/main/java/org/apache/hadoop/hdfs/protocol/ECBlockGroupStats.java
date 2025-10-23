@@ -38,24 +38,27 @@ public final class ECBlockGroupStats {
   private final long missingBlockGroups;
   private final long bytesInFutureBlockGroups;
   private final long pendingDeletionBlocks;
+  private final Long badlyDistributedBlocks;
   private final Long highestPriorityLowRedundancyBlocks;
 
   public ECBlockGroupStats(long lowRedundancyBlockGroups,
       long corruptBlockGroups, long missingBlockGroups,
       long bytesInFutureBlockGroups, long pendingDeletionBlocks) {
     this(lowRedundancyBlockGroups, corruptBlockGroups, missingBlockGroups,
-        bytesInFutureBlockGroups, pendingDeletionBlocks, null);
+        bytesInFutureBlockGroups, pendingDeletionBlocks,
+        null, null);
   }
 
   public ECBlockGroupStats(long lowRedundancyBlockGroups,
       long corruptBlockGroups, long missingBlockGroups,
       long bytesInFutureBlockGroups, long pendingDeletionBlocks,
-      Long highestPriorityLowRedundancyBlocks) {
+      Long badlyDistributedBlocks, Long highestPriorityLowRedundancyBlocks) {
     this.lowRedundancyBlockGroups = lowRedundancyBlockGroups;
     this.corruptBlockGroups = corruptBlockGroups;
     this.missingBlockGroups = missingBlockGroups;
     this.bytesInFutureBlockGroups = bytesInFutureBlockGroups;
     this.pendingDeletionBlocks = pendingDeletionBlocks;
+    this.badlyDistributedBlocks = badlyDistributedBlocks;
     this.highestPriorityLowRedundancyBlocks
         = highestPriorityLowRedundancyBlocks;
   }
@@ -80,6 +83,14 @@ public final class ECBlockGroupStats {
     return pendingDeletionBlocks;
   }
 
+  public boolean hasBadlyDistributedBlocks() {
+    return getBadlyDistributedBlocks() != null;
+  }
+
+  public Long getBadlyDistributedBlocks() {
+    return badlyDistributedBlocks;
+  }
+
   public boolean hasHighestPriorityLowRedundancyBlocks() {
     return getHighestPriorityLowRedundancyBlocks() != null;
   }
@@ -100,6 +111,10 @@ public final class ECBlockGroupStats {
             getBytesInFutureBlockGroups())
         .append(", PendingDeletionBlocks=").append(
             getPendingDeletionBlocks());
+    if(hasBadlyDistributedBlocks()) {
+      statsBuilder.append(", BadlyDistributedBlocks=")
+          .append(getBadlyDistributedBlocks());
+    }
     if (hasHighestPriorityLowRedundancyBlocks()) {
       statsBuilder.append(", HighestPriorityLowRedundancyBlocks=")
           .append(getHighestPriorityLowRedundancyBlocks());
@@ -116,6 +131,7 @@ public final class ECBlockGroupStats {
         .append(missingBlockGroups)
         .append(bytesInFutureBlockGroups)
         .append(pendingDeletionBlocks)
+        .append(badlyDistributedBlocks)
         .append(highestPriorityLowRedundancyBlocks)
         .toHashCode();
   }
@@ -135,6 +151,7 @@ public final class ECBlockGroupStats {
         .append(missingBlockGroups, other.missingBlockGroups)
         .append(bytesInFutureBlockGroups, other.bytesInFutureBlockGroups)
         .append(pendingDeletionBlocks, other.pendingDeletionBlocks)
+        .append(badlyDistributedBlocks, other.badlyDistributedBlocks)
         .append(highestPriorityLowRedundancyBlocks,
             other.highestPriorityLowRedundancyBlocks)
         .isEquals();
@@ -151,6 +168,8 @@ public final class ECBlockGroupStats {
     long missingBlockGroups = 0;
     long bytesInFutureBlockGroups = 0;
     long pendingDeletionBlocks = 0;
+    long badlyDistributedBlocks = 0;
+    boolean hasBadlyDistributedBlocks = false;
     long highestPriorityLowRedundancyBlocks = 0;
     boolean hasHighestPriorityLowRedundancyBlocks = false;
 
@@ -160,16 +179,20 @@ public final class ECBlockGroupStats {
       missingBlockGroups += stat.getMissingBlockGroups();
       bytesInFutureBlockGroups += stat.getBytesInFutureBlockGroups();
       pendingDeletionBlocks += stat.getPendingDeletionBlocks();
+      if (stat.hasBadlyDistributedBlocks()) {
+        hasBadlyDistributedBlocks = true;
+        badlyDistributedBlocks += stat.getBadlyDistributedBlocks();
+      }
       if (stat.hasHighestPriorityLowRedundancyBlocks()) {
         hasHighestPriorityLowRedundancyBlocks = true;
         highestPriorityLowRedundancyBlocks +=
             stat.getHighestPriorityLowRedundancyBlocks();
       }
     }
-    if (hasHighestPriorityLowRedundancyBlocks) {
+    if (hasBadlyDistributedBlocks && hasHighestPriorityLowRedundancyBlocks) {
       return new ECBlockGroupStats(lowRedundancyBlockGroups, corruptBlockGroups,
           missingBlockGroups, bytesInFutureBlockGroups, pendingDeletionBlocks,
-          highestPriorityLowRedundancyBlocks);
+          badlyDistributedBlocks, highestPriorityLowRedundancyBlocks);
     }
     return new ECBlockGroupStats(lowRedundancyBlockGroups, corruptBlockGroups,
         missingBlockGroups, bytesInFutureBlockGroups, pendingDeletionBlocks);

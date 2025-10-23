@@ -20,8 +20,9 @@ package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.MockNodes.newResource;
 import static org.apache.hadoop.yarn.webapp.Params.TITLE;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -59,6 +60,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
@@ -69,8 +71,7 @@ import org.apache.hadoop.yarn.util.StringHelper;
 import org.apache.hadoop.yarn.webapp.WebApps;
 import org.apache.hadoop.yarn.webapp.YarnWebParams;
 import org.apache.hadoop.yarn.webapp.test.WebAppTests;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 import com.google.inject.Binder;
@@ -96,7 +97,8 @@ public class TestRMWebApp {
     assertEquals("Applications", c.get(TITLE, "unknown"));
   }
 
-  @Test public void testView() {
+  @Test
+  public void testView() {
     Injector injector = WebAppTests.createMockInjector(RMContext.class,
         mockRMContext(15, 1, 2, 8*GiB),
         new Module() {
@@ -124,24 +126,22 @@ public class TestRMWebApp {
     Map<String, String> moreParams =
         rmViewInstance.context().requestContext().moreParams();
     String appsTableColumnsMeta = moreParams.get("ui.dataTables.apps.init");
-    Assert.assertTrue(appsTableColumnsMeta.indexOf("natural") != -1);
+    assertTrue(appsTableColumnsMeta.indexOf("natural") != -1);
   }
 
-  @Test public void testNodesPage() {
+  @Test
+  public void testNodesPage() {
     // 10 nodes. Two of each type.
     final RMContext rmContext = mockRMContext(3, 2, 12, 8*GiB);
     Injector injector = WebAppTests.createMockInjector(RMContext.class,
         rmContext,
-        new Module() {
-      @Override
-      public void configure(Binder binder) {
-        try {
-          binder.bind(ResourceManager.class).toInstance(mockRm(rmContext));
-        } catch (IOException e) {
-          throw new IllegalStateException(e);
-        }
-      }
-    });
+        binder -> {
+          try {
+            binder.bind(ResourceManager.class).toInstance(mockRm(rmContext));
+          } catch (IOException e) {
+            throw new IllegalStateException(e);
+          }
+        });
 
     // All nodes
     NodesPage instance = injector.getInstance(NodesPage.class);
@@ -166,9 +166,9 @@ public class TestRMWebApp {
   public void testRMAppColumnIndices() {
 
     // Find the columns to check
-    List<Integer> colsId = new LinkedList<Integer>();
-    List<Integer> colsTime = new LinkedList<Integer>();
-    List<Integer> colsProgress = new LinkedList<Integer>();
+    List<Integer> colsId = new LinkedList<>();
+    List<Integer> colsTime = new LinkedList<>();
+    List<Integer> colsProgress = new LinkedList<>();
     for (int i = 0; i < RMAppsBlock.COLUMNS.length; i++) {
       ColumnHeader col = RMAppsBlock.COLUMNS[i];
       if (col.getCData().contains("ID")) {
@@ -184,14 +184,14 @@ public class TestRMWebApp {
     String tableInit = WebPageUtils.appsTableInit(true);
     for (String tableLine : tableInit.split("\\n")) {
       if (tableLine.contains("parseHadoopID")) {
-        assertTrue(tableLine + " should have id " + colsId,
-            tableLine.contains(colsId.toString()));
+        assertTrue(tableLine.contains(colsId.toString()),
+            tableLine + " should have id " + colsId);
       } else if (tableLine.contains("renderHadoopDate")) {
-        assertTrue(tableLine + " should have dates " + colsTime,
-            tableLine.contains(colsTime.toString()));
+        assertTrue(tableLine.contains(colsTime.toString()),
+            tableLine + " should have dates " + colsTime);
       } else if (tableLine.contains("parseHadoopProgress")) {
-        assertTrue(tableLine + " should have progress " + colsProgress,
-            tableLine.contains(colsProgress.toString()));
+        assertTrue(tableLine.contains(colsProgress.toString()),
+            tableLine + " should have progress " + colsProgress);
       }
     }
   }
@@ -316,7 +316,7 @@ public class TestRMWebApp {
       when(clientRMService.getApplications(any(GetApplicationsRequest.class)))
           .thenReturn(response);
     } catch (YarnException e) {
-      Assert.fail("Exception is not expected.");
+      fail("Exception is not expected.");
     }
     return clientRMService;
   }
@@ -329,50 +329,51 @@ public class TestRMWebApp {
   static void setupQueueConfiguration(CapacitySchedulerConfiguration conf,
       boolean useDRC) {
     // Define top-level queues
-    conf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] {"a", "b", "c"});
+    QueuePath root = new QueuePath(CapacitySchedulerConfiguration.ROOT);
+    conf.setQueues(root, new String[] {"a", "b", "c"});
 
-    final String A = CapacitySchedulerConfiguration.ROOT + ".a";
-    conf.setCapacity(A, 10);
+    final QueuePath a = root.createNewLeaf("a");
+    conf.setCapacity(a, 10);
 
-    final String B = CapacitySchedulerConfiguration.ROOT + ".b";
-    conf.setCapacity(B, 20);
+    final QueuePath b = root.createNewLeaf("b");
+    conf.setCapacity(b, 20);
 
-    final String C = CapacitySchedulerConfiguration.ROOT + ".c";
-    conf.setCapacity(C, 70);
+    final QueuePath c = root.createNewLeaf("c");
+    conf.setCapacity(c, 70);
 
     // Define 2nd-level queues
-    final String A1 = A + ".a1";
-    final String A2 = A + ".a2";
-    conf.setQueues(A, new String[] {"a1", "a2"});
-    conf.setCapacity(A1, 30);
-    conf.setCapacity(A2, 70);
+    final QueuePath a1 = a.createNewLeaf("a1");
+    final QueuePath a2 = a.createNewLeaf("a2");
+    conf.setQueues(a, new String[] {"a1", "a2"});
+    conf.setCapacity(a1, 30);
+    conf.setCapacity(a2, 70);
 
-    final String B1 = B + ".b1";
-    final String B2 = B + ".b2";
-    final String B3 = B + ".b3";
-    conf.setQueues(B, new String[] {"b1", "b2", "b3"});
-    conf.setCapacity(B1, 50);
-    conf.setCapacity(B2, 30);
-    conf.setCapacity(B3, 20);
+    final QueuePath b1 = b.createNewLeaf("b1");
+    final QueuePath b2 = b.createNewLeaf("b2");
+    final QueuePath b3 = b.createNewLeaf("b3");
+    conf.setQueues(b, new String[] {"b1", "b2", "b3"});
+    conf.setCapacity(b1, 50);
+    conf.setCapacity(b2, 30);
+    conf.setCapacity(b3, 20);
 
-    final String C1 = C + ".c1";
-    final String C2 = C + ".c2";
-    final String C3 = C + ".c3";
-    final String C4 = C + ".c4";
-    conf.setQueues(C, new String[] {"c1", "c2", "c3", "c4"});
-    conf.setCapacity(C1, 50);
-    conf.setCapacity(C2, 10);
-    conf.setCapacity(C3, 35);
-    conf.setCapacity(C4, 5);
+    final QueuePath c1 = c.createNewLeaf("c1");
+    final QueuePath c2 = c.createNewLeaf("c2");
+    final QueuePath c3 = c.createNewLeaf("c3");
+    final QueuePath c4 = c.createNewLeaf("c4");
+    conf.setQueues(c, new String[] {"c1", "c2", "c3", "c4"});
+    conf.setCapacity(c1, 50);
+    conf.setCapacity(c2, 10);
+    conf.setCapacity(c3, 35);
+    conf.setCapacity(c4, 5);
 
     // Define 3rd-level queues
-    final String C11 = C1 + ".c11";
-    final String C12 = C1 + ".c12";
-    final String C13 = C1 + ".c13";
-    conf.setQueues(C1, new String[] {"c11", "c12", "c13"});
-    conf.setCapacity(C11, 15);
-    conf.setCapacity(C12, 45);
-    conf.setCapacity(C13, 40);
+    final QueuePath c11 = c1.createNewLeaf("c11");
+    final QueuePath c12 = c1.createNewLeaf("c12");
+    final QueuePath c13 = c1.createNewLeaf("c13");
+    conf.setQueues(c1, new String[] {"c11", "c12", "c13"});
+    conf.setCapacity(c11, 15);
+    conf.setCapacity(c12, 45);
+    conf.setCapacity(c13, 40);
     if (useDRC) {
       conf.set("yarn.scheduler.capacity.resource-calculator",
           "org.apache.hadoop.yarn.util.resource.DominantResourceCalculator");
@@ -405,8 +406,8 @@ public class TestRMWebApp {
 
   static void setupFifoQueueConfiguration(CapacitySchedulerConfiguration conf) {
     // Define default queue
-    conf.setQueues("default", new String[] {"default"});
-    conf.setCapacity("default", 100);
+    conf.setQueues(new QueuePath("default"), new String[] {"default"});
+    conf.setCapacity(new QueuePath("default"), 100);
   }
 
   public static void main(String[] args) throws Exception {

@@ -42,17 +42,18 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.Time;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
@@ -66,12 +67,12 @@ public class TestRequestHedgingProxyProvider {
   private URI nnUri;
   private String ns;
 
-  @BeforeClass
+  @BeforeAll
   public static void setupClass() throws Exception {
     GenericTestUtils.setLogLevel(RequestHedgingProxyProvider.LOG, Level.TRACE);
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws URISyntaxException {
     ns = "mycluster-" + Time.monotonicNow();
     nnUri = new URI("hdfs://" + ns);
@@ -103,10 +104,10 @@ public class TestRequestHedgingProxyProvider {
     RequestHedgingProxyProvider<ClientProtocol> provider =
         new RequestHedgingProxyProvider<>(conf, nnUri, ClientProtocol.class,
             createFactory(badMock, goodMock));
-    Assert.assertTrue(Proxy.getInvocationHandler(
+    assertTrue(Proxy.getInvocationHandler(
         provider.getProxy().proxy) instanceof RpcInvocationHandler);
     long[] stats = provider.getProxy().proxy.getStats();
-    Assert.assertTrue(stats.length == 1);
+    assertTrue(stats.length == 1);
     Mockito.verify(badMock).getStats();
     Mockito.verify(goodMock).getStats();
   }
@@ -202,8 +203,8 @@ public class TestRequestHedgingProxyProvider {
         new RequestHedgingProxyProvider<>(conf, nnUri, ClientProtocol.class,
             createFactory(goodMock, badMock));
     long[] stats = provider.getProxy().proxy.getStats();
-    Assert.assertTrue(stats.length == 1);
-    Assert.assertEquals(1, stats[0]);
+    assertTrue(stats.length == 1);
+    assertEquals(1, stats[0]);
     Mockito.verify(badMock).getStats();
     Mockito.verify(goodMock).getStats();
   }
@@ -221,9 +222,9 @@ public class TestRequestHedgingProxyProvider {
             createFactory(badMock, worseMock));
     try {
       provider.getProxy().proxy.getStats();
-      Assert.fail("Should fail since both namenodes throw IOException !!");
+      fail("Should fail since both namenodes throw IOException !!");
     } catch (Exception e) {
-      Assert.assertTrue(e instanceof MultiException);
+      assertTrue(e instanceof MultiException);
     }
     Mockito.verify(badMock).getStats();
     Mockito.verify(worseMock).getStats();
@@ -261,61 +262,61 @@ public class TestRequestHedgingProxyProvider {
             new RequestHedgingProxyProvider<>(conf, nnUri, ClientProtocol.class,
                     createFactory(goodMock, badMock));
     long[] stats = provider.getProxy().proxy.getStats();
-    Assert.assertTrue(stats.length == 1);
-    Assert.assertEquals(1, stats[0]);
-    Assert.assertEquals(2, counter.get());
+    assertTrue(stats.length == 1);
+    assertEquals(1, stats[0]);
+    assertEquals(2, counter.get());
     Mockito.verify(badMock).getStats();
     Mockito.verify(goodMock).getStats();
 
     stats = provider.getProxy().proxy.getStats();
-    Assert.assertTrue(stats.length == 1);
-    Assert.assertEquals(1, stats[0]);
+    assertTrue(stats.length == 1);
+    assertEquals(1, stats[0]);
     // Ensure only the previous successful one is invoked
     Mockito.verifyNoMoreInteractions(badMock);
-    Assert.assertEquals(3, counter.get());
+    assertEquals(3, counter.get());
 
     // Flip to standby.. so now this should fail
     isGood[0] = 2;
     try {
       provider.getProxy().proxy.getStats();
-      Assert.fail("Should fail since previously successful proxy now fails ");
+      fail("Should fail since previously successful proxy now fails ");
     } catch (Exception ex) {
-      Assert.assertTrue(ex instanceof IOException);
+      assertTrue(ex instanceof IOException);
     }
 
-    Assert.assertEquals(4, counter.get());
+    assertEquals(4, counter.get());
 
     provider.performFailover(provider.getProxy().proxy);
     stats = provider.getProxy().proxy.getStats();
-    Assert.assertTrue(stats.length == 1);
-    Assert.assertEquals(2, stats[0]);
+    assertTrue(stats.length == 1);
+    assertEquals(2, stats[0]);
 
     // Counter should update only once
-    Assert.assertEquals(5, counter.get());
+    assertEquals(5, counter.get());
 
     stats = provider.getProxy().proxy.getStats();
-    Assert.assertTrue(stats.length == 1);
-    Assert.assertEquals(2, stats[0]);
+    assertTrue(stats.length == 1);
+    assertEquals(2, stats[0]);
 
     // Counter updates only once now
-    Assert.assertEquals(6, counter.get());
+    assertEquals(6, counter.get());
 
     // Flip back to old active.. so now this should fail
     isGood[0] = 1;
     try {
       provider.getProxy().proxy.getStats();
-      Assert.fail("Should fail since previously successful proxy now fails ");
+      fail("Should fail since previously successful proxy now fails ");
     } catch (Exception ex) {
-      Assert.assertTrue(ex instanceof IOException);
+      assertTrue(ex instanceof IOException);
     }
 
-    Assert.assertEquals(7, counter.get());
+    assertEquals(7, counter.get());
 
     provider.performFailover(provider.getProxy().proxy);
     stats = provider.getProxy().proxy.getStats();
-    Assert.assertTrue(stats.length == 1);
+    assertTrue(stats.length == 1);
     // Ensure correct proxy was called
-    Assert.assertEquals(1, stats[0]);
+    assertEquals(1, stats[0]);
   }
 
   @Test
@@ -338,7 +339,7 @@ public class TestRequestHedgingProxyProvider {
             ClientProtocol.class, createFactory(standby, active));
     try {
       provider.getProxy().proxy.getBlockLocations("/tmp/test.file", 0L, 20L);
-      Assert.fail("Should fail since the active namenode throws"
+      fail("Should fail since the active namenode throws"
           + " FileNotFoundException!");
     } catch (MultiException me) {
       for (Exception ex : me.getExceptions().values()) {
@@ -346,14 +347,14 @@ public class TestRequestHedgingProxyProvider {
         if (rEx instanceof StandbyException) {
           continue;
         }
-        Assert.assertTrue(rEx instanceof FileNotFoundException);
+        assertTrue(rEx instanceof FileNotFoundException);
       }
     }
     //Perform failover now, there will only be one active proxy now
     provider.performFailover(active);
     try {
       provider.getProxy().proxy.getBlockLocations("/tmp/test.file", 0L, 20L);
-      Assert.fail("Should fail since the active namenode throws"
+      fail("Should fail since the active namenode throws"
           + " FileNotFoundException!");
     } catch (RemoteException ex) {
       Exception rEx = ex.unwrapRemoteException();
@@ -363,7 +364,7 @@ public class TestRequestHedgingProxyProvider {
         Mockito.verify(standby, Mockito.times(2))
             .getBlockLocations(anyString(), anyLong(), anyLong());
       } else {
-        Assert.assertTrue(rEx instanceof FileNotFoundException);
+        assertTrue(rEx instanceof FileNotFoundException);
         Mockito.verify(active, Mockito.times(2))
             .getBlockLocations(anyString(), anyLong(), anyLong());
         Mockito.verify(standby).getBlockLocations(anyString(), anyLong(),
@@ -395,22 +396,22 @@ public class TestRequestHedgingProxyProvider {
             ClientProtocol.class, createFactory(active));
     try {
       provider.getProxy().proxy.getBlockLocations("/tmp/test.file", 0L, 20L);
-      Assert.fail("Should fail since the active namenode throws"
+      fail("Should fail since the active namenode throws"
           + " FileNotFoundException!");
     } catch (RemoteException ex) {
       Exception rEx = ex.unwrapRemoteException();
-      Assert.assertTrue(rEx instanceof FileNotFoundException);
+      assertTrue(rEx instanceof FileNotFoundException);
     }
     //Perform failover now, there will be no active proxies now
     provider.performFailover(active);
     try {
       provider.getProxy().proxy.getBlockLocations("/tmp/test.file", 0L, 20L);
-      Assert.fail("Should fail since the active namenode throws"
+      fail("Should fail since the active namenode throws"
           + " FileNotFoundException!");
     } catch (RemoteException ex) {
       Exception rEx = ex.unwrapRemoteException();
-      Assert.assertTrue(rEx instanceof IOException);
-      Assert.assertTrue(rEx.getMessage().equals("No valid proxies left."
+      assertTrue(rEx instanceof IOException);
+      assertTrue(rEx.getMessage().equals("No valid proxies left."
           + " All NameNode proxies have failed over."));
     }
   }
@@ -465,75 +466,75 @@ public class TestRequestHedgingProxyProvider {
             new RequestHedgingProxyProvider<>(conf, nnUri, ClientProtocol.class,
                     createFactory(goodMock, badMock, worseMock));
     long[] stats = provider.getProxy().proxy.getStats();
-    Assert.assertTrue(stats.length == 1);
-    Assert.assertEquals(1, stats[0]);
-    Assert.assertEquals(3, counter.get());
+    assertTrue(stats.length == 1);
+    assertEquals(1, stats[0]);
+    assertEquals(3, counter.get());
     Mockito.verify(badMock).getStats();
     Mockito.verify(goodMock).getStats();
     Mockito.verify(worseMock).getStats();
 
     stats = provider.getProxy().proxy.getStats();
-    Assert.assertTrue(stats.length == 1);
-    Assert.assertEquals(1, stats[0]);
+    assertTrue(stats.length == 1);
+    assertEquals(1, stats[0]);
     // Ensure only the previous successful one is invoked
     Mockito.verifyNoMoreInteractions(badMock);
     Mockito.verifyNoMoreInteractions(worseMock);
-    Assert.assertEquals(4, counter.get());
+    assertEquals(4, counter.get());
 
     // Flip to standby.. so now this should fail
     isGood[0] = 2;
     try {
       provider.getProxy().proxy.getStats();
-      Assert.fail("Should fail since previously successful proxy now fails ");
+      fail("Should fail since previously successful proxy now fails ");
     } catch (Exception ex) {
-      Assert.assertTrue(ex instanceof IOException);
+      assertTrue(ex instanceof IOException);
     }
 
-    Assert.assertEquals(5, counter.get());
+    assertEquals(5, counter.get());
 
     provider.performFailover(provider.getProxy().proxy);
     stats = provider.getProxy().proxy.getStats();
-    Assert.assertTrue(stats.length == 1);
-    Assert.assertEquals(2, stats[0]);
+    assertTrue(stats.length == 1);
+    assertEquals(2, stats[0]);
 
     // Counter updates twice since both proxies are tried on failure
-    Assert.assertEquals(7, counter.get());
+    assertEquals(7, counter.get());
 
     stats = provider.getProxy().proxy.getStats();
-    Assert.assertTrue(stats.length == 1);
-    Assert.assertEquals(2, stats[0]);
+    assertTrue(stats.length == 1);
+    assertEquals(2, stats[0]);
 
     // Counter updates only once now
-    Assert.assertEquals(8, counter.get());
+    assertEquals(8, counter.get());
 
     // Flip to Other standby.. so now this should fail
     isGood[0] = 3;
     try {
       provider.getProxy().proxy.getStats();
-      Assert.fail("Should fail since previously successful proxy now fails ");
+      fail("Should fail since previously successful proxy now fails ");
     } catch (Exception ex) {
-      Assert.assertTrue(ex instanceof IOException);
+      assertTrue(ex instanceof IOException);
     }
 
     // Counter should ipdate only 1 time
-    Assert.assertEquals(9, counter.get());
+    assertEquals(9, counter.get());
 
     provider.performFailover(provider.getProxy().proxy);
     stats = provider.getProxy().proxy.getStats();
-    Assert.assertTrue(stats.length == 1);
+    assertTrue(stats.length == 1);
 
     // Ensure correct proxy was called
-    Assert.assertEquals(3, stats[0]);
+    assertEquals(3, stats[0]);
 
     // Counter updates twice since both proxies are tried on failure
-    Assert.assertEquals(11, counter.get());
+    assertEquals(11, counter.get());
 
     stats = provider.getProxy().proxy.getStats();
-    Assert.assertTrue(stats.length == 1);
-    Assert.assertEquals(3, stats[0]);
+    assertTrue(stats.length == 1);
+    assertEquals(3, stats[0]);
 
     // Counter updates only once now
-    Assert.assertEquals(12, counter.get());
+    assertEquals(12, counter.get());
   }
 
   @Test
@@ -558,7 +559,7 @@ public class TestRequestHedgingProxyProvider {
           ClientProtocol.class, createFactory(active, standby));
     try {
       provider.getProxy().proxy.getBlockLocations("/tmp/test.file", 0L, 20L);
-      Assert.fail("Should fail since the active namenode throws"
+      fail("Should fail since the active namenode throws"
           + " FileNotFoundException!");
     } catch (MultiException me) {
       for (Exception ex : me.getExceptions().values()) {
@@ -566,7 +567,7 @@ public class TestRequestHedgingProxyProvider {
         if (rEx instanceof StandbyException) {
           continue;
         }
-        Assert.assertTrue(rEx instanceof FileNotFoundException);
+        assertTrue(rEx instanceof FileNotFoundException);
       }
     }
     Mockito.verify(active).getBlockLocations(anyString(),
@@ -591,17 +592,17 @@ public class TestRequestHedgingProxyProvider {
           ClientProtocol.class, createFactory(active, standby));
     try {
       provider.getProxy().proxy.getStats();
-      Assert.fail("Should fail since the active namenode throws"
+      fail("Should fail since the active namenode throws"
           + " ConnectException!");
     } catch (MultiException me) {
       for (Exception ex : me.getExceptions().values()) {
         if (ex instanceof RemoteException) {
           Exception rEx = ((RemoteException) ex)
               .unwrapRemoteException();
-          Assert.assertTrue("Unexpected RemoteException: " + rEx.getMessage(),
-              rEx instanceof StandbyException);
+          assertTrue(rEx instanceof StandbyException,
+              "Unexpected RemoteException: " + rEx.getMessage());
         } else {
-          Assert.assertTrue(ex instanceof ConnectException);
+          assertTrue(ex instanceof ConnectException);
         }
       }
     }
@@ -622,13 +623,13 @@ public class TestRequestHedgingProxyProvider {
           ClientProtocol.class, createFactory(active, standby));
     try {
       provider.getProxy().proxy.getStats();
-      Assert.fail("Should fail since both active and standby namenodes throw"
+      fail("Should fail since both active and standby namenodes throw"
           + " Exceptions!");
     } catch (MultiException me) {
       for (Exception ex : me.getExceptions().values()) {
         if (!(ex instanceof ConnectException) &&
             !(ex instanceof EOFException)) {
-          Assert.fail("Unexpected Exception " + ex.getMessage());
+          fail("Unexpected Exception " + ex.getMessage());
         }
       }
     }
@@ -672,9 +673,9 @@ public class TestRequestHedgingProxyProvider {
             createFactory(delayMock, badMock));
     final ClientProtocol delayProxy = provider.getProxy().proxy;
     long[] stats = delayProxy.getStats();
-    Assert.assertTrue(stats.length == 1);
-    Assert.assertEquals(1, stats[0]);
-    Assert.assertEquals(1, counter.get());
+    assertTrue(stats.length == 1);
+    assertEquals(1, stats[0]);
+    assertEquals(1, counter.get());
 
     Thread t = new Thread() {
       @Override

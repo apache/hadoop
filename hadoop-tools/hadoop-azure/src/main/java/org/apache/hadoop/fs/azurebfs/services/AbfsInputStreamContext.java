@@ -24,6 +24,8 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.impl.BackReference;
 import org.apache.hadoop.util.Preconditions;
 
+import org.apache.hadoop.fs.azurebfs.security.ContextEncryptionAdapter;
+
 /**
  * Class to hold extra input stream configs.
  */
@@ -39,6 +41,8 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
 
   private boolean isReadAheadEnabled = true;
 
+  private boolean isReadAheadV2Enabled;
+
   private boolean alwaysReadBufferSize;
 
   private int readAheadBlockSize;
@@ -51,10 +55,14 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
 
   private boolean optimizeFooterRead;
 
+  private int footerReadBufferSize;
+
   private boolean bufferedPreadDisabled;
 
   /** A BackReference to the FS instance that created this OutputStream. */
   private BackReference fsBackRef;
+
+  private ContextEncryptionAdapter contextEncryptionAdapter = null;
 
   public AbfsInputStreamContext(final long sasTokenRenewPeriodForStreamsInSeconds) {
     super(sasTokenRenewPeriodForStreamsInSeconds);
@@ -85,6 +93,12 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
     return this;
   }
 
+  public AbfsInputStreamContext isReadAheadV2Enabled(
+      final boolean isReadAheadV2Enabled) {
+    this.isReadAheadV2Enabled = isReadAheadV2Enabled;
+    return this;
+  }
+
   public AbfsInputStreamContext withReadAheadRange(
           final int readAheadRange) {
     this.readAheadRange = readAheadRange;
@@ -106,6 +120,11 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
   public AbfsInputStreamContext withOptimizeFooterRead(
       final boolean optimizeFooterRead) {
     this.optimizeFooterRead = optimizeFooterRead;
+    return this;
+  }
+
+  public AbfsInputStreamContext withFooterReadBufferSize(final int footerReadBufferSize) {
+    this.footerReadBufferSize = footerReadBufferSize;
     return this;
   }
 
@@ -132,6 +151,12 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
     this.fsBackRef = fsBackRef;
     return this;
   }
+
+    public AbfsInputStreamContext withEncryptionAdapter(
+        ContextEncryptionAdapter contextEncryptionAdapter){
+      this.contextEncryptionAdapter = contextEncryptionAdapter;
+      return this;
+    }
 
   public AbfsInputStreamContext build() {
     if (readBufferSize > readAheadBlockSize) {
@@ -164,6 +189,10 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
     return isReadAheadEnabled;
   }
 
+  public boolean isReadAheadV2Enabled() {
+    return isReadAheadV2Enabled;
+  }
+
   public int getReadAheadRange() {
     return readAheadRange;
   }
@@ -178,6 +207,10 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
 
   public boolean optimizeFooterRead() {
     return this.optimizeFooterRead;
+  }
+
+  public int getFooterReadBufferSize() {
+    return footerReadBufferSize;
   }
 
   public boolean shouldReadBufferSizeAlways() {
@@ -195,4 +228,8 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
   public BackReference getFsBackRef() {
     return fsBackRef;
   }
+
+    public ContextEncryptionAdapter getEncryptionAdapter() {
+      return contextEncryptionAdapter;
+    }
 }

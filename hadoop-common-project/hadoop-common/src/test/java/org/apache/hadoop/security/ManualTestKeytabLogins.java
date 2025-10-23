@@ -18,7 +18,7 @@
 package org.apache.hadoop.security;
 
 import org.apache.hadoop.security.UserGroupInformation;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Regression test for HADOOP-6947 which can be run manually in

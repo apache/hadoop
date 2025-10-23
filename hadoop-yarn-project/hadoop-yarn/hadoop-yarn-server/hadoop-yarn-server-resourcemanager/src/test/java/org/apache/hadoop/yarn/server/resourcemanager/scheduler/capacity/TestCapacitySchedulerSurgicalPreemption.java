@@ -44,10 +44,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.hamcrest.CoreMatchers;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -56,14 +55,28 @@ import java.util.List;
 import java.util.Set;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.PREFIX;
-import static org.hamcrest.MatcherAssert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 public class TestCapacitySchedulerSurgicalPreemption
     extends CapacitySchedulerPreemptionTestBase {
 
   private static final int NUM_NM = 5;
+
+  private static final QueuePath ROOT = new QueuePath(CapacitySchedulerConfiguration.ROOT);
+  private static final QueuePath A = new QueuePath(CapacitySchedulerConfiguration.ROOT +
+      ".a");
+  private static final QueuePath B = new QueuePath(CapacitySchedulerConfiguration.ROOT +
+      ".b");
+  private static final QueuePath C = new QueuePath(CapacitySchedulerConfiguration.ROOT +
+      ".c");
+  private static final QueuePath D = new QueuePath(CapacitySchedulerConfiguration.ROOT +
+      ".d");
+
   @Override
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     super.setUp();
     conf.setBoolean(
@@ -71,7 +84,8 @@ public class TestCapacitySchedulerSurgicalPreemption
         true);
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testSimpleSurgicalPreemption()
       throws Exception {
     /**
@@ -145,7 +159,7 @@ public class TestCapacitySchedulerSurgicalPreemption
     // App1 should have 33 containers now
     FiCaSchedulerApp schedulerApp1 = cs.getApplicationAttempt(
         am1.getApplicationAttemptId());
-    Assert.assertEquals(33, schedulerApp1.getLiveContainers().size());
+    assertEquals(33, schedulerApp1.getLiveContainers().size());
     // 17 from n1 and 16 from n2
     waitNumberOfLiveContainersOnNodeFromApp(cs.getNode(rmNode1.getNodeID()),
         am1.getApplicationAttemptId(), 17);
@@ -166,9 +180,9 @@ public class TestCapacitySchedulerSurgicalPreemption
     MockAM am2 = MockRM.launchAndRegisterAM(app2, rm1, nm1);
 
     // NM1/NM2 has available resource = 2G/4G
-    Assert.assertEquals(2 * GB, cs.getNode(nm1.getNodeId())
+    assertEquals(2 * GB, cs.getNode(nm1.getNodeId())
         .getUnallocatedResource().getMemorySize());
-    Assert.assertEquals(4 * GB, cs.getNode(nm2.getNodeId())
+    assertEquals(4 * GB, cs.getNode(nm2.getNodeId())
         .getUnallocatedResource().getMemorySize());
 
     // AM asks for a 1 * GB container
@@ -178,7 +192,7 @@ public class TestCapacitySchedulerSurgicalPreemption
 
     // Call allocation once on n1, we should expect the container reserved on n1
     cs.handle(new NodeUpdateSchedulerEvent(rmNode1));
-    Assert.assertNotNull(cs.getNode(nm1.getNodeId()).getReservedContainer());
+    assertNotNull(cs.getNode(nm1.getNodeId()).getReservedContainer());
 
     // Get edit policy and do one update
     SchedulingMonitorManager smm = ((CapacityScheduler) rm1.
@@ -200,20 +214,20 @@ public class TestCapacitySchedulerSurgicalPreemption
         am1.getApplicationAttemptId(), 16);
 
     // Ensure preemption metrics were recored.
-    Assert.assertEquals("Number of preempted containers incorrectly recorded:",
-        4, cs.getQueue("root").getMetrics().getAggregatePreemptedContainers());
+    assertEquals(4, cs.getQueue("root").getMetrics().getAggregatePreemptedContainers(),
+        "Number of preempted containers incorrectly recorded:");
 
-    Assert.assertEquals("Amount of preempted memory incorrectly recorded:",
-        4 * GB,
-        cs.getQueue("root").getMetrics().getAggregateMemoryMBPreempted());
+    assertEquals(4 * GB, cs.getQueue("root").getMetrics().getAggregateMemoryMBPreempted(),
+        "Amount of preempted memory incorrectly recorded:");
 
-    Assert.assertEquals("Number of preempted vcores incorrectly recorded:", 4,
-        cs.getQueue("root").getMetrics().getAggregateVcoresPreempted());
+    assertEquals(4, cs.getQueue("root").getMetrics().getAggregateVcoresPreempted(),
+        "Number of preempted vcores incorrectly recorded:");
 
     rm1.close();
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testSurgicalPreemptionWithAvailableResource()
       throws Exception {
     /**
@@ -269,7 +283,7 @@ public class TestCapacitySchedulerSurgicalPreemption
     // App1 should have 31 containers now
     FiCaSchedulerApp schedulerApp1 = cs.getApplicationAttempt(
         am1.getApplicationAttemptId());
-    Assert.assertEquals(39, schedulerApp1.getLiveContainers().size());
+    assertEquals(39, schedulerApp1.getLiveContainers().size());
     // 17 from n1 and 16 from n2
     waitNumberOfLiveContainersOnNodeFromApp(cs.getNode(rmNode1.getNodeID()),
         am1.getApplicationAttemptId(), 20);
@@ -297,7 +311,7 @@ public class TestCapacitySchedulerSurgicalPreemption
     ProportionalCapacityPreemptionPolicy editPolicy =
         (ProportionalCapacityPreemptionPolicy) smon.getSchedulingEditPolicy();
     editPolicy.editSchedule();
-    Assert.assertEquals(3, editPolicy.getToPreemptContainers().size());
+    assertEquals(3, editPolicy.getToPreemptContainers().size());
 
     // Call editSchedule again: selected containers are killed
     editPolicy.editSchedule();
@@ -324,7 +338,8 @@ public class TestCapacitySchedulerSurgicalPreemption
     rm1.close();
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testPriorityPreemptionWhenAllQueuesAreBelowGuaranteedCapacities()
       throws Exception {
     /**
@@ -350,11 +365,11 @@ public class TestCapacitySchedulerSurgicalPreemption
      */
     conf.setPUOrderingPolicyUnderUtilizedPreemptionEnabled(true);
     conf.setPUOrderingPolicyUnderUtilizedPreemptionDelay(1000);
-    conf.setQueueOrderingPolicy(CapacitySchedulerConfiguration.ROOT,
+    conf.setQueueOrderingPolicy(ROOT,
         CapacitySchedulerConfiguration.QUEUE_PRIORITY_UTILIZATION_ORDERING_POLICY);
 
     // Queue c has higher priority than a/b
-    conf.setQueuePriority(CapacitySchedulerConfiguration.ROOT + ".c", 1);
+    conf.setQueuePriority(C, 1);
 
     MockRM rm1 = new MockRM(conf);
     rm1.getRMContext().setNodeLabelManager(mgr);
@@ -390,7 +405,7 @@ public class TestCapacitySchedulerSurgicalPreemption
     // 7 / 40 = 17.5% < 20% (guaranteed)
     FiCaSchedulerApp schedulerApp1 = cs.getApplicationAttempt(
         am1.getApplicationAttemptId());
-    Assert.assertEquals(7, schedulerApp1.getLiveContainers().size());
+    assertEquals(7, schedulerApp1.getLiveContainers().size());
     // 4 from n1 and 3 from n2
     waitNumberOfLiveContainersOnNodeFromApp(cs.getNode(rmNode1.getNodeID()),
         am1.getApplicationAttemptId(), 4);
@@ -422,12 +437,12 @@ public class TestCapacitySchedulerSurgicalPreemption
     ProportionalCapacityPreemptionPolicy editPolicy =
         (ProportionalCapacityPreemptionPolicy) smon.getSchedulingEditPolicy();
     editPolicy.editSchedule();
-    Assert.assertEquals(0, editPolicy.getToPreemptContainers().size());
+    assertEquals(0, editPolicy.getToPreemptContainers().size());
 
     // Sleep the timeout interval, we should be able to see containers selected
     Thread.sleep(1000);
     editPolicy.editSchedule();
-    Assert.assertEquals(2, editPolicy.getToPreemptContainers().size());
+    assertEquals(2, editPolicy.getToPreemptContainers().size());
 
     // Call editSchedule again: selected containers are killed, and new AM
     // container launched
@@ -444,7 +459,8 @@ public class TestCapacitySchedulerSurgicalPreemption
     rm1.close();
   }
 
-  @Test(timeout = 300000)
+  @Test
+  @Timeout(value = 300)
   public void testPriorityPreemptionRequiresMoveReservation()
       throws Exception {
     /**
@@ -470,12 +486,12 @@ public class TestCapacitySchedulerSurgicalPreemption
      */
     conf.setPUOrderingPolicyUnderUtilizedPreemptionEnabled(true);
     conf.setPUOrderingPolicyUnderUtilizedPreemptionDelay(1000);
-    conf.setQueueOrderingPolicy(CapacitySchedulerConfiguration.ROOT,
+    conf.setQueueOrderingPolicy(ROOT,
         CapacitySchedulerConfiguration.QUEUE_PRIORITY_UTILIZATION_ORDERING_POLICY);
     conf.setPUOrderingPolicyUnderUtilizedPreemptionMoveReservation(true);
 
     // Queue c has higher priority than a/b
-    conf.setQueuePriority(CapacitySchedulerConfiguration.ROOT + ".c", 1);
+    conf.setQueuePriority(C, 1);
 
     MockRM rm1 = new MockRM(conf);
     rm1.getRMContext().setNodeLabelManager(mgr);
@@ -513,7 +529,7 @@ public class TestCapacitySchedulerSurgicalPreemption
 
     FiCaSchedulerApp schedulerApp1 = cs.getApplicationAttempt(
         am1.getApplicationAttemptId());
-    Assert.assertEquals(3, schedulerApp1.getLiveContainers().size());
+    assertEquals(3, schedulerApp1.getLiveContainers().size());
 
     // 1 from n1 and 2 from n2
     waitNumberOfLiveContainersOnNodeFromApp(cs.getNode(rmNode1.getNodeID()),
@@ -542,7 +558,7 @@ public class TestCapacitySchedulerSurgicalPreemption
     cs.handle(new NodeUpdateSchedulerEvent(rmNode3));
 
     // Make sure container reserved on node3
-    Assert.assertNotNull(
+    assertNotNull(
         cs.getNode(rmNode3.getNodeID()).getReservedContainer());
 
     // Call editSchedule immediately: nothing happens
@@ -552,23 +568,23 @@ public class TestCapacitySchedulerSurgicalPreemption
     ProportionalCapacityPreemptionPolicy editPolicy =
         (ProportionalCapacityPreemptionPolicy) smon.getSchedulingEditPolicy();
     editPolicy.editSchedule();
-    Assert.assertNotNull(
+    assertNotNull(
         cs.getNode(rmNode3.getNodeID()).getReservedContainer());
 
     // Sleep the timeout interval, we should be able to see reserved container
     // moved to n2 (n1 occupied by AM)
     Thread.sleep(1000);
     editPolicy.editSchedule();
-    Assert.assertNull(
+    assertNull(
         cs.getNode(rmNode3.getNodeID()).getReservedContainer());
-    Assert.assertNotNull(
+    assertNotNull(
         cs.getNode(rmNode2.getNodeID()).getReservedContainer());
-    Assert.assertEquals(am2.getApplicationAttemptId(), cs.getNode(
+    assertEquals(am2.getApplicationAttemptId(), cs.getNode(
         rmNode2.getNodeID()).getReservedContainer().getApplicationAttemptId());
 
     // Do it again, we should see containers marked to be preempt
     editPolicy.editSchedule();
-    Assert.assertEquals(2, editPolicy.getToPreemptContainers().size());
+    assertEquals(2, editPolicy.getToPreemptContainers().size());
 
     // Call editSchedule again: selected containers are killed
     editPolicy.editSchedule();
@@ -584,7 +600,8 @@ public class TestCapacitySchedulerSurgicalPreemption
     rm1.close();
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testPriorityPreemptionOnlyTriggeredWhenDemandingQueueUnsatisfied()
       throws Exception {
     /**
@@ -610,11 +627,11 @@ public class TestCapacitySchedulerSurgicalPreemption
      */
     conf.setPUOrderingPolicyUnderUtilizedPreemptionEnabled(true);
     conf.setPUOrderingPolicyUnderUtilizedPreemptionDelay(1000);
-    conf.setQueueOrderingPolicy(CapacitySchedulerConfiguration.ROOT,
+    conf.setQueueOrderingPolicy(ROOT,
         CapacitySchedulerConfiguration.QUEUE_PRIORITY_UTILIZATION_ORDERING_POLICY);
 
     // Queue c has higher priority than a/b
-    conf.setQueuePriority(CapacitySchedulerConfiguration.ROOT + ".c", 1);
+    conf.setQueuePriority(C, 1);
 
     MockRM rm1 = new MockRM(conf);
     rm1.getRMContext().setNodeLabelManager(mgr);
@@ -654,7 +671,7 @@ public class TestCapacitySchedulerSurgicalPreemption
     // App1 should have 9 containers now, so the abs-used-cap of b is 9%
     FiCaSchedulerApp schedulerApp1 = cs.getApplicationAttempt(
         am1.getApplicationAttemptId());
-    Assert.assertEquals(9, schedulerApp1.getLiveContainers().size());
+    assertEquals(9, schedulerApp1.getLiveContainers().size());
     for (int i = 0; i < 9; i++) {
       waitNumberOfLiveContainersOnNodeFromApp(cs.getNode(rmNodes[i].getNodeID()),
           am1.getApplicationAttemptId(), 1);
@@ -685,8 +702,8 @@ public class TestCapacitySchedulerSurgicalPreemption
 
     // Check am2 reserved resource from nm1-nm9
     for (int i = 1; i < 9; i++) {
-      Assert.assertNotNull("Should reserve on nm-" + i,
-          cs.getNode(rmNodes[i].getNodeID()).getReservedContainer());
+      assertNotNull(cs.getNode(rmNodes[i].getNodeID()).getReservedContainer(),
+          "Should reserve on nm-" + i);
     }
 
     // Sleep the timeout interval, we should be able to see 6 containers selected
@@ -717,7 +734,8 @@ public class TestCapacitySchedulerSurgicalPreemption
     rm1.close();
   }
 
-  @Test(timeout = 600000)
+  @Test
+  @Timeout(value = 600)
   public void testPriorityPreemptionFromHighestPriorityQueueAndOldestContainer()
       throws Exception {
     /**
@@ -750,11 +768,11 @@ public class TestCapacitySchedulerSurgicalPreemption
      */
 
     // A/B has higher priority
-    conf.setQueuePriority(CapacitySchedulerConfiguration.ROOT + ".a" , 1);
-    conf.setQueuePriority(CapacitySchedulerConfiguration.ROOT + ".b", 2);
-    conf.setCapacity(CapacitySchedulerConfiguration.ROOT + ".a", 45f);
-    conf.setCapacity(CapacitySchedulerConfiguration.ROOT + ".b", 45f);
-    conf.setCapacity(CapacitySchedulerConfiguration.ROOT + ".c", 10f);
+    conf.setQueuePriority(A, 1);
+    conf.setQueuePriority(B, 2);
+    conf.setCapacity(A, 45f);
+    conf.setCapacity(B, 45f);
+    conf.setCapacity(C, 10f);
 
     testPriorityPreemptionFromHighestPriorityQueueAndOldestContainer(new
         String[] {"a", "b", "c"}, new String[] {"user", "user", "user"});
@@ -770,7 +788,7 @@ public class TestCapacitySchedulerSurgicalPreemption
     conf.setInt(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB, 512);
     conf.setPUOrderingPolicyUnderUtilizedPreemptionEnabled(true);
     conf.setPUOrderingPolicyUnderUtilizedPreemptionDelay(1000);
-    conf.setQueueOrderingPolicy(CapacitySchedulerConfiguration.ROOT,
+    conf.setQueueOrderingPolicy(ROOT,
         CapacitySchedulerConfiguration.QUEUE_PRIORITY_UTILIZATION_ORDERING_POLICY);
 
     MockRM rm1 = new MockRM(conf) {
@@ -814,7 +832,7 @@ public class TestCapacitySchedulerSurgicalPreemption
     // App1 should have 5 containers now, one for each node
     FiCaSchedulerApp schedulerApp1 = cs.getApplicationAttempt(
         am1.getApplicationAttemptId());
-    Assert.assertEquals(5, schedulerApp1.getLiveContainers().size());
+    assertEquals(5, schedulerApp1.getLiveContainers().size());
     for (int i = 0; i < 5; i++) {
       waitNumberOfLiveContainersOnNodeFromApp(cs.getNode(rmNodes[i].getNodeID()),
           am1.getApplicationAttemptId(), 1);
@@ -844,9 +862,9 @@ public class TestCapacitySchedulerSurgicalPreemption
 
     // Check am2 reserved resource from nm0-nm1
     for (int i = 0; i < 2; i++) {
-      Assert.assertNotNull("Should reserve on nm-" + i,
-          cs.getNode(rmNodes[i].getNodeID()).getReservedContainer());
-      Assert.assertEquals(cs.getNode(rmNodes[i].getNodeID())
+      assertNotNull(cs.getNode(rmNodes[i].getNodeID()).getReservedContainer(),
+          "Should reserve on nm-" + i);
+      assertEquals(cs.getNode(rmNodes[i].getNodeID())
           .getReservedContainer()
           .getQueueName(), cs.normalizeQueueName(queues[0]));
     }
@@ -875,9 +893,9 @@ public class TestCapacitySchedulerSurgicalPreemption
 
     // Check am2 reserved resource from nm2-nm3
     for (int i = 2; i < 4; i++) {
-      Assert.assertNotNull("Should reserve on nm-" + i,
-          cs.getNode(rmNodes[i].getNodeID()).getReservedContainer());
-      Assert.assertEquals(cs.getNode(rmNodes[i].getNodeID())
+      assertNotNull(cs.getNode(rmNodes[i].getNodeID()).getReservedContainer(),
+          "Should reserve on nm-" + i);
+      assertEquals(cs.getNode(rmNodes[i].getNodeID())
           .getReservedContainer()
           .getQueueName(), cs.normalizeQueueName(queues[1]));
     }
@@ -896,8 +914,8 @@ public class TestCapacitySchedulerSurgicalPreemption
     // We should have one to-preempt container, on node[2]
     Set<RMContainer> selectedToPreempt =
         editPolicy.getToPreemptContainers().keySet();
-    Assert.assertEquals(1, selectedToPreempt.size());
-    Assert.assertEquals(mockNMs[2].getNodeId(),
+    assertEquals(1, selectedToPreempt.size());
+    assertEquals(mockNMs[2].getNodeId(),
         selectedToPreempt.iterator().next().getAllocatedNode());
 
     // Call editSchedule again: selected containers are killed
@@ -919,8 +937,8 @@ public class TestCapacitySchedulerSurgicalPreemption
     // We should have one to-preempt container, on node[3]
     selectedToPreempt =
         editPolicy.getToPreemptContainers().keySet();
-    Assert.assertEquals(1, selectedToPreempt.size());
-    Assert.assertEquals(mockNMs[3].getNodeId(),
+    assertEquals(1, selectedToPreempt.size());
+    assertEquals(mockNMs[3].getNodeId(),
         selectedToPreempt.iterator().next().getAllocatedNode());
 
     // Call editSchedule again: selected containers are killed
@@ -942,8 +960,8 @@ public class TestCapacitySchedulerSurgicalPreemption
     // We should have one to-preempt container, on node[0]
     selectedToPreempt =
         editPolicy.getToPreemptContainers().keySet();
-    Assert.assertEquals(1, selectedToPreempt.size());
-    Assert.assertEquals(mockNMs[0].getNodeId(),
+    assertEquals(1, selectedToPreempt.size());
+    assertEquals(mockNMs[0].getNodeId(),
         selectedToPreempt.iterator().next().getAllocatedNode());
 
     // Call editSchedule again: selected containers are killed
@@ -965,8 +983,8 @@ public class TestCapacitySchedulerSurgicalPreemption
     // We should have one to-preempt container, on node[0]
     selectedToPreempt =
         editPolicy.getToPreemptContainers().keySet();
-    Assert.assertEquals(1, selectedToPreempt.size());
-    Assert.assertEquals(mockNMs[1].getNodeId(),
+    assertEquals(1, selectedToPreempt.size());
+    assertEquals(mockNMs[1].getNodeId(),
         selectedToPreempt.iterator().next().getAllocatedNode());
 
     // Call editSchedule again: selected containers are killed
@@ -987,12 +1005,14 @@ public class TestCapacitySchedulerSurgicalPreemption
 
   private void initializeConfProperties(CapacitySchedulerConfiguration conf)
       throws IOException {
+    QueuePath aQueuePath = new QueuePath("root.A");
+    QueuePath bQueuePath = new QueuePath("root.B");
 
-    conf.setQueues("root", new String[] {"A", "B"});
-    conf.setCapacity("root.A", 50);
-    conf.setCapacity("root.B", 50);
-    conf.setQueuePriority("root.A", 1);
-    conf.setQueuePriority("root.B", 2);
+    conf.setQueues(ROOT, new String[] {"A", "B"});
+    conf.setCapacity(aQueuePath, 50);
+    conf.setCapacity(bQueuePath, 50);
+    conf.setQueuePriority(aQueuePath, 1);
+    conf.setQueuePriority(bQueuePath, 2);
 
     conf.set(PREFIX + "root.ordering-policy", "priority-utilization");
     conf.set(PREFIX + "ordering-policy.priority-utilization.underutilized-preemption.enabled", "true");
@@ -1072,7 +1092,7 @@ public class TestCapacitySchedulerSurgicalPreemption
     // App1 should have 5 containers now, one for each node
     FiCaSchedulerApp schedulerApp1 = cs.getApplicationAttempt(
         am1.getApplicationAttemptId());
-    Assert.assertEquals(NUM_NM, schedulerApp1.getLiveContainers().size());
+    assertEquals(NUM_NM, schedulerApp1.getLiveContainers().size());
     for (int i = 0; i < NUM_NM; i++) {
       waitNumberOfLiveContainersOnNodeFromApp(cs.getNode(
           rmNodes[i].getNodeID()), am1.getApplicationAttemptId(), 1);
@@ -1138,19 +1158,18 @@ public class TestCapacitySchedulerSurgicalPreemption
     // We should only allow to preempt 2 containers, on node1 and node2
     Set<RMContainer> selectedToPreempt =
         editPolicy.getToPreemptContainers().keySet();
-    Assert.assertEquals(2, selectedToPreempt.size());
+    assertEquals(2, selectedToPreempt.size());
     List<NodeId> selectedToPreemptNodeIds = new ArrayList<>();
     for (RMContainer rmc : selectedToPreempt) {
       selectedToPreemptNodeIds.add(rmc.getAllocatedNode());
     }
-    assertThat(selectedToPreemptNodeIds, CoreMatchers.hasItems(
-        mockNMs[1].getNodeId(), mockNMs[2].getNodeId()));
-
+    assertThat(selectedToPreemptNodeIds).contains(mockNMs[1].getNodeId(), mockNMs[2].getNodeId());
     rm1.close();
 
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testPreemptionForFragmentatedCluster() throws Exception {
     // Set additional_balance_queue_based_on_reserved_res to true to get
     // additional preemptions.
@@ -1171,11 +1190,11 @@ public class TestCapacitySchedulerSurgicalPreemption
         this.conf);
     conf.setLong(YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
         1024 * 21);
-    conf.setQueues("root", new String[] { "a", "b" });
-    conf.setCapacity("root.a", 50);
-    conf.setUserLimitFactor("root.a", 100);
-    conf.setCapacity("root.b", 50);
-    conf.setUserLimitFactor("root.b", 100);
+    conf.setQueues(ROOT, new String[] {"a", "b"});
+    conf.setCapacity(A, 50);
+    conf.setUserLimitFactor(A, 100);
+    conf.setCapacity(B, 50);
+    conf.setUserLimitFactor(B, 100);
     MockRM rm1 = new MockRM(conf);
     rm1.getRMContext().setNodeLabelManager(mgr);
     rm1.start();
@@ -1211,7 +1230,7 @@ public class TestCapacitySchedulerSurgicalPreemption
     // App1 should have 5 containers now
     FiCaSchedulerApp schedulerApp1 = cs.getApplicationAttempt(
         am1.getApplicationAttemptId());
-    Assert.assertEquals(5, schedulerApp1.getLiveContainers().size());
+    assertEquals(5, schedulerApp1.getLiveContainers().size());
 
     // launch an app to queue, AM container should be launched in nm1
     MockRMAppSubmissionData data =
@@ -1237,7 +1256,7 @@ public class TestCapacitySchedulerSurgicalPreemption
     // App2 should have 2 containers now
     FiCaSchedulerApp schedulerApp2 = cs.getApplicationAttempt(
         am2.getApplicationAttemptId());
-    Assert.assertEquals(2, schedulerApp2.getLiveContainers().size());
+    assertEquals(2, schedulerApp2.getLiveContainers().size());
 
     waitNumberOfReservedContainersFromApp(schedulerApp2, 1);
 
@@ -1261,12 +1280,13 @@ public class TestCapacitySchedulerSurgicalPreemption
       tick++;
       Thread.sleep(100);
     }
-    Assert.assertEquals(3, schedulerApp2.getLiveContainers().size());
+    assertEquals(3, schedulerApp2.getLiveContainers().size());
 
     rm1.close();
   }
 
-  @Test(timeout = 600000)
+  @Test
+  @Timeout(value = 600)
   public void testPreemptionToBalanceWithCustomTimeout() throws Exception {
     /**
      * Test case: Submit two application (app1/app2) to different queues, queue
@@ -1332,7 +1352,7 @@ public class TestCapacitySchedulerSurgicalPreemption
     // App1 should have 39 containers now
     FiCaSchedulerApp schedulerApp1 = cs.getApplicationAttempt(
         am1.getApplicationAttemptId());
-    Assert.assertEquals(39, schedulerApp1.getLiveContainers().size());
+    assertEquals(39, schedulerApp1.getLiveContainers().size());
     // 20 from n1 and 19 from n2
     waitNumberOfLiveContainersOnNodeFromApp(cs.getNode(rmNode1.getNodeID()),
         am1.getApplicationAttemptId(), 20);
@@ -1360,10 +1380,10 @@ public class TestCapacitySchedulerSurgicalPreemption
     ProportionalCapacityPreemptionPolicy editPolicy =
         (ProportionalCapacityPreemptionPolicy) smon.getSchedulingEditPolicy();
     editPolicy.editSchedule();
-    Assert.assertEquals(4, editPolicy.getToPreemptContainers().size());
+    assertEquals(4, editPolicy.getToPreemptContainers().size());
 
     // check live containers immediately, nothing happen
-    Assert.assertEquals(39, schedulerApp1.getLiveContainers().size());
+    assertEquals(39, schedulerApp1.getLiveContainers().size());
 
     Thread.sleep(20*1000);
     // Call editSchedule again: selected containers are killed

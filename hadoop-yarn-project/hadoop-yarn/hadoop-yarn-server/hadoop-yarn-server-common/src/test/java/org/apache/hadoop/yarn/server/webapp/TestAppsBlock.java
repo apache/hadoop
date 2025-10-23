@@ -29,7 +29,9 @@ import org.apache.hadoop.yarn.webapp.YarnWebParams;
 import org.apache.hadoop.yarn.webapp.view.BlockForTest;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlockForTest;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class TestAppsBlock {
 
@@ -37,29 +39,31 @@ public class TestAppsBlock {
    * Test invalid application state.Exception should be thrown if application
    * state is not valid.
    */
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testInvalidAppState() {
-    AppsBlock appBlock = new AppsBlock(null, null) {
-      // override this so that apps block can fetch app state.
-      @Override
-      public Map<String, String> moreParams() {
-        Map<String, String> map = new HashMap<>();
-        map.put(YarnWebParams.APP_STATE, "ACCEPTEDPING");
-        return map;
-      }
+    assertThrows(IllegalArgumentException.class, () -> {
+      AppsBlock appBlock = new AppsBlock(null, null) {
+        // override this so that apps block can fetch app state.
+        @Override
+        public Map<String, String> moreParams() {
+          Map<String, String> map = new HashMap<>();
+          map.put(YarnWebParams.APP_STATE, "ACCEPTEDPING");
+          return map;
+        }
 
-      @Override
-      protected void renderData(Block html) {
-      }
-    };
+        @Override
+        protected void renderData(Block html) {
+        }
+      };
 
-    // set up the test block to render AppsBlock
-    OutputStream outputStream = new ByteArrayOutputStream();
-    HtmlBlock.Block block = createBlockToCreateTo(outputStream);
+      // set up the test block to render AppsBlock
+      OutputStream outputStream = new ByteArrayOutputStream();
+      HtmlBlock.Block block = createBlockToCreateTo(outputStream);
 
-    // If application state is invalid it should throw exception
-    // instead of catching it.
-    appBlock.render(block);
+      // If application state is invalid it should throw exception
+      // instead of catching it.
+      appBlock.render(block);
+    });
   }
 
   private static HtmlBlock.Block createBlockToCreateTo(

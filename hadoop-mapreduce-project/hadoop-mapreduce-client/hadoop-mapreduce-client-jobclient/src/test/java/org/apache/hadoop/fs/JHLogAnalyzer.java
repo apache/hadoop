@@ -76,7 +76,7 @@ import org.slf4j.LoggerFactory;
  * specific attempt A during hour h.
  * The tool then sums all slots for all attempts for every hour.
  * The result is the slot hour utilization of the cluster:
- * <tt>slotTime(h) = SUM<sub>A</sub> slotTime(A,h)</tt>.
+ * <code>slotTime(h) = SUM<sub>A</sub> slotTime(A,h)</code>.
  * <p>
  * Log analyzer calculates slot hours for <em>MAP</em> and <em>REDUCE</em> 
  * attempts separately.
@@ -88,8 +88,8 @@ import org.slf4j.LoggerFactory;
  * <p>
  * Map-reduce clusters are usually configured to have a fixed number of MAP 
  * and REDUCE slots per node. Thus the maximal possible number of slots on
- * the cluster is <tt>total_slots = total_nodes * slots_per_node</tt>.
- * Effective slot hour cannot exceed <tt>total_slots</tt> for successful
+ * the cluster is <code>total_slots = total_nodes * slots_per_node</code>.
+ * Effective slot hour cannot exceed <code>total_slots</code> for successful
  * attempts.
  * <p>
  * <em>Pending time</em> characterizes the wait time of attempts.
@@ -106,39 +106,39 @@ import org.slf4j.LoggerFactory;
  * The following input parameters can be specified in the argument string
  * to the job log analyzer:
  * <ul>
- * <li><tt>-historyDir inputDir</tt> specifies the location of the directory
+ * <li><code>-historyDir inputDir</code> specifies the location of the directory
  * where analyzer will be looking for job history log files.</li>
- * <li><tt>-resFile resultFile</tt> the name of the result file.</li>
- * <li><tt>-usersIncluded | -usersExcluded userList</tt> slot utilization and 
+ * <li><code>-resFile resultFile</code> the name of the result file.</li>
+ * <li><code>-usersIncluded | -usersExcluded userList</code> slot utilization and
  * pending time can be calculated for all or for all but the specified users.
  * <br>
- * <tt>userList</tt> is a comma or semicolon separated list of users.</li>
- * <li><tt>-gzip</tt> is used if history log files are compressed.
+ * <code>userList</code> is a comma or semicolon separated list of users.</li>
+ * <li><code>-gzip</code> is used if history log files are compressed.
  * Only {@link GzipCodec} is currently supported.</li>
- * <li><tt>-jobDelimiter pattern</tt> one can concatenate original log files into 
+ * <li><code>-jobDelimiter pattern</code> one can concatenate original log files into
  * larger file(s) with the specified delimiter to recognize the end of the log
  * for one job from the next one.<br>
- * <tt>pattern</tt> is a java regular expression
+ * <code>pattern</code> is a java regular expression
  * {@link java.util.regex.Pattern}, which should match only the log delimiters.
  * <br>
- * E.g. pattern <tt>".!!FILE=.*!!"</tt> matches delimiters, which contain
+ * E.g. pattern <code>".!!FILE=.*!!"</code> matches delimiters, which contain
  * the original history log file names in the following form:<br>
- * <tt>"$!!FILE=my.job.tracker.com_myJobId_user_wordcount.log!!"</tt></li>
- * <li><tt>-clean</tt> cleans up default directories used by the analyzer.</li>
- * <li><tt>-test</tt> test one file locally and exit;
+ * <code>"$!!FILE=my.job.tracker.com_myJobId_user_wordcount.log!!"</code></li>
+ * <li><code>-clean</code> cleans up default directories used by the analyzer.</li>
+ * <li><code>-test</code> test one file locally and exit;
  * does not require map-reduce.</li>
- * <li><tt>-help</tt> print usage.</li>
+ * <li><code>-help</code> print usage.</li>
  * </ul>
  * 
  * <h3>Output.</h3>
  * The output file is formatted as a tab separated table consisting of four
- * columns: <tt>SERIES, PERIOD, TYPE, SLOT_HOUR</tt>.
+ * columns: <code>SERIES, PERIOD, TYPE, SLOT_HOUR</code>.
  * <ul>
- * <li><tt>SERIES</tt> one of the four statistical series;</li>
- * <li><tt>PERIOD</tt> the start of the time interval in the following format:
- * <tt>"yyyy-mm-dd hh:mm:ss"</tt>;</li>
- * <li><tt>TYPE</tt> the slot type, e.g. MAP or REDUCE;</li>
- * <li><tt>SLOT_HOUR</tt> the value of the slot usage during this 
+ * <li><code>SERIES</code> one of the four statistical series;</li>
+ * <li><code>PERIOD</code> the start of the time interval in the following format:
+ * <code>"yyyy-mm-dd hh:mm:ss"</code>;</li>
+ * <li><code>TYPE</code> the slot type, e.g. MAP or REDUCE;</li>
+ * <li><code>SLOT_HOUR</code> the value of the slot usage during this
  * time interval.</li>
  * </ul>
  */
@@ -773,7 +773,7 @@ public class JHLogAnalyzer {
     /**
      * Read lines until one ends with a " ." or "\" "
      */
-    private StringBuffer resBuffer = new StringBuffer();
+    private StringBuilder resBuffer = new StringBuilder();
     private String readLine(BufferedReader reader) throws IOException {
       resBuffer.setLength(0);
       reader.mark(maxJobDelimiterLineLength);

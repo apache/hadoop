@@ -807,10 +807,13 @@ public class DelegationTokenRenewer extends AbstractService {
   private void removeFailedDelegationToken(DelegationTokenToRenew t) {
     Collection<ApplicationId> applicationIds = t.referringAppIds;
     synchronized (applicationIds) {
-      LOG.error("removing failed delegation token for appid=" + applicationIds
-          + ";t=" + t.token.getService());
+      LOG.error("removing failed delegation token for appid={};t={}",
+          applicationIds, t.token.getService());
       for (ApplicationId applicationId : applicationIds) {
-        appTokens.get(applicationId).remove(t);
+        Set<DelegationTokenToRenew> tokens = appTokens.get(applicationId);
+        if (tokens != null && !tokens.isEmpty()) {
+          tokens.remove(t);
+        }
       }
     }
     allTokens.remove(t.token);

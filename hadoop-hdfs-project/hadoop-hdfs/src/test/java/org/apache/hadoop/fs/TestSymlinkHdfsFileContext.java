@@ -17,24 +17,26 @@
  */
 package org.apache.hadoop.fs;
 
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 public class TestSymlinkHdfsFileContext extends TestSymlinkHdfs {
 
   private static FileContext fc;
 
-  @BeforeClass
+  @BeforeAll
   public static void testSetup() throws Exception {
     fc = FileContext.getFileContext(cluster.getURI(0));
     wrapper = new FileContextTestWrapper(fc, "/tmp/TestSymlinkHdfsFileContext");
   }
 
-  @Test(timeout=10000)
+  @Test
+  @Timeout(value = 10)
   /** Test access a symlink using AbstractFileSystem */
   public void testAccessLinkFromAbstractFileSystem() throws IOException {
     Path file = new Path(testBaseDir1(), "file");

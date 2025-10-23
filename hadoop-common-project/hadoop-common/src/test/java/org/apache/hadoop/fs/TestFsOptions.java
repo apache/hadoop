@@ -17,12 +17,12 @@
  */
 package org.apache.hadoop.fs;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.apache.hadoop.fs.Options.ChecksumOpt;
 import org.apache.hadoop.util.DataChecksum;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class TestFsOptions {
 

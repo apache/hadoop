@@ -17,10 +17,10 @@
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker;
 
 import org.apache.hadoop.util.StringUtils;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Tests the docker pull command and its command
@@ -31,7 +31,7 @@ public class TestDockerPullCommand {
 
   private static final String IMAGE_NAME = "foo";
 
-  @Before
+  @BeforeEach
   public void setup() {
     dockerPullCommand = new DockerPullCommand(IMAGE_NAME);
   }

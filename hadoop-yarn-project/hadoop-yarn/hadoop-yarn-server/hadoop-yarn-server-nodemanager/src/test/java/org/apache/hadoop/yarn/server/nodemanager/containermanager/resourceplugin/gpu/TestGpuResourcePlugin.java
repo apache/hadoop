@@ -18,6 +18,10 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.gpu;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -28,8 +32,7 @@ import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.gpu.GpuDeviceInforma
 import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.gpu.NMGpuResourceInfo;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.gpu.PerGpuDeviceInformation;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.gpu.PerGpuUtilizations;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import java.util.List;
 
 public class TestGpuResourcePlugin {
@@ -50,16 +53,18 @@ public class TestGpuResourcePlugin {
     return gpuDiscoverer;
   }
 
-  @Test(expected = YarnException.class)
+  @Test
   public void testResourceHandlerNotInitialized() throws YarnException {
-    GpuDiscoverer gpuDiscoverer = createMockDiscoverer();
-    GpuNodeResourceUpdateHandler gpuNodeResourceUpdateHandler =
-        mock(GpuNodeResourceUpdateHandler.class);
+    assertThrows(YarnException.class, () -> {
+      GpuDiscoverer gpuDiscoverer = createMockDiscoverer();
+      GpuNodeResourceUpdateHandler gpuNodeResourceUpdateHandler =
+          mock(GpuNodeResourceUpdateHandler.class);
 
-    GpuResourcePlugin target =
-        new GpuResourcePlugin(gpuNodeResourceUpdateHandler, gpuDiscoverer);
+      GpuResourcePlugin target =
+          new GpuResourcePlugin(gpuNodeResourceUpdateHandler, gpuDiscoverer);
 
-    target.getNMResourceInfo();
+      target.getNMResourceInfo();
+    });
   }
 
   @Test
@@ -92,18 +97,17 @@ public class TestGpuResourcePlugin {
 
     NMGpuResourceInfo resourceInfo =
         (NMGpuResourceInfo) target.getNMResourceInfo();
-    Assert.assertNotNull("GpuDeviceInformation should not be null",
-        resourceInfo.getGpuDeviceInformation());
+    assertNotNull(
+        resourceInfo.getGpuDeviceInformation(), "GpuDeviceInformation should not be null");
 
     List<PerGpuDeviceInformation> gpus =
         resourceInfo.getGpuDeviceInformation().getGpus();
-    Assert.assertNotNull("List of PerGpuDeviceInformation should not be null",
-        gpus);
+    assertNotNull(gpus, "List of PerGpuDeviceInformation should not be null");
 
-    Assert.assertEquals("List of PerGpuDeviceInformation should have a " +
-        "size of 1", 1, gpus.size());
-    Assert.assertEquals("Product name of GPU does not match",
-        "testGpu", gpus.get(0).getProductName());
+    assertEquals(1, gpus.size(), "List of PerGpuDeviceInformation should have a " +
+        "size of 1");
+    assertEquals("testGpu", gpus.get(0).getProductName(),
+        "Product name of GPU does not match");
   }
 
   @Test
@@ -122,7 +126,7 @@ public class TestGpuResourcePlugin {
 
     NMGpuResourceInfo resourceInfo =
         (NMGpuResourceInfo) target.getNMResourceInfo();
-    Assert.assertNull(resourceInfo.getGpuDeviceInformation());
+    assertNull(resourceInfo.getGpuDeviceInformation());
   }
 
   @Test
@@ -133,7 +137,7 @@ public class TestGpuResourcePlugin {
     GpuNodeResourceUpdateHandler gpuNodeResourceUpdateHandler =
         new GpuNodeResourceUpdateHandler(gpuDiscoverer, new Configuration());
 
-    Assert.assertEquals(0.5F,
+    assertEquals(0.5F,
         gpuNodeResourceUpdateHandler.getAvgNodeGpuUtilization(), 1e-6);
   }
 

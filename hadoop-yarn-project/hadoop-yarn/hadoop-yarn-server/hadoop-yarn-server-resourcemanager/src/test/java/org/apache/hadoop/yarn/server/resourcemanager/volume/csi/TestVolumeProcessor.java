@@ -17,6 +17,12 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.volume.csi;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
@@ -53,11 +59,10 @@ import org.apache.hadoop.yarn.server.volume.csi.VolumeId;
 import org.apache.hadoop.yarn.server.volume.csi.exception.InvalidVolumeException;
 import org.apache.hadoop.yarn.server.volume.csi.exception.VolumeException;
 import org.apache.hadoop.yarn.server.volume.csi.exception.VolumeProvisioningException;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.mockito.Mockito;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -67,9 +72,10 @@ import java.util.Arrays;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
 
 /**
  * Test cases for volume processor.
@@ -90,7 +96,7 @@ public class TestVolumeProcessor {
 
   private static final String VOLUME_RESOURCE_NAME = "yarn.io/csi-volume";
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     conf = new YarnConfiguration();
     resourceTypesFile = new File(conf.getClassLoader()
@@ -126,7 +132,7 @@ public class TestVolumeProcessor {
     }
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     if (resourceTypesFile != null && resourceTypesFile.exists()) {
       resourceTypesFile.delete();
@@ -146,7 +152,8 @@ public class TestVolumeProcessor {
     }
   }
 
-  @Test (timeout = 10000L)
+  @Test
+  @Timeout(10)
   public void testVolumeProvisioning() throws Exception {
     MockRMAppSubmissionData data =
         MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm)
@@ -179,8 +186,7 @@ public class TestVolumeProcessor {
         .build();
 
     // inject adaptor client for testing
-    CsiAdaptorProtocol mockedClient = Mockito
-        .mock(CsiAdaptorProtocol.class);
+    CsiAdaptorProtocol mockedClient = mock(CsiAdaptorProtocol.class);
     rm.getRMContext().getVolumeManager()
         .registerCsiDriverAdaptor("hostpath", mockedClient);
 
@@ -192,7 +198,7 @@ public class TestVolumeProcessor {
     am1.allocate(ar);
     VolumeStates volumeStates =
         rm.getRMContext().getVolumeManager().getVolumeStates();
-    Assert.assertNotNull(volumeStates);
+    assertNotNull(volumeStates);
     VolumeState volumeState = VolumeState.NEW;
     while (volumeState != VolumeState.NODE_READY) {
       Volume volume = volumeStates
@@ -207,7 +213,8 @@ public class TestVolumeProcessor {
     rm.stop();
   }
 
-  @Test (timeout = 30000L)
+  @Test
+  @Timeout(30)
   public void testInvalidRequest() throws Exception {
     MockRMAppSubmissionData data =
         MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm)
@@ -242,14 +249,15 @@ public class TestVolumeProcessor {
 
     try {
       am1.allocate(ar);
-      Assert.fail("allocate should fail because invalid request received");
+      fail("allocate should fail because invalid request received");
     } catch (Exception e) {
-      Assert.assertTrue(e instanceof InvalidVolumeException);
+      assertTrue(e instanceof InvalidVolumeException);
     }
     rm.stop();
   }
 
-  @Test (timeout = 30000L)
+  @Test
+  @Timeout(30)
   public void testProvisioningFailures() throws Exception {
     MockRMAppSubmissionData data =
         MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm)
@@ -262,8 +270,7 @@ public class TestVolumeProcessor {
     RMApp app1 = MockRMAppSubmitter.submit(rm, data);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, mockNMS[0]);
 
-    CsiAdaptorProtocol mockedClient = Mockito
-        .mock(CsiAdaptorProtocol.class);
+    CsiAdaptorProtocol mockedClient = mock(CsiAdaptorProtocol.class);
     // inject adaptor client
     rm.getRMContext().getVolumeManager()
         .registerCsiDriverAdaptor("hostpath", mockedClient);
@@ -293,14 +300,15 @@ public class TestVolumeProcessor {
 
     try {
       am1.allocate(ar);
-      Assert.fail("allocate should fail");
+      fail("allocate should fail");
     } catch (Exception e) {
-      Assert.assertTrue(e instanceof VolumeProvisioningException);
+      assertTrue(e instanceof VolumeProvisioningException);
     }
     rm.stop();
   }
 
-  @Test (timeout = 10000L)
+  @Test
+  @Timeout(10)
   public void testVolumeResourceAllocate() throws Exception {
     RMApp app1 = MockRMAppSubmitter.submit(rm,
         MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm)
@@ -328,8 +336,7 @@ public class TestVolumeProcessor {
         .build();
 
     // inject adaptor client for testing
-    CsiAdaptorProtocol mockedClient = Mockito
-        .mock(CsiAdaptorProtocol.class);
+    CsiAdaptorProtocol mockedClient = mock(CsiAdaptorProtocol.class);
     rm.getRMContext().getVolumeManager()
         .registerCsiDriverAdaptor("hostpath", mockedClient);
 
@@ -347,13 +354,13 @@ public class TestVolumeProcessor {
       Thread.sleep(500);
     }
 
-    Assert.assertEquals(1, allocated.size());
+    assertEquals(1, allocated.size());
     Container alloc = allocated.get(0);
     assertThat(alloc.getResource().getMemorySize()).isEqualTo(1024);
     assertThat(alloc.getResource().getVirtualCores()).isEqualTo(1);
     ResourceInformation allocatedVolume =
         alloc.getResource().getResourceInformation(VOLUME_RESOURCE_NAME);
-    Assert.assertNotNull(allocatedVolume);
+    assertNotNull(allocatedVolume);
     assertThat(allocatedVolume.getValue()).isEqualTo(1024);
     assertThat(allocatedVolume.getUnits()).isEqualTo("Mi");
     rm.stop();

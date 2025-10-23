@@ -31,13 +31,18 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.*;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * TestCounters checks the sanity and recoverability of Queue
@@ -46,12 +51,12 @@ public class TestQueue {
   private static File testDir = new File(System.getProperty("test.build.data",
       "/tmp"), TestJobConf.class.getSimpleName());
 
-  @Before
+  @BeforeEach
   public void setup() {
     testDir.mkdirs();
   }
 
-  @After
+  @AfterEach
   public void cleanup() {
     FileUtil.fullyDelete(testDir);
   }
@@ -62,7 +67,8 @@ public class TestQueue {
    * 
    * @throws IOException
    */
-  @Test (timeout=5000)
+  @Test
+  @Timeout(value = 5)
   public void testQueue() throws IOException {
     File f = null;
     try {
@@ -194,7 +200,8 @@ public class TestQueue {
     return conf;
   }
 
-  @Test (timeout=5000)
+  @Test
+  @Timeout(value = 5)
   public void testDefaultConfig() {
     QueueManager manager = new QueueManager(true);
     assertThat(manager.getRoot().getChildren().size()).isEqualTo(2);
@@ -206,7 +213,8 @@ public class TestQueue {
    * @throws IOException
    */
 
-  @Test (timeout=5000)
+  @Test
+  @Timeout(value = 5)
   public void test2Queue() throws IOException {
     Configuration conf = getConfiguration();
 

@@ -36,7 +36,7 @@ public class TestYarnConfigurationFields extends TestConfigurationFieldsBase {
   @SuppressWarnings({"deprecation", "methodlength"})
   @Override
   public void initializeMemberVariables() {
-    xmlFilename = new String("yarn-default.xml");
+    xmlFilename = "yarn-default.xml";
     configurationClasses = new Class[] { YarnConfiguration.class };
 
     // Allocate for usage
@@ -142,7 +142,6 @@ public class TestYarnConfigurationFields extends TestConfigurationFieldsBase {
         .add(YarnConfiguration.RM_SYSTEM_METRICS_PUBLISHER_ENABLED);
 
     // skip deprecated ZooKeeper settings
-    configurationPropsToSkipCompare.add(YarnConfiguration.RM_ZK_ADDRESS);
     configurationPropsToSkipCompare.add(YarnConfiguration.RM_ZK_NUM_RETRIES);
     configurationPropsToSkipCompare.add(YarnConfiguration.RM_ZK_TIMEOUT_MS);
     configurationPropsToSkipCompare.add(

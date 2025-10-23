@@ -18,9 +18,9 @@
 package org.apache.hadoop.hdfs.server.federation.store.driver;
 
 import static org.apache.hadoop.hdfs.server.federation.store.FederationStateStoreTestUtils.getStateStoreConfiguration;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -32,7 +32,6 @@ import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.RetryNTimes;
 import org.apache.curator.test.TestingServer;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys;
 import org.apache.hadoop.hdfs.server.federation.store.StateStoreUtils;
 import org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreZooKeeperImpl;
@@ -43,10 +42,10 @@ import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 import org.apache.hadoop.hdfs.server.federation.store.records.RouterState;
 import org.apache.hadoop.util.Time;
 import org.apache.zookeeper.CreateMode;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test the ZooKeeper implementation of the State Store driver.
@@ -57,7 +56,7 @@ public class TestStateStoreZK extends TestStateStoreDriverBase {
   private static CuratorFramework curatorFramework;
   private static String baseZNode;
 
-  @BeforeClass
+  @BeforeAll
   public static void setupCluster() throws Exception {
     curatorTestingServer = new TestingServer();
     curatorTestingServer.start();
@@ -71,7 +70,7 @@ public class TestStateStoreZK extends TestStateStoreDriverBase {
     // Create the ZK State Store
     Configuration conf =
         getStateStoreConfiguration(StateStoreZooKeeperImpl.class);
-    conf.set(CommonConfigurationKeys.ZK_ADDRESS, connectString);
+    conf.set(RBFConfigKeys.FEDERATION_STORE_ZK_ADDRESS, connectString);
     // Disable auto-repair of connection
     conf.setLong(RBFConfigKeys.FEDERATION_STORE_CONNECTION_TEST_MS,
         TimeUnit.HOURS.toMillis(1));
@@ -82,7 +81,7 @@ public class TestStateStoreZK extends TestStateStoreDriverBase {
     getStateStore(conf);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownCluster() {
     curatorFramework.close();
     try {
@@ -91,7 +90,7 @@ public class TestStateStoreZK extends TestStateStoreDriverBase {
     }
   }
 
-  @Before
+  @BeforeEach
   public void startup() throws IOException {
     removeAll(getStateStoreDriver());
     StateStoreZooKeeperImpl stateStoreZooKeeper = (StateStoreZooKeeperImpl) getStateStoreDriver();
@@ -140,17 +139,28 @@ public class TestStateStoreZK extends TestStateStoreDriverBase {
       insertList.add(newRecord);
     }
     // Insert Multiple on sync mode
-    long startSync = Time.now();
+    long startSyncPut = Time.now();
     stateStoreDriver.putAll(insertList, true, false);
-    long endSync = Time.now();
+    long endSyncPut = Time.now();
+    // Removing 1000 records synchronously is painfully slow so test with only 5 records
+    // Then remove the rest with removeAll()
+    long startSyncRemove = Time.now();
+    for (MountTable entry : insertList.subList(0, 5)) {
+      stateStoreDriver.remove(entry);
+    }
+    long endSyncRemove = Time.now();
     stateStoreDriver.removeAll(MembershipState.class);
 
     stateStoreDriver.setEnableConcurrent(true);
     // Insert Multiple on async mode
-    long startAsync = Time.now();
+    long startAsyncPut = Time.now();
     stateStoreDriver.putAll(insertList, true, false);
-    long endAsync = Time.now();
-    assertTrue((endSync - startSync) > (endAsync - startAsync));
+    long endAsyncPut = Time.now();
+    long startAsyncRemove = Time.now();
+    stateStoreDriver.removeMultiple(insertList.subList(0, 5));
+    long endAsyncRemove = Time.now();
+    assertTrue((endSyncPut - startSyncPut) > (endAsyncPut - startAsyncPut));
+    assertTrue((endSyncRemove - startSyncRemove) > (endAsyncRemove - startAsyncRemove));
   }
 
   @Test

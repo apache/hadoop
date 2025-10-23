@@ -18,6 +18,7 @@
 package org.apache.hadoop.test;
 
 import java.io.File;
+import java.lang.reflect.Method;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.conf.Configuration;
@@ -35,9 +36,8 @@ import org.apache.hadoop.hdfs.StripedFileTestUtil;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.StoragePolicySatisfierMode;
-import org.junit.Test;
-import org.junit.runners.model.FrameworkMethod;
-import org.junit.runners.model.Statement;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtensionContext;
 
 public class TestHdfsHelper extends TestDirHelper {
 
@@ -54,27 +54,16 @@ public class TestHdfsHelper extends TestDirHelper {
 
   private static final ThreadLocal<Path> HDFS_TEST_DIR_TL = new InheritableThreadLocal<Path>();
 
-  @Override
-  public Statement apply(Statement statement, FrameworkMethod frameworkMethod, Object o) {
-    TestHdfs testHdfsAnnotation = frameworkMethod.getAnnotation(TestHdfs.class);
-    if (testHdfsAnnotation != null) {
-      this.statement = new HdfsStatement(statement, frameworkMethod.getName());
-      statement = this.statement;
-    }
-    return super.apply(statement, frameworkMethod, o);
-  }
-
   public MiniDFSCluster getMiniDFSCluster() {
     return statement.getMiniDFSCluster();
   }
 
-  private static class HdfsStatement extends Statement {
-    private Statement statement;
+  private static class HdfsStatement {
+
     private String testName;
     private MiniDFSCluster miniHdfs = null;
 
-    public HdfsStatement(Statement statement, String testName) {
-      this.statement = statement;
+    HdfsStatement(String testName) {
       this.testName = testName;
     }
 
@@ -82,21 +71,15 @@ public class TestHdfsHelper extends TestDirHelper {
       return miniHdfs;
     }
 
-    @Override
-    public void evaluate() throws Throwable {
+
+    public void evaluate() throws Exception {
       Configuration conf = HadoopUsersConfTestHelper.getBaseConf();
       if (Boolean.parseBoolean(System.getProperty(HADOOP_MINI_HDFS, "true"))) {
         miniHdfs = startMiniHdfs(conf);
         conf = miniHdfs.getConfiguration(0);
       }
-      try {
-        HDFS_CONF_TL.set(conf);
-        HDFS_TEST_DIR_TL.set(resetHdfsTestDir(conf));
-        statement.evaluate();
-      } finally {
-        HDFS_CONF_TL.remove();
-        HDFS_TEST_DIR_TL.remove();
-      }
+      HDFS_CONF_TL.set(conf);
+      HDFS_TEST_DIR_TL.set(resetHdfsTestDir(conf));
     }
 
     private static AtomicInteger counter = new AtomicInteger();
@@ -223,4 +206,22 @@ public class TestHdfsHelper extends TestDirHelper {
     return MINI_DFS;
   }
 
+  @Override
+  public void beforeEach(ExtensionContext context) throws Exception {
+    super.beforeEach(context);
+    Method testMethod = context.getRequiredTestMethod();
+    TestHdfs testHdfsAnnotation = testMethod.getAnnotation(TestHdfs.class);
+    if (testHdfsAnnotation != null) {
+      this.statement = new HdfsStatement(testMethod.getName());
+      this.statement.evaluate();
+    }
+  }
+
+  @Override
+  public void afterEach(ExtensionContext extensionContext) throws Exception {
+
+    super.afterEach(extensionContext);
+    HDFS_CONF_TL.remove();
+    HDFS_TEST_DIR_TL.remove();
+  }
 }

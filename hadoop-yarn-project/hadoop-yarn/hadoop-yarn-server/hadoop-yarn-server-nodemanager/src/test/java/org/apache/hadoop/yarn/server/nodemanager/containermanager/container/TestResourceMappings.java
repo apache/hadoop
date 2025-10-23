@@ -19,9 +19,8 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.container;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hadoop.yarn.server.nodemanager.api.deviceplugin.Device;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -29,12 +28,15 @@ import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
+
 public class TestResourceMappings {
 
   private static final ResourceMappings.AssignedResources testResources =
       new ResourceMappings.AssignedResources();
 
-  @BeforeClass
+  @BeforeAll
   public static void setup() {
     testResources.updateAssignedResources(ImmutableList.of(
         Device.Builder.newInstance()
@@ -64,12 +66,12 @@ public class TestResourceMappings {
       ResourceMappings.AssignedResources deserialized =
           ResourceMappings.AssignedResources.fromBytes(serializedString);
 
-      Assert.assertEquals(testResources.getAssignedResources(),
+      assertEquals(testResources.getAssignedResources(),
           deserialized.getAssignedResources());
 
     } catch (IOException e) {
       e.printStackTrace();
-      Assert.fail(String.format("Serialization of test AssignedResources " +
+      fail(String.format("Serialization of test AssignedResources " +
           "failed with %s", e.getMessage()));
     }
   }
@@ -82,12 +84,12 @@ public class TestResourceMappings {
       ResourceMappings.AssignedResources deserialized =
           ResourceMappings.AssignedResources.fromBytes(serializedString);
 
-      Assert.assertEquals(testResources.getAssignedResources(),
+      assertEquals(testResources.getAssignedResources(),
           deserialized.getAssignedResources());
 
     } catch (IOException e) {
       e.printStackTrace();
-      Assert.fail(String.format("Deserialization of test AssignedResources " +
+      fail(String.format("Deserialization of test AssignedResources " +
           "failed with %s", e.getMessage()));
     }
   }

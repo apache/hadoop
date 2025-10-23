@@ -32,9 +32,11 @@ import org.apache.hadoop.mapreduce.lib.output.NullOutputFormat;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestMapCollection {
 
@@ -81,7 +83,7 @@ public class TestMapCollection {
       }
       len = WritableUtils.readVInt(in);
       for (int i = 0; i < len; ++i) {
-        assertEquals("Invalid byte at " + i, fillChar, in.readByte());
+        assertEquals(fillChar, in.readByte(), "Invalid byte at " + i);
       }
     }
     @Override
@@ -162,10 +164,10 @@ public class TestMapCollection {
         n2 = 0;
       }
       for (int i = s1 + n1; i < l1 - n1; ++i) {
-        assertEquals("Invalid key at " + s1, (int)KeyWritable.keyFill, b1[i]);
+        assertEquals((int)KeyWritable.keyFill, b1[i], "Invalid key at " + s1);
       }
       for (int i = s2 + n2; i < l2 - n2; ++i) {
-        assertEquals("Invalid key at " + s2, (int)KeyWritable.keyFill, b2[i]);
+        assertEquals((int)KeyWritable.keyFill, b2[i], "Invalid key at " + s2);
       }
       return l1 - l2;
     }
@@ -193,7 +195,7 @@ public class TestMapCollection {
     @Override
     protected void cleanup(Context context)
         throws IOException, InterruptedException {
-      assertEquals("Unexpected record count", expected, numrecs);
+      assertEquals(expected, numrecs, "Unexpected record count");
     }
   }
 
@@ -281,7 +283,7 @@ public class TestMapCollection {
         public float getProgress() { return (float) current / records; }
         @Override
         public void close() {
-          assertEquals("Unexpected count", records, current - 1);
+          assertEquals(records, current - 1, "Unexpected count");
         }
       };
     }
@@ -318,7 +320,7 @@ public class TestMapCollection {
     job.setSortComparatorClass(VariableComparator.class);
 
     LOG.info("Running " + name);
-    assertTrue("Job failed!", job.waitForCompletion(false));
+    assertTrue(job.waitForCompletion(false), "Job failed!");
   }
 
   @Test

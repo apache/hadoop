@@ -22,6 +22,9 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.security.PrivilegedExceptionAction;
 
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
+import org.junit.jupiter.api.BeforeEach;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -31,7 +34,6 @@ import org.apache.hadoop.service.Service.STATE;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
-import org.junit.Before;
 
 public abstract class ACLsTestBase {
 
@@ -47,6 +49,13 @@ public abstract class ACLsTestBase {
   protected static final String QUEUEA = "queueA";
   protected static final String QUEUEB = "queueB";
   protected static final String QUEUEC = "queueC";
+  protected static final QueuePath ROOT = new QueuePath(CapacitySchedulerConfiguration.ROOT);
+  protected static final QueuePath A_QUEUE_PATH = new QueuePath(
+      CapacitySchedulerConfiguration.ROOT + "." + QUEUEA);
+  protected static final QueuePath B_QUEUE_PATH = new QueuePath(
+      CapacitySchedulerConfiguration.ROOT + "." + QUEUEB);
+  protected static final QueuePath C_QUEUE_PATH = new QueuePath(
+      CapacitySchedulerConfiguration.ROOT + "." + QUEUEC);
 
   protected static final Logger LOG =
       LoggerFactory.getLogger(TestApplicationACLs.class);
@@ -56,7 +65,7 @@ public abstract class ACLsTestBase {
   YarnRPC rpc;
   InetSocketAddress rmAddress;
 
-  @Before
+  @BeforeEach
   public void setup() throws InterruptedException, IOException {
     conf = createConfiguration();
     rpc = YarnRPC.create(conf);

@@ -24,16 +24,16 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.tools.rumen.JobStory;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.event.Level;
 
 import java.io.IOException;
 import java.util.List;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.slf4j.LoggerFactory.getLogger;
 
 public class TestSleepJob extends CommonJobTest {
@@ -47,12 +47,12 @@ public class TestSleepJob extends CommonJobTest {
 
   static GridmixJobSubmissionPolicy policy = GridmixJobSubmissionPolicy.REPLAY;
 
-  @BeforeClass
+  @BeforeAll
   public static void init() throws IOException {
     GridmixTestUtils.initCluster(TestSleepJob.class);
   }
 
-  @AfterClass
+  @AfterAll
   public static void shutDown() throws IOException {
     GridmixTestUtils.shutdownCluster();
   }

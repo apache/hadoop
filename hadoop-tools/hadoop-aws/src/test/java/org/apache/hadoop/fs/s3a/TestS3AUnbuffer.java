@@ -28,14 +28,14 @@ import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.time.Instant;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -43,6 +43,8 @@ import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfAnalyticsAcceleratorEnabled;
 
 /**
  * Uses mocks to check that the {@link ResponseInputStream<GetObjectResponse>} is
@@ -55,6 +57,8 @@ public class TestS3AUnbuffer extends AbstractS3AMockTest {
   @Test
   public void testUnbuffer() throws IOException {
     // Create mock ObjectMetadata for getFileStatus()
+    skipIfAnalyticsAcceleratorEnabled(conf,
+        "Analytics accelerator does not support unbuffer");
     Path path = new Path("/file");
     HeadObjectResponse objectMetadata = HeadObjectResponse.builder()
         .contentLength(1L)

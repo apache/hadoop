@@ -100,7 +100,7 @@ public interface DiffList<T extends Comparable<Integer>> extends Iterable<T> {
    * @param index index of the element to return
    * @return the element at the specified position in this list
    * @throws IndexOutOfBoundsException if the index is out of range
-   *         (<tt>index &lt; 0 || index &gt;= size()</tt>)
+   *         (<code>index &lt; 0 || index &gt;= size()</code>)
    */
   T get(int index);
 

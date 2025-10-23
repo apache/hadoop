@@ -32,9 +32,11 @@ import org.apache.hadoop.util.XMLUtils;
 
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
-import static org.junit.Assert.*;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestQueueConfigurationParser {
 /**
@@ -42,7 +44,8 @@ public class TestQueueConfigurationParser {
  * @throws ParserConfigurationException
  * @throws Exception 
  */
-  @Test (timeout=5000)
+  @Test
+  @Timeout(value = 5)
   public void testQueueConfigurationParser()
       throws ParserConfigurationException, Exception {
     JobQueueInfo info = new JobQueueInfo("root", "rootInfo");

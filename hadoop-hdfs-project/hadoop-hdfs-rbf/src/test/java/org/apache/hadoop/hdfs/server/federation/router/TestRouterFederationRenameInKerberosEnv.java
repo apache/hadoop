@@ -36,11 +36,11 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.security.authorize.ImpersonationProvider;
 import org.apache.hadoop.tools.fedbalance.DistCpProcedure;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
@@ -64,8 +64,8 @@ import static org.apache.hadoop.security.token.delegation.ZKDelegationTokenSecre
 import static org.apache.hadoop.test.GenericTestUtils.getMethodName;
 import static org.apache.hadoop.tools.fedbalance.FedBalanceConfigs.SCHEDULER_JOURNAL_URI;
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.RM_PRINCIPAL;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Basic tests of router federation rename. Rename across namespaces.
@@ -94,7 +94,7 @@ public class TestRouterFederationRenameInKerberosEnv
   /** Random Router for this federated cluster. */
   private RouterContext router;
 
-  @BeforeClass
+  @BeforeAll
   public static void globalSetUp() throws Exception {
     // init KDC
     File workDir = new File(System.getProperty("test.dir", "target"));
@@ -151,20 +151,20 @@ public class TestRouterFederationRenameInKerberosEnv
     }
   }
 
-  @AfterClass
+  @AfterAll
   public static void globalTearDown() {
     kdc.stop();
     DistCpProcedure.disableForTest();
   }
 
-  @After
+  @AfterEach
   @Override
   public void tearDown() throws Exception {
     super.tearDown();
     cluster.shutdown();
   }
 
-  @Before
+  @BeforeEach
   @Override
   public void setUp() throws Exception {
     super.setUp();

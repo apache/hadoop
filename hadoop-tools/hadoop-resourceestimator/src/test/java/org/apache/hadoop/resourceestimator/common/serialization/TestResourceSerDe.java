@@ -20,11 +20,12 @@
 
 package org.apache.hadoop.resourceestimator.common.serialization;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import org.apache.hadoop.yarn.api.records.Resource;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -41,23 +42,25 @@ public class TestResourceSerDe {
 
   private Resource resource;
 
-  @Before public final void setup() {
+  @BeforeEach
+  public final void setup() {
     resource = Resource.newInstance(1024 * 100, 100);
     gson = new GsonBuilder()
         .registerTypeAdapter(Resource.class, new ResourceSerDe()).create();
   }
 
-  @Test public final void testSerialization() {
+  @Test
+  public final void testSerialization() {
     final String json = gson.toJson(resource, new TypeToken<Resource>() {
     }.getType());
     final Resource resourceDe = gson.fromJson(json, new TypeToken<Resource>() {
     }.getType());
-    Assert.assertEquals(resource.getMemorySize(), resourceDe.getMemorySize());
-    Assert
-        .assertEquals(resource.getVirtualCores(), resourceDe.getVirtualCores());
+    assertEquals(resource.getMemorySize(), resourceDe.getMemorySize());
+    assertEquals(resource.getVirtualCores(), resourceDe.getVirtualCores());
   }
 
-  @After public final void cleanUp() {
+  @AfterEach
+  public final void cleanUp() {
     resource = null;
     gson = null;
   }

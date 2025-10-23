@@ -26,9 +26,15 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.Iterator;
+import java.util.List;
 import java.util.StringTokenizer;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
@@ -55,6 +61,7 @@ import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.SequenceFileInputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -134,27 +141,61 @@ public class NNBench extends Configured implements Tool {
    * 
    * @throws IOException on error
    */
-  private void createControlFiles() throws IOException {
+  private void createControlFiles() {
     LOG.info("Creating " + numberOfMaps + " control files");
 
+    ExecutorService executorService =
+        HadoopExecutors.newFixedThreadPool(2 * Runtime.getRuntime().availableProcessors());
+    List<Future<Void>> list = new ArrayList<>();
     for (int i = 0; i < numberOfMaps; i++) {
       String strFileName = "NNBench_Controlfile_" + i;
       Path filePath = new Path(new Path(baseDir, CONTROL_DIR_NAME),
               strFileName);
 
+      Future<Void> future = executorService.submit(new CreateControlFile(strFileName, filePath, i));
+      list.add(future);
+    }
+
+    for (int i = 0; i < list.size(); i++) {
+      try {
+        list.get(i).get();
+      } catch (InterruptedException | ExecutionException e) {
+        LOG.error("Creating control files Error.", e);
+      }
+    }
+
+    executorService.shutdown();
+  }
+
+  private class CreateControlFile implements Callable<Void> {
+    private String strFileName;
+    private Path filePath;
+    private int order;
+
+    CreateControlFile(String strFileName, Path filePath, int order) {
+      this.strFileName = strFileName;
+      this.filePath = filePath;
+      this.order = order;
+    }
+
+    @Override
+    public Void call() throws Exception {
       SequenceFile.Writer writer = null;
       try {
         writer = SequenceFile.createWriter(getConf(), Writer.file(filePath),
             Writer.keyClass(Text.class), Writer.valueClass(LongWritable.class),
             Writer.compression(CompressionType.NONE));
-        writer.append(new Text(strFileName), new LongWritable(i));
+        writer.append(new Text(strFileName), new LongWritable(order));
       } finally {
         if (writer != null) {
           writer.close();
         }
       }
+      return null;
     }
+
   }
+
   /**
    * Display version
    */

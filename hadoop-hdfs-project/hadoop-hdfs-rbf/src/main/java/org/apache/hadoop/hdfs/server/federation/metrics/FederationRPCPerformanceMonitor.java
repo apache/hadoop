@@ -52,9 +52,9 @@ public class FederationRPCPerformanceMonitor implements RouterRpcMonitor {
 
 
   /** Time for an operation to be received in the Router. */
-  private static final ThreadLocal<Long> START_TIME = new ThreadLocal<>();
+  private static final ThreadLocal<Long> START_TIME = ThreadLocal.withInitial(() -> -1L);
   /** Time for an operation to be sent to the Namenode. */
-  private static final ThreadLocal<Long> PROXY_TIME = new ThreadLocal<>();
+  private static final ThreadLocal<Long> PROXY_TIME = ThreadLocal.withInitial(() -> -1L);
 
   /** Configuration for the performance monitor. */
   private Configuration conf;
@@ -141,6 +141,14 @@ public class FederationRPCPerformanceMonitor implements RouterRpcMonitor {
     START_TIME.set(monotonicNow());
   }
 
+  public static long getStartOpTime() {
+    return START_TIME.get();
+  }
+
+  public static void setStartOpTime(long startOpTime) {
+    START_TIME.set(startOpTime);
+  }
+
   @Override
   public long proxyOp() {
     PROXY_TIME.set(monotonicNow());
@@ -149,6 +157,14 @@ public class FederationRPCPerformanceMonitor implements RouterRpcMonitor {
       metrics.addProcessingTime(processingTime);
     }
     return Thread.currentThread().getId();
+  }
+
+  public static long getProxyOpTime() {
+    return PROXY_TIME.get();
+  }
+
+  public static void setProxyOpTime(long proxyOpTime) {
+    PROXY_TIME.set(proxyOpTime);
   }
 
   @Override

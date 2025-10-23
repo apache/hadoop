@@ -448,6 +448,12 @@ message FederationQueueWeightProto {
   optional string policyManagerClassName = 5;
 }
 
+message FederationSubClusterProto {
+  optional string subClusterId = 1;
+  optional string lastHeartBeatTime = 2;
+  optional string subClusterState = 3;
+}
+
 ////////////////////////////////////////////////////////////////////////
 ////// From AM_RM_Protocol /////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////

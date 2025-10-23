@@ -299,7 +299,9 @@ public class GlobalPolicyGenerator extends CompositeService {
     }
     LOG.info("Instantiating GPGWebApp at {}.", webAppAddress);
     GPGWebApp gpgWebApp = new GPGWebApp(this);
-    webApp = WebApps.$for("gpg").at(webAppAddress).start(gpgWebApp);
+    webApp = WebApps.$for("gpg", GPGContext.class, this.gpgContext,
+        "gpg-ws").at(webAppAddress).
+         withResourceConfig(gpgWebApp.resourceConfig()).start(gpgWebApp);
   }
 
   @SuppressWarnings("resource")
@@ -340,8 +342,7 @@ public class GlobalPolicyGenerator extends CompositeService {
       argv = hParser.getRemainingArgs();
       if (argv.length > 1) {
         if (argv[0].equals("-format-policy-store")) {
-          // TODO: YARN-11561. [Federation] GPG Supports Format PolicyStateStore.
-          System.err.println("format-policy-store is not yet supported.");
+          handFormatPolicyStateStore(conf);
         } else {
           printUsage(System.err);
         }
@@ -365,5 +366,22 @@ public class GlobalPolicyGenerator extends CompositeService {
 
   private static void printUsage(PrintStream out) {
     out.println("Usage: yarn gpg [-format-policy-store]");
+  }
+
+  private static void handFormatPolicyStateStore(Configuration conf) {
+    try {
+      System.out.println("Deleting Federation policy state store.");
+      FederationStateStoreFacade facade = FederationStateStoreFacade.getInstance(conf);
+      System.out.println("Federation policy state store has been cleaned.");
+      facade.deleteAllPoliciesConfigurations();
+    } catch (Exception e) {
+      LOG.error("Delete Federation policy state store error.", e);
+      System.err.println("Delete Federation policy state store error, exception = " + e);
+    }
+  }
+
+  @Override
+  public void setConfig(Configuration conf) {
+    super.setConfig(conf);
   }
 }

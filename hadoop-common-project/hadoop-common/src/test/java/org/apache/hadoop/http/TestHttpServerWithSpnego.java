@@ -34,10 +34,9 @@ import org.apache.hadoop.security.authentication.util.SignerSecretProvider;
 import org.apache.hadoop.security.authentication.util.StringSignerSecretProviderCreator;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.authorize.ProxyUsers;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.Assert;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -46,7 +45,9 @@ import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
 import java.util.Properties;
-import static org.junit.Assert.assertTrue;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * This class is tested for http server with SPNEGO authentication.
@@ -69,7 +70,7 @@ public class TestHttpServerWithSpnego {
   private static MiniKdc testMiniKDC;
   private static File secretFile = new File(testRootDir, SECRET_STR);
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     try {
       testMiniKDC = new MiniKdc(MiniKdc.createConf(), testRootDir);
@@ -77,14 +78,14 @@ public class TestHttpServerWithSpnego {
       testMiniKDC.createPrincipal(
           httpSpnegoKeytabFile, HTTP_USER + "/localhost");
     } catch (Exception e) {
-      assertTrue("Couldn't setup MiniKDC", false);
+      assertTrue(false, "Couldn't setup MiniKDC");
     }
     Writer w = new FileWriter(secretFile);
     w.write("secret");
     w.close();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() {
     if (testMiniKDC != null) {
       testMiniKDC.stop();
@@ -153,7 +154,7 @@ public class TestHttpServerWithSpnego {
         HttpURLConnection conn = authUrl
             .openConnection(new URL(serverURL + servlet + "?doAs=userB"),
             token);
-        Assert.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
+        assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
       }
 
       // userA cannot impersonate userC, it fails.
@@ -162,7 +163,7 @@ public class TestHttpServerWithSpnego {
         HttpURLConnection conn = authUrl
             .openConnection(new URL(serverURL + servlet + "?doAs=userC"),
             token);
-        Assert.assertEquals(HttpURLConnection.HTTP_FORBIDDEN,
+        assertEquals(HttpURLConnection.HTTP_FORBIDDEN,
             conn.getResponseCode());
       }
 
@@ -173,7 +174,7 @@ public class TestHttpServerWithSpnego {
           new String[]{"logLevel", "logs"}) {
         HttpURLConnection conn = authUrl
             .openConnection(new URL(serverURL + servlet), token);
-        Assert.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
+        assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
       }
 
       // Setup token for userB
@@ -184,7 +185,7 @@ public class TestHttpServerWithSpnego {
           new String[]{"logLevel", "logs"}) {
         HttpURLConnection conn = authUrl
             .openConnection(new URL(serverURL + servlet), token);
-        Assert.assertEquals(HttpURLConnection.HTTP_FORBIDDEN,
+        assertEquals(HttpURLConnection.HTTP_FORBIDDEN,
             conn.getResponseCode());
       }
 
@@ -221,13 +222,13 @@ public class TestHttpServerWithSpnego {
       // endpoints in whitelist should not require Kerberos authentication
       for (String endpoint : allowList) {
         HttpURLConnection conn = (HttpURLConnection) new URL(serverURL + endpoint).openConnection();
-        Assert.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
+        assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
       }
 
       // endpoints not in whitelist should require Kerberos authentication
       for (String endpoint : denyList) {
         HttpURLConnection conn = (HttpURLConnection) new URL(serverURL + endpoint).openConnection();
-        Assert.assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED, conn.getResponseCode());
+        assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED, conn.getResponseCode());
       }
 
     } finally {

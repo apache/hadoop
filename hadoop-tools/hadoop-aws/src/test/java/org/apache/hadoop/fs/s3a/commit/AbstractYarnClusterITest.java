@@ -18,13 +18,14 @@
 
 package org.apache.hadoop.fs.s3a.commit;
 
+import java.io.File;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
-import org.junit.AfterClass;
-import org.junit.Rule;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.io.TempDir;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -93,7 +94,7 @@ public abstract class AbstractYarnClusterITest extends AbstractCommitITest {
   private static ClusterBinding clusterBinding;
 
 
-  @AfterClass
+  @AfterAll
   public static void teardownClusters() throws IOException {
     terminateCluster(clusterBinding);
     clusterBinding = null;
@@ -226,8 +227,8 @@ public abstract class AbstractYarnClusterITest extends AbstractCommitITest {
    * the user's home directory, as that is often rejected by CI test
    * runners.
    */
-  @Rule
-  public final TemporaryFolder stagingFilesDir = new TemporaryFolder();
+  @TempDir
+  public File stagingFilesDir;
 
   /**
    * The name of the committer as returned by
@@ -245,6 +246,7 @@ public abstract class AbstractYarnClusterITest extends AbstractCommitITest {
     return createCluster(new JobConf(), false);
   }
 
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     super.setup();
@@ -256,9 +258,9 @@ public abstract class AbstractYarnClusterITest extends AbstractCommitITest {
     if (getClusterBinding() == null) {
       clusterBinding = demandCreateClusterBinding();
     }
-    assertNotNull("cluster is not bound",
-        getClusterBinding());
-
+    assertNotNull(
+       getClusterBinding(), "cluster is not bound");
+    String methodName = getMethodName();
   }
 
   @Override
@@ -303,7 +305,7 @@ public abstract class AbstractYarnClusterITest extends AbstractCommitITest {
     // pass down the scale test flag
     jobConf.setBoolean(KEY_SCALE_TESTS_ENABLED, isScaleTest());
     // and fix the commit dir to the local FS across all workers.
-    String staging = stagingFilesDir.getRoot().getAbsolutePath();
+    String staging = stagingFilesDir.getAbsolutePath();
     LOG.info("Staging temp dir is {}", staging);
     jobConf.set(FS_S3A_COMMITTER_STAGING_TMP_PATH, staging);
     return jobConf;

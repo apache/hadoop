@@ -18,9 +18,9 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -38,8 +38,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.QueueEntit
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test class for dynamic auto created leaf queues.
@@ -58,7 +58,7 @@ public class TestReservationQueue {
   private PlanQueue planQueue;
   private final Resource clusterResource = Resources.createResource(100 * 16 * GB, 100 * 32);
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException, SchedulerDynamicEditException {
     // setup a context / conf
     csConf = new CapacitySchedulerConfiguration();
@@ -97,8 +97,8 @@ public class TestReservationQueue {
   }
 
   private void validateAutoCreatedLeafQueue(double capacity) {
-    assertTrue(" actual capacity: " + autoCreatedLeafQueue.getCapacity(),
-        autoCreatedLeafQueue.getCapacity() - capacity < CSQueueUtils.EPSILON);
+    assertTrue(autoCreatedLeafQueue.getCapacity() - capacity < CSQueueUtils.EPSILON,
+        " actual capacity: " + autoCreatedLeafQueue.getCapacity());
     assertEquals(autoCreatedLeafQueue.maxApplications, DEF_MAX_APPS);
     assertEquals(autoCreatedLeafQueue.maxApplicationsPerUser, DEF_MAX_APPS);
   }

@@ -20,24 +20,25 @@ package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.NoSuchFileException;
+import java.nio.file.Path;
 
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.fs.azurebfs.utils.TextFileBasedIdentityHandler;
+import org.junit.jupiter.api.io.TempDir;
 
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TestTextFileBasedIdentityHandler {
 
-  @ClassRule
-  public static TemporaryFolder tempDir = new TemporaryFolder();
+  @TempDir
+  public static Path tempDir;
+
   private static File userMappingFile = null;
   private static File groupMappingFile = null;
   private static final String NEW_LINE = "\n";
@@ -65,34 +66,34 @@ public class TestTextFileBasedIdentityHandler {
   private static String testGroupDataLine4 = "          " + NEW_LINE;
   private static String testGroupDataLine5 = "7d83024d-957c-4456-aac1-a57f9e2de914:group4:21000:sgp-group4" + NEW_LINE;
 
-  @BeforeClass
+  @BeforeAll
   public static void init() throws IOException {
-    userMappingFile = tempDir.newFile("user-mapping.conf");
-    groupMappingFile = tempDir.newFile("group-mapping.conf");
+    userMappingFile = tempDir.resolve("user-mapping.conf").toFile();
+    groupMappingFile = tempDir.resolve("group-mapping.conf").toFile();
 
     //Stage data for user mapping
-    FileUtils.writeStringToFile(userMappingFile, testUserDataLine1, Charset.forName("UTF-8"), true);
-    FileUtils.writeStringToFile(userMappingFile, testUserDataLine2, Charset.forName("UTF-8"), true);
-    FileUtils.writeStringToFile(userMappingFile, testUserDataLine3, Charset.forName("UTF-8"), true);
-    FileUtils.writeStringToFile(userMappingFile, testUserDataLine4, Charset.forName("UTF-8"), true);
-    FileUtils.writeStringToFile(userMappingFile, testUserDataLine5, Charset.forName("UTF-8"), true);
-    FileUtils.writeStringToFile(userMappingFile, testUserDataLine6, Charset.forName("UTF-8"), true);
-    FileUtils.writeStringToFile(userMappingFile, testUserDataLine7, Charset.forName("UTF-8"), true);
-    FileUtils.writeStringToFile(userMappingFile, NEW_LINE, Charset.forName("UTF-8"), true);
+    FileUtils.writeStringToFile(userMappingFile, testUserDataLine1, StandardCharsets.UTF_8, true);
+    FileUtils.writeStringToFile(userMappingFile, testUserDataLine2, StandardCharsets.UTF_8, true);
+    FileUtils.writeStringToFile(userMappingFile, testUserDataLine3, StandardCharsets.UTF_8, true);
+    FileUtils.writeStringToFile(userMappingFile, testUserDataLine4, StandardCharsets.UTF_8, true);
+    FileUtils.writeStringToFile(userMappingFile, testUserDataLine5, StandardCharsets.UTF_8, true);
+    FileUtils.writeStringToFile(userMappingFile, testUserDataLine6, StandardCharsets.UTF_8, true);
+    FileUtils.writeStringToFile(userMappingFile, testUserDataLine7, StandardCharsets.UTF_8, true);
+    FileUtils.writeStringToFile(userMappingFile, NEW_LINE, StandardCharsets.UTF_8, true);
 
     //Stage data for group mapping
-    FileUtils.writeStringToFile(groupMappingFile, testGroupDataLine1, Charset.forName("UTF-8"), true);
-    FileUtils.writeStringToFile(groupMappingFile, testGroupDataLine2, Charset.forName("UTF-8"), true);
-    FileUtils.writeStringToFile(groupMappingFile, testGroupDataLine3, Charset.forName("UTF-8"), true);
-    FileUtils.writeStringToFile(groupMappingFile, testGroupDataLine4, Charset.forName("UTF-8"), true);
-    FileUtils.writeStringToFile(groupMappingFile, testGroupDataLine5, Charset.forName("UTF-8"), true);
-    FileUtils.writeStringToFile(groupMappingFile, NEW_LINE, Charset.forName("UTF-8"), true);
+    FileUtils.writeStringToFile(groupMappingFile, testGroupDataLine1, StandardCharsets.UTF_8, true);
+    FileUtils.writeStringToFile(groupMappingFile, testGroupDataLine2, StandardCharsets.UTF_8, true);
+    FileUtils.writeStringToFile(groupMappingFile, testGroupDataLine3, StandardCharsets.UTF_8, true);
+    FileUtils.writeStringToFile(groupMappingFile, testGroupDataLine4, StandardCharsets.UTF_8, true);
+    FileUtils.writeStringToFile(groupMappingFile, testGroupDataLine5, StandardCharsets.UTF_8, true);
+    FileUtils.writeStringToFile(groupMappingFile, NEW_LINE, StandardCharsets.UTF_8, true);
   }
 
   private void assertUserLookup(TextFileBasedIdentityHandler handler, String userInTest, String expectedUser)
       throws IOException {
     String actualUser = handler.lookupForLocalUserIdentity(userInTest);
-    Assert.assertEquals("Wrong user identity for ", expectedUser, actualUser);
+    assertEquals(expectedUser, actualUser, "Wrong user identity for ");
   }
 
   @Test
@@ -121,7 +122,7 @@ public class TestTextFileBasedIdentityHandler {
   private void assertGroupLookup(TextFileBasedIdentityHandler handler, String groupInTest, String expectedGroup)
       throws IOException {
     String actualGroup = handler.lookupForLocalGroupIdentity(groupInTest);
-    Assert.assertEquals("Wrong group identity for ", expectedGroup, actualGroup);
+    assertEquals(expectedGroup, actualGroup, "Wrong group identity for ");
   }
 
   @Test

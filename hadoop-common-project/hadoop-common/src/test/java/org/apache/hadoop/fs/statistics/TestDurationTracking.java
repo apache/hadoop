@@ -24,9 +24,9 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -59,14 +59,14 @@ public class TestDurationTracking extends AbstractHadoopTestBase {
 
   private final AtomicInteger invocationCounter = new AtomicInteger(0);
 
-  @Before
+  @BeforeEach
   public void setup() {
     stats = iostatisticsStore()
         .withDurationTracking(REQUESTS)
         .build();
   }
 
-  @After
+  @AfterEach
   public void teardown() {
     LOG.info("stats {}", stats);
   }

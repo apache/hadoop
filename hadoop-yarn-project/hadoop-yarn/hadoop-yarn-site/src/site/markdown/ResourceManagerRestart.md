@@ -93,7 +93,7 @@ This section describes the configurations involved to enable RM Restart feature.
 
 | Property | Description |
 |:---- |:---- |
-| `hadoop.zk.address` | Comma separated list of Host:Port pairs. Each corresponds to a ZooKeeper server (e.g. "127.0.0.1:3000,127.0.0.1:3001,127.0.0.1:3002") to be used by the RM for storing RM state. |
+| `yarn.resourcemanager.zk-address` | Comma separated list of Host:Port pairs. Each corresponds to a ZooKeeper server (e.g. "127.0.0.1:3000,127.0.0.1:3001,127.0.0.1:3002") to be used by the RM for storing RM state. |
 | `yarn.resourcemanager.zk-state-store.parent-path` | The full path of the root znode where RM state will be stored. Default value is /rmstore. |
 
 * Configure the retry policy state-store client uses to connect with the ZooKeeper server.
@@ -157,7 +157,7 @@ Below is a minimum set of configurations for enabling RM work-preserving restart
        (e.g. "127.0.0.1:3000,127.0.0.1:3001,127.0.0.1:3002") to be used by the RM for storing RM state.
        This must be supplied when using org.apache.hadoop.yarn.server.resourcemanager.recovery.ZKRMStateStore
        as the value for yarn.resourcemanager.store.class</description>
-       <name>hadoop.zk.address</name>
+       <name>yarn.resourcemanager.zk-address</name>
        <value>127.0.0.1:2181</value>
      </property>
 

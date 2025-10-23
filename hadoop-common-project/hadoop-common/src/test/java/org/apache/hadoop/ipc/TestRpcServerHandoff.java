@@ -34,10 +34,14 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.net.NetUtils;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class TestRpcServerHandoff {
 
@@ -97,7 +101,8 @@ public class TestRpcServerHandoff {
     }
   }
 
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testDeferredResponse() throws IOException, InterruptedException,
       ExecutionException {
 
@@ -120,7 +125,7 @@ public class TestRpcServerHandoff {
       server.sendResponse();
       BytesWritable response = (BytesWritable) future.get();
 
-      Assert.assertEquals(new BytesWritable(requestBytes), response);
+      assertEquals(new BytesWritable(requestBytes), response);
     } finally {
       if (server != null) {
         server.stop();
@@ -128,7 +133,8 @@ public class TestRpcServerHandoff {
     }
   }
 
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testDeferredException() throws IOException, InterruptedException,
       ExecutionException {
     ServerForHandoffTest server = new ServerForHandoffTest(2);
@@ -149,12 +155,12 @@ public class TestRpcServerHandoff {
       server.sendError();
       try {
         future.get();
-        Assert.fail("Call succeeded. Was expecting an exception");
+        fail("Call succeeded. Was expecting an exception");
       } catch (ExecutionException e) {
         Throwable cause = e.getCause();
-        Assert.assertTrue(cause instanceof RemoteException);
+        assertTrue(cause instanceof RemoteException);
         RemoteException re = (RemoteException) cause;
-        Assert.assertTrue(re.toString().contains("DeferredError"));
+        assertTrue(re.toString().contains("DeferredError"));
       }
     } finally {
       if (server != null) {
@@ -170,7 +176,7 @@ public class TestRpcServerHandoff {
     while (sleepTime > 0) {
       try {
         future.get(200L, TimeUnit.MILLISECONDS);
-        Assert.fail("Expected to timeout since" +
+        fail("Expected to timeout since" +
             " the deferred response hasn't been registered");
       } catch (TimeoutException e) {
         // Ignoring. Expected to time out.

@@ -1873,8 +1873,8 @@ public class JobConf extends Configuration {
    * Set the uri to be invoked in-order to send a notification after the job
    * has completed (success/failure).
    * 
-   * <p>The uri can contain 2 special parameters: <tt>$jobId</tt> and 
-   * <tt>$jobStatus</tt>. Those, if present, are replaced by the job's 
+   * <p>The uri can contain 2 special parameters: <code>$jobId</code> and 
+   * <code>$jobStatus</code>. Those, if present, are replaced by the job's 
    * identifier and completion-status respectively.</p>
    * 
    * <p>This is typically used by application-writers to implement chaining of 

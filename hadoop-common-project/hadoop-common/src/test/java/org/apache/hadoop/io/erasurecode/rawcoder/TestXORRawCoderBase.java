@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.io.erasurecode.rawcoder;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test base for raw XOR coders.

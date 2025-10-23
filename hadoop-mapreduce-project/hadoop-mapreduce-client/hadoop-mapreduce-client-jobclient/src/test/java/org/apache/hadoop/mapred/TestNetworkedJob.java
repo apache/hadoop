@@ -19,7 +19,10 @@
 package org.apache.hadoop.mapred;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -47,7 +50,8 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 public class TestNetworkedJob {
   private static String TEST_ROOT_DIR = new File(System.getProperty(
@@ -56,7 +60,8 @@ public class TestNetworkedJob {
   private static Path inFile = new Path(testDir, "in");
   private static Path outDir = new Path(testDir, "out");
 
-  @Test (timeout=5000)
+  @Test
+  @Timeout(value = 5)
   public void testGetNullCounters() throws Exception {
     //mock creation
     Job mockJob = mock(Job.class);
@@ -68,7 +73,8 @@ public class TestNetworkedJob {
     verify(mockJob).getCounters();
   }
   
-  @Test (timeout=500000)
+  @Test
+  @Timeout(value = 500)
   public void testGetJobStatus() throws IOException, InterruptedException,
       ClassNotFoundException {
     MiniMRClientCluster mr = null;
@@ -101,11 +107,11 @@ public class TestNetworkedJob {
 
       // The following asserts read JobStatus twice and ensure the returned
       // JobStatus objects correspond to the same Job.
-      assertEquals("Expected matching JobIDs", jobId, client.getJob(jobId)
-          .getJobStatus().getJobID());
-      assertEquals("Expected matching startTimes", rj.getJobStatus()
+      assertEquals(jobId, client.getJob(jobId)
+          .getJobStatus().getJobID(), "Expected matching JobIDs");
+      assertEquals(rj.getJobStatus()
           .getStartTime(), client.getJob(jobId).getJobStatus()
-          .getStartTime());
+          .getStartTime(), "Expected matching startTimes");
     } finally {
       if (fileSys != null) {
         fileSys.delete(testDir, true);
@@ -120,7 +126,8 @@ public class TestNetworkedJob {
  * @throws Exception
  */
   @SuppressWarnings( "deprecation" )
-  @Test (timeout=500000)
+  @Test
+  @Timeout(value = 500)
   public void testNetworkedJob() throws Exception {
     // mock creation
     MiniMRClientCluster mr = null;
@@ -252,10 +259,10 @@ public class TestNetworkedJob {
       // test JobClient
       // The following asserts read JobStatus twice and ensure the returned
       // JobStatus objects correspond to the same Job.
-      assertEquals("Expected matching JobIDs", jobId, client.getJob(jobId)
-          .getJobStatus().getJobID());
-      assertEquals("Expected matching startTimes", rj.getJobStatus()
-          .getStartTime(), client.getJob(jobId).getJobStatus().getStartTime());
+      assertEquals(jobId, client.getJob(jobId)
+          .getJobStatus().getJobID(), "Expected matching JobIDs");
+      assertEquals(rj.getJobStatus().getStartTime(),
+          client.getJob(jobId).getJobStatus().getStartTime(), "Expected matching startTimes");
     } finally {
       if (fileSys != null) {
         fileSys.delete(testDir, true);
@@ -271,7 +278,8 @@ public class TestNetworkedJob {
    * 
    * @throws IOException
    */
-  @Test (timeout=5000)
+  @Test
+  @Timeout(value = 5)
   public void testBlackListInfo() throws IOException {
     BlackListInfo info = new BlackListInfo();
     info.setBlackListReport("blackListInfo");
@@ -293,7 +301,8 @@ public class TestNetworkedJob {
  *  test run from command line JobQueueClient
  * @throws Exception
  */
-  @Test (timeout=500000)
+  @Test
+  @Timeout(value = 500)
   public void testJobQueueClient() throws Exception {
         MiniMRClientCluster mr = null;
     FileSystem fileSys = null;

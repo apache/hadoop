@@ -19,6 +19,7 @@
 package org.apache.hadoop.streaming.mapreduce;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -107,7 +108,7 @@ public abstract class StreamBaseRecordReader extends RecordReader<Text, Text> {
     numRec_++;
     if (numRec_ == nextStatusRec_) {
       String recordStr = new String(record, start, Math.min(len,
-          statusMaxRecordChars_), "UTF-8");
+          statusMaxRecordChars_), StandardCharsets.UTF_8);
       nextStatusRec_ += 100;// *= 10;
       String status = getStatus(recordStr);
       LOG.info(status);

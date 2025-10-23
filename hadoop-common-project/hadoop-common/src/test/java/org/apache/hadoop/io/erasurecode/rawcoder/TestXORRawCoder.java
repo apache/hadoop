@@ -17,14 +17,14 @@
  */
 package org.apache.hadoop.io.erasurecode.rawcoder;
 
-import org.junit.Before;
+import org.junit.jupiter.api.BeforeEach;
 
 /**
  * Test pure Java XOR encoding and decoding.
  */
 public class TestXORRawCoder extends TestXORRawCoderBase {
 
-  @Before
+  @BeforeEach
   public void setup() {
     this.encoderFactoryClass = XORRawErasureCoderFactory.class;
     this.decoderFactoryClass = XORRawErasureCoderFactory.class;

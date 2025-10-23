@@ -21,7 +21,8 @@ package org.apache.hadoop.fs.s3a.audit;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -59,10 +60,6 @@ public class ITestAuditAccessChecks extends AbstractS3ACostTest {
 
   private AccessCheckingAuditor auditor;
 
-  public ITestAuditAccessChecks() {
-    super(true);
-  }
-
   @Override
   public Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
@@ -72,6 +69,7 @@ public class ITestAuditAccessChecks extends AbstractS3ACostTest {
     return conf;
   }
 
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     super.setup();

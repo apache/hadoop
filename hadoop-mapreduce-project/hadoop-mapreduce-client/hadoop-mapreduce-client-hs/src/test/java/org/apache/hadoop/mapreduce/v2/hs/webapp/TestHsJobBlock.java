@@ -21,9 +21,10 @@ package org.apache.hadoop.mapreduce.v2.hs.webapp;
 import org.apache.commons.io.output.ByteArrayOutputStream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.Counters;
-import org.apache.hadoop.mapreduce.v2.api.records.*;
+import org.apache.hadoop.mapreduce.v2.api.records.JobId;
+import org.apache.hadoop.mapreduce.v2.api.records.JobReport;
+import org.apache.hadoop.mapreduce.v2.api.records.JobState;
 import org.apache.hadoop.mapreduce.v2.api.records.impl.pb.JobIdPBImpl;
-import org.apache.hadoop.mapreduce.v2.app.job.Task;
 import org.apache.hadoop.mapreduce.v2.app.webapp.AMParams;
 import org.apache.hadoop.mapreduce.v2.hs.CompletedJob;
 import org.apache.hadoop.mapreduce.v2.hs.HistoryFileManager;
@@ -39,8 +40,7 @@ import org.apache.hadoop.yarn.webapp.view.BlockForTest;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlockForTest;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -49,6 +49,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -87,9 +88,8 @@ public class TestHsJobBlock {
 
     block.getWriter().flush();
     String out = outputStream.toString();
-    Assert.assertTrue("Should display warning message for jobs that have too " +
-        "many tasks", out.contains("Any job larger than " + maxAllowedTaskNum +
-            " will not be loaded"));
+    assertTrue(out.contains("Any job larger than " + maxAllowedTaskNum + " will not be loaded"),
+        "Should display warning message for jobs that have too many tasks");
   }
 
   @Test
@@ -98,7 +98,7 @@ public class TestHsJobBlock {
     Configuration config = new Configuration();
     config.setInt(JHAdminConfig.MR_HS_LOADED_JOBS_TASKS_MAX, -1);
 
-    JobHistory jobHistory = new JobHitoryStubWithAllNormalSizeJobs();
+    JobHistory jobHistory = new JobHistoryStubWithAllNormalSizeJobs();
     jobHistory.init(config);
 
     HsJobBlock jobBlock = new HsJobBlock(jobHistory) {
@@ -132,8 +132,8 @@ public class TestHsJobBlock {
     block.getWriter().flush();
     String out = outputStream.toString();
 
-    Assert.assertTrue("Should display job overview for the job.",
-        out.contains("ApplicationMaster"));
+    assertTrue(out.contains("ApplicationMaster"),
+        "Should display job overview for the job.");
   }
 
   private static HtmlBlock.Block createBlockToCreateTo(
@@ -145,9 +145,9 @@ public class TestHsJobBlock {
       protected void subView(Class<? extends SubView> cls) {
       }
     };
-  };
+  }
 
-  /**
+    /**
    * A JobHistory stub that treat all jobs as oversized and therefore will
    * not parse their job history files but return a UnparseJob instance.
    */
@@ -195,7 +195,7 @@ public class TestHsJobBlock {
    * A JobHistory stub that treats all jobs as normal size and therefore will
    * return a CompletedJob on HistoryFileInfo.loadJob().
    */
-  static class JobHitoryStubWithAllNormalSizeJobs extends  JobHistory {
+  static class JobHistoryStubWithAllNormalSizeJobs extends  JobHistory {
     @Override
     public HistoryFileManager createHistoryFileManager() {
       HistoryFileManager historyFileManager;
@@ -239,14 +239,14 @@ public class TestHsJobBlock {
       when(jobReport.getFinishTime()).thenReturn(-1L);
       when(job.getReport()).thenReturn(jobReport);
 
-      when(job.getAMInfos()).thenReturn(new ArrayList<AMInfo>());
-      when(job.getDiagnostics()).thenReturn(new ArrayList<String>());
+      when(job.getAMInfos()).thenReturn(new ArrayList<>());
+      when(job.getDiagnostics()).thenReturn(new ArrayList<>());
       when(job.getName()).thenReturn("fake completed job");
       when(job.getQueueName()).thenReturn("default");
       when(job.getUserName()).thenReturn("junit");
       when(job.getState()).thenReturn(JobState.ERROR);
       when(job.getAllCounters()).thenReturn(new Counters());
-      when(job.getTasks()).thenReturn(new HashMap<TaskId, Task>());
+      when(job.getTasks()).thenReturn(new HashMap<>());
 
       return job;
     }

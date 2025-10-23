@@ -73,14 +73,16 @@ import org.apache.hadoop.yarn.server.nodemanager.NodeManager.NMContext;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMMemoryStateStoreService;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
 import org.apache.hadoop.yarn.util.Records;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.io.TempDir;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class TestFederationInterceptorSecure extends BaseAMRMProxyTest {
 
@@ -113,31 +115,29 @@ public class TestFederationInterceptorSecure extends BaseAMRMProxyTest {
   private static String serverPrincipal;
   private static File serverKeytab;
 
-  @ClassRule
-  public final static TemporaryFolder FOLDER = new TemporaryFolder();
-
-  @BeforeClass
-  public static void setUpCluster() throws Exception {
+  @BeforeAll
+  public static void setUpCluster(@TempDir java.nio.file.Path dir) throws Exception {
     miniKDC = new MiniKdc(MiniKdc.createConf(), TEST_ROOT_DIR);
     miniKDC.start();
 
-    workDir = FOLDER.getRoot();
+    workDir = dir.toFile();
     serverKeytab = new File(workDir, "yarn.keytab");
     serverPrincipal =
         serverUserName + "/" + (Path.WINDOWS ? "127.0.0.1" : "localhost") + "@EXAMPLE.COM";
     miniKDC.createPrincipal(serverKeytab, serverPrincipal);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownCluster() {
     if (miniKDC != null) {
       miniKDC.stop();
     }
-    if (FOLDER != null) {
-      FOLDER.delete();
+    if (workDir != null) {
+      workDir.delete();
     }
   }
 
+  @BeforeEach
   @Override
   public void setUp() throws IOException {
     super.setUp();
@@ -183,6 +183,7 @@ public class TestFederationInterceptorSecure extends BaseAMRMProxyTest {
     }
   }
 
+  @AfterEach
   @Override
   public void tearDown() {
     interceptor.cleanupRegistry();
@@ -257,7 +258,7 @@ public class TestFederationInterceptorSecure extends BaseAMRMProxyTest {
 
     allocateRequest.setResponseId(lastResponseId);
     AllocateResponse allocateResponse = interceptor.allocate(allocateRequest);
-    Assert.assertNotNull("allocate() returned null response", allocateResponse);
+    assertNotNull(allocateResponse, "allocate() returned null response");
     checkAMRMToken(allocateResponse.getAMRMToken());
     lastResponseId = allocateResponse.getResponseId();
 
@@ -272,7 +273,7 @@ public class TestFederationInterceptorSecure extends BaseAMRMProxyTest {
       allocateRequest = Records.newRecord(AllocateRequest.class);
       allocateRequest.setResponseId(lastResponseId);
       allocateResponse = interceptor.allocate(allocateRequest);
-      Assert.assertNotNull("allocate() returned null response", allocateResponse);
+      assertNotNull(allocateResponse, "allocate() returned null response");
       checkAMRMToken(allocateResponse.getAMRMToken());
       lastResponseId = allocateResponse.getResponseId();
 
@@ -285,13 +286,13 @@ public class TestFederationInterceptorSecure extends BaseAMRMProxyTest {
       LOG.info("Total number of allocated containers: {}.", containers.size());
       Thread.sleep(10);
     }
-    Assert.assertEquals(numberOfAllocationExcepted, containers.size());
+    assertEquals(numberOfAllocationExcepted, containers.size());
     return containers;
   }
 
   private void releaseContainersAndAssert(List<Container> containers)
       throws Exception {
-    Assert.assertTrue(containers.size() > 0);
+    assertTrue(containers.size() > 0);
     AllocateRequest allocateRequest = Records.newRecord(AllocateRequest.class);
     List<ContainerId> relList = new ArrayList<>(containers.size());
     for (Container container : containers) {
@@ -302,7 +303,7 @@ public class TestFederationInterceptorSecure extends BaseAMRMProxyTest {
 
     allocateRequest.setResponseId(lastResponseId);
     AllocateResponse allocateResponse = interceptor.allocate(allocateRequest);
-    Assert.assertNotNull(allocateResponse);
+    assertNotNull(allocateResponse);
     checkAMRMToken(allocateResponse.getAMRMToken());
     lastResponseId = allocateResponse.getResponseId();
 
@@ -322,7 +323,7 @@ public class TestFederationInterceptorSecure extends BaseAMRMProxyTest {
       allocateRequest = Records.newRecord(AllocateRequest.class);
       allocateRequest.setResponseId(lastResponseId);
       allocateResponse = interceptor.allocate(allocateRequest);
-      Assert.assertNotNull(allocateResponse);
+      assertNotNull(allocateResponse);
       checkAMRMToken(allocateResponse.getAMRMToken());
       lastResponseId = allocateResponse.getResponseId();
 
@@ -337,13 +338,13 @@ public class TestFederationInterceptorSecure extends BaseAMRMProxyTest {
       Thread.sleep(10);
     }
 
-    Assert.assertEquals(relList.size(), containersForReleasedContainerIds.size());
+    assertEquals(relList.size(), containersForReleasedContainerIds.size());
   }
 
   private void checkAMRMToken(Token amrmToken) {
     if (amrmToken != null) {
       // The token should be the one issued by home MockRM
-      Assert.assertEquals(Integer.toString(0), amrmToken.getKind());
+      assertEquals(Integer.toString(0), amrmToken.getKind());
     }
   }
 
@@ -376,10 +377,10 @@ public class TestFederationInterceptorSecure extends BaseAMRMProxyTest {
 
       RegisterApplicationMasterResponse registerResponse =
           interceptor.registerApplicationMaster(registerReq);
-      Assert.assertNotNull(registerResponse);
+      assertNotNull(registerResponse);
       lastResponseId = 0;
 
-      Assert.assertEquals(0, interceptor.getUnmanagedAMPoolSize());
+      assertEquals(0, interceptor.getUnmanagedAMPoolSize());
 
       // Allocate one batch of containers
       registerSubCluster(SubClusterId.newInstance(SC_ID1));
@@ -388,7 +389,7 @@ public class TestFederationInterceptorSecure extends BaseAMRMProxyTest {
       int numberOfContainers = 3;
       List<Container> containers =
           getContainersAndAssert(numberOfContainers, numberOfContainers * 2);
-      Assert.assertEquals(1, interceptor.getUnmanagedAMPoolSize());
+      assertEquals(1, interceptor.getUnmanagedAMPoolSize());
 
       // Make sure all async hb threads are done
       interceptor.drainAllAsyncQueue(true);
@@ -397,11 +398,11 @@ public class TestFederationInterceptorSecure extends BaseAMRMProxyTest {
       Map<String, byte[]> recoveredDataMap = recoverDataMapForAppAttempt(nmStateStore, attemptId);
       String scEntry = FederationInterceptor.NMSS_SECONDARY_SC_PREFIX + "SC-1";
       if (registryObj == null) {
-        Assert.assertTrue(recoveredDataMap.containsKey(scEntry));
+        assertTrue(recoveredDataMap.containsKey(scEntry));
       } else {
         // When AMRMPRoxy HA is enabled, NMSS should not have the UAM token,
         // it should be in Registry
-        Assert.assertFalse(recoveredDataMap.containsKey(scEntry));
+        assertFalse(recoveredDataMap.containsKey(scEntry));
       }
 
       // Preserve the mock RM instances
@@ -417,9 +418,9 @@ public class TestFederationInterceptorSecure extends BaseAMRMProxyTest {
       interceptor.recover(recoveredDataMap);
       interceptor.setClientRPC(false);
 
-      Assert.assertEquals(1, interceptor.getUnmanagedAMPoolSize());
+      assertEquals(1, interceptor.getUnmanagedAMPoolSize());
       // SC-1 should be initialized to be timed out
-      Assert.assertEquals(1, interceptor.getTimedOutSCs(true).size());
+      assertEquals(1, interceptor.getTimedOutSCs(true).size());
 
       // The first allocate call expects a fail-over exception and re-register
       try {
@@ -427,7 +428,7 @@ public class TestFederationInterceptorSecure extends BaseAMRMProxyTest {
         allocateRequest.setResponseId(lastResponseId);
         AllocateResponse allocateResponse = interceptor.allocate(allocateRequest);
         lastResponseId = allocateResponse.getResponseId();
-        Assert.fail("Expecting an ApplicationMasterNotRegisteredException  "
+        fail("Expecting an ApplicationMasterNotRegisteredException  "
             + " after FederationInterceptor restarts and recovers");
       } catch (ApplicationMasterNotRegisteredException e) {
       }
@@ -446,16 +447,16 @@ public class TestFederationInterceptorSecure extends BaseAMRMProxyTest {
 
       FinishApplicationMasterResponse finishResponse =
           interceptor.finishApplicationMaster(finishReq);
-      Assert.assertNotNull(finishResponse);
-      Assert.assertTrue(finishResponse.getIsUnregistered());
+      assertNotNull(finishResponse);
+      assertTrue(finishResponse.getIsUnregistered());
 
       // After the application succeeds, the registry/NMSS entry should be
       // cleaned up
       if (registryObj != null) {
-        Assert.assertEquals(0, interceptor.getRegistryClient().getAllApplications().size());
+        assertEquals(0, interceptor.getRegistryClient().getAllApplications().size());
       } else {
         recoveredDataMap = recoverDataMapForAppAttempt(nmStateStore, attemptId);
-        Assert.assertFalse(recoveredDataMap.containsKey(scEntry));
+        assertFalse(recoveredDataMap.containsKey(scEntry));
       }
       return null;
     });

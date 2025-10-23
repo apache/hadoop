@@ -46,13 +46,15 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.AMRMClientRelayer;
 import org.apache.hadoop.yarn.server.metrics.AMRMClientRelayerMetrics.RequestType;
 import org.apache.hadoop.yarn.util.Records;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Unit test for AMRMClientRelayer.
@@ -133,7 +135,7 @@ public class TestAMRMClientRelayerMetrics {
   private List<String> blacklistAdditions = new ArrayList<>();
   private List<String> blacklistRemoval = new ArrayList<>();
 
-  @Before
+  @BeforeEach
   public void setup() throws YarnException, IOException {
     this.conf = new Configuration();
 
@@ -236,39 +238,39 @@ public class TestAMRMClientRelayerMetrics {
         ExecutionType.GUARANTEED, 2));
     this.homeRelayer.allocate(getAllocateRequest());
 
-    Assert.assertEquals(2, AMRMClientRelayerMetrics.getInstance()
+    assertEquals(2, AMRMClientRelayerMetrics.getInstance()
         .getPendingMetric(homeID, RequestType.Guaranteed).value());
 
-    Assert.assertEquals(0, AMRMClientRelayerMetrics.getInstance()
+    assertEquals(0, AMRMClientRelayerMetrics.getInstance()
         .getPendingMetric(uamID, RequestType.Guaranteed).value());
 
     // Ask from the uam
     this.uamRelayer.allocate(getAllocateRequest());
 
-    Assert.assertEquals(2, AMRMClientRelayerMetrics.getInstance()
+    assertEquals(2, AMRMClientRelayerMetrics.getInstance()
         .getPendingMetric(homeID, RequestType.Guaranteed).value());
 
-    Assert.assertEquals(2, AMRMClientRelayerMetrics.getInstance()
+    assertEquals(2, AMRMClientRelayerMetrics.getInstance()
         .getPendingMetric(uamID, RequestType.Guaranteed).value());
 
     // Update the any to ask for an extra container
     this.asks.get(2).setNumContainers(3);
     this.homeRelayer.allocate(getAllocateRequest());
 
-    Assert.assertEquals(3, AMRMClientRelayerMetrics.getInstance()
+    assertEquals(3, AMRMClientRelayerMetrics.getInstance()
         .getPendingMetric(homeID, RequestType.Guaranteed).value());
 
-    Assert.assertEquals(2, AMRMClientRelayerMetrics.getInstance()
+    assertEquals(2, AMRMClientRelayerMetrics.getInstance()
         .getPendingMetric(uamID, RequestType.Guaranteed).value());
 
     // Update the any to ask to pretend a container was allocated
     this.asks.get(2).setNumContainers(2);
     this.homeRelayer.allocate(getAllocateRequest());
 
-    Assert.assertEquals(2, AMRMClientRelayerMetrics.getInstance()
+    assertEquals(2, AMRMClientRelayerMetrics.getInstance()
         .getPendingMetric(homeID, RequestType.Guaranteed).value());
 
-    Assert.assertEquals(2, AMRMClientRelayerMetrics.getInstance()
+    assertEquals(2, AMRMClientRelayerMetrics.getInstance()
         .getPendingMetric(uamID, RequestType.Guaranteed).value());
   }
 
@@ -281,7 +283,7 @@ public class TestAMRMClientRelayerMetrics {
 
     this.homeRelayer.allocate(getAllocateRequest());
 
-    Assert.assertEquals(3, AMRMClientRelayerMetrics.getInstance()
+    assertEquals(3, AMRMClientRelayerMetrics.getInstance()
         .getPendingMetric(homeID, RequestType.Promote).value());
 
     // Demote 2 containers, one of which is pending promote
@@ -291,7 +293,7 @@ public class TestAMRMClientRelayerMetrics {
 
     this.homeRelayer.allocate(getAllocateRequest());
 
-    Assert.assertEquals(2, AMRMClientRelayerMetrics.getInstance()
+    assertEquals(2, AMRMClientRelayerMetrics.getInstance()
         .getPendingMetric(homeID, RequestType.Promote).value());
 
     // Let the RM respond with two successful promotions, one of which
@@ -309,7 +311,7 @@ public class TestAMRMClientRelayerMetrics {
 
     this.homeRelayer.allocate(getAllocateRequest());
 
-    Assert.assertEquals(1, AMRMClientRelayerMetrics.getInstance()
+    assertEquals(1, AMRMClientRelayerMetrics.getInstance()
         .getPendingMetric(homeID, RequestType.Promote).value());
 
     // Remove the promoted container and clean up response
@@ -327,7 +329,7 @@ public class TestAMRMClientRelayerMetrics {
 
     this.homeRelayer.allocate(getAllocateRequest());
 
-    Assert.assertEquals(0, AMRMClientRelayerMetrics.getInstance()
+    assertEquals(0, AMRMClientRelayerMetrics.getInstance()
         .getPendingMetric(homeID, RequestType.Promote).value());
   }
 
@@ -354,10 +356,10 @@ public class TestAMRMClientRelayerMetrics {
     // After finish, the metrics should reset to zero
     this.homeRelayer.shutdown();
 
-    Assert.assertEquals(0, AMRMClientRelayerMetrics.getInstance()
+    assertEquals(0, AMRMClientRelayerMetrics.getInstance()
         .getPendingMetric(homeID, RequestType.Guaranteed).value());
 
-    Assert.assertEquals(0, AMRMClientRelayerMetrics.getInstance()
+    assertEquals(0, AMRMClientRelayerMetrics.getInstance()
         .getPendingMetric(homeID, RequestType.Promote).value());
   }
 
@@ -381,28 +383,28 @@ public class TestAMRMClientRelayerMetrics {
     mockAMS.failover = true;
     this.homeRelayer.allocate(getAllocateRequest());
     // The failover metric should be incremented
-    Assert.assertEquals(++previousFailover,
+    assertEquals(++previousFailover,
         AMRMClientRelayerMetrics.getInstance()
         .getRMMasterSlaveSwitchMetric(homeID).value());
 
     // The success metric should be incremented once
-    Assert.assertEquals(++previousSuccess,
+    assertEquals(++previousSuccess,
         AMRMClientRelayerMetrics.getInstance()
             .getHeartbeatSuccessMetric(homeID).value());
 
-    Assert.assertEquals(2, AMRMClientRelayerMetrics.getInstance()
+    assertEquals(2, AMRMClientRelayerMetrics.getInstance()
         .getPendingMetric(homeID, RequestType.Guaranteed).value());
 
-    Assert.assertEquals(0, AMRMClientRelayerMetrics.getInstance()
+    assertEquals(0, AMRMClientRelayerMetrics.getInstance()
         .getPendingMetric(uamID, RequestType.Guaranteed).value());
 
     // Ask from the uam
     this.uamRelayer.allocate(getAllocateRequest());
 
-    Assert.assertEquals(2, AMRMClientRelayerMetrics.getInstance()
+    assertEquals(2, AMRMClientRelayerMetrics.getInstance()
         .getPendingMetric(homeID, RequestType.Guaranteed).value());
 
-    Assert.assertEquals(2, AMRMClientRelayerMetrics.getInstance()
+    assertEquals(2, AMRMClientRelayerMetrics.getInstance()
         .getPendingMetric(uamID, RequestType.Guaranteed).value());
 
     // Update the any to ask for an extra container
@@ -410,19 +412,19 @@ public class TestAMRMClientRelayerMetrics {
     mockAMS.failover = true;
     this.homeRelayer.allocate(getAllocateRequest());
     // The failover metric should be incremented
-    Assert.assertEquals(++previousFailover,
+    assertEquals(++previousFailover,
         AMRMClientRelayerMetrics.getInstance()
             .getRMMasterSlaveSwitchMetric(homeID).value());
 
     // The success metric should be incremented once
-    Assert.assertEquals(++previousSuccess,
+    assertEquals(++previousSuccess,
         AMRMClientRelayerMetrics.getInstance()
             .getHeartbeatSuccessMetric(homeID).value());
 
-    Assert.assertEquals(3, AMRMClientRelayerMetrics.getInstance()
+    assertEquals(3, AMRMClientRelayerMetrics.getInstance()
         .getPendingMetric(homeID, RequestType.Guaranteed).value());
 
-    Assert.assertEquals(2, AMRMClientRelayerMetrics.getInstance()
+    assertEquals(2, AMRMClientRelayerMetrics.getInstance()
         .getPendingMetric(uamID, RequestType.Guaranteed).value());
 
     // Update the any to ask to pretend a container was allocated
@@ -430,19 +432,19 @@ public class TestAMRMClientRelayerMetrics {
     mockAMS.failover = true;
     this.homeRelayer.allocate(getAllocateRequest());
     // The failover metric should be incremented
-    Assert.assertEquals(++previousFailover,
+    assertEquals(++previousFailover,
         AMRMClientRelayerMetrics.getInstance()
             .getRMMasterSlaveSwitchMetric(homeID).value());
 
     // The success metric should be incremented once
-    Assert.assertEquals(++previousSuccess,
+    assertEquals(++previousSuccess,
         AMRMClientRelayerMetrics.getInstance()
             .getHeartbeatSuccessMetric(homeID).value());
 
-    Assert.assertEquals(2, AMRMClientRelayerMetrics.getInstance()
+    assertEquals(2, AMRMClientRelayerMetrics.getInstance()
         .getPendingMetric(homeID, RequestType.Guaranteed).value());
 
-    Assert.assertEquals(2, AMRMClientRelayerMetrics.getInstance()
+    assertEquals(2, AMRMClientRelayerMetrics.getInstance()
         .getPendingMetric(uamID, RequestType.Guaranteed).value());
 
     long previousFailure = AMRMClientRelayerMetrics.getInstance()
@@ -451,21 +453,21 @@ public class TestAMRMClientRelayerMetrics {
     mockAMS.exception = true;
     try{
       this.homeRelayer.allocate(getAllocateRequest());
-      Assert.fail();
+      fail();
     } catch (YarnException e){
     }
     // The failover metric should not be incremented
-    Assert.assertEquals(previousFailover,
+    assertEquals(previousFailover,
         AMRMClientRelayerMetrics.getInstance()
             .getRMMasterSlaveSwitchMetric(homeID).value());
 
     // The success metric should not be incremented
-    Assert.assertEquals(previousSuccess,
+    assertEquals(previousSuccess,
         AMRMClientRelayerMetrics.getInstance()
             .getHeartbeatSuccessMetric(homeID).value());
 
     // The failure metric should be incremented
-    Assert.assertEquals(++previousFailure,
+    assertEquals(++previousFailure,
         AMRMClientRelayerMetrics.getInstance()
             .getHeartbeatFailureMetric(homeID).value());
 
@@ -473,21 +475,21 @@ public class TestAMRMClientRelayerMetrics {
     mockAMS.exception = true;
     try{
       this.homeRelayer.allocate(getAllocateRequest());
-      Assert.fail();
+      fail();
     } catch (YarnException e){
     }
     // The failover metric should be incremented
-    Assert.assertEquals(++previousFailover,
+    assertEquals(++previousFailover,
         AMRMClientRelayerMetrics.getInstance()
             .getRMMasterSlaveSwitchMetric(homeID).value());
 
     // The success metric should not be incremented
-    Assert.assertEquals(previousSuccess,
+    assertEquals(previousSuccess,
         AMRMClientRelayerMetrics.getInstance()
             .getHeartbeatSuccessMetric(homeID).value());
 
     // The failure metric should be incremented
-    Assert.assertEquals(++previousFailure,
+    assertEquals(++previousFailure,
         AMRMClientRelayerMetrics.getInstance()
             .getHeartbeatFailureMetric(homeID).value());
   }
@@ -500,10 +502,10 @@ public class TestAMRMClientRelayerMetrics {
         ExecutionType.GUARANTEED, 0));
     this.homeRelayer.allocate(getAllocateRequest());
 
-    Assert.assertEquals(0, AMRMClientRelayerMetrics.getInstance()
+    assertEquals(0, AMRMClientRelayerMetrics.getInstance()
         .getPendingMetric(homeID, RequestType.Guaranteed).value());
 
-    Assert.assertEquals(0, AMRMClientRelayerMetrics.getInstance()
+    assertEquals(0, AMRMClientRelayerMetrics.getInstance()
         .getPendingMetric(uamID, RequestType.Guaranteed).value());
   }
 }

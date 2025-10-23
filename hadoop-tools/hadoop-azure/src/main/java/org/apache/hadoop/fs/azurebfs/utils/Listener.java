@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.azurebfs.utils;
 
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
+import org.apache.hadoop.fs.azurebfs.constants.ReadType;
 
 /**
  * Interface for testing identifiers tracked via TracingContext
@@ -30,4 +31,7 @@ public interface Listener {
   void updatePrimaryRequestID(String primaryRequestID);
   Listener getClone();
   void setOperation(FSOperationType operation);
+  void updateIngressHandler(String ingressHandler);
+  void updatePosition(String position);
+  void updateReadType(ReadType readType);
 }

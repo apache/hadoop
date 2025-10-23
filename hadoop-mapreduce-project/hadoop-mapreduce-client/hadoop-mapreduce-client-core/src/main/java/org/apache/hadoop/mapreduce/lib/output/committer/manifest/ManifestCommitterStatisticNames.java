@@ -188,6 +188,12 @@ public final class ManifestCommitterStatisticNames {
       "task_stage_save_task_manifest";
 
   /**
+   * Save a summary file: {@value}.
+   */
+  public static final String OP_SAVE_SUMMARY_FILE =
+      "task_stage_save_summary_file";
+
+  /**
    * Task abort: {@value}.
    */
   public static final String OP_STAGE_TASK_ABORT_TASK
@@ -258,6 +264,9 @@ public final class ManifestCommitterStatisticNames {
   /** Task Scan directory Stage: {@value}. */
   public static final String OP_STAGE_TASK_SCAN_DIRECTORY
       = "task_stage_scan_directory";
+
+  /** Delete a directory: {@value}. */
+  public static final String OP_DELETE_DIR = "op_delete_dir";
 
   private ManifestCommitterStatisticNames() {
   }

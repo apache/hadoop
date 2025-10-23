@@ -33,6 +33,9 @@ import org.apache.hadoop.fs.store.audit.AuditEntryPoint;
 /**
  * This is an unstable interface for access to S3A Internal state, S3 operations
  * and the S3 client connector itself.
+ * <p>
+ * Note for maintainers: this is documented in {@code aws_sdk_upgrade.md}; update
+ * on changes.
  */
 @InterfaceStability.Unstable
 @InterfaceAudience.LimitedPrivate("testing/diagnostics")
@@ -52,12 +55,18 @@ public interface S3AInternals {
    * set to false.
    * <p>
    * Mocking note: this is the same S3Client as is used by the owning
-   * filesystem; changes to this client will be reflected by changes
+   * filesystem and S3AStore; changes to this client will be reflected by changes
    * in the behavior of that filesystem.
    * @param reason a justification for requesting access.
    * @return S3Client
    */
   S3Client getAmazonS3Client(String reason);
+
+  /**
+   * Get the store for low-level operations.
+   * @return the store the S3A FS is working through.
+   */
+  S3AStore getStore();
 
   /**
    * Get the region of a bucket.
@@ -121,4 +130,15 @@ public interface S3AInternals {
    * @return true if the transfer manager is used to copy files.
    */
   boolean isMultipartCopyEnabled();
+
+  /**
+   * Abort multipart uploads under a path.
+   * @param path path to abort uploads under.
+   * @return a count of aborts
+   * @throws IOException trouble; FileNotFoundExceptions are swallowed.
+   */
+  @AuditEntryPoint
+  @Retries.RetryTranslated
+  long abortMultipartUploads(Path path) throws IOException;
+
 }

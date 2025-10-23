@@ -21,6 +21,7 @@ package org.apache.hadoop.streaming;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -29,8 +30,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.hadoop.util.Shell;
-import org.junit.After;
-import org.junit.Before;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 
 /**
  * This class tests that the '-file' argument to streaming results
@@ -64,13 +65,13 @@ public class TestFileArgs extends TestStreaming
     setTestDir(new File("/tmp/TestFileArgs"));
   }
 
-  @Before
+  @BeforeEach
   @Override
   public void setUp() throws IOException {
     // Set up side file
     FileSystem localFs = FileSystem.getLocal(conf);
     DataOutputStream dos = localFs.create(new Path("target/sidefile"));
-    dos.write("hello world\n".getBytes("UTF-8"));
+    dos.write("hello world\n".getBytes(StandardCharsets.UTF_8));
     dos.close();
 
     // Since ls doesn't read stdin, we don't want to write anything
@@ -78,7 +79,7 @@ public class TestFileArgs extends TestStreaming
     input = "";
   }
 
-  @After
+  @AfterEach
   @Override
   public void tearDown() {
     if (mr != null) {

@@ -66,6 +66,55 @@ The change in interface will mean that custom credential providers will need to 
 implement `software.amazon.awssdk.auth.credentials.AwsCredentialsProvider` instead of
 `com.amazonaws.auth.AWSCredentialsProvider`.
 
+[HADOOP-18980](https://issues.apache.org/jira/browse/HADOOP-18980) introduces extended version of
+the credential provider remapping. `fs.s3a.aws.credentials.provider.mapping` can be used to
+list comma-separated key-value pairs of mapped credential providers that are separated by
+equal operator (=).
+The key can be used by `fs.s3a.aws.credentials.provider` or
+`fs.s3a.assumed.role.credentials.provider` configs, and the key will be translated into
+the specified value of credential provider class based on the key-value pair
+provided by the config `fs.s3a.aws.credentials.provider.mapping`.
+
+For example, if `fs.s3a.aws.credentials.provider.mapping` is set with value:
+
+```xml
+<property>
+  <name>fs.s3a.aws.credentials.provider.mapping</name>
+  <vale>
+    com.amazonaws.auth.AnonymousAWSCredentials=org.apache.hadoop.fs.s3a.AnonymousAWSCredentialsProvider,
+    com.amazonaws.auth.EC2ContainerCredentialsProviderWrapper=org.apache.hadoop.fs.s3a.auth.IAMInstanceCredentialsProvider,
+    com.amazonaws.auth.InstanceProfileCredentialsProvider=org.apache.hadoop.fs.s3a.auth.IAMInstanceCredentialsProvider
+  </vale>
+</property>
+```
+
+and if `fs.s3a.aws.credentials.provider` is set with:
+
+```xml
+<property>
+  <name>fs.s3a.aws.credentials.provider</name>
+  <vale>com.amazonaws.auth.AnonymousAWSCredentials</vale>
+</property>
+```
+
+`com.amazonaws.auth.AnonymousAWSCredentials` will be internally remapped to
+`org.apache.hadoop.fs.s3a.AnonymousAWSCredentialsProvider` by S3A while preparing
+the AWS credential provider list.
+
+Similarly, if `fs.s3a.assumed.role.credentials.provider` is set with:
+
+```xml
+<property>
+  <name>fs.s3a.assumed.role.credentials.provider</name>
+  <vale>com.amazonaws.auth.InstanceProfileCredentialsProvider</vale>
+</property>
+```
+
+`com.amazonaws.auth.InstanceProfileCredentialsProvider` will be internally
+remapped to `org.apache.hadoop.fs.s3a.auth.IAMInstanceCredentialsProvider` by
+S3A while preparing the assumed role AWS credential provider list.
+
+
 ### Original V1 `AWSCredentialsProvider` interface
 
 Note how the interface begins with the capitalized "AWS" acronym.
@@ -275,6 +324,7 @@ They have also been updated to return V2 SDK classes.
 public interface S3AInternals {
   S3Client getAmazonS3V2Client(String reason);
 
+  S3AStore getStore();
   @Retries.RetryTranslated
   @AuditEntryPoint
   String getBucketLocation() throws IOException;
@@ -288,6 +338,16 @@ public interface S3AInternals {
   HeadObjectResponse getObjectMetadata(Path path) throws IOException;
 
   AWSCredentialProviderList shareCredentials(final String purpose);
+
+  @AuditEntryPoint
+  @Retries.RetryTranslated
+  HeadBucketResponse getBucketMetadata() throws IOException;
+
+  boolean isMultipartCopyEnabled();
+
+  @AuditEntryPoint
+  @Retries.RetryTranslated
+  long abortMultipartUploads(Path path) throws IOException;
 }
 ```
 

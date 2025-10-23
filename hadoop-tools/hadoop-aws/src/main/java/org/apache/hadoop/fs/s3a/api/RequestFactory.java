@@ -37,7 +37,6 @@ import software.amazon.awssdk.services.s3.model.ListObjectsRequest;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
-import software.amazon.awssdk.services.s3.model.SelectObjectContentRequest;
 import software.amazon.awssdk.services.s3.model.StorageClass;
 import software.amazon.awssdk.services.s3.model.UploadPartRequest;
 
@@ -169,12 +168,14 @@ public interface RequestFactory {
    * @param destKey destination object key
    * @param uploadId ID of initiated upload
    * @param partETags ordered list of etags
+   * @param putOptions options for the request
    * @return the request builder.
    */
   CompleteMultipartUploadRequest.Builder newCompleteMultipartUploadRequestBuilder(
       String destKey,
       String uploadId,
-      List<CompletedPart> partETags);
+      List<CompletedPart> partETags,
+      PutObjectOptions putOptions);
 
   /**
    * Create a HEAD object request builder.
@@ -204,6 +205,7 @@ public interface RequestFactory {
    * @param destKey      destination key of ongoing operation
    * @param uploadId     ID of ongoing upload
    * @param partNumber   current part number of the upload
+   * @param isLastPart   isLastPart is this the last part?
    * @param size         amount of data
    * @return the request builder.
    * @throws PathIOException if the part number is out of range.
@@ -212,15 +214,8 @@ public interface RequestFactory {
       String destKey,
       String uploadId,
       int partNumber,
+      boolean isLastPart,
       long size) throws PathIOException;
-
-  /**
-   * Create a S3 Select request builder for the destination object.
-   * This does not build the query.
-   * @param key object key
-   * @return the request builder
-   */
-  SelectObjectContentRequest.Builder newSelectRequestBuilder(String key);
 
   /**
    * Create the (legacy) V1 list request builder.

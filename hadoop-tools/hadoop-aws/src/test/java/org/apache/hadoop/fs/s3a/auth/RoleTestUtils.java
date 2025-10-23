@@ -26,7 +26,6 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import org.junit.Assume;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,14 +37,17 @@ import org.apache.hadoop.fs.Path;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
 import static org.apache.hadoop.fs.s3a.Constants.*;
+import static org.apache.hadoop.fs.s3a.Constants.S3EXPRESS_CREATE_SESSION;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.disableCreateSession;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.disableFilesystemCaching;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.auth.RoleModel.*;
 import static org.apache.hadoop.fs.s3a.auth.RolePolicies.*;
 import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.DELEGATION_TOKEN_BINDING;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.assertj.core.api.Assumptions.assumeThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Helper class for testing roles.
@@ -155,13 +157,16 @@ public final class RoleTestUtils {
         DELEGATION_TOKEN_BINDING,
         ASSUMED_ROLE_ARN,
         AWS_CREDENTIALS_PROVIDER,
-        ASSUMED_ROLE_SESSION_DURATION);
+        ASSUMED_ROLE_SESSION_DURATION,
+        S3EXPRESS_CREATE_SESSION);
+
     conf.set(AWS_CREDENTIALS_PROVIDER, AssumedRoleCredentialProvider.NAME);
     conf.set(ASSUMED_ROLE_ARN, roleARN);
     conf.set(ASSUMED_ROLE_SESSION_NAME, "test");
     conf.set(ASSUMED_ROLE_SESSION_DURATION, "15m");
     // force in bucket resolution during startup
     conf.setInt(S3A_BUCKET_PROBE, 1);
+    disableCreateSession(conf);
     disableFilesystemCaching(conf);
     return conf;
   }
@@ -207,8 +212,9 @@ public final class RoleTestUtils {
    */
   public static String probeForAssumedRoleARN(Configuration conf) {
     String arn = conf.getTrimmed(ASSUMED_ROLE_ARN, "");
-    Assume.assumeTrue("No ARN defined in " + ASSUMED_ROLE_ARN,
-        !arn.isEmpty());
+    assumeThat(arn)
+        .as("No ARN defined in " + ASSUMED_ROLE_ARN)
+        .isNotEmpty();
     return arn;
   }
 
@@ -224,15 +230,14 @@ public final class RoleTestUtils {
       final MarshalledCredentials actual) {
     // DO NOT use assertEquals() here, as that could print a secret to
     // the test report.
-    assertEquals(message + ": access key",
-        expected.getAccessKey(),
-        actual.getAccessKey());
-    assertTrue(message + ": secret key",
-        expected.getSecretKey().equals(actual.getSecretKey()));
-    assertEquals(message + ": session token",
-        expected.getSessionToken(),
-        actual.getSessionToken());
-
+    assertEquals(expected.getAccessKey(),
+        actual.getAccessKey(),
+        message + ": access key");
+    assertTrue(expected.getSecretKey().equals(actual.getSecretKey()),
+        message + ": secret key");
+    assertEquals(expected.getSessionToken(),
+        actual.getSessionToken(),
+        message + ": session token");
   }
 
   /**

@@ -27,6 +27,7 @@ final class UGIExceptionMessages {
   public static final String FOR_USER = " for user: ";
   public static final String FOR_PRINCIPAL = " for principal: ";
   public static final String FROM_KEYTAB = " from keytab ";
+  public static final String INVALID_UID = "Invalid UID, could not determine effective user";
   public static final String LOGIN_FAILURE = "Login failure";
   public static final String LOGOUT_FAILURE = "Logout failure";
   public static final String MUST_FIRST_LOGIN =

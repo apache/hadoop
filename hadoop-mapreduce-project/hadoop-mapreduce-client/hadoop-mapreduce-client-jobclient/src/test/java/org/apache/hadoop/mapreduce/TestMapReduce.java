@@ -41,10 +41,10 @@ import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.MapFileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
-import org.junit.After;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**********************************************************
  * MapredLoadTest generates a bunch of work that exercises
@@ -221,7 +221,7 @@ public class TestMapReduce {
   private static int counts = 100;
   private static Random r = new Random();
 
-  @After
+  @AfterEach
   public void cleanup() {
     FileUtil.fullyDelete(TEST_DIR);
   }
@@ -437,7 +437,7 @@ public class TestMapReduce {
     } finally {
       bw.close();
     }
-    assertTrue("testMapRed failed", success);
+    assertTrue(success, "testMapRed failed");
     fs.delete(testdir, true);
   }
 

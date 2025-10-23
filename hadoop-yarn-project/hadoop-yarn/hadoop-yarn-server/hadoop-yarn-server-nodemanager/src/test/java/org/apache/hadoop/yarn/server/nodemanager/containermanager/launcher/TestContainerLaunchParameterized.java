@@ -20,13 +20,14 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher;
 
 import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.util.Shell;
-import org.junit.Assert;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.Set;
 import java.util.stream.Stream;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TestContainerLaunchParameterized {
   private static Stream<Arguments> inputForGetEnvDependenciesLinux() {
@@ -104,8 +105,8 @@ public class TestContainerLaunchParameterized {
                                    Set<String> expected) {
     ContainerLaunch.ShellScriptBuilder bash =
         ContainerLaunch.ShellScriptBuilder.create(Shell.OSType.OS_TYPE_LINUX);
-    Assert.assertEquals("Failed to parse " + input, expected,
-        bash.getEnvDependencies(input));
+    assertEquals(expected,
+        bash.getEnvDependencies(input), "Failed to parse " + input);
   }
 
   private static Stream<Arguments> inputForGetEnvDependenciesWin() {
@@ -141,8 +142,8 @@ public class TestContainerLaunchParameterized {
                                  Set<String> expected) {
     ContainerLaunch.ShellScriptBuilder win =
         ContainerLaunch.ShellScriptBuilder.create(Shell.OSType.OS_TYPE_WIN);
-    Assert.assertEquals("Failed to parse " + input, expected,
-        win.getEnvDependencies(input));
+    assertEquals(expected,
+        win.getEnvDependencies(input), "Failed to parse " + input);
   }
 
   private static Set<String> asSet(String... str) {

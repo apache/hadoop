@@ -24,9 +24,9 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.StringJoiner;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -37,7 +37,7 @@ import org.apache.hadoop.io.compress.bzip2.BZip2Utils;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY;
 import static org.apache.hadoop.io.compress.bzip2.BZip2TextFileWriter.BLOCK_SIZE;
 import static org.apache.hadoop.util.Preconditions.checkArgument;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public abstract class BaseTestLineRecordReaderBZip2 {
 
@@ -63,7 +63,7 @@ public abstract class BaseTestLineRecordReaderBZip2 {
     return tempFile;
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     conf = new Configuration();
 
@@ -77,7 +77,7 @@ public abstract class BaseTestLineRecordReaderBZip2 {
     tempFile = new Path(inputDir, "test.txt.bz2");
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     fs.delete(tempFile, /* recursive */ false);
   }
@@ -409,7 +409,7 @@ public abstract class BaseTestLineRecordReaderBZip2 {
     private void assertSplit(SplitRange splitRange) throws IOException {
       String message = splitRange.toString();
       long actual = reader.countRecords(splitRange.start, splitRange.length);
-      assertEquals(message, splitRange.expectedNumRecords, actual);
+      assertEquals(splitRange.expectedNumRecords, actual, message);
     }
   }
 

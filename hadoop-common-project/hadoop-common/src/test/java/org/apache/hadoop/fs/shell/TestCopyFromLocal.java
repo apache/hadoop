@@ -21,11 +21,11 @@ import java.io.IOException;
 import java.util.LinkedList;
 import java.util.concurrent.ThreadPoolExecutor;
 
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.RandomUtils;
@@ -37,7 +37,8 @@ import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.shell.CopyCommands.CopyFromLocal;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Test for copyFromLocal.
@@ -82,7 +83,7 @@ public class TestCopyFromLocal {
     return numTotalFiles;
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void init() throws Exception {
     conf = new Configuration(false);
     conf.set("fs.file.impl", LocalFileSystem.class.getName());
@@ -95,13 +96,13 @@ public class TestCopyFromLocal {
     fs.setWorkingDirectory(testDir);
   }
 
-  @AfterClass
+  @AfterAll
   public static void cleanup() throws Exception {
     fs.delete(testDir, true);
     fs.close();
   }
 
-  @Before
+  @BeforeEach
   public void initDirectory() throws Exception {
     dir = new Path("dir" + RandomStringUtils.randomNumeric(4));
     numFiles = initialize(dir);
@@ -113,14 +114,16 @@ public class TestCopyFromLocal {
     assertEquals(0, cmd.run(args));
   }
 
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testCopyFromLocal() {
     run(new TestMultiThreadedCopy(1, 0),
         new Path(dir, FROM_DIR_NAME).toString(),
         new Path(dir, TO_DIR_NAME).toString());
   }
 
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testCopyFromLocalWithThreads(){
     int threads = Runtime.getRuntime().availableProcessors() * 2 + 1;
     run(new TestMultiThreadedCopy(threads, numFiles),
@@ -129,7 +132,8 @@ public class TestCopyFromLocal {
         new Path(dir, TO_DIR_NAME).toString());
   }
 
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testCopyFromLocalWithThreadWrong(){
     run(new TestMultiThreadedCopy(1, 0), "-t", "0",
         new Path(dir, FROM_DIR_NAME).toString(),
@@ -150,7 +154,7 @@ public class TestCopyFromLocal {
     protected void processArguments(LinkedList<PathData> args)
         throws IOException {
       // Check if the correct number of threads are spawned
-      Assert.assertEquals(expectedThreads, getThreadCount());
+      assertEquals(expectedThreads, getThreadCount());
       super.processArguments(args);
 
       if (isMultiThreadNecessary(args)) {
@@ -159,10 +163,10 @@ public class TestCopyFromLocal {
         // 2) There are no active tasks in the executor
         // 3) Executor has shutdown correctly
         ThreadPoolExecutor executor = getExecutor();
-        Assert.assertEquals(expectedCompletedTaskCount,
+        assertEquals(expectedCompletedTaskCount,
             executor.getCompletedTaskCount());
-        Assert.assertEquals(0, executor.getActiveCount());
-        Assert.assertTrue(executor.isTerminated());
+        assertEquals(0, executor.getActiveCount());
+        assertTrue(executor.isTerminated());
       } else {
         assert getExecutor() == null;
       }

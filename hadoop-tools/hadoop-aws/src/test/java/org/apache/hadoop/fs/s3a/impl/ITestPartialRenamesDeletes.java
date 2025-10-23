@@ -29,9 +29,11 @@ import java.util.TreeSet;
 import java.util.stream.Collectors;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -90,8 +92,9 @@ import static org.apache.hadoop.test.LambdaTestUtils.eval;
  * </ol>
  *
  */
+@ParameterizedClass(name="bulk-delete-{0}")
+@MethodSource("params")
 @SuppressWarnings("ThrowableNotThrown")
-@RunWith(Parameterized.class)
 public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
 
   private static final Logger LOG =
@@ -190,7 +193,6 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
    *
    * @return a list of parameter tuples.
    */
-  @Parameterized.Parameters(name = "bulk-delete={0}")
   public static Collection<Object[]> params() {
     return Arrays.asList(new Object[][]{
         {false},
@@ -215,6 +217,7 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
    * @throws Exception failure
    */
   @Override
+  @BeforeEach
   public void setup() throws Exception {
     super.setup();
     assumeRoleTests();
@@ -256,6 +259,7 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
     dirDepth = scaleTest ? DEPTH_SCALED : DEPTH;
   }
 
+  @AfterEach
   @Override
   public void teardown() throws Exception {
     cleanupWithLogger(LOG, roleFS);
@@ -289,8 +293,11 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
         roleARN);
     removeBaseAndBucketOverrides(conf,
         DELEGATION_TOKEN_BINDING,
-        ENABLE_MULTI_DELETE);
+        ENABLE_MULTI_DELETE,
+        S3EXPRESS_CREATE_SESSION);
     conf.setBoolean(ENABLE_MULTI_DELETE, multiDelete);
+    disableCreateSession(conf);
+    disableFilesystemCaching(conf);
     return conf;
   }
 
@@ -304,13 +311,9 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
     removeBucketOverrides(bucketName, conf,
         MAX_THREADS,
         MAXIMUM_CONNECTIONS,
-        DIRECTORY_MARKER_POLICY,
         BULK_DELETE_PAGE_SIZE);
     conf.setInt(MAX_THREADS, EXECUTOR_THREAD_COUNT);
     conf.setInt(MAXIMUM_CONNECTIONS, EXECUTOR_THREAD_COUNT * 2);
-    // use the keep policy to ensure that surplus markers exist
-    // to complicate failures
-    conf.set(DIRECTORY_MARKER_POLICY, DIRECTORY_MARKER_POLICY_KEEP);
     // set the delete page size to its maximum to ensure that all
     // entries are included in the same large delete, even on
     // scale runs. This is needed for assertions on the result.
@@ -600,8 +603,8 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
 
     // as a safety check, verify that one of the deletable files can be deleted
     Path head = deletableFiles.remove(0);
-    assertTrue("delete " + head + " failed",
-        roleFS.delete(head, false));
+    assertTrue(roleFS.delete(head, false),
+        "delete " + head + " failed");
 
     // this set can be deleted by the role FS
     MetricDiff rejectionCount = new MetricDiff(roleFS, FILES_DELETE_REJECTED);

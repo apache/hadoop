@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.nfs.nfs3;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.net.URL;
@@ -31,9 +31,9 @@ import org.apache.hadoop.hdfs.nfs.conf.NfsConfiguration;
 import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 public class TestNfs3HttpServer {
   private static final String BASEDIR =
@@ -43,7 +43,7 @@ public class TestNfs3HttpServer {
   private static String keystoresDir;
   private static String sslConfDir;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     conf.set(DFSConfigKeys.DFS_HTTP_POLICY_KEY,
         HttpConfig.Policy.HTTP_AND_HTTPS.name());
@@ -64,7 +64,7 @@ public class TestNfs3HttpServer {
     cluster.waitActive();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     FileUtil.fullyDelete(new File(BASEDIR));
     if (cluster != null) {
@@ -84,11 +84,11 @@ public class TestNfs3HttpServer {
 
     // Check default servlets.
     String pageContents = DFSTestUtil.urlGet(new URL(urlRoot + "/jmx"));
-    assertTrue("Bad contents: " + pageContents,
-        pageContents.contains("java.lang:type="));
+    assertTrue(pageContents.contains("java.lang:type="),
+        "Bad contents: " + pageContents);
     System.out.println("pc:" + pageContents);
 
     int port = infoServer.getSecurePort();
-    assertTrue("Can't get https port", port > 0);
+    assertTrue(port > 0, "Can't get https port");
   }
 }

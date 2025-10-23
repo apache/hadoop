@@ -31,10 +31,12 @@ import javax.naming.directory.SearchControls;
 import javax.naming.directory.SearchResult;
 
 import org.apache.hadoop.conf.Configuration;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.mockito.stubbing.Stubber;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -114,9 +116,9 @@ public class TestLdapGroupsMappingWithOneQuery
     // regardless of input
     List<String> groups = groupsMapping.getGroups("some_user");
 
-    Assert.assertEquals(expectedGroups, groups);
-    Assert.assertFalse("Second LDAP query should NOT have been called.",
-            groupsMapping.isSecondaryQueryCalled());
+    assertEquals(expectedGroups, groups);
+    assertFalse(groupsMapping.isSecondaryQueryCalled(),
+        "Second LDAP query should NOT have been called.");
 
     // We should have only made one query because single-query lookup is enabled
     verify(getContext(), times(1)).search(anyString(), anyString(),
@@ -144,11 +146,11 @@ public class TestLdapGroupsMappingWithOneQuery
     List<String> groups = groupsMapping.getGroups("some_user");
 
     // expected to be empty due to invalid memberOf
-    Assert.assertEquals(0, groups.size());
+    assertEquals(0, groups.size());
 
     // expect secondary query to be called: getGroups()
-    Assert.assertTrue("Second LDAP query should have been called.",
-            groupsMapping.isSecondaryQueryCalled());
+    assertTrue(groupsMapping.isSecondaryQueryCalled(),
+        "Second LDAP query should have been called.");
 
     // We should have fallen back to the second query because first threw
     // NamingException expected count is 3 since testGetGroups calls

@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.router.webapp;
 
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
@@ -33,6 +34,7 @@ import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ActivitiesInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppActivitiesInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptsInfo;
@@ -58,9 +60,8 @@ import org.apache.hadoop.yarn.server.router.webapp.RouterWebServices.RequestInte
 import org.apache.hadoop.yarn.server.webapp.dao.AppAttemptInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.mockito.Mockito;
 
 /**
@@ -81,10 +82,14 @@ public abstract class BaseRouterWebServicesTest {
   public static final String QUEUE_DEDICATED = "dedicated";
   public static final String QUEUE_DEDICATED_FULL = CapacitySchedulerConfiguration.ROOT +
       CapacitySchedulerConfiguration.DOT + QUEUE_DEDICATED;
+  public static final QueuePath ROOT_QUEUE_PATH =
+      new QueuePath(CapacitySchedulerConfiguration.ROOT);
+  public static final QueuePath DEFAULT_QUEUE_PATH = new QueuePath(QUEUE_DEFAULT_FULL);
+  public static final QueuePath DEDICATED_QUEUE_PATH = new QueuePath(QUEUE_DEDICATED_FULL);
 
   private RouterWebServices routerWebService;
 
-  @Before
+  @BeforeEach
   public void setUp() throws YarnException, IOException {
 
     this.conf = createConfiguration();
@@ -116,7 +121,7 @@ public abstract class BaseRouterWebServicesTest {
     return config;
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     if (router != null) {
       router.stop();
@@ -132,7 +137,7 @@ public abstract class BaseRouterWebServicesTest {
   }
 
   protected RouterWebServices getRouterWebServices() {
-    Assert.assertNotNull(this.routerWebService);
+    assertNotNull(this.routerWebService);
     return this.routerWebService;
   }
 

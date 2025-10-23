@@ -27,7 +27,7 @@ import java.util.stream.Collectors;
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
@@ -39,16 +39,16 @@ import org.apache.hadoop.fs.s3a.AWSCredentialProviderList;
 import org.apache.hadoop.fs.s3a.AnonymousAWSCredentialsProvider;
 import org.apache.hadoop.fs.s3a.auth.IAMInstanceCredentialsProvider;
 import org.apache.hadoop.fs.s3a.impl.InstantiationIOException;
+import org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils;
 
 import static org.apache.hadoop.fs.s3a.Constants.AWS_CREDENTIALS_PROVIDER;
-import static org.apache.hadoop.fs.s3a.S3ATestConstants.DEFAULT_CSVTEST_FILE;
 import static org.apache.hadoop.fs.s3a.auth.CredentialProviderListFactory.ANONYMOUS_CREDENTIALS_V1;
 import static org.apache.hadoop.fs.s3a.auth.CredentialProviderListFactory.EC2_CONTAINER_CREDENTIALS_V1;
 import static org.apache.hadoop.fs.s3a.auth.CredentialProviderListFactory.ENVIRONMENT_CREDENTIALS_V1;
 import static org.apache.hadoop.fs.s3a.auth.CredentialProviderListFactory.createAWSCredentialProviderList;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Unit tests for v1 to v2 credential provider logic.
@@ -56,10 +56,10 @@ import static org.junit.Assert.assertTrue;
 public class TestV1CredentialsProvider {
 
   /**
-   * URI of the landsat images.
+   * URI of the test file.
    */
   private static final URI TESTFILE_URI = new Path(
-      DEFAULT_CSVTEST_FILE).toUri();
+      PublicDatasetTestUtils.DEFAULT_EXTERNAL_FILE).toUri();
 
   private static final Logger LOG = LoggerFactory.getLogger(TestV1CredentialsProvider.class);
 
@@ -150,13 +150,12 @@ public class TestV1CredentialsProvider {
       Class<?> expectedClass =
           expectedClasses.get(i);
       AwsCredentialsProvider provider = providers.get(i);
-      assertNotNull(
+      assertNotNull(provider,
           String.format("At position %d, expected class is %s, but found null.",
-              i, expectedClass), provider);
-      assertTrue(
+          i, expectedClass));
+      assertTrue(expectedClass.isAssignableFrom(provider.getClass()),
           String.format("At position %d, expected class is %s, but found %s.",
-              i, expectedClass, provider.getClass()),
-          expectedClass.isAssignableFrom(provider.getClass()));
+          i, expectedClass, provider.getClass()));
     }
   }
 

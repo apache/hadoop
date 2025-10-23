@@ -17,13 +17,11 @@
  */
 package org.apache.hadoop.hdfs;
 
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,7 +34,7 @@ import static org.apache.hadoop.hdfs.ReadStripedFileWithDecodingHelper.tearDownC
 /**
  * Test online recovery with corrupt files. This test is parameterized.
  */
-@RunWith(Parameterized.class)
+@Timeout(300)
 public class TestReadStripedFileWithDecodingCorruptData {
   static final Logger LOG =
       LoggerFactory.getLogger(TestReadStripedFileWithDecodingCorruptData.class);
@@ -44,21 +42,17 @@ public class TestReadStripedFileWithDecodingCorruptData {
   private static MiniDFSCluster cluster;
   private static DistributedFileSystem dfs;
 
-  @Rule
-  public Timeout globalTimeout = new Timeout(300000);
-
-  @BeforeClass
+  @BeforeAll
   public static void setup() throws IOException {
     cluster = initializeCluster();
     dfs = cluster.getFileSystem();
   }
 
-  @AfterClass
-  public static void tearDown() throws IOException {
+  @AfterEach
+  public void tearDown() throws IOException {
     tearDownCluster(cluster);
   }
 
-  @Parameterized.Parameters
   public static Collection<Object[]> getParameters() {
     return ReadStripedFileWithDecodingHelper.getParameters();
   }
@@ -67,19 +61,23 @@ public class TestReadStripedFileWithDecodingCorruptData {
   private int dataDelNum;
   private int parityDelNum;
 
-  public TestReadStripedFileWithDecodingCorruptData(int fileLength, int
-      dataDelNum, int parityDelNum) {
-    this.fileLength = fileLength;
-    this.dataDelNum = dataDelNum;
-    this.parityDelNum = parityDelNum;
+  public void initTestReadStripedFileWithDecodingCorruptData(int pFileLength, int
+      pDataDelNum, int pParityDelNum) {
+    this.fileLength = pFileLength;
+    this.dataDelNum = pDataDelNum;
+    this.parityDelNum = pParityDelNum;
   }
 
   /**
    * Corrupt tolerable number of block before reading.
    * Verify the decoding works correctly.
    */
-  @Test
-  public void testReadCorruptedData() throws IOException {
+  @ParameterizedTest
+  @MethodSource("getParameters")
+  public void testReadCorruptedData(int pFileLength, int
+      pDataDelNum, int pParityDelNum) throws IOException {
+    initTestReadStripedFileWithDecodingCorruptData(pFileLength, pDataDelNum, pParityDelNum);
+    setup();
     String src = "/corrupted_" + dataDelNum + "_" + parityDelNum;
     ReadStripedFileWithDecodingHelper.testReadWithBlockCorrupted(cluster,
         dfs, src, fileLength, dataDelNum, parityDelNum, false);

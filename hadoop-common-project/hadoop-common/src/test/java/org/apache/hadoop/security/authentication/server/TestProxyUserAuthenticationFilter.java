@@ -39,7 +39,8 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.mockito.Mockito;
 
 
@@ -271,7 +272,8 @@ public class TestProxyUserAuthenticationFilter {
   }
 
 
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testFilter() throws Exception {
     Map<String, String> params = new HashMap<String, String>();
     params.put("proxyuser.knox.users", "testuser");

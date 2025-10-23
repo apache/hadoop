@@ -27,11 +27,17 @@ import java.io.File;
 import java.io.InputStreamReader;
 import java.io.IOException;
 import java.io.Reader;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.FutureTask;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.Callable;
+import java.util.concurrent.TimeoutException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -84,7 +90,7 @@ public final class CombinedHostsFileReader {
     if (hostFile.length() > 0) {
       try (Reader input =
           new InputStreamReader(
-              Files.newInputStream(hostFile.toPath()), "UTF-8")) {
+              Files.newInputStream(hostFile.toPath()), StandardCharsets.UTF_8)) {
         allDNs = objectMapper.readValue(input, DatanodeAdminProperties[].class);
       } catch (JsonMappingException jme) {
         // The old format doesn't have json top-level token to enclose
@@ -103,7 +109,7 @@ public final class CombinedHostsFileReader {
       List<DatanodeAdminProperties> all = new ArrayList<>();
       try (Reader input =
           new InputStreamReader(Files.newInputStream(Paths.get(hostsFilePath)),
-                  "UTF-8")) {
+                  StandardCharsets.UTF_8)) {
         Iterator<DatanodeAdminProperties> iterator =
             objectReader.readValues(jsonFactory.createParser(input));
         while (iterator.hasNext()) {
@@ -118,5 +124,38 @@ public final class CombinedHostsFileReader {
       allDNs = all.toArray(new DatanodeAdminProperties[all.size()]);
     }
     return allDNs;
+  }
+
+  /**
+   * Wrapper to call readFile with timeout via Future Tasks.
+   * If timeout is reached, it will throw IOException
+   * @param hostsFile the input json file to read from
+   * @param readTimeout timeout for FutureTask execution in milliseconds
+   * @return the set of DatanodeAdminProperties
+   * @throws IOException
+   */
+  public static DatanodeAdminProperties[]
+      readFileWithTimeout(final String hostsFile, final int readTimeout) throws IOException {
+    FutureTask<DatanodeAdminProperties[]> futureTask = new FutureTask<>(
+        new Callable<DatanodeAdminProperties[]>() {
+          @Override
+          public DatanodeAdminProperties[] call() throws Exception {
+            return readFile(hostsFile);
+        }
+      });
+
+    Thread thread = new Thread(futureTask);
+    thread.start();
+
+    try {
+      return futureTask.get(readTimeout, TimeUnit.MILLISECONDS);
+    } catch (TimeoutException e) {
+      futureTask.cancel(true);
+      LOG.error("refresh File read operation timed out");
+      throw new IOException("host file read operation timed out");
+    } catch (InterruptedException | ExecutionException e) {
+      LOG.error("File read operation interrupted : " + e.getMessage());
+      throw new IOException("host file read operation timed out");
+    }
   }
 }

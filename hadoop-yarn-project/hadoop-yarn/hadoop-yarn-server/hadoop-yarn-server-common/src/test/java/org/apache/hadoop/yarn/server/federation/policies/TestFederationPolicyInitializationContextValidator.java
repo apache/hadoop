@@ -22,6 +22,7 @@ import java.nio.ByteBuffer;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.server.federation.policies.amrmproxy.FederationAMRMProxyPolicy;
+import org.apache.hadoop.yarn.server.federation.policies.dao.WeightedPolicyInfo;
 import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyInitializationException;
 import org.apache.hadoop.yarn.server.federation.policies.manager.FederationPolicyManager;
 import org.apache.hadoop.yarn.server.federation.policies.router.FederationRouterPolicy;
@@ -30,8 +31,10 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterPolicyConfiguration;
 import org.apache.hadoop.yarn.server.federation.utils.FederationPoliciesTestUtil;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * Test class for {@link FederationPolicyInitializationContextValidator}.
@@ -44,7 +47,7 @@ public class TestFederationPolicyInitializationContextValidator {
   private SubClusterId goodHome;
   private FederationPolicyInitializationContext context;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     Configuration conf = new Configuration();
     goodFacade = FederationPoliciesTestUtil.initFacade(conf);
@@ -61,42 +64,54 @@ public class TestFederationPolicyInitializationContextValidator {
         MockPolicyManager.class.getCanonicalName());
   }
 
-  @Test(expected = FederationPolicyInitializationException.class)
+  @Test
   public void nullContext() throws Exception {
-    FederationPolicyInitializationContextValidator.validate(null,
-        MockPolicyManager.class.getCanonicalName());
+    assertThrows(FederationPolicyInitializationException.class, () -> {
+      FederationPolicyInitializationContextValidator.validate(null,
+          MockPolicyManager.class.getCanonicalName());
+    });
   }
 
-  @Test(expected = FederationPolicyInitializationException.class)
+  @Test
   public void nullType() throws Exception {
-    FederationPolicyInitializationContextValidator.validate(context, null);
+    assertThrows(FederationPolicyInitializationException.class, () -> {
+      FederationPolicyInitializationContextValidator.validate(context, null);
+    });
   }
 
-  @Test(expected = FederationPolicyInitializationException.class)
+  @Test
   public void wrongType() throws Exception {
-    FederationPolicyInitializationContextValidator.validate(context,
-        "WrongType");
+    assertThrows(FederationPolicyInitializationException.class, () -> {
+      FederationPolicyInitializationContextValidator.validate(context,
+          "WrongType");
+    });
   }
 
-  @Test(expected = FederationPolicyInitializationException.class)
+  @Test
   public void nullConf() throws Exception {
-    context.setSubClusterPolicyConfiguration(null);
-    FederationPolicyInitializationContextValidator.validate(context,
-        MockPolicyManager.class.getCanonicalName());
+    assertThrows(FederationPolicyInitializationException.class, () -> {
+      context.setSubClusterPolicyConfiguration(null);
+      FederationPolicyInitializationContextValidator.validate(context,
+          MockPolicyManager.class.getCanonicalName());
+    });
   }
 
-  @Test(expected = FederationPolicyInitializationException.class)
+  @Test
   public void nullResolver() throws Exception {
-    context.setFederationSubclusterResolver(null);
-    FederationPolicyInitializationContextValidator.validate(context,
-        MockPolicyManager.class.getCanonicalName());
+    assertThrows(FederationPolicyInitializationException.class, () -> {
+      context.setFederationSubclusterResolver(null);
+      FederationPolicyInitializationContextValidator.validate(context,
+          MockPolicyManager.class.getCanonicalName());
+    });
   }
 
-  @Test(expected = FederationPolicyInitializationException.class)
+  @Test
   public void nullFacade() throws Exception {
-    context.setFederationStateStoreFacade(null);
-    FederationPolicyInitializationContextValidator.validate(context,
-        MockPolicyManager.class.getCanonicalName());
+    assertThrows(FederationPolicyInitializationException.class, () -> {
+      context.setFederationStateStoreFacade(null);
+      FederationPolicyInitializationContextValidator.validate(context,
+          MockPolicyManager.class.getCanonicalName());
+    });
   }
 
   private class MockPolicyManager implements FederationPolicyManager {
@@ -135,6 +150,19 @@ public class TestFederationPolicyInitializationContextValidator {
 
     }
 
+    @Override
+    public WeightedPolicyInfo getWeightedPolicyInfo() {
+      return null;
+    }
+
+    @Override
+    public void setWeightedPolicyInfo(WeightedPolicyInfo weightedPolicyInfo) {
+    }
+
+    @Override
+    public boolean isSupportWeightedPolicyInfo() {
+      return false;
+    }
   }
 
 }

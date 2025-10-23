@@ -31,9 +31,9 @@ import org.apache.hadoop.yarn.service.provider.tarball.TarballClientProvider;
 import org.apache.hadoop.yarn.service.provider.tarball.TarballProviderFactory;
 import org.apache.hadoop.yarn.service.provider.tarball.TarballProviderService;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Test provider factories.

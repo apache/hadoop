@@ -22,9 +22,9 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.UUID;
 
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,7 +38,7 @@ public class TestProfileServlet extends HttpServerFunctionalTest {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestProfileServlet.class);
 
-  @BeforeClass
+  @BeforeAll
   public static void setup() throws Exception {
     ProfileServlet.setIsTestRun(true);
     System.setProperty("async.profiler.home", UUID.randomUUID().toString());
@@ -47,7 +47,7 @@ public class TestProfileServlet extends HttpServerFunctionalTest {
     baseUrl = getServerURL(server);
   }
 
-  @AfterClass
+  @AfterAll
   public static void cleanup() throws Exception {
     ProfileServlet.setIsTestRun(false);
     System.clearProperty("async.profiler.home");

@@ -21,7 +21,8 @@ package org.apache.hadoop.fs.obs;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.contract.AbstractContractAppendTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
-import org.junit.Assume;
+
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
  * Append test cases on obs file system.
@@ -35,6 +36,6 @@ public class TestOBSContractAppend extends AbstractContractAppendTest {
 
   @Override
   public void testRenameFileBeingAppended() {
-    Assume.assumeTrue("unsupport.", false);
+    assumeTrue(false, "unsupport.");
   }
 }

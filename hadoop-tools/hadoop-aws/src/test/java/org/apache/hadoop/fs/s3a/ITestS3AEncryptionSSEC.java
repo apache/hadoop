@@ -24,9 +24,11 @@ import java.util.Arrays;
 import java.util.Collection;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -37,17 +39,16 @@ import org.apache.hadoop.io.IOUtils;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
-import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_MARKER_POLICY;
-import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_MARKER_POLICY_DELETE;
-import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_MARKER_POLICY_KEEP;
 import static org.apache.hadoop.fs.s3a.Constants.ETAG_CHECKSUM_ENABLED;
 import static org.apache.hadoop.fs.s3a.Constants.S3_ENCRYPTION_ALGORITHM;
 import static org.apache.hadoop.fs.s3a.Constants.S3_ENCRYPTION_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.SERVER_SIDE_ENCRYPTION_ALGORITHM;
 import static org.apache.hadoop.fs.s3a.Constants.SERVER_SIDE_ENCRYPTION_KEY;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.createTestPath;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.disableFilesystemCaching;
+
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.assumeStoreAwsHosted;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.enableAnalyticsAccelerator;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestBucketName;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.maybeSkipRootTests;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
@@ -59,7 +60,8 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
  * Equally "vexing" has been the optimizations of getFileStatus(), wherein
  * LIST comes before HEAD path + /
  */
-@RunWith(Parameterized.class)
+@ParameterizedClass(name="analytics-accelerator-enabled-{0}")
+@MethodSource("params")
 public class ITestS3AEncryptionSSEC extends AbstractTestS3AEncryption {
 
   private static final String SERVICE_AMAZON_S3_STATUS_CODE_403
@@ -75,62 +77,60 @@ public class ITestS3AEncryptionSSEC extends AbstractTestS3AEncryption {
   private static final int TEST_FILE_LEN = 2048;
 
   /**
-   * Parameterization.
-   */
-  @Parameterized.Parameters(name = "{0}")
-  public static Collection<Object[]> params() {
-    return Arrays.asList(new Object[][]{
-        {"keep-markers", true},
-        {"delete-markers", false}
-    });
-  }
-
-  /**
-   * Parameter: should directory markers be retained?
-   */
-  private final boolean keepMarkers;
-
-  /**
    * Filesystem created with a different key.
    */
   private S3AFileSystem fsKeyB;
 
-  public ITestS3AEncryptionSSEC(final String name,
-      final boolean keepMarkers) {
-    this.keepMarkers = keepMarkers;
+  private final boolean analyticsAcceleratorEnabled;
+
+  public static Collection<Object[]> params() {
+    return Arrays.asList(new Object[][]{
+            {true},
+            {false}
+    });
   }
+
+  public ITestS3AEncryptionSSEC (final boolean analyticsAcceleratorEnabled) {
+    this.analyticsAcceleratorEnabled = analyticsAcceleratorEnabled;
+  }
+
 
   @SuppressWarnings("deprecation")
   @Override
   protected Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
-    disableFilesystemCaching(conf);
     String bucketName = getTestBucketName(conf);
     // directory marker options
     removeBaseAndBucketOverrides(bucketName, conf,
-        DIRECTORY_MARKER_POLICY,
         ETAG_CHECKSUM_ENABLED,
         S3_ENCRYPTION_ALGORITHM,
         S3_ENCRYPTION_KEY,
         SERVER_SIDE_ENCRYPTION_ALGORITHM,
         SERVER_SIDE_ENCRYPTION_KEY);
-    conf.set(DIRECTORY_MARKER_POLICY,
-        keepMarkers
-            ? DIRECTORY_MARKER_POLICY_KEEP
-            : DIRECTORY_MARKER_POLICY_DELETE);
     conf.set(S3_ENCRYPTION_ALGORITHM,
         getSSEAlgorithm().getMethod());
     conf.set(S3_ENCRYPTION_KEY, KEY_1);
     conf.setBoolean(ETAG_CHECKSUM_ENABLED, true);
+
+    if (analyticsAcceleratorEnabled) {
+      enableAnalyticsAccelerator(conf);
+    }
+
     return conf;
   }
 
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     super.setup();
     assumeEnabled();
+    // although not a root dir test, this confuses paths enough it shouldn't be run in
+    // parallel with other jobs
+    maybeSkipRootTests(getConfiguration());
+    assumeStoreAwsHosted(getFileSystem());
   }
 
+  @AfterEach
   @Override
   public void teardown() throws Exception {
     super.teardown();
@@ -154,7 +154,7 @@ public class ITestS3AEncryptionSSEC extends AbstractTestS3AEncryption {
         () -> {
           int len = TEST_FILE_LEN;
           describe("Create an encrypted file of size " + len);
-          Path src = path("testCreateFileAndReadWithDifferentEncryptionKey");
+          Path src = methodPath();
           writeThenReadFile(src, len);
 
           //extract the test FS
@@ -174,7 +174,7 @@ public class ITestS3AEncryptionSSEC extends AbstractTestS3AEncryption {
    */
   @Test
   public void testCreateSubdirWithDifferentKey() throws Exception {
-    Path base = path("testCreateSubdirWithDifferentKey");
+    Path base = methodPath();
     Path nestedDirectory = new Path(base, "nestedDir");
     fsKeyB = createNewFileSystemWithSSECKey(
         KEY_2);
@@ -213,9 +213,10 @@ public class ITestS3AEncryptionSSEC extends AbstractTestS3AEncryption {
    */
   @Test
   public void testRenameFile() throws Exception {
-    Path src = path("original-path.txt");
+    final Path base = methodPath();
+    Path src = new Path(base, "original-path.txt");
     writeThenReadFile(src, TEST_FILE_LEN);
-    Path newPath = path("different-path.txt");
+    Path newPath = new Path(base, "different-path.txt");
     getFileSystem().rename(src, newPath);
     byte[] data = dataset(TEST_FILE_LEN, 'a', 'z');
     ContractTestUtils.verifyFileContents(getFileSystem(), newPath, data);
@@ -228,11 +229,11 @@ public class ITestS3AEncryptionSSEC extends AbstractTestS3AEncryption {
   @Test
   public void testListEncryptedDir() throws Exception {
 
-    Path pathABC = path("testListEncryptedDir/a/b/c/");
+    Path pathABC = new Path(methodPath(), "a/b/c/");
     Path pathAB = pathABC.getParent();
     Path pathA = pathAB.getParent();
 
-    Path nestedDirectory = createTestPath(pathABC);
+    Path nestedDirectory = pathABC;
     assertTrue(getFileSystem().mkdirs(nestedDirectory));
 
     fsKeyB = createNewFileSystemWithSSECKey(KEY_4);
@@ -261,7 +262,7 @@ public class ITestS3AEncryptionSSEC extends AbstractTestS3AEncryption {
   @Test
   public void testListStatusEncryptedDir() throws Exception {
 
-    Path pathABC = path("testListStatusEncryptedDir/a/b/c/");
+    Path pathABC = new Path(methodPath(), "a/b/c/");
     Path pathAB = pathABC.getParent();
     Path pathA = pathAB.getParent();
     assertTrue(getFileSystem().mkdirs(pathABC));
@@ -296,8 +297,8 @@ public class ITestS3AEncryptionSSEC extends AbstractTestS3AEncryption {
    */
   @Test
   public void testListStatusEncryptedFile() throws Exception {
-    Path pathABC = path("testListStatusEncryptedFile/a/b/c/");
-    assertTrue("mkdirs failed", getFileSystem().mkdirs(pathABC));
+    Path pathABC = new Path(methodPath(), "a/b/c/");
+    assertTrue(getFileSystem().mkdirs(pathABC), "mkdirs failed");
 
     Path fileToStat = new Path(pathABC, "fileToStat.txt");
     writeThenReadFile(fileToStat, TEST_FILE_LEN);
@@ -305,23 +306,9 @@ public class ITestS3AEncryptionSSEC extends AbstractTestS3AEncryption {
     fsKeyB = createNewFileSystemWithSSECKey(KEY_4);
 
     //Until this point, no exception is thrown about access
-    if (statusProbesCheckS3(fsKeyB, fileToStat)) {
-      intercept(AccessDeniedException.class,
-          SERVICE_AMAZON_S3_STATUS_CODE_403,
-          () -> fsKeyB.listStatus(fileToStat));
-    } else {
-      fsKeyB.listStatus(fileToStat);
-    }
-  }
-
-  /**
-   * Do file status probes check S3?
-   * @param fs filesystem
-   * @param path file path
-   * @return true if check for a path being a file will issue a HEAD request.
-   */
-  private boolean statusProbesCheckS3(S3AFileSystem fs, Path path) {
-    return true;
+    intercept(AccessDeniedException.class,
+        SERVICE_AMAZON_S3_STATUS_CODE_403,
+        () -> fsKeyB.listStatus(fileToStat));
   }
 
   /**
@@ -332,22 +319,17 @@ public class ITestS3AEncryptionSSEC extends AbstractTestS3AEncryption {
    */
   @Test
   public void testDeleteEncryptedObjectWithDifferentKey() throws Exception {
-    //requireUnguardedFilesystem();
-    Path pathABC = path("testDeleteEncryptedObjectWithDifferentKey/a/b/c/");
 
+    Path pathABC = new Path(methodPath(), "a/b/c/");
     Path pathAB = pathABC.getParent();
     Path pathA = pathAB.getParent();
     assertTrue(getFileSystem().mkdirs(pathABC));
     Path fileToDelete = new Path(pathABC, "filetobedeleted.txt");
     writeThenReadFile(fileToDelete, TEST_FILE_LEN);
     fsKeyB = createNewFileSystemWithSSECKey(KEY_4);
-    if (statusProbesCheckS3(fsKeyB, fileToDelete)) {
-      intercept(AccessDeniedException.class,
-          SERVICE_AMAZON_S3_STATUS_CODE_403,
-          () -> fsKeyB.delete(fileToDelete, false));
-    } else {
-      fsKeyB.delete(fileToDelete, false);
-    }
+    intercept(AccessDeniedException.class,
+        SERVICE_AMAZON_S3_STATUS_CODE_403,
+        () -> fsKeyB.delete(fileToDelete, false));
     //This is possible
     fsKeyB.delete(pathABC, true);
     fsKeyB.delete(pathAB, true);
@@ -360,7 +342,7 @@ public class ITestS3AEncryptionSSEC extends AbstractTestS3AEncryption {
    */
   @Test
   public void testChecksumRequiresReadAccess() throws Throwable {
-    Path path = path("tagged-file");
+    Path path = methodPath();
     S3AFileSystem fs = getFileSystem();
     touch(fs, path);
     Assertions.assertThat(fs.getFileChecksum(path))

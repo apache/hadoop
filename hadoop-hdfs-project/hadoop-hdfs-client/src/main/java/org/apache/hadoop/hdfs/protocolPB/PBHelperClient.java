@@ -385,6 +385,9 @@ public class PBHelperClient {
     if (info.getUpgradeDomain() != null) {
       builder.setUpgradeDomain(info.getUpgradeDomain());
     }
+    if (info.getSoftwareVersion() != null) {
+      builder.setSoftwareVersion(info.getSoftwareVersion());
+    }
     builder
         .setId(convert((DatanodeID) info))
         .setCapacity(info.getCapacity())
@@ -786,7 +789,8 @@ public class PBHelperClient {
                 di.getLastBlockReportTime() : 0)
             .setLastBlockReportMonotonic(di.hasLastBlockReportMonotonic() ?
                 di.getLastBlockReportMonotonic() : 0)
-            .setNumBlocks(di.getNumBlocks());
+            .setNumBlocks(di.getNumBlocks())
+            .setSoftwareVersion(di.getSoftwareVersion());
 
     if (di.hasNonDfsUsed()) {
       dinfo.setNonDfsUsed(di.getNonDfsUsed());
@@ -2029,11 +2033,11 @@ public class PBHelperClient {
 
   public static ReplicatedBlockStats convert(
       GetFsReplicatedBlockStatsResponseProto res) {
-    if (res.hasHighestPrioLowRedundancyBlocks()) {
+    if (res.hasBadlyDistributedBlocks() && res.hasHighestPrioLowRedundancyBlocks()) {
       return new ReplicatedBlockStats(res.getLowRedundancy(),
           res.getCorruptBlocks(), res.getMissingBlocks(),
           res.getMissingReplOneBlocks(), res.getBlocksInFuture(),
-          res.getPendingDeletionBlocks(),
+          res.getPendingDeletionBlocks(), res.getBadlyDistributedBlocks(),
           res.getHighestPrioLowRedundancyBlocks());
     }
     return new ReplicatedBlockStats(res.getLowRedundancy(),
@@ -2044,11 +2048,11 @@ public class PBHelperClient {
 
   public static ECBlockGroupStats convert(
       GetFsECBlockGroupStatsResponseProto res) {
-    if (res.hasHighestPrioLowRedundancyBlocks()) {
+    if (res.hasBadlyDistributedBlocks() && res.hasHighestPrioLowRedundancyBlocks()) {
       return new ECBlockGroupStats(res.getLowRedundancy(),
           res.getCorruptBlocks(), res.getMissingBlocks(),
           res.getBlocksInFuture(), res.getPendingDeletionBlocks(),
-          res.getHighestPrioLowRedundancyBlocks());
+          res.getBadlyDistributedBlocks(), res.getHighestPrioLowRedundancyBlocks());
     }
     return new ECBlockGroupStats(res.getLowRedundancy(),
         res.getCorruptBlocks(), res.getMissingBlocks(),
@@ -2521,6 +2525,10 @@ public class PBHelperClient {
         replicatedBlockStats.getBytesInFutureBlocks());
     result.setPendingDeletionBlocks(
         replicatedBlockStats.getPendingDeletionBlocks());
+    if (replicatedBlockStats.hasBadlyDistributedBlocks()) {
+      result.setBadlyDistributedBlocks(
+          replicatedBlockStats.getBadlyDistributedBlocks());
+    }
     if (replicatedBlockStats.hasHighestPriorityLowRedundancyBlocks()) {
       result.setHighestPrioLowRedundancyBlocks(
           replicatedBlockStats.getHighestPriorityLowRedundancyBlocks());
@@ -2540,6 +2548,10 @@ public class PBHelperClient {
         ecBlockGroupStats.getBytesInFutureBlockGroups());
     result.setPendingDeletionBlocks(
         ecBlockGroupStats.getPendingDeletionBlocks());
+    if (ecBlockGroupStats.hasBadlyDistributedBlocks()) {
+      result.setBadlyDistributedBlocks(
+          ecBlockGroupStats.getBadlyDistributedBlocks());
+    }
     if (ecBlockGroupStats.hasHighestPriorityLowRedundancyBlocks()) {
       result.setHighestPrioLowRedundancyBlocks(
           ecBlockGroupStats.getHighestPriorityLowRedundancyBlocks());

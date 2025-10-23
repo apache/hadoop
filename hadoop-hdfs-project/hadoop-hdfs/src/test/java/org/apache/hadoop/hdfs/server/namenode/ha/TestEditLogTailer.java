@@ -17,14 +17,17 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.net.BindException;
 import java.net.URI;
 import java.util.ArrayList;
@@ -58,21 +61,19 @@ import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.FakeTimer;
 import org.slf4j.event.Level;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.util.function.Supplier;
 import org.mockito.Mockito;
 
-@RunWith(Parameterized.class)
+@MethodSource("data")
+@ParameterizedClass
 public class TestEditLogTailer {
   static {
     GenericTestUtils.setLogLevel(FSEditLog.LOG, Level.DEBUG);
   }
 
-  @Parameters
   public static Collection<Object[]> data() {
     Collection<Object[]> params = new ArrayList<Object[]>();
     params.add(new Object[]{ Boolean.FALSE });
@@ -131,9 +132,9 @@ public class TestEditLogTailer {
       }
       
       HATestUtil.waitForStandbyToCatchUp(nn1, nn2);
-      assertEquals("Inconsistent number of applied txns on Standby",
-          nn1.getNamesystem().getEditLog().getLastWrittenTxId(),
-          nn2.getNamesystem().getFSImage().getLastAppliedTxId() + 1);
+      assertEquals(nn1.getNamesystem().getEditLog().getLastWrittenTxId(),
+          nn2.getNamesystem().getFSImage().getLastAppliedTxId() + 1,
+          "Inconsistent number of applied txns on Standby");
 
       for (int i = 0; i < DIRS_TO_MAKE / 2; i++) {
         assertTrue(NameNodeAdapter.getFileInfo(nn2,
@@ -147,9 +148,9 @@ public class TestEditLogTailer {
       }
       
       HATestUtil.waitForStandbyToCatchUp(nn1, nn2);
-      assertEquals("Inconsistent number of applied txns on Standby",
-          nn1.getNamesystem().getEditLog().getLastWrittenTxId(),
-          nn2.getNamesystem().getFSImage().getLastAppliedTxId() + 1);
+      assertEquals(nn1.getNamesystem().getEditLog().getLastWrittenTxId(),
+          nn2.getNamesystem().getFSImage().getLastAppliedTxId() + 1,
+          "Inconsistent number of applied txns on Standby");
 
       for (int i = DIRS_TO_MAKE / 2; i < DIRS_TO_MAKE; i++) {
         assertTrue(NameNodeAdapter.getFileInfo(nn2,
@@ -301,7 +302,8 @@ public class TestEditLogTailer {
     }, 100, 10000);
   }
 
-  @Test(timeout=20000)
+  @Test
+  @Timeout(value = 20)
   public void testRollEditTimeoutForActiveNN() throws IOException {
     Configuration conf = getConf();
     conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_ROLLEDITS_TIMEOUT_KEY, 5); // 5s
@@ -459,6 +461,80 @@ public class TestEditLogTailer {
       checkForLogRoll(active, origTxId, logRollWaitTime);
     } finally {
       cluster.shutdown();
+    }
+  }
+
+  @Test
+  public void testRollEditLogHandleThreadInterruption()
+      throws IOException, InterruptedException, TimeoutException {
+    Configuration conf = getConf();
+    // RollEdits timeout 1s.
+    conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_ROLLEDITS_TIMEOUT_KEY, 1);
+
+    MiniDFSCluster cluster = null;
+    try {
+      cluster = createMiniDFSCluster(conf, 3);
+      cluster.transitionToActive(2);
+      EditLogTailer tailer = Mockito.spy(
+          cluster.getNamesystem(0).getEditLogTailer());
+
+      // Stop the edit log tail thread for testing.
+      tailer.setShouldRunForTest(false);
+
+      final AtomicInteger invokedTimes = new AtomicInteger(0);
+
+      // For nn0 run triggerActiveLogRoll, nns is [nn1,nn2].
+      // Mock the NameNodeProxy for testing.
+      // An InterruptedIOException will be thrown when requesting to nn1.
+      when(tailer.getNameNodeProxy()).thenReturn(
+          tailer.new MultipleNameNodeProxy<Void>() {
+            @Override
+            protected Void doWork() throws IOException {
+              invokedTimes.getAndIncrement();
+              if (tailer.getCurrentNN().getNameNodeID().equals("nn1")) {
+                while (true) {
+                  Thread.yield();
+                  if (Thread.currentThread().isInterrupted()) {
+                    throw new InterruptedIOException("It is an Interrupted IOException.");
+                  }
+                }
+              } else {
+                tailer.getCachedActiveProxy().rollEditLog();
+                return null;
+              }
+            }
+          }
+      );
+
+      // Record the initial LastRollTimeMs value.
+      // This time will be updated only when triggerActiveLogRoll is executed successfully.
+      long initLastRollTimeMs = tailer.getLastRollTimeMs();
+
+      // Execute triggerActiveLogRoll for the first time.
+      // The MultipleNameNodeProxy uses round-robin to look for an active NN to roll the edit log.
+      // Here, a request will be made to nn1, and the main thread will trigger a Timeout and
+      // the doWork() method will throw an InterruptedIOException.
+      // The getActiveNodeProxy() method will determine that the thread is interrupted
+      // and will return null.
+      tailer.triggerActiveLogRoll();
+
+      // Execute triggerActiveLogRoll for the second time.
+      // A request will be made to nn2 and the rollEditLog will be successfully finished and
+      // lastRollTimeMs will be updated.
+      tailer.triggerActiveLogRoll();
+      GenericTestUtils.waitFor(new Supplier<Boolean>() {
+        @Override
+        public Boolean get() {
+          return tailer.getLastRollTimeMs() > initLastRollTimeMs;
+        }
+      }, 100, 10000);
+
+      // The total number of invoked times should be 2.
+      assertEquals(2, invokedTimes.get());
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
     }
   }
 

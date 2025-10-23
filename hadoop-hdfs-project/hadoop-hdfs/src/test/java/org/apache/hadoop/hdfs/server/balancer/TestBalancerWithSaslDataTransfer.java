@@ -18,7 +18,7 @@
 package org.apache.hadoop.hdfs.server.balancer;
 
 import org.apache.hadoop.hdfs.protocol.datatransfer.sasl.SaslDataTransferTestCase;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class TestBalancerWithSaslDataTransfer extends SaslDataTransferTestCase {
 

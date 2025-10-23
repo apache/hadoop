@@ -18,9 +18,9 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
@@ -33,7 +33,6 @@ import java.util.Map;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.After;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.event.Level;
@@ -71,9 +70,9 @@ import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.junit.Before;
-import org.junit.Test;
-import org.mockito.Mockito;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.TestUtils.toSchedulerKey;
 
@@ -101,14 +100,14 @@ public class TestReservations {
   final static int GB = 1024;
   final static String DEFAULT_RACK = "/default";
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     CapacityScheduler spyCs = new CapacityScheduler();
     cs = spy(spyCs);
     rmContext = TestUtils.getMockRMContext();
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     if (cs != null) {
       cs.stop();
@@ -176,27 +175,26 @@ public class TestReservations {
       final String newRoot, boolean addUserLimits) {
 
     // Define top-level queues
-    conf.setQueues(CapacitySchedulerConfiguration.ROOT,
-        new String[] { newRoot });
-    conf.setMaximumCapacity(CapacitySchedulerConfiguration.ROOT, 100);
-    conf.setAcl(CapacitySchedulerConfiguration.ROOT,
-        QueueACL.SUBMIT_APPLICATIONS, " ");
+    QueuePath root = new QueuePath(CapacitySchedulerConfiguration.ROOT);
+    QueuePath newRootPath = root.createNewLeaf(newRoot);
+    QueuePath aQueuePath = newRootPath.createNewLeaf(A);
 
-    final String Q_newRoot = CapacitySchedulerConfiguration.ROOT + "."
-        + newRoot;
-    conf.setQueues(Q_newRoot, new String[] { A });
-    conf.setCapacity(Q_newRoot, 100);
-    conf.setMaximumCapacity(Q_newRoot, 100);
-    conf.setAcl(Q_newRoot, QueueACL.SUBMIT_APPLICATIONS, " ");
+    conf.setQueues(root, new String[] {newRoot});
+    conf.setMaximumCapacity(root, 100);
+    conf.setAcl(root, QueueACL.SUBMIT_APPLICATIONS, " ");
 
-    final String Q_A = Q_newRoot + "." + A;
-    conf.setCapacity(Q_A, 100f);
-    conf.setMaximumCapacity(Q_A, 100);
-    conf.setAcl(Q_A, QueueACL.SUBMIT_APPLICATIONS, "*");
+    conf.setQueues(newRootPath, new String[] {A});
+    conf.setCapacity(newRootPath, 100);
+    conf.setMaximumCapacity(newRootPath, 100);
+    conf.setAcl(newRootPath, QueueACL.SUBMIT_APPLICATIONS, " ");
+
+    conf.setCapacity(aQueuePath, 100f);
+    conf.setMaximumCapacity(aQueuePath, 100);
+    conf.setAcl(aQueuePath, QueueACL.SUBMIT_APPLICATIONS, "*");
 
     if (addUserLimits) {
-      conf.setUserLimit(Q_A, 25);
-      conf.setUserLimitFactor(Q_A, 0.25f);
+      conf.setUserLimit(aQueuePath, 25);
+      conf.setUserLimitFactor(aQueuePath, 0.25f);
     }
   }
 
@@ -233,7 +231,7 @@ public class TestReservations {
     FiCaSchedulerApp app_0 = new FiCaSchedulerApp(appAttemptId_0, user_0, a,
         mock(ActiveUsersManager.class), spyRMContext);
     app_0 = spy(app_0);
-    Mockito.doNothing().when(app_0).updateAMContainerDiagnostics(any(AMState.class),
+    doNothing().when(app_0).updateAMContainerDiagnostics(any(AMState.class),
         any(String.class));
     rmContext.getRMApps().put(app_0.getApplicationId(), mock(RMApp.class));
 
@@ -244,7 +242,7 @@ public class TestReservations {
     FiCaSchedulerApp app_1 = new FiCaSchedulerApp(appAttemptId_1, user_0, a,
         mock(ActiveUsersManager.class), spyRMContext);
     app_1 = spy(app_1);
-    Mockito.doNothing().when(app_1).updateAMContainerDiagnostics(any(AMState.class),
+    doNothing().when(app_1).updateAMContainerDiagnostics(any(AMState.class),
         any(String.class));
     a.submitApplicationAttempt(app_1, user_0); 
 
@@ -420,7 +418,7 @@ public class TestReservations {
     FiCaSchedulerApp app_0 = new FiCaSchedulerApp(appAttemptId_0, user_0, a,
         mock(ActiveUsersManager.class), spyRMContext);
     app_0 = spy(app_0);
-    Mockito.doNothing().when(app_0).updateAMContainerDiagnostics(any(AMState.class),
+    doNothing().when(app_0).updateAMContainerDiagnostics(any(AMState.class),
         any(String.class));
     rmContext.getRMApps().put(app_0.getApplicationId(), mock(RMApp.class));
 
@@ -431,7 +429,7 @@ public class TestReservations {
     FiCaSchedulerApp app_1 = new FiCaSchedulerApp(appAttemptId_1, user_1, a,
         mock(ActiveUsersManager.class), spyRMContext);
     app_1 = spy(app_1);
-    Mockito.doNothing().when(app_1).updateAMContainerDiagnostics(any(AMState.class),
+    doNothing().when(app_1).updateAMContainerDiagnostics(any(AMState.class),
         any(String.class));
     rmContext.getRMApps().put(app_1.getApplicationId(), mock(RMApp.class));
 
@@ -574,7 +572,7 @@ public class TestReservations {
     FiCaSchedulerApp app_0 = new FiCaSchedulerApp(appAttemptId_0, user_0, a,
         mock(ActiveUsersManager.class), spyRMContext);
     app_0 = spy(app_0);
-    Mockito.doNothing().when(app_0).updateAMContainerDiagnostics(any(AMState.class),
+    doNothing().when(app_0).updateAMContainerDiagnostics(any(AMState.class),
         any(String.class));
     rmContext.getRMApps().put(app_0.getApplicationId(), mock(RMApp.class));
 
@@ -585,7 +583,7 @@ public class TestReservations {
     FiCaSchedulerApp app_1 = new FiCaSchedulerApp(appAttemptId_1, user_0, a,
         mock(ActiveUsersManager.class), spyRMContext);
     app_1 = spy(app_1);
-    Mockito.doNothing().when(app_1).updateAMContainerDiagnostics(any(AMState.class),
+    doNothing().when(app_1).updateAMContainerDiagnostics(any(AMState.class),
         any(String.class));
     a.submitApplicationAttempt(app_1, user_0); 
 
@@ -758,7 +756,7 @@ public class TestReservations {
     FiCaSchedulerApp app_0 = new FiCaSchedulerApp(appAttemptId_0, user_0, a,
         mock(ActiveUsersManager.class), spyRMContext);
     app_0 = spy(app_0);
-    Mockito.doNothing().when(app_0).updateAMContainerDiagnostics(any(AMState.class),
+    doNothing().when(app_0).updateAMContainerDiagnostics(any(AMState.class),
         any(String.class));
     rmContext.getRMApps().put(app_0.getApplicationId(), mock(RMApp.class));
 
@@ -769,7 +767,7 @@ public class TestReservations {
     FiCaSchedulerApp app_1 = new FiCaSchedulerApp(appAttemptId_1, user_0, a,
         mock(ActiveUsersManager.class), spyRMContext);
     app_1 = spy(app_1);
-    Mockito.doNothing().when(app_1).updateAMContainerDiagnostics(any(AMState.class),
+    doNothing().when(app_1).updateAMContainerDiagnostics(any(AMState.class),
         any(String.class));
     a.submitApplicationAttempt(app_1, user_0); 
 
@@ -1048,7 +1046,7 @@ public class TestReservations {
     FiCaSchedulerApp app_0 = new FiCaSchedulerApp(appAttemptId_0, user_0, a,
         mock(ActiveUsersManager.class), spyRMContext);
     app_0 = spy(app_0);
-    Mockito.doNothing().when(app_0).updateAMContainerDiagnostics(any(AMState.class),
+    doNothing().when(app_0).updateAMContainerDiagnostics(any(AMState.class),
         any(String.class));
     rmContext.getRMApps().put(app_0.getApplicationId(), mock(RMApp.class));
 
@@ -1059,7 +1057,7 @@ public class TestReservations {
     FiCaSchedulerApp app_1 = new FiCaSchedulerApp(appAttemptId_1, user_0, a,
         mock(ActiveUsersManager.class), spyRMContext);
     app_1 = spy(app_1);
-    Mockito.doNothing().when(app_1).updateAMContainerDiagnostics(any(AMState.class),
+    doNothing().when(app_1).updateAMContainerDiagnostics(any(AMState.class),
         any(String.class));
     a.submitApplicationAttempt(app_1, user_0); 
 
@@ -1240,7 +1238,7 @@ public class TestReservations {
     FiCaSchedulerApp app_0 = new FiCaSchedulerApp(appAttemptId_0, user_0, a,
         mock(ActiveUsersManager.class), spyRMContext);
     app_0 = spy(app_0);
-    Mockito.doNothing().when(app_0).updateAMContainerDiagnostics(any(AMState.class),
+    doNothing().when(app_0).updateAMContainerDiagnostics(any(AMState.class),
         any(String.class));
     rmContext.getRMApps().put(app_0.getApplicationId(), mock(RMApp.class));
     a.submitApplicationAttempt(app_0, user_0); 
@@ -1250,7 +1248,7 @@ public class TestReservations {
     FiCaSchedulerApp app_1 = new FiCaSchedulerApp(appAttemptId_1, user_0, a,
         mock(ActiveUsersManager.class), spyRMContext);
     app_1 = spy(app_1);
-    Mockito.doNothing().when(app_1).updateAMContainerDiagnostics(any(AMState.class),
+    doNothing().when(app_1).updateAMContainerDiagnostics(any(AMState.class),
         any(String.class));
     a.submitApplicationAttempt(app_1, user_0); 
 
@@ -1403,7 +1401,7 @@ public class TestReservations {
     FiCaSchedulerApp app_0 = new FiCaSchedulerApp(appAttemptId_0, user_0, a,
         mock(ActiveUsersManager.class), spyRMContext);
     app_0 = spy(app_0);
-    Mockito.doNothing().when(app_0).updateAMContainerDiagnostics(any(AMState.class),
+    doNothing().when(app_0).updateAMContainerDiagnostics(any(AMState.class),
         any(String.class));
     rmContext.getRMApps().put(app_0.getApplicationId(), mock(RMApp.class));
 
@@ -1414,7 +1412,7 @@ public class TestReservations {
     FiCaSchedulerApp app_1 = new FiCaSchedulerApp(appAttemptId_1, user_0, a,
         mock(ActiveUsersManager.class), spyRMContext);
     app_1 = spy(app_1);
-    Mockito.doNothing().when(app_1).updateAMContainerDiagnostics(any(AMState.class),
+    doNothing().when(app_1).updateAMContainerDiagnostics(any(AMState.class),
         any(String.class));
     a.submitApplicationAttempt(app_1, user_0); 
 

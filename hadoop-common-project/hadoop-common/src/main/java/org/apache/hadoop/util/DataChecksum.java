@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,6 +22,7 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.function.ToIntFunction;
 import java.util.zip.CRC32;
 import java.util.zip.Checksum;
 
@@ -117,18 +118,15 @@ public class DataChecksum implements Checksum {
    * @param type type.
    * @return the int representation of the polynomial associated with the
    *     CRC {@code type}, suitable for use with further CRC arithmetic.
-   * @throws IOException if there is no CRC polynomial applicable
-   *     to the given {@code type}.
    */
-  public static int getCrcPolynomialForType(Type type) throws IOException {
+  static ToIntFunction<Long> getModFunction(Type type) {
     switch (type) {
     case CRC32:
-      return CrcUtil.GZIP_POLYNOMIAL;
+      return PureJavaCrc32::mod;
     case CRC32C:
-      return CrcUtil.CASTAGNOLI_POLYNOMIAL;
+      return PureJavaCrc32C::mod;
     default:
-      throw new IOException(
-          "No CRC polynomial could be associated with type: " + type);
+      throw new IllegalArgumentException("Unexpected type: " + type);
     }
   }
 
@@ -155,10 +153,10 @@ public class DataChecksum implements Checksum {
    * @param bytes bytes.
    * @param offset offset.
    * @return DataChecksum of the type in the array or null in case of an error.
-   * @throws IOException raised on errors performing I/O.
+   * @throws InvalidChecksumSizeException when the stored checksum is invalid.
    */
   public static DataChecksum newDataChecksum(byte[] bytes, int offset)
-      throws IOException {
+      throws InvalidChecksumSizeException {
     if (offset < 0 || bytes.length < offset + getChecksumHeaderSize()) {
       throw new InvalidChecksumSizeException("Could not create DataChecksum "
           + " from the byte array of length " + bytes.length

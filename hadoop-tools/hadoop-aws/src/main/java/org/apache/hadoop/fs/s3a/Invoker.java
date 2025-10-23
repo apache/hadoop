@@ -478,7 +478,7 @@ public class Invoker {
       if (caught instanceof IOException) {
         translated = (IOException) caught;
       } else {
-        translated = S3AUtils.translateException(text, "",
+        translated = S3AUtils.translateException(text, "/",
             (SdkException) caught);
       }
 

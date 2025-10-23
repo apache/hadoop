@@ -21,6 +21,7 @@ package org.apache.hadoop.streaming;
 import java.io.DataInputStream;
 import java.io.EOFException;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 
 import org.apache.hadoop.io.IntWritable;
 
@@ -62,7 +63,7 @@ public class RawBytesReduceApp {
     }
     byte[] bytes = new byte[length];
     dis.readFully(bytes);
-    return new String(bytes, "UTF-8");
+    return new String(bytes, StandardCharsets.UTF_8);
   }
   
   private int readInt() throws IOException {

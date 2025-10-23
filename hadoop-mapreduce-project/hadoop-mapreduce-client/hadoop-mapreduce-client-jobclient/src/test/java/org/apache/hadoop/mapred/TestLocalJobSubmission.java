@@ -37,16 +37,16 @@ import org.apache.hadoop.mapreduce.util.MRJobConfUtil;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.ToolRunner;
 
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * check for the job submission options of
@@ -58,22 +58,20 @@ public class TestLocalJobSubmission {
 
   private static File testRootDir;
 
-  @Rule
-  public TestName unitTestName = new TestName();
   private File unitTestDir;
   private Path jarPath;
   private Configuration config;
 
-  @BeforeClass
+  @BeforeAll
   public static void setupClass() throws Exception {
     // setup the test root directory
     testRootDir =
         GenericTestUtils.setupTestRootDir(TestLocalJobSubmission.class);
   }
 
-  @Before
-  public void setup() throws IOException {
-    unitTestDir = new File(testRootDir, unitTestName.getMethodName());
+  @BeforeEach
+  public void setup(TestInfo testInfo) throws IOException {
+    unitTestDir = new File(testRootDir, testInfo.getDisplayName());
     unitTestDir.mkdirs();
     config = createConfig();
     jarPath = makeJar(new Path(unitTestDir.getAbsolutePath(), "test.jar"));
@@ -120,7 +118,7 @@ public class TestLocalJobSubmission {
       LOG.error("Job failed with {}", e.getLocalizedMessage(), e);
       fail("Job failed");
     }
-    assertEquals("dist job res is not 0:", 0, res);
+    assertEquals(0, res, "dist job res is not 0:");
   }
 
   /**
@@ -140,13 +138,13 @@ public class TestLocalJobSubmission {
           (SpillCallBackPathsFinder) IntermediateEncryptedStream
               .setSpillCBInjector(new SpillCallBackPathsFinder());
       res = ToolRunner.run(config, new SleepJob(), args);
-      Assert.assertTrue("No spill occurred",
-          spillInjector.getEncryptedSpilledFiles().size() > 0);
+      assertTrue(spillInjector.getEncryptedSpilledFiles().size() > 0,
+          "No spill occurred");
     } catch (Exception e) {
       LOG.error("Job failed with {}", e.getLocalizedMessage(), e);
       fail("Job failed");
     }
-    assertEquals("dist job res is not 0:", 0, res);
+    assertEquals(0, res, "dist job res is not 0:");
   }
 
   /**
@@ -188,7 +186,7 @@ public class TestLocalJobSubmission {
       LOG.error("Job failed with {}", e.getLocalizedMessage(), e);
       fail("Job failed");
     }
-    assertEquals("dist job res is not 0:", 0, res);
+    assertEquals(0, res, "dist job res is not 0:");
   }
 
   /**
@@ -209,7 +207,7 @@ public class TestLocalJobSubmission {
       LOG.error("Job failed with {}" + e.getLocalizedMessage(), e);
       fail("Job failed");
     }
-    assertEquals("dist job res is not 0:", 0, res);
+    assertEquals(0, res, "dist job res is not 0:");
   }
 
   private Path makeJar(Path p) throws IOException {

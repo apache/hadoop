@@ -41,6 +41,14 @@ import org.apache.hadoop.classification.InterfaceStability;
 public final class StreamStatisticNames {
 
   /**
+   * Count of Stream leaks from an application which
+   * is not cleaning up correctly.
+   * Value :{@value}.
+   */
+  public static final String STREAM_LEAKS =
+      "stream_leaks";
+
+  /**
    * Count of times the TCP stream was aborted.
    * Value: {@value}.
    */
@@ -88,6 +96,20 @@ public final class StreamStatisticNames {
    * Value: {@value}.
    */
   public static final String STREAM_READ_OPENED = "stream_read_opened";
+
+  /**
+   * Total count of times an analytics input stream was opened.
+   *
+   * Value: {@value}.
+   */
+  public static final String STREAM_READ_ANALYTICS_OPENED = "stream_read_analytics_opened";
+
+  /**
+   * Total count of times object stream factory was closed.
+   *
+   * Value: {@value}.
+   */
+  public static final String ANALYTICS_STREAM_FACTORY_CLOSED = "analytics_stream_factory_closed";
 
   /**
    * Count of exceptions raised during input stream reads.

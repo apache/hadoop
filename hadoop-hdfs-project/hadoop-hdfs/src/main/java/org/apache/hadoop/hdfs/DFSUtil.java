@@ -60,6 +60,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.SortedSet;
 
+import java.util.concurrent.TimeUnit;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.Option;
@@ -1629,7 +1630,9 @@ public class DFSUtil {
             getPassword(sslConf, DFS_SERVER_HTTPS_TRUSTSTORE_PASSWORD_KEY),
             sslConf.get("ssl.server.truststore.type", "jks"))
         .excludeCiphers(
-            sslConf.get("ssl.server.exclude.cipher.list"));
+            sslConf.get("ssl.server.exclude.cipher.list"))
+        .includeCiphers(
+            sslConf.get("ssl.server.include.cipher.list"));
   }
 
   /**
@@ -1735,11 +1738,11 @@ public class DFSUtil {
   }
 
   /**
-   * Return a HttpServer.Builder that the journalnode / namenode / secondary
+   * Return a HttpServer.Builder that the journalnode / namenode / secondary / router / balancer
    * namenode can use to initialize their HTTP / HTTPS server.
    *
    */
-  public static HttpServer2.Builder httpServerTemplateForNNAndJN(
+  public static HttpServer2.Builder getHttpServerTemplate(
       Configuration conf, final InetSocketAddress httpAddr,
       final InetSocketAddress httpsAddr, String name, String spnegoUserNameKey,
       String spnegoKeytabFileKey) throws IOException {
@@ -1970,16 +1973,36 @@ public class DFSUtil {
   }
 
   /**
-   * Add transfer rate metrics for valid data read and duration values.
+   * Add transfer rate metrics in bytes per second.
    * @param metrics metrics for datanodes
    * @param read bytes read
-   * @param duration read duration
+   * @param durationInNS read duration in nanoseconds
    */
-  public static void addTransferRateMetric(final DataNodeMetrics metrics, final long read, final long duration) {
-    if (read >= 0 && duration > 0) {
-        metrics.addReadTransferRate(read * 1000 / duration);
-    } else {
-      LOG.warn("Unexpected value for data transfer bytes={} duration={}", read, duration);
-    }
+  public static void addTransferRateMetric(final DataNodeMetrics metrics, final long read,
+      final long durationInNS) {
+    metrics.addReadTransferRate(getTransferRateInBytesPerSecond(read, durationInNS));
+  }
+
+  /**
+   * Calculate the transfer rate in bytes per second.
+   *
+   * We have the read duration in nanoseconds for precision for transfers taking a few nanoseconds.
+   * We treat shorter durations below 1 ns as 1 ns as we also want to capture reads taking less
+   * than a nanosecond. To calculate transferRate in bytes per second, we avoid multiplying bytes
+   * read by 10^9 to avoid overflow. Instead, we first calculate the duration in seconds in double
+   * to keep the decimal values for smaller durations. We then divide bytes read by
+   * durationInSeconds to get the transferRate in bytes per second.
+   *
+   * We also replace a negative value for transferred bytes with 0 byte.
+   *
+   * @param bytes bytes read
+   * @param durationInNS read duration in nanoseconds
+   * @return bytes per second
+   */
+  public static long getTransferRateInBytesPerSecond(long bytes, long durationInNS) {
+    bytes = Math.max(bytes, 0);
+    durationInNS = Math.max(durationInNS, 1);
+    double durationInSeconds = (double) durationInNS / TimeUnit.SECONDS.toNanos(1);
+    return (long) (bytes / durationInSeconds);
   }
 }

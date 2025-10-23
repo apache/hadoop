@@ -18,14 +18,18 @@
 
 package org.apache.hadoop.fs.s3a.audit;
 
+import software.amazon.awssdk.core.exception.SdkClientException;
 import software.amazon.awssdk.core.interceptor.ExecutionAttributes;
 import software.amazon.awssdk.core.interceptor.InterceptorContext;
+import software.amazon.awssdk.core.internal.interceptor.DefaultFailedExecutionContext;
+import software.amazon.awssdk.http.SdkHttpResponse;
 import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadRequest;
 import software.amazon.awssdk.services.s3.model.GetBucketLocationRequest;
+import software.amazon.awssdk.services.s3.model.HeadBucketRequest;
 import software.amazon.awssdk.services.s3.model.UploadPartCopyRequest;
 import software.amazon.awssdk.transfer.s3.progress.TransferListener;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,6 +38,8 @@ import org.apache.hadoop.fs.s3a.audit.impl.LoggingAuditor;
 import org.apache.hadoop.fs.store.audit.AuditSpan;
 
 
+import static org.apache.hadoop.fs.s3a.Statistic.HTTP_RESPONSE_400;
+import static org.apache.hadoop.fs.s3a.Statistic.HTTP_RESPONSE_500;
 import static org.apache.hadoop.fs.s3a.audit.AuditTestSupport.loggingAuditConfig;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -54,7 +60,8 @@ public class TestLoggingAuditor extends AbstractAuditingTest {
 
   private LoggingAuditor auditor;
 
-  @Before
+  @BeforeEach
+  @Override
   public void setup() throws Exception {
     super.setup();
     auditor = (LoggingAuditor) getManager().getAuditor();
@@ -218,5 +225,40 @@ public class TestLoggingAuditor extends AbstractAuditingTest {
     AuditSpan s2 = span();
     assertThat(s1.getSpanId())
         .doesNotMatch(s2.getSpanId());
+  }
+
+  /**
+   * Verify that the auditor processes 400 exceptions.
+   */
+  @Test
+  public void testErrorCode400Extraction() throws Throwable {
+    span().onExecutionFailure(createFailureContext(400),
+        ExecutionAttributes.builder().build());
+    verifyCounter(HTTP_RESPONSE_400, 1);
+  }
+
+  /**
+   * Verify that the auditor processes 500 exceptions.
+   */
+  @Test
+  public void testErrorCode500Extraction() throws Throwable {
+    span().onExecutionFailure(createFailureContext(500),
+        ExecutionAttributes.builder().build());
+    verifyCounter(HTTP_RESPONSE_500, 1);
+  }
+
+  private static DefaultFailedExecutionContext createFailureContext(final int statusCode) {
+    final DefaultFailedExecutionContext failedExecutionContext =
+        DefaultFailedExecutionContext.builder()
+            .exception(SdkClientException.builder().message(Integer.toString(statusCode)).build())
+            .interceptorContext(
+                InterceptorContext.builder()
+                    .request(HeadBucketRequest.builder().bucket("bucket").build())
+                    .httpResponse(SdkHttpResponse.builder()
+                        .statusCode(statusCode)
+                        .build())
+                    .build()
+            ).build();
+    return failedExecutionContext;
   }
 }

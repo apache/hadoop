@@ -56,6 +56,7 @@ import org.apache.hadoop.fs.Options.ChecksumOpt;
 import org.apache.hadoop.fs.Options.HandleOpt;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.impl.AbstractFSBuilderImpl;
+import org.apache.hadoop.fs.impl.DefaultBulkDeleteOperation;
 import org.apache.hadoop.fs.impl.FutureDataInputStreamBuilderImpl;
 import org.apache.hadoop.fs.impl.OpenFileParameters;
 import org.apache.hadoop.fs.permission.AclEntry;
@@ -169,7 +170,8 @@ import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapa
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public abstract class FileSystem extends Configured
-    implements Closeable, DelegationTokenIssuer, PathCapabilities {
+    implements Closeable, DelegationTokenIssuer,
+        PathCapabilities, BulkDeleteSource {
   public static final String FS_DEFAULT_NAME_KEY =
                    CommonConfigurationKeys.FS_DEFAULT_NAME_KEY;
   public static final String DEFAULT_FS =
@@ -2176,34 +2178,34 @@ public abstract class FileSystem extends Configured
    * <dl>
    *  <dd>
    *   <dl>
-   *    <dt> <tt> ? </tt>
+   *    <dt> <code> ? </code>
    *    <dd> Matches any single character.
    *
-   *    <dt> <tt> * </tt>
+   *    <dt> <code> * </code>
    *    <dd> Matches zero or more characters.
    *
-   *    <dt> <tt> [<i>abc</i>] </tt>
+   *    <dt> <code> [<i>abc</i>] </code>
    *    <dd> Matches a single character from character set
-   *     <tt>{<i>a,b,c</i>}</tt>.
+   *     <code>{<i>a,b,c</i>}</code>.
    *
-   *    <dt> <tt> [<i>a</i>-<i>b</i>] </tt>
+   *    <dt> <code> [<i>a</i>-<i>b</i>] </code>
    *    <dd> Matches a single character from the character range
-   *     <tt>{<i>a...b</i>}</tt>.  Note that character <tt><i>a</i></tt> must be
-   *     lexicographically less than or equal to character <tt><i>b</i></tt>.
+   *     <code>{<i>a...b</i>}</code>.  Note that character <code><i>a</i></code> must be
+   *     lexicographically less than or equal to character <code><i>b</i></code>.
    *
-   *    <dt> <tt> [^<i>a</i>] </tt>
+   *    <dt> <code> [^<i>a</i>] </code>
    *    <dd> Matches a single character that is not from character set or range
-   *     <tt>{<i>a</i>}</tt>.  Note that the <tt>^</tt> character must occur
+   *     <code>{<i>a</i>}</code>.  Note that the <code>^</code> character must occur
    *     immediately to the right of the opening bracket.
    *
-   *    <dt> <tt> \<i>c</i> </tt>
+   *    <dt> <code> \<i>c</i> </code>
    *    <dd> Removes (escapes) any special meaning of character <i>c</i>.
    *
-   *    <dt> <tt> {ab,cd} </tt>
-   *    <dd> Matches a string from the string set <tt>{<i>ab, cd</i>} </tt>
+   *    <dt> <code> {ab,cd} </code>
+   *    <dd> Matches a string from the string set <code>{<i>ab, cd</i>} </code>
    *
-   *    <dt> <tt> {ab,c{de,fh}} </tt>
-   *    <dd> Matches a string from the string set <tt>{<i>ab, cde, cfh</i>}</tt>
+   *    <dt> <code> {ab,c{de,fh}} </code>
+   *    <dd> Matches a string from the string set <code>{<i>ab, cde, cfh</i>}</code>
    *
    *   </dl>
    *  </dd>
@@ -3485,12 +3487,16 @@ public abstract class FileSystem extends Configured
   public boolean hasPathCapability(final Path path, final String capability)
       throws IOException {
     switch (validatePathCapabilityArgs(makeQualified(path), capability)) {
-    case CommonPathCapabilities.FS_SYMLINKS:
-      // delegate to the existing supportsSymlinks() call.
-      return supportsSymlinks() && areSymlinksEnabled();
-    default:
-      // the feature is not implemented.
-      return false;
+      case CommonPathCapabilities.BULK_DELETE:
+        // bulk delete has default implementation which
+        // can called on any FileSystem.
+        return true;
+      case CommonPathCapabilities.FS_SYMLINKS:
+        // delegate to the existing supportsSymlinks() call.
+        return supportsSymlinks() && areSymlinksEnabled();
+      default:
+        // the feature is not implemented.
+        return false;
     }
   }
 
@@ -3575,7 +3581,15 @@ public abstract class FileSystem extends Configured
       throw new UnsupportedFileSystemException("No FileSystem for scheme "
           + "\"" + scheme + "\"");
     }
-    LOGGER.debug("FS for {} is {}", scheme, clazz);
+    if (LOGGER.isDebugEnabled()) {
+      LOGGER.debug("FS for {} is {}", scheme, clazz);
+      final String jarLocation = ClassUtil.findContainingJar(clazz);
+      if (jarLocation != null) {
+        LOGGER.debug("Jar location for {} : {}", clazz, jarLocation);
+      } else {
+        LOGGER.debug("Class location for {} : {}", clazz, ClassUtil.findClassLocation(clazz));
+      }
+    }
     return clazz;
   }
 
@@ -4077,6 +4091,7 @@ public abstract class FileSystem extends Configured
       STATS_DATA_CLEANER.
           setName(StatisticsDataReferenceCleaner.class.getName());
       STATS_DATA_CLEANER.setDaemon(true);
+      STATS_DATA_CLEANER.setContextClassLoader(null);
       STATS_DATA_CLEANER.start();
     }
 
@@ -4974,5 +4989,19 @@ public abstract class FileSystem extends Configured
       throws IOException {
     methodNotSupported();
     return null;
+  }
+
+  /**
+   * Create a bulk delete operation.
+   * The default implementation returns an instance of {@link DefaultBulkDeleteOperation}.
+   * @param path base path for the operation.
+   * @return an instance of the bulk delete.
+   * @throws IllegalArgumentException any argument is invalid.
+   * @throws IOException if there is an IO problem.
+   */
+  @Override
+  public BulkDelete createBulkDelete(Path path)
+          throws IllegalArgumentException, IOException {
+    return new DefaultBulkDeleteOperation(path, this);
   }
 }

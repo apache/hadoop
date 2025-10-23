@@ -18,9 +18,9 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
@@ -87,9 +87,9 @@ import org.apache.hadoop.yarn.util.ProcfsBasedProcessTree;
 import org.apache.hadoop.yarn.util.ResourceCalculatorPlugin;
 import org.apache.hadoop.yarn.util.TestProcfsBasedProcessTree;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import org.slf4j.LoggerFactory;
@@ -104,7 +104,7 @@ public class TestContainersMonitor extends BaseContainerManagerTest {
     LOG = LoggerFactory.getLogger(TestContainersMonitor.class);
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException {
     conf.setClass(
         YarnConfiguration.NM_MON_RESOURCE_CALCULATOR,
@@ -185,35 +185,34 @@ public class TestContainersMonitor extends BaseContainerManagerTest {
                                           "100",
                                           procfsRootDir.getAbsolutePath());
       pTree.updateProcessTree();
-      assertTrue("tree rooted at 100 should be over limit " +
-                    "after first iteration.",
-                  test.isProcessTreeOverLimit(pTree, "dummyId", limit));
+      assertTrue(test.isProcessTreeOverLimit(pTree, "dummyId", limit),
+          "tree rooted at 100 should be over limit " +
+          "after first iteration.");
 
       // the tree rooted at 200 is initially below limit.
       pTree = new ProcfsBasedProcessTree("200",
                                           procfsRootDir.getAbsolutePath());
       pTree.updateProcessTree();
-      assertFalse("tree rooted at 200 shouldn't be over limit " +
-                    "after one iteration.",
-                  test.isProcessTreeOverLimit(pTree, "dummyId", limit));
+      assertFalse(test.isProcessTreeOverLimit(pTree, "dummyId", limit),
+          "tree rooted at 200 shouldn't be over limit " +
+          "after one iteration.");
       // second iteration - now the tree has been over limit twice,
       // hence it should be declared over limit.
       pTree.updateProcessTree();
-      assertTrue(
-          "tree rooted at 200 should be over limit after 2 iterations",
-                  test.isProcessTreeOverLimit(pTree, "dummyId", limit));
+      assertTrue(test.isProcessTreeOverLimit(pTree, "dummyId", limit),
+          "tree rooted at 200 should be over limit after 2 iterations");
 
       // the tree rooted at 600 is never over limit.
       pTree = new ProcfsBasedProcessTree("600",
                                             procfsRootDir.getAbsolutePath());
       pTree.updateProcessTree();
-      assertFalse("tree rooted at 600 should never be over limit.",
-                    test.isProcessTreeOverLimit(pTree, "dummyId", limit));
+      assertFalse(test.isProcessTreeOverLimit(pTree, "dummyId", limit),
+          "tree rooted at 600 should never be over limit.");
 
       // another iteration does not make any difference.
       pTree.updateProcessTree();
-      assertFalse("tree rooted at 600 should never be over limit.",
-                    test.isProcessTreeOverLimit(pTree, "dummyId", limit));
+      assertFalse(test.isProcessTreeOverLimit(pTree, "dummyId", limit),
+          "tree rooted at 600 should never be over limit.");
     } finally {
       FileUtil.fullyDelete(procfsRootDir);
     }
@@ -325,17 +324,17 @@ public class TestContainersMonitor extends BaseContainerManagerTest {
       Thread.sleep(1000);
       LOG.info("Waiting for process start-file to be created");
     }
-    Assert.assertTrue("ProcessStartFile doesn't exist!",
-        processStartFile.exists());
+    assertTrue(processStartFile.exists(),
+        "ProcessStartFile doesn't exist!");
 
     // Now verify the contents of the file
     BufferedReader reader =
         new BufferedReader(new FileReader(processStartFile));
-    Assert.assertEquals("Hello World!", reader.readLine());
+    assertEquals("Hello World!", reader.readLine());
     // Get the pid of the process
     String pid = reader.readLine().trim();
     // No more lines
-    Assert.assertEquals(null, reader.readLine());
+    assertEquals(null, reader.readLine());
 
     BaseContainerManagerTest.waitForContainerState(containerManager, cId,
         ContainerState.COMPLETE, 60);
@@ -346,7 +345,7 @@ public class TestContainersMonitor extends BaseContainerManagerTest {
         GetContainerStatusesRequest.newInstance(containerIds);
     ContainerStatus containerStatus =
         containerManager.getContainerStatuses(gcsRequest).getContainerStatuses().get(0);
-    Assert.assertEquals(ContainerExitStatus.KILLED_EXCEEDED_VMEM,
+    assertEquals(ContainerExitStatus.KILLED_EXCEEDED_VMEM,
         containerStatus.getExitStatus());
     String expectedMsgPattern =
         "Container \\[pid=" + pid + ",containerID=" + cId + "\\] is running "
@@ -356,17 +355,17 @@ public class TestContainersMonitor extends BaseContainerManagerTest {
             + "Killing container.\nDump of the process-tree for "
             + cId + " :\n";
     Pattern pat = Pattern.compile(expectedMsgPattern);
-    Assert.assertEquals("Expected message pattern is: " + expectedMsgPattern
-        + "\n\nObserved message is: " + containerStatus.getDiagnostics(),
-        true, pat.matcher(containerStatus.getDiagnostics()).find());
+    assertEquals(true,
+        pat.matcher(containerStatus.getDiagnostics()).find(),
+        "Expected message pattern is: " + expectedMsgPattern
+        + "\n\nObserved message is: " + containerStatus.getDiagnostics());
 
     // Assert that the process is not alive anymore
-    Assert.assertFalse("Process is still alive!",
-        exec.signalContainer(new ContainerSignalContext.Builder()
+    assertFalse(exec.signalContainer(new ContainerSignalContext.Builder()
             .setUser(user)
             .setPid(pid)
             .setSignal(Signal.NULL)
-            .build()));
+            .build()), "Process is still alive!");
   }
 
   @SuppressWarnings("unchecked")
@@ -433,11 +432,10 @@ public class TestContainersMonitor extends BaseContainerManagerTest {
       monitor.stop();
     }
 
-    assertTrue("Expected a kill event", event instanceof ContainerKillEvent);
+    assertTrue(event instanceof ContainerKillEvent, "Expected a kill event");
     ContainerKillEvent cke = (ContainerKillEvent) event;
-    assertEquals("Unexpected container exit status",
-        ContainerExitStatus.KILLED_FOR_EXCESS_LOGS,
-        cke.getContainerExitStatus());
+    assertEquals(ContainerExitStatus.KILLED_FOR_EXCESS_LOGS,
+        cke.getContainerExitStatus(), "Unexpected container exit status");
   }
 
   @SuppressWarnings("unchecked")
@@ -520,14 +518,14 @@ public class TestContainersMonitor extends BaseContainerManagerTest {
       monitor.stop();
     }
 
-    assertTrue("Expected a kill event", event instanceof ContainerKillEvent);
+    assertTrue(event instanceof ContainerKillEvent, "Expected a kill event");
     ContainerKillEvent cke = (ContainerKillEvent) event;
-    assertEquals("Unexpected container exit status",
-        ContainerExitStatus.KILLED_FOR_EXCESS_LOGS,
-        cke.getContainerExitStatus());
+    assertEquals(ContainerExitStatus.KILLED_FOR_EXCESS_LOGS,
+        cke.getContainerExitStatus(), "Unexpected container exit status");
   }
 
-  @Test(timeout = 20000)
+  @Test
+  @Timeout(value = 20)
   public void testContainerMonitorMemFlags() {
     ContainersMonitor cm = null;
 

@@ -37,6 +37,32 @@ The primary abstraction provided by the `CapacityScheduler` is the concept of *q
 
 To provide further control and predictability on sharing of resources, the `CapacityScheduler` supports *hierarchical queues* to ensure resources are shared among the sub-queues of an organization before other queues are allowed to use free resources, thereby providing *affinity* for sharing free resources among applications of a given organization.
 
+The container allocation in `CapacityScheduler` can be triggered by using one of the following ways:
+
+* **Node heartbeat** : The container scheduling is triggered by a
+  heartbeat signal from a NodeManager to the ResourceManager.The scheduler then
+  selects an application that can be scheduled for the node.
+  This type of scheduling is random, and whichever node's heartbeat
+  gets the chance. If the NodeManager heartbeat interval is set to higher values,
+  it can negatively affect the container scheduling performance.
+
+* **Asynchronous scheduling** : The container scheduling is triggered by
+  single or multiple parallel threads running in the background.
+  The scheduler first selects a random node from the node list for scheduling,
+  and then it loops through the node list (circularly) to ensure that all the nodes get
+  a fair chance. This approach improves the scheduling performance because
+  it is proactive and does not need to wait for any events.
+
+* **Global scheduling** : It is similar to asynchronous scheduling,
+  but instead of randomly picking nodes, the nodes are selected for
+  scheduling based on factors such as the resource size, scheduling requirements,
+  and resource distribution of the applications. This approach allows the scheduler
+  to make optimal scheduling decisions. The node selection policy is pluggable,
+  meaning it can be customized to fit the specific needs of the application.
+
+Note: Asynchronous scheduling is the default scheduling mechanism for capacity scheduler.
+
+
 Features
 --------
 
@@ -84,6 +110,17 @@ Configuration
 | Property | Value |
 |:---- |:---- |
 | `yarn.resourcemanager.scheduler.class` | `org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler` |
+
+###Setting up scheduling strategy
+
+  To configure different scheduling strategy in capacity scheduler, set the following property in the **conf/capacity-scheduler.xml**:
+
+
+| Property                                                                                                         | Description                                                                                                                                                                                          |
+|:-----------------------------------------------------------------------------------------------------------------|:-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `yarn.scheduler.capacity.schedule-asynchronously.enable`                                                         | Specifies whether to enable asynchronous scheduling. The default value is true.                                                                                                                      |
+| `yarn.scheduler.capacity.multi-node-placement-enabled`                                                           | Specifies whether to enable global scheduling. The default value is false. In addition to this, node sorting policy needs to be set using `yarn.scheduler.capacity.multi-node-sorting.policy.names`. |
+
 
 ###Setting up queues
 
@@ -633,7 +670,7 @@ The following configuration parameters can be configured in yarn-site.xml to con
 | `yarn.resourcemanager.reservation-system.planfollower.time-step` | *Optional* parameter: the frequency in milliseconds of the `PlanFollower` timer. Long value expected. The default value is *1000*. |
 
 
-The `ReservationSystem` is integrated with the `CapacityScheduler` queue hierachy and can be configured for any **LeafQueue** currently. The `CapacityScheduler` supports the following parameters to tune the `ReservationSystem`:
+The `ReservationSystem` is integrated with the `CapacityScheduler` queue hierarchy and can be configured for any **LeafQueue** currently. The `CapacityScheduler` supports the following parameters to tune the `ReservationSystem`:
 
 | Property | Description |
 |:---- |:---- |
@@ -879,7 +916,7 @@ Changing queue/scheduler properties and adding/removing queues can be done in tw
   Remove the queue configurations from the file and run refresh as described above
 
 ### Enabling periodic configuration refresh
-Enabling queue configuration periodic refresh allows reloading and applying the configuration by editing the *conf/capacity-scheduler.xml* without the necessicity of calling yarn rmadmin -refreshQueues.
+Enabling queue configuration periodic refresh allows reloading and applying the configuration by editing the *conf/capacity-scheduler.xml* without the necessity of calling yarn rmadmin -refreshQueues.
 
 | Property | Description |
 |:---- |:---- |

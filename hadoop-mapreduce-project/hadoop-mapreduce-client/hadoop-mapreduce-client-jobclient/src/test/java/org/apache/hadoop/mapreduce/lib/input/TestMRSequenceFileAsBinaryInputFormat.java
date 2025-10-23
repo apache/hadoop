@@ -32,13 +32,13 @@ import org.apache.hadoop.mapreduce.MapReduceTestUtil;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.task.MapContextImpl;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.Random;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestMRSequenceFileAsBinaryInputFormat {
   private static final int RECORDS = 10000;
@@ -103,21 +103,19 @@ public class TestMRSequenceFileAsBinaryInputFormat {
           cmpkey.readFields(buf);
           buf.reset(bval.getBytes(), bval.getLength());
           cmpval.readFields(buf);
-          assertTrue(
-            "Keys don't match: " + "*" + cmpkey.toString() + ":" +
-            tkey.toString() + "*",
-            cmpkey.toString().equals(tkey.toString()));
-          assertTrue(
-            "Vals don't match: " + "*" + cmpval.toString() + ":" +
-            tval.toString() + "*",
-            cmpval.toString().equals(tval.toString()));
+          assertTrue(cmpkey.toString().equals(tkey.toString()),
+              "Keys don't match: " + "*" + cmpkey.toString() + ":" +
+              tkey.toString() + "*");
+          assertTrue(cmpval.toString().equals(tval.toString()),
+              "Vals don't match: " + "*" + cmpval.toString() + ":" +
+              tval.toString() + "*");
           ++count;
         }
       } finally {
         reader.close();
       }
     }
-    assertEquals("Some records not found", RECORDS, count);
+    assertEquals(RECORDS, count, "Some records not found");
   }
 
 }

@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.io.PrintStream;
 import java.net.BindException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
 import java.net.URI;
@@ -59,7 +60,8 @@ import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.jmx.JMXJsonServletNaNFiltered;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
-import com.sun.jersey.spi.container.servlet.ServletContainer;
+import org.glassfish.jersey.server.ResourceConfig;
+import org.glassfish.jersey.servlet.ServletContainer;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -252,6 +254,7 @@ public final class HttpServer2 implements FilterContainer {
         new ArrayList<>(Collections.singletonList(
             "hadoop.http.authentication."));
     private String excludeCiphers;
+    private String includeCiphers;
 
     private boolean xFrameEnabled;
     private XFrameOption xFrameOption = XFrameOption.SAMEORIGIN;
@@ -399,6 +402,11 @@ public final class HttpServer2 implements FilterContainer {
       return this;
     }
 
+    public Builder includeCiphers(String pIncludeCiphers) {
+      this.includeCiphers = pIncludeCiphers;
+      return this;
+    }
+
     /**
      * Adds the ability to control X_FRAME_OPTIONS on HttpServer2.
      * @param xFrameEnabled - True enables X_FRAME_OPTIONS false disables it.
@@ -480,6 +488,7 @@ public final class HttpServer2 implements FilterContainer {
       trustStoreType = sslConf.get(SSLFactory.SSL_SERVER_TRUSTSTORE_TYPE,
           SSLFactory.SSL_SERVER_TRUSTSTORE_TYPE_DEFAULT);
       excludeCiphers = sslConf.get(SSLFactory.SSL_SERVER_EXCLUDE_CIPHER_LIST);
+      includeCiphers = sslConf.get(SSLFactory.SSL_SERVER_INCLUDE_CIPHER_LIST);
     }
 
     public HttpServer2 build() throws IOException {
@@ -541,25 +550,50 @@ public final class HttpServer2 implements FilterContainer {
       }
 
       for (URI ep : endpoints) {
-        final ServerConnector connector;
+        //
+        // To enable dual-stack or IPv6 support, use InetAddress
+        // .getAllByName(hostname) to resolve the IP addresses of a host.
+        // When the system property java.net.preferIPv4Stack is set to true,
+        // only IPv4 addresses are returned, and any IPv6 addresses are
+        // ignored, so no extra check is needed to exclude IPv6.
+        // When java.net.preferIPv4Stack is false, both IPv4 and IPv6
+        // addresses may be returned, and any IPv6 addresses will also be
+        // added as connectors.
+        // To disable IPv4, you need to configure the OS at the system level.
+        //
+        InetAddress[] addresses = InetAddress.getAllByName(ep.getHost());
+        server = addConnectors(
+            ep, addresses, server, httpConfig, backlogSize, idleTimeout);
+      }
+      server.loadListeners();
+      return server;
+    }
+
+    @VisibleForTesting
+    HttpServer2 addConnectors(
+        URI ep, InetAddress[] addresses, HttpServer2 server,
+        HttpConfiguration httpConfig, int backlogSize, int idleTimeout){
+      for (InetAddress addr : addresses) {
+        ServerConnector connector;
         String scheme = ep.getScheme();
         if (HTTP_SCHEME.equals(scheme)) {
-          connector = createHttpChannelConnector(server.webServer,
-              httpConfig);
+          connector = createHttpChannelConnector(
+              server.webServer, httpConfig);
         } else if (HTTPS_SCHEME.equals(scheme)) {
-          connector = createHttpsChannelConnector(server.webServer,
-              httpConfig);
+          connector = createHttpsChannelConnector(
+              server.webServer, httpConfig);
         } else {
           throw new HadoopIllegalArgumentException(
               "unknown scheme for endpoint:" + ep);
         }
-        connector.setHost(ep.getHost());
+        LOG.debug("Adding connector to WebServer for address {}",
+            addr.getHostAddress());
+        connector.setHost(addr.getHostAddress());
         connector.setPort(ep.getPort() == -1 ? 0 : ep.getPort());
         connector.setAcceptQueueSize(backlogSize);
         connector.setIdleTimeout(idleTimeout);
         server.addListener(connector);
       }
-      server.loadListeners();
       return server;
     }
 
@@ -607,10 +641,17 @@ public final class HttpServer2 implements FilterContainer {
           sslContextFactory.setTrustStorePassword(trustStorePassword);
         }
       }
-      if(null != excludeCiphers && !excludeCiphers.isEmpty()) {
+
+      if (StringUtils.hasLength(excludeCiphers)) {
         sslContextFactory.setExcludeCipherSuites(
             StringUtils.getTrimmedStrings(excludeCiphers));
-        LOG.info("Excluded Cipher List:" + excludeCiphers);
+        LOG.info("Excluded Cipher List:{}", excludeCiphers);
+      }
+
+      if (StringUtils.hasLength(includeCiphers)) {
+        sslContextFactory.setIncludeCipherSuites(
+          StringUtils.getTrimmedStrings(includeCiphers));
+        LOG.info("Included Cipher List:{}", includeCiphers);
       }
 
       setEnabledProtocols(sslContextFactory);
@@ -1017,8 +1058,7 @@ public final class HttpServer2 implements FilterContainer {
    */
   public void addJerseyResourcePackage(final String packageName,
       final String pathSpec) {
-    addJerseyResourcePackage(packageName, pathSpec,
-        Collections.<String, String>emptyMap());
+    addJerseyResourcePackage(packageName, pathSpec, Collections.emptyMap());
   }
 
   /**
@@ -1029,14 +1069,30 @@ public final class HttpServer2 implements FilterContainer {
    */
   public void addJerseyResourcePackage(final String packageName,
       final String pathSpec, Map<String, String> params) {
-    LOG.info("addJerseyResourcePackage: packageName=" + packageName
-        + ", pathSpec=" + pathSpec);
-    final ServletHolder sh = new ServletHolder(ServletContainer.class);
-    sh.setInitParameter("com.sun.jersey.config.property.resourceConfigClass",
-        "com.sun.jersey.api.core.PackagesResourceConfig");
-    sh.setInitParameter("com.sun.jersey.config.property.packages", packageName);
+    LOG.info("addJerseyResourcePackage: packageName = {}, pathSpec = {}.",
+        packageName, pathSpec);
+    final ResourceConfig config = new ResourceConfig().packages(packageName);
+    final ServletHolder sh = new ServletHolder(new ServletContainer(config));
     for (Map.Entry<String, String> entry : params.entrySet()) {
       sh.setInitParameter(entry.getKey(), entry.getValue());
+    }
+    webAppContext.addServlet(sh, pathSpec);
+  }
+
+  /**
+   * Add a Jersey resource config.
+   * @param config The Jersey ResourceConfig to be registered.
+   * @param pathSpec The path spec for the servlet
+   * @param params properties and features for ResourceConfig
+   */
+  public void addJerseyResourceConfig(final ResourceConfig config,
+      final String pathSpec, Map<String, String> params) {
+    LOG.info("addJerseyResourceConfig: pathSpec = {}.", pathSpec);
+    final ServletHolder sh = new ServletHolder(new ServletContainer(config));
+    if (params != null) {
+      for (Map.Entry<String, String> entry : params.entrySet()) {
+        sh.setInitParameter(entry.getKey(), entry.getValue());
+      }
     }
     webAppContext.addServlet(sh, pathSpec);
   }

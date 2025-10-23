@@ -67,9 +67,10 @@ public class ITestS3AClientSideEncryptionKms
     String xAttrPrefix = "header.";
 
     // Assert KeyWrap Algo
-    assertEquals("Key wrap algo isn't same as expected", KMS_KEY_WRAP_ALGO,
+    assertEquals(KMS_KEY_WRAP_ALGO,
         processHeader(fsXAttrs,
-            xAttrPrefix + AWSHeaders.CRYPTO_KEYWRAP_ALGORITHM));
+        xAttrPrefix + AWSHeaders.CRYPTO_KEYWRAP_ALGORITHM),
+        "Key wrap algo isn't same as expected");
 
     // Assert content encryption algo for KMS, is present in the
     // materials description and KMS key ID isn't.

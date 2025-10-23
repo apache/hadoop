@@ -20,7 +20,7 @@ package org.apache.hadoop.fs.azure;
 import java.io.IOException;
 import java.util.EnumSet;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;

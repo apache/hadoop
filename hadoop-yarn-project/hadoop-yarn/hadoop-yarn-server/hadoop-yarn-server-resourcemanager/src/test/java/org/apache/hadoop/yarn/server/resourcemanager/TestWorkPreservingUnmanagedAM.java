@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -39,9 +42,9 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.InvalidApplicationMasterRequestException;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.slf4j.event.Level;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 /**
  * Test UAM handling in RM.
@@ -51,11 +54,11 @@ public class TestWorkPreservingUnmanagedAM
 
   private YarnConfiguration conf;
 
-  public TestWorkPreservingUnmanagedAM(SchedulerType type) throws IOException {
-    super(type);
+  public void initTestWorkPreservingUnmanagedAM(SchedulerType type) throws IOException {
+    initParameterizedSchedulerTestBase(type);
+    setup();
   }
 
-  @Before
   public void setup() {
     GenericTestUtils.setRootLogLevel(Level.DEBUG);
     conf = getConf();
@@ -142,15 +145,15 @@ public class TestWorkPreservingUnmanagedAM
       response.getNMTokensFromPreviousAttempts()
           .forEach(token -> tokenCacheClientSide.add(token.getNodeId()));
     } catch (InvalidApplicationMasterRequestException e) {
-      Assert.assertEquals(false, keepContainers);
+      assertEquals(false, keepContainers);
       return;
     }
-    Assert.assertEquals("RM should not allow second register"
-        + " for UAM without keep container flag ", true, keepContainers);
+    assertEquals(true, keepContainers, "RM should not allow second register"
+        + " for UAM without keep container flag ");
 
     // Expecting the two running containers previously
-    Assert.assertEquals(2, response.getContainersFromPreviousAttempts().size());
-    Assert.assertEquals(1, response.getNMTokensFromPreviousAttempts().size());
+    assertEquals(2, response.getContainersFromPreviousAttempts().size());
+    assertEquals(1, response.getNMTokensFromPreviousAttempts().size());
 
     // Allocate one more containers to UAM, just to be safe
     numContainers = 1;
@@ -248,15 +251,15 @@ public class TestWorkPreservingUnmanagedAM
       response.getNMTokensFromPreviousAttempts()
           .forEach(token -> tokenCacheClientSide.add(token.getNodeId()));
     } catch (InvalidApplicationMasterRequestException e) {
-      Assert.assertEquals(false, keepContainers);
+      assertEquals(false, keepContainers);
       return;
     }
-    Assert.assertEquals("RM should not allow second register"
-        + " for UAM without keep container flag ", true, keepContainers);
+    assertEquals(true, keepContainers, "RM should not allow second register"
+        + " for UAM without keep container flag ");
 
     // Expecting the zero running containers previously
-    Assert.assertEquals(0, response.getContainersFromPreviousAttempts().size());
-    Assert.assertEquals(0, response.getNMTokensFromPreviousAttempts().size());
+    assertEquals(0, response.getContainersFromPreviousAttempts().size());
+    assertEquals(0, response.getNMTokensFromPreviousAttempts().size());
 
     // Allocate one more containers to UAM, just to be safe
     numContainers = 1;
@@ -278,29 +281,43 @@ public class TestWorkPreservingUnmanagedAM
     rm.stop();
   }
 
-  @Test(timeout = 600000)
-  public void testUAMRestartKeepContainers() throws Exception {
+  @Timeout(value = 600)
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("getParameters")
+  public void testUAMRestartKeepContainers(SchedulerType type) throws Exception {
+    initTestWorkPreservingUnmanagedAM(type);
     testUAMRestart(true);
   }
 
-  @Test(timeout = 600000)
-  public void testUAMRestartNoKeepContainers() throws Exception {
+  @Timeout(value = 600)
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("getParameters")
+  public void testUAMRestartNoKeepContainers(SchedulerType type) throws Exception {
+    initTestWorkPreservingUnmanagedAM(type);
     testUAMRestart(false);
   }
 
-  @Test(timeout = 600000)
-  public void testUAMRestartKeepContainersWithoutTransferContainer() throws Exception {
+  @Timeout(value = 600)
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("getParameters")
+  public void testUAMRestartKeepContainersWithoutTransferContainer(
+      SchedulerType type) throws Exception {
+    initTestWorkPreservingUnmanagedAM(type);
     testUAMRestartWithoutTransferContainer(true);
   }
 
-  @Test(timeout = 600000)
-  public void testUAMRestartNoKeepContainersWithoutTransferContainer() throws Exception {
+  @Timeout(value = 600)
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("getParameters")
+  public void testUAMRestartNoKeepContainersWithoutTransferContainer(
+      SchedulerType type) throws Exception {
+    initTestWorkPreservingUnmanagedAM(type);
     testUAMRestartWithoutTransferContainer(false);
   }
 
   private void checkNMTokenForContainer(Set<NodeId> cacheToken, List<Container> containers) {
     for (Container container : containers) {
-      Assert.assertTrue(cacheToken.contains(container.getNodeId()));
+      assertTrue(cacheToken.contains(container.getNodeId()));
     }
   }
 }

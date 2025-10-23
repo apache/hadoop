@@ -18,8 +18,8 @@
 package org.apache.hadoop.yarn.server.globalpolicygenerator.secure;
 
 import org.apache.hadoop.yarn.server.globalpolicygenerator.GPGContext;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -28,7 +28,7 @@ public class TestGpgSecureLogins extends AbstractGlobalPolicyGeneratorTest {
 
   @Test
   public void testHasRealm() throws Throwable {
-    Assert.assertNotNull(getRealm());
+    Assertions.assertNotNull(getRealm());
     LOG.info("Router principal = {}", getPrincipalAndRealm(GPG_LOCALHOST));
   }
 
@@ -36,7 +36,7 @@ public class TestGpgSecureLogins extends AbstractGlobalPolicyGeneratorTest {
   public void testRouterSecureLogin() throws Exception {
     startSecureGPG();
     GPGContext gpgContext = this.getGpg().getGPGContext();
-    Assert.assertNotNull(gpgContext);
+    Assertions.assertNotNull(gpgContext);
     stopSecureRouter();
   }
 

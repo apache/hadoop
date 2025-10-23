@@ -133,8 +133,8 @@ public class RouterSafemodeService extends PeriodicService {
 
     // Use same interval as cache update service
     this.setIntervalMs(conf.getTimeDuration(
-        RBFConfigKeys.DFS_ROUTER_CACHE_TIME_TO_LIVE_MS,
-        RBFConfigKeys.DFS_ROUTER_CACHE_TIME_TO_LIVE_MS_DEFAULT,
+        RBFConfigKeys.DFS_ROUTER_SAFEMODE_CHECKPERIOD_MS,
+        RBFConfigKeys.DFS_ROUTER_SAFEMODE_CHECKPERIOD_MS_DEFAULT,
         TimeUnit.MILLISECONDS));
 
     this.startupInterval = conf.getTimeDuration(
@@ -169,7 +169,7 @@ public class RouterSafemodeService extends PeriodicService {
     }
     StateStoreService stateStore = router.getStateStore();
     long cacheUpdateTime = stateStore.getCacheUpdateTime();
-    boolean isCacheStale = (now - cacheUpdateTime) > this.staleInterval;
+    boolean isCacheStale = (cacheUpdateTime == 0) || (now - cacheUpdateTime) > this.staleInterval;
 
     // Always update to indicate our cache was updated
     if (isCacheStale) {

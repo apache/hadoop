@@ -121,10 +121,10 @@ public class FieldSelectionHelper {
       int allFieldsFrom, String separator) {
     String retv = null;
     int i = 0;
-    StringBuffer sb = null;
+    StringBuilder sb = null;
     if (fieldList != null && fieldList.size() > 0) {
       if (sb == null) {
-        sb = new StringBuffer();
+        sb = new StringBuilder();
       }
       for (Integer index : fieldList) {
         if (index < fields.length) {
@@ -135,7 +135,7 @@ public class FieldSelectionHelper {
     }
     if (allFieldsFrom >= 0) {
       if (sb == null) {
-        sb = new StringBuffer();
+        sb = new StringBuilder();
       }
       for (i = allFieldsFrom; i < fields.length; i++) {
         sb.append(fields[i]).append(separator);
@@ -168,7 +168,7 @@ public class FieldSelectionHelper {
   public static String specToString(String fieldSeparator, String keyValueSpec,
       int allValueFieldsFrom, List<Integer> keyFieldList,
       List<Integer> valueFieldList) {
-    StringBuffer sb = new StringBuffer();
+    StringBuilder sb = new StringBuilder();
     sb.append("fieldSeparator: ").append(fieldSeparator).append("\n");
 
     sb.append("keyValueSpec: ").append(keyValueSpec).append("\n");

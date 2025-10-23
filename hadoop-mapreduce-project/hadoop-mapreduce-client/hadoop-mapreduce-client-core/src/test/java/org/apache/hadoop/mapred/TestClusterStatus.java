@@ -17,25 +17,29 @@
  */
 package org.apache.hadoop.mapred;
 
-import org.junit.Assert;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
-import org.junit.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestClusterStatus {
 
   private ClusterStatus clusterStatus = new ClusterStatus();
 
   @SuppressWarnings("deprecation")
-  @Test (timeout = 10000)
-  public void testGraylistedTrackers() {
-    Assert.assertEquals(0, clusterStatus.getGraylistedTrackers());
-    Assert.assertTrue(clusterStatus.getGraylistedTrackerNames().isEmpty());
+  @Test
+  @Timeout(value = 10)
+  public void testGrayListedTrackers() {
+    assertEquals(0, clusterStatus.getGraylistedTrackers());
+    assertTrue(clusterStatus.getGraylistedTrackerNames().isEmpty());
   }
 
   @SuppressWarnings("deprecation")
-  @Test (timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testJobTrackerState() {
-    Assert.assertEquals(JobTracker.State.RUNNING,
+    assertEquals(JobTracker.State.RUNNING,
         clusterStatus.getJobTrackerState());
   }
 }

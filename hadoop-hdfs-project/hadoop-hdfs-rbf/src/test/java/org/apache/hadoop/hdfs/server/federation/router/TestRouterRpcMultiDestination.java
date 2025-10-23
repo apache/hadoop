@@ -19,12 +19,12 @@ package org.apache.hadoop.hdfs.server.federation.router;
 
 import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.createFile;
 import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.verifyFileExists;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-import static org.mockito.Matchers.any;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.apache.hadoop.test.Whitebox.getInternalState;
@@ -33,9 +33,13 @@ import static org.apache.hadoop.test.Whitebox.setInternalState;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.net.InetAddress;
+import java.net.NetworkInterface;
+import java.net.SocketException;
 import java.net.URISyntaxException;
 import java.util.Arrays;
 import java.util.EnumSet;
+import java.util.Enumeration;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
@@ -72,15 +76,21 @@ import org.apache.hadoop.ipc.CallerContext;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.MethodOrderer;
+import org.junit.jupiter.api.Order;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestMethodOrder;
 import org.slf4j.event.Level;
 
 /**
  * The RPC interface of the {@link getRouter()} implemented by
  * {@link RouterRpcServer}.
  */
+@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class TestRouterRpcMultiDestination extends TestRouterRpc {
 
+  @BeforeEach
   @Override
   public void testSetup() throws Exception {
 
@@ -186,9 +196,8 @@ public class TestRouterRpcMultiDestination extends TestRouterRpc {
     }
 
     // Verify the total number of results found/matched
-    assertEquals(
-        requiredPaths + " doesn't match " + Arrays.toString(partialListing),
-        requiredPaths.size(), partialListing.length);
+    assertEquals(requiredPaths.size(), partialListing.length,
+        requiredPaths + " doesn't match " + Arrays.toString(partialListing));
   }
 
   /**
@@ -408,11 +417,11 @@ public class TestRouterRpcMultiDestination extends TestRouterRpc {
   }
 
   @Test
+  @Order(1)
   public void testSubclusterDown() throws Exception {
     final int totalFiles = 6;
 
     List<RouterContext> routers = getCluster().getRouters();
-
     // Test the behavior when everything is fine
     FileSystem fs = getRouterFileSystem();
     FileStatus[] files = fs.listStatus(new Path("/"));
@@ -443,8 +452,7 @@ public class TestRouterRpcMultiDestination extends TestRouterRpc {
     // router1 should report partial results
     RouterContext router1 = routers.get(1);
     files = router1.getFileSystem().listStatus(new Path("/"));
-    assertTrue("Found " + files.length + " items, we should have less",
-        files.length < totalFiles);
+    assertTrue(files.length < totalFiles, "Found " + files.length + " items, we should have less");
 
 
     // Restore the HA context and the Router
@@ -474,21 +482,59 @@ public class TestRouterRpcMultiDestination extends TestRouterRpc {
     routerFs.getFileStatus(dirPath);
 
     String auditFlag = "src=" + dirPath.toString();
-    String clientIpInfo = "clientIp:"
-        + InetAddress.getLocalHost().getHostAddress();
+    Set<String> clientIpInfos = getClientIpInfos();
     for (String line : auditLog.getOutput().split("\n")) {
       if (line.contains(auditFlag)) {
         // assert origin caller context exist in audit log
         String callerContext = line.substring(line.indexOf("callerContext="));
-        assertTrue(callerContext.contains("clientContext"));
+        assertTrue(callerContext.contains("clientContext"),
+            String.format("%s doesn't contain 'clientContext'", callerContext));
         // assert client ip info exist in caller context
-        assertTrue(callerContext.contains(clientIpInfo));
-        // assert client ip info appears only once in caller context
-        assertEquals(callerContext.indexOf(clientIpInfo),
-            callerContext.lastIndexOf(clientIpInfo));
+        checkCallerContextContainsClientIp(clientIpInfos, callerContext);
       }
     }
-    // clear client context
-    CallerContext.setCurrent(null);
+  }
+
+  /**
+   * Check that one of the IP from all local network interfaces is contained
+   * only once in callerContext.
+   *
+   * @param clientIpInfos IP information extracted from all local network interfaces.
+   * @param callerContext current caller context.
+   */
+  private static void checkCallerContextContainsClientIp(Set<String> clientIpInfos,
+      String callerContext) {
+    String clientIpInfo = null;
+    for (String curClientIpInfo : clientIpInfos) {
+      if (callerContext.contains(curClientIpInfo)) {
+        clientIpInfo = curClientIpInfo;
+        // assert client ip info appears only once in caller context
+        assertEquals(callerContext.indexOf(clientIpInfo), callerContext.lastIndexOf(clientIpInfo),
+            String.format("%s contains %s more than once", callerContext, clientIpInfo));
+        break;
+      }
+    }
+    assertNotNull(clientIpInfo);
+  }
+
+  /**
+   * A local machine where we run tests may have more than 1 network interface,
+   * extracting all IP information from them.
+   *
+   * @return A set of 'clientIp:IP' where IP is taken from all local network interfaces.
+   * @throws SocketException
+   */
+  private static Set<String> getClientIpInfos() throws SocketException {
+    Set<String> clientIpInfos = new HashSet<>();
+    Enumeration<NetworkInterface> networkInterfaces = NetworkInterface.getNetworkInterfaces();
+    while (networkInterfaces.hasMoreElements()) {
+      NetworkInterface networkInterface = networkInterfaces.nextElement();
+      Enumeration<InetAddress> inetAddresses = networkInterface.getInetAddresses();
+      while (inetAddresses.hasMoreElements()) {
+        InetAddress inetAddress = inetAddresses.nextElement();
+        clientIpInfos.add("clientIp:" + inetAddress.getHostAddress());
+      }
+    }
+    return clientIpInfos;
   }
 }

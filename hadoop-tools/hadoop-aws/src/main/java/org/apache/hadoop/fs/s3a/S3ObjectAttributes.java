@@ -25,7 +25,7 @@ import org.apache.hadoop.fs.Path;
 /**
  * This class holds attributes of an object independent of the
  * file status type.
- * It is used in {@link S3AInputStream} and the select equivalent.
+ * It is used in {@link S3AInputStream} and elsewhere.
  * as a way to reduce parameters being passed
  * to the constructor of such class,
  * and elsewhere to be a source-neutral representation of a file status.

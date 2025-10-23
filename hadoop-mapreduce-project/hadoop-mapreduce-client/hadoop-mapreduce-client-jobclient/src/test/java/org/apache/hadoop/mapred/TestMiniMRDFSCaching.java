@@ -21,9 +21,9 @@ package org.apache.hadoop.mapred;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.mapred.MRCaching.TestResult;
-import org.junit.Ignore;
-import org.junit.Test;
-import static org.junit.Assert.assertTrue;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 
@@ -31,7 +31,7 @@ import java.io.IOException;
  * A JUnit test to test caching with DFS
  * 
  */
-@Ignore
+@Disabled
 public class TestMiniMRDFSCaching {
 
   @Test
@@ -52,7 +52,7 @@ public class TestMiniMRDFSCaching {
                                             mr.createJobConf(),
                                             "The quick brown fox\nhas many silly\n"
                                             + "red fox sox\n");
-      assertTrue("Archives not matching", ret.isOutputOk);
+      assertTrue(ret.isOutputOk, "Archives not matching");
       // launch MR cache with symlinks
       ret = MRCaching.launchMRCache("/testing/wc/input",
                                     "/testing/wc/output",
@@ -60,7 +60,7 @@ public class TestMiniMRDFSCaching {
                                     mr.createJobConf(),
                                     "The quick brown fox\nhas many silly\n"
                                     + "red fox sox\n");
-      assertTrue("Archives not matching", ret.isOutputOk);
+      assertTrue(ret.isOutputOk, "Archives not matching");
     } finally {
       if (fileSys != null) {
         fileSys.close();

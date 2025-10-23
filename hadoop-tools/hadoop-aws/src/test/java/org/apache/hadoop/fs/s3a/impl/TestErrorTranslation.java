@@ -26,19 +26,22 @@ import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 import java.util.Collections;
 
-import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.awscore.retry.conditions.RetryOnErrorCodeCondition;
 import software.amazon.awssdk.core.exception.SdkClientException;
+import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.core.retry.RetryPolicyContext;
+import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
+import software.amazon.encryption.s3.S3EncryptionClientException;
 
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.s3a.auth.NoAwsCredentialsException;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 
 import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.maybeExtractIOException;
+import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.maybeProcessEncryptionClientException;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
-import static org.junit.Assert.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Unit tests related to the {@link ErrorTranslation} class.
@@ -67,7 +70,7 @@ public class TestErrorTranslation extends AbstractHadoopTestBase {
             new UnknownHostException("bottom")));
     final IOException ioe = intercept(UnknownHostException.class, "top",
         () -> {
-          throw maybeExtractIOException("", thrown);
+          throw maybeExtractIOException("", thrown, "");
         });
 
     // the wrapped exception is the top level one: no stack traces have
@@ -85,7 +88,7 @@ public class TestErrorTranslation extends AbstractHadoopTestBase {
           throw maybeExtractIOException("p2",
               sdkException("top",
                   sdkException("middle",
-                      new NoRouteToHostException("bottom"))));
+                      new NoRouteToHostException("bottom"))), null);
         });
   }
 
@@ -96,7 +99,7 @@ public class TestErrorTranslation extends AbstractHadoopTestBase {
           throw maybeExtractIOException("p1",
               sdkException("top",
                   sdkException("middle",
-                      new ConnectException("bottom"))));
+                      new ConnectException("bottom"))), null);
         });
   }
 
@@ -113,7 +116,7 @@ public class TestErrorTranslation extends AbstractHadoopTestBase {
                   new UncheckedIOException(
                       new SocketTimeoutException("bottom"))));
           throw maybeExtractIOException("p1",
-              new NoAwsCredentialsException("IamProvider", thrown.toString(), thrown));
+              new NoAwsCredentialsException("IamProvider", thrown.toString(), thrown), null);
         });
   }
 
@@ -124,12 +127,38 @@ public class TestErrorTranslation extends AbstractHadoopTestBase {
           throw maybeExtractIOException("p1",
               sdkException("top",
                   sdkException("middle",
-                      new NoConstructorIOE())));
+                      new NoConstructorIOE())), null);
         });
   }
 
+  @Test
+  public void testEncryptionClientExceptionExtraction() throws Throwable {
+    intercept(NoSuchKeyException.class, () -> {
+      throw maybeProcessEncryptionClientException(
+          new S3EncryptionClientException("top",
+              new S3EncryptionClientException("middle", NoSuchKeyException.builder().build())));
+    });
+  }
 
-  public static final class NoConstructorIOE extends IOException {
+  @Test
+  public void testNonEncryptionClientExceptionExtraction() throws Throwable {
+    intercept(SdkException.class, () -> {
+      throw maybeProcessEncryptionClientException(
+          sdkException("top", sdkException("middle", NoSuchKeyException.builder().build())));
+    });
+  }
+
+  @Test
+  public void testEncryptionClientExceptionExtractionWithRTE() throws Throwable {
+    intercept(S3EncryptionClientException.class, () -> {
+      throw maybeProcessEncryptionClientException(
+          new S3EncryptionClientException("top", new UnsupportedOperationException()));
+    });
+  }
+
+
+
+    public static final class NoConstructorIOE extends IOException {
 
     public static final String MESSAGE = "no-arg constructor";
 
@@ -149,7 +178,7 @@ public class TestErrorTranslation extends AbstractHadoopTestBase {
         .build();
     RetryOnErrorCodeCondition retry = RetryOnErrorCodeCondition.create("");
 
-    Assertions.assertThat(retry.shouldRetry(context))
+    assertThat(retry.shouldRetry(context))
         .describedAs("retry policy of MultiObjectException")
         .isFalse();
   }

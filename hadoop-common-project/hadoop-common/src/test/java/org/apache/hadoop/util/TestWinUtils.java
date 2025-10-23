@@ -19,7 +19,12 @@
 package org.apache.hadoop.util;
 
 import static org.apache.hadoop.test.PlatformAssumptions.assumeWindows;
-import static org.junit.Assert.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -30,10 +35,10 @@ import java.io.IOException;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.assertj.core.api.Assertions;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -48,17 +53,17 @@ public class TestWinUtils {
 
   String winutils;
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     // Not supported on non-Windows platforms
     assumeWindows();
     TEST_DIR.mkdirs();
-    assertTrue("Failed to create Test directory " + TEST_DIR,
-        TEST_DIR.isDirectory() );
+    assertTrue(TEST_DIR.isDirectory(),
+        "Failed to create Test directory " + TEST_DIR);
     winutils = Shell.getWinUtilsPath();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     FileUtil.fullyDelete(TEST_DIR);
   }
@@ -87,7 +92,8 @@ public class TestWinUtils {
     return new String(b);
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testLs() throws IOException {
     requireWinutils();
     final String content = "6bytes";
@@ -117,7 +123,8 @@ public class TestWinUtils {
     assertFalse(testFile.exists());
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testGroups() throws IOException {
     requireWinutils();
     String currentUser = System.getProperty("user.name");
@@ -241,7 +248,8 @@ public class TestWinUtils {
     assertTrue(FileUtil.fullyDelete(a));
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testBasicChmod() throws IOException {
     requireWinutils();
     // - Create a file.
@@ -253,7 +261,7 @@ public class TestWinUtils {
 
     try {
       readFile(a);
-      assertFalse("readFile should have failed!", true);
+      assertFalse(true, "readFile should have failed!");
     } catch (IOException ex) {
       LOG.info("Expected: Failed read from a file with permissions 377");
     }
@@ -294,7 +302,8 @@ public class TestWinUtils {
   }
 
   /** Validate behavior of chmod commands on directories on Windows. */
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testBasicChmodOnDir() throws IOException {
     requireWinutils();
     // Validate that listing a directory with no read permission fails
@@ -306,7 +315,7 @@ public class TestWinUtils {
     // Remove read permissions on directory a
     chmod("300", a);
     String[] files = a.list();
-    assertNull("Listing a directory without read permission should fail", files);
+    assertNull(files, "Listing a directory without read permission should fail");
 
     // restore permissions
     chmod("700", a);
@@ -333,12 +342,13 @@ public class TestWinUtils {
     // Deleting a file will succeed even if write permissions are not present
     // on the parent dir. Check the following link for additional details:
     // http://support.microsoft.com/kb/238018
-    assertTrue("Special behavior: deleting a file will succeed on Windows "
-        + "even if a user does not have write permissions on the parent dir",
-        b.delete());
+    assertTrue(b.delete(),
+        "Special behavior: deleting a file will succeed on Windows "
+        + "even if a user does not have write permissions on the parent dir");
 
-    assertFalse("Renaming a file should fail on the dir where a user does "
-        + "not have write permissions", b.renameTo(new File(a, "d")));
+    assertFalse(b.renameTo(new File(a, "d")),
+        "Renaming a file should fail on the dir where a user does "
+        + "not have write permissions");
 
     // restore permissions
     chmod("700", a);
@@ -372,7 +382,8 @@ public class TestWinUtils {
     chmod("700", a);
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testChmod() throws IOException {
     requireWinutils();
     testChmodInternal("7", "-------rwx");
@@ -407,7 +418,8 @@ public class TestWinUtils {
         StringUtils.toLowerCase(args[3]));
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testChown() throws IOException {
     requireWinutils();
     File a = new File(TEST_DIR, "a");
@@ -433,7 +445,8 @@ public class TestWinUtils {
     assertFalse(a.exists());
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testSymlinkRejectsForwardSlashesInLink() throws IOException {
     requireWinutils();
     File newFile = new File(TEST_DIR, "file");
@@ -450,7 +463,8 @@ public class TestWinUtils {
     }
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testSymlinkRejectsForwardSlashesInTarget() throws IOException {
     requireWinutils();
     File newFile = new File(TEST_DIR, "file");
@@ -467,7 +481,8 @@ public class TestWinUtils {
     }
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testReadLink() throws IOException {
     requireWinutils();
     // Create TEST_DIR\dir1\file1.txt
@@ -494,12 +509,12 @@ public class TestWinUtils {
     String readLinkOutput = Shell.execCommand(winutils,
         "readlink",
         dirLink.toString());
-    Assertions.assertThat(readLinkOutput).isEqualTo(dir1.toString());
+    assertThat(readLinkOutput).isEqualTo(dir1.toString());
 
     readLinkOutput = Shell.execCommand(winutils,
         "readlink",
         fileLink.toString());
-    Assertions.assertThat(readLinkOutput).isEqualTo(file1.toString());
+    assertThat(readLinkOutput).isEqualTo(file1.toString());
 
     // Try a few invalid inputs and verify we get an ExitCodeException for each.
     //
@@ -509,7 +524,7 @@ public class TestWinUtils {
       Shell.execCommand(winutils, "readlink", "");
       fail("Failed to get Shell.ExitCodeException when reading bad symlink");
     } catch (Shell.ExitCodeException ece) {
-      Assertions.assertThat(ece.getExitCode()).isEqualTo(1);
+      assertThat(ece.getExitCode()).isEqualTo(1);
     }
 
     try {
@@ -518,7 +533,7 @@ public class TestWinUtils {
       Shell.execCommand(winutils, "readlink", "ThereIsNoSuchLink");
       fail("Failed to get Shell.ExitCodeException when reading bad symlink");
     } catch (Shell.ExitCodeException ece) {
-      Assertions.assertThat(ece.getExitCode()).isEqualTo(1);
+      assertThat(ece.getExitCode()).isEqualTo(1);
     }
 
     try {
@@ -527,7 +542,7 @@ public class TestWinUtils {
       Shell.execCommand(winutils, "readlink", dir1.toString());
       fail("Failed to get Shell.ExitCodeException when reading bad symlink");
     } catch (Shell.ExitCodeException ece) {
-      Assertions.assertThat(ece.getExitCode()).isEqualTo(1);
+      assertThat(ece.getExitCode()).isEqualTo(1);
     }
 
     try {
@@ -536,7 +551,7 @@ public class TestWinUtils {
       Shell.execCommand(winutils, "readlink", file1.toString());
       fail("Failed to get Shell.ExitCodeException when reading bad symlink");
     } catch (Shell.ExitCodeException ece) {
-      Assertions.assertThat(ece.getExitCode()).isEqualTo(1);
+      assertThat(ece.getExitCode()).isEqualTo(1);
     }
 
     try {
@@ -545,11 +560,12 @@ public class TestWinUtils {
       Shell.execCommand(winutils, "readlink", "a", "b");
       fail("Failed to get Shell.ExitCodeException with bad parameters");
     } catch (Shell.ExitCodeException ece) {
-      Assertions.assertThat(ece.getExitCode()).isEqualTo(1);
+      assertThat(ece.getExitCode()).isEqualTo(1);
     }
   }
   
-  @Test(timeout=10000)
+  @Test
+  @Timeout(value = 10)
   public void testTaskCreate() throws IOException {
     requireWinutils();
     File batch = new File(TEST_DIR, "testTaskCreate.cmd");
@@ -568,10 +584,11 @@ public class TestWinUtils {
     
     String outNumber = FileUtils.readFileToString(proof);
 
-    Assertions.assertThat(outNumber).contains(testNumber);
+    assertThat(outNumber).contains(testNumber);
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testTaskCreateWithLimits() throws IOException {
     requireWinutils();
     // Generate a unique job id
@@ -601,7 +618,7 @@ public class TestWinUtils {
           + jobId, "java -Xmx256m -version");
       fail("Failed to get Shell.ExitCodeException with insufficient memory");
     } catch (Shell.ExitCodeException ece) {
-      Assertions.assertThat(ece.getExitCode()).isEqualTo(1);
+      assertThat(ece.getExitCode()).isEqualTo(1);
     }
 
     // Run tasks with wrong parameters
@@ -612,7 +629,7 @@ public class TestWinUtils {
           "-1", "foo", "job" + jobId, "cmd /c echo job" + jobId);
       fail("Failed to get Shell.ExitCodeException with bad parameters");
     } catch (Shell.ExitCodeException ece) {
-      Assertions.assertThat(ece.getExitCode()).isEqualTo(1639);
+      assertThat(ece.getExitCode()).isEqualTo(1639);
     }
 
     try {
@@ -621,7 +638,7 @@ public class TestWinUtils {
           "job" + jobId, "cmd /c echo job" + jobId);
       fail("Failed to get Shell.ExitCodeException with bad parameters");
     } catch (Shell.ExitCodeException ece) {
-      Assertions.assertThat(ece.getExitCode()).isEqualTo(1639);
+      assertThat(ece.getExitCode()).isEqualTo(1639);
     }
 
     try {
@@ -630,7 +647,7 @@ public class TestWinUtils {
           "job" + jobId, "cmd /c echo job" + jobId);
       fail("Failed to get Shell.ExitCodeException with bad parameters");
     } catch (Shell.ExitCodeException ece) {
-      Assertions.assertThat(ece.getExitCode()).isEqualTo(1639);
+      assertThat(ece.getExitCode()).isEqualTo(1639);
     }
   }
 }

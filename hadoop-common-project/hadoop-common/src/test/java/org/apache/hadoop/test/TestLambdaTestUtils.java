@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.test;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -39,7 +39,7 @@ import static org.apache.hadoop.test.GenericTestUtils.*;
  * This test suite includes Java 8 and Java 7 code; the Java 8 code exists
  * to verify that the API is easily used with Lambda expressions.
  */
-public class TestLambdaTestUtils extends Assert {
+public class TestLambdaTestUtils extends Assertions {
 
   public static final int INTERVAL = 10;
   public static final int TIMEOUT = 50;
@@ -116,7 +116,7 @@ public class TestLambdaTestUtils extends Assert {
    * @param expected expected value
    */
   protected void assertRetryCount(int expected) {
-    assertEquals(retry.toString(), expected, retry.getInvocationCount());
+    assertEquals(expected, retry.getInvocationCount(), retry.toString());
   }
 
   /**
@@ -124,8 +124,8 @@ public class TestLambdaTestUtils extends Assert {
    * @param minCount minimum value
    */
   protected void assertMinRetryCount(int minCount) {
-    assertTrue("retry count of " + retry + " is not >= " + minCount,
-        minCount <= retry.getInvocationCount());
+    assertTrue(minCount <= retry.getInvocationCount(),
+        "retry count of " + retry + " is not >= " + minCount);
   }
 
   /**
@@ -181,8 +181,8 @@ public class TestLambdaTestUtils extends Assert {
           TIMEOUT_FAILURE_HANDLER);
       fail("should not have got here");
     } catch (TimeoutException e) {
-      assertEquals(linearRetry.toString(),
-          2, linearRetry.getInvocationCount());
+      assertEquals(2, linearRetry.getInvocationCount(),
+          linearRetry.toString());
     }
   }
 
@@ -499,7 +499,7 @@ public class TestLambdaTestUtils extends Assert {
 
   @Test
   public void testEvalToSuccess() {
-    assertTrue("Eval to success", eval(() -> true));
+    assertTrue(eval(() -> true), "Eval to success");
   }
 
   /**

@@ -29,9 +29,9 @@ import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.slf4j.event.Level;
 
 public class TestClientBlockVerification {
@@ -44,7 +44,7 @@ public class TestClientBlockVerification {
   static {
     GenericTestUtils.setLogLevel(BlockReaderRemote.LOG, Level.TRACE);
   }
-  @BeforeClass
+  @BeforeAll
   public static void setupCluster() throws Exception {
     final int REPLICATION_FACTOR = 1;
     util = new BlockReaderTestUtil(REPLICATION_FACTOR);
@@ -118,7 +118,7 @@ public class TestClientBlockVerification {
   }
 
 
-  @AfterClass
+  @AfterAll
   public static void teardownCluster() throws Exception {
     util.shutdown();
   }

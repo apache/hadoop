@@ -36,11 +36,11 @@ import org.apache.hadoop.mapreduce.split.JobSplit.TaskSplitMetaInfo;
 import org.apache.hadoop.mapreduce.split.JobSplitWriter;
 import org.apache.hadoop.mapreduce.split.SplitMetaInfoReader;
 import org.apache.hadoop.util.ReflectionUtils;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  *  Validates map phase progress.
@@ -119,7 +119,7 @@ public class TestMapProgress {
     
     public AMFeedback statusUpdate(TaskAttemptID taskId, TaskStatus taskStatus) 
     throws IOException, InterruptedException {
-      StringBuffer buf = new StringBuffer("Task ");
+      StringBuilder buf = new StringBuilder("Task ");
       buf.append(taskId);
       if (taskStatus != null) {
         buf.append(" making progress to ");
@@ -193,8 +193,8 @@ public class TestMapProgress {
         return;
       }
       // validate map task progress when the map task is in map phase
-      assertTrue("Map progress is not the expected value.",
-                 Math.abs(mapTaskProgress - ((float)recordNum/3)) < 0.001);
+      assertTrue(Math.abs(mapTaskProgress - ((float)recordNum/3)) < 0.001,
+          "Map progress is not the expected value.");
     }
   }
 

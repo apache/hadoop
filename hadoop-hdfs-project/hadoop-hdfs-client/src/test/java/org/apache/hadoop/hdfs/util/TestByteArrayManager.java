@@ -24,8 +24,7 @@ import org.apache.hadoop.hdfs.util.ByteArrayManager.FixedLengthManager;
 import org.apache.hadoop.hdfs.util.ByteArrayManager.ManagerMap;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.event.Level;
@@ -43,6 +42,12 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Test {@link ByteArrayManager}.
@@ -93,15 +98,15 @@ public class TestByteArrayManager {
     }
 
     // check futures
-    Assert.assertEquals(n, futures.size());
+    assertEquals(n, futures.size());
     for(int i = 0; i < n; i++) {
-      Assert.assertEquals(i + 1, futures.get(i).get().intValue());
+      assertEquals(i + 1, futures.get(i).get().intValue());
     }
-    Assert.assertEquals(n, c.getCount());
+    assertEquals(n, c.getCount());
 
     // test auto-reset
     Thread.sleep(countResetTimePeriodMs + 100);
-    Assert.assertEquals(1, c.increment());
+    assertEquals(1, c.increment());
   }
 
   
@@ -131,12 +136,12 @@ public class TestByteArrayManager {
         }        
         waitForAll(allocator.futures);
   
-        Assert.assertEquals(countThreshold,
+        assertEquals(countThreshold,
             counters.get(arrayLength, false).getCount());
-        Assert.assertNull(managers.get(arrayLength, false));
+        assertNull(managers.get(arrayLength, false));
         for(int n : uncommonArrays) {
-          Assert.assertNull(counters.get(n, false));
-          Assert.assertNull(managers.get(n, false));
+          assertNull(counters.get(n, false));
+          assertNull(managers.get(n, false));
         }
       }
 
@@ -146,7 +151,7 @@ public class TestByteArrayManager {
         }
 
         for(Future<Integer> f : recycler.furtures) {
-          Assert.assertEquals(-1, f.get().intValue());
+          assertEquals(-1, f.get().intValue());
         }
         recycler.furtures.clear();
       }
@@ -154,8 +159,8 @@ public class TestByteArrayManager {
       { // allocate one more
         allocator.submit(arrayLength).get();
 
-        Assert.assertEquals(countThreshold + 1, counters.get(arrayLength, false).getCount());
-        Assert.assertNotNull(managers.get(arrayLength, false));
+        assertEquals(countThreshold + 1, counters.get(arrayLength, false).getCount());
+        assertNotNull(managers.get(arrayLength, false));
       }
 
       { // recycle the remaining arrays
@@ -182,25 +187,25 @@ public class TestByteArrayManager {
           if (threadState != Thread.State.RUNNABLE
               && threadState != Thread.State.WAITING
               && threadState != Thread.State.TIMED_WAITING) {
-            Assert.fail("threadState = " + threadState);
+            fail("threadState = " + threadState);
           }
         }
 
         // recycle an array
         recycler.submit(removeLast(allocator.futures).get());
-        Assert.assertEquals(1, removeLast(recycler.furtures).get().intValue());
+        assertEquals(1, removeLast(recycler.furtures).get().intValue());
 
         // check if the thread is unblocked
         Thread.sleep(100);
-        Assert.assertEquals(Thread.State.TERMINATED, t.getState());
+        assertEquals(Thread.State.TERMINATED, t.getState());
             
         // recycle the remaining, the recycle should be full.
-        Assert.assertEquals(countLimit-1, allocator.recycleAll(recycler));
+        assertEquals(countLimit-1, allocator.recycleAll(recycler));
         recycler.submit(t.array);
         recycler.verify(countLimit);
 
         // recycle one more; it should not increase the free queue size
-        Assert.assertEquals(countLimit, bam.release(new byte[arrayLength]));
+        assertEquals(countLimit, bam.release(new byte[arrayLength]));
       }
     } finally {
       allocator.pool.shutdown();
@@ -255,7 +260,7 @@ public class TestByteArrayManager {
         @Override
         public byte[] call() throws Exception {
           final byte[] array = bam.newByteArray(arrayLength);
-          Assert.assertEquals(arrayLength, array.length);
+          assertEquals(arrayLength, array.length);
           return array;
         }
       });
@@ -294,10 +299,10 @@ public class TestByteArrayManager {
     }
 
     void verify(final int expectedSize) throws Exception {
-      Assert.assertEquals(expectedSize, furtures.size());
+      assertEquals(expectedSize, furtures.size());
       Collections.sort(furtures, CMP);
       for(int i = 0; i < furtures.size(); i++) {
-        Assert.assertEquals(i+1, furtures.get(i).get().intValue());
+        assertEquals(i+1, furtures.get(i).get().intValue());
       }
       furtures.clear();
     }
@@ -364,24 +369,24 @@ public class TestByteArrayManager {
     randomRecycler.start();
     
     randomRecycler.join();
-    Assert.assertTrue(exceptions.isEmpty());
+    assertTrue(exceptions.isEmpty());
 
-    Assert.assertNull(counters.get(0, false));
+    assertNull(counters.get(0, false));
     for(int i = 1; i < runners.length; i++) {
       if (!runners[i].assertionErrors.isEmpty()) {
         for(AssertionError e : runners[i].assertionErrors) {
           LOG.error("AssertionError " + i, e);
         }
-        Assert.fail(runners[i].assertionErrors.size() + " AssertionError(s)");
+        fail(runners[i].assertionErrors.size() + " AssertionError(s)");
       }
       
       final int arrayLength = Runner.index2arrayLength(i);
       final boolean exceedCountThreshold = counters.get(arrayLength, false).getCount() > countThreshold; 
       final FixedLengthManager m = managers.get(arrayLength, false);
       if (exceedCountThreshold) {
-        Assert.assertNotNull(m);
+        assertNotNull(m);
       } else {
-        Assert.assertNull(m);
+        assertNull(m);
       }
     }
   }
@@ -391,7 +396,7 @@ public class TestByteArrayManager {
       Thread.sleep(ms);
     } catch (InterruptedException e) {
       e.printStackTrace();
-      Assert.fail("Sleep is interrupted: " + e);
+      fail("Sleep is interrupted: " + e);
     }
   }
 
@@ -443,8 +448,8 @@ public class TestByteArrayManager {
               maxArrayLength - lower) + lower + 1;
           final byte[] array = bam.newByteArray(arrayLength);
           try {
-            Assert.assertEquals("arrayLength=" + arrayLength + ", lower=" + lower,
-                maxArrayLength, array.length);
+            assertEquals(maxArrayLength, array.length, "arrayLength=" + arrayLength +
+                ", lower=" + lower);
           } catch(AssertionError e) {
             assertionErrors.add(e);
           }
@@ -507,7 +512,7 @@ public class TestByteArrayManager {
             }
           } catch (Exception e) {
             e.printStackTrace();
-            Assert.fail(this + " has " + e);
+            fail(this + " has " + e);
           }
         }
 

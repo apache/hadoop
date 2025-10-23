@@ -24,9 +24,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ClusterNodeTracker;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import org.junit.Test;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
@@ -71,12 +71,12 @@ public class TestVisitedResourceRequestTracker {
         new VisitedResourceRequestTracker(nodeTracker);
 
     // Visit ANY request first
-    assertTrue(FIRST_CALL_FAILURE, tracker.visit(anyRequest));
+    assertTrue(tracker.visit(anyRequest), FIRST_CALL_FAILURE);
 
     // All other requests should return false
-    assertFalse(ANY_VISITED + RACK_FAILURE, tracker.visit(rackRequest));
-    assertFalse(ANY_VISITED + NODE_FAILURE, tracker.visit(node1Request));
-    assertFalse(ANY_VISITED + NODE_FAILURE, tracker.visit(node2Request));
+    assertFalse(tracker.visit(rackRequest), ANY_VISITED + RACK_FAILURE);
+    assertFalse(tracker.visit(node1Request), ANY_VISITED + NODE_FAILURE);
+    assertFalse(tracker.visit(node2Request), ANY_VISITED + NODE_FAILURE);
   }
 
   @Test
@@ -85,12 +85,12 @@ public class TestVisitedResourceRequestTracker {
         new VisitedResourceRequestTracker(nodeTracker);
 
     // Visit rack request first
-    assertTrue(FIRST_CALL_FAILURE, tracker.visit(rackRequest));
+    assertTrue(tracker.visit(rackRequest), FIRST_CALL_FAILURE);
 
     // All other requests should return false
-    assertFalse(RACK_VISITED + ANY_FAILURE, tracker.visit(anyRequest));
-    assertFalse(RACK_VISITED + NODE_FAILURE, tracker.visit(node1Request));
-    assertFalse(RACK_VISITED + NODE_FAILURE, tracker.visit(node2Request));
+    assertFalse(tracker.visit(anyRequest), RACK_VISITED + ANY_FAILURE);
+    assertFalse(tracker.visit(node1Request), RACK_VISITED + NODE_FAILURE);
+    assertFalse(tracker.visit(node2Request), RACK_VISITED + NODE_FAILURE);
   }
 
   @Test
@@ -99,14 +99,13 @@ public class TestVisitedResourceRequestTracker {
         new VisitedResourceRequestTracker(nodeTracker);
 
     // Visit node1 first
-    assertTrue(FIRST_CALL_FAILURE, tracker.visit(node1Request));
+    assertTrue(tracker.visit(node1Request), FIRST_CALL_FAILURE);
 
     // Rack and ANY should return false
-    assertFalse(NODE_VISITED + ANY_FAILURE, tracker.visit(anyRequest));
-    assertFalse(NODE_VISITED + RACK_FAILURE, tracker.visit(rackRequest));
+    assertFalse(tracker.visit(anyRequest), NODE_VISITED + ANY_FAILURE);
+    assertFalse(tracker.visit(rackRequest), NODE_VISITED + RACK_FAILURE);
 
     // The other node should return true
-    assertTrue(NODE_VISITED + "Different node visit failed",
-        tracker.visit(node2Request));
+    assertTrue(tracker.visit(node2Request), NODE_VISITED + "Different node visit failed");
   }
 }

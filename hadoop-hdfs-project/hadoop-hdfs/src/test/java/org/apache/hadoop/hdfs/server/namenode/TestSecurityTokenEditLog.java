@@ -18,7 +18,6 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
-import static org.junit.Assert.assertEquals;
 
 import java.io.File;
 import java.io.IOException;
@@ -35,14 +34,18 @@ import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifie
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretManager;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
+import org.apache.hadoop.hdfs.util.RwLockMode;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.*;
 
 /**
@@ -164,7 +167,7 @@ public class TestSecurityTokenEditLog {
         FSEditLogLoader loader = new FSEditLogLoader(namesystem, 0);        
         long numEdits = loader.loadFSEdits(
             new EditLogFileInputStream(editFile), 1);
-        assertEquals("Verification for " + editFile, expectedTransactions, numEdits);
+        assertEquals(expectedTransactions, numEdits, "Verification for " + editFile);
       }
     } finally {
       if(fileSys != null) fileSys.close();
@@ -172,7 +175,8 @@ public class TestSecurityTokenEditLog {
     }
   }
   
-  @Test(timeout=10000)
+  @Test
+  @Timeout(value = 10)
   public void testEditsForCancelOnTokenExpire() throws IOException,
   InterruptedException {
     long renewInterval = 2000;
@@ -196,8 +200,8 @@ public class TestSecurityTokenEditLog {
         @Override
         public Void answer(InvocationOnMock invocation) throws Throwable {
           // fsn claims read lock if either read or write locked.
-          Assert.assertTrue(fsnRef.get().hasReadLock());
-          Assert.assertFalse(fsnRef.get().hasWriteLock());
+          assertTrue(fsnRef.get().hasReadLock(RwLockMode.FS));
+          assertFalse(fsnRef.get().hasWriteLock(RwLockMode.FS));
           return null;
         }
       }

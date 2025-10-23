@@ -20,7 +20,6 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueResourceQuotas;
-import org.junit.Assert;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -32,6 +31,8 @@ import java.util.function.Supplier;
 
 import static org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager.NO_LABEL;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueueUtils.EPSILON;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Provides a fluent API to assert resource and capacity attributes of queues.
@@ -64,15 +65,15 @@ class QueueAssertionBuilder {
   }
 
   public class QueueAssertion {
-    private final String queuePath;
+    private final QueuePath queuePath;
     private final List<QueueAssertion.ValueAssertion> assertions = new ArrayList<>();
 
-    QueueAssertion(String queuePath) {
+    QueueAssertion(QueuePath queuePath) {
       this.queuePath = queuePath;
     }
 
 
-    public QueueAssertion withQueue(String queuePath) {
+    public QueueAssertion withQueue(QueuePath queuePath) {
       return QueueAssertionBuilder.this.withQueue(queuePath);
     }
 
@@ -139,9 +140,9 @@ class QueueAssertionBuilder {
 
       public void withResourceSupplier(
           BiFunction<QueueResourceQuotas, String, Resource> assertion, String messageInfo) {
-        CSQueue queue = cs.getQueue(queuePath);
+        CSQueue queue = cs.getQueue(queuePath.getFullPath());
         if (queue == null) {
-          Assert.fail("Queue " + queuePath + " is not found");
+          fail("Queue " + queuePath + " is not found");
         }
 
         assertionType = messageInfo;
@@ -150,9 +151,9 @@ class QueueAssertionBuilder {
 
       public void withCapacitySupplier(
           BiFunction<QueueCapacities, String, Float> assertion, String messageInfo) {
-        CSQueue queue = cs.getQueue(queuePath);
+        CSQueue queue = cs.getQueue(queuePath.getFullPath());
         if (queue == null) {
-          Assert.fail("Queue " + queuePath + " is not found");
+          fail("Queue " + queuePath + " is not found");
         }
         assertionType = messageInfo;
         valueSupplier = () -> assertion.apply(queue.getQueueCapacities(), label);
@@ -161,7 +162,7 @@ class QueueAssertionBuilder {
 
   }
 
-  private final Map<String, QueueAssertion> assertions = new LinkedHashMap<>();
+  private final Map<QueuePath, QueueAssertion> assertions = new LinkedHashMap<>();
 
   public QueueAssertionBuilder build() {
     return this;
@@ -172,7 +173,7 @@ class QueueAssertionBuilder {
    * @param queuePath path of the queue
    * @return queue assertion group
    */
-  public QueueAssertion withQueue(String queuePath) {
+  public QueueAssertion withQueue(QueuePath queuePath) {
     assertions.putIfAbsent(queuePath, new QueueAssertion(queuePath));
     return assertions.get(queuePath);
   }
@@ -181,20 +182,20 @@ class QueueAssertionBuilder {
    * Executes assertions created for all queues.
    */
   public void finishAssertion() {
-    for (Map.Entry<String, QueueAssertion> assertionEntry : assertions.entrySet()) {
+    for (Map.Entry<QueuePath, QueueAssertion> assertionEntry : assertions.entrySet()) {
       for (QueueAssertion.ValueAssertion assertion : assertionEntry.getValue().assertions) {
         if (assertion.resourceSupplier != null) {
           String errorMessage = String.format(RESOURCE_ASSERTION_ERROR_MESSAGE,
               assertion.assertionType, assertionEntry.getKey(),
               assertion.expectedResource.toString(), assertion.label);
-          Assert.assertEquals(errorMessage, assertion.expectedResource,
-              assertion.resourceSupplier.get());
+          assertEquals(assertion.expectedResource,
+              assertion.resourceSupplier.get(), errorMessage);
         } else {
           String errorMessage = String.format(ASSERTION_ERROR_MESSAGE,
               assertion.assertionType, assertionEntry.getKey(), assertion.expectedValue,
               assertion.label);
-          Assert.assertEquals(errorMessage, assertion.expectedValue,
-              assertion.valueSupplier.get(), EPSILON);
+          assertEquals(assertion.expectedValue,
+              assertion.valueSupplier.get(), EPSILON, errorMessage);
         }
       }
     }
@@ -204,7 +205,7 @@ class QueueAssertionBuilder {
    * Returns all queues that have defined assertions.
    * @return queue paths
    */
-  public Set<String> getQueues() {
+  public Set<QueuePath> getQueues() {
     return assertions.keySet();
   }
 }

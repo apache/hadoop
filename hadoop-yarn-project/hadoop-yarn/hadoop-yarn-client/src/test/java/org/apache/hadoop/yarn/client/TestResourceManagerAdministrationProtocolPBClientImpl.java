@@ -47,14 +47,14 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshUserToGroupsMapp
 import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceResponse;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Test ResourceManagerAdministrationProtocolPBClientImpl. Test a methods and the proxy without  logic.
@@ -72,7 +72,7 @@ public class TestResourceManagerAdministrationProtocolPBClientImpl {
    * Start resource manager server
    */
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpResourceManager() throws IOException,
           InterruptedException {
     Configuration.addDefaultResource("config-with-security.xml");
@@ -104,7 +104,7 @@ public class TestResourceManagerAdministrationProtocolPBClientImpl {
     }.start();
 
     boolean rmStarted = rmStartedSignal.await(60000L, TimeUnit.MILLISECONDS);
-    Assert.assertTrue("ResourceManager failed to start up.", rmStarted);
+    assertTrue(rmStarted, "ResourceManager failed to start up.");
 
     LOG.info("ResourceManager RMAdmin address: {}.",
             configuration.get(YarnConfiguration.RM_ADMIN_ADDRESS));
@@ -197,7 +197,7 @@ public class TestResourceManagerAdministrationProtocolPBClientImpl {
    * Stop server
    */
 
-  @AfterClass
+  @AfterAll
   public static void tearDownResourceManager() throws InterruptedException {
     if (resourceManager != null) {
       LOG.info("Stopping ResourceManager...");

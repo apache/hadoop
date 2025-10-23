@@ -1204,6 +1204,12 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
     return createTemporary(storageType, storageId, b, false);
   }
 
+  @Override
+  public ReplicaHandler createRbw(StorageType storageType, String storageId,
+      ExtendedBlock b, boolean allowLazyPersist, long newGS) throws IOException {
+    return createRbw(storageType, storageId, b, allowLazyPersist);
+  }
+
   @Override // FsDatasetSpi
   public synchronized ReplicaHandler createTemporary(StorageType storageType,
       String storageId, ExtendedBlock b, boolean isTransfer)

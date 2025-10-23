@@ -118,11 +118,7 @@ public class MultiObjectDeleteException extends S3Exception {
     String exitCode = "";
     for (S3Error error : errors()) {
       String code = error.code();
-      String item = String.format("%s: %s%s: %s%n", code, error.key(),
-          (error.versionId() != null
-              ? (" (" + error.versionId() + ")")
-              : ""),
-          error.message());
+      String item = errorToString(error);
       LOG.info(item);
       result.append(item);
       if (exitCode == null || exitCode.isEmpty() || ACCESS_DENIED.equals(code)) {
@@ -135,5 +131,19 @@ public class MultiObjectDeleteException extends S3Exception {
     } else {
       return new AWSS3IOException(result.toString(), this);
     }
+  }
+
+  /**
+   * Convert an error to a string.
+   * @param error error from a delete request
+   * @return string value
+   */
+  public static String errorToString(final S3Error error) {
+    String code = error.code();
+    return String.format("%s: %s%s: %s%n", code, error.key(),
+        (error.versionId() != null
+            ? (" (" + error.versionId() + ")")
+            : ""),
+        error.message());
   }
 }

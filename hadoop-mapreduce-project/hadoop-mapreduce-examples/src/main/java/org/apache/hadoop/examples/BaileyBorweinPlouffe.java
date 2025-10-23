@@ -25,6 +25,7 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.PrintStream;
 import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -53,7 +54,6 @@ import org.apache.hadoop.util.ToolRunner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 
 /**
  * A map/reduce program that uses Bailey-Borwein-Plouffe to compute exact 
@@ -158,7 +158,7 @@ public class BaileyBorweinPlouffe extends Configured implements Tool {
         final OutputStream outputstream = fs.create(outfile);
         try {
           final PrintWriter out = new PrintWriter(
-              new OutputStreamWriter(outputstream, Charsets.UTF_8), true);
+              new OutputStreamWriter(outputstream, StandardCharsets.UTF_8), true);
           // write hex text
           print(out, hex.iterator(), "Pi = 0x3.", "%02X", 5, 5);
           out.println("Total number of hexadecimal digits is "

@@ -1,0 +1,16 @@
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+  "dependencies": [
+    "boost",
+    "protobuf",
+    "openssl",
+    "zlib"
+  ],
+  "builtin-baseline": "289a69379604112a433874fe8b9812dad3103341",
+  "overrides": [
+    {
+      "name": "protobuf",
+      "version": "3.21.12"
+    }
+  ]
+}

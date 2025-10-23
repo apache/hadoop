@@ -24,18 +24,11 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.util.Collections;
-import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Stream;
 
-import org.apache.curator.ensemble.fixed.FixedEnsembleProvider;
+import org.apache.curator.RetryPolicy;
 import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.framework.CuratorFrameworkFactory;
-import org.apache.curator.framework.CuratorFrameworkFactory.Builder;
-import org.apache.curator.framework.api.ACLProvider;
-import org.apache.curator.framework.imps.DefaultACLProvider;
 import org.apache.curator.framework.recipes.cache.ChildData;
 import org.apache.curator.framework.recipes.cache.CuratorCache;
 import org.apache.curator.framework.recipes.cache.CuratorCacheBridge;
@@ -43,28 +36,28 @@ import org.apache.curator.framework.recipes.cache.CuratorCacheListener;
 import org.apache.curator.framework.recipes.shared.SharedCount;
 import org.apache.curator.framework.recipes.shared.VersionedValue;
 import org.apache.curator.retry.RetryNTimes;
+import org.apache.curator.utils.ZookeeperFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.security.SecurityUtil;
-import org.apache.hadoop.security.authentication.util.JaasConfiguration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.security.SecurityUtil.TruststoreKeystore;
+import org.apache.hadoop.security.authentication.util.ZookeeperClient;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenManager;
+
+import static org.apache.hadoop.security.SecurityUtil.getServerPrincipal;
 import static org.apache.hadoop.util.Time.now;
-import org.apache.hadoop.util.curator.ZKCuratorManager;
+
+import org.apache.hadoop.util.curator.ZKCuratorManager.HadoopZookeeperFactory;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.KeeperException.NoNodeException;
-import org.apache.zookeeper.ZooDefs.Perms;
-import org.apache.zookeeper.client.ZKClientConfig;
-import org.apache.zookeeper.data.ACL;
-import org.apache.zookeeper.data.Id;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.util.Preconditions;
 
 /**
  * An implementation of {@link AbstractDelegationTokenSecretManager} that
@@ -103,6 +96,16 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
   public static final String ZK_DTSM_TOKEN_WATCHER_ENABLED = ZK_CONF_PREFIX
       + "token.watcher.enabled";
   public static final boolean ZK_DTSM_TOKEN_WATCHER_ENABLED_DEFAULT = true;
+
+  public static final String ZK_DTSM_ZK_SSL_ENABLED = ZK_CONF_PREFIX + "ssl.enabled";
+  public static final String ZK_DTSM_ZK_SSL_KEYSTORE_LOCATION =
+      ZK_CONF_PREFIX + "ssl.keystore.location";
+  public static final String ZK_DTSM_ZK_SSL_KEYSTORE_PASSWORD =
+      ZK_CONF_PREFIX + "ssl.keystore.password";
+  public static final String ZK_DTSM_ZK_SSL_TRUSTSTORE_LOCATION =
+      ZK_CONF_PREFIX + "ssl.truststore.location";
+  public static final String ZK_DTSM_ZK_SSL_TRUSTSTORE_PASSWORD =
+      ZK_CONF_PREFIX + "ssl.truststore.password";
 
   public static final int ZK_DTSM_ZK_NUM_RETRIES_DEFAULT = 3;
   public static final int ZK_DTSM_ZK_SESSION_TIMEOUT_DEFAULT = 10000;
@@ -149,7 +152,7 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
   private final int seqNumBatchSize;
   private int currentSeqNum;
   private int currentMaxSeqNum;
-  private final ReentrantLock currentSeqNumLock;
+
   private final boolean isTokenWatcherEnabled;
 
   public ZKDelegationTokenSecretManager(Configuration conf) {
@@ -165,94 +168,74 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
         ZK_DTSM_TOKEN_SEQNUM_BATCH_SIZE_DEFAULT);
     isTokenWatcherEnabled = conf.getBoolean(ZK_DTSM_TOKEN_WATCHER_ENABLED,
         ZK_DTSM_TOKEN_WATCHER_ENABLED_DEFAULT);
-    this.currentSeqNumLock = new ReentrantLock(true);
+    
+    String workPath = conf.get(ZK_DTSM_ZNODE_WORKING_PATH, ZK_DTSM_ZNODE_WORKING_PATH_DEAFULT);
+    String nameSpace = workPath + "/" + ZK_DTSM_NAMESPACE;
     if (CURATOR_TL.get() != null) {
-      zkClient =
-          CURATOR_TL.get().usingNamespace(
-              conf.get(ZK_DTSM_ZNODE_WORKING_PATH,
-                  ZK_DTSM_ZNODE_WORKING_PATH_DEAFULT)
-                  + "/" + ZK_DTSM_NAMESPACE);
+      zkClient = CURATOR_TL.get().usingNamespace(nameSpace);
       isExternalClient = true;
     } else {
-      String connString = conf.get(ZK_DTSM_ZK_CONNECTION_STRING);
-      Preconditions.checkNotNull(connString,
-          "Zookeeper connection string cannot be null");
-      String authType = conf.get(ZK_DTSM_ZK_AUTH_TYPE);
-
-      // AuthType has to be explicitly set to 'none' or 'sasl'
-      Preconditions.checkNotNull(authType, "Zookeeper authType cannot be null !!");
-      Preconditions.checkArgument(
-          authType.equals("sasl") || authType.equals("none"),
-          "Zookeeper authType must be one of [none, sasl]");
-
-      Builder builder = null;
-      try {
-        ACLProvider aclProvider = null;
-        if (authType.equals("sasl")) {
-          LOG.info("Connecting to ZooKeeper with SASL/Kerberos"
-              + "and using 'sasl' ACLs");
-          String principal = setJaasConfiguration(conf);
-          System.setProperty(ZKClientConfig.LOGIN_CONTEXT_NAME_KEY,
-                             JAAS_LOGIN_ENTRY_NAME);
-          System.setProperty("zookeeper.authProvider.1",
-              "org.apache.zookeeper.server.auth.SASLAuthenticationProvider");
-          aclProvider = new SASLOwnerACLProvider(principal);
-        } else { // "none"
-          LOG.info("Connecting to ZooKeeper without authentication");
-          aclProvider = new DefaultACLProvider(); // open to everyone
-        }
-        int sessionT =
-            conf.getInt(ZK_DTSM_ZK_SESSION_TIMEOUT,
-                ZK_DTSM_ZK_SESSION_TIMEOUT_DEFAULT);
-        int numRetries =
-            conf.getInt(ZK_DTSM_ZK_NUM_RETRIES, ZK_DTSM_ZK_NUM_RETRIES_DEFAULT);
-        builder =
-            CuratorFrameworkFactory
-                .builder()
-                .zookeeperFactory(new ZKCuratorManager.HadoopZookeeperFactory(
-                    conf.get(ZK_DTSM_ZK_KERBEROS_SERVER_PRINCIPAL)))
-                .aclProvider(aclProvider)
-                .namespace(
-                    conf.get(ZK_DTSM_ZNODE_WORKING_PATH,
-                        ZK_DTSM_ZNODE_WORKING_PATH_DEAFULT)
-                        + "/"
-                        + ZK_DTSM_NAMESPACE
-                )
-                .sessionTimeoutMs(sessionT)
-                .connectionTimeoutMs(
-                    conf.getInt(ZK_DTSM_ZK_CONNECTION_TIMEOUT,
-                        ZK_DTSM_ZK_CONNECTION_TIMEOUT_DEFAULT)
-                )
-                .retryPolicy(
-                    new RetryNTimes(numRetries, numRetries == 0 ? 0 : sessionT / numRetries));
-      } catch (Exception ex) {
-        throw new RuntimeException("Could not Load ZK acls or auth: " + ex, ex);
-      }
-      zkClient = builder.ensembleProvider(new FixedEnsembleProvider(connString))
-          .build();
+      zkClient = createCuratorClient(conf, nameSpace);
       isExternalClient = false;
     }
   }
 
-  private String setJaasConfiguration(Configuration config) throws Exception {
-    String keytabFile =
-        config.get(ZK_DTSM_ZK_KERBEROS_KEYTAB, "").trim();
-    if (keytabFile == null || keytabFile.length() == 0) {
-      throw new IllegalArgumentException(ZK_DTSM_ZK_KERBEROS_KEYTAB
-          + " must be specified");
-    }
-    String principal =
-        config.get(ZK_DTSM_ZK_KERBEROS_PRINCIPAL, "").trim();
-    principal = SecurityUtil.getServerPrincipal(principal, "");
-    if (principal == null || principal.length() == 0) {
-      throw new IllegalArgumentException(ZK_DTSM_ZK_KERBEROS_PRINCIPAL
-          + " must be specified");
-    }
+  @VisibleForTesting
+  static CuratorFramework createCuratorClient(Configuration conf, String namespace) {
+    try {
+      String connString = conf.get(ZK_DTSM_ZK_CONNECTION_STRING);
+      String authType = conf.get(ZK_DTSM_ZK_AUTH_TYPE);
+      String keytab = conf.get(ZK_DTSM_ZK_KERBEROS_KEYTAB, "").trim();
+      String principal = getServerPrincipal(conf.get(ZK_DTSM_ZK_KERBEROS_PRINCIPAL, "").trim(), "");
+      int sessionTimeout =
+          conf.getInt(ZK_DTSM_ZK_SESSION_TIMEOUT, ZK_DTSM_ZK_SESSION_TIMEOUT_DEFAULT);
+      int connectionTimeout =
+          conf.getInt(ZK_DTSM_ZK_CONNECTION_TIMEOUT, ZK_DTSM_ZK_CONNECTION_TIMEOUT_DEFAULT);
+      int retryCount =
+          conf.getInt(ZK_DTSM_ZK_NUM_RETRIES, ZK_DTSM_ZK_NUM_RETRIES_DEFAULT);
+      RetryPolicy retryPolicy =
+          new RetryNTimes(retryCount, retryCount == 0 ? 0 : sessionTimeout / retryCount);
 
-    JaasConfiguration jConf =
-        new JaasConfiguration(JAAS_LOGIN_ENTRY_NAME, principal, keytabFile);
-    javax.security.auth.login.Configuration.setConfiguration(jConf);
-    return principal.split("[/@]")[0];
+      boolean isSSLEnabled =
+          conf.getBoolean(CommonConfigurationKeys.ZK_CLIENT_SSL_ENABLED,
+              conf.getBoolean(ZK_DTSM_ZK_SSL_ENABLED, false));
+      String keystoreLocation = conf.get(ZK_DTSM_ZK_SSL_KEYSTORE_LOCATION,
+          conf.get(CommonConfigurationKeys.ZK_SSL_KEYSTORE_LOCATION, ""));
+      String keystorePassword = conf.get(ZK_DTSM_ZK_SSL_KEYSTORE_PASSWORD,
+          conf.get(CommonConfigurationKeys.ZK_SSL_KEYSTORE_PASSWORD, ""));
+      String truststoreLocation = conf.get(ZK_DTSM_ZK_SSL_TRUSTSTORE_LOCATION,
+          conf.get(CommonConfigurationKeys.ZK_SSL_TRUSTSTORE_LOCATION, ""));
+      String truststorePassword = conf.get(ZK_DTSM_ZK_SSL_TRUSTSTORE_PASSWORD,
+          conf.get(CommonConfigurationKeys.ZK_SSL_TRUSTSTORE_PASSWORD, ""));
+
+      ZookeeperFactory zkFactory = new HadoopZookeeperFactory(
+          conf.get(ZK_DTSM_ZK_KERBEROS_SERVER_PRINCIPAL),
+          conf.get(ZK_DTSM_ZK_KERBEROS_PRINCIPAL),
+          conf.get(ZK_DTSM_ZK_KERBEROS_KEYTAB),
+          isSSLEnabled,
+          new TruststoreKeystore(conf));
+
+
+      return ZookeeperClient.configure()
+          .withConnectionString(connString)
+          .withNamespace(namespace)
+          .withZookeeperFactory(zkFactory)
+          .withAuthType(authType)
+          .withKeytab(keytab)
+          .withPrincipal(principal)
+          .withJaasLoginEntryName(JAAS_LOGIN_ENTRY_NAME)
+          .withRetryPolicy(retryPolicy)
+          .withSessionTimeout(sessionTimeout)
+          .withConnectionTimeout(connectionTimeout)
+          .enableSSL(isSSLEnabled)
+          .withKeystore(keystoreLocation)
+          .withKeystorePassword(keystorePassword)
+          .withTruststore(truststoreLocation)
+          .withTruststorePassword(truststorePassword)
+          .create();
+    } catch (Exception ex) {
+      throw new RuntimeException("Could not Load ZK acls or auth: " + ex, ex);
+    }
   }
 
   @Override
@@ -521,28 +504,24 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
     // The secret manager will keep a local range of seq num which won't be
     // seen by peers, so only when the range is exhausted it will ask zk for
     // another range again
-    try {
-      this.currentSeqNumLock.lock();
-      if (currentSeqNum >= currentMaxSeqNum) {
-        try {
-          // after a successful batch request, we can get the range starting point
-          currentSeqNum = incrSharedCount(delTokSeqCounter, seqNumBatchSize);
-          currentMaxSeqNum = currentSeqNum + seqNumBatchSize;
-          LOG.info("Fetched new range of seq num, from {} to {} ",
-              currentSeqNum+1, currentMaxSeqNum);
-        } catch (InterruptedException e) {
-          // The ExpirationThread is just finishing.. so dont do anything..
-          LOG.debug(
-                  "Thread interrupted while performing token counter increment", e);
-          Thread.currentThread().interrupt();
-        } catch (Exception e) {
-          throw new RuntimeException("Could not increment shared counter !!", e);
-        }
+    if (currentSeqNum >= currentMaxSeqNum) {
+      try {
+        // after a successful batch request, we can get the range starting point
+        currentSeqNum = incrSharedCount(delTokSeqCounter, seqNumBatchSize);
+        currentMaxSeqNum = currentSeqNum + seqNumBatchSize;
+        LOG.info("Fetched new range of seq num, from {} to {} ",
+            currentSeqNum+1, currentMaxSeqNum);
+      } catch (InterruptedException e) {
+        // The ExpirationThread is just finishing.. so dont do anything..
+        LOG.debug(
+            "Thread interrupted while performing token counter increment", e);
+        Thread.currentThread().interrupt();
+      } catch (Exception e) {
+        throw new RuntimeException("Could not increment shared counter !!", e);
       }
-      return ++currentSeqNum;
-    } finally {
-      this.currentSeqNumLock.unlock();
     }
+
+    return ++currentSeqNum;
   }
 
   @Override
@@ -886,30 +865,6 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
 
   public boolean isTokenWatcherEnabled() {
     return isTokenWatcherEnabled;
-  }
-
-  /**
-   * Simple implementation of an {@link ACLProvider} that simply returns an ACL
-   * that gives all permissions only to a single principal.
-   */
-  private static class SASLOwnerACLProvider implements ACLProvider {
-
-    private final List<ACL> saslACL;
-
-    private SASLOwnerACLProvider(String principal) {
-      this.saslACL = Collections.singletonList(
-          new ACL(Perms.ALL, new Id("sasl", principal)));
-    }
-
-    @Override
-    public List<ACL> getDefaultAcl() {
-      return saslACL;
-    }
-
-    @Override
-    public List<ACL> getAclForPath(String path) {
-      return saslACL;
-    }
   }
 
   @VisibleForTesting

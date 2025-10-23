@@ -36,9 +36,9 @@ import org.apache.hadoop.yarn.client.api.NMTokenCache;
 import org.apache.hadoop.yarn.client.api.async.AMRMClientAsync;
 import org.apache.hadoop.yarn.client.api.async.impl.AMRMClientAsyncImpl;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -53,6 +53,8 @@ import java.util.stream.Collectors;
 import static java.lang.Thread.sleep;
 import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.NODE;
 import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.PlacementTargets.allocationTag;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 
 /**
  * Test Placement Constraints and Scheduling Requests.
@@ -63,7 +65,7 @@ public class TestAMRMClientPlacementConstraints extends BaseAMRMClientTest {
   private List<RejectedSchedulingRequest> rejectedSchedulingRequests = null;
   private Map<Set<String>, PlacementConstraint> pcMapping = null;
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     conf = new YarnConfiguration();
     allocatedContainers = new ArrayList<>();
@@ -77,7 +79,8 @@ public class TestAMRMClientPlacementConstraints extends BaseAMRMClientTest {
             PlacementConstraints.targetNotIn(NODE, allocationTag("bar"))));
   }
 
-  @Test(timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testAMRMClientWithPlacementConstraintsByPlacementProcessor()
       throws Exception {
     // we have to create a new instance of MiniYARNCluster to avoid SASL qop
@@ -92,7 +95,7 @@ public class TestAMRMClientPlacementConstraints extends BaseAMRMClientTest {
         AMRMClient.<AMRMClient.ContainerRequest>createAMRMClient();
     amClient.setNMTokenCache(new NMTokenCache());
     //asserting we are not using the singleton instance cache
-    Assert.assertNotSame(NMTokenCache.getSingleton(),
+    assertNotSame(NMTokenCache.getSingleton(),
         amClient.getNMTokenCache());
     AMRMClientAsync asyncClient = new AMRMClientAsyncImpl<>(amClient,
         1000, new TestCallbackHandler());
@@ -120,7 +123,7 @@ public class TestAMRMClientPlacementConstraints extends BaseAMRMClientTest {
     waitForContainerAllocation(allocatedContainers,
         rejectedSchedulingRequests, 6, 2);
 
-    Assert.assertEquals(6, allocatedContainers.size());
+    assertEquals(6, allocatedContainers.size());
     Map<NodeId, List<Container>> containersPerNode =
         allocatedContainers.stream().collect(
             Collectors.groupingBy(Container::getNodeId));
@@ -128,19 +131,19 @@ public class TestAMRMClientPlacementConstraints extends BaseAMRMClientTest {
     Map<Set<String>, List<SchedulingRequest>> outstandingSchedRequests =
         ((AMRMClientImpl)amClient).getOutstandingSchedRequests();
     // Check the outstanding SchedulingRequests
-    Assert.assertEquals(2, outstandingSchedRequests.size());
-    Assert.assertEquals(1, outstandingSchedRequests.get(
+    assertEquals(2, outstandingSchedRequests.size());
+    assertEquals(1, outstandingSchedRequests.get(
         new HashSet<>(Collections.singletonList("foo"))).size());
-    Assert.assertEquals(1, outstandingSchedRequests.get(
+    assertEquals(1, outstandingSchedRequests.get(
         new HashSet<>(Collections.singletonList("bar"))).size());
 
     // Ensure 2 containers allocated per node.
     // Each node should have a "foo" and a "bar" container.
-    Assert.assertEquals(3, containersPerNode.entrySet().size());
+    assertEquals(3, containersPerNode.entrySet().size());
     HashSet<String> srcTags = new HashSet<>(Arrays.asList("foo", "bar"));
     containersPerNode.entrySet().forEach(
         x ->
-          Assert.assertEquals(
+          assertEquals(
               srcTags,
               x.getValue()
                   .stream()
@@ -149,8 +152,8 @@ public class TestAMRMClientPlacementConstraints extends BaseAMRMClientTest {
     );
 
     // Ensure 2 rejected requests - 1 of "foo" and 1 of "bar"
-    Assert.assertEquals(2, rejectedSchedulingRequests.size());
-    Assert.assertEquals(srcTags,
+    assertEquals(2, rejectedSchedulingRequests.size());
+    assertEquals(srcTags,
         rejectedSchedulingRequests
             .stream()
             .map(x -> x.getRequest().getAllocationTags().iterator().next())
@@ -159,7 +162,8 @@ public class TestAMRMClientPlacementConstraints extends BaseAMRMClientTest {
     asyncClient.stop();
   }
 
-  @Test(timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testAMRMClientWithPlacementConstraintsByScheduler()
       throws Exception {
     // we have to create a new instance of MiniYARNCluster to avoid SASL qop
@@ -174,7 +178,7 @@ public class TestAMRMClientPlacementConstraints extends BaseAMRMClientTest {
         AMRMClient.<AMRMClient.ContainerRequest>createAMRMClient();
     amClient.setNMTokenCache(new NMTokenCache());
     //asserting we are not using the singleton instance cache
-    Assert.assertNotSame(NMTokenCache.getSingleton(),
+    assertNotSame(NMTokenCache.getSingleton(),
         amClient.getNMTokenCache());
     AMRMClientAsync asyncClient = new AMRMClientAsyncImpl<>(amClient,
         1000, new TestCallbackHandler());
@@ -204,7 +208,7 @@ public class TestAMRMClientPlacementConstraints extends BaseAMRMClientTest {
     waitForContainerAllocation(allocatedContainers,
         rejectedSchedulingRequests, 7, 0);
 
-    Assert.assertEquals(7, allocatedContainers.size());
+    assertEquals(7, allocatedContainers.size());
     Map<NodeId, List<Container>> containersPerNode =
         allocatedContainers.stream().collect(
             Collectors.groupingBy(Container::getNodeId));
@@ -212,20 +216,20 @@ public class TestAMRMClientPlacementConstraints extends BaseAMRMClientTest {
     Map<Set<String>, List<SchedulingRequest>> outstandingSchedRequests =
         ((AMRMClientImpl)amClient).getOutstandingSchedRequests();
     // Check the outstanding SchedulingRequests
-    Assert.assertEquals(3, outstandingSchedRequests.size());
-    Assert.assertEquals(1, outstandingSchedRequests.get(
+    assertEquals(3, outstandingSchedRequests.size());
+    assertEquals(1, outstandingSchedRequests.get(
         new HashSet<>(Collections.singletonList("foo"))).size());
-    Assert.assertEquals(1, outstandingSchedRequests.get(
+    assertEquals(1, outstandingSchedRequests.get(
         new HashSet<>(Collections.singletonList("bar"))).size());
-    Assert.assertEquals(0, outstandingSchedRequests.get(
+    assertEquals(0, outstandingSchedRequests.get(
         new HashSet<String>()).size());
 
     // Each node should have a "foo" and a "bar" container.
-    Assert.assertEquals(3, containersPerNode.entrySet().size());
+    assertEquals(3, containersPerNode.entrySet().size());
     HashSet<String> srcTags = new HashSet<>(Arrays.asList("foo", "bar"));
     containersPerNode.entrySet().forEach(
         x ->
-          Assert.assertEquals(
+          assertEquals(
               srcTags,
               x.getValue()
                   .stream()
@@ -235,7 +239,7 @@ public class TestAMRMClientPlacementConstraints extends BaseAMRMClientTest {
     );
 
     // The rejected requests were not set by scheduler
-    Assert.assertEquals(0, rejectedSchedulingRequests.size());
+    assertEquals(0, rejectedSchedulingRequests.size());
 
     asyncClient.stop();
   }
@@ -258,8 +262,8 @@ public class TestAMRMClientPlacementConstraints extends BaseAMRMClientTest {
         schedulingRequest(1, 1, 3, 1, 512, schedRequest)));
     Map<Set<String>, List<SchedulingRequest>> outstandingSchedRequests =
         ((AMRMClientImpl)amClient).getOutstandingSchedRequests();
-    Assert.assertEquals(1, outstandingSchedRequests.size());
-    Assert.assertEquals(3, outstandingSchedRequests
+    assertEquals(1, outstandingSchedRequests.size());
+    assertEquals(3, outstandingSchedRequests
         .get(new HashSet<String>()).size());
   }
 

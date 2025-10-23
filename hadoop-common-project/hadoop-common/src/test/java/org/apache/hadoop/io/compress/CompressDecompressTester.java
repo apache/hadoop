@@ -17,10 +17,11 @@
  */
 package org.apache.hadoop.io.compress;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -37,13 +38,11 @@ import org.apache.hadoop.io.compress.zlib.ZlibCompressor;
 import org.apache.hadoop.io.compress.zlib.ZlibFactory;
 import org.apache.hadoop.util.NativeCodeLoader;
 import org.apache.log4j.Logger;
-import org.junit.Assert;
 
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
-import static org.junit.Assert.*;
 
 public class CompressDecompressTester<T extends Compressor, E extends Decompressor> {
 
@@ -274,12 +273,10 @@ public class CompressDecompressTester<T extends Compressor, E extends Decompress
         int maxCompressedLength = 32 + rawData.length + rawData.length/6;
         byte[] compressedResult = new byte[maxCompressedLength];
         byte[] decompressedBytes = new byte[rawData.length];
-        assertTrue(
-            joiner.join(name, "compressor.needsInput before error !!!"),
-            compressor.needsInput());
-        assertEquals(
-              joiner.join(name, "compressor.getBytesWritten before error !!!"),
-            0, compressor.getBytesWritten());
+        assertTrue(compressor.needsInput(),
+            joiner.join(name, "compressor.needsInput before error !!!"));
+        assertEquals(0, compressor.getBytesWritten(),
+            joiner.join(name, "compressor.getBytesWritten before error !!!"));
         compressor.setInput(rawData, 0, rawData.length);
         compressor.finish();
         while (!compressor.finished()) {
@@ -288,23 +285,20 @@ public class CompressDecompressTester<T extends Compressor, E extends Decompress
         }
         compressor.reset();
 
-        assertTrue(
-            joiner.join(name, "decompressor.needsInput() before error !!!"),
-            decompressor.needsInput());
+        assertTrue(decompressor.needsInput(),
+            joiner.join(name, "decompressor.needsInput() before error !!!"));
         decompressor.setInput(compressedResult, 0, cSize);
-        assertFalse(
-            joiner.join(name, "decompressor.needsInput() after error !!!"),
-            decompressor.needsInput());
+        assertFalse(decompressor.needsInput(),
+            joiner.join(name, "decompressor.needsInput() after error !!!"));
         while (!decompressor.finished()) {
           decompressedSize = decompressor.decompress(decompressedBytes, 0,
               decompressedBytes.length);
         }
         decompressor.reset();
-        assertEquals(joiner.join(name, " byte size not equals error !!!"),
-            rawData.length, decompressedSize);
-        assertArrayEquals(
-            joiner.join(name, " byte arrays not equals error !!!"), rawData,
-            decompressedBytes);
+        assertEquals(rawData.length, decompressedSize,
+            joiner.join(name, " byte size not equals error !!!"));
+        assertArrayEquals(rawData, decompressedBytes,
+            joiner.join(name, " byte arrays not equals error !!!"));
       }
     }),
 
@@ -331,17 +325,16 @@ public class CompressDecompressTester<T extends Compressor, E extends Decompress
           // check compressed output
           buf = bytesOut.toByteArray();
           int emSize = emptySize.get(compressor.getClass());
-          Assert.assertEquals(
-              joiner.join(name, "empty stream compressed output size != "
-                  + emSize), emSize, buf.length);
+          assertEquals(emSize, buf.length,
+              joiner.join(name, "empty stream compressed output size != " + emSize));
           // use compressed output as input for decompression
           bytesIn = new ByteArrayInputStream(buf);
           // create decompression stream
           blockDecompressorStream = new BlockDecompressorStream(bytesIn,
               decompressor, 1024);
           // no byte is available because stream was closed
-          assertEquals(joiner.join(name, " return value is not -1"), -1,
-              blockDecompressorStream.read());
+          assertEquals(-1,
+              blockDecompressorStream.read(), joiner.join(name, " return value is not -1"));
         } catch (IOException e) {
           fail(joiner.join(name, e.getMessage()));
         } finally {
@@ -407,9 +400,8 @@ public class CompressDecompressTester<T extends Compressor, E extends Decompress
             decompressor.reset();
             off = off + step;
           }
-          assertArrayEquals(
-              joiner.join(name, "byte arrays not equals error !!!"),
-              originalRawData, decompressOut.toByteArray());
+          assertArrayEquals(originalRawData, decompressOut.toByteArray(),
+              joiner.join(name, "byte arrays not equals error !!!"));
         } catch (Exception ex) {
           throw new AssertionError(name + ex, ex);
         } finally {

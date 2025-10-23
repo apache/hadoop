@@ -386,6 +386,8 @@ public class BlockRecoveryWorker {
       Map<Long, BlockRecord> syncBlocks = new HashMap<>(locs.length);
       final int dataBlkNum = ecPolicy.getNumDataUnits();
       final int totalBlkNum = dataBlkNum + ecPolicy.getNumParityUnits();
+      int zeroLenReplicaCnt = 0;
+      int dnNotHaveReplicaCnt = 0;
       //check generation stamps
       for (int i = 0; i < locs.length; i++) {
         DatanodeID id = locs[i];
@@ -419,10 +421,14 @@ public class BlockRecoveryWorker {
             if (info == null) {
               LOG.debug("Block recovery: DataNode: {} does not have " +
                   "replica for block: (block={}, internalBlk={})", id, block, internalBlk);
+              dnNotHaveReplicaCnt++;
             } else {
               LOG.debug("Block recovery: Ignored replica with invalid "
                   + "generation stamp or length: {} from DataNode: {} by block: {}",
                   info, id, block);
+              if (info.getNumBytes() == 0) {
+                zeroLenReplicaCnt++;
+              }
             }
           }
         } catch (RecoveryInProgressException ripE) {
@@ -436,9 +442,18 @@ public class BlockRecoveryWorker {
                   "datanode={})", block, internalBlk, id, e);
         }
       }
-      checkLocations(syncBlocks.size());
 
-      final long safeLength = getSafeLength(syncBlocks);
+      final long safeLength;
+      if (dnNotHaveReplicaCnt + zeroLenReplicaCnt <= locs.length - ecPolicy.getNumDataUnits()) {
+        checkLocations(syncBlocks.size());
+        safeLength = getSafeLength(syncBlocks);
+      } else {
+        safeLength = 0;
+        LOG.warn("Block recovery: {} datanodes do not have the replica of block {}." +
+            " {} datanodes have zero-length replica. Will remove this block.",
+            dnNotHaveReplicaCnt, block, zeroLenReplicaCnt);
+      }
+
       LOG.debug("Recovering block {}, length={}, safeLength={}, syncList={}", block,
           block.getNumBytes(), safeLength, syncBlocks);
 
@@ -452,11 +467,13 @@ public class BlockRecoveryWorker {
           rurList.add(r);
         }
       }
-      assert rurList.size() >= dataBlkNum : "incorrect safe length";
 
-      // Recovery the striped block by truncating internal blocks to the safe
-      // length. Abort if there is any failure in this step.
-      truncatePartialBlock(rurList, safeLength);
+      if (safeLength > 0) {
+        Preconditions.checkArgument(rurList.size() >= dataBlkNum, "incorrect safe length");
+        // Recovery the striped block by truncating internal blocks to the safe
+        // length. Abort if there is any failure in this step.
+        truncatePartialBlock(rurList, safeLength);
+      }
 
       // notify Namenode the new size and locations
       final DatanodeID[] newLocs = new DatanodeID[totalBlkNum];
@@ -469,11 +486,20 @@ public class BlockRecoveryWorker {
         int index = (int) (r.rInfo.getBlockId() &
             HdfsServerConstants.BLOCK_GROUP_INDEX_MASK);
         newLocs[index] = r.id;
-        newStorages[index] = r.storageID;
+        if (r.storageID != null) {
+          newStorages[index] = r.storageID;
+        }
       }
       ExtendedBlock newBlock = new ExtendedBlock(bpid, block.getBlockId(),
           safeLength, recoveryId);
       DatanodeProtocolClientSideTranslatorPB nn = getActiveNamenodeForBP(bpid);
+      if (safeLength == 0) {
+        nn.commitBlockSynchronization(block, newBlock.getGenerationStamp(),
+            newBlock.getNumBytes(), true, true, newLocs, newStorages);
+        LOG.info("After block recovery, the length of new block is 0. " +
+            "Will remove this block: {} from file.", newBlock);
+        return;
+      }
       nn.commitBlockSynchronization(block, newBlock.getGenerationStamp(),
           newBlock.getNumBytes(), true, false, newLocs, newStorages);
     }
@@ -527,8 +553,8 @@ public class BlockRecoveryWorker {
     private void checkLocations(int locationCount)
         throws IOException {
       if (locationCount < ecPolicy.getNumDataUnits()) {
-        throw new IOException(block + " has no enough internal blocks" +
-            ", unable to start recovery. Locations=" + Arrays.asList(locs));
+        throw new IOException(block + " has no enough internal blocks(current: " + locationCount +
+            "), unable to start recovery. Locations=" + Arrays.asList(locs));
       }
     }
   }
@@ -602,7 +628,7 @@ public class BlockRecoveryWorker {
                 new RecoveryTaskContiguous(b).recover();
               }
             } catch (IOException e) {
-              LOG.warn("recover Block: {} FAILED: {}", b, e);
+              LOG.warn("recover Block: {} FAILED: ", b, e);
             }
           }
         } finally {

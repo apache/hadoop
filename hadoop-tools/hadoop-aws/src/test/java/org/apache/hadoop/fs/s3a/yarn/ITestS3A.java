@@ -17,67 +17,49 @@
  */
 package org.apache.hadoop.fs.s3a.yarn;
 
-import org.apache.hadoop.conf.Configuration;
+import java.util.EnumSet;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FsStatus;
 import org.apache.hadoop.fs.Path;
-
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
-
-import java.util.EnumSet;
+import org.apache.hadoop.fs.s3a.AbstractS3ATestBase;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
-
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import org.junit.jupiter.api.Timeout;
 
 /**
  * S3A tests through the {@link FileContext} API.
  */
-public class ITestS3A {
+@Timeout(90)
+public class ITestS3A  extends AbstractS3ATestBase {
   private FileContext fc;
 
-  @Rule
-  public final Timeout testTimeout = new Timeout(90000);
-
-  @Before
-  public void setUp() throws Exception {
-    Configuration conf = new Configuration();
-    fc = S3ATestUtils.createTestFileContext(conf);
-  }
-
-  @After
-  public void tearDown() throws Exception {
-    if (fc != null) {
-      fc.delete(getTestPath(), true);
-    }
-  }
-
-  protected Path getTestPath() {
-    return S3ATestUtils.createTestPath(new Path("/tests3afc"));
+  @BeforeEach
+  @Override
+  public void setup() throws Exception {
+    super.setup();
+    fc = S3ATestUtils.createTestFileContext(getConfiguration());
   }
 
   @Test
   public void testS3AStatus() throws Exception {
     FsStatus fsStatus = fc.getFsStatus(null);
     assertNotNull(fsStatus);
-    assertTrue("Used capacity should be positive: " + fsStatus.getUsed(),
-        fsStatus.getUsed() >= 0);
-    assertTrue("Remaining capacity should be positive: " + fsStatus
-            .getRemaining(),
-        fsStatus.getRemaining() >= 0);
-    assertTrue("Capacity should be positive: " + fsStatus.getCapacity(),
-        fsStatus.getCapacity() >= 0);
+    assertTrue(fsStatus.getUsed() >= 0,
+        "Used capacity should be positive: " + fsStatus.getUsed());
+    assertTrue(fsStatus.getRemaining() >= 0,
+        "Remaining capacity should be positive: " + fsStatus.getRemaining());
+    assertTrue(fsStatus.getCapacity() >= 0,
+        "Capacity should be positive: " + fsStatus.getCapacity());
   }
 
   @Test
   public void testS3ACreateFileInSubDir() throws Exception {
-    Path dirPath = getTestPath();
+    Path dirPath = methodPath();
     fc.mkdir(dirPath, FileContext.DIR_DEFAULT_PERM, true);
     Path filePath = new Path(dirPath, "file");
     try (FSDataOutputStream file = fc.create(filePath, EnumSet.of(CreateFlag

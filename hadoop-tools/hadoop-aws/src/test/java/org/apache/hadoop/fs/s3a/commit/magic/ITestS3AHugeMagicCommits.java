@@ -23,7 +23,10 @@ import java.util.List;
 import java.util.Map;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.MethodOrderer;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestMethodOrder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,6 +44,7 @@ import org.apache.hadoop.fs.s3a.commit.impl.CommitContext;
 import org.apache.hadoop.fs.s3a.commit.impl.CommitOperations;
 import org.apache.hadoop.fs.s3a.scale.AbstractSTestS3AHugeFiles;
 import org.apache.hadoop.fs.store.audit.AuditSpan;
+import org.apache.hadoop.test.tags.ScaleTest;
 
 import static org.apache.hadoop.fs.s3a.MultipartTestUtils.listMultipartUploads;
 import static org.apache.hadoop.fs.s3a.Statistic.MULTIPART_UPLOAD_ABORT_UNDER_PATH_INVOKED;
@@ -56,6 +60,8 @@ import static org.apache.hadoop.fs.s3a.impl.HeaderProcessing.extractXAttrLongVal
  *
  * This is a scale test.
  */
+@ScaleTest
+@TestMethodOrder(MethodOrderer.Alphanumeric.class)
 public class ITestS3AHugeMagicCommits extends AbstractSTestS3AHugeFiles {
   private static final Logger LOG = LoggerFactory.getLogger(
       ITestS3AHugeMagicCommits.class);
@@ -97,6 +103,7 @@ public class ITestS3AHugeMagicCommits extends AbstractSTestS3AHugeFiles {
     return false;
   }
 
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     super.setup();
@@ -134,6 +141,7 @@ public class ITestS3AHugeMagicCommits extends AbstractSTestS3AHugeFiles {
     LOG.info("Aborted {} uploads under {}", count, key);
   }
 
+  @Test
   @Override
   public void test_030_postCreationAssertions() throws Throwable {
     describe("Committing file");
@@ -144,8 +152,8 @@ public class ITestS3AHugeMagicCommits extends AbstractSTestS3AHugeFiles {
     // as a 0-byte marker is created, there is a file at the end path,
     // it just MUST be 0-bytes long
     FileStatus status = fs.getFileStatus(magicOutputFile);
-    assertEquals("Non empty marker file " + status,
-        0, status.getLen());
+    assertEquals(0, status.getLen(),
+        "Non empty marker file " + status);
     final Map<String, byte[]> xAttr = fs.getXAttrs(magicOutputFile);
     final String header = XA_MAGIC_MARKER;
     Assertions.assertThat(xAttr)
@@ -164,7 +172,7 @@ public class ITestS3AHugeMagicCommits extends AbstractSTestS3AHugeFiles {
     Assertions.assertThat(listMultipartUploads(fs, destDirKey))
         .describedAs("Pending uploads")
         .hasSize(1);
-    assertNotNull("jobDir", jobDir);
+    assertNotNull(jobDir, "jobDir");
     try(CommitContext commitContext
             = operations.createCommitContextForTesting(jobDir, null, COMMITTER_THREADS)) {
       Pair<PendingSet, List<Pair<LocatedFileStatus, IOException>>>
@@ -189,21 +197,25 @@ public class ITestS3AHugeMagicCommits extends AbstractSTestS3AHugeFiles {
     describe("Skipping: %s", text);
   }
 
+  @Test
   @Override
   public void test_040_PositionedReadHugeFile() {
     skipQuietly("test_040_PositionedReadHugeFile");
   }
 
+  @Test
   @Override
   public void test_050_readHugeFile() {
     skipQuietly("readHugeFile");
   }
 
+  @Test
   @Override
   public void test_100_renameHugeFile() {
     skipQuietly("renameHugeFile");
   }
 
+  @Test
   @Override
   public void test_800_DeleteHugeFiles() throws IOException {
     if (getFileSystem() != null) {

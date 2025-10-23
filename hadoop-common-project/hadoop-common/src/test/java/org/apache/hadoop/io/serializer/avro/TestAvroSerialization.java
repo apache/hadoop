@@ -18,13 +18,13 @@
 
 package org.apache.hadoop.io.serializer.avro;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.serializer.SerializationFactory;
 import org.apache.hadoop.io.serializer.SerializationTestUtil;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class TestAvroSerialization {
 
@@ -33,7 +33,7 @@ public class TestAvroSerialization {
   @Test
   public void testSpecific() throws Exception {
     AvroRecord before = new AvroRecord();
-    before.intField = 5;
+    before.setIntField(5);
     AvroRecord after = SerializationTestUtil.testSerialization(conf, before);
     assertEquals(before, after);
   }

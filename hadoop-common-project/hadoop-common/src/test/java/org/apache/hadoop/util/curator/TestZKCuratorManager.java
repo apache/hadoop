@@ -17,11 +17,12 @@
  */
 package org.apache.hadoop.util.curator;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -42,9 +43,9 @@ import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.client.ZKClientConfig;
 import org.apache.zookeeper.data.ACL;
 import org.apache.zookeeper.data.Stat;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test the manager for ZooKeeper Curator.
@@ -54,19 +55,18 @@ public class TestZKCuratorManager {
   private TestingServer server;
   private ZKCuratorManager curator;
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     this.server = new TestingServer();
 
     Configuration conf = new Configuration();
-    conf.set(
-        CommonConfigurationKeys.ZK_ADDRESS, this.server.getConnectString());
+    String zkHostPort = this.server.getConnectString();
 
     this.curator = new ZKCuratorManager(conf);
-    this.curator.start();
+    this.curator.start(zkHostPort);
   }
 
-  @After
+  @AfterEach
   public void teardown() throws Exception {
     this.curator.close();
     if (this.server != null) {
@@ -117,7 +117,7 @@ public class TestZKCuratorManager {
     curator.create(node1);
     assertNull(curator.getStringData(node1));
 
-    byte[] setData = "setData".getBytes("UTF-8");
+    byte[] setData = "setData".getBytes(StandardCharsets.UTF_8);
     curator.setData(node1, setData, -1);
     assertEquals("setData", curator.getStringData(node1));
 
@@ -136,7 +136,7 @@ public class TestZKCuratorManager {
     String fencingNodePath = "/fencing";
     String node1 = "/node1";
     String node2 = "/node2";
-    byte[] testData = "testData".getBytes("UTF-8");
+    byte[] testData = "testData".getBytes(StandardCharsets.UTF_8);
     assertFalse(curator.exists(fencingNodePath));
     assertFalse(curator.exists(node1));
     assertFalse(curator.exists(node2));
@@ -154,7 +154,7 @@ public class TestZKCuratorManager {
     assertTrue(Arrays.equals(testData, curator.getData(node1)));
     assertTrue(Arrays.equals(testData, curator.getData(node2)));
 
-    byte[] setData = "setData".getBytes("UTF-8");
+    byte[] setData = "setData".getBytes(StandardCharsets.UTF_8);
     txn = curator.createTransaction(zkAcl, fencingNodePath);
     txn.setData(node1, setData, -1);
     txn.delete(node2);
@@ -231,14 +231,15 @@ public class TestZKCuratorManager {
 
   private void validateJaasConfiguration(String clientConfig, String principal, String keytab,
       ZooKeeper zk) {
-    assertEquals("Validate that expected clientConfig is set in ZK config", clientConfig,
-        zk.getClientConfig().getProperty(ZKClientConfig.LOGIN_CONTEXT_NAME_KEY));
+    assertEquals(clientConfig,
+        zk.getClientConfig().getProperty(ZKClientConfig.LOGIN_CONTEXT_NAME_KEY),
+        "Validate that expected clientConfig is set in ZK config");
 
     AppConfigurationEntry[] entries = javax.security.auth.login.Configuration.getConfiguration()
         .getAppConfigurationEntry(clientConfig);
-    assertEquals("Validate that expected principal is set in Jaas config", principal,
-        entries[0].getOptions().get("principal"));
-    assertEquals("Validate that expected keytab is set in Jaas config", keytab,
-        entries[0].getOptions().get("keyTab"));
+    assertEquals(principal, entries[0].getOptions().get("principal"),
+        "Validate that expected principal is set in Jaas config");
+    assertEquals(keytab, entries[0].getOptions().get("keyTab"),
+        "Validate that expected keytab is set in Jaas config");
   }
 }

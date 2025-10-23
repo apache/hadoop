@@ -33,8 +33,6 @@ import org.apache.hadoop.classification.VisibleForTesting;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.UndeclaredThrowableException;
-import java.security.AccessControlContext;
-import java.security.AccessController;
 import java.security.Principal;
 import java.security.PrivilegedAction;
 import java.security.PrivilegedActionException;
@@ -85,9 +83,11 @@ import org.apache.hadoop.metrics2.lib.MutableQuantiles;
 import org.apache.hadoop.metrics2.lib.MutableRate;
 import org.apache.hadoop.security.SaslRpcServer.AuthMethod;
 import org.apache.hadoop.security.authentication.util.KerberosUtil;
+import org.apache.hadoop.security.authentication.util.SubjectUtil;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.Shell;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 
 import org.slf4j.Logger;
@@ -584,8 +584,7 @@ public class UserGroupInformation {
   @InterfaceStability.Evolving
   public static UserGroupInformation getCurrentUser() throws IOException {
     ensureInitialized();
-    AccessControlContext context = AccessController.getContext();
-    Subject subject = Subject.getSubject(context);
+    Subject subject = SubjectUtil.current();
     if (subject == null || subject.getPrincipals(User.class).isEmpty()) {
       return getLoginUser();
     } else {
@@ -1715,7 +1714,18 @@ public class UserGroupInformation {
       return true;
     }
   }
-  
+
+  /**
+   * Remove a named token from this UGI.
+   *
+   * @param alias Name of the token
+   */
+  public void removeToken(Text alias) {
+    synchronized (subject) {
+      getCredentialsInternal().removeToken(alias);
+    }
+  }
+
   /**
    * Obtain the collection of tokens associated with this user.
    * 
@@ -1923,13 +1933,10 @@ public class UserGroupInformation {
   @InterfaceAudience.Public
   @InterfaceStability.Evolving
   public <T> T doAs(PrivilegedAction<T> action) {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("PrivilegedAction [as: {}][action: {}]", this, action,
-          new Exception());
-    }
-    return Subject.doAs(subject, action);
+    tracePrivilegedAction(action);
+    return SubjectUtil.doAs(subject, action);
   }
-  
+
   /**
    * Run the given action as the user, potentially throwing an exception.
    * @param <T> the return type of the run method
@@ -1946,11 +1953,8 @@ public class UserGroupInformation {
   public <T> T doAs(PrivilegedExceptionAction<T> action
                     ) throws IOException, InterruptedException {
     try {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("PrivilegedAction [as: {}][action: {}]", this, action,
-            new Exception());
-      }
-      return Subject.doAs(subject, action);
+      tracePrivilegedAction(action);
+      return SubjectUtil.doAs(subject, action);
     } catch (PrivilegedActionException pae) {
       Throwable cause = pae.getCause();
       LOG.debug("PrivilegedActionException as: {}", this, cause);
@@ -1968,6 +1972,14 @@ public class UserGroupInformation {
       } else {
         throw new UndeclaredThrowableException(cause);
       }
+    }
+  }
+
+  private void tracePrivilegedAction(Object action) {
+    if (LOG.isTraceEnabled()) {
+      // would be nice if action included a descriptive toString()
+      LOG.trace("PrivilegedAction [as: {}][action: {}][from: {}]", this, action,
+          StringUtils.getStackTrace(new Throwable()));
     }
   }
 
@@ -2061,6 +2073,12 @@ public class UserGroupInformation {
       }
       return ugi;
     } catch (LoginException le) {
+      String msg = le.getMessage();
+      if (msg != null && msg.contains("invalid null input")) {
+        // This error from the JDK indicates that the OS couldn't map the UID of this process to an
+        // actual user. Throw this as an IOException, because it's not related to Kerberos.
+        throw new IOException(INVALID_UID, le);
+      }
       KerberosAuthException kae =
         new KerberosAuthException(FAILURE_TO_LOGIN, le);
       if (params != null) {

@@ -46,6 +46,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_AVOID_SLOW_DATAN
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_BLOCKPLACEMENTPOLICY_EXCLUDE_SLOW_NODES_ENABLED_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_BACKOFF_MONITOR_PENDING_LIMIT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_BACKOFF_MONITOR_PENDING_BLOCKS_PER_LOCK;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_TRANSFER_BANDWIDTHPERSEC_KEY;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.text.TextStringBuilder;
@@ -80,6 +81,7 @@ import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.util.RwLockMode;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.AccessControlException;
@@ -91,27 +93,25 @@ import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.ToolRunner;
 
-import org.assertj.core.api.Assertions;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.Assert;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.MethodOrderer;
+import org.junit.jupiter.api.Order;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestMethodOrder;
+import org.junit.jupiter.api.Timeout;
+import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_MAX_SLOWPEER_COLLECT_NODES_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_LOCK_DETAILED_METRICS_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsAdmin.TRASH_PERMISSION;
-import static org.hamcrest.CoreMatchers.allOf;
-import static org.hamcrest.CoreMatchers.anyOf;
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.CoreMatchers.not;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-import static org.hamcrest.CoreMatchers.containsString;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -119,6 +119,7 @@ import static org.mockito.Mockito.when;
 /**
  * set/clrSpaceQuote are tested in {@link org.apache.hadoop.hdfs.TestQuota}.
  */
+@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class TestDFSAdmin {
   private static final Logger LOG = LoggerFactory.getLogger(TestDFSAdmin.class);
   private Configuration conf = null;
@@ -133,7 +134,7 @@ public class TestDFSAdmin {
   private String tempResource = null;
   private static final int NUM_DATANODES = 2;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     conf = new Configuration();
     conf.setInt(IPC_CLIENT_CONNECT_MAX_RETRIES_KEY, 3);
@@ -157,7 +158,7 @@ public class TestDFSAdmin {
     err.reset();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     try {
       System.out.flush();
@@ -237,7 +238,8 @@ public class TestDFSAdmin {
     scanner.close();
   }
 
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testGetDatanodeInfo() throws Exception {
     redirectStream();
     final DFSAdmin dfsAdmin = new DFSAdmin(conf);
@@ -257,18 +259,18 @@ public class TestDFSAdmin {
       final List<String> outs = Lists.newArrayList();
       scanIntoList(out, outs);
       /* verify results */
-      assertEquals(
+      assertEquals(1, outs.size(),
           "One line per DataNode like: Uptime: XXX, Software version: x.y.z,"
-              + " Config version: core-x.y.z,hdfs-x",
-          1, outs.size());
-      assertThat(outs.get(0),
-          is(allOf(containsString("Uptime:"),
-              containsString("Software version"),
-              containsString("Config version"))));
+              + " Config version: core-x.y.z,hdfs-x");
+      assertThat(outs.get(0))
+          .contains("Uptime:")
+          .contains("Software version")
+          .contains("Config version");
     }
   }
 
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testTriggerBlockReport() throws Exception {
     redirectStream();
     final DFSAdmin dfsAdmin = new DFSAdmin(conf);
@@ -288,12 +290,13 @@ public class TestDFSAdmin {
 
     scanIntoList(out, outs);
     assertEquals(1, outs.size());
-    assertThat(outs.get(0),
-        is(allOf(containsString("Triggering an incremental block report on "),
-            containsString(" to namenode "))));
+    assertThat(outs.get(0)).
+        contains("Triggering an incremental block report on ").
+        contains(" to namenode ");
   }
 
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testGetVolumeReport() throws Exception {
     redirectStream();
     final DFSAdmin dfsAdmin = new DFSAdmin(conf);
@@ -317,7 +320,8 @@ public class TestDFSAdmin {
    * Test that if datanode is not reachable, some DFSAdmin commands will fail
    * elegantly with non-zero ret error code along with exception error message.
    */
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testDFSAdminUnreachableDatanode() throws Exception {
     redirectStream();
     final DFSAdmin dfsAdmin = new DFSAdmin(conf);
@@ -334,20 +338,21 @@ public class TestDFSAdmin {
       assertEquals(-1, ret);
 
       scanIntoList(out, outs);
-      assertTrue("Unexpected " + command + " stdout: " + out, outs.isEmpty());
-      assertTrue("Unexpected " + command + " stderr: " + err,
-          err.toString().contains("Exception"));
+      assertTrue(outs.isEmpty(), "Unexpected " + command + " stdout: " + out);
+      assertTrue(err.toString().contains("Exception"),
+          "Unexpected " + command + " stderr: " + err);
     }
   }
 
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testDataNodeGetReconfigurableProperties() throws IOException, InterruptedException {
     final int port = datanode.getIpcPort();
     final String address = "localhost:" + port;
     final List<String> outs = Lists.newArrayList();
     final List<String> errs = Lists.newArrayList();
     getReconfigurableProperties("datanode", address, outs, errs);
-    assertEquals(25, outs.size());
+    assertEquals(26, outs.size());
     assertEquals(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY, outs.get(1));
   }
 
@@ -383,23 +388,23 @@ public class TestDFSAdmin {
     final int port = datanode.getIpcPort();
     final String address = "localhost:" + port;
 
-    assertThat(admin.startReconfiguration("datanode", address), is(0));
+    assertThat(admin.startReconfiguration("datanode", address)).isEqualTo(0);
 
     final List<String> outs = Lists.newArrayList();
     final List<String> errs = Lists.newArrayList();
     awaitReconfigurationFinished("datanode", address, outs, errs);
 
     if (expectedSuccuss) {
-      assertThat(outs.size(), is(4));
+      assertThat(outs.size()).isEqualTo(4);
     } else {
-      assertThat(outs.size(), is(6));
+      assertThat(outs.size()).isEqualTo(6);
     }
 
     List<StorageLocation> locations = DataNode.getStorageLocations(
         datanode.getConf());
     if (expectedSuccuss) {
-      assertThat(locations.size(), is(1));
-      assertThat(new File(locations.get(0).getUri()), is(newDir));
+      assertThat(locations.size()).isEqualTo(1);
+      assertThat(new File(locations.get(0).getUri())).isEqualTo(newDir);
       // Verify the directory is appropriately formatted.
       assertTrue(new File(newDir, Storage.STORAGE_DIR_CURRENT).isDirectory());
     } else {
@@ -408,27 +413,28 @@ public class TestDFSAdmin {
 
     int offset = 1;
     if (expectedSuccuss) {
-      assertThat(outs.get(offset),
-          containsString("SUCCESS: Changed property " +
-              DFS_DATANODE_DATA_DIR_KEY));
+      assertThat(outs.get(offset)).
+          contains("SUCCESS: Changed property " +
+              DFS_DATANODE_DATA_DIR_KEY);
     } else {
-      assertThat(outs.get(offset),
-          containsString("FAILED: Change property " +
-              DFS_DATANODE_DATA_DIR_KEY));
+      assertThat(outs.get(offset)).
+          contains("FAILED: Change property " +
+              DFS_DATANODE_DATA_DIR_KEY);
     }
     File dnDir0 = cluster.getInstanceStorageDir(0, 0);
     File dnDir1 = cluster.getInstanceStorageDir(0, 1);
-    assertThat(outs.get(offset + 1), is(allOf(containsString("From:"),
-                containsString(dnDir0.getName()),
-                containsString(dnDir1.getName()))));
-    assertThat(outs.get(offset + 2),
-        is(not(anyOf(containsString(dnDir0.getName()),
-            containsString(dnDir1.getName())))));
-    assertThat(outs.get(offset + 2),
-        is(allOf(containsString("To"), containsString("data_new"))));
+    assertThat(outs.get(offset + 1)).
+        contains("From:").
+        contains(dnDir0.getName())
+        .contains(dnDir1.getName());
+    assertThat(outs.get(offset + 2))
+        .doesNotContain(dnDir0.getName())
+        .doesNotContain(dnDir1.getName());
+    assertThat(outs.get(offset + 2)).contains("To").contains("data_new");
   }
 
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testDataNodeGetReconfigurationStatus() throws IOException,
       InterruptedException, TimeoutException {
     testDataNodeGetReconfigurationStatus(true);
@@ -436,13 +442,14 @@ public class TestDFSAdmin {
     testDataNodeGetReconfigurationStatus(false);
   }
 
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testNameNodeGetReconfigurableProperties() throws IOException, InterruptedException {
     final String address = namenode.getHostAndPort();
     final List<String> outs = Lists.newArrayList();
     final List<String> errs = Lists.newArrayList();
     getReconfigurableProperties("namenode", address, outs, errs);
-    assertEquals(25, outs.size());
+    assertEquals(29, outs.size());
     assertTrue(outs.get(0).contains("Reconfigurable properties:"));
     assertEquals(DFS_BLOCK_INVALIDATE_LIMIT_KEY, outs.get(1));
     assertEquals(DFS_BLOCK_PLACEMENT_EC_CLASSNAME_KEY, outs.get(2));
@@ -457,7 +464,7 @@ public class TestDFSAdmin {
     assertEquals(DFS_NAMENODE_DECOMMISSION_BACKOFF_MONITOR_PENDING_BLOCKS_PER_LOCK, outs.get(11));
     assertEquals(DFS_NAMENODE_DECOMMISSION_BACKOFF_MONITOR_PENDING_LIMIT, outs.get(12));
     assertEquals(DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, outs.get(13));
-    assertEquals(DFS_NAMENODE_MAX_SLOWPEER_COLLECT_NODES_KEY, outs.get(14));
+    assertEquals(DFS_NAMENODE_LOCK_DETAILED_METRICS_KEY, outs.get(14));
     assertEquals(errs.size(), 0);
   }
 
@@ -482,7 +489,8 @@ public class TestDFSAdmin {
     }, 100, 100 * 100);
   }
 
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testPrintTopology() throws Exception {
     redirectStream();
 
@@ -515,23 +523,23 @@ public class TestDFSAdmin {
 
       /* verify results */
       assertEquals(0, ret);
-      assertEquals(
+      assertEquals(12, outs.size(),
           "There should be three lines per Datanode: the 1st line is"
               + " rack info, 2nd node info, 3rd empty line. The total"
-              + " should be as a result of 3 * numDn.",
-          12, outs.size());
-      assertThat(outs.get(0),
-          is(allOf(containsString("Rack:"), containsString("/d1/r1"))));
-      assertThat(outs.get(3),
-          is(allOf(containsString("Rack:"), containsString("/d1/r2"))));
-      assertThat(outs.get(6),
-          is(allOf(containsString("Rack:"), containsString("/d2/r1"))));
-      assertThat(outs.get(9),
-          is(allOf(containsString("Rack:"), containsString("/d2/r2"))));
+              + " should be as a result of 3 * numDn.");
+      assertThat(outs.get(0)).
+          contains("Rack:").contains("/d1/r1");
+      assertThat(outs.get(3)).
+          contains("Rack:").contains("/d1/r2");
+      assertThat(outs.get(6)).
+          contains("Rack:").contains("/d2/r1");
+      assertThat(outs.get(9)).
+          contains("Rack:").contains("/d2/r2");
     }
   }
 
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testPrintTopologyWithStatus() throws Exception {
     redirectStream();
     final Configuration dfsConf = new HdfsConfiguration();
@@ -577,7 +585,8 @@ public class TestDFSAdmin {
     }
   }
 
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testNameNodeGetReconfigurationStatus() throws IOException,
       InterruptedException, TimeoutException {
     ReconfigurationUtil ru = mock(ReconfigurationUtil.class);
@@ -593,35 +602,28 @@ public class TestDFSAdmin {
         "randomKey", "new123", "old456"));
     when(ru.parseChangedProperties(any(Configuration.class),
         any(Configuration.class))).thenReturn(changes);
-    assertThat(admin.startReconfiguration("namenode", address), is(0));
+    assertThat(admin.startReconfiguration("namenode", address)).isEqualTo(0);
 
     final List<String> outs = Lists.newArrayList();
     final List<String> errs = Lists.newArrayList();
     awaitReconfigurationFinished("namenode", address, outs, errs);
 
     // verify change
-    assertEquals(
-        DFS_HEARTBEAT_INTERVAL_KEY + " has wrong value",
-        6,
-        namenode
-          .getConf()
-          .getLong(DFS_HEARTBEAT_INTERVAL_KEY,
-                DFS_HEARTBEAT_INTERVAL_DEFAULT));
-    assertEquals(DFS_HEARTBEAT_INTERVAL_KEY + " has wrong value",
-        6,
-        namenode
-          .getNamesystem()
-          .getBlockManager()
-          .getDatanodeManager()
-          .getHeartbeatInterval());
+    assertEquals(6, namenode
+        .getConf()
+        .getLong(DFS_HEARTBEAT_INTERVAL_KEY,
+            DFS_HEARTBEAT_INTERVAL_DEFAULT), DFS_HEARTBEAT_INTERVAL_KEY + " has wrong value");
+    assertEquals(6, namenode
+        .getNamesystem()
+        .getBlockManager()
+        .getDatanodeManager()
+        .getHeartbeatInterval(), DFS_HEARTBEAT_INTERVAL_KEY + " has wrong value");
 
     int offset = 1;
-    assertThat(outs.get(offset), containsString("SUCCESS: Changed property "
-        + DFS_HEARTBEAT_INTERVAL_KEY));
-    assertThat(outs.get(offset + 1),
-        is(allOf(containsString("From:"), containsString("3"))));
-    assertThat(outs.get(offset + 2),
-        is(allOf(containsString("To:"), containsString("6"))));
+    assertThat(outs.get(offset)).contains("SUCCESS: Changed property "
+        + DFS_HEARTBEAT_INTERVAL_KEY);
+    assertThat(outs.get(offset + 1)).contains("From:").contains("3");
+    assertThat(outs.get(offset + 2)).contains("To:").contains("6");
   }
 
   private static String scanIntoString(final ByteArrayOutputStream baos) {
@@ -654,7 +656,8 @@ public class TestDFSAdmin {
     }, 1000, 60000);
   }
 
-  @Test(timeout = 180000)
+  @Test
+  @Timeout(value = 180)
   public void testReportCommand() throws Exception {
     tearDown();
     redirectStream();
@@ -699,8 +702,7 @@ public class TestDFSAdmin {
       LocatedBlocks lbs = miniCluster.getFileSystem().getClient().
           getNamenode().getBlockLocations(
           file.toString(), 0, fileLength);
-      assertTrue("Unexpected block type: " + lbs.get(0),
-          lbs.get(0) instanceof LocatedBlock);
+      assertTrue(lbs.get(0) instanceof LocatedBlock, "Unexpected block type: " + lbs.get(0));
       LocatedBlock locatedBlock = lbs.get(0);
       DatanodeInfo locatedDataNode = locatedBlock.getLocations()[0];
       LOG.info("Replica block located on: " + locatedDataNode);
@@ -722,7 +724,6 @@ public class TestDFSAdmin {
       resetStream();
       assertEquals(0, ToolRunner.run(dfsAdmin, new String[] {"-report"}));
       verifyNodesAndCorruptBlocks(numDn, numDn, 0, 0, client, 0L, 0L);
-
       // Choose a DataNode to shutdown
       final List<DataNode> datanodes = miniCluster.getDataNodes();
       DataNode dataNodeToShutdown = null;
@@ -733,9 +734,7 @@ public class TestDFSAdmin {
           break;
         }
       }
-      assertTrue("Unable to choose a DataNode to shutdown!",
-          dataNodeToShutdown != null);
-
+      assertTrue(dataNodeToShutdown != null, "Unable to choose a DataNode to shutdown!");
       // Shut down the DataNode not hosting the replicated block
       LOG.info("Shutting down: " + dataNodeToShutdown);
       dataNodeToShutdown.shutdown();
@@ -748,8 +747,8 @@ public class TestDFSAdmin {
       // Corrupt the replicated block
       final int blockFilesCorrupted = miniCluster
           .corruptBlockOnDataNodes(block);
-      assertEquals("Fail to corrupt all replicas for block " + block,
-          replFactor, blockFilesCorrupted);
+      assertEquals(replFactor, blockFilesCorrupted,
+          "Fail to corrupt all replicas for block " + block);
 
       try {
         IOUtils.copyBytes(fs.open(file), new IOUtils.NullOutputStream(),
@@ -776,19 +775,18 @@ public class TestDFSAdmin {
       lbs = miniCluster.getFileSystem().getClient().
           getNamenode().getBlockLocations(
           ecFile.toString(), 0, blockGroupSize);
-      assertTrue("Unexpected block type: " + lbs.get(0),
-          lbs.get(0) instanceof LocatedStripedBlock);
+      assertTrue(lbs.get(0) instanceof LocatedStripedBlock, "Unexpected block type: " + lbs.get(0));
       LocatedStripedBlock bg =
           (LocatedStripedBlock)(lbs.get(0));
 
-      miniCluster.getNamesystem().writeLock();
+      miniCluster.getNamesystem().writeLock(RwLockMode.BM);
       try {
         BlockManager bm = miniCluster.getNamesystem().getBlockManager();
         bm.findAndMarkBlockAsCorrupt(bg.getBlock(), bg.getLocations()[0],
             "STORAGE_ID", "TEST");
         BlockManagerTestUtil.updateState(bm);
       } finally {
-        miniCluster.getNamesystem().writeUnlock();
+        miniCluster.getNamesystem().writeUnlock(RwLockMode.BM, "testReportCommand");
       }
       waitForCorruptBlock(miniCluster, client, file);
 
@@ -808,7 +806,8 @@ public class TestDFSAdmin {
     }
   }
 
-  @Test(timeout = 300000L)
+  @Test
+  @Timeout(300)
   public void testListOpenFiles() throws Exception {
     redirectStream();
 
@@ -920,7 +919,7 @@ public class TestDFSAdmin {
           new String[] {"-listOpenFiles", "-path", "/invalid_path"}));
       outStr = scanIntoString(out);
       for (Path openFilePath : openFilesMap.keySet()) {
-        assertThat(outStr, not(containsString(openFilePath.toString())));
+        assertThat(outStr).doesNotContain(openFilePath.toString());
       }
       DFSTestUtil.closeOpenFiles(openFilesMap, openFilesMap.size());
     }
@@ -932,15 +931,14 @@ public class TestDFSAdmin {
     LOG.info("dfsadmin -listOpenFiles output: \n" + out);
     if (closedFileSet != null) {
       for (Path closedFilePath : closedFileSet) {
-        assertThat(outStr,
-            not(containsString(closedFilePath.toString() +
-                System.lineSeparator())));
+        assertThat(outStr).doesNotContain(closedFilePath.toString() +
+            System.lineSeparator());
       }
     }
 
     for (Path openFilePath : openFilesMap.keySet()) {
-      assertThat(outStr, is(containsString(openFilePath.toString() +
-          System.lineSeparator())));
+      assertThat(outStr).contains(openFilePath.toString() +
+          System.lineSeparator());
     }
   }
 
@@ -976,12 +974,12 @@ public class TestDFSAdmin {
         highestPriorityLowRedundancyReplicatedBlocks);
 
     // verify nodes and corrupt blocks
-    assertThat(outStr, is(allOf(
-        containsString(expectedLiveNodesStr),
-        containsString(expectedCorruptedBlocksStr),
-        containsString(expectedCorruptedECBlockGroupsStr),
-        containsString(highestPriorityLowRedundancyReplicatedBlocksStr),
-        containsString(highestPriorityLowRedundancyECBlocksStr))));
+    assertThat(outStr).
+        contains(expectedLiveNodesStr).
+        contains(expectedCorruptedBlocksStr).
+        contains(expectedCorruptedECBlockGroupsStr).
+        contains(highestPriorityLowRedundancyReplicatedBlocksStr).
+        contains(highestPriorityLowRedundancyECBlocksStr);
 
     assertEquals(
         numDn,
@@ -1114,23 +1112,23 @@ public class TestDFSAdmin {
     assertEquals(0, ToolRunner.run(dfsAdmin,
         new String[]{"-setBalancerBandwidth", "10000"}));
     outStr = scanIntoString(out);
-    assertTrue("Did not set bandwidth!", outStr.contains("Balancer " +
-        "bandwidth is set to 10000"));
+    assertTrue(outStr.contains("Balancer " +
+        "bandwidth is set to 10000"), "Did not set bandwidth!");
 
     // Test parsing with units
     resetStream();
     assertEquals(0, ToolRunner.run(dfsAdmin,
         new String[]{"-setBalancerBandwidth", "10m"}));
     outStr = scanIntoString(out);
-    assertTrue("Did not set bandwidth!", outStr.contains("Balancer " +
-        "bandwidth is set to 10485760"));
+    assertTrue(outStr.contains("Balancer " +
+        "bandwidth is set to 10485760"), "Did not set bandwidth!");
 
     resetStream();
     assertEquals(0, ToolRunner.run(dfsAdmin,
         new String[]{"-setBalancerBandwidth", "10k"}));
     outStr = scanIntoString(out);
-    assertTrue("Did not set bandwidth!", outStr.contains("Balancer " +
-        "bandwidth is set to 10240"));
+    assertTrue(outStr.contains("Balancer " +
+        "bandwidth is set to 10240"), "Did not set bandwidth!");
 
     // Test negative numbers
     assertEquals(-1, ToolRunner.run(dfsAdmin,
@@ -1139,7 +1137,8 @@ public class TestDFSAdmin {
         new String[]{"-setBalancerBandwidth", "-10m"}));
   }
 
-  @Test(timeout = 300000L)
+  @Test
+  @Timeout(300)
   public void testCheckNumOfBlocksInReportCommand() throws Exception {
     DistributedFileSystem dfs = cluster.getFileSystem();
     Path path = new Path("/tmp.txt");
@@ -1204,9 +1203,9 @@ public class TestDFSAdmin {
         }
       });
     } catch (RemoteException re) {
-      Assert.assertTrue(re.unwrapRemoteException()
+      assertTrue(re.unwrapRemoteException()
           instanceof AccessControlException);
-      Assert.assertTrue(re.unwrapRemoteException().getMessage()
+      assertTrue(re.unwrapRemoteException().getMessage()
           .equals("User: " + realUser +
               " is not allowed to impersonate " + proxyUser));
     }
@@ -1236,6 +1235,7 @@ public class TestDFSAdmin {
   }
 
   @Test
+  @Order(1)
   public void testAllDatanodesReconfig()
       throws IOException, InterruptedException, TimeoutException {
     ReconfigurationUtil reconfigurationUtil = mock(ReconfigurationUtil.class);
@@ -1250,7 +1250,7 @@ public class TestDFSAdmin {
         any(Configuration.class))).thenReturn(changes);
 
     int result = admin.startReconfiguration("datanode", "livenodes");
-    Assertions.assertThat(result).isEqualTo(0);
+    assertThat(result).isEqualTo(0);
     final List<String> outsForStartReconf = new ArrayList<>();
     final List<String> errsForStartReconf = new ArrayList<>();
     reconfigurationOutErrFormatter("startReconfiguration", "datanode",
@@ -1258,21 +1258,21 @@ public class TestDFSAdmin {
     String started = "Started reconfiguration task on node";
     String starting =
         "Starting of reconfiguration task successful on 2 nodes, failed on 0 nodes.";
-    Assertions.assertThat(outsForStartReconf).hasSize(3);
-    Assertions.assertThat(errsForStartReconf).hasSize(0);
-    Assertions.assertThat(outsForStartReconf.get(0)).startsWith(started);
-    Assertions.assertThat(outsForStartReconf.get(1)).startsWith(started);
-    Assertions.assertThat(outsForStartReconf.get(2)).startsWith(starting);
+    assertThat(outsForStartReconf).hasSize(3);
+    assertThat(errsForStartReconf).hasSize(0);
+    assertThat(outsForStartReconf.get(0)).startsWith(started);
+    assertThat(outsForStartReconf.get(1)).startsWith(started);
+    assertThat(outsForStartReconf.get(2)).startsWith(starting);
 
     Thread.sleep(1000);
     final List<String> outs = new ArrayList<>();
     final List<String> errs = new ArrayList<>();
     awaitReconfigurationFinished("datanode", "livenodes", outs, errs);
-    Assertions.assertThat(outs).hasSize(9);
-    Assertions.assertThat(errs).hasSize(0);
+    assertThat(outs).hasSize(9);
+    assertThat(errs).hasSize(0);
     LOG.info("dfsadmin -status -livenodes output:");
     outs.forEach(s -> LOG.info("{}", s));
-    Assertions.assertThat(outs.get(0)).startsWith("Reconfiguring status for node");
+    assertThat(outs.get(0)).startsWith("Reconfiguring status for node");
 
     String success = "SUCCESS: Changed property dfs.datanode.peer.stats.enabled";
     String from = "\tFrom: \"false\"";
@@ -1280,7 +1280,109 @@ public class TestDFSAdmin {
     String retrieval =
         "Retrieval of reconfiguration status successful on 2 nodes, failed on 0 nodes.";
 
-    Assertions.assertThat(outs.subList(1, 5)).containsSubsequence(success, from, to);
-    Assertions.assertThat(outs.subList(5, 9)).containsSubsequence(success, from, to, retrieval);
+    assertThat(outs.subList(1, 5)).containsSubsequence(success, from, to);
+    assertThat(outs.subList(5, 9)).containsSubsequence(success, from, to, retrieval);
+  }
+
+  @Test
+  public void testDecommissionDataNodesReconfig()
+      throws IOException, InterruptedException, TimeoutException {
+    redirectStream();
+    final Configuration dfsConf = new HdfsConfiguration();
+    try (MiniDFSCluster miniCluster = new MiniDFSCluster.Builder(dfsConf)
+        .numDataNodes(3).build()) {
+      ReconfigurationUtil reconfigurationUtil = mock(ReconfigurationUtil.class);
+      miniCluster.getDataNodes().forEach(node -> node.setReconfigurationUtil(reconfigurationUtil));
+      List<ReconfigurationUtil.PropertyChange> changes = new ArrayList<>();
+      changes.add(new ReconfigurationUtil.PropertyChange(
+          DFS_DATANODE_DATA_TRANSFER_BANDWIDTHPERSEC_KEY, "1000",
+          datanode.getConf().get(DFS_DATANODE_DATA_TRANSFER_BANDWIDTHPERSEC_KEY)));
+      when(reconfigurationUtil.parseChangedProperties(any(Configuration.class),
+          any(Configuration.class))).thenReturn(changes);
+
+      DFSAdmin dfsAdmin = Mockito.spy(new DFSAdmin(dfsConf));
+      DistributedFileSystem dfs = Mockito.spy(miniCluster.getFileSystem());
+      DatanodeInfo decommissioningNode1 = dfs.getDataNodeStats()[0];
+      DatanodeInfo decommissioningNode2 = dfs.getDataNodeStats()[1];
+      DatanodeInfo[] dataNodeStats = new DatanodeInfo[]{decommissioningNode1, decommissioningNode2};
+      when(dfsAdmin.getDFS()).thenReturn(dfs);
+      when(dfs.getDataNodeStats(DatanodeReportType.DECOMMISSIONING)).thenReturn(dataNodeStats);
+
+      int ret = dfsAdmin.startReconfiguration("datanode", "decomnodes");
+
+      // collect outputs
+      final List<String> outsForStartReconf = Lists.newArrayList();
+      final List<String> errsForStartReconf = Lists.newArrayList();
+      scanIntoList(out, outsForStartReconf);
+      scanIntoList(err, errsForStartReconf);
+
+      // verify startReconfiguration results is as expected
+      assertEquals(0, ret);
+      String started = "Started reconfiguration task on node";
+      String starting =
+          "Starting of reconfiguration task successful on 2 nodes, failed on 0 nodes.";
+      assertThat(outsForStartReconf).hasSize(3);
+      assertThat(errsForStartReconf).hasSize(0);
+      assertThat(outsForStartReconf.get(0)).startsWith(started);
+      assertThat(outsForStartReconf.get(1)).startsWith(started);
+      assertThat(outsForStartReconf.get(2)).startsWith(starting);
+
+      // verify getReconfigurationStatus results is as expected
+      Thread.sleep(1000);
+      resetStream();
+      final List<String> outsForFinishReconf = Lists.newArrayList();
+      final List<String> errsForFinishReconf = Lists.newArrayList();
+      waitForReconfigurationDecommissionNode("datanode", "decomnodes",
+          dfsAdmin, outsForFinishReconf, errsForFinishReconf);
+      String success = "SUCCESS: Changed property " +
+          DFS_DATANODE_DATA_TRANSFER_BANDWIDTHPERSEC_KEY;
+      String from = "\tFrom: \"0\"";
+      String to = "\tTo: \"1000\"";
+      String retrieval =
+          "Retrieval of reconfiguration status successful on 2 nodes, failed on 0 nodes.";
+
+      assertThat(outsForFinishReconf.subList(1, 5)).
+          containsSubsequence(success, from, to);
+      assertThat(outsForFinishReconf.subList(5, 9)).
+          containsSubsequence(success, from, to, retrieval);
+
+      // verify refreshed decommissioningNode is as expected
+      String node1Addr = decommissioningNode1.getIpAddr() + ":" +
+          decommissioningNode1.getIpcPort();
+      String node2Addr = decommissioningNode2.getIpAddr() + ":" +
+          decommissioningNode2.getIpcPort();
+      int finishedReconfCount = 0;
+      for (String outMessage : outsForFinishReconf) {
+        finishedReconfCount = outMessage.contains(node1Addr) ?
+            finishedReconfCount + 1 : finishedReconfCount + 0;
+        finishedReconfCount = outMessage.contains(node2Addr) ?
+            finishedReconfCount + 1 : finishedReconfCount + 0;
+      }
+      assertTrue(finishedReconfCount == 2);
+    }
+  }
+
+  private void waitForReconfigurationDecommissionNode(final String nodeType, final String address,
+      DFSAdmin dfsAdmin, List<String> outs, List<String> errs)
+      throws TimeoutException, InterruptedException {
+    PrintStream outStream = new PrintStream(out);
+    PrintStream errStream = new PrintStream(err);
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        LocatedBlocks blocks = null;
+        try {
+          dfsAdmin.getReconfigurationStatusUtil("datanode", "decomnodes",
+              outStream, errStream);
+        } catch (IOException | InterruptedException e) {
+          LOG.error(String.format(
+              "call getReconfigurationStatus on %s[%s] failed.", nodeType,
+              address), e);
+        }
+        scanIntoList(out, outs);
+        scanIntoList(err, errs);
+        return !outs.isEmpty() && outs.get(0).contains("finished");
+      }
+    }, 100, 100 * 100);
   }
 }

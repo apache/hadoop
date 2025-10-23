@@ -58,6 +58,7 @@ public class MockStateStoreDriver extends StateStoreBaseImpl {
 
   @Override
   public void close() throws Exception {
+    super.close();
     VALUE_MAP.clear();
     initialized = false;
   }

@@ -19,8 +19,8 @@
 package org.apache.hadoop.mapreduce.jobhistory;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -40,7 +40,8 @@ import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.v2.app.job.impl.JobImpl;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEvent;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 public class TestEvents {
 
@@ -50,7 +51,8 @@ public class TestEvents {
    * 
    * @throws Exception
    */
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testTaskAttemptFinishedEvent() throws Exception {
 
     JobID jid = new JobID("001", 1);
@@ -79,7 +81,8 @@ public class TestEvents {
    * @throws Exception
    */
 
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testJobPriorityChange() throws Exception {
     org.apache.hadoop.mapreduce.JobID jid = new JobID("001", 1);
     JobPriorityChangeEvent test = new JobPriorityChangeEvent(jid,
@@ -89,7 +92,8 @@ public class TestEvents {
 
   }
   
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testJobQueueChange() throws Exception {
     org.apache.hadoop.mapreduce.JobID jid = new JobID("001", 1);
     JobQueueChangeEvent test = new JobQueueChangeEvent(jid,
@@ -103,7 +107,8 @@ public class TestEvents {
    * 
    * @throws Exception
    */
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testTaskUpdated() throws Exception {
     JobID jid = new JobID("001", 1);
     TaskID tid = new TaskID(jid, TaskType.REDUCE, 2);
@@ -118,7 +123,8 @@ public class TestEvents {
    * instance of HistoryEvent Different HistoryEvent should have a different
    * datum.
    */
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testEvents() throws Exception {
 
     EventReader reader = new EventReader(new DataInputStream(

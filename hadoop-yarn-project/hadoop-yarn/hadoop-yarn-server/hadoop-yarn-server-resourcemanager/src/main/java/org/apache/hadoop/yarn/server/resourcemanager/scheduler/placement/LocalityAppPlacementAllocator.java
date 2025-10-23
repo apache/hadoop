@@ -23,7 +23,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.SchedulingRequest;
-import org.apache.hadoop.yarn.exceptions.SchedulerInvalidResoureRequestException;
+import org.apache.hadoop.yarn.exceptions.SchedulerInvalidResourceRequestException;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AppSchedulingInfo;
@@ -172,8 +172,8 @@ public class LocalityAppPlacementAllocator <N extends SchedulerNode>
       SchedulerRequestKey schedulerRequestKey,
       SchedulingRequest schedulingRequest,
       boolean recoverPreemptedRequestForAContainer)
-      throws SchedulerInvalidResoureRequestException {
-    throw new SchedulerInvalidResoureRequestException(this.getClass().getName()
+      throws SchedulerInvalidResourceRequestException {
+    throw new SchedulerInvalidResourceRequestException(this.getClass().getName()
         + " not be able to handle SchedulingRequest, there exists a "
         + "ResourceRequest with the same scheduler key=" + schedulerRequestKey
         + ", please send SchedulingRequest with a different allocationId and "

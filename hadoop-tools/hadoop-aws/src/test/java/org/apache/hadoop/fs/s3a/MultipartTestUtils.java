@@ -26,30 +26,39 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.s3a.impl.PutObjectOptions;
 import org.apache.hadoop.fs.store.audit.AuditSpan;
-import org.apache.hadoop.io.IOUtils;
 
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import static org.apache.hadoop.fs.contract.ContractTestUtils.assertFileHasLength;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
-import static org.apache.hadoop.fs.s3a.Invoker.LOG_EVENT;
+import static org.apache.hadoop.fs.s3a.commit.CommitConstants.MAGIC_PATH_PREFIX;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 /**
  * Utilities for S3A multipart upload tests.
  */
 public final class MultipartTestUtils {
+
   private static final Logger LOG = LoggerFactory.getLogger(
       MultipartTestUtils.class);
+
+  /**
+   * Target file of {@code createMagicFile()}.
+   */
+  public static final String MAGIC_FILE_TARGET = "subdir/file.txt";
 
   /** Not instantiated. */
   private MultipartTestUtils() { }
@@ -72,8 +81,7 @@ public final class MultipartTestUtils {
         anyFailure = true;
       }
     }
-    Assert.assertFalse("Failure aborting multipart upload(s), see log.",
-        anyFailure);
+    assertFalse(anyFailure, "Failure aborting multipart upload(s), see log.");
   }
 
   public static IdKey createPartUpload(S3AFileSystem fs, String key, int len,
@@ -82,9 +90,9 @@ public final class MultipartTestUtils {
       WriteOperationHelper writeHelper = fs.getWriteOperationHelper();
       byte[] data = dataset(len, 'a', 'z');
       InputStream in = new ByteArrayInputStream(data);
-      String uploadId = writeHelper.initiateMultiPartUpload(key, PutObjectOptions.keepingDirs());
+      String uploadId = writeHelper.initiateMultiPartUpload(key, PutObjectOptions.defaultOptions());
       UploadPartRequest req = writeHelper.newUploadPartRequestBuilder(key, uploadId,
-          partNo, len).build();
+          partNo, true, len).build();
       RequestBody body = RequestBody.fromInputStream(in, len);
       UploadPartResponse response = writeHelper.uploadPart(req, body, null);
       LOG.debug("uploaded part etag {}, upid {}", response.eTag(), uploadId);
@@ -94,24 +102,10 @@ public final class MultipartTestUtils {
 
   /** Delete any uploads under given path (recursive).  Silent on failure. */
   public static void clearAnyUploads(S3AFileSystem fs, Path path) {
-    String key = fs.pathToKey(path);
-    AuditSpan span = null;
     try {
-      RemoteIterator<MultipartUpload> uploads = fs.listUploads(key);
-      span = fs.createSpan("multipart", path.toString(), null);
-      final WriteOperationHelper helper
-          = fs.getWriteOperationHelper();
-      while (uploads.hasNext()) {
-        MultipartUpload upload = uploads.next();
-        LOG.debug("Cleaning up upload: {} {}", upload.key(),
-            truncatedUploadId(upload.uploadId()));
-        helper.abortMultipartUpload(upload.key(),
-            upload.uploadId(), true, LOG_EVENT);
-      }
+      fs.getS3AInternals().abortMultipartUploads(path);
     } catch (IOException ioe) {
       LOG.info("Ignoring exception: ", ioe);
-    } finally {
-      IOUtils.closeStream(span);
     }
   }
 
@@ -122,7 +116,7 @@ public final class MultipartTestUtils {
     RemoteIterator<MultipartUpload> uploads = fs.listUploads(key);
     while (uploads.hasNext()) {
       MultipartUpload upload = uploads.next();
-      Assert.fail("Found unexpected upload " + upload.key() + " " +
+      Assertions.fail("Found unexpected upload " + upload.key() + " " +
           truncatedUploadId(upload.uploadId()));
     }
   }
@@ -163,6 +157,33 @@ public final class MultipartTestUtils {
 
   private static String truncatedUploadId(String fullId) {
     return fullId.substring(0, 12) + " ...";
+  }
+
+  /**
+   * Given a dir, return the name of the magic subdir.
+   * The naming has changed across versions; this isolates
+   * the changes.
+   * @param dir directory
+   * @return the magic subdir
+   */
+  public static Path magicPath(Path dir) {
+    return new Path(dir, MAGIC_PATH_PREFIX + "001/");
+  }
+
+  /**
+   * Create a magic file of "real" length more than 0 bytes long.
+   * @param fs filesystem
+   * @param dir directory
+   * @return the path
+   * @throws IOException creation failure.p
+   */
+  public static Path createMagicFile(final S3AFileSystem fs, final Path dir) throws IOException {
+    Path magicFile = new Path(magicPath(dir), "__base/" + MAGIC_FILE_TARGET);
+    createFile(fs, magicFile, true, "123".getBytes(StandardCharsets.UTF_8));
+
+    // the file exists but is a 0 byte marker file.
+    assertFileHasLength(fs, magicFile, 0);
+    return magicFile;
   }
 
   /** Struct of object key, upload ID. */

@@ -254,7 +254,7 @@ public abstract class PipeMapRed {
   }
 
   String safeEnvVarName(String var) {
-    StringBuffer safe = new StringBuffer();
+    StringBuilder safe = new StringBuilder();
     int len = var.length();
     for (int i = 0; i < len; i++) {
       char c = var.charAt(i);

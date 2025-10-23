@@ -23,6 +23,8 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.StringReader;
+import java.nio.file.FileStore;
+import java.nio.file.Files;
 
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.Shell;
@@ -30,6 +32,8 @@ import org.apache.hadoop.util.Shell.ExitCodeException;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static java.nio.file.Files.createLink;
 
@@ -50,6 +54,11 @@ public class HardLink {
   private static HardLinkCommandGetter getHardLinkCommand;
   
   public final LinkStats linkStats; //not static
+
+  static final Logger LOG = LoggerFactory.getLogger(HardLink.class);
+
+  private static final String FILE_ATTRIBUTE_VIEW = "unix";
+  private static final String FILE_ATTRIBUTE = "unix:nlink";
   
   //initialize the command "getters" statically, so can use their 
   //methods without instantiating the HardLink object
@@ -204,6 +213,21 @@ public class HardLink {
     }
   }
 
+    /**
+     * Determines whether the system supports hardlinks.
+     * @param f - file to examine
+     * @return true if hardlinks are supported, false otherwise
+     */
+  public static boolean supportsHardLink(File f) {
+    try {
+      FileStore store = Files.getFileStore(f.toPath());
+      return store.supportsFileAttributeView(FILE_ATTRIBUTE_VIEW);
+    } catch (IOException e) {
+      LOG.warn("Failed to determine if hardlink is supported", e);
+      return false;
+    }
+  }
+
    /**
    * Retrieves the number of links to the specified file.
     *
@@ -218,6 +242,10 @@ public class HardLink {
     }
     if (!fileName.exists()) {
       throw new FileNotFoundException(fileName + " not found.");
+    }
+
+    if (supportsHardLink(fileName)) {
+      return (int) Files.getAttribute(fileName.toPath(), FILE_ATTRIBUTE);
     }
 
     // construct and execute shell command

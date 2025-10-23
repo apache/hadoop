@@ -37,9 +37,13 @@ import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.io.retry.FailoverProxyProvider;
 import org.apache.hadoop.net.DomainNameResolver;
 import org.apache.hadoop.net.DomainNameResolverFactory;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.Failover.DFS_CLIENT_LAZY_RESOLVED;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.Failover.DFS_CLIENT_LAZY_RESOLVED_DEFAULT;
 
 public abstract class AbstractNNFailoverProxyProvider<T> implements
     FailoverProxyProvider <T> {
@@ -138,6 +142,10 @@ public abstract class AbstractNNFailoverProxyProvider<T> implements
     public HAServiceState getCachedState() {
       return cachedState;
     }
+
+    public void setAddress(InetSocketAddress address) {
+      this.address = address;
+    }
   }
 
   @Override
@@ -152,6 +160,24 @@ public abstract class AbstractNNFailoverProxyProvider<T> implements
     if (pi.proxy == null) {
       assert pi.getAddress() != null : "Proxy address is null";
       try {
+        InetSocketAddress address = pi.getAddress();
+        // If the host is not resolved to IP and lazy.resolved=true,
+        // the host needs to be resolved.
+        if (address.isUnresolved()) {
+          if (conf.getBoolean(DFS_CLIENT_LAZY_RESOLVED, DFS_CLIENT_LAZY_RESOLVED_DEFAULT)) {
+            InetSocketAddress isa =
+                NetUtils.createSocketAddrForHost(address.getHostName(), address.getPort());
+            if (isa.isUnresolved()) {
+              LOG.warn("Can not resolve host {}, check your hdfs-site.xml file " +
+                  "to ensure host are configured correctly.", address.getHostName());
+            }
+            pi.setAddress(isa);
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("Lazy resolve host {} -> {}, when create proxy if needed.",
+                  address.toString(), pi.getAddress().toString());
+            }
+          }
+        }
         pi.proxy = factory.createProxy(conf,
             pi.getAddress(), xface, ugi, false, getFallbackToSimpleAuth());
       } catch (IOException ioe) {

@@ -34,7 +34,7 @@ import org.slf4j.LoggerFactory;
 @InterfaceStability.Unstable
 public class GenericsUtil {
 
-  private static final String SLF4J_LOG4J_ADAPTER_CLASS = "org.slf4j.impl.Log4jLoggerAdapter";
+  private static final String SLF4J_LOG4J_ADAPTER_CLASS = "org.slf4j.impl.Reload4jLoggerAdapter";
 
   /**
    * Set to false only if log4j adapter class is not found in the classpath. Once set to false,

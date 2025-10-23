@@ -21,13 +21,13 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 
-import org.junit.BeforeClass;
+import org.junit.jupiter.api.BeforeAll;
 
 /**
  * End-to-end tests for COMPOSITE_CRC combine mode.
  */
 public class TestCopyMapperCompositeCrc extends TestCopyMapper {
-  @BeforeClass
+  @BeforeAll
   public static void setup() throws Exception {
     Configuration configuration = TestCopyMapper.getConfigurationForCluster();
     configuration.set(

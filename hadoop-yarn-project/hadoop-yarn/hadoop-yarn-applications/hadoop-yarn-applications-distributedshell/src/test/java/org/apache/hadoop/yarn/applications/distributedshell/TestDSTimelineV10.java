@@ -24,14 +24,19 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.UncheckedIOException;
+import java.net.ConnectException;
+import java.net.SocketException;
+import java.net.SocketTimeoutException;
 import java.net.URI;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.junit.Assert;
-import org.junit.Test;
+import net.jodah.failsafe.RetryPolicy;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -58,9 +63,14 @@ import org.apache.hadoop.yarn.exceptions.ResourceNotFoundException;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import javax.ws.rs.ProcessingException;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
@@ -83,18 +93,20 @@ public class TestDSTimelineV10 extends DistributedShellBaseTest {
   }
 
   @Test
-  public void testDSShellWithDomain() throws Exception {
-    baseTestDSShell(true);
+  public void testDSShellWithDomain(TestInfo testInfo) throws Exception {
+    baseTestDSShell(getMethodName(testInfo), true);
   }
 
   @Test
-  public void testDSShellWithoutDomain() throws Exception {
-    baseTestDSShell(false);
+  public void testDSShellWithoutDomain(TestInfo testInfo) throws Exception {
+    baseTestDSShell(getMethodName(testInfo), false);
   }
 
   @Test
-  public void testDSRestartWithPreviousRunningContainers() throws Exception {
+  public void testDSRestartWithPreviousRunningContainers(TestInfo testInfo)
+      throws Exception {
     String[] args = createArgumentsWithAppName(
+        getMethodName(testInfo),
         "--num_containers",
         "1",
         "--shell_command",
@@ -116,7 +128,7 @@ public class TestDSTimelineV10 extends DistributedShellBaseTest {
     boolean result = getDSClient().run();
     LOG.info("Client run completed. Result={}", result);
     // application should succeed
-    Assert.assertTrue(result);
+    assertTrue(result);
   }
 
   /*
@@ -126,8 +138,9 @@ public class TestDSTimelineV10 extends DistributedShellBaseTest {
    * The application is expected to be successful.
    */
   @Test
-  public void testDSAttemptFailuresValidityIntervalSuccess() throws Exception {
+  public void testDSAttemptFailuresValidityIntervalSuccess(TestInfo testInfo) throws Exception {
     String[] args = createArgumentsWithAppName(
+        getMethodName(testInfo),
         "--num_containers",
         "1",
         "--shell_command",
@@ -151,9 +164,9 @@ public class TestDSTimelineV10 extends DistributedShellBaseTest {
     LOG.info("Running DS Client");
     boolean result = getDSClient().run();
 
-    LOG.info("Client run completed. Result=" + result);
+    LOG.info("Client run completed. Result = {}.", result);
     // application should succeed
-    Assert.assertTrue(result);
+    assertTrue(result);
   }
 
   /*
@@ -163,8 +176,9 @@ public class TestDSTimelineV10 extends DistributedShellBaseTest {
    * The application is expected to be fail.
    */
   @Test
-  public void testDSAttemptFailuresValidityIntervalFailed() throws Exception {
+  public void testDSAttemptFailuresValidityIntervalFailed(TestInfo testInfo) throws Exception {
     String[] args = createArgumentsWithAppName(
+        getMethodName(testInfo),
         "--num_containers",
         "1",
         "--shell_command",
@@ -190,11 +204,11 @@ public class TestDSTimelineV10 extends DistributedShellBaseTest {
 
     LOG.info("Client run completed. Result=" + result);
     // application should be failed
-    Assert.assertFalse(result);
+    assertFalse(result);
   }
 
   @Test
-  public void testDSShellWithCustomLogPropertyFile() throws Exception {
+  public void testDSShellWithCustomLogPropertyFile(TestInfo testInfo) throws Exception {
     final File basedir = getBaseDirForTest();
     final File tmpDir = new File(basedir, "tmpDir");
     tmpDir.mkdirs();
@@ -203,13 +217,14 @@ public class TestDSTimelineV10 extends DistributedShellBaseTest {
       customLogProperty.delete();
     }
     if (!customLogProperty.createNewFile()) {
-      Assert.fail("Can not create custom log4j property file.");
+      fail("Can not create custom log4j property file.");
     }
     PrintWriter fileWriter = new PrintWriter(customLogProperty);
     // set the output to DEBUG level
     fileWriter.write("log4j.rootLogger=debug,stdout");
     fileWriter.close();
     String[] args = createArgumentsWithAppName(
+        getMethodName(testInfo),
         "--num_containers",
         "3",
         "--shell_command",
@@ -231,39 +246,40 @@ public class TestDSTimelineV10 extends DistributedShellBaseTest {
     // Before run the DS, the default the log level is INFO
     final Logger LOG_Client =
         LoggerFactory.getLogger(Client.class);
-    Assert.assertTrue(LOG_Client.isInfoEnabled());
-    Assert.assertFalse(LOG_Client.isDebugEnabled());
+    assertTrue(LOG_Client.isInfoEnabled());
+    assertFalse(LOG_Client.isDebugEnabled());
     final Logger LOG_AM = LoggerFactory.getLogger(ApplicationMaster.class);
-    Assert.assertTrue(LOG_AM.isInfoEnabled());
-    Assert.assertFalse(LOG_AM.isDebugEnabled());
+    assertTrue(LOG_AM.isInfoEnabled());
+    assertFalse(LOG_AM.isDebugEnabled());
 
     LOG.info("Initializing DS Client");
     setAndGetDSClient(new Configuration(getYarnClusterConfiguration()));
     boolean initSuccess = getDSClient().init(args);
-    Assert.assertTrue(initSuccess);
+    assertTrue(initSuccess);
 
     LOG.info("Running DS Client");
     boolean result = getDSClient().run();
     LOG.info("Client run completed. Result=" + result);
-    Assert.assertTrue(verifyContainerLog(3, null, true, "DEBUG") > 10);
+    assertTrue(verifyContainerLog(3, null, true, "DEBUG") > 10);
     //After DS is finished, the log level should be DEBUG
-    Assert.assertTrue(LOG_Client.isInfoEnabled());
-    Assert.assertTrue(LOG_Client.isDebugEnabled());
-    Assert.assertTrue(LOG_AM.isInfoEnabled());
-    Assert.assertTrue(LOG_AM.isDebugEnabled());
+    assertTrue(LOG_Client.isInfoEnabled());
+    assertTrue(LOG_Client.isDebugEnabled());
+    assertTrue(LOG_AM.isInfoEnabled());
+    assertTrue(LOG_AM.isDebugEnabled());
   }
 
   @Test
-  public void testSpecifyingLogAggregationContext() throws Exception {
+  public void testSpecifyingLogAggregationContext(TestInfo testInfo) throws Exception {
     String regex = ".*(foo|bar)\\d";
     String[] args = createArgumentsWithAppName(
+        getMethodName(testInfo),
         "--shell_command",
         "echo",
         "--rolling_log_pattern",
         regex
     );
     setAndGetDSClient(new Configuration(getYarnClusterConfiguration()));
-    Assert.assertTrue(getDSClient().init(args));
+    assertTrue(getDSClient().init(args));
 
     ApplicationSubmissionContext context =
         Records.newRecord(ApplicationSubmissionContext.class);
@@ -274,8 +290,9 @@ public class TestDSTimelineV10 extends DistributedShellBaseTest {
   }
 
   @Test
-  public void testDSShellWithMultipleArgs() throws Exception {
+  public void testDSShellWithMultipleArgs(TestInfo testInfo) throws Exception {
     String[] args = createArgumentsWithAppName(
+        getMethodName(testInfo),
         "--num_containers",
         "4",
         "--shell_command",
@@ -295,7 +312,7 @@ public class TestDSTimelineV10 extends DistributedShellBaseTest {
     LOG.info("Initializing DS Client");
     setAndGetDSClient(new Configuration(getYarnClusterConfiguration()));
     boolean initSuccess = getDSClient().init(args);
-    Assert.assertTrue(initSuccess);
+    assertTrue(initSuccess);
     LOG.info("Running DS Client");
 
     boolean result = getDSClient().run();
@@ -306,7 +323,7 @@ public class TestDSTimelineV10 extends DistributedShellBaseTest {
   }
 
   @Test
-  public void testDSShellWithShellScript() throws Exception {
+  public void testDSShellWithShellScript(TestInfo testInfo) throws Exception {
     final File basedir = getBaseDirForTest();
     final File tmpDir = new File(basedir, "tmpDir");
     tmpDir.mkdirs();
@@ -315,7 +332,7 @@ public class TestDSTimelineV10 extends DistributedShellBaseTest {
       customShellScript.delete();
     }
     if (!customShellScript.createNewFile()) {
-      Assert.fail("Can not create custom shell script file.");
+      fail("Can not create custom shell script file.");
     }
     PrintWriter fileWriter = new PrintWriter(customShellScript);
     // set the output to DEBUG level
@@ -323,6 +340,7 @@ public class TestDSTimelineV10 extends DistributedShellBaseTest {
     fileWriter.close();
     LOG.info(customShellScript.getAbsolutePath());
     String[] args = createArgumentsWithAppName(
+        getMethodName(testInfo),
         "--num_containers",
         "1",
         "--shell_script",
@@ -339,7 +357,7 @@ public class TestDSTimelineV10 extends DistributedShellBaseTest {
 
     LOG.info("Initializing DS Client");
     setAndGetDSClient(new Configuration(getYarnClusterConfiguration()));
-    Assert.assertTrue(getDSClient().init(args));
+    assertTrue(getDSClient().init(args));
     LOG.info("Running DS Client");
     assertTrue(getDSClient().run());
     List<String> expectedContent = new ArrayList<>();
@@ -521,10 +539,21 @@ public class TestDSTimelineV10 extends DistributedShellBaseTest {
     TimelineClientImpl client = new TimelineClientImpl() {
       @Override
       protected TimelineWriter createTimelineWriter(Configuration conf,
-          UserGroupInformation authUgi, com.sun.jersey.api.client.Client client,
-          URI resURI) throws IOException {
+           UserGroupInformation ugi, javax.ws.rs.client.Client webClient, URI uri,
+           RetryPolicy<Object> retryPolicy) {
+        long retryInterval =
+            YarnConfiguration.DEFAULT_TIMELINE_SERVICE_CLIENT_RETRY_INTERVAL_MS;
+        int maxRetries = YarnConfiguration.DEFAULT_TIMELINE_SERVICE_CLIENT_MAX_RETRIES;
+        RetryPolicy<Object> testRetryPolicy = new RetryPolicy<>()
+            .handle(IOException.class, RuntimeException.class)
+            .handleIf(e -> e instanceof ProcessingException
+            && (e.getCause() instanceof ConnectException
+            || e.getCause() instanceof SocketTimeoutException
+            || e.getCause() instanceof SocketException))
+            .withDelay(Duration.ofMillis(retryInterval))
+            .withMaxRetries(maxRetries);
         TimelineWriter timelineWriter =
-            new DirectTimelineWriter(authUgi, client, resURI);
+            new DirectTimelineWriter(authUgi, webClient, uri, testRetryPolicy);
         spyTimelineWriterRef.set(spy(timelineWriter));
         return spyTimelineWriterRef.get();
       }
@@ -536,7 +565,7 @@ public class TestDSTimelineV10 extends DistributedShellBaseTest {
     try {
       UserGroupInformation ugi = mock(UserGroupInformation.class);
       when(ugi.getShortUserName()).thenReturn("user1");
-      // verify no ClientHandlerException get thrown out.
+      // verify no ProcessingException get thrown out.
       am.publishContainerEndEvent(client, ContainerStatus.newInstance(
           BuilderUtils.newContainerId(1, 1, 1, 1), ContainerState.COMPLETE, "",
           1), "domainId", ugi);
@@ -546,8 +575,9 @@ public class TestDSTimelineV10 extends DistributedShellBaseTest {
   }
 
   @Test
-  public void testContainerLaunchFailureHandling() throws Exception {
+  public void testContainerLaunchFailureHandling(TestInfo testInfo) throws Exception {
     String[] args = createArgumentsWithAppName(
+        getMethodName(testInfo),
         "--num_containers",
         "2",
         "--shell_command",
@@ -561,14 +591,15 @@ public class TestDSTimelineV10 extends DistributedShellBaseTest {
     LOG.info("Initializing DS Client");
     setAndGetDSClient(ContainerLaunchFailAppMaster.class.getName(),
         new Configuration(getYarnClusterConfiguration()));
-    Assert.assertTrue(getDSClient().init(args));
+    assertTrue(getDSClient().init(args));
     LOG.info("Running DS Client");
-    Assert.assertFalse(getDSClient().run());
+    assertFalse(getDSClient().run());
   }
 
   @Test
-  public void testDebugFlag() throws Exception {
+  public void testDebugFlag(TestInfo testInfo) throws Exception {
     String[] args = createArgumentsWithAppName(
+        getMethodName(testInfo),
         "--num_containers",
         "2",
         "--shell_command",
@@ -586,9 +617,9 @@ public class TestDSTimelineV10 extends DistributedShellBaseTest {
 
     LOG.info("Initializing DS Client");
     setAndGetDSClient(new Configuration(getYarnClusterConfiguration()));
-    Assert.assertTrue(getDSClient().init(args));
+    assertTrue(getDSClient().init(args));
     LOG.info("Running DS Client");
-    Assert.assertTrue(getDSClient().run());
+    assertTrue(getDSClient().run());
   }
 
   private int verifyContainerLog(int containerNum,
@@ -599,7 +630,7 @@ public class TestDSTimelineV10 extends DistributedShellBaseTest {
                 YarnConfiguration.DEFAULT_NM_LOG_DIRS));
 
     File[] listOfFiles = logFolder.listFiles();
-    Assert.assertNotNull(listOfFiles);
+    assertNotNull(listOfFiles);
     int currentContainerLogFileIndex = -1;
     for (int i = listOfFiles.length - 1; i >= 0; i--) {
       if (listOfFiles[i].listFiles().length == containerNum + 1) {
@@ -607,7 +638,7 @@ public class TestDSTimelineV10 extends DistributedShellBaseTest {
         break;
       }
     }
-    Assert.assertTrue(currentContainerLogFileIndex != -1);
+    assertTrue(currentContainerLogFileIndex != -1);
     File[] containerFiles =
         listOfFiles[currentContainerLogFileIndex].listFiles();
 
@@ -622,7 +653,7 @@ public class TestDSTimelineV10 extends DistributedShellBaseTest {
           try (BufferedReader br = new BufferedReader(new FileReader(output))) {
             String sCurrentLine;
 
-            int numOfline = 0;
+            int numOffline = 0;
             while ((sCurrentLine = br.readLine()) != null) {
               if (count) {
                 if (sCurrentLine.contains(expectedWord)) {
@@ -630,9 +661,9 @@ public class TestDSTimelineV10 extends DistributedShellBaseTest {
                 }
               } else if (output.getName().trim().equals("stdout")) {
                 if (!Shell.WINDOWS) {
-                  Assert.assertEquals("The current is" + sCurrentLine,
-                      expectedContent.get(numOfline), sCurrentLine.trim());
-                  numOfline++;
+                  assertEquals(expectedContent.get(numOffline), sCurrentLine.trim(),
+                      "The current is" + sCurrentLine);
+                  numOffline++;
                 } else {
                   stdOutContent.add(sCurrentLine.trim());
                 }
@@ -646,7 +677,7 @@ public class TestDSTimelineV10 extends DistributedShellBaseTest {
              */
             if (Shell.WINDOWS && !count
                 && output.getName().trim().equals("stdout")) {
-              Assert.assertTrue(stdOutContent.containsAll(expectedContent));
+              assertTrue(stdOutContent.containsAll(expectedContent));
             }
           } catch (IOException e) {
             LOG.error("Exception reading the buffer", e);
@@ -678,7 +709,7 @@ public class TestDSTimelineV10 extends DistributedShellBaseTest {
     for (int i = 0; i < args.length; ++i) {
       LOG.info("Initializing DS Client[{}]", i);
       setAndGetDSClient(new Configuration(getYarnClusterConfiguration()));
-      Assert.assertTrue(getDSClient().init(args[i]));
+      assertTrue(getDSClient().init(args[i]));
       LOG.info("Running DS Client[{}]", i);
       LambdaTestUtils.intercept(Exception.class,
           () -> getDSClient().run());
@@ -686,10 +717,11 @@ public class TestDSTimelineV10 extends DistributedShellBaseTest {
   }
 
   @Test
-  public void testDSShellWithOpportunisticContainers() throws Exception {
+  public void testDSShellWithOpportunisticContainers(TestInfo testInfo) throws Exception {
     setAndGetDSClient(new Configuration(getYarnClusterConfiguration()));
 
     String[] args = createArgumentsWithAppName(
+        getMethodName(testInfo),
         "--num_containers",
         "2",
         "--master_memory",
@@ -709,42 +741,48 @@ public class TestDSTimelineV10 extends DistributedShellBaseTest {
     assertTrue(getDSClient().run());
   }
 
-  @Test(expected = ResourceNotFoundException.class)
-  public void testDistributedShellAMResourcesWithUnknownResource()
+  @Test
+  public void testDistributedShellAMResourcesWithUnknownResource(TestInfo testInfo)
       throws Exception {
-    String[] args = createArgumentsWithAppName(
-        "--num_containers",
-        "1",
-        "--shell_command",
-        getListCommand(),
-        "--master_resources",
-        "unknown-resource=5"
-    );
-    setAndGetDSClient(new Configuration(getYarnClusterConfiguration()));
-    assertTrue(getDSClient().init(args));
-    getDSClient().run();
-  }
-
-  @Test(expected = IllegalArgumentException.class)
-  public void testDistributedShellNonExistentQueue()
-      throws Exception {
-    String[] args = createArgumentsWithAppName(
-        "--num_containers",
-        "1",
-        "--shell_command",
-        getListCommand(),
-        "--queue",
-        "non-existent-queue"
-    );
-    setAndGetDSClient(new Configuration(getYarnClusterConfiguration()));
-    assertTrue(getDSClient().init(args));
-    getDSClient().run();
+    assertThrows(ResourceNotFoundException.class, () -> {
+      String[] args = createArgumentsWithAppName(
+              getMethodName(testInfo),
+              "--num_containers",
+              "1",
+              "--shell_command",
+              getListCommand(),
+              "--master_resources",
+              "unknown-resource=5"
+      );
+      setAndGetDSClient(new Configuration(getYarnClusterConfiguration()));
+      assertTrue(getDSClient().init(args));
+      getDSClient().run();
+    });
   }
 
   @Test
-  public void testDistributedShellWithSingleFileLocalization()
+  public void testDistributedShellNonExistentQueue(TestInfo testInfo) throws Exception {
+    assertThrows(IllegalArgumentException.class, () -> {
+      String[] args = createArgumentsWithAppName(
+          getMethodName(testInfo),
+          "--num_containers",
+          "1",
+          "--shell_command",
+          getListCommand(),
+          "--queue",
+          "non-existent-queue"
+      );
+      setAndGetDSClient(new Configuration(getYarnClusterConfiguration()));
+      assertTrue(getDSClient().init(args));
+      getDSClient().run();
+    });
+  }
+
+  @Test
+  public void testDistributedShellWithSingleFileLocalization(TestInfo testInfo)
       throws Exception {
     String[] args = createArgumentsWithAppName(
+        getMethodName(testInfo),
         "--num_containers",
         "1",
         "--shell_command",
@@ -757,13 +795,14 @@ public class TestDSTimelineV10 extends DistributedShellBaseTest {
 
     setAndGetDSClient(new Configuration(getYarnClusterConfiguration()));
     assertTrue(getDSClient().init(args));
-    assertTrue("Client exited with an error", getDSClient().run());
+    assertTrue(getDSClient().run(), "Client exited with an error");
   }
 
   @Test
-  public void testDistributedShellWithMultiFileLocalization()
+  public void testDistributedShellWithMultiFileLocalization(TestInfo testInfo)
       throws Exception {
     String[] args = createArgumentsWithAppName(
+        getMethodName(testInfo),
         "--num_containers",
         "1",
         "--shell_command",
@@ -776,32 +815,35 @@ public class TestDSTimelineV10 extends DistributedShellBaseTest {
 
     setAndGetDSClient(new Configuration(getYarnClusterConfiguration()));
     assertTrue(getDSClient().init(args));
-    assertTrue("Client exited with an error", getDSClient().run());
-  }
-
-  @Test(expected = UncheckedIOException.class)
-  public void testDistributedShellWithNonExistentFileLocalization()
-      throws Exception {
-    String[] args = createArgumentsWithAppName(
-        "--num_containers",
-        "1",
-        "--shell_command",
-        getCatCommand(),
-        "--localize_files",
-        "/non/existing/path/file.txt",
-        "--shell_args",
-        "file.txt"
-    );
-
-    setAndGetDSClient(new Configuration(getYarnClusterConfiguration()));
-    assertTrue(getDSClient().init(args));
-    assertTrue(getDSClient().run());
+    assertTrue(getDSClient().run(), "Client exited with an error");
   }
 
   @Test
-  public void testDistributedShellCleanup()
+  public void testDistributedShellWithNonExistentFileLocalization(TestInfo testInfo)
+      throws Exception {
+    assertThrows(UncheckedIOException.class, () -> {
+      String[] args = createArgumentsWithAppName(
+              getMethodName(testInfo),
+              "--num_containers",
+              "1",
+              "--shell_command",
+              getCatCommand(),
+              "--localize_files",
+              "/non/existing/path/file.txt",
+              "--shell_args",
+              "file.txt"
+      );
+      setAndGetDSClient(new Configuration(getYarnClusterConfiguration()));
+      assertTrue(getDSClient().init(args));
+      assertTrue(getDSClient().run());
+    });
+  }
+
+  @Test
+  public void testDistributedShellCleanup(TestInfo testInfo)
       throws Exception {
     String[] args = createArgumentsWithAppName(
+        getMethodName(testInfo),
         "--num_containers",
         "1",
         "--shell_command",
@@ -814,7 +856,7 @@ public class TestDSTimelineV10 extends DistributedShellBaseTest {
     assertTrue(getDSClient().run());
     ApplicationId appId = getDSClient().getAppId();
     String relativePath =
-        ApplicationMaster.getRelativePath(generateAppName(),
+        ApplicationMaster.getRelativePath(generateAppName(getMethodName(testInfo)),
             appId.toString(), "");
     FileSystem fs1 = FileSystem.get(config);
     Path path = new Path(fs1.getHomeDirectory(), relativePath);
@@ -827,12 +869,11 @@ public class TestDSTimelineV10 extends DistributedShellBaseTest {
       }
     }, 10, 60000);
 
-    assertFalse("Distributed Shell Cleanup failed", fs1.exists(path));
+    assertFalse(fs1.exists(path), "Distributed Shell Cleanup failed");
   }
 
   @Override
-  protected void customizeConfiguration(
-      YarnConfiguration config) throws Exception {
+  protected void customizeConfiguration(YarnConfiguration config) {
     config.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY,
         CommonConfigurationKeysPublic.FS_DEFAULT_NAME_DEFAULT);
   }

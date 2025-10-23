@@ -20,14 +20,14 @@ package org.apache.hadoop.fs.viewfs;
 import org.apache.hadoop.fs.FileContext;
 
 
-import org.junit.After;
-import org.junit.Before;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 
 
 public class TestViewFsLocalFs extends ViewFsBaseTest {
 
   @Override
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     // create the test root on local_fs
     fcTarget = FileContext.getLocalFSFileContext();
@@ -36,7 +36,7 @@ public class TestViewFsLocalFs extends ViewFsBaseTest {
   }
 
   @Override
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     super.tearDown();
   }

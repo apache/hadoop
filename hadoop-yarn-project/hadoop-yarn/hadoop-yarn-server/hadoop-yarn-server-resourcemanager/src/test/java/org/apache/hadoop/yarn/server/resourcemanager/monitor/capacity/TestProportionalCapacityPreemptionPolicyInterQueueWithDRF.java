@@ -20,8 +20,8 @@ package org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity;
 
 import java.io.IOException;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.yarn.api.protocolrecords.ResourceTypes;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -43,7 +43,7 @@ import static org.mockito.Mockito.when;
 public class TestProportionalCapacityPreemptionPolicyInterQueueWithDRF
     extends ProportionalCapacityPreemptionPolicyMockFramework {
 
-  @Before
+  @BeforeEach
   public void setup() {
     super.setup();
     resourceCalculator = new DominantResourceCalculator();

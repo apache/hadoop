@@ -36,9 +36,8 @@ import org.apache.zookeeper.common.ClientX509Util;
 import org.apache.zookeeper.data.ACL;
 import org.apache.zookeeper.data.Stat;
 import org.apache.zookeeper.ZooDefs.Ids;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.Assert;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
@@ -49,7 +48,13 @@ import org.apache.hadoop.ha.ActiveStandbyElector.ActiveNotFoundException;
 import org.apache.hadoop.util.ZKUtil.ZKAuthInfo;
 import org.apache.hadoop.test.GenericTestUtils;
 
-import static org.mockito.ArgumentMatchers.any;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.mockito.Mockito.any;
 
 public class TestActiveStandbyElector {
 
@@ -92,7 +97,7 @@ public class TestActiveStandbyElector {
   private static final String ZK_BREADCRUMB_NAME = ZK_PARENT_NAME + "/" +
       ActiveStandbyElector.BREADCRUMB_FILENAME;
 
-  @Before
+  @BeforeEach
   public void init() throws IOException, KeeperException {
     count = 0;
     mockZK = Mockito.mock(ZooKeeper.class);
@@ -123,9 +128,10 @@ public class TestActiveStandbyElector {
   /**
    * verify that joinElection checks for null data
    */
-  @Test(expected = HadoopIllegalArgumentException.class)
+  @Test
   public void testJoinElectionException() {
-    elector.joinElection(null);
+    assertThrows(HadoopIllegalArgumentException.class,
+        () -> elector.joinElection(null));
   }
 
   /**
@@ -177,7 +183,7 @@ public class TestActiveStandbyElector {
   public void testFailToBecomeActive() throws Exception {
     mockNoPriorActive();
     elector.joinElection(data);
-    Assert.assertEquals(0, elector.sleptFor);
+    assertEquals(0, elector.sleptFor);
     
     Mockito.doThrow(new ServiceFailedException("failed to become active"))
         .when(mockApp).becomeActive();
@@ -189,8 +195,8 @@ public class TestActiveStandbyElector {
     // should re-join
     Mockito.verify(mockZK, Mockito.times(2)).create(ZK_LOCK_NAME, data,
         Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL, elector, mockZK);
-    Assert.assertEquals(2, count);
-    Assert.assertTrue(elector.sleptFor > 0);
+    assertEquals(2, count);
+    assertTrue(elector.sleptFor > 0);
   }
   
   /**
@@ -202,7 +208,7 @@ public class TestActiveStandbyElector {
   public void testFailToBecomeActiveAfterZKDisconnect() throws Exception {
     mockNoPriorActive();
     elector.joinElection(data);
-    Assert.assertEquals(0, elector.sleptFor);
+    assertEquals(0, elector.sleptFor);
 
     elector.processResult(Code.CONNECTIONLOSS.intValue(), ZK_LOCK_NAME, mockZK,
         ZK_LOCK_NAME);
@@ -226,8 +232,8 @@ public class TestActiveStandbyElector {
     // should re-join
     Mockito.verify(mockZK, Mockito.times(3)).create(ZK_LOCK_NAME, data,
         Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL, elector, mockZK);
-    Assert.assertEquals(2, count);
-    Assert.assertTrue(elector.sleptFor > 0);
+    assertEquals(2, count);
+    assertTrue(elector.sleptFor > 0);
   }
 
   
@@ -331,7 +337,7 @@ public class TestActiveStandbyElector {
 
     elector.joinElection(data);
     // recreate connection via getNewZooKeeper
-    Assert.assertEquals(2, count);
+    assertEquals(2, count);
     elector.processResult(Code.CONNECTIONLOSS.intValue(), ZK_LOCK_NAME, mockZK,
         ZK_LOCK_NAME);
     elector.processResult(Code.NODEEXISTS.intValue(), ZK_LOCK_NAME, mockZK,
@@ -457,10 +463,10 @@ public class TestActiveStandbyElector {
         Event.KeeperState.SyncConnected);
     elector.processWatchEvent(mockZK, mockEvent);
     verifyExistCall(1);
-    Assert.assertTrue(elector.isMonitorLockNodePending());
+    assertTrue(elector.isMonitorLockNodePending());
     elector.processResult(Code.SESSIONEXPIRED.intValue(), ZK_LOCK_NAME,
         mockZK, new Stat());
-    Assert.assertFalse(elector.isMonitorLockNodePending());
+    assertFalse(elector.isMonitorLockNodePending());
 
     // session expired should enter safe mode and initiate re-election
     // re-election checked via checking re-creation of new zookeeper and
@@ -471,7 +477,7 @@ public class TestActiveStandbyElector {
     Mockito.verify(mockApp, Mockito.times(1)).enterNeutralMode();
     // called getNewZooKeeper to create new session. first call was in
     // constructor
-    Assert.assertEquals(2, count);
+    assertEquals(2, count);
     // once in initial joinElection and one now
     Mockito.verify(mockZK, Mockito.times(2)).create(ZK_LOCK_NAME, data,
         Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL, elector, mockZK);
@@ -504,13 +510,13 @@ public class TestActiveStandbyElector {
         ZK_LOCK_NAME);
     Mockito.verify(mockApp, Mockito.times(1)).becomeStandby();
     verifyExistCall(1);
-    Assert.assertTrue(elector.isMonitorLockNodePending());
+    assertTrue(elector.isMonitorLockNodePending());
 
     Stat stat = new Stat();
     stat.setEphemeralOwner(0L);
     Mockito.when(mockZK.getSessionId()).thenReturn(1L);
     elector.processResult(Code.OK.intValue(), ZK_LOCK_NAME, mockZK, stat);
-    Assert.assertFalse(elector.isMonitorLockNodePending());
+    assertFalse(elector.isMonitorLockNodePending());
 
     WatchedEvent mockEvent = Mockito.mock(WatchedEvent.class);
     Mockito.when(mockEvent.getPath()).thenReturn(ZK_LOCK_NAME);
@@ -520,18 +526,18 @@ public class TestActiveStandbyElector {
         Event.EventType.NodeDataChanged);
     elector.processWatchEvent(mockZK, mockEvent);
     verifyExistCall(2);
-    Assert.assertTrue(elector.isMonitorLockNodePending());
+    assertTrue(elector.isMonitorLockNodePending());
     elector.processResult(Code.OK.intValue(), ZK_LOCK_NAME, mockZK, stat);
-    Assert.assertFalse(elector.isMonitorLockNodePending());
+    assertFalse(elector.isMonitorLockNodePending());
 
     // monitoring should be setup again after event is received
     Mockito.when(mockEvent.getType()).thenReturn(
         Event.EventType.NodeChildrenChanged);
     elector.processWatchEvent(mockZK, mockEvent);
     verifyExistCall(3);
-    Assert.assertTrue(elector.isMonitorLockNodePending());
+    assertTrue(elector.isMonitorLockNodePending());
     elector.processResult(Code.OK.intValue(), ZK_LOCK_NAME, mockZK, stat);
-    Assert.assertFalse(elector.isMonitorLockNodePending());
+    assertFalse(elector.isMonitorLockNodePending());
 
     // lock node deletion when in standby mode should create znode again
     // successful znode creation enters active state and sets monitor
@@ -546,10 +552,10 @@ public class TestActiveStandbyElector {
         ZK_LOCK_NAME);
     Mockito.verify(mockApp, Mockito.times(1)).becomeActive();
     verifyExistCall(4);
-    Assert.assertTrue(elector.isMonitorLockNodePending());
+    assertTrue(elector.isMonitorLockNodePending());
     stat.setEphemeralOwner(1L);
     elector.processResult(Code.OK.intValue(), ZK_LOCK_NAME, mockZK, stat);
-    Assert.assertFalse(elector.isMonitorLockNodePending());
+    assertFalse(elector.isMonitorLockNodePending());
 
     // lock node deletion in active mode should enter neutral mode and create
     // znode again successful znode creation enters active state and sets
@@ -564,9 +570,9 @@ public class TestActiveStandbyElector {
         ZK_LOCK_NAME);
     Mockito.verify(mockApp, Mockito.times(2)).becomeActive();
     verifyExistCall(5);
-    Assert.assertTrue(elector.isMonitorLockNodePending());
+    assertTrue(elector.isMonitorLockNodePending());
     elector.processResult(Code.OK.intValue(), ZK_LOCK_NAME, mockZK, stat);
-    Assert.assertFalse(elector.isMonitorLockNodePending());
+    assertFalse(elector.isMonitorLockNodePending());
 
     // bad path name results in fatal error
     Mockito.when(mockEvent.getPath()).thenReturn(null);
@@ -574,7 +580,7 @@ public class TestActiveStandbyElector {
     Mockito.verify(mockApp, Mockito.times(1)).notifyFatalError(
         "Unexpected watch error from Zookeeper");
     // fatal error means no new connection other than one from constructor
-    Assert.assertEquals(1, count);
+    assertEquals(1, count);
     // no new watches after fatal error
     verifyExistCall(5);
 
@@ -599,13 +605,13 @@ public class TestActiveStandbyElector {
         ZK_LOCK_NAME);
     Mockito.verify(mockApp, Mockito.times(1)).becomeStandby();
     verifyExistCall(1);
-    Assert.assertTrue(elector.isMonitorLockNodePending());
+    assertTrue(elector.isMonitorLockNodePending());
 
     Stat stat = new Stat();
     stat.setEphemeralOwner(0L);
     Mockito.when(mockZK.getSessionId()).thenReturn(1L);
     elector.processResult(Code.OK.intValue(), ZK_LOCK_NAME, mockZK, stat);
-    Assert.assertFalse(elector.isMonitorLockNodePending());
+    assertFalse(elector.isMonitorLockNodePending());
 
     WatchedEvent mockEvent = Mockito.mock(WatchedEvent.class);
     Mockito.when(mockEvent.getPath()).thenReturn(ZK_LOCK_NAME);
@@ -644,7 +650,7 @@ public class TestActiveStandbyElector {
     byte[] data = new byte[8];
     elector.joinElection(data);
     // getNewZooKeeper called 2 times. once in constructor and once now
-    Assert.assertEquals(2, count);
+    assertEquals(2, count);
     elector.processResult(Code.NODEEXISTS.intValue(), ZK_LOCK_NAME, mockZK,
         ZK_LOCK_NAME);
     Mockito.verify(mockApp, Mockito.times(1)).becomeStandby();
@@ -669,7 +675,7 @@ public class TestActiveStandbyElector {
     Mockito.when(
         mockZK.getData(Mockito.eq(ZK_LOCK_NAME), Mockito.eq(false),
             any())).thenReturn(data);
-    Assert.assertEquals(data, elector.getActiveData());
+    assertEquals(data, elector.getActiveData());
     Mockito.verify(mockZK, Mockito.times(1)).getData(
         Mockito.eq(ZK_LOCK_NAME), Mockito.eq(false), any());
 
@@ -680,7 +686,7 @@ public class TestActiveStandbyElector {
         new KeeperException.NoNodeException());
     try {
       elector.getActiveData();
-      Assert.fail("ActiveNotFoundException expected");
+      fail("ActiveNotFoundException expected");
     } catch(ActiveNotFoundException e) {
       Mockito.verify(mockZK, Mockito.times(2)).getData(
           Mockito.eq(ZK_LOCK_NAME), Mockito.eq(false), any());
@@ -693,7 +699,7 @@ public class TestActiveStandbyElector {
               any())).thenThrow(
           new KeeperException.AuthFailedException());
       elector.getActiveData();
-      Assert.fail("KeeperException.AuthFailedException expected");
+      fail("KeeperException.AuthFailedException expected");
     } catch(KeeperException.AuthFailedException ke) {
       Mockito.verify(mockZK, Mockito.times(3)).getData(
           Mockito.eq(ZK_LOCK_NAME), Mockito.eq(false), any());
@@ -762,7 +768,7 @@ public class TestActiveStandbyElector {
           Mockito.eq(Ids.OPEN_ACL_UNSAFE), Mockito.eq(CreateMode.PERSISTENT));
     try {
       elector.ensureParentZNode();
-      Assert.fail("Did not throw!");
+      fail("Did not throw!");
     } catch (IOException ioe) {
       if (!(ioe.getCause() instanceof KeeperException.ConnectionLossException)) {
         throw ioe;
@@ -791,7 +797,7 @@ public class TestActiveStandbyElector {
       };
 
 
-      Assert.fail("Did not throw zookeeper connection loss exceptions!");
+      fail("Did not throw zookeeper connection loss exceptions!");
     } catch (KeeperException ke) {
       GenericTestUtils.assertExceptionContains( "ConnectionLoss", ke);
     }
@@ -842,14 +848,14 @@ public class TestActiveStandbyElector {
             = ArgumentCaptor.forClass(ZKClientConfig.class);
     Mockito.verify(e).initiateZookeeper(configArgumentCaptor.capture());
     ZKClientConfig clientConfig = configArgumentCaptor.getValue();
-    Assert.assertEquals(defaultConfig.getProperty(ZKClientConfig.SECURE_CLIENT),
-            clientConfig.getProperty(ZKClientConfig.SECURE_CLIENT));
-    Assert.assertEquals(defaultConfig.getProperty(ZKClientConfig.ZOOKEEPER_CLIENT_CNXN_SOCKET),
-            clientConfig.getProperty(ZKClientConfig.ZOOKEEPER_CLIENT_CNXN_SOCKET));
-    Assert.assertNull(clientConfig.getProperty(clientX509Util.getSslKeystoreLocationProperty()));
-    Assert.assertNull(clientConfig.getProperty(clientX509Util.getSslKeystorePasswdProperty()));
-    Assert.assertNull(clientConfig.getProperty(clientX509Util.getSslTruststoreLocationProperty()));
-    Assert.assertNull(clientConfig.getProperty(clientX509Util.getSslTruststorePasswdProperty()));
+    assertEquals(defaultConfig.getProperty(ZKClientConfig.SECURE_CLIENT),
+        clientConfig.getProperty(ZKClientConfig.SECURE_CLIENT));
+    assertEquals(defaultConfig.getProperty(ZKClientConfig.ZOOKEEPER_CLIENT_CNXN_SOCKET),
+        clientConfig.getProperty(ZKClientConfig.ZOOKEEPER_CLIENT_CNXN_SOCKET));
+    assertNull(clientConfig.getProperty(clientX509Util.getSslKeystoreLocationProperty()));
+    assertNull(clientConfig.getProperty(clientX509Util.getSslKeystorePasswdProperty()));
+    assertNull(clientConfig.getProperty(clientX509Util.getSslTruststoreLocationProperty()));
+    assertNull(clientConfig.getProperty(clientX509Util.getSslTruststorePasswdProperty()));
   }
 
   /**
@@ -882,17 +888,17 @@ public class TestActiveStandbyElector {
             = ArgumentCaptor.forClass(ZKClientConfig.class);
     Mockito.verify(e).initiateZookeeper(configArgumentCaptor.capture());
     ZKClientConfig clientConfig = configArgumentCaptor.getValue();
-    Assert.assertEquals("true", clientConfig.getProperty(ZKClientConfig.SECURE_CLIENT));
-    Assert.assertEquals("org.apache.zookeeper.ClientCnxnSocketNetty",
-            clientConfig.getProperty(ZKClientConfig.ZOOKEEPER_CLIENT_CNXN_SOCKET));
-    Assert.assertEquals("keystore_location",
-            clientConfig.getProperty(clientX509Util.getSslKeystoreLocationProperty()));
-    Assert.assertEquals("keystore_password",
-            clientConfig.getProperty(clientX509Util.getSslKeystorePasswdProperty()));
-    Assert.assertEquals("truststore_location",
-            clientConfig.getProperty(clientX509Util.getSslTruststoreLocationProperty()));
-    Assert.assertEquals("truststore_password",
-            clientConfig.getProperty(clientX509Util.getSslTruststorePasswdProperty()));
+    assertEquals("true", clientConfig.getProperty(ZKClientConfig.SECURE_CLIENT));
+    assertEquals("org.apache.zookeeper.ClientCnxnSocketNetty",
+        clientConfig.getProperty(ZKClientConfig.ZOOKEEPER_CLIENT_CNXN_SOCKET));
+    assertEquals("keystore_location",
+        clientConfig.getProperty(clientX509Util.getSslKeystoreLocationProperty()));
+    assertEquals("keystore_password",
+        clientConfig.getProperty(clientX509Util.getSslKeystorePasswdProperty()));
+    assertEquals("truststore_location",
+        clientConfig.getProperty(clientX509Util.getSslTruststoreLocationProperty()));
+    assertEquals("truststore_password",
+        clientConfig.getProperty(clientX509Util.getSslTruststorePasswdProperty()));
 
   }
 }

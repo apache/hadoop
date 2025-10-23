@@ -23,10 +23,10 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,7 +38,7 @@ import org.apache.hadoop.tools.CopyListingFileStatus;
  * Unit tests of the deleted directory tracker.
  */
 @SuppressWarnings("RedundantThrows")
-public class TestDeletedDirTracker extends Assert {
+public class TestDeletedDirTracker extends Assertions {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(TestDeletedDirTracker.class);
@@ -63,24 +63,28 @@ public class TestDeletedDirTracker extends Assert {
 
   private DeletedDirTracker tracker;
 
-  @Before
+  @BeforeEach
   public void setup() {
     tracker = new DeletedDirTracker(1000);
   }
 
-  @After
+  @AfterEach
   public void teardown() {
     LOG.info(tracker.toString());
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testNoRootDir() throws Throwable {
-    shouldDelete(ROOT, true);
+    assertThrows(IllegalArgumentException.class, () -> {
+      shouldDelete(ROOT, true);
+    });
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testNoRootFile() throws Throwable {
-    shouldDelete(dirStatus(ROOT));
+    assertThrows(IllegalArgumentException.class, () -> {
+      shouldDelete(dirStatus(ROOT));
+    });
   }
 
   @Test
@@ -202,8 +206,8 @@ public class TestDeletedDirTracker extends Assert {
   }
 
   private void expectShouldDelete(CopyListingFileStatus status) {
-    assertTrue("Expected shouldDelete of " + status.getPath(),
-        shouldDelete(status));
+    assertTrue(shouldDelete(status),
+        "Expected shouldDelete of " + status.getPath());
   }
 
   private boolean shouldDelete(final Path path, final boolean isDir) {
@@ -219,9 +223,8 @@ public class TestDeletedDirTracker extends Assert {
   }
 
   private void expectShouldNotDelete(CopyListingFileStatus status) {
-    assertFalse("Expected !shouldDelete of " + status.getPath()
-            + " but got true",
-        shouldDelete(status));
+    assertFalse(shouldDelete(status),
+        "Expected !shouldDelete of " + status.getPath() + " but got true");
   }
 
   private CopyListingFileStatus newStatus(final Path path,
@@ -238,13 +241,13 @@ public class TestDeletedDirTracker extends Assert {
   }
 
   private void expectCached(final Path path) {
-    assertTrue("Path " + path + " is not in the cache of " + tracker,
-        tracker.isContained(path));
+    assertTrue(tracker.isContained(path),
+        "Path " + path + " is not in the cache of " + tracker);
   }
 
   private void expectNotCached(final Path path) {
-    assertFalse("Path " + path + " is in the cache of " + tracker,
-        tracker.isContained(path));
+    assertFalse(tracker.isContained(path),
+        "Path " + path + " is in the cache of " + tracker);
   }
 
 }

@@ -27,6 +27,7 @@ import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.function.Consumer;
 import java.util.function.IntFunction;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -262,6 +263,14 @@ public class FSDataInputStream extends DataInputStream
         "by " + in.getClass().getCanonicalName());
   }
 
+  /**
+   * Delegate to the underlying stream.
+   * @param position position within file
+   * @param buf the ByteBuffer to receive the results of the read operation.
+   * @throws IOException on a failure from the nested stream.
+   * @throws UnsupportedOperationException if the inner stream does not
+   * support this operation.
+   */
   @Override
   public void readFully(long position, ByteBuffer buf) throws IOException {
     if (in instanceof ByteBufferPositionedReadable) {
@@ -297,5 +306,12 @@ public class FSDataInputStream extends DataInputStream
   public void readVectored(List<? extends FileRange> ranges,
                            IntFunction<ByteBuffer> allocate) throws IOException {
     ((PositionedReadable) in).readVectored(ranges, allocate);
+  }
+
+  @Override
+  public void readVectored(final List<? extends FileRange> ranges,
+      final IntFunction<ByteBuffer> allocate,
+      final Consumer<ByteBuffer> release) throws IOException {
+    ((PositionedReadable) in).readVectored(ranges, allocate, release);
   }
 }

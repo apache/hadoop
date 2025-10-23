@@ -19,9 +19,11 @@
 package org.apache.hadoop.fs.s3a;
 
 import java.io.IOException;
+import java.util.Optional;
 
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -36,6 +38,7 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.writeDataset;
 import static org.apache.hadoop.fs.s3a.Constants.S3_ENCRYPTION_ALGORITHM;
 import static org.apache.hadoop.fs.s3a.Constants.SERVER_SIDE_ENCRYPTION_ALGORITHM;
 import static org.apache.hadoop.fs.s3a.EncryptionTestUtils.AWS_KMS_SSE_ALGORITHM;
+import static org.apache.hadoop.fs.s3a.EncryptionTestUtils.validateEncryptionFileAttributes;
 import static org.apache.hadoop.fs.s3a.S3AEncryptionMethods.SSE_KMS;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestBucketName;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
@@ -53,6 +56,7 @@ import static org.apache.hadoop.fs.s3a.S3AUtils.getS3EncryptionKey;
 public class ITestS3AEncryptionWithDefaultS3Settings extends
         AbstractTestS3AEncryption {
 
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     super.setup();
@@ -97,14 +101,31 @@ public class ITestS3AEncryptionWithDefaultS3Settings extends
     EncryptionTestUtils.assertEncrypted(fs, path, SSE_KMS, kmsKey);
   }
 
+  @Test
+  public void testEncryptionFileAttributes() throws Exception {
+    describe("Test for correct encryption file attributes for SSE-KMS with user default setting.");
+    skipIfBucketNotKmsEncrypted();
+    Path path = path(createFilename(1024));
+    byte[] data = dataset(1024, 'a', 'z');
+    S3AFileSystem fs = getFileSystem();
+    writeDataset(fs, path, data, data.length, 1024 * 1024, true);
+    ContractTestUtils.verifyFileContents(fs, path, data);
+    Configuration c = fs.getConf();
+    String kmsKey = getS3EncryptionKey(getTestBucketName(c), c);
+    validateEncryptionFileAttributes(fs, path, AWS_KMS_SSE_ALGORITHM, Optional.of(kmsKey));
+  }
+
+
+
+
   @Override
-  @Ignore
+  @Disabled
   @Test
   public void testEncryptionSettingPropagation() throws Throwable {
   }
 
   @Override
-  @Ignore
+  @Disabled
   @Test
   public void testEncryption() throws Throwable {
   }

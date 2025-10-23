@@ -47,12 +47,15 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnSched
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestWorkPreservingRMRestartForNodeLabel {
   private Configuration conf;
@@ -60,7 +63,7 @@ public class TestWorkPreservingRMRestartForNodeLabel {
   
   RMNodeLabelsManager mgr;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     conf = new YarnConfiguration();
     conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
@@ -82,8 +85,8 @@ public class TestWorkPreservingRMRestartForNodeLabel {
       MockRM rm, String labelExpression) {
     RMContainer container =
         rm.getRMContext().getScheduler().getRMContainer(containerId);
-    Assert.assertNotNull("Cannot find RMContainer=" + containerId, container);
-    Assert.assertEquals(labelExpression,
+    assertNotNull(container, "Cannot find RMContainer=" + containerId);
+    assertEquals(labelExpression,
         container.getNodeLabelExpression());
   }
   
@@ -113,14 +116,14 @@ public class TestWorkPreservingRMRestartForNodeLabel {
     CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
     FiCaSchedulerApp app =
         cs.getSchedulerApplications().get(appId).getCurrentAppAttempt();
-    Assert.assertEquals(expectedMemUsage, app.getAppAttemptResourceUsage()
+    assertEquals(expectedMemUsage, app.getAppAttemptResourceUsage()
         .getUsed(partition).getMemorySize());
   }
   
   private void checkQueueResourceUsage(String partition, String queueName, MockRM rm, int expectedMemUsage) {
     CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
     CSQueue queue = cs.getQueue(queueName);
-    Assert.assertEquals(expectedMemUsage, queue.getQueueResourceUsage()
+    assertEquals(expectedMemUsage, queue.getQueueResourceUsage()
         .getUsed(partition).getMemorySize());
   }
 
@@ -171,7 +174,7 @@ public class TestWorkPreservingRMRestartForNodeLabel {
     am1.allocate("*", 1024, 1, new ArrayList<ContainerId>());
     containerId =
         ContainerId.newContainerId(am1.getApplicationAttemptId(), 2);
-    Assert.assertTrue(rm1.waitForState(nm1, containerId,
+    assertTrue(rm1.waitForState(nm1, containerId,
         RMContainerState.ALLOCATED));
     checkRMContainerLabelExpression(ContainerId.newContainerId(
         am1.getApplicationAttemptId(), 1), rm1, "x");
@@ -194,7 +197,7 @@ public class TestWorkPreservingRMRestartForNodeLabel {
     // request a container.
     am2.allocate("*", 1024, 1, new ArrayList<ContainerId>());
     containerId = ContainerId.newContainerId(am2.getApplicationAttemptId(), 2);
-    Assert.assertTrue(rm1.waitForState(nm2, containerId,
+    assertTrue(rm1.waitForState(nm2, containerId,
         RMContainerState.ALLOCATED));
     checkRMContainerLabelExpression(ContainerId.newContainerId(
         am2.getApplicationAttemptId(), 1), rm1, "y");
@@ -217,7 +220,7 @@ public class TestWorkPreservingRMRestartForNodeLabel {
     // request a container.
     am3.allocate("*", 1024, 1, new ArrayList<ContainerId>());
     containerId = ContainerId.newContainerId(am3.getApplicationAttemptId(), 2);
-    Assert.assertTrue(rm1.waitForState(nm3, containerId,
+    assertTrue(rm1.waitForState(nm3, containerId,
         RMContainerState.ALLOCATED));
     checkRMContainerLabelExpression(ContainerId.newContainerId(
         am3.getApplicationAttemptId(), 1), rm1, "");

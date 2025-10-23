@@ -39,6 +39,7 @@ import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
+import javax.ws.rs.OPTIONS;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
@@ -114,6 +115,14 @@ public class KMS {
         .build(domain, KMSRESTConstants.KEY_RESOURCE, keyName);
   }
 
+  @OPTIONS
+  public Response handleOptions() {
+    return Response.ok()
+        .header("Allow", "GET")
+        .header("Allow", "OPTIONS")
+        .build();
+  }
+
   @POST
   @Path(KMSRESTConstants.KEYS_RESOURCE)
   @Consumes(MediaType.APPLICATION_JSON)
@@ -175,13 +184,10 @@ public class KMS {
         keyVersion = removeKeyMaterial(keyVersion);
       }
       Map json = KMSUtil.toJSON(keyVersion);
-      String requestURL = KMSMDCFilter.getURL();
-      int idx = requestURL.lastIndexOf(KMSRESTConstants.KEYS_RESOURCE);
-      requestURL = requestURL.substring(0, idx);
       LOG.trace("Exiting createKey Method.");
       return Response.created(getKeyURI(KMSRESTConstants.SERVICE_VERSION, name))
           .type(MediaType.APPLICATION_JSON)
-          .header("Location", getKeyURI(requestURL, name)).entity(json).build();
+          .entity(json).build();
     } catch (Exception e) {
       LOG.debug("Exception in createKey.", e);
       throw e;

@@ -33,13 +33,20 @@ import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.MetricsAsserts;
 import org.apache.hadoop.util.Tool;
-import org.junit.Test;
+import org.apache.hadoop.util.VersionInfo;
 
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+
+import java.lang.management.ManagementFactory;
 import java.util.concurrent.TimeUnit;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import javax.management.MBeanServer;
+import javax.management.ObjectName;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Test balancer run as a service.
@@ -118,7 +125,8 @@ public class TestBalancerService {
    * should balance succeed but not exit, then make the cluster imbalanced and
    * wait for balancer to balance it again
    */
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testBalancerServiceBalanceTwice() throws Exception {
     Configuration conf = new HdfsConfiguration();
     conf.setTimeDuration(DFSConfigKeys.DFS_BALANCER_SERVICE_INTERVAL_KEY, 5,
@@ -168,7 +176,8 @@ public class TestBalancerService {
     }
   }
 
-  @Test(timeout = 120000)
+  @Test
+  @Timeout(value = 120)
   public void testBalancerServiceOnError() throws Exception {
     Configuration conf = new HdfsConfiguration();
     // retry for every 5 seconds
@@ -204,6 +213,65 @@ public class TestBalancerService {
 
       // reset to 0 once the balancer finished without exception
       assertEquals(Balancer.getExceptionsSinceLastBalance(), 0);
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  @Test
+  @Timeout(value = 60)
+  public void testBalancerServiceMetrics() throws Exception {
+    Configuration conf = new HdfsConfiguration();
+    conf.setTimeDuration(DFSConfigKeys.DFS_BALANCER_SERVICE_INTERVAL_KEY, 5, TimeUnit.SECONDS);
+    TestBalancer.initConf(conf);
+    try {
+      setupCluster(conf);
+      TestBalancerWithHANameNodes.waitStoragesNoStale(cluster, client, 0);
+      long totalCapacity = addOneDataNode(conf); // make cluster imbalanced
+
+      Thread balancerThread = newBalancerService(conf, new String[] {"-asService"});
+      balancerThread.start();
+
+      MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
+      GenericTestUtils.waitFor(() -> {
+        try {
+          ObjectName mxbeanName = new ObjectName("Hadoop:service=Balancer,name=BalancerInfo");
+          String version = (String) mbs.getAttribute(mxbeanName, "Version");
+          return version.contains(VersionInfo.getVersion()) &&
+              version.contains(VersionInfo.getRevision());
+        } catch (Exception e) {
+          return false;
+        }
+      }, 100, 10000);
+
+      GenericTestUtils.waitFor(() -> {
+        final String balancerMetricsName =
+            "Balancer-" + cluster.getNameNode(0).getNamesystem().getBlockPoolId();
+        String blockPoolId = cluster.getNameNode(0).getNamesystem().getBlockPoolId();
+        MetricsRecordBuilder metrics = MetricsAsserts.getMetrics(balancerMetricsName);
+        try {
+          MetricsAsserts.assertTag("BlockPoolID", blockPoolId, metrics);
+          return true;
+        } catch (Exception e) {
+          return false;
+        }
+      }, 100, 10000);
+
+      TestBalancer.waitForBalancer(totalUsedSpace, totalCapacity, client, cluster,
+          BalancerParameters.DEFAULT);
+
+      cluster.triggerHeartbeats();
+      cluster.triggerBlockReports();
+
+      // add another empty datanode, wait for cluster become balance again
+      totalCapacity = addOneDataNode(conf);
+      TestBalancer.waitForBalancer(totalUsedSpace, totalCapacity, client, cluster,
+          BalancerParameters.DEFAULT);
+
+      Balancer.stop();
+      balancerThread.join();
     } finally {
       if (cluster != null) {
         cluster.shutdown();

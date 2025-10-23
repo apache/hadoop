@@ -69,7 +69,7 @@ public interface OperationCallbacks {
    * Create the read context for reading from the referenced file,
    * using FS state as well as the status.
    * @param fileStatus file status.
-   * @return a context for read and select operations.
+   * @return a context for read operations.
    */
   S3AReadOpContext createReadContext(
       FileStatus fileStatus);

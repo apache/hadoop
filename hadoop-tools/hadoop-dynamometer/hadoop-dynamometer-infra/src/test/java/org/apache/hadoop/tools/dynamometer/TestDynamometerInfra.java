@@ -71,22 +71,23 @@ import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsMana
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Assume;
-import org.junit.BeforeClass;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static org.apache.hadoop.tools.dynamometer.DynoInfraUtils.fetchHadoopTarball;
 import static org.apache.hadoop.hdfs.MiniDFSCluster.PROP_TEST_BUILD_DATA;
-import static org.hamcrest.CoreMatchers.notNullValue;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
  * Start a Dynamometer cluster in a MiniYARNCluster. Ensure that the NameNode is
@@ -112,7 +113,7 @@ import static org.junit.Assert.fail;
  * property to point directly to a Hadoop tarball which is present locally and
  * no download will occur.
  */
-@Ignore
+@Disabled
 public class TestDynamometerInfra {
 
   private static final Logger LOG =
@@ -153,19 +154,19 @@ public class TestDynamometerInfra {
 
   private ApplicationId infraAppId;
 
-  @BeforeClass
+  @BeforeAll
   public static void setupClass() throws Exception {
     PlatformAssumptions.assumeNotWindows("Dynamometer will not run on Windows");
-    Assume.assumeThat("JAVA_HOME must be set properly",
-        System.getenv("JAVA_HOME"), notNullValue());
+    assumeTrue(System.getenv("JAVA_HOME") != null,
+        "JAVA_HOME must be set properly");
     try {
       Shell.ShellCommandExecutor tarCheck = new Shell.ShellCommandExecutor(
           new String[]{"bash", "-c", "command -v tar"});
       tarCheck.execute();
-      Assume.assumeTrue("tar command is not available",
-          tarCheck.getExitCode() == 0);
+      assumeTrue(tarCheck.getExitCode() == 0,
+          "tar command is not available");
     } catch (IOException ioe) {
-      Assume.assumeNoException("Unable to execute a shell command", ioe);
+      assumeTrue(false, "Unexpected exception occurred: " + ioe.getMessage());
     }
 
     conf = new Configuration();
@@ -193,8 +194,7 @@ public class TestDynamometerInfra {
     // Set up the Hadoop binary to be used as the system-level Hadoop install
     hadoopUnpackedDir = new File(testBaseDir,
         HADOOP_BIN_UNPACKED_DIR_PREFIX + UUID.randomUUID());
-    assertTrue("Failed to make temporary directory",
-        hadoopUnpackedDir.mkdirs());
+    assertTrue(hadoopUnpackedDir.mkdirs(), "Failed to make temporary directory");
     Shell.ShellCommandExecutor shexec = new Shell.ShellCommandExecutor(
         new String[] {"tar", "xzf", hadoopTarballPath.getAbsolutePath(), "-C",
             hadoopUnpackedDir.getAbsolutePath()});
@@ -280,7 +280,7 @@ public class TestDynamometerInfra {
     nodeLabelManager.addLabelsToNode(nodeLabels);
   }
 
-  @AfterClass
+  @AfterAll
   public static void teardownClass() throws Exception {
     if (miniDFSCluster != null) {
       miniDFSCluster.shutdown(true);
@@ -303,7 +303,7 @@ public class TestDynamometerInfra {
     }
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (infraAppId != null && yarnClient != null) {
       yarnClient.killApplication(infraAppId);
@@ -311,7 +311,8 @@ public class TestDynamometerInfra {
     infraAppId = null;
   }
 
-  @Test(timeout = 15 * 60 * 1000)
+  @Test
+  @Timeout(15 * 60)
   public void testNameNodeInYARN() throws Exception {
     Configuration localConf = new Configuration(yarnConf);
     localConf.setLong(AuditLogDirectParser.AUDIT_START_TIMESTAMP_KEY, 60000);
@@ -458,7 +459,7 @@ public class TestDynamometerInfra {
 
   private Client createAndStartClient(Configuration localConf) {
     final Client client = new Client(JarFinder.getJar(ApplicationMaster.class),
-        JarFinder.getJar(Assert.class));
+        JarFinder.getJar(Assertions.class));
     client.setConf(localConf);
     Thread appThread = new Thread(() -> {
       try {

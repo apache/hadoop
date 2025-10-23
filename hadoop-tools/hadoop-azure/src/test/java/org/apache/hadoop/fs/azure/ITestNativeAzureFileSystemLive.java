@@ -33,7 +33,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import com.microsoft.azure.storage.StorageException;
 
@@ -299,7 +299,7 @@ public class ITestNativeAzureFileSystemLive extends
     AzureNativeFileSystemStore store = nfs.getStore();
     // Acquire the lease on the folder
     lease = store.acquireLease(fullKey);
-    assertNotNull("lease ID", lease.getLeaseID() != null);
+    assertNotNull(lease.getLeaseID() != null, "lease ID");
     // Try to create the same folder
     store.storeEmptyFolder(fullKey,
       nfs.createPermissionStatus(FsPermission.getDirDefault()));

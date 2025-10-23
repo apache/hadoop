@@ -18,16 +18,20 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.rmcontainer;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.anyLong;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.reset;
 
 import java.util.ArrayList;
 import java.util.concurrent.ConcurrentHashMap;
@@ -74,11 +78,10 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.Alloca
 import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
-import org.mockito.Mockito;
 
 @SuppressWarnings({ "unchecked", "rawtypes" })
 public class TestRMContainerImpl {
@@ -110,7 +113,7 @@ public class TestRMContainerImpl {
         spy(new ConcurrentHashMap<ApplicationId, RMApp>());
     RMApp rmApp = mock(RMApp.class);
     when(rmApp.getRMAppAttempt(any())).thenReturn(null);
-    Mockito.doReturn(rmApp)
+    doReturn(rmApp)
         .when(rmApps).get(ArgumentMatchers.<ApplicationId>any());
 
     RMApplicationHistoryWriter writer = mock(RMApplicationHistoryWriter.class);
@@ -298,7 +301,7 @@ public class TestRMContainerImpl {
 
     // Verify whether list of ResourceRequest is present in RMContainer
     // while moving to ALLOCATED state
-    Assert.assertNotNull(
+    assertNotNull(
         scheduler.getRMContainer(containerId2).getContainerRequest());
 
     // Allocate container
@@ -308,11 +311,12 @@ public class TestRMContainerImpl {
 
     // After RMContainer moving to ACQUIRED state, list of ResourceRequest will
     // be empty
-    Assert.assertNull(
+    assertNull(
         scheduler.getRMContainer(containerId2).getContainerRequest());
   }
 
-  @Test (timeout = 180000)
+  @Test
+  @Timeout(value = 180)
   public void testStoreAllContainerMetrics() throws Exception {
     Configuration conf = new Configuration();
     conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, 1);
@@ -352,7 +356,8 @@ public class TestRMContainerImpl {
     verify(publisher, times(2)).containerFinished(any(RMContainer.class), anyLong());
   }
 
-  @Test (timeout = 180000)
+  @Test
+  @Timeout(value = 180)
   public void testStoreOnlyAMContainerMetrics() throws Exception {
     Configuration conf = new Configuration();
     conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, 1);
@@ -418,7 +423,7 @@ public class TestRMContainerImpl {
         spy(new ConcurrentHashMap<ApplicationId, RMApp>());
     RMApp rmApp = mock(RMApp.class);
     when(rmApp.getRMAppAttempt(any())).thenReturn(null);
-    Mockito.doReturn(rmApp).when(rmApps).get(
+    doReturn(rmApp).when(rmApps).get(
         ArgumentMatchers.<ApplicationId>any());
 
     RMApplicationHistoryWriter writer = mock(RMApplicationHistoryWriter.class);
@@ -446,7 +451,7 @@ public class TestRMContainerImpl {
         SchedulerRequestKey.extractFrom(container), appAttemptId,
         nodeId, "user", rmContext);
 
-    Assert.assertEquals(0,
+    assertEquals(0,
         tagsManager.getNodeCardinalityByOp(nodeId,
             AllocationTags.createSingleAppAllocationTags(
                 TestUtils.getMockApplicationId(1), null),
@@ -456,7 +461,7 @@ public class TestRMContainerImpl {
         RMContainerEventType.START));
     schedulerNode.allocateContainer(rmContainer);
 
-    Assert.assertEquals(1,
+    assertEquals(1,
         tagsManager.getNodeCardinalityByOp(nodeId,
             AllocationTags.createSingleAppAllocationTags(appId, null),
             Long::max));
@@ -466,7 +471,7 @@ public class TestRMContainerImpl {
         RMContainerEventType.KILL));
     schedulerNode.releaseContainer(container.getId(), true);
 
-    Assert.assertEquals(0,
+    assertEquals(0,
         tagsManager.getNodeCardinalityByOp(nodeId,
             AllocationTags.createSingleAppAllocationTags(appId, null),
             Long::max));
@@ -476,7 +481,7 @@ public class TestRMContainerImpl {
         SchedulerRequestKey.extractFrom(container), appAttemptId,
         nodeId, "user", rmContext);
 
-    Assert.assertEquals(0,
+    assertEquals(0,
         tagsManager.getNodeCardinalityByOp(nodeId,
             AllocationTags.createSingleAppAllocationTags(appId, null),
             Long::max));
@@ -486,7 +491,7 @@ public class TestRMContainerImpl {
         RMContainerEventType.START));
     schedulerNode.allocateContainer(rmContainer);
 
-    Assert.assertEquals(1,
+    assertEquals(1,
         tagsManager.getNodeCardinalityByOp(nodeId,
             AllocationTags.createSingleAppAllocationTags(appId, null),
             Long::max));
@@ -499,7 +504,7 @@ public class TestRMContainerImpl {
         RMContainerEventType.FINISHED));
     schedulerNode.releaseContainer(container.getId(), true);
 
-    Assert.assertEquals(0,
+    assertEquals(0,
         tagsManager.getNodeCardinalityByOp(nodeId,
             AllocationTags.createSingleAppAllocationTags(appId, null),
             Long::max));
@@ -510,7 +515,7 @@ public class TestRMContainerImpl {
         nodeId, "user", rmContext);
     rmContainer.setAllocationTags(ImmutableSet.of("mapper"));
 
-    Assert.assertEquals(0,
+    assertEquals(0,
         tagsManager.getNodeCardinalityByOp(nodeId,
             AllocationTags.createSingleAppAllocationTags(appId, null),
             Long::max));
@@ -519,7 +524,7 @@ public class TestRMContainerImpl {
         RMContainerEventType.START));
     schedulerNode.allocateContainer(rmContainer);
 
-    Assert.assertEquals(1,
+    assertEquals(1,
         tagsManager.getNodeCardinalityByOp(nodeId,
             AllocationTags.createSingleAppAllocationTags(appId, null),
             Long::max));
@@ -535,7 +540,7 @@ public class TestRMContainerImpl {
         RMContainerEventType.FINISHED));
     schedulerNode.releaseContainer(container.getId(), true);
 
-    Assert.assertEquals(0,
+    assertEquals(0,
         tagsManager.getNodeCardinalityByOp(nodeId,
             AllocationTags.createSingleAppAllocationTags(appId, null),
             Long::max));
@@ -546,7 +551,7 @@ public class TestRMContainerImpl {
         "user", rmContext);
     rmContainer.setAllocationTags(ImmutableSet.of("mapper"));
 
-    Assert.assertEquals(0,
+    assertEquals(0,
         tagsManager.getNodeCardinalityByOp(nodeId,
             AllocationTags.createSingleAppAllocationTags(appId, null),
             Long::max));
@@ -559,13 +564,14 @@ public class TestRMContainerImpl {
     rmContainer
         .handle(new RMContainerRecoverEvent(containerId, containerStatus));
 
-    Assert.assertEquals(1,
+    assertEquals(1,
         tagsManager.getNodeCardinalityByOp(nodeId,
             AllocationTags.createSingleAppAllocationTags(appId, null),
             Long::max));
   }
 
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testContainerAcquiredAtKilled() {
     DrainDispatcher drainDispatcher = new DrainDispatcher();
     EventHandler<RMAppAttemptEvent> appAttemptEventHandler = mock(
@@ -616,7 +622,7 @@ public class TestRMContainerImpl {
         @Override
         protected void onInvalidStateTransition(
             RMContainerEventType rmContainerEventType, RMContainerState state) {
-            Assert.fail("RMContainerImpl: can't handle " + rmContainerEventType
+            fail("RMContainerImpl: can't handle " + rmContainerEventType
                 + " at state " + state);
         }
     };
