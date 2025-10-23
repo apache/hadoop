@@ -342,7 +342,7 @@ public class StandbyCheckpointer {
       throw ie;
     }
 
-    if (!ioes.isEmpty()) {
+    if (ioes.size() > activeNNAddresses.size() / 2) {
       throw MultipleIOException.createIOException(ioes);
     }
   }

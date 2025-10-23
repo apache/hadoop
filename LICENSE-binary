@@ -417,7 +417,7 @@ org.lz4:lz4-java:1.7.1
 org.objenesis:objenesis:2.6
 org.xerial.snappy:snappy-java:1.1.10.4
 org.yaml:snakeyaml:2.0
-org.wildfly.openssl:wildfly-openssl:2.1.4.Final
+org.wildfly.openssl:wildfly-openssl:2.2.5.Final
 ro.isdc.wro4j:wro4j-maven-plugin:1.8.0
 software.amazon.awssdk:bundle:2.29.52
 software.amazon.s3.analyticsaccelerator:analyticsaccelerator-s3:1.3.0
@@ -544,9 +544,9 @@ com.microsoft.azure:azure-cosmosdb-gateway:2.4.5
 com.microsoft.azure:azure-data-lake-store-sdk:2.3.3
 com.microsoft.azure:azure-keyvault-core:1.0.0
 com.microsoft.sqlserver:mssql-jdbc:6.2.1.jre7
-org.bouncycastle:bcpkix-jdk18on:1.78.1
-org.bouncycastle:bcprov-jdk18on:1.78.1
-org.bouncycastle:bcutil-jdk18on:1.78.1
+org.bouncycastle:bcpkix-jdk18on:1.82
+org.bouncycastle:bcprov-jdk18on:1.82
+org.bouncycastle:bcutil-jdk18on:1.82
 org.checkerframework:checker-qual:3.8.0
 org.codehaus.mojo:animal-sniffer-annotations:1.24
 org.jruby.jcodings:jcodings:1.0.13

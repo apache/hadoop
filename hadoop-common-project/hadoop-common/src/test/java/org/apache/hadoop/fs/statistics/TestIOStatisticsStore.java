@@ -18,6 +18,12 @@
 
 package org.apache.hadoop.fs.statistics;
 
+import java.util.Collection;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.atomic.LongAdder;
+
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -172,6 +178,61 @@ public class TestIOStatisticsStore extends AbstractHadoopTestBase {
         .isEqualTo(2);
     assertThat(stats.incrementCounter(COUNT, -10))
         .isEqualTo(2);
+  }
+
+  @Test
+  public void testForeach() throws Throwable {
+
+    final IOStatisticsStore store = iostatisticsStore()
+        .withCounters(COUNT, "c1", "c2")
+        .withGauges(GAUGE)
+        .withMinimums(MIN)
+        .withMaximums(MAX)
+        .withMeanStatistics(MEAN)
+        .build();
+    store.setCounter(COUNT, 10);
+    store.setCounter("c1", 1);
+    store.setCounter("c2", 2);
+
+    // get the counter map, which is evaluated on demand
+    final Map<String, Long> counters = store.counters();
+    LongAdder entryCount = new LongAdder();
+    LongAdder sum = new LongAdder();
+
+    // apply the foreach iteration
+    counters.forEach((k, v) -> {
+      entryCount.increment();
+      sum.add(v);
+    });
+    Assertions.assertThat(entryCount.longValue())
+        .describedAs("entry count")
+        .isEqualTo(3);
+    Assertions.assertThat(sum.longValue())
+        .describedAs("sum of values")
+        .isEqualTo(13);
+
+    // keyset is as expected
+    final Set<String> keys = counters.keySet();
+    Assertions.assertThat(keys)
+        .describedAs("keys")
+        .hasSize(3)
+        .contains("c1", "c2", COUNT);
+
+    // values are as expected
+    final Collection<Long> values = counters.values();
+    Assertions.assertThat(values)
+        .describedAs("values")
+        .hasSize(3)
+        .contains(10L, 1L, 2L);
+
+    // entries will all be evaluated
+    final Set<Map.Entry<String, Long>> entries = counters.entrySet();
+    entryCount.reset();
+    sum.reset();
+    entries.forEach(e -> {
+      entryCount.increment();
+      sum.add(e.getValue());
+    });
   }
 
 }
