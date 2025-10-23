@@ -266,7 +266,8 @@ public class OfflineImageViewerPB {
         return -1;
       }
       if ((out != null) && out.checkError()) {
-        System.err.println("CRITICAL FAILURE: PrintStream reported a write error (e.g., Disk Full).");
+        System.err.println("CRITICAL FAILURE: PrintStream reported a write error " +
+                "(e.g., Disk Full).");
         return -1;
       }
       return 0;
