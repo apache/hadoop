@@ -93,7 +93,7 @@ public class TestSignerManager extends AbstractHadoopTestBase {
     signerManager.initCustomSigners();
     // Simulate a call from the AWS SDK to create the signer.
     intercept(InstantiationIOException.class,
-        () -> SignerFactory.createSigner("testsignerUnregistered", null));
+        () -> SignerFactory.createSigner(config, "testsignerUnregistered", null));
   }
 
   @Test
@@ -103,7 +103,7 @@ public class TestSignerManager extends AbstractHadoopTestBase {
     SignerManager signerManager = new SignerManager("dontcare", null, config,
         UserGroupInformation.getCurrentUser());
     signerManager.initCustomSigners();
-    Signer s1 = SignerFactory.createSigner("testsigner1", null);
+    Signer s1 = SignerFactory.createSigner(config, "testsigner1", null);
     s1.sign(null, null);
     assertThat(SignerForTest1.initialized)
         .as(SignerForTest1.class.getName() + " not initialized")
@@ -119,13 +119,13 @@ public class TestSignerManager extends AbstractHadoopTestBase {
     SignerManager signerManager = new SignerManager("dontcare", null, config,
         UserGroupInformation.getCurrentUser());
     signerManager.initCustomSigners();
-    Signer s1 = SignerFactory.createSigner("testsigner1", null);
+    Signer s1 = SignerFactory.createSigner(config, "testsigner1", null);
     s1.sign(null, null);
     assertThat(SignerForTest1.initialized)
         .as(SignerForTest1.class.getName() + " not initialized")
         .isEqualTo(true);
 
-    Signer s2 = SignerFactory.createSigner("testsigner2", null);
+    Signer s2 = SignerFactory.createSigner(config, "testsigner2", null);
     s2.sign(null, null);
     assertThat(SignerForTest2.initialized)
         .as(SignerForTest2.class.getName() + " not initialized")
@@ -585,14 +585,16 @@ public class TestSignerManager extends AbstractHadoopTestBase {
 
   @Test
   public void testV2SignerRejected() throws Throwable {
+    Configuration config = new Configuration();
     intercept(InstantiationIOException.class, "no longer supported",
-        () -> SignerFactory.createSigner(S3_V2_SIGNER, "key"));
+        () -> SignerFactory.createSigner(config, S3_V2_SIGNER, "key"));
   }
 
   @Test
   public void testUnknownSignerRejected() throws Throwable {
+    Configuration config = new Configuration();
     intercept(InstantiationIOException.class, "unknownSigner",
-        () -> SignerFactory.createSigner("unknownSigner", "key"));
+        () -> SignerFactory.createSigner(config, "unknownSigner", "key"));
   }
 
 }

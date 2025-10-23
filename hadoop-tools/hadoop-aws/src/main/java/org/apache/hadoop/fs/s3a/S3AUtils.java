@@ -621,8 +621,9 @@ public final class S3AUtils {
    * <li>a public default constructor.</li>
    * </ol>
    *
-   * Uses the Configuration's class loader, to respect the configured value of
-   * {@link Constants#AWS_S3_CLASSLOADER_ISOLATION}.
+   * Uses the configuration's class loader, to respect the setting of
+   * {@link Constants#AWS_S3_CLASSLOADER_ISOLATION}. For backwards
+   * compatibility, if configuration is null, a default classloader is used.
    *
    * @param className name of class for which instance is to be created
    * @param conf configuration
@@ -642,8 +643,18 @@ public final class S3AUtils {
       String methodName,
       String configKey) throws IOException {
     try {
-      LOG.debug("Loading class {} with Configuration classloader {}", className, conf.getClassLoader());
-      Class<?> instanceClass = conf.getClassLoader().loadClass(className);
+      ClassLoader classLoader;
+      if (conf != null) {
+        classLoader = conf.getClassLoader();
+        LOG.debug("Loading class {} with Configuration classloader {}",
+              className, classLoader);
+      } else {
+        classLoader = S3AUtils.class.getClassLoader();
+        LOG.debug("Loading class {} with default classloader {}",
+              className, classLoader);
+      }
+
+      Class<?> instanceClass = classLoader.loadClass(className);
       if (Modifier.isAbstract(instanceClass.getModifiers())) {
         throw isAbstract(uri, className, configKey);
       }

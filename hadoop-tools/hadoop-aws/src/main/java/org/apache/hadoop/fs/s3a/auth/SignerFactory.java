@@ -101,6 +101,7 @@ public final class SignerFactory {
   /**
    * Create an instance of the given signer.
    *
+   * @param conf configuration
    * @param signerType The signer type.
    * @param configKey Config key used to configure the signer.
    * @return The new signer instance.
@@ -108,7 +109,7 @@ public final class SignerFactory {
    * @throws IOException on any other problem.
    *
    */
-  public static Signer createSigner(String signerType, String configKey) throws IOException {
+  public static Signer createSigner(Configuration conf, String signerType, String configKey) throws IOException {
     if (S3_V2_SIGNER.equals(signerType)) {
       throw unavailable(null, null, configKey, S3_V2_SIGNER + " is no longer supported");
     }
@@ -122,10 +123,19 @@ public final class SignerFactory {
     LOG.debug("Signer class from {} and key {} is {}", signerType, configKey, className);
 
     Signer signer =
-        S3AUtils.getInstanceFromReflection(className, null, null, Signer.class, "create",
+        S3AUtils.getInstanceFromReflection(className, conf, null, Signer.class, "create",
             configKey);
 
     return signer;
+  }
+
+  /**
+   * {@code conf} defaults to null for backwards compatibility.
+   *
+   * @see SignerFactory#createSigner(conf, String, String)
+   */
+  public static Signer createSigner(String signerType, String configKey) throws IOException {
+    return createSigner(null, signerType, configKey);
   }
 
   /**
