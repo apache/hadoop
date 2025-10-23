@@ -105,7 +105,7 @@ public class ITestS3APutIfMatchAndIfNoneMatch extends AbstractS3ATestBase {
   @BeforeEach
   public void setup() throws Exception {
     super.setup();
-    Configuration conf = getConfiguration();
+    Configuration conf = getFileSystem().getConf();
     assumeConditionalCreateEnabled(conf);
   }
 

@@ -202,7 +202,7 @@ public class ITestCreateFileCost extends AbstractS3ACostTest {
           () -> buildFile(testFile, false, true,
               GET_FILE_STATUS_ON_FILE));
     } else {
-      if (getConfiguration().getBoolean(FS_S3A_CONDITIONAL_CREATE_ENABLED, true)) {
+      if (getFileSystem().getConf().getBoolean(FS_S3A_CONDITIONAL_CREATE_ENABLED, true)) {
         // will trigger conditional create and throw RemoteFileChangedException
         intercept(RemoteFileChangedException.class,
             () -> buildFile(testFile, false, true, NO_HEAD_OR_LIST));
