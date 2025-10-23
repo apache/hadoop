@@ -108,9 +108,26 @@ public class ITestS3AFileSystemIsolatedClassloader extends AbstractS3ATestBase {
     }
   }
 
+  private Map<String, String> mapOf() {
+    return new HashMap<>();
+  }
+
+  private Map<String, String> mapOf(String key, String value) {
+    HashMap<String, String> m = new HashMap<>();
+    m.put(key, value);
+    return m;
+  }
+
+  private Map<String, String> mapOf(String key1, String value1, String key2, String value2) {
+    HashMap<String, String> m = new HashMap<>();
+    m.put(key1, value1);
+    m.put(key2, value2);
+    return m;
+  }
+
   @Test
   public void defaultIsolatedClassloader() throws IOException {
-    assertInNewFilesystem(Map.of(), (fs) -> {
+    assertInNewFilesystem(mapOf(), (fs) -> {
       Assertions.assertThat(fs.getConf().getClassLoader())
               .describedAs("The classloader used to load s3a fs extensions")
               .isNotEqualTo(Thread.currentThread().getContextClassLoader())
@@ -124,7 +141,7 @@ public class ITestS3AFileSystemIsolatedClassloader extends AbstractS3ATestBase {
 
     Throwable thrown = Assertions.catchThrowable(() -> {
       assertInNewFilesystem(
-              Map.of(Constants.AWS_CREDENTIALS_PROVIDER, customClassName),
+              mapOf(Constants.AWS_CREDENTIALS_PROVIDER, customClassName),
               (fs) -> {});
     });
 
@@ -140,7 +157,7 @@ public class ITestS3AFileSystemIsolatedClassloader extends AbstractS3ATestBase {
 
   @Test
   public void isolatedClassloader() throws IOException {
-    assertInNewFilesystem(Map.of(Constants.AWS_S3_CLASSLOADER_ISOLATION, "true"), (fs) -> {
+    assertInNewFilesystem(mapOf(Constants.AWS_S3_CLASSLOADER_ISOLATION, "true"), (fs) -> {
       Assertions.assertThat(fs.getConf().getClassLoader())
               .describedAs("The classloader used to load s3a fs extensions")
               .isNotEqualTo(Thread.currentThread().getContextClassLoader())
@@ -154,8 +171,8 @@ public class ITestS3AFileSystemIsolatedClassloader extends AbstractS3ATestBase {
 
     Throwable thrown = Assertions.catchThrowable(() -> {
       assertInNewFilesystem(
-              Map.of(Constants.AWS_S3_CLASSLOADER_ISOLATION, "true",
-                     Constants.AWS_CREDENTIALS_PROVIDER, customClassName),
+              mapOf(Constants.AWS_S3_CLASSLOADER_ISOLATION, "true",
+                    Constants.AWS_CREDENTIALS_PROVIDER, customClassName),
               (fs) -> {});
     });
 
@@ -171,7 +188,7 @@ public class ITestS3AFileSystemIsolatedClassloader extends AbstractS3ATestBase {
 
   @Test
   public void notIsolatedClassloader() throws IOException {
-    Map<String, String> confToSet = Map.of(
+    Map<String, String> confToSet = mapOf(
             Constants.AWS_S3_CLASSLOADER_ISOLATION, "false",
             Constants.AWS_CREDENTIALS_PROVIDER, customClassName);
 
