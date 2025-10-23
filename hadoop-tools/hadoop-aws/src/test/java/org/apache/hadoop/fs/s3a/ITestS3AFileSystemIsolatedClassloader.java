@@ -26,13 +26,12 @@ import java.util.function.Consumer;
 
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
+import software.amazon.awssdk.auth.credentials.AwsCredentials;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.s3a.impl.InstantiationIOException;
-
-import software.amazon.awssdk.auth.credentials.AwsCredentials;
-import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.spy;
