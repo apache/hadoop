@@ -24,7 +24,11 @@ import org.slf4j.LoggerFactory;
 import java.io.Closeable;
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
-import java.lang.management.OperatingSystemMXBean;
+import java.lang.management.MemoryMXBean;
+import java.lang.management.MemoryUsage;
+
+import com.sun.management.OperatingSystemMXBean;
+
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -100,7 +104,7 @@ public final class WriteThreadPoolSizeManager implements Closeable {
 
     /* Get the initial pool size from config, fallback to at least 1 */
     this.initialPoolSize = Math.max(1,
-        abfsConfiguration.getWriteMaxConcurrentRequestCount());
+        abfsConfiguration.getWriteConcurrentRequestCount());
 
     /* Set the upper bound for the thread pool size */
     this.maxThreadPoolSize = Math.max(computedMaxPoolSize, initialPoolSize);
@@ -117,13 +121,12 @@ public final class WriteThreadPoolSizeManager implements Closeable {
     executor.setKeepAliveTime(
         abfsConfiguration.getWriteThreadPoolKeepAliveTime(), TimeUnit.SECONDS);
     executor.allowCoreThreadTimeOut(true);
-
     /* Create a scheduled executor for CPU monitoring and pool adjustment */
-    this.cpuMonitorExecutor = Executors.newScheduledThreadPool(
-        abfsConfiguration.getWriteCorePoolSize());
+    this.cpuMonitorExecutor = Executors.newScheduledThreadPool(1);
   }
 
-  public AbfsConfiguration getAbfsConfiguration() {
+  /** Returns the internal {@link AbfsConfiguration}. */
+  private AbfsConfiguration getAbfsConfiguration() {
     return abfsConfiguration;
   }
 
@@ -135,11 +138,10 @@ public final class WriteThreadPoolSizeManager implements Closeable {
    * @return Computed max thread pool size.
    */
   private int getComputedMaxPoolSize(final int availableProcessors, long initialAvailableHeapMemory) {
-      LOG.debug("The available heap space in GB {} ", initialAvailableHeapMemory);
-      LOG.debug("The number of available processors is {} ", availableProcessors);
-      int maxpoolSize = getMemoryTierMaxThreads(initialAvailableHeapMemory, availableProcessors);
-      LOG.debug("The max thread pool size is {} ", maxpoolSize);
-      return maxpoolSize;
+    int maxpoolSize = getMemoryTierMaxThreads(initialAvailableHeapMemory, availableProcessors);
+    LOG.debug("Computed max thread pool size: {} | Available processors: {} | Heap memory (GB): {}",
+        maxpoolSize, availableProcessors, initialAvailableHeapMemory);
+    return maxpoolSize;
   }
 
   /**
@@ -152,10 +154,9 @@ public final class WriteThreadPoolSizeManager implements Closeable {
    * @return the available heap memory in gigabytes
    */
   private long getAvailableHeapMemory() {
-    Runtime runtime = Runtime.getRuntime();
-    long maxMemory = runtime.maxMemory();
-    long usedMemory = runtime.totalMemory() - runtime.freeMemory();
-    long availableHeapBytes = maxMemory - usedMemory;
+    MemoryMXBean osBean = ManagementFactory.getMemoryMXBean();
+    MemoryUsage memoryUsage = osBean.getHeapMemoryUsage();
+    long availableHeapBytes = memoryUsage.getMax() - memoryUsage.getUsed();
     return (availableHeapBytes + BYTES_PER_GIGABYTE - 1) / BYTES_PER_GIGABYTE;
   }
 
@@ -222,10 +223,8 @@ public final class WriteThreadPoolSizeManager implements Closeable {
         threadPoolExecutor.setCorePoolSize(newMaxPoolSize);
         threadPoolExecutor.setMaximumPoolSize(newMaxPoolSize);
       }
-
-      LOG.debug("The thread pool size is: {} ", newMaxPoolSize);
-      LOG.debug("The pool size is: {} ", threadPoolExecutor.getPoolSize());
-      LOG.debug("The active thread count is: {}", threadPoolExecutor.getActiveCount());
+      LOG.debug("ThreadPool Info - New max pool size: {}, Current pool size: {}, Active threads: {}",
+          newMaxPoolSize, threadPoolExecutor.getPoolSize(), threadPoolExecutor.getActiveCount());
     }
   }
 
@@ -247,21 +246,19 @@ public final class WriteThreadPoolSizeManager implements Closeable {
   }
 
   /**
-   * Gets the current CPU utilization.
+   * Gets the current system CPU utilization.
    *
-   * @return the CPU utilization as a percentage (0.0 to 1.0).
+   * @return the CPU utilization as a fraction (0.0 to 1.0), or 0.0 if unavailable.
    */
   private double getCpuUtilization() {
-    OperatingSystemMXBean osBean = ManagementFactory.getOperatingSystemMXBean();
-    if (osBean instanceof com.sun.management.OperatingSystemMXBean) {
-      com.sun.management.OperatingSystemMXBean sunOsBean
-          = (com.sun.management.OperatingSystemMXBean) osBean;
-      double cpuLoad = sunOsBean.getSystemCpuLoad();
-      if (cpuLoad >= 0) {
-        return cpuLoad;
-      }
+    OperatingSystemMXBean osBean = ManagementFactory.getPlatformMXBean(
+        OperatingSystemMXBean.class);
+    double cpuLoad = osBean.getSystemCpuLoad();
+    if (cpuLoad < 0) {
+      LOG.warn("System CPU load value unavailable (returned -1.0). Defaulting to 0.0.");
+      return 0.0;
     }
-    return 0.0;
+    return cpuLoad;
   }
 
   /**
@@ -291,7 +288,6 @@ public final class WriteThreadPoolSizeManager implements Closeable {
         newMaxPoolSize = currentPoolSize;
         LOG.debug("CPU load normal ({}). No change: current={}", cpuUtilization, currentPoolSize);
       }
-
       if (newMaxPoolSize != currentPoolSize) {
         LOG.debug("Resizing thread pool from {} to {}", currentPoolSize, newMaxPoolSize);
         adjustThreadPoolSize(newMaxPoolSize);
@@ -357,10 +353,21 @@ public final class WriteThreadPoolSizeManager implements Closeable {
     return boundedThreadPool;
   }
 
+  /**
+   * Returns the scheduled executor responsible for CPU monitoring and dynamic pool adjustment.
+   *
+   * @return the {@link ScheduledExecutorService} used for CPU monitoring.
+   */
   public ScheduledExecutorService getCpuMonitorExecutor() {
     return cpuMonitorExecutor;
   }
 
+  /**
+   * Closes this manager by shutting down executors and cleaning up resources.
+   * Removes the instance from the active manager map.
+   *
+   * @throws IOException if an error occurs during shutdown.
+   */
   @Override
   public void close() throws IOException {
     synchronized (this) {
@@ -372,11 +379,9 @@ public final class WriteThreadPoolSizeManager implements Closeable {
 
         // Remove from the map
         POOL_SIZE_MANAGER_MAP.remove(filesystemName);
-        LOG.debug("Closed and removed instance for filesystem: {}",
-            filesystemName);
+        LOG.debug("Closed and removed instance for filesystem: {}", filesystemName);
       } catch (Exception e) {
-        LOG.warn("Failed to properly close instance for filesystem: {}",
-            filesystemName, e);
+        LOG.warn("Failed to properly close instance for filesystem: {}", filesystemName, e);
       }
     }
   }

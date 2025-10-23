@@ -286,7 +286,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       this.boundedThreadPool = poolSizeManager.getExecutorService();
     } else {
       this.boundedThreadPool = BlockingThreadPoolExecutorService.newInstance(
-          abfsConfiguration.getWriteMaxConcurrentRequestCount(),
+          abfsConfiguration.getWriteConcurrentRequestCount(),
           abfsConfiguration.getMaxWriteRequestsToQueue(),
           10L, TimeUnit.SECONDS,
           "abfs-bounded");
@@ -803,7 +803,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
             .disableOutputStreamFlush(abfsConfiguration.isOutputStreamFlushDisabled())
             .withStreamStatistics(new AbfsOutputStreamStatisticsImpl())
             .withAppendBlob(isAppendBlob)
-            .withWriteMaxConcurrentRequestCount(abfsConfiguration.getWriteMaxConcurrentRequestCount())
+            .withWriteMaxConcurrentRequestCount(abfsConfiguration.getWriteConcurrentRequestCount())
             .withMaxWriteRequestsToQueue(abfsConfiguration.getMaxWriteRequestsToQueue())
             .withLease(lease)
             .withEncryptionAdapter(contextEncryptionAdapter)

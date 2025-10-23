@@ -497,10 +497,6 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_WRITE_CPU_MONITORING_INTERVAL)
   private int writeCpuMonitoringInterval;
 
-  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_WRITE_THREADPOOL_CORE_POOL_SIZE,
-      DefaultValue = DEFAULT_WRITE_THREADPOOL_CORE_POOL_SIZE)
-  private int writeCorePoolSize;
-
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_WRITE_HIGH_CPU_THRESHOLD,
       MinValue = MIN_WRITE_HIGH_CPU_THRESHOLD,
       MaxValue = MAX_WRITE_HIGH_CPU_THRESHOLD,
@@ -1692,7 +1688,7 @@ public class AbfsConfiguration{
         oauthTokenFetchRetryDeltaBackoff);
   }
 
-  public int getWriteMaxConcurrentRequestCount() {
+  public int getWriteConcurrentRequestCount() {
     if (this.writeMaxConcurrentRequestCount < 1) {
       return 4 * Runtime.getRuntime().availableProcessors();
     }
@@ -1735,13 +1731,9 @@ public class AbfsConfiguration{
     return highTierMemoryMultiplier;
   }
 
-  public int getWriteCorePoolSize() {
-    return writeCorePoolSize;
-  }
-
   public int getMaxWriteRequestsToQueue() {
     if (this.maxWriteRequestsToQueue < 1) {
-      return 2 * getWriteMaxConcurrentRequestCount();
+      return 2 * getWriteConcurrentRequestCount();
     }
     return this.maxWriteRequestsToQueue;
   }
