@@ -141,13 +141,36 @@ final class AbfsApacheHttpClient implements Closeable {
       final AbfsManagedHttpClientContext abfsHttpClientContext,
       final int connectTimeout,
       final int readTimeout,
-      final long tailLatency) throws IOException {
-    if (tailLatency <= 0) {
-      return executeWithDeadline(httpRequest, abfsHttpClientContext,
-          connectTimeout, readTimeout, Long.MAX_VALUE);
+      final long tailLatencyTimeout) throws IOException {
+    if (tailLatencyTimeout <= 0) {
+      return executeWithoutDeadline(httpRequest, abfsHttpClientContext,
+          connectTimeout, readTimeout);
     }
     return executeWithDeadline(httpRequest, abfsHttpClientContext,
-        connectTimeout, readTimeout, tailLatency);
+        connectTimeout, readTimeout, tailLatencyTimeout);
+  }
+
+  /**
+   * Executes the HTTP request.
+   *
+   * @param httpRequest HTTP request to execute.
+   * @param abfsHttpClientContext HttpClient context.
+   * @param connectTimeout Connection timeout.
+   * @param readTimeout Read timeout.
+   *
+   * @return HTTP response.
+   * @throws IOException network error.
+   */
+  public HttpResponse executeWithoutDeadline(HttpRequestBase httpRequest,
+      final AbfsManagedHttpClientContext abfsHttpClientContext,
+      final int connectTimeout,
+      final int readTimeout) throws IOException {
+    RequestConfig.Builder requestConfigBuilder = RequestConfig
+        .custom()
+        .setConnectTimeout(connectTimeout)
+        .setSocketTimeout(readTimeout);
+    httpRequest.setConfig(requestConfigBuilder.build());
+    return httpClient.execute(httpRequest, abfsHttpClientContext);
   }
 
   /**
@@ -168,22 +191,27 @@ final class AbfsApacheHttpClient implements Closeable {
       final int connectTimeout,
       final int readTimeout,
       final long deadlineMillis) throws IOException {
-
     RequestConfig.Builder requestConfigBuilder = RequestConfig
         .custom()
         .setConnectTimeout(connectTimeout)
         .setSocketTimeout(readTimeout);
     httpRequest.setConfig(requestConfigBuilder.build());
-
     ExecutorService executor = Executors.newSingleThreadExecutor();
     Future<HttpResponse> future = executor.submit(() ->
-        httpClient.execute(httpRequest, abfsHttpClientContext));
+        httpClient.execute(httpRequest, abfsHttpClientContext)
+    );
+
     try {
       return future.get(deadlineMillis, TimeUnit.MILLISECONDS);
     } catch (TimeoutException e) {
+      /* Deadline exceeded, abort the request.
+       * This will also kill the underlying socket exception in the HttpClient.
+       * Connection will be marker stale and won't be returned back to KAC for reuse.
+       */
       httpRequest.abort();
       throw new TailLatencyRequestTimeoutException(e);
     } catch (Exception e) {
+      // Any other exception from execution should be thrown as IOException.
       throw new IOException("Request execution with deadline failed", e);
     } finally {
       executor.shutdownNow();

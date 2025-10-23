@@ -18,15 +18,18 @@
 
 package org.apache.hadoop.fs.azurebfs.contracts.exceptions;
 
+import java.util.concurrent.TimeoutException;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_TAIL_LATENCY_REQUEST_TIMEOUT;
 
+/**
+ * Thrown when a request takes more time than the current reported tail latency.
+ */
 public class TailLatencyRequestTimeoutException extends AzureBlobFileSystemException {
 
-  public TailLatencyRequestTimeoutException() {
-    super(ERR_TAIL_LATENCY_REQUEST_TIMEOUT);
-  }
-
-  public TailLatencyRequestTimeoutException(Exception innerException) {
+  /**
+   * Constructs a TailLatencyRequestTimeoutException with TimeoutException as the cause.
+   */
+  public TailLatencyRequestTimeoutException(TimeoutException innerException) {
     super(ERR_TAIL_LATENCY_REQUEST_TIMEOUT, innerException);
   }
 }

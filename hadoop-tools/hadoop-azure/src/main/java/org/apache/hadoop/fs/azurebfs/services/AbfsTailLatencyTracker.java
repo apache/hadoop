@@ -144,8 +144,9 @@ public class AbfsTailLatencyTracker {
   }
 
   /**
-   *
+   * Gets the tail latency for a specific operation type.
    * @param operationType Only applicable for read and write operations.
+   * @return Tail latency value.
    */
   public double getTailLatency(final AbfsRestOperationType operationType) {
     SlidingWindowHdrHistogram histogram = operationLatencyMap.get(operationType);

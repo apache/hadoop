@@ -80,7 +80,7 @@ public class AbfsRestOperation {
   private final AbfsClient client;
   // Return intercept instance
   private final AbfsThrottlingIntercept intercept;
-  // Latency tracker
+  // Tail Latency tracker
   private final AbfsTailLatencyTracker tailLatencyTracker;
   // the HTTP method (PUT, PATCH, POST, GET, HEAD, or DELETE)
   private final String method;
@@ -236,7 +236,7 @@ public class AbfsRestOperation {
     }
     this.maxIoRetries = abfsConfiguration.getMaxIoRetries();
     this.intercept = client.getIntercept();
-    this.tailLatencyTracker = client.getLatencyTracker();
+    this.tailLatencyTracker = client.getTailLatencyTracker();
     this.abfsConfiguration = abfsConfiguration;
     this.retryPolicy = client.getExponentialRetryPolicy();
   }
@@ -524,7 +524,12 @@ public class AbfsRestOperation {
         }
       }
       if (!retryPolicy.shouldRetry(retryCount, -1)) {
+        /*
+         * If a request is failing with TailLatencyTimeout exception.
+         * it should be retried without Tail Latency Timeout exception should not be returned to caller.
+         */
         if (retryPolicy instanceof TailLatencyRequestTimeoutRetryPolicy) {
+          // Disable Tail Latency Timeout for the next retry.
           shouldTailLatencyTimeout = false;
           return false;
         }
@@ -540,6 +545,7 @@ public class AbfsRestOperation {
         intercept.updateMetrics(operationType, httpOperation);
       }
 
+      // Update Tail Latency Tracker only for successful requests.
       if (tailLatencyTracker != null && statusCode <  HttpURLConnection.HTTP_MULT_CHOICE) {
         tailLatencyTracker.updateLatency(operationType,
             httpOperation.getSendLatency() + httpOperation.getRecvLatency());
@@ -624,14 +630,19 @@ public class AbfsRestOperation {
 
   @VisibleForTesting
   AbfsAHCHttpOperation createAbfsAHCHttpOperation() throws IOException {
-    long tailLatency = getTailLatencyIfTimeoutEnabled();
+    long tailLatency = getTailLatencyTimeoutIfEnabled();
     return new AbfsAHCHttpOperation(url, method, requestHeaders,
         Duration.ofMillis(client.getAbfsConfiguration().getHttpConnectionTimeout()),
         Duration.ofMillis(client.getAbfsConfiguration().getHttpReadTimeout()),
         tailLatency, client.getAbfsApacheHttpClient(), client);
   }
 
-  long getTailLatencyIfTimeoutEnabled() {
+  /**
+   * Get Tail Latency Timeout value if profiling is enabled, timeout is enabled
+   * and retries due to tail latency request timeout is allowed.
+   * @return tail latency timeout value else return zero.
+   */
+  long getTailLatencyTimeoutIfEnabled() {
     if (tailLatencyTracker != null && abfsConfiguration.isTailLatencyRequestTimeoutEnabled() && shouldTailLatencyTimeout) {
       return (long) tailLatencyTracker.getTailLatency(this.operationType);
     }

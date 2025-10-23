@@ -190,7 +190,7 @@ public abstract class AbfsClient implements Closeable {
   private EncryptionContextProvider encryptionContextProvider = null;
   private EncryptionType encryptionType = EncryptionType.NONE;
   private final AbfsThrottlingIntercept intercept;
-  private AbfsTailLatencyTracker latencyTracker = null;
+  private AbfsTailLatencyTracker tailLatencyTracker = null;
 
   private final ListeningScheduledExecutorService executorService;
 
@@ -227,7 +227,7 @@ public abstract class AbfsClient implements Closeable {
     this.accountName = abfsConfiguration.getAccountName().substring(0, abfsConfiguration.getAccountName().indexOf(AbfsHttpConstants.DOT));
     this.authType = abfsConfiguration.getAuthType(accountName);
     this.intercept = AbfsThrottlingInterceptFactory.getInstance(accountName, abfsConfiguration);
-    this.latencyTracker = AbfsTailLatencyTrackerFactory.getInstance(accountName, abfsConfiguration);
+    this.tailLatencyTracker = AbfsTailLatencyTrackerFactory.getInstance(accountName, abfsConfiguration);
     this.renameResilience = abfsConfiguration.getRenameResilience();
     this.abfsServiceType = abfsServiceType;
 
@@ -434,8 +434,12 @@ public abstract class AbfsClient implements Closeable {
     this.encryptionType = encryptionType;
   }
 
-  public AbfsTailLatencyTracker getLatencyTracker() {
-    return latencyTracker;
+  /**
+   * Get the tail latency tracker for this account.
+   * @return tail latency tracker if enabled, null otherwise.
+   */
+  public AbfsTailLatencyTracker getTailLatencyTracker() {
+    return tailLatencyTracker;
   }
 
   public EncryptionType getEncryptionType() {
