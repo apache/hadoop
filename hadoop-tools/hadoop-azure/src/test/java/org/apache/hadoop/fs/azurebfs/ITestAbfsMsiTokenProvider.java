@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.azurebfs;
 
 import java.io.IOException;
 import java.util.Date;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.assertj.core.api.Assertions;
@@ -134,7 +135,7 @@ public final class ITestAbfsMsiTokenProvider
             // Return a valid fake token
             AzureADToken token = new AzureADToken();
             token.setAccessToken("fake-token");
-            token.setExpiry(new Date(System.currentTimeMillis() + 3600_000));
+            token.setExpiry(new Date(System.currentTimeMillis() + TimeUnit.HOURS.toMillis(1)));
             return token;
           }
         }
