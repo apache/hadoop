@@ -1838,33 +1838,34 @@ public final class Constants {
   public static final boolean CHECKSUM_VALIDATION_DEFAULT = false;
 
   /**
-   * Should checksums always be calculated?
+   * Should checksums always be generated?
    * Not all third-party stores like this being enabled for every request.
    * Value: {@value}.
    */
-  public static final String CHECKSUM_CALCULATION_ENABLED =
-      "fs.s3a.checksum.calculation.enabled";
+  public static final String CHECKSUM_GENERATION =
+      "fs.s3a.checksum.generation";
 
   /**
-   * Default value of {@link #CHECKSUM_CALCULATION_ENABLED}.
+   * Default value of {@link #CHECKSUM_GENERATION}.
    * Value: {@value}.
    */
-  public static final boolean CHECKSUM_CALCULATION_ENABLED_DEFAULT = true;
+  public static final boolean CHECKSUM_GENERATION_DEFAULT = false;
 
   /**
    * Indicates the algorithm used to create the checksum for the object
    * to be uploaded to S3. Unset by default. It supports the following values:
-   * 'CRC32', 'CRC32C', 'SHA1', 'SHA256', 'NONE', ''..
+   * 'CRC32', 'CRC32C', 'SHA1', 'SHA256', 'CRC64_NVME 'NONE', ''.
+   * When checksum calculation is enabled this MUST be set to a valid algorithm.
    * value:{@value}
    */
   public static final String CHECKSUM_ALGORITHM =
       "fs.s3a.create.checksum.algorithm";
 
   /**
-   * Default checksum algorithm: {@code "none"}.
+   * Default checksum algorithm: {@code "CRC32C"}.
    */
   public static final String CHECKSUM_ALGORITHM_DEFAULT =
-      ChecksumSupport.NONE;
+      ChecksumSupport.CRC32C;
 
   /**
    * Send a {@code Content-MD5 header} with every request.
@@ -1872,16 +1873,15 @@ public final class Constants {
    * For example: bulk delete).
    * It is supported by AWS S3, though has unexpected behavior with AWS S3 Express storage.
    * See https://github.com/aws/aws-sdk-java-v2/issues/6459  for details.
-   * It will be automatically disabled there.
    */
-  public static final String MD5_HEADER_ENABLED =
-      "fs.s3a.md5.header.enabled";
+  public static final String REQUEST_MD5_HEADER =
+      "fs.s3a.request.md5.header";
 
   /**
-   * Default value of {@link #MD5_HEADER_ENABLED}.
+   * Default value of {@link #REQUEST_MD5_HEADER}.
    * Value: {@value}.
    */
-  public static final boolean MD5_HEADER_ENABLED_DEFAULT = true;
+  public static final boolean DEFAULT_REQUEST_MD5_HEADER = true;
 
 
   /**

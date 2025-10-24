@@ -931,7 +931,9 @@ Here are some the S3A properties for use in production.
   <description>
     Indicates the algorithm used to create the checksum for the object
     to be uploaded to S3. Unset by default. It supports the following values:
-    'CRC32', 'CRC32C', 'SHA1', 'SHA256', "none"
+    'CRC32', 'CRC32C', 'SHA1', 'SHA256', "CRC64_NVME", "none"
+    The CRC64_NVME option requires aws-crt on the classpath, and is still
+    tangibly slower than CRC32C, which has its own instruction on x86 and ARM.
   </description>
 </property>
 
@@ -1433,6 +1435,9 @@ The "fast" output stream
 1.  Uploads blocks in parallel in background threads.
 1.  Begins uploading blocks as soon as the buffered data exceeds this partition
     size.
+1.  Uses any checksum set in `fs.s3a.create.checksum.algorithm` to calculate an upload
+    checksum on data written; this is included in the file/part upload and verified
+    on the store. This can be a source of third-party store compatibility issues.
 1.  When buffering data to disk, uses the directory/directories listed in
     `fs.s3a.buffer.dir`. The size of data which can be buffered is limited
     to the available disk space.
@@ -1707,16 +1712,7 @@ rate.
 The best practise for using this option is to disable multipart purges in
 normal use of S3A, enabling only in manual/scheduled housekeeping operations.
 
-### S3A "fadvise" input policy support
-
-The S3A Filesystem client supports the notion of input policies, similar
-to that of the Posix `fadvise()` API call. This tunes the behavior of the S3A
-client to optimise HTTP GET requests for the different use cases.
-
-See [Improving data input performance through fadvise](./performance.html#fadvise)
-for the details.
-
-##<a name="metrics"></a>Metrics
+## <a name="metrics"></a>Metrics
 
 S3A metrics can be monitored through Hadoop's metrics2 framework. S3A creates
 its own metrics system called s3a-file-system, and each instance of the client
@@ -1754,7 +1750,89 @@ also get recorded, for example the following:
 Note that low-level metrics from the AWS SDK itself are not currently included
 in these metrics.
 
-##<a name="further_reading"></a> Other Topics
+
+## <a name="checksums"></a>Checksums
+
+The S3 Client can use checksums in its requests to an S3 store in a number of ways
+
+1. To provide a checksum of the request headers.
+2. To provide a `Content-MD5` hash of the request headers
+3. To provide a checksum of data being PUT/POSTed to the store.
+4. To validate data downloaded from the store.
+
+The various options available can impact performance and compatibility.
+To understand the risks and issues here know that
+* Request checksum generation (item 1) and validation (4) can be done "when required" or "always".
+  The "always" option is stricter, but can result in third-party compatibility issues
+* Some third-party stores require the `Content-MD5` header and will fail without it (item 2)
+* Data upload checksums (item 3) can be computationally expensive and incompatible with third-party stores
+* The most efficient data upload checksum is CRC32C; there are explicit opcodes for this in x86 and ARM CPUs, with the appropriate implementation circuitry.
+* Data download validation checksums are also computationally expensive.
+
+| Option                             | Purpose                                        | Values  | Default  | 
+|------------------------------------|------------------------------------------------|---------|----------|
+| `fs.s3a.request.md5.header`        | Enable MD5 header                              | boolean | `true`   |
+| `fs.s3a.checksum.generation`       | Generate checksums on all requests             | boolean | `false`  |
+| `fs.s3a.checksum.validation`       | Validate checksums on download                 | boolean | `false`  |
+| `fs.s3a.create.checksum.algorithm` | Checksum Algorithm when creating/copying files | `NONE`, `CRC32`, `CRC32C`, `CRC32_C`, `CRC64NVME` , `CRC64_NVME`        | `CRC32C` |
+
+### Content-MD5 Header on requests: `fs.s3a.request.md5.header`
+
+Send a `Content-MD5 header` with every request?
+
+This header is required when interacting with some third-party stores.
+It is supported by AWS S3, though has shown some unexpected behavior with AWS S3 Express storage
+[issue 6459](https://github.com/aws/aws-sdk-java-v2/issues/6459).
+As that appears to have been fixed in the SDK, this option is enabled by default.
+
+### Request checksum generation: `fs.s3a.checksum.generation`
+
+Should checksums be generated for all requests made to the store?
+
+* Incompatible with some third-party stores
+* If `true` then multipart upload (i.e. large file upload) may fail if `fs.s3a.create.checksum.algorithm` is set to `NONE`.
+
+Set to `false` by default to avoid problems.
+
+### Checksum validation `fs.s3a.checksum.validation`
+
+Should the checksums of downloaded data be validated?
+
+This hurts performance and should be only used if considered important. 
+
+### Creation checksum `fs.s3a.create.checksum.algorithm`
+
+
+This is the algorithm to use when checksumming data during file creation and copy.
+
+Options: `NONE`, `CRC32`, `CRC32C`, `CRC32_C`, `CRC64NVME` , `CRC64_NVME` 
+
+The option `NONE` is new to Hadoop 3.4.3; previously an empty string was required for the same behavior.
+
+The `CRC64NVME`/`CRC64_NVME` option is also new to Hadoop 3.4.3 and requires the `aws-crt` module to be on the classpath, otherwise an error is printed: 
+ 
+```
+java.lang.RuntimeException: Could not load software.amazon.awssdk.crt.checksums.CRC64NVME.
+Add dependency on 'software.amazon.awssdk.crt:aws-crt' module to enable CRC64NVME feature.
+```
+
+Checksum/algorithm incompatibilities may surface as a failure in "Completing multipart upload"`.
+
+```
+org.apache.hadoop.fs.s3a.AWSBadRequestException: Completing multipart upload id l8itQB.
+5u7TcWqznqbGfTjHv06mxb4IlBNcZiDWrBAS0t1EMJGkr9J1QD2UAwDM5rLUZqypJfWCoPJtySxA3QK9QqKTBdKr3LXYjYJ_r9lRcGdzBRbnIJeI8tBr8yqtS on
+test/testCommitEmptyFile/empty-commit.txt:
+software.amazon.awssdk.services.s3.model.S3Exception: One or more of the specified parts could not be found.
+The part may not have been uploaded, or the specified entity tag may not match the part's entity tag.
+(Service: S3, Status Code: 400, Request ID: AQ0J4B66H626Y3FH,
+Extended Request ID: g1zo25aQCZfqFh3vOzrzOBp9RjJEWmKImRcfWhvaeFHQ2hZo1xTm3GVMD03zN+d+cFB6oNeelNc=)
+(SDK Attempt Count: 1):InvalidPart: One or more of the specified parts could not be found.
+The part may not have been uploaded, or the specified entity tag may not match the part's entity tag.
+(Service: S3, Status Code: 400, Request ID: AQ0J4B66H626Y3FH, Extended Request ID:
+g1zo25aQCZfqFh3vOzrzOBp9RjJEWmKImRcfWhvaeFHQ2hZo1xTm3GVMD03zN+d+cFB6oNeelNc=) (SDK Attempt Count: 1)
+```
+
+## <a name="other_topics"></a> Other Topics
 
 ### <a name="distcp"></a> Copying Data with distcp
 

@@ -1179,8 +1179,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         .withChecksumValidationEnabled(
             conf.getBoolean(CHECKSUM_VALIDATION, CHECKSUM_VALIDATION_DEFAULT))
         .withChecksumCalculationEnabled(
-            conf.getBoolean(CHECKSUM_CALCULATION_ENABLED, CHECKSUM_CALCULATION_ENABLED_DEFAULT))
-        .withMd5HeaderEnabled(conf.getBoolean(MD5_HEADER_ENABLED, MD5_HEADER_ENABLED_DEFAULT))
+            conf.getBoolean(CHECKSUM_GENERATION, CHECKSUM_GENERATION_DEFAULT))
+        .withMd5HeaderEnabled(conf.getBoolean(REQUEST_MD5_HEADER,
+            DEFAULT_REQUEST_MD5_HEADER))
         .withClientSideEncryptionEnabled(isCSEEnabled)
         .withClientSideEncryptionMaterials(cseMaterials)
         .withAnalyticsAcceleratorEnabled(isAnalyticsAcceleratorEnabled)

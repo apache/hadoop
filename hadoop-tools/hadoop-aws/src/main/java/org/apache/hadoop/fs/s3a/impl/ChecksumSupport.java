@@ -18,12 +18,12 @@
 
 package org.apache.hadoop.fs.s3a.impl;
 
+import java.util.Locale;
 import java.util.Set;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 import software.amazon.awssdk.services.s3.model.ChecksumAlgorithm;
 
-import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.ConfigurationHelper;
 
@@ -38,7 +38,11 @@ public final class ChecksumSupport {
    * Special checksum algorithm to declare that no checksum
    * is required: {@value}.
    */
-  public static final String NONE = "none";
+  public static final String NONE = "NONE";
+
+  public static final String CRC32C = "CRC32C";
+
+  public static final String CRC64NVME = "CRC64NVME";
 
   private ChecksumSupport() {
   }
@@ -49,6 +53,7 @@ public final class ChecksumSupport {
   private static final Set<ChecksumAlgorithm> SUPPORTED_CHECKSUM_ALGORITHMS = ImmutableSet.of(
       ChecksumAlgorithm.CRC32,
       ChecksumAlgorithm.CRC32_C,
+      ChecksumAlgorithm.CRC64_NVME,
       ChecksumAlgorithm.SHA1,
       ChecksumAlgorithm.SHA256);
 
@@ -64,14 +69,19 @@ public final class ChecksumSupport {
         CHECKSUM_ALGORITHM,
         ChecksumAlgorithm.class,
         configValue -> {
-          if (StringUtils.isBlank(configValue) || NONE.equalsIgnoreCase(configValue)) {
+          // default values and handling algorithms names without underscores.
+          String val = configValue == null ? NONE : configValue.toUpperCase(Locale.ROOT);
+          switch (val) {
+          case "":
+          case NONE:
             return null;
-          }
-          if (ChecksumAlgorithm.CRC32_C.toString().equalsIgnoreCase(configValue)) {
-            // In case the configuration value is CRC32C, without underscore.
+          case CRC32C:
             return ChecksumAlgorithm.CRC32_C;
+          case CRC64NVME:
+            return ChecksumAlgorithm.CRC64_NVME;
+          default:
+            throw new IllegalArgumentException("Checksum algorithm is not supported: " + configValue);
           }
-          throw new IllegalArgumentException("Checksum algorithm is not supported: " + configValue);
         });
   }
 }

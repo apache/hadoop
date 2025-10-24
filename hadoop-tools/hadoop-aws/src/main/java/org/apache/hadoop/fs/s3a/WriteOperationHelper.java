@@ -54,8 +54,6 @@ import org.apache.hadoop.fs.store.audit.AuditSpan;
 import org.apache.hadoop.fs.store.audit.AuditSpanSource;
 import org.apache.hadoop.util.functional.CallableRaisingIOE;
 
-import static org.apache.hadoop.fs.s3a.impl.InternalConstants.PRECONDITION_FAILED;
-import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_200_OK;
 import static org.apache.hadoop.util.Preconditions.checkNotNull;
 import static org.apache.hadoop.fs.s3a.Invoker.*;
 import static org.apache.hadoop.fs.store.audit.AuditingFunctions.withinAuditSpan;
@@ -315,7 +313,8 @@ public class WriteOperationHelper implements WriteOperations {
     }
     try (AuditSpan span = activateAuditSpan()) {
       CompleteMultipartUploadResponse uploadResult;
-      uploadResult = invoker.retry("Completing multipart upload", destKey,
+      uploadResult = invoker.retry("Completing multipart upload id " + uploadId,
+          destKey,
           true,
           retrying,
           () -> {
@@ -324,17 +323,6 @@ public class WriteOperationHelper implements WriteOperations {
             return writeOperationHelperCallbacks.completeMultipartUpload(requestBuilder.build());
           });
       return uploadResult;
-    } catch (AWSS3IOException e) {
-      // S3 express buckets report the create conflict differently
-      // recognize and convert.
-      if (e.statusCode() == SC_200_OK
-          && PRECONDITION_FAILED.equals(e.awsErrorDetails().errorCode())) {
-        throw new RemoteFileChangedException(destKey,
-            e.getOperation(),
-            e.getMessage(),
-            e.getCause());
-      }
-      throw e;
     }
   }
 

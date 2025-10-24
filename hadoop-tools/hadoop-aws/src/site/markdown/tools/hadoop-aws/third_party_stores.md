@@ -175,22 +175,32 @@ false to disable use of these features.
 
 It may be necessary to change checksums of uploads by
 1. Restoring the attachment of a `Content-MD5 header` in requests
-2. Changing checksum calculation from "always" to "when required"
+2. Restricting checksum generation to only when required.
 
 ```xml
   <property>
-    <name>fs.s3a.md5.header.enabled</name>
-    <value>false</value>
-    <description>re-enable calculation and inclusion of an MD5 HEADER on data upload operations (default: false)</description>
+    <name>fs.s3a.request.md5.header</name>
+    <value>true</value>
+    <description>re-enable calculation and inclusion of an MD5 HEADER on data upload operations</description>
   </property>
 
   <property>
-    <name>fs.s3a.checksum.calculation.enabled</name>
+    <name>fs.s3a.checksum.generation</name>
     <value>false</value>
-    <description>Calculate and attach a message checksum on every operation. (default: true)</description>
+    <description>Calculate and attach a message checksum on every operation.</description>
   </property>
+
+  <property>
+    <name>fs.s3a.checksum.validation</name>
+    <value>false</value>
+    <description>Validate data checksums on download</description>
+  </property>
+
 ```
 
+These options are set for best compatibility and performance by default; they may need tuning for specific stores.
+
+See [checksums](index.html#checksums) for more details.
 
 ### Disabling Change Detection
 
@@ -501,15 +511,13 @@ As of October 2025 and the 2.33.8 AWS SDK, the settings needed to interact with 
 </property>
 
 <property>
-  <name>fs.s3a.md5.header.enabled</name>
+  <name>fs.s3a.request.md5.header</name>
   <value>false</value>
-  <description>re-enable calculation and inclusion of an MD5 HEADER on data upload operations (default: false)</description>
 </property>
 
 <property>
-  <name>fs.s3a.checksum.calculation.enabled</name>
+  <name>fs.s3a.checksum.generation</name>
   <value>false</value>
-  <description>Calculate and attach a message checksum on every operation. (default: true)</description>
 </property>
 ```
 
@@ -569,7 +577,7 @@ this makes renaming and deleting significantly slower.
   </property>
 
   <property>
-    <name>fs.s3a.checksum.calculation.enabled</name>
+    <name>fs.s3a.checksum.generation</name>
     <value>false</value>
     <description>Calculate and attach a message checksum on every operation. (default: true)</description>
   </property>

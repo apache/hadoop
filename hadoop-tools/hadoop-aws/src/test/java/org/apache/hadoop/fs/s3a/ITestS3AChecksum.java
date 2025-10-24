@@ -37,8 +37,8 @@ import org.apache.hadoop.fs.s3a.impl.ChecksumSupport;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
 import static org.apache.hadoop.fs.s3a.Constants.CHECKSUM_ALGORITHM;
-import static org.apache.hadoop.fs.s3a.Constants.CHECKSUM_CALCULATION_ENABLED;
-import static org.apache.hadoop.fs.s3a.Constants.CHECKSUM_CALCULATION_ENABLED_DEFAULT;
+import static org.apache.hadoop.fs.s3a.Constants.CHECKSUM_GENERATION;
+import static org.apache.hadoop.fs.s3a.Constants.CHECKSUM_GENERATION_DEFAULT;
 import static org.apache.hadoop.fs.s3a.Constants.CHECKSUM_VALIDATION;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.assume;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestBucketName;
@@ -99,9 +99,9 @@ public class ITestS3AChecksum extends AbstractS3ATestBase {
     conf.setBoolean(REJECT_OUT_OF_SPAN_OPERATIONS, false);
     checksumAlgorithm = ChecksumSupport.getChecksumAlgorithm(conf);
     LOG.info("Using checksum algorithm {}/{}", algorithmName, checksumAlgorithm);
-    assume("Skipping checksum tests as " + CHECKSUM_CALCULATION_ENABLED + " is set",
+    assume("Skipping checksum tests as " + CHECKSUM_GENERATION + " is set",
         propagateBucketOptions(conf, getTestBucketName(conf))
-            .getBoolean(CHECKSUM_CALCULATION_ENABLED, CHECKSUM_CALCULATION_ENABLED_DEFAULT));
+            .getBoolean(CHECKSUM_GENERATION, CHECKSUM_GENERATION_DEFAULT));
     return conf;
   }
 
