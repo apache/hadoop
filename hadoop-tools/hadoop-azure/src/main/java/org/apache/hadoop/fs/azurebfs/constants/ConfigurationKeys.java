@@ -277,7 +277,7 @@ public final class ConfigurationKeys {
   public static final String FS_AZURE_ENABLE_READAHEAD_V2 = "fs.azure.enable.readahead.v2";
 
   /**
-   * Enable or disable readahead V2 in AbfsInputStream. This will work independent of V1.
+   * Enable or disable request priority for prefetch requests
    * Value: {@value}.
    */
   public static final String FS_AZURE_ENABLE_REQUEST_PRIORITY_FOR_PREFETCH = "fs.azure.enable.prefetch.request.priority";
