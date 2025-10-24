@@ -1753,7 +1753,7 @@ in these metrics.
 
 ## <a name="checksums"></a>Checksums
 
-The S3 Client can use checksums in its requests to an S3 store in a number of ways
+The S3 Client can use checksums in its requests to an S3 store in a number of ways:
 
 1. To provide a checksum of the request headers.
 2. To provide a `Content-MD5` hash of the request headers
@@ -1761,7 +1761,7 @@ The S3 Client can use checksums in its requests to an S3 store in a number of wa
 4. To validate data downloaded from the store.
 
 The various options available can impact performance and compatibility.
-To understand the risks and issues here know that
+To understand the risks and issues here know that:
 * Request checksum generation (item 1) and validation (4) can be done "when required" or "always".
   The "always" option is stricter, but can result in third-party compatibility issues
 * Some third-party stores require the `Content-MD5` header and will fail without it (item 2)
@@ -1776,23 +1776,44 @@ To understand the risks and issues here know that
 | `fs.s3a.checksum.validation`       | Validate checksums on download                 | boolean | `false`  |
 | `fs.s3a.create.checksum.algorithm` | Checksum Algorithm when creating/copying files | `NONE`, `CRC32`, `CRC32C`, `CRC32_C`, `CRC64NVME` , `CRC64_NVME`, `SHA256`, `SHA1`   | `""` |
 
+
+Turning on checksum generation and validation may seem like obvious actions, but consider
+this: you are communicating with an S3 store over an HTTPS channels, which includes
+cryptographically strong HMAC checksums of every block transmitted.
+These are far more robust than the CRC* algorithms, and the computational cost is already
+being paid for: so why add more?
+
+With TLS ensuring the network traffic isn't altered from the moment it is encrypted to when
+it is decrypted, all extra checksum generation/validation does is ensure that there's no
+accidental corruption between the data being generated and uploaded, or between being downloaded and read.
+
+This could potentially deal with memory/buffering/bus issues on the servers.
+However this is what ECC RAM is for.
+If you do suspect requests being corrupted during writing or reading, the options may
+be worth considering.
+As it is, they are off by default to avoid compatibility problems. 
+
+Note: if you have a real example of where these checksum options have identified memory corruption,
+please let us know.
+
 ### Content-MD5 Header on requests: `fs.s3a.request.md5.header`
 
 Send a `Content-MD5 header` with every request?
 
 This header is required when interacting with some third-party stores.
-It is supported by AWS S3, though has shown some unexpected behavior with AWS S3 Express storage
+It is supported by AWS S3, though has has some unexpected behavior with AWS S3 Express storage
 [issue 6459](https://github.com/aws/aws-sdk-java-v2/issues/6459).
-As that appears to have been fixed in the SDK, this option is enabled by default.
+As that appears to have been fixed in the 2.35.4 SDK release, this option is enabled by default.
 
 ### Request checksum generation: `fs.s3a.checksum.generation`
 
 Should checksums be generated for all requests made to the store?
 
 * Incompatible with some third-party stores
-* If `true` then multipart upload (i.e. large file upload) may fail if `fs.s3a.create.checksum.algorithm` is not set to an algorithm other than `NONE`.
+* If `true` then multipart upload (i.e. large file upload) may fail if `fs.s3a.create.checksum.algorithm`
+  is not set to a valid algorithm (i.e. something other than `NONE`)
 
-Set to `false` by default to avoid problems.
+Set `fs.s3a.checksum.generation` to `false` by default to avoid these problems.
 
 ### Checksum validation `fs.s3a.checksum.validation`
 

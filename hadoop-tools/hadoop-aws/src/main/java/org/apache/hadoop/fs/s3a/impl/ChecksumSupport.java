@@ -40,8 +40,14 @@ public final class ChecksumSupport {
    */
   public static final String NONE = "NONE";
 
+  /**
+   * CRC32C, mapped to CRC32_C algorithm class.
+   */
   public static final String CRC32C = "CRC32C";
 
+  /**
+   * CRC64NVME, mapped to CRC64_NVME algorithm class.
+   */
   public static final String CRC64NVME = "CRC64NVME";
 
   private ChecksumSupport() {
@@ -70,7 +76,9 @@ public final class ChecksumSupport {
         ChecksumAlgorithm.class,
         configValue -> {
           // default values and handling algorithms names without underscores.
-          String val = configValue == null ? NONE : configValue.toUpperCase(Locale.ROOT);
+          String val = configValue == null
+              ? NONE
+              : configValue.toUpperCase(Locale.ROOT);
           switch (val) {
           case "":
           case NONE:

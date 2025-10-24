@@ -354,7 +354,7 @@ org.apache.hadoop.fs.s3a.AWSBadRequestException: upload part #1 upload ID 112233
 
 This is an obscure failure which was encountered as part of
 [HADOOP-19221](https://issues.apache.org/jira/browse/HADOOP-19221) : an upload of part of a file could not
-be succesfully retried after a failure was reported on the first attempt.
+be successfully retried after a failure was reported on the first attempt.
 
 1. It was only encountered during uploading files via the Staging Committers
 2. And is a regression in the V2 SDK.
@@ -364,7 +364,7 @@ be succesfully retried after a failure was reported on the first attempt.
 * If it is encountered on a release without the fix, please upgrade.
 
 It may be that the problem arises in the AWS SDK's "TransferManager", which is used for a
-higher performance upload of data from the local fileystem. If this is the case. disable this feature:
+higher performance upload of data from the local filesystem. If this is the case. disable this feature:
 ```
 <property>
   <name>fs.s3a.optimized.copy.from.local.enabled</name>
@@ -614,13 +614,13 @@ This can surface when trying to interact, especially write data, to a third-part
 ```
 
 The store does not recognize checksum calculation on every operation.
-Fix: disable it by setting `fs.s3a.checksum.calculation.enabled` to `false`.
+Fix: disable it by setting `fs.s3a.checksum.generation` to `false`.
 
 ```
   <property>
-    <name>fs.s3a.checksum.calculation.enabled</name>
+    <name>fs.s3a.checksum.generation</name>
     <value>false</value>
-    <description>Calculate and attach a message checksum on every operation. (default: true)</description>
+    <description>Calculate and attach a message checksum on every operation. (default: false)</description>
   </property>
 ```
 
