@@ -590,7 +590,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       tracingContext.setPosition(String.valueOf(position));
       op = client.read(path, position, b, offset, length,
           tolerateOobAppends ? "*" : eTag, cachedSasToken.get(),
-          contextEncryptionAdapter, tracingContext);
+          contextEncryptionAdapter, new TracingContext(tracingContext));
       cachedSasToken.update(op.getSasToken());
       LOG.debug("issuing HTTP GET request params position = {} b.length = {} "
           + "offset = {} length = {}", position, b.length, offset, length);

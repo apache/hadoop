@@ -519,6 +519,10 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_FS_AZURE_ENABLE_CREATE_BLOB_IDEMPOTENCY)
   private boolean enableCreateIdempotency;
 
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ENABLE_REQUEST_PRIORITY_FOR_PREFETCH,
+      DefaultValue = DEFAULT_FS_AZURE_ENABLE_PREFETCH_REQUEST_PRIORITY)
+  private boolean enablePrefetchRequestPriority;
+
   private String clientProvidedEncryptionKey;
   private String clientProvidedEncryptionKeySHA;
 
@@ -1234,6 +1238,10 @@ public class AbfsConfiguration{
 
   public boolean getIsCreateIdempotencyEnabled() {
     return enableCreateIdempotency;
+  }
+
+  public boolean isEnablePrefetchRequestPriority() {
+    return enablePrefetchRequestPriority;
   }
 
   /**

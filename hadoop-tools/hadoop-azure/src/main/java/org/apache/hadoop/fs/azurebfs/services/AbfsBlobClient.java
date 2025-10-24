@@ -63,6 +63,7 @@ import org.apache.hadoop.fs.azurebfs.constants.AbfsServiceType;
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams;
+import org.apache.hadoop.fs.azurebfs.constants.ReadType;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsDriverException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsInvalidChecksumException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
@@ -1334,6 +1335,11 @@ public class AbfsBlobClient extends AbfsClient {
         "bytes=%d-%d", position, position + bufferLength - 1));
     requestHeaders.add(rangeHeader);
     requestHeaders.add(new AbfsHttpHeader(IF_MATCH, eTag));
+
+    if (getAbfsConfiguration().isEnablePrefetchRequestPriority()
+        && ReadType.PREFETCH_READ.equals(tracingContext.getReadType())) {
+      requestHeaders.add(new AbfsHttpHeader("x-ms-request-priority", "7"));
+    }
 
     // Add request header to fetch MD5 Hash of data returned by server.
     if (isChecksumValidationEnabled(requestHeaders, rangeHeader, bufferLength)) {

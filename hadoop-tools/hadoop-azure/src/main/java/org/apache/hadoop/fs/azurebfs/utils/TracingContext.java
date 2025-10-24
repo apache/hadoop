@@ -389,4 +389,11 @@ public class TracingContext {
       listener.updateReadType(readType);
     }
   }
+
+  /**
+   * Returns the read type for the current operation.
+   */
+  public ReadType getReadType() {
+    return readType;
+  }
 }

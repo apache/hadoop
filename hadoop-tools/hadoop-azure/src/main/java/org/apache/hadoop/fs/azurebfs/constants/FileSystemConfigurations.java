@@ -266,5 +266,7 @@ public final class FileSystemConfigurations {
 
   public static final boolean DEFAULT_FS_AZURE_ENABLE_CREATE_BLOB_IDEMPOTENCY = true;
 
+  public static final boolean DEFAULT_FS_AZURE_ENABLE_PREFETCH_REQUEST_PRIORITY = false;
+
   private FileSystemConfigurations() {}
 }

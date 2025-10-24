@@ -127,7 +127,7 @@ final class ReadBufferManagerV1 extends ReadBufferManager {
       buffer.setRequestedLength(requestedLength);
       buffer.setStatus(ReadBufferStatus.NOT_AVAILABLE);
       buffer.setLatch(new CountDownLatch(1));
-      buffer.setTracingContext(tracingContext);
+      buffer.setTracingContext(new TracingContext(tracingContext));
 
       Integer bufferIndex = getFreeList().pop();  // will return a value, since we have checked size > 0 already
 

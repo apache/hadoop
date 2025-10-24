@@ -56,6 +56,7 @@ import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.ApiVersion;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsServiceType;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams;
+import org.apache.hadoop.fs.azurebfs.constants.ReadType;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsDriverException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsInvalidChecksumException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
@@ -1050,6 +1051,12 @@ public class AbfsDfsClient extends AbfsClient {
     }
 
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
+
+    if (getAbfsConfiguration().isEnablePrefetchRequestPriority()
+        && ReadType.PREFETCH_READ.equals(tracingContext.getReadType())) {
+      requestHeaders.add(new AbfsHttpHeader("x-ms-request-priority", "7"));
+    }
+
     // AbfsInputStream/AbfsOutputStream reuse SAS tokens for better performance
     String sasTokenForReuse = appendSASTokenToQuery(path,
         SASTokenProvider.READ_OPERATION,
