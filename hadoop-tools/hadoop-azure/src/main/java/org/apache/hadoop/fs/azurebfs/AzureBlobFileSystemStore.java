@@ -1741,7 +1741,15 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     } else if (authType == AuthType.SAS) {
       LOG.trace("Fetching SAS Token Provider");
       sasTokenProvider = abfsConfiguration.getSASTokenProvider();
-    } else {
+    } else if(authType == AuthType.UserboundSASWithOAuth){
+      LOG.trace("Fetching SAS and OAuth Token Provider for user bound SAS");
+      AzureADAuthenticator.init(abfsConfiguration);
+      tokenProvider = abfsConfiguration.getTokenProvider();
+      ExtensionHelper.bind(tokenProvider, uri,
+          abfsConfiguration.getRawConfiguration());
+      sasTokenProvider = abfsConfiguration.getSASTokenProviderForUserBoundSAS();
+    }
+    else {
       LOG.trace("Fetching token provider");
       tokenProvider = abfsConfiguration.getTokenProvider();
       ExtensionHelper.bind(tokenProvider, uri,

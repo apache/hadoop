@@ -303,6 +303,7 @@ driven by them.
 3. Deployed in-Azure with the Azure VMs providing OAuth 2.0 tokens to the application, "Managed Instance".
 4. Using Shared Access Signature (SAS) tokens provided by a custom implementation of the SASTokenProvider interface.
 5. By directly configuring a fixed Shared Access Signature (SAS) token in the account configuration settings files.
+6. Using user-bound SAS auth type, which is requires OAuth 2.0 setup (point 2 above) and SAS setup (point 4 above)
 
 Note: SAS Based Authentication should be used only with HNS Enabled accounts.
 
@@ -782,6 +783,45 @@ requests. User can specify them as fixed SAS Token to be used across all the req
     - fs.azure.sas.fixed.token.CONTAINER_NAME.ACCOUNT_NAME
     - fs.azure.sas.fixed.token.ACCOUNT_NAME
     - fs.azure.sas.fixed.token
+
+### User-bound user delegation SAS 
+- **Description**: The user-bound SAS auth type allows to track the usage of the SAS token generated- something 
+ that was not possible in user-delegation SAS authentication type. Reach out to us at 'askabfs@microsoft.com' for more information.
+ To use this authentication type, both custom SAS token provider class (that implements org.apache.hadoop.fs.azurebfs.extensions.SASTokenProvider) as
+    well as OAuth 2.0 provider type need to be specified.
+    - Refer to 'Shared Access Signature (SAS) Token Provider' section above for user-delegation SAS token provider class details and example class implementation.
+    - There are multiple identity configurations for OAuth settings. Listing the main ones below:
+        - Client Credentials
+        - Custom token provider
+        - Managed Identity
+        - Workload Identity
+        Refer to respective OAuth 2.0 sections above to correctly chose the OAuth provider type
+
+
+- **Configuration**: To use this method with ABFS Driver, specify the following properties in your `core-site.xml` file:
+
+    1. Authentication Type:
+        ```xml
+        <property>
+          <name>fs.azure.account.auth.type</name>
+          <value>UserboundSASWithOAuth</value>
+        </property>
+        ```
+    2. OAuth 2.0 Provider Type:
+        ```xml
+        <property>
+          <name>fs.azure.account.oauth.provider.type</name>
+          <value>org.apache.hadoop.fs.azurebfs.oauth2.ADD_CHOSEN_OAUTH_IDENTITY_CONFIGURATION</value>
+        </property>
+       ```
+    3. Custom SAS Token Provider Class:
+        ```xml
+        <property>
+          <name>fs.azure.sas.token.provider.type</name>
+          <value>CUSTOM_SAS_TOKEN_PROVIDER_CLASS</value>
+        </property>
+        ```
+       
 
 ## <a name="technical"></a> Technical notes
 

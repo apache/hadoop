@@ -1279,7 +1279,7 @@ public class AbfsConfiguration{
 
   public AccessTokenProvider getTokenProvider() throws TokenAccessProviderException {
     AuthType authType = getEnum(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME, AuthType.SharedKey);
-    if (authType == AuthType.OAuth) {
+    if (authType == AuthType.OAuth || authType == AuthType.UserboundSASWithOAuth) {
       try {
         Class<? extends AccessTokenProvider> tokenProviderClass =
             getTokenProviderClass(authType,
@@ -1471,6 +1471,49 @@ public class AbfsConfiguration{
     } catch (Exception e) {
       throw new SASTokenProviderException(
           "Unable to load SAS token provider class: " + e, e);
+    }
+  }
+
+  /**
+   * Returns the SASTokenProvider implementation to be used to generate user-bound SAS token.<br>
+   * Custom implementation of {@link SASTokenProvider} under th config
+   * "fs.azure.sas.token.provider.type" needs to be provided.<br>
+   * @return sasTokenProvider object based on configurations provided
+   * @throws AzureBlobFileSystemException
+   */
+  public SASTokenProvider getSASTokenProviderForUserBoundSAS() throws AzureBlobFileSystemException {
+    AuthType authType = getEnum(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME, AuthType.SharedKey);
+    if (authType != AuthType.UserboundSASWithOAuth) {
+      throw new SASTokenProviderException(String.format(
+          "Invalid auth type: %s is being used, expecting user-bound SAS.", authType));
+    }
+
+    try {
+      Class<? extends SASTokenProvider> customSasTokenProviderImplementation =
+          getTokenProviderClass(authType, FS_AZURE_SAS_TOKEN_PROVIDER_TYPE,
+              null, SASTokenProvider.class);
+
+      if (customSasTokenProviderImplementation == null) {
+        throw new SASTokenProviderException(String.format(
+            "\"%s\" must be set for user-bound SAS auth type.",
+            FS_AZURE_SAS_TOKEN_PROVIDER_TYPE));
+      }
+
+        SASTokenProvider sasTokenProvider = ReflectionUtils.newInstance(
+            customSasTokenProviderImplementation, rawConfig);
+        if (sasTokenProvider == null) {
+          throw new SASTokenProviderException(String.format(
+              "Failed to initialize %s", customSasTokenProviderImplementation));
+        }
+        LOG.trace("Initializing {}", customSasTokenProviderImplementation.getName());
+        sasTokenProvider.initialize(rawConfig, accountName);
+        LOG.trace("{} init complete", customSasTokenProviderImplementation.getName());
+        return sasTokenProvider;
+    } catch (SASTokenProviderException e) {
+      throw e;
+    } catch (Exception e) {
+      throw new SASTokenProviderException(
+          "Unable to load user-bound SAS token provider class: " + e, e);
     }
   }
 

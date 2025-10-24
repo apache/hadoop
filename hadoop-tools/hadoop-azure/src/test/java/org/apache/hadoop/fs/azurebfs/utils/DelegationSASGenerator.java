@@ -19,11 +19,13 @@
 package org.apache.hadoop.fs.azurebfs.utils;
 
 import java.time.Instant;
+import java.util.Objects;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.azurebfs.extensions.SASTokenProvider;
 import org.apache.hadoop.fs.azurebfs.services.AbfsUriQueryBuilder;
 
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.ROOT_PATH;
 
 /**
@@ -36,14 +38,18 @@ public class DelegationSASGenerator extends SASGenerator {
   private final String ske;
   private final String sks = "b";
   private final String skv;
+  private final String skdutid;
+  private final String sduoid;
 
-  public DelegationSASGenerator(byte[] userDelegationKey, String skoid, String sktid, String skt, String ske, String skv) {
+  public DelegationSASGenerator(byte[] userDelegationKey, String skoid, String sktid, String skt, String ske, String skv, String skdutid, String sduoid) {
     super(userDelegationKey);
     this.skoid = skoid;
     this.sktid = sktid;
     this.skt = skt;
     this.ske = ske;
     this.skv = skv;
+    this.skdutid = skdutid;
+    this.sduoid = sduoid;
   }
 
   public String getDelegationSAS(String accountName, String containerName, String path, String operation,
@@ -117,6 +123,15 @@ public class DelegationSASGenerator extends SASGenerator {
     qb.addQuery("ske", ske);
     qb.addQuery("sks", sks);
     qb.addQuery("skv", skv);
+
+    //skdutid and sduoid are required for user bound SAS only
+    if(!Objects.equals(skdutid, EMPTY_STRING)){
+      qb.addQuery("skdutid",  skdutid);
+    }
+    if(!Objects.equals(sduoid, EMPTY_STRING)){
+      qb.addQuery("sduoid",  sduoid);
+    }
+
     if (saoid != null) {
       qb.addQuery("saoid", saoid);
     }
