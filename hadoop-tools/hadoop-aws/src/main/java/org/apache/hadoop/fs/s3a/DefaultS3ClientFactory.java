@@ -222,9 +222,12 @@ public class DefaultS3ClientFactory extends Configured
     builder.requestChecksumCalculation(checksumCalculation);
 
     // response checksum validation. Slow, even with CRC32 checksums.
-    if (parameters.isChecksumValidationEnabled()) {
-      builder.responseChecksumValidation(ResponseChecksumValidation.WHEN_SUPPORTED);
-    }
+    final ResponseChecksumValidation checksumValidation;
+    checksumValidation = parameters.isChecksumValidationEnabled()
+        ? ResponseChecksumValidation.WHEN_SUPPORTED
+        : ResponseChecksumValidation.WHEN_REQUIRED;
+    LOG.debug("Using checksum validation policy: {}", checksumValidation);
+    builder.responseChecksumValidation(checksumValidation);
 
     maybeApplyS3AccessGrantsConfigurations(builder, conf);
 

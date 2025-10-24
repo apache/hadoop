@@ -1849,7 +1849,7 @@ public final class Constants {
    * Default value of {@link #CHECKSUM_GENERATION}.
    * Value: {@value}.
    */
-  public static final boolean CHECKSUM_GENERATION_DEFAULT = false;
+  public static final boolean DEFAULT_CHECKSUM_GENERATION = false;
 
   /**
    * Indicates the algorithm used to create the checksum for the object
@@ -1862,10 +1862,10 @@ public final class Constants {
       "fs.s3a.create.checksum.algorithm";
 
   /**
-   * Default checksum algorithm: {@code "CRC32C"}.
+   * Default checksum algorithm: {@code "NONE"}.
    */
-  public static final String CHECKSUM_ALGORITHM_DEFAULT =
-      ChecksumSupport.CRC32C;
+  public static final String DEFAULT_CHECKSUM_ALGORITHM =
+      ChecksumSupport.NONE;
 
   /**
    * Send a {@code Content-MD5 header} with every request.

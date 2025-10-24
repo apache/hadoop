@@ -1774,7 +1774,7 @@ To understand the risks and issues here know that
 | `fs.s3a.request.md5.header`        | Enable MD5 header                              | boolean | `true`   |
 | `fs.s3a.checksum.generation`       | Generate checksums on all requests             | boolean | `false`  |
 | `fs.s3a.checksum.validation`       | Validate checksums on download                 | boolean | `false`  |
-| `fs.s3a.create.checksum.algorithm` | Checksum Algorithm when creating/copying files | `NONE`, `CRC32`, `CRC32C`, `CRC32_C`, `CRC64NVME` , `CRC64_NVME`        | `CRC32C` |
+| `fs.s3a.create.checksum.algorithm` | Checksum Algorithm when creating/copying files | `NONE`, `CRC32`, `CRC32C`, `CRC32_C`, `CRC64NVME` , `CRC64_NVME`, `SHA256`, `SHA1`   | `""` |
 
 ### Content-MD5 Header on requests: `fs.s3a.request.md5.header`
 
@@ -1790,7 +1790,7 @@ As that appears to have been fixed in the SDK, this option is enabled by default
 Should checksums be generated for all requests made to the store?
 
 * Incompatible with some third-party stores
-* If `true` then multipart upload (i.e. large file upload) may fail if `fs.s3a.create.checksum.algorithm` is set to `NONE`.
+* If `true` then multipart upload (i.e. large file upload) may fail if `fs.s3a.create.checksum.algorithm` is not set to an algorithm other than `NONE`.
 
 Set to `false` by default to avoid problems.
 
@@ -1805,7 +1805,7 @@ This hurts performance and should be only used if considered important.
 
 This is the algorithm to use when checksumming data during file creation and copy.
 
-Options: `NONE`, `CRC32`, `CRC32C`, `CRC32_C`, `CRC64NVME` , `CRC64_NVME` 
+Options: `NONE`, `CRC32`, `CRC32C`, `CRC32_C`, `CRC64NVME` , `CRC64_NVME`, `SHA256`, `SHA1`  
 
 The option `NONE` is new to Hadoop 3.4.3; previously an empty string was required for the same behavior.
 
@@ -1818,6 +1818,7 @@ Add dependency on 'software.amazon.awssdk.crt:aws-crt' module to enable CRC64NVM
 
 Checksum/algorithm incompatibilities may surface as a failure in "Completing multipart upload"`.
 
+First as a failure reported as a "missing part".
 ```
 org.apache.hadoop.fs.s3a.AWSBadRequestException: Completing multipart upload id l8itQB.
 5u7TcWqznqbGfTjHv06mxb4IlBNcZiDWrBAS0t1EMJGkr9J1QD2UAwDM5rLUZqypJfWCoPJtySxA3QK9QqKTBdKr3LXYjYJ_r9lRcGdzBRbnIJeI8tBr8yqtS on
@@ -1831,6 +1832,22 @@ The part may not have been uploaded, or the specified entity tag may not match t
 (Service: S3, Status Code: 400, Request ID: AQ0J4B66H626Y3FH, Extended Request ID:
 g1zo25aQCZfqFh3vOzrzOBp9RjJEWmKImRcfWhvaeFHQ2hZo1xTm3GVMD03zN+d+cFB6oNeelNc=) (SDK Attempt Count: 1)
 ```
+
+Alternatively, as the failure of multipart uploads when a checksum algorithm is set and the part ordering is not in sequence.
+
+```
+org.apache.hadoop.fs.s3a.AWSStatus500Exception:
+  Completing multipart upload id A8rf256dBVbDtIVLr40KaMGKw9DY.rhgNP5zmn1ap97YjPaIO2Ac3XXL_T.2HCtIrGUpx5bdOTgvVeZzVHuoWI4pKv_MeMMVqBHJGP7u_q4PR8AxWvSq0Lsv724HT1fQ
+   on test/testMultipartUploadReverseOrderNonContiguousPartNumbers:
+software.amazon.awssdk.services.s3.model.S3Exception: We encountered an internal error.
+Please try again.
+(Service: S3, Status Code: 500, Request ID: WTBY2FX76Q5F5YWB,
+Extended Request ID: eWQWk8V8rmVmKImWVCI2rHyFS3XQSPgIkjfAyzzZCgVgyeRqox8mO8qO4ODMB6IUY0+rYqqsnOX2zXiQcRzFlb9p3nSkEEc+T0CYurLaH28=)
+(SDK Attempt Count: 3)
+```
+
+This is only possible through the FileSystem multipart API; normal data writes including
+those through the magic committer will not encounter it,
 
 ## <a name="other_topics"></a> Other Topics
 
