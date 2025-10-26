@@ -26,11 +26,13 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.apache.hadoop.classification.VisibleForTesting;
+
 public class SlidingWindowHdrHistogram {
   private static final Logger LOG = LoggerFactory.getLogger(SlidingWindowHdrHistogram.class);
 
   // Configuration
-  private final long windowSizeSecondsMillis;          // Total analysis window
+  private final long windowSizeMillis;          // Total analysis window
   private final long timeSegmentDurationMillis;       // Subdivision on analysis window
   private final int numSegments;
   private final long highestTrackableValue;
@@ -68,7 +70,7 @@ public class SlidingWindowHdrHistogram {
   private double tailLatency = 0.0;
   private int deviation = 0;
 
-  public SlidingWindowHdrHistogram(long windowSizeSeconds,
+  public SlidingWindowHdrHistogram(long windowSizeMillis,
       int numberOfSegments,
       int minSampleSize,
       int tailLatencyPercentile,
@@ -76,13 +78,14 @@ public class SlidingWindowHdrHistogram {
       long highestTrackableValue,
       int significantFigures,
       final AbfsRestOperationType operationType) {
-    if (windowSizeSeconds <= 0) throw new IllegalArgumentException("windowSizeSeconds > 0");
+    if (windowSizeMillis <= 0) throw new IllegalArgumentException("windowSizeMillis > 0");
     if (numberOfSegments <= 0) throw new IllegalArgumentException("bucketDurationMillis > 0");
     if (highestTrackableValue <= 0) throw new IllegalArgumentException("highestTrackableValue > 0");
     if (significantFigures < 1 || significantFigures > 5) throw new IllegalArgumentException("significantFigures in [1,5]");
 
-    this.windowSizeSecondsMillis = windowSizeSeconds;
-    this.timeSegmentDurationMillis = windowSizeSeconds/numberOfSegments;
+    this.windowSizeMillis = windowSizeMillis;
+    this.numSegments = numberOfSegments;
+    this.timeSegmentDurationMillis = windowSizeMillis/numberOfSegments;
     this.highestTrackableValue = highestTrackableValue;
     this.significantFigures = significantFigures;
     this.operationType = operationType;
@@ -90,7 +93,6 @@ public class SlidingWindowHdrHistogram {
     this.tailLatencyPercentile = tailLatencyPercentile;
     this.tailLatencyMinDeviation = tailLatencyMinDeviation; // 5ms
 
-    this.numSegments = (int) Math.ceil((double) this.windowSizeSecondsMillis / timeSegmentDurationMillis);
     this.completedSegments = new Histogram[numSegments];
     long now = System.currentTimeMillis();
     this.currentSegmentStartMillis = alignToSegmentDuration(now);
@@ -100,7 +102,7 @@ public class SlidingWindowHdrHistogram {
     this.tmpForDelta = new Histogram(highestTrackableValue, significantFigures);
     this.tmpForMerge = new Histogram(highestTrackableValue, significantFigures);
 
-    LOG.debug("[{}] Initialized SlidingWindowHdrHistogram with WindowSize {}, TimeSegmentDur: {}, NumOfSegments: {}", operationType, windowSizeSeconds, timeSegmentDurationMillis, numSegments);
+    LOG.debug("[{}] Initialized SlidingWindowHdrHistogram with WindowSize {}, TimeSegmentDur: {}, NumOfSegments: {}", operationType, windowSizeMillis, timeSegmentDurationMillis, numSegments);
   }
 
   /** Record a single latency value (in your chosen time unit). Thread-safe and lock-free. */
@@ -209,14 +211,11 @@ public class SlidingWindowHdrHistogram {
     }
   }
 
-  public long getCurrentTotalCount() {
-    return currentTotalCount.get();
-  }
-
+  @VisibleForTesting
   public double getTailLatency() {
     LOG.debug("[{}] Getting Tail Latency. Current total count: {}, Deviation: {}%, p50: {}, Tail Latency: {}, isAnalysisWindowFilled: {}",
         operationType, getCurrentTotalCount(), deviation, p50, tailLatency, isAnalysisWindowFilled);
-    if (!isAnalysisWindowFilled) {
+    if (!isAnalysisWindowFilled()) {
       LOG.debug("[{}] Analysis window not yet filled. Not reporting tail latency", operationType);
       return 0.0;
     }
@@ -226,5 +225,25 @@ public class SlidingWindowHdrHistogram {
       return 0.0;
     }
     return tailLatency;
+  }
+
+  @VisibleForTesting
+  public long getCurrentTotalCount() {
+    return currentTotalCount.get();
+  }
+
+  @VisibleForTesting
+  public int getCurrentIndex() {
+    return currentIndex.get();
+  }
+
+  @VisibleForTesting
+  public double getP50() {
+    return p50;
+  }
+
+  @VisibleForTesting
+  public boolean isAnalysisWindowFilled() {
+    return isAnalysisWindowFilled;
   }
 }
