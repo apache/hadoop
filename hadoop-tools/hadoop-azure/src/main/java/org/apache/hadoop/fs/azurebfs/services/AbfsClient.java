@@ -148,7 +148,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X
 import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARAM_RESOURCE;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARAM_TIMEOUT;
 import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.CONNECTION_TIMEOUT_ABBREVIATION;
-import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.TAIL_LATENCY_TIMEOUT_ABBREVIATION;
+import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.TAIL_LATENCY_REQUEST_TIMEOUT_ABBREVIATION;
 
 /**
  * AbfsClient.
@@ -416,7 +416,7 @@ public abstract class AbfsClient implements Closeable {
     if (CONNECTION_TIMEOUT_ABBREVIATION.equals(failureReason)
         && getAbfsConfiguration().getStaticRetryForConnectionTimeoutEnabled()) {
       return getStaticRetryPolicy();
-    } else if (TAIL_LATENCY_TIMEOUT_ABBREVIATION.equals(failureReason)) {
+    } else if (TAIL_LATENCY_REQUEST_TIMEOUT_ABBREVIATION.equals(failureReason)) {
       return getTailLatencyRequestTimeoutRetryPolicy();
     }
     return getExponentialRetryPolicy();

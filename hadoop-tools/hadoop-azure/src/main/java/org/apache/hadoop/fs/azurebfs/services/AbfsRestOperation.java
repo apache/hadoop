@@ -643,10 +643,17 @@ public class AbfsRestOperation {
    * @return tail latency timeout value else return zero.
    */
   long getTailLatencyTimeoutIfEnabled() {
-    if (tailLatencyTracker != null && abfsConfiguration.isTailLatencyRequestTimeoutEnabled() && shouldTailLatencyTimeout) {
+    if (isTailLatencyTimeoutEnabled() && shouldTailLatencyTimeout) {
       return (long) tailLatencyTracker.getTailLatency(this.operationType);
     }
     return ZERO;
+  }
+
+  boolean isTailLatencyTimeoutEnabled() {
+    return tailLatencyTracker != null
+        && abfsConfiguration.isTailLatencyRequestTimeoutEnabled()
+        && abfsConfiguration.getPreferredHttpOperationType() == HttpOperationType.APACHE_HTTP_CLIENT
+        && isApacheClientUsable();
   }
 
   /**

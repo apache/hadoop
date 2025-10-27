@@ -19,7 +19,7 @@
 package org.apache.hadoop.fs.azurebfs.services.retryReasonCategories;
 
 import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_TAIL_LATENCY_REQUEST_TIMEOUT;
-import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.TAIL_LATENCY_TIMEOUT_ABBREVIATION;
+import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.TAIL_LATENCY_REQUEST_TIMEOUT_ABBREVIATION;
 
 public class TailLatencyRequestTimeoutRetryReason  extends
     RetryReasonCategory {
@@ -27,7 +27,7 @@ public class TailLatencyRequestTimeoutRetryReason  extends
   @Override
   String getAbbreviation(final Integer statusCode,
       final String serverErrorMessage) {
-    return TAIL_LATENCY_TIMEOUT_ABBREVIATION;
+    return TAIL_LATENCY_REQUEST_TIMEOUT_ABBREVIATION;
   }
 
   @Override
