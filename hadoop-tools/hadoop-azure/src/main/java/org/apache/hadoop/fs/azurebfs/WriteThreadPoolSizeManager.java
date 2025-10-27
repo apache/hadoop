@@ -131,11 +131,14 @@ public final class WriteThreadPoolSizeManager implements Closeable {
   }
 
   /**
-   * Calculates the max thread pool size using a multiplier based on
-   * memory per core. Higher memory per core results in a larger multiplier.
+   * Computes the maximum thread pool size based on the available processors
+   * and the initial available heap memory. The calculation uses a tiered
+   * multiplier derived from the memory-to-core ratio — systems with higher
+   * memory per core allow for a larger thread pool.
    *
-   * @param availableProcessors Number of CPU cores.
-   * @return Computed max thread pool size.
+   * @param availableProcessors the number of available CPU cores.
+   * @param initialAvailableHeapMemory the initial available heap memory, in bytes or GB (depending on implementation).
+   * @return the computed maximum thread pool size.
    */
   private int getComputedMaxPoolSize(final int availableProcessors, long initialAvailableHeapMemory) {
     int maxpoolSize = getMemoryTierMaxThreads(initialAvailableHeapMemory, availableProcessors);

@@ -281,7 +281,7 @@ public final class FileSystemConfigurations {
 
   public static final int DEFAULT_FS_AZURE_BLOB_DELETE_THREAD = DEFAULT_FS_AZURE_LISTING_ACTION_THREADS;
 
-  public static final boolean DEFAULT_WRITE_DYNAMIC_THREADPOOL_ENABLEMENT = true;
+  public static final boolean DEFAULT_WRITE_DYNAMIC_THREADPOOL_ENABLEMENT = false;
 
   public static final int DEFAULT_WRITE_THREADPOOL_KEEP_ALIVE_TIME = 30;
 

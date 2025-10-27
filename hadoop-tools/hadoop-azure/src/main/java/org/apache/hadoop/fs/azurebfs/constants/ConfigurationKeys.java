@@ -490,12 +490,5 @@ public final class ConfigurationKeys {
   /**Flag to enable/disable create idempotency during create operation: {@value}*/
   public static final String FS_AZURE_ENABLE_CREATE_BLOB_IDEMPOTENCY = "fs.azure.enable.create.blob.idempotency";
 
-  /**
-   * Configuration key for the core pool size of the write thread pool.
-   * This value specifies the number of threads to keep in the write thread pool,
-   * even if they are idle.
-   * Value: {@value}.
-   */
-  public static final String FS_AZURE_WRITE_THREADPOOL_CORE_POOL_SIZE = "fs.azure.write.threadpool.core.pool.size";
   private ConfigurationKeys() {}
 }
