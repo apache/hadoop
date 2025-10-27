@@ -53,7 +53,7 @@ class AppendOp extends Operation {
    * @return Path
    */
   protected Path getAppendFile() {
-    Path fn = getFinder().getFile();
+    Path fn = getFinder().getFile("APPEND");
     return fn;
   }
 
@@ -100,7 +100,7 @@ class AppendOp extends Operation {
     } catch (FileNotFoundException e) {
       out.add(new OperationOutput(OutputType.LONG, getType(),
           ReportWriter.NOT_FOUND, 1L));
-      LOG.warn("Error with appending", e);
+      LOG.warn("AppendOp failed: File not found", e);
     } catch (IOException | UnsupportedOperationException e) {
       out.add(new OperationOutput(OutputType.LONG, getType(),
           ReportWriter.FAILURES, 1L));

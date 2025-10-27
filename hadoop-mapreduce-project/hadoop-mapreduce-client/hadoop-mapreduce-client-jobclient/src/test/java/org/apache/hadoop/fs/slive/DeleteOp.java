@@ -49,7 +49,7 @@ class DeleteOp extends Operation {
    * Gets the file to delete
    */
   protected Path getDeleteFile() {
-    Path fn = getFinder().getFile();
+    Path fn = getFinder().getFile("DELETE");
     return fn;
   }
 
@@ -58,6 +58,7 @@ class DeleteOp extends Operation {
     List<OperationOutput> out = super.run(fs);
     try {
       Path fn = getDeleteFile();
+      LOG.info("Deleting file: " + fn);
       long timeTaken = 0;
       boolean deleteStatus = false;
       {
@@ -80,7 +81,7 @@ class DeleteOp extends Operation {
     } catch (FileNotFoundException e) {
       out.add(new OperationOutput(OutputType.LONG, getType(),
           ReportWriter.NOT_FOUND, 1L));
-      LOG.warn("Error with deleting", e);
+      LOG.warn("DeleteOp failed: File not found", e);
     } catch (IOException e) {
       out.add(new OperationOutput(OutputType.LONG, getType(),
           ReportWriter.FAILURES, 1L));

@@ -28,6 +28,9 @@ import java.util.TreeMap;
 
 import org.apache.hadoop.fs.slive.Constants.Distribution;
 import org.apache.hadoop.fs.slive.Constants.OperationType;
+import org.apache.hadoop.fs.slive.Weights.BeginWeight;
+import org.apache.hadoop.fs.slive.Weights.EndWeight;
+import org.apache.hadoop.fs.slive.Weights.MidWeight;
 import org.apache.hadoop.fs.slive.Weights.UniformWeight;
 import org.apache.hadoop.fs.slive.ObserveableOp.Observer;
 import org.slf4j.Logger;
@@ -75,9 +78,9 @@ class WeightSelector {
   private void configureWeights(ConfigExtractor e) {
     weights = new HashMap<Distribution, Weightable>();
     weights.put(Distribution.UNIFORM, new UniformWeight());
-    // weights.put(Distribution.BEG, new BeginWeight());
-    // weights.put(Distribution.END, new EndWeight());
-    // weights.put(Distribution.MID, new MidWeight());
+    weights.put(Distribution.BEG, new BeginWeight());
+    weights.put(Distribution.END, new EndWeight());
+    weights.put(Distribution.MID, new MidWeight());
   }
 
   /**

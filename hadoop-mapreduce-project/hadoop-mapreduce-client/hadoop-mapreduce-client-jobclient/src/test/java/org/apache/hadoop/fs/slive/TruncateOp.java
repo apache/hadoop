@@ -52,7 +52,7 @@ class TruncateOp extends Operation {
    * @return Path
    */
   protected Path getTruncateFile() {
-    Path fn = getFinder().getFile();
+    Path fn = getFinder().getFile("TRUNCATE");
     return fn;
   }
 
@@ -93,7 +93,7 @@ class TruncateOp extends Operation {
     } catch (FileNotFoundException e) {
       out.add(new OperationOutput(OutputType.LONG, getType(),
           ReportWriter.NOT_FOUND, 1L));
-      LOG.warn("Error with truncating", e);
+      LOG.warn("TruncateOp failed: File not found", e);
     } catch (IOException | UnsupportedOperationException e) {
       out.add(new OperationOutput(OutputType.LONG, getType(),
           ReportWriter.FAILURES, 1L));

@@ -55,7 +55,7 @@ class ReadOp extends Operation {
    * @return Path
    */
   protected Path getReadFile() {
-    Path fn = getFinder().getFile();
+    Path fn = getFinder().getFile("READ"); 
     return fn;
   }
 
@@ -118,15 +118,15 @@ class ReadOp extends Operation {
     } catch (FileNotFoundException e) {
       out.add(new OperationOutput(OutputType.LONG, getType(),
           ReportWriter.NOT_FOUND, 1L));
-      LOG.warn("Error with reading", e);
+      LOG.warn("ReadOp failed: File not found", e);
     } catch (BadFileException e) {
       out.add(new OperationOutput(OutputType.LONG, getType(),
           ReportWriter.BAD_FILES, 1L));
-      LOG.warn("Error reading bad file", e);
+      LOG.warn("ReadOp failed: File data corrupted", e);
     } catch (IOException e) {
       out.add(new OperationOutput(OutputType.LONG, getType(),
           ReportWriter.FAILURES, 1L));
-      LOG.warn("Error reading", e);
+      LOG.warn("ReadOp failed: IO error reading file", e);
     } finally {
       if (is != null) {
         try {

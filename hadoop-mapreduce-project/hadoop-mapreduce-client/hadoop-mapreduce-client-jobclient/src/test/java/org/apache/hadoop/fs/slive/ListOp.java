@@ -53,7 +53,7 @@ class ListOp extends Operation {
    * @return Path
    */
   protected Path getDirectory() {
-    Path dir = getFinder().getDirectory();
+    Path dir = getFinder().getDirectory("LS");
     return dir;
   }
 
@@ -81,7 +81,7 @@ class ListOp extends Operation {
     } catch (FileNotFoundException e) {
       out.add(new OperationOutput(OutputType.LONG, getType(),
           ReportWriter.NOT_FOUND, 1L));
-      LOG.warn("Error with listing", e);
+      LOG.warn("ListOp failed: File not found", e);
     } catch (IOException e) {
       out.add(new OperationOutput(OutputType.LONG, getType(),
           ReportWriter.FAILURES, 1L));

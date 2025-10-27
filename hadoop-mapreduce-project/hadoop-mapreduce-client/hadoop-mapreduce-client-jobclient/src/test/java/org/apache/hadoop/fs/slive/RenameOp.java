@@ -72,8 +72,10 @@ class RenameOp extends Operation {
    * @return SrcTarget
    */
   protected SrcTarget getRenames() {
-    Path src = getFinder().getFile();
-    Path target = getFinder().getFile();
+    // Source: scan existing files (use RENAME_SRC operation type)
+    Path src = getFinder().getFile("RENAME_SRC");
+    // Target: generate new unique path (use CREATE operation type)
+    Path target = getFinder().getFile("CREATE");
     return new SrcTarget(src, target);
   }
 
@@ -85,6 +87,16 @@ class RenameOp extends Operation {
       SrcTarget targets = getRenames();
       Path src = targets.getSrc();
       Path target = targets.getTarget();
+      LOG.info("Renaming " + src + " to " + target);
+      // Ensure target directory exists
+      Path targetDir = target.getParent();
+      if (targetDir != null && !fs.exists(targetDir)) {
+        LOG.info("Creating target directory: " + targetDir);
+        boolean mkdirOk = fs.mkdirs(targetDir);
+        if (!mkdirOk) {
+          LOG.warn("Failed to create target directory: " + targetDir);
+        }
+      }
       // capture results
       boolean renamedOk = false;
       long timeTaken = 0;
@@ -108,7 +120,7 @@ class RenameOp extends Operation {
     } catch (FileNotFoundException e) {
       out.add(new OperationOutput(OutputType.LONG, getType(),
           ReportWriter.NOT_FOUND, 1L));
-      LOG.warn("Error with renaming", e);
+      LOG.warn("RenameOp failed: File not found", e);
     } catch (IOException e) {
       out.add(new OperationOutput(OutputType.LONG, getType(),
           ReportWriter.FAILURES, 1L));

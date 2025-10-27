@@ -132,6 +132,29 @@ class ConfigExtractor {
   }
 
   /**
+   * @return true|false for whether to use existing files only
+   */
+  boolean shouldUseNewAlgorithm() {
+    return shouldUseNewAlgorithm(null);
+  }
+
+  /**
+   * @param primary
+   *          primary the initial string to be used for the value of this
+   * @return true|false for whether to use existing files only from primary,config,default (in that order)
+   */
+  boolean shouldUseNewAlgorithm(String primary) {
+    String val = primary;
+    if (val == null) {
+      val = config.get(ConfigOption.USE_NEW_ALGORITHM.getCfgOption());
+    }
+    if (val == null) {
+      val = ConfigOption.USE_NEW_ALGORITHM.getDefault().toString();
+    }
+    return Boolean.parseBoolean(val);
+  }
+
+  /**
    * @return whether the mapper or reducer should wait for truncate recovery
    */
   boolean shouldWaitOnTruncate() {
@@ -735,6 +758,7 @@ class ConfigExtractor {
     LOG.info("Operation amount = " + cfg.getOpCount());
     LOG.info("Total file limit = " + cfg.getTotalFiles());
     LOG.info("Total dir file limit = " + cfg.getDirSize());
+    LOG.info("Use new algorithm = " + cfg.shouldUseNewAlgorithm());
     {
       String read = "Read size = ";
       if (cfg.shouldReadFullFile()) {

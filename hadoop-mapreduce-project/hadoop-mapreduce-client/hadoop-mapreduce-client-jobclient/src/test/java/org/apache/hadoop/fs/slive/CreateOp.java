@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.slive;
 
 import java.io.IOException;
+import org.apache.hadoop.fs.FileAlreadyExistsException;
 import java.util.List;
 import java.util.Random;
 
@@ -111,7 +112,7 @@ class CreateOp extends Operation {
    * @return Path
    */
   protected Path getCreateFile() {
-    Path fn = getFinder().getFile();
+    Path fn = getFinder().getFile("CREATE");
     return fn;
   }
 
@@ -164,10 +165,14 @@ class CreateOp extends Operation {
           ReportWriter.BYTES_WRITTEN, bytesWritten));
       out.add(new OperationOutput(OutputType.LONG, getType(),
           ReportWriter.SUCCESSES, 1L));
+    } catch (FileAlreadyExistsException e) {
+      out.add(new OperationOutput(OutputType.LONG, getType(),
+          ReportWriter.FILE_ALREADY_EXISTS, 1L));
+      LOG.warn("CreateOp failed: File already exists", e);
     } catch (IOException e) {
       out.add(new OperationOutput(OutputType.LONG, getType(),
           ReportWriter.FAILURES, 1L));
-      LOG.warn("Error with creating", e);
+      LOG.warn("CreateOp failed: IO error creating file", e);
     } finally {
       if (os != null) {
         try {

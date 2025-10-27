@@ -52,6 +52,10 @@ class ConfigOption<T> extends Option {
       "exitOnError", false, "Exit on first error", SLIVE_PREFIX
           + ".exit.on.error", false);
 
+  static final ConfigOption<Boolean> USE_NEW_ALGORITHM = new ConfigOption<Boolean>(
+      "useNewAlgorithm", false, "Use new algorithm for slivetest read/delete etc. operations", SLIVE_PREFIX
+          + ".use.new.algorithm", false);
+
   static final ConfigOption<Integer> FILES = new ConfigOption<Integer>(
       "files", true, "Max total number of files",
       SLIVE_PREFIX + ".total.files", 10);
