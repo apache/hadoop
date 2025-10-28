@@ -375,11 +375,19 @@ public final class WriteThreadPoolSizeManager implements Closeable {
   public void close() throws IOException {
     synchronized (this) {
       try {
-        // Shutdown executors
-        cpuMonitorExecutor.shutdown();
-        HadoopExecutors.shutdown(boundedThreadPool, LOG, THIRTY_SECONDS, TimeUnit.SECONDS);
-        boundedThreadPool = null;
-
+        // Shutdown CPU monitor
+        if (cpuMonitorExecutor != null && !cpuMonitorExecutor.isShutdown()) {
+          cpuMonitorExecutor.shutdown();
+        }
+        // Gracefully shutdown the bounded thread pool
+        if (boundedThreadPool != null && !boundedThreadPool.isShutdown()) {
+          boundedThreadPool.shutdown();
+          if (!boundedThreadPool.awaitTermination(THIRTY_SECONDS, TimeUnit.SECONDS)) {
+            LOG.warn("Bounded thread pool did not terminate in time, forcing shutdownNow for filesystem: {}", filesystemName);
+            boundedThreadPool.shutdownNow();
+          }
+          boundedThreadPool = null;
+        }
         // Remove from the map
         POOL_SIZE_MANAGER_MAP.remove(filesystemName);
         LOG.debug("Closed and removed instance for filesystem: {}", filesystemName);
