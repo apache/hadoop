@@ -831,7 +831,7 @@ public class TestDirectoryScanner {
 
     // We need lots of blocks so the report compiler threads have enough to
     // keep them busy while we watch them.
-    int blocks = 20000;
+    int blocks = 40000;
     int maxRetries = 3;
 
     cluster = new MiniDFSCluster.Builder(conf).build();

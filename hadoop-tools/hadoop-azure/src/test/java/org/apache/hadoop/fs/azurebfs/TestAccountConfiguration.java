@@ -34,6 +34,7 @@ import org.apache.hadoop.fs.azurebfs.oauth2.MsiTokenProvider;
 import org.apache.hadoop.fs.azurebfs.oauth2.RefreshTokenBasedTokenProvider;
 import org.apache.hadoop.fs.azurebfs.oauth2.UserPasswordTokenProvider;
 import org.apache.hadoop.fs.azurebfs.oauth2.WorkloadIdentityTokenProvider;
+import org.apache.hadoop.fs.azurebfs.oauth2.ClientAssertionProvider;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
@@ -49,6 +50,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_OAUTH_REFRESH_TOKEN;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_OAUTH_USER_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_OAUTH_USER_PASSWORD;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_OAUTH_CLIENT_ASSERTION_PROVIDER_TYPE;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_TOKEN_PROVIDER_TYPE_PROPERTY_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_SAS_TOKEN_PROVIDER_TYPE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -79,6 +81,8 @@ public class TestAccountConfiguration {
   private static final String TEST_USER_PASSWORD = "userPassword";
   private static final String TEST_MSI_TENANT = "msiTenant";
   private static final String TEST_REFRESH_TOKEN = "refreshToken";
+  private static final String TEST_CUSTOM_CLIENT_ASSERTION_PROVIDER = "org.apache.hadoop.fs.azurebfs.TestAccountConfiguration$MockClientAssertionProvider";
+  private static final String TEST_TOKEN_FILE = "/tmp/test-token-file";
 
   private static final List<String> CLIENT_CREDENTIAL_OAUTH_CONFIG_KEYS =
       Collections.unmodifiableList(Arrays.asList(
@@ -605,6 +609,212 @@ public class TestAccountConfiguration {
     abfsConf.unset(FS_AZURE_ACCOUNT_OAUTH_USER_PASSWORD + accountNameSuffix);
     abfsConf.unset(FS_AZURE_ACCOUNT_OAUTH_MSI_TENANT + accountNameSuffix);
     abfsConf.unset(FS_AZURE_ACCOUNT_OAUTH_REFRESH_TOKEN + accountNameSuffix);
+    abfsConf.unset(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ASSERTION_PROVIDER_TYPE + accountNameSuffix);
+  }
+
+  /**
+   * Mock implementation of ClientAssertionProvider for testing
+   */
+  public static class MockClientAssertionProvider implements ClientAssertionProvider {
+    @Override
+    public void initialize(Configuration configuration, String accountName) throws IOException {
+      // Mock implementation
+    }
+
+    @Override
+    public String getClientAssertion() throws IOException {
+      return "mock-jwt-token";
+    }
+  }
+
+  /**
+   * Test that WorkloadIdentityTokenProvider can be configured with custom ClientAssertionProvider
+   */
+  @Test
+  public void testWorkloadIdentityTokenProviderWithCustomClientAssertionProvider() throws Exception {
+    final String accountName = "account";
+    final Configuration conf = new Configuration();
+    final AbfsConfiguration abfsConf = new AbfsConfiguration(conf, accountName);
+
+    final String accountNameSuffix = "." + abfsConf.getAccountName();
+
+    // Set up OAuth with WorkloadIdentityTokenProvider
+    abfsConf.set(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME + accountNameSuffix, AuthType.OAuth.toString());
+    abfsConf.set(FS_AZURE_ACCOUNT_TOKEN_PROVIDER_TYPE_PROPERTY_NAME + accountNameSuffix,
+                 WorkloadIdentityTokenProvider.class.getName());
+
+    // Set required OAuth parameters
+    abfsConf.set(FS_AZURE_ACCOUNT_OAUTH_MSI_TENANT + accountNameSuffix, TEST_MSI_TENANT);
+    abfsConf.set(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ID + accountNameSuffix, TEST_CLIENT_ID);
+
+    // Set custom ClientAssertionProvider
+    abfsConf.set(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ASSERTION_PROVIDER_TYPE + accountNameSuffix,
+                 TEST_CUSTOM_CLIENT_ASSERTION_PROVIDER);
+
+    AccessTokenProvider tokenProvider = abfsConf.getTokenProvider();
+    Assertions.assertThat(tokenProvider)
+        .describedAs("Should create WorkloadIdentityTokenProvider with custom ClientAssertionProvider")
+        .isInstanceOf(WorkloadIdentityTokenProvider.class);
+
+    // Verify that the custom provider configuration was read and used
+    String customProviderType = abfsConf.getPasswordString(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ASSERTION_PROVIDER_TYPE);
+    Assertions.assertThat(customProviderType)
+        .describedAs("Custom provider type should be configured")
+        .isEqualTo(TEST_CUSTOM_CLIENT_ASSERTION_PROVIDER);
+  }
+
+  /**
+   * Test that WorkloadIdentityTokenProvider falls back to file-based approach when no custom provider is configured
+   */
+  @Test
+  public void testWorkloadIdentityTokenProviderWithFileBasedFallback() throws Exception {
+    final String accountName = "account";
+    final Configuration conf = new Configuration();
+    final AbfsConfiguration abfsConf = new AbfsConfiguration(conf, accountName);
+
+    final String accountNameSuffix = "." + abfsConf.getAccountName();
+
+    // Set up OAuth with WorkloadIdentityTokenProvider
+    abfsConf.set(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME + accountNameSuffix, AuthType.OAuth.toString());
+    abfsConf.set(FS_AZURE_ACCOUNT_TOKEN_PROVIDER_TYPE_PROPERTY_NAME + accountNameSuffix,
+                 WorkloadIdentityTokenProvider.class.getName());
+
+    // Set required OAuth parameters
+    abfsConf.set(FS_AZURE_ACCOUNT_OAUTH_MSI_TENANT + accountNameSuffix, TEST_MSI_TENANT);
+    abfsConf.set(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ID + accountNameSuffix, TEST_CLIENT_ID);
+
+    // Don't set custom provider - should fallback to file-based approach
+    // abfsConf.set(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ASSERTION_PROVIDER_TYPE + accountNameSuffix, ...);
+
+    AccessTokenProvider tokenProvider = abfsConf.getTokenProvider();
+    Assertions.assertThat(tokenProvider)
+        .describedAs("Should create WorkloadIdentityTokenProvider with file-based fallback")
+        .isInstanceOf(WorkloadIdentityTokenProvider.class);
+
+    // Verify that no custom provider is configured (should be null or empty)
+    String customProviderType = abfsConf.getPasswordString(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ASSERTION_PROVIDER_TYPE);
+    Assertions.assertThat(customProviderType)
+        .describedAs("No custom provider should be configured for file-based fallback")
+        .isNull();
+  }
+
+  /**
+   * Test that invalid custom ClientAssertionProvider class name throws appropriate exception
+   */
+  @Test
+  public void testWorkloadIdentityTokenProviderWithInvalidCustomProvider() throws Exception {
+    final String accountName = "account";
+    final Configuration conf = new Configuration();
+    final AbfsConfiguration abfsConf = new AbfsConfiguration(conf, accountName);
+
+    final String accountNameSuffix = "." + abfsConf.getAccountName();
+
+    // Set up OAuth with WorkloadIdentityTokenProvider
+    abfsConf.set(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME + accountNameSuffix, AuthType.OAuth.toString());
+    abfsConf.set(FS_AZURE_ACCOUNT_TOKEN_PROVIDER_TYPE_PROPERTY_NAME + accountNameSuffix,
+                 WorkloadIdentityTokenProvider.class.getName());
+
+    // Set required OAuth parameters
+    abfsConf.set(FS_AZURE_ACCOUNT_OAUTH_MSI_TENANT + accountNameSuffix, TEST_MSI_TENANT);
+    abfsConf.set(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ID + accountNameSuffix, TEST_CLIENT_ID);
+
+    // Set invalid custom ClientAssertionProvider class
+    abfsConf.set(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ASSERTION_PROVIDER_TYPE + accountNameSuffix,
+                 "non.existent.InvalidProvider");
+
+    TokenAccessProviderException exception = LambdaTestUtils.intercept(
+        TokenAccessProviderException.class,
+        () -> abfsConf.getTokenProvider());
+
+    Assertions.assertThat(exception.getMessage())
+        .describedAs("Should contain error about unable to load OAuth token provider class")
+        .contains("Unable to load OAuth token provider class");
+  }
+
+  /**
+   * Test that empty/whitespace custom ClientAssertionProvider config falls back to file-based approach
+   */
+  @Test
+  public void testWorkloadIdentityTokenProviderWithEmptyCustomProviderConfig() throws Exception {
+    final String accountName = "account";
+    final Configuration conf = new Configuration();
+    final AbfsConfiguration abfsConf = new AbfsConfiguration(conf, accountName);
+
+    final String accountNameSuffix = "." + abfsConf.getAccountName();
+
+    // Set up OAuth with WorkloadIdentityTokenProvider
+    abfsConf.set(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME + accountNameSuffix, AuthType.OAuth.toString());
+    abfsConf.set(FS_AZURE_ACCOUNT_TOKEN_PROVIDER_TYPE_PROPERTY_NAME + accountNameSuffix,
+                 WorkloadIdentityTokenProvider.class.getName());
+
+    // Set required OAuth parameters
+    abfsConf.set(FS_AZURE_ACCOUNT_OAUTH_MSI_TENANT + accountNameSuffix, TEST_MSI_TENANT);
+    abfsConf.set(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ID + accountNameSuffix, TEST_CLIENT_ID);
+
+    // Set empty custom ClientAssertionProvider - should fallback to file-based
+    abfsConf.set(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ASSERTION_PROVIDER_TYPE + accountNameSuffix, "   ");
+
+    AccessTokenProvider tokenProvider = abfsConf.getTokenProvider();
+    Assertions.assertThat(tokenProvider)
+        .describedAs("Should create WorkloadIdentityTokenProvider with file-based fallback when provider config is empty")
+        .isInstanceOf(WorkloadIdentityTokenProvider.class);
+
+    // Verify that the empty provider configuration is read but treated as empty
+    String customProviderType = abfsConf.getPasswordString(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ASSERTION_PROVIDER_TYPE);
+    Assertions.assertThat(customProviderType)
+        .describedAs("Empty custom provider config should be present but whitespace-only")
+        .isEqualTo("   ");
+
+    // Verify that when trimmed, it's empty (this is what triggers file-based fallback)
+    Assertions.assertThat(customProviderType.trim())
+        .describedAs("Trimmed custom provider config should be empty")
+        .isEmpty();
+  }
+
+  /**
+   * Test that configuration precedence works for custom ClientAssertionProvider
+   * (account-specific vs account-agnostic)
+   */
+  @Test
+  public void testWorkloadIdentityCustomProviderConfigPrecedence() throws Exception {
+    final String accountName = "account";
+    final Configuration conf = new Configuration();
+    final AbfsConfiguration abfsConf = new AbfsConfiguration(conf, accountName);
+
+    final String accountNameSuffix = "." + abfsConf.getAccountName();
+
+    // Set up OAuth with WorkloadIdentityTokenProvider
+    abfsConf.set(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME + accountNameSuffix, AuthType.OAuth.toString());
+    abfsConf.set(FS_AZURE_ACCOUNT_TOKEN_PROVIDER_TYPE_PROPERTY_NAME + accountNameSuffix,
+                 WorkloadIdentityTokenProvider.class.getName());
+
+    // Set required OAuth parameters
+    abfsConf.set(FS_AZURE_ACCOUNT_OAUTH_MSI_TENANT + accountNameSuffix, TEST_MSI_TENANT);
+    abfsConf.set(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ID + accountNameSuffix, TEST_CLIENT_ID);
+
+    // Set account-agnostic custom provider (should be overridden by account-specific)
+    abfsConf.set(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ASSERTION_PROVIDER_TYPE, "some.other.Provider");
+
+    // Set account-specific custom provider (should take precedence)
+    abfsConf.set(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ASSERTION_PROVIDER_TYPE + accountNameSuffix,
+                 TEST_CUSTOM_CLIENT_ASSERTION_PROVIDER);
+
+    AccessTokenProvider tokenProvider = abfsConf.getTokenProvider();
+    Assertions.assertThat(tokenProvider)
+        .describedAs("Should create WorkloadIdentityTokenProvider with account-specific custom provider taking precedence")
+        .isInstanceOf(WorkloadIdentityTokenProvider.class);
+
+    // Verify that account-specific configuration takes precedence over account-agnostic
+    String accountSpecificProvider = abfsConf.getPasswordString(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ASSERTION_PROVIDER_TYPE);
+    Assertions.assertThat(accountSpecificProvider)
+        .describedAs("Account-specific custom provider should take precedence")
+        .isEqualTo(TEST_CUSTOM_CLIENT_ASSERTION_PROVIDER);
+
+    // Verify that the account-agnostic setting exists but isn't used
+    String accountAgnosticProvider = abfsConf.getRawConfiguration().get(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ASSERTION_PROVIDER_TYPE);
+    Assertions.assertThat(accountAgnosticProvider)
+        .describedAs("Account-agnostic setting should exist but not be used")
+        .isEqualTo("some.other.Provider");
   }
 
 }

@@ -721,8 +721,51 @@ public class TestStandbyCheckpoints {
     out.write(42);
     out.close();
   }
-  
-  
+
+  /**
+   * Test checkpoint still succeeds when no more than half of the fsimages upload failed.
+   */
+  @Test
+  @Timeout(value = 300)
+  public void testPutFsimagePartFailed() throws Exception {
+    for (int i = 1; i < NUM_NNS; i++) {
+      cluster.shutdownNameNode(i);
+
+      // Make true checkpoint for DFS_NAMENODE_CHECKPOINT_PERIOD_KEY
+      cluster.getConfiguration(i).setInt(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_PERIOD_KEY, 3);
+      cluster.getConfiguration(i).setInt(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_TXNS_KEY, 1000);
+    }
+    doEdits(0, 10);
+    cluster.transitionToStandby(0);
+
+    for (int i = 1; i < NUM_NNS; i++) {
+      cluster.restartNameNode(i, false);
+    }
+    cluster.waitClusterUp();
+    setNNs();
+
+    for (int i = 0; i < NUM_NNS; i++) {
+      // Once the standby catches up, it should do a checkpoint
+      // and save to local directories.
+      HATestUtil.waitForCheckpoint(cluster, i, ImmutableList.of(12));
+    }
+
+    long snnCheckpointTime1 = nns[1].getNamesystem().getStandbyLastCheckpointTime();
+    cluster.transitionToActive(0);
+    cluster.transitionToObserver(2);
+    cluster.shutdownNameNode(2);
+
+    doEdits(11, 20);
+    nns[0].getRpcServer().rollEditLog();
+    HATestUtil.waitForCheckpoint(cluster, 0, ImmutableList.of(23));
+
+    long snnCheckpointTime2 = nns[1].getNamesystem().getStandbyLastCheckpointTime();
+
+    // Make sure that standby namenode checkpoint success and update the lastCheckpointTime
+    // even though it send fsimage to nn2 failed because nn2 is shut down.
+    assertTrue(snnCheckpointTime2 > snnCheckpointTime1);
+  }
+
   /**
    * A codec which just slows down the saving of the image significantly
    * by sleeping a few milliseconds on every write. This makes it easy to

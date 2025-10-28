@@ -202,6 +202,7 @@ Here are the main configuration options of the committer.
 
 There are some more, as covered in the (Advanced)[#advanced] section.
 
+WARNING: setting `mapreduce.fileoutputcommitter.cleanup.skipped` to `true` is not compatible with version 1 of the committer and can cause unexpected behaviors.
 
 ## <a name="scaling"></a> Scaling jobs `mapreduce.manifest.committer.io.threads`
 

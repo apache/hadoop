@@ -27,6 +27,7 @@ import java.net.URISyntaxException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -109,7 +110,7 @@ public class TestNameNodeResourceChecker {
       boolean isNameNodeMonitorRunning = false;
       Set<Thread> runningThreads = Thread.getAllStackTraces().keySet();
       for (Thread runningThread : runningThreads) {
-        if (runningThread.toString().startsWith("Thread[" + name)) {
+        if (runningThread.toString().matches("Thread\\[(#\\d+,)?" + Pattern.quote(name) + ".*")) {
           isNameNodeMonitorRunning = true;
           break;
         }
