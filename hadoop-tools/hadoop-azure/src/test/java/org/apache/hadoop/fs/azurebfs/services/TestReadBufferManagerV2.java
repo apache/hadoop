@@ -35,8 +35,11 @@ import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_READAHEAD_V2_CACHED_BUFFER_TTL_MILLIS;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_READAHEAD_V2_CPU_MONITORING_INTERVAL_MILLIS;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_READAHEAD_V2_CPU_USAGE_THRESHOLD_PERCENT;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_READAHEAD_V2_MAX_BUFFER_POOL_SIZE;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_READAHEAD_V2_MAX_THREAD_POOL_SIZE;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_READAHEAD_V2_MEMORY_MONITORING_INTERVAL_MILLIS;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_READAHEAD_V2_MEMORY_USAGE_THRESHOLD_PERCENT;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_READAHEAD_V2_MIN_BUFFER_POOL_SIZE;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_READAHEAD_V2_MIN_THREAD_POOL_SIZE;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_KB;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
@@ -118,9 +121,10 @@ public class TestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
     TestAbfsInputStream testAbfsInputStream = new TestAbfsInputStream();
     AbfsClient client = testAbfsInputStream.getMockAbfsClient();
     AbfsInputStream inputStream = testAbfsInputStream.getAbfsInputStream(client, "testFailedReadAhead.txt");
-    Configuration configuration = getReabAheadV2Configuration();
+    Configuration configuration = getReadAheadV2Configuration();
     AbfsConfiguration abfsConfig = new AbfsConfiguration(configuration,
         getAccountName());
+    ReadBufferManagerV2.setReadBufferManagerConfigs(abfsConfig.getReadAheadBlockSize(), abfsConfig);
     ReadBufferManagerV2.getBufferManager().testResetReadBufferManager();
     ReadBufferManagerV2.setReadBufferManagerConfigs(abfsConfig.getReadAheadBlockSize(), abfsConfig);
     ReadBufferManagerV2 bufferManagerV2 = ReadBufferManagerV2.getBufferManager();
@@ -144,11 +148,42 @@ public class TestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
   }
 
   @Test
+  public void testCpuUpscaleNotAllowedIfCpuAboveThreshold() throws Exception {
+    TestAbfsInputStream testAbfsInputStream = new TestAbfsInputStream();
+    AbfsClient client = testAbfsInputStream.getMockAbfsClient();
+    AbfsInputStream inputStream = testAbfsInputStream.getAbfsInputStream(client, "testFailedReadAhead.txt");
+    Configuration configuration = getReadAheadV2Configuration();
+    configuration.set(FS_AZURE_READAHEAD_V2_CPU_USAGE_THRESHOLD_PERCENT, "0"); // set low threshold
+    AbfsConfiguration abfsConfig = new AbfsConfiguration(configuration,
+        getAccountName());
+    ReadBufferManagerV2.setReadBufferManagerConfigs(abfsConfig.getReadAheadBlockSize(), abfsConfig);
+    ReadBufferManagerV2.getBufferManager().testResetReadBufferManager();
+    ReadBufferManagerV2.setReadBufferManagerConfigs(abfsConfig.getReadAheadBlockSize(), abfsConfig);
+    ReadBufferManagerV2 bufferManagerV2 = ReadBufferManagerV2.getBufferManager();
+    assertThat(bufferManagerV2.getCurrentThreadPoolSize()).isEqualTo(2);
+    int[] reqOffset = {0};
+    int reqLength = 1;
+    running = true;
+    Thread t = new Thread(() -> {
+      while (running) {
+        bufferManagerV2.queueReadAhead(inputStream, reqOffset[0], reqLength,
+            inputStream.getTracingContext());
+        reqOffset[0] += reqLength;
+      }
+    });
+    t.start();
+    Thread.sleep(2L * bufferManagerV2.getCpuMonitoringIntervalInMilliSec());
+    assertThat(bufferManagerV2.getCurrentThreadPoolSize()).isEqualTo(2);
+    running = false;
+    t.join();
+  }
+
+  @Test
   public void testScheduledEviction() throws Exception {
     TestAbfsInputStream testAbfsInputStream = new TestAbfsInputStream();
     AbfsClient client = testAbfsInputStream.getMockAbfsClient();
     AbfsInputStream inputStream = testAbfsInputStream.getAbfsInputStream(client, "testFailedReadAhead.txt");
-    Configuration configuration = getReabAheadV2Configuration();
+    Configuration configuration = getReadAheadV2Configuration();
     AbfsConfiguration abfsConfig = new AbfsConfiguration(configuration,
         getAccountName());
     ReadBufferManagerV2.getBufferManager().testResetReadBufferManager();
@@ -170,13 +205,14 @@ public class TestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
     TestAbfsInputStream testAbfsInputStream = new TestAbfsInputStream();
     AbfsClient client = testAbfsInputStream.getMockAbfsClient();
     AbfsInputStream inputStream = testAbfsInputStream.getAbfsInputStream(client, "testFailedReadAhead.txt");
-    Configuration configuration = getReabAheadV2Configuration();
+    Configuration configuration = getReadAheadV2Configuration();
+    configuration.set(FS_AZURE_READAHEAD_V2_MEMORY_USAGE_THRESHOLD_PERCENT, "0"); // set low threshold
     AbfsConfiguration abfsConfig = new AbfsConfiguration(configuration,
         getAccountName());
+    ReadBufferManagerV2.setReadBufferManagerConfigs(abfsConfig.getReadAheadBlockSize(), abfsConfig);
     ReadBufferManagerV2.getBufferManager().testResetReadBufferManager();
     ReadBufferManagerV2.setReadBufferManagerConfigs(abfsConfig.getReadAheadBlockSize(), abfsConfig);
-    ReadBufferManagerV2 bufferManagerV2 = Mockito.spy(ReadBufferManagerV2.getBufferManager());
-    Mockito.doReturn(0.6).when(bufferManagerV2).getMemoryLoad();
+    ReadBufferManagerV2 bufferManagerV2 = ReadBufferManagerV2.getBufferManager();
     // Add a failed buffer to completed queue and set to no free buffers to read ahead.
     ReadBuffer buff = new ReadBuffer();
     buff.setStatus(ReadBufferStatus.READ_FAILED);
@@ -193,13 +229,14 @@ public class TestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
     TestAbfsInputStream testAbfsInputStream = new TestAbfsInputStream();
     AbfsClient client = testAbfsInputStream.getMockAbfsClient();
     AbfsInputStream inputStream = testAbfsInputStream.getAbfsInputStream(client, "testFailedReadAhead.txt");
-    Configuration configuration = getReabAheadV2Configuration();
+    Configuration configuration = getReadAheadV2Configuration();
+    configuration.set(FS_AZURE_READAHEAD_V2_MEMORY_USAGE_THRESHOLD_PERCENT, "100");
     AbfsConfiguration abfsConfig = new AbfsConfiguration(configuration,
         getAccountName());
+    ReadBufferManagerV2.setReadBufferManagerConfigs(abfsConfig.getReadAheadBlockSize(), abfsConfig);
     ReadBufferManagerV2.getBufferManager().testResetReadBufferManager();
     ReadBufferManagerV2.setReadBufferManagerConfigs(abfsConfig.getReadAheadBlockSize(), abfsConfig);
-    ReadBufferManagerV2 bufferManagerV2 = Mockito.spy(ReadBufferManagerV2.getBufferManager());
-    Mockito.doReturn(0.4).when(bufferManagerV2).getMemoryLoad();
+    ReadBufferManagerV2 bufferManagerV2 = ReadBufferManagerV2.getBufferManager();
     // Add a failed buffer to completed queue and set to no free buffers to read ahead.
     ReadBuffer buff = new ReadBuffer();
     buff.setStatus(ReadBufferStatus.READ_FAILED);
@@ -213,17 +250,16 @@ public class TestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
 
   @Test
   public void testMemoryDownscaleIfMemoryAboveThreshold() throws Exception {
-    running = true;
-    TestAbfsInputStream testAbfsInputStream = new TestAbfsInputStream();
-    AbfsClient client = testAbfsInputStream.getMockAbfsClient();
-    AbfsInputStream inputStream = testAbfsInputStream.getAbfsInputStream(client, "testFailedReadAhead.txt");
-    Configuration configuration = getReabAheadV2Configuration();
+    Configuration configuration = getReadAheadV2Configuration();
+    configuration.set(FS_AZURE_READAHEAD_V2_MEMORY_USAGE_THRESHOLD_PERCENT, "2");
     AbfsConfiguration abfsConfig = new AbfsConfiguration(configuration,
         getAccountName());
+    ReadBufferManagerV2.setReadBufferManagerConfigs(abfsConfig.getReadAheadBlockSize(), abfsConfig);
     ReadBufferManagerV2.getBufferManager().testResetReadBufferManager();
     ReadBufferManagerV2.setReadBufferManagerConfigs(abfsConfig.getReadAheadBlockSize(), abfsConfig);
-    ReadBufferManagerV2 bufferManagerV2 = Mockito.spy(ReadBufferManagerV2.getBufferManager());
-    assertThat(bufferManagerV2.getNumBuffers()).isEqualTo(bufferManagerV2.getMinBufferPoolSize());
+    ReadBufferManagerV2 bufferManagerV2 = ReadBufferManagerV2.getBufferManager();
+    int initialBuffers = bufferManagerV2.getMinBufferPoolSize();
+    assertThat(bufferManagerV2.getNumBuffers()).isEqualTo(initialBuffers);
     running = true;
     Thread t = new Thread(() -> {
       while (running) {
@@ -231,7 +267,7 @@ public class TestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
         long usedMemory = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
         double usage = (double) usedMemory / maxMemory;
 
-        if (usage < 0.6) {
+        if (usage < 0.8) {
           // Allocate more memory
           allocations.add(new byte[10 * 1024 * 1024]); // 10MB
         }
@@ -242,10 +278,10 @@ public class TestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
     Thread.sleep(bufferManagerV2.getMemoryMonitoringIntervalInMilliSec());
     running = false;
     t.join();
-    assertThat(bufferManagerV2.getNumBuffers()).isLessThan(bufferManagerV2.getMinBufferPoolSize());
+    assertThat(bufferManagerV2.getNumBuffers()).isLessThan(initialBuffers);
   }
 
-  private Configuration getReabAheadV2Configuration() {
+  private Configuration getReadAheadV2Configuration() {
     Configuration conf = new Configuration(getRawConfiguration());
     conf.setBoolean(FS_AZURE_ENABLE_READAHEAD_V2, true);
     conf.setBoolean(FS_AZURE_ENABLE_READAHEAD_V2_DYNAMIC_SCALING, true);
