@@ -27,13 +27,13 @@ public class TestSlidingWindowHdrHistogram {
   @Test
   public void testSlidingWindowHdrHistogram() throws Exception {
     SlidingWindowHdrHistogram histogram = new SlidingWindowHdrHistogram(
-        100,
-        5,
-        7,
-        99,
-        0,
-        100,
-        3,
+        100, // Analysis window size in ms
+        5, // Number of histogram slots in the analysis window
+        7, // Minimum number of samples to compute percentiles
+        99, // Percentile to compute
+        0, // Minimum deviation percentage to report tail latency
+        100, // Maximum expected value
+        3, // Number of significant digits
         AbfsRestOperationType.GetPathStatus);
 
     // Verify that the histogram is created successfully with default values and
@@ -145,7 +145,7 @@ public class TestSlidingWindowHdrHistogram {
     // Verify that analysis window is full after full rotation.
     assertThat(histogram.isAnalysisWindowFilled()).isTrue();
 
-    // Verify that percentiles are not computed due to low deviation
+    // Verify that percentiles are computed.
     assertThat(histogram.getP50()).isGreaterThan(0.0);
     assertThat(histogram.getTailLatency()).isGreaterThan(0.0);
   }

@@ -61,7 +61,7 @@ public class SlidingWindowHdrHistogram {
 
   private boolean isAnalysisWindowFilled = false;
   private int minSampleSize;
-  private int tailLatencyPercentile;
+  private double tailLatencyPercentile;
   private int tailLatencyMinDeviation;
 
   private double p50 = 0.0;
@@ -79,7 +79,7 @@ public class SlidingWindowHdrHistogram {
       int significantFigures,
       final AbfsRestOperationType operationType) {
     if (windowSizeMillis <= 0) throw new IllegalArgumentException("windowSizeMillis > 0");
-    if (numberOfSegments <= 0) throw new IllegalArgumentException("bucketDurationMillis > 0");
+    if (numberOfSegments <= 0) throw new IllegalArgumentException("numberOfSegments > 0");
     if (highestTrackableValue <= 0) throw new IllegalArgumentException("highestTrackableValue > 0");
     if (significantFigures < 1 || significantFigures > 5) throw new IllegalArgumentException("significantFigures in [1,5]");
 
@@ -90,7 +90,7 @@ public class SlidingWindowHdrHistogram {
     this.significantFigures = significantFigures;
     this.operationType = operationType;
     this.minSampleSize = minSampleSize;
-    this.tailLatencyPercentile = tailLatencyPercentile;
+    this.tailLatencyPercentile = adjustPercentile(tailLatencyPercentile);
     this.tailLatencyMinDeviation = tailLatencyMinDeviation; // 5ms
 
     this.completedSegments = new Histogram[numSegments];
@@ -123,6 +123,7 @@ public class SlidingWindowHdrHistogram {
     if (getCurrentTotalCount() < minSampleSize) {
       LOG.debug("[{}] Not enough data to report percentiles. Current total count: {}",
           operationType, getCurrentTotalCount());
+      return;
     } else {
       rotateLock.lock();
       try {
@@ -140,7 +141,11 @@ public class SlidingWindowHdrHistogram {
         p50 = tmpForMerge.getValueAtPercentile(50);
         p90 = tmpForMerge.getValueAtPercentile(90);
         p99 = tmpForMerge.getValueAtPercentile(99);
-        deviation = (int) ((tailLatency - p50)/p50 * 100);
+        if (p50 == 0 || tailLatency < p50) {
+          deviation = 0;
+        } else {
+          deviation = (int) ((tailLatency - p50) / p50 * 100);
+        }
       } finally {
         rotateLock.unlock();
       }
@@ -156,8 +161,7 @@ public class SlidingWindowHdrHistogram {
   /** Ensure active bucket is aligned to current time; rotate if we've crossed a boundary. */
   public void rotateIfNeeded() {
     LOG.debug("[{}] Triggering Histogram Rotation", operationType);
-    long now = System.currentTimeMillis();
-    long expectedStart = alignToSegmentDuration(now);
+    long expectedStart = alignToSegmentDuration(System.currentTimeMillis());
     if (expectedStart == currentSegmentStartMillis) {
       LOG.debug("[{}] Current Time Segment Still Active at {}. Skipping Rotation", operationType, expectedStart);
       return; // still current
@@ -166,8 +170,7 @@ public class SlidingWindowHdrHistogram {
     rotateLock.lock();
     try {
       // Re-check inside lock
-      now = System.currentTimeMillis();
-      expectedStart = alignToSegmentDuration(now);
+      expectedStart = alignToSegmentDuration(System.currentTimeMillis());
       if (expectedStart == currentSegmentStartMillis) return;
 
       // Finalize the current bucket:
@@ -209,6 +212,21 @@ public class SlidingWindowHdrHistogram {
     } finally {
       rotateLock.unlock();
     }
+  }
+
+  /**
+   * If percentile is configured to more than 100, adjust it to a decimal value.
+   * @param number configured percentile
+   * @return adjusted percentile
+   */
+  public static double adjustPercentile(int number) {
+    if (number <= 100) {
+      return number; // No change for numbers ≤ 100
+    }
+
+    String numStr = String.valueOf(number);
+    String withDecimal = numStr.substring(0, 2) + "." + numStr.substring(2);
+    return Double.parseDouble(withDecimal);
   }
 
   @VisibleForTesting

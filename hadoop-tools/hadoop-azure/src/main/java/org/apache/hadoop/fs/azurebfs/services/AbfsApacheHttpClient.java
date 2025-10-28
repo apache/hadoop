@@ -161,7 +161,7 @@ final class AbfsApacheHttpClient implements Closeable {
    * @return HTTP response.
    * @throws IOException network error.
    */
-  public HttpResponse executeWithoutDeadline(HttpRequestBase httpRequest,
+  private HttpResponse executeWithoutDeadline(HttpRequestBase httpRequest,
       final AbfsManagedHttpClientContext abfsHttpClientContext,
       final int connectTimeout,
       final int readTimeout) throws IOException {
@@ -186,7 +186,7 @@ final class AbfsApacheHttpClient implements Closeable {
    * @return HTTP response.
    * @throws IOException network error or deadline exceeded.
    */
-  public HttpResponse executeWithDeadline(HttpRequestBase httpRequest,
+  private HttpResponse executeWithDeadline(HttpRequestBase httpRequest,
       final AbfsManagedHttpClientContext abfsHttpClientContext,
       final int connectTimeout,
       final int readTimeout,
@@ -206,7 +206,7 @@ final class AbfsApacheHttpClient implements Closeable {
     } catch (TimeoutException e) {
       /* Deadline exceeded, abort the request.
        * This will also kill the underlying socket exception in the HttpClient.
-       * Connection will be marker stale and won't be returned back to KAC for reuse.
+       * Connection will be marked stale and won't be returned back to KAC for reuse.
        */
       httpRequest.abort();
       throw new TailLatencyRequestTimeoutException(e);

@@ -28,11 +28,15 @@ public class TailLatencyRequestTimeoutException extends AzureBlobFileSystemExcep
 
   /**
    * Constructs a TailLatencyRequestTimeoutException with TimeoutException as the cause.
+   * @param innerException the TimeoutException that caused this exception
    */
   public TailLatencyRequestTimeoutException(TimeoutException innerException) {
     super(ERR_TAIL_LATENCY_REQUEST_TIMEOUT, innerException);
   }
 
+  /**
+   * Constructs a TailLatencyRequestTimeoutException without a cause.
+   */
   public TailLatencyRequestTimeoutException() {
     super(ERR_TAIL_LATENCY_REQUEST_TIMEOUT);
   }

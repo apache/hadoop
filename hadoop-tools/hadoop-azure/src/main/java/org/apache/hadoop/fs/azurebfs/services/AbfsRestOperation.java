@@ -47,6 +47,7 @@ import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
 import org.apache.hadoop.fs.azurebfs.enums.RetryValue;
 import org.apache.http.impl.execchain.RequestAbortedException;
 
+import static java.net.HttpURLConnection.HTTP_OK;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.PUT_BLOCK_LIST;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ZERO;
 import static org.apache.hadoop.fs.azurebfs.enums.AbfsBackoffMetricsEnum.MAX_RETRY_COUNT;
@@ -116,6 +117,11 @@ public class AbfsRestOperation {
    */
   private String failureReason;
   private AbfsRetryPolicy retryPolicy;
+
+  /**
+   * Flag to indicate whether Tail Latency Timeout should be applied for the request.
+   * This is normally true, but will be set to false if all the retries for Tail Latency Timeout are exhausted.
+   */
   private boolean shouldTailLatencyTimeout = true;
 
   private final AbfsConfiguration abfsConfiguration;
@@ -363,7 +369,7 @@ public class AbfsRestOperation {
   @VisibleForTesting
   void updateBackoffMetrics(int retryCount, int statusCode) {
     if (abfsBackoffMetrics != null) {
-      if (statusCode < HttpURLConnection.HTTP_OK
+      if (statusCode < HTTP_OK
               || statusCode >= HttpURLConnection.HTTP_INTERNAL_ERROR) {
         synchronized (this) {
           if (retryCount >= maxIoRetries) {
@@ -457,7 +463,7 @@ public class AbfsRestOperation {
       }
         incrementCounter(AbfsStatistic.GET_RESPONSES, 1);
       //Only increment bytesReceived counter when the status code is 2XX.
-      if (httpOperation.getStatusCode() >= HttpURLConnection.HTTP_OK
+      if (httpOperation.getStatusCode() >= HTTP_OK
           && httpOperation.getStatusCode() <= HttpURLConnection.HTTP_PARTIAL) {
         incrementCounter(AbfsStatistic.BYTES_RECEIVED,
             httpOperation.getBytesReceived());
@@ -546,7 +552,7 @@ public class AbfsRestOperation {
       }
 
       // Update Tail Latency Tracker only for successful requests.
-      if (tailLatencyTracker != null && statusCode <  HttpURLConnection.HTTP_MULT_CHOICE) {
+      if (tailLatencyTracker != null && (statusCode >= HTTP_OK && statusCode < HttpURLConnection.HTTP_MULT_CHOICE)) {
         tailLatencyTracker.updateLatency(operationType,
             httpOperation.getSendLatency() + httpOperation.getRecvLatency());
       }
@@ -649,6 +655,10 @@ public class AbfsRestOperation {
     return ZERO;
   }
 
+  /**
+   * Checks if Tail Latency Timeout is enabled for the request.
+   * @return true if Tail Latency Timeout is enabled.
+   */
   boolean isTailLatencyTimeoutEnabled() {
     return tailLatencyTracker != null
         && abfsConfiguration.isTailLatencyRequestTimeoutEnabled()

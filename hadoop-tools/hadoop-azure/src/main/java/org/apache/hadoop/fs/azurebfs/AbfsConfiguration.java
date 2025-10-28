@@ -544,7 +544,8 @@ public class AbfsConfiguration{
   private int tailLatencyAnalysisWindowInMillis;
 
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_TAIL_LATENCY_ANALYSIS_WINDOW_GRANULARITY,
-      DefaultValue = DEFAULT_FS_AZURE_TAIL_LATENCY_ANALYSIS_WINDOW_GRANULARITY)
+      DefaultValue = DEFAULT_FS_AZURE_TAIL_LATENCY_ANALYSIS_WINDOW_GRANULARITY,
+      MinValue = MIN_FS_AZURE_TAIL_LATENCY_ANALYSIS_WINDOW_GRANULARITY)
   private int tailLatencyAnalysisWindowGranularity;
 
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_TAIL_LATENCY_PERCENTILE_COMPUTATION_INTERVAL_MILLIS,
@@ -1866,7 +1867,7 @@ public class AbfsConfiguration{
   }
 
   public boolean isTailLatencyRequestTimeoutEnabled() {
-    return isTailLatencyRequestTimeoutEnabled && isTailLatencyTrackerEnabled
+    return isTailLatencyTrackerEnabled && isTailLatencyRequestTimeoutEnabled
         && getPreferredHttpOperationType().equals(HttpOperationType.APACHE_HTTP_CLIENT);
   }
 
@@ -1886,11 +1887,14 @@ public class AbfsConfiguration{
     return tailLatencyAnalysisWindowInMillis;
   }
 
-  public int getTailLatencyPercentileComputationIntervalInMillis() {
+  public int getTailLatencyComputationIntervalInMillis() {
     return tailLatencyPercentileComputationIntervalInMillis;
   }
 
   public int getTailLatencyAnalysisWindowGranularity() {
+    if (tailLatencyAnalysisWindowGranularity <= 0) {
+        return MIN_FS_AZURE_TAIL_LATENCY_ANALYSIS_WINDOW_GRANULARITY;
+    }
     return tailLatencyAnalysisWindowGranularity;
   }
 

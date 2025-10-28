@@ -39,7 +39,7 @@ public class AbfsTailLatencyTracker {
 
   private static final Logger LOG = LoggerFactory.getLogger(
       AbfsTailLatencyTracker.class);
-  private static AbfsTailLatencyTracker singleton;
+  private static AbfsTailLatencyTracker singletonLatencyTracker;
   private static final ReentrantLock LOCK = new ReentrantLock();
   private static final int HISTOGRAM_MAX_VALUE = 60_000;
   private static final int HISTOGRAM_SIGNIFICANT_FIGURES = 3;
@@ -72,7 +72,7 @@ public class AbfsTailLatencyTracker {
           return t;
         });
 
-    long computationalInterval = configuration.getTailLatencyPercentileComputationIntervalInMillis();
+    long computationalInterval = configuration.getTailLatencyComputationIntervalInMillis();
     tailLatencyComputationThread.scheduleAtFixedRate(this::computePercentiles,
         computationalInterval, computationalInterval, TimeUnit.MILLISECONDS);
   }
@@ -104,17 +104,17 @@ public class AbfsTailLatencyTracker {
    * @return singleton object of intercept.
    */
   static AbfsTailLatencyTracker initializeSingleton(AbfsConfiguration abfsConfiguration) {
-    if (singleton == null) {
+    if (singletonLatencyTracker == null) {
       LOCK.lock();
       try {
-        if (singleton == null) {
-          singleton = new AbfsTailLatencyTracker(abfsConfiguration);
+        if (singletonLatencyTracker == null) {
+          singletonLatencyTracker = new AbfsTailLatencyTracker(abfsConfiguration);
         }
       } finally {
         LOCK.unlock();
       }
     }
-    return singleton;
+    return singletonLatencyTracker;
   }
 
   /**
@@ -126,15 +126,23 @@ public class AbfsTailLatencyTracker {
       final long latency) {
     SlidingWindowHdrHistogram histogram = operationLatencyMap.get(operationType);
     if (histogram == null) {
-      LOG.debug("Creating new histogram for operation: {}", operationType);
-      histogram = new SlidingWindowHdrHistogram(
-          configuration.getTailLatencyAnalysisWindowInMillis(),
-          configuration.getTailLatencyAnalysisWindowGranularity(),
-          configuration.getTailLatencyMinSampleSize(),
-          configuration.getTailLatencyPercentile(),
-          configuration.getTailLatencyMinDeviation(),
-          HISTOGRAM_MAX_VALUE, HISTOGRAM_SIGNIFICANT_FIGURES, operationType);
-      operationLatencyMap.put(operationType, histogram);
+      LOCK.lock();
+      try {
+        if (operationLatencyMap.get(operationType) == null) {
+          LOG.debug("Creating new histogram for operation: {}", operationType);
+          histogram = new SlidingWindowHdrHistogram(
+              configuration.getTailLatencyAnalysisWindowInMillis(),
+              configuration.getTailLatencyAnalysisWindowGranularity(),
+              configuration.getTailLatencyMinSampleSize(),
+              configuration.getTailLatencyPercentile(),
+              configuration.getTailLatencyMinDeviation(),
+              HISTOGRAM_MAX_VALUE, HISTOGRAM_SIGNIFICANT_FIGURES,
+              operationType);
+          operationLatencyMap.put(operationType, histogram);
+        }
+      } finally {
+        LOCK.unlock();
+      }
     } else {
       LOG.debug("Using existing histogram for operation: {}",  operationType);
     }
@@ -145,7 +153,7 @@ public class AbfsTailLatencyTracker {
 
   /**
    * Gets the tail latency for a specific operation type.
-   * @param operationType Only applicable for read and write operations.
+   * @param operationType for which tail latency is required.
    * @return Tail latency value.
    */
   public double getTailLatency(final AbfsRestOperationType operationType) {
