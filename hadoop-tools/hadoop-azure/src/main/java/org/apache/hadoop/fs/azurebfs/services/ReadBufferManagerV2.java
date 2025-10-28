@@ -49,38 +49,57 @@ import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.O
 /**
  * The Improved Read Buffer Manager for Rest AbfsClient.
  */
-public class ReadBufferManagerV2 extends ReadBufferManager {
+public final class ReadBufferManagerV2 extends ReadBufferManager {
+
   // Internal constants
   private static final ReentrantLock LOCK = new ReentrantLock();
 
   // Thread Pool Configurations
   private static int minThreadPoolSize;
+
   private static int maxThreadPoolSize;
+
   private static int cpuMonitoringIntervalInMilliSec;
+
   private static double cpuThreshold;
+
   private static int threadPoolUpscalePercentage;
+
   private static int threadPoolDownscalePercentage;
+
   private static int executorServiceKeepAliveTimeInMilliSec;
-  private static final double THREAD_POOL_REQUIREMENT_BUFFER = 1.2; // 20% more threads than the queue size
+
+  private static final double THREAD_POOL_REQUIREMENT_BUFFER = 1.2;
+      // 20% more threads than the queue size
+
   private static boolean isDynamicScalingEnabled;
 
   private ScheduledExecutorService cpuMonitorThread;
+
   private ThreadPoolExecutor workerPool;
+
   private final List<ReadBufferWorker> workerRefs = new ArrayList<>();
 
   // Buffer Pool Configurations
   private static int minBufferPoolSize;
+
   private static int maxBufferPoolSize;
+
   private static int memoryMonitoringIntervalInMilliSec;
+
   private static double memoryThreshold;
 
   private int numberOfActiveBuffers = 0;
+
   private byte[][] bufferPool;
+
   private Stack<Integer> removedBufferList = new Stack<>();
+
   private ScheduledExecutorService memoryMonitorThread;
 
   // Buffer Manager Structures
   private static ReadBufferManagerV2 bufferManager;
+
   private static boolean isConfigured = false;
 
   /**
@@ -121,18 +140,28 @@ public class ReadBufferManagerV2 extends ReadBufferManager {
     if (bufferManager == null && !isConfigured) {
       minThreadPoolSize = abfsConfiguration.getMinReadAheadV2ThreadPoolSize();
       maxThreadPoolSize = abfsConfiguration.getMaxReadAheadV2ThreadPoolSize();
-      cpuMonitoringIntervalInMilliSec = abfsConfiguration.getReadAheadV2CpuMonitoringIntervalMillis();
-      cpuThreshold = abfsConfiguration.getReadAheadV2CpuUsageThresholdPercent()/ ONE_HUNDRED;
-      threadPoolUpscalePercentage = abfsConfiguration.getReadAheadV2ThreadPoolUpscalePercentage();
-      threadPoolDownscalePercentage = abfsConfiguration.getReadAheadV2ThreadPoolDownscalePercentage();
-      executorServiceKeepAliveTimeInMilliSec = abfsConfiguration.getReadAheadExecutorServiceTTLInMillis();
+      cpuMonitoringIntervalInMilliSec
+          = abfsConfiguration.getReadAheadV2CpuMonitoringIntervalMillis();
+      cpuThreshold = abfsConfiguration.getReadAheadV2CpuUsageThresholdPercent()
+          / ONE_HUNDRED;
+      threadPoolUpscalePercentage
+          = abfsConfiguration.getReadAheadV2ThreadPoolUpscalePercentage();
+      threadPoolDownscalePercentage
+          = abfsConfiguration.getReadAheadV2ThreadPoolDownscalePercentage();
+      executorServiceKeepAliveTimeInMilliSec
+          = abfsConfiguration.getReadAheadExecutorServiceTTLInMillis();
 
       minBufferPoolSize = abfsConfiguration.getMinReadAheadV2BufferPoolSize();
       maxBufferPoolSize = abfsConfiguration.getMaxReadAheadV2BufferPoolSize();
-      memoryMonitoringIntervalInMilliSec = abfsConfiguration.getReadAheadV2MemoryMonitoringIntervalMillis();
-      memoryThreshold = abfsConfiguration.getReadAheadV2MemoryUsageThresholdPercent()/ ONE_HUNDRED;
-      setThresholdAgeMilliseconds(abfsConfiguration.getReadAheadV2CachedBufferTTLMillis());
-      isDynamicScalingEnabled = abfsConfiguration.isReadAheadV2DynamicScalingEnabled();
+      memoryMonitoringIntervalInMilliSec
+          = abfsConfiguration.getReadAheadV2MemoryMonitoringIntervalMillis();
+      memoryThreshold =
+          abfsConfiguration.getReadAheadV2MemoryUsageThresholdPercent()
+              / ONE_HUNDRED;
+      setThresholdAgeMilliseconds(
+          abfsConfiguration.getReadAheadV2CachedBufferTTLMillis());
+      isDynamicScalingEnabled
+          = abfsConfiguration.isReadAheadV2DynamicScalingEnabled();
       setReadAheadBlockSize(readAheadBlockSize);
       setIsConfigured(true);
     }
@@ -147,17 +176,20 @@ public class ReadBufferManagerV2 extends ReadBufferManager {
     bufferPool = new byte[maxBufferPoolSize][];
     for (int i = 0; i < minBufferPoolSize; i++) {
       // Start with just minimum number of buffers.
-      bufferPool[i] = new byte[getReadAheadBlockSize()];  // same buffers are reused. The byte array never goes back to GC
+      bufferPool[i]
+          = new byte[getReadAheadBlockSize()];  // same buffers are reused. The byte array never goes back to GC
       getFreeList().add(i);
       numberOfActiveBuffers++;
     }
-    memoryMonitorThread = Executors.newSingleThreadScheduledExecutor(runnable -> {
-      Thread t = new Thread(runnable, "ReadAheadV2-Memory-Monitor");
-      t.setDaemon(true);
-      return t;
-    });
+    memoryMonitorThread = Executors.newSingleThreadScheduledExecutor(
+        runnable -> {
+          Thread t = new Thread(runnable, "ReadAheadV2-Memory-Monitor");
+          t.setDaemon(true);
+          return t;
+        });
     memoryMonitorThread.scheduleAtFixedRate(this::scheduledEviction,
-        getMemoryMonitoringIntervalInMilliSec(), getMemoryMonitoringIntervalInMilliSec(), TimeUnit.MILLISECONDS);
+        getMemoryMonitoringIntervalInMilliSec(),
+        getMemoryMonitoringIntervalInMilliSec(), TimeUnit.MILLISECONDS);
 
     // Initialize a Fixed Size Thread Pool with minThreadPoolSize threads
     workerPool = new ThreadPoolExecutor(
@@ -176,17 +208,20 @@ public class ReadBufferManagerV2 extends ReadBufferManager {
     ReadBufferWorker.UNLEASH_WORKERS.countDown();
 
     if (isDynamicScalingEnabled) {
-      cpuMonitorThread = Executors.newSingleThreadScheduledExecutor(runnable -> {
-        Thread t = new Thread(runnable, "ReadAheadV2-CPU-Monitor");
-        t.setDaemon(true);
-        return t;
-      });
+      cpuMonitorThread = Executors.newSingleThreadScheduledExecutor(
+          runnable -> {
+            Thread t = new Thread(runnable, "ReadAheadV2-CPU-Monitor");
+            t.setDaemon(true);
+            return t;
+          });
       cpuMonitorThread.scheduleAtFixedRate(this::adjustThreadPool,
-          getCpuMonitoringIntervalInMilliSec(), getCpuMonitoringIntervalInMilliSec(),
+          getCpuMonitoringIntervalInMilliSec(),
+          getCpuMonitoringIntervalInMilliSec(),
           TimeUnit.MILLISECONDS);
     }
 
-    printTraceLog("ReadBufferManagerV2 initialized with {} buffers and {} worker threads",
+    printTraceLog(
+        "ReadBufferManagerV2 initialized with {} buffers and {} worker threads",
         numberOfActiveBuffers, workerRefs.size());
   }
 
@@ -197,22 +232,32 @@ public class ReadBufferManagerV2 extends ReadBufferManager {
    * @param requestedLength The length to read.
    */
   @Override
-  public void queueReadAhead(final AbfsInputStream stream, final long requestedOffset,
-      final int requestedLength, TracingContext tracingContext) {
-    printTraceLog("Start Queueing readAhead for file: {}, with eTag: {}, offset: {}, length: {}, triggered by stream: {}",
-        stream.getPath(), stream.getETag(), requestedOffset, requestedLength, stream.hashCode());
+  public void queueReadAhead(final AbfsInputStream stream,
+      final long requestedOffset,
+      final int requestedLength,
+      TracingContext tracingContext) {
+    printTraceLog(
+        "Start Queueing readAhead for file: {}, with eTag: {}, "
+            + "offset: {}, length: {}, triggered by stream: {}",
+        stream.getPath(), stream.getETag(), requestedOffset, requestedLength,
+        stream.hashCode());
     ReadBuffer buffer;
     synchronized (this) {
       if (isAlreadyQueued(stream.getETag(), requestedOffset)) {
         // Already queued for this offset, so skip queuing.
-        printTraceLog("Skipping queuing readAhead for file: {}, with eTag: {}, offset: {}, triggered by stream: {} as it is already queued",
-            stream.getPath(), stream.getETag(), requestedOffset, stream.hashCode());
+        printTraceLog(
+            "Skipping queuing readAhead for file: {}, with eTag: {}, "
+                + "offset: {}, triggered by stream: {} as it is already queued",
+            stream.getPath(), stream.getETag(), requestedOffset,
+            stream.hashCode());
         return;
       }
       if (isFreeListEmpty() && !tryMemoryUpscale() && !tryEvict()) {
         // No buffers are available and more buffers cannot be created. Skip queuing.
-        printTraceLog("Skipping queuing readAhead for file: {}, with eTag: {}, offset: {}, triggered by stream: {} as no buffers are available",
-            stream.getPath(), stream.getETag(), requestedOffset, stream.hashCode());
+        printTraceLog(
+            "Skipping queuing readAhead for file: {}, with eTag: {}, offset: {}, triggered by stream: {} as no buffers are available",
+            stream.getPath(), stream.getETag(), requestedOffset,
+            stream.hashCode());
         return;
       }
 
@@ -239,16 +284,21 @@ public class ReadBufferManagerV2 extends ReadBufferManager {
       Integer bufferIndex = popFromFreeList();
       if (bufferIndex > bufferPool.length) {
         // This should never happen.
-        printTraceLog("Skipping queuing readAhead for file: {}, with eTag: {}, offset: {}, triggered by stream: {} as invalid buffer index popped from free list",
-            stream.getPath(), stream.getETag(), requestedOffset, stream.hashCode());
+        printTraceLog(
+            "Skipping queuing readAhead for file: {}, with eTag: {}, offset: {}, triggered by stream: {} as invalid buffer index popped from free list",
+            stream.getPath(), stream.getETag(), requestedOffset,
+            stream.hashCode());
         return;
       }
       buffer.setBuffer(bufferPool[bufferIndex]);
       buffer.setBufferindex(bufferIndex);
       getReadAheadQueue().add(buffer);
       notifyAll();
-      printTraceLog("Done q-ing readAhead for file: {}, with eTag:{}, offset: {}, buffer idx: {}, triggered by stream: {}",
-          stream.getPath(), stream.getETag(), requestedOffset, buffer.getBufferindex(), stream.hashCode());
+      printTraceLog(
+          "Done q-ing readAhead for file: {}, with eTag:{}, offset: {}, "
+              + "buffer idx: {}, triggered by stream: {}",
+          stream.getPath(), stream.getETag(), requestedOffset,
+          buffer.getBufferindex(), stream.hashCode());
     }
   }
 
@@ -267,11 +317,17 @@ public class ReadBufferManagerV2 extends ReadBufferManager {
    * @return the number of bytes read
    */
   @Override
-  public int getBlock(final AbfsInputStream stream, final long position, final int length, final byte[] buffer)
+  public int getBlock(final AbfsInputStream stream,
+      final long position,
+      final int length,
+      final byte[] buffer)
       throws IOException {
     // not synchronized, so have to be careful with locking
-    printTraceLog("getBlock request for file: {}, with eTag: {}, for position: {} for length: {} received from stream: {}",
-        stream.getPath(), stream.getETag(), position, length, stream.hashCode());
+    printTraceLog(
+        "getBlock request for file: {}, with eTag: {}, for position: {} "
+            + "for length: {} received from stream: {}",
+        stream.getPath(), stream.getETag(), position, length,
+        stream.hashCode());
 
     String requestedETag = stream.getETag();
     boolean isFirstRead = stream.isFirstRead();
@@ -281,10 +337,12 @@ public class ReadBufferManagerV2 extends ReadBufferManager {
 
     int bytesRead = 0;
     synchronized (this) {
-      bytesRead = getBlockFromCompletedQueue(requestedETag, position, length, buffer);
+      bytesRead = getBlockFromCompletedQueue(requestedETag, position, length,
+          buffer);
     }
     if (bytesRead > 0) {
-      printTraceLog("Done read from Cache for the file with eTag: {}, position: {}, length: {}, requested by stream: {}",
+      printTraceLog(
+          "Done read from Cache for the file with eTag: {}, position: {}, length: {}, requested by stream: {}",
           requestedETag, position, bytesRead, stream.hashCode());
       return bytesRead;
     }
@@ -315,8 +373,11 @@ public class ReadBufferManagerV2 extends ReadBufferManager {
       buffer.setStatus(ReadBufferStatus.READING_IN_PROGRESS);
       getInProgressList().add(buffer);
     }
-    printTraceLog("ReadBufferWorker picked file: {}, with eTag: {}, for offset: {}, queued by stream: {}",
-        buffer.getPath(), buffer.getETag(), buffer.getOffset(), buffer.getStream().hashCode());
+    printTraceLog(
+        "ReadBufferWorker picked file: {}, with eTag: {}, for offset: {}, "
+            + "queued by stream: {}",
+        buffer.getPath(), buffer.getETag(), buffer.getOffset(),
+        buffer.getStream().hashCode());
     return buffer;
   }
 
@@ -327,10 +388,13 @@ public class ReadBufferManagerV2 extends ReadBufferManager {
    * @param bytesActuallyRead the number of bytes that the worker thread was actually able to read
    */
   @Override
-  public void doneReading(final ReadBuffer buffer, final ReadBufferStatus result,
+  public void doneReading(final ReadBuffer buffer,
+      final ReadBufferStatus result,
       final int bytesActuallyRead) {
-    printTraceLog("ReadBufferWorker completed prefetch for file: {} with eTag: {}, for offset: {}, queued by stream: {}, with status: {} and bytes read: {}",
-        buffer.getPath(), buffer.getETag(), buffer.getOffset(), buffer.getStream().hashCode(), result, bytesActuallyRead);
+    printTraceLog(
+        "ReadBufferWorker completed prefetch for file: {} with eTag: {}, for offset: {}, queued by stream: {}, with status: {} and bytes read: {}",
+        buffer.getPath(), buffer.getETag(), buffer.getOffset(),
+        buffer.getStream().hashCode(), result, bytesActuallyRead);
     synchronized (this) {
       // If this buffer has already been purged during
       // close of InputStream then we don't update the lists.
@@ -364,7 +428,8 @@ public class ReadBufferManagerV2 extends ReadBufferManager {
    */
   public synchronized void purgeBuffersForStream(AbfsInputStream stream) {
     printDebugLog("Purging stale buffers for AbfsInputStream {} ", stream);
-    getReadAheadQueue().removeIf(readBuffer -> readBuffer.getStream() == stream);
+    getReadAheadQueue().removeIf(
+        readBuffer -> readBuffer.getStream() == stream);
     purgeList(stream, getCompletedReadList());
   }
 
@@ -374,7 +439,8 @@ public class ReadBufferManagerV2 extends ReadBufferManager {
    * @param requestedOffset the requested offset
    * @return whether any buffer is already queued
    */
-  private boolean isAlreadyQueued(final String eTag, final long requestedOffset) {
+  private boolean isAlreadyQueued(final String eTag,
+      final long requestedOffset) {
     // returns true if any part of the buffer is already queued
     return (isInList(getReadAheadQueue(), eTag, requestedOffset)
         || isInList(getInProgressList(), eTag, requestedOffset)
@@ -400,7 +466,8 @@ public class ReadBufferManagerV2 extends ReadBufferManager {
    * @param requestedOffset the requested offset
    * @return the buffer if found, null otherwise
    */
-  private ReadBuffer getFromList(final Collection<ReadBuffer> list, final String eTag,
+  private ReadBuffer getFromList(final Collection<ReadBuffer> list,
+      final String eTag,
       final long requestedOffset) {
     for (ReadBuffer buffer : list) {
       if (eTag.equals(buffer.getETag())) {
@@ -469,7 +536,8 @@ public class ReadBufferManagerV2 extends ReadBufferManager {
         nodeToEvict = buf;
         earliestBirthday = buf.getTimeStamp();
       } else if ((buf.getBufferindex() == -1)
-          && (currentTimeInMs - buf.getTimeStamp()) > getThresholdAgeMilliseconds()) {
+          && (currentTimeInMs - buf.getTimeStamp())
+          > getThresholdAgeMilliseconds()) {
         oldFailedBuffers.add(buf);
       }
     }
@@ -478,7 +546,8 @@ public class ReadBufferManagerV2 extends ReadBufferManager {
       manualEviction(buf);
     }
 
-    if ((currentTimeInMs - earliestBirthday > getThresholdAgeMilliseconds()) && (nodeToEvict != null)) {
+    if ((currentTimeInMs - earliestBirthday > getThresholdAgeMilliseconds())
+        && (nodeToEvict != null)) {
       return manualEviction(nodeToEvict);
     }
 
@@ -520,7 +589,9 @@ public class ReadBufferManagerV2 extends ReadBufferManager {
    * @param position the requested offset
    * @param isFirstRead whether this is the first read of the stream
    */
-  private void waitForProcess(final String eTag, final long position, boolean isFirstRead) {
+  private void waitForProcess(final String eTag,
+      final long position,
+      boolean isFirstRead) {
     ReadBuffer readBuf;
     synchronized (this) {
       readBuf = clearFromReadAheadQueue(eTag, position, isFirstRead);
@@ -530,9 +601,13 @@ public class ReadBufferManagerV2 extends ReadBufferManager {
     }
     if (readBuf != null) {         // if in in-progress queue, then block for it
       try {
-        printTraceLog("A relevant read buffer for file: {}, with eTag: {}, offset: {}, queued by stream: {}, having buffer idx: {} is being prefetched, waiting for latch",
-            readBuf.getPath(), readBuf.getETag(), readBuf.getOffset(), readBuf.getStream().hashCode(), readBuf.getBufferindex());
-        readBuf.getLatch().await();  // blocking wait on the caller stream's thread
+        printTraceLog(
+            "A relevant read buffer for file: {}, with eTag: {}, offset: {}, "
+                + "queued by stream: {}, having buffer idx: {} is being prefetched, waiting for latch",
+            readBuf.getPath(), readBuf.getETag(), readBuf.getOffset(),
+            readBuf.getStream().hashCode(), readBuf.getBufferindex());
+        readBuf.getLatch()
+            .await();  // blocking wait on the caller stream's thread
         // Note on correctness: readBuf gets out of getInProgressList() only in 1 place: after worker thread
         // is done processing it (in doneReading). There, the latch is set after removing the buffer from
         // getInProgressList(). So this latch is safe to be outside the synchronized block.
@@ -543,8 +618,10 @@ public class ReadBufferManagerV2 extends ReadBufferManager {
         Thread.currentThread().interrupt();
       }
       printTraceLog("Latch done for file: {}, with eTag: {}, for offset: {}, "
-          + "buffer index: {} queued by stream: {}", readBuf.getPath(), readBuf.getETag(),
-          readBuf.getOffset(), readBuf.getBufferindex(), readBuf.getStream().hashCode());
+              + "buffer index: {} queued by stream: {}", readBuf.getPath(),
+          readBuf.getETag(),
+          readBuf.getOffset(), readBuf.getBufferindex(),
+          readBuf.getStream().hashCode());
     }
   }
 
@@ -555,7 +632,9 @@ public class ReadBufferManagerV2 extends ReadBufferManager {
    * @param isFirstRead whether this is the first read of the stream
    * @return the buffer if found, null otherwise
    */
-  private ReadBuffer clearFromReadAheadQueue(final String eTag, final long requestedOffset, boolean isFirstRead) {
+  private ReadBuffer clearFromReadAheadQueue(final String eTag,
+      final long requestedOffset,
+      boolean isFirstRead) {
     ReadBuffer buffer = getFromList(getReadAheadQueue(), eTag, requestedOffset);
     /*
      * If this prefetch was triggered by first read of this input stream,
@@ -594,7 +673,8 @@ public class ReadBufferManagerV2 extends ReadBufferManager {
     if (buf.getStatus() == ReadBufferStatus.READ_FAILED) {
       // To prevent new read requests to fail due to old read-ahead attempts,
       // return exception only from buffers that failed within last getThresholdAgeMilliseconds()
-      if ((currentTimeMillis() - (buf.getTimeStamp()) < getThresholdAgeMilliseconds())) {
+      if ((currentTimeMillis() - (buf.getTimeStamp())
+          < getThresholdAgeMilliseconds())) {
         throw buf.getErrException();
       } else {
         return 0;
@@ -628,14 +708,16 @@ public class ReadBufferManagerV2 extends ReadBufferManager {
    * @param requestedOffset the requested offset
    * @return the buffer if found, null otherwise
    */
-  private ReadBuffer getBufferFromCompletedQueue(final String eTag, final long requestedOffset) {
+  private ReadBuffer getBufferFromCompletedQueue(final String eTag,
+      final long requestedOffset) {
     for (ReadBuffer buffer : getCompletedReadList()) {
       // Buffer is returned if the requestedOffset is at or above buffer's
       // offset but less than buffer's length or the actual requestedLength
       if (eTag.equals(buffer.getETag())
           && (requestedOffset >= buffer.getOffset())
           && ((requestedOffset < buffer.getOffset() + buffer.getLength())
-          || (requestedOffset < buffer.getOffset() + buffer.getRequestedLength()))) {
+          || (requestedOffset
+          < buffer.getOffset() + buffer.getRequestedLength()))) {
         return buffer;
       }
     }
@@ -670,7 +752,9 @@ public class ReadBufferManagerV2 extends ReadBufferManager {
         pushToFreeList(freeIndex);
       }
       incrementActiveBufferCount();
-      printTraceLog("Current Memory Load: {}. Incrementing buffer pool size to {}", memoryLoad, getNumBuffers());
+      printTraceLog(
+          "Current Memory Load: {}. Incrementing buffer pool size to {}",
+          memoryLoad, getNumBuffers());
       return true;
     }
     printTraceLog("Could not Upscale memory. Total buffers: {} Memory Load: {}",
@@ -683,10 +767,14 @@ public class ReadBufferManagerV2 extends ReadBufferManager {
    */
   private void scheduledEviction() {
     for (ReadBuffer buf : getCompletedReadList()) {
-      if (currentTimeMillis() - buf.getTimeStamp() > getThresholdAgeMilliseconds()) {
+      if (currentTimeMillis() - buf.getTimeStamp()
+          > getThresholdAgeMilliseconds()) {
         // If the buffer is older than thresholdAge, evict it.
-        printTraceLog("Scheduled Eviction of Buffer Triggered for BufferIndex: {}, file: {}, with eTag: {}, offset: {}, length: {}, queued by stream: {}",
-            buf.getBufferindex(), buf.getPath(), buf.getETag(), buf.getOffset(), buf.getLength(), buf.getStream().hashCode());
+        printTraceLog(
+            "Scheduled Eviction of Buffer Triggered for BufferIndex: {}, "
+                + "file: {}, with eTag: {}, offset: {}, length: {}, queued by stream: {}",
+            buf.getBufferindex(), buf.getPath(), buf.getETag(), buf.getOffset(),
+            buf.getLength(), buf.getStream().hashCode());
         evict(buf);
       }
     }
@@ -695,7 +783,8 @@ public class ReadBufferManagerV2 extends ReadBufferManager {
     if (isDynamicScalingEnabled && memoryLoad > memoryThreshold) {
       synchronized (this) {
         if (isFreeListEmpty()) {
-          printTraceLog("No free buffers available. Skipping downscale of buffer pool");
+          printTraceLog(
+              "No free buffers available. Skipping downscale of buffer pool");
           return; // No free buffers available, so cannot downscale.
         }
         int freeIndex = popFromFreeList();
@@ -707,7 +796,9 @@ public class ReadBufferManagerV2 extends ReadBufferManager {
         bufferPool[freeIndex] = null;
         removedBufferList.add(freeIndex);
         decrementActiveBufferCount();
-        printTraceLog("Current Memory Load: {}. Decrementing buffer pool size to {}", memoryLoad, getNumBuffers());
+        printTraceLog(
+            "Current Memory Load: {}. Decrementing buffer pool size to {}",
+            memoryLoad, getNumBuffers());
       }
     }
   }
@@ -718,8 +809,10 @@ public class ReadBufferManagerV2 extends ReadBufferManager {
    * @return whether the eviction succeeded
    */
   private boolean manualEviction(final ReadBuffer buf) {
-    printTraceLog("Manual Eviction of Buffer Triggered for BufferIndex: {}, file: {}, with eTag: {}, offset: {}, queued by stream: {}",
-        buf.getBufferindex(), buf.getPath(), buf.getETag(), buf.getOffset(), buf.getStream().hashCode());
+    printTraceLog(
+        "Manual Eviction of Buffer Triggered for BufferIndex: {}, file: {}, with eTag: {}, offset: {}, queued by stream: {}",
+        buf.getBufferindex(), buf.getPath(), buf.getETag(), buf.getOffset(),
+        buf.getStream().hashCode());
     return evict(buf);
   }
 
@@ -731,29 +824,38 @@ public class ReadBufferManagerV2 extends ReadBufferManager {
     double cpuLoad = getCpuLoad();
     int requiredPoolSize = getRequiredThreadPoolSize();
     int newThreadPoolSize;
-    printTraceLog("Current CPU load: {}, Current worker pool size: {}, Current queue size: {}", cpuLoad, currentPoolSize, requiredPoolSize);
+    printTraceLog(
+        "Current CPU load: {}, Current worker pool size: {}, Current queue size: {}",
+        cpuLoad, currentPoolSize, requiredPoolSize);
     if (currentPoolSize < requiredPoolSize && cpuLoad < cpuThreshold) {
       // Submit more background tasks.
       newThreadPoolSize = Math.min(maxThreadPoolSize,
-          (int) Math.ceil((currentPoolSize * (ONE_HUNDRED + threadPoolUpscalePercentage))/ONE_HUNDRED));
+          (int) Math.ceil(
+              (currentPoolSize * (ONE_HUNDRED + threadPoolUpscalePercentage))
+                  / ONE_HUNDRED));
       // Create new Worker Threads
       for (int i = currentPoolSize; i < newThreadPoolSize; i++) {
         ReadBufferWorker worker = new ReadBufferWorker(i, getBufferManager());
         workerRefs.add(worker);
         workerPool.submit(worker);
       }
-      printTraceLog("Increased worker pool size from {} to {}", currentPoolSize, newThreadPoolSize);
+      printTraceLog("Increased worker pool size from {} to {}", currentPoolSize,
+          newThreadPoolSize);
     } else if (cpuLoad > cpuThreshold || currentPoolSize > requiredPoolSize) {
       newThreadPoolSize = Math.max(minThreadPoolSize,
-          (int) Math.ceil((currentPoolSize * (ONE_HUNDRED - threadPoolDownscalePercentage))/ONE_HUNDRED));
+          (int) Math.ceil(
+              (currentPoolSize * (ONE_HUNDRED - threadPoolDownscalePercentage))
+                  / ONE_HUNDRED));
       // Signal the extra workers to stop
       while (workerRefs.size() > newThreadPoolSize) {
         ReadBufferWorker worker = workerRefs.remove(workerRefs.size() - 1);
         worker.stop();
       }
-      printTraceLog("Decreased worker pool size from {} to {}", currentPoolSize, newThreadPoolSize);
+      printTraceLog("Decreased worker pool size from {} to {}", currentPoolSize,
+          newThreadPoolSize);
     } else {
-      printTraceLog("No change in worker pool size. CPU load: {} Pool size: {}", cpuLoad, currentPoolSize);
+      printTraceLog("No change in worker pool size. CPU load: {} Pool size: {}",
+          cpuLoad, currentPoolSize);
     }
   }
 
@@ -776,7 +878,7 @@ public class ReadBufferManagerV2 extends ReadBufferManager {
    * @param list the list to purge from
    */
   private void purgeList(AbfsInputStream stream, LinkedList<ReadBuffer> list) {
-    for (Iterator<ReadBuffer> it = list.iterator(); it.hasNext();) {
+    for (Iterator<ReadBuffer> it = list.iterator(); it.hasNext(); ) {
       ReadBuffer readBuffer = it.next();
       if (readBuffer.getStream() == stream) {
         it.remove();
@@ -831,7 +933,8 @@ public class ReadBufferManagerV2 extends ReadBufferManager {
 
   @VisibleForTesting
   @Override
-  public void testResetReadBufferManager(int readAheadBlockSize, int thresholdAgeMilliseconds) {
+  public void testResetReadBufferManager(int readAheadBlockSize,
+      int thresholdAgeMilliseconds) {
     setReadAheadBlockSize(readAheadBlockSize);
     setThresholdAgeMilliseconds(thresholdAgeMilliseconds);
     testResetReadBufferManager();
@@ -868,6 +971,7 @@ public class ReadBufferManagerV2 extends ReadBufferManager {
 
   private final ThreadFactory workerThreadFactory = new ThreadFactory() {
     private int count = 0;
+
     @Override
     public Thread newThread(Runnable r) {
       Thread t = new Thread(r, "ReadAheadV2-WorkerThread-" + count++);
@@ -950,7 +1054,8 @@ public class ReadBufferManagerV2 extends ReadBufferManager {
 
   public int getRequiredThreadPoolSize() {
     return (int) Math.ceil(THREAD_POOL_REQUIREMENT_BUFFER
-        * (getReadAheadQueue().size() + getInProgressList().size())); // 20% more for buffer
+        * (getReadAheadQueue().size()
+        + getInProgressList().size())); // 20% more for buffer
   }
 
   private boolean isFreeListEmpty() {
