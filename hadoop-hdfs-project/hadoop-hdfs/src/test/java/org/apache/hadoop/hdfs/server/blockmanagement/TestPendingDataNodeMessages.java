@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.util.Arrays;
 import java.util.List;
@@ -38,7 +38,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.PendingDataNodeMessages.Rep
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 
@@ -119,8 +119,8 @@ public class TestPendingDataNodeMessages {
       // processing IBR
       int pendingIBRMsg = cluster.getNameNode(1).getNamesystem()
           .getBlockManager().getPendingDataNodeMessageCount();
-      assertEquals("All DN message should processed after tail edits", 0,
-          pendingIBRMsg);
+      assertEquals(0, pendingIBRMsg,
+          "All DN message should processed after tail edits");
     } finally {
       cluster.shutdown();
     }

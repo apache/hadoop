@@ -48,8 +48,7 @@ import org.apache.hadoop.hdfs.server.diskbalancer.datamodel.DiskBalancerDataNode
 import org.apache.hadoop.hdfs.server.diskbalancer.planner.NodePlan;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -65,13 +64,13 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY;
-import static org.hamcrest.core.Is.is;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Test Disk Balancer.
@@ -101,10 +100,8 @@ public class TestDiskBalancer {
       DiskBalancerDataNode dbDnNode =
           diskBalancerCluster.getNodeByUUID(dnNode.getDatanodeUuid());
       assertEquals(dnNode.getDatanodeUuid(), dbDnNode.getDataNodeUUID());
-      assertEquals(dnNode.getDatanodeId().getIpAddr(),
-          dbDnNode.getDataNodeIP());
-      assertEquals(dnNode.getDatanodeId().getHostName(),
-          dbDnNode.getDataNodeName());
+      assertEquals(dnNode.getDatanodeId().getIpAddr(), dbDnNode.getDataNodeIP());
+      assertEquals(dnNode.getDatanodeId().getHostName(), dbDnNode.getDataNodeName());
       try (FsDatasetSpi.FsVolumeReferences ref = dnNode.getFSDataset()
           .getFsVolumeReferences()) {
         assertEquals(ref.size(), dbDnNode.getVolumeCount());
@@ -275,9 +272,9 @@ public class TestDiskBalancer {
       // Expect return sleep delay in Milliseconds. sleep value = bytesCopied /
       // (1024*1024*bandwidth in MB/milli) - timeUsed;
       long val = diskBalancerMover.computeDelay(20 * 1024 * 1024, 1200, item);
-      Assert.assertEquals(val, (long) 800);
+      assertEquals(val, (long) 800);
     } catch (Exception e) {
-      Assert.fail("Unexpected exception: " + e);
+      fail("Unexpected exception: " + e);
     } finally {
       if (cluster != null) {
         cluster.shutdown();
@@ -335,8 +332,9 @@ public class TestDiskBalancer {
       dataMover.verifyAllVolumesHaveData(false);
     } finally {
       String logOut = logCapturer.getOutput();
-      Assert.assertTrue("Wrong log: " + logOut, logOut.contains(
-          "NextBlock call returned null. No valid block to copy."));
+      assertTrue(
+          logOut.contains("NextBlock call returned null. No valid block to copy."),
+          "Wrong log: " + logOut);
       cluster.shutdown();
     }
   }
@@ -423,7 +421,7 @@ public class TestDiskBalancer {
       dataMover.verifyAllVolumesHaveData(true);
       dataMover.verifyTolerance(plan, 0, sourceDiskIndex, 10);
     } catch (Exception e) {
-      Assert.fail("Unexpected exception: " + e);
+      fail("Unexpected exception: " + e);
     } finally {
       if (cluster != null) {
         cluster.shutdown();
@@ -725,15 +723,14 @@ public class TestDiskBalancer {
             LOG.info("Waiting for work plan creation!");
             createWorkPlanLatch.await();
             LOG.info("Work plan created. Removing disk!");
-            assertThat(
-                "DN did not update its own config", node.
-                reconfigurePropertyImpl(DFS_DATANODE_DATA_DIR_KEY, newDirs),
-                is(node.getConf().get(DFS_DATANODE_DATA_DIR_KEY)));
+            assertThat(node.reconfigurePropertyImpl(DFS_DATANODE_DATA_DIR_KEY, newDirs))
+                .as("DN did not update its own config")
+                .isEqualTo(node.getConf().get(DFS_DATANODE_DATA_DIR_KEY));
             Thread.sleep(1000);
             LOG.info("Removed disk!");
             removeDiskLatch.countDown();
           } catch (ReconfigurationException | InterruptedException e) {
-            Assert.fail("Unexpected error while reconfiguring: " + e);
+            fail("Unexpected error while reconfiguring: " + e);
           }
         }
       };
@@ -757,8 +754,8 @@ public class TestDiskBalancer {
         }
       }, 1000, 100000);
 
-      assertTrue("Disk balancer operation hit max errors!", errorCount.get() <=
-          DFSConfigKeys.DFS_DISK_BALANCER_MAX_DISK_ERRORS_DEFAULT);
+      assertTrue(errorCount.get() <= DFSConfigKeys.DFS_DISK_BALANCER_MAX_DISK_ERRORS_DEFAULT,
+          "Disk balancer operation hit max errors!");
       createWorkPlanLatch.await();
       removeDiskLatch.await();
     }

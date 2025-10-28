@@ -22,9 +22,9 @@ import org.apache.hadoop.cli.util.CommandExecutor.Result;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class TestAclCLI extends CLITestHelperDFS {
   private MiniDFSCluster cluster = null;
@@ -38,7 +38,7 @@ public class TestAclCLI extends CLITestHelperDFS {
         DFSConfigKeys.DFS_NAMENODE_POSIX_ACL_INHERITANCE_ENABLED_KEY, false);
   }
 
-  @Before
+  @BeforeEach
   @Override
   public void setUp() throws Exception {
     super.setUp();
@@ -49,7 +49,7 @@ public class TestAclCLI extends CLITestHelperDFS {
     username = System.getProperty("user.name");
   }
 
-  @After
+  @AfterEach
   @Override
   public void tearDown() throws Exception {
     super.tearDown();

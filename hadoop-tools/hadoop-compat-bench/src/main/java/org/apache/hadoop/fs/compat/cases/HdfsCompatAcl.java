@@ -24,10 +24,13 @@ import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclEntryScope;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
-import org.junit.Assert;
 
 import java.io.IOException;
 import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @HdfsCompatCaseGroup(name = "ACL")
 public class HdfsCompatAcl extends AbstractHdfsCompatCase {
@@ -63,10 +66,10 @@ public class HdfsCompatAcl extends AbstractHdfsCompatCase {
     for (AclEntry acl : acls) {
       if ("foo".equals(acl.getName())) {
         ++count;
-        Assert.assertEquals(FsAction.NONE, acl.getPermission());
+        assertEquals(FsAction.NONE, acl.getPermission());
       }
     }
-    Assert.assertEquals(1, count);
+    assertEquals(1, count);
   }
 
   @HdfsCompatCase
@@ -76,15 +79,15 @@ public class HdfsCompatAcl extends AbstractHdfsCompatCase {
     entries = AclEntry.parseAclSpec("user:foo:---", true);
     fs().removeAclEntries(file, entries);
     List<AclEntry> acls = fs().getAclStatus(file).getEntries();
-    Assert.assertTrue(acls.stream().noneMatch(e -> "foo".equals(e.getName())));
-    Assert.assertTrue(acls.stream().anyMatch(e -> "bar".equals(e.getName())));
+    assertTrue(acls.stream().noneMatch(e -> "foo".equals(e.getName())));
+    assertTrue(acls.stream().anyMatch(e -> "bar".equals(e.getName())));
   }
 
   @HdfsCompatCase
   public void removeDefaultAcl() throws IOException {
     fs().removeDefaultAcl(dir);
     List<AclEntry> acls = fs().getAclStatus(dir).getEntries();
-    Assert.assertTrue(acls.stream().noneMatch(
+    assertTrue(acls.stream().noneMatch(
         e -> (e.getScope() == AclEntryScope.DEFAULT)));
   }
 
@@ -92,29 +95,29 @@ public class HdfsCompatAcl extends AbstractHdfsCompatCase {
   public void removeAcl() throws IOException {
     fs().removeAcl(file);
     List<AclEntry> acls = fs().getAclStatus(file).getEntries();
-    Assert.assertTrue(acls.stream().noneMatch(e -> "foo".equals(e.getName())));
+    assertTrue(acls.stream().noneMatch(e -> "foo".equals(e.getName())));
   }
 
   @HdfsCompatCase
   public void setAcl() throws IOException {
     List<AclEntry> acls = fs().getAclStatus(file).getEntries();
-    Assert.assertTrue(acls.stream().anyMatch(e -> "foo".equals(e.getName())));
+    assertTrue(acls.stream().anyMatch(e -> "foo".equals(e.getName())));
   }
 
   @HdfsCompatCase
   public void getAclStatus() throws IOException {
     AclStatus status = fs().getAclStatus(dir);
-    Assert.assertFalse(status.getOwner().isEmpty());
-    Assert.assertFalse(status.getGroup().isEmpty());
+    assertFalse(status.getOwner().isEmpty());
+    assertFalse(status.getGroup().isEmpty());
     List<AclEntry> acls = status.getEntries();
-    Assert.assertTrue(acls.stream().anyMatch(e ->
+    assertTrue(acls.stream().anyMatch(e ->
         e.getScope() == AclEntryScope.DEFAULT));
 
     status = fs().getAclStatus(file);
-    Assert.assertFalse(status.getOwner().isEmpty());
-    Assert.assertFalse(status.getGroup().isEmpty());
+    assertFalse(status.getOwner().isEmpty());
+    assertFalse(status.getGroup().isEmpty());
     acls = status.getEntries();
-    Assert.assertTrue(acls.stream().anyMatch(e ->
+    assertTrue(acls.stream().anyMatch(e ->
         e.getScope() == AclEntryScope.ACCESS));
   }
 }

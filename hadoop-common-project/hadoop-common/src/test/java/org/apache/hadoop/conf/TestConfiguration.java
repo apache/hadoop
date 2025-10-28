@@ -2610,12 +2610,6 @@ public class TestConfiguration {
     assertTrue(prefixedProps.isEmpty());
   }
 
-  public static void main(String[] argv) throws Exception {
-    junit.textui.TestRunner.main(new String[]{
-      TestConfiguration.class.getName()
-    });
-  }
-
   @Test
   public void testGetAllPropertiesByTags() throws Exception {
 

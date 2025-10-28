@@ -21,9 +21,11 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.compat.common.*;
-import org.junit.Assert;
 
 import java.io.IOException;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @HdfsCompatCaseGroup(name = "Symlink")
 public class HdfsCompatSymlink extends AbstractHdfsCompatCase {
@@ -52,19 +54,19 @@ public class HdfsCompatSymlink extends AbstractHdfsCompatCase {
 
   @HdfsCompatCase
   public void createSymlink() throws IOException {
-    Assert.assertTrue(fs().exists(link));
+    assertTrue(fs().exists(link));
   }
 
   @HdfsCompatCase
   public void getFileLinkStatus() throws IOException {
     FileStatus linkStatus = fs().getFileLinkStatus(link);
-    Assert.assertTrue(linkStatus.isSymlink());
-    Assert.assertEquals(target.getName(), linkStatus.getSymlink().getName());
+    assertTrue(linkStatus.isSymlink());
+    assertEquals(target.getName(), linkStatus.getSymlink().getName());
   }
 
   @HdfsCompatCase
   public void getLinkTarget() throws IOException {
     Path src = fs().getLinkTarget(link);
-    Assert.assertEquals(target.getName(), src.getName());
+    assertEquals(target.getName(), src.getName());
   }
 }
