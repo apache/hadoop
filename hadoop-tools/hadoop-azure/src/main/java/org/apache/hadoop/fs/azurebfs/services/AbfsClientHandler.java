@@ -80,6 +80,25 @@ public class AbfsClientHandler implements Closeable {
         abfsClientContext);
   }
 
+  public AbfsClientHandler(final URL baseUrl,
+      final SharedKeyCredentials sharedKeyCredentials,
+      final AbfsConfiguration abfsConfiguration,
+      final AccessTokenProvider tokenProvider,
+      final SASTokenProvider sasTokenProvider,
+      final EncryptionContextProvider encryptionContextProvider,
+      final AbfsClientContext abfsClientContext) throws IOException {
+    // This will initialize the default and ingress service types.
+    // This is needed before creating the clients so that we can do cache warmup
+    // only for default client.
+    initServiceType(abfsConfiguration);
+    this.dfsAbfsClient = createDfsClient(baseUrl, sharedKeyCredentials,
+        abfsConfiguration, tokenProvider, sasTokenProvider, encryptionContextProvider,
+        abfsClientContext);
+    this.blobAbfsClient = createBlobClient(baseUrl, sharedKeyCredentials,
+        abfsConfiguration, tokenProvider, sasTokenProvider, encryptionContextProvider,
+        abfsClientContext);
+  }
+
   /**
    * Initialize the default service type based on the user configuration.
    * @param abfsConfiguration set by user.
@@ -154,7 +173,15 @@ public class AbfsClientHandler implements Closeable {
       final EncryptionContextProvider encryptionContextProvider,
       final AbfsClientContext abfsClientContext) throws IOException {
     URL dfsUrl = changeUrlFromBlobToDfs(baseUrl);
-    if (tokenProvider != null) {
+    if (tokenProvider != null && sasTokenProvider != null) {
+      LOG.debug(
+          "Creating AbfsDfsClient with both access token provider and SAS token provider using the URL: {}",
+          dfsUrl);
+      return new AbfsDfsClient(dfsUrl, creds, abfsConfiguration,
+          tokenProvider, sasTokenProvider, encryptionContextProvider,
+          abfsClientContext);
+    }
+    else if (tokenProvider != null) {
       LOG.debug("Creating AbfsDfsClient with access token provider using the URL: {}", dfsUrl);
       return new AbfsDfsClient(dfsUrl, creds, abfsConfiguration,
           tokenProvider, encryptionContextProvider,

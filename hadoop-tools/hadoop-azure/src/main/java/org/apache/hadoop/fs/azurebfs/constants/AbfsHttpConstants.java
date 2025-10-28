@@ -187,7 +187,8 @@ public final class AbfsHttpConstants {
     DEC_12_2019("2019-12-12"),
     APR_10_2021("2021-04-10"),
     AUG_03_2023("2023-08-03"),
-    NOV_04_2024("2024-11-04");
+    NOV_04_2024("2024-11-04"),
+    JULY_05_2025("2025-07-05");
 
     private final String xMsApiVersion;
 
@@ -201,7 +202,7 @@ public final class AbfsHttpConstants {
     }
 
     public static ApiVersion getCurrentVersion() {
-      return NOV_04_2024;
+      return JULY_05_2025;
     }
   }
 

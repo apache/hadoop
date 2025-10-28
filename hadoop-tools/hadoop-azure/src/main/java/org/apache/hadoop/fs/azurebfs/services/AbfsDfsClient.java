@@ -174,6 +174,17 @@ public class AbfsDfsClient extends AbfsClient {
         encryptionContextProvider, abfsClientContext, AbfsServiceType.DFS);
   }
 
+  public AbfsDfsClient(final URL baseUrl,
+      final SharedKeyCredentials sharedKeyCredentials,
+      final AbfsConfiguration abfsConfiguration,
+      final AccessTokenProvider tokenProvider,
+      final SASTokenProvider sasTokenProvider,
+      final EncryptionContextProvider encryptionContextProvider,
+      final AbfsClientContext abfsClientContext) throws IOException {
+    super(baseUrl, sharedKeyCredentials, abfsConfiguration, tokenProvider, sasTokenProvider,
+        encryptionContextProvider, abfsClientContext, AbfsServiceType.DFS);
+  }
+
   /**
    * Create request headers for Rest Operation using the default API version.
    * @return default request headers.

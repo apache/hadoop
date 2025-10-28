@@ -363,6 +363,21 @@ public abstract class AbfsClient implements Closeable {
     this.sasTokenProvider = sasTokenProvider;
   }
 
+  public AbfsClient(final URL baseUrl,
+      final SharedKeyCredentials sharedKeyCredentials,
+      final AbfsConfiguration abfsConfiguration,
+      final AccessTokenProvider tokenProvider,
+      final SASTokenProvider sasTokenProvider,
+      final EncryptionContextProvider encryptionContextProvider,
+      final AbfsClientContext abfsClientContext,
+      final AbfsServiceType abfsServiceType)
+      throws IOException {
+    this(baseUrl, sharedKeyCredentials, abfsConfiguration,
+        encryptionContextProvider, abfsClientContext, abfsServiceType);
+    this.sasTokenProvider = sasTokenProvider;
+    this.tokenProvider = tokenProvider;
+  }
+
   @Override
   public void close() throws IOException {
     if (isMetricCollectionEnabled && runningTimerTask != null) {
@@ -1157,7 +1172,7 @@ public abstract class AbfsClient implements Closeable {
                                          String cachedSasToken)
       throws SASTokenProviderException {
     String sasToken = null;
-    if (this.authType == AuthType.SAS) {
+    if (this.authType == AuthType.SAS || this.authType == AuthType.UserboundSASWithOAuth) {
       try {
         LOG.trace("Fetch SAS token for {} on {}", operation, path);
         if (cachedSasToken == null) {
