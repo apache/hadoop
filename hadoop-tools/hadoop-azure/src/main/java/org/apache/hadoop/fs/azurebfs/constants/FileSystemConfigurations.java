@@ -283,31 +283,31 @@ public final class FileSystemConfigurations {
 
   public static final boolean DEFAULT_WRITE_DYNAMIC_THREADPOOL_ENABLEMENT = false;
 
-  public static final int DEFAULT_WRITE_THREADPOOL_KEEP_ALIVE_TIME = 30;
+  public static final int DEFAULT_WRITE_THREADPOOL_KEEP_ALIVE_TIME_MILLIS = 30_000;
 
-  public static final int MIN_WRITE_CPU_MONITORING_INTERVAL = 10;
+  public static final int MIN_WRITE_CPU_MONITORING_INTERVAL_MILLIS = 10_000;
 
-  public static final int MAX_WRITE_CPU_MONITORING_INTERVAL = 60;
+  public static final int MAX_WRITE_CPU_MONITORING_INTERVAL_MILLIS = 60_000;
 
-  public static final int DEFAULT_WRITE_CPU_MONITORING_INTERVAL = 15;
+  public static final int DEFAULT_WRITE_CPU_MONITORING_INTERVAL_MILLIS = 15_000;
 
-  public static final int MIN_WRITE_HIGH_CPU_THRESHOLD = 65;
+  public static final int MIN_WRITE_HIGH_CPU_THRESHOLD_PERCENT = 65;
 
-  public static final int MAX_WRITE_HIGH_CPU_THRESHOLD = 90;
+  public static final int MAX_WRITE_HIGH_CPU_THRESHOLD_PERCENT = 90;
 
-  public static final int DEFAULT_WRITE_HIGH_CPU_THRESHOLD = 80;
+  public static final int DEFAULT_WRITE_HIGH_CPU_THRESHOLD_PERCENT = 80;
 
-  public static final int MIN_WRITE_MEDIUM_CPU_THRESHOLD = 45;
+  public static final int MIN_WRITE_MEDIUM_CPU_THRESHOLD_PERCENT = 45;
 
-  public static final int MAX_WRITE_MEDIUM_CPU_THRESHOLD = 65;
+  public static final int MAX_WRITE_MEDIUM_CPU_THRESHOLD_PERCENT = 65;
 
-  public static final int DEFAULT_WRITE_MEDIUM_CPU_THRESHOLD = 60;
+  public static final int DEFAULT_WRITE_MEDIUM_CPU_THRESHOLD_PERCENT = 60;
 
-  public static final int MIN_WRITE_LOW_CPU_THRESHOLD = 10;
+  public static final int MIN_WRITE_LOW_CPU_THRESHOLD_PERCENT = 10;
 
-  public static final int MAX_WRITE_LOW_CPU_THRESHOLD = 40;
+  public static final int MAX_WRITE_LOW_CPU_THRESHOLD_PERCENT = 40;
 
-  public static final int DEFAULT_WRITE_LOW_CPU_THRESHOLD = 35;
+  public static final int DEFAULT_WRITE_LOW_CPU_THRESHOLD_PERCENT = 35;
 
   public static final int MIN_WRITE_LOW_TIER_MEMORY_MULTIPLIER = 3;
 
@@ -320,8 +320,6 @@ public final class FileSystemConfigurations {
   public static final int MIN_WRITE_HIGH_TIER_MEMORY_MULTIPLIER = 12;
 
   public static final int DEFAULT_WRITE_HIGH_TIER_MEMORY_MULTIPLIER = 16;
-
-  public static final int DEFAULT_WRITE_THREADPOOL_CORE_POOL_SIZE = 1;
 
   public static final boolean DEFAULT_FS_AZURE_ENABLE_CLIENT_TRANSACTION_ID = true;
 
