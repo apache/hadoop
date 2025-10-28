@@ -55,9 +55,9 @@ public class DelegationSASGenerator extends SASGenerator {
   public String getDelegationSAS(String accountName, String containerName, String path, String operation,
                                  String saoid, String suoid, String scid) {
 
-    //final String sv = AuthenticationVersion.July5.toString();
+    final String sv = AuthenticationVersion.July5.toString();
     //todo: this will be removed later. Keeping for now
-    final String sv = AuthenticationVersion.Feb20.toString();
+    //final String sv = AuthenticationVersion.Feb20.toString();
     final String st = ISO_8601_FORMATTER.format(Instant.now().minus(FIVE_MINUTES));
     final String se = ISO_8601_FORMATTER.format(Instant.now().plus(ONE_DAY));
     String sr = "b";
