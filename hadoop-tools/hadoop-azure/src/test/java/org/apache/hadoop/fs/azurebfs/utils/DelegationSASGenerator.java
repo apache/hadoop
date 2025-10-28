@@ -55,9 +55,9 @@ public class DelegationSASGenerator extends SASGenerator {
   public String getDelegationSAS(String accountName, String containerName, String path, String operation,
                                  String saoid, String suoid, String scid) {
 
-    final String sv = AuthenticationVersion.July5.toString();
+    //final String sv = AuthenticationVersion.July5.toString();
     //todo: this will be removed later. Keeping for now
-    //final String sv = AuthenticationVersion.Feb20.toString();
+    final String sv = AuthenticationVersion.Feb20.toString();
     final String st = ISO_8601_FORMATTER.format(Instant.now().minus(FIVE_MINUTES));
     final String se = ISO_8601_FORMATTER.format(Instant.now().plus(ONE_DAY));
     String sr = "b";
@@ -200,14 +200,18 @@ public class DelegationSASGenerator extends SASGenerator {
     }
     sb.append("\n");
 
-    if (skdutid != null) {
+    // skdutid, sduoid are sent as empty strings for user-delegation SAS
+    // They are only required for user-bound SAS so added the escape sequences
+    // also inside if checks only
+    if (!Objects.equals(skdutid, EMPTY_STRING)) {
       sb.append(skdutid);
+      sb.append("\n");
     }
-    sb.append("\n");
-    if (sduoid != null) {
+
+    if (!Objects.equals(sduoid, EMPTY_STRING)) {
       sb.append(sduoid);
+      sb.append("\n");
     }
-    sb.append("\n");
 
 
     sb.append("\n"); // sip

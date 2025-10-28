@@ -1782,8 +1782,8 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       this.clientHandler = new AbfsClientHandler(baseUrl, creds, abfsConfiguration,
           tokenProvider, sasTokenProvider, encryptionContextProvider,
           populateAbfsClientContext());
-    } else
-    if (tokenProvider != null) {
+    }
+    else if (tokenProvider != null) {
       this.clientHandler = new AbfsClientHandler(baseUrl, creds, abfsConfiguration,
           tokenProvider, encryptionContextProvider,
           populateAbfsClientContext());
