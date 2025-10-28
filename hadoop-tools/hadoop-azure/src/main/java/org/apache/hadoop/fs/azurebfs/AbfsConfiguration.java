@@ -453,12 +453,12 @@ public class AbfsConfiguration{
 
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey =
       FS_AZURE_READAHEAD_V2_CPU_USAGE_THRESHOLD_PERCENT,
-      DefaultValue = DEFAULT_READAHEAD_V2_CPU_USAGE_THRESHOLD_PERCENT)
+      DefaultValue = DEFAULT_READAHEAD_V2_CPU_USAGE_THRESHOLD_PERCENTAGE)
   private int readAheadV2CpuUsageThresholdPercent;
 
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey =
       FS_AZURE_READAHEAD_V2_MEMORY_USAGE_THRESHOLD_PERCENT,
-      DefaultValue = DEFAULT_READAHEAD_V2_MEMORY_USAGE_THRESHOLD_PERCENT)
+      DefaultValue = DEFAULT_READAHEAD_V2_MEMORY_USAGE_THRESHOLD_PERCENTAGE)
   private int readAheadV2MemoryUsageThresholdPercent;
 
   @LongConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_SAS_TOKEN_RENEW_PERIOD_FOR_STREAMS,
@@ -1536,7 +1536,7 @@ public class AbfsConfiguration{
   }
 
   public boolean isReadAheadEnabled() {
-    return this.enabledReadAhead;
+    return enabledReadAhead;
   }
 
   /**
@@ -1544,7 +1544,7 @@ public class AbfsConfiguration{
    * @return true if read-ahead v2 is enabled, false otherwise.
    */
   public boolean isReadAheadV2Enabled() {
-    return this.isReadAheadV2Enabled;
+    return isReadAheadV2Enabled;
   }
 
   public boolean isReadAheadV2DynamicScalingEnabled() {
@@ -1570,7 +1570,7 @@ public class AbfsConfiguration{
   public int getMinReadAheadV2BufferPoolSize() {
     if (minReadAheadV2BufferPoolSize <= 0) {
       // If the minReadAheadV2BufferPoolSize is not set, use the default value
-      return 2 * Runtime.getRuntime().availableProcessors();
+      return DEFAULT_READAHEAD_V2_MIN_BUFFER_POOL_SIZE;
     }
     return minReadAheadV2BufferPoolSize;
   }

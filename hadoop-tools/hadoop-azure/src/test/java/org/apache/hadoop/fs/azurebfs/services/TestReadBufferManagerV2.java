@@ -114,6 +114,7 @@ public class TestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
 
   @Test
   public void testThreadPoolDynamicScaling() throws Exception {
+    running = true;
     TestAbfsInputStream testAbfsInputStream = new TestAbfsInputStream();
     AbfsClient client = testAbfsInputStream.getMockAbfsClient();
     AbfsInputStream inputStream = testAbfsInputStream.getAbfsInputStream(client, "testFailedReadAhead.txt");
@@ -212,6 +213,7 @@ public class TestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
 
   @Test
   public void testMemoryDownscaleIfMemoryAboveThreshold() throws Exception {
+    running = true;
     TestAbfsInputStream testAbfsInputStream = new TestAbfsInputStream();
     AbfsClient client = testAbfsInputStream.getMockAbfsClient();
     AbfsInputStream inputStream = testAbfsInputStream.getAbfsInputStream(client, "testFailedReadAhead.txt");

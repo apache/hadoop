@@ -368,6 +368,12 @@ public class ReadBufferManagerV2 extends ReadBufferManager {
     purgeList(stream, getCompletedReadList());
   }
 
+  /**
+   * Check if any buffer is already queued for the requested offset.
+   * @param eTag the eTag of the file
+   * @param requestedOffset the requested offset
+   * @return whether any buffer is already queued
+   */
   private boolean isAlreadyQueued(final String eTag, final long requestedOffset) {
     // returns true if any part of the buffer is already queued
     return (isInList(getReadAheadQueue(), eTag, requestedOffset)
@@ -375,11 +381,25 @@ public class ReadBufferManagerV2 extends ReadBufferManager {
         || isInList(getCompletedReadList(), eTag, requestedOffset));
   }
 
+  /**
+   * Check if any buffer in the list contains the requested offset.
+   * @param list the list to check
+   * @param eTag the eTag of the file
+   * @param requestedOffset the requested offset
+   * @return whether any buffer in the list contains the requested offset
+   */
   private boolean isInList(final Collection<ReadBuffer> list, final String eTag,
       final long requestedOffset) {
     return (getFromList(list, eTag, requestedOffset) != null);
   }
 
+  /**
+   * Get the buffer from the list that contains the requested offset.
+   * @param list the list to check
+   * @param eTag the eTag of the file
+   * @param requestedOffset the requested offset
+   * @return the buffer if found, null otherwise
+   */
   private ReadBuffer getFromList(final Collection<ReadBuffer> list, final String eTag,
       final long requestedOffset) {
     for (ReadBuffer buffer : list) {
@@ -467,6 +487,11 @@ public class ReadBufferManagerV2 extends ReadBufferManager {
     return false;
   }
 
+  /**
+   * Evict the given buffer.
+   * @param buf the buffer to evict
+   * @return whether the eviction succeeded
+   */
   private boolean evict(final ReadBuffer buf) {
     if (buf.getRefCount() > 0) {
       // If the buffer is still being read, then we cannot evict it.
@@ -489,6 +514,12 @@ public class ReadBufferManagerV2 extends ReadBufferManager {
     return true;
   }
 
+  /**
+   * Wait for any in-progress read for the requested offset to complete.
+   * @param eTag the eTag of the file
+   * @param position the requested offset
+   * @param isFirstRead whether this is the first read of the stream
+   */
   private void waitForProcess(final String eTag, final long position, boolean isFirstRead) {
     ReadBuffer readBuf;
     synchronized (this) {
@@ -507,7 +538,7 @@ public class ReadBufferManagerV2 extends ReadBufferManager {
         // getInProgressList(). So this latch is safe to be outside the synchronized block.
         // Putting it in synchronized would result in a deadlock, since this thread would be holding the lock
         // while waiting, so no one will be able to  change any state. If this becomes more complex in the future,
-        // then the latch cane be removed and replaced with wait/notify whenever getInProgressList() is touched.
+        // then the latch can be removed and replaced with wait/notify whenever getInProgressList() is touched.
       } catch (InterruptedException ex) {
         Thread.currentThread().interrupt();
       }
@@ -517,6 +548,13 @@ public class ReadBufferManagerV2 extends ReadBufferManager {
     }
   }
 
+  /**
+   * Clear the buffer from read-ahead queue if it exists.
+   * @param eTag the eTag of the file
+   * @param requestedOffset the requested offset
+   * @param isFirstRead whether this is the first read of the stream
+   * @return the buffer if found, null otherwise
+   */
   private ReadBuffer clearFromReadAheadQueue(final String eTag, final long requestedOffset, boolean isFirstRead) {
     ReadBuffer buffer = getFromList(getReadAheadQueue(), eTag, requestedOffset);
     /*
@@ -534,6 +572,15 @@ public class ReadBufferManagerV2 extends ReadBufferManager {
     return null;
   }
 
+  /**
+   * Get the block from completed queue if it exists.
+   * @param eTag the eTag of the file
+   * @param position the requested offset
+   * @param length the length to read
+   * @param buffer the buffer to read data into
+   * @return the number of bytes read
+   * @throws IOException if an I/O error occurs
+   */
   private int getBlockFromCompletedQueue(final String eTag, final long position,
       final int length, final byte[] buffer) throws IOException {
     ReadBuffer buf = getBufferFromCompletedQueue(eTag, position);
@@ -575,6 +622,12 @@ public class ReadBufferManagerV2 extends ReadBufferManager {
     return lengthToCopy;
   }
 
+  /**
+   * Get the buffer from completed queue that contains the requested offset.
+   * @param eTag the eTag of the file
+   * @param requestedOffset the requested offset
+   * @return the buffer if found, null otherwise
+   */
   private ReadBuffer getBufferFromCompletedQueue(final String eTag, final long requestedOffset) {
     for (ReadBuffer buffer : getCompletedReadList()) {
       // Buffer is returned if the requestedOffset is at or above buffer's
@@ -589,6 +642,10 @@ public class ReadBufferManagerV2 extends ReadBufferManager {
     return null;
   }
 
+  /**
+   * Try to upscale memory by adding more buffers to the pool if memory usage is below threshold.
+   * @return whether the upscale succeeded
+   */
   private synchronized boolean tryMemoryUpscale() {
     if (!isDynamicScalingEnabled) {
       printTraceLog("Dynamic scaling is disabled, skipping memory upscale");
@@ -621,6 +678,9 @@ public class ReadBufferManagerV2 extends ReadBufferManager {
     return false;
   }
 
+  /**
+   * Scheduled Eviction task that runs periodically to evict old buffers.
+   */
   private void scheduledEviction() {
     for (ReadBuffer buf : getCompletedReadList()) {
       if (currentTimeMillis() - buf.getTimeStamp() > getThresholdAgeMilliseconds()) {
@@ -652,12 +712,20 @@ public class ReadBufferManagerV2 extends ReadBufferManager {
     }
   }
 
+  /**
+   * Manual Eviction of a buffer.
+   * @param buf the buffer to evict
+   * @return whether the eviction succeeded
+   */
   private boolean manualEviction(final ReadBuffer buf) {
     printTraceLog("Manual Eviction of Buffer Triggered for BufferIndex: {}, file: {}, with eTag: {}, offset: {}, queued by stream: {}",
         buf.getBufferindex(), buf.getPath(), buf.getETag(), buf.getOffset(), buf.getStream().hashCode());
     return evict(buf);
   }
 
+  /**
+   * Adjust the thread pool size based on CPU load and queue size.
+   */
   private void adjustThreadPool() {
     int currentPoolSize = workerRefs.size();
     double cpuLoad = getCpuLoad();
@@ -699,9 +767,14 @@ public class ReadBufferManagerV2 extends ReadBufferManager {
    * @return current time in milliseconds
    */
   private long currentTimeMillis() {
-    return System.nanoTime() / 1000 / 1000;
+    return TimeUnit.NANOSECONDS.toMillis(System.nanoTime());
   }
 
+  /**
+   * Purge all buffers associated with the given stream from the given list.
+   * @param stream the stream whose buffers are to be purged
+   * @param list the list to purge from
+   */
   private void purgeList(AbfsInputStream stream, LinkedList<ReadBuffer> list) {
     for (Iterator<ReadBuffer> it = list.iterator(); it.hasNext();) {
       ReadBuffer readBuffer = it.next();
@@ -743,9 +816,15 @@ public class ReadBufferManagerV2 extends ReadBufferManager {
         bufferPool[i] = null;
       }
       bufferPool = null;
-      cpuMonitorThread.shutdownNow();
-      memoryMonitorThread.shutdownNow();
-      workerPool.shutdownNow();
+      if (cpuMonitorThread != null) {
+        cpuMonitorThread.shutdownNow();
+      }
+      if (memoryMonitorThread != null) {
+        memoryMonitorThread.shutdownNow();
+      }
+      if (workerPool != null) {
+        workerPool.shutdownNow();
+      }
       resetBufferManager();
     }
   }
@@ -807,6 +886,10 @@ public class ReadBufferManagerV2 extends ReadBufferManager {
     LOGGER.debug(message, args);
   }
 
+  /**
+   * Get the current memory load of the JVM.
+   * @return the memory load as a double value between 0.0 and 1.0
+   */
   @VisibleForTesting
   double getMemoryLoad() {
     MemoryMXBean osBean = ManagementFactory.getMemoryMXBean();
@@ -814,11 +897,20 @@ public class ReadBufferManagerV2 extends ReadBufferManager {
     return (double) memoryUsage.getUsed() / memoryUsage.getMax();
   }
 
+  /**
+   * Get the current CPU load of the system.
+   * @return the CPU load as a double value between 0.0 and 1.0
+   */
   @VisibleForTesting
   public double getCpuLoad() {
     OperatingSystemMXBean osBean = ManagementFactory.getPlatformMXBean(
         OperatingSystemMXBean.class);
-    return osBean.getSystemCpuLoad();
+    double cpuLoad = osBean.getSystemCpuLoad();
+    if (cpuLoad < 0) {
+      // If the CPU load is not available, return 0.0
+      return 0.0;
+    }
+    return cpuLoad;
   }
 
   @VisibleForTesting
