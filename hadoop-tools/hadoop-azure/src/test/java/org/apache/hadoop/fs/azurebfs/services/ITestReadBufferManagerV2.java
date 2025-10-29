@@ -26,12 +26,17 @@ import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.Test;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
 
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CONNECTIONS_MADE;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.TRUE;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENABLE_READAHEAD_V2;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENABLE_READAHEAD_V2_DYNAMIC_SCALING;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_MB;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -48,81 +53,95 @@ public class ITestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
 
   @Test
   public void testReadDifferentFilesInParallel() throws Exception {
-    AzureBlobFileSystem fs = getFileSystem();
-    int fileSize = LARGE_FILE_SIZE;
-    int numFiles = MORE_NUM_FILES;
-    byte[] fileContent = getRandomBytesArray(fileSize);
+    try (AzureBlobFileSystem fs = getConfiguredFileSystem()) {
+      int fileSize = LARGE_FILE_SIZE;
+      int numFiles = MORE_NUM_FILES;
+      byte[] fileContent = getRandomBytesArray(fileSize);
 
-    Path[] testPaths = new Path[numFiles];
-    int[] idx = {0};
-    for (int i = 0; i < numFiles; i++) {
-      final String fileName = methodName.getMethodName() + i;
-      testPaths[i] = createFileWithContent(fs, fileName, fileContent);
-    }
-    ExecutorService executorService = Executors.newFixedThreadPool(numFiles);
-    Map<String, Long> metricMap = getInstrumentationMap(fs);
-    long requestsMadeBeforeTest = metricMap
-        .get(CONNECTIONS_MADE.getStatName());
-    try {
+      Path[] testPaths = new Path[numFiles];
+      int[] idx = {0};
       for (int i = 0; i < numFiles; i++) {
-        executorService.submit((Callable<Void>) () -> {
-          try (FSDataInputStream iStream = fs.open(testPaths[idx[0]++])) {
-            byte[] buffer = new byte[fileSize];
-            int bytesRead = iStream.read(buffer, 0, fileSize);
-            assertThat(bytesRead).isEqualTo(fileSize);
-            assertThat(buffer).isEqualTo(fileContent);
-          }
-          return null;
-        });
+        final String fileName = methodName.getMethodName() + i;
+        testPaths[i] = createFileWithContent(fs, fileName, fileContent);
       }
-    } finally {
-      executorService.shutdown();
-      // wait for all tasks to finish
-      executorService.awaitTermination(1, TimeUnit.MINUTES);
+      ExecutorService executorService = Executors.newFixedThreadPool(numFiles);
+      Map<String, Long> metricMap = getInstrumentationMap(fs);
+      long requestsMadeBeforeTest = metricMap
+          .get(CONNECTIONS_MADE.getStatName());
+      try {
+        for (int i = 0; i < numFiles; i++) {
+          executorService.submit((Callable<Void>) () -> {
+            try (FSDataInputStream iStream = fs.open(testPaths[idx[0]++])) {
+              byte[] buffer = new byte[fileSize];
+              int bytesRead = iStream.read(buffer, 0, fileSize);
+              assertThat(bytesRead).isEqualTo(fileSize);
+              assertThat(buffer).isEqualTo(fileContent);
+            }
+            return null;
+          });
+        }
+      } finally {
+        executorService.shutdown();
+        // wait for all tasks to finish
+        executorService.awaitTermination(1, TimeUnit.MINUTES);
+      }
+      metricMap = getInstrumentationMap(fs);
+      long requestsMadeAfterTest = metricMap
+          .get(CONNECTIONS_MADE.getStatName());
+      int expectedRequests = numFiles // Get Path Status for each file
+          + ((int) Math.ceil((double) fileSize / BLOCK_SIZE))
+          * numFiles; // Read requests for each file
+      assertEquals(expectedRequests,
+          requestsMadeAfterTest - requestsMadeBeforeTest);
     }
-    metricMap = getInstrumentationMap(fs);
-    long requestsMadeAfterTest = metricMap
-        .get(CONNECTIONS_MADE.getStatName());
-    int expectedRequests = numFiles // Get Path Status for each file
-        + ((int) Math.ceil((double) fileSize/BLOCK_SIZE)) * numFiles; // Read requests for each file
-    assertEquals(expectedRequests, requestsMadeAfterTest - requestsMadeBeforeTest);
   }
 
   @Test
   public void testReadSameFileInParallel() throws Exception {
-    AzureBlobFileSystem fs = getFileSystem();
-    int fileSize = SMALL_FILE_SIZE;
-    int numFiles = LESS_NUM_FILES;
-    byte[] fileContent = getRandomBytesArray(fileSize);
+    try (AzureBlobFileSystem fs = getConfiguredFileSystem()) {
+      int fileSize = SMALL_FILE_SIZE;
+      int numFiles = LESS_NUM_FILES;
+      byte[] fileContent = getRandomBytesArray(fileSize);
 
-    final String fileName = methodName.getMethodName();
-    Path testPath = createFileWithContent(fs, fileName, fileContent);
-    ExecutorService executorService = Executors.newFixedThreadPool(numFiles);
-    Map<String, Long> metricMap = getInstrumentationMap(fs);
-    long requestsMadeBeforeTest = metricMap
-        .get(CONNECTIONS_MADE.getStatName());
-    try {
-      for (int i = 0; i < numFiles; i++) {
-        executorService.submit((Callable<Void>) () -> {
-          try (FSDataInputStream iStream = fs.open(testPath)) {
-            byte[] buffer = new byte[fileSize];
-            int bytesRead = iStream.read(buffer, 0, fileSize);
-            assertThat(bytesRead).isEqualTo(fileSize);
-            assertThat(buffer).isEqualTo(fileContent);
-          }
-          return null;
-        });
+      final String fileName = methodName.getMethodName();
+      Path testPath = createFileWithContent(fs, fileName, fileContent);
+      ExecutorService executorService = Executors.newFixedThreadPool(numFiles);
+      Map<String, Long> metricMap = getInstrumentationMap(fs);
+      long requestsMadeBeforeTest = metricMap
+          .get(CONNECTIONS_MADE.getStatName());
+      try {
+        for (int i = 0; i < numFiles; i++) {
+          executorService.submit((Callable<Void>) () -> {
+            try (FSDataInputStream iStream = fs.open(testPath)) {
+              byte[] buffer = new byte[fileSize];
+              int bytesRead = iStream.read(buffer, 0, fileSize);
+              assertThat(bytesRead).isEqualTo(fileSize);
+              assertThat(buffer).isEqualTo(fileContent);
+            }
+            return null;
+          });
+        }
+      } finally {
+        executorService.shutdown();
+        // wait for all tasks to finish
+        executorService.awaitTermination(1, TimeUnit.MINUTES);
       }
-    } finally {
-      executorService.shutdown();
-      // wait for all tasks to finish
-      executorService.awaitTermination(1, TimeUnit.MINUTES);
+      metricMap = getInstrumentationMap(fs);
+      long requestsMadeAfterTest = metricMap
+          .get(CONNECTIONS_MADE.getStatName());
+      int expectedRequests = numFiles // Get Path Status for each file
+          + ((int) Math.ceil(
+          (double) fileSize / BLOCK_SIZE)); // Read requests for each file
+      assertEquals(expectedRequests,
+          requestsMadeAfterTest - requestsMadeBeforeTest);
     }
-    metricMap = getInstrumentationMap(fs);
-    long requestsMadeAfterTest = metricMap
-        .get(CONNECTIONS_MADE.getStatName());
-    int expectedRequests = numFiles // Get Path Status for each file
-        + ((int) Math.ceil((double) fileSize/BLOCK_SIZE)); // Read requests for each file
-    assertEquals(expectedRequests, requestsMadeAfterTest - requestsMadeBeforeTest);
+  }
+
+  private AzureBlobFileSystem getConfiguredFileSystem() throws Exception {
+    Configuration config = new Configuration(getRawConfiguration());
+    config.set(FS_AZURE_ENABLE_READAHEAD_V2, TRUE);
+    config.set(FS_AZURE_ENABLE_READAHEAD_V2_DYNAMIC_SCALING, TRUE);
+    AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(config);
+    return fs;
   }
 }
