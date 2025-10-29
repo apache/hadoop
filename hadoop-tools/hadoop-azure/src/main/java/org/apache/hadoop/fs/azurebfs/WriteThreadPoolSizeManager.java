@@ -234,6 +234,8 @@ public final class WriteThreadPoolSizeManager implements Closeable {
         threadPoolExecutor.setCorePoolSize(newMaxPoolSize);
         threadPoolExecutor.setMaximumPoolSize(newMaxPoolSize);
       }
+      WriteThreadPoolStats stats = getCurrentStats();
+      writeThreadPoolMetrics.update(stats);
       LOG.debug("ThreadPool Info - New max pool size: {}, Current pool size: {}, Active threads: {}",
           newMaxPoolSize, threadPoolExecutor.getPoolSize(), threadPoolExecutor.getActiveCount());
     }
