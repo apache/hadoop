@@ -255,7 +255,7 @@ public final class WriteThreadPoolSizeManager implements Closeable {
             "Thread pool size adjustment interrupted for filesystem %s",
             filesystemName), e);
       }
-    }, 0, getAbfsConfiguration().getWriteCpuMonitoringInterval(), TimeUnit.SECONDS);
+    }, 0, getAbfsConfiguration().getWriteCpuMonitoringInterval(), TimeUnit.MILLISECONDS);
   }
 
   /**
