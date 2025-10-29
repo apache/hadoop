@@ -112,7 +112,7 @@ public final class WriteThreadPoolSizeManager implements Closeable {
 
     /* Get the initial pool size from config, fallback to at least 1 */
     this.initialPoolSize = Math.max(1,
-        abfsConfiguration.getWriteMaxConcurrentRequestCount());
+        abfsConfiguration.getWriteConcurrentRequestCount());
 
     /* Set the upper bound for the thread pool size */
     this.maxThreadPoolSize = Math.max(computedMaxPoolSize, initialPoolSize);
@@ -129,29 +129,30 @@ public final class WriteThreadPoolSizeManager implements Closeable {
     executor.setKeepAliveTime(
         abfsConfiguration.getWriteThreadPoolKeepAliveTime(), TimeUnit.SECONDS);
     executor.allowCoreThreadTimeOut(true);
-
     /* Create a scheduled executor for CPU monitoring and pool adjustment */
-    this.cpuMonitorExecutor = Executors.newScheduledThreadPool(
-        abfsConfiguration.getWriteCorePoolSize());
+    this.cpuMonitorExecutor = Executors.newScheduledThreadPool(1);
   }
 
-  public AbfsConfiguration getAbfsConfiguration() {
+  /** Returns the internal {@link AbfsConfiguration}. */
+  private AbfsConfiguration getAbfsConfiguration() {
     return abfsConfiguration;
   }
 
   /**
-   * Calculates the max thread pool size using a multiplier based on
-   * memory per core. Higher memory per core results in a larger multiplier.
+   * Computes the maximum thread pool size based on the available processors
+   * and the initial available heap memory. The calculation uses a tiered
+   * multiplier derived from the memory-to-core ratio — systems with higher
+   * memory per core allow for a larger thread pool.
    *
-   * @param availableProcessors Number of CPU cores.
-   * @return Computed max thread pool size.
+   * @param availableProcessors the number of available CPU cores.
+   * @param initialAvailableHeapMemory the initial available heap memory, in bytes or GB (depending on implementation).
+   * @return the computed maximum thread pool size.
    */
   private int getComputedMaxPoolSize(final int availableProcessors, long initialAvailableHeapMemory) {
-      LOG.debug("The available heap space in GB {} ", initialAvailableHeapMemory);
-      LOG.debug("The number of available processors is {} ", availableProcessors);
-      int maxpoolSize = getMemoryTierMaxThreads(initialAvailableHeapMemory, availableProcessors);
-      LOG.debug("The max thread pool size is {} ", maxpoolSize);
-      return maxpoolSize;
+    int maxpoolSize = getMemoryTierMaxThreads(initialAvailableHeapMemory, availableProcessors);
+    LOG.debug("Computed max thread pool size: {} | Available processors: {} | Heap memory (GB): {}",
+        maxpoolSize, availableProcessors, initialAvailableHeapMemory);
+    return maxpoolSize;
   }
 
   /**
@@ -233,11 +234,8 @@ public final class WriteThreadPoolSizeManager implements Closeable {
         threadPoolExecutor.setCorePoolSize(newMaxPoolSize);
         threadPoolExecutor.setMaximumPoolSize(newMaxPoolSize);
       }
-      WriteThreadPoolStats stats = getCurrentStats();
-      writeThreadPoolMetrics.update(stats);
-      LOG.debug("The thread pool size is: {} ", newMaxPoolSize);
-      LOG.debug("The pool size is: {} ", threadPoolExecutor.getPoolSize());
-      LOG.debug("The active thread count is: {}", threadPoolExecutor.getActiveCount());
+      LOG.debug("ThreadPool Info - New max pool size: {}, Current pool size: {}, Active threads: {}",
+          newMaxPoolSize, threadPoolExecutor.getPoolSize(), threadPoolExecutor.getActiveCount());
     }
   }
 
@@ -259,18 +257,19 @@ public final class WriteThreadPoolSizeManager implements Closeable {
   }
 
   /**
-   * Gets the current CPU utilization.
+   * Gets the current system CPU utilization.
    *
-   * @return the CPU utilization as a percentage (0.0 to 1.0).
+   * @return the CPU utilization as a fraction (0.0 to 1.0), or 0.0 if unavailable.
    */
   private double getCpuUtilization() {
     OperatingSystemMXBean osBean = ManagementFactory.getPlatformMXBean(
         OperatingSystemMXBean.class);
     double cpuLoad = osBean.getSystemCpuLoad();
-    if (cpuLoad >= 0) {
-      return cpuLoad;
+    if (cpuLoad < 0) {
+      LOG.warn("System CPU load value unavailable (returned -1.0). Defaulting to 0.0.");
+      return 0.0;
     }
-    return 0.0;
+    return cpuLoad;
   }
 
   /**
@@ -388,26 +387,43 @@ public final class WriteThreadPoolSizeManager implements Closeable {
     return boundedThreadPool;
   }
 
+  /**
+   * Returns the scheduled executor responsible for CPU monitoring and dynamic pool adjustment.
+   *
+   * @return the {@link ScheduledExecutorService} used for CPU monitoring.
+   */
   public ScheduledExecutorService getCpuMonitorExecutor() {
     return cpuMonitorExecutor;
   }
 
+  /**
+   * Closes this manager by shutting down executors and cleaning up resources.
+   * Removes the instance from the active manager map.
+   *
+   * @throws IOException if an error occurs during shutdown.
+   */
   @Override
   public void close() throws IOException {
     synchronized (this) {
       try {
-        // Shutdown executors
-        cpuMonitorExecutor.shutdown();
-        HadoopExecutors.shutdown(boundedThreadPool, LOG, THIRTY_SECONDS, TimeUnit.SECONDS);
-        boundedThreadPool = null;
-
+        // Shutdown CPU monitor
+        if (cpuMonitorExecutor != null && !cpuMonitorExecutor.isShutdown()) {
+          cpuMonitorExecutor.shutdown();
+        }
+        // Gracefully shutdown the bounded thread pool
+        if (boundedThreadPool != null && !boundedThreadPool.isShutdown()) {
+          boundedThreadPool.shutdown();
+          if (!boundedThreadPool.awaitTermination(THIRTY_SECONDS, TimeUnit.SECONDS)) {
+            LOG.warn("Bounded thread pool did not terminate in time, forcing shutdownNow for filesystem: {}", filesystemName);
+            boundedThreadPool.shutdownNow();
+          }
+          boundedThreadPool = null;
+        }
         // Remove from the map
         POOL_SIZE_MANAGER_MAP.remove(filesystemName);
-        LOG.debug("Closed and removed instance for filesystem: {}",
-            filesystemName);
+        LOG.debug("Closed and removed instance for filesystem: {}", filesystemName);
       } catch (Exception e) {
-        LOG.warn("Failed to properly close instance for filesystem: {}",
-            filesystemName, e);
+        LOG.warn("Failed to properly close instance for filesystem: {}", filesystemName, e);
       }
     }
   }

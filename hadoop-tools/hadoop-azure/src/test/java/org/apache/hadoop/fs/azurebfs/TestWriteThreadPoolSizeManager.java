@@ -53,8 +53,7 @@ class TestWriteThreadPoolSizeManager extends AbstractAbfsIntegrationTest {
   private static final String TEST_FILE_PATH = "testFilePath";
   private static final String TEST_DIR_PATH = "testDirPath";
   private static final int TEST_FILE_LENGTH = 1024 * 1024 * 8;
-  private static final int MAX_CONCURRENT_REQUEST_COUNT = 15;
-  private static final int CORE_POOL_SIZE = 1;
+  private static final int CONCURRENT_REQUEST_COUNT = 15;
   private static final int THREAD_POOL_KEEP_ALIVE_TIME = 10;
   private static final int LOW_TIER_MEMORY_MULTIPLIER = 4;
   private static final int MEDIUM_TIER_MEMORY_MULTIPLIER = 6;
@@ -87,8 +86,7 @@ class TestWriteThreadPoolSizeManager extends AbstractAbfsIntegrationTest {
   @BeforeEach
   public void setUp() {
     mockConfig = mock(AbfsConfiguration.class);
-    when(mockConfig.getWriteMaxConcurrentRequestCount()).thenReturn(MAX_CONCURRENT_REQUEST_COUNT);
-    when(mockConfig.getWriteCorePoolSize()).thenReturn(CORE_POOL_SIZE);
+    when(mockConfig.getWriteConcurrentRequestCount()).thenReturn(CONCURRENT_REQUEST_COUNT);
     when(mockConfig.getWriteThreadPoolKeepAliveTime()).thenReturn(THREAD_POOL_KEEP_ALIVE_TIME);
     when(mockConfig.getLowTierMemoryMultiplier()).thenReturn(LOW_TIER_MEMORY_MULTIPLIER);
     when(mockConfig.getMediumTierMemoryMultiplier()).thenReturn(MEDIUM_TIER_MEMORY_MULTIPLIER);
@@ -299,7 +297,7 @@ class TestWriteThreadPoolSizeManager extends AbstractAbfsIntegrationTest {
     // 2. Pool size must fall within valid bounds → proves resizing occurred
     Assertions.assertThat(resizedPoolSize)
         .as("Thread pool size should dynamically adjust under CPU stress")
-        .isBetween(1, getAbfsStore(fs).getAbfsConfiguration().getWriteMaxConcurrentRequestCount());
+        .isBetween(1, getAbfsStore(fs).getAbfsConfiguration().getWriteConcurrentRequestCount());
 
     // 3. Task queue must be empty → proves no backlog remains after workload
     Assertions.assertThat(executor.getQueue().size())

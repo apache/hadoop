@@ -487,36 +487,32 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_WRITE_DYNAMIC_THREADPOOL_ENABLEMENT)
   private boolean dynamicWriteThreadPoolEnablement;
 
-  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_WRITE_THREADPOOL_KEEP_ALIVE_TIME,
-      DefaultValue = DEFAULT_WRITE_THREADPOOL_KEEP_ALIVE_TIME)
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_WRITE_THREADPOOL_KEEP_ALIVE_TIME_MILLIS,
+      DefaultValue = DEFAULT_WRITE_THREADPOOL_KEEP_ALIVE_TIME_MILLIS)
   private int writeThreadPoolKeepAliveTime;
 
-  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_WRITE_CPU_MONITORING_INTERVAL,
-      MinValue = MIN_WRITE_CPU_MONITORING_INTERVAL,
-      MaxValue = MAX_WRITE_CPU_MONITORING_INTERVAL,
-      DefaultValue = DEFAULT_WRITE_CPU_MONITORING_INTERVAL)
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_WRITE_CPU_MONITORING_INTERVAL_MILLIS,
+      MinValue = MIN_WRITE_CPU_MONITORING_INTERVAL_MILLIS,
+      MaxValue = MAX_WRITE_CPU_MONITORING_INTERVAL_MILLIS,
+      DefaultValue = DEFAULT_WRITE_CPU_MONITORING_INTERVAL_MILLIS)
   private int writeCpuMonitoringInterval;
 
-  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_WRITE_THREADPOOL_CORE_POOL_SIZE,
-      DefaultValue = DEFAULT_WRITE_THREADPOOL_CORE_POOL_SIZE)
-  private int writeCorePoolSize;
-
-  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_WRITE_HIGH_CPU_THRESHOLD,
-      MinValue = MIN_WRITE_HIGH_CPU_THRESHOLD,
-      MaxValue = MAX_WRITE_HIGH_CPU_THRESHOLD,
-      DefaultValue = DEFAULT_WRITE_HIGH_CPU_THRESHOLD)
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_WRITE_HIGH_CPU_THRESHOLD_PERCENT,
+      MinValue = MIN_WRITE_HIGH_CPU_THRESHOLD_PERCENT,
+      MaxValue = MAX_WRITE_HIGH_CPU_THRESHOLD_PERCENT,
+      DefaultValue = DEFAULT_WRITE_HIGH_CPU_THRESHOLD_PERCENT)
   private int writeHighCpuThreshold;
 
-  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_WRITE_MEDIUM_CPU_THRESHOLD,
-      MinValue = MIN_WRITE_MEDIUM_CPU_THRESHOLD,
-      MaxValue = MAX_WRITE_MEDIUM_CPU_THRESHOLD,
-      DefaultValue = DEFAULT_WRITE_MEDIUM_CPU_THRESHOLD)
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_WRITE_MEDIUM_CPU_THRESHOLD_PERCENT,
+      MinValue = MIN_WRITE_MEDIUM_CPU_THRESHOLD_PERCENT,
+      MaxValue = MAX_WRITE_MEDIUM_CPU_THRESHOLD_PERCENT,
+      DefaultValue = DEFAULT_WRITE_MEDIUM_CPU_THRESHOLD_PERCENT)
   private int writeMediumCpuThreshold;
 
-  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_WRITE_LOW_CPU_THRESHOLD,
-      MinValue = MIN_WRITE_LOW_CPU_THRESHOLD,
-      MaxValue = MAX_WRITE_LOW_CPU_THRESHOLD,
-      DefaultValue = DEFAULT_WRITE_LOW_CPU_THRESHOLD)
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_WRITE_LOW_CPU_THRESHOLD_PERCENT,
+      MinValue = MIN_WRITE_LOW_CPU_THRESHOLD_PERCENT,
+      MaxValue = MAX_WRITE_LOW_CPU_THRESHOLD_PERCENT,
+      DefaultValue = DEFAULT_WRITE_LOW_CPU_THRESHOLD_PERCENT)
   private int writeLowCpuThreshold;
 
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_WRITE_LOW_TIER_MEMORY_MULTIPLIER,
@@ -1692,7 +1688,7 @@ public class AbfsConfiguration{
         oauthTokenFetchRetryDeltaBackoff);
   }
 
-  public int getWriteMaxConcurrentRequestCount() {
+  public int getWriteConcurrentRequestCount() {
     if (this.writeMaxConcurrentRequestCount < 1) {
       return 4 * Runtime.getRuntime().availableProcessors();
     }
@@ -1735,13 +1731,9 @@ public class AbfsConfiguration{
     return highTierMemoryMultiplier;
   }
 
-  public int getWriteCorePoolSize() {
-    return writeCorePoolSize;
-  }
-
   public int getMaxWriteRequestsToQueue() {
     if (this.maxWriteRequestsToQueue < 1) {
-      return 2 * getWriteMaxConcurrentRequestCount();
+      return 2 * getWriteConcurrentRequestCount();
     }
     return this.maxWriteRequestsToQueue;
   }

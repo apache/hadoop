@@ -465,17 +465,17 @@ public final class ConfigurationKeys {
    * will remain idle before being terminated.
    * Value: {@value}.
    */
-  public static final String FS_AZURE_WRITE_THREADPOOL_KEEP_ALIVE_TIME = "fs.azure.write.threadpool.keep.alive.time";
+  public static final String FS_AZURE_WRITE_THREADPOOL_KEEP_ALIVE_TIME_MILLIS = "fs.azure.write.threadpool.keep.alive.time.millis";
 
-  public static final String FS_AZURE_WRITE_CPU_MONITORING_INTERVAL = "fs.azure.write.cpu.monitoring.interval";
+  public static final String FS_AZURE_WRITE_CPU_MONITORING_INTERVAL_MILLIS = "fs.azure.write.cpu.monitoring.interval.millis";
 
   public static final String FS_AZURE_WRITE_DYNAMIC_THREADPOOL_ENABLEMENT = "fs.azure.write.dynamic.threadpool.enablement";
 
-  public static final String FS_AZURE_WRITE_HIGH_CPU_THRESHOLD = "fs.azure.write.high.cpu.threshold";
+  public static final String FS_AZURE_WRITE_HIGH_CPU_THRESHOLD_PERCENT = "fs.azure.write.high.cpu.threshold.percent";
 
-  public static final String FS_AZURE_WRITE_MEDIUM_CPU_THRESHOLD = "fs.azure.write.medium.cpu.threshold";
+  public static final String FS_AZURE_WRITE_MEDIUM_CPU_THRESHOLD_PERCENT = "fs.azure.write.medium.cpu.threshold.percent";
 
-  public static final String FS_AZURE_WRITE_LOW_CPU_THRESHOLD = "fs.azure.write.low.cpu.threshold";
+  public static final String FS_AZURE_WRITE_LOW_CPU_THRESHOLD_PERCENT = "fs.azure.write.low.cpu.threshold.percent";
 
   public static final String FS_AZURE_WRITE_LOW_TIER_MEMORY_MULTIPLIER = "fs.azure.write.low.tier.memory.multiplier";
 
@@ -490,12 +490,5 @@ public final class ConfigurationKeys {
   /**Flag to enable/disable create idempotency during create operation: {@value}*/
   public static final String FS_AZURE_ENABLE_CREATE_BLOB_IDEMPOTENCY = "fs.azure.enable.create.blob.idempotency";
 
-  /**
-   * Configuration key for the core pool size of the write thread pool.
-   * This value specifies the number of threads to keep in the write thread pool,
-   * even if they are idle.
-   * Value: {@value}.
-   */
-  public static final String FS_AZURE_WRITE_THREADPOOL_CORE_POOL_SIZE = "fs.azure.write.threadpool.core.pool.size";
   private ConfigurationKeys() {}
 }
