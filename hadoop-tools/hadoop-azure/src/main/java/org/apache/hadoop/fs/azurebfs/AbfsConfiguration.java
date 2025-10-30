@@ -1554,7 +1554,7 @@ public class AbfsConfiguration{
   public int getMinReadAheadV2ThreadPoolSize() {
     if (minReadAheadV2ThreadPoolSize <= 0) {
       // If the minReadAheadV2ThreadPoolSize is not set, use the default value
-      return 2 * Runtime.getRuntime().availableProcessors();
+      return DEFAULT_READAHEAD_V2_MIN_THREAD_POOL_SIZE;
     }
     return minReadAheadV2ThreadPoolSize;
   }

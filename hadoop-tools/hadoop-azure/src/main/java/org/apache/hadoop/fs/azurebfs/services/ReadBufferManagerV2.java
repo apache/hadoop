@@ -39,6 +39,8 @@ import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
@@ -89,18 +91,18 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
 
   private static double memoryThreshold;
 
-  private int numberOfActiveBuffers = 0;
+  private final AtomicInteger numberOfActiveBuffers = new AtomicInteger(0);
 
   private byte[][] bufferPool;
 
-  private Stack<Integer> removedBufferList = new Stack<>();
+  private final Stack<Integer> removedBufferList = new Stack<>();
 
   private ScheduledExecutorService memoryMonitorThread;
 
   // Buffer Manager Structures
   private static ReadBufferManagerV2 bufferManager;
 
-  private static boolean isConfigured = false;
+  private static AtomicBoolean isConfigured = new AtomicBoolean(false);
 
   /**
    * Private constructor to prevent instantiation as this needs to be singleton.
@@ -110,7 +112,7 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
   }
 
   public static ReadBufferManagerV2 getBufferManager() {
-    if (!isConfigured) {
+    if (!isConfigured.get()) {
       throw new IllegalStateException("ReadBufferManagerV2 is not configured. "
           + "Please call setReadBufferManagerConfigs() before calling getBufferManager().");
     }
@@ -137,33 +139,40 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
   public static void setReadBufferManagerConfigs(final int readAheadBlockSize,
       final AbfsConfiguration abfsConfiguration) {
     // Set Configs only before initializations.
-    if (bufferManager == null && !isConfigured) {
-      minThreadPoolSize = abfsConfiguration.getMinReadAheadV2ThreadPoolSize();
-      maxThreadPoolSize = abfsConfiguration.getMaxReadAheadV2ThreadPoolSize();
-      cpuMonitoringIntervalInMilliSec
-          = abfsConfiguration.getReadAheadV2CpuMonitoringIntervalMillis();
-      cpuThreshold = abfsConfiguration.getReadAheadV2CpuUsageThresholdPercent()
-          / ONE_HUNDRED;
-      threadPoolUpscalePercentage
-          = abfsConfiguration.getReadAheadV2ThreadPoolUpscalePercentage();
-      threadPoolDownscalePercentage
-          = abfsConfiguration.getReadAheadV2ThreadPoolDownscalePercentage();
-      executorServiceKeepAliveTimeInMilliSec
-          = abfsConfiguration.getReadAheadExecutorServiceTTLInMillis();
-
-      minBufferPoolSize = abfsConfiguration.getMinReadAheadV2BufferPoolSize();
-      maxBufferPoolSize = abfsConfiguration.getMaxReadAheadV2BufferPoolSize();
-      memoryMonitoringIntervalInMilliSec
-          = abfsConfiguration.getReadAheadV2MemoryMonitoringIntervalMillis();
-      memoryThreshold =
-          abfsConfiguration.getReadAheadV2MemoryUsageThresholdPercent()
+    if (bufferManager == null && !isConfigured.get()) {
+      LOCK.lock();
+      try {
+        if (bufferManager == null && !isConfigured.get()) {
+          minThreadPoolSize = abfsConfiguration.getMinReadAheadV2ThreadPoolSize();
+          maxThreadPoolSize = abfsConfiguration.getMaxReadAheadV2ThreadPoolSize();
+          cpuMonitoringIntervalInMilliSec
+              = abfsConfiguration.getReadAheadV2CpuMonitoringIntervalMillis();
+          cpuThreshold = abfsConfiguration.getReadAheadV2CpuUsageThresholdPercent()
               / ONE_HUNDRED;
-      setThresholdAgeMilliseconds(
-          abfsConfiguration.getReadAheadV2CachedBufferTTLMillis());
-      isDynamicScalingEnabled
-          = abfsConfiguration.isReadAheadV2DynamicScalingEnabled();
-      setReadAheadBlockSize(readAheadBlockSize);
-      setIsConfigured(true);
+          threadPoolUpscalePercentage
+              = abfsConfiguration.getReadAheadV2ThreadPoolUpscalePercentage();
+          threadPoolDownscalePercentage
+              = abfsConfiguration.getReadAheadV2ThreadPoolDownscalePercentage();
+          executorServiceKeepAliveTimeInMilliSec
+              = abfsConfiguration.getReadAheadExecutorServiceTTLInMillis();
+
+          minBufferPoolSize = abfsConfiguration.getMinReadAheadV2BufferPoolSize();
+          maxBufferPoolSize = abfsConfiguration.getMaxReadAheadV2BufferPoolSize();
+          memoryMonitoringIntervalInMilliSec
+              = abfsConfiguration.getReadAheadV2MemoryMonitoringIntervalMillis();
+          memoryThreshold =
+              abfsConfiguration.getReadAheadV2MemoryUsageThresholdPercent()
+                  / ONE_HUNDRED;
+          setThresholdAgeMilliseconds(
+              abfsConfiguration.getReadAheadV2CachedBufferTTLMillis());
+          isDynamicScalingEnabled
+              = abfsConfiguration.isReadAheadV2DynamicScalingEnabled();
+          setReadAheadBlockSize(readAheadBlockSize);
+          setIsConfigured(true);
+        }
+      } finally {
+        LOCK.unlock();
+      }
     }
   }
 
@@ -179,7 +188,7 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
       bufferPool[i]
           = new byte[getReadAheadBlockSize()];  // same buffers are reused. The byte array never goes back to GC
       getFreeList().add(i);
-      numberOfActiveBuffers++;
+      numberOfActiveBuffers.getAndIncrement();
     }
     memoryMonitorThread = Executors.newSingleThreadScheduledExecutor(
         runnable -> {
@@ -222,7 +231,7 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
 
     printTraceLog(
         "ReadBufferManagerV2 initialized with {} buffers and {} worker threads",
-        numberOfActiveBuffers, workerRefs.size());
+        numberOfActiveBuffers.get(), workerRefs.size());
   }
 
   /**
@@ -878,7 +887,7 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
    * @param list the list to purge from
    */
   private void purgeList(AbfsInputStream stream, LinkedList<ReadBuffer> list) {
-    for (Iterator<ReadBuffer> it = list.iterator(); it.hasNext(); ) {
+    for (Iterator<ReadBuffer> it = list.iterator(); it.hasNext();) {
       ReadBuffer readBuffer = it.next();
       if (readBuffer.getStream() == stream) {
         it.remove();
@@ -947,12 +956,7 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
 
   @VisibleForTesting
   public int getNumBuffers() {
-    LOCK.lock();
-    try {
-      return numberOfActiveBuffers;
-    } finally {
-      LOCK.unlock();
-    }
+    return numberOfActiveBuffers.get();
   }
 
   @Override
@@ -966,7 +970,7 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
   }
 
   private static void setIsConfigured(boolean configured) {
-    isConfigured = configured;
+    isConfigured.set(true);
   }
 
   private final ThreadFactory workerThreadFactory = new ThreadFactory() {
@@ -1086,20 +1090,10 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
   }
 
   private void incrementActiveBufferCount() {
-    LOCK.lock();
-    try {
-      numberOfActiveBuffers++;
-    } finally {
-      LOCK.unlock();
-    }
+    numberOfActiveBuffers.getAndIncrement();
   }
 
   private void decrementActiveBufferCount() {
-    LOCK.lock();
-    try {
-      numberOfActiveBuffers--;
-    } finally {
-      LOCK.unlock();
-    }
+    numberOfActiveBuffers.getAndDecrement();
   }
 }
