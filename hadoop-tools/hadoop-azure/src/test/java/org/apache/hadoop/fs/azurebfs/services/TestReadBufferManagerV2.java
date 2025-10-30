@@ -96,6 +96,8 @@ public class TestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
     try(AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(getFileSystem().getUri(), conf)) {
       AbfsConfiguration abfsConfiguration = fs.getAbfsStore().getAbfsConfiguration();
       ReadBufferManagerV2.setReadBufferManagerConfigs(abfsConfiguration.getReadAheadBlockSize(), abfsConfiguration);
+      ReadBufferManagerV2.getBufferManager().testResetReadBufferManager();
+      ReadBufferManagerV2.setReadBufferManagerConfigs(abfsConfiguration.getReadAheadBlockSize(), abfsConfiguration);
       ReadBufferManagerV2 bufferManagerV2 = ReadBufferManagerV2.getBufferManager();
       assertThat(bufferManagerV2.getCpuMonitoringThread())
           .as("CPU Monitor thread should be initialized").isNotNull();
@@ -105,6 +107,8 @@ public class TestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
     conf.setBoolean(FS_AZURE_ENABLE_READAHEAD_V2_DYNAMIC_SCALING, false);
     try(AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(getFileSystem().getUri(), conf)) {
       AbfsConfiguration abfsConfiguration = fs.getAbfsStore().getAbfsConfiguration();
+      ReadBufferManagerV2.setReadBufferManagerConfigs(abfsConfiguration.getReadAheadBlockSize(), abfsConfiguration);
+      ReadBufferManagerV2.getBufferManager().testResetReadBufferManager();
       ReadBufferManagerV2.setReadBufferManagerConfigs(abfsConfiguration.getReadAheadBlockSize(), abfsConfiguration);
       ReadBufferManagerV2 bufferManagerV2 = ReadBufferManagerV2.getBufferManager();
       assertThat(bufferManagerV2.getCpuMonitoringThread())

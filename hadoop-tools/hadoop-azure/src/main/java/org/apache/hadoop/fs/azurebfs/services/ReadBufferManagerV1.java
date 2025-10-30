@@ -41,7 +41,7 @@ public final class ReadBufferManagerV1 extends ReadBufferManager {
 
   private Thread[] threads = new Thread[NUM_THREADS];
   private byte[][] buffers;
-  private static  ReadBufferManagerV1 bufferManager;
+  private static ReadBufferManagerV1 bufferManager;
 
   // hide instance constructor
   private ReadBufferManagerV1() {
@@ -66,7 +66,7 @@ public final class ReadBufferManagerV1 extends ReadBufferManager {
    * Returns the singleton instance of ReadBufferManagerV1.
    * @return the singleton instance of ReadBufferManagerV1
    */
-  public static ReadBufferManagerV1 getBufferManager() {
+  static ReadBufferManagerV1 getBufferManager() {
     if (bufferManager == null) {
       LOCK.lock();
       try {

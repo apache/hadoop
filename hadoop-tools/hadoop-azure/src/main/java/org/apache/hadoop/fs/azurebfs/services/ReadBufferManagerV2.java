@@ -111,7 +111,7 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
     printTraceLog("Creating Read Buffer Manager V2 with HADOOP-18546 patch");
   }
 
-  public static ReadBufferManagerV2 getBufferManager() {
+  static ReadBufferManagerV2 getBufferManager() {
     if (!isConfigured.get()) {
       throw new IllegalStateException("ReadBufferManagerV2 is not configured. "
           + "Please call setReadBufferManagerConfigs() before calling getBufferManager().");
@@ -970,7 +970,7 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
   }
 
   private static void setIsConfigured(boolean configured) {
-    isConfigured.set(true);
+    isConfigured.set(configured);
   }
 
   private final ThreadFactory workerThreadFactory = new ThreadFactory() {
@@ -1022,7 +1022,7 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
   }
 
   @VisibleForTesting
-  public static ReadBufferManagerV2 getInstance() {
+  synchronized static ReadBufferManagerV2 getInstance() {
     return bufferManager;
   }
 
