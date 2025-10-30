@@ -1343,7 +1343,11 @@ public class AbfsBlobClient extends AbfsClient {
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     String sasTokenForReuse = appendSASTokenToQuery(path, SASTokenProvider.READ_OPERATION,
         abfsUriQueryBuilder, cachedSasToken);
-
+    AbfsReadThreadPoolMetrics metrics = getAbfsCounters()
+        .getAbfsReadThreadPoolMetrics();
+    if (metrics != null) {
+      tracingContext.setMetricResults(metrics.toString());
+    }
     URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = getAbfsRestOperation(
         AbfsRestOperationType.GetBlob,

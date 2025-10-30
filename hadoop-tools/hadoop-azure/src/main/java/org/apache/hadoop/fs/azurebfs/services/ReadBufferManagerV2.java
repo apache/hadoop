@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.fs.azurebfs.services;
 
+import org.apache.hadoop.fs.azurebfs.Abfs;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ReadBufferStatus;
 
@@ -108,14 +109,18 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
 
   private static long lastTime = 0;
 
+  private final AbfsClient abfsClient;
+
   /**
    * Private constructor to prevent instantiation as this needs to be singleton.
    */
-  private ReadBufferManagerV2() {
+  private ReadBufferManagerV2(AbfsClient abfsClient) {
+    this.abfsClient = abfsClient;
+    readThreadPoolMetrics = abfsClient.getAbfsCounters().getAbfsReadThreadPoolMetrics();
     printTraceLog("Creating Read Buffer Manager V2 with HADOOP-18546 patch");
   }
 
-  public static ReadBufferManagerV2 getBufferManager() {
+  public static ReadBufferManagerV2 getBufferManager(AbfsClient client) {
     if (!isConfigured) {
       throw new IllegalStateException("ReadBufferManagerV2 is not configured. "
           + "Please call setReadBufferManagerConfigs() before calling getBufferManager().");
@@ -124,7 +129,7 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
       LOCK.lock();
       try {
         if (bufferManager == null) {
-          bufferManager = new ReadBufferManagerV2();
+          bufferManager = new ReadBufferManagerV2(client);
           bufferManager.init();
           LOGGER.trace("ReadBufferManagerV2 singleton initialized");
         }
@@ -207,7 +212,7 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
         workerThreadFactory);
     workerPool.allowCoreThreadTimeOut(true);
     for (int i = 0; i < minThreadPoolSize; i++) {
-      ReadBufferWorker worker = new ReadBufferWorker(i, getBufferManager());
+      ReadBufferWorker worker = new ReadBufferWorker(i, getBufferManager(abfsClient));
       workerRefs.add(worker);
       workerPool.submit(worker);
     }
@@ -841,7 +846,7 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
                   / ONE_HUNDRED));
       // Create new Worker Threads
       for (int i = currentPoolSize; i < newThreadPoolSize; i++) {
-        ReadBufferWorker worker = new ReadBufferWorker(i, getBufferManager());
+        ReadBufferWorker worker = new ReadBufferWorker(i, getBufferManager(abfsClient));
         workerRefs.add(worker);
         workerPool.submit(worker);
       }

@@ -246,7 +246,10 @@ public class TracingContext {
     }
     httpOperation.setRequestProperty(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID, header);
     if (!metricHeader.equals(EMPTY_STRING)) {
-      httpOperation.setRequestProperty(HttpHeaderConfigurations.X_MS_FECLIENT_METRICS, metricHeader);
+      httpOperation.setRequestProperty(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID, header + COLON + metricHeader);
+    } else {
+      httpOperation.setRequestProperty(
+          HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID, header);
     }
     /*
     * In case the primaryRequestId is an empty-string and if it is the first try to
@@ -381,6 +384,7 @@ public class TracingContext {
 
   /**
    * Sets the read type for the current operation.
+   *
    * @param readType the read type to set, must not be null.
    */
   public void setReadType(ReadType readType) {
@@ -388,5 +392,9 @@ public class TracingContext {
     if (listener != null) {
       listener.updateReadType(readType);
     }
+  }
+
+  public void setMetricResults(final String metricResults) {
+    this.metricResults = metricResults;
   }
 }

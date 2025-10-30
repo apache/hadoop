@@ -184,10 +184,13 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
      * If none of the V1 and V2 are enabled, then no read ahead will be done.
      */
     if (readAheadV2Enabled) {
-      LOG.debug("ReadBufferManagerV2 not yet implemented, defaulting to ReadBufferManagerV1");
+      ReadBufferManagerV2.setReadBufferManagerConfigs(
+          readAheadBlockSize, client.getAbfsConfiguration());
+      readBufferManager = ReadBufferManagerV2.getBufferManager(client);
+    } else {
+      ReadBufferManagerV1.setReadBufferManagerConfigs(readAheadBlockSize);
+      readBufferManager = ReadBufferManagerV1.getBufferManager();
     }
-    ReadBufferManagerV1.setReadBufferManagerConfigs(readAheadBlockSize);
-    readBufferManager = ReadBufferManagerV1.getBufferManager();
 
     if (streamStatistics != null) {
       ioStatistics = streamStatistics.getIOStatistics();

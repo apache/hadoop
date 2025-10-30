@@ -61,17 +61,18 @@ public class TestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
    */
   @Test
   public void testReadBufferManagerV2Init() throws Exception {
+    AbfsClient abfsClient = getFileSystem().getAbfsStore().getClient();
     ReadBufferManagerV2.setReadBufferManagerConfigs(getConfiguration().getReadAheadBlockSize(), getConfiguration());
-    ReadBufferManagerV2.getBufferManager().testResetReadBufferManager();
+    ReadBufferManagerV2.getBufferManager(abfsClient).testResetReadBufferManager();
     assertThat(ReadBufferManagerV2.getInstance())
         .as("ReadBufferManager should be uninitialized").isNull();
     intercept(IllegalStateException.class, "ReadBufferManagerV2 is not configured.", () -> {
-      ReadBufferManagerV2.getBufferManager();
+      ReadBufferManagerV2.getBufferManager(abfsClient);
     });
     // verify that multiple invocations of getBufferManager returns same instance.
     ReadBufferManagerV2.setReadBufferManagerConfigs(getConfiguration().getReadAheadBlockSize(), getConfiguration());
-    ReadBufferManagerV2 bufferManager = ReadBufferManagerV2.getBufferManager();
-    ReadBufferManagerV2 bufferManager2 = ReadBufferManagerV2.getBufferManager();
+    ReadBufferManagerV2 bufferManager = ReadBufferManagerV2.getBufferManager(abfsClient);
+    ReadBufferManagerV2 bufferManager2 = ReadBufferManagerV2.getBufferManager(abfsClient);
     ReadBufferManagerV2 bufferManager3 = ReadBufferManagerV2.getInstance();
     assertThat(bufferManager).isNotNull();
     assertThat(bufferManager2).isNotNull();
@@ -96,7 +97,7 @@ public class TestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
     try(AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(getFileSystem().getUri(), conf)) {
       AbfsConfiguration abfsConfiguration = fs.getAbfsStore().getAbfsConfiguration();
       ReadBufferManagerV2.setReadBufferManagerConfigs(abfsConfiguration.getReadAheadBlockSize(), abfsConfiguration);
-      ReadBufferManagerV2 bufferManagerV2 = ReadBufferManagerV2.getBufferManager();
+      ReadBufferManagerV2 bufferManagerV2 = ReadBufferManagerV2.getBufferManager(fs.getAbfsStore().getClient());
       assertThat(bufferManagerV2.getCpuMonitoringThread())
           .as("CPU Monitor thread should be initialized").isNotNull();
       bufferManagerV2.resetBufferManager();
@@ -106,7 +107,7 @@ public class TestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
     try(AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(getFileSystem().getUri(), conf)) {
       AbfsConfiguration abfsConfiguration = fs.getAbfsStore().getAbfsConfiguration();
       ReadBufferManagerV2.setReadBufferManagerConfigs(abfsConfiguration.getReadAheadBlockSize(), abfsConfiguration);
-      ReadBufferManagerV2 bufferManagerV2 = ReadBufferManagerV2.getBufferManager();
+      ReadBufferManagerV2 bufferManagerV2 = ReadBufferManagerV2.getBufferManager(fs.getAbfsStore().getClient());
       assertThat(bufferManagerV2.getCpuMonitoringThread())
           .as("CPU Monitor thread should not be initialized").isNull();
       bufferManagerV2.resetBufferManager();
@@ -123,9 +124,9 @@ public class TestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
     AbfsConfiguration abfsConfig = new AbfsConfiguration(configuration,
         getAccountName());
     ReadBufferManagerV2.setReadBufferManagerConfigs(abfsConfig.getReadAheadBlockSize(), abfsConfig);
-    ReadBufferManagerV2.getBufferManager().testResetReadBufferManager();
+    ReadBufferManagerV2.getBufferManager(client).testResetReadBufferManager();
     ReadBufferManagerV2.setReadBufferManagerConfigs(abfsConfig.getReadAheadBlockSize(), abfsConfig);
-    ReadBufferManagerV2 bufferManagerV2 = ReadBufferManagerV2.getBufferManager();
+    ReadBufferManagerV2 bufferManagerV2 = ReadBufferManagerV2.getBufferManager(client);
     assertThat(bufferManagerV2.getCurrentThreadPoolSize()).isEqualTo(2);
     int[] reqOffset = {0};
     int reqLength = 1;
@@ -155,9 +156,9 @@ public class TestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
     AbfsConfiguration abfsConfig = new AbfsConfiguration(configuration,
         getAccountName());
     ReadBufferManagerV2.setReadBufferManagerConfigs(abfsConfig.getReadAheadBlockSize(), abfsConfig);
-    ReadBufferManagerV2.getBufferManager().testResetReadBufferManager();
+    ReadBufferManagerV2.getBufferManager(client).testResetReadBufferManager();
     ReadBufferManagerV2.setReadBufferManagerConfigs(abfsConfig.getReadAheadBlockSize(), abfsConfig);
-    ReadBufferManagerV2 bufferManagerV2 = ReadBufferManagerV2.getBufferManager();
+    ReadBufferManagerV2 bufferManagerV2 = ReadBufferManagerV2.getBufferManager(client);
     assertThat(bufferManagerV2.getCurrentThreadPoolSize()).isEqualTo(2);
     int[] reqOffset = {0};
     int reqLength = 1;
@@ -184,9 +185,9 @@ public class TestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
     Configuration configuration = getReadAheadV2Configuration();
     AbfsConfiguration abfsConfig = new AbfsConfiguration(configuration,
         getAccountName());
-    ReadBufferManagerV2.getBufferManager().testResetReadBufferManager();
+    ReadBufferManagerV2.getBufferManager(client).testResetReadBufferManager();
     ReadBufferManagerV2.setReadBufferManagerConfigs(abfsConfig.getReadAheadBlockSize(), abfsConfig);
-    ReadBufferManagerV2 bufferManagerV2 = ReadBufferManagerV2.getBufferManager();
+    ReadBufferManagerV2 bufferManagerV2 = ReadBufferManagerV2.getBufferManager(client);
     // Add a failed buffer to completed queue and set to no free buffers to read ahead.
     ReadBuffer buff = new ReadBuffer();
     buff.setStatus(ReadBufferStatus.READ_FAILED);
@@ -208,9 +209,9 @@ public class TestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
     AbfsConfiguration abfsConfig = new AbfsConfiguration(configuration,
         getAccountName());
     ReadBufferManagerV2.setReadBufferManagerConfigs(abfsConfig.getReadAheadBlockSize(), abfsConfig);
-    ReadBufferManagerV2.getBufferManager().testResetReadBufferManager();
+    ReadBufferManagerV2.getBufferManager(client).testResetReadBufferManager();
     ReadBufferManagerV2.setReadBufferManagerConfigs(abfsConfig.getReadAheadBlockSize(), abfsConfig);
-    ReadBufferManagerV2 bufferManagerV2 = ReadBufferManagerV2.getBufferManager();
+    ReadBufferManagerV2 bufferManagerV2 = ReadBufferManagerV2.getBufferManager(client);
     // Add a failed buffer to completed queue and set to no free buffers to read ahead.
     ReadBuffer buff = new ReadBuffer();
     buff.setStatus(ReadBufferStatus.READ_FAILED);
@@ -232,9 +233,9 @@ public class TestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
     AbfsConfiguration abfsConfig = new AbfsConfiguration(configuration,
         getAccountName());
     ReadBufferManagerV2.setReadBufferManagerConfigs(abfsConfig.getReadAheadBlockSize(), abfsConfig);
-    ReadBufferManagerV2.getBufferManager().testResetReadBufferManager();
+    ReadBufferManagerV2.getBufferManager(client).testResetReadBufferManager();
     ReadBufferManagerV2.setReadBufferManagerConfigs(abfsConfig.getReadAheadBlockSize(), abfsConfig);
-    ReadBufferManagerV2 bufferManagerV2 = ReadBufferManagerV2.getBufferManager();
+    ReadBufferManagerV2 bufferManagerV2 = ReadBufferManagerV2.getBufferManager(client);
     // Add a failed buffer to completed queue and set to no free buffers to read ahead.
     ReadBuffer buff = new ReadBuffer();
     buff.setStatus(ReadBufferStatus.READ_FAILED);
@@ -248,14 +249,16 @@ public class TestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
 
   @Test
   public void testMemoryDownscaleIfMemoryAboveThreshold() throws Exception {
+    TestAbfsInputStream testAbfsInputStream = new TestAbfsInputStream();
+    AbfsClient client = testAbfsInputStream.getMockAbfsClient();
     Configuration configuration = getReadAheadV2Configuration();
     configuration.set(FS_AZURE_READAHEAD_V2_MEMORY_USAGE_THRESHOLD_PERCENT, "2");
     AbfsConfiguration abfsConfig = new AbfsConfiguration(configuration,
         getAccountName());
     ReadBufferManagerV2.setReadBufferManagerConfigs(abfsConfig.getReadAheadBlockSize(), abfsConfig);
-    ReadBufferManagerV2.getBufferManager().testResetReadBufferManager();
+    ReadBufferManagerV2.getBufferManager(client).testResetReadBufferManager();
     ReadBufferManagerV2.setReadBufferManagerConfigs(abfsConfig.getReadAheadBlockSize(), abfsConfig);
-    ReadBufferManagerV2 bufferManagerV2 = ReadBufferManagerV2.getBufferManager();
+    ReadBufferManagerV2 bufferManagerV2 = ReadBufferManagerV2.getBufferManager(client);
     int initialBuffers = bufferManagerV2.getMinBufferPoolSize();
     assertThat(bufferManagerV2.getNumBuffers()).isEqualTo(initialBuffers);
     running = true;

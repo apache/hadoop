@@ -1054,7 +1054,11 @@ public class AbfsDfsClient extends AbfsClient {
     String sasTokenForReuse = appendSASTokenToQuery(path,
         SASTokenProvider.READ_OPERATION,
         abfsUriQueryBuilder, cachedSasToken);
-
+    AbfsReadThreadPoolMetrics metrics = getAbfsCounters()
+        .getAbfsReadThreadPoolMetrics();
+    if (metrics != null) {
+      tracingContext.setMetricResults(metrics.toString());
+    }
     final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = getAbfsRestOperation(
         AbfsRestOperationType.ReadFile,

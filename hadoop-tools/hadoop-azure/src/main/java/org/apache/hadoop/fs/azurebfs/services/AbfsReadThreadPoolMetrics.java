@@ -115,7 +115,7 @@ public class AbfsReadThreadPoolMetrics extends AbstractAbfsStatisticsSource {
       if (currentVersion == lastPushedVersion.get()) {
         return EMPTY_STRING;
       }
-      StringBuilder sb = new StringBuilder("WR").append(CHAR_EQUALS);
+      StringBuilder sb = new StringBuilder("RE").append(CHAR_EQUALS);
       for (AbfsReadThreadPoolMetricsEnum metric : AbfsReadThreadPoolMetricsEnum.values()) {
         sb.append(metric.getName())
             .append(CHAR_EQUALS)
