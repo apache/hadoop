@@ -45,6 +45,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import java.util.WeakHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -203,6 +204,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
   private int blockOutputActiveBlocks;
   /** Bounded ThreadPool for this instance. */
   private ExecutorService boundedThreadPool;
+  private WriteThreadPoolSizeManager poolSizeManager;
 
   /** ABFS instance reference to be held by the store to avoid GC close. */
   private BackReference fsBackRef;
@@ -277,11 +279,19 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     }
     this.blockFactory = abfsStoreBuilder.blockFactory;
     this.blockOutputActiveBlocks = abfsStoreBuilder.blockOutputActiveBlocks;
-    this.boundedThreadPool = BlockingThreadPoolExecutorService.newInstance(
-        abfsConfiguration.getWriteMaxConcurrentRequestCount(),
-        abfsConfiguration.getMaxWriteRequestsToQueue(),
-        10L, TimeUnit.SECONDS,
-        "abfs-bounded");
+    if (abfsConfiguration.isDynamicWriteThreadPoolEnablement()) {
+      this.poolSizeManager = WriteThreadPoolSizeManager.getInstance(
+          getClient().getFileSystem() + "-" + UUID.randomUUID(),
+          abfsConfiguration);
+      poolSizeManager.startCPUMonitoring();
+      this.boundedThreadPool = poolSizeManager.getExecutorService();
+    } else {
+      this.boundedThreadPool = BlockingThreadPoolExecutorService.newInstance(
+          abfsConfiguration.getWriteConcurrentRequestCount(),
+          abfsConfiguration.getMaxWriteRequestsToQueue(),
+          10L, TimeUnit.SECONDS,
+          "abfs-bounded");
+    }
   }
 
   /**
@@ -320,17 +330,19 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     }
     try {
       Futures.allAsList(futures).get();
-      // shutdown the threadPool and set it to null.
-      HadoopExecutors.shutdown(boundedThreadPool, LOG,
-          30, TimeUnit.SECONDS);
-      boundedThreadPool = null;
+      if (!abfsConfiguration.isDynamicWriteThreadPoolEnablement()) {
+        // shutdown the threadPool and set it to null.
+        HadoopExecutors.shutdown(boundedThreadPool, LOG,
+            30, TimeUnit.SECONDS);
+        boundedThreadPool = null;
+      }
     } catch (InterruptedException e) {
       LOG.error("Interrupted freeing leases", e);
       Thread.currentThread().interrupt();
     } catch (ExecutionException e) {
       LOG.error("Error freeing leases", e);
     } finally {
-      IOUtils.cleanupWithLogger(LOG, getClientHandler());
+      IOUtils.cleanupWithLogger(LOG, poolSizeManager, getClientHandler());
     }
   }
 
@@ -797,7 +809,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
             .disableOutputStreamFlush(abfsConfiguration.isOutputStreamFlushDisabled())
             .withStreamStatistics(new AbfsOutputStreamStatisticsImpl())
             .withAppendBlob(isAppendBlob)
-            .withWriteMaxConcurrentRequestCount(abfsConfiguration.getWriteMaxConcurrentRequestCount())
+            .withWriteMaxConcurrentRequestCount(abfsConfiguration.getWriteConcurrentRequestCount())
             .withMaxWriteRequestsToQueue(abfsConfiguration.getMaxWriteRequestsToQueue())
             .withLease(lease)
             .withEncryptionAdapter(contextEncryptionAdapter)

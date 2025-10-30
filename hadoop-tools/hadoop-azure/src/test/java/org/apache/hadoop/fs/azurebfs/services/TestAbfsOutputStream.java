@@ -96,7 +96,7 @@ public final class TestAbfsOutputStream {
             .disableOutputStreamFlush(disableOutputStreamFlush)
             .withStreamStatistics(new AbfsOutputStreamStatisticsImpl())
             .withAppendBlob(isAppendBlob)
-            .withWriteMaxConcurrentRequestCount(abfsConf.getWriteMaxConcurrentRequestCount())
+            .withWriteMaxConcurrentRequestCount(abfsConf.getWriteConcurrentRequestCount())
             .withMaxWriteRequestsToQueue(abfsConf.getMaxWriteRequestsToQueue())
             .withClientHandler(clientHandler)
             .withPath(path)
@@ -613,7 +613,7 @@ public final class TestAbfsOutputStream {
       AbfsConfiguration abfsConf) {
     ExecutorService executorService =
         new SemaphoredDelegatingExecutor(BlockingThreadPoolExecutorService.newInstance(
-            abfsConf.getWriteMaxConcurrentRequestCount(),
+            abfsConf.getWriteConcurrentRequestCount(),
             abfsConf.getMaxWriteRequestsToQueue(),
             10L, TimeUnit.SECONDS,
             "abfs-test-bounded"),

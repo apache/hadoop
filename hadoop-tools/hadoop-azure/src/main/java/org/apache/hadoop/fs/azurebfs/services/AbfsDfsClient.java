@@ -154,6 +154,17 @@ import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_RENAME_RECOV
  */
 public class AbfsDfsClient extends AbfsClient {
 
+  /**
+   * Creates an {@code AbfsDfsClient} instance.
+   *
+   * @param baseUrl the base URL of the DFS endpoint
+   * @param sharedKeyCredentials the shared key credentials
+   * @param abfsConfiguration the ABFS configuration
+   * @param tokenProvider the access token provider for authentication
+   * @param encryptionContextProvider the encryption context provider
+   * @param abfsClientContext the ABFS client context
+   * @throws IOException if client initialization fails
+   */
   public AbfsDfsClient(final URL baseUrl,
       final SharedKeyCredentials sharedKeyCredentials,
       final AbfsConfiguration abfsConfiguration,
@@ -164,6 +175,17 @@ public class AbfsDfsClient extends AbfsClient {
         encryptionContextProvider, abfsClientContext, AbfsServiceType.DFS);
   }
 
+  /**
+   * Creates an {@code AbfsDfsClient} instance.
+   *
+   * @param baseUrl the base URL of the DFS endpoint
+   * @param sharedKeyCredentials the shared key credentials
+   * @param abfsConfiguration the ABFS configuration
+   * @param sasTokenProvider the SAS token provider
+   * @param encryptionContextProvider the encryption context provider
+   * @param abfsClientContext the ABFS client context
+   * @throws IOException if client initialization fails
+   */
   public AbfsDfsClient(final URL baseUrl,
       final SharedKeyCredentials sharedKeyCredentials,
       final AbfsConfiguration abfsConfiguration,
