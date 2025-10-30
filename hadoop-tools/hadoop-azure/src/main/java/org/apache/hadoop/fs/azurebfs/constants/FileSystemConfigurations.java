@@ -281,44 +281,104 @@ public final class FileSystemConfigurations {
 
   public static final int DEFAULT_FS_AZURE_BLOB_DELETE_THREAD = DEFAULT_FS_AZURE_LISTING_ACTION_THREADS;
 
+  /**
+   * Whether dynamic write thread pool adjustment is enabled by default.
+   */
   public static final boolean DEFAULT_WRITE_DYNAMIC_THREADPOOL_ENABLEMENT = false;
 
+  /**
+   * Default keep-alive time (in milliseconds) for write thread pool threads.
+   */
   public static final int DEFAULT_WRITE_THREADPOOL_KEEP_ALIVE_TIME_MILLIS = 30_000;
 
+  /**
+   * Minimum interval (in milliseconds) for CPU monitoring during write operations.
+   */
   public static final int MIN_WRITE_CPU_MONITORING_INTERVAL_MILLIS = 10_000;
 
+  /**
+   * Maximum interval (in milliseconds) for CPU monitoring during write operations.
+   */
   public static final int MAX_WRITE_CPU_MONITORING_INTERVAL_MILLIS = 60_000;
 
+  /**
+   * Default interval (in milliseconds) for CPU monitoring during write operations.
+   */
   public static final int DEFAULT_WRITE_CPU_MONITORING_INTERVAL_MILLIS = 15_000;
 
+  /**
+   * Minimum CPU utilization percentage considered as high threshold for write scaling.
+   */
   public static final int MIN_WRITE_HIGH_CPU_THRESHOLD_PERCENT = 65;
 
+  /**
+   * Maximum CPU utilization percentage considered as high threshold for write scaling.
+   */
   public static final int MAX_WRITE_HIGH_CPU_THRESHOLD_PERCENT = 90;
 
+  /**
+   * Default CPU utilization percentage considered as high threshold for write scaling.
+   */
   public static final int DEFAULT_WRITE_HIGH_CPU_THRESHOLD_PERCENT = 80;
 
+  /**
+   * Minimum CPU utilization percentage considered as medium threshold for write scaling.
+   */
   public static final int MIN_WRITE_MEDIUM_CPU_THRESHOLD_PERCENT = 45;
 
+  /**
+   * Maximum CPU utilization percentage considered as medium threshold for write scaling.
+   */
   public static final int MAX_WRITE_MEDIUM_CPU_THRESHOLD_PERCENT = 65;
 
+  /**
+   * Default CPU utilization percentage considered as medium threshold for write scaling.
+   */
   public static final int DEFAULT_WRITE_MEDIUM_CPU_THRESHOLD_PERCENT = 60;
 
+  /**
+   * Minimum CPU utilization percentage considered as low threshold for write scaling.
+   */
   public static final int MIN_WRITE_LOW_CPU_THRESHOLD_PERCENT = 10;
 
+  /**
+   * Maximum CPU utilization percentage considered as low threshold for write scaling.
+   */
   public static final int MAX_WRITE_LOW_CPU_THRESHOLD_PERCENT = 40;
 
+  /**
+   * Default CPU utilization percentage considered as low threshold for write scaling.
+   */
   public static final int DEFAULT_WRITE_LOW_CPU_THRESHOLD_PERCENT = 35;
 
+  /**
+   * Minimum multiplier applied to available memory for low-tier write workloads.
+   */
   public static final int MIN_WRITE_LOW_TIER_MEMORY_MULTIPLIER = 3;
 
+  /**
+   * Default multiplier applied to available memory for low-tier write workloads.
+   */
   public static final int DEFAULT_WRITE_LOW_TIER_MEMORY_MULTIPLIER = 4;
 
+  /**
+   * Minimum multiplier applied to available memory for medium-tier write workloads.
+   */
   public static final int MIN_WRITE_MEDIUM_TIER_MEMORY_MULTIPLIER = 6;
 
+  /**
+   * Default multiplier applied to available memory for medium-tier write workloads.
+   */
   public static final int DEFAULT_WRITE_MEDIUM_TIER_MEMORY_MULTIPLIER = 8;
 
+  /**
+   * Minimum multiplier applied to available memory for high-tier write workloads.
+   */
   public static final int MIN_WRITE_HIGH_TIER_MEMORY_MULTIPLIER = 12;
 
+  /**
+   * Default multiplier applied to available memory for high-tier write workloads.
+   */
   public static final int DEFAULT_WRITE_HIGH_TIER_MEMORY_MULTIPLIER = 16;
 
   public static final boolean DEFAULT_FS_AZURE_ENABLE_CLIENT_TRANSACTION_ID = true;
