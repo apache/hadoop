@@ -91,7 +91,7 @@ public final class FileSystemConfigurations {
   public static final int ONE_KB = 1024;
   public static final int ONE_MB = ONE_KB * ONE_KB;
 
-  // Default upload and download buffer size
+  /** Default buffer sizes and optimization flags. */
   public static final int DEFAULT_WRITE_BUFFER_SIZE = 8 * ONE_MB;  // 8 MB
   public static final int APPENDBLOB_MAX_WRITE_BUFFER_SIZE = 4 * ONE_MB;  // 4 MB
   public static final boolean DEFAULT_AZURE_ENABLE_SMALL_WRITE_OPTIMIZATION = false;
