@@ -46,7 +46,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.classification.VisibleForTesting;
 
-import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_HUNDRED;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.HUNDRED_D;
 
 /**
  * The Improved Read Buffer Manager for Rest AbfsClient.
@@ -148,7 +148,7 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
           cpuMonitoringIntervalInMilliSec
               = abfsConfiguration.getReadAheadV2CpuMonitoringIntervalMillis();
           cpuThreshold = abfsConfiguration.getReadAheadV2CpuUsageThresholdPercent()
-              / ONE_HUNDRED;
+              / HUNDRED_D;
           threadPoolUpscalePercentage
               = abfsConfiguration.getReadAheadV2ThreadPoolUpscalePercentage();
           threadPoolDownscalePercentage
@@ -162,7 +162,7 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
               = abfsConfiguration.getReadAheadV2MemoryMonitoringIntervalMillis();
           memoryThreshold =
               abfsConfiguration.getReadAheadV2MemoryUsageThresholdPercent()
-                  / ONE_HUNDRED;
+                  / HUNDRED_D;
           setThresholdAgeMilliseconds(
               abfsConfiguration.getReadAheadV2CachedBufferTTLMillis());
           isDynamicScalingEnabled
@@ -840,8 +840,8 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
       // Submit more background tasks.
       newThreadPoolSize = Math.min(maxThreadPoolSize,
           (int) Math.ceil(
-              (currentPoolSize * (ONE_HUNDRED + threadPoolUpscalePercentage))
-                  / ONE_HUNDRED));
+              (currentPoolSize * (HUNDRED_D + threadPoolUpscalePercentage))
+                  / HUNDRED_D));
       // Create new Worker Threads
       for (int i = currentPoolSize; i < newThreadPoolSize; i++) {
         ReadBufferWorker worker = new ReadBufferWorker(i, getBufferManager());
@@ -853,8 +853,8 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
     } else if (cpuLoad > cpuThreshold || currentPoolSize > requiredPoolSize) {
       newThreadPoolSize = Math.max(minThreadPoolSize,
           (int) Math.ceil(
-              (currentPoolSize * (ONE_HUNDRED - threadPoolDownscalePercentage))
-                  / ONE_HUNDRED));
+              (currentPoolSize * (HUNDRED_D - threadPoolDownscalePercentage))
+                  / HUNDRED_D));
       // Signal the extra workers to stop
       while (workerRefs.size() > newThreadPoolSize) {
         ReadBufferWorker worker = workerRefs.remove(workerRefs.size() - 1);
