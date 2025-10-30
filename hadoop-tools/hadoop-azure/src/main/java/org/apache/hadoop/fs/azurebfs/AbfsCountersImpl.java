@@ -27,6 +27,7 @@ import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.azurebfs.services.AbfsBackoffMetrics;
 import org.apache.hadoop.fs.azurebfs.services.AbfsCounters;
 import org.apache.hadoop.fs.azurebfs.services.AbfsReadFooterMetrics;
+import org.apache.hadoop.fs.azurebfs.services.AbfsReadThreadPoolMetrics;
 import org.apache.hadoop.fs.azurebfs.utils.MetricFormat;
 import org.apache.hadoop.fs.statistics.DurationTracker;
 import org.apache.hadoop.fs.statistics.IOStatistics;
@@ -108,6 +109,8 @@ public class AbfsCountersImpl implements AbfsCounters {
 
   private AtomicLong lastExecutionTime = null;
 
+  private AbfsReadThreadPoolMetrics abfsReadThreadPoolMetrics = null;
+
   private static final AbfsStatistic[] STATISTIC_LIST = {
       CALL_CREATE,
       CALL_OPEN,
@@ -167,6 +170,10 @@ public class AbfsCountersImpl implements AbfsCounters {
     }
     ioStatisticsStore = ioStatisticsStoreBuilder.build();
     lastExecutionTime = new AtomicLong(now());
+  }
+
+  public void initializeReadMetrics() {
+    abfsReadThreadPoolMetrics = new AbfsReadThreadPoolMetrics();
   }
 
   @Override
@@ -265,6 +272,11 @@ public class AbfsCountersImpl implements AbfsCounters {
   @Override
   public AbfsReadFooterMetrics getAbfsReadFooterMetrics() {
     return abfsReadFooterMetrics != null ? abfsReadFooterMetrics : null;
+  }
+
+  @Override
+  public AbfsReadThreadPoolMetrics getAbfsReadThreadPoolMetrics() {
+    return abfsReadThreadPoolMetrics != null ? abfsReadThreadPoolMetrics : null;
   }
 
   /**
