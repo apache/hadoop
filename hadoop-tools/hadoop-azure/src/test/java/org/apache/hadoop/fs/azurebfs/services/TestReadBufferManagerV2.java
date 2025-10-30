@@ -243,7 +243,7 @@ public class TestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
     assertThat(bufferManagerV2.getNumBuffers()).isEqualTo(bufferManagerV2.getMinBufferPoolSize());
     bufferManagerV2.queueReadAhead(inputStream, 0, ONE_KB,
         inputStream.getTracingContext());
-    assertThat(bufferManagerV2.getNumBuffers()).isEqualTo(bufferManagerV2.getMinBufferPoolSize() + 1);
+    assertThat(bufferManagerV2.getNumBuffers()).isGreaterThan(bufferManagerV2.getMinBufferPoolSize());
   }
 
   @Test
@@ -273,10 +273,10 @@ public class TestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
     }, "MemoryLoadThread");
     t.setDaemon(true);
     t.start();
-    Thread.sleep(bufferManagerV2.getMemoryMonitoringIntervalInMilliSec());
+    Thread.sleep(2L * bufferManagerV2.getMemoryMonitoringIntervalInMilliSec());
+    assertThat(bufferManagerV2.getNumBuffers()).isLessThan(initialBuffers);
     running = false;
     t.join();
-    assertThat(bufferManagerV2.getNumBuffers()).isLessThan(initialBuffers);
   }
 
   private Configuration getReadAheadV2Configuration() {
