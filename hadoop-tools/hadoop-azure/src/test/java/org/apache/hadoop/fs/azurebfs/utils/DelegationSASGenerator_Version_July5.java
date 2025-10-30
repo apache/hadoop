@@ -31,7 +31,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.ROOT_PAT
 /**
  * Test Delegation SAS generator.
  */
-public class DelegationSASGenerator extends SASGenerator {
+public class DelegationSASGenerator_Version_July5 extends SASGenerator {
   private final String skoid;
   private final String sktid;
   private final String skt;
@@ -41,7 +41,7 @@ public class DelegationSASGenerator extends SASGenerator {
   private final String skdutid;
   private final String sduoid;
 
-  public DelegationSASGenerator(byte[] userDelegationKey, String skoid, String sktid, String skt, String ske, String skv, String skdutid, String sduoid) {
+  public DelegationSASGenerator_Version_July5(byte[] userDelegationKey, String skoid, String sktid, String skt, String ske, String skv, String skdutid, String sduoid) {
     super(userDelegationKey);
     this.skoid = skoid;
     this.sktid = sktid;
@@ -55,9 +55,13 @@ public class DelegationSASGenerator extends SASGenerator {
   public String getDelegationSAS(String accountName, String containerName, String path, String operation,
                                  String saoid, String suoid, String scid) {
 
+    // The params for signature computation (particularly the string-to-sign) are different based on the SAS version (sv)
+    // They might need to be changed if using a different version
+    //Ref: https://learn.microsoft.com/en-us/rest/api/storageservices/create-user-delegation-sas
+
+    // SAS version (sv) used here is 2025-07-05
     final String sv = AuthenticationVersion.July5.toString();
-    //todo: this will be removed later. Keeping for now
-    //final String sv = AuthenticationVersion.Feb20.toString();
+
     final String st = ISO_8601_FORMATTER.format(Instant.now().minus(FIVE_MINUTES));
     final String se = ISO_8601_FORMATTER.format(Instant.now().plus(ONE_DAY));
     String sr = "b";
@@ -117,6 +121,7 @@ public class DelegationSASGenerator extends SASGenerator {
 
     String signature = computeSignatureForSAS(sp, st, se, sv, sr, accountName, containerName,
         path, saoid, suoid, scid);
+  //  String signature = "testttsstst";
 
     AbfsUriQueryBuilder qb = new AbfsUriQueryBuilder();
     qb.addQuery("skoid", skoid);
@@ -201,17 +206,16 @@ public class DelegationSASGenerator extends SASGenerator {
     sb.append("\n");
 
     // skdutid, sduoid are sent as empty strings for user-delegation SAS
-    // They are only required for user-bound SAS so added the escape sequences
-    // also inside if checks only
+    // They are only required for user-bound SAS
     if (!Objects.equals(skdutid, EMPTY_STRING)) {
       sb.append(skdutid);
-      sb.append("\n");
     }
+    sb.append("\n");
 
     if (!Objects.equals(sduoid, EMPTY_STRING)) {
       sb.append(sduoid);
-      sb.append("\n");
     }
+    sb.append("\n");
 
 
     sb.append("\n"); // sip
@@ -220,11 +224,13 @@ public class DelegationSASGenerator extends SASGenerator {
     sb.append("\n");
     sb.append(sr);
     sb.append("\n");
+    sb.append("\n"); // - For optional : signedSnapshotTime
+    sb.append("\n"); // - For optional :signedEncryptionScope
     sb.append("\n"); // - For optional : rscc - ResponseCacheControl
     sb.append("\n"); // - For optional : rscd - ResponseContentDisposition
     sb.append("\n"); // - For optional : rsce - ResponseContentEncoding
     sb.append("\n"); // - For optional : rscl - ResponseContentLanguage
-    sb.append("\n"); // - For optional : rsct - ResponseContentType
+    //No escape sequence required for optional param rsct - ResponseContentType
 
     String stringToSign = sb.toString();
     LOG.debug("Delegation SAS stringToSign: " + stringToSign.replace("\n", "."));
