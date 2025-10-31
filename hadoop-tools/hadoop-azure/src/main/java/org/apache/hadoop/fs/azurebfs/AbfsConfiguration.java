@@ -483,6 +483,53 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_APACHE_HTTP_CLIENT_MAX_IO_EXCEPTION_RETRIES)
   private int maxApacheHttpClientIoExceptionsRetries;
 
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_WRITE_DYNAMIC_THREADPOOL_ENABLEMENT,
+      DefaultValue = DEFAULT_WRITE_DYNAMIC_THREADPOOL_ENABLEMENT)
+  private boolean dynamicWriteThreadPoolEnablement;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_WRITE_THREADPOOL_KEEP_ALIVE_TIME_MILLIS,
+      DefaultValue = DEFAULT_WRITE_THREADPOOL_KEEP_ALIVE_TIME_MILLIS)
+  private int writeThreadPoolKeepAliveTime;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_WRITE_CPU_MONITORING_INTERVAL_MILLIS,
+      MinValue = MIN_WRITE_CPU_MONITORING_INTERVAL_MILLIS,
+      MaxValue = MAX_WRITE_CPU_MONITORING_INTERVAL_MILLIS,
+      DefaultValue = DEFAULT_WRITE_CPU_MONITORING_INTERVAL_MILLIS)
+  private int writeCpuMonitoringInterval;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_WRITE_HIGH_CPU_THRESHOLD_PERCENT,
+      MinValue = MIN_WRITE_HIGH_CPU_THRESHOLD_PERCENT,
+      MaxValue = MAX_WRITE_HIGH_CPU_THRESHOLD_PERCENT,
+      DefaultValue = DEFAULT_WRITE_HIGH_CPU_THRESHOLD_PERCENT)
+  private int writeHighCpuThreshold;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_WRITE_MEDIUM_CPU_THRESHOLD_PERCENT,
+      MinValue = MIN_WRITE_MEDIUM_CPU_THRESHOLD_PERCENT,
+      MaxValue = MAX_WRITE_MEDIUM_CPU_THRESHOLD_PERCENT,
+      DefaultValue = DEFAULT_WRITE_MEDIUM_CPU_THRESHOLD_PERCENT)
+  private int writeMediumCpuThreshold;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_WRITE_LOW_CPU_THRESHOLD_PERCENT,
+      MinValue = MIN_WRITE_LOW_CPU_THRESHOLD_PERCENT,
+      MaxValue = MAX_WRITE_LOW_CPU_THRESHOLD_PERCENT,
+      DefaultValue = DEFAULT_WRITE_LOW_CPU_THRESHOLD_PERCENT)
+  private int writeLowCpuThreshold;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_WRITE_LOW_TIER_MEMORY_MULTIPLIER,
+      MinValue = MIN_WRITE_LOW_TIER_MEMORY_MULTIPLIER,
+      DefaultValue = DEFAULT_WRITE_LOW_TIER_MEMORY_MULTIPLIER)
+  private int lowTierMemoryMultiplier;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_WRITE_MEDIUM_TIER_MEMORY_MULTIPLIER,
+      MinValue = MIN_WRITE_MEDIUM_TIER_MEMORY_MULTIPLIER,
+      DefaultValue = DEFAULT_WRITE_MEDIUM_TIER_MEMORY_MULTIPLIER)
+  private int mediumTierMemoryMultiplier;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_WRITE_HIGH_TIER_MEMORY_MULTIPLIER,
+      MinValue = MIN_WRITE_HIGH_TIER_MEMORY_MULTIPLIER,
+      DefaultValue = DEFAULT_WRITE_HIGH_TIER_MEMORY_MULTIPLIER)
+  private int highTierMemoryMultiplier;
+
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey =
       FS_AZURE_APACHE_HTTP_CLIENT_MAX_CACHE_SIZE, DefaultValue = DEFAULT_APACHE_HTTP_CLIENT_MAX_CACHE_SIZE,
       MinValue = MIN_APACHE_HTTP_CLIENT_MAX_CACHE_SIZE, MaxValue = MAX_APACHE_HTTP_CLIENT_MAX_CACHE_SIZE)
@@ -1678,16 +1725,52 @@ public class AbfsConfiguration{
         oauthTokenFetchRetryDeltaBackoff);
   }
 
-  public int getWriteMaxConcurrentRequestCount() {
+  public int getWriteConcurrentRequestCount() {
     if (this.writeMaxConcurrentRequestCount < 1) {
       return 4 * Runtime.getRuntime().availableProcessors();
     }
     return this.writeMaxConcurrentRequestCount;
   }
 
+  public int getWriteThreadPoolKeepAliveTime() {
+    return writeThreadPoolKeepAliveTime;
+  }
+
+  public int getWriteCpuMonitoringInterval() {
+    return writeCpuMonitoringInterval;
+  }
+
+  public boolean isDynamicWriteThreadPoolEnablement() {
+    return dynamicWriteThreadPoolEnablement;
+  }
+
+  public int getWriteLowCpuThreshold() {
+    return writeLowCpuThreshold;
+  }
+
+  public int getWriteMediumCpuThreshold() {
+    return writeMediumCpuThreshold;
+  }
+
+  public int getWriteHighCpuThreshold() {
+    return writeHighCpuThreshold;
+  }
+
+  public int getLowTierMemoryMultiplier() {
+    return lowTierMemoryMultiplier;
+  }
+
+  public int getMediumTierMemoryMultiplier() {
+    return mediumTierMemoryMultiplier;
+  }
+
+  public int getHighTierMemoryMultiplier() {
+    return highTierMemoryMultiplier;
+  }
+
   public int getMaxWriteRequestsToQueue() {
     if (this.maxWriteRequestsToQueue < 1) {
-      return 2 * getWriteMaxConcurrentRequestCount();
+      return 2 * getWriteConcurrentRequestCount();
     }
     return this.maxWriteRequestsToQueue;
   }

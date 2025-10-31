@@ -31,7 +31,7 @@ On Linux / Mac:
 
     $ ./start-build-env.sh [OS platform]
 
-   - [OS Platform] One of [rockylinux_8, debian_11, ubuntu_20, ubuntu_24, windows_10].
+   - [OS Platform] One of [rockylinux_8, debian_11, debian_12, debian_13, ubuntu_20, ubuntu_24, windows_10].
         Default is 'ubuntu_20'.
         Note: Currently only default ('ubuntu_20') is supported on arm machine
 
