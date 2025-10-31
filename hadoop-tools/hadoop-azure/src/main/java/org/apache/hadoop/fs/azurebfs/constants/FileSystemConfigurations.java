@@ -129,12 +129,19 @@ public final class FileSystemConfigurations {
 
   public static final boolean DEFAULT_ENABLE_READAHEAD = true;
   public static final boolean DEFAULT_ENABLE_READAHEAD_V2 = false;
-  public static final int DEFAULT_READAHEAD_V2_MIN_THREAD_POOL_SIZE = -1;
+  public static final boolean DEFAULT_ENABLE_READAHEAD_V2_DYNAMIC_SCALING = false;
+  public static final int DEFAULT_READAHEAD_V2_MIN_THREAD_POOL_SIZE = 8;
   public static final int DEFAULT_READAHEAD_V2_MAX_THREAD_POOL_SIZE = -1;
-  public static final int DEFAULT_READAHEAD_V2_MIN_BUFFER_POOL_SIZE = -1;
+  public static final int DEFAULT_READAHEAD_V2_MIN_BUFFER_POOL_SIZE = 16;
   public static final int DEFAULT_READAHEAD_V2_MAX_BUFFER_POOL_SIZE = -1;
-  public static final int DEFAULT_READAHEAD_V2_EXECUTOR_SERVICE_TTL_MILLIS = 3_000;
+  public static final int DEFAULT_READAHEAD_V2_CPU_MONITORING_INTERVAL_MILLIS = 6_000;
+  public static final int DEFAULT_READAHEAD_V2_THREAD_POOL_UPSCALE_PERCENTAGE = 20;
+  public static final int DEFAULT_READAHEAD_V2_THREAD_POOL_DOWNSCALE_PERCENTAGE = 30;
+  public static final int DEFAULT_READAHEAD_V2_MEMORY_MONITORING_INTERVAL_MILLIS = 6_000;
+  public static final int DEFAULT_READAHEAD_V2_EXECUTOR_SERVICE_TTL_MILLIS = 6_000;
   public static final int DEFAULT_READAHEAD_V2_CACHED_BUFFER_TTL_MILLIS = 6_000;
+  public static final int DEFAULT_READAHEAD_V2_CPU_USAGE_THRESHOLD_PERCENTAGE = 50;
+  public static final int DEFAULT_READAHEAD_V2_MEMORY_USAGE_THRESHOLD_PERCENTAGE = 50;
 
   public static final String DEFAULT_FS_AZURE_USER_AGENT_PREFIX = EMPTY_STRING;
   public static final String DEFAULT_VALUE_UNKNOWN = "UNKNOWN";
@@ -211,6 +218,7 @@ public final class FileSystemConfigurations {
 
   public static final int ZERO = 0;
   public static final int HUNDRED = 100;
+  public static final double HUNDRED_D = 100.0;
   public static final long THOUSAND = 1000L;
 
   public static final HttpOperationType DEFAULT_NETWORKING_LIBRARY

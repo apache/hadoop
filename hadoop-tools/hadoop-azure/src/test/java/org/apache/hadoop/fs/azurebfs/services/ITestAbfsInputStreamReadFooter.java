@@ -260,8 +260,8 @@ public class ITestAbfsInputStreamReadFooter extends AbstractAbfsScaleTest {
         try (AzureBlobFileSystem spiedFs = createSpiedFs(
             getRawConfiguration())) {
           String fileName = methodName.getMethodName() + fileId;
-          byte[] fileContent = abfsInputStreamTestUtils.getRandomBytesArray(fileSize);
-          Path testFilePath = abfsInputStreamTestUtils.createFileWithContent(spiedFs, fileName,
+          byte[] fileContent = getRandomBytesArray(fileSize);
+          Path testFilePath = createFileWithContent(spiedFs, fileName,
               fileContent);
           for (int readBufferSize : READ_BUFFER_SIZE) {
             validateSeekAndReadWithConf(spiedFs, optimizeFooterRead, seekTo,
@@ -391,8 +391,8 @@ public class ITestAbfsInputStreamReadFooter extends AbstractAbfsScaleTest {
       futureList.add(executorService.submit(() -> {
         try (AzureBlobFileSystem spiedFs = createSpiedFs(
             getRawConfiguration())) {
-          byte[] fileContent = abfsInputStreamTestUtils.getRandomBytesArray(fileSize);
-          Path testFilePath = abfsInputStreamTestUtils.createFileWithContent(spiedFs, fileName,
+          byte[] fileContent = getRandomBytesArray(fileSize);
+          Path testFilePath = createFileWithContent(spiedFs, fileName,
               fileContent);
           validatePartialReadWithNoData(spiedFs, fileSize, fileContent,
               testFilePath);
@@ -463,8 +463,8 @@ public class ITestAbfsInputStreamReadFooter extends AbstractAbfsScaleTest {
         try (AzureBlobFileSystem spiedFs = createSpiedFs(
             getRawConfiguration())) {
           String fileName = methodName.getMethodName() + fileId;
-          byte[] fileContent = abfsInputStreamTestUtils.getRandomBytesArray(fileSize);
-          Path testFilePath = abfsInputStreamTestUtils.createFileWithContent(spiedFs, fileName,
+          byte[] fileContent = getRandomBytesArray(fileSize);
+          Path testFilePath = createFileWithContent(spiedFs, fileName,
               fileContent);
           validatePartialReadWithSomeData(spiedFs, fileSize, testFilePath,
               fileContent);
@@ -585,8 +585,8 @@ public class ITestAbfsInputStreamReadFooter extends AbstractAbfsScaleTest {
   private Path createPathAndFileWithContent(final AzureBlobFileSystem fs,
       final int fileIdx, final int fileSize) throws Exception {
     String fileName = methodName.getMethodName() + fileIdx;
-    byte[] fileContent = abfsInputStreamTestUtils.getRandomBytesArray(fileSize);
-    return abfsInputStreamTestUtils.createFileWithContent(fs, fileName, fileContent);
+    byte[] fileContent = getRandomBytesArray(fileSize);
+    return createFileWithContent(fs, fileName, fileContent);
   }
 
   private FutureDataInputStreamBuilder getParameterizedBuilder(final Path path,
