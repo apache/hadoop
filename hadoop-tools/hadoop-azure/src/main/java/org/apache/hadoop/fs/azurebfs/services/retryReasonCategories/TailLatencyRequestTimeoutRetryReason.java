@@ -24,8 +24,7 @@ import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.TAIL_L
 /**
  * Retry reason category for tail latency request timeout scenarios.
  */
-public class TailLatencyRequestTimeoutRetryReason  extends
-    RetryReasonCategory {
+public class TailLatencyRequestTimeoutRetryReason extends RetryReasonCategory {
 
   /**
    * Get abbreviation for the tail latency request timeout retry reason.

@@ -43,24 +43,34 @@ public class AbfsTailLatencyTracker {
   private static final ReentrantLock LOCK = new ReentrantLock();
   private static final int HISTOGRAM_MAX_VALUE = 60_000;
   private static final int HISTOGRAM_SIGNIFICANT_FIGURES = 3;
+
   private final Map<AbfsRestOperationType, SlidingWindowHdrHistogram>
       operationLatencyMap = new HashMap<>();
-  private final AbfsConfiguration configuration;
+  private final int talLatencyAnalysisWindowInMillis;
+  private final int tailLatencyAnalysisWindowGranularity;
+  private final int tailLatencyPercentile;
+  private final int tailLatencyMinSampleSize;
+  private final int tailLatencyMinDeviation;
+  private final int tailLatencyComputationIntervalInMillis;
 
   /**
    * Constructor to initialize the latency tracker with configuration.
    * @param abfsConfiguration Configuration settings for latency tracking.
    */
   public AbfsTailLatencyTracker(final AbfsConfiguration abfsConfiguration) {
-    this.configuration = abfsConfiguration;
+    this.talLatencyAnalysisWindowInMillis = abfsConfiguration.getTailLatencyAnalysisWindowInMillis();
+    this.tailLatencyAnalysisWindowGranularity = abfsConfiguration.getTailLatencyAnalysisWindowGranularity();
+    this.tailLatencyPercentile = abfsConfiguration.getTailLatencyPercentile();
+    this.tailLatencyMinSampleSize = abfsConfiguration.getTailLatencyMinSampleSize();
+    this.tailLatencyMinDeviation = abfsConfiguration.getTailLatencyMinDeviation();
+    this.tailLatencyComputationIntervalInMillis = abfsConfiguration.getTailLatencyComputationIntervalInMillis();
     ScheduledExecutorService histogramRotatorThread = Executors.newSingleThreadScheduledExecutor(
         r -> {
           Thread t = new Thread(r, "Histogram-Rotator-Thread");
           t.setDaemon(true);
           return t;
         });
-    long rotationInterval = configuration.getTailLatencyAnalysisWindowInMillis()
-        / configuration.getTailLatencyAnalysisWindowGranularity();
+    long rotationInterval = talLatencyAnalysisWindowInMillis/tailLatencyAnalysisWindowGranularity;
     histogramRotatorThread.scheduleAtFixedRate(this::rotateHistograms,
         rotationInterval, rotationInterval, TimeUnit.MILLISECONDS);
 
@@ -71,10 +81,8 @@ public class AbfsTailLatencyTracker {
           t.setDaemon(true);
           return t;
         });
-
-    long computationalInterval = configuration.getTailLatencyComputationIntervalInMillis();
     tailLatencyComputationThread.scheduleAtFixedRate(this::computePercentiles,
-        computationalInterval, computationalInterval, TimeUnit.MILLISECONDS);
+        tailLatencyComputationIntervalInMillis, tailLatencyComputationIntervalInMillis, TimeUnit.MILLISECONDS);
   }
 
   /**
@@ -131,11 +139,11 @@ public class AbfsTailLatencyTracker {
         if (operationLatencyMap.get(operationType) == null) {
           LOG.debug("Creating new histogram for operation: {}", operationType);
           histogram = new SlidingWindowHdrHistogram(
-              configuration.getTailLatencyAnalysisWindowInMillis(),
-              configuration.getTailLatencyAnalysisWindowGranularity(),
-              configuration.getTailLatencyMinSampleSize(),
-              configuration.getTailLatencyPercentile(),
-              configuration.getTailLatencyMinDeviation(),
+              talLatencyAnalysisWindowInMillis,
+              tailLatencyAnalysisWindowGranularity,
+              tailLatencyMinSampleSize,
+              tailLatencyPercentile,
+              tailLatencyMinDeviation,
               HISTOGRAM_MAX_VALUE, HISTOGRAM_SIGNIFICANT_FIGURES,
               operationType);
           operationLatencyMap.put(operationType, histogram);

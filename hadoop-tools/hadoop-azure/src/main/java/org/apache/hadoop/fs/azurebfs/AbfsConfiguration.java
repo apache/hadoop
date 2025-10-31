@@ -1945,35 +1945,67 @@ public class AbfsConfiguration{
     return blobDeleteDirConsumptionParallelism;
   }
 
+  /**
+   * Checks if the tail latency tracker is enabled.
+   * @return true if enabled, false otherwise.
+   */
   public boolean isTailLatencyTrackerEnabled() {
     return isTailLatencyTrackerEnabled;
   }
 
+  /**
+   * Checks if the tail latency request timeout feature is enabled.
+   * @return true if enabled, false otherwise.
+   */
   public boolean isTailLatencyRequestTimeoutEnabled() {
     return isTailLatencyTrackerEnabled && isTailLatencyRequestTimeoutEnabled
         && getPreferredHttpOperationType().equals(HttpOperationType.APACHE_HTTP_CLIENT);
   }
 
+  /**
+   * Gets the tail latency percentile to be tracked.
+   * @return the tail latency percentile.
+   */
   public int getTailLatencyPercentile() {
     return tailLatencyPercentile;
   }
 
+  /**
+   * Gets the minimum deviation for tail latency tracking.
+   * @return the minimum deviation.
+   */
   public int getTailLatencyMinDeviation() {
     return tailLatencyMinDeviation;
   }
 
+  /**
+   * Gets the minimum sample size for tail latency reporting.
+   * @return the minimum sample size.
+   */
   public int getTailLatencyMinSampleSize() {
     return tailLatencyMinSampleSize;
   }
 
+  /**
+   * Gets the tail latency analysis window in milliseconds.
+   * @return the analysis window in milliseconds.
+   */
   public int getTailLatencyAnalysisWindowInMillis() {
     return tailLatencyAnalysisWindowInMillis;
   }
 
+  /**
+   * Gets the interval for tail latency percentile computation in milliseconds.
+   * @return the computation interval in milliseconds.
+   */
   public int getTailLatencyComputationIntervalInMillis() {
     return tailLatencyPercentileComputationIntervalInMillis;
   }
 
+  /**
+   * Gets the granularity of the tail latency analysis window.
+   * @return the analysis window granularity.
+   */
   public int getTailLatencyAnalysisWindowGranularity() {
     if (tailLatencyAnalysisWindowGranularity <= 0) {
         return MIN_FS_AZURE_TAIL_LATENCY_ANALYSIS_WINDOW_GRANULARITY;
@@ -1981,6 +2013,10 @@ public class AbfsConfiguration{
     return tailLatencyAnalysisWindowGranularity;
   }
 
+  /**
+   * Gets the maximum retry count for tail latency requests.
+   * @return the maximum retry count.
+   */
   public int getTailLatencyMaxRetryCount() {
     return tailLatencyMaxRetryCount;
   }

@@ -20,6 +20,11 @@ package org.apache.hadoop.fs.azurebfs.services;
 
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 
+import static org.apache.hadoop.fs.azurebfs.services.RetryPolicyConstants.TAIL_LATENCY_TIMEOUT_RETRY_POLICY_ABBREVIATION;
+
+/**
+ * Retry policy for tail latency request timeout scenarios.
+ */
 public class TailLatencyRequestTimeoutRetryPolicy extends AbfsRetryPolicy{
 
   /**
@@ -27,7 +32,7 @@ public class TailLatencyRequestTimeoutRetryPolicy extends AbfsRetryPolicy{
    * @param conf The {@link AbfsConfiguration} from which to retrieve retry configuration.
    */
   public TailLatencyRequestTimeoutRetryPolicy(AbfsConfiguration conf) {
-    super(conf.getTailLatencyMaxRetryCount(), RetryPolicyConstants.TAIL_LATENCY_TIMEOUT_RETRY_POLICY_ABBREVIATION);
+    super(conf.getTailLatencyMaxRetryCount(), TAIL_LATENCY_TIMEOUT_RETRY_POLICY_ABBREVIATION);
   }
 
   /**

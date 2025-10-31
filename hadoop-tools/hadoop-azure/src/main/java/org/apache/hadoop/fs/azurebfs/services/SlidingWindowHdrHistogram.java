@@ -30,13 +30,14 @@ import org.apache.hadoop.classification.VisibleForTesting;
 
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.HUNDRED;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ZERO;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ZERO_D;
 
 /**
  * Sliding Window HdrHistogram for tracking latencies over a time window.
  * Uses a ring buffer of histograms to represent time segments within the window.
  * Thread-safe for concurrent recording and querying.
  */
-public class SlidingWindowHdrHistogram {
+public final class SlidingWindowHdrHistogram {
 
   private static final Logger LOG = LoggerFactory.getLogger(
       SlidingWindowHdrHistogram.class);
@@ -77,11 +78,11 @@ public class SlidingWindowHdrHistogram {
   private double tailLatencyPercentile;
   private int tailLatencyMinDeviation;
 
-  private double p50 = 0.0;
-  private double p90 = 0.0;
-  private double p99 = 0.0;
-  private double tailLatency = 0.0;
-  private int deviation = 0;
+  private double p50 = ZERO_D;
+  private double p90 = ZERO_D;
+  private double p99 = ZERO_D;
+  private double tailLatency = ZERO_D;
+  private int deviation = ZERO;
 
   public SlidingWindowHdrHistogram(long windowSizeMillis,
       int numberOfSegments,
@@ -91,13 +92,13 @@ public class SlidingWindowHdrHistogram {
       long highestTrackableValue,
       int significantFigures,
       final AbfsRestOperationType operationType) {
-    if (windowSizeMillis <= 0) {
+    if (windowSizeMillis <= ZERO) {
       throw new IllegalArgumentException("windowSizeMillis > 0");
     }
-    if (numberOfSegments <= 0) {
+    if (numberOfSegments <= ZERO) {
       throw new IllegalArgumentException("numberOfSegments > 0");
     }
-    if (highestTrackableValue <= 0) {
+    if (highestTrackableValue <= ZERO) {
       throw new IllegalArgumentException("highestTrackableValue > 0");
     }
     if (significantFigures < 1 || significantFigures > 5) {
@@ -222,7 +223,7 @@ public class SlidingWindowHdrHistogram {
       activeSegmentRecorder.getIntervalHistogramInto(tmpForDelta);
       currentSegmentAccumulation.add(tmpForDelta);
 
-      if (currentSegmentAccumulation.getTotalCount() <= 0) {
+      if (currentSegmentAccumulation.getTotalCount() <= ZERO) {
         currentSegmentStartMillis = alignToSegmentDuration(
             System.currentTimeMillis());
         LOG.debug(
@@ -241,7 +242,7 @@ public class SlidingWindowHdrHistogram {
       // Next slot is now going to be eradicated. Remove its count from total.
       currentTotalCount.set(
           currentTotalCount.get() - (completedSegments[currentIdx] == null
-              ? 0
+              ? ZERO
               : completedSegments[currentIdx].getTotalCount()));
       // Store an immutable snapshot (make sure we don't mutate the instance after storing)
       completedSegments[currentIdx] = currentSegmentAccumulation;
@@ -275,7 +276,7 @@ public class SlidingWindowHdrHistogram {
    * @return adjusted percentile
    */
   public static double adjustPercentile(int number) {
-    if (number <= 100) {
+    if (number <= HUNDRED) {
       return number; // No change for numbers ≤ 100
     }
 
@@ -295,13 +296,13 @@ public class SlidingWindowHdrHistogram {
       LOG.debug(
           "[{}] Analysis window not yet filled. Not reporting tail latency",
           operationType);
-      return 0.0;
+      return ZERO_D;
     }
     if (deviation < tailLatencyMinDeviation) {
       LOG.debug(
           "[{}] Tail latency deviation {}% is less than minimum required {}%. Not reporting tail latency",
           operationType, deviation, tailLatencyMinDeviation);
-      return 0.0;
+      return ZERO_D;
     }
     return tailLatency;
   }
