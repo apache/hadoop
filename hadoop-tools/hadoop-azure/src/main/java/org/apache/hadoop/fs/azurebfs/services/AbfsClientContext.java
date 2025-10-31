@@ -51,6 +51,10 @@ public class AbfsClientContext {
     return staticRetryPolicy;
   }
 
+  /**
+   * Get Tail Latency Request Timeout Retry Policy.
+   * @return TailLatencyRequestTimeoutRetryPolicy instance.
+   */
   public TailLatencyRequestTimeoutRetryPolicy getTailLatencyRequestTimeoutRetryPolicy() {
     return tailLatencyRequestTimeoutRetryPolicy;
   }
