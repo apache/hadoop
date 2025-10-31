@@ -28,12 +28,25 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.HUNDRED;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ZERO;
+
+/**
+ * Sliding Window HdrHistogram for tracking latencies over a time window.
+ * Uses a ring buffer of histograms to represent time segments within the window.
+ * Thread-safe for concurrent recording and querying.
+ */
 public class SlidingWindowHdrHistogram {
-  private static final Logger LOG = LoggerFactory.getLogger(SlidingWindowHdrHistogram.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(
+      SlidingWindowHdrHistogram.class);
+  private static final int PERCENTILE_50 = 50;
+  private static final int PERCENTILE_90 = 90;
+  private static final int PERCENTILE_99 = 99;
 
   // Configuration
   private final long windowSizeMillis;          // Total analysis window
-  private final long timeSegmentDurationMillis;       // Subdivision on analysis window
+  private final long timeSegmentDurationMillis; // Subdivision on analysis window
   private final int numSegments;
   private final long highestTrackableValue;
   private final int significantFigures;
@@ -78,14 +91,22 @@ public class SlidingWindowHdrHistogram {
       long highestTrackableValue,
       int significantFigures,
       final AbfsRestOperationType operationType) {
-    if (windowSizeMillis <= 0) throw new IllegalArgumentException("windowSizeMillis > 0");
-    if (numberOfSegments <= 0) throw new IllegalArgumentException("numberOfSegments > 0");
-    if (highestTrackableValue <= 0) throw new IllegalArgumentException("highestTrackableValue > 0");
-    if (significantFigures < 1 || significantFigures > 5) throw new IllegalArgumentException("significantFigures in [1,5]");
+    if (windowSizeMillis <= 0) {
+      throw new IllegalArgumentException("windowSizeMillis > 0");
+    }
+    if (numberOfSegments <= 0) {
+      throw new IllegalArgumentException("numberOfSegments > 0");
+    }
+    if (highestTrackableValue <= 0) {
+      throw new IllegalArgumentException("highestTrackableValue > 0");
+    }
+    if (significantFigures < 1 || significantFigures > 5) {
+      throw new IllegalArgumentException("significantFigures in [1,5]");
+    }
 
     this.windowSizeMillis = windowSizeMillis;
     this.numSegments = numberOfSegments;
-    this.timeSegmentDurationMillis = windowSizeMillis/numberOfSegments;
+    this.timeSegmentDurationMillis = windowSizeMillis / numberOfSegments;
     this.highestTrackableValue = highestTrackableValue;
     this.significantFigures = significantFigures;
     this.operationType = operationType;
@@ -97,15 +118,23 @@ public class SlidingWindowHdrHistogram {
     long now = System.currentTimeMillis();
     this.currentSegmentStartMillis = alignToSegmentDuration(now);
     currentIndex.set(0);
-    this.activeSegmentRecorder = new Recorder(highestTrackableValue, significantFigures);
-    this.currentSegmentAccumulation = new Histogram(highestTrackableValue, significantFigures);
+    this.activeSegmentRecorder = new Recorder(highestTrackableValue,
+        significantFigures);
+    this.currentSegmentAccumulation = new Histogram(highestTrackableValue,
+        significantFigures);
     this.tmpForDelta = new Histogram(highestTrackableValue, significantFigures);
     this.tmpForMerge = new Histogram(highestTrackableValue, significantFigures);
 
-    LOG.debug("[{}] Initialized SlidingWindowHdrHistogram with WindowSize {}, TimeSegmentDur: {}, NumOfSegments: {}", operationType, windowSizeMillis, timeSegmentDurationMillis, numSegments);
+    LOG.debug(
+        "[{}] Initialized SlidingWindowHdrHistogram with WindowSize {}, TimeSegmentDur: {}, "
+            + "NumOfSegments: {}", operationType, windowSizeMillis, timeSegmentDurationMillis,
+        numSegments);
   }
 
-  /** Record a single latency value (in your chosen time unit). Thread-safe and lock-free. */
+  /**
+   * Record a single latency value (in your chosen time unit). Thread-safe and lock-free.
+   * @param value latency value to record
+   */
   public void recordValue(long value) {
     if (value < 0 || value > highestTrackableValue) {
       LOG.warn("[{}] Value {} outside of range [0, {}]. Ignoring",
@@ -118,10 +147,13 @@ public class SlidingWindowHdrHistogram {
         operationType, value, currentTotalCount.get());
   }
 
-  /** Get any percentile over the current sliding window. */
+  /**
+   * Get any percentile over the current sliding window.
+   */
   public void computeLatency() {
     if (getCurrentTotalCount() < minSampleSize) {
-      LOG.debug("[{}] Not enough data to report percentiles. Current total count: {}",
+      LOG.debug(
+          "[{}] Not enough data to report percentiles. Current total count: {}",
           operationType, getCurrentTotalCount());
       return;
     } else {
@@ -135,35 +167,44 @@ public class SlidingWindowHdrHistogram {
           }
         }
 
-        if (tmpForMerge.getTotalCount() == 0) return;
+        if (tmpForMerge.getTotalCount() == 0) {
+          return;
+        }
 
         tailLatency = tmpForMerge.getValueAtPercentile(tailLatencyPercentile);
-        p50 = tmpForMerge.getValueAtPercentile(50);
-        p90 = tmpForMerge.getValueAtPercentile(90);
-        p99 = tmpForMerge.getValueAtPercentile(99);
-        if (p50 == 0 || tailLatency < p50) {
-          deviation = 0;
+        p50 = tmpForMerge.getValueAtPercentile(PERCENTILE_50);
+        p90 = tmpForMerge.getValueAtPercentile(PERCENTILE_90);
+        p99 = tmpForMerge.getValueAtPercentile(PERCENTILE_99);
+        if (p50 == ZERO || tailLatency < p50) {
+          deviation = ZERO;
         } else {
-          deviation = (int) ((tailLatency - p50) / p50 * 100);
+          deviation = (int) ((tailLatency - p50) / p50 * HUNDRED);
         }
       } finally {
         rotateLock.unlock();
       }
     }
-    LOG.debug("[{}] Computed Latencies. p50: {}, p90: {}, p99: {}, tailLatency: {}, deviation with p50: {} Current total count: {}",
-        operationType, p50, p90, p99, tailLatency, deviation, getCurrentTotalCount());
+    LOG.debug(
+        "[{}] Computed Latencies. p50: {}, p90: {}, p99: {}, tailLatency: {}, "
+            + "deviation with p50: {} Current total count: {}",
+        operationType, p50, p90, p99, tailLatency, deviation,
+        getCurrentTotalCount());
   }
 
   private long alignToSegmentDuration(long timeMs) {
     return timeMs - (timeMs % timeSegmentDurationMillis);
   }
 
-  /** Ensure active bucket is aligned to current time; rotate if we've crossed a boundary. */
+  /**
+   * Ensure active bucket is aligned to current time; rotate if we've crossed a boundary.
+   */
   public void rotateIfNeeded() {
     LOG.debug("[{}] Triggering Histogram Rotation", operationType);
     long expectedStart = alignToSegmentDuration(System.currentTimeMillis());
     if (expectedStart == currentSegmentStartMillis) {
-      LOG.debug("[{}] Current Time Segment Still Active at {}. Skipping Rotation", operationType, expectedStart);
+      LOG.debug(
+          "[{}] Current Time Segment Still Active at {}. Skipping Rotation",
+          operationType, expectedStart);
       return; // still current
     }
 
@@ -171,7 +212,9 @@ public class SlidingWindowHdrHistogram {
     try {
       // Re-check inside lock
       expectedStart = alignToSegmentDuration(System.currentTimeMillis());
-      if (expectedStart == currentSegmentStartMillis) return;
+      if (expectedStart == currentSegmentStartMillis) {
+        return;
+      }
 
       // Finalize the current bucket:
       // Pull any remaining deltas from active recorder and add to currentAccumulation
@@ -180,26 +223,36 @@ public class SlidingWindowHdrHistogram {
       currentSegmentAccumulation.add(tmpForDelta);
 
       if (currentSegmentAccumulation.getTotalCount() <= 0) {
-        currentSegmentStartMillis = alignToSegmentDuration(System.currentTimeMillis());
-        LOG.debug("[{}] No data recorded in current time segment at {}. Skipping Rotation. Current Index is {}.",
+        currentSegmentStartMillis = alignToSegmentDuration(
+            System.currentTimeMillis());
+        LOG.debug(
+            "[{}] No data recorded in current time segment at {}. Skipping Rotation. Current Index is {}.",
             operationType, currentSegmentStartMillis, currentIndex.get());
         return;
       }
 
-      LOG.debug("[{}] Rotating current segment with total count {} into slot {}",
-          operationType, currentSegmentAccumulation.getTotalCount(), currentIndex.get());
+      LOG.debug(
+          "[{}] Rotating current segment with total count {} into slot {}",
+          operationType, currentSegmentAccumulation.getTotalCount(),
+          currentIndex.get());
 
       // Place the finished currentAccumulation into the ring buffer slot ahead.
       int currentIdx = (currentIndex.getAndIncrement()) % numSegments;
       // Next slot is now going to be eradicated. Remove its count from total.
-      currentTotalCount.set(currentTotalCount.get() - (completedSegments[currentIdx] == null ? 0 : completedSegments[currentIdx].getTotalCount()));
+      currentTotalCount.set(
+          currentTotalCount.get() - (completedSegments[currentIdx] == null
+              ? 0
+              : completedSegments[currentIdx].getTotalCount()));
       // Store an immutable snapshot (make sure we don't mutate the instance after storing)
       completedSegments[currentIdx] = currentSegmentAccumulation;
-      currentSegmentStartMillis = alignToSegmentDuration(System.currentTimeMillis());
+      currentSegmentStartMillis = alignToSegmentDuration(
+          System.currentTimeMillis());
 
       // Start a fresh current bucket
-      currentSegmentAccumulation = new Histogram(highestTrackableValue, significantFigures);
-      activeSegmentRecorder = new Recorder(highestTrackableValue, significantFigures);
+      currentSegmentAccumulation = new Histogram(highestTrackableValue,
+          significantFigures);
+      activeSegmentRecorder = new Recorder(highestTrackableValue,
+          significantFigures);
 
       if (currentIndex.get() >= numSegments) {
         LOG.debug("[{}] Analysis window is now filled", operationType);
@@ -207,8 +260,10 @@ public class SlidingWindowHdrHistogram {
         // Prevent overflow of currentIndex
         currentIndex.set(currentIndex.get() % numSegments);
       }
-      LOG.debug("[{}] Completed rotation. New current index {}, New segment start time {}, New total count {}",
-          operationType, currentIndex.get(), currentSegmentStartMillis, currentTotalCount.get());
+      LOG.debug(
+          "[{}] Completed rotation. New current index {}, New segment start time {}, New total count {}",
+          operationType, currentIndex.get(), currentSegmentStartMillis,
+          currentTotalCount.get());
     } finally {
       rotateLock.unlock();
     }
@@ -231,14 +286,20 @@ public class SlidingWindowHdrHistogram {
 
   @VisibleForTesting
   public double getTailLatency() {
-    LOG.debug("[{}] Getting Tail Latency. Current total count: {}, Deviation: {}%, p50: {}, Tail Latency: {}, isAnalysisWindowFilled: {}",
-        operationType, getCurrentTotalCount(), deviation, p50, tailLatency, isAnalysisWindowFilled);
+    LOG.debug(
+        "[{}] Getting Tail Latency. Current total count: {}, Deviation: {}%, "
+            + "p50: {}, Tail Latency: {}, isAnalysisWindowFilled: {}",
+        operationType, getCurrentTotalCount(), deviation, p50, tailLatency,
+        isAnalysisWindowFilled);
     if (!isAnalysisWindowFilled()) {
-      LOG.debug("[{}] Analysis window not yet filled. Not reporting tail latency", operationType);
+      LOG.debug(
+          "[{}] Analysis window not yet filled. Not reporting tail latency",
+          operationType);
       return 0.0;
     }
     if (deviation < tailLatencyMinDeviation) {
-      LOG.debug("[{}] Tail latency deviation {}% is less than minimum required {}%. Not reporting tail latency",
+      LOG.debug(
+          "[{}] Tail latency deviation {}% is less than minimum required {}%. Not reporting tail latency",
           operationType, deviation, tailLatencyMinDeviation);
       return 0.0;
     }

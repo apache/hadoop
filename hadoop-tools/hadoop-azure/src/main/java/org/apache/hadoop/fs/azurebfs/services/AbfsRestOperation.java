@@ -369,7 +369,7 @@ public class AbfsRestOperation {
   @VisibleForTesting
   void updateBackoffMetrics(int retryCount, int statusCode) {
     if (abfsBackoffMetrics != null) {
-      if (statusCode < HTTP_OK
+      if (statusCode < HttpURLConnection.HTTP_OK
               || statusCode >= HttpURLConnection.HTTP_INTERNAL_ERROR) {
         synchronized (this) {
           if (retryCount >= maxIoRetries) {
@@ -463,7 +463,7 @@ public class AbfsRestOperation {
       }
         incrementCounter(AbfsStatistic.GET_RESPONSES, 1);
       //Only increment bytesReceived counter when the status code is 2XX.
-      if (httpOperation.getStatusCode() >= HTTP_OK
+      if (httpOperation.getStatusCode() >= HttpURLConnection.HTTP_OK
           && httpOperation.getStatusCode() <= HttpURLConnection.HTTP_PARTIAL) {
         incrementCounter(AbfsStatistic.BYTES_RECEIVED,
             httpOperation.getBytesReceived());

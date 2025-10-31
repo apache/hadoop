@@ -31,11 +31,18 @@ import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_NETWORKING_LIBRARY;
 import static org.assertj.core.api.Assertions.assertThat;
 
+/**
+ * Tests for AbfsTailLatencyTracker related configurations.
+ */
 public class ITestAbfsTailLatencyTracker extends AbstractAbfsIntegrationTest {
 
   protected ITestAbfsTailLatencyTracker() throws Exception {
   }
 
+  /**
+   * Test to verify that tail latency timeout is enabled and disabled with all conditions.
+   * @throws Exception
+   */
   @Test
   public void testTailLatencyTimeoutEnabled() throws Exception {
     Configuration conf = new Configuration(getRawConfiguration());

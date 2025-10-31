@@ -51,7 +51,7 @@ public class AbfsTailLatencyTracker {
    * Constructor to initialize the latency tracker with configuration.
    * @param abfsConfiguration Configuration settings for latency tracking.
    */
-  public AbfsTailLatencyTracker(AbfsConfiguration abfsConfiguration) {
+  public AbfsTailLatencyTracker(final AbfsConfiguration abfsConfiguration) {
     this.configuration = abfsConfiguration;
     ScheduledExecutorService histogramRotatorThread = Executors.newSingleThreadScheduledExecutor(
         r -> {
@@ -145,6 +145,10 @@ public class AbfsTailLatencyTracker {
       }
     } else {
       LOG.debug("Using existing histogram for operation: {}",  operationType);
+    }
+    if (histogram == null) {
+      LOG.error("Unable to find/create histogram for: {}", operationType);
+      return;
     }
     histogram.recordValue(latency);
     LOG.debug("Updated latency for operation: {} with latency: {}",

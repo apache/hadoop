@@ -234,6 +234,7 @@ public final class FileSystemConfigurations {
   public static final int RATE_LIMIT_DEFAULT = 1_000;
 
   public static final int ZERO = 0;
+  public static final double ZERO_D = 0.0;
   public static final int HUNDRED = 100;
   public static final double HUNDRED_D = 100.0;
   public static final long THOUSAND = 1000L;

@@ -21,15 +21,33 @@ package org.apache.hadoop.fs.azurebfs.services.retryReasonCategories;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_TAIL_LATENCY_REQUEST_TIMEOUT;
 import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.TAIL_LATENCY_REQUEST_TIMEOUT_ABBREVIATION;
 
+/**
+ * Retry reason category for tail latency request timeout scenarios.
+ */
 public class TailLatencyRequestTimeoutRetryReason  extends
     RetryReasonCategory {
 
+  /**
+   * Get abbreviation for the tail latency request timeout retry reason.
+   * @param statusCode statusCode on the server response
+   * @param serverErrorMessage serverErrorMessage on the server response.
+   *
+   * @return abbreviation string.
+   */
   @Override
   String getAbbreviation(final Integer statusCode,
       final String serverErrorMessage) {
     return TAIL_LATENCY_REQUEST_TIMEOUT_ABBREVIATION;
   }
 
+  /**
+   * Determine if the exception can be captured as a tail latency request timeout.
+   * @param ex exception captured in the server response.
+   * @param statusCode statusCode on the server response
+   * @param serverErrorMessage serverErrorMessage on the server response.
+   *
+   * @return true if it can be captured, false otherwise.
+   */
   @Override
   Boolean canCapture(final Exception ex,
       final Integer statusCode,
