@@ -268,5 +268,11 @@ public final class FileSystemConfigurations {
 
   public static final boolean DEFAULT_FS_AZURE_ENABLE_PREFETCH_REQUEST_PRIORITY = false;
 
+  // The default traffic request priority is 3 (from service)
+  // The lowest priority a request can get is 7
+  public static final int DEFAULT_FS_AZURE_PREFETCH_REQUEST_PRIORITY_VALUE = 7;
+
+  public static final int DEFAULT_FS_AZURE_MIN_PREFETCH_REQUEST_PRIORITY_VALUE = 3;
+
   private FileSystemConfigurations() {}
 }

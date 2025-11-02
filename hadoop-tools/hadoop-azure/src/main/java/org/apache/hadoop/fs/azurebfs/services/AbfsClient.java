@@ -62,6 +62,7 @@ import org.apache.hadoop.fs.azurebfs.constants.AbfsServiceType;
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.constants.HttpOperationType;
+import org.apache.hadoop.fs.azurebfs.constants.ReadType;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsDriverException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsInvalidChecksumException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
@@ -139,6 +140,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.HTTPS
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.ACCEPT_CHARSET;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.CONTENT_MD5;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.CONTENT_TYPE;
+import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.PREFETCH_TRAFFIC_PRIORITY_HEADER;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.USER_AGENT;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_ENCRYPTION_ALGORITHM;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_ENCRYPTION_CONTEXT;
@@ -157,6 +159,7 @@ public abstract class AbfsClient implements Closeable {
   public static final String HUNDRED_CONTINUE_USER_AGENT = SINGLE_WHITE_SPACE + HUNDRED_CONTINUE + SEMICOLON;
   public static final String ABFS_CLIENT_TIMER_THREAD_NAME = "abfs-timer-client";
   public static final String FNS_BLOB_USER_AGENT_IDENTIFIER = "FNS";
+  private static final String PREFETCH_TRAFFIC_PRIORITY_HEADER_VALUE = "7";
 
   private final URL baseUrl;
   private final SharedKeyCredentials sharedKeyCredentials;
@@ -1376,6 +1379,15 @@ public abstract class AbfsClient implements Closeable {
       final AppendRequestParameters reqParams) {
     if (reqParams.getMd5() != null) {
       requestHeaders.add(new AbfsHttpHeader(CONTENT_MD5, reqParams.getMd5()));
+    }
+  }
+
+  protected void addRequestPriorityForPrefetch(List<AbfsHttpHeader> requestHeaders,
+      TracingContext tracingContext) {
+    if (getAbfsConfiguration().isEnablePrefetchRequestPriority()
+        && ReadType.PREFETCH_READ.equals(tracingContext.getReadType())) {
+      requestHeaders.add(new AbfsHttpHeader(PREFETCH_TRAFFIC_PRIORITY_HEADER,
+          getAbfsConfiguration().getPrefetchRequestPriorityValue()));
     }
   }
 

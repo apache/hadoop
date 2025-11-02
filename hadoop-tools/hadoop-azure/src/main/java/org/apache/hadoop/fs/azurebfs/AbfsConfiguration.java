@@ -519,9 +519,14 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_FS_AZURE_ENABLE_CREATE_BLOB_IDEMPOTENCY)
   private boolean enableCreateIdempotency;
 
-  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ENABLE_REQUEST_PRIORITY_FOR_PREFETCH,
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ENABLE_PREFETCH_REQUEST_PRIORITY,
       DefaultValue = DEFAULT_FS_AZURE_ENABLE_PREFETCH_REQUEST_PRIORITY)
   private boolean enablePrefetchRequestPriority;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_PREFETCH_REQUEST_PRIORITY_VALUE,
+      MinValue = DEFAULT_FS_AZURE_MIN_PREFETCH_REQUEST_PRIORITY_VALUE,
+      DefaultValue = DEFAULT_FS_AZURE_PREFETCH_REQUEST_PRIORITY_VALUE)
+  private int prefetchRequestPriorityValue;
 
   private String clientProvidedEncryptionKey;
   private String clientProvidedEncryptionKeySHA;
@@ -1242,6 +1247,10 @@ public class AbfsConfiguration{
 
   public boolean isEnablePrefetchRequestPriority() {
     return enablePrefetchRequestPriority;
+  }
+
+  public String getPrefetchRequestPriorityValue() {
+    return Integer.toString(prefetchRequestPriorityValue);
   }
 
   /**

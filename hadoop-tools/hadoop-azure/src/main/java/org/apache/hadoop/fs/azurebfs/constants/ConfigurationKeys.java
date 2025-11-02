@@ -280,7 +280,13 @@ public final class ConfigurationKeys {
    * Enable or disable request priority for prefetch requests
    * Value: {@value}.
    */
-  public static final String FS_AZURE_ENABLE_REQUEST_PRIORITY_FOR_PREFETCH = "fs.azure.enable.prefetch.request.priority";
+  public static final String FS_AZURE_ENABLE_PREFETCH_REQUEST_PRIORITY = "fs.azure.enable.prefetch.request.priority";
+
+  /**
+   * Enable or disable request priority for prefetch requests
+   * Value: {@value}.
+   */
+  public static final String FS_AZURE_PREFETCH_REQUEST_PRIORITY_VALUE = "fs.azure.prefetch.request.priority.value";
 
   /**
    * Minimum number of prefetch threads in the thread pool for readahead V2.
