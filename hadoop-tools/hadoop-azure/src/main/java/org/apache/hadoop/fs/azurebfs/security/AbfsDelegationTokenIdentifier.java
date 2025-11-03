@@ -37,16 +37,29 @@ public class AbfsDelegationTokenIdentifier extends DelegationTokenIdentifier {
    */
   public static final Text TOKEN_KIND = new Text("ABFS delegation");
 
-  public AbfsDelegationTokenIdentifier(){
+  /** Creates an {@code AbfsDelegationTokenIdentifier} with the default ABFS token kind. */
+  public AbfsDelegationTokenIdentifier() {
     super(TOKEN_KIND);
   }
 
+  /**
+   * Creates an {@code AbfsDelegationTokenIdentifier} with the specified token kind.
+   *
+   * @param kind the token kind to use
+   */
   public AbfsDelegationTokenIdentifier(Text kind) {
     super(kind);
   }
 
-  public AbfsDelegationTokenIdentifier(Text kind, Text owner, Text renewer,
-      Text realUser) {
+  /**
+   * Creates an {@code AbfsDelegationTokenIdentifier} with the specified details.
+   *
+   * @param kind the token kind
+   * @param owner the token owner
+   * @param renewer the token renewer
+   * @param realUser the real user on whose behalf the token was issued
+   */
+  public AbfsDelegationTokenIdentifier(Text kind, Text owner, Text renewer, Text realUser) {
     super(kind, owner, renewer, realUser);
   }
 

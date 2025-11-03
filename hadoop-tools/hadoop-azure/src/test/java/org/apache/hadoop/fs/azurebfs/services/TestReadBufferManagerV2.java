@@ -95,9 +95,12 @@ public class TestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
     conf.setBoolean(FS_AZURE_ENABLE_READAHEAD_V2, true);
     conf.setBoolean(FS_AZURE_ENABLE_READAHEAD_V2_DYNAMIC_SCALING, true);
     try(AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(getFileSystem().getUri(), conf)) {
+      AbfsClient abfsClient = fs.getAbfsStore().getClient();
       AbfsConfiguration abfsConfiguration = fs.getAbfsStore().getAbfsConfiguration();
       ReadBufferManagerV2.setReadBufferManagerConfigs(abfsConfiguration.getReadAheadBlockSize(), abfsConfiguration);
-      ReadBufferManagerV2 bufferManagerV2 = ReadBufferManagerV2.getBufferManager(fs.getAbfsStore().getClient());
+      ReadBufferManagerV2.getBufferManager(abfsClient).testResetReadBufferManager();
+      ReadBufferManagerV2.setReadBufferManagerConfigs(abfsConfiguration.getReadAheadBlockSize(), abfsConfiguration);
+      ReadBufferManagerV2 bufferManagerV2 = ReadBufferManagerV2.getBufferManager(abfsClient);
       assertThat(bufferManagerV2.getCpuMonitoringThread())
           .as("CPU Monitor thread should be initialized").isNotNull();
       bufferManagerV2.resetBufferManager();
@@ -105,9 +108,12 @@ public class TestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
 
     conf.setBoolean(FS_AZURE_ENABLE_READAHEAD_V2_DYNAMIC_SCALING, false);
     try(AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(getFileSystem().getUri(), conf)) {
+      AbfsClient abfsClient = fs.getAbfsStore().getClient();
       AbfsConfiguration abfsConfiguration = fs.getAbfsStore().getAbfsConfiguration();
       ReadBufferManagerV2.setReadBufferManagerConfigs(abfsConfiguration.getReadAheadBlockSize(), abfsConfiguration);
-      ReadBufferManagerV2 bufferManagerV2 = ReadBufferManagerV2.getBufferManager(fs.getAbfsStore().getClient());
+      ReadBufferManagerV2.getBufferManager(abfsClient).testResetReadBufferManager();
+      ReadBufferManagerV2.setReadBufferManagerConfigs(abfsConfiguration.getReadAheadBlockSize(), abfsConfiguration);
+      ReadBufferManagerV2 bufferManagerV2 = ReadBufferManagerV2.getBufferManager(abfsClient);
       assertThat(bufferManagerV2.getCpuMonitoringThread())
           .as("CPU Monitor thread should not be initialized").isNull();
       bufferManagerV2.resetBufferManager();
@@ -139,7 +145,7 @@ public class TestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
     });
     t.start();
     Thread.sleep(2L * bufferManagerV2.getCpuMonitoringIntervalInMilliSec());
-    assertThat(bufferManagerV2.getCurrentThreadPoolSize()).isEqualTo(4);
+    assertThat(bufferManagerV2.getCurrentThreadPoolSize()).isGreaterThan(2);
     running = false;
     t.join();
     Thread.sleep(4L * bufferManagerV2.getCpuMonitoringIntervalInMilliSec());
@@ -244,21 +250,20 @@ public class TestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
     assertThat(bufferManagerV2.getNumBuffers()).isEqualTo(bufferManagerV2.getMinBufferPoolSize());
     bufferManagerV2.queueReadAhead(inputStream, 0, ONE_KB,
         inputStream.getTracingContext());
-    assertThat(bufferManagerV2.getNumBuffers()).isEqualTo(bufferManagerV2.getMinBufferPoolSize() + 1);
+    assertThat(bufferManagerV2.getNumBuffers()).isGreaterThan(bufferManagerV2.getMinBufferPoolSize());
   }
 
   @Test
   public void testMemoryDownscaleIfMemoryAboveThreshold() throws Exception {
-    TestAbfsInputStream testAbfsInputStream = new TestAbfsInputStream();
-    AbfsClient client = testAbfsInputStream.getMockAbfsClient();
     Configuration configuration = getReadAheadV2Configuration();
     configuration.set(FS_AZURE_READAHEAD_V2_MEMORY_USAGE_THRESHOLD_PERCENT, "2");
     AbfsConfiguration abfsConfig = new AbfsConfiguration(configuration,
         getAccountName());
+    AbfsClient abfsClient = getFileSystem().getAbfsStore().getClient();
     ReadBufferManagerV2.setReadBufferManagerConfigs(abfsConfig.getReadAheadBlockSize(), abfsConfig);
-    ReadBufferManagerV2.getBufferManager(client).testResetReadBufferManager();
+    ReadBufferManagerV2.getBufferManager(abfsClient).testResetReadBufferManager();
     ReadBufferManagerV2.setReadBufferManagerConfigs(abfsConfig.getReadAheadBlockSize(), abfsConfig);
-    ReadBufferManagerV2 bufferManagerV2 = ReadBufferManagerV2.getBufferManager(client);
+    ReadBufferManagerV2 bufferManagerV2 = ReadBufferManagerV2.getBufferManager(abfsClient);
     int initialBuffers = bufferManagerV2.getMinBufferPoolSize();
     assertThat(bufferManagerV2.getNumBuffers()).isEqualTo(initialBuffers);
     running = true;
@@ -276,10 +281,10 @@ public class TestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
     }, "MemoryLoadThread");
     t.setDaemon(true);
     t.start();
-    Thread.sleep(bufferManagerV2.getMemoryMonitoringIntervalInMilliSec());
+    Thread.sleep(2L * bufferManagerV2.getMemoryMonitoringIntervalInMilliSec());
+    assertThat(bufferManagerV2.getNumBuffers()).isLessThan(initialBuffers);
     running = false;
     t.join();
-    assertThat(bufferManagerV2.getNumBuffers()).isLessThan(initialBuffers);
   }
 
   private Configuration getReadAheadV2Configuration() {

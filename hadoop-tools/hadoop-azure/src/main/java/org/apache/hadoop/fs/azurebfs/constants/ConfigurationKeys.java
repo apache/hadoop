@@ -497,10 +497,93 @@ public final class ConfigurationKeys {
   public static final String FS_AZURE_BLOB_DIR_RENAME_MAX_THREAD = "fs.azure.blob.dir.rename.max.thread";
   /**Maximum number of thread per blob-delete orchestration: {@value}*/
   public static final String FS_AZURE_BLOB_DIR_DELETE_MAX_THREAD = "fs.azure.blob.dir.delete.max.thread";
+
+  /** Configuration key for the keep-alive time (ms) for the write thread pool. Value: {@value}. */
+  public static final String FS_AZURE_WRITE_THREADPOOL_KEEP_ALIVE_TIME_MILLIS = "fs.azure.write.threadpool.keep.alive.time.millis";
+
+  /** Configuration key for the CPU monitoring interval (ms) during write operations. Value: {@value}. */
+  public static final String FS_AZURE_WRITE_CPU_MONITORING_INTERVAL_MILLIS = "fs.azure.write.cpu.monitoring.interval.millis";
+
+  /** Configuration key to enable or disable dynamic write thread pool adjustment. Value: {@value}. */
+  public static final String FS_AZURE_WRITE_DYNAMIC_THREADPOOL_ENABLEMENT = "fs.azure.write.dynamic.threadpool.enablement";
+
+  /** Configuration key for the high CPU utilization threshold (%) for write scaling. Value: {@value}. */
+  public static final String FS_AZURE_WRITE_HIGH_CPU_THRESHOLD_PERCENT = "fs.azure.write.high.cpu.threshold.percent";
+
+  /** Configuration key for the medium CPU utilization threshold (%) for write scaling. Value: {@value}. */
+  public static final String FS_AZURE_WRITE_MEDIUM_CPU_THRESHOLD_PERCENT = "fs.azure.write.medium.cpu.threshold.percent";
+
+  /** Configuration key for the low CPU utilization threshold (%) for write scaling. Value: {@value}. */
+  public static final String FS_AZURE_WRITE_LOW_CPU_THRESHOLD_PERCENT = "fs.azure.write.low.cpu.threshold.percent";
+
+  /** Configuration key for the low-tier memory multiplier for write workloads. Value: {@value}. */
+  public static final String FS_AZURE_WRITE_LOW_TIER_MEMORY_MULTIPLIER = "fs.azure.write.low.tier.memory.multiplier";
+
+  /** Configuration key for the medium-tier memory multiplier for write workloads. Value: {@value}. */
+  public static final String FS_AZURE_WRITE_MEDIUM_TIER_MEMORY_MULTIPLIER = "fs.azure.write.medium.tier.memory.multiplier";
+
+  /** Configuration key for the high-tier memory multiplier for write workloads. Value: {@value}. */
+  public static final String FS_AZURE_WRITE_HIGH_TIER_MEMORY_MULTIPLIER = "fs.azure.write.high.tier.memory.multiplier";
+
   /**Flag to enable/disable sending client transactional ID during create/rename operations: {@value}*/
   public static final String FS_AZURE_ENABLE_CLIENT_TRANSACTION_ID = "fs.azure.enable.client.transaction.id";
   /**Flag to enable/disable create idempotency during create operation: {@value}*/
   public static final String FS_AZURE_ENABLE_CREATE_BLOB_IDEMPOTENCY = "fs.azure.enable.create.blob.idempotency";
+
+  /**
+   * Flag to enable/disable tail latency tracker for AbfsRestOperation.
+   * When enabled, Client observed E2E latency will be tracked by a histogram.
+   * Regular p50, p99 and configured percentile latencies will be reported.
+   */
+  public static final String FS_AZURE_ENABLE_TAIL_LATENCY_TRACKER = "fs.azure.enable.tail.latency.tracker";
+
+  /**
+   * Flag to enable/disable tail latency based timeout for AbfsRestOperation.
+   * When enabled, if an operation's latency exceeds the currently reported tail
+   * latency by the tracker, the ongoing socket connection will be closed and
+   * the operation will be retried, up to the configured max retry count: {@value}
+   */
+  public static final String FS_AZURE_ENABLE_TAIL_LATENCY_REQUEST_TIMEOUT = "fs.azure.enable.tail.latency.timeout";
+
+  /**
+   * The percentile value to be considered as tail latency value.
+   * Default is 99.0 (99th percentile): {@value}
+   */
+  public static final String FS_AZURE_TAIL_LATENCY_PERCENTILE = "fs.azure.tail.latency.percentile";
+
+  /**
+   * The minimum deviation (in percentage) between p50 and tail latency
+   * percentile to trigger tail latency based request timeout: {@value}
+   */
+  public static final String FS_AZURE_TAIL_LATENCY_MIN_DEVIATION = "fs.azure.tail.latency.min.deviation";
+
+  /**
+   * The minimum sample size required before the histogram starts reporting latency data: {@value}
+   */
+  public static final String FS_AZURE_TAIL_LATENCY_MIN_SAMPLE_SIZE = "fs.azure.tail.latency.min.sample.size";
+
+  /**
+   * The time window (in milliseconds) over which the tail latency analysis is performed.
+   * Until the whole window is filled, the histogram will not report any latency data: {@value}
+   */
+  public static final String FS_AZURE_TAIL_LATENCY_ANALYSIS_WINDOW_MILLIS = "fs.azure.tail.latency.analysis.window.millis";
+
+  /**
+   * The granularity (in milliseconds) at which the tail latency analysis window is divided.
+   * This is to make sliding window calculations efficient and robust: {@value}
+   */
+  public static final String FS_AZURE_TAIL_LATENCY_ANALYSIS_WINDOW_GRANULARITY = "fs.azure.tail.latency.analysis.window.granularity";
+
+  /**
+   * Interval (in milliseconds) at which the tail latency percentile is computed
+   * and updated by the background thread for each operation type: {@value}
+   */
+  public static final String FS_AZURE_TAIL_LATENCY_PERCENTILE_COMPUTATION_INTERVAL_MILLIS = "fs.azure.tail.latency.percentile.computation.interval.millis";
+
+  /**
+   * Maximum number of retries for an operation when tail latency based timeout occur: {@value}
+   */
+  public static final String FS_AZURE_TAIL_LATENCY_MAX_RETRY_COUNT = "fs.azure.tail.latency.max.retry.count";
 
   private ConfigurationKeys() {}
 }

@@ -518,6 +518,53 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_APACHE_HTTP_CLIENT_MAX_IO_EXCEPTION_RETRIES)
   private int maxApacheHttpClientIoExceptionsRetries;
 
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_WRITE_DYNAMIC_THREADPOOL_ENABLEMENT,
+      DefaultValue = DEFAULT_WRITE_DYNAMIC_THREADPOOL_ENABLEMENT)
+  private boolean dynamicWriteThreadPoolEnablement;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_WRITE_THREADPOOL_KEEP_ALIVE_TIME_MILLIS,
+      DefaultValue = DEFAULT_WRITE_THREADPOOL_KEEP_ALIVE_TIME_MILLIS)
+  private int writeThreadPoolKeepAliveTime;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_WRITE_CPU_MONITORING_INTERVAL_MILLIS,
+      MinValue = MIN_WRITE_CPU_MONITORING_INTERVAL_MILLIS,
+      MaxValue = MAX_WRITE_CPU_MONITORING_INTERVAL_MILLIS,
+      DefaultValue = DEFAULT_WRITE_CPU_MONITORING_INTERVAL_MILLIS)
+  private int writeCpuMonitoringInterval;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_WRITE_HIGH_CPU_THRESHOLD_PERCENT,
+      MinValue = MIN_WRITE_HIGH_CPU_THRESHOLD_PERCENT,
+      MaxValue = MAX_WRITE_HIGH_CPU_THRESHOLD_PERCENT,
+      DefaultValue = DEFAULT_WRITE_HIGH_CPU_THRESHOLD_PERCENT)
+  private int writeHighCpuThreshold;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_WRITE_MEDIUM_CPU_THRESHOLD_PERCENT,
+      MinValue = MIN_WRITE_MEDIUM_CPU_THRESHOLD_PERCENT,
+      MaxValue = MAX_WRITE_MEDIUM_CPU_THRESHOLD_PERCENT,
+      DefaultValue = DEFAULT_WRITE_MEDIUM_CPU_THRESHOLD_PERCENT)
+  private int writeMediumCpuThreshold;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_WRITE_LOW_CPU_THRESHOLD_PERCENT,
+      MinValue = MIN_WRITE_LOW_CPU_THRESHOLD_PERCENT,
+      MaxValue = MAX_WRITE_LOW_CPU_THRESHOLD_PERCENT,
+      DefaultValue = DEFAULT_WRITE_LOW_CPU_THRESHOLD_PERCENT)
+  private int writeLowCpuThreshold;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_WRITE_LOW_TIER_MEMORY_MULTIPLIER,
+      MinValue = MIN_WRITE_LOW_TIER_MEMORY_MULTIPLIER,
+      DefaultValue = DEFAULT_WRITE_LOW_TIER_MEMORY_MULTIPLIER)
+  private int lowTierMemoryMultiplier;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_WRITE_MEDIUM_TIER_MEMORY_MULTIPLIER,
+      MinValue = MIN_WRITE_MEDIUM_TIER_MEMORY_MULTIPLIER,
+      DefaultValue = DEFAULT_WRITE_MEDIUM_TIER_MEMORY_MULTIPLIER)
+  private int mediumTierMemoryMultiplier;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_WRITE_HIGH_TIER_MEMORY_MULTIPLIER,
+      MinValue = MIN_WRITE_HIGH_TIER_MEMORY_MULTIPLIER,
+      DefaultValue = DEFAULT_WRITE_HIGH_TIER_MEMORY_MULTIPLIER)
+  private int highTierMemoryMultiplier;
+
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey =
       FS_AZURE_APACHE_HTTP_CLIENT_MAX_CACHE_SIZE, DefaultValue = DEFAULT_APACHE_HTTP_CLIENT_MAX_CACHE_SIZE,
       MinValue = MIN_APACHE_HTTP_CLIENT_MAX_CACHE_SIZE, MaxValue = MAX_APACHE_HTTP_CLIENT_MAX_CACHE_SIZE)
@@ -553,6 +600,43 @@ public class AbfsConfiguration{
   @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ENABLE_CREATE_BLOB_IDEMPOTENCY,
       DefaultValue = DEFAULT_FS_AZURE_ENABLE_CREATE_BLOB_IDEMPOTENCY)
   private boolean enableCreateIdempotency;
+
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ENABLE_TAIL_LATENCY_TRACKER,
+      DefaultValue = DEFAULT_FS_AZURE_ENABLE_TAIL_LATENCY_TRACKER)
+  private boolean isTailLatencyTrackerEnabled;
+
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ENABLE_TAIL_LATENCY_REQUEST_TIMEOUT,
+      DefaultValue = DEFAULT_FS_AZURE_ENABLE_TAIL_LATENCY_REQUEST_TIMEOUT)
+  private boolean isTailLatencyRequestTimeoutEnabled;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_TAIL_LATENCY_PERCENTILE,
+      DefaultValue = DEFAULT_FS_AZURE_TAIL_LATENCY_PERCENTILE)
+  private int tailLatencyPercentile;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_TAIL_LATENCY_MIN_DEVIATION,
+      DefaultValue = DEFAULT_FS_AZURE_TAIL_LATENCY_MIN_DEVIATION)
+  private int tailLatencyMinDeviation;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_TAIL_LATENCY_MIN_SAMPLE_SIZE,
+      DefaultValue = DEFAULT_FS_AZURE_TAIL_LATENCY_MIN_SAMPLE_SIZE)
+  private int tailLatencyMinSampleSize;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_TAIL_LATENCY_ANALYSIS_WINDOW_MILLIS,
+      DefaultValue = DEFAULT_FS_AZURE_TAIL_LATENCY_ANALYSIS_WINDOW_MILLIS)
+  private int tailLatencyAnalysisWindowInMillis;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_TAIL_LATENCY_ANALYSIS_WINDOW_GRANULARITY,
+      DefaultValue = DEFAULT_FS_AZURE_TAIL_LATENCY_ANALYSIS_WINDOW_GRANULARITY,
+      MinValue = MIN_FS_AZURE_TAIL_LATENCY_ANALYSIS_WINDOW_GRANULARITY)
+  private int tailLatencyAnalysisWindowGranularity;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_TAIL_LATENCY_PERCENTILE_COMPUTATION_INTERVAL_MILLIS,
+      DefaultValue = DEFAULT_FS_AZURE_TAIL_LATENCY_PERCENTILE_COMPUTATION_INTERVAL_MILLIS)
+  private int tailLatencyPercentileComputationIntervalInMillis;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_TAIL_LATENCY_MAX_RETRY_COUNT,
+      DefaultValue = DEFAULT_FS_AZURE_TAIL_LATENCY_MAX_RETRY_COUNT)
+  private int tailLatencyMaxRetryCount;
 
   private String clientProvidedEncryptionKey;
   private String clientProvidedEncryptionKeySHA;
@@ -1554,7 +1638,7 @@ public class AbfsConfiguration{
   public int getMinReadAheadV2ThreadPoolSize() {
     if (minReadAheadV2ThreadPoolSize <= 0) {
       // If the minReadAheadV2ThreadPoolSize is not set, use the default value
-      return 2 * Runtime.getRuntime().availableProcessors();
+      return DEFAULT_READAHEAD_V2_MIN_THREAD_POOL_SIZE;
     }
     return minReadAheadV2ThreadPoolSize;
   }
@@ -1704,16 +1788,52 @@ public class AbfsConfiguration{
         oauthTokenFetchRetryDeltaBackoff);
   }
 
-  public int getWriteMaxConcurrentRequestCount() {
+  public int getWriteConcurrentRequestCount() {
     if (this.writeMaxConcurrentRequestCount < 1) {
       return 4 * Runtime.getRuntime().availableProcessors();
     }
     return this.writeMaxConcurrentRequestCount;
   }
 
+  public int getWriteThreadPoolKeepAliveTime() {
+    return writeThreadPoolKeepAliveTime;
+  }
+
+  public int getWriteCpuMonitoringInterval() {
+    return writeCpuMonitoringInterval;
+  }
+
+  public boolean isDynamicWriteThreadPoolEnablement() {
+    return dynamicWriteThreadPoolEnablement;
+  }
+
+  public int getWriteLowCpuThreshold() {
+    return writeLowCpuThreshold;
+  }
+
+  public int getWriteMediumCpuThreshold() {
+    return writeMediumCpuThreshold;
+  }
+
+  public int getWriteHighCpuThreshold() {
+    return writeHighCpuThreshold;
+  }
+
+  public int getLowTierMemoryMultiplier() {
+    return lowTierMemoryMultiplier;
+  }
+
+  public int getMediumTierMemoryMultiplier() {
+    return mediumTierMemoryMultiplier;
+  }
+
+  public int getHighTierMemoryMultiplier() {
+    return highTierMemoryMultiplier;
+  }
+
   public int getMaxWriteRequestsToQueue() {
     if (this.maxWriteRequestsToQueue < 1) {
-      return 2 * getWriteMaxConcurrentRequestCount();
+      return 2 * getWriteConcurrentRequestCount();
     }
     return this.maxWriteRequestsToQueue;
   }
@@ -1886,5 +2006,81 @@ public class AbfsConfiguration{
 
   public int getBlobDeleteDirConsumptionParallelism() {
     return blobDeleteDirConsumptionParallelism;
+  }
+
+  /**
+   * Checks if the tail latency tracker is enabled.
+   * @return true if enabled, false otherwise.
+   */
+  public boolean isTailLatencyTrackerEnabled() {
+    return isTailLatencyTrackerEnabled;
+  }
+
+  /**
+   * Checks if the tail latency request timeout feature is enabled.
+   * @return true if enabled, false otherwise.
+   */
+  public boolean isTailLatencyRequestTimeoutEnabled() {
+    return isTailLatencyTrackerEnabled && isTailLatencyRequestTimeoutEnabled
+        && getPreferredHttpOperationType().equals(HttpOperationType.APACHE_HTTP_CLIENT);
+  }
+
+  /**
+   * Gets the tail latency percentile to be tracked.
+   * @return the tail latency percentile.
+   */
+  public int getTailLatencyPercentile() {
+    return tailLatencyPercentile;
+  }
+
+  /**
+   * Gets the minimum deviation for tail latency tracking.
+   * @return the minimum deviation.
+   */
+  public int getTailLatencyMinDeviation() {
+    return tailLatencyMinDeviation;
+  }
+
+  /**
+   * Gets the minimum sample size for tail latency reporting.
+   * @return the minimum sample size.
+   */
+  public int getTailLatencyMinSampleSize() {
+    return tailLatencyMinSampleSize;
+  }
+
+  /**
+   * Gets the tail latency analysis window in milliseconds.
+   * @return the analysis window in milliseconds.
+   */
+  public int getTailLatencyAnalysisWindowInMillis() {
+    return tailLatencyAnalysisWindowInMillis;
+  }
+
+  /**
+   * Gets the interval for tail latency percentile computation in milliseconds.
+   * @return the computation interval in milliseconds.
+   */
+  public int getTailLatencyComputationIntervalInMillis() {
+    return tailLatencyPercentileComputationIntervalInMillis;
+  }
+
+  /**
+   * Gets the granularity of the tail latency analysis window.
+   * @return the analysis window granularity.
+   */
+  public int getTailLatencyAnalysisWindowGranularity() {
+    if (tailLatencyAnalysisWindowGranularity <= 0) {
+        return MIN_FS_AZURE_TAIL_LATENCY_ANALYSIS_WINDOW_GRANULARITY;
+    }
+    return tailLatencyAnalysisWindowGranularity;
+  }
+
+  /**
+   * Gets the maximum retry count for tail latency requests.
+   * @return the maximum retry count.
+   */
+  public int getTailLatencyMaxRetryCount() {
+    return tailLatencyMaxRetryCount;
   }
 }
