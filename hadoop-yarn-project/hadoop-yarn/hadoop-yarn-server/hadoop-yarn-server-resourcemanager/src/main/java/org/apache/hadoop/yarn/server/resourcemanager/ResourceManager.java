@@ -1218,7 +1218,11 @@ public class ResourceManager extends CompositeService
    * Transition to standby state in a new thread. The transition operation is
    * asynchronous to avoid deadlock caused by cyclic dependency.
    */
-  private void handleTransitionToStandByInNewThread() {
+  private synchronized void handleTransitionToStandByInNewThread() {
+    if (rmContext.getHAServiceState() == HAServiceProtocol.HAServiceState.STANDBY) {
+      LOG.info("RM already in standby state");
+      return;
+    }
     Thread standByTransitionThread =
         new Thread(activeServices.standByTransitionRunnable);
     standByTransitionThread.setName("StandByTransitionThread");

@@ -542,5 +542,60 @@ public final class ConfigurationKeys {
   /**Flag to enable/disable create idempotency during create operation: {@value}*/
   public static final String FS_AZURE_ENABLE_CREATE_BLOB_IDEMPOTENCY = "fs.azure.enable.create.blob.idempotency";
 
+  /**
+   * Flag to enable/disable tail latency tracker for AbfsRestOperation.
+   * When enabled, Client observed E2E latency will be tracked by a histogram.
+   * Regular p50, p99 and configured percentile latencies will be reported.
+   */
+  public static final String FS_AZURE_ENABLE_TAIL_LATENCY_TRACKER = "fs.azure.enable.tail.latency.tracker";
+
+  /**
+   * Flag to enable/disable tail latency based timeout for AbfsRestOperation.
+   * When enabled, if an operation's latency exceeds the currently reported tail
+   * latency by the tracker, the ongoing socket connection will be closed and
+   * the operation will be retried, up to the configured max retry count: {@value}
+   */
+  public static final String FS_AZURE_ENABLE_TAIL_LATENCY_REQUEST_TIMEOUT = "fs.azure.enable.tail.latency.timeout";
+
+  /**
+   * The percentile value to be considered as tail latency value.
+   * Default is 99.0 (99th percentile): {@value}
+   */
+  public static final String FS_AZURE_TAIL_LATENCY_PERCENTILE = "fs.azure.tail.latency.percentile";
+
+  /**
+   * The minimum deviation (in percentage) between p50 and tail latency
+   * percentile to trigger tail latency based request timeout: {@value}
+   */
+  public static final String FS_AZURE_TAIL_LATENCY_MIN_DEVIATION = "fs.azure.tail.latency.min.deviation";
+
+  /**
+   * The minimum sample size required before the histogram starts reporting latency data: {@value}
+   */
+  public static final String FS_AZURE_TAIL_LATENCY_MIN_SAMPLE_SIZE = "fs.azure.tail.latency.min.sample.size";
+
+  /**
+   * The time window (in milliseconds) over which the tail latency analysis is performed.
+   * Until the whole window is filled, the histogram will not report any latency data: {@value}
+   */
+  public static final String FS_AZURE_TAIL_LATENCY_ANALYSIS_WINDOW_MILLIS = "fs.azure.tail.latency.analysis.window.millis";
+
+  /**
+   * The granularity (in milliseconds) at which the tail latency analysis window is divided.
+   * This is to make sliding window calculations efficient and robust: {@value}
+   */
+  public static final String FS_AZURE_TAIL_LATENCY_ANALYSIS_WINDOW_GRANULARITY = "fs.azure.tail.latency.analysis.window.granularity";
+
+  /**
+   * Interval (in milliseconds) at which the tail latency percentile is computed
+   * and updated by the background thread for each operation type: {@value}
+   */
+  public static final String FS_AZURE_TAIL_LATENCY_PERCENTILE_COMPUTATION_INTERVAL_MILLIS = "fs.azure.tail.latency.percentile.computation.interval.millis";
+
+  /**
+   * Maximum number of retries for an operation when tail latency based timeout occur: {@value}
+   */
+  public static final String FS_AZURE_TAIL_LATENCY_MAX_RETRY_COUNT = "fs.azure.tail.latency.max.retry.count";
+
   private ConfigurationKeys() {}
 }

@@ -91,11 +91,19 @@ public class AbfsAHCHttpOperation extends AbfsHttpOperation {
    */
   private final AbfsApacheHttpClient abfsApacheHttpClient;
 
+  /**
+   * Timeout in milliseconds that defines maximum allowed time to execute operation.
+   * This timeout starts when execution starts and includes E2E processing time of request.
+   * This is based on tail latency observed in the system.
+   */
+  private final long tailLatencyTimeout;
+
   public AbfsAHCHttpOperation(final URL url,
       final String method,
       final List<AbfsHttpHeader> requestHeaders,
       final Duration connectionTimeout,
       final Duration readTimeout,
+      final long tailLatencyTimeout,
       final AbfsApacheHttpClient abfsApacheHttpClient,
       final AbfsClient abfsClient) throws IOException {
     super(LOG, url, method, requestHeaders, connectionTimeout, readTimeout,
@@ -104,6 +112,7 @@ public class AbfsAHCHttpOperation extends AbfsHttpOperation {
         || HTTP_METHOD_PATCH.equals(method)
         || HTTP_METHOD_POST.equals(method);
     this.abfsApacheHttpClient = abfsApacheHttpClient;
+    this.tailLatencyTimeout = tailLatencyTimeout;
     LOG.debug("Creating AbfsAHCHttpOperation for URL: {}, method: {}",
         url, method);
 
@@ -157,6 +166,10 @@ public class AbfsAHCHttpOperation extends AbfsHttpOperation {
   @VisibleForTesting
   AbfsManagedHttpClientContext getHttpClientContext() {
     return new AbfsManagedHttpClientContext();
+  }
+
+  long getTailLatencyTimeout() {
+    return tailLatencyTimeout;
   }
 
   /**{@inheritDoc}*/
@@ -273,7 +286,7 @@ public class AbfsAHCHttpOperation extends AbfsHttpOperation {
     try {
       LOG.debug("Executing request: {}", httpRequestBase);
       HttpResponse response = abfsApacheHttpClient.execute(httpRequestBase,
-          abfsHttpClientContext, getConnectionTimeout(), getReadTimeout());
+          abfsHttpClientContext, getConnectionTimeout(), getReadTimeout(), getTailLatencyTimeout());
       setConnectionTimeMs(abfsHttpClientContext.getConnectTime());
       setSendRequestTimeMs(abfsHttpClientContext.getSendTime());
       setRecvResponseTimeMs(abfsHttpClientContext.getReadTime());

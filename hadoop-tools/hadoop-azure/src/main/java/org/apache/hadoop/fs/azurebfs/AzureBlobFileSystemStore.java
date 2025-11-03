@@ -113,6 +113,7 @@ import org.apache.hadoop.fs.azurebfs.services.ExponentialRetryPolicy;
 import org.apache.hadoop.fs.azurebfs.services.ListingSupport;
 import org.apache.hadoop.fs.azurebfs.services.SharedKeyCredentials;
 import org.apache.hadoop.fs.azurebfs.services.StaticRetryPolicy;
+import org.apache.hadoop.fs.azurebfs.services.TailLatencyRequestTimeoutRetryPolicy;
 import org.apache.hadoop.fs.azurebfs.services.VersionedFileStatus;
 import org.apache.hadoop.fs.azurebfs.utils.Base64;
 import org.apache.hadoop.fs.azurebfs.utils.CRC64;
@@ -1817,6 +1818,8 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
             new ExponentialRetryPolicy(abfsConfiguration))
         .withStaticRetryPolicy(
             new StaticRetryPolicy(abfsConfiguration))
+        .withTailLatencyRequestTimeoutRetryPolicy(
+            new TailLatencyRequestTimeoutRetryPolicy(abfsConfiguration))
         .withAbfsCounters(abfsCounters)
         .withAbfsPerfTracker(abfsPerfTracker)
         .build();

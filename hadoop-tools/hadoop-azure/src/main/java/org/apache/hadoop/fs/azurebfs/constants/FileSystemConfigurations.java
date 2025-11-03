@@ -241,6 +241,7 @@ public final class FileSystemConfigurations {
   public static final int RATE_LIMIT_DEFAULT = 1_000;
 
   public static final int ZERO = 0;
+  public static final double ZERO_D = 0.0;
   public static final int HUNDRED = 100;
   public static final double HUNDRED_D = 100.0;
   public static final long THOUSAND = 1000L;
@@ -399,6 +400,17 @@ public final class FileSystemConfigurations {
   public static final int DEFAULT_FS_AZURE_REQUEST_PRIORITY_VALUE_7 = 7;
 
   public static final int DEFAULT_FS_AZURE_STANDARD_REQUEST_PRIORITY_VALUE = 3;
+
+  public static final boolean DEFAULT_FS_AZURE_ENABLE_TAIL_LATENCY_TRACKER = false;
+  public static final boolean DEFAULT_FS_AZURE_ENABLE_TAIL_LATENCY_REQUEST_TIMEOUT = false;
+  public static final int DEFAULT_FS_AZURE_TAIL_LATENCY_PERCENTILE = 99;
+  public static final int DEFAULT_FS_AZURE_TAIL_LATENCY_MIN_DEVIATION = 200;
+  public static final int DEFAULT_FS_AZURE_TAIL_LATENCY_MIN_SAMPLE_SIZE = 100;
+  public static final int DEFAULT_FS_AZURE_TAIL_LATENCY_ANALYSIS_WINDOW_MILLIS = 60_000;
+  public static final int DEFAULT_FS_AZURE_TAIL_LATENCY_ANALYSIS_WINDOW_GRANULARITY = 10;
+  public static final int MIN_FS_AZURE_TAIL_LATENCY_ANALYSIS_WINDOW_GRANULARITY = 1;
+  public static final int DEFAULT_FS_AZURE_TAIL_LATENCY_PERCENTILE_COMPUTATION_INTERVAL_MILLIS = 500;
+  public static final int DEFAULT_FS_AZURE_TAIL_LATENCY_MAX_RETRY_COUNT = 1;
 
   private FileSystemConfigurations() {}
 }
