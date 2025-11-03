@@ -524,8 +524,8 @@ public class AbfsConfiguration{
   private boolean enablePrefetchRequestPriority;
 
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_PREFETCH_REQUEST_PRIORITY_VALUE,
-      MinValue = DEFAULT_FS_AZURE_MIN_PREFETCH_REQUEST_PRIORITY_VALUE,
-      DefaultValue = DEFAULT_FS_AZURE_PREFETCH_REQUEST_PRIORITY_VALUE)
+      MinValue = DEFAULT_FS_AZURE_STANDARD_REQUEST_PRIORITY_VALUE,
+      DefaultValue = DEFAULT_FS_AZURE_REQUEST_PRIORITY_VALUE_7)
   private int prefetchRequestPriorityValue;
 
   private String clientProvidedEncryptionKey;

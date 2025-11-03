@@ -140,7 +140,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.HTTPS
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.ACCEPT_CHARSET;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.CONTENT_MD5;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.CONTENT_TYPE;
-import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.PREFETCH_TRAFFIC_PRIORITY_HEADER;
+import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_REQUEST_PRIORITY;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.USER_AGENT;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_ENCRYPTION_ALGORITHM;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_ENCRYPTION_CONTEXT;
@@ -1386,7 +1386,7 @@ public abstract class AbfsClient implements Closeable {
       TracingContext tracingContext) {
     if (getAbfsConfiguration().isEnablePrefetchRequestPriority()
         && ReadType.PREFETCH_READ.equals(tracingContext.getReadType())) {
-      requestHeaders.add(new AbfsHttpHeader(PREFETCH_TRAFFIC_PRIORITY_HEADER,
+      requestHeaders.add(new AbfsHttpHeader(X_MS_REQUEST_PRIORITY,
           getAbfsConfiguration().getPrefetchRequestPriorityValue()));
     }
   }

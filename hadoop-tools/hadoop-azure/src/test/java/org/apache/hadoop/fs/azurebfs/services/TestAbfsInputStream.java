@@ -29,7 +29,6 @@ import java.util.Optional;
 import java.util.Random;
 import java.util.concurrent.ExecutionException;
 
-import org.apache.hadoop.fs.azurebfs.Abfs;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.AbfsCountersImpl;
 import org.junit.jupiter.api.AfterEach;
@@ -62,7 +61,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.COLON;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.SPLIT_NO_LIMIT;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENABLE_PREFETCH_REQUEST_PRIORITY;
-import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.PREFETCH_TRAFFIC_PRIORITY_HEADER;
+import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_REQUEST_PRIORITY;
 import static org.apache.hadoop.fs.azurebfs.constants.ReadType.DIRECT_READ;
 import static org.apache.hadoop.fs.azurebfs.constants.ReadType.FOOTER_READ;
 import static org.apache.hadoop.fs.azurebfs.constants.ReadType.MISSEDCACHE_READ;
@@ -939,53 +938,55 @@ public class TestAbfsInputStream extends
   private void executePrefetchReadTest(TracingContext tracingContext,
       Configuration rawConfig,
       boolean shouldHaveHeader) throws Exception {
-    AzureBlobFileSystem azureFs = (AzureBlobFileSystem) FileSystem.newInstance(
-        rawConfig);
-    AzureBlobFileSystemStore store = Mockito.spy(azureFs.getAbfsStore());
+    try (AzureBlobFileSystem azureFs = (AzureBlobFileSystem) FileSystem.newInstance(
+        rawConfig)) {
+      AzureBlobFileSystemStore store = Mockito.spy(azureFs.getAbfsStore());
 
-    AbfsClient abfsClient = Mockito.spy(store.getClient());
-    Mockito.doReturn(abfsClient).when(store).getClient();
+      AbfsClient abfsClient = Mockito.spy(store.getClient());
+      Mockito.doReturn(abfsClient).when(store).getClient();
 
-    List<AbfsHttpHeader> headersList = new ArrayList<>();
+      List<AbfsHttpHeader> headersList = new ArrayList<>();
 
-    doAnswer(invocation -> {
-      AbfsRestOperation realOp
-          = (AbfsRestOperation) invocation.callRealMethod();
-      AbfsRestOperation spiedOp = spy(realOp);
+      doAnswer(invocation -> {
+        AbfsRestOperation realOp
+            = (AbfsRestOperation) invocation.callRealMethod();
+        AbfsRestOperation spiedOp = spy(realOp);
 
-      headersList.addAll(spiedOp.getRequestHeaders());
+        headersList.addAll(spiedOp.getRequestHeaders());
 
-      doNothing().when(spiedOp).execute(any(TracingContext.class));
-      return spiedOp;
-    })
-        .when(abfsClient)
-        .getAbfsRestOperation(
-            any(AbfsRestOperationType.class),
-            anyString(),
-            any(URL.class),
-            anyList(),
-            any(byte[].class),
-            anyInt(),
-            anyInt(),
-            nullable(String.class)
-        );
+        doNothing().when(spiedOp).execute(any(TracingContext.class));
+        return spiedOp;
+      })
+          .when(abfsClient)
+          .getAbfsRestOperation(
+              any(AbfsRestOperationType.class),
+              anyString(),
+              any(URL.class),
+              anyList(),
+              any(byte[].class),
+              anyInt(),
+              anyInt(),
+              nullable(String.class)
+          );
 
-    abfsClient.read(
-        "dummy-path", 0L, new byte[1], 0, 1,
-        "etag", "leaseId", null, tracingContext);
+      abfsClient.read(
+          "dummy-path", 0L, new byte[1], 0, 1,
+          "etag", "leaseId", null, tracingContext);
 
-    AbfsConfiguration abfsConfig = store.getAbfsConfiguration();
-    if (shouldHaveHeader) {
-      assertThat(headersList)
-          .anySatisfy(header -> {
-            assertThat(header.getName()).isEqualTo(
-                PREFETCH_TRAFFIC_PRIORITY_HEADER);
-            assertThat(header.getValue()).isEqualTo(abfsConfig.getPrefetchRequestPriorityValue());
-          });
-    } else {
-      assertThat(headersList)
-          .noneSatisfy(header -> assertThat(header.getName()).isEqualTo(
-              PREFETCH_TRAFFIC_PRIORITY_HEADER));
+      AbfsConfiguration abfsConfig = store.getAbfsConfiguration();
+      if (shouldHaveHeader) {
+        assertThat(headersList)
+            .anySatisfy(header -> {
+              assertThat(header.getName()).isEqualTo(
+                  X_MS_REQUEST_PRIORITY);
+              assertThat(header.getValue()).isEqualTo(
+                  abfsConfig.getPrefetchRequestPriorityValue());
+            });
+      } else {
+        assertThat(headersList)
+            .noneSatisfy(header -> assertThat(header.getName()).isEqualTo(
+                X_MS_REQUEST_PRIORITY));
+      }
     }
   }
 
