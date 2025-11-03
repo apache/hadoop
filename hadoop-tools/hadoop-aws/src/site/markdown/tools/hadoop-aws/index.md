@@ -1769,7 +1769,7 @@ To understand the risks and issues here know that:
 * The most efficient data upload checksum is CRC32C; there are explicit opcodes for this in x86 and ARM CPUs, with the appropriate implementation circuitry.
 * Data download validation checksums are also computationally expensive.
 
-| Option                             | Purpose                                        | Values  | Default  | 
+| Option                             | Purpose                                        | Values  | Default  |
 |------------------------------------|------------------------------------------------|---------|----------|
 | `fs.s3a.request.md5.header`        | Enable MD5 header                              | boolean | `true`   |
 | `fs.s3a.checksum.generation`       | Generate checksums on all requests             | boolean | `false`  |
@@ -1791,7 +1791,7 @@ This could potentially deal with memory/buffering/bus issues on the servers.
 However this is what ECC RAM is for.
 If you do suspect requests being corrupted during writing or reading, the options may
 be worth considering.
-As it is, they are off by default to avoid compatibility problems. 
+As it is, they are off by default to avoid compatibility problems.
 
 Note: if you have a real example of where these checksum options have identified memory corruption,
 please let us know.
@@ -1819,19 +1819,19 @@ Set `fs.s3a.checksum.generation` to `false` by default to avoid these problems.
 
 Should the checksums of downloaded data be validated?
 
-This hurts performance and should be only used if considered important. 
+This hurts performance and should be only used if considered important.
 
 ### Creation checksum `fs.s3a.create.checksum.algorithm`
 
 
 This is the algorithm to use when checksumming data during file creation and copy.
 
-Options: `NONE`, `CRC32`, `CRC32C`, `CRC32_C`, `CRC64NVME` , `CRC64_NVME`, `SHA256`, `SHA1`  
+Options: `NONE`, `CRC32`, `CRC32C`, `CRC32_C`, `CRC64NVME` , `CRC64_NVME`, `SHA256`, `SHA1`
 
 The option `NONE` is new to Hadoop 3.4.3; previously an empty string was required for the same behavior.
 
-The `CRC64NVME`/`CRC64_NVME` option is also new to Hadoop 3.4.3 and requires the `aws-crt` module to be on the classpath, otherwise an error is printed: 
- 
+The `CRC64NVME`/`CRC64_NVME` option is also new to Hadoop 3.4.3 and requires the `aws-crt` module to be on the classpath, otherwise an error is printed:
+
 ```
 java.lang.RuntimeException: Could not load software.amazon.awssdk.crt.checksums.CRC64NVME.
 Add dependency on 'software.amazon.awssdk.crt:aws-crt' module to enable CRC64NVME feature.

@@ -88,7 +88,8 @@ public final class ChecksumSupport {
           case CRC64NVME:
             return ChecksumAlgorithm.CRC64_NVME;
           default:
-            throw new IllegalArgumentException("Checksum algorithm is not supported: " + configValue);
+            throw new IllegalArgumentException("Checksum algorithm is not supported: "
+                + configValue);
           }
         });
   }

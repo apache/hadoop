@@ -31,7 +31,8 @@ import static org.apache.hadoop.fs.s3a.Constants.CHECKSUM_ALGORITHM;
 public class TestChecksumSupport {
 
   @ParameterizedTest
-  @EnumSource(value = ChecksumAlgorithm.class, names = {"CRC32", "CRC32_C", "SHA1", "SHA256", "CRC64_NVME"})
+  @EnumSource(value = ChecksumAlgorithm.class,
+      names = {"CRC32", "CRC32_C", "SHA1", "SHA256", "CRC64_NVME"})
   public void testGetSupportedChecksumAlgorithm(ChecksumAlgorithm checksumAlgorithm) {
     assertChecksumAlgorithm(checksumAlgorithm, checksumAlgorithm.toString());
   }
@@ -52,14 +53,14 @@ public class TestChecksumSupport {
 
   @Test
   public void testCRC32C() throws Throwable {
-    assertChecksumAlgorithm(ChecksumAlgorithm.CRC32_C, "CRC32C" );
-    assertChecksumAlgorithm(ChecksumAlgorithm.CRC32_C, "CRC32_C" );
+    assertChecksumAlgorithm(ChecksumAlgorithm.CRC32_C, "CRC32C");
+    assertChecksumAlgorithm(ChecksumAlgorithm.CRC32_C, "CRC32_C");
   }
 
   @Test
   public void testCRC64NVME() throws Throwable {
-    assertChecksumAlgorithm(ChecksumAlgorithm.CRC64_NVME, "CRC64_NVME" );
-    assertChecksumAlgorithm(ChecksumAlgorithm.CRC64_NVME, "CRC64NVME" );
+    assertChecksumAlgorithm(ChecksumAlgorithm.CRC64_NVME, "CRC64_NVME");
+    assertChecksumAlgorithm(ChecksumAlgorithm.CRC64_NVME, "CRC64NVME");
   }
 
   @Test
