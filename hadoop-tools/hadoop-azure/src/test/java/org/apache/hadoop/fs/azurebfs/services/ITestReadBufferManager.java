@@ -18,10 +18,8 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
-import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Random;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -29,7 +27,6 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
@@ -62,127 +59,122 @@ public class ITestReadBufferManager extends AbstractAbfsIntegrationTest {
    */
   public static final int PROBE_INTERVAL_MILLIS = 1_000;
 
-    public ITestReadBufferManager() throws Exception {
+  public ITestReadBufferManager() throws Exception {
+  }
+
+  @Test
+  public void testPurgeBufferManagerForParallelStreams() throws Exception {
+    describe("Testing purging of buffers from ReadBufferManagerV1 for "
+        + "parallel input streams");
+    final int numBuffers = 16;
+    final LinkedList<Integer> freeList = new LinkedList<>();
+    for (int i=0; i < numBuffers; i++) {
+      freeList.add(i);
+    }
+    ExecutorService executorService = Executors.newFixedThreadPool(4);
+    AzureBlobFileSystem fs = getABFSWithReadAheadConfig();
+    // verify that the fs has the capability to validate the fix
+    Assertions.assertThat(fs.hasPathCapability(new Path("/"), CAPABILITY_SAFE_READAHEAD))
+        .describedAs("path capability %s in %s", CAPABILITY_SAFE_READAHEAD, fs)
+        .isTrue();
+
+    try {
+      for (int i = 0; i < 4; i++) {
+        final String fileName = methodName.getMethodName() + i;
+        executorService.submit((Callable<Void>) () -> {
+          byte[] fileContent = getRandomBytesArray(ONE_MB);
+          Path testFilePath = createFileWithContent(fs, fileName, fileContent);
+          try (FSDataInputStream iStream = fs.open(testFilePath)) {
+            iStream.read();
+          }
+          return null;
+        });
+      }
+    } finally {
+      executorService.shutdown();
+      // wait for all tasks to finish
+      executorService.awaitTermination(1, TimeUnit.MINUTES);
     }
 
-    @Test
-    public void testPurgeBufferManagerForParallelStreams() throws Exception {
-        describe("Testing purging of buffers from ReadBufferManagerV1 for "
-                + "parallel input streams");
-        final int numBuffers = 16;
-        final LinkedList<Integer> freeList = new LinkedList<>();
-        for (int i=0; i < numBuffers; i++) {
-            freeList.add(i);
-        }
-        ExecutorService executorService = Executors.newFixedThreadPool(4);
-        AzureBlobFileSystem fs = getABFSWithReadAheadConfig();
-        // verify that the fs has the capability to validate the fix
-        Assertions.assertThat(fs.hasPathCapability(new Path("/"), CAPABILITY_SAFE_READAHEAD))
-            .describedAs("path capability %s in %s", CAPABILITY_SAFE_READAHEAD, fs)
-            .isTrue();
+    ReadBufferManager bufferManager = getBufferManager(fs);
+    // readahead queue is empty
+    assertListEmpty("ReadAheadQueue", bufferManager.getReadAheadQueueCopy());
+    // verify the in progress list eventually empties out.
+    eventually(getTestTimeoutMillis() - TIMEOUT_OFFSET, PROBE_INTERVAL_MILLIS, () ->
+        assertListEmpty("InProgressList", bufferManager.getInProgressListCopy()));
+  }
 
-        try {
-            for (int i = 0; i < 4; i++) {
-                final String fileName = methodName.getMethodName() + i;
-                executorService.submit((Callable<Void>) () -> {
-                    byte[] fileContent = getRandomBytesArray(ONE_MB);
-                    Path testFilePath = createFileWithContent(fs, fileName, fileContent);
-                    try (FSDataInputStream iStream = fs.open(testFilePath)) {
-                        iStream.read();
-                    }
-                    return null;
-                });
-            }
-        } finally {
-            executorService.shutdown();
-            // wait for all tasks to finish
-            executorService.awaitTermination(1, TimeUnit.MINUTES);
-        }
+  private void assertListEmpty(String listName, List<ReadBuffer> list) {
+    Assertions.assertThat(list)
+        .describedAs("After closing all streams %s should be empty", listName)
+        .hasSize(0);
+  }
 
-        ReadBufferManagerV1 bufferManager = ReadBufferManagerV1.getBufferManager();
-        // readahead queue is empty
-        assertListEmpty("ReadAheadQueue", bufferManager.getReadAheadQueueCopy());
-        // verify the in progress list eventually empties out.
-        eventually(getTestTimeoutMillis() - TIMEOUT_OFFSET, PROBE_INTERVAL_MILLIS, () ->
-            assertListEmpty("InProgressList", bufferManager.getInProgressCopiedList()));
+  @Test
+  public void testPurgeBufferManagerForSequentialStream() throws Exception {
+    describe("Testing purging of buffers in ReadBufferManagerV1 for "
+        + "sequential input streams");
+    AzureBlobFileSystem fs = getABFSWithReadAheadConfig();
+    final String fileName = methodName.getMethodName();
+    byte[] fileContent = getRandomBytesArray(ONE_MB);
+    Path testFilePath = createFileWithContent(fs, fileName, fileContent);
+
+    AbfsInputStream iStream1 =  null;
+    // stream1 will be closed right away.
+    try {
+      iStream1 = (AbfsInputStream) fs.open(testFilePath).getWrappedStream();
+      // Just reading one byte will trigger all read ahead calls.
+      iStream1.read();
+    } finally {
+      IOUtils.closeStream(iStream1);
     }
-
-    private void assertListEmpty(String listName, List<ReadBuffer> list) {
-        Assertions.assertThat(list)
-                .describedAs("After closing all streams %s should be empty", listName)
-                .hasSize(0);
+    ReadBufferManager bufferManager = getBufferManager(fs);
+    AbfsInputStream iStream2 = null;
+    try {
+      iStream2 = (AbfsInputStream) fs.open(testFilePath).getWrappedStream();
+      iStream2.read();
+      // After closing stream1, no queued buffers of stream1 should be present
+      // assertions can't be made about the state of the other lists as it is
+      // too prone to race conditions.
+      assertListDoesnotContainBuffersForIstream(bufferManager.getReadAheadQueueCopy(), iStream1);
+    } finally {
+      // closing the stream later.
+      IOUtils.closeStream(iStream2);
     }
+    // After closing stream2, no queued buffers of stream2 should be present.
+    assertListDoesnotContainBuffersForIstream(bufferManager.getReadAheadQueueCopy(), iStream2);
 
-    @Test
-    public void testPurgeBufferManagerForSequentialStream() throws Exception {
-        describe("Testing purging of buffers in ReadBufferManagerV1 for "
-                + "sequential input streams");
-        AzureBlobFileSystem fs = getABFSWithReadAheadConfig();
-        final String fileName = methodName.getMethodName();
-        byte[] fileContent = getRandomBytesArray(ONE_MB);
-        Path testFilePath = createFileWithContent(fs, fileName, fileContent);
+    // After closing both the streams, read queue should be empty.
+    assertListEmpty("ReadAheadQueue", bufferManager.getReadAheadQueueCopy());
 
-        AbfsInputStream iStream1 =  null;
-        // stream1 will be closed right away.
-        try {
-            iStream1 = (AbfsInputStream) fs.open(testFilePath).getWrappedStream();
-            // Just reading one byte will trigger all read ahead calls.
-            iStream1.read();
-        } finally {
-            IOUtils.closeStream(iStream1);
-        }
-        ReadBufferManagerV1 bufferManager = ReadBufferManagerV1.getBufferManager();
-        AbfsInputStream iStream2 = null;
-        try {
-            iStream2 = (AbfsInputStream) fs.open(testFilePath).getWrappedStream();
-            iStream2.read();
-            // After closing stream1, no queued buffers of stream1 should be present
-            // assertions can't be made about the state of the other lists as it is
-            // too prone to race conditions.
-            assertListDoesnotContainBuffersForIstream(bufferManager.getReadAheadQueueCopy(), iStream1);
-        } finally {
-            // closing the stream later.
-            IOUtils.closeStream(iStream2);
-        }
-        // After closing stream2, no queued buffers of stream2 should be present.
-        assertListDoesnotContainBuffersForIstream(bufferManager.getReadAheadQueueCopy(), iStream2);
+  }
 
-        // After closing both the streams, read queue should be empty.
-        assertListEmpty("ReadAheadQueue", bufferManager.getReadAheadQueueCopy());
 
+  private void assertListDoesnotContainBuffersForIstream(List<ReadBuffer> list,
+      AbfsInputStream inputStream) {
+    for (ReadBuffer buffer : list) {
+      Assertions.assertThat(buffer.getStream())
+          .describedAs("Buffers associated with closed input streams shouldn't be present")
+          .isNotEqualTo(inputStream);
     }
+  }
 
+  private AzureBlobFileSystem getABFSWithReadAheadConfig() throws Exception {
+    Configuration conf = getRawConfiguration();
+    conf.setLong(FS_AZURE_READ_AHEAD_QUEUE_DEPTH, 8);
+    conf.setInt(AZURE_READ_BUFFER_SIZE, MIN_BUFFER_SIZE);
+    conf.setInt(FS_AZURE_READ_AHEAD_BLOCK_SIZE, MIN_BUFFER_SIZE);
+    return (AzureBlobFileSystem) FileSystem.newInstance(conf);
+  }
 
-    private void assertListDoesnotContainBuffersForIstream(List<ReadBuffer> list,
-                                                           AbfsInputStream inputStream) {
-        for (ReadBuffer buffer : list) {
-            Assertions.assertThat(buffer.getStream())
-                    .describedAs("Buffers associated with closed input streams shouldn't be present")
-                    .isNotEqualTo(inputStream);
-        }
+  private ReadBufferManager getBufferManager(AzureBlobFileSystem fs) {
+    int blockSize = fs.getAbfsStore().getAbfsConfiguration().getReadAheadBlockSize();
+    if (getConfiguration().isReadAheadV2Enabled()) {
+      ReadBufferManagerV2.setReadBufferManagerConfigs(blockSize,
+          getConfiguration());
+      return ReadBufferManagerV2.getBufferManager();
     }
-
-    private AzureBlobFileSystem getABFSWithReadAheadConfig() throws Exception {
-        Configuration conf = getRawConfiguration();
-        conf.setLong(FS_AZURE_READ_AHEAD_QUEUE_DEPTH, 8);
-        conf.setInt(AZURE_READ_BUFFER_SIZE, MIN_BUFFER_SIZE);
-        conf.setInt(FS_AZURE_READ_AHEAD_BLOCK_SIZE, MIN_BUFFER_SIZE);
-        return (AzureBlobFileSystem) FileSystem.newInstance(conf);
-    }
-
-    protected byte[] getRandomBytesArray(int length) {
-        final byte[] b = new byte[length];
-        new Random().nextBytes(b);
-        return b;
-    }
-
-    protected Path createFileWithContent(FileSystem fs, String fileName,
-                                         byte[] fileContent) throws IOException {
-        Path testFilePath = path(fileName);
-        try (FSDataOutputStream oStream = fs.create(testFilePath)) {
-            oStream.write(fileContent);
-            oStream.flush();
-        }
-        return testFilePath;
-    }
+    ReadBufferManagerV1.setReadBufferManagerConfigs(blockSize);
+    return ReadBufferManagerV1.getBufferManager();
+  }
 }

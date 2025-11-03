@@ -69,7 +69,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   public static final int FOOTER_SIZE = 16 * ONE_KB;
   public static final int MAX_OPTIMIZED_READ_ATTEMPTS = 2;
 
-  private int readAheadBlockSize;
+  private final int readAheadBlockSize;
   private final AbfsClient client;
   private final Statistics statistics;
   private final String path;
@@ -132,7 +132,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
 
   /** ABFS instance to be held by the input stream to avoid GC close. */
   private final BackReference fsBackRef;
-  private ReadBufferManager readBufferManager;
+  private final ReadBufferManager readBufferManager;
 
   public AbfsInputStream(
           final AbfsClient client,
@@ -184,10 +184,13 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
      * If none of the V1 and V2 are enabled, then no read ahead will be done.
      */
     if (readAheadV2Enabled) {
-      LOG.debug("ReadBufferManagerV2 not yet implemented, defaulting to ReadBufferManagerV1");
+      ReadBufferManagerV2.setReadBufferManagerConfigs(
+          readAheadBlockSize, client.getAbfsConfiguration());
+      readBufferManager = ReadBufferManagerV2.getBufferManager();
+    } else {
+      ReadBufferManagerV1.setReadBufferManagerConfigs(readAheadBlockSize);
+      readBufferManager = ReadBufferManagerV1.getBufferManager();
     }
-    ReadBufferManagerV1.setReadBufferManagerConfigs(readAheadBlockSize);
-    readBufferManager = ReadBufferManagerV1.getBufferManager();
 
     if (streamStatistics != null) {
       ioStatistics = streamStatistics.getIOStatistics();
@@ -530,7 +533,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       while (numReadAheads > 0 && nextOffset < contentLength) {
         LOG.debug("issuing read ahead requestedOffset = {} requested size {}",
             nextOffset, nextSize);
-        readBufferManager.queueReadAhead(this, nextOffset, (int) nextSize,
+        getReadBufferManager().queueReadAhead(this, nextOffset, (int) nextSize,
                 new TracingContext(readAheadTracingContext));
         nextOffset = nextOffset + nextSize;
         numReadAheads--;
@@ -539,7 +542,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       }
 
       // try reading from buffers first
-      receivedBytes = readBufferManager.getBlock(this, position, length, b);
+      receivedBytes = getReadBufferManager().getBlock(this, position, length, b);
       bytesFromReadAhead += receivedBytes;
       if (receivedBytes > 0) {
         incrementReadOps();
@@ -743,8 +746,8 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   public synchronized void close() throws IOException {
     LOG.debug("Closing {}", this);
     closed = true;
-    if (readBufferManager != null) {
-      readBufferManager.purgeBuffersForStream(this);
+    if (getReadBufferManager() != null) {
+      getReadBufferManager().purgeBuffersForStream(this);
     }
     buffer = null; // de-reference the buffer so it can be GC'ed sooner
     if (contextEncryptionAdapter != null) {
@@ -805,7 +808,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
    */
   @VisibleForTesting
   public boolean isReadAheadEnabled() {
-    return (readAheadEnabled || readAheadV2Enabled) && readBufferManager != null;
+    return (readAheadEnabled || readAheadV2Enabled) && getReadBufferManager() != null;
   }
 
   @VisibleForTesting
@@ -821,6 +824,10 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   @VisibleForTesting
   public String getStreamID() {
     return inputStreamId;
+  }
+
+  public String getETag() {
+    return eTag;
   }
 
   /**
@@ -920,9 +927,18 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     return this.limit;
   }
 
+  boolean isFirstRead() {
+    return this.firstRead;
+  }
+
   @VisibleForTesting
   BackReference getFsBackRef() {
     return fsBackRef;
+  }
+
+  @VisibleForTesting
+  ReadBufferManager getReadBufferManager() {
+    return readBufferManager;
   }
 
   @Override

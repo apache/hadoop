@@ -121,7 +121,7 @@ public class TestAbfsInputStream extends
     getBufferManager().testResetReadBufferManager();
   }
 
-  private AbfsRestOperation getMockRestOp() {
+  AbfsRestOperation getMockRestOp() {
     AbfsRestOperation op = mock(AbfsRestOperation.class);
     AbfsHttpOperation httpOp = mock(AbfsHttpOperation.class);
     when(httpOp.getBytesReceived()).thenReturn(1024L);
@@ -130,7 +130,7 @@ public class TestAbfsInputStream extends
     return op;
   }
 
-  private AbfsClient getMockAbfsClient() throws URISyntaxException {
+  AbfsClient getMockAbfsClient() throws URISyntaxException {
     // Mock failure for client.read()
     AbfsClient client = mock(AbfsClient.class);
     AbfsCounters abfsCounters = Mockito.spy(new AbfsCountersImpl(new URI("abcd")));
@@ -144,7 +144,7 @@ public class TestAbfsInputStream extends
     return client;
   }
 
-  private AbfsInputStream getAbfsInputStream(AbfsClient mockAbfsClient,
+  AbfsInputStream getAbfsInputStream(AbfsClient mockAbfsClient,
       String fileName) throws IOException {
     AbfsInputStreamContext inputStreamContext = new AbfsInputStreamContext(-1);
     // Create AbfsInputStream with the client instance
@@ -153,7 +153,10 @@ public class TestAbfsInputStream extends
         null,
         FORWARD_SLASH + fileName,
         THREE_KB,
-        inputStreamContext.withReadBufferSize(ONE_KB).withReadAheadQueueDepth(10).withReadAheadBlockSize(ONE_KB),
+        inputStreamContext.withReadBufferSize(ONE_KB)
+            .withReadAheadQueueDepth(10)
+            .withReadAheadBlockSize(ONE_KB)
+            .isReadAheadV2Enabled(getConfiguration().isReadAheadV2Enabled()),
         "eTag",
         getTestTracingContext(null, false));
 
@@ -191,7 +194,7 @@ public class TestAbfsInputStream extends
     return inputStream;
   }
 
-  private void queueReadAheads(AbfsInputStream inputStream) {
+  void queueReadAheads(AbfsInputStream inputStream) {
     // Mimic AbfsInputStream readAhead queue requests
     getBufferManager()
         .queueReadAhead(inputStream, 0, ONE_KB, inputStream.getTracingContext());
@@ -573,7 +576,7 @@ public class TestAbfsInputStream extends
       //Sleeping to give ReadBufferWorker to pick the readBuffers for processing.
       Thread.sleep(readBufferTransferToInProgressProbableTime);
 
-      assertThat(readBufferManager.getInProgressCopiedList())
+      assertThat(readBufferManager.getInProgressListCopy())
           .describedAs(String.format("InProgressList should have %d elements",
               readBufferQueuedCount))
           .hasSize(readBufferQueuedCount);
@@ -586,7 +589,7 @@ public class TestAbfsInputStream extends
           .hasSize(0);
     }
 
-    assertThat(readBufferManager.getInProgressCopiedList())
+    assertThat(readBufferManager.getInProgressListCopy())
         .describedAs(String.format("InProgressList should have %d elements",
             readBufferQueuedCount))
         .hasSize(readBufferQueuedCount);
@@ -1219,6 +1222,11 @@ public class TestAbfsInputStream extends
   }
 
   private ReadBufferManager getBufferManager() {
+    if (getConfiguration().isReadAheadV2Enabled()) {
+      ReadBufferManagerV2.setReadBufferManagerConfigs(
+          getConfiguration().getReadAheadBlockSize(), getConfiguration());
+      return ReadBufferManagerV2.getBufferManager();
+    }
     return ReadBufferManagerV1.getBufferManager();
   }
 }

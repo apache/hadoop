@@ -277,6 +277,12 @@ public final class ConfigurationKeys {
   public static final String FS_AZURE_ENABLE_READAHEAD_V2 = "fs.azure.enable.readahead.v2";
 
   /**
+   * Enable or disable dynamic scaling of thread pool and buffer pool of readahead V2.
+   * Value: {@value}.
+   */
+  public static final String FS_AZURE_ENABLE_READAHEAD_V2_DYNAMIC_SCALING = "fs.azure.enable.readahead.v2.dynamic.scaling";
+
+  /**
    * Enable or disable request priority for prefetch requests
    * Value: {@value}.
    */
@@ -310,6 +316,28 @@ public final class ConfigurationKeys {
   public static final String FS_AZURE_READAHEAD_V2_MAX_BUFFER_POOL_SIZE = "fs.azure.readahead.v2.max.buffer.pool.size";
 
   /**
+   * Interval in milliseconds for periodic monitoring of CPU usage and up/down scaling thread pool size accordingly.
+   * {@value }
+   */
+  public static final String FS_AZURE_READAHEAD_V2_CPU_MONITORING_INTERVAL_MILLIS = "fs.azure.readahead.v2.cpu.monitoring.interval.millis";
+
+  /**
+   * Percentage by which the thread pool size should be upscaled when CPU usage is low.
+   */
+  public static final String FS_AZURE_READAHEAD_V2_THREAD_POOL_UPSCALE_PERCENTAGE = "fs.azure.readahead.v2.thread.pool.upscale.percentage";
+
+  /**
+   * Percentage by which the thread pool size should be downscaled when CPU usage is high.
+   */
+  public static final String FS_AZURE_READAHEAD_V2_THREAD_POOL_DOWNSCALE_PERCENTAGE = "fs.azure.readahead.v2.thread.pool.downscale.percentage";
+
+  /**
+   * Interval in milliseconds for periodic monitoring of memory usage and up/down scaling buffer pool size accordingly.
+   * {@value }
+   */
+  public static final String FS_AZURE_READAHEAD_V2_MEMORY_MONITORING_INTERVAL_MILLIS = "fs.azure.readahead.v2.memory.monitoring.interval.millis";
+
+  /**
    * TTL in milliseconds for the idle threads in executor service used by read ahead v2.
    */
   public static final String FS_AZURE_READAHEAD_V2_EXECUTOR_SERVICE_TTL_MILLIS = "fs.azure.readahead.v2.executor.service.ttl.millis";
@@ -318,6 +346,16 @@ public final class ConfigurationKeys {
    * TTL in milliseconds for the cached buffers in buffer pool used by read ahead v2.
    */
   public static final String FS_AZURE_READAHEAD_V2_CACHED_BUFFER_TTL_MILLIS = "fs.azure.readahead.v2.cached.buffer.ttl.millis";
+
+  /**
+   * Threshold percentage for CPU usage to scale up/down the thread pool size in read ahead v2.
+   */
+  public static final String FS_AZURE_READAHEAD_V2_CPU_USAGE_THRESHOLD_PERCENT = "fs.azure.readahead.v2.cpu.usage.threshold.percent";
+
+  /**
+   * Threshold percentage for memory usage to scale up/down the buffer pool size in read ahead v2.
+   */
+  public static final String FS_AZURE_READAHEAD_V2_MEMORY_USAGE_THRESHOLD_PERCENT = "fs.azure.readahead.v2.memory.usage.threshold.percent";
 
   /** Setting this true will make the driver use it's own RemoteIterator implementation */
   public static final String FS_AZURE_ENABLE_ABFS_LIST_ITERATOR = "fs.azure.enable.abfslistiterator";
@@ -471,6 +509,34 @@ public final class ConfigurationKeys {
   public static final String FS_AZURE_BLOB_DIR_RENAME_MAX_THREAD = "fs.azure.blob.dir.rename.max.thread";
   /**Maximum number of thread per blob-delete orchestration: {@value}*/
   public static final String FS_AZURE_BLOB_DIR_DELETE_MAX_THREAD = "fs.azure.blob.dir.delete.max.thread";
+
+  /** Configuration key for the keep-alive time (ms) for the write thread pool. Value: {@value}. */
+  public static final String FS_AZURE_WRITE_THREADPOOL_KEEP_ALIVE_TIME_MILLIS = "fs.azure.write.threadpool.keep.alive.time.millis";
+
+  /** Configuration key for the CPU monitoring interval (ms) during write operations. Value: {@value}. */
+  public static final String FS_AZURE_WRITE_CPU_MONITORING_INTERVAL_MILLIS = "fs.azure.write.cpu.monitoring.interval.millis";
+
+  /** Configuration key to enable or disable dynamic write thread pool adjustment. Value: {@value}. */
+  public static final String FS_AZURE_WRITE_DYNAMIC_THREADPOOL_ENABLEMENT = "fs.azure.write.dynamic.threadpool.enablement";
+
+  /** Configuration key for the high CPU utilization threshold (%) for write scaling. Value: {@value}. */
+  public static final String FS_AZURE_WRITE_HIGH_CPU_THRESHOLD_PERCENT = "fs.azure.write.high.cpu.threshold.percent";
+
+  /** Configuration key for the medium CPU utilization threshold (%) for write scaling. Value: {@value}. */
+  public static final String FS_AZURE_WRITE_MEDIUM_CPU_THRESHOLD_PERCENT = "fs.azure.write.medium.cpu.threshold.percent";
+
+  /** Configuration key for the low CPU utilization threshold (%) for write scaling. Value: {@value}. */
+  public static final String FS_AZURE_WRITE_LOW_CPU_THRESHOLD_PERCENT = "fs.azure.write.low.cpu.threshold.percent";
+
+  /** Configuration key for the low-tier memory multiplier for write workloads. Value: {@value}. */
+  public static final String FS_AZURE_WRITE_LOW_TIER_MEMORY_MULTIPLIER = "fs.azure.write.low.tier.memory.multiplier";
+
+  /** Configuration key for the medium-tier memory multiplier for write workloads. Value: {@value}. */
+  public static final String FS_AZURE_WRITE_MEDIUM_TIER_MEMORY_MULTIPLIER = "fs.azure.write.medium.tier.memory.multiplier";
+
+  /** Configuration key for the high-tier memory multiplier for write workloads. Value: {@value}. */
+  public static final String FS_AZURE_WRITE_HIGH_TIER_MEMORY_MULTIPLIER = "fs.azure.write.high.tier.memory.multiplier";
+
   /**Flag to enable/disable sending client transactional ID during create/rename operations: {@value}*/
   public static final String FS_AZURE_ENABLE_CLIENT_TRANSACTION_ID = "fs.azure.enable.client.transaction.id";
   /**Flag to enable/disable create idempotency during create operation: {@value}*/
