@@ -392,6 +392,8 @@ public class TracingContext {
 
   /**
    * Returns the read type for the current operation.
+   *
+   *  @return the read type for the request.
    */
   public ReadType getReadType() {
     return readType;

@@ -289,7 +289,7 @@ public final class ConfigurationKeys {
   public static final String FS_AZURE_ENABLE_PREFETCH_REQUEST_PRIORITY = "fs.azure.enable.prefetch.request.priority";
 
   /**
-   * Enable or disable request priority for prefetch requests
+   * Request priority value for prefetch requests
    * Value: {@value}.
    */
   public static final String FS_AZURE_PREFETCH_REQUEST_PRIORITY_VALUE = "fs.azure.prefetch.request.priority.value";

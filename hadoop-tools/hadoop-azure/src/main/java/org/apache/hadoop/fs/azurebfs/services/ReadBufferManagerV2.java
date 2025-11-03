@@ -280,7 +280,7 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
       buffer.setRequestedLength(requestedLength);
       buffer.setStatus(ReadBufferStatus.NOT_AVAILABLE);
       buffer.setLatch(new CountDownLatch(1));
-      buffer.setTracingContext(new TracingContext(tracingContext));
+      buffer.setTracingContext(tracingContext);
 
       if (isFreeListEmpty()) {
         /*

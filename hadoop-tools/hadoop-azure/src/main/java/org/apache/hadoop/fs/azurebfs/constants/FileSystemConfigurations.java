@@ -397,9 +397,9 @@ public final class FileSystemConfigurations {
 
   // The default traffic request priority is 3 (from service)
   // The lowest priority a request can get is 7
-  public static final int DEFAULT_FS_AZURE_REQUEST_PRIORITY_VALUE_7 = 7;
+  public static final int DEFAULT_FS_AZURE_REQUEST_PRIORITY_VALUE = 7;
 
-  public static final int DEFAULT_FS_AZURE_STANDARD_REQUEST_PRIORITY_VALUE = 3;
+  public static final int DEFAULT_FS_AZURE_STANDARD_MIN_REQUEST_PRIORITY_VALUE = 3;
 
   public static final boolean DEFAULT_FS_AZURE_ENABLE_TAIL_LATENCY_TRACKER = false;
   public static final boolean DEFAULT_FS_AZURE_ENABLE_TAIL_LATENCY_REQUEST_TIMEOUT = false;

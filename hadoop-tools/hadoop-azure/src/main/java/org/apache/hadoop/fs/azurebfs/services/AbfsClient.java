@@ -160,7 +160,6 @@ public abstract class AbfsClient implements Closeable {
   public static final String HUNDRED_CONTINUE_USER_AGENT = SINGLE_WHITE_SPACE + HUNDRED_CONTINUE + SEMICOLON;
   public static final String ABFS_CLIENT_TIMER_THREAD_NAME = "abfs-timer-client";
   public static final String FNS_BLOB_USER_AGENT_IDENTIFIER = "FNS";
-  private static final String PREFETCH_TRAFFIC_PRIORITY_HEADER_VALUE = "7";
 
   private final URL baseUrl;
   private final SharedKeyCredentials sharedKeyCredentials;
@@ -1402,6 +1401,12 @@ public abstract class AbfsClient implements Closeable {
     }
   }
 
+  /**
+   * Add request priority header for prefetch read requests if enabled.
+   *
+   * @param requestHeaders to be updated with request priority header
+   * @param tracingContext tracing context to check read type
+   */
   protected void addRequestPriorityForPrefetch(List<AbfsHttpHeader> requestHeaders,
       TracingContext tracingContext) {
     if (getAbfsConfiguration().isEnablePrefetchRequestPriority()
