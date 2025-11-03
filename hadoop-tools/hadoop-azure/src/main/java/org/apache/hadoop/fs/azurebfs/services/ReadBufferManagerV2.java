@@ -858,6 +858,8 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
         workerRefs.add(worker);
         workerPool.submit(worker);
       }
+      ReadThreadPoolStats stats = getCurrentStats();
+      readThreadPoolMetrics.update(stats);
       printTraceLog("Increased worker pool size from {} to {}", currentPoolSize,
           newThreadPoolSize);
     } else if (cpuLoad > cpuThreshold || currentPoolSize > requiredPoolSize) {
@@ -870,6 +872,8 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
         ReadBufferWorker worker = workerRefs.remove(workerRefs.size() - 1);
         worker.stop();
       }
+      ReadThreadPoolStats stats = getCurrentStats();
+      readThreadPoolMetrics.update(stats);
       printTraceLog("Decreased worker pool size from {} to {}", currentPoolSize,
           newThreadPoolSize);
     } else {
