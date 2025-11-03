@@ -219,7 +219,7 @@ public class ClassSerialisationConfig {
 
     unWrappedClasses = new HashSet<>(CONST_UNWRAPPED_CLASSES);
     try {
-      wrappedClasses.addAll(Arrays.asList(conf.getClasses(YarnConfiguration.YARN_HTTP_WEBAPP_CUSTOM_UNWRAPPED_DAO_CLASSES)));
+      unWrappedClasses.addAll(Arrays.asList(conf.getClasses(YarnConfiguration.YARN_HTTP_WEBAPP_CUSTOM_UNWRAPPED_DAO_CLASSES)));
     } catch (RuntimeException e) {
       LOG.warn("Failed to load YARN_HTTP_WEBAPP_CUSTOM_DAO_CLASSES", e);
     }
