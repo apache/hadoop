@@ -1159,10 +1159,10 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
     private final int activeThreads;     // matches ACTIVE_THREADS metric
     private final double jvmCpuUtilization; // matches JVM_CPU_UTILIZATION metric
     private final double cpuUtilization; // matches CPU_UTILIZATION metric
-    private final double availableHeapGB;  // matches MEMORY_UTILIZATION metric
+    private final long availableHeapGB;  // matches MEMORY_UTILIZATION metric
 
     public ReadThreadPoolStats(int currentPoolSize, int maxPoolSize,
-        int activeThreads, double jvmCpuUtilization, double cpuUtilization, double availableHeapGB) {
+        int activeThreads, double jvmCpuUtilization, double cpuUtilization, long availableHeapGB) {
       this.currentPoolSize = currentPoolSize;
       this.maxPoolSize = maxPoolSize;
       this.activeThreads = activeThreads;
@@ -1176,12 +1176,12 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
     public int getActiveThreads() { return activeThreads; }
     public double getJvmCpuUtilization() { return jvmCpuUtilization; }
     public double getCpuUtilization() { return cpuUtilization; }
-    public double getMemoryUtilization() { return availableHeapGB; }
+    public long getMemoryUtilization() { return availableHeapGB; }
 
     @Override
     public String toString() {
       return String.format(
-          "currentPoolSize=%d, maxPoolSize=%d, activeThreads=%d, jvmCpuUtilization=%.2f%%, cpuUtilization=%.2f%%, availableHeap=%.2fGB",
+          "currentPoolSize=%d, maxPoolSize=%d, activeThreads=%d, jvmCpuUtilization=%.2f%%, cpuUtilization=%.2f%%, availableHeap=%dGB",
           currentPoolSize, maxPoolSize, activeThreads, jvmCpuUtilization * 100, cpuUtilization * 100, availableHeapGB);
     }
   }
