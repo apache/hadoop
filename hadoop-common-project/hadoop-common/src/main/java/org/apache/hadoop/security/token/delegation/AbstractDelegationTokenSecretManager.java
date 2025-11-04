@@ -858,7 +858,11 @@ extends AbstractDelegationTokenIdentifier>
         long renewDate = entry.getValue().getRenewDate();
         if (renewDate < now) {
           expiredTokens.add(entry.getKey());
-          removeTokenForOwnerStats(entry.getKey());
+          try {
+            removeTokenForOwnerStats(entry.getKey());
+          } catch (Exception e) {
+            LOG.warn("Ignoring the exception in removeTokenForOwnerStats to remove expired delegation tokens from cache and proceeding to remove", e);
+          }
           i.remove();
         }
       }
