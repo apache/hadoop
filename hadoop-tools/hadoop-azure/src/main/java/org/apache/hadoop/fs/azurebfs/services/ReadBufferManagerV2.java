@@ -46,6 +46,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.classification.VisibleForTesting;
 
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.BYTES_PER_GIGABYTE;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.HUNDRED_D;
 
 /**
@@ -1020,6 +1021,22 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
   }
 
   /**
+   * Calculates the available heap memory in gigabytes.
+   * This method uses {@link Runtime#getRuntime()} to obtain the maximum heap memory
+   * allowed for the JVM and subtracts the currently used memory (total - free)
+   * to determine how much heap memory is still available.
+   * The result is rounded up to the nearest gigabyte.
+   *
+   * @return the available heap memory in gigabytes
+   */
+  private long getAvailableHeapMemory() {
+    MemoryMXBean osBean = ManagementFactory.getMemoryMXBean();
+    MemoryUsage memoryUsage = osBean.getHeapMemoryUsage();
+    long availableHeapBytes = memoryUsage.getMax() - memoryUsage.getUsed();
+    return (availableHeapBytes + BYTES_PER_GIGABYTE - 1) / BYTES_PER_GIGABYTE;
+  }
+
+  /**
    * Get the current CPU load of the system.
    * @return the CPU load as a double value between 0.0 and 1.0
    */
@@ -1184,7 +1201,7 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
         exec.getActiveCount(),      // Threads actively executing tasks
         getJvmCpuUtilization(),     // JVM process CPU usage (%)
         getCpuLoad(),        // System-wide CPU usage (%)
-        getMemoryLoad()    // Available JVM heap memory (GB)
+        getAvailableHeapMemory()    // Available JVM heap memory (GB)
     );
   }
 }
