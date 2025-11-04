@@ -26,6 +26,7 @@ import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.enums.StatisticTypeEnum;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 
@@ -45,10 +46,20 @@ import org.apache.hadoop.fs.azurebfs.WriteThreadPoolSizeManager;
 public class AbfsWriteThreadPoolMetrics extends AbstractAbfsStatisticsSource {
 
   private static final Logger LOG = LoggerFactory.getLogger(AbfsWriteThreadPoolMetrics.class);
+
+  /* Flag indicating whether metrics have been updated at least once. */
   private final AtomicBoolean updatedAtLeastOnce = new AtomicBoolean(false);
+
+  /* Tracks the current version of metric updates. */
   private final AtomicLong updateVersion = new AtomicLong(0);
+
+  /* Tracks the last version of metrics that was pushed or reported. */
   private final AtomicLong lastPushedVersion = new AtomicLong(-1);
 
+  /**
+   * Initializes the IOStatistics store for write thread pool metrics,
+   * registering all gauge-type metrics for monitoring.
+   */
   public AbfsWriteThreadPoolMetrics() {
     IOStatisticsStore ioStatisticsStore = iostatisticsStore()
         .withGauges(getMetricNames(StatisticTypeEnum.TYPE_GAUGE))
@@ -57,7 +68,12 @@ public class AbfsWriteThreadPoolMetrics extends AbstractAbfsStatisticsSource {
   }
 
   /**
-   * Retrieves metric names based on the statistic type.
+   * Returns the list of metric names corresponding to the specified statistic type.
+   * Filters the {@link AbfsWriteThreadPoolMetricsEnum} values by their
+   * {@link StatisticTypeEnum} and collects the matching metric names.
+   *
+   * @param type the {@link StatisticTypeEnum} used to filter metrics (e.g., gauge or counter).
+   * @return an array of metric names matching the given statistic type.
    */
   private String[] getMetricNames(StatisticTypeEnum type) {
     return Arrays.stream(AbfsWriteThreadPoolMetricsEnum.values())
@@ -67,7 +83,12 @@ public class AbfsWriteThreadPoolMetrics extends AbstractAbfsStatisticsSource {
   }
 
   /**
-   * Sets the metric value for a given enum.
+   * Sets the metric value for the specified write thread pool metric.
+   * Depending on the metric’s statistic type, the value is recorded either as a gauge
+   * (representing the current state) or as a counter (representing a cumulative count).
+   *
+   * @param metric the {@link AbfsWriteThreadPoolMetricsEnum} representing the metric to update.
+   * @param value  the value to assign to the metric.
    */
   public void setMetricValue(AbfsWriteThreadPoolMetricsEnum metric, double value) {
     switch (metric.getStatisticType()) {
@@ -83,7 +104,14 @@ public class AbfsWriteThreadPoolMetrics extends AbstractAbfsStatisticsSource {
   }
 
   /**
-   * Updates the thread pool metrics from the given stats.
+   * Updates the write thread pool metrics using the provided statistics snapshot.
+   * This synchronized method ensures thread-safe updates of metrics including current pool size,
+   * maximum pool size, active threads, JVM CPU utilization, overall CPU utilization, and
+   * available memory. Once updated, it marks the metrics as refreshed and increments the
+   * internal version counter for tracking metric changes.
+   *
+   * @param stats the {@link WriteThreadPoolSizeManager.WriteThreadPoolStats} instance containing
+   *              the latest thread pool and system statistics; ignored if {@code null}.
    */
   public synchronized void update(WriteThreadPoolSizeManager.WriteThreadPoolStats stats) {
     if (stats == null) {
@@ -117,7 +145,7 @@ public class AbfsWriteThreadPoolMetrics extends AbstractAbfsStatisticsSource {
       if (currentVersion == lastPushedVersion.get()) {
         return EMPTY_STRING;
       }
-      StringBuilder sb = new StringBuilder("WR").append(CHAR_EQUALS);
+      StringBuilder sb = new StringBuilder(String.valueOf(FSOperationType.WRITE)).append(CHAR_EQUALS);
       for (AbfsWriteThreadPoolMetricsEnum metric : AbfsWriteThreadPoolMetricsEnum.values()) {
         sb.append(metric.getName())
             .append(CHAR_EQUALS)

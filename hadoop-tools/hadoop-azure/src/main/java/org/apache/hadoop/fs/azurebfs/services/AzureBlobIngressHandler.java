@@ -125,6 +125,7 @@ public class AzureBlobIngressHandler extends AzureIngressHandler {
     TracingContext tracingContextAppend = new TracingContext(tracingContext);
     tracingContextAppend.setIngressHandler(BLOB_APPEND + " T " + threadIdStr);
     tracingContextAppend.setPosition(String.valueOf(blockToUpload.getOffset()));
+     // Fetches write thread pool metrics from the ABFS client and adds them to the tracing context.
     AbfsWriteThreadPoolMetrics metrics = getAbfsOutputStream().getClient()
         .getAbfsCounters()
         .getAbfsWriteThreadPoolMetrics();

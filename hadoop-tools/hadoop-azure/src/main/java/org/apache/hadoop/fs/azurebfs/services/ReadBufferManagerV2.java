@@ -105,16 +105,21 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
 
   private static AtomicBoolean isConfigured = new AtomicBoolean(false);
 
+  /* Metrics collector for monitoring the performance of the ABFS read thread pool.  */
   private final AbfsReadThreadPoolMetrics readThreadPoolMetrics;
 
+  /* Last recorded CPU time used for computing CPU utilization deltas.  */
   private static long lastCpuTime = 0;
 
+  /* Last recorded system time used for utilization calculations.  */
   private static long lastTime = 0;
 
   private final AbfsClient abfsClient;
 
   /**
-   * Private constructor to prevent instantiation as this needs to be singleton.
+   * Initializes a new instance of {@code ReadBufferManagerV2} for the given ABFS client.
+   *
+   * @param abfsClient the {@link AbfsClient} used for managing read operations.
    */
   private ReadBufferManagerV2(AbfsClient abfsClient) {
     this.abfsClient = abfsClient;
@@ -122,6 +127,12 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
     printTraceLog("Creating Read Buffer Manager V2 with HADOOP-18546 patch");
   }
 
+  /**
+   * Returns the singleton instance of {@code ReadBufferManagerV2} for the given ABFS client.
+   *
+   * @param abfsClient the {@link AbfsClient} used for read operations.
+   * @return the singleton instance of {@code ReadBufferManagerV2}.
+   */
   static ReadBufferManagerV2 getBufferManager(AbfsClient abfsClient) {
     if (!isConfigured.get()) {
       throw new IllegalStateException("ReadBufferManagerV2 is not configured. "
@@ -859,7 +870,9 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
         workerRefs.add(worker);
         workerPool.submit(worker);
       }
+      // Capture the latest thread pool statistics (pool size, CPU, memory, etc.)
       ReadThreadPoolStats stats = getCurrentStats();
+      // Update the read thread pool metrics with the latest statistics snapshot.
       readThreadPoolMetrics.update(stats);
       printTraceLog("Increased worker pool size from {} to {}", currentPoolSize,
           newThreadPoolSize);
@@ -873,7 +886,9 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
         ReadBufferWorker worker = workerRefs.remove(workerRefs.size() - 1);
         worker.stop();
       }
+      // Capture the latest thread pool statistics (pool size, CPU, memory, etc.)
       ReadThreadPoolStats stats = getCurrentStats();
+      // Update the read thread pool metrics with the latest statistics snapshot.
       readThreadPoolMetrics.update(stats);
       printTraceLog("Decreased worker pool size from {} to {}", currentPoolSize,
           newThreadPoolSize);
@@ -1151,7 +1166,7 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
   }
 
   /**
-   * Represents current statistics of the write thread pool and system.
+   * Represents current statistics of the read thread pool and system.
    */
   public static class ReadThreadPoolStats {
     private final int currentPoolSize;   // matches CURRENT_POOL_SIZE metric
@@ -1161,6 +1176,17 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
     private final double cpuUtilization; // matches CPU_UTILIZATION metric
     private final long availableHeapGB;  // matches MEMORY_UTILIZATION metric
 
+    /**
+     * Constructs an instance of {@code ReadThreadPoolStats} to capture the current
+     * state and performance metrics of the read thread pool.
+     *
+     * @param currentPoolSize     the current number of threads in the pool
+     * @param maxPoolSize         the maximum number of threads allowed in the pool
+     * @param activeThreads       the number of threads currently executing tasks
+     * @param jvmCpuUtilization   the overall JVM CPU utilization percentage
+     * @param cpuUtilization      the process-level CPU utilization percentage
+     * @param availableHeapGB     the currently available heap memory in gigabytes
+     */
     public ReadThreadPoolStats(int currentPoolSize, int maxPoolSize,
         int activeThreads, double jvmCpuUtilization, double cpuUtilization, long availableHeapGB) {
       this.currentPoolSize = currentPoolSize;
@@ -1171,23 +1197,39 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
       this.availableHeapGB = availableHeapGB;
     }
 
+    /** @return the current number of threads in the pool. */
     public int getCurrentPoolSize() { return currentPoolSize; }
+
+    /** @return the maximum allowed size of the thread pool. */
     public int getMaxPoolSize() { return maxPoolSize; }
+
+    /** @return the number of threads currently executing tasks. */
     public int getActiveThreads() { return activeThreads; }
+
+    /** @return the JVM process CPU utilization percentage. */
     public double getJvmCpuUtilization() { return jvmCpuUtilization; }
+
+    /** @return the overall system CPU utilization percentage. */
     public double getCpuUtilization() { return cpuUtilization; }
+
+    /** @return the available heap memory in gigabytes. */
     public long getMemoryUtilization() { return availableHeapGB; }
 
     @Override
     public String toString() {
       return String.format(
           "currentPoolSize=%d, maxPoolSize=%d, activeThreads=%d, jvmCpuUtilization=%.2f%%, cpuUtilization=%.2f%%, availableHeap=%dGB",
-          currentPoolSize, maxPoolSize, activeThreads, jvmCpuUtilization * 100, cpuUtilization * 100, availableHeapGB);
+          currentPoolSize, maxPoolSize, activeThreads, jvmCpuUtilization,  cpuUtilization * 100, availableHeapGB);
     }
   }
 
   /**
-   * Returns the latest snapshot of thread pool + system stats.
+   * Returns a snapshot of the current thread pool and system resource statistics.
+   * Captures key metrics including thread counts, CPU utilization, and available
+   * heap memory for performance monitoring and dynamic pool sizing decisions.
+   *
+   * @return the latest {@link ReadThreadPoolStats} representing the current state
+   *         of the thread pool and system resources.
    */
   synchronized ReadThreadPoolStats getCurrentStats() {
     if (workerPool == null) {

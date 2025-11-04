@@ -18,31 +18,59 @@
 
 package org.apache.hadoop.fs.azurebfs.enums;
 
-import org.apache.hadoop.fs.azurebfs.enums.StatisticTypeEnum;
-
 /**
- * Enum representing metrics for ABFS write thread pool monitoring.
+ * Enum representing the set of metrics tracked for the ABFS read thread pool.
+ * Each metric includes a short name used for reporting and its corresponding
+ * {@link StatisticTypeEnum}, which defines how the metric is measured (e.g., gauge).
  */
 public enum AbfsReadThreadPoolMetricsEnum {
+
+  /** Current number of threads in the read thread pool. */
   CURRENT_POOL_SIZE("CP", StatisticTypeEnum.TYPE_GAUGE),
+
+  /** Maximum configured size of the read thread pool. */
   MAX_POOL_SIZE("MP", StatisticTypeEnum.TYPE_GAUGE),
+
+  /** Number of threads currently executing read operations. */
   ACTIVE_THREADS("AT", StatisticTypeEnum.TYPE_GAUGE),
+
+  /** CPU utilization of the JVM process handling read requests. */
   JVM_CPU_UTILIZATION("JvmCpu", StatisticTypeEnum.TYPE_GAUGE),
+
+  /** Overall system CPU utilization observed during read operations. */
   CPU_UTILIZATION("Cpu", StatisticTypeEnum.TYPE_GAUGE),
+
+  /** Available heap memory in gigabytes during read operations. */
   MEMORY_UTILIZATION("AvlMem", StatisticTypeEnum.TYPE_GAUGE);
 
   private final String name;
   private final StatisticTypeEnum statisticType;
 
+  /**
+   * Constructs a metric enum constant with its short name and type.
+   *
+   * @param name  the short name or label for the metric.
+   * @param type  the {@link StatisticTypeEnum} indicating the metric type.
+   */
   AbfsReadThreadPoolMetricsEnum(String name, StatisticTypeEnum type) {
     this.name = name;
     this.statisticType = type;
   }
 
+  /**
+   * Returns the short name of the metric.
+   *
+   * @return the metric name.
+   */
   public String getName() {
     return name;
   }
 
+  /**
+   * Returns the {@link StatisticTypeEnum} associated with this metric.
+   *
+   * @return the metric's statistic type.
+   */
   public StatisticTypeEnum getStatisticType() {
     return statisticType;
   }

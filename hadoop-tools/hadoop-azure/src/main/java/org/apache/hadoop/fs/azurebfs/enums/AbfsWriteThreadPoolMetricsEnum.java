@@ -18,32 +18,63 @@
 
 package org.apache.hadoop.fs.azurebfs.enums;
 
-import org.apache.hadoop.fs.azurebfs.enums.StatisticTypeEnum;
-
 /**
- * Enum representing metrics for ABFS write thread pool monitoring.
+ * Enum representing the set of metrics tracked for the ABFS write thread pool.
+ * Each metric entry defines a short name identifier and its corresponding
+ * {@link StatisticTypeEnum}, which specifies the type of measurement (e.g., gauge).
+ * These metrics are used for monitoring and analyzing the performance and
+ * resource utilization of the write thread pool.
  */
 public enum AbfsWriteThreadPoolMetricsEnum {
+
+  /** Current number of threads in the write thread pool. */
   CURRENT_POOL_SIZE("CP", StatisticTypeEnum.TYPE_GAUGE),
+
+  /** Maximum configured size of the write thread pool. */
   MAX_POOL_SIZE("MP", StatisticTypeEnum.TYPE_GAUGE),
+
+  /** Number of threads currently executing write operations. */
   ACTIVE_THREADS("AT", StatisticTypeEnum.TYPE_GAUGE),
+
+  /** JVM CPU utilization percentage during write operations. */
   JVM_CPU_UTILIZATION("JvmCpu", StatisticTypeEnum.TYPE_GAUGE),
+
+  /** Overall system CPU utilization percentage observed during writes. */
   CPU_UTILIZATION("Cpu", StatisticTypeEnum.TYPE_GAUGE),
+
+  /** Available heap memory (in GB) during write operations. */
   MEMORY_UTILIZATION("AvlMem", StatisticTypeEnum.TYPE_GAUGE);
 
   private final String name;
   private final StatisticTypeEnum statisticType;
 
+  /**
+   * Constructs a metric definition for the ABFS write thread pool.
+   *
+   * @param name  the short name identifier for the metric.
+   * @param type  the {@link StatisticTypeEnum} describing the metric type.
+   */
   AbfsWriteThreadPoolMetricsEnum(String name, StatisticTypeEnum type) {
     this.name = name;
     this.statisticType = type;
   }
 
+  /**
+   * Returns the short name identifier of the metric.
+   *
+   * @return the metric name.
+   */
   public String getName() {
     return name;
   }
 
+  /**
+   * Returns the {@link StatisticTypeEnum} associated with this metric.
+   *
+   * @return the metric's statistic type.
+   */
   public StatisticTypeEnum getStatisticType() {
     return statisticType;
   }
 }
+

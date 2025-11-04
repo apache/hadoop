@@ -117,6 +117,7 @@ public class AzureDFSIngressHandler extends AzureIngressHandler {
       AppendRequestParameters reqParams,
       TracingContext tracingContext) throws IOException {
     TracingContext tracingContextAppend = new TracingContext(tracingContext);
+    // Fetches write thread pool metrics from the ABFS client and adds them to the tracing context.
     AbfsWriteThreadPoolMetrics metrics = getAbfsOutputStream().getClient()
         .getAbfsCounters()
         .getAbfsWriteThreadPoolMetrics();
