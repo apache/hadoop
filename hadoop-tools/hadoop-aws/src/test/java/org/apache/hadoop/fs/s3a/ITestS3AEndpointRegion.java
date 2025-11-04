@@ -516,17 +516,19 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
             || bucketLocation.startsWith(CA_REGION_PREFIX)
             || bucketLocation.startsWith(US_DUAL_STACK_PREFIX));
 
-    final Configuration conf = getConfiguration();
+    final Configuration conf = getFileSystem().getConf();
     final Configuration newConf = new Configuration(conf);
 
     removeBaseAndBucketOverrides(
         newConf,
         ENDPOINT,
         AWS_REGION,
-        FIPS_ENDPOINT);
+        FIPS_ENDPOINT,
+        PATH_STYLE_ACCESS);
 
     newConf.set(ENDPOINT, CENTRAL_ENDPOINT);
     newConf.setBoolean(FIPS_ENDPOINT, true);
+    newConf.setBoolean(PATH_STYLE_ACCESS, false);
 
     newFS = new S3AFileSystem();
     newFS.initialize(getFileSystem().getUri(), newConf);
