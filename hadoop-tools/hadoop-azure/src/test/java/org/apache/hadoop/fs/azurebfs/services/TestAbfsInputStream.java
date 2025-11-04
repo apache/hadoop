@@ -938,6 +938,9 @@ public class TestAbfsInputStream extends
     executePrefetchReadTest(tracingContext1, configuration1, false);
   }
 
+  /*
+   * Helper method to execute read and verify if priority header is added or not as expected
+   */
   private void executePrefetchReadTest(TracingContext tracingContext,
       Configuration rawConfig,
       boolean shouldHaveHeader) throws Exception {
