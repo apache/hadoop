@@ -57,6 +57,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.fs.s3a.impl.RegionResolution;
 import org.apache.hadoop.fs.s3a.statistics.impl.AwsStatisticsCollector;
 import org.apache.hadoop.fs.store.LogExactlyOnce;
 
@@ -418,24 +419,8 @@ public class DefaultS3ClientFactory extends Configured
    */
   protected static URI getS3Endpoint(String endpoint, final Configuration conf) {
 
-    boolean secureConnections = conf.getBoolean(SECURE_CONNECTIONS, DEFAULT_SECURE_CONNECTIONS);
-
-    String protocol = secureConnections ? "https" : "http";
-
-    if (endpoint == null || endpoint.isEmpty()) {
-      // don't set an endpoint if none is configured, instead let the SDK figure it out.
-      return null;
-    }
-
-    if (!endpoint.contains("://")) {
-      endpoint = String.format("%s://%s", protocol, endpoint);
-    }
-
-    try {
-      return new URI(endpoint);
-    } catch (URISyntaxException e) {
-      throw new IllegalArgumentException(e);
-    }
+    return RegionResolution.getS3Endpoint(endpoint,
+        conf.getBoolean(SECURE_CONNECTIONS, DEFAULT_SECURE_CONNECTIONS));
   }
 
   /**
