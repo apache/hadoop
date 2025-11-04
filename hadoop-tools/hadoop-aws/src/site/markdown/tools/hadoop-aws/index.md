@@ -1763,7 +1763,7 @@ The S3 Client can use checksums in its requests to an S3 store in a number of wa
 The various options available can impact performance and compatibility.
 To understand the risks and issues here know that:
 * Request checksum generation (item 1) and validation (4) can be done "when required" or "always".
-  The "always" option is stricter, but can result in third-party compatibility issues
+  The "always" option is stricter, but can result in third-party compatibility issues.
 * Some third-party stores require the `Content-MD5` header and will fail without it (item 2)
 * Data upload checksums (item 3) can be computationally expensive and incompatible with third-party stores
 * The most efficient data upload checksum is CRC32C; there are explicit opcodes for this in x86 and ARM CPUs, with the appropriate implementation circuitry.
@@ -1809,11 +1809,11 @@ As that appears to have been fixed in the 2.35.4 SDK release, this option is ena
 
 Should checksums be generated for all requests made to the store?
 
-* Incompatible with some third-party stores
+* Incompatible with some third-party stores.
 * If `true` then multipart upload (i.e. large file upload) may fail if `fs.s3a.create.checksum.algorithm`
-  is not set to a valid algorithm (i.e. something other than `NONE`)
+  is not set to a valid algorithm (i.e. something other than `NONE`).
 
-Set `fs.s3a.checksum.generation` to `false` by default to avoid these problems.
+Set `fs.s3a.checksum.generation` to `false` (the default value) to avoid these problems.
 
 ### Checksum validation `fs.s3a.checksum.validation`
 
@@ -1822,7 +1822,6 @@ Should the checksums of downloaded data be validated?
 This hurts performance and should be only used if considered important.
 
 ### Creation checksum `fs.s3a.create.checksum.algorithm`
-
 
 This is the algorithm to use when checksumming data during file creation and copy.
 
@@ -1854,7 +1853,7 @@ The part may not have been uploaded, or the specified entity tag may not match t
 g1zo25aQCZfqFh3vOzrzOBp9RjJEWmKImRcfWhvaeFHQ2hZo1xTm3GVMD03zN+d+cFB6oNeelNc=) (SDK Attempt Count: 1)
 ```
 
-Alternatively, as the failure of multipart uploads when a checksum algorithm is set and the part ordering is not in sequence.
+Alternatively, as the failure of a multipart upload when a checksum algorithm is set and the part ordering is not in sequence.
 
 ```
 org.apache.hadoop.fs.s3a.AWSStatus500Exception:

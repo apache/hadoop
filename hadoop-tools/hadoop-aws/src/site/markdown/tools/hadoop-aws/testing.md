@@ -593,11 +593,9 @@ on third party stores.
    Note how this can be set as a per-bucket option.
   -->
   <property>
-    <name>fs.s3a.ext.multipart.commit.consumes.upload.id</name>
+    <name>fs.s3a.ext.test.multipart.commit.consumes.upload.id</name>
     <value>true</value>
   </property>
-
-
 ```
 
 See [Third Party Stores](third_party_stores.html) for more on this topic.
@@ -754,13 +752,13 @@ For stores with stricter semantics, these test cases must be disabled.
 If the store reports errors when trying to list/abort completed multipart uploads,
 expect failures in `ITestUploadRecovery` and `ITestS3AContractMultipartUploader`.
 The tests can be reconfigured to expect failure by setting the option
-`fs.s3a.ext.multipart.commit.consumes.upload.id` to true.
+`fs.s3a.ext.test.multipart.commit.consumes.upload.id` to true.
 
 Note how this can be set as a per-bucket option.
 
 ```xml
   <property>
-    <name>fs.s3a.ext.multipart.commit.consumes.upload.id</name>
+    <name>fs.s3a.ext.test.multipart.commit.consumes.upload.id</name>
     <value>true</value>
   </property>
 ```

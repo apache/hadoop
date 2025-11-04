@@ -172,7 +172,6 @@ client to optimise HTTP GET requests for the different use cases.
 See [Improving data input performance through fadvise](./performance.html#fadvise)
 for the details.
 
-
 ## Developer Topics
 
 ### Stream IOStatistics

@@ -57,7 +57,7 @@ The v4 signing algorithm requires a region to be set in `fs.s3a.endpoint.region`
 A non-empty value is generally sufficient, though some deployments may require
 a specific value.
 
-*Important:* do not use `auto` or `sdk` as these may be used
+*Important:* do not use `auto`, `ec2`, or `sdk` as these may be used
 in the future for specific region binding algorithms.
 
 Finally, assuming the credential source is the normal access/secret key
@@ -195,7 +195,6 @@ It may be necessary to change checksums of uploads by
     <value>false</value>
     <description>Validate data checksums on download</description>
   </property>
-
 ```
 
 These options are set for best compatibility and performance by default; they may need tuning for specific stores.
@@ -485,7 +484,8 @@ Fix: path style access
 
 ## Dell ECS through the S3A Connector
 
-As of October 2025 and the 2.33.8 AWS SDK, the settings needed to interact with Dell ECS at [ECS Test Drive](https://portal.ecstestdrive.com/) were
+As of November 2025 and the 2.35.4 AWS SDK, the settings needed to interact with Dell ECS
+at [ECS Test Drive](https://portal.ecstestdrive.com/) were
 
 ```xml
 <property>
@@ -493,7 +493,6 @@ As of October 2025 and the 2.33.8 AWS SDK, the settings needed to interact with 
   <value>region</value>
   <description>arbitrary name</description>
 </property>
-
 
 <property>
   <name>fs.s3a.endpoint.region</name>

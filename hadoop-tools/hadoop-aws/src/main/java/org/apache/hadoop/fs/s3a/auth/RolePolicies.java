@@ -202,7 +202,6 @@ public final class RolePolicies {
    */
   public static final String EVERYTHING_ARN = "*";
 
-
   /**
    * All S3Express buckets: {@value}.
    * S3Express adds another "domain" for permissions: S3 express ARNs and S3 Express operations,

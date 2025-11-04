@@ -182,7 +182,6 @@ public class ITestS3AContractMultipartUploader extends
     super.testConcurrentUploads();
   }
 
-
   @Test
   @Override
   public void testMultipartUploadAbort() throws Exception {

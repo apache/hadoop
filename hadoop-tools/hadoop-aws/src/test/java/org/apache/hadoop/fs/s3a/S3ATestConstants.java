@@ -296,7 +296,7 @@ public interface S3ATestConstants {
    * Can be set as a per-bucket setting; test runner will pick this up.
    */
   String MULTIPART_COMMIT_CONSUMES_UPLOAD_ID =
-      "fs.s3a.ext.multipart.commit.consumes.upload.id";
+      "fs.s3a.ext.test.multipart.commit.consumes.upload.id";
 
   /**
    * Default value of {@link #MULTIPART_COMMIT_CONSUMES_UPLOAD_ID}: {@value}.
