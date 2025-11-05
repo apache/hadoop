@@ -94,7 +94,7 @@ echo "DOCKER_HOME_DIR=${DOCKER_HOME_DIR:-<empty>}"
 echo "OS_PLATFORM_SUFFIX=${OS_PLATFORM_SUFFIX:-<empty>}"
 echo "=================================="
 
-docker build -t "hadoop-build${OS_PLATFORM_SUFFIX}-${USER_ID}" - <<UserSpecificDocker
+cat > ${HOME}/Dockerfile.user <<EOF
 FROM hadoop-build
 RUN rm -f /var/log/faillog /var/log/lastlog
 RUN groupadd --non-unique -g ${GROUP_ID} ${USER_NAME}
@@ -102,7 +102,9 @@ RUN useradd -g ${GROUP_ID} -u ${USER_ID} -k /root -m ${USER_NAME} -d "${DOCKER_H
 RUN echo "${USER_NAME} ALL=NOPASSWD: ALL" > "/etc/sudoers.d/hadoop-build-${USER_ID}"
 ENV HOME "${DOCKER_HOME_DIR}"
 
-UserSpecificDocker
+EOF
+
+docker build -t "hadoop-build${OS_PLATFORM_SUFFIX}-${USER_ID}" -f ${HOME}/Dockerfile.user .
 
 #If this env varible is empty, docker will be started
 # in non interactive mode
