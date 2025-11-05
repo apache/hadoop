@@ -62,6 +62,7 @@ import org.apache.hadoop.fs.azurebfs.constants.AbfsServiceType;
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.constants.HttpOperationType;
+import org.apache.hadoop.fs.azurebfs.constants.ReadType;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsDriverException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsInvalidChecksumException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
@@ -139,6 +140,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.HTTPS
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.ACCEPT_CHARSET;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.CONTENT_MD5;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.CONTENT_TYPE;
+import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_REQUEST_PRIORITY;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.USER_AGENT;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_ENCRYPTION_ALGORITHM;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_ENCRYPTION_CONTEXT;
@@ -1403,6 +1405,21 @@ public abstract class AbfsClient implements Closeable {
       final AppendRequestParameters reqParams) {
     if (reqParams.getMd5() != null) {
       requestHeaders.add(new AbfsHttpHeader(CONTENT_MD5, reqParams.getMd5()));
+    }
+  }
+
+  /**
+   * Add request priority header for prefetch read requests if enabled.
+   *
+   * @param requestHeaders to be updated with request priority header
+   * @param tracingContext tracing context to check read type
+   */
+  protected void addRequestPriorityForPrefetch(List<AbfsHttpHeader> requestHeaders,
+      TracingContext tracingContext) {
+    if (getAbfsConfiguration().isEnablePrefetchRequestPriority()
+        && ReadType.PREFETCH_READ.equals(tracingContext.getReadType())) {
+      requestHeaders.add(new AbfsHttpHeader(X_MS_REQUEST_PRIORITY,
+          getAbfsConfiguration().getPrefetchRequestPriorityValue()));
     }
   }
 

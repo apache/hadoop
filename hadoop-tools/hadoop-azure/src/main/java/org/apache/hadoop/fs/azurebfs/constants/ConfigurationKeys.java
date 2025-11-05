@@ -283,6 +283,18 @@ public final class ConfigurationKeys {
   public static final String FS_AZURE_ENABLE_READAHEAD_V2_DYNAMIC_SCALING = "fs.azure.enable.readahead.v2.dynamic.scaling";
 
   /**
+   * Enable or disable request priority for prefetch requests
+   * Value: {@value}.
+   */
+  public static final String FS_AZURE_ENABLE_PREFETCH_REQUEST_PRIORITY = "fs.azure.enable.prefetch.request.priority";
+
+  /**
+   * Request priority value for prefetch requests
+   * Value: {@value}.
+   */
+  public static final String FS_AZURE_PREFETCH_REQUEST_PRIORITY_VALUE = "fs.azure.prefetch.request.priority.value";
+
+  /**
    * Minimum number of prefetch threads in the thread pool for readahead V2.
    * {@value }
    */

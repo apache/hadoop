@@ -393,6 +393,15 @@ public class TracingContext {
   }
 
   /**
+   * Returns the read type for the current operation.
+   *
+   *  @return the read type for the request.
+   */
+  public ReadType getReadType() {
+    return readType;
+  }
+
+  /**
    * Sets the metric results string used for tracing or logging.
    * @param metricResults the formatted metric data to store.
    */

@@ -1335,6 +1335,9 @@ public class AbfsBlobClient extends AbfsClient {
     requestHeaders.add(rangeHeader);
     requestHeaders.add(new AbfsHttpHeader(IF_MATCH, eTag));
 
+    // Add request priority header for prefetch reads
+    addRequestPriorityForPrefetch(requestHeaders, tracingContext);
+
     // Add request header to fetch MD5 Hash of data returned by server.
     if (isChecksumValidationEnabled(requestHeaders, rangeHeader, bufferLength)) {
       requestHeaders.add(new AbfsHttpHeader(X_MS_RANGE_GET_CONTENT_MD5, TRUE));

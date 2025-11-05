@@ -638,6 +638,15 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_FS_AZURE_TAIL_LATENCY_MAX_RETRY_COUNT)
   private int tailLatencyMaxRetryCount;
 
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ENABLE_PREFETCH_REQUEST_PRIORITY,
+      DefaultValue = DEFAULT_FS_AZURE_ENABLE_PREFETCH_REQUEST_PRIORITY)
+  private boolean enablePrefetchRequestPriority;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_PREFETCH_REQUEST_PRIORITY_VALUE,
+      MinValue = DEFAULT_FS_AZURE_STANDARD_REQUEST_PRIORITY_VALUE,
+      DefaultValue = DEFAULT_FS_AZURE_LOWEST_REQUEST_PRIORITY_VALUE)
+  private int prefetchRequestPriorityValue;
+
   private String clientProvidedEncryptionKey;
   private String clientProvidedEncryptionKeySHA;
 
@@ -1353,6 +1362,14 @@ public class AbfsConfiguration{
 
   public boolean getIsCreateIdempotencyEnabled() {
     return enableCreateIdempotency;
+  }
+
+  public boolean isEnablePrefetchRequestPriority() {
+    return enablePrefetchRequestPriority;
+  }
+
+  public String getPrefetchRequestPriorityValue() {
+    return Integer.toString(prefetchRequestPriorityValue);
   }
 
   /**

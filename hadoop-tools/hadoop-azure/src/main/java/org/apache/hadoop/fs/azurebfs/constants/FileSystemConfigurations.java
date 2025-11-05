@@ -393,6 +393,13 @@ public final class FileSystemConfigurations {
 
   public static final boolean DEFAULT_FS_AZURE_ENABLE_CREATE_BLOB_IDEMPOTENCY = true;
 
+  public static final boolean DEFAULT_FS_AZURE_ENABLE_PREFETCH_REQUEST_PRIORITY = true;
+
+  // The default traffic request priority is 3 (from service side)
+  // The lowest priority a request can get is 7
+  public static final int DEFAULT_FS_AZURE_LOWEST_REQUEST_PRIORITY_VALUE = 7;
+  public static final int DEFAULT_FS_AZURE_STANDARD_REQUEST_PRIORITY_VALUE = 3;
+
   public static final boolean DEFAULT_FS_AZURE_ENABLE_TAIL_LATENCY_TRACKER = false;
   public static final boolean DEFAULT_FS_AZURE_ENABLE_TAIL_LATENCY_REQUEST_TIMEOUT = false;
   public static final int DEFAULT_FS_AZURE_TAIL_LATENCY_PERCENTILE = 99;

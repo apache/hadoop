@@ -1072,6 +1072,10 @@ public class AbfsDfsClient extends AbfsClient {
     }
 
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
+
+    // Add request priority header for prefetch reads
+    addRequestPriorityForPrefetch(requestHeaders, tracingContext);
+
     // AbfsInputStream/AbfsOutputStream reuse SAS tokens for better performance
     String sasTokenForReuse = appendSASTokenToQuery(path,
         SASTokenProvider.READ_OPERATION,
