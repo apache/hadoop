@@ -129,8 +129,8 @@ public final class WriteThreadPoolSizeManager implements Closeable {
         }
     );
     ThreadPoolExecutor executor = (ThreadPoolExecutor) this.boundedThreadPool;
-    executor.setKeepAliveTime(
-        abfsConfiguration.getWriteThreadPoolKeepAliveTime(), TimeUnit.SECONDS);
+    int keepAlive = Math.max(1, abfsConfiguration.getWriteThreadPoolKeepAliveTime());
+    executor.setKeepAliveTime(keepAlive, TimeUnit.SECONDS);
     executor.allowCoreThreadTimeOut(true);
     /* Create a scheduled executor for CPU monitoring and pool adjustment */
     this.cpuMonitorExecutor = Executors.newScheduledThreadPool(1);
@@ -516,7 +516,7 @@ public final class WriteThreadPoolSizeManager implements Closeable {
     public String toString() {
       return String.format(
           "currentPoolSize=%d, maxPoolSize=%d, activeThreads=%d, jvmCpuUtilization=%.2f%%, cpuUtilization=%.2f%%, availableHeap=%dGB",
-          currentPoolSize, maxPoolSize, activeThreads, jvmCpuUtilization * 100, cpuUtilization * 100, availableHeapGB);
+          currentPoolSize, maxPoolSize, activeThreads, jvmCpuUtilization,  cpuUtilization * 100, availableHeapGB);
     }
   }
 

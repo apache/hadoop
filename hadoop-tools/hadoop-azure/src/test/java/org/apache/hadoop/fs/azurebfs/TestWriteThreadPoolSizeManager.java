@@ -36,12 +36,23 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicIntegerArray;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
+import org.apache.hadoop.fs.azurebfs.services.AbfsCounters;
+import org.apache.hadoop.fs.azurebfs.services.AbfsWriteThreadPoolMetrics;
 
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_WRITE_MAX_CONCURRENT_REQUESTS;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ABFS_ENABLE_CHECKSUM_VALIDATION;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_WRITE_DYNAMIC_THREADPOOL_ENABLEMENT;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_WRITE_HIGH_CPU_THRESHOLD_PERCENT;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_WRITE_LOW_CPU_THRESHOLD_PERCENT;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ZERO;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
 class TestWriteThreadPoolSizeManager extends AbstractAbfsIntegrationTest {
@@ -772,6 +783,133 @@ class TestWriteThreadPoolSizeManager extends AbstractAbfsIntegrationTest {
               latch.await(LATCH_TIMEOUT_SECONDS / 2, TimeUnit.SECONDS))
           .as("All burst tasks should finish in reasonable time")
           .isTrue();
+      instance.close();
+    }
+  }
+
+  /**
+   * Verifies that when the system experiences high CPU usage,
+   * the WriteThreadPoolSizeManager detects the load, scales down
+   * the maximum thread pool size, and updates the corresponding
+   * write thread pool metrics accordingly.
+   */
+  @Test
+  void testThreadPoolScalesDownOnHighCpuLoadAndMetricsUpdate()
+      throws Exception {
+    // Initialize filesystem and thread pool manager
+    Configuration conf = getRawConfiguration();
+    conf.setBoolean(FS_AZURE_WRITE_DYNAMIC_THREADPOOL_ENABLEMENT, true);
+    conf.setInt(AZURE_WRITE_MAX_CONCURRENT_REQUESTS, 2);
+    conf.setInt(FS_AZURE_WRITE_LOW_CPU_THRESHOLD_PERCENT, 10);
+    FileSystem fileSystem = FileSystem.newInstance(conf);
+    try (AzureBlobFileSystem abfs = (AzureBlobFileSystem) fileSystem) {
+      WriteThreadPoolSizeManager instance =
+          WriteThreadPoolSizeManager.getInstance("fs1",
+              abfs.getAbfsStore().getAbfsConfiguration(),
+              getFileSystem().getAbfsClient());
+      // --- Capture initial metrics and stats ---
+      AbfsWriteThreadPoolMetrics metrics =
+          abfs.getAbfsClient().getAbfsCounters().getAbfsWriteThreadPoolMetrics();
+
+      WriteThreadPoolSizeManager.WriteThreadPoolStats statsBefore =
+          instance.getCurrentStats();
+      ThreadPoolExecutor executor =
+          (ThreadPoolExecutor) instance.getExecutorService();
+      // Start monitoring CPU load
+      instance.startCPUMonitoring();
+
+      // Create a CPU-bound task (simulate heavy computation)
+      Runnable cpuBurn = () -> {
+        long end = System.currentTimeMillis() + WAIT_TIMEOUT_MS;
+        while (System.currentTimeMillis() < end) {
+          double waste = Math.sin(Math.random()) * Math.cos(Math.random());
+        }
+      };
+
+      // Launch two CPU hog threads
+      Thread cpuHog1 = new Thread(cpuBurn, "cpu-hog-thread-1");
+      Thread cpuHog2 = new Thread(cpuBurn, "cpu-hog-thread-2");
+      cpuHog1.start();
+      cpuHog2.start();
+
+      // Submit multiple concurrent write tasks while CPU is under load
+      int taskCount = 10;
+      CountDownLatch latch = new CountDownLatch(taskCount);
+      Path base = new Path(TEST_DIR_PATH);
+      abfs.mkdirs(base);
+      final byte[] buffer = new byte[TEST_FILE_LENGTH];
+      new Random().nextBytes(buffer);
+
+      for (int i = 0; i < taskCount; i++) {
+        final Path part = new Path(base, "part-" + i);
+        executor.submit(() -> {
+          try (FSDataOutputStream out = abfs.create(part, true)) {
+            for (int j = 0; j < 5; j++) {
+              out.write(buffer);
+              out.hflush();
+            }
+          } catch (IOException e) {
+            Assertions.fail("Write task failed under CPU stress", e);
+          } finally {
+            latch.countDown();
+          }
+        });
+      }
+
+      // Ensure all tasks complete
+      boolean finished = latch.await(LATCH_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+
+      // Wait for CPU hogs to complete and metrics to refresh
+      cpuHog1.join();
+      cpuHog2.join();
+      Thread.sleep(SLEEP_DURATION_30S_MS);
+
+      WriteThreadPoolSizeManager.WriteThreadPoolStats statsAfter
+          = instance.getCurrentStats();
+
+      // --- Validate that metrics and stats changed ---
+      Assertions.assertThat(statsAfter)
+          .as("Thread pool stats should update after CPU load")
+          .isNotEqualTo(statsBefore);
+
+      boolean updatedMetrics = metrics.getUpdatedAtLeastOnce().get();
+
+      Assertions.assertThat(updatedMetrics)
+          .as("Metrics should be updated at least once after CPU load")
+          .isTrue();
+
+      String metricsOutput = metrics.toString();
+
+      // Assertions for metrics correctness
+      Assertions.assertThat(metricsOutput)
+          .as("Metrics output should not be empty")
+          .isNotEmpty();
+
+      Assertions.assertThat(metricsOutput)
+          .as("Metrics must include CPU utilization data")
+          .contains("Cpu=");
+
+      Assertions.assertThat(metricsOutput)
+          .as("Metrics must include memory utilization data")
+          .contains("AvlMem=");
+
+      Assertions.assertThat(metricsOutput)
+          .as("Metrics must include current thread pool size")
+          .contains("CP=");
+
+      // Cleanup test data
+      for (int i = 0; i < taskCount; i++) {
+        try {
+          abfs.delete(new Path(base, "part-" + i), false);
+        } catch (IOException ignore) {
+          // Ignored: cleanup failures are non-fatal in tests
+        }
+      }
+      try {
+        abfs.delete(base, true);
+      } catch (IOException ignore) {
+        // Ignored: cleanup failures are non-fatal in tests
+      }
       instance.close();
     }
   }

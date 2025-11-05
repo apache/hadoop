@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.azurebfs.services;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
@@ -27,6 +28,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
+import org.apache.hadoop.fs.azurebfs.WriteThreadPoolSizeManager;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ReadBufferStatus;
 
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENABLE_READAHEAD_V2;
@@ -286,6 +288,87 @@ public class TestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
     running = false;
     t.join();
   }
+
+  @Test
+  public void testReadMetricUpdation() throws Exception {
+    Configuration configuration = getReadAheadV2Configuration();
+    configuration.set(FS_AZURE_READAHEAD_V2_MEMORY_USAGE_THRESHOLD_PERCENT, "2");
+    FileSystem fileSystem = FileSystem.newInstance(configuration);
+    try (AzureBlobFileSystem abfs = (AzureBlobFileSystem) fileSystem) {
+      AbfsClient abfsClient = abfs.getAbfsStore().getClient();
+      AbfsConfiguration abfsConfig = new AbfsConfiguration(configuration,
+          getAccountName());
+      ReadBufferManagerV2.setReadBufferManagerConfigs(
+          abfsConfig.getReadAheadBlockSize(), abfsConfig);
+      ReadBufferManagerV2.getBufferManager(abfsClient).testResetReadBufferManager();
+      ReadBufferManagerV2.setReadBufferManagerConfigs(
+          abfsConfig.getReadAheadBlockSize(), abfsConfig);
+      ReadBufferManagerV2 bufferManagerV2
+          = ReadBufferManagerV2.getBufferManager(abfsClient);
+
+      // --- Capture initial metrics and stats ---
+      AbfsReadThreadPoolMetrics metrics =
+          abfsClient.getAbfsCounters().getAbfsReadThreadPoolMetrics();
+
+      ReadBufferManagerV2.ReadThreadPoolStats statsBefore =
+          bufferManagerV2.getCurrentStats();
+      int initialBuffers = bufferManagerV2.getMinBufferPoolSize();
+      assertThat(bufferManagerV2.getNumBuffers()).isEqualTo(initialBuffers);
+      running = true;
+      Thread t = new Thread(() -> {
+        while (running) {
+          long maxMemory = Runtime.getRuntime().maxMemory();
+          long usedMemory = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
+          double usage = (double) usedMemory / maxMemory;
+
+          if (usage < HIGH_MEMORY_USAGE_THRESHOLD_PERCENT) {
+            // Allocate more memory
+            allocations.add(new byte[10 * 1024 * 1024]); // 10MB
+          }
+        }
+      }, "MemoryLoadThread");
+      t.setDaemon(true);
+      t.start();
+      Thread.sleep(2L * bufferManagerV2.getMemoryMonitoringIntervalInMilliSec());
+      assertThat(bufferManagerV2.getNumBuffers()).isLessThan(initialBuffers);
+      running = false;
+      t.join();
+
+      ReadBufferManagerV2.ReadThreadPoolStats statsAfter
+          = bufferManagerV2.getCurrentStats();
+
+      // --- Validate that metrics and stats changed ---
+      Assertions.assertThat(statsAfter)
+          .as("Thread pool stats should update after CPU load")
+          .isNotEqualTo(statsBefore);
+
+      boolean updatedMetrics = metrics.getUpdatedAtLeastOnce().get();
+
+      Assertions.assertThat(updatedMetrics)
+          .as("Metrics should be updated at least once after CPU load")
+          .isTrue();
+
+      String metricsOutput = metrics.toString();
+
+      // Assertions for metrics correctness
+      Assertions.assertThat(metricsOutput)
+          .as("Metrics output should not be empty")
+          .isNotEmpty();
+
+      Assertions.assertThat(metricsOutput)
+          .as("Metrics must include CPU utilization data")
+          .contains("Cpu=");
+
+      Assertions.assertThat(metricsOutput)
+          .as("Metrics must include memory utilization data")
+          .contains("AvlMem=");
+
+      Assertions.assertThat(metricsOutput)
+          .as("Metrics must include current thread pool size")
+          .contains("CP=");
+    }
+  }
+
 
   private Configuration getReadAheadV2Configuration() {
     Configuration conf = new Configuration(getRawConfiguration());

@@ -129,6 +129,14 @@ public class AbfsWriteThreadPoolMetrics extends AbstractAbfsStatisticsSource {
   }
 
   /**
+   * Returns a flag indicating whether the metrics have been updated at least once.
+   * Used to verify if metric updates have occurred since initialization.
+   */
+  public AtomicBoolean getUpdatedAtLeastOnce() {
+    return updatedAtLeastOnce;
+  }
+
+  /**
    * Returns metrics as a string only once per update version.
    */
   @Override
