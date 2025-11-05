@@ -18,9 +18,13 @@
 
 package org.apache.hadoop.fs.s3a;
 
+import java.util.Optional;
+
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.regions.Region;
+
+import org.apache.hadoop.fs.s3a.impl.RegionResolution;
 
 public class TestS3AEndpointParsing extends AbstractS3AMockTest {
 
@@ -31,13 +35,19 @@ public class TestS3AEndpointParsing extends AbstractS3AMockTest {
 
     @Test
     public void testVPCEndpoint() {
-        Region region = DefaultS3ClientFactory.getS3RegionFromEndpoint(VPC_ENDPOINT, false);
-        Assertions.assertThat(region).isEqualTo(Region.of(US_WEST_2));
+        Optional<RegionResolution.Resolution>
+            region = RegionResolution.getS3RegionFromEndpoint(VPC_ENDPOINT, false);
+        Assertions.assertThat(region).get()
+            .extracting(RegionResolution.Resolution::getRegion)
+            .isEqualTo(Region.of(US_WEST_2));
     }
 
     @Test
     public void testNonVPCEndpoint() {
-        Region region = DefaultS3ClientFactory.getS3RegionFromEndpoint(NON_VPC_ENDPOINT, false);
-        Assertions.assertThat(region).isEqualTo(Region.of(EU_WEST_1));
+      Optional<RegionResolution.Resolution>
+                  region = RegionResolution.getS3RegionFromEndpoint(NON_VPC_ENDPOINT, false);
+        Assertions.assertThat(region).get()
+            .extracting(RegionResolution.Resolution::getRegion)
+            .isEqualTo(Region.of(EU_WEST_1));
     }
 }

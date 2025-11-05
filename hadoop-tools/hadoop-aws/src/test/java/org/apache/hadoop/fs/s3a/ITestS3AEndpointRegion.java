@@ -29,8 +29,10 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.opentest4j.AssertionFailedError;
 import software.amazon.awssdk.awscore.AwsExecutionAttribute;
 import software.amazon.awssdk.awscore.exception.AwsServiceException;
+import software.amazon.awssdk.core.exception.SdkClientException;
 import software.amazon.awssdk.core.interceptor.Context;
 import software.amazon.awssdk.core.interceptor.ExecutionAttributes;
 import software.amazon.awssdk.core.interceptor.ExecutionInterceptor;
@@ -54,11 +56,12 @@ import static org.apache.hadoop.fs.s3a.Constants.ENDPOINT;
 import static org.apache.hadoop.fs.s3a.Constants.FIPS_ENDPOINT;
 import static org.apache.hadoop.fs.s3a.Constants.PATH_STYLE_ACCESS;
 import static org.apache.hadoop.fs.s3a.Constants.S3_ENCRYPTION_ALGORITHM;
-import static org.apache.hadoop.fs.s3a.DefaultS3ClientFactory.ERROR_ENDPOINT_WITH_FIPS;
+import static org.apache.hadoop.fs.s3a.Constants.SDK_REGION;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.assume;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.assumeNotS3ExpressFileSystem;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.assumeStoreAwsHosted;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
+import static org.apache.hadoop.fs.s3a.impl.RegionResolution.ERROR_ENDPOINT_WITH_FIPS;
 import static org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils.DEFAULT_REQUESTER_PAYS_BUCKET_NAME;
 import static org.apache.hadoop.io.IOUtils.closeStream;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
@@ -113,6 +116,9 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
    * Text to include in assertions.
    */
   private static final AtomicReference<String> EXPECTED_MESSAGE = new AtomicReference<>();
+
+  public static final String INCORRECT_REGION_SET = "Incorrect region set";
+
   /**
    * New FS instance which will be closed in teardown.
    */
@@ -221,6 +227,32 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
     S3Client client = createS3Client(conf, null, EU_WEST_2, EU_WEST_2, false);
 
     expectInterceptorException(client);
+  }
+
+  /**
+   * This hands off resolution to the SDK which may fail if nothing can be found
+   * (non-EC2; no AWS_REGION env var or through {@code ~/.aws/config}.
+   * There's separate handling for the different failure modes so this
+   * test will work in all deployments.
+   */
+  @Test
+  public void testWithSDKRegionConfig() throws Throwable {
+    describe("Create a client with an SDK region");
+    Configuration conf = getConfiguration();
+
+    try {
+      S3Client client = createS3Client(conf, CENTRAL_ENDPOINT, SDK_REGION, null, false);
+
+      expectInterceptorException(client);
+    } catch (SdkClientException e) {
+      Assertions.assertThat(e)
+          .describedAs("Exception raised due to unable to resolve region")
+          .hasMessageContaining("region");
+    } catch (AssertionFailedError e) {
+      Assertions.assertThat(e)
+          .describedAs("Exception raised region resolution working on local system")
+          .hasMessageContaining(INCORRECT_REGION_SET);
+    }
   }
 
   @Test
@@ -646,7 +678,7 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
       }
 
       Assertions.assertThat(reg)
-          .describedAs("Incorrect region set in %s. Client Config=%s",
+          .describedAs(INCORRECT_REGION_SET + " in %s. Client Config=%s",
               state, EXPECTED_MESSAGE.get())
           .isEqualTo(region);
 

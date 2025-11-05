@@ -1530,6 +1530,26 @@ public final class Constants {
   public static final String AWS_S3_ACCESSPOINT_REQUIRED = "fs.s3a.accesspoint.required";
 
   /**
+   * Explicit request for the SDK region resolution.
+   * Value: {@code}.
+   */
+  public static final String SDK_REGION = "sdk";
+
+  /**
+   * Declare as running in EC2.
+   * Currently hands off to the SDK for resolution; it may change in future.
+   * Value: {@code}.
+   */
+  public static final String EC2_REGION = "ec2";
+
+  /**
+   * An empty region is the historic fall-through to the SDK.
+   * Value: ""
+   */
+  public static final String EMPTY_REGION = "";
+
+
+  /**
    * Flag for create performance.
    * This can be set in the {code createFile()} builder.
    * Value {@value}.
