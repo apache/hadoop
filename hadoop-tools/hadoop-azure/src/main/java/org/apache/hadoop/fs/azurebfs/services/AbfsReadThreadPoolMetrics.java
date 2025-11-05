@@ -128,8 +128,8 @@ public class AbfsReadThreadPoolMetrics extends AbstractAbfsStatisticsSource {
    * Returns a flag indicating whether the metrics have been updated at least once.
    * Used to verify if metric updates have occurred since initialization.
    */
-  public AtomicBoolean getUpdatedAtLeastOnce() {
-    return updatedAtLeastOnce;
+  public boolean getUpdatedAtLeastOnce() {
+    return updatedAtLeastOnce.get();
   }
 
   /**

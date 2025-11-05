@@ -28,7 +28,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
-import org.apache.hadoop.fs.azurebfs.WriteThreadPoolSizeManager;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ReadBufferStatus;
 
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENABLE_READAHEAD_V2;
@@ -342,7 +341,7 @@ public class TestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
           .as("Thread pool stats should update after CPU load")
           .isNotEqualTo(statsBefore);
 
-      boolean updatedMetrics = metrics.getUpdatedAtLeastOnce().get();
+      boolean updatedMetrics = metrics.getUpdatedAtLeastOnce();
 
       Assertions.assertThat(updatedMetrics)
           .as("Metrics should be updated at least once after CPU load")

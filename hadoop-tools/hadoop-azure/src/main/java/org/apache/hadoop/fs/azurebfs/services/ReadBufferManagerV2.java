@@ -47,7 +47,10 @@ import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.classification.VisibleForTesting;
 
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.BYTES_PER_GIGABYTE;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.HUNDRED;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.HUNDRED_D;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ZERO;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ZERO_D;
 
 /**
  * The Improved Read Buffer Manager for Rest AbfsClient.
@@ -1075,7 +1078,7 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
         (OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean();
     long cpuTime = osBean.getProcessCpuTime();
     long now = System.nanoTime();
-    if (lastTime == 0) {
+    if (lastTime == ZERO) {
       lastCpuTime = cpuTime;
       lastTime = now;
       return 0.0; // first call has no previous data
@@ -1084,9 +1087,11 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
     long elapsedTime = now - lastTime;
     lastCpuTime = cpuTime;
     lastTime = now;
-    if (elapsedTime <= 0) return 0.0;
-    double load = (elapsedCpu * 100.0) / (elapsedTime * osBean.getAvailableProcessors());
-    return Math.max(0.0, Math.min(load, 100.0));
+    if (elapsedTime <= ZERO) {
+      return ZERO_D;
+    }
+    double load = (elapsedCpu * HUNDRED_D) / (elapsedTime * osBean.getAvailableProcessors());
+    return Math.max(ZERO_D, Math.min(load, HUNDRED_D));
   }
 
   @VisibleForTesting
@@ -1198,28 +1203,40 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
     }
 
     /** @return the current number of threads in the pool. */
-    public int getCurrentPoolSize() { return currentPoolSize; }
+    public int getCurrentPoolSize() {
+      return currentPoolSize;
+    }
 
     /** @return the maximum allowed size of the thread pool. */
-    public int getMaxPoolSize() { return maxPoolSize; }
+    public int getMaxPoolSize() {
+      return maxPoolSize;
+    }
 
     /** @return the number of threads currently executing tasks. */
-    public int getActiveThreads() { return activeThreads; }
+    public int getActiveThreads() {
+      return activeThreads;
+    }
 
     /** @return the JVM process CPU utilization percentage. */
-    public double getJvmCpuUtilization() { return jvmCpuUtilization; }
+    public double getJvmCpuUtilization() {
+      return jvmCpuUtilization;
+    }
 
     /** @return the overall system CPU utilization percentage. */
-    public double getCpuUtilization() { return cpuUtilization; }
+    public double getCpuUtilization() {
+      return cpuUtilization;
+    }
 
     /** @return the available heap memory in gigabytes. */
-    public long getMemoryUtilization() { return availableHeapGB; }
+    public long getMemoryUtilization() {
+      return availableHeapGB;
+    }
 
     @Override
     public String toString() {
       return String.format(
           "currentPoolSize=%d, maxPoolSize=%d, activeThreads=%d, jvmCpuUtilization=%.2f%%, cpuUtilization=%.2f%%, availableHeap=%dGB",
-          currentPoolSize, maxPoolSize, activeThreads, jvmCpuUtilization,  cpuUtilization * 100, availableHeapGB);
+          currentPoolSize, maxPoolSize, activeThreads, jvmCpuUtilization,  cpuUtilization * HUNDRED, availableHeapGB);
     }
   }
 
@@ -1233,7 +1250,7 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
    */
   synchronized ReadThreadPoolStats getCurrentStats() {
     if (workerPool == null) {
-      return new ReadThreadPoolStats(0, 0, 0, 0.0, 0.0, 0);
+      return new ReadThreadPoolStats(ZERO,  ZERO,  ZERO,  ZERO_D,  ZERO_D, ZERO);
     }
 
     ThreadPoolExecutor exec = this.workerPool;

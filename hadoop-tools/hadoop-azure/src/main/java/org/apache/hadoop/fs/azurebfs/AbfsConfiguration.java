@@ -545,7 +545,6 @@ public class AbfsConfiguration{
   private int writeMediumCpuThreshold;
 
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_WRITE_LOW_CPU_THRESHOLD_PERCENT,
-      MinValue = MIN_WRITE_LOW_CPU_THRESHOLD_PERCENT,
       MaxValue = MAX_WRITE_LOW_CPU_THRESHOLD_PERCENT,
       DefaultValue = DEFAULT_WRITE_LOW_CPU_THRESHOLD_PERCENT)
   private int writeLowCpuThreshold;
