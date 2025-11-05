@@ -861,7 +861,8 @@ extends AbstractDelegationTokenIdentifier>
           try {
             removeTokenForOwnerStats(entry.getKey());
           } catch (Exception e) {
-            LOG.warn("Ignoring the exception in removeTokenForOwnerStats to remove expired delegation tokens from cache and proceeding to remove", e);
+            LOG.warn("Ignoring the exception in removeTokenForOwnerStats to remove expired " +
+                    "delegation tokens from cache and proceeding to remove", e);
           }
           i.remove();
         }
