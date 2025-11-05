@@ -19,6 +19,9 @@
 package org.apache.hadoop.yarn.server.nodemanager.webapp;
 
 import static org.apache.hadoop.yarn.util.StringHelper.pajoin;
+
+import org.eclipse.persistence.jaxb.MarshallerProperties;
+import org.eclipse.persistence.jaxb.rs.MOXyJsonProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -69,12 +72,17 @@ public class WebServer extends AbstractService {
   }
 
   protected ResourceConfig configure() {
+    MOXyJsonProvider moXyJsonProvider = new MOXyJsonProvider();
+    moXyJsonProvider.setIncludeRoot(true);
+    moXyJsonProvider.setMarshalEmptyCollections(true);
+
     ResourceConfig config = new ResourceConfig();
     config.packages("org.apache.hadoop.yarn.server.nodemanager.webapp");
     config.register(new JerseyBinder());
     config.register(NMWebServices.class);
     config.register(GenericExceptionHandler.class);
-    config.register(new JettisonFeature()).register(JAXBContextResolver.class);
+    config.register(moXyJsonProvider);
+    config.register(JAXBContextResolver.class);
     return config;
   }
 
