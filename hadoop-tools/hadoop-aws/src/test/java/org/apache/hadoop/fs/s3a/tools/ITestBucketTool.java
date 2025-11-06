@@ -35,10 +35,13 @@ import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.util.ExitUtil;
 
 import static org.apache.hadoop.fs.s3a.Constants.AWS_REGION;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.assume;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.assumeNotS3ExpressFileSystem;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.assumeS3ExpressFileSystem;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.assumeStoreAwsHosted;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.expectErrorCode;
+import static org.apache.hadoop.fs.s3a.impl.RegionResolution.isEc2Region;
+import static org.apache.hadoop.fs.s3a.impl.RegionResolution.isSdkRegion;
 import static org.apache.hadoop.fs.s3a.impl.S3ExpressStorage.STORE_CAPABILITY_S3_EXPRESS_STORAGE;
 import static org.apache.hadoop.fs.s3a.tools.BucketTool.CREATE;
 import static org.apache.hadoop.fs.s3a.tools.BucketTool.NO_ZONE_SUPPLIED;
@@ -142,6 +145,9 @@ public class ITestBucketTool extends AbstractS3ATestBase {
   public void testRecreateTestBucketNonS3Express() throws Throwable {
     assumeNotS3ExpressFileSystem(fs);
     assumeStoreAwsHosted(fs);
+    // fix a region if resolution is handed down to sdk
+    assume("Skipping as SDK region logic active",
+        !isSdkRegion(region) && !isEc2Region(region));
     intercept(AWSBadRequestException.class, OWNED,
         () -> bucketTool.exec("bucket", d(CREATE),
             d(OPT_REGION), region,

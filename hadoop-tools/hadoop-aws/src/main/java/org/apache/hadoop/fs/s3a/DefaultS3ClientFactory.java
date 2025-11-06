@@ -56,6 +56,7 @@ import org.apache.hadoop.fs.s3a.impl.RegionResolution;
 import org.apache.hadoop.fs.s3a.statistics.impl.AwsStatisticsCollector;
 import org.apache.hadoop.fs.store.LogExactlyOnce;
 
+import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_ACCESS_GRANTS_ENABLED;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_ACCESS_GRANTS_FALLBACK_TO_IAM_ENABLED;
 import static org.apache.hadoop.fs.s3a.Constants.HTTP_SIGNER_CLASS_NAME;
@@ -67,6 +68,7 @@ import static org.apache.hadoop.fs.s3a.Constants.AWS_SERVICE_IDENTIFIER_S3;
 import static org.apache.hadoop.fs.s3a.auth.SignerFactory.createHttpSigner;
 import static org.apache.hadoop.fs.s3a.impl.AWSHeaders.REQUESTER_PAYS_HEADER;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.AUTH_SCHEME_AWS_SIGV_4;
+import static org.apache.hadoop.fs.s3a.impl.RegionResolution.RegionResolutionMechanism.Sdk;
 import static org.apache.hadoop.fs.s3a.impl.RegionResolution.calculateRegion;
 
 
@@ -87,6 +89,18 @@ public class DefaultS3ClientFactory extends Configured
    */
   protected static final Logger LOG =
       LoggerFactory.getLogger(DefaultS3ClientFactory.class);
+
+  /**
+   * A one-off warning of default region chains in use.
+   */
+  private static final LogExactlyOnce DEFAULT_REGION_CHAIN =
+      new LogExactlyOnce(LOG);
+
+  /**
+   * Message printed when the SDK Region chain is in use.
+   */
+  private static final String SDK_REGION_CHAIN_IN_USE =
+      "S3A filesystem client is using the SDK region resolution chain.";
 
   /**
    * A one-off log stating whether S3 Access Grants are enabled.
@@ -280,16 +294,16 @@ public class DefaultS3ClientFactory extends Configured
    * <li> S3 cross region is enabled by default irrespective of region or endpoint
    *      is set or not.</li>
    * </ol>
-   *
    * @param builder S3 client builder.
    * @param parameters parameter object
-   * @param conf  conf configuration object
+   * @param conf conf configuration object
    * @param <BuilderT> S3 client builder type
    * @param <ClientT> S3 client type
+   * @return how the region was resolved.
    * @throws IllegalArgumentException if endpoint is set when FIPS is enabled.
    */
-  private <BuilderT extends S3BaseClientBuilder<BuilderT, ClientT>, ClientT> void configureEndpointAndRegion(
-      BuilderT builder, S3ClientCreationParameters parameters, Configuration conf) {
+  private <BuilderT extends S3BaseClientBuilder<BuilderT, ClientT>, ClientT> RegionResolution.Resolution configureEndpointAndRegion(
+      BuilderT builder, S3ClientCreationParameters parameters, Configuration conf)  throws IOException {
 
     final RegionResolution.Resolution resolution =
         calculateRegion(parameters, conf);
@@ -298,19 +312,30 @@ public class DefaultS3ClientFactory extends Configured
     // always setting to true or false guarantees the value is non-null,
     // which tests expect.
     builder.fipsEnabled(resolution.isUseFips());
-    final Region region = resolution.getRegion();
-    if (region != null) {
-      builder.region(region);
+
+    if (Sdk != resolution.getMechanism()) {
+      final Region region = resolution.getRegion();
+      builder.region(requireNonNull(region));
+      // s3 cross region access
+      if (resolution.isCrossRegionAccessEnabled()) {
+        builder.crossRegionAccessEnabled(true);
+      }
+      if (!resolution.isUseCentralEndpoint()) {
+        final URI endpointUri = resolution.getEndpointUri();
+        if  (endpointUri != null) {
+          builder.endpointOverride(endpointUri);
+          LOG.debug("Setting endpoint to {}", endpointUri);
+        }
+      }
+    } else {
+      // handing off all resolution to SDK.
+      // region configuration was set to empty string.
+      // allow this if people really want it; it is OK to rely on this
+      // when deployed in EC2.
+      DEFAULT_REGION_CHAIN.info(SDK_REGION_CHAIN_IN_USE);
+      LOG.debug(SDK_REGION_CHAIN_IN_USE);
     }
-    // s3 cross region access
-    if (resolution.isCrossRegionAccessEnabled()) {
-      builder.crossRegionAccessEnabled(true);
-    }
-    if (!resolution.isUseCentralEndpoint()) {
-      final URI endpointUri = resolution.getEndpointUri();
-      builder.endpointOverride(endpointUri);
-      LOG.debug("Setting endpoint to {}", endpointUri);
-    }
+    return resolution;
   }
 
   /**

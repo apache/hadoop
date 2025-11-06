@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.fs.s3a.impl;
 
+import java.io.IOException;
+
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
@@ -38,8 +40,6 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 /**
  * Test region resolution logic in {@link RegionResolution}.
  * These are based on {@code ITestS3AEndpointRegion}.
- * <p>
- * This does not look at SDK internal logic, "what really happens".
  */
 public class TestRegionResolution extends AbstractHadoopTestBase {
 
@@ -51,8 +51,6 @@ public class TestRegionResolution extends AbstractHadoopTestBase {
   private static final String US_EAST_2 = "us-east-2";
 
   private static final String US_WEST_2 = "us-west-2";
-
-  private static final String SA_EAST_1 = "sa-east-1";
 
   private static final String EU_WEST_2 = "eu-west-2";
 
@@ -90,7 +88,7 @@ public class TestRegionResolution extends AbstractHadoopTestBase {
       String configuredRegion,
       boolean isFips,
       String expectedRegion,
-      final RegionResolution.RegionResolutionMechanism expectedMechanism) {
+      final RegionResolution.RegionResolutionMechanism expectedMechanism) throws IOException {
     S3ClientFactory.S3ClientCreationParameters parameters =
         new S3ClientFactory.S3ClientCreationParameters()
             .withEndpoint(endpoint)
@@ -112,21 +110,32 @@ public class TestRegionResolution extends AbstractHadoopTestBase {
 
     // supplied resolution
     if (expectedMechanism != null) {
-      Assertions.assertThat(resolved.getResolution())
-          .describedAs("Resolution mechanism of %s", resolved)
-          .isEqualTo(expectedMechanism);
+      assertMechanism(expectedMechanism, resolved);
     }
     return resolved;
   }
 
+  /**
+   * Assert that a resolution used a specific mechanism.
+   * @param expectedMechanism expected mechanism.
+   * @param resolved resolved region
+   */
+  private static void assertMechanism(
+      final RegionResolution.RegionResolutionMechanism expectedMechanism,
+      final RegionResolution.Resolution resolved) {
+    Assertions.assertThat(resolved.getMechanism())
+        .describedAs("Resolution mechanism of %s", resolved)
+        .isEqualTo(expectedMechanism);
+  }
+
   @Test
-  public void testWithVPCE() {
+  public void testWithVPCE() throws IOException {
     resolve(getConfiguration(), VPC_ENDPOINT, null, false, US_WEST_2,
         RegionResolution.RegionResolutionMechanism.ParseVpceEndpoint);
   }
 
   @Test
-  public void testWithChinaVPCE() {
+  public void testWithChinaVPCE() throws IOException {
     final RegionResolution.Resolution r =
         resolve(getConfiguration(), CN_VPC_ENDPOINT, null, false,
             CN_NORTHWEST_1, RegionResolution.RegionResolutionMechanism.ParseVpceEndpoint);
@@ -135,7 +144,7 @@ public class TestRegionResolution extends AbstractHadoopTestBase {
   }
 
   @Test
-  public void testCentralEndpointNoRegion() {
+  public void testCentralEndpointNoRegion() throws IOException {
     final RegionResolution.Resolution r =
         resolve(getConfiguration(), CENTRAL_ENDPOINT, null, false,
             US_EAST_2,
@@ -145,7 +154,7 @@ public class TestRegionResolution extends AbstractHadoopTestBase {
   }
 
   @Test
-  public void testCentralEndpointWithRegion() {
+  public void testCentralEndpointWithRegion() throws IOException {
     final RegionResolution.Resolution r =
         resolve(getConfiguration(), CENTRAL_ENDPOINT, US_WEST_2, false,
             US_WEST_2, RegionResolution.RegionResolutionMechanism.Specified);
@@ -154,7 +163,7 @@ public class TestRegionResolution extends AbstractHadoopTestBase {
   }
 
   @Test
-  public void testConfiguredRegion() {
+  public void testConfiguredRegion() throws IOException {
     final RegionResolution.Resolution r =
         resolve(getConfiguration(), null, EU_WEST_2, false,
             EU_WEST_2, RegionResolution.RegionResolutionMechanism.Specified);
@@ -164,7 +173,7 @@ public class TestRegionResolution extends AbstractHadoopTestBase {
   }
 
   @Test
-  public void testSDKRegion() {
+  public void testSDKRegion() throws IOException {
     final RegionResolution.Resolution r =
         resolve(getConfiguration(), null, SDK_REGION, false,
             null, RegionResolution.RegionResolutionMechanism.Sdk);
@@ -174,17 +183,7 @@ public class TestRegionResolution extends AbstractHadoopTestBase {
   }
 
   @Test
-  public void testEC2Region() {
-    final RegionResolution.Resolution r =
-        resolve(getConfiguration(), null, EC2_REGION, false,
-            null, RegionResolution.RegionResolutionMechanism.Sdk);
-    // SDK handles endpoint logic.
-    assertEndpoint(r, null);
-    assertUseCentral(r, true);
-  }
-
-  @Test
-  public void testEC2UpperCaseRegion() {
+  public void testEC2UpperCaseRegion() throws IOException {
     final RegionResolution.Resolution r =
         resolve(getConfiguration(), null, "EC2", false,
             null, RegionResolution.RegionResolutionMechanism.Sdk);
@@ -194,7 +193,7 @@ public class TestRegionResolution extends AbstractHadoopTestBase {
   }
 
   @Test
-  public void testSDKUpperCaseRegion() {
+  public void testSDKUpperCaseRegion() throws IOException {
     final RegionResolution.Resolution r =
         resolve(getConfiguration(), null, "SDK", false,
             null, RegionResolution.RegionResolutionMechanism.Sdk);
@@ -204,7 +203,7 @@ public class TestRegionResolution extends AbstractHadoopTestBase {
   }
 
   @Test
-  public void testEmptyStringRegion() {
+  public void testEmptyStringRegion() throws IOException {
     final RegionResolution.Resolution r =
         resolve(getConfiguration(), null, "", false,
             null, RegionResolution.RegionResolutionMechanism.Sdk);
@@ -214,7 +213,7 @@ public class TestRegionResolution extends AbstractHadoopTestBase {
   }
 
   @Test
-  public void testWithFipsNoEndpoint() {
+  public void testWithFipsNoEndpoint() throws IOException {
     describe("Create a client with fips enabled");
 
     resolve(getConfiguration(),
@@ -235,7 +234,7 @@ public class TestRegionResolution extends AbstractHadoopTestBase {
   }
 
   @Test
-  public void testWithRegionConfig() {
+  public void testWithRegionConfig() throws IOException {
     describe("Create a client with a configured region");
 
     resolve(getConfiguration(), null, EU_WEST_2, false,
@@ -243,7 +242,7 @@ public class TestRegionResolution extends AbstractHadoopTestBase {
   }
 
   @Test
-  public void testEUWest2Endpoint() {
+  public void testEUWest2Endpoint() throws IOException {
     describe("specifying an eu-west-2 endpoint selects that region");
 
     resolve(getConfiguration(), EU_WEST_2_ENDPOINT, null, false,
@@ -251,7 +250,7 @@ public class TestRegionResolution extends AbstractHadoopTestBase {
   }
 
   @Test
-  public void testWithRegionAndEndpointConfig() {
+  public void testWithRegionAndEndpointConfig() throws IOException {
     describe("Test that when both region and endpoint are configured, region takes precedence");
 
     resolve(getConfiguration(), EU_WEST_2_ENDPOINT, US_WEST_2, false,
@@ -259,7 +258,7 @@ public class TestRegionResolution extends AbstractHadoopTestBase {
   }
 
   @Test
-  public void testWithChinaEndpoint() {
+  public void testWithChinaEndpoint() throws IOException {
     describe("Test with a china endpoint");
     final RegionResolution.Resolution r =
         resolve(getConfiguration(), CN_ENDPOINT, null, false,
@@ -270,7 +269,7 @@ public class TestRegionResolution extends AbstractHadoopTestBase {
   }
 
   @Test
-  public void testWithGovCloudEndpoint() {
+  public void testWithGovCloudEndpoint() throws IOException {
     describe("Test with a gov cloud endpoint");
     final RegionResolution.Resolution r =
         resolve(getConfiguration(), GOV_ENDPOINT, null, false,
@@ -278,6 +277,40 @@ public class TestRegionResolution extends AbstractHadoopTestBase {
             RegionResolution.RegionResolutionMechanism.CalculatedFromEndpoint);
     assertEndpoint(r, GOV_ENDPOINT);
     assertUseCentral(r, false);
+  }
+
+  @Test
+  public void testNullIsForbidden() throws Throwable {
+    describe("The region null is forbidden as a red flag of configuration problems");
+    intercept(IllegalArgumentException.class, () ->
+        resolve(getConfiguration(), null, "null", false,
+            null, null));
+  }
+
+
+  /**
+   * This does attempt to talk to EC2 IAM but it doesn't need cloud credentials
+   * and will succeed whether the information came back or not.
+   * <p>What it does do is validate the codepath.
+   */
+  @Test
+  public void testEC2Region() {
+    describe("Attempt to resolve region through EC2");
+
+    final Configuration conf = new Configuration(false);
+    S3ClientFactory.S3ClientCreationParameters parameters =
+        new S3ClientFactory.S3ClientCreationParameters()
+            .withRegion(EC2_REGION);
+    try {
+      final RegionResolution.Resolution resolved = calculateRegion(parameters, conf);
+      // here the process is under EC2 and a region was returned.
+      LOG.info("EC2 IAM resolved metadata: {}", resolved);
+      assertMechanism(RegionResolution.RegionResolutionMechanism.Ec2Metadata, resolved);
+    } catch (IOException e) {
+      // expected on anything except EC2
+      LOG.info("Expected failure when EC2 IAM is not present", e);
+    }
+
   }
 
   /**

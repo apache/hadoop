@@ -18,9 +18,9 @@
 
 package org.apache.hadoop.fs.s3a.impl;
 
+import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.Locale;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -31,9 +31,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.awscore.util.AwsHostNameUtils;
 import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.regions.providers.InstanceProfileRegionProvider;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.s3a.Invoker;
+import org.apache.hadoop.fs.s3a.Retries;
 import org.apache.hadoop.fs.s3a.S3ClientFactory;
 
 import static java.util.Objects.requireNonNull;
@@ -98,6 +101,7 @@ public class RegionResolution {
    CalculatedFromEndpoint("Calculated from endpoint"),
    FallbackToCentral("Fallback to central endpoint"),
    ParseVpceEndpoint("Parse VPCE Endpoint"),
+   Ec2Metadata("EC2 Metadata"),
    Sdk("SDK resolution chain"),
    Specified("region specified");
 
@@ -141,7 +145,7 @@ public class RegionResolution {
      * How was the region resolved?
      * Null means unresolved.
      */
-    private RegionResolutionMechanism resolution;
+    private RegionResolutionMechanism mechanism;
 
     /**
      * Should FIPS be enabled?
@@ -168,17 +172,31 @@ public class RegionResolution {
      */
     private boolean useCentralEndpoint;
 
+    public Resolution() {
+    }
+
+    /**
+     * Instantiate with a region and resolution mechanism.
+     * @param region region
+     * @param mechanism resolution mechanism.
+     */
+    public Resolution(final Region region, final RegionResolutionMechanism mechanism) {
+      this.region = region;
+      this.mechanism = mechanism;
+    }
+
     /**
      * Set the region.
      * Declares the region as resolved even when the value is null (i.e. resolve to SDK).
-     * @param region new value
+     * @param region region
+     * @param resolutionMechanism resolution mechanism.
      * @return the builder
      */
     public Resolution withRegion(
         @Nullable final Region region,
         final RegionResolutionMechanism resolutionMechanism) {
       this.region = region;
-      this.resolution = requireNonNull(resolutionMechanism);
+      this.mechanism = requireNonNull(resolutionMechanism);
       return this;
     }
 
@@ -238,8 +256,8 @@ public class RegionResolution {
       return crossRegionAccessEnabled;
     }
 
-    public RegionResolutionMechanism getResolution() {
-      return resolution;
+    public RegionResolutionMechanism getMechanism() {
+      return mechanism;
     }
 
     public String getEndpointStr() {
@@ -247,7 +265,7 @@ public class RegionResolution {
     }
 
     public boolean isRegionResolved() {
-      return resolution != null;
+      return mechanism != null;
     }
 
     public boolean isUseCentralEndpoint() {
@@ -268,7 +286,7 @@ public class RegionResolution {
     public String toString() {
       final StringBuilder sb = new StringBuilder("Resolution{");
       sb.append("region=").append(region);
-      sb.append(", resolution=").append(resolution);
+      sb.append(", resolution=").append(mechanism);
       sb.append(", useFips=").append(useFips);
       sb.append(", crossRegionAccessEnabled=").append(crossRegionAccessEnabled);
       sb.append(", endpointUri=").append(endpointUri);
@@ -324,16 +342,15 @@ public class RegionResolution {
       if (matcher.find()) {
         LOG.debug("Mapping to VPCE");
         LOG.debug("Endpoint {} is vpc endpoint; parsing region as {}", endpoint, matcher.group(1));
-        return Optional.of(new Resolution()
-            .withRegion(Region.of(matcher.group(1)),
-                RegionResolutionMechanism.ParseVpceEndpoint));
+        return Optional.of(new Resolution(
+            Region.of(matcher.group(1)),
+            RegionResolutionMechanism.ParseVpceEndpoint));
       }
 
       LOG.debug("Endpoint {} is not the default; parsing", endpoint);
       return AwsHostNameUtils.parseSigningRegion(endpoint, S3_SERVICE_NAME)
           .map(r ->
-              new Resolution().withRegion(r,
-                  RegionResolutionMechanism.CalculatedFromEndpoint));
+              new Resolution(r, RegionResolutionMechanism.CalculatedFromEndpoint));
     }
 
     // No resolution.
@@ -341,17 +358,39 @@ public class RegionResolution {
   }
 
   /**
+   * Does the region name refer to an SDK region?
+   * @param configuredRegion region in the configuration
+   * @return true if this is considered to refer to an SDK region.
+   */
+  public static boolean isSdkRegion(String configuredRegion) {
+    return SDK_REGION.equalsIgnoreCase(configuredRegion)
+        || EMPTY_REGION.equalsIgnoreCase(configuredRegion);
+  }
+
+  /**
+   * Does the region name refer to {@code "ec2"} in which case special handling
+   * is required.
+   * @param configuredRegion region in the configuration
+   * @return true if this is considered to refer to an SDK region.
+   */
+  public static boolean isEc2Region(String configuredRegion) {
+    return EC2_REGION.equalsIgnoreCase(configuredRegion);
+  }
+
+  /**
    * Calculate the region and the final endpoint.
    * @param parameters creation parameters
    * @param conf configuration with other options.
    * @return the resolved region and endpoint.
+   * @throws IOException if the client failed to communicate with the IAM service.
    * @throws IllegalArgumentException failure to parse endpoint, or FIPS settings.
    */
+  @Retries.OnceTranslated
   public static Resolution calculateRegion(
       final S3ClientFactory.S3ClientCreationParameters parameters,
-      final Configuration conf) {
+      final Configuration conf) throws IOException {
 
-    final Resolution resolution = new Resolution();
+    Resolution resolution = new Resolution();
 
     // endpoint; may be null
     final String endpointStr = parameters.getEndpoint();
@@ -364,30 +403,43 @@ public class RegionResolution {
     // If the region was configured, set it.
     // this includes special handling of the sdk, ec2 and "" regions.
     if (configuredRegion != null) {
-      switch (configuredRegion.toLowerCase(Locale.ROOT)) {
-      case EC2_REGION:
-      case SDK_REGION:
-      case EMPTY_REGION:
+      checkArgument(!"null".equals(configuredRegion),
+          "null is region name");
+      if (isSdkRegion(configuredRegion)) {
         resolution.withRegion(null, RegionResolutionMechanism.Sdk);
-        break;
-
-      default:
+      } else if (isEc2Region(configuredRegion)) {
+        // special EC2 handling
+        final Resolution r = getS3RegionFromEc2IAM();
+        resolution.withRegion(r.getRegion(), r.getMechanism());
+      } else {
         resolution.withRegion(Region.of(configuredRegion),
             RegionResolutionMechanism.Specified);
       }
     }
-
-
-    // cross region setting.
-    resolution.withCrossRegionAccessEnabled(
-        conf.getBoolean(AWS_S3_CROSS_REGION_ACCESS_ENABLED,
-            AWS_S3_CROSS_REGION_ACCESS_ENABLED_DEFAULT));
 
     // central endpoint if no endpoint has been set, or it is explicitly
     // requested
     boolean endpointEndsWithCentral = endpointStr == null
         || endpointStr.isEmpty()
         || endpointStr.endsWith(CENTRAL_ENDPOINT);
+
+    if (!resolution.isRegionResolved()) {
+      // parse from the endpoint and set if calculated
+      LOG.debug("Falling back to parsing region endpoint {}; endpointEndsWithCentral={}",
+          endpointStr, endpointEndsWithCentral);
+      final Optional<Resolution> regionFromEndpoint =
+          getS3RegionFromEndpoint(endpointStr, endpointEndsWithCentral);
+      if (regionFromEndpoint.isPresent()) {
+        regionFromEndpoint
+            .map(r ->
+                resolution.withRegion(r.getRegion(), r.getMechanism()));
+      }
+    }
+
+    // cross region setting.
+    resolution.withCrossRegionAccessEnabled(
+        conf.getBoolean(AWS_S3_CROSS_REGION_ACCESS_ENABLED,
+            AWS_S3_CROSS_REGION_ACCESS_ENABLED_DEFAULT));
 
     // fips settings.
     final boolean fipsEnabled = parameters.isFipsEnabled();
@@ -400,18 +452,6 @@ public class RegionResolution {
           FIPS_PATH_ACCESS_INCOMPATIBLE);
     }
 
-    if (!resolution.isRegionResolved()) {
-      // parse from the endpoint and set if calculated
-      LOG.debug("Falling back to parsing region endpoint {}; endpointEndsWithCentral={}",
-          endpointStr, endpointEndsWithCentral);
-      final Optional<Resolution> regionFromEndpoint =
-          getS3RegionFromEndpoint(endpointStr, endpointEndsWithCentral);
-      if (regionFromEndpoint.isPresent()) {
-        regionFromEndpoint
-            .map(r ->
-                resolution.withRegion(r.getRegion(), r.getResolution()));
-      }
-    }
     if (!resolution.isRegionResolved()) {
       // still failing to resolve the region
       // fall back to central
@@ -442,4 +482,21 @@ public class RegionResolution {
     return resolution;
   }
 
+  /**
+   * Probes EC2 Metadata for the region.
+   * This uses a class {@code InstanceProfileRegionProvider} which AWS
+   * declare as for internal use only.
+   * Linking/invocation should be caught and downgraded to returning an empty() option.
+   * @return the region from EC2 IAM.
+   * @throws IOException if the client failed to communicate with the IAM service.
+   */
+  @VisibleForTesting
+  @Retries.OnceTranslated
+  static Resolution getS3RegionFromEc2IAM() throws IOException {
+    return Invoker.once("Resolve EC2 Metadata", "/", () -> {
+      LOG.debug("Resolving region through EC2 Metadata");
+      final Region region = new InstanceProfileRegionProvider().getRegion();
+      return new Resolution(region, RegionResolutionMechanism.Ec2Metadata);
+    });
+  }
 }
