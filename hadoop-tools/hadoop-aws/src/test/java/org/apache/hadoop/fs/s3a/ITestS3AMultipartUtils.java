@@ -31,6 +31,7 @@ import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
 
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.assumeMultipartUploads;
 import static org.apache.hadoop.util.functional.RemoteIterators.foreach;
 
 /**
@@ -52,6 +53,12 @@ public class ITestS3AMultipartUtils extends AbstractS3ATestBase {
     // the iterators.
     conf.setInt(Constants.MAX_PAGING_KEYS, LIST_BATCH_SIZE);
     return conf;
+  }
+
+  @Override
+  public void setup() throws Exception {
+    super.setup();
+    assumeMultipartUploads(getFileSystem().getConf());
   }
 
   /**

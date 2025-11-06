@@ -72,6 +72,7 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.DurationInfo;
 
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.assumeMultipartUploads;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.disableFilesystemCaching;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.lsR;
 import static org.apache.hadoop.fs.s3a.S3AUtils.applyLocatedFiles;
@@ -173,6 +174,7 @@ public class ITestS3ACommitterMRJob extends AbstractYarnClusterITest {
   @Override
   public void setup() throws Exception {
     super.setup();
+    assumeMultipartUploads(getFileSystem().getConf());
     // configure the test binding for this specific test case.
     committerTestBinding.setup(getClusterBinding(), getFileSystem());
   }

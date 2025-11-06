@@ -29,6 +29,7 @@ import org.apache.hadoop.fs.contract.ContractTestUtils;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.disableFilesystemCaching;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.setPerformanceFlags;
 
 /**
@@ -38,9 +39,9 @@ public class ITestS3AContractMkdirWithCreatePerf extends AbstractContractMkdirTe
 
   @Override
   protected Configuration createConfiguration() {
-    return setPerformanceFlags(
-        super.createConfiguration(),
-        "create,mkdir");
+    final Configuration conf = super.createConfiguration();
+    disableFilesystemCaching(conf);
+    return setPerformanceFlags(conf, "create,mkdir");
   }
 
   @Override

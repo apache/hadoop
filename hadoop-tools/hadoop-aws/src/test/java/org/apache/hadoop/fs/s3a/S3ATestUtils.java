@@ -529,6 +529,32 @@ public final class S3ATestUtils {
   }
 
   /**
+   * Skip a test suite/case if a configuration option is true.
+   * @param configuration configuration to probe
+   * @param key key to resolve
+   * @param defVal default value.
+   * @param message assertion text
+   */
+  public static void skipIfEnabled(final Configuration configuration,
+      final String key,
+      final boolean defVal,
+      final String message) {
+    if (!configuration.getBoolean(key, defVal)) {
+      skip(message);
+    }
+  }
+
+  /**
+   * Require multipart uploads; skip tests if not enabled in the configuration.
+   * @param conf filesystem configuration.
+   */
+  public static void assumeMultipartUploads(Configuration conf) {
+    skipIfNotEnabled(conf,
+        MULTIPART_UPLOADS_ENABLED,
+        "Store has disabled multipart uploads; skipping tests");
+  }
+
+  /**
    * Skip a test if storage class tests are disabled,
    * or the bucket is an S3Express bucket.
    * @param configuration configuration to probe

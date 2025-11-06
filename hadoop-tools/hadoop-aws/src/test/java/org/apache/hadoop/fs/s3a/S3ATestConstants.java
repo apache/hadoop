@@ -285,4 +285,22 @@ public interface S3ATestConstants {
    * Default policy on root tests: {@value}.
    */
   boolean DEFAULT_ROOT_TESTS_ENABLED = true;
+
+  /**
+   * Flag to set when testing third party stores: {@value}.
+   * <p>
+   * Set to true when a completed MPU commit consumes the ID so it is no
+   * longer visible in list operations; and abort reports {@code NoSuchUploadException}.
+   * <p>
+   * This will change assertions in relevant tests.
+   * <p>
+   * Can be set as a per-bucket setting; test runner will pick this up.
+   */
+  String MULTIPART_COMMIT_CONSUMES_UPLOAD_ID =
+      "fs.s3a.ext.test.multipart.commit.consumes.upload.id";
+
+  /**
+   * Default value of {@link #MULTIPART_COMMIT_CONSUMES_UPLOAD_ID}: {@value}.
+   */
+  boolean DEFAULT_MULTIPART_COMMIT_CONSUMES_UPLOAD_ID = false;
 }

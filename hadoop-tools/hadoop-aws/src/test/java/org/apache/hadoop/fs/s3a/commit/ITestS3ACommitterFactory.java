@@ -46,6 +46,7 @@ import org.apache.hadoop.mapreduce.lib.output.PathOutputCommitter;
 import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
 import org.apache.hadoop.security.UserGroupInformation;
 
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.assumeMultipartUploads;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
 import static org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants.COMMITTER_NAME_STAGING;
@@ -182,6 +183,7 @@ public final class ITestS3ACommitterFactory extends AbstractCommitITest {
     // destroy all filesystems from previous runs.
     FileSystem.closeAllForUGI(UserGroupInformation.getCurrentUser());
     super.setup();
+    assumeMultipartUploads(getFileSystem().getConf());
     jobId = randomJobId();
     attempt0 = "attempt_" + jobId + "_m_000000_0";
     taskAttempt0 = TaskAttemptID.forName(attempt0);

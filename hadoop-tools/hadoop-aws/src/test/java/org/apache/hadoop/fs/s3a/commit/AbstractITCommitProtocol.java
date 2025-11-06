@@ -170,7 +170,7 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
     taskAttempt0 = TaskAttemptID.forName(attempt0);
     attempt1 = "attempt_" + jobId + "_m_000001_0";
     taskAttempt1 = TaskAttemptID.forName(attempt1);
-
+    assumeMultipartUploads(getFileSystem().getConf());
     outDir = path(getMethodName());
     abortMultipartUploadsUnderPath(outDir);
     cleanupDestDir();

@@ -106,6 +106,9 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
     uploadBlockSize = uploadBlockSize();
     filesize = getTestPropertyBytes(getConf(), KEY_HUGE_FILESIZE,
         DEFAULT_HUGE_FILESIZE);
+    if (requireMultipartUploads()) {
+      assumeMultipartUploads(getFileSystem().getConf());
+    }
   }
 
   /**
@@ -125,6 +128,14 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
    */
   public String getTestSuiteName() {
     return getBlockOutputBufferName();
+  }
+
+  /**
+   * Override point: does this test suite require MPUs?
+   * @return true if the test suite must be skipped if MPUS are off.
+   */
+  protected boolean requireMultipartUploads() {
+    return false;
   }
 
   /**

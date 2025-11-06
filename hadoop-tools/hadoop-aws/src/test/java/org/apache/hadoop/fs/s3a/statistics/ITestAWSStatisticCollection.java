@@ -19,12 +19,17 @@
 package org.apache.hadoop.fs.s3a.statistics;
 
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.s3a.S3AFileSystem;
+import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.performance.AbstractS3ACostTest;
 
-import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_PERFORMANCE;
+import static org.apache.hadoop.fs.s3a.Constants.S3EXPRESS_CREATE_SESSION;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.setPerformanceFlags;
 import static org.apache.hadoop.fs.s3a.Statistic.STORE_IO_REQUEST;
 
 /**
@@ -32,19 +37,27 @@ import static org.apache.hadoop.fs.s3a.Statistic.STORE_IO_REQUEST;
  */
 public class ITestAWSStatisticCollection extends AbstractS3ACostTest {
 
+  private static final Logger LOG =
+      LoggerFactory.getLogger(ITestAWSStatisticCollection.class);
+
   @Override
   public Configuration createConfiguration() {
     final Configuration conf = super.createConfiguration();
-    conf.setBoolean(FS_S3A_CREATE_PERFORMANCE, true);
+    S3ATestUtils.removeBaseAndBucketOverrides(conf,
+        S3EXPRESS_CREATE_SESSION);
+    setPerformanceFlags(conf, "create");
+    conf.setBoolean(S3EXPRESS_CREATE_SESSION, false);
     return conf;
   }
 
   @Test
   public void testSDKMetricsCostOfGetFileStatusOnFile() throws Throwable {
-    describe("performing getFileStatus on a file");
+    describe("Performing getFileStatus() on a file");
     Path simpleFile = file(methodPath());
     // and repeat on the file looking at AWS wired up stats
-    verifyMetrics(() -> getFileSystem().getFileStatus(simpleFile),
+    final S3AFileSystem fs = getFileSystem();
+    LOG.info("Initiating GET request for {}", simpleFile);
+    verifyMetrics(() -> fs.getFileStatus(simpleFile),
         with(STORE_IO_REQUEST, 1));
   }
 

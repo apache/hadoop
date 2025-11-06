@@ -140,11 +140,13 @@ public class ITestHttpSigner extends AbstractS3ATestBase {
       ContractTestUtils.touch(fs, new Path(subdir, "file1"));
 
       // create a magic file.
-      createMagicFile(fs, subdir);
-      ContentSummary summary = fs.getContentSummary(finalPath);
-      fs.getS3AInternals().abortMultipartUploads(subdir);
-      fs.rename(subdir, new Path(finalPath, "renamed"));
-      fs.delete(finalPath, true);
+      if (fs.isMagicCommitEnabled()) {
+        createMagicFile(fs, subdir);
+        ContentSummary summary = fs.getContentSummary(finalPath);
+        fs.getS3AInternals().abortMultipartUploads(subdir);
+        fs.rename(subdir, new Path(finalPath, "renamed"));
+        fs.delete(finalPath, true);
+      }
       return fs;
     });
   }

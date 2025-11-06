@@ -243,7 +243,7 @@ A credential provider listed in `fs.s3a.aws.credentials.provider` does not imple
 the interface `software.amazon.awssdk.auth.credentials.AwsCredentialsProvider`.
 
 ```
-InstantiationIOException: `s3a://stevel-gcs/': Class org.apache.hadoop.fs.s3a.S3ARetryPolicy does not implement
+InstantiationIOException: `s3a://gcs/': Class org.apache.hadoop.fs.s3a.S3ARetryPolicy does not implement
  software.amazon.awssdk.auth.credentials.AwsCredentialsProvider (configuration key fs.s3a.aws.credentials.provider)
         at org.apache.hadoop.fs.s3a.impl.InstantiationIOException.isNotInstanceOf(InstantiationIOException.java:128)
         at org.apache.hadoop.fs.s3a.S3AUtils.getInstanceFromReflection(S3AUtils.java:604)
@@ -354,7 +354,7 @@ org.apache.hadoop.fs.s3a.AWSBadRequestException: upload part #1 upload ID 112233
 
 This is an obscure failure which was encountered as part of
 [HADOOP-19221](https://issues.apache.org/jira/browse/HADOOP-19221) : an upload of part of a file could not
-be succesfully retried after a failure was reported on the first attempt.
+be successfully retried after a failure was reported on the first attempt.
 
 1. It was only encountered during uploading files via the Staging Committers
 2. And is a regression in the V2 SDK.
@@ -364,7 +364,7 @@ be succesfully retried after a failure was reported on the first attempt.
 * If it is encountered on a release without the fix, please upgrade.
 
 It may be that the problem arises in the AWS SDK's "TransferManager", which is used for a
-higher performance upload of data from the local fileystem. If this is the case. disable this feature:
+higher performance upload of data from the local filesystem. If this is the case. disable this feature:
 ```
 <property>
   <name>fs.s3a.optimized.copy.from.local.enabled</name>
@@ -409,6 +409,48 @@ affect the performance.
 </property>
 ```
 
+### <a name="content-sha-256"></a> Status Code 400 "XAmzContentSHA256Mismatch: The Content-SHA256 you specified did not match what we receive"
+
+Seen when working with a third-party store
+
+```
+org.apache.hadoop.fs.s3a.AWSBadRequestException: PUT 0-byte object  on test:
+software.amazon.awssdk.services.s3.model.S3Exception:
+The Content-SHA256 you specified did not match what we received
+(Service: S3, Status Code: 400, Request ID: 0c07c87d:196d43d824a:d7bca:eeb, Extended Request ID: 2af53adb49ffb141a32b534ad7ffbdf33a247f6b95b422011e0b109649d1fab7) (SDK Attempt Count: 1):
+XAmzContentSHA256Mismatch: The Content-SHA256 you specified did not match what we received
+```
+
+This happens when a file create checksum has been enabled but the store does not support it/support it consistently with AWS S3.
+
+```xml
+  <property>
+    <name>fs.s3a.create.checksum.algorithm</name>
+    <value>none</value>
+  </property>
+```
+
+### <a name="content-sha-256"></a> Status Code 400 "x-amz-sdk-checksum-algorithm specified, but no corresponding x-amz-checksum-* or x-amz-trailer headers were found"
+
+```
+org.apache.hadoop.fs.s3a.AWSBadRequestException: PUT 0-byte object  on test
+software.amazon.awssdk.services.s3.model.InvalidRequestException
+x-amz-sdk-checksum-algorithm specified, but no corresponding x-amz-checksum-* or x-amz-trailer headers were found.
+  (Service: S3, Status Code: 400, Request ID: 012929bd17000198c8bc82d20509eecd6df79b1a, Extended Request ID: P9bq0Iv) (SDK Attempt Count: 1):
+```
+
+The checksum algorithm to be used is not one supported by the store.
+In particular, the value `unknown_to_sdk_version` appears to cause it.
+
+```xml
+  <property>
+    <name>fs.s3a.create.checksum.algorithm</name>
+    <value>unknown_to_sdk_version</value>
+  </property>
+```
+
+Fix: use a checksum the store knows about.
+
 ## <a name="access_denied"></a> Access Denied
 
 HTTP error codes 401 and 403 are mapped to `AccessDeniedException` in the S3A connector.
@@ -435,6 +477,9 @@ java.nio.file.AccessDeniedException: bucket: doesBucketExist on bucket:
     The AWS Access Key Id you provided does not exist in our records.
 
 ```
+
+If working with a third-party bucket, verify the `fs.s3a.endpoint` setting
+points to the third-party store.
 
 ###  <a name="access_denied_disabled"></a> `AccessDeniedException` All access to this object has been disabled
 
@@ -560,13 +605,80 @@ Glacier.
 
 If you want to access the file with S3A after writes, do not set `fs.s3a.create.storage.class` to `glacier` or `deep_archive`.
 
+### <a name="SignatureDoesNotMatch"></a>`AccessDeniedException` with `SignatureDoesNotMatch` on a third party bucket.
+
+This can surface when trying to interact, especially write data, to a third-party bucket
+
+```
+ Writing Object on example-file: software.amazon.awssdk.services.s3.model.S3Exception: Invalid argument. (Service: S3, Status Code: 403, Request ID: null) (SDK Attempt Count: 1):SignatureDoesNotMatch
+```
+
+The store does not recognize checksum calculation on every operation.
+Fix: disable it by setting `fs.s3a.checksum.generation` to `false`.
+
+```xml
+<property>
+  <name>fs.s3a.checksum.generation</name>
+  <value>false</value>
+  <description>Calculate and attach a message checksum on every operation. (default: false)</description>
+</property>
+```
+
+Full stack
+
+```
+> bin/hadoop fs -touchz s3a://gcs/example-file
+2025-10-21 16:23:27,642 [main] WARN  s3a.S3ABlockOutputStream (S3ABlockOutputStream.java:progressChanged(1335)) - Transfer failure of block FileBlock{index=1, destFile=/tmp/hadoop-stevel/s3a/s3ablock-0001-1358390699869033998.tmp, state=Upload, dataSize=0, limit=-1}
+2025-10-21 16:23:27,645 [main] DEBUG shell.Command (Command.java:displayError(481)) - touchz failure
+java.nio.file.AccessDeniedException: example-file: Writing Object on example-file: software.amazon.awssdk.services.s3.model.S3Exception: Invalid argument. (Service: S3, Status Code: 403, Request ID: null) (SDK Attempt Count: 1):SignatureDoesNotMatch
+   at org.apache.hadoop.fs.s3a.S3AUtils.translateException(S3AUtils.java:271)
+   at org.apache.hadoop.fs.s3a.Invoker.once(Invoker.java:124)
+   at org.apache.hadoop.fs.s3a.Invoker.lambda$retry$4(Invoker.java:376)
+   at org.apache.hadoop.fs.s3a.Invoker.retryUntranslated(Invoker.java:468)
+   at org.apache.hadoop.fs.s3a.Invoker.retry(Invoker.java:372)
+   at org.apache.hadoop.fs.s3a.Invoker.retry(Invoker.java:347)
+   at org.apache.hadoop.fs.s3a.WriteOperationHelper.retry(WriteOperationHelper.java:210)
+   at org.apache.hadoop.fs.s3a.WriteOperationHelper.putObject(WriteOperationHelper.java:534)
+   at org.apache.hadoop.fs.s3a.S3ABlockOutputStream.putObject(S3ABlockOutputStream.java:726)
+   at org.apache.hadoop.fs.s3a.S3ABlockOutputStream.close(S3ABlockOutputStream.java:518)
+   at org.apache.hadoop.fs.FSDataOutputStream$PositionCache.close(FSDataOutputStream.java:77)
+   at org.apache.hadoop.fs.FSDataOutputStream.close(FSDataOutputStream.java:106)
+   at org.apache.hadoop.fs.shell.TouchCommands$Touchz.touchz(TouchCommands.java:89)
+   at org.apache.hadoop.fs.shell.TouchCommands$Touchz.processNonexistentPath(TouchCommands.java:85)
+   at org.apache.hadoop.fs.shell.Command.processArgument(Command.java:303)
+   at org.apache.hadoop.fs.shell.Command.processArguments(Command.java:285)
+   at org.apache.hadoop.fs.shell.FsCommand.processRawArguments(FsCommand.java:121)
+   at org.apache.hadoop.fs.shell.Command.run(Command.java:192)
+   at org.apache.hadoop.fs.FsShell.run(FsShell.java:327)
+   at org.apache.hadoop.util.ToolRunner.run(ToolRunner.java:82)
+   at org.apache.hadoop.util.ToolRunner.run(ToolRunner.java:97)
+   at org.apache.hadoop.fs.FsShell.main(FsShell.java:390)
+Caused by: software.amazon.awssdk.services.s3.model.S3Exception: Invalid argument. (Service: S3, Status Code: 403, Request ID: null) (SDK Attempt Count: 1)
+   at software.amazon.awssdk.services.s3.model.S3Exception$BuilderImpl.build(S3Exception.java:113)
+   at software.amazon.awssdk.services.s3.model.S3Exception$BuilderImpl.build(S3Exception.java:61)
+...
+   at software.amazon.awssdk.awscore.client.handler.AwsSyncClientHandler.execute(AwsSyncClientHandler.java:53)
+   at software.amazon.awssdk.services.s3.DefaultS3Client.putObject(DefaultS3Client.java:11883)
+   at software.amazon.awssdk.services.s3.DelegatingS3Client.lambda$putObject$89(DelegatingS3Client.java:9716)
+   at software.amazon.awssdk.services.s3.internal.crossregion.S3CrossRegionSyncClient.invokeOperation(S3CrossRegionSyncClient.java:67)
+   at software.amazon.awssdk.services.s3.DelegatingS3Client.putObject(DelegatingS3Client.java:9716)
+   at org.apache.hadoop.fs.s3a.S3AFileSystem.lambda$putObjectDirect$14(S3AFileSystem.java:3332)
+   at org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDurationOfSupplier(IOStatisticsBinding.java:650)
+   at org.apache.hadoop.fs.s3a.S3AFileSystem.putObjectDirect(S3AFileSystem.java:3330)
+   at org.apache.hadoop.fs.s3a.WriteOperationHelper.lambda$putObject$7(WriteOperationHelper.java:535)
+   at org.apache.hadoop.fs.store.audit.AuditingFunctions.lambda$withinAuditSpan$0(AuditingFunctions.java:62)
+   at org.apache.hadoop.fs.s3a.Invoker.once(Invoker.java:122)
+   ... 20 more
+   touchz: example-file: Writing Object on example-file: software.amazon.awssdk.services.s3.model.S3Exception: Invalid argument. (Service: S3, Status Code: 403, Request ID: null) (SDK Attempt Count: 1):SignatureDoesNotMatch
+```
+
 ### <a name="no_region_session_credentials"></a> "Unable to find a region via the region provider chain." when using session credentials.
 
 Region must be provided when requesting session credentials, or an exception will be thrown with the
 message:
 
 ```
- Unable to find a region via the region provider
+Unable to find a region via the region provider
 chain. Must provide an explicit region in the builder or setup environment to supply a region.
 ```
 
@@ -1241,6 +1353,21 @@ When working with S3 Express store buckets (unlike standard S3 buckets), follow 
 
 2. This setting ensures that all pending MPUs are aborted before the directory object is deleted, which is a requirement specific to S3 Express store buckets.
 
+## Status Code: 200 + "PreconditionFailed: At least one of the pre-conditions you specified did not hold"
+
+```
+software.amazon.awssdk.services.s3.model.S3Exception: At least one of the pre-conditions you specified did not hold
+(Service: S3, Status Code: 200, Request ID: 01a396cff3000198cc0439e40509a95e33467bdc, Extended Request ID: TZrsG8pBzlmXoV) (SDK Attempt Count: 1):
+PreconditionFailed: At least one of the pre-conditions you specified did not hold
+```
+
+An attempt to write to S3Express bucket using conditional overwrite failed because another process was writing at the same time.
+
+Conditional overwrite during file creation is used when conditional creation has been enabled (`fs.s3a.create.conditional.enabled`).
+This is true by default.
+
+* A file is created using the `createFile()` API with the option `fs.option.create.conditional.overwrite` set to true.
+* File create performance has been enabled with (`fs.s3a.performance.flags` including `create` or being `*`)
 
 ### Application hangs after reading a number of files
 
@@ -1332,6 +1459,39 @@ connections more frequently.
 ```
 
 Something has been trying to write data to "/".
+
+### "Unable to create OutputStream with the given multipart upload and buffer configuration."
+
+This error is raised when an attemt it made to write to a store with
+`fs.s3a.multipart.uploads.enabled` set to `false` and `fs.s3a.fast.upload.buffer` set to array.
+
+This is pre-emptively disabled before a write of so much data takes place that the process runs out of heap space.
+
+If the store doesn't support multipart uploads, _use disk for buffering_.
+Nothing else is safe to use as it leads to a state where small jobs work, but those which generate large amounts of data fail.
+
+```xml
+<property>
+  <name>fs.s3a.fast.upload.buffer</name>
+  <value>disk</value>
+</property>
+```
+
+```
+org.apache.hadoop.fs.PathIOException: `s3a://gcs/a2a8c3e4-5788-40c0-ad66-fe3fe63f4507': Unable to create OutputStream with the given multipart upload and buffer configuration.
+    at org.apache.hadoop.fs.s3a.S3AUtils.validateOutputStreamConfiguration(S3AUtils.java:985)
+    at org.apache.hadoop.fs.s3a.S3AFileSystem.innerCreateFile(S3AFileSystem.java:2201)
+    at org.apache.hadoop.fs.s3a.S3AFileSystem.lambda$create$5(S3AFileSystem.java:2068)
+    at org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.invokeTrackingDuration(IOStatisticsBinding.java:546)
+    at org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.lambda$trackDurationOfOperation$5(IOStatisticsBinding.java:527)
+    at org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDuration(IOStatisticsBinding.java:448)
+    at org.apache.hadoop.fs.s3a.S3AFileSystem.trackDurationAndSpan(S3AFileSystem.java:2881)
+    at org.apache.hadoop.fs.s3a.S3AFileSystem.trackDurationAndSpan(S3AFileSystem.java:2900)
+    at org.apache.hadoop.fs.s3a.S3AFileSystem.create(S3AFileSystem.java:2067)
+    at org.apache.hadoop.fs.FileSystem.create(FileSystem.java:1233)
+    at org.apache.hadoop.fs.FileSystem.create(FileSystem.java:1210)
+    at org.apache.hadoop.fs.FileSystem.create(FileSystem.java:1091)
+```
 
 ## <a name="best"></a> Best Practises
 

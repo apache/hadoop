@@ -41,6 +41,15 @@ public class ITestS3AHugeFilesByteBufferBlocks
   }
 
   /**
+   * Skip this test suite when MPUS are not avaialable.
+   * @return false
+   */
+  @Override
+  protected boolean requireMultipartUploads() {
+    return true;
+  }
+
+  /**
    * Rename the parent directory, rather than the file itself.
    * @param src source file
    * @param dest dest file

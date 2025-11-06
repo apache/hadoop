@@ -56,6 +56,7 @@ import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
 import static java.util.Optional.empty;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.assumeMultipartUploads;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.lsR;
 
 /**
@@ -142,6 +143,7 @@ public class ITestTerasortOnS3A extends AbstractYarnClusterITest {
   public void setup() throws Exception {
     super.setup();
     requireScaleTestsEnabled();
+    assumeMultipartUploads(getFileSystem().getConf());
     prepareToTerasort();
   }
 

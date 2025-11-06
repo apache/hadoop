@@ -48,12 +48,37 @@ public class TestChecksumSupport {
     testGetSupportedChecksumAlgorithm(ChecksumAlgorithm.SHA256);
   }
 
-  private void testGetSupportedChecksumAlgorithm(ChecksumAlgorithm checksumAlgorithm) {
-    final Configuration conf = new Configuration();
-    conf.set(CHECKSUM_ALGORITHM, checksumAlgorithm.toString());
+  /**
+   * Assert that a checksum algorithm string resolves to a value.
+   * @param checksumAlgorithm expected value
+   */
+  private static void testGetSupportedChecksumAlgorithm(final ChecksumAlgorithm checksumAlgorithm) {
+    assertChecksumAlgorithm(checksumAlgorithm, checksumAlgorithm.toString());
+  }
+  /**
+   * Assert that a checksum algorithm string resolves to a value.
+   * @param checksumAlgorithm expected value
+   * @param algorithm algorithm name
+   */
+  private static void assertChecksumAlgorithm(final ChecksumAlgorithm checksumAlgorithm,
+      final String algorithm) {
+    final Configuration conf = new Configuration(false);
+    conf.set(CHECKSUM_ALGORITHM, algorithm);
     Assertions.assertThat(ChecksumSupport.getChecksumAlgorithm(conf))
         .describedAs("Checksum algorithm must match value set in the configuration")
         .isEqualTo(checksumAlgorithm);
+  }
+
+  @Test
+  public void testCRC32C() throws Throwable {
+    assertChecksumAlgorithm(ChecksumAlgorithm.CRC32_C, "CRC32C");
+    assertChecksumAlgorithm(ChecksumAlgorithm.CRC32_C, "CRC32_C");
+  }
+
+  @Test
+  public void testCRC64NVME() throws Throwable {
+    assertChecksumAlgorithm(ChecksumAlgorithm.CRC64_NVME, "CRC64_NVME");
+    assertChecksumAlgorithm(ChecksumAlgorithm.CRC64_NVME, "CRC64NVME");
   }
 
   @Test
@@ -73,4 +98,5 @@ public class TestChecksumSupport {
         .describedAs("Invalid checksum algorithm should throw an exception")
         .isInstanceOf(IllegalArgumentException.class);
   }
+
 }
