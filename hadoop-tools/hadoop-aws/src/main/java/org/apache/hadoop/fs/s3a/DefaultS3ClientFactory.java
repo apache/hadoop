@@ -68,6 +68,7 @@ import static org.apache.hadoop.fs.s3a.Constants.AWS_SERVICE_IDENTIFIER_S3;
 import static org.apache.hadoop.fs.s3a.auth.SignerFactory.createHttpSigner;
 import static org.apache.hadoop.fs.s3a.impl.AWSHeaders.REQUESTER_PAYS_HEADER;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.AUTH_SCHEME_AWS_SIGV_4;
+import static org.apache.hadoop.fs.s3a.impl.RegionResolution.RegionResolutionMechanism.Ec2Metadata;
 import static org.apache.hadoop.fs.s3a.impl.RegionResolution.RegionResolutionMechanism.Sdk;
 import static org.apache.hadoop.fs.s3a.impl.RegionResolution.calculateRegion;
 
@@ -313,7 +314,15 @@ public class DefaultS3ClientFactory extends Configured
     // which tests expect.
     builder.fipsEnabled(resolution.isUseFips());
 
-    if (Sdk != resolution.getMechanism()) {
+    final RegionResolution.RegionResolutionMechanism mechanism = resolution.getMechanism();
+    if (Sdk == mechanism) {
+      // handing off all resolution to SDK.
+      // region configuration was set to empty string.
+      // allow this if people really want it; it is OK to rely on this
+      // when deployed in EC2.
+      DEFAULT_REGION_CHAIN.info(SDK_REGION_CHAIN_IN_USE);
+      LOG.debug(SDK_REGION_CHAIN_IN_USE);
+    } else {
       final Region region = resolution.getRegion();
       builder.region(requireNonNull(region));
       // s3 cross region access
@@ -327,13 +336,6 @@ public class DefaultS3ClientFactory extends Configured
           LOG.debug("Setting endpoint to {}", endpointUri);
         }
       }
-    } else {
-      // handing off all resolution to SDK.
-      // region configuration was set to empty string.
-      // allow this if people really want it; it is OK to rely on this
-      // when deployed in EC2.
-      DEFAULT_REGION_CHAIN.info(SDK_REGION_CHAIN_IN_USE);
-      LOG.debug(SDK_REGION_CHAIN_IN_USE);
     }
     return resolution;
   }
