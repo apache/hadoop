@@ -94,6 +94,8 @@ public final class WriteThreadPoolSizeManager implements Closeable {
   private static long lastCpuTime = 0;
   /* Last recorded system time used for utilization calculations.  */
   private static long lastTime = 0;
+  /* Flag indicating if CPU monitoring has started. */
+  private volatile boolean isMonitoringStarted = false;
 
   /**
    * Private constructor to initialize the write thread pool and CPU monitor executor
@@ -260,18 +262,22 @@ public final class WriteThreadPoolSizeManager implements Closeable {
   /**
    * Starts monitoring the CPU utilization and adjusts the thread pool size accordingly.
    */
-  synchronized void startCPUMonitoring() {
-    cpuMonitorExecutor.scheduleAtFixedRate(() -> {
-      double cpuUtilization = getCpuUtilization();
-      LOG.debug("Current CPU Utilization is this: {}", cpuUtilization);
-      try {
-        adjustThreadPoolSizeBasedOnCPU(cpuUtilization);
-      } catch (InterruptedException e) {
-        throw new RuntimeException(String.format(
-            "Thread pool size adjustment interrupted for filesystem %s",
-            filesystemName), e);
-      }
-    }, 0, getAbfsConfiguration().getWriteCpuMonitoringInterval(), TimeUnit.MILLISECONDS);
+  public synchronized void startCPUMonitoring() {
+    if (!isMonitoringStarted()) {
+      isMonitoringStarted = true;
+      cpuMonitorExecutor.scheduleAtFixedRate(() -> {
+            double cpuUtilization = getCpuUtilization();
+            LOG.debug("Current CPU Utilization is this: {}", cpuUtilization);
+            try {
+              adjustThreadPoolSizeBasedOnCPU(cpuUtilization);
+            } catch (InterruptedException e) {
+              throw new RuntimeException(String.format(
+                  "Thread pool size adjustment interrupted for filesystem %s",
+                  filesystemName), e);
+            }
+          }, 0, getAbfsConfiguration().getWriteCpuMonitoringInterval(),
+          TimeUnit.MILLISECONDS);
+    }
   }
 
   /**
@@ -435,6 +441,15 @@ public final class WriteThreadPoolSizeManager implements Closeable {
    */
   public ScheduledExecutorService getCpuMonitorExecutor() {
     return cpuMonitorExecutor;
+  }
+
+  /**
+   * Checks if monitoring has started.
+   *
+   * @return true if monitoring has started, false otherwise.
+   */
+  public synchronized boolean isMonitoringStarted() {
+    return isMonitoringStarted;
   }
 
   /**
