@@ -251,7 +251,23 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
     boolean isAutoQueueCreationEnabledParent = isDynamicParent || conf.isAutoQueueCreationV2Enabled(
         queueToParse) || isAutoCreateEnabled;
 
-    if (childQueueNames.size() == 0 && !isAutoQueueCreationEnabledParent) {
+    LOG.info("Parsing queue '{}': parent={}, path={}, childQueues={}, " +
+                      "reservable={}, autoCreateEnabled={}, autoQueueCreationV2={}, isDynamicParent={}",
+            queueName,
+            (parent == null ? "null" : parent.getQueueName()),
+            queueToParse.getFullPath(),
+            childQueueNames,
+            isReservableQueue,
+            isAutoCreateEnabled,
+            conf.isAutoQueueCreationV2Enabled(queueToParse),
+            isDynamicParent);
+
+
+    if (childQueueNames.isEmpty() && !isAutoQueueCreationEnabledParent) {
+      LOG.info("Queue '{}' has no children; parent={}, conf path={}",
+              queueName,
+              (parent == null ? "null" : parent.getQueueName()),
+              queueToParse.getFullPath());
       validateParent(parent, queueName);
       // Check if the queue will be dynamically managed by the Reservation system
       if (isReservableQueue) {
@@ -737,7 +753,9 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
   }
 
   private static void validateParent(CSQueue parent, String queueName) {
-    if (parent == null) {
+    if (parent != null) {
+      LOG.info("Validating parent queue: {} with child queues: {}", parent.getQueueName(), parent.getChildQueues());
+    } else {
       throw new IllegalStateException("Queue configuration missing child queue names for "
           + queueName);
     }

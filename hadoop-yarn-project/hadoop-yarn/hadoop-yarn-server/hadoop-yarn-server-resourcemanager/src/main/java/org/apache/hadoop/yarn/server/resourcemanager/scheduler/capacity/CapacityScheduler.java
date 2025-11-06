@@ -27,9 +27,9 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Random;
 import java.util.Set;
+import java.util.Map.Entry;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -795,6 +795,9 @@ public class CapacityScheduler extends
   @Lock(CapacityScheduler.class)
   private void initializeQueues(CapacitySchedulerConfiguration conf)
     throws YarnException {
+    if (conf != null) {
+      LOG.info("The child of root.queues: {}", conf.get("yarn.scheduler.capacity.root.queues"));
+    }
     try {
       this.queueManager.initializeQueues(conf);
 
