@@ -58,7 +58,8 @@ A non-empty value is generally sufficient, though some deployments may require
 a specific value.
 
 *Important:* do not use `auto`, `ec2`, or `sdk` as these may be used
-in the future for specific region binding algorithms.
+in the future for specific region binding algorithms; while `null`
+can be mis-interpreted.
 
 Finally, assuming the credential source is the normal access/secret key
 then these must be set, either in XML or (preferred) in a JCEKS file.
@@ -174,14 +175,14 @@ false to disable use of these features.
 ## Controlling Upload Checksums and MD5 Headers
 
 It may be necessary to change checksums of uploads by
-1. Restoring the attachment of a `Content-MD5 header` in requests
+1. Enabling the attachment of a `Content-MD5 header` in requests
 2. Restricting checksum generation to only when required.
 
 ```xml
   <property>
     <name>fs.s3a.request.md5.header</name>
     <value>true</value>
-    <description>re-enable calculation and inclusion of an MD5 HEADER on data upload operations</description>
+    <description>Enable calculation and inclusion of an MD5 HEADER on data upload operations</description>
   </property>
 
   <property>
@@ -489,14 +490,9 @@ at [ECS Test Drive](https://portal.ecstestdrive.com/) were
 
 ```xml
 <property>
-  <name>fs.s3a.region</name>
-  <value>region</value>
-  <description>arbitrary name</description>
-</property>
-
-<property>
   <name>fs.s3a.endpoint.region</name>
-  <value>region</value>
+  <value>dell</value>
+  <description>arbitrary name other than sdk, ec2, auto or null</description>
 </property>
 
 <property>
@@ -510,8 +506,9 @@ at [ECS Test Drive](https://portal.ecstestdrive.com/) were
 </property>
 
 <property>
-  <name>fs.s3a.request.md5.header</name>
-  <value>false</value>
+  <name>fs.s3a.bucket.request.md5.header</name>
+  <value>true</value>
+  <description>Enable calculation and inclusion of an MD5 HEADER on data upload operations</description>
 </property>
 
 <property>
