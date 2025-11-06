@@ -55,61 +55,33 @@ import static org.mockito.Mockito.when;
 class TestWriteThreadPoolSizeManager extends AbstractAbfsIntegrationTest {
 
   private AbfsConfiguration mockConfig;
-
   private static final double HIGH_CPU_UTILIZATION_THRESHOLD = 0.95;
-
   private static final double LOW_CPU_UTILIZATION_THRESHOLD = 0.05;
-
   private static final int THREAD_SLEEP_DURATION_MS = 200;
-
   private static final String TEST_FILE_PATH = "testFilePath";
-
   private static final String TEST_DIR_PATH = "testDirPath";
-
   private static final int TEST_FILE_LENGTH = 1024 * 1024 * 8;
-
   private static final int CONCURRENT_REQUEST_COUNT = 15;
-
   private static final int THREAD_POOL_KEEP_ALIVE_TIME = 10;
-
   private static final int LOW_TIER_MEMORY_MULTIPLIER = 4;
-
   private static final int MEDIUM_TIER_MEMORY_MULTIPLIER = 6;
-
   private static final int HIGH_TIER_MEMORY_MULTIPLIER = 8;
-
   private static final int HIGH_CPU_THRESHOLD = 15;
-
   private static final int MEDIUM_CPU_THRESHOLD = 10;
-
   private static final int LOW_CPU_THRESHOLD = 5;
-
   private static final int CPU_MONITORING_INTERVAL = 15;
-
   private static final int WAIT_DURATION_MS = 3000;
-
   private static final int LATCH_TIMEOUT_SECONDS = 60;
-
   private static final int RESIZE_WAIT_TIME_MS = 6_000;
-
   private static final double HIGH_CPU_USAGE_RATIO = 0.95;
-
   private static final double LOW_CPU_USAGE_RATIO = 0.05;
-
   private static final int SLEEP_DURATION_MS = 150;
-
   private static final int AWAIT_TIMEOUT_SECONDS = 45;
-
   private static final int RESIZER_JOIN_TIMEOUT_MS = 2_000;
-
   private static final int WAIT_TIMEOUT_MS = 5000;
-
   private static final int SLEEP_DURATION_30S_MS = 30000;
-
   private static final int SMALL_PAUSE_MS = 50;
-
   private static final int BURST_LOAD = 50;
-
   private static final long LOAD_SLEEP_DURATION_MS = 2000;
 
   TestWriteThreadPoolSizeManager() throws Exception {
@@ -122,22 +94,15 @@ class TestWriteThreadPoolSizeManager extends AbstractAbfsIntegrationTest {
   @BeforeEach
   public void setUp() {
     mockConfig = mock(AbfsConfiguration.class);
-    when(mockConfig.getWriteConcurrentRequestCount()).thenReturn(
-        CONCURRENT_REQUEST_COUNT);
-    when(mockConfig.getWriteThreadPoolKeepAliveTime()).thenReturn(
-        THREAD_POOL_KEEP_ALIVE_TIME);
-    when(mockConfig.getLowTierMemoryMultiplier()).thenReturn(
-        LOW_TIER_MEMORY_MULTIPLIER);
-    when(mockConfig.getMediumTierMemoryMultiplier()).thenReturn(
-        MEDIUM_TIER_MEMORY_MULTIPLIER);
-    when(mockConfig.getHighTierMemoryMultiplier()).thenReturn(
-        HIGH_TIER_MEMORY_MULTIPLIER);
+    when(mockConfig.getWriteConcurrentRequestCount()).thenReturn(CONCURRENT_REQUEST_COUNT);
+    when(mockConfig.getWriteThreadPoolKeepAliveTime()).thenReturn(THREAD_POOL_KEEP_ALIVE_TIME);
+    when(mockConfig.getLowTierMemoryMultiplier()).thenReturn(LOW_TIER_MEMORY_MULTIPLIER);
+    when(mockConfig.getMediumTierMemoryMultiplier()).thenReturn(MEDIUM_TIER_MEMORY_MULTIPLIER);
+    when(mockConfig.getHighTierMemoryMultiplier()).thenReturn(HIGH_TIER_MEMORY_MULTIPLIER);
     when(mockConfig.getWriteHighCpuThreshold()).thenReturn(HIGH_CPU_THRESHOLD);
-    when(mockConfig.getWriteMediumCpuThreshold()).thenReturn(
-        MEDIUM_CPU_THRESHOLD);
+    when(mockConfig.getWriteMediumCpuThreshold()).thenReturn(MEDIUM_CPU_THRESHOLD);
     when(mockConfig.getWriteLowCpuThreshold()).thenReturn(LOW_CPU_THRESHOLD);
-    when(mockConfig.getWriteCpuMonitoringInterval()).thenReturn(
-        CPU_MONITORING_INTERVAL);
+    when(mockConfig.getWriteCpuMonitoringInterval()).thenReturn(CPU_MONITORING_INTERVAL);
   }
 
   /**
@@ -165,12 +130,10 @@ class TestWriteThreadPoolSizeManager extends AbstractAbfsIntegrationTest {
   }
 
   /**
-   * /**
    * Tests that high CPU usage results in thread pool downscaling.
    */
   @Test
-  void testAdjustThreadPoolSizeBasedOnHighCPU()
-      throws InterruptedException, IOException {
+  void testAdjustThreadPoolSizeBasedOnHighCPU() throws InterruptedException, IOException {
     // Get the executor service (ThreadPoolExecutor)
     WriteThreadPoolSizeManager instance
         = WriteThreadPoolSizeManager.getInstance("testfsHigh",
@@ -181,8 +144,7 @@ class TestWriteThreadPoolSizeManager extends AbstractAbfsIntegrationTest {
 
     // Simulate high CPU usage (e.g., 95% CPU utilization)
     int initialMaxSize = threadPoolExecutor.getMaximumPoolSize();
-    instance.adjustThreadPoolSizeBasedOnCPU(
-        HIGH_CPU_UTILIZATION_THRESHOLD);  // High CPU
+    instance.adjustThreadPoolSizeBasedOnCPU(HIGH_CPU_UTILIZATION_THRESHOLD);  // High CPU
 
     // Get the new maximum pool size after adjustment
     int newMaxSize = threadPoolExecutor.getMaximumPoolSize();
@@ -206,8 +168,7 @@ class TestWriteThreadPoolSizeManager extends AbstractAbfsIntegrationTest {
         getFileSystem().getAbfsClient());
     ExecutorService executor = instance.getExecutorService();
     int initialSize = ((ThreadPoolExecutor) executor).getMaximumPoolSize();
-    instance.adjustThreadPoolSizeBasedOnCPU(
-        LOW_CPU_UTILIZATION_THRESHOLD); // Low CPU
+    instance.adjustThreadPoolSizeBasedOnCPU(LOW_CPU_UTILIZATION_THRESHOLD); // Low CPU
     int newSize = ((ThreadPoolExecutor) executor).getMaximumPoolSize();
     Assertions.assertThat(newSize)
         .as("Expected pool size to increase or stay the same under low CPU usage")
@@ -254,7 +215,6 @@ class TestWriteThreadPoolSizeManager extends AbstractAbfsIntegrationTest {
    * This test checks the following:
    * 1. That the CPU monitoring task gets scheduled by verifying that the CPU monitor executor is not null.
    * 2. Ensures that the thread pool executor has at least one thread running, confirming that the task is being executed.
-   *
    * @throws InterruptedException if the test is interrupted during the sleep time
    */
   @Test
@@ -358,8 +318,7 @@ class TestWriteThreadPoolSizeManager extends AbstractAbfsIntegrationTest {
     // 2. Pool size must fall within valid bounds → proves resizing occurred
     Assertions.assertThat(resizedPoolSize)
         .as("Thread pool size should dynamically adjust under CPU stress")
-        .isBetween(1, getAbfsStore(fs).getAbfsConfiguration()
-            .getWriteConcurrentRequestCount());
+        .isBetween(1, getAbfsStore(fs).getAbfsConfiguration().getWriteConcurrentRequestCount());
 
     // 3. Task queue must be empty → proves no backlog remains after workload
     Assertions.assertThat(executor.getQueue().size())
@@ -402,12 +361,9 @@ class TestWriteThreadPoolSizeManager extends AbstractAbfsIntegrationTest {
     final CountDownLatch done = new CountDownLatch(taskCount);
 
     // Track execution results
-    final AtomicIntegerArray completed = new AtomicIntegerArray(
-        taskCount); // mark tasks once
-    final AtomicInteger duplicates = new AtomicInteger(
-        0);                  // guard against double-completion
-    final AtomicInteger rejected = new AtomicInteger(
-        0);                    // count unexpected rejections
+    final AtomicIntegerArray completed = new AtomicIntegerArray(taskCount); // mark tasks once
+    final AtomicInteger duplicates = new AtomicInteger(0);                  // guard against double-completion
+    final AtomicInteger rejected = new AtomicInteger(0);                    // count unexpected rejections
 
     // Submit ABFS write tasks
     for (int i = 0; i < taskCount; i++) {
@@ -446,18 +402,15 @@ class TestWriteThreadPoolSizeManager extends AbstractAbfsIntegrationTest {
     }
 
     // Thread that simulates fluctuating CPU load while tasks are running
-    final AtomicInteger observedMinMax = new AtomicInteger(
-        executor.getMaximumPoolSize());
-    final AtomicInteger observedMaxMax = new AtomicInteger(
-        executor.getMaximumPoolSize());
+    final AtomicInteger observedMinMax = new AtomicInteger(executor.getMaximumPoolSize());
+    final AtomicInteger observedMaxMax = new AtomicInteger(executor.getMaximumPoolSize());
 
     Thread resizer = new Thread(() -> {
       try {
         // Release worker tasks
         startBarrier.await(10, TimeUnit.SECONDS);
 
-        long end = System.currentTimeMillis()
-            + RESIZE_WAIT_TIME_MS; // keep resizing for ~6s
+        long end = System.currentTimeMillis() + RESIZE_WAIT_TIME_MS; // keep resizing for ~6s
         boolean high = true;
         while (System.currentTimeMillis() < end) {
           // Alternate between high load (shrink) and low load (expand)
@@ -552,6 +505,7 @@ class TestWriteThreadPoolSizeManager extends AbstractAbfsIntegrationTest {
   }
 
 
+
   /**
    * Verifies that when the system experiences high CPU usage,
    * the WriteThreadPoolSizeManager detects the load and reduces
@@ -560,8 +514,7 @@ class TestWriteThreadPoolSizeManager extends AbstractAbfsIntegrationTest {
   @Test
   void testThreadPoolScalesDownOnHighCpuLoad() throws Exception {
     // Initialize filesystem and thread pool manager
-    try (FileSystem fileSystem = FileSystem.newInstance(
-        getRawConfiguration())) {
+    try (FileSystem fileSystem = FileSystem.newInstance(getRawConfiguration())) {
       AzureBlobFileSystem abfs = (AzureBlobFileSystem) fileSystem;
       WriteThreadPoolSizeManager instance =
           WriteThreadPoolSizeManager.getInstance(abfs.getFileSystemId(),
@@ -665,8 +618,7 @@ class TestWriteThreadPoolSizeManager extends AbstractAbfsIntegrationTest {
   @Test
   void testScalesDownOnParallelHighMemoryLoad() throws Exception {
     // Initialize filesystem and thread pool manager
-    try (FileSystem fileSystem = FileSystem.newInstance(
-        getRawConfiguration())) {
+    try (FileSystem fileSystem = FileSystem.newInstance(getRawConfiguration())) {
       AzureBlobFileSystem abfs = (AzureBlobFileSystem) fileSystem;
       WriteThreadPoolSizeManager instance =
           WriteThreadPoolSizeManager.getInstance(abfs.getFileSystemId(),
@@ -784,10 +736,8 @@ class TestWriteThreadPoolSizeManager extends AbstractAbfsIntegrationTest {
     try (FileSystem fileSystem = FileSystem.newInstance(
         getRawConfiguration())) {
       AzureBlobFileSystem abfs = (AzureBlobFileSystem) fileSystem;
-      WriteThreadPoolSizeManager instance
-          = WriteThreadPoolSizeManager.getInstance(abfs.getFileSystemId(),
-          abfs.getAbfsStore().getAbfsConfiguration(),
-          getFileSystem().getAbfsClient());
+      WriteThreadPoolSizeManager instance = WriteThreadPoolSizeManager.getInstance(abfs.getFileSystemId(),
+          abfs.getAbfsStore().getAbfsConfiguration(), getFileSystem().getAbfsClient());
       ThreadPoolExecutor executor =
           (ThreadPoolExecutor) instance.getExecutorService();
 
