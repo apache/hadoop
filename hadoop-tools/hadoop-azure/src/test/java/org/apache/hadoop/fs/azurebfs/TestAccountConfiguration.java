@@ -518,7 +518,6 @@ public class TestAccountConfiguration {
     String providerClassKey = "";
     String providerClassValue = "";
 
-    //todo: add user-bound auth type handling tests
     switch (authType) {
     case OAuth:
       providerClassKey = FS_AZURE_ACCOUNT_TOKEN_PROVIDER_TYPE_PROPERTY_NAME
@@ -548,12 +547,6 @@ public class TestAccountConfiguration {
           + (isAccountSetting ? accountNameSuffix : "");
       providerClassValue = TEST_SAS_PROVIDER_CLASS_CONFIG_1;
       break;
-
-    case UserboundSASWithOAuth:
-//          providerClassKey = FS_AZURE_SAS_TOKEN_PROVIDER_TYPE
-//              + (isAccountSetting ? accountNameSuffix : "");
-//          providerClassValue = TEST_SAS_PROVIDER_CLASS_CONFIG_1;
-          break;
 
     default: // set nothing
     }

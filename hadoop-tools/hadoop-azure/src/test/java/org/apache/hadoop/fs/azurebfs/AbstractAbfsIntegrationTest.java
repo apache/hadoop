@@ -199,6 +199,8 @@ public abstract class AbstractAbfsIntegrationTest extends
     // Only live account without namespace support can run ABFS&WASB
     // compatibility tests
     if (!isIPAddress && (abfsConfig.getAuthType(accountName) != AuthType.SAS)
+        && (abfsConfig.getAuthType(accountName)
+        != AuthType.UserboundSASWithOAuth)
         && !abfs.getIsNamespaceEnabled(getTestTracingContext(
             getFileSystem(), false))) {
       final URI wasbUri = new URI(
@@ -321,6 +323,20 @@ public abstract class AbstractAbfsIntegrationTest extends
         tempFs.create(testPath).close();
       }
       abfsConfig.set(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME, AuthType.SAS.name());
+      usingFilesystemForSASTests = true;
+    }
+  }
+
+  /**
+   * Create a filesystem for user bound SAS tests using the SharedKey authentication.
+   *
+   * @throws Exception
+   */
+  protected void createFilesystemForUserBoundSASTests() throws Exception{
+    try (AzureBlobFileSystem tempFs = (AzureBlobFileSystem) FileSystem.newInstance(rawConfig)){
+      ContractTestUtils.assertPathExists(tempFs, "This path should exist",
+          new Path("/"));
+      abfsConfig.set(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME, AuthType.UserboundSASWithOAuth.name());
       usingFilesystemForSASTests = true;
     }
   }
@@ -587,6 +603,9 @@ public abstract class AbstractAbfsIntegrationTest extends
     assumeThat(currentAuthType).
         as("SAS Based Authentication Not Allowed For Integration Tests").
         isNotEqualTo(AuthType.SAS);
+    assumeThat(currentAuthType).
+        as("User-bound SAS Based Authentication Not Allowed For Integration Tests").
+        isNotEqualTo(AuthType.UserboundSASWithOAuth);
     if (currentAuthType == AuthType.SharedKey) {
       assumeValidTestConfigPresent(getRawConfiguration(), FS_AZURE_ACCOUNT_KEY);
     } else {

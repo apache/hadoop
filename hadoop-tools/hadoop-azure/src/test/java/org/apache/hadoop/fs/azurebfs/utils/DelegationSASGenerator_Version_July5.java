@@ -41,6 +41,18 @@ public class DelegationSASGenerator_Version_July5 extends SASGenerator {
   private final String skdutid;
   private final String sduoid;
 
+  /**
+   * Initializes all the fields required for generating delegation SAS.
+   *
+   * @param userDelegationKey the user delegation key as a byte array
+   * @param skoid Azure AD delegator app's object ID
+   * @param sktid Azure AD delegator app's tenant ID
+   * @param skt The start time for the delegation key
+   * @param ske The expiry time for the delegation key
+   * @param skv the API version
+   * @param skdutid Azure AD delegated app's tenant ID
+   * @param sduoid Azure AD delegated app's user object ID
+   */
   public DelegationSASGenerator_Version_July5(byte[] userDelegationKey, String skoid, String sktid, String skt, String ske, String skv, String skdutid, String sduoid) {
     super(userDelegationKey);
     this.skoid = skoid;
@@ -52,6 +64,19 @@ public class DelegationSASGenerator_Version_July5 extends SASGenerator {
     this.sduoid = sduoid;
   }
 
+  /**
+   * Generates a delegation SAS token for the specified resource and operation.
+   *
+   * @param accountName The storage account name
+   * @param containerName The container name
+   * @param path The path to the resource
+   * @param operation The operation to authorize
+   * @param saoid The Azure AD object ID of the application
+   * @param suoid The Azure AD object ID of the user
+   * @param scid The correlation ID
+   * @return The generated SAS token as a query string
+   * @throws IllegalArgumentException if the operation is not recognized
+   */
   public String getDelegationSAS(String accountName, String containerName, String path, String operation,
                                  String saoid, String suoid, String scid) {
 
@@ -60,7 +85,7 @@ public class DelegationSASGenerator_Version_July5 extends SASGenerator {
     //Ref: https://learn.microsoft.com/en-us/rest/api/storageservices/create-user-delegation-sas
 
     // SAS version (sv) used here is 2025-07-05
-    final String sv = AuthenticationVersion.July5.toString();
+    final String sv = AuthenticationVersion.Jul5.toString();
 
     final String st = ISO_8601_FORMATTER.format(Instant.now().minus(FIVE_MINUTES));
     final String se = ISO_8601_FORMATTER.format(Instant.now().plus(ONE_DAY));
@@ -121,7 +146,6 @@ public class DelegationSASGenerator_Version_July5 extends SASGenerator {
 
     String signature = computeSignatureForSAS(sp, st, se, sv, sr, accountName, containerName,
         path, saoid, suoid, scid);
-  //  String signature = "testttsstst";
 
     AbfsUriQueryBuilder qb = new AbfsUriQueryBuilder();
     qb.addQuery("skoid", skoid);
@@ -132,11 +156,11 @@ public class DelegationSASGenerator_Version_July5 extends SASGenerator {
     qb.addQuery("skv", skv);
 
     //skdutid and sduoid are required for user bound SAS only
-    if(!Objects.equals(skdutid, EMPTY_STRING)){
-      qb.addQuery("skdutid",  skdutid);
+    if (!Objects.equals(skdutid, EMPTY_STRING)) {
+      qb.addQuery("skdutid", skdutid);
     }
-    if(!Objects.equals(sduoid, EMPTY_STRING)){
-      qb.addQuery("sduoid",  sduoid);
+    if (!Objects.equals(sduoid, EMPTY_STRING)) {
+      qb.addQuery("sduoid", sduoid);
     }
 
     if (saoid != null) {
@@ -160,6 +184,22 @@ public class DelegationSASGenerator_Version_July5 extends SASGenerator {
     return qb.toString().substring(1);
   }
 
+  /**
+   * Computes the signature for the SAS token based on the provided parameters.
+   *
+   * @param sp Signed permissions
+   * @param st Signed start time
+   * @param se Signed expiry time
+   * @param sv Signed version
+   * @param sr Signed resource
+   * @param accountName The storage account name
+   * @param containerName The container name
+   * @param path The path to the resource
+   * @param saoid The Azure AD object ID of the application
+   * @param suoid The Azure AD object ID of the user
+   * @param scid The correlation ID
+   * @return The computed HMAC256 signature
+   */
   private String computeSignatureForSAS(String sp, String st, String se, String sv,
       String sr, String accountName, String containerName,
       String path, String saoid, String suoid, String scid) {
@@ -234,7 +274,6 @@ public class DelegationSASGenerator_Version_July5 extends SASGenerator {
 
     String stringToSign = sb.toString();
     LOG.debug("Delegation SAS stringToSign: " + stringToSign.replace("\n", "."));
-    System.out.println("Delegation SAS stringToSign: " + stringToSign.replace("\n", "."));
     return computeHmac256(stringToSign);
   }
 }

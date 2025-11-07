@@ -47,39 +47,22 @@ public class AbfsClientHandler implements Closeable {
   private final AbfsDfsClient dfsAbfsClient;
   private final AbfsBlobClient blobAbfsClient;
 
-  public AbfsClientHandler(final URL baseUrl,
-      final SharedKeyCredentials sharedKeyCredentials,
-      final AbfsConfiguration abfsConfiguration,
-      final AccessTokenProvider tokenProvider,
-      final EncryptionContextProvider encryptionContextProvider,
-      final AbfsClientContext abfsClientContext) throws IOException {
-    this.dfsAbfsClient = createDfsClient(baseUrl, sharedKeyCredentials,
-        abfsConfiguration, tokenProvider, null, encryptionContextProvider,
-        abfsClientContext);
-    this.blobAbfsClient = createBlobClient(baseUrl, sharedKeyCredentials,
-        abfsConfiguration, tokenProvider, null, encryptionContextProvider,
-        abfsClientContext);
-    initServiceType(abfsConfiguration);
-  }
 
-  public AbfsClientHandler(final URL baseUrl,
-      final SharedKeyCredentials sharedKeyCredentials,
-      final AbfsConfiguration abfsConfiguration,
-      final SASTokenProvider sasTokenProvider,
-      final EncryptionContextProvider encryptionContextProvider,
-      final AbfsClientContext abfsClientContext) throws IOException {
-    // This will initialize the default and ingress service types.
-    // This is needed before creating the clients so that we can do cache warmup
-    // only for default client.
-    initServiceType(abfsConfiguration);
-    this.dfsAbfsClient = createDfsClient(baseUrl, sharedKeyCredentials,
-        abfsConfiguration, null, sasTokenProvider, encryptionContextProvider,
-        abfsClientContext);
-    this.blobAbfsClient = createBlobClient(baseUrl, sharedKeyCredentials,
-        abfsConfiguration, null, sasTokenProvider, encryptionContextProvider,
-        abfsClientContext);
-  }
-
+  /**
+   * Constructs an AbfsClientHandler instance.
+   *
+   * Initializes the default and ingress service types from the provided configuration,
+   * then creates both DFS and Blob clients using the given params
+   *
+   * @param baseUrl the base URL for the file system.
+   * @param sharedKeyCredentials credentials for shared key authentication.
+   * @param abfsConfiguration the ABFS configuration.
+   * @param tokenProvider the access token provider, may be null.
+   * @param sasTokenProvider the SAS token provider, may be null.
+   * @param encryptionContextProvider the encryption context provider
+   * @param abfsClientContext the ABFS client context.
+   * @throws IOException if client creation or URL conversion fails.
+   */
   public AbfsClientHandler(final URL baseUrl,
       final SharedKeyCredentials sharedKeyCredentials,
       final AbfsConfiguration abfsConfiguration,
@@ -215,12 +198,21 @@ public class AbfsClientHandler implements Closeable {
       final EncryptionContextProvider encryptionContextProvider,
       final AbfsClientContext abfsClientContext) throws IOException {
     URL blobUrl = changeUrlFromDfsToBlob(baseUrl);
-    if (tokenProvider != null) {
+    if (tokenProvider != null && sasTokenProvider != null) {
+      LOG.debug(
+          "Creating AbfsBlobClient with both access token provider and SAS token provider using the URL: {}",
+          blobUrl);
+      return new AbfsBlobClient(blobUrl, creds, abfsConfiguration,
+          tokenProvider, sasTokenProvider, encryptionContextProvider,
+          abfsClientContext);
+    }
+    else if (tokenProvider != null) {
       LOG.debug("Creating AbfsBlobClient with access token provider using the URL: {}", blobUrl);
       return new AbfsBlobClient(blobUrl, creds, abfsConfiguration,
           tokenProvider, encryptionContextProvider,
           abfsClientContext);
-    } else {
+    }
+    else {
       LOG.debug("Creating AbfsBlobClient with SAS token provider using the URL: {}", blobUrl);
       return new AbfsBlobClient(blobUrl, creds, abfsConfiguration,
           sasTokenProvider, encryptionContextProvider,

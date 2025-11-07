@@ -1112,9 +1112,11 @@ public class AbfsConfiguration{
   }
 
   public boolean getCreateRemoteFileSystemDuringInitialization() {
-    // we do not support creating the filesystem when AuthType is SAS
+    // we do not support creating the filesystem when AuthType is SAS or UserboundSASWithOAuth
     return this.createRemoteFileSystemDuringInitialization
-        && this.getAuthType(this.accountName) != AuthType.SAS;
+        && this.getAuthType(this.accountName) != AuthType.SAS
+        && this.getAuthType(this.accountName)
+        != AuthType.UserboundSASWithOAuth;
   }
 
   public boolean getSkipUserGroupMetadataDuringInitialization() {
@@ -1481,12 +1483,7 @@ public class AbfsConfiguration{
    * @return sasTokenProvider object based on configurations provided
    * @throws AzureBlobFileSystemException
    */
-  public SASTokenProvider getSASTokenProviderForUserBoundSAS() throws AzureBlobFileSystemException {
-    AuthType authType = getEnum(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME, AuthType.SharedKey);
-    if (authType != AuthType.UserboundSASWithOAuth) {
-      throw new SASTokenProviderException(String.format(
-          "Invalid auth type: %s is being used, expecting user-bound SAS.", authType));
-    }
+  public SASTokenProvider getUserBoundSASTokenProvider(AuthType authType) throws AzureBlobFileSystemException {
 
     try {
       Class<? extends SASTokenProvider> customSasTokenProviderImplementation =
@@ -1515,6 +1512,30 @@ public class AbfsConfiguration{
       throw new SASTokenProviderException(
           "Unable to load user-bound SAS token provider class: " + e, e);
     }
+  }
+
+  /**
+   * Returns both the AccessTokenProvider and the SASTokenProvider
+   * when auth type is UserboundSASWithOAuth.
+   *
+   * @return Object[] where:
+   *   [0] = AccessTokenProvider
+   *   [1] = SASTokenProvider
+   * @throws AzureBlobFileSystemException if provider initialization fails
+   */
+  public Object[] getUserBoundSASBothTokenProviders()
+      throws AzureBlobFileSystemException {
+    AuthType authType = getEnum(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME,
+        AuthType.SharedKey);
+    if (authType != AuthType.UserboundSASWithOAuth) {
+      throw new SASTokenProviderException(String.format(
+          "Invalid auth type: %s is being used, expecting user-bound SAS.",
+          authType));
+    }
+
+    AccessTokenProvider tokenProvider = getTokenProvider();
+    SASTokenProvider sasTokenProvider = getUserBoundSASTokenProvider(authType);
+    return new Object[]{tokenProvider, sasTokenProvider};
   }
 
   public EncryptionContextProvider createEncryptionContextProvider() {

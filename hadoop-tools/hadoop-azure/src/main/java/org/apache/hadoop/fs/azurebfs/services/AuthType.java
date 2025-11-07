@@ -25,5 +25,5 @@ public enum AuthType {
     OAuth,
     Custom,
     SAS,
-     UserboundSASWithOAuth
+    UserboundSASWithOAuth
 }

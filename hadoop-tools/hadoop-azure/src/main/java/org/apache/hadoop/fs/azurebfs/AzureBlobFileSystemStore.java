@@ -1741,19 +1741,20 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     } else if (authType == AuthType.SAS) {
       LOG.trace("Fetching SAS Token Provider");
       sasTokenProvider = abfsConfiguration.getSASTokenProvider();
-    } else if(authType == AuthType.UserboundSASWithOAuth){
+    } else if (authType == AuthType.UserboundSASWithOAuth) {
       LOG.trace("Fetching SAS and OAuth Token Provider for user bound SAS");
       AzureADAuthenticator.init(abfsConfiguration);
-      tokenProvider = abfsConfiguration.getTokenProvider();
+      Object[] providers
+          = abfsConfiguration.getUserBoundSASBothTokenProviders();
+      tokenProvider = (AccessTokenProvider) providers[0];
+      sasTokenProvider = (SASTokenProvider) providers[1];
       ExtensionHelper.bind(tokenProvider, uri,
           abfsConfiguration.getRawConfiguration());
-      sasTokenProvider = abfsConfiguration.getSASTokenProviderForUserBoundSAS();
-    }
-    else {
+    } else {
       LOG.trace("Fetching token provider");
       tokenProvider = abfsConfiguration.getTokenProvider();
       ExtensionHelper.bind(tokenProvider, uri,
-            abfsConfiguration.getRawConfiguration());
+          abfsConfiguration.getRawConfiguration());
     }
 
     // Encryption setup
@@ -1777,21 +1778,11 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       }
     }
 
-    LOG.trace("Initializing AbfsClient for {}", baseUrl);
-    if(tokenProvider != null && sasTokenProvider != null){
-      this.clientHandler = new AbfsClientHandler(baseUrl, creds, abfsConfiguration,
-          tokenProvider, sasTokenProvider, encryptionContextProvider,
-          populateAbfsClientContext());
-    }
-    else if (tokenProvider != null) {
-      this.clientHandler = new AbfsClientHandler(baseUrl, creds, abfsConfiguration,
-          tokenProvider, encryptionContextProvider,
-          populateAbfsClientContext());
-    } else {
-      this.clientHandler = new AbfsClientHandler(baseUrl, creds, abfsConfiguration,
-          sasTokenProvider, encryptionContextProvider,
-          populateAbfsClientContext());
-    }
+    LOG.trace("Initializing AbfsClientHandler for {}", baseUrl);
+    this.clientHandler = new AbfsClientHandler(baseUrl, creds,
+        abfsConfiguration,
+        tokenProvider, sasTokenProvider, encryptionContextProvider,
+        populateAbfsClientContext());
 
     this.setClient(getClientHandler().getClient());
     LOG.trace("AbfsClient init complete");

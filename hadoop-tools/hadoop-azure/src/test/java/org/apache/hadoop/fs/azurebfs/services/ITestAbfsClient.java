@@ -32,6 +32,8 @@ import java.util.regex.Pattern;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.Mockito;
 
@@ -49,7 +51,9 @@ import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.constants.HttpOperationType;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsApacheHttpExpect100Exception;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.TokenAccessProviderException;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters;
+import org.apache.hadoop.fs.azurebfs.extensions.SASTokenProvider;
 import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
 import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
@@ -80,6 +84,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARA
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_ABFS_ACCOUNT_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpOperationType.APACHE_HTTP_CLIENT;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpOperationType.JDK_HTTP_URL_CONNECTION;
+import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_TEST_END_USER_OBJECT_ID;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -763,6 +768,76 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
     Assertions.assertThat(appendRequestParameters.isExpectHeaderEnabled())
             .describedAs("The expect header is not false")
             .isFalse();
+  }
+
+  /**
+   * Parameterized test to verify the correct setup of authentication providers
+   * for each supported AuthType in the Azure Blob FileSystem configuration.
+   * For each AuthType, this test checks that the expected provider(s) are present
+   * and that unsupported providers throw the correct exceptions.
+   *
+   * OAuth: Token provider must be present, SAS provider must throw exception.
+   * SharedKey: Token provider must throw exception, SAS provider must throw exception.
+   * SAS: SAS provider must be present, token provider must throw exception.
+   * UserboundSASWithOAuth: Both AccessTokenProvider and SASTokenProvider must be present.
+   * Custom: Test is skipped.
+   *
+   * @param authType the authentication type to test
+   * @throws Exception if any error occurs during test execution
+   */
+  @ParameterizedTest
+  @EnumSource(AuthType.class)
+  public void testAuthTypeProviderSetup(AuthType authType) throws Exception {
+    this.getConfiguration().set("fs.azure.account.auth.type", authType.name());
+    if (authType.name().equals("Custom")) {
+      return;
+    }
+
+    AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(
+        getRawConfiguration());
+
+    AbfsConfiguration abfsConfig = fs.getAbfsStore().getAbfsConfiguration();
+
+    switch (authType) {
+    case OAuth:
+      assertNotNull(abfsConfig.getTokenProvider(),
+          "OAuth should have token provider");
+      assertThrows(AzureBlobFileSystemException.class,
+          () -> abfsConfig.getSASTokenProvider(),
+          "SharedKey should not have SAS provider");
+      break;
+
+    case SharedKey:
+      assertThrows(TokenAccessProviderException.class,
+          () -> abfsConfig.getTokenProvider(),
+          "SharedKey should not have token provider");
+      assertThrows(AzureBlobFileSystemException.class,
+          () -> abfsConfig.getSASTokenProvider(),
+          "SharedKey should not have SAS provider");
+      break;
+
+    case SAS:
+      assertThrows(TokenAccessProviderException.class,
+          () -> abfsConfig.getTokenProvider(),
+          "SharedKey should not have token provider");
+      assertNotNull(abfsConfig.getSASTokenProvider(),
+          "SAS should have SAS provider");
+      break;
+
+    case UserboundSASWithOAuth:
+      Object[] providers = abfsConfig.getUserBoundSASBothTokenProviders();
+      assertNotNull(providers, "Providers array must not be null");
+      assertTrue(providers[0] instanceof AccessTokenProvider,
+          "First should be AccessTokenProvider");
+      assertTrue(providers[1] instanceof SASTokenProvider,
+          "Second should be SASTokenProvider");
+      break;
+
+    default:
+      fail("Unexpected AuthType: " + authType);
+    }
+
+    fs.close();
   }
 
   @Test
