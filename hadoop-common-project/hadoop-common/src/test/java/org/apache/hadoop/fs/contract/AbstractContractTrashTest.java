@@ -207,9 +207,7 @@ public abstract class AbstractContractTrashTest extends AbstractFSContractTestBa
 
   @Test
   public void testEmptier() throws Throwable {
-    // Adapted from TestTrash#testTrashEmptier. There are some tests that are excluded,
-    // such as checkpoint format tests since the trash does not specify the trash
-    // checkpoint requirements
+    // Adapted from TestTrash#testTrashEmptier.
     final FileSystem fs = getFileSystem();
 
     // Start Emptier in background
@@ -256,7 +254,9 @@ public abstract class AbstractContractTrashTest extends AbstractFSContractTestBa
 
   @Test
   public void testTrash() throws Throwable {
-    // Adapted from TestTrash#testTrash
+    // Adapted from TestTrash#testTrash. There are some tests that are excluded,
+    // such as checkpoint format tests since the trash does not specify the trash
+    // checkpoint requirements
     final FileSystem fs = getFileSystem();
     Trash trash = new Trash(fs, getContract().getConf());
 
