@@ -23,15 +23,17 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.http.HttpServer2;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
+
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Test that X-Frame-Options works correctly with DatanodeHTTPServer.
@@ -40,10 +42,7 @@ public class TestDatanodeHttpXFrame {
 
   private MiniDFSCluster cluster = null;
 
-  @Rule
-  public ExpectedException exception = ExpectedException.none();
-
-  @After
+  @AfterEach
   public void cleanUp() {
     if (cluster != null) {
       cluster.shutdown();
@@ -57,8 +56,8 @@ public class TestDatanodeHttpXFrame {
     cluster = createCluster(xFrameEnabled, null);
     HttpURLConnection conn = getConn(cluster);
     String xfoHeader = conn.getHeaderField("X-FRAME-OPTIONS");
-    Assert.assertNotNull("X-FRAME-OPTIONS is absent in the header", xfoHeader);
-    Assert.assertTrue(xfoHeader.endsWith(HttpServer2.XFrameOption
+    assertNotNull(xfoHeader, "X-FRAME-OPTIONS is absent in the header");
+    assertTrue(xfoHeader.endsWith(HttpServer2.XFrameOption
         .SAMEORIGIN.toString()));
   }
 
@@ -68,13 +67,14 @@ public class TestDatanodeHttpXFrame {
     cluster = createCluster(xFrameEnabled, null);
     HttpURLConnection conn = getConn(cluster);
     String xfoHeader = conn.getHeaderField("X-FRAME-OPTIONS");
-    Assert.assertNull("unexpected X-FRAME-OPTION in header", xfoHeader);
+    assertNull(xfoHeader, "unexpected X-FRAME-OPTION in header");
   }
 
   @Test
   public void testDataNodeXFramewithInvalidOptions() throws Exception {
-    exception.expect(IllegalArgumentException.class);
-    cluster = createCluster(false, "Hadoop");
+    assertThrows(IllegalArgumentException.class, () -> {
+      cluster = createCluster(false, "Hadoop");
+    });
   }
 
   private static MiniDFSCluster createCluster(boolean enabled, String

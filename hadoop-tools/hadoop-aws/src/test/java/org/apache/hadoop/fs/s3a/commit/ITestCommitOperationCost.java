@@ -24,7 +24,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,6 +42,7 @@ import org.apache.hadoop.fs.s3a.commit.impl.CommitOperations;
 import org.apache.hadoop.fs.s3a.performance.AbstractS3ACostTest;
 import org.apache.hadoop.fs.statistics.IOStatisticsLogging;
 
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.assumeMultipartUploads;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfAnalyticsAcceleratorEnabled;
 import static org.apache.hadoop.fs.s3a.Statistic.ACTION_HTTP_GET_REQUEST;
 import static org.apache.hadoop.fs.s3a.Statistic.COMMITTER_MAGIC_FILES_CREATED;
@@ -78,12 +81,15 @@ public class ITestCommitOperationCost extends AbstractS3ACostTest {
    */
   private CommitterTestHelper testHelper;
 
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     super.setup();
+    assumeMultipartUploads(getFileSystem().getConf());
     testHelper = new CommitterTestHelper(getFileSystem());
   }
 
+  @AfterEach
   @Override
   public void teardown() throws Exception {
     try {

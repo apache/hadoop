@@ -21,7 +21,7 @@ package org.apache.hadoop.fs.contract.localfs;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.fs.contract.AbstractFSContractTestBase;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.net.URL;
 
@@ -38,9 +38,9 @@ public class TestLocalFSContractLoaded extends AbstractFSContractTestBase {
   @Test
   public void testContractWorks() throws Throwable {
     String key = getContract().getConfKey(SUPPORTS_ATOMIC_RENAME);
-    assertNotNull("not set: " + key, getContract().getConf().get(key));
-    assertTrue("not true: " + key,
-               getContract().isSupported(SUPPORTS_ATOMIC_RENAME, false));
+    assertNotNull(getContract().getConf().get(key), "not set: " + key);
+    assertTrue(getContract().isSupported(SUPPORTS_ATOMIC_RENAME, false),
+        "not true: " + key);
   }
 
   @Test
@@ -48,6 +48,6 @@ public class TestLocalFSContractLoaded extends AbstractFSContractTestBase {
     URL url = this.getClass()
                        .getClassLoader()
                        .getResource(LocalFSContract.CONTRACT_XML);
-    assertNotNull("could not find contract resource", url);
+    assertNotNull(url, "could not find contract resource");
   }
 }

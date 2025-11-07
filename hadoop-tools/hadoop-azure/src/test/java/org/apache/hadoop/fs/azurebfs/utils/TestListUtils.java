@@ -21,11 +21,11 @@ package org.apache.hadoop.fs.azurebfs.utils;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Test class for ListUtils.
@@ -92,7 +92,7 @@ public class TestListUtils {
    */
   private void validateList(List<FileStatus> originalList, int expectedSize) {
     List<FileStatus> uniqueList = ListUtils.getUniqueListResult(originalList);
-    Assertions.assertThat(uniqueList)
+    assertThat(uniqueList)
         .describedAs("List Size is not as expected after duplicate removal")
         .hasSize(expectedSize);
   }

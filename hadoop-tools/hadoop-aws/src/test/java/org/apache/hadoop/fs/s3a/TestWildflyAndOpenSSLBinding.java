@@ -20,8 +20,8 @@ package org.apache.hadoop.fs.s3a;
 
 import java.io.IOException;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.http.apache.ApacheHttpClient;
 
 import org.apache.hadoop.conf.Configuration;
@@ -54,7 +54,7 @@ public class TestWildflyAndOpenSSLBinding extends AbstractHadoopTestBase {
   /** Was wildfly found. */
   private boolean hasWildfly;
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     // determine whether or not wildfly is on the classpath
     ClassLoader loader = this.getClass().getClassLoader();

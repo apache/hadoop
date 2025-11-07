@@ -22,9 +22,10 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 
+import org.junit.jupiter.api.BeforeEach;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 
 import org.apache.hadoop.conf.Configuration;
@@ -58,6 +59,7 @@ public class ITestS3AMiscOperations extends AbstractS3ATestBase {
 
   private static final byte[] HELLO = "hello".getBytes(StandardCharsets.UTF_8);
 
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     super.setup();
@@ -165,7 +167,7 @@ public class ITestS3AMiscOperations extends AbstractS3ATestBase {
     EtagChecksum checksum1 = fs.getFileChecksum(file1, 0);
     assertLacksPathCapabilities(fs, file1,
         CommonPathCapabilities.FS_CHECKSUMS);
-    assertNull("Checksums are being generated", checksum1);
+    assertNull(checksum1, "Checksums are being generated");
   }
 
   /**
@@ -179,10 +181,10 @@ public class ITestS3AMiscOperations extends AbstractS3ATestBase {
 
     final Path file3 = mkFile("file3", HELLO);
     final EtagChecksum checksum1 = fs.getFileChecksum(file3, 0);
-    assertNotNull("file 3 checksum", checksum1);
+    assertNotNull(checksum1, "file 3 checksum");
     final Path file4 = touchFile("file4");
     final EtagChecksum checksum2 = fs.getFileChecksum(file4, 0);
-    assertNotEquals("checksums", checksum1, checksum2);
+    assertNotEquals(checksum1, checksum2, "checksums");
     // overwrite
     createFile(fs, file4, true,
         "hello, world".getBytes(StandardCharsets.UTF_8));
@@ -215,7 +217,7 @@ public class ITestS3AMiscOperations extends AbstractS3ATestBase {
     final S3AFileSystem fs = getFileSystem();
     Path f = mkFile("file5", HELLO);
     EtagChecksum l = fs.getFileChecksum(f, HELLO.length);
-    assertNotNull("Null checksum", l);
+    assertNotNull(l, "Null checksum");
     assertEquals(l, fs.getFileChecksum(f, HELLO.length * 2));
   }
 
@@ -325,10 +327,8 @@ public class ITestS3AMiscOperations extends AbstractS3ATestBase {
    */
   private static <T> T verifyTrailingSlash(String role, T o) {
     String s = o.toString();
-    assertTrue(role + " lacks trailing slash " + s,
-        s.endsWith("/"));
-    assertFalse(role + " has double trailing slash " + s,
-        s.endsWith("//"));
+    assertTrue(s.endsWith("/"), role + " lacks trailing slash " + s);
+    assertFalse(s.endsWith("//"), role + " has double trailing slash " + s);
     return o;
   }
 
@@ -342,8 +342,7 @@ public class ITestS3AMiscOperations extends AbstractS3ATestBase {
    */
   private static <T> T verifyNoTrailingSlash(String role, T o) {
     String s = o.toString();
-    assertFalse(role + " has trailing slash " + s,
-        s.endsWith("/"));
+    assertFalse(s.endsWith("/"), role + " has trailing slash " + s);
     return o;
   }
 

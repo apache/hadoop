@@ -104,22 +104,32 @@ import org.apache.hadoop.crypto.key.KeyProviderDelegationTokenExtension.Delegati
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension.CryptoExtension;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.util.XMLUtils;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
-import org.mockito.Mockito;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeys.DFS_CLIENT_IGNORE_NAMENODE_DEFAULT_KMS_URI;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
-import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyShort;
 import static org.mockito.Mockito.withSettings;
+import static org.mockito.Mockito.anyBoolean;
+import static org.mockito.Mockito.anyLong;
 import static org.mockito.Mockito.anyString;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_KEY;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_DEFAULT;
@@ -138,12 +148,6 @@ import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_WRIT
 import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
 import static org.apache.hadoop.test.MetricsAsserts.assertGauge;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -153,6 +157,7 @@ import org.xml.sax.helpers.DefaultHandler;
 
 import javax.xml.parsers.SAXParser;
 
+@Timeout(120)
 public class TestEncryptionZones {
   static final Logger LOG = LoggerFactory.getLogger(TestEncryptionZones.class);
 
@@ -180,10 +185,7 @@ public class TestEncryptionZones {
       new Path(testRootDir.toString(), "test.jks").toUri();
   }
 
-  @Rule
-  public Timeout globalTimeout = new Timeout(120 * 1000);
-
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     conf = new HdfsConfiguration();
     fsHelper = new FileSystemTestHelper();
@@ -217,7 +219,7 @@ public class TestEncryptionZones {
         .getProvider());
   }
 
-  @After
+  @AfterEach
   public void teardown() {
     if (cluster != null) {
       cluster.shutdown();
@@ -233,7 +235,7 @@ public class TestEncryptionZones {
       count++;
       it.next();
     }
-    assertEquals("Unexpected number of encryption zones!", numZones, count);
+    assertEquals(numZones, count, "Unexpected number of encryption zones!");
   }
 
   /**
@@ -260,8 +262,8 @@ public class TestEncryptionZones {
         break;
       }
     }
-    assertTrue("Did not find expected encryption zone with keyName " + keyName +
-            " path " + path, match
+    assertTrue(match, "Did not find expected encryption zone with keyName " + keyName +
+        " path " + path
     );
   }
 
@@ -297,7 +299,7 @@ public class TestEncryptionZones {
     final FsShell shell = new FsShell(clientConf);
     String[] argv = new String[]{"-rm", ezfile1.toString()};
     int res = ToolRunner.run(shell, argv);
-    assertEquals("Can't remove a file in EZ as superuser", 0, res);
+    assertEquals(0, res, "Can't remove a file in EZ as superuser");
 
     final Path trashDir = new Path(zone1, FileSystem.TRASH_PREFIX);
     assertTrue(fsWrapper.exists(trashDir));
@@ -322,7 +324,7 @@ public class TestEncryptionZones {
         // /zones/zone1/.Trash/user/Current/zones/zone1/file2
         String[] argv = new String[]{"-rm", ezfile2.toString()};
         int res = ToolRunner.run(shell, argv);
-        assertEquals("Can't remove a file in EZ as user:mygroup", 0, res);
+        assertEquals(0, res, "Can't remove a file in EZ as user:mygroup");
         return null;
       }
     });
@@ -351,7 +353,7 @@ public class TestEncryptionZones {
     final Path trashDir = new Path(zone1, FileSystem.TRASH_PREFIX);
     String[] argv = new String[]{"-rmdir", trashDir.toUri().getPath()};
     int res = ToolRunner.run(shell, argv);
-    assertEquals("Unable to delete trash directory.", 0, res);
+    assertEquals(0, res, "Unable to delete trash directory.");
     assertFalse(fsWrapper.exists(trashDir));
 
     // execute -provisionTrash command option and make sure the trash
@@ -369,11 +371,12 @@ public class TestEncryptionZones {
   @Test
   public void testBasicOperations() throws Exception {
 
-    assertNotNull("key provider is not present", dfsAdmin.getKeyProvider());
+    assertNotNull(dfsAdmin.getKeyProvider(), "key provider is not present");
     int numZones = 0;
     /* Number of EZs should be 0 if no EZ is created */
-    assertEquals("Unexpected number of encryption zones!", numZones,
-        cluster.getNamesystem().getNumEncryptionZones());
+    assertEquals(numZones,
+        cluster.getNamesystem().getNumEncryptionZones(),
+        "Unexpected number of encryption zones!");
     /* Test failure of create EZ on a directory that doesn't exist. */
     final Path zoneParent = new Path("/zones");
     final Path zone1 = new Path(zoneParent, "zone1");
@@ -510,8 +513,8 @@ public class TestEncryptionZones {
     fs.setSafeMode(SafeModeAction.LEAVE);
     cluster.restartNameNode(true);
     assertNumZones(numZones);
-    assertEquals("Unexpected number of encryption zones!", numZones, cluster
-        .getNamesystem().getNumEncryptionZones());
+    assertEquals(numZones, cluster.getNamesystem().getNumEncryptionZones(),
+        "Unexpected number of encryption zones!");
     assertGauge("NumEncryptionZones", numZones, getMetrics(NS_METRICS));
     assertZonePresent(null, zone1.toString());
 
@@ -568,14 +571,14 @@ public class TestEncryptionZones {
     assertZonePresent(TEST_KEY, zone1.toString());
     // Check that zone1 contains a .Trash directory
     final Path zone1Trash = new Path(zone1, fs.TRASH_PREFIX);
-    assertTrue("CreateEncryptionZone with trash enabled should create a " +
-        ".Trash directory in the EZ", fs.exists(zone1Trash));
+    assertTrue(fs.exists(zone1Trash), "CreateEncryptionZone with trash enabled should create a " +
+        ".Trash directory in the EZ");
 
     // getEncryptionZoneForPath for FQP should return the path component
     EncryptionZone ezForZone1 = dfsAdmin.getEncryptionZoneForPath(zone1FQP);
-    assertTrue("getEncryptionZoneForPath for fully qualified path should " +
-        "return the path component",
-        ezForZone1.getPath().equals(zone1.toString()));
+    assertTrue(ezForZone1.getPath().equals(zone1.toString()),
+        "getEncryptionZoneForPath for fully qualified path should " +
+        "return the path component");
 
     // Create EZ without Trash
     fsWrapper.mkdir(zone2FQP, FsPermission.getDirDefault(), true);
@@ -588,8 +591,9 @@ public class TestEncryptionZones {
     EncryptionZone ezForZone2 = dfsAdmin.getEncryptionZoneForPath(zone2FQP);
     Path ezTrashForZone2 = new Path(ezForZone2.getPath(),
         FileSystem.TRASH_PREFIX);
-    assertTrue("provisionEZTrash with fully qualified path should create " +
-        "trash directory ", fsWrapper.exists(ezTrashForZone2));
+    assertTrue(fsWrapper.exists(ezTrashForZone2),
+        "provisionEZTrash with fully qualified path should create " +
+        "trash directory ");
   }
 
   /**
@@ -675,12 +679,12 @@ public class TestEncryptionZones {
         }
 
         // Check operation with accessible paths
-        assertEquals("expected ez path", allPath.toString(),
-            userAdmin.getEncryptionZoneForPath(allPath).getPath().
-            toString());
-        assertEquals("expected ez path", allPath.toString(),
-            userAdmin.getEncryptionZoneForPath(allPathFile).getPath().
-            toString());
+        assertEquals(allPath.toString(),
+            userAdmin.getEncryptionZoneForPath(allPath).getPath().toString(),
+            "expected ez path");
+        assertEquals(allPath.toString(),
+            userAdmin.getEncryptionZoneForPath(allPathFile).getPath().toString(),
+            "expected ez path");
 
         // Check operation with inaccessible (lack of permissions) path
         try {
@@ -690,39 +694,39 @@ public class TestEncryptionZones {
           assertExceptionContains("Permission denied:", e);
         }
 
-        assertNull("expected null for nonexistent path",
-            userAdmin.getEncryptionZoneForPath(nonexistent));
+        assertNull(userAdmin.getEncryptionZoneForPath(nonexistent),
+            "expected null for nonexistent path");
 
         // Check operation with non-ez paths
-        assertNull("expected null for non-ez path",
-            userAdmin.getEncryptionZoneForPath(nonEZDir));
-        assertNull("expected null for non-ez path",
-            userAdmin.getEncryptionZoneForPath(nonEZFile));
+        assertNull(userAdmin.getEncryptionZoneForPath(nonEZDir),
+            "expected null for non-ez path");
+        assertNull(userAdmin.getEncryptionZoneForPath(nonEZFile),
+            "expected null for non-ez path");
 
         // Check operation with snapshots
         String snapshottedAllPath = newSnap.toString() + allPath.toString();
-        assertEquals("expected ez path", allPath.toString(),
-            userAdmin.getEncryptionZoneForPath(
-                new Path(snapshottedAllPath)).getPath().toString());
+        assertEquals(allPath.toString(),
+            userAdmin.getEncryptionZoneForPath(new Path(snapshottedAllPath)).getPath().toString(),
+            "expected ez path");
 
         /*
          * Delete the file from the non-snapshot and test that it is still ok
          * in the ez.
          */
         fs.delete(allPathFile, false);
-        assertEquals("expected ez path", allPath.toString(),
-            userAdmin.getEncryptionZoneForPath(
-                new Path(snapshottedAllPath)).getPath().toString());
+        assertEquals(allPath.toString(), userAdmin.getEncryptionZoneForPath(
+            new Path(snapshottedAllPath)).getPath().toString(),
+            "expected ez path");
 
         // Delete the ez and make sure ss's ez is still ok.
         fs.delete(allPath, true);
-        assertEquals("expected ez path", allPath.toString(),
-            userAdmin.getEncryptionZoneForPath(
-                new Path(snapshottedAllPath)).getPath().toString());
-        assertNull("expected null for deleted file path",
-            userAdmin.getEncryptionZoneForPath(allPathFile));
-        assertNull("expected null for deleted directory path",
-            userAdmin.getEncryptionZoneForPath(allPath));
+        assertEquals(allPath.toString(),
+            userAdmin.getEncryptionZoneForPath(new Path(snapshottedAllPath)).getPath().toString(),
+            "expected ez path");
+        assertNull(userAdmin.getEncryptionZoneForPath(allPathFile),
+            "expected null for deleted file path");
+        assertNull(userAdmin.getEncryptionZoneForPath(allPath),
+            "expected null for deleted directory path");
         return null;
       }
     });
@@ -754,16 +758,16 @@ public class TestEncryptionZones {
 
     // Verify that we can rename dir and files within an encryption zone.
     assertTrue(fs.rename(pathFooBaz, pathFooBar));
-    assertTrue("Rename of dir and file within ez failed",
-        !wrapper.exists(pathFooBaz) && wrapper.exists(pathFooBar));
-    assertEquals("Renamed file contents not the same",
-        contents, DFSTestUtil.readFile(fs, pathFooBarFile));
+    assertTrue(!wrapper.exists(pathFooBaz) && wrapper.exists(pathFooBar),
+        "Rename of dir and file within ez failed");
+    assertEquals(contents, DFSTestUtil.readFile(fs, pathFooBarFile),
+        "Renamed file contents not the same");
 
     // Verify that we can rename an EZ root
     final Path newFoo = new Path(testRoot, "newfoo");
-    assertTrue("Rename of EZ root", fs.rename(pathFoo, newFoo));
-    assertTrue("Rename of EZ root failed",
-        !wrapper.exists(pathFoo) && wrapper.exists(newFoo));
+    assertTrue(fs.rename(pathFoo, newFoo), "Rename of EZ root");
+    assertTrue(!wrapper.exists(pathFoo) && wrapper.exists(newFoo),
+        "Rename of EZ root failed");
 
     // Verify that we can't rename an EZ root onto itself
     try {
@@ -817,11 +821,11 @@ public class TestEncryptionZones {
     // FEInfos should be different
     FileEncryptionInfo feInfo1 = getFileEncryptionInfo(encFile1);
     FileEncryptionInfo feInfo2 = getFileEncryptionInfo(encFile2);
-    assertFalse("EDEKs should be different", Arrays
+    assertFalse(Arrays
         .equals(feInfo1.getEncryptedDataEncryptionKey(),
-            feInfo2.getEncryptedDataEncryptionKey()));
-    assertNotEquals("Key was rolled, versions should be different",
-        feInfo1.getEzKeyVersionName(), feInfo2.getEzKeyVersionName());
+            feInfo2.getEncryptedDataEncryptionKey()), "EDEKs should be different");
+    assertNotEquals(feInfo1.getEzKeyVersionName(), feInfo2.getEzKeyVersionName(),
+        "Key was rolled, versions should be different");
     // Contents still equal
     verifyFilesEqual(fs, encFile1, encFile2, len);
   }
@@ -924,13 +928,13 @@ public class TestEncryptionZones {
         CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_PROVIDER_PATH)),
         conf);
     List<String> keys = provider.getKeys();
-    assertEquals("Expected NN to have created one key per zone", 1,
-        keys.size());
+    assertEquals(1, keys.size(),
+        "Expected NN to have created one key per zone");
     List<KeyProvider.KeyVersion> allVersions = Lists.newArrayList();
     for (String key : keys) {
       List<KeyProvider.KeyVersion> versions = provider.getKeyVersions(key);
-      assertEquals("Should only have one key version per key", 1,
-          versions.size());
+      assertEquals(1, versions.size(),
+          "Should only have one key version per key");
       allVersions.addAll(versions);
     }
     // Check that the specified CipherSuite was correctly saved on the NN
@@ -952,7 +956,7 @@ public class TestEncryptionZones {
   @SuppressWarnings("unchecked")
   private static void mockCreate(ClientProtocol mcp,
       CipherSuite suite, CryptoProtocolVersion version) throws Exception {
-    Mockito.doReturn(new HdfsFileStatus.Builder()
+    doReturn(new HdfsFileStatus.Builder()
           .replication(1)
           .blocksize(1024)
           .perm(new FsPermission((short) 777))
@@ -976,7 +980,7 @@ public class TestEncryptionZones {
   private static void testCipherSuiteNegotiation(DistributedFileSystem fs,
       Configuration conf) throws Exception {
     // Set up mock ClientProtocol to test client-side CipherSuite negotiation
-    final ClientProtocol mcp = Mockito.mock(ClientProtocol.class);
+    final ClientProtocol mcp = mock(ClientProtocol.class);
 
     // Try with an empty conf
     final Configuration noCodecConf = new Configuration(conf);
@@ -987,7 +991,7 @@ public class TestEncryptionZones {
     noCodecConf.set(confKey, "");
     fs.dfs = new DFSClient(null, mcp, noCodecConf, null);
     mockCreate(mcp, suite, CryptoProtocolVersion.ENCRYPTION_ZONES);
-    Mockito.when(mcp.complete(anyString(), anyString(), any(), anyLong()))
+    when(mcp.complete(anyString(), anyString(), any(), anyLong()))
         .thenReturn(true);
     try {
       fs.create(new Path("/mock"));
@@ -1056,8 +1060,8 @@ public class TestEncryptionZones {
     final Path baseFile = new Path(prefix, "base");
     fsWrapper.createFile(baseFile);
     FileStatus stat = fsWrapper.getFileStatus(baseFile);
-    assertFalse("Expected isEncrypted to return false for " + baseFile,
-        stat.isEncrypted());
+    assertFalse(stat.isEncrypted(),
+        "Expected isEncrypted to return false for " + baseFile);
 
     // Create an encrypted file to check isEncrypted returns true
     final Path zone = new Path(prefix, "zone");
@@ -1066,57 +1070,52 @@ public class TestEncryptionZones {
     final Path encFile = new Path(zone, "encfile");
     fsWrapper.createFile(encFile);
     stat = fsWrapper.getFileStatus(encFile);
-    assertTrue("Expected isEncrypted to return true for enc file" + encFile,
-        stat.isEncrypted());
+    assertTrue(stat.isEncrypted(),
+        "Expected isEncrypted to return true for enc file" + encFile);
 
     // check that it returns true for an ez root
     stat = fsWrapper.getFileStatus(zone);
-    assertTrue("Expected isEncrypted to return true for ezroot",
-        stat.isEncrypted());
+    assertTrue(stat.isEncrypted(),
+        "Expected isEncrypted to return true for ezroot");
 
     // check that it returns true for a dir in the ez
     final Path zoneSubdir = new Path(zone, "subdir");
     fsWrapper.mkdir(zoneSubdir, FsPermission.getDirDefault(), true);
     stat = fsWrapper.getFileStatus(zoneSubdir);
-    assertTrue(
-        "Expected isEncrypted to return true for ez subdir " + zoneSubdir,
-        stat.isEncrypted());
+    assertTrue(stat.isEncrypted(),
+        "Expected isEncrypted to return true for ez subdir " + zoneSubdir);
 
     // check that it returns false for a non ez dir
     final Path nonEzDirPath = new Path(prefix, "nonzone");
     fsWrapper.mkdir(nonEzDirPath, FsPermission.getDirDefault(), true);
     stat = fsWrapper.getFileStatus(nonEzDirPath);
-    assertFalse(
-        "Expected isEncrypted to return false for directory " + nonEzDirPath,
-        stat.isEncrypted());
+    assertFalse(stat.isEncrypted(),
+        "Expected isEncrypted to return false for directory " + nonEzDirPath);
 
     // check that it returns true for listings within an ez
     FileStatus[] statuses = fsWrapper.listStatus(zone);
     for (FileStatus s : statuses) {
-      assertTrue("Expected isEncrypted to return true for ez stat " + zone,
-          s.isEncrypted());
+      assertTrue(s.isEncrypted(),
+          "Expected isEncrypted to return true for ez stat " + zone);
     }
 
     statuses = fsWrapper.listStatus(encFile);
     for (FileStatus s : statuses) {
-      assertTrue(
-          "Expected isEncrypted to return true for ez file stat " + encFile,
-          s.isEncrypted());
+      assertTrue(s.isEncrypted(),
+          "Expected isEncrypted to return true for ez file stat " + encFile);
     }
 
     // check that it returns false for listings outside an ez
     statuses = fsWrapper.listStatus(nonEzDirPath);
     for (FileStatus s : statuses) {
-      assertFalse(
-          "Expected isEncrypted to return false for nonez stat " + nonEzDirPath,
-          s.isEncrypted());
+      assertFalse(s.isEncrypted(),
+          "Expected isEncrypted to return false for nonez stat " + nonEzDirPath);
     }
 
     statuses = fsWrapper.listStatus(baseFile);
     for (FileStatus s : statuses) {
-      assertFalse(
-          "Expected isEncrypted to return false for non ez stat " + baseFile,
-          s.isEncrypted());
+      assertFalse(s.isEncrypted(),
+          "Expected isEncrypted to return false for non ez stat " + baseFile);
     }
   }
 
@@ -1130,18 +1129,18 @@ public class TestEncryptionZones {
     fs.createSnapshot(snapshottable, "snap1");
     SnapshotDiffReport report =
         fs.getSnapshotDiffReport(snapshottable, "snap1", "");
-    Assert.assertEquals(0, report.getDiffList().size());
+    assertEquals(0, report.getDiffList().size());
     report =
         fs.getSnapshotDiffReport(snapshottable, "snap1", "");
     System.out.println(report);
-    Assert.assertEquals(0, report.getDiffList().size());
+    assertEquals(0, report.getDiffList().size());
     fs.setSafeMode(SafeModeAction.ENTER);
     fs.saveNamespace();
     fs.setSafeMode(SafeModeAction.LEAVE);
     cluster.restartNameNode(true);
     report =
         fs.getSnapshotDiffReport(snapshottable, "snap1", "");
-    Assert.assertEquals(0, report.getDiffList().size());
+    assertEquals(0, report.getDiffList().size());
   }
 
   private class AuthorizationExceptionInjector extends EncryptionFaultInjector {
@@ -1271,8 +1270,8 @@ public class TestEncryptionZones {
     executor.submit(new InjectFaultTask() {
       @Override
       public void doCleanup() throws Exception {
-        assertEquals("Expected no startFile key generation",
-            -1, injector.generateCount);
+        assertEquals(-1, injector.generateCount,
+            "Expected no startFile key generation");
         fsWrapper.delete(file, false);
       }
     }).get();
@@ -1288,7 +1287,7 @@ public class TestEncryptionZones {
       }
       @Override
       public void doCleanup() throws Exception {
-        assertEquals("Expected no startFile retries", 1, injector.generateCount);
+        assertEquals(1, injector.generateCount, "Expected no startFile retries");
         fsWrapper.delete(file, false);
       }
     }).get();
@@ -1310,7 +1309,7 @@ public class TestEncryptionZones {
       }
       @Override
       public void doCleanup() throws Exception {
-        assertEquals("Expected a startFile retry", 2, injector.generateCount);
+        assertEquals(2, injector.generateCount, "Expected a startFile retry");
         fsWrapper.delete(zone1, true);
       }
     }).get();
@@ -1358,19 +1357,19 @@ public class TestEncryptionZones {
   public void testDelegationToken() throws Exception {
     UserGroupInformation.createRemoteUser("JobTracker");
     DistributedFileSystem dfs = cluster.getFileSystem();
-    KeyProvider keyProvider = Mockito.mock(KeyProvider.class,
+    KeyProvider keyProvider = mock(KeyProvider.class,
         withSettings().extraInterfaces(
             DelegationTokenExtension.class,
             CryptoExtension.class));
-    Mockito.when(keyProvider.getConf()).thenReturn(conf);
+    when(keyProvider.getConf()).thenReturn(conf);
     byte[] testIdentifier = "Test identifier for delegation token".getBytes();
 
     @SuppressWarnings("rawtypes")
     Token testToken = new Token(testIdentifier, new byte[0],
         new Text(), new Text());
-    Mockito.when(((DelegationTokenIssuer)keyProvider).
+    when(((DelegationTokenIssuer)keyProvider).
         getCanonicalServiceName()).thenReturn("service");
-    Mockito.when(((DelegationTokenIssuer)keyProvider).
+    when(((DelegationTokenIssuer)keyProvider).
         getDelegationToken(anyString())).
         thenReturn(testToken);
 
@@ -1379,9 +1378,9 @@ public class TestEncryptionZones {
     Credentials creds = new Credentials();
     final Token<?> tokens[] = dfs.addDelegationTokens("JobTracker", creds);
     LOG.debug("Delegation tokens: " + Arrays.asList(tokens));
-    Assert.assertEquals(2, tokens.length);
-    Assert.assertEquals(tokens[1], testToken);
-    Assert.assertEquals(2, creds.numberOfTokens());
+    assertEquals(2, tokens.length);
+    assertEquals(tokens[1], testToken);
+    assertEquals(2, creds.numberOfTokens());
   }
 
   /**
@@ -1400,18 +1399,18 @@ public class TestEncryptionZones {
     PrintStream out = new PrintStream(bStream, true);
     int errCode = ToolRunner.run(new DFSck(conf, out),
         new String[]{ "/" });
-    assertEquals("Fsck ran with non-zero error code", 0, errCode);
+    assertEquals(0, errCode, "Fsck ran with non-zero error code");
     String result = bStream.toString();
-    assertTrue("Fsck did not return HEALTHY status",
-        result.contains(NamenodeFsck.HEALTHY_STATUS));
+    assertTrue(result.contains(NamenodeFsck.HEALTHY_STATUS),
+        "Fsck did not return HEALTHY status");
 
     // Run fsck directly on the encryption zone instead of root
     errCode = ToolRunner.run(new DFSck(conf, out),
         new String[]{ zoneParent.toString() });
-    assertEquals("Fsck ran with non-zero error code", 0, errCode);
+    assertEquals(0, errCode, "Fsck ran with non-zero error code");
     result = bStream.toString();
-    assertTrue("Fsck did not return HEALTHY status",
-        result.contains(NamenodeFsck.HEALTHY_STATUS));
+    assertTrue(result.contains(NamenodeFsck.HEALTHY_STATUS),
+        "Fsck did not return HEALTHY status");
   }
 
   /**
@@ -1434,8 +1433,9 @@ public class TestEncryptionZones {
     String contents = DFSTestUtil.readFile(fs, zoneFile);
     final Path snap1 = fs.createSnapshot(zoneParent, "snap1");
     final Path snap1Zone = new Path(snap1, zone.getName());
-    assertEquals("Got unexpected ez path", zone.toString(),
-        dfsAdmin.getEncryptionZoneForPath(snap1Zone).getPath().toString());
+    assertEquals(zone.toString(),
+        dfsAdmin.getEncryptionZoneForPath(snap1Zone).getPath().toString(),
+        "Got unexpected ez path");
 
     // Now delete the encryption zone, recreate the dir, and take another
     // snapshot
@@ -1443,34 +1443,35 @@ public class TestEncryptionZones {
     fsWrapper.mkdir(zone, FsPermission.getDirDefault(), true);
     final Path snap2 = fs.createSnapshot(zoneParent, "snap2");
     final Path snap2Zone = new Path(snap2, zone.getName());
-    assertEquals("Got unexpected ez path", zone.toString(),
-        dfsAdmin.getEncryptionZoneForPath(snap1Zone).getPath().toString());
-    assertNull("Expected null ez path",
-        dfsAdmin.getEncryptionZoneForPath(snap2Zone));
+    assertEquals(zone.toString(),
+        dfsAdmin.getEncryptionZoneForPath(snap1Zone).getPath().toString(),
+        "Got unexpected ez path");
+    assertNull(dfsAdmin.getEncryptionZoneForPath(snap2Zone),
+        "Expected null ez path");
 
     // Create the encryption zone again, and that shouldn't affect old snapshot
     dfsAdmin.createEncryptionZone(zone, TEST_KEY2, NO_TRASH);
     EncryptionZone ezSnap1 = dfsAdmin.getEncryptionZoneForPath(snap1Zone);
-    assertEquals("Got unexpected ez path", zone.toString(),
-        ezSnap1.getPath().toString());
-    assertEquals("Unexpected ez key", TEST_KEY, ezSnap1.getKeyName());
-    assertNull("Expected null ez path",
-        dfsAdmin.getEncryptionZoneForPath(snap2Zone));
+    assertEquals(zone.toString(), ezSnap1.getPath().toString(),
+        "Got unexpected ez path");
+    assertEquals(TEST_KEY, ezSnap1.getKeyName(), "Unexpected ez key");
+    assertNull(dfsAdmin.getEncryptionZoneForPath(snap2Zone),
+        "Expected null ez path");
 
     final Path snap3 = fs.createSnapshot(zoneParent, "snap3");
     final Path snap3Zone = new Path(snap3, zone.getName());
     // Check that snap3's EZ has the correct settings
     EncryptionZone ezSnap3 = dfsAdmin.getEncryptionZoneForPath(snap3Zone);
-    assertEquals("Got unexpected ez path", zone.toString(),
-        ezSnap3.getPath().toString());
-    assertEquals("Unexpected ez key", TEST_KEY2, ezSnap3.getKeyName());
+    assertEquals(zone.toString(), ezSnap3.getPath().toString(),
+        "Got unexpected ez path");
+    assertEquals(TEST_KEY2, ezSnap3.getKeyName(), "Unexpected ez key");
     // Check that older snapshots still have the old EZ settings
     ezSnap1 = dfsAdmin.getEncryptionZoneForPath(snap1Zone);
-    assertEquals("Got unexpected ez path", zone.toString(),
-        ezSnap1.getPath().toString());
-    assertEquals("Unexpected ez key", TEST_KEY, ezSnap1.getKeyName());
-    assertNull("Expected null ez path",
-        dfsAdmin.getEncryptionZoneForPath(snap2Zone));
+    assertEquals(zone.toString(), ezSnap1.getPath().toString(),
+        "Got unexpected ez path");
+    assertEquals(TEST_KEY, ezSnap1.getKeyName(), "Unexpected ez key");
+    assertNull(dfsAdmin.getEncryptionZoneForPath(snap2Zone),
+        "Expected null ez path");
 
     // Check that listEZs only shows the current filesystem state
     ArrayList<EncryptionZone> listZones = Lists.newArrayList();
@@ -1481,29 +1482,32 @@ public class TestEncryptionZones {
     for (EncryptionZone z: listZones) {
       System.out.println(z);
     }
-    assertEquals("Did not expect additional encryption zones!", 1,
-        listZones.size());
+    assertEquals(1, listZones.size(),
+        "Did not expect additional encryption zones!");
     EncryptionZone listZone = listZones.get(0);
-    assertEquals("Got unexpected ez path", zone.toString(),
-        listZone.getPath().toString());
-    assertEquals("Unexpected ez key", TEST_KEY2, listZone.getKeyName());
+    assertEquals(zone.toString(), listZone.getPath().toString(),
+        "Got unexpected ez path");
+    assertEquals(TEST_KEY2, listZone.getKeyName(), "Unexpected ez key");
 
     // Verify contents of the snapshotted file
     final Path snapshottedZoneFile = new Path(
         snap1.toString() + "/" + zone.getName() + "/" + zoneFile.getName());
-    assertEquals("Contents of snapshotted file have changed unexpectedly",
-        contents, DFSTestUtil.readFile(fs, snapshottedZoneFile));
+    assertEquals(contents, DFSTestUtil.readFile(fs, snapshottedZoneFile),
+        "Contents of snapshotted file have changed unexpectedly");
 
     // Now delete the snapshots out of order and verify the zones are still
     // correct
     fs.deleteSnapshot(zoneParent, snap2.getName());
-    assertEquals("Got unexpected ez path", zone.toString(),
-        dfsAdmin.getEncryptionZoneForPath(snap1Zone).getPath().toString());
-    assertEquals("Got unexpected ez path", zone.toString(),
-        dfsAdmin.getEncryptionZoneForPath(snap3Zone).getPath().toString());
+    assertEquals(zone.toString(),
+        dfsAdmin.getEncryptionZoneForPath(snap1Zone).getPath().toString(),
+        "Got unexpected ez path");
+    assertEquals(zone.toString(),
+        dfsAdmin.getEncryptionZoneForPath(snap3Zone).getPath().toString(),
+        "Got unexpected ez path");
     fs.deleteSnapshot(zoneParent, snap1.getName());
-    assertEquals("Got unexpected ez path", zone.toString(),
-        dfsAdmin.getEncryptionZoneForPath(snap3Zone).getPath().toString());
+    assertEquals(zone.toString(),
+        dfsAdmin.getEncryptionZoneForPath(snap3Zone).getPath().toString(),
+        "Got unexpected ez path");
   }
 
   /**
@@ -1527,16 +1531,16 @@ public class TestEncryptionZones {
     // Now delete the file and create encryption zone
     fsWrapper.delete(zoneFile, false);
     dfsAdmin.createEncryptionZone(zone, TEST_KEY, NO_TRASH);
-    assertEquals("Got unexpected ez path", zone.toString(),
-        dfsAdmin.getEncryptionZoneForPath(zone).getPath());
+    assertEquals(zone.toString(), dfsAdmin.getEncryptionZoneForPath(zone).getPath(),
+        "Got unexpected ez path");
 
     // The file in snapshot shouldn't have any encryption info
     final Path snapshottedZoneFile = new Path(
         snap1 + "/" + zone.getName() + "/" + zoneFile.getName());
     FileEncryptionInfo feInfo = getFileEncryptionInfo(snapshottedZoneFile);
-    assertNull("Expected null ez info", feInfo);
-    assertEquals("Contents of snapshotted file have changed unexpectedly",
-        contents, DFSTestUtil.readFile(fs, snapshottedZoneFile));
+    assertNull(feInfo, "Expected null ez info");
+    assertEquals(contents, DFSTestUtil.readFile(fs, snapshottedZoneFile),
+        "Contents of snapshotted file have changed unexpectedly");
   }
 
   /**
@@ -1598,8 +1602,8 @@ public class TestEncryptionZones {
     DFSTestUtil.createFile(fs, target, len, (short)1, 0xFEED);
     String content = DFSTestUtil.readFile(fs, target);
     fs.createSymlink(target, link, false);
-    assertEquals("Contents read from link are not the same as target",
-        content, DFSTestUtil.readFile(fs, link));
+    assertEquals(content, DFSTestUtil.readFile(fs, link),
+        "Contents read from link are not the same as target");
     fs.delete(parent, true);
 
     // Now let's test when the symlink and target are in different
@@ -1611,8 +1615,8 @@ public class TestEncryptionZones {
     DFSTestUtil.createFile(fs, target, len, (short)1, 0xFEED);
     content = DFSTestUtil.readFile(fs, target);
     fs.createSymlink(target, link, false);
-    assertEquals("Contents read from link are not the same as target",
-        content, DFSTestUtil.readFile(fs, link));
+    assertEquals(content, DFSTestUtil.readFile(fs, link),
+        "Contents read from link are not the same as target");
     fs.delete(link, true);
     fs.delete(target, true);
   }
@@ -1682,13 +1686,11 @@ public class TestEncryptionZones {
     dfsAdmin.createEncryptionZone(rootDir, TEST_KEY, NO_TRASH);
     DFSTestUtil.createFile(fs, zoneFile, len, (short) 1, 0xFEED);
 
-    assertEquals("File can be created on the root encryption zone " +
-            "with correct length",
-        len, fs.getFileStatus(zoneFile).getLen());
-    assertEquals("Root dir is encrypted",
-        true, fs.getFileStatus(rootDir).isEncrypted());
-    assertEquals("File is encrypted",
-        true, fs.getFileStatus(zoneFile).isEncrypted());
+    assertEquals(len, fs.getFileStatus(zoneFile).getLen(),
+        "File can be created on the root encryption zone " +
+        "with correct length");
+    assertEquals(true, fs.getFileStatus(rootDir).isEncrypted(), "Root dir is encrypted");
+    assertEquals(true, fs.getFileStatus(zoneFile).isEncrypted(), "File is encrypted");
   }
 
   @Test
@@ -1705,8 +1707,9 @@ public class TestEncryptionZones {
     assertNumZones(1);
     assertZonePresent(TEST_KEY, "/somewhere/base/zone");
 
-    assertEquals("Got unexpected ez path", "/somewhere/base/zone", dfsAdmin
-        .getEncryptionZoneForPath(zoneDir).getPath().toString());
+    assertEquals("/somewhere/base/zone", dfsAdmin
+        .getEncryptionZoneForPath(zoneDir).getPath().toString(),
+        "Got unexpected ez path");
   }
 
   @Test
@@ -1716,12 +1719,12 @@ public class TestEncryptionZones {
     dfsAdmin.createEncryptionZone(ezPath, TEST_KEY, NO_TRASH);
     Path zoneFile = new Path(ezPath, "file");
     EncryptionZone ez = fs.getEZForPath(zoneFile);
-    assertNotNull("Expected EZ for non-existent path in EZ", ez);
+    assertNotNull(ez, "Expected EZ for non-existent path in EZ");
     ez = dfsAdmin.getEncryptionZoneForPath(zoneFile);
-    assertNotNull("Expected EZ for non-existent path in EZ", ez);
+    assertNotNull(ez, "Expected EZ for non-existent path in EZ");
     ez = dfsAdmin.getEncryptionZoneForPath(
         new Path("/does/not/exist"));
-    assertNull("Expected null for non-existent path not in EZ", ez);
+    assertNull(ez, "Expected null for non-existent path not in EZ");
   }
 
   @Test
@@ -1807,8 +1810,8 @@ public class TestEncryptionZones {
     // if root path is an encryption zone
     Path encFileCurrentTrash = shell.getCurrentTrashDir(encFile);
     Path rootDirCurrentTrash = shell.getCurrentTrashDir(rootDir);
-    assertEquals("Root trash should be equal with ezFile trash",
-        encFileCurrentTrash, rootDirCurrentTrash);
+    assertEquals(encFileCurrentTrash, rootDirCurrentTrash,
+        "Root trash should be equal with ezFile trash");
 
     // Use webHDFS client to test trash root path
     final WebHdfsFileSystem webFS = WebHdfsTestUtil.getWebHdfsFileSystem(
@@ -1838,7 +1841,7 @@ public class TestEncryptionZones {
     fs.mkdirs(ezRoot3);
     dfsAdmin.createEncryptionZone(ezRoot3, TEST_KEY, NO_TRASH);
     Collection<FileStatus> trashRootsBegin = fs.getTrashRoots(true);
-    assertEquals("Unexpected getTrashRoots result", 0, trashRootsBegin.size());
+    assertEquals(0, trashRootsBegin.size(), "Unexpected getTrashRoots result");
 
     final Path encFile = new Path(ezRoot2, "encFile");
     final int len = 8192;
@@ -1849,16 +1852,14 @@ public class TestEncryptionZones {
     verifyShellDeleteWithTrash(shell, encFile);
 
     Collection<FileStatus> trashRootsDelete1 = fs.getTrashRoots(true);
-    assertEquals("Unexpected getTrashRoots result", 1,
-        trashRootsDelete1.size());
+    assertEquals(1, trashRootsDelete1.size(), "Unexpected getTrashRoots result");
 
     final Path nonEncFile = new Path("/nonEncFile");
     DFSTestUtil.createFile(fs, nonEncFile, len, (short) 1, 0xFEED);
     verifyShellDeleteWithTrash(shell, nonEncFile);
 
     Collection<FileStatus> trashRootsDelete2 = fs.getTrashRoots(true);
-    assertEquals("Unexpected getTrashRoots result", 2,
-        trashRootsDelete2.size());
+    assertEquals(2, trashRootsDelete2.size(), "Unexpected getTrashRoots result");
   }
 
   private void verifyShellDeleteWithTrash(FsShell shell, Path path)
@@ -1870,14 +1871,14 @@ public class TestEncryptionZones {
       while (!checkTrash.isRoot() && !checkTrash.getName().equals(".Trash")) {
         checkTrash = checkTrash.getParent();
       }
-      assertEquals("No .Trash component found in trash dir " + trashDir,
-          ".Trash", checkTrash.getName());
+      assertEquals(".Trash", checkTrash.getName(),
+          "No .Trash component found in trash dir " + trashDir);
       final Path trashFile =
           new Path(shell.getCurrentTrashDir(path) + "/" + path);
       String[] argv = new String[]{"-rm", "-r", path.toString()};
       int res = ToolRunner.run(shell, argv);
-      assertEquals("rm failed", 0, res);
-      assertTrue("File not in trash : " + trashFile, fs.exists(trashFile));
+      assertEquals(0, res, "rm failed");
+      assertTrue(fs.exists(trashFile), "File not in trash : " + trashFile);
     } catch (IOException ioe) {
       fail(ioe.getMessage());
     } finally {
@@ -1904,9 +1905,10 @@ public class TestEncryptionZones {
     credentials.addSecretKey(lookUpKey,
         DFSUtilClient.string2Bytes(dummyKeyProvider));
     client.ugi.addCredentials(credentials);
-    Assert.assertEquals("Client Key provider is different from provider in "
-        + "credentials map", dummyKeyProvider,
-        client.getKeyProviderUri().toString());
+    assertEquals(dummyKeyProvider,
+        client.getKeyProviderUri().toString(),
+        "Client Key provider is different from provider in "
+        + "credentials map");
   }
 
 
@@ -1924,27 +1926,25 @@ public class TestEncryptionZones {
     clusterConf.set(
         CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_PROVIDER_PATH,
         dummyKeyProviderUri1);
-    DFSClient mockClient = Mockito.spy(cluster.getFileSystem().getClient());
+    DFSClient mockClient = spy(cluster.getFileSystem().getClient());
     // Namenode returning null as keyProviderUri in FSServerDefaults.
     FsServerDefaults serverDefaultsWithKeyProviderNull =
         getTestServerDefaults(null);
-    Mockito.doReturn(serverDefaultsWithKeyProviderNull)
+    doReturn(serverDefaultsWithKeyProviderNull)
         .when(mockClient).getServerDefaults();
-    Assert.assertEquals(
-        "Key provider uri from client doesn't match with uri from conf",
-        dummyKeyProviderUri1, mockClient.getKeyProviderUri().toString());
-    Mockito.verify(mockClient, Mockito.times(1)).getServerDefaults();
+    assertEquals(dummyKeyProviderUri1, mockClient.getKeyProviderUri().toString(),
+        "Key provider uri from client doesn't match with uri from conf");
+    verify(mockClient, times(1)).getServerDefaults();
 
     String dummyKeyProviderUri2 = "dummy://foo:bar@test_provider2";
     FsServerDefaults serverDefaultsWithDummyKeyProvider =
         getTestServerDefaults(dummyKeyProviderUri2);
     // Namenode returning dummyKeyProvider2 in serverDefaults.
-    Mockito.doReturn(serverDefaultsWithDummyKeyProvider)
+    doReturn(serverDefaultsWithDummyKeyProvider)
     .when(mockClient).getServerDefaults();
-    Assert.assertEquals(
-        "Key provider uri from client doesn't match with uri from namenode",
-        dummyKeyProviderUri2, mockClient.getKeyProviderUri().toString());
-    Mockito.verify(mockClient, Mockito.times(2)).getServerDefaults();
+    assertEquals(dummyKeyProviderUri2, mockClient.getKeyProviderUri().toString(),
+        "Key provider uri from client doesn't match with uri from namenode");
+    verify(mockClient, times(2)).getServerDefaults();
   }
 
   /**
@@ -1957,18 +1957,18 @@ public class TestEncryptionZones {
   public void testDifferentKMSProviderOnUpgradedNamenode() throws Exception {
     Configuration clusterConf = cluster.getConfiguration(0);
     URI namenodeKeyProviderUri = URI.create(getKeyProviderURI());
-    Assert.assertEquals("Key Provider for client and namenode are different",
-        namenodeKeyProviderUri, cluster.getFileSystem().getClient()
-        .getKeyProviderUri());
+    assertEquals(namenodeKeyProviderUri,
+        cluster.getFileSystem().getClient()
+        .getKeyProviderUri(), "Key Provider for client and namenode are different");
 
     // Unset the provider path in conf
     clusterConf.unset(
         CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_PROVIDER_PATH);
     // Even after unsetting the local conf, the client key provider should be
     // the same as namenode's provider.
-    Assert.assertEquals("Key Provider for client and namenode are different",
-        namenodeKeyProviderUri, cluster.getFileSystem().getClient()
-        .getKeyProviderUri());
+    assertEquals(namenodeKeyProviderUri,
+        cluster.getFileSystem().getClient()
+        .getKeyProviderUri(), "Key Provider for client and namenode are different");
 
     // Set the provider path to some dummy scheme.
     clusterConf.set(
@@ -1976,19 +1976,19 @@ public class TestEncryptionZones {
         "dummy://foo:bar@test_provider1");
     // Even after pointing the conf to some dummy provider, the client key
     // provider should be the same as namenode's provider.
-    Assert.assertEquals("Key Provider for client and namenode are different",
-        namenodeKeyProviderUri, cluster.getFileSystem().getClient()
-        .getKeyProviderUri());
+    assertEquals(namenodeKeyProviderUri,
+        cluster.getFileSystem().getClient()
+        .getKeyProviderUri(), "Key Provider for client and namenode are different");
 
     // Ignore the key provider from NN.
     clusterConf.setBoolean(
         DFS_CLIENT_IGNORE_NAMENODE_DEFAULT_KMS_URI, true);
-    Assert.assertEquals("Expecting Key Provider for client config",
-        "dummy://foo:bar@test_provider1", cluster.getFileSystem().getClient()
-            .getKeyProviderUri().toString());
-    Assert.assertNotEquals("Key Provider for client and namenode is different",
-        namenodeKeyProviderUri, cluster.getFileSystem().getClient()
-            .getKeyProviderUri().toString());
+    assertEquals("dummy://foo:bar@test_provider1",
+        cluster.getFileSystem().getClient().getKeyProviderUri().toString(),
+        "Expecting Key Provider for client config");
+    assertNotEquals(namenodeKeyProviderUri,
+        cluster.getFileSystem().getClient().getKeyProviderUri().toString(),
+        "Key Provider for client and namenode is different");
   }
 
   /**
@@ -2003,11 +2003,11 @@ public class TestEncryptionZones {
     URI namenodeKeyProviderUri = URI.create(getKeyProviderURI());
     URI clientKeyProviderUri =
         cluster.getFileSystem().getClient().getKeyProviderUri();
-    Assert.assertNotNull(clientKeyProviderUri);
+    assertNotNull(clientKeyProviderUri);
     // Since the client and the namenode share the same conf, they will have
     // identical key provider.
-    Assert.assertEquals("Key Provider for client and namenode are different",
-        namenodeKeyProviderUri, clientKeyProviderUri);
+    assertEquals(namenodeKeyProviderUri, clientKeyProviderUri,
+        "Key Provider for client and namenode are different");
 
     String dummyKeyProviderUri = "dummy://foo:bar@test_provider";
     // Unset the provider path in conf.
@@ -2017,15 +2017,15 @@ public class TestEncryptionZones {
     FsServerDefaults spyServerDefaults = getTestServerDefaults(null);
     // Creating a fake serverdefaults so that we can simulate namenode not
     // being upgraded.
-    DFSClient spyClient = Mockito.spy(cluster.getFileSystem().getClient());
-    Mockito.doReturn(spyServerDefaults).when(spyClient).getServerDefaults();
+    DFSClient spyClient = spy(cluster.getFileSystem().getClient());
+    doReturn(spyServerDefaults).when(spyClient).getServerDefaults();
 
     // Since FsServerDefaults#keyProviderUri is null, the client
     // will fallback to local conf which is null.
     clientKeyProviderUri = spyClient.getKeyProviderUri();
-    Assert.assertEquals("Client keyProvider should be " + dummyKeyProviderUri,
-        dummyKeyProviderUri, clientKeyProviderUri.toString());
-    Mockito.verify(spyClient, Mockito.times(1)).getServerDefaults();
+    assertEquals(dummyKeyProviderUri, clientKeyProviderUri.toString(),
+        "Client keyProvider should be " + dummyKeyProviderUri);
+    verify(spyClient, times(1)).getServerDefaults();
   }
 
   // Given a provider uri return serverdefaults.
@@ -2121,9 +2121,9 @@ public class TestEncryptionZones {
     verifyShellDeleteWithTrash(shell, zoneDirectChild);
     //permanently remove zone direct child of snapshottable directory
     fsWrapper.delete(shell.getCurrentTrashDir(zoneDirectChild), true);
-    assertFalse("listEncryptionZones should not return anything, " +
-            "since both EZs were deleted.",
-        dfsAdmin.listEncryptionZones().hasNext());
+    assertFalse(dfsAdmin.listEncryptionZones().hasNext(),
+        "listEncryptionZones should not return anything, " +
+        "since both EZs were deleted.");
   }
 
   /**
@@ -2137,17 +2137,17 @@ public class TestEncryptionZones {
     UserGroupInformation.createRemoteUser("JobTracker");
     WebHdfsFileSystem webfs = WebHdfsTestUtil.getWebHdfsFileSystem(conf,
         WebHdfsConstants.WEBHDFS_SCHEME);
-    KeyProvider keyProvider = Mockito.mock(KeyProvider.class, withSettings()
+    KeyProvider keyProvider = mock(KeyProvider.class, withSettings()
         .extraInterfaces(DelegationTokenExtension.class,
          CryptoExtension.class));
-    Mockito.when(keyProvider.getConf()).thenReturn(conf);
+    when(keyProvider.getConf()).thenReturn(conf);
     byte[] testIdentifier = "Test identifier for delegation token".getBytes();
 
     Token testToken = new Token(testIdentifier, new byte[0],
         new Text("kms-dt"), new Text());
-    Mockito.when(((DelegationTokenIssuer)keyProvider).
+    when(((DelegationTokenIssuer)keyProvider).
         getCanonicalServiceName()).thenReturn("service");
-    Mockito.when(((DelegationTokenIssuer)keyProvider).
+    when(((DelegationTokenIssuer)keyProvider).
         getDelegationToken(anyString())).
         thenReturn(testToken);
 
@@ -2156,9 +2156,9 @@ public class TestEncryptionZones {
     final Token<?>[] tokens =
         webfs.addDelegationTokens("JobTracker", creds);
 
-    Assert.assertEquals(2, tokens.length);
-    Assert.assertEquals(tokens[1], testToken);
-    Assert.assertEquals(2, creds.numberOfTokens());
+    assertEquals(2, tokens.length);
+    assertEquals(tokens[1], testToken);
+    assertEquals(2, creds.numberOfTokens());
   }
 
   /**
@@ -2193,8 +2193,9 @@ public class TestEncryptionZones {
     // raw encrypted bytes.
     InputStream cryptoStream =
         webhdfs.open(encryptedFilePath).getWrappedStream();
-    Assert.assertTrue("cryptoStream should be an instance of "
-        + "CryptoInputStream", (cryptoStream instanceof CryptoInputStream));
+    assertTrue((cryptoStream instanceof CryptoInputStream),
+        "cryptoStream should be an instance of "
+        + "CryptoInputStream");
     InputStream encryptedStream =
         ((CryptoInputStream)cryptoStream).getWrappedStream();
     // Verify that the data read from the raw input stream is different
@@ -2210,7 +2211,7 @@ public class TestEncryptionZones {
       IOUtils.copyBytes(is, os, 1024, true);
       streamBytes = os.toByteArray();
     }
-    Assert.assertArrayEquals(content.getBytes(), streamBytes);
+    assertArrayEquals(content.getBytes(), streamBytes);
   }
 
   private void verifyRaw(String content, InputStream is, InputStream rawIs)
@@ -2220,14 +2221,14 @@ public class TestEncryptionZones {
       IOUtils.copyBytes(is, os, 1024, true);
       streamBytes = os.toByteArray();
     }
-    Assert.assertFalse(Arrays.equals(content.getBytes(), streamBytes));
+    assertFalse(Arrays.equals(content.getBytes(), streamBytes));
 
     // webhdfs raw bytes should match the raw bytes from dfs.
     try (ByteArrayOutputStream os = new ByteArrayOutputStream()) {
       IOUtils.copyBytes(rawIs, os, 1024, true);
       rawBytes = os.toByteArray();
     }
-    Assert.assertArrayEquals(rawBytes, streamBytes);
+    assertArrayEquals(rawBytes, streamBytes);
   }
 
   /* Tests that if client is old and namenode is new then the
@@ -2253,7 +2254,7 @@ public class TestEncryptionZones {
     String location = namenodeConnection.getHeaderField("Location");
     URL datanodeURL = new URL(location);
     String path = datanodeURL.getPath();
-    Assert.assertEquals(
+    assertEquals(
         WebHdfsFileSystem.PATH_PREFIX + encryptedFilePath.toString(), path);
     HttpURLConnection datanodeConnection = returnConnection(datanodeURL,
         "GET", false);
@@ -2286,11 +2287,11 @@ public class TestEncryptionZones {
     // Return a connection with client not supporting EZ.
     HttpURLConnection namenodeConnection =
         returnConnection(url, "GET", false);
-    Assert.assertNotNull(namenodeConnection.getHeaderField("Location"));
+    assertNotNull(namenodeConnection.getHeaderField("Location"));
     URL datanodeUrl = new URL(namenodeConnection.getHeaderField("Location"));
-    Assert.assertNotNull(datanodeUrl);
+    assertNotNull(datanodeUrl);
     String path = datanodeUrl.getPath();
-    Assert.assertEquals(
+    assertEquals(
         WebHdfsFileSystem.PATH_PREFIX + encryptedFilePath.toString(), path);
 
     url = new URL("http", addr.getHostString(), addr.getPort(),
@@ -2298,11 +2299,11 @@ public class TestEncryptionZones {
         + "?op=OPEN");
     // Return a connection with client supporting EZ.
     namenodeConnection = returnConnection(url, "GET", true);
-    Assert.assertNotNull(namenodeConnection.getHeaderField("Location"));
+    assertNotNull(namenodeConnection.getHeaderField("Location"));
     datanodeUrl = new URL(namenodeConnection.getHeaderField("Location"));
-    Assert.assertNotNull(datanodeUrl);
+    assertNotNull(datanodeUrl);
     path = datanodeUrl.getPath();
-    Assert.assertEquals(WebHdfsFileSystem.PATH_PREFIX
+    assertEquals(WebHdfsFileSystem.PATH_PREFIX
         + "/.reserved/raw" + encryptedFilePath.toString(), path);
   }
 
@@ -2338,7 +2339,7 @@ public class TestEncryptionZones {
     FSDataInputStream in = webfs.open(encryptedFilePath);
     for (int i = 0; i < 1024; i++) {
       in.seek(i);
-      Assert.assertEquals((data[i] & 0XFF), in.read());
+      assertEquals((data[i] & 0XFF), in.read());
     }
   }
 

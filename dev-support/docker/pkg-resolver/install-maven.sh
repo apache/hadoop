@@ -27,22 +27,22 @@ if [ $? -eq 1 ]; then
   exit 1
 fi
 
-default_version="3.6.3"
+default_version="3.9.11"
 version_to_install=$default_version
 if [ -n "$2" ]; then
   version_to_install="$2"
 fi
 
-if [ "$version_to_install" != "3.6.3" ]; then
+if [ "$version_to_install" != "3.9.11" ]; then
   echo "WARN: Don't know how to install version $version_to_install, installing the default version $default_version instead"
   version_to_install=$default_version
 fi
 
-if [ "$version_to_install" == "3.6.3" ]; then
+if [ "$version_to_install" == "3.9.11" ]; then
   mkdir -p /opt/maven /tmp/maven &&
-    curl -L -s -S https://repo.maven.apache.org/maven2/org/apache/maven/apache-maven/3.6.3/apache-maven-3.6.3-bin.tar.gz \
-      -o /tmp/maven/apache-maven-3.6.3-bin.tar.gz &&
-    tar xzf /tmp/maven/apache-maven-3.6.3-bin.tar.gz --strip-components 1 -C /opt/maven
+    curl -L -s -S https://repo.maven.apache.org/maven2/org/apache/maven/apache-maven/3.9.11/apache-maven-3.9.11-bin.tar.gz \
+      -o /tmp/maven/apache-maven-3.9.11-bin.tar.gz &&
+    tar xzf /tmp/maven/apache-maven-3.9.11-bin.tar.gz --strip-components 1 -C /opt/maven
 else
   echo "ERROR: Don't know how to install version $version_to_install"
   exit 1

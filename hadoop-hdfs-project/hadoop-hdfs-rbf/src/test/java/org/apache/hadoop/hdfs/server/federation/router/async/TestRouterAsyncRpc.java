@@ -36,6 +36,7 @@ import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_FAIRNESS_POLICY_CONTROLLER_CLASS;
 import static org.apache.hadoop.hdfs.server.federation.router.async.utils.AsyncUtil.syncReturn;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 /**
@@ -88,5 +89,13 @@ public class TestRouterAsyncRpc extends TestRouterRpc {
   @Override
   public void testConcurrentCallExecutorInitial() {
     assertNull(rndRouter.getRouterRpcClient().getExecutorService());
+  }
+
+  @Test
+  public void testGetDelegationTokenAsyncRpc() throws Exception {
+    UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+    assertDoesNotThrow(() -> {
+      rndRouter.getFileSystem().getDelegationToken(ugi.getShortUserName());
+    });
   }
 }

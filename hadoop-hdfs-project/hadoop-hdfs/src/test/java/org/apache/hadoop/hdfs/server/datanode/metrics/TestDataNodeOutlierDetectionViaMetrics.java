@@ -24,10 +24,9 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.server.protocol.OutlierMetrics;
 import org.apache.hadoop.metrics2.lib.MetricsTestHelper;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.event.Level;
@@ -36,24 +35,18 @@ import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
-import static org.hamcrest.core.Is.is;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
-
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Test that the {@link DataNodePeerMetrics} class is able to detect
  * outliers i.e. slow nodes via the metrics it maintains.
+ * Set a timeout for every test case.
  */
+@Timeout(300)
 public class TestDataNodeOutlierDetectionViaMetrics {
   public static final Logger LOG =
       LoggerFactory.getLogger(TestDataNodeOutlierDetectionViaMetrics.class);
-
-  /**
-   * Set a timeout for every test case.
-   */
-  @Rule
-  public Timeout testTimeout = new Timeout(300_000);
 
   // A few constants to keep the test run time short.
   private static final int WINDOW_INTERVAL_SECONDS = 3;
@@ -66,7 +59,7 @@ public class TestDataNodeOutlierDetectionViaMetrics {
 
   private Configuration conf;
 
-  @Before
+  @BeforeEach
   public void setup() {
     GenericTestUtils.setLogLevel(DataNodePeerMetrics.LOG, Level.TRACE);
     GenericTestUtils.setLogLevel(OutlierDetector.LOG, Level.TRACE);
@@ -103,7 +96,7 @@ public class TestDataNodeOutlierDetectionViaMetrics {
 
     final Map<String, OutlierMetrics> outliers = peerMetrics.getOutliers();
     LOG.info("Got back outlier nodes: {}", outliers);
-    assertThat(outliers.size(), is(1));
+    assertThat(outliers.size()).isEqualTo(1);
     assertTrue(outliers.containsKey(slowNodeName));
   }
 

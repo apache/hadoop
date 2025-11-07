@@ -21,7 +21,7 @@ package org.apache.hadoop.fs.aliyun.oss.fileContext;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContextCreateMkdirBaseTest;
 import org.apache.hadoop.fs.aliyun.oss.AliyunOSSTestUtils;
-import org.junit.Before;
+import org.junit.jupiter.api.BeforeEach;
 
 import java.io.IOException;
 
@@ -31,7 +31,7 @@ import java.io.IOException;
 public class TestOSSFileContextCreateMkdir
     extends FileContextCreateMkdirBaseTest {
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException, Exception {
     Configuration conf = new Configuration();
     fc = AliyunOSSTestUtils.createTestFileContext(conf);

@@ -23,7 +23,8 @@ import java.nio.file.AccessDeniedException;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -43,7 +44,11 @@ import static org.apache.hadoop.fs.s3a.Constants.FIPS_ENDPOINT;
 import static org.apache.hadoop.fs.s3a.Constants.FS_S3A;
 import static org.apache.hadoop.fs.s3a.Constants.PATH_STYLE_ACCESS;
 import static org.apache.hadoop.fs.s3a.Constants.S3A_BUCKET_PROBE;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.assume;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestBucketName;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
+import static org.apache.hadoop.fs.s3a.S3AUtils.propagateBucketOptions;
+import static org.apache.hadoop.fs.s3a.impl.NetworkBinding.isAwsEndpoint;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
@@ -58,6 +63,15 @@ public class ITestS3ABucketExistence extends AbstractS3ATestBase {
 
   private final URI uri = URI.create(FS_S3A + "://" + randomBucket + "/");
 
+  @Override
+  protected Configuration createConfiguration() {
+    final Configuration conf = super.createConfiguration();
+    String endpoint = propagateBucketOptions(conf, getTestBucketName(conf)).get(ENDPOINT, "");
+    assume("Skipping existence probes",
+        isAwsEndpoint(endpoint));
+    return conf;
+  }
+
   @SuppressWarnings("deprecation")
   @Test
   public void testNoBucketProbing() throws Exception {
@@ -69,9 +83,9 @@ public class ITestS3ABucketExistence extends AbstractS3ATestBase {
     Path root = new Path(uri);
 
     //See HADOOP-17323.
-    assertTrue("root path should always exist", fs.exists(root));
-    assertTrue("getFileStatus on root should always return a directory",
-            fs.getFileStatus(root).isDirectory());
+    assertTrue(fs.exists(root), "root path should always exist");
+    assertTrue(fs.getFileStatus(root).isDirectory(),
+        "getFileStatus on root should always return a directory");
 
     try {
       expectUnknownStore(
@@ -91,9 +105,8 @@ public class ITestS3ABucketExistence extends AbstractS3ATestBase {
     expectUnknownStore(() -> fs.exists(src));
     // now that isFile() only does a HEAD, it will get a 404 without
     // the no-such-bucket error.
-    assertFalse("isFile(" + src + ")"
-            + " was expected to complete by returning false",
-        fs.isFile(src));
+    assertFalse(fs.isFile(src), "isFile(" + src + ")"
+        + " was expected to complete by returning false");
     expectUnknownStore(() -> fs.isDirectory(src));
     expectUnknownStore(() -> fs.mkdirs(src));
     expectUnknownStore(() -> fs.delete(src));
@@ -171,9 +184,9 @@ public class ITestS3ABucketExistence extends AbstractS3ATestBase {
     fs = FileSystem.get(uri, configuration);
     Path root = new Path(uri);
 
-    assertTrue("root path should always exist", fs.exists(root));
-    assertTrue("getFileStatus on root should always return a directory",
-        fs.getFileStatus(root).isDirectory());
+    assertTrue(fs.exists(root), "root path should always exist");
+    assertTrue(fs.getFileStatus(root).isDirectory(),
+        "getFileStatus on root should always return a directory");
   }
 
   @Test
@@ -233,6 +246,7 @@ public class ITestS3ABucketExistence extends AbstractS3ATestBase {
     return configuration;
   }
 
+  @AfterEach
   @Override
   public void teardown() throws Exception {
     IOUtils.cleanupWithLogger(getLogger(), fs);

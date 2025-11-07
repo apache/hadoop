@@ -210,6 +210,7 @@ See licenses/ for text of these licenses.
 Apache Software Foundation License 2.0
 --------------------------------------
 
+hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/util/LimitInputStream.java
 hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static/nvd3-1.8.5.* (css and js files)
 hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/checker/AbstractFuture.java
 hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/checker/TimeoutFuture.java

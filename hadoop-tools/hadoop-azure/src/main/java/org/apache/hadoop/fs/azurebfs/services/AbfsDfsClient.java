@@ -53,6 +53,7 @@ import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.ApiVersion;
+import org.apache.hadoop.fs.azurebfs.constants.AbfsServiceType;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsDriverException;
@@ -116,6 +117,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.I
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.RANGE;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.USER_AGENT;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_HTTP_METHOD_OVERRIDE;
+import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_BLOB_CONTENT_MD5;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_CLIENT_TRANSACTION_ID;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_EXISTING_RESOURCE_TYPE;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_LEASE_ACTION;
@@ -152,6 +154,17 @@ import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_RENAME_RECOV
  */
 public class AbfsDfsClient extends AbfsClient {
 
+  /**
+   * Creates an {@code AbfsDfsClient} instance.
+   *
+   * @param baseUrl the base URL of the DFS endpoint
+   * @param sharedKeyCredentials the shared key credentials
+   * @param abfsConfiguration the ABFS configuration
+   * @param tokenProvider the access token provider for authentication
+   * @param encryptionContextProvider the encryption context provider
+   * @param abfsClientContext the ABFS client context
+   * @throws IOException if client initialization fails
+   */
   public AbfsDfsClient(final URL baseUrl,
       final SharedKeyCredentials sharedKeyCredentials,
       final AbfsConfiguration abfsConfiguration,
@@ -159,9 +172,20 @@ public class AbfsDfsClient extends AbfsClient {
       final EncryptionContextProvider encryptionContextProvider,
       final AbfsClientContext abfsClientContext) throws IOException {
     super(baseUrl, sharedKeyCredentials, abfsConfiguration, tokenProvider,
-        encryptionContextProvider, abfsClientContext);
+        encryptionContextProvider, abfsClientContext, AbfsServiceType.DFS);
   }
 
+  /**
+   * Creates an {@code AbfsDfsClient} instance.
+   *
+   * @param baseUrl the base URL of the DFS endpoint
+   * @param sharedKeyCredentials the shared key credentials
+   * @param abfsConfiguration the ABFS configuration
+   * @param sasTokenProvider the SAS token provider
+   * @param encryptionContextProvider the encryption context provider
+   * @param abfsClientContext the ABFS client context
+   * @throws IOException if client initialization fails
+   */
   public AbfsDfsClient(final URL baseUrl,
       final SharedKeyCredentials sharedKeyCredentials,
       final AbfsConfiguration abfsConfiguration,
@@ -169,7 +193,7 @@ public class AbfsDfsClient extends AbfsClient {
       final EncryptionContextProvider encryptionContextProvider,
       final AbfsClientContext abfsClientContext) throws IOException {
     super(baseUrl, sharedKeyCredentials, abfsConfiguration, sasTokenProvider,
-        encryptionContextProvider, abfsClientContext);
+        encryptionContextProvider, abfsClientContext, AbfsServiceType.DFS);
   }
 
   /**
@@ -762,7 +786,7 @@ public class AbfsDfsClient extends AbfsClient {
 
     // Add MD5 Hash of request content as request header if feature is enabled
     if (isChecksumValidationEnabled()) {
-      addCheckSumHeaderForWrite(requestHeaders, reqParams, buffer);
+     addCheckSumHeaderForWrite(requestHeaders, reqParams);
     }
 
     // AbfsInputStream/AbfsOutputStream reuse SAS tokens for better performance
@@ -844,6 +868,7 @@ public class AbfsDfsClient extends AbfsClient {
    * @param leaseId if there is an active lease on the path.
    * @param contextEncryptionAdapter to provide encryption context.
    * @param tracingContext for tracing the server calls.
+   * @param blobMd5 the MD5 hash of the blob for integrity verification.
    * @return executed rest operation containing response from server.
    * @throws AzureBlobFileSystemException if rest operation fails.
    */
@@ -855,7 +880,7 @@ public class AbfsDfsClient extends AbfsClient {
       final String cachedSasToken,
       final String leaseId,
       ContextEncryptionAdapter contextEncryptionAdapter,
-      TracingContext tracingContext) throws AzureBlobFileSystemException {
+      TracingContext tracingContext, String blobMd5) throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
     addEncryptionKeyRequestHeaders(path, requestHeaders, false,
         contextEncryptionAdapter, tracingContext);
@@ -865,7 +890,9 @@ public class AbfsDfsClient extends AbfsClient {
     if (leaseId != null) {
       requestHeaders.add(new AbfsHttpHeader(X_MS_LEASE_ID, leaseId));
     }
-
+    if (isFullBlobChecksumValidationEnabled() && blobMd5 != null) {
+      requestHeaders.add(new AbfsHttpHeader(X_MS_BLOB_CONTENT_MD5, blobMd5));
+    }
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_ACTION, FLUSH_ACTION);
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_POSITION, Long.toString(position));
@@ -886,6 +913,21 @@ public class AbfsDfsClient extends AbfsClient {
     return op;
   }
 
+  /**
+   * Flushes data to a file at the specified path, using the provided buffer and other parameters.
+   * This operation is not supported on the DFS endpoint and will throw an {@link UnsupportedOperationException}.
+   *
+   * @param buffer the byte array containing the data to be flushed to the file.
+   * @param path the path where the data has to be flushed.
+   * @param isClose whether this is the last flush operation to the file.
+   * @param cachedSasToken the SAS token to authenticate the operation.
+   * @param leaseId the lease ID, if an active lease exists on the path.
+   * @param eTag the ETag for concurrency control to ensure the flush is applied to the correct file version.
+   * @param contextEncryptionAdapter the adapter providing the encryption context.
+   * @param tracingContext the tracing context for tracking server calls.
+   * @param blobMd5 the MD5 hash of the blob for integrity verification.
+   * @throws UnsupportedOperationException if flush with blockIds is called on a DFS endpoint.
+   */
   @Override
   public AbfsRestOperation flush(byte[] buffer,
       final String path,
@@ -894,7 +936,7 @@ public class AbfsDfsClient extends AbfsClient {
       final String leaseId,
       final String eTag,
       final ContextEncryptionAdapter contextEncryptionAdapter,
-      final TracingContext tracingContext) throws AzureBlobFileSystemException {
+      final TracingContext tracingContext, String blobMd5) throws AzureBlobFileSystemException {
     throw new UnsupportedOperationException(
         "Flush with blockIds not supported on DFS Endpoint");
   }
@@ -1030,6 +1072,10 @@ public class AbfsDfsClient extends AbfsClient {
     }
 
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
+
+    // Add request priority header for prefetch reads
+    addRequestPriorityForPrefetch(requestHeaders, tracingContext);
+
     // AbfsInputStream/AbfsOutputStream reuse SAS tokens for better performance
     String sasTokenForReuse = appendSASTokenToQuery(path,
         SASTokenProvider.READ_OPERATION,
@@ -1563,9 +1609,11 @@ public class AbfsDfsClient extends AbfsClient {
    * @param requestHeaders list of headers to be sent with the request
    *
    * @return client transaction id
+   * @throws AzureBlobFileSystemException if an error occurs while generating the client transaction id
    */
   @VisibleForTesting
-  public String addClientTransactionIdToHeader(List<AbfsHttpHeader> requestHeaders) {
+  public String addClientTransactionIdToHeader(List<AbfsHttpHeader> requestHeaders)
+      throws AzureBlobFileSystemException {
     String clientTransactionId = null;
     // Set client transaction ID if the namespace and client transaction ID config are enabled.
     if (getIsNamespaceEnabled() && getAbfsConfiguration().getIsClientTransactionIdEnabled()) {

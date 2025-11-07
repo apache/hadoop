@@ -23,8 +23,8 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.assertj.core.api.Assertions;
 
 import org.apache.hadoop.conf.Configuration;
@@ -42,6 +42,7 @@ import software.amazon.s3.analyticsaccelerator.common.ConnectorConfiguration;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_PARQUET;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_WHOLE_FILE;
+import static org.apache.hadoop.fs.audit.AuditStatisticNames.AUDIT_REQUEST_EXECUTION;
 import static org.apache.hadoop.fs.s3a.Constants.ANALYTICS_ACCELERATOR_CONFIGURATION_PREFIX;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.enableAnalyticsAccelerator;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
@@ -67,7 +68,7 @@ public class ITestS3AAnalyticsAcceleratorStreamReading extends AbstractS3ATestBa
 
   private Path externalTestFile;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     super.setup();
     skipIfClientSideEncryption();
@@ -109,6 +110,12 @@ public class ITestS3AAnalyticsAcceleratorStreamReading extends AbstractS3ATestBa
     verifyStatisticCounterValue(ioStats, STREAM_READ_ANALYTICS_OPENED, 1);
     fs.close();
     verifyStatisticCounterValue(fs.getIOStatistics(), ANALYTICS_STREAM_FACTORY_CLOSED, 1);
+
+    // Expect 4 audited requests. One HEAD, and 3 GETs. The 3 GETs are because the read policy is WHOLE_FILE,
+    // in which case, AAL will start prefetching till EoF on file open in 8MB chunks. The file read here
+    // s3://noaa-cors-pds/raw/2023/017/ohfh/OHFH017d.23_.gz, has a size of ~21MB, resulting in 3 GETS:
+    // [0-8388607, 8388608-16777215, 16777216-21511173].
+    verifyStatisticCounterValue(fs.getIOStatistics(), AUDIT_REQUEST_EXECUTION, 4);
   }
 
   @Test
@@ -157,24 +164,33 @@ public class ITestS3AAnalyticsAcceleratorStreamReading extends AbstractS3ATestBa
 
     FileStatus fileStatus = getFileSystem().getFileStatus(dest);
 
-    byte[] buffer = new byte[3000];
+    final int size = 3000;
+    byte[] buffer = new byte[size];
+    int readLimit = Math.min(size, (int) fileStatus.getLen());
     IOStatistics ioStats;
+
+    final IOStatistics fsIostats = getFileSystem().getIOStatistics();
+    final long initialAuditCount = fsIostats.counters()
+        .getOrDefault(AUDIT_REQUEST_EXECUTION, 0L);
 
     try (FSDataInputStream inputStream = getFileSystem().open(dest)) {
       ioStats = inputStream.getIOStatistics();
-      inputStream.readFully(buffer, 0, (int) fileStatus.getLen());
+      inputStream.readFully(buffer, 0, readLimit);
     }
 
     verifyStatisticCounterValue(ioStats, STREAM_READ_ANALYTICS_OPENED, 1);
 
     try (FSDataInputStream inputStream = getFileSystem().openFile(dest)
+        .withFileStatus(fileStatus)
         .must(FS_OPTION_OPENFILE_READ_POLICY, FS_OPTION_OPENFILE_READ_POLICY_PARQUET)
         .build().get()) {
       ioStats = inputStream.getIOStatistics();
-      inputStream.readFully(buffer, 0, (int) fileStatus.getLen());
+      inputStream.readFully(buffer, 0, readLimit);
     }
 
     verifyStatisticCounterValue(ioStats, STREAM_READ_ANALYTICS_OPENED, 1);
+
+    verifyStatisticCounterValue(fsIostats, AUDIT_REQUEST_EXECUTION, initialAuditCount + 2);
   }
 
   @Test
@@ -185,7 +201,7 @@ public class ITestS3AAnalyticsAcceleratorStreamReading extends AbstractS3ATestBa
     removeBaseAndBucketOverrides(conf);
     //Disable Sequential Prefetching
     conf.setInt(ANALYTICS_ACCELERATOR_CONFIGURATION_PREFIX +
-        "." + PHYSICAL_IO_PREFIX + ".blobstore.capacity", -1);
+        "." + PHYSICAL_IO_PREFIX + ".cache.timeout", -1);
 
     ConnectorConfiguration connectorConfiguration =
         new ConnectorConfiguration(conf, ANALYTICS_ACCELERATOR_CONFIGURATION_PREFIX);

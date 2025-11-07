@@ -25,7 +25,9 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import org.apache.hadoop.fs.azurebfs.constants.AbfsServiceType;
@@ -33,7 +35,6 @@ import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidConfigurationValueException;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.TrileanConversionException;
 import org.apache.hadoop.fs.azurebfs.enums.Trilean;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
@@ -50,6 +51,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.ABFS_
 import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.INCORRECT_INGRESS_TYPE;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.mockito.ArgumentMatchers.any;
+import org.junit.jupiter.api.Assertions;
 
 /**
  * Test filesystem initialization and creation.
@@ -61,19 +63,23 @@ public class ITestAzureBlobFileSystemInitAndCreate extends
     this.getConfiguration().unset(ConfigurationKeys.AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION);
   }
 
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     super.setup();
   }
 
+  @AfterEach
   @Override
   public void teardown() {
   }
 
-  @Test (expected = FileNotFoundException.class)
+  @Test
   public void ensureFilesystemWillNotBeCreatedIfCreationConfigIsNotSet() throws Exception {
-    final AzureBlobFileSystem fs = this.createFileSystem();
-    FileStatus[] fileStatuses = fs.listStatus(new Path("/"));
+      Assertions.assertThrows(FileNotFoundException.class, () -> {
+          final AzureBlobFileSystem fs = this.createFileSystem();
+          FileStatus[] fileStatuses = fs.listStatus(new Path("/"));
+      });
   }
 
   @Test
@@ -83,11 +89,7 @@ public class ITestAzureBlobFileSystemInitAndCreate extends
     AzureBlobFileSystemStore store = Mockito.spy(fs.getAbfsStore());
     AbfsClient client = Mockito.spy(fs.getAbfsStore().getClient(AbfsServiceType.DFS));
     Mockito.doReturn(client).when(store).getClient(AbfsServiceType.DFS);
-
-    Mockito.doThrow(TrileanConversionException.class)
-        .when(store)
-        .isNamespaceEnabled();
-    store.setNamespaceEnabled(Trilean.UNKNOWN);
+    store.getAbfsConfiguration().setIsNamespaceEnabledAccountForTesting(Trilean.UNKNOWN);
 
     TracingContext tracingContext = getSampleTracingContext(fs, true);
     Mockito.doReturn(Mockito.mock(AbfsRestOperation.class))

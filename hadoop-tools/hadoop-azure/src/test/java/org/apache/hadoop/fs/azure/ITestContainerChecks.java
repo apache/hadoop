@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.fs.azure;
 
-import static org.junit.jupiter.api.Assumptions.assumeFalse;
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 import java.io.FileNotFoundException;
 import java.util.EnumSet;
@@ -169,7 +169,7 @@ public class ITestContainerChecks extends AbstractWasbTestWithTimeout {
   @Test
   public void testContainerChecksWithSas() throws Exception {
 
-    assumeFalse(runningInSASMode);
+    assumeThat(runningInSASMode).isFalse();
     testAccount = AzureBlobStorageTestAccount.create("",
         EnumSet.of(CreateOptions.UseSas));
     assumeNotNull(testAccount);

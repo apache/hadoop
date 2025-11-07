@@ -153,7 +153,7 @@ public class TestMRJobs {
   @BeforeAll
   public static void setup() throws IOException {
     try {
-      dfsCluster = new MiniDFSCluster.Builder(conf).numDataNodes(2)
+      dfsCluster = new MiniDFSCluster.Builder(conf).numDataNodes(5)
         .format(true).racks(null).build();
       remoteFs = dfsCluster.getFileSystem();
     } catch (IOException io) {

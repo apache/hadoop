@@ -27,8 +27,9 @@ import org.apache.hadoop.fs.s3a.impl.UploadContentProviders;
 import org.apache.hadoop.fs.s3a.statistics.BlockOutputStreamStatistics;
 import org.apache.hadoop.io.IOUtils;
 
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -36,6 +37,7 @@ import java.net.URI;
 
 import static org.apache.hadoop.fs.StreamCapabilities.ABORTABLE_STREAM;
 import static org.apache.hadoop.fs.s3a.Constants.*;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfNotEnabled;
 import static org.apache.hadoop.fs.s3a.test.ExtraAssertions.assertCompleteAbort;
 import static org.apache.hadoop.fs.s3a.test.ExtraAssertions.assertNoopAbort;
 
@@ -51,7 +53,7 @@ public class ITestS3ABlockOutputArray extends AbstractS3ATestBase {
 
   private static byte[] dataset;
 
-  @BeforeClass
+  @BeforeAll
   public static void setupDataset() {
     dataset = ContractTestUtils.dataset(BLOCK_SIZE, 0, 256);
   }
@@ -64,6 +66,16 @@ public class ITestS3ABlockOutputArray extends AbstractS3ATestBase {
     conf.setInt(MULTIPART_SIZE, MULTIPART_MIN_SIZE);
     conf.set(FAST_UPLOAD_BUFFER, getBlockOutputBufferName());
     return conf;
+  }
+
+  @Override
+  @BeforeEach
+  public void setup() throws Exception {
+    super.setup();
+
+    skipIfNotEnabled(getFileSystem().getConf(),
+        MULTIPART_UPLOADS_ENABLED,
+        "Store has disabled multipart uploads; skipping tests");
   }
 
   protected String getBlockOutputBufferName() {
@@ -80,19 +92,21 @@ public class ITestS3ABlockOutputArray extends AbstractS3ATestBase {
     verifyUpload("regular", 1024);
   }
 
-  @Test(expected = IOException.class)
+  @Test
   public void testWriteAfterStreamClose() throws Throwable {
-    Path dest = path("testWriteAfterStreamClose");
-    describe(" testWriteAfterStreamClose");
-    FSDataOutputStream stream = getFileSystem().create(dest, true);
-    byte[] data = ContractTestUtils.dataset(16, 'a', 26);
-    try {
-      stream.write(data);
-      stream.close();
-      stream.write(data);
-    } finally {
-      IOUtils.closeStream(stream);
-    }
+    assertThrows(IOException.class, () -> {
+      Path dest = path("testWriteAfterStreamClose");
+      describe(" testWriteAfterStreamClose");
+      FSDataOutputStream stream = getFileSystem().create(dest, true);
+      byte[] data = ContractTestUtils.dataset(16, 'a', 26);
+      try {
+        stream.write(data);
+        stream.close();
+        stream.write(data);
+      } finally {
+        IOUtils.closeStream(stream);
+      }
+    });
   }
 
   @Test
@@ -106,10 +120,10 @@ public class ITestS3ABlockOutputArray extends AbstractS3ATestBase {
     stream.write(data);
     LOG.info("closing output stream");
     stream.close();
-    assertEquals("total allocated blocks in " + statistics,
-        1, statistics.getBlocksAllocated());
-    assertEquals("actively allocated blocks in " + statistics,
-        0, statistics.getBlocksActivelyAllocated());
+    assertEquals(1, statistics.getBlocksAllocated(),
+        "total allocated blocks in " + statistics);
+    assertEquals(0, statistics.getBlocksActivelyAllocated(),
+        "actively allocated blocks in " + statistics);
     LOG.info("end of test case");
   }
 

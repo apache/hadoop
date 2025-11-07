@@ -29,12 +29,12 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Consumer;
 
-import org.junit.Assume;
-import org.junit.FixMethodOrder;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.MethodSorters;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.MethodOrderer;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestMethodOrder;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,13 +50,18 @@ import org.apache.hadoop.fs.s3a.commit.CommitConstants;
 import org.apache.hadoop.fs.s3a.commit.magic.MagicS3GuardCommitter;
 import org.apache.hadoop.fs.s3a.commit.staging.DirectoryStagingCommitter;
 import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.test.tags.ScaleTest;
 import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
 import static java.util.Optional.empty;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.assumeMultipartUploads;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.lsR;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
+
 
 /**
  * Runs Terasort against S3A.
@@ -72,8 +77,10 @@ import static org.apache.hadoop.fs.s3a.S3ATestUtils.lsR;
  * Before anyone calls that out as slow: try running the test with the file
  * committer.
  */
-@FixMethodOrder(MethodSorters.NAME_ASCENDING)
-@RunWith(Parameterized.class)
+@ScaleTest
+@ParameterizedClass(name="-{0}")
+@TestMethodOrder(MethodOrderer.Alphanumeric.class)
+@MethodSource("params")
 @SuppressWarnings("StaticNonFinalField")
 public class ITestTerasortOnS3A extends AbstractYarnClusterITest {
 
@@ -120,7 +127,6 @@ public class ITestTerasortOnS3A extends AbstractYarnClusterITest {
    *
    * @return the committer binding for this run.
    */
-  @Parameterized.Parameters(name = "{0}-memory={1}")
   public static Collection<Object[]> params() {
     return Arrays.asList(new Object[][]{
         {DirectoryStagingCommitter.NAME, false},
@@ -138,10 +144,12 @@ public class ITestTerasortOnS3A extends AbstractYarnClusterITest {
     return committerName;
   }
 
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     super.setup();
     requireScaleTestsEnabled();
+    assumeMultipartUploads(getFileSystem().getConf());
     prepareToTerasort();
   }
 
@@ -212,9 +220,8 @@ public class ITestTerasortOnS3A extends AbstractYarnClusterITest {
    * @param stage stage name
    */
   private static void requireStage(final String stage) {
-    Assume.assumeTrue(
-        "Required stage was not completed: " + stage,
-        completedStages.get(stage) != null);
+    assumeTrue(completedStages.get(stage) != null,
+        "Required stage was not completed: " + stage);
   }
 
   /**
@@ -243,9 +250,11 @@ public class ITestTerasortOnS3A extends AbstractYarnClusterITest {
       d.close();
     }
     dumpOutputTree(dest);
-    assertEquals(stage
-        + "(" + StringUtils.join(", ", args) + ")"
-        + " failed", 0, result);
+    assertThat(result)
+        .describedAs(stage
+            + "(" + StringUtils.join(", ", args) + ")"
+            + " failed")
+        .isEqualTo(0);
     validateSuccessFile(dest, committerName(), getFileSystem(), stage,
         minimumFileCount, "");
     completedStage(stage, d);

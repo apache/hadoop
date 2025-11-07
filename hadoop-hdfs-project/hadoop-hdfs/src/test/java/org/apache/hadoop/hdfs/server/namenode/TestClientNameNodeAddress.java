@@ -20,36 +20,31 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.*;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
-import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.*;
-
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 /**
  * Test that {@link NameNodeUtils#getClientNamenodeAddress}  correctly
  * computes the client address for WebHDFS redirects for different
  * combinations of HA, federated and single NN setups.
  */
+@Timeout(300)
 public class TestClientNameNodeAddress {
   public static final Logger LOG = LoggerFactory.getLogger(
       TestClientNameNodeAddress.class);
-
-  @Rule
-  public Timeout globalTimeout = new Timeout(300000);
 
   @Test
   public void testSimpleConfig() {
     final Configuration conf = new HdfsConfiguration();
     conf.set(FS_DEFAULT_NAME_KEY, "hdfs://host1:100");
-    assertThat(NameNodeUtils.getClientNamenodeAddress(conf, null),
-        is("host1:100"));
+    assertThat(NameNodeUtils.getClientNamenodeAddress(conf, null)).isEqualTo("host1:100");
   }
 
   @Test
@@ -81,12 +76,10 @@ public class TestClientNameNodeAddress {
     conf.set(DFS_HA_NAMENODES_KEY_PREFIX + ".ns2", "nn1,nn2");
 
     // The current namenode belongs to ns1 and ns1 is the default nameservice.
-    assertThat(NameNodeUtils.getClientNamenodeAddress(conf, "ns1"),
-        is("ns1"));
+    assertThat(NameNodeUtils.getClientNamenodeAddress(conf, "ns1")).isEqualTo("ns1");
 
     // The current namenode belongs to ns2 and ns1 is the default nameservice.
-    assertThat(NameNodeUtils.getClientNamenodeAddress(conf, "ns2"),
-        is("ns2"));
+    assertThat(NameNodeUtils.getClientNamenodeAddress(conf, "ns2")).isEqualTo("ns2");
   }
 
   @Test
@@ -96,9 +89,7 @@ public class TestClientNameNodeAddress {
     conf.set(DFS_NAMESERVICES, "ns1,ns2");
     conf.set(DFS_NAMENODE_RPC_ADDRESS_KEY + ".ns1", "host1:100");
     conf.set(DFS_NAMENODE_RPC_ADDRESS_KEY + ".ns2", "host2:200");
-    assertThat(NameNodeUtils.getClientNamenodeAddress(conf, "ns1"),
-        is("host1:100"));
-    assertThat(NameNodeUtils.getClientNamenodeAddress(conf, "ns2"),
-        is("host2:200"));
+    assertThat(NameNodeUtils.getClientNamenodeAddress(conf, "ns1")).isEqualTo("host1:100");
+    assertThat(NameNodeUtils.getClientNamenodeAddress(conf, "ns2")).isEqualTo("host2:200");
   }
 }

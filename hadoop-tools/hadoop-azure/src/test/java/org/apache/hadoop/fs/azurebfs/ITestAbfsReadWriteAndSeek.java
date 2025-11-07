@@ -21,9 +21,9 @@ package org.apache.hadoop.fs.azurebfs;
 import java.util.Arrays;
 import java.util.Random;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -47,7 +47,8 @@ import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.logIOStatistic
  * Uses package-private methods in AbfsConfiguration, which is why it is in
  * this package.
  */
-@RunWith(Parameterized.class)
+@ParameterizedClass(name="Size={0}-readahead={1}-Client={2}")
+@MethodSource("sizes")
 public class ITestAbfsReadWriteAndSeek extends AbstractAbfsScaleTest {
   private static final String TEST_PATH = "/testfile";
 
@@ -56,7 +57,6 @@ public class ITestAbfsReadWriteAndSeek extends AbstractAbfsScaleTest {
    * For test performance, a full x*y test matrix is not used.
    * @return the test parameters
    */
-  @Parameterized.Parameters(name = "Size={0}-readahead={1}-Client={2}")
   public static Iterable<Object[]> sizes() {
     return Arrays.asList(new Object[][]{
         {
@@ -172,7 +172,7 @@ public class ITestAbfsReadWriteAndSeek extends AbstractAbfsScaleTest {
     }
     logIOStatisticsAtLevel(LOG, IOSTATISTICS_LOGGING_LEVEL_INFO, statisticsSource);
 
-    assertNotEquals("data read in final read()", -1, result);
+    assertNotEquals(-1, result, "data read in final read()");
     assertArrayEquals(readBuffer, b);
   }
 

@@ -741,7 +741,14 @@ public class NodeAttributesManagerImpl extends NodeAttributesManager {
     if (host == null || host.attributes == null) {
       return;
     }
-    newNodeToAttributesMap.put(hostName, host.attributes.keySet());
+    // Use read lock and create defensive copy since
+    // other threads might access host.attributes
+    readLock.lock();
+    try {
+      newNodeToAttributesMap.put(hostName, new HashSet<>(host.attributes.keySet()));
+    } finally {
+      readLock.unlock();
+    }
 
     // Notify RM
     if (rmContext != null && rmContext.getDispatcher() != null) {

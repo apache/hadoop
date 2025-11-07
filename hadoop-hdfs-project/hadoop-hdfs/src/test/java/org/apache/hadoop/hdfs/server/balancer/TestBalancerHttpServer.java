@@ -22,9 +22,9 @@ import java.net.InetSocketAddress;
 import java.net.URL;
 import java.net.URLConnection;
 
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
@@ -35,7 +35,7 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
 import org.apache.hadoop.test.GenericTestUtils;
 
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestBalancerHttpServer {
   private static final String BASEDIR =
@@ -45,7 +45,7 @@ public class TestBalancerHttpServer {
   private static Configuration conf;
   private static URLConnectionFactory connectionFactory;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     conf = new Configuration();
     conf.set(DFSConfigKeys.DFS_HTTP_POLICY_KEY, HttpConfig.Policy.HTTP_ONLY.name());
@@ -60,7 +60,7 @@ public class TestBalancerHttpServer {
     connectionFactory = URLConnectionFactory.newDefaultURLConnectionFactory(conf);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     FileUtil.fullyDelete(new File(BASEDIR));
     KeyStoreTestUtil.cleanupSSLConfig(keystoresDir, sslConfDir);

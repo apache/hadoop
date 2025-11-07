@@ -69,6 +69,7 @@ public final class HttpHeaderConfigurations {
   public static final String X_MS_LEASE_ACTION = "x-ms-lease-action";
   public static final String X_MS_LEASE_DURATION = "x-ms-lease-duration";
   public static final String X_MS_LEASE_ID = "x-ms-lease-id";
+  public static final String X_MS_REQUEST_PRIORITY = "x-ms-request-priority";
 
   /**
    * Http Request Header for denoting the lease id of source in copy operation.

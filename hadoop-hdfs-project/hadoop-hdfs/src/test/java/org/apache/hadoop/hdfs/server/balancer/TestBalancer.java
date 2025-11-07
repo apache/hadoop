@@ -43,14 +43,14 @@ import java.lang.reflect.Field;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicyWithNodeGroup;
 import org.apache.hadoop.net.NetworkTopologyWithNodeGroup;
-import org.junit.AfterClass;
+import org.junit.jupiter.api.AfterAll;
 
 import static org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset.CONFIG_PROPERTY_NONDFSUSED;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-import static org.junit.Assert.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyLong;
 import static org.mockito.Mockito.doAnswer;
@@ -79,8 +79,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.lang3.StringUtils;
-import org.junit.Assert;
-import org.junit.Before;
+import org.junit.jupiter.api.BeforeEach;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
@@ -128,8 +127,9 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.Tool;
 import org.slf4j.event.Level;
-import org.junit.After;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
@@ -162,14 +162,14 @@ public class TestBalancer {
   private AtomicLong startGetBlocksTime;
   private AtomicLong endGetBlocksTime;
 
-  @Before
+  @BeforeEach
   public void setup() {
     numGetBlocksCalls = new AtomicInteger(0);
     startGetBlocksTime = new AtomicLong(Long.MAX_VALUE);
     endGetBlocksTime = new AtomicLong(Long.MIN_VALUE);
   }
 
-  @After
+  @AfterEach
   public void shutdown() throws Exception {
     if (cluster != null) {
       cluster.shutdown();
@@ -242,8 +242,8 @@ public class TestBalancer {
         UserGroupInformation.AuthenticationMethod.KERBEROS, conf);
     UserGroupInformation.setConfiguration(conf);
     KerberosName.resetDefaultRealm();
-    assertTrue("Expected configuration to enable security",
-        UserGroupInformation.isSecurityEnabled());
+    assertTrue(UserGroupInformation.isSecurityEnabled(),
+        "Expected configuration to enable security");
 
     keytabFile = new File(baseDir, username + ".keytab");
     String keytab = keytabFile.getAbsolutePath();
@@ -282,7 +282,7 @@ public class TestBalancer {
     initConf(conf);
   }
 
-  @AfterClass
+  @AfterAll
   public static void destroy() throws Exception {
     if (kdc != null) {
       kdc.stop();
@@ -543,7 +543,7 @@ public class TestBalancer {
           break;
         }
       }
-      assertEquals(expectedExcludedNodes,actualExcludedNodeCount);
+      assertEquals(expectedExcludedNodes, actualExcludedNodeCount);
     } while (!balanced);
   }
 
@@ -1044,7 +1044,7 @@ public class TestBalancer {
     tool.setConf(conf);
     final int r = tool.run(args.toArray(new String[0])); // start rebalancing
 
-    assertEquals("Tools should exit 0 on success", 0, r);
+    assertEquals(0, r, "Tools should exit 0 on success");
     waitForHeartBeat(totalDfsUsedSpace, totalCapacity, client, cluster);
     LOG.info("Rebalancing with default ctor.");
     long totalUsedSpace = totalDfsUsedSpace + totalNonDfsUsedSpace;
@@ -1077,7 +1077,8 @@ public class TestBalancer {
     oneNodeTest(conf, false);
   }
 
-  @Test(timeout = 100000)
+  @Test
+  @Timeout(value = 100)
   public void testUnknownDatanodeSimple() throws Exception {
     Configuration conf = new HdfsConfiguration();
     initConf(conf);
@@ -1147,7 +1148,8 @@ public class TestBalancer {
    * Test parse method in Balancer#Cli class with threshold value out of
    * boundaries.
    */
-  @Test(timeout=100000)
+  @Test
+  @Timeout(value = 100)
   public void testBalancerCliParseWithThresholdOutOfBoundaries() {
     String parameters[] = new String[] { "-threshold", "0" };
     String reason = "IllegalArgumentException is expected when threshold value"
@@ -1169,7 +1171,8 @@ public class TestBalancer {
 
   /** Test a cluster with even distribution,
    * then a new empty node is added to the cluster*/
-  @Test(timeout=100000)
+  @Test
+  @Timeout(value = 100)
   public void testBalancer0() throws Exception {
     testBalancer0Internal(new HdfsConfiguration());
   }
@@ -1181,7 +1184,8 @@ public class TestBalancer {
   }
 
   /** Test unevenly distributed cluster */
-  @Test(timeout=100000)
+  @Test
+  @Timeout(value = 100)
   public void testBalancer1() throws Exception {
     testBalancer1Internal(new HdfsConfiguration());
   }
@@ -1194,21 +1198,25 @@ public class TestBalancer {
         new String[]{RACK0, RACK1});
   }
 
-  @Test(expected=HadoopIllegalArgumentException.class)
+  @Test
   public void testBalancerWithZeroThreadsForMove() throws Exception {
-    Configuration conf = new HdfsConfiguration();
-    conf.setInt(DFSConfigKeys.DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_KEY, 0);
-    testBalancer1Internal (conf);
+    assertThrows(HadoopIllegalArgumentException.class, () -> {
+      Configuration conf = new HdfsConfiguration();
+      conf.setInt(DFSConfigKeys.DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_KEY, 0);
+      testBalancer1Internal(conf);
+    });
   }
 
-  @Test(timeout=100000)
+  @Test
+  @Timeout(value = 100)
   public void testBalancerWithNonZeroThreadsForMove() throws Exception {
     Configuration conf = new HdfsConfiguration();
     conf.setInt(DFSConfigKeys.DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_KEY, 8);
     testBalancer1Internal(conf);
   }
 
-  @Test(timeout=100000)
+  @Test
+  @Timeout(value = 100)
   public void testBalancer2() throws Exception {
     testBalancer2Internal(new HdfsConfiguration());
   }
@@ -1221,7 +1229,8 @@ public class TestBalancer {
 
   /** Test a cluster with even distribution,
    * then a new node with nonDfsUsed is added to the cluster. */
-  @Test(timeout=100000)
+  @Test
+  @Timeout(value = 100)
   public void testBalancer3() throws Exception {
     Configuration conf = new HdfsConfiguration();
     initConf(conf);
@@ -1266,7 +1275,8 @@ public class TestBalancer {
   /**
    * Test parse method in Balancer#Cli class with wrong number of params
    */
-  @Test(timeout=100000)
+  @Test
+  @Timeout(value = 100)
   public void testBalancerCliParseWithWrongParams() {
     String parameters[] = new String[] { "-threshold" };
     String reason =
@@ -1448,14 +1458,15 @@ public class TestBalancer {
       Object hotBlockTimeInterval = field1.get(dispatcher);
       assertEquals(1000, (long)hotBlockTimeInterval);
     } catch (Exception e) {
-      Assert.fail(e.getMessage());
+      fail(e.getMessage());
     }
   }
 
   /**
    * Verify balancer exits 0 on success.
    */
-  @Test(timeout=100000)
+  @Test
+  @Timeout(value = 100)
   public void testExitZeroOnSuccess() throws Exception {
     final Configuration conf = new HdfsConfiguration();
 
@@ -1469,7 +1480,8 @@ public class TestBalancer {
    * then three nodes are added to the cluster,
    * runs balancer with two of the nodes in the exclude list
    */
-  @Test(timeout=100000)
+  @Test
+  @Timeout(value = 100)
   public void testBalancerWithExcludeList() throws Exception {
     final Configuration conf = new HdfsConfiguration();
     initConf(conf);
@@ -1487,7 +1499,8 @@ public class TestBalancer {
    * then three nodes are added to the cluster,
    * runs balancer with two of the nodes in the exclude list
    */
-  @Test(timeout=100000)
+  @Test
+  @Timeout(value = 100)
   public void testBalancerWithExcludeListWithPorts() throws Exception {
     final Configuration conf = new HdfsConfiguration();
     initConf(conf);
@@ -1500,7 +1513,8 @@ public class TestBalancer {
    * then three nodes are added to the cluster,
    * runs balancer with two of the nodes in the exclude list
    */
-  @Test(timeout=100000)
+  @Test
+  @Timeout(value = 100)
   public void testBalancerCliWithExcludeList() throws Exception {
     final Configuration conf = new HdfsConfiguration();
     initConf(conf);
@@ -1519,7 +1533,8 @@ public class TestBalancer {
    * then three nodes are added to the cluster,
    * runs balancer with two of the nodes in the exclude list
    */
-  @Test(timeout=100000)
+  @Test
+  @Timeout(value = 100)
   public void testBalancerCliWithExcludeListWithPorts() throws Exception {
     final Configuration conf = new HdfsConfiguration();
     initConf(conf);
@@ -1532,7 +1547,8 @@ public class TestBalancer {
    * then three nodes are added to the cluster,
    * runs balancer with two of the nodes in the exclude list in a file
    */
-  @Test(timeout=100000)
+  @Test
+  @Timeout(value = 100)
   public void testBalancerCliWithExcludeListInAFile() throws Exception {
     final Configuration conf = new HdfsConfiguration();
     initConf(conf);
@@ -1550,7 +1566,8 @@ public class TestBalancer {
    * then three nodes are added to the cluster,
    * runs balancer with two of the nodes in the exclude list
    */
-  @Test(timeout=100000)
+  @Test
+  @Timeout(value = 100)
   public void testBalancerCliWithExcludeListWithPortsInAFile() throws Exception {
     final Configuration conf = new HdfsConfiguration();
     initConf(conf);
@@ -1563,7 +1580,8 @@ public class TestBalancer {
    * then three nodes are added to the cluster,
    * runs balancer with two of the nodes in the include list
    */
-  @Test(timeout=100000)
+  @Test
+  @Timeout(value = 100)
   public void testBalancerWithIncludeList() throws Exception {
     final Configuration conf = new HdfsConfiguration();
     initConf(conf);
@@ -1580,7 +1598,8 @@ public class TestBalancer {
    * then three nodes are added to the cluster,
    * runs balancer with two of the nodes in the include list
    */
-  @Test(timeout=100000)
+  @Test
+  @Timeout(value = 100)
   public void testBalancerWithIncludeListWithPorts() throws Exception {
     final Configuration conf = new HdfsConfiguration();
     initConf(conf);
@@ -1593,7 +1612,8 @@ public class TestBalancer {
    * then three nodes are added to the cluster,
    * runs balancer with two of the nodes in the include list
    */
-  @Test(timeout=100000)
+  @Test
+  @Timeout(value = 100)
   public void testBalancerCliWithIncludeList() throws Exception {
     final Configuration conf = new HdfsConfiguration();
     initConf(conf);
@@ -1610,7 +1630,8 @@ public class TestBalancer {
    * then three nodes are added to the cluster,
    * runs balancer with two of the nodes in the include list
    */
-  @Test(timeout=100000)
+  @Test
+  @Timeout(value = 100)
   public void testBalancerCliWithIncludeListWithPorts() throws Exception {
     final Configuration conf = new HdfsConfiguration();
     initConf(conf);
@@ -1623,7 +1644,8 @@ public class TestBalancer {
    * then three nodes are added to the cluster,
    * runs balancer with two of the nodes in the include list
    */
-  @Test(timeout=100000)
+  @Test
+  @Timeout(value = 100)
   public void testBalancerCliWithIncludeListInAFile() throws Exception {
     final Configuration conf = new HdfsConfiguration();
     initConf(conf);
@@ -1640,7 +1662,8 @@ public class TestBalancer {
    * then three nodes are added to the cluster,
    * runs balancer with two of the nodes in the include list
    */
-  @Test(timeout=100000)
+  @Test
+  @Timeout(value = 100)
   public void testBalancerCliWithIncludeListWithPortsInAFile() throws Exception {
     final Configuration conf = new HdfsConfiguration();
     initConf(conf);
@@ -1651,7 +1674,8 @@ public class TestBalancer {
   /**
    * Test a cluster with BlockPlacementPolicyWithNodeGroup
    */
-  @Test(timeout=100000)
+  @Test
+  @Timeout(value = 100)
   public void testBalancerCliWithBlockPlacementPolicyWithNodeGroup() throws Exception {
     Configuration conf = new HdfsConfiguration();
     initConf(conf);
@@ -1667,7 +1691,8 @@ public class TestBalancer {
   /**
    * Check that the balancer exits when there is an unfinalized upgrade.
    */
-  @Test(timeout=300000)
+  @Test
+  @Timeout(value = 300)
   public void testBalancerDuringUpgrade() throws Exception {
     final int SEED = 0xFADED;
     Configuration conf = new HdfsConfiguration();
@@ -1737,7 +1762,8 @@ public class TestBalancer {
    * Case-2: When running second balancer 'balancer.id' file exists but the
    * lease doesn't exists. Now, the second balancer should run successfully.
    */
-  @Test(timeout = 100000)
+  @Test
+  @Timeout(value = 100)
   public void testManyBalancerSimultaneously() throws Exception {
     final Configuration conf = new HdfsConfiguration();
     initConf(conf);
@@ -1778,25 +1804,25 @@ public class TestBalancer {
         .create(Balancer.BALANCER_ID_PATH, false);
     out.writeBytes(InetAddress.getLocalHost().getHostName());
     out.hflush();
-    assertTrue("'balancer.id' file doesn't exist!",
-        fs.exists(Balancer.BALANCER_ID_PATH));
+    assertTrue(fs.exists(Balancer.BALANCER_ID_PATH),
+        "'balancer.id' file doesn't exist!");
 
     // start second balancer
     final String[] args = { "-policy", "datanode" };
     final Tool tool = new Cli();
     tool.setConf(conf);
     int exitCode = tool.run(args); // start balancing
-    assertEquals("Exit status code mismatches",
-        ExitStatus.IO_EXCEPTION.getExitCode(), exitCode);
+    assertEquals(ExitStatus.IO_EXCEPTION.getExitCode(),
+        exitCode, "Exit status code mismatches");
 
     // Case2: Release lease so that another balancer would be able to
     // perform balancing.
     out.close();
-    assertTrue("'balancer.id' file doesn't exist!",
-        fs.exists(Balancer.BALANCER_ID_PATH));
+    assertTrue(fs.exists(Balancer.BALANCER_ID_PATH),
+        "'balancer.id' file doesn't exist!");
     exitCode = tool.run(args); // start balancing
-    assertEquals("Exit status code mismatches",
-        ExitStatus.SUCCESS.getExitCode(), exitCode);
+    assertEquals(ExitStatus.SUCCESS.getExitCode(), exitCode,
+        "Exit status code mismatches");
   }
 
   public void integrationTestWithStripedFile(Configuration conf) throws Exception {
@@ -1804,7 +1830,8 @@ public class TestBalancer {
     doTestBalancerWithStripedFile(conf);
   }
 
-  @Test(timeout = 200000)
+  @Test
+  @Timeout(value = 200)
   public void testBalancerWithStripedFile() throws Exception {
     Configuration conf = new Configuration();
     initConfWithStripe(conf);
@@ -1960,7 +1987,7 @@ public class TestBalancer {
           cluster.triggerHeartbeats();
           datanodeInfos = client.getDatanodeReport(DatanodeReportType.ALL);
         } catch (IOException e) {
-          Assert.fail(e.getMessage());
+          fail(e.getMessage());
         }
         long blocksAfterBalancer = 0;
         for (DatanodeInfo dn : datanodeInfos) {
@@ -2006,7 +2033,8 @@ public class TestBalancer {
    * Test Balancer runs fine when logging in with a keytab in kerberized env.
    * Reusing testUnknownDatanode here for basic functionality testing.
    */
-  @Test(timeout = 300000)
+  @Test
+  @Timeout(value = 300)
   public void testBalancerWithKeytabs() throws Exception {
     final Configuration conf = new HdfsConfiguration();
     try {
@@ -2075,15 +2103,15 @@ public class TestBalancer {
         // also includes the time it took to perform the block move ops in the
         // first iteration
         new PortNumberBasedNodes(1, 0, 0), false, false, true, 0.5, null);
-    assertTrue("Number of getBlocks should be not less than " +
-        getBlocksMaxQps, numGetBlocksCalls.get() >= getBlocksMaxQps);
+    assertTrue(numGetBlocksCalls.get() >= getBlocksMaxQps,
+        "Number of getBlocks should be not less than " + getBlocksMaxQps);
     long durationMs = 1 + endGetBlocksTime.get() - startGetBlocksTime.get();
     int durationSec = (int) Math.ceil(durationMs / 1000.0);
     LOG.info("Balancer executed {} getBlocks in {} msec (round up to {} sec)",
         numGetBlocksCalls.get(), durationMs, durationSec);
     long getBlockCallsPerSecond = numGetBlocksCalls.get() / durationSec;
-    assertTrue("Expected balancer getBlocks calls per second <= " +
-        getBlocksMaxQps, getBlockCallsPerSecond <= getBlocksMaxQps);
+    assertTrue(getBlockCallsPerSecond <= getBlocksMaxQps,
+        "Expected balancer getBlocks calls per second <= " + getBlocksMaxQps);
   }
 
   /**
@@ -2091,7 +2119,8 @@ public class TestBalancer {
    * One of three added nodes is excluded in the target nodes list.
    * Balancer should only move blocks to the two included nodes.
    */
-  @Test(timeout=100000)
+  @Test
+  @Timeout(value = 100)
   public void testBalancerExcludeTargetNodesNoMoveBlock() throws Exception {
     final Configuration conf = new HdfsConfiguration();
     initConf(conf);
@@ -2117,7 +2146,8 @@ public class TestBalancer {
    * Two of three added nodes are included in the target nodes list.
    * Balancer should only move blocks to the included nodes.
    */
-  @Test(timeout=100000)
+  @Test
+  @Timeout(value = 100)
   public void testBalancerIncludeTargetNodesNoMoveBlock() throws Exception {
     final Configuration conf = new HdfsConfiguration();
     initConf(conf);
@@ -2144,7 +2174,8 @@ public class TestBalancer {
    * Three of three added nodes are included in the target nodes list.
    * Balancer should exit with success code.
    */
-  @Test(timeout=100000)
+  @Test
+  @Timeout(value = 100)
   public void testBalancerIncludeTargetNodesSuccess() throws Exception {
     final Configuration conf = new HdfsConfiguration();
     initConf(conf);
@@ -2166,7 +2197,8 @@ public class TestBalancer {
    * Test balancer with included source nodes.
    * Since newly added nodes are the only included source nodes no balancing will occur.
    */
-  @Test(timeout=100000)
+  @Test
+  @Timeout(value = 100)
   public void testBalancerIncludeSourceNodesNoMoveBlock() throws Exception {
     final Configuration conf = new HdfsConfiguration();
     initConf(conf);
@@ -2194,7 +2226,8 @@ public class TestBalancer {
    * Since newly added nodes will not be selected as a source,
    * all nodes will be included in balancing.
    */
-  @Test(timeout=100000)
+  @Test
+  @Timeout(value = 100)
   public void testBalancerExcludeSourceNodes() throws Exception {
     final Configuration conf = new HdfsConfiguration();
     initConf(conf);

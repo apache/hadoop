@@ -26,9 +26,9 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.namenode.FSImageTestUtil;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,7 +39,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Tests OfflineImageViewer if the input fsimage has HDFS ErasureCodingPolicy
@@ -57,7 +57,7 @@ public class TestOfflineImageViewerForErasureCodingPolicy {
    * Create a populated namespace for later testing. Save its contents to a
    * data structure and store its fsimage location.
    */
-  @BeforeClass
+  @BeforeAll
   public static void createOriginalFSImage() throws IOException {
     MiniDFSCluster cluster = null;
     try {
@@ -137,7 +137,7 @@ public class TestOfflineImageViewerForErasureCodingPolicy {
     }
   }
 
-  @AfterClass
+  @AfterAll
   public static void deleteOriginalFSImage() throws IOException {
     if (originalFsimage != null && originalFsimage.exists()) {
       originalFsimage.delete();

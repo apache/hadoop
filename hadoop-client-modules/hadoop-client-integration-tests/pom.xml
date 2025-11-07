@@ -43,11 +43,6 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter-api</artifactId>
       <scope>test</scope>
@@ -164,7 +159,6 @@
                   <goal>verify</goal>
                 </goals>
                 <configuration>
-                  <trimStackTrace>false</trimStackTrace>
                 </configuration>
               </execution>
             </executions>

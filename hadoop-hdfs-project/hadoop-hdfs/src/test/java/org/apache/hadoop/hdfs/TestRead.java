@@ -35,15 +35,16 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.log4j.Level;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSTestUtil.ShortCircuitTestContext;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -51,9 +52,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_MAX_BLOCK_ACQUIRE_FAILURES_KEY;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
-
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class TestRead {
   static final private int BLOCK_SIZE = 512;
@@ -64,7 +64,7 @@ public class TestRead {
   private final GenericTestUtils.LogCapturer dfsClientLog =
       GenericTestUtils.LogCapturer.captureLogs(DFSClient.LOG);
 
-  @BeforeClass
+  @BeforeAll
   public static void setLogLevel() {
     GenericTestUtils.setLogLevel(DFSClient.LOG, Level.WARN);
   }
@@ -76,19 +76,20 @@ public class TestRead {
     FSDataInputStream fis = fs.open(path);
     ByteBuffer empty = ByteBuffer.allocate(0);
     // A read into an empty bytebuffer at the beginning of the file gives 0.
-    Assert.assertEquals(0, fis.read(empty));
+    Assertions.assertEquals(0, fis.read(empty));
     fis.seek(fileLength);
     // A read into an empty bytebuffer at the end of the file gives -1.
-    Assert.assertEquals(-1, fis.read(empty));
+    Assertions.assertEquals(-1, fis.read(empty));
     if (fileLength > BLOCK_SIZE) {
       fis.seek(fileLength - BLOCK_SIZE + 1);
       ByteBuffer dbb = ByteBuffer.allocateDirect(BLOCK_SIZE);
-      Assert.assertEquals(BLOCK_SIZE - 1, fis.read(dbb));
+      Assertions.assertEquals(BLOCK_SIZE - 1, fis.read(dbb));
     }
     fis.close();
   }
 
-  @Test(timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testEOFWithBlockReaderLocal() throws Exception {
     ShortCircuitTestContext testContext = 
         new ShortCircuitTestContext("testEOFWithBlockReaderLocal");
@@ -106,7 +107,8 @@ public class TestRead {
     }
   }
 
-  @Test(timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testEOFWithRemoteBlockReader() throws Exception {
     final Configuration conf = new Configuration();
     conf.setLong(HdfsClientConfigKeys.DFS_CLIENT_CACHE_READAHEAD, BLOCK_SIZE);
@@ -123,7 +125,8 @@ public class TestRead {
    * If deadlock happen, the test will time out.
    * @throws Exception
    */
-  @Test(timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testReadReservedPath() throws Exception {
     Configuration conf = new Configuration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).
@@ -131,7 +134,7 @@ public class TestRead {
     try {
       FileSystem fs = cluster.getFileSystem();
       fs.open(new Path("/.reserved/.inodes/file"));
-      Assert.fail("Open a non existing file should fail.");
+      Assertions.fail("Open a non existing file should fail.");
     } catch (FileNotFoundException e) {
       // Expected
     } finally {
@@ -139,7 +142,8 @@ public class TestRead {
     }
   }
 
-  @Test(timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testInterruptReader() throws Exception {
     final Configuration conf = new HdfsConfiguration();
     conf.set(DFSConfigKeys.DFS_DATANODE_FSDATASET_FACTORY_KEY,
@@ -174,7 +178,7 @@ public class TestRead {
       reader.interrupt();
       reader.join();
 
-      Assert.assertTrue(readInterrupted.get());
+      Assertions.assertTrue(readInterrupted.get());
     } finally {
       cluster.shutdown();
     }
@@ -220,7 +224,8 @@ public class TestRead {
    * Test logging in readBuffer() when the number of IOExceptions can be recovered by retrying on
    * a different datanode or by refreshing data nodes and retrying each data node one more time.
    */
-  @Test(timeout=120000)
+  @Test
+  @Timeout(value = 120)
   public void testReadBufferIOExceptionLogging() throws IOException {
     testReadBufferIOExceptionLogging(0, 0);
     testReadBufferIOExceptionLogging(1, 0);
@@ -283,7 +288,8 @@ public class TestRead {
   /**
    * Test the case where we always hit IOExceptions, causing the read request to fail.
    */
-  @Test(timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testReadBufferIOExceptionLoggingFailedRequest() throws IOException {
     testReadBufferIOExceptionLoggingFailedRequest(0);
     testReadBufferIOExceptionLoggingFailedRequest(1);

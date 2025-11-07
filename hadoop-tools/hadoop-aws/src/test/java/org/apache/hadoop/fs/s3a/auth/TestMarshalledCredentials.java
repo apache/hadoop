@@ -22,8 +22,8 @@ import java.net.URI;
 import java.net.URISyntaxException;
 
 import software.amazon.awssdk.auth.credentials.AwsCredentials;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.S3AEncryptionMethods;
@@ -44,7 +44,7 @@ public class TestMarshalledCredentials extends HadoopTestBase {
 
   private URI bucketURI;
 
-  @Before
+  @BeforeEach
   public void createSessionToken() throws URISyntaxException {
     bucketURI = new URI("s3a://bucket1");
     credentials = new MarshalledCredentials("accessKey",
@@ -84,7 +84,7 @@ public class TestMarshalledCredentials extends HadoopTestBase {
         "encryptionContext");
     EncryptionSecrets result = S3ATestUtils.roundTrip(secrets,
         new Configuration());
-    assertEquals("round trip", secrets, result);
+    assertEquals(secrets, result, "round trip");
   }
 
   @Test
@@ -96,12 +96,10 @@ public class TestMarshalledCredentials extends HadoopTestBase {
         credentials,
         MarshalledCredentials.CredentialTypeRequired.SessionOnly);
     AwsCredentials aws = provider.resolveCredentials();
-    assertEquals(credentials.toString(),
-        credentials.getAccessKey(),
-        aws.accessKeyId());
-    assertEquals(credentials.toString(),
-        credentials.getSecretKey(),
-        aws.secretAccessKey());
+    assertEquals(credentials.getAccessKey(),
+        aws.accessKeyId(), credentials.toString());
+    assertEquals(credentials.getSecretKey(),
+        aws.secretAccessKey(), credentials.toString());
     // because the credentials are set to full only, creation will fail
   }
 

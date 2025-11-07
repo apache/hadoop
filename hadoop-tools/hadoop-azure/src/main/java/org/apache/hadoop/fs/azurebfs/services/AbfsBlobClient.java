@@ -59,6 +59,7 @@ import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.ApiVersion;
+import org.apache.hadoop.fs.azurebfs.constants.AbfsServiceType;
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams;
@@ -129,6 +130,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.XML_TAG_
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.XML_TAG_BLOCK_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.XML_TAG_COMMITTED_BLOCKS;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.XML_TAG_HDI_ISFOLDER;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.XML_TAG_HDI_PERMISSION;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.XML_TAG_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.XML_VERSION;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.XMS_PROPERTIES_ENCODING_ASCII;
@@ -187,7 +189,7 @@ public class AbfsBlobClient extends AbfsClient {
       final EncryptionContextProvider encryptionContextProvider,
       final AbfsClientContext abfsClientContext) throws IOException {
     super(baseUrl, sharedKeyCredentials, abfsConfiguration, tokenProvider,
-        encryptionContextProvider, abfsClientContext);
+        encryptionContextProvider, abfsClientContext, AbfsServiceType.BLOB);
     this.azureAtomicRenameDirSet = new HashSet<>(Arrays.asList(
         abfsConfiguration.getAzureAtomicRenameDirs()
             .split(AbfsHttpConstants.COMMA)));
@@ -200,7 +202,7 @@ public class AbfsBlobClient extends AbfsClient {
       final EncryptionContextProvider encryptionContextProvider,
       final AbfsClientContext abfsClientContext) throws IOException {
     super(baseUrl, sharedKeyCredentials, abfsConfiguration, sasTokenProvider,
-        encryptionContextProvider, abfsClientContext);
+        encryptionContextProvider, abfsClientContext, AbfsServiceType.BLOB);
     this.azureAtomicRenameDirSet = new HashSet<>(Arrays.asList(
         abfsConfiguration.getAzureAtomicRenameDirs()
             .split(AbfsHttpConstants.COMMA)));
@@ -508,9 +510,34 @@ public class AbfsBlobClient extends AbfsClient {
       final TracingContext tracingContext) throws AzureBlobFileSystemException {
     AbfsRestOperation op;
     if (isFileCreation) {
-      // Create a file with the specified parameters
-      op = createFile(path, overwrite, permissions, isAppendBlob, eTag,
-          contextEncryptionAdapter, tracingContext);
+      if (getAbfsConfiguration().getIsCreateIdempotencyEnabled()) {
+        AbfsRestOperation statusOp = null;
+        try {
+          // Check if the file already exists by calling GetPathStatus
+          statusOp = getPathStatus(path, tracingContext, null, false);
+        } catch (AbfsRestOperationException ex) {
+          // If the path does not exist, continue with file creation
+          // For other errors, rethrow the exception
+          if (ex.getStatusCode() != HTTP_NOT_FOUND) {
+            throw ex;
+          }
+        }
+        // If the file exists and overwrite is not allowed, throw conflict
+        if (statusOp != null && statusOp.hasResult() && !overwrite) {
+          throw new AbfsRestOperationException(
+              HTTP_CONFLICT,
+              AzureServiceErrorCode.PATH_CONFLICT.getErrorCode(),
+              PATH_EXISTS,
+              null);
+        } else {
+          // Proceed with file creation (force overwrite = true)
+          op = createFile(path, true, permissions, isAppendBlob, eTag,
+              contextEncryptionAdapter, tracingContext);
+        }
+      } else {
+        op = createFile(path, overwrite, permissions, isAppendBlob, eTag,
+            contextEncryptionAdapter, tracingContext);
+      }
     } else {
       // Create a directory with the specified parameters
       op = createDirectory(path, permissions, isAppendBlob, eTag,
@@ -531,7 +558,7 @@ public class AbfsBlobClient extends AbfsClient {
    *
    * @throws AzureBlobFileSystemException if an error occurs during the operation.
    */
-  protected AbfsRestOperation createMarkerAtPath(final String path,
+  public AbfsRestOperation createMarkerAtPath(final String path,
       final String eTag,
       final ContextEncryptionAdapter contextEncryptionAdapter,
       final TracingContext tracingContext) throws AzureBlobFileSystemException {
@@ -583,7 +610,6 @@ public class AbfsBlobClient extends AbfsClient {
     if (eTag != null && !eTag.isEmpty()) {
       requestHeaders.add(new AbfsHttpHeader(HttpHeaderConfigurations.IF_MATCH, eTag));
     }
-
     final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = getAbfsRestOperation(
         AbfsRestOperationType.PutBlob,
@@ -898,7 +924,7 @@ public class AbfsBlobClient extends AbfsClient {
       requestHeaders.add(new AbfsHttpHeader(EXPECT, HUNDRED_CONTINUE));
     }
     if (isChecksumValidationEnabled()) {
-      addCheckSumHeaderForWrite(requestHeaders, reqParams, buffer);
+      addCheckSumHeaderForWrite(requestHeaders, reqParams);
     }
     if (reqParams.isRetryDueToExpect()) {
       String userAgentRetry = getUserAgent();
@@ -982,6 +1008,9 @@ public class AbfsBlobClient extends AbfsClient {
     if (requestParameters.getLeaseId() != null) {
       requestHeaders.add(new AbfsHttpHeader(X_MS_LEASE_ID, requestParameters.getLeaseId()));
     }
+    if (isChecksumValidationEnabled()) {
+      addCheckSumHeaderForWrite(requestHeaders, requestParameters);
+    }
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_COMP, APPEND_BLOCK);
     String sasTokenForReuse = appendSASTokenToQuery(path, SASTokenProvider.WRITE_OPERATION, abfsUriQueryBuilder);
@@ -1021,6 +1050,7 @@ public class AbfsBlobClient extends AbfsClient {
    * @param leaseId if there is an active lease on the path.
    * @param contextEncryptionAdapter to provide encryption context.
    * @param tracingContext for tracing the server calls.
+   * @param blobMd5 the MD5 hash of the blob for integrity verification.
    * @return exception as this operation is not supported on Blob Endpoint.
    * @throws UnsupportedOperationException always.
    */
@@ -1032,7 +1062,7 @@ public class AbfsBlobClient extends AbfsClient {
       final String cachedSasToken,
       final String leaseId,
       final ContextEncryptionAdapter contextEncryptionAdapter,
-      final TracingContext tracingContext) throws AzureBlobFileSystemException {
+      final TracingContext tracingContext, String blobMd5) throws AzureBlobFileSystemException {
     throw new UnsupportedOperationException(
         "Flush without blockIds not supported on Blob Endpoint");
   }
@@ -1049,6 +1079,7 @@ public class AbfsBlobClient extends AbfsClient {
    * @param eTag The etag of the blob.
    * @param contextEncryptionAdapter to provide encryption context.
    * @param tracingContext for tracing the service call.
+   * @param blobMd5 the MD5 hash of the blob for integrity verification.
    * @return executed rest operation containing response from server.
    * @throws AzureBlobFileSystemException if rest operation fails.
    */
@@ -1060,7 +1091,7 @@ public class AbfsBlobClient extends AbfsClient {
       final String leaseId,
       final String eTag,
       ContextEncryptionAdapter contextEncryptionAdapter,
-      final TracingContext tracingContext) throws AzureBlobFileSystemException {
+      final TracingContext tracingContext, String blobMd5) throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
     addEncryptionKeyRequestHeaders(path, requestHeaders, false,
         contextEncryptionAdapter, tracingContext);
@@ -1070,9 +1101,10 @@ public class AbfsBlobClient extends AbfsClient {
     if (leaseId != null) {
       requestHeaders.add(new AbfsHttpHeader(X_MS_LEASE_ID, leaseId));
     }
-    String md5Hash = computeMD5Hash(buffer, 0, buffer.length);
-    requestHeaders.add(new AbfsHttpHeader(X_MS_BLOB_CONTENT_MD5, md5Hash));
-
+    String md5Value = (isFullBlobChecksumValidationEnabled() && blobMd5 != null)
+        ? blobMd5
+        : computeMD5Hash(buffer, 0, buffer.length);
+    requestHeaders.add(new AbfsHttpHeader(X_MS_BLOB_CONTENT_MD5, md5Value));
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_COMP, BLOCKLIST);
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_CLOSE, String.valueOf(isClose));
@@ -1097,7 +1129,12 @@ public class AbfsBlobClient extends AbfsClient {
         AbfsRestOperation op1 = getPathStatus(path, true, tracingContext,
             contextEncryptionAdapter);
         String metadataMd5 = op1.getResult().getResponseHeader(CONTENT_MD5);
-        if (!md5Hash.equals(metadataMd5)) {
+        /*
+         * Validate the response by comparing the server's MD5 metadata against either:
+         * 1. The full blob content MD5 (if full blob checksum validation is enabled), or
+         * 2. The full block ID list buffer MD5 (fallback if blob checksum validation is disabled)
+         */
+        if (md5Value != null && !md5Value.equals(metadataMd5)) {
           throw ex;
         }
         return op;
@@ -1235,8 +1272,16 @@ public class AbfsBlobClient extends AbfsClient {
       if (op.getResult().getStatusCode() == HTTP_NOT_FOUND
           && isImplicitCheckRequired && isNonEmptyDirectory(path, tracingContext)) {
         // Implicit path found.
-        // Create a marker blob at this path.
-        this.createMarkerAtPath(path, null, contextEncryptionAdapter, tracingContext);
+        // Create a marker blob at this path. Marker creation might fail due to permission issues, so we swallow exception in case of failure.
+        try {
+          this.createMarkerAtPath(path, null, contextEncryptionAdapter,
+              tracingContext);
+        } catch (AbfsRestOperationException exception) {
+          LOG.debug("Marker creation failed for path {} during getPathStatus. StatusCode: {}, ErrorCode: {}",
+              path,
+              exception.getStatusCode(),
+              exception.getErrorCode());
+        }
         AbfsRestOperation successOp = getSuccessOp(
             AbfsRestOperationType.GetPathStatus, HTTP_METHOD_HEAD,
             url, requestHeaders);
@@ -1289,6 +1334,9 @@ public class AbfsBlobClient extends AbfsClient {
         "bytes=%d-%d", position, position + bufferLength - 1));
     requestHeaders.add(rangeHeader);
     requestHeaders.add(new AbfsHttpHeader(IF_MATCH, eTag));
+
+    // Add request priority header for prefetch reads
+    addRequestPriorityForPrefetch(requestHeaders, tracingContext);
 
     // Add request header to fetch MD5 Hash of data returned by server.
     if (isChecksumValidationEnabled(requestHeaders, rangeHeader, bufferLength)) {
@@ -1914,7 +1962,11 @@ public class AbfsBlobClient extends AbfsClient {
       // AzureBlobFileSystem supports only ASCII Characters in property values.
       if (isPureASCII(value)) {
         try {
-          value = encodeMetadataAttribute(value);
+          // URL encoding this JSON metadata, set by the WASB Client during file creation, causes compatibility issues.
+          // Therefore, we need to avoid encoding this metadata.
+          if (!XML_TAG_HDI_PERMISSION.equalsIgnoreCase(entry.getKey())) {
+            value = encodeMetadataAttribute(value);
+          }
         } catch (UnsupportedEncodingException e) {
           throw new InvalidAbfsRestOperationException(e);
         }
@@ -2037,7 +2089,7 @@ public class AbfsBlobClient extends AbfsClient {
     List<FileStatus> fileStatusList = new ArrayList<>();
     // We need to loop on continuation token until we get an entry or continuation token becomes null.
     do {
-      ListResponseData listResponseData = listPath(path, false, 1, null, tracingContext, null);
+      ListResponseData listResponseData = listPath(path, false, 1, continuationToken, tracingContext, null);
       fileStatusList.addAll(listResponseData.getFileStatusList());
       continuationToken = listResponseData.getContinuationToken();
     } while (StringUtils.isNotEmpty(continuationToken) && fileStatusList.isEmpty());
@@ -2057,7 +2109,7 @@ public class AbfsBlobClient extends AbfsClient {
 
     // Split the block ID string by commas and generate XML for each block ID
     if (!blockIdString.isEmpty()) {
-      String[] blockIds = blockIdString.split(",");
+      String[] blockIds = blockIdString.split(COMMA);
       for (String blockId : blockIds) {
         stringBuilder.append(String.format(LATEST_BLOCK_FORMAT, blockId));
       }

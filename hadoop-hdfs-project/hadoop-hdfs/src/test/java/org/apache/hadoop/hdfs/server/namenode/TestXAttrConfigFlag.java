@@ -27,10 +27,12 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.io.IOUtils;
-import org.junit.After;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
+
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Tests that the configuration flag that controls support for XAttrs is off
@@ -43,10 +45,8 @@ public class TestXAttrConfigFlag {
   private MiniDFSCluster cluster;
   private DistributedFileSystem fs;
 
-  @Rule
-  public ExpectedException exception = ExpectedException.none();
 
-  @After
+  @AfterEach
   public void shutdown() throws Exception {
     IOUtils.cleanupWithLogger(null, fs);
     if (cluster != null) {
@@ -59,24 +59,21 @@ public class TestXAttrConfigFlag {
   public void testSetXAttr() throws Exception {
     initCluster(true, false);
     fs.mkdirs(PATH);
-    expectException();
-    fs.setXAttr(PATH, "user.foo", null);
+    expectException(() -> fs.setXAttr(PATH, "user.foo", null));
   }
   
   @Test
   public void testGetXAttrs() throws Exception {
     initCluster(true, false);
     fs.mkdirs(PATH);
-    expectException();
-    fs.getXAttrs(PATH);
+    expectException(() -> fs.getXAttrs(PATH));
   }
   
   @Test
   public void testRemoveXAttr() throws Exception {
     initCluster(true, false);
     fs.mkdirs(PATH);
-    expectException();
-    fs.removeXAttr(PATH, "user.foo");
+    expectException(() -> fs.removeXAttr(PATH, "user.foo"));
   }
 
   @Test
@@ -108,9 +105,9 @@ public class TestXAttrConfigFlag {
    * We expect an IOException, and we want the exception text to state the
    * configuration key that controls XAttr support.
    */
-  private void expectException() {
-    exception.expect(IOException.class);
-    exception.expectMessage(DFSConfigKeys.DFS_NAMENODE_XATTRS_ENABLED_KEY);
+  private void expectException(Executable exec) {
+    IOException ex = assertThrows(IOException.class, exec);
+    assertTrue(ex.getMessage().contains(DFSConfigKeys.DFS_NAMENODE_XATTRS_ENABLED_KEY));
   }
 
   /**

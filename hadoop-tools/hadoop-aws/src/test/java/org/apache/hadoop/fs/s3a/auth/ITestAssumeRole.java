@@ -30,12 +30,14 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import software.amazon.awssdk.auth.credentials.AwsCredentials;
 import software.amazon.awssdk.services.s3.model.MultipartUpload;
 import software.amazon.awssdk.services.sts.model.StsException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -84,6 +86,10 @@ import static org.apache.hadoop.test.LambdaTestUtils.*;
 /**
  * Tests use of assumed roles.
  * Only run if an assumed role is provided.
+ * <p>
+ * S3Express buckets only support access restrictions at the bucket level,
+ * rather than at paths underneath.
+ * All partial permission tests are disabled.
  */
 @SuppressWarnings("ThrowableNotThrown")
 public class ITestAssumeRole extends AbstractS3ATestBase {
@@ -119,6 +125,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
     return conf;
   }
 
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     super.setup();
@@ -126,6 +133,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
     uri = requireAnonymousDataPath(getConfiguration()).toUri();
   }
 
+  @AfterEach
   @Override
   public void teardown() throws Exception {
     cleanupWithLogger(LOG, roleFS);
@@ -167,7 +175,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
              = new AssumedRoleCredentialProvider(uri, conf)) {
       LOG.info("Provider is {}", provider);
       AwsCredentials credentials = provider.resolveCredentials();
-      assertNotNull("Null credentials from " + provider, credentials);
+      assertNotNull(credentials, "Null credentials from " + provider);
     }
   }
 
@@ -180,7 +188,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
              = new AssumedRoleCredentialProvider(null, conf)) {
       LOG.info("Provider is {}", provider);
       AwsCredentials credentials = provider.resolveCredentials();
-      assertNotNull("Null credentials from " + provider, credentials);
+      assertNotNull(credentials, "Null credentials from " + provider);
     }
   }
 
@@ -197,9 +205,6 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
     conf.set(ASSUMED_ROLE_ARN, roleARN);
     conf.set(ASSUMED_ROLE_SESSION_NAME, "valid");
     conf.set(ASSUMED_ROLE_SESSION_DURATION, "45m");
-    // disable create session so there's no need to
-    // add a role policy for it.
-    disableCreateSession(conf);
 
     bindRolePolicy(conf, RESTRICTED_POLICY);
     return conf;
@@ -458,12 +463,15 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
   public void testReadOnlyOperations() throws Throwable {
 
     describe("Restrict role to read only");
+    skipIfS3ExpressBucket(getConfiguration());
     Configuration conf = createAssumedRoleConfig();
 
     bindRolePolicy(conf,
         policy(
             statement(false, S3_ALL_BUCKETS, S3_PATH_WRITE_OPERATIONS),
-            STATEMENT_ALL_S3, STATEMENT_ALLOW_KMS_RW));
+            STATEMENT_ALL_S3,
+            STATEMENT_S3EXPRESS,
+            STATEMENT_ALLOW_KMS_RW));
     Path path = methodPath();
     roleFS = (S3AFileSystem) path.getFileSystem(conf);
     // list the root path, expect happy
@@ -501,6 +509,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
 
     describe("Attempt writing to paths where a role only has"
         + " write access to a subdir of the bucket");
+    skipIfS3ExpressBucket(getConfiguration());
     Path restrictedDir = methodPath();
     Path child = new Path(restrictedDir, "child");
     // the full FS
@@ -563,6 +572,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
   @Test
   public void testRestrictedCommitActions() throws Throwable {
     describe("Attempt commit operations against a path with restricted rights");
+    skipIfS3ExpressBucket(getConfiguration());
     Configuration conf = createAssumedRoleConfig();
     final int uploadPartSize = 5 * 1024 * 1024;
 
@@ -679,7 +689,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
   public void assertCommitAccessDenied(final Path path,
       final CommitOperations.MaybeIOE maybeIOE) {
     IOException ex = maybeIOE.getException();
-    assertNotNull("no IOE in " + maybeIOE + " for " + path, ex);
+    assertNotNull(ex, "no IOE in " + maybeIOE + " for " + path);
     if (!(ex instanceof AccessDeniedException)) {
       ContractTestUtils.fail("Wrong exception class for commit to "
           + path, ex);
@@ -700,12 +710,14 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
   @Test
   public void testPartialDelete() throws Throwable {
     describe("delete with part of the child tree read only; multidelete");
+    skipIfS3ExpressBucket(getConfiguration());
     executePartialDelete(createAssumedRoleConfig(), false);
   }
 
   @Test
   public void testPartialDeleteSingleDelete() throws Throwable {
     describe("delete with part of the child tree read only");
+    skipIfS3ExpressBucket(getConfiguration());
     executePartialDelete(createAssumedRoleConfig(), true);
   }
 
@@ -718,6 +730,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
   @Test
   public void testBulkDeleteWithReadWriteAccess() throws Throwable {
     describe("Bulk delete with read write access");
+    skipIfS3ExpressBucket(getConfiguration());
     executeBulkDeleteOnSomeReadOnlyFiles(createAssumedRoleConfig());
   }
 
@@ -807,6 +820,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
           throws JsonProcessingException {
     bindRolePolicyStatements(assumedRoleConfig, STATEMENT_ALLOW_KMS_RW,
         statement(true, S3_ALL_BUCKETS, S3_ALL_OPERATIONS),
+        STATEMENT_S3EXPRESS,
         new Statement(Effects.Deny)
             .addActions(S3_PATH_WRITE_OPERATIONS)
             .addResources(directory(readOnlyDir))
@@ -854,8 +868,8 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
     // and although you can't delete under the path, if the file doesn't
     // exist, the delete call fails fast.
     Path pathWhichDoesntExist = new Path(readOnlyDir, "no-such-path");
-    assertFalse("deleting " + pathWhichDoesntExist,
-        roleFS.delete(pathWhichDoesntExist, true));
+    assertFalse(roleFS.delete(pathWhichDoesntExist, true),
+        "deleting " + pathWhichDoesntExist);
   }
 
   /**

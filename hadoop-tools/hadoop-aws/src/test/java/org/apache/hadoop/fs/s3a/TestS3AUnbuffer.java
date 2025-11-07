@@ -28,14 +28,14 @@ import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.time.Instant;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;

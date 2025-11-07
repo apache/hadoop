@@ -20,7 +20,10 @@ package org.apache.hadoop.fs.s3a.scale;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
-import org.junit.Test;
+import org.apache.hadoop.test.tags.ScaleTest;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,6 +34,7 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
 /**
  * Tests for create(): performance and/or load testing.
  */
+@ScaleTest
 public class ITestS3ACreatePerformance extends S3AScaleTestBase {
   private static final Logger LOG = LoggerFactory.getLogger(
       ITestS3ADirectoryPerformance.class);
@@ -39,6 +43,7 @@ public class ITestS3ACreatePerformance extends S3AScaleTestBase {
   private int basePathDepth;
   private static final int PATH_DEPTH = 10;
 
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     super.setup();
@@ -70,8 +75,8 @@ public class ITestS3ACreatePerformance extends S3AScaleTestBase {
 
   /* Get a unique path of depth totalDepth for given test iteration. */
   private Path getPathIteration(long iter, int totalDepth) throws Exception {
-    assertTrue("Test path too long, increase PATH_DEPTH in test.",
-        totalDepth > basePathDepth);
+    assertTrue(totalDepth > basePathDepth,
+        "Test path too long, increase PATH_DEPTH in test.");
 
     int neededDirs = totalDepth - basePathDepth - 1;
     StringBuilder sb = new StringBuilder();

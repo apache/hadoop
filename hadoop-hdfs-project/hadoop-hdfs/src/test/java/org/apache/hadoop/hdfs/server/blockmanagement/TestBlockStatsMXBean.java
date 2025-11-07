@@ -18,11 +18,11 @@
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.File;
 import java.io.IOException;
@@ -45,24 +45,21 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.eclipse.jetty.util.ajax.JSON;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.Timeout;
 
 /**
  * Class for testing {@link BlockStatsMXBean} implementation
  */
+@Timeout(300)
 public class TestBlockStatsMXBean {
 
   private MiniDFSCluster cluster;
 
-  @Rule
-  public Timeout globalTimeout = new Timeout(300000);
-
-  @Before
+  @BeforeEach
   public void setup() throws IOException {
     HdfsConfiguration conf = new HdfsConfiguration();
     conf.setTimeDuration(DFSConfigKeys.DFS_DATANODE_DISK_CHECK_MIN_GAP_KEY,
@@ -84,7 +81,7 @@ public class TestBlockStatsMXBean {
     cluster.waitActive();
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     if (cluster != null) {
       cluster.shutdown();
@@ -219,8 +216,8 @@ public class TestBlockStatsMXBean {
     Thread.sleep(6000);
     storageTypeStatsMap = cluster.getNamesystem().getBlockManager()
         .getStorageTypeStats();
-    assertFalse("StorageTypeStatsMap should not contain DISK Storage type",
-        storageTypeStatsMap.containsKey(StorageType.DISK));
+    assertFalse(storageTypeStatsMap.containsKey(StorageType.DISK),
+        "StorageTypeStatsMap should not contain DISK Storage type");
     DataNodeTestUtils.restoreDataDirFromFailure(dn1ArcVol1);
     DataNodeTestUtils.restoreDataDirFromFailure(dn2ArcVol1);
     DataNodeTestUtils.restoreDataDirFromFailure(dn3ArcVol1);

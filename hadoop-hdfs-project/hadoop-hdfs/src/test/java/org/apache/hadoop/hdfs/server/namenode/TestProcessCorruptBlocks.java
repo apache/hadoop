@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
@@ -35,7 +35,8 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.NumberReplicas;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 public class TestProcessCorruptBlocks {
   /**
@@ -160,7 +161,8 @@ public class TestProcessCorruptBlocks {
    *     (corrupt replica should  be removed since number of good
    *      replicas (1) is equal to replication factor (1))
    */
-  @Test(timeout=20000)
+  @Test
+  @Timeout(value = 20)
   public void testWithReplicationFactorAsOne() throws Exception {
     Configuration conf = new HdfsConfiguration();
     conf.setLong(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 1000L);
@@ -288,7 +290,7 @@ public class TestProcessCorruptBlocks {
       if (scanLogFile.exists()) {
         // wait for one minute for deletion to succeed;
         for (int i = 0; !scanLogFile.delete(); i++) {
-          assertTrue("Could not delete log file in one minute", i < 60);
+          assertTrue(i < 60, "Could not delete log file in one minute");
           try {
             Thread.sleep(1000);
           } catch (InterruptedException ignored) {

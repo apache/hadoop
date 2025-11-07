@@ -20,6 +20,8 @@ package org.apache.hadoop.fs.s3a.auth;
 
 import java.io.IOException;
 
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -59,6 +61,7 @@ public class ITestAssumedRoleCommitOperations extends ITestCommitOperations {
     return disableCreateSession(super.createConfiguration());
   }
 
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     super.setup();
@@ -67,7 +70,9 @@ public class ITestAssumedRoleCommitOperations extends ITestCommitOperations {
     restrictedDir = super.path("restricted");
     Configuration conf = newAssumedRoleConfig(getConfiguration(),
         getAssumedRoleARN());
-    bindRolePolicyStatements(conf, STATEMENT_ALLOW_KMS_RW,
+    bindRolePolicyStatements(conf,
+        STATEMENT_ALLOW_KMS_RW,
+        STATEMENT_S3EXPRESS,
         statement(true, S3_ALL_BUCKETS, S3_BUCKET_READ_OPERATIONS),
         new RoleModel.Statement(RoleModel.Effects.Allow)
             .addActions(S3_PATH_RW_OPERATIONS)
@@ -76,6 +81,7 @@ public class ITestAssumedRoleCommitOperations extends ITestCommitOperations {
     roleFS = (S3AFileSystem) restrictedDir.getFileSystem(conf);
   }
 
+  @AfterEach
   @Override
   public void teardown() throws Exception {
     cleanupWithLogger(LOG, roleFS);

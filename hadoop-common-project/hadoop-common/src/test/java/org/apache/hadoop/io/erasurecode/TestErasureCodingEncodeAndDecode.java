@@ -21,11 +21,11 @@ package org.apache.hadoop.io.erasurecode;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureDecoder;
 import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureEncoder;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.Random;
 
-import static org.junit.Assert.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 
 public class TestErasureCodingEncodeAndDecode {
 
