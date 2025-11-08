@@ -24,6 +24,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.Trash;
 import org.apache.hadoop.fs.TrashPolicy;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -110,6 +112,7 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERV
  */
 public abstract class AbstractContractTrashTest extends AbstractFSContractTestBase {
 
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     super.setup();
@@ -124,6 +127,7 @@ public abstract class AbstractContractTrashTest extends AbstractFSContractTestBa
     return conf;
   }
 
+  @AfterEach
   @Override
   public void teardown() throws Exception {
     final FileSystem fs = getFileSystem();
