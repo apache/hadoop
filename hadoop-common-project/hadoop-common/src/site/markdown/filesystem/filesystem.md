@@ -663,7 +663,7 @@ The default implementation:
   while HDFS can still use `TrashPolicyDefault`.
 * The returned TrashPolicy should not be null.
 * FileSystem implementations with multiple child file systems (e.g. `ViewFileSystem`)
-  should NOT implement this method since the Hadoop trash mechanism should resolve to the underlying filesystem 
+  should NOT implement this method since the Hadoop trash mechanism should resolve to the underlying filesystem
   before invoking `getTrashPolicy`.
 
 ## <a name="state_changing_operations"></a> State Changing Operations
