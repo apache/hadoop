@@ -43,9 +43,70 @@ SET(CMAKE_PREFIX_PATH "${CMAKE_PREFIX_PATH};${CYRUS_SASL_DIR};${GSASL_DIR};$ENV{
 # Specify PROTOBUF_HOME so that find_package picks up the correct version
 SET(CMAKE_PREFIX_PATH "${CMAKE_PREFIX_PATH};$ENV{PROTOBUF_HOME}")
 
+if (BUILD_SHARED_LIBS AND MSVC)
+  # On MSVC Abseil is bundled into a single DLL.
+  # This condition is necessary as of abseil 20230125.3 when abseil is consumed via add_subdirectory,
+  # the abseil_dll target  is named abseil_dll, while if abseil is consumed via find_package, the target
+  # is called absl::abseil_dll
+  # Once https://github.com/abseil/abseil-cpp/pull/1466 is merged and released in the minimum version of
+  # abseil required by protobuf, it is possible to always link absl::abseil_dll and absl::abseil_test_dll
+  # and remove the if
+  if(protobuf_ABSL_PROVIDER STREQUAL "package")
+    set(protobuf_ABSL_USED_TARGETS absl::abseil_dll)
+    set(protobuf_ABSL_USED_TEST_TARGETS absl::abseil_test_dll)
+  else()
+    set(protobuf_ABSL_USED_TARGETS abseil_dll)
+    set(protobuf_ABSL_USED_TEST_TARGETS abseil_test_dll)
+  endif()
+else()
+  set(protobuf_ABSL_USED_TARGETS
+    absl::absl_check
+    absl::absl_log
+    absl::algorithm
+    absl::base
+    absl::bind_front
+    absl::bits
+    absl::btree
+    absl::cleanup
+    absl::cord
+    absl::core_headers
+    absl::debugging
+    absl::die_if_null
+    absl::dynamic_annotations
+    absl::flags
+    absl::flat_hash_map
+    absl::flat_hash_set
+    absl::function_ref
+    absl::hash
+    absl::layout
+    absl::log_initialize
+    absl::log_severity
+    absl::memory
+    absl::node_hash_map
+    absl::node_hash_set
+    absl::optional
+    absl::span
+    absl::status
+    absl::statusor
+    absl::strings
+    absl::synchronization
+    absl::time
+    absl::type_traits
+    absl::utility
+    absl::variant
+    utf8_range::utf8_validity
+    utf8_range::utf8_range
+  )
+  set(protobuf_ABSL_USED_TEST_TARGETS
+    absl::scoped_mock_log
+  )
+endif ()
+
 find_package(Doxygen)
 find_package(OpenSSL REQUIRED)
 find_package(Protobuf REQUIRED)
+find_package(absl REQUIRED)
+find_package(utf8_range REQUIRED)
 find_package(CyrusSASL)
 find_package(GSasl)
 find_package(Threads)
@@ -89,7 +150,10 @@ endif (NOT THREAD_LOCAL_SUPPORTED)
 # to compile some dummy code
 unset (PROTOC_IS_COMPATIBLE CACHE)
 set (CMAKE_REQUIRED_INCLUDES ${PROTOBUF_INCLUDE_DIRS})
-set (CMAKE_REQUIRED_LIBRARIES ${PROTOBUF_LIBRARY} ${PROTOBUF_PROTOC_LIBRARY})
+set (CMAKE_REQUIRED_LIBRARIES
+  ${PROTOBUF_LIBRARY}
+  ${PROTOBUF_PROTOC_LIBRARY}
+  ${protobuf_ABSL_USED_TARGETS})
 check_cxx_source_compiles(
     "#include <google/protobuf/io/printer.h>
     #include <string>
@@ -280,6 +344,7 @@ if (HADOOP_BUILD AND NOT MSVC)
   hadoop_target_link_dual_libraries(hdfspp
     ${LIB_DL}
     ${PROTOBUF_LIBRARY}
+    ${protobuf_ABSL_USED_TARGETS}
     ${OPENSSL_LIBRARIES}
     ${SASL_LIBRARIES}
     ${CMAKE_THREAD_LIBS_INIT}
@@ -291,6 +356,7 @@ else (HADOOP_BUILD AND NOT MSVC)
   target_link_libraries(hdfspp_static PUBLIC
     ${LIB_DL}
     ${PROTOBUF_LIBRARY}
+    ${protobuf_ABSL_USED_TARGETS}
     ${OPENSSL_LIBRARIES}
     ${SASL_LIBRARIES}
     ${CMAKE_THREAD_LIBS_INIT}
