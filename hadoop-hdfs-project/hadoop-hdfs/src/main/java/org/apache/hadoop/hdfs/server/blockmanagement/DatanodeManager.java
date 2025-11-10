@@ -90,6 +90,8 @@ public class DatanodeManager {
 
   private volatile long heartbeatIntervalSeconds;
   private volatile int heartbeatRecheckInterval;
+  /** Used by {@link HeartbeatManager}. */
+  private volatile long heartbeatRecheckIntervalForMonitor;
   /**
    * Stores the datanode -> block map.  
    * <p>
@@ -346,6 +348,7 @@ public class DatanodeManager {
         DFSConfigKeys.DFS_NAMENODE_AVOID_STALE_DATANODE_FOR_WRITE_KEY,
         DFSConfigKeys.DFS_NAMENODE_AVOID_STALE_DATANODE_FOR_WRITE_DEFAULT);
     this.staleInterval = getStaleIntervalFromConf(conf, heartbeatExpireInterval);
+    refreshHeartbeatRecheckIntervalForMonitor();
     this.ratioUseStaleDataNodesForWrite = conf.getFloat(
         DFSConfigKeys.DFS_NAMENODE_USE_STALE_DATANODE_FOR_WRITE_RATIO_KEY,
         DFSConfigKeys.DFS_NAMENODE_USE_STALE_DATANODE_FOR_WRITE_RATIO_DEFAULT);
@@ -2210,6 +2213,19 @@ public class DatanodeManager {
     this.heartbeatExpireInterval = 2L * recheckInterval + 10 * 1000
         * intervalSeconds;
     this.blockInvalidateLimit = getBlockInvalidateLimit(blockInvalidateLimit);
+    refreshHeartbeatRecheckIntervalForMonitor();
+  }
+
+  @VisibleForTesting
+  public void refreshHeartbeatRecheckIntervalForMonitor() {
+    if (avoidStaleDataNodesForWrite && staleInterval < heartbeatRecheckInterval) {
+      heartbeatRecheckIntervalForMonitor = staleInterval;
+      LOG.info("Setting heartbeat recheck interval to " + staleInterval
+          + " since " + DFSConfigKeys.DFS_NAMENODE_STALE_DATANODE_INTERVAL_KEY
+          + " is less than " + heartbeatRecheckInterval);
+    } else {
+      heartbeatRecheckIntervalForMonitor = heartbeatRecheckInterval;
+    }
   }
 
   private int getBlockInvalidateLimitFromHBInterval() {
@@ -2350,5 +2366,9 @@ public class DatanodeManager {
   @VisibleForTesting
   public long getSlowPeerCollectionInterval() {
     return slowPeerCollectionInterval;
+  }
+
+  public long getHeartbeatRecheckIntervalForMonitor() {
+    return heartbeatRecheckIntervalForMonitor;
   }
 }
