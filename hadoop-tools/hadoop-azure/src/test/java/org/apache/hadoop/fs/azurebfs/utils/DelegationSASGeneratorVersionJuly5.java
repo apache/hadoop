@@ -31,7 +31,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.ROOT_PAT
 /**
  * Test Delegation SAS generator.
  */
-public class DelegationSASGenerator_Version_July5 extends SASGenerator {
+public class DelegationSASGeneratorVersionJuly5 extends SASGenerator {
   private final String skoid;
   private final String sktid;
   private final String skt;
@@ -53,7 +53,14 @@ public class DelegationSASGenerator_Version_July5 extends SASGenerator {
    * @param skdutid Azure AD delegated app's tenant ID
    * @param sduoid Azure AD delegated app's user object ID
    */
-  public DelegationSASGenerator_Version_July5(byte[] userDelegationKey, String skoid, String sktid, String skt, String ske, String skv, String skdutid, String sduoid) {
+  public DelegationSASGeneratorVersionJuly5(byte[] userDelegationKey,
+      String skoid,
+      String sktid,
+      String skt,
+      String ske,
+      String skv,
+      String skdutid,
+      String sduoid) {
     super(userDelegationKey);
     this.skoid = skoid;
     this.sktid = sktid;

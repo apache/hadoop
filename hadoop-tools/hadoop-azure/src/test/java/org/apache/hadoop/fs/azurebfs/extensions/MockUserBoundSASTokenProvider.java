@@ -36,7 +36,7 @@ import org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider;
 import org.apache.hadoop.fs.azurebfs.services.AbfsHttpHeader;
 import org.apache.hadoop.fs.azurebfs.services.AbfsJdkHttpOperation;
 import org.apache.hadoop.fs.azurebfs.utils.Base64;
-import org.apache.hadoop.fs.azurebfs.utils.DelegationSASGenerator_Version_July5;
+import org.apache.hadoop.fs.azurebfs.utils.DelegationSASGeneratorVersionJuly5;
 import org.apache.hadoop.fs.azurebfs.utils.SASGenerator;
 import org.apache.hadoop.security.AccessControlException;
 
@@ -65,7 +65,7 @@ public class MockUserBoundSASTokenProvider implements SASTokenProvider {
   public static final String CORRELATION_ID = "66ff4ffc-ff17-417e-a2a9-45db8c5b0b5c";
   public static final String NO_AGENT_PATH = "NoAgentPath";
 
-  private DelegationSASGenerator_Version_July5 generator;
+  private DelegationSASGeneratorVersionJuly5 generator;
 
   /**
    * Initializes the SAS token provider with configuration settings.
@@ -89,7 +89,7 @@ public class MockUserBoundSASTokenProvider implements SASTokenProvider {
 
     byte[] key = getUserDelegationKey(accountName, appID, appSecret, sktid, skt, ske, skv, skdutid);
 
-    generator = new DelegationSASGenerator_Version_July5(key, skoid, sktid, skt, ske, skv, skdutid, sduoid);
+    generator = new DelegationSASGeneratorVersionJuly5(key, skoid, sktid, skt, ske, skv, skdutid, sduoid);
   }
 
   /**

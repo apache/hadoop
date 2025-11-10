@@ -36,7 +36,7 @@ import org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider;
 import org.apache.hadoop.fs.azurebfs.services.AbfsHttpHeader;
 import org.apache.hadoop.fs.azurebfs.services.AbfsJdkHttpOperation;
 import org.apache.hadoop.fs.azurebfs.utils.Base64;
-import org.apache.hadoop.fs.azurebfs.utils.DelegationSASGenerator_Version_July5;
+import org.apache.hadoop.fs.azurebfs.utils.DelegationSASGeneratorVersionJuly5;
 import org.apache.hadoop.fs.azurebfs.utils.SASGenerator;
 import org.apache.hadoop.security.AccessControlException;
 
@@ -49,7 +49,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.D
  */
 public class MockDelegationSASTokenProvider implements SASTokenProvider {
 
-  private DelegationSASGenerator_Version_July5 generator;
+  private DelegationSASGeneratorVersionJuly5 generator;
 
   public static final String TEST_OWNER = "325f1619-4205-432f-9fce-3fd594325ce5";
   public static final String CORRELATION_ID = "66ff4ffc-ff17-417e-a2a9-45db8c5b0b5c";
@@ -66,7 +66,7 @@ public class MockDelegationSASTokenProvider implements SASTokenProvider {
     String skv = SASGenerator.AuthenticationVersion.Dec19.toString();
 
     byte[] key = getUserDelegationKey(accountName, appID, appSecret, sktid, skt, ske, skv);
-    generator = new DelegationSASGenerator_Version_July5(key, skoid, sktid, skt, ske, skv, EMPTY_STRING, EMPTY_STRING);
+    generator = new DelegationSASGeneratorVersionJuly5(key, skoid, sktid, skt, ske, skv, EMPTY_STRING, EMPTY_STRING);
   }
 
   // Invokes the AAD v2.0 authentication endpoint with a client credentials grant to get an

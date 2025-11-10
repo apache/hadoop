@@ -28,7 +28,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -57,7 +56,9 @@ import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_A
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_BLOB_FS_CHECKACCESS_TEST_CLIENT_SECRET;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_BLOB_FS_CHECKACCESS_TEST_USER_GUID;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_BLOB_FS_CLIENT_SERVICE_PRINCIPAL_OBJECT_ID;
+import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_TEST_APP_SERVICE_PRINCIPAL_TENANT_ID;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_TEST_END_USER_OBJECT_ID;
+import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_TEST_END_USER_TENANT_ID;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.assertj.core.api.Assumptions.assumeThat;
 
@@ -65,7 +66,8 @@ import static org.assertj.core.api.Assumptions.assumeThat;
  * Integration tests for AzureBlobFileSystem using User-Bound SAS and OAuth.
  * Covers scenarios for token provider configuration, SAS token validity, and basic file operations.
  */
-public class ITestAzureBlobFileSystemUserBoundSAS extends AbstractAbfsIntegrationTest {
+public class ITestAzureBlobFileSystemUserBoundSAS
+    extends AbstractAbfsIntegrationTest {
 
   private static Path testPath = new Path("/test.txt");
 
@@ -115,6 +117,8 @@ public class ITestAzureBlobFileSystemUserBoundSAS extends AbstractAbfsIntegratio
         abfsConfig.get(FS_AZURE_BLOB_FS_CHECKACCESS_TEST_CLIENT_SECRET));
     abfsConfig.set(FS_AZURE_ACCOUNT_OAUTH_CLIENT_SECRET,
         abfsConfig.get(FS_AZURE_BLOB_FS_CHECKACCESS_TEST_CLIENT_SECRET));
+    abfsConfig.set(FS_AZURE_TEST_END_USER_TENANT_ID,
+        abfsConfig.get(FS_AZURE_TEST_APP_SERVICE_PRINCIPAL_TENANT_ID));
     abfsConfig.set(FS_AZURE_TEST_END_USER_OBJECT_ID,
         abfsConfig.get(FS_AZURE_BLOB_FS_CHECKACCESS_TEST_USER_GUID));
     abfsConfig.set(FS_AZURE_SAS_TOKEN_PROVIDER_TYPE,
@@ -154,7 +158,8 @@ public class ITestAzureBlobFileSystemUserBoundSAS extends AbstractAbfsIntegratio
    */
   private AzureBlobFileSystem createTestFileSystem() throws RuntimeException {
     try {
-      return (AzureBlobFileSystem) FileSystem.newInstance(getRawConfiguration());
+      return (AzureBlobFileSystem) FileSystem.newInstance(
+          getRawConfiguration());
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
@@ -167,7 +172,8 @@ public class ITestAzureBlobFileSystemUserBoundSAS extends AbstractAbfsIntegratio
   @Test
   public void testShouldFailWhenSduoidMismatchesServicePrincipalId()
       throws Exception {
-    this.getConfiguration().set(FS_AZURE_TEST_END_USER_OBJECT_ID, TEST_OBJECT_ID);
+    this.getConfiguration()
+        .set(FS_AZURE_TEST_END_USER_OBJECT_ID, TEST_OBJECT_ID);
     AzureBlobFileSystem testFs = createTestFileSystem();
     intercept(AccessDeniedException.class,
         () -> {
@@ -201,7 +207,8 @@ public class ITestAzureBlobFileSystemUserBoundSAS extends AbstractAbfsIntegratio
 
     // Verify AbfsConfiguration has an SASTokenProvider configured
     SASTokenProvider sasProvider
-        = abfsConfiguration.getUserBoundSASTokenProvider(AuthType.UserboundSASWithOAuth);
+        = abfsConfiguration.getUserBoundSASTokenProvider(
+        AuthType.UserboundSASWithOAuth);
     assertNotNull(sasProvider,
         "SASTokenProvider for user-bound SAS must be configured");
     assertInstanceOf(MockUserBoundSASTokenProvider.class, sasProvider,
@@ -216,7 +223,7 @@ public class ITestAzureBlobFileSystemUserBoundSAS extends AbstractAbfsIntegratio
   }
 
   /*
-    * Tests listing and deleting files under an implicit directory
+   * Tests listing and deleting files under an implicit directory
    */
   @Test
   public void testOperationsForImplicitPaths() throws Exception {
@@ -245,7 +252,8 @@ public class ITestAzureBlobFileSystemUserBoundSAS extends AbstractAbfsIntegratio
         listOp.getResult().getListResultSchema().paths();
 
     assertNotNull(listedEntries, "List result should not be null");
-    assertEquals(2, listedEntries.size(), "Expected exactly two files under implicit directory");
+    assertEquals(2, listedEntries.size(),
+        "Expected exactly two files under implicit directory");
 
     client.deletePath(
         implicitDir.toString(),
@@ -346,7 +354,8 @@ public class ITestAzureBlobFileSystemUserBoundSAS extends AbstractAbfsIntegratio
     // Get a real SAS token from the configured provider
     AbfsConfiguration abfsConfig = testFs.getAbfsStore().getAbfsConfiguration();
     SASTokenProvider realSasProvider
-        = abfsConfig.getUserBoundSASTokenProvider(AuthType.UserboundSASWithOAuth);
+        = abfsConfig.getUserBoundSASTokenProvider(
+        AuthType.UserboundSASWithOAuth);
     assertNotNull(realSasProvider,
         "SASTokenProvider for user-bound SAS must be configured");
     String validSasToken = realSasProvider.getSASToken(
@@ -388,20 +397,26 @@ public class ITestAzureBlobFileSystemUserBoundSAS extends AbstractAbfsIntegratio
     injectMockSASTokenProvider(testFs, mockSasProvider);
 
     // Try a file operation and expect failure due to expired SAS token
-    intercept(AccessDeniedException.class, () -> {testFs.getFileStatus(testPath);});
+    intercept(AccessDeniedException.class,
+        () -> {testFs.getFileStatus(testPath);});
   }
 
   // Helper method to inject a mock SASTokenProvider into the AbfsClient
-  private void injectMockSASTokenProvider(AzureBlobFileSystem fs, SASTokenProvider provider) throws Exception {
-    Field abfsStoreField = AzureBlobFileSystem.class.getDeclaredField("abfsStore");
+  private void injectMockSASTokenProvider(AzureBlobFileSystem fs,
+      SASTokenProvider provider) throws Exception {
+    Field abfsStoreField = AzureBlobFileSystem.class.getDeclaredField(
+        "abfsStore");
     abfsStoreField.setAccessible(true);
-    AzureBlobFileSystemStore store = (AzureBlobFileSystemStore) abfsStoreField.get(fs);
+    AzureBlobFileSystemStore store
+        = (AzureBlobFileSystemStore) abfsStoreField.get(fs);
 
-    Field abfsClientField = AzureBlobFileSystemStore.class.getDeclaredField("client");
+    Field abfsClientField = AzureBlobFileSystemStore.class.getDeclaredField(
+        "client");
     abfsClientField.setAccessible(true);
     AbfsClient client = (AbfsClient) abfsClientField.get(store);
 
-    Field sasProviderField = AbfsClient.class.getDeclaredField("sasTokenProvider");
+    Field sasProviderField = AbfsClient.class.getDeclaredField(
+        "sasTokenProvider");
     sasProviderField.setAccessible(true);
     sasProviderField.set(client, provider);
   }
