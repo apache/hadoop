@@ -19,12 +19,12 @@
 package org.apache.hadoop.security.ssl;
 
 import java.io.IOException;
-import java.util.Arrays;
 
 import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.util.NativeCodeLoader;
 
+import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
@@ -39,19 +39,16 @@ public class TestDelegatingSSLSocketFactory {
         "Unable to load native libraries");
     assumeTrue(NativeCodeLoader.buildSupportsOpenssl(),
         "Build was not compiled with support for OpenSSL");
-    DelegatingSSLSocketFactory.initializeDefaultFactory(
-            DelegatingSSLSocketFactory.SSLChannelMode.OpenSSL);
-    assertThat(DelegatingSSLSocketFactory.getDefaultFactory()
-            .getProviderName()).contains("openssl");
+    try {
+      DelegatingSSLSocketFactory.initializeDefaultFactory(
+              DelegatingSSLSocketFactory.SSLChannelMode.OpenSSL);
+      assertThat(DelegatingSSLSocketFactory.getDefaultFactory()
+              .getProviderName()).contains("openssl");
+    } catch (IOException e) {
+      // if this is caused by a wildfly version error, downgrade to an assume
+      assertExceptionContains("GLIBC_2.34", e);
+      assumeTrue(false, "wildfly library not compatible with this OS version");
+    }
   }
 
-  @Test
-  public void testJSEENoGCMJava8() throws IOException {
-    assumeTrue(System.getProperty("java.version").startsWith("1.8"),
-        "Not running on Java 8");
-    DelegatingSSLSocketFactory.initializeDefaultFactory(
-            DelegatingSSLSocketFactory.SSLChannelMode.Default_JSSE);
-    assertThat(Arrays.stream(DelegatingSSLSocketFactory.getDefaultFactory()
-            .getSupportedCipherSuites())).noneMatch("GCM"::contains);
-  }
 }
