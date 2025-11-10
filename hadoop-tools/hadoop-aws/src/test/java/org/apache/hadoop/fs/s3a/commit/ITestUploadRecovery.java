@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.s3a.commit;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.UUID;
@@ -59,11 +60,13 @@ import static org.apache.hadoop.fs.s3a.Constants.FAST_UPLOAD_BYTEBUFFER;
 import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_PERFORMANCE;
 import static org.apache.hadoop.fs.s3a.Constants.MAX_ERROR_RETRIES;
 import static org.apache.hadoop.fs.s3a.Constants.RETRY_HTTP_5XX_ERRORS;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.assumeMultipartUploads;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.AUDIT_EXECUTION_INTERCEPTORS;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.BASE;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.MAGIC_PATH_PREFIX;
 import static org.apache.hadoop.fs.s3a.test.SdkFaultInjector.setRequestFailureConditions;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
  * Test upload recovery by injecting failures into the response chain.
@@ -159,6 +162,10 @@ public class ITestUploadRecovery extends AbstractS3ACostTest {
   public void setup() throws Exception {
     SdkFaultInjector.resetFaultInjector();
     super.setup();
+    if (!FAST_UPLOAD_BUFFER_DISK.equals(buffer)) {
+      assumeMultipartUploads(getFileSystem().getConf());
+    }
+
   }
 
   @AfterEach
@@ -167,7 +174,6 @@ public class ITestUploadRecovery extends AbstractS3ACostTest {
     // safety check in case the evaluation is failing any
     // request needed in cleanup.
     SdkFaultInjector.resetFaultInjector();
-
     super.teardown();
   }
 
@@ -264,9 +270,18 @@ public class ITestUploadRecovery extends AbstractS3ACostTest {
     setRequestFailureConditions(2,
         SdkFaultInjector::isCompleteMultipartUploadRequest);
 
+    boolean mpuCommitConsumesUploadId = getFileSystem().getConf().getBoolean(
+        MULTIPART_COMMIT_CONSUMES_UPLOAD_ID,
+        DEFAULT_MULTIPART_COMMIT_CONSUMES_UPLOAD_ID);
     try (CommitContext commitContext
              = actions.createCommitContextForTesting(dest, JOB_ID, 0)) {
-      commitContext.commitOrFail(commit);
+
+      if (mpuCommitConsumesUploadId) {
+        intercept(FileNotFoundException.class, () ->
+            commitContext.commitOrFail(commit));
+      } else {
+        commitContext.commitOrFail(commit);
+      }
     }
     // make sure the saved data is as expected
     verifyFileContents(fs, dest, dataset);

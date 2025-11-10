@@ -164,26 +164,33 @@ public class ITestS3AAnalyticsAcceleratorStreamReading extends AbstractS3ATestBa
 
     FileStatus fileStatus = getFileSystem().getFileStatus(dest);
 
-    byte[] buffer = new byte[3000];
+    final int size = 3000;
+    byte[] buffer = new byte[size];
+    int readLimit = Math.min(size, (int) fileStatus.getLen());
     IOStatistics ioStats;
+
+    final IOStatistics fsIostats = getFileSystem().getIOStatistics();
+    final long initialAuditCount = fsIostats.counters()
+        .getOrDefault(AUDIT_REQUEST_EXECUTION, 0L);
 
     try (FSDataInputStream inputStream = getFileSystem().open(dest)) {
       ioStats = inputStream.getIOStatistics();
-      inputStream.readFully(buffer, 0, (int) fileStatus.getLen());
+      inputStream.readFully(buffer, 0, readLimit);
     }
 
     verifyStatisticCounterValue(ioStats, STREAM_READ_ANALYTICS_OPENED, 1);
 
     try (FSDataInputStream inputStream = getFileSystem().openFile(dest)
+        .withFileStatus(fileStatus)
         .must(FS_OPTION_OPENFILE_READ_POLICY, FS_OPTION_OPENFILE_READ_POLICY_PARQUET)
         .build().get()) {
       ioStats = inputStream.getIOStatistics();
-      inputStream.readFully(buffer, 0, (int) fileStatus.getLen());
+      inputStream.readFully(buffer, 0, readLimit);
     }
 
     verifyStatisticCounterValue(ioStats, STREAM_READ_ANALYTICS_OPENED, 1);
 
-    verifyStatisticCounterValue(getFileSystem().getIOStatistics(), AUDIT_REQUEST_EXECUTION, 4);
+    verifyStatisticCounterValue(fsIostats, AUDIT_REQUEST_EXECUTION, initialAuditCount + 2);
   }
 
   @Test

@@ -30,4 +30,13 @@ public class ITestS3AHugeFilesArrayBlocks extends AbstractSTestS3AHugeFiles {
   protected String getBlockOutputBufferName() {
     return Constants.FAST_UPLOAD_BUFFER_ARRAY;
   }
+
+  /**
+   * Skip this test suite when MPUS are not avaialable.
+   * @return false
+   */
+  @Override
+  protected boolean requireMultipartUploads() {
+    return true;
+  }
 }

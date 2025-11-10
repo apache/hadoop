@@ -155,15 +155,15 @@ import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_RENAME_RECOV
 public class AbfsDfsClient extends AbfsClient {
 
   /**
-   * Constructs an AbfsDfsClient using OAuth token provider.
+   * Creates an {@code AbfsDfsClient} instance.
    *
-   * @param baseUrl the base URL for the DFS endpoint
+   * @param baseUrl the base URL of the DFS endpoint
    * @param sharedKeyCredentials the shared key credentials
    * @param abfsConfiguration the ABFS configuration
-   * @param tokenProvider the OAuth access token provider
+   * @param tokenProvider the access token provider for authentication
    * @param encryptionContextProvider the encryption context provider
    * @param abfsClientContext the ABFS client context
-   * @throws IOException if an I/O error occurs
+   * @throws IOException if client initialization fails
    */
   public AbfsDfsClient(final URL baseUrl,
       final SharedKeyCredentials sharedKeyCredentials,
@@ -176,15 +176,15 @@ public class AbfsDfsClient extends AbfsClient {
   }
 
   /**
-   * Constructs an AbfsDfsClient using SAS token provider.
+   * Creates an {@code AbfsDfsClient} instance.
    *
-   * @param baseUrl the base URL for the DFS endpoint
+   * @param baseUrl the base URL of the DFS endpoint
    * @param sharedKeyCredentials the shared key credentials
    * @param abfsConfiguration the ABFS configuration
    * @param sasTokenProvider the SAS token provider
    * @param encryptionContextProvider the encryption context provider
    * @param abfsClientContext the ABFS client context
-   * @throws IOException if an I/O error occurs
+   * @throws IOException if client initialization fails
    */
   public AbfsDfsClient(final URL baseUrl,
       final SharedKeyCredentials sharedKeyCredentials,
@@ -197,16 +197,16 @@ public class AbfsDfsClient extends AbfsClient {
   }
 
   /**
-   * Constructs an AbfsDfsClient using both OAuth and SAS token providers.
+   * Creates an {@code AbfsDfsClient} instance.
    *
-   * @param baseUrl the base URL for the DFS endpoint
+   * @param baseUrl the base URL of the DFS endpoint
    * @param sharedKeyCredentials the shared key credentials
    * @param abfsConfiguration the ABFS configuration
    * @param tokenProvider the OAuth access token provider
    * @param sasTokenProvider the SAS token provider
    * @param encryptionContextProvider the encryption context provider
    * @param abfsClientContext the ABFS client context
-   * @throws IOException if an I/O error occurs
+   * @throws IOException if client initialization fails
    */
   public AbfsDfsClient(final URL baseUrl,
       final SharedKeyCredentials sharedKeyCredentials,
@@ -1095,6 +1095,10 @@ public class AbfsDfsClient extends AbfsClient {
     }
 
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
+
+    // Add request priority header for prefetch reads
+    addRequestPriorityForPrefetch(requestHeaders, tracingContext);
+
     // AbfsInputStream/AbfsOutputStream reuse SAS tokens for better performance
     String sasTokenForReuse = appendSASTokenToQuery(path,
         SASTokenProvider.READ_OPERATION,

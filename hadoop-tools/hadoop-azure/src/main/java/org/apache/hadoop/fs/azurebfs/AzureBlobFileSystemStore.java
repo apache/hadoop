@@ -45,6 +45,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import java.util.WeakHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -112,6 +113,7 @@ import org.apache.hadoop.fs.azurebfs.services.ExponentialRetryPolicy;
 import org.apache.hadoop.fs.azurebfs.services.ListingSupport;
 import org.apache.hadoop.fs.azurebfs.services.SharedKeyCredentials;
 import org.apache.hadoop.fs.azurebfs.services.StaticRetryPolicy;
+import org.apache.hadoop.fs.azurebfs.services.TailLatencyRequestTimeoutRetryPolicy;
 import org.apache.hadoop.fs.azurebfs.services.VersionedFileStatus;
 import org.apache.hadoop.fs.azurebfs.utils.Base64;
 import org.apache.hadoop.fs.azurebfs.utils.CRC64;
@@ -203,6 +205,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
   private int blockOutputActiveBlocks;
   /** Bounded ThreadPool for this instance. */
   private ExecutorService boundedThreadPool;
+  private WriteThreadPoolSizeManager poolSizeManager;
 
   /** ABFS instance reference to be held by the store to avoid GC close. */
   private BackReference fsBackRef;
@@ -277,11 +280,19 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     }
     this.blockFactory = abfsStoreBuilder.blockFactory;
     this.blockOutputActiveBlocks = abfsStoreBuilder.blockOutputActiveBlocks;
-    this.boundedThreadPool = BlockingThreadPoolExecutorService.newInstance(
-        abfsConfiguration.getWriteMaxConcurrentRequestCount(),
-        abfsConfiguration.getMaxWriteRequestsToQueue(),
-        10L, TimeUnit.SECONDS,
-        "abfs-bounded");
+    if (abfsConfiguration.isDynamicWriteThreadPoolEnablement()) {
+      this.poolSizeManager = WriteThreadPoolSizeManager.getInstance(
+          getClient().getFileSystem() + "-" + UUID.randomUUID(),
+          abfsConfiguration);
+      poolSizeManager.startCPUMonitoring();
+      this.boundedThreadPool = poolSizeManager.getExecutorService();
+    } else {
+      this.boundedThreadPool = BlockingThreadPoolExecutorService.newInstance(
+          abfsConfiguration.getWriteConcurrentRequestCount(),
+          abfsConfiguration.getMaxWriteRequestsToQueue(),
+          10L, TimeUnit.SECONDS,
+          "abfs-bounded");
+    }
   }
 
   /**
@@ -320,17 +331,19 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     }
     try {
       Futures.allAsList(futures).get();
-      // shutdown the threadPool and set it to null.
-      HadoopExecutors.shutdown(boundedThreadPool, LOG,
-          30, TimeUnit.SECONDS);
-      boundedThreadPool = null;
+      if (!abfsConfiguration.isDynamicWriteThreadPoolEnablement()) {
+        // shutdown the threadPool and set it to null.
+        HadoopExecutors.shutdown(boundedThreadPool, LOG,
+            30, TimeUnit.SECONDS);
+        boundedThreadPool = null;
+      }
     } catch (InterruptedException e) {
       LOG.error("Interrupted freeing leases", e);
       Thread.currentThread().interrupt();
     } catch (ExecutionException e) {
       LOG.error("Error freeing leases", e);
     } finally {
-      IOUtils.cleanupWithLogger(LOG, getClientHandler());
+      IOUtils.cleanupWithLogger(LOG, poolSizeManager, getClientHandler());
     }
   }
 
@@ -797,7 +810,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
             .disableOutputStreamFlush(abfsConfiguration.isOutputStreamFlushDisabled())
             .withStreamStatistics(new AbfsOutputStreamStatisticsImpl())
             .withAppendBlob(isAppendBlob)
-            .withWriteMaxConcurrentRequestCount(abfsConfiguration.getWriteMaxConcurrentRequestCount())
+            .withWriteMaxConcurrentRequestCount(abfsConfiguration.getWriteConcurrentRequestCount())
             .withMaxWriteRequestsToQueue(abfsConfiguration.getMaxWriteRequestsToQueue())
             .withLease(lease)
             .withEncryptionAdapter(contextEncryptionAdapter)
@@ -951,24 +964,24 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     int footerReadBufferSize = options.map(c -> c.getInt(
         AZURE_FOOTER_READ_BUFFER_SIZE, getAbfsConfiguration().getFooterReadBufferSize()))
         .orElse(getAbfsConfiguration().getFooterReadBufferSize());
+
     return new AbfsInputStreamContext(getAbfsConfiguration().getSasTokenRenewPeriodForStreamsInSeconds())
-            .withReadBufferSize(getAbfsConfiguration().getReadBufferSize())
-            .withReadAheadQueueDepth(getAbfsConfiguration().getReadAheadQueueDepth())
-            .withTolerateOobAppends(getAbfsConfiguration().getTolerateOobAppends())
-            .isReadAheadEnabled(getAbfsConfiguration().isReadAheadEnabled())
-            .isReadAheadV2Enabled(getAbfsConfiguration().isReadAheadV2Enabled())
-            .withReadSmallFilesCompletely(getAbfsConfiguration().readSmallFilesCompletely())
-            .withOptimizeFooterRead(getAbfsConfiguration().optimizeFooterRead())
-            .withFooterReadBufferSize(footerReadBufferSize)
-            .withReadAheadRange(getAbfsConfiguration().getReadAheadRange())
-            .withStreamStatistics(new AbfsInputStreamStatisticsImpl())
-            .withShouldReadBufferSizeAlways(
-                getAbfsConfiguration().shouldReadBufferSizeAlways())
-            .withReadAheadBlockSize(getAbfsConfiguration().getReadAheadBlockSize())
-            .withBufferedPreadDisabled(bufferedPreadDisabled)
-            .withEncryptionAdapter(contextEncryptionAdapter)
-            .withAbfsBackRef(fsBackRef)
-            .build();
+        .withReadBufferSize(getAbfsConfiguration().getReadBufferSize())
+        .withReadAheadQueueDepth(getAbfsConfiguration().getReadAheadQueueDepth())
+        .withTolerateOobAppends(getAbfsConfiguration().getTolerateOobAppends())
+        .isReadAheadEnabled(getAbfsConfiguration().isReadAheadEnabled())
+        .isReadAheadV2Enabled(getAbfsConfiguration().isReadAheadV2Enabled())
+        .withReadSmallFilesCompletely(getAbfsConfiguration().readSmallFilesCompletely())
+        .withOptimizeFooterRead(getAbfsConfiguration().optimizeFooterRead())
+        .withFooterReadBufferSize(footerReadBufferSize)
+        .withReadAheadRange(getAbfsConfiguration().getReadAheadRange())
+        .withStreamStatistics(new AbfsInputStreamStatisticsImpl())
+        .withShouldReadBufferSizeAlways(getAbfsConfiguration().shouldReadBufferSizeAlways())
+        .withReadAheadBlockSize(getAbfsConfiguration().getReadAheadBlockSize())
+        .withBufferedPreadDisabled(bufferedPreadDisabled)
+        .withEncryptionAdapter(contextEncryptionAdapter)
+        .withAbfsBackRef(fsBackRef)
+        .build();
   }
 
   public OutputStream openFileForWrite(final Path path,
@@ -1809,6 +1822,8 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
             new ExponentialRetryPolicy(abfsConfiguration))
         .withStaticRetryPolicy(
             new StaticRetryPolicy(abfsConfiguration))
+        .withTailLatencyRequestTimeoutRetryPolicy(
+            new TailLatencyRequestTimeoutRetryPolicy(abfsConfiguration))
         .withAbfsCounters(abfsCounters)
         .withAbfsPerfTracker(abfsPerfTracker)
         .build();

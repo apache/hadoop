@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
+/**
+ * Constants for Retry Policies used in Azure Blob File System.
+ */
 public final class RetryPolicyConstants {
 
   private RetryPolicyConstants() {
@@ -32,4 +35,8 @@ public final class RetryPolicyConstants {
    * Constant for Static Retry Policy Abbreviation. {@value}
    */
   public static final String STATIC_RETRY_POLICY_ABBREVIATION = "S";
+  /**
+   * Constant for Tail Latency Timeout Retry Policy Abbreviation. {@value}
+   */
+  public static final String TAIL_LATENCY_TIMEOUT_RETRY_POLICY_ABBREVIATION = "T";
 }

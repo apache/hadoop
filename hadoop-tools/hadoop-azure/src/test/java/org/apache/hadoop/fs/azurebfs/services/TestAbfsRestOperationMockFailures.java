@@ -28,6 +28,7 @@ import org.mockito.stubbing.Stubber;
 
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.TailLatencyRequestTimeoutException;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
 import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
@@ -50,6 +51,7 @@ import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.CONNEC
 import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.EGRESS_LIMIT_BREACH_ABBREVIATION;
 import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.INGRESS_LIMIT_BREACH_ABBREVIATION;
 import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.IO_EXCEPTION_ABBREVIATION;
+import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.TAIL_LATENCY_REQUEST_TIMEOUT_ABBREVIATION;
 import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.TPS_LIMIT_BREACH_ABBREVIATION;
 import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.OTHER_SERVER_THROTTLING_ABBREVIATION;
 import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.READ_TIMEOUT_ABBREVIATION;
@@ -101,6 +103,15 @@ public class TestAbfsRestOperationMockFailures {
     String[] abbreviations = new String[1];
     exceptions[0] = new SocketTimeoutException(READ_TIMEOUT_JDK_MESSAGE);
     abbreviations[0] = READ_TIMEOUT_ABBREVIATION;
+    testClientRequestIdForTimeoutRetry(exceptions, abbreviations, 1, 0);
+  }
+
+  @Test
+  public void testClientRequestIdForTailLatencyTimeoutRetry() throws Exception {
+    Exception[] exceptions = new Exception[1];
+    String[] abbreviations = new String[1];
+    exceptions[0] = new TailLatencyRequestTimeoutException();
+    abbreviations[0] = TAIL_LATENCY_REQUEST_TIMEOUT_ABBREVIATION;
     testClientRequestIdForTimeoutRetry(exceptions, abbreviations, 1, 0);
   }
 

@@ -42,6 +42,7 @@ import org.apache.hadoop.fs.s3a.commit.impl.CommitOperations;
 import org.apache.hadoop.fs.s3a.performance.AbstractS3ACostTest;
 import org.apache.hadoop.fs.statistics.IOStatisticsLogging;
 
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.assumeMultipartUploads;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfAnalyticsAcceleratorEnabled;
 import static org.apache.hadoop.fs.s3a.Statistic.ACTION_HTTP_GET_REQUEST;
 import static org.apache.hadoop.fs.s3a.Statistic.COMMITTER_MAGIC_FILES_CREATED;
@@ -84,6 +85,7 @@ public class ITestCommitOperationCost extends AbstractS3ACostTest {
   @Override
   public void setup() throws Exception {
     super.setup();
+    assumeMultipartUploads(getFileSystem().getConf());
     testHelper = new CommitterTestHelper(getFileSystem());
   }
 

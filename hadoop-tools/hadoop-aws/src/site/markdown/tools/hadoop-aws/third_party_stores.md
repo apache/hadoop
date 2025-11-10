@@ -42,19 +42,9 @@ The features which may be unavailable include:
 * Bucket lifecycle rules to clean up pending uploads.
 * Support for multipart uploads.
 * Conditional file creation. (`fs.s3a.create.conditional.enabled = false`)
+* Variations in checksum calculation on uploads.
+* Requirement for Content-MD5 headers.
 
-### Disabling Change Detection
-
-The (default) etag-based change detection logic expects stores to provide an Etag header in HEAD/GET requests,
-and to support it as a precondition in subsequent GET and COPY calls.
-If a store does not do this, disable the checks.
-
-```xml
-<property>
-  <name>fs.s3a.change.detection.mode</name>
-  <value>none</value>
-</property>
-```
 ## Connecting to a third party object store over HTTPS
 
 The core setting for a third party store is to change the endpoint in `fs.s3a.endpoint`.
@@ -65,10 +55,11 @@ path style access must also be enabled in `fs.s3a.path.style.access`.
 
 The v4 signing algorithm requires a region to be set in `fs.s3a.endpoint.region`.
 A non-empty value is generally sufficient, though some deployments may require
-a specific value. 
+a specific value.
 
-*Important:* do not use `auto` or `sdk` as these may be used
-in the future for specific region binding algorithms.
+*Important:* do not use `auto`, `ec2`, or `sdk` as these may be used
+in the future for specific region binding algorithms; while `null`
+can be mis-interpreted.
 
 Finally, assuming the credential source is the normal access/secret key
 then these must be set, either in XML or (preferred) in a JCEKS file.
@@ -87,7 +78,7 @@ then these must be set, either in XML or (preferred) in a JCEKS file.
 
   <property>
     <name>fs.s3a.endpoint.region</name>
-    <value>anything</value>
+    <value>anything except: sdk, auto, ec2</value>
   </property>
 
   <property>
@@ -104,7 +95,14 @@ then these must be set, either in XML or (preferred) in a JCEKS file.
 
 If per-bucket settings are used here, then third-party stores and credentials may be used alongside an AWS store.
 
+### region naming
 
+AWS SDK requires the name of a region is supplied for signing, and that region match the endpoint used.
+
+Third-party stores don't normally care about the name of a region, *only that a region is supplied*.
+
+You should set `fs.s3a.endpoint.region` to anything except the following reserved names: `sdk`, `ec2` and `auto`.
+We have plans for those.
 
 ## Other issues
 
@@ -120,7 +118,7 @@ This can be addressed in two ways
 
 #### S3Guard uploads command
 
-This can be executed on a schedule, or manually
+This can be executed on a schedule, or manually:
 
 ```
 hadoop s3guard uploads -abort -force s3a://bucket/
@@ -174,10 +172,78 @@ false to disable use of these features.
   </property>
 ```
 
+## Controlling Upload Checksums and MD5 Headers
+
+It may be necessary to change checksums of uploads by
+1. Enabling the attachment of a `Content-MD5 header` in requests
+2. Restricting checksum generation to only when required.
+
+```xml
+  <property>
+    <name>fs.s3a.request.md5.header</name>
+    <value>true</value>
+    <description>Enable calculation and inclusion of an MD5 HEADER on data upload operations</description>
+  </property>
+
+  <property>
+    <name>fs.s3a.checksum.generation</name>
+    <value>false</value>
+    <description>Calculate and attach a message checksum on every operation.</description>
+  </property>
+
+  <property>
+    <name>fs.s3a.checksum.validation</name>
+    <value>false</value>
+    <description>Validate data checksums on download</description>
+  </property>
+```
+
+These options are set for best compatibility and performance by default; they may need tuning for specific stores.
+
+See [checksums](index.html#checksums) for more details.
+
+### Disabling Change Detection
+
+The (default) etag-based change detection logic expects stores to provide an Etag header in HEAD/GET requests,
+and to support it as a precondition in subsequent GET and COPY calls.
+If a store does not do this, disable the checks.
+
+```xml
+<property>
+  <name>fs.s3a.change.detection.mode</name>
+  <value>none</value>
+</property>
+```
+
+## Handling Null Etags
+
+Some object stores do not support etags, that is: they return `null` or an empty string as the etag of an object on both HEAD and GET requests.
+
+This breaks version management in the classic input stream *and* metadata caching in the analytics stream.
+
+To work with such a store:
+* Set `fs.s3a.input.stream.type` to `classic`
+* Set `fs.s3a.change.detection.mode` to `none`
+
+```xml
+<property>
+  <name>fs.s3a.input.stream.type</name>
+  <value>classic</value>
+</property>
+
+<property>
+  <name>fs.s3a.change.detection.mode</name>
+  <value>none</value>
+</property>
+```
+
+Note: the [cloudstore](https://github.com/steveloughran/cloudstore) `etag` command will retrieve and print an object's etag,
+and can be used to help debug this situation.
+The etag value of a newly created object SHOULD be a non-empty string.
 
 # Troubleshooting
 
-The most common problem when talking to third-party stores are
+The most common problem when talking to third-party stores are:
 
 1. The S3A client is still configured to talk to the AWS S3 endpoint. This leads to authentication failures and/or reports that the bucket is unknown.
 2. Path access has not been enabled, the client is generating a host name for the target bucket and it does not exist.
@@ -185,11 +251,12 @@ The most common problem when talking to third-party stores are
 4. JVM HTTPS settings include the certificates needed to negotiate a TLS connection with the store.
 
 
-## How to improve troubleshooting
+## How to Troubleshoot problems
 
-### log more network info
+### Log More Network Info
 
-There are some very low level logs.
+There are some very low level logs which can be printed.
+
 ```properties
 # Log all HTTP requests made; includes S3 interaction. This may
 # include sensitive information such as account IDs in HTTP headers.
@@ -203,7 +270,7 @@ log4j.logger.io.netty.handler.logging=DEBUG
 log4j.logger.io.netty.handler.codec.http2.Http2FrameLogger=DEBUG
 ```
 
-### Cut back on retries, shorten timeouts
+### Reduce on Retries; Shorten Timeouts
 
 By default, there's a lot of retries going on in the AWS connector (which even retries on DNS failures)
 and in the S3A code which invokes it.
@@ -263,7 +330,7 @@ the AWS SDK itself still makes a limited attempt to retry.
 There's an external utility, [cloudstore](https://github.com/steveloughran/cloudstore) whose [storediag](https://github.com/steveloughran/cloudstore#command-storediag) exists to debug the connection settings to hadoop cloud storage.
 
 ```bash
-hadoop jar cloudstore-1.0.jar storediag s3a://nonexistent-bucket-example/
+hadoop jar cloudstore-1.1.jar storediag s3a://nonexistent-bucket-example/
 ```
 
 The main reason it's not an ASF release is that it allows for a rapid release cycle, sometimes hours; if anyone doesn't trust
@@ -414,7 +481,43 @@ Fix: path style access
   </property>
 ```
 
-# Connecting to Google Cloud Storage through the S3A connector
+# Settings for Specific Stores
+
+## Dell ECS through the S3A Connector
+
+As of November 2025 and the 2.35.4 AWS SDK, the settings needed to interact with Dell ECS
+at [ECS Test Drive](https://portal.ecstestdrive.com/) were
+
+```xml
+<property>
+  <name>fs.s3a.endpoint.region</name>
+  <value>dell</value>
+  <description>arbitrary name other than sdk, ec2, auto or null</description>
+</property>
+
+<property>
+  <name>fs.s3a.path.style.access</name>
+  <value>true</value>
+</property>
+
+<property>
+  <name>fs.s3a.create.conditional.enabled</name>
+  <value>false</value>
+</property>
+
+<property>
+  <name>fs.s3a.bucket.request.md5.header</name>
+  <value>true</value>
+  <description>Enable calculation and inclusion of an MD5 HEADER on data upload operations</description>
+</property>
+
+<property>
+  <name>fs.s3a.checksum.generation</name>
+  <value>false</value>
+</property>
+```
+
+## Google Cloud Storage through the S3A connector
 
 It *is* possible to connect to google cloud storage through the S3A connector.
 However, Google provide their own [Cloud Storage connector](https://cloud.google.com/dataproc/docs/concepts/connectors/cloud-storage).
@@ -443,63 +546,68 @@ this makes renaming and deleting significantly slower.
 <configuration>
 
   <property>
-    <name>fs.s3a.bucket.gcs-container.access.key</name>
+    <name>fs.s3a.access.key</name>
     <value>GOOG1EZ....</value>
   </property>
 
   <property>
-    <name>fs.s3a.bucket.gcs-container.secret.key</name>
+    <name>fs.s3a.secret.key</name>
     <value>SECRETS</value>
   </property>
 
   <property>
-    <name>fs.s3a.bucket.gcs-container.endpoint</name>
+    <name>fs.s3a.endpoint</name>
     <value>https://storage.googleapis.com</value>
   </property>
 
+
+  <!-- any value except sdk, auto and ec2 is allowed here, using "gcs" is more informative -->
   <property>
-    <name>fs.s3a.bucket.gcs-container.bucket.probe</name>
+    <name>fs.s3a.endpoint.region</name>
+    <value>gcs</value>
+  </property>
+
+  <property>
+    <name>fs.s3a.path.style.access</name>
+    <value>true</value>
+  </property>
+
+  <property>
+    <name>fs.s3a.checksum.generation</name>
+    <value>false</value>
+    <description>Calculate and attach a message checksum on every operation. (default: true)</description>
+  </property>
+
+  <property>
+    <name>fs.s3a.bucket.probe</name>
     <value>0</value>
   </property>
 
   <property>
-    <name>fs.s3a.bucket.gcs-container.list.version</name>
+    <name>fs.s3a.list.version</name>
     <value>1</value>
   </property>
 
   <property>
-    <name>fs.s3a.bucket.gcs-container.multiobjectdelete.enable</name>
+    <name>fs.s3a.multiobjectdelete.enable</name>
     <value>false</value>
   </property>
 
   <property>
-    <name>fs.s3a.bucket.gcs-container.path.style.access</name>
-    <value>true</value>
-  </property>
-
-  <!-- any value is allowed here, using "gcs" is more informative -->
-  <property>
-    <name>fs.s3a.bucket.gcs-container.endpoint.region</name>
-    <value>gcs</value>
-  </property>
-
-  <!-- multipart uploads trigger 400 response-->
-  <property>
-    <name>fs.s3a.multipart.uploads.enabled</name>
+    <name>fs.s3a.committer.magic.enabled</name>
     <value>false</value>
   </property>
-  
+
    <property>
     <name>fs.s3a.optimized.copy.from.local.enabled</name>
     <value>false</value>
   </property>
-  
+
   <!-- No support for conditional file creation -->
   <property>
     <name>fs.s3a.create.conditional.enabled</name>
     <value>false</value>
   </property>
-  
 </configuration>
 ```
 
@@ -531,3 +639,4 @@ It is also a way to regression test foundational S3A third-party store compatibi
 
 _Note_ If anyone is set up to test this regularly, please let the hadoop developer team know if regressions do surface,
 as it is not a common test configuration.
+We do use it to help test compatibility during SDK updates.
