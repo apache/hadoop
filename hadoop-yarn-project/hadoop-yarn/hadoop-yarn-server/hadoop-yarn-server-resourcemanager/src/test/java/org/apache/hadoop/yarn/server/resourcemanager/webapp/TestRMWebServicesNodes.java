@@ -583,7 +583,7 @@ public class TestRMWebServicesNodes extends JerseyTestBase {
 
   private void verifyNonexistNodeException(String message, String type, String classname) {
     assertTrue("exception message incorrect: " + message,
-        "nodeId, node_invalid:99, is not found".matches(message));
+        "java.lang.Exception: nodeId, node_invalid:99, is not found".matches(message));
     assertTrue("exception type incorrect", "NotFoundException".matches(type));
     assertTrue("exception className incorrect",
         "org.apache.hadoop.yarn.webapp.NotFoundException".matches(classname));

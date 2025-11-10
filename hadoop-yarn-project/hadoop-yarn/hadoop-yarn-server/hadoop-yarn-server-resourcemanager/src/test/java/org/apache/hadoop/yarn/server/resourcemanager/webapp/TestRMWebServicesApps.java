@@ -1221,7 +1221,7 @@ public class TestRMWebServicesApps extends JerseyTestBase {
       String type = exception.getString("exception");
       String classname = exception.getString("javaClassName");
       WebServicesTestUtils.checkStringContains("exception message",
-          "Invalid deSelects string"
+          "java.lang.Exception: Invalid deSelects string"
               + " INVALIED_deSelectsParam " + "specified. It should be one of",
           message);
       WebServicesTestUtils.checkStringEqual("exception type",
@@ -1620,7 +1620,7 @@ public class TestRMWebServicesApps extends JerseyTestBase {
       String type = exception.getString("exception");
       String classname = exception.getString("javaClassName");
       WebServicesTestUtils.checkStringMatch("exception message",
-          "Invalid ApplicationId: application_invalid_12", message);
+          "java.lang.IllegalArgumentException: Invalid ApplicationId: application_invalid_12", message);
       WebServicesTestUtils.checkStringMatch("exception type",
           "BadRequestException", type);
       WebServicesTestUtils.checkStringMatch("exception classname",
@@ -1662,7 +1662,7 @@ public class TestRMWebServicesApps extends JerseyTestBase {
       String type = exception.getString("exception");
       String classname = exception.getString("javaClassName");
       WebServicesTestUtils.checkStringMatch("exception message",
-          "app with id: application_00000_0099 not found", message);
+          "java.lang.Exception: app with id: application_00000_0099 not found", message);
       WebServicesTestUtils.checkStringMatch("exception type",
           "NotFoundException", type);
       WebServicesTestUtils.checkStringMatch("exception classname",

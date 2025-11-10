@@ -349,7 +349,7 @@ public class TestNMWebServicesContainers extends JerseyTestBase {
       String type = exception.getString("exception");
       String classname = exception.getString("javaClassName");
       WebServicesTestUtils.checkStringMatch("exception cause",
-          "invalid container id, container_foo_1234", message);
+          "java.lang.Exception: invalid container id, container_foo_1234", message);
       WebServicesTestUtils.checkStringMatch("exception type", "BadRequestException", type);
       WebServicesTestUtils.checkStringMatch("exception classname",
           "org.apache.hadoop.yarn.webapp.BadRequestException", classname);
@@ -381,7 +381,7 @@ public class TestNMWebServicesContainers extends JerseyTestBase {
       String type = exception.getString("exception");
       String classname = exception.getString("javaClassName");
       WebServicesTestUtils.checkStringMatch("exception cause",
-          "invalid container id, container_1234_0001", message);
+          "java.lang.Exception: invalid container id, container_1234_0001", message);
       WebServicesTestUtils.checkStringMatch("exception type", "BadRequestException", type);
       WebServicesTestUtils.checkStringMatch("exception classname",
           "org.apache.hadoop.yarn.webapp.BadRequestException", classname);
@@ -414,7 +414,7 @@ public class TestNMWebServicesContainers extends JerseyTestBase {
       String type = exception.getString("exception");
       String classname = exception.getString("javaClassName");
       WebServicesTestUtils.checkStringMatch("exception message",
-          "container with id, container_1234_0001_01_000005, not found",
+          "java.lang.Exception: container with id, container_1234_0001_01_000005, not found",
           message);
       WebServicesTestUtils.checkStringMatch("exception type", "NotFoundException", type);
       WebServicesTestUtils.checkStringMatch("exception classname",

@@ -291,7 +291,7 @@ public class TestNMWebServicesAuxServices extends JerseyTestBase {
       String type = exception.getString("exception");
       String classname = exception.getString("javaClassName");
       WebServicesTestUtils.checkStringMatch("exception message",
-          "Auxiliary services manifest is not enabled", message);
+          "java.lang.Exception: Auxiliary services manifest is not enabled", message);
       WebServicesTestUtils.checkStringMatch("exception type", "BadRequestException", type);
       WebServicesTestUtils.checkStringMatch("exception classname",
           "org.apache.hadoop.yarn.webapp.BadRequestException", classname);
