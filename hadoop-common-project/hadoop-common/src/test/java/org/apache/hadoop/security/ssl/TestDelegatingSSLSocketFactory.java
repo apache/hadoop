@@ -25,6 +25,7 @@ import org.junit.Test;
 
 import org.apache.hadoop.util.NativeCodeLoader;
 
+import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assume.assumeTrue;
 
@@ -34,15 +35,21 @@ import static org.junit.Assume.assumeTrue;
 public class TestDelegatingSSLSocketFactory {
 
   @Test
-  public void testOpenSSL() throws IOException {
+  public void testOpenSSL() {
     assumeTrue("Unable to load native libraries",
             NativeCodeLoader.isNativeCodeLoaded());
     assumeTrue("Build was not compiled with support for OpenSSL",
             NativeCodeLoader.buildSupportsOpenssl());
-    DelegatingSSLSocketFactory.initializeDefaultFactory(
-            DelegatingSSLSocketFactory.SSLChannelMode.OpenSSL);
-    assertThat(DelegatingSSLSocketFactory.getDefaultFactory()
-            .getProviderName()).contains("openssl");
+    try {
+      DelegatingSSLSocketFactory.initializeDefaultFactory(
+              DelegatingSSLSocketFactory.SSLChannelMode.OpenSSL);
+      assertThat(DelegatingSSLSocketFactory.getDefaultFactory()
+              .getProviderName()).contains("openssl");
+    } catch (IOException e) {
+      // if this is caused by a wildfly version error, downgrade to an assume
+      assertExceptionContains("GLIBC_2.34", e);
+      assumeTrue("wildfly library not compatible with this OS version", false);
+    }
   }
 
   @Test
