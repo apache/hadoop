@@ -21,7 +21,6 @@ package org.apache.hadoop.fs.azurebfs;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -48,6 +47,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_WR
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_WRITE_CPU_MONITORING_INTERVAL_MILLIS;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_WRITE_DYNAMIC_THREADPOOL_ENABLEMENT;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_WRITE_LOW_CPU_THRESHOLD_PERCENT;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.HUNDRED;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ZERO;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -832,7 +832,7 @@ class TestWriteThreadPoolSizeManager extends AbstractAbfsIntegrationTest {
           try {
             // Light operations — minimal CPU load
             for (int j = 0; j < 3; j++) {
-              Thread.sleep(100); // simulate idle/light wait
+              Thread.sleep(HUNDRED); // simulate idle/light wait
             }
           } catch (Exception e) {
             Assertions.fail("Light task failed unexpectedly", e);
