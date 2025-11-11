@@ -861,6 +861,10 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
     printTraceLog(
         "Current CPU load: {}, Current worker pool size: {}, Current queue size: {}",
         cpuLoad, currentPoolSize, requiredPoolSize);
+    // Capture the latest thread pool statistics (pool size, CPU, memory, etc.)
+    ReadThreadPoolStats stats = getCurrentStats();
+    // Update the read thread pool metrics with the latest statistics snapshot.
+    readThreadPoolMetrics.update(stats);
     if (currentPoolSize < requiredPoolSize && cpuLoad < cpuThreshold) {
       // Submit more background tasks.
       newThreadPoolSize = Math.min(maxThreadPoolSize,
@@ -873,10 +877,6 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
         workerRefs.add(worker);
         workerPool.submit(worker);
       }
-      // Capture the latest thread pool statistics (pool size, CPU, memory, etc.)
-      ReadThreadPoolStats stats = getCurrentStats();
-      // Update the read thread pool metrics with the latest statistics snapshot.
-      readThreadPoolMetrics.update(stats);
       printTraceLog("Increased worker pool size from {} to {}", currentPoolSize,
           newThreadPoolSize);
     } else if (cpuLoad > cpuThreshold || currentPoolSize > requiredPoolSize) {
@@ -889,10 +889,6 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
         ReadBufferWorker worker = workerRefs.remove(workerRefs.size() - 1);
         worker.stop();
       }
-      // Capture the latest thread pool statistics (pool size, CPU, memory, etc.)
-      ReadThreadPoolStats stats = getCurrentStats();
-      // Update the read thread pool metrics with the latest statistics snapshot.
-      readThreadPoolMetrics.update(stats);
       printTraceLog("Decreased worker pool size from {} to {}", currentPoolSize,
           newThreadPoolSize);
     } else {
