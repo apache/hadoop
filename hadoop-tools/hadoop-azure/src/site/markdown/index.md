@@ -798,8 +798,8 @@ requests. User can specify them as fixed SAS Token to be used across all the req
     - fs.azure.sas.fixed.token.ACCOUNT_NAME
     - fs.azure.sas.fixed.token
 
-### User-bound user delegation SAS 
-- **Description**: The user-bound SAS auth type allows to track the usage of the SAS token generated- something 
+### User-bound user delegation SAS
+- **Description**: The user-bound SAS auth type allows to track the usage of the SAS token generated- something
  that was not possible in user-delegation SAS authentication type. Reach out to us at 'askabfs@microsoft.com' for more information.
  To use this authentication type, both custom SAS token provider class (that implements org.apache.hadoop.fs.azurebfs.extensions.SASTokenProvider) as
     well as OAuth 2.0 provider type need to be specified.
@@ -809,9 +809,8 @@ requests. User can specify them as fixed SAS Token to be used across all the req
         - Custom token provider
         - Managed Identity
         - Workload Identity
-      
-        Refer to respective OAuth 2.0 sections above to correctly chose the OAuth provider type
 
+      Refer to respective OAuth 2.0 sections above to correctly chose the OAuth provider type
 
 - **Configuration**: To use this method with ABFS Driver, specify the following properties in your `core-site.xml` file:
 
@@ -836,7 +835,6 @@ requests. User can specify them as fixed SAS Token to be used across all the req
           <value>CUSTOM_SAS_TOKEN_PROVIDER_CLASS</value>
         </property>
         ```
-       
 
 ## <a name="technical"></a> Technical notes
 

@@ -73,7 +73,7 @@ public class ITestAzureBlobFileSystemUserBoundSAS
 
   private static final String TEST_OBJECT_ID = "123456789";
 
-  private static final String InvalidOAuthToken = "InvalidOAuthTokenValue";
+  private static final String invalidOAuthToken = "InvalidOAuthTokenValue";
 
   /**
    * Constructor. Ensures tests run with SharedKey authentication.
@@ -318,13 +318,15 @@ public class ITestAzureBlobFileSystemUserBoundSAS
     // Create mock token provider with invalid token
     AccessTokenProvider mockProvider = Mockito.mock(AccessTokenProvider.class);
     AzureADToken mockToken = Mockito.mock(AzureADToken.class);
-    Mockito.when(mockToken.getAccessToken()).thenReturn(InvalidOAuthToken);
+    Mockito.when(mockToken.getAccessToken()).thenReturn(invalidOAuthToken);
     Mockito.when(mockProvider.getToken()).thenReturn(mockToken);
 
     // Inject mock provider into AbfsClient
     injectMockTokenProvider(testFs, mockProvider);
 
-    intercept(AccessDeniedException.class, () -> {testFs.create(testPath);});
+    intercept(AccessDeniedException.class, () -> {
+      testFs.create(testPath);
+    });
   }
 
   /**
@@ -338,7 +340,10 @@ public class ITestAzureBlobFileSystemUserBoundSAS
         MockInvalidSASTokenProvider.class.getName());
     AzureBlobFileSystem invalidSASTokenFs = createTestFileSystem();
     intercept(AccessDeniedException.class,
-        () -> {invalidSASTokenFs.create(testPath);});
+        () -> {
+          invalidSASTokenFs.create(testPath);
+        }
+    );
   }
 
 
@@ -398,7 +403,10 @@ public class ITestAzureBlobFileSystemUserBoundSAS
 
     // Try a file operation and expect failure due to expired SAS token
     intercept(AccessDeniedException.class,
-        () -> {testFs.getFileStatus(testPath);});
+        () -> {
+          testFs.getFileStatus(testPath);
+        }
+    );
   }
 
   // Helper method to inject a mock SASTokenProvider into the AbfsClient

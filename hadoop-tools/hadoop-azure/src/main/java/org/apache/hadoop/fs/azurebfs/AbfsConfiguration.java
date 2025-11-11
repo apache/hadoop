@@ -1565,7 +1565,7 @@ public class AbfsConfiguration{
    * the AbfsConfiguration with which a filesystem is initialized, and eliminate
    * chances of dynamic modifications and spurious situations.<br>
    * @return sasTokenProvider object based on configurations provided
-   * @throws AzureBlobFileSystemException
+   * @throws AzureBlobFileSystemException if SAS token provider initialization fails
    */
   public SASTokenProvider getSASTokenProvider() throws AzureBlobFileSystemException {
     AuthType authType = getEnum(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME, AuthType.SharedKey);
@@ -1613,13 +1613,15 @@ public class AbfsConfiguration{
   }
 
   /**
-   * Returns the SASTokenProvider implementation to be used to generate user-bound SAS token.<br>
+   * Returns the SASTokenProvider implementation to be used to generate user-bound SAS token.
    * Custom implementation of {@link SASTokenProvider} under th config
-   * "fs.azure.sas.token.provider.type" needs to be provided.<br>
+   * "fs.azure.sas.token.provider.type" needs to be provided.
+   * @param authType authentication type
    * @return sasTokenProvider object based on configurations provided
-   * @throws AzureBlobFileSystemException
+   * @throws AzureBlobFileSystemException is user-bound SAS token provider initialization fails
    */
-  public SASTokenProvider getUserBoundSASTokenProvider(AuthType authType) throws AzureBlobFileSystemException {
+  public SASTokenProvider getUserBoundSASTokenProvider(AuthType authType)
+      throws AzureBlobFileSystemException {
 
     try {
       Class<? extends SASTokenProvider> customSasTokenProviderImplementation =

@@ -24,7 +24,7 @@ import org.apache.hadoop.conf.Configuration;
  * A mock SAS token provider to test error conditions.
  */
 public class MockInvalidSASTokenProvider implements SASTokenProvider {
-  String invalidSASToken = "testInvalidSASToken";
+  private final String invalidSASToken = "testInvalidSASToken";
 
   @Override
   public void initialize(Configuration configuration, String accountName) {
