@@ -1,0 +1,27 @@
+{
+    "labelsToNodesInfo": {
+        "labelsToNodes": [
+            {
+                "nodeLabels": ["default"],
+                "nodeId": [
+                    "ccycloud-4.nightly7x-us-sq.root.comops.site:8041",
+                    "ccycloud-5.nightly7x-us-sq.root.comops.site:8041"
+                ]
+            },
+            {
+                "nodeLabels": ["gpu"],
+                "nodeId": [
+                    "ccycloud-1.nightly7x-us-sq.root.comops.site:8041",
+                    "ccycloud-2.nightly7x-us-sq.root.comops.site:8041"
+                ]
+            },
+            {
+                "nodeLabels": ["fpga"],
+                "nodeId": [
+                    "ccycloud-3.nightly7x-us-sq.root.comops.site:8041",
+                    "ccycloud-5.nightly7x-us-sq.root.comops.site:8041"
+                ]
+            }
+        ]
+    }
+}
