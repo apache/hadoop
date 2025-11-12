@@ -337,6 +337,30 @@
   </property>
 
   <property>
+    <description>To enable YARN Capacity Scheduler UI.</description>
+    <name>yarn.webapp.scheduler-ui.enable</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>
+      The WAR file path for the YARN Capacity Scheduler UI.
+      If not specified, the scheduler UI will be loaded from the classpath.
+    </description>
+    <name>yarn.webapp.scheduler-ui.war-file-path</name>
+    <value></value>
+  </property>
+
+  <property>
+    <description>
+      Enable read-only mode for YARN Capacity Scheduler UI.
+      When set to true, the UI will not allow configuration changes.
+    </description>
+    <name>yarn.webapp.scheduler-ui.read-only.enable</name>
+    <value>false</value>
+  </property>
+
+  <property>
     <description>
       Enable services rest api on ResourceManager.
     </description>

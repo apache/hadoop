@@ -55,3 +55,21 @@ export default function App() {
     </ValidationProvider>
   );
 }
+
+export function HydrateFallback() {
+  return (
+    <div className="flex h-screen items-center justify-center bg-background">
+      <div className="text-center space-y-4">
+        <div
+          className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]"
+          role="status"
+        >
+          <span className="sr-only">Loading...</span>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Loading YARN Capacity Scheduler UI...
+        </p>
+      </div>
+    </div>
+  );
+}

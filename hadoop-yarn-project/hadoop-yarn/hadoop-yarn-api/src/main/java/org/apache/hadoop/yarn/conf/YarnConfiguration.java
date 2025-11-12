@@ -378,6 +378,21 @@ public class YarnConfiguration extends Configuration {
 
   public static final String YARN_WEBAPP_UI2_WARFILE_PATH = "yarn."
       + "webapp.ui2.war-file-path";
+
+  /**
+   * Enable YARN Capacity Scheduler UI.
+   */
+  public static final String YARN_WEBAPP_SCHEDULER_UI_ENABLE = "yarn."
+      + "webapp.scheduler-ui.enable";
+  public static final boolean DEFAULT_YARN_WEBAPP_SCHEDULER_UI_ENABLE = false;
+
+  public static final String YARN_WEBAPP_SCHEDULER_UI_WARFILE_PATH = "yarn."
+      + "webapp.scheduler-ui.war-file-path";
+
+  public static final String YARN_WEBAPP_SCHEDULER_UI_READ_ONLY_ENABLE = "yarn."
+      + "webapp.scheduler-ui.read-only.enable";
+  public static final boolean DEFAULT_YARN_WEBAPP_SCHEDULER_UI_READ_ONLY = false;
+
   public static final String YARN_API_SERVICES_ENABLE = "yarn."
       + "webapp.api-service.enable";
   public static final String YARN_WEBAPP_UI1_ENABLE_TOOLS = "yarn."
