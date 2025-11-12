@@ -530,15 +530,9 @@ Requirements:
 
 * Windows 10
 * JDK 1.8
-<<<<<<< HEAD
-* Maven 3.0 or later (maven.apache.org)
-* Boost 1.72 (boost.org)
-* Protocol Buffers 3.21.12 (https://github.com/protocolbuffers/protobuf/tags)
-=======
 * Maven 3.3 or later (maven.apache.org)
-* Boost 1.86.0 (boost.org)
+* Boost 1.72 (boost.org)
 * Protocol Buffers 3.25.5 (https://github.com/protocolbuffers/protobuf/tags)
->>>>>>> d361d0ddff2 (HADOOP-19605. Upgrade Protobuf 3.25.5 for docker images (#7780))
 * CMake 3.19 or newer (cmake.org)
 * Visual Studio 2019 (visualstudio.com)
 * Windows SDK 8.1 (optional, if building CPU rate control for the container executor. Get this from
