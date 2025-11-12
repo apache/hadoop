@@ -530,7 +530,7 @@ Requirements:
 
 * Windows 10
 * JDK 1.8
-* Maven 3.3 or later (maven.apache.org)
+* Maven 3.0 or later (maven.apache.org)
 * Boost 1.72 (boost.org)
 * Protocol Buffers 3.25.5 (https://github.com/protocolbuffers/protobuf/tags)
 * CMake 3.19 or newer (cmake.org)
