@@ -227,9 +227,28 @@
           var n = nodes[i];
           n.usedPercentage = Math.round((n.used + n.nonDfsUsedSpace) * 1.0 / n.capacity * 100);
 
-          var port = n.infoAddr.split(":")[1];
-          var securePort = n.infoSecureAddr.split(":")[1];
+          // 处理IPv6地址的infoAddr
+          var infoAddrParts = n.infoAddr.split("]:");
+          var port = "50075";
           var dnHost = n.name.split(":")[0];
+          if (infoAddrParts.length > 1) {
+            // IPv6地址格式 [xxxx:xxxx:...]:port
+             port = infoAddrParts[1];
+          } else {
+            // IPv4地址格式 host:port
+            var parts = n.infoAddr.split(":");
+            port = parts[1];
+          }
+          // 同样方式处理安全端口
+          var securePort = "0";
+          if (n.infoSecureAddr) {
+            var secureAddrParts = n.infoSecureAddr.split("]:");
+            if (secureAddrParts.length > 1) {
+              securePort = secureAddrParts[1];
+            } else {
+            securePort = n.infoSecureAddr.split(":")[1];
+            }
+          }
           n.dnWebAddress = "http://" + dnHost + ":" + port;
           if (securePort != 0) {
             n.dnWebAddress = "https://" + dnHost + ":" + securePort;
