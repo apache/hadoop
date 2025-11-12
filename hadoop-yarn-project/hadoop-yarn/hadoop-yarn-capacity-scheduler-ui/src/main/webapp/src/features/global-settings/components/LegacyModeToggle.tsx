@@ -25,6 +25,7 @@ import { HighlightedText } from '~/components/search/HighlightedText';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -265,15 +266,12 @@ export const LegacyModeToggle: React.FC<LegacyModeToggleProps> = ({
             <DialogContent className="max-w-2xl max-h-[80vh]">
               <DialogHeader>
                 <DialogTitle>Validation Preview</DialogTitle>
+                <DialogDescription>
+                  Changes that would occur when switching to{' '}
+                  {currentEnabled ? 'Flexible' : 'Legacy'} Mode
+                </DialogDescription>
               </DialogHeader>
               <div className="space-y-3 overflow-y-auto max-h-[calc(80vh-8rem)]">
-                <div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Changes that would occur when switching to{' '}
-                    {currentEnabled ? 'Flexible' : 'Legacy'} Mode
-                  </p>
-                </div>
-
                 {validationPreview.affectedQueues === 0 ? (
                   <p className="text-sm text-muted-foreground py-2">
                     No validation changes would occur.

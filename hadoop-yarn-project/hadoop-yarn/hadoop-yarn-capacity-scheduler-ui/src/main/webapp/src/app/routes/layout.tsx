@@ -27,11 +27,9 @@ import { GlobalRefreshButton } from '~/components/elements/GlobalRefreshButton';
 import { DiagnosticsDialog } from '~/components/elements/DiagnosticsDialog';
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '~/components/ui/sidebar';
 import { Badge } from '~/components/ui/badge';
+import { Button } from '~/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '~/components/ui/tooltip';
-import { ChevronRight, Lock } from 'lucide-react';
-import { LegacyModeDocumentation } from '~/features/queue-management/components/LegacyModeDocumentation';
-import { getMergedConfigData } from '~/utils/configUtils';
-import { SPECIAL_VALUES } from '~/types';
+import { Lock, GitCompareArrows } from 'lucide-react';
 import { SearchBar } from '~/components/search/SearchBar';
 import { useKeyboardShortcuts } from '~/hooks/useKeyboardShortcuts';
 import { toast } from 'sonner';
@@ -41,18 +39,15 @@ export default function Layout() {
   const [stagedChangesPanelOpen, setStagedChangesPanelOpen] = useState(false);
   const [isApplying, setIsApplying] = useState(false);
   const loadInitialData = useSchedulerStore((state) => state.loadInitialData);
-  const configData = useSchedulerStore((state) => state.configData);
   const stagedChanges = useSchedulerStore((state) => state.stagedChanges);
   const setSearchContext = useSchedulerStore((state) => state.setSearchContext);
   const isReadOnly = useSchedulerStore((state) => state.isReadOnly);
   const applyChanges = useSchedulerStore((state) => state.applyChanges);
   const clearAllChanges = useSchedulerStore((state) => state.clearAllChanges);
   const isPropertyPanelOpen = useSchedulerStore((state) => state.isPropertyPanelOpen);
+  const isComparisonModeActive = useSchedulerStore((state) => state.isComparisonModeActive);
+  const toggleComparisonMode = useSchedulerStore((state) => state.toggleComparisonMode);
   const location = useLocation();
-
-  // Get legacy mode status considering staged changes
-  const mergedData = getMergedConfigData(configData, stagedChanges);
-  const legacyModeEnabled = mergedData.get(SPECIAL_VALUES.LEGACY_MODE_PROPERTY) !== 'false';
 
   useEffect(() => {
     loadInitialData().catch((err) => {
@@ -183,21 +178,7 @@ export default function Layout() {
             <header className="flex h-16 items-center gap-4 border-b px-6">
               <SidebarTrigger />
               <div className="flex-1">
-                <div className="flex items-center gap-2">
-                  <h1 className="text-xl font-semibold">{pageInfo.title}</h1>
-                  {location.pathname === '/' && (
-                    <LegacyModeDocumentation legacyModeEnabled={legacyModeEnabled}>
-                      <Badge
-                        variant={legacyModeEnabled ? 'warning' : 'success'}
-                        className="cursor-pointer hover:opacity-80 hover:scale-105 transition-all duration-200 animate-pulse"
-                        style={{ animationIterationCount: '3' }}
-                      >
-                        {legacyModeEnabled ? 'Legacy Mode' : 'Flexible Mode'}
-                        <ChevronRight className="h-3 w-3 ml-1" />
-                      </Badge>
-                    </LegacyModeDocumentation>
-                  )}
-                </div>
+                <h1 className="text-xl font-semibold">{pageInfo.title}</h1>
                 <p className="text-sm text-muted-foreground">{pageInfo.description}</p>
               </div>
               <SearchBar className="w-64" placeholder="Search" />
@@ -217,6 +198,27 @@ export default function Layout() {
                 </TooltipProvider>
               )}
               <GlobalRefreshButton />
+              {location.pathname === '/' && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant={isComparisonModeActive ? 'default' : 'ghost'}
+                        size="icon"
+                        onClick={toggleComparisonMode}
+                        aria-label={
+                          isComparisonModeActive ? 'Exit comparison mode' : 'Enter comparison mode'
+                        }
+                      >
+                        <GitCompareArrows className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>{isComparisonModeActive ? 'Exit comparison mode' : 'Compare queues'}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
               <DiagnosticsDialog />
               <ModeToggle />
             </header>

@@ -36,6 +36,7 @@ export const createQueueSelectionSlice: StateCreator<
   isPropertyPanelOpen: false,
   propertyPanelInitialTab: 'overview',
   shouldOpenTemplateConfig: false,
+  isComparisonModeActive: false,
 
   selectQueue: (queuePath) => {
     // Validate that the queue exists if a path is provided
@@ -121,5 +122,25 @@ export const createQueueSelectionSlice: StateCreator<
     });
 
     return configs;
+  },
+
+  toggleComparisonMode: () => {
+    set((state) => {
+      state.isComparisonModeActive = !state.isComparisonModeActive;
+      // Clear selections when exiting comparison mode
+      if (!state.isComparisonModeActive) {
+        state.comparisonQueues = [];
+      }
+    });
+  },
+
+  setComparisonMode: (active) => {
+    set((state) => {
+      state.isComparisonModeActive = active;
+      // Clear selections when exiting comparison mode
+      if (!active) {
+        state.comparisonQueues = [];
+      }
+    });
   },
 });

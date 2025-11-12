@@ -77,7 +77,7 @@ describe('QueueChangeGroup', () => {
       expect(screen.getByText('Global Settings')).toBeInTheDocument();
     });
 
-    it('should display total change count', () => {
+    it('should display summary badges for all change types', () => {
       const changes = [
         createMockChange({ id: '1', type: 'add' }),
         createMockChange({ id: '2', type: 'update' }),
@@ -88,17 +88,21 @@ describe('QueueChangeGroup', () => {
         <QueueChangeGroup queuePath="root.default" changes={changes} onRevert={mockOnRevert} />,
       );
 
-      expect(screen.getByText('3 changes')).toBeInTheDocument();
+      // Should show badges for each change type
+      expect(screen.getByText('+1')).toBeInTheDocument();
+      expect(screen.getByText('~1')).toBeInTheDocument();
+      expect(screen.getByText('-1')).toBeInTheDocument();
     });
 
-    it('should display singular "change" for single change', () => {
-      const change = createMockChange();
+    it('should display summary badge for single change', () => {
+      const change = createMockChange({ type: 'update' });
 
       render(
         <QueueChangeGroup queuePath="root.default" changes={[change]} onRevert={mockOnRevert} />,
       );
 
-      expect(screen.getByText('1 change')).toBeInTheDocument();
+      // Should show badge for the change type
+      expect(screen.getByText('~1')).toBeInTheDocument();
     });
   });
 
@@ -177,7 +181,7 @@ describe('QueueChangeGroup', () => {
       );
 
       // Check if the change type section is visible
-      expect(screen.getByText(/Modify \(1\)/)).toBeInTheDocument();
+      expect(screen.getByText(/Modified \(1\)/)).toBeInTheDocument();
     });
 
     it('should collapse/expand queue group when header is clicked', async () => {
@@ -192,51 +196,51 @@ describe('QueueChangeGroup', () => {
       expect(header).toBeInTheDocument();
 
       // Initially expanded
-      expect(screen.getByText(/Modify \(1\)/)).toBeInTheDocument();
+      expect(screen.getByText(/Modified \(1\)/)).toBeInTheDocument();
 
       // Click to collapse
       await user.click(header!);
 
       // Should be collapsed now (content hidden)
-      expect(screen.queryByText(/Modify \(1\)/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Modified \(1\)/)).not.toBeInTheDocument();
 
       // Click to expand again
       await user.click(header!);
 
       // Should be expanded again
-      expect(screen.getByText(/Modify \(1\)/)).toBeInTheDocument();
+      expect(screen.getByText(/Modified \(1\)/)).toBeInTheDocument();
     });
   });
 
   describe('change type sections', () => {
-    it('should render "Add" section for add changes', () => {
+    it('should render "New" section for add changes', () => {
       const changes = [createMockChange({ id: '1', type: 'add' })];
 
       render(
         <QueueChangeGroup queuePath="root.default" changes={changes} onRevert={mockOnRevert} />,
       );
 
-      expect(screen.getByText('Add (1)')).toBeInTheDocument();
+      expect(screen.getByText('New (1)')).toBeInTheDocument();
     });
 
-    it('should render "Modify" section for update changes', () => {
+    it('should render "Modified" section for update changes', () => {
       const changes = [createMockChange({ id: '1', type: 'update' })];
 
       render(
         <QueueChangeGroup queuePath="root.default" changes={changes} onRevert={mockOnRevert} />,
       );
 
-      expect(screen.getByText('Modify (1)')).toBeInTheDocument();
+      expect(screen.getByText('Modified (1)')).toBeInTheDocument();
     });
 
-    it('should render "Remove" section for remove changes', () => {
+    it('should render "Removed" section for remove changes', () => {
       const changes = [createMockChange({ id: '1', type: 'remove' })];
 
       render(
         <QueueChangeGroup queuePath="root.default" changes={changes} onRevert={mockOnRevert} />,
       );
 
-      expect(screen.getByText('Remove (1)')).toBeInTheDocument();
+      expect(screen.getByText('Removed (1)')).toBeInTheDocument();
     });
 
     it('should render all change type sections', () => {
@@ -250,9 +254,9 @@ describe('QueueChangeGroup', () => {
         <QueueChangeGroup queuePath="root.default" changes={changes} onRevert={mockOnRevert} />,
       );
 
-      expect(screen.getByText('Add (1)')).toBeInTheDocument();
-      expect(screen.getByText('Modify (1)')).toBeInTheDocument();
-      expect(screen.getByText('Remove (1)')).toBeInTheDocument();
+      expect(screen.getByText('New (1)')).toBeInTheDocument();
+      expect(screen.getByText('Modified (1)')).toBeInTheDocument();
+      expect(screen.getByText('Removed (1)')).toBeInTheDocument();
     });
 
     it('should render all changes in each section expanded by default', () => {
@@ -281,7 +285,7 @@ describe('QueueChangeGroup', () => {
       expect(screen.getByText('DiffView: capacity')).toBeInTheDocument();
 
       // Click to collapse
-      const addSection = screen.getByText('Add (1)').closest('button');
+      const addSection = screen.getByText('New (1)').closest('button');
       await user.click(addSection!);
 
       // Should be collapsed
@@ -302,7 +306,7 @@ describe('QueueChangeGroup', () => {
         <QueueChangeGroup queuePath="root.default" changes={changes} onRevert={mockOnRevert} />,
       );
 
-      const modifySection = screen.getByText('Modify (1)').closest('button');
+      const modifySection = screen.getByText('Modified (1)').closest('button');
       await user.click(modifySection!);
 
       expect(screen.queryByText('DiffView: capacity')).not.toBeInTheDocument();
@@ -316,7 +320,7 @@ describe('QueueChangeGroup', () => {
         <QueueChangeGroup queuePath="root.default" changes={changes} onRevert={mockOnRevert} />,
       );
 
-      const removeSection = screen.getByText('Remove (1)').closest('button');
+      const removeSection = screen.getByText('Removed (1)').closest('button');
       await user.click(removeSection!);
 
       expect(screen.queryByText('DiffView: capacity')).not.toBeInTheDocument();
@@ -363,7 +367,7 @@ describe('QueueChangeGroup', () => {
         <QueueChangeGroup queuePath="root.default" changes={changes} onRevert={mockOnRevert} />,
       );
 
-      expect(screen.getByText('Modify (3)')).toBeInTheDocument();
+      expect(screen.getByText('Modified (3)')).toBeInTheDocument();
       expect(screen.getByText('DiffView: capacity')).toBeInTheDocument();
       expect(screen.getByText('DiffView: maximum-capacity')).toBeInTheDocument();
       expect(screen.getByText('DiffView: state')).toBeInTheDocument();
@@ -385,13 +389,13 @@ describe('QueueChangeGroup', () => {
         <QueueChangeGroup queuePath="root.default" changes={changes} onRevert={mockOnRevert} />,
       );
 
-      expect(screen.getByText('6 changes')).toBeInTheDocument();
+      // Should show badges with counts (but not "6 changes" text - that was removed in redesign)
       expect(screen.getByText('+2')).toBeInTheDocument();
       expect(screen.getByText('~3')).toBeInTheDocument();
       expect(screen.getByText('-1')).toBeInTheDocument();
-      expect(screen.getByText('Add (2)')).toBeInTheDocument();
-      expect(screen.getByText('Modify (3)')).toBeInTheDocument();
-      expect(screen.getByText('Remove (1)')).toBeInTheDocument();
+      expect(screen.getByText('New (2)')).toBeInTheDocument();
+      expect(screen.getByText('Modified (3)')).toBeInTheDocument();
+      expect(screen.getByText('Removed (1)')).toBeInTheDocument();
     });
 
     it('should handle empty changes array', () => {

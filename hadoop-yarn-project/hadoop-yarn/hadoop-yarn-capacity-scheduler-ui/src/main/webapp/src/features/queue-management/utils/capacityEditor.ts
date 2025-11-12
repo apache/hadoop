@@ -191,6 +191,22 @@ const getParentPath = (queuePath: string): string => {
   return parts.slice(0, -1).join('.');
 };
 
+/**
+ * Detects if a queue path is a template path.
+ * Template paths contain:
+ * - 'leaf-queue-template' (legacy auto-created leaf queues)
+ * - 'auto-queue-creation-v2.template' (flexible shared template)
+ * - 'auto-queue-creation-v2.parent-template' (flexible parent template)
+ * - 'auto-queue-creation-v2.leaf-template' (flexible leaf template)
+ */
+const isTemplatePath = (queuePath: string): boolean => {
+  const parts = queuePath.split('.');
+  return (
+    parts.includes('leaf-queue-template') ||
+    parts.some((part) => part.includes('template') && part.includes('auto-queue-creation'))
+  );
+};
+
 const getBaseValue = (store: SchedulerStore, queuePath: string, property: string): string => {
   const key = buildPropertyKey(queuePath, property);
   return sanitize(store.configData.get(key) ?? '');
@@ -233,6 +249,36 @@ export const buildCapacityEditorDrafts = ({
 
   const capacityProperty = getPropertyNameForLabel(selectedNodeLabel, 'capacity');
   const maxCapacityProperty = getPropertyNameForLabel(selectedNodeLabel, 'maximum-capacity');
+
+  // Special handling for template paths: only create a draft for the template itself
+  if (isTemplatePath(originQueuePath)) {
+    const baseCapacity = getBaseValue(store, originQueuePath, capacityProperty);
+    const baseMaxCapacity = getBaseValue(store, originQueuePath, maxCapacityProperty);
+
+    const capacityResult = store.getQueuePropertyValue(originQueuePath, capacityProperty);
+    const maxCapacityResult = store.getQueuePropertyValue(originQueuePath, maxCapacityProperty);
+
+    const currentCapacity =
+      originInitialCapacity !== null ? originInitialCapacity : capacityResult.value;
+    const currentMaxCapacity =
+      originInitialMaxCapacity !== null ? originInitialMaxCapacity : maxCapacityResult.value;
+
+    const hasStagedChange = originIsNew || capacityResult.isStaged || maxCapacityResult.isStaged;
+
+    return [
+      createRowDraft({
+        queuePath: originQueuePath,
+        queueName: originQueueName,
+        baseCapacity,
+        baseMaxCapacity,
+        currentCapacity,
+        currentMaxCapacity,
+        isOrigin: true,
+        isNew: originIsNew,
+        hasStagedChange,
+      }),
+    ];
+  }
 
   const drafts: CapacityRowDraft[] = [];
   const seen = new Set<string>();

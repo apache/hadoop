@@ -210,6 +210,7 @@ export const QueueCardNode: React.FC<NodeProps> = ({ data }) => {
     clearQueueChanges,
     hasPendingDeletion,
     searchQuery,
+    isComparisonModeActive,
   } = useSchedulerStore();
 
   const { canAddChildQueue, canDeleteQueue, updateQueueProperty } = useQueueActions();
@@ -442,7 +443,13 @@ export const QueueCardNode: React.FC<NodeProps> = ({ data }) => {
         shouldGrayOut && 'opacity-50 grayscale',
         'gap-4 py-5',
       )}
-      onClick={(event) => openPropertyPanel(event, 'overview')}
+      onClick={(event) => {
+        if (isComparisonModeActive) {
+          handleComparisonToggle();
+        } else {
+          openPropertyPanel(event, 'overview');
+        }
+      }}
       style={{ width: QUEUE_CARD_WIDTH, height: QUEUE_CARD_HEIGHT }}
     >
       <CardHeader className="px-5 pb-3 gap-1">
@@ -568,15 +575,17 @@ export const QueueCardNode: React.FC<NodeProps> = ({ data }) => {
           )}
         </div>
 
-        <CardAction>
-          <Checkbox
-            checked={isSelectedForComparison}
-            onCheckedChange={handleComparisonToggle}
-            onClick={(e) => e.stopPropagation()}
-            className="h-5 w-5 border-2"
-            disabled={false}
-          />
-        </CardAction>
+        {isComparisonModeActive && (
+          <CardAction>
+            <Checkbox
+              checked={isSelectedForComparison}
+              onCheckedChange={handleComparisonToggle}
+              onClick={(e) => e.stopPropagation()}
+              className="h-5 w-5 border-2"
+              disabled={false}
+            />
+          </CardAction>
+        )}
       </CardHeader>
 
       <CardContent className="px-5 pt-0 pb-4 flex-1 flex flex-col">
@@ -744,7 +753,7 @@ export const QueueCardNode: React.FC<NodeProps> = ({ data }) => {
           {queuePath !== SPECIAL_VALUES.ROOT_QUEUE_NAME && (
             <ContextMenuItem onClick={(e) => handleOpenCapacityEditor(e)}>
               <SlidersHorizontal className="mr-2 h-4 w-4" />
-              Capacity Editor
+              Edit Capacity
             </ContextMenuItem>
           )}
 

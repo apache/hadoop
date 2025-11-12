@@ -329,6 +329,36 @@ describe('QueueCardNode', () => {
   });
 
   it('should toggle comparison checkbox', async () => {
+    (useSchedulerStore as any).mockImplementation((selector: any) => {
+      const state = {
+        comparisonQueues: [],
+        selectedQueuePath: null,
+        selectQueue: mockSelectQueue,
+        setPropertyPanelOpen: mockSetPropertyPanelOpen,
+        isPropertyPanelOpen: false,
+        propertyPanelInitialTab: 'overview' as const,
+        setPropertyPanelInitialTab: mockSetPropertyPanelInitialTab,
+        toggleComparisonQueue: mockToggleComparisonQueue,
+        getQueueByPath: vi.fn().mockReturnValue({ queueName: 'default' }),
+        getChildQueues: vi.fn().mockReturnValue([]),
+        selectedNodeLabelFilter: '',
+        getQueueLabelCapacity: vi.fn().mockReturnValue({
+          capacity: '10',
+          maxCapacity: '100',
+          absoluteCapacity: '10',
+          isLabelSpecific: false,
+          label: 'DEFAULT',
+          hasAccess: true,
+          canUseLabel: true,
+        }),
+        hasPendingDeletion: vi.fn().mockReturnValue(false),
+        clearQueueChanges: vi.fn(),
+        requestTemplateConfigOpen: vi.fn(),
+        isComparisonModeActive: true,
+      };
+      return selector ? selector(state) : state;
+    });
+
     const user = userEvent.setup();
     renderWithProviders(<QueueCardNode {...createNodeProps(defaultNodeData)} />);
 
@@ -336,6 +366,94 @@ describe('QueueCardNode', () => {
     await user.click(checkbox);
 
     expect(mockToggleComparisonQueue).toHaveBeenCalledWith('root.default');
+  });
+
+  it('should toggle comparison when clicking card in comparison mode', async () => {
+    (useSchedulerStore as any).mockImplementation((selector: any) => {
+      const state = {
+        comparisonQueues: [],
+        selectedQueuePath: null,
+        selectQueue: mockSelectQueue,
+        setPropertyPanelOpen: mockSetPropertyPanelOpen,
+        isPropertyPanelOpen: false,
+        propertyPanelInitialTab: 'overview' as const,
+        setPropertyPanelInitialTab: mockSetPropertyPanelInitialTab,
+        toggleComparisonQueue: mockToggleComparisonQueue,
+        getQueueByPath: vi.fn().mockReturnValue({ queueName: 'default' }),
+        getChildQueues: vi.fn().mockReturnValue([]),
+        selectedNodeLabelFilter: '',
+        getQueueLabelCapacity: vi.fn().mockReturnValue({
+          capacity: '10',
+          maxCapacity: '100',
+          absoluteCapacity: '10',
+          isLabelSpecific: false,
+          label: 'DEFAULT',
+          hasAccess: true,
+          canUseLabel: true,
+        }),
+        hasPendingDeletion: vi.fn().mockReturnValue(false),
+        clearQueueChanges: vi.fn(),
+        requestTemplateConfigOpen: vi.fn(),
+        isComparisonModeActive: true,
+      };
+      return selector ? selector(state) : state;
+    });
+
+    const user = userEvent.setup();
+    renderWithProviders(<QueueCardNode {...createNodeProps(defaultNodeData)} />);
+
+    // Click on the card title (which is on the card)
+    const cardTitle = screen.getByText('default');
+    await user.click(cardTitle);
+
+    expect(mockToggleComparisonQueue).toHaveBeenCalledWith('root.default');
+    // Should NOT open property panel in comparison mode
+    expect(mockSetPropertyPanelOpen).not.toHaveBeenCalled();
+  });
+
+  it('should open property panel when clicking card outside comparison mode', async () => {
+    (useSchedulerStore as any).mockImplementation((selector: any) => {
+      const state = {
+        comparisonQueues: [],
+        selectedQueuePath: null,
+        selectQueue: mockSelectQueue,
+        setPropertyPanelOpen: mockSetPropertyPanelOpen,
+        isPropertyPanelOpen: false,
+        propertyPanelInitialTab: 'overview' as const,
+        setPropertyPanelInitialTab: mockSetPropertyPanelInitialTab,
+        toggleComparisonQueue: mockToggleComparisonQueue,
+        getQueueByPath: vi.fn().mockReturnValue({ queueName: 'default' }),
+        getChildQueues: vi.fn().mockReturnValue([]),
+        selectedNodeLabelFilter: '',
+        getQueueLabelCapacity: vi.fn().mockReturnValue({
+          capacity: '10',
+          maxCapacity: '100',
+          absoluteCapacity: '10',
+          isLabelSpecific: false,
+          label: 'DEFAULT',
+          hasAccess: true,
+          canUseLabel: true,
+        }),
+        hasPendingDeletion: vi.fn().mockReturnValue(false),
+        clearQueueChanges: vi.fn(),
+        requestTemplateConfigOpen: vi.fn(),
+        isComparisonModeActive: false,
+      };
+      return selector ? selector(state) : state;
+    });
+
+    const user = userEvent.setup();
+    renderWithProviders(<QueueCardNode {...createNodeProps(defaultNodeData)} />);
+
+    // Click on the card title (which is on the card)
+    const cardTitle = screen.getByText('default');
+    await user.click(cardTitle);
+
+    // Should open property panel when NOT in comparison mode
+    expect(mockSetPropertyPanelOpen).toHaveBeenCalledWith(true);
+    expect(mockSelectQueue).toHaveBeenCalledWith('root.default');
+    // Should NOT toggle comparison
+    expect(mockToggleComparisonQueue).not.toHaveBeenCalled();
   });
 
   it('should show selected state when queue is selected', () => {
@@ -395,6 +513,7 @@ describe('QueueCardNode', () => {
         hasPendingDeletion: vi.fn().mockReturnValue(false),
         clearQueueChanges: vi.fn(),
         requestTemplateConfigOpen: vi.fn(),
+        isComparisonModeActive: true,
       };
       return selector ? selector(state) : state;
     });

@@ -224,7 +224,7 @@ describe('PropertyFormField', () => {
       </FormWrapper>,
     );
 
-    expect(screen.getByText('Capacity Editor')).toBeInTheDocument();
+    expect(screen.getByText('Edit Capacity')).toBeInTheDocument();
     expect(screen.queryByText('This is the capacity description')).not.toBeInTheDocument();
   });
 

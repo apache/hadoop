@@ -12,6 +12,7 @@
 html,
 body {
   @apply bg-white dark:bg-gray-950;
+  overscroll-behavior: none;
 
   @media (prefers-color-scheme: dark) {
     color-scheme: dark;
@@ -112,7 +113,7 @@ body {
   --card-foreground: oklch(0.985 0 0);
   --popover: oklch(0.21 0.006 285.885);
   --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.648 0.2 131.684);
+  --primary: oklch(0.52 0.18 131.684);
   --primary-foreground: oklch(0.986 0.031 120.757);
   --secondary: oklch(0.274 0.006 286.033);
   --secondary-foreground: oklch(0.985 0 0);
@@ -123,7 +124,7 @@ body {
   --destructive: oklch(0.704 0.191 22.216);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.405 0.101 131.063);
+  --ring: oklch(0.33 0.09 131.063);
   --chart-1: oklch(0.871 0.15 154.449);
   --chart-2: oklch(0.723 0.219 149.579);
   --chart-3: oklch(0.627 0.194 149.214);
@@ -131,12 +132,12 @@ body {
   --chart-5: oklch(0.448 0.119 151.328);
   --sidebar: oklch(0.21 0.006 285.885);
   --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.768 0.233 130.85);
+  --sidebar-primary: oklch(0.6 0.2 130.85);
   --sidebar-primary-foreground: oklch(0.986 0.031 120.757);
   --sidebar-accent: oklch(0.274 0.006 286.033);
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.405 0.101 131.063);
+  --sidebar-ring: oklch(0.33 0.09 131.063);
 }
 
 @layer base {

@@ -90,11 +90,8 @@ export function validatePropertyChange({
       ? result.issues
       : result.issues.filter((issue) => !isBlockingError(issue.rule, issue.severity));
 
-    // Only include issues that are relevant to the queue being changed.
-    // This prevents duplicate errors when multiple sibling queues have the same issue.
     const relevantIssues = filtered.filter((issue) => {
-      // Always include issues for the queue being directly edited
-      if (issue.queuePath === queuePath) {
+      if (issue.queuePath === queuePath && issue.field === propertyName) {
         return true;
       }
 
@@ -109,6 +106,7 @@ export function validatePropertyChange({
 
       // Include other cross-queue issues (like child-capacity-sum on parent,
       // or parent-child-capacity-constraint warnings on children)
+      // But only if they're for related properties (capacity-related rules)
       if (isCrossQueueRule(issue.rule)) {
         return true;
       }

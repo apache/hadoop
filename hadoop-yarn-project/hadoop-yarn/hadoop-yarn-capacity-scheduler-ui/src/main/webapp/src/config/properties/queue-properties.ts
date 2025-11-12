@@ -508,6 +508,12 @@ export const queuePropertyDefinitions: PropertyDescriptor[] = [
     defaultValue: '',
     required: false,
     showWhen: [shouldShowLegacyAutoCreation],
+    enableWhen: [
+      ({ queueInfo }) => {
+        // Disable if queue has children
+        return !queueInfo?.queues?.queue || queueInfo.queues.queue.length === 0;
+      },
+    ],
   },
   {
     name: 'auto-queue-creation-v2.enabled',

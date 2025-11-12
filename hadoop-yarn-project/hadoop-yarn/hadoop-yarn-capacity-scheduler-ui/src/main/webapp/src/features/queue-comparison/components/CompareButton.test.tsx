@@ -32,40 +32,49 @@ vi.mock('./QueueComparisonDialog', () => ({
 }));
 
 describe('CompareButton', () => {
-  const mockClearComparisonQueues = vi.fn();
-  const mockCanCompareQueues = vi.fn();
+  const mockSetComparisonMode = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
-    (useSchedulerStore as any).mockReturnValue({
-      comparisonQueues: ['root.default', 'root.production'],
-      clearComparisonQueues: mockClearComparisonQueues,
-      canCompareQueues: mockCanCompareQueues,
+    (useSchedulerStore as any).mockImplementation((selector: any) => {
+      const state = {
+        comparisonQueues: ['root.default', 'root.production'],
+        setComparisonMode: mockSetComparisonMode,
+        isComparisonModeActive: true,
+      };
+      return selector ? selector(state) : state;
     });
   });
 
-  it('should not render when canCompareQueues returns false', () => {
-    mockCanCompareQueues.mockReturnValue(false);
+  it('should not render when comparison mode is not active', () => {
+    (useSchedulerStore as any).mockImplementation((selector: any) => {
+      const state = {
+        comparisonQueues: ['root.default', 'root.production'],
+        setComparisonMode: mockSetComparisonMode,
+        isComparisonModeActive: false,
+      };
+      return selector ? selector(state) : state;
+    });
 
     const { container } = render(<CompareButton />);
 
     expect(container.firstChild).toBeNull();
   });
 
-  it('should render when canCompareQueues returns true', () => {
-    mockCanCompareQueues.mockReturnValue(true);
-
+  it('should render when 2 or more queues are selected', () => {
     render(<CompareButton />);
 
     expect(screen.getByText('Compare 2 Queues')).toBeInTheDocument();
   });
 
   it('should display the correct number of selected queues', () => {
-    mockCanCompareQueues.mockReturnValue(true);
-    (useSchedulerStore as any).mockReturnValue({
-      comparisonQueues: ['root.default', 'root.production', 'root.dev'],
-      clearComparisonQueues: mockClearComparisonQueues,
-      canCompareQueues: mockCanCompareQueues,
+    (useSchedulerStore as any).mockImplementation((selector: any) => {
+      const state = {
+        comparisonQueues: ['root.default', 'root.production', 'root.dev'],
+        setComparisonMode: mockSetComparisonMode,
+        isComparisonModeActive: true,
+      };
+      return selector ? selector(state) : state;
     });
 
     render(<CompareButton />);
@@ -74,8 +83,6 @@ describe('CompareButton', () => {
   });
 
   it('should open dialog when compare button is clicked', () => {
-    mockCanCompareQueues.mockReturnValue(true);
-
     render(<CompareButton />);
     const compareButton = screen.getByText('Compare 2 Queues');
 
@@ -85,20 +92,16 @@ describe('CompareButton', () => {
     expect(dialog).toHaveAttribute('data-open', 'true');
   });
 
-  it('should clear selection when clear button is clicked', () => {
-    mockCanCompareQueues.mockReturnValue(true);
-
+  it('should exit comparison mode when exit button is clicked', () => {
     render(<CompareButton />);
-    const clearButton = screen.getByLabelText('Clear selection');
+    const exitButton = screen.getByLabelText('Exit comparison mode');
 
-    fireEvent.click(clearButton);
+    fireEvent.click(exitButton);
 
-    expect(mockClearComparisonQueues).toHaveBeenCalled();
+    expect(mockSetComparisonMode).toHaveBeenCalledWith(false);
   });
 
-  it('should close dialog when onOpenChange is called', () => {
-    mockCanCompareQueues.mockReturnValue(true);
-
+  it('should close dialog when onOpenChange is called without exiting comparison mode', () => {
     render(<CompareButton />);
     const compareButton = screen.getByText('Compare 2 Queues');
 
@@ -109,5 +112,7 @@ describe('CompareButton', () => {
 
     const dialog = screen.getByTestId('comparison-dialog');
     expect(dialog).toHaveAttribute('data-open', 'false');
+    // Comparison mode should NOT be exited when dialog closes
+    expect(mockSetComparisonMode).not.toHaveBeenCalled();
   });
 });

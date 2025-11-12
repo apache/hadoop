@@ -62,6 +62,15 @@ export function StagedChangesPanel({ open, onClose, onOpen }: StagedChangesPanel
     {} as Record<string, StagedChange[]>,
   );
 
+  // Sort queue paths to show 'global' first, then alphabetically
+  const sortedQueuePaths = Object.keys(changesByQueue).sort((a, b) => {
+    const isAGlobal = a === 'global';
+    const isBGlobal = b === 'global';
+    if (isAGlobal && !isBGlobal) return -1;
+    if (!isAGlobal && isBGlobal) return 1;
+    return a.localeCompare(b);
+  });
+
   // Calculate validation summary
   let errorCount = 0;
   let warningCount = 0;
@@ -197,11 +206,11 @@ export function StagedChangesPanel({ open, onClose, onOpen }: StagedChangesPanel
                   </Alert>
                 )}
 
-                {Object.entries(changesByQueue).map(([queuePath, changes]) => (
+                {sortedQueuePaths.map((queuePath) => (
                   <QueueChangeGroup
                     key={queuePath}
                     queuePath={queuePath}
-                    changes={changes}
+                    changes={changesByQueue[queuePath]}
                     onRevert={handleRevertChange}
                   />
                 ))}

@@ -495,6 +495,148 @@ describe('crossQueue validation', () => {
       expect(properties['maximum-capacity']).toBe('100');
       expect(properties['root.production.capacity']).toBeUndefined();
     });
+
+    it('should only attach capacity errors to capacity changes (field matching)', () => {
+      const schedulerData = createMockSchedulerData();
+      const configData = new Map();
+
+      vi.mocked(getAffectedQueuesForValidation).mockReturnValue(['root.default']);
+      vi.mocked(validateQueue).mockReturnValue({
+        valid: false,
+        issues: [
+          {
+            queuePath: 'root.default',
+            field: 'capacity',
+            message: 'Capacity error',
+            severity: 'error',
+            rule: 'capacity-rule',
+          },
+          {
+            queuePath: 'root.default',
+            field: 'state',
+            message: 'State error',
+            severity: 'error',
+            rule: 'state-rule',
+          },
+        ],
+      });
+
+      const result = validatePropertyChange({
+        propertyName: 'capacity',
+        propertyValue: '60',
+        queuePath: 'root.default',
+        schedulerData,
+        configData,
+        stagedChanges: [],
+      });
+
+      // Should only include capacity error, not state error
+      expect(result).toHaveLength(1);
+      expect(result[0].field).toBe('capacity');
+      expect(result[0].message).toBe('Capacity error');
+    });
+
+    it('should only attach state errors to state changes (field matching)', () => {
+      const schedulerData = createMockSchedulerData();
+      const configData = new Map();
+
+      vi.mocked(getAffectedQueuesForValidation).mockReturnValue(['root.default']);
+      vi.mocked(validateQueue).mockReturnValue({
+        valid: false,
+        issues: [
+          {
+            queuePath: 'root.default',
+            field: 'capacity',
+            message: 'Capacity error',
+            severity: 'error',
+            rule: 'capacity-rule',
+          },
+          {
+            queuePath: 'root.default',
+            field: 'state',
+            message: 'State error',
+            severity: 'error',
+            rule: 'state-rule',
+          },
+        ],
+      });
+
+      const result = validatePropertyChange({
+        propertyName: 'state',
+        propertyValue: 'STOPPED',
+        queuePath: 'root.default',
+        schedulerData,
+        configData,
+        stagedChanges: [],
+      });
+
+      // Should only include state error, not capacity error
+      expect(result).toHaveLength(1);
+      expect(result[0].field).toBe('state');
+      expect(result[0].message).toBe('State error');
+    });
+
+    it('should not attach capacity errors when changing state property', () => {
+      const schedulerData = createMockSchedulerData();
+      const configData = new Map();
+
+      vi.mocked(getAffectedQueuesForValidation).mockReturnValue(['root.default']);
+      vi.mocked(validateQueue).mockReturnValue({
+        valid: false,
+        issues: [
+          {
+            queuePath: 'root.default',
+            field: 'capacity',
+            message: 'Capacity must be between 0 and 100',
+            severity: 'error',
+            rule: 'capacity-range',
+          },
+        ],
+      });
+
+      const result = validatePropertyChange({
+        propertyName: 'state',
+        propertyValue: 'RUNNING',
+        queuePath: 'root.default',
+        schedulerData,
+        configData,
+        stagedChanges: [],
+      });
+
+      // Should NOT include the capacity error when changing state
+      expect(result).toHaveLength(0);
+    });
+
+    it('should not attach state errors when changing capacity property', () => {
+      const schedulerData = createMockSchedulerData();
+      const configData = new Map();
+
+      vi.mocked(getAffectedQueuesForValidation).mockReturnValue(['root.default']);
+      vi.mocked(validateQueue).mockReturnValue({
+        valid: false,
+        issues: [
+          {
+            queuePath: 'root.default',
+            field: 'state',
+            message: 'Invalid state transition',
+            severity: 'error',
+            rule: 'state-validation',
+          },
+        ],
+      });
+
+      const result = validatePropertyChange({
+        propertyName: 'capacity',
+        propertyValue: '75',
+        queuePath: 'root.default',
+        schedulerData,
+        configData,
+        stagedChanges: [],
+      });
+
+      // Should NOT include the state error when changing capacity
+      expect(result).toHaveLength(0);
+    });
   });
 
   describe('validateAllStagedChanges', () => {

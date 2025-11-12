@@ -74,39 +74,44 @@ export const QueueChangeGroup: React.FC<QueueChangeGroupProps> = ({
     <div className="border rounded-lg overflow-hidden bg-card">
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
         <CollapsibleTrigger asChild>
-          <Button variant="ghost" className="w-full p-4 justify-between hover:bg-muted/50">
-            <div className="flex items-center gap-3">
+          <Button variant="ghost" className="w-full p-3 justify-between hover:bg-muted/50 h-auto">
+            <div className="flex items-center gap-2">
               {queuePath === SPECIAL_VALUES.GLOBAL_QUEUE_PATH ? (
-                <Folder className="h-4 w-4" />
+                <Folder className="h-4 w-4 text-muted-foreground" />
               ) : (
-                <GitBranch className="h-4 w-4" />
+                <GitBranch className="h-4 w-4 text-muted-foreground" />
               )}
-              <span className="font-medium">
+              <span className="font-medium text-sm">
                 {queuePath === SPECIAL_VALUES.GLOBAL_QUEUE_PATH ? 'Global Settings' : queuePath}
               </span>
 
               {/* Change summary badges */}
-              <div className="flex gap-1">
+              <div className="flex gap-1 ml-2">
                 {summary.add > 0 && (
-                  <Badge variant="outline" className="h-5 text-xs border-green-500 text-green-700">
+                  <Badge
+                    variant="outline"
+                    className="h-5 text-xs border-green-600 text-green-700 dark:text-green-400"
+                  >
                     +{summary.add}
                   </Badge>
                 )}
                 {summary.update > 0 && (
-                  <Badge variant="outline" className="h-5 text-xs border-blue-500 text-blue-700">
+                  <Badge
+                    variant="outline"
+                    className="h-5 text-xs border-blue-600 text-blue-700 dark:text-blue-400"
+                  >
                     ~{summary.update}
                   </Badge>
                 )}
                 {summary.remove > 0 && (
-                  <Badge variant="outline" className="h-5 text-xs border-red-500 text-red-700">
+                  <Badge
+                    variant="outline"
+                    className="h-5 text-xs border-red-600 text-red-700 dark:text-red-400"
+                  >
                     -{summary.remove}
                   </Badge>
                 )}
               </div>
-
-              <span className="text-sm text-muted-foreground">
-                {changes.length} change{changes.length !== 1 ? 's' : ''}
-              </span>
             </div>
 
             {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
@@ -114,47 +119,8 @@ export const QueueChangeGroup: React.FC<QueueChangeGroupProps> = ({
         </CollapsibleTrigger>
 
         <CollapsibleContent>
-          <div className="px-4 pb-4 space-y-4">
-            {/* Add Changes */}
-            {summary.add > 0 && (
-              <div>
-                <Collapsible
-                  open={expandedTypes.has('add')}
-                  onOpenChange={() => toggleTypeExpanded('add')}
-                >
-                  <CollapsibleTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      className="w-full p-2 justify-between hover:bg-muted/30 h-auto"
-                    >
-                      <div className="flex items-center gap-2">
-                        <Plus className="h-3 w-3 text-green-600" />
-                        <span className="text-sm font-medium">Add ({summary.add})</span>
-                      </div>
-                      {expandedTypes.has('add') ? (
-                        <ChevronUp className="h-3 w-3" />
-                      ) : (
-                        <ChevronDown className="h-3 w-3" />
-                      )}
-                    </Button>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent>
-                    <div className="pl-5 pt-2 space-y-2">
-                      {changesByType.add.map((change) => (
-                        <DiffView
-                          key={change.id}
-                          change={change}
-                          onRevert={() => onRevert(change)}
-                          timestamp={new Date(change.timestamp).toLocaleTimeString()}
-                        />
-                      ))}
-                    </div>
-                  </CollapsibleContent>
-                </Collapsible>
-              </div>
-            )}
-
-            {/* Update Changes */}
+          <div className="px-3 pb-3 space-y-3">
+            {/* Modified Properties */}
             {summary.update > 0 && (
               <div>
                 <Collapsible
@@ -164,21 +130,21 @@ export const QueueChangeGroup: React.FC<QueueChangeGroupProps> = ({
                   <CollapsibleTrigger asChild>
                     <Button
                       variant="ghost"
-                      className="w-full p-2 justify-between hover:bg-muted/30 h-auto"
+                      className="w-full px-2 py-1.5 justify-between hover:bg-muted/30 h-auto"
                     >
                       <div className="flex items-center gap-2">
-                        <Edit2 className="h-3 w-3 text-blue-600" />
-                        <span className="text-sm font-medium">Modify ({summary.update})</span>
+                        <Edit2 className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+                        <span className="text-xs font-medium">Modified ({summary.update})</span>
                       </div>
                       {expandedTypes.has('update') ? (
-                        <ChevronUp className="h-3 w-3" />
+                        <ChevronUp className="h-3.5 w-3.5" />
                       ) : (
-                        <ChevronDown className="h-3 w-3" />
+                        <ChevronDown className="h-3.5 w-3.5" />
                       )}
                     </Button>
                   </CollapsibleTrigger>
                   <CollapsibleContent>
-                    <div className="pl-5 pt-2 space-y-2">
+                    <div className="pt-2 space-y-2">
                       {changesByType.update.map((change) => (
                         <DiffView
                           key={change.id}
@@ -193,7 +159,46 @@ export const QueueChangeGroup: React.FC<QueueChangeGroupProps> = ({
               </div>
             )}
 
-            {/* Remove Changes */}
+            {/* New Properties */}
+            {summary.add > 0 && (
+              <div>
+                <Collapsible
+                  open={expandedTypes.has('add')}
+                  onOpenChange={() => toggleTypeExpanded('add')}
+                >
+                  <CollapsibleTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      className="w-full px-2 py-1.5 justify-between hover:bg-muted/30 h-auto"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Plus className="h-3.5 w-3.5 text-green-600 dark:text-green-400" />
+                        <span className="text-xs font-medium">New ({summary.add})</span>
+                      </div>
+                      {expandedTypes.has('add') ? (
+                        <ChevronUp className="h-3.5 w-3.5" />
+                      ) : (
+                        <ChevronDown className="h-3.5 w-3.5" />
+                      )}
+                    </Button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <div className="pt-2 space-y-2">
+                      {changesByType.add.map((change) => (
+                        <DiffView
+                          key={change.id}
+                          change={change}
+                          onRevert={() => onRevert(change)}
+                          timestamp={new Date(change.timestamp).toLocaleTimeString()}
+                        />
+                      ))}
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
+              </div>
+            )}
+
+            {/* Removed Properties */}
             {summary.remove > 0 && (
               <div>
                 <Collapsible
@@ -203,21 +208,21 @@ export const QueueChangeGroup: React.FC<QueueChangeGroupProps> = ({
                   <CollapsibleTrigger asChild>
                     <Button
                       variant="ghost"
-                      className="w-full p-2 justify-between hover:bg-muted/30 h-auto"
+                      className="w-full px-2 py-1.5 justify-between hover:bg-muted/30 h-auto"
                     >
                       <div className="flex items-center gap-2">
-                        <Trash2 className="h-3 w-3 text-red-600" />
-                        <span className="text-sm font-medium">Remove ({summary.remove})</span>
+                        <Trash2 className="h-3.5 w-3.5 text-red-600 dark:text-red-400" />
+                        <span className="text-xs font-medium">Removed ({summary.remove})</span>
                       </div>
                       {expandedTypes.has('remove') ? (
-                        <ChevronUp className="h-3 w-3" />
+                        <ChevronUp className="h-3.5 w-3.5" />
                       ) : (
-                        <ChevronDown className="h-3 w-3" />
+                        <ChevronDown className="h-3.5 w-3.5" />
                       )}
                     </Button>
                   </CollapsibleTrigger>
                   <CollapsibleContent>
-                    <div className="pl-5 pt-2 space-y-2">
+                    <div className="pt-2 space-y-2">
                       {changesByType.remove.map((change) => (
                         <DiffView
                           key={change.id}

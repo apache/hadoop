@@ -30,6 +30,7 @@ import { Badge } from '~/components/ui/badge';
 import { Button } from '~/components/ui/button';
 import { Form } from '~/components/ui/form';
 import { ScrollArea } from '~/components/ui/scroll-area';
+import { Kbd } from '~/components/ui/kbd';
 import {
   PropertyFormField,
   usePropertyEditor,
@@ -45,6 +46,7 @@ import { CONFIG_PREFIXES } from '~/types';
 import { useSchedulerStore } from '~/stores/schedulerStore';
 import type { TemplateScope } from '~/features/template-config/types';
 import { formatQueuePathLabel } from '~/features/template-config/utils/queuePathLabel';
+import { useKeyboardShortcuts, getModifierKey } from '~/hooks/useKeyboardShortcuts';
 
 interface TemplateScopeFormProps {
   scope: TemplateScope;
@@ -223,6 +225,32 @@ export const TemplateScopeForm: React.FC<TemplateScopeFormProps> = ({ scope, bas
     }
   };
 
+  // Keyboard shortcuts
+  useKeyboardShortcuts([
+    {
+      key: 's',
+      ctrl: true,
+      meta: true,
+      preventDefault: true,
+      handler: () => {
+        if (!isSubmitting && formState.isDirty) {
+          void onSubmit();
+        }
+      },
+    },
+    {
+      key: 'k',
+      ctrl: true,
+      meta: true,
+      preventDefault: true,
+      handler: () => {
+        if (!isSubmitting) {
+          handleReset();
+        }
+      },
+    },
+  ]);
+
   return (
     <Card className="border-border flex h-full min-h-0 flex-col">
       <CardHeader className="px-6 pt-6 pb-4 shrink-0">
@@ -325,15 +353,19 @@ export const TemplateScopeForm: React.FC<TemplateScopeFormProps> = ({ scope, bas
       </ScrollArea>
       <CardFooter className="sticky bottom-0 z-10 flex items-center justify-between gap-3 border-t bg-background/95 px-6 py-4 backdrop-blur supports-[backdrop-filter]:bg-background/70 shrink-0">
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          {!isValid && <span className="text-destructive">Resolve validation errors</span>}
+          {!isValid && formState.isSubmitted && (
+            <span className="text-destructive">Resolve validation errors</span>
+          )}
           {formState.isDirty && <span>Unsaved changes</span>}
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" onClick={() => handleReset()} disabled={isSubmitting}>
             Reset
+            <Kbd className="ml-auto">{getModifierKey()}+K</Kbd>
           </Button>
-          <Button onClick={onSubmit} disabled={isSubmitting || (!formState.isDirty && !hasChanges)}>
+          <Button onClick={onSubmit} disabled={isSubmitting || !formState.isDirty}>
             {isSubmitting ? 'Staging…' : 'Stage changes'}
+            {!isSubmitting && <Kbd className="ml-auto">{getModifierKey()}+S</Kbd>}
           </Button>
         </div>
       </CardFooter>

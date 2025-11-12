@@ -43,13 +43,11 @@ describe('DiffView', () => {
   });
 
   describe('rendering', () => {
-    it('should render change card', () => {
+    it('should render change card with timestamp', () => {
       const change = createMockChange();
 
       render(<DiffView change={change} onRevert={mockOnRevert} timestamp={mockTimestamp} />);
 
-      expect(screen.getByText('UPDATE')).toBeInTheDocument();
-      expect(screen.getByText('Capacity')).toBeInTheDocument();
       expect(screen.getByText(mockTimestamp)).toBeInTheDocument();
     });
 
@@ -62,17 +60,23 @@ describe('DiffView', () => {
       expect(revertButton).toBeInTheDocument();
     });
 
-    it('should format property name', () => {
-      const change = createMockChange({ property: 'maximum-capacity' });
+    it('should show full property key for update', () => {
+      const change = createMockChange({ property: 'capacity' });
 
       render(<DiffView change={change} onRevert={mockOnRevert} timestamp={mockTimestamp} />);
 
-      expect(screen.getByText('Maximum Capacity')).toBeInTheDocument();
+      // Should show full property key in the diff lines
+      expect(
+        screen.getByText(/yarn\.scheduler\.capacity\.root\.default\.capacity=50/),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText(/yarn\.scheduler\.capacity\.root\.default\.capacity=60/),
+      ).toBeInTheDocument();
     });
   });
 
   describe('change types', () => {
-    it('should render ADD badge for add changes', () => {
+    it('should render add change with + prefix', () => {
       const change = createMockChange({
         type: 'add',
         oldValue: undefined,
@@ -81,18 +85,28 @@ describe('DiffView', () => {
 
       render(<DiffView change={change} onRevert={mockOnRevert} timestamp={mockTimestamp} />);
 
-      expect(screen.getByText('ADD')).toBeInTheDocument();
+      // Should show the full property key with value
+      expect(
+        screen.getByText(/yarn\.scheduler\.capacity\.root\.default\.capacity=50/),
+      ).toBeInTheDocument();
+      // Should have + prefix
+      const plusElements = screen.getAllByText('+', { exact: true });
+      expect(plusElements.length).toBeGreaterThan(0);
     });
 
-    it('should render UPDATE badge for update changes', () => {
+    it('should render update change with - and + prefixes', () => {
       const change = createMockChange({ type: 'update' });
 
       render(<DiffView change={change} onRevert={mockOnRevert} timestamp={mockTimestamp} />);
 
-      expect(screen.getByText('UPDATE')).toBeInTheDocument();
+      // Should have both - and + prefixes
+      const minusElements = screen.getAllByText('-', { exact: true });
+      const plusElements = screen.getAllByText('+', { exact: true });
+      expect(minusElements.length).toBeGreaterThan(0);
+      expect(plusElements.length).toBeGreaterThan(0);
     });
 
-    it('should render REMOVE badge for remove changes', () => {
+    it('should render remove change with - prefix', () => {
       const change = createMockChange({
         type: 'remove',
         oldValue: '50',
@@ -101,7 +115,13 @@ describe('DiffView', () => {
 
       render(<DiffView change={change} onRevert={mockOnRevert} timestamp={mockTimestamp} />);
 
-      expect(screen.getByText('REMOVE')).toBeInTheDocument();
+      // Should show the full property key with value
+      expect(
+        screen.getByText(/yarn\.scheduler\.capacity\.root\.default\.capacity=50/),
+      ).toBeInTheDocument();
+      // Should have - prefix
+      const minusElements = screen.getAllByText('-', { exact: true });
+      expect(minusElements.length).toBeGreaterThan(0);
     });
   });
 
@@ -115,21 +135,27 @@ describe('DiffView', () => {
 
       render(<DiffView change={change} onRevert={mockOnRevert} timestamp={mockTimestamp} />);
 
-      expect(screen.getByText('50')).toBeInTheDocument();
-      expect(screen.getByText('60')).toBeInTheDocument();
+      expect(
+        screen.getByText(/yarn\.scheduler\.capacity\.root\.default\.capacity=50/),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText(/yarn\.scheduler\.capacity\.root\.default\.capacity=60/),
+      ).toBeInTheDocument();
     });
 
-    it('should show strikethrough for old value', () => {
+    it('should use red background for old value', () => {
       const change = createMockChange({
         type: 'update',
         oldValue: '50',
         newValue: '60',
       });
 
-      render(<DiffView change={change} onRevert={mockOnRevert} timestamp={mockTimestamp} />);
+      const { container } = render(
+        <DiffView change={change} onRevert={mockOnRevert} timestamp={mockTimestamp} />,
+      );
 
-      const oldValueElement = screen.getByText('50').closest('div');
-      expect(oldValueElement).toHaveClass('line-through');
+      const oldValueElement = container.querySelector('.bg-red-500\\/10');
+      expect(oldValueElement).toBeInTheDocument();
     });
 
     it('should display minus prefix for old value', () => {
@@ -142,7 +168,7 @@ describe('DiffView', () => {
       render(<DiffView change={change} onRevert={mockOnRevert} timestamp={mockTimestamp} />);
 
       // The minus prefix is rendered as a separate span
-      const minusElements = screen.getAllByText('-', { exact: false });
+      const minusElements = screen.getAllByText('-', { exact: true });
       expect(minusElements.length).toBeGreaterThan(0);
     });
 
@@ -156,7 +182,7 @@ describe('DiffView', () => {
       render(<DiffView change={change} onRevert={mockOnRevert} timestamp={mockTimestamp} />);
 
       // The plus prefix is rendered as a separate span
-      const plusElements = screen.getAllByText('+', { exact: false });
+      const plusElements = screen.getAllByText('+', { exact: true });
       expect(plusElements.length).toBeGreaterThan(0);
     });
 
@@ -169,8 +195,8 @@ describe('DiffView', () => {
 
       render(<DiffView change={change} onRevert={mockOnRevert} timestamp={mockTimestamp} />);
 
-      expect(screen.getByText('(empty)')).toBeInTheDocument();
-      expect(screen.getByText('60')).toBeInTheDocument();
+      expect(screen.getByText(/capacity=\(empty\)/)).toBeInTheDocument();
+      expect(screen.getByText(/capacity=60/)).toBeInTheDocument();
     });
 
     it('should handle empty new value', () => {
@@ -182,8 +208,8 @@ describe('DiffView', () => {
 
       render(<DiffView change={change} onRevert={mockOnRevert} timestamp={mockTimestamp} />);
 
-      expect(screen.getByText('50')).toBeInTheDocument();
-      expect(screen.getByText('(empty)')).toBeInTheDocument();
+      expect(screen.getByText(/capacity=50/)).toBeInTheDocument();
+      expect(screen.getByText(/capacity=\(empty\)/)).toBeInTheDocument();
     });
   });
 
@@ -197,7 +223,9 @@ describe('DiffView', () => {
 
       render(<DiffView change={change} onRevert={mockOnRevert} timestamp={mockTimestamp} />);
 
-      expect(screen.getByText('50')).toBeInTheDocument();
+      expect(
+        screen.getByText(/yarn\.scheduler\.capacity\.root\.default\.capacity=50/),
+      ).toBeInTheDocument();
     });
 
     it('should display plus prefix for add changes', () => {
@@ -209,7 +237,7 @@ describe('DiffView', () => {
 
       render(<DiffView change={change} onRevert={mockOnRevert} timestamp={mockTimestamp} />);
 
-      const plusElements = screen.getAllByText('+', { exact: false });
+      const plusElements = screen.getAllByText('+', { exact: true });
       expect(plusElements.length).toBeGreaterThan(0);
     });
 
@@ -224,25 +252,24 @@ describe('DiffView', () => {
         <DiffView change={change} onRevert={mockOnRevert} timestamp={mockTimestamp} />,
       );
 
-      // Only one value should be rendered
-      const valueElements = container.querySelectorAll('.font-mono');
-      expect(valueElements.length).toBe(1);
+      // Only one diff line should be rendered (green background for add)
+      const addLines = container.querySelectorAll('.bg-green-500\\/10');
+      expect(addLines.length).toBe(1);
+      // Should not have red background lines (remove)
+      const removeLines = container.querySelectorAll('.bg-red-500\\/10');
+      expect(removeLines.length).toBe(0);
     });
 
-    it('should not render value for empty string in add change', () => {
+    it('should render (empty) for empty string in add change', () => {
       const change = createMockChange({
         type: 'add',
         oldValue: undefined,
         newValue: '',
       });
 
-      const { container } = render(
-        <DiffView change={change} onRevert={mockOnRevert} timestamp={mockTimestamp} />,
-      );
+      render(<DiffView change={change} onRevert={mockOnRevert} timestamp={mockTimestamp} />);
 
-      // Empty string is falsy, so DiffValue won't render
-      const valueElements = container.querySelectorAll('.font-mono');
-      expect(valueElements.length).toBe(0);
+      expect(screen.getByText(/capacity=\(empty\)/)).toBeInTheDocument();
     });
   });
 
@@ -256,7 +283,9 @@ describe('DiffView', () => {
 
       render(<DiffView change={change} onRevert={mockOnRevert} timestamp={mockTimestamp} />);
 
-      expect(screen.getByText('50')).toBeInTheDocument();
+      expect(
+        screen.getByText(/yarn\.scheduler\.capacity\.root\.default\.capacity=50/),
+      ).toBeInTheDocument();
     });
 
     it('should display minus prefix for remove changes', () => {
@@ -268,21 +297,23 @@ describe('DiffView', () => {
 
       render(<DiffView change={change} onRevert={mockOnRevert} timestamp={mockTimestamp} />);
 
-      const minusElements = screen.getAllByText('-', { exact: false });
+      const minusElements = screen.getAllByText('-', { exact: true });
       expect(minusElements.length).toBeGreaterThan(0);
     });
 
-    it('should show strikethrough for removed value', () => {
+    it('should use red background for removed value', () => {
       const change = createMockChange({
         type: 'remove',
         oldValue: '50',
         newValue: undefined,
       });
 
-      render(<DiffView change={change} onRevert={mockOnRevert} timestamp={mockTimestamp} />);
+      const { container } = render(
+        <DiffView change={change} onRevert={mockOnRevert} timestamp={mockTimestamp} />,
+      );
 
-      const oldValueElement = screen.getByText('50').closest('div');
-      expect(oldValueElement).toHaveClass('line-through');
+      const removeLines = container.querySelectorAll('.bg-red-500\\/10');
+      expect(removeLines.length).toBe(1);
     });
 
     it('should not display new value for remove changes', () => {
@@ -296,15 +327,19 @@ describe('DiffView', () => {
         <DiffView change={change} onRevert={mockOnRevert} timestamp={mockTimestamp} />,
       );
 
-      // Only one value should be rendered
-      const valueElements = container.querySelectorAll('.font-mono');
-      expect(valueElements.length).toBe(1);
+      // Only one diff line should be rendered (red background for remove)
+      const removeLines = container.querySelectorAll('.bg-red-500\\/10');
+      expect(removeLines.length).toBe(1);
+      // Should not have green background lines (add)
+      const addLines = container.querySelectorAll('.bg-green-500\\/10');
+      expect(addLines.length).toBe(0);
     });
 
-    it('should display "Queue will be removed" message when removing queue without old value', () => {
+    it('should display "Queue will be removed" message when removing queue with QUEUE_MARKER property', () => {
       const change = createMockChange({
         type: 'remove',
-        oldValue: undefined,
+        property: '__queue__', // QUEUE_MARKER
+        oldValue: 'exists',
         newValue: undefined,
       });
 
@@ -313,17 +348,17 @@ describe('DiffView', () => {
       expect(screen.getByText('Queue will be removed')).toBeInTheDocument();
     });
 
-    it('should display "Queue will be removed" for empty old value in remove change', () => {
+    it('should show diff line for regular property removal', () => {
       const change = createMockChange({
         type: 'remove',
-        oldValue: '',
+        oldValue: '50',
         newValue: undefined,
       });
 
       render(<DiffView change={change} onRevert={mockOnRevert} timestamp={mockTimestamp} />);
 
-      // Empty string is falsy, so it shows the "Queue will be removed" message
-      expect(screen.getByText('Queue will be removed')).toBeInTheDocument();
+      // Regular property removal shows diff line
+      expect(screen.getByText(/capacity=50/)).toBeInTheDocument();
     });
   });
 
@@ -405,6 +440,80 @@ describe('DiffView', () => {
 
       expect(screen.queryByText(/Capacity exceeds/)).not.toBeInTheDocument();
     });
+
+    it('should display "Validation Error" label for errors', () => {
+      const change = createMockChange({
+        validationErrors: [
+          {
+            severity: 'error',
+            message: 'Test error message',
+            rule: 'test-rule',
+            queuePath: 'root.default',
+            field: 'capacity',
+          },
+        ],
+      });
+
+      render(<DiffView change={change} onRevert={mockOnRevert} timestamp={mockTimestamp} />);
+
+      expect(screen.getByText('Validation Error')).toBeInTheDocument();
+    });
+
+    it('should display "Warning" label for warnings', () => {
+      const change = createMockChange({
+        validationErrors: [
+          {
+            severity: 'warning',
+            message: 'Test warning message',
+            rule: 'test-rule',
+            queuePath: 'root.default',
+            field: 'capacity',
+          },
+        ],
+      });
+
+      render(<DiffView change={change} onRevert={mockOnRevert} timestamp={mockTimestamp} />);
+
+      expect(screen.getByText('Warning')).toBeInTheDocument();
+    });
+
+    it('should show "Affects: queue" when error affects different queue', () => {
+      const change = createMockChange({
+        queuePath: 'root.parent',
+        validationErrors: [
+          {
+            queuePath: 'root.parent.child',
+            field: 'capacity',
+            message: 'Child capacity error',
+            severity: 'error',
+            rule: 'test-rule',
+          },
+        ],
+      });
+
+      render(<DiffView change={change} onRevert={mockOnRevert} timestamp={mockTimestamp} />);
+
+      expect(screen.getByText('Affects: root.parent.child')).toBeInTheDocument();
+    });
+
+    it('should not show "Affects" when error is for same queue', () => {
+      const change = createMockChange({
+        queuePath: 'root.default',
+        validationErrors: [
+          {
+            queuePath: 'root.default',
+            field: 'capacity',
+            message: 'Capacity error',
+            severity: 'error',
+            rule: 'test-rule',
+          },
+        ],
+      });
+
+      render(<DiffView change={change} onRevert={mockOnRevert} timestamp={mockTimestamp} />);
+
+      expect(screen.queryByText(/Affects:/)).not.toBeInTheDocument();
+    });
   });
 
   describe('revert functionality', () => {
@@ -435,15 +544,21 @@ describe('DiffView', () => {
   });
 
   describe('complex scenarios', () => {
-    it('should render complex property names correctly', () => {
+    it('should render node label properties correctly', () => {
       const change = createMockChange({
-        property: 'accessible-node-labels.gpu.capacity',
+        queuePath: 'root.default',
+        property: 'capacity',
+        label: 'gpu',
       });
 
       render(<DiffView change={change} onRevert={mockOnRevert} timestamp={mockTimestamp} />);
 
-      // Should format the property name
-      expect(screen.getByText('Capacity (label: gpu)')).toBeInTheDocument();
+      // Should show full property key including node label (both old and new values for update)
+      const matches = screen.getAllByText(
+        /yarn\.scheduler\.capacity\.root\.default\.accessible-node-labels\.gpu\.capacity/,
+      );
+      // For update type, there should be 2 lines (old and new)
+      expect(matches.length).toBe(2);
     });
 
     it('should render update with validation errors', () => {
@@ -464,9 +579,8 @@ describe('DiffView', () => {
 
       render(<DiffView change={change} onRevert={mockOnRevert} timestamp={mockTimestamp} />);
 
-      expect(screen.getByText('UPDATE')).toBeInTheDocument();
-      expect(screen.getByText('50')).toBeInTheDocument();
-      expect(screen.getByText('150')).toBeInTheDocument();
+      expect(screen.getByText(/capacity=50/)).toBeInTheDocument();
+      expect(screen.getByText(/capacity=150/)).toBeInTheDocument();
       expect(screen.getByText('Capacity exceeds 100%')).toBeInTheDocument();
     });
 
@@ -488,8 +602,7 @@ describe('DiffView', () => {
 
       render(<DiffView change={change} onRevert={mockOnRevert} timestamp={mockTimestamp} />);
 
-      expect(screen.getByText('ADD')).toBeInTheDocument();
-      expect(screen.getByText('10')).toBeInTheDocument();
+      expect(screen.getByText(/capacity=10/)).toBeInTheDocument();
       expect(screen.getByText('Capacity is very low')).toBeInTheDocument();
     });
 
@@ -503,8 +616,8 @@ describe('DiffView', () => {
 
       render(<DiffView change={change} onRevert={mockOnRevert} timestamp={mockTimestamp} />);
 
-      expect(screen.getByText(longValue)).toBeInTheDocument();
-      expect(screen.getByText('short')).toBeInTheDocument();
+      expect(screen.getByText(new RegExp(longValue))).toBeInTheDocument();
+      expect(screen.getByText(/capacity=short/)).toBeInTheDocument();
     });
 
     it('should handle special characters in values', () => {
@@ -516,8 +629,27 @@ describe('DiffView', () => {
 
       render(<DiffView change={change} onRevert={mockOnRevert} timestamp={mockTimestamp} />);
 
-      expect(screen.getByText('[memory=2048,vcores=4]')).toBeInTheDocument();
-      expect(screen.getByText('[memory=4096,vcores=8]')).toBeInTheDocument();
+      expect(screen.getByText(/\[memory=2048,vcores=4\]/)).toBeInTheDocument();
+      expect(screen.getByText(/\[memory=4096,vcores=8\]/)).toBeInTheDocument();
+    });
+
+    it('should render global properties correctly', () => {
+      const change = createMockChange({
+        queuePath: 'global',
+        property: 'maximum-applications',
+        oldValue: '10000',
+        newValue: '20000',
+      });
+
+      render(<DiffView change={change} onRevert={mockOnRevert} timestamp={mockTimestamp} />);
+
+      // Should show global property key (without queue path)
+      expect(
+        screen.getByText(/yarn\.scheduler\.capacity\.maximum-applications=10000/),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText(/yarn\.scheduler\.capacity\.maximum-applications=20000/),
+      ).toBeInTheDocument();
     });
   });
 });

@@ -24,33 +24,49 @@ import { useSchedulerStore } from '~/stores/schedulerStore';
 import { QueueComparisonDialog } from './QueueComparisonDialog';
 
 export const CompareButton: React.FC = () => {
-  const { comparisonQueues, clearComparisonQueues, canCompareQueues } = useSchedulerStore();
+  const comparisonQueues = useSchedulerStore((state) => state.comparisonQueues);
+  const isComparisonModeActive = useSchedulerStore((state) => state.isComparisonModeActive);
+  const setComparisonMode = useSchedulerStore((state) => state.setComparisonMode);
   const [isOpen, setIsOpen] = useState(false);
 
   const selectedCount = comparisonQueues.length;
+  const canCompare = selectedCount >= 2;
 
-  if (!canCompareQueues()) return null;
+  // Only show when comparison mode is active
+  if (!isComparisonModeActive) return null;
+
+  const handleOpenDialog = () => {
+    if (canCompare) {
+      setIsOpen(true);
+    }
+  };
+
+  const handleCloseDialog = (open: boolean) => {
+    setIsOpen(open);
+    // Don't exit comparison mode when dialog closes
+    // Let the user explicitly exit via the X button
+  };
 
   return (
     <>
       <div className="fixed bottom-6 right-6 z-50">
         <div className="flex items-center gap-2">
-          <Button onClick={() => setIsOpen(true)} size="lg" className="shadow-lg">
+          <Button onClick={handleOpenDialog} size="lg" className="shadow-lg" disabled={!canCompare}>
             <GitCompareArrows className="mr-2 h-4 w-4" />
-            Compare {selectedCount} Queues
+            Compare {selectedCount} Queue{selectedCount !== 1 ? 's' : ''}
           </Button>
           <Button
             variant="outline"
             size="icon"
-            onClick={clearComparisonQueues}
-            aria-label="Clear selection"
+            onClick={() => setComparisonMode(false)}
+            aria-label="Exit comparison mode"
           >
             <X className="h-4 w-4" />
           </Button>
         </div>
       </div>
 
-      <QueueComparisonDialog open={isOpen} onOpenChange={setIsOpen} />
+      <QueueComparisonDialog open={isOpen} onOpenChange={handleCloseDialog} />
     </>
   );
 };

@@ -67,6 +67,7 @@ export interface NodeLabelsSlice {
 export interface StagedChangesSlice {
   stagedChanges: StagedChange[];
   applyError: string | null;
+  orphanedValidationErrors: ValidationIssue[];
 
   stageQueueChange: (
     queuePath: string,
@@ -115,6 +116,7 @@ export interface QueueSelectionSlice {
   isPropertyPanelOpen: boolean;
   propertyPanelInitialTab: 'overview' | 'info' | 'settings';
   shouldOpenTemplateConfig: boolean;
+  isComparisonModeActive: boolean;
 
   selectQueue: (queuePath: string | null) => void;
   toggleComparisonQueue: (queuePath: string) => void;
@@ -125,6 +127,8 @@ export interface QueueSelectionSlice {
   clearComparisonQueues: () => void;
   canCompareQueues: () => boolean;
   getComparisonData: () => Map<string, Record<string, string>>;
+  toggleComparisonMode: () => void;
+  setComparisonMode: (active: boolean) => void;
 }
 
 export interface QueueDataSlice {

@@ -273,6 +273,206 @@ describe('capacity editor utilities', () => {
     expect(drafts[1].maxCapacityValue).toBe('60');
   });
 
+  describe('buildCapacityEditorDrafts with template paths', () => {
+    it('builds single draft for legacy template path without sibling queues', () => {
+      const configData = new Map<string, string>([
+        ['yarn.scheduler.capacity.root.parent.leaf-queue-template.capacity', '10'],
+        ['yarn.scheduler.capacity.root.parent.leaf-queue-template.maximum-capacity', '50'],
+      ]);
+
+      const store = {
+        configData,
+        getChildQueues: () => [],
+        getQueuePropertyValue: (queuePath: string, property: string) => {
+          if (queuePath === 'root.parent.leaf-queue-template') {
+            if (property === 'capacity') {
+              return { value: '10', isStaged: false };
+            }
+            if (property === 'maximum-capacity') {
+              return { value: '50', isStaged: false };
+            }
+          }
+          return { value: '', isStaged: false };
+        },
+        stagedChanges: [],
+      } as unknown as SchedulerStore;
+
+      const drafts = buildCapacityEditorDrafts({
+        store,
+        parentQueuePath: 'root.parent',
+        originQueuePath: 'root.parent.leaf-queue-template',
+        originQueueName: 'leaf-queue-template',
+        originInitialCapacity: null,
+        originInitialMaxCapacity: null,
+        originIsNew: false,
+        selectedNodeLabel: null,
+      });
+
+      expect(drafts).toHaveLength(1);
+      expect(drafts[0].queuePath).toBe('root.parent.leaf-queue-template');
+      expect(drafts[0].queueName).toBe('leaf-queue-template');
+      expect(drafts[0].isOrigin).toBe(true);
+      expect(drafts[0].capacityValue).toBe('10');
+      expect(drafts[0].maxCapacityValue).toBe('50');
+    });
+
+    it('builds single draft for flexible template path (auto-queue-creation-v2.template)', () => {
+      const configData = new Map<string, string>([
+        ['yarn.scheduler.capacity.root.parent.auto-queue-creation-v2.template.capacity', '5w'],
+        [
+          'yarn.scheduler.capacity.root.parent.auto-queue-creation-v2.template.maximum-capacity',
+          '100',
+        ],
+      ]);
+
+      const store = {
+        configData,
+        getChildQueues: () => [],
+        getQueuePropertyValue: (queuePath: string, property: string) => {
+          if (queuePath === 'root.parent.auto-queue-creation-v2.template') {
+            if (property === 'capacity') {
+              return { value: '5w', isStaged: false };
+            }
+            if (property === 'maximum-capacity') {
+              return { value: '100', isStaged: false };
+            }
+          }
+          return { value: '', isStaged: false };
+        },
+        stagedChanges: [],
+      } as unknown as SchedulerStore;
+
+      const drafts = buildCapacityEditorDrafts({
+        store,
+        parentQueuePath: 'root.parent',
+        originQueuePath: 'root.parent.auto-queue-creation-v2.template',
+        originQueueName: 'auto-queue-creation-v2.template',
+        originInitialCapacity: '5w',
+        originInitialMaxCapacity: '100',
+        originIsNew: false,
+        selectedNodeLabel: null,
+      });
+
+      expect(drafts).toHaveLength(1);
+      expect(drafts[0].queuePath).toBe('root.parent.auto-queue-creation-v2.template');
+      expect(drafts[0].isOrigin).toBe(true);
+      expect(drafts[0].capacityValue).toBe('5w');
+      expect(drafts[0].maxCapacityValue).toBe('100');
+    });
+
+    it('builds single draft for flexible parent template path', () => {
+      const store = {
+        configData: new Map(),
+        getChildQueues: () => [],
+        getQueuePropertyValue: (queuePath: string, property: string) => {
+          if (
+            queuePath === 'root.parent.auto-queue-creation-v2.parent-template' &&
+            property === 'capacity'
+          ) {
+            return { value: '3w', isStaged: false };
+          }
+          return { value: '', isStaged: false };
+        },
+        stagedChanges: [],
+      } as unknown as SchedulerStore;
+
+      const drafts = buildCapacityEditorDrafts({
+        store,
+        parentQueuePath: 'root.parent',
+        originQueuePath: 'root.parent.auto-queue-creation-v2.parent-template',
+        originQueueName: 'auto-queue-creation-v2.parent-template',
+        originInitialCapacity: null,
+        originInitialMaxCapacity: null,
+        originIsNew: false,
+        selectedNodeLabel: null,
+      });
+
+      expect(drafts).toHaveLength(1);
+      expect(drafts[0].queuePath).toBe('root.parent.auto-queue-creation-v2.parent-template');
+      expect(drafts[0].isOrigin).toBe(true);
+    });
+
+    it('builds single draft for flexible leaf template path', () => {
+      const store = {
+        configData: new Map(),
+        getChildQueues: () => [],
+        getQueuePropertyValue: (queuePath: string, property: string) => {
+          if (
+            queuePath === 'root.parent.auto-queue-creation-v2.leaf-template' &&
+            property === 'capacity'
+          ) {
+            return { value: '2w', isStaged: false };
+          }
+          return { value: '', isStaged: false };
+        },
+        stagedChanges: [],
+      } as unknown as SchedulerStore;
+
+      const drafts = buildCapacityEditorDrafts({
+        store,
+        parentQueuePath: 'root.parent',
+        originQueuePath: 'root.parent.auto-queue-creation-v2.leaf-template',
+        originQueueName: 'auto-queue-creation-v2.leaf-template',
+        originInitialCapacity: null,
+        originInitialMaxCapacity: null,
+        originIsNew: false,
+        selectedNodeLabel: null,
+      });
+
+      expect(drafts).toHaveLength(1);
+      expect(drafts[0].queuePath).toBe('root.parent.auto-queue-creation-v2.leaf-template');
+      expect(drafts[0].isOrigin).toBe(true);
+    });
+
+    it('respects originInitialCapacity and originInitialMaxCapacity for templates', () => {
+      const store = {
+        configData: new Map(),
+        getChildQueues: () => [],
+        getQueuePropertyValue: () => ({ value: '', isStaged: false }),
+        stagedChanges: [],
+      } as unknown as SchedulerStore;
+
+      const drafts = buildCapacityEditorDrafts({
+        store,
+        parentQueuePath: 'root.parent',
+        originQueuePath: 'root.parent.leaf-queue-template',
+        originQueueName: 'leaf-queue-template',
+        originInitialCapacity: '15',
+        originInitialMaxCapacity: '75',
+        originIsNew: false,
+        selectedNodeLabel: null,
+      });
+
+      expect(drafts).toHaveLength(1);
+      expect(drafts[0].capacityValue).toBe('15');
+      expect(drafts[0].maxCapacityValue).toBe('75');
+    });
+
+    it('marks template as new when originIsNew is true', () => {
+      const store = {
+        configData: new Map(),
+        getChildQueues: () => [],
+        getQueuePropertyValue: () => ({ value: '', isStaged: false }),
+        stagedChanges: [],
+      } as unknown as SchedulerStore;
+
+      const drafts = buildCapacityEditorDrafts({
+        store,
+        parentQueuePath: 'root.parent',
+        originQueuePath: 'root.parent.leaf-queue-template',
+        originQueueName: 'leaf-queue-template',
+        originInitialCapacity: '20',
+        originInitialMaxCapacity: '100',
+        originIsNew: true,
+        selectedNodeLabel: null,
+      });
+
+      expect(drafts).toHaveLength(1);
+      expect(drafts[0].isNew).toBe(true);
+      expect(drafts[0].hasStagedChange).toBe(true);
+    });
+  });
+
   describe('parseVectorDraft', () => {
     it('should parse valid vector string with two resources', () => {
       const result = parseVectorDraft('[memory=2048,vcores=4]');

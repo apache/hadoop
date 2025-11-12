@@ -30,7 +30,7 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { Alert, AlertDescription, AlertTitle } from '~/components/ui/alert';
-import { AlertCircle, Tag, Search, X } from 'lucide-react';
+import { AlertCircle, Tag, Search, X, Info } from 'lucide-react';
 import { useSchedulerStore } from '~/stores/schedulerStore';
 import {
   useQueueTreeData,
@@ -40,9 +40,13 @@ import { QueueCardNode } from './QueueCardNode';
 import CustomFlowEdge from './CustomFlowEdge';
 import { useTheme } from '~/components/providers/use-theme';
 import { Button } from '~/components/ui/button';
+import { Badge } from '~/components/ui/badge';
 import { CompareButton } from '~/features/queue-comparison/components/CompareButton';
 import { NodeLabelSelector } from '~/components/search/NodeLabelSelector';
 import { CapacityEditorDialog } from './CapacityEditorDialog';
+import { LegacyModeDocumentation } from './LegacyModeDocumentation';
+import { getMergedConfigData } from '~/utils/configUtils';
+import { SPECIAL_VALUES } from '~/types';
 
 export interface QueueVisualizationContainerProps {
   className?: string;
@@ -57,9 +61,20 @@ const edgeTypes = {
 };
 
 const FlowInner: React.FC = () => {
-  const { selectQueue, stagedChanges, searchQuery, selectedNodeLabelFilter, getSearchResults } =
-    useSchedulerStore();
+  const {
+    selectQueue,
+    stagedChanges,
+    searchQuery,
+    selectedNodeLabelFilter,
+    getSearchResults,
+    configData,
+    isComparisonModeActive,
+  } = useSchedulerStore();
   const { theme } = useTheme();
+
+  // Get legacy mode status considering staged changes
+  const mergedData = getMergedConfigData(configData, stagedChanges);
+  const legacyModeEnabled = mergedData.get(SPECIAL_VALUES.LEGACY_MODE_PROPERTY) !== 'false';
 
   const { nodes, edges, isLoading, loadError, applyError } = useQueueTreeData();
 
@@ -101,7 +116,10 @@ const FlowInner: React.FC = () => {
   };
 
   const onNodeClick: NodeMouseHandler = (_, node) => {
-    selectQueue?.(node.id);
+    // Don't open property panel in comparison mode - let card click handler manage it
+    if (!isComparisonModeActive) {
+      selectQueue?.(node.id);
+    }
   };
 
   if (isLoading) {
@@ -160,7 +178,22 @@ const FlowInner: React.FC = () => {
         </div>
       )}
       {/* Header with controls */}
-      <div className="pointer-events-none absolute inset-x-0 top-4 z-30 flex justify-end px-4">
+      <div className="pointer-events-none absolute inset-x-0 top-4 z-30 flex justify-end items-center gap-3 px-4">
+        <div className="pointer-events-auto">
+          <LegacyModeDocumentation legacyModeEnabled={legacyModeEnabled}>
+            <Badge
+              variant="outline"
+              className={`gap-1.5 text-xs cursor-pointer hover:bg-accent transition-colors ${
+                legacyModeEnabled
+                  ? 'border-amber-500/60 bg-amber-50/60 text-amber-900 hover:bg-amber-100/80 dark:border-amber-500/60 dark:bg-amber-900/20 dark:text-amber-400 dark:hover:bg-amber-900/30'
+                  : 'border-primary/60 bg-primary/5 text-primary hover:bg-primary/10 dark:border-primary/60 dark:bg-primary/10 dark:text-primary dark:hover:bg-primary/20'
+              }`}
+            >
+              <Info className="h-3 w-3" />
+              {legacyModeEnabled ? 'Legacy Mode' : 'Flexible Mode'}
+            </Badge>
+          </LegacyModeDocumentation>
+        </div>
         <div className="pointer-events-auto">
           <NodeLabelSelector />
         </div>

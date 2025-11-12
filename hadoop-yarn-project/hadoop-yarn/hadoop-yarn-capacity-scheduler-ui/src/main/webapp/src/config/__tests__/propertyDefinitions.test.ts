@@ -238,6 +238,128 @@ describe('propertyDefinitions', () => {
       }
     });
 
+    it('disables legacy auto-creation for queues with children', () => {
+      const legacyAutoCreate = queuePropertyDefinitions.find(
+        (p) => p.name === 'auto-create-child-queue.enabled',
+      );
+
+      expect(legacyAutoCreate).toBeDefined();
+      if (!legacyAutoCreate) {
+        return;
+      }
+
+      expect(Array.isArray(legacyAutoCreate.enableWhen)).toBe(true);
+      const enableCondition = legacyAutoCreate.enableWhen?.[0];
+      expect(enableCondition).toBeInstanceOf(Function);
+
+      if (enableCondition) {
+        // Test parent queue with children - should be disabled
+        const parentWithChildrenOptions = {
+          ...createConditionOptions({
+            property: legacyAutoCreate,
+            capacity: '50',
+            values: { 'auto-create-child-queue.enabled': 'false' },
+          }),
+          queuePath: 'root.parent',
+          queueInfo: {
+            queueType: 'parent' as const,
+            queueName: 'parent',
+            queuePath: 'root.parent',
+            capacity: 50,
+            usedCapacity: 0,
+            maxCapacity: 100,
+            absoluteCapacity: 50,
+            absoluteMaxCapacity: 100,
+            absoluteUsedCapacity: 0,
+            numApplications: 0,
+            numActiveApplications: 0,
+            numPendingApplications: 0,
+            state: 'RUNNING' as const,
+            queues: {
+              queue: [
+                {
+                  queueType: 'leaf' as const,
+                  queueName: 'child1',
+                  queuePath: 'root.parent.child1',
+                  capacity: 50,
+                  usedCapacity: 0,
+                  maxCapacity: 100,
+                  absoluteCapacity: 25,
+                  absoluteMaxCapacity: 100,
+                  absoluteUsedCapacity: 0,
+                  numApplications: 0,
+                  numActiveApplications: 0,
+                  numPendingApplications: 0,
+                  state: 'RUNNING' as const,
+                },
+              ],
+            },
+          },
+        };
+        expect(enableCondition(parentWithChildrenOptions)).toBe(false);
+
+        // Test parent queue without children - should be enabled
+        const parentNoChildrenOptions = {
+          ...createConditionOptions({
+            property: legacyAutoCreate,
+            capacity: '50',
+            values: { 'auto-create-child-queue.enabled': 'false' },
+          }),
+          queuePath: 'root.parent',
+          queueInfo: {
+            queueType: 'parent' as const,
+            queueName: 'parent',
+            queuePath: 'root.parent',
+            capacity: 50,
+            usedCapacity: 0,
+            maxCapacity: 100,
+            absoluteCapacity: 50,
+            absoluteMaxCapacity: 100,
+            absoluteUsedCapacity: 0,
+            numApplications: 0,
+            numActiveApplications: 0,
+            numPendingApplications: 0,
+            state: 'RUNNING' as const,
+            queues: {
+              queue: [],
+            },
+          },
+        };
+        expect(enableCondition(parentNoChildrenOptions)).toBe(true);
+
+        // Test with null queueInfo - should be enabled (default behavior)
+        const nullQueueInfoOptions = createConditionOptions({
+          property: legacyAutoCreate,
+          capacity: '50',
+        });
+        expect(enableCondition(nullQueueInfoOptions)).toBe(true);
+
+        // Test with undefined queues property - should be enabled
+        const undefinedQueuesOptions = {
+          ...createConditionOptions({
+            property: legacyAutoCreate,
+            capacity: '50',
+          }),
+          queueInfo: {
+            queueType: 'parent' as const,
+            queueName: 'parent',
+            queuePath: 'root.parent',
+            capacity: 50,
+            usedCapacity: 0,
+            maxCapacity: 100,
+            absoluteCapacity: 50,
+            absoluteMaxCapacity: 100,
+            absoluteUsedCapacity: 0,
+            numApplications: 0,
+            numActiveApplications: 0,
+            numPendingApplications: 0,
+            state: 'RUNNING' as const,
+          },
+        };
+        expect(enableCondition(undefinedQueuesOptions)).toBe(true);
+      }
+    });
+
     it('enables flexible auto-creation based on root queue children capacity mode', () => {
       const flexibleAutoCreate = queuePropertyDefinitions.find(
         (p) => p.name === 'auto-queue-creation-v2.enabled',

@@ -24,7 +24,7 @@
 import type { StateCreator } from 'zustand';
 import { nanoid } from 'nanoid';
 import { AUTO_CREATION_PROPS, MUTATION_OPERATIONS, SPECIAL_VALUES } from '~/types';
-import type { SchedConfUpdateInfo, StagedChange } from '~/types';
+import type { SchedConfUpdateInfo, StagedChange, ValidationIssue } from '~/types';
 import {
   buildGlobalPropertyKey,
   buildNodeLabelPropertyKey,
@@ -61,6 +61,7 @@ export const createStagedChangesSlice: StateCreator<
 > = (set, get) => ({
   stagedChanges: [],
   applyError: null,
+  orphanedValidationErrors: [],
 
   stageQueueChange: (queuePath, property, value, validationErrors) => {
     if (!queuePath || !queuePath.startsWith(SPECIAL_VALUES.ROOT_QUEUE_NAME)) {
@@ -574,6 +575,7 @@ export const createStagedChangesSlice: StateCreator<
     set((state) => {
       if (state.stagedChanges.length > 0) {
         state.stagedChanges = [];
+        state.orphanedValidationErrors = [];
         clearMutationError(state);
       }
     });

@@ -139,9 +139,6 @@ export const TemplateConfigDialog: React.FC<TemplateConfigDialogProps> = ({
     });
   };
 
-  const showFlexibleHelpers =
-    flexibleEnabled || mergedGroups.some((group) => group.type === 'flexible');
-
   const allScopes = mergedGroups.flatMap((group) => group.scopes);
 
   useEffect(() => {
@@ -256,16 +253,6 @@ export const TemplateConfigDialog: React.FC<TemplateConfigDialogProps> = ({
                     ))}
                   </div>
                 </ScrollArea>
-
-                {showFlexibleHelpers && (
-                  <Alert variant="secondary" className="text-xs">
-                    <AlertTitle>Wildcard templates</AlertTitle>
-                    <AlertDescription>
-                      Use wildcard scopes (for example <code>{queuePath}.*</code>) to apply shared
-                      defaults. Specific scopes override shared values when both are present.
-                    </AlertDescription>
-                  </Alert>
-                )}
               </div>
 
               <div className="flex flex-1 min-w-0 min-h-0">

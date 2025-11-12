@@ -523,7 +523,7 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                       onClick={handleOpenCapacityEditor}
                       disabled={!parentQueuePath || !isEnabled}
                     >
-                      Capacity Editor
+                      Edit Capacity
                     </Button>
                   ) : (
                     <span className="text-xs text-muted-foreground">

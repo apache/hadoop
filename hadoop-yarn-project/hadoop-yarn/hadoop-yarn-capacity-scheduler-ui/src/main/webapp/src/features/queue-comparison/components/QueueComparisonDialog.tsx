@@ -34,6 +34,7 @@ import {
   exportComparison,
 } from '~/features/queue-comparison/utils/comparison';
 import { ComparisonTable } from './ComparisonTable';
+import { getQueueProperties } from '~/utils/configPropertyUtils';
 
 interface QueueComparisonDialogProps {
   open: boolean;
@@ -44,9 +45,19 @@ export const QueueComparisonDialog: React.FC<QueueComparisonDialogProps> = ({
   open,
   onOpenChange,
 }) => {
-  const { getComparisonData } = useSchedulerStore();
+  const comparisonQueues = useSchedulerStore((state) => state.comparisonQueues);
+  const configData = useSchedulerStore((state) => state.configData);
 
-  const configs = getComparisonData();
+  // Build comparison data from current store state
+  const configs = React.useMemo(() => {
+    const result = new Map<string, Record<string, string>>();
+    comparisonQueues.forEach((queuePath) => {
+      const properties = getQueueProperties(configData, queuePath);
+      result.set(queuePath, properties);
+    });
+    return result;
+  }, [comparisonQueues, configData]);
+
   const comparisonData = buildComparisonData(configs);
 
   return (
