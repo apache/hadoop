@@ -58,6 +58,7 @@ public abstract class AbstractS3ACommitterFactory
     return outputCommitter;
   }
 
+  @Override
   public PathOutputCommitter createOutputCommitter(Path outputPath,
                                                    JobContext context) throws IOException {
     FileSystem fs = getDestinationFileSystem(outputPath, context);

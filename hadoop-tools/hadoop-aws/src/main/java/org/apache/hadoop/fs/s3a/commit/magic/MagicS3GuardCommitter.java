@@ -92,7 +92,7 @@ public class MagicS3GuardCommitter extends AbstractS3ACommitter {
    * @throws IOException on a failure
    */
   public MagicS3GuardCommitter(Path outputPath,
-                               JobContext context) throws IOException {
+      JobContext context) throws IOException {
     super(outputPath, context);
     setWorkPath(getJobAttemptPath(context));
     verifyIsMagicCommitPath(getDestS3AFS(), getWorkPath());

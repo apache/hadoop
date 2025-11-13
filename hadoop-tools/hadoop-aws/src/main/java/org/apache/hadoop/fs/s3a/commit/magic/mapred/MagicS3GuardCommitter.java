@@ -27,6 +27,9 @@ import org.apache.hadoop.mapreduce.lib.output.PathOutputCommitterFactory;
 
 import java.io.IOException;
 
+/**
+ * This is a mapred wrapper for the MagicS3GuardCommitter.
+ */
 public class MagicS3GuardCommitter extends OutputCommitter {
 
   private org.apache.hadoop.fs.s3a.commit.magic.MagicS3GuardCommitter committer = null;

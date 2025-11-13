@@ -252,8 +252,8 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
    * @throws IOException on a failure
    */
   protected AbstractS3ACommitter(
-          Path outputPath,
-          JobContext context) throws IOException {
+      Path outputPath,
+      JobContext context) throws IOException {
     super(outputPath, context);
     setOutputPath(outputPath);
     this.jobContext = requireNonNull(context, "null job context");
