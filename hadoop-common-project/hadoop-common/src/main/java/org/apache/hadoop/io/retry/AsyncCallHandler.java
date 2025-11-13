@@ -158,7 +158,7 @@ public class AsyncCallHandler {
         if (running.compareAndSet(null, current)) {
           final Daemon daemon = new Daemon() {
             @Override
-            public void run() {
+            public void work() {
               for (; isRunning(this);) {
                 final long waitTime = checkCalls();
                 tryStop(this);

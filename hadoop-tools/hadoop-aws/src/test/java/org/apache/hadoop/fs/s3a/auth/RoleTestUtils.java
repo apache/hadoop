@@ -164,8 +164,8 @@ public final class RoleTestUtils {
     conf.set(ASSUMED_ROLE_ARN, roleARN);
     conf.set(ASSUMED_ROLE_SESSION_NAME, "test");
     conf.set(ASSUMED_ROLE_SESSION_DURATION, "15m");
-    // force in bucket resolution during startup
-    conf.setInt(S3A_BUCKET_PROBE, 1);
+    // disable bucket resolution during startup as s3 express doesn't like it
+    conf.setInt(S3A_BUCKET_PROBE, 0);
     disableCreateSession(conf);
     disableFilesystemCaching(conf);
     return conf;

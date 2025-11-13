@@ -120,6 +120,15 @@ public class ITestS3AHugeMagicCommits extends AbstractSTestS3AHugeFiles {
   }
 
   /**
+   * Skip this test suite when MPUS are not avaialable.
+   * @return false
+   */
+  @Override
+  protected boolean requireMultipartUploads() {
+    return true;
+  }
+
+  /**
    * Returns the path to the commit metadata file, not that of the huge file.
    * @return a file in the job dir
    */

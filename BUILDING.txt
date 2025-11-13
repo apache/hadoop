@@ -7,7 +7,7 @@ Requirements:
 * JDK 1.8
 * Maven 3.3 or later
 * Boost 1.86.0 (if compiling native code)
-* Protocol Buffers 3.21.12 (if compiling native code)
+* Protocol Buffers 3.25.5 (if compiling native code)
 * CMake 3.19 or newer (if compiling native code)
 * Zlib devel (if compiling native code)
 * Cyrus SASL devel (if compiling native code)
@@ -78,13 +78,15 @@ Refer to  dev-support/docker/Dockerfile):
   $ ./bootstrap
   $ make -j$(nproc)
   $ sudo make install
-* Protocol Buffers 3.21.12 (required to build native code)
-  $ curl -L https://github.com/protocolbuffers/protobuf/archive/refs/tags/v3.21.12.tar.gz > protobuf-3.21.12.tar.gz
-  $ tar -zxvf protobuf-3.21.12.tar.gz && cd protobuf-3.21.12
-  $ ./autogen.sh
-  $ ./configure
-  $ make -j$(nproc)
-  $ sudo make install
+* Protocol Buffers 3.25.5 (required to build native code)
+  $ curl -L https://github.com/protocolbuffers/protobuf/archive/refs/tags/v3.25.5.tar.gz > protobuf-3.25.5.tar.gz
+  $ curl -L https://github.com/abseil/abseil-cpp/archive/refs/tags/20230802.1.tar.gz > abseil-cpp-20230802.1.tar.gz
+  $ tar -zxvf protobuf-3.25.5.tar.gz
+  $ tar -zxvf abseil-cpp-20230802.1.tar.gz --strip-components 1 -C protobuf-3.25.5/third_party/abseil-cpp
+  $ cd protobuf-3.25.5
+  $ cmake -S . -B build -DCMAKE_POSITION_INDEPENDENT_CODE=ON -Dprotobuf_BUILD_TESTS=OFF
+  $ cmake --build build --parallel $(nproc)
+  $ sudo cmake --install build
 * Boost
   $ curl -L https://sourceforge.net/projects/boost/files/boost/1.86.0/boost_1_86_0.tar.bz2/download > boost_1_86_0.tar.bz2
   $ tar --bzip2 -xf boost_1_86_0.tar.bz2 && cd boost_1_86_0
@@ -433,14 +435,15 @@ Installing required dependencies for clean install of macOS 10.14:
 * Install native libraries, only openssl is required to compile native code,
 you may optionally install zlib, lz4, etc.
   $ brew install openssl
-* Protocol Buffers 3.21.12 (required to compile native code)
-  $ curl -L https://github.com/protocolbuffers/protobuf/archive/refs/tags/v3.21.12.tar.gz > protobuf-3.21.12.tar.gz
-  $ tar -zxvf protobuf-3.21.12.tar.gz && cd protobuf-3.21.12
-  $ ./autogen.sh
-  $ ./configure
-  $ make
-  $ make check
-  $ make install
+* Protocol Buffers 3.25.5 (required to build native code)
+  $ curl -L https://github.com/protocolbuffers/protobuf/archive/refs/tags/v3.25.5.tar.gz > protobuf-3.25.5.tar.gz
+  $ curl -L https://github.com/abseil/abseil-cpp/archive/refs/tags/20230802.1.tar.gz > abseil-cpp-20230802.1.tar.gz
+  $ tar -zxvf protobuf-3.25.5.tar.gz
+  $ tar -zxvf abseil-cpp-20230802.1.tar.gz --strip-components 1 -C protobuf-3.25.5/third_party/abseil-cpp
+  $ cd protobuf-3.25.5
+  $ cmake -S . -B build -DCMAKE_POSITION_INDEPENDENT_CODE=ON -Dprotobuf_BUILD_TESTS=OFF
+  $ cmake --build build --parallel $(nproc)
+  $ cmake --install build
   $ protoc --version
 
 Note that building Hadoop 3.1.1/3.1.2/3.2.0 native code from source is broken
@@ -472,13 +475,15 @@ Building on Rocky Linux 8
 * Install python2 for building documentation.
   $ sudo dnf install python2
 
-* Install Protocol Buffers v3.21.12.
-  $ curl -L https://github.com/protocolbuffers/protobuf/archive/refs/tags/v3.21.12.tar.gz > protobuf-3.21.12.tar.gz
-  $ tar -zxvf protobuf-3.21.12.tar.gz && cd protobuf-3.21.12
-  $ ./autogen.sh
-  $ ./configure --prefix=/usr/local
-  $ make
-  $ sudo make install
+* Protocol Buffers 3.25.5 (required to build native code)
+  $ curl -L https://github.com/protocolbuffers/protobuf/archive/refs/tags/v3.25.5.tar.gz > protobuf-3.25.5.tar.gz
+  $ curl -L https://github.com/abseil/abseil-cpp/archive/refs/tags/20230802.1.tar.gz > abseil-cpp-20230802.1.tar.gz
+  $ tar -zxvf protobuf-3.25.5.tar.gz
+  $ tar -zxvf abseil-cpp-20230802.1.tar.gz --strip-components 1 -C protobuf-3.25.5/third_party/abseil-cpp
+  $ cd protobuf-3.25.5
+  $ cmake -S . -B build -DCMAKE_POSITION_INDEPENDENT_CODE=ON -Dprotobuf_BUILD_TESTS=OFF
+  $ cmake --build build --parallel $(nproc)
+  $ sudo cmake --install build --prefix /usr/local
   $ cd ..
 
 * Install libraries provided by Rocky Linux 8.
@@ -530,7 +535,7 @@ Requirements:
 * JDK 1.8
 * Maven 3.3 or later (maven.apache.org)
 * Boost 1.86.0 (boost.org)
-* Protocol Buffers 3.21.12 (https://github.com/protocolbuffers/protobuf/tags)
+* Protocol Buffers 3.25.5 (https://github.com/protocolbuffers/protobuf/tags)
 * CMake 3.19 or newer (cmake.org)
 * Visual Studio 2019 (visualstudio.com)
 * Windows SDK 8.1 (optional, if building CPU rate control for the container executor. Get this from

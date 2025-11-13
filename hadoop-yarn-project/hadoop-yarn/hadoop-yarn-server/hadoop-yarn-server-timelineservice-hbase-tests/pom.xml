@@ -66,6 +66,10 @@
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-common</artifactId>
         </exclusion>
+        <exclusion>
+           <groupId>org.apache.hbase</groupId>
+           <artifactId>hbase-shaded-client-byo-hadoop</artifactId>
+         </exclusion>
       </exclusions>
     </dependency>
 
@@ -78,6 +82,10 @@
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-common</artifactId>
         </exclusion>
+        <exclusion>
+           <groupId>org.apache.hbase</groupId>
+           <artifactId>hbase-shaded-client-byo-hadoop</artifactId>
+         </exclusion>
       </exclusions>
     </dependency>
 

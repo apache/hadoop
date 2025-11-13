@@ -73,6 +73,11 @@
       </exclusions>
     </dependency>
 
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-shaded-client-byo-hadoop</artifactId>
+    </dependency>
+
     <!-- This is needed for GenericObjectMapper in GenericConverter -->
     <dependency>
       <groupId>org.apache.hadoop</groupId>
@@ -94,25 +99,6 @@
       <type>test-jar</type>
       <scope>test</scope>
       <exclusions>
-        <exclusion>
-          <groupId>com.google.guava</groupId>
-          <artifactId>guava</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-
-    <dependency>
-      <groupId>org.apache.hbase</groupId>
-      <artifactId>hbase-common</artifactId>
-      <exclusions>
-        <exclusion>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-mapreduce-client-core</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.mortbay.jetty</groupId>
-          <artifactId>jetty-util</artifactId>
-        </exclusion>
         <exclusion>
           <groupId>com.google.guava</groupId>
           <artifactId>guava</artifactId>

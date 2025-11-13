@@ -70,7 +70,9 @@ public class ITestAssumedRoleCommitOperations extends ITestCommitOperations {
     restrictedDir = super.path("restricted");
     Configuration conf = newAssumedRoleConfig(getConfiguration(),
         getAssumedRoleARN());
-    bindRolePolicyStatements(conf, STATEMENT_ALLOW_KMS_RW,
+    bindRolePolicyStatements(conf,
+        STATEMENT_ALLOW_KMS_RW,
+        STATEMENT_S3EXPRESS,
         statement(true, S3_ALL_BUCKETS, S3_BUCKET_READ_OPERATIONS),
         new RoleModel.Statement(RoleModel.Effects.Allow)
             .addActions(S3_PATH_RW_OPERATIONS)
