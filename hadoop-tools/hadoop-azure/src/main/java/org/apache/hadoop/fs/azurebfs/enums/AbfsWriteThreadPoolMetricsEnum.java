@@ -39,6 +39,8 @@ public enum AbfsWriteThreadPoolMetricsEnum {
   /** JVM CPU utilization percentage during write operations. */
   JVM_CPU_UTILIZATION("JvmCpu", StatisticTypeEnum.TYPE_GAUGE),
 
+  JVM_CPU_LOAD("JvmCpuLoad", StatisticTypeEnum.TYPE_GAUGE),
+
   /** Overall system CPU utilization percentage observed during writes. */
   CPU_UTILIZATION("Cpu", StatisticTypeEnum.TYPE_GAUGE),
 
