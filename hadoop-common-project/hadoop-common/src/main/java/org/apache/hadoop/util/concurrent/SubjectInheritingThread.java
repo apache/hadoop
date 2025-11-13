@@ -40,8 +40,8 @@ import org.apache.hadoop.security.authentication.util.SubjectUtil;
  * Thread.
  * <p>
  * {@link #run()} cannot be directly overridden, as that would also override the
- * subject restoration logic. SubjectInheritingThread provides a {@link work()}
- * method instead, which is wrapped and invoked by its own final {@link run()}
+ * subject restoration logic. SubjectInheritingThread provides a {@link #work()}
+ * method instead, which is wrapped and invoked by its own final {@link #run()}
  * method.
  */
 public class SubjectInheritingThread extends Thread {
