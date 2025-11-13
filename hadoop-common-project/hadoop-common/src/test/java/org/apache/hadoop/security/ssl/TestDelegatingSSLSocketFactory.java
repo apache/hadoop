@@ -19,12 +19,13 @@
 package org.apache.hadoop.security.ssl;
 
 import java.io.IOException;
+import java.security.NoSuchAlgorithmException;
 
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.util.NativeCodeLoader;
 
-import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
@@ -34,7 +35,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 public class TestDelegatingSSLSocketFactory {
 
   @Test
-  public void testOpenSSL() throws IOException {
+  public void testOpenSSL() {
     assumeTrue(NativeCodeLoader.isNativeCodeLoaded(),
         "Unable to load native libraries");
     assumeTrue(NativeCodeLoader.buildSupportsOpenssl(),
@@ -46,7 +47,14 @@ public class TestDelegatingSSLSocketFactory {
               .getProviderName()).contains("openssl");
     } catch (IOException e) {
       // if this is caused by a wildfly version error, downgrade to an assume
-      assertExceptionContains("GLIBC_2.34", e);
+      final Throwable cause = e.getCause();
+      Assertions.assertThat(cause)
+              .describedAs("Cause of %s: %s", e, cause)
+              .isInstanceOf(NoSuchAlgorithmException.class);
+      final Throwable innermost = cause.getCause();
+      Assertions.assertThat(innermost)
+              .describedAs("Innermost Cause of %s: %s", e, innermost)
+              .isInstanceOf(UnsatisfiedLinkError.class);
       assumeTrue(false, "wildfly library not compatible with this OS version");
     }
   }
