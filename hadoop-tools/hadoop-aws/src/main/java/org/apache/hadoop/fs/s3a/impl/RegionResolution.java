@@ -21,10 +21,10 @@ package org.apache.hadoop.fs.s3a.impl;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
 import javax.annotation.Nullable;
 
 import org.slf4j.Logger;
@@ -80,56 +80,67 @@ public class RegionResolution {
   private static final Pattern VPC_ENDPOINT_PATTERN =
       Pattern.compile("^(?:.+\\.)?([a-z0-9-]+)\\.vpce\\.amazonaws\\.(?:com|com\\.cn)$");
 
- /**
-  * Error message when an endpoint is set with FIPS enabled: {@value}.
-  */
- @VisibleForTesting
- public static final String ERROR_ENDPOINT_WITH_FIPS =
-     "Only S3 central endpoint cannot be set when " + FIPS_ENDPOINT + " is true";
+  /**
+   * Error message when an endpoint is set with FIPS enabled: {@value}.
+   */
+  @VisibleForTesting
+  public static final String ERROR_ENDPOINT_WITH_FIPS =
+      "Only S3 central endpoint cannot be set when " + FIPS_ENDPOINT + " is true";
 
   /**
    * Virtual hostnames MUST be used when using the FIPS endpoint.
    */
- public static final String FIPS_PATH_ACCESS_INCOMPATIBLE =
-     "Path style access must be disabled when "+ FIPS_ENDPOINT + " is true";
+  public static final String FIPS_PATH_ACCESS_INCOMPATIBLE =
+      "Path style access must be disabled when " + FIPS_ENDPOINT + " is true";
+
+  /**
+   * String value for external region: {@value}.
+   */
+  public static final String EXTERNAL = "external";
+
+  /**
+   * External region, used for third party endpoints.
+   */
+  public static final Region EXTERNAL_REGION = Region.of(EXTERNAL);
 
   /**
    * How was the region resolved?
    */
- public enum RegionResolutionMechanism {
+  public enum RegionResolutionMechanism {
 
-   CalculatedFromEndpoint("Calculated from endpoint"),
-   FallbackToCentral("Fallback to central endpoint"),
-   ParseVpceEndpoint("Parse VPCE Endpoint"),
-   Ec2Metadata("EC2 Metadata"),
-   Sdk("SDK resolution chain"),
-   Specified("region specified");
+    CalculatedFromEndpoint("Calculated from endpoint"),
+    ExternalEndpoint("External endpoint"),
+    FallbackToCentral("Fallback to central endpoint"),
+    ParseVpceEndpoint("Parse VPCE Endpoint"),
+    Ec2Metadata("EC2 Metadata"),
+    Sdk("SDK resolution chain"),
+    Specified("region specified");
 
-   /**
-    * Text of the mechanism.
-    */
-   private final String mechanism;
+    /**
+     * Text of the mechanism.
+     */
+    private final String mechanism;
 
-   RegionResolutionMechanism(String mechanism) {
-     this.mechanism = mechanism;
-   }
+    RegionResolutionMechanism(String mechanism) {
+      this.mechanism = mechanism;
+    }
 
     /**
      * String value of the resolution mechanism.
      * @return the resolution mechanism.
      */
-   public String getMechanism() {
-     return mechanism;
-   }
+    public String getMechanism() {
+      return mechanism;
+    }
 
-   @Override
-   public String toString() {
-     final StringBuilder sb = new StringBuilder("RegionResolutionMechanism{");
-     sb.append("mechanism='").append(mechanism).append('\'');
-     sb.append('}');
-     return sb.toString();
-   }
- }
+    @Override
+    public String toString() {
+      final StringBuilder sb = new StringBuilder("RegionResolutionMechanism{");
+      sb.append("mechanism='").append(mechanism).append('\'');
+      sb.append('}');
+      return sb.toString();
+    }
+  }
 
   /**
    * The resolution of a region and endpoint..
@@ -298,7 +309,6 @@ public class RegionResolution {
 
   /**
    * Given a endpoint string, create the endpoint URI.
-   *
    * @param endpoint possibly null endpoint.
    * @param secureConnections use secure HTTPS connection?
    * @return an endpoint uri or null if the endpoint was passed in was null/empty
@@ -341,7 +351,8 @@ public class RegionResolution {
       Matcher matcher = VPC_ENDPOINT_PATTERN.matcher(endpoint);
       if (matcher.find()) {
         LOG.debug("Mapping to VPCE");
-        LOG.debug("Endpoint {} is vpc endpoint; parsing region as {}", endpoint, matcher.group(1));
+        LOG.debug("Endpoint {} is VPC endpoint; parsing region as {}",
+            endpoint, matcher.group(1));
         return Optional.of(new Resolution(
             Region.of(matcher.group(1)),
             RegionResolutionMechanism.ParseVpceEndpoint));
@@ -356,6 +367,20 @@ public class RegionResolution {
     // No resolution.
     return Optional.empty();
   }
+
+  /**
+   * Is this an AWS endpoint, that is: has an endpoint been set which matches
+   * amazon.
+   * @param endpoint non-null endpoint URL
+   * @return true if this is amazonaws or amazonaws china
+   */
+  public static boolean isAwsEndpoint(final String endpoint) {
+    final String h = endpoint.toLowerCase(Locale.ROOT);
+    // Common AWS partitions: global (.amazonaws.com) and China (.amazonaws.com.cn).
+    return h.endsWith(".amazonaws.com")
+        || h.endsWith(".amazonaws.com.cn");
+  }
+
 
   /**
    * Does the region name refer to an SDK region?
@@ -394,6 +419,7 @@ public class RegionResolution {
 
     // endpoint; may be null
     final String endpointStr = parameters.getEndpoint();
+    boolean endpointDeclared = endpointStr != null && !endpointStr.isEmpty();
     // will be null if endpointStr is null/empty
     final URI endpoint = buildEndpointUri(endpointStr,
         conf.getBoolean(SECURE_CONNECTIONS, DEFAULT_SECURE_CONNECTIONS));
@@ -419,8 +445,7 @@ public class RegionResolution {
 
     // central endpoint if no endpoint has been set, or it is explicitly
     // requested
-    boolean endpointEndsWithCentral = endpointStr == null
-        || endpointStr.isEmpty()
+    boolean endpointEndsWithCentral = !endpointDeclared
         || endpointStr.endsWith(CENTRAL_ENDPOINT);
 
     if (!resolution.isRegionResolved()) {
@@ -452,10 +477,18 @@ public class RegionResolution {
           FIPS_PATH_ACCESS_INCOMPATIBLE);
     }
 
+
     if (!resolution.isRegionResolved()) {
-      // still failing to resolve the region
-      // fall back to central
-      resolution.withRegion(US_EAST_2, RegionResolutionMechanism.FallbackToCentral);
+      // still not resolved.
+      if (!endpointDeclared || isAwsEndpoint(endpointStr)) {
+        // still failing to resolve the region
+        // fall back to central
+        resolution.withRegion(US_EAST_2, RegionResolutionMechanism.FallbackToCentral);
+      } else {
+        // we are not resolved and not an aws region.
+        // set the region to being "external"
+        resolution.withRegion(EXTERNAL_REGION, RegionResolutionMechanism.ExternalEndpoint);
+      }
     }
 
     // No need to override endpoint with "s3.amazonaws.com".

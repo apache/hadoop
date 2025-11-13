@@ -35,6 +35,7 @@ import static org.apache.hadoop.fs.s3a.Constants.EC2_REGION;
 import static org.apache.hadoop.fs.s3a.Constants.SDK_REGION;
 import static org.apache.hadoop.fs.s3a.impl.RegionResolution.ERROR_ENDPOINT_WITH_FIPS;
 import static org.apache.hadoop.fs.s3a.impl.RegionResolution.calculateRegion;
+import static org.apache.hadoop.fs.s3a.impl.RegionResolution.isEc2Region;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
@@ -140,7 +141,7 @@ public class TestRegionResolution extends AbstractHadoopTestBase {
         resolve(getConfiguration(), CN_VPC_ENDPOINT, null, false,
             CN_NORTHWEST_1, RegionResolution.RegionResolutionMechanism.ParseVpceEndpoint);
     assertEndpoint(r, CN_VPC_ENDPOINT);
-    assertUseCentral(r, false);
+    assertUseCentralValue(r, false);
   }
 
   @Test
@@ -150,7 +151,7 @@ public class TestRegionResolution extends AbstractHadoopTestBase {
             US_EAST_2,
             RegionResolution.RegionResolutionMechanism.FallbackToCentral);
     assertEndpoint(r, null);
-    assertUseCentral(r, true);
+    assertUseCentralValue(r, true);
   }
 
   @Test
@@ -159,7 +160,7 @@ public class TestRegionResolution extends AbstractHadoopTestBase {
         resolve(getConfiguration(), CENTRAL_ENDPOINT, US_WEST_2, false,
             US_WEST_2, RegionResolution.RegionResolutionMechanism.Specified);
     assertEndpoint(r, null);
-    assertUseCentral(r, true);
+    assertUseCentralValue(r, true);
   }
 
   @Test
@@ -169,7 +170,7 @@ public class TestRegionResolution extends AbstractHadoopTestBase {
             EU_WEST_2, RegionResolution.RegionResolutionMechanism.Specified);
     // this still uses the central endpoint.
     assertEndpoint(r, null);
-    assertUseCentral(r, true);
+    assertUseCentralValue(r, true);
   }
 
   @Test
@@ -179,17 +180,7 @@ public class TestRegionResolution extends AbstractHadoopTestBase {
             null, RegionResolution.RegionResolutionMechanism.Sdk);
     // SDK handles endpoint logic.
     assertEndpoint(r, null);
-    assertUseCentral(r, true);
-  }
-
-  @Test
-  public void testEC2UpperCaseRegion() throws IOException {
-    final RegionResolution.Resolution r =
-        resolve(getConfiguration(), null, "EC2", false,
-            null, RegionResolution.RegionResolutionMechanism.Sdk);
-    // SDK handles endpoint logic.
-    assertEndpoint(r, null);
-    assertUseCentral(r, true);
+    assertUseCentralValue(r, true);
   }
 
   @Test
@@ -199,7 +190,7 @@ public class TestRegionResolution extends AbstractHadoopTestBase {
             null, RegionResolution.RegionResolutionMechanism.Sdk);
     // SDK handles endpoint logic.
     assertEndpoint(r, null);
-    assertUseCentral(r, true);
+    assertUseCentralValue(r, true);
   }
 
   @Test
@@ -209,7 +200,7 @@ public class TestRegionResolution extends AbstractHadoopTestBase {
             null, RegionResolution.RegionResolutionMechanism.Sdk);
     // SDK handles endpoint logic.
     assertEndpoint(r, null);
-    assertUseCentral(r, true);
+    assertUseCentralValue(r, true);
   }
 
   @Test
@@ -265,7 +256,7 @@ public class TestRegionResolution extends AbstractHadoopTestBase {
             CN_NORTHWEST_1,
             RegionResolution.RegionResolutionMechanism.CalculatedFromEndpoint);
     assertEndpoint(r, CN_ENDPOINT);
-    assertUseCentral(r, false);
+    assertUseCentralValue(r, false);
   }
 
   @Test
@@ -276,7 +267,7 @@ public class TestRegionResolution extends AbstractHadoopTestBase {
             US_GOV_EAST_1,
             RegionResolution.RegionResolutionMechanism.CalculatedFromEndpoint);
     assertEndpoint(r, GOV_ENDPOINT);
-    assertUseCentral(r, false);
+    assertUseCentralValue(r, false);
   }
 
   @Test
@@ -310,7 +301,28 @@ public class TestRegionResolution extends AbstractHadoopTestBase {
       // expected on anything except EC2
       LOG.info("Expected failure when EC2 IAM is not present", e);
     }
+  }
 
+  @Test
+  public void testEc2RegionCaseLogic() throws Throwable {
+    Assertions.assertThat(isEc2Region("ec2"))
+        .describedAs("lower case ec2").isTrue();
+    Assertions.assertThat(isEc2Region("EC2"))
+        .describedAs("upper case ec2").isTrue();
+  }
+
+  @Test
+  public void testGcsRegion() throws Throwable {
+    resolve(getConfiguration(), "https://storage.googleapis.com", null, false,
+        RegionResolution.EXTERNAL,
+        RegionResolution.RegionResolutionMechanism.ExternalEndpoint);
+  }
+
+  @Test
+  public void testLocalhostRegion() throws Throwable {
+    resolve(getConfiguration(), "127.0.0.1", null, false,
+        RegionResolution.EXTERNAL,
+        RegionResolution.RegionResolutionMechanism.ExternalEndpoint);
   }
 
   /**
@@ -331,7 +343,7 @@ public class TestRegionResolution extends AbstractHadoopTestBase {
    * @param r resolution
    * @param expected expected value.
    */
-  private static void assertUseCentral(final RegionResolution.Resolution r,
+  private static void assertUseCentralValue(final RegionResolution.Resolution r,
       final boolean expected) {
     Assertions.assertThat(r.isUseCentralEndpoint())
         .describedAs("Endpoint of %s", r)

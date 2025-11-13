@@ -323,18 +323,20 @@ public class DefaultS3ClientFactory extends Configured
       DEFAULT_REGION_CHAIN.info(SDK_REGION_CHAIN_IN_USE);
       LOG.debug(SDK_REGION_CHAIN_IN_USE);
     } else {
+
+      // a region has been determined from configuration,
+      // or it is falling back to central region.
+
       final Region region = resolution.getRegion();
       builder.region(requireNonNull(region));
       // s3 cross region access
       if (resolution.isCrossRegionAccessEnabled()) {
         builder.crossRegionAccessEnabled(true);
       }
-      if (!resolution.isUseCentralEndpoint()) {
-        final URI endpointUri = resolution.getEndpointUri();
-        if  (endpointUri != null) {
-          builder.endpointOverride(endpointUri);
-          LOG.debug("Setting endpoint to {}", endpointUri);
-        }
+      final URI endpointUri = resolution.getEndpointUri();
+      if (endpointUri != null && !resolution.isUseCentralEndpoint()) {
+        LOG.debug("Setting endpoint to {}", endpointUri);
+        builder.endpointOverride(endpointUri);
       }
     }
     return resolution;
