@@ -286,7 +286,6 @@ public interface S3ATestConstants {
   boolean DEFAULT_ROOT_TESTS_ENABLED = true;
 
   /**
-<<<<<<< HEAD
    * Flag to set when testing third party stores: {@value}.
    * <p>
    * Set to true when a completed MPU commit consumes the ID so it is no
