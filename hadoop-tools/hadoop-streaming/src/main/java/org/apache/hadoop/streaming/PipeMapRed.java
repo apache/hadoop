@@ -39,6 +39,7 @@ import org.apache.hadoop.streaming.io.TextOutputReader;
 import org.apache.hadoop.util.LineReader;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
+
 import org.apache.hadoop.io.Text;
 
 /** Shared functionality for PipeMapper, PipeReducer.

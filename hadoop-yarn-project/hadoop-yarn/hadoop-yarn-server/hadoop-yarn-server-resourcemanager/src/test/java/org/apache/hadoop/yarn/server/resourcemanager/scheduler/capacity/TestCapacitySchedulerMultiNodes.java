@@ -40,6 +40,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Iterators;
 import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
+
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContextImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;

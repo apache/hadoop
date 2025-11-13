@@ -19,8 +19,9 @@
 package org.apache.hadoop.fs.azure;
 
 import org.apache.hadoop.fs.azure.StorageInterface.CloudBlobWrapper;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
+
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 
 import com.microsoft.azure.storage.AccessCondition;
 import com.microsoft.azure.storage.StorageException;

@@ -62,7 +62,7 @@ public final class SubjectUtil {
       Integer.parseInt(System.getProperty("java.specification.version").split("\\.")[0]));
 
   /**
-   * True if the current JVM copies the current JAAS subject into new threads automatically
+   * True if the current JVM copies the current JAAS subject into new threads automatically.
    */
   public static final boolean THREAD_INHERITS_SUBJECT = checkThreadInheritsSubject();
 
