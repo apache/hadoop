@@ -206,7 +206,7 @@ public class ITestS3AOpenCost extends AbstractS3ACostTest {
       in.read();
 
       // now examine the innermost stream and make sure it doesn't have a checksum
-        assertStreamIsNotChecksummed(getS3AInputStream(in));
+      assertStreamIsNotChecksummed(getS3AInputStream(in));
     }
   }
 
@@ -277,8 +277,8 @@ public class ITestS3AOpenCost extends AbstractS3ACostTest {
       }
     },
         always(),
-         // two GET calls were made, one for readFully,
-         // the second on the read() past the EOF
+        // two GET calls were made, one for readFully,
+        // the second on the read() past the EOF
         // the operation has got as far as S3
         probe(classicInputStream, STREAM_READ_OPENED, 1 + 1),
         // For AAL, the seek past content length fails, before the GET is made.
@@ -459,7 +459,8 @@ public class ITestS3AOpenCost extends AbstractS3ACostTest {
         // For AAL, if there is no eTag, the provided length will not be passed in, and a HEAD request will be made.
         // AAL requires the etag to detect changes in the object and then do cache eviction if required.
         if (isAnalyticsStream()) {
-          intercept(EOFException.class, () -> in.readVectored(Arrays.asList(range), (i) -> bb));
+          intercept(EOFException.class, () ->
+                  in.readVectored(Arrays.asList(range), (i) -> bb));
           verifyStatisticCounterValue(in.getIOStatistics(), ACTION_HTTP_HEAD_REQUEST, 1);
           return "vector read past EOF with " + in;
         } else {

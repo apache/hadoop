@@ -276,7 +276,8 @@ public class AnalyticsStream extends ObjectInputStream implements StreamCapabili
     OpenStreamInformation.OpenStreamInformationBuilder openStreamInformationBuilder =
         OpenStreamInformation.builder()
             .inputPolicy(mapS3AInputPolicyToAAL(parameters.getContext()
-            .getInputPolicy())).requestCallback(requestCallback);
+            .getInputPolicy()))
+            .requestCallback(requestCallback);
 
     if (parameters.getObjectAttributes().getETag() != null) {
       openStreamInformationBuilder.objectMetadata(ObjectMetadata.builder()

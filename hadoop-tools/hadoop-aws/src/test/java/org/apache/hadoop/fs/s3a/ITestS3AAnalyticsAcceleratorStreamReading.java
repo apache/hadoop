@@ -102,10 +102,13 @@ public class ITestS3AAnalyticsAcceleratorStreamReading extends AbstractS3ATestBa
     S3AFileSystem fs =
         (S3AFileSystem) FileSystem.get(externalTestFile.toUri(), getConfiguration());
 
+    final long initialAuditCount = fs.getIOStatistics().counters()
+            .getOrDefault(AUDIT_REQUEST_EXECUTION, 0L);
+
    long fileLength = fs.getFileStatus(externalTestFile).getLen();
 
    // Head request for the file length.
-    verifyStatisticCounterValue(fs.getIOStatistics(), AUDIT_REQUEST_EXECUTION, 1);
+    verifyStatisticCounterValue(fs.getIOStatistics(), AUDIT_REQUEST_EXECUTION, initialAuditCount + 1);
 
     byte[] buffer = new byte[500];
     IOStatistics ioStats;
@@ -146,7 +149,7 @@ public class ITestS3AAnalyticsAcceleratorStreamReading extends AbstractS3ATestBa
     // in which case, AAL will start prefetching till EoF on file open in 8MB chunks. The file read here
     // s3://noaa-cors-pds/raw/2023/017/ohfh/OHFH017d.23_.gz, has a size of ~21MB, resulting in 3 GETS:
     // [0-8388607, 8388608-16777215, 16777216-21511173].
-    verifyStatisticCounterValue(fs.getIOStatistics(), AUDIT_REQUEST_EXECUTION, 5);
+    verifyStatisticCounterValue(fs.getIOStatistics(), AUDIT_REQUEST_EXECUTION, initialAuditCount + 1 + 4);
   }
 
   @Test

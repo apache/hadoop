@@ -27,6 +27,8 @@ import org.apache.hadoop.fs.FileRange;
 import org.apache.hadoop.fs.contract.AbstractContractVectoredReadTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
+import org.apache.hadoop.fs.s3a.S3ATestUtils;
+import org.apache.hadoop.fs.s3a.S3AUtils;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.StreamStatisticNames;
 import org.apache.hadoop.test.tags.IntegrationTest;
@@ -38,12 +40,12 @@ import org.junit.jupiter.params.provider.MethodSource;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.validateVectoredReadResult;
 import static org.apache.hadoop.fs.s3a.Constants.ANALYTICS_ACCELERATOR_CONFIGURATION_PREFIX;
-
 import static org.apache.hadoop.fs.s3a.S3ATestConstants.AAL_CACHE_TIMEOUT;
 import static org.apache.hadoop.fs.s3a.S3ATestConstants.AAL_READ_BUFFER_SIZE;
 import static org.apache.hadoop.fs.s3a.S3ATestConstants.AAL_REQUEST_COALESCE_TOLERANCE;
 import static org.apache.hadoop.fs.s3a.S3ATestConstants.AAL_SMALL_OBJECT_PREFETCH_ENABLED;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.enableAnalyticsAccelerator;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipForAnyEncryptionExceptSSES3;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyStatisticCounterValue;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.ACTION_HTTP_GET_REQUEST;
@@ -69,6 +71,15 @@ public class ITestS3AContractAnalyticsStreamVectoredRead extends AbstractContrac
     super(bufferType);
   }
 
+  private static final String REQUEST_COALESCE_TOLERANCE_KEY = ANALYTICS_ACCELERATOR_CONFIGURATION_PREFIX + "."
+          + AAL_REQUEST_COALESCE_TOLERANCE;
+  private static final String READ_BUFFER_SIZE_KEY = ANALYTICS_ACCELERATOR_CONFIGURATION_PREFIX + "."
+          + AAL_READ_BUFFER_SIZE;
+  private static final String SMALL_OBJECT_PREFETCH_ENABLED_KEY = ANALYTICS_ACCELERATOR_CONFIGURATION_PREFIX + "."
+          + AAL_SMALL_OBJECT_PREFETCH_ENABLED;
+  private static final String CACHE_TIMEOUT_KEY = ANALYTICS_ACCELERATOR_CONFIGURATION_PREFIX + "."
+          + AAL_CACHE_TIMEOUT;
+
   /**
    * Create a configuration.
    * @return a configuration
@@ -76,22 +87,27 @@ public class ITestS3AContractAnalyticsStreamVectoredRead extends AbstractContrac
   @Override
   protected Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
+
+    S3ATestUtils.disableFilesystemCaching(conf);
+
+    removeBaseAndBucketOverrides(conf,
+            REQUEST_COALESCE_TOLERANCE_KEY,
+            READ_BUFFER_SIZE_KEY,
+            SMALL_OBJECT_PREFETCH_ENABLED_KEY,
+            CACHE_TIMEOUT_KEY);
+
     // Set the coalesce tolerance to 1KB, default is 1MB.
-    conf.setInt(ANALYTICS_ACCELERATOR_CONFIGURATION_PREFIX +
-            "."  + AAL_REQUEST_COALESCE_TOLERANCE, S_16K);
+    conf.setInt(REQUEST_COALESCE_TOLERANCE_KEY, S_16K);
 
     // Set the minimum block size to 32KB. AAL uses a default block size of 128KB, which means the minimum size a S3
     // request will be is 128KB. Since the file being read is 128KB, we need to  use this here to demonstrate that
     // separate GET requests are made for ranges that are not coalesced.
-    conf.setInt(ANALYTICS_ACCELERATOR_CONFIGURATION_PREFIX +
-            "."  + AAL_READ_BUFFER_SIZE, S_32K);
+    conf.setInt(READ_BUFFER_SIZE_KEY, S_32K);
 
     // Disable small object prefetched, otherwise anything less than 8MB is fetched in a single GET.
-    conf.set(ANALYTICS_ACCELERATOR_CONFIGURATION_PREFIX +
-            "."  + AAL_SMALL_OBJECT_PREFETCH_ENABLED, "false");
+    conf.set(SMALL_OBJECT_PREFETCH_ENABLED_KEY, "false");
 
-    conf.setInt(ANALYTICS_ACCELERATOR_CONFIGURATION_PREFIX +
-            "."  + AAL_CACHE_TIMEOUT, 5000);
+    conf.setInt(CACHE_TIMEOUT_KEY, 5000);
 
     enableAnalyticsAccelerator(conf);
     // If encryption is set, some AAL tests will fail.
