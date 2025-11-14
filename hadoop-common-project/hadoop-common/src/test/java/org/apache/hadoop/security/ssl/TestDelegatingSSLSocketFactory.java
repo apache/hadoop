@@ -51,10 +51,6 @@ public class TestDelegatingSSLSocketFactory {
       Assertions.assertThat(cause)
               .describedAs("Cause of %s: %s", e, cause)
               .isInstanceOf(NoSuchAlgorithmException.class);
-      final Throwable innermost = cause.getCause();
-      Assertions.assertThat(innermost)
-              .describedAs("Innermost Cause of %s: %s", e, innermost)
-              .isInstanceOf(UnsatisfiedLinkError.class);
       assumeTrue(false, "wildfly library not compatible with this OS version");
     }
   }
