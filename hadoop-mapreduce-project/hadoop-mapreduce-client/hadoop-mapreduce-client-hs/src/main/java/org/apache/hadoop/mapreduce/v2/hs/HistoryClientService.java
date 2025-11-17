@@ -93,6 +93,8 @@ import org.apache.hadoop.yarn.webapp.WebApp;
 import org.apache.hadoop.yarn.webapp.WebApps;
 
 import org.apache.hadoop.classification.VisibleForTesting;
+
+import org.eclipse.persistence.jaxb.rs.MOXyJsonProvider;
 import org.glassfish.jersey.internal.inject.AbstractBinder;
 import org.glassfish.jersey.jettison.JettisonFeature;
 import org.glassfish.jersey.server.ResourceConfig;
@@ -470,12 +472,17 @@ public class HistoryClientService extends AbstractService {
 
   protected ResourceConfig configure(Configuration configuration,
       ApplicationClientProtocol protocol) {
+    MOXyJsonProvider moXyJsonProvider = new MOXyJsonProvider();
+    moXyJsonProvider.setIncludeRoot(true);
+    moXyJsonProvider.setMarshalEmptyCollections(true);
+
     ResourceConfig config = new ResourceConfig();
     config.packages("org.apache.hadoop.mapreduce.v2.hs.webapp");
     config.register(new HSJerseyBinder(configuration, protocol));
     config.register(HsWebServices.class);
     config.register(GenericExceptionHandler.class);
-    config.register(new JettisonFeature()).register(JAXBContextResolver.class);
+    config.register(moXyJsonProvider);
+    config.register(JAXBContextResolver.class);
     return config;
   }
 
