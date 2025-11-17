@@ -73,7 +73,7 @@ public class ITestAzureBlobFileSystemUserBoundSAS
 
   private static final String TEST_OBJECT_ID = "123456789";
 
-  private static final String invalidOAuthToken = "InvalidOAuthTokenValue";
+  private static final String INVALID_OAUTH_TOKEN_VALUE = "InvalidOAuthTokenValue";
 
   /**
    * Constructor. Ensures tests run with SharedKey authentication.
@@ -318,7 +318,8 @@ public class ITestAzureBlobFileSystemUserBoundSAS
     // Create mock token provider with invalid token
     AccessTokenProvider mockProvider = Mockito.mock(AccessTokenProvider.class);
     AzureADToken mockToken = Mockito.mock(AzureADToken.class);
-    Mockito.when(mockToken.getAccessToken()).thenReturn(invalidOAuthToken);
+    Mockito.when(mockToken.getAccessToken()).thenReturn(
+        INVALID_OAUTH_TOKEN_VALUE);
     Mockito.when(mockProvider.getToken()).thenReturn(mockToken);
 
     // Inject mock provider into AbfsClient

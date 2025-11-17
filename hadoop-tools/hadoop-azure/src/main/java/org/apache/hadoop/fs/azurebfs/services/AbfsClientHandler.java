@@ -156,25 +156,13 @@ public class AbfsClientHandler implements Closeable {
       final EncryptionContextProvider encryptionContextProvider,
       final AbfsClientContext abfsClientContext) throws IOException {
     URL dfsUrl = changeUrlFromBlobToDfs(baseUrl);
-    if (tokenProvider != null && sasTokenProvider != null) {
-      LOG.debug(
-          "Creating AbfsDfsClient with both access token provider and SAS token provider using the URL: {}",
-          dfsUrl);
-      return new AbfsDfsClient(dfsUrl, creds, abfsConfiguration,
-          tokenProvider, sasTokenProvider, encryptionContextProvider,
-          abfsClientContext);
-    }
-    else if (tokenProvider != null) {
-      LOG.debug("Creating AbfsDfsClient with access token provider using the URL: {}", dfsUrl);
-      return new AbfsDfsClient(dfsUrl, creds, abfsConfiguration,
-          tokenProvider, encryptionContextProvider,
-          abfsClientContext);
-    } else {
-      LOG.debug("Creating AbfsDfsClient with SAS token provider using the URL: {}", dfsUrl);
-      return new AbfsDfsClient(dfsUrl, creds, abfsConfiguration,
-          sasTokenProvider, encryptionContextProvider,
-          abfsClientContext);
-    }
+    LOG.debug(
+        "Creating AbfsDfsClient with access token provider: %s and "
+            + "SAS token provider: %s using the URL: %s",
+        tokenProvider, sasTokenProvider, dfsUrl);
+    return new AbfsDfsClient(dfsUrl, creds, abfsConfiguration,
+        tokenProvider, sasTokenProvider, encryptionContextProvider,
+        abfsClientContext);
   }
 
   /**
@@ -198,26 +186,13 @@ public class AbfsClientHandler implements Closeable {
       final EncryptionContextProvider encryptionContextProvider,
       final AbfsClientContext abfsClientContext) throws IOException {
     URL blobUrl = changeUrlFromDfsToBlob(baseUrl);
-    if (tokenProvider != null && sasTokenProvider != null) {
-      LOG.debug(
-          "Creating AbfsBlobClient with both access token provider and SAS token provider using the URL: {}",
-          blobUrl);
-      return new AbfsBlobClient(blobUrl, creds, abfsConfiguration,
-          tokenProvider, sasTokenProvider, encryptionContextProvider,
-          abfsClientContext);
-    }
-    else if (tokenProvider != null) {
-      LOG.debug("Creating AbfsBlobClient with access token provider using the URL: {}", blobUrl);
-      return new AbfsBlobClient(blobUrl, creds, abfsConfiguration,
-          tokenProvider, encryptionContextProvider,
-          abfsClientContext);
-    }
-    else {
-      LOG.debug("Creating AbfsBlobClient with SAS token provider using the URL: {}", blobUrl);
-      return new AbfsBlobClient(blobUrl, creds, abfsConfiguration,
-          sasTokenProvider, encryptionContextProvider,
-          abfsClientContext);
-    }
+    LOG.debug(
+        "Creating AbfsBlobClient with access token provider: %s and "
+            + "SAS token provider: %s using the URL: %s",
+        tokenProvider, sasTokenProvider, blobUrl);
+    return new AbfsBlobClient(blobUrl, creds, abfsConfiguration,
+        tokenProvider, sasTokenProvider, encryptionContextProvider,
+        abfsClientContext);
   }
 
   @Override

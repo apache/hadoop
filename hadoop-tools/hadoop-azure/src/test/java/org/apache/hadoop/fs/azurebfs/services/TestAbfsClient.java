@@ -70,6 +70,7 @@ public class TestAbfsClient {
                 abfsConfiguration,
                 (AccessTokenProvider) null,
                 null,
+                null,
                 abfsClientContext);
 
         assertThat(client.getTimer())
@@ -105,6 +106,7 @@ public class TestAbfsClient {
                 null,
                 abfsConfiguration,
                 (AccessTokenProvider) null,
+                null,
                 null,
                 abfsClientContext);
 

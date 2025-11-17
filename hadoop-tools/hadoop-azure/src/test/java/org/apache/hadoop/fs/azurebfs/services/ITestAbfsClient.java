@@ -178,10 +178,10 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
     AbfsClient client;
     if (AbfsServiceType.DFS.equals(config.getFsConfiguredServiceType())) {
       client = new AbfsDfsClient(new URL("https://azure.com"), null,
-          config, (AccessTokenProvider) null, null, abfsClientContext);
+          config, (AccessTokenProvider) null, null, null, abfsClientContext);
     } else {
       client = new AbfsBlobClient(new URL("https://azure.com"), null,
-          config, (AccessTokenProvider) null, null, abfsClientContext);
+          config, (AccessTokenProvider) null, null, null, abfsClientContext);
     }
     String sslProviderName = null;
     if (includeSSLProvider) {
@@ -434,6 +434,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
           (currentAuthType == AuthType.OAuth
               ? abfsConfig.getTokenProvider()
               : null),
+          null,
           null,
           abfsClientContext);
     } else {
