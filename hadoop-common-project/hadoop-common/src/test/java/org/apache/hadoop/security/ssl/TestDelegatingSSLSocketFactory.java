@@ -19,13 +19,14 @@
 package org.apache.hadoop.security.ssl;
 
 import java.io.IOException;
+import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 
+import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
 import org.apache.hadoop.util.NativeCodeLoader;
 
-import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assume.assumeTrue;
 
@@ -47,7 +48,10 @@ public class TestDelegatingSSLSocketFactory {
               .getProviderName()).contains("openssl");
     } catch (IOException e) {
       // if this is caused by a wildfly version error, downgrade to an assume
-      assertExceptionContains("GLIBC_2.34", e);
+      final Throwable cause = e.getCause();
+      Assertions.assertThat(cause)
+              .describedAs("Cause of %s: %s", e, cause)
+              .isInstanceOf(NoSuchAlgorithmException.class);
       assumeTrue("wildfly library not compatible with this OS version", false);
     }
   }
