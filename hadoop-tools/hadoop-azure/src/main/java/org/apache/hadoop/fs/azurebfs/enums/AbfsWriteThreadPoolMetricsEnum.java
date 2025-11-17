@@ -41,6 +41,8 @@ public enum AbfsWriteThreadPoolMetricsEnum {
 
   JVM_CPU_LOAD("JvmCpuLoad", StatisticTypeEnum.TYPE_GAUGE),
 
+  JVM_CPU_LOAD_OSHI("JvmCpuLoadOshi", StatisticTypeEnum.TYPE_GAUGE),
+
   /** Overall system CPU utilization percentage observed during writes. */
   CPU_UTILIZATION("Cpu", StatisticTypeEnum.TYPE_GAUGE),
 

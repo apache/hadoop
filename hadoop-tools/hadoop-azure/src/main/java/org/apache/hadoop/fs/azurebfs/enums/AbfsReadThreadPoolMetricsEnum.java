@@ -39,6 +39,8 @@ public enum AbfsReadThreadPoolMetricsEnum {
 
   JVM_CPU_LOAD("JvmCpuLoad", StatisticTypeEnum.TYPE_GAUGE),
 
+  JVM_CPU_LOAD_OSHI("JvmCpuLoadOshi", StatisticTypeEnum.TYPE_GAUGE),
+
   /** Overall system CPU utilization observed during read operations. */
   CPU_UTILIZATION("Cpu", StatisticTypeEnum.TYPE_GAUGE),
 
