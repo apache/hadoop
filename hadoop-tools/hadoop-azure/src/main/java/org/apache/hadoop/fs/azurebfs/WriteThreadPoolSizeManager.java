@@ -42,6 +42,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsWriteThreadPoolMetrics;
 
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.LOW_HEAP_SPACE_FACTOR;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.MEDIUM_HEAP_SPACE_FACTOR;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.BYTES_PER_GIGABYTE;
@@ -103,6 +104,7 @@ public final class WriteThreadPoolSizeManager implements Closeable {
   private final SystemInfo si = new SystemInfo();
   private final OperatingSystem os = si.getOperatingSystem();
   private OSProcess prevProcess;
+  private volatile String lastScaleDirection = EMPTY_STRING;
 
   /**
    * Private constructor to initialize the write thread pool and CPU monitor executor
@@ -123,7 +125,7 @@ public final class WriteThreadPoolSizeManager implements Closeable {
     /* Get the heap space available when the instance is created */
     this.initialAvailableHeapMemory = getAvailableHeapMemory();
     /* Compute the max pool size */
-    int computedMaxPoolSize = getComputedMaxPoolSize(availableProcessors, initialAvailableHeapMemory);
+    int computedMaxPoolSize = getComputedMaxPoolSize(availableProcessors, getAvailableMaxHeapMemory());
 
     /* Get the initial pool size from config, fallback to at least 1 */
     this.initialPoolSize = Math.max(1,
@@ -184,6 +186,22 @@ public final class WriteThreadPoolSizeManager implements Closeable {
     MemoryMXBean osBean = ManagementFactory.getMemoryMXBean();
     MemoryUsage memoryUsage = osBean.getHeapMemoryUsage();
     long availableHeapBytes = memoryUsage.getCommitted() - memoryUsage.getUsed();
+    return (availableHeapBytes + BYTES_PER_GIGABYTE - 1) / BYTES_PER_GIGABYTE;
+  }
+
+  /**
+   * Calculates the available max heap memory in gigabytes.
+   * This method uses {@link Runtime#getRuntime()} to obtain the maximum heap memory
+   * allowed for the JVM and subtracts the currently used memory (total - free)
+   * to determine how much heap memory is still available.
+   * The result is rounded up to the nearest gigabyte.
+   *
+   * @return the available heap memory in gigabytes
+   */
+  private long getAvailableMaxHeapMemory() {
+    MemoryMXBean osBean = ManagementFactory.getMemoryMXBean();
+    MemoryUsage memoryUsage = osBean.getHeapMemoryUsage();
+    long availableHeapBytes = memoryUsage.getMax() - memoryUsage.getUsed();
     return (availableHeapBytes + BYTES_PER_GIGABYTE - 1) / BYTES_PER_GIGABYTE;
   }
 
@@ -384,6 +402,8 @@ public final class WriteThreadPoolSizeManager implements Closeable {
       writeThreadPoolMetrics.update(stats);
       if (newMaxPoolSize != currentPoolSize) {
         LOG.debug("Resizing thread pool from {} to {}", currentPoolSize, newMaxPoolSize);
+        // Record scale direction
+        lastScaleDirection = (newMaxPoolSize > currentPoolSize) ? "I" : "D";
         adjustThreadPoolSize(newMaxPoolSize);
       }
     } finally {
@@ -487,6 +507,10 @@ public final class WriteThreadPoolSizeManager implements Closeable {
     return isMonitoringStarted;
   }
 
+  public String getLastScaleDirection() {
+    return lastScaleDirection;
+  }
+
   /**
    * Closes this manager by shutting down executors and cleaning up resources.
    * Removes the instance from the active manager map.
@@ -528,7 +552,8 @@ public final class WriteThreadPoolSizeManager implements Closeable {
     private final double jvmCpuLoad;
     private final double jvmLoadOshi;
     private final double cpuUtilization; // matches CPU_UTILIZATION metric
-    private final long availableHeapGB;  // matches MEMORY_UTILIZATION metric
+    private final long availableHeapGB;
+    private final String lastScaleDirection;
 
     /**
      * Constructs a {@link WriteThreadPoolStats} instance with the given thread pool
@@ -543,7 +568,8 @@ public final class WriteThreadPoolSizeManager implements Closeable {
      * @param availableHeapGB     the available heap memory in gigabytes.
      */
     public WriteThreadPoolStats(int currentPoolSize, int maxPoolSize,
-        int activeThreads, double jvmCpuUtilization, double jvmCpuLoad, double jvmLoadOshi,  double cpuUtilization, long availableHeapGB) {
+        int activeThreads, double jvmCpuUtilization, double jvmCpuLoad,
+        double jvmLoadOshi,  double cpuUtilization, long availableHeapGB, String lastScaleDirection) {
       this.currentPoolSize = currentPoolSize;
       this.maxPoolSize = maxPoolSize;
       this.activeThreads = activeThreads;
@@ -552,6 +578,7 @@ public final class WriteThreadPoolSizeManager implements Closeable {
       this.jvmLoadOshi = jvmLoadOshi;
       this.cpuUtilization = cpuUtilization;
       this.availableHeapGB = availableHeapGB;
+      this.lastScaleDirection = lastScaleDirection;
     }
 
     /** @return the current number of threads in the pool. */
@@ -592,14 +619,29 @@ public final class WriteThreadPoolSizeManager implements Closeable {
       return jvmLoadOshi;
     }
 
+    public String getLastScaleDirection() {
+      return lastScaleDirection;
+    }
+
+    public int getLastScaleDirectionNumeric(String lastScaleDirection) {
+      switch (lastScaleDirection) {
+      case "I":
+        return 1;  // Scale up
+      case "D":
+        return -1; // Scale down
+      default:
+        return 0;  // No scaling
+      }
+    }
+
     @Override
     public String toString() {
       return String.format(
           "currentPoolSize=%d, maxPoolSize=%d, activeThreads=%d, jvmCpuUtilization=%.2f%%, jvmcpuLoad=%.2f%%, "
-              + "jvmLoadOshi=%.2f%%, cpuUtilization=%.2f%%, availableHeap=%dGB",
+              + "jvmLoadOshi=%.2f%%, cpuUtilization=%.2f%%, availableHeap=%dGB", "scaleDirection=%s",
           currentPoolSize, maxPoolSize, activeThreads, jvmCpuUtilization,
           jvmCpuLoad * HUNDRED, jvmLoadOshi * HUNDRED, cpuUtilization * HUNDRED,
-          availableHeapGB);
+          availableHeapGB, lastScaleDirection);
     }
   }
 
@@ -613,7 +655,7 @@ public final class WriteThreadPoolSizeManager implements Closeable {
    */
   synchronized WriteThreadPoolStats getCurrentStats() {
     if (boundedThreadPool == null) {
-      return new WriteThreadPoolStats(ZERO,  ZERO,  ZERO,  ZERO_D,  ZERO_D,  ZERO_D,  ZERO_D, ZERO);
+      return new WriteThreadPoolStats(ZERO,  ZERO,  ZERO,  ZERO_D,  ZERO_D,  ZERO_D,  ZERO_D, ZERO, EMPTY_STRING);
     }
 
     ThreadPoolExecutor exec = (ThreadPoolExecutor) this.boundedThreadPool;
@@ -626,7 +668,8 @@ public final class WriteThreadPoolSizeManager implements Closeable {
         getjvmCpuLoad(),
         getJvmCpuUtilizationOshi(),// JVM process CPU usage (%)
         getCpuUtilization(),        // System-wide CPU usage (%)
-        getAvailableHeapMemory()    // Available JVM heap memory (GB)
+        getAvailableHeapMemory(),  // Available JVM heap memory (GB)
+        getLastScaleDirection()
     );
   }
 }

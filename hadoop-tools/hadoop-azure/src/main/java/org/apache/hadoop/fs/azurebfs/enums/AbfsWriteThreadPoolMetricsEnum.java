@@ -47,7 +47,9 @@ public enum AbfsWriteThreadPoolMetricsEnum {
   CPU_UTILIZATION("Cpu", StatisticTypeEnum.TYPE_GAUGE),
 
   /** Available heap memory (in GB) during write operations. */
-  MEMORY_UTILIZATION("AvlMem", StatisticTypeEnum.TYPE_GAUGE);
+  MEMORY_UTILIZATION("AvlMem", StatisticTypeEnum.TYPE_GAUGE),
+
+  LAST_SCALE_DIRECTION("ScaleDirection", StatisticTypeEnum.TYPE_GAUGE);
 
   private final String name;
   private final StatisticTypeEnum statisticType;
