@@ -217,7 +217,10 @@ public class FSDirectory implements Closeable {
   // authorizeWithContext() API or not.
   private boolean useAuthorizationWithContextAPI = false;
 
-  private static final int maxDirItemsLimit = 64 * 100 * 1000;
+  // We need a maximum maximum because by default, PB limits message sizes
+  // to 64MB. This means we can only store approximately 6.7 million entries
+  // per directory, but let's use 6.4 million for some safety.
+  private static final int MAX_DIR_ITEMS = 64 * 100 * 1000;
 
   public void setINodeAttributeProvider(
       @Nullable INodeAttributeProvider provider) {
@@ -397,13 +400,10 @@ public class FSDirectory implements Closeable {
     Preconditions.checkArgument(this.inodeXAttrsLimit >= 0,
         "Cannot set a negative limit on the number of xattrs per inode (%s).",
         DFSConfigKeys.DFS_NAMENODE_MAX_XATTRS_PER_INODE_KEY);
-    // We need a maximum maximum because by default, PB limits message sizes
-    // to 64MB. This means we can only store approximately 6.7 million entries
-    // per directory, but let's use 6.4 million for some safety.
     Preconditions.checkArgument(
-        maxDirItems > 0 && maxDirItems <= maxDirItemsLimit, "Cannot set "
+        maxDirItems > 0 && maxDirItems <= MAX_DIR_ITEMS, "Cannot set "
             + DFSConfigKeys.DFS_NAMENODE_MAX_DIRECTORY_ITEMS_KEY
-            + " to a value less than 1 or greater than " + maxDirItemsLimit);
+            + " to a value less than 1 or greater than " + MAX_DIR_ITEMS);
 
     int threshold = conf.getInt(
         DFSConfigKeys.DFS_NAMENODE_NAME_CACHE_THRESHOLD_KEY,
@@ -582,10 +582,10 @@ public class FSDirectory implements Closeable {
   }
 
   public void setMaxDirItems(int newVal) {
-    com.google.common.base.Preconditions.checkArgument(
-        newVal > 0 && newVal <= maxDirItemsLimit, "Cannot set "
+    Preconditions.checkArgument(
+        newVal > 0 && newVal <= MAX_DIR_ITEMS, "Cannot set "
             + DFSConfigKeys.DFS_NAMENODE_MAX_DIRECTORY_ITEMS_KEY
-            + " to a value less than 1 or greater than " + maxDirItemsLimit);
+            + " to a value less than 1 or greater than " + MAX_DIR_ITEMS);
     maxDirItems = newVal;
   }
 

@@ -867,20 +867,29 @@ public class TestNameNodeReconfigure {
   }
 
   @Test
-  public void testReconfigureMaxDirItems()
-      throws ReconfigurationException {
+  public void testReconfigureMaxDirItems() throws Exception {
     final NameNode nameNode = cluster.getNameNode();
     final FSDirectory fsd = nameNode.namesystem.getFSDirectory();
 
-    // By default, DFS_NAMENODE_MAX_DIRECTORY_ITEMS_KEY is 1024*1024.
-    assertEquals(1024*1024, fsd.getMaxDirItems());
+    // By default, DFS_NAMENODE_MAX_DIRECTORY_ITEMS_KEY is 1024 * 1024.
+    assertEquals(1024 * 1024, fsd.getMaxDirItems());
 
     // Reconfigure.
-    nameNode.reconfigureProperty(
-        DFS_NAMENODE_MAX_DIRECTORY_ITEMS_KEY, Integer.toString(1024*1024*2));
+    nameNode.reconfigureProperty(DFS_NAMENODE_MAX_DIRECTORY_ITEMS_KEY,
+        Integer.toString(1024 * 1024 * 2));
 
-    // Assert DFS_NAMENODE_MAX_SLOWPEER_COLLECT_NODES_KEY is 10.
-    assertEquals(1024*1024*2, fsd.getMaxDirItems());
+    // Assert DFS_NAMENODE_MAX_SLOWPEER_COLLECT_NODES_KEY is 1024 * 1024 * 2.
+    assertEquals(1024 * 1024 * 2, fsd.getMaxDirItems());
+
+    // Reconfigure to negative, and expect failed.
+    LambdaTestUtils.intercept(ReconfigurationException.class,
+        "Could not change property dfs.namenode.fs-limits.max-directory-items from '"
+            + 1024 * 1024 * 2 + "' to '" + 1024 * 1024 * -1 + "'",
+        () -> nameNode.reconfigureProperty(DFS_NAMENODE_MAX_DIRECTORY_ITEMS_KEY,
+            Integer.toString(1024 * 1024 * -1)));
+
+    // Assert DFS_NAMENODE_MAX_SLOWPEER_COLLECT_NODES_KEY is also 1024 * 1024 * 2.
+    assertEquals(1024 * 1024 * 2, fsd.getMaxDirItems());
   }
 
   @AfterEach

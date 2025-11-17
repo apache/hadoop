@@ -2392,7 +2392,7 @@ public class NameNode extends ReconfigurableBase implements
         || property.equals(DFS_NAMENODE_WRITE_LOCK_REPORTING_THRESHOLD_MS_KEY)) {
       return reconfigureFSNamesystemLockMetricsParameters(property, newVal);
     } else if (property.equals(DFS_NAMENODE_MAX_DIRECTORY_ITEMS_KEY)) {
-      return reconfMaxDirItems(newVal);
+      return reconfigureMaxDirItems(newVal);
     } else {
       throw new ReconfigurationException(property, newVal, getConf().get(
           property));
@@ -2811,7 +2811,7 @@ public class NameNode extends ReconfigurableBase implements
     }
   }
 
-  private String reconfMaxDirItems(String newVal) throws ReconfigurationException {
+  private String reconfigureMaxDirItems(String newVal) throws ReconfigurationException {
     int newSetting;
     namesystem.writeLock(RwLockMode.BM);
     try {
@@ -2824,7 +2824,7 @@ public class NameNode extends ReconfigurableBase implements
       throw new ReconfigurationException(DFS_NAMENODE_MAX_DIRECTORY_ITEMS_KEY, newVal,
           getConf().get(DFS_NAMENODE_MAX_DIRECTORY_ITEMS_KEY), e);
     } finally {
-      namesystem.writeUnlock(RwLockMode.BM, "reconfMaxDirItems");
+      namesystem.writeUnlock(RwLockMode.BM, "reconfigureMaxDirItems");
     }
   }
 
