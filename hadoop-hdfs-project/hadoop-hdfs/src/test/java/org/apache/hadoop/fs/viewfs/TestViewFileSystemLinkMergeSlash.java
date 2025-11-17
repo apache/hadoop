@@ -28,7 +28,9 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystemTestHelper;
 import org.apache.hadoop.fs.FsConstants;
+import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -228,4 +230,136 @@ public class TestViewFileSystemLinkMergeSlash extends ViewFileSystemBaseTest {
     assertEquals(DistributedFileSystem.class, childFs[0].getClass(),
         "Unexpected child filesystem!");
   }
+
+  @Test
+  public void testListStatusReturnsCorrectPaths() throws Exception {
+    String clusterName = "ClusterLMS1";
+    URI viewFsUri = new URI(FsConstants.VIEWFS_SCHEME, clusterName,
+        "/", null, null);
+
+    Configuration conf = new Configuration();
+    ConfigUtil.addLinkMergeSlash(conf, clusterName,
+        fsDefault.getUri());
+
+    FileSystem vfs = FileSystem.get(viewFsUri, conf);
+
+    // Create test directory structure
+    Path testDir = new Path("/testListStatus");
+    Path subDir1 = new Path(testDir, "subdir1");
+    Path subDir2 = new Path(testDir, "subdir2");
+    Path file1 = new Path(testDir, "file1.txt");
+
+    try {
+      fsDefault.mkdirs(subDir1);
+      fsDefault.mkdirs(subDir2);
+      fsDefault.create(file1).close();
+
+      // Test listStatus returns correct ViewFS paths
+      FileStatus[] statuses = vfs.listStatus(testDir);
+      Assert.assertEquals("Should have 3 items", 3, statuses.length);
+
+      for (FileStatus status : statuses) {
+        Path path = status.getPath();
+        // Path should be viewfs:// URI, not hdfs://
+        Assert.assertEquals("Scheme should be viewfs",
+            FsConstants.VIEWFS_SCHEME, path.toUri().getScheme());
+        Assert.assertEquals("Authority should match cluster name",
+            clusterName, path.toUri().getAuthority());
+        // Path should start with /testListStatus, not contain cluster name
+        Assert.assertTrue("Path should be absolute and correct: " + path,
+            path.toString().startsWith("viewfs://" + clusterName + "/testListStatus/"));
+        Assert.assertFalse("Path should not contain duplicate cluster name: " + path,
+            path.toString().contains(clusterName + "/" + clusterName));
+      }
+    } finally {
+      fsDefault.delete(testDir, true);
+      vfs.close();
+    }
+  }
+
+  @Test
+  public void testListLocatedStatusReturnsCorrectPaths() throws Exception {
+    String clusterName = "ClusterLMS1";
+    URI viewFsUri = new URI(FsConstants.VIEWFS_SCHEME, clusterName,
+        "/", null, null);
+
+    Configuration conf = new Configuration();
+    ConfigUtil.addLinkMergeSlash(conf, clusterName,
+        fsDefault.getUri());
+
+    FileSystem vfs = FileSystem.get(viewFsUri, conf);
+
+    // Create test directory structure
+    Path testDir = new Path("/testListLocatedStatus");
+    Path file1 = new Path(testDir, "file1.txt");
+    Path file2 = new Path(testDir, "file2.txt");
+
+    try {
+      fsDefault.mkdirs(testDir);
+      fsDefault.create(file1).close();
+      fsDefault.create(file2).close();
+
+      // Test listLocatedStatus returns correct ViewFS paths
+      RemoteIterator<LocatedFileStatus> iter = vfs.listLocatedStatus(testDir);
+      int count = 0;
+      while (iter.hasNext()) {
+        LocatedFileStatus status = iter.next();
+        Path path = status.getPath();
+        count++;
+
+        // Path should be viewfs:// URI
+        Assert.assertEquals("Scheme should be viewfs",
+            FsConstants.VIEWFS_SCHEME, path.toUri().getScheme());
+        Assert.assertEquals("Authority should match cluster name",
+            clusterName, path.toUri().getAuthority());
+        // Path should be absolute and not contain relative path issues
+        Assert.assertTrue("Path should start correctly: " + path,
+            path.toString().startsWith("viewfs://" + clusterName + "/testListLocatedStatus/"));
+        Assert.assertFalse("Path should not contain duplicate cluster name: " + path,
+            path.toString().contains(clusterName + "/" + clusterName));
+      }
+      Assert.assertEquals("Should have 2 files", 2, count);
+    } finally {
+      fsDefault.delete(testDir, true);
+      vfs.close();
+    }
+  }
+
+  @Test
+  public void testResolvedPathIsAbsolute() throws Exception {
+    String clusterName = "ClusterLMS1";
+    URI viewFsUri = new URI(FsConstants.VIEWFS_SCHEME, clusterName,
+        "/", null, null);
+
+    Configuration conf = new Configuration();
+    ConfigUtil.addLinkMergeSlash(conf, clusterName,
+        fsDefault.getUri());
+
+    FileSystem vfs = FileSystem.get(viewFsUri, conf);
+
+    // Create nested directory structure
+    Path baseDir = new Path("/user/history/done");
+    Path yearDir = new Path(baseDir, "2021");
+
+    try {
+      fsDefault.mkdirs(yearDir);
+
+      // This is the exact scenario that caused the bug
+      FileStatus[] statuses = vfs.listStatus(baseDir);
+      Assert.assertEquals("Should have 1 directory", 1, statuses.length);
+
+      Path resultPath = statuses[0].getPath();
+      String expectedPath = "viewfs://" + clusterName + "/user/history/done/2021";
+      Assert.assertEquals("Path should be correctly formed",
+          expectedPath, resultPath.toString());
+
+      // Verify path is absolute (starts with /)
+      Assert.assertTrue("Path should be absolute",
+          resultPath.toUri().getPath().startsWith("/"));
+    } finally {
+      fsDefault.delete(new Path("/user"), true);
+      vfs.close();
+    }
+  }
 }
+
