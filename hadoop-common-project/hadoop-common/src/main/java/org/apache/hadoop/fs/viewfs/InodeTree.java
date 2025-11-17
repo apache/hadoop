@@ -719,7 +719,7 @@ public abstract class InodeTree<T> {
 
     if (isMergeSlashConfigured) {
       Preconditions.checkNotNull(mergeSlashTarget);
-      root = new INodeLink<T>(mountTableName, ugi,
+      root = new INodeLink<T>("/", ugi,
           initAndGetTargetFs(), mergeSlashTarget);
       mountPoints.add(new MountPoint<T>("/", (INodeLink<T>) root));
       rootFallbackLink = null;
