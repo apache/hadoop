@@ -95,10 +95,11 @@ public final class SubjectUtil {
     } else {
       // 24+ never inherits the Subject.
       // For 22 and 23 the behavior actually depends on whether the SecurityManager
-      // is enabled, but this check is only used to enable a minor performance
-      // optimization of bypassing a doAs/callAs call in SubjectInheritingThread.
-      // We accept that possible minor performance cost to avoid extra complexity
-      // and prevent the HVM from logging SecurityManager warnings to console.
+      // is enabled, but this check is only used to determine whether a doAs/callAs
+      // call can be optimized out in SubjectInheritingThread and Daemon.
+      // We accept that possible minor performance cost for those EOL non-LTS versions
+      // to avoid the extra complexity and to prevent the JVM from logging
+      // SecurityManager warnings to the console.
       return false;
     }
   }
