@@ -90,20 +90,17 @@ public final class SubjectUtil {
    */
   private static boolean checkThreadInheritsSubject() {
 
-    boolean securityManagerEnabled = true;
-    try {
-      // TODO this needs SecurityManager to compile, use reflection to look it up instead
-      SecurityManager sm = System.getSecurityManager();
-      System.setSecurityManager(sm);
-    } catch (UnsupportedOperationException e) {
-      // JDK24+ unconditionally throws this, so we don't need to check for JDK24+
-      // explicitly
-      securityManagerEnabled = false;
-    } catch (Throwable t) {
-      // don't care
+    if (JAVA_SPEC_VER <= 21) {
+      return true;
+    } else {
+      // 24+ never inherits the Subject.
+      // For 22 and 23 the behavior actually depends on whether the SecurityManager
+      // is enabled, but this check is only used to enable a minor performance
+      // optimization of bypassing a doAs/callAs call in SubjectInheritingThread.
+      // We accept that possible minor performance cost to avoid extra complexity
+      // and prevent the HVM from logging SecurityManager warnings to console.
+      return false;
     }
-
-    return JAVA_SPEC_VER < 22 || securityManagerEnabled;
   }
 
   /**
