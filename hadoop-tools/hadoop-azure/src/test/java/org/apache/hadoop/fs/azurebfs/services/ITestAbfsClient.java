@@ -451,6 +451,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
               ? abfsConfig.getTokenProvider()
               : null),
           null,
+          null,
           abfsClientContext);
     }
 
@@ -487,6 +488,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
         (currentAuthType == AuthType.OAuth
             ? abfsConfig.getTokenProvider()
             : null),
+        null,
         null,
         abfsClientContext);
 

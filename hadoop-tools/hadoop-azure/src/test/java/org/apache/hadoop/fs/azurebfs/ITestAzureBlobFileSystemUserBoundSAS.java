@@ -26,6 +26,7 @@ import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -48,6 +49,7 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsBlobClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
+import org.apache.hadoop.fs.permission.AclEntry;
 
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_OAUTH_CLIENT_ID;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_OAUTH_CLIENT_SECRET;
@@ -268,8 +270,9 @@ public class ITestAzureBlobFileSystemUserBoundSAS
 
 
   /**
-   * Tests basic file operations (create, open, write, read, list, delete) using user-bound SAS.
-   * @throws Exception if test fails
+   * Performs and validates basic file and directory operations.
+   * Operations tested: create, open, write, read, list, mkdir, existence check, ACL (if HNS), and delete.
+   * @throws Exception if any operation fails
    */
   @Test
   public void testBasicOperations() throws Exception {
@@ -302,9 +305,36 @@ public class ITestAzureBlobFileSystemUserBoundSAS
     // 7. Check file existence
     assertTrue(testFs.exists(testPath));
 
-    // 9. Delete file
+    // 8. Create directory and a file undere it
+    Path dirPath = new Path("/testDirAcl");
+    Path filePath = new Path(dirPath, "fileInDir.txt");
+
+    assertTrue(testFs.mkdirs(dirPath));
+
+    // 9. ACL operations (only for HNS accounts)
+    if (getConfiguration().getBoolean(
+        TestConfigurationKeys.FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT, false)) {
+      // Set ACL
+      List<AclEntry> aclSpec = Arrays.asList(
+          AclEntry.parseAclEntry("user::rwx", true),
+          AclEntry.parseAclEntry("group::r-x", true),
+          AclEntry.parseAclEntry("other::---", true)
+      );
+      testFs.setAcl(dirPath, aclSpec);
+
+      // Get ACL
+      List<AclEntry> returnedAcl = testFs.getAclStatus(dirPath).getEntries();
+      assertNotNull(returnedAcl);
+    }
+
+    // 10. Delete file (non-recursive)
     assertTrue(testFs.delete(testPath, false));
     assertFalse(testFs.exists(testPath));
+
+    // 11. Delete directory (recursive)
+    assertTrue(testFs.delete(dirPath, true));
+    assertFalse(testFs.exists(dirPath));
+    assertFalse(testFs.exists(filePath));
   }
 
   /**
