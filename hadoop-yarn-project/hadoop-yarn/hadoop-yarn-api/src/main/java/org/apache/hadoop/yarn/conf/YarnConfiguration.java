@@ -2196,6 +2196,15 @@ public class YarnConfiguration extends Configuration {
    */
   public static final long DEFAULT_NM_MIN_PER_DISK_FREE_SPACE_MB = 0;
 
+  /**
+   * Validate content of the node manager directories can be accessed.
+   */
+  public static final String NM_WORKING_DIR_CONTENT_ACCESSIBILITY_VALIDATION_ENABLED =
+          NM_DISK_HEALTH_CHECK_PREFIX + "working-dir-content-accessibility-validation.enabled";
+
+  public static final boolean DEFAULT_NM_WORKING_DIR_CONTENT_ACCESSIBILITY_VALIDATION_ENABLED =
+          false;
+
   /** The health checker scripts. */
   public static final String NM_HEALTH_CHECK_SCRIPTS =
       NM_PREFIX + "health-checker.scripts";
