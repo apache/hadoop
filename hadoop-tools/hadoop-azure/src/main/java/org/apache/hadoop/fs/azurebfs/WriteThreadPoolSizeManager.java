@@ -39,6 +39,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsWriteThreadPoolMetrics;
 
@@ -101,10 +102,10 @@ public final class WriteThreadPoolSizeManager implements Closeable {
   private static long lastTime = 0;
   /* Flag indicating if CPU monitoring has started. */
   private volatile boolean isMonitoringStarted = false;
-  private final SystemInfo si = new SystemInfo();
-  private final OperatingSystem os = si.getOperatingSystem();
-  private OSProcess prevProcess;
+  /* Tracks the last scale direction applied, or empty if none. */
   private volatile String lastScaleDirection = EMPTY_STRING;
+  /* Maximum CPU utilization observed during the monitoring interval. */
+  private volatile double maxCpuUtilization = 0.0;
 
   /**
    * Private constructor to initialize the write thread pool and CPU monitor executor
@@ -148,7 +149,6 @@ public final class WriteThreadPoolSizeManager implements Closeable {
     executor.allowCoreThreadTimeOut(true);
     /* Create a scheduled executor for CPU monitoring and pool adjustment */
     this.cpuMonitorExecutor = Executors.newScheduledThreadPool(1);
-    prevProcess = os.getProcess(os.getProcessId());
   }
 
   /** Returns the internal {@link AbfsConfiguration}. */
@@ -182,7 +182,8 @@ public final class WriteThreadPoolSizeManager implements Closeable {
    *
    * @return the available heap memory in gigabytes
    */
-  private long getAvailableHeapMemory() {
+  @VisibleForTesting
+  public long getAvailableHeapMemory() {
     MemoryMXBean osBean = ManagementFactory.getMemoryMXBean();
     MemoryUsage memoryUsage = osBean.getHeapMemoryUsage();
     long availableHeapBytes = memoryUsage.getCommitted() - memoryUsage.getUsed();
@@ -347,7 +348,8 @@ public final class WriteThreadPoolSizeManager implements Closeable {
    *
    * @return the CPU utilization as a fraction (0.0 to 1.0), or 0.0 if unavailable.
    */
-  private double getjvmCpuLoad() {
+  @VisibleForTesting
+  public double getjvmCpuLoad() {
     OperatingSystemMXBean osBean = ManagementFactory.getPlatformMXBean(
         OperatingSystemMXBean.class);
     double cpuLoad = osBean.getProcessCpuLoad();
@@ -357,18 +359,6 @@ public final class WriteThreadPoolSizeManager implements Closeable {
     }
     return cpuLoad;
   }
-
-  /**
-   * Returns JVM CPU usage as a value in [0.0, 1.0]
-   * Multiply by 100 for percentage.
-   */
-  public double getJvmCpuUtilizationOshi() {
-    OSProcess current = os.getProcess(os.getProcessId());
-    double load = current.getProcessCpuLoadBetweenTicks(prevProcess);
-    prevProcess = current;
-    return load;
-  }
-
 
   /**
    * Dynamically adjusts the thread pool size based on current CPU utilization
@@ -396,11 +386,22 @@ public final class WriteThreadPoolSizeManager implements Closeable {
         newMaxPoolSize = currentPoolSize;
         LOG.debug("CPU load normal ({}). No change: current={}", cpuUtilization, currentPoolSize);
       }
-      // Capture the latest thread pool statistics (pool size, CPU, memory, etc.).
-      WriteThreadPoolStats stats = getCurrentStats();
-      // Update the write thread pool metrics with the latest statistics snapshot.
-      writeThreadPoolMetrics.update(stats);
-      if (newMaxPoolSize != currentPoolSize) {
+      boolean willResize = newMaxPoolSize != currentPoolSize;
+      // Case 1: CPU increased — push metrics ONLY if not resizing
+      if (cpuUtilization > maxCpuUtilization) {
+        maxCpuUtilization = cpuUtilization;
+        if (!willResize) {
+          WriteThreadPoolStats stats = getCurrentStats(cpuUtilization, maxCpuUtilization, currentHeap);
+          // Update the write thread pool metrics with the latest statistics snapshot.
+          writeThreadPoolMetrics.update(stats);
+        }
+      }
+      // Case 2: Resize — always push metrics
+      if (willResize) {
+        // Capture the latest thread pool statistics (pool size, CPU, memory, etc.).
+        WriteThreadPoolStats stats = getCurrentStats(cpuUtilization, maxCpuUtilization, currentHeap);
+        // Update the write thread pool metrics with the latest statistics snapshot.
+        writeThreadPoolMetrics.update(stats);
         LOG.debug("Resizing thread pool from {} to {}", currentPoolSize, newMaxPoolSize);
         // Record scale direction
         lastScaleDirection = (newMaxPoolSize > currentPoolSize) ? "I" : "D";
@@ -507,8 +508,9 @@ public final class WriteThreadPoolSizeManager implements Closeable {
     return isMonitoringStarted;
   }
 
-  public String getLastScaleDirection() {
-    return lastScaleDirection;
+  @VisibleForTesting
+  public double getMaxCpuUtilization() {
+    return maxCpuUtilization;
   }
 
   /**
@@ -550,35 +552,37 @@ public final class WriteThreadPoolSizeManager implements Closeable {
     private final int activeThreads;     // matches ACTIVE_THREADS metric
     private final double jvmCpuUtilization; // matches JVM_CPU_UTILIZATION metric
     private final double jvmCpuLoad;
-    private final double jvmLoadOshi;
-    private final double cpuUtilization; // matches CPU_UTILIZATION metric
-    private final long availableHeapGB;
-    private final String lastScaleDirection;
+    private final double systemCpuUtilization; // matches SYSTEM_CPU_UTILIZATION metric
+    private final long availableHeapGB;           // available heap in GB
+    private final String lastScaleDirection;// "I" (increase), "D" (decrease), or same
+    private final double maxCpuUtilization;
 
     /**
      * Constructs a {@link WriteThreadPoolStats} instance with the given thread pool
      * and system utilization metrics.
      *
-     * @param currentPoolSize     the current number of threads in the pool.
-     * @param maxPoolSize         the maximum allowed thread pool size.
-     * @param activeThreads       the number of currently active threads.
-     * @param jvmCpuUtilization   the JVM CPU utilization percentage.
-     *  @param jvmCpuLoad   the JVM CPU load percentage.
-     * @param cpuUtilization      the overall system CPU utilization percentage.
-     * @param availableHeapGB     the available heap memory in gigabytes.
+     * @param currentPoolSize        the current number of threads in the pool
+     * @param maxPoolSize            the maximum allowed thread pool size
+     * @param activeThreads          the number of currently active threads
+     * @param jvmCpuUtilization      the JVM CPU utilization percentage during write operations
+     * @param jvmCpuLoad             the recent JVM CPU load value (0.0–1.0)
+     * @param systemCpuUtilization   the overall system CPU utilization percentage
+     * @param availableHeapGB        the available heap memory in gigabytes
+     * @param lastScaleDirection     the last scale direction: "I" (increase), "D" (decrease), or empty if none
+     * @param maxCpuUtilization      the maximum CPU utilization recorded during the monitoring interval
      */
     public WriteThreadPoolStats(int currentPoolSize, int maxPoolSize,
         int activeThreads, double jvmCpuUtilization, double jvmCpuLoad,
-        double jvmLoadOshi,  double cpuUtilization, long availableHeapGB, String lastScaleDirection) {
+        double systemCpuUtilization, long availableHeapGB, String lastScaleDirection, double maxCpuUtilization) {
       this.currentPoolSize = currentPoolSize;
       this.maxPoolSize = maxPoolSize;
       this.activeThreads = activeThreads;
       this.jvmCpuUtilization = jvmCpuUtilization;
       this.jvmCpuLoad = jvmCpuLoad;
-      this.jvmLoadOshi = jvmLoadOshi;
-      this.cpuUtilization = cpuUtilization;
+      this.systemCpuUtilization = systemCpuUtilization;
       this.availableHeapGB = availableHeapGB;
       this.lastScaleDirection = lastScaleDirection;
+      this.maxCpuUtilization = maxCpuUtilization;
     }
 
     /** @return the current number of threads in the pool. */
@@ -601,13 +605,9 @@ public final class WriteThreadPoolSizeManager implements Closeable {
       return jvmCpuUtilization;
     }
 
-    public double getJvmCpuLoad() {
-      return jvmCpuLoad;
-    }
-
     /** @return the overall system CPU utilization percentage. */
-    public double getCpuUtilization() {
-      return cpuUtilization;
+    public double getSystemCpuUtilization() {
+      return systemCpuUtilization;
     }
 
     /** @return the available heap memory in gigabytes. */
@@ -615,14 +615,27 @@ public final class WriteThreadPoolSizeManager implements Closeable {
       return availableHeapGB;
     }
 
-    public double getJvmLoadOshi() {
-      return jvmLoadOshi;
-    }
-
+    /** @return "I" (increase), "D" (decrease), or empty. */
     public String getLastScaleDirection() {
       return lastScaleDirection;
     }
 
+    /** @return the JVM process CPU utilization percentage. */
+    public double getJvmCpuLoad() {
+      return jvmCpuLoad;
+    }
+
+    /** @return the max JVM process CPU utilization percentage. */
+    public double getMaxCpuUtilization() {
+      return maxCpuUtilization;
+    }
+
+    /**
+     * Converts the scale direction string into numeric value.
+     *
+     * @param lastScaleDirection the scale direction ("I", "D", or empty)
+     * @return 1 for increase, -1 for decrease, 0 for none
+     */
     public int getLastScaleDirectionNumeric(String lastScaleDirection) {
       switch (lastScaleDirection) {
       case "I":
@@ -637,11 +650,12 @@ public final class WriteThreadPoolSizeManager implements Closeable {
     @Override
     public String toString() {
       return String.format(
-          "currentPoolSize=%d, maxPoolSize=%d, activeThreads=%d, jvmCpuUtilization=%.2f%%, jvmcpuLoad=%.2f%%, "
-              + "jvmLoadOshi=%.2f%%, cpuUtilization=%.2f%%, availableHeap=%dGB", "scaleDirection=%s",
-          currentPoolSize, maxPoolSize, activeThreads, jvmCpuUtilization,
-          jvmCpuLoad * HUNDRED, jvmLoadOshi * HUNDRED, cpuUtilization * HUNDRED,
-          availableHeapGB, lastScaleDirection);
+          "currentPoolSize=%d, maxPoolSize=%d, activeThreads=%d, "
+              + "jvmCpuUtilization=%.2f%%, jvmCpuLoad=%.2f%%, systemCpuUtilization=%.2f%%, "
+              + "availableHeap=%dGB, scaleDirection=%s, maxCpuUtilization=%.2f%%",
+          currentPoolSize, maxPoolSize, activeThreads, jvmCpuUtilization, jvmCpuLoad * HUNDRED,
+          systemCpuUtilization * HUNDRED,
+          availableHeapGB, lastScaleDirection, maxCpuUtilization * HUNDRED);
     }
   }
 
@@ -653,23 +667,25 @@ public final class WriteThreadPoolSizeManager implements Closeable {
    * @return the latest {@link WriteThreadPoolStats} representing the current state
    *         of the thread pool and system resources.
    */
-  synchronized WriteThreadPoolStats getCurrentStats() {
+  synchronized WriteThreadPoolStats getCurrentStats(double jvmCpuUtilization, double maxCpuUtilization, long currentHeap) {
     if (boundedThreadPool == null) {
-      return new WriteThreadPoolStats(ZERO,  ZERO,  ZERO,  ZERO_D,  ZERO_D,  ZERO_D,  ZERO_D, ZERO, EMPTY_STRING);
+      return new WriteThreadPoolStats(ZERO,  ZERO,  ZERO,  ZERO_D,  ZERO_D,  ZERO_D, ZERO,  EMPTY_STRING, ZERO_D);
     }
 
     ThreadPoolExecutor exec = (ThreadPoolExecutor) this.boundedThreadPool;
+    String currentScaleDirection = lastScaleDirection;
+    lastScaleDirection = EMPTY_STRING;
 
     return new WriteThreadPoolStats(
         exec.getPoolSize(),         // Current threads in pool (active + idle)
         exec.getMaximumPoolSize(),  // Max threads allowed in pool
         exec.getActiveCount(),      // Threads actively executing tasks
-        getJvmCpuUtilization(),
-        getjvmCpuLoad(),
-        getJvmCpuUtilizationOshi(),// JVM process CPU usage (%)
+        getJvmCpuUtilization(),   // JVM process CPU usage (%)
+        jvmCpuUtilization,
         getCpuUtilization(),        // System-wide CPU usage (%)
-        getAvailableHeapMemory(),  // Available JVM heap memory (GB)
-        getLastScaleDirection()
+        currentHeap,  // Available JVM heap memory (GB)
+        currentScaleDirection,  // Increase or decrease in thread pool size
+        maxCpuUtilization
     );
   }
 }

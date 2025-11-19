@@ -123,11 +123,10 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
   private static long lastTime = 0;
 
   private final AbfsClient abfsClient;
-
-  private final SystemInfo si = new SystemInfo();
-  private final OperatingSystem os = si.getOperatingSystem();
-  private OSProcess prevProcess;
+  /* Tracks the last scale direction applied, or empty if none. */
   private volatile String lastScaleDirection = EMPTY_STRING;
+  /* Maximum CPU utilization observed during the monitoring interval. */
+  private volatile double maxCpuUtilization = 0.0;
 
   /**
    * Initializes a new instance of {@code ReadBufferManagerV2} for the given ABFS client.
@@ -138,7 +137,6 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
     this.abfsClient = abfsClient;
     readThreadPoolMetrics = abfsClient.getAbfsCounters().getAbfsReadThreadPoolMetrics();
     printTraceLog("Creating Read Buffer Manager V2 with HADOOP-18546 patch");
-    prevProcess = os.getProcess(os.getProcessId());
   }
 
   /**
@@ -867,15 +865,14 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
   private void adjustThreadPool() {
     int currentPoolSize = workerRefs.size();
     double cpuLoad = getjvmCpuLoad();
+    if (cpuLoad > maxCpuUtilization) {
+      maxCpuUtilization = cpuLoad;
+    }
     int requiredPoolSize = getRequiredThreadPoolSize();
     int newThreadPoolSize;
     printTraceLog(
         "Current CPU load: {}, Current worker pool size: {}, Current queue size: {}",
         cpuLoad, currentPoolSize, requiredPoolSize);
-    // Capture the latest thread pool statistics (pool size, CPU, memory, etc.)
-    ReadThreadPoolStats stats = getCurrentStats();
-    // Update the read thread pool metrics with the latest statistics snapshot.
-    readThreadPoolMetrics.update(stats);
     if (currentPoolSize < requiredPoolSize && cpuLoad < cpuThreshold) {
       lastScaleDirection = "I";
       // Submit more background tasks.
@@ -889,6 +886,10 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
         workerRefs.add(worker);
         workerPool.submit(worker);
       }
+      // Capture the latest thread pool statistics (pool size, CPU, memory, etc.)
+      ReadThreadPoolStats stats = getCurrentStats(cpuLoad, maxCpuUtilization);
+      // Update the read thread pool metrics with the latest statistics snapshot.
+      readThreadPoolMetrics.update(stats);
       printTraceLog("Increased worker pool size from {} to {}", currentPoolSize,
           newThreadPoolSize);
     } else if (cpuLoad > cpuThreshold || currentPoolSize > requiredPoolSize) {
@@ -902,11 +903,19 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
         ReadBufferWorker worker = workerRefs.remove(workerRefs.size() - 1);
         worker.stop();
       }
+      // Capture the latest thread pool statistics (pool size, CPU, memory, etc.)
+      ReadThreadPoolStats stats = getCurrentStats(cpuLoad, maxCpuUtilization);
+      // Update the read thread pool metrics with the latest statistics snapshot.
+      readThreadPoolMetrics.update(stats);
       printTraceLog("Decreased worker pool size from {} to {}", currentPoolSize,
           newThreadPoolSize);
     } else {
       printTraceLog("No change in worker pool size. CPU load: {} Pool size: {}",
           cpuLoad, currentPoolSize);
+      if (cpuLoad >= maxCpuUtilization) {
+        ReadThreadPoolStats stats = getCurrentStats(cpuLoad, maxCpuUtilization);
+        readThreadPoolMetrics.update(stats); // publish snapshot)
+      }
     }
   }
 
@@ -1079,12 +1088,14 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
     return cpuLoad;
   }
 
+
   /**
    * Gets the current system CPU utilization.
    *
    * @return the CPU utilization as a fraction (0.0 to 1.0), or 0.0 if unavailable.
    */
-  private double getjvmCpuLoad() {
+  @VisibleForTesting
+  public double getjvmCpuLoad() {
     OperatingSystemMXBean osBean = ManagementFactory.getPlatformMXBean(
         OperatingSystemMXBean.class);
     double cpuLoad = osBean.getProcessCpuLoad();
@@ -1116,17 +1127,6 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
     }
     double load = (elapsedCpu * HUNDRED_D) / (elapsedTime * osBean.getAvailableProcessors());
     return Math.max(ZERO_D, Math.min(load, HUNDRED_D));
-  }
-
-  /**
-   * Returns JVM CPU usage as a value in [0.0, 1.0]
-   * Multiply by 100 for percentage.
-   */
-  public double getJvmCpuUtilizationOshi() {
-    OSProcess current = os.getProcess(os.getProcessId());
-    double load = current.getProcessCpuLoadBetweenTicks(prevProcess);
-    prevProcess = current;
-    return load;
   }
 
   @VisibleForTesting
@@ -1162,6 +1162,10 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
   @VisibleForTesting
   public ScheduledExecutorService getCpuMonitoringThread() {
     return cpuMonitorThread;
+  }
+
+  public double getMaxCpuUtilization() {
+    return maxCpuUtilization;
   }
 
   public int getRequiredThreadPoolSize() {
@@ -1218,33 +1222,39 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
     private final int activeThreads;     // matches ACTIVE_THREADS metric
     private final double jvmCpuUtilization; // matches JVM_CPU_UTILIZATION metric
     private final double jvmCpuLoad;
-    private final double jvmCpuLoadOshi;
-    private final double cpuUtilization; // matches CPU_UTILIZATION metric
+    private final double systemCpuUtilization; // matches CPU_UTILIZATION metric
     private final long availableHeapGB;
     private final String lastScaleDirection; // matches MEMORY_UTILIZATION metric
+    private final double maxCpuUtilization;
 
     /**
      * Constructs an instance of {@code ReadThreadPoolStats} to capture the current
      * state and performance metrics of the read thread pool.
      *
-     * @param currentPoolSize     the current number of threads in the pool
-     * @param maxPoolSize         the maximum number of threads allowed in the pool
-     * @param activeThreads       the number of threads currently executing tasks
-     * @param jvmCpuUtilization   the overall JVM CPU utilization percentage
-     * @param cpuUtilization      the process-level CPU utilization percentage
-     * @param availableHeapGB     the currently available heap memory in gigabytes
+     * @param currentPoolSize the current number of threads in the pool
+     * @param maxPoolSize the maximum number of threads allowed in the pool
+     * @param activeThreads the number of threads currently executing tasks
+     * @param jvmCpuUtilization the overall JVM CPU utilization percentage
+     * @param jvmCpuLoad the recent JVM process CPU load value
+     * @param systemCpuUtilization the overall system CPU utilization percentage
+     * @param availableHeapGB the currently available heap memory in gigabytes
+     * @param lastScaleDirection the last scaling direction ("I" for increase, "D" for decrease)
+     * @param maxCpuUtilization the maximum JVM CPU utilization observed so far
      */
-    public ReadThreadPoolStats(int currentPoolSize, int maxPoolSize,
-        int activeThreads, double jvmCpuUtilization, double jvmCpuLoad, double jvmCpuLoadOshi,  double cpuUtilization, long availableHeapGB,  String lastScaleDirection) {
+    public ReadThreadPoolStats(int currentPoolSize,
+        int maxPoolSize, int activeThreads,
+        double jvmCpuUtilization, double jvmCpuLoad,
+        double systemCpuUtilization, long availableHeapGB,
+        String lastScaleDirection, double maxCpuUtilization) {
       this.currentPoolSize = currentPoolSize;
       this.maxPoolSize = maxPoolSize;
       this.activeThreads = activeThreads;
       this.jvmCpuUtilization = jvmCpuUtilization;
       this.jvmCpuLoad = jvmCpuLoad;
-      this.jvmCpuLoadOshi = jvmCpuLoadOshi;
-      this.cpuUtilization = cpuUtilization;
+      this.systemCpuUtilization = systemCpuUtilization;
       this.availableHeapGB = availableHeapGB;
       this.lastScaleDirection = lastScaleDirection;
+      this.maxCpuUtilization = maxCpuUtilization;
     }
 
     /** @return the current number of threads in the pool. */
@@ -1267,13 +1277,9 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
       return jvmCpuUtilization;
     }
 
-    public double getJvmCpuLoad() {
-      return jvmCpuLoad;
-    }
-
     /** @return the overall system CPU utilization percentage. */
     public double getCpuUtilization() {
-      return cpuUtilization;
+      return systemCpuUtilization;
     }
 
     /** @return the available heap memory in gigabytes. */
@@ -1281,12 +1287,19 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
       return availableHeapGB;
     }
 
-    public double getJvmLoadOshi() {
-      return jvmCpuLoadOshi;
-    }
 
     public String getLastScaleDirection() {
       return lastScaleDirection;
+    }
+
+    /** @return the JVM process CPU utilization percentage. */
+    public double getJvmCpuLoad() {
+      return jvmCpuLoad;
+    }
+
+    /** @return the max JVM process CPU utilization percentage. */
+    public double getMaxCpuUtilization() {
+      return maxCpuUtilization;
     }
 
     public int getLastScaleDirectionNumeric(String lastScaleDirection) {
@@ -1303,11 +1316,12 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
     @Override
     public String toString() {
       return String.format(
-          "currentPoolSize=%d, maxPoolSize=%d, activeThreads=%d, jvmCpuUtilization=%.2f%%, jvmcpuLoad=%.2f%%, "
-              + "jvmLoadOshi=%.2f%%, cpuUtilization=%.2f%%, availableHeap=%dGB", "scaleDirection=%s",
-          currentPoolSize, maxPoolSize, activeThreads, jvmCpuUtilization,
-          jvmCpuLoad * HUNDRED, jvmCpuLoadOshi * HUNDRED, cpuUtilization * HUNDRED,
-          availableHeapGB, lastScaleDirection);
+          "currentPoolSize=%d, maxPoolSize=%d, activeThreads=%d, "
+              + "jvmCpuUtilization=%.2f%%, jvmCpuLoad=%.2f%%, systemCpuUtilization=%.2f%%, "
+              + "availableHeap=%dGB, scaleDirection=%s, maxCpuUtilization=%.2f%%",
+          currentPoolSize, maxPoolSize, activeThreads, jvmCpuUtilization, jvmCpuLoad * HUNDRED,
+          systemCpuUtilization * HUNDRED,
+          availableHeapGB, lastScaleDirection, maxCpuUtilization * HUNDRED);
     }
   }
 
@@ -1319,22 +1333,26 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
    * @return the latest {@link ReadThreadPoolStats} representing the current state
    *         of the thread pool and system resources.
    */
-  synchronized ReadThreadPoolStats getCurrentStats() {
+  synchronized ReadThreadPoolStats getCurrentStats(double jvmCpuLoad, double maxCpuUtilization) {
     if (workerPool == null) {
-      return new ReadThreadPoolStats(ZERO,  ZERO,  ZERO,  ZERO_D,  ZERO_D, ZERO_D, ZERO_D, ZERO, EMPTY_STRING);
+      return new ReadThreadPoolStats(ZERO,  ZERO,  ZERO,  ZERO_D,  ZERO_D, ZERO_D, ZERO, EMPTY_STRING, ZERO_D);
     }
 
     ThreadPoolExecutor exec = this.workerPool;
+
+    String currentScaleDirection = lastScaleDirection;
+    lastScaleDirection = EMPTY_STRING;
+
     return new ReadThreadPoolStats(
         exec.getPoolSize(),         // Current threads in pool (active + idle)
         exec.getMaximumPoolSize(),  // Max threads allowed in pool
         exec.getActiveCount(),      // Threads actively executing tasks
         getJvmCpuUtilization(),
-        getjvmCpuLoad(),
-        getJvmCpuUtilizationOshi(),// JVM process CPU usage (%)
+        jvmCpuLoad,// JVM process CPU usage (%)
         getCpuLoad(),        // System-wide CPU usage (%)
-        getAvailableHeapMemory(),
-        getLastScaleDirection()// Available JVM heap memory (GB)
+        getAvailableHeapMemory(), // Available JVM heap memory (GB)
+        currentScaleDirection,
+        maxCpuUtilization
     );
   }
 }

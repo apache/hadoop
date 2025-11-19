@@ -36,20 +36,23 @@ public enum AbfsWriteThreadPoolMetricsEnum {
   /** Number of threads currently executing write operations. */
   ACTIVE_THREADS("AT", StatisticTypeEnum.TYPE_GAUGE),
 
-  /** JVM CPU utilization percentage during write operations. */
+  /** Percentage of JVM CPU utilization observed during write operations. */
   JVM_CPU_UTILIZATION("JvmCpu", StatisticTypeEnum.TYPE_GAUGE),
 
+  /** Recent JVM CPU load value as reported by the JVM (0.0 to 1.0). */
   JVM_CPU_LOAD("JvmCpuLoad", StatisticTypeEnum.TYPE_GAUGE),
 
-  JVM_CPU_LOAD_OSHI("JvmCpuLoadOshi", StatisticTypeEnum.TYPE_GAUGE),
-
-  /** Overall system CPU utilization percentage observed during writes. */
+  /** Overall system-wide CPU utilization percentage during write operations. */
   CPU_UTILIZATION("Cpu", StatisticTypeEnum.TYPE_GAUGE),
 
-  /** Available heap memory (in GB) during write operations. */
+  /** Available heap memory (in GB) measured during write operations. */
   MEMORY_UTILIZATION("AvlMem", StatisticTypeEnum.TYPE_GAUGE),
 
-  LAST_SCALE_DIRECTION("ScaleDirection", StatisticTypeEnum.TYPE_GAUGE);
+  /** Direction of the last scaling decision (e.g., scale-up or scale-down). */
+  LAST_SCALE_DIRECTION("ScaleDirection", StatisticTypeEnum.TYPE_GAUGE),
+
+  /** Maximum CPU utilization recorded during the monitoring interval. */
+  MAX_CPU_UTILIZATION("MaxCpu", StatisticTypeEnum.TYPE_GAUGE);
 
   private final String name;
   private final StatisticTypeEnum statisticType;

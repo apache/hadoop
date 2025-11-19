@@ -39,15 +39,17 @@ public enum AbfsReadThreadPoolMetricsEnum {
 
   JVM_CPU_LOAD("JvmCpuLoad", StatisticTypeEnum.TYPE_GAUGE),
 
-  JVM_CPU_LOAD_OSHI("JvmCpuLoadOshi", StatisticTypeEnum.TYPE_GAUGE),
-
   /** Overall system CPU utilization observed during read operations. */
   CPU_UTILIZATION("Cpu", StatisticTypeEnum.TYPE_GAUGE),
 
   /** Available heap memory in gigabytes during read operations. */
   MEMORY_UTILIZATION("AvlMem", StatisticTypeEnum.TYPE_GAUGE),
 
-  LAST_SCALE_DIRECTION("ScaleDirection", StatisticTypeEnum.TYPE_GAUGE);
+  /** Direction of the last scaling decision (e.g., scale-up or scale-down). */
+  LAST_SCALE_DIRECTION("ScaleDirection", StatisticTypeEnum.TYPE_GAUGE),
+
+  /** Maximum CPU utilization recorded during the monitoring interval. */
+  MAX_CPU_UTILIZATION("MaxCpu", StatisticTypeEnum.TYPE_GAUGE);
 
   private final String name;
   private final StatisticTypeEnum statisticType;

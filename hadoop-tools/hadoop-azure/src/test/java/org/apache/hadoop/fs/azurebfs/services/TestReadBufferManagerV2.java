@@ -310,7 +310,7 @@ public class TestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
           abfsClient.getAbfsCounters().getAbfsReadThreadPoolMetrics();
 
       ReadBufferManagerV2.ReadThreadPoolStats statsBefore =
-          bufferManagerV2.getCurrentStats();
+          bufferManagerV2.getCurrentStats(bufferManagerV2.getjvmCpuLoad(), bufferManagerV2.getMaxCpuUtilization());
       int initialBuffers = bufferManagerV2.getMinBufferPoolSize();
       assertThat(bufferManagerV2.getNumBuffers()).isEqualTo(initialBuffers);
       running = true;
@@ -334,7 +334,7 @@ public class TestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
       t.join();
 
       ReadBufferManagerV2.ReadThreadPoolStats statsAfter
-          = bufferManagerV2.getCurrentStats();
+          = bufferManagerV2.getCurrentStats(bufferManagerV2.getjvmCpuLoad(), bufferManagerV2.getMaxCpuUtilization());
 
       // --- Validate that metrics and stats changed ---
       Assertions.assertThat(statsAfter)
