@@ -60,6 +60,7 @@ class AppendOp extends Operation {
   @Override // Operation
   List<OperationOutput> run(FileSystem fs) {
     List<OperationOutput> out = super.run(fs);
+    long opStart = beginOpTime();
     OutputStream os = null;
     try {
       Path fn = getAppendFile();
@@ -113,6 +114,7 @@ class AppendOp extends Operation {
           LOG.warn("Error with closing append stream", e);
         }
       }
+      recordOpTime(out, opStart);
     }
     return out;
   }

@@ -53,6 +53,7 @@ class SleepOp extends Operation {
    */
   List<OperationOutput> run(Range<Long> sleepTime) {
     List<OperationOutput> out = super.run(null);
+    long opStart = beginOpTime();
     try {
       if (sleepTime != null) {
         long sleepMs = getSleepTime(sleepTime);
@@ -68,6 +69,8 @@ class SleepOp extends Operation {
       out.add(new OperationOutput(OutputType.LONG, getType(),
           ReportWriter.FAILURES, 1L));
       LOG.warn("Error with sleeping", e);
+    } finally {
+      recordOpTime(out, opStart);
     }
     return out;
   }

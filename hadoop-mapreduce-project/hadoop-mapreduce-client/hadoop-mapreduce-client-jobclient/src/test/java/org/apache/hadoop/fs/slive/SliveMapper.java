@@ -138,6 +138,9 @@ public class SliveMapper extends MapReduceBase implements
   @Override // Mapper
   public void map(Object key, Object value, OutputCollector<Text, Text> output,
       Reporter reporter) throws IOException {
+    OpRunTimeTopN.Tracker runtimeTracker =
+        new OpRunTimeTopN.Tracker(OpRunTimeTopN.DEFAULT_LIMIT);
+    Operation.installRuntimeTracker(runtimeTracker);
     logAndSetStatus(reporter, "Running slive mapper for dummy key " + key
         + " and dummy value " + value);
     //Add taskID to randomSeed to deterministically seed rnd.
@@ -153,36 +156,36 @@ public class SliveMapper extends MapReduceBase implements
     if (sleepRange != null) {
       sleeper = new SleepOp(getConfig(), rnd);
     }
-    while (Timer.elapsed(startTime) < duration) {
-      try {
-        logAndSetStatus(reporter, "Attempting to select operation #"
-            + (opAm + 1));
-        int currElapsed = (int) (Timer.elapsed(startTime));
-        Operation op = selector.select(currElapsed, duration);
-        if (op == null) {
-          // no ops left
-          break;
-        } else {
-          // got a good op
-          ++opAm;
-          runOperation(op, reporter, output, opAm);
-        }
-        // do a sleep??
-        if (sleeper != null) {
-          // these don't count against the number of operations
-          ++sleepOps;
-          runOperation(sleeper, reporter, output, sleepOps);
-        }
-      } catch (Exception e) {
-        logAndSetStatus(reporter, "Failed at running due to "
-            + StringUtils.stringifyException(e));
-        if (getConfig().shouldExitOnFirstError()) {
-          break;
+    try {
+      while (Timer.elapsed(startTime) < duration) {
+        try {
+          logAndSetStatus(reporter, "Attempting to select operation #"
+              + (opAm + 1));
+          int currElapsed = (int) (Timer.elapsed(startTime));
+          Operation op = selector.select(currElapsed, duration);
+          if (op == null) {
+            // no ops left
+            break;
+          } else {
+            // got a good op
+            ++opAm;
+            runOperation(op, reporter, output, opAm);
+          }
+          // do a sleep??
+          if (sleeper != null) {
+            // these don't count against the number of operations
+            ++sleepOps;
+            runOperation(sleeper, reporter, output, sleepOps);
+          }
+        } catch (Exception e) {
+          logAndSetStatus(reporter, "Failed at running due to "
+              + StringUtils.stringifyException(e));
+          if (getConfig().shouldExitOnFirstError()) {
+            break;
+          }
         }
       }
-    }
-    // write out any accumulated mapper stats
-    {
+      // write out any accumulated mapper stats
       long timeTaken = Timer.elapsed(startTime);
       OperationOutput opCount = new OperationOutput(OutputType.LONG, OP_TYPE,
           ReportWriter.OP_COUNT, opAm);
@@ -192,6 +195,22 @@ public class SliveMapper extends MapReduceBase implements
       output.collect(overallTime.getKey(), overallTime.getOutputValue());
       logAndSetStatus(reporter, "Finished " + opAm + " operations in "
           + timeTaken + " milliseconds");
+    } finally {
+      try {
+        emitRuntimeTopN(runtimeTracker, output);
+      } finally {
+        Operation.clearRuntimeTracker();
+      }
+    }
+  }
+
+  private void emitRuntimeTopN(OpRunTimeTopN.Tracker tracker,
+      OutputCollector<Text, Text> output) throws IOException {
+    if (tracker == null) {
+      return;
+    }
+    for (OperationOutput opOut : tracker.buildOutputs()) {
+      output.collect(opOut.getKey(), opOut.getOutputValue());
     }
   }
 }

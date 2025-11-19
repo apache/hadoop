@@ -62,6 +62,7 @@ class ReadOp extends Operation {
   @Override // Operation
   List<OperationOutput> run(FileSystem fs) {
     List<OperationOutput> out = super.run(fs);
+    long opStart = beginOpTime();
     DataInputStream is = null;
     try {
       Path fn = getReadFile();
@@ -135,6 +136,7 @@ class ReadOp extends Operation {
           LOG.warn("Error closing read stream", e);
         }
       }
+      recordOpTime(out, opStart);
     }
     return out;
   }

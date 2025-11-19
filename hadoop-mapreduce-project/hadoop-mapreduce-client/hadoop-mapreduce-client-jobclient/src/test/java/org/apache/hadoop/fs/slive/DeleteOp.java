@@ -56,6 +56,7 @@ class DeleteOp extends Operation {
   @Override // Operation
   List<OperationOutput> run(FileSystem fs) {
     List<OperationOutput> out = super.run(fs);
+    long opStart = beginOpTime();
     try {
       Path fn = getDeleteFile();
       LOG.info("Deleting file: " + fn);
@@ -86,6 +87,8 @@ class DeleteOp extends Operation {
       out.add(new OperationOutput(OutputType.LONG, getType(),
           ReportWriter.FAILURES, 1L));
       LOG.warn("Error with deleting", e);
+    } finally {
+      recordOpTime(out, opStart);
     }
     return out;
   }

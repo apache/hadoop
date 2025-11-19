@@ -60,6 +60,7 @@ class ListOp extends Operation {
   @Override // Operation
   List<OperationOutput> run(FileSystem fs) {
     List<OperationOutput> out = super.run(fs);
+    long opStart = beginOpTime();
     try {
       Path dir = getDirectory();
       long dirEntries = 0;
@@ -86,6 +87,8 @@ class ListOp extends Operation {
       out.add(new OperationOutput(OutputType.LONG, getType(),
           ReportWriter.FAILURES, 1L));
       LOG.warn("Error with listing", e);
+    } finally {
+      recordOpTime(out, opStart);
     }
     return out;
   }

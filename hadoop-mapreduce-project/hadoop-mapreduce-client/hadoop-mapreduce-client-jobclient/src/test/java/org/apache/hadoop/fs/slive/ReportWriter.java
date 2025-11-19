@@ -48,6 +48,7 @@ class ReportWriter {
   static final String NOT_FOUND = "files_not_found";
   static final String BAD_FILES = "bad_files";
   static final String FILE_ALREADY_EXISTS = "file_already_exists";
+  static final String OP_RUN_TIME = "op_run_time";
 
   private static final Logger LOG = LoggerFactory.getLogger(ReportWriter.class);
 

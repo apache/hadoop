@@ -234,9 +234,20 @@ public class SliveTest implements Tool {
             new DataInputStream(fs.open(fn.getPath()))));
         String line;
         while ((line = fileReader.readLine()) != null) {
+          if (line.trim().isEmpty()) {
+            continue;
+          }
+          // Try tab separator first, then fall back to whitespace
           String pieces[] = line.split("\t", 2);
-          if (pieces.length == 2) {
-            OperationOutput data = new OperationOutput(pieces[0], pieces[1]);
+          if (pieces.length != 2) {
+            // Try splitting on whitespace (one or more spaces/tabs)
+            pieces = line.split("\\s+", 2);
+          }
+          if (pieces.length != 2) {
+            throw new IOException("Unparseable line " + line);
+          }
+          try {
+            OperationOutput data = new OperationOutput(pieces[0].trim(), pieces[1].trim());
             String op = (data.getOperationType());
             if (op != null) {
               List<OperationOutput> opList = splitTypes.get(op);
@@ -248,8 +259,8 @@ public class SliveTest implements Tool {
             } else {
               noOperations.add(data);
             }
-          } else {
-            throw new IOException("Unparseable line " + line);
+          } catch (Exception e) {
+            throw new IOException("Unparseable line " + line, e);
           }
         }
         fileReader.close();
@@ -262,6 +273,11 @@ public class SliveTest implements Tool {
       if (resFile != null) {
         LOG.info("Report results being placed to logging output and to file "
             + resFile.getCanonicalPath());
+        // Ensure parent directory exists
+        File parentDir = resFile.getParentFile();
+        if (parentDir != null && !parentDir.exists()) {
+          parentDir.mkdirs();
+        }
         reportWriter = new PrintWriter(new FileOutputStream(resFile));
       } else {
         LOG.info("Report results being placed to logging output");

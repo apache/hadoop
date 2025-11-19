@@ -74,6 +74,11 @@ public class SliveReducer extends MapReduceBase implements
   @Override // Reducer
   public void reduce(Text key, Iterator<Text> values,
       OutputCollector<Text, Text> output, Reporter reporter) throws IOException {
+    String measurement = extractMeasurementType(key);
+    if (ReportWriter.OP_RUN_TIME.equals(measurement)) {
+      reduceOpRunTimeTopN(key, values, output, reporter);
+      return;
+    }
     OperationOutput collector = null;
     int reduceAm = 0;
     int errorAm = 0;
@@ -105,6 +110,48 @@ public class SliveReducer extends MapReduceBase implements
           + collector.getOutputValue());
       output.collect(collector.getKey(), collector.getOutputValue());
     }
+  }
+
+  private void reduceOpRunTimeTopN(Text key, Iterator<Text> values,
+      OutputCollector<Text, Text> output, Reporter reporter) throws IOException {
+    OpRunTimeTopN.GlobalTopN aggregator =
+        new OpRunTimeTopN.GlobalTopN(OpRunTimeTopN.DEFAULT_LIMIT);
+    int reduceAm = 0;
+    int errorAm = 0;
+    logAndSetStatus(reporter, "Aggregating runtime values for key " + key);
+    while (values.hasNext()) {
+      Text value = values.next();
+      try {
+        aggregator.addEncodedSamples(value.toString());
+        ++reduceAm;
+      } catch (Exception e) {
+        ++errorAm;
+        logAndSetStatus(reporter, "Failed to parse runtime entry " + value
+            + " due to " + StringUtils.stringifyException(e));
+        if (getConfig().shouldExitOnFirstError()) {
+          break;
+        }
+      }
+    }
+    logAndSetStatus(reporter, "Aggregated " + reduceAm
+        + " runtime values with " + errorAm + " errors");
+    String encoded = aggregator.encode();
+    if (!encoded.isEmpty()) {
+      output.collect(key, new Text(encoded));
+    }
+  }
+
+  private String extractMeasurementType(Text key) {
+    if (key == null) {
+      return null;
+    }
+    String keyString = key.toString();
+    int colon = keyString.indexOf(':');
+    int star = keyString.indexOf('*');
+    if (colon == -1 || star == -1 || star <= colon) {
+      return null;
+    }
+    return keyString.substring(star + 1);
   }
 
   /*
