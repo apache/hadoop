@@ -32,6 +32,9 @@ import org.apache.hadoop.fs.slive.OperationOutput.OutputType;
  */
 abstract class Operation {
 
+  private static final ThreadLocal<OpRunTimeTopN.Tracker> RUNTIME_TRACKER =
+      new ThreadLocal<OpRunTimeTopN.Tracker>();
+
   private ConfigExtractor config;
   private PathFinder finder;
   private String type;
@@ -108,4 +111,40 @@ abstract class Operation {
     return out;
   }
 
+  /**
+   * Marks the start time for the operation execution.
+   *
+   * @return start time in milliseconds
+   */
+  protected long beginOpTime() {
+    return Timer.now();
+  }
+
+  /**
+   * Adds an entry recording the elapsed time for the operation execution. The
+   * data is fed to a mapper-local tracker so that only the longest samples are
+   * emitted downstream.
+   *
+   * @param out output list
+   * @param startTime the start time returned by {@link #beginOpTime()}
+   */
+  protected void recordOpTime(List<OperationOutput> out, long startTime) {
+    long endTime = Timer.now();
+    OpRunTimeTopN.Tracker tracker = RUNTIME_TRACKER.get();
+    if (tracker != null) {
+      tracker.record(getType(), startTime, endTime);
+    } else {
+      out.add(new OperationOutput(OutputType.STRING, getType(),
+          ReportWriter.OP_RUN_TIME,
+          OpRunTimeTopN.encodeSingle(startTime, endTime)));
+    }
+  }
+
+  static void installRuntimeTracker(OpRunTimeTopN.Tracker tracker) {
+    RUNTIME_TRACKER.set(tracker);
+  }
+
+  static void clearRuntimeTracker() {
+    RUNTIME_TRACKER.remove();
+  }
 }

@@ -59,6 +59,7 @@ class MkdirOp extends Operation {
   @Override // Operation
   List<OperationOutput> run(FileSystem fs) {
     List<OperationOutput> out = super.run(fs);
+    long opStart = beginOpTime();
     try {
       Path dir = getDirectory();
       boolean mkRes = false;
@@ -88,6 +89,8 @@ class MkdirOp extends Operation {
       out.add(new OperationOutput(OutputType.LONG, getType(),
           ReportWriter.FAILURES, 1L));
       LOG.warn("Error with mkdir", e);
+    } finally {
+      recordOpTime(out, opStart);
     }
     return out;
   }

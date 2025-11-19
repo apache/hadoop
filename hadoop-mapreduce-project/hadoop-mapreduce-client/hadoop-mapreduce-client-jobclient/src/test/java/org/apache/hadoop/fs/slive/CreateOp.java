@@ -119,6 +119,7 @@ class CreateOp extends Operation {
   @Override // Operation
   List<OperationOutput> run(FileSystem fs) {
     List<OperationOutput> out = super.run(fs);
+    long opStart = beginOpTime();
     FSDataOutputStream os = null;
     try {
       Path fn = getCreateFile();
@@ -181,6 +182,7 @@ class CreateOp extends Operation {
           LOG.warn("Error closing create stream", e);
         }
       }
+      recordOpTime(out, opStart);
     }
     return out;
   }
