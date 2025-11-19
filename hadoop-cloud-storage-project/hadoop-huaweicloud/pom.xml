@@ -169,6 +169,10 @@
           <artifactId>log4j-api</artifactId>
           <groupId>org.apache.logging.log4j</groupId>
         </exclusion>
+        <exclusion>
+          <groupId>com.fasterxml.jackson.core</groupId>
+          <artifactId>*</artifactId>
+        </exclusion>
       </exclusions>
     </dependency>
     <dependency>

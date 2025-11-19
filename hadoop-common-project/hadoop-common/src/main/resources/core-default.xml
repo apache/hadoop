@@ -4438,4 +4438,10 @@ The switch to turn S3A auditing on or off.
     <description>The AbstractFileSystem for Ozone FileSystem o3fs uri</description>
   </property>
 
+  <property>
+    <name>fs.obs.impl</name>
+    <value>org.apache.hadoop.fs.obs.OBSFileSystem</value>
+    <description>The FileSystem for obs: uris.</description>
+  </property>
+
 </configuration>

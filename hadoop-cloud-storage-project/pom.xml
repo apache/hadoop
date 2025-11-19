@@ -34,7 +34,6 @@
     <module>hadoop-cos</module>
     <module>hadoop-huaweicloud</module>
   </modules>
-
   <build>
     <plugins>
       <plugin>
@@ -51,5 +50,18 @@
       </plugin>
     </plugins>
   </build>
-
+  <profiles>
+     <profile>
+       <id>dist</id>
+       <activation>
+         <activeByDefault>false</activeByDefault>
+         <property>
+           <name>tar</name>
+         </property>
+       </activation>
+       <modules>
+         <module>hadoop-cloud-storage-dist</module>
+       </modules>
+     </profile>
+  </profiles>
 </project>

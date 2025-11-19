@@ -203,7 +203,10 @@
 
 --------------------------------------------------------------------------------
 This project bundles some components that are also licensed under the Apache
-License Version 2.0:
+License Version 2.0.
+Note: some of the listed artifacts may not be included in a given build of the binary
+distribution; it depends on the build options. This list intends
+to be inclusive of all which may be included:
 
 
 hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static/nvd3-1.8.5.* (css and js files)
@@ -211,10 +214,12 @@ hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/data
 hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/checker/TimeoutFuture.java
 
 ch.qos.reload4j:reload4j:1.2.22
+com.aliyun:aliyun-java-core:0.2.11-beta
 com.aliyun:aliyun-java-sdk-core:4.5.10
 com.aliyun:aliyun-java-sdk-kms:2.11.0
 com.aliyun:aliyun-java-sdk-ram:3.1.0
 com.aliyun:aliyun-java-sdk-sts:3.0.0
+com.aliyun:java-trace-api:0.2.11-beta
 com.aliyun.oss:aliyun-sdk-oss:3.13.2
 com.cedarsoftware:java-util:1.9.0
 com.cedarsoftware:json-io:2.5.1
@@ -241,6 +246,8 @@ com.google.guava:guava:33.4.8-jre
 com.google.guava:listenablefuture:9999.0-empty-to-avoid-conflict-with-guava
 com.microsoft.azure:azure-storage:7.0.0
 com.nimbusds:nimbus-jose-jwt:10.4
+com.squareup.okhttp3:okhttp:jar:3.14.2
+com.squareup.okio:okio:jar:1.17.2
 com.zaxxer:HikariCP:4.0.3
 commons-beanutils:commons-beanutils:1.9.4
 commons-cli:commons-cli:1.9.0
@@ -289,6 +296,9 @@ io.netty:netty-transport-native-kqueue:4.1.127.Final
 io.netty:netty-resolver-dns-native-macos:4.1.127.Final
 io.opencensus:opencensus-api:0.12.3
 io.opencensus:opencensus-contrib-grpc-metrics:0.12.3
+io.opentracing:opentracing-api:0.33.0.jar
+io.opentracing:opentracing-noop:0.33.0.jar
+io.opentracing:opentracing-util:0.33.0.jar
 io.reactivex:rxjava:1.3.8
 io.reactivex:rxjava-string:1.1.1
 io.reactivex:rxnetty:0.4.20
@@ -316,6 +326,8 @@ org.apache.htrace:htrace-core:3.1.0-incubating
 org.apache.htrace:htrace-core4:4.1.0-incubating
 org.apache.httpcomponents:httpclient:4.5.13
 org.apache.httpcomponents:httpcore:4.4.13
+org.apache.httpcomponents.client5:httpclient5:5.5
+org.apache.httpcomponents.core5:httpcore5:5.5
 org.apache.kafka:kafka-clients:3.9.0
 org.apache.kerby:kerb-admin:2.0.3
 org.apache.kerby:kerb-client:2.0.3
@@ -432,6 +444,7 @@ hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-nodemanage
 bootstrap v3.3.6
 broccoli-asset-rev v2.4.2
 broccoli-funnel v1.0.1
+cos_api-bundle-5.6.19.jar
 datatables v1.11.5
 em-helpers v0.5.13
 em-table v0.1.6
@@ -477,7 +490,7 @@ com.microsoft.azure:azure-cosmosdb:2.4.5
 com.microsoft.azure:azure-cosmosdb-commons:2.4.5
 com.microsoft.azure:azure-cosmosdb-direct:2.4.5
 com.microsoft.azure:azure-cosmosdb-gateway:2.4.5
-com.microsoft.azure:azure-data-lake-store-sdk:2.3.3
+com.microsoft.azure:azure-data-lake-store-sdk:2.3.9
 com.microsoft.azure:azure-keyvault-core:1.0.0
 com.microsoft.sqlserver:mssql-jdbc:6.2.1.jre7
 org.bouncycastle:bcpkix-jdk18on:1.82
@@ -536,3 +549,8 @@ Public Domain
 -------------
 
 aopalliance:aopalliance:1.0
+
+Dom4J license
+-------------
+
+org.dom4j:dom4j:2.1.4.jar
