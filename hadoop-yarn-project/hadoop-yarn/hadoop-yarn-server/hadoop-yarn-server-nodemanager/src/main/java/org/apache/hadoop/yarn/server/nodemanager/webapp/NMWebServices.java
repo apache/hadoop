@@ -37,7 +37,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.ResourcePluginManager;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.AuxiliaryServicesInfo;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.NMResourceInfo;
-import org.apache.hadoop.yarn.server.webapp.dao.ContainerLogsResponse;
+import org.apache.hadoop.yarn.server.webapp.dao.ContainerLogsInfoes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -330,7 +330,7 @@ public class NMWebServices {
         // Skip it and do nothing
         LOG.debug("{}", ex);
       }
-      ResponseBuilder resp = Response.ok().entity(new ContainerLogsResponse(containersLogsInfo));
+      ResponseBuilder resp = Response.ok().entity(new ContainerLogsInfoes(containersLogsInfo));
       // Sending the X-Content-Type-Options response header with the value
       // nosniff will prevent Internet Explorer from MIME-sniffing a response
       // away from the declared content-type.

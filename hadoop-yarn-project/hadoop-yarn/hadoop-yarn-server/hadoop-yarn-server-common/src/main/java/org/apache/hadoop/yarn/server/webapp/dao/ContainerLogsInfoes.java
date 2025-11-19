@@ -1,17 +1,19 @@
 package org.apache.hadoop.yarn.server.webapp.dao;
 
+import javax.xml.bind.annotation.XmlRootElement;
 import java.util.List;
 
-public class ContainerLogsResponse {
-  
+
+@XmlRootElement
+public class ContainerLogsInfoes {
   private List<ContainerLogsInfo> containerLogsInfo;
 
 
-  public ContainerLogsResponse(List<ContainerLogsInfo> containerLogsInfo) {
+  public ContainerLogsInfoes(List<ContainerLogsInfo> containerLogsInfo) {
     this.containerLogsInfo = containerLogsInfo;
   }
 
-  public ContainerLogsResponse() {
+  public ContainerLogsInfoes() {
   }
 
   public List<ContainerLogsInfo> getContainerLogsInfo() {

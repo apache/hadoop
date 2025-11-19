@@ -19,7 +19,7 @@
 package org.apache.hadoop.yarn.server.nodemanager.webapp;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
-import org.apache.hadoop.yarn.server.webapp.dao.ContainerLogsResponse;
+import org.apache.hadoop.yarn.server.webapp.dao.ContainerLogsInfoes;
 import org.glassfish.jersey.internal.inject.AbstractBinder;
 import org.glassfish.jersey.jettison.JettisonFeature;
 import org.glassfish.jersey.server.ResourceConfig;
@@ -707,7 +707,7 @@ public class TestNMWebServices extends JerseyTestBase {
         .path("logs").request(MediaType.APPLICATION_JSON)
         .get(Response.class);
     assertEquals(200, response.getStatus());
-    ContainerLogsResponse responseObject = (ContainerLogsResponse) readEntity(response);
+    ContainerLogsInfoes responseObject = (ContainerLogsInfoes) readEntity(response);
     List<ContainerLogsInfo> responseList = responseObject.getContainerLogsInfo();
 
     assertEquals(1, responseList.size());
@@ -735,7 +735,7 @@ public class TestNMWebServices extends JerseyTestBase {
           .path("logs").request(MediaType.APPLICATION_JSON)
           .get(Response.class);
       assertEquals(200, response.getStatus());
-      responseObject = (ContainerLogsResponse) readEntity(response);
+      responseObject = (ContainerLogsInfoes) readEntity(response);
       responseList = responseObject.getContainerLogsInfo();
 
       assertThat(responseList).hasSize(2);
