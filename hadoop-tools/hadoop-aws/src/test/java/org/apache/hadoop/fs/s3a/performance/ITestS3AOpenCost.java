@@ -57,7 +57,6 @@ import static org.apache.hadoop.fs.s3a.S3ATestUtils.assertStreamIsNotChecksummed
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.disableFilesystemCaching;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getS3AInputStream;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfAnalyticsAcceleratorEnabled;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.streamType;
 import static org.apache.hadoop.fs.s3a.Statistic.STREAM_READ_BYTES_READ_CLOSE;
 import static org.apache.hadoop.fs.s3a.Statistic.STREAM_READ_OPENED;
@@ -70,6 +69,7 @@ import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyStatis
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.demandStringifyIOStatistics;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsToPrettyString;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.ACTION_FILE_OPENED;
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.ACTION_HTTP_HEAD_REQUEST;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.apache.hadoop.test.LambdaTestUtils.interceptFuture;
 
@@ -98,6 +98,16 @@ public class ITestS3AOpenCost extends AbstractS3ACostTest {
     super(true);
   }
 
+  /**
+   * Is the analytics stream enabled?
+   */
+  private boolean analyticsStream;
+
+  /**
+   * Is the classic input stream enabled?
+   */
+  private boolean classicInputStream;
+
   @Override
   public Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
@@ -115,17 +125,14 @@ public class ITestS3AOpenCost extends AbstractS3ACostTest {
   @Override
   public void setup() throws Exception {
     super.setup();
-    // Analytics accelerator currently does not support IOStatistics, this will be added as
-    // part of https://issues.apache.org/jira/browse/HADOOP-19364
-    skipIfAnalyticsAcceleratorEnabled(getConfiguration(),
-        "Analytics Accelerator currently does not support stream statistics");
     S3AFileSystem fs = getFileSystem();
     testFile = methodPath();
-
     writeTextFile(fs, testFile, TEXT, true);
     testFileStatus = fs.getFileStatus(testFile);
     fileLength = (int)testFileStatus.getLen();
     prefetching = prefetching();
+    analyticsStream = isAnalyticsStream();
+    classicInputStream = isClassicInputStream();
   }
 
   /**
@@ -179,6 +186,10 @@ public class ITestS3AOpenCost extends AbstractS3ACostTest {
 
     // if prefetching is enabled, skip this test
     assumeNoPrefetching();
+    // If AAL is enabled, skip this test. AAL uses S3A's default S3 client, and if checksumming is disabled on the
+    // client, then AAL will also not enforce it.
+    assumeNotAnalytics();
+
     S3AFileSystem fs = getFileSystem();
 
     // open the file
@@ -195,6 +206,7 @@ public class ITestS3AOpenCost extends AbstractS3ACostTest {
 
       // open the stream.
       in.read();
+
       // now examine the innermost stream and make sure it doesn't have a checksum
       assertStreamIsNotChecksummed(getS3AInputStream(in));
     }
@@ -202,6 +214,11 @@ public class ITestS3AOpenCost extends AbstractS3ACostTest {
 
   @Test
   public void testOpenFileShorterLength() throws Throwable {
+
+    // For AAL, since it makes the HEAD to get the file length if the eTag is not supplied,
+    // it is not able to use the file length supplied in the open() call, and the test fails.
+    assumeNotAnalytics();
+
     // do a second read with the length declared as short.
     // we now expect the bytes read to be shorter.
     S3AFileSystem fs = getFileSystem();
@@ -246,7 +263,6 @@ public class ITestS3AOpenCost extends AbstractS3ACostTest {
     final int extra = 10;
     long longLen = fileLength + extra;
 
-
     // assert behaviors of seeking/reading past the file length.
     // there is no attempt at recovery.
     verifyMetrics(() -> {
@@ -266,7 +282,9 @@ public class ITestS3AOpenCost extends AbstractS3ACostTest {
         // two GET calls were made, one for readFully,
         // the second on the read() past the EOF
         // the operation has got as far as S3
-        probe(!prefetching(), STREAM_READ_OPENED, 1 + 1));
+        probe(classicInputStream, STREAM_READ_OPENED, 1 + 1),
+        // For AAL, the seek past content length fails, before the GET is made.
+        probe(analyticsStream, STREAM_READ_OPENED, 1));
 
     // now on a new stream, try a full read from after the EOF
     verifyMetrics(() -> {
@@ -277,10 +295,6 @@ public class ITestS3AOpenCost extends AbstractS3ACostTest {
         return in.toString();
       }
     },
-        // two GET calls were made, one for readFully,
-        // the second on the read() past the EOF
-        // the operation has got as far as S3
-
         with(STREAM_READ_OPENED, 1));
   }
 
@@ -350,7 +364,9 @@ public class ITestS3AOpenCost extends AbstractS3ACostTest {
       }
     },
         always(),
-        probe(!prefetching, Statistic.ACTION_HTTP_GET_REQUEST, extra));
+        probe(classicInputStream, Statistic.ACTION_HTTP_GET_REQUEST, extra),
+        // AAL won't make the GET call if trying to read beyond EOF
+        probe(analyticsStream, Statistic.ACTION_HTTP_GET_REQUEST, 0));
   }
 
   /**
@@ -441,18 +457,28 @@ public class ITestS3AOpenCost extends AbstractS3ACostTest {
         byte[] buf = new byte[longLen];
         ByteBuffer bb = ByteBuffer.wrap(buf);
         final FileRange range = FileRange.createFileRange(0, longLen);
-        in.readVectored(Arrays.asList(range), (i) -> bb);
-        interceptFuture(EOFException.class,
-            "",
-            ContractTestUtils.VECTORED_READ_OPERATION_TEST_TIMEOUT_SECONDS,
-            TimeUnit.SECONDS,
-            range.getData());
-        assertS3StreamClosed(in);
-        return "vector read past EOF with " + in;
+
+        // For AAL, if there is no eTag, the provided length will not be passed in, and a HEAD request will be made.
+        // AAL requires the etag to detect changes in the object and then do cache eviction if required.
+        if (isAnalyticsStream()) {
+          intercept(EOFException.class, () ->
+                  in.readVectored(Arrays.asList(range), (i) -> bb));
+          verifyStatisticCounterValue(in.getIOStatistics(), ACTION_HTTP_HEAD_REQUEST, 1);
+          return "vector read past EOF with " + in;
+        } else {
+          in.readVectored(Arrays.asList(range), (i) -> bb);
+          interceptFuture(EOFException.class,
+                  "",
+                  ContractTestUtils.VECTORED_READ_OPERATION_TEST_TIMEOUT_SECONDS,
+                  TimeUnit.SECONDS,
+                  range.getData());
+          assertS3StreamClosed(in);
+          return "vector read past EOF with " + in;
+        }
       }
     },
         always(),
-        probe(!prefetching, Statistic.ACTION_HTTP_GET_REQUEST, 1));
+        probe(classicInputStream, Statistic.ACTION_HTTP_GET_REQUEST, 1));
   }
 
   /**
@@ -464,11 +490,33 @@ public class ITestS3AOpenCost extends AbstractS3ACostTest {
   }
 
   /**
+   * Is the current stream type Analytics?
+   * @return true if Analytics stream is enabled.
+   */
+  private boolean isAnalyticsStream() {
+    return InputStreamType.Analytics == streamType(getFileSystem());
+  }
+
+  /**
+   * Is the current input stream type S3AInputStream?
+   * @return true if the S3AInputStream is being used.
+   */
+  private boolean isClassicInputStream() {
+    return InputStreamType.Classic == streamType(getFileSystem());
+  }
+
+  /**
    * Skip the test if prefetching is enabled.
    */
   private void assumeNoPrefetching(){
     if (prefetching) {
       skip("Prefetching is enabled");
+    }
+  }
+
+  private void assumeNotAnalytics() {
+    if (analyticsStream) {
+      skip("Analytics stream is enabled");
     }
   }
 
