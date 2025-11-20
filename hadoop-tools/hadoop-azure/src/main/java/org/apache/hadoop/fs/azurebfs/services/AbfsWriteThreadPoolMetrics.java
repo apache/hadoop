@@ -123,7 +123,7 @@ public class AbfsWriteThreadPoolMetrics extends AbstractAbfsStatisticsSource {
     setMetricValue(AbfsWriteThreadPoolMetricsEnum.ACTIVE_THREADS, stats.getActiveThreads());
     setMetricValue(AbfsWriteThreadPoolMetricsEnum.JVM_CPU_UTILIZATION, stats.getJvmCpuUtilization());
     setMetricValue(AbfsWriteThreadPoolMetricsEnum.JVM_CPU_LOAD, stats.getJvmCpuLoad() * HUNDRED_D);
-    setMetricValue(AbfsWriteThreadPoolMetricsEnum.CPU_UTILIZATION, (stats.getSystemCpuUtilization() * HUNDRED_D));
+    setMetricValue(AbfsWriteThreadPoolMetricsEnum.CPU_UTILIZATION, stats.getSystemCpuUtilization() * HUNDRED_D);
     setMetricValue(AbfsWriteThreadPoolMetricsEnum.MEMORY_UTILIZATION, stats.getMemoryUtilization());
     setMetricValue(AbfsWriteThreadPoolMetricsEnum.LAST_SCALE_DIRECTION, stats.getLastScaleDirectionNumeric(
         stats.getLastScaleDirection()));

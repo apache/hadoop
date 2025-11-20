@@ -388,6 +388,10 @@ public final class WriteThreadPoolSizeManager implements Closeable {
       }
       boolean willResize = newMaxPoolSize != currentPoolSize;
       // Case 1: CPU increased — push metrics ONLY if not resizing
+      LOG.debug(
+          "Willresize value {}, newMaxPoolSize {}, currentPoolSize {}, cpuUtilization {}, maxCpuUtilization {}",
+          willResize, newMaxPoolSize,
+          currentPoolSize, cpuUtilization, maxCpuUtilization);
       if (cpuUtilization > maxCpuUtilization) {
         maxCpuUtilization = cpuUtilization;
         if (!willResize) {
