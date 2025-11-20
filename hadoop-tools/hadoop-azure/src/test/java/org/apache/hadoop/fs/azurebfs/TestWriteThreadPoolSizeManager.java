@@ -817,7 +817,7 @@ class TestWriteThreadPoolSizeManager extends AbstractAbfsIntegrationTest {
               .getAbfsWriteThreadPoolMetrics();
 
       WriteThreadPoolSizeManager.WriteThreadPoolStats statsBefore =
-          instance.getCurrentStats(instance.getjvmCpuLoad(), instance.getMaxCpuUtilization(), instance.getAvailableHeapMemory());
+          instance.getCurrentStats(instance.getJvmCpuLoad(), instance.getMaxCpuUtilization(), instance.getMemoryLoad());
 
       ThreadPoolExecutor executor =
           (ThreadPoolExecutor) instance.getExecutorService();
@@ -852,7 +852,7 @@ class TestWriteThreadPoolSizeManager extends AbstractAbfsIntegrationTest {
       Thread.sleep(SLEEP_DURATION_30S_MS);
 
       WriteThreadPoolSizeManager.WriteThreadPoolStats statsAfter =
-          instance.getCurrentStats(instance.getjvmCpuLoad(), instance.getMaxCpuUtilization(), instance.getAvailableHeapMemory());
+          instance.getCurrentStats(instance.getJvmCpuLoad(), instance.getMaxCpuUtilization(), instance.getMemoryLoad());
 
       //--- Validate that metrics and stats changed ---
       Assertions.assertThat(statsAfter)

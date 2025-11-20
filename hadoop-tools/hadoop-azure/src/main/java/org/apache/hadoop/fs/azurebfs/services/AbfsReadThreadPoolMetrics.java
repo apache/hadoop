@@ -29,6 +29,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.enums.AbfsReadThreadPoolMetricsEnum;
+import org.apache.hadoop.fs.azurebfs.enums.AbfsWriteThreadPoolMetricsEnum;
 import org.apache.hadoop.fs.azurebfs.enums.StatisticTypeEnum;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 
@@ -117,10 +118,12 @@ public class AbfsReadThreadPoolMetrics extends AbstractAbfsStatisticsSource {
     setMetricValue(AbfsReadThreadPoolMetricsEnum.CURRENT_POOL_SIZE, stats.getCurrentPoolSize());
     setMetricValue(AbfsReadThreadPoolMetricsEnum.MAX_POOL_SIZE, stats.getMaxPoolSize());
     setMetricValue(AbfsReadThreadPoolMetricsEnum.ACTIVE_THREADS, stats.getActiveThreads());
-    setMetricValue(AbfsReadThreadPoolMetricsEnum.JVM_CPU_UTILIZATION, stats.getJvmCpuUtilization());
-    setMetricValue(AbfsReadThreadPoolMetricsEnum.JVM_CPU_LOAD, stats.getJvmCpuLoad() * HUNDRED_D);
-    setMetricValue(AbfsReadThreadPoolMetricsEnum.CPU_UTILIZATION, (stats.getCpuUtilization() * HUNDRED_D));
-    setMetricValue(AbfsReadThreadPoolMetricsEnum.MEMORY_UTILIZATION, stats.getMemoryUtilization());
+    setMetricValue(AbfsReadThreadPoolMetricsEnum.IDLE_THREADS, stats.getIdleThreads());
+    setMetricValue(AbfsReadThreadPoolMetricsEnum.JVM_CPU_UTILIZATION, stats.getJvmCpuLoad() * HUNDRED_D);
+    setMetricValue(AbfsReadThreadPoolMetricsEnum.SYSTEM_CPU_UTILIZATION, stats.getSystemCpuUtilization() * HUNDRED_D);
+    setMetricValue(AbfsReadThreadPoolMetricsEnum.AVAILABLE_MEMORY, stats.getMemoryUtilization());
+    setMetricValue(AbfsReadThreadPoolMetricsEnum.COMMITTED_MEMORY, stats.getCommittedHeapGB());
+    setMetricValue(AbfsReadThreadPoolMetricsEnum.MEMORY_LOAD, stats.getMemoryLoad());
     setMetricValue(AbfsReadThreadPoolMetricsEnum.LAST_SCALE_DIRECTION, stats.getLastScaleDirectionNumeric(stats.getLastScaleDirection()));
     setMetricValue(AbfsReadThreadPoolMetricsEnum.MAX_CPU_UTILIZATION, stats.getMaxCpuUtilization() * HUNDRED_D);
     updatedAtLeastOnce.set(true);

@@ -345,11 +345,6 @@ public final class FileSystemConfigurations {
   public static final int DEFAULT_WRITE_MEDIUM_CPU_THRESHOLD_PERCENT = 60;
 
   /**
-   * Minimum CPU utilization percentage considered as low threshold for write scaling.
-   */
-  public static final int MIN_WRITE_LOW_CPU_THRESHOLD_PERCENT = 10;
-
-  /**
    * Maximum CPU utilization percentage considered as low threshold for write scaling.
    */
   public static final int MAX_WRITE_LOW_CPU_THRESHOLD_PERCENT = 40;
@@ -388,6 +383,12 @@ public final class FileSystemConfigurations {
    * Default multiplier applied to available memory for high-tier write workloads.
    */
   public static final int DEFAULT_WRITE_HIGH_TIER_MEMORY_MULTIPLIER = 16;
+
+  /** Percentage threshold of heap usage at which memory pressure is considered high. */
+  public static final int DEFAULT_WRITE_HIGH_MEMORY_USAGE_THRESHOLD_PERCENTAGE = 60;
+
+  /** Percentage threshold of heap usage at which memory pressure is considered low. */
+  public static final int DEFAULT_WRITE_LOW_MEMORY_USAGE_THRESHOLD_PERCENTAGE = 20;
 
   public static final boolean DEFAULT_FS_AZURE_ENABLE_CLIENT_TRANSACTION_ID = true;
 

@@ -537,6 +537,16 @@ public final class ConfigurationKeys {
   /** Configuration key for the high-tier memory multiplier for write workloads. Value: {@value}. */
   public static final String FS_AZURE_WRITE_HIGH_TIER_MEMORY_MULTIPLIER = "fs.azure.write.high.tier.memory.multiplier";
 
+  /**
+   * Threshold percentage for high memory usage to scale up/down the buffer pool size in write code.
+   */
+  public static final String FS_AZURE_WRITE_HIGH_MEMORY_USAGE_THRESHOLD_PERCENT = "fs.azure.write.high.memory.usage.threshold.percent";
+
+  /**
+   * Threshold percentage for low memory usage to scale up/down the buffer pool size in write code.
+   */
+  public static final String FS_AZURE_WRITE_LOW_MEMORY_USAGE_THRESHOLD_PERCENT = "fs.azure.write.low.memory.usage.threshold.percent";
+
   /**Flag to enable/disable sending client transactional ID during create/rename operations: {@value}*/
   public static final String FS_AZURE_ENABLE_CLIENT_TRANSACTION_ID = "fs.azure.enable.client.transaction.id";
   /**Flag to enable/disable create idempotency during create operation: {@value}*/

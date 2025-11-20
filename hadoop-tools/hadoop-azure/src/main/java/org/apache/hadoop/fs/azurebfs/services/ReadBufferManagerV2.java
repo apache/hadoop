@@ -18,6 +18,7 @@
 package org.apache.hadoop.fs.azurebfs.services;
 
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
+import org.apache.hadoop.fs.azurebfs.WriteThreadPoolSizeManager;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ReadBufferStatus;
 
 import com.sun.management.OperatingSystemMXBean;
@@ -864,7 +865,7 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
    */
   private void adjustThreadPool() {
     int currentPoolSize = workerRefs.size();
-    double cpuLoad = getjvmCpuLoad();
+    double cpuLoad = getJvmCpuLoad();
     if (cpuLoad > maxCpuUtilization) {
       maxCpuUtilization = cpuLoad;
     }
@@ -910,6 +911,7 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
       printTraceLog("Decreased worker pool size from {} to {}", currentPoolSize,
           newThreadPoolSize);
     } else {
+      lastScaleDirection = EMPTY_STRING;
       printTraceLog("No change in worker pool size. CPU load: {} Pool size: {}",
           cpuLoad, currentPoolSize);
       if (cpuLoad >= maxCpuUtilization) {
@@ -1073,11 +1075,24 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
   }
 
   /**
+   * Returns the currently committed JVM heap memory in bytes.
+   * This reflects the amount of heap the JVM has reserved from the OS and may grow as needed.
+   *
+   * @return committed heap memory in bytes
+   */
+  @VisibleForTesting
+  public long getCommittedHeapMemory() {
+    MemoryMXBean osBean = ManagementFactory.getMemoryMXBean();
+    MemoryUsage memoryUsage = osBean.getHeapMemoryUsage();
+    return memoryUsage.getCommitted();
+  }
+
+  /**
    * Get the current CPU load of the system.
    * @return the CPU load as a double value between 0.0 and 1.0
    */
   @VisibleForTesting
-  public double getCpuLoad() {
+  public double getSystemCpuLoad() {
     OperatingSystemMXBean osBean = ManagementFactory.getPlatformMXBean(
         OperatingSystemMXBean.class);
     double cpuLoad = osBean.getSystemCpuLoad();
@@ -1095,7 +1110,7 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
    * @return the CPU utilization as a fraction (0.0 to 1.0), or 0.0 if unavailable.
    */
   @VisibleForTesting
-  public double getjvmCpuLoad() {
+  public double getJvmCpuLoad() {
     OperatingSystemMXBean osBean = ManagementFactory.getPlatformMXBean(
         OperatingSystemMXBean.class);
     double cpuLoad = osBean.getProcessCpuLoad();
@@ -1103,30 +1118,6 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
       return ZERO_D;
     }
     return cpuLoad;
-  }
-
-  /**
-   * Returns the CPU utilization of the JVM process as a percentage (0–100).
-   */
-  public static double getJvmCpuUtilization() {
-    OperatingSystemMXBean osBean =
-        (OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean();
-    long cpuTime = osBean.getProcessCpuTime();
-    long now = System.nanoTime();
-    if (lastTime == ZERO) {
-      lastCpuTime = cpuTime;
-      lastTime = now;
-      return 0.0; // first call has no previous data
-    }
-    long elapsedCpu = cpuTime - lastCpuTime;
-    long elapsedTime = now - lastTime;
-    lastCpuTime = cpuTime;
-    lastTime = now;
-    if (elapsedTime <= ZERO) {
-      return ZERO_D;
-    }
-    double load = (elapsedCpu * HUNDRED_D) / (elapsedTime * osBean.getAvailableProcessors());
-    return Math.max(ZERO_D, Math.min(load, HUNDRED_D));
   }
 
   @VisibleForTesting
@@ -1164,6 +1155,13 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
     return cpuMonitorThread;
   }
 
+  /**
+   * Returns the maximum JVM CPU utilization observed during the current
+   * monitoring interval or since the last reset.
+   *
+   * @return the highest JVM CPU utilization percentage recorded
+   */
+  @VisibleForTesting
   public double getMaxCpuUtilization() {
     return maxCpuUtilization;
   }
@@ -1209,50 +1207,55 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
     numberOfActiveBuffers.getAndDecrement();
   }
 
-  public String getLastScaleDirection() {
-    return lastScaleDirection;
-  }
 
   /**
    * Represents current statistics of the read thread pool and system.
    */
   public static class ReadThreadPoolStats {
-    private final int currentPoolSize;   // matches CURRENT_POOL_SIZE metric
-    private final int maxPoolSize;       // matches MAX_POOL_SIZE metric
-    private final int activeThreads;     // matches ACTIVE_THREADS metric
-    private final double jvmCpuUtilization; // matches JVM_CPU_UTILIZATION metric
-    private final double jvmCpuLoad;
-    private final double systemCpuUtilization; // matches CPU_UTILIZATION metric
-    private final long availableHeapGB;
-    private final String lastScaleDirection; // matches MEMORY_UTILIZATION metric
-    private final double maxCpuUtilization;
+    private final int currentPoolSize;  // Current number of threads in the pool
+    private final int maxPoolSize;        // Maximum allowed pool size
+    private final int activeThreads;    // Number of threads currently executing tasks
+    private final int idleThreads;        // Number of threads not executing tasks
+    private final double jvmCpuLoad;    // Current JVM CPU utilization (%)
+    private final double systemCpuUtilization;  // Current system CPU utilization (%)
+    private final long availableHeapGB;       // Available heap memory (GB)
+    private final long committedHeapGB;  // Total committed heap memory (GB)
+    private final double memoryLoad;  // Heap usage ratio (used/committed)
+    private final String lastScaleDirection;  // Last resize direction: "I" (increase) or "D" (decrease)
+    private final double maxCpuUtilization;  // Peak JVM CPU observed in the current interval
 
     /**
-     * Constructs an instance of {@code ReadThreadPoolStats} to capture the current
-     * state and performance metrics of the read thread pool.
+     * Constructs a {@link WriteThreadPoolSizeManager.WriteThreadPoolStats} instance containing thread pool
+     * metrics and JVM/system resource utilization details.
      *
      * @param currentPoolSize the current number of threads in the pool
-     * @param maxPoolSize the maximum number of threads allowed in the pool
-     * @param activeThreads the number of threads currently executing tasks
-     * @param jvmCpuUtilization the overall JVM CPU utilization percentage
-     * @param jvmCpuLoad the recent JVM process CPU load value
-     * @param systemCpuUtilization the overall system CPU utilization percentage
-     * @param availableHeapGB the currently available heap memory in gigabytes
-     * @param lastScaleDirection the last scaling direction ("I" for increase, "D" for decrease)
-     * @param maxCpuUtilization the maximum JVM CPU utilization observed so far
+     * @param maxPoolSize the maximum number of threads permitted in the pool
+     * @param activeThreads the number of threads actively executing tasks
+     * @param idleThreads the number of idle threads in the pool
+     * @param jvmCpuLoad the current JVM CPU load (0.0–1.0)
+     * @param systemCpuUtilization the current system-wide CPU utilization (0.0–1.0)
+     * @param availableHeapGB the available heap memory in gigabytes
+     * @param committedHeapGB the committed heap memory in gigabytes
+     * @param memoryLoad the JVM memory load (used / committed)
+     * @param lastScaleDirection the last scaling action performed: "I" (increase),
+     * "D" (decrease), or empty if no scaling occurred
+     * @param maxCpuUtilization the peak JVM CPU utilization observed during this interval
      */
     public ReadThreadPoolStats(int currentPoolSize,
-        int maxPoolSize, int activeThreads,
-        double jvmCpuUtilization, double jvmCpuLoad,
+        int maxPoolSize, int activeThreads, int idleThreads,
+        double jvmCpuLoad,
         double systemCpuUtilization, long availableHeapGB,
+        long committedHeapGB, double memoryLoad,
         String lastScaleDirection, double maxCpuUtilization) {
       this.currentPoolSize = currentPoolSize;
       this.maxPoolSize = maxPoolSize;
       this.activeThreads = activeThreads;
-      this.jvmCpuUtilization = jvmCpuUtilization;
+      this.idleThreads = idleThreads;
       this.jvmCpuLoad = jvmCpuLoad;
       this.systemCpuUtilization = systemCpuUtilization;
       this.availableHeapGB = availableHeapGB;
+      this.committedHeapGB = committedHeapGB;
+      this.memoryLoad = memoryLoad;
       this.lastScaleDirection = lastScaleDirection;
       this.maxCpuUtilization = maxCpuUtilization;
     }
@@ -1272,13 +1275,13 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
       return activeThreads;
     }
 
-    /** @return the JVM process CPU utilization percentage. */
-    public double getJvmCpuUtilization() {
-      return jvmCpuUtilization;
+    /** @return the number of threads idle. */
+    public int getIdleThreads() {
+      return idleThreads;
     }
 
     /** @return the overall system CPU utilization percentage. */
-    public double getCpuUtilization() {
+    public double getSystemCpuUtilization() {
       return systemCpuUtilization;
     }
 
@@ -1287,7 +1290,18 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
       return availableHeapGB;
     }
 
+    /** @return the total committed heap memory in gigabytes */
+    public long getCommittedHeapGB() {
+      return committedHeapGB;
+    }
 
+    /** @return the current JVM memory load (used / committed) as a value between 0.0 and 1.0 */
+    public double getMemoryLoad() {
+      return memoryLoad;
+    }
+
+
+    /** @return "I" (increase), "D" (decrease), or empty. */
     public String getLastScaleDirection() {
       return lastScaleDirection;
     }
@@ -1302,6 +1316,12 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
       return maxCpuUtilization;
     }
 
+    /**
+     * Converts the scale direction string into a numeric value.
+     *
+     * @param lastScaleDirection "I" for increase, "D" for decrease, anything else for no change
+     * @return 1 for increase, -1 for decrease, or 0 for no change
+     */
     public int getLastScaleDirectionNumeric(String lastScaleDirection) {
       switch (lastScaleDirection) {
       case "I":
@@ -1316,43 +1336,54 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
     @Override
     public String toString() {
       return String.format(
-          "currentPoolSize=%d, maxPoolSize=%d, activeThreads=%d, "
-              + "jvmCpuUtilization=%.2f%%, jvmCpuLoad=%.2f%%, systemCpuUtilization=%.2f%%, "
-              + "availableHeap=%dGB, scaleDirection=%s, maxCpuUtilization=%.2f%%",
-          currentPoolSize, maxPoolSize, activeThreads, jvmCpuUtilization, jvmCpuLoad * HUNDRED,
-          systemCpuUtilization * HUNDRED,
-          availableHeapGB, lastScaleDirection, maxCpuUtilization * HUNDRED);
+          "currentPoolSize=%d, maxPoolSize=%d, activeThreads=%d, idleThreads=%d, "
+              + "jvmCpuLoad=%.2f%%, systemCpuUtilization=%.2f%%, "
+              + "availableHeap=%dGB, committedHeap=%dGB, memoryLoad=%.2f%%, "
+              + "scaleDirection=%s, maxCpuUtilization=%.2f%%",
+          currentPoolSize, maxPoolSize, activeThreads,
+          idleThreads, jvmCpuLoad * HUNDRED, systemCpuUtilization * HUNDRED,
+          availableHeapGB, committedHeapGB, memoryLoad,
+          lastScaleDirection, maxCpuUtilization * HUNDRED
+      );
     }
   }
 
   /**
-   * Returns a snapshot of the current thread pool and system resource statistics.
-   * Captures key metrics including thread counts, CPU utilization, and available
-   * heap memory for performance monitoring and dynamic pool sizing decisions.
+   * Creates and returns a snapshot of the current read thread pool and system metrics.
+   * This method captures live values such as pool size, active threads, JVM CPU load,
+   * system CPU utilization, available heap memory, and the maximum CPU utilization
+   * observed during the current interval.
    *
-   * @return the latest {@link ReadThreadPoolStats} representing the current state
-   *         of the thread pool and system resources.
+   * @param jvmCpuLoad the current JVM process CPU utilization percentage
+   * @param maxCpuUtilization the highest JVM CPU utilization observed so far
+   * @return a {@link ReadThreadPoolStats} object containing the current thread pool
+   *         and system resource statistics
    */
   synchronized ReadThreadPoolStats getCurrentStats(double jvmCpuLoad, double maxCpuUtilization) {
     if (workerPool == null) {
-      return new ReadThreadPoolStats(ZERO,  ZERO,  ZERO,  ZERO_D,  ZERO_D, ZERO_D, ZERO, EMPTY_STRING, ZERO_D);
+      return new ReadThreadPoolStats(ZERO, ZERO, ZERO, ZERO, ZERO_D, ZERO_D, ZERO, ZERO, ZERO_D, EMPTY_STRING, ZERO_D);
     }
 
     ThreadPoolExecutor exec = this.workerPool;
-
     String currentScaleDirection = lastScaleDirection;
     lastScaleDirection = EMPTY_STRING;
 
+    int poolSize = exec.getPoolSize();
+    int activeThreads = exec.getActiveCount();
+    int idleThreads = poolSize - activeThreads;
+
     return new ReadThreadPoolStats(
-        exec.getPoolSize(),         // Current threads in pool (active + idle)
-        exec.getMaximumPoolSize(),  // Max threads allowed in pool
-        exec.getActiveCount(),      // Threads actively executing tasks
-        getJvmCpuUtilization(),
-        jvmCpuLoad,// JVM process CPU usage (%)
-        getCpuLoad(),        // System-wide CPU usage (%)
-        getAvailableHeapMemory(), // Available JVM heap memory (GB)
-        currentScaleDirection,
-        maxCpuUtilization
+        poolSize,                      // Current thread count
+        exec.getMaximumPoolSize(),     // Max allowed threads
+        activeThreads,                 // Busy threads
+        idleThreads,                   // Idle threads
+        jvmCpuLoad,             // JVM CPU usage (ratio)
+        getSystemCpuLoad(),     // System CPU usage (ratio)
+        getAvailableHeapMemory(),      // Free heap (GB)
+        getCommittedHeapMemory(),      // Committed heap (GB)
+        getMemoryLoad(),                    // used/committed
+        currentScaleDirection,         // "I", "D", or ""
+        maxCpuUtilization              // Peak JVM CPU usage so far
     );
   }
 }
