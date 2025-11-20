@@ -22,6 +22,7 @@ import java.io.DataOutputStream;
 import java.io.File;
 import java.nio.file.Files;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
@@ -33,6 +34,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Timeout.ThreadMode.SEPARATE_THREAD;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -475,6 +477,7 @@ public class TestRMHA {
   }
 
   @Test
+  @Timeout(value=60, unit = TimeUnit.SECONDS, threadMode = SEPARATE_THREAD)
   public void testTransitionedToStandbyShouldNotHang() throws Exception {
     configuration.setBoolean(YarnConfiguration.AUTO_FAILOVER_ENABLED, false);
     Configuration conf = new YarnConfiguration(configuration);
@@ -611,7 +614,7 @@ public class TestRMHA {
   }
 
   @Test
-  @Timeout(value = 9000)
+  @Timeout(value = 9000) // FIXME that's more than two hours
   public void testTransitionedToActiveRefreshFail() throws Exception {
     configuration.setBoolean(YarnConfiguration.AUTO_FAILOVER_ENABLED, false);
     rm = new MockRM(configuration) {
