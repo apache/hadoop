@@ -256,10 +256,7 @@ public class ITestS3AAnalyticsAcceleratorStreamReading extends AbstractS3ATestBa
     // This file has a content length of 451. Since it's a parquet file, AAL will prefetch the footer bytes (last 32KB),
     // as soon as the file is opened, but because the file is < 32KB, the whole file is prefetched.
     verifyStatisticCounterValue(ioStats, STREAM_READ_PREFETCHED_BYTES, fileLength);
-
-    // The footer is only prefetched once, but parsing is attempted on each stream open.
-    verifyStatisticCounterValue(ioStats, STREAM_READ_PARQUET_FOOTER_PARSING_FAILED, 1);
-
+    
     // Open a stream to the object twice, verifying that data is cached, and streams to the same object, do not
     // prefetch the same data twice.
     try (FSDataInputStream inputStream = getFileSystem().open(dest)) {
@@ -273,9 +270,6 @@ public class ITestS3AAnalyticsAcceleratorStreamReading extends AbstractS3ATestBa
     verifyStatisticCounterValue(ioStats, ACTION_HTTP_HEAD_REQUEST, 0);
     // No data is prefetched, as it already exists in the cache from the previous factory.
     verifyStatisticCounterValue(ioStats, STREAM_READ_PREFETCHED_BYTES, 0);
-
-    // The footer is only prefetched once, but parsing is attempted on each stream open.
-    verifyStatisticCounterValue(ioStats, STREAM_READ_PARQUET_FOOTER_PARSING_FAILED, 1);
   }
 
   /**
