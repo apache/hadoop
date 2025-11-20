@@ -497,7 +497,8 @@ public final class StreamStatisticNames {
   /**
    * Tracks failures in footer parsing.
    */
-  public static final String STREAM_READ_PARQUET_FOOTER_PARSING_FAILED = "stream_read_parquet_footer_parsing_failed";
+  public static final String STREAM_READ_PARQUET_FOOTER_PARSING_FAILED
+          = "stream_read_parquet_footer_parsing_failed";
 
   /**
    * A cache hit occurs when the request range can be satisfied by the data in the cache.

@@ -28,7 +28,6 @@ import org.apache.hadoop.fs.contract.AbstractContractVectoredReadTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
-import org.apache.hadoop.fs.s3a.S3AUtils;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.StreamStatisticNames;
 import org.apache.hadoop.test.tags.IntegrationTest;
@@ -71,14 +70,17 @@ public class ITestS3AContractAnalyticsStreamVectoredRead extends AbstractContrac
     super(bufferType);
   }
 
-  private static final String REQUEST_COALESCE_TOLERANCE_KEY = ANALYTICS_ACCELERATOR_CONFIGURATION_PREFIX + "."
-          + AAL_REQUEST_COALESCE_TOLERANCE;
-  private static final String READ_BUFFER_SIZE_KEY = ANALYTICS_ACCELERATOR_CONFIGURATION_PREFIX + "."
-          + AAL_READ_BUFFER_SIZE;
-  private static final String SMALL_OBJECT_PREFETCH_ENABLED_KEY = ANALYTICS_ACCELERATOR_CONFIGURATION_PREFIX + "."
-          + AAL_SMALL_OBJECT_PREFETCH_ENABLED;
-  private static final String CACHE_TIMEOUT_KEY = ANALYTICS_ACCELERATOR_CONFIGURATION_PREFIX + "."
-          + AAL_CACHE_TIMEOUT;
+  private static final String REQUEST_COALESCE_TOLERANCE_KEY =
+          ANALYTICS_ACCELERATOR_CONFIGURATION_PREFIX + "." + AAL_REQUEST_COALESCE_TOLERANCE;
+
+  private static final String READ_BUFFER_SIZE_KEY =
+          ANALYTICS_ACCELERATOR_CONFIGURATION_PREFIX + "." + AAL_READ_BUFFER_SIZE;
+
+  private static final String SMALL_OBJECT_PREFETCH_ENABLED_KEY =
+          ANALYTICS_ACCELERATOR_CONFIGURATION_PREFIX + "." + AAL_SMALL_OBJECT_PREFETCH_ENABLED;
+
+  private static final String CACHE_TIMEOUT_KEY =
+          ANALYTICS_ACCELERATOR_CONFIGURATION_PREFIX + "." + AAL_CACHE_TIMEOUT;
 
   /**
    * Create a configuration.
@@ -150,8 +152,8 @@ public class ITestS3AContractAnalyticsStreamVectoredRead extends AbstractContrac
     List<FileRange> fileRanges = new ArrayList<>();
     fileRanges.add(FileRange.createFileRange(0, 100));
     fileRanges.add(FileRange.createFileRange(800, 200));
-    fileRanges.add(FileRange.createFileRange(4 * S_1K , 4 * S_1K));
-    fileRanges.add(FileRange.createFileRange(80 * S_1K , 4 * S_1K));
+    fileRanges.add(FileRange.createFileRange(4 * S_1K, 4 * S_1K));
+    fileRanges.add(FileRange.createFileRange(80 * S_1K, 4 * S_1K));
 
     try (FSDataInputStream in = openVectorFile()) {
       in.readVectored(fileRanges, getAllocate());

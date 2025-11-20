@@ -108,7 +108,8 @@ public class ITestS3AAnalyticsAcceleratorStreamReading extends AbstractS3ATestBa
    long fileLength = fs.getFileStatus(externalTestFile).getLen();
 
    // Head request for the file length.
-    verifyStatisticCounterValue(fs.getIOStatistics(), AUDIT_REQUEST_EXECUTION, initialAuditCount + 1);
+    verifyStatisticCounterValue(fs.getIOStatistics(), AUDIT_REQUEST_EXECUTION,
+            initialAuditCount + 1);
 
     byte[] buffer = new byte[500];
     IOStatistics ioStats;
@@ -149,7 +150,8 @@ public class ITestS3AAnalyticsAcceleratorStreamReading extends AbstractS3ATestBa
     // in which case, AAL will start prefetching till EoF on file open in 8MB chunks. The file read here
     // s3://noaa-cors-pds/raw/2023/017/ohfh/OHFH017d.23_.gz, has a size of ~21MB, resulting in 3 GETS:
     // [0-8388607, 8388608-16777215, 16777216-21511173].
-    verifyStatisticCounterValue(fs.getIOStatistics(), AUDIT_REQUEST_EXECUTION, initialAuditCount + 1 + 4);
+    verifyStatisticCounterValue(fs.getIOStatistics(), AUDIT_REQUEST_EXECUTION,
+            initialAuditCount + 1 + 4);
   }
 
   @Test
@@ -203,7 +205,8 @@ public class ITestS3AAnalyticsAcceleratorStreamReading extends AbstractS3ATestBa
 
 
       // Though the next GP should prefetch 16MB, since the file is ~23MB, only the bytes till EoF are prefetched.
-      verifyStatisticCounterValue(ioStats, STREAM_READ_PREFETCHED_BYTES, 10 * ONE_MB + bytesRemainingForPrefetch);
+      verifyStatisticCounterValue(ioStats, STREAM_READ_PREFETCHED_BYTES,
+              10 * ONE_MB + bytesRemainingForPrefetch);
       inputStream.readFully(buffer, 0, 3 * ONE_MB);
       verifyStatisticCounterValue(ioStats, STREAM_READ_CACHE_HIT, 3);
     }
@@ -314,7 +317,8 @@ public class ITestS3AAnalyticsAcceleratorStreamReading extends AbstractS3ATestBa
     // S3A makes a HEAD request on the stream open(), and then AAL makes a GET request to get the object, total audit
     // operations = 10.
     long currentAuditCount = initialAuditCount + 2;
-    verifyStatisticCounterValue(getFileSystem().getIOStatistics(), AUDIT_REQUEST_EXECUTION, currentAuditCount);
+    verifyStatisticCounterValue(getFileSystem().getIOStatistics(),
+            AUDIT_REQUEST_EXECUTION, currentAuditCount);
 
     try (FSDataInputStream inputStream = getFileSystem().openFile(dest)
         .withFileStatus(fileStatus)
@@ -396,7 +400,7 @@ public class ITestS3AAnalyticsAcceleratorStreamReading extends AbstractS3ATestBa
 
       stream1.read(buffer, 0, 2 * ONE_KB);
       stream2.read(buffer);
-      stream1.read(buffer, 0 , 10 * ONE_KB);
+      stream1.read(buffer, 0, 10 * ONE_KB);
 
       IOStatistics stats1 = stream1.getIOStatistics();
       IOStatistics stats2 = stream2.getIOStatistics();
@@ -413,7 +417,8 @@ public class ITestS3AAnalyticsAcceleratorStreamReading extends AbstractS3ATestBa
     }
 
     // verify value is passed up to the FS
-    verifyStatisticCounterValue(getFileSystem().getIOStatistics(), STREAM_READ_PREFETCHED_BYTES, fileLen);
+    verifyStatisticCounterValue(getFileSystem().getIOStatistics(),
+            STREAM_READ_PREFETCHED_BYTES, fileLen);
 
     // We did 3 reads, all of them were served from the small object cache. In this case, the whole object was
     // downloaded as soon as the stream to it was opened.
