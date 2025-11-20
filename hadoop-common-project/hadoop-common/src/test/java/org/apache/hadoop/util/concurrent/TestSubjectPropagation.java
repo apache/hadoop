@@ -147,9 +147,12 @@ public class TestSubjectPropagation {
     });
 
     if (SubjectUtil.THREAD_INHERITS_SUBJECT) {
+
       assertEquals(parentSubject, childSubject);
     } else {
       // This is the behaviour that breaks Hadoop authorization
+      // This would fail for Java 22-23 if the SecurityManager would be enabled,
+      // but we don't run tests with the SecurityManager enabled.
       assertNull(childSubject);
     }
   }
@@ -179,6 +182,8 @@ public class TestSubjectPropagation {
       assertEquals(parentSubject, childSubject);
     } else {
       // This is the behaviour that breaks Hadoop authorization
+      // This would fail for Java 22-23 if the SecurityManager would be enabled,
+      // but we don't run tests with the SecurityManager enabled.
       assertNull(childSubject);
     }
   }

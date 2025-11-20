@@ -391,6 +391,57 @@ Create a local staging version of the website (in /tmp/hadoop-site)
 Note that the site needs to be built in a second pass after other artifacts.
 
 ----------------------------------------------------------------------------------
+Including Cloud Connector Dependencies in Distributions:
+
+Hadoop distributions include the hadoop modules needed to work with data and services
+on cloud infrastructure
+
+However, dependencies are omitted for all cloud connectors except hadoop-azure
+(abfs:// and wasb://) and possibly hadoop-gcp (gs://) and hadoop-tos (tos://).
+For the latter two modules, it depends on shading options.
+
+For hadoop-aws the AWS SDK bundle.jar is omitted, but everything else is included.
+
+Excluding the extra binaries:
+* Keeps release artifact size below the limit of the ASF distribution network.
+* Reduces download and size overhead in docker usage.
+* Reduces the CVE attack surface and audit-related complaints about those same CVEs.
+* Reduces the risk of classpath conflict.
+
+To produce a build with the specific desired dependencies, the build must be executed
+with the relevant profile of ${module}-package alongside the -Pdist profile.
+
+For example, a build with the hadoop-aws and hadoop-azure-datalake dependencies,
+run with
+
+ mvn package -Pdist -DskipTests -Dhadoop-aws-package -Dhadoop-azure-datalake-package
+
+Available package profiles:
+  hadoop-aliyun-package
+  hadoop-aws-package
+  hadoop-azure-datalake-package
+  hadoop-cos-package
+  hadoop-gcp-package
+  hadoop-huaweicloud-package
+  hadoop-tos-package
+
+To build a complete distribution then with all cloud dependencies included:
+
+mvn package -Pdist -DskipTests -Dtar -Dmaven.javadoc.skip=true \
+ -Dhadoop-aliyun-package \
+ -Dhadoop-aws-package \
+ -Dhadoop-azure-datalake-package \
+ -Dhadoop-cos-package \
+ -Dhadoop-gcp-package \
+ -Dhadoop-huaweicloud-package \
+ -Dhadoop-tos-package
+
+The resulting tar file will be too large to be distributable through ASF infrastructure.
+
+The hadoop-gcp and hadoop-tos artifacts include their dependencies as shaded
+artifacts unless the distribution is built with -DskipShade.
+
+----------------------------------------------------------------------------------
 Installing Hadoop
 
 Look for these HTML files after you build the document by the above commands.
