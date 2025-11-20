@@ -53,6 +53,7 @@
   build with -Dhadoop-aws-package -Dhadoop-azure-datalake-package
 
   Available package profiles:
+    hadoop-aliyun-package
     hadoop-aws-package
     hadoop-azure-datalake-package
     hadoop-cos-package
