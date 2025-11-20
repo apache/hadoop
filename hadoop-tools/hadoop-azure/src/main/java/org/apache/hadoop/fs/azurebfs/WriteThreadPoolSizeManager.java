@@ -49,10 +49,8 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.MEDIUM_H
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.BYTES_PER_GIGABYTE;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.HIGH_CPU_LOW_MEMORY_REDUCTION_FACTOR;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.HIGH_CPU_REDUCTION_FACTOR;
-import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.HIGH_MEDIUM_HEAP_FACTOR;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.HUNDRED;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.HUNDRED_D;
-import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.LOW_CPU_HEAP_FACTOR;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.LOW_CPU_HIGH_MEMORY_DECREASE_FACTOR;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.LOW_CPU_POOL_SIZE_INCREASE_FACTOR;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.MEDIUM_CPU_LOW_MEMORY_REDUCTION_FACTOR;
@@ -60,10 +58,6 @@ import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.M
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.THIRTY_SECONDS;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ZERO;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ZERO_D;
-
-import oshi.SystemInfo;
-import oshi.software.os.OSProcess;
-import oshi.software.os.OperatingSystem;
 
 /**
  * Manages a thread pool for writing operations, adjusting the pool size based on CPU utilization.
@@ -533,6 +527,8 @@ public final class WriteThreadPoolSizeManager implements Closeable {
   /**
    * Closes this manager by shutting down executors and cleaning up resources.
    * Removes the instance from the active manager map.
+   *
+   * @throws IOException if an error occurs during shutdown.
    */
   @Override
   public void close() throws IOException {
@@ -692,9 +688,9 @@ public final class WriteThreadPoolSizeManager implements Closeable {
               + "availableHeap=%dGB, committedHeap=%dGB, memoryLoad=%.2f%%, "
               + "scaleDirection=%s, maxCpuUtilization=%.2f%%",
           currentPoolSize, maxPoolSize, activeThreads,
-          idleThreads, jvmCpuLoad * HUNDRED, systemCpuUtilization * HUNDRED,
+          idleThreads, jvmCpuLoad * HUNDRED_D, systemCpuUtilization * HUNDRED_D,
           availableHeapGB, committedHeapGB, memoryLoad,
-          lastScaleDirection, maxCpuUtilization * HUNDRED
+          lastScaleDirection, maxCpuUtilization * HUNDRED_D
       );
     }
   }

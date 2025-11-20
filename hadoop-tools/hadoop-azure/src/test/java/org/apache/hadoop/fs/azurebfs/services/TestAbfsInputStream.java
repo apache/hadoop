@@ -919,7 +919,6 @@ public class TestAbfsInputStream extends
     configuration1.set(FS_AZURE_ENABLE_PREFETCH_REQUEST_PRIORITY, "true");
 
     Configuration configuration2 = new Configuration(getRawConfiguration());
-    //use the default value for the config: false
     configuration2.set(FS_AZURE_ENABLE_PREFETCH_REQUEST_PRIORITY, "false");
 
     TracingContext tracingContext1 = mock(TracingContext.class);

@@ -49,14 +49,9 @@ import org.apache.hadoop.classification.VisibleForTesting;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.BYTES_PER_GIGABYTE;
-import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.HUNDRED;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.HUNDRED_D;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ZERO;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ZERO_D;
-
-import oshi.SystemInfo;
-import oshi.software.os.OSProcess;
-import oshi.software.os.OperatingSystem;
 
 /**
  * The Improved Read Buffer Manager for Rest AbfsClient.
@@ -1341,9 +1336,9 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
               + "availableHeap=%dGB, committedHeap=%dGB, memoryLoad=%.2f%%, "
               + "scaleDirection=%s, maxCpuUtilization=%.2f%%",
           currentPoolSize, maxPoolSize, activeThreads,
-          idleThreads, jvmCpuLoad * HUNDRED, systemCpuUtilization * HUNDRED,
+          idleThreads, jvmCpuLoad * HUNDRED_D, systemCpuUtilization * HUNDRED_D,
           availableHeapGB, committedHeapGB, memoryLoad,
-          lastScaleDirection, maxCpuUtilization * HUNDRED
+          lastScaleDirection, maxCpuUtilization * HUNDRED_D
       );
     }
   }
