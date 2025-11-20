@@ -292,7 +292,7 @@ public final class FileSystemConfigurations {
   /**
    * Whether dynamic write thread pool adjustment is enabled by default.
    */
-  public static final boolean DEFAULT_WRITE_DYNAMIC_THREADPOOL_ENABLEMENT = true;
+  public static final boolean DEFAULT_WRITE_DYNAMIC_THREADPOOL_ENABLEMENT = false;
 
   /**
    * Default keep-alive time (in milliseconds) for write thread pool threads.
