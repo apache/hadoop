@@ -1096,10 +1096,10 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
    * @return committed heap memory in bytes
    */
   @VisibleForTesting
-  public long getCommittedHeapMemory() {
+  public double getCommittedHeapMemory() {
     MemoryMXBean osBean = ManagementFactory.getMemoryMXBean();
     MemoryUsage memoryUsage = osBean.getHeapMemoryUsage();
-    return memoryUsage.getCommitted();
+    return (double) memoryUsage.getCommitted() / BYTES_PER_GIGABYTE;
   }
 
   /**
@@ -1244,8 +1244,8 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
     private final int idleThreads;        // Number of threads not executing tasks
     private final double jvmCpuLoad;    // Current JVM CPU utilization (%)
     private final double systemCpuUtilization;  // Current system CPU utilization (%)
-    private final long availableHeapGB;       // Available heap memory (GB)
-    private final long committedHeapGB;  // Total committed heap memory (GB)
+    private final double availableHeapGB;       // Available heap memory (GB)
+    private final double committedHeapGB;  // Total committed heap memory (GB)
     private final double memoryLoad;  // Heap usage ratio (used/committed)
     private final String lastScaleDirection;  // Last resize direction: "I" (increase) or "D" (decrease)
     private final double maxCpuUtilization;  // Peak JVM CPU observed in the current interval
@@ -1272,8 +1272,8 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
     public ReadThreadPoolStats(int currentPoolSize,
         int maxPoolSize, int activeThreads, int idleThreads,
         double jvmCpuLoad,
-        double systemCpuUtilization, long availableHeapGB,
-        long committedHeapGB, double memoryLoad,
+        double systemCpuUtilization, double availableHeapGB,
+        double committedHeapGB, double memoryLoad,
         String lastScaleDirection, double maxCpuUtilization, long jvmProcessId) {
       this.currentPoolSize = currentPoolSize;
       this.maxPoolSize = maxPoolSize;
@@ -1315,12 +1315,12 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
     }
 
     /** @return the available heap memory in gigabytes. */
-    public long getMemoryUtilization() {
+    public double getMemoryUtilization() {
       return availableHeapGB;
     }
 
     /** @return the total committed heap memory in gigabytes */
-    public long getCommittedHeapGB() {
+    public double getCommittedHeapGB() {
       return committedHeapGB;
     }
 
@@ -1378,11 +1378,11 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
       return String.format(
           "currentPoolSize=%d, maxPoolSize=%d, activeThreads=%d, idleThreads=%d, "
               + "jvmCpuLoad=%.2f%%, systemCpuUtilization=%.2f%%, "
-              + "availableHeap=%dGB, committedHeap=%dGB, memoryLoad=%.2f%%, "
+              + "availableHeap=%.2fGB, committedHeap=%.2fGB, memoryLoad=%.2f, "
               + "scaleDirection=%s, maxCpuUtilization=%.2f%%, jvmProcessId=%d",
           currentPoolSize, maxPoolSize, activeThreads,
           idleThreads, jvmCpuLoad * HUNDRED_D, systemCpuUtilization * HUNDRED_D,
-          availableHeapGB, committedHeapGB, memoryLoad,
+          availableHeapGB, committedHeapGB, memoryLoad * HUNDRED_D,
           lastScaleDirection, maxCpuUtilization * HUNDRED_D, jvmProcessId
       );
     }
