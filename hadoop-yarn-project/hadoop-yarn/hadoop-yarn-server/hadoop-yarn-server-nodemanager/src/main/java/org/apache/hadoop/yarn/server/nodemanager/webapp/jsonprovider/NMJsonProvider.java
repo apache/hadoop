@@ -15,6 +15,26 @@ import javax.xml.bind.Unmarshaller;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Type;
 
+/**
+ * MOXy JSON provider for NodeManager WebService.
+ *
+ * <p>This class configures a MOXy JSON provider for the NodeManager REST API endpoints.
+ * The endpoints should be able to provide two types of JSON responses:</p>
+ * <ul>
+ *   <li>
+ *     <b>Wrapped classes</b> – classes whose JSON representation includes a root wrapper element.
+ *   </li>
+ *   <li>
+ *     <b>Unwrapped classes</b> – classes whose JSON representation omits a root wrapper element.
+ *   </li>
+ * </ul>
+ *
+ * <p>This behaviour can be configured by the MarshallerProperties.JSON_INCLUDE_ROOT property.
+ *
+ * By default NodeManager REST API endpoints should include the root wrapper element in the
+ * responses, however there are some exceptions (e.g. ContainerLogsInfoes class) which
+ * was introduced to provide backward-compatibility with the Jersey 1 response format.</p>
+ */
 @Provider
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
