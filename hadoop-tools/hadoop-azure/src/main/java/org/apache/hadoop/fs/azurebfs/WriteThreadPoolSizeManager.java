@@ -720,7 +720,7 @@ public final class WriteThreadPoolSizeManager implements Closeable {
       return String.format(
           "currentPoolSize=%d, maxPoolSize=%d, activeThreads=%d, idleThreads=%d, "
               + "jvmCpuLoad=%.2f%%, systemCpuUtilization=%.2f%%, "
-              + "availableHeap=%.2fGB, committedHeap=%.2fGB, memoryLoad=%.2f, "
+              + "availableHeap=%.2fGB, committedHeap=%.2fGB, memoryLoad=%.2f%%, "
               + "scaleDirection=%s, maxCpuUtilization=%.2f%%, jvmProcessId=%d",
           currentPoolSize, maxPoolSize, activeThreads,
           idleThreads, jvmCpuLoad * HUNDRED_D, systemCpuUtilization * HUNDRED_D,

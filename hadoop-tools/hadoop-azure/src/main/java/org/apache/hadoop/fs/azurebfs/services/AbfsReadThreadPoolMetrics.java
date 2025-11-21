@@ -122,7 +122,7 @@ public class AbfsReadThreadPoolMetrics extends AbstractAbfsStatisticsSource {
     setMetricValue(AbfsReadThreadPoolMetricsEnum.SYSTEM_CPU_UTILIZATION, stats.getSystemCpuUtilization() * HUNDRED_D);
     setMetricValue(AbfsReadThreadPoolMetricsEnum.AVAILABLE_MEMORY, stats.getMemoryUtilization());
     setMetricValue(AbfsReadThreadPoolMetricsEnum.COMMITTED_MEMORY, stats.getCommittedHeapGB());
-    setMetricValue(AbfsReadThreadPoolMetricsEnum.MEMORY_LOAD, stats.getMemoryLoad());
+    setMetricValue(AbfsReadThreadPoolMetricsEnum.MEMORY_LOAD, stats.getMemoryLoad() * HUNDRED_D);
     setMetricValue(AbfsReadThreadPoolMetricsEnum.LAST_SCALE_DIRECTION, stats.getLastScaleDirectionNumeric(stats.getLastScaleDirection()));
     setMetricValue(AbfsReadThreadPoolMetricsEnum.MAX_CPU_UTILIZATION, stats.getMaxCpuUtilization() * HUNDRED_D);
     setMetricValue(AbfsReadThreadPoolMetricsEnum.JVM_PROCESS_ID, stats.getJvmProcessId());

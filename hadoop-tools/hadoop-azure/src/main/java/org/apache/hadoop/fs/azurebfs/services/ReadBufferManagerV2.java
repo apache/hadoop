@@ -1378,7 +1378,7 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
       return String.format(
           "currentPoolSize=%d, maxPoolSize=%d, activeThreads=%d, idleThreads=%d, "
               + "jvmCpuLoad=%.2f%%, systemCpuUtilization=%.2f%%, "
-              + "availableHeap=%.2fGB, committedHeap=%.2fGB, memoryLoad=%.2f, "
+              + "availableHeap=%.2fGB, committedHeap=%.2fGB, memoryLoad=%.2f%%, "
               + "scaleDirection=%s, maxCpuUtilization=%.2f%%, jvmProcessId=%d",
           currentPoolSize, maxPoolSize, activeThreads,
           idleThreads, jvmCpuLoad * HUNDRED_D, systemCpuUtilization * HUNDRED_D,
@@ -1401,7 +1401,7 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
    */
   synchronized ReadThreadPoolStats getCurrentStats(double jvmCpuLoad, double maxCpuUtilization) {
     if (workerPool == null) {
-      return new ReadThreadPoolStats(ZERO, ZERO, ZERO, ZERO, ZERO_D, ZERO_D, ZERO, ZERO, ZERO_D, EMPTY_STRING, ZERO_D, ZERO);
+      return new ReadThreadPoolStats(ZERO, ZERO, ZERO, ZERO, ZERO_D, ZERO_D, ZERO_D, ZERO_D, ZERO_D, EMPTY_STRING, ZERO_D, ZERO);
     }
 
     ThreadPoolExecutor exec = this.workerPool;
