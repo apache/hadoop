@@ -429,6 +429,7 @@ public final class WriteThreadPoolSizeManager implements Closeable {
    * @return the adjusted (reduced) pool size based on CPU and memory conditions.
    */
   private int calculateReducedPoolSizeHighCPU(int currentPoolSize, double memoryLoad) {
+    LOG.debug("The high cpu memory load is {}", memoryLoad);
     if (memoryLoad > highMemoryThreshold) {
       LOG.debug("High CPU & high memory load ({}). Aggressive reduction: current={}, new={}",
           memoryLoad, currentPoolSize, currentPoolSize / HIGH_CPU_LOW_MEMORY_REDUCTION_FACTOR);
@@ -451,6 +452,7 @@ public final class WriteThreadPoolSizeManager implements Closeable {
    * @return the adjusted (reduced) pool size based on medium CPU and memory conditions.
    */
   private int calculateReducedPoolSizeMediumCPU(int currentPoolSize, double memoryLoad) {
+    LOG.debug("The medium cpu memory load is {}", memoryLoad);
     if (memoryLoad > highMemoryThreshold) {
       int reduced = Math.max(initialPoolSize, currentPoolSize - currentPoolSize / MEDIUM_CPU_LOW_MEMORY_REDUCTION_FACTOR);
       LOG.debug("Medium CPU & high memory load ({}). Reducing: current={}, new={}",
@@ -473,6 +475,7 @@ public final class WriteThreadPoolSizeManager implements Closeable {
    * @return the adjusted (increased or decreased) pool size based on CPU and memory conditions.
    */
   private int calculateIncreasedPoolSizeLowCPU(int currentPoolSize, double memoryLoad) {
+    LOG.debug("The low cpu memory load is {}", memoryLoad);
     if (memoryLoad <= lowMemoryThreshold) {
       int increased = Math.min(maxThreadPoolSize, (int) (currentPoolSize * LOW_CPU_POOL_SIZE_INCREASE_FACTOR));
       LOG.debug("Low CPU & low memory load ({}). Increasing: current={}, new={}",
