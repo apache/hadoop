@@ -24,6 +24,8 @@ import java.nio.file.Files;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
+
+import org.apache.hadoop.test.AbstractHadoopTestBase;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
@@ -33,7 +35,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
-import static org.junit.jupiter.api.Timeout.ThreadMode.SEPARATE_THREAD;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -80,7 +81,7 @@ import org.junit.jupiter.api.Timeout;
 
 import org.glassfish.jersey.jettison.internal.entity.JettisonObjectProvider;
 
-public class TestRMHA {
+public class TestRMHA extends AbstractHadoopTestBase {
   private static final Logger LOG = LoggerFactory.getLogger(TestRMHA.class);
   private Configuration configuration;
   private MockRM rm = null;
@@ -476,7 +477,6 @@ public class TestRMHA {
   }
 
   @Test
-  @Timeout(value=60, unit = TimeUnit.SECONDS, threadMode = SEPARATE_THREAD)
   public void testTransitionedToStandbyShouldNotHang() throws Exception {
     configuration.setBoolean(YarnConfiguration.AUTO_FAILOVER_ENABLED, false);
     Configuration conf = new YarnConfiguration(configuration);
@@ -613,7 +613,7 @@ public class TestRMHA {
   }
 
   @Test
-  @Timeout(value = 9000) // FIXME that's more than two hours
+  @Timeout(value = 10, unit = TimeUnit.MINUTES)
   public void testTransitionedToActiveRefreshFail() throws Exception {
     configuration.setBoolean(YarnConfiguration.AUTO_FAILOVER_ENABLED, false);
     rm = new MockRM(configuration) {
