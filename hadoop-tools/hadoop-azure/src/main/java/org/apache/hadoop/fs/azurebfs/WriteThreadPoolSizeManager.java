@@ -364,6 +364,7 @@ public final class WriteThreadPoolSizeManager implements Closeable {
       ThreadPoolExecutor executor = (ThreadPoolExecutor) this.boundedThreadPool;
       int currentPoolSize = executor.getMaximumPoolSize();
       double memoryLoad = getMemoryLoad();
+      LOG.debug("The memory load is {}", memoryLoad);
       LOG.debug("Current CPU Utilization: {}", cpuUtilization);
       if (cpuUtilization > (abfsConfiguration.getWriteHighCpuThreshold()/HUNDRED_D)) {
         newMaxPoolSize = calculateReducedPoolSizeHighCPU(currentPoolSize, memoryLoad);
@@ -591,7 +592,7 @@ public final class WriteThreadPoolSizeManager implements Closeable {
     private final double systemCpuUtilization;  // Current system CPU utilization (%)
     private final double availableHeapGB;       // Available heap memory (GB)
     private final double committedHeapGB;  // Total committed heap memory (GB)
-    private final double memoryLoad;  // Heap usage ratio (used/committed)
+    private final double memoryLoad;  // Heap usage ratio (used/max)
     private final String lastScaleDirection;  // Last resize direction: "I" (increase) or "D" (decrease)
     private final double maxCpuUtilization;  // Peak JVM CPU observed in the current interval
     private final long jvmProcessId;   // JVM Process ID
@@ -608,7 +609,7 @@ public final class WriteThreadPoolSizeManager implements Closeable {
      * @param systemCpuUtilization the current system-wide CPU utilization (0.0–1.0)
      * @param availableHeapGB the available heap memory in gigabytes
      * @param committedHeapGB the committed heap memory in gigabytes
-     * @param memoryLoad the JVM memory load (used / committed)
+     * @param memoryLoad the JVM memory load (used / max)
      * @param lastScaleDirection the last scaling action performed: "I" (increase),
      * "D" (decrease), or empty if no scaling occurred
      * @param maxCpuUtilization the peak JVM CPU utilization observed during this interval
@@ -748,7 +749,7 @@ public final class WriteThreadPoolSizeManager implements Closeable {
 
     if (boundedThreadPool == null) {
       return new WriteThreadPoolStats(
-          ZERO, ZERO, ZERO, ZERO, ZERO_D, ZERO_D, ZERO, ZERO, ZERO_D, EMPTY_STRING, ZERO_D, ZERO);
+          ZERO, ZERO, ZERO, ZERO, ZERO_D, ZERO_D, ZERO_D, ZERO_D, ZERO_D, EMPTY_STRING, ZERO_D, ZERO);
     }
 
     ThreadPoolExecutor exec = (ThreadPoolExecutor) this.boundedThreadPool;

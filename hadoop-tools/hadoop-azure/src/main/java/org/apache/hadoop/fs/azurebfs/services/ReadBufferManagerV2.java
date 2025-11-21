@@ -1263,7 +1263,7 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
      * @param systemCpuUtilization the current system-wide CPU utilization (0.0–1.0)
      * @param availableHeapGB the available heap memory in gigabytes
      * @param committedHeapGB the committed heap memory in gigabytes
-     * @param memoryLoad the JVM memory load (used / committed)
+     * @param memoryLoad the JVM memory load (used / max)
      * @param lastScaleDirection the last scaling action performed: "I" (increase),
      * "D" (decrease), or empty if no scaling occurred
      * @param maxCpuUtilization the peak JVM CPU utilization observed during this interval
@@ -1324,7 +1324,7 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
       return committedHeapGB;
     }
 
-    /** @return the current JVM memory load (used / committed) as a value between 0.0 and 1.0 */
+    /** @return the current JVM memory load (used / max) as a value between 0.0 and 1.0 */
     public double getMemoryLoad() {
       return memoryLoad;
     }
