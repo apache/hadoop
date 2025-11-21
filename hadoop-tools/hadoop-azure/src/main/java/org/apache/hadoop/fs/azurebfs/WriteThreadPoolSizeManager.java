@@ -49,7 +49,6 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.MEDIUM_H
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.BYTES_PER_GIGABYTE;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.HIGH_CPU_LOW_MEMORY_REDUCTION_FACTOR;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.HIGH_CPU_REDUCTION_FACTOR;
-import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.HUNDRED;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.HUNDRED_D;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.LOW_CPU_HIGH_MEMORY_DECREASE_FACTOR;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.LOW_CPU_POOL_SIZE_INCREASE_FACTOR;
@@ -88,17 +87,15 @@ public final class WriteThreadPoolSizeManager implements Closeable {
   private final AbfsConfiguration abfsConfiguration;
   /* Metrics collector for monitoring the performance of the ABFS write thread pool.  */
   private final AbfsWriteThreadPoolMetrics writeThreadPoolMetrics;
-  /* Last recorded CPU time used for computing CPU utilization deltas.  */
-  private static long lastCpuTime = 0;
-  /* Last recorded system time used for utilization calculations.  */
-  private static long lastTime = 0;
   /* Flag indicating if CPU monitoring has started. */
   private volatile boolean isMonitoringStarted = false;
   /* Tracks the last scale direction applied, or empty if none. */
   private volatile String lastScaleDirection = EMPTY_STRING;
   /* Maximum CPU utilization observed during the monitoring interval. */
   private volatile double maxCpuUtilization = 0.0;
+  /** High memory usage threshold used to trigger thread pool downscaling. */
   private final double highMemoryThreshold;
+  /** Low memory usage threshold used to allow thread pool upscaling. */
   private final double lowMemoryThreshold;
 
   /**
@@ -351,7 +348,7 @@ public final class WriteThreadPoolSizeManager implements Closeable {
   double getMemoryLoad() {
     MemoryMXBean osBean = ManagementFactory.getMemoryMXBean();
     MemoryUsage memoryUsage = osBean.getHeapMemoryUsage();
-    return (double) memoryUsage.getUsed() / memoryUsage.getCommitted();
+    return (double) memoryUsage.getUsed() / memoryUsage.getMax();
   }
 
   /**
@@ -359,6 +356,7 @@ public final class WriteThreadPoolSizeManager implements Closeable {
    * and available heap memory relative to the initially available heap.
    *
    * @param cpuUtilization Current system CPU utilization (0.0 to 1.0)
+   *  @throws InterruptedException if the resizing operation is interrupted while acquiring the lock
    */
   public void adjustThreadPoolSizeBasedOnCPU(double cpuUtilization) throws InterruptedException {
     lock.lock();
@@ -367,7 +365,6 @@ public final class WriteThreadPoolSizeManager implements Closeable {
       int currentPoolSize = executor.getMaximumPoolSize();
       double memoryLoad = getMemoryLoad();
       LOG.debug("Current CPU Utilization: {}", cpuUtilization);
-
       if (cpuUtilization > (abfsConfiguration.getWriteHighCpuThreshold()/HUNDRED_D)) {
         newMaxPoolSize = calculateReducedPoolSizeHighCPU(currentPoolSize, memoryLoad);
       } else if (cpuUtilization > (abfsConfiguration.getWriteMediumCpuThreshold()/HUNDRED_D)) {
@@ -737,7 +734,7 @@ public final class WriteThreadPoolSizeManager implements Closeable {
         getSystemCpuUtilization(),     // System CPU usage (ratio)
         getAvailableHeapMemory(),      // Free heap (GB)
         getCommittedHeapMemory(),      // Committed heap (GB)
-        memoryLoad,                    // used/committed
+        memoryLoad,                    // used/max
         currentScaleDirection,         // "I", "D", or ""
         maxCpuUtilization              // Peak JVM CPU usage so far
     );

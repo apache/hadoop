@@ -632,6 +632,8 @@
                     <exclude>**/azurebfs/ITestSmallWriteOptimization.java</exclude>
                     <exclude>**/azurebfs/ITestAbfsStreamStatistics*.java</exclude>
                     <exclude>**/azurebfs/services/ITestReadBufferManager.java</exclude>
+                    <exclude>**/azurebfs/WriteThreadPoolSizeManager.java</exclude>
+                    <exclude>**/azurebfs/services/ReadBufferManagerV2.java</exclude>
                     <exclude>**/azurebfs/commit/*.java</exclude>
                   </excludes>
 
@@ -672,6 +674,8 @@
                     <include>**/azurebfs/extensions/ITestAbfsDelegationTokens.java</include>
                     <include>**/azurebfs/ITestSmallWriteOptimization.java</include>
                     <include>**/azurebfs/services/ITestReadBufferManager.java</include>
+                    <include>**/azurebfs/WriteThreadPoolSizeManager.java</include>
+                    <include>**/azurebfs/services/ReadBufferManagerV2.java</include>
                     <include>**/azurebfs/ITestAbfsStreamStatistics*.java</include>
                     <include>**/azurebfs/commit/*.java</include>
                   </includes>

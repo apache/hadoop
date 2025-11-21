@@ -29,7 +29,6 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.enums.AbfsReadThreadPoolMetricsEnum;
-import org.apache.hadoop.fs.azurebfs.enums.AbfsWriteThreadPoolMetricsEnum;
 import org.apache.hadoop.fs.azurebfs.enums.StatisticTypeEnum;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 
@@ -131,8 +130,9 @@ public class AbfsReadThreadPoolMetrics extends AbstractAbfsStatisticsSource {
   }
 
   /**
-   * Returns a flag indicating whether the metrics have been updated at least once.
-   * Used to verify if metric updates have occurred since initialization.
+   * Indicates whether the metrics have been updated at least once since initialization.
+   *
+   * @return {@code true} if an update has occurred, {@code false} otherwise
    */
   public boolean getUpdatedAtLeastOnce() {
     return updatedAtLeastOnce.get();

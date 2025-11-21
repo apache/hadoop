@@ -303,7 +303,7 @@ public class AbfsCountersImpl implements AbfsCounters {
    */
   @Override
   public AbfsWriteThreadPoolMetrics getAbfsWriteThreadPoolMetrics() {
-    return abfsWriteThreadPoolMetrics;
+    return abfsWriteThreadPoolMetrics != null ? abfsWriteThreadPoolMetrics : null;
   }
 
   /**
@@ -311,7 +311,7 @@ public class AbfsCountersImpl implements AbfsCounters {
    */
   @Override
   public AbfsReadThreadPoolMetrics getAbfsReadThreadPoolMetrics() {
-    return abfsReadThreadPoolMetrics;
+    return abfsReadThreadPoolMetrics != null ? abfsReadThreadPoolMetrics : null;
   }
 
   /**

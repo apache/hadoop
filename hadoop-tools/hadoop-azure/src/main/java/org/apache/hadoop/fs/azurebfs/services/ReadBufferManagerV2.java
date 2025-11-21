@@ -1050,7 +1050,7 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
   double getMemoryLoad() {
     MemoryMXBean osBean = ManagementFactory.getMemoryMXBean();
     MemoryUsage memoryUsage = osBean.getHeapMemoryUsage();
-    return (double) memoryUsage.getUsed() / memoryUsage.getCommitted();
+    return (double) memoryUsage.getUsed() / memoryUsage.getMax();
   }
 
   /**
@@ -1376,7 +1376,7 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
         getSystemCpuLoad(),     // System CPU usage (ratio)
         getAvailableHeapMemory(),      // Free heap (GB)
         getCommittedHeapMemory(),      // Committed heap (GB)
-        getMemoryLoad(),                    // used/committed
+        getMemoryLoad(),                    // used/max
         currentScaleDirection,         // "I", "D", or ""
         maxCpuUtilization              // Peak JVM CPU usage so far
     );
