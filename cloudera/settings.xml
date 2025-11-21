@@ -13,7 +13,7 @@
                </snapshots>
                <id>hortonworks.private</id>
                <name>Hortonworks Private Dependencies</name>
-               <url>http://nexus.eng.cloudera.com/repository/public</url>
+               <url>https://nexus.eng.cloudera.com/repository/public</url>
             </repository>
          </repositories>
          <pluginRepositories>
@@ -25,7 +25,7 @@
                <snapshots>
                   <enabled>true</enabled>
                </snapshots>
-               <url>http://nexus.eng.cloudera.com/repository/public</url>
+               <url>https://nexus.eng.cloudera.com/repository/public</url>
             </pluginRepository>
          </pluginRepositories>
       </profile>

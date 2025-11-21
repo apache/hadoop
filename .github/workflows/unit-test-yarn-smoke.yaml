@@ -34,5 +34,4 @@ jobs:
         env:
           USER: "jenkins"
           DOCKER_INTERACTIVE_RUN: ""
-          SKIP_MOUNT_M2: "true"
-        run: ./start-build-env.sh cloudera/unit-tests-yarn-smoke.sh
+        run: ./start-build-env.sh ubuntu_24 cloudera/unit-tests-yarn-smoke.sh
