@@ -84,6 +84,7 @@ import org.apache.hadoop.hdfs.server.federation.resolver.ActiveNamenodeResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamespaceInfo;
 import org.apache.hadoop.hdfs.server.federation.resolver.FileSubclusterResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.MountTableResolver;
+import org.apache.hadoop.hdfs.server.federation.resolver.PathLocation;
 import org.apache.hadoop.hdfs.server.federation.resolver.RemoteLocation;
 import org.apache.hadoop.hdfs.server.federation.resolver.RouterResolveException;
 import org.apache.hadoop.hdfs.server.federation.router.async.AsyncErasureCoding;
@@ -2001,8 +2002,9 @@ public class RouterClientProtocol implements ClientProtocol {
       minOfMax = Math.min(minOfMax, max);
     }
     // Concatenate all entries into one result, sorted by inodeId
-    List<OpenFileEntry> routerEntries = new ArrayList<>();
     boolean hasMore = false;
+    Map<String, OpenFileEntry> routerEntries = new HashMap<>();
+    Map<String, RemoteLocation> resolvedPaths = new HashMap<>();
     for (Map.Entry<RemoteLocation, BatchedEntries> entry : results.entrySet()) {
       BatchedEntries nsEntries = entry.getValue();
       hasMore |= nsEntries.hasMore();
@@ -2012,16 +2014,33 @@ public class RouterClientProtocol implements ClientProtocol {
           hasMore = true;
           break;
         }
-        RemoteLocation loc = entry.getKey();
-        String routerPath = ofe.getFilePath().replaceFirst(loc.getDest(), loc.getSrc());;
+        RemoteLocation remoteLoc = entry.getKey();
+        String routerPath = ofe.getFilePath().replaceFirst(remoteLoc.getDest(), remoteLoc.getSrc());;
         OpenFileEntry newEntry =
             new OpenFileEntry(ofe.getId(), routerPath, ofe.getClientName(),
                 ofe.getClientMachine());
-        routerEntries.add(newEntry);
+        // An existing file already resolves to the same path.
+        // Resolve according to mount table and keep the best path.
+        if (resolvedPaths.containsKey(routerPath)) {
+          PathLocation pathLoc = subclusterResolver.getDestinationForPath(routerPath);
+          List<String> namespaces = pathLoc.getDestinations().stream().map(
+              RemoteLocation::getNameserviceId).collect(
+                  Collectors.toList());
+          int existingIdx = namespaces.indexOf(resolvedPaths.get(routerPath).getNameserviceId());
+          int currentIdx = namespaces.indexOf(remoteLoc.getNameserviceId());
+          if (currentIdx < existingIdx && currentIdx != -1) {
+            routerEntries.put(routerPath, newEntry);
+            resolvedPaths.put(routerPath, remoteLoc);
+          }
+        } else {
+          routerEntries.put(routerPath, newEntry);
+          resolvedPaths.put(routerPath, remoteLoc);
+        }
       }
     }
-    routerEntries.sort(Comparator.comparingLong(OpenFileEntry::getId));
-    return new BatchedRemoteIterator.BatchedListEntries<>(routerEntries, hasMore);
+    List<OpenFileEntry> entryList = new ArrayList<>(routerEntries.values());
+    entryList.sort(Comparator.comparingLong(OpenFileEntry::getId));
+    return new BatchedRemoteIterator.BatchedListEntries<>(entryList, hasMore);
   }
 
   @Override

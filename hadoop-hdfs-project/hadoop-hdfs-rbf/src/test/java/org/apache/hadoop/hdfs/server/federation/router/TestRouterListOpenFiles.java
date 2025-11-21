@@ -157,11 +157,12 @@ public class TestRouterListOpenFiles {
     result =
         routerProtocol.listOpenFiles(0, EnumSet.of(OpenFilesIterator.OpenFilesType.ALL_OPEN_FILES),
             testPath);
-    // Should list both entries
-    assertEquals(2, result.size());
-    assertEquals(testPath + "/file2", result.get(0).getFilePath());
-    assertEquals(testPath + "/file2", result.get(1).getFilePath());
+    // Should list one file only
+    assertEquals(1, result.size());
+    assertEquals(routerClient.getFileInfo(TEST_DESTINATION_PATH + "/file2").getFileId(),
+        result.get(0).getId());
     ite = routerClient.listOpenFiles(testPath);
+    routerClient.open(testPath + "/file2");
     while (ite.hasNext()) {
       OpenFileEntry ofe = ite.next();
       assertTrue(ofe.getFilePath().equals(testPath + "/file2"));
