@@ -22,8 +22,12 @@ import java.io.DataOutputStream;
 import java.io.File;
 import java.nio.file.Files;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
+
+import org.apache.hadoop.test.AbstractHadoopTestBase;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -78,7 +82,7 @@ import org.junit.jupiter.api.Timeout;
 
 import org.glassfish.jersey.jettison.internal.entity.JettisonObjectProvider;
 
-public class TestRMHA {
+public class TestRMHA extends AbstractHadoopTestBase {
   private static final Logger LOG = LoggerFactory.getLogger(TestRMHA.class);
   private Configuration configuration;
   private MockRM rm = null;
@@ -515,7 +519,7 @@ public class TestRMHA {
     rm.adminService.transitionToActive(requestInfo);
 
     // 3. Try Transition to standby
-    Thread t = new Thread(new Runnable() {
+    Thread t = new SubjectInheritingThread(new Runnable() {
       @Override
       public void run() {
         try {
@@ -610,7 +614,7 @@ public class TestRMHA {
   }
 
   @Test
-  @Timeout(value = 9000)
+  @Timeout(value = 10, unit = TimeUnit.MINUTES)
   public void testTransitionedToActiveRefreshFail() throws Exception {
     configuration.setBoolean(YarnConfiguration.AUTO_FAILOVER_ENABLED, false);
     rm = new MockRM(configuration) {

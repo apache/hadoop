@@ -68,6 +68,7 @@ import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto.Rpc
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.Whitebox;
 import org.apache.hadoop.util.Lists;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -142,9 +143,9 @@ public class TestHASafeMode {
         .getBlockManager());
     assertTrue(nn0.getNamesystem().isInStartupSafeMode());
     LOG.info("enter safemode");
-    new Thread() {
+    new SubjectInheritingThread() {
       @Override
-      public void run() {
+      public void work() {
         try {
           boolean mkdir = fs.mkdirs(test);
           LOG.info("mkdir finished, result is " + mkdir);

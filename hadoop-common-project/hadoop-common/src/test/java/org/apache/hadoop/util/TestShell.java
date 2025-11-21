@@ -41,6 +41,7 @@ import java.util.Map;
 
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 
 import static org.apache.hadoop.util.Shell.*;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
@@ -477,9 +478,9 @@ public class TestShell extends Assertions {
     final ShellCommandExecutor shexc1 = new ShellCommandExecutor(shellCmd);
     final ShellCommandExecutor shexc2 = new ShellCommandExecutor(shellCmd);
 
-    Thread shellThread1 = new Thread() {
+    SubjectInheritingThread shellThread1 = new SubjectInheritingThread() {
       @Override
-      public void run() {
+      public void work() {
         try {
           shexc1.execute();
         } catch(IOException ioe) {
@@ -487,9 +488,9 @@ public class TestShell extends Assertions {
         }
       }
     };
-    Thread shellThread2 = new Thread() {
+    SubjectInheritingThread shellThread2 = new SubjectInheritingThread() {
       @Override
-      public void run() {
+      public void work() {
         try {
           shexc2.execute();
         } catch(IOException ioe) {

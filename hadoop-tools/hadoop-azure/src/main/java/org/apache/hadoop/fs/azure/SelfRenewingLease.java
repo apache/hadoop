@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.azure;
 import org.apache.hadoop.fs.azure.StorageInterface.CloudBlobWrapper;
 
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 
 import com.microsoft.azure.storage.AccessCondition;
 import com.microsoft.azure.storage.StorageException;
@@ -105,7 +106,7 @@ public class SelfRenewingLease {
         }
       }
     }
-    renewer = new Thread(new Renewer());
+    renewer = new SubjectInheritingThread(new Renewer());
 
     // A Renewer running should not keep JVM from exiting, so make it a daemon.
     renewer.setDaemon(true);

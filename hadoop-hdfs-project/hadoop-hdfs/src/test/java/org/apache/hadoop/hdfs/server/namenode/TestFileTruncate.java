@@ -68,6 +68,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.slf4j.event.Level;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -255,7 +256,7 @@ public class TestFileTruncate {
     DataNodeFaultInjector.set(injector);
 
     // Truncate by using different client name.
-    Thread t = new Thread(() -> {
+    Thread t = new SubjectInheritingThread(() -> {
       String hdfsCacheDisableKey = "fs.hdfs.impl.disable.cache";
       boolean originCacheDisable =
           conf.getBoolean(hdfsCacheDisableKey, false);

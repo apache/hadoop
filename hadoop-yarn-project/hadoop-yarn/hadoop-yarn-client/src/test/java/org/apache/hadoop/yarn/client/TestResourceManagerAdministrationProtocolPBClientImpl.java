@@ -26,6 +26,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.service.Service;
 import org.apache.hadoop.service.Service.STATE;
 import org.apache.hadoop.service.ServiceStateChangeListener;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.api.records.DecommissionType;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.factories.RecordFactory;
@@ -97,8 +98,8 @@ public class TestResourceManagerAdministrationProtocolPBClientImpl {
     resourceManager.registerServiceListener(rmStateChangeListener);
 
     resourceManager.init(configuration);
-    new Thread() {
-      public void run() {
+    new SubjectInheritingThread() {
+      public void work() {
         resourceManager.start();
       }
     }.start();

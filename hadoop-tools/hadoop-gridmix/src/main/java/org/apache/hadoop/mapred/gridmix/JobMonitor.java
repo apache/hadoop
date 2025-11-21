@@ -35,6 +35,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.mapred.gridmix.Statistics.JobStats;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.JobStatus;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 
 /**
  * Component accepting submitted, running {@link Statistics.JobStats} and 
@@ -133,14 +134,14 @@ class JobMonitor implements Gridmix.Component<JobStats> {
    * Monitoring thread pulling running jobs from the component and into
    * a queue to be polled for status.
    */
-  private class MonitorThread extends Thread {
+  private class MonitorThread extends SubjectInheritingThread {
 
     public MonitorThread(int i) {
       super("GridmixJobMonitor-" + i);
     }
 
     @Override
-    public void run() {
+    public void work() {
       boolean graceful;
       boolean shutdown;
       while (true) {

@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.security;
 
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -42,7 +43,7 @@ public class TestAuthorizationContext {
   public void testThreadLocalIsolation() throws Exception {
     byte[] mainHeader = "main-thread".getBytes();
     AuthorizationContext.setCurrentAuthorizationHeader(mainHeader);
-    Thread t = new Thread(() -> {
+    SubjectInheritingThread t = new SubjectInheritingThread(() -> {
       Assertions.assertNull(AuthorizationContext.getCurrentAuthorizationHeader());
       byte[] threadHeader = "other-thread".getBytes();
       AuthorizationContext.setCurrentAuthorizationHeader(threadHeader);

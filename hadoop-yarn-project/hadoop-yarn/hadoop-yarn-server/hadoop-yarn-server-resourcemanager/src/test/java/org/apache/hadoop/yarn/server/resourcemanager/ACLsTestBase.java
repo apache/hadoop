@@ -31,6 +31,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.service.Service.STATE;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
@@ -89,8 +90,8 @@ public abstract class ACLsTestBase {
       protected void doSecureLogin() throws IOException {
       }
     };
-    new Thread() {
-      public void run() {
+    new SubjectInheritingThread() {
+      public void work() {
         resourceManager.start();
       };
     }.start();

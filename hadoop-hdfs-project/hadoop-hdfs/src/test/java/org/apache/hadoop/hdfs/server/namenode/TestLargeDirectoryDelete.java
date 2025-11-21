@@ -32,6 +32,7 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.util.Time;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -165,12 +166,12 @@ public class TestLargeDirectoryDelete {
    * implementation class, the thread is notified: other threads can wait
    * for it to terminate
    */
-  private abstract class TestThread extends Thread {
+  private abstract class TestThread extends SubjectInheritingThread {
     volatile Throwable thrown;
     protected volatile boolean live = true;
 
     @Override
-    public void run() {
+    public void work() {
       try {
         execute();
       } catch (Throwable throwable) {

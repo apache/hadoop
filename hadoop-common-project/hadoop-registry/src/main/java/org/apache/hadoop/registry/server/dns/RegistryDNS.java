@@ -29,6 +29,7 @@ import org.apache.hadoop.registry.client.types.ServiceRecord;
 import org.apache.hadoop.registry.client.types.yarn.YarnRegistryAttributes;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xbill.DNS.CNAMERecord;
@@ -174,7 +175,7 @@ public class RegistryDNS extends AbstractService implements DNSOperations,
 
           @Override
           public Thread newThread(Runnable r) {
-            return new Thread(r,
+            return new SubjectInheritingThread(r,
                 "RegistryDNS "
                     + counter.getAndIncrement());
           }

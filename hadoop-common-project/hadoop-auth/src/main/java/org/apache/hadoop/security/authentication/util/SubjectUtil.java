@@ -61,6 +61,9 @@ public final class SubjectUtil {
   private static final int JAVA_SPEC_VER = Math.max(8,
       Integer.parseInt(System.getProperty("java.specification.version").split("\\.")[0]));
 
+  /**
+   * True if the current JVM copies the current JAAS subject into new threads automatically.
+   */
   public static final boolean THREAD_INHERITS_SUBJECT = checkThreadInheritsSubject();
 
   /**

@@ -29,6 +29,7 @@ import java.security.PrivilegedExceptionAction;
 import java.util.Map;
 
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.server.api.protocolrecords.AddToClusterNodeLabelsResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.CheckForDecommissioningNodesResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshAdminAclsResponse;
@@ -235,9 +236,9 @@ public class TestRouterRMAdminService extends BaseRouterRMAdminTest {
      * ClientTestThread is a thread to simulate a client request to get a
      * RMAdminRequestInterceptor for the user.
      */
-    class ClientTestThread extends Thread {
+    class ClientTestThread extends SubjectInheritingThread {
       private RMAdminRequestInterceptor interceptor;
-      @Override public void run() {
+      @Override public void work() {
         try {
           interceptor = pipeline();
         } catch (IOException | InterruptedException e) {

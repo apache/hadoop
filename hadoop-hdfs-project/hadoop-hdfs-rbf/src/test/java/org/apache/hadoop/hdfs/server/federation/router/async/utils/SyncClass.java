@@ -24,6 +24,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
+
 /**
  * SyncClass implements BaseClass, providing a synchronous
  * version of the methods. All operations are performed in a
@@ -186,7 +188,7 @@ public class SyncClass implements BaseClass{
 
   private ExecutorService getExecutorService() {
     return Executors.newFixedThreadPool(2, r -> {
-      Thread t = new Thread(r);
+      SubjectInheritingThread t = new SubjectInheritingThread(r);
       t.setDaemon(true);
       return t;
     });

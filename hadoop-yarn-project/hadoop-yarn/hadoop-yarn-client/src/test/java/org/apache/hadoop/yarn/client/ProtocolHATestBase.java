@@ -23,6 +23,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeoutException;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
@@ -244,8 +245,8 @@ public abstract class ProtocolHATestBase extends ClientBaseWithFixes {
   }
 
   protected Thread createAndStartFailoverThread() {
-    Thread failoverThread = new Thread() {
-      public void run() {
+    SubjectInheritingThread failoverThread = new SubjectInheritingThread() {
+      public void work() {
         keepRunning = true;
         while (keepRunning) {
           if (cluster.getStartFailoverFlag()) {

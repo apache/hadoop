@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.applications.distributedshell;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Container;
@@ -69,7 +70,7 @@ public class TestDSAppMaster {
       threadsLaunched++;
       launchedContainers.add(allocatedContainer.getId());
       yarnShellIds.add(shellId);
-      return new Thread();
+      return new SubjectInheritingThread();
     }
 
     void setNumTotalContainers(int numTotalContainers) {

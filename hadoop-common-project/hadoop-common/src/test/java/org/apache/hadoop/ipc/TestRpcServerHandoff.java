@@ -34,6 +34,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
@@ -116,7 +117,7 @@ public class TestRpcServerHandoff {
           new ClientCallable(serverAddress, conf, requestBytes);
 
       FutureTask<Writable> future = new FutureTask<Writable>(clientCallable);
-      Thread clientThread = new Thread(future);
+      Thread clientThread = new SubjectInheritingThread(future);
       clientThread.start();
 
       server.awaitInvocation();
@@ -146,7 +147,7 @@ public class TestRpcServerHandoff {
           new ClientCallable(serverAddress, conf, requestBytes);
 
       FutureTask<Writable> future = new FutureTask<Writable>(clientCallable);
-      Thread clientThread = new Thread(future);
+      Thread clientThread = new SubjectInheritingThread(future);
       clientThread.start();
 
       server.awaitInvocation();
