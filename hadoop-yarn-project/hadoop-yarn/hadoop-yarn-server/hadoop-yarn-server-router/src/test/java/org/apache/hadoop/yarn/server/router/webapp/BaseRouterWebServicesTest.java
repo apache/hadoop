@@ -36,7 +36,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ActivitiesInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppActivitiesInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptsInfoRM;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppPriority;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppQueue;
@@ -374,7 +374,7 @@ public abstract class BaseRouterWebServicesTest {
         null, createHttpServletRequest(user), null);
   }
 
-  protected AppAttemptsInfo getAppAttempts(String user)
+  protected AppAttemptsInfoRM getAppAttempts(String user)
       throws IOException, InterruptedException {
     return routerWebService.getAppAttempts(
         createHttpServletRequest(user), null);

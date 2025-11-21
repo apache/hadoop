@@ -99,8 +99,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWebServiceProtocol;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ActivitiesInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppActivitiesInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptInfoRM;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptsInfoRM;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppPriority;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppQueue;
@@ -707,12 +707,12 @@ public class TestRouterWebServicesREST {
 
     String appId = submitApplication();
 
-    List<AppAttemptsInfo> responses = performGetCalls(
+    List<AppAttemptsInfoRM> responses = performGetCalls(
         RM_WEB_SERVICE_PATH + format(APPS_APPID_APPATTEMPTS, appId),
-        AppAttemptsInfo.class, null, null);
+        AppAttemptsInfoRM.class, null, null);
 
-    AppAttemptsInfo routerResponse = responses.get(0);
-    AppAttemptsInfo rmResponse = responses.get(1);
+    AppAttemptsInfoRM routerResponse = responses.get(0);
+    AppAttemptsInfoRM rmResponse = responses.get(1);
 
     assertNotNull(routerResponse);
     assertNotNull(rmResponse);
@@ -1287,11 +1287,11 @@ public class TestRouterWebServicesREST {
     String appId = submitApplication();
     String pathAttempts = RM_WEB_SERVICE_PATH + format(
         APPS_APPID_APPATTEMPTS_APPATTEMPTID, appId, getAppAttempt(appId));
-    List<AppAttemptInfo> responses = performGetCalls(
-        pathAttempts, AppAttemptInfo.class, null, null);
+    List<AppAttemptInfoRM> responses = performGetCalls(
+        pathAttempts, AppAttemptInfoRM.class, null, null);
 
-    AppAttemptInfo routerResponse = responses.get(0);
-    AppAttemptInfo rmResponse = responses.get(1);
+    AppAttemptInfoRM routerResponse = responses.get(0);
+    AppAttemptInfoRM rmResponse = responses.get(1);
 
     assertNotNull(routerResponse);
     assertNotNull(rmResponse);
@@ -1450,7 +1450,7 @@ public class TestRouterWebServicesREST {
     Response response = toRM.
         request(APPLICATION_XML).
         get(Response.class);
-    AppAttemptsInfo ci = response.readEntity(AppAttemptsInfo.class);
+    AppAttemptsInfoRM ci = response.readEntity(AppAttemptsInfoRM.class);
     return ci.getAttempts().get(0).getAppAttemptId();
   }
 

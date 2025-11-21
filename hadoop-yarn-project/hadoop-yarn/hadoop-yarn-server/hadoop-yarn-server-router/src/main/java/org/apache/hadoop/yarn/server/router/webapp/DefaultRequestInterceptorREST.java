@@ -36,7 +36,7 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ActivitiesInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppActivitiesInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptsInfoRM;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppPriority;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppQueue;
@@ -519,9 +519,9 @@ public class DefaultRequestInterceptorREST
   }
 
   @Override
-  public AppAttemptsInfo getAppAttempts(HttpServletRequest hsr, String appId) {
+  public AppAttemptsInfoRM getAppAttempts(HttpServletRequest hsr, String appId) {
     return RouterWebServiceUtil.genericForward(webAppAddress, hsr,
-        AppAttemptsInfo.class, HTTPMethods.GET, RMWSConsts.RM_WEB_SERVICE_PATH
+        AppAttemptsInfoRM.class, HTTPMethods.GET, RMWSConsts.RM_WEB_SERVICE_PATH
             + RMWSConsts.APPS + "/" + appId + "/" + RMWSConsts.APPATTEMPTS,
         null, null, getConf(), client);
   }

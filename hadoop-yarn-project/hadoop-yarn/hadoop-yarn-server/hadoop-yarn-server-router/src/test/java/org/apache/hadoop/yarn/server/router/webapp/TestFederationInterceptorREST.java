@@ -90,8 +90,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsInfo
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.LabelsToNodesInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptsInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptsInfoRM;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptInfoRM;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppTimeoutInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppTimeoutsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.StatisticsItemInfo;
@@ -865,21 +865,21 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
 
     Assert.assertNotNull(interceptor.submitApplication(context, null));
 
-    AppAttemptsInfo appAttemptsInfo = interceptor.getAppAttempts(null, appId.toString());
+    AppAttemptsInfoRM appAttemptsInfo = interceptor.getAppAttempts(null, appId.toString());
     Assert.assertNotNull(appAttemptsInfo);
 
-    ArrayList<AppAttemptInfo> attemptLists = appAttemptsInfo.getAttempts();
+    ArrayList<AppAttemptInfoRM> attemptLists = appAttemptsInfo.getAttempts();
     Assert.assertNotNull(appAttemptsInfo);
     Assert.assertEquals(2, attemptLists.size());
 
-    AppAttemptInfo attemptInfo1 = attemptLists.get(0);
+    AppAttemptInfoRM attemptInfo1 = attemptLists.get(0);
     Assert.assertNotNull(attemptInfo1);
     Assert.assertEquals(0, attemptInfo1.getAttemptId());
     Assert.assertEquals("AppAttemptId_0", attemptInfo1.getAppAttemptId());
     Assert.assertEquals("LogLink_0", attemptInfo1.getLogsLink());
     Assert.assertEquals(1659621705L, attemptInfo1.getFinishedTime());
 
-    AppAttemptInfo attemptInfo2 = attemptLists.get(1);
+    AppAttemptInfoRM attemptInfo2 = attemptLists.get(1);
     Assert.assertNotNull(attemptInfo2);
     Assert.assertEquals(0, attemptInfo2.getAttemptId());
     Assert.assertEquals("AppAttemptId_1", attemptInfo2.getAppAttemptId());

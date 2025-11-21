@@ -42,7 +42,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptMetrics;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptInfoRM;
 import org.apache.hadoop.yarn.server.webapp.AppBlock;
 import org.apache.hadoop.yarn.util.StringHelper;
 import org.apache.hadoop.yarn.util.resource.Resources;
@@ -141,8 +141,8 @@ public class RMAppBlock extends AppBlock{
       if (rmAppAttempt == null) {
         continue;
       }
-      AppAttemptInfo attemptInfo =
-          new AppAttemptInfo(this.rm, rmAppAttempt, true, rmApp.getUser(),
+      AppAttemptInfoRM attemptInfo =
+          new AppAttemptInfoRM(this.rm, rmAppAttempt, true, rmApp.getUser(),
               WebAppUtils.getHttpSchemePrefix(conf));
       Set<String> nodes = rmAppAttempt.getBlacklistedNodes();
       // nodes which are blacklisted by the application

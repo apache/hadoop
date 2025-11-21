@@ -42,8 +42,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppActivitiesInf
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationStatisticsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.StatisticsItemInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NewApplication;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptsInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptsInfoRM;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptInfoRM;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppState;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppPriority;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppQueue;
@@ -391,11 +391,11 @@ public class TestYarnFederationWithFairScheduler {
   public void testAppAttempt() throws Exception {
     String appId = testFederationSubCluster.submitApplication(ROUTER_WEB_ADDRESS);
     assertNotNull(appId);
-    AppAttemptsInfo appAttemptsInfo = TestFederationSubCluster.performGetCalls(ROUTER_WEB_ADDRESS,
+    AppAttemptsInfoRM appAttemptsInfo = TestFederationSubCluster.performGetCalls(ROUTER_WEB_ADDRESS,
         RM_WEB_SERVICE_PATH + format(APPS_APPID_APPATTEMPTS, appId),
-        AppAttemptsInfo.class, null, null);
+        AppAttemptsInfoRM.class, null, null);
     assertNotNull(appAttemptsInfo);
-    ArrayList<AppAttemptInfo> attempts = appAttemptsInfo.getAttempts();
+    ArrayList<AppAttemptInfoRM> attempts = appAttemptsInfo.getAttempts();
     assertNotNull(attempts);
     assertEquals(1, attempts.size());
   }

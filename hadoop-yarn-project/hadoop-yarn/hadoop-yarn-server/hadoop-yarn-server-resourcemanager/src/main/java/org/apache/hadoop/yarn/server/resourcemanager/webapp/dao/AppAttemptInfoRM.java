@@ -37,7 +37,7 @@ import static org.apache.hadoop.yarn.util.StringHelper.PATH_JOINER;
 
 @XmlRootElement(name = "appAttempt")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class AppAttemptInfo {
+public class AppAttemptInfoRM {
 
   protected int id;
   protected long startTime;
@@ -52,10 +52,10 @@ public class AppAttemptInfo {
   private String exportPorts;
   private RMAppAttemptState appAttemptState;
 
-  public AppAttemptInfo() {
+  public AppAttemptInfoRM() {
   }
 
-  public AppAttemptInfo(ResourceManager rm, RMAppAttempt attempt,
+  public AppAttemptInfoRM(ResourceManager rm, RMAppAttempt attempt,
       Boolean hasAccess, String user, String schemePrefix) {
     this.startTime = 0;
     this.containerId = "";

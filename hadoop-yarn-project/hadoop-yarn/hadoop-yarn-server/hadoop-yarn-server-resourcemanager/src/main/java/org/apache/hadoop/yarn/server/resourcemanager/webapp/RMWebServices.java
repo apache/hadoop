@@ -50,7 +50,6 @@ import javax.ws.rs.DELETE;
 import javax.ws.rs.DefaultValue;
 import javax.ws.rs.FormParam;
 import javax.ws.rs.GET;
-import javax.ws.rs.HeaderParam;
 import javax.ws.rs.POST;
 import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
@@ -163,8 +162,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedule
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ActivitiesInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppActivitiesInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptInfoRM;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptsInfoRM;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppPriority;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppQueue;
@@ -1178,7 +1177,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
   @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
       MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
   @Override
-  public AppAttemptsInfo getAppAttempts(@Context HttpServletRequest hsr,
+  public AppAttemptsInfoRM getAppAttempts(@Context HttpServletRequest hsr,
       @PathParam(RMWSConsts.APPID) String appId) {
     initForReadableEndpoints();
 
@@ -1188,9 +1187,9 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
       throw new NotFoundException("app with id: " + appId + " not found");
     }
 
-    AppAttemptsInfo appAttemptsInfo = new AppAttemptsInfo();
+    AppAttemptsInfoRM appAttemptsInfo = new AppAttemptsInfoRM();
     for (RMAppAttempt attempt : app.getAppAttempts().values()) {
-      AppAttemptInfo attemptInfo = new AppAttemptInfo(rm, attempt,
+      AppAttemptInfoRM attemptInfo = new AppAttemptInfoRM(rm, attempt,
           hasAccess(app, hsr), app.getUser(), hsr.getScheme() + "://");
       appAttemptsInfo.add(attemptInfo);
     }

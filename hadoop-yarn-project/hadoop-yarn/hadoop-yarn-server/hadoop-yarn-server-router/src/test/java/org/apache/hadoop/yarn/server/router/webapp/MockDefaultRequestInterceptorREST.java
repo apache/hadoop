@@ -122,7 +122,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceOptionInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptsInfoRM;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppTimeoutInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppTimeoutsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppPriority;
@@ -169,7 +169,6 @@ import org.slf4j.LoggerFactory;
 import static org.apache.hadoop.yarn.server.router.webapp.BaseRouterWebServicesTest.DEDICATED_QUEUE_PATH;
 import static org.apache.hadoop.yarn.server.router.webapp.BaseRouterWebServicesTest.DEFAULT_QUEUE_PATH;
 import static org.apache.hadoop.yarn.server.router.webapp.BaseRouterWebServicesTest.QUEUE_DEFAULT;
-import static org.apache.hadoop.yarn.server.router.webapp.BaseRouterWebServicesTest.QUEUE_DEFAULT_FULL;
 import static org.apache.hadoop.yarn.server.router.webapp.BaseRouterWebServicesTest.QUEUE_DEDICATED;
 import static org.apache.hadoop.yarn.server.router.webapp.BaseRouterWebServicesTest.QUEUE_DEDICATED_FULL;
 import static org.apache.hadoop.yarn.server.router.webapp.BaseRouterWebServicesTest.ROOT_QUEUE_PATH;
@@ -591,7 +590,7 @@ public class MockDefaultRequestInterceptorREST
   }
 
   @Override
-  public AppAttemptsInfo getAppAttempts(HttpServletRequest hsr, String appId) {
+  public AppAttemptsInfoRM getAppAttempts(HttpServletRequest hsr, String appId) {
     if (!isRunning) {
       throw new RuntimeException("RM is stopped");
     }
@@ -601,7 +600,7 @@ public class MockDefaultRequestInterceptorREST
       throw new NotFoundException("app with id: " + appId + " not found");
     }
 
-    AppAttemptsInfo infos = new AppAttemptsInfo();
+    AppAttemptsInfoRM infos = new AppAttemptsInfoRM();
     infos.add(TestRouterWebServiceUtil.generateAppAttemptInfo(0));
     infos.add(TestRouterWebServiceUtil.generateAppAttemptInfo(1));
     return infos;

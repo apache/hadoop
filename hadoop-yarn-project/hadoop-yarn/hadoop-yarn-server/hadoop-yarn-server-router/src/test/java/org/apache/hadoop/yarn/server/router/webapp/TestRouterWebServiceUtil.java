@@ -35,7 +35,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsIn
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodesInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceRequestInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptInfoRM;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationStatisticsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.StatisticsItemInfo;
 import org.apache.hadoop.yarn.server.uam.UnmanagedApplicationManager;
@@ -601,8 +601,8 @@ public class TestRouterWebServiceUtil {
     metrics.setShutdownNodes(rand.nextInt(1000));
   }
 
-  public static AppAttemptInfo generateAppAttemptInfo(int attemptId) {
-    AppAttemptInfo appAttemptInfo = mock(AppAttemptInfo.class);
+  public static AppAttemptInfoRM generateAppAttemptInfo(int attemptId) {
+    AppAttemptInfoRM appAttemptInfo = mock(AppAttemptInfoRM.class);
     when(appAttemptInfo.getAppAttemptId()).thenReturn("AppAttemptId_" + attemptId);
     when(appAttemptInfo.getAttemptId()).thenReturn(0);
     when(appAttemptInfo.getFinishedTime()).thenReturn(1659621705L);

@@ -89,7 +89,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWebAppUtil;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ActivitiesInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppActivitiesInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptsInfoRM;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppPriority;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppQueue;
@@ -2867,12 +2867,12 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   }
 
   @Override
-  public AppAttemptsInfo getAppAttempts(HttpServletRequest hsr, String appId) {
+  public AppAttemptsInfoRM getAppAttempts(HttpServletRequest hsr, String appId) {
 
     try {
       long startTime = Time.now();
       DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorByAppId(appId);
-      AppAttemptsInfo appAttemptsInfo = interceptor.getAppAttempts(hsr, appId);
+      AppAttemptsInfoRM appAttemptsInfo = interceptor.getAppAttempts(hsr, appId);
       if (appAttemptsInfo != null) {
         long stopTime = Time.now();
         routerMetrics.succeededAppAttemptsRetrieved(stopTime - startTime);

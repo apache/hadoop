@@ -29,7 +29,7 @@ import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ActivitiesInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppActivitiesInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptsInfoRM;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppPriority;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppQueue;
@@ -70,7 +70,7 @@ public class PassThroughRESTRequestInterceptor
     extends AbstractRESTRequestInterceptor {
 
   @Override
-  public AppAttemptsInfo getAppAttempts(HttpServletRequest hsr, String appId) {
+  public AppAttemptsInfoRM getAppAttempts(HttpServletRequest hsr, String appId) {
     return getNextInterceptor().getAppAttempts(hsr, appId);
   }
 
