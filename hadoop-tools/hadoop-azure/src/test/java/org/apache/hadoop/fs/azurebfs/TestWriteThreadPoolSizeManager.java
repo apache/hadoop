@@ -869,11 +869,11 @@ class TestWriteThreadPoolSizeManager extends AbstractAbfsIntegrationTest {
 
         Assertions.assertThat(metricsOutput)
             .as("Metrics must include CPU utilization data")
-            .contains("Cpu=");
+            .contains("SC=");
 
         Assertions.assertThat(metricsOutput)
             .as("Metrics must include memory utilization data")
-            .contains("AvlMem=");
+            .contains("AM=");
 
         Assertions.assertThat(metricsOutput)
             .as("Metrics must include current thread pool size")

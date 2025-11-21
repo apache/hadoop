@@ -388,7 +388,7 @@ public final class FileSystemConfigurations {
   public static final int DEFAULT_WRITE_HIGH_MEMORY_USAGE_THRESHOLD_PERCENTAGE = 60;
 
   /** Percentage threshold of heap usage at which memory pressure is considered low. */
-  public static final int DEFAULT_WRITE_LOW_MEMORY_USAGE_THRESHOLD_PERCENTAGE = 20;
+  public static final int DEFAULT_WRITE_LOW_MEMORY_USAGE_THRESHOLD_PERCENTAGE = 30;
 
   public static final boolean DEFAULT_FS_AZURE_ENABLE_CLIENT_TRANSACTION_ID = true;
 

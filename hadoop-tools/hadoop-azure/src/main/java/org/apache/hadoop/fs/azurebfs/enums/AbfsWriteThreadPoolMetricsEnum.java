@@ -40,25 +40,28 @@ public enum AbfsWriteThreadPoolMetricsEnum {
   IDLE_THREADS("IT", StatisticTypeEnum.TYPE_GAUGE),
 
   /** Recent JVM CPU load value as reported by the JVM (0.0 to 1.0). */
-  JVM_CPU_UTILIZATION("JvmCpu", StatisticTypeEnum.TYPE_GAUGE),
+  JVM_CPU_UTILIZATION("JC", StatisticTypeEnum.TYPE_GAUGE),
 
   /** Overall system-wide CPU utilization percentage during write operations. */
-  SYSTEM_CPU_UTILIZATION("SysCpu", StatisticTypeEnum.TYPE_GAUGE),
+  SYSTEM_CPU_UTILIZATION("SC", StatisticTypeEnum.TYPE_GAUGE),
 
   /** Available heap memory (in GB) measured during write operations. */
-  AVAILABLE_MEMORY("AvlMem", StatisticTypeEnum.TYPE_GAUGE),
+  AVAILABLE_MEMORY("AM", StatisticTypeEnum.TYPE_GAUGE),
 
   /** Committed heap memory (in GB) measured during write operations. */
-  COMMITTED_MEMORY("CoMem", StatisticTypeEnum.TYPE_GAUGE),
+  COMMITTED_MEMORY("CM", StatisticTypeEnum.TYPE_GAUGE),
 
   /** Available heap memory (in GB) measured during write operations. */
-  MEMORY_LOAD("MemLoad", StatisticTypeEnum.TYPE_GAUGE),
+  MEMORY_LOAD("ML", StatisticTypeEnum.TYPE_GAUGE),
 
   /** Direction of the last scaling decision (e.g., scale-up or scale-down). */
-  LAST_SCALE_DIRECTION("ScaleDirection", StatisticTypeEnum.TYPE_GAUGE),
+  LAST_SCALE_DIRECTION("SD", StatisticTypeEnum.TYPE_GAUGE),
 
   /** Maximum CPU utilization recorded during the monitoring interval. */
-  MAX_CPU_UTILIZATION("MaxCpu", StatisticTypeEnum.TYPE_GAUGE);
+  MAX_CPU_UTILIZATION("MC", StatisticTypeEnum.TYPE_GAUGE),
+
+  /** The process ID (PID) of the running JVM, useful for correlating metrics with system-level process information. */
+  JVM_PROCESS_ID("JI", StatisticTypeEnum.TYPE_GAUGE);
 
   private final String name;
   private final StatisticTypeEnum statisticType;

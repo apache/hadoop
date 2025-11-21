@@ -367,19 +367,31 @@ public final class WriteThreadPoolSizeManager implements Closeable {
       LOG.debug("Current CPU Utilization: {}", cpuUtilization);
       if (cpuUtilization > (abfsConfiguration.getWriteHighCpuThreshold()/HUNDRED_D)) {
         newMaxPoolSize = calculateReducedPoolSizeHighCPU(currentPoolSize, memoryLoad);
+        if (newMaxPoolSize == initialPoolSize) {
+          lastScaleDirection = "-D";
+        }
       } else if (cpuUtilization > (abfsConfiguration.getWriteMediumCpuThreshold()/HUNDRED_D)) {
         newMaxPoolSize = calculateReducedPoolSizeMediumCPU(currentPoolSize, memoryLoad);
+        if (newMaxPoolSize == initialPoolSize) {
+          lastScaleDirection = "-D";
+        }
       } else if (cpuUtilization < (abfsConfiguration.getWriteLowCpuThreshold()/HUNDRED_D)) {
         newMaxPoolSize = calculateIncreasedPoolSizeLowCPU(currentPoolSize, memoryLoad);
+        if (newMaxPoolSize == maxThreadPoolSize) {
+          lastScaleDirection = "+F";
+        }
       } else {
         newMaxPoolSize = currentPoolSize;
         LOG.debug("CPU load normal ({}). No change: current={}", cpuUtilization, currentPoolSize);
       }
       boolean willResize = newMaxPoolSize != currentPoolSize;
+      if (!willResize && !lastScaleDirection.equals(EMPTY_STRING)) {
+        WriteThreadPoolStats stats = getCurrentStats(cpuUtilization,
+            maxCpuUtilization, memoryLoad);
+        // Update the write thread pool metrics with the latest statistics snapshot.
+        writeThreadPoolMetrics.update(stats);
+      }
       // Case 1: CPU increased — push metrics ONLY if not resizing
-      LOG.debug("Willresize value {}, newMaxPoolSize {}, currentPoolSize {}, cpuUtilization {}, maxCpuUtilization {}",
-          willResize, newMaxPoolSize,
-          currentPoolSize, cpuUtilization, maxCpuUtilization);
       if (cpuUtilization > maxCpuUtilization) {
         maxCpuUtilization = cpuUtilization;
         if (!willResize) {
@@ -525,6 +537,17 @@ public final class WriteThreadPoolSizeManager implements Closeable {
   }
 
   /**
+   * Returns the process ID (PID) of the currently running JVM.
+   * This method uses {@link ProcessHandle#current()} to obtain the ID of the
+   * Java process.
+   *
+   * @return the PID of the current JVM process
+   */
+  public long getJvmProcessId() {
+    return ProcessHandle.current().pid();
+  }
+
+  /**
    * Closes this manager by shutting down executors and cleaning up resources.
    * Removes the instance from the active manager map.
    *
@@ -571,6 +594,7 @@ public final class WriteThreadPoolSizeManager implements Closeable {
     private final double memoryLoad;  // Heap usage ratio (used/committed)
     private final String lastScaleDirection;  // Last resize direction: "I" (increase) or "D" (decrease)
     private final double maxCpuUtilization;  // Peak JVM CPU observed in the current interval
+    private final long jvmProcessId;   // JVM Process ID
 
     /**
      * Constructs a {@link WriteThreadPoolStats} instance containing thread pool
@@ -588,12 +612,13 @@ public final class WriteThreadPoolSizeManager implements Closeable {
      * @param lastScaleDirection the last scaling action performed: "I" (increase),
      * "D" (decrease), or empty if no scaling occurred
      * @param maxCpuUtilization the peak JVM CPU utilization observed during this interval
+     * @param jvmProcessId the process ID of the JVM
      */
     public WriteThreadPoolStats(int currentPoolSize,
         int maxPoolSize, int activeThreads, int idleThreads,
         double jvmCpuLoad, double systemCpuUtilization, long availableHeapGB,
         long committedHeapGB, double memoryLoad, String lastScaleDirection,
-        double maxCpuUtilization) {
+        double maxCpuUtilization, long jvmProcessId) {
       this.currentPoolSize = currentPoolSize;
       this.maxPoolSize = maxPoolSize;
       this.activeThreads = activeThreads;
@@ -605,6 +630,7 @@ public final class WriteThreadPoolSizeManager implements Closeable {
       this.memoryLoad = memoryLoad;
       this.lastScaleDirection = lastScaleDirection;
       this.maxCpuUtilization = maxCpuUtilization;
+      this.jvmProcessId = jvmProcessId;
     }
 
     /** @return the current number of threads in the pool. */
@@ -662,6 +688,11 @@ public final class WriteThreadPoolSizeManager implements Closeable {
       return maxCpuUtilization;
     }
 
+    /** @return the JVM process ID. */
+    public long getJvmProcessId() {
+      return jvmProcessId;
+    }
+
     /**
      * Converts the scale direction string into numeric value.
      *
@@ -672,9 +703,13 @@ public final class WriteThreadPoolSizeManager implements Closeable {
     public int getLastScaleDirectionNumeric(String lastScaleDirection) {
       switch (lastScaleDirection) {
       case "I":
-        return 1;  // Scale up
+        return 1;    // Scaled up
       case "D":
-        return -1; // Scale down
+        return -1;   // Scaled down
+      case "-D":
+        return -2;   // Attempted down-scale, already at minimum
+      case "+F":
+        return 2;    // Attempted up-scale, already at maximum
       default:
         return 0;  // No scaling
       }
@@ -686,11 +721,11 @@ public final class WriteThreadPoolSizeManager implements Closeable {
           "currentPoolSize=%d, maxPoolSize=%d, activeThreads=%d, idleThreads=%d, "
               + "jvmCpuLoad=%.2f%%, systemCpuUtilization=%.2f%%, "
               + "availableHeap=%dGB, committedHeap=%dGB, memoryLoad=%.2f%%, "
-              + "scaleDirection=%s, maxCpuUtilization=%.2f%%",
+              + "scaleDirection=%s, maxCpuUtilization=%.2f%%, jvmProcessId=%d",
           currentPoolSize, maxPoolSize, activeThreads,
           idleThreads, jvmCpuLoad * HUNDRED_D, systemCpuUtilization * HUNDRED_D,
           availableHeapGB, committedHeapGB, memoryLoad,
-          lastScaleDirection, maxCpuUtilization * HUNDRED_D
+          lastScaleDirection, maxCpuUtilization * HUNDRED_D, jvmProcessId
       );
     }
   }
@@ -713,7 +748,7 @@ public final class WriteThreadPoolSizeManager implements Closeable {
 
     if (boundedThreadPool == null) {
       return new WriteThreadPoolStats(
-          ZERO, ZERO, ZERO, ZERO, ZERO_D, ZERO_D, ZERO, ZERO, ZERO_D, EMPTY_STRING, ZERO_D);
+          ZERO, ZERO, ZERO, ZERO, ZERO_D, ZERO_D, ZERO, ZERO, ZERO_D, EMPTY_STRING, ZERO_D, ZERO);
     }
 
     ThreadPoolExecutor exec = (ThreadPoolExecutor) this.boundedThreadPool;
@@ -736,7 +771,8 @@ public final class WriteThreadPoolSizeManager implements Closeable {
         getCommittedHeapMemory(),      // Committed heap (GB)
         memoryLoad,                    // used/max
         currentScaleDirection,         // "I", "D", or ""
-        maxCpuUtilization              // Peak JVM CPU usage so far
+        maxCpuUtilization,              // Peak JVM CPU usage so far
+        getJvmProcessId()              // JVM PID
     );
   }
 }
