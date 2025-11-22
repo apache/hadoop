@@ -133,5 +133,82 @@ public interface MRConfig {
   boolean DEFAULT_MASTER_WEBAPP_UI_ACTIONS_ENABLED = true;
   String MULTIPLE_OUTPUTS_CLOSE_THREAD_COUNT = "mapreduce.multiple-outputs-close-threads";
   int DEFAULT_MULTIPLE_OUTPUTS_CLOSE_THREAD_COUNT = 10;
+
+  /**
+   * Enables MapReduce Task-Level Security Enforcement.
+   *
+   * When enabled, the Application Master performs validation of user-submitted
+   * mapper, reducer, and other task-related classes before launching containers.
+   * This mechanism protects the cluster from running disallowed or unsafe task
+   * implementations as defined by administrator-controlled policies.
+   *
+   * Property type: boolean
+   * Default: false (security disabled)
+   */
+  String SECURITY_ENABLED = "mapreduce.security.enabled";
+  boolean DEFAULT_SECURITY_ENABLED = false;
+
+  /**
+   * MapReduce Task-Level Security Enforcement: Property Domain
+   *
+   * Defines the set of MapReduce configuration keys that represent user-supplied
+   * class names involved in task execution (e.g., mapper, reducer, partitioner).
+   * The Application Master examines the values of these properties and checks
+   * whether any referenced class is listed in {@link #SECURITY_DENIED_TASKS}.
+   * Administrators may override this list to expand or restrict the validation
+   * domain.
+   *
+   * Property type: list of configuration keys
+   * Default: all known task-level class properties (see list below)
+   */
+  String SECURITY_PROPERTY_DOMAIN = "mapreduce.security.property-domain";
+  String[] DEFAULT_SECURITY_PROPERTY_DOMAIN = {
+      "mapreduce.job.combine.class",
+      "mapreduce.job.combiner.group.comparator.class",
+      "mapreduce.job.end-notification.custom-notifier-class",
+      "mapreduce.job.inputformat.class",
+      "mapreduce.job.map.class",
+      "mapreduce.job.map.output.collector.class",
+      "mapreduce.job.output.group.comparator.class",
+      "mapreduce.job.output.key.class",
+      "mapreduce.job.output.key.comparator.class",
+      "mapreduce.job.output.value.class",
+      "mapreduce.job.outputformat.class",
+      "mapreduce.job.partitioner.class",
+      "mapreduce.job.reduce.class",
+      "mapreduce.map.output.key.class",
+      "mapreduce.map.output.value.class"
+  };
+
+  /**
+   * MapReduce Task-Level Security Enforcement: Denied Tasks
+   *
+   * Specifies the list of disallowed task implementation classes or packages.
+   * If a user submits a job whose mapper, reducer, or other task-related classes
+   * match any entry in this blacklist.
+   *
+   * Property type: list of class name or package patterns
+   * Default: empty (no restrictions)
+   * Example: org.apache.hadoop.streaming,org.apache.hadoop.examples.QuasiMonteCarlo
+   */
+  String SECURITY_DENIED_TASKS = "mapreduce.security.denied-tasks";
+  String[] DEFAULT_SECURITY_DENIED_TASKS = {};
+
+  /**
+   * MapReduce Task-Level Security Enforcement: Allowed Users
+   *
+   * Specifies users who may bypass the blacklist defined in
+   * {@link #SECURITY_DENIED_TASKS}.
+   * This whitelist is intended for trusted or system-level workflows that may
+   * legitimately require the use of restricted task implementations.
+   * If the submitting user is listed here, blacklist enforcement is skipped,
+   * although standard Hadoop authentication and ACL checks still apply.
+   *
+   * Property type: list of usernames
+   * Default: empty (no bypass users)
+   * Example: hue,hive
+   */
+  String SECURITY_ALLOWED_USERS = "mapreduce.security.allowed-users";
+  String[] DEFAULT_SECURITY_ALLOWED_USERS = {};
 }
   
