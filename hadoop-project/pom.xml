@@ -11,7 +11,7 @@
   See the License for the specific language governing permissions and
   limitations under the License. See accompanying LICENSE file.
 -->
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0                       https://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0                       https://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/4.0.0">
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>org.apache.hadoop</groupId>
@@ -34,7 +34,7 @@
     <maven.test.failure.ignore>false</maven.test.failure.ignore>
     <batsFailOnError>true</batsFailOnError>
     <maven.test.redirectTestOutputToFile>true</maven.test.redirectTestOutputToFile>
-    <jetty.version>9.4.57.v20241219</jetty.version>
+    <jetty.version>9.4.58.v20250814</jetty.version>
     <test.exclude>_</test.exclude>
     <test.exclude.pattern>_</test.exclude.pattern>
 
@@ -47,7 +47,7 @@
     <!-- Version number for xerces used by JDiff -->
     <xerces.jdiff.version>2.12.2</xerces.jdiff.version>
 
-    <kafka.version>3.9.0</kafka.version>
+    <kafka.version>3.9.1.7.3.2.0-SNAPSHOT</kafka.version>
 
     <commons-daemon.version>1.0.13</commons-daemon.version>
 
@@ -60,10 +60,10 @@
     <java.security.egd>file:///dev/urandom</java.security.egd>
 
     <!-- avro version -->
-    <avro.version>1.11.4</avro.version>
+    <avro.version>1.11.3.7.3.2.0-SNAPSHOT</avro.version>
 
     <!-- jersey version -->
-    <jersey2.version>2.46</jersey2.version>
+    <jersey2.version>2.47</jersey2.version>
 
     <!-- jaxb version -->
     <jaxb.version>2.3.9</jaxb.version>
@@ -78,8 +78,8 @@
 
     <!-- SLF4J/LOG4J version -->
     <slf4j.version>1.7.36</slf4j.version>
-    <reload4j.version>1.2.22</reload4j.version>
-    <log4j2.version>2.18.0</log4j2.version>
+    <reload4j.version>1.2.25</reload4j.version>
+    <log4j2.version>2.20.0</log4j2.version>
 
     <!-- com.google.re2j version -->
     <re2j.version>1.2</re2j.version>
@@ -93,7 +93,7 @@
     <!-- Protobuf scope in other modules which explicitly import the libarary -->
     <transient.protobuf2.scope>${common.protobuf2.scope}</transient.protobuf2.scope>
     <!-- ProtocolBuffer version, actually used in Hadoop -->
-    <hadoop.protobuf.version>3.23.4</hadoop.protobuf.version>
+    <hadoop.protobuf.version>3.25.8</hadoop.protobuf.version>
     <protoc.path>${env.HADOOP_PROTOC_PATH}</protoc.path>
 
     <hadoop-thirdparty.version>1.4.0</hadoop-thirdparty.version>
@@ -103,7 +103,7 @@
     <hadoop-thirdparty-shaded-protobuf-prefix>${hadoop-thirdparty-shaded-prefix}.protobuf</hadoop-thirdparty-shaded-protobuf-prefix>
     <hadoop-thirdparty-shaded-guava-prefix>${hadoop-thirdparty-shaded-prefix}.com.google.common</hadoop-thirdparty-shaded-guava-prefix>
 
-    <zookeeper.version>3.8.1.7.3.2.0-SNAPSHOT</zookeeper.version>
+    <zookeeper.version>3.8.5.7.3.2.0-SNAPSHOT</zookeeper.version>
     <curator.version>5.4.0.7.3.2.0-SNAPSHOT</curator.version>
     <findbugs.version>3.0.5</findbugs.version>
     <dnsjava.version>3.6.1</dnsjava.version>
@@ -119,7 +119,7 @@
 
     <!-- Apache Commons dependencies -->
     <commons-cli.version>1.9.0</commons-cli.version>
-    <commons-codec.version>1.15</commons-codec.version>
+    <commons-codec.version>1.17.2</commons-codec.version>
     <!-- this library is not used in the hadoop codebase since HADOOP-15760;
     it is declared here and exported for CDH components, with the
     export restrictions altered to permit this-->
@@ -128,11 +128,11 @@
     <commons-collections4.version>4.4</commons-collections4.version>
     <commons-compress.version>1.26.1</commons-compress.version>
     <commons-csv.version>1.9.0</commons-csv.version>
-    <commons-io.version>2.17.0</commons-io.version>
-    <commons-lang3.version>3.17.0</commons-lang3.version>
+    <commons-io.version>2.18.0</commons-io.version>
+    <commons-lang3.version>3.18.0</commons-lang3.version>
     <commons-logging.version>1.3.0</commons-logging.version>
     <commons-math3.version>3.6.1</commons-math3.version>
-    <commons-net.version>3.9.0</commons-net.version>
+    <commons-net.version>3.12.0</commons-net.version>
     <commons-text.version>1.10.0</commons-text.version>
 
     <kerby.version>2.0.3</kerby.version>
@@ -143,10 +143,10 @@
     <okhttp3.version>4.11.0</okhttp3.version>
     <kotlin-stdlib.version>1.6.20</kotlin-stdlib.version>
     <jdom2.version>2.0.6.1</jdom2.version>
-    <jna.version>5.2.0</jna.version>
-    <gson.version>2.10.1</gson.version>
+    <jna.version>5.13.0</jna.version>
+    <gson.version>2.13.1</gson.version>
     <metrics.version>3.2.6</metrics.version>
-    <netty4.version>4.1.121.Final</netty4.version>
+    <netty4.version>4.1.128.Final</netty4.version>
     <snappy-java.version>1.1.10.5</snappy-java.version>
     <lz4-java.version>1.7.1</lz4-java.version>
 
@@ -214,7 +214,7 @@
     <exec-maven-plugin.version>1.3.1</exec-maven-plugin.version>
     <make-maven-plugin.version>1.0-beta-1</make-maven-plugin.version>
     <surefire.fork.timeout>900</surefire.fork.timeout>
-    <aws-java-sdk.version>1.12.788</aws-java-sdk.version>
+    <aws-java-sdk.version>1.12.791</aws-java-sdk.version>
     <aws-java-sdk-v2.version>2.29.52</aws-java-sdk-v2.version>
     <amazon-s3-encryption-client-java.version>3.1.1</amazon-s3-encryption-client-java.version>
     <amazon-s3-analyticsaccelerator-s3.version>1.2.1</amazon-s3-analyticsaccelerator-s3.version>
@@ -236,14 +236,14 @@
     <sshd.version>2.11.0</sshd.version>
     <hbase.version>2.6.3.7.3.2.0-SNAPSHOT</hbase.version>
     <junit.version>4.13.2</junit.version>
-    <junit.jupiter.version>5.13.3</junit.jupiter.version>
-    <junit.vintage.version>5.13.3</junit.vintage.version>
-    <junit.platform.version>1.13.3</junit.platform.version>
+    <junit.jupiter.version>5.8.2</junit.jupiter.version>
+    <junit.vintage.version>5.8.2</junit.vintage.version>
+    <junit.platform.version>1.8.2</junit.platform.version>
     <assertj.version>3.12.2</assertj.version>
     <jline.version>3.9.0</jline.version>
     <mockito.version>4.11.0</mockito.version>
     <solr.version>8.11.2</solr.version>
-    <openssl-wildfly.version>2.1.4.ClouderaFinal</openssl-wildfly.version>
+    <openssl-wildfly.version>2.2.5.ClouderaMoreFinal</openssl-wildfly.version>
     <jsonschema2pojo.version>1.0.2</jsonschema2pojo.version>
     <woodstox.version>5.4.0</woodstox.version>
     <nimbus-jose-jwt.version>10.4</nimbus-jose-jwt.version>
@@ -253,7 +253,7 @@
     <apache-ant.version>1.10.13</apache-ant.version>
     <jmh.version>1.20</jmh.version>
     <gcs.version>2.1.2.7.3.2.0-SNAPSHOT</gcs.version>
-    <knox.version>2.0.0.7.3.2.0-SNAPSHOT</knox.version>
+    <knox.version>2.1.0.7.3.2.0-SNAPSHOT</knox.version>
     <ranger.version>2.6.0.7.3.2.0-SNAPSHOT</ranger.version>
     <t9000-core.version>1.0.0.7.3.2.0-SNAPSHOT</t9000-core.version>
   </properties>
@@ -815,7 +815,7 @@
       <dependency>
         <groupId>com.google.guava</groupId>
         <artifactId>guava</artifactId>
-        <version>${guava.version}</version>
+        <version>33.4.8-jre</version>
         <exclusions>
           <exclusion>
             <groupId>com.google.errorprone</groupId>
@@ -2662,8 +2662,8 @@
             </goals>
             <configuration>
               <target>
-                <mkdir dir="${test.build.dir}"/>
-                <mkdir dir="${test.build.data}"/>
+                <mkdir dir="${test.build.dir}" />
+                <mkdir dir="${test.build.data}" />
               </target>
             </configuration>
           </execution>
@@ -2674,8 +2674,8 @@
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>
           <reuseForks>false</reuseForks>
-          <forkedProcessTimeoutInSeconds>${surefire.fork.timeout}</forkedProcessTimeoutInSeconds>
-          <argLine>${maven-surefire-plugin.argLine}</argLine>
+          <forkedProcessTimeoutInSeconds>1800</forkedProcessTimeoutInSeconds>
+          <argLine>-Xms2048m -Xmx3072m -XX:MaxMetaspaceSize=2048m -XX:+HeapDumpOnOutOfMemoryError</argLine>
           <!-- CAREFUL with enableOutErrElements: enabling this produces much larger xml -->
           <enableOutErrElements>false</enableOutErrElements>
           <environmentVariables>

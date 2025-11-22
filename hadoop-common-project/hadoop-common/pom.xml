@@ -1,4 +1,3 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <!--
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -12,10 +11,7 @@
   See the License for the specific language governing permissions and
   limitations under the License. See accompanying LICENSE file.
 -->
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
-                      https://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0                       https://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/4.0.0">
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>org.apache.hadoop</groupId>
@@ -586,12 +582,12 @@
                 TODO: there are tests (TestLocalFileSystem#testCopy) that fail if data
                 TODO: from a previous run is present
                 -->
-                <delete dir="${test.build.data}"/>
-                <mkdir dir="${test.build.data}"/>
-                <mkdir dir="${hadoop.log.dir}"/>
+                <delete dir="${test.build.data}" />
+                <mkdir dir="${test.build.data}" />
+                <mkdir dir="${hadoop.log.dir}" />
 
                 <copy toDir="${project.build.directory}/test-classes">
-                  <fileset dir="${basedir}/src/main/conf"/>
+                  <fileset dir="${basedir}/src/main/conf" />
                 </copy>
               </target>
             </configuration>
@@ -603,8 +599,8 @@
             </goals>
             <configuration>
               <target>
-                <copy file="src/main/resources/core-default.xml" todir="src/site/resources"/>
-                <copy file="src/main/xsl/configuration.xsl" todir="src/site/resources"/>
+                <copy file="src/main/resources/core-default.xml" todir="src/site/resources" />
+                <copy file="src/main/xsl/configuration.xsl" todir="src/site/resources" />
               </target>
             </configuration>
           </execution>
@@ -693,20 +689,20 @@
       </activation>
       <properties>
         <require.bzip2>false</require.bzip2>
-        <zstd.prefix></zstd.prefix>
-        <zstd.lib></zstd.lib>
-        <zstd.include></zstd.include>
+        <zstd.prefix />
+        <zstd.lib />
+        <zstd.include />
         <require.zstd>false</require.zstd>
-        <openssl.prefix></openssl.prefix>
-        <openssl.lib></openssl.lib>
-        <openssl.include></openssl.include>
+        <openssl.prefix />
+        <openssl.lib />
+        <openssl.include />
         <require.isal>false</require.isal>
-        <isal.prefix></isal.prefix>
-        <isal.lib></isal.lib>
+        <isal.prefix />
+        <isal.lib />
         <require.openssl>false</require.openssl>
         <runningWithNative>true</runningWithNative>
         <bundle.openssl.in.bin>false</bundle.openssl.in.bin>
-        <extra.libhadoop.rpath></extra.libhadoop.rpath>
+        <extra.libhadoop.rpath />
       </properties>
       <build>
         <plugins>
@@ -802,16 +798,16 @@
       </activation>
       <properties>
         <require.isal>false</require.isal>
-        <isal.prefix></isal.prefix>
-        <isal.lib></isal.lib>
-        <zstd.prefix></zstd.prefix>
-        <zstd.lib></zstd.lib>
-        <zstd.include></zstd.include>
+        <isal.prefix />
+        <isal.lib />
+        <zstd.prefix />
+        <zstd.lib />
+        <zstd.include />
         <require.zstd>false</require.zstd>
         <bundle.zstd.in.bin>true</bundle.zstd.in.bin>
-        <openssl.prefix></openssl.prefix>
-        <openssl.lib></openssl.lib>
-        <openssl.include></openssl.include>
+        <openssl.prefix />
+        <openssl.lib />
+        <openssl.include />
         <require.openssl>false</require.openssl>
         <runningWithNative>true</runningWithNative>
         <bundle.openssl.in.bin>false</bundle.openssl.in.bin>
@@ -856,12 +852,12 @@
                   <exportAntProperties>true</exportAntProperties>
                   <target>
                     <condition property="skip.platformToolsetDetection" value="true" else="false">
-                      <isset property="use.platformToolsetVersion"/>
+                      <isset property="use.platformToolsetVersion" />
                     </condition>
                     <!--Unfortunately, Maven doesn't have a way to negate a flag, thus we declare a
                      property which holds the negated value of skip.platformToolsetDetection.-->
                     <condition property="skip.platformToolsetDetection.negated" value="false" else="true">
-                      <isset property="use.platformToolsetVersion"/>
+                      <isset property="use.platformToolsetVersion" />
                     </condition>
                     <echo>Skip platform toolset version detection = ${skip.platformToolsetDetection}</echo>
                   </target>
@@ -1136,9 +1132,7 @@
                     <configuration>
                       <failOnError>${batsFailOnError}</failOnError>
                       <target>
-                          <exec dir="src/test/scripts"
-                           executable="bash"
-                           failonerror="true">
+                          <exec dir="src/test/scripts" executable="bash" failonerror="true">
                            <arg value="./run-bats.sh" />
                          </exec>
                       </target>
