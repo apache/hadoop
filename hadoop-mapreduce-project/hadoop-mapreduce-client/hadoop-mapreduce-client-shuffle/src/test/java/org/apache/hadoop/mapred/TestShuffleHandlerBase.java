@@ -41,14 +41,14 @@ import org.apache.hadoop.thirdparty.com.google.common.cache.CacheBuilder;
 import org.apache.hadoop.thirdparty.com.google.common.cache.CacheLoader;
 import org.apache.hadoop.thirdparty.com.google.common.cache.LoadingCache;
 import org.apache.hadoop.thirdparty.com.google.common.cache.RemovalListener;
-import org.junit.After;
-import org.junit.Before;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 
 import static io.netty.util.ResourceLeakDetector.Level.PARANOID;
 import static org.apache.hadoop.io.MapFile.DATA_FILE_NAME;
 import static org.apache.hadoop.io.MapFile.INDEX_FILE_NAME;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestShuffleHandlerBase {
   public static final String TEST_ATTEMPT_1 = "attempt_1111111111111_0001_m_000001_0";
@@ -65,7 +65,7 @@ public class TestShuffleHandlerBase {
   @SuppressWarnings("checkstyle:VisibilityModifier")
   protected java.nio.file.Path tempDir;
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException {
     tempDir = Files.createTempDirectory("test-shuffle-channel-handler");
     tempDir.toFile().deleteOnExit();
@@ -82,8 +82,15 @@ public class TestShuffleHandlerBase {
     System.setOut(new PrintStream(outputStreamCaptor));
   }
 
-  @After
+  @AfterEach
   public void teardown() {
+    //Trigger GC so that we get the leak warnings early
+    System.gc();
+    try {
+      // Wait for logger to flush
+      Thread.sleep(1000);
+    } catch (InterruptedException e) {
+    }
     System.setOut(standardOut);
     System.out.print(outputStreamCaptor);
     // For this to work ch.qos.logback.classic is needed for some reason
@@ -102,7 +109,7 @@ public class TestShuffleHandlerBase {
   }
 
   public static void generateMapOutput(String user, String tempDir,
-                                       String attempt, List<String> maps)
+      String attempt, List<String> maps)
       throws IOException {
     SpillRecord record = new SpillRecord(maps.size());
 

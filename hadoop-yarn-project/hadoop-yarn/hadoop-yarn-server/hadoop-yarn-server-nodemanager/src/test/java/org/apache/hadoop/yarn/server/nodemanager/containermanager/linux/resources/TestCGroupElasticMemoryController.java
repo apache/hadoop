@@ -23,14 +23,16 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
@@ -53,17 +55,19 @@ public class TestCGroupElasticMemoryController {
    * Test that at least one memory type is requested.
    * @throws YarnException on exception
    */
-  @Test(expected = YarnException.class)
+  @Test
   public void testConstructorOff()
       throws YarnException {
-    new CGroupElasticMemoryController(
-        conf,
-        null,
-        null,
-        false,
-        false,
-        10000
-    );
+    assertThrows(YarnException.class, () -> {
+      new CGroupElasticMemoryController(
+          conf,
+          null,
+          null,
+          false,
+          false,
+          10000
+      );
+    });
   }
 
   /**
@@ -91,15 +95,15 @@ public class TestCGroupElasticMemoryController {
    * Test that the handler is notified about multiple OOM events.
    * @throws Exception on exception
    */
-  @Test(timeout = 20000)
+  @Test
+  @Timeout(value = 20)
   public void testMultipleOOMEvents() throws Exception {
     conf.set(YarnConfiguration.NM_ELASTIC_MEMORY_CONTROL_OOM_LISTENER_PATH,
         script.getAbsolutePath());
     try {
       FileUtils.writeStringToFile(script,
           "#!/bin/bash\nprintf oomevent;printf oomevent;\n", StandardCharsets.UTF_8, false);
-      assertTrue("Could not set executable",
-          script.setExecutable(true));
+      assertTrue(script.setExecutable(true), "Could not set executable");
 
       CGroupsHandler cgroups = mock(CGroupsHandler.class);
       when(cgroups.getPathForCGroup(any(), any())).thenReturn("");
@@ -122,8 +126,9 @@ public class TestCGroupElasticMemoryController {
       controller.run();
       verify(handler, times(2)).run();
     } finally {
-      assertTrue(String.format("Could not clean up script %s",
-          script.getAbsolutePath()), script.delete());
+      assertTrue(script.delete(),
+          String.format("Could not clean up script %s",
+          script.getAbsolutePath()));
     }
   }
 
@@ -132,15 +137,15 @@ public class TestCGroupElasticMemoryController {
    * the child process starts
    * @throws Exception one exception
    */
-  @Test(timeout = 20000)
+  @Test
+  @Timeout(value = 20)
   public void testStopBeforeStart() throws Exception {
     conf.set(YarnConfiguration.NM_ELASTIC_MEMORY_CONTROL_OOM_LISTENER_PATH,
         script.getAbsolutePath());
     try {
       FileUtils.writeStringToFile(script, "#!/bin/bash\nprintf oomevent;printf oomevent;\n",
           StandardCharsets.UTF_8, false);
-      assertTrue("Could not set executable",
-          script.setExecutable(true));
+      assertTrue(script.setExecutable(true), "Could not set executable");
 
       CGroupsHandler cgroups = mock(CGroupsHandler.class);
       when(cgroups.getPathForCGroup(any(), any())).thenReturn("");
@@ -164,8 +169,8 @@ public class TestCGroupElasticMemoryController {
       controller.run();
       verify(handler, times(0)).run();
     } finally {
-      assertTrue(String.format("Could not clean up script %s",
-          script.getAbsolutePath()), script.delete());
+      assertTrue(script.delete(), String.format("Could not clean up script %s",
+          script.getAbsolutePath()));
     }
   }
 
@@ -173,40 +178,42 @@ public class TestCGroupElasticMemoryController {
    * Test the edge case that OOM is never resolved.
    * @throws Exception on exception
    */
-  @Test(timeout = 20000, expected = YarnRuntimeException.class)
+  @Test
+  @Timeout(value = 20)
   public void testInfiniteOOM() throws Exception {
-    conf.set(YarnConfiguration.NM_ELASTIC_MEMORY_CONTROL_OOM_LISTENER_PATH,
-        script.getAbsolutePath());
-    Runnable handler = mock(Runnable.class);
-    try {
-      FileUtils.writeStringToFile(script, "#!/bin/bash\nprintf oomevent;sleep 1000;\n",
-          StandardCharsets.UTF_8, false);
-      assertTrue("Could not set executable",
-          script.setExecutable(true));
+    assertThrows(YarnRuntimeException.class, () -> {
+      conf.set(YarnConfiguration.NM_ELASTIC_MEMORY_CONTROL_OOM_LISTENER_PATH,
+              script.getAbsolutePath());
+      Runnable handler = mock(Runnable.class);
+      try {
+        FileUtils.writeStringToFile(script, "#!/bin/bash\nprintf oomevent;sleep 1000;\n",
+            StandardCharsets.UTF_8, false);
+        assertTrue(script.setExecutable(true), "Could not set executable");
 
-      CGroupsHandler cgroups = mock(CGroupsHandler.class);
-      when(cgroups.getPathForCGroup(any(), any())).thenReturn("");
-      when(cgroups.getCGroupParam(any(), any(), any()))
-          .thenReturn("under_oom 1");
+        CGroupsHandler cgroups = mock(CGroupsHandler.class);
+        when(cgroups.getPathForCGroup(any(), any())).thenReturn("");
+        when(cgroups.getCGroupParam(any(), any(), any()))
+            .thenReturn("under_oom 1");
 
-      doNothing().when(handler).run();
+        doNothing().when(handler).run();
 
-      CGroupElasticMemoryController controller =
-          new CGroupElasticMemoryController(
-              conf,
-              null,
-              cgroups,
-              true,
-              false,
-              10000,
-              handler
-          );
-      controller.run();
-    } finally {
-      verify(handler, times(1)).run();
-      assertTrue(String.format("Could not clean up script %s",
-          script.getAbsolutePath()), script.delete());
-    }
+        CGroupElasticMemoryController controller =
+             new CGroupElasticMemoryController(
+                 conf,
+                 null,
+                 cgroups,
+                 true,
+                 false,
+                 10000,
+                 handler
+              );
+        controller.run();
+      } finally {
+        verify(handler, times(1)).run();
+        assertTrue(script.delete(), String.format("Could not clean up script %s",
+            script.getAbsolutePath()));
+      }
+    });
   }
 
   /**
@@ -214,40 +221,43 @@ public class TestCGroupElasticMemoryController {
    * containers.
    * @throws Exception on exception
    */
-  @Test(timeout = 20000, expected = YarnRuntimeException.class)
+  @Test
+  @Timeout(value = 20)
   public void testNothingToKill() throws Exception {
-    conf.set(YarnConfiguration.NM_ELASTIC_MEMORY_CONTROL_OOM_LISTENER_PATH,
-        script.getAbsolutePath());
-    Runnable handler = mock(Runnable.class);
-    try {
-      FileUtils.writeStringToFile(script, "#!/bin/bash\nprintf oomevent;sleep 1000;\n",
-          StandardCharsets.UTF_8, false);
-      assertTrue("Could not set executable",
-          script.setExecutable(true));
+    assertThrows(YarnRuntimeException.class, () -> {
+      conf.set(YarnConfiguration.NM_ELASTIC_MEMORY_CONTROL_OOM_LISTENER_PATH,
+              script.getAbsolutePath());
+      Runnable handler = mock(Runnable.class);
+      try {
+        FileUtils.writeStringToFile(script, "#!/bin/bash\nprintf oomevent;sleep 1000;\n",
+            StandardCharsets.UTF_8, false);
+        assertTrue(
+            script.setExecutable(true), "Could not set executable");
 
-      CGroupsHandler cgroups = mock(CGroupsHandler.class);
-      when(cgroups.getPathForCGroup(any(), any())).thenReturn("");
-      when(cgroups.getCGroupParam(any(), any(), any()))
-          .thenReturn("under_oom 1");
+        CGroupsHandler cgroups = mock(CGroupsHandler.class);
+        when(cgroups.getPathForCGroup(any(), any())).thenReturn("");
+        when(cgroups.getCGroupParam(any(), any(), any()))
+            .thenReturn("under_oom 1");
 
-      doThrow(new YarnRuntimeException("Expected")).when(handler).run();
+        doThrow(new YarnRuntimeException("Expected")).when(handler).run();
 
-      CGroupElasticMemoryController controller =
-          new CGroupElasticMemoryController(
-              conf,
-              null,
-              cgroups,
-              true,
-              false,
-              10000,
-              handler
-          );
-      controller.run();
-    } finally {
-      verify(handler, times(1)).run();
-      assertTrue(String.format("Could not clean up script %s",
-          script.getAbsolutePath()), script.delete());
-    }
+        CGroupElasticMemoryController controller =
+             new CGroupElasticMemoryController(
+                 conf,
+                 null,
+                 cgroups,
+                 true,
+                 false,
+                 10000,
+                 handler
+             );
+        controller.run();
+      } finally {
+        verify(handler, times(1)).run();
+        assertTrue(script.delete(), String.format("Could not clean up script %s",
+            script.getAbsolutePath()));
+      }
+    });
   }
 
   /**
@@ -257,7 +267,8 @@ public class TestCGroupElasticMemoryController {
    * We do not use a script this time to avoid leaking the child process.
    * @throws Exception exception occurred
    */
-  @Test(timeout = 20000)
+  @Test
+  @Timeout(value = 20)
   public void testNormalExit() throws Exception {
     conf.set(YarnConfiguration.NM_ELASTIC_MEMORY_CONTROL_OOM_LISTENER_PATH,
         "sleep");
@@ -287,7 +298,7 @@ public class TestCGroupElasticMemoryController {
         try {
           Thread.sleep(2000);
         } catch (InterruptedException ex) {
-          assertTrue("Wait interrupted.", false);
+          assertTrue(false, "Wait interrupted.");
         }
         LOG.info(String.format("Calling process destroy in %d ms",
             System.currentTimeMillis() - start));

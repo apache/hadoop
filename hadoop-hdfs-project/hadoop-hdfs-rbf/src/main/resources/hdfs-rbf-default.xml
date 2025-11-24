@@ -49,6 +49,41 @@
   </property>
 
   <property>
+    <name>dfs.federation.router.async.rpc.enable</name>
+    <value>false</value>
+    <description>
+      If true, router will process the RPC request asynchronously.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.async.rpc.ns.handler.count</name>
+    <value></value>
+    <description>
+      The number of asynchronous handlers per nameservice, separated by commas, internally separated by colons.
+      The identifier of nameservice is in dfs.nameservices configuration entry.
+      Such as: ns1:count1,ns2:count2,ns3:count3.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.async.rpc.responder.count</name>
+    <value>10</value>
+    <description>
+      For those nameservices not in dfs.federation.router.async.rpc.ns.handler.count configuration entry,
+      use this value as the asynchronous handler thread counts.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.async.rpc.responder.count</name>
+    <value>10</value>
+    <description>
+      The thread counts of async responder executor.
+    </description>
+  </property>
+
+  <property>
     <name>dfs.federation.router.rpc-address</name>
     <value>0.0.0.0:8888</value>
     <description>
@@ -98,6 +133,31 @@
     <value>100</value>
     <description>
       The size of the queue for the number of readers for the router to handle RPC client requests.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.async.rpc.handler.count</name>
+    <value>10</value>
+    <description>
+      The number of async handler for the router to handle RPC client requests.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.async.rpc.responder.count</name>
+    <value>10</value>
+    <description>
+      The number of async responder for the router to handle responses.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.async.rpc.max.asynccall.permit</name>
+    <value>20000</value>
+    <description>
+      Maximum number of asynchronous RPC requests the Router can send to
+      one downstream nameservice.
     </description>
   </property>
 
@@ -371,10 +431,27 @@
   </property>
 
   <property>
+    <name>dfs.federation.router.store.driver.async.override.max.threads</name>
+    <value>-1</value>
+    <description>
+      Number of threads used by StateStoreDriver to overwrite and delete records asynchronously.
+      Only used by MembershipStore and RouterStore. Non-positive values will make StateStoreDriver
+      run in sync mode.
+    </description>
+  </property>
+
+  <property>
     <name>dfs.federation.router.store.connection.test</name>
     <value>60000</value>
     <description>
       How often to check for the connection to the State Store in milliseconds.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.store.driver.zk.address</name>
+    <description>
+      Host:Port of the ZooKeeper for StateStoreZooKeeperImpl.
     </description>
   </property>
 
@@ -524,6 +601,17 @@
     <value>3m</value>
     <description>
       Time without being able to reach the State Store to enter safe mode. This
+      setting supports multiple time unit suffixes as described in
+      dfs.heartbeat.interval. If no suffix is specified then milliseconds is
+      assumed.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.safemode.checkperiod</name>
+    <value>5s</value>
+    <description>
+      How often the Router should check safe mode. This
       setting supports multiple time unit suffixes as described in
       dfs.heartbeat.interval. If no suffix is specified then milliseconds is
       assumed.
@@ -808,6 +896,19 @@
   </property>
 
   <property>
+    <name>dfs.federation.router.fairness.handler.proportion.EXAMPLENAMESERVICE</name>
+    <value>0.1</value>
+    <description>
+      Dedicated handler proportion for nameservice EXAMPLENAMESERVICE.
+      The range of this value is [0, 1], and the data type is float.
+      If this value is configured as x, and the total number of handlers
+      (configed by dfs.federation.router.handler.count) of the router is y,
+      then the maximum number of handlers for the EXAMPLENAMESERVICE is z=(int) x*y;
+      If z is 0, z is reset to 1, ensuring the ns has at least one handler.
+    </description>
+  </property>
+
+  <property>
     <name>dfs.federation.router.federation.rename.bandwidth</name>
     <value>10</value>
     <description>
@@ -931,6 +1032,14 @@
       would access one file from the filesystem at a time.
       Use positive integer value to enable concurrent files access from the given filesystem.
     </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.heartbeat.with.ip.enable</name>
+    <description>
+      Make router use IP instead of host when communicating with router state state store.
+    </description>
+    <value>false</value>
   </property>
 
 </configuration>

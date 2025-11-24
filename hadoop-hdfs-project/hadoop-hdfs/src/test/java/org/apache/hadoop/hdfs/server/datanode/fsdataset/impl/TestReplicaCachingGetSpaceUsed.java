@@ -31,10 +31,11 @@ import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.Replica;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.io.IOUtils;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -44,7 +45,8 @@ import java.util.Set;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DU_INTERVAL_KEY;
 import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Unit test for ReplicaCachingGetSpaceUsed class.
@@ -55,7 +57,7 @@ public class TestReplicaCachingGetSpaceUsed {
   private DistributedFileSystem fs;
   private DataNode dataNode;
 
-  @Before
+  @BeforeEach
   public void setUp()
       throws IOException, NoSuchMethodException, InterruptedException {
     conf = new Configuration();
@@ -70,7 +72,7 @@ public class TestReplicaCachingGetSpaceUsed {
     fs = cluster.getFileSystem();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     if (cluster != null) {
       cluster.shutdown();
@@ -104,8 +106,7 @@ public class TestReplicaCachingGetSpaceUsed {
     // Guarantee ReplicaCachingGetSpaceUsed#refresh() is called after replica
     // has been written to disk.
     Thread.sleep(2000);
-    assertEquals(blockLength + metaLength,
-        dataNode.getFSDataset().getDfsUsed());
+    assertEquals(blockLength + metaLength, dataNode.getFSDataset().getDfsUsed());
 
     fs.delete(new Path("/testReplicaCachingGetSpaceUsedByFINALIZEDReplica"),
         true);
@@ -137,8 +138,7 @@ public class TestReplicaCachingGetSpaceUsed {
     // Guarantee ReplicaCachingGetSpaceUsed#refresh() is called after replica
     // has been written to disk.
     Thread.sleep(2000);
-    assertEquals(blockLength + metaLength,
-        dataNode.getFSDataset().getDfsUsed());
+    assertEquals(blockLength + metaLength, dataNode.getFSDataset().getDfsUsed());
 
     os.close();
 
@@ -148,13 +148,13 @@ public class TestReplicaCachingGetSpaceUsed {
     // After close operation, the replica state will be transformed from RBW to
     // finalized. But the space used of these replicas are all included and the
     // dfsUsed value should be same.
-    assertEquals(blockLength + metaLength,
-        dataNode.getFSDataset().getDfsUsed());
+    assertEquals(blockLength + metaLength, dataNode.getFSDataset().getDfsUsed());
 
     fs.delete(new Path("/testReplicaCachingGetSpaceUsedByRBWReplica"), true);
   }
 
-  @Test(timeout = 15000)
+  @Test
+  @Timeout(value = 15)
   public void testFsDatasetImplDeepCopyReplica() {
     FsDatasetSpi<?> fsDataset = dataNode.getFSDataset();
     ModifyThread modifyThread = new ModifyThread();
@@ -170,17 +170,17 @@ public class TestReplicaCachingGetSpaceUsed {
         }
       } catch (IOException e) {
         modifyThread.setShouldRun(false);
-        Assert.fail("Encounter IOException when deep copy replica.");
+        fail("Encounter IOException when deep copy replica.");
       }
     }
     modifyThread.setShouldRun(false);
   }
 
-  private class ModifyThread extends Thread {
+  private class ModifyThread extends SubjectInheritingThread {
     private boolean shouldRun = true;
 
     @Override
-    public void run() {
+    public void work() {
       FSDataOutputStream os = null;
       while (shouldRun) {
         try {

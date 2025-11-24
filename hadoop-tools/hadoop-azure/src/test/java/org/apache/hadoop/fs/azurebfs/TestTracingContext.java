@@ -27,10 +27,8 @@ import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.assertj.core.api.Assertions;
-import org.junit.Assume;
-import org.junit.AssumptionViolatedException;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import org.apache.hadoop.fs.CommonPathCapabilities;
@@ -38,19 +36,30 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.enums.Trilean;
-import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
+import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderFormat;
 import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderValidator;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.util.Preconditions;
+import org.opentest4j.TestAbortedException;
 
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_HYPHEN;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.COLON;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.SPLIT_NO_LIMIT;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_CLIENT_CORRELATIONID;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.MIN_BUFFER_SIZE;
+import static org.apache.hadoop.fs.azurebfs.constants.HttpOperationType.APACHE_HTTP_CLIENT;
+import static org.apache.hadoop.fs.azurebfs.constants.HttpOperationType.JDK_HTTP_URL_CONNECTION;
+import static org.apache.hadoop.fs.azurebfs.services.RetryPolicyConstants.EXPONENTIAL_RETRY_POLICY_ABBREVIATION;
+import static org.apache.hadoop.fs.azurebfs.services.RetryPolicyConstants.STATIC_RETRY_POLICY_ABBREVIATION;
+import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.CONNECTION_TIMEOUT_ABBREVIATION;
+import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.READ_TIMEOUT_ABBREVIATION;
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 public class TestTracingContext extends AbstractAbfsIntegrationTest {
   private static final String[] CLIENT_CORRELATIONID_LIST = {
@@ -83,47 +92,46 @@ public class TestTracingContext extends AbstractAbfsIntegrationTest {
       boolean includeInHeader) throws Exception {
     Configuration conf = getRawConfiguration();
     conf.set(FS_AZURE_CLIENT_CORRELATIONID, clientCorrelationId);
-    AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(conf);
+    try (AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(conf)) {
 
-    String correlationID = fs.getClientCorrelationId();
-    if (includeInHeader) {
-      Assertions.assertThat(correlationID)
-          .describedAs("Correlation ID should match config when valid")
-          .isEqualTo(clientCorrelationId);
-    } else {
-      Assertions.assertThat(correlationID)
-          .describedAs("Invalid ID should be replaced with empty string")
-          .isEqualTo(EMPTY_STRING);
+      String correlationID = fs.getClientCorrelationId();
+      if (includeInHeader) {
+        Assertions.assertThat(correlationID)
+                .describedAs("Correlation ID should match config when valid")
+                .isEqualTo(clientCorrelationId);
+      } else {
+        Assertions.assertThat(correlationID)
+                .describedAs("Invalid ID should be replaced with empty string")
+                .isEqualTo(EMPTY_STRING);
+      }
+      TracingContext tracingContext = new TracingContext(clientCorrelationId,
+              fs.getFileSystemId(), FSOperationType.TEST_OP,
+              TracingHeaderFormat.ALL_ID_FORMAT, null);
+      boolean isNamespaceEnabled = fs.getIsNamespaceEnabled(tracingContext);
+      String path = getRelativePath(new Path("/testDir"));
+      AzureBlobFileSystemStore.Permissions permissions
+          = new AzureBlobFileSystemStore.Permissions(isNamespaceEnabled,
+          FsPermission.getDefault(), FsPermission.getUMask(fs.getConf()));
+
+      //request should not fail for invalid clientCorrelationID
+      AbfsRestOperation op = fs.getAbfsClient()
+          .createPath(path, true, true, permissions, false, null, null,
+              tracingContext);
+
+      int statusCode = op.getResult().getStatusCode();
+      Assertions.assertThat(statusCode).describedAs("Request should not fail")
+              .isEqualTo(HTTP_CREATED);
+
+      String requestHeader = op.getResult().getClientRequestId().replace("[", "")
+              .replace("]", "");
+      Assertions.assertThat(requestHeader)
+              .describedAs("Client Request Header should match TracingContext")
+              .isEqualTo(op.getLastTracingContext().getHeader());
+
     }
-    TracingContext tracingContext = new TracingContext(clientCorrelationId,
-        fs.getFileSystemId(), FSOperationType.TEST_OP,
-        TracingHeaderFormat.ALL_ID_FORMAT, null);
-    boolean isNamespaceEnabled = fs.getIsNamespaceEnabled(tracingContext);
-    String path = getRelativePath(new Path("/testDir"));
-    String permission = isNamespaceEnabled
-        ? getOctalNotation(FsPermission.getDirDefault())
-        : null;
-    String umask = isNamespaceEnabled
-        ? getOctalNotation(FsPermission.getUMask(fs.getConf()))
-        : null;
-
-    //request should not fail for invalid clientCorrelationID
-    AbfsRestOperation op = fs.getAbfsClient()
-        .createPath(path, false, true, permission, umask, false, null,
-            tracingContext);
-
-    int statusCode = op.getResult().getStatusCode();
-    Assertions.assertThat(statusCode).describedAs("Request should not fail")
-        .isEqualTo(HTTP_CREATED);
-
-    String requestHeader = op.getResult().getClientRequestId().replace("[", "")
-        .replace("]", "");
-    Assertions.assertThat(requestHeader)
-        .describedAs("Client Request Header should match TracingContext")
-        .isEqualTo(tracingContext.getHeader());
   }
 
-  @Ignore
+  @Disabled
   @Test
   //call test methods from the respective test classes
   //can be ignored when running all tests as these get covered
@@ -132,10 +140,16 @@ public class TestTracingContext extends AbstractAbfsIntegrationTest {
 
     testClasses.put(new ITestAzureBlobFileSystemListStatus(), //liststatus
         ITestAzureBlobFileSystemListStatus.class.getMethod("testListPath"));
-    testClasses.put(new ITestAbfsReadWriteAndSeek(MIN_BUFFER_SIZE, true), //open,
+    testClasses.put(new ITestAbfsReadWriteAndSeek(MIN_BUFFER_SIZE, true, JDK_HTTP_URL_CONNECTION), //open,
         // read, write
         ITestAbfsReadWriteAndSeek.class.getMethod("testReadAheadRequestID"));
-    testClasses.put(new ITestAbfsReadWriteAndSeek(MIN_BUFFER_SIZE, false), //read (bypassreadahead)
+    testClasses.put(new ITestAbfsReadWriteAndSeek(MIN_BUFFER_SIZE, true, APACHE_HTTP_CLIENT), //open,
+        // read, write
+        ITestAbfsReadWriteAndSeek.class.getMethod("testReadAheadRequestID"));
+    testClasses.put(new ITestAbfsReadWriteAndSeek(MIN_BUFFER_SIZE, false, JDK_HTTP_URL_CONNECTION), //read (bypassreadahead)
+        ITestAbfsReadWriteAndSeek.class
+            .getMethod("testReadAndWriteWithDifferentBufferSizesAndSeek"));
+    testClasses.put(new ITestAbfsReadWriteAndSeek(MIN_BUFFER_SIZE, false, APACHE_HTTP_CLIENT), //read (bypassreadahead)
         ITestAbfsReadWriteAndSeek.class
             .getMethod("testReadAndWriteWithDifferentBufferSizesAndSeek"));
     testClasses.put(new ITestAzureBlobFileSystemAppend(), //append
@@ -170,7 +184,7 @@ public class TestTracingContext extends AbstractAbfsIntegrationTest {
         testClasses.get(testClass).invoke(testClass);
         testClass.teardown();
       } catch (InvocationTargetException e) {
-        if (!(e.getCause() instanceof AssumptionViolatedException)) {
+        if (!(e.getCause() instanceof TestAbortedException)) {
           throw new IOException(testClasses.get(testClass).getName()
               + " failed tracing context validation test");
         }
@@ -189,15 +203,15 @@ public class TestTracingContext extends AbstractAbfsIntegrationTest {
         0));
 
     // unset namespaceEnabled to call getAcl -> trigger tracing header validator
-    fs.getAbfsStore().setNamespaceEnabled(Trilean.UNKNOWN);
+    fs.getAbfsStore().getAbfsConfiguration().setIsNamespaceEnabledAccountForTesting(Trilean.UNKNOWN);
     fs.hasPathCapability(new Path("/"), CommonPathCapabilities.FS_ACLS);
 
-    Assume.assumeTrue(getIsNamespaceEnabled(getFileSystem()));
-    Assume.assumeTrue(getConfiguration().isCheckAccessEnabled());
-    Assume.assumeTrue(getAuthType() == AuthType.OAuth);
+    assumeThat(getIsNamespaceEnabled(getFileSystem())).isTrue();
+    assumeThat(getConfiguration().isCheckAccessEnabled()).isTrue();
+    assumeThat(getAuthType()).isEqualTo(AuthType.OAuth);
 
     fs.setListenerOperation(FSOperationType.ACCESS);
-    fs.getAbfsStore().setNamespaceEnabled(Trilean.TRUE);
+    fs.getAbfsStore().getAbfsConfiguration().setIsNamespaceEnabledAccountForTesting(Trilean.TRUE);
     fs.access(new Path("/"), FsAction.READ);
   }
 
@@ -214,10 +228,10 @@ public class TestTracingContext extends AbstractAbfsIntegrationTest {
         0));
     AbfsHttpOperation abfsHttpOperation = Mockito.mock(AbfsHttpOperation.class);
     Mockito.doNothing().when(abfsHttpOperation).setRequestProperty(Mockito.anyString(), Mockito.anyString());
-    tracingContext.constructHeader(abfsHttpOperation, null);
+    tracingContext.constructHeader(abfsHttpOperation, null, EXPONENTIAL_RETRY_POLICY_ABBREVIATION);
     String header = tracingContext.getHeader();
-    String clientRequestIdUsed = header.split(":")[1];
-    String[] clientRequestIdUsedParts = clientRequestIdUsed.split("-");
+    String clientRequestIdUsed = header.split(COLON, SPLIT_NO_LIMIT)[2];
+    String[] clientRequestIdUsedParts = clientRequestIdUsed.split(String.valueOf(CHAR_HYPHEN));
     String assertionPrimaryId = clientRequestIdUsedParts[clientRequestIdUsedParts.length - 1];
 
     tracingContext.setRetryCount(1);
@@ -226,9 +240,9 @@ public class TestTracingContext extends AbstractAbfsIntegrationTest {
         fs.getFileSystemId(), FSOperationType.CREATE_FILESYSTEM, false,
         1));
 
-    tracingContext.constructHeader(abfsHttpOperation, "RT");
+    tracingContext.constructHeader(abfsHttpOperation, READ_TIMEOUT_ABBREVIATION, EXPONENTIAL_RETRY_POLICY_ABBREVIATION);
     header = tracingContext.getHeader();
-    String primaryRequestId = header.split(":")[3];
+    String primaryRequestId = header.split(COLON, SPLIT_NO_LIMIT)[4];
 
     Assertions.assertThat(primaryRequestId)
         .describedAs("PrimaryRequestId in a retried request's "
@@ -251,9 +265,9 @@ public class TestTracingContext extends AbstractAbfsIntegrationTest {
     tracingContext.setPrimaryRequestID();
     AbfsHttpOperation abfsHttpOperation = Mockito.mock(AbfsHttpOperation.class);
     Mockito.doNothing().when(abfsHttpOperation).setRequestProperty(Mockito.anyString(), Mockito.anyString());
-    tracingContext.constructHeader(abfsHttpOperation, null);
+    tracingContext.constructHeader(abfsHttpOperation, null, EXPONENTIAL_RETRY_POLICY_ABBREVIATION);
     String header = tracingContext.getHeader();
-    String assertionPrimaryId = header.split(":")[3];
+    String assertionPrimaryId = header.split(COLON)[3];
 
     tracingContext.setRetryCount(1);
     tracingContext.setListener(new TracingHeaderValidator(
@@ -261,13 +275,78 @@ public class TestTracingContext extends AbstractAbfsIntegrationTest {
         fs.getFileSystemId(), FSOperationType.CREATE_FILESYSTEM, false,
         1));
 
-    tracingContext.constructHeader(abfsHttpOperation, "RT");
+    tracingContext.constructHeader(abfsHttpOperation, READ_TIMEOUT_ABBREVIATION, EXPONENTIAL_RETRY_POLICY_ABBREVIATION);
     header = tracingContext.getHeader();
-    String primaryRequestId = header.split(":")[3];
+    String primaryRequestId = header.split(COLON)[3];
 
     Assertions.assertThat(primaryRequestId)
         .describedAs("PrimaryRequestId in a retried request's tracingContext "
             + "should be equal to PrimaryRequestId in the original request.")
         .isEqualTo(assertionPrimaryId);
+  }
+
+  @Test
+  public void testTracingContextHeaderForRetrypolicy() throws Exception {
+    final AzureBlobFileSystem fs = getFileSystem();
+    final String fileSystemId = fs.getFileSystemId();
+    final String clientCorrelationId = fs.getClientCorrelationId();
+    final TracingHeaderFormat tracingHeaderFormat = TracingHeaderFormat.ALL_ID_FORMAT;
+    TracingContext tracingContext = new TracingContext(clientCorrelationId,
+        fileSystemId, FSOperationType.CREATE_FILESYSTEM, tracingHeaderFormat, new TracingHeaderValidator(
+        fs.getAbfsStore().getAbfsConfiguration().getClientCorrelationId(),
+        fs.getFileSystemId(), FSOperationType.CREATE_FILESYSTEM, false,
+        0));
+    tracingContext.setPrimaryRequestID();
+    AbfsHttpOperation abfsHttpOperation = Mockito.mock(AbfsHttpOperation.class);
+    Mockito.doNothing().when(abfsHttpOperation).setRequestProperty(Mockito.anyString(), Mockito.anyString());
+
+    tracingContext.constructHeader(abfsHttpOperation, null, null);
+    checkHeaderForRetryPolicyAbbreviation(tracingContext.getHeader(), null, null);
+
+    tracingContext.constructHeader(abfsHttpOperation, null, STATIC_RETRY_POLICY_ABBREVIATION);
+    checkHeaderForRetryPolicyAbbreviation(tracingContext.getHeader(), null, null);
+
+    tracingContext.constructHeader(abfsHttpOperation, null, EXPONENTIAL_RETRY_POLICY_ABBREVIATION);
+    checkHeaderForRetryPolicyAbbreviation(tracingContext.getHeader(), null, null);
+
+    tracingContext.constructHeader(abfsHttpOperation, CONNECTION_TIMEOUT_ABBREVIATION, null);
+    checkHeaderForRetryPolicyAbbreviation(tracingContext.getHeader(), CONNECTION_TIMEOUT_ABBREVIATION, null);
+
+    tracingContext.constructHeader(abfsHttpOperation, CONNECTION_TIMEOUT_ABBREVIATION, STATIC_RETRY_POLICY_ABBREVIATION);
+    checkHeaderForRetryPolicyAbbreviation(tracingContext.getHeader(), CONNECTION_TIMEOUT_ABBREVIATION, STATIC_RETRY_POLICY_ABBREVIATION);
+
+    tracingContext.constructHeader(abfsHttpOperation, CONNECTION_TIMEOUT_ABBREVIATION, EXPONENTIAL_RETRY_POLICY_ABBREVIATION);
+    checkHeaderForRetryPolicyAbbreviation(tracingContext.getHeader(), CONNECTION_TIMEOUT_ABBREVIATION, EXPONENTIAL_RETRY_POLICY_ABBREVIATION);
+
+    tracingContext.constructHeader(abfsHttpOperation, "503", null);
+    checkHeaderForRetryPolicyAbbreviation(tracingContext.getHeader(), "503", null);
+
+    tracingContext.constructHeader(abfsHttpOperation, "503", STATIC_RETRY_POLICY_ABBREVIATION);
+    checkHeaderForRetryPolicyAbbreviation(tracingContext.getHeader(), "503", null);
+
+    tracingContext.constructHeader(abfsHttpOperation, "503", EXPONENTIAL_RETRY_POLICY_ABBREVIATION);
+    checkHeaderForRetryPolicyAbbreviation(tracingContext.getHeader(), "503", null);
+  }
+
+  private void checkHeaderForRetryPolicyAbbreviation(String header, String expectedFailureReason, String expectedRetryPolicyAbbreviation) {
+    String[] headerContents = header.split(COLON, SPLIT_NO_LIMIT);
+    String previousReqContext = headerContents[7];
+
+    if (expectedFailureReason != null) {
+      Assertions.assertThat(previousReqContext.split("_")[1]).describedAs(
+          "Failure reason Is not as expected").isEqualTo(expectedFailureReason);
+      if (expectedRetryPolicyAbbreviation != null) {
+        Assertions.assertThat(previousReqContext.split("_")).describedAs(
+            "Retry Count, Failure Reason and Retry Policy should be present").hasSize(3);
+        Assertions.assertThat(previousReqContext.split("_")[2]).describedAs(
+            "Retry policy is not as expected").isEqualTo(expectedRetryPolicyAbbreviation);
+      } else {
+        Assertions.assertThat(previousReqContext.split("_")).describedAs(
+            "Retry Count and Failure Reason should be present").hasSize(2);
+      }
+    } else {
+      Assertions.assertThat(previousReqContext.split("_")).describedAs(
+          "Only Retry Count should be present").hasSize(1);
+    }
   }
 }

@@ -38,9 +38,9 @@ import org.apache.hadoop.io.serializer.JavaSerialization;
 import org.apache.hadoop.io.serializer.JavaSerializationComparator;
 import org.apache.hadoop.io.serializer.WritableSerialization;
 import org.apache.hadoop.mapreduce.MRJobConfig;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TestTotalOrderPartitioner {
 
@@ -158,8 +158,9 @@ public class TestTotalOrderPartitioner {
       partitioner.setConf(conf);
       NullWritable nw = NullWritable.get();
       for (Check<String> chk : testJavaStrings) {
-        assertEquals(chk.data.toString(), chk.part,
-            partitioner.getPartition(chk.data, nw, splitJavaStrings.length + 1));
+        assertEquals(chk.part,
+            partitioner.getPartition(chk.data, nw, splitJavaStrings.length + 1),
+            chk.data.toString());
       }
     } finally {
       p.getFileSystem(conf).delete(p, true);
@@ -178,8 +179,8 @@ public class TestTotalOrderPartitioner {
       partitioner.setConf(conf);
       NullWritable nw = NullWritable.get();
       for (Check<Text> chk : testStrings) {
-        assertEquals(chk.data.toString(), chk.part,
-            partitioner.getPartition(chk.data, nw, splitStrings.length + 1));
+        assertEquals(chk.part,
+            partitioner.getPartition(chk.data, nw, splitStrings.length + 1), chk.data.toString());
       }
     } finally {
       p.getFileSystem(conf).delete(p, true);
@@ -199,8 +200,8 @@ public class TestTotalOrderPartitioner {
       partitioner.setConf(conf);
       NullWritable nw = NullWritable.get();
       for (Check<Text> chk : testStrings) {
-        assertEquals(chk.data.toString(), chk.part,
-            partitioner.getPartition(chk.data, nw, splitStrings.length + 1));
+        assertEquals(chk.part,
+            partitioner.getPartition(chk.data, nw, splitStrings.length + 1), chk.data.toString());
       }
     } finally {
       p.getFileSystem(conf).delete(p, true);
@@ -248,8 +249,8 @@ public class TestTotalOrderPartitioner {
       partitioner.setConf(conf);
       NullWritable nw = NullWritable.get();
       for (Check<Text> chk : revCheck) {
-        assertEquals(chk.data.toString(), chk.part,
-            partitioner.getPartition(chk.data, nw, splitStrings.length + 1));
+        assertEquals(chk.part,
+            partitioner.getPartition(chk.data, nw, splitStrings.length + 1), chk.data.toString());
       }
     } finally {
       p.getFileSystem(conf).delete(p, true);

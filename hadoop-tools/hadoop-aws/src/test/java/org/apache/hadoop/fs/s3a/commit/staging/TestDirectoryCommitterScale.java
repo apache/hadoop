@@ -27,17 +27,17 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import com.amazonaws.services.s3.model.PartETag;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.MethodOrderer;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestMethodOrder;
+import software.amazon.awssdk.services.s3.model.CompletedPart;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
-import org.assertj.core.api.Assertions;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.FixMethodOrder;
-import org.junit.Test;
-import org.junit.runners.MethodSorters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -65,6 +65,7 @@ import static org.apache.hadoop.fs.s3a.commit.staging.StagingTestBase.BUCKET;
 import static org.apache.hadoop.fs.s3a.commit.staging.StagingTestBase.getOutputPath;
 import static org.apache.hadoop.fs.s3a.commit.staging.StagingTestBase.getOutputPathUri;
 import static org.apache.hadoop.fs.s3a.commit.staging.StagingTestBase.pathIsDirectory;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Scale test of the directory committer: if there are many, many files
@@ -73,7 +74,7 @@ import static org.apache.hadoop.fs.s3a.commit.staging.StagingTestBase.pathIsDire
  * it does use a lot of local filesystem files though so as to
  * simulate real large scale deployment better.
  */
-@FixMethodOrder(MethodSorters.NAME_ASCENDING)
+@TestMethodOrder(MethodOrderer.MethodName.class)
 public class TestDirectoryCommitterScale
     extends StagingTestBase.JobCommitterTest<DirectoryStagingCommitter> {
 
@@ -104,7 +105,7 @@ public class TestDirectoryCommitterScale
         createTaskAttemptForJob());
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setupStaging() throws Exception {
     stagingDir = File.createTempFile("staging", null);
     stagingDir.delete();
@@ -114,7 +115,7 @@ public class TestDirectoryCommitterScale
   }
 
 
-  @AfterClass
+  @AfterAll
   public static void teardownStaging() throws IOException {
     try {
       if (stagingDir != null) {
@@ -159,8 +160,8 @@ public class TestDirectoryCommitterScale
     // step1: a list of tags.
     // this is the md5sum of hadoop 3.2.1.tar
     String tag = "9062dcf18ffaee254821303bbd11c72b";
-    List<PartETag> etags = IntStream.rangeClosed(1, BLOCKS_PER_TASK + 1)
-        .mapToObj(i -> new PartETag(i, tag))
+    List<CompletedPart> etags = IntStream.rangeClosed(1, BLOCKS_PER_TASK + 1)
+        .mapToObj(i -> CompletedPart.builder().partNumber(i).eTag(tag).build())
         .collect(Collectors.toList());
     SinglePendingCommit base = new SinglePendingCommit();
     base.setBucket(BUCKET);
@@ -227,7 +228,7 @@ public class TestDirectoryCommitterScale
         null, COMMITTER_THREAD_COUNT)) {
       AbstractS3ACommitter.ActiveCommit activeCommit
           = committer.listPendingUploadsToCommit(commitContext);
-      Assertions.assertThat(activeCommit.getSourceFiles())
+      assertThat(activeCommit.getSourceFiles())
           .describedAs("Source files of %s", activeCommit)
           .hasSize(TASKS);
     }
@@ -249,15 +250,15 @@ public class TestDirectoryCommitterScale
       committer.commitJob(getJob());
     }
 
-    Assertions.assertThat(results.getCommits())
+    assertThat(results.getCommits())
         .describedAs("commit count")
         .hasSize(TOTAL_COMMIT_COUNT);
     AbstractS3ACommitter.ActiveCommit activeCommit = committer.activeCommit;
-    Assertions.assertThat(activeCommit.getCommittedObjects())
+    assertThat(activeCommit.getCommittedObjects())
         .describedAs("committed objects in active commit")
         .hasSize(Math.min(TOTAL_COMMIT_COUNT,
             CommitConstants.SUCCESS_MARKER_FILE_LIMIT));
-    Assertions.assertThat(activeCommit.getCommittedFileCount())
+    assertThat(activeCommit.getCommittedFileCount())
         .describedAs("committed objects in active commit")
         .isEqualTo(TOTAL_COMMIT_COUNT);
 

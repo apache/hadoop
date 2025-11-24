@@ -31,9 +31,9 @@ import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 import java.util.List;
 import java.util.Map;
 
-import static junit.framework.TestCase.assertTrue;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 /**
  * Performs value verifications on
@@ -87,10 +87,9 @@ public class ResourceRequestsJsonVerifications {
     Map.Entry<String, Long> resourceEntry =
         resourceAndValue.entrySet().iterator().next();
 
-    assertTrue(
+    assertTrue(expectedResourceTypes.contains(resourceEntry.getKey()),
         "Found resource type: " + resourceEntry.getKey()
-            + " is not in expected resource types: " + expectedResourceTypes,
-        expectedResourceTypes.contains(resourceEntry.getKey()));
+        + " is not in expected resource types: " + expectedResourceTypes);
 
     return resourceAndValue;
   }
@@ -98,37 +97,33 @@ public class ResourceRequestsJsonVerifications {
   private static Map<String, Long> extractCustomResorceTypeValues(
       JSONObject capability, List<String> expectedResourceTypes)
       throws JSONException {
-    assertTrue(
-        "resourceCategory does not have resourceInformations: " + capability,
-        capability.has("resourceInformations"));
+    assertTrue(capability.has("resourceInformations"),
+        "resourceCategory does not have resourceInformations: " + capability);
 
     JSONObject resourceInformations =
         capability.getJSONObject("resourceInformations");
-    assertTrue(
+    assertTrue(resourceInformations.has("resourceInformation"),
         "resourceInformations does not have resourceInformation object: "
-            + resourceInformations,
-        resourceInformations.has("resourceInformation"));
+        + resourceInformations);
     JSONArray customResources =
         resourceInformations.getJSONArray("resourceInformation");
 
     // customResources will include vcores / memory as well
-    assertEquals(
-        "Different number of custom resource types found than expected",
-        expectedResourceTypes.size(), customResources.length() - 2);
+    assertEquals(expectedResourceTypes.size(), customResources.length() - 2,
+        "Different number of custom resource types found than expected");
 
     Map<String, Long> resourceValues = Maps.newHashMap();
     for (int i = 0; i < customResources.length(); i++) {
       JSONObject customResource = customResources.getJSONObject(i);
-      assertTrue("Resource type does not have name field: " + customResource,
-          customResource.has("name"));
-      assertTrue("Resource type does not have name resourceType field: "
-          + customResource, customResource.has("resourceType"));
-      assertTrue(
-          "Resource type does not have name units field: " + customResource,
-          customResource.has("units"));
-      assertTrue(
-          "Resource type does not have name value field: " + customResource,
-          customResource.has("value"));
+      assertTrue(customResource.has("name"),
+          "Resource type does not have name field: " + customResource);
+      assertTrue(customResource.has("resourceType"),
+          "Resource type does not have name resourceType field: "
+          + customResource);
+      assertTrue(customResource.has("units"),
+          "Resource type does not have name units field: " + customResource);
+      assertTrue(customResource.has("value"),
+          "Resource type does not have name value field: " + customResource);
 
       String name = customResource.getString("name");
       String unit = customResource.getString("units");
@@ -140,12 +135,12 @@ public class ResourceRequestsJsonVerifications {
         continue;
       }
 
-      assertTrue("Custom resource type " + name + " not found",
-          expectedResourceTypes.contains(name));
+      assertTrue(expectedResourceTypes.contains(name),
+          "Custom resource type " + name + " not found");
       assertEquals("k", unit);
       assertEquals(ResourceTypes.COUNTABLE,
           ResourceTypes.valueOf(resourceType));
-      assertNotNull("Custom resource value " + value + " is null!", value);
+      assertNotNull(value, "Custom resource value " + value + " is null!");
       resourceValues.put(name, value);
     }
 
@@ -153,38 +148,31 @@ public class ResourceRequestsJsonVerifications {
   }
 
   private void verify() throws JSONException {
-    assertEquals("nodeLabelExpression doesn't match",
-        resourceRequest.getNodeLabelExpression(),
-            requestInfo.getString("nodeLabelExpression"));
-    assertEquals("numContainers doesn't match",
-            resourceRequest.getNumContainers(),
-            requestInfo.getInt("numContainers"));
-    assertEquals("relaxLocality doesn't match",
-            resourceRequest.getRelaxLocality(),
-            requestInfo.getBoolean("relaxLocality"));
-    assertEquals("priority does not match",
-            resourceRequest.getPriority().getPriority(),
-            requestInfo.getInt("priority"));
-    assertEquals("resourceName does not match",
-            resourceRequest.getResourceName(),
-            requestInfo.getString("resourceName"));
-    assertEquals("memory does not match",
-        resourceRequest.getCapability().getMemorySize(),
-            requestInfo.getJSONObject("capability").getLong("memory"));
-    assertEquals("vCores does not match",
-        resourceRequest.getCapability().getVirtualCores(),
-            requestInfo.getJSONObject("capability").getLong("vCores"));
+    assertEquals(resourceRequest.getNodeLabelExpression(),
+        requestInfo.getString("nodeLabelExpression"),
+        "nodeLabelExpression doesn't match");
+    assertEquals(resourceRequest.getNumContainers(),
+        requestInfo.getInt("numContainers"), "numContainers doesn't match");
+    assertEquals(resourceRequest.getRelaxLocality(),
+        requestInfo.getBoolean("relaxLocality"), "relaxLocality doesn't match");
+    assertEquals(resourceRequest.getPriority().getPriority(),
+        requestInfo.getInt("priority"), "priority does not match");
+    assertEquals(resourceRequest.getResourceName(),
+        requestInfo.getString("resourceName"), "resourceName does not match");
+    assertEquals(resourceRequest.getCapability().getMemorySize(),
+        requestInfo.getJSONObject("capability").getLong("memory"), "memory does not match");
+    assertEquals(resourceRequest.getCapability().getVirtualCores(),
+        requestInfo.getJSONObject("capability").getLong("vCores"), "vCores does not match");
 
     verifyAtLeastOneCustomResourceIsSerialized();
 
     JSONObject executionTypeRequest =
-            requestInfo.getJSONObject("executionTypeRequest");
-    assertEquals("executionType does not match",
-        resourceRequest.getExecutionTypeRequest().getExecutionType().name(),
-            executionTypeRequest.getString("executionType"));
-    assertEquals("enforceExecutionType does not match",
-            resourceRequest.getExecutionTypeRequest().getEnforceExecutionType(),
-            executionTypeRequest.getBoolean("enforceExecutionType"));
+        requestInfo.getJSONObject("executionTypeRequest");
+    assertEquals(resourceRequest.getExecutionTypeRequest().getExecutionType().name(),
+        executionTypeRequest.getString("executionType"), "executionType does not match");
+    assertEquals(resourceRequest.getExecutionTypeRequest().getEnforceExecutionType(),
+        executionTypeRequest.getBoolean("enforceExecutionType"),
+        "enforceExecutionType does not match");
   }
 
   /**
@@ -203,11 +191,10 @@ public class ResourceRequestsJsonVerifications {
         resourceFound = true;
         Long resourceValue =
             customResourceTypes.get(expectedCustomResourceType);
-        assertNotNull("Resource value should not be null!", resourceValue);
+        assertNotNull(resourceValue, "Resource value should not be null!");
       }
     }
-    assertTrue("No custom resource type can be found in the response!",
-        resourceFound);
+    assertTrue(resourceFound, "No custom resource type can be found in the response!");
   }
 
   /**

@@ -30,6 +30,7 @@ import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
 import java.io.Writer;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
@@ -54,6 +55,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.api.TestContainerId;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -159,7 +161,7 @@ public class TestAggregatedLogFormat {
 
     File outputFile = new File(new File(srcFilePath.toString()), fileName);
     FileOutputStream os = new FileOutputStream(outputFile);
-    final OutputStreamWriter osw = new OutputStreamWriter(os, "UTF8");
+    final OutputStreamWriter osw = new OutputStreamWriter(os, StandardCharsets.UTF_8);
     final int ch = filler;
 
     UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
@@ -173,8 +175,8 @@ public class TestAggregatedLogFormat {
 
       final CountDownLatch latch = new CountDownLatch(1);
 
-      Thread t = new Thread() {
-        public void run() {
+      SubjectInheritingThread t = new SubjectInheritingThread() {
+        public void work() {
           try {
             for (int i = 0; i < length / 3; i++) {
               osw.write(ch);
@@ -400,7 +402,7 @@ public class TestAggregatedLogFormat {
         new BufferedReader(new FileReader(new File(remoteAppLogFile
             .toUri().getRawPath())));
     String line;
-    StringBuffer sb = new StringBuffer("");
+    StringBuilder sb = new StringBuilder("");
     while ((line = in.readLine()) != null) {
       LOG.info(line);
       sb.append(line);
@@ -473,7 +475,7 @@ public class TestAggregatedLogFormat {
     }
     File outputFile = new File(new File(srcFilePath.toString()), fileName);
     FileOutputStream os = new FileOutputStream(outputFile);
-    OutputStreamWriter osw = new OutputStreamWriter(os, "UTF8");
+    OutputStreamWriter osw = new OutputStreamWriter(os, StandardCharsets.UTF_8);
     return osw;
   }
 }

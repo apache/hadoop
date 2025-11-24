@@ -19,7 +19,7 @@
 package org.apache.hadoop.fs.azure;
 
 import org.apache.hadoop.fs.contract.ContractTestUtils.NanoTimer;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for <code>ClientThrottlingAnalyzer</code>.
@@ -43,32 +43,25 @@ public class TestClientThrottlingAnalyzer extends AbstractWasbTestWithTimeout {
     final double lowerBound = Math.max(expected - percentage / 100 * expected, 0);
     final double upperBound = expected + percentage / 100 * expected;
 
-    assertTrue(
-        String.format(
-            "The actual value %1$d is not within the expected range: "
-                + "[%2$.2f, %3$.2f].",
-            actual,
-            lowerBound,
-            upperBound),
-        actual >= lowerBound && actual <= upperBound);
+    assertTrue(actual >= lowerBound && actual <= upperBound, String.format(
+        "The actual value %1$d is not within the expected range: "
+        + "[%2$.2f, %3$.2f].",
+        actual,
+        lowerBound,
+        upperBound));
   }
 
   private void validate(long expected, long actual) {
-    assertEquals(
-        String.format("The actual value %1$d is not the expected value %2$d.",
-            actual,
-            expected),
-        expected, actual);
+    assertEquals(expected, actual,
+       String.format("The actual value %1$d is not the expected value %2$d.", actual, expected));
   }
 
   private void validateLessThanOrEqual(long maxExpected, long actual) {
-    assertTrue(
-        String.format(
-            "The actual value %1$d is not less than or equal to the maximum"
-            + " expected value %2$d.",
-            actual,
-            maxExpected),
-        actual < maxExpected);
+    assertTrue(actual < maxExpected, String.format(
+        "The actual value %1$d is not less than or equal to the maximum"
+        + " expected value %2$d.",
+        actual,
+        maxExpected));
   }
 
   /**

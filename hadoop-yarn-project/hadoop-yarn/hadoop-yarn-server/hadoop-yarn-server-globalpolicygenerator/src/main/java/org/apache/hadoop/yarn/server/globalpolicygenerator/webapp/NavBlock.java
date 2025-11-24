@@ -31,6 +31,7 @@ public class NavBlock extends HtmlBlock {
         h3("GPG").
         ul().
           li().a(url(""), "Overview").__().
+          li().a(url("policies"), "Policies").__().
         __().
         h3("Tools").
         ul().

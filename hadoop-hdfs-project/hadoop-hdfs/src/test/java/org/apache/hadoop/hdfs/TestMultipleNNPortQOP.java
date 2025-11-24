@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs;
 
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -31,8 +32,8 @@ import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.security.token.Token;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_RPC_PROTECTION;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ENCRYPT_DATA_OVERWRITE_DOWNSTREAM_DERIVED_QOP_KEY;
@@ -40,7 +41,10 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_ADDR
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SEND_QOP_ENABLED;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_AUXILIARY_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_ENCRYPT_DATA_OVERWRITE_DOWNSTREAM_NEW_QOP_KEY;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 
 /**
@@ -57,26 +61,26 @@ public class TestMultipleNNPortQOP extends SaslDataTransferTestCase {
 
   private static HdfsConfiguration clusterConf;
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     clusterConf = createSecureConfig(
         "authentication,integrity,privacy");
     clusterConf.set(DFS_NAMENODE_RPC_ADDRESS_AUXILIARY_KEY,
-        "12000,12100,12200");
+        "12001,12101,12201");
     // explicitly setting service rpc for datanode. This because
     // DFSUtil.getNNServiceRpcAddressesForCluster looks up client facing port
     // and service port at the same time, and if no setting for service
     // rpc, it would return client port, in this case, it will be the
     // auxiliary port for data node. Which is not what auxiliary is for.
     // setting service rpc port to avoid this.
-    clusterConf.set(DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY, "localhost:9020");
+    clusterConf.set(DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY, "localhost:9021");
     clusterConf.set(
         CommonConfigurationKeys.HADOOP_SECURITY_SASL_PROPS_RESOLVER_CLASS,
         "org.apache.hadoop.security.IngressPortBasedResolver");
-    clusterConf.set("ingress.port.sasl.configured.ports", "12000,12100,12200");
-    clusterConf.set("ingress.port.sasl.prop.12000", "authentication");
-    clusterConf.set("ingress.port.sasl.prop.12100", "integrity");
-    clusterConf.set("ingress.port.sasl.prop.12200", "privacy");
+    clusterConf.set("ingress.port.sasl.configured.ports", "12001,12101,12201");
+    clusterConf.set("ingress.port.sasl.prop.12001", "authentication");
+    clusterConf.set("ingress.port.sasl.prop.12101", "integrity");
+    clusterConf.set("ingress.port.sasl.prop.12201", "privacy");
     clusterConf.setBoolean(DFS_NAMENODE_SEND_QOP_ENABLED, true);
   }
 
@@ -102,11 +106,11 @@ public class TestMultipleNNPortQOP extends SaslDataTransferTestCase {
 
       URI currentURI = cluster.getURI();
       URI uriAuthPort = new URI(currentURI.getScheme() + "://" +
-              currentURI.getHost() + ":12000");
+              currentURI.getHost() + ":12001");
       URI uriIntegrityPort = new URI(currentURI.getScheme() + "://" +
-              currentURI.getHost() + ":12100");
+              currentURI.getHost() + ":12101");
       URI uriPrivacyPort = new URI(currentURI.getScheme() +
-          "://" + currentURI.getHost() + ":12200");
+          "://" + currentURI.getHost() + ":12201");
 
       // If connecting to primary port, block token should not include
       // handshake secret
@@ -179,11 +183,11 @@ public class TestMultipleNNPortQOP extends SaslDataTransferTestCase {
 
       URI currentURI = cluster.getURI();
       URI uriAuthPort = new URI(currentURI.getScheme() +
-          "://" + currentURI.getHost() + ":12000");
+          "://" + currentURI.getHost() + ":12001");
       URI uriIntegrityPort = new URI(currentURI.getScheme() +
-          "://" + currentURI.getHost() + ":12100");
+          "://" + currentURI.getHost() + ":12101");
       URI uriPrivacyPort = new URI(currentURI.getScheme() +
-          "://" + currentURI.getHost() + ":12200");
+          "://" + currentURI.getHost() + ":12201");
 
       clientConf.set(HADOOP_RPC_PROTECTION, "privacy");
       FileSystem fsPrivacy = FileSystem.get(uriPrivacyPort, clientConf);
@@ -239,13 +243,13 @@ public class TestMultipleNNPortQOP extends SaslDataTransferTestCase {
       URI currentURI = cluster.getURI();
       URI uriAuthPort =
           new URI(currentURI.getScheme() + "://" +
-              currentURI.getHost() + ":12000");
+              currentURI.getHost() + ":12001");
       URI uriIntegrityPort =
           new URI(currentURI.getScheme() + "://" +
-              currentURI.getHost() + ":12100");
+              currentURI.getHost() + ":12101");
       URI uriPrivacyPort =
           new URI(currentURI.getScheme() + "://" +
-              currentURI.getHost() + ":12200");
+              currentURI.getHost() + ":12201");
 
       clientConf.set(HADOOP_RPC_PROTECTION, "privacy");
       FileSystem fsPrivacy = FileSystem.get(uriPrivacyPort, clientConf);
@@ -258,7 +262,7 @@ public class TestMultipleNNPortQOP extends SaslDataTransferTestCase {
       // datanodes become equal to auth.
       // Note that it is not necessarily the case for all datanodes,
       // since a datanode may be always at the last position in pipelines.
-      assertTrue("At least two qops should be auth", count >= 2);
+      assertTrue(count >= 2, "At least two qops should be auth");
 
       clientConf.set(HADOOP_RPC_PROTECTION, "integrity");
       FileSystem fsIntegrity = FileSystem.get(uriIntegrityPort, clientConf);
@@ -267,7 +271,7 @@ public class TestMultipleNNPortQOP extends SaslDataTransferTestCase {
           .map(dn -> dn.getSaslClient().getTargetQOP())
           .filter("auth"::equals)
           .count();
-      assertTrue("At least two qops should be auth", count >= 2);
+      assertTrue(count >= 2, "At least two qops should be auth");
 
       clientConf.set(HADOOP_RPC_PROTECTION, "authentication");
       FileSystem fsAuth = FileSystem.get(uriAuthPort, clientConf);
@@ -276,7 +280,7 @@ public class TestMultipleNNPortQOP extends SaslDataTransferTestCase {
           .map(dn -> dn.getSaslServer().getNegotiatedQOP())
           .filter("auth"::equals)
           .count();
-      assertEquals("All qops should be auth", 3, count);
+      assertEquals(3, count, "All qops should be auth");
     } finally {
       if (cluster != null) {
         cluster.shutdown();
@@ -287,7 +291,7 @@ public class TestMultipleNNPortQOP extends SaslDataTransferTestCase {
   private void doTest(FileSystem fs, Path path) throws Exception {
     FileSystemTestHelper.createFile(fs, path, NUM_BLOCKS, BLOCK_SIZE);
     assertArrayEquals(FileSystemTestHelper.getFileData(NUM_BLOCKS, BLOCK_SIZE),
-        DFSTestUtil.readFile(fs, path).getBytes("UTF-8"));
+        DFSTestUtil.readFile(fs, path).getBytes(StandardCharsets.UTF_8));
     BlockLocation[] blockLocations = fs.getFileBlockLocations(path, 0,
         Long.MAX_VALUE);
     assertNotNull(blockLocations);

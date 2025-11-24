@@ -145,7 +145,7 @@ public class AMRMProxyService extends CompositeService implements
           RegistryOperations.class);
       addService(this.registry);
     }
-    this.federationFacade = FederationStateStoreFacade.getInstance();
+    this.federationFacade = FederationStateStoreFacade.getInstance(conf);
     this.federationEnabled =
         conf.getBoolean(YarnConfiguration.FEDERATION_ENABLED,
             YarnConfiguration.DEFAULT_FEDERATION_ENABLED);

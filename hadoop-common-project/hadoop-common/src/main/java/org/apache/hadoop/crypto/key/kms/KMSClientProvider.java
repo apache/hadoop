@@ -18,6 +18,7 @@
 package org.apache.hadoop.crypto.key.kms;
 
 import org.apache.commons.codec.binary.Base64;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.KeyProvider;
@@ -561,17 +562,19 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
       }
       throw ex;
     }
+
     if ((conn.getResponseCode() == HttpURLConnection.HTTP_FORBIDDEN
-        && (conn.getResponseMessage().equals(ANONYMOUS_REQUESTS_DISALLOWED) ||
-            conn.getResponseMessage().contains(INVALID_SIGNATURE)))
+        && (!StringUtils.isEmpty(conn.getResponseMessage())
+            && (conn.getResponseMessage().equals(ANONYMOUS_REQUESTS_DISALLOWED)
+            || conn.getResponseMessage().contains(INVALID_SIGNATURE))))
         || conn.getResponseCode() == HttpURLConnection.HTTP_UNAUTHORIZED) {
       // Ideally, this should happen only when there is an Authentication
       // failure. Unfortunately, the AuthenticationFilter returns 403 when it
       // cannot authenticate (Since a 401 requires Server to send
       // WWW-Authenticate header as well)..
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Response={}({}), resetting authToken",
-            conn.getResponseCode(), conn.getResponseMessage());
+        LOG.debug("Response={}, resetting authToken",
+            conn.getResponseCode());
       }
       KMSClientProvider.this.authToken =
           new DelegationTokenAuthenticatedURL.Token();
@@ -798,6 +801,7 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
   @SuppressWarnings("rawtypes")
   @Override
   public KeyVersion decryptEncryptedKey(
+
       EncryptedKeyVersion encryptedKeyVersion) throws IOException,
                                                       GeneralSecurityException {
     checkNotNull(encryptedKeyVersion.getEncryptionKeyVersionName(),
@@ -947,11 +951,7 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
   @Override
   public void warmUpEncryptedKeys(String... keyNames)
       throws IOException {
-    try {
-      encKeyVersionQueue.initializeQueuesForKeys(keyNames);
-    } catch (ExecutionException e) {
-      throw new IOException(e);
-    }
+    encKeyVersionQueue.initializeQueuesForKeys(keyNames);
   }
 
   @Override

@@ -32,6 +32,8 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
+import javax.ws.rs.core.Response;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
@@ -83,7 +85,9 @@ public class TestWebServiceClient {
             sslConf.get(SSL_SERVER_TRUSTSTORE_PROP_PREFIX + ".location"),
             sslConf.get(SSL_SERVER_TRUSTSTORE_PROP_PREFIX + ".password"),
             sslConf.get(SSL_SERVER_TRUSTSTORE_PROP_PREFIX + ".type", "jks"))
-        .excludeCiphers(sslConf.get("ssl.server.exclude.cipher.list")).build();
+        .excludeCiphers(sslConf.get("ssl.server.exclude.cipher.list"))
+        .includeCiphers(sslConf.get("ssl.server.include.cipher.list"))
+        .build();
     server.addServlet(SERVLET_NAME_ECHO, SERVLET_PATH_ECHO, EchoServlet.class);
     server.start();
 
@@ -92,9 +96,8 @@ public class TestWebServiceClient {
     URL u = new URL(baseUrl, SERVLET_PATH_ECHO + "?a=b&c=d");
     WebServiceClient.initialize(sslConf);
     WebServiceClient client = WebServiceClient.getWebServiceClient();
-    HttpURLConnection conn = client.getHttpURLConnectionFactory()
-        .getHttpURLConnection(u);
-    assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
+    Response resp = client.createClient().target(u.toURI()).request().get();
+    assertEquals(HttpURLConnection.HTTP_OK, resp.getStatus());
     WebServiceClient.destroy();
     server.stop();
     FileUtil.fullyDelete(new File(BASEDIR));

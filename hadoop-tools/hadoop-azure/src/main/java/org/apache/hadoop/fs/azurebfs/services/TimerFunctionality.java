@@ -18,9 +18,11 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
+/**
+ * Class for Timer Functionality.
+ */
 public enum TimerFunctionality {
   RESUME,
-
   SUSPEND
 }
 

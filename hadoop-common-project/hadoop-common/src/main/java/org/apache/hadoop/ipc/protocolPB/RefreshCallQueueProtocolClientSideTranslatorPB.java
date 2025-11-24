@@ -21,16 +21,14 @@ package org.apache.hadoop.ipc.protocolPB;
 import java.io.Closeable;
 import java.io.IOException;
 
-import org.apache.hadoop.ipc.ProtobufHelper;
 import org.apache.hadoop.ipc.ProtocolMetaInterface;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RpcClientUtil;
 import org.apache.hadoop.ipc.RefreshCallQueueProtocol;
 import org.apache.hadoop.ipc.proto.RefreshCallQueueProtocolProtos.RefreshCallQueueRequestProto;
-import org.apache.hadoop.ipc.protocolPB.RefreshCallQueueProtocolPB;
-
 import org.apache.hadoop.thirdparty.protobuf.RpcController;
-import org.apache.hadoop.thirdparty.protobuf.ServiceException;
+
+import static org.apache.hadoop.ipc.internal.ShadedProtobufHelper.ipc;
 
 public class RefreshCallQueueProtocolClientSideTranslatorPB implements
     ProtocolMetaInterface, RefreshCallQueueProtocol, Closeable {
@@ -55,12 +53,8 @@ public class RefreshCallQueueProtocolClientSideTranslatorPB implements
 
   @Override
   public void refreshCallQueue() throws IOException {
-    try {
-      rpcProxy.refreshCallQueue(NULL_CONTROLLER,
-          VOID_REFRESH_CALL_QUEUE_REQUEST);
-    } catch (ServiceException se) {
-      throw ProtobufHelper.getRemoteException(se);
-    }
+    ipc(() -> rpcProxy.refreshCallQueue(NULL_CONTROLLER,
+        VOID_REFRESH_CALL_QUEUE_REQUEST));
   }
 
   @Override

@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.mapreduce.lib.jobcontrol;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -30,7 +30,8 @@ import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.Job;
-import org.junit.Test;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests the JobControl API using mock and stub Job instances.
@@ -48,8 +49,8 @@ public class TestMapReduceJobControlWithMocks {
     
     runJobControl(jobControl);
     
-    assertEquals("Success list", 4, jobControl.getSuccessfulJobList().size());
-    assertEquals("Failed list", 0, jobControl.getFailedJobList().size());
+    assertEquals(4, jobControl.getSuccessfulJobList().size(), "Success list");
+    assertEquals(0, jobControl.getFailedJobList().size(), "Failed list");
     
     assertEquals(ControlledJob.State.SUCCESS, job1.getJobState());
     assertEquals(ControlledJob.State.SUCCESS, job2.getJobState());
@@ -70,8 +71,8 @@ public class TestMapReduceJobControlWithMocks {
     
     runJobControl(jobControl);
     
-    assertEquals("Success list", 1, jobControl.getSuccessfulJobList().size());
-    assertEquals("Failed list", 3, jobControl.getFailedJobList().size());
+    assertEquals(1, jobControl.getSuccessfulJobList().size(), "Success list");
+    assertEquals(3, jobControl.getFailedJobList().size(), "Failed list");
 
     assertEquals(ControlledJob.State.FAILED, job1.getJobState());
     assertEquals(ControlledJob.State.SUCCESS, job2.getJobState());
@@ -95,8 +96,8 @@ public class TestMapReduceJobControlWithMocks {
     
     runJobControl(jobControl);
     try {
-      assertEquals("Success list", 0, jobControl.getSuccessfulJobList().size());
-      assertEquals("Failed list", 1, jobControl.getFailedJobList().size());
+      assertEquals(0, jobControl.getSuccessfulJobList().size(), "Success list");
+      assertEquals(1, jobControl.getFailedJobList().size(), "Failed list");
 
       assertEquals(ControlledJob.State.FAILED, job1.getJobState());
     } finally {
@@ -148,7 +149,7 @@ public class TestMapReduceJobControlWithMocks {
   }
 
   private void runJobControl(JobControl jobControl) {
-    Thread controller = new Thread(jobControl);
+    Thread controller = new SubjectInheritingThread(jobControl);
     controller.start();
     waitTillAllFinished(jobControl);
   }

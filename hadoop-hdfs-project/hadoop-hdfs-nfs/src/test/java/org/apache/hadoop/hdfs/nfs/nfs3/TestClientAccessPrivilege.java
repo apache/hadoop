@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.nfs.nfs3;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -36,11 +36,13 @@ import org.apache.hadoop.oncrpc.XDR;
 import org.apache.hadoop.oncrpc.security.SecurityHandler;
 import org.apache.hadoop.security.authorize.DefaultImpersonationProvider;
 import org.apache.hadoop.security.authorize.ProxyUsers;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.mockito.Mockito;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 public class TestClientAccessPrivilege {
   static MiniDFSCluster cluster = null;
@@ -50,7 +52,7 @@ public class TestClientAccessPrivilege {
   static String testdir = "/tmp";
   static SecurityHandler securityHandler;
 
-  @BeforeClass
+  @BeforeAll
   public static void setup() throws Exception {
 
     String currentUser = System.getProperty("user.name");
@@ -68,26 +70,27 @@ public class TestClientAccessPrivilege {
     config.setInt("nfs3.mountd.port", 0);
     config.setInt("nfs3.server.port", 0);
 
-    securityHandler = Mockito.mock(SecurityHandler.class);
-    Mockito.when(securityHandler.getUser()).thenReturn(
+    securityHandler = mock(SecurityHandler.class);
+    when(securityHandler.getUser()).thenReturn(
         System.getProperty("user.name"));
   }
 
-  @AfterClass
+  @AfterAll
   public static void shutdown() throws Exception {
     if (cluster != null) {
       cluster.shutdown();
     }
   }
 
-  @Before
+  @BeforeEach
   public void createFiles() throws IllegalArgumentException, IOException {
     hdfs.delete(new Path(testdir), true);
     hdfs.mkdirs(new Path(testdir));
     DFSTestUtil.createFile(hdfs, new Path(testdir + "/f1"), 0, (short) 1, 0);
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testClientAccessPrivilegeForRemove() throws Exception {
     // Configure ro access for nfs1 service
     config.set("dfs.nfs.exports.allowed.hosts", "* ro");
@@ -113,9 +116,8 @@ public class TestClientAccessPrivilege {
         securityHandler, new InetSocketAddress("localhost", 1234));
 
     // Assert on return code
-    assertEquals("Incorrect return code", Nfs3Status.NFS3ERR_ACCES,
-        response.getStatus());
-
+    assertEquals(Nfs3Status.NFS3ERR_ACCES,
+        response.getStatus(), "Incorrect return code");
   }
 
 }

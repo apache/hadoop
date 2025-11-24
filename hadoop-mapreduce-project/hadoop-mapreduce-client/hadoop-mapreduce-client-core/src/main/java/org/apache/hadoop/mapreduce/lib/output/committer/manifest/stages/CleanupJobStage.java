@@ -40,7 +40,10 @@ import static org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter.FILEOUT
 import static org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter.FILEOUTPUTCOMMITTER_CLEANUP_SKIPPED;
 import static org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter.FILEOUTPUTCOMMITTER_CLEANUP_SKIPPED_DEFAULT;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_CLEANUP_PARALLEL_DELETE;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_CLEANUP_PARALLEL_DELETE_BASE_FIRST;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_CLEANUP_PARALLEL_DELETE_BASE_FIRST_DEFAULT;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_CLEANUP_PARALLEL_DELETE_DIRS_DEFAULT;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_DELETE_DIR;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_STAGE_JOB_CLEANUP;
 
 /**
@@ -49,7 +52,7 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.Manifest
  * Returns: the outcome of the overall operation
  * The result is detailed purely for the benefit of tests, which need
  * to make assertions about error handling and fallbacks.
- *
+ * <p>
  * There's a few known issues with the azure and GCS stores which
  * this stage tries to address.
  * - Google GCS directory deletion is O(entries), so is slower for big jobs.
@@ -57,19 +60,28 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.Manifest
  *   when not the store owner triggers a scan down the tree to verify the
  *   caller has the permission to delete each subdir.
  *   If this scan takes over 90s, the operation can time out.
- *
+ * <p>
  * The main solution for both of these is that task attempts are
  * deleted in parallel, in different threads.
  * This will speed up GCS cleanup and reduce the risk of
  * abfs related timeouts.
  * Exceptions during cleanup can be suppressed,
  * so that these do not cause the job to fail.
- *
+ * <p>
+ * There is one weakness of this design: the number of delete operations
+ * is 1 + number of task attempts, which, on ABFS can generate excessive
+ * load.
+ * For this reason, there is an option to attempt to delete the base directory
+ * first; if this does not time out then, on Azure ADLS Gen2 storage,
+ * this is the most efficient cleanup.
+ * Only if that attempt fails for any reason then the parallel delete
+ * phase takes place.
+ * <p>
  * Also, some users want to be able to run multiple independent jobs
  * targeting the same output directory simultaneously.
  * If one job deletes the directory `__temporary` all the others
  * will fail.
- *
+ * <p>
  * This can be addressed by disabling cleanup entirely.
  *
  */
@@ -128,7 +140,7 @@ public class CleanupJobStage extends
     stageName = getStageName(args);
     // this is $dest/_temporary
     final Path baseDir = requireNonNull(getStageConfig().getOutputTempSubDir());
-    LOG.debug("{}: Cleaup of directory {} with {}", getName(), baseDir, args);
+    LOG.debug("{}: Cleanup of directory {} with {}", getName(), baseDir, args);
     if (!args.enabled) {
       LOG.info("{}: Cleanup of {} disabled", getName(), baseDir);
       return new Result(Outcome.DISABLED, baseDir,
@@ -142,64 +154,105 @@ public class CleanupJobStage extends
     }
 
     Outcome outcome = null;
-    IOException exception;
+    IOException exception = null;
+    boolean baseDirDeleted = false;
 
 
     // to delete.
     LOG.info("{}: Deleting job directory {}", getName(), baseDir);
+    final long directoryCount = args.directoryCount;
+    if (directoryCount > 0) {
+      // log the expected directory count, which drives duration in GCS
+      // and may cause timeouts on azure if the count is too high for a
+      // timely permissions tree scan.
+      LOG.info("{}: Expected directory count: {}", getName(), directoryCount);
+    }
 
+    progress();
+    // check and maybe execute parallel delete of task attempt dirs.
     if (args.deleteTaskAttemptDirsInParallel) {
-      // Attempt to do a parallel delete of task attempt dirs;
-      // don't overreact if a delete fails, but stop trying
-      // to delete the others, and fall back to deleting the
-      // job dir.
-      Path taskSubDir
-          = getStageConfig().getJobAttemptTaskSubDir();
-      try (DurationInfo info = new DurationInfo(LOG,
-          "parallel deletion of task attempts in %s",
-          taskSubDir)) {
-        RemoteIterator<FileStatus> dirs =
-            RemoteIterators.filteringRemoteIterator(
-                listStatusIterator(taskSubDir),
-                FileStatus::isDirectory);
-        TaskPool.foreach(dirs)
-            .executeWith(getIOProcessors())
-            .stopOnFailure()
-            .suppressExceptions(false)
-            .run(this::rmTaskAttemptDir);
-        getIOStatistics().aggregate((retrieveIOStatistics(dirs)));
 
-        if (getLastDeleteException() != null) {
-          // one of the task attempts failed.
-          throw getLastDeleteException();
+
+      if (args.parallelDeleteAttemptBaseDeleteFirst) {
+        // attempt to delete the base dir first.
+        // This can reduce ABFS delete load but may time out
+        // (which the fallback to parallel delete will handle).
+        // on GCS it is slow.
+        try (DurationInfo info = new DurationInfo(LOG, true,
+            "Initial delete of %s", baseDir)) {
+          exception = deleteOneDir(baseDir);
+          if (exception == null) {
+            // success: record this as the outcome,
+            outcome = Outcome.DELETED;
+            // and flag that the the parallel delete should be skipped because the
+            // base directory is alredy deleted.
+            baseDirDeleted = true;
+          } else {
+            // failure: log and continue
+            LOG.warn("{}: Exception on initial attempt at deleting base dir {}"
+                    + " with directory count {}. Falling back to parallel delete",
+                getName(), baseDir, directoryCount, exception);
+          }
         }
-        // success: record this as the outcome.
-        outcome = Outcome.PARALLEL_DELETE;
-      } catch (FileNotFoundException ex) {
-        // not a problem if there's no dir to list.
-        LOG.debug("{}: Task attempt dir {} not found", getName(), taskSubDir);
-        outcome = Outcome.DELETED;
-      } catch (IOException ex) {
-        // failure. Log and continue
-        LOG.info(
-            "{}: Exception while listing/deleting task attempts under {}; continuing",
-            getName(),
-            taskSubDir, ex);
-        // not overreacting here as the base delete will still get executing
-        outcome = Outcome.DELETED;
+      }
+      if (!baseDirDeleted) {
+        // no base delete attempted or it failed.
+        // Attempt to do a parallel delete of task attempt dirs;
+        // don't overreact if a delete fails, but stop trying
+        // to delete the others, and fall back to deleting the
+        // job dir.
+        Path taskSubDir
+            = getStageConfig().getJobAttemptTaskSubDir();
+        try (DurationInfo info = new DurationInfo(LOG, true,
+            "parallel deletion of task attempts in %s",
+            taskSubDir)) {
+          RemoteIterator<FileStatus> dirs =
+              RemoteIterators.filteringRemoteIterator(
+                  listStatusIterator(taskSubDir),
+                  FileStatus::isDirectory);
+          TaskPool.foreach(dirs)
+              .executeWith(getIOProcessors())
+              .stopOnFailure()
+              .suppressExceptions(false)
+              .run(this::rmTaskAttemptDir);
+          getIOStatistics().aggregate((retrieveIOStatistics(dirs)));
+
+          if (getLastDeleteException() != null) {
+            // one of the task attempts failed.
+            throw getLastDeleteException();
+          } else {
+            // success: record this as the outcome.
+            outcome = Outcome.PARALLEL_DELETE;
+          }
+        } catch (FileNotFoundException ex) {
+          // not a problem if there's no dir to list.
+          LOG.debug("{}: Task attempt dir {} not found", getName(), taskSubDir);
+          outcome = Outcome.DELETED;
+        } catch (IOException ex) {
+          // failure. Log and continue
+          LOG.info(
+              "{}: Exception while listing/deleting task attempts under {}; continuing",
+              getName(),
+              taskSubDir, ex);
+        }
       }
     }
-    // Now the top-level deletion; exception gets saved
-    exception = deleteOneDir(baseDir);
-    if (exception != null) {
-      // failure, report and continue
-      // assume failure.
-      outcome = Outcome.FAILURE;
-    } else {
-      // if the outcome isn't already recorded as parallel delete,
-      // mark is a simple delete.
-      if (outcome == null) {
-        outcome = Outcome.DELETED;
+    // Now the top-level deletion if not already executed; exception gets saved
+    if (!baseDirDeleted) {
+      exception = deleteOneDir(baseDir);
+      if (exception != null) {
+        // failure, report and continue
+        LOG.warn("{}: Exception on final attempt at deleting base dir {}"
+                + " with directory count {}",
+            getName(), baseDir, directoryCount, exception);
+        // assume failure.
+        outcome = Outcome.FAILURE;
+      } else {
+        // if the outcome isn't already recorded as parallel delete,
+        // mark is a simple delete.
+        if (outcome == null) {
+          outcome = Outcome.DELETED;
+        }
       }
     }
 
@@ -235,7 +288,7 @@ public class CleanupJobStage extends
   }
 
   /**
-   * Delete a directory.
+   * Delete a directory suppressing exceptions.
    * The {@link #deleteFailureCount} counter.
    * is incremented on every failure.
    * @param dir directory
@@ -246,21 +299,22 @@ public class CleanupJobStage extends
       throws IOException {
 
     deleteDirCount.incrementAndGet();
-    IOException ex = deleteDir(dir, true);
-    if (ex != null) {
-      deleteFailure(ex);
-    }
-    return ex;
+    return noteAnyDeleteFailure(
+        deleteRecursiveSuppressingExceptions(dir, OP_DELETE_DIR));
   }
 
   /**
-   * Note a failure.
+   * Note a failure if the exception is not null.
    * @param ex exception
+   * @return the exception
    */
-  private synchronized void deleteFailure(IOException ex) {
-    // excaption: add the count
-    deleteFailureCount.incrementAndGet();
-    lastDeleteException = ex;
+  private synchronized IOException noteAnyDeleteFailure(IOException ex) {
+    if (ex != null) {
+      // exception: add the count
+      deleteFailureCount.incrementAndGet();
+      lastDeleteException = ex;
+    }
+    return ex;
   }
 
   /**
@@ -287,8 +341,22 @@ public class CleanupJobStage extends
     /** Attempt parallel delete of task attempt dirs? */
     private final boolean deleteTaskAttemptDirsInParallel;
 
+    /**
+     * Make an initial attempt to delete the base directory.
+     * This will reduce IO load on abfs. If it times out, the
+     * parallel delete will be the fallback.
+     */
+    private final boolean parallelDeleteAttemptBaseDeleteFirst;
+
     /** Ignore failures? */
     private final boolean suppressExceptions;
+
+    /**
+     * Non-final count of directories.
+     * Default value, "0", means "unknown".
+     * This can be dynamically updated during job commit.
+     */
+    private long directoryCount;
 
     /**
      * Arguments to the stage.
@@ -296,17 +364,24 @@ public class CleanupJobStage extends
      * @param enabled is the stage enabled?
      * @param deleteTaskAttemptDirsInParallel delete task attempt dirs in
      * parallel?
+     * @param parallelDeleteAttemptBaseDeleteFirst Make an initial attempt to
+     * delete the base directory in a parallel delete?
      * @param suppressExceptions suppress exceptions?
+     * @param directoryCount directories under job dir; 0 means unknown.
      */
     public Arguments(
         final String statisticName,
         final boolean enabled,
         final boolean deleteTaskAttemptDirsInParallel,
-        final boolean suppressExceptions) {
+        final boolean parallelDeleteAttemptBaseDeleteFirst,
+        final boolean suppressExceptions,
+        long directoryCount) {
       this.statisticName = statisticName;
       this.enabled = enabled;
       this.deleteTaskAttemptDirsInParallel = deleteTaskAttemptDirsInParallel;
       this.suppressExceptions = suppressExceptions;
+      this.parallelDeleteAttemptBaseDeleteFirst = parallelDeleteAttemptBaseDeleteFirst;
+      this.directoryCount = directoryCount;
     }
 
     public String getStatisticName() {
@@ -325,6 +400,18 @@ public class CleanupJobStage extends
       return suppressExceptions;
     }
 
+    public boolean isParallelDeleteAttemptBaseDeleteFirst() {
+      return parallelDeleteAttemptBaseDeleteFirst;
+    }
+
+    public long getDirectoryCount() {
+      return directoryCount;
+    }
+
+    public void setDirectoryCount(final long directoryCount) {
+      this.directoryCount = directoryCount;
+    }
+
     @Override
     public String toString() {
       return "Arguments{" +
@@ -332,6 +419,7 @@ public class CleanupJobStage extends
           + ", enabled=" + enabled
           + ", deleteTaskAttemptDirsInParallel="
           + deleteTaskAttemptDirsInParallel
+          + ", parallelDeleteAttemptBaseDeleteFirst=" + parallelDeleteAttemptBaseDeleteFirst
           + ", suppressExceptions=" + suppressExceptions
           + '}';
     }
@@ -343,8 +431,9 @@ public class CleanupJobStage extends
   public static final Arguments DISABLED = new Arguments(OP_STAGE_JOB_CLEANUP,
       false,
       false,
-      false
-  );
+      false,
+      false,
+      0);
 
   /**
    * Build an options argument from a configuration, using the
@@ -364,12 +453,16 @@ public class CleanupJobStage extends
     boolean deleteTaskAttemptDirsInParallel = conf.getBoolean(
         OPT_CLEANUP_PARALLEL_DELETE,
         OPT_CLEANUP_PARALLEL_DELETE_DIRS_DEFAULT);
+    boolean parallelDeleteAttemptBaseDeleteFirst = conf.getBoolean(
+        OPT_CLEANUP_PARALLEL_DELETE_BASE_FIRST,
+        OPT_CLEANUP_PARALLEL_DELETE_BASE_FIRST_DEFAULT);
     return new Arguments(
         statisticName,
         enabled,
         deleteTaskAttemptDirsInParallel,
-        suppressExceptions
-    );
+        parallelDeleteAttemptBaseDeleteFirst,
+        suppressExceptions,
+        0);
   }
 
   /**

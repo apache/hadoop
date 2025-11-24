@@ -19,11 +19,12 @@
 package org.apache.hadoop.fs;
 
 import org.apache.hadoop.conf.Configuration;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * Test FsShell -ls command.
@@ -34,7 +35,7 @@ public class TestFsShellList {
   private static LocalFileSystem lfs;
   private static Path testRootDir;
 
-  @BeforeClass
+  @BeforeAll
   public static void setup() throws Exception {
     conf = new Configuration();
     shell = new FsShell(conf);
@@ -47,7 +48,7 @@ public class TestFsShellList {
     assertThat(lfs.mkdirs(testRootDir)).isTrue();
   }
 
-  @AfterClass
+  @AfterAll
   public static void teardown() throws Exception {
     lfs.delete(testRootDir, true);
   }
@@ -65,9 +66,12 @@ public class TestFsShellList {
     String[] lsArgv = new String[]{"-ls", testRootDir.toString()};
     assertThat(shell.run(lsArgv)).isEqualTo(0);
 
-    createFile(new Path(testRootDir, "abc\bd\tef"));
+    if (!Path.WINDOWS) {
+      createFile(new Path(testRootDir, "abc\bd\tef"));
+      createFile(new Path(testRootDir, "qq\r123"));
+    }
+
     createFile(new Path(testRootDir, "ghi"));
-    createFile(new Path(testRootDir, "qq\r123"));
     lsArgv = new String[]{"-ls", testRootDir.toString()};
     assertThat(shell.run(lsArgv)).isEqualTo(0);
 
@@ -78,14 +82,15 @@ public class TestFsShellList {
   /*
   UGI params should take effect when we pass.
  */
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testListWithUGI() throws Exception {
-    FsShell fsShell = new FsShell(new Configuration());
-    //Passing Dummy such that it should through IAE
-    fsShell.getConf()
-        .set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
-            "DUMMYAUTH");
-    String[] lsArgv = new String[] {"-ls", testRootDir.toString()};
-    fsShell.run(lsArgv);
+    assertThrows(IllegalArgumentException.class, () -> {
+      FsShell fsShell = new FsShell(new Configuration());
+      //Passing Dummy such that it should through IAE
+      fsShell.getConf().set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
+          "DUMMYAUTH");
+      String[] lsArgv = new String[]{"-ls", testRootDir.toString()};
+      fsShell.run(lsArgv);
+    });
   }
 }

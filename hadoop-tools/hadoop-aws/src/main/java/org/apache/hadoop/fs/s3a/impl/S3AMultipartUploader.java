@@ -25,6 +25,8 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
+import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -34,11 +36,11 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
-import com.amazonaws.services.s3.model.CompleteMultipartUploadResult;
-import com.amazonaws.services.s3.model.PartETag;
-import com.amazonaws.services.s3.model.UploadPartRequest;
-import com.amazonaws.services.s3.model.UploadPartResult;
-import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
+import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadResponse;
+import software.amazon.awssdk.services.s3.model.CompletedPart;
+import software.amazon.awssdk.services.s3.model.UploadPartRequest;
+import software.amazon.awssdk.services.s3.model.UploadPartResponse;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -53,6 +55,7 @@ import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.UploadHandle;
 import org.apache.hadoop.fs.impl.AbstractMultipartUploader;
 import org.apache.hadoop.fs.s3a.WriteOperations;
+import org.apache.hadoop.fs.s3a.commit.files.UploadEtag;
 import org.apache.hadoop.fs.s3a.statistics.S3AMultipartUploaderStatistics;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.util.Preconditions;
@@ -127,10 +130,10 @@ class S3AMultipartUploader extends AbstractMultipartUploader {
     return context.submit(new CompletableFuture<>(),
         trackDurationOfCallable(statistics, OBJECT_MULTIPART_UPLOAD_INITIATED.getSymbol(), () -> {
           String uploadId = writeOperations.initiateMultiPartUpload(key,
-              PutObjectOptions.keepingDirs());
+              PutObjectOptions.defaultOptions());
           statistics.uploadStarted();
           return BBUploadHandle.from(ByteBuffer.wrap(
-              uploadId.getBytes(Charsets.UTF_8)));
+              uploadId.getBytes(StandardCharsets.UTF_8)));
         }));
   }
 
@@ -138,6 +141,7 @@ class S3AMultipartUploader extends AbstractMultipartUploader {
   public CompletableFuture<PartHandle> putPart(
       final UploadHandle uploadId,
       final int partNumber,
+      final boolean isLastPart,
       final Path filePath,
       final InputStream inputStream,
       final long lengthInBytes)
@@ -149,23 +153,32 @@ class S3AMultipartUploader extends AbstractMultipartUploader {
     checkUploadId(uploadIdBytes);
     String key = context.pathToKey(dest);
     String uploadIdString = new String(uploadIdBytes, 0, uploadIdBytes.length,
-        Charsets.UTF_8);
+        StandardCharsets.UTF_8);
     return context.submit(new CompletableFuture<>(),
         () -> {
-          UploadPartRequest request = writeOperations.newUploadPartRequest(key,
-              uploadIdString, partNumber, (int) lengthInBytes, inputStream,
-              null, 0L);
-          UploadPartResult result = writeOperations.uploadPart(request, statistics);
+          UploadPartRequest request = writeOperations.newUploadPartRequestBuilder(key,
+              uploadIdString, partNumber, isLastPart, lengthInBytes).build();
+          RequestBody body = RequestBody.fromInputStream(inputStream, lengthInBytes);
+          UploadPartResponse response = writeOperations.uploadPart(request, body, statistics);
           statistics.partPut(lengthInBytes);
-          String eTag = result.getETag();
+          String eTag = response.eTag();
+          String checksumAlgorithm = null;
+          String checksum = null;
+          final Map.Entry<String, String> extractedChecksum = extractChecksum(response);
+          if (extractedChecksum != null) {
+            checksumAlgorithm = extractedChecksum.getKey();
+            checksum = extractedChecksum.getValue();
+          }
           return BBPartHandle.from(
               ByteBuffer.wrap(
                   buildPartHandlePayload(
                       filePath.toUri().toString(),
                       uploadIdString,
-                      result.getPartNumber(),
+                      partNumber,
                       eTag,
-                      lengthInBytes)));
+                      lengthInBytes,
+                      checksumAlgorithm,
+                      checksum)));
         });
   }
 
@@ -187,8 +200,8 @@ class S3AMultipartUploader extends AbstractMultipartUploader {
     String key = context.pathToKey(dest);
 
     String uploadIdStr = new String(uploadIdBytes, 0, uploadIdBytes.length,
-        Charsets.UTF_8);
-    ArrayList<PartETag> eTags = new ArrayList<>();
+        StandardCharsets.UTF_8);
+    ArrayList<CompletedPart> eTags = new ArrayList<>();
     eTags.ensureCapacity(handles.size());
     long totalLength = 0;
     // built up to identify duplicates -if the size of this set is
@@ -201,7 +214,9 @@ class S3AMultipartUploader extends AbstractMultipartUploader {
       payload.validate(uploadIdStr, filePath);
       ids.add(payload.getPartNumber());
       totalLength += payload.getLen();
-      eTags.add(new PartETag(handle.getKey(), payload.getEtag()));
+      final UploadEtag uploadEtag = new UploadEtag(payload.getEtag(),
+          payload.getChecksumAlgorithm(), payload.getChecksum());
+      eTags.add(UploadEtag.toCompletedPart(uploadEtag, handle.getKey()));
     }
     Preconditions.checkArgument(ids.size() == count,
         "Duplicate PartHandles");
@@ -210,7 +225,7 @@ class S3AMultipartUploader extends AbstractMultipartUploader {
     long finalLen = totalLength;
     return context.submit(new CompletableFuture<>(),
         trackDurationOfCallable(statistics, MULTIPART_UPLOAD_COMPLETED.getSymbol(), () -> {
-          CompleteMultipartUploadResult result =
+          CompleteMultipartUploadResponse result =
               writeOperations.commitUpload(
                   key,
                   uploadIdStr,
@@ -218,7 +233,7 @@ class S3AMultipartUploader extends AbstractMultipartUploader {
                   finalLen
               );
 
-          byte[] eTag = result.getETag().getBytes(Charsets.UTF_8);
+          byte[] eTag = result.eTag().getBytes(StandardCharsets.UTF_8);
           statistics.uploadCompleted();
           return (PathHandle) () -> ByteBuffer.wrap(eTag);
         }));
@@ -234,7 +249,7 @@ class S3AMultipartUploader extends AbstractMultipartUploader {
     final byte[] uploadIdBytes = uploadId.toByteArray();
     checkUploadId(uploadIdBytes);
     String uploadIdString = new String(uploadIdBytes, 0, uploadIdBytes.length,
-        Charsets.UTF_8);
+        StandardCharsets.UTF_8);
     return context.submit(new CompletableFuture<>(),
         () -> {
           writeOperations.abortMultipartCommit(
@@ -267,6 +282,8 @@ class S3AMultipartUploader extends AbstractMultipartUploader {
    * @param partNumber part number from response
    * @param etag upload etag
    * @param len length
+   * @param checksumAlgorithm checksum algorithm
+   * @param checksum checksum content
    * @return a byte array to marshall.
    * @throws IOException error writing the payload
    */
@@ -276,10 +293,12 @@ class S3AMultipartUploader extends AbstractMultipartUploader {
       final String uploadId,
       final int partNumber,
       final String etag,
-      final long len)
+      final long len,
+      final String checksumAlgorithm,
+      final String checksum)
       throws IOException {
 
-    return new PartHandlePayload(path, uploadId, partNumber, len, etag)
+    return new PartHandlePayload(path, uploadId, partNumber, len, etag, checksumAlgorithm, checksum)
         .toBytes();
   }
 
@@ -305,11 +324,34 @@ class S3AMultipartUploader extends AbstractMultipartUploader {
       final int partNumber = input.readInt();
       final long len = input.readLong();
       final String etag = input.readUTF();
+      String checksumAlgorithm = null;
+      String checksum = null;
+      if (input.available() > 0) {
+        checksumAlgorithm = input.readUTF();
+        checksum = input.readUTF();
+      }
       if (len < 0) {
         throw new IOException("Negative length");
       }
-      return new PartHandlePayload(path, uploadId, partNumber, len, etag);
+      return new PartHandlePayload(path, uploadId, partNumber, len, etag, checksumAlgorithm,
+          checksum);
     }
+  }
+
+  static Map.Entry<String, String> extractChecksum(final UploadPartResponse uploadPartResponse) {
+    if (uploadPartResponse.checksumCRC32() != null) {
+      return new AbstractMap.SimpleEntry<>("CRC32", uploadPartResponse.checksumCRC32());
+    }
+    if (uploadPartResponse.checksumCRC32C() != null) {
+      return new AbstractMap.SimpleEntry<>("CRC32C", uploadPartResponse.checksumCRC32C());
+    }
+    if (uploadPartResponse.checksumSHA1() != null) {
+      return new AbstractMap.SimpleEntry<>("SHA1", uploadPartResponse.checksumSHA1());
+    }
+    if (uploadPartResponse.checksumSHA256() != null) {
+      return new AbstractMap.SimpleEntry<>("SHA256", uploadPartResponse.checksumSHA256());
+    }
+    return null;
   }
 
   /**
@@ -329,12 +371,18 @@ class S3AMultipartUploader extends AbstractMultipartUploader {
 
     private final String etag;
 
+    private final String checksumAlgorithm;
+
+    private final String checksum;
+
     private PartHandlePayload(
         final String path,
         final String uploadId,
         final int partNumber,
         final long len,
-        final String etag) {
+        final String etag,
+        final String checksumAlgorithm,
+        final String checksum) {
       Preconditions.checkArgument(StringUtils.isNotEmpty(etag),
           "Empty etag");
       Preconditions.checkArgument(StringUtils.isNotEmpty(path),
@@ -343,12 +391,18 @@ class S3AMultipartUploader extends AbstractMultipartUploader {
           "Empty uploadId");
       Preconditions.checkArgument(len >= 0,
           "Invalid length");
+      Preconditions.checkArgument((StringUtils.isNotEmpty(checksumAlgorithm) &&
+              StringUtils.isNotEmpty(checksum)) ||
+              (StringUtils.isEmpty(checksumAlgorithm) && StringUtils.isEmpty(checksum)),
+          "Checksum algorithm and checksum should be both provided or empty");
 
       this.path = path;
       this.uploadId = uploadId;
       this.partNumber = partNumber;
       this.len = len;
       this.etag = etag;
+      this.checksumAlgorithm = checksumAlgorithm;
+      this.checksum = checksum;
     }
 
     public String getPath() {
@@ -371,6 +425,14 @@ class S3AMultipartUploader extends AbstractMultipartUploader {
       return uploadId;
     }
 
+    public String getChecksumAlgorithm() {
+      return checksumAlgorithm;
+    }
+
+    public String getChecksum() {
+      return checksum;
+    }
+
     public byte[] toBytes()
         throws IOException {
       Preconditions.checkArgument(StringUtils.isNotEmpty(etag),
@@ -386,6 +448,10 @@ class S3AMultipartUploader extends AbstractMultipartUploader {
         output.writeInt(partNumber);
         output.writeLong(len);
         output.writeUTF(etag);
+        if (checksumAlgorithm != null && checksum != null) {
+          output.writeUTF(checksumAlgorithm);
+          output.writeUTF(checksum);
+        }
       }
       return bytes.toByteArray();
     }

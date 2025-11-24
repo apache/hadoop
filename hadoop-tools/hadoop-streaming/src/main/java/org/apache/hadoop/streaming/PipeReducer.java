@@ -20,6 +20,7 @@ package org.apache.hadoop.streaming;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
 import java.net.URLDecoder;
 
@@ -71,13 +72,11 @@ public class PipeReducer extends PipeMapRed implements Reducer {
     SkipBadRecords.setAutoIncrReducerProcCount(job, false);
     skipping = job.getBoolean(MRJobConfig.SKIP_RECORDS, false);
 
-    try {
-      reduceOutFieldSeparator = job_.get("stream.reduce.output.field.separator", "\t").getBytes("UTF-8");
-      reduceInputFieldSeparator = job_.get("stream.reduce.input.field.separator", "\t").getBytes("UTF-8");
-      this.numOfReduceOutputKeyFields = job_.getInt("stream.num.reduce.output.key.fields", 1);
-    } catch (UnsupportedEncodingException e) {
-      throw new RuntimeException("The current system does not support UTF-8 encoding!", e);
-    }
+    reduceOutFieldSeparator = job_.get("stream.reduce.output.field.separator", "\t")
+            .getBytes(StandardCharsets.UTF_8);
+    reduceInputFieldSeparator = job_.get("stream.reduce.input.field.separator", "\t")
+            .getBytes(StandardCharsets.UTF_8);
+    this.numOfReduceOutputKeyFields = job_.getInt("stream.num.reduce.output.key.fields", 1);
   }
 
   public void reduce(Object key, Iterator values, OutputCollector output,

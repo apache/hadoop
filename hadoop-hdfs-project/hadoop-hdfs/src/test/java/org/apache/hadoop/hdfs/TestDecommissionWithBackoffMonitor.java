@@ -22,7 +22,8 @@ import org.apache.hadoop.hdfs.server.blockmanagement
     .DatanodeAdminBackoffMonitor;
 import org.apache.hadoop.hdfs.server.blockmanagement
     .DatanodeAdminMonitorInterface;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
@@ -35,6 +36,7 @@ import java.io.IOException;
 public class TestDecommissionWithBackoffMonitor extends TestDecommission {
 
   @Override
+  @BeforeEach
   public void setup() throws IOException {
     super.setup();
     Configuration conf = getConf();

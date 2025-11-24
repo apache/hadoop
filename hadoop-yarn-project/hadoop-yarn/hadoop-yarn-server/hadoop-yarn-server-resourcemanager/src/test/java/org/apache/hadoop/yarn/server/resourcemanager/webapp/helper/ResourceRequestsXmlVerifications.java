@@ -32,14 +32,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import static junit.framework.TestCase.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.helper.XmlCustomResourceTypeTestCase.toXml;
 import static org.apache.hadoop.yarn.webapp.WebServicesTestUtils.getXmlBoolean;
 import static org.apache.hadoop.yarn.webapp.WebServicesTestUtils.getXmlInt;
 import static org.apache.hadoop.yarn.webapp.WebServicesTestUtils.getXmlLong;
 import static org.apache.hadoop.yarn.webapp.WebServicesTestUtils.getXmlString;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 /**
  * Performs value verifications on
@@ -88,9 +88,9 @@ public class ResourceRequestsXmlVerifications {
 
   private static Map<String, Long> extractCustomResorceTypes(Element capability,
       Set<String> expectedResourceTypes) {
-    assertEquals(
-        toXml(capability) + " should have only one resourceInformations child!",
-        1, capability.getElementsByTagName("resourceInformations").getLength());
+    assertEquals(1,
+        capability.getElementsByTagName("resourceInformations").getLength(),
+        toXml(capability) + " should have only one resourceInformations child!");
     Element resourceInformations = (Element) capability
         .getElementsByTagName("resourceInformations").item(0);
 
@@ -98,9 +98,8 @@ public class ResourceRequestsXmlVerifications {
         resourceInformations.getElementsByTagName("resourceInformation");
 
     // customResources will include vcores / memory as well
-    assertEquals(
-        "Different number of custom resource types found than expected",
-        expectedResourceTypes.size(), customResources.getLength() - 2);
+    assertEquals(expectedResourceTypes.size(), customResources.getLength() - 2,
+        "Different number of custom resource types found than expected");
 
     Map<String, Long> resourceTypesAndValues = Maps.newHashMap();
     for (int i = 0; i < customResources.getLength(); i++) {
@@ -115,14 +114,13 @@ public class ResourceRequestsXmlVerifications {
         continue;
       }
 
-      assertTrue("Custom resource type " + name + " not found",
-          expectedResourceTypes.contains(name));
+      assertTrue(expectedResourceTypes.contains(name),
+          "Custom resource type " + name + " not found");
       assertEquals("k", unit);
       assertEquals(ResourceTypes.COUNTABLE,
           ResourceTypes.valueOf(resourceType));
-      assertNotNull("Resource value should not be null for resource type "
-          + resourceType + ", listing xml contents: " + toXml(customResource),
-          value);
+      assertNotNull(value, "Resource value should not be null for resource type "
+          + resourceType + ", listing xml contents: " + toXml(customResource));
       resourceTypesAndValues.put(name, value);
     }
 
@@ -130,48 +128,39 @@ public class ResourceRequestsXmlVerifications {
   }
 
   private void verify() {
-    assertEquals("nodeLabelExpression doesn't match",
-        resourceRequest.getNodeLabelExpression(),
-        getXmlString(requestInfo, "nodeLabelExpression"));
-    assertEquals("numContainers doesn't match",
-        resourceRequest.getNumContainers(),
-        getXmlInt(requestInfo, "numContainers"));
-    assertEquals("relaxLocality doesn't match",
-        resourceRequest.getRelaxLocality(),
-        getXmlBoolean(requestInfo, "relaxLocality"));
-    assertEquals("priority does not match",
-        resourceRequest.getPriority().getPriority(),
-        getXmlInt(requestInfo, "priority"));
-    assertEquals("resourceName does not match",
-        resourceRequest.getResourceName(),
-        getXmlString(requestInfo, "resourceName"));
+    assertEquals(resourceRequest.getNodeLabelExpression(),
+        getXmlString(requestInfo, "nodeLabelExpression"), "nodeLabelExpression doesn't match");
+    assertEquals(resourceRequest.getNumContainers(),
+        getXmlInt(requestInfo, "numContainers"), "numContainers doesn't match");
+    assertEquals(resourceRequest.getRelaxLocality(),
+        getXmlBoolean(requestInfo, "relaxLocality"), "relaxLocality doesn't match");
+    assertEquals(resourceRequest.getPriority().getPriority(),
+        getXmlInt(requestInfo, "priority"), "priority does not match");
+    assertEquals(resourceRequest.getResourceName(),
+        getXmlString(requestInfo, "resourceName"), "resourceName does not match");
     Element capability = (Element) requestInfo
             .getElementsByTagName("capability").item(0);
-    assertEquals("memory does not match",
-        resourceRequest.getCapability().getMemorySize(),
-        getXmlLong(capability, "memory"));
-    assertEquals("vCores does not match",
-        resourceRequest.getCapability().getVirtualCores(),
-        getXmlLong(capability, "vCores"));
+    assertEquals(resourceRequest.getCapability().getMemorySize(),
+        getXmlLong(capability, "memory"), "memory does not match");
+    assertEquals(resourceRequest.getCapability().getVirtualCores(),
+        getXmlLong(capability, "vCores"), "vCores does not match");
 
     for (String expectedCustomResourceType : expectedCustomResourceTypes) {
-      assertTrue(
+      assertTrue(customResourceTypes.containsKey(expectedCustomResourceType),
           "Custom resource type " + expectedCustomResourceType
-              + " cannot be found!",
-          customResourceTypes.containsKey(expectedCustomResourceType));
+          + " cannot be found!");
 
       Long resourceValue = customResourceTypes.get(expectedCustomResourceType);
-      assertNotNull("Resource value should not be null!", resourceValue);
+      assertNotNull(resourceValue, "Resource value should not be null!");
     }
 
     Element executionTypeRequest = (Element) requestInfo
         .getElementsByTagName("executionTypeRequest").item(0);
-    assertEquals("executionType does not match",
-        resourceRequest.getExecutionTypeRequest().getExecutionType().name(),
-        getXmlString(executionTypeRequest, "executionType"));
-    assertEquals("enforceExecutionType does not match",
-        resourceRequest.getExecutionTypeRequest().getEnforceExecutionType(),
-        getXmlBoolean(executionTypeRequest, "enforceExecutionType"));
+    assertEquals(resourceRequest.getExecutionTypeRequest().getExecutionType().name(),
+        getXmlString(executionTypeRequest, "executionType"), "executionType does not match");
+    assertEquals(resourceRequest.getExecutionTypeRequest().getEnforceExecutionType(),
+        getXmlBoolean(executionTypeRequest, "enforceExecutionType"),
+        "enforceExecutionType does not match");
   }
 
   /**

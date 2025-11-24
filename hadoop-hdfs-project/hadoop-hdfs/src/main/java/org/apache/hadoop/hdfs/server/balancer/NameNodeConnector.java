@@ -32,6 +32,7 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.RateLimiter;
 import org.apache.hadoop.ha.HAServiceProtocol;
@@ -255,7 +256,7 @@ public class NameNodeConnector implements Closeable {
 
   /** @return blocks with locations. */
   public BlocksWithLocations getBlocks(DatanodeInfo datanode, long size, long
-      minBlockSize, long timeInterval) throws IOException {
+      minBlockSize, long timeInterval, StorageType storageType) throws IOException {
     if (getBlocksRateLimiter != null) {
       getBlocksRateLimiter.acquire();
     }
@@ -274,7 +275,7 @@ public class NameNodeConnector implements Closeable {
       } else {
         nnProxy = namenode;
       }
-      return nnProxy.getBlocks(datanode, size, minBlockSize, timeInterval);
+      return nnProxy.getBlocks(datanode, size, minBlockSize, timeInterval, storageType);
     } finally {
       if (isRequestStandby) {
         LOG.info("Request #getBlocks to Standby NameNode success. " +

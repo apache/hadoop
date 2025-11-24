@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.fs.http.server;
 
-import com.sun.jersey.api.container.ContainerException;
+import org.glassfish.jersey.server.ContainerException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.lib.service.FileSystemAccessException;
 import org.apache.hadoop.lib.wsrs.ExceptionProvider;

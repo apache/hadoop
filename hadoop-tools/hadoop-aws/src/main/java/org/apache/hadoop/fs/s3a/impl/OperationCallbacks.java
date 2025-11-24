@@ -22,10 +22,9 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.List;
 
-import com.amazonaws.AmazonClientException;
-import com.amazonaws.services.s3.model.DeleteObjectsRequest;
-import com.amazonaws.services.s3.model.MultiObjectDeleteException;
-import com.amazonaws.services.s3.transfer.model.CopyResult;
+import software.amazon.awssdk.awscore.exception.AwsServiceException;
+import software.amazon.awssdk.services.s3.model.CopyObjectResponse;
+import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
 
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.InvalidRequestException;
@@ -70,7 +69,7 @@ public interface OperationCallbacks {
    * Create the read context for reading from the referenced file,
    * using FS state as well as the status.
    * @param fileStatus file status.
-   * @return a context for read and select operations.
+   * @return a context for read operations.
    */
   S3AReadOpContext createReadContext(
       FileStatus fileStatus);
@@ -127,7 +126,7 @@ public interface OperationCallbacks {
    * @throws IOException Other IO problems
    */
   @Retries.RetryTranslated
-  CopyResult copyFile(String srcKey,
+  CopyObjectResponse copyFile(String srcKey,
       String destKey,
       S3ObjectAttributes srcAttributes,
       S3AReadOpContext readContext)
@@ -142,14 +141,14 @@ public interface OperationCallbacks {
    * a mistaken attempt to delete the root directory.
    * @throws MultiObjectDeleteException one or more of the keys could not
    * be deleted in a multiple object delete operation.
-   * @throws AmazonClientException amazon-layer failure.
+   * @throws AwsServiceException amazon-layer failure.
    * @throws IOException other IO Exception.
    */
   @Retries.RetryRaw
   void removeKeys(
-          List<DeleteObjectsRequest.KeyVersion> keysToDelete,
+          List<ObjectIdentifier> keysToDelete,
           boolean deleteFakeDir)
-      throws MultiObjectDeleteException, AmazonClientException,
+      throws MultiObjectDeleteException, AwsServiceException,
       IOException;
 
   /**
@@ -165,4 +164,16 @@ public interface OperationCallbacks {
       Path path,
       String key)
       throws IOException;
+
+  /**
+   * Abort multipart uploads under a path; paged.
+   * @param prefix prefix for uploads to abort
+   * @return a count of aborts
+   * @throws IOException trouble; FileNotFoundExceptions are swallowed.
+   */
+  @Retries.RetryTranslated
+  default long abortMultipartUploadsUnderPrefix(String prefix)
+      throws IOException {
+    return 0;
+  }
 }

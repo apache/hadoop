@@ -36,6 +36,7 @@ import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Time;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.eclipse.jetty.util.ajax.JSON;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -173,6 +174,11 @@ public class ConnectionManager {
     }
   }
 
+  @VisibleForTesting
+  public void closeConnectionCreator(){
+    this.creator.shutdown();
+  }
+
   /**
    * Fetches the next available proxy client in the pool. Each client connection
    * is reserved for a single user and cannot be reused until free.
@@ -229,7 +235,7 @@ public class ConnectionManager {
 
     // Add a new connection to the pool if it wasn't usable
     if (conn == null || !conn.isUsable()) {
-      if (!this.creatorQueue.offer(pool)) {
+      if (!this.creatorQueue.contains(pool) && !this.creatorQueue.offer(pool)) {
         LOG.error("Cannot add more than {} connections at the same time",
             this.creatorQueueMaxSize);
       }
@@ -453,7 +459,7 @@ public class ConnectionManager {
   /**
    * Thread that creates connections asynchronously.
    */
-  static class ConnectionCreator extends Thread {
+  static class ConnectionCreator extends SubjectInheritingThread {
     /** If the creator is running. */
     private boolean running = true;
     /** Queue to push work to. */
@@ -465,7 +471,7 @@ public class ConnectionManager {
     }
 
     @Override
-    public void run() {
+    public void work() {
       while (this.running) {
         try {
           ConnectionPool pool = this.queue.take();

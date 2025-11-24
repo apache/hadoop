@@ -57,7 +57,7 @@ import java.util.jar.JarOutputStream;
 import java.util.jar.Manifest;
 import java.util.zip.GZIPInputStream;
 
-import org.apache.commons.collections.map.CaseInsensitiveMap;
+import org.apache.commons.collections4.map.CaseInsensitiveMap;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
 import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
@@ -77,6 +77,7 @@ import org.apache.hadoop.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.apache.hadoop.fs.CommonPathCapabilities.DIRECTORY_LISTING_INCONSISTENT;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_LENGTH;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_WHOLE_FILE;
@@ -899,7 +900,7 @@ public class FileUtil {
             try (BufferedReader reader =
                      new BufferedReader(
                          new InputStreamReader(process.getInputStream(),
-                             Charset.forName("UTF-8")))) {
+                             StandardCharsets.UTF_8))) {
               String line;
               while((line = reader.readLine()) != null) {
                 LOG.debug(line);
@@ -922,7 +923,7 @@ public class FileUtil {
             try (BufferedReader reader =
                      new BufferedReader(
                          new InputStreamReader(process.getErrorStream(),
-                             Charset.forName("UTF-8")))) {
+                             StandardCharsets.UTF_8))) {
               String line;
               while((line = reader.readLine()) != null) {
                 LOG.debug(line);
@@ -1051,7 +1052,7 @@ public class FileUtil {
 
   private static void unTarUsingTar(File inFile, File untarDir,
       boolean gzipped) throws IOException {
-    StringBuffer untarCommand = new StringBuffer();
+    StringBuilder untarCommand = new StringBuilder();
     // not using canonical path here; this postpones relative path
     // resolution until bash is executed.
     final String source = "'" + FileUtil.makeSecureShellPath(inFile) + "'";
@@ -2078,5 +2079,52 @@ public class FileUtil {
   public static void rename(FileSystem srcFs, Path src, Path dst,
       final Options.Rename... options) throws IOException {
     srcFs.rename(src, dst, options);
+  }
+
+  /**
+   * Method to call after a FNFE has been raised on a treewalk, so as to
+   * decide whether to throw the exception (default), or, if the FS
+   * supports inconsistent directory listings, to log and ignore it.
+   * If this returns then the caller should ignore the failure and continue.
+   * @param fs filesystem
+   * @param path path
+   * @param e exception caught
+   * @throws FileNotFoundException the exception passed in, if rethrown.
+   */
+  public static void maybeIgnoreMissingDirectory(FileSystem fs,
+      Path path,
+      FileNotFoundException e) throws FileNotFoundException {
+    final boolean b;
+    try {
+      b = !fs.hasPathCapability(path, DIRECTORY_LISTING_INCONSISTENT);
+    } catch (IOException ex) {
+      // something went wrong; rethrow the existing exception
+      e.addSuppressed(ex);
+      throw e;
+    }
+    if (b) {
+      throw e;
+    }
+    LOG.info("Ignoring missing directory {}", path);
+    LOG.debug("Directory missing", e);
+  }
+
+  /**
+   * Return true if the FS implements {@link WithErasureCoding} and
+   * supports EC_POLICY option in {@link Options.OpenFileOptions}.
+   * A message is logged when the filesystem does not support Erasure coding.
+   * @param fs filesystem
+   * @param path path
+   * @return true if the Filesystem supports EC
+   * @throws IOException if there is a failure in hasPathCapability call
+   */
+  public static boolean checkFSSupportsEC(FileSystem fs, Path path) throws IOException {
+    if (fs instanceof WithErasureCoding &&
+        fs.hasPathCapability(path, Options.OpenFileOptions.FS_OPTION_OPENFILE_EC_POLICY)) {
+      return true;
+    }
+    LOG.warn("Filesystem with scheme {}  does not support Erasure Coding" +
+        " at path {}", fs.getScheme(), path);
+    return false;
   }
 }

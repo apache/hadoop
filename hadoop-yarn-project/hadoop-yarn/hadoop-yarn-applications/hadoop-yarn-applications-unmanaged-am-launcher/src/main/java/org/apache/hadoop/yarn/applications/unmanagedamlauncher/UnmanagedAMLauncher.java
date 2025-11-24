@@ -25,7 +25,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.InetAddress;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.Map;
@@ -40,6 +40,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -160,7 +161,7 @@ public class UnmanagedAMLauncher {
     appName = cliParser.getOptionValue("appname", "UnmanagedAM");
     amPriority = Integer.parseInt(cliParser.getOptionValue("priority", "0"));
     amQueue = cliParser.getOptionValue("queue", "default");
-    classpath = cliParser.getOptionValue("classpath", null);
+    classpath = cliParser.getOptionValue("classpath", () ->null);
 
     amCmd = cliParser.getOptionValue("cmd");
     if (amCmd == null) {
@@ -235,16 +236,16 @@ public class UnmanagedAMLauncher {
 
     final BufferedReader errReader = 
         new BufferedReader(new InputStreamReader(
-            amProc.getErrorStream(), Charset.forName("UTF-8")));
+            amProc.getErrorStream(), StandardCharsets.UTF_8));
     final BufferedReader inReader = 
         new BufferedReader(new InputStreamReader(
-            amProc.getInputStream(), Charset.forName("UTF-8")));
+            amProc.getInputStream(), StandardCharsets.UTF_8));
     
     // read error and input streams as this would free up the buffers
     // free the error stream buffer
-    Thread errThread = new Thread() {
+    Thread errThread = new SubjectInheritingThread() {
       @Override
-      public void run() {
+      public void work() {
         try {
           String line = errReader.readLine();
           while((line != null) && !isInterrupted()) {
@@ -256,9 +257,9 @@ public class UnmanagedAMLauncher {
         }
       }
     };
-    Thread outThread = new Thread() {
+    Thread outThread = new SubjectInheritingThread() {
       @Override
-      public void run() {
+      public void work() {
         try {
           String line = inReader.readLine();
           while((line != null) && !isInterrupted()) {

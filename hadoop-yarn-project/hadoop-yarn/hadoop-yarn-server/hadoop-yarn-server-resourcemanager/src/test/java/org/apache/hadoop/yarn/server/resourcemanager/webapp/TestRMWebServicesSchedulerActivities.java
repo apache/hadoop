@@ -18,22 +18,24 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
-import com.google.inject.Guice;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.WebResource;
-import com.sun.jersey.core.util.MultivaluedMapImpl;
+import org.glassfish.jersey.internal.inject.AbstractBinder;
+import org.glassfish.jersey.jettison.JettisonFeature;
+import org.glassfish.jersey.server.ResourceConfig;
+import org.glassfish.jersey.test.TestProperties;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivityDiagnosticConstant;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivityState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
-import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.reader.NodeLabelsInfoReader;
+import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
-import org.junit.Before;
+import org.junit.jupiter.api.BeforeEach;
 import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
@@ -43,6 +45,7 @@ import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.SchedulingRequest;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraint;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraints;
+import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
@@ -55,9 +58,17 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateS
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONObject;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
+import javax.ws.rs.core.MultivaluedMap;
+import javax.ws.rs.core.MultivaluedHashMap;
+import javax.ws.rs.core.Application;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -90,11 +101,11 @@ import static org.apache.hadoop.yarn.server.resourcemanager.webapp.ActivitiesTes
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.ActivitiesTestUtils.verifyNumberOfNodes;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.ActivitiesTestUtils.verifyQueueOrder;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.ActivitiesTestUtils.verifyStateOfAllocations;
-import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.createWebAppDescriptor;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
 
 /**
  * Tests for scheduler/app activities.
@@ -103,19 +114,42 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
 
   private MockRM rm;
 
-  public TestRMWebServicesSchedulerActivities() {
-    super(createWebAppDescriptor());
+  @Override
+  protected Application configure() {
+    ResourceConfig config = new ResourceConfig();
+    config.register(RMWebServices.class);
+    config.register(new JerseyBinder());
+    config.register(GenericExceptionHandler.class);
+    config.register(NodeLabelsInfoReader.class);
+    config.register(new JettisonFeature()).register(JAXBContextResolver.class);
+    forceSet(TestProperties.CONTAINER_PORT, JERSEY_RANDOM_PORT);
+    return config;
   }
 
-  @Before
+  private class JerseyBinder extends AbstractBinder {
+
+    @Override
+    protected void configure() {
+      CapacitySchedulerConfiguration config =
+          createConfig(new CapacitySchedulerConfiguration(new Configuration(false)));
+      rm = createMockRM(config);
+      bind(rm).to(ResourceManager.class).named("rm");
+      bind(config).to(Configuration.class).named("conf");
+
+      HttpServletRequest request = mock(HttpServletRequest.class);
+      bind(request).to(HttpServletRequest.class);
+      HttpServletResponse response = mock(HttpServletResponse.class);
+      bind(response).to(HttpServletResponse.class);
+    }
+  }
+
+  public TestRMWebServicesSchedulerActivities() {
+  }
+
+  @BeforeEach
   @Override
   public void setUp() throws Exception {
     super.setUp();
-    CapacitySchedulerConfiguration config =
-        createConfig(new CapacitySchedulerConfiguration(new Configuration(false)));
-    rm = createMockRM(config);
-    GuiceServletConfig.setInjector(
-        Guice.createInjector(new TestWebServiceUtil.WebServletModule(rm)));
   }
 
   public static MockRM createMockRM(CapacitySchedulerConfiguration csConf) {
@@ -189,26 +223,26 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
               10)), null);
 
       //Get JSON
-      WebResource r = resource();
-      MultivaluedMapImpl params = new MultivaluedMapImpl();
+      WebTarget r = targetWithJsonObject();
+      MultivaluedMap params = new MultivaluedHashMap();
       params.add("nodeId", "127.0.0.1:1234");
-      ClientResponse response = r.path("ws").path("v1").path("cluster").path(
-          "scheduler/activities").queryParams(params).accept(
-          MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-          response.getType().toString());
-      JSONObject json = response.getEntity(JSONObject.class);
+      Response response = r.path("ws").path("v1").path("cluster").path(
+          "scheduler/activities").queryParam("nodeId", "127.0.0.1:1234").request(
+          MediaType.APPLICATION_JSON).get(Response.class);
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
+          response.getMediaType().toString());
+      JSONObject json = response.readEntity(JSONObject.class);
 
       nm.nodeHeartbeat(true);
       Thread.sleep(1000);
 
       //Get JSON
       response = r.path("ws").path("v1").path("cluster").path(
-          "scheduler/activities").queryParams(params).accept(
-          MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-          response.getType().toString());
-      json = response.getEntity(JSONObject.class);
+          "scheduler/activities").queryParam("nodeId", "127.0.0.1:1234").request(
+          MediaType.APPLICATION_JSON).get(Response.class);
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
+          response.getMediaType().toString());
+      json = response.readEntity(JSONObject.class);
 
       // Collection logic of scheduler activities changed after YARN-9313,
       // only one allocation should be recorded for all scenarios.
@@ -253,26 +287,26 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
               10)), null);
 
       //Get JSON
-      WebResource r = resource();
-      MultivaluedMapImpl params = new MultivaluedMapImpl();
+      WebTarget r = targetWithJsonObject();
+      MultivaluedMap params = new MultivaluedHashMap();
       params.add("nodeId", "127.0.0.1");
-      ClientResponse response = r.path("ws").path("v1").path("cluster").path(
-          "scheduler/activities").queryParams(params).accept(
-          MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-          response.getType().toString());
-      JSONObject json = response.getEntity(JSONObject.class);
+      Response response = r.path("ws").path("v1").path("cluster").path(
+          "scheduler/activities").queryParam("nodeId", "127.0.0.1").
+          request(MediaType.APPLICATION_JSON).get(Response.class);
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
+          response.getMediaType().toString());
+      JSONObject json = response.readEntity(JSONObject.class);
 
       nm.nodeHeartbeat(true);
       Thread.sleep(1000);
 
       //Get JSON
       response = r.path("ws").path("v1").path("cluster").path(
-          "scheduler/activities").queryParams(params).accept(
-          MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-          response.getType().toString());
-      json = response.getEntity(JSONObject.class);
+          "scheduler/activities").queryParam("nodeId", "127.0.0.1").request(
+          MediaType.APPLICATION_JSON).get(Response.class);
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
+          response.getMediaType().toString());
+      json = response.readEntity(JSONObject.class);
 
       // verify scheduler activities
       verifyNumberOfAllocations(json, 1);
@@ -294,25 +328,23 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
 
     try {
       //Get JSON
-      WebResource r = resource();
-      MultivaluedMapImpl params = new MultivaluedMapImpl();
-      params.add("nodeId", "127.0.0.1:1234");
-      ClientResponse response = r.path("ws").path("v1").path("cluster").path(
-          "scheduler/activities").queryParams(params).accept(
-          MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-          response.getType().toString());
-      JSONObject json = response.getEntity(JSONObject.class);
+      WebTarget r = targetWithJsonObject();
+      Response response = r.path("ws").path("v1").path("cluster").path(
+          "scheduler/activities").queryParam("nodeId", "127.0.0.1:1234").request(
+          MediaType.APPLICATION_JSON).get(Response.class);
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
+          response.getMediaType().toString());
+      JSONObject json = response.readEntity(JSONObject.class);
 
       Thread.sleep(1000);
 
       //Get JSON
       response = r.path("ws").path("v1").path("cluster").path(
-          "scheduler/activities").queryParams(params).accept(
-          MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-          response.getType().toString());
-      json = response.getEntity(JSONObject.class);
+          "scheduler/activities").queryParam("nodeId", "127.0.0.1:1234").request(
+          MediaType.APPLICATION_JSON).get(Response.class);
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
+          response.getMediaType().toString());
+      json = response.readEntity(JSONObject.class);
 
       verifyNumberOfAllocations(json, 0);
     } finally {
@@ -349,26 +381,24 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
               10)), null);
 
       //Get JSON
-      WebResource r = resource();
-      MultivaluedMapImpl params = new MultivaluedMapImpl();
-      params.add("nodeId", "127.0.0.0");
-      ClientResponse response = r.path("ws").path("v1").path("cluster").path(
-          "scheduler/activities").queryParams(params).accept(
-          MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-          response.getType().toString());
-      JSONObject json = response.getEntity(JSONObject.class);
+      WebTarget r = targetWithJsonObject();
+      Response response = r.path("ws").path("v1").path("cluster").path(
+          "scheduler/activities").queryParam("nodeId", "127.0.0.0").request(
+          MediaType.APPLICATION_JSON).get(Response.class);
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
+          response.getMediaType().toString());
+      JSONObject json = response.readEntity(JSONObject.class);
 
       nm.nodeHeartbeat(true);
       Thread.sleep(1000);
 
       //Get JSON
       response = r.path("ws").path("v1").path("cluster").path(
-          "scheduler/activities").queryParams(params).accept(
-          MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-          response.getType().toString());
-      json = response.getEntity(JSONObject.class);
+          "scheduler/activities").queryParam("nodeId", "127.0.0.0").request(
+          MediaType.APPLICATION_JSON).get(Response.class);
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
+          response.getMediaType().toString());
+      json = response.readEntity(JSONObject.class);
 
       verifyNumberOfAllocations(json, 0);
     } finally {
@@ -417,25 +447,23 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
               10)), null);
 
       // Reserve new container
-      WebResource r = resource();
-      MultivaluedMapImpl params = new MultivaluedMapImpl();
-      params.add("nodeId", "127.0.0.2");
-      ClientResponse response = r.path("ws").path("v1").path("cluster").path(
-          "scheduler/activities").queryParams(params).accept(
-          MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-          response.getType().toString());
-      JSONObject json = response.getEntity(JSONObject.class);
+      WebTarget r = targetWithJsonObject();
+      Response response = r.path("ws").path("v1").path("cluster").path(
+          "scheduler/activities").queryParam("nodeId", "127.0.0.2").request(
+          MediaType.APPLICATION_JSON).get(Response.class);
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
+          response.getMediaType().toString());
+      JSONObject json = response.readEntity(JSONObject.class);
 
       nm2.nodeHeartbeat(true);
       Thread.sleep(1000);
 
       response = r.path("ws").path("v1").path("cluster").path(
-          "scheduler/activities").queryParams(params).accept(
-          MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-          response.getType().toString());
-      json = response.getEntity(JSONObject.class);
+          "scheduler/activities").queryParam("nodeId", "127.0.0.2").request(
+          MediaType.APPLICATION_JSON).get(Response.class);
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
+          response.getMediaType().toString());
+      json = response.readEntity(JSONObject.class);
 
       verifyNumberOfAllocations(json, 1);
 
@@ -447,25 +475,23 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
           "RESERVED");
 
       // Do a node heartbeat again without releasing container from app2
-      r = resource();
-      params = new MultivaluedMapImpl();
-      params.add("nodeId", "127.0.0.2");
+      r = targetWithJsonObject();
       response = r.path("ws").path("v1").path("cluster").path(
-          "scheduler/activities").queryParams(params).accept(
-          MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-          response.getType().toString());
-      json = response.getEntity(JSONObject.class);
+          "scheduler/activities").queryParam("nodeId", "127.0.0.2").request(
+          MediaType.APPLICATION_JSON).get(Response.class);
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
+          response.getMediaType().toString());
+      json = response.readEntity(JSONObject.class);
 
       nm2.nodeHeartbeat(true);
       Thread.sleep(1000);
 
       response = r.path("ws").path("v1").path("cluster").path(
-          "scheduler/activities").queryParams(params).accept(
-          MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-          response.getType().toString());
-      json = response.getEntity(JSONObject.class);
+          "scheduler/activities").queryParam("nodeId", "127.0.0.2").request(
+          MediaType.APPLICATION_JSON).get(Response.class);
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
+          response.getMediaType().toString());
+      json = response.readEntity(JSONObject.class);
 
       verifyNumberOfAllocations(json, 1);
 
@@ -484,25 +510,23 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
           RMContainerEventType.FINISHED);
 
       // Do a node heartbeat again
-      r = resource();
-      params = new MultivaluedMapImpl();
-      params.add("nodeId", "127.0.0.2");
+      r = targetWithJsonObject();
       response = r.path("ws").path("v1").path("cluster").path(
-          "scheduler/activities").queryParams(params).accept(
-          MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-          response.getType().toString());
-      json = response.getEntity(JSONObject.class);
+          "scheduler/activities").queryParam("nodeId", "127.0.0.2").request(
+          MediaType.APPLICATION_JSON).get(Response.class);
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
+          response.getMediaType().toString());
+      json = response.readEntity(JSONObject.class);
 
       nm2.nodeHeartbeat(true);
       Thread.sleep(1000);
 
       response = r.path("ws").path("v1").path("cluster").path(
-          "scheduler/activities").queryParams(params).accept(
-          MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-          response.getType().toString());
-      json = response.getEntity(JSONObject.class);
+          "scheduler/activities").queryParam("nodeId", "127.0.0.2").request(
+          MediaType.APPLICATION_JSON).get(Response.class);
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
+          response.getMediaType().toString());
+      json = response.readEntity(JSONObject.class);
 
       verifyNumberOfAllocations(json, 1);
 
@@ -537,26 +561,24 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
       RMApp app1 = MockRMAppSubmitter.submit(rm, data);
 
       //Get JSON
-      WebResource r = resource();
-      MultivaluedMapImpl params = new MultivaluedMapImpl();
-      params.add("nodeId", "127.0.0.1");
-      ClientResponse response = r.path("ws").path("v1").path("cluster").path(
-          "scheduler/activities").queryParams(params).accept(
-          MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-          response.getType().toString());
-      JSONObject json = response.getEntity(JSONObject.class);
+      WebTarget r = targetWithJsonObject();
+      Response response = r.path("ws").path("v1").path("cluster").path(
+          "scheduler/activities").queryParam("nodeId", "127.0.0.1").request(
+          MediaType.APPLICATION_JSON).get(Response.class);
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
+          response.getMediaType().toString());
+      JSONObject json = response.readEntity(JSONObject.class);
 
       nm.nodeHeartbeat(true);
       Thread.sleep(1000);
 
       //Get JSON
       response = r.path("ws").path("v1").path("cluster").path(
-          "scheduler/activities").queryParams(params).accept(
-          MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-          response.getType().toString());
-      json = response.getEntity(JSONObject.class);
+          "scheduler/activities").queryParam("nodeId", "127.0.0.1").request(
+          MediaType.APPLICATION_JSON).get(Response.class);
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
+          response.getMediaType().toString());
+      json = response.readEntity(JSONObject.class);
 
       verifyNumberOfAllocations(json, 1);
 
@@ -595,10 +617,10 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
       RMApp app1 = MockRMAppSubmitter.submit(rm, data);
 
       //Get JSON
-      WebResource r = resource().path(RMWSConsts.RM_WEB_SERVICE_PATH)
+      WebTarget r = target().path(RMWSConsts.RM_WEB_SERVICE_PATH)
           .path(ActivitiesTestUtils.format(RMWSConsts.SCHEDULER_APP_ACTIVITIES,
               app1.getApplicationId().toString()));
-      MultivaluedMapImpl params = new MultivaluedMapImpl();
+      MultivaluedMap params = new MultivaluedHashMap();
       ActivitiesTestUtils.requestWebResource(r, params);
 
       nm.nodeHeartbeat(true);
@@ -665,10 +687,10 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
               10)), null);
 
       //Get JSON
-      WebResource r = resource().path(RMWSConsts.RM_WEB_SERVICE_PATH)
+      WebTarget r = target().path(RMWSConsts.RM_WEB_SERVICE_PATH)
           .path(ActivitiesTestUtils.format(RMWSConsts.SCHEDULER_APP_ACTIVITIES,
               app1.getApplicationId().toString()));
-      MultivaluedMapImpl params = new MultivaluedMapImpl();
+      MultivaluedMap params = new MultivaluedHashMap();
       ActivitiesTestUtils.requestWebResource(r, params);
 
       nm.nodeHeartbeat(true);
@@ -719,10 +741,10 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
               10)), null);
 
       //Get JSON
-      WebResource r = resource().path(RMWSConsts.RM_WEB_SERVICE_PATH)
+      WebTarget r = target().path(RMWSConsts.RM_WEB_SERVICE_PATH)
           .path(ActivitiesTestUtils.format(RMWSConsts.SCHEDULER_APP_ACTIVITIES,
               app1.getApplicationId().toString()));
-      MultivaluedMapImpl params = new MultivaluedMapImpl();
+      MultivaluedMap params = new MultivaluedHashMap();
       ActivitiesTestUtils.requestWebResource(r, params);
 
       nm.nodeHeartbeat(true);
@@ -753,10 +775,10 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
       RMApp app1 = MockRMAppSubmitter.submit(rm, data);
 
       //Get JSON
-      WebResource r = resource().path(RMWSConsts.RM_WEB_SERVICE_PATH)
+      WebTarget r = target().path(RMWSConsts.RM_WEB_SERVICE_PATH)
           .path(ActivitiesTestUtils.format(RMWSConsts.SCHEDULER_APP_ACTIVITIES,
               app1.getApplicationId().toString()));
-      MultivaluedMapImpl params = new MultivaluedMapImpl();
+      MultivaluedMap params = new MultivaluedHashMap();
       ActivitiesTestUtils.requestWebResource(r, params);
 
       //Get JSON
@@ -808,10 +830,10 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
               10)), null);
 
       // Reserve new container
-      WebResource r = resource().path(RMWSConsts.RM_WEB_SERVICE_PATH)
+      WebTarget r = target().path(RMWSConsts.RM_WEB_SERVICE_PATH)
           .path(ActivitiesTestUtils.format(RMWSConsts.SCHEDULER_APP_ACTIVITIES,
               app1.getApplicationId().toString()));
-      MultivaluedMapImpl params = new MultivaluedMapImpl();
+      MultivaluedMap params = new MultivaluedHashMap();
       ActivitiesTestUtils.requestWebResource(r, params);
 
       nm2.nodeHeartbeat(true);
@@ -846,7 +868,8 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
     }
   }
 
-  @Test (timeout=30000)
+  @Test
+  @Timeout(value = 30)
   public void testInsufficientResourceDiagnostic() throws Exception {
     rm.start();
     CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
@@ -864,14 +887,14 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
               .build());
       MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm1);
 
-      WebResource r = resource();
+      WebTarget r = targetWithJsonObject();
 
-      ClientResponse response =
+      Response response =
           r.path("ws").path("v1").path("cluster").path("scheduler/activities")
-              .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-          response.getType().toString());
-      JSONObject json = response.getEntity(JSONObject.class);
+              .request(MediaType.APPLICATION_JSON).get(Response.class);
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
+          response.getMediaType().toString());
+      JSONObject json = response.readEntity(JSONObject.class);
       assertEquals("waiting for next allocation",
           getFirstSubNodeFromJson(json, FN_SCHEDULER_ACT_ROOT)
               .optString(FN_ACT_DIAGNOSTIC));
@@ -886,10 +909,10 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
 
       response =
           r.path("ws").path("v1").path("cluster").path("scheduler/activities")
-              .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-          response.getType().toString());
-      json = response.getEntity(JSONObject.class);
+              .request(MediaType.APPLICATION_JSON).get(Response.class);
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
+          response.getMediaType().toString());
+      json = response.readEntity(JSONObject.class);
 
       verifyNumberOfAllocations(json, 1);
       JSONObject allocationObj = getFirstSubNodeFromJson(json,
@@ -910,7 +933,8 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
     }
   }
 
-  @Test (timeout=30000)
+  @Test
+  @Timeout(value = 30)
   public void testPlacementConstraintDiagnostic() throws Exception {
     rm.start();
     CapacityScheduler cs = (CapacityScheduler)rm.getResourceScheduler();
@@ -938,13 +962,13 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
               .build();
       am1.allocate(allocateReq);
 
-      WebResource r = resource();
-      ClientResponse response =
+      WebTarget r = targetWithJsonObject();
+      Response response =
           r.path("ws").path("v1").path("cluster").path("scheduler/activities")
-              .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-          response.getType().toString());
-      JSONObject json = response.getEntity(JSONObject.class);
+              .request(MediaType.APPLICATION_JSON).get(Response.class);
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
+          response.getMediaType().toString());
+      JSONObject json = response.readEntity(JSONObject.class);
       assertEquals("waiting for next allocation",
           getFirstSubNodeFromJson(json, FN_SCHEDULER_ACT_ROOT)
               .optString(FN_ACT_DIAGNOSTIC));
@@ -955,10 +979,10 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
 
       response =
           r.path("ws").path("v1").path("cluster").path("scheduler/activities")
-              .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-          response.getType().toString());
-      json = response.getEntity(JSONObject.class);
+              .request(MediaType.APPLICATION_JSON).get(Response.class);
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
+          response.getMediaType().toString());
+      json = response.readEntity(JSONObject.class);
 
       verifyNumberOfAllocations(json, 1);
       JSONObject allocationObj = getFirstSubNodeFromJson(json,
@@ -978,7 +1002,8 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
     }
   }
 
-  @Test (timeout=30000)
+  @Test
+  @Timeout(value = 30)
   public void testAppInsufficientResourceDiagnostic() throws Exception {
     rm.start();
     CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
@@ -996,10 +1021,10 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
               .build());
       MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm1);
 
-      WebResource r = resource().path(RMWSConsts.RM_WEB_SERVICE_PATH)
+      WebTarget r = target().path(RMWSConsts.RM_WEB_SERVICE_PATH)
           .path(ActivitiesTestUtils.format(RMWSConsts.SCHEDULER_APP_ACTIVITIES,
               app1.getApplicationId().toString()));
-      MultivaluedMapImpl params = new MultivaluedMapImpl();
+      MultivaluedMap params = new MultivaluedHashMap();
       JSONObject json = ActivitiesTestUtils.requestWebResource(r, params);
       assertEquals("waiting for display",
           json.getJSONObject(FN_APP_ACT_ROOT).getString(FN_ACT_DIAGNOSTIC));
@@ -1030,7 +1055,8 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
     }
   }
 
-  @Test(timeout=30000)
+  @Test
+  @Timeout(value = 30)
   public void testAppPlacementConstraintDiagnostic() throws Exception {
     rm.start();
     CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
@@ -1048,10 +1074,10 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
               .build());
       MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm1);
 
-      WebResource r = resource().path(RMWSConsts.RM_WEB_SERVICE_PATH)
+      WebTarget r = target().path(RMWSConsts.RM_WEB_SERVICE_PATH)
           .path(ActivitiesTestUtils.format(RMWSConsts.SCHEDULER_APP_ACTIVITIES,
               app1.getApplicationId().toString()));
-      MultivaluedMapImpl params = new MultivaluedMapImpl();
+      MultivaluedMap params = new MultivaluedHashMap();
       JSONObject json = ActivitiesTestUtils.requestWebResource(r, params);
       assertEquals("waiting for display",
           json.getJSONObject(FN_APP_ACT_ROOT).getString(FN_ACT_DIAGNOSTIC));
@@ -1088,7 +1114,8 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
     }
   }
 
-  @Test (timeout=30000)
+  @Test
+  @Timeout(value = 30)
   public void testAppFilterByRequestPrioritiesAndAllocationRequestIds()
       throws Exception {
     rm.start();
@@ -1106,10 +1133,10 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
               .build());
       MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm1);
 
-      WebResource r = resource().path(RMWSConsts.RM_WEB_SERVICE_PATH)
+      WebTarget r = target().path(RMWSConsts.RM_WEB_SERVICE_PATH)
           .path(ActivitiesTestUtils.format(RMWSConsts.SCHEDULER_APP_ACTIVITIES,
               app1.getApplicationId().toString()));
-      MultivaluedMapImpl params = new MultivaluedMapImpl();
+      MultivaluedMap params = new MultivaluedHashMap();
       JSONObject json = ActivitiesTestUtils.requestWebResource(r, params);
       assertEquals("waiting for display",
           json.getJSONObject(FN_APP_ACT_ROOT).getString(FN_ACT_DIAGNOSTIC));
@@ -1159,13 +1186,13 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
           rm.getRMContext().getRMNodes().get(nm1.getNodeId())));
 
       // query app activities with requestPriorities={0,-1}
-      MultivaluedMapImpl filterParams1 = new MultivaluedMapImpl(params);
+      MultivaluedMap filterParams1 = new MultivaluedHashMap(params);
       filterParams1.add(RMWSConsts.REQUEST_PRIORITIES, "0,-1");
       json = ActivitiesTestUtils.requestWebResource(r, filterParams1);
       verifyNumberOfAllocations(json, 4);
 
       // query app activities with requestPriorities=-1
-      MultivaluedMapImpl filterParams2 = new MultivaluedMapImpl(params);
+      MultivaluedMap filterParams2 = new MultivaluedHashMap(params);
       filterParams2.add(RMWSConsts.REQUEST_PRIORITIES, "-1");
       json = ActivitiesTestUtils.requestWebResource(r, filterParams2);
       verifyNumberOfAllocations(json, 2);
@@ -1177,7 +1204,7 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
       }
 
       // query app activities with allocationRequestId=1
-      MultivaluedMapImpl filterParams3 = new MultivaluedMapImpl(params);
+      MultivaluedMap filterParams3 = new MultivaluedHashMap(params);
       filterParams3.add(RMWSConsts.ALLOCATION_REQUEST_IDS, "1");
       json = ActivitiesTestUtils.requestWebResource(r, filterParams3);
       verifyNumberOfAllocations(json, 2);
@@ -1189,7 +1216,7 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
       }
 
       // query app activities with requestPriorities=0 and allocationRequestId=1
-      MultivaluedMapImpl filterParams4 = new MultivaluedMapImpl(params);
+      MultivaluedMap filterParams4 = new MultivaluedHashMap(params);
       filterParams4.add(RMWSConsts.REQUEST_PRIORITIES, "0");
       filterParams4.add(RMWSConsts.ALLOCATION_REQUEST_IDS, "1");
       json = ActivitiesTestUtils.requestWebResource(r, filterParams4);
@@ -1203,7 +1230,7 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
 
       // query app activities with requestPriorities=-1
       // and allocationRequestId={1,2}
-      MultivaluedMapImpl filterParams5 = new MultivaluedMapImpl(params);
+      MultivaluedMap filterParams5 = new MultivaluedHashMap(params);
       filterParams5.add(RMWSConsts.REQUEST_PRIORITIES, "-1");
       filterParams5.add(RMWSConsts.ALLOCATION_REQUEST_IDS, "1,2");
       json = ActivitiesTestUtils.requestWebResource(r, filterParams5);
@@ -1217,7 +1244,7 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
 
       // query app activities with requestPriorities=-1
       // and allocationRequestId={-1,1}
-      MultivaluedMapImpl filterParams6 = new MultivaluedMapImpl(params);
+      MultivaluedMap filterParams6 = new MultivaluedHashMap(params);
       filterParams6.add(RMWSConsts.REQUEST_PRIORITIES, "-1");
       filterParams6.add(RMWSConsts.ALLOCATION_REQUEST_IDS, "-1,1");
       json = ActivitiesTestUtils.requestWebResource(r, filterParams6);
@@ -1227,7 +1254,8 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
     }
   }
 
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testAppLimit() throws Exception {
     rm.start();
     CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
@@ -1243,10 +1271,10 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
               .build());
       MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm1);
 
-      WebResource r = resource().path(RMWSConsts.RM_WEB_SERVICE_PATH)
+      WebTarget r = target().path(RMWSConsts.RM_WEB_SERVICE_PATH)
           .path(ActivitiesTestUtils.format(RMWSConsts.SCHEDULER_APP_ACTIVITIES,
               app1.getApplicationId().toString()));
-      MultivaluedMapImpl params = new MultivaluedMapImpl();
+      MultivaluedMap params = new MultivaluedHashMap();
       JSONObject json = ActivitiesTestUtils.requestWebResource(r, params);
       assertEquals("waiting for display",
           json.getJSONObject(FN_APP_ACT_ROOT).getString(FN_ACT_DIAGNOSTIC));
@@ -1302,7 +1330,8 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
     }
   }
 
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testAppActions() throws Exception {
     rm.start();
     CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
@@ -1319,10 +1348,10 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
       // am1 asks for 10 * 512MB container
       am1.allocate("*", 512, 10, new ArrayList<>());
 
-      WebResource r = resource().path(RMWSConsts.RM_WEB_SERVICE_PATH)
+      WebTarget r = target().path(RMWSConsts.RM_WEB_SERVICE_PATH)
           .path(ActivitiesTestUtils.format(RMWSConsts.SCHEDULER_APP_ACTIVITIES,
               app1.getApplicationId().toString()));
-      MultivaluedMapImpl params = new MultivaluedMapImpl();
+      MultivaluedMap params = new MultivaluedHashMap();
       params.add("maxTime", 1); //only last for 1 second
 
       // testing invalid action
@@ -1406,7 +1435,8 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
     }
   }
 
-  @Test(timeout=30000)
+  @Test
+  @Timeout(value = 30)
   public void testAppSummary() throws Exception {
     rm.start();
     CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
@@ -1424,10 +1454,10 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
               .withQueue("b1")
               .build());
 
-      WebResource r = resource().path(RMWSConsts.RM_WEB_SERVICE_PATH)
+      WebTarget r = target().path(RMWSConsts.RM_WEB_SERVICE_PATH)
           .path(ActivitiesTestUtils.format(RMWSConsts.SCHEDULER_APP_ACTIVITIES,
               app1.getApplicationId().toString()));
-      MultivaluedMapImpl params = new MultivaluedMapImpl();
+      MultivaluedMap params = new MultivaluedHashMap();
       JSONObject json = ActivitiesTestUtils.requestWebResource(r, params);
       assertEquals("waiting for display",
           json.getJSONObject(FN_APP_ACT_ROOT).getString(FN_ACT_DIAGNOSTIC));
@@ -1464,9 +1494,15 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
           assertEquals(2, attempt.getJSONArray(FN_ACT_NODE_IDS).length());
         } else if (attempt.getString(FN_ACT_ALLOCATION_STATE)
             .equals(ActivityState.RESERVED.name())) {
-          assertEquals(1, attempt.getJSONArray(FN_ACT_NODE_IDS).length());
-          assertEquals(nm1.getNodeId().toString(),
-              attempt.getJSONArray(FN_ACT_NODE_IDS).getString(0));
+          Object obj = attempt.get(FN_ACT_NODE_IDS);
+          JSONArray jsonArray = new JSONArray();
+          if (obj instanceof JSONArray) {
+            jsonArray = attempt.getJSONArray(FN_ACT_NODE_IDS);
+          } else {
+            jsonArray.put(obj);
+          }
+          assertEquals(1, jsonArray.length());
+          assertEquals(nm1.getNodeId().toString(), jsonArray.getString(0));
         }
       }
     } finally {
@@ -1513,11 +1549,11 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
               .relaxLocality(false)
               .build()), null);
 
-      WebResource r = resource().path(RMWSConsts.RM_WEB_SERVICE_PATH)
+      WebTarget r = target().path(RMWSConsts.RM_WEB_SERVICE_PATH)
           .path(ActivitiesTestUtils.format(RMWSConsts.SCHEDULER_APP_ACTIVITIES,
               app1.getApplicationId().toString()));
       ActivitiesTestUtils.requestWebResource(r, null);
-      WebResource sr = resource().path(RMWSConsts.RM_WEB_SERVICE_PATH)
+      WebTarget sr = target().path(RMWSConsts.RM_WEB_SERVICE_PATH)
           .path(RMWSConsts.SCHEDULER_ACTIVITIES);
       ActivitiesTestUtils.requestWebResource(sr, null);
 
@@ -1593,11 +1629,11 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
               .resourceName("*").capability(Resources.createResource(3072))
               .numContainers(1).relaxLocality(false).build()), null);
 
-      WebResource r = resource().path(RMWSConsts.RM_WEB_SERVICE_PATH)
+      WebTarget r = target().path(RMWSConsts.RM_WEB_SERVICE_PATH)
           .path(ActivitiesTestUtils.format(RMWSConsts.SCHEDULER_APP_ACTIVITIES,
               app1.getApplicationId().toString()));
       ActivitiesTestUtils.requestWebResource(r, null);
-      WebResource sr = resource().path(RMWSConsts.RM_WEB_SERVICE_PATH)
+      WebTarget sr = target().path(RMWSConsts.RM_WEB_SERVICE_PATH)
           .path(RMWSConsts.SCHEDULER_ACTIVITIES);
       ActivitiesTestUtils.requestWebResource(sr, null);
 
@@ -1651,7 +1687,8 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
     }
   }
 
-  @Test(timeout=30000)
+  @Test
+  @Timeout(value = 30)
   public void testSchedulerBulkActivities() throws Exception {
     rm.start();
 
@@ -1677,8 +1714,8 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
       JSONObject activitiesJson = restClient.getOutput().getJSONObject(
           FN_SCHEDULER_BULK_ACT_ROOT);
       Object activities = activitiesJson.get(FN_SCHEDULER_ACT_ROOT);
-      assertEquals("Number of activities is wrong", expectedCount,
-          ((JSONArray) activities).length());
+      assertEquals(expectedCount,
+          ((JSONArray) activities).length(), "Number of activities is wrong");
 
 
       // Validate if response does not exceed max 500
@@ -1691,16 +1728,15 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
       activitiesJson = restClient.getOutput().getJSONObject(
           FN_SCHEDULER_BULK_ACT_ROOT);
       activities = activitiesJson.get(FN_SCHEDULER_ACT_ROOT);
-      assertEquals("Max Activities Limit does not work",
-          RMWebServices.MAX_ACTIVITIES_COUNT,
-          ((JSONArray) activities).length());
+      assertEquals(RMWebServices.MAX_ACTIVITIES_COUNT,
+          ((JSONArray) activities).length(), "Max Activities Limit does not work");
 
     } finally {
       rm.stop();
     }
   }
 
-  private class RESTClient extends Thread {
+  private class RESTClient extends SubjectInheritingThread {
 
     private int expectedCount;
     private boolean done = false;
@@ -1719,18 +1755,17 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
     }
 
     @Override
-    public void run() {
-      WebResource r = resource();
-      MultivaluedMapImpl params = new MultivaluedMapImpl();
-      params.add(RMWSConsts.ACTIVITIES_COUNT, expectedCount);
+    public void work() {
+      WebTarget r = targetWithJsonObject();
 
-      ClientResponse response = r.path("ws").path("v1").path("cluster")
-          .path(RMWSConsts.SCHEDULER_BULK_ACTIVITIES).queryParams(params)
-          .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+      Response response = r.path("ws").path("v1").path("cluster")
+          .path(RMWSConsts.SCHEDULER_BULK_ACTIVITIES)
+          .queryParam(RMWSConsts.ACTIVITIES_COUNT, expectedCount)
+          .request(MediaType.APPLICATION_JSON).get(Response.class);
 
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; "
-          + JettyUtils.UTF_8, response.getType().toString());
-      json = response.getEntity(JSONObject.class);
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + ";"
+          + JettyUtils.UTF_8, response.getMediaType().toString());
+      json = response.readEntity(JSONObject.class);
       done = true;
     }
   }

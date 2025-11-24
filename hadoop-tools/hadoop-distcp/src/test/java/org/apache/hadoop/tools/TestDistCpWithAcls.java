@@ -21,7 +21,8 @@ package org.apache.hadoop.tools;
 import static org.apache.hadoop.fs.permission.AclEntryScope.*;
 import static org.apache.hadoop.fs.permission.AclEntryType.*;
 import static org.apache.hadoop.fs.permission.FsAction.*;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
 import java.net.URI;
@@ -45,9 +46,9 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.ToolRunner;
 
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests distcp in combination with HDFS ACLs.
@@ -58,7 +59,7 @@ public class TestDistCpWithAcls {
   private static Configuration conf;
   private static FileSystem fs;
 
-  @BeforeClass
+  @BeforeAll
   public static void init() throws Exception {
     initCluster(true, true);
     // Create this directory structure:
@@ -94,7 +95,7 @@ public class TestDistCpWithAcls {
       new FsPermission((short)01777));
   }
 
-  @AfterClass
+  @AfterAll
   public static void shutdown() {
     IOUtils.cleanupWithLogger(null, fs);
     if (cluster != null) {
@@ -286,7 +287,7 @@ public class TestDistCpWithAcls {
    * Runs distcp from /src to specified destination, preserving ACLs.  Asserts
    * expected exit code.
    *
-   * @param int exitCode expected exit code
+   * @param exitCode expected exit code
    * @param dst String distcp destination
    * @throws Exception if there is any error
    */

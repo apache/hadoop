@@ -22,6 +22,7 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
@@ -155,19 +156,21 @@ public final class CallableSupplier<T> implements Supplier<T> {
    * Wait for a single of future to complete, extracting IOEs afterwards.
    * @param future future to wait for.
    * @param <T> type
+   * @return the result
    * @throws IOException if one of the called futures raised an IOE.
    * @throws RuntimeException if one of the futures raised one.
    */
-  public static <T> void waitForCompletion(
+  public static <T> T waitForCompletion(
       final CompletableFuture<T> future)
       throws IOException {
     try (DurationInfo ignore =
             new DurationInfo(LOG, false, "Waiting for task completion")) {
-      future.join();
+      return future.join();
     } catch (CancellationException e) {
       throw new IOException(e);
     } catch (CompletionException e) {
       raiseInnerCause(e);
+      return null;
     }
   }
 
@@ -175,31 +178,35 @@ public final class CallableSupplier<T> implements Supplier<T> {
    * Wait for a single of future to complete, ignoring exceptions raised.
    * @param future future to wait for.
    * @param <T> type
+   * @return the outcome if successfully retrieved.
    */
-  public static <T> void waitForCompletionIgnoringExceptions(
+  public static <T> Optional<T> waitForCompletionIgnoringExceptions(
       @Nullable final CompletableFuture<T> future) {
-    if (future != null) {
-      try (DurationInfo ignore =
-               new DurationInfo(LOG, false, "Waiting for task completion")) {
-        future.join();
-      } catch (Exception e) {
-        LOG.debug("Ignoring exception raised in task completion: ");
-      }
+
+    try {
+      return maybeAwaitCompletion(future);
+    } catch (Exception e) {
+      LOG.debug("Ignoring exception raised in task completion: ", e);
+      return Optional.empty();
     }
   }
 
   /**
    * Block awaiting completion for any non-null future passed in;
    * No-op if a null arg was supplied.
+   * @param <T> return type
    * @param future future
+   * @return the outcome; is empty if the future was null/had no return value
    * @throws IOException if one of the called futures raised an IOE.
    * @throws RuntimeException if one of the futures raised one.
    */
-  public static void maybeAwaitCompletion(
-      @Nullable final CompletableFuture<Void> future)
+  public static <T> Optional<T> maybeAwaitCompletion(
+      @Nullable final CompletableFuture<T> future)
       throws IOException {
     if (future != null) {
-      waitForCompletion(future);
+      return Optional.ofNullable(waitForCompletion(future));
+    } else {
+      return Optional.empty();
     }
   }
 }

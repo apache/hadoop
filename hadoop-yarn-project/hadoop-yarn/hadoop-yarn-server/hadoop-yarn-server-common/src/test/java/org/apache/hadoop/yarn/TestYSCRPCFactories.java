@@ -21,8 +21,6 @@ package org.apache.hadoop.yarn;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 
-import org.junit.Assert;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.net.NetUtils;
@@ -37,7 +35,9 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequ
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.UnRegisterNodeManagerRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.UnRegisterNodeManagerResponse;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class TestYSCRPCFactories {
   
@@ -64,7 +64,7 @@ public class TestYSCRPCFactories {
       server.start();
     } catch (YarnRuntimeException e) {
       e.printStackTrace();
-      Assert.fail("Failed to create server");
+      fail("Failed to create server");
     } finally {
       server.stop();
     }
@@ -90,12 +90,12 @@ public class TestYSCRPCFactories {
         client = (ResourceTracker) RpcClientFactoryPBImpl.get().getClient(ResourceTracker.class, 1, NetUtils.getConnectAddress(server), conf);
       } catch (YarnRuntimeException e) {
         e.printStackTrace();
-        Assert.fail("Failed to create client");
+        fail("Failed to create client");
       }
       
     } catch (YarnRuntimeException e) {
       e.printStackTrace();
-      Assert.fail("Failed to create server");
+      fail("Failed to create server");
     } finally {
       server.stop();
     }     

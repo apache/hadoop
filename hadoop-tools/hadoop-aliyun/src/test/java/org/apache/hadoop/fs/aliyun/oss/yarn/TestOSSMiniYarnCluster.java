@@ -37,7 +37,9 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.yarn.server.MiniYARNCluster;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.EnumSet;
@@ -60,6 +62,7 @@ public class TestOSSMiniYarnCluster extends AbstractFSContractTestBase {
     return new AliyunOSSContract(conf);
   }
 
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     super.setup();
@@ -97,7 +100,7 @@ public class TestOSSMiniYarnCluster extends AbstractFSContractTestBase {
     FileOutputFormat.setOutputPath(job, output);
 
     int exitCode = (job.waitForCompletion(true) ? 0 : 1);
-    assertEquals("Returned error code.", 0, exitCode);
+    assertEquals(0, exitCode, "Returned error code.");
 
     assertTrue(fs.exists(new Path(output, "_SUCCESS")));
     String outputAsStr = readStringFromFile(new Path(output, "part-r-00000"));
@@ -118,9 +121,8 @@ public class TestOSSMiniYarnCluster extends AbstractFSContractTestBase {
     Map<String, Integer> result = new HashMap<>();
     for (String line : outputAsStr.split("\n")) {
       String[] tokens = line.split("\t");
-      assertTrue("Not enough tokens in in string \" "
-              + line + "\" from output \"" + outputAsStr + "\"",
-          tokens.length > 1);
+      assertTrue(tokens.length > 1, "Not enough tokens in in string \" "
+          + line + "\" from output \"" + outputAsStr + "\"");
       result.put(tokens[0], Integer.parseInt(tokens[1]));
     }
     return result;
@@ -149,6 +151,7 @@ public class TestOSSMiniYarnCluster extends AbstractFSContractTestBase {
     }
   }
 
+  @AfterEach
   @Override
   public void teardown() throws Exception {
     if (yarnCluster != null) {

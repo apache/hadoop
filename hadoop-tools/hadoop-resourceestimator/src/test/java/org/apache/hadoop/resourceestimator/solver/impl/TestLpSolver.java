@@ -33,7 +33,7 @@ import org.apache.hadoop.resourceestimator.translator.api.LogParser;
 import org.apache.hadoop.resourceestimator.translator.exceptions.DataFieldNotFoundException;
 import org.apache.hadoop.resourceestimator.translator.impl.BaseLogParser;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.RLESparseResourceAllocation;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.BufferedReader;
 import java.io.FileInputStream;
@@ -41,12 +41,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.text.ParseException;
 import java.util.List;
 import java.util.Map;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * This LPSolver class will make resource estimation using Linear Programming
@@ -84,7 +84,7 @@ public class TestLpSolver extends TestSolver {
     RLESparseResourceAllocation result = solver.solve(jobHistory);
     String file = "src/test/resources/lp/answer.txt";
     Reader fileReader = new InputStreamReader(new FileInputStream(file),
-        Charset.forName("UTF-8"));
+        StandardCharsets.UTF_8);
     BufferedReader bufferedReader = new BufferedReader(fileReader);
     String line = bufferedReader.readLine();
     Configuration config = new Configuration();

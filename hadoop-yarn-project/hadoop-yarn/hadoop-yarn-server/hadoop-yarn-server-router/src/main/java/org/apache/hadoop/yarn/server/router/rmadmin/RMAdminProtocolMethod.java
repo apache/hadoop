@@ -63,7 +63,7 @@ public class RMAdminProtocolMethod extends FederationMethodWrapper {
   public <R> Collection<R> invokeConcurrent(FederationRMAdminInterceptor interceptor,
       Class<R> clazz, String subClusterId) throws YarnException {
     this.rmAdminInterceptor = interceptor;
-    this.federationFacade = FederationStateStoreFacade.getInstance();
+    this.federationFacade = FederationStateStoreFacade.getInstance(interceptor.getConf());
     this.configuration = interceptor.getConf();
     if (StringUtils.isNotBlank(subClusterId)) {
       return invoke(clazz, subClusterId);

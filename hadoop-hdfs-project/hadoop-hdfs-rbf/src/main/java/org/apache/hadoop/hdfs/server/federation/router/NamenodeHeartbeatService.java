@@ -543,7 +543,8 @@ public class NamenodeHeartbeatService extends PeriodicService {
                 .optLong("NumberOfMissingBlocksWithReplicationFactorOne"),
             jsonObject
                 .optLong("HighestPriorityLowRedundancyReplicatedBlocks"),
-            jsonObject.optLong("HighestPriorityLowRedundancyECBlocks"));
+            jsonObject.optLong("HighestPriorityLowRedundancyECBlocks"),
+            jsonObject.optLong("BadlyDistributedBlocks"));
       }
     }
   }

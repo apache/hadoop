@@ -28,6 +28,7 @@ import java.net.URI;
 import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -85,14 +86,16 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsVolumeImpl;
 import org.apache.hadoop.hdfs.server.namenode.ha.BootstrapStandby;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
+import org.apache.hadoop.hdfs.util.RwLockMode;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NodeBase;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TestName;
+import org.apache.hadoop.test.TestName;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -105,14 +108,20 @@ import static org.apache.hadoop.hdfs.MiniDFSCluster.HDFS_MINIDFS_BASEDIR;
 import static org.apache.hadoop.hdfs.server.common.Util.fileAsURI;
 import static org.apache.hadoop.hdfs.server.common.blockaliasmap.impl.TextFileRegionAliasMap.fileNameFromBlockPoolID;
 import static org.apache.hadoop.net.NodeBase.PATH_SEPARATOR_STR;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Integration tests for the Provided implementation.
  */
 public class ITestProvidedImplementation {
 
-  @Rule public TestName name = new TestName();
+  @RegisterExtension
+  private TestName name = new TestName();
+
   public static final Logger LOG =
       LoggerFactory.getLogger(ITestProvidedImplementation.class);
 
@@ -134,7 +143,7 @@ public class ITestProvidedImplementation {
   private Configuration conf;
   private MiniDFSCluster cluster;
 
-  @Before
+  @BeforeEach
   public void setSeed() throws Exception {
     if (fBASE.exists() && !FileUtil.fullyDelete(fBASE)) {
       throw new IOException("Could not fully delete " + fBASE);
@@ -180,7 +189,7 @@ public class ITestProvidedImplementation {
           LOG.info("Creating " + newFile.toString());
           newFile.createNewFile();
           Writer writer = new OutputStreamWriter(
-              new FileOutputStream(newFile.getAbsolutePath()), "utf-8");
+              new FileOutputStream(newFile.getAbsolutePath()), StandardCharsets.UTF_8);
           for(int j=0; j < baseFileLen*i; j++) {
             writer.write("0");
           }
@@ -194,7 +203,7 @@ public class ITestProvidedImplementation {
     }
   }
 
-  @After
+  @AfterEach
   public void shutdown() throws Exception {
     try {
       if (cluster != null) {
@@ -310,7 +319,8 @@ public class ITestProvidedImplementation {
     return nnDirs;
   }
 
-  @Test(timeout=20000)
+  @Test
+  @Timeout(value = 20)
   public void testLoadImage() throws Exception {
     final long seed = r.nextLong();
     LOG.info("providedPath: " + providedPath);
@@ -336,7 +346,8 @@ public class ITestProvidedImplementation {
     }
   }
 
-  @Test(timeout=30000)
+  @Test
+  @Timeout(value = 30)
   public void testProvidedReporting() throws Exception {
     conf.setClass(ImageWriter.Options.UGI_CLASS,
         SingleUGIResolver.class, UGIResolver.class);
@@ -415,7 +426,8 @@ public class ITestProvidedImplementation {
     }
   }
 
-  @Test(timeout=500000)
+  @Test
+  @Timeout(value = 500)
   public void testDefaultReplication() throws Exception {
     int targetReplication = 2;
     conf.setInt(FixedBlockMultiReplicaResolver.REPLICATION, targetReplication);
@@ -527,7 +539,8 @@ public class ITestProvidedImplementation {
     return fs.getFileBlockLocations(path, 0, fileLen);
   }
 
-  @Test(timeout=30000)
+  @Test
+  @Timeout(value = 30)
   public void testClusterWithEmptyImage() throws IOException {
     // start a cluster with 2 datanodes without any provided storage
     startCluster(nnDirPath, 2, null,
@@ -565,8 +578,8 @@ public class ITestProvidedImplementation {
   private void checkUniqueness(DatanodeInfo[] locations) {
     Set<String> set = new HashSet<>();
     for (DatanodeInfo info: locations) {
-      assertFalse("All locations should be unique",
-          set.contains(info.getDatanodeUuid()));
+      assertFalse(set.contains(info.getDatanodeUuid()),
+          "All locations should be unique");
       set.add(info.getDatanodeUuid());
     }
   }
@@ -575,7 +588,8 @@ public class ITestProvidedImplementation {
    * Tests setting replication of provided files.
    * @throws Exception
    */
-  @Test(timeout=50000)
+  @Test
+  @Timeout(value = 50)
   public void testSetReplicationForProvidedFiles() throws Exception {
     createImage(new FSTreeWalk(providedPath, conf), nnDirPath,
         FixedBlockResolver.class);
@@ -616,7 +630,8 @@ public class ITestProvidedImplementation {
         defaultReplication);
   }
 
-  @Test(timeout=30000)
+  @Test
+  @Timeout(value = 30)
   public void testProvidedDatanodeFailures() throws Exception {
     createImage(new FSTreeWalk(providedPath, conf), nnDirPath,
             FixedBlockResolver.class);
@@ -687,7 +702,8 @@ public class ITestProvidedImplementation {
     }
   }
 
-  @Test(timeout=300000)
+  @Test
+  @Timeout(value = 300)
   public void testTransientDeadDatanodes() throws Exception {
     createImage(new FSTreeWalk(providedPath, conf), nnDirPath,
             FixedBlockResolver.class);
@@ -725,7 +741,8 @@ public class ITestProvidedImplementation {
     return providedStorageMap.getProvidedStorageInfo();
   }
 
-  @Test(timeout=30000)
+  @Test
+  @Timeout(value = 30)
   public void testNamenodeRestart() throws Exception {
     createImage(new FSTreeWalk(providedPath, conf), nnDirPath,
         FixedBlockResolver.class);
@@ -766,7 +783,8 @@ public class ITestProvidedImplementation {
     }
   }
 
-  @Test(timeout=30000)
+  @Test
+  @Timeout(value = 30)
   public void testSetClusterID() throws Exception {
     String clusterID = "PROVIDED-CLUSTER";
     createImage(new FSTreeWalk(providedPath, conf), nnDirPath,
@@ -781,7 +799,8 @@ public class ITestProvidedImplementation {
     assertEquals(clusterID, nn.getNamesystem().getClusterId());
   }
 
-  @Test(timeout=30000)
+  @Test
+  @Timeout(value = 30)
   public void testNumberOfProvidedLocations() throws Exception {
     // set default replication to 4
     conf.setInt(DFSConfigKeys.DFS_REPLICATION_KEY, 4);
@@ -812,7 +831,8 @@ public class ITestProvidedImplementation {
     }
   }
 
-  @Test(timeout=30000)
+  @Test
+  @Timeout(value = 30)
   public void testNumberOfProvidedLocationsManyBlocks() throws Exception {
     // increase number of blocks per file to at least 10 blocks per file
     conf.setLong(FixedBlockResolver.BLOCKSIZE, baseFileLen/10);
@@ -1093,26 +1113,26 @@ public class ITestProvidedImplementation {
 
   private void startDecommission(FSNamesystem namesystem, DatanodeManager dnm,
       int dnIndex) throws Exception {
-    namesystem.writeLock();
+    namesystem.writeLock(RwLockMode.BM);
     DatanodeDescriptor dnDesc = getDatanodeDescriptor(dnm, dnIndex);
     dnm.getDatanodeAdminManager().startDecommission(dnDesc);
-    namesystem.writeUnlock();
+    namesystem.writeUnlock(RwLockMode.BM, "startDecommission");
   }
 
   private void startMaintenance(FSNamesystem namesystem, DatanodeManager dnm,
       int dnIndex) throws Exception {
-    namesystem.writeLock();
+    namesystem.writeLock(RwLockMode.BM);
     DatanodeDescriptor dnDesc = getDatanodeDescriptor(dnm, dnIndex);
     dnm.getDatanodeAdminManager().startMaintenance(dnDesc, Long.MAX_VALUE);
-    namesystem.writeUnlock();
+    namesystem.writeUnlock(RwLockMode.BM, "startMaintenance");
   }
 
   private void stopMaintenance(FSNamesystem namesystem, DatanodeManager dnm,
       int dnIndex) throws Exception {
-    namesystem.writeLock();
+    namesystem.writeLock(RwLockMode.GLOBAL);
     DatanodeDescriptor dnDesc = getDatanodeDescriptor(dnm, dnIndex);
     dnm.getDatanodeAdminManager().stopMaintenance(dnDesc);
-    namesystem.writeUnlock();
+    namesystem.writeUnlock(RwLockMode.GLOBAL, "stopMaintenance");
   }
 
   @Test

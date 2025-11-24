@@ -70,7 +70,7 @@ public class MountTableStoreImpl extends MountTableStore {
    *
    * @param src mount entry being accessed
    * @param action type of action being performed on the mount entry
-   * @throws AccessControlException if mount table cannot be accessed
+   * @throws IOException if mount table cannot be accessed
    */
   private void checkMountTableEntryPermission(String src, FsAction action)
       throws IOException {
@@ -90,7 +90,7 @@ public class MountTableStoreImpl extends MountTableStore {
    * Check parent path permission recursively. It needs WRITE permission
    * of the nearest parent entry and other EXECUTE permission.
    * @param src mount entry being checked
-   * @throws AccessControlException if mount table cannot be accessed
+   * @throws IOException if mount table cannot be accessed
    */
   private void checkMountTablePermission(final String src) throws IOException {
     String parent = src.substring(0, src.lastIndexOf(Path.SEPARATOR));

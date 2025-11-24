@@ -22,7 +22,8 @@ import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.client.impl.metrics.BlockReaderIoProvider;
 import org.apache.hadoop.hdfs.client.impl.metrics.BlockReaderLocalMetrics;
 import org.apache.hadoop.util.FakeTimer;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -45,7 +46,8 @@ public class TestBlockReaderIoProvider {
 
   private static final FakeTimer TIMER = new FakeTimer();
 
-  @Test(timeout = 300_000)
+  @Test
+  @Timeout(value = 300)
   public void testSlowShortCircuitReadsIsRecorded() throws IOException {
     HdfsConfiguration conf = new HdfsConfiguration();
     conf.setInt(HdfsClientConfigKeys.Read.ShortCircuit

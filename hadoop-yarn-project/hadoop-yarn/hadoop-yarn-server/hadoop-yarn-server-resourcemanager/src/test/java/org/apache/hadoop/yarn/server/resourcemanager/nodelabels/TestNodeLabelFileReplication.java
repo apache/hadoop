@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.nodelabels;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
@@ -26,8 +28,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class TestNodeLabelFileReplication {
 
@@ -51,9 +52,8 @@ public class TestNodeLabelFileReplication {
       int fileReplication = fs
           .getFileStatus(new Path(nodeLabelDir, "nodelabel.mirror"))
           .getReplication();
-      Assert.assertEquals(
-          "Node label file replication should be " + expectedReplication,
-          expectedReplication, fileReplication);
+      assertEquals(expectedReplication, fileReplication,
+          "Node label file replication should be " + expectedReplication);
       manager.close();
     } finally {
       if (cluster != null) {

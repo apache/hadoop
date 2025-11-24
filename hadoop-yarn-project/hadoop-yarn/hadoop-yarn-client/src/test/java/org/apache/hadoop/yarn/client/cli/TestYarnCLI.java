@@ -20,7 +20,11 @@ package org.apache.hadoop.yarn.client.cli;
 import org.apache.hadoop.yarn.api.records.NodeAttribute;
 import org.apache.hadoop.yarn.api.records.NodeAttributeType;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.isA;
@@ -38,6 +42,7 @@ import java.io.OutputStreamWriter;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -88,6 +93,8 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.ApplicationAttemptNotFoundException;
 import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 import org.apache.hadoop.yarn.exceptions.ContainerNotFoundException;
+import org.apache.hadoop.yarn.factories.RecordFactory;
+import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.MiniYARNCluster;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSystemTestUtil;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
@@ -96,9 +103,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.Times;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.PREFIX;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.eclipse.jetty.util.log.Log;
 
 import org.slf4j.Logger;
@@ -116,7 +123,7 @@ public class TestYarnCLI {
   private static final Pattern SPACES_PATTERN =
       Pattern.compile("\\s+|\\n+|\\t+");
 
-  @Before
+  @BeforeEach
   public void setup() {
     sysOutStream = new ByteArrayOutputStream();
     sysOut = spy(new PrintStream(sysOutStream));
@@ -131,17 +138,17 @@ public class TestYarnCLI {
       ApplicationCLI cli = createAndGetAppCLI();
       ApplicationId applicationId = ApplicationId.newInstance(1234, 5);
       Map<String, Long> resourceSecondsMap = new HashMap<>();
-      Map<String, Long> preemptedResoureSecondsMap = new HashMap<>();
+      Map<String, Long> preemptedResourceSecondsMap = new HashMap<>();
       resourceSecondsMap.put(ResourceInformation.MEMORY_MB.getName(), 123456L);
       resourceSecondsMap.put(ResourceInformation.VCORES.getName(), 4567L);
-      preemptedResoureSecondsMap
+      preemptedResourceSecondsMap
           .put(ResourceInformation.MEMORY_MB.getName(), 1111L);
-      preemptedResoureSecondsMap
+      preemptedResourceSecondsMap
           .put(ResourceInformation.VCORES.getName(), 2222L);
       ApplicationResourceUsageReport usageReport = i == 0 ? null :
           ApplicationResourceUsageReport
               .newInstance(2, 0, null, null, null, resourceSecondsMap, 0, 0,
-                  preemptedResoureSecondsMap);
+                  preemptedResourceSecondsMap);
       ApplicationReport newApplicationReport = ApplicationReport.newInstance(
           applicationId, ApplicationAttemptId.newInstance(applicationId, 1),
           "user", "queue", "appname", "host", 124, null,
@@ -194,7 +201,7 @@ public class TestYarnCLI {
       pw.println();
       pw.close();
       String appReportStr = baos.toString("UTF-8");
-      Assert.assertEquals(appReportStr, sysOutStream.toString());
+      assertEquals(appReportStr, sysOutStream.toString());
       sysOutStream.reset();
       verify(sysOut, times(1 + i)).println(isA(String.class));
     }
@@ -230,7 +237,7 @@ public class TestYarnCLI {
     pw.println("\tDiagnostics : diagnostics");
     pw.close();
     String appReportStr = baos.toString("UTF-8");
-    Assert.assertEquals(appReportStr, sysOutStream.toString());
+    assertEquals(appReportStr, sysOutStream.toString());
     verify(sysOut, times(1)).println(isA(String.class));
   }
   
@@ -276,7 +283,7 @@ public class TestYarnCLI {
     pw.println("\t                                url");
     pw.close();
     String appReportStr = baos.toString("UTF-8");
-    Assert.assertEquals(appReportStr, sysOutStream.toString());
+    assertEquals(appReportStr, sysOutStream.toString());
   }
   
   @Test
@@ -319,7 +326,7 @@ public class TestYarnCLI {
     pw.close();
     String appReportStr = baos.toString("UTF-8");
 
-    Assert.assertEquals(appReportStr, sysOutStream.toString());
+    assertEquals(appReportStr, sysOutStream.toString());
     verify(sysOut, times(1)).println(isA(String.class));
   }
   
@@ -362,7 +369,7 @@ public class TestYarnCLI {
     verify(client).getContainers(attemptId);
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     OutputStreamWriter stream =
-        new OutputStreamWriter(baos, "UTF-8");
+        new OutputStreamWriter(baos, StandardCharsets.UTF_8);
     PrintWriter pw = new PrintWriter(stream);
     pw.println("Total number of containers :3");
     pw.printf(ApplicationCLI.CONTAINER_PATTERN, "Container-Id", "Start Time",
@@ -383,7 +390,7 @@ public class TestYarnCLI {
     Log.getLog().info("OutputFrom command");
     String actualOutput = sysOutStream.toString("UTF-8");
     Log.getLog().info("["+actualOutput+"]");
-    Assert.assertEquals(appReportStr, actualOutput);
+    assertEquals(appReportStr, actualOutput);
   }
   
   @Test
@@ -398,7 +405,7 @@ public class TestYarnCLI {
     verify(sysOut).println(
         "Application with id '" + applicationId
             + "' doesn't exist in RM or Timeline Server.");
-    Assert.assertNotSame("should return non-zero exit code.", 0, exitCode);
+    assertNotSame(0, exitCode, "should return non-zero exit code.");
   }
 
   @Test
@@ -513,8 +520,7 @@ public class TestYarnCLI {
     pw.println("\t                                N/A");
     pw.close();
     String appsReportStr = baos.toString("UTF-8");
-    Assert.assertEquals(appsReportStr, sysOutStream.toString());
-    verify(sysOut, times(1)).write(any(byte[].class), anyInt(), anyInt());
+    assertEquals(appsReportStr, sysOutStream.toString());
 
     //Test command yarn application -list --appTypes apptype1,apptype2
     //the output should be the same as
@@ -554,8 +560,7 @@ public class TestYarnCLI {
     pw.println("\t                                N/A");
     pw.close();
     appsReportStr = baos.toString("UTF-8");
-    Assert.assertEquals(appsReportStr, sysOutStream.toString());
-    verify(sysOut, times(2)).write(any(byte[].class), anyInt(), anyInt());
+    assertEquals(appsReportStr, sysOutStream.toString());
 
     //Test command yarn application -list --appStates appState1,appState2
     sysOutStream.reset();
@@ -595,8 +600,7 @@ public class TestYarnCLI {
     pw.println("\t                                N/A");
     pw.close();
     appsReportStr = baos.toString("UTF-8");
-    Assert.assertEquals(appsReportStr, sysOutStream.toString());
-    verify(sysOut, times(3)).write(any(byte[].class), anyInt(), anyInt());
+    assertEquals(appsReportStr, sysOutStream.toString());
 
     // Test command yarn application -list --appTypes apptype1,apptype2
     // --appStates appstate1,appstate2
@@ -634,8 +638,7 @@ public class TestYarnCLI {
     pw.println("\t                                N/A");
     pw.close();
     appsReportStr = baos.toString("UTF-8");
-    Assert.assertEquals(appsReportStr, sysOutStream.toString());
-    verify(sysOut, times(4)).write(any(byte[].class), anyInt(), anyInt());
+    assertEquals(appsReportStr, sysOutStream.toString());
 
     //Test command yarn application -list --appStates with invalid appStates
     sysOutStream.reset();
@@ -656,8 +659,7 @@ public class TestYarnCLI {
     pw.println(output.substring(0, output.length()-1));
     pw.close();
     appsReportStr = baos.toString("UTF-8");
-    Assert.assertEquals(appsReportStr, sysOutStream.toString());
-    verify(sysOut, times(4)).write(any(byte[].class), anyInt(), anyInt());
+    assertEquals(appsReportStr, sysOutStream.toString());
 
     //Test command yarn application -list --appStates all
     sysOutStream.reset();
@@ -715,8 +717,7 @@ public class TestYarnCLI {
     pw.println("\t                                N/A");
     pw.close();
     appsReportStr = baos.toString("UTF-8");
-    Assert.assertEquals(appsReportStr, sysOutStream.toString());
-    verify(sysOut, times(5)).write(any(byte[].class), anyInt(), anyInt());
+    assertEquals(appsReportStr, sysOutStream.toString());
 
     // Test command yarn application user case insensitive
     sysOutStream.reset();
@@ -751,8 +752,7 @@ public class TestYarnCLI {
     pw.println("\t                                N/A");
     pw.close();
     appsReportStr = baos.toString("UTF-8");
-    Assert.assertEquals(appsReportStr, sysOutStream.toString());
-    verify(sysOut, times(6)).write(any(byte[].class), anyInt(), anyInt());
+    assertEquals(appsReportStr, sysOutStream.toString());
 
     // Test command yarn application with tags.
     sysOutStream.reset();
@@ -785,8 +785,7 @@ public class TestYarnCLI {
     pw.println("\t                                N/A");
     pw.close();
     appsReportStr = baos.toString("UTF-8");
-    Assert.assertEquals(appsReportStr, sysOutStream.toString());
-    verify(sysOut, times(7)).write(any(byte[].class), anyInt(), anyInt());
+    assertEquals(appsReportStr, sysOutStream.toString());
 
     sysOutStream.reset();
     EnumSet<YarnApplicationState> appState7 =
@@ -825,8 +824,7 @@ public class TestYarnCLI {
     pw.println("\t                                N/A");
     pw.close();
     appsReportStr = baos.toString("UTF-8");
-    Assert.assertEquals(appsReportStr, sysOutStream.toString());
-    verify(sysOut, times(8)).write(any(byte[].class), anyInt(), anyInt());
+    assertEquals(appsReportStr, sysOutStream.toString());
 
     sysOutStream.reset();
     Set<String> appType9 = Sets.newHashSet("YARN");
@@ -854,8 +852,7 @@ public class TestYarnCLI {
     pw.println("\t                                N/A");
     pw.close();
     appsReportStr = baos.toString("UTF-8");
-    Assert.assertEquals(appsReportStr, sysOutStream.toString());
-    verify(sysOut, times(9)).write(any(byte[].class), anyInt(), anyInt());
+    assertEquals(appsReportStr, sysOutStream.toString());
 
     sysOutStream.reset();
     Set<String> appType10 = Sets.newHashSet("HIVE");
@@ -885,8 +882,7 @@ public class TestYarnCLI {
     pw.println("\t                                N/A");
     pw.close();
     appsReportStr = baos.toString("UTF-8");
-    Assert.assertEquals(appsReportStr, sysOutStream.toString());
-    verify(sysOut, times(10)).write(any(byte[].class), anyInt(), anyInt());
+    assertEquals(appsReportStr, sysOutStream.toString());
   }
 
   private List<ApplicationReport> getApplicationReports(
@@ -935,14 +931,15 @@ public class TestYarnCLI {
     return appReports;
   }
 
-  @Test (timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testAppsHelpCommand() throws Exception {
     ApplicationCLI cli = createAndGetAppCLI();
     ApplicationCLI spyCli = spy(cli);
     int result = spyCli.run(new String[] { "application", "-help" });
-    Assert.assertTrue(result == 0);
+    assertTrue(result == 0);
     verify(spyCli).printUsage(any(String.class), any(Options.class));
-    Assert.assertEquals(createApplicationCLIHelpMessage(),
+    assertEquals(createApplicationCLIHelpMessage(),
         sysOutStream.toString());
 
     sysOutStream.reset();
@@ -950,18 +947,19 @@ public class TestYarnCLI {
     result = cli.run(
         new String[] { "application", "-status", nodeId.toString(), "args" });
     verify(spyCli).printUsage(any(String.class), any(Options.class));
-    Assert.assertEquals(createApplicationCLIHelpMessage(),
+    assertEquals(createApplicationCLIHelpMessage(),
         sysOutStream.toString());
   }
 
-  @Test (timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testAppAttemptsHelpCommand() throws Exception {
     ApplicationCLI cli = createAndGetAppCLI();
     ApplicationCLI spyCli = spy(cli);
     int result = spyCli.run(new String[] { "applicationattempt", "-help" });
-    Assert.assertTrue(result == 0);
+    assertTrue(result == 0);
     verify(spyCli).printUsage(any(String.class), any(Options.class));
-    Assert.assertEquals(createApplicationAttemptCLIHelpMessage(),
+    assertEquals(createApplicationAttemptCLIHelpMessage(),
         sysOutStream.toString());
 
     sysOutStream.reset();
@@ -970,7 +968,7 @@ public class TestYarnCLI {
         new String[] {"applicationattempt", "-list", applicationId.toString(),
             "args" });
     verify(spyCli).printUsage(any(String.class), any(Options.class));
-    Assert.assertEquals(createApplicationAttemptCLIHelpMessage(),
+    assertEquals(createApplicationAttemptCLIHelpMessage(),
         sysOutStream.toString());
 
     sysOutStream.reset();
@@ -980,18 +978,19 @@ public class TestYarnCLI {
         new String[] { "applicationattempt", "-status", appAttemptId.toString(),
             "args" });
     verify(spyCli).printUsage(any(String.class), any(Options.class));
-    Assert.assertEquals(createApplicationAttemptCLIHelpMessage(),
+    assertEquals(createApplicationAttemptCLIHelpMessage(),
         sysOutStream.toString());
   }
 
-  @Test (timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testContainersHelpCommand() throws Exception {
     ApplicationCLI cli = createAndGetAppCLI();
     ApplicationCLI spyCli = spy(cli);
     int result = spyCli.run(new String[] { "container", "-help" });
-    Assert.assertTrue(result == 0);
+    assertTrue(result == 0);
     verify(spyCli).printUsage(any(String.class), any(Options.class));
-    Assert.assertEquals(createContainerCLIHelpMessage(),
+    assertEquals(createContainerCLIHelpMessage(),
         normalize(sysOutStream.toString()));
 
     sysOutStream.reset();
@@ -1001,7 +1000,7 @@ public class TestYarnCLI {
     result = cli.run(
         new String[] {"container", "-list", appAttemptId.toString(), "args" });
     verify(spyCli).printUsage(any(String.class), any(Options.class));
-    Assert.assertEquals(createContainerCLIHelpMessage(),
+    assertEquals(createContainerCLIHelpMessage(),
         normalize(sysOutStream.toString()));
 
     sysOutStream.reset();
@@ -1009,15 +1008,16 @@ public class TestYarnCLI {
     result = cli.run(
         new String[] { "container", "-status", containerId.toString(), "args" });
     verify(spyCli).printUsage(any(String.class), any(Options.class));
-    Assert.assertEquals(createContainerCLIHelpMessage(),
+    assertEquals(createContainerCLIHelpMessage(),
         normalize(sysOutStream.toString()));
   }
 
-  @Test (timeout = 5000)
+  @Test
+  @Timeout(value = 5)
   public void testNodesHelpCommand() throws Exception {
     NodeCLI nodeCLI = createAndGetNodeCLI();
     nodeCLI.run(new String[] {});
-    Assert.assertEquals(createNodeCLIHelpMessage(),
+    assertEquals(createNodeCLIHelpMessage(),
         sysOutStream.toString());
   }
 
@@ -1060,12 +1060,12 @@ public class TestYarnCLI {
           cli.run(new String[] { "application","-kill", applicationId.toString() });
       verify(sysOut).println("Application with id '" + applicationId +
               "' doesn't exist in RM.");
-      Assert.assertNotSame("should return non-zero exit code.", 0, exitCode);
+      assertNotSame(0, exitCode, "should return non-zero exit code.");
     } catch (ApplicationNotFoundException appEx) {
-      Assert.fail("application -kill should not throw" +
+      fail("application -kill should not throw" +
           "ApplicationNotFoundException. " + appEx);
     } catch (Exception e) {
-      Assert.fail("Unexpected exception: " + e);
+      fail("Unexpected exception: " + e);
     }
   }
 
@@ -1136,7 +1136,7 @@ public class TestYarnCLI {
         .getApplicationReport(applicationId4);
     result = cli.run(new String[]{"application", "-kill",
         applicationId3.toString() + " " + applicationId4.toString()});
-    Assert.assertNotEquals(0, result);
+    assertNotEquals(0, result);
     verify(sysOut).println(
         "Application with id 'application_1234_0007' doesn't exist in RM.");
     verify(sysOut).println(
@@ -1155,14 +1155,14 @@ public class TestYarnCLI {
         newApplicationReport5);
     result = cli.run(new String[]{"application", "-kill",
         applicationId3.toString() + " " + applicationId1.toString()});
-    Assert.assertEquals(0, result);
+    assertEquals(0, result);
 
     // Test Scenario 5: kill operation with some other command.
     sysOutStream.reset();
     result = cli.run(new String[]{"application", "--appStates", "RUNNING",
         "-kill", applicationId3.toString() + " " + applicationId1.toString()});
-    Assert.assertEquals(-1, result);
-    Assert.assertEquals(createApplicationCLIHelpMessage(),
+    assertEquals(-1, result);
+    assertEquals(createApplicationCLIHelpMessage(),
         sysOutStream.toString());
   }
 
@@ -1238,10 +1238,10 @@ public class TestYarnCLI {
     try {
       result = cli.run(new String[] { "application", "-movetoqueue",
           applicationId.toString(), "-queue", "targetqueue"});
-      Assert.fail();
+      fail();
     } catch (Exception ex) {
-      Assert.assertTrue(ex instanceof ApplicationNotFoundException);
-      Assert.assertEquals("Application with id '" + applicationId +
+      assertTrue(ex instanceof ApplicationNotFoundException);
+      assertEquals("Application with id '" + applicationId +
           "' doesn't exist in RM.", ex.getMessage());
     }
   }
@@ -1290,10 +1290,10 @@ public class TestYarnCLI {
     try {
       result = cli.run(new String[]{"application", "-appId",
           applicationId.toString(), "-changeQueue", "targetqueue"});
-      Assert.fail();
+      fail();
     } catch (Exception ex) {
-      Assert.assertTrue(ex instanceof ApplicationNotFoundException);
-      Assert.assertEquals(
+      assertTrue(ex instanceof ApplicationNotFoundException);
+      assertEquals(
           "Application with id '" + applicationId + "' doesn't exist in RM.",
           ex.getMessage());
     }
@@ -1328,7 +1328,7 @@ public class TestYarnCLI {
     pw.println("                           0");
     pw.close();
     String nodesReportStr = baos.toString("UTF-8");
-    Assert.assertEquals(nodesReportStr, sysOutStream.toString());
+    assertEquals(nodesReportStr, sysOutStream.toString());
     verify(sysOut, times(1)).write(any(byte[].class), anyInt(), anyInt());
 
     sysOutStream.reset();
@@ -1351,13 +1351,13 @@ public class TestYarnCLI {
     pw.println("                           0");
     pw.close();
     nodesReportStr = baos.toString("UTF-8");
-    Assert.assertEquals(nodesReportStr, sysOutStream.toString());
+    assertEquals(nodesReportStr, sysOutStream.toString());
     verify(sysOut, times(2)).write(any(byte[].class), anyInt(), anyInt());
 
     sysOutStream.reset();
     result = cli.run(new String[] {"-list"});
     assertEquals(0, result);
-    Assert.assertEquals(nodesReportStr, sysOutStream.toString());
+    assertEquals(nodesReportStr, sysOutStream.toString());
     verify(sysOut, times(3)).write(any(byte[].class), anyInt(), anyInt());
 
     sysOutStream.reset();
@@ -1386,8 +1386,7 @@ public class TestYarnCLI {
     pw.println("\tNode-Labels : ");
     pw.close();
     nodesReportStr = baos.toString("UTF-8");
-    Assert.assertEquals(nodesReportStr, sysOutStream.toString());
-    verify(sysOut, times(4)).write(any(byte[].class), anyInt(), anyInt());
+    assertEquals(nodesReportStr, sysOutStream.toString());
 
     sysOutStream.reset();
     nodeStates.clear();
@@ -1407,8 +1406,7 @@ public class TestYarnCLI {
     pw.println("                           0");
     pw.close();
     nodesReportStr = baos.toString("UTF-8");
-    Assert.assertEquals(nodesReportStr, sysOutStream.toString());
-    verify(sysOut, times(5)).write(any(byte[].class), anyInt(), anyInt());
+    assertEquals(nodesReportStr, sysOutStream.toString());
 
     sysOutStream.reset();
     nodeStates.clear();
@@ -1428,8 +1426,7 @@ public class TestYarnCLI {
     pw.println("                           0");
     pw.close();
     nodesReportStr = baos.toString("UTF-8");
-    Assert.assertEquals(nodesReportStr, sysOutStream.toString());
-    verify(sysOut, times(6)).write(any(byte[].class), anyInt(), anyInt());
+    assertEquals(nodesReportStr, sysOutStream.toString());
 
     sysOutStream.reset();
     nodeStates.clear();
@@ -1449,8 +1446,7 @@ public class TestYarnCLI {
     pw.println("                           0");
     pw.close();
     nodesReportStr = baos.toString("UTF-8");
-    Assert.assertEquals(nodesReportStr, sysOutStream.toString());
-    verify(sysOut, times(7)).write(any(byte[].class), anyInt(), anyInt());
+    assertEquals(nodesReportStr, sysOutStream.toString());
 
     sysOutStream.reset();
     nodeStates.clear();
@@ -1470,8 +1466,7 @@ public class TestYarnCLI {
     pw.println("                           0");
     pw.close();
     nodesReportStr = baos.toString("UTF-8");
-    Assert.assertEquals(nodesReportStr, sysOutStream.toString());
-    verify(sysOut, times(8)).write(any(byte[].class), anyInt(), anyInt());
+    assertEquals(nodesReportStr, sysOutStream.toString());
 
     sysOutStream.reset();
     nodeStates.clear();
@@ -1503,8 +1498,7 @@ public class TestYarnCLI {
     pw.println("                           0");
     pw.close();
     nodesReportStr = baos.toString("UTF-8");
-    Assert.assertEquals(nodesReportStr, sysOutStream.toString());
-    verify(sysOut, times(9)).write(any(byte[].class), anyInt(), anyInt());
+    assertEquals(nodesReportStr, sysOutStream.toString());
 
     sysOutStream.reset();
     nodeStates.clear();
@@ -1538,8 +1532,7 @@ public class TestYarnCLI {
     pw.println("                           0");
     pw.close();
     nodesReportStr = baos.toString("UTF-8");
-    Assert.assertEquals(nodesReportStr, sysOutStream.toString());
-    verify(sysOut, times(10)).write(any(byte[].class), anyInt(), anyInt());
+    assertEquals(nodesReportStr, sysOutStream.toString());
 
     sysOutStream.reset();
     result = cli.run(new String[] { "-list", "-states", "InvalidState"});
@@ -1692,26 +1685,26 @@ public class TestYarnCLI {
     ApplicationCLI cli = createAndGetAppCLI();
     int result = cli.run(new String[] { "application", "-status" });
     assertThat(result).isEqualTo(-1);
-    Assert.assertEquals(String.format("Missing argument for options%n%1s",
+    assertEquals(String.format("Missing argument for options%n%1s",
         createApplicationCLIHelpMessage()), sysOutStream.toString());
 
     sysOutStream.reset();
     result = cli.run(new String[] { "applicationattempt", "-status" });
     assertThat(result).isEqualTo(-1);
-    Assert.assertEquals(String.format("Missing argument for options%n%1s",
+    assertEquals(String.format("Missing argument for options%n%1s",
         createApplicationAttemptCLIHelpMessage()), sysOutStream.toString());
 
     sysOutStream.reset();
     result = cli.run(new String[] { "container", "-status" });
     assertThat(result).isEqualTo(-1);
-    Assert.assertEquals(String.format("Missing argument for options %1s",
+    assertEquals(String.format("Missing argument for options %1s",
         createContainerCLIHelpMessage()), normalize(sysOutStream.toString()));
 
     sysOutStream.reset();
     NodeCLI nodeCLI = createAndGetNodeCLI();
     result = nodeCLI.run(new String[] { "-status" });
     assertThat(result).isEqualTo(-1);
-    Assert.assertEquals(String.format("Missing argument for options%n%1s",
+    assertEquals(String.format("Missing argument for options%n%1s",
         createNodeCLIHelpMessage()), sysOutStream.toString());
   }
   
@@ -1748,7 +1741,7 @@ public class TestYarnCLI {
     pw.println("\tIntra-queue Preemption : " + "enabled");
     pw.close();
     String queueInfoStr = baos.toString("UTF-8");
-    Assert.assertEquals(queueInfoStr, sysOutStream.toString());
+    assertEquals(queueInfoStr, sysOutStream.toString());
   }
 
   @Test
@@ -1772,7 +1765,7 @@ public class TestYarnCLI {
     queueInfos.add(queueInfo3);
     when(client.getAllQueues()).thenReturn(queueInfos);
     int result = cli.run(new String[] {"-list", "all"});
-    Assert.assertEquals(0, result);
+    assertEquals(0, result);
     verify(client).getAllQueues();
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     PrintWriter writer = new PrintWriter(baos);
@@ -1793,7 +1786,7 @@ public class TestYarnCLI {
     writer.print(formattingCLIUtils.render());
     writer.close();
     String queueInfoStr = baos.toString("UTF-8");
-    Assert.assertEquals(queueInfoStr, sysOutStream.toString());
+    assertEquals(queueInfoStr, sysOutStream.toString());
   }
 
   @Test
@@ -1834,10 +1827,10 @@ public class TestYarnCLI {
       int result = cli.run(new String[] { "-status", "a" });
       assertEquals(0, result);
       String queueStatusOut = sysOutStream.toString();
-      Assert.assertTrue(queueStatusOut
+      assertTrue(queueStatusOut
           .contains("\tPreemption : enabled"));
       // In-queue preemption is disabled at the "root.a" queue level
-      Assert.assertTrue(queueStatusOut
+      assertTrue(queueStatusOut
           .contains("Intra-queue Preemption : disabled"));
       cli = createAndGetQueueCLI(yarnClient);
       sysOutStream.reset();
@@ -1845,10 +1838,10 @@ public class TestYarnCLI {
       result = cli.run(new String[] { "-status", "a1" });
       assertEquals(0, result);
       queueStatusOut = sysOutStream.toString();
-      Assert.assertTrue(queueStatusOut
+      assertTrue(queueStatusOut
           .contains("\tPreemption : enabled"));
       // In-queue preemption is enabled at the "root.a.a1" queue level
-      Assert.assertTrue(queueStatusOut
+      assertTrue(queueStatusOut
           .contains("Intra-queue Preemption : enabled"));
     } finally {
       // clean-up
@@ -1889,9 +1882,9 @@ public class TestYarnCLI {
       int result = cli.run(new String[] { "-status", "a1" });
       assertEquals(0, result);
       String queueStatusOut = sysOutStream.toString();
-      Assert.assertTrue(queueStatusOut
+      assertTrue(queueStatusOut
           .contains("\tPreemption : enabled"));
-      Assert.assertTrue(queueStatusOut
+      assertTrue(queueStatusOut
           .contains("Intra-queue Preemption : enabled"));
     } finally {
       // clean-up
@@ -1930,9 +1923,9 @@ public class TestYarnCLI {
       int result = cli.run(new String[] { "-status", "a1" });
       assertEquals(0, result);
       String queueStatusOut = sysOutStream.toString();
-      Assert.assertTrue(queueStatusOut
+      assertTrue(queueStatusOut
           .contains("\tPreemption : disabled"));
-      Assert.assertTrue(queueStatusOut
+      assertTrue(queueStatusOut
           .contains("Intra-queue Preemption : disabled"));
     }
   }
@@ -1967,7 +1960,99 @@ public class TestYarnCLI {
     pw.println("\tIntra-queue Preemption : " + "disabled");
     pw.close();
     String queueInfoStr = baos.toString("UTF-8");
-    Assert.assertEquals(queueInfoStr, sysOutStream.toString());
+    assertEquals(queueInfoStr, sysOutStream.toString());
+  }
+
+  @Test
+  public void testGetQueueInfoWithFairScheduler() throws Exception {
+    // In this test case, we will simulate the queue information of fairScheduler
+    // and check the results of the queue information.
+    QueueCLI cli = createAndGetQueueCLI();
+    RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
+    QueueInfo queueInfo = recordFactory.newRecordInstance(QueueInfo.class);
+    queueInfo.setQueueName("queueA");
+    queueInfo.setSchedulerType("FairScheduler");
+    queueInfo.setQueueState(QueueState.RUNNING);
+    queueInfo.setCapacity(0.3f);
+    queueInfo.setCurrentCapacity(0.1f);
+    queueInfo.setWeight(0.3f);
+    queueInfo.setMinResourceVCore(1);
+    queueInfo.setMinResourceMemory(1024);
+    queueInfo.setMaxResourceVCore(10);
+    queueInfo.setMaxResourceMemory(8192);
+    queueInfo.setReservedResourceVCore(0);
+    queueInfo.setReservedResourceMemory(0);
+    queueInfo.setSteadyFairShareVCore(10);
+    queueInfo.setSteadyFairShareMemory(8192);
+    queueInfo.setMaxRunningApp(10);
+    queueInfo.setPreemptionDisabled(true);
+    when(client.getQueueInfo(any(String.class))).thenReturn(queueInfo);
+    int result = cli.run(new String[]{"-status", "queueA"});
+    assertEquals(0, result);
+    verify(client).getQueueInfo("queueA");
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    PrintWriter pw = new PrintWriter(baos);
+    pw.println("Queue Information : ");
+    pw.println("Scheduler Name : FairScheduler");
+    pw.println("Queue Name : queueA");
+    pw.println("\tWeight : 0.30");
+    pw.println("\tState : RUNNING");
+    pw.println("\tMinResource : <memory : 0, vCores:10>");
+    pw.println("\tMaxResource : <memory : 8192, vCores:0>");
+    pw.println("\tReservedResource : <memory : 0, vCores:0>");
+    pw.println("\tSteadyFairShare : <memory : 8192, vCores:10>");
+    pw.println("\tQueue Preemption : enabled");
+    pw.close();
+    String queueInfoStr = baos.toString("UTF-8");
+    assertEquals(queueInfoStr, sysOutStream.toString());
+  }
+
+  @Test
+  public void testGetQueueInfoWithFairSchedulerAndSubClusterId() throws Exception {
+    // In this test case,
+    // we simulated printing FairScheduler queue information in YARN Federation mode.
+    QueueCLI cli = createAndGetQueueCLI();
+    Configuration config = new Configuration();
+    config.setBoolean(YarnConfiguration.FEDERATION_ENABLED, true);
+    cli.setConf(config);
+    RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
+    QueueInfo queueInfo = recordFactory.newRecordInstance(QueueInfo.class);
+    queueInfo.setQueueName("queueA");
+    queueInfo.setSchedulerType("FairScheduler");
+    queueInfo.setQueueState(QueueState.RUNNING);
+    queueInfo.setCapacity(0.3f);
+    queueInfo.setCurrentCapacity(0.1f);
+    queueInfo.setWeight(0.3f);
+    queueInfo.setMinResourceVCore(1);
+    queueInfo.setMinResourceMemory(1024);
+    queueInfo.setMaxResourceVCore(10);
+    queueInfo.setMaxResourceMemory(8192);
+    queueInfo.setReservedResourceVCore(0);
+    queueInfo.setReservedResourceMemory(0);
+    queueInfo.setSteadyFairShareVCore(10);
+    queueInfo.setSteadyFairShareMemory(8192);
+    queueInfo.setMaxRunningApp(10);
+    queueInfo.setPreemptionDisabled(true);
+    when(client.getQueueInfo(any(String.class), any(String.class))).thenReturn(queueInfo);
+    int result = cli.run(new String[]{"-status", "queueA", "-subClusterId", "SC-1"});
+    assertEquals(0, result);
+    verify(client).getQueueInfo("queueA", "SC-1");
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    PrintWriter pw = new PrintWriter(baos);
+    pw.println("Using YARN Federation mode.");
+    pw.println("SubClusterId : SC-1, Queue Information : ");
+    pw.println("Scheduler Name : FairScheduler");
+    pw.println("Queue Name : " + "queueA");
+    pw.println("\tWeight : " + "0.30");
+    pw.println("\tState : " + "RUNNING");
+    pw.println("\tMinResource : " + "<memory : 0, vCores:10>");
+    pw.println("\tMaxResource : " + "<memory : 8192, vCores:0>");
+    pw.println("\tReservedResource : " + "<memory : 0, vCores:0>");
+    pw.println("\tSteadyFairShare : " + "<memory : 8192, vCores:10>");
+    pw.println("\tQueue Preemption : " + "enabled");
+    pw.close();
+    String queueInfoStr = baos.toString("UTF-8");
+    assertEquals(queueInfoStr, sysOutStream.toString());
   }
   
   @Test
@@ -1983,7 +2068,7 @@ public class TestYarnCLI {
         + ", please check.");
     pw.close();
     String queueInfoStr = baos.toString("UTF-8");
-    Assert.assertEquals(queueInfoStr, sysOutStream.toString());
+    assertEquals(queueInfoStr, sysOutStream.toString());
   }
 
   @Test
@@ -2001,7 +2086,7 @@ public class TestYarnCLI {
     verify(sysOut).println(
         "Application for AppAttempt with id '" + attemptId1
             + "' doesn't exist in RM or Timeline Server.");
-    Assert.assertNotSame("should return non-zero exit code.", 0, exitCode);
+    assertNotSame(0, exitCode, "should return non-zero exit code.");
 
     ApplicationAttemptId attemptId2 = ApplicationAttemptId.newInstance(
         applicationId, 2);
@@ -2015,7 +2100,7 @@ public class TestYarnCLI {
     verify(sysOut).println(
         "Application Attempt with id '" + attemptId2
             + "' doesn't exist in RM or Timeline Server.");
-    Assert.assertNotSame("should return non-zero exit code.", 0, exitCode);
+    assertNotSame(0, exitCode, "should return non-zero exit code.");
   }
 
   @Test
@@ -2035,7 +2120,7 @@ public class TestYarnCLI {
     verify(sysOut).println(
         "Application for Container with id '" + containerId1
             + "' doesn't exist in RM or Timeline Server.");
-    Assert.assertNotSame("should return non-zero exit code.", 0, exitCode);
+    assertNotSame(0, exitCode, "should return non-zero exit code.");
     ContainerId containerId2 = ContainerId.newContainerId(attemptId, cntId++);
     when(client.getContainerReport(containerId2)).thenThrow(
         new ApplicationAttemptNotFoundException(
@@ -2047,7 +2132,7 @@ public class TestYarnCLI {
     verify(sysOut).println(
         "Application Attempt for Container with id '" + containerId2
             + "' doesn't exist in RM or Timeline Server.");
-    Assert.assertNotSame("should return non-zero exit code.", 0, exitCode);
+    assertNotSame(0, exitCode, "should return non-zero exit code.");
 
     ContainerId containerId3 = ContainerId.newContainerId(attemptId, cntId++);
     when(client.getContainerReport(containerId3)).thenThrow(
@@ -2058,10 +2143,11 @@ public class TestYarnCLI {
     verify(sysOut).println(
         "Container with id '" + containerId3
             + "' doesn't exist in RM or Timeline Server.");
-    Assert.assertNotSame("should return non-zero exit code.", 0, exitCode);
+    assertNotSame(0, exitCode, "should return non-zero exit code.");
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testUpdateApplicationPriority() throws Exception {
     ApplicationCLI cli = createAndGetAppCLI();
     ApplicationId applicationId = ApplicationId.newInstance(1234, 6);
@@ -2091,7 +2177,7 @@ public class TestYarnCLI {
     ApplicationCLI cli = createAndGetAppCLI();
     int exitCode = cli.run(new String[] {"applicationattempt", "-fail",
         "appattempt_1444199730803_0003_000001"});
-    Assert.assertEquals(0, exitCode);
+    assertEquals(0, exitCode);
 
     verify(client).failApplicationAttempt(any(ApplicationAttemptId.class));
     verifyNoMoreInteractions(client);
@@ -2457,7 +2543,8 @@ public class TestYarnCLI {
     assertEquals(0, result);
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testUpdateApplicationTimeout() throws Exception {
     ApplicationCLI cli = createAndGetAppCLI();
     ApplicationId applicationId = ApplicationId.newInstance(1234, 6);

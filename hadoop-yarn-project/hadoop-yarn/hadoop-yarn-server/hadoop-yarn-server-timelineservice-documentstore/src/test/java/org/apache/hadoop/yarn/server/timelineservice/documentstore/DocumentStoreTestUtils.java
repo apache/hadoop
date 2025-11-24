@@ -25,6 +25,7 @@ import org.apache.hadoop.yarn.server.timelineservice.documentstore.collection.do
 import org.apache.hadoop.yarn.server.timelineservice.documentstore.collection.document.flowrun.FlowRunDocument;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -41,7 +42,7 @@ public final class DocumentStoreTestUtils {
       throws IOException {
     String jsonStr = IOUtils.toString(
         DocumentStoreTestUtils.class.getClassLoader().getResourceAsStream(
-            "documents/timeline-entities.json"), "UTF-8");
+            "documents/timeline-entities.json"), StandardCharsets.UTF_8);
     return JsonUtils.fromJson(jsonStr,
         new TypeReference<List<TimelineEntity>>(){});
   }
@@ -50,7 +51,7 @@ public final class DocumentStoreTestUtils {
       throws IOException {
     String jsonStr = IOUtils.toString(
         DocumentStoreTestUtils.class.getClassLoader().getResourceAsStream(
-            "documents/test-timeline-entities-doc.json"), "UTF-8");
+            "documents/test-timeline-entities-doc.json"), StandardCharsets.UTF_8);
     return JsonUtils.fromJson(jsonStr,
         new TypeReference<List<TimelineEntityDocument>>() {});
   }
@@ -59,7 +60,7 @@ public final class DocumentStoreTestUtils {
       throws IOException {
     String jsonStr = IOUtils.toString(
         DocumentStoreTestUtils.class.getClassLoader().getResourceAsStream(
-            "documents/timeline-app-doc.json"), "UTF-8");
+            "documents/timeline-app-doc.json"), StandardCharsets.UTF_8);
     return JsonUtils.fromJson(jsonStr,
         new TypeReference<TimelineEntityDocument>() {});
   }
@@ -67,7 +68,7 @@ public final class DocumentStoreTestUtils {
   public static FlowActivityDocument bakeFlowActivityDoc() throws IOException {
     String jsonStr = IOUtils.toString(
         DocumentStoreTestUtils.class.getClassLoader().getResourceAsStream(
-            "documents/flowactivity-doc.json"), "UTF-8");
+            "documents/flowactivity-doc.json"), StandardCharsets.UTF_8);
     return JsonUtils.fromJson(jsonStr,
         new TypeReference<FlowActivityDocument>() {});
   }
@@ -75,7 +76,7 @@ public final class DocumentStoreTestUtils {
   public static FlowRunDocument bakeFlowRunDoc() throws IOException {
     String jsonStr = IOUtils.toString(
         DocumentStoreTestUtils.class.getClassLoader().getResourceAsStream(
-            "documents/flowrun-doc.json"), "UTF-8");
+            "documents/flowrun-doc.json"), StandardCharsets.UTF_8);
     return JsonUtils.fromJson(jsonStr,
         new TypeReference<FlowRunDocument>(){});
   }

@@ -17,9 +17,10 @@
  */
 package org.apache.hadoop.hdfs;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.net.InetSocketAddress;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -36,6 +37,7 @@ import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.SafeModeAction;
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.client.HdfsDataInputStream;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
@@ -58,7 +60,7 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.test.LambdaTestUtils;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -76,7 +78,7 @@ public class TestGetBlocks {
 
   /**
    * Stop the heartbeat of a datanode in the MiniDFSCluster
-   * 
+   *
    * @param cluster
    *          The MiniDFSCluster
    * @param hostName
@@ -99,7 +101,7 @@ public class TestGetBlocks {
    * when stale nodes checking is enabled. Also test during the scenario when 1)
    * stale nodes checking is enabled, 2) a writing is going on, 3) a datanode
    * becomes stale happen simultaneously
-   * 
+   *
    * @throws Exception
    */
   @Test
@@ -119,8 +121,8 @@ public class TestGetBlocks {
     List<DatanodeDescriptor> nodeInfoList = cluster.getNameNode()
         .getNamesystem().getBlockManager().getDatanodeManager()
         .getDatanodeListForReport(DatanodeReportType.LIVE);
-    assertEquals("Unexpected number of datanodes", NUM_DATA_NODES,
-        nodeInfoList.size());
+    assertEquals(NUM_DATA_NODES, nodeInfoList.size(),
+        "Unexpected number of datanodes");
     FileSystem fileSys = cluster.getFileSystem();
     FSDataOutputStream stm = null;
     try {
@@ -239,26 +241,29 @@ public class TestGetBlocks {
           DFSUtilClient.getNNUri(addr), NamenodeProtocol.class).getProxy();
 
       // Should return all 13 blocks, as minBlockSize is not passed
-      locs = namenode.getBlocks(dataNodes[0], fileLen, 0, 0).getBlocks();
+      locs = namenode.getBlocks(dataNodes[0], fileLen, 0, 0,
+          null).getBlocks();
       assertEquals(blkLocsSize, locs.length);
 
       assertEquals(locs[0].getStorageIDs().length, replicationFactor);
       assertEquals(locs[1].getStorageIDs().length, replicationFactor);
 
       // Should return 12 blocks, as minBlockSize is blkSize
-      locs = namenode.getBlocks(dataNodes[0], fileLen, blkSize, 0).getBlocks();
+      locs = namenode.getBlocks(dataNodes[0], fileLen, blkSize, 0,
+          null).getBlocks();
       assertEquals(blkLocsSize - 1, locs.length);
       assertEquals(locs[0].getStorageIDs().length, replicationFactor);
       assertEquals(locs[1].getStorageIDs().length, replicationFactor);
 
       // get blocks of size BlockSize from dataNodes[0]
       locs = namenode.getBlocks(dataNodes[0], blkSize,
-          blkSize, 0).getBlocks();
+          blkSize, 0, null).getBlocks();
       assertEquals(locs.length, 1);
       assertEquals(locs[0].getStorageIDs().length, replicationFactor);
 
       // get blocks of size 1 from dataNodes[0]
-      locs = namenode.getBlocks(dataNodes[0], 1, 1, 0).getBlocks();
+      locs = namenode.getBlocks(dataNodes[0], 1, 1, 0,
+          null).getBlocks();
       assertEquals(locs.length, 1);
       assertEquals(locs[0].getStorageIDs().length, replicationFactor);
 
@@ -283,7 +288,8 @@ public class TestGetBlocks {
 
       // Namenode should refuse to provide block locations to the balancer
       // while in safemode.
-      locs = namenode.getBlocks(dataNodes[0], fileLen, 0, 0).getBlocks();
+      locs = namenode.getBlocks(dataNodes[0], fileLen, 0, 0,
+          null).getBlocks();
       assertEquals(blkLocsSize, locs.length);
       assertFalse(fs.isInSafeMode());
       LOG.info("Entering safe mode");
@@ -310,7 +316,8 @@ public class TestGetBlocks {
 
     // Namenode should refuse should fail
     LambdaTestUtils.intercept(exClass,
-        msg, () -> namenode.getBlocks(datanode, size, minBlkSize, 0));
+        msg, () -> namenode.getBlocks(datanode, size, minBlkSize, 0,
+            null));
   }
 
   /**
@@ -324,18 +331,18 @@ public class TestGetBlocks {
     String dId = cluster.getDataNodes().get(0).getDatanodeUuid();
     DatanodeDescriptor dnd = BlockManagerTestUtil.getDatanode(ns, dId);
     DatanodeStorageInfo[] storages = dnd.getStorageInfos();
-    assertEquals("DataNode should have 4 storages", 4, storages.length);
+    assertEquals(4, storages.length, "DataNode should have 4 storages");
 
     Iterator<BlockInfo> dnBlockIt = null;
     // check illegal start block number
     try {
       dnBlockIt = BlockManagerTestUtil.getBlockIterator(
           cluster.getNamesystem(), dId, -1);
-      assertTrue("Should throw IllegalArgumentException", false);
+      assertTrue(false, "Should throw IllegalArgumentException");
     } catch(IllegalArgumentException ei) {
       // as expected
     }
-    assertNull("Iterator should be null", dnBlockIt);
+    assertNull(dnBlockIt, "Iterator should be null");
 
     // form an array of all DataNode blocks
     int numBlocks = dnd.numBlocks();
@@ -349,7 +356,7 @@ public class TestGetBlocks {
         try {
           storageBlockIt.remove();
           assertTrue(
-              "BlockInfo iterator should have been unmodifiable", false);
+              false, "BlockInfo iterator should have been unmodifiable");
         } catch (UnsupportedOperationException e) {
           //expected exception
         }
@@ -360,17 +367,17 @@ public class TestGetBlocks {
     for(int i = 0; i < allBlocks.length; i++) {
       // create iterator starting from i
       dnBlockIt = BlockManagerTestUtil.getBlockIterator(ns, dId, i);
-      assertTrue("Block iterator should have next block", dnBlockIt.hasNext());
+      assertTrue(dnBlockIt.hasNext(), "Block iterator should have next block");
       // check iterator lists blocks in the desired order
       for(int j = i; j < allBlocks.length; j++) {
-        assertEquals("Wrong block order", allBlocks[j], dnBlockIt.next());
+        assertEquals(allBlocks[j], dnBlockIt.next(), "Wrong block order");
       }
     }
 
     // check start block number larger than numBlocks in the DataNode
     dnBlockIt = BlockManagerTestUtil.getBlockIterator(
         ns, dId, allBlocks.length + 1);
-    assertFalse("Iterator should not have next block", dnBlockIt.hasNext());
+    assertFalse(dnBlockIt.hasNext(), "Iterator should not have next block");
   }
 
   @Test
@@ -450,7 +457,7 @@ public class TestGetBlocks {
           .getBlockLocations(fileNew, 0, fileLen).getLocatedBlocks();
 
       BlockWithLocations[] locsAll = namenode.getBlocks(
-          dataNodes[0], fileLen*2, 0, hotInterval).getBlocks();
+          dataNodes[0], fileLen*2, 0, hotInterval, null).getBlocks();
       assertEquals(locsAll.length, 4);
 
       for(int i = 0; i < blockNum; i++) {
@@ -461,7 +468,7 @@ public class TestGetBlocks {
       }
 
       BlockWithLocations[]  locs2 = namenode.getBlocks(
-          dataNodes[0], fileLen*2, 0, hotInterval).getBlocks();
+          dataNodes[0], fileLen*2, 0, hotInterval, null).getBlocks();
       for(int i = 0; i < 2; i++) {
         assertTrue(belongToFile(locs2[i], locatedBlocksOld));
       }
@@ -508,7 +515,7 @@ public class TestGetBlocks {
 
     // check blocks count equals to blockNum
     BlockWithLocations[] blocks = namenode.getBlocks(
-        dataNodes[0], fileLen*2, 0, 0).getBlocks();
+        dataNodes[0], fileLen*2, 0, 0, null).getBlocks();
     assertEquals(blockNum, blocks.length);
 
     // calculate the block count on storage[0]
@@ -524,13 +531,94 @@ public class TestGetBlocks {
     // set storage[0] stale
     storageInfos[0].setBlockContentsStale(true);
     blocks = namenode.getBlocks(
-        dataNodes[0], fileLen*2, 0, 0).getBlocks();
+        dataNodes[0], fileLen*2, 0, 0, null).getBlocks();
     assertEquals(blockNum - count, blocks.length);
 
     // set all storage stale
-    bm0.getDatanodeManager().markAllDatanodesStale();
+    bm0.getDatanodeManager().markAllDatanodesStaleAndSetKeyUpdateIfNeed();
     blocks = namenode.getBlocks(
-        dataNodes[0], fileLen*2, 0, 0).getBlocks();
+        dataNodes[0], fileLen*2, 0, 0, null).getBlocks();
     assertEquals(0, blocks.length);
+  }
+
+  @Test
+  public void testChooseSpecifyStorageType() throws Exception {
+    final short repFactor = (short) 1;
+    final int fileLen = BLOCK_SIZE;
+    final Configuration conf = new HdfsConfiguration();
+    conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCK_SIZE);
+
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1)
+        .storageTypes(new StorageType[] {StorageType.DISK, StorageType.SSD}).
+        storagesPerDatanode(2).build()) {
+      cluster.waitActive();
+
+      // Get storage info.
+      ClientProtocol client = NameNodeProxies.createProxy(conf,
+          cluster.getFileSystem(0).getUri(),
+          ClientProtocol.class).getProxy();
+      DatanodeInfo[] dataNodes = client.getDatanodeReport(DatanodeReportType.ALL);
+      BlockManager bm0 = cluster.getNamesystem(0).getBlockManager();
+      DatanodeStorageInfo[] storageInfos = bm0.getDatanodeManager()
+          .getDatanode(dataNodes[0].getDatanodeUuid()).getStorageInfos();
+      assert Arrays.stream(storageInfos)
+          .anyMatch(datanodeStorageInfo -> {
+            String storageTypeName = datanodeStorageInfo.getStorageType().name();
+            return storageTypeName.equals("SSD") || storageTypeName.equals("DISK");
+          }) : "No 'SSD' or 'DISK' storage types found.";
+
+      // Create hdfs file.
+      Path ssdDir = new Path("/testChooseSSD");
+      DistributedFileSystem fs = cluster.getFileSystem();
+      Path ssdFile = new Path(ssdDir, "file");
+      fs.mkdirs(ssdDir);
+      fs.setStoragePolicy(ssdDir, "ALL_SSD");
+      DFSTestUtil.createFile(fs, ssdFile, false, 1024, fileLen,
+          BLOCK_SIZE, repFactor, 0, true);
+      DFSTestUtil.waitReplication(fs, ssdFile, repFactor);
+      BlockLocation[] locations = fs.getClient()
+          .getBlockLocations(ssdFile.toUri().getPath(), 0, Long.MAX_VALUE);
+      assertEquals(1, locations.length);
+      assertEquals("SSD", locations[0].getStorageTypes()[0].name());
+
+      Path diskDir = new Path("/testChooseDisk");
+      fs = cluster.getFileSystem();
+      Path diskFile = new Path(diskDir, "file");
+      fs.mkdirs(diskDir);
+      fs.setStoragePolicy(diskDir, "HOT");
+      DFSTestUtil.createFile(fs, diskFile, false, 1024, fileLen,
+          BLOCK_SIZE, repFactor, 0, true);
+      DFSTestUtil.waitReplication(fs, diskFile, repFactor);
+      locations = fs.getClient()
+          .getBlockLocations(diskFile.toUri().getPath(), 0, Long.MAX_VALUE);
+      assertEquals(1, locations.length);
+      assertEquals("DISK", locations[0].getStorageTypes()[0].name());
+
+      InetSocketAddress addr = new InetSocketAddress("localhost",
+          cluster.getNameNodePort());
+      NamenodeProtocol namenode = NameNodeProxies.createProxy(conf,
+          DFSUtilClient.getNNUri(addr), NamenodeProtocol.class).getProxy();
+
+      // Check blocks count equals to blockNum.
+      // If StorageType is not specified will get all blocks.
+      BlockWithLocations[] blocks = namenode.getBlocks(
+          dataNodes[0], fileLen * 2, 0, 0,
+          null).getBlocks();
+      assertEquals(2, blocks.length);
+
+      // Check the count of blocks with a StorageType of DISK.
+      blocks = namenode.getBlocks(
+          dataNodes[0], fileLen * 2, 0, 0,
+          StorageType.DISK).getBlocks();
+      assertEquals(1, blocks.length);
+      assertEquals("DISK", blocks[0].getStorageTypes()[0].name());
+
+      // Check the count of blocks with a StorageType of SSD.
+      blocks = namenode.getBlocks(
+          dataNodes[0], fileLen * 2, 0, 0,
+          StorageType.SSD).getBlocks();
+      assertEquals(1, blocks.length);
+      assertEquals("SSD", blocks[0].getStorageTypes()[0].name());
+    }
   }
 }

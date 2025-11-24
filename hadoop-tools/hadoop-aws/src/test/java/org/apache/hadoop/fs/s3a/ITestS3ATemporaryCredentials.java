@@ -25,12 +25,12 @@ import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.concurrent.TimeUnit;
 
-import com.amazonaws.ClientConfiguration;
-import com.amazonaws.services.securitytoken.AWSSecurityTokenService;
-import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClientBuilder;
-import com.amazonaws.services.securitytoken.model.Credentials;
-import org.hamcrest.Matchers;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import software.amazon.awssdk.services.sts.StsClient;
+import software.amazon.awssdk.services.sts.StsClientBuilder;
+import software.amazon.awssdk.services.sts.model.Credentials;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,7 +55,7 @@ import static org.apache.hadoop.fs.s3a.auth.RoleTestUtils.assertCredentialsEqual
 import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.*;
 import static org.apache.hadoop.fs.s3a.auth.delegation.SessionTokenBinding.CREDENTIALS_CONVERTED_TO_DELEGATION_TOKEN;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
-import static org.hamcrest.Matchers.containsString;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Tests use of temporary credentials (for example, AWS STS & S3).
@@ -71,7 +71,6 @@ public class ITestS3ATemporaryCredentials extends AbstractS3ATestBase {
   private static final Logger LOG =
       LoggerFactory.getLogger(ITestS3ATemporaryCredentials.class);
 
-  @SuppressWarnings("deprecation")
   private static final String TEMPORARY_AWS_CREDENTIALS
       = TemporaryAWSCredentialsProvider.NAME;
 
@@ -83,12 +82,14 @@ public class ITestS3ATemporaryCredentials extends AbstractS3ATestBase {
 
   private AWSCredentialProviderList credentials;
 
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     super.setup();
     assumeSessionTestsEnabled(getConfiguration());
   }
 
+  @AfterEach
   @Override
   public void teardown() throws Exception {
     S3AUtils.closeAutocloseables(LOG, credentials);
@@ -117,10 +118,10 @@ public class ITestS3ATemporaryCredentials extends AbstractS3ATestBase {
   public void testSTS() throws IOException {
     Configuration conf = getContract().getConf();
     S3AFileSystem testFS = getFileSystem();
-    credentials = testFS.shareCredentials("testSTS");
+    credentials = getS3AInternals().shareCredentials("testSTS");
 
     String bucket = testFS.getBucket();
-    AWSSecurityTokenServiceClientBuilder builder = STSClientFactory.builder(
+    StsClientBuilder builder = STSClientFactory.builder(
         conf,
         bucket,
         credentials,
@@ -154,7 +155,7 @@ public class ITestS3ATemporaryCredentials extends AbstractS3ATestBase {
 
     // now create an invalid set of credentials by changing the session
     // token
-    conf2.set(SESSION_TOKEN, "invalid-" + sessionCreds.getSessionToken());
+    conf2.set(SESSION_TOKEN, "invalid-" + sessionCreds.sessionToken());
     try (S3AFileSystem fs = S3ATestUtils.createTestFileSystem(conf2)) {
       createAndVerifyFile(fs, path("testSTSInvalidToken"), TEST_FILE_SIZE);
       fail("Expected an access exception, but file access to "
@@ -176,14 +177,13 @@ public class ITestS3ATemporaryCredentials extends AbstractS3ATestBase {
   }
 
   @Test
-  @SuppressWarnings("deprecation")
   public void testTemporaryCredentialValidation() throws Throwable {
     Configuration conf = new Configuration();
     conf.set(ACCESS_KEY, "accesskey");
     conf.set(SECRET_KEY, "secretkey");
     conf.set(SESSION_TOKEN, "");
     LambdaTestUtils.intercept(CredentialInitializationException.class,
-        () -> new TemporaryAWSCredentialsProvider(conf).getCredentials());
+        () -> new TemporaryAWSCredentialsProvider(conf).resolveCredentials());
   }
 
   /**
@@ -204,9 +204,9 @@ public class ITestS3ATemporaryCredentials extends AbstractS3ATestBase {
           = (SessionTokenIdentifier) fs.getDelegationToken("")
           .decodeIdentifier();
       String ids = identifier.toString();
-      assertThat("origin in " + ids,
-          identifier.getOrigin(),
-          containsString(CREDENTIALS_CONVERTED_TO_DELEGATION_TOKEN));
+      assertThat(identifier.getOrigin()).
+          contains(CREDENTIALS_CONVERTED_TO_DELEGATION_TOKEN).
+          as("origin in " + ids);
 
       // and validate the AWS bits to make sure everything has come across.
       assertCredentialsEqual("Reissued credentials in " + ids,
@@ -227,21 +227,18 @@ public class ITestS3ATemporaryCredentials extends AbstractS3ATestBase {
     long permittedExpiryOffset = 60;
     OffsetDateTime expirationTimestamp = sc.getExpirationDateTime().get();
     OffsetDateTime localTimestamp = OffsetDateTime.now();
-    assertTrue("local time of " + localTimestamp
-            + " is after expiry time of " + expirationTimestamp,
-        localTimestamp.isBefore(expirationTimestamp));
+    assertTrue(localTimestamp.isBefore(expirationTimestamp),
+        "local time of " + localTimestamp
+         + " is after expiry time of " + expirationTimestamp);
 
     // what is the interval
     Duration actualDuration = Duration.between(localTimestamp,
         expirationTimestamp);
     Duration offset = actualDuration.minus(TEST_SESSION_TOKEN_DURATION);
-
-    assertThat(
-        "Duration of session " + actualDuration
-            + " out of expected range of with " + offset
-            + " this host's clock may be wrong.",
-        offset.getSeconds(),
-        Matchers.lessThanOrEqualTo(permittedExpiryOffset));
+    assertThat(offset.getSeconds()).isLessThanOrEqualTo(permittedExpiryOffset).
+        as( "Duration of session " + actualDuration +
+        " out of expected range of with " + offset +
+        " this host's clock may be wrong.");
   }
 
   protected void updateConfigWithSessionCreds(final Configuration conf,
@@ -360,25 +357,24 @@ public class ITestS3ATemporaryCredentials extends AbstractS3ATestBase {
    * @return the caught exception.
    * @throws Exception any unexpected exception.
    */
-  @SuppressWarnings("deprecation")
   public <E extends Exception> E expectedSessionRequestFailure(
       final Class<E> clazz,
       final String endpoint,
       final String region,
       final String exceptionText) throws Exception {
     try(AWSCredentialProviderList parentCreds =
-            getFileSystem().shareCredentials("test");
+            getS3AInternals().shareCredentials("test");
         DurationInfo ignored = new DurationInfo(LOG, "requesting credentials")) {
       Configuration conf = new Configuration(getContract().getConf());
-      ClientConfiguration awsConf =
-          S3AUtils.createAwsConf(conf, null, AWS_SERVICE_IDENTIFIER_STS);
+
       return intercept(clazz, exceptionText,
           () -> {
-            AWSSecurityTokenService tokenService =
+            StsClient tokenService =
                 STSClientFactory.builder(parentCreds,
-                    awsConf,
+                    conf,
                     endpoint,
-                    region)
+                    region,
+                    getFileSystem().getBucket())
                     .build();
             Invoker invoker = new Invoker(new S3ARetryPolicy(conf),
                 LOG_AT_ERROR);

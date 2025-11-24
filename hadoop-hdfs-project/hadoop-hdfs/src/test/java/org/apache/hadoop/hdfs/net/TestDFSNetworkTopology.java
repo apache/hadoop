@@ -26,10 +26,9 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo.DatanodeInfoBuilder;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
 import org.apache.hadoop.net.Node;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,16 +38,17 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 
 /**
  * This class tests the correctness of storage type info stored in
  * DFSNetworkTopology.
  */
+@Timeout(30)
 public class TestDFSNetworkTopology {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestDFSNetworkTopology.class);
@@ -56,10 +56,7 @@ public class TestDFSNetworkTopology {
       DFSNetworkTopology.getInstance(new Configuration());
   private DatanodeDescriptor[] dataNodes;
 
-  @Rule
-  public Timeout testTimeout = new Timeout(30000);
-
-  @Before
+  @BeforeEach
   public void setupDatanodes() {
     final String[] racks = {
         "/l1/d1/r1", "/l1/d1/r1", "/l1/d1/r2", "/l1/d1/r2", "/l1/d1/r2",
@@ -635,7 +632,7 @@ public class TestDFSNetworkTopology {
     excluded.add(dns[1]);
     Node n = dfsCluster.chooseRandomWithStorageType("/default",
         "/default/rack1", excluded, StorageType.DISK);
-    assertNull("No node should have been selected.", n);
+    assertNull(n, "No node should have been selected.");
   }
 
   /**
@@ -665,6 +662,25 @@ public class TestDFSNetworkTopology {
     Node n = dfsCluster.chooseRandomWithStorageType(
         "/default/rack1/0.0.0.0:" + DFSConfigKeys.DFS_DATANODE_DEFAULT_PORT,
         null, excluded, StorageType.DISK);
-    assertNull("No node should have been selected.", n);
+    assertNull(n, "No node should have been selected.");
+  }
+
+  @Test
+  public void testChooseRandomWithStorageTypeWithExcludeNodes() {
+    DFSNetworkTopology dfsCluster =
+        DFSNetworkTopology.getInstance(new Configuration());
+    final String[] racks = {"/default/rack1", "/default/rack2"};
+    final String[] hosts = {"host1", "host2"};
+    final StorageType[] types = {StorageType.DISK, StorageType.DISK};
+    final DatanodeStorageInfo[] storages =
+        DFSTestUtil.createDatanodeStorageInfos(2, racks, hosts, types);
+    DatanodeDescriptor[] dns = DFSTestUtil.toDatanodeDescriptor(storages);
+    dfsCluster.add(dns[0]);
+    dfsCluster.add(dns[1]);
+    HashSet<Node> excluded = new HashSet<>();
+    excluded.add(dns[1]);
+    Node n = dfsCluster.chooseRandomWithStorageType("/default/rack1",
+        null, excluded, StorageType.DISK);
+    assertNotNull(n, "/default/rack1/host1 should be selected.");
   }
 }

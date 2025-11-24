@@ -34,6 +34,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.commons.io.FileUtils;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -45,13 +46,17 @@ import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.BlockWrite.ReplaceData
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.TestFileTruncate;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.util.Preconditions;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.slf4j.event.Level;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Test randomly mixing append, snapshot and truncate operations.
@@ -78,7 +83,7 @@ public class TestAppendSnapshotTruncate {
   static MiniDFSCluster cluster;
   static DistributedFileSystem dfs;
 
-  @BeforeClass
+  @BeforeAll
   public static void startUp() throws IOException {
     conf = new HdfsConfiguration();
     conf.setLong(DFSConfigKeys.DFS_NAMENODE_MIN_BLOCK_SIZE_KEY, BLOCK_SIZE);
@@ -95,7 +100,7 @@ public class TestAppendSnapshotTruncate {
     dfs = cluster.getFileSystem();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws IOException {
     if(dfs != null) {
       dfs.close();
@@ -107,7 +112,8 @@ public class TestAppendSnapshotTruncate {
 
 
   /** Test randomly mixing append, snapshot and truncate operations. */
-  @Test(timeout=TEST_TIMEOUT_SECOND*1000)
+  @Test
+  @Timeout(TEST_TIMEOUT_SECOND)
   public void testAST() throws Exception {
     final String dirPathString = "/dir";
     final Path dir = new Path(dirPathString);
@@ -167,7 +173,7 @@ public class TestAppendSnapshotTruncate {
       {
         //copy all local files to a sub dir to simulate snapshot. 
         final File subDir = new File(localDir, snapshot);
-        Assert.assertFalse(subDir.exists());
+        assertFalse(subDir.exists());
         subDir.mkdir();
 
         for(File f : localDir.listFiles(FILE_ONLY)) {
@@ -185,12 +191,12 @@ public class TestAppendSnapshotTruncate {
           .append(snapshot);
 
       final File subDir = new File(localDir, snapshot);
-      Assert.assertTrue(subDir.exists());
+      assertTrue(subDir.exists());
       
       final File[] localFiles = subDir.listFiles(FILE_ONLY);
       final Path p = snapshotPaths.get(snapshot);
       final FileStatus[] statuses = dfs.listStatus(p);
-      Assert.assertEquals(localFiles.length, statuses.length);
+      assertEquals(localFiles.length, statuses.length);
       b.append(p).append(" vs ").append(subDir).append(", ")
        .append(statuses.length).append(" entries");
       
@@ -374,8 +380,8 @@ public class TestAppendSnapshotTruncate {
 
     static int checkLength(Path file, File localFile) throws IOException {
       final long length = dfs.getFileStatus(file).getLen();
-      Assert.assertEquals(localFile.length(), length);
-      Assert.assertTrue(length <= Integer.MAX_VALUE);
+      assertEquals(localFile.length(), length);
+      assertTrue(length <= Integer.MAX_VALUE);
       return (int)length;
     }
     
@@ -443,7 +449,7 @@ public class TestAppendSnapshotTruncate {
       Preconditions.checkState(state.compareAndSet(State.IDLE, State.RUNNING));
       
       if (thread.get() == null) {
-        final Thread t = new Thread(null, new Runnable() {
+        final Thread t = new SubjectInheritingThread(null, new Runnable() {
           @Override
           public void run() {
             for(State s; !(s = checkErrorState()).isTerminated;) {

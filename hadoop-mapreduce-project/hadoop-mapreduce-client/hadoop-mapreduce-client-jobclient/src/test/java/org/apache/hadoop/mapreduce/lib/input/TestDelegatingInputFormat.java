@@ -20,8 +20,9 @@ package org.apache.hadoop.mapreduce.lib.input;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.List;
-import org.junit.Test;
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -83,10 +84,10 @@ public class TestDelegatingInputFormat {
        bins[index]++;
       }
 
-      assertEquals("count is not equal to num splits", numSplits, bins[0]);
-      assertEquals("count is not equal to num splits", numSplits, bins[1]);
-      assertEquals("count is not equal to 2 * num splits",
-        numSplits * 2, bins[2]);
+      assertEquals(numSplits, bins[0], "count is not equal to num splits");
+      assertEquals(numSplits, bins[1], "count is not equal to num splits");
+      assertEquals(numSplits * 2, bins[2],
+          "count is not equal to 2 * num splits");
     } finally {
       if (dfs != null) {
        dfs.shutdown();

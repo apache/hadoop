@@ -68,14 +68,23 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.even
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMNullStateStoreService;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+
 public class TestLocalResourcesTrackerImpl {
 
-  @Test(timeout=10000)
+  @Test
+  @Timeout(value = 10)
   @SuppressWarnings("unchecked")
   public void test() {
     String user = "testuser";
@@ -135,9 +144,9 @@ public class TestLocalResourcesTrackerImpl {
       verify(localizerEventHandler, times(3)).handle(
           any(LocalizerResourceRequestEvent.class));
       // Verify refCount for R1 is 2
-      Assert.assertEquals(2, lr1.getRefCount());
+      assertEquals(2, lr1.getRefCount());
       // Verify refCount for R2 is 1
-      Assert.assertEquals(1, lr2.getRefCount());
+      assertEquals(1, lr2.getRefCount());
 
       // Release R2 for C1
       tracker.handle(rel21Event);
@@ -146,23 +155,23 @@ public class TestLocalResourcesTrackerImpl {
       verifyTrackedResourceCount(tracker, 2);
 
       // Verify resource with non zero ref count is not removed.
-      Assert.assertEquals(2, lr1.getRefCount());
-      Assert.assertFalse(tracker.remove(lr1, mockDelService));
+      assertEquals(2, lr1.getRefCount());
+      assertFalse(tracker.remove(lr1, mockDelService));
       verifyTrackedResourceCount(tracker, 2);
 
       // Localize resource1
       ResourceLocalizedEvent rle =
           new ResourceLocalizedEvent(req1, new Path("file:///tmp/r1"), 1);
       lr1.handle(rle);
-      Assert.assertTrue(lr1.getState().equals(ResourceState.LOCALIZED));
+      assertTrue(lr1.getState().equals(ResourceState.LOCALIZED));
 
       // Release resource1
       tracker.handle(rel11Event);
       tracker.handle(rel12Event);
-      Assert.assertEquals(0, lr1.getRefCount());
+      assertEquals(0, lr1.getRefCount());
 
       // Verify resources in state LOCALIZED with ref-count=0 is removed.
-      Assert.assertTrue(tracker.remove(lr1, mockDelService));
+      assertTrue(tracker.remove(lr1, mockDelService));
       verifyTrackedResourceCount(tracker, 1);
     } finally {
       if (dispatcher != null) {
@@ -171,7 +180,8 @@ public class TestLocalResourcesTrackerImpl {
     }
   }
 
-  @Test(timeout=10000)
+  @Test
+  @Timeout(value = 10)
   @SuppressWarnings("unchecked")
   public void testConsistency() {
     String user = "testuser";
@@ -206,7 +216,7 @@ public class TestLocalResourcesTrackerImpl {
       dispatcher.await();
 
       // Verify refCount for R1 is 1
-      Assert.assertEquals(1, lr1.getRefCount());
+      assertEquals(1, lr1.getRefCount());
 
       dispatcher.await();
       verifyTrackedResourceCount(tracker, 1);
@@ -215,23 +225,23 @@ public class TestLocalResourcesTrackerImpl {
       ResourceLocalizedEvent rle = new ResourceLocalizedEvent(req1, new Path(
           "file:///tmp/r1"), 1);
       lr1.handle(rle);
-      Assert.assertTrue(lr1.getState().equals(ResourceState.LOCALIZED));
-      Assert.assertTrue(createdummylocalizefile(new Path("file:///tmp/r1")));
+      assertTrue(lr1.getState().equals(ResourceState.LOCALIZED));
+      assertTrue(createdummylocalizefile(new Path("file:///tmp/r1")));
       LocalizedResource rsrcbefore = tracker.iterator().next();
       File resFile = new File(lr1.getLocalPath().toUri().getRawPath()
           .toString());
-      Assert.assertTrue(resFile.exists());
-      Assert.assertTrue(resFile.delete());
+      assertTrue(resFile.exists());
+      assertTrue(resFile.delete());
 
       // Localize R1 for C1
       tracker.handle(req11Event);
 
       dispatcher.await();
       lr1.handle(rle);
-      Assert.assertTrue(lr1.getState().equals(ResourceState.LOCALIZED));
+      assertTrue(lr1.getState().equals(ResourceState.LOCALIZED));
       LocalizedResource rsrcafter = tracker.iterator().next();
       if (rsrcbefore == rsrcafter) {
-        Assert.fail("Localized resource should not be equal");
+        fail("Localized resource should not be equal");
       }
       // Release resource1
       tracker.handle(rel11Event);
@@ -242,7 +252,8 @@ public class TestLocalResourcesTrackerImpl {
     }
   }
 
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   @SuppressWarnings("unchecked")
   public void testLocalResourceCache() {
     String user = "testuser";
@@ -278,7 +289,7 @@ public class TestLocalResourcesTrackerImpl {
           new ResourceRequestEvent(lr, LocalResourceVisibility.PRIVATE, lc1);
 
       // No resource request is initially present in local cache
-      Assert.assertEquals(0, localrsrc.size());
+      assertEquals(0, localrsrc.size());
 
       // Container-1 requesting local resource.
       tracker.handle(reqEvent1);
@@ -286,11 +297,11 @@ public class TestLocalResourcesTrackerImpl {
 
       // New localized Resource should have been added to local resource map
       // and the requesting container will be added to its waiting queue.
-      Assert.assertEquals(1, localrsrc.size());
-      Assert.assertTrue(localrsrc.containsKey(lr));
-      Assert.assertEquals(1, localrsrc.get(lr).getRefCount());
-      Assert.assertTrue(localrsrc.get(lr).ref.contains(cId1));
-      Assert.assertEquals(ResourceState.DOWNLOADING, localrsrc.get(lr)
+      assertEquals(1, localrsrc.size());
+      assertTrue(localrsrc.containsKey(lr));
+      assertEquals(1, localrsrc.get(lr).getRefCount());
+      assertTrue(localrsrc.get(lr).ref.contains(cId1));
+      assertEquals(ResourceState.DOWNLOADING, localrsrc.get(lr)
         .getState());
 
       // Container 2 requesting the resource
@@ -303,8 +314,8 @@ public class TestLocalResourcesTrackerImpl {
 
       // Container 2 should have been added to the waiting queue of the local
       // resource
-      Assert.assertEquals(2, localrsrc.get(lr).getRefCount());
-      Assert.assertTrue(localrsrc.get(lr).ref.contains(cId2));
+      assertEquals(2, localrsrc.get(lr).getRefCount());
+      assertTrue(localrsrc.get(lr).ref.contains(cId2));
 
       // Failing resource localization
       ResourceEvent resourceFailedEvent = new ResourceFailedLocalizationEvent(
@@ -319,10 +330,10 @@ public class TestLocalResourcesTrackerImpl {
 
       // After receiving failed resource event; all waiting containers will be
       // notified with Container Resource Failed Event.
-      Assert.assertEquals(0, localrsrc.size());
+      assertEquals(0, localrsrc.size());
       verify(containerEventHandler, timeout(1000).times(2)).handle(
         isA(ContainerResourceFailedEvent.class));
-      Assert.assertEquals(ResourceState.FAILED, localizedResource.getState());
+      assertEquals(ResourceState.FAILED, localizedResource.getState());
 
       // Container 1 trying to release the resource (This resource is already
       // deleted from the cache. This call should return silently without
@@ -342,10 +353,10 @@ public class TestLocalResourcesTrackerImpl {
 
       // Local resource cache now should have the requested resource and the
       // number of waiting containers should be 1.
-      Assert.assertEquals(1, localrsrc.size());
-      Assert.assertTrue(localrsrc.containsKey(lr));
-      Assert.assertEquals(1, localrsrc.get(lr).getRefCount());
-      Assert.assertTrue(localrsrc.get(lr).ref.contains(cId3));
+      assertEquals(1, localrsrc.size());
+      assertTrue(localrsrc.containsKey(lr));
+      assertEquals(1, localrsrc.get(lr).getRefCount());
+      assertTrue(localrsrc.get(lr).ref.contains(cId3));
 
       // Container-2 Releases the resource
       ResourceReleaseEvent relEvent2 = new ResourceReleaseEvent(lr, cId2);
@@ -353,10 +364,10 @@ public class TestLocalResourcesTrackerImpl {
       dispatcher.await();
 
       // Making sure that there is no change in the cache after the release.
-      Assert.assertEquals(1, localrsrc.size());
-      Assert.assertTrue(localrsrc.containsKey(lr));
-      Assert.assertEquals(1, localrsrc.get(lr).getRefCount());
-      Assert.assertTrue(localrsrc.get(lr).ref.contains(cId3));
+      assertEquals(1, localrsrc.size());
+      assertTrue(localrsrc.containsKey(lr));
+      assertEquals(1, localrsrc.get(lr).getRefCount());
+      assertTrue(localrsrc.get(lr).ref.contains(cId3));
       
       // Sending ResourceLocalizedEvent to tracker. In turn resource should
       // send Container Resource Localized Event to waiting containers.
@@ -369,16 +380,16 @@ public class TestLocalResourcesTrackerImpl {
       // Verifying ContainerResourceLocalizedEvent .
       verify(containerEventHandler, timeout(1000).times(1)).handle(
         isA(ContainerResourceLocalizedEvent.class));
-      Assert.assertEquals(ResourceState.LOCALIZED, localrsrc.get(lr)
+      assertEquals(ResourceState.LOCALIZED, localrsrc.get(lr)
         .getState());
-      Assert.assertEquals(1, localrsrc.get(lr).getRefCount());
+      assertEquals(1, localrsrc.get(lr).getRefCount());
       
       // Container-3 releasing the resource.
       ResourceReleaseEvent relEvent3 = new ResourceReleaseEvent(lr, cId3);
       tracker.handle(relEvent3);
       dispatcher.await();
       
-      Assert.assertEquals(0, localrsrc.get(lr).getRefCount());
+      assertEquals(0, localrsrc.get(lr).getRefCount());
       
     } finally {
       if (dispatcher != null) {
@@ -387,7 +398,8 @@ public class TestLocalResourcesTrackerImpl {
     }
   }
 
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   @SuppressWarnings("unchecked")
   public void testHierarchicalLocalCacheDirectories() {
     String user = "testuser";
@@ -458,7 +470,7 @@ public class TestLocalResourcesTrackerImpl {
        * The path returned for two localization should be different because we
        * are limiting one file per sub-directory.
        */
-      Assert.assertNotSame(hierarchicalPath1, hierarchicalPath2);
+      assertNotSame(hierarchicalPath1, hierarchicalPath2);
 
       LocalResourceRequest lr3 = createLocalResourceRequest(user, 2, 2,
           LocalResourceVisibility.PUBLIC);
@@ -474,7 +486,7 @@ public class TestLocalResourcesTrackerImpl {
       tracker.handle(rle3);
 
       // Verifying that path created is inside the subdirectory
-      Assert.assertEquals(hierarchicalPath3.toUri().toString(),
+      assertEquals(hierarchicalPath3.toUri().toString(),
           hierarchicalPath1.toUri().toString() + Path.SEPARATOR + "0");
 
       // Container 1 releases resource lr1
@@ -489,20 +501,20 @@ public class TestLocalResourcesTrackerImpl {
         resources++;
       }
       // There should be only two resources lr1 and lr3 now.
-      Assert.assertEquals(2, resources);
+      assertEquals(2, resources);
 
       // Now simulate cache cleanup - removes unused resources.
       iter = tracker.iterator();
       while (iter.hasNext()) {
         LocalizedResource rsrc = iter.next();
         if (rsrc.getRefCount() == 0) {
-          Assert.assertTrue(tracker.remove(rsrc, mockDelService));
+          assertTrue(tracker.remove(rsrc, mockDelService));
           resources--;
         }
       }
       // lr1 is not used by anyone and will be removed, only lr3 will hang
       // around
-      Assert.assertEquals(1, resources);
+      assertEquals(1, resources);
     } finally {
       if (dispatcher != null) {
         dispatcher.stop();
@@ -555,9 +567,9 @@ public class TestLocalResourcesTrackerImpl {
           localResourceCaptor.capture(), pathCaptor.capture());
       LocalResourceProto lrProto = localResourceCaptor.getValue();
       Path localizedPath1 = pathCaptor.getValue();
-      Assert.assertEquals(lr1,
+      assertEquals(lr1,
           new LocalResourceRequest(new LocalResourcePBImpl(lrProto)));
-      Assert.assertEquals(hierarchicalPath1, localizedPath1.getParent());
+      assertEquals(hierarchicalPath1, localizedPath1.getParent());
 
       // Simulate lr1 getting localized
       ResourceLocalizedEvent rle1 =
@@ -570,19 +582,19 @@ public class TestLocalResourcesTrackerImpl {
       verify(stateStore).finishResourceLocalization(eq(user), eq(appId),
           localizedProtoCaptor.capture());
       LocalizedResourceProto localizedProto = localizedProtoCaptor.getValue();
-      Assert.assertEquals(lr1, new LocalResourceRequest(
+      assertEquals(lr1, new LocalResourceRequest(
           new LocalResourcePBImpl(localizedProto.getResource())));
-      Assert.assertEquals(localizedPath1.toString(),
+      assertEquals(localizedPath1.toString(),
           localizedProto.getLocalPath());
       LocalizedResource localizedRsrc1 = tracker.getLocalizedResource(lr1);
-      Assert.assertNotNull(localizedRsrc1);
+      assertNotNull(localizedRsrc1);
 
       // simulate release and retention processing
       tracker.handle(new ResourceReleaseEvent(lr1, cId1));
       dispatcher.await();
       boolean removeResult = tracker.remove(localizedRsrc1, mockDelService);
 
-      Assert.assertTrue(removeResult);
+      assertTrue(removeResult);
       verify(stateStore).removeLocalizedResource(eq(user), eq(appId),
           eq(localizedPath1));
     } finally {
@@ -636,9 +648,9 @@ public class TestLocalResourcesTrackerImpl {
           localResourceCaptor.capture(), pathCaptor.capture());
       LocalResourceProto lrProto = localResourceCaptor.getValue();
       Path localizedPath1 = pathCaptor.getValue();
-      Assert.assertEquals(lr1,
+      assertEquals(lr1,
           new LocalResourceRequest(new LocalResourcePBImpl(lrProto)));
-      Assert.assertEquals(hierarchicalPath1, localizedPath1.getParent());
+      assertEquals(hierarchicalPath1, localizedPath1.getParent());
 
       ResourceFailedLocalizationEvent rfe1 =
           new ResourceFailedLocalizationEvent(
@@ -679,14 +691,14 @@ public class TestLocalResourcesTrackerImpl {
       ContainerId cId1 = BuilderUtils.newContainerId(1, 1, 1, 1);
       LocalResourceRequest lr1 = createLocalResourceRequest(user, 1, 1,
           LocalResourceVisibility.APPLICATION);
-      Assert.assertNull(tracker.getLocalizedResource(lr1));
+      assertNull(tracker.getLocalizedResource(lr1));
       final long localizedId1 = 52;
       Path hierarchicalPath1 = new Path(localDir,
           Long.toString(localizedId1));
       Path localizedPath1 = new Path(hierarchicalPath1, "resource.jar");
       tracker.handle(new ResourceRecoveredEvent(lr1, localizedPath1, 120));
       dispatcher.await();
-      Assert.assertNotNull(tracker.getLocalizedResource(lr1));
+      assertNotNull(tracker.getLocalizedResource(lr1));
 
       // verify new paths reflect recovery of previous resources
       LocalResourceRequest lr2 = createLocalResourceRequest(user, 2, 2,
@@ -699,7 +711,7 @@ public class TestLocalResourcesTrackerImpl {
       Path hierarchicalPath2 = tracker.getPathForLocalization(lr2, localDir,
           null);
       long localizedId2 = Long.parseLong(hierarchicalPath2.getName());
-      Assert.assertEquals(localizedId1 + 1, localizedId2);
+      assertEquals(localizedId1 + 1, localizedId2);
     } finally {
       if (dispatcher != null) {
         dispatcher.stop();
@@ -730,60 +742,60 @@ public class TestLocalResourcesTrackerImpl {
           appId, dispatcher, true, conf, stateStore, null);
       LocalResourceRequest lr1 = createLocalResourceRequest(user, 1, 1,
           LocalResourceVisibility.PUBLIC);
-      Assert.assertNull(tracker.getLocalizedResource(lr1));
+      assertNull(tracker.getLocalizedResource(lr1));
       final long localizedId1 = 52;
       Path hierarchicalPath1 = new Path(localDirRoot + "/4/2",
           Long.toString(localizedId1));
       Path localizedPath1 = new Path(hierarchicalPath1, "resource.jar");
       tracker.handle(new ResourceRecoveredEvent(lr1, localizedPath1, 120));
       dispatcher.await();
-      Assert.assertNotNull(tracker.getLocalizedResource(lr1));
+      assertNotNull(tracker.getLocalizedResource(lr1));
       LocalCacheDirectoryManager dirMgrRoot =
           tracker.getDirectoryManager(localDirRoot);
-      Assert.assertEquals(0, dirMgrRoot.getDirectory("").getCount());
-      Assert.assertEquals(1, dirMgrRoot.getDirectory("4/2").getCount());
+      assertEquals(0, dirMgrRoot.getDirectory("").getCount());
+      assertEquals(1, dirMgrRoot.getDirectory("4/2").getCount());
 
       LocalResourceRequest lr2 = createLocalResourceRequest(user, 2, 2,
           LocalResourceVisibility.PUBLIC);
-      Assert.assertNull(tracker.getLocalizedResource(lr2));
+      assertNull(tracker.getLocalizedResource(lr2));
       final long localizedId2 = localizedId1 + 1;
       Path hierarchicalPath2 = new Path(localDirRoot + "/4/2",
           Long.toString(localizedId2));
       Path localizedPath2 = new Path(hierarchicalPath2, "resource.jar");
       tracker.handle(new ResourceRecoveredEvent(lr2, localizedPath2, 120));
       dispatcher.await();
-      Assert.assertNotNull(tracker.getLocalizedResource(lr2));
-      Assert.assertEquals(0, dirMgrRoot.getDirectory("").getCount());
-      Assert.assertEquals(2, dirMgrRoot.getDirectory("4/2").getCount());
+      assertNotNull(tracker.getLocalizedResource(lr2));
+      assertEquals(0, dirMgrRoot.getDirectory("").getCount());
+      assertEquals(2, dirMgrRoot.getDirectory("4/2").getCount());
 
       LocalResourceRequest lr3 = createLocalResourceRequest(user, 3, 3,
           LocalResourceVisibility.PUBLIC);
-      Assert.assertNull(tracker.getLocalizedResource(lr3));
+      assertNull(tracker.getLocalizedResource(lr3));
       final long localizedId3 = 128;
       Path hierarchicalPath3 = new Path(localDirRoot + "/4/3",
           Long.toString(localizedId3));
       Path localizedPath3 = new Path(hierarchicalPath3, "resource.jar");
       tracker.handle(new ResourceRecoveredEvent(lr3, localizedPath3, 120));
       dispatcher.await();
-      Assert.assertNotNull(tracker.getLocalizedResource(lr3));
-      Assert.assertEquals(0, dirMgrRoot.getDirectory("").getCount());
-      Assert.assertEquals(2, dirMgrRoot.getDirectory("4/2").getCount());
-      Assert.assertEquals(1, dirMgrRoot.getDirectory("4/3").getCount());
+      assertNotNull(tracker.getLocalizedResource(lr3));
+      assertEquals(0, dirMgrRoot.getDirectory("").getCount());
+      assertEquals(2, dirMgrRoot.getDirectory("4/2").getCount());
+      assertEquals(1, dirMgrRoot.getDirectory("4/3").getCount());
 
       LocalResourceRequest lr4 = createLocalResourceRequest(user, 4, 4,
           LocalResourceVisibility.PUBLIC);
-      Assert.assertNull(tracker.getLocalizedResource(lr4));
+      assertNull(tracker.getLocalizedResource(lr4));
       final long localizedId4 = 256;
       Path hierarchicalPath4 = new Path(localDirRoot + "/4",
           Long.toString(localizedId4));
       Path localizedPath4 = new Path(hierarchicalPath4, "resource.jar");
       tracker.handle(new ResourceRecoveredEvent(lr4, localizedPath4, 120));
       dispatcher.await();
-      Assert.assertNotNull(tracker.getLocalizedResource(lr4));
-      Assert.assertEquals(0, dirMgrRoot.getDirectory("").getCount());
-      Assert.assertEquals(1, dirMgrRoot.getDirectory("4").getCount());
-      Assert.assertEquals(2, dirMgrRoot.getDirectory("4/2").getCount());
-      Assert.assertEquals(1, dirMgrRoot.getDirectory("4/3").getCount());
+      assertNotNull(tracker.getLocalizedResource(lr4));
+      assertEquals(0, dirMgrRoot.getDirectory("").getCount());
+      assertEquals(1, dirMgrRoot.getDirectory("4").getCount());
+      assertEquals(2, dirMgrRoot.getDirectory("4/2").getCount());
+      assertEquals(1, dirMgrRoot.getDirectory("4/3").getCount());
     } finally {
       if (dispatcher != null) {
         dispatcher.stop();
@@ -824,7 +836,7 @@ public class TestLocalResourcesTrackerImpl {
       lfs.mkdir(qualifiedConflictPath, null, true);
       Path rPath = tracker.getPathForLocalization(req1, base_path,
           delService);
-      Assert.assertFalse(lfs.util().exists(rPath));
+      assertFalse(lfs.util().exists(rPath));
       verify(delService, times(1)).delete(argThat(new FileDeletionMatcher(
           delService, user, conflictPath, null)));
     } finally {
@@ -892,9 +904,9 @@ public class TestLocalResourcesTrackerImpl {
       tracker.handle(rle2);
       dispatcher.await();
       // Remove somedir2 from gooddirs
-      Assert.assertTrue(tracker.checkLocalResource(lr2));
+      assertTrue(tracker.checkLocalResource(lr2));
       goodDirs.remove(1);
-      Assert.assertFalse(tracker.checkLocalResource(lr2));
+      assertFalse(tracker.checkLocalResource(lr2));
     } finally {
       if (dispatcher != null) {
         dispatcher.stop();
@@ -971,8 +983,8 @@ public class TestLocalResourcesTrackerImpl {
       iter.next();
       count++;
     }
-    Assert.assertEquals("Tracker resource count does not match", expected,
-        count);
+    assertEquals(expected,
+        count, "Tracker resource count does not match");
   }
 
   private LocalResourceRequest createLocalResourceRequest(String user, int i,

@@ -43,6 +43,11 @@ public interface PrefetchingStatistics extends IOStatisticsSource {
   void blockRemovedFromFileCache();
 
   /**
+   * A block has been evicted from the file cache.
+   */
+  void blockEvictedFromFileCache();
+
+  /**
    * A prefetch operation has completed.
    */
   void prefetchOperationCompleted();

@@ -47,9 +47,10 @@ import org.apache.hadoop.yarn.server.nodemanager.health.NodeHealthCheckerService
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.TestResourceUtils;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.util.HashMap;
 import java.util.List;
@@ -57,7 +58,7 @@ import java.util.Map;
 import java.io.File;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.Mockito.mock;
@@ -70,8 +71,9 @@ public class TestResourcePluginManager extends NodeManagerTestBase {
   private NodeManager nm;
   private String tempResourceTypesFile;
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
+    super.setUp();
     // setup resource-types.xml
     ResourceUtils.resetResourceTypes();
     String resourceTypesFile = "resource-types-pluggable-devices.xml";
@@ -102,7 +104,7 @@ public class TestResourcePluginManager extends NodeManagerTestBase {
     return rpm;
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     if (nm != null) {
       try {
@@ -196,7 +198,8 @@ public class TestResourcePluginManager extends NodeManagerTestBase {
   /**
    * Make sure {@link ResourcePluginManager} is initialized during NM start up.
    */
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testResourcePluginManagerInitialization() throws Exception {
     final ResourcePluginManager rpm = stubResourcePluginmanager();
     nm = new ResourcePluginMockNM(rpm);
@@ -209,7 +212,8 @@ public class TestResourcePluginManager extends NodeManagerTestBase {
   /**
    * Make sure {@link ResourcePluginManager} is invoked during NM update.
    */
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testNodeStatusUpdaterWithResourcePluginsEnabled()
       throws Exception {
     final ResourcePluginManager rpm = stubResourcePluginmanager();
@@ -230,7 +234,8 @@ public class TestResourcePluginManager extends NodeManagerTestBase {
   /**
    * Make sure ResourcePluginManager is used to initialize ResourceHandlerChain.
    */
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testLinuxContainerExecutorWithResourcePluginsEnabled() {
     final ResourcePluginManager rpm = stubResourcePluginmanager();
     final LinuxContainerExecutor lce = new MyLCE();
@@ -290,7 +295,8 @@ public class TestResourcePluginManager extends NodeManagerTestBase {
    * We use spy object of real rpm to verify "initializePluggableDevicePlugins"
    * because use mock rpm will not working
    */
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testInitializationWithPluggableDeviceFrameworkDisabled()
       throws Exception {
     ResourcePluginManager rpm = new ResourcePluginManager();
@@ -309,7 +315,8 @@ public class TestResourcePluginManager extends NodeManagerTestBase {
   }
 
   // No related configuration set.
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testInitializationWithPluggableDeviceFrameworkDisabled2()
       throws Exception {
     ResourcePluginManager rpm = new ResourcePluginManager();
@@ -326,7 +333,8 @@ public class TestResourcePluginManager extends NodeManagerTestBase {
   }
 
   // Enable framework and configure pluggable device classes
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testInitializationWithPluggableDeviceFrameworkEnabled()
       throws Exception {
     ResourcePluginManager rpm = new ResourcePluginManager();
@@ -349,7 +357,8 @@ public class TestResourcePluginManager extends NodeManagerTestBase {
 
   // Enable pluggable framework, but leave device classes un-configured
   // initializePluggableDevicePlugins invoked but it should throw an exception
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testInitializationWithPluggableDeviceFrameworkEnabled2()
       throws ClassNotFoundException {
     ResourcePluginManager rpm = new ResourcePluginManager();
@@ -373,7 +382,8 @@ public class TestResourcePluginManager extends NodeManagerTestBase {
     assertThat(fail).isTrue();
   }
 
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testNormalInitializationOfPluggableDeviceClasses() {
     ResourcePluginManager rpm = new ResourcePluginManager();
 
@@ -398,7 +408,8 @@ public class TestResourcePluginManager extends NodeManagerTestBase {
   }
 
   // Fail to load a class which doesn't implement interface DevicePlugin
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testLoadInvalidPluggableDeviceClasses() {
     ResourcePluginManager rpm = new ResourcePluginManager();
 
@@ -425,7 +436,8 @@ public class TestResourcePluginManager extends NodeManagerTestBase {
   }
 
   // Fail to register duplicated resource name.
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testLoadDuplicateResourceNameDevicePlugin() {
     ResourcePluginManager rpm = new ResourcePluginManager();
 
@@ -458,7 +470,8 @@ public class TestResourcePluginManager extends NodeManagerTestBase {
    * Fail a plugin due to incompatible interface implemented.
    * It doesn't implement the "getRegisterRequestInfo"
    */
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testIncompatibleDevicePlugin() {
     ResourcePluginManager rpm = new ResourcePluginManager();
 
@@ -511,7 +524,8 @@ public class TestResourcePluginManager extends NodeManagerTestBase {
     assertThat(dmm.getDevicePluginSchedulers().size()).isOne();
   }
 
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testRequestedResourceNameIsConfigured() {
     ResourcePluginManager rpm = new ResourcePluginManager();
     String resourceName = "a.com/a";

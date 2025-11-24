@@ -23,9 +23,12 @@ import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.notification.Failure;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestTimedOutTestsListener {
 
@@ -57,7 +60,7 @@ public class TestTimedOutTestsListener {
       }
     }
   
-    class DeadlockThread extends Thread {
+    class DeadlockThread extends SubjectInheritingThread {
       private Lock lock1 = null;
   
       private Lock lock2 = null;
@@ -82,7 +85,7 @@ public class TestTimedOutTestsListener {
         this.useSync = false;
       }
   
-      public void run() {
+      public void work() {
         if (useSync) {
           syncLock();
         } else {
@@ -143,7 +146,8 @@ public class TestTimedOutTestsListener {
   
   }
 
-  @Test(timeout=30000)
+  @Test
+  @Timeout(value = 30)
   public void testThreadDumpAndDeadlocks() throws Exception {
     new Deadlock();
     String s = null;
@@ -154,16 +158,16 @@ public class TestTimedOutTestsListener {
       Thread.sleep(100);
     }
     
-    Assert.assertEquals(3, countStringOccurrences(s, "BLOCKED"));
+    assertEquals(3, countStringOccurrences(s, "BLOCKED"));
     
-    Failure failure = new Failure(
-        null, new Exception(TimedOutTestsListener.TEST_TIMED_OUT_PREFIX));
+    RuntimeException failure =
+        new RuntimeException(TimedOutTestsListener.TEST_TIMED_OUT_PREFIX);
     StringWriter writer = new StringWriter();
     new TimedOutTestsListener(new PrintWriter(writer)).testFailure(failure);
     String out = writer.toString();
     
-    Assert.assertTrue(out.contains("THREAD DUMP"));
-    Assert.assertTrue(out.contains("DEADLOCKS DETECTED"));
+    assertTrue(out.contains("THREAD DUMP"));
+    assertTrue(out.contains("DEADLOCKS DETECTED"));
     
     System.out.println(out);
   }

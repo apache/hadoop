@@ -24,7 +24,7 @@ import org.apache.hadoop.service.Service;
 import org.apache.hadoop.service.launcher.testservices.ExceptionInExecuteLaunchableService;
 import org.apache.hadoop.service.launcher.testservices.LaunchableRunningService;
 import org.apache.hadoop.service.launcher.testservices.NoArgsAllowedService;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
@@ -40,7 +40,7 @@ public class TestServiceLauncherInnerMethods extends
     ServiceLauncher<NoArgsAllowedService> launcher =
         launchService(NoArgsAllowedService.class, new Configuration());
     NoArgsAllowedService service = launcher.getService();
-    assertNotNull("null service from " + launcher, service);
+    assertNotNull(service, "null service from " + launcher);
     service.stop();
   }
 
@@ -78,7 +78,7 @@ public class TestServiceLauncherInnerMethods extends
     ServiceLauncher<BreakableService> launcher =
         launchService(BreakableService.class, new Configuration());
     BreakableService service = launcher.getService();
-    assertNotNull("null service from " + launcher, service);
+    assertNotNull(service, "null service from " + launcher);
     service.stop();
   }
 

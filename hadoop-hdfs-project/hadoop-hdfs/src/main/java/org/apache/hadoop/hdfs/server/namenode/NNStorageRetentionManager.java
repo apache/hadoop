@@ -80,6 +80,9 @@ public class NNStorageRetentionManager {
     Preconditions.checkArgument(numExtraEditsToRetain >= 0,
         DFSConfigKeys.DFS_NAMENODE_NUM_EXTRA_EDITS_RETAINED_KEY +
         " must not be negative");
+    Preconditions.checkArgument(maxExtraEditsSegmentsToRetain >= 0,
+        DFSConfigKeys.DFS_NAMENODE_MAX_EXTRA_EDITS_SEGMENTS_RETAINED_KEY +
+        " must not be negative");
     
     this.storage = storage;
     this.purgeableLogs = purgeableLogs;

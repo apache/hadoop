@@ -19,6 +19,7 @@
 package org.apache.hadoop.examples.dancing;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.StringTokenizer;
 
@@ -33,7 +34,6 @@ import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.*;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 
 /**
  * Launch a distributed pentomino solver.
@@ -141,7 +141,7 @@ public class DistributedPentomino extends Configured implements Tool {
     Path input = new Path(dir, "part1");
     PrintWriter file = 
       new PrintWriter(new OutputStreamWriter(new BufferedOutputStream
-                      (fs.create(input), 64*1024), Charsets.UTF_8));
+                      (fs.create(input), 64*1024), StandardCharsets.UTF_8));
     for(int[] prefix: splits) {
       for(int i=0; i < prefix.length; ++i) {
         if (i != 0) {

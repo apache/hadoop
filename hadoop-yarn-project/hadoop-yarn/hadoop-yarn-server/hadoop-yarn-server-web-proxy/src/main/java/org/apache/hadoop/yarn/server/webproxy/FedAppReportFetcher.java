@@ -50,7 +50,7 @@ public class FedAppReportFetcher extends AppReportFetcher {
   public FedAppReportFetcher(Configuration conf) {
     super(conf);
     subClusters = new ConcurrentHashMap<>();
-    federationFacade = FederationStateStoreFacade.getInstance();
+    federationFacade = FederationStateStoreFacade.getInstance(conf);
   }
 
   /**

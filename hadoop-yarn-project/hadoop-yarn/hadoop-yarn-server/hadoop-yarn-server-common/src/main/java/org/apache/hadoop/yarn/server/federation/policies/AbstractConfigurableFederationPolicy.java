@@ -53,7 +53,7 @@ public abstract class AbstractConfigurableFederationPolicy
         initializationContext.getSubClusterPolicyConfiguration().getParams());
 
     // if nothing has changed skip the rest of initialization
-    // and signal to childs that the reinit is free via isDirty var.
+    // and signal to children that the reinit is free via isDirty var.
     if (policyInfo != null && policyInfo.equals(newPolicyInfo)) {
       isDirty = false;
       return;

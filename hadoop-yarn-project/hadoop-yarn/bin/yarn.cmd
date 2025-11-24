@@ -273,6 +273,9 @@ goto :eof
   set CLASSPATH=%CLASSPATH%;%YARN_CONF_DIR%\globalpolicygenerator-config\log4j.properties
   set CLASS=org.apache.hadoop.yarn.server.globalpolicygenerator.GlobalPolicyGenerator
   set YARN_OPTS=%YARN_OPTS% %YARN_GLOBALPOLICYGENERATOR_OPTS%
+  if defined YARN_GLOBALPOLICYGENERATOR_HEAPSIZE (
+    set JAVA_HEAP_MAX=-Xmx%YARN_GLOBALPOLICYGENERATOR_HEAPSIZE%m
+  )
   goto :eof
 
 :routeradmin

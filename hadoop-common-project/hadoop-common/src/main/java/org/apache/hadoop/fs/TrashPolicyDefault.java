@@ -162,7 +162,7 @@ public class TrashPolicyDefault extends TrashPolicy {
           LOG.warn("Can't create(mkdir) trash directory: " + baseTrashPath);
           return false;
         }
-      } catch (FileAlreadyExistsException e) {
+      } catch (FileAlreadyExistsException | ParentNotDirectoryException e) {
         // find the path which is not a directory, and modify baseTrashPath
         // & trashPath, then mkdirs
         Path existsFilePath = baseTrashPath;

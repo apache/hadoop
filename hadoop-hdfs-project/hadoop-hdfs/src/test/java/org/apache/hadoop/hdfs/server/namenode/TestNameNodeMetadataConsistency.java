@@ -28,19 +28,20 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
+import org.apache.hadoop.hdfs.util.RwLockMode;
 import org.apache.hadoop.test.GenericTestUtils;
 
 import java.util.function.Supplier;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.io.OutputStream;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestNameNodeMetadataConsistency {
   private static final Path filePath1 = new Path("/testdata1.txt");
@@ -52,7 +53,7 @@ public class TestNameNodeMetadataConsistency {
   MiniDFSCluster cluster;
   HdfsConfiguration conf;
 
-  @Before
+  @BeforeEach
   public void InitTest() throws IOException {
     conf = new HdfsConfiguration();
     conf.setLong(DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_INTERVAL_KEY,
@@ -62,7 +63,7 @@ public class TestNameNodeMetadataConsistency {
         .build();
   }
 
-  @After
+  @AfterEach
   public void cleanup() {
     if (cluster != null) {
       cluster.shutdown();
@@ -95,13 +96,14 @@ public class TestNameNodeMetadataConsistency {
 
     // Simulate Namenode forgetting a Block
     cluster.restartNameNode(true);
-    cluster.getNameNode().getNamesystem().writeLock();
+    cluster.getNameNode().getNamesystem().writeLock(RwLockMode.BM);
     BlockInfo bInfo = cluster.getNameNode().getNamesystem().getBlockManager()
         .getStoredBlock(block.getLocalBlock());
     bInfo.delete();
     cluster.getNameNode().getNamesystem().getBlockManager()
         .removeBlock(bInfo);
-    cluster.getNameNode().getNamesystem().writeUnlock();
+    cluster.getNameNode().getNamesystem().writeUnlock(RwLockMode.BM,
+        "testGenerationStampInFuture");
 
     // we also need to tell block manager that we are in the startup path
     BlockManagerTestUtil.setStartupSafeModeForTest(
@@ -145,11 +147,12 @@ public class TestNameNodeMetadataConsistency {
     cluster.restartNameNode(true);
     BlockInfo bInfo = cluster.getNameNode().getNamesystem().getBlockManager
         ().getStoredBlock(block.getLocalBlock());
-    cluster.getNameNode().getNamesystem().writeLock();
+    cluster.getNameNode().getNamesystem().writeLock(RwLockMode.BM);
     bInfo.delete();
     cluster.getNameNode().getNamesystem().getBlockManager()
         .removeBlock(bInfo);
-    cluster.getNameNode().getNamesystem().writeUnlock();
+    cluster.getNameNode().getNamesystem().writeUnlock(RwLockMode.BM,
+        "testEnsureGenStampsIsStartupOnly");
 
     cluster.restartDataNode(dnProps);
     waitForNumBytes(0);

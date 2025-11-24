@@ -175,6 +175,12 @@ public interface CSQueue extends SchedulerQueue<CSQueue> {
    * @return child queues
    */
   public List<CSQueue> getChildQueues();
+
+  /**
+   * Get child queues By tryLock.
+   * @return child queues
+   */
+  List<CSQueue> getChildQueuesByTryLock();
   
   /**
    * Check if the <code>user</code> has permission to perform the operation
@@ -529,7 +535,7 @@ public interface CSQueue extends SchedulerQueue<CSQueue> {
    * Get Multi Node scheduling policy name.
    * @return policy name
    */
-  String getMultiNodeSortingPolicyName();
+  String getMultiNodeSortingPolicyClassName();
 
   /**
    * Get the maximum lifetime in seconds of an application which is submitted to

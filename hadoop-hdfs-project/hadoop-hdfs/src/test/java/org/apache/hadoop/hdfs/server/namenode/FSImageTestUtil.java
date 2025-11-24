@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
@@ -445,7 +445,7 @@ public abstract class FSImageTestUtil {
   public static Map<File, String> getFileMD5s(File... files) throws Exception {
     Map<File, String> ret = Maps.newHashMap();
     for (File f : files) {
-      assertTrue("Must exist: " + f, f.exists());
+      assertTrue(f.exists(), "Must exist: " + f);
       ret.put(f, getFileMD5(f));
     }
     return ret;
@@ -514,7 +514,24 @@ public abstract class FSImageTestUtil {
       for (long checkpointTxId : txids) {
         File image = new File(nameDir,
                               NNStorage.getImageFileName(checkpointTxId));
-        assertTrue("Expected non-empty " + image, image.length() > 0);
+        assertTrue(image.length() > 0, "Expected non-empty " + image);
+      }
+    }
+  }
+
+  public static void assertNNHasRollbackCheckpoints(MiniDFSCluster cluster,
+      int nnIdx, List<Integer> txids) {
+
+    for (File nameDir : getNameNodeCurrentDirs(cluster, nnIdx)) {
+      LOG.info("examining name dir with files: {}",
+                   Joiner.on(",").join(nameDir.listFiles()));
+      // Should have fsimage_N for the three checkpoints
+      LOG.info("Examining storage dir {} with contents: {}", nameDir,
+                   StringUtils.join(nameDir.listFiles(), ", "));
+      for (long checkpointTxId : txids) {
+        File image = new File(nameDir,
+            NNStorage.getRollbackImageFileName(checkpointTxId));
+        assertTrue(image.length() > 0, "Expected non-empty " + image);
       }
     }
   }
@@ -609,9 +626,10 @@ public abstract class FSImageTestUtil {
   
   public static void assertNNFilesMatch(MiniDFSCluster cluster) throws Exception {
     List<File> curDirs = Lists.newArrayList();
-    curDirs.addAll(FSImageTestUtil.getNameNodeCurrentDirs(cluster, 0));
-    curDirs.addAll(FSImageTestUtil.getNameNodeCurrentDirs(cluster, 1));
-    
+    for (int i = 0; i < cluster.getNumNameNodes(); i++) {
+      curDirs.addAll(FSImageTestUtil.getNameNodeCurrentDirs(cluster, i));
+    }
+
     // Ignore seen_txid file, since the newly bootstrapped standby
     // will have a higher seen_txid than the one it bootstrapped from.
     Set<String> ignoredFiles = ImmutableSet.of("seen_txid");

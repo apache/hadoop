@@ -18,9 +18,10 @@
 
 package org.apache.hadoop.yarn.server.nodemanager;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.lang.Thread.State;
@@ -59,10 +60,10 @@ import org.apache.hadoop.yarn.server.api.records.impl.pb.MasterKeyPBImpl;
 import org.apache.hadoop.yarn.server.nodemanager.health.NodeHealthCheckerService;
 import org.apache.hadoop.yarn.server.nodemanager.nodelabels.NodeAttributesProvider;
 import org.apache.hadoop.yarn.server.utils.YarnServerBuilderUtils;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 /**
  * Test NodeStatusUpdater for node attributes.
@@ -74,12 +75,12 @@ public class TestNodeStatusUpdaterForAttributes extends NodeLabelTestBase {
   private NodeManager nm;
   private DummyNodeAttributesProvider dummyAttributesProviderRef;
 
-  @Before
+  @BeforeEach
   public void setup() {
     dummyAttributesProviderRef = new DummyNodeAttributesProvider();
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     if (null != nm) {
       ServiceOperations.stop(nm);
@@ -122,7 +123,7 @@ public class TestNodeStatusUpdaterForAttributes extends NodeLabelTestBase {
         throws InterruptedException, TimeoutException {
       GenericTestUtils.waitFor(() -> receivedNMHeartbeat, 100, 30000);
       if (!receivedNMHeartbeat) {
-        Assert.fail("Heartbeat is not received even after waiting");
+        fail("Heartbeat is not received even after waiting");
       }
     }
 
@@ -130,7 +131,7 @@ public class TestNodeStatusUpdaterForAttributes extends NodeLabelTestBase {
         throws InterruptedException, TimeoutException {
       GenericTestUtils.waitFor(() -> receivedNMRegister, 100, 30000);
       if (!receivedNMRegister) {
-        Assert.fail("Registration is not received even after waiting");
+        fail("Registration is not received even after waiting");
       }
     }
 
@@ -205,7 +206,8 @@ public class TestNodeStatusUpdaterForAttributes extends NodeLabelTestBase {
     return conf;
   }
 
-  @Test(timeout = 20000)
+  @Test
+  @Timeout(value = 20)
   public void testNodeStatusUpdaterForNodeAttributes()
       throws InterruptedException, IOException, TimeoutException {
     final ResourceTrackerForAttributes resourceTracker =
@@ -270,19 +272,17 @@ public class TestNodeStatusUpdaterForAttributes extends NodeLabelTestBase {
     sendOutofBandHeartBeat();
     resourceTracker.waitTillHeartbeat();
     resourceTracker.resetNMHeartbeatReceiveFlag();
-    assertNull("If no change in attributes"
-            + " then null should be sent as part of request",
-        resourceTracker.attributes);
+    assertNull(resourceTracker.attributes, "If no change in attributes"
+        + " then null should be sent as part of request");
 
     // provider return with null attributes
     dummyAttributesProviderRef.setDescriptors(null);
     sendOutofBandHeartBeat();
     resourceTracker.waitTillHeartbeat();
-    assertNotNull("If provider sends null"
-            + " then empty label set should be sent and not null",
-        resourceTracker.attributes);
-    assertTrue("If provider sends null then empty attributes should be sent",
-        resourceTracker.attributes.isEmpty());
+    assertNotNull(resourceTracker.attributes, "If provider sends null"
+        + " then empty label set should be sent and not null");
+    assertTrue(resourceTracker.attributes.isEmpty(),
+        "If provider sends null then empty attributes should be sent");
     resourceTracker.resetNMHeartbeatReceiveFlag();
     // Since the resync interval is set to 2 sec in every alternate heartbeat
     // the attributes will be send along with heartbeat.
@@ -297,22 +297,23 @@ public class TestNodeStatusUpdaterForAttributes extends NodeLabelTestBase {
       if (null == resourceTracker.attributes) {
         nullAttributes++;
       } else {
-        Assert.assertTrue("In heartbeat PI attributes should be send",
-            NodeLabelUtil.isNodeAttributesEquals(ImmutableSet.of(attribute1),
-                resourceTracker.attributes));
+        assertTrue(NodeLabelUtil.isNodeAttributesEquals(ImmutableSet.of(attribute1),
+            resourceTracker.attributes),
+            "In heartbeat PI attributes should be send");
         nonNullAttributes++;
       }
       resourceTracker.resetNMHeartbeatReceiveFlag();
       Thread.sleep(1000);
     }
-    Assert.assertTrue("More than one heartbeat with empty attributes expected",
-        nullAttributes > 1);
-    Assert.assertTrue("More than one heartbeat with attributes expected",
-        nonNullAttributes > 1);
+    assertTrue(nullAttributes > 1,
+        "More than one heartbeat with empty attributes expected");
+    assertTrue(nonNullAttributes > 1,
+        "More than one heartbeat with attributes expected");
     nm.stop();
   }
 
-  @Test(timeout = 20000)
+  @Test
+  @Timeout(value = 20)
   public void testInvalidNodeAttributesFromProvider()
       throws InterruptedException, IOException, TimeoutException {
     final ResourceTrackerForAttributes resourceTracker =
@@ -393,8 +394,9 @@ public class TestNodeStatusUpdaterForAttributes extends NodeLabelTestBase {
         .setDescriptors(ImmutableSet.of(invalidAttribute));
     sendOutofBandHeartBeat();
     resourceTracker.waitTillHeartbeat();
-    assertNull("On Invalid Attributes we need to retain earlier attributes, HB"
-        + " needs to send null", resourceTracker.attributes);
+    assertNull(resourceTracker.attributes,
+        "On Invalid Attributes we need to retain earlier attributes, HB"
+        + " needs to send null");
     resourceTracker.resetNMHeartbeatReceiveFlag();
 
     // on next heartbeat same invalid attributes will be given by the provider,
@@ -402,8 +404,9 @@ public class TestNodeStatusUpdaterForAttributes extends NodeLabelTestBase {
     // should not happen
     sendOutofBandHeartBeat();
     resourceTracker.waitTillHeartbeat();
-    assertNull("NodeStatusUpdater need not send repeatedly empty attributes on"
-        + " invalid attributes from provider ", resourceTracker.attributes);
+    assertNull(resourceTracker.attributes,
+        "NodeStatusUpdater need not send repeatedly empty attributes on"
+        + " invalid attributes from provider ");
     resourceTracker.resetNMHeartbeatReceiveFlag();
   }
 

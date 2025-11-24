@@ -21,9 +21,9 @@ package org.apache.hadoop.fs.azurebfs;
 import java.util.Arrays;
 import java.util.Random;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -31,6 +31,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.services.AbfsInputStream;
 import org.apache.hadoop.fs.azurebfs.services.AbfsOutputStream;
+import org.apache.hadoop.fs.azurebfs.constants.HttpOperationType;
 import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderValidator;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 
@@ -46,7 +47,8 @@ import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.logIOStatistic
  * Uses package-private methods in AbfsConfiguration, which is why it is in
  * this package.
  */
-@RunWith(Parameterized.class)
+@ParameterizedClass(name="Size={0}-readahead={1}-Client={2}")
+@MethodSource("sizes")
 public class ITestAbfsReadWriteAndSeek extends AbstractAbfsScaleTest {
   private static final String TEST_PATH = "/testfile";
 
@@ -55,22 +57,70 @@ public class ITestAbfsReadWriteAndSeek extends AbstractAbfsScaleTest {
    * For test performance, a full x*y test matrix is not used.
    * @return the test parameters
    */
-  @Parameterized.Parameters(name = "Size={0}-readahead={1}")
   public static Iterable<Object[]> sizes() {
-    return Arrays.asList(new Object[][]{{MIN_BUFFER_SIZE, true},
-        {DEFAULT_READ_BUFFER_SIZE, false},
-        {DEFAULT_READ_BUFFER_SIZE, true},
-        {APPENDBLOB_MAX_WRITE_BUFFER_SIZE, false},
-        {MAX_BUFFER_SIZE, true}});
+    return Arrays.asList(new Object[][]{
+        {
+            MIN_BUFFER_SIZE,
+            true,
+            HttpOperationType.JDK_HTTP_URL_CONNECTION
+        },
+        {
+            MIN_BUFFER_SIZE,
+            true,
+            HttpOperationType.APACHE_HTTP_CLIENT
+        },
+        {
+            DEFAULT_READ_BUFFER_SIZE,
+            false,
+            HttpOperationType.JDK_HTTP_URL_CONNECTION
+        },
+        {
+            DEFAULT_READ_BUFFER_SIZE,
+            false,
+            HttpOperationType.APACHE_HTTP_CLIENT
+        },
+        {
+            DEFAULT_READ_BUFFER_SIZE,
+            true,
+            HttpOperationType.JDK_HTTP_URL_CONNECTION
+        },
+        {
+            DEFAULT_READ_BUFFER_SIZE,
+            true,
+            HttpOperationType.APACHE_HTTP_CLIENT
+        },
+        {
+            APPENDBLOB_MAX_WRITE_BUFFER_SIZE,
+            false,
+            HttpOperationType.JDK_HTTP_URL_CONNECTION
+        },
+        {
+            APPENDBLOB_MAX_WRITE_BUFFER_SIZE,
+            false,
+            HttpOperationType.APACHE_HTTP_CLIENT
+        },
+        {
+            MAX_BUFFER_SIZE,
+            true,
+            HttpOperationType.JDK_HTTP_URL_CONNECTION
+        },
+        {
+            MAX_BUFFER_SIZE,
+            true,
+            HttpOperationType.APACHE_HTTP_CLIENT
+        }
+    });
   }
 
   private final int size;
   private final boolean readaheadEnabled;
+  private final HttpOperationType httpOperationType;
 
   public ITestAbfsReadWriteAndSeek(final int size,
-      final boolean readaheadEnabled) throws Exception {
+      final boolean readaheadEnabled, final HttpOperationType httpOperationType) throws Exception {
     this.size = size;
     this.readaheadEnabled = readaheadEnabled;
+    this.httpOperationType = httpOperationType;
   }
 
   @Test
@@ -84,6 +134,7 @@ public class ITestAbfsReadWriteAndSeek extends AbstractAbfsScaleTest {
     abfsConfiguration.setWriteBufferSize(bufferSize);
     abfsConfiguration.setReadBufferSize(bufferSize);
     abfsConfiguration.setReadAheadEnabled(readaheadEnabled);
+    abfsConfiguration.setOptimizeFooterRead(false);
 
     final byte[] b = new byte[2 * bufferSize];
     new Random().nextBytes(b);
@@ -121,7 +172,7 @@ public class ITestAbfsReadWriteAndSeek extends AbstractAbfsScaleTest {
     }
     logIOStatisticsAtLevel(LOG, IOSTATISTICS_LOGGING_LEVEL_INFO, statisticsSource);
 
-    assertNotEquals("data read in final read()", -1, result);
+    assertNotEquals(-1, result, "data read in final read()");
     assertArrayEquals(readBuffer, b);
   }
 

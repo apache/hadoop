@@ -24,12 +24,11 @@ import org.apache.hadoop.minikdc.MiniKdc;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -37,13 +36,19 @@ import org.slf4j.event.Level;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_KERBEROS_KEYTAB_LOGIN_AUTORENEWAL_ENABLED;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_KERBEROS_MIN_SECONDS_BEFORE_RELOGIN;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.security.Principal;
 import java.security.PrivilegedExceptionAction;
 import java.util.Iterator;
@@ -73,11 +78,8 @@ public class TestUGILoginFromKeytab {
   private File workDir;
   private ExecutorService executor;
 
-  @Rule
-  public final TemporaryFolder folder = new TemporaryFolder();
-
-  @Before
-  public void startMiniKdc() throws Exception {
+  @BeforeEach
+  public void startMiniKdc(@TempDir Path tempDir) throws Exception {
     // This setting below is required. If not enabled, UGI will abort
     // any attempt to loginUserFromKeytab.
     Configuration conf = new Configuration();
@@ -85,14 +87,14 @@ public class TestUGILoginFromKeytab {
         "kerberos");
     UserGroupInformation.setConfiguration(conf);
     UserGroupInformation.setShouldRenewImmediatelyForTests(true);
-    workDir = folder.getRoot();
+    workDir = tempDir.toFile();
     kdc = new MiniKdc(MiniKdc.createConf(), workDir);
     kdc.start();
     executor = Executors.newCachedThreadPool();
 
   }
 
-  @After
+  @AfterEach
   public void stopMiniKdc() {
     if (kdc != null) {
       kdc.stop();
@@ -114,15 +116,15 @@ public class TestUGILoginFromKeytab {
 
     UserGroupInformation.loginUserFromKeytab(principal, keytab.getPath());
     UserGroupInformation ugi = UserGroupInformation.getLoginUser();
-    Assert.assertTrue("UGI should be configured to login from keytab",
-        ugi.isFromKeytab());
+    assertTrue(ugi.isFromKeytab(),
+        "UGI should be configured to login from keytab");
 
     User user = getUser(ugi.getSubject());
-    Assert.assertNotNull(user.getLogin());
+    assertNotNull(user.getLogin());
  
-    Assert.assertTrue("User login time is less than before login time, "
-        + "beforeLoginTime:" + beforeLogin + " userLoginTime:" + user.getLastLogin(),
-            user.getLastLogin() > beforeLogin);
+    assertTrue(user.getLastLogin() > beforeLogin,
+        "User login time is less than before login time, "
+        + "beforeLoginTime:" + beforeLogin + " userLoginTime:" + user.getLastLogin());
   }
 
   /**
@@ -137,14 +139,13 @@ public class TestUGILoginFromKeytab {
 
     UserGroupInformation.loginUserFromKeytab(principal, keytab.getPath());
     UserGroupInformation ugi = UserGroupInformation.getLoginUser();
-    Assert.assertTrue("UGI should be configured to login from keytab",
-        ugi.isFromKeytab());
+    assertTrue(ugi.isFromKeytab(), "UGI should be configured to login from keytab");
 
     // Verify relogin from keytab.
     User user = getUser(ugi.getSubject());
     final long firstLogin = user.getLastLogin();
     final LoginContext login1 = user.getLogin();
-    Assert.assertNotNull(login1);
+    assertNotNull(login1);
 
     // Sleep for 2 secs to have a difference between first and second login
     Thread.sleep(2000);
@@ -152,10 +153,10 @@ public class TestUGILoginFromKeytab {
     ugi.reloginFromKeytab();
     final long secondLogin = user.getLastLogin();
     final LoginContext login2 = user.getLogin();
-    Assert.assertTrue("User should have been able to relogin from keytab",
-        secondLogin > firstLogin);
-    Assert.assertNotNull(login2);
-    Assert.assertNotSame(login1, login2);
+    assertTrue(secondLogin > firstLogin,
+        "User should have been able to relogin from keytab");
+    assertNotNull(login2);
+    assertNotSame(login1, login2);
   }
 
   /**
@@ -172,14 +173,13 @@ public class TestUGILoginFromKeytab {
 
     UserGroupInformation.loginUserFromKeytab(principal, keytab.getPath());
     UserGroupInformation ugi = UserGroupInformation.getLoginUser();
-    Assert.assertTrue("UGI should be configured to login from keytab",
-        ugi.isFromKeytab());
+    assertTrue(ugi.isFromKeytab(), "UGI should be configured to login from keytab");
 
     // Verify relogin from keytab.
     User user = getUser(ugi.getSubject());
     final long firstLogin = user.getLastLogin();
     final LoginContext login1 = user.getLogin();
-    Assert.assertNotNull(login1);
+    assertNotNull(login1);
 
     // Sleep for 2 secs to have a difference between first and second login
     Thread.sleep(2000);
@@ -188,10 +188,10 @@ public class TestUGILoginFromKeytab {
     ugi.forceReloginFromKeytab();
     final long secondLogin = user.getLastLogin();
     final LoginContext login2 = user.getLogin();
-    Assert.assertTrue("User should have been able to relogin from keytab",
-        secondLogin > firstLogin);
-    Assert.assertNotNull(login2);
-    Assert.assertNotSame(login1, login2);
+    assertTrue(secondLogin > firstLogin,
+        "User should have been able to relogin from keytab");
+    assertNotNull(login2);
+    assertNotSame(login1, login2);
   }
 
   @Test
@@ -205,14 +205,14 @@ public class TestUGILoginFromKeytab {
         principal.getName(), keytab.getPath());
     Subject subject = ugi1.getSubject();
     User user = getUser(subject);
-    Assert.assertNotNull(user);
+    assertNotNull(user);
     LoginContext login = user.getLogin();
-    Assert.assertNotNull(login);
+    assertNotNull(login);
 
     // User instance and/or login context should not change.
     UserGroupInformation ugi2 = UserGroupInformation.getUGIFromSubject(subject);
-    Assert.assertSame(user, getUser(ugi2.getSubject()));
-    Assert.assertSame(login, user.getLogin());
+    assertSame(user, getUser(ugi2.getSubject()));
+    assertSame(login, user.getLogin());
   }
 
   @Test
@@ -230,17 +230,17 @@ public class TestUGILoginFromKeytab {
     // first call to get the ugi should add the User instance w/o a login
     // context.
     UserGroupInformation ugi1 = UserGroupInformation.getUGIFromSubject(subject);
-    Assert.assertSame(subject, ugi1.getSubject());
+    assertSame(subject, ugi1.getSubject());
     User user = getUser(subject);
-    Assert.assertNotNull(user);
-    Assert.assertEquals(principal.getName(), user.getName());
-    Assert.assertNull(user.getLogin());
+    assertNotNull(user);
+    assertEquals(principal.getName(), user.getName());
+    assertNull(user.getLogin());
 
     // subsequent call should not change the existing User instance.
     UserGroupInformation ugi2 = UserGroupInformation.getUGIFromSubject(subject);
-    Assert.assertSame(subject, ugi2.getSubject());
-    Assert.assertSame(user, getUser(ugi2.getSubject()));
-    Assert.assertNull(user.getLogin());
+    assertSame(subject, ugi2.getSubject());
+    assertSame(user, getUser(ugi2.getSubject()));
+    assertNull(user.getLogin());
   }
 
   @Test
@@ -261,9 +261,9 @@ public class TestUGILoginFromKeytab {
 
     // nothing should change.
     UserGroupInformation ugi2 = UserGroupInformation.getUGIFromSubject(subject);
-    Assert.assertSame(subject, ugi2.getSubject());
-    Assert.assertSame(user, getUser(ugi2.getSubject()));
-    Assert.assertSame(dummyLogin, user.getLogin());
+    assertSame(subject, ugi2.getSubject());
+    assertSame(user, getUser(ugi2.getSubject()));
+    assertSame(dummyLogin, user.getLogin());
   }
 
   @Test
@@ -282,14 +282,12 @@ public class TestUGILoginFromKeytab {
 
     UserGroupInformation ugi = UserGroupInformation.getLoginUser();
 
-    Assert.assertEquals(UserGroupInformation.AuthenticationMethod.KERBEROS,
+    assertEquals(UserGroupInformation.AuthenticationMethod.KERBEROS,
         ugi.getAuthenticationMethod());
-    Assert.assertTrue(ugi.isFromKeytab());
-    Assert.assertTrue(
-            UserGroupInformation.isKerberosKeyTabLoginRenewalEnabled());
-    Assert.assertTrue(
-            UserGroupInformation.getKerberosLoginRenewalExecutor()
-                    .isPresent());
+    assertTrue(ugi.isFromKeytab());
+    assertTrue(UserGroupInformation.isKerberosKeyTabLoginRenewalEnabled());
+    assertTrue(UserGroupInformation.getKerberosLoginRenewalExecutor()
+        .isPresent());
   }
 
   @Test
@@ -309,14 +307,12 @@ public class TestUGILoginFromKeytab {
     UserGroupInformation.loginUserFromKeytab(principal, keytab.getPath());
 
     UserGroupInformation ugi = UserGroupInformation.getLoginUser();
-    Assert.assertEquals(UserGroupInformation.AuthenticationMethod.KERBEROS,
-            ugi.getAuthenticationMethod());
-    Assert.assertTrue(ugi.isFromKeytab());
-    Assert.assertFalse(
-            UserGroupInformation.isKerberosKeyTabLoginRenewalEnabled());
-    Assert.assertFalse(
-            UserGroupInformation.getKerberosLoginRenewalExecutor()
-                    .isPresent());
+    assertEquals(UserGroupInformation.AuthenticationMethod.KERBEROS,
+        ugi.getAuthenticationMethod());
+    assertTrue(ugi.isFromKeytab());
+    assertFalse(UserGroupInformation.isKerberosKeyTabLoginRenewalEnabled());
+    assertFalse(UserGroupInformation.getKerberosLoginRenewalExecutor()
+        .isPresent());
   }
 
   private static KerberosTicket getTicket(UserGroupInformation ugi) {
@@ -329,13 +325,11 @@ public class TestUGILoginFromKeytab {
   // the expected principal.
   private static KerberosTicket checkTicketAndKeytab(UserGroupInformation ugi,
       KerberosPrincipal principal, boolean expectIsKeytab) {
-    Assert.assertEquals("wrong principal",
-      principal.getName(), ugi.getUserName());
-    Assert.assertEquals("is not keytab",
-      expectIsKeytab, ugi.isFromKeytab());
+    assertEquals(principal.getName(), ugi.getUserName(), "wrong principal");
+    assertEquals(expectIsKeytab, ugi.isFromKeytab(), "is not keytab");
     KerberosTicket ticket = getTicket(ugi);
-    Assert.assertNotNull("no ticket", ticket);
-    Assert.assertEquals("wrong principal", principal, ticket.getClient());
+    assertNotNull(ticket, "no ticket");
+    assertEquals(principal, ticket.getClient(), "wrong principal");
     return ticket;
   }
 
@@ -377,16 +371,16 @@ public class TestUGILoginFromKeytab {
         loginUser.reloginFromKeytab();
         KerberosTicket newLoginTicket =
             checkTicketAndKeytab(loginUser, principal1, true);
-        Assert.assertNotEquals(loginTicket.getAuthTime(),
+        assertNotEquals(loginTicket.getAuthTime(),
             newLoginTicket.getAuthTime());
 
         // verify an "external" subject ticket does not change.
         extSubjectUser.reloginFromKeytab();
-        Assert.assertSame(ticket,
+        assertSame(ticket,
             checkTicketAndKeytab(extSubjectUser, principal2, false));
 
         // verify subject ugi relogin did not affect the login user.
-        Assert.assertSame(newLoginTicket,
+        assertSame(newLoginTicket,
             checkTicketAndKeytab(loginUser, principal1, true));
 
         return null;
@@ -409,7 +403,7 @@ public class TestUGILoginFromKeytab {
         principal1.getName(), keytab1.getPath());
     final UserGroupInformation originalLoginUser =
         UserGroupInformation.getLoginUser();
-    Assert.assertNotNull(getUser(originalLoginUser.getSubject()).getLogin());
+    assertNotNull(getUser(originalLoginUser.getSubject()).getLogin());
 
     originalLoginUser.doAs(new PrivilegedExceptionAction<Void>() {
       @Override
@@ -426,7 +420,7 @@ public class TestUGILoginFromKeytab {
 
         // verify the new login user is external.
         UserGroupInformation.loginUserFromSubject(subject);
-        Assert.assertNull(getUser(subject).getLogin());
+        assertNull(getUser(subject).getLogin());
         UserGroupInformation extLoginUser =
           UserGroupInformation.getLoginUser();
         KerberosTicket extLoginUserTicket =
@@ -435,17 +429,17 @@ public class TestUGILoginFromKeytab {
         // verify subject-based login user does not get a new ticket, and
         // original login user not affected.
         extLoginUser.reloginFromKeytab();
-        Assert.assertSame(extLoginUserTicket,
-          checkTicketAndKeytab(extLoginUser, principal2, false));
-        Assert.assertSame(originalLoginUserTicket,
-          checkTicketAndKeytab(originalLoginUser, principal1, true));
+        assertSame(extLoginUserTicket,
+            checkTicketAndKeytab(extLoginUser, principal2, false));
+        assertSame(originalLoginUserTicket,
+            checkTicketAndKeytab(originalLoginUser, principal1, true));
 
         // verify original login user gets a new ticket, new login user
         // not affected.
         originalLoginUser.reloginFromKeytab();
-        Assert.assertNotSame(originalLoginUserTicket,
+        assertNotSame(originalLoginUserTicket,
             checkTicketAndKeytab(originalLoginUser, principal1, true));
-        Assert.assertSame(extLoginUserTicket,
+        assertSame(extLoginUserTicket,
             checkTicketAndKeytab(extLoginUser, principal2, false));
         return null;
       }
@@ -465,27 +459,28 @@ public class TestUGILoginFromKeytab {
     checkTicketAndKeytab(loginUser, principal, true);
 
     // move the keytab to induce a relogin failure.
-    Assert.assertTrue(keytab.renameTo(keytabBackup));
+    assertTrue(keytab.renameTo(keytabBackup));
     try {
       loginUser.reloginFromKeytab();
-      Assert.fail("relogin should fail");
+      fail("relogin should fail");
     } catch (KerberosAuthException kae) {
       // expected.
     }
 
     // even though no KeyTab object, ugi should know it's keytab based.
-    Assert.assertTrue(loginUser.isFromKeytab());
-    Assert.assertNull(getTicket(loginUser));
+    assertTrue(loginUser.isFromKeytab());
+    assertNull(getTicket(loginUser));
 
     // move keytab back to enable relogin to succeed.
-    Assert.assertTrue(keytabBackup.renameTo(keytab));
+    assertTrue(keytabBackup.renameTo(keytab));
     loginUser.reloginFromKeytab();
     checkTicketAndKeytab(loginUser, principal, true);
   }
 
   // verify getting concurrent relogins blocks to avoid indeterminate
   // credentials corruption, but getting a ugi for the subject does not block.
-  @Test(timeout=180000)
+  @Test
+  @Timeout(value = 180)
   public void testConcurrentRelogin() throws Exception {
     final CyclicBarrier barrier = new CyclicBarrier(2);
     final CountDownLatch latch = new CountDownLatch(1);
@@ -537,8 +532,7 @@ public class TestUGILoginFromKeytab {
         });
     // wait for the thread to block on the barrier in the logout of the
     // relogin.
-    assertTrue("first relogin didn't block",
-      latch.await(2, TimeUnit.SECONDS));
+    assertTrue(latch.await(2, TimeUnit.SECONDS), "first relogin didn't block");
 
     // although the logout removed the keytab instance, verify the ugi
     // knows from its login params that it is supposed to be from a keytab.

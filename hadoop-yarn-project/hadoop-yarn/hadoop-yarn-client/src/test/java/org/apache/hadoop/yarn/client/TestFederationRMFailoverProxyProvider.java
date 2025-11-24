@@ -25,6 +25,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.io.retry.FailoverProxyProvider.ProxyInfo;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsRequest;
@@ -44,11 +45,13 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterState;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 import org.apache.hadoop.yarn.server.resourcemanager.HATestUtil;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.mock;
@@ -68,7 +71,7 @@ public class TestFederationRMFailoverProxyProvider {
 
   private GetClusterMetricsResponse threadResponse;
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException, YarnException {
     conf = new YarnConfiguration();
 
@@ -77,23 +80,25 @@ public class TestFederationRMFailoverProxyProvider {
 
     stateStore = spy(new MemoryFederationStateStore());
     stateStore.init(conf);
-    FederationStateStoreFacade.getInstance().reinitialize(stateStore, conf);
+    FederationStateStoreFacade.getInstance(conf).reinitialize(stateStore, conf);
     verify(stateStore, times(0))
         .getSubClusters(any(GetSubClustersInfoRequest.class));
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     stateStore.close();
     stateStore = null;
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testFederationRMFailoverProxyProvider() throws Exception {
     testProxyProvider(true);
   }
 
-  @Test (timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testFederationRMFailoverProxyProviderWithoutFlushFacadeCache()
       throws Exception {
     testProxyProvider(false);
@@ -156,7 +161,7 @@ public class TestFederationRMFailoverProxyProvider {
         .getSubClusters(any(GetSubClustersInfoRequest.class));
 
     threadResponse = null;
-    Thread thread = new Thread(new Runnable() {
+    Thread thread = new SubjectInheritingThread(new Runnable() {
       @Override
       public void run() {
         try {
@@ -180,7 +185,7 @@ public class TestFederationRMFailoverProxyProvider {
           .getSubClusters(any(GetSubClustersInfoRequest.class));
 
       // Force flush cache, so that it will pick up the new RM address
-      FederationStateStoreFacade.getInstance().getSubCluster(subClusterId,
+      FederationStateStoreFacade.getInstance(conf).getSubCluster(subClusterId,
           true);
     }
 
@@ -203,8 +208,8 @@ public class TestFederationRMFailoverProxyProvider {
   }
 
   private void checkResponse(GetClusterMetricsResponse response) {
-    Assert.assertNotNull(response.getClusterMetrics());
-    Assert.assertEquals(0,
+    assertNotNull(response.getClusterMetrics());
+    assertEquals(0,
         response.getClusterMetrics().getNumActiveNodeManagers());
   }
 
@@ -267,7 +272,7 @@ public class TestFederationRMFailoverProxyProvider {
     });
 
     final ProxyInfo currentProxy = provider.getProxy();
-    Assert.assertEquals("user1", provider.getLastProxyUGI().getUserName());
+    assertEquals("user1", provider.getLastProxyUGI().getUserName());
 
     user2.doAs(new PrivilegedExceptionAction<Object>() {
       @Override
@@ -276,7 +281,7 @@ public class TestFederationRMFailoverProxyProvider {
         return null;
       }
     });
-    Assert.assertEquals("user1", provider.getLastProxyUGI().getUserName());
+    assertEquals("user1", provider.getLastProxyUGI().getUserName());
 
     provider.close();
   }

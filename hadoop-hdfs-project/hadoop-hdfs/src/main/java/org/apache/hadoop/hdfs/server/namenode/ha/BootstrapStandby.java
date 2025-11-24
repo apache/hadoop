@@ -33,6 +33,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -170,6 +171,7 @@ public class BootstrapStandby implements Tool, Configurable {
     NamenodeProtocol proxy = null;
     NamespaceInfo nsInfo = null;
     boolean isUpgradeFinalized = false;
+    boolean isRollingUpgrade = false;
     RemoteNameNodeInfo proxyInfo = null;
     for (int i = 0; i < remoteNNs.size(); i++) {
       proxyInfo = remoteNNs.get(i);
@@ -180,8 +182,9 @@ public class BootstrapStandby implements Tool, Configurable {
         // bootstrapping the other NNs from that layout, it will only contact the single NN.
         // However, if there cluster is already running and you are adding a NN later (e.g.
         // replacing a failed NN), then this will bootstrap from any node in the cluster.
-        nsInfo = proxy.versionRequest();
+        nsInfo = getProxyNamespaceInfo(proxy);
         isUpgradeFinalized = proxy.isUpgradeFinalized();
+        isRollingUpgrade = proxy.isRollingUpgrade();
         break;
       } catch (IOException ioe) {
         LOG.warn("Unable to fetch namespace information from remote NN at " + otherIpcAddress
@@ -199,10 +202,17 @@ public class BootstrapStandby implements Tool, Configurable {
       return ERR_CODE_FAILED_CONNECT;
     }
 
-    if (!checkLayoutVersion(nsInfo)) {
-      LOG.error("Layout version on remote node (" + nsInfo.getLayoutVersion()
-          + ") does not match " + "this node's layout version ("
-          + HdfsServerConstants.NAMENODE_LAYOUT_VERSION + ")");
+    if (!checkLayoutVersion(nsInfo, isRollingUpgrade)) {
+      if(isRollingUpgrade) {
+        LOG.error("Layout version on remote node in rolling upgrade ({}, {})"
+            + " is not compatible based on minimum compatible version ({})",
+            nsInfo.getLayoutVersion(), proxyInfo.getIpcAddress(),
+            HdfsServerConstants.MINIMUM_COMPATIBLE_NAMENODE_LAYOUT_VERSION);
+      } else {
+        LOG.error("Layout version on remote node ({}) does not match this "
+            + "node's service layout version ({})", nsInfo.getLayoutVersion(),
+            nsInfo.getServiceLayoutVersion());
+      }
       return ERR_CODE_INVALID_VERSION;
     }
 
@@ -217,9 +227,11 @@ public class BootstrapStandby implements Tool, Configurable {
         "            Block pool ID: " + nsInfo.getBlockPoolID() + "\n" +
         "               Cluster ID: " + nsInfo.getClusterID() + "\n" +
         "           Layout version: " + nsInfo.getLayoutVersion() + "\n" +
+        "   Service Layout version: " + nsInfo.getServiceLayoutVersion() + "\n" +
         "       isUpgradeFinalized: " + isUpgradeFinalized + "\n" +
+        "         isRollingUpgrade: " + isRollingUpgrade + "\n" +
         "=====================================================");
-    
+
     NNStorage storage = new NNStorage(conf, dirsToFormat, editUrisToFormat);
 
     if (!isUpgradeFinalized) {
@@ -231,12 +243,12 @@ public class BootstrapStandby implements Tool, Configurable {
       if (!doPreUpgrade(storage, nsInfo)) {
         return ERR_CODE_ALREADY_FORMATTED;
       }
-    } else if (!format(storage, nsInfo)) { // prompt the user to format storage
+    } else if (!format(storage, nsInfo, isRollingUpgrade)) { // prompt the user to format storage
       return ERR_CODE_ALREADY_FORMATTED;
     }
 
     // download the fsimage from active namenode
-    int download = downloadImage(storage, proxy, proxyInfo);
+    int download = downloadImage(storage, proxy, proxyInfo, isRollingUpgrade);
     if (download != 0) {
       return download;
     }
@@ -254,20 +266,26 @@ public class BootstrapStandby implements Tool, Configurable {
     return 0;
   }
 
+  @VisibleForTesting
+  public NamespaceInfo getProxyNamespaceInfo(NamenodeProtocol proxy)
+      throws IOException {
+    return proxy.versionRequest();
+  }
+
   /**
    * Iterate over all the storage directories, checking if it should be
    * formatted. Format the storage if necessary and allowed by the user.
    * @return True if formatting is processed
    */
-  private boolean format(NNStorage storage, NamespaceInfo nsInfo)
-      throws IOException {
+  private boolean format(NNStorage storage, NamespaceInfo nsInfo,
+      boolean isRollingUpgrade) throws IOException {
     // Check with the user before blowing away data.
     if (!Storage.confirmFormat(storage.dirIterable(null), force, interactive)) {
       storage.close();
       return false;
     } else {
       // Format the storage (writes VERSION file)
-      storage.format(nsInfo);
+      storage.format(nsInfo, isRollingUpgrade);
       return true;
     }
   }
@@ -302,7 +320,7 @@ public class BootstrapStandby implements Tool, Configurable {
     // format the storage. Although this format is done through the new
     // software, since in HA setup the SBN is rolled back through
     // "-bootstrapStandby", we should still be fine.
-    if (!isFormatted && !format(storage, nsInfo)) {
+    if (!isFormatted && !format(storage, nsInfo, false)) {
       return false;
     }
 
@@ -333,12 +351,32 @@ public class BootstrapStandby implements Tool, Configurable {
     }
   }
 
-  private int downloadImage(NNStorage storage, NamenodeProtocol proxy, RemoteNameNodeInfo proxyInfo)
+  private int downloadImage(NNStorage storage, NamenodeProtocol proxy, RemoteNameNodeInfo proxyInfo,
+        boolean isRollingUpgrade)
       throws IOException {
     // Load the newly formatted image, using all of the directories
     // (including shared edits)
     final long imageTxId = proxy.getMostRecentCheckpointTxId();
     final long curTxId = proxy.getTransactionID();
+
+    if (isRollingUpgrade) {
+      final long rollbackTxId =
+          proxy.getMostRecentNameNodeFileTxId(NameNodeFile.IMAGE_ROLLBACK);
+      assert rollbackTxId != HdfsServerConstants.INVALID_TXID :
+          "Expected a valid TXID for fsimage_rollback file";
+      FSImage rollbackImage = new FSImage(conf);
+      try {
+        rollbackImage.getStorage().setStorageInfo(storage);
+        MD5Hash hash = TransferFsImage.downloadImageToStorage(
+            proxyInfo.getHttpAddress(), rollbackTxId, storage, true, true);
+        rollbackImage.saveDigestAndRenameCheckpointImage(
+            NameNodeFile.IMAGE_ROLLBACK, rollbackTxId, hash);
+      } catch (IOException ioe) {
+        throw ioe;
+      } finally {
+        rollbackImage.close();
+      }
+    }
     FSImage image = new FSImage(conf);
     try {
       image.getStorage().setStorageInfo(storage);
@@ -405,8 +443,14 @@ public class BootstrapStandby implements Tool, Configurable {
     }
   }
 
-  private boolean checkLayoutVersion(NamespaceInfo nsInfo) throws IOException {
-    return (nsInfo.getLayoutVersion() == HdfsServerConstants.NAMENODE_LAYOUT_VERSION);
+  private boolean checkLayoutVersion(NamespaceInfo nsInfo, boolean isRollingUpgrade) {
+    if (isRollingUpgrade) {
+      // During a rolling upgrade the service layout versions may be different,
+      // but we should check that the layout version being sent is compatible
+      return nsInfo.getLayoutVersion() <=
+          HdfsServerConstants.MINIMUM_COMPATIBLE_NAMENODE_LAYOUT_VERSION;
+    }
+    return nsInfo.getLayoutVersion() == nsInfo.getServiceLayoutVersion();
   }
 
   private void parseConfAndFindOtherNN() throws IOException {

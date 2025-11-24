@@ -45,7 +45,8 @@ public enum FSOperationType {
     SET_OWNER("SO"),
     SET_ACL("SA"),
     TEST_OP("TS"),
-    WRITE("WR");
+    WRITE("WR"),
+    INIT("IN");
 
     private final String opCode;
 

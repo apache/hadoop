@@ -20,8 +20,8 @@ package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.DF;
 import org.apache.hadoop.fs.StorageType;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DU_RESERVED_KEY;
@@ -31,7 +31,8 @@ import static org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.ReservedSpac
 import static org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.ReservedSpaceCalculator.ReservedSpaceCalculatorAggressive;
 import static org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.ReservedSpaceCalculator.ReservedSpaceCalculatorConservative;
 import static org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.ReservedSpaceCalculator.ReservedSpaceCalculatorPercentage;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.when;
 
 /**
@@ -43,7 +44,7 @@ public class TestReservedSpaceCalculator {
   private DF usage;
   private ReservedSpaceCalculator reserved;
 
-  @Before
+  @BeforeEach
   public void setUp() {
     conf = new Configuration();
     usage = Mockito.mock(DF.class);
@@ -168,21 +169,77 @@ public class TestReservedSpaceCalculator {
     checkReserved(StorageType.ARCHIVE, 100000, 5000);
   }
 
-  @Test(expected = IllegalStateException.class)
+  @Test
+  public void testReservedSpaceAbsolutePerDir() {
+    conf.setClass(DFS_DATANODE_DU_RESERVED_CALCULATOR_KEY, ReservedSpaceCalculatorAbsolute.class,
+        ReservedSpaceCalculator.class);
+
+    String dir1 = "/data/hdfs1/data";
+    String dir2 = "/data/hdfs2/data";
+    String dir3 = "/data/hdfs3/data";
+
+    conf.setLong(DFS_DATANODE_DU_RESERVED_KEY + "." + dir1 + ".ssd", 900);
+    conf.setLong(DFS_DATANODE_DU_RESERVED_KEY + "." + dir1, 1800);
+    conf.setLong(DFS_DATANODE_DU_RESERVED_KEY + "." + dir2, 2700);
+    conf.setLong(DFS_DATANODE_DU_RESERVED_KEY + ".ssd", 3600);
+    conf.setLong(DFS_DATANODE_DU_RESERVED_KEY, 4500);
+
+    checkReserved(StorageType.SSD, 10000, 900, dir1);
+    checkReserved(StorageType.DISK, 10000, 1800, dir1);
+    checkReserved(StorageType.SSD, 10000, 2700, dir2);
+    checkReserved(StorageType.DISK, 10000, 2700, dir2);
+    checkReserved(StorageType.SSD, 10000, 3600, dir3);
+    checkReserved(StorageType.DISK, 10000, 4500, dir3);
+  }
+
+  @Test
+  public void testReservedSpacePercentagePerDir() {
+    conf.setClass(DFS_DATANODE_DU_RESERVED_CALCULATOR_KEY,
+            ReservedSpaceCalculatorPercentage.class,
+            ReservedSpaceCalculator.class);
+
+    String dir1 = "/data/hdfs1/data";
+    String dir2 = "/data/hdfs2/data";
+    String dir3 = "/data/hdfs3/data";
+
+    // Set percentage reserved values for different directories
+    conf.setLong(DFS_DATANODE_DU_RESERVED_PERCENTAGE_KEY + "." + dir1 + ".ssd", 20);
+    conf.setLong(DFS_DATANODE_DU_RESERVED_PERCENTAGE_KEY + "." + dir1, 10);
+    conf.setLong(DFS_DATANODE_DU_RESERVED_PERCENTAGE_KEY + "." + dir2, 25);
+    conf.setLong(DFS_DATANODE_DU_RESERVED_PERCENTAGE_KEY + ".ssd", 30);
+    conf.setLong(DFS_DATANODE_DU_RESERVED_PERCENTAGE_KEY, 40);
+
+    // Verify reserved space calculations for different directories and storage types
+    checkReserved(StorageType.SSD, 10000, 2000, dir1);
+    checkReserved(StorageType.DISK, 10000, 1000, dir1);
+    checkReserved(StorageType.SSD, 10000, 2500, dir2);
+    checkReserved(StorageType.DISK, 10000, 2500, dir2);
+    checkReserved(StorageType.SSD, 10000, 3000, dir3);
+    checkReserved(StorageType.DISK, 10000, 4000, dir3);
+  }
+
+  @Test
   public void testInvalidCalculator() {
-    conf.set(DFS_DATANODE_DU_RESERVED_CALCULATOR_KEY, "INVALIDTYPE");
-    reserved = new ReservedSpaceCalculator.Builder(conf)
-        .setUsage(usage)
-        .setStorageType(StorageType.DISK)
-        .build();
+    assertThrows(IllegalStateException.class, () -> {
+      conf.set(DFS_DATANODE_DU_RESERVED_CALCULATOR_KEY, "INVALIDTYPE");
+      reserved = new ReservedSpaceCalculator.Builder(conf)
+          .setUsage(usage)
+          .setStorageType(StorageType.DISK)
+          .build();
+    });
   }
 
   private void checkReserved(StorageType storageType,
       long totalCapacity, long reservedExpected) {
+    checkReserved(storageType, totalCapacity, reservedExpected, "NULL");
+  }
+
+  private void checkReserved(StorageType storageType,
+      long totalCapacity, long reservedExpected, String dir) {
     when(usage.getCapacity()).thenReturn(totalCapacity);
 
     reserved = new ReservedSpaceCalculator.Builder(conf).setUsage(usage)
-        .setStorageType(storageType).build();
+        .setStorageType(storageType).setDir(dir).build();
     assertEquals(reservedExpected, reserved.getReserved());
   }
 }

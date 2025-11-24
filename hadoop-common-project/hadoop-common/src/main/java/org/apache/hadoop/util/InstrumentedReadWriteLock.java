@@ -28,7 +28,7 @@ import org.slf4j.Logger;
 /**
  * This is a wrap class of a {@link ReentrantReadWriteLock}.
  * It implements the interface {@link ReadWriteLock}, and can be used to
- * create instrumented <tt>ReadLock</tt> and <tt>WriteLock</tt>.
+ * create instrumented <code>ReadLock</code> and <code>WriteLock</code>.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable

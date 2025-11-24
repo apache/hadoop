@@ -32,12 +32,15 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptS
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppRemovedSchedulerEvent;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.TestCapacitySchedulerNewQueueAutoCreation.MAX_MEMORY;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestAutoCreatedQueueDeletionPolicy
     extends TestCapacitySchedulerAutoCreatedQueueBase {
@@ -48,6 +51,11 @@ public class TestAutoCreatedQueueDeletionPolicy
 
   private CapacitySchedulerQueueManager autoQueueHandler;
 
+  public static final QueuePath ROOT = new QueuePath(CapacitySchedulerConfiguration.ROOT);
+  public static final QueuePath ROOT_A = new QueuePath("root", "a");
+  public static final QueuePath ROOT_A_A1 = QueuePath.createFromQueues("root", "a", "a1");
+  public static final QueuePath ROOT_B = new QueuePath("root", "b");
+
   /*
     Create the following structure:
              root
@@ -56,27 +64,27 @@ public class TestAutoCreatedQueueDeletionPolicy
       /
     a1
   */
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     csConf = new CapacitySchedulerConfiguration();
     csConf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
         ResourceScheduler.class);
 
     // By default, set 3 queues, a/b, and a.a1
-    csConf.setQueues("root", new String[]{"a", "b"});
-    csConf.setNonLabeledQueueWeight("root", 1f);
-    csConf.setNonLabeledQueueWeight("root.a", 1f);
-    csConf.setNonLabeledQueueWeight("root.b", 1f);
-    csConf.setQueues("root.a", new String[]{"a1"});
-    csConf.setNonLabeledQueueWeight("root.a.a1", 1f);
-    csConf.setAutoQueueCreationV2Enabled("root", true);
-    csConf.setAutoQueueCreationV2Enabled("root.a", true);
-    csConf.setAutoQueueCreationV2Enabled(PARENT_QUEUE, true);
+    csConf.setQueues(ROOT, new String[]{"a", "b"});
+    csConf.setNonLabeledQueueWeight(ROOT, 1f);
+    csConf.setNonLabeledQueueWeight(ROOT_A, 1f);
+    csConf.setNonLabeledQueueWeight(ROOT_B, 1f);
+    csConf.setQueues(ROOT_A, new String[]{"a1"});
+    csConf.setNonLabeledQueueWeight(ROOT_A_A1, 1f);
+    csConf.setAutoQueueCreationV2Enabled(ROOT, true);
+    csConf.setAutoQueueCreationV2Enabled(ROOT_A, true);
+    csConf.setAutoQueueCreationV2Enabled(PARENT_QUEUE_PATH, true);
     // Test for auto deletion when expired
     csConf.setAutoExpiredDeletionTime(1);
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     if (mockRM != null) {
       mockRM.stop();
@@ -89,14 +97,14 @@ public class TestAutoCreatedQueueDeletionPolicy
     // Make sure e not null
     AbstractCSQueue e = (AbstractCSQueue) cs.
         getQueue("root.e");
-    Assert.assertNotNull(e);
-    Assert.assertTrue(e.isDynamicQueue());
+    assertNotNull(e);
+    assertTrue(e.isDynamicQueue());
 
     // Make sure e1 not null
     AbstractCSQueue e1 =  (AbstractCSQueue)cs.
         getQueue("root.e.e1");
-    Assert.assertNotNull(e1);
-    Assert.assertTrue(e1.isDynamicQueue());
+    assertNotNull(e1);
+    assertTrue(e1.isDynamicQueue());
     // signal it because of without submit created
     e1.setLastSubmittedTimestamp(Time.monotonicNow());
 
@@ -110,8 +118,8 @@ public class TestAutoCreatedQueueDeletionPolicy
     // Make sure user0 not null
     AbstractCSQueue user0 = (AbstractCSQueue) cs
         .getQueue("root.e.user_0");
-    Assert.assertNotNull(user0);
-    Assert.assertTrue(user0.isDynamicQueue());
+    assertNotNull(user0);
+    assertTrue(user0.isDynamicQueue());
     // Make app finished
     AppAttemptRemovedSchedulerEvent event =
         new AppAttemptRemovedSchedulerEvent(user0AppAttemptId,
@@ -122,7 +130,7 @@ public class TestAutoCreatedQueueDeletionPolicy
     cs.handle(rEvent);
 
     // There are no apps in user0
-    Assert.assertEquals(user0.getNumApplications(), 0);
+    assertEquals(user0.getNumApplications(), 0);
 
     // Wait the time expired.
     long l1 = user0.getLastSubmittedTimestamp();
@@ -143,29 +151,29 @@ public class TestAutoCreatedQueueDeletionPolicy
     // Make sure user_0 , e1 queue
     // will be scheduled to mark for deletion
     // because it is expired for deletion.
-    Assert.assertEquals(policy.getMarkedForDeletion().size(), 2);
-    Assert.assertTrue(policy.
+    assertEquals(policy.getMarkedForDeletion().size(), 2);
+    assertTrue(policy.
         getMarkedForDeletion().contains("root.e.user_0"));
-    Assert.assertTrue(policy.
+    assertTrue(policy.
         getMarkedForDeletion().contains("root.e.e1"));
     // Make sure the send for deletion is empty for first mark.
-    Assert.assertEquals(policy.getSentForDeletion().size(), 0);
+    assertEquals(policy.getSentForDeletion().size(), 0);
 
     // Make sure user_0 , e1 queue will be scheduled to send for deletion
     policy.prepareForAutoDeletion();
-    Assert.assertEquals(policy.getMarkedForDeletion().size(), 0);
-    Assert.assertEquals(policy.getSentForDeletion().size(), 2);
+    assertEquals(policy.getMarkedForDeletion().size(), 0);
+    assertEquals(policy.getSentForDeletion().size(), 2);
 
     // Make sure e1, user0 not null before trigger remove.
     e1 = (AbstractCSQueue) cs.getQueue("root.e.e1");
-    Assert.assertNotNull(e1);
+    assertNotNull(e1);
     user0 =  (AbstractCSQueue)cs.getQueue("root.e.user_0");
-    Assert.assertNotNull(user0);
+    assertNotNull(user0);
 
     // Make sure e1, user0 will be null after trigger remove.
     policy.triggerAutoDeletionForExpiredQueues();
-    Assert.assertEquals(policy.getMarkedForDeletion().size(), 0);
-    Assert.assertEquals(policy.getSentForDeletion().size(), 0);
+    assertEquals(policy.getMarkedForDeletion().size(), 0);
+    assertEquals(policy.getSentForDeletion().size(), 0);
 
     // Wait e1, user0 auto deleted.
     GenericTestUtils.waitFor(()-> cs.getQueue(
@@ -175,13 +183,13 @@ public class TestAutoCreatedQueueDeletionPolicy
         "root.e.user_0") == null,
         100, 2000);
     e1 = (AbstractCSQueue) cs.getQueue("root.e.e1");
-    Assert.assertNull(e1);
+    assertNull(e1);
     user0 =  (AbstractCSQueue)cs.getQueue("root.e.user_0");
-    Assert.assertNull(user0);
+    assertNull(user0);
 
     // Make sure e is not null, before schedule.
     e = (AbstractCSQueue) cs.getQueue("root.e");
-    Assert.assertNotNull(e);
+    assertNotNull(e);
 
     // Expired for e
     // Wait e marked for deletion.
@@ -193,29 +201,29 @@ public class TestAutoCreatedQueueDeletionPolicy
     }, 100, 2000);
     policy.editSchedule();
     e = (AbstractCSQueue) cs.getQueue("root.e");
-    Assert.assertNotNull(e);
-    Assert.assertEquals(policy.getMarkedForDeletion().size(), 1);
-    Assert.assertEquals(policy.getSentForDeletion().size(), 0);
-    Assert.assertTrue(policy.getMarkedForDeletion().contains("root.e"));
+    assertNotNull(e);
+    assertEquals(policy.getMarkedForDeletion().size(), 1);
+    assertEquals(policy.getSentForDeletion().size(), 0);
+    assertTrue(policy.getMarkedForDeletion().contains("root.e"));
 
     // Make sure e queue will be scheduled to send for deletion
     policy.prepareForAutoDeletion();
-    Assert.assertEquals(policy.getMarkedForDeletion().size(), 0);
-    Assert.assertEquals(policy.getSentForDeletion().size(), 1);
+    assertEquals(policy.getMarkedForDeletion().size(), 0);
+    assertEquals(policy.getSentForDeletion().size(), 1);
 
     // Make sure e not null before trigger remove.
     e = (AbstractCSQueue) cs.getQueue("root.e");
-    Assert.assertNotNull(e);
+    assertNotNull(e);
 
     // Make sure e will be null after trigger remove.
     policy.triggerAutoDeletionForExpiredQueues();
     // Wait e1 auto deleted.
     GenericTestUtils.waitFor(()-> cs.getQueue(
         "root.e") == null, 100, 2000);
-    Assert.assertEquals(policy.getMarkedForDeletion().size(), 0);
-    Assert.assertEquals(policy.getSentForDeletion().size(), 0);
+    assertEquals(policy.getMarkedForDeletion().size(), 0);
+    assertEquals(policy.getSentForDeletion().size(), 0);
     e = (AbstractCSQueue) cs.getQueue("root.e");
-    Assert.assertNull(e);
+    assertNull(e);
   }
 
   public void prepareForSchedule() throws Exception{
@@ -223,8 +231,8 @@ public class TestAutoCreatedQueueDeletionPolicy
 
     policy.editSchedule();
     // There are no queues should be scheduled
-    Assert.assertEquals(policy.getMarkedForDeletion().size(), 0);
-    Assert.assertEquals(policy.getSentForDeletion().size(), 0);
+    assertEquals(policy.getMarkedForDeletion().size(), 0);
+    assertEquals(policy.getSentForDeletion().size(), 0);
 
     createQueue("root.e.e1");
   }

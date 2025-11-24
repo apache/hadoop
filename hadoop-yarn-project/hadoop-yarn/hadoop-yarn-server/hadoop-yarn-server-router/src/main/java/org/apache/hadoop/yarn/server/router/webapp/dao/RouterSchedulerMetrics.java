@@ -51,9 +51,20 @@ public class RouterSchedulerMetrics {
 
   public RouterSchedulerMetrics(SubClusterInfo subClusterInfo, RouterClusterMetrics metrics,
       SchedulerOverviewInfo overview) {
+    if (subClusterInfo != null) {
+      initRouterSchedulerMetrics(subClusterInfo.getSubClusterId().getId(), overview);
+    }
+  }
+
+  public RouterSchedulerMetrics(String localClusterName, SchedulerOverviewInfo overview) {
+    initRouterSchedulerMetrics(localClusterName, overview);
+  }
+
+  private void initRouterSchedulerMetrics(String subClusterName,
+      SchedulerOverviewInfo overview) {
     try {
       // Parse Scheduler Information.
-      this.subCluster = subClusterInfo.getSubClusterId().getId();
+      this.subCluster = subClusterName;
       this.schedulerType = overview.getSchedulerType();
       this.schedulingResourceType = overview.getSchedulingResourceType();
       this.minimumAllocation = overview.getMinimumAllocation().toString();

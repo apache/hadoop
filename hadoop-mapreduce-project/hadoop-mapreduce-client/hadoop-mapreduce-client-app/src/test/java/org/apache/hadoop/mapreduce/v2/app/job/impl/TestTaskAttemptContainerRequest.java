@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.mapreduce.v2.app.job.impl;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -27,8 +30,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.junit.After;
-import org.junit.Assert;
+import org.junit.jupiter.api.AfterEach;
 
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileStatus;
@@ -58,12 +60,12 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.util.SystemClock;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 @SuppressWarnings({"rawtypes"})
 public class TestTaskAttemptContainerRequest {
 
-  @After
+  @AfterEach
   public void cleanup() {
     UserGroupInformation.reset();
   }
@@ -72,8 +74,7 @@ public class TestTaskAttemptContainerRequest {
   public void testAttemptContainerRequest() throws Exception {
     final Text SECRET_KEY_ALIAS = new Text("secretkeyalias");
     final byte[] SECRET_KEY = ("secretkey").getBytes();
-    Map<ApplicationAccessType, String> acls =
-        new HashMap<ApplicationAccessType, String>(1);
+    Map<ApplicationAccessType, String> acls = new HashMap<>(1);
     acls.put(ApplicationAccessType.VIEW_APP, "otheruser");
     ApplicationId appId = ApplicationId.newInstance(1, 1);
     JobId jobId = MRBuilderUtils.newJobId(appId, 1);
@@ -95,7 +96,7 @@ public class TestTaskAttemptContainerRequest {
 
     Credentials credentials = new Credentials();
     credentials.addSecretKey(SECRET_KEY_ALIAS, SECRET_KEY);
-    Token<JobTokenIdentifier> jobToken = new Token<JobTokenIdentifier>(
+    Token<JobTokenIdentifier> jobToken = new Token<>(
         ("tokenid").getBytes(), ("tokenpw").getBytes(),
         new Text("tokenkind"), new Text("tokenservice"));
 
@@ -114,7 +115,7 @@ public class TestTaskAttemptContainerRequest {
             mock(WrappedJvmID.class), taListener,
             credentials);
 
-    Assert.assertEquals("ACLs mismatch", acls, launchCtx.getApplicationACLs());
+    assertEquals(acls, launchCtx.getApplicationACLs(), "ACLs mismatch");
     Credentials launchCredentials = new Credentials();
 
     DataInputByteBuffer dibb = new DataInputByteBuffer();
@@ -125,17 +126,14 @@ public class TestTaskAttemptContainerRequest {
     for (Token<? extends TokenIdentifier> token : credentials.getAllTokens()) {
       Token<? extends TokenIdentifier> launchToken =
           launchCredentials.getToken(token.getService());
-      Assert.assertNotNull("Token " + token.getService() + " is missing",
-          launchToken);
-      Assert.assertEquals("Token " + token.getService() + " mismatch",
-          token, launchToken);
+      assertNotNull(launchToken, "Token " + token.getService() + " is missing");
+      assertEquals(token, launchToken, "Token " + token.getService() + " mismatch");
     }
 
     // verify the secret key is in the launch context
-    Assert.assertNotNull("Secret key missing",
-        launchCredentials.getSecretKey(SECRET_KEY_ALIAS));
-    Assert.assertTrue("Secret key mismatch", Arrays.equals(SECRET_KEY,
-        launchCredentials.getSecretKey(SECRET_KEY_ALIAS)));
+    assertNotNull(launchCredentials.getSecretKey(SECRET_KEY_ALIAS), "Secret key missing");
+    assertTrue(Arrays.equals(SECRET_KEY,
+        launchCredentials.getSecretKey(SECRET_KEY_ALIAS)), "Secret key mismatch");
   }
 
   static public class StubbedFS extends RawLocalFileSystem {

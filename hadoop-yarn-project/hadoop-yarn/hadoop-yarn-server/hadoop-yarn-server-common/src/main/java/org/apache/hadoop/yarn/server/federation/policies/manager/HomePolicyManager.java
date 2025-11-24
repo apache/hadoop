@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.federation.policies.manager;
 import java.nio.ByteBuffer;
 import java.util.Collections;
 
+import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.yarn.server.federation.policies.amrmproxy.HomeAMRMProxyPolicy;
 import org.apache.hadoop.yarn.server.federation.policies.dao.WeightedPolicyInfo;
 import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyInitializationException;
@@ -57,5 +58,22 @@ public class HomePolicyManager extends AbstractPolicyManager {
     ByteBuffer buf = weightedPolicyInfo.toByteBuffer();
     return SubClusterPolicyConfiguration.newInstance(
         getQueue(), this.getClass().getCanonicalName(), buf);
+  }
+
+  @Override
+  public WeightedPolicyInfo getWeightedPolicyInfo() {
+    throw new NotImplementedException(
+        "HomePolicyManager does not implement getWeightedPolicyInfo.");
+  }
+
+  @Override
+  public void setWeightedPolicyInfo(WeightedPolicyInfo weightedPolicyInfo) {
+    throw new NotImplementedException(
+        "HomePolicyManager does not implement setWeightedPolicyInfo.");
+  }
+
+  @Override
+  public boolean isSupportWeightedPolicyInfo() {
+    return false;
   }
 }

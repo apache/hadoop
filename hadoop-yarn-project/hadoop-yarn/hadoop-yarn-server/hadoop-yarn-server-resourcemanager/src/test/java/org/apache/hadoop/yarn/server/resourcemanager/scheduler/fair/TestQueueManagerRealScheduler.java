@@ -22,14 +22,14 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair
     .allocationfile.AllocationFileQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair
     .allocationfile.AllocationFileWriter;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * QueueManager tests that require a real scheduler
@@ -37,7 +37,7 @@ import static org.junit.Assert.assertEquals;
 public class TestQueueManagerRealScheduler extends FairSchedulerTestBase {
   private final static File ALLOC_FILE = new File(TEST_DIR, "test-queue-mgr");
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException {
     createConfiguration();
     writeAllocFile(30);
@@ -49,7 +49,7 @@ public class TestQueueManagerRealScheduler extends FairSchedulerTestBase {
     scheduler = (FairScheduler) resourceManager.getResourceScheduler();
   }
 
-  @After
+  @AfterEach
   public void teardown() {
     ALLOC_FILE.deleteOnExit();
     if (resourceManager != null) {

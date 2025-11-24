@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.hdfs.web;
 
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -31,12 +31,16 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.nio.channels.SocketChannel;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
 
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -47,14 +51,10 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.authentication.client.ConnectionConfigurator;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.After;
-import org.junit.AssumptionViolatedException;
-import org.junit.Before;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameter;
-import org.junit.runners.Parameterized.Parameters;
-import org.junit.Test;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Timeout;
+import org.opentest4j.TestAbortedException;
 
 /**
  * This test suite checks that WebHdfsFileSystem sets connection timeouts and
@@ -63,7 +63,6 @@ import org.junit.Test;
  * bogus server on the namenode HTTP port, which is rigged to not accept new
  * connections or to accept connections but not send responses.
  */
-@RunWith(Parameterized.class)
 public class TestWebHdfsTimeouts {
 
   private static final Logger LOG =
@@ -72,7 +71,6 @@ public class TestWebHdfsTimeouts {
   private static final int CLIENTS_TO_CONSUME_BACKLOG = 129;
   private static final int CONNECTION_BACKLOG = 1;
   private static final int SHORT_SOCKET_TIMEOUT = 200;
-  private static final int TEST_TIMEOUT = 100000;
 
   private List<SocketChannel> clients;
   private WebHdfsFileSystem fs;
@@ -96,7 +94,6 @@ public class TestWebHdfsTimeouts {
    * connection factory, and again with the timeouts set by
    * configuration options.
    */
-  @Parameters(name = "timeoutSource={0}")
   public static Collection<Object[]> data() {
     return Arrays.asList(new Object[][] {
       { TimeoutSource.ConnectionFactory },
@@ -104,11 +101,7 @@ public class TestWebHdfsTimeouts {
     });
   }
 
-  @Parameter
-  public TimeoutSource timeoutSource;
-
-  @Before
-  public void setUp() throws Exception {
+  public void setUp(TimeoutSource timeoutSource) throws Exception {
     Configuration conf = WebHdfsTestUtil.createConf();
     serverSocket = new ServerSocket(0, CONNECTION_BACKLOG);
     nnHttpAddress = new InetSocketAddress("localhost", serverSocket.getLocalPort());
@@ -129,7 +122,7 @@ public class TestWebHdfsTimeouts {
     failedToConsumeBacklog = false;
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     IOUtils.cleanupWithLogger(
         LOG, clients.toArray(new SocketChannel[clients.size()]));
@@ -149,8 +142,12 @@ public class TestWebHdfsTimeouts {
   /**
    * Expect connect timeout, because the connection backlog is consumed.
    */
-  @Test(timeout=TEST_TIMEOUT)
-  public void testConnectTimeout() throws Exception {
+  @MethodSource("data")
+  @ParameterizedTest
+  @EnumSource(TimeoutSource.class)
+  @Timeout(value = 100)
+  public void testConnectTimeout(TimeoutSource src) throws Exception {
+    setUp(src);
     consumeConnectionBacklog();
     try {
       fs.listFiles(new Path("/"), false);
@@ -164,8 +161,12 @@ public class TestWebHdfsTimeouts {
   /**
    * Expect read timeout, because the bogus server never sends a reply.
    */
-  @Test(timeout=TEST_TIMEOUT)
-  public void testReadTimeout() throws Exception {
+  @MethodSource("data")
+  @ParameterizedTest
+  @EnumSource(TimeoutSource.class)
+  @Timeout(value = 100)
+  public void testReadTimeout(TimeoutSource src) throws Exception {
+    setUp(src);
     try {
       fs.listFiles(new Path("/"), false);
       fail("expected timeout");
@@ -179,8 +180,12 @@ public class TestWebHdfsTimeouts {
    * Expect connect timeout on a URL that requires auth, because the connection
    * backlog is consumed.
    */
-  @Test(timeout=TEST_TIMEOUT)
-  public void testAuthUrlConnectTimeout() throws Exception {
+  @MethodSource("data")
+  @ParameterizedTest
+  @EnumSource(TimeoutSource.class)
+  @Timeout(value = 100)
+  public void testAuthUrlConnectTimeout(TimeoutSource src) throws Exception {
+    setUp(src);
     consumeConnectionBacklog();
     try {
       fs.getDelegationToken("renewer");
@@ -195,8 +200,12 @@ public class TestWebHdfsTimeouts {
    * Expect read timeout on a URL that requires auth, because the bogus server
    * never sends a reply.
    */
-  @Test(timeout=TEST_TIMEOUT)
-  public void testAuthUrlReadTimeout() throws Exception {
+  @MethodSource("data")
+  @ParameterizedTest
+  @EnumSource(TimeoutSource.class)
+  @Timeout(value = 100)
+  public void testAuthUrlReadTimeout(TimeoutSource src) throws Exception {
+    setUp(src);
     try {
       fs.getDelegationToken("renewer");
       fail("expected timeout");
@@ -210,8 +219,12 @@ public class TestWebHdfsTimeouts {
    * After a redirect, expect connect timeout accessing the redirect location,
    * because the connection backlog is consumed.
    */
-  @Test(timeout=TEST_TIMEOUT)
-  public void testRedirectConnectTimeout() throws Exception {
+  @MethodSource("data")
+  @ParameterizedTest
+  @EnumSource(TimeoutSource.class)
+  @Timeout(value = 100)
+  public void testRedirectConnectTimeout(TimeoutSource src) throws Exception {
+    setUp(src);
     startSingleTemporaryRedirectResponseThread(true);
     try {
       fs.getFileChecksum(new Path("/file"));
@@ -227,8 +240,12 @@ public class TestWebHdfsTimeouts {
    * After a redirect, expect read timeout accessing the redirect location,
    * because the bogus server never sends a reply.
    */
-  @Test(timeout=TEST_TIMEOUT)
-  public void testRedirectReadTimeout() throws Exception {
+  @MethodSource("data")
+  @ParameterizedTest
+  @EnumSource(TimeoutSource.class)
+  @Timeout(value = 100)
+  public void testRedirectReadTimeout(TimeoutSource src) throws Exception {
+    setUp(src);
     startSingleTemporaryRedirectResponseThread(false);
     try {
       fs.getFileChecksum(new Path("/file"));
@@ -243,8 +260,12 @@ public class TestWebHdfsTimeouts {
    * On the second step of two-step write, expect connect timeout accessing the
    * redirect location, because the connection backlog is consumed.
    */
-  @Test(timeout=TEST_TIMEOUT)
-  public void testTwoStepWriteConnectTimeout() throws Exception {
+  @MethodSource("data")
+  @ParameterizedTest
+  @EnumSource(TimeoutSource.class)
+  @Timeout(value = 100)
+  public void testTwoStepWriteConnectTimeout(TimeoutSource src) throws Exception {
+    setUp(src);
     startSingleTemporaryRedirectResponseThread(true);
     OutputStream os = null;
     try {
@@ -263,8 +284,12 @@ public class TestWebHdfsTimeouts {
    * On the second step of two-step write, expect read timeout accessing the
    * redirect location, because the bogus server never sends a reply.
    */
-  @Test(timeout=TEST_TIMEOUT)
-  public void testTwoStepWriteReadTimeout() throws Exception {
+  @MethodSource("data")
+  @ParameterizedTest
+  @EnumSource(TimeoutSource.class)
+  @Timeout(value = 100)
+  public void testTwoStepWriteReadTimeout(TimeoutSource src) throws Exception {
+    setUp(src);
     startSingleTemporaryRedirectResponseThread(false);
     OutputStream os = null;
     try {
@@ -301,9 +326,9 @@ public class TestWebHdfsTimeouts {
   private void startSingleTemporaryRedirectResponseThread(
       final boolean consumeConnectionBacklog) {
     fs.connectionFactory = URLConnectionFactory.DEFAULT_SYSTEM_CONNECTION_FACTORY;
-    serverThread = new Thread() {
+    serverThread = new SubjectInheritingThread() {
       @Override
-      public void run() {
+      public void work() {
         Socket clientSocket = null;
         OutputStream out = null;
         InputStream in = null;
@@ -332,7 +357,7 @@ public class TestWebHdfsTimeouts {
 
           // Write response.
           out = clientSocket.getOutputStream();
-          out.write(temporaryRedirect().getBytes("UTF-8"));
+          out.write(temporaryRedirect().getBytes(StandardCharsets.UTF_8));
         } catch (IOException e) {
           // Fail the test on any I/O error in the server thread.
           LOG.error("unexpected IOException in server thread", e);
@@ -384,7 +409,7 @@ public class TestWebHdfsTimeouts {
 
   private void assumeBacklogConsumed() {
     if (failedToConsumeBacklog) {
-      throw new AssumptionViolatedException(
+      throw new TestAbortedException(
           "failed to fill up connection backlog.");
     }
   }

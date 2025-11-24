@@ -28,6 +28,7 @@ import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
 import org.apache.hadoop.hdfs.protocol.NoECPolicySetException;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory.DirOp;
+import org.apache.hadoop.hdfs.util.RwLockMode;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.io.erasurecode.CodecRegistry;
@@ -71,7 +72,7 @@ final class FSDirErasureCodingOp {
    */
   static ErasureCodingPolicy getEnabledErasureCodingPolicyByName(
       final FSNamesystem fsn, final String ecPolicyName) throws IOException {
-    assert fsn.hasReadLock();
+    assert fsn.hasReadLock(RwLockMode.FS);
     ErasureCodingPolicy ecPolicy = fsn.getErasureCodingPolicyManager()
         .getEnabledPolicyByName(ecPolicyName);
     if (ecPolicy == null) {
@@ -103,7 +104,7 @@ final class FSDirErasureCodingOp {
    */
   static ErasureCodingPolicy getErasureCodingPolicyByName(
       final FSNamesystem fsn, final String ecPolicyName) throws IOException {
-    assert fsn.hasReadLock();
+    assert fsn.hasReadLock(RwLockMode.FS);
     ErasureCodingPolicy ecPolicy = fsn.getErasureCodingPolicyManager()
         .getErasureCodingPolicyByName(ecPolicyName);
     if (ecPolicy == null) {
@@ -132,7 +133,7 @@ final class FSDirErasureCodingOp {
       final String srcArg, final String ecPolicyName,
       final FSPermissionChecker pc, final boolean logRetryCache)
       throws IOException, AccessControlException {
-    assert fsn.hasWriteLock();
+    assert fsn.hasWriteLock(RwLockMode.FS);
 
     String src = srcArg;
     FSDirectory fsd = fsn.getFSDirectory();
@@ -209,7 +210,7 @@ final class FSDirErasureCodingOp {
   static FileStatus unsetErasureCodingPolicy(final FSNamesystem fsn,
       final String srcArg, final FSPermissionChecker pc,
       final boolean logRetryCache) throws IOException {
-    assert fsn.hasWriteLock();
+    assert fsn.hasWriteLock(RwLockMode.FS);
 
     String src = srcArg;
     FSDirectory fsd = fsn.getFSDirectory();
@@ -353,7 +354,7 @@ final class FSDirErasureCodingOp {
   static ErasureCodingPolicy getErasureCodingPolicy(final FSNamesystem fsn,
       final String src, FSPermissionChecker pc)
       throws IOException, AccessControlException {
-    assert fsn.hasReadLock();
+    assert fsn.hasReadLock(RwLockMode.FS);
 
     if (FSDirectory.isExactReservedName(src)) {
       return null;
@@ -416,7 +417,7 @@ final class FSDirErasureCodingOp {
    */
   static ErasureCodingPolicy unprotectedGetErasureCodingPolicy(
       final FSNamesystem fsn, final INodesInPath iip) throws IOException {
-    assert fsn.hasReadLock();
+    assert fsn.hasReadLock(RwLockMode.FS);
 
     return getErasureCodingPolicyForPath(fsn.getFSDirectory(), iip);
   }
@@ -429,7 +430,7 @@ final class FSDirErasureCodingOp {
    */
   static ErasureCodingPolicyInfo[] getErasureCodingPolicies(
       final FSNamesystem fsn) throws IOException {
-    assert fsn.hasReadLock();
+    assert fsn.hasReadLock(RwLockMode.FS);
     return fsn.getErasureCodingPolicyManager().getPolicies();
   }
 
@@ -441,7 +442,7 @@ final class FSDirErasureCodingOp {
    */
   static Map<String, String> getErasureCodingCodecs(final FSNamesystem fsn)
       throws IOException {
-    assert fsn.hasReadLock();
+    assert fsn.hasReadLock(RwLockMode.FS);
     return CodecRegistry.getInstance().getCodec2CoderCompactMap();
   }
 

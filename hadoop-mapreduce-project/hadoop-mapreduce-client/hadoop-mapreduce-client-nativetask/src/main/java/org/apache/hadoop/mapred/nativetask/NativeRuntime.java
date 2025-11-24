@@ -19,8 +19,8 @@
 package org.apache.hadoop.mapred.nativetask;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.DataInputBuffer;
@@ -83,7 +83,7 @@ public class NativeRuntime {
    */
   public synchronized static long createNativeObject(String clazz) {
     assertNativeLibraryLoaded();
-    final long ret = JNICreateNativeObject(clazz.getBytes(Charsets.UTF_8));
+    final long ret = JNICreateNativeObject(clazz.getBytes(StandardCharsets.UTF_8));
     if (ret == 0) {
       LOG.warn("Can't create NativeObject for class " + clazz + ", probably not exist.");
     }
@@ -95,8 +95,8 @@ public class NativeRuntime {
    */
   public synchronized static long registerLibrary(String libraryName, String clazz) {
     assertNativeLibraryLoaded();
-    final long ret = JNIRegisterModule(libraryName.getBytes(Charsets.UTF_8),
-                                       clazz.getBytes(Charsets.UTF_8));
+    final long ret = JNIRegisterModule(libraryName.getBytes(StandardCharsets.UTF_8),
+                                       clazz.getBytes(StandardCharsets.UTF_8));
     if (ret != 0) {
       LOG.warn("Can't create NativeObject for class " + clazz + ", probably not exist.");
     }

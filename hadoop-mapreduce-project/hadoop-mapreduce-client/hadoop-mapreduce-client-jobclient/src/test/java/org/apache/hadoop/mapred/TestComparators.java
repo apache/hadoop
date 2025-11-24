@@ -35,11 +35,11 @@ import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.WritableComparator;
 import org.apache.hadoop.mapreduce.MRConfig;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 
 /**
@@ -312,7 +312,7 @@ public class TestComparators {
     }
   }
 
-  @Before
+  @BeforeEach
   public void configure() throws Exception {
     Path testdir = new Path(TEST_DIR.getAbsolutePath());
     Path inDir = new Path(testdir, "in");
@@ -355,7 +355,7 @@ public class TestComparators {
     jc = new JobClient(conf);
   }
 
-  @After
+  @AfterEach
   public void cleanup() {
     FileUtil.fullyDelete(TEST_DIR);
   }

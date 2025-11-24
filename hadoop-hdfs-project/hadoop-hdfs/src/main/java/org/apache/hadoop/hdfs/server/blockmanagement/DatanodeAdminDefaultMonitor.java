@@ -26,6 +26,7 @@ import org.apache.hadoop.hdfs.server.namenode.INodeId;
 import org.apache.hadoop.hdfs.util.CyclicIteration;
 import org.apache.hadoop.hdfs.util.LightWeightHashSet;
 import org.apache.hadoop.hdfs.util.LightWeightLinkedSet;
+import org.apache.hadoop.hdfs.util.RwLockMode;
 import org.apache.hadoop.util.ChunkedArrayList;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.slf4j.Logger;
@@ -182,7 +183,9 @@ public class DatanodeAdminDefaultMonitor extends DatanodeAdminMonitorBase
     numBlocksCheckedPerLock = 0;
     numNodesChecked = 0;
     // Check decommission or maintenance progress.
-    namesystem.writeLock();
+    // dnAdmin.stopMaintenance(dn) needs FSReadLock
+    // since processExtraRedundancyBlock involves storage policy and isSufficient involves bc.
+    namesystem.writeLock(RwLockMode.GLOBAL);
     try {
       processCancelledNodes();
       processPendingNodes();
@@ -191,7 +194,7 @@ public class DatanodeAdminDefaultMonitor extends DatanodeAdminMonitorBase
       LOG.warn("DatanodeAdminMonitor caught exception when processing node.",
           e);
     } finally {
-      namesystem.writeUnlock("DatanodeAdminMonitorThread");
+      namesystem.writeUnlock(RwLockMode.GLOBAL, "DatanodeAdminMonitorThread");
     }
     if (numBlocksChecked + numNodesChecked > 0) {
       LOG.info("Checked {} blocks and {} nodes this tick. {} nodes are now " +
@@ -426,7 +429,7 @@ public class DatanodeAdminDefaultMonitor extends DatanodeAdminMonitorBase
         // lock.
         // Yielding is required in case of block number is greater than the
         // configured per-iteration-limit.
-        namesystem.writeUnlock("processBlocksInternal");
+        namesystem.writeUnlock(RwLockMode.GLOBAL, "processBlocksInternal");
         try {
           LOG.debug("Yielded lock during decommission/maintenance check");
           Thread.sleep(0, 500);
@@ -435,7 +438,7 @@ public class DatanodeAdminDefaultMonitor extends DatanodeAdminMonitorBase
         }
         // reset
         numBlocksCheckedPerLock = 0;
-        namesystem.writeLock();
+        namesystem.writeLock(RwLockMode.GLOBAL);
       }
       numBlocksChecked++;
       numBlocksCheckedPerLock++;
@@ -464,20 +467,7 @@ public class DatanodeAdminDefaultMonitor extends DatanodeAdminMonitorBase
       // if not already pending.
       boolean isDecommission = datanode.isDecommissionInProgress();
       boolean isMaintenance = datanode.isEnteringMaintenance();
-      boolean neededReconstruction = isDecommission ?
-          blockManager.isNeededReconstruction(block, num) :
-          blockManager.isNeededReconstructionForMaintenance(block, num);
-      if (neededReconstruction) {
-        if (!blockManager.neededReconstruction.contains(block) &&
-            blockManager.pendingReconstruction.getNumReplicas(block) == 0 &&
-            blockManager.isPopulatingReplQueues()) {
-          // Process these blocks only when active NN is out of safe mode.
-          blockManager.neededReconstruction.add(block,
-              liveReplicas, num.readOnlyReplicas(),
-              num.outOfServiceReplicas(),
-              blockManager.getExpectedRedundancyNum(block));
-        }
-      }
+      addReconstructionBlockIfNeeded(isDecommission, block, num, liveReplicas);
 
       // Even if the block is without sufficient redundancy,
       // it might not block decommission/maintenance if it

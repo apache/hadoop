@@ -28,6 +28,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -74,7 +75,7 @@ public class AsyncDiskService {
     threadFactory = new ThreadFactory() {
       @Override
       public Thread newThread(Runnable r) {
-        return new Thread(threadGroup, r);
+        return new SubjectInheritingThread(threadGroup, r);
       }
     };
     

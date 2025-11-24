@@ -48,6 +48,7 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.io.Writer;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -257,9 +258,9 @@ public class DefaultLinuxContainerRuntime implements LinuxContainerRuntime {
       File commandFile = File.createTempFile(TMP_FILE_PREFIX + filePrefix,
           TMP_FILE_SUFFIX, cmdDir);
       try (
-          Writer writer = new OutputStreamWriter(
-              new FileOutputStream(commandFile.toString()), "UTF-8");
-          PrintWriter printWriter = new PrintWriter(writer);
+              Writer writer = new OutputStreamWriter(
+              new FileOutputStream(commandFile.toString()), StandardCharsets.UTF_8);
+              PrintWriter printWriter = new PrintWriter(writer);
       ) {
         Map<String, List<String>> cmd = new HashMap<String, List<String>>();
         // command = exec

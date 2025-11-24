@@ -41,9 +41,9 @@ import org.apache.hadoop.yarn.service.api.records.PlacementType;
 import org.apache.hadoop.yarn.service.api.records.Resource;
 import org.apache.hadoop.yarn.service.component.instance.ComponentInstance;
 import org.apache.hadoop.yarn.service.component.instance.ComponentInstanceId;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -54,7 +54,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -78,7 +78,7 @@ public class TestServiceTimelinePublisher {
   private static String CONTAINER_BAREHOST =
       "localhost.com";
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     config = new Configuration();
     config.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
@@ -90,7 +90,7 @@ public class TestServiceTimelinePublisher {
     serviceTimelinePublisher.start();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (serviceTimelinePublisher != null) {
       serviceTimelinePublisher.stop();

@@ -20,7 +20,7 @@ package org.apache.hadoop.fs.s3a.statistics;
 
 import java.io.IOException;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -30,6 +30,7 @@ import org.apache.hadoop.fs.s3a.AbstractS3ATestBase;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.statistics.IOStatisticAssertions;
 import org.apache.hadoop.fs.statistics.StreamStatisticNames;
+
 
 public class ITestS3AFileSystemStatistic extends AbstractS3ATestBase {
 
@@ -69,7 +70,7 @@ public class ITestS3AFileSystemStatistic extends AbstractS3ATestBase {
 
     FileSystem.Statistics fsStats = fs.getFsStatistics();
     // Verifying that total bytes read by FS is equal to 2KB.
-    assertEquals("Mismatch in number of FS bytes read by InputStreams", TWO_KB,
-        fsStats.getBytesRead());
+    assertEquals(TWO_KB, fsStats.getBytesRead(),
+        "Mismatch in number of FS bytes read by InputStreams");
   }
 }

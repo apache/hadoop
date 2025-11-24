@@ -21,7 +21,7 @@ package org.apache.hadoop.http;
 
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.authorize.AccessControlList;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.HttpServer2.Builder;
 
@@ -42,14 +42,14 @@ import javax.servlet.http.HttpServletResponse;
  * This is a base class for functional tests of the {@link HttpServer2}.
  * The methods are static for other classes to import statically.
  */
-public class HttpServerFunctionalTest extends Assert {
+public class HttpServerFunctionalTest extends Assertions {
   @SuppressWarnings("serial")
   public static class LongHeaderServlet extends HttpServlet {
     @Override
     public void doGet(HttpServletRequest request,
                       HttpServletResponse response
     ) throws ServletException, IOException {
-      Assert.assertEquals(63 * 1024, request.getHeader("longheader").length());
+      assertEquals(63 * 1024, request.getHeader("longheader").length());
       response.setStatus(HttpServletResponse.SC_OK);
     }
   }
@@ -244,7 +244,7 @@ public class HttpServerFunctionalTest extends Assert {
    */
   public static URL getServerURL(HttpServer2 server)
       throws MalformedURLException {
-    assertNotNull("No server", server);
+    assertNotNull(server, "No server");
     return new URL("http://"
         + NetUtils.getHostPortString(server.getConnectorAddress(0)));
   }

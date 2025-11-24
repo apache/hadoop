@@ -193,6 +193,8 @@ class RedundantEditLogInputStream extends EditLogInputStream {
         } catch (IOException e) {
           prevException = e;
           state = State.STREAM_FAILED;
+          LOG.warn("Got error skipUntil edit log input stream {}.", streams[curIdx].getName());
+          break;
         }
         state = State.OK;
         break;

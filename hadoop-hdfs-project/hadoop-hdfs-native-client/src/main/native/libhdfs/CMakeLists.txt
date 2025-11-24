@@ -32,13 +32,23 @@ include_directories(
     ../libhdfspp/lib
 )
 
-hadoop_add_dual_library(hdfs
+set(HDFS_SOURCES
     exception.c
     jni_helper.c
     hdfs.c
     jclasses.c
     ${OS_DIR}/mutexes.c
     ${OS_DIR}/thread_local_storage.c
+)
+# We want to create an object library for hdfs
+# so that we can reuse it for the targets
+# (like get_jni_test), where we don't wish to
+# link to hdfs's publicly linked libraries
+# (like jvm)
+add_library(hdfs_obj OBJECT ${HDFS_SOURCES})
+set_target_properties(hdfs_obj PROPERTIES POSITION_INDEPENDENT_CODE ON)
+hadoop_add_dual_library(hdfs
+    $<TARGET_OBJECTS:hdfs_obj>
     $<TARGET_OBJECTS:x_platform_obj>
     $<TARGET_OBJECTS:x_platform_obj_c_api>
 )

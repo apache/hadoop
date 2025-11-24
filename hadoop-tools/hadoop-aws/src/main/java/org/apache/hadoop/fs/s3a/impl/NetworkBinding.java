@@ -23,9 +23,9 @@ import java.lang.reflect.InvocationTargetException;
 import java.net.URI;
 import java.net.URISyntaxException;
 
-import com.amazonaws.ClientConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.http.apache.ApacheHttpClient;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.net.NetUtils;
@@ -56,13 +56,12 @@ public final class NetworkBinding {
    * so as to avoid 
    * @param conf the {@link Configuration} used to get the client specified
    *             value of {@code SSL_CHANNEL_MODE}
-   * @param awsConf the {@code ClientConfiguration} to set the
-   *                SSLConnectionSocketFactory for.
+   * @param httpClientBuilder the http client builder.
    * @throws IOException if there is an error while initializing the
    * {@code SSLSocketFactory} other than classloader problems.
    */
   public static void bindSSLChannelMode(Configuration conf,
-      ClientConfiguration awsConf) throws IOException {
+      ApacheHttpClient.Builder httpClientBuilder) throws IOException {
 
     // Validate that SSL_CHANNEL_MODE is set to a valid value.
     String channelModeString = conf.getTrimmed(
@@ -89,7 +88,7 @@ public final class NetworkBinding {
           (Class<? extends ConfigureAWSSocketFactory>) Class.forName(BINDING_CLASSNAME);
       clazz.getConstructor()
           .newInstance()
-          .configureSocketFactory(awsConf, channelMode);
+          .configureSocketFactory(httpClientBuilder, channelMode);
     } catch (ClassNotFoundException | NoSuchMethodException |
             IllegalAccessException | InstantiationException |
             InvocationTargetException | LinkageError  e) {
@@ -99,11 +98,22 @@ public final class NetworkBinding {
   }
 
   /**
+   * Is this an AWS endpoint? looks at end of FQDN.
+   * @param endpoint endpoint
+   * @return true if the endpoint matches the requirements for an aws endpoint.
+   */
+  public static boolean isAwsEndpoint(final String endpoint) {
+    return (endpoint.isEmpty()
+        || endpoint.endsWith(".amazonaws.com")
+        || endpoint.endsWith(".amazonaws.com.cn"));
+  }
+
+  /**
    * Interface used to bind to the socket factory, allows the code which
    * works with the shaded AWS libraries to exist in their own class.
    */
   interface ConfigureAWSSocketFactory {
-    void configureSocketFactory(ClientConfiguration awsConf,
+    void configureSocketFactory(ApacheHttpClient.Builder httpClientBuilder,
         DelegatingSSLSocketFactory.SSLChannelMode channelMode)
         throws IOException;
   }

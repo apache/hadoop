@@ -35,9 +35,9 @@ import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.serializer.JavaSerializationComparator;
 import org.apache.hadoop.mapreduce.MRConfig;
-import org.junit.Test;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertEquals;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TestJavaSerialization {
 
@@ -58,8 +58,8 @@ public class TestJavaSerialization {
       StringTokenizer st = new StringTokenizer(value.toString());
       while (st.hasMoreTokens()) {
         String token = st.nextToken();
-        assertTrue("Invalid token; expected 'a' or 'b', got " + token,
-          token.equals("a") || token.equals("b"));
+        assertTrue(token.equals("a") || token.equals("b"),
+            "Invalid token; expected 'a' or 'b', got " + token);
         output.collect(token, 1L);
       }
     }
@@ -124,9 +124,9 @@ public class TestJavaSerialization {
 
     String inputFileContents =
         FileUtils.readFileToString(new File(INPUT_FILE.toUri().getPath()));
-    assertTrue("Input file contents not as expected; contents are '"
-        + inputFileContents + "', expected \"b a\n\" ",
-      inputFileContents.equals("b a\n"));
+    assertTrue(inputFileContents.equals("b a\n"),
+        "Input file contents not as expected; contents are '"
+        + inputFileContents + "', expected \"b a\n\" ");
 
     JobClient.runJob(conf);
 
@@ -137,13 +137,12 @@ public class TestJavaSerialization {
     try (InputStream is = fs.open(outputFiles[0])) {
       String reduceOutput = org.apache.commons.io.IOUtils.toString(is, StandardCharsets.UTF_8);
       String[] lines = reduceOutput.split("\n");
-      assertEquals("Unexpected output; received output '" + reduceOutput + "'",
-          "a\t1", lines[0]);
-      assertEquals("Unexpected output; received output '" + reduceOutput + "'",
-          "b\t1", lines[1]);
-      assertEquals(
-          "Reduce output has extra lines; output is '" + reduceOutput + "'", 2,
-          lines.length);
+      assertEquals("a\t1", lines[0],
+          "Unexpected output; received output '" + reduceOutput + "'");
+      assertEquals("b\t1", lines[1],
+          "Unexpected output; received output '" + reduceOutput + "'");
+      assertEquals(2, lines.length,
+          "Reduce output has extra lines; output is '" + reduceOutput + "'");
     }
   }
 

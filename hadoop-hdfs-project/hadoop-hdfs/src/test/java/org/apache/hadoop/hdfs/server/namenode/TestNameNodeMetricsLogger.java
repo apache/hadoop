@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import java.util.function.Supplier;
 import org.apache.hadoop.metrics2.annotation.Metrics;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -29,9 +30,7 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.log4j.Appender;
 import org.apache.log4j.AsyncAppender;
 
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -39,18 +38,16 @@ import java.util.List;
 import java.util.concurrent.TimeoutException;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
 
 /**
  * Test periodic logging of NameNode metrics.
  */
+@Timeout(300)
 public class TestNameNodeMetricsLogger {
   static final Logger LOG =
       LoggerFactory.getLogger(TestNameNodeMetricsLogger.class);
-
-  @Rule
-  public Timeout timeout = new Timeout(300000);
 
   @Test
   public void testMetricsLoggerOnByDefault() throws IOException {

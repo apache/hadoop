@@ -38,7 +38,12 @@ public class GPGController extends Controller {
   }
 
   public void overview() {
-    setTitle("GPG Details");
+    setTitle("GPG");
     render(GPGOverviewPage.class);
+  }
+
+  public void policies() {
+    setTitle("Global Policy Generator Policies");
+    render(GPGPoliciesPage.class);
   }
 }

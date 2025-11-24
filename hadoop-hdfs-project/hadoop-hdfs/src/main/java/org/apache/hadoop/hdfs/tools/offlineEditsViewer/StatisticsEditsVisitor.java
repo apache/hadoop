@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.HashMap;
 
@@ -30,7 +31,6 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 
 /**
  * StatisticsEditsVisitor implements text version of EditsVisitor
@@ -53,7 +53,7 @@ public class StatisticsEditsVisitor implements OfflineEditsVisitor {
    * @param out Name of file to write output to
    */
   public StatisticsEditsVisitor(OutputStream out) throws IOException {
-    this.out = new PrintWriter(new OutputStreamWriter(out, Charsets.UTF_8));
+    this.out = new PrintWriter(new OutputStreamWriter(out, StandardCharsets.UTF_8));
   }
 
   /** Start the visitor */

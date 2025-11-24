@@ -629,7 +629,7 @@ public class RouterClientRMService extends AbstractService
         TimeUnit.MILLISECONDS);
 
     return new RouterDelegationTokenSecretManager(secretKeyInterval,
-        tokenMaxLifetime, tokenRenewInterval, removeScanInterval);
+        tokenMaxLifetime, tokenRenewInterval, removeScanInterval, conf);
   }
 
   @VisibleForTesting

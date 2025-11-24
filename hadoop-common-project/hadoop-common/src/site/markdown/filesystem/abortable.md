@@ -88,14 +88,13 @@ for example. output streams returned by the S3A FileSystem.
 The stream MUST implement `Abortable` and `StreamCapabilities`.
 
 ```python
- if unsupported:
+if unsupported:
   throw UnsupportedException
 
 if not isOpen(stream):
   no-op
 
 StreamCapabilities.hasCapability("fs.capability.outputstream.abortable") == True
-
 ```
 
 

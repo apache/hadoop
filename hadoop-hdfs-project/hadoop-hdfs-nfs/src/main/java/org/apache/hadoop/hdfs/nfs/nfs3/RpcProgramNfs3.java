@@ -25,7 +25,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.EnumSet;
 
 import io.netty.buffer.ByteBuf;
@@ -681,15 +681,15 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
       }
       int rtmax = config.getInt(NfsConfigKeys.DFS_NFS_MAX_READ_TRANSFER_SIZE_KEY,
           NfsConfigKeys.DFS_NFS_MAX_READ_TRANSFER_SIZE_DEFAULT);
-      if (rtmax < target.getBytes(Charset.forName("UTF-8")).length) {
+      if (rtmax < target.getBytes(StandardCharsets.UTF_8).length) {
         LOG.error("Link size: {} is larger than max transfer size: {}",
-            target.getBytes(Charset.forName("UTF-8")).length, rtmax);
+            target.getBytes(StandardCharsets.UTF_8).length, rtmax);
         return new READLINK3Response(Nfs3Status.NFS3ERR_IO, postOpAttr,
             new byte[0]);
       }
 
       return new READLINK3Response(Nfs3Status.NFS3_OK, postOpAttr,
-          target.getBytes(Charset.forName("UTF-8")));
+          target.getBytes(StandardCharsets.UTF_8));
 
     } catch (IOException e) {
       LOG.warn("Readlink error", e);
@@ -1515,7 +1515,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
       }
       // This happens when startAfter was just deleted
       LOG.info("Cookie couldn't be found: {}, do listing from beginning",
-          new String(startAfter, Charset.forName("UTF-8")));
+          new String(startAfter, StandardCharsets.UTF_8));
       dlisting = dfsClient
           .listPaths(dirFileIdPath, HdfsFileStatus.EMPTY_NAME);
     }
@@ -1628,7 +1628,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
         startAfter = HdfsFileStatus.EMPTY_NAME;
       } else {
         String inodeIdPath = Nfs3Utils.getFileIdPath(cookie);
-        startAfter = inodeIdPath.getBytes(Charset.forName("UTF-8"));
+        startAfter = inodeIdPath.getBytes(StandardCharsets.UTF_8);
       }
 
       dlisting = listPaths(dfsClient, dirFileIdPath, startAfter);
@@ -1800,7 +1800,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
         startAfter = HdfsFileStatus.EMPTY_NAME;
       } else {
         String inodeIdPath = Nfs3Utils.getFileIdPath(cookie);
-        startAfter = inodeIdPath.getBytes(Charset.forName("UTF-8"));
+        startAfter = inodeIdPath.getBytes(StandardCharsets.UTF_8);
       }
 
       dlisting = listPaths(dfsClient, dirFileIdPath, startAfter);

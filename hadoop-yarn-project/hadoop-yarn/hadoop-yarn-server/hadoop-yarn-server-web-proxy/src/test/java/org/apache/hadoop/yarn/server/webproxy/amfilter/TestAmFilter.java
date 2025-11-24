@@ -202,7 +202,7 @@ public class TestAmFilter {
 
     // change proxy configurations
     params = new HashMap<>();
-    params.put(AmIpFilter.PROXY_HOSTS, "unknownhost");
+    params.put(AmIpFilter.PROXY_HOSTS, "unknownhostaf79d34c");
     params.put(AmIpFilter.PROXY_URI_BASES, proxyUri);
     conf = new DummyFilterConfig(params);
     filter.init(conf);

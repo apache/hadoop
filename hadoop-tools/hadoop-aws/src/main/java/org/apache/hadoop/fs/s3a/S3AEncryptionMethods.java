@@ -33,13 +33,14 @@ public enum S3AEncryptionMethods {
   SSE_KMS("SSE-KMS", true, false),
   SSE_C("SSE-C", true, true),
   CSE_KMS("CSE-KMS", false, true),
-  CSE_CUSTOM("CSE-CUSTOM", false, true);
+  CSE_CUSTOM("CSE-CUSTOM", false, true),
+  DSSE_KMS("DSSE-KMS", true, false);
 
   /**
    * Error string when {@link #getMethod(String)} fails.
    * Used in tests.
    */
-  static final String UNKNOWN_ALGORITHM
+  public static final String UNKNOWN_ALGORITHM
       = "Unknown encryption algorithm ";
 
   /**

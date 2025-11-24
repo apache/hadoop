@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.security.authorize;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.lang.annotation.Annotation;
 import java.net.InetAddress;
@@ -32,7 +32,7 @@ import org.apache.hadoop.security.SecurityInfo;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.TokenInfo;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class TestServiceAuthorization {
 

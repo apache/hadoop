@@ -65,9 +65,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.Records;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import javax.security.sasl.SaslException;
 import java.io.IOException;
@@ -79,7 +79,11 @@ import java.security.PrivilegedExceptionAction;
 import java.util.Timer;
 import java.util.TimerTask;
 
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -87,11 +91,11 @@ import static org.mockito.Mockito.when;
 public class TestClientToAMTokens extends ParameterizedSchedulerTestBase {
   private YarnConfiguration conf;
 
-  public TestClientToAMTokens(SchedulerType type) throws IOException {
-    super(type);
+  public void initTestClientToAMTokens(SchedulerType type) throws IOException {
+    initParameterizedSchedulerTestBase(type);
+    setup();
   }
 
-  @Before
   public void setup() {
     conf = getConf();
   }
@@ -189,8 +193,10 @@ public class TestClientToAMTokens extends ParameterizedSchedulerTestBase {
     }
   }
 
-  @Test
-  public void testClientToAMTokens() throws Exception {
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("getParameters")
+  public void testClientToAMTokens(SchedulerType type) throws Exception {
+    initTestClientToAMTokens(type);
     conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
       "kerberos");
     // Set RPC engine to protobuf RPC engine
@@ -242,7 +248,7 @@ public class TestClientToAMTokens extends ParameterizedSchedulerTestBase {
             try {
               response = mockAM.registerAppAttempt();
             } catch (Exception e) {
-              Assert.fail("Exception was not expected");
+              fail("Exception was not expected");
             }
             return response;
           }
@@ -260,14 +266,13 @@ public class TestClientToAMTokens extends ParameterizedSchedulerTestBase {
 
     // ClientToAMToken master key should have been received on register
     // application master response.
-    Assert.assertNotNull(response.getClientToAMTokenMasterKey());
-    Assert
-        .assertTrue(response.getClientToAMTokenMasterKey().array().length > 0);
+    assertNotNull(response.getClientToAMTokenMasterKey());
+    assertTrue(response.getClientToAMTokenMasterKey().array().length > 0);
     
     // Start the AM with the correct shared-secret.
     ApplicationAttemptId appAttemptId =
         app.getAppAttempts().keySet().iterator().next();
-    Assert.assertNotNull(appAttemptId);
+    assertNotNull(appAttemptId);
     final CustomAM am =
         new CustomAM(appAttemptId, response.getClientToAMTokenMasterKey()
             .array());
@@ -285,7 +290,7 @@ public class TestClientToAMTokens extends ParameterizedSchedulerTestBase {
       client.ping(null, TestRpcBase.newEmptyRequest());
       fail("Access by unauthenticated user should fail!!");
     } catch (Exception e) {
-      Assert.assertFalse(am.pinged);
+      assertFalse(am.pinged);
     }
 
     Token<ClientToAMTokenIdentifier> token =
@@ -360,18 +365,15 @@ public class TestClientToAMTokens extends ParameterizedSchedulerTestBase {
         }
       });
     } catch (Exception e) {
-      Assert.assertEquals(RemoteException.class.getName(), e.getClass()
+      assertEquals(RemoteException.class.getName(), e.getClass()
           .getName());
       e = ((RemoteException)e).unwrapRemoteException();
-      Assert
-        .assertEquals(SaslException.class
+      assertEquals(SaslException.class
           .getCanonicalName(), e.getClass().getCanonicalName());
-      Assert.assertTrue(e
-        .getMessage()
-        .contains(
-          "DIGEST-MD5: digest response format violation. "
-              + "Mismatched response."));
-      Assert.assertFalse(am.pinged);
+      assertTrue(e
+          .getMessage()
+          .contains("DIGEST-MD5: digest response format violation. " + "Mismatched response."));
+      assertFalse(am.pinged);
     }
   }
 
@@ -395,7 +397,7 @@ public class TestClientToAMTokens extends ParameterizedSchedulerTestBase {
         CustomProtocol client =
             RPC.getProxy(CustomProtocol.class, 1L, am.address, conf);
         client.ping(null, TestRpcBase.newEmptyRequest());
-        Assert.assertTrue(am.pinged);
+        assertTrue(am.pinged);
         return null;
       }
     });
@@ -414,14 +416,18 @@ public class TestClientToAMTokens extends ParameterizedSchedulerTestBase {
         CustomProtocol client = RPC.getProxy(CustomProtocol.class,
             1L, am.address, conf);
         client.ping(null, TestRpcBase.newEmptyRequest());
-        Assert.assertTrue(am.pinged);
+        assertTrue(am.pinged);
         return null;
       }
     });
   }
 
-  @Test(timeout=20000)
-  public void testClientTokenRace() throws Exception {
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("getParameters")
+  @Timeout(20)
+  public void testClientTokenRace(SchedulerType type) throws Exception {
+
+    initTestClientToAMTokens(type);
 
     conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
       "kerberos");
@@ -472,7 +478,7 @@ public class TestClientToAMTokens extends ParameterizedSchedulerTestBase {
             try {
               response = mockAM.registerAppAttempt();
             } catch (Exception e) {
-              Assert.fail("Exception was not expected");
+              fail("Exception was not expected");
             }
             return response;
           }
@@ -491,13 +497,13 @@ public class TestClientToAMTokens extends ParameterizedSchedulerTestBase {
     // ClientToAMToken master key should have been received on register
     // application master response.
     final ByteBuffer clientMasterKey = response.getClientToAMTokenMasterKey();
-    Assert.assertNotNull(clientMasterKey);
-    Assert.assertTrue(clientMasterKey.array().length > 0);
+    assertNotNull(clientMasterKey);
+    assertTrue(clientMasterKey.array().length > 0);
 
     // Start the AM with the correct shared-secret.
     ApplicationAttemptId appAttemptId =
         app.getAppAttempts().keySet().iterator().next();
-    Assert.assertNotNull(appAttemptId);
+    assertNotNull(appAttemptId);
     final CustomAM am = new CustomAM(appAttemptId, null);
     am.init(conf);
     am.start();

@@ -26,6 +26,7 @@ import java.io.FilterOutputStream;
 import java.io.OutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.security.DigestOutputStream;
 import java.security.MessageDigest;
 import java.util.Arrays;
@@ -35,7 +36,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 import org.apache.hadoop.thirdparty.protobuf.CodedOutputStream;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -325,7 +325,7 @@ public class ImageWriter implements Closeable {
     Path chk = new Path(outdir, imagename + ".md5");
     try (OutputStream out = outfs.create(chk)) {
       String md5Line = digestString + " *" + imagename + "\n";
-      out.write(md5Line.getBytes(Charsets.UTF_8));
+      out.write(md5Line.getBytes(StandardCharsets.UTF_8));
     }
   }
 

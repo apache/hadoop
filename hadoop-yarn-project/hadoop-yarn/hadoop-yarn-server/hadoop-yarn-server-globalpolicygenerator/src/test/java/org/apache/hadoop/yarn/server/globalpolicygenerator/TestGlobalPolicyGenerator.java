@@ -19,20 +19,28 @@
 package org.apache.hadoop.yarn.server.globalpolicygenerator;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.service.Service;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Unit test for GlobalPolicyGenerator.
  */
 public class TestGlobalPolicyGenerator {
 
-  @Test(timeout = 1000)
+  @Test
+  @Timeout(value = 1)
   public void testNonFederation() {
     Configuration conf = new YarnConfiguration();
     conf.setBoolean(YarnConfiguration.FEDERATION_ENABLED, false);
@@ -54,5 +62,27 @@ public class TestGlobalPolicyGenerator {
       List<Service> services = gpg.getServices();
       return (services.size() == 1 && gpg.getWebApp() != null);
     }, 100, 5000);
+  }
+
+  @Test
+  public void testGPGCLI() {
+    ByteArrayOutputStream dataOut = new ByteArrayOutputStream();
+    ByteArrayOutputStream dataErr = new ByteArrayOutputStream();
+    System.setOut(new PrintStream(dataOut));
+    System.setErr(new PrintStream(dataErr));
+    GlobalPolicyGenerator.main(new String[]{"-help", "-format-policy-store"});
+    assertTrue(dataErr.toString().contains(
+        "Usage: yarn gpg [-format-policy-store]"));
+  }
+
+  @Test
+  public void testUserProvidedUGIConf() throws Exception {
+    String errMsg = "Invalid attribute value for " +
+        CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION + " of DUMMYAUTH";
+    Configuration dummyConf = new YarnConfiguration();
+    dummyConf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION, "DUMMYAUTH");
+    GlobalPolicyGenerator gpg = new GlobalPolicyGenerator();
+    LambdaTestUtils.intercept(IllegalArgumentException.class, errMsg, () -> gpg.init(dummyConf));
+    gpg.stop();
   }
 }

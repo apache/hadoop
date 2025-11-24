@@ -17,11 +17,19 @@
  */
 package org.apache.hadoop.hdfs.server.federation.router;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.ha.HAServiceProtocol;
+import org.apache.hadoop.hdfs.server.federation.MockResolver;
+import org.apache.hadoop.hdfs.server.federation.resolver.ActiveNamenodeResolver;
+import org.apache.hadoop.hdfs.server.federation.resolver.FileSubclusterResolver;
 import org.apache.hadoop.tools.fedbalance.FedBalanceConfigs;
+
+import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.createNamenodeReport;
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.FEDERATION_STORE_MEMBERSHIP_EXPIRATION_MS;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TestDFSRouter {
 
@@ -32,8 +40,49 @@ public class TestDFSRouter {
         configuration.get(FedBalanceConfigs.SCHEDULER_JOURNAL_URI);
     int workerThreads =
         configuration.getInt(FedBalanceConfigs.WORK_THREAD_NUM, -1);
-    Assert.assertEquals("hdfs://localhost:8020/tmp/procedure", journalUri);
-    Assert.assertEquals(10, workerThreads);
+    Assertions.assertEquals("hdfs://localhost:8020/tmp/procedure", journalUri);
+    Assertions.assertEquals(10, workerThreads);
   }
 
+  @Test
+  public void testClearStaleNamespacesInRouterStateIdContext() throws Exception {
+    Router testRouter = new Router();
+    Configuration routerConfig = DFSRouter.getConfiguration();
+    routerConfig.set(FEDERATION_STORE_MEMBERSHIP_EXPIRATION_MS, "2000");
+    routerConfig.set(RBFConfigKeys.DFS_ROUTER_SAFEMODE_ENABLE, "false");
+    // Mock resolver classes
+    routerConfig.setClass(RBFConfigKeys.FEDERATION_NAMENODE_RESOLVER_CLIENT_CLASS,
+        MockResolver.class, ActiveNamenodeResolver.class);
+    routerConfig.setClass(RBFConfigKeys.FEDERATION_FILE_RESOLVER_CLIENT_CLASS,
+        MockResolver.class, FileSubclusterResolver.class);
+
+    testRouter.init(routerConfig);
+    String nsID1 = "ns0";
+    String nsID2 = "ns1";
+    MockResolver resolver = (MockResolver)testRouter.getNamenodeResolver();
+    resolver.registerNamenode(createNamenodeReport(nsID1, "nn1",
+        HAServiceProtocol.HAServiceState.ACTIVE));
+    resolver.registerNamenode(createNamenodeReport(nsID2, "nn1",
+        HAServiceProtocol.HAServiceState.ACTIVE));
+
+    RouterRpcServer rpcServer = testRouter.getRpcServer();
+
+    rpcServer.getRouterStateIdContext().getNamespaceStateId(nsID1);
+    rpcServer.getRouterStateIdContext().getNamespaceStateId(nsID2);
+
+    resolver.disableNamespace(nsID1);
+    Thread.sleep(3000);
+    RouterStateIdContext context = rpcServer.getRouterStateIdContext();
+    assertEquals(2, context.getNamespaceIdMap().size());
+
+    testRouter.start();
+    Thread.sleep(3000);
+    // wait clear stale namespaces
+    RouterStateIdContext routerStateIdContext = rpcServer.getRouterStateIdContext();
+    int size = routerStateIdContext.getNamespaceIdMap().size();
+    assertEquals(1, size);
+    rpcServer.stop();
+    rpcServer.close();
+    testRouter.close();
+  }
 }

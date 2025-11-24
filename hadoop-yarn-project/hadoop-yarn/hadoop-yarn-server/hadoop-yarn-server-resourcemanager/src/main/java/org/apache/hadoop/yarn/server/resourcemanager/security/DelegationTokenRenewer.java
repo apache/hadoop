@@ -62,6 +62,7 @@ import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdenti
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AbstractEvent;
@@ -200,7 +201,7 @@ public class DelegationTokenRenewer extends AbstractService {
     dtCancelThread.start();
     if (tokenKeepAliveEnabled) {
       delayedRemovalThread =
-          new Thread(new DelayedTokenRemovalRunnable(getConfig()),
+          new SubjectInheritingThread(new DelayedTokenRemovalRunnable(getConfig()),
               "DelayedTokenCanceller");
       delayedRemovalThread.start();
     }
@@ -347,7 +348,7 @@ public class DelegationTokenRenewer extends AbstractService {
   }
   
   
-  private static class DelegationTokenCancelThread extends Thread {
+  private static class DelegationTokenCancelThread extends SubjectInheritingThread {
     private static class TokenWithConf {
       Token<?> token;
       Configuration conf;
@@ -377,7 +378,7 @@ public class DelegationTokenRenewer extends AbstractService {
       }
     }
 
-    public void run() {
+    public void work() {
       TokenWithConf tokenWithConf = null;
       while (true) {
         try {
@@ -807,10 +808,13 @@ public class DelegationTokenRenewer extends AbstractService {
   private void removeFailedDelegationToken(DelegationTokenToRenew t) {
     Collection<ApplicationId> applicationIds = t.referringAppIds;
     synchronized (applicationIds) {
-      LOG.error("removing failed delegation token for appid=" + applicationIds
-          + ";t=" + t.token.getService());
+      LOG.error("removing failed delegation token for appid={};t={}",
+          applicationIds, t.token.getService());
       for (ApplicationId applicationId : applicationIds) {
-        appTokens.get(applicationId).remove(t);
+        Set<DelegationTokenToRenew> tokens = appTokens.get(applicationId);
+        if (tokens != null && !tokens.isEmpty()) {
+          tokens.remove(t);
+        }
       }
     }
     allTokens.remove(t.token);

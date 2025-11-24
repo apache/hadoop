@@ -19,16 +19,18 @@
 package org.apache.hadoop.fs.s3a.impl;
 
 import java.io.IOException;
+import java.io.InputStream;
 
-import com.amazonaws.internal.SdkFilterInputStream;
-import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import software.amazon.awssdk.http.Abortable;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.test.HadoopTestBase;
+
 
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.DRAIN_BUFFER_SIZE;
 import static org.apache.hadoop.fs.s3a.statistics.impl.EmptyS3AStatisticsContext.EMPTY_INPUT_STREAM_STATISTICS;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Unit tests for stream draining.
@@ -127,7 +129,6 @@ public class TestSDKStreamDrainer extends HadoopTestBase {
   public void testReadFailure() throws Throwable {
     int threshold = 50;
     SDKStreamDrainer drainer = new SDKStreamDrainer("s3://example/",
-        null,
         new FakeSDKInputStream(BYTES, threshold),
         false,
         BYTES,
@@ -145,7 +146,6 @@ public class TestSDKStreamDrainer extends HadoopTestBase {
   public void testReadFailureDoesNotSurfaceInAbort() throws Throwable {
     int threshold = 50;
     SDKStreamDrainer drainer = new SDKStreamDrainer("s3://example/",
-        null,
         new FakeSDKInputStream(BYTES, threshold),
         true,
         BYTES,
@@ -165,7 +165,7 @@ public class TestSDKStreamDrainer extends HadoopTestBase {
     while (stream.read() > 0) {
       count++;
     }
-    Assertions.assertThat(count)
+    assertThat(count)
         .describedAs("bytes read from %s", stream)
         .isEqualTo(BYTES);
   }
@@ -183,7 +183,6 @@ public class TestSDKStreamDrainer extends HadoopTestBase {
       boolean shouldAbort,
       FakeSDKInputStream in) throws Throwable {
     SDKStreamDrainer drainer = new SDKStreamDrainer("s3://example/",
-        null,
         in,
         shouldAbort,
         remaining,
@@ -199,7 +198,7 @@ public class TestSDKStreamDrainer extends HadoopTestBase {
    * @return the drainer.
    */
   private SDKStreamDrainer assertAborted(SDKStreamDrainer drainer) {
-    Assertions.assertThat(drainer)
+    assertThat(drainer)
         .matches(SDKStreamDrainer::aborted, "aborted");
     return drainer;
   }
@@ -210,7 +209,7 @@ public class TestSDKStreamDrainer extends HadoopTestBase {
    * @return the drainer.
    */
   private SDKStreamDrainer assertNotAborted(SDKStreamDrainer drainer) {
-    Assertions.assertThat(drainer)
+    assertThat(drainer)
         .matches(d -> !d.aborted(), "is not aborted");
     return drainer;
   }
@@ -234,7 +233,7 @@ public class TestSDKStreamDrainer extends HadoopTestBase {
    */
   private static SDKStreamDrainer assertBytesRead(final SDKStreamDrainer drainer,
       final int bytes) {
-    Assertions.assertThat(drainer)
+    assertThat(drainer)
         .describedAs("bytes read by %s", drainer)
         .extracting(SDKStreamDrainer::getDrained)
         .isEqualTo(bytes);
@@ -246,7 +245,8 @@ public class TestSDKStreamDrainer extends HadoopTestBase {
    * Fake stream; generates data dynamically.
    * Only overrides the methods used in stream draining.
    */
-  private static final class FakeSDKInputStream extends SdkFilterInputStream {
+  private static final class FakeSDKInputStream extends InputStream
+      implements Abortable {
 
     private final int capacity;
 
@@ -264,7 +264,6 @@ public class TestSDKStreamDrainer extends HadoopTestBase {
      * @param readToRaiseIOE position to raise an IOE, or -1
      */
     private FakeSDKInputStream(final int capacity, final int readToRaiseIOE) {
-      super(null);
       this.capacity = capacity;
       this.readToRaiseIOE = readToRaiseIOE;
     }
@@ -280,11 +279,6 @@ public class TestSDKStreamDrainer extends HadoopTestBase {
     @Override
     public void abort() {
       aborted = true;
-    }
-
-    @Override
-    protected boolean isAborted() {
-      return aborted;
     }
 
     @Override

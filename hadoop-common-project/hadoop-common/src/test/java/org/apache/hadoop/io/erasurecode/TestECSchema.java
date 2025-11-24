@@ -17,22 +17,18 @@
  */
 package org.apache.hadoop.io.erasurecode;
 
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
-import java.util.concurrent.TimeUnit;
 
+@Timeout(300)
 public class TestECSchema {
-
-  @Rule
-  public Timeout globalTimeout = new Timeout(300000, TimeUnit.MILLISECONDS);
 
   @Test
   public void testGoodSchema() {
@@ -60,7 +56,7 @@ public class TestECSchema {
     extraMap.put(extraOption, extraOptionValue);
     ECSchema sameSchema = new ECSchema(codec, numDataUnits, numParityUnits,
         extraMap);
-    assertEquals("Different constructors not equal", sameSchema, schema);
+    assertEquals(sameSchema, schema, "Different constructors not equal");
   }
 
   @Test

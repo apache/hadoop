@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.mapred;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.StringTokenizer;
@@ -34,9 +34,9 @@ import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 /**
  * Basic testing for the MiniMRClientCluster. This test shows an example class
@@ -54,7 +54,7 @@ public class TestMiniMRClientCluster {
   private class InternalClass {
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setup() throws IOException {
     final Configuration conf = new Configuration();
     final Path TEST_ROOT_DIR = new Path(System.getProperty("test.build.data",
@@ -81,7 +81,7 @@ public class TestMiniMRClientCluster {
         InternalClass.class, 1, new Configuration());
   }
 
-  @AfterClass
+  @AfterAll
   public static void cleanup() throws IOException {
     // clean up the input and output files
     final Configuration conf = new Configuration();
@@ -128,27 +128,26 @@ public class TestMiniMRClientCluster {
     String mrHistWebAppAddress2 = mrCluster.getConfig().get(
         JHAdminConfig.MR_HISTORY_WEBAPP_ADDRESS);
 
-    assertEquals("Address before restart: " + rmAddress1
-        + " is different from new address: " + rmAddress2, rmAddress1,
-        rmAddress2);
-    assertEquals("Address before restart: " + rmAdminAddress1
-        + " is different from new address: " + rmAdminAddress2,
-        rmAdminAddress1, rmAdminAddress2);
-    assertEquals("Address before restart: " + rmSchedAddress1
-        + " is different from new address: " + rmSchedAddress2,
-        rmSchedAddress1, rmSchedAddress2);
-    assertEquals("Address before restart: " + rmRstrackerAddress1
-        + " is different from new address: " + rmRstrackerAddress2,
-        rmRstrackerAddress1, rmRstrackerAddress2);
-    assertEquals("Address before restart: " + rmWebAppAddress1
-        + " is different from new address: " + rmWebAppAddress2,
-        rmWebAppAddress1, rmWebAppAddress2);
-    assertEquals("Address before restart: " + mrHistAddress1
-        + " is different from new address: " + mrHistAddress2, mrHistAddress1,
-        mrHistAddress2);
-    assertEquals("Address before restart: " + mrHistWebAppAddress1
-        + " is different from new address: " + mrHistWebAppAddress2,
-        mrHistWebAppAddress1, mrHistWebAppAddress2);
+    assertEquals(rmAddress1, rmAddress2, "Address before restart: " + rmAddress1
+        + " is different from new address: " + rmAddress2);
+    assertEquals(rmAdminAddress1, rmAdminAddress2,
+        "Address before restart: " + rmAdminAddress1
+        + " is different from new address: " + rmAdminAddress2);
+    assertEquals(rmSchedAddress1, rmSchedAddress2,
+        "Address before restart: " + rmSchedAddress1
+        + " is different from new address: " + rmSchedAddress2);
+    assertEquals(rmRstrackerAddress1, rmRstrackerAddress2,
+        "Address before restart: " + rmRstrackerAddress1
+        + " is different from new address: " + rmRstrackerAddress2);
+    assertEquals(rmWebAppAddress1, rmWebAppAddress2,
+        "Address before restart: " + rmWebAppAddress1
+        + " is different from new address: " + rmWebAppAddress2);
+    assertEquals(mrHistAddress1, mrHistAddress2,
+        "Address before restart: " + mrHistAddress1
+        + " is different from new address: " + mrHistAddress2);
+    assertEquals(mrHistWebAppAddress1, mrHistWebAppAddress2,
+        "Address before restart: " + mrHistWebAppAddress1
+        + " is different from new address: " + mrHistWebAppAddress2);
 
   }
 
@@ -165,14 +164,14 @@ public class TestMiniMRClientCluster {
 
   private void validateCounters(Counters counters, long mapInputRecords,
       long mapOutputRecords, long reduceInputGroups, long reduceOutputRecords) {
-    assertEquals("MapInputRecords", mapInputRecords, counters.findCounter(
-        "MyCounterGroup", "MAP_INPUT_RECORDS").getValue());
-    assertEquals("MapOutputRecords", mapOutputRecords, counters.findCounter(
-        "MyCounterGroup", "MAP_OUTPUT_RECORDS").getValue());
-    assertEquals("ReduceInputGroups", reduceInputGroups, counters.findCounter(
-        "MyCounterGroup", "REDUCE_INPUT_GROUPS").getValue());
-    assertEquals("ReduceOutputRecords", reduceOutputRecords, counters
-        .findCounter("MyCounterGroup", "REDUCE_OUTPUT_RECORDS").getValue());
+    assertEquals(mapInputRecords, counters.findCounter("MyCounterGroup",
+        "MAP_INPUT_RECORDS").getValue(), "MapInputRecords");
+    assertEquals(mapOutputRecords, counters.findCounter("MyCounterGroup",
+        "MAP_OUTPUT_RECORDS").getValue(), "MapOutputRecords");
+    assertEquals(reduceInputGroups, counters.findCounter("MyCounterGroup",
+        "REDUCE_INPUT_GROUPS").getValue(), "ReduceInputGroups");
+    assertEquals(reduceOutputRecords, counters.findCounter("MyCounterGroup",
+        "REDUCE_OUTPUT_RECORDS").getValue(), "ReduceOutputRecords");
   }
 
   private static void createFile(Path inFile, Configuration conf)

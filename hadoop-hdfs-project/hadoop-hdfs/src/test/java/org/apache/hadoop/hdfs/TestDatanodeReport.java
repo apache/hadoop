@@ -19,7 +19,8 @@ package org.apache.hadoop.hdfs;
 
 import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -42,8 +43,7 @@ import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorageReport;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.hdfs.util.HostsFileWriter;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * This test ensures the all types of data node report work correctly.
@@ -160,31 +160,20 @@ public class TestDatanodeReport {
       cluster.waitActive();
       DistributedFileSystem fs = cluster.getFileSystem();
       Path p = new Path("/testDatanodeReportMissingBlock");
-      DFSTestUtil.writeFile(fs, p, new String("testdata"));
+      DFSTestUtil.writeFile(fs, p, "testdata");
       LocatedBlock lb = fs.getClient().getLocatedBlocks(p.toString(), 0).get(0);
       assertEquals(3, lb.getLocations().length);
       ExtendedBlock b = lb.getBlock();
       cluster.corruptBlockOnDataNodesByDeletingBlockFile(b);
       try {
         DFSTestUtil.readFile(fs, p);
-        Assert.fail("Must throw exception as the block doesn't exists on disk");
+        fail("Must throw exception as the block doesn't exists on disk");
       } catch (IOException e) {
         // all bad datanodes
       }
       cluster.triggerHeartbeats(); // IBR delete ack
-      int retries = 0;
-      while (true) {
-        lb = fs.getClient().getLocatedBlocks(p.toString(), 0).get(0);
-        if (0 != lb.getLocations().length) {
-          retries++;
-          if (retries > 7) {
-            Assert.fail("getLocatedBlocks failed after 7 retries");
-          }
-          Thread.sleep(2000);
-        } else {
-          break;
-        }
-      }
+      lb = fs.getClient().getLocatedBlocks(p.toString(), 0).get(0);
+      assertEquals(0, lb.getLocations().length);
     } finally {
       cluster.shutdown();
     }

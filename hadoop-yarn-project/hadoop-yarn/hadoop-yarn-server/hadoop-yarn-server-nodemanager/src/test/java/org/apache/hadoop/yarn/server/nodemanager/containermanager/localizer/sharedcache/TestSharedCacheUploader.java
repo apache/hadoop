@@ -18,9 +18,9 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.sharedcache;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.doReturn;
@@ -41,7 +41,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.api.SCMUploaderProtocol;
 import org.apache.hadoop.yarn.server.api.protocolrecords.SCMUploaderNotifyRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.SCMUploaderNotifyResponse;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class TestSharedCacheUploader {
 

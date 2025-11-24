@@ -23,14 +23,15 @@ import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.UTFDataFormatException;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.Random;
 
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.StringUtils;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /** Unit tests for UTF8. */
 @SuppressWarnings("deprecation")
@@ -110,7 +111,7 @@ public class TestUTF8 {
     DataOutputBuffer dob = new DataOutputBuffer();
     new UTF8(s).write(dob);
 
-    assertEquals(s, new String(dob.getData(), 2, dob.getLength()-2, "UTF-8"));
+    assertEquals(s, new String(dob.getData(), 2, dob.getLength()-2, StandardCharsets.UTF_8));
   }
 
   /**
@@ -125,7 +126,7 @@ public class TestUTF8 {
     String catFace = "\uD83D\uDC31";
 
     // This encodes to 4 bytes in UTF-8:
-    byte[] encoded = catFace.getBytes("UTF-8");
+    byte[] encoded = catFace.getBytes(StandardCharsets.UTF_8);
     assertEquals(4, encoded.length);
     assertEquals("f09f90b1", StringUtils.byteToHexString(encoded));
 

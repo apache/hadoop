@@ -17,21 +17,23 @@
  */
 package org.apache.hadoop.io;
 
-import static org.junit.Assert.fail;
-import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.nativeio.NativeIO;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 public class TestSecureIOUtils {
 
@@ -41,7 +43,7 @@ public class TestSecureIOUtils {
   private static File testFilePathFadis;
   private static FileSystem fs;
 
-  @BeforeClass
+  @BeforeAll
   public static void makeTestFile() throws Exception {
     Configuration conf = new Configuration();
     fs = FileSystem.getLocal(conf).getRaw();
@@ -57,7 +59,7 @@ public class TestSecureIOUtils {
     for (File f : new File[] { testFilePathIs, testFilePathRaf,
         testFilePathFadis }) {
       FileOutputStream fos = new FileOutputStream(f);
-      fos.write("hello".getBytes("UTF-8"));
+      fos.write("hello".getBytes(StandardCharsets.UTF_8));
       fos.close();
     }
 
@@ -68,14 +70,16 @@ public class TestSecureIOUtils {
     realGroup = stat.getGroup();
   }
 
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testReadUnrestricted() throws IOException {
     SecureIOUtils.openForRead(testFilePathIs, null, null).close();
     SecureIOUtils.openFSDataInputStream(testFilePathFadis, null, null).close();
     SecureIOUtils.openForRandomRead(testFilePathRaf, "r", null, null).close();
   }
 
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testReadCorrectlyRestrictedWithSecurity() throws IOException {
     SecureIOUtils
         .openForRead(testFilePathIs, realOwner, realGroup).close();
@@ -85,7 +89,8 @@ public class TestSecureIOUtils {
         .close();
   }
 
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testReadIncorrectlyRestrictedWithSecurity() throws IOException {
     // this will only run if libs are available
     assumeTrue(NativeIO.isAvailable());
@@ -128,7 +133,8 @@ public class TestSecureIOUtils {
     }
   }
 
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testCreateForWrite() throws IOException {
     try {
       SecureIOUtils.createForWrite(testFilePathIs, 0777);
@@ -138,7 +144,7 @@ public class TestSecureIOUtils {
     }
   }
 
-  @AfterClass
+  @AfterAll
   public static void removeTestFile() throws Exception {
     // cleaning files
     for (File f : new File[] { testFilePathIs, testFilePathRaf,

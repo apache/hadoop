@@ -40,6 +40,7 @@ import org.apache.hadoop.mapreduce.TaskInputOutputContext;
 import org.apache.hadoop.mapreduce.lib.map.WrappedMapper;
 import org.apache.hadoop.mapreduce.lib.reduce.WrappedReducer;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 
 /**
  * The Chain class provides all the common functionality for the
@@ -296,7 +297,7 @@ public class Chain {
     return false;
   }
 
-  private class MapRunner<KEYIN, VALUEIN, KEYOUT, VALUEOUT> extends Thread {
+  private class MapRunner<KEYIN, VALUEIN, KEYOUT, VALUEOUT> extends SubjectInheritingThread {
     private Mapper<KEYIN, VALUEIN, KEYOUT, VALUEOUT> mapper;
     private Mapper<KEYIN, VALUEIN, KEYOUT, VALUEOUT>.Context chainContext;
     private RecordReader<KEYIN, VALUEIN> rr;
@@ -313,7 +314,7 @@ public class Chain {
     }
 
     @Override
-    public void run() {
+    public void work() {
       if (getThrowable() != null) {
         return;
       }
@@ -329,7 +330,7 @@ public class Chain {
     }
   }
 
-  private class ReduceRunner<KEYIN, VALUEIN, KEYOUT, VALUEOUT> extends Thread {
+  private class ReduceRunner<KEYIN, VALUEIN, KEYOUT, VALUEOUT> extends SubjectInheritingThread {
     private Reducer<KEYIN, VALUEIN, KEYOUT, VALUEOUT> reducer;
     private Reducer<KEYIN, VALUEIN, KEYOUT, VALUEOUT>.Context chainContext;
     private RecordWriter<KEYOUT, VALUEOUT> rw;
@@ -344,7 +345,7 @@ public class Chain {
     }
 
     @Override
-    public void run() {
+    public void work() {
       try {
         reducer.run(chainContext);
         rw.close(chainContext);

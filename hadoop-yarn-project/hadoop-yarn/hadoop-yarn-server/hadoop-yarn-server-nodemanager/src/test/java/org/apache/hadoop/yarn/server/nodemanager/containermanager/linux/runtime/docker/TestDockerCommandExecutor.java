@@ -32,12 +32,11 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resource
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.DockerLinuxContainerRuntime;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.TestDockerContainerRuntime;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerRuntimeContext;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -48,9 +47,9 @@ import java.util.concurrent.ConcurrentMap;
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntimeConstants.CONTAINER_ID_STR;
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerCommandExecutor.DockerContainerStatus;
 import static org.eclipse.jetty.server.handler.gzip.GzipHttpOutputInterceptor.LOG;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -80,12 +79,12 @@ public class TestDockerCommandExecutor {
   private Context nmContext;
   private ApplicationAttemptId appAttemptId;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     mockExecutor = mock(PrivilegedOperationExecutor.class);
     mockCGroupsHandler = mock(CGroupsHandler.class);
     configuration = new Configuration();
-    String tmpPath = new StringBuffer(System.getProperty("test.build.data"))
+    String tmpPath = new StringBuilder(System.getProperty("test.build.data"))
         .append('/').append("hadoop.tmp.dir").toString();
     configuration.set("hadoop.tmp.dir", tmpPath);
     runtime = new DockerLinuxContainerRuntime(mockExecutor, mockCGroupsHandler);
@@ -115,7 +114,7 @@ public class TestDockerCommandExecutor {
     LocalDirsHandlerService localDirsHandler =
         mock(LocalDirsHandlerService.class);
 
-    String tmpPath = new StringBuffer(System.getProperty("test.build.data"))
+    String tmpPath = new StringBuilder(System.getProperty("test.build.data"))
         .append('/').append("hadoop.tmp.dir").toString();
 
     ConcurrentMap<ContainerId, Container> containerMap =
@@ -403,12 +402,12 @@ public class TestDockerCommandExecutor {
     try {
       List<String> dockerCommands = new ArrayList<>();
       for (PrivilegedOperation op : ops) {
-        Assert.assertEquals(op.getOperationType(),
+        assertEquals(op.getOperationType(),
             PrivilegedOperation.OperationType.RUN_DOCKER_CMD);
         String dockerCommandFile = op.getArguments().get(0);
         List<String> dockerCommandFileContents = Files
             .readAllLines(Paths.get(dockerCommandFile),
-                Charset.forName("UTF-8"));
+                StandardCharsets.UTF_8);
         dockerCommands.addAll(dockerCommandFileContents);
       }
       return dockerCommands;

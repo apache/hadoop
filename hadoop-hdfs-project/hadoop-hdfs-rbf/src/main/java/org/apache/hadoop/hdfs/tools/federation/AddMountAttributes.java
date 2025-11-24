@@ -148,6 +148,7 @@ public class AddMountAttributes {
    * @throws IOException If mount table instantiation fails.
    */
   private MountTable getMountTableForAddRequest(String mountSrc) throws IOException {
+    // linked hash map can keep the order of inserting.
     Map<String, String> destMap = new LinkedHashMap<>();
     for (String ns : this.getNss()) {
       destMap.put(ns, this.getDest());

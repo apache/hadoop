@@ -55,7 +55,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.InvalidContainerReleaseException;
 import org.apache.hadoop.yarn.exceptions.InvalidResourceBlacklistRequestException;
 import org.apache.hadoop.yarn.exceptions.InvalidResourceRequestException;
-import org.apache.hadoop.yarn.exceptions.SchedulerInvalidResoureRequestException;
+import org.apache.hadoop.yarn.exceptions.SchedulerInvalidResourceRequestException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
@@ -168,14 +168,13 @@ final class DefaultAMSProcessor implements ApplicationMasterServiceProcessor {
     // and corresponding NM tokens.
     if (app.getApplicationSubmissionContext()
         .getKeepContainersAcrossApplicationAttempts()) {
+      // Clear the node set remembered by the secret manager. Necessary
+      // for UAM restart because we use the same attemptId.
+      rmContext.getNMTokenSecretManager().clearNodeSetForAttempt(applicationAttemptId);
       List<Container> transferredContainers = getScheduler()
           .getTransferredContainers(applicationAttemptId);
       if (!transferredContainers.isEmpty()) {
         response.setContainersFromPreviousAttempts(transferredContainers);
-        // Clear the node set remembered by the secret manager. Necessary
-        // for UAM restart because we use the same attemptId.
-        rmContext.getNMTokenSecretManager()
-            .clearNodeSetForAttempt(applicationAttemptId);
 
         List<NMToken> nmTokens = new ArrayList<NMToken>();
         for (Container container : transferredContainers) {
@@ -302,7 +301,7 @@ final class DefaultAMSProcessor implements ApplicationMasterServiceProcessor {
         allocation = getScheduler().allocate(appAttemptId, ask,
             request.getSchedulingRequests(), release,
             blacklistAdditions, blacklistRemovals, containerUpdateRequests);
-      } catch (SchedulerInvalidResoureRequestException e) {
+      } catch (SchedulerInvalidResourceRequestException e) {
         LOG.warn("Exceptions caught when scheduler handling requests");
         throw new YarnException(e);
       }

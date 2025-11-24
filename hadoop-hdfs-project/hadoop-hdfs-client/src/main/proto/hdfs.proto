@@ -133,6 +133,7 @@ message DatanodeInfoProto {
   optional uint64 lastBlockReportTime = 15 [default = 0];
   optional uint64 lastBlockReportMonotonic = 16 [default = 0];
   optional uint32 numBlocks = 17 [default = 0];
+  optional string softwareVersion = 18;
 }
 
 /**

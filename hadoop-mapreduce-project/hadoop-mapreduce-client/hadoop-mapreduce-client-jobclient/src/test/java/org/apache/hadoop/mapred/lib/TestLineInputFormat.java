@@ -24,8 +24,8 @@ import java.util.*;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.mapred.*;
-import org.junit.Test;
-import static org.junit.Assert.assertEquals;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TestLineInputFormat {
   private static int MAX_LENGTH = 200;
@@ -84,21 +84,21 @@ public class TestLineInputFormat {
     InputSplit[] splits = format.getSplits(job, ignoredNumSplits);
 
     // check all splits except last one
-    int count = 0;
+    int count;
     for (int j = 0; j < splits.length -1; j++) {
-      assertEquals("There are no split locations", 0,
-                   splits[j].getLocations().length);
+      assertEquals(0, splits[j].getLocations().length,
+          "There are no split locations");
       RecordReader<LongWritable, Text> reader =
         format.getRecordReader(splits[j], job, voidReporter);
       Class readerClass = reader.getClass();
-      assertEquals("reader class is LineRecordReader.",
-                   LineRecordReader.class, readerClass);        
+      assertEquals(LineRecordReader.class, readerClass,
+          "reader class is LineRecordReader.");
       LongWritable key = reader.createKey();
       Class keyClass = key.getClass();
-      assertEquals("Key class is LongWritable.", LongWritable.class, keyClass);
+      assertEquals(LongWritable.class, keyClass, "Key class is LongWritable.");
       Text value = reader.createValue();
       Class valueClass = value.getClass();
-      assertEquals("Value class is Text.", Text.class, valueClass);
+      assertEquals(Text.class, valueClass, "Value class is Text.");
          
       try {
         count = 0;
@@ -108,8 +108,8 @@ public class TestLineInputFormat {
       } finally {
         reader.close();
       }
-      assertEquals("number of lines in split is " + expectedN ,
-                   expectedN, count);
+      assertEquals(expectedN, count,
+          "number of lines in split is " + expectedN);
     }
   }
   

@@ -27,7 +27,7 @@ import com.google.inject.Inject;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -196,7 +196,7 @@ public abstract class LogAggregationHtmlBlock extends HtmlBlock {
     Hamlet.PRE<Hamlet> pre = html.pre();
 
     while (toRead > 0 && (len = in.read(cbuf, 0, currentToRead)) > 0) {
-      pre.__(new String(cbuf, 0, len, Charset.forName("UTF-8")));
+      pre.__(new String(cbuf, 0, len, StandardCharsets.UTF_8));
       toRead = toRead - len;
       currentToRead = toRead > bufferSize ? bufferSize : (int) toRead;
     }

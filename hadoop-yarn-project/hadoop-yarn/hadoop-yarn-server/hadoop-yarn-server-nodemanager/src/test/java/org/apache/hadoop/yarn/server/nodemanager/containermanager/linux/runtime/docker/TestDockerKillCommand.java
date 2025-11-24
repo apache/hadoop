@@ -20,11 +20,11 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.apache.hadoop.util.StringUtils;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests the docker kill command and its command line arguments.
@@ -36,7 +36,7 @@ public class TestDockerKillCommand {
   private static final String SIGNAL = "SIGUSR2";
   private static final String CONTAINER_NAME = "foo";
 
-  @Before
+  @BeforeEach
   public void setup() {
     dockerKillCommand = new DockerKillCommand(CONTAINER_NAME);
   }

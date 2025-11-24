@@ -18,15 +18,17 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.placement.csmappingrule;
 
-import junit.framework.TestCase;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.VariableContext;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
 import java.util.Map;
 
-public class TestMappingRuleMatchers extends TestCase {
+public class TestMappingRuleMatchers  {
 
   @Test
   public void testCatchAll() {
@@ -64,12 +66,12 @@ public class TestMappingRuleMatchers extends TestCase {
         new MappingRuleMatchers.VariableMatcher("%custom", "Matching string"));
 
     matchers.forEach((matcherName, matcher) -> {
-      assertTrue(matcherName + " with matchingContext should match",
-          matcher.match(matchingContext));
-      assertFalse(matcherName + " with mismatchingContext shouldn't match",
-          matcher.match(mismatchingContext));
-      assertFalse(matcherName + " with emptyContext shouldn't match",
-          matcher.match(emptyContext));
+      assertTrue(matcher.match(matchingContext),
+          matcherName + " with matchingContext should match");
+      assertFalse(matcher.match(mismatchingContext),
+          matcherName + " with mismatchingContext shouldn't match");
+      assertFalse(matcher.match(emptyContext),
+          matcherName + " with emptyContext shouldn't match");
     });
   }
 
@@ -106,31 +108,27 @@ public class TestMappingRuleMatchers extends TestCase {
     MappingRuleMatcher userStatic =
         new MappingRuleMatchers.VariableMatcher("%user", "bob");
 
-    assertTrue("%custom should match %user in matching context",
-        customUser.match(matchingContext));
-    assertTrue("%user should match %custom in matching context",
-        userCustom.match(matchingContext));
-    assertTrue("%user (bob) should match %cus%tom (b + ob) in matching context",
-        userCusTom.match(matchingContext));
-    assertTrue("%user should match %user in any context",
-        userUser.match(matchingContext));
-    assertTrue("%user (bob) should match bob in in matching context",
-        userStatic.match(matchingContext));
+    assertTrue(customUser.match(matchingContext),
+        "%custom should match %user in matching context");
+    assertTrue(userCustom.match(matchingContext),
+        "%user should match %custom in matching context");
+    assertTrue(userCusTom.match(matchingContext),
+        "%user (bob) should match %cus%tom (b + ob) in matching context");
+    assertTrue(userUser.match(matchingContext),
+        "%user should match %user in any context");
+    assertTrue(userStatic.match(matchingContext),
+        "%user (bob) should match bob in in matching context");
 
-    assertFalse(
-        "%custom (bob) should NOT match %user (dave) in mismatching context",
-        customUser.match(mismatchingContext));
-    assertFalse(
-        "%user (dave) should NOT match %custom (bob) in mismatching context",
-        userCustom.match(mismatchingContext));
-    assertFalse(
-        "%user (dave) should NOT match %cus%tom (b+ob) in mismatching context",
-        userCusTom.match(mismatchingContext));
-    assertTrue("%user should match %user in any context",
-        userUser.match(mismatchingContext));
-    assertFalse(
-        "%user (dave) should NOT match match bob in in matching context",
-        userStatic.match(mismatchingContext));
+    assertFalse(customUser.match(mismatchingContext),
+        "%custom (bob) should NOT match %user (dave) in mismatching context");
+    assertFalse(userCustom.match(mismatchingContext),
+        "%user (dave) should NOT match %custom (bob) in mismatching context");
+    assertFalse(userCusTom.match(mismatchingContext),
+        "%user (dave) should NOT match %cus%tom (b+ob) in mismatching context");
+    assertTrue(userUser.match(mismatchingContext),
+        "%user should match %user in any context");
+    assertFalse(userStatic.match(mismatchingContext),
+        "%user (dave) should NOT match match bob in in matching context");
   }
 
   @Test

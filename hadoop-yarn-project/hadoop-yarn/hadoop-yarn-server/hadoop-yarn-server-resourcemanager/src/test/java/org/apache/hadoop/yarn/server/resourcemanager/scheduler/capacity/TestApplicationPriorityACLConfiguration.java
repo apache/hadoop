@@ -17,11 +17,12 @@
 */
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import java.util.List;
 
 import org.apache.hadoop.yarn.api.records.Priority;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 
 public class TestApplicationPriorityACLConfiguration {
@@ -40,28 +41,36 @@ public class TestApplicationPriorityACLConfiguration {
   private static final String QUEUEB = "queueB";
   private static final String QUEUEC = "queueC";
 
+  private static final QueuePath ROOT = new QueuePath(CapacitySchedulerConfiguration.ROOT);
+  private static final QueuePath A_QUEUE_PATH = new QueuePath(
+      CapacitySchedulerConfiguration.ROOT + "." + QUEUEA);
+  private static final QueuePath B_QUEUE_PATH = new QueuePath(
+      CapacitySchedulerConfiguration.ROOT + "." + QUEUEB);
+  private static final QueuePath C_QUEUE_PATH = new QueuePath(
+      CapacitySchedulerConfiguration.ROOT + "." + QUEUEC);
+
+
   @Test
   public void testSimpleACLConfiguration() throws Exception {
     CapacitySchedulerConfiguration csConf = new CapacitySchedulerConfiguration();
-    csConf.setQueues(CapacitySchedulerConfiguration.ROOT,
+    csConf.setQueues(ROOT,
         new String[]{QUEUEA, QUEUEB, QUEUEC});
 
-    csConf.setCapacity(CapacitySchedulerConfiguration.ROOT + "." + QUEUEA, 50f);
-    csConf.setCapacity(CapacitySchedulerConfiguration.ROOT + "." + QUEUEB, 25f);
-    csConf.setCapacity(CapacitySchedulerConfiguration.ROOT + "." + QUEUEC, 25f);
+    csConf.setCapacity(A_QUEUE_PATH, 50f);
+    csConf.setCapacity(B_QUEUE_PATH, 25f);
+    csConf.setCapacity(C_QUEUE_PATH, 25f);
 
     // Success case: Configure one user/group level priority acl for queue A.
     String[] aclsForA = new String[2];
     aclsForA[0] = QUEUE_A_USER;
     aclsForA[1] = QUEUE_A_GROUP;
-    csConf.setPriorityAcls(CapacitySchedulerConfiguration.ROOT + "." + QUEUEA,
+    csConf.setPriorityAcls(A_QUEUE_PATH,
         Priority.newInstance(maxPriorityQueueA),
         Priority.newInstance(defaultPriorityQueueA), aclsForA);
 
     // Try to get the ACL configs and make sure there are errors/exceptions
     List<AppPriorityACLGroup> pGroupA = csConf.getPriorityAcls(
-        CapacitySchedulerConfiguration.ROOT + "." + QUEUEA,
-        Priority.newInstance(clusterMaxPriority));
+        A_QUEUE_PATH, Priority.newInstance(clusterMaxPriority));
 
     // Validate!
     verifyACLs(pGroupA, QUEUE_A_USER, QUEUE_A_GROUP, maxPriorityQueueA,
@@ -71,34 +80,32 @@ public class TestApplicationPriorityACLConfiguration {
   @Test
   public void testACLConfigurationForInvalidCases() throws Exception {
     CapacitySchedulerConfiguration csConf = new CapacitySchedulerConfiguration();
-    csConf.setQueues(CapacitySchedulerConfiguration.ROOT,
+    csConf.setQueues(ROOT,
         new String[]{QUEUEA, QUEUEB, QUEUEC});
 
-    csConf.setCapacity(CapacitySchedulerConfiguration.ROOT + "." + QUEUEA, 50f);
-    csConf.setCapacity(CapacitySchedulerConfiguration.ROOT + "." + QUEUEB, 25f);
-    csConf.setCapacity(CapacitySchedulerConfiguration.ROOT + "." + QUEUEC, 25f);
+    csConf.setCapacity(A_QUEUE_PATH, 50f);
+    csConf.setCapacity(B_QUEUE_PATH, 25f);
+    csConf.setCapacity(C_QUEUE_PATH, 25f);
 
     // Success case: Configure one user/group level priority acl for queue A.
     String[] aclsForA = new String[2];
     aclsForA[0] = QUEUE_A_USER;
     aclsForA[1] = QUEUE_A_GROUP;
-    csConf.setPriorityAcls(CapacitySchedulerConfiguration.ROOT + "." + QUEUEA,
+    csConf.setPriorityAcls(A_QUEUE_PATH,
         Priority.newInstance(maxPriorityQueueA),
         Priority.newInstance(defaultPriorityQueueA), aclsForA);
 
     String[] aclsForB = new String[1];
     aclsForB[0] = QUEUE_B_USER;
-    csConf.setPriorityAcls(CapacitySchedulerConfiguration.ROOT + "." + QUEUEB,
+    csConf.setPriorityAcls(B_QUEUE_PATH,
         Priority.newInstance(maxPriorityQueueB),
         Priority.newInstance(defaultPriorityQueueB), aclsForB);
 
     // Try to get the ACL configs and make sure there are errors/exceptions
     List<AppPriorityACLGroup> pGroupA = csConf.getPriorityAcls(
-        CapacitySchedulerConfiguration.ROOT + "." + QUEUEA,
-        Priority.newInstance(clusterMaxPriority));
+        A_QUEUE_PATH, Priority.newInstance(clusterMaxPriority));
     List<AppPriorityACLGroup> pGroupB = csConf.getPriorityAcls(
-        CapacitySchedulerConfiguration.ROOT + "." + QUEUEB,
-        Priority.newInstance(clusterMaxPriority));
+        B_QUEUE_PATH, Priority.newInstance(clusterMaxPriority));
 
     // Validate stored ACL values with configured ones.
     verifyACLs(pGroupA, QUEUE_A_USER, QUEUE_A_GROUP, maxPriorityQueueA,
@@ -111,10 +118,10 @@ public class TestApplicationPriorityACLConfiguration {
     AppPriorityACLGroup group = pGroup.get(0);
     String aclString = queueUser + " " + queueGroup;
 
-    Assert.assertEquals(aclString.trim(),
+    assertEquals(aclString.trim(),
         group.getACLList().getAclString().trim());
-    Assert.assertEquals(maxPriority, group.getMaxPriority().getPriority());
-    Assert.assertEquals(defaultPriority,
+    assertEquals(maxPriority, group.getMaxPriority().getPriority());
+    assertEquals(defaultPriority,
         group.getDefaultPriority().getPriority());
   }
 }

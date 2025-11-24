@@ -27,11 +27,11 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.test.Whitebox;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -62,7 +62,6 @@ public class TestCommitBlockSynchronization {
     }
     namesystem.dir.getINodeMap().put(file);
 
-    FSNamesystem namesystemSpy = spy(namesystem);
     BlockInfo blockInfo = new BlockInfoContiguous(block, (short) 1);
     blockInfo.convertToBlockUnderConstruction(
         HdfsServerConstants.BlockUCState.UNDER_CONSTRUCTION, targets);
@@ -73,8 +72,10 @@ public class TestCommitBlockSynchronization {
     doReturn(blockInfo).when(file).removeLastBlock(any(Block.class));
     doReturn(true).when(file).isUnderConstruction();
     doReturn(new BlockInfoContiguous[1]).when(file).getBlocks();
-
-    doReturn(blockInfo).when(namesystemSpy).getStoredBlock(any(Block.class));
+    FSNamesystem namesystemSpy = spy(namesystem);
+    doReturn(blockInfo).when(namesystemSpy).getStoredBlock(nullable(Block.class));
+    doReturn(file).when(namesystemSpy).getBlockCollection(any(BlockInfo.class));
+    doReturn(false).when(namesystemSpy).isFileDeleted(any(INodeFile.class));
     doReturn(blockInfo).when(file).getLastBlock();
     doNothing().when(namesystemSpy).closeFileCommitBlocks(
         any(), any(INodeFile.class), any(BlockInfo.class));

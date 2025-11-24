@@ -19,13 +19,14 @@
 package org.apache.hadoop.lib.util;
 
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 
 import org.apache.hadoop.test.HTestCase;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class TestCheck extends HTestCase {
 
@@ -34,9 +35,11 @@ public class TestCheck extends HTestCase {
     assertEquals(Check.notNull("value", "name"), "value");
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void notNullNull() {
-    Check.notNull(null, "name");
+    assertThrows(IllegalArgumentException.class, () -> {
+      Check.notNull(null, "name");
+    });
   }
 
   @Test
@@ -45,14 +48,18 @@ public class TestCheck extends HTestCase {
     Check.notNullElements(Arrays.asList("a"), "name");
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void notNullElementsNullList() {
-    Check.notNullElements(null, "name");
+    assertThrows(IllegalArgumentException.class, () -> {
+      Check.notNullElements(null, "name");
+    });
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void notNullElementsNullElements() {
-    Check.notNullElements(Arrays.asList("a", "", null), "name");
+    assertThrows(IllegalArgumentException.class, () -> {
+      Check.notNullElements(Arrays.asList("a", "", null), "name");
+    });
   }
 
   @Test
@@ -61,20 +68,25 @@ public class TestCheck extends HTestCase {
     Check.notEmptyElements(Arrays.asList("a"), "name");
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void notEmptyElementsNullList() {
-    Check.notEmptyElements(null, "name");
+    assertThrows(IllegalArgumentException.class, () -> {
+      Check.notEmptyElements(null, "name");
+    });
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void notEmptyElementsNullElements() {
-    Check.notEmptyElements(Arrays.asList("a", null), "name");
+    assertThrows(IllegalArgumentException.class, () -> {
+      Check.notEmptyElements(Arrays.asList("a", null), "name");
+    });
   }
 
-
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void notEmptyElementsEmptyElements() {
-    Check.notEmptyElements(Arrays.asList("a", ""), "name");
+    assertThrows(IllegalArgumentException.class, () -> {
+      Check.notEmptyElements(Arrays.asList("a", ""), "name");
+    });
   }
 
 
@@ -83,14 +95,18 @@ public class TestCheck extends HTestCase {
     assertEquals(Check.notEmpty("value", "name"), "value");
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void notEmptyNull() {
-    Check.notEmpty(null, "name");
+    assertThrows(IllegalArgumentException.class, () -> {
+      Check.notEmpty(null, "name");
+    });
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void notEmptyEmpty() {
-    Check.notEmpty("", "name");
+    assertThrows(IllegalArgumentException.class, () -> {
+      Check.notEmpty("", "name");
+    });
   }
 
   @Test
@@ -101,29 +117,39 @@ public class TestCheck extends HTestCase {
     assertEquals(Check.validIdentifier("_", 1, ""), "_");
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void validIdentifierInvalid1() throws Exception {
-    Check.validIdentifier("!", 1, "");
+    assertThrows(IllegalArgumentException.class, () -> {
+      Check.validIdentifier("!", 1, "");
+    });
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void validIdentifierInvalid2() throws Exception {
-    Check.validIdentifier("a1", 1, "");
+    assertThrows(IllegalArgumentException.class, () -> {
+      Check.validIdentifier("a1", 1, "");
+    });
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void validIdentifierInvalid3() throws Exception {
-    Check.validIdentifier("1", 1, "");
+    assertThrows(IllegalArgumentException.class, () -> {
+      Check.validIdentifier("1", 1, "");
+    });
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void validIdentifierInvalid4() throws Exception {
-    Check.validIdentifier("`a", 2, "");
+    assertThrows(IllegalArgumentException.class, () -> {
+      Check.validIdentifier("`a", 2, "");
+    });
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void validIdentifierInvalid5() throws Exception {
-    Check.validIdentifier("[a", 2, "");
+    assertThrows(IllegalArgumentException.class, () -> {
+      Check.validIdentifier("[a", 2, "");
+    });
   }
 
   @Test
@@ -131,14 +157,18 @@ public class TestCheck extends HTestCase {
     assertEquals(Check.gt0(120, "test"), 120);
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void checkGTZeroZero() {
-    Check.gt0(0, "test");
+    assertThrows(IllegalArgumentException.class, () -> {
+      Check.gt0(0, "test");
+    });
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void checkGTZeroLessThanZero() {
-    Check.gt0(-1, "test");
+    assertThrows(IllegalArgumentException.class, () -> {
+      Check.gt0(-1, "test");
+    });
   }
 
   @Test
@@ -147,9 +177,11 @@ public class TestCheck extends HTestCase {
     assertEquals(Check.ge0(0, "test"), 0);
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void checkGELessThanZero() {
-    Check.ge0(-1, "test");
+    assertThrows(IllegalArgumentException.class, () -> {
+      Check.ge0(-1, "test");
+    });
   }
 
 }

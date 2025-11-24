@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.mapreduce.lib.input;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
@@ -47,6 +48,9 @@ import org.apache.hadoop.util.StopWatch;
 import org.apache.hadoop.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static java.util.Objects.requireNonNull;
+import static org.apache.hadoop.fs.FileUtil.maybeIgnoreMissingDirectory;
 
 /**
  * A base class for file-based {@link InputFormat}s.
@@ -356,16 +360,26 @@ public abstract class FileInputFormat<K, V> extends InputFormat<K, V> {
   protected void addInputPathRecursively(List<FileStatus> result,
       FileSystem fs, Path path, PathFilter inputFilter) 
       throws IOException {
-    RemoteIterator<LocatedFileStatus> iter = fs.listLocatedStatus(path);
-    while (iter.hasNext()) {
-      LocatedFileStatus stat = iter.next();
-      if (inputFilter.accept(stat.getPath())) {
-        if (stat.isDirectory()) {
-          addInputPathRecursively(result, fs, stat.getPath(), inputFilter);
-        } else {
-          result.add(shrinkStatus(stat));
+    // FNFE exceptions are caught whether raised in the list call,
+    // or in the hasNext() or next() calls, where async reporting
+    // may take place.
+    try {
+      RemoteIterator<LocatedFileStatus> iter = fs.listLocatedStatus(path);
+      while (iter.hasNext()) {
+        LocatedFileStatus stat = iter.next();
+        if (inputFilter.accept(stat.getPath())) {
+          if (stat.isDirectory()) {
+            addInputPathRecursively(result, fs, stat.getPath(), inputFilter);
+          } else {
+            result.add(shrinkStatus(stat));
+          }
         }
       }
+    } catch (FileNotFoundException e) {
+      // unless the store is capabile of list inconsistencies, rethrow.
+      // because this is recursive, the caller method may also end up catching
+      // and rethrowing, which is slighly inefficient but harmless.
+      maybeIgnoreMissingDirectory(fs, path, e);
     }
   }
 
@@ -442,10 +456,17 @@ public abstract class FileInputFormat<K, V> extends InputFormat<K, V> {
       if (length != 0) {
         BlockLocation[] blkLocations;
         if (file instanceof LocatedFileStatus) {
-          blkLocations = ((LocatedFileStatus) file).getBlockLocations();
+          blkLocations = requireNonNull(
+              ((LocatedFileStatus) file).getBlockLocations(),
+              () -> String.format("No block locations in LocatedFileStatus %s; length=%d",
+                  file, length));
+
         } else {
           FileSystem fs = path.getFileSystem(job.getConfiguration());
-          blkLocations = fs.getFileBlockLocations(file, 0, length);
+          blkLocations = requireNonNull(fs.getFileBlockLocations(file, 0, length), () ->
+              String.format("No block locations returned from getFileBlockLocations(%s, 0, %d)"
+                      + "; status=%s",
+                  path, length, file));
         }
         if (isSplitable(job, path)) {
           long blockSize = file.getBlockSize();
@@ -556,7 +577,7 @@ public abstract class FileInputFormat<K, V> extends InputFormat<K, V> {
                                    Path... inputPaths) throws IOException {
     Configuration conf = job.getConfiguration();
     Path path = inputPaths[0].getFileSystem(conf).makeQualified(inputPaths[0]);
-    StringBuffer str = new StringBuffer(StringUtils.escapeString(path.toString()));
+    StringBuilder str = new StringBuilder(StringUtils.escapeString(path.toString()));
     for(int i = 1; i < inputPaths.length;i++) {
       str.append(StringUtils.COMMA_STR);
       path = inputPaths[i].getFileSystem(conf).makeQualified(inputPaths[i]);

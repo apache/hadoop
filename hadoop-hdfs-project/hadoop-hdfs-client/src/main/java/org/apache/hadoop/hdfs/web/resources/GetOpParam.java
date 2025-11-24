@@ -69,6 +69,7 @@ public class GetOpParam extends HttpOpParam<GetOpParam.Op> {
     GETSTATUS(false, HttpURLConnection.HTTP_OK),
     GETECPOLICIES(false, HttpURLConnection.HTTP_OK),
     GETECCODECS(false, HttpURLConnection.HTTP_OK),
+    GETTRASHROOTS(false, HttpURLConnection.HTTP_OK),
     GETSNAPSHOTLIST(false, HttpURLConnection.HTTP_OK);
 
     final boolean redirect;

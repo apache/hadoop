@@ -170,4 +170,37 @@ public final class CommonPathCapabilities {
    */
   public static final String LEASE_RECOVERABLE = "fs.capability.lease.recoverable";
 
+  /**
+   * Is this a store where parent directory listings are potentially inconsistent with
+   * direct list/getFileStatus calls?
+   * This can happen with Amazon S3 Express One Zone Storage when there are pending
+   * uploads under a path.
+   * Application code can use this flag to decide whether or not to treat
+   * FileNotFoundExceptions on treewalk as errors or something to downgrade.
+   * Value: {@value}.
+   */
+  public static final String DIRECTORY_LISTING_INCONSISTENT =
+      "fs.capability.directory.listing.inconsistent";
+
+  /**
+   * Capability string to probe for bulk delete: {@value}.
+   */
+  public static final String BULK_DELETE = "fs.capability.bulk.delete";
+
+  /**
+   * Capability string to probe for block locations returned in {@code LocatedFileStatus}
+   * instances from calls such as {@code getBlockLocations()} and {@code listStatus()}l
+   * to be 'virtual' rather than actual values resolved against a Distributed Filesystem including
+   * HDFS: {@value}.
+   * <p>
+   * Key implications from this path capability being true:
+   * <ol>
+   *   <li>Work can be scheduled anywhere</li>
+   *   <li>Creation of the location list is a low cost-client side operation</li>
+   * </ol>
+   * Implication #2 means there is no performance penalty from use of FileSystem operations which
+   * return lists or iterators of {@code LocatedFileStatus}.
+   */
+  public static final String VIRTUAL_BLOCK_LOCATIONS = "fs.capability.virtual.block.locations";
+
 }

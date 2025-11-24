@@ -76,6 +76,13 @@ public abstract class SubClusterInfo {
     return subClusterInfo;
   }
 
+  public static SubClusterInfo newInstance(SubClusterId subClusterId,
+      String rmWebServiceAddress, SubClusterState state, long lastStartTime, long lastHeartBeat,
+      String capability) {
+    return newInstance(subClusterId, null, null, null,
+        rmWebServiceAddress, lastHeartBeat, state, lastStartTime, capability);
+  }
+
   /**
    * Get the {@link SubClusterId} representing the unique identifier of the
    * subcluster.

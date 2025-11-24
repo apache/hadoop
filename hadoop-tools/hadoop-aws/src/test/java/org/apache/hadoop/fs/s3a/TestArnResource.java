@@ -18,15 +18,16 @@
 
 package org.apache.hadoop.fs.s3a;
 
-import com.amazonaws.regions.Regions;
-import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import software.amazon.awssdk.regions.Region;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 
 import org.apache.hadoop.test.HadoopTestBase;
 
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Verifies the mapping of ARN declaration of resource to the associated
@@ -47,9 +48,9 @@ public class TestArnResource extends HadoopTestBase {
 
     String accessPoint = "testAp";
     String[][] regionPartitionEndpoints = new String[][] {
-        {Regions.EU_WEST_1.getName(), "aws"},
-        {Regions.US_GOV_EAST_1.getName(), "aws-us-gov"},
-        {Regions.CN_NORTH_1.getName(), "aws-cn"},
+        {Region.EU_WEST_1.id(), "aws"},
+        {Region.US_GOV_EAST_1.id(), "aws-us-gov"},
+        {Region.CN_NORTH_1.id(), "aws-cn"},
     };
 
     for (String[] testPair : regionPartitionEndpoints) {
@@ -57,9 +58,9 @@ public class TestArnResource extends HadoopTestBase {
       String partition = testPair[1];
 
       ArnResource resource = getArnResourceFrom(partition, "s3", region, MOCK_ACCOUNT, accessPoint);
-      assertEquals("Access Point name does not match", accessPoint, resource.getName());
-      assertEquals("Account Id does not match", MOCK_ACCOUNT, resource.getOwnerAccountId());
-      assertEquals("Region does not match", region, resource.getRegion());
+      assertEquals(accessPoint, resource.getName(), "Access Point name does not match");
+      assertEquals(MOCK_ACCOUNT, resource.getOwnerAccountId(), "Account Id does not match");
+      assertEquals(region, resource.getRegion(), "Region does not match");
     }
   }
 
@@ -71,7 +72,7 @@ public class TestArnResource extends HadoopTestBase {
         "test");
     String expected = "s3-accesspoint.eu-west-1.amazonaws.com";
 
-    Assertions.assertThat(accessPoint.getEndpoint())
+    assertThat(accessPoint.getEndpoint())
         .describedAs("Endpoint has invalid format. Access Point requests will not work")
         .isEqualTo(expected);
   }
@@ -84,7 +85,7 @@ public class TestArnResource extends HadoopTestBase {
         "test");
     String expected = "s3-outposts.eu-west-1.amazonaws.com";
 
-    Assertions.assertThat(accessPoint.getEndpoint())
+    assertThat(accessPoint.getEndpoint())
         .describedAs("Endpoint has invalid format. Access Point requests will not work")
         .isEqualTo(expected);
   }

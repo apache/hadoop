@@ -21,10 +21,12 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
 import org.apache.hadoop.hdfs.server.namenode.CheckpointSignature;
+import org.apache.hadoop.hdfs.server.namenode.NNStorage;
 import org.apache.hadoop.hdfs.server.namenode.NameNode.OperationCategory;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorageReport;
@@ -53,7 +55,7 @@ public class RouterNamenodeProtocol implements NamenodeProtocol {
 
   @Override
   public BlocksWithLocations getBlocks(DatanodeInfo datanode, long size,
-      long minBlockSize, long hotBlockTimeInterval) throws IOException {
+      long minBlockSize, long hotBlockTimeInterval, StorageType storageType) throws IOException {
     rpcServer.checkOperation(OperationCategory.READ);
 
     // Get the namespace where the datanode is located
@@ -79,8 +81,8 @@ public class RouterNamenodeProtocol implements NamenodeProtocol {
     if (nsId != null) {
       RemoteMethod method = new RemoteMethod(
           NamenodeProtocol.class, "getBlocks", new Class<?>[]
-          {DatanodeInfo.class, long.class, long.class, long.class},
-          datanode, size, minBlockSize, hotBlockTimeInterval);
+          {DatanodeInfo.class, long.class, long.class, long.class, StorageType.class},
+          datanode, size, minBlockSize, hotBlockTimeInterval, storageType);
       return rpcClient.invokeSingle(nsId, method, BlocksWithLocations.class);
     }
     return null;
@@ -110,6 +112,17 @@ public class RouterNamenodeProtocol implements NamenodeProtocol {
 
     RemoteMethod method =
         new RemoteMethod(NamenodeProtocol.class, "getMostRecentCheckpointTxId");
+    return rpcServer.invokeAtAvailableNs(method, long.class);
+  }
+
+  @Override
+  public long getMostRecentNameNodeFileTxId(NNStorage.NameNodeFile nnf)
+      throws IOException {
+    rpcServer.checkOperation(OperationCategory.READ);
+
+    RemoteMethod method =
+        new RemoteMethod(NamenodeProtocol.class, "getMostRecentNameNodeFileTxId",
+            new Class<?>[] {NNStorage.NameNodeFile.class}, nnf);
     return rpcServer.invokeAtAvailableNs(method, long.class);
   }
 

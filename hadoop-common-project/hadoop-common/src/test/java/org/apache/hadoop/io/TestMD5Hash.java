@@ -18,10 +18,11 @@
 
 package org.apache.hadoop.io;
 
-import org.junit.Test;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 
 import java.io.ByteArrayInputStream;
@@ -90,12 +91,12 @@ public class TestMD5Hash {
     
     assertEquals(0x0102030405060708L, orderedHash.halfDigest());
     assertEquals(0xfffefdfcfbfaf9f8L, backwardHash.halfDigest());
-    assertTrue("hash collision", 
-               closeHash1.hashCode() != closeHash2.hashCode());
+    assertTrue(closeHash1.hashCode() != closeHash2.hashCode(),
+        "hash collision");
      
-    Thread t1 = new Thread() {      
+    SubjectInheritingThread t1 = new SubjectInheritingThread() {
       @Override
-      public void run() {
+      public void work() {
         for (int i = 0; i < 100; i++) {
           MD5Hash hash = new MD5Hash(DFF);
           assertEquals(hash, md5HashFF);
@@ -103,9 +104,9 @@ public class TestMD5Hash {
       }
     };
     
-    Thread t2 = new Thread() {
+    SubjectInheritingThread t2 = new SubjectInheritingThread() {
       @Override
-      public void run() {
+      public void work() {
         for (int i = 0; i < 100; i++) {
           MD5Hash hash = new MD5Hash(D00);
           assertEquals(hash, md5Hash00);

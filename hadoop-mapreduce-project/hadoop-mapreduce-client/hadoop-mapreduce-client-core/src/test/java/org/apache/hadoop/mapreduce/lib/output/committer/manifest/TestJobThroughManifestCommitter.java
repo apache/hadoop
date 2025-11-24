@@ -26,9 +26,10 @@ import java.util.stream.Collectors;
 
 import org.assertj.core.api.Assertions;
 import org.assertj.core.api.Assumptions;
-import org.junit.FixMethodOrder;
-import org.junit.Test;
-import org.junit.runners.MethodSorters;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.MethodOrderer;
+import org.junit.jupiter.api.TestMethodOrder;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileSystem;
@@ -83,7 +84,7 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
  * after each test case.
  * The last test case MUST perform the cleanup.
  */
-@FixMethodOrder(MethodSorters.NAME_ASCENDING)
+@TestMethodOrder(MethodOrderer.Alphanumeric.class)
 public class TestJobThroughManifestCommitter
     extends AbstractManifestCommitterTest {
 
@@ -152,6 +153,7 @@ public class TestJobThroughManifestCommitter
   private static LoadedManifestData
       loadedManifestData;
 
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     super.setup();
@@ -598,7 +600,8 @@ public class TestJobThroughManifestCommitter
   public void test_0900_cleanupJob() throws Throwable {
     describe("Cleanup job");
     CleanupJobStage.Arguments arguments = new CleanupJobStage.Arguments(
-        OP_STAGE_JOB_CLEANUP, true, true, false);
+        OP_STAGE_JOB_CLEANUP, true, true,
+        false, false, 0);
     // the first run will list the three task attempt dirs and delete each
     // one before the toplevel dir.
     CleanupJobStage.Result result = new CleanupJobStage(
@@ -615,7 +618,7 @@ public class TestJobThroughManifestCommitter
    * Needed to clean up the shared test root, as test case teardown
    * does not do it.
    */
-  //@Test
+  @Test
   public void test_9999_cleanupTestDir() throws Throwable {
     if (shouldDeleteTestRootAtEndOfTestRun()) {
       deleteSharedTestRoot();

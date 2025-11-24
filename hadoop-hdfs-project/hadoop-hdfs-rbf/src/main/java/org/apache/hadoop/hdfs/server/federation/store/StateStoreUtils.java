@@ -25,6 +25,7 @@ import java.util.List;
 
 import org.apache.hadoop.hdfs.server.federation.store.records.BaseRecord;
 import org.apache.hadoop.hdfs.server.federation.store.records.Query;
+import org.apache.hadoop.net.NetUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -134,6 +135,21 @@ public final class StateStoreUtils {
       }
     }
     return hostName + ":" + address.getPort();
+  }
+
+  /**
+   * Returns address in form of ip:port, empty string if address is null.
+   *
+   * @param address address
+   * @return host:port
+   */
+  public static String getIpPortString(InetSocketAddress address) {
+    if (null == address) {
+      return "";
+    }
+    address = NetUtils.getConnectAddress(address);
+    InetAddress inet = address.getAddress();
+    return inet.getHostAddress() + ":" + address.getPort();
   }
 
 }

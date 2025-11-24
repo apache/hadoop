@@ -27,9 +27,10 @@ import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
-import com.amazonaws.services.s3.model.MultipartUpload;
+import software.amazon.awssdk.services.s3.model.MultipartUpload;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.commons.lang3.StringUtils;
@@ -975,7 +976,7 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
             .executeWith(commitContext.getOuterSubmitter())
             .suppressExceptions(suppressExceptions)
             .run(u -> commitContext.abortMultipartCommit(
-                u.getKey(), u.getUploadId()));
+                u.key(), u.uploadId()));
       } else {
         LOG.info("No pending uploads were found");
       }
@@ -1300,8 +1301,8 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
       DateFormat df = DateFormat.getDateTimeInstance();
       pending.forEach(u ->
           LOG.info("[{}] {}",
-              df.format(u.getInitiated()),
-              u.getKey()));
+              df.format(Date.from(u.initiated())),
+              u.key()));
       if (shouldAbortUploadsInCleanup()) {
         LOG.warn("This committer will abort these uploads in job cleanup");
       }

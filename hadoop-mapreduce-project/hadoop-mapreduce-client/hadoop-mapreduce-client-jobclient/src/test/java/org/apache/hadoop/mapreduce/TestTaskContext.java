@@ -29,18 +29,18 @@ import org.apache.hadoop.mapred.HadoopTestCase;
 import org.apache.hadoop.mapreduce.MapReduceTestUtil.DataCopyMapper;
 import org.apache.hadoop.mapreduce.MapReduceTestUtil.DataCopyReducer;
 
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Ignore;
-import org.junit.Test;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Tests context api and {@link StatusReporter#getProgress()} via 
  * {@link TaskAttemptContext#getProgress()} API . 
  */
-@Ignore
+@Disabled
 public class TestTaskContext extends HadoopTestCase {
   private static final Path rootTempDir =
     new Path(System.getProperty("test.build.data", "/tmp"));
@@ -49,14 +49,14 @@ public class TestTaskContext extends HadoopTestCase {
   
   private static FileSystem fs = null;
 
-  @BeforeClass
+  @BeforeAll
   public static void setup() throws Exception {
     fs = FileSystem.getLocal(new Configuration());
     fs.delete(testRootTempDir, true);
     fs.mkdirs(testRootTempDir);
   }
 
-  @AfterClass
+  @AfterAll
   public static void cleanup() throws Exception {
     fs.delete(testRootTempDir, true);
   }
@@ -82,7 +82,7 @@ public class TestTaskContext extends HadoopTestCase {
    * @throws ClassNotFoundException
    */
   @Test
-  @Ignore
+  @Disabled
   public void testContextStatus()
       throws IOException, InterruptedException, ClassNotFoundException {
     Path test = new Path(testRootTempDir, "testContextStatus");
@@ -94,7 +94,7 @@ public class TestTaskContext extends HadoopTestCase {
                 new Path(test, "in"), new Path(test, "out"), numMaps, 0);
     job.setMapperClass(MyMapper.class);
     job.waitForCompletion(true);
-    assertTrue("Job failed", job.isSuccessful());
+    assertTrue(job.isSuccessful(), "Job failed");
     TaskReport[] reports = job.getTaskReports(TaskType.MAP);
     assertEquals(numMaps, reports.length);
     assertEquals(myStatus, reports[0].getState());
@@ -117,7 +117,7 @@ public class TestTaskContext extends HadoopTestCase {
     
     // run the job and wait for completion
     job.waitForCompletion(true);
-    assertTrue("Job failed", job.isSuccessful());
+    assertTrue(job.isSuccessful(), "Job failed");
     
     // check map task reports
     // TODO fix testcase 
@@ -147,8 +147,8 @@ public class TestTaskContext extends HadoopTestCase {
     @Override
     protected void setup(Context context) throws IOException {
       // check if the map task attempt progress is 0
-      assertEquals("Invalid progress in map setup", 
-                   0.0f, context.getProgress(), 0f);
+      assertEquals(0.0f, context.getProgress(), 0f,
+          "Invalid progress in map setup");
       
       // define the progress boundaries
       if (context.getNumReduceTasks() == 0) {
@@ -167,8 +167,8 @@ public class TestTaskContext extends HadoopTestCase {
       // get the weighted map phase progress
       float weightedMapProgress = progressRange * mapPhaseProgress;
       // check the map progress
-      assertEquals("Invalid progress in map", 
-                   weightedMapProgress, context.getProgress(), 0f);
+      assertEquals(weightedMapProgress, context.getProgress(), 0f,
+          "Invalid progress in map");
       
       context.write(new Text(value.toString() + recordCount), value);
     };
@@ -176,8 +176,8 @@ public class TestTaskContext extends HadoopTestCase {
     protected void cleanup(Mapper.Context context) 
     throws IOException, InterruptedException {
       // check if the attempt progress is at the progress boundary 
-      assertEquals("Invalid progress in map cleanup", 
-                   progressRange, context.getProgress(), 0f);
+      assertEquals(progressRange, context.getProgress(), 0f,
+          "Invalid progress in map cleanup");
     };
   }
   
@@ -203,7 +203,7 @@ public class TestTaskContext extends HadoopTestCase {
     job.setMaxMapAttempts(1);
     
     job.waitForCompletion(true);
-    assertTrue("Job failed", job.isSuccessful());
+    assertTrue(job.isSuccessful(), "Job failed");
   }
   
   @SuppressWarnings("unchecked")
@@ -220,9 +220,8 @@ public class TestTaskContext extends HadoopTestCase {
       float weightedReducePhaseProgress = 
         REDUCE_PROGRESS_RANGE * reducePhaseProgress;
       // check that the shuffle phase progress is accounted for
-      assertEquals("Invalid progress in reduce setup",
-                   SHUFFLE_PROGRESS_RANGE + weightedReducePhaseProgress, 
-                   context.getProgress(), 0.01f);
+      assertEquals(SHUFFLE_PROGRESS_RANGE + weightedReducePhaseProgress,
+          context.getProgress(), 0.01f, "Invalid progress in reduce setup");
     };
     
     public void reduce(Text key, Iterator<Text> values, Context context)
@@ -230,16 +229,15 @@ public class TestTaskContext extends HadoopTestCase {
       float reducePhaseProgress =  ((float)++recordCount)/INPUT_LINES;
       float weightedReducePhaseProgress = 
         REDUCE_PROGRESS_RANGE * reducePhaseProgress;
-      assertEquals("Invalid progress in reduce", 
-                   SHUFFLE_PROGRESS_RANGE + weightedReducePhaseProgress, 
-                   context.getProgress(), 0.01f);
+      assertEquals(SHUFFLE_PROGRESS_RANGE + weightedReducePhaseProgress,
+          context.getProgress(), 0.01f, "Invalid progress in reduce");
     }
     
     protected void cleanup(Reducer.Context context) 
     throws IOException, InterruptedException {
       // check if the reduce task has progress of 1 in the end
-      assertEquals("Invalid progress in reduce cleanup", 
-                   1.0f, context.getProgress(), 0f);
+      assertEquals(1.0f, context.getProgress(), 0f,
+          "Invalid progress in reduce cleanup");
     };
   }
   
@@ -268,6 +266,6 @@ public class TestTaskContext extends HadoopTestCase {
     job.setMaxReduceAttempts(1);
     
     job.waitForCompletion(true);
-    assertTrue("Job failed", job.isSuccessful());
+    assertTrue(job.isSuccessful(), "Job failed");
   }
 }

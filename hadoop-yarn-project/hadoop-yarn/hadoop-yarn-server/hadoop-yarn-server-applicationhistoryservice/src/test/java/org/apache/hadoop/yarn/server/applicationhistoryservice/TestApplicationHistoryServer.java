@@ -24,6 +24,7 @@ import java.io.FileInputStream;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -227,6 +228,6 @@ public class TestApplicationHistoryServer {
     while ((read = input.read(buffer)) >= 0) {
       data.write(buffer, 0, read);
     }
-    return new String(data.toByteArray(), "UTF-8");
+    return new String(data.toByteArray(), StandardCharsets.UTF_8);
   }
 }

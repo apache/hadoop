@@ -25,9 +25,9 @@ import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.RouterContext;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test the SafeMode.
@@ -37,7 +37,7 @@ public class TestSafeMode {
   /** Federated HDFS cluster. */
   private MiniRouterDFSCluster cluster;
 
-  @Before
+  @BeforeEach
   public  void setup() throws Exception {
     cluster = new MiniRouterDFSCluster(true, 2);
 
@@ -64,7 +64,7 @@ public class TestSafeMode {
     cluster.waitActiveNamespaces();
   }
 
-  @After
+  @AfterEach
   public void teardown() throws IOException {
     if (cluster != null) {
       cluster.shutdown();

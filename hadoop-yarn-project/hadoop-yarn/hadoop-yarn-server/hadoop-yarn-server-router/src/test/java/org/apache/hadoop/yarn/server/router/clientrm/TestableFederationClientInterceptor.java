@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.router.clientrm;
 
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.mock;
 
 import java.io.IOException;
@@ -37,6 +38,8 @@ import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsResponse;
 import org.apache.hadoop.yarn.api.records.NodeAttribute;
 import org.apache.hadoop.yarn.api.records.NodeAttributeType;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -56,7 +59,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.QueueACLsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMDelegationTokenSecretManager;
 import org.apache.hadoop.yarn.server.router.security.RouterDelegationTokenSecretManager;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
-import org.junit.Assert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -99,7 +101,7 @@ public class TestableFederationClientInterceptor
           MockNM nm = mockRM.registerNode("127.0.0.1:1234", 8*1024, 4);
           mockNMs.put(subClusterId, nm);
         } catch (Exception e) {
-          Assert.fail(e.getMessage());
+          fail(e.getMessage());
         }
         mockRMs.put(subClusterId, mockRM);
       }
@@ -126,6 +128,11 @@ public class TestableFederationClientInterceptor
       throw new ConnectException("RM is stopped");
     }
 
+    @Override
+    public GetClusterMetricsResponse getClusterMetrics(GetClusterMetricsRequest request)
+        throws YarnException {
+      throw new YarnException("RM is stopped");
+    }
   }
 
   /**
@@ -245,6 +252,6 @@ public class TestableFederationClientInterceptor
         TimeUnit.MILLISECONDS);
 
     return new RouterDelegationTokenSecretManager(secretKeyInterval,
-        tokenMaxLifetime, tokenRenewInterval, removeScanInterval);
+        tokenMaxLifetime, tokenRenewInterval, removeScanInterval, conf);
   }
 }

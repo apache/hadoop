@@ -21,7 +21,8 @@ package org.apache.hadoop.fs.azurebfs.commit;
 import java.nio.charset.StandardCharsets;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,7 +40,7 @@ import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestSt
 
 import static org.apache.hadoop.fs.CommonPathCapabilities.ETAGS_PRESERVED_IN_RENAME;
 import static org.apache.hadoop.fs.azurebfs.commit.AbfsCommitTestHelper.prepareTestConfiguration;
-import static org.junit.Assume.assumeTrue;
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 /**
  * Test {@link AbfsManifestStoreOperations}.
@@ -60,16 +61,16 @@ public class ITestAbfsManifestStoreOperations extends AbstractManifestCommitterT
     binding = new ABFSContractTestBinding();
   }
 
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     binding.setup();
     super.setup();
 
     // skip tests on non-HNS stores
-    assumeTrue("Resilient rename not available",
-        getFileSystem().hasPathCapability(getContract().getTestPath(),
-            ETAGS_PRESERVED_IN_RENAME));
-
+    assumeThat(getFileSystem().hasPathCapability(getContract().getTestPath(),
+        ETAGS_PRESERVED_IN_RENAME)).as("Resilient rename not available")
+        .isTrue();
   }
 
   @Override

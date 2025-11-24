@@ -17,9 +17,15 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.apache.hadoop.hdfs.server.namenode.ha.BootstrapStandby.ERR_CODE_INVALID_VERSION;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.spy;
 
 import java.io.File;
 import java.io.IOException;
@@ -28,6 +34,13 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import java.util.function.Supplier;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
+import org.apache.hadoop.hdfs.server.common.HttpGetFailedException;
+import org.apache.hadoop.hdfs.server.namenode.FSImage;
+import org.apache.hadoop.hdfs.server.namenode.NameNodeLayoutVersion;
+import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -44,11 +57,13 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 
 public class TestBootstrapStandby {
   private static final Logger LOG =
@@ -60,7 +75,7 @@ public class TestBootstrapStandby {
   private MiniDFSCluster cluster;
   private NameNode nn0;
 
-  @Before
+  @BeforeEach
   public void setupCluster() throws IOException {
     Configuration conf = new Configuration();
 
@@ -87,7 +102,7 @@ public class TestBootstrapStandby {
     }
   }
 
-  @After
+  @AfterEach
   public void shutdownCluster() {
     if (cluster != null) {
       cluster.shutdown();
@@ -165,11 +180,133 @@ public class TestBootstrapStandby {
     FSImageTestUtil.assertNNFilesMatch(cluster);
 
     // Make sure the seen_txid was not modified by the standby
-    assertEquals(seen_txid_shared,
-        FSImageTestUtil.getStorageTxId(nn0, editsUri));
+    assertEquals(seen_txid_shared, FSImageTestUtil.getStorageTxId(nn0, editsUri));
 
     // We should now be able to start the standby successfully.
     restartNameNodesFromIndex(1);
+  }
+
+  /**
+   * Test for downloading a checkpoint while the cluster is in rolling upgrade.
+   */
+  @Test
+  public void testRollingUpgradeBootstrapStandby() throws Exception {
+    // This node is needed to create the rollback fsimage
+    cluster.restartNameNode(1);
+
+    int futureVersion = NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION - 1;
+
+    DistributedFileSystem fs = cluster.getFileSystem(0);
+    NameNodeAdapter.enterSafeMode(nn0, false);
+    NameNodeAdapter.saveNamespace(nn0);
+    NameNodeAdapter.leaveSafeMode(nn0);
+
+    // Setup BootstrapStandby to think it is a future NameNode version
+    BootstrapStandby bs = spy(new BootstrapStandby());
+    doAnswer(nsInfo ->  {
+      NamespaceInfo nsInfoSpy = (NamespaceInfo) spy(nsInfo.callRealMethod());
+      doReturn(futureVersion).when(nsInfoSpy).getServiceLayoutVersion();
+      return nsInfoSpy;
+    }).when(bs).getProxyNamespaceInfo(any());
+
+    // BootstrapStandby should fail if the node has a future version
+    // and the cluster isn't in rolling upgrade
+    bs.setConf(cluster.getConfiguration(2));
+    assertEquals(ERR_CODE_INVALID_VERSION, bs.run(new String[]{"-force"}),
+        "BootstrapStandby should return ERR_CODE_INVALID_VERSION");
+
+    // Start rolling upgrade
+    fs.rollingUpgrade(RollingUpgradeAction.PREPARE);
+    LambdaTestUtils.await(60000, 1000, () ->
+        fs.rollingUpgrade(RollingUpgradeAction.QUERY).createdRollbackImages());
+    // After the rollback image is created the standby is not needed
+    cluster.shutdownNameNode(1);
+    removeStandbyNameDirs();
+
+    nn0 = spy(nn0);
+
+    // Make nn0 think it is a future version
+    doAnswer(fsImage -> {
+      FSImage fsImageSpy = (FSImage) spy(fsImage.callRealMethod());
+      doAnswer(storage -> {
+        NNStorage storageSpy = (NNStorage) spy(storage.callRealMethod());
+        doReturn(futureVersion).when(storageSpy).getServiceLayoutVersion();
+        return storageSpy;
+      }).when(fsImageSpy).getStorage();
+      return fsImageSpy;
+    }).when(nn0).getFSImage();
+
+    // Roll edit logs a few times to inflate txid
+    nn0.getRpcServer().rollEditLog();
+    nn0.getRpcServer().rollEditLog();
+    // Make checkpoint
+    NameNodeAdapter.enterSafeMode(nn0, false);
+    NameNodeAdapter.saveNamespace(nn0);
+    NameNodeAdapter.leaveSafeMode(nn0);
+
+    long expectedCheckpointTxId = NameNodeAdapter.getNamesystem(nn0)
+        .getFSImage().getMostRecentCheckpointTxId();
+    long expectedRollbackTxId = NameNodeAdapter.getNamesystem(nn0)
+        .getFSImage().getMostRecentNameNodeFileTxId(
+            NNStorage.NameNodeFile.IMAGE_ROLLBACK);
+    assertEquals(11, expectedCheckpointTxId);
+
+    for (int i = 1; i < maxNNCount; i++) {
+      // BootstrapStandby on Standby NameNode
+      bs.setConf(cluster.getConfiguration(i));
+      bs.run(new String[]{"-force"});
+      FSImageTestUtil.assertNNHasCheckpoints(cluster, i,
+          ImmutableList.of((int) expectedCheckpointTxId));
+      FSImageTestUtil.assertNNHasRollbackCheckpoints(cluster, i,
+          ImmutableList.of((int) expectedRollbackTxId));
+    }
+
+    // Make sure the bootstrap was successful
+    FSImageTestUtil.assertNNFilesMatch(cluster);
+
+    // We should now be able to start the standby successfully
+    restartNameNodesFromIndex(1, "-rollingUpgrade", "started");
+
+    for (int i = 1; i < maxNNCount; i++) {
+      NameNode nn = cluster.getNameNode(i);
+      assertTrue(nn.getFSImage().hasRollbackFSImage(),
+          "NameNodes should all have the rollback FSImage");
+      assertTrue(nn.getNamesystem().isRollingUpgrade(), "NameNodes should all be inRollingUpgrade");
+    }
+
+    // Cleanup standby dirs
+    for (int i = 1; i < maxNNCount; i++) {
+      cluster.shutdownNameNode(i);
+    }
+    removeStandbyNameDirs();
+
+    // BootstrapStandby should fail if it thinks it's version is future version
+    // before rolling upgrade is finalized;
+    doAnswer(nsInfo -> {
+      NamespaceInfo nsInfoSpy = (NamespaceInfo) spy(nsInfo.callRealMethod());
+      nsInfoSpy.layoutVersion = futureVersion;
+      doReturn(futureVersion).when(nsInfoSpy).getServiceLayoutVersion();
+      return nsInfoSpy;
+    }).when(bs).getProxyNamespaceInfo(any());
+
+    for (int i = 1; i < maxNNCount; i++) {
+      bs.setConf(cluster.getConfiguration(i));
+      assertThrows(
+          HttpGetFailedException.class,
+          () -> {
+            try {
+              bs.run(new String[]{"-force"});
+            } catch (RuntimeException e) {
+              Throwable cause = e.getCause();
+              if (cause != null) {
+                throw cause;
+              }
+              throw e;
+            }
+          },
+          "BootstrapStandby should fail the image transfer request"
+      );
+    }
   }
 
   /**
@@ -229,7 +366,8 @@ public class TestBootstrapStandby {
    * Test that, even if the other node is not active, we are able
    * to bootstrap standby from it.
    */
-  @Test(timeout=30000)
+  @Test
+  @Timeout(value = 30)
   public void testOtherNodeNotActive() throws Exception {
     cluster.transitionToStandby(0);
     assertSuccessfulBootstrapFromIndex(1);
@@ -241,7 +379,8 @@ public class TestBootstrapStandby {
    * {@link DFSConfigKeys#DFS_IMAGE_TRANSFER_BOOTSTRAP_STANDBY_RATE_KEY}
    * created by HDFS-8808.
    */
-  @Test(timeout=180000)
+  @Test
+  @Timeout(value = 180)
   public void testRateThrottling() throws Exception {
     cluster.getConfiguration(0).setLong(
         DFSConfigKeys.DFS_IMAGE_TRANSFER_RATE_KEY, 1);
@@ -271,7 +410,7 @@ public class TestBootstrapStandby {
     final int timeOut = (int)(imageFile.length() / minXferRatePerMS) + 1;
     // A very low DFS_IMAGE_TRANSFER_RATE_KEY value won't affect bootstrapping
     final AtomicBoolean bootStrapped = new AtomicBoolean(false);
-    new Thread(
+    new SubjectInheritingThread(
         new Runnable() {
           @Override
           public void run() {
@@ -301,7 +440,7 @@ public class TestBootstrapStandby {
     // A very low DFS_IMAGE_TRANSFER_BOOTSTRAP_STANDBY_RATE_KEY value should
     // cause timeout
     bootStrapped.set(false);
-    new Thread(
+    new SubjectInheritingThread(
         new Runnable() {
           @Override
           public void run() {
@@ -336,10 +475,10 @@ public class TestBootstrapStandby {
     }
   }
 
-  private void restartNameNodesFromIndex(int start) throws IOException {
+  private void restartNameNodesFromIndex(int start, String... args) throws IOException {
     for (int i = start; i < maxNNCount; i++) {
       // We should now be able to start the standby successfully.
-      cluster.restartNameNode(i, false);
+      cluster.restartNameNode(i, false, args);
     }
 
     cluster.waitClusterUp();

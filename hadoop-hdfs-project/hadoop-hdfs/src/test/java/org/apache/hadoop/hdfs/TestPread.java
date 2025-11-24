@@ -17,8 +17,10 @@
  */
 package org.apache.hadoop.hdfs;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_MAX_BLOCK_ACQUIRE_FAILURES_KEY;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.EOFException;
 import java.io.IOException;
@@ -35,6 +37,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -50,9 +53,11 @@ import org.apache.hadoop.hdfs.protocol.datatransfer.DataTransferProtocol;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -76,8 +81,15 @@ public class TestPread {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(TestPread.class.getName());
+  private final GenericTestUtils.LogCapturer dfsClientLog =
+      GenericTestUtils.LogCapturer.captureLogs(DFSClient.LOG);
 
-  @Before
+  @BeforeAll
+  public static void setLogLevel() {
+    GenericTestUtils.setLogLevel(DFSClient.LOG, org.apache.log4j.Level.WARN);
+  }
+
+  @BeforeEach
   public void setup() {
     simulatedStorage = false;
     isHedgedRead = false;
@@ -98,10 +110,10 @@ public class TestPread {
       // should throw an exception
       res = e;
     }
-    assertTrue("Error reading beyond file boundary.", res != null);
+    assertTrue(res != null, "Error reading beyond file boundary.");
     in.close();
     if (!fileSys.delete(name, true))
-      assertTrue("Cannot delete file", false);
+      assertTrue(false, "Cannot delete file");
     
     // now create the real file
     DFSTestUtil.createFile(fileSys, name, fileSize, fileSize,
@@ -110,9 +122,9 @@ public class TestPread {
   
   private void checkAndEraseData(byte[] actual, int from, byte[] expected, String message) {
     for (int idx = 0; idx < actual.length; idx++) {
-      assertEquals(message+" byte "+(from+idx)+" differs. expected "+
-                        expected[from+idx]+" actual "+actual[idx],
-                        actual[idx], expected[from+idx]);
+      assertEquals(actual[idx], expected[from + idx],
+          message + " byte " + (from + idx)
+              + " differs. expected " + expected[from + idx] + " actual " + actual[idx]);
       actual[idx] = 0;
     }
   }
@@ -131,17 +143,17 @@ public class TestPread {
     while (nread < length) {
       int nbytes =
           stm.read(position + nread, buffer, offset + nread, length - nread);
-      assertTrue("Error in pread", nbytes > 0);
+      assertTrue(nbytes > 0, "Error in pread");
       nread += nbytes;
     }
 
     if (dfstm != null) {
       if (isHedgedRead) {
-        assertTrue("Expected read statistic to be incremented", length <= dfstm
-            .getReadStatistics().getTotalBytesRead() - totalRead);
+        assertTrue(length <= dfstm.getReadStatistics().getTotalBytesRead() - totalRead,
+            "Expected read statistic to be incremented");
       } else {
-        assertEquals("Expected read statistic to be incremented", length, dfstm
-            .getReadStatistics().getTotalBytesRead() - totalRead);
+        assertEquals(length, dfstm.getReadStatistics().getTotalBytesRead() - totalRead,
+            "Expected read statistic to be incremented");
       }
     }
   }
@@ -212,7 +224,7 @@ public class TestPread {
       // should throw an exception
       res = e;
     }
-    assertTrue("Error reading beyond file boundary.", res != null);
+    assertTrue(res != null, "Error reading beyond file boundary.");
     
     stm.close();
   }
@@ -544,9 +556,9 @@ public class TestPread {
       });
       try {
         future.get(4, TimeUnit.SECONDS);
-        Assert.fail();
+        Assertions.fail();
       } catch (ExecutionException ee) {
-        assertTrue(ee.toString(), ee.getCause() instanceof EOFException);
+        assertTrue(ee.getCause() instanceof EOFException, ee.toString());
       } finally {
         future.cancel(true);
         executor.shutdown();
@@ -556,7 +568,168 @@ public class TestPread {
     }
   }
 
-  @Test(timeout=30000)
+  /**
+   * Test logging in getFromOneDataNode when the number of IOExceptions can be recovered by
+   * retrying on a different datanode or by refreshing data nodes and retrying each data node one
+   * more time.
+   */
+  @Test
+  @Timeout(value = 120)
+  public void testGetFromOneDataNodeExceptionLogging() throws IOException {
+    // With maxBlockAcquireFailures = 0, we would try on each datanode only once and if
+    // we fail on all three datanodes, we fail the read request.
+    testGetFromOneDataNodeExceptionLogging(0, 0);
+    testGetFromOneDataNodeExceptionLogging(1, 0);
+    testGetFromOneDataNodeExceptionLogging(2, 0);
+
+    // With maxBlockAcquireFailures = 1, we will re-try each datanode a second time.
+    // So, we can tolerate up to 5 datanode fetch failures.
+    testGetFromOneDataNodeExceptionLogging(3, 1);
+    testGetFromOneDataNodeExceptionLogging(4, 1);
+    testGetFromOneDataNodeExceptionLogging(5, 1);
+  }
+
+  /**
+   * Each failed IOException would result in a WARN log of "Failed to connect to XXX. Retry with
+   * the next available datanode.". We verify the number of such log lines match the number of
+   * failed DNs.
+   * <p>
+   * @param ioExceptions number of IOExceptions to throw during a test.
+   * @param maxBlockAcquireFailures number of refreshLocation we would perform once we mark
+   *                                   all current data nodes as dead.
+   */
+  private void testGetFromOneDataNodeExceptionLogging(final int ioExceptions,
+      int maxBlockAcquireFailures)
+      throws IOException {
+    dfsClientLog.clearOutput();
+
+    if (ioExceptions < 0 || ioExceptions >= 3 * (maxBlockAcquireFailures+1)) {
+      return;
+    }
+
+    Configuration conf = new Configuration();
+    conf.setInt(DFS_CLIENT_MAX_BLOCK_ACQUIRE_FAILURES_KEY, maxBlockAcquireFailures);
+    final int[] count = {0};
+    // Set up the InjectionHandler
+    DFSClientFaultInjector.set(Mockito.mock(DFSClientFaultInjector.class));
+    DFSClientFaultInjector injector = DFSClientFaultInjector.get();
+    Mockito.doAnswer(new Answer<Void>() {
+      @Override
+      public Void answer(InvocationOnMock invocation) throws Throwable {
+        if (count[0] < ioExceptions) {
+          LOG.info("-------------- throw IOException " + count[0]);
+          count[0]++;
+          throw new IOException("IOException test");
+        }
+        return null;
+      }
+    }).when(injector).fetchFromDatanodeException();
+
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).format(true).build();
+    DistributedFileSystem fileSys = cluster.getFileSystem();
+    DFSClient dfsClient = fileSys.getClient();
+    DFSInputStream input = null;
+    Path file = new Path("/testfile.dat");
+
+    try {
+      DFSTestUtil.createFile(fileSys, file, fileSize, fileSize, blockSize, (short) 3, seed);
+
+      byte[] buffer = new byte[fileSize];
+      input = dfsClient.open(file.toString());
+      input.read(0, buffer, 0, fileSize);
+      assertEquals(ioExceptions, StringUtils.countMatches(dfsClientLog.getOutput(),
+          "Retry with the next available datanode."));
+    } finally {
+      Mockito.reset(injector);
+      IOUtils.cleanupWithLogger(LOG, input);
+      fileSys.close();
+      cluster.shutdown();
+      dfsClientLog.clearOutput();
+    }
+  }
+
+  /**
+   * Test the case where we always hit IOExceptions, causing the read request to fail.
+   */
+  @Test
+  @Timeout(value = 60)
+  public void testFetchFromDataNodeExceptionLoggingFailedRequest()
+      throws IOException {
+    testFetchFromDataNodeExceptionLoggingFailedRequest(0);
+    testFetchFromDataNodeExceptionLoggingFailedRequest(1);
+  }
+
+  /**
+   * We verify that BlockMissingException is threw and there is one ERROR log line of
+   * "Failed to read from all available datanodes for file"
+   * and 3 * (maxBlockAcquireFailures+1) ERROR log lines of
+   * "Exception when fetching file /testfile.dat at position".
+   * <p>
+   * maxBlockAcquireFailures determines how many times we can retry when we fail to read from
+   * all three data nodes.
+   * <ul>
+   *   <li>maxBlockAcquireFailures = 0: no retry. We will only read from each of the three
+   *   data nodes only once. We expect to see 3 ERROR log lines of "Exception when fetching file
+   *   /testfile.dat at position".
+   *   </li>
+   *   <li>maxBlockAcquireFailures = 1: 1 retry. We will read from each of the three data
+   *   nodes twice. We expect to see 6 ERROR log lines of "Exception when fetching file
+   *   /testfile.dat at position".
+   *   </li>
+   * </ul>
+   */
+  private void testFetchFromDataNodeExceptionLoggingFailedRequest(int maxBlockAcquireFailures)
+      throws IOException {
+    dfsClientLog.clearOutput();
+
+    Configuration conf = new Configuration();
+    conf.setInt(DFS_CLIENT_MAX_BLOCK_ACQUIRE_FAILURES_KEY, maxBlockAcquireFailures);
+    // Set up the InjectionHandler
+    DFSClientFaultInjector.set(Mockito.mock(DFSClientFaultInjector.class));
+    DFSClientFaultInjector injector = DFSClientFaultInjector.get();
+    Mockito.doAnswer(new Answer<Void>() {
+      @Override
+      public Void answer(InvocationOnMock invocation) throws Throwable {
+        LOG.info("-------------- throw IOException ");
+        throw new IOException("IOException test");
+      }
+    }).when(injector).fetchFromDatanodeException();
+
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).format(true).build();
+    DistributedFileSystem fileSys = cluster.getFileSystem();
+    DFSClient dfsClient = fileSys.getClient();
+    DFSInputStream input = null;
+    Path file = new Path("/testfile.dat");
+
+    try {
+      DFSTestUtil.createFile(fileSys, file, fileSize, fileSize, blockSize, (short) 3, seed);
+
+      byte[] buffer = new byte[fileSize];
+      input = dfsClient.open(file.toString());
+      input.read(0, buffer, 0, fileSize);
+      fail();
+    } catch (BlockMissingException expected) {
+      // Logging from pread
+      assertEquals(1, StringUtils.countMatches(dfsClientLog.getOutput(),
+          "Failed to read from all available datanodes for file"));
+      assertEquals(3 * (maxBlockAcquireFailures + 1),
+          StringUtils.countMatches(dfsClientLog.getOutput(),
+              "Exception when fetching file /testfile.dat at position"));
+      // Logging from actualGetFromOneDataNode
+      assertEquals(3 * (maxBlockAcquireFailures + 1),
+          StringUtils.countMatches(dfsClientLog.getOutput(),
+              "Retry with the next available datanode."));
+    } finally {
+      Mockito.reset(injector);
+      IOUtils.cleanupWithLogger(LOG, input);
+      fileSys.close();
+      cluster.shutdown();
+      dfsClientLog.clearOutput();
+    }
+  }
+
+  @Test
+  @Timeout(value = 30)
   public void testHedgedReadFromAllDNFailed() throws IOException {
     Configuration conf = new Configuration();
     int numHedgedReadPoolThreads = 5;
@@ -601,7 +774,7 @@ public class TestPread {
       byte[] buffer = new byte[64 * 1024];
       input = dfsClient.open(filename);
       input.read(0, buffer, 0, 1024);
-      Assert.fail("Reading the block should have thrown BlockMissingException");
+      Assertions.fail("Reading the block should have thrown BlockMissingException");
     } catch (BlockMissingException e) {
       // The result of 9 is due to 2 blocks by 4 iterations plus one because
       // hedgedReadOpsLoopNumForTesting is incremented at start of the loop.
@@ -641,7 +814,8 @@ public class TestPread {
    * 7. Consider next calls to getBlockLocations() always returns DN3 as last
    * location.<br>
    */
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testPreadHedgedFailureWithChangedBlockLocations()
       throws Exception {
     isHedgedRead = true;
@@ -762,10 +936,10 @@ public class TestPread {
       byte[] buf = new byte[1024];
       int n = din.read(0, buf, 0, data.length());
       assertEquals(data.length(), n);
-      assertEquals("Data should be read", data, new String(buf, 0, n));
-      assertTrue("Read should complete with maximum " + maxFailures
-              + " failures, but completed with " + din.failures,
-          din.failures <= maxFailures);
+      assertEquals(data, new String(buf, 0, n), "Data should be read");
+      assertTrue(din.failures <= maxFailures,
+          "Read should complete with maximum " + maxFailures
+              + " failures, but completed with " + din.failures);
       DFSClient.LOG.info("Read completed");
     }
   }

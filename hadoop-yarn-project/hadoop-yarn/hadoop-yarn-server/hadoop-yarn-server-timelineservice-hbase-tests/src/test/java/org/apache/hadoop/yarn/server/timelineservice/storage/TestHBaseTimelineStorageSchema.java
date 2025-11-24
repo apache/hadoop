@@ -18,15 +18,16 @@
 
 package org.apache.hadoop.yarn.server.timelineservice.storage;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.BaseTableRW;
 import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityTableRW;
 import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowRunTableRW;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
@@ -45,12 +46,21 @@ import org.apache.hadoop.hbase.client.Table;
 public class TestHBaseTimelineStorageSchema {
   private static HBaseTestingUtility util;
 
-  @BeforeClass
+  @BeforeAll
   public static void setupBeforeClass() throws Exception {
     util = new HBaseTestingUtility();
     Configuration conf = util.getConfiguration();
     conf.setInt("hfile.format.version", 3);
-    util.startMiniCluster();
+    try {
+      util.startMiniCluster();
+    } catch (Exception e) {
+      // TODO catch InaccessibleObjectException directly once Java 8 support is dropped
+      if (e.getClass().getSimpleName().equals("InaccessibleObjectException")) {
+        assumeTrue(false, "Could not start HBase because of HBASE-29234");
+      } else {
+        throw e;
+      }
+    }
   }
 
   @Test
@@ -139,10 +149,14 @@ public class TestHBaseTimelineStorageSchema {
     .unset(YarnConfiguration.TIMELINE_SERVICE_HBASE_SCHEMA_PREFIX_NAME);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     if (util != null) {
-      util.shutdownMiniCluster();
+      try {
+        util.shutdownMiniCluster();
+      } catch (Exception e) {
+        //May not work if we failed initializing
+      }
     }
   }
 }

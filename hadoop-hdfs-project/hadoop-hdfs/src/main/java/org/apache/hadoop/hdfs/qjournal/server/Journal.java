@@ -25,6 +25,7 @@ import java.io.InputStream;
 import java.io.OutputStreamWriter;
 import java.net.URL;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.security.PrivilegedExceptionAction;
@@ -72,7 +73,6 @@ import org.apache.hadoop.util.StopWatch;
 import org.apache.hadoop.util.Time;
 
 import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hadoop.thirdparty.protobuf.TextFormat;
@@ -1105,7 +1105,7 @@ public class Journal implements Closeable {
       // Write human-readable data after the protobuf. This is only
       // to assist in debugging -- it's not parsed at all.
       try(OutputStreamWriter writer =
-          new OutputStreamWriter(fos, Charsets.UTF_8)) {
+          new OutputStreamWriter(fos, StandardCharsets.UTF_8)) {
         writer.write(String.valueOf(newData));
         writer.write('\n');
         writer.flush();

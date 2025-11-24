@@ -19,6 +19,7 @@ package org.apache.hadoop.yarn.service.utils;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.registry.client.api.RegistryConstants;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.service.ServiceTestUtils;
 import org.apache.hadoop.yarn.service.api.records.Artifact;
@@ -32,9 +33,9 @@ import org.apache.hadoop.yarn.service.api.records.Resource;
 import org.apache.hadoop.yarn.service.api.records.Service;
 import org.apache.hadoop.yarn.service.api.records.ServiceState;
 import org.apache.hadoop.yarn.service.exceptions.RestApiErrorMessages;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,13 +46,14 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.apache.hadoop.yarn.service.conf.RestApiConstants.DEFAULT_UNLIMITED_LIFETIME;
 import static org.apache.hadoop.yarn.service.exceptions.RestApiErrorMessages.*;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.fail;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Test for ServiceApiUtil helper methods.
@@ -72,12 +74,13 @@ public class TestServiceApiUtil extends ServiceTestUtils {
   private static final YarnConfiguration CONF_DNS_ENABLED = new
       YarnConfiguration();
 
-  @BeforeClass
+  @BeforeAll
   public static void init() {
     CONF_DNS_ENABLED.setBoolean(RegistryConstants.KEY_DNS_ENABLED, true);
   }
 
-  @Test(timeout = 90000)
+  @Test
+  @Timeout(value = 90)
   public void testResourceValidation() throws Exception {
     assertEquals(RegistryConstants.MAX_FQDN_LABEL_LENGTH + 1, LEN_64_STR
         .length());
@@ -89,7 +92,7 @@ public class TestServiceApiUtil extends ServiceTestUtils {
     // no name
     try {
       ServiceApiUtil.validateAndResolveService(app, sfs, CONF_DNS_ENABLED);
-      Assert.fail(EXCEPTION_PREFIX + "service with no name");
+      fail(EXCEPTION_PREFIX + "service with no name");
     } catch (IllegalArgumentException e) {
       assertEquals(ERROR_APPLICATION_NAME_INVALID, e.getMessage());
     }
@@ -98,7 +101,7 @@ public class TestServiceApiUtil extends ServiceTestUtils {
     // no version
     try {
       ServiceApiUtil.validateAndResolveService(app, sfs, CONF_DNS_ENABLED);
-      Assert.fail(EXCEPTION_PREFIX + " service with no version");
+      fail(EXCEPTION_PREFIX + " service with no version");
     } catch (IllegalArgumentException e) {
       assertEquals(String.format(ERROR_APPLICATION_VERSION_INVALID,
           app.getName()), e.getMessage());
@@ -111,7 +114,7 @@ public class TestServiceApiUtil extends ServiceTestUtils {
       app.setName(badName);
       try {
         ServiceApiUtil.validateAndResolveService(app, sfs, CONF_DNS_ENABLED);
-        Assert.fail(EXCEPTION_PREFIX + "service with bad name " + badName);
+        fail(EXCEPTION_PREFIX + "service with bad name " + badName);
       } catch (IllegalArgumentException e) {
 
       }
@@ -123,7 +126,7 @@ public class TestServiceApiUtil extends ServiceTestUtils {
     app.addComponent(comp);
     try {
       ServiceApiUtil.validateAndResolveService(app, sfs, CONF_DEFAULT_DNS);
-      Assert.fail(EXCEPTION_PREFIX + "service with no launch command");
+      fail(EXCEPTION_PREFIX + "service with no launch command");
     } catch (IllegalArgumentException e) {
       assertEquals(RestApiErrorMessages.ERROR_ABSENT_LAUNCH_COMMAND,
           e.getMessage());
@@ -134,7 +137,7 @@ public class TestServiceApiUtil extends ServiceTestUtils {
         .MAX_FQDN_LABEL_LENGTH));
     try {
       ServiceApiUtil.validateAndResolveService(app, sfs, CONF_DNS_ENABLED);
-      Assert.fail(EXCEPTION_PREFIX + "service with no launch command");
+      fail(EXCEPTION_PREFIX + "service with no launch command");
     } catch (IllegalArgumentException e) {
       assertEquals(RestApiErrorMessages.ERROR_ABSENT_LAUNCH_COMMAND,
           e.getMessage());
@@ -146,7 +149,7 @@ public class TestServiceApiUtil extends ServiceTestUtils {
     app.setResource(res);
     try {
       ServiceApiUtil.validateAndResolveService(app, sfs, CONF_DNS_ENABLED);
-      Assert.fail(EXCEPTION_PREFIX + "service with no memory");
+      fail(EXCEPTION_PREFIX + "service with no memory");
     } catch (IllegalArgumentException e) {
       assertEquals(String.format(
           RestApiErrorMessages.ERROR_RESOURCE_MEMORY_FOR_COMP_INVALID,
@@ -158,7 +161,7 @@ public class TestServiceApiUtil extends ServiceTestUtils {
     res.setCpus(-2);
     try {
       ServiceApiUtil.validateAndResolveService(app, sfs, CONF_DNS_ENABLED);
-      Assert.fail(
+      fail(
           EXCEPTION_PREFIX + "service with invalid no of cpus");
     } catch (IllegalArgumentException e) {
       assertEquals(String.format(
@@ -170,9 +173,9 @@ public class TestServiceApiUtil extends ServiceTestUtils {
     res.setCpus(2);
     try {
       ServiceApiUtil.validateAndResolveService(app, sfs, CONF_DNS_ENABLED);
-      Assert.fail(EXCEPTION_PREFIX + "service with no container count");
+      fail(EXCEPTION_PREFIX + "service with no container count");
     } catch (IllegalArgumentException e) {
-      Assert.assertTrue(e.getMessage()
+      assertTrue(e.getMessage()
           .contains(ERROR_CONTAINERS_COUNT_INVALID));
     }
 
@@ -180,7 +183,7 @@ public class TestServiceApiUtil extends ServiceTestUtils {
     res.setProfile("hbase_finance_large");
     try {
       ServiceApiUtil.validateAndResolveService(app, sfs, CONF_DNS_ENABLED);
-      Assert.fail(EXCEPTION_PREFIX
+      fail(EXCEPTION_PREFIX
           + "service with resource profile along with cpus/memory");
     } catch (IllegalArgumentException e) {
       assertEquals(String.format(RestApiErrorMessages
@@ -195,7 +198,7 @@ public class TestServiceApiUtil extends ServiceTestUtils {
     res.setMemory(null);
     try {
       ServiceApiUtil.validateAndResolveService(app, sfs, CONF_DNS_ENABLED);
-      Assert.fail(EXCEPTION_PREFIX + "service with resource profile only");
+      fail(EXCEPTION_PREFIX + "service with resource profile only");
     } catch (IllegalArgumentException e) {
       assertEquals(ERROR_RESOURCE_PROFILE_NOT_SUPPORTED_YET,
           e.getMessage());
@@ -209,9 +212,9 @@ public class TestServiceApiUtil extends ServiceTestUtils {
     // null number of containers
     try {
       ServiceApiUtil.validateAndResolveService(app, sfs, CONF_DNS_ENABLED);
-      Assert.fail(EXCEPTION_PREFIX + "null number of containers");
+      fail(EXCEPTION_PREFIX + "null number of containers");
     } catch (IllegalArgumentException e) {
-      Assert.assertTrue(e.getMessage()
+      assertTrue(e.getMessage()
           .startsWith(ERROR_CONTAINERS_COUNT_INVALID));
     }
   }
@@ -236,7 +239,7 @@ public class TestServiceApiUtil extends ServiceTestUtils {
     app.setComponents(Collections.singletonList(comp));
     try {
       ServiceApiUtil.validateAndResolveService(app, sfs, CONF_DNS_ENABLED);
-      Assert.fail(EXCEPTION_PREFIX + "service with no artifact id");
+      fail(EXCEPTION_PREFIX + "service with no artifact id");
     } catch (IllegalArgumentException e) {
       assertEquals(String.format(ERROR_ARTIFACT_ID_FOR_COMP_INVALID, compName),
           e.getMessage());
@@ -246,7 +249,7 @@ public class TestServiceApiUtil extends ServiceTestUtils {
     artifact.setType(Artifact.TypeEnum.SERVICE);
     try {
       ServiceApiUtil.validateAndResolveService(app, sfs, CONF_DNS_ENABLED);
-      Assert.fail(EXCEPTION_PREFIX + "service with no artifact id");
+      fail(EXCEPTION_PREFIX + "service with no artifact id");
     } catch (IllegalArgumentException e) {
       assertEquals(ERROR_ARTIFACT_ID_INVALID, e.getMessage());
     }
@@ -255,7 +258,7 @@ public class TestServiceApiUtil extends ServiceTestUtils {
     artifact.setType(Artifact.TypeEnum.TARBALL);
     try {
       ServiceApiUtil.validateAndResolveService(app, sfs, CONF_DNS_ENABLED);
-      Assert.fail(EXCEPTION_PREFIX + "service with no artifact id");
+      fail(EXCEPTION_PREFIX + "service with no artifact id");
     } catch (IllegalArgumentException e) {
       assertEquals(String.format(ERROR_ARTIFACT_ID_FOR_COMP_INVALID, compName),
           e.getMessage());
@@ -268,7 +271,7 @@ public class TestServiceApiUtil extends ServiceTestUtils {
       ServiceApiUtil.validateAndResolveService(app, sfs, CONF_DNS_ENABLED);
     } catch (IllegalArgumentException e) {
       LOG.error("service attributes specified should be valid here", e);
-      Assert.fail(NO_EXCEPTION_PREFIX + e.getMessage());
+      fail(NO_EXCEPTION_PREFIX + e.getMessage());
     }
 
     assertThat(app.getLifetime()).isEqualTo(DEFAULT_UNLIMITED_LIFETIME);
@@ -315,7 +318,7 @@ public class TestServiceApiUtil extends ServiceTestUtils {
     try {
       ServiceApiUtil.validateAndResolveService(app, sfs, CONF_DNS_ENABLED);
     } catch (IllegalArgumentException e) {
-      Assert.fail(NO_EXCEPTION_PREFIX + e.getMessage());
+      fail(NO_EXCEPTION_PREFIX + e.getMessage());
     }
 
     assertEquals(1, app.getComponents().size());
@@ -333,7 +336,7 @@ public class TestServiceApiUtil extends ServiceTestUtils {
     // duplicate component name fails
     try {
       ServiceApiUtil.validateAndResolveService(app, sfs, CONF_DNS_ENABLED);
-      Assert.fail(EXCEPTION_PREFIX + "service with component collision");
+      fail(EXCEPTION_PREFIX + "service with component collision");
     } catch (IllegalArgumentException e) {
       assertEquals("Component name collision: " + compName, e.getMessage());
     }
@@ -350,7 +353,7 @@ public class TestServiceApiUtil extends ServiceTestUtils {
     //component name same as service name
     try {
       ServiceApiUtil.validateAndResolveService(app, sfs, CONF_DNS_ENABLED);
-      Assert.fail(EXCEPTION_PREFIX + "component name matches service name");
+      fail(EXCEPTION_PREFIX + "component name matches service name");
     } catch (IllegalArgumentException e) {
       assertEquals("Component name test must not be same as service name test",
           e.getMessage());
@@ -372,7 +375,7 @@ public class TestServiceApiUtil extends ServiceTestUtils {
     try {
       ServiceApiUtil.validateAndResolveService(app, sfs, CONF_DNS_ENABLED);
     } catch (IllegalArgumentException e) {
-      Assert.fail(NO_EXCEPTION_PREFIX + e.getMessage());
+      fail(NO_EXCEPTION_PREFIX + e.getMessage());
     }
   }
 
@@ -390,7 +393,7 @@ public class TestServiceApiUtil extends ServiceTestUtils {
     try {
       ServiceApiUtil.validateAndResolveService(app, sfs, CONF_DNS_ENABLED);
     } catch (IllegalArgumentException e) {
-      Assert.fail(NO_EXCEPTION_PREFIX + e.getMessage());
+      fail(NO_EXCEPTION_PREFIX + e.getMessage());
     }
 
     assertEquals(1, app.getComponents().size());
@@ -403,7 +406,7 @@ public class TestServiceApiUtil extends ServiceTestUtils {
     try {
       ServiceApiUtil.validateAndResolveService(app, sfs, CONF_DNS_ENABLED);
     } catch (IllegalArgumentException e) {
-      Assert.fail(NO_EXCEPTION_PREFIX + e.getMessage());
+      fail(NO_EXCEPTION_PREFIX + e.getMessage());
     }
 
     assertEquals(1, app.getComponents().size());
@@ -440,7 +443,7 @@ public class TestServiceApiUtil extends ServiceTestUtils {
     c.setDependencies(Arrays.asList("e"));
     try {
       verifyDependencySorting(Arrays.asList(a, b, c, d, e));
-      Assert.fail(EXCEPTION_PREFIX + "components with dependency cycle");
+      fail(EXCEPTION_PREFIX + "components with dependency cycle");
     } catch (IllegalArgumentException ex) {
       assertEquals(String.format(
           RestApiErrorMessages.ERROR_DEPENDENCY_CYCLE, Arrays.asList(c, d,
@@ -453,7 +456,7 @@ public class TestServiceApiUtil extends ServiceTestUtils {
     try {
       ServiceApiUtil.validateAndResolveService(service, sfs,
           CONF_DEFAULT_DNS);
-      Assert.fail(EXCEPTION_PREFIX + "components with bad dependencies");
+      fail(EXCEPTION_PREFIX + "components with bad dependencies");
     } catch (IllegalArgumentException ex) {
       assertEquals(String.format(
           RestApiErrorMessages.ERROR_DEPENDENCY_INVALID, "b", "e"), ex
@@ -476,7 +479,7 @@ public class TestServiceApiUtil extends ServiceTestUtils {
     for (String name : invalidNames) {
       try {
         ServiceApiUtil.validateNameFormat(name, new Configuration());
-        Assert.fail();
+        fail();
       } catch (IllegalArgumentException ex) {
         ex.printStackTrace();
       }
@@ -496,7 +499,7 @@ public class TestServiceApiUtil extends ServiceTestUtils {
     // invalid component name fails if dns is enabled
     try {
       ServiceApiUtil.validateAndResolveService(app, sfs, CONF_DNS_ENABLED);
-      Assert.fail(EXCEPTION_PREFIX + "service with invalid component name");
+      fail(EXCEPTION_PREFIX + "service with invalid component name");
     } catch (IllegalArgumentException e) {
       assertEquals(String.format(RestApiErrorMessages
           .ERROR_COMPONENT_NAME_INVALID, maxLen, compName), e.getMessage());
@@ -506,7 +509,7 @@ public class TestServiceApiUtil extends ServiceTestUtils {
     try {
       ServiceApiUtil.validateAndResolveService(app, sfs, CONF_DEFAULT_DNS);
     } catch (IllegalArgumentException e) {
-      Assert.fail(NO_EXCEPTION_PREFIX + e.getMessage());
+      fail(NO_EXCEPTION_PREFIX + e.getMessage());
     }
 
     compName = LEN_64_STR.substring(0, maxLen);
@@ -517,7 +520,7 @@ public class TestServiceApiUtil extends ServiceTestUtils {
     try {
       ServiceApiUtil.validateAndResolveService(app, sfs, CONF_DNS_ENABLED);
     } catch (IllegalArgumentException e) {
-      Assert.fail(NO_EXCEPTION_PREFIX + e.getMessage());
+      fail(NO_EXCEPTION_PREFIX + e.getMessage());
     }
   }
 
@@ -534,7 +537,7 @@ public class TestServiceApiUtil extends ServiceTestUtils {
 
     try {
       ServiceApiUtil.validateAndResolveService(app, sfs, CONF_DNS_ENABLED);
-      Assert.fail(EXCEPTION_PREFIX + "constraint with no type");
+      fail(EXCEPTION_PREFIX + "constraint with no type");
     } catch (IllegalArgumentException e) {
       assertEquals(String.format(
           RestApiErrorMessages.ERROR_PLACEMENT_POLICY_CONSTRAINT_TYPE_NULL,
@@ -546,7 +549,7 @@ public class TestServiceApiUtil extends ServiceTestUtils {
 
     try {
       ServiceApiUtil.validateAndResolveService(app, sfs, CONF_DNS_ENABLED);
-      Assert.fail(EXCEPTION_PREFIX + "constraint with no scope");
+      fail(EXCEPTION_PREFIX + "constraint with no scope");
     } catch (IllegalArgumentException e) {
       assertEquals(String.format(
           RestApiErrorMessages.ERROR_PLACEMENT_POLICY_CONSTRAINT_SCOPE_NULL,
@@ -564,7 +567,7 @@ public class TestServiceApiUtil extends ServiceTestUtils {
     try {
       ServiceApiUtil.validateAndResolveService(app, sfs, CONF_DNS_ENABLED);
     } catch (IllegalArgumentException e) {
-      Assert.fail(NO_EXCEPTION_PREFIX + e.getMessage());
+      fail(NO_EXCEPTION_PREFIX + e.getMessage());
     }
   }
 
@@ -581,7 +584,7 @@ public class TestServiceApiUtil extends ServiceTestUtils {
     try {
       ServiceApiUtil.validateKerberosPrincipal(app.getKerberosPrincipal());
     } catch (IllegalArgumentException e) {
-      Assert.fail(NO_EXCEPTION_PREFIX + e.getMessage());
+      fail(NO_EXCEPTION_PREFIX + e.getMessage());
     }
 
     // Keytab with no URI scheme should succeed too
@@ -589,7 +592,7 @@ public class TestServiceApiUtil extends ServiceTestUtils {
     try {
       ServiceApiUtil.validateKerberosPrincipal(app.getKerberosPrincipal());
     } catch (IllegalArgumentException e) {
-      Assert.fail(NO_EXCEPTION_PREFIX + e.getMessage());
+      fail(NO_EXCEPTION_PREFIX + e.getMessage());
     }
   }
 
@@ -602,7 +605,7 @@ public class TestServiceApiUtil extends ServiceTestUtils {
 
     try {
       ServiceApiUtil.validateKerberosPrincipal(app.getKerberosPrincipal());
-      Assert.fail(EXCEPTION_PREFIX + "service with invalid principal name " +
+      fail(EXCEPTION_PREFIX + "service with invalid principal name " +
           "format.");
     } catch (IllegalArgumentException e) {
       assertEquals(
@@ -616,7 +619,7 @@ public class TestServiceApiUtil extends ServiceTestUtils {
     try {
       ServiceApiUtil.validateKerberosPrincipal(app.getKerberosPrincipal());
     } catch (IllegalArgumentException e) {
-      Assert.fail(NO_EXCEPTION_PREFIX + e.getMessage());
+      fail(NO_EXCEPTION_PREFIX + e.getMessage());
     }
 
     kp.setPrincipalName(null);
@@ -624,7 +627,7 @@ public class TestServiceApiUtil extends ServiceTestUtils {
     try {
       ServiceApiUtil.validateKerberosPrincipal(app.getKerberosPrincipal());
     } catch (NullPointerException e) {
-        Assert.fail(NO_EXCEPTION_PREFIX + e.getMessage());
+      fail(NO_EXCEPTION_PREFIX + e.getMessage());
     }
   }
 
@@ -643,8 +646,8 @@ public class TestServiceApiUtil extends ServiceTestUtils {
     expected.add("compb");
     expected.add("compa");
     for (int i = 0; i < expected.size(); i++) {
-      Assert.assertEquals("Components are not equal.", expected.get(i),
-          order.get(i));
+      assertEquals(expected.get(i),
+          order.get(i), "Components are not equal.");
     }
   }
 
@@ -663,8 +666,8 @@ public class TestServiceApiUtil extends ServiceTestUtils {
     expected.add("compa");
     expected.add("compb");
     for (int i = 0; i < expected.size(); i++) {
-      Assert.assertEquals("Components are not equal.", expected.get(i),
-          order.get(i));
+      assertEquals(expected.get(i),
+          order.get(i), "Components are not equal.");
     }
   }
 
@@ -686,8 +689,8 @@ public class TestServiceApiUtil extends ServiceTestUtils {
     expected.add("compa");
     expected.add("compb");
     for (int i = 0; i < expected.size(); i++) {
-      Assert.assertEquals("Components are not equal.", expected.get(i),
-          order.get(i));
+      assertEquals(expected.get(i),
+          order.get(i), "Components are not equal.");
     }
   }
 
@@ -703,12 +706,13 @@ public class TestServiceApiUtil extends ServiceTestUtils {
     expected.add("compa");
     expected.add("compb");
     for (int i = 0; i < expected.size(); i++) {
-      Assert.assertEquals("Components are not equal.", expected.get(i),
-          order.get(i));
+      assertEquals(expected.get(i),
+          order.get(i), "Components are not equal.");
     }
   }
 
-  @Test(timeout = 1500)
+  @Test
+  @Timeout(value = 1)
   public void testNoServiceDependencies() {
     Service service = createExampleApplication();
     Component compa = createComponent("compa");
@@ -722,9 +726,9 @@ public class TestServiceApiUtil extends ServiceTestUtils {
 
   @Test
   public void testServiceDependencies() {
-    Thread thread = new Thread() {
+    SubjectInheritingThread thread = new SubjectInheritingThread() {
       @Override
-      public void run() {
+      public void work() {
         Service service = createExampleApplication();
         Component compa = createComponent("compa");
         Component compb = createComponent("compb");
@@ -743,7 +747,7 @@ public class TestServiceApiUtil extends ServiceTestUtils {
       Thread.sleep(1000);
     } catch (InterruptedException e) {
     }
-    Assert.assertTrue(thread.isAlive());
+    assertTrue(thread.isAlive());
   }
 
   @Test

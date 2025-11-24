@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.fs.viewfs;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.apache.hadoop.fs.viewfs.TestChRootedFileSystem.getChildFileSystem;
 
 import java.io.IOException;
@@ -34,8 +34,8 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test ViewFileSystem's support for having delegation tokens fetched and cached
@@ -52,7 +52,7 @@ public class TestViewFileSystemDelegationTokenSupport {
   static FakeFileSystem fs1;
   static FakeFileSystem fs2;
 
-  @BeforeClass
+  @BeforeAll
   public static void setup() throws Exception {
     conf = ViewFileSystemTestSetup.createConfig();
     setupFileSystem(new URI("fs1:///"), FakeFileSystem.class);

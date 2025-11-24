@@ -25,33 +25,32 @@ import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.fs.contract.AbstractFSContractTestBase;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.contract.s3a.S3AContract;
-import org.apache.hadoop.fs.s3a.tools.MarkerTool;
 import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
 import org.apache.hadoop.fs.statistics.IOStatisticsContext;
 import org.apache.hadoop.fs.store.audit.AuditSpan;
 import org.apache.hadoop.fs.store.audit.AuditSpanSource;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.test.tags.IntegrationTest;
 
-import org.junit.AfterClass;
-import org.junit.Assume;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.writeDataset;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestPropertyBool;
-import static org.apache.hadoop.fs.s3a.S3AUtils.E_FS_CLOSED;
-import static org.apache.hadoop.fs.s3a.tools.MarkerTool.UNLIMITED_LISTING;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsToPrettyString;
 import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.snapshotIOStatistics;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
  * An extension of the contract test base set up for S3A tests.
  */
+@IntegrationTest
 public abstract class AbstractS3ATestBase extends AbstractFSContractTestBase
     implements S3ATestConstants {
   protected static final Logger LOG =
@@ -98,6 +97,7 @@ public abstract class AbstractS3ATestBase extends AbstractFSContractTestBase
     return new S3AContract(conf, false);
   }
 
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     Thread.currentThread().setName("setup");
@@ -115,11 +115,10 @@ public abstract class AbstractS3ATestBase extends AbstractFSContractTestBase
     IOStatisticsContext.getCurrentIOStatisticsContext().reset();
   }
 
+  @AfterEach
   @Override
   public void teardown() throws Exception {
     Thread.currentThread().setName("teardown");
-
-    maybeAuditTestPath();
 
     super.teardown();
     if (getFileSystem() != null) {
@@ -132,54 +131,10 @@ public abstract class AbstractS3ATestBase extends AbstractFSContractTestBase
   /**
    * Dump the filesystem statistics after the class.
    */
-  @AfterClass
+  @AfterAll
   public static void dumpFileSystemIOStatistics() {
     LOG.info("Aggregate FileSystem Statistics {}",
         ioStatisticsToPrettyString(FILESYSTEM_IOSTATS));
-  }
-
-  /**
-   * Audit the FS under {@link #methodPath()} if
-   * the test option {@link #DIRECTORY_MARKER_AUDIT} is
-   * true.
-   */
-  public void maybeAuditTestPath() {
-    final S3AFileSystem fs = getFileSystem();
-    if (fs != null) {
-      try {
-        boolean audit = getTestPropertyBool(fs.getConf(),
-            DIRECTORY_MARKER_AUDIT, false);
-        Path methodPath = methodPath();
-        if (audit
-            && !fs.getDirectoryMarkerPolicy()
-            .keepDirectoryMarkers(methodPath)
-            && fs.isDirectory(methodPath)) {
-          MarkerTool.ScanResult result = MarkerTool.execMarkerTool(
-              new MarkerTool.ScanArgsBuilder()
-                  .withSourceFS(fs)
-                  .withPath(methodPath)
-                  .withDoPurge(true)
-                  .withMinMarkerCount(0)
-                  .withMaxMarkerCount(0)
-                  .withLimit(UNLIMITED_LISTING)
-                  .withNonAuth(false)
-                  .build());
-          final String resultStr = result.toString();
-          assertEquals("Audit of " + methodPath + " failed: "
-                  + resultStr,
-              0, result.getExitCode());
-          assertEquals("Marker Count under " + methodPath
-                  + " non-zero: " + resultStr,
-              0, result.getFilteredMarkerCount());
-        }
-      } catch (FileNotFoundException ignored) {
-      } catch (Exception e) {
-        // If is this is not due to the FS being closed: log.
-        if (!e.toString().contains(E_FS_CLOSED)) {
-          LOG.warn("Marker Tool Failure", e);
-        }
-      }
-    }
   }
 
   @Override
@@ -210,6 +165,14 @@ public abstract class AbstractS3ATestBase extends AbstractFSContractTestBase
     return (S3AFileSystem) super.getFileSystem();
   }
 
+  /**
+   * Get the {@link S3AInternals} internal access for the
+   * test filesystem.
+   * @return internals.
+   */
+  public S3AInternals getS3AInternals() {
+    return getFileSystem().getS3AInternals();
+  }
   /**
    * Describe a test in the logs.
    * @param text text to print
@@ -274,8 +237,8 @@ public abstract class AbstractS3ATestBase extends AbstractFSContractTestBase
    *  Method to assume that S3 client side encryption is disabled on a test.
    */
   public void skipIfClientSideEncryption() {
-    Assume.assumeTrue("Skipping test if CSE is enabled",
-        !getFileSystem().isCSEEnabled());
+    assumeTrue(!getFileSystem().isCSEEnabled(),
+        "Skipping test if CSE is enabled");
   }
 
   /**

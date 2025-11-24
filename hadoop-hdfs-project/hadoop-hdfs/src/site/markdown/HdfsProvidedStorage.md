@@ -124,7 +124,7 @@ Assign all files to be owned by "rmarathe", write to gzip compressed text:
 hadoop org.apache.hadoop.hdfs.server.namenode.FileSystemImage \
   -Dhdfs.image.writer.ugi.single.user=rmarathe \
   -Ddfs.provided.aliasmap.text.codec=gzip \
-  -Ddfs.provided.aliasmap.text.write.dir=file:///tmp/
+  -Ddfs.provided.aliasmap.text.write.dir=file:///tmp/ \
   -b org.apache.hadoop.hdfs.server.common.blockaliasmap.impl.TextFileRegionAliasMap \
   -u org.apache.hadoop.hdfs.server.namenode.SingleUGIResolver \
   -o file:///tmp/name \

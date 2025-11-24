@@ -358,4 +358,23 @@ public abstract class MembershipState extends BaseRecord
   public static void setDeletionMs(long time) {
     MembershipState.deletionMs = time;
   }
+
+  /**
+   * First use the comparator of the BaseRecord to compare the date modified.
+   * If they are equal, compare their primary keys to ensure that MembershipStates
+   * with the same date modified but reported by different routers will not be judged as equal.
+   *
+   * @param record the MembershipState object to be compared.
+   * @return a negative integer, zero, or a positive integer as this object
+   *         is less than, equal to, or greater than the specified object.
+   */
+  @Override
+  public int compareTo(BaseRecord record) {
+    int order = super.compareTo(record);
+    if (order == 0) {
+      MembershipState other = (MembershipState) record;
+      return this.getPrimaryKey().compareTo(other.getPrimaryKey());
+    }
+    return order;
+  }
 }

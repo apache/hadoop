@@ -37,6 +37,7 @@ import java.util.concurrent.TimeoutException;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Iterators;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.util.Timer;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -53,6 +54,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSImage;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
+import org.apache.hadoop.hdfs.util.RwLockMode;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.security.SecurityUtil;
 
@@ -355,7 +357,7 @@ public class EditLogTailer {
     // transitionToActive RPC takes the write lock before calling
     // tailer.stop() -- so if we're not interruptible, it will
     // deadlock.
-    namesystem.writeLockInterruptibly();
+    namesystem.writeLockInterruptibly(RwLockMode.GLOBAL);
     try {
       long currentLastTxnId = image.getLastAppliedTxId();
       if (lastTxnId != currentLastTxnId) {
@@ -386,7 +388,7 @@ public class EditLogTailer {
       lastLoadedTxnId = image.getLastAppliedTxId();
       return editsLoaded;
     } finally {
-      namesystem.writeUnlock("doTailEdits");
+      namesystem.writeUnlock(RwLockMode.GLOBAL, "doTailEdits");
     }
   }
 
@@ -474,7 +476,7 @@ public class EditLogTailer {
    * The thread which does the actual work of tailing edits journals and
    * applying the transactions to the FSNS.
    */
-  private class EditLogTailerThread extends Thread {
+  private class EditLogTailerThread extends SubjectInheritingThread {
     private volatile boolean shouldRun = true;
     
     private EditLogTailerThread() {
@@ -486,7 +488,7 @@ public class EditLogTailer {
     }
     
     @Override
-    public void run() {
+    public void work() {
       SecurityUtil.doAsLoginUserOrFatal(
           new PrivilegedAction<Object>() {
           @Override
@@ -612,8 +614,15 @@ public class EditLogTailer {
     private NamenodeProtocol getActiveNodeProxy() throws IOException {
       if (cachedActiveProxy == null) {
         while (true) {
+          // If the thread is interrupted, quit by returning null.
+          if (Thread.currentThread().isInterrupted()) {
+            LOG.warn("Interrupted while trying to getActiveNodeProxy.");
+            return null;
+          }
+
           // if we have reached the max loop count, quit by returning null
           if ((nnLoopCount / nnCount) >= maxRetries) {
+            LOG.warn("Have reached the max loop count ({}).", nnLoopCount);
             return null;
           }
 
@@ -637,5 +646,25 @@ public class EditLogTailer {
       assert cachedActiveProxy != null;
       return cachedActiveProxy;
     }
+  }
+
+  @VisibleForTesting
+  public NamenodeProtocol getCachedActiveProxy() {
+    return cachedActiveProxy;
+  }
+
+  @VisibleForTesting
+  public long getLastRollTimeMs() {
+    return lastRollTimeMs;
+  }
+
+  @VisibleForTesting
+  public RemoteNameNodeInfo getCurrentNN() {
+    return currentNN;
+  }
+
+  @VisibleForTesting
+  public void setShouldRunForTest(boolean shouldRun) {
+    this.tailerThread.setShouldRun(shouldRun);
   }
 }

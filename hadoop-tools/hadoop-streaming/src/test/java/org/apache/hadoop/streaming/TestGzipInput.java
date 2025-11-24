@@ -21,6 +21,7 @@ package org.apache.hadoop.streaming;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.zip.GZIPOutputStream;
 
 /**
@@ -37,7 +38,7 @@ public class TestGzipInput extends TestStreaming
   {
     GZIPOutputStream out = new GZIPOutputStream(
       new FileOutputStream(INPUT_FILE.getAbsoluteFile()));
-    out.write(input.getBytes("UTF-8"));
+    out.write(input.getBytes(StandardCharsets.UTF_8));
     out.close();
   }
 }

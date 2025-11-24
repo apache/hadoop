@@ -18,9 +18,6 @@
 
 package org.apache.hadoop.test;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -34,24 +31,34 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.apache.hadoop.util.Time;
 import org.eclipse.jetty.servlet.ServletContextHandler;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.eclipse.jetty.server.Server;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class TestHTestCase extends HTestCase {
 
-  @Test(expected = IllegalStateException.class)
+  @Test
   public void testDirNoAnnotation() throws Exception {
-    TestDirHelper.getTestDir();
+    assertThrows(IllegalStateException.class, () -> {
+      TestDirHelper.getTestDir();
+    });
   }
 
-  @Test(expected = IllegalStateException.class)
+  @Test
   public void testJettyNoAnnotation() throws Exception {
-    TestJettyHelper.getJettyServer();
+    assertThrows(IllegalStateException.class, () -> {
+      TestJettyHelper.getJettyServer();
+    });
   }
 
-  @Test(expected = IllegalStateException.class)
+  @Test
   public void testJettyNoAnnotation2() throws Exception {
-    TestJettyHelper.getJettyURL();
+    assertThrows(IllegalStateException.class, () -> {
+      TestJettyHelper.getJettyURL();
+    });
   }
 
   @Test

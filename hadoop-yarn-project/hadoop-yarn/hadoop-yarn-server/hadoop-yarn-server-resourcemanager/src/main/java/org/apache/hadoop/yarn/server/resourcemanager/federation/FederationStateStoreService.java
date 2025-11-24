@@ -31,6 +31,7 @@ import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -45,6 +46,8 @@ import org.apache.hadoop.yarn.server.federation.store.records.DeleteApplicationH
 import org.apache.hadoop.yarn.server.federation.store.records.DeleteApplicationHomeSubClusterResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.DeleteReservationHomeSubClusterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.DeleteReservationHomeSubClusterResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.DeletePoliciesConfigurationsRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.DeletePoliciesConfigurationsResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.GetApplicationHomeSubClusterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.GetApplicationHomeSubClusterResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.GetApplicationsHomeSubClusterRequest;
@@ -76,6 +79,8 @@ import org.apache.hadoop.yarn.server.federation.store.records.UpdateApplicationH
 import org.apache.hadoop.yarn.server.federation.store.records.UpdateApplicationHomeSubClusterResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.UpdateReservationHomeSubClusterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.UpdateReservationHomeSubClusterResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.DeleteSubClusterPoliciesConfigurationsRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.DeleteSubClusterPoliciesConfigurationsResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKeyRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKeyResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterRMTokenRequest;
@@ -288,6 +293,11 @@ public class FederationStateStoreService extends AbstractService
   }
 
   @Override
+  public void deleteStateStore() throws Exception {
+    stateStoreClient.deleteStateStore();
+  }
+
+  @Override
   public GetSubClusterPolicyConfigurationResponse getPolicyConfiguration(
       GetSubClusterPolicyConfigurationRequest request) throws YarnException {
     FederationClientMethod<GetSubClusterPolicyConfigurationResponse> clientMethod =
@@ -314,6 +324,26 @@ public class FederationStateStoreService extends AbstractService
         new FederationClientMethod<>("getPoliciesConfigurations",
         GetSubClusterPoliciesConfigurationsRequest.class, request,
         GetSubClusterPoliciesConfigurationsResponse.class, stateStoreClient, clock);
+    return clientMethod.invoke();
+  }
+
+  @Override
+  public DeleteSubClusterPoliciesConfigurationsResponse deletePoliciesConfigurations(
+      DeleteSubClusterPoliciesConfigurationsRequest request) throws YarnException {
+    FederationClientMethod<DeleteSubClusterPoliciesConfigurationsResponse> clientMethod =
+        new FederationClientMethod<>("deletePoliciesConfigurations",
+        DeleteSubClusterPoliciesConfigurationsRequest.class, request,
+        DeleteSubClusterPoliciesConfigurationsResponse.class, stateStoreClient, clock);
+    return clientMethod.invoke();
+  }
+
+  @Override
+  public DeletePoliciesConfigurationsResponse deleteAllPoliciesConfigurations(
+      DeletePoliciesConfigurationsRequest request) throws Exception {
+    FederationClientMethod<DeletePoliciesConfigurationsResponse> clientMethod =
+        new FederationClientMethod<>("deleteAllPoliciesConfigurations",
+        DeletePoliciesConfigurationsRequest.class, request,
+        DeletePoliciesConfigurationsResponse.class, stateStoreClient, clock);
     return clientMethod.invoke();
   }
 
@@ -568,7 +598,7 @@ public class FederationStateStoreService extends AbstractService
    */
   public void createCleanUpFinishApplicationThread(String stage) {
     String threadName = cleanUpThreadNamePrefix + "-" + stage;
-    Thread finishApplicationThread = new Thread(createCleanUpFinishApplicationThread());
+    Thread finishApplicationThread = new SubjectInheritingThread(createCleanUpFinishApplicationThread());
     finishApplicationThread.setName(threadName);
     finishApplicationThread.start();
     LOG.info("CleanUpFinishApplicationThread has been started {}.", threadName);

@@ -22,6 +22,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_AVAILABLE_SPACE_
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_PREFERENCE_FRACTION_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_LIMIT_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_LIMIT_DEFAULT;
 
 import java.util.Collection;
 import java.util.EnumMap;
@@ -50,7 +52,10 @@ public class AvailableSpaceBlockPlacementPolicy extends
   private int balancedPreference =
       (int) (100 * DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_PREFERENCE_FRACTION_DEFAULT);
   private int balancedSpaceTolerance =
-          DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_DEFAULT;
+      DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_DEFAULT;
+
+  private int balancedSpaceToleranceLimit =
+      DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_LIMIT_DEFAULT;
   private boolean optimizeLocal;
 
   @Override
@@ -59,8 +64,8 @@ public class AvailableSpaceBlockPlacementPolicy extends
     super.initialize(conf, stats, clusterMap, host2datanodeMap);
     float balancedPreferencePercent =
         conf.getFloat(
-          DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_PREFERENCE_FRACTION_KEY,
-          DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_PREFERENCE_FRACTION_DEFAULT);
+        DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_PREFERENCE_FRACTION_KEY,
+        DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_PREFERENCE_FRACTION_DEFAULT);
 
     LOG.info("Available space block placement policy initialized: "
         + DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_PREFERENCE_FRACTION_KEY
@@ -70,6 +75,11 @@ public class AvailableSpaceBlockPlacementPolicy extends
         conf.getInt(
         DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_KEY,
         DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_DEFAULT);
+
+    balancedSpaceToleranceLimit =
+      conf.getInt(
+      DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_LIMIT_KEY,
+      DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_LIMIT_DEFAULT);
 
     optimizeLocal = conf.getBoolean(
         DFSConfigKeys.DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCE_LOCAL_NODE_KEY,
@@ -85,6 +95,17 @@ public class AvailableSpaceBlockPlacementPolicy extends
           + DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_PREFERENCE_FRACTION_KEY
           + " is less than 0.5 so datanodes with more used percent will"
           + " receive  more block allocations.");
+    }
+
+    if (balancedSpaceToleranceLimit > 100 || balancedSpaceToleranceLimit < 0) {
+      LOG.warn("The value of "
+          + DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_LIMIT_KEY
+          + " is invalid, Current value is " + balancedSpaceToleranceLimit + ", Default value "
+          + DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_LIMIT_DEFAULT
+          + " will be used instead.");
+
+      balancedSpaceToleranceLimit =
+          DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_LIMIT_DEFAULT;
     }
 
     if (balancedSpaceTolerance > 20 || balancedSpaceTolerance < 0) {
@@ -201,8 +222,12 @@ public class AvailableSpaceBlockPlacementPolicy extends
    */
   protected int compareDataNode(final DatanodeDescriptor a,
       final DatanodeDescriptor b, boolean isBalanceLocal) {
+
+    boolean toleranceLimit = Math.max(a.getDfsUsedPercent(), b.getDfsUsedPercent())
+        < balancedSpaceToleranceLimit;
     if (a.equals(b)
-        || Math.abs(a.getDfsUsedPercent() - b.getDfsUsedPercent()) < balancedSpaceTolerance || ((
+        || (toleranceLimit && Math.abs(a.getDfsUsedPercent() - b.getDfsUsedPercent())
+            < balancedSpaceTolerance) || ((
         isBalanceLocal && a.getDfsUsedPercent() < 50))) {
       return 0;
     }

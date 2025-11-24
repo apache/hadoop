@@ -22,9 +22,9 @@ import java.io.PrintStream;
 
 import org.apache.hadoop.registry.AbstractRegistryTest;
 import org.apache.hadoop.registry.operations.TestRegistryOperations;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,7 +38,7 @@ public class TestRegistryCli extends AbstractRegistryTest {
   private PrintStream sysErr;
   private RegistryCli cli;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     sysOutStream = new ByteArrayOutputStream();
     sysOut = new PrintStream(sysOutStream);
@@ -48,7 +48,7 @@ public class TestRegistryCli extends AbstractRegistryTest {
     cli = new RegistryCli(operations, createRegistryConfiguration(), sysOut, sysErr);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     cli.close();
   }

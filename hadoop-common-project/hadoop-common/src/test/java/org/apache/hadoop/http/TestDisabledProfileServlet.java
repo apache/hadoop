@@ -23,9 +23,9 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import javax.servlet.http.HttpServletResponse;
 
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 /**
  * Small test to cover default disabled prof endpoint.
@@ -35,14 +35,14 @@ public class TestDisabledProfileServlet extends HttpServerFunctionalTest {
   private static HttpServer2 server;
   private static URL baseUrl;
 
-  @BeforeClass
+  @BeforeAll
   public static void setup() throws Exception {
     server = createTestServer();
     server.start();
     baseUrl = getServerURL(server);
   }
 
-  @AfterClass
+  @AfterAll
   public static void cleanup() throws Exception {
     server.stop();
   }
@@ -68,20 +68,20 @@ public class TestDisabledProfileServlet extends HttpServerFunctionalTest {
   @Test
   public void testRequestMethods() throws IOException {
     HttpURLConnection connection = getConnection("PUT");
-    assertEquals("Unexpected response code", HttpServletResponse.SC_METHOD_NOT_ALLOWED,
-        connection.getResponseCode());
+    assertEquals(HttpServletResponse.SC_METHOD_NOT_ALLOWED,
+        connection.getResponseCode(), "Unexpected response code");
     connection.disconnect();
     connection = getConnection("POST");
-    assertEquals("Unexpected response code", HttpServletResponse.SC_METHOD_NOT_ALLOWED,
-        connection.getResponseCode());
+    assertEquals(HttpServletResponse.SC_METHOD_NOT_ALLOWED,
+        connection.getResponseCode(), "Unexpected response code");
     connection.disconnect();
     connection = getConnection("DELETE");
-    assertEquals("Unexpected response code", HttpServletResponse.SC_METHOD_NOT_ALLOWED,
-        connection.getResponseCode());
+    assertEquals(HttpServletResponse.SC_METHOD_NOT_ALLOWED,
+        connection.getResponseCode(), "Unexpected response code");
     connection.disconnect();
     connection = getConnection("GET");
-    assertEquals("Unexpected response code", HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
-        connection.getResponseCode());
+    assertEquals(HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
+        connection.getResponseCode(), "Unexpected response code");
     connection.disconnect();
   }
 

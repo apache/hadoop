@@ -27,8 +27,8 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager
 import org.apache.hadoop.yarn.server.nodemanager.containermanager
     .monitor.MockResourceCalculatorPlugin;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.timeout;
@@ -38,7 +38,7 @@ public class TestNodeResourceMonitor extends BaseContainerManagerTest {
     super();
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException {
     // Enable node resource monitor with a mocked resource calculator.
     conf.set(

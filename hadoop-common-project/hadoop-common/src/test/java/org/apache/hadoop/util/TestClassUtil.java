@@ -20,21 +20,46 @@ package org.apache.hadoop.util;
 
 import java.io.File;
 
-import org.junit.Assert;
+import org.apache.hadoop.fs.viewfs.ViewFileSystem;
 
-import org.apache.log4j.Logger;
-import org.junit.Test;
+import org.assertj.core.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestClassUtil {
-  @Test(timeout=10000)
+
+  @Test
+  @Timeout(value = 10)
   public void testFindContainingJar() {
-    String containingJar = ClassUtil.findContainingJar(Logger.class);
-    Assert.assertNotNull("Containing jar not found for Logger", 
-        containingJar);
+    String containingJar = ClassUtil.findContainingJar(Assertions.class);
+    assertThat(containingJar)
+        .describedAs("Containing jar for %s", Assertions.class)
+        .isNotNull();
     File jarFile = new File(containingJar);
-    Assert.assertTrue("Containing jar does not exist on file system ",
-        jarFile.exists());
-    Assert.assertTrue("Incorrect jar file " + containingJar,
-        jarFile.getName().matches("log4j.*[.]jar"));
+    assertThat(jarFile)
+        .describedAs("Containing jar %s", jarFile)
+        .exists();
+    assertThat(jarFile.getName())
+        .describedAs("Containing jar name %s", jarFile.getName())
+        .matches("assertj-core.*[.]jar");
   }
+
+  @Test
+  @Timeout(value = 10)
+  public void testFindContainingClass() {
+    String classFileLocation = ClassUtil.findClassLocation(ViewFileSystem.class);
+    assertThat(classFileLocation)
+        .describedAs("Class path for %s", ViewFileSystem.class)
+        .isNotNull();
+    File classFile = new File(classFileLocation);
+    assertThat(classFile)
+        .describedAs("Containing class file %s", classFile)
+        .exists();
+    assertThat(classFile.getName())
+        .describedAs("Containing class file name %s", classFile.getName())
+        .matches("ViewFileSystem.class");
+  }
+
 }

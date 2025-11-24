@@ -37,7 +37,7 @@ import org.apache.hadoop.io.IOUtils;
  * <p>
  * The compression requires large amounts of memory. Thus you should call the
  * {@link #close() close()} method as soon as possible, to force
- * <tt>CBZip2OutputStream</tt> to release the allocated memory.
+ * <code>CBZip2OutputStream</code> to release the allocated memory.
  * </p>
  *
  * <p>
@@ -64,64 +64,64 @@ import org.apache.hadoop.io.IOUtils;
  * &lt;code&gt;65k + (5 * blocksize)&lt;/code&gt;.
  * </pre>
  *
- * <table width="100%" border="1">
+ * <table border="1">
  * <caption>Memory usage by blocksize</caption>
- * <colgroup> <col width="33%" > <col width="33%" > <col width="33%" >
+ * <colgroup> <col> <col> <col>
  * </colgroup>
  * <tr>
- * <th align="right">Blocksize</th> <th align="right">Compression<br>
- * memory usage</th> <th align="right">Decompression<br>
+ * <th>Blocksize</th> <th>Compression<br>
+ * memory usage</th> <th>Decompression<br>
  * memory usage</th>
  * </tr>
  * <tr>
- * <td align="right">100k</td>
- * <td align="right">1300k</td>
- * <td align="right">565k</td>
+ * <td>100k</td>
+ * <td>1300k</td>
+ * <td>565k</td>
  * </tr>
  * <tr>
- * <td align="right">200k</td>
- * <td align="right">2200k</td>
- * <td align="right">1065k</td>
+ * <td>200k</td>
+ * <td>2200k</td>
+ * <td>1065k</td>
  * </tr>
  * <tr>
- * <td align="right">300k</td>
- * <td align="right">3100k</td>
- * <td align="right">1565k</td>
+ * <td>300k</td>
+ * <td>3100k</td>
+ * <td>1565k</td>
  * </tr>
  * <tr>
- * <td align="right">400k</td>
- * <td align="right">4000k</td>
- * <td align="right">2065k</td>
+ * <td>400k</td>
+ * <td>4000k</td>
+ * <td>2065k</td>
  * </tr>
  * <tr>
- * <td align="right">500k</td>
- * <td align="right">4900k</td>
- * <td align="right">2565k</td>
+ * <td>500k</td>
+ * <td>4900k</td>
+ * <td>2565k</td>
  * </tr>
  * <tr>
- * <td align="right">600k</td>
- * <td align="right">5800k</td>
- * <td align="right">3065k</td>
+ * <td>600k</td>
+ * <td>5800k</td>
+ * <td>3065k</td>
  * </tr>
  * <tr>
- * <td align="right">700k</td>
- * <td align="right">6700k</td>
- * <td align="right">3565k</td>
+ * <td>700k</td>
+ * <td>6700k</td>
+ * <td>3565k</td>
  * </tr>
  * <tr>
- * <td align="right">800k</td>
- * <td align="right">7600k</td>
- * <td align="right">4065k</td>
+ * <td>800k</td>
+ * <td>7600k</td>
+ * <td>4065k</td>
  * </tr>
  * <tr>
- * <td align="right">900k</td>
- * <td align="right">8500k</td>
- * <td align="right">4565k</td>
+ * <td>900k</td>
+ * <td>8500k</td>
+ * <td>4565k</td>
  * </tr>
  * </table>
  *
  * <p>
- * For decompression <tt>CBZip2InputStream</tt> allocates less memory if the
+ * For decompression <code>CBZip2InputStream</code> allocates less memory if the
  * bzipped input is smaller than one block.
  * </p>
  *
@@ -137,12 +137,12 @@ import org.apache.hadoop.io.IOUtils;
 public class CBZip2OutputStream extends OutputStream implements BZip2Constants {
 
   /**
-  * The minimum supported blocksize <tt> == 1</tt>.
+  * The minimum supported blocksize <code> == 1</code>.
   */
   public static final int MIN_BLOCKSIZE = 1;
 
   /**
-  * The maximum supported blocksize <tt> == 9</tt>.
+  * The maximum supported blocksize <code> == 9</code>.
   */
   public static final int MAX_BLOCKSIZE = 9;
 
@@ -566,12 +566,12 @@ public class CBZip2OutputStream extends OutputStream implements BZip2Constants {
   *
   * @return The blocksize, between {@link #MIN_BLOCKSIZE} and
   *         {@link #MAX_BLOCKSIZE} both inclusive. For a negative
-  *         <tt>inputLength</tt> this method returns <tt>MAX_BLOCKSIZE</tt>
+  *         <code>inputLength</code> this method returns <code>MAX_BLOCKSIZE</code>
   *         always.
   *
   * @param inputLength
   *            The length of the data which will be compressed by
-  *            <tt>CBZip2OutputStream</tt>.
+  *            <code>CBZip2OutputStream</code>.
   */
   public static int chooseBlockSize(long inputLength) {
     return (inputLength > 0) ? (int) Math
@@ -579,11 +579,11 @@ public class CBZip2OutputStream extends OutputStream implements BZip2Constants {
   }
 
   /**
-  * Constructs a new <tt>CBZip2OutputStream</tt> with a blocksize of 900k.
+  * Constructs a new <code>CBZip2OutputStream</code> with a blocksize of 900k.
   *
   * <p>
   * <b>Attention: </b>The caller is resonsible to write the two BZip2 magic
-  * bytes <tt>"BZ"</tt> to the specified stream prior to calling this
+  * bytes <code>"BZ"</code> to the specified stream prior to calling this
   * constructor.
   * </p>
   *
@@ -600,11 +600,11 @@ public class CBZip2OutputStream extends OutputStream implements BZip2Constants {
   }
 
   /**
-  * Constructs a new <tt>CBZip2OutputStream</tt> with specified blocksize.
+  * Constructs a new <code>CBZip2OutputStream</code> with specified blocksize.
   *
   * <p>
   * <b>Attention: </b>The caller is resonsible to write the two BZip2 magic
-  * bytes <tt>"BZ"</tt> to the specified stream prior to calling this
+  * bytes <code>"BZ"</code> to the specified stream prior to calling this
   * constructor.
   * </p>
   *

@@ -18,38 +18,36 @@
 
 package org.apache.hadoop.fs.azure;
 
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.rules.TestName;
-import org.junit.rules.Timeout;
-
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Timeout;
 import org.apache.hadoop.fs.azure.integration.AzureTestConstants;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.apache.hadoop.test.TestName;
+
+import java.util.concurrent.TimeUnit;
+
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 /**
  * Base class for any Wasb test with timeouts & named threads.
  * This class does not attempt to bind to Azure.
  */
-public class AbstractWasbTestWithTimeout extends Assert {
+@Timeout(value = AzureTestConstants.AZURE_TEST_TIMEOUT, unit = TimeUnit.MILLISECONDS)
+public class AbstractWasbTestWithTimeout extends Assertions {
 
   /**
    * The name of the current method.
    */
-  @Rule
+  @RegisterExtension
   public TestName methodName = new TestName();
-  /**
-   * Set the timeout for every test.
-   * This is driven by the value returned by {@link #getTestTimeoutMillis()}.
-   */
-  @Rule
-  public Timeout testTimeout = new Timeout(getTestTimeoutMillis());
 
   /**
    * Name the junit thread for the class. This will overridden
    * before the individual test methods are run.
    */
-  @BeforeClass
+  @BeforeAll
   public static void nameTestThread() {
     Thread.currentThread().setName("JUnit");
   }
@@ -57,7 +55,7 @@ public class AbstractWasbTestWithTimeout extends Assert {
   /**
    * Name the thread to the current test method.
    */
-  @Before
+  @BeforeEach
   public void nameThread() {
     Thread.currentThread().setName("JUnit-" + methodName.getMethodName());
   }
@@ -70,4 +68,11 @@ public class AbstractWasbTestWithTimeout extends Assert {
     return AzureTestConstants.AZURE_TEST_TIMEOUT;
   }
 
+  public static void assumeNotNull(Object objects) {
+    assumeThat(objects).isNotNull();
+  }
+
+  public static void assumeNotNull(Object objects, String message) {
+    assumeThat(objects).as(message).isNotNull();
+  }
 }

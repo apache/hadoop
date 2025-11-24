@@ -39,16 +39,23 @@
     5. SUPERUSER_TENANT_ID -> AAD tenant ID of Superuser Service principal
     6. SUPERUSER_CLIENT_ID -> SuperUser Service principal's client ID
     7. SUPERUSER_CLIENT_SECRET -> SuperUser Service principal's client secret
+    8. SUPERUSER_CLIENT_SERVICE_PRINCIPAL_OBJECT_ID -> SuperUser Service principal's object ID
 
-    8. NO_RBAC_USER_CLIENT_ID -> noRBACUser Service principal's client ID
-    9. NO_RBAC_USER_CLIENT_SECRET -> noRBACUser Service principal's client secret
-    10. NO_RBAC_USER_OID -> noRBACUser Service principal's OID
+    9. NO_RBAC_USER_CLIENT_ID -> noRBACUser Service principal's client ID
+    10. NO_RBAC_USER_CLIENT_SECRET -> noRBACUser Service principal's client secret
+    11. NO_RBAC_USER_OID -> noRBACUser Service principal's OID
 
-    11. CONTRIBUTOR_RBAC_USER_CLIENT_ID -> contributorRBACUser Service principal's client ID
-    12. CONTRIBUTOR_RBAC_USER_CLIENT_SECRET -> contributorRBACUser Service principal's client secret
+    12. CONTRIBUTOR_RBAC_USER_CLIENT_ID -> contributorRBACUser Service principal's client ID
+    13. CONTRIBUTOR_RBAC_USER_CLIENT_SECRET -> contributorRBACUser Service principal's client secret
 
-    13. READER_RBAC_USER_CLIENT_ID -> readerRBACUser Service principal's client ID
-    14. READER_RBAC_USER_CLIENT_SECRET -> readerRBACUser Service principal's client secret
+    14. READER_RBAC_USER_CLIENT_ID -> readerRBACUser Service principal's client ID
+    15. READER_RBAC_USER_CLIENT_SECRET -> readerRBACUser Service principal's client secret
+
+  ## METRIC SETTINGS ##
+    16. METRIC_ACCOUNT_NAME -> to metric account name without domain
+    17. METRIC_ACCOUNT_KEY -> Metric account access key
+    18. METRIC_CONTAINER -> name of an metric container
+    19. METRIC_FORMAT -> format of the metric (INTERNAL_BACKOFF_METRIC_FORMAT, INTERNAL_FOOTER_METRIC_FORMAT, INTERNAL_METRIC_FORMAT)
 -->
 
 <configuration>
@@ -95,11 +102,7 @@
     <value>IS_NAMESPACE_ENABLED</value>
   </property>
   <property>
-    <name>fs.azure.account.key.ACCOUNTNAME.dfs.core.windows.net</name>
-    <value>ACCOUNT_KEY</value>
-  </property>
-  <property>
-    <name>fs.azure.account.key.ACCOUNTNAME.blob.core.windows.net</name>
+    <name>fs.azure.account.key</name>
     <value>ACCOUNT_KEY</value>
   </property>
   <property>
@@ -144,6 +147,14 @@
     <name>fs.azure.account.oauth2.client.secret</name>
     <value>SUPERUSER_CLIENT_SECRET</value>
   </property>
+  <property>
+    <name>fs.azure.account.oauth2.client.service.principal.object.id.ACCOUNTNAME.dfs.core.windows.net</name>
+    <value>SUPERUSER_CLIENT_SERVICE_PRINCIPAL_OBJECT_ID</value>
+    </property>
+  <property>
+    <name>fs.azure.account.oauth2.client.service.principal.object.id</name>
+    <value>SUPERUSER_CLIENT_SERVICE_PRINCIPAL_OBJECT_ID</value>
+  </property>
 
   <!-- NO RBAC USER SETTINGS -->
   <property>
@@ -181,5 +192,23 @@
   <property>
     <name>fs.azure.account.oauth2.reader.client.secret</name>
     <value>READER_RBAC_USER_CLIENT_ID</value>
+  </property>
+
+  <!-- METRIC SETTINGS -->
+  <property>
+    <name>fs.azure.metric.account.name</name>
+    <value>METRIC_ACCOUNT_NAME.dfs.core.windows.net</value>
+  </property>
+  <property>
+    <name>fs.azure.metric.account.key</name>
+    <value>METRIC_ACCOUNT_KEY</value>
+  </property>
+  <property>
+    <name>fs.azure.metric.uri</name>
+    <value>https://METRIC_ACCOUNT_NAME.dfs.core.windows.net/METRIC_CONTAINER</value>
+  </property>
+  <property>
+    <name>fs.azure.metric.format</name>
+    <value>METRIC_FORMAT</value>
   </property>
 </configuration>

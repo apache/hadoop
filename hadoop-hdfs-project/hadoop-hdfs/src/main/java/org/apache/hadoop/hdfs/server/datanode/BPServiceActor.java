@@ -36,8 +36,6 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -73,11 +71,11 @@ import org.apache.hadoop.hdfs.server.protocol.VolumeFailureSummary;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.VersionInfo;
 import org.apache.hadoop.util.VersionUtil;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.slf4j.Logger;
 
 import org.apache.hadoop.classification.VisibleForTesting;
@@ -103,8 +101,6 @@ class BPServiceActor implements Runnable {
   
   volatile long lastCacheReport = 0;
   private final Scheduler scheduler;
-  private final Object sendIBRLock;
-  private final ExecutorService ibrExecutorService;
 
   Thread bpThread;
   DatanodeProtocolClientSideTranslatorPB bpNamenode;
@@ -161,10 +157,6 @@ class BPServiceActor implements Runnable {
     }
     commandProcessingThread = new CommandProcessingThread(this);
     commandProcessingThread.start();
-    sendIBRLock = new Object();
-    ibrExecutorService = Executors.newSingleThreadExecutor(
-        new ThreadFactoryBuilder().setDaemon(true)
-            .setNameFormat("ibr-executor-%d").build());
   }
 
   public DatanodeRegistration getBpRegistration() {
@@ -267,7 +259,7 @@ class BPServiceActor implements Runnable {
     while (shouldRun()) {
       try {
         nsInfo = bpNamenode.versionRequest();
-        LOG.debug(this + " received versionRequest response: " + nsInfo);
+        LOG.debug("{} received versionRequest response: {}", this, nsInfo);
         break;
       } catch(SocketTimeoutException e) {  // namenode is busy
         LOG.warn("Problem connecting to server: " + nnAddr);
@@ -322,6 +314,7 @@ class BPServiceActor implements Runnable {
     // This also initializes our block pool in the DN if we are
     // the first NN connection for this BP.
     bpos.verifyAndSetNamespaceInfo(this, nsInfo);
+    state = nsInfo.getState();
 
     /* set thread name again to include NamespaceInfo when it's available. */
     this.bpThread.setName(formatThreadName("heartbeating", nnAddr));
@@ -397,10 +390,8 @@ class BPServiceActor implements Runnable {
     // we have a chance that we will miss the delHint information
     // or we will report an RBW replica after the BlockReport already reports
     // a FINALIZED one.
-    synchronized (sendIBRLock) {
-      ibrManager.sendIBRs(bpNamenode, bpRegistration,
-          bpos.getBlockPoolId(), getRpcMetricSuffix());
-    }
+    ibrManager.sendIBRs(bpNamenode, bpRegistration,
+        bpos.getBlockPoolId(), getRpcMetricSuffix());
 
     long brCreateStartTime = monotonicNow();
     Map<DatanodeStorage, BlockListAsLongs> perVolumeBlockLists =
@@ -463,6 +454,7 @@ class BPServiceActor implements Runnable {
       // Log the block report processing stats from Datanode perspective
       long brSendCost = monotonicNow() - brSendStartTime;
       long brCreateCost = brSendStartTime - brCreateStartTime;
+      dn.getMetrics().addBlockReportCreateCost(brCreateCost);
       dn.getMetrics().addBlockReport(brSendCost, getRpcMetricSuffix());
       final int nCmds = cmds.size();
       LOG.info((success ? "S" : "Uns") +
@@ -514,6 +506,10 @@ class BPServiceActor implements Runnable {
 
       String bpid = bpos.getBlockPoolId();
       List<Long> blockIds = dn.getFSDataset().getCacheReport(bpid);
+      // Skip cache report
+      if (blockIds.isEmpty()) {
+        return null;
+      }
       long createTime = monotonicNow();
 
       cmd = bpNamenode.cacheReport(bpRegistration, bpid, blockIds);
@@ -604,7 +600,7 @@ class BPServiceActor implements Runnable {
       //Thread is started already
       return;
     }
-    bpThread = new Thread(this);
+    bpThread = new SubjectInheritingThread(this);
     bpThread.setDaemon(true); // needed for JUnit testing
 
     if (lifelineSender != null) {
@@ -633,9 +629,6 @@ class BPServiceActor implements Runnable {
     if (commandProcessingThread != null) {
       commandProcessingThread.interrupt();
     }
-    if (ibrExecutorService != null && !ibrExecutorService.isShutdown()) {
-      ibrExecutorService.shutdownNow();
-    }
   }
   
   //This must be called only by blockPoolManager
@@ -650,18 +643,13 @@ class BPServiceActor implements Runnable {
     } catch (InterruptedException ie) { }
   }
   
-  // Cleanup method to be called by current thread before exiting.
-  // Any Thread / ExecutorService started by BPServiceActor can be shutdown
-  // here.
+  //Cleanup method to be called by current thread before exiting.
   private synchronized void cleanUp() {
     
     shouldServiceRun = false;
     IOUtils.cleanupWithLogger(null, bpNamenode);
     IOUtils.cleanupWithLogger(null, lifelineSender);
     bpos.shutdownActor(this);
-    if (!ibrExecutorService.isShutdown()) {
-      ibrExecutorService.shutdownNow();
-    }
   }
 
   private void handleRollingUpgradeStatus(HeartbeatResponse resp) throws IOException {
@@ -756,6 +744,11 @@ class BPServiceActor implements Runnable {
             commandProcessingThread.enqueue(resp.getCommands());
             isSlownode = resp.getIsSlownode();
           }
+        }
+        if (!dn.areIBRDisabledForTests() &&
+            (ibrManager.sendImmediately()|| sendHeartbeat)) {
+          ibrManager.sendIBRs(bpNamenode, bpRegistration,
+              bpos.getBlockPoolId(), getRpcMetricSuffix());
         }
 
         List<DatanodeCommand> cmds = null;
@@ -923,10 +916,6 @@ class BPServiceActor implements Runnable {
         initialRegistrationComplete.countDown();
       }
 
-      // IBR tasks to be handled separately from offerService() in order to
-      // improve performance of offerService(), which can now focus only on
-      // FBR and heartbeat.
-      ibrExecutorService.submit(new IBRTaskHandler());
       while (shouldRun()) {
         try {
           offerService();
@@ -1090,7 +1079,7 @@ class BPServiceActor implements Runnable {
     }
 
     public void start() {
-      lifelineThread = new Thread(this,
+      lifelineThread = new SubjectInheritingThread(this,
           formatThreadName("lifeline", lifelineNnAddr));
       lifelineThread.setDaemon(true);
       lifelineThread.setUncaughtExceptionHandler(
@@ -1157,34 +1146,6 @@ class BPServiceActor implements Runnable {
                                     numFailedVolumes,
                                     volumeFailureSummary);
     }
-  }
-
-  class IBRTaskHandler implements Runnable {
-
-    @Override
-    public void run() {
-      LOG.info("Starting IBR Task Handler.");
-      while (shouldRun()) {
-        try {
-          final long startTime = scheduler.monotonicNow();
-          final boolean sendHeartbeat = scheduler.isHeartbeatDue(startTime);
-          if (!dn.areIBRDisabledForTests() &&
-              (ibrManager.sendImmediately() || sendHeartbeat)) {
-            synchronized (sendIBRLock) {
-              ibrManager.sendIBRs(bpNamenode, bpRegistration,
-                  bpos.getBlockPoolId(), getRpcMetricSuffix());
-            }
-          }
-          // There is no work to do; sleep until heartbeat timer elapses,
-          // or work arrives, and then iterate again.
-          ibrManager.waitTillNextIBR(scheduler.getHeartbeatWaitTime());
-        } catch (Throwable t) {
-          LOG.error("Exception in IBRTaskHandler.", t);
-          sleepAndLogInterrupts(5000, "offering IBR service");
-        }
-      }
-    }
-
   }
 
   /**
@@ -1424,7 +1385,7 @@ class BPServiceActor implements Runnable {
   /**
    * CommandProcessingThread that process commands asynchronously.
    */
-  class CommandProcessingThread extends Thread {
+  class CommandProcessingThread extends SubjectInheritingThread {
     private final BPServiceActor actor;
     private final BlockingQueue<Runnable> queue;
 
@@ -1436,7 +1397,7 @@ class BPServiceActor implements Runnable {
     }
 
     @Override
-    public void run() {
+    public void work() {
       try {
         processQueue();
       } catch (Throwable t) {
@@ -1528,8 +1489,10 @@ class BPServiceActor implements Runnable {
     }
 
     void enqueue(DatanodeCommand[] cmds) throws InterruptedException {
-      queue.put(() -> processCommand(cmds));
-      dn.getMetrics().incrActorCmdQueueLength(1);
+      if (cmds.length != 0) {
+        queue.put(() -> processCommand(cmds));
+        dn.getMetrics().incrActorCmdQueueLength(1);
+      }
     }
   }
 

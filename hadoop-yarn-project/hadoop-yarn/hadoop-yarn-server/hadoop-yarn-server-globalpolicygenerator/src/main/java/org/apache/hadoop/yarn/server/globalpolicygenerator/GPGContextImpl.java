@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.globalpolicygenerator;
 
+import org.apache.hadoop.yarn.server.federation.utils.FederationRegistryClient;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 
 /**
@@ -27,6 +28,7 @@ public class GPGContextImpl implements GPGContext {
 
   private FederationStateStoreFacade facade;
   private GPGPolicyFacade policyFacade;
+  private FederationRegistryClient registryClient;
 
   @Override
   public FederationStateStoreFacade getStateStoreFacade() {
@@ -47,5 +49,15 @@ public class GPGContextImpl implements GPGContext {
   @Override
   public void setPolicyFacade(GPGPolicyFacade gpgPolicyfacade){
     policyFacade = gpgPolicyfacade;
+  }
+
+  @Override
+  public FederationRegistryClient getRegistryClient() {
+    return registryClient;
+  }
+
+  @Override
+  public void setRegistryClient(FederationRegistryClient client) {
+    registryClient = client;
   }
 }

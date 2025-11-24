@@ -72,7 +72,7 @@ public enum XAttrFormat implements LongBitFormat.Enum {
     return SerialNumberManager.XATTR.getString(nid);
   }
 
-  static int toInt(XAttr a) {
+  public static int toInt(XAttr a) {
     int nid = SerialNumberManager.XATTR.getSerialNumber(a.getName());
     int nsOrd = a.getNameSpace().ordinal();
     long value = NS.BITS.combine(nsOrd & NS_MASK, 0L);

@@ -19,9 +19,12 @@
 package org.apache.hadoop.fs.s3a.scale;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.s3a.AWSUnsupportedFeatureException;
 import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.S3AEncryptionMethods;
-import org.apache.hadoop.fs.s3a.S3ATestUtils;
+import org.apache.hadoop.test.tags.ScaleTest;
+
+import org.junit.jupiter.api.BeforeEach;
 
 import java.nio.file.AccessDeniedException;
 
@@ -38,6 +41,7 @@ import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfEncryptionTestsDisable
  * and tests huge files operations with SSE-C encryption enabled.
  * Skipped if the SSE tests are disabled.
  */
+@ScaleTest
 public class ITestS3AHugeFilesSSECDiskBlocks
     extends ITestS3AHugeFilesDiskBlocks {
 
@@ -50,12 +54,12 @@ public class ITestS3AHugeFilesSSECDiskBlocks
    * S3 throw AmazonS3Exception with status 403 AccessDenied
    * then it is translated into AccessDeniedException by S3AUtils.translateException(...)
    */
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     try {
       super.setup();
-      skipIfEncryptionTestsDisabled(getConfiguration());
-    } catch (AccessDeniedException e) {
+    } catch (AccessDeniedException | AWSUnsupportedFeatureException e) {
       skip("Bucket does not allow " + S3AEncryptionMethods.SSE_C + " encryption method");
     }
   }
@@ -67,7 +71,7 @@ public class ITestS3AHugeFilesSSECDiskBlocks
     removeBaseAndBucketOverrides(conf, S3_ENCRYPTION_KEY,
         S3_ENCRYPTION_ALGORITHM, SERVER_SIDE_ENCRYPTION_ALGORITHM,
         SERVER_SIDE_ENCRYPTION_KEY);
-    S3ATestUtils.disableFilesystemCaching(conf);
+    skipIfEncryptionTestsDisabled(conf);
     conf.set(Constants.S3_ENCRYPTION_ALGORITHM,
         getSSEAlgorithm().getMethod());
     conf.set(Constants.S3_ENCRYPTION_KEY, KEY_1);

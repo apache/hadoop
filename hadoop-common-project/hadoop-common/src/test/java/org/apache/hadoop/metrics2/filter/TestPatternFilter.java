@@ -22,10 +22,12 @@ import java.util.Arrays;
 import java.util.List;
 
 import org.apache.commons.configuration2.SubsetConfiguration;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.*;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import org.apache.hadoop.metrics2.MetricsFilter;
 import org.apache.hadoop.metrics2.MetricsRecord;
@@ -129,8 +131,8 @@ public class TestPatternFilter {
   }
   
   static void shouldAccept(SubsetConfiguration conf, String s) {
-    assertTrue("accepts "+ s, newGlobFilter(conf).accepts(s));
-    assertTrue("accepts "+ s, newRegexFilter(conf).accepts(s));
+    assertTrue(newGlobFilter(conf).accepts(s), "accepts "+ s);
+    assertTrue(newRegexFilter(conf).accepts(s), "accepts "+ s);
   }
 
   // Version for one tag:
@@ -159,8 +161,8 @@ public class TestPatternFilter {
     final MetricsFilter regexFilter = newRegexFilter(conf);
     
     // Test acceptance of the tag list:  
-    assertEquals("accepts "+ tags, expectAcceptList, globFilter.accepts(tags));
-    assertEquals("accepts "+ tags, expectAcceptList, regexFilter.accepts(tags));
+    assertEquals(expectAcceptList, globFilter.accepts(tags), "accepts "+ tags);
+    assertEquals(expectAcceptList, regexFilter.accepts(tags), "accepts "+ tags);
     
     // Test results on each of the individual tags:
     int acceptedCount = 0;
@@ -168,7 +170,7 @@ public class TestPatternFilter {
       MetricsTag tag = tags.get(i);
       boolean actGlob = globFilter.accepts(tag);
       boolean actRegex = regexFilter.accepts(tag);
-      assertEquals("accepts "+tag, expectedAcceptedSpec[i], actGlob);
+      assertEquals(expectedAcceptedSpec[i], actGlob, "accepts "+tag);
       // Both the filters should give the same result:
       assertEquals(actGlob, actRegex);
       if (actGlob) {
@@ -177,10 +179,10 @@ public class TestPatternFilter {
     }
     if (expectAcceptList) {
       // At least one individual tag should be accepted:
-      assertTrue("No tag of the following accepted: " + tags, acceptedCount > 0);
+      assertTrue(acceptedCount > 0, "No tag of the following accepted: " + tags);
     } else {
       // At least one individual tag should be rejected: 
-      assertTrue("No tag of the following rejected: " + tags, acceptedCount < tags.size());
+      assertTrue(acceptedCount < tags.size(), "No tag of the following rejected: " + tags);
     }
   }
 
@@ -191,13 +193,13 @@ public class TestPatternFilter {
    * @param record MetricsRecord to check
    */
   static void shouldAccept(SubsetConfiguration conf, MetricsRecord record) {
-    assertTrue("accepts " + record, newGlobFilter(conf).accepts(record));
-    assertTrue("accepts " + record, newRegexFilter(conf).accepts(record));
+    assertTrue(newGlobFilter(conf).accepts(record), "accepts " + record);
+    assertTrue(newRegexFilter(conf).accepts(record), "accepts " + record);
   }
 
   static void shouldReject(SubsetConfiguration conf, String s) {
-    assertTrue("rejects "+ s, !newGlobFilter(conf).accepts(s));
-    assertTrue("rejects "+ s, !newRegexFilter(conf).accepts(s));
+    assertTrue(!newGlobFilter(conf).accepts(s), "rejects "+ s);
+    assertTrue(!newRegexFilter(conf).accepts(s), "rejects "+ s);
   }
 
   /**
@@ -207,8 +209,8 @@ public class TestPatternFilter {
    * @param record MetricsRecord to check
    */
   static void shouldReject(SubsetConfiguration conf, MetricsRecord record) {
-    assertTrue("rejects " + record, !newGlobFilter(conf).accepts(record));
-    assertTrue("rejects " + record, !newRegexFilter(conf).accepts(record));
+    assertTrue(!newGlobFilter(conf).accepts(record), "rejects " + record);
+    assertTrue(!newRegexFilter(conf).accepts(record), "rejects " + record);
   }
 
   /**

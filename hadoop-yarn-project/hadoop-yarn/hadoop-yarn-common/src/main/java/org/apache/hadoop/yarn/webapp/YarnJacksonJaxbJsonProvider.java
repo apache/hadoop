@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.webapp;
 
+import javax.inject.Singleton;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.ext.Provider;
 
@@ -30,7 +31,6 @@ import com.fasterxml.jackson.module.jaxb.JaxbAnnotationIntrospector;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 
-import com.google.inject.Singleton;
 
 /**
  * YARN's implementation of JAX-RS abstractions based on

@@ -18,8 +18,9 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.util.Arrays;
+import java.util.List;
+
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.util.ProcfsBasedProcessTree;
 import org.apache.hadoop.yarn.util.ResourceCalculatorProcessTree;
@@ -29,80 +30,68 @@ import org.apache.hadoop.yarn.util.ResourceCalculatorProcessTree;
  * it is backward compatible with procfs in terms of virtual memory usage.
  */
 public class CombinedResourceCalculator  extends ResourceCalculatorProcessTree {
-  protected static final Logger LOG = LoggerFactory
-      .getLogger(CombinedResourceCalculator.class);
-  private ProcfsBasedProcessTree procfs;
-  private CGroupsResourceCalculator cgroup;
+  private final List<ResourceCalculatorProcessTree> resourceCalculators;
+  private final ProcfsBasedProcessTree procfsBasedProcessTree;
 
   public CombinedResourceCalculator(String pid) {
     super(pid);
-    procfs = new ProcfsBasedProcessTree(pid);
-    cgroup = new CGroupsResourceCalculator(pid);
+    this.procfsBasedProcessTree = new ProcfsBasedProcessTree(pid);
+    this.resourceCalculators = Arrays.asList(
+        new CGroupsV2ResourceCalculator(pid),
+        new CGroupsResourceCalculator(pid),
+        procfsBasedProcessTree
+    );
   }
 
   @Override
   public void initialize() throws YarnException {
-    procfs.initialize();
-    cgroup.initialize();
+    for (ResourceCalculatorProcessTree calculator : resourceCalculators) {
+      calculator.initialize();
+    }
   }
 
   @Override
   public void updateProcessTree() {
-    procfs.updateProcessTree();
-    cgroup.updateProcessTree();
+    resourceCalculators.stream().parallel()
+        .forEach(ResourceCalculatorProcessTree::updateProcessTree);
   }
 
   @Override
   public String getProcessTreeDump() {
-    return procfs.getProcessTreeDump();
-  }
-
-  @Override
-  public float getCpuUsagePercent() {
-    float cgroupUsage = cgroup.getCpuUsagePercent();
-    if (LOG.isDebugEnabled()) {
-      float procfsUsage = procfs.getCpuUsagePercent();
-      LOG.debug("CPU Comparison:" + procfsUsage + " " + cgroupUsage);
-      LOG.debug("Jiffy Comparison:" +
-          procfs.getCumulativeCpuTime() + " " +
-          cgroup.getCumulativeCpuTime());
-    }
-
-    return cgroupUsage;
+    return procfsBasedProcessTree.getProcessTreeDump();
   }
 
   @Override
   public boolean checkPidPgrpidForMatch() {
-    return procfs.checkPidPgrpidForMatch();
-  }
-
-  @Override
-  public long getCumulativeCpuTime() {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("CPU Comparison:" +
-          procfs.getCumulativeCpuTime() + " " +
-          cgroup.getCumulativeCpuTime());
-    }
-    return cgroup.getCumulativeCpuTime();
-  }
-
-  @Override
-  public long getRssMemorySize(int olderThanAge) {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("MEM Comparison:" +
-          procfs.getRssMemorySize(olderThanAge) + " " +
-          cgroup.getRssMemorySize(olderThanAge));
-    }
-    return cgroup.getRssMemorySize(olderThanAge);
+    return procfsBasedProcessTree.checkPidPgrpidForMatch();
   }
 
   @Override
   public long getVirtualMemorySize(int olderThanAge) {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("VMEM Comparison:" +
-          procfs.getVirtualMemorySize(olderThanAge) + " " +
-          cgroup.getVirtualMemorySize(olderThanAge));
-    }
-    return procfs.getVirtualMemorySize(olderThanAge);
+    return procfsBasedProcessTree.getVirtualMemorySize(olderThanAge);
+  }
+
+  @Override
+  public long getRssMemorySize(int olderThanAge) {
+    return resourceCalculators.stream()
+        .map(calculator -> calculator.getRssMemorySize(olderThanAge))
+        .filter(result -> UNAVAILABLE < result)
+        .findAny().orElse((long) UNAVAILABLE);
+  }
+
+  @Override
+  public long getCumulativeCpuTime() {
+    return resourceCalculators.stream()
+        .map(ResourceCalculatorProcessTree::getCumulativeCpuTime)
+        .filter(result -> UNAVAILABLE < result)
+        .findAny().orElse((long) UNAVAILABLE);
+  }
+
+  @Override
+  public float getCpuUsagePercent() {
+    return resourceCalculators.stream()
+        .map(ResourceCalculatorProcessTree::getCpuUsagePercent)
+        .filter(result -> UNAVAILABLE < result)
+        .findAny().orElse((float) UNAVAILABLE);
   }
 }

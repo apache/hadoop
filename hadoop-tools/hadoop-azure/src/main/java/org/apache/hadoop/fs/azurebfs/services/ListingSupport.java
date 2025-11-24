@@ -75,7 +75,7 @@ public interface ListingSupport {
    *                     result.
    * @param continuation Contiuation token. null means start rom the begining.
    * @param tracingContext TracingContext instance to track identifiers
-   * @return Continuation tokem
+   * @return Continuation token
    * @throws IOException in case of error
    */
   String listStatus(Path path, String startFrom, List<FileStatus> fileStatuses,

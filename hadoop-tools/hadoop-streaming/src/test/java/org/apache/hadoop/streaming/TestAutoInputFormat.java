@@ -34,10 +34,10 @@ import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.FileInputFormat;
 import org.apache.hadoop.mapred.RecordReader;
 import org.apache.hadoop.mapred.Reporter;
-import org.apache.hadoop.streaming.AutoInputFormat;
 
-import org.junit.Test;
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestAutoInputFormat {
 
@@ -93,15 +93,15 @@ public class TestAutoInputFormat {
       try {
         while (reader.next(key, value)) {
           if (key instanceof LongWritable) {
-            assertEquals("Wrong value class.", Text.class, value.getClass());
-            assertTrue("Invalid value", Integer.parseInt(((Text) value)
-              .toString()) % 10 == 0);
+            assertEquals(Text.class, value.getClass(), "Wrong value class.");
+            assertTrue(Integer.parseInt(((Text) value)
+                .toString()) % 10 == 0, "Invalid value");
           } else {
-            assertEquals("Wrong key class.", IntWritable.class, key.getClass());
-            assertEquals("Wrong value class.", LongWritable.class, value
-              .getClass());
-            assertTrue("Invalid key.", ((IntWritable) key).get() % 11 == 0);
-            assertTrue("Invalid value.", ((LongWritable) value).get() % 12 == 0);
+            assertEquals(IntWritable.class, key.getClass(), "Wrong key class.");
+            assertEquals(LongWritable.class, value
+                .getClass(), "Wrong value class.");
+            assertTrue(((IntWritable) key).get() % 11 == 0, "Invalid key.");
+            assertTrue(((LongWritable) value).get() % 12 == 0, "Invalid value.");
           }
         }
       } finally {

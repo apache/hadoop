@@ -26,20 +26,19 @@ import org.apache.hadoop.fs.FileSystemContractBaseTest;
 import org.apache.hadoop.fs.Path;
 
 import org.apache.hadoop.security.UserGroupInformation;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Arrays;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assume.assumeFalse;
-import static org.junit.Assume.assumeNotNull;
-import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
  * Tests a live Aliyun OSS system.
@@ -52,11 +51,11 @@ public class TestAliyunOSSFileSystemContract
   private static Path testRootPath =
       new Path(AliyunOSSTestUtils.generateUniqueTestPath());
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     Configuration conf = new Configuration();
     fs = AliyunOSSTestUtils.createTestFileSystem(conf);
-    assumeNotNull(fs);
+    assumeTrue(fs != null);
   }
 
   @Override
@@ -75,8 +74,8 @@ public class TestAliyunOSSFileSystemContract
     fs.getFileStatus(super.path("/"));
     //this catches overrides of the base exists() method that don't
     //use getFileStatus() as an existence probe
-    assertTrue("FileSystem.exists() fails for root",
-        fs.exists(super.path("/")));
+    assertTrue(
+        fs.exists(super.path("/")), "FileSystem.exists() fails for root");
   }
 
   @Test
@@ -91,7 +90,7 @@ public class TestAliyunOSSFileSystemContract
   public void testListStatus() throws IOException {
     Path file = this.path("/test/hadoop/file");
     this.createFile(file);
-    assertTrue("File exists", this.fs.exists(file));
+    assertTrue(this.fs.exists(file), "File exists");
     FileStatus fs = this.fs.getFileStatus(file);
     assertEquals(fs.getOwner(),
         UserGroupInformation.getCurrentUser().getShortUserName());
@@ -105,7 +104,7 @@ public class TestAliyunOSSFileSystemContract
     for (int i = 1; i <= 30; ++i) {
       this.createFile(new Path(file, "sub" + i));
     }
-    assertTrue("File exists", this.fs.exists(file));
+    assertTrue(this.fs.exists(file), "File exists");
     FileStatus fs = this.fs.getFileStatus(file);
     assertEquals(fs.getOwner(),
         UserGroupInformation.getCurrentUser().getShortUserName());
@@ -128,16 +127,16 @@ public class TestAliyunOSSFileSystemContract
     Path subdir = this.path("/test/hadoop/subdir");
     this.createFile(file);
 
-    assertTrue("Created subdir", this.fs.mkdirs(subdir));
-    assertTrue("File exists", this.fs.exists(file));
-    assertTrue("Parent dir exists", this.fs.exists(parentDir));
-    assertTrue("Subdir exists", this.fs.exists(subdir));
+    assertTrue(this.fs.mkdirs(subdir), "Created subdir");
+    assertTrue(this.fs.exists(file), "File exists");
+    assertTrue(this.fs.exists(parentDir), "Parent dir exists");
+    assertTrue(this.fs.exists(subdir), "Subdir exists");
 
-    assertTrue("Deleted subdir", this.fs.delete(subdir, true));
-    assertTrue("Parent should exist", this.fs.exists(parentDir));
+    assertTrue(this.fs.delete(subdir, true), "Deleted subdir");
+    assertTrue(this.fs.exists(parentDir), "Parent should exist");
 
-    assertTrue("Deleted file", this.fs.delete(file, false));
-    assertTrue("Parent should exist", this.fs.exists(parentDir));
+    assertTrue(this.fs.delete(file, false), "Deleted file");
+    assertTrue(this.fs.exists(parentDir), "Parent should exist");
   }
 
 
@@ -354,20 +353,20 @@ public class TestAliyunOSSFileSystemContract
   public void testGetFileStatusFileAndDirectory() throws Exception {
     Path filePath = this.path("/test/oss/file1");
     this.createFile(filePath);
-    assertTrue("Should be file", this.fs.getFileStatus(filePath).isFile());
-    assertFalse("Should not be directory",
-        this.fs.getFileStatus(filePath).isDirectory());
+    assertTrue(this.fs.getFileStatus(filePath).isFile(), "Should be file");
+    assertFalse(
+        this.fs.getFileStatus(filePath).isDirectory(), "Should not be directory");
 
     Path dirPath = this.path("/test/oss/dir");
     this.fs.mkdirs(dirPath);
-    assertTrue("Should be directory",
-        this.fs.getFileStatus(dirPath).isDirectory());
-    assertFalse("Should not be file", this.fs.getFileStatus(dirPath).isFile());
+    assertTrue(
+        this.fs.getFileStatus(dirPath).isDirectory(), "Should be directory");
+    assertFalse(this.fs.getFileStatus(dirPath).isFile(), "Should not be file");
 
     Path parentPath = this.path("/test/oss");
     for (FileStatus fileStatus: fs.listStatus(parentPath)) {
-      assertTrue("file and directory should be new",
-          fileStatus.getModificationTime() > 0L);
+      assertTrue(
+          fileStatus.getModificationTime() > 0L, "file and directory should be new");
     }
   }
 

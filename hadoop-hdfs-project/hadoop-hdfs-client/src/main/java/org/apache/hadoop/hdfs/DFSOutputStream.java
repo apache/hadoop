@@ -356,7 +356,7 @@ public class DFSOutputStream extends FSOutputSummer
       streamer = new DataStreamer(lastBlock, stat, dfsClient, src, progress,
           checksum, cachingStrategy, byteArrayManager);
       getStreamer().setBytesCurBlock(lastBlock.getBlockSize());
-      adjustPacketChunkSize(stat);
+      adjustPacketChunkSize(lastBlock);
       getStreamer().setPipelineInConstruction(lastBlock);
     } else {
       computePacketChunkSize(dfsClient.getConf().getWritePacketSize(),
@@ -368,14 +368,14 @@ public class DFSOutputStream extends FSOutputSummer
     }
   }
 
-  private void adjustPacketChunkSize(HdfsFileStatus stat) throws IOException{
+  private void adjustPacketChunkSize(LocatedBlock lastBlock) throws IOException{
 
-    long usedInLastBlock = stat.getLen() % blockSize;
+    long usedInLastBlock = lastBlock.getBlockSize();
     int freeInLastBlock = (int)(blockSize - usedInLastBlock);
 
     // calculate the amount of free space in the pre-existing
     // last crc chunk
-    int usedInCksum = (int)(stat.getLen() % bytesPerChecksum);
+    int usedInCksum = (int)(lastBlock.getBlockSize() % bytesPerChecksum);
     int freeInCksum = bytesPerChecksum - usedInCksum;
 
     // if there is space in the last block, then we have to
@@ -536,8 +536,13 @@ public class DFSOutputStream extends FSOutputSummer
     }
 
     if (!getStreamer().getAppendChunk()) {
-      final int psize = (int) Math
-          .min(blockSize - getStreamer().getBytesCurBlock(), writePacketSize);
+      int psize = 0;
+      if (blockSize == getStreamer().getBytesCurBlock()) {
+        psize = writePacketSize;
+      } else {
+        psize = (int) Math
+            .min(blockSize - getStreamer().getBytesCurBlock(), writePacketSize);
+      }
       computePacketChunkSize(psize, bytesPerChecksum);
     }
   }

@@ -19,8 +19,6 @@
 package org.apache.hadoop.yarn.server.webapp;
 
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
-import com.sun.jersey.api.client.ClientHandlerException;
-import com.sun.jersey.api.client.UniformInterfaceException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -46,7 +44,7 @@ import javax.ws.rs.core.StreamingOutput;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.lang.reflect.UndeclaredThrowableException;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -120,7 +118,7 @@ public final class LogWebServiceUtils {
             .readAggregatedLogs(request, os);
         if (!findLogs) {
           os.write(("Can not find logs for container:" + containerIdStr)
-              .getBytes(Charset.forName("UTF-8")));
+              .getBytes(StandardCharsets.UTF_8));
         } else {
           if (printEmptyLocalContainerLog) {
             StringBuilder sb = new StringBuilder();
@@ -129,7 +127,7 @@ public final class LogWebServiceUtils {
                 + "\n");
             sb.append("LogContents:\n");
             sb.append(getNoRedirectWarning() + "\n");
-            os.write(sb.toString().getBytes(Charset.forName("UTF-8")));
+            os.write(sb.toString().getBytes(StandardCharsets.UTF_8));
           }
         }
       }
@@ -188,10 +186,9 @@ public final class LogWebServiceUtils {
 
   public static String getNMWebAddressFromRM(Configuration yarnConf,
       String nodeId)
-      throws ClientHandlerException, UniformInterfaceException, JSONException {
-    JSONObject nodeInfo =
-        YarnWebServiceUtils.getNodeInfoFromRMWebService(yarnConf, nodeId)
-            .getJSONObject("node");
+      throws JSONException {
+    JSONObject nodeInfo = YarnWebServiceUtils.getNodeInfoFromRMWebService(yarnConf, nodeId)
+        .getJSONObject("node");
     return nodeInfo.has("nodeHTTPAddress") ?
         nodeInfo.getString("nodeHTTPAddress") : null;
   }

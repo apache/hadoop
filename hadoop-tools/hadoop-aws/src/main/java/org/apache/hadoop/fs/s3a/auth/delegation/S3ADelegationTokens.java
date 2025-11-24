@@ -121,11 +121,6 @@ public class S3ADelegationTokens extends AbstractDTService {
   private AbstractDelegationTokenBinding tokenBinding;
 
   /**
-   * List of cred providers; unset until {@link #bindToDelegationToken(Token)}.
-   */
-  //private Optional<AWSCredentialProviderList> credentialProviders = Optional.empty();
-
-  /**
    * delegation binding information; unset until {@link #bindToDelegationToken(Token)}.
    */
   private Optional<DelegationBindingInfo> bindingInfo

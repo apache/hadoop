@@ -17,13 +17,14 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
@@ -50,7 +51,7 @@ public class TestResourceManagerMXBean {
       // Get attribute "SecurityEnabled"
       boolean securityEnabled = (boolean) mbs.getAttribute(mxbeanName,
               "SecurityEnabled");
-      Assert.assertEquals(resourceManager.isSecurityEnabled(), securityEnabled);
+      assertEquals(resourceManager.isSecurityEnabled(), securityEnabled);
     }
   }
 }

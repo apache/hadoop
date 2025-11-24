@@ -22,7 +22,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.router.Router;
 import org.apache.hadoop.yarn.webapp.test.WebAppTests;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -116,6 +116,7 @@ public class TestFederationWebApp extends TestRouterWebServicesREST {
   @Test
   public void testNodeLabelAppViewNotEnable()
       throws InterruptedException, YarnException, IOException {
+    LOG.info("testNodeLabelAppViewNotEnable - NotEnable Federation.");
     // Test Federation Not Enabled
     Configuration config = new YarnConfiguration();
     config.setBoolean(YarnConfiguration.FEDERATION_ENABLED, false);
@@ -125,6 +126,7 @@ public class TestFederationWebApp extends TestRouterWebServicesREST {
   @Test
   public void testNodeLabelAppViewEnable()
       throws InterruptedException, YarnException, IOException {
+    LOG.info("testNodeLabelAppViewEnable - Enable Federation.");
     // Test Federation Not Enabled
     Configuration config = new YarnConfiguration();
     config.setBoolean(YarnConfiguration.FEDERATION_ENABLED, true);

@@ -20,9 +20,9 @@ package org.apache.hadoop.yarn.server.resourcemanager.reservation.planning;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.mock;
 
 import java.util.ArrayList;
@@ -56,10 +56,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -67,12 +66,10 @@ import org.slf4j.LoggerFactory;
 /**
  * This class tests the {@code AlignedPlannerWithGreedy} agent.
  */
-@RunWith(value = Parameterized.class)
 @NotThreadSafe
 @SuppressWarnings("VisibilityModifier")
 public class TestAlignedPlanner {
 
-  @Parameterized.Parameter(value = 0)
   public String recurrenceExpression;
 
   final static String NONPERIODIC = "0";
@@ -92,8 +89,6 @@ public class TestAlignedPlanner {
   private Resource clusterCapacity;
   private long step;
 
-
-  @Parameterized.Parameters(name = "Testing: periodicity {0})")
   public static Collection<Object[]> data() {
     return Arrays.asList(new Object[][]{
             {NONPERIODIC},
@@ -102,8 +97,15 @@ public class TestAlignedPlanner {
     });
   }
 
-  @Test
-  public void testSingleReservationAccept() throws PlanningException {
+  public void initTestAlignedPlanner(String pRecurrenceExpression) {
+    this.recurrenceExpression = pRecurrenceExpression;
+  }
+
+  @ParameterizedTest(name = "Testing: periodicity {0}")
+  @MethodSource("data")
+  public void testSingleReservationAccept(String pRecurrenceExpression) throws PlanningException {
+
+    initTestAlignedPlanner(pRecurrenceExpression);
 
     // Prepare basic plan
     int numJobsInScenario = initializeScenario1();
@@ -126,25 +128,26 @@ public class TestAlignedPlanner {
     agentRight.createReservation(reservationID, "u1", plan, rr1);
 
     // CHECK: allocation was accepted
-    assertTrue("Agent-based allocation failed", reservationID != null);
-    assertTrue("Agent-based allocation failed", plan.getAllReservations()
-        .size() == numJobsInScenario + 1);
+    assertTrue(reservationID != null, "Agent-based allocation failed");
+    assertTrue(plan.getAllReservations()
+        .size() == numJobsInScenario + 1, "Agent-based allocation failed");
 
     // Get reservation
     ReservationAllocation alloc1 = plan.getReservationById(reservationID);
 
     // Verify allocation
-    assertTrue(alloc1.toString(),
-        check(alloc1, 10 * step, 20 * step, 10, 2048, 2));
+    assertTrue(check(alloc1, 10 * step, 20 * step,
+        10, 2048, 2), alloc1.toString());
 
     System.out.println("--------AFTER AGENT----------");
     System.out.println(plan.toString());
 
   }
 
-  @Test
-  public void testOrderNoGapImpossible() throws PlanningException {
-
+  @ParameterizedTest(name = "Testing: periodicity {0}")
+  @MethodSource("data")
+  public void testOrderNoGapImpossible(String pRecurrenceExpression) throws PlanningException {
+    initTestAlignedPlanner(pRecurrenceExpression);
     // Prepare basic plan
     int numJobsInScenario = initializeScenario2();
 
@@ -177,14 +180,15 @@ public class TestAlignedPlanner {
     }
 
     // CHECK: allocation was not accepted
-    assertTrue("Agent-based allocation should have failed", plan
-        .getAllReservations().size() == numJobsInScenario);
+    assertTrue(plan.getAllReservations().size() == numJobsInScenario,
+        "Agent-based allocation should have failed");
 
   }
 
-  @Test
-  public void testOrderNoGapImpossible2() throws PlanningException {
-
+  @ParameterizedTest(name = "Testing: periodicity {0}")
+  @MethodSource("data")
+  public void testOrderNoGapImpossible2(String pRecurrenceExpression) throws PlanningException {
+    initTestAlignedPlanner(pRecurrenceExpression);
     // Prepare basic plan
     int numJobsInScenario = initializeScenario2();
 
@@ -217,14 +221,15 @@ public class TestAlignedPlanner {
     }
 
     // CHECK: allocation was not accepted
-    assertTrue("Agent-based allocation should have failed", plan
-        .getAllReservations().size() == numJobsInScenario);
+    assertTrue(plan.getAllReservations().size() == numJobsInScenario,
+        "Agent-based allocation should have failed");
 
   }
 
-  @Test
-  public void testOrderImpossible() throws PlanningException {
-
+  @ParameterizedTest(name = "Testing: periodicity {0}")
+  @MethodSource("data")
+  public void testOrderImpossible(String pRecurrenceExpression) throws PlanningException {
+    initTestAlignedPlanner(pRecurrenceExpression);
     // Prepare basic plan
     int numJobsInScenario = initializeScenario2();
 
@@ -257,14 +262,15 @@ public class TestAlignedPlanner {
     }
 
     // CHECK: allocation was not accepted
-    assertTrue("Agent-based allocation should have failed", plan
-        .getAllReservations().size() == numJobsInScenario);
+    assertTrue(plan.getAllReservations().size() == numJobsInScenario,
+        "Agent-based allocation should have failed");
 
   }
 
-  @Test
-  public void testAnyImpossible() throws PlanningException {
-
+  @ParameterizedTest(name = "Testing: periodicity {0}")
+  @MethodSource("data")
+  public void testAnyImpossible(String pRecurrenceExpression) throws PlanningException {
+    initTestAlignedPlanner(pRecurrenceExpression);
     // Prepare basic plan
     int numJobsInScenario = initializeScenario2();
 
@@ -297,14 +303,15 @@ public class TestAlignedPlanner {
     }
 
     // CHECK: allocation was not accepted
-    assertTrue("Agent-based allocation should have failed", plan
-        .getAllReservations().size() == numJobsInScenario);
+    assertTrue(plan.getAllReservations().size() == numJobsInScenario,
+        "Agent-based allocation should have failed");
 
   }
 
-  @Test
-  public void testAnyAccept() throws PlanningException {
-
+  @ParameterizedTest(name = "Testing: periodicity {0}")
+  @MethodSource("data")
+  public void testAnyAccept(String pRecurrenceExpression) throws PlanningException {
+    initTestAlignedPlanner(pRecurrenceExpression);
     // Prepare basic plan
     int numJobsInScenario = initializeScenario2();
 
@@ -332,22 +339,23 @@ public class TestAlignedPlanner {
     agentRight.createReservation(reservationID, "u1", plan, rr1);
 
     // CHECK: allocation was accepted
-    assertTrue("Agent-based allocation failed", reservationID != null);
-    assertTrue("Agent-based allocation failed", plan.getAllReservations()
-        .size() == numJobsInScenario + 1);
+    assertTrue(reservationID != null, "Agent-based allocation failed");
+    assertTrue(plan.getAllReservations()
+        .size() == numJobsInScenario + 1, "Agent-based allocation failed");
 
     // Get reservation
     ReservationAllocation alloc1 = plan.getReservationById(reservationID);
 
     // Verify allocation
-    assertTrue(alloc1.toString(),
-        check(alloc1, 14 * step, 15 * step, 20, 1024, 1));
+    assertTrue(check(alloc1, 14 * step, 15 * step, 20, 1024, 1),
+        alloc1.toString());
 
   }
 
-  @Test
-  public void testAllAccept() throws PlanningException {
-
+  @ParameterizedTest(name = "Testing: periodicity {0}")
+  @MethodSource("data")
+  public void testAllAccept(String pRecurrenceExpression) throws PlanningException {
+    initTestAlignedPlanner(pRecurrenceExpression);
     // Prepare basic plan
     int numJobsInScenario = initializeScenario2();
 
@@ -375,24 +383,25 @@ public class TestAlignedPlanner {
     agentRight.createReservation(reservationID, "u1", plan, rr1);
 
     // CHECK: allocation was accepted
-    assertTrue("Agent-based allocation failed", reservationID != null);
-    assertTrue("Agent-based allocation failed", plan.getAllReservations()
-        .size() == numJobsInScenario + 1);
+    assertTrue(reservationID != null, "Agent-based allocation failed");
+    assertTrue(plan.getAllReservations()
+        .size() == numJobsInScenario + 1, "Agent-based allocation failed");
 
     // Get reservation
     ReservationAllocation alloc1 = plan.getReservationById(reservationID);
 
     // Verify allocation
-    assertTrue(alloc1.toString(),
-        check(alloc1, 10 * step, 11 * step, 20, 1024, 1));
-    assertTrue(alloc1.toString(),
-        check(alloc1, 14 * step, 15 * step, 20, 1024, 1));
+    assertTrue(check(alloc1, 10 * step, 11 * step, 20, 1024, 1),
+        alloc1.toString());
+    assertTrue(check(alloc1, 14 * step, 15 * step, 20, 1024, 1),
+        alloc1.toString());
 
   }
 
-  @Test
-  public void testAllImpossible() throws PlanningException {
-
+  @ParameterizedTest(name = "Testing: periodicity {0}")
+  @MethodSource("data")
+  public void testAllImpossible(String pRecurrenceExpression) throws PlanningException {
+    initTestAlignedPlanner(pRecurrenceExpression);
     // Prepare basic plan
     int numJobsInScenario = initializeScenario2();
 
@@ -425,14 +434,15 @@ public class TestAlignedPlanner {
     }
 
     // CHECK: allocation was not accepted
-    assertTrue("Agent-based allocation should have failed", plan
-        .getAllReservations().size() == numJobsInScenario);
+    assertTrue(plan.getAllReservations().size() == numJobsInScenario,
+        "Agent-based allocation should have failed");
 
   }
 
-  @Test
-  public void testUpdate() throws PlanningException {
-
+  @ParameterizedTest(name = "Testing: periodicity {0}")
+  @MethodSource("data")
+  public void testUpdate(String pRecurrenceExpression) throws PlanningException {
+    initTestAlignedPlanner(pRecurrenceExpression);
     // Create flexible reservation
     ReservationDefinition rrFlex =
         createReservationDefinition(
@@ -470,22 +480,23 @@ public class TestAlignedPlanner {
     agentRight.updateReservation(flexReservationID, "uFlex", plan, rrFlex);
 
     // CHECK: allocation was accepted
-    assertTrue("Agent-based allocation failed", flexReservationID != null);
-    assertTrue("Agent-based allocation failed", plan.getAllReservations()
-        .size() == 1);
+    assertTrue(flexReservationID != null, "Agent-based allocation failed");
+    assertTrue(plan.getAllReservations()
+        .size() == 1, "Agent-based allocation failed");
 
     // Get reservation
     ReservationAllocation alloc1 = plan.getReservationById(flexReservationID);
 
     // Verify allocation
-    assertTrue(alloc1.toString(),
-        check(alloc1, 10 * step, 14 * step, 50, 1024, 1));
+    assertTrue(check(alloc1, 10 * step, 14 * step,
+        50, 1024, 1), alloc1.toString());
 
   }
 
-  @Test
-  public void testImpossibleDuration() throws PlanningException {
-
+  @ParameterizedTest(name = "Testing: periodicity {0}")
+  @MethodSource("data")
+  public void testImpossibleDuration(String pRecurrenceExpression) throws PlanningException {
+    initTestAlignedPlanner(pRecurrenceExpression);
     // Create reservation
     ReservationDefinition rr1 =
         createReservationDefinition(
@@ -509,14 +520,15 @@ public class TestAlignedPlanner {
     }
 
     // CHECK: allocation was not accepted
-    assertTrue("Agent-based allocation should have failed", plan
-        .getAllReservations().size() == 0);
+    assertTrue(plan.getAllReservations().size() == 0,
+        "Agent-based allocation should have failed");
 
   }
 
-  @Test
-  public void testLoadedDurationIntervals() throws PlanningException {
-
+  @ParameterizedTest(name = "Testing: periodicity {0}")
+  @MethodSource("data")
+  public void testLoadedDurationIntervals(String pRecurrenceExpression) throws PlanningException {
+    initTestAlignedPlanner(pRecurrenceExpression);
     int numJobsInScenario = initializeScenario3();
 
     // Create reservation
@@ -537,25 +549,26 @@ public class TestAlignedPlanner {
     agentRight.createReservation(reservationID, "u1", plan, rr1);
 
     // CHECK: allocation was accepted
-    assertTrue("Agent-based allocation failed", reservationID != null);
-    assertTrue("Agent-based allocation failed", plan.getAllReservations()
-        .size() == numJobsInScenario + 1);
+    assertTrue(reservationID != null, "Agent-based allocation failed");
+    assertTrue(plan.getAllReservations()
+        .size() == numJobsInScenario + 1, "Agent-based allocation failed");
 
     // Get reservation
     ReservationAllocation alloc1 = plan.getReservationById(reservationID);
 
     // Verify allocation
-    assertTrue(alloc1.toString(),
-        check(alloc1, 10 * step, 11 * step, 20, 1024, 1));
-    assertTrue(alloc1.toString(),
-        check(alloc1, 11 * step, 12 * step, 20, 1024, 1));
-    assertTrue(alloc1.toString(),
-        check(alloc1, 12 * step, 13 * step, 40, 1024, 1));
+    assertTrue(check(alloc1, 10 * step, 11 * step, 20, 1024, 1),
+        alloc1.toString());
+    assertTrue(check(alloc1, 11 * step, 12 * step, 20, 1024, 1),
+        alloc1.toString());
+    assertTrue(check(alloc1, 12 * step, 13 * step, 40, 1024, 1),
+        alloc1.toString());
   }
 
-  @Test
-  public void testCostFunction() throws PlanningException {
-
+  @ParameterizedTest(name = "Testing: periodicity {0}")
+  @MethodSource("data")
+  public void testCostFunction(String pRecurrenceExpression) throws PlanningException {
+    initTestAlignedPlanner(pRecurrenceExpression);
     // Create large memory reservation
     ReservationDefinition rr7Mem1Core =
         createReservationDefinition(
@@ -608,16 +621,17 @@ public class TestAlignedPlanner {
     // Get reservation
     ReservationAllocation alloc3 = plan.getReservationById(reservationID3);
 
-    assertTrue(alloc3.toString(),
-        check(alloc3, 10 * step, 11 * step, 0, 1024, 1));
-    assertTrue(alloc3.toString(),
-        check(alloc3, 11 * step, 12 * step, 1, 1024, 1));
+    assertTrue(check(alloc3, 10 * step, 11 * step, 0, 1024, 1),
+        alloc3.toString());
+    assertTrue(check(alloc3, 11 * step, 12 * step, 1, 1024, 1),
+        alloc3.toString());
 
   }
 
-  @Test
-  public void testFromCluster() throws PlanningException {
-
+  @ParameterizedTest(name = "Testing: periodicity {0}")
+  @MethodSource("data")
+  public void testFromCluster(String pRecurrenceExpression) throws PlanningException {
+    initTestAlignedPlanner(pRecurrenceExpression);
     // int numJobsInScenario = initializeScenario3();
 
     List<ReservationDefinition> list = new ArrayList<ReservationDefinition>();
@@ -734,15 +748,16 @@ public class TestAlignedPlanner {
     }
 
     // CHECK: allocation was accepted
-    assertTrue("Agent-based allocation failed", plan.getAllReservations()
-        .size() == list.size());
+    assertTrue(plan.getAllReservations().size() == list.size(),
+        "Agent-based allocation failed");
 
   }
 
-  @Test
-  public void testSingleReservationAcceptAllocateLeft()
+  @ParameterizedTest(name = "Testing: periodicity {0}")
+  @MethodSource("data")
+  public void testSingleReservationAcceptAllocateLeft(String pRecurrenceExpression)
       throws PlanningException {
-
+    initTestAlignedPlanner(pRecurrenceExpression);
     // Create reservation
     ReservationDefinition rr1 =
         createReservationDefinition(
@@ -767,22 +782,23 @@ public class TestAlignedPlanner {
     agentLeft.createReservation(reservationID, "u1", plan, rr1);
 
     // CHECK: allocation was accepted
-    assertTrue("Agent-based allocation failed", reservationID != null);
-    assertTrue("Agent-based allocation failed", plan.getAllReservations()
-        .size() == 1);
+    assertTrue(reservationID != null, "Agent-based allocation failed");
+    assertTrue(plan.getAllReservations().size() == 1,
+        "Agent-based allocation failed");
 
     // Get reservation
     ReservationAllocation alloc1 = plan.getReservationById(reservationID);
 
     // Verify allocation
-    assertTrue(alloc1.toString(),
-        check(alloc1, 10 * step, 30 * step, 20, 1024, 1));
+    assertTrue(check(alloc1, 10 * step, 30 * step, 20, 1024, 1),
+        alloc1.toString());
 
   }
 
-  @Test
-  public void testLeftSucceedsRightFails() throws PlanningException {
-
+  @ParameterizedTest(name = "Testing: periodicity {0}")
+  @MethodSource("data")
+  public void testLeftSucceedsRightFails(String pRecurrenceExpression) throws PlanningException {
+    initTestAlignedPlanner(pRecurrenceExpression);
     // Prepare basic plan
     int numJobsInScenario = initializeScenario2();
 
@@ -820,16 +836,15 @@ public class TestAlignedPlanner {
     agentLeft.createReservation(reservationID1, "u1", plan, rr1);
 
     // CHECK: allocation was accepted
-    assertTrue("Agent-based allocation failed", reservationID1 != null);
-    assertTrue("Agent-based allocation failed", plan.getAllReservations()
-        .size() == numJobsInScenario + 1);
+    assertTrue(reservationID1 != null, "Agent-based allocation failed");
+    assertTrue(plan.getAllReservations().size() == numJobsInScenario + 1,
+        "Agent-based allocation failed");
 
     // Get reservation
     ReservationAllocation alloc1 = plan.getReservationById(reservationID1);
 
     // Verify allocation
-    assertTrue(alloc1.toString(),
-        check(alloc1, 7 * step, 11 * step, 20, 1024, 1));
+    assertTrue(check(alloc1, 7 * step, 11 * step, 20, 1024, 1), alloc1.toString());
 
     // Add second reservation
     ReservationId reservationID2 =
@@ -837,16 +852,16 @@ public class TestAlignedPlanner {
     agentLeft.createReservation(reservationID2, "u2", plan, rr2);
 
     // CHECK: allocation was accepted
-    assertTrue("Agent-based allocation failed", reservationID2 != null);
-    assertTrue("Agent-based allocation failed", plan.getAllReservations()
-        .size() == numJobsInScenario + 2);
+    assertTrue(reservationID2 != null, "Agent-based allocation failed");
+    assertTrue(plan.getAllReservations().size() == numJobsInScenario + 2,
+        "Agent-based allocation failed");
 
     // Get reservation
     ReservationAllocation alloc2 = plan.getReservationById(reservationID2);
 
     // Verify allocation
-    assertTrue(alloc2.toString(),
-        check(alloc2, 14 * step, 16 * step, 100, 1024, 1));
+    assertTrue(check(alloc2, 14 * step, 16 * step, 100, 1024, 1),
+        alloc2.toString());
 
     agentLeft.deleteReservation(reservationID1, "u1", plan);
     agentLeft.deleteReservation(reservationID2, "u2", plan);
@@ -859,9 +874,9 @@ public class TestAlignedPlanner {
     agentRight.createReservation(reservationID3, "u1", plan, rr1);
 
     // CHECK: allocation was accepted
-    assertTrue("Agent-based allocation failed", reservationID3 != null);
-    assertTrue("Agent-based allocation failed", plan.getAllReservations()
-        .size() == numJobsInScenario + 1);
+    assertTrue(reservationID3 != null, "Agent-based allocation failed");
+    assertTrue(plan.getAllReservations().size() == numJobsInScenario + 1,
+        "Agent-based allocation failed");
 
  // Add 2nd reservation
     try {
@@ -875,9 +890,10 @@ public class TestAlignedPlanner {
 
   }
 
-  @Test
-  public void testValidateOrderNoGap() {
-
+  @ParameterizedTest(name = "Testing: periodicity {0}")
+  @MethodSource("data")
+  public void testValidateOrderNoGap(String pRecurrenceExpression) {
+    initTestAlignedPlanner(pRecurrenceExpression);
     //
     // Initialize allocations
     //
@@ -899,51 +915,52 @@ public class TestAlignedPlanner {
     curAlloc.clear();
     curAlloc.put(new ReservationInterval(9 * step, 10 * step),
         Resource.newInstance(1024, 1));
-    assertTrue("validateOrderNoFap() should have succeeded",
-        IterativePlanner.validateOrderNoGap(allocation, curAlloc, false));
+    assertTrue(IterativePlanner.validateOrderNoGap(allocation, curAlloc, false),
+        "validateOrderNoFap() should have succeeded");
 
     // 2. allocateLeft = false, fail when curAlloc has a gap
     curAlloc.put(new ReservationInterval(7 * step, 8 * step),
         Resource.newInstance(1024, 1));
-    assertFalse("validateOrderNoGap() failed to identify a gap in curAlloc",
-        IterativePlanner.validateOrderNoGap(allocation, curAlloc, false));
+    assertFalse(IterativePlanner.validateOrderNoGap(allocation, curAlloc, false),
+        "validateOrderNoGap() failed to identify a gap in curAlloc");
 
     // 3. allocateLeft = false, fail when there is a gap between curAlloc and
     // allocations
     curAlloc.clear();
     curAlloc.put(new ReservationInterval(8 * step, 9 * step),
         Resource.newInstance(1024, 1));
-    assertFalse("validateOrderNoGap() failed to identify a gap between "
-        + "allocations and curAlloc",
-        IterativePlanner.validateOrderNoGap(allocation, curAlloc, false));
+    assertFalse(IterativePlanner.validateOrderNoGap(allocation, curAlloc, false),
+        "validateOrderNoGap() failed to identify a gap between "
+        + "allocations and curAlloc");
 
     // 4. allocateLeft = true, succeed when there is no gap
     curAlloc.clear();
     curAlloc.put(new ReservationInterval(13 * step, 14 * step),
         Resource.newInstance(1024, 1));
-    assertTrue("validateOrderNoFap() should have succeeded",
-        IterativePlanner.validateOrderNoGap(allocation, curAlloc, true));
+    assertTrue(IterativePlanner.validateOrderNoGap(allocation, curAlloc, true),
+        "validateOrderNoFap() should have succeeded");
 
     // 5. allocateLeft = true, fail when there is a gap between curAlloc and
     // allocations
     curAlloc.put(new ReservationInterval(15 * step, 16 * step),
         Resource.newInstance(1024, 1));
-    assertFalse("validateOrderNoGap() failed to identify a gap in curAlloc",
-        IterativePlanner.validateOrderNoGap(allocation, curAlloc, true));
+    assertFalse(IterativePlanner.validateOrderNoGap(allocation, curAlloc, true),
+        "validateOrderNoGap() failed to identify a gap in curAlloc");
 
     // 6. allocateLeft = true, fail when curAlloc has a gap
     curAlloc.clear();
     curAlloc.put(new ReservationInterval(14 * step, 15 * step),
         Resource.newInstance(1024, 1));
-    assertFalse("validateOrderNoGap() failed to identify a gap between "
-        + "allocations and curAlloc",
-        IterativePlanner.validateOrderNoGap(allocation, curAlloc, true));
+    assertFalse(IterativePlanner.validateOrderNoGap(allocation, curAlloc, true),
+        "validateOrderNoGap() failed to identify a gap between "
+        + "allocations and curAlloc");
 
   }
 
-  @Test
-  public void testGetDurationInterval() throws PlanningException {
-
+  @ParameterizedTest(name = "Testing: periodicity {0}")
+  @MethodSource("data")
+  public void testGetDurationInterval(String pRecurrenceExpression) throws PlanningException {
+    initTestAlignedPlanner(pRecurrenceExpression);
     DurationInterval durationInterval = null;
 
     // Create netRLERes:
@@ -1067,7 +1084,7 @@ public class TestAlignedPlanner {
 
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
 
     // Initialize random seed
@@ -1165,12 +1182,11 @@ public class TestAlignedPlanner {
     ReservationDefinition rDef =
         ReservationSystemTestUtil.createSimpleReservationDefinition(
             start, start + f.length * step, f.length * step);
-    assertTrue(plan.toString(),
-        plan.addReservation(new InMemoryReservationAllocation(
-            ReservationSystemTestUtil.getNewReservationId(), rDef,
-            "user_fixed", "dedicated", start, start + f.length * step,
-            ReservationSystemTestUtil.generateAllocation(start, step, f), res,
-            minAlloc), false));
+    assertTrue(plan.addReservation(new InMemoryReservationAllocation(
+        ReservationSystemTestUtil.getNewReservationId(), rDef,
+        "user_fixed", "dedicated", start, start + f.length * step,
+        ReservationSystemTestUtil.generateAllocation(start, step, f), res,
+        minAlloc), false), plan.toString());
 
   }
 

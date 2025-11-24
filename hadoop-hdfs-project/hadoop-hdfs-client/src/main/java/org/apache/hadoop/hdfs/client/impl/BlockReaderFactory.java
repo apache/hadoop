@@ -769,7 +769,7 @@ public class BlockReaderFactory implements ShortCircuitReplicaCreator {
           LOG.debug("Closed potentially stale remote peer {}", peer, ioe);
         } else {
           // Handle an I/O error we got when using a newly created peer.
-          LOG.warn("I/O error constructing remote block reader.", ioe);
+          LOG.warn("I/O error constructing remote block reader for block {}", block, ioe);
           throw ioe;
         }
       } finally {

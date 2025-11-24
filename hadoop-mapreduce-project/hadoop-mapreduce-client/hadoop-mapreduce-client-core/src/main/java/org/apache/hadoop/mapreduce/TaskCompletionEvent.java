@@ -188,7 +188,7 @@ public class TaskCompletionEvent implements Writable{
     
   @Override
   public String toString(){
-    StringBuffer buf = new StringBuffer(); 
+    StringBuilder buf = new StringBuilder();
     buf.append("Task Id : "); 
     buf.append(taskId); 
     buf.append(", Status : ");  

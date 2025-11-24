@@ -21,7 +21,7 @@ package org.apache.hadoop.fs.impl.prefetch;
 
 import java.nio.ByteBuffer;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.LocalDirAllocator;
@@ -29,11 +29,11 @@ import org.apache.hadoop.test.AbstractHadoopTestBase;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeys.HADOOP_TMP_DIR;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNotSame;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestBlockCache extends AbstractHadoopTestBase {
 
@@ -45,7 +45,7 @@ public class TestBlockCache extends AbstractHadoopTestBase {
   public void testArgChecks() throws Exception {
     // Should not throw.
     BlockCache cache =
-        new SingleFilePerBlockCache(EmptyPrefetchingStatistics.getInstance(), 2);
+        new SingleFilePerBlockCache(EmptyPrefetchingStatistics.getInstance(), 2, null);
 
     ByteBuffer buffer = ByteBuffer.allocate(16);
 
@@ -54,8 +54,8 @@ public class TestBlockCache extends AbstractHadoopTestBase {
         () -> cache.put(42, null, null, null));
 
 
-    intercept(NullPointerException.class, null,
-        () -> new SingleFilePerBlockCache(null, 2));
+    intercept(NullPointerException.class,
+        () -> new SingleFilePerBlockCache(null, 2, null));
 
   }
 
@@ -63,7 +63,7 @@ public class TestBlockCache extends AbstractHadoopTestBase {
   @Test
   public void testPutAndGet() throws Exception {
     BlockCache cache =
-        new SingleFilePerBlockCache(EmptyPrefetchingStatistics.getInstance(), 2);
+        new SingleFilePerBlockCache(EmptyPrefetchingStatistics.getInstance(), 2, null);
 
     ByteBuffer buffer1 = ByteBuffer.allocate(BUFFER_SIZE);
     for (byte i = 0; i < BUFFER_SIZE; i++) {

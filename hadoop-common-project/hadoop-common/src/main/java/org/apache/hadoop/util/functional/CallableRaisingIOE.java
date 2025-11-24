@@ -19,9 +19,14 @@
 package org.apache.hadoop.util.functional;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 
 /**
  * This is a callable which only raises an IOException.
+ * Its method {@link #unchecked()} invokes the {@link #apply()}
+ * method and wraps all IOEs in UncheckedIOException;
+ * call this if you need to pass this through java streaming
+ * APIs
  * @param <R> return type
  */
 @FunctionalInterface
@@ -33,4 +38,18 @@ public interface CallableRaisingIOE<R> {
    * @throws IOException Any IO failure
    */
   R apply() throws IOException;
+
+  /**
+   * Apply unchecked.
+   * @return the evaluated call
+   * @throws UncheckedIOException IOE raised.
+   */
+  default R unchecked() {
+    try {
+      return apply();
+    } catch (IOException e) {
+      throw new UncheckedIOException(e);
+    }
+  }
+
 }

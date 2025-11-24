@@ -24,8 +24,10 @@ import java.util.Map.Entry;
 import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.junit.Test;
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Tests for the YarnClientUtils class
@@ -46,8 +48,8 @@ public class TestYarnClientUtils {
 
     String result = YarnClientUtils.getRmPrincipal(conf);
 
-    assertNull("The hostname translation did return null when the principal is "
-        + "missing from the conf: " + result, result);
+    assertNull(result, "The hostname translation did return null when the principal is "
+        + "missing from the conf: " + result);
 
     conf = new Configuration();
 
@@ -57,15 +59,17 @@ public class TestYarnClientUtils {
 
     result = YarnClientUtils.getRmPrincipal(conf);
 
-    assertEquals("The hostname translation did not produce the expected "
-        + "results: " + result, "test/myhost@REALM", result);
+    assertEquals("test/myhost@REALM", result,
+        "The hostname translation did not produce the expected "
+        + "results: " + result);
 
     conf.set(YarnConfiguration.RM_PRINCIPAL, "test/yourhost@REALM");
 
     result = YarnClientUtils.getRmPrincipal(conf);
 
-    assertEquals("The hostname translation did not produce the expected "
-        + "results: " + result, "test/yourhost@REALM", result);
+    assertEquals("test/yourhost@REALM", result,
+        "The hostname translation did not produce the expected "
+        + "results: " + result);
   }
 
   /**
@@ -83,8 +87,8 @@ public class TestYarnClientUtils {
 
     String result = YarnClientUtils.getRmPrincipal(conf);
 
-    assertNull("The hostname translation did return null when the principal is "
-        + "missing from the conf: " + result, result);
+    assertNull(result, "The hostname translation did return null when the principal is "
+        + "missing from the conf: " + result);
 
     conf = new Configuration();
 
@@ -95,8 +99,9 @@ public class TestYarnClientUtils {
 
     result = YarnClientUtils.getRmPrincipal(conf);
 
-    assertEquals("The hostname translation did not produce the expected "
-        + "results: " + result, "test/myhost@REALM", result);
+    assertEquals("test/myhost@REALM", result,
+        "The hostname translation did not produce the expected "
+        + "results: " + result);
 
     conf = new Configuration();
 
@@ -121,15 +126,17 @@ public class TestYarnClientUtils {
 
     result = YarnClientUtils.getRmPrincipal(conf);
 
-    assertEquals("The hostname translation did not produce the expected "
-        + "results: " + result, "test/myhost@REALM", result);
+    assertEquals("test/myhost@REALM", result,
+        "The hostname translation did not produce the expected "
+        + "results: " + result);
 
     conf.set(YarnConfiguration.RM_PRINCIPAL, "test/yourhost@REALM");
 
     result = YarnClientUtils.getRmPrincipal(conf);
 
-    assertEquals("The hostname translation did not produce the expected "
-        + "results: " + result, "test/yourhost@REALM", result);
+    assertEquals("test/yourhost@REALM", result,
+        "The hostname translation did not produce the expected "
+        + "results: " + result);
   }
 
   /**
@@ -147,13 +154,15 @@ public class TestYarnClientUtils {
 
     String result = YarnClientUtils.getRmPrincipal("test/_HOST@REALM", conf);
 
-    assertEquals("The hostname translation did not produce the expected "
-        + "results: " + result, "test/myhost@REALM", result);
+    assertEquals("test/myhost@REALM", result,
+        "The hostname translation did not produce the expected "
+        + "results: " + result);
 
     result = YarnClientUtils.getRmPrincipal("test/yourhost@REALM", conf);
 
-    assertEquals("The hostname translation did not produce the expected "
-        + "results: " + result, "test/yourhost@REALM", result);
+    assertEquals("test/yourhost@REALM", result,
+        "The hostname translation did not produce the expected "
+        + "results: " + result);
 
     try {
       result = YarnClientUtils.getRmPrincipal(null, conf);
@@ -180,8 +189,9 @@ public class TestYarnClientUtils {
 
     String result = YarnClientUtils.getRmPrincipal("test/_HOST@REALM", conf);
 
-    assertEquals("The hostname translation did not produce the expected "
-        + "results: " + result, "test/myhost@REALM", result);
+    assertEquals("test/myhost@REALM", result,
+        "The hostname translation did not produce the expected "
+        + "results: " + result);
 
     try {
       result = YarnClientUtils.getRmPrincipal(null, conf);
@@ -211,13 +221,15 @@ public class TestYarnClientUtils {
 
     result = YarnClientUtils.getRmPrincipal("test/_HOST@REALM", conf);
 
-    assertEquals("The hostname translation did not produce the expected "
-        + "results: " + result, "test/myhost@REALM", result);
+    assertEquals("test/myhost@REALM", result,
+        "The hostname translation did not produce the expected "
+        + "results: " + result);
 
     result = YarnClientUtils.getRmPrincipal("test/yourhost@REALM", conf);
 
-    assertEquals("The hostname translation did not produce the expected "
-        + "results: " + result, "test/yourhost@REALM", result);
+    assertEquals("test/yourhost@REALM", result,
+        "The hostname translation did not produce the expected "
+        + "results: " + result);
   }
 
   /**
@@ -235,9 +247,9 @@ public class TestYarnClientUtils {
     YarnConfiguration result = YarnClientUtils.getYarnConfWithRmHaId(conf);
 
     assertSameConf(conf, result);
-    assertEquals("RM_HA_ID was changed when it shouldn't have been: "
-        + result.get(YarnConfiguration.RM_HA_ID), "rm0",
-        result.get(YarnConfiguration.RM_HA_ID));
+    assertEquals("rm0", result.get(YarnConfiguration.RM_HA_ID),
+        "RM_HA_ID was changed when it shouldn't have been: "
+        + result.get(YarnConfiguration.RM_HA_ID));
 
     conf = new Configuration();
 
@@ -247,9 +259,9 @@ public class TestYarnClientUtils {
     result = YarnClientUtils.getYarnConfWithRmHaId(conf);
 
     assertSameConf(conf, result);
-    assertEquals("RM_HA_ID was changed when it shouldn't have been: "
-        + result.get(YarnConfiguration.RM_HA_ID), "rm0",
-        result.get(YarnConfiguration.RM_HA_ID));
+    assertEquals("rm0", result.get(YarnConfiguration.RM_HA_ID),
+        "RM_HA_ID was changed when it shouldn't have been: "
+        + result.get(YarnConfiguration.RM_HA_ID));
 
     conf = new Configuration();
 
@@ -259,9 +271,9 @@ public class TestYarnClientUtils {
     result = YarnClientUtils.getYarnConfWithRmHaId(conf);
 
     assertSameConf(conf, result);
-    assertEquals("RM_HA_ID was not set correctly: "
-         + result.get(YarnConfiguration.RM_HA_ID), "rm0",
-         result.get(YarnConfiguration.RM_HA_ID));
+    assertEquals("rm0", result.get(YarnConfiguration.RM_HA_ID),
+        "RM_HA_ID was not set correctly: "
+        + result.get(YarnConfiguration.RM_HA_ID));
 
     conf = new Configuration();
 
@@ -298,8 +310,8 @@ public class TestYarnClientUtils {
       if (!seen.add(key)) {
         // Here we use master.get() instead of property.getValue() because
         // they're not the same thing.
-        assertEquals("New configuration changed the value of "
-            + key, master.get(key), copy.get(key));
+        assertEquals(master.get(key), copy.get(key),
+            "New configuration changed the value of " + key);
       }
     }
 
@@ -310,9 +322,8 @@ public class TestYarnClientUtils {
       String key = property.getKey();
 
       if (!seen.contains(property.getKey())) {
-        assertEquals("New configuration changed the value of "
-            + key, copy.get(key),
-            master.get(key));
+        assertEquals(copy.get(key),
+            master.get(key), "New configuration changed the value of " + key);
       }
     }
   }

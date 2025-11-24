@@ -752,6 +752,27 @@ public class JsonUtil {
     return m;
   }
 
+  public static Map<String, Object> toJsonMap(FileStatus status) throws IOException {
+    Map<String, Object> m = new HashMap<>();
+    m.put("path", status.getPath().toUri().getPath());
+    m.put("length", status.getLen());
+    m.put("isdir", status.isDirectory());
+    m.put("block_replication", status.getReplication());
+    m.put("blocksize", status.getBlockSize());
+    m.put("modification_time", status.getModificationTime());
+    m.put("access_time", status.getAccessTime());
+    FsPermission perm = status.getPermission();
+    if (perm != null) {
+      m.put("permission", toString(perm));
+    }
+    m.put("owner", status.getOwner());
+    m.put("group", status.getGroup());
+    if (status.isSymlink()) {
+      m.put("symlink", status.getSymlink());
+    }
+    return m;
+  }
+
   public static String toJsonString(ErasureCodingPolicyInfo[] ecPolicyInfos) {
     final Map<String, Object> erasureCodingPolicies = new HashMap<>();
     Object[] erasureCodingPolicyInfos = null;
@@ -763,5 +784,17 @@ public class JsonUtil {
     }
     erasureCodingPolicies.put("ErasureCodingPolicyInfo", erasureCodingPolicyInfos);
     return toJsonString("ErasureCodingPolicies", erasureCodingPolicies);
+  }
+
+  public static String toJsonString(Collection<FileStatus> trashPaths) throws IOException {
+    List<FileStatus> list = new ArrayList<>(trashPaths);
+    Object[] paths = null;
+    if(list.size() > 0){
+      paths = new Object[list.size()];
+      for(int i = 0; i < list.size(); i++){
+        paths[i] = toJsonMap(list.get(i));
+      }
+    }
+    return toJsonString("Paths", paths);
   }
 }

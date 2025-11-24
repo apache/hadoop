@@ -20,12 +20,29 @@ package org.apache.hadoop.fs.azurebfs.contracts.exceptions;
 
 /**
  * Thrown when a concurrent write operation is detected.
+ * This exception is used to indicate that parallel access to the create path
+ * has been detected, which violates the single writer semantics.
  */
 @org.apache.hadoop.classification.InterfaceAudience.Public
 @org.apache.hadoop.classification.InterfaceStability.Evolving
 public class ConcurrentWriteOperationDetectedException
     extends AzureBlobFileSystemException {
 
+  private static final String ERROR_MESSAGE = "Parallel access to the create path detected. Failing request "
+      + "to honor single writer semantics";
+
+  /**
+   * Constructs a new ConcurrentWriteOperationDetectedException with a default error message.
+   */
+  public ConcurrentWriteOperationDetectedException() {
+    super(ERROR_MESSAGE);
+  }
+
+  /**
+   * Constructs a new ConcurrentWriteOperationDetectedException with the specified error message.
+   *
+   * @param message the detail message.
+   */
   public ConcurrentWriteOperationDetectedException(String message) {
     super(message);
   }

@@ -123,7 +123,7 @@ public final class FederationPoliciesTestUtil {
     fpc.setSubClusterPolicyConfiguration(SubClusterPolicyConfiguration
         .newInstance("queue1", policy.getClass().getCanonicalName(), buf));
     FederationStateStoreFacade facade = FederationStateStoreFacade
-        .getInstance();
+        .getInstance(conf);
     FederationStateStore fss = mock(FederationStateStore.class);
 
     if (activeSubclusters == null) {
@@ -242,9 +242,8 @@ public final class FederationPoliciesTestUtil {
 
   public static FederationStateStoreFacade initFacade(
       List<SubClusterInfo> subClusterInfos, SubClusterPolicyConfiguration
-      policyConfiguration) throws YarnException {
-    FederationStateStoreFacade goodFacade = FederationStateStoreFacade
-        .getInstance();
+      policyConfiguration, Configuration conf) throws YarnException {
+    FederationStateStoreFacade goodFacade = FederationStateStoreFacade.getInstance(conf);
     FederationStateStore fss = mock(FederationStateStore.class);
     GetSubClustersInfoResponse response = GetSubClustersInfoResponse
         .newInstance(subClusterInfos);
@@ -276,8 +275,20 @@ public final class FederationPoliciesTestUtil {
    * @throws YarnException in case the initialization is not successful.
    */
   public static FederationStateStoreFacade initFacade() throws YarnException {
+    return initFacade(new Configuration());
+  }
+
+  /**
+   * Initialiaze a main-memory {@link FederationStateStoreFacade} used for
+   * testing, wiht a mock resolver.
+   *
+   * @param conf Configuration.
+   * @return the facade.
+   * @throws YarnException in case the initialization is not successful.
+   */
+  public static FederationStateStoreFacade initFacade(Configuration conf) throws YarnException {
     SubClusterPolicyConfiguration policyConfiguration =
         SubClusterPolicyConfiguration.newInstance(null, null, null);
-    return initFacade(new ArrayList<>(), policyConfiguration);
+    return initFacade(new ArrayList<>(), policyConfiguration, conf);
   }
 }

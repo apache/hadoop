@@ -50,6 +50,7 @@ public final class RouterAuditLogger {
     public static final String FORCE_KILL_APP = "Force Kill App";
     public static final String GET_APP_REPORT = "Get Application Report";
     public static final String TARGET_CLIENT_RM_SERVICE = "RouterClientRMService";
+    public static final String TARGET_WEB_SERVICE = "RouterWebServices";
     public static final String UNKNOWN = "UNKNOWN";
     public static final String GET_APPLICATIONS = "Get Applications";
     public static final String GET_CLUSTERMETRICS = "Get ClusterMetrics";
@@ -82,6 +83,32 @@ public final class RouterAuditLogger {
     public static final String GET_ATTRIBUTESTONODES = "Get AttributesToNodes";
     public static final String GET_CLUSTERNODEATTRIBUTES = "Get ClusterNodeAttributes";
     public static final String GET_NODESTOATTRIBUTES = "Get NodesToAttributes";
+    public static final String GET_CLUSTERINFO = "Get ClusterInfo";
+    public static final String GET_CLUSTERUSERINFO = "Get ClusterUserInfo";
+    public static final String GET_SCHEDULERINFO = "Get SchedulerInfo";
+    public static final String DUMP_SCHEDULERLOGS = "Dump SchedulerLogs";
+    public static final String GET_ACTIVITIES = "Get Activities";
+    public static final String GET_BULKACTIVITIES = "Get BulkActivities";
+    public static final String GET_APPACTIVITIES = "Get AppActivities";
+    public static final String GET_APPSTATISTICS = "Get AppStatistics";
+    public static final String GET_RMNODELABELS = "Get RMNodeLabels";
+    public static final String REPLACE_LABELSONNODES = "Replace LabelsOnNodes";
+    public static final String REPLACE_LABELSONNODE = "Replace LabelsOnNode";
+    public static final String GET_CLUSTER_NODELABELS = "Get ClusterNodeLabels";
+    public static final String ADD_TO_CLUSTER_NODELABELS = "Add To ClusterNodeLabels";
+    public static final String REMOVE_FROM_CLUSTERNODELABELS = "Remove From ClusterNodeLabels";
+    public static final String GET_LABELS_ON_NODE = "Get LabelsOnNode";
+    public static final String GET_APP_PRIORITY = "Get AppPriority";
+    public static final String UPDATE_APP_QUEUE = "Update AppQueue";
+    public static final String POST_DELEGATION_TOKEN = "Post DelegationToken";
+    public static final String POST_DELEGATION_TOKEN_EXPIRATION = "Post DelegationTokenExpiration";
+    public static final String GET_APP_TIMEOUT = "Get App Timeout";
+    public static final String GET_APP_TIMEOUTS = "Get App Timeouts";
+    public static final String CHECK_USER_ACCESS_TO_QUEUE = "Check User AccessToQueue";
+    public static final String GET_APP_ATTEMPT = "Get AppAttempt";
+    public static final String GET_CONTAINER = "Get Container";
+    public static final String UPDATE_SCHEDULER_CONFIGURATION = "Update SchedulerConfiguration";
+    public static final String GET_SCHEDULER_CONFIGURATION = "Get SchedulerConfiguration";
   }
 
   public static void logSuccess(String user, String operation, String target) {

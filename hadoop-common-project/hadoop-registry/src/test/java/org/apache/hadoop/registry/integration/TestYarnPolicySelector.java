@@ -24,7 +24,7 @@ import org.apache.hadoop.registry.client.types.RegistryPathStatus;
 import org.apache.hadoop.registry.client.types.ServiceRecord;
 import org.apache.hadoop.registry.server.integration.SelectByYarnPersistence;
 import org.apache.hadoop.registry.server.services.RegistryAdminService;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class TestYarnPolicySelector extends RegistryTestHelper {
 
@@ -37,7 +37,7 @@ public class TestYarnPolicySelector extends RegistryTestHelper {
   public void assertSelected(boolean outcome,
       RegistryAdminService.NodeSelector selector) {
     boolean select = selector.shouldSelect("/", status, record);
-    assertEquals(selector.toString(), outcome, select);
+    assertEquals(outcome, select, selector.toString());
   }
 
   @Test
