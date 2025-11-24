@@ -81,7 +81,7 @@ public class AbfsOutputStreamContext extends AbfsStreamContext {
   private AbfsClientHandler clientHandler;
 
   /** Reference to the thread pool manager. */
-  private WriteThreadPoolSizeManager poolSizeManager;
+  private WriteThreadPoolSizeManager writeThreadPoolSizeManager;
 
   public AbfsOutputStreamContext(final long sasTokenRenewPeriodForStreamsInSeconds) {
     super(sasTokenRenewPeriodForStreamsInSeconds);
@@ -232,9 +232,9 @@ public class AbfsOutputStreamContext extends AbfsStreamContext {
     return this;
   }
 
-  public AbfsOutputStreamContext withThreadPoolManager(
+  public AbfsOutputStreamContext withWriteThreadPoolManager(
       final WriteThreadPoolSizeManager writeThreadPoolSizeManager) {
-    this.poolSizeManager = writeThreadPoolSizeManager;
+    this.writeThreadPoolSizeManager = writeThreadPoolSizeManager;
     return this;
   }
 
@@ -338,8 +338,8 @@ public class AbfsOutputStreamContext extends AbfsStreamContext {
     return clientHandler;
   }
 
-  public WriteThreadPoolSizeManager getPoolSizeManager() {
-    return poolSizeManager;
+  public WriteThreadPoolSizeManager getWriteThreadPoolSizeManager() {
+    return writeThreadPoolSizeManager;
   }
 
   /**

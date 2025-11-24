@@ -71,6 +71,7 @@ public class TracingContext {
   private String metricResults = EMPTY_STRING;
   private String metricHeader = EMPTY_STRING;
   private ReadType readType = ReadType.UNKNOWN_READ;
+  private String resourceUtilizationMetricResults = EMPTY_STRING;
 
   /**
    * If {@link #primaryRequestId} is null, this field shall be set equal
@@ -128,7 +129,6 @@ public class TracingContext {
         listener);
     this.metricResults = metricResults;
   }
-
 
   public TracingContext(TracingContext originalTracingContext) {
     this.fileSystemID = originalTracingContext.fileSystemID;

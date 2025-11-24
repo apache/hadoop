@@ -1228,7 +1228,7 @@ public class TestAbfsInputStream extends
     if (getConfiguration().isReadAheadV2Enabled()) {
       ReadBufferManagerV2.setReadBufferManagerConfigs(
           getConfiguration().getReadAheadBlockSize(), getConfiguration());
-      return ReadBufferManagerV2.getBufferManager(getFileSystem().getAbfsStore().getClient());
+      return ReadBufferManagerV2.getBufferManager(getFileSystem().getAbfsStore().getClient().getAbfsCounters());
     }
     return ReadBufferManagerV1.getBufferManager();
   }

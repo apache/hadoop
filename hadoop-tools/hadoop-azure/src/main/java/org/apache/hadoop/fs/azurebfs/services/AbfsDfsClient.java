@@ -1081,11 +1081,10 @@ public class AbfsDfsClient extends AbfsClient {
         SASTokenProvider.READ_OPERATION,
         abfsUriQueryBuilder, cachedSasToken);
     // Retrieve the read thread pool metrics from the ABFS counters.
-    AbfsReadThreadPoolMetrics metrics = getAbfsCounters()
-        .getAbfsReadThreadPoolMetrics();
+    AbfsReadResourceUtilizationMetrics readResourceUtilizationMetrics = retrieveReadResourceUtilizationMetrics();
     // If metrics are available, record them in the tracing context for diagnostics or logging.
-    if (metrics != null) {
-      tracingContext.setMetricResults(metrics.toString());
+    if (readResourceUtilizationMetrics != null) {
+      tracingContext.setMetricResults(readResourceUtilizationMetrics.toString());
     }
     final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = getAbfsRestOperation(

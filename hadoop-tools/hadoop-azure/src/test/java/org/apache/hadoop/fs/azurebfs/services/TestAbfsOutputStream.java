@@ -125,7 +125,7 @@ public final class TestAbfsOutputStream {
     when(client.getAbfsPerfTracker()).thenReturn(tracker);
     when(client.getAbfsConfiguration()).thenReturn(abfsConf);
     when(client.getAbfsCounters()).thenReturn(abfsCounters);
-    when(client.getAbfsCounters().getAbfsWriteThreadPoolMetrics()).thenReturn(new AbfsWriteThreadPoolMetrics());
+    when(client.getAbfsCounters().getAbfsWriteResourceUtilizationMetrics()).thenReturn(new AbfsWriteResourceUtilizationMetrics());
     when(client.append(anyString(), any(byte[].class),
         any(AppendRequestParameters.class), any(),
         any(), any(TracingContext.class)))
@@ -197,7 +197,7 @@ public final class TestAbfsOutputStream {
         "test-fs-id", FSOperationType.WRITE,
         TracingHeaderFormat.ALL_ID_FORMAT, null);
     when(client.getAbfsCounters()).thenReturn(abfsCounters);
-    when(client.getAbfsCounters().getAbfsWriteThreadPoolMetrics()).thenReturn(new AbfsWriteThreadPoolMetrics());
+    when(client.getAbfsCounters().getAbfsWriteResourceUtilizationMetrics()).thenReturn(new AbfsWriteResourceUtilizationMetrics());
     when(client.getAbfsPerfTracker()).thenReturn(tracker);
     when(client.append(anyString(), any(byte[].class), any(AppendRequestParameters.class), any(), any(), any(TracingContext.class))).thenReturn(op);
     when(client.flush(anyString(), anyLong(), anyBoolean(), anyBoolean(), any(), isNull(), any(), any(TracingContext.class), anyString())).thenReturn(op);
@@ -284,7 +284,7 @@ public final class TestAbfsOutputStream {
     when(clientHandler.getClient(any())).thenReturn(client);
     when(clientHandler.getDfsClient()).thenReturn(client);
     when(client.getAbfsCounters()).thenReturn(abfsCounters);
-    when(client.getAbfsCounters().getAbfsWriteThreadPoolMetrics()).thenReturn(new AbfsWriteThreadPoolMetrics());
+    when(client.getAbfsCounters().getAbfsWriteResourceUtilizationMetrics()).thenReturn(new AbfsWriteResourceUtilizationMetrics());
 
 
     AbfsOutputStream out = Mockito.spy(Mockito.spy(new AbfsOutputStream(
@@ -367,7 +367,7 @@ public final class TestAbfsOutputStream {
     when(clientHandler.getClient(any())).thenReturn(client);
     when(clientHandler.getDfsClient()).thenReturn(client);
     when(client.getAbfsCounters()).thenReturn(abfsCounters);
-    when(client.getAbfsCounters().getAbfsWriteThreadPoolMetrics()).thenReturn(new AbfsWriteThreadPoolMetrics());
+    when(client.getAbfsCounters().getAbfsWriteResourceUtilizationMetrics()).thenReturn(new AbfsWriteResourceUtilizationMetrics());
 
     AbfsOutputStream out = Mockito.spy(new AbfsOutputStream(
         populateAbfsOutputStreamContext(
@@ -431,7 +431,7 @@ public final class TestAbfsOutputStream {
     when(clientHandler.getClient(any())).thenReturn(client);
     when(clientHandler.getDfsClient()).thenReturn(client);
     when(client.getAbfsCounters()).thenReturn(abfsCounters);
-    when(client.getAbfsCounters().getAbfsWriteThreadPoolMetrics()).thenReturn(new AbfsWriteThreadPoolMetrics());
+    when(client.getAbfsCounters().getAbfsWriteResourceUtilizationMetrics()).thenReturn(new AbfsWriteResourceUtilizationMetrics());
     AbfsOutputStream out = Mockito.spy(new AbfsOutputStream(
         populateAbfsOutputStreamContext(
             BUFFER_SIZE,
@@ -492,7 +492,7 @@ public final class TestAbfsOutputStream {
         abfsConf.getClientCorrelationId(), "test-fs-id",
         FSOperationType.WRITE, abfsConf.getTracingHeaderFormat(), null);
     when(client.getAbfsCounters()).thenReturn(abfsCounters);
-    when(client.getAbfsCounters().getAbfsWriteThreadPoolMetrics()).thenReturn(new AbfsWriteThreadPoolMetrics());
+    when(client.getAbfsCounters().getAbfsWriteResourceUtilizationMetrics()).thenReturn(new AbfsWriteResourceUtilizationMetrics());
     when(client.getAbfsPerfTracker()).thenReturn(tracker);
     when(client.append(anyString(), any(byte[].class),
         any(AppendRequestParameters.class), any(), any(), any(TracingContext.class)))
@@ -569,7 +569,7 @@ public final class TestAbfsOutputStream {
     abfsConf = new AbfsConfiguration(conf, accountName1);
     when(client.getAbfsConfiguration()).thenReturn(abfsConf);
     when(client.getAbfsCounters()).thenReturn(abfsCounters);
-    when(client.getAbfsCounters().getAbfsWriteThreadPoolMetrics()).thenReturn(new AbfsWriteThreadPoolMetrics());
+    when(client.getAbfsCounters().getAbfsWriteResourceUtilizationMetrics()).thenReturn(new AbfsWriteResourceUtilizationMetrics());
     AbfsPerfTracker tracker = new AbfsPerfTracker("test", accountName1, abfsConf);
     when(client.getAbfsPerfTracker()).thenReturn(tracker);
     when(client.append(anyString(), any(byte[].class),

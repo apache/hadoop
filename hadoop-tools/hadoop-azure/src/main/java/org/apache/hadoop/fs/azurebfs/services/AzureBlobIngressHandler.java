@@ -126,11 +126,9 @@ public class AzureBlobIngressHandler extends AzureIngressHandler {
     tracingContextAppend.setIngressHandler(BLOB_APPEND + " T " + threadIdStr);
     tracingContextAppend.setPosition(String.valueOf(blockToUpload.getOffset()));
      // Fetches write thread pool metrics from the ABFS client and adds them to the tracing context.
-    AbfsWriteThreadPoolMetrics metrics = getAbfsOutputStream().getClient()
-        .getAbfsCounters()
-        .getAbfsWriteThreadPoolMetrics();
-    if (metrics != null) {
-      tracingContextAppend.setMetricResults(metrics.toString());
+    AbfsWriteResourceUtilizationMetrics writeResourceUtilizationMetrics = getWriteResourceUtilizationMetrics();
+    if (writeResourceUtilizationMetrics != null) {
+      tracingContextAppend.setMetricResults(writeResourceUtilizationMetrics.toString());
     }
     try {
       LOG.trace("Starting remote write for block with ID {} and offset {}",

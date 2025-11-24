@@ -40,8 +40,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
-import org.apache.hadoop.fs.azurebfs.services.AbfsWriteThreadPoolMetrics;
+import org.apache.hadoop.fs.azurebfs.services.AbfsCounters;
+import org.apache.hadoop.fs.azurebfs.services.AbfsWriteResourceUtilizationMetrics;
 
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_WRITE_MAX_CONCURRENT_REQUESTS;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_WRITE_CPU_MONITORING_INTERVAL_MILLIS;
@@ -106,7 +106,7 @@ class TestWriteThreadPoolSizeManager extends AbstractAbfsIntegrationTest {
   }
 
   /**
-   * Verifies that {@link WriteThreadPoolSizeManager#getInstance(String, AbfsConfiguration, AbfsClient)}
+   * Verifies that {@link WriteThreadPoolSizeManager#getInstance(String, AbfsConfiguration, AbfsCounters)}
    * returns the same singleton instance for the same filesystem name, and a different instance
    * for a different filesystem name.
    */
@@ -114,13 +114,13 @@ class TestWriteThreadPoolSizeManager extends AbstractAbfsIntegrationTest {
   void testGetInstanceReturnsSingleton() throws IOException {
     WriteThreadPoolSizeManager instance1
         = WriteThreadPoolSizeManager.getInstance("testfs", mockConfig,
-        getFileSystem().getAbfsClient());
+        getFileSystem().getAbfsClient().getAbfsCounters());
     WriteThreadPoolSizeManager instance2
         = WriteThreadPoolSizeManager.getInstance("testfs", mockConfig,
-        getFileSystem().getAbfsClient());
+        getFileSystem().getAbfsClient().getAbfsCounters());
     WriteThreadPoolSizeManager instance3 =
         WriteThreadPoolSizeManager.getInstance("newFs", mockConfig,
-            getFileSystem().getAbfsClient());
+            getFileSystem().getAbfsClient().getAbfsCounters());
     Assertions.assertThat(instance1)
         .as("Expected the same singleton instance for the same key")
         .isSameAs(instance2);
@@ -138,7 +138,7 @@ class TestWriteThreadPoolSizeManager extends AbstractAbfsIntegrationTest {
     WriteThreadPoolSizeManager instance
         = WriteThreadPoolSizeManager.getInstance("testfsHigh",
         getAbfsStore(getFileSystem()).getAbfsConfiguration(),
-        getFileSystem().getAbfsClient());
+        getFileSystem().getAbfsClient().getAbfsCounters());
     ExecutorService executor = instance.getExecutorService();
     ThreadPoolExecutor threadPoolExecutor = (ThreadPoolExecutor) executor;
 
@@ -165,7 +165,7 @@ class TestWriteThreadPoolSizeManager extends AbstractAbfsIntegrationTest {
     WriteThreadPoolSizeManager instance
         = WriteThreadPoolSizeManager.getInstance("testfsLow",
         getAbfsStore(getFileSystem()).getAbfsConfiguration(),
-        getFileSystem().getAbfsClient());
+        getFileSystem().getAbfsClient().getAbfsCounters());
     ExecutorService executor = instance.getExecutorService();
     int initialSize = ((ThreadPoolExecutor) executor).getMaximumPoolSize();
     instance.adjustThreadPoolSizeBasedOnCPU(LOW_CPU_UTILIZATION_THRESHOLD); // Low CPU
@@ -184,7 +184,7 @@ class TestWriteThreadPoolSizeManager extends AbstractAbfsIntegrationTest {
   void testExecutorServiceIsNotNull() throws IOException {
     WriteThreadPoolSizeManager instance
         = WriteThreadPoolSizeManager.getInstance("testfsExec", mockConfig,
-        getFileSystem().getAbfsClient());
+        getFileSystem().getAbfsClient().getAbfsCounters());
     ExecutorService executor = instance.getExecutorService();
     Assertions.assertThat(executor).as("Executor service should be initialized")
         .isNotNull();
@@ -202,7 +202,7 @@ class TestWriteThreadPoolSizeManager extends AbstractAbfsIntegrationTest {
   void testCloseCleansUp() throws Exception {
     WriteThreadPoolSizeManager instance
         = WriteThreadPoolSizeManager.getInstance("testfsClose", mockConfig,
-        getFileSystem().getAbfsClient());
+        getFileSystem().getAbfsClient().getAbfsCounters());
     ExecutorService executor = instance.getExecutorService();
     instance.close();
     Assertions.assertThat(executor.isShutdown() || executor.isTerminated())
@@ -223,7 +223,7 @@ class TestWriteThreadPoolSizeManager extends AbstractAbfsIntegrationTest {
     // Create a new instance of WriteThreadPoolSizeManager using a mock configuration
     WriteThreadPoolSizeManager instance
         = WriteThreadPoolSizeManager.getInstance("testScheduler", mockConfig,
-        getFileSystem().getAbfsClient());
+        getFileSystem().getAbfsClient().getAbfsCounters());
 
     // Call startCPUMonitoring to schedule the monitoring task
     instance.startCPUMonitoring();
@@ -259,7 +259,7 @@ class TestWriteThreadPoolSizeManager extends AbstractAbfsIntegrationTest {
     AzureBlobFileSystem fs = getFileSystem();
     WriteThreadPoolSizeManager instance =
         WriteThreadPoolSizeManager.getInstance(getFileSystemName(),
-            getConfiguration(), getFileSystem().getAbfsClient());
+            getConfiguration(), getFileSystem().getAbfsClient().getAbfsCounters());
     ThreadPoolExecutor executor =
         (ThreadPoolExecutor) instance.getExecutorService();
 
@@ -342,7 +342,7 @@ class TestWriteThreadPoolSizeManager extends AbstractAbfsIntegrationTest {
     AzureBlobFileSystem fs = getFileSystem();
     WriteThreadPoolSizeManager mgr =
         WriteThreadPoolSizeManager.getInstance(getFileSystemName(), mockConfig,
-            getFileSystem().getAbfsClient());
+            getFileSystem().getAbfsClient().getAbfsCounters());
     ThreadPoolExecutor executor = (ThreadPoolExecutor) mgr.getExecutorService();
 
     // Enable monitoring (may not be required if adjust() is triggered internally)
@@ -518,7 +518,7 @@ class TestWriteThreadPoolSizeManager extends AbstractAbfsIntegrationTest {
       AzureBlobFileSystem abfs = (AzureBlobFileSystem) fileSystem;
       WriteThreadPoolSizeManager instance =
           WriteThreadPoolSizeManager.getInstance(abfs.getFileSystemId(),
-              getConfiguration(), getFileSystem().getAbfsClient());
+              getConfiguration(), getFileSystem().getAbfsClient().getAbfsCounters());
       ThreadPoolExecutor executor =
           (ThreadPoolExecutor) instance.getExecutorService();
 
@@ -622,7 +622,7 @@ class TestWriteThreadPoolSizeManager extends AbstractAbfsIntegrationTest {
       AzureBlobFileSystem abfs = (AzureBlobFileSystem) fileSystem;
       WriteThreadPoolSizeManager instance =
           WriteThreadPoolSizeManager.getInstance(abfs.getFileSystemId(),
-              getConfiguration(), getFileSystem().getAbfsClient());
+              getConfiguration(), getFileSystem().getAbfsClient().getAbfsCounters());
       ThreadPoolExecutor executor =
           (ThreadPoolExecutor) instance.getExecutorService();
 
@@ -737,7 +737,7 @@ class TestWriteThreadPoolSizeManager extends AbstractAbfsIntegrationTest {
         getRawConfiguration())) {
       AzureBlobFileSystem abfs = (AzureBlobFileSystem) fileSystem;
       WriteThreadPoolSizeManager instance = WriteThreadPoolSizeManager.getInstance(abfs.getFileSystemId(),
-          abfs.getAbfsStore().getAbfsConfiguration(), getFileSystem().getAbfsClient());
+          abfs.getAbfsStore().getAbfsConfiguration(), getFileSystem().getAbfsClient().getAbfsCounters());
       ThreadPoolExecutor executor =
           (ThreadPoolExecutor) instance.getExecutorService();
 
@@ -807,14 +807,14 @@ class TestWriteThreadPoolSizeManager extends AbstractAbfsIntegrationTest {
       WriteThreadPoolSizeManager instance =
           WriteThreadPoolSizeManager.getInstance("fs1",
               abfs.getAbfsStore().getAbfsConfiguration(),
-              abfs.getAbfsClient());
+              abfs.getAbfsClient().getAbfsCounters());
       instance.startCPUMonitoring();
 
       // --- Capture initial metrics and stats ---
-      AbfsWriteThreadPoolMetrics metrics =
+      AbfsWriteResourceUtilizationMetrics metrics =
           abfs.getAbfsClient()
               .getAbfsCounters()
-              .getAbfsWriteThreadPoolMetrics();
+              .getAbfsWriteResourceUtilizationMetrics();
 
       WriteThreadPoolSizeManager.WriteThreadPoolStats statsBefore =
           instance.getCurrentStats(instance.getJvmCpuLoad(), instance.getMaxCpuUtilization(), instance.getMemoryLoad());

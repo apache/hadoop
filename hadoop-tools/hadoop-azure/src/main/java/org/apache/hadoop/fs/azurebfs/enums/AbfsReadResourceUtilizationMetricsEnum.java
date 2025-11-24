@@ -19,21 +19,20 @@
 package org.apache.hadoop.fs.azurebfs.enums;
 
 /**
- * Enum representing the set of metrics tracked for the ABFS write thread pool.
- * Each metric entry defines a short name identifier and its corresponding
- * {@link StatisticTypeEnum}, which specifies the type of measurement (e.g., gauge).
- * These metrics are used for monitoring and analyzing the performance and
- * resource utilization of the write thread pool.
+ * Enum representing the set of metrics tracked for the ABFS read thread pool.
+ * Each metric includes a short name used for reporting and its corresponding
+ * {@link StatisticTypeEnum}, which defines how the metric is measured (e.g., gauge).
  */
-public enum AbfsWriteThreadPoolMetricsEnum {
+public enum AbfsReadResourceUtilizationMetricsEnum implements
+    AbfsResourceUtilizationMetricsEnum {
 
-  /** Current number of threads in the write thread pool. */
+  /** Current number of threads in the read thread pool. */
   CURRENT_POOL_SIZE("CP", StatisticTypeEnum.TYPE_GAUGE),
 
-  /** Maximum configured size of the write thread pool. */
+  /** Maximum configured size of the read thread pool. */
   MAX_POOL_SIZE("MP", StatisticTypeEnum.TYPE_GAUGE),
 
-  /** Number of threads currently executing write operations. */
+  /** Number of threads currently executing read operations. */
   ACTIVE_THREADS("AT", StatisticTypeEnum.TYPE_GAUGE),
 
   /** Number of threads currently idle. */
@@ -67,18 +66,18 @@ public enum AbfsWriteThreadPoolMetricsEnum {
   private final StatisticTypeEnum statisticType;
 
   /**
-   * Constructs a metric definition for the ABFS write thread pool.
+   * Constructs a metric enum constant with its short name and type.
    *
-   * @param name  the short name identifier for the metric.
-   * @param type  the {@link StatisticTypeEnum} describing the metric type.
+   * @param name  the short name or label for the metric.
+   * @param type  the {@link StatisticTypeEnum} indicating the metric type.
    */
-  AbfsWriteThreadPoolMetricsEnum(String name, StatisticTypeEnum type) {
+  AbfsReadResourceUtilizationMetricsEnum(String name, StatisticTypeEnum type) {
     this.name = name;
     this.statisticType = type;
   }
 
   /**
-   * Returns the short name identifier of the metric.
+   * Returns the short name of the metric.
    *
    * @return the metric name.
    */
@@ -95,4 +94,3 @@ public enum AbfsWriteThreadPoolMetricsEnum {
     return statisticType;
   }
 }
-

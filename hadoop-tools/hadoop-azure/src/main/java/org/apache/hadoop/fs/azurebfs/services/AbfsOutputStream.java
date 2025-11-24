@@ -173,7 +173,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
    * to dynamically adjust the write thread pool size based on
    * system resource utilization.
    */
-  private final WriteThreadPoolSizeManager poolSizeManager;
+  private final WriteThreadPoolSizeManager writeThreadPoolSizeManager;
 
   public AbfsOutputStream(AbfsOutputStreamContext abfsOutputStreamContext)
       throws IOException {
@@ -225,7 +225,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
     this.serviceTypeAtInit = abfsOutputStreamContext.getIngressServiceType();
     this.currentExecutingServiceType = abfsOutputStreamContext.getIngressServiceType();
     this.clientHandler = abfsOutputStreamContext.getClientHandler();
-    this.poolSizeManager = abfsOutputStreamContext.getPoolSizeManager();
+    this.writeThreadPoolSizeManager = abfsOutputStreamContext.getWriteThreadPoolSizeManager();
     // Initialize CPU monitoring if the pool size manager is present
     initializeMonitoringIfNeeded();
     createIngressHandler(serviceTypeAtInit,
@@ -258,9 +258,12 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
    * is initialized and not already monitoring.
    */
   private void initializeMonitoringIfNeeded() {
-    if (poolSizeManager != null && !poolSizeManager.isMonitoringStarted()) {
+    if (writeThreadPoolSizeManager != null && !writeThreadPoolSizeManager.isMonitoringStarted()) {
       synchronized (this) {
-        poolSizeManager.startCPUMonitoring();
+        // Re-check to avoid a race between threads
+        if (!writeThreadPoolSizeManager.isMonitoringStarted()) {
+          writeThreadPoolSizeManager.startCPUMonitoring();
+        }
       }
     }
   }

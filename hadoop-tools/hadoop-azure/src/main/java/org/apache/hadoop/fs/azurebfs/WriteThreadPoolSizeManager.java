@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.azurebfs;
 
+import com.nimbusds.jose.util.Resource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,8 +41,9 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
-import org.apache.hadoop.fs.azurebfs.services.AbfsWriteThreadPoolMetrics;
+import org.apache.hadoop.fs.azurebfs.services.AbfsCounters;
+import org.apache.hadoop.fs.azurebfs.services.AbfsWriteResourceUtilizationMetrics;
+import org.apache.hadoop.fs.azurebfs.services.ResourceUtilizationStats;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.LOW_HEAP_SPACE_FACTOR;
@@ -54,6 +56,15 @@ import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.L
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.LOW_CPU_POOL_SIZE_INCREASE_FACTOR;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.MEDIUM_CPU_LOW_MEMORY_REDUCTION_FACTOR;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.MEDIUM_CPU_REDUCTION_FACTOR;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.NO_SCALE_DOWN_AT_MIN;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.NO_SCALE_UP_AT_MAX;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.SCALE_DIRECTION_DOWN;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.SCALE_DIRECTION_NO_DOWN_AT_MIN;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.SCALE_DIRECTION_NO_UP_AT_MAX;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.SCALE_DIRECTION_UP;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.SCALE_DOWN;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.SCALE_NONE;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.SCALE_UP;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.THIRTY_SECONDS;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ZERO;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ZERO_D;
@@ -86,7 +97,7 @@ public final class WriteThreadPoolSizeManager implements Closeable {
   /* The configuration instance. */
   private final AbfsConfiguration abfsConfiguration;
   /* Metrics collector for monitoring the performance of the ABFS write thread pool.  */
-  private final AbfsWriteThreadPoolMetrics writeThreadPoolMetrics;
+  private final AbfsWriteResourceUtilizationMetrics writeThreadPoolMetrics;
   /* Flag indicating if CPU monitoring has started. */
   private volatile boolean isMonitoringStarted = false;
   /* Tracks the last scale direction applied, or empty if none. */
@@ -104,13 +115,12 @@ public final class WriteThreadPoolSizeManager implements Closeable {
    *
    * @param filesystemName       Name of the ABFS filesystem.
    * @param abfsConfiguration    Configuration containing pool size parameters.
-   * @param abfsClient                  ABFS client instance used for communication.
+   * @param abfsCounters                  ABFS counters instance used for metrics.
    */
   private WriteThreadPoolSizeManager(String filesystemName,
-      AbfsConfiguration abfsConfiguration, AbfsClient abfsClient) {
+      AbfsConfiguration abfsConfiguration, AbfsCounters abfsCounters) {
     /* Retrieves and assigns the write thread pool metrics from the ABFS client counters. */
-    this.writeThreadPoolMetrics = abfsClient.getAbfsCounters()
-        .getAbfsWriteThreadPoolMetrics();
+    this.writeThreadPoolMetrics = abfsCounters.getAbfsWriteResourceUtilizationMetrics();
     this.filesystemName = filesystemName;
     this.abfsConfiguration = abfsConfiguration;
     int availableProcessors = Runtime.getRuntime().availableProcessors();
@@ -238,11 +248,11 @@ public final class WriteThreadPoolSizeManager implements Closeable {
    *
    * @param filesystemName     the name of the filesystem.
    * @param abfsConfiguration  the {@link AbfsConfiguration} associated with the filesystem.
-   * @param abfsClient                the {@link AbfsClient} used to initialize the manager.
+   * @param abfsCounters                the {@link AbfsCounters} used to initialize the manager.
    * @return  the singleton {@link WriteThreadPoolSizeManager} instance for the given filesystem.
    */
   public static synchronized WriteThreadPoolSizeManager getInstance(
-      String filesystemName, AbfsConfiguration abfsConfiguration, AbfsClient abfsClient) {
+      String filesystemName, AbfsConfiguration abfsConfiguration, AbfsCounters abfsCounters) {
     /* Check if an instance already exists in the map for the given filesystem */
     WriteThreadPoolSizeManager existingInstance = POOL_SIZE_MANAGER_MAP.get(
         filesystemName);
@@ -258,7 +268,7 @@ public final class WriteThreadPoolSizeManager implements Closeable {
         "Creating new WriteThreadPoolSizeManager instance for filesystem: {}",
         filesystemName);
     WriteThreadPoolSizeManager newInstance = new WriteThreadPoolSizeManager(
-        filesystemName, abfsConfiguration, abfsClient);
+        filesystemName, abfsConfiguration, abfsCounters);
     POOL_SIZE_MANAGER_MAP.put(filesystemName, newInstance);
     return newInstance;
   }
@@ -369,17 +379,17 @@ public final class WriteThreadPoolSizeManager implements Closeable {
       if (cpuUtilization > (abfsConfiguration.getWriteHighCpuThreshold()/HUNDRED_D)) {
         newMaxPoolSize = calculateReducedPoolSizeHighCPU(currentPoolSize, memoryLoad);
         if (newMaxPoolSize == initialPoolSize) {
-          lastScaleDirection = "-D";
+          lastScaleDirection = SCALE_DIRECTION_NO_DOWN_AT_MIN;
         }
       } else if (cpuUtilization > (abfsConfiguration.getWriteMediumCpuThreshold()/HUNDRED_D)) {
         newMaxPoolSize = calculateReducedPoolSizeMediumCPU(currentPoolSize, memoryLoad);
         if (newMaxPoolSize == initialPoolSize) {
-          lastScaleDirection = "-D";
+          lastScaleDirection = SCALE_DIRECTION_NO_DOWN_AT_MIN;
         }
       } else if (cpuUtilization < (abfsConfiguration.getWriteLowCpuThreshold()/HUNDRED_D)) {
         newMaxPoolSize = calculateIncreasedPoolSizeLowCPU(currentPoolSize, memoryLoad);
         if (newMaxPoolSize == maxThreadPoolSize) {
-          lastScaleDirection = "+F";
+          lastScaleDirection = SCALE_DIRECTION_NO_UP_AT_MAX;
         }
       } else {
         newMaxPoolSize = currentPoolSize;
@@ -411,7 +421,7 @@ public final class WriteThreadPoolSizeManager implements Closeable {
       if (willResize) {
         LOG.debug("Resizing thread pool from {} to {}", currentPoolSize, newMaxPoolSize);
         // Record scale direction
-        lastScaleDirection = (newMaxPoolSize > currentPoolSize) ? "I" : "D";
+        lastScaleDirection = (newMaxPoolSize > currentPoolSize) ? SCALE_DIRECTION_UP: SCALE_DIRECTION_DOWN;
         adjustThreadPoolSize(newMaxPoolSize);
         try {
           // Capture the latest thread pool statistics (pool size, CPU, memory, etc.).
@@ -583,19 +593,7 @@ public final class WriteThreadPoolSizeManager implements Closeable {
   /**
    * Represents current statistics of the write thread pool and system.
    */
-  public static class WriteThreadPoolStats {
-    private final int currentPoolSize;  // Current number of threads in the pool
-    private final int maxPoolSize;        // Maximum allowed pool size
-    private final int activeThreads;    // Number of threads currently executing tasks
-    private final int idleThreads;        // Number of threads not executing tasks
-    private final double jvmCpuLoad;    // Current JVM CPU utilization (%)
-    private final double systemCpuUtilization;  // Current system CPU utilization (%)
-    private final double availableHeapGB;       // Available heap memory (GB)
-    private final double committedHeapGB;  // Total committed heap memory (GB)
-    private final double memoryLoad;  // Heap usage ratio (used/max)
-    private final String lastScaleDirection;  // Last resize direction: "I" (increase) or "D" (decrease)
-    private final double maxCpuUtilization;  // Peak JVM CPU observed in the current interval
-    private final long jvmProcessId;   // JVM Process ID
+  public static class WriteThreadPoolStats extends ResourceUtilizationStats {
 
     /**
      * Constructs a {@link WriteThreadPoolStats} instance containing thread pool
@@ -620,114 +618,10 @@ public final class WriteThreadPoolSizeManager implements Closeable {
         double jvmCpuLoad, double systemCpuUtilization, double availableHeapGB,
         double committedHeapGB, double memoryLoad, String lastScaleDirection,
         double maxCpuUtilization, long jvmProcessId) {
-      this.currentPoolSize = currentPoolSize;
-      this.maxPoolSize = maxPoolSize;
-      this.activeThreads = activeThreads;
-      this.idleThreads = idleThreads;
-      this.jvmCpuLoad = jvmCpuLoad;
-      this.systemCpuUtilization = systemCpuUtilization;
-      this.availableHeapGB = availableHeapGB;
-      this.committedHeapGB = committedHeapGB;
-      this.memoryLoad = memoryLoad;
-      this.lastScaleDirection = lastScaleDirection;
-      this.maxCpuUtilization = maxCpuUtilization;
-      this.jvmProcessId = jvmProcessId;
-    }
-
-    /** @return the current number of threads in the pool. */
-    public int getCurrentPoolSize() {
-      return currentPoolSize;
-    }
-
-    /** @return the maximum allowed size of the thread pool. */
-    public int getMaxPoolSize() {
-      return maxPoolSize;
-    }
-
-    /** @return the number of threads currently executing tasks. */
-    public int getActiveThreads() {
-      return activeThreads;
-    }
-
-    /** @return the number of threads currently idle. */
-    public int getIdleThreads() {
-      return idleThreads;
-    }
-
-    /** @return the overall system CPU utilization percentage. */
-    public double getSystemCpuUtilization() {
-      return systemCpuUtilization;
-    }
-
-    /** @return the available heap memory in gigabytes. */
-    public double getMemoryUtilization() {
-      return availableHeapGB;
-    }
-
-    /** @return the total committed heap memory in gigabytes */
-    public double getCommittedHeapGB() {
-      return committedHeapGB;
-    }
-
-    /** @return the current JVM memory load (used / committed) as a value between 0.0 and 1.0 */
-    public double getMemoryLoad() {
-      return memoryLoad;
-    }
-
-    /** @return "I" (increase), "D" (decrease), or empty. */
-    public String getLastScaleDirection() {
-      return lastScaleDirection;
-    }
-
-    /** @return the JVM process CPU utilization percentage. */
-    public double getJvmCpuLoad() {
-      return jvmCpuLoad;
-    }
-
-    /** @return the max JVM process CPU utilization percentage. */
-    public double getMaxCpuUtilization() {
-      return maxCpuUtilization;
-    }
-
-    /** @return the JVM process ID. */
-    public long getJvmProcessId() {
-      return jvmProcessId;
-    }
-
-    /**
-     * Converts the scale direction string into numeric value.
-     *
-     * @param lastScaleDirection the scale direction ("I", "D", or empty)
-     *
-     * @return 1 for increase, -1 for decrease, 0 for none
-     */
-    public int getLastScaleDirectionNumeric(String lastScaleDirection) {
-      switch (lastScaleDirection) {
-      case "I":
-        return 1;    // Scaled up
-      case "D":
-        return -1;   // Scaled down
-      case "-D":
-        return -2;   // Attempted down-scale, already at minimum
-      case "+F":
-        return 2;    // Attempted up-scale, already at maximum
-      default:
-        return 0;  // No scaling
-      }
-    }
-
-    @Override
-    public String toString() {
-      return String.format(
-          "currentPoolSize=%d, maxPoolSize=%d, activeThreads=%d, idleThreads=%d, "
-              + "jvmCpuLoad=%.2f%%, systemCpuUtilization=%.2f%%, "
-              + "availableHeap=%.2fGB, committedHeap=%.2fGB, memoryLoad=%.2f%%, "
-              + "scaleDirection=%s, maxCpuUtilization=%.2f%%, jvmProcessId=%d",
-          currentPoolSize, maxPoolSize, activeThreads,
-          idleThreads, jvmCpuLoad * HUNDRED_D, systemCpuUtilization * HUNDRED_D,
-          availableHeapGB, committedHeapGB, memoryLoad * HUNDRED_D,
-          lastScaleDirection, maxCpuUtilization * HUNDRED_D, jvmProcessId
-      );
+      super(currentPoolSize, maxPoolSize, activeThreads, idleThreads,
+          jvmCpuLoad, systemCpuUtilization, availableHeapGB,
+          committedHeapGB, memoryLoad, lastScaleDirection,
+          maxCpuUtilization, jvmProcessId);
     }
   }
 
@@ -749,7 +643,8 @@ public final class WriteThreadPoolSizeManager implements Closeable {
 
     if (boundedThreadPool == null) {
       return new WriteThreadPoolStats(
-          ZERO, ZERO, ZERO, ZERO, ZERO_D, ZERO_D, ZERO_D, ZERO_D, ZERO_D, EMPTY_STRING, ZERO_D, ZERO);
+          ZERO, ZERO, ZERO, ZERO, ZERO_D, ZERO_D, ZERO_D, ZERO_D, ZERO_D,
+          EMPTY_STRING, ZERO_D, ZERO);
     }
 
     ThreadPoolExecutor exec = (ThreadPoolExecutor) this.boundedThreadPool;

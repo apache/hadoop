@@ -245,6 +245,28 @@ public final class FileSystemConfigurations {
   public static final int HUNDRED = 100;
   public static final double HUNDRED_D = 100.0;
   public static final long THOUSAND = 1000L;
+  // Indicates a successful scale-up operation
+  public static final int SCALE_UP = 1;
+  // Indicates a successful scale-down operation
+  public static final int SCALE_DOWN = -1;
+  // Indicates a down-scale was requested but already at minimum
+  public static final int NO_SCALE_DOWN_AT_MIN = -2;
+  // Indicates an up-scale was requested but already at maximum
+  public static final int NO_SCALE_UP_AT_MAX = 2;
+  // Indicates no scaling action was taken
+  public static final int SCALE_NONE = 0;
+  // Indicates no action is needed based on current metrics
+  public static final int NO_ACTION_NEEDED = 3;
+  // Indicates a successful scale-up operation
+  public static final String SCALE_DIRECTION_UP = "I";
+  // Indicates a successful scale-down operation
+  public static final String SCALE_DIRECTION_DOWN = "D";
+  // Indicates a down-scale was requested but pool is already at minimum
+  public static final String SCALE_DIRECTION_NO_DOWN_AT_MIN = "-D";
+  // Indicates an up-scale was requested but pool is already at maximum
+  public static final String SCALE_DIRECTION_NO_UP_AT_MAX = "+F";
+  // Indicates no scaling action is needed based on current metrics
+  public static final String SCALE_DIRECTION_NO_ACTION_NEEDED = "NA";
 
   public static final HttpOperationType DEFAULT_NETWORKING_LIBRARY
       = HttpOperationType.APACHE_HTTP_CLIENT;
