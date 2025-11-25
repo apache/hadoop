@@ -63,6 +63,10 @@
     <!-- allow tests to use _ for ordering. -->
     <suppress checks="MethodName"
               files="org[\\/]apache[\\/]hadoop[\\/]fs[\\/]azurebfs[\\/]commit[\\/]ITestAbfsTerasort.java"/>
-     <suppress checks="ParameterNumber"
-       files="org[\\/]apache[\\/]hadoop[\\/]fs[\\/]azurebfs[\\/]services[\\/]TestAbfsOutputStream.java"/>
+  <suppress checks="ParameterNumber"
+              files="org[\\/]apache[\\/]hadoop[\\/]fs[\\/]azurebfs[\\/]services[\\/]TestAbfsOutputStream.java"/>
+  <suppress checks="ParameterNumber"
+              files="org[\\/]apache[\\/]hadoop[\\/]fs[\\/]azurebfs[\\/]services[\\/]ReadBufferMangerV2.java"/>
+  <suppress checks="ParameterNumber"
+              files="org[\\/]apache[\\/]hadoop[\\/]fs[\\/]azurebfs[\\/]WriteThreadPoolManager.java"/>
 </suppressions>
