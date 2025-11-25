@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.nodemanager.webapp;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
+import org.eclipse.persistence.jaxb.rs.MOXyJsonProvider;
 import org.glassfish.jersey.internal.inject.AbstractBinder;
 import org.glassfish.jersey.jettison.JettisonFeature;
 import org.glassfish.jersey.server.ResourceConfig;
@@ -136,11 +137,16 @@ public class TestNMWebServices extends JerseyTestBase {
 
   @Override
   protected Application configure() {
+    MOXyJsonProvider moxyJsonProvider = new MOXyJsonProvider();
+    moxyJsonProvider.setIncludeRoot(true);
+    moxyJsonProvider.setMarshalEmptyCollections(false);
+
     ResourceConfig config = new ResourceConfig();
     config.register(new JerseyBinder());
     config.register(NMWebServices.class);
     config.register(GenericExceptionHandler.class);
-    config.register(new JettisonFeature()).register(JAXBContextResolver.class);
+    config.register(moxyJsonProvider);
+    config.register(JAXBContextResolver.class);
     forceSet(TestProperties.CONTAINER_PORT, JERSEY_RANDOM_PORT);
     return config;
   }

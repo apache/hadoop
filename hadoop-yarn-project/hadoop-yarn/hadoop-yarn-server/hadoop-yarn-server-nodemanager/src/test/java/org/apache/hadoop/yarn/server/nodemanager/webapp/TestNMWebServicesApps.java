@@ -69,6 +69,7 @@ import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
+import org.eclipse.persistence.jaxb.rs.MOXyJsonProvider;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.Test;
@@ -99,11 +100,16 @@ public class TestNMWebServicesApps extends JerseyTestBase {
 
   @Override
   protected javax.ws.rs.core.Application configure() {
+    MOXyJsonProvider moxyJsonProvider = new MOXyJsonProvider();
+    moxyJsonProvider.setIncludeRoot(true);
+    moxyJsonProvider.setMarshalEmptyCollections(false);
+
     ResourceConfig config = new ResourceConfig();
     config.register(new JerseyBinder());
     config.register(NMWebServices.class);
     config.register(GenericExceptionHandler.class);
-    config.register(new JettisonFeature()).register(JAXBContextResolver.class);
+    config.register(moxyJsonProvider);
+    config.register(JAXBContextResolver.class);
     forceSet(TestProperties.CONTAINER_PORT, JERSEY_RANDOM_PORT);
     return config;
   }
@@ -190,7 +196,7 @@ public class TestNMWebServicesApps extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
         response.getMediaType().toString());
     JSONObject json = response.readEntity(JSONObject.class);
-    assertEquals("apps is not empty", new JSONObject("{apps:\"\"}"), json);
+    assertEquals("apps is not null", "{}", json.getString("apps"));
   }
 
   private HashMap<String, String> addAppContainers(Application app) 
@@ -306,7 +312,7 @@ public class TestNMWebServicesApps extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
         response.getMediaType().toString());
     JSONObject json = response.readEntity(JSONObject.class);
-    assertEquals("apps is not empty", new JSONObject("{apps:\"\"}"), json);
+    assertEquals("apps is not null", "{}", json.getString("apps"));
   }
 
   @Test
@@ -387,7 +393,7 @@ public class TestNMWebServicesApps extends JerseyTestBase {
         response.getMediaType().toString());
     JSONObject json = response.readEntity(JSONObject.class);
 
-    assertEquals("apps is not empty", new JSONObject("{apps:\"\"}"), json);
+    assertEquals("apps is not null", "{}", json.getString("apps"));
   }
 
   @Test

@@ -71,7 +71,6 @@ public class WebServer extends AbstractService {
 
   protected ResourceConfig configure() {
     NMJsonProvider nmJsonProvider = new NMJsonProvider();
-    nmJsonProvider.setMarshalEmptyCollections(true);
 
     ResourceConfig config = new ResourceConfig();
     config.packages("org.apache.hadoop.yarn.server.nodemanager.webapp");

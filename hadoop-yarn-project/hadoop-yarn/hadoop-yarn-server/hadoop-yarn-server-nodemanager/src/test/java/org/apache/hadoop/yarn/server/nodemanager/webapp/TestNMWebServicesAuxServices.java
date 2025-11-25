@@ -62,6 +62,7 @@ import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
+import org.eclipse.persistence.jaxb.rs.MOXyJsonProvider;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.Test;
@@ -93,11 +94,16 @@ public class TestNMWebServicesAuxServices extends JerseyTestBase {
 
   @Override
   protected Application configure() {
+    MOXyJsonProvider moxyJsonProvider = new MOXyJsonProvider();
+    moxyJsonProvider.setIncludeRoot(true);
+    moxyJsonProvider.setMarshalEmptyCollections(false);
+
     ResourceConfig config = new ResourceConfig();
     config.register(new JerseyBinder());
     config.register(NMWebServices.class);
     config.register(GenericExceptionHandler.class);
-    config.register(new JettisonFeature()).register(JAXBContextResolver.class);
+    config.register(moxyJsonProvider);
+    config.register(JAXBContextResolver.class);
     forceSet(TestProperties.CONTAINER_PORT, "9999");
     return config;
   }
@@ -196,7 +202,7 @@ public class TestNMWebServicesAuxServices extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
         response.getMediaType().toString());
     JSONObject json = response.readEntity(JSONObject.class);
-    assertEquals("aux services isn't empty", "{\"services\":\"\"}", json.toString());
+    assertEquals("aux services isn't null", "{}", json.getString("services"));
   }
 
   private void addAuxServices(AuxServiceRecord... records) {
