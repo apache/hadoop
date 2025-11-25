@@ -1350,7 +1350,7 @@ public class AbfsBlobClient extends AbfsClient {
     AbfsReadResourceUtilizationMetrics readResourceUtilizationMetrics = retrieveReadResourceUtilizationMetrics();
     // If metrics are available, record them in the tracing context for diagnostics or logging.
     if (readResourceUtilizationMetrics != null) {
-      tracingContext.setMetricResults(readResourceUtilizationMetrics.toString());
+      tracingContext.setResourceUtilizationMetricResults(readResourceUtilizationMetrics.toString());
     }
     URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = getAbfsRestOperation(

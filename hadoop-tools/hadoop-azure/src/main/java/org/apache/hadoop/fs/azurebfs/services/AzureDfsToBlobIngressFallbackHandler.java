@@ -113,7 +113,7 @@ public class AzureDfsToBlobIngressFallbackHandler extends AzureDFSIngressHandler
     // Fetches write thread pool metrics from the ABFS client and adds them to the tracing context.
     AbfsWriteResourceUtilizationMetrics writeResourceUtilizationMetrics = getWriteResourceUtilizationMetrics();
     if (writeResourceUtilizationMetrics != null) {
-      tracingContextAppend.setMetricResults(writeResourceUtilizationMetrics.toString());
+      tracingContextAppend.setResourceUtilizationMetricResults(writeResourceUtilizationMetrics.toString());
     }
     String threadIdStr = String.valueOf(Thread.currentThread().getId());
     tracingContextAppend.setIngressHandler(FALLBACK_APPEND + " T " + threadIdStr);

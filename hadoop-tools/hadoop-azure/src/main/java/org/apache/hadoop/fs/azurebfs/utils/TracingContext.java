@@ -72,6 +72,7 @@ public class TracingContext {
   private String metricHeader = EMPTY_STRING;
   private ReadType readType = ReadType.UNKNOWN_READ;
   private String resourceUtilizationMetricResults = EMPTY_STRING;
+  private String resourceUtilizationMetricHeader = EMPTY_STRING;
 
   /**
    * If {@link #primaryRequestId} is null, this field shall be set equal
@@ -130,6 +131,15 @@ public class TracingContext {
     this.metricResults = metricResults;
   }
 
+  public TracingContext(String clientCorrelationID, String fileSystemID,
+      FSOperationType opType, boolean needsPrimaryReqId,
+      TracingHeaderFormat tracingHeaderFormat, Listener listener,
+      String metricResults, String resourceUtilizationMetricResults) {
+    this(clientCorrelationID, fileSystemID, opType, needsPrimaryReqId,
+        tracingHeaderFormat, listener, metricResults);
+    this.resourceUtilizationMetricResults = resourceUtilizationMetricResults;
+  }
+
   public TracingContext(TracingContext originalTracingContext) {
     this.fileSystemID = originalTracingContext.fileSystemID;
     this.streamID = originalTracingContext.streamID;
@@ -146,7 +156,9 @@ public class TracingContext {
     }
     this.metricResults = originalTracingContext.metricResults;
     this.readType = originalTracingContext.readType;
+    this.resourceUtilizationMetricResults = originalTracingContext.resourceUtilizationMetricResults;
   }
+
   public static String validateClientCorrelationID(String clientCorrelationID) {
     if ((clientCorrelationID.length() > MAX_CLIENT_CORRELATION_ID_LENGTH)
         || (!clientCorrelationID.matches(CLIENT_CORRELATION_ID_PATTERN))) {
@@ -226,38 +238,31 @@ public class TracingContext {
           + position + COLON
           + operatedBlobCount + COLON
           + getOperationSpecificHeader(opType) + COLON
-          + httpOperation.getTracingContextSuffix();
-      metricHeader += !(metricResults.trim().isEmpty()) ? metricResults  : EMPTY_STRING;
+          + httpOperation.getTracingContextSuffix() + COLON
+          + metricResults + COLON + resourceUtilizationMetricResults;
       break;
     case TWO_ID_FORMAT:
       header = TracingHeaderVersion.getCurrentVersion() + COLON
           + clientCorrelationID + COLON + clientRequestId;
-      metricHeader += !(metricResults.trim().isEmpty()) ? metricResults  : EMPTY_STRING;
       break;
     default:
       //case SINGLE_ID_FORMAT
       header = TracingHeaderVersion.getCurrentVersion() + COLON
           + clientRequestId;
-      metricHeader += !(metricResults.trim().isEmpty()) ? metricResults  : EMPTY_STRING;
     }
     if (listener != null) { //for testing
       listener.callTracingHeaderValidator(header, format);
     }
-    // If metricHeader is present, append it to the client request ID header for tracing
-    if (!metricHeader.equals(EMPTY_STRING)) {
-      httpOperation.setRequestProperty(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID, header + COLON + metricHeader);
-    } else {
-      // Otherwise, set only the base header value
-      httpOperation.setRequestProperty(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID, header);
-    }
+    httpOperation.setRequestProperty(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID, header);
     /*
-    * In case the primaryRequestId is an empty-string and if it is the first try to
-    * API call (previousFailure shall be null), maintain the last part of clientRequestId's
-    * UUID in primaryRequestIdForRetry. This field shall be used as primaryRequestId part
-    * of the x-ms-client-request-id header in case of retry of the same API-request.
-    */
+     * In case the primaryRequestId is an empty-string and if it is the first try to
+     * API call (previousFailure shall be null), maintain the last part of clientRequestId's
+     * UUID in primaryRequestIdForRetry. This field shall be used as primaryRequestId part
+     * of the x-ms-client-request-id header in case of retry of the same API-request.
+     */
     if (primaryRequestId.isEmpty() && previousFailure == null) {
-      String[] clientRequestIdParts = clientRequestId.split(String.valueOf(CHAR_HYPHEN));
+      String[] clientRequestIdParts = clientRequestId.split(
+          String.valueOf(CHAR_HYPHEN));
       primaryRequestIdForRetry = clientRequestIdParts[
           clientRequestIdParts.length - 1];
     }
@@ -407,5 +412,13 @@ public class TracingContext {
    */
   public void setMetricResults(final String metricResults) {
     this.metricResults = metricResults;
+  }
+
+  /**
+   * Sets the resource utilization metric results string used for tracing or logging.
+   * @param resourceUtilizationMetricResults the formatted metric data to store.
+   */
+  public void setResourceUtilizationMetricResults(final String resourceUtilizationMetricResults) {
+    this.resourceUtilizationMetricResults = resourceUtilizationMetricResults;
   }
 }

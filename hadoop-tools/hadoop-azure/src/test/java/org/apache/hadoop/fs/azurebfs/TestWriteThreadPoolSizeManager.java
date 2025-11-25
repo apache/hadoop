@@ -42,6 +42,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.services.AbfsCounters;
 import org.apache.hadoop.fs.azurebfs.services.AbfsWriteResourceUtilizationMetrics;
+import org.apache.hadoop.fs.azurebfs.utils.ResourceUtilizationUtils;
 
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_WRITE_MAX_CONCURRENT_REQUESTS;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_WRITE_CPU_MONITORING_INTERVAL_MILLIS;
@@ -817,7 +818,7 @@ class TestWriteThreadPoolSizeManager extends AbstractAbfsIntegrationTest {
               .getAbfsWriteResourceUtilizationMetrics();
 
       WriteThreadPoolSizeManager.WriteThreadPoolStats statsBefore =
-          instance.getCurrentStats(instance.getJvmCpuLoad(), instance.getMaxCpuUtilization(), instance.getMemoryLoad());
+          instance.getCurrentStats(ResourceUtilizationUtils.getJvmCpuLoad(), ResourceUtilizationUtils.getMemoryLoad());
 
       ThreadPoolExecutor executor =
           (ThreadPoolExecutor) instance.getExecutorService();
@@ -852,7 +853,7 @@ class TestWriteThreadPoolSizeManager extends AbstractAbfsIntegrationTest {
       Thread.sleep(SLEEP_DURATION_30S_MS);
 
       WriteThreadPoolSizeManager.WriteThreadPoolStats statsAfter =
-          instance.getCurrentStats(instance.getJvmCpuLoad(), instance.getMaxCpuUtilization(), instance.getMemoryLoad());
+          instance.getCurrentStats(ResourceUtilizationUtils.getJvmCpuLoad(), ResourceUtilizationUtils.getMemoryLoad());
 
       //--- Validate that metrics and stats changed ---
       Assertions.assertThat(statsAfter)

@@ -18,18 +18,8 @@
 
 package org.apache.hadoop.fs.azurebfs;
 
-import com.nimbusds.jose.util.Resource;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.Closeable;
 import java.io.IOException;
-import java.lang.management.ManagementFactory;
-import java.lang.management.MemoryMXBean;
-import java.lang.management.MemoryUsage;
-
-import com.sun.management.OperatingSystemMXBean;
-
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -40,15 +30,18 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.azurebfs.services.AbfsCounters;
 import org.apache.hadoop.fs.azurebfs.services.AbfsWriteResourceUtilizationMetrics;
 import org.apache.hadoop.fs.azurebfs.services.ResourceUtilizationStats;
+import org.apache.hadoop.fs.azurebfs.utils.ResourceUtilizationUtils;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.LOW_HEAP_SPACE_FACTOR;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.MEDIUM_HEAP_SPACE_FACTOR;
-import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.BYTES_PER_GIGABYTE;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.HIGH_CPU_LOW_MEMORY_REDUCTION_FACTOR;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.HIGH_CPU_REDUCTION_FACTOR;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.HUNDRED_D;
@@ -56,15 +49,10 @@ import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.L
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.LOW_CPU_POOL_SIZE_INCREASE_FACTOR;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.MEDIUM_CPU_LOW_MEMORY_REDUCTION_FACTOR;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.MEDIUM_CPU_REDUCTION_FACTOR;
-import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.NO_SCALE_DOWN_AT_MIN;
-import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.NO_SCALE_UP_AT_MAX;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.SCALE_DIRECTION_DOWN;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.SCALE_DIRECTION_NO_DOWN_AT_MIN;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.SCALE_DIRECTION_NO_UP_AT_MAX;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.SCALE_DIRECTION_UP;
-import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.SCALE_DOWN;
-import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.SCALE_NONE;
-import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.SCALE_UP;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.THIRTY_SECONDS;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ZERO;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ZERO_D;
@@ -103,7 +91,7 @@ public final class WriteThreadPoolSizeManager implements Closeable {
   /* Tracks the last scale direction applied, or empty if none. */
   private volatile String lastScaleDirection = EMPTY_STRING;
   /* Maximum CPU utilization observed during the monitoring interval. */
-  private volatile double maxCpuUtilization = 0.0;
+  private volatile double maxJvmCpuUtilization = 0.0;
   /** High memory usage threshold used to trigger thread pool downscaling. */
   private final double highMemoryThreshold;
   /** Low memory usage threshold used to allow thread pool upscaling. */
@@ -125,7 +113,7 @@ public final class WriteThreadPoolSizeManager implements Closeable {
     this.abfsConfiguration = abfsConfiguration;
     int availableProcessors = Runtime.getRuntime().availableProcessors();
     /* Compute the max pool size */
-    int computedMaxPoolSize = getComputedMaxPoolSize(availableProcessors, getAvailableMaxHeapMemory());
+    int computedMaxPoolSize = getComputedMaxPoolSize(availableProcessors, ResourceUtilizationUtils.getAvailableMaxHeapMemory());
 
     /* Get the initial pool size from config, fallback to at least 1 */
     this.initialPoolSize = Math.max(1,
@@ -172,52 +160,6 @@ public final class WriteThreadPoolSizeManager implements Closeable {
     LOG.debug("Computed max thread pool size: {} | Available processors: {} | Heap memory (GB): {}",
         maxpoolSize, availableProcessors, initialAvailableHeapMemory);
     return maxpoolSize;
-  }
-
-  /**
-   * Calculates the available heap memory in gigabytes.
-   * This method uses {@link Runtime#getRuntime()} to obtain the maximum heap memory
-   * allowed for the JVM and subtracts the currently used memory (total - free)
-   * to determine how much heap memory is still available.
-   * The result is rounded up to the nearest gigabyte.
-   *
-   * @return the available heap memory in gigabytes
-   */
-  @VisibleForTesting
-  public long getAvailableHeapMemory() {
-    MemoryMXBean osBean = ManagementFactory.getMemoryMXBean();
-    MemoryUsage memoryUsage = osBean.getHeapMemoryUsage();
-    long availableHeapBytes = memoryUsage.getCommitted() - memoryUsage.getUsed();
-    return (availableHeapBytes + BYTES_PER_GIGABYTE - 1) / BYTES_PER_GIGABYTE;
-  }
-
-  /**
-   * Returns the currently committed JVM heap memory in bytes.
-   * This reflects the amount of heap the JVM has reserved from the OS and may grow as needed.
-   *
-   * @return committed heap memory in bytes
-   */
-  @VisibleForTesting
-  public double getCommittedHeapMemory() {
-    MemoryMXBean osBean = ManagementFactory.getMemoryMXBean();
-    MemoryUsage memoryUsage = osBean.getHeapMemoryUsage();
-    return (double) memoryUsage.getCommitted() / BYTES_PER_GIGABYTE;
-  }
-
-  /**
-   * Calculates the available max heap memory in gigabytes.
-   * This method uses {@link Runtime#getRuntime()} to obtain the maximum heap memory
-   * allowed for the JVM and subtracts the currently used memory (total - free)
-   * to determine how much heap memory is still available.
-   * The result is rounded up to the nearest gigabyte.
-   *
-   * @return the available heap memory in gigabytes
-   */
-  private long getAvailableMaxHeapMemory() {
-    MemoryMXBean osBean = ManagementFactory.getMemoryMXBean();
-    MemoryUsage memoryUsage = osBean.getHeapMemoryUsage();
-    long availableHeapBytes = memoryUsage.getMax() - memoryUsage.getUsed();
-    return (availableHeapBytes + BYTES_PER_GIGABYTE - 1) / BYTES_PER_GIGABYTE;
   }
 
   /**
@@ -303,7 +245,7 @@ public final class WriteThreadPoolSizeManager implements Closeable {
     if (!isMonitoringStarted()) {
       isMonitoringStarted = true;
       cpuMonitorExecutor.scheduleAtFixedRate(() -> {
-            double cpuUtilization = getJvmCpuLoad();
+            double cpuUtilization = ResourceUtilizationUtils.getJvmCpuLoad();
             LOG.debug("Current CPU Utilization is this: {}", cpuUtilization);
             try {
               adjustThreadPoolSizeBasedOnCPU(cpuUtilization);
@@ -318,50 +260,6 @@ public final class WriteThreadPoolSizeManager implements Closeable {
   }
 
   /**
-   * Gets the current system CPU utilization.
-   *
-   * @return the CPU utilization as a fraction (0.0 to 1.0), or 0.0 if unavailable.
-   */
-  private double getSystemCpuUtilization() {
-    OperatingSystemMXBean osBean = ManagementFactory.getPlatformMXBean(
-        OperatingSystemMXBean.class);
-    double cpuLoad = osBean.getSystemCpuLoad();
-    if (cpuLoad < ZERO) {
-      LOG.warn("System CPU load value unavailable (returned -1.0). Defaulting to 0.0.");
-      return ZERO_D;
-    }
-    return cpuLoad;
-  }
-
-  /**
-   * Gets the current system CPU utilization.
-   *
-   * @return the CPU utilization as a fraction (0.0 to 1.0), or 0.0 if unavailable.
-   */
-  @VisibleForTesting
-  public double getJvmCpuLoad() {
-    OperatingSystemMXBean osBean = ManagementFactory.getPlatformMXBean(
-        OperatingSystemMXBean.class);
-    double cpuLoad = osBean.getProcessCpuLoad();
-    if (cpuLoad < ZERO) {
-      LOG.warn("System CPU load value unavailable (returned -1.0). Defaulting to 0.0.");
-      return ZERO_D;
-    }
-    return cpuLoad;
-  }
-
-  /**
-   * Get the current memory load of the JVM.
-   * @return the memory load as a double value between 0.0 and 1.0
-   */
-  @VisibleForTesting
-  double getMemoryLoad() {
-    MemoryMXBean osBean = ManagementFactory.getMemoryMXBean();
-    MemoryUsage memoryUsage = osBean.getHeapMemoryUsage();
-    return (double) memoryUsage.getUsed() / memoryUsage.getMax();
-  }
-
-  /**
    * Dynamically adjusts the thread pool size based on current CPU utilization
    * and available heap memory relative to the initially available heap.
    *
@@ -373,22 +271,21 @@ public final class WriteThreadPoolSizeManager implements Closeable {
     try {
       ThreadPoolExecutor executor = (ThreadPoolExecutor) this.boundedThreadPool;
       int currentPoolSize = executor.getMaximumPoolSize();
-      double memoryLoad = getMemoryLoad();
-      LOG.debug("The memory load is {}", memoryLoad);
-      LOG.debug("Current CPU Utilization: {}", cpuUtilization);
+      double memoryLoad = ResourceUtilizationUtils.getMemoryLoad();
+      LOG.debug("The memory load is {} and CPU utilization is {}", memoryLoad, cpuUtilization);
       if (cpuUtilization > (abfsConfiguration.getWriteHighCpuThreshold()/HUNDRED_D)) {
         newMaxPoolSize = calculateReducedPoolSizeHighCPU(currentPoolSize, memoryLoad);
-        if (newMaxPoolSize == initialPoolSize) {
+        if (currentPoolSize == initialPoolSize && newMaxPoolSize == initialPoolSize) {
           lastScaleDirection = SCALE_DIRECTION_NO_DOWN_AT_MIN;
         }
       } else if (cpuUtilization > (abfsConfiguration.getWriteMediumCpuThreshold()/HUNDRED_D)) {
         newMaxPoolSize = calculateReducedPoolSizeMediumCPU(currentPoolSize, memoryLoad);
-        if (newMaxPoolSize == initialPoolSize) {
+        if (currentPoolSize == initialPoolSize && newMaxPoolSize == initialPoolSize) {
           lastScaleDirection = SCALE_DIRECTION_NO_DOWN_AT_MIN;
         }
       } else if (cpuUtilization < (abfsConfiguration.getWriteLowCpuThreshold()/HUNDRED_D)) {
         newMaxPoolSize = calculateIncreasedPoolSizeLowCPU(currentPoolSize, memoryLoad);
-        if (newMaxPoolSize == maxThreadPoolSize) {
+        if (currentPoolSize == maxThreadPoolSize && newMaxPoolSize == maxThreadPoolSize) {
           lastScaleDirection = SCALE_DIRECTION_NO_UP_AT_MAX;
         }
       } else {
@@ -397,19 +294,17 @@ public final class WriteThreadPoolSizeManager implements Closeable {
       }
       boolean willResize = newMaxPoolSize != currentPoolSize;
       if (!willResize && !lastScaleDirection.equals(EMPTY_STRING)) {
-        WriteThreadPoolStats stats = getCurrentStats(cpuUtilization,
-            maxCpuUtilization, memoryLoad);
+        WriteThreadPoolStats stats = getCurrentStats(cpuUtilization, memoryLoad);
         // Update the write thread pool metrics with the latest statistics snapshot.
         writeThreadPoolMetrics.update(stats);
       }
       // Case 1: CPU increased — push metrics ONLY if not resizing
-      if (cpuUtilization > maxCpuUtilization) {
-        maxCpuUtilization = cpuUtilization;
+      if (cpuUtilization > maxJvmCpuUtilization) {
+        maxJvmCpuUtilization = cpuUtilization;
         if (!willResize) {
           try {
             // Capture the latest thread pool statistics (pool size, CPU, memory, etc.).
-            WriteThreadPoolStats stats = getCurrentStats(cpuUtilization,
-                maxCpuUtilization, memoryLoad);
+            WriteThreadPoolStats stats = getCurrentStats(cpuUtilization, memoryLoad);
             // Update the write thread pool metrics with the latest statistics snapshot.
             writeThreadPoolMetrics.update(stats);
           } catch (Exception e) {
@@ -425,8 +320,7 @@ public final class WriteThreadPoolSizeManager implements Closeable {
         adjustThreadPoolSize(newMaxPoolSize);
         try {
           // Capture the latest thread pool statistics (pool size, CPU, memory, etc.).
-          WriteThreadPoolStats stats = getCurrentStats(cpuUtilization,
-              maxCpuUtilization, memoryLoad);
+          WriteThreadPoolStats stats = getCurrentStats(cpuUtilization, memoryLoad);
           // Update the write thread pool metrics with the latest statistics snapshot.
           writeThreadPoolMetrics.update(stats);
         } catch (Exception e) {
@@ -543,19 +437,8 @@ public final class WriteThreadPoolSizeManager implements Closeable {
    * @return the highest JVM CPU utilization percentage recorded
    */
   @VisibleForTesting
-  public double getMaxCpuUtilization() {
-    return maxCpuUtilization;
-  }
-
-  /**
-   * Returns the process ID (PID) of the currently running JVM.
-   * This method uses {@link ProcessHandle#current()} to obtain the ID of the
-   * Java process.
-   *
-   * @return the PID of the current JVM process
-   */
-  public long getJvmProcessId() {
-    return ProcessHandle.current().pid();
+  public double getMaxJvmCpuUtilization() {
+    return maxJvmCpuUtilization;
   }
 
   /**
@@ -632,13 +515,10 @@ public final class WriteThreadPoolSizeManager implements Closeable {
    * sizing decisions for the write thread pool.
    *
    * @param jvmCpuUtilization current JVM CPU usage (%)
-   * @param maxCpuUtilization highest observed CPU utilization (%)
    * @param memoryLoad        current JVM memory load (used/committed)
    * @return a {@link WriteThreadPoolStats} object containing the current metrics
    */
-  synchronized WriteThreadPoolStats getCurrentStats(
-      double jvmCpuUtilization,
-      double maxCpuUtilization,
+  synchronized WriteThreadPoolStats getCurrentStats(double jvmCpuUtilization,
       double memoryLoad) {
 
     if (boundedThreadPool == null) {
@@ -662,13 +542,13 @@ public final class WriteThreadPoolSizeManager implements Closeable {
         activeThreads,                 // Busy threads
         idleThreads,                   // Idle threads
         jvmCpuUtilization,             // JVM CPU usage (ratio)
-        getSystemCpuUtilization(),     // System CPU usage (ratio)
-        getAvailableHeapMemory(),      // Free heap (GB)
-        getCommittedHeapMemory(),      // Committed heap (GB)
+        ResourceUtilizationUtils.getSystemCpuLoad(),     // System CPU usage (ratio)
+        ResourceUtilizationUtils.getAvailableHeapMemory(),      // Free heap (GB)
+        ResourceUtilizationUtils.getCommittedHeapMemory(),      // Committed heap (GB)
         memoryLoad,                    // used/max
         currentScaleDirection,         // "I", "D", or ""
-        maxCpuUtilization,              // Peak JVM CPU usage so far
-        getJvmProcessId()              // JVM PID
+        getMaxJvmCpuUtilization(),              // Peak JVM CPU usage so far
+        ResourceUtilizationUtils.getJvmProcessId()              // JVM PID
     );
   }
 }

@@ -29,6 +29,7 @@ import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ReadBufferStatus;
+import org.apache.hadoop.fs.azurebfs.utils.ResourceUtilizationUtils;
 
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENABLE_READAHEAD_V2;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENABLE_READAHEAD_V2_DYNAMIC_SCALING;
@@ -310,7 +311,7 @@ public class TestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
           abfsClient.getAbfsCounters().getAbfsReadResourceUtilizationMetrics();
 
       ReadBufferManagerV2.ReadThreadPoolStats statsBefore =
-          bufferManagerV2.getCurrentStats(bufferManagerV2.getJvmCpuLoad(), bufferManagerV2.getMaxCpuUtilization());
+          bufferManagerV2.getCurrentStats(ResourceUtilizationUtils.getJvmCpuLoad());
       int initialBuffers = bufferManagerV2.getMinBufferPoolSize();
       assertThat(bufferManagerV2.getNumBuffers()).isEqualTo(initialBuffers);
       running = true;
@@ -334,7 +335,7 @@ public class TestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
       t.join();
 
       ReadBufferManagerV2.ReadThreadPoolStats statsAfter
-          = bufferManagerV2.getCurrentStats(bufferManagerV2.getJvmCpuLoad(), bufferManagerV2.getMaxCpuUtilization());
+          = bufferManagerV2.getCurrentStats(ResourceUtilizationUtils.getJvmCpuLoad());
 
       // --- Validate that metrics and stats changed ---
       Assertions.assertThat(statsAfter)
