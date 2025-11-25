@@ -69,10 +69,8 @@ public class TracingContext {
   private String ingressHandler = EMPTY_STRING;
   private String position = EMPTY_STRING; // position of read/write in remote file
   private String metricResults = EMPTY_STRING;
-  private String metricHeader = EMPTY_STRING;
   private ReadType readType = ReadType.UNKNOWN_READ;
   private String resourceUtilizationMetricResults = EMPTY_STRING;
-  private String resourceUtilizationMetricHeader = EMPTY_STRING;
 
   /**
    * If {@link #primaryRequestId} is null, this field shall be set equal
@@ -255,14 +253,13 @@ public class TracingContext {
     }
     httpOperation.setRequestProperty(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID, header);
     /*
-     * In case the primaryRequestId is an empty-string and if it is the first try to
-     * API call (previousFailure shall be null), maintain the last part of clientRequestId's
-     * UUID in primaryRequestIdForRetry. This field shall be used as primaryRequestId part
-     * of the x-ms-client-request-id header in case of retry of the same API-request.
-     */
+    * In case the primaryRequestId is an empty-string and if it is the first try to
+    * API call (previousFailure shall be null), maintain the last part of clientRequestId's
+    * UUID in primaryRequestIdForRetry. This field shall be used as primaryRequestId part
+    * of the x-ms-client-request-id header in case of retry of the same API-request.
+    */
     if (primaryRequestId.isEmpty() && previousFailure == null) {
-      String[] clientRequestIdParts = clientRequestId.split(
-          String.valueOf(CHAR_HYPHEN));
+      String[] clientRequestIdParts = clientRequestId.split(String.valueOf(CHAR_HYPHEN));
       primaryRequestIdForRetry = clientRequestIdParts[
           clientRequestIdParts.length - 1];
     }
@@ -404,14 +401,6 @@ public class TracingContext {
    */
   public ReadType getReadType() {
     return readType;
-  }
-
-  /**
-   * Sets the metric results string used for tracing or logging.
-   * @param metricResults the formatted metric data to store.
-   */
-  public void setMetricResults(final String metricResults) {
-    this.metricResults = metricResults;
   }
 
   /**
