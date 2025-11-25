@@ -66,7 +66,9 @@
   <suppress checks="ParameterNumber"
               files="org[\\/]apache[\\/]hadoop[\\/]fs[\\/]azurebfs[\\/]services[\\/]TestAbfsOutputStream.java"/>
   <suppress checks="ParameterNumber"
-              files="org[\\/]apache[\\/]hadoop[\\/]fs[\\/]azurebfs[\\/]services[\\/]ReadBufferMangerV2.java"/>
+              files="org[\\/]apache[\\/]hadoop[\\/]fs[\\/]azurebfs[\\/]services[\\/]ReadBufferManagerV2.java"/>
   <suppress checks="ParameterNumber"
-              files="org[\\/]apache[\\/]hadoop[\\/]fs[\\/]azurebfs[\\/]WriteThreadPoolManager.java"/>
+              files="org[\\/]apache[\\/]hadoop[\\/]fs[\\/]azurebfs[\\/]WriteThreadPoolSizeManager.java"/>
+  <suppress checks="ParameterNumber"
+             files="org[\\/]apache[\\/]hadoop[\\/]fs[\\/]azurebfs[\\/]services[\\/]ResourceUtilizationStats.java"/>
 </suppressions>

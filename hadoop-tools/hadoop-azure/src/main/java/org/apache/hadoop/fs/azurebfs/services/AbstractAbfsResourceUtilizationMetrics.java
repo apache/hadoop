@@ -142,8 +142,8 @@ public abstract class AbstractAbfsResourceUtilizationMetrics<T extends Enum<T> &
    *
    * @return the {@link AtomicBoolean} tracking whether at least one update occurred
    */
-  public AtomicBoolean getUpdatedAtLeastOnce() {
-    return updatedAtLeastOnce;
+  public boolean getUpdatedAtLeastOnce() {
+    return updatedAtLeastOnce.get();
   }
 
   /**

@@ -342,7 +342,7 @@ public class TestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
           .as("Thread pool stats should update after CPU load")
           .isNotEqualTo(statsBefore);
 
-      boolean updatedMetrics = metrics.getUpdatedAtLeastOnce().get();
+      boolean updatedMetrics = metrics.getUpdatedAtLeastOnce();
 
       Assertions.assertThat(updatedMetrics)
           .as("Metrics should be updated at least once after CPU load")

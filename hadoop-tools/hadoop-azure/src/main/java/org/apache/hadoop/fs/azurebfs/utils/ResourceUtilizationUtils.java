@@ -36,6 +36,10 @@ import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.Z
  */
 public final class ResourceUtilizationUtils {
 
+  private ResourceUtilizationUtils() {
+    // Prevent instantiation
+  }
+
   /**
    * Calculates the available heap memory in gigabytes.
    * This method uses {@link Runtime#getRuntime()} to obtain the maximum heap memory
