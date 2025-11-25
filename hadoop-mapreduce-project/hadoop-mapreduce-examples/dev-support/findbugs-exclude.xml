@@ -36,6 +36,12 @@
     <Bug pattern="OBL_UNSATISFIED_OBLIGATION" />
   </Match>
 
+  <Match>
+    <Class name="org.apache.hadoop.examples.DBCountPageView" />
+    <Method name="verify" />
+    <Bug pattern="OBL_UNSATISFIED_OBLIGATION_EXCEPTION_EDGE" />
+  </Match>
+
  <!-- Ignore the irrelevant closure warnings-->
   <Match>
     <Class name="org.apache.hadoop.examples.dancing.Pentomino$Piece" />

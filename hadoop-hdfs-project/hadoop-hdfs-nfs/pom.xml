@@ -239,4 +239,20 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
     </profile>
   </profiles>
 
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>com.github.spotbugs</groupId>
+        <artifactId>spotbugs-maven-plugin</artifactId>
+        <configuration>
+          <excludeFilterFiles>
+            <excludeFilterFile>
+              ${repo.root}/dev-support/findbugs-exclude-global.xml
+            </excludeFilterFile>
+          </excludeFilterFiles>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+
 </project>
