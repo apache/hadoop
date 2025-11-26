@@ -64,6 +64,12 @@ public class ZKConfigurationStore extends YarnConfigurationStore {
   private static final String CONF_VERSION_PATH = "CONF_VERSION";
   private static final String NODEEXISTS_MSG = "Encountered NodeExists error."
       + " Skipping znode creation since another RM has already created it";
+
+  @VisibleForTesting
+  protected int maxRetryAttempts;
+  @VisibleForTesting
+  protected long retryDelayMs;
+
   private String znodeParentPath;
   private String zkVersionPath;
   private String logsPath;
@@ -85,6 +91,14 @@ public class ZKConfigurationStore extends YarnConfigurationStore {
 
     this.maxLogs = conf.getLong(YarnConfiguration.RM_SCHEDCONF_MAX_LOGS,
         YarnConfiguration.DEFAULT_RM_SCHEDCONF_ZK_MAX_LOGS);
+
+    this.maxRetryAttempts = conf.getInt(
+        YarnConfiguration.RM_SCHEDCONF_ZK_STORE_MAX_RETRY_ATTEMPTS,
+        YarnConfiguration.DEFAULT_RM_SCHEDCONF_ZK_STORE_MAX_RETRY_ATTEMPTS);
+    this.retryDelayMs = conf.getLong(
+        YarnConfiguration.RM_SCHEDCONF_ZK_STORE_RETRY_DELAY_MS,
+        YarnConfiguration.DEFAULT_RM_SCHEDCONF_ZK_STORE_RETRY_DELAY_MS);
+    
     this.zkManager =
         rmContext.getResourceManager().createAndStartZKManager(conf);
     this.zkAcl = ZKCuratorManager.getZKAcls(conf);
@@ -202,26 +216,44 @@ public class ZKConfigurationStore extends YarnConfigurationStore {
 
   @Override
   public synchronized Configuration retrieve() {
-    byte[] serializedSchedConf;
-    try {
-      serializedSchedConf = getZkData(confStorePath);
-    } catch (Exception e) {
-      LOG.error("Failed to retrieve configuration from zookeeper store", e);
-      return null;
-    }
-    try {
-      Map<String, String> map =
-          unsafeCast(deserializeObject(serializedSchedConf));
-      Configuration c = new Configuration(false);
-      for (Map.Entry<String, String> e : map.entrySet()) {
-        c.set(e.getKey(), e.getValue());
+    Configuration config = null;
+    int attempts = 0;
+
+    do {
+      try {
+        if (attempts > 0) {
+          long randomDelay = (long) (Math.random() * 1000);
+          long delay = retryDelayMs + randomDelay;
+          Thread.sleep(delay);
+        }
+        
+        byte[] serializedSchedConf = getZkData(confStorePath);
+        
+        if (serializedSchedConf == null || serializedSchedConf.length == 0) {
+          LOG.warn("Configuration data from ZooKeeper path " + confStorePath + 
+                   " is null or empty (attempt " + (attempts + 1) + ")");
+        } else {
+
+          Map<String, String> map =
+              unsafeCast(deserializeObject(serializedSchedConf));
+          Configuration c = new Configuration(false);
+          for (Map.Entry<String, String> e : map.entrySet()) {
+            c.set(e.getKey(), e.getValue());
+          }
+          config = c;
+        }
+      } catch (Exception e) {
+        LOG.warn("Failed to retrieve and deserialize configuration from " + confStorePath + 
+                 " (attempt " + (attempts + 1) + ")", e);
       }
-      return c;
-    } catch (Exception e) {
-      LOG.error("Exception while deserializing scheduler configuration " +
-          "from store", e);
+      attempts++;
+    } while (config == null && attempts < maxRetryAttempts);
+
+    if (config == null) {
+      LOG.error("Failed to retrieve configuration from ZooKeeper path " + confStorePath
+              + " after " + attempts + " attempts");
     }
-    return null;
+    return config;
   }
 
   @Override

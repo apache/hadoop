@@ -994,6 +994,24 @@ public class YarnConfiguration extends Configuration {
 
   @Private
   @Unstable
+  public static final String RM_SCHEDCONF_ZK_STORE_MAX_RETRY_ATTEMPTS = 
+      YARN_PREFIX + "scheduler.configuration.zk-store.max-retry-attempts";
+
+  @Private
+  @Unstable
+  public static final int DEFAULT_RM_SCHEDCONF_ZK_STORE_MAX_RETRY_ATTEMPTS = 30;
+
+  @Private
+  @Unstable
+  public static final String RM_SCHEDCONF_ZK_STORE_RETRY_DELAY_MS = 
+      YARN_PREFIX + "scheduler.configuration.zk-store.retry-delay-ms";
+
+  @Private
+  @Unstable
+  public static final int DEFAULT_RM_SCHEDCONF_ZK_STORE_RETRY_DELAY_MS = 1000;
+
+  @Private
+  @Unstable
   public static final String RM_SCHEDULER_MUTATION_ACL_POLICY_CLASS =
       YARN_PREFIX + "scheduler.configuration.mutation.acl-policy.class";
 

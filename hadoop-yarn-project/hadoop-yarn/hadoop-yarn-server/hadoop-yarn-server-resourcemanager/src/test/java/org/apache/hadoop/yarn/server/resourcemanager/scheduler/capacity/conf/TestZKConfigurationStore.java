@@ -418,6 +418,8 @@ public class TestZKConfigurationStore extends
   @Timeout(value = 3)
   @SuppressWarnings("checkstyle:linelength")
   public void testDeserializationIsNotVulnerable() throws Exception {
+    conf.setInt(YarnConfiguration.RM_SCHEDCONF_ZK_STORE_MAX_RETRY_ATTEMPTS, 0);
+    conf.setInt(YarnConfiguration.RM_SCHEDCONF_ZK_STORE_RETRY_DELAY_MS, 0);
     confStore.initialize(conf, schedConf, rmContext);
     String confStorePath = getZkPath("CONF_STORE");
 
