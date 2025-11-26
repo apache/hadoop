@@ -44,6 +44,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -256,20 +257,20 @@ public class TestViewFileSystemLinkMergeSlash extends ViewFileSystemBaseTest {
 
       // Test listStatus returns correct ViewFS paths
       FileStatus[] statuses = vfs.listStatus(testDir);
-      Assert.assertEquals("Should have 3 items", 3, statuses.length);
+      assertEquals(3, statuses.length, "Should have 3 items");
 
       for (FileStatus status : statuses) {
         Path path = status.getPath();
         // Path should be viewfs:// URI, not hdfs://
-        Assert.assertEquals("Scheme should be viewfs",
-            FsConstants.VIEWFS_SCHEME, path.toUri().getScheme());
-        Assert.assertEquals("Authority should match cluster name",
-            clusterName, path.toUri().getAuthority());
+        assertEquals(FsConstants.VIEWFS_SCHEME, path.toUri().getScheme(),
+            "Scheme should be viewfs");
+        assertEquals(clusterName, path.toUri().getAuthority(),
+            "Authority should match cluster name");
         // Path should start with /testListStatus, not contain cluster name
-        Assert.assertTrue("Path should be absolute and correct: " + path,
-            path.toString().startsWith("viewfs://" + clusterName + "/testListStatus/"));
-        Assert.assertFalse("Path should not contain duplicate cluster name: " + path,
-            path.toString().contains(clusterName + "/" + clusterName));
+        assertTrue(path.toString().startsWith("viewfs://" + clusterName + "/testListStatus/"),
+            "Path should be absolute and correct: " + path);
+        assertFalse(path.toString().contains(clusterName + "/" + clusterName),
+            "Path should not contain duplicate cluster name: " + path);
       }
     } finally {
       fsDefault.delete(testDir, true);
@@ -308,17 +309,17 @@ public class TestViewFileSystemLinkMergeSlash extends ViewFileSystemBaseTest {
         count++;
 
         // Path should be viewfs:// URI
-        Assert.assertEquals("Scheme should be viewfs",
-            FsConstants.VIEWFS_SCHEME, path.toUri().getScheme());
-        Assert.assertEquals("Authority should match cluster name",
-            clusterName, path.toUri().getAuthority());
+        assertEquals(FsConstants.VIEWFS_SCHEME, path.toUri().getScheme(),
+            "Scheme should be viewfs");
+        assertEquals(clusterName, path.toUri().getAuthority(),
+            "Authority should match cluster name");
         // Path should be absolute and not contain relative path issues
-        Assert.assertTrue("Path should start correctly: " + path,
-            path.toString().startsWith("viewfs://" + clusterName + "/testListLocatedStatus/"));
-        Assert.assertFalse("Path should not contain duplicate cluster name: " + path,
-            path.toString().contains(clusterName + "/" + clusterName));
+        assertTrue(path.toString().startsWith("viewfs://" + clusterName + "/testListLocatedStatus/"),
+            "Path should start correctly: " + path);
+        assertFalse(path.toString().contains(clusterName + "/" + clusterName),
+            "Path should not contain duplicate cluster name: " + path);
       }
-      Assert.assertEquals("Should have 2 files", 2, count);
+      assertEquals(2, count, "Should have 2 files");
     } finally {
       fsDefault.delete(testDir, true);
       vfs.close();
@@ -346,16 +347,16 @@ public class TestViewFileSystemLinkMergeSlash extends ViewFileSystemBaseTest {
 
       // This is the exact scenario that caused the bug
       FileStatus[] statuses = vfs.listStatus(baseDir);
-      Assert.assertEquals("Should have 1 directory", 1, statuses.length);
+      assertEquals(1, statuses.length, "Should have 1 directory");
 
       Path resultPath = statuses[0].getPath();
       String expectedPath = "viewfs://" + clusterName + "/user/history/done/2021";
-      Assert.assertEquals("Path should be correctly formed",
-          expectedPath, resultPath.toString());
+      assertEquals(expectedPath, resultPath.toString(),
+          "Path should be correctly formed");
 
       // Verify path is absolute (starts with /)
-      Assert.assertTrue("Path should be absolute",
-          resultPath.toUri().getPath().startsWith("/"));
+      assertTrue(resultPath.toUri().getPath().startsWith("/"),
+          "Path should be absolute");
     } finally {
       fsDefault.delete(new Path("/user"), true);
       vfs.close();
