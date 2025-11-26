@@ -18,26 +18,20 @@
 
 package org.apache.hadoop.hdfs.server.datanode;
 
-import org.apache.commons.io.FileUtils;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileUtil;
-import org.apache.hadoop.fs.HardLink;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.server.common.Storage;
-import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
-import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsDatasetUtil;
-import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.io.nativeio.NativeIO;
-import org.apache.hadoop.io.nativeio.NativeIOException;
-import org.apache.hadoop.net.SocketOutputStream;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import static org.apache.hadoop.hdfs.server.datanode.FileIoProvider.OPERATION.DELETE;
+import static org.apache.hadoop.hdfs.server.datanode.FileIoProvider.OPERATION.EXISTS;
+import static org.apache.hadoop.hdfs.server.datanode.FileIoProvider.OPERATION.FADVISE;
+import static org.apache.hadoop.hdfs.server.datanode.FileIoProvider.OPERATION.FLUSH;
+import static org.apache.hadoop.hdfs.server.datanode.FileIoProvider.OPERATION.LIST;
+import static org.apache.hadoop.hdfs.server.datanode.FileIoProvider.OPERATION.MKDIRS;
+import static org.apache.hadoop.hdfs.server.datanode.FileIoProvider.OPERATION.MOVE;
+import static org.apache.hadoop.hdfs.server.datanode.FileIoProvider.OPERATION.NATIVE_COPY;
+import static org.apache.hadoop.hdfs.server.datanode.FileIoProvider.OPERATION.OPEN;
+import static org.apache.hadoop.hdfs.server.datanode.FileIoProvider.OPERATION.READ;
+import static org.apache.hadoop.hdfs.server.datanode.FileIoProvider.OPERATION.SYNC;
+import static org.apache.hadoop.hdfs.server.datanode.FileIoProvider.OPERATION.TRANSFER;
+import static org.apache.hadoop.hdfs.server.datanode.FileIoProvider.OPERATION.WRITE;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import java.io.File;
 import java.io.FileDescriptor;
 import java.io.FileInputStream;
@@ -47,13 +41,35 @@ import java.io.FilenameFilter;
 import java.io.Flushable;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.io.UncheckedIOException;
 import java.nio.channels.FileChannel;
 import java.nio.file.CopyOption;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 
-import static org.apache.hadoop.hdfs.server.datanode.FileIoProvider.OPERATION.*;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
+import org.apache.commons.io.FileUtils;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.fs.HardLink;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.server.common.Storage;
+import org.apache.hadoop.hdfs.server.datanode.FaultInjectorFileIoEvents.InjectedFileIOFaultException;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsDatasetUtil;
+import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.nativeio.Errno;
+import org.apache.hadoop.io.nativeio.NativeIO;
+import org.apache.hadoop.io.nativeio.NativeIOException;
+import org.apache.hadoop.net.SocketOutputStream;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This class abstracts out various file IO operations performed by the
@@ -132,6 +148,9 @@ public class FileIoProvider {
       faultInjectorEventHook.beforeFileIo(volume, FLUSH, 0);
       f.flush();
       profilingEventHook.afterFileIo(volume, FLUSH, begin, 0);
+    } catch (InjectedFileIOFaultException e) {
+      onFailure(volume, begin);
+      throw new IOException(e.getMessage(), e);
     } catch (Exception e) {
       onFailure(volume, begin);
       throw e;
@@ -151,6 +170,9 @@ public class FileIoProvider {
       faultInjectorEventHook.beforeFileIo(volume, SYNC, 0);
       IOUtils.fsync(fos.getChannel(), false);
       profilingEventHook.afterFileIo(volume, SYNC, begin, 0);
+    } catch (InjectedFileIOFaultException e) {
+      onFailure(volume, begin);
+      throw new IOException(e.getMessage(), e);
     } catch (Exception e) {
       onFailure(volume, begin);
       throw e;
@@ -168,6 +190,9 @@ public class FileIoProvider {
       faultInjectorEventHook.beforeFileIo(volume, SYNC, 0);
       IOUtils.fsync(dir);
       profilingEventHook.afterFileIo(volume, SYNC, begin, 0);
+    } catch (InjectedFileIOFaultException e) {
+      onFailure(volume, begin);
+      throw new IOException(e.getMessage(), e);
     } catch (Exception e) {
       onFailure(volume, begin);
       throw e;
@@ -187,6 +212,9 @@ public class FileIoProvider {
       faultInjectorEventHook.beforeFileIo(volume, SYNC, 0);
       NativeIO.POSIX.syncFileRangeIfPossible(outFd, offset, numBytes, flags);
       profilingEventHook.afterFileIo(volume, SYNC, begin, 0);
+    } catch (InjectedFileIOFaultException e) {
+      onFailure(volume, begin);
+      throw new NativeIOException(e.getMessage(), Errno.UNKNOWN);
     } catch (Exception e) {
       onFailure(volume, begin);
       throw e;
@@ -207,6 +235,9 @@ public class FileIoProvider {
       NativeIO.POSIX.getCacheManipulator().posixFadviseIfPossible(
           identifier, outFd, offset, length, flags);
       profilingEventHook.afterMetadataOp(volume, FADVISE, begin);
+    } catch (InjectedFileIOFaultException e) {
+      onFailure(volume, begin);
+      throw new NativeIOException(e.getMessage(), Errno.UNKNOWN);
     } catch (Exception e) {
       onFailure(volume, begin);
       throw e;
@@ -226,6 +257,9 @@ public class FileIoProvider {
       boolean deleted = f.delete();
       profilingEventHook.afterMetadataOp(volume, DELETE, begin);
       return deleted;
+    } catch (InjectedFileIOFaultException e) {
+      onFailure(volume, begin);
+      throw new UncheckedIOException(e.getMessage(), new IOException(e));
     } catch (Exception e) {
       onFailure(volume, begin);
       throw e;
@@ -249,6 +283,9 @@ public class FileIoProvider {
         LOG.warn("Failed to delete file {}", f);
       }
       return deleted;
+    } catch (InjectedFileIOFaultException e) {
+      onFailure(volume, begin);
+      throw new UncheckedIOException(e.getMessage(), new IOException(e));
     } catch (Exception e) {
       onFailure(volume, begin);
       throw e;
@@ -278,6 +315,9 @@ public class FileIoProvider {
       sockOut.transferToFully(fileCh, position, count,
           waitTime, transferTime);
       profilingEventHook.afterFileIo(volume, TRANSFER, begin, count);
+    } catch (InjectedFileIOFaultException e) {
+      onFailure(volume, begin);
+      throw new IOException(e.getMessage(), e);
     } catch (Exception e) {
       String em = e.getMessage();
       if (em != null) {
@@ -308,6 +348,9 @@ public class FileIoProvider {
       boolean created = f.createNewFile();
       profilingEventHook.afterMetadataOp(volume, OPEN, begin);
       return created;
+    } catch (InjectedFileIOFaultException e) {
+      onFailure(volume, begin);
+      throw new IOException(e.getMessage(), e);
     } catch (Exception e) {
       onFailure(volume, begin);
       throw e;
@@ -335,6 +378,9 @@ public class FileIoProvider {
       fis = new WrappedFileInputStream(volume, f);
       profilingEventHook.afterMetadataOp(volume, OPEN, begin);
       return fis;
+    } catch (InjectedFileIOFaultException e) {
+      onFailure(volume, begin);
+      throw new FileNotFoundException(e.getMessage());
     } catch(Exception e) {
       IOUtils.closeStream(fis);
       onFailure(volume, begin);
@@ -366,6 +412,9 @@ public class FileIoProvider {
       fos = new WrappedFileOutputStream(volume, f, append);
       profilingEventHook.afterMetadataOp(volume, OPEN, begin);
       return fos;
+    } catch (InjectedFileIOFaultException e) {
+      onFailure(volume, begin);
+      throw new FileNotFoundException(e.getMessage());
     } catch(Exception e) {
       IOUtils.closeStream(fos);
       onFailure(volume, begin);
@@ -431,6 +480,9 @@ public class FileIoProvider {
           NativeIO.getShareDeleteFileDescriptor(f, offset));
       profilingEventHook.afterMetadataOp(volume, OPEN, begin);
       return fis;
+    } catch (InjectedFileIOFaultException e) {
+      onFailure(volume, begin);
+      throw new IOException(e.getMessage(), e);
     } catch(Exception e) {
       IOUtils.closeStream(fis);
       onFailure(volume, begin);
@@ -463,6 +515,9 @@ public class FileIoProvider {
           FsDatasetUtil.openAndSeek(f, offset));
       profilingEventHook.afterMetadataOp(volume, OPEN, begin);
       return fis;
+    } catch (InjectedFileIOFaultException e) {
+      onFailure(volume, begin);
+      throw new IOException(e.getMessage(), e);
     } catch(Exception e) {
       IOUtils.closeStream(fis);
       onFailure(volume, begin);
@@ -494,6 +549,9 @@ public class FileIoProvider {
       raf = new WrappedRandomAccessFile(volume, f, mode);
       profilingEventHook.afterMetadataOp(volume, OPEN, begin);
       return raf;
+    } catch (InjectedFileIOFaultException e) {
+      onFailure(volume, begin);
+      throw new FileNotFoundException(e.getMessage());
     } catch(Exception e) {
       IOUtils.closeStream(raf);
       onFailure(volume, begin);
@@ -516,6 +574,9 @@ public class FileIoProvider {
       LOG.trace("Deletion of dir {} {}", dir, deleted ? "succeeded" : "failed");
       profilingEventHook.afterMetadataOp(volume, DELETE, begin);
       return deleted;
+    } catch (InjectedFileIOFaultException e) {
+      onFailure(volume, begin);
+      throw new UncheckedIOException(e.getMessage(), new IOException(e));
     } catch(Exception e) {
       onFailure(volume, begin);
       throw e;
@@ -538,6 +599,9 @@ public class FileIoProvider {
       faultInjectorEventHook.beforeMetadataOp(volume, MOVE);
       FileUtil.replaceFile(src, target);
       profilingEventHook.afterMetadataOp(volume, MOVE, begin);
+    } catch (InjectedFileIOFaultException e) {
+      onFailure(volume, begin);
+      throw new IOException(e.getMessage(), e);
     } catch(Exception e) {
       onFailure(volume, begin);
       throw e;
@@ -561,6 +625,9 @@ public class FileIoProvider {
       faultInjectorEventHook.beforeMetadataOp(volume, MOVE);
       Storage.rename(src, target);
       profilingEventHook.afterMetadataOp(volume, MOVE, begin);
+    } catch (InjectedFileIOFaultException e) {
+      onFailure(volume, begin);
+      throw new IOException(e.getMessage(), e);
     } catch(Exception e) {
       onFailure(volume, begin);
       throw e;
@@ -584,6 +651,9 @@ public class FileIoProvider {
       faultInjectorEventHook.beforeMetadataOp(volume, MOVE);
       FileUtils.moveFile(src, target);
       profilingEventHook.afterMetadataOp(volume, MOVE, begin);
+    } catch (InjectedFileIOFaultException e) {
+      onFailure(volume, begin);
+      throw new IOException(e.getMessage(), e);
     } catch(Exception e) {
       onFailure(volume, begin);
       throw e;
@@ -609,6 +679,9 @@ public class FileIoProvider {
       faultInjectorEventHook.beforeMetadataOp(volume, MOVE);
       Files.move(src, target, options);
       profilingEventHook.afterMetadataOp(volume, MOVE, begin);
+    } catch (InjectedFileIOFaultException e) {
+      onFailure(volume, begin);
+      throw new IOException(e.getMessage(), e);
     } catch(Exception e) {
       onFailure(volume, begin);
       throw e;
@@ -635,6 +708,9 @@ public class FileIoProvider {
       faultInjectorEventHook.beforeFileIo(volume, NATIVE_COPY, length);
       Storage.nativeCopyFileUnbuffered(src, target, preserveFileDate);
       profilingEventHook.afterFileIo(volume, NATIVE_COPY, begin, length);
+    } catch (InjectedFileIOFaultException e) {
+      onFailure(volume, begin);
+      throw new IOException(e.getMessage(), e);
     } catch(Exception e) {
       onFailure(volume, begin);
       throw e;
@@ -661,6 +737,9 @@ public class FileIoProvider {
       created = dir.mkdirs();
       isDirectory = !created && dir.isDirectory();
       profilingEventHook.afterMetadataOp(volume, MKDIRS, begin);
+    } catch (InjectedFileIOFaultException e) {
+      onFailure(volume, begin);
+      throw new IOException(e.getMessage(), e);
     } catch(Exception e) {
       onFailure(volume, begin);
       throw e;
@@ -688,6 +767,9 @@ public class FileIoProvider {
       faultInjectorEventHook.beforeMetadataOp(volume, MKDIRS);
       succeeded = dir.isDirectory() || dir.mkdirs();
       profilingEventHook.afterMetadataOp(volume, MKDIRS, begin);
+    } catch (InjectedFileIOFaultException e) {
+      onFailure(volume, begin);
+      throw new IOException(e.getMessage(), e);
     } catch(Exception e) {
       onFailure(volume, begin);
       throw e;
@@ -715,6 +797,9 @@ public class FileIoProvider {
       File[] children = FileUtil.listFiles(dir);
       profilingEventHook.afterMetadataOp(volume, LIST, begin);
       return children;
+    } catch (InjectedFileIOFaultException e) {
+      onFailure(volume, begin);
+      throw new IOException(e.getMessage(), e);
     } catch(Exception e) {
       onFailure(volume, begin);
       throw e;
@@ -738,6 +823,9 @@ public class FileIoProvider {
       String[] children = FileUtil.list(dir);
       profilingEventHook.afterMetadataOp(volume, LIST, begin);
       return children;
+    } catch (InjectedFileIOFaultException e) {
+      onFailure(volume, begin);
+      throw new IOException(e.getMessage(), e);
     } catch(Exception e) {
       onFailure(volume, begin);
       throw e;
@@ -762,6 +850,9 @@ public class FileIoProvider {
       List<String> children = IOUtils.listDirectory(dir, filter);
       profilingEventHook.afterMetadataOp(volume, LIST, begin);
       return children;
+    } catch (InjectedFileIOFaultException e) {
+      onFailure(volume, begin);
+      throw new IOException(e.getMessage(), e);
     } catch(Exception e) {
       onFailure(volume, begin);
       throw e;
@@ -785,6 +876,9 @@ public class FileIoProvider {
       int count = HardLink.getLinkCount(f);
       profilingEventHook.afterMetadataOp(volume, LIST, begin);
       return count;
+    } catch (InjectedFileIOFaultException e) {
+      onFailure(volume, begin);
+      throw new IOException(e.getMessage(), e);
     } catch(Exception e) {
       onFailure(volume, begin);
       throw e;
@@ -805,6 +899,9 @@ public class FileIoProvider {
       boolean exists = f.exists();
       profilingEventHook.afterMetadataOp(volume, EXISTS, begin);
       return exists;
+    } catch (InjectedFileIOFaultException e) {
+      onFailure(volume, begin);
+      throw new UncheckedIOException(e.getMessage(), new IOException(e));
     } catch(Exception e) {
       onFailure(volume, begin);
       throw e;
@@ -847,6 +944,9 @@ public class FileIoProvider {
         int b = super.read();
         profilingEventHook.afterFileIo(volume, READ, begin, LEN_INT);
         return b;
+      } catch (InjectedFileIOFaultException e) {
+        onFailure(volume, begin);
+        throw new IOException(e.getMessage(), e);
       } catch(Exception e) {
         onFailure(volume, begin);
         throw e;
@@ -865,6 +965,9 @@ public class FileIoProvider {
         int numBytesRead = super.read(b);
         profilingEventHook.afterFileIo(volume, READ, begin, numBytesRead);
         return numBytesRead;
+      } catch (InjectedFileIOFaultException e) {
+        onFailure(volume, begin);
+        throw new IOException(e.getMessage(), e);
       } catch(Exception e) {
         onFailure(volume, begin);
         throw e;
@@ -882,6 +985,9 @@ public class FileIoProvider {
         int numBytesRead = super.read(b, off, len);
         profilingEventHook.afterFileIo(volume, READ, begin, numBytesRead);
         return numBytesRead;
+      } catch (InjectedFileIOFaultException e) {
+        onFailure(volume, begin);
+        throw new IOException(e.getMessage(), e);
       } catch(Exception e) {
         onFailure(volume, begin);
         throw e;
@@ -926,6 +1032,9 @@ public class FileIoProvider {
         faultInjectorEventHook.beforeFileIo(volume, WRITE, LEN_INT);
         super.write(b);
         profilingEventHook.afterFileIo(volume, WRITE, begin, LEN_INT);
+      } catch (InjectedFileIOFaultException e) {
+        onFailure(volume, begin);
+        throw new IOException(e.getMessage(), e);
       } catch(Exception e) {
         onFailure(volume, begin);
         throw e;
@@ -943,6 +1052,9 @@ public class FileIoProvider {
         faultInjectorEventHook.beforeFileIo(volume, WRITE, b.length);
         super.write(b);
         profilingEventHook.afterFileIo(volume, WRITE, begin, b.length);
+      } catch (InjectedFileIOFaultException e) {
+        onFailure(volume, begin);
+        throw new IOException(e.getMessage(), e);
       } catch(Exception e) {
         onFailure(volume, begin);
         throw e;
@@ -959,6 +1071,9 @@ public class FileIoProvider {
         faultInjectorEventHook.beforeFileIo(volume, WRITE, len);
         super.write(b, off, len);
         profilingEventHook.afterFileIo(volume, WRITE, begin, len);
+      } catch (InjectedFileIOFaultException e) {
+        onFailure(volume, begin);
+        throw new IOException(e.getMessage(), e);
       } catch(Exception e) {
         onFailure(volume, begin);
         throw e;
@@ -988,6 +1103,9 @@ public class FileIoProvider {
         int b = super.read();
         profilingEventHook.afterFileIo(volume, READ, begin, LEN_INT);
         return b;
+      } catch (InjectedFileIOFaultException e) {
+        onFailure(volume, begin);
+        throw new IOException(e.getMessage(), e);
       } catch(Exception e) {
         onFailure(volume, begin);
         throw e;
@@ -1002,6 +1120,9 @@ public class FileIoProvider {
         int numBytesRead = super.read(b, off, len);
         profilingEventHook.afterFileIo(volume, READ, begin, numBytesRead);
         return numBytesRead;
+      } catch (InjectedFileIOFaultException e) {
+        onFailure(volume, begin);
+        throw new IOException(e.getMessage(), e);
       } catch(Exception e) {
         onFailure(volume, begin);
         throw e;
@@ -1017,6 +1138,9 @@ public class FileIoProvider {
         int numBytesRead = super.read(b);
         profilingEventHook.afterFileIo(volume, READ, begin, numBytesRead);
         return numBytesRead;
+      } catch (InjectedFileIOFaultException e) {
+        onFailure(volume, begin);
+        throw new IOException(e.getMessage(), e);
       } catch(Exception e) {
         onFailure(volume, begin);
         throw e;
@@ -1031,6 +1155,9 @@ public class FileIoProvider {
         faultInjectorEventHook.beforeFileIo(volume, WRITE, LEN_INT);
         super.write(b);
         profilingEventHook.afterFileIo(volume, WRITE, begin, LEN_INT);
+      } catch (InjectedFileIOFaultException e) {
+        onFailure(volume, begin);
+        throw new IOException(e.getMessage(), e);
       } catch(Exception e) {
         onFailure(volume, begin);
         throw e;
@@ -1045,6 +1172,9 @@ public class FileIoProvider {
         faultInjectorEventHook.beforeFileIo(volume, WRITE, b.length);
         super.write(b);
         profilingEventHook.afterFileIo(volume, WRITE, begin, b.length);
+      } catch (InjectedFileIOFaultException e) {
+        onFailure(volume, begin);
+        throw new IOException(e.getMessage(), e);
       } catch(Exception e) {
         onFailure(volume, begin);
         throw e;
@@ -1058,6 +1188,9 @@ public class FileIoProvider {
         faultInjectorEventHook.beforeFileIo(volume, WRITE, len);
         super.write(b, off, len);
         profilingEventHook.afterFileIo(volume, WRITE, begin, len);
+      } catch (InjectedFileIOFaultException e) {
+        onFailure(volume, begin);
+        throw new IOException(e.getMessage(), e);
       } catch(Exception e) {
         onFailure(volume, begin);
         throw e;

@@ -1202,6 +1202,10 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       "dfs.datanode.enable.fileio.fault.injection";
   public static final boolean
       DFS_DATANODE_ENABLE_FILEIO_FAULT_INJECTION_DEFAULT = false;
+  public static final String DFS_DATANODE_ENABLED_OPS_FILEIO_FAULT_INJECTION_KEY =
+      "dfs.datanode.fileio.fault.injection.operations";
+  public static final String DFS_DATANODE_FILEIO_FAULT_PERCENTAGE_KEY =
+      "dfs.datanode.fileio.fault.percentage";
   public static final String
       DFS_DATANODE_FILEIO_PROFILING_SAMPLING_PERCENTAGE_KEY =
       "dfs.datanode.fileio.profiling.sampling.percentage";

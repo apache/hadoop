@@ -6712,4 +6712,28 @@
       Enables observer reads for clients. This should only be enabled when clients are using routers.
     </description>
   </property>
+  <property>
+    <name>dfs.datanode.enable.fileio.fault.injection</name>
+    <value>false</value>
+    <description>
+      Enables fault injection in the DataNode for file I/O operations. This is useful for testing
+      how applications respond to exceptions. This should not be enabled on a production cluster.
+    </description>
+  </property>
+  <property>
+    <name>dfs.datanode.fileio.fault.injection.operations</name>
+    <value></value>
+    <description>
+    Comma-separated list of FileIOProvider.OPERATION values for which to throw faults.
+    </description>
+  </property>
+  <property>
+    <name>dfs.datanode.fileio.fault.percentage</name>
+    <value>0</value>
+    <description>
+      This setting controls the percentage of file I/O operations for which
+      an exception will be thrown. Set to an integer value between 1 and 100
+      to enable. A value of zero will disable the fault injector.
+    </description>
+  </property>
 </configuration>
