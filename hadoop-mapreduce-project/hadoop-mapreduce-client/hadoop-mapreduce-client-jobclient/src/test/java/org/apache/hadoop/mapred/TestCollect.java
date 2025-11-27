@@ -21,6 +21,7 @@ import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.mapred.UtilsForTests.RandomInputFormat;
 import org.apache.hadoop.mapreduce.MRConfig;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.junit.jupiter.api.Test;
 
 import java.io.*;
@@ -51,14 +52,14 @@ public class TestCollect
                     final OutputCollector<IntWritable, IntWritable> out,
                     Reporter reporter) throws IOException {
       // Class for calling collect in separate threads
-      class CollectFeeder extends Thread {
+      class CollectFeeder extends SubjectInheritingThread {
         int id; // id for the thread
         
         public CollectFeeder(int id) {
           this.id = id;
         }
         
-        public void run() {
+        public void work() {
           for (int j = 1; j <= NUM_COLLECTS_PER_THREAD; j++) {
             try {
               out.collect(new IntWritable((id * NUM_COLLECTS_PER_THREAD) + j), 

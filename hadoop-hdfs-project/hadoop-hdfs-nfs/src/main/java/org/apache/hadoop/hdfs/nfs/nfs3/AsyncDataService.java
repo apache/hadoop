@@ -22,6 +22,7 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -47,7 +48,7 @@ public class AsyncDataService {
     threadFactory = new ThreadFactory() {
       @Override
       public Thread newThread(Runnable r) {
-        return new Thread(threadGroup, r);
+        return new SubjectInheritingThread(threadGroup, r);
       }
     };
 

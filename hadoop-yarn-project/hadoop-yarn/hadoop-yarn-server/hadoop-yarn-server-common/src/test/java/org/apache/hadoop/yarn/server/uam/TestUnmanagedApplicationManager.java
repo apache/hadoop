@@ -33,6 +33,7 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.service.Service;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest;
@@ -228,7 +229,7 @@ public class TestUnmanagedApplicationManager {
       throws YarnException, IOException, InterruptedException {
 
     // Register with wait() in RM in a separate thread
-    Thread registerAMThread = new Thread(new Runnable() {
+    Thread registerAMThread = new SubjectInheritingThread(new Runnable() {
       @Override
       public void run() {
         try {
@@ -486,10 +487,10 @@ public class TestUnmanagedApplicationManager {
     }
 
     @Override
-    public void run() {
+    public void work() {
       try {
         getUGIWithToken(attemptId).doAs((PrivilegedExceptionAction<Object>) () -> {
-          TestableAMRequestHandlerThread.super.run();
+          TestableAMRequestHandlerThread.super.work();
           return null;
         });
       } catch (Exception e) {

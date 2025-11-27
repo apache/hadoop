@@ -49,6 +49,7 @@ import org.apache.hadoop.mapreduce.TaskID;
 import org.apache.hadoop.mapreduce.task.reduce.MapHost.State;
 import org.apache.hadoop.util.Progress;
 import org.apache.hadoop.util.Time;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -554,13 +555,13 @@ public class ShuffleSchedulerImpl<K,V> implements ShuffleScheduler<K,V> {
   /**
    * A thread that takes hosts off of the penalty list when the timer expires.
    */
-  private class Referee extends Thread {
+  private class Referee extends SubjectInheritingThread {
     public Referee() {
       setName("ShufflePenaltyReferee");
       setDaemon(true);
     }
 
-    public void run() {
+    public void work() {
       try {
         while (true) {
           // take the first host that has an expired penalty

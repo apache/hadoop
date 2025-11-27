@@ -693,7 +693,7 @@ class DataStreamer extends Daemon {
    * and closes them. Any error recovery is also done by this thread.
    */
   @Override
-  public void run() {
+  public void work() {
     TraceScope scope = null;
     while (!streamerClosed && dfsClient.clientRunning) {
       // if the Responder encountered an error, shutdown Responder
@@ -1167,7 +1167,7 @@ class DataStreamer extends Daemon {
     }
 
     @Override
-    public void run() {
+    public void work() {
 
       setName("ResponseProcessor for block " + block);
       PipelineAck ack = new PipelineAck();

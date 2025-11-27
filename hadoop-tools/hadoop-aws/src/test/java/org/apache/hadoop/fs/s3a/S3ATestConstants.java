@@ -302,4 +302,24 @@ public interface S3ATestConstants {
    * Default value of {@link #MULTIPART_COMMIT_CONSUMES_UPLOAD_ID}: {@value}.
    */
   boolean DEFAULT_MULTIPART_COMMIT_CONSUMES_UPLOAD_ID = false;
+
+  /**
+   * Ranges within this distance of each other will be coalesced.
+   */
+  String AAL_REQUEST_COALESCE_TOLERANCE = "physicalio.request.coalesce.tolerance";
+
+  /**
+   * The minimum size of a block in AAL.
+   */
+  String AAL_READ_BUFFER_SIZE = "physicalio.readbuffersize";
+
+  /**
+   * Objects smaller than this will be downloaded completely.
+   */
+  String AAL_SMALL_OBJECT_PREFETCH_ENABLED = "physicalio.small.objects.prefetching.enabled";
+
+  /**
+   * Objects in AAL's cache will expire after this duration.
+   */
+  String AAL_CACHE_TIMEOUT = "physicalio.cache.timeout";
 }

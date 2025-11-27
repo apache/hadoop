@@ -30,7 +30,6 @@ import org.apache.hadoop.test.tags.IntegrationTest;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfAnalyticsAcceleratorEnabled;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
@@ -48,10 +47,6 @@ public class ITestS3AFileContextStatistics extends FCStatisticsBaseTest {
   @BeforeEach
   public void setUp() throws Exception {
     conf = new Configuration();
-    // Analytics accelerator currently does not support IOStatistics, this will be added as
-    // part of https://issues.apache.org/jira/browse/HADOOP-19364
-    skipIfAnalyticsAcceleratorEnabled(conf,
-        "Analytics Accelerator currently does not support stream statistics");
     fc = S3ATestUtils.createTestFileContext(conf);
     testRootPath = fileContextTestHelper.getTestRootPath(fc, "test");
     fc.mkdir(testRootPath,

@@ -46,6 +46,7 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.util.Preconditions;
 
 import org.slf4j.Logger;
@@ -215,7 +216,7 @@ public class LoadGenerator extends Configured implements Tool {
    * A thread runs for the specified elapsed time if the time isn't zero.
    * Otherwise, it runs forever.
    */
-  private class DFSClientThread extends Thread {
+  private class DFSClientThread extends SubjectInheritingThread {
     private int id;
     private long [] executionTime = new long[TOTAL_OP_TYPES];
     private long [] totalNumOfOps = new long[TOTAL_OP_TYPES];
@@ -230,7 +231,7 @@ public class LoadGenerator extends Configured implements Tool {
      * Each iteration decides what's the next operation and then pauses.
      */
     @Override
-    public void run() {
+    public void work() {
       try {
         while (shouldRun) {
           nextOp();

@@ -130,7 +130,7 @@ import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.LightWeightGSet;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
-
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.util.Preconditions;
 
@@ -3960,7 +3960,7 @@ public class BlockManager implements BlockStatsMXBean {
     reconstructionQueuesInitializer = new Daemon() {
 
       @Override
-      public void run() {
+      public void work() {
         try {
           processMisReplicatesAsync();
         } catch (InterruptedException ie) {
@@ -5641,7 +5641,7 @@ public class BlockManager implements BlockStatsMXBean {
     return blockReportThread.queue.size();
   }
 
-  private class BlockReportProcessingThread extends Thread {
+  private class BlockReportProcessingThread extends SubjectInheritingThread {
     private long lastFull = 0;
 
     private final BlockingQueue<Runnable> queue;
@@ -5653,7 +5653,7 @@ public class BlockManager implements BlockStatsMXBean {
     }
 
     @Override
-    public void run() {
+    public void work() {
       try {
         processQueue();
       } catch (Throwable t) {

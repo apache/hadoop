@@ -69,6 +69,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.Shell;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
@@ -1761,7 +1762,7 @@ public class ApplicationMaster {
     LaunchContainerRunnable runnableLaunchContainer =
         new LaunchContainerRunnable(allocatedContainer, containerListener,
             shellId);
-    return new Thread(runnableLaunchContainer);
+    return new SubjectInheritingThread(runnableLaunchContainer);
   }
 
   private void publishContainerStartEventOnTimelineServiceV2(

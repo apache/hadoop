@@ -39,6 +39,7 @@ import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
 import org.apache.hadoop.util.Lists;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -315,7 +316,7 @@ public class TestAuditLogger {
           .build();
       CallerContext.setCurrent(context);
       LOG.info("Set current caller context as {}", CallerContext.getCurrent());
-      Thread child = new Thread(new Runnable()
+      Thread child = new SubjectInheritingThread(new Runnable()
       {
         @Override
         public void run() {
@@ -342,7 +343,7 @@ public class TestAuditLogger {
               .setSignature("L".getBytes(CallerContext.SIGNATURE_ENCODING))
               .build();
       LOG.info("Set current caller context as {}", CallerContext.getCurrent());
-      child = new Thread(new Runnable()
+      child = new SubjectInheritingThread(new Runnable()
       {
         @Override
         public void run() {

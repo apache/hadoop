@@ -67,6 +67,7 @@ import org.apache.hadoop.hdfs.util.RwLockMode;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.mockito.ArgumentMatcher;
 import org.slf4j.event.Level;
 import org.junit.jupiter.api.Test;
@@ -205,7 +206,7 @@ public class TestEditLogRace {
     // Create threads and make them run transactions concurrently.
     for (int i = 0; i < NUM_THREADS; i++) {
       Transactions trans = new Transactions(cluster, caughtErr);
-      new Thread(trans, "TransactionThread-" + i).start();
+      new SubjectInheritingThread(trans, "TransactionThread-" + i).start();
       workers.add(trans);
     }
   }
@@ -425,9 +426,9 @@ public class TestEditLogRace {
           new AtomicReference<Throwable>();
       final CountDownLatch waitToEnterFlush = new CountDownLatch(1);
       
-      final Thread doAnEditThread = new Thread() {
+      final SubjectInheritingThread doAnEditThread = new SubjectInheritingThread() {
         @Override
-        public void run() {
+        public void work() {
           try {
             LOG.info("Starting mkdirs");
             namesystem.mkdirs("/test",
@@ -518,9 +519,9 @@ public class TestEditLogRace {
           new AtomicReference<Throwable>();
       final CountDownLatch sleepingBeforeSync = new CountDownLatch(1);
 
-      final Thread doAnEditThread = new Thread() {
+      final SubjectInheritingThread doAnEditThread = new SubjectInheritingThread() {
         @Override
-        public void run() {
+        public void work() {
           try {
             LOG.info("Starting setOwner");
             namesystem.writeLock(RwLockMode.FS);

@@ -77,6 +77,7 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.ClassUtil;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationResponse;
@@ -891,7 +892,7 @@ public class Client extends Configured implements Tool {
     boolean loggedApplicationInfo = false;
     boolean success = false;
 
-    Thread namenodeMonitoringThread = new Thread(() -> {
+    Thread namenodeMonitoringThread = new SubjectInheritingThread(() -> {
       Supplier<Boolean> exitCritera = () ->
           Apps.isApplicationFinalState(infraAppState);
       Optional<Properties> namenodeProperties = Optional.empty();

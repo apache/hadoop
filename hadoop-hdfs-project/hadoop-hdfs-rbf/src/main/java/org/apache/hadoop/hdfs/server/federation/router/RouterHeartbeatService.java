@@ -35,6 +35,7 @@ import org.apache.hadoop.hdfs.server.federation.store.protocol.RouterHeartbeatRe
 import org.apache.hadoop.hdfs.server.federation.store.records.BaseRecord;
 import org.apache.hadoop.hdfs.server.federation.store.records.RouterState;
 import org.apache.hadoop.hdfs.server.federation.store.records.StateStoreVersion;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -63,7 +64,7 @@ public class RouterHeartbeatService extends PeriodicService {
    * Trigger the update of the Router state asynchronously.
    */
   protected void updateStateAsync() {
-    Thread thread = new Thread(this::updateStateStore, "Router Heartbeat Async");
+    Thread thread = new SubjectInheritingThread(this::updateStateStore, "Router Heartbeat Async");
     thread.setDaemon(true);
     thread.start();
   }

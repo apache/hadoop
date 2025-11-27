@@ -53,6 +53,7 @@ import org.apache.hadoop.net.ServerSocketUtil;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.JarFinder;
 import org.apache.hadoop.util.Shell;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -333,7 +334,7 @@ public abstract class DistributedShellBaseTest {
     assertTrue(initSuccess);
     LOG.info("Running DS Client");
     final AtomicBoolean result = new AtomicBoolean(false);
-    Thread t = new Thread(() -> {
+    Thread t = new SubjectInheritingThread(() -> {
       try {
         result.set(dsClient.run());
       } catch (Exception e) {

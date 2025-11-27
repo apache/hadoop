@@ -27,6 +27,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.util.Time;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -256,7 +257,7 @@ class AzureFileSystemThreadPoolExecutor {
 
     @Override
     public Thread newThread(Runnable r) {
-      Thread t = new Thread(r);
+      Thread t = new SubjectInheritingThread(r);
 
       // Use current thread name as part in naming thread such that use of
       // same file system object will have unique names.

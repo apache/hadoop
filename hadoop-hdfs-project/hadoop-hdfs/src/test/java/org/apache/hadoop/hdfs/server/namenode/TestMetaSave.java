@@ -44,6 +44,7 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.MethodOrderer;
@@ -222,7 +223,7 @@ public class TestMetaSave {
     }
   }
 
-  class MetaSaveThread extends Thread {
+  class MetaSaveThread extends SubjectInheritingThread {
     NamenodeProtocols nnRpc;
     String filename;
     public MetaSaveThread(NamenodeProtocols nnRpc, String filename) {
@@ -231,7 +232,7 @@ public class TestMetaSave {
     }
 
     @Override
-    public void run() {
+    public void work() {
       try {
         nnRpc.metaSave(filename);
       } catch (IOException e) {

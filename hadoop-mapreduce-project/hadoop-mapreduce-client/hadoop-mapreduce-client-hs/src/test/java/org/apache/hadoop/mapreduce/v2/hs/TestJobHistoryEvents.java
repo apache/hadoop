@@ -38,6 +38,7 @@ import org.apache.hadoop.mapreduce.v2.app.job.Job;
 import org.apache.hadoop.mapreduce.v2.app.job.Task;
 import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
 import org.apache.hadoop.service.Service;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.junit.jupiter.api.Test;
@@ -254,7 +255,7 @@ public class TestJobHistoryEvents {
         @Override
         protected void serviceStart() {
           // Don't start any event draining thread.
-          super.eventHandlingThread = new Thread();
+          super.eventHandlingThread = new SubjectInheritingThread();
           super.eventHandlingThread.start();
         }
       };

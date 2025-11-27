@@ -24,6 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.Timeout;
@@ -68,17 +69,17 @@ public class TestInstrumentedReadWriteLock {
     final AutoCloseableLock readLock = new AutoCloseableLock(
         readWriteLock.readLock());
     try (AutoCloseableLock lock = writeLock.acquire()) {
-      Thread competingWriteThread = new Thread() {
+      Thread competingWriteThread = new SubjectInheritingThread() {
         @Override
-        public void run() {
+        public void work() {
           assertFalse(writeLock.tryLock());
         }
       };
       competingWriteThread.start();
       competingWriteThread.join();
-      Thread competingReadThread = new Thread() {
+      Thread competingReadThread = new SubjectInheritingThread() {
         @Override
-        public void run() {
+        public void work() {
           assertFalse(readLock.tryLock());
         };
       };
@@ -104,18 +105,18 @@ public class TestInstrumentedReadWriteLock {
     final AutoCloseableLock writeLock = new AutoCloseableLock(
         readWriteLock.writeLock());
     try (AutoCloseableLock lock = readLock.acquire()) {
-      Thread competingReadThread = new Thread() {
+      SubjectInheritingThread competingReadThread = new SubjectInheritingThread() {
         @Override
-        public void run() {
+        public void work() {
           assertTrue(readLock.tryLock());
           readLock.release();
         }
       };
       competingReadThread.start();
       competingReadThread.join();
-      Thread competingWriteThread = new Thread() {
+      SubjectInheritingThread competingWriteThread = new SubjectInheritingThread() {
         @Override
-        public void run() {
+        public void work() {
           assertFalse(writeLock.tryLock());
         }
       };

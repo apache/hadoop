@@ -203,7 +203,10 @@
 
 --------------------------------------------------------------------------------
 This project bundles some components that are also licensed under the Apache
-License Version 2.0:
+License Version 2.0.
+Note: some of the listed artifacts may not be included in a given build of the binary
+distribution; it depends on the build options. This list intends
+to be inclusive of all which may be included:
 
 
 hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static/nvd3-1.8.5.* (css and js files)
@@ -211,10 +214,12 @@ hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/data
 hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/checker/TimeoutFuture.java
 
 ch.qos.reload4j:reload4j:1.2.22
+com.aliyun:aliyun-java-core:0.2.11-beta
 com.aliyun:aliyun-java-sdk-core:4.5.10
 com.aliyun:aliyun-java-sdk-kms:2.11.0
 com.aliyun:aliyun-java-sdk-ram:3.1.0
 com.aliyun:aliyun-java-sdk-sts:3.0.0
+com.aliyun:java-trace-api:0.2.11-beta
 com.aliyun.oss:aliyun-sdk-oss:3.13.2
 com.cedarsoftware:java-util:1.9.0
 com.cedarsoftware:json-io:2.5.1
@@ -247,19 +252,17 @@ com.google.cloud:google-cloud-core-http:2.54.2
 com.google.cloud:google-cloud-core:2.54.2
 com.google.cloud:google-cloud-monitoring:3.52.0
 com.google.cloud.opentelemetry:exporter-metrics:0.33.0
+com.google.errorprone:error_prone_annotations:2.32.0
 com.google.errorprone:error_prone_annotations:2.36.0
 com.google:guice:5.1.0
 com.google:guice-servlet:5.1.0
 com.google.api.grpc:proto-google-common-protos:1.0.0
 com.google.code.gson:2.9.0
-com.google.errorprone:error_prone_annotations:2.5.1
 com.google.j2objc:j2objc-annotations:1.3
 com.google.json-simple:json-simple:1.1.1
 com.google.guava:failureaccess:1.0
 com.google.guava:failureaccess:1.0.2
-com.google.guava:guava:20.0
-com.google.guava:guava:32.0.1-jre
-com.google.guava:guava:33.1.0-jre
+com.google.guava:guava:33.4.8-jre
 com.google.guava:listenablefuture:9999.0-empty-to-avoid-conflict-with-guava
 com.google.http-client:google-http-client-apache-v2:1.46.3
 com.google.http-client:google-http-client-appengine:1.46.3
@@ -268,8 +271,13 @@ com.google.http-client:google-http-client-jackson2:1.46.3
 com.google.http-client:google-http-client:1.46.3
 com.google.j2objc:j2objc-annotations:3.0.0
 com.google.oauth-client:google-oauth-client:1.37.0
-com.microsoft.azure:azure-storage:7.0.0
+com.huaweicloud:esdk-obs-java:3.20.4.2
+com.jamesmurty.utils:java-xmlbuilder-1.2.jar
+com.microsoft.azure:azure-storage:7.0.1
 com.nimbusds:nimbus-jose-jwt:10.4
+com.squareup.okhttp3:okhttp:jar:3.14.2
+com.squareup.okio:okio:jar:1.17.2
+com.volcengine:ve-tos-java-sdk-hadoop:2.8.9.jar
 com.zaxxer:HikariCP:4.0.3
 commons-beanutils:commons-beanutils:1.9.4
 commons-cli:commons-cli:1.9.0
@@ -346,6 +354,9 @@ io.opentelemetry:opentelemetry-sdk-logs:1.47.0
 io.opentelemetry:opentelemetry-sdk-metrics:1.47.0
 io.opentelemetry:opentelemetry-sdk-trace:1.47.0
 io.opentelemetry.semconv:opentelemetry-semconv:1.29.0-alpha
+io.opentracing:opentracing-api:0.33.0.jar
+io.opentracing:opentracing-noop:0.33.0.jar
+io.opentracing:opentracing-util:0.33.0.jar
 io.reactivex:rxjava:1.3.8
 io.reactivex:rxjava-string:1.1.1
 io.reactivex:rxnetty:0.4.20
@@ -373,6 +384,8 @@ org.apache.htrace:htrace-core:3.1.0-incubating
 org.apache.htrace:htrace-core4:4.1.0-incubating
 org.apache.httpcomponents:httpclient:4.5.13
 org.apache.httpcomponents:httpcore:4.4.13
+org.apache.httpcomponents.client5:httpclient5:5.5
+org.apache.httpcomponents.core5:httpcore5:5.5
 org.apache.kafka:kafka-clients:3.9.0
 org.apache.kerby:kerb-admin:2.0.3
 org.apache.kerby:kerb-client:2.0.3
@@ -420,7 +433,7 @@ org.yaml:snakeyaml:2.0
 org.wildfly.openssl:wildfly-openssl:2.2.5.Final
 ro.isdc.wro4j:wro4j-maven-plugin:1.8.0
 software.amazon.awssdk:bundle:2.35.4
-software.amazon.s3.analyticsaccelerator:analyticsaccelerator-s3:1.3.0
+software.amazon.s3.analyticsaccelerator:analyticsaccelerator-s3:1.3.1
 net.jodah:failsafe:2.4.4
 
 --------------------------------------------------------------------------------
@@ -496,6 +509,7 @@ hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-nodemanage
 bootstrap v3.3.6
 broccoli-asset-rev v2.4.2
 broccoli-funnel v1.0.1
+cos_api-bundle-5.6.19.jar
 datatables v1.11.5
 em-helpers v0.5.13
 em-table v0.1.6
@@ -541,7 +555,7 @@ com.microsoft.azure:azure-cosmosdb:2.4.5
 com.microsoft.azure:azure-cosmosdb-commons:2.4.5
 com.microsoft.azure:azure-cosmosdb-direct:2.4.5
 com.microsoft.azure:azure-cosmosdb-gateway:2.4.5
-com.microsoft.azure:azure-data-lake-store-sdk:2.3.3
+com.microsoft.azure:azure-data-lake-store-sdk:2.3.9
 com.microsoft.azure:azure-keyvault-core:1.0.0
 com.microsoft.sqlserver:mssql-jdbc:6.2.1.jre7
 org.bouncycastle:bcpkix-jdk18on:1.82
@@ -552,6 +566,7 @@ org.codehaus.mojo:animal-sniffer-annotations:1.24
 org.jruby.jcodings:jcodings:1.0.13
 org.jruby.joni:joni:2.1.2
 org.ojalgo:ojalgo:43.0
+org.reactivestreams:reactive-streams:1.0.3.jar
 org.slf4j:jul-to-slf4j:1.7.36
 org.slf4j:slf4j-api:1.7.36
 org.slf4j:slf4j-reload4j:1.7.36
@@ -622,3 +637,8 @@ Public Domain
 -------------
 
 aopalliance:aopalliance:1.0
+
+Dom4J license
+-------------
+
+org.dom4j:dom4j:2.1.4.jar

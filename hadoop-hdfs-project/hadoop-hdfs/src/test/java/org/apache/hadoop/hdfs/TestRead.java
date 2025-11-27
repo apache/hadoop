@@ -34,6 +34,7 @@ import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.log4j.Level;
 import org.junit.jupiter.api.Assertions;
 
@@ -159,7 +160,7 @@ public class TestRead {
 
       final FSDataInputStream in = fs.open(file);
       AtomicBoolean readInterrupted = new AtomicBoolean(false);
-      final Thread reader = new Thread(new Runnable() {
+      final Thread reader = new SubjectInheritingThread(new Runnable() {
         @Override
         public void run() {
           try {

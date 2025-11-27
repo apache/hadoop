@@ -20,6 +20,7 @@ package org.apache.hadoop.service.launcher.testservices;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.service.AbstractService;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -58,7 +59,7 @@ public class RunningService extends AbstractService implements Runnable {
 
   @Override
   protected void serviceStart() throws Exception {
-    Thread thread = new Thread(this);
+    Thread thread = new SubjectInheritingThread(this);
     thread.setName(getName());
     thread.start();
   }

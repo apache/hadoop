@@ -35,6 +35,7 @@ import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -126,7 +127,7 @@ public class TestDSTimelineV20 extends DistributedShellBaseTest {
     try {
       setAndGetDSClient(new Configuration(getYarnClusterConfiguration()));
       getDSClient().init(args);
-      Thread dsClientRunner = new Thread(() -> {
+      Thread dsClientRunner = new SubjectInheritingThread(() -> {
         try {
           getDSClient().run();
         } catch (Exception e) {
@@ -220,7 +221,7 @@ public class TestDSTimelineV20 extends DistributedShellBaseTest {
     assertTrue(getDSClient().init(args));
     LOG.info("Running DS Client");
     final AtomicBoolean result = new AtomicBoolean(false);
-    Thread dsClientRunner = new Thread(() -> {
+    Thread dsClientRunner = new SubjectInheritingThread(() -> {
       try {
         result.set(getDSClient().run());
       } catch (Exception e) {

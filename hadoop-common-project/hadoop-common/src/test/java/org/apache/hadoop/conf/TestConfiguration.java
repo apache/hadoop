@@ -81,6 +81,7 @@ import org.apache.hadoop.security.alias.CredentialProvider;
 import org.apache.hadoop.security.alias.CredentialProviderFactory;
 import org.apache.hadoop.security.alias.LocalJavaKeyStoreProvider;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 
 import static org.apache.hadoop.util.PlatformName.IBM_JAVA;
 
@@ -2478,7 +2479,7 @@ public class TestConfiguration {
     Configuration conf = new Configuration();
     conf.addResource(fileResource);
 
-    class ConfigModifyThread extends Thread {
+    class ConfigModifyThread extends SubjectInheritingThread {
       final private Configuration config;
       final private String prefix;
 
@@ -2488,7 +2489,7 @@ public class TestConfiguration {
       }
 
       @Override
-      public void run() {
+      public void work() {
         for (int i = 0; i < 10000; i++) {
           config.set("some.config.value-" + prefix + i, "value");
         }
@@ -2740,7 +2741,7 @@ public class TestConfiguration {
   @Test
   public void testConcurrentModificationDuringIteration() throws InterruptedException {
     Configuration configuration = new Configuration();
-    new Thread(() -> {
+    new SubjectInheritingThread(() -> {
       while (true) {
         configuration.set(String.valueOf(Math.random()), String.valueOf(Math.random()));
       }
@@ -2748,7 +2749,7 @@ public class TestConfiguration {
 
     AtomicBoolean exceptionOccurred = new AtomicBoolean(false);
 
-    new Thread(() -> {
+    new SubjectInheritingThread(() -> {
       while (true) {
         try {
           configuration.iterator();

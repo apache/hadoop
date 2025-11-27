@@ -90,6 +90,7 @@ import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.ipc.RetryCache.CacheEntry;
 import org.apache.hadoop.util.LightWeightCache;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -1330,9 +1331,9 @@ public class TestRetryCacheWithHA {
     // set DummyRetryInvocationHandler#block to true
     DummyRetryInvocationHandler.block.set(true);
     
-    new Thread() {
+    new SubjectInheritingThread() {
       @Override
-      public void run() {
+      public void work() {
         try {
           op.invoke();
           Object result = op.getResult();

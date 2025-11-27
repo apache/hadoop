@@ -42,6 +42,7 @@ import org.apache.hadoop.hdfs.server.protocol.SlowDiskReports;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -386,9 +387,9 @@ public class TestFsVolumeList {
     ExecutorService pool = Executors.newFixedThreadPool(10);
     List<Future<?>> futureList = new ArrayList<>();
     for (int i = 0; i < 100; i++) {
-      Thread thread = new Thread() {
+      SubjectInheritingThread thread = new SubjectInheritingThread() {
         @Override
-        public void run() {
+        public void work() {
           for (int j = 0; j < 10; j++) {
             try {
               DFSTestUtil.createFile(fs, new Path("File_" + getName() + j), 10,

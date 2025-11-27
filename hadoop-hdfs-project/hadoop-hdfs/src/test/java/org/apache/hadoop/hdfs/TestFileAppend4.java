@@ -47,6 +47,7 @@ import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.LeaseExpiredException;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -165,9 +166,9 @@ public class TestFileAppend4 {
       // write 1/2 block
       AppendTestUtil.write(stm, 0, 4096);
       final AtomicReference<Throwable> err = new AtomicReference<Throwable>();
-      Thread t = new Thread() { 
+      SubjectInheritingThread t = new SubjectInheritingThread() {
           @Override
-          public void run() {
+          public void work() {
             try {
               stm.close();
             } catch (Throwable t) {
@@ -237,9 +238,9 @@ public class TestFileAppend4 {
       // write 1/2 block
       AppendTestUtil.write(stm, 0, 4096);
       final AtomicReference<Throwable> err = new AtomicReference<Throwable>();
-      Thread t = new Thread() { 
+      SubjectInheritingThread t = new SubjectInheritingThread() {
           @Override
-          public void run() {
+          public void work() {
             try {
               stm.close();
             } catch (Throwable t) {

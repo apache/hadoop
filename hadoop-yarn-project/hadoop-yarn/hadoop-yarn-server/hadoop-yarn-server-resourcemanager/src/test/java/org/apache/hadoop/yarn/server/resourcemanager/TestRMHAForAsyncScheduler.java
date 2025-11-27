@@ -236,14 +236,16 @@ public class TestRMHAForAsyncScheduler extends RMHATestBase {
     Thread resourceCommitterService = null;
     for (Thread thread : threads) {
       StackTraceElement[] stackTrace = thread.getStackTrace();
-      if(stackTrace.length>0){
-        String stackBottom = stackTrace[stackTrace.length-1].toString();
-        if(stackBottom.contains("AsyncScheduleThread.run")){
-          numAsyncScheduleThread++;
-          asyncScheduleThread = thread;
-        }else if(stackBottom.contains("ResourceCommitterService.run")){
-          numResourceCommitterService++;
-          resourceCommitterService = thread;
+      if (stackTrace.length > 0) {
+        for (StackTraceElement elem : stackTrace) {
+          String line = elem.toString();
+          if (line.contains("AsyncScheduleThread.work")) {
+            numAsyncScheduleThread++;
+            asyncScheduleThread = thread;
+          } else if (line.contains("ResourceCommitterService.work")) {
+            numResourceCommitterService++;
+            resourceCommitterService = thread;
+          }
         }
       }
     }

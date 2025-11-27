@@ -38,6 +38,7 @@ import org.apache.hadoop.hdfs.util.RwLockMode;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.mockito.invocation.InvocationOnMock;
@@ -136,7 +137,7 @@ public class TestSecurityTokenEditLog {
       Thread threadId[] = new Thread[NUM_THREADS];
       for (int i = 0; i < NUM_THREADS; i++) {
         Transactions trans = new Transactions(namesystem, NUM_TRANSACTIONS);
-        threadId[i] = new Thread(trans, "TransactionThread-" + i);
+        threadId[i] = new SubjectInheritingThread(trans, "TransactionThread-" + i);
         threadId[i].start();
       }
   
