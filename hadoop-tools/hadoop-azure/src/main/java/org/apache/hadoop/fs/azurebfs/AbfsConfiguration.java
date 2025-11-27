@@ -566,12 +566,12 @@ public class AbfsConfiguration{
 
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey =
       FS_AZURE_WRITE_HIGH_MEMORY_USAGE_THRESHOLD_PERCENT,
-      DefaultValue = DEFAULT_WRITE_HIGH_MEMORY_USAGE_THRESHOLD_PERCENTAGE)
+      DefaultValue = DEFAULT_WRITE_HIGH_MEMORY_USAGE_THRESHOLD_PERCENT)
   private int writeHighMemoryUsageThresholdPercent;
 
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey =
       FS_AZURE_WRITE_LOW_MEMORY_USAGE_THRESHOLD_PERCENT,
-      DefaultValue = DEFAULT_WRITE_LOW_MEMORY_USAGE_THRESHOLD_PERCENTAGE)
+      DefaultValue = DEFAULT_WRITE_LOW_MEMORY_USAGE_THRESHOLD_PERCENT)
   private int writeLowMemoryUsageThresholdPercent;
 
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey =

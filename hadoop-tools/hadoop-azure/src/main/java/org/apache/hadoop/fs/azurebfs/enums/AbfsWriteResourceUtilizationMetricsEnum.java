@@ -83,6 +83,7 @@ public enum AbfsWriteResourceUtilizationMetricsEnum implements
    *
    * @return the metric name.
    */
+  @Override
   public String getName() {
     return name;
   }
@@ -92,6 +93,7 @@ public enum AbfsWriteResourceUtilizationMetricsEnum implements
    *
    * @return the metric's statistic type.
    */
+  @Override
   public StatisticTypeEnum getStatisticType() {
     return statisticType;
   }
