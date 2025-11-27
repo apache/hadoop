@@ -89,6 +89,7 @@ import org.apache.hadoop.security.TestRefreshUserMappings;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.DefaultImpersonationProvider;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.ToolRunner;
@@ -1236,8 +1237,7 @@ public class TestDFSAdmin {
 
   @Test
   @Order(1)
-  public void testAllDatanodesReconfig()
-      throws IOException, InterruptedException, TimeoutException {
+  public void testAllDatanodesReconfig() throws Exception {
     ReconfigurationUtil reconfigurationUtil = mock(ReconfigurationUtil.class);
     cluster.getDataNodes().get(0).setReconfigurationUtil(reconfigurationUtil);
     cluster.getDataNodes().get(1).setReconfigurationUtil(reconfigurationUtil);
@@ -1251,6 +1251,18 @@ public class TestDFSAdmin {
 
     int result = admin.startReconfiguration("datanode", "livenodes");
     assertThat(result).isEqualTo(0);
+    LambdaTestUtils.await(10000, 100, () -> {
+      List<String> outs = new ArrayList<>();
+      List<String> errs = new ArrayList<>();
+      try {
+        getReconfigurationStatus("datanode", "livenodes", outs, errs);
+      } catch (IOException | InterruptedException e) {
+        LOG.error(String.format(
+            "call getReconfigurationStatus on datanode[livenodes] failed."), e);
+      }
+      return !outs.isEmpty() && outs.get(0).contains("finished");
+    });
+
     final List<String> outsForStartReconf = new ArrayList<>();
     final List<String> errsForStartReconf = new ArrayList<>();
     reconfigurationOutErrFormatter("startReconfiguration", "datanode",
