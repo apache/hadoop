@@ -26,7 +26,6 @@ import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.List;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -39,15 +38,12 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys;
-import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultEntrySchema;
 import org.apache.hadoop.fs.azurebfs.extensions.MockInvalidSASTokenProvider;
 import org.apache.hadoop.fs.azurebfs.extensions.MockUserBoundSASTokenProvider;
 import org.apache.hadoop.fs.azurebfs.extensions.SASTokenProvider;
 import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
 import org.apache.hadoop.fs.azurebfs.oauth2.AzureADToken;
-import org.apache.hadoop.fs.azurebfs.services.AbfsBlobClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
-import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.fs.permission.AclEntry;
 
@@ -61,11 +57,8 @@ import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_A
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_TEST_APP_SERVICE_PRINCIPAL_TENANT_ID;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_TEST_END_USER_OBJECT_ID;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_TEST_END_USER_TENANT_ID;
-import static org.apache.hadoop.fs.contract.ContractTestUtils.assertPathDoesNotExist;
-import static org.apache.hadoop.fs.contract.ContractTestUtils.assertPathExists;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.assertj.core.api.Assumptions.assumeThat;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
  * Integration tests for AzureBlobFileSystem using User-Bound SAS and OAuth.
@@ -86,6 +79,8 @@ public class ITestAzureBlobFileSystemUserBoundSAS
    */
   protected ITestAzureBlobFileSystemUserBoundSAS() throws Exception {
     assumeThat(this.getAuthType()).isEqualTo(AuthType.SharedKey);
+    assumeThat(this.getConfiguration().getIsNamespaceEnabledAccount().toBoolean()).
+        isEqualTo(true);
   }
 
   /**
@@ -97,8 +92,6 @@ public class ITestAzureBlobFileSystemUserBoundSAS
   public void setup() throws Exception {
     AbfsConfiguration abfsConfig = this.getConfiguration();
     String accountName = getAccountName();
-
-    assumeHnsEnabled();
 
     createFilesystemForUserBoundSASTests();
     super.setup();

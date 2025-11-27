@@ -133,6 +133,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.InternalConstants.CAPABILI
 import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_CREATE_ON_ROOT;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_INVALID_ABFS_STATE;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.UNAUTHORIZED_SAS;
+import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.UNAUTHORIZED_USER_BOUND_SAS;
 import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.logIOStatisticsAtLevel;
 import static org.apache.hadoop.util.functional.RemoteIterators.filteringRemoteIterator;
@@ -282,8 +283,7 @@ public class AzureBlobFileSystem extends FileSystem
           == AuthType.UserboundSASWithOAuth && // Auth type is User-bound SAS
           !tryGetIsNamespaceEnabled(
               new TracingContext(initFSTracingContext))) { // Account is FNS
-        throw new InvalidConfigurationValueException(FS_AZURE_SAS_FIXED_TOKEN,
-            UNAUTHORIZED_SAS);
+        throw new InvalidConfigurationValueException(UNAUTHORIZED_USER_BOUND_SAS);
       }
     } catch (InvalidConfigurationValueException ex) {
       LOG.error("User-bound SAS not supported for FNS Accounts", ex);
