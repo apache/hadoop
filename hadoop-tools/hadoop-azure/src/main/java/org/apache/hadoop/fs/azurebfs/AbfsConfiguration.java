@@ -1242,9 +1242,7 @@ public class AbfsConfiguration{
   public boolean getCreateRemoteFileSystemDuringInitialization() {
     // we do not support creating the filesystem when AuthType is SAS or UserboundSASWithOAuth
     return this.createRemoteFileSystemDuringInitialization
-        && this.getAuthType(this.accountName) != AuthType.SAS
-        && this.getAuthType(this.accountName)
-        != AuthType.UserboundSASWithOAuth;
+        && !(validateForSASType(this.getAuthType(this.accountName)));
   }
 
   public boolean getSkipUserGroupMetadataDuringInitialization() {
@@ -1413,6 +1411,11 @@ public class AbfsConfiguration{
    */
   public boolean shouldTrackLatency() {
     return this.trackLatency;
+  }
+
+  public boolean validateForSASType(AuthType authType){
+    return authType == AuthType.SAS
+        || authType == AuthType.UserboundSASWithOAuth;
   }
 
   public AccessTokenProvider getTokenProvider() throws TokenAccessProviderException {

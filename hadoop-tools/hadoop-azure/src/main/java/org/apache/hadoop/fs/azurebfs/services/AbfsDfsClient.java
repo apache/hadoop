@@ -1762,7 +1762,7 @@ public class AbfsDfsClient extends AbfsClient {
     String encodedRenameSource = urlEncode(
         FORWARD_SLASH + this.getFileSystem() + source);
 
-    if (getAuthType() == AuthType.SAS || getAuthType() == AuthType.UserboundSASWithOAuth) {
+    if (getAbfsConfiguration().validateForSASType(getAuthType())) {
       final AbfsUriQueryBuilder srcQueryBuilder = new AbfsUriQueryBuilder();
       appendSASTokenToQuery(source,
           SASTokenProvider.RENAME_SOURCE_OPERATION, srcQueryBuilder);

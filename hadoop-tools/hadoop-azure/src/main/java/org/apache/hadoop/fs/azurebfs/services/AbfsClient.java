@@ -1182,7 +1182,7 @@ public abstract class AbfsClient implements Closeable {
                                          String cachedSasToken)
       throws SASTokenProviderException {
     String sasToken = null;
-    if (this.authType == AuthType.SAS || this.authType == AuthType.UserboundSASWithOAuth) {
+    if (getAbfsConfiguration().validateForSASType(this.authType)) {
       try {
         LOG.trace("Fetch SAS token for {} on {}", operation, path);
         if (cachedSasToken == null) {
