@@ -74,8 +74,8 @@ public class ITestAbfsTailLatencyTracker extends AbstractAbfsIntegrationTest {
       Path testPath = new Path("/testFile");
       fs.create(testPath).close();
       AbfsClient client = fs.getAbfsStore().getClient();
-      AbfsRestOperation op = client.getAclStatus("/testFile",
-          getTestTracingContext(fs, false));
+      AbfsRestOperation op = client.getPathStatus("/testFile", false,
+          getTestTracingContext(fs, false), null);
       assertThat(op.isTailLatencyTimeoutEnabled()).isEqualTo(expected);
     }
   }
