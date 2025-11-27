@@ -271,6 +271,30 @@ public class AzureBlobFileSystem extends FileSystem
       throw new InvalidConfigurationValueException(FS_AZURE_ACCOUNT_IS_HNS_ENABLED, ex);
     }
 
+    /**
+     * Validates that User-bound SAS with OAuth is not used for FNS (non-hierarchical namespace) accounts.
+     * Throws an InvalidConfigurationValueException if this configuration is detected.
+     *
+     * @throws InvalidConfigurationValueException if User-bound SAS with OAuth is configured for FNS accounts
+     */
+    try {
+      if (abfsConfiguration.getAuthType(abfsConfiguration.getAccountName())
+          == AuthType.UserboundSASWithOAuth && // Auth type is User-bound SAS
+          !tryGetIsNamespaceEnabled(
+              new TracingContext(initFSTracingContext))) { // Account is FNS
+        throw new InvalidConfigurationValueException(FS_AZURE_SAS_FIXED_TOKEN,
+            UNAUTHORIZED_SAS);
+      }
+    } catch (InvalidConfigurationValueException ex) {
+      LOG.error("User-bound SAS not supported for FNS Accounts", ex);
+      throw ex;
+    } catch (AzureBlobFileSystemException ex) {
+      LOG.error("Failed to determine account type for auth type validation",
+          ex);
+      throw new InvalidConfigurationValueException(
+          FS_AZURE_ACCOUNT_IS_HNS_ENABLED, ex);
+    }
+
     /*
      * Non-hierarchical-namespace account can not have a customer-provided-key(CPK).
      * Fail initialization of filesystem if the configs are provided. CPK is of

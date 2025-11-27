@@ -303,9 +303,10 @@ driven by them.
 3. Deployed in-Azure with the Azure VMs providing OAuth 2.0 tokens to the application, "Managed Instance".
 4. Using Shared Access Signature (SAS) tokens provided by a custom implementation of the SASTokenProvider interface.
 5. By directly configuring a fixed Shared Access Signature (SAS) token in the account configuration settings files.
-6. Using user-bound SAS auth type, which is requires OAuth 2.0 setup (point 2 above) and SAS setup (point 4 above)
+6. Using user-bound SAS auth type, which requires both OAuth 2.0 setup (point 2 above) and SAS setup (point 4 above)
 
-Note: SAS Based Authentication should be used only with HNS Enabled accounts.
+Note: While user-bound SAS Authentication is **only supported** with HNS Enabled accounts, we **recommend** using HNS Enabled
+accounts with SAS authentication as well.
 
 What can be changed is what secrets/credentials are used to authenticate the caller.
 
@@ -798,7 +799,7 @@ requests. User can specify them as fixed SAS Token to be used across all the req
     - fs.azure.sas.fixed.token.ACCOUNT_NAME
     - fs.azure.sas.fixed.token
 
-### User-bound user delegation SAS
+### User-bound SAS
 - **Description**: The user-bound SAS auth type allows to track the usage of the SAS token generated- something
  that was not possible in user-delegation SAS authentication type. Reach out to us at 'askabfs@microsoft.com' for more information.
  To use this authentication type, both custom SAS token provider class (that implements org.apache.hadoop.fs.azurebfs.extensions.SASTokenProvider) as
@@ -811,6 +812,7 @@ requests. User can specify them as fixed SAS Token to be used across all the req
         - Workload Identity
 
       Refer to respective OAuth 2.0 sections above to correctly chose the OAuth provider type
+    - NOTE: User-bound SAS Authentication is **only supported** with HNS Enabled accounts.
 
 - **Configuration**: To use this method with ABFS Driver, specify the following properties in your `core-site.xml` file:
 

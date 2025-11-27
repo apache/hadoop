@@ -61,8 +61,11 @@ import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_A
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_TEST_APP_SERVICE_PRINCIPAL_TENANT_ID;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_TEST_END_USER_OBJECT_ID;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_TEST_END_USER_TENANT_ID;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.assertPathDoesNotExist;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.assertPathExists;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.assertj.core.api.Assumptions.assumeThat;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
  * Integration tests for AzureBlobFileSystem using User-Bound SAS and OAuth.
@@ -95,12 +98,7 @@ public class ITestAzureBlobFileSystemUserBoundSAS
     AbfsConfiguration abfsConfig = this.getConfiguration();
     String accountName = getAccountName();
 
-    Boolean isHNSEnabled = abfsConfig.getBoolean(
-        TestConfigurationKeys.FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT, false);
-
-    if (!isHNSEnabled) {
-      assumeBlobServiceType();
-    }
+    assumeHnsEnabled();
 
     createFilesystemForUserBoundSASTests();
     super.setup();
@@ -224,56 +222,11 @@ public class ITestAzureBlobFileSystemUserBoundSAS
     assertFalse(sasToken.isEmpty(), "SAS token must not be empty");
   }
 
-  /*
-   * Tests listing and deleting files under an implicit directory
-   */
-  @Test
-  public void testOperationsForImplicitPaths() throws Exception {
-    AzureBlobFileSystem fs = createTestFileSystem();
-    assumeBlobServiceType();
-
-    AbfsBlobClient client = (AbfsBlobClient) getFileSystem().getAbfsClient();
-
-    Path file1 = new Path("/testDir/dir1/file1");
-    Path file2 = new Path("/testDir/dir1/file2");
-    Path implicitDir = file1.getParent();
-
-    createAzCopyFolder(implicitDir);
-    createAzCopyFile(file1);
-    createAzCopyFile(file2);
-
-    AbfsRestOperation listOp = client.listPath(
-        implicitDir.toString(),
-        false,
-        2,
-        null,
-        getTestTracingContext(fs, false),
-        null).getOp();
-
-    List<? extends ListResultEntrySchema> listedEntries =
-        listOp.getResult().getListResultSchema().paths();
-
-    assertNotNull(listedEntries, "List result should not be null");
-    assertEquals(2, listedEntries.size(),
-        "Expected exactly two files under implicit directory");
-
-    client.deletePath(
-        implicitDir.toString(),
-        true,
-        "",
-        getTestTracingContext(fs, false));
-
-    assertFalse(fs.exists(file1), "File1 should not exist after deletion");
-    assertFalse(fs.exists(file2), "File2 should not exist after deletion");
-    assertFalse(fs.exists(implicitDir), "Implicit directory should be deleted");
-  }
-
-
-  /**
-   * Performs and validates basic file and directory operations.
-   * Operations tested: create, open, write, read, list, mkdir, existence check, ACL (if HNS), and delete.
-   * @throws Exception if any operation fails
-   */
+/**
+ * Performs and validates basic file and directory operations, including rename.
+ * Operations tested: create, open, write, read, list, mkdir, existence check, ACL (if HNS), rename, and delete.
+ * @throws Exception if any operation fails
+ */
   @Test
   public void testBasicOperations() throws Exception {
     AzureBlobFileSystem testFs = createTestFileSystem();
@@ -305,7 +258,7 @@ public class ITestAzureBlobFileSystemUserBoundSAS
     // 7. Check file existence
     assertTrue(testFs.exists(testPath));
 
-    // 8. Create directory and a file undere it
+    // 8. Create directory and a file under it
     Path dirPath = new Path("/testDirAcl");
     Path filePath = new Path(dirPath, "fileInDir.txt");
 
@@ -327,11 +280,17 @@ public class ITestAzureBlobFileSystemUserBoundSAS
       assertNotNull(returnedAcl);
     }
 
-    // 10. Delete file (non-recursive)
-    assertTrue(testFs.delete(testPath, false));
+    // 10. Rename file
+    Path renamedPath = new Path("/testRenamed.txt");
+    assertTrue(testFs.rename(testPath, renamedPath));
     assertFalse(testFs.exists(testPath));
+    assertTrue(testFs.exists(renamedPath));
 
-    // 11. Delete directory (recursive)
+    // 11. Delete file (non-recursive)
+    assertTrue(testFs.delete(renamedPath, false));
+    assertFalse(testFs.exists(renamedPath));
+
+    // 12. Delete directory (recursive)
     assertTrue(testFs.delete(dirPath, true));
     assertFalse(testFs.exists(dirPath));
     assertFalse(testFs.exists(filePath));
