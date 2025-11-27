@@ -54,6 +54,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.AuxServices;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.records.AuxServiceRecord;
 import org.apache.hadoop.yarn.server.nodemanager.health.NodeHealthCheckerService;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.WebServer.NMWebApp;
+import org.apache.hadoop.yarn.server.nodemanager.webapp.jsonprovider.NMJsonProvider;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
@@ -94,15 +95,13 @@ public class TestNMWebServicesAuxServices extends JerseyTestBase {
 
   @Override
   protected Application configure() {
-    MOXyJsonProvider moxyJsonProvider = new MOXyJsonProvider();
-    moxyJsonProvider.setIncludeRoot(true);
-    moxyJsonProvider.setMarshalEmptyCollections(false);
+    NMJsonProvider nmJsonProvider = new NMJsonProvider();
 
     ResourceConfig config = new ResourceConfig();
     config.register(new JerseyBinder());
     config.register(NMWebServices.class);
     config.register(GenericExceptionHandler.class);
-    config.register(moxyJsonProvider);
+    config.register(nmJsonProvider);
     config.register(JAXBContextResolver.class);
     forceSet(TestProperties.CONTAINER_PORT, "9999");
     return config;
