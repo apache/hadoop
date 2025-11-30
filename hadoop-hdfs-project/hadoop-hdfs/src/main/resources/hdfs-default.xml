@@ -1790,7 +1790,7 @@
 
         This has the benefit of ensuring that data is written to disk
         immediately when a block is closed, avoiding the data being held
-        in the operating system cache. This can help data loss in the event
+        solely in the operating system cache. This can help data loss in the event
         of a malfunction such as a power failure.
   </description>
 </property>
