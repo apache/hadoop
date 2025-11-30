@@ -1785,7 +1785,8 @@
   <description>
         If this property is enabled, the datanode will instruct the
         operating system to sync data block files contents to disk when the
-        blockfile is closed.
+        blockfile is closed. This can help data loss in the event of a malfunction such as a power
+        failure.
 
         This has the benefit of ensuring that data is written to disk
         immediately when a block is closed, avoiding the data being held
