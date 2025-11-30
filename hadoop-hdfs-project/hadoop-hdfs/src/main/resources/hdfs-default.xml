@@ -1783,7 +1783,7 @@
   <name>dfs.datanode.synconclose</name>
   <value>false</value>
   <description>
-        If this configuration is enabled, the datanode will instruct the
+        If this property is enabled, the datanode will instruct the
         operating system to sync data block files contents to disk when the
         blockfile is closed.
 
