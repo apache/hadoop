@@ -624,7 +624,7 @@ public final class S3ATestUtils {
 
   public static boolean isAnalyticsAcceleratorEnabled(final Configuration conf) {
     return conf.get(INPUT_STREAM_TYPE,
-        INPUT_STREAM_TYPE_CLASSIC).equals(INPUT_STREAM_TYPE_ANALYTICS);
+        INPUT_STREAM_TYPE_ANALYTICS).equals(INPUT_STREAM_TYPE_ANALYTICS);
   }
 
   /**
