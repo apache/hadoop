@@ -18,39 +18,11 @@
 
 
 import type { QueueInfo, SchedulerInfo } from '~/types';
+import { mapQueueTree } from '~/utils/treeUtils';
 
 export interface QueueOption {
   value: string;
   label: string;
-}
-
-/**
- * Generic function to recursively collect queues from the tree
- * @param queue - The queue to process
- * @param result - Array to collect results
- * @param filter - Optional filter function to determine which queues to include
- */
-function collectQueues(
-  queue: QueueInfo,
-  result: QueueOption[],
-  filter?: (queue: QueueInfo) => boolean,
-): void {
-  // Add this queue if it passes the filter (or no filter is provided)
-  if (!filter || filter(queue)) {
-    result.push({
-      value: queue.queuePath,
-      label: queue.queuePath,
-    });
-  }
-
-  // Recursively process children if they exist
-  if (queue.queues?.queue) {
-    const children = Array.isArray(queue.queues.queue) ? queue.queues.queue : [queue.queues.queue];
-
-    for (const child of children) {
-      collectQueues(child, result, filter);
-    }
-  }
 }
 
 /**
@@ -62,6 +34,14 @@ function isParentQueue(queue: QueueInfo): boolean {
     (Array.isArray(queue.queues.queue) ? queue.queues.queue.length > 0 : true)
   );
 }
+
+/**
+ * Map a QueueInfo to a QueueOption
+ */
+const toQueueOption = (queue: QueueInfo): QueueOption => ({
+  value: queue.queuePath,
+  label: queue.queuePath,
+});
 
 /**
  * Generic function to get queues from scheduler data
@@ -76,22 +56,19 @@ function getQueues(
     return [];
   }
 
-  const result: QueueOption[] = [];
+  const result: QueueOption[] = [
+    // Add root queue
+    { value: 'root', label: 'root' },
+  ];
 
-  // Add root queue
-  result.push({
-    value: 'root',
-    label: 'root',
-  });
-
-  // Process child queues
+  // Process child queues using shared utility
   if (schedulerData.queues?.queue) {
     const children = Array.isArray(schedulerData.queues.queue)
       ? schedulerData.queues.queue
       : [schedulerData.queues.queue];
 
     for (const child of children) {
-      collectQueues(child, result, filter);
+      result.push(...mapQueueTree(child, toQueueOption, filter));
     }
   }
 

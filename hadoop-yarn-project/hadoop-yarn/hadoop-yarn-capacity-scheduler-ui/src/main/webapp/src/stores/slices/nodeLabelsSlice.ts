@@ -22,22 +22,15 @@
  */
 
 import type { StateCreator } from 'zustand';
-import type {
-  NodeLabel,
-  NodeLabelInfoItem,
-  NodeLabelsResponse,
-  NodeToLabelMapping,
-  NodeToLabelsMapEntry,
-  NodeToLabelsResponse,
-} from '~/types';
 import {
   createDetailedErrorMessage,
   createStoreError,
   ERROR_CODES,
   isNetworkError,
 } from '~/lib/errors';
+import { createReadOnlyBlockedError } from '~/lib/errors/readOnlyGuard';
+import { normalizeNodeLabels, normalizeNodeToLabels } from '~/lib/normalizers/nodeDataNormalizers';
 import { validateLabelRemoval } from '~/features/node-labels/utils/labelValidation';
-import { READ_ONLY_PROPERTY } from '~/config';
 import type { NodeLabelsSlice, SchedulerStore } from './types';
 
 export const createNodeLabelsSlice: StateCreator<
@@ -60,7 +53,7 @@ export const createNodeLabelsSlice: StateCreator<
   addNodeLabel: async (name, exclusivity) => {
     // Block adding node labels in read-only mode
     if (get().isReadOnly) {
-      const errorMessage = `Cannot add node labels in read-only mode. Set ${READ_ONLY_PROPERTY}=false in YARN to enable editing.`;
+      const { errorMessage, error } = createReadOnlyBlockedError('add node labels');
 
       set((state) => {
         state.error = errorMessage;
@@ -68,7 +61,7 @@ export const createNodeLabelsSlice: StateCreator<
         state.isLoading = false;
       });
 
-      throw createStoreError(ERROR_CODES.MUTATION_BLOCKED, errorMessage);
+      throw error;
     }
 
     set((state) => {
@@ -113,7 +106,7 @@ export const createNodeLabelsSlice: StateCreator<
   removeNodeLabel: async (name) => {
     // Block removing node labels in read-only mode
     if (get().isReadOnly) {
-      const errorMessage = `Cannot remove node labels in read-only mode. Set ${READ_ONLY_PROPERTY}=false in YARN to enable editing.`;
+      const { errorMessage, error } = createReadOnlyBlockedError('remove node labels');
 
       set((state) => {
         state.error = errorMessage;
@@ -121,7 +114,7 @@ export const createNodeLabelsSlice: StateCreator<
         state.isLoading = false;
       });
 
-      throw createStoreError(ERROR_CODES.MUTATION_BLOCKED, errorMessage);
+      throw error;
     }
 
     // Validate that the label can be safely removed
@@ -196,7 +189,7 @@ export const createNodeLabelsSlice: StateCreator<
   assignNodeToLabel: async (nodeId, labelName) => {
     // Block assigning nodes to labels in read-only mode
     if (get().isReadOnly) {
-      const errorMessage = `Cannot assign nodes to labels in read-only mode. Set ${READ_ONLY_PROPERTY}=false in YARN to enable editing.`;
+      const { errorMessage, error } = createReadOnlyBlockedError('assign nodes to labels');
 
       set((state) => {
         state.error = errorMessage;
@@ -204,7 +197,7 @@ export const createNodeLabelsSlice: StateCreator<
         state.isLoading = false;
       });
 
-      throw createStoreError(ERROR_CODES.MUTATION_BLOCKED, errorMessage);
+      throw error;
     }
 
     set((state) => {
@@ -252,75 +245,3 @@ export const createNodeLabelsSlice: StateCreator<
     }
   },
 });
-
-/**
- * Helper function to normalize node labels from API response
- * Ensures exclusivity defaults to true if not specified (YARN default)
- */
-function normalizeNodeLabels(response?: NodeLabelsResponse): NodeLabel[] {
-  const rawNodeLabelInfo = response?.nodeLabelInfo;
-  const nodeLabelInfo = Array.isArray(rawNodeLabelInfo)
-    ? rawNodeLabelInfo
-    : rawNodeLabelInfo
-      ? [rawNodeLabelInfo]
-      : [];
-
-  return nodeLabelInfo.map((label) => ({
-    ...label,
-    exclusivity: parseExclusivity(label.exclusivity),
-  }));
-}
-
-function parseExclusivity(value?: boolean | 'true' | 'false'): boolean {
-  if (typeof value === 'string') {
-    return value.toLowerCase() !== 'false';
-  }
-
-  return value ?? true;
-}
-
-type NodeLabelInfoLike =
-  | NodeLabelInfoItem
-  | NodeLabelInfoItem[]
-  | {
-      nodeLabelInfo?: NodeLabelInfoItem | NodeLabelInfoItem[];
-    };
-
-function normalizeNodeToLabels(response?: NodeToLabelsResponse): NodeToLabelMapping[] {
-  const entries = extractEntries(response?.nodeToLabels);
-
-  return entries.map((entry) => ({
-    nodeId: entry.key,
-    nodeLabels: extractLabelNames(entry.value?.nodeLabelInfo),
-  }));
-}
-
-function extractEntries(data?: NodeToLabelsResponse['nodeToLabels']): NodeToLabelsMapEntry[] {
-  if (!data || !data.entry) {
-    return [];
-  }
-
-  const { entry } = data;
-  return Array.isArray(entry) ? entry : [entry];
-}
-
-function extractLabelNames(info?: NodeLabelInfoLike): string[] {
-  if (!info) {
-    return [];
-  }
-
-  if (Array.isArray(info)) {
-    return info.map((item) => item?.name).filter((name): name is string => Boolean(name));
-  }
-
-  if ('nodeLabelInfo' in info && info.nodeLabelInfo) {
-    return extractLabelNames(info.nodeLabelInfo as NodeLabelInfoItem | NodeLabelInfoItem[]);
-  }
-
-  if (typeof info === 'object' && info !== null && 'name' in info) {
-    const name = (info as NodeLabelInfoItem).name;
-    return name ? [name] : [];
-  }
-
-  return [];
-}

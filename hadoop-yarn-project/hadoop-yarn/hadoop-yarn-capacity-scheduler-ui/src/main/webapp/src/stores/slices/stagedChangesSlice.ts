@@ -31,16 +31,22 @@ import {
   buildPropertyKey,
 } from '~/utils/propertyUtils';
 import { buildMutationRequest } from '~/features/staged-changes/utils/mutationBuilder';
+import {
+  getParentQueuesForAdditions,
+  getQueuesForRemoval,
+  getQueuesForAutoCreationEnable,
+  prepareMutationRequestForSubmission,
+  prepareMutationRequestWithVersion,
+  applyQueueStates,
+  addQueueHierarchyToSet,
+  restartQueues,
+} from '~/features/staged-changes/utils/queueStateManager';
 import { isValidQueueName } from '~/types';
 import { createStoreError, ERROR_CODES, extractErrorMessage, isNetworkError } from '~/lib/errors';
+import { assertWritable } from '~/lib/errors/readOnlyGuard';
 import type { StagedChangesSlice, SchedulerStore } from './types';
 import { getAffectedQueuesForValidation } from '~/features/validation/utils/affectedQueues';
-import {
-  validateAllStagedChanges,
-  selectivelyValidateStagedChanges,
-  validatePropertyChange,
-} from '~/features/validation/crossQueue';
-import { READ_ONLY_PROPERTY } from '~/config';
+import { validateStagedChanges, validatePropertyChange } from '~/features/validation/crossQueue';
 
 type MutationErrorState = Pick<SchedulerStore, 'applyError' | 'error' | 'errorContext'>;
 const clearMutationError = (state: MutationErrorState) => {
@@ -359,12 +365,7 @@ export const createStagedChangesSlice: StateCreator<
     if (changes.length === 0) return;
 
     // Block applying changes in read-only mode
-    if (get().isReadOnly) {
-      throw createStoreError(
-        ERROR_CODES.MUTATION_BLOCKED,
-        `Cannot apply changes in read-only mode. Set ${READ_ONLY_PROPERTY}=false in YARN to enable editing.`,
-      );
-    }
+    assertWritable(get().isReadOnly, 'apply changes');
 
     set((state) => {
       state.isLoading = true;
@@ -393,88 +394,25 @@ export const createStagedChangesSlice: StateCreator<
     const apiClient = get().apiClient;
     let mutationApplied = false;
 
-    const applyQueueStates = async (queueNames: Iterable<string>, state: 'STOPPED' | 'RUNNING') => {
-      const uniqueQueueNames = Array.from(new Set(queueNames)).filter(
-        (queueName) => queueName && queueName !== SPECIAL_VALUES.ROOT_QUEUE_NAME,
-      );
-      if (uniqueQueueNames.length === 0) return;
+    // Helper to get child queues for hierarchy collection
+    const getChildQueues = (path: string) => get().getChildQueues(path);
 
-      const stateMutation: SchedConfUpdateInfo = {
-        [MUTATION_OPERATIONS.UPDATE_QUEUE]: [
-          ...uniqueQueueNames.map((queueName) => ({
-            'queue-name': queueName,
-            params: {
-              entry: [{ key: 'state', value: state }],
-            },
-          })),
-        ],
-      };
-
-      await apiClient.updateSchedulerConf(stateMutation);
-    };
-
-    const collectQueueHierarchy = (queuePath: string): string[] => {
-      const visited = new Set<string>();
-
-      const traverse = (path: string) => {
-        if (!path || visited.has(path)) {
-          return;
-        }
-
-        visited.add(path);
-
-        const childQueues = get()
-          .getChildQueues(path)
-          .map((child) => child.queuePath || `${path}.${child.queueName}`)
-          .filter(
-            (childPath): childPath is string =>
-              typeof childPath === 'string' && childPath.length > 0,
-          );
-
-        for (const childQueue of childQueues) {
-          traverse(childQueue);
-        }
-      };
-
-      traverse(queuePath);
-      return Array.from(visited);
-    };
-
-    const addQueueHierarchyToSet = (queuePath: string, trackingSet: Set<string>) => {
-      for (const path of collectQueueHierarchy(queuePath)) {
-        if (path !== SPECIAL_VALUES.ROOT_QUEUE_NAME) {
-          trackingSet.add(path);
-        }
-      }
-    };
-
-    const restartQueues = async (queueSet: Set<string>) => {
-      if (queueSet.size === 0) return;
-
-      try {
-        await applyQueueStates(queueSet, 'RUNNING');
-      } catch (startError) {
-        console.error(`Failed to restart queues:`, startError);
-      } finally {
-        queueSet.clear();
-      }
-    };
-
-    const restartParents = async () => restartQueues(parentQueuesStopped);
-    const restartRemovalQueues = async () => restartQueues(removalQueuesStopped);
-    const restartAutoCreationQueues = async () => restartQueues(autoCreationQueuesStopped);
+    const restartParents = async () => restartQueues(parentQueuesStopped, apiClient);
+    const restartRemovalQueues = async () => restartQueues(removalQueuesStopped, apiClient);
+    const restartAutoCreationQueues = async () =>
+      restartQueues(autoCreationQueuesStopped, apiClient);
 
     try {
       for (const parentQueue of parentQueuesToStop) {
-        addQueueHierarchyToSet(parentQueue, parentQueuesStopped);
+        addQueueHierarchyToSet(parentQueue, parentQueuesStopped, getChildQueues);
       }
 
       for (const queueName of queuesToStopForRemoval) {
-        addQueueHierarchyToSet(queueName, removalQueuesStopped);
+        addQueueHierarchyToSet(queueName, removalQueuesStopped, getChildQueues);
       }
 
       for (const queueName of queuesToStopForAutoCreation) {
-        addQueueHierarchyToSet(queueName, autoCreationQueuesStopped);
+        addQueueHierarchyToSet(queueName, autoCreationQueuesStopped, getChildQueues);
       }
 
       const allQueuesToStop = new Set<string>([
@@ -484,7 +422,7 @@ export const createStagedChangesSlice: StateCreator<
       ]);
 
       if (allQueuesToStop.size > 0) {
-        await applyQueueStates(allQueuesToStop, 'STOPPED');
+        await applyQueueStates(allQueuesToStop, 'STOPPED', apiClient);
       }
 
       const validationResponse = await apiClient.validateSchedulerConf(submissionRequest);
@@ -508,7 +446,7 @@ export const createStagedChangesSlice: StateCreator<
       await restartAutoCreationQueues();
 
       for (const queueName of childQueuesToStart) {
-        await applyQueueStates([queueName], 'RUNNING');
+        await applyQueueStates([queueName], 'RUNNING', apiClient);
       }
 
       // Reload configuration after successful update
@@ -621,8 +559,8 @@ export const createStagedChangesSlice: StateCreator<
       return;
     }
 
-    // Validate all staged changes using the shared logic
-    const validationResults = validateAllStagedChanges({
+    // Validate all staged changes using the unified validation function
+    const validationResults = validateStagedChanges({
       stagedChanges,
       schedulerData,
       configData,
@@ -671,13 +609,13 @@ export const createStagedChangesSlice: StateCreator<
       });
     }
 
-    // Selectively validate only affected changes
-    const validationResults = selectivelyValidateStagedChanges({
-      affectedQueuePaths,
-      affectedProperties,
+    // Selectively validate only affected changes using the unified validation function
+    const validationResults = validateStagedChanges({
       stagedChanges,
       schedulerData,
       configData,
+      affectedQueuePaths,
+      affectedProperties,
     });
 
     set((state) => {
@@ -689,158 +627,3 @@ export const createStagedChangesSlice: StateCreator<
     });
   },
 });
-
-const MUTATION_VERSION_PROPERTY_KEY = 'yarn.webservice.mutation-api.version';
-
-function getParentQueuesForAdditions(
-  addQueueMutations: SchedConfUpdateInfo[typeof MUTATION_OPERATIONS.ADD_QUEUE],
-): string[] {
-  const parents = new Set<string>();
-
-  for (const mutation of addQueueMutations ?? []) {
-    const queueName = mutation['queue-name'];
-    const lastDotIndex = queueName.lastIndexOf('.');
-    if (lastDotIndex <= 0) {
-      continue;
-    }
-
-    const parentQueue = queueName.slice(0, lastDotIndex);
-    if (parentQueue === SPECIAL_VALUES.ROOT_QUEUE_NAME) {
-      continue;
-    }
-
-    parents.add(parentQueue);
-  }
-
-  return Array.from(parents);
-}
-
-function getQueuesForRemoval(
-  removeQueueMutations: SchedConfUpdateInfo[typeof MUTATION_OPERATIONS.REMOVE_QUEUE],
-): string[] {
-  if (!removeQueueMutations) {
-    return [];
-  }
-
-  if (Array.isArray(removeQueueMutations)) {
-    return removeQueueMutations.filter((queue): queue is string => typeof queue === 'string');
-  }
-
-  if (typeof removeQueueMutations === 'string') {
-    return [removeQueueMutations];
-  }
-
-  return [];
-}
-
-function getQueuesForAutoCreationEnable(changes: StagedChange[]): string[] {
-  if (!changes.length) {
-    return [];
-  }
-
-  const queues = new Set<string>();
-  const normalize = (value?: string) => value?.trim().toLowerCase() ?? '';
-
-  for (const change of changes) {
-    if (
-      change.type !== 'update' ||
-      !change.queuePath ||
-      change.queuePath === SPECIAL_VALUES.ROOT_QUEUE_NAME ||
-      change.queuePath === SPECIAL_VALUES.GLOBAL_QUEUE_PATH
-    ) {
-      continue;
-    }
-
-    if (
-      change.property === AUTO_CREATION_PROPS.LEGACY_ENABLED ||
-      change.property === AUTO_CREATION_PROPS.FLEXIBLE_ENABLED
-    ) {
-      const newValue = normalize(change.newValue);
-      const oldValue = normalize(change.oldValue);
-
-      if (newValue === 'true' && oldValue !== 'true') {
-        queues.add(change.queuePath);
-      }
-    }
-  }
-
-  return Array.from(queues);
-}
-
-function prepareMutationRequestForSubmission(request: SchedConfUpdateInfo): {
-  request: SchedConfUpdateInfo;
-  childQueuesToStart: string[];
-} {
-  const clonedRequest = JSON.parse(JSON.stringify(request)) as SchedConfUpdateInfo;
-  const childQueuesToStart: string[] = [];
-
-  const addQueueMutations = clonedRequest[MUTATION_OPERATIONS.ADD_QUEUE] ?? [];
-  for (const mutation of addQueueMutations) {
-    const stateEntry = mutation.params.entry.find((entry) => entry.key === 'state');
-    if (!stateEntry) continue;
-
-    const desiredState = stateEntry.value?.toUpperCase?.();
-    if (desiredState === 'RUNNING') {
-      childQueuesToStart.push(mutation['queue-name']);
-      stateEntry.value = 'STOPPED';
-    }
-  }
-
-  const globalUpdateBlocks = clonedRequest[MUTATION_OPERATIONS.GLOBAL_UPDATES];
-  if (globalUpdateBlocks) {
-    for (const block of globalUpdateBlocks) {
-      block.entry = block.entry.map(({ key, value }) => ({
-        key: buildGlobalPropertyKey(key),
-        value,
-      }));
-    }
-  }
-
-  return { request: clonedRequest, childQueuesToStart };
-}
-
-function prepareMutationRequestWithVersion(
-  request: SchedConfUpdateInfo,
-  version?: string | number,
-): SchedConfUpdateInfo {
-  const clonedRequest = JSON.parse(JSON.stringify(request)) as SchedConfUpdateInfo;
-
-  const existingGlobalUpdates =
-    clonedRequest[MUTATION_OPERATIONS.GLOBAL_UPDATES]?.filter((block) => block.entry.length > 0) ??
-    [];
-
-  for (const block of existingGlobalUpdates) {
-    block.entry = block.entry.map(({ key, value }) => ({
-      key: buildGlobalPropertyKey(key),
-      value,
-    }));
-  }
-
-  if (version !== undefined) {
-    const versionValue = String(version);
-    let versionEntryUpdated = false;
-
-    for (const block of existingGlobalUpdates) {
-      const entry = block.entry.find((item) => item.key === MUTATION_VERSION_PROPERTY_KEY);
-      if (entry) {
-        entry.value = versionValue;
-        versionEntryUpdated = true;
-        break;
-      }
-    }
-
-    if (!versionEntryUpdated) {
-      existingGlobalUpdates.unshift({
-        entry: [{ key: MUTATION_VERSION_PROPERTY_KEY, value: versionValue }],
-      });
-    }
-  }
-
-  if (existingGlobalUpdates.length > 0) {
-    clonedRequest[MUTATION_OPERATIONS.GLOBAL_UPDATES] = existingGlobalUpdates;
-  } else {
-    delete clonedRequest[MUTATION_OPERATIONS.GLOBAL_UPDATES];
-  }
-
-  return clonedRequest;
-}

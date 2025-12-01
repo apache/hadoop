@@ -22,6 +22,7 @@ import { validateQueue } from './service';
 import { isBlockingError, isCrossQueueRule } from './ruleCategories';
 import { mergeStagedConfig } from '~/utils/configUtils';
 import { getAffectedQueuesForValidation } from './utils/affectedQueues';
+import { dedupeIssues } from './utils/dedupeIssues';
 
 interface ValidatePropertyChangeOptions {
   propertyName: string;
@@ -120,91 +121,51 @@ export function validatePropertyChange({
   return dedupeIssues(issues);
 }
 
-interface ValidateAllStagedChangesOptions {
+export interface ValidateStagedChangesOptions {
   stagedChanges: StagedChange[];
   schedulerData: SchedulerInfo | null;
   configData: Map<string, string>;
+  /** Optional: only validate changes affecting these queue paths */
+  affectedQueuePaths?: Set<string>;
+  /** Optional: only validate changes affecting these properties */
+  affectedProperties?: Set<string>;
 }
 
-export function validateAllStagedChanges({
+/**
+ * Validate staged changes and return a map of change IDs to their validation issues.
+ * When affectedQueuePaths and/or affectedProperties are provided, only changes
+ * affecting those will be re-validated; others retain their existing validation state.
+ */
+export function validateStagedChanges({
   stagedChanges,
   schedulerData,
   configData,
-}: ValidateAllStagedChangesOptions): Map<string, ValidationIssue[] | undefined> {
-  const validationResults = new Map<string, ValidationIssue[] | undefined>();
-
-  if (!schedulerData || stagedChanges.length === 0) {
-    return validationResults;
-  }
-
-  stagedChanges.forEach((change) => {
-    if (change.type === 'add' && change.property === 'capacity') {
-      const issues = validatePropertyChange({
-        propertyName: 'capacity',
-        propertyValue: change.newValue || '',
-        queuePath: change.queuePath,
-        schedulerData,
-        configData,
-        stagedChanges: stagedChanges.filter((c) => c.id !== change.id),
-        includeBlockingErrors: false,
-      });
-
-      validationResults.set(change.id, issues.length > 0 ? issues : undefined);
-      return;
-    }
-
-    if (change.type !== 'update' || !change.property) {
-      validationResults.set(change.id, change.validationErrors);
-      return;
-    }
-
-    const issues = validatePropertyChange({
-      propertyName: change.property,
-      propertyValue: change.newValue || '',
-      queuePath: change.queuePath,
-      schedulerData,
-      configData,
-      stagedChanges: stagedChanges.filter((c) => c.id !== change.id),
-      includeBlockingErrors: false,
-    });
-
-    validationResults.set(change.id, issues.length > 0 ? issues : undefined);
-  });
-
-  return validationResults;
-}
-
-interface SelectiveValidateOptions {
-  affectedQueuePaths: Set<string>;
-  affectedProperties: Set<string>;
-  stagedChanges: StagedChange[];
-  schedulerData: SchedulerInfo | null;
-  configData: Map<string, string>;
-}
-
-export function selectivelyValidateStagedChanges({
   affectedQueuePaths,
   affectedProperties,
-  stagedChanges,
-  schedulerData,
-  configData,
-}: SelectiveValidateOptions): Map<string, ValidationIssue[] | undefined> {
+}: ValidateStagedChangesOptions): Map<string, ValidationIssue[] | undefined> {
   const validationResults = new Map<string, ValidationIssue[] | undefined>();
 
   if (!schedulerData || stagedChanges.length === 0) {
     return validationResults;
   }
 
-  stagedChanges.forEach((change) => {
-    const isAffected =
-      affectedQueuePaths.has(change.queuePath) ||
-      (change.property && affectedProperties.has(change.property));
+  const hasFilter = affectedQueuePaths || affectedProperties;
 
-    if (!isAffected) {
-      validationResults.set(change.id, change.validationErrors);
-      return;
+  stagedChanges.forEach((change) => {
+    // Check if this change should be validated based on filters
+    if (hasFilter) {
+      const isAffected =
+        (affectedQueuePaths && affectedQueuePaths.has(change.queuePath)) ||
+        (affectedProperties && change.property && affectedProperties.has(change.property));
+
+      if (!isAffected) {
+        // Keep existing validation state for unaffected changes
+        validationResults.set(change.id, change.validationErrors);
+        return;
+      }
     }
 
+    // Handle 'add' type with capacity property
     if (change.type === 'add' && change.property === 'capacity') {
       const issues = validatePropertyChange({
         propertyName: 'capacity',
@@ -220,11 +181,13 @@ export function selectivelyValidateStagedChanges({
       return;
     }
 
+    // Skip non-update changes or changes without property
     if (change.type !== 'update' || !change.property) {
       validationResults.set(change.id, change.validationErrors);
       return;
     }
 
+    // Validate update changes
     const issues = validatePropertyChange({
       propertyName: change.property,
       propertyValue: change.newValue || '',
@@ -239,19 +202,4 @@ export function selectivelyValidateStagedChanges({
   });
 
   return validationResults;
-}
-
-function dedupeIssues(issues: ValidationIssue[]): ValidationIssue[] {
-  const seen = new Set<string>();
-  const result: ValidationIssue[] = [];
-
-  issues.forEach((issue) => {
-    const key = `${issue.queuePath}|${issue.field}|${issue.rule}|${issue.message}|${issue.severity}`;
-    if (!seen.has(key)) {
-      seen.add(key);
-      result.push(issue);
-    }
-  });
-
-  return result;
 }

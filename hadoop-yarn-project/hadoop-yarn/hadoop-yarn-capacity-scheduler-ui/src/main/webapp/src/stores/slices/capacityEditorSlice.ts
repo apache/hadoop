@@ -30,12 +30,13 @@ import type { SchedulerStore } from './types';
 import {
   buildCapacityEditorDrafts,
   buildCapacityEditorLabelOptions,
-  convertVectorDraftToString,
   DEFAULT_PARTITION_VALUE,
-  getPropertyNameForLabel,
 } from '~/features/queue-management/utils/capacityEditor';
-import { buildPropertyKey } from '~/utils/propertyUtils';
-import { validateQueue } from '~/features/validation/service';
+import {
+  extractChangesFromDrafts,
+  buildPreviewConfig,
+  validateCapacityChanges,
+} from '~/features/queue-management/utils/capacityValidation';
 import type { ValidationIssue } from '~/types';
 
 export type CapacityEditorOrigin = 'property-editor' | 'context-menu' | 'add-queue';
@@ -350,8 +351,6 @@ export const createCapacityEditorSlice: StateCreator<
       parentQueuePath,
       originQueuePath,
       originQueueName,
-      originInitialCapacity: _originInitialCapacity,
-      originInitialMaxCapacity: _originInitialMaxCapacity,
       originIsNew,
       selectedNodeLabel,
       drafts,
@@ -371,65 +370,13 @@ export const createCapacityEditorSlice: StateCreator<
       }
     });
 
-    const normalizeValue = (value: string) => value.trim();
-
-    const changesByQueue = new Map<string, Record<string, string>>();
-
-    // Build a complete cache including the current drafts
-    const currentCacheKey = selectedNodeLabel ?? DEFAULT_PARTITION_VALUE;
-    const completeDraftCache = {
-      ...draftCache,
-      [currentCacheKey]: {
-        drafts: { ...drafts },
-        draftOrder: [...draftOrder],
-      },
-    };
-
-    // Process all cached labels (including the currently selected one)
-    Object.entries(completeDraftCache).forEach(([cacheKey, cachedData]) => {
-      const label = cacheKey === DEFAULT_PARTITION_VALUE ? null : cacheKey;
-      const capacityProperty = getPropertyNameForLabel(label, 'capacity');
-      const maxCapacityProperty = getPropertyNameForLabel(label, 'maximum-capacity');
-
-      cachedData.draftOrder.forEach((queuePath) => {
-        const draft = cachedData.drafts[queuePath];
-        if (!draft) {
-          return;
-        }
-
-        const capacityString =
-          draft.mode === 'vector'
-            ? convertVectorDraftToString(draft.vectorCapacity)
-            : draft.capacityValue;
-        const maxCapacityString =
-          draft.mode === 'vector'
-            ? convertVectorDraftToString(draft.vectorMaxCapacity)
-            : draft.maxCapacityValue;
-
-        const currentCapacity = normalizeValue(capacityString);
-        const currentMaxCapacity = normalizeValue(maxCapacityString);
-
-        const existingCapacity = normalizeValue(
-          storeSnapshot.getQueuePropertyValue(queuePath, capacityProperty).value,
-        );
-        const existingMaxCapacity = normalizeValue(
-          storeSnapshot.getQueuePropertyValue(queuePath, maxCapacityProperty).value,
-        );
-
-        const existingChanges = changesByQueue.get(queuePath) ?? {};
-
-        if (currentCapacity !== existingCapacity) {
-          existingChanges[capacityProperty] = currentCapacity;
-        }
-
-        if (currentMaxCapacity !== existingMaxCapacity) {
-          existingChanges[maxCapacityProperty] = currentMaxCapacity;
-        }
-
-        if (Object.keys(existingChanges).length > 0) {
-          changesByQueue.set(queuePath, existingChanges);
-        }
-      });
+    // Extract changes from drafts using shared utility
+    const changesByQueue = extractChangesFromDrafts({
+      draftCache,
+      currentDrafts: drafts,
+      currentDraftOrder: draftOrder,
+      selectedNodeLabel,
+      getQueuePropertyValue: storeSnapshot.getQueuePropertyValue,
     });
 
     if (changesByQueue.size === 0) {
@@ -440,35 +387,15 @@ export const createCapacityEditorSlice: StateCreator<
       return true;
     }
 
-    const previewConfig = new Map(storeSnapshot.configData);
-    changesByQueue.forEach((properties, queuePath) => {
-      Object.entries(properties).forEach(([propertyName, value]) => {
-        const key = buildPropertyKey(queuePath, propertyName);
-        if (value === '') {
-          previewConfig.delete(key);
-        } else {
-          previewConfig.set(key, value);
-        }
-      });
-    });
+    // Build preview config and validate
+    const previewConfig = buildPreviewConfig(storeSnapshot.configData, changesByQueue);
 
-    let aggregatedIssues: ValidationIssue[] = [];
-    let hasBlockingErrors = false;
-
-    changesByQueue.forEach((properties, queuePath) => {
-      const result = validateQueue({
-        queuePath,
-        properties,
-        configData: previewConfig,
-        stagedChanges: storeSnapshot.stagedChanges,
-        schedulerData: storeSnapshot.schedulerData,
-      });
-
-      aggregatedIssues = aggregatedIssues.concat(result.issues);
-
-      if (!force && result.issues.some((issue) => issue.severity === 'error')) {
-        hasBlockingErrors = true;
-      }
+    const { issues: aggregatedIssues, hasBlockingErrors } = validateCapacityChanges({
+      changesByQueue,
+      previewConfig,
+      stagedChanges: storeSnapshot.stagedChanges,
+      schedulerData: storeSnapshot.schedulerData,
+      force,
     });
 
     if (!force && hasBlockingErrors) {
@@ -480,6 +407,7 @@ export const createCapacityEditorSlice: StateCreator<
       return false;
     }
 
+    // Stage the changes
     changesByQueue.forEach((properties, queuePath) => {
       Object.entries(properties).forEach(([propertyName, value]) => {
         const propertyIssues = aggregatedIssues.filter(
@@ -509,6 +437,7 @@ export const createCapacityEditorSlice: StateCreator<
       });
     });
 
+    // Refresh drafts after staging
     const refreshedStore = get();
     const refreshedDrafts = buildCapacityEditorDrafts({
       store: refreshedStore,

@@ -30,51 +30,51 @@ The **YARN Capacity Scheduler UI** is a modern web interface for managing Apache
 ### Main Features
 
 1. **Visual Queue Tree Management**
-   - Interactive, draggable, zoomable tree visualization using XYFlow
-   - Create, edit, and delete queues with real-time validation
-   - Configure queue properties: capacities (percentage/weight/absolute), states, ACLs, resource limits
-   - Visual capacity indicators and resource statistics
-   - Queue search with highlighting
+    - Interactive, draggable, zoomable tree visualization using XYFlow
+    - Create, edit, and delete queues with real-time validation
+    - Configure queue properties: capacities (percentage/weight/absolute), states, ACLs, resource limits
+    - Visual capacity indicators and resource statistics
+    - Queue search with highlighting
 
 2. **Placement Rules Editor**
-   - Guided forms for authoring placement rules
-   - Support for multiple rule types (user, group, application name, etc.)
-   - Drag-and-drop rule ordering and priority management
-   - Migration from legacy placement rules to new format
-   - Validation before applying updates
+    - Guided forms for authoring placement rules
+    - Support for multiple rule types (user, group, application name, etc.)
+    - Drag-and-drop rule ordering and priority management
+    - Migration from legacy placement rules to new format
+    - Validation before applying updates
 
 3. **Staged Changes System**
-   - Review all pending configuration edits in a unified panel
-   - Apply changes in batches or revert individual changes
-   - Side-by-side comparison of staged vs live configuration
-   - Visual highlighting of configuration deltas
-   - Validation errors displayed per change
+    - Review all pending configuration edits in a unified panel
+    - Apply changes in batches or revert individual changes
+    - Side-by-side comparison of staged vs live configuration
+    - Visual highlighting of configuration deltas
+    - Validation errors displayed per change
 
 4. **Node Labels & Partitions**
-   - Create and manage node labels (resource partitions)
-   - Assign nodes to labels with bulk operations
-   - Configure per-label capacity settings for queues
-   - View node-to-label and label-to-node mappings
+    - Create and manage node labels (resource partitions)
+    - Assign nodes to labels with bulk operations
+    - Configure per-label capacity settings for queues
+    - View node-to-label and label-to-node mappings
 
 5. **Real-Time Validation System**
-   - Property-level validation during editing
-   - Cross-queue dependency validation (sibling capacities, parent-child constraints)
-   - Warning and error severity levels
-   - Blocks applying changes until errors are resolved
-   - Clear error messages with affected queues highlighted
+    - Property-level validation during editing
+    - Cross-queue dependency validation (sibling capacities, parent-child constraints)
+    - Warning and error severity levels
+    - Blocks applying changes until errors are resolved
+    - Clear error messages with affected queues highlighted
 
 6. **Global Scheduler Settings**
-   - Configure cluster-wide scheduler properties
-   - Resource calculator selection (memory-only vs dominant resource)
-   - Application limits and scheduling behavior
-   - Preemption policies and async scheduling settings
-   - Legacy mode toggle and capacity configuration modes
+    - Configure cluster-wide scheduler properties
+    - Resource calculator selection (memory-only vs dominant resource)
+    - Application limits and scheduling behavior
+    - Preemption policies and async scheduling settings
+    - Legacy mode toggle and capacity configuration modes
 
 7. **Read-Only Mode Support**
-   - Configurable read-only mode via YARN property (`yarn.webapp.scheduler-ui.read-only.enable`)
-   - Users can stage and validate changes but cannot apply them
-   - Visual indicators (lock icon, disabled buttons) in UI
-   - Useful for production environments with restricted access
+    - Configurable read-only mode via YARN property (`yarn.webapp.scheduler-ui.read-only.enable`)
+    - Users can stage and validate changes but cannot apply them
+    - Visual indicators (lock icon, disabled buttons) in UI
+    - Useful for production environments with restricted access
 
 ---
 
@@ -144,48 +144,48 @@ The application uses a **single Zustand store** with **Immer middleware** for im
 **Store Slices** (`src/stores/slices/`):
 
 1. **schedulerDataSlice** - Core scheduler data
-   - Queue tree structure (`SchedulerInfo`)
-   - Configuration properties (key-value map)
-   - Node labels and partitions
-   - Read-only mode flag
-   - Loading and error states
+    - Queue tree structure (`SchedulerInfo`)
+    - Configuration properties (key-value map)
+    - Node labels and partitions
+    - Read-only mode flag
+    - Loading and error states
 
 2. **queueDataSlice** - Queue hierarchy utilities
-   - Find queue by path
-   - Get parent/siblings/children
-   - Path manipulation utilities
-   - Queue tree traversal functions
+    - Find queue by path
+    - Get parent/siblings/children
+    - Path manipulation utilities
+    - Queue tree traversal functions
 
 3. **queueSelectionSlice** - UI selection state
-   - Currently selected queue(s)
-   - Multi-select support
-   - Selection history
+    - Currently selected queue(s)
+    - Multi-select support
+    - Selection history
 
 4. **stagedChangesSlice** - Pending changes management
-   - Stage queue property changes
-   - Stage queue add/remove operations
-   - Revert individual or all changes
-   - Apply changes to YARN (converts to mutations)
+    - Stage queue property changes
+    - Stage queue add/remove operations
+    - Revert individual or all changes
+    - Apply changes to YARN (converts to mutations)
 
 5. **placementRulesSlice** - Placement rule authoring
-   - Rule CRUD operations
-   - Rule ordering and validation
-   - Migration from legacy format
+    - Rule CRUD operations
+    - Rule ordering and validation
+    - Migration from legacy format
 
 6. **nodeLabelsSlice** - Node label operations
-   - Create/delete labels
-   - Assign nodes to labels
-   - Node-to-label mappings
+    - Create/delete labels
+    - Assign nodes to labels
+    - Node-to-label mappings
 
 7. **capacityEditorSlice** - Capacity editing
-   - Bulk capacity operations
-   - Capacity mode switching
-   - Validation helpers
+    - Bulk capacity operations
+    - Capacity mode switching
+    - Validation helpers
 
 8. **searchSlice** - Queue search
-   - Search query state
-   - Match highlighting
-   - Search results
+    - Search query state
+    - Match highlighting
+    - Search results
 
 **Pattern**: All slices use Immer middleware, allowing direct mutation syntax:
 
@@ -387,23 +387,23 @@ Translates staged changes into YARN's `SchedConfUpdateInfo` format:
 **Key Components**:
 
 1. **service.ts** - Main validation orchestration
-   - `validateField()` - Single property validation
-   - `validateQueue()` - All properties in a queue
-   - `validateAllQueues()` - Full tree validation
+    - `validateField()` - Single property validation with context
+    - `validateQueue()` - All properties in a queue
+    - `hasBlockingIssues()` - Check for blocking errors
 
 2. **crossQueue.ts** - Cross-queue validation engine
-   - Detects affected queues when a property changes
-   - Validates rules across parent/children/siblings
-   - Examples: sibling capacity sums, max >= min, mode consistency
+    - `validatePropertyChange()` - Validates a property change with cross-queue awareness
+    - `validateStagedChanges()` - Validates all staged changes (or a filtered subset)
+    - Handles parent/children/siblings relationships
 
 3. **ruleCategories.ts** - Rule categorization
-   - `CROSS_QUEUE_RULES` - Affects multiple queues (re-validate dependencies)
-   - `QUEUE_SPECIFIC_RULES` - Only validates single queue
-   - `WARNING_ONLY_RULES` - Never blocks applying changes
+    - `CROSS_QUEUE_RULES` - Affects multiple queues (re-validate dependencies)
+    - `QUEUE_SPECIFIC_RULES` - Only validates single queue
+    - `WARNING_ONLY_RULES` - Never blocks applying changes
 
 4. **utils/affectedQueues.ts** - Dependency detection
-   - Determines which queues need re-validation when a property changes
-   - Example: changing parent capacity affects all children
+    - Determines which queues need re-validation when a property changes
+    - Example: changing parent capacity affects all children
 
 **Validation Rules Examples** (from `validation-rules.ts`):
 
@@ -436,10 +436,10 @@ Translates staged changes into YARN's `SchedConfUpdateInfo` format:
 
 - **SchedulerInfo** - Root scheduler with queue tree
 - **QueueInfo** - Individual queue:
-  - Properties (capacity, state, ACLs, limits)
-  - Children (recursive hierarchy)
-  - Live metrics (used capacity, running apps, pending apps)
-  - Per-partition capacities
+    - Properties (capacity, state, ACLs, limits)
+    - Children (recursive hierarchy)
+    - Live metrics (used capacity, running apps, pending apps)
+    - Per-partition capacities
 
 **Queue Path Format**: Dot-separated hierarchical identifiers
 
@@ -478,18 +478,18 @@ Translates staged changes into YARN's `SchedConfUpdateInfo` format:
 MSW enables three modes controlled by `VITE_API_MOCK_MODE`:
 
 1. **`static`** (default in dev)
-   - Serves JSON fixtures from `public/mock/ws/v1/cluster/*.json`
-   - No YARN cluster required
-   - Consistent data for development and testing
+    - Serves JSON fixtures from `public/mock/ws/v1/cluster/*.json`
+    - No YARN cluster required
+    - Consistent data for development and testing
 
 2. **`cluster`**
-   - Proxies requests to real YARN cluster via `VITE_CLUSTER_PROXY_TARGET`
-   - Example: `http://rm-host:8088`
-   - Live data from actual cluster
+    - Proxies requests to real YARN cluster via `VITE_CLUSTER_PROXY_TARGET`
+    - Example: `http://rm-host:8088`
+    - Live data from actual cluster
 
 3. **`off`**
-   - Disables mocking entirely
-   - Production builds use this mode
+    - Disables mocking entirely
+    - Production builds use this mode
 
 MSW boots automatically in dev mode via `src/app/entry.client.tsx`.
 
@@ -513,9 +513,9 @@ MSW boots automatically in dev mode via `src/app/entry.client.tsx`.
 
 - **Tailwind CSS 4.1.4** - Utility-first CSS framework
 - **Radix UI** - Headless accessible component primitives:
-  - Accordion, Checkbox, Dialog, Dropdown Menu, Label, Popover, Progress
-  - Scroll Area, Select, Separator, Switch, Tabs, Toggle, Tooltip
-  - Context Menu, Collapsible
+    - Accordion, Checkbox, Dialog, Dropdown Menu, Label, Popover, Progress
+    - Scroll Area, Select, Separator, Switch, Tabs, Toggle, Tooltip
+    - Context Menu, Collapsible
 - **shadcn/ui** - Pre-built components using Radix + Tailwind
 - **Lucide React 0.525.0** - Icon library
 - **class-variance-authority 0.7.1** - Component variant styling
@@ -569,10 +569,10 @@ MSW boots automatically in dev mode via `src/app/entry.client.tsx`.
 ### Code Quality
 
 - **ESLint 9.18.0** - Linting with TypeScript and React rules
-  - **typescript-eslint 8.20.0**
-  - **@eslint-react/eslint-plugin 2.2.4**
-  - **eslint-plugin-react-compiler 19.1.0-rc.2**
-  - **eslint-plugin-react-hooks 5.1.0**
+    - **typescript-eslint 8.20.0**
+    - **@eslint-react/eslint-plugin 2.2.4**
+    - **eslint-plugin-react-compiler 19.1.0-rc.2**
+    - **eslint-plugin-react-hooks 5.1.0**
 - **Prettier 3.5.0** - Code formatting
 - **Husky 9.1.7** - Git hooks
 - **lint-staged 16.1.2** - Run linters on staged files
@@ -829,6 +829,7 @@ Property automatically appears in the Global Settings page (`src/app/routes/glob
 - `src/features/validation/crossQueue.ts` - Cross-queue validation engine
 - `src/features/validation/ruleCategories.ts` - Rule categorization
 - `src/features/validation/utils/affectedQueues.ts` - Dependency detection
+- `src/features/validation/utils/dedupeIssues.ts` - Issue deduplication
 
 **State Management**:
 
@@ -844,7 +845,9 @@ Property automatically appears in the Global Settings page (`src/app/routes/glob
 
 - `src/utils/propertyUtils.ts` - Property key construction
 - `src/utils/capacityUtils.ts` - Capacity parsing and validation
-- `src/utils/queueTreeUtils.ts` - Queue tree traversal
+- `src/utils/treeUtils.ts` - Queue tree traversal (`flattenQueueTree`, `traverseQueueTree`, `findQueueByPath`)
+- `src/utils/nodeLabelUtils.ts` - Node label name normalization
+- `src/lib/errors/readOnlyGuard.ts` - Read-only mode enforcement helpers
 
 ---
 
@@ -908,16 +911,29 @@ yarn-scheduler-ui/
 │   │   ├── properties/           # Property descriptors
 │   │   ├── schemas/              # Zod schemas
 │   │   └── validation-rules.ts   # Business validation
-│   ├── features/                 # Feature modules (10 features)
+│   ├── features/                 # Feature modules
+│   │   ├── queue-management/     # Queue tree visualization
+│   │   │   ├── components/       # QueueCardNode, CapacityEditorDialog, etc.
+│   │   │   ├── hooks/            # useCapacityEditor, useQueueActions
+│   │   │   └── utils/            # capacityDisplay, capacityEditor, etc.
+│   │   ├── property-editor/      # Queue property editing
+│   │   │   └── components/       # PropertyPanel, PropertyFormField, etc.
+│   │   ├── staged-changes/       # Change review and mutation
+│   │   ├── validation/           # Cross-queue validation engine
+│   │   ├── placement-rules/      # Placement rule builder
+│   │   ├── node-labels/          # Node label management
+│   │   ├── template-config/      # Auto-queue templates
+│   │   ├── queue-comparison/     # Queue comparison tool
+│   │   └── global-settings/      # Global scheduler settings
 │   ├── hooks/                    # Shared React hooks
 │   ├── lib/                      # Libraries and utilities
 │   │   ├── api/                  # YarnApiClient + MSW
-│   │   └── errors/               # Error handling
+│   │   └── errors/               # Error handling + readOnlyGuard
 │   ├── stores/                   # Zustand state management
 │   │   ├── schedulerStore.ts     # Main store
 │   │   └── slices/               # 8 feature slices
 │   ├── types/                    # TypeScript definitions
-│   ├── utils/                    # Utility functions
+│   ├── utils/                    # Utility functions (treeUtils, nodeLabelUtils, etc.)
 │   └── testing/                  # Test utilities
 ├── public/mock/                  # Mock API responses
 ├── docs/                         # Documentation

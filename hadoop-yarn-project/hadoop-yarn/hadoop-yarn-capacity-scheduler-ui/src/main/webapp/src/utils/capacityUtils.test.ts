@@ -18,7 +18,12 @@
 
 
 import { describe, it, expect } from 'vitest';
-import { parseCapacityValue, getCapacityType } from './capacityUtils';
+import {
+  parseCapacityValue,
+  getCapacityType,
+  isVectorCapacity,
+  parseResourceVector,
+} from './capacityUtils';
 
 describe('capacityUtils', () => {
   describe('parseCapacityValue', () => {
@@ -107,6 +112,79 @@ describe('capacityUtils', () => {
       expect(getCapacityType('2w')).toBe('weight');
       expect(getCapacityType('[memory=1024]')).toBe('absolute');
       expect(getCapacityType('invalid')).toBeNull();
+    });
+  });
+
+  describe('isVectorCapacity', () => {
+    it('should return true for vector format', () => {
+      expect(isVectorCapacity('[memory=1024,vcores=2]')).toBe(true);
+      expect(isVectorCapacity('[memory=1024]')).toBe(true);
+      expect(isVectorCapacity('[]')).toBe(true);
+    });
+
+    it('should return false for non-vector formats', () => {
+      expect(isVectorCapacity('50%')).toBe(false);
+      expect(isVectorCapacity('2w')).toBe(false);
+      expect(isVectorCapacity('100')).toBe(false);
+      expect(isVectorCapacity('memory=1024')).toBe(false);
+      expect(isVectorCapacity('[incomplete')).toBe(false);
+      expect(isVectorCapacity('incomplete]')).toBe(false);
+    });
+
+    it('should handle null and undefined', () => {
+      expect(isVectorCapacity(null)).toBe(false);
+      expect(isVectorCapacity(undefined)).toBe(false);
+      expect(isVectorCapacity('')).toBe(false);
+    });
+
+    it('should handle whitespace', () => {
+      expect(isVectorCapacity('  [memory=1024]  ')).toBe(true);
+      expect(isVectorCapacity('  50%  ')).toBe(false);
+    });
+  });
+
+  describe('parseResourceVector', () => {
+    it('should parse valid vector strings', () => {
+      const result = parseResourceVector('[memory=1024,vcores=2]');
+      expect(result).toEqual([
+        { resource: 'memory', value: '1024' },
+        { resource: 'vcores', value: '2' },
+      ]);
+    });
+
+    it('should parse single entry vectors', () => {
+      const result = parseResourceVector('[memory=1024]');
+      expect(result).toEqual([{ resource: 'memory', value: '1024' }]);
+    });
+
+    it('should handle whitespace in vectors', () => {
+      const result = parseResourceVector('[ memory = 1024 , vcores = 2 ]');
+      expect(result).toEqual([
+        { resource: 'memory', value: '1024' },
+        { resource: 'vcores', value: '2' },
+      ]);
+    });
+
+    it('should return empty array for non-vector strings', () => {
+      expect(parseResourceVector('50%')).toEqual([]);
+      expect(parseResourceVector('2w')).toEqual([]);
+      expect(parseResourceVector('invalid')).toEqual([]);
+    });
+
+    it('should return empty array for empty vectors', () => {
+      expect(parseResourceVector('[]')).toEqual([]);
+      expect(parseResourceVector('[  ]')).toEqual([]);
+    });
+
+    it('should filter out invalid entries', () => {
+      // Missing value - filtered out
+      const result = parseResourceVector('[memory=1024,vcores=]');
+      expect(result).toEqual([{ resource: 'memory', value: '1024' }]);
+    });
+
+    it('should filter out entries without equals sign', () => {
+      const result = parseResourceVector('[memory=1024,vcores]');
+      expect(result).toEqual([{ resource: 'memory', value: '1024' }]);
     });
   });
 });

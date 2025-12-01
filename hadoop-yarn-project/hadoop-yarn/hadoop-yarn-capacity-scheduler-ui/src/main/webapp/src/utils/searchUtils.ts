@@ -17,7 +17,7 @@
  */
 
 
-import { schedulerTreeUtils } from './schedulerTreeUtils';
+import { flattenSchedulerTree } from './treeUtils';
 import type { SchedulerInfo } from '~/types';
 import type { PropertyDescriptor } from '~/types/property-descriptor';
 
@@ -43,7 +43,7 @@ export function calculateSearchResults(params: {
   switch (searchContext) {
     case 'queues': {
       if (filteredQueues) {
-        count = schedulerTreeUtils.flattenSchedulerTree(filteredQueues).length;
+        count = flattenSchedulerTree(filteredQueues).length;
       }
       break;
     }
@@ -57,7 +57,7 @@ export function calculateSearchResults(params: {
     default: {
       // When context is not set, search all contexts and return the total
       count =
-        (filteredQueues ? schedulerTreeUtils.flattenSchedulerTree(filteredQueues).length : 0) +
+        (filteredQueues ? flattenSchedulerTree(filteredQueues).length : 0) +
         filteredNodes.length +
         filteredSettings.length;
       break;

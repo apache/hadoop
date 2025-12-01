@@ -26,7 +26,7 @@
  * - Node label properties: yarn.scheduler.capacity.<queue-path>.accessible-node-labels.<label>.<property>
  */
 
-import { SPECIAL_VALUES, CONFIG_PREFIXES } from '~/types';
+import { SPECIAL_VALUES, CONFIG_PREFIXES, getQueueNameValidationError } from '~/types';
 
 const YARN_SCHEDULER_PREFIX = CONFIG_PREFIXES.BASE;
 const NODE_LABELS_SEGMENT = 'accessible-node-labels';
@@ -79,29 +79,16 @@ export type ValidationResult = {
 };
 
 /**
- * Validates a queue name according to YARN rules
- * - Cannot contain dots (.) as they are used as path separators
- * - Cannot be empty
- * - Should only contain alphanumeric characters, hyphens, and underscores
+ * Validates a queue name according to YARN rules.
+ * Uses getQueueNameValidationError() as the single source of truth for validation logic.
  * @param queueName The queue name to validate
  * @returns Validation result with error message if invalid
  */
 export function validateQueueName(queueName: string): ValidationResult {
-  if (!queueName || queueName.trim() === '') {
-    return { valid: false, message: 'Queue name cannot be empty' };
+  const error = getQueueNameValidationError(queueName);
+  if (error) {
+    return { valid: false, message: error };
   }
-
-  if (queueName.includes('.')) {
-    return { valid: false, message: 'Queue names cannot contain dots (.)' };
-  }
-
-  if (!/^[a-zA-Z0-9_-]+$/.test(queueName)) {
-    return {
-      valid: false,
-      message: 'Queue names should only contain letters, numbers, hyphens, and underscores',
-    };
-  }
-
   return { valid: true };
 }
 
@@ -110,7 +97,7 @@ export function validateQueueName(queueName: string): ValidationResult {
  * @param queuePath The queue path (e.g. 'root.production.team1')
  * @returns Array of path segments (e.g. ['root', 'production', 'team1'])
  */
-function splitQueuePath(queuePath: string): string[] {
+export function splitQueuePath(queuePath: string): string[] {
   if (!queuePath) {
     return [];
   }
@@ -122,7 +109,7 @@ function splitQueuePath(queuePath: string): string[] {
  * @param segments Array of path segments (e.g. ['root', 'production', 'team1'])
  * @returns The joined queue path (e.g. 'root.production.team1')
  */
-function joinQueuePath(segments: string[]): string {
+export function joinQueuePath(segments: string[]): string {
   return segments.join('.');
 }
 

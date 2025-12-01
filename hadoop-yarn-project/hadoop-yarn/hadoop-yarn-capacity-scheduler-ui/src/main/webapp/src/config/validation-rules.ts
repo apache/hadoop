@@ -22,7 +22,7 @@ import { parseCapacityValue, getCapacityType } from '~/utils/capacityUtils';
 import { SPECIAL_VALUES } from '~/types/constants/special-values';
 import { AUTO_CREATION_PROPS } from '~/types/constants/auto-creation';
 import type { StagedChange, ValidationIssue, SchedulerInfo } from '~/types';
-import { findQueueByPath, getSiblingQueues } from '~/utils/queueTreeUtils';
+import { findQueueByPath, getSiblingQueues } from '~/utils/treeUtils';
 import { isTemplateQueuePath } from '~/utils/templateUtils';
 
 export interface ValidationContext {

@@ -20,7 +20,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createStagedChangesSlice } from './stagedChangesSlice';
 import type { StagedChange } from '~/types';
-import { validateAllStagedChanges } from '~/features/validation/crossQueue';
+import { validateStagedChanges } from '~/features/validation/crossQueue';
 
 // Mock dependencies
 vi.mock('~/features/validation/crossQueue');
@@ -65,7 +65,7 @@ describe('stagedChangesSlice - validation refresh', () => {
     const mockGet = vi.fn(() => state);
     const mockSet = vi.fn((fn) => fn(state as any));
 
-    vi.mocked(validateAllStagedChanges).mockReturnValue(
+    vi.mocked(validateStagedChanges).mockReturnValue(
       new Map([
         [
           '1',
@@ -135,7 +135,7 @@ describe('stagedChangesSlice - validation refresh', () => {
     const mockGet = vi.fn(() => state);
     const mockSet = vi.fn((fn) => fn(state as any));
 
-    vi.mocked(validateAllStagedChanges).mockReturnValue(new Map([['1', undefined]]));
+    vi.mocked(validateStagedChanges).mockReturnValue(new Map([['1', undefined]]));
 
     const slice = createStagedChangesSlice(mockSet as any, mockGet as any, {} as any);
 
@@ -178,7 +178,7 @@ describe('stagedChangesSlice - validation refresh', () => {
     const mockGet = vi.fn(() => state);
     const mockSet = vi.fn((fn) => fn(state as any));
 
-    vi.mocked(validateAllStagedChanges).mockReturnValue(
+    vi.mocked(validateStagedChanges).mockReturnValue(
       new Map([
         [
           '1',

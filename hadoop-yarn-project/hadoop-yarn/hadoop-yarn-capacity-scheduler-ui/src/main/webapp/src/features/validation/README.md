@@ -14,14 +14,14 @@ The validation system is a **multi-layered architecture** that progressively val
 
 ### service.ts
 
-The **validation service** is the main entry point for all validation operations. It provides:
+The **validation service** provides core validation functions:
 
-- `validateField()` - Validates a single field change
+- `validateField()` - Validates a single field change with full context
 - `validateQueue()` - Validates all properties of a queue
-- `validateAllQueues()` - Validates the entire queue tree
-- `runCrossQueueValidation()` - Validates cross-queue dependencies
+- `hasBlockingIssues()` - Checks if any validation issues are blocking errors
+- `splitIssues()` - Separates issues into errors and warnings
 
-The service coordinates between individual validation rules and cross-queue logic.
+The service coordinates between individual validation rules and the cross-queue logic in `crossQueue.ts`.
 
 ### crossQueue.ts
 
@@ -34,8 +34,8 @@ Contains the **cross-queue validation engine** that:
 
 Key functions:
 
-- `validateCrossQueueConstraints()` - Main orchestration function
-- `validateQueueWithContext()` - Validates a single queue with full context
+- `validatePropertyChange()` - Validates a single property change with cross-queue awareness
+- `validateStagedChanges()` - Validates all staged changes, optionally filtering by affected queues/properties
 
 ### ruleCategories.ts
 
@@ -54,6 +54,13 @@ Implements the **affected queue detection** logic:
 - `getAffectedQueuesForValidation()` - Determines which queues are affected by a property change
 - Handles cascading effects (e.g., parent capacity changes affect all descendants)
 - Manages sibling relationships (e.g., capacity changes require sibling re-validation)
+
+### utils/dedupeIssues.ts
+
+Provides **validation issue deduplication**:
+
+- `dedupeIssues()` - Removes duplicate validation issues based on queuePath, field, rule, message, and severity
+- Used by both `service.ts` and `crossQueue.ts` to ensure unique issues are reported
 
 ## Validation Flow
 
@@ -80,15 +87,13 @@ Return validation issues
 ```
 User stages changes
     ↓
-validateAllQueues(stagedChanges)
+validateStagedChanges({ stagedChanges, schedulerData, configData })
     ↓
-Merge staged changes with current config
+For each staged change:
+  - Merge staged changes with current config
+  - Validate affected queues with cross-queue awareness
     ↓
-For each queue in tree:
-  - Run all applicable validation rules
-  - Check cross-queue constraints
-    ↓
-Aggregate all validation issues
+Return Map of change ID → validation issues
     ↓
 Block "Apply" if blocking errors exist
 ```

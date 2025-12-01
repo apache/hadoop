@@ -18,16 +18,7 @@
 
 
 import React, { useState, useEffect, useRef } from 'react';
-import {
-  Save,
-  RotateCcw,
-  GitBranch,
-  Info,
-  Settings,
-  Edit,
-  AlertCircle,
-  AlertTriangle,
-} from 'lucide-react';
+import { Save, RotateCcw, GitBranch, Info, Settings, Edit, AlertTriangle } from 'lucide-react';
 import { useSchedulerStore } from '~/stores/schedulerStore';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '~/components/ui/sheet';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '~/components/ui/tabs';
@@ -37,11 +28,10 @@ import { QueueOverview } from './QueueOverview';
 import { QueueInfoTab } from './QueueInfoTab';
 import { PropertyEditorTab } from './PropertyEditorTab';
 import { UnsavedChangesDialog } from './dialogs/UnsavedChangesDialog';
+import { ValidationIssuesPopover } from './ValidationIssuesPopover';
 import type { PropertyEditorTabHandle } from './PropertyEditorTab';
 import { toast } from 'sonner';
 import { useValidation } from '~/contexts/ValidationContext';
-import { Popover, PopoverContent, PopoverTrigger } from '~/components/ui/popover';
-import type { ValidationIssue } from '~/types';
 import { Alert, AlertDescription, AlertTitle } from '~/components/ui/alert';
 import { cn } from '~/utils/cn';
 import { TemplateConfigDialog } from '~/features/template-config/components/TemplateConfigDialog';
@@ -240,11 +230,9 @@ export const PropertyPanel: React.FC = () => {
 
   const queuePath = selectedQueue?.queuePath;
 
-  const queueIssues = !queuePath
-    ? ({} as Record<string, ValidationIssue[]>)
-    : (validationState[queuePath] ?? {});
+  const queueIssues = !queuePath ? {} : (validationState[queuePath] ?? {});
 
-  const issueList: Array<ValidationIssue & { field: string; key: string }> = !queuePath
+  const issueList = !queuePath
     ? []
     : Object.entries(queueIssues).flatMap(([field, issues]) =>
         issues.map((issue, index) => ({
@@ -253,21 +241,6 @@ export const PropertyPanel: React.FC = () => {
           key: `${field}-${issue.rule}-${index}`,
         })),
       );
-
-  const errorIssues = issueList.filter((issue) => issue.severity === 'error');
-
-  const warningIssues = issueList.filter((issue) => issue.severity === 'warning');
-
-  const summaryLabel = (() => {
-    const parts: string[] = [];
-    if (errorIssues.length) {
-      parts.push(`${errorIssues.length} error${errorIssues.length === 1 ? '' : 's'}`);
-    }
-    if (warningIssues.length) {
-      parts.push(`${warningIssues.length} warning${warningIssues.length === 1 ? '' : 's'}`);
-    }
-    return parts.length > 0 ? parts.join(', ') : 'Validation issues';
-  })();
 
   const handleIssueSelect = (field: string) => {
     const selector = `[data-field-id="${field.replace(/"/g, '\\"')}"]`;
@@ -333,77 +306,12 @@ export const PropertyPanel: React.FC = () => {
                 <div className="flex items-center gap-2 pb-2">
                   <span className="text-xs text-muted-foreground">{selectedQueue.queuePath}</span>
                   <div className="flex-1" />
-                  {issueList.length > 0 && (
-                    <Popover open={isSummaryOpen} onOpenChange={setIsSummaryOpen}>
-                      <PopoverTrigger asChild>
-                        <Button
-                          size="sm"
-                          variant={errorIssues.length ? 'destructive' : 'secondary'}
-                          className="h-6 px-2 gap-1"
-                        >
-                          {errorIssues.length > 0 ? (
-                            <AlertCircle className="h-3.5 w-3.5" />
-                          ) : (
-                            <AlertTriangle className="h-3.5 w-3.5" />
-                          )}
-                          <span className="text-xs font-medium">{summaryLabel}</span>
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent align="end" className="w-80">
-                        <div className="space-y-3">
-                          <div className="text-sm font-semibold">Validation issues</div>
-                          {errorIssues.length > 0 && (
-                            <div className="space-y-1">
-                              <div className="text-xs font-semibold text-destructive uppercase">
-                                Errors
-                              </div>
-                              <div className="space-y-1">
-                                {errorIssues.map((issue) => (
-                                  <button
-                                    key={issue.key}
-                                    className="w-full text-left text-xs px-2 py-1 rounded-md hover:bg-muted flex items-start gap-2"
-                                    onClick={() => handleIssueSelect(issue.field)}
-                                  >
-                                    <span className="mt-1 h-2 w-2 rounded-full bg-destructive flex-shrink-0" />
-                                    <span>
-                                      <span className="font-medium">{issue.field}</span>
-                                      <span className="block text-muted-foreground">
-                                        {issue.message}
-                                      </span>
-                                    </span>
-                                  </button>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                          {warningIssues.length > 0 && (
-                            <div className="space-y-1">
-                              <div className="text-xs font-semibold text-amber-600 uppercase">
-                                Warnings
-                              </div>
-                              <div className="space-y-1">
-                                {warningIssues.map((issue) => (
-                                  <button
-                                    key={issue.key}
-                                    className="w-full text-left text-xs px-2 py-1 rounded-md hover:bg-muted flex items-start gap-2"
-                                    onClick={() => handleIssueSelect(issue.field)}
-                                  >
-                                    <span className="mt-1 h-2 w-2 rounded-full bg-amber-500 flex-shrink-0" />
-                                    <span>
-                                      <span className="font-medium">{issue.field}</span>
-                                      <span className="block text-muted-foreground">
-                                        {issue.message}
-                                      </span>
-                                    </span>
-                                  </button>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </PopoverContent>
-                    </Popover>
-                  )}
+                  <ValidationIssuesPopover
+                    isOpen={isSummaryOpen}
+                    onOpenChange={setIsSummaryOpen}
+                    issues={issueList}
+                    onIssueSelect={handleIssueSelect}
+                  />
                   {isFormDirty && (
                     <Badge variant="outline" className="text-xs">
                       <Edit className="h-3 w-3 mr-1" />

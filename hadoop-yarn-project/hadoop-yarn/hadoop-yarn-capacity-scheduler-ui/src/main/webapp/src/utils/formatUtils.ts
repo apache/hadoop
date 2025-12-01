@@ -17,8 +17,6 @@
  */
 
 
-import type { ResourceInfo } from '~/types/resource';
-import type { QueueInfo } from '~/types/queue';
 import { SPECIAL_VALUES } from '~/types/constants/special-values';
 
 /**

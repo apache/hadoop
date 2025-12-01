@@ -28,6 +28,7 @@ import {
 } from '~/config/validation-rules';
 import type { ValidationIssue, SchedulerInfo, StagedChange } from '~/types';
 import { SPECIAL_VALUES } from '~/types/constants/special-values';
+import { dedupeIssues } from './utils/dedupeIssues';
 
 type Severity = ValidationIssue['severity'];
 
@@ -142,21 +143,6 @@ function buildRuleContext(params: {
     stagedChanges,
     legacyModeEnabled,
   };
-}
-
-function dedupeIssues(issues: ValidationIssue[]): ValidationIssue[] {
-  const seen = new Set<string>();
-  const result: ValidationIssue[] = [];
-
-  issues.forEach((issue) => {
-    const key = `${issue.queuePath}|${issue.field}|${issue.rule}|${issue.message}`;
-    if (!seen.has(key)) {
-      seen.add(key);
-      result.push(issue);
-    }
-  });
-
-  return result;
 }
 
 export function hasBlockingIssues(issues: ValidationIssue[]): boolean {

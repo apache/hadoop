@@ -18,7 +18,9 @@
 
 
 import { nanoid } from 'nanoid';
-import { buildPropertyKey } from '~/utils/propertyUtils';
+import { buildPropertyKey, getParentQueuePath, getQueueNameFromPath } from '~/utils/propertyUtils';
+import { isVectorCapacity } from '~/utils/capacityUtils';
+import { isTemplateQueuePath } from '~/utils/templateUtils';
 import type { SchedulerStore } from '~/stores/schedulerStore';
 import type {
   CapacityResourceMode,
@@ -26,25 +28,16 @@ import type {
   CapacityVectorEntryDraft,
 } from '~/stores/slices/capacityEditorSlice';
 
-const VECTOR_START = '[';
-const VECTOR_END = ']';
 const DEFAULT_VECTOR_KEYS = ['memory', 'vcores'];
 
 export const DEFAULT_PARTITION_VALUE = '__DEFAULT_PARTITION__';
 
 const sanitize = (value?: string | null) => (value ?? '').trim();
 
-const looksLikeVector = (value: string): boolean => {
-  if (!value) {
-    return false;
-  }
-  const trimmed = value.trim();
-  return trimmed.startsWith(VECTOR_START) && trimmed.endsWith(VECTOR_END);
-};
-
 export const parseVectorDraft = (value: string): CapacityVectorEntryDraft[] => {
+  // More permissive parsing for drafts - allows empty values for editing
   const trimmed = value.trim();
-  if (!looksLikeVector(trimmed)) {
+  if (!isVectorCapacity(trimmed)) {
     return [];
   }
 
@@ -98,7 +91,7 @@ export const ensureCoreEntries = (
 };
 
 const inferModeFromValues = (capacity: string, maxCapacity: string): CapacityResourceMode => {
-  if (looksLikeVector(capacity) || looksLikeVector(maxCapacity)) {
+  if (isVectorCapacity(capacity) || isVectorCapacity(maxCapacity)) {
     return 'vector';
   }
   return 'simple';
@@ -186,27 +179,6 @@ export const createEmptyVectorEntry = (key = '', value = ''): CapacityVectorEntr
   value,
 });
 
-const getParentPath = (queuePath: string): string => {
-  const parts = queuePath.split('.');
-  return parts.slice(0, -1).join('.');
-};
-
-/**
- * Detects if a queue path is a template path.
- * Template paths contain:
- * - 'leaf-queue-template' (legacy auto-created leaf queues)
- * - 'auto-queue-creation-v2.template' (flexible shared template)
- * - 'auto-queue-creation-v2.parent-template' (flexible parent template)
- * - 'auto-queue-creation-v2.leaf-template' (flexible leaf template)
- */
-const isTemplatePath = (queuePath: string): boolean => {
-  const parts = queuePath.split('.');
-  return (
-    parts.includes('leaf-queue-template') ||
-    parts.some((part) => part.includes('template') && part.includes('auto-queue-creation'))
-  );
-};
-
 const getBaseValue = (store: SchedulerStore, queuePath: string, property: string): string => {
   const key = buildPropertyKey(queuePath, property);
   return sanitize(store.configData.get(key) ?? '');
@@ -251,7 +223,7 @@ export const buildCapacityEditorDrafts = ({
   const maxCapacityProperty = getPropertyNameForLabel(selectedNodeLabel, 'maximum-capacity');
 
   // Special handling for template paths: only create a draft for the template itself
-  if (isTemplatePath(originQueuePath)) {
+  if (isTemplateQueuePath(originQueuePath)) {
     const baseCapacity = getBaseValue(store, originQueuePath, capacityProperty);
     const baseMaxCapacity = getBaseValue(store, originQueuePath, maxCapacityProperty);
 
@@ -333,7 +305,7 @@ export const buildCapacityEditorDrafts = ({
       return;
     }
 
-    const changeParent = getParentPath(change.queuePath);
+    const changeParent = getParentQueuePath(change.queuePath);
     if (changeParent !== parentQueuePath) {
       return;
     }
@@ -354,7 +326,7 @@ export const buildCapacityEditorDrafts = ({
       return;
     }
 
-    const queueName = queuePath.split('.').pop() ?? queuePath;
+    const queueName = getQueueNameFromPath(queuePath) || queuePath;
     const isOrigin = queuePath === originQueuePath;
 
     const currentCapacity =
@@ -385,7 +357,7 @@ export const buildCapacityEditorDrafts = ({
     drafts.unshift(
       createRowDraft({
         queuePath: originQueuePath,
-        queueName: originQueueName || originQueuePath.split('.').pop() || originQueuePath,
+        queueName: originQueueName || getQueueNameFromPath(originQueuePath) || originQueuePath,
         baseCapacity: originIsNew ? '' : (originInitialCapacity ?? ''),
         baseMaxCapacity: originIsNew ? '' : (originInitialMaxCapacity ?? ''),
         currentCapacity: originInitialCapacity ?? '',
@@ -469,7 +441,7 @@ const getAccessibleLabelsForQueue = (
   }
 
   // Fallback to parent if nodeLabels is undefined or empty
-  const parentPath = getParentPath(queuePath);
+  const parentPath = getParentQueuePath(queuePath);
   if (parentPath && parentPath !== queuePath) {
     return getAccessibleLabelsForQueue(store, parentPath);
   }
