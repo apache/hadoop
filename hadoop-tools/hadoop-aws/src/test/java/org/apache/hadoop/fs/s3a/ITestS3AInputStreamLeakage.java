@@ -90,10 +90,6 @@ public class ITestS3AInputStreamLeakage extends AbstractS3ATestBase {
   @Test
   public void testFinalizer() throws Throwable {
     Path path = methodPath();
-    // Analytics accelerator currently does not support stream leak detection. This work is tracked
-    // in https://issues.apache.org/jira/browse/HADOOP-19451
-    skipIfAnalyticsAcceleratorEnabled(getConfiguration(),
-        "Analytics Accelerator currently does not support leak detection");
 
     final S3AFileSystem fs = getFileSystem();
 
