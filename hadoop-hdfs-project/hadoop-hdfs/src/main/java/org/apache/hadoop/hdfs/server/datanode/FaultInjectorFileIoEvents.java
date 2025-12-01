@@ -119,11 +119,17 @@ public class FaultInjectorFileIoEvents {
     }
   }
 
+  /**
+   * Inject fault into metadata operation before it's executed.
+   */
   public void beforeMetadataOp(@Nullable FsVolumeSpi volume,
       FileIoProvider.OPERATION op) throws InjectedFileIOFaultException {
     fault(op);
   }
 
+  /**
+   * Inject fault into file I/O operation before it's executed.
+   */
   public void beforeFileIo(@Nullable FsVolumeSpi volume,
       FileIoProvider.OPERATION op, long len)
           throws InjectedFileIOFaultException {

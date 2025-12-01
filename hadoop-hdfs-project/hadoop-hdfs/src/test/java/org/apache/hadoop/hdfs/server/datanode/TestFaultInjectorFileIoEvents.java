@@ -82,9 +82,9 @@ public class TestFaultInjectorFileIoEvents {
     assertEquals(createExpected(OPERATION.DELETE), injector.getOperations());
     assertEquals(getFaultMaxRange(100), injector.getFaultRangeMax());
     assertThrows(InjectedFileIOFaultException .class, () -> injector.beforeMetadataOp(null,
-      OPERATION.DELETE));
+        OPERATION.DELETE));
     assertThrows(InjectedFileIOFaultException .class, () -> injector.beforeFileIo(null,
-      OPERATION.DELETE, 0));
+        OPERATION.DELETE, 0));
     injector.beforeMetadataOp(null, OPERATION.WRITE);
     injector.beforeFileIo(null, OPERATION.WRITE, 0);
   }
@@ -97,13 +97,13 @@ public class TestFaultInjectorFileIoEvents {
     assertEquals(createExpected(OPERATION.DELETE, OPERATION.WRITE), injector.getOperations());
     assertEquals(getFaultMaxRange(100), injector.getFaultRangeMax());
     assertThrows(InjectedFileIOFaultException .class, () -> injector.beforeMetadataOp(null,
-      OPERATION.DELETE));
+        OPERATION.DELETE));
     assertThrows(InjectedFileIOFaultException .class, () -> injector.beforeFileIo(null,
-      OPERATION.DELETE, 0));
+        OPERATION.DELETE, 0));
     assertThrows(InjectedFileIOFaultException .class, () -> injector.beforeMetadataOp(null,
-      OPERATION.WRITE));
+        OPERATION.WRITE));
     assertThrows(InjectedFileIOFaultException .class, () -> injector.beforeFileIo(null,
-      OPERATION.WRITE, 0));
+        OPERATION.WRITE, 0));
     injector.beforeMetadataOp(null, OPERATION.READ);
     injector.beforeFileIo(null, OPERATION.READ, 0);
   }
@@ -116,13 +116,13 @@ public class TestFaultInjectorFileIoEvents {
     assertEquals(createExpected(OPERATION.DELETE, OPERATION.WRITE), injector.getOperations());
     assertEquals(getFaultMaxRange(100), injector.getFaultRangeMax());
     assertThrows(InjectedFileIOFaultException .class, () -> injector.beforeMetadataOp(null,
-      OPERATION.DELETE));
+        OPERATION.DELETE));
     assertThrows(InjectedFileIOFaultException .class, () -> injector.beforeFileIo(null,
-      OPERATION.DELETE, 0));
+        OPERATION.DELETE, 0));
     assertThrows(InjectedFileIOFaultException .class, () -> injector.beforeMetadataOp(null,
-      OPERATION.WRITE));
+        OPERATION.WRITE));
     assertThrows(InjectedFileIOFaultException .class, () -> injector.beforeFileIo(null,
-      OPERATION.WRITE, 0));
+        OPERATION.WRITE, 0));
     injector.beforeMetadataOp(null, OPERATION.READ);
     injector.beforeFileIo(null, OPERATION.READ, 0);
   }
@@ -135,13 +135,13 @@ public class TestFaultInjectorFileIoEvents {
     assertEquals(createExpected(OPERATION.DELETE, OPERATION.WRITE), injector.getOperations());
     assertEquals(getFaultMaxRange(100), injector.getFaultRangeMax());
     assertThrows(InjectedFileIOFaultException .class, () -> injector.beforeMetadataOp(null,
-      OPERATION.DELETE));
+        OPERATION.DELETE));
     assertThrows(InjectedFileIOFaultException .class, () -> injector.beforeFileIo(null,
-      OPERATION.DELETE, 0));
+        OPERATION.DELETE, 0));
     assertThrows(InjectedFileIOFaultException .class, () -> injector.beforeMetadataOp(null,
-      OPERATION.WRITE));
+        OPERATION.WRITE));
     assertThrows(InjectedFileIOFaultException .class, () -> injector.beforeFileIo(null,
-      OPERATION.WRITE, 0));
+        OPERATION.WRITE, 0));
     injector.beforeMetadataOp(null, OPERATION.READ);
     injector.beforeFileIo(null, OPERATION.READ, 0);
   }
