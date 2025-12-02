@@ -149,7 +149,7 @@
     <metrics.version>3.2.4</metrics.version>
     <netty4.version>4.1.127.Final</netty4.version>
     <snappy-java.version>1.1.10.4</snappy-java.version>
-    <lz4-java.version>1.7.1</lz4-java.version>
+    <lz4-java.version>1.9.0</lz4-java.version>
     <byte-buddy.version>1.17.6</byte-buddy.version>
 
     <!-- Maven protoc compiler -->
@@ -2090,7 +2090,7 @@
         </exclusions>
       </dependency>
       <dependency>
-        <groupId>org.lz4</groupId>
+        <groupId>at.yawk.lz4</groupId>
         <artifactId>lz4-java</artifactId>
         <version>${lz4-java.version}</version>
       </dependency>
