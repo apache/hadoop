@@ -24,6 +24,7 @@ import java.util.BitSet;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.Random;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
@@ -36,8 +37,6 @@ import org.apache.hadoop.util.StringUtils;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import sun.misc.Unsafe;
 
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ComparisonChain;
@@ -53,19 +52,6 @@ public class ShortCircuitShm {
       ShortCircuitShm.class);
 
   protected static final int BYTES_PER_SLOT = 64;
-
-  private static final Unsafe unsafe = safetyDance();
-
-  private static Unsafe safetyDance() {
-    try {
-      Field f = Unsafe.class.getDeclaredField("theUnsafe");
-      f.setAccessible(true);
-      return (Unsafe)f.get(null);
-    } catch (Throwable e) {
-      LOG.error("failed to load misc.Unsafe", e);
-    }
-    return null;
-  }
 
   /**
    * Calculate the usable size of a shared memory segment.
@@ -259,9 +245,9 @@ public class ShortCircuitShm {
     private static final long ANCHORABLE_FLAG =     1L<<62;
 
     /**
-     * The slot address in memory.
+     * The slot address in memory. Use AtomicLong instead of Unsafe
      */
-    private final long slotAddress;
+    private final AtomicLong slotAddress;
 
     /**
      * BlockId of the block this slot is used for.
@@ -269,7 +255,7 @@ public class ShortCircuitShm {
     private final ExtendedBlockId blockId;
 
     Slot(long slotAddress, ExtendedBlockId blockId) {
-      this.slotAddress = slotAddress;
+      this.slotAddress = new AtomicLong(slotAddress);
       this.blockId = blockId;
     }
 
@@ -307,41 +293,39 @@ public class ShortCircuitShm {
      */
     public int getSlotIdx() {
       return Ints.checkedCast(
-          (slotAddress - baseAddress) / BYTES_PER_SLOT);
+          (slotAddress.get() - baseAddress) / BYTES_PER_SLOT);
     }
 
     /**
      * Clear the slot.
      */
     void clear() {
-      unsafe.putLongVolatile(null, this.slotAddress, 0);
+      slotAddress.set(0);
     }
 
     private boolean isSet(long flag) {
-      long prev = unsafe.getLongVolatile(null, this.slotAddress);
+      long prev = slotAddress.get();
       return (prev & flag) != 0;
     }
 
     private void setFlag(long flag) {
       long prev;
       do {
-        prev = unsafe.getLongVolatile(null, this.slotAddress);
+        prev = slotAddress.get();
         if ((prev & flag) != 0) {
           return;
         }
-      } while (!unsafe.compareAndSwapLong(null, this.slotAddress,
-                  prev, prev | flag));
+      } while (!slotAddress.compareAndSet(prev, prev | flag));
     }
 
     private void clearFlag(long flag) {
       long prev;
       do {
-        prev = unsafe.getLongVolatile(null, this.slotAddress);
+        prev = slotAddress.get();
         if ((prev & flag) == 0) {
           return;
         }
-      } while (!unsafe.compareAndSwapLong(null, this.slotAddress,
-                  prev, prev & (~flag)));
+      } while (!slotAddress.compareAndSet(prev, prev & (~flag)));
     }
 
     public boolean isValid() {
@@ -369,7 +353,7 @@ public class ShortCircuitShm {
     }
 
     public boolean isAnchored() {
-      long prev = unsafe.getLongVolatile(null, this.slotAddress);
+      long prev = slotAddress.get();
       // Slot is no longer valid.
       return (prev & VALID_FLAG) != 0 && ((prev & 0x7fffffff) != 0);
     }
@@ -385,7 +369,7 @@ public class ShortCircuitShm {
     public boolean addAnchor() {
       long prev;
       do {
-        prev = unsafe.getLongVolatile(null, this.slotAddress);
+        prev = slotAddress.get();
         if ((prev & VALID_FLAG) == 0) {
           // Slot is no longer valid.
           return false;
@@ -398,8 +382,7 @@ public class ShortCircuitShm {
           // Too many other threads have anchored the slot (2 billion?)
           return false;
         }
-      } while (!unsafe.compareAndSwapLong(null, this.slotAddress,
-                  prev, prev + 1));
+      } while (!slotAddress.compareAndSet(prev, prev + 1));
       return true;
     }
 
@@ -409,12 +392,11 @@ public class ShortCircuitShm {
     public void removeAnchor() {
       long prev;
       do {
-        prev = unsafe.getLongVolatile(null, this.slotAddress);
+        prev = slotAddress.get();
         Preconditions.checkState((prev & 0x7fffffff) != 0,
             "Tried to remove anchor for slot " + slotAddress +", which was " +
             "not anchored.");
-      } while (!unsafe.compareAndSwapLong(null, this.slotAddress,
-                  prev, prev - 1));
+      } while (!slotAddress.compareAndSet(prev, prev - 1));
     }
 
     @Override
@@ -472,11 +454,6 @@ public class ShortCircuitShm {
     if (Shell.WINDOWS) {
       throw new UnsupportedOperationException(
           "DfsClientShm is not yet implemented for Windows.");
-    }
-    if (unsafe == null) {
-      throw new UnsupportedOperationException(
-          "can't use DfsClientShm because we failed to " +
-          "load misc.Unsafe.");
     }
     this.shmId = shmId;
     this.mmappedLength = getUsableLength(stream);

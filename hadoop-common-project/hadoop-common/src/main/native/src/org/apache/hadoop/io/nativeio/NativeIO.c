@@ -1483,6 +1483,25 @@ JNIEnv *env, jclass clazz)
 #endif
 }
 
+JNIEXPORT jlong JNICALL
+Java_org_apache_hadoop_io_nativeio_NativeIO_getOperatingSystemPageSize0(
+JNIEnv *env, jclass clazz)
+{
+#ifdef UNIX
+  long pageSize = sysconf(_SC_PAGESIZE);
+  if (pageSize < 0) {
+    // Guess 4096
+    return 4096;
+  }
+  return (jlong) pageSize;
+#endif
+#ifdef WINDOWS
+  SYSTEM_INFO sysInfo;
+  GetSystemInfo(&sysInfo);
+  return (jlong) sysInfo.dwPageSize;
+#endif
+}
+
 JNIEXPORT void JNICALL
 Java_org_apache_hadoop_io_nativeio_NativeIO_copyFileUnbuffered0(
 JNIEnv *env, jclass clazz, jstring jsrc, jstring jdst)

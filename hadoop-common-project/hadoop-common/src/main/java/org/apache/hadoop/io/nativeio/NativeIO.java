@@ -17,13 +17,14 @@
  */
 package org.apache.hadoop.io.nativeio;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileDescriptor;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.RandomAccessFile;
-import java.lang.reflect.Field;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
@@ -45,7 +46,6 @@ import org.apache.hadoop.util.PerformanceAdvisory;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import sun.misc.Unsafe;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 
@@ -898,15 +898,34 @@ public class NativeIO {
    */
   static long getOperatingSystemPageSize() {
     try {
-      Field f = Unsafe.class.getDeclaredField("theUnsafe");
-      f.setAccessible(true);
-      Unsafe unsafe = (Unsafe)f.get(null);
-      return unsafe.pageSize();
+      if (isAvailable()) {
+        return getOperatingSystemPageSize0();
+      } else {
+        String os = System.getProperty("os.name").toLowerCase();
+        ProcessBuilder processBuilder;
+        if (os.contains("mac") || os.contains("linux") || os.contains("unix")) {
+          processBuilder = new ProcessBuilder("getconf", "PAGESIZE");
+        } else {
+          return 4096;
+        }
+        Process process = processBuilder.start();
+        try (BufferedReader reader = new BufferedReader(
+            new InputStreamReader(process.getInputStream()))) {
+          String line = reader.readLine();
+          if (line != null && !line.isEmpty()) {
+            return Long.parseLong(line.trim());
+          } else {
+            return 4096;
+          }
+        }
+      }
     } catch (Throwable e) {
       LOG.warn("Unable to get operating system page size.  Guessing 4096.", e);
       return 4096;
     }
   }
+
+  private static native long getOperatingSystemPageSize0();
 
   private static class CachedUid {
     final long timestamp;

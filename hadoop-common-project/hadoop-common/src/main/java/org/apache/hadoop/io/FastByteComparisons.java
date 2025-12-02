@@ -17,14 +17,11 @@
  */
 package org.apache.hadoop.io;
 
-import java.lang.reflect.Field;
+import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import sun.misc.Unsafe;
 
 import org.apache.hadoop.thirdparty.com.google.common.primitives.UnsignedBytes;
 
@@ -57,8 +54,7 @@ abstract class FastByteComparisons {
 
 
   /**
-   * Provides a lexicographical comparer implementation; either a Java
-   * implementation or a faster implementation based on {@link Unsafe}.
+   * Provides a lexicographical comparer Java implementation.
    *
    * <p>Uses reflection to gracefully fall back to the Java implementation if
    * {@code Unsafe} isn't available.
@@ -131,34 +127,19 @@ abstract class FastByteComparisons {
     private enum UnsafeComparer implements Comparer<byte[]> {
       INSTANCE;
 
-      static final Unsafe theUnsafe;
-
       /** The offset to the first element in a byte array. */
       static final int BYTE_ARRAY_BASE_OFFSET;
 
       static {
-        theUnsafe = (Unsafe) AccessController.doPrivileged(
-            new PrivilegedAction<Object>() {
-              @Override
-              public Object run() {
-                try {
-                  Field f = Unsafe.class.getDeclaredField("theUnsafe");
-                  f.setAccessible(true);
-                  return f.get(null);
-                } catch (NoSuchFieldException e) {
-                  // It doesn't matter what we throw;
-                  // it's swallowed in getBestComparer().
-                  throw new Error();
-                } catch (IllegalAccessException e) {
-                  throw new Error();
-                }
-              }
-            });
-
-        BYTE_ARRAY_BASE_OFFSET = theUnsafe.arrayBaseOffset(byte[].class);
+        /**
+         * For a byte[] array, the base offset is always 0 because byte is the most fundamental data type in Java,
+         * and it does not have any additional header information.
+         * Therefore, it can be safely assumed that its base offset is 0.
+         */
+        BYTE_ARRAY_BASE_OFFSET = 0;
 
         // sanity check - this should never fail
-        if (theUnsafe.arrayIndexScale(byte[].class) != 1) {
+        if (Byte.BYTES != 1) {
           throw new AssertionError();
         }
       }
@@ -207,8 +188,8 @@ abstract class FastByteComparisons {
          * On the other hand, it is substantially faster on 64-bit.
          */
         for (i = 0; i < strideLimit; i += stride) {
-          long lw = theUnsafe.getLong(buffer1, offset1Adj + (long) i);
-          long rw = theUnsafe.getLong(buffer2, offset2Adj + (long) i);
+          long lw = getLongFromByteBuffer(buffer1, offset1Adj + i);
+          long rw = getLongFromByteBuffer(buffer2, offset2Adj + i);
 
           if (lw != rw) {
             if (!littleEndian) {
@@ -240,6 +221,12 @@ abstract class FastByteComparisons {
         }
         return length1 - length2;
       }
+    }
+
+    /** Get the long value from the specified offset. */
+    private static long getLongFromByteBuffer(byte[] buffer, int offset) {
+      ByteBuffer byteBuffer = ByteBuffer.wrap(buffer);
+      return byteBuffer.order(ByteOrder.nativeOrder()).getLong(offset);
     }
   }
 }
