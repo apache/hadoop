@@ -37,7 +37,6 @@ import org.apache.hadoop.test.GenericTestUtils;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.assume;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfAnalyticsAcceleratorEnabled;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertThatStatisticCounter;
 import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_LEAKS;
 import static org.apache.hadoop.test.GenericTestUtils.LogCapturer.captureLogs;
