@@ -17,7 +17,7 @@
 # Dockerfile for installing the necessary dependencies for building Hadoop.
 # See BUILDING.txt.
 
-FROM debian:10
+FROM ubuntu:noble
 
 WORKDIR /root
 
@@ -36,29 +36,34 @@ ENV DEBCONF_TERSE true
 # Platform package dependency resolver
 ######
 COPY pkg-resolver pkg-resolver
-RUN chmod a+x pkg-resolver/install-pkg-resolver.sh
-RUN pkg-resolver/install-pkg-resolver.sh debian:10
+RUN chmod a+x pkg-resolver/*.sh pkg-resolver/*.py \
+    && chmod a+r pkg-resolver/*.json
 
 ######
 # Install packages from apt
 ######
 # hadolint ignore=DL3008,SC2046
 RUN apt-get -q update \
-    && apt-get -q install -y --no-install-recommends $(pkg-resolver/resolve.py debian:10) \
-    && echo 'deb http://deb.debian.org/debian bullseye main' >> /etc/apt/sources.list \
+    && apt-get -q install -y --no-install-recommends wget apt-transport-https gpg gpg-agent gawk ca-certificates \
+    && apt-get -q install -y --no-install-recommends python3 \
+    && echo "deb https://packages.adoptium.net/artifactory/deb $(awk -F= '/^VERSION_CODENAME/{print$2}' /etc/os-release) main" > /etc/apt/sources.list.d/adoptium.list \
+    && wget -q -O - https://packages.adoptium.net/artifactory/api/gpg/key/public > /etc/apt/trusted.gpg.d/adoptium.asc  \
     && apt-get -q update \
-    && apt-get -q install -y --no-install-recommends -t bullseye $(pkg-resolver/resolve.py --release=bullseye debian:10) \
+    && apt-get -q install -y --no-install-recommends $(pkg-resolver/resolve.py ubuntu:noble) \
     && apt-get clean \
+    && update-java-alternatives -s java-1.17.0-openjdk-amd64 \
     && rm -rf /var/lib/apt/lists/*
 
-# TODO : Set locale
+RUN locale-gen en_US.UTF-8
+ENV LANG='en_US.UTF-8' LANGUAGE='en_US:en' LC_ALL='en_US.UTF-8'
+ENV PYTHONIOENCODING=utf-8
 
 ######
 # Set env vars required to build Hadoop
 ######
 ENV MAVEN_HOME /usr
 # JAVA_HOME must be set in Maven >= 3.5.0 (MNG-6003)
-ENV JAVA_HOME /usr/lib/jvm/java-11-openjdk-amd64
+ENV JAVA_HOME /usr/lib/jvm/java-17-openjdk-amd64
 
 #######
 # Set env vars for SpotBugs 4.2.2
@@ -82,12 +87,11 @@ ENV HADOOP_SKIP_YETUS_VERIFICATION true
 ####
 # Install packages
 ####
-RUN pkg-resolver/install-cmake.sh debian:10
-RUN pkg-resolver/install-spotbugs.sh debian:10
-RUN pkg-resolver/install-boost.sh debian:10
-RUN pkg-resolver/install-protobuf.sh debian:10
-RUN pkg-resolver/install-hadolint.sh debian:10
-RUN pkg-resolver/install-intel-isa-l.sh debian:10
+RUN pkg-resolver/install-spotbugs.sh ubuntu:noble
+RUN pkg-resolver/install-boost.sh ubuntu:noble
+RUN pkg-resolver/install-protobuf.sh ubuntu:noble
+RUN pkg-resolver/install-hadolint.sh ubuntu:noble
+RUN pkg-resolver/install-intel-isa-l.sh ubuntu:noble
 
 ###
 # Everything past this point is either not needed for testing or breaks Yetus.
