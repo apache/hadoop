@@ -19,29 +19,12 @@ set -e               # exit on error
 
 cd "$(dirname "$0")" # connect to root
 
-OS_PLATFORM="${1:-}"
-[ "$#" -gt 0 ] && shift
-
-DEFAULT_OS_PLATFORM="ubuntu_20"
-
-OS_PLATFORM_SUFFIX=""
-
-if [[ -n ${OS_PLATFORM} ]] && [[ "${OS_PLATFORM}" != "${DEFAULT_OS_PLATFORM}" ]]; then
-  # ubuntu_20 (default) platform does not have suffix in Dockerfile.
-  OS_PLATFORM_SUFFIX="_${OS_PLATFORM}"
-fi
-
 DOCKER_DIR=dev-support/docker
 DOCKER_FILE="${DOCKER_DIR}/Dockerfile"
 
 CPU_ARCH=$(echo "$MACHTYPE" | cut -d- -f1)
-if [[ "$CPU_ARCH" == "aarch64" || "$CPU_ARCH" == "arm64" ]]; then
-  DOCKER_FILE="${DOCKER_DIR}/Dockerfile${OS_PLATFORM_SUFFIX}_aarch64"
-fi
-
-if [ ! -e "${DOCKER_FILE}" ] ; then
-  echo "'${OS_PLATFORM}' environment not available yet for '${CPU_ARCH}'"
-  exit 1
+if [[ "$CPU_ARCH" = "aarch64" || "$CPU_ARCH" = "arm64" ]]; then
+  DOCKER_FILE="${DOCKER_DIR}/Dockerfile_aarch64"
 fi
 
 docker build -t hadoop-build -f $DOCKER_FILE $DOCKER_DIR
@@ -92,7 +75,7 @@ RUN rm -f /var/log/faillog /var/log/lastlog
 RUN groupadd --non-unique -g ${GROUP_ID} ${USER_NAME}
 RUN useradd -g ${GROUP_ID} -u ${USER_ID} -k /root -m ${USER_NAME} -d "${DOCKER_HOME_DIR}"
 RUN echo "${USER_NAME} ALL=NOPASSWD: ALL" > "/etc/sudoers.d/hadoop-build-${USER_ID}"
-ENV HOME="${DOCKER_HOME_DIR}"
+ENV HOME "${DOCKER_HOME_DIR}"
 
 UserSpecificDocker
 
@@ -110,5 +93,4 @@ docker run --rm=true $DOCKER_INTERACTIVE_RUN \
   -v "${HOME}/.m2:${DOCKER_HOME_DIR}/.m2${V_OPTS:-}" \
   -v "${HOME}/.gnupg:${DOCKER_HOME_DIR}/.gnupg${V_OPTS:-}" \
   -u "${USER_ID}" \
-  --name "hadoop-build${OS_PLATFORM_SUFFIX}" \
-  "hadoop-build${OS_PLATFORM_SUFFIX}-${USER_ID}" "$@"
+  "hadoop-build-${USER_ID}" "$@"

@@ -17,23 +17,17 @@
 # limitations under the License.
 
 if [ $# -lt 1 ]; then
-  echo "ERROR: No platform specified, please specify one"
+  echo "ERROR: Need at least 1 argument, $# were provided"
   exit 1
 fi
 
-chmod a+x pkg-resolver/*.sh pkg-resolver/*.py
-chmod a+r pkg-resolver/*.json
-
-if [ "$1" == "debian:10" ]; then
-  apt-get -q update
-  apt-get -q install -y --no-install-recommends python3 \
-    python3-pip \
-    python3-pkg-resources \
-    python3-setuptools \
-    python3-wheel
-  pip3 install pylint==2.6.0 python-dateutil==2.8.1
+if [ "$1" == "centos:7" ] || [ "$1" == "centos:8" ]; then
+  cd /etc/yum.repos.d/ || exit &&
+    sed -i 's/mirrorlist/#mirrorlist/g' /etc/yum.repos.d/CentOS-* &&
+    sed -i 's|# *baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' /etc/yum.repos.d/CentOS-* &&
+    yum update -y &&
+    cd /root || exit
 else
-  # Need to add the code for the rest of the platforms - HADOOP-17920
-  echo "ERROR: The given platform $1 is not yet supported or is invalid"
+  echo "ERROR: Setting the archived baseurl is only supported for centos 7 and 8 environments"
   exit 1
 fi
