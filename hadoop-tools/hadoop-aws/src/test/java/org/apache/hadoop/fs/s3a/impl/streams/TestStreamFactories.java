@@ -55,14 +55,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class TestStreamFactories extends AbstractHadoopTestBase {
 
   /**
-   * The empty string and "default" both map to the classic stream.
+   * The empty string and "default" both map to the analytics stream.
    */
   @Test
   public void testDefaultFactoryCreation() throws Throwable {
     load("", DEFAULT_STREAM_TYPE,
-        ClassicObjectInputStreamFactory.class);
+        AnalyticsStreamFactory.class);
     load(INPUT_STREAM_TYPE_DEFAULT, DEFAULT_STREAM_TYPE,
-        ClassicObjectInputStreamFactory.class);
+        AnalyticsStreamFactory.class);
   }
 
   /**
@@ -71,7 +71,7 @@ public class TestStreamFactories extends AbstractHadoopTestBase {
   @Test
   public void testClassicFactoryCreation() throws Throwable {
     final ClassicObjectInputStreamFactory f =
-        load(INPUT_STREAM_TYPE_CLASSIC, DEFAULT_STREAM_TYPE,
+        load(INPUT_STREAM_TYPE_CLASSIC, InputStreamType.Classic,
             ClassicObjectInputStreamFactory.class);
     final StreamFactoryRequirements requirements = f.factoryRequirements();
     Assertions.assertThat(requirements.requiresFuturePool())

@@ -227,6 +227,7 @@ public class AnalyticsStream extends ObjectInputStream implements StreamCapabili
 
   @Override
   protected void abortInFinalizer() {
+    getS3AStreamStatistics().streamLeaked();
     try {
       close();
     } catch (IOException ignored) {
