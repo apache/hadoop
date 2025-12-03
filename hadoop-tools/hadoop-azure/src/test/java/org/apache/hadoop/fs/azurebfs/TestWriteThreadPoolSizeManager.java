@@ -58,6 +58,7 @@ class TestWriteThreadPoolSizeManager extends AbstractAbfsIntegrationTest {
   private AbfsConfiguration mockConfig;
   private static final double HIGH_CPU_UTILIZATION_THRESHOLD = 0.95;
   private static final double LOW_CPU_UTILIZATION_THRESHOLD = 0.05;
+  private static final int LOW_MEMORY_USAGE_THRESHOLD_PERCENT = 100;
   private static final int THREAD_SLEEP_DURATION_MS = 200;
   private static final String TEST_FILE_PATH = "testFilePath";
   private static final String TEST_DIR_PATH = "testDirPath";
@@ -104,6 +105,7 @@ class TestWriteThreadPoolSizeManager extends AbstractAbfsIntegrationTest {
     when(mockConfig.getWriteMediumCpuThreshold()).thenReturn(MEDIUM_CPU_THRESHOLD);
     when(mockConfig.getWriteLowCpuThreshold()).thenReturn(LOW_CPU_THRESHOLD);
     when(mockConfig.getWriteCpuMonitoringInterval()).thenReturn(CPU_MONITORING_INTERVAL);
+    when(mockConfig.getWriteLowMemoryUsageThresholdPercent()).thenReturn(LOW_MEMORY_USAGE_THRESHOLD_PERCENT);
   }
 
   /**
@@ -135,26 +137,33 @@ class TestWriteThreadPoolSizeManager extends AbstractAbfsIntegrationTest {
    */
   @Test
   void testAdjustThreadPoolSizeBasedOnHighCPU() throws InterruptedException, IOException {
-    // Get the executor service (ThreadPoolExecutor)
-    WriteThreadPoolSizeManager instance
-        = WriteThreadPoolSizeManager.getInstance("testfsHigh",
-        getAbfsStore(getFileSystem()).getAbfsConfiguration(),
-        getFileSystem().getAbfsClient().getAbfsCounters());
-    ExecutorService executor = instance.getExecutorService();
-    ThreadPoolExecutor threadPoolExecutor = (ThreadPoolExecutor) executor;
+    // Initialize filesystem and thread pool manager
+    Configuration conf = getRawConfiguration();
+    conf.setBoolean(FS_AZURE_WRITE_DYNAMIC_THREADPOOL_ENABLEMENT, true);
+    FileSystem fileSystem = FileSystem.newInstance(conf);
+    try (AzureBlobFileSystem abfs = (AzureBlobFileSystem) fileSystem) {
+      // Get the executor service (ThreadPoolExecutor)
+      WriteThreadPoolSizeManager instance
+          = WriteThreadPoolSizeManager.getInstance(abfs.getFileSystemId(),
+          getAbfsStore(abfs).getAbfsConfiguration(),
+          abfs.getAbfsClient().getAbfsCounters());
+      ExecutorService executor = instance.getExecutorService();
+      ThreadPoolExecutor threadPoolExecutor = (ThreadPoolExecutor) executor;
 
-    // Simulate high CPU usage (e.g., 95% CPU utilization)
-    int initialMaxSize = threadPoolExecutor.getMaximumPoolSize();
-    instance.adjustThreadPoolSizeBasedOnCPU(HIGH_CPU_UTILIZATION_THRESHOLD);  // High CPU
+      // Simulate high CPU usage (e.g., 95% CPU utilization)
+      int initialMaxSize = threadPoolExecutor.getMaximumPoolSize();
+      instance.adjustThreadPoolSizeBasedOnCPU(
+          HIGH_CPU_UTILIZATION_THRESHOLD);  // High CPU
 
-    // Get the new maximum pool size after adjustment
-    int newMaxSize = threadPoolExecutor.getMaximumPoolSize();
+      // Get the new maximum pool size after adjustment
+      int newMaxSize = threadPoolExecutor.getMaximumPoolSize();
 
-    // Assert that the pool size has decreased or is equal to initial PoolSize based on high CPU usage
-    Assertions.assertThat(newMaxSize)
-        .as("Expected pool size to decrease under high CPU usage")
-        .isLessThanOrEqualTo(initialMaxSize);
-    instance.close();
+      // Assert that the pool size has decreased or is equal to initial PoolSize based on high CPU usage
+      Assertions.assertThat(newMaxSize)
+          .as("Expected pool size to decrease under high CPU usage")
+          .isLessThanOrEqualTo(initialMaxSize);
+      instance.close();
+    }
   }
 
   /**
@@ -163,18 +172,24 @@ class TestWriteThreadPoolSizeManager extends AbstractAbfsIntegrationTest {
   @Test
   void testAdjustThreadPoolSizeBasedOnLowCPU()
       throws InterruptedException, IOException {
-    WriteThreadPoolSizeManager instance
-        = WriteThreadPoolSizeManager.getInstance("testfsLow",
-        getAbfsStore(getFileSystem()).getAbfsConfiguration(),
-        getFileSystem().getAbfsClient().getAbfsCounters());
-    ExecutorService executor = instance.getExecutorService();
-    int initialSize = ((ThreadPoolExecutor) executor).getMaximumPoolSize();
-    instance.adjustThreadPoolSizeBasedOnCPU(LOW_CPU_UTILIZATION_THRESHOLD); // Low CPU
-    int newSize = ((ThreadPoolExecutor) executor).getMaximumPoolSize();
-    Assertions.assertThat(newSize)
-        .as("Expected pool size to increase or stay the same under low CPU usage")
-        .isGreaterThanOrEqualTo(initialSize);
-    instance.close();
+    Configuration conf = getRawConfiguration();
+    conf.setBoolean(FS_AZURE_WRITE_DYNAMIC_THREADPOOL_ENABLEMENT, true);
+    FileSystem fileSystem = FileSystem.newInstance(conf);
+    try (AzureBlobFileSystem abfs = (AzureBlobFileSystem) fileSystem) {
+      WriteThreadPoolSizeManager instance
+          = WriteThreadPoolSizeManager.getInstance(abfs.getFileSystemId(),
+          getAbfsStore(abfs).getAbfsConfiguration(),
+          abfs.getAbfsClient().getAbfsCounters());
+      ExecutorService executor = instance.getExecutorService();
+      int initialSize = ((ThreadPoolExecutor) executor).getMaximumPoolSize();
+      instance.adjustThreadPoolSizeBasedOnCPU(
+          LOW_CPU_UTILIZATION_THRESHOLD); // Low CPU
+      int newSize = ((ThreadPoolExecutor) executor).getMaximumPoolSize();
+      Assertions.assertThat(newSize)
+          .as("Expected pool size to increase or stay the same under low CPU usage")
+          .isGreaterThanOrEqualTo(initialSize);
+      instance.close();
+    }
   }
 
 
