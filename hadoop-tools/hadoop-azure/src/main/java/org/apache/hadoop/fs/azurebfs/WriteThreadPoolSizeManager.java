@@ -490,6 +490,8 @@ public final class WriteThreadPoolSizeManager implements Closeable {
      * @param systemCpuUtilization the current system-wide CPU utilization (0.0–1.0)
      * @param availableHeapGB the available heap memory in gigabytes
      * @param committedHeapGB the committed heap memory in gigabytes
+     * @param usedHeapGB the available heap memory in gigabytes
+     * @param maxHeapGB the committed heap memory in gigabytes
      * @param memoryLoad the JVM memory load (used / max)
      * @param lastScaleDirection the last scaling action performed: "I" (increase),
      * "D" (decrease), or empty if no scaling occurred
@@ -499,11 +501,11 @@ public final class WriteThreadPoolSizeManager implements Closeable {
     public WriteThreadPoolStats(int currentPoolSize,
         int maxPoolSize, int activeThreads, int idleThreads,
         double jvmCpuLoad, double systemCpuUtilization, double availableHeapGB,
-        double committedHeapGB, double memoryLoad, String lastScaleDirection,
+        double committedHeapGB, double usedHeapGB, double maxHeapGB, double memoryLoad, String lastScaleDirection,
         double maxCpuUtilization, long jvmProcessId) {
       super(currentPoolSize, maxPoolSize, activeThreads, idleThreads,
           jvmCpuLoad, systemCpuUtilization, availableHeapGB,
-          committedHeapGB, memoryLoad, lastScaleDirection,
+          committedHeapGB, usedHeapGB, maxHeapGB, memoryLoad, lastScaleDirection,
           maxCpuUtilization, jvmProcessId);
     }
   }
@@ -524,7 +526,7 @@ public final class WriteThreadPoolSizeManager implements Closeable {
     if (boundedThreadPool == null) {
       return new WriteThreadPoolStats(
           ZERO, ZERO, ZERO, ZERO, ZERO_D, ZERO_D, ZERO_D, ZERO_D, ZERO_D,
-          EMPTY_STRING, ZERO_D, ZERO);
+          ZERO_D, ZERO_D, EMPTY_STRING, ZERO_D, ZERO);
     }
 
     ThreadPoolExecutor exec = (ThreadPoolExecutor) this.boundedThreadPool;
@@ -545,6 +547,8 @@ public final class WriteThreadPoolSizeManager implements Closeable {
         ResourceUtilizationUtils.getSystemCpuLoad(),     // System CPU usage (ratio)
         ResourceUtilizationUtils.getAvailableHeapMemory(),      // Free heap (GB)
         ResourceUtilizationUtils.getCommittedHeapMemory(),      // Committed heap (GB)
+        ResourceUtilizationUtils.getUsedHeapMemory(),   // Used heap (GB)
+        ResourceUtilizationUtils.getMaxHeapMemory(),    // Max heap (GB)
         memoryLoad,                    // used/max
         currentScaleDirection,         // "I", "D", or ""
         getMaxJvmCpuUtilization(),              // Peak JVM CPU usage so far

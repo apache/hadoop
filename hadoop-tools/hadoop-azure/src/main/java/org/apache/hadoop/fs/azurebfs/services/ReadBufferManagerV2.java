@@ -130,7 +130,7 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
   }
 
   /**
-   * Returns the singleton instance of {@code ReadBufferManagerV2} for the given ABFS client.
+   * Returns the singleton instance of {@code ReadBufferManagerV2}.
    *
    * @param abfsCounters the {@link AbfsCounters} used for read operations.
    * @return the singleton instance of {@code ReadBufferManagerV2}.
@@ -1158,6 +1158,8 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
      * @param systemCpuUtilization the current system-wide CPU utilization (0.0–1.0)
      * @param availableHeapGB the available heap memory in gigabytes
      * @param committedHeapGB the committed heap memory in gigabytes
+     * @param usedHeapGB the available heap memory in gigabytes
+     * @param maxHeapGB the committed heap memory in gigabytes
      * @param memoryLoad the JVM memory load (used / max)
      * @param lastScaleDirection the last scaling action performed: "I" (increase),
      * "D" (decrease), or empty if no scaling occurred
@@ -1168,11 +1170,11 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
         int maxPoolSize, int activeThreads, int idleThreads,
         double jvmCpuLoad,
         double systemCpuUtilization, double availableHeapGB,
-        double committedHeapGB, double memoryLoad,
+        double committedHeapGB, double usedHeapGB, double maxHeapGB, double memoryLoad,
         String lastScaleDirection, double maxCpuUtilization, long jvmProcessId) {
       super(currentPoolSize, maxPoolSize, activeThreads, idleThreads,
           jvmCpuLoad, systemCpuUtilization, availableHeapGB,
-          committedHeapGB, memoryLoad, lastScaleDirection,
+          committedHeapGB, usedHeapGB, maxHeapGB, memoryLoad, lastScaleDirection,
           maxCpuUtilization, jvmProcessId);
     }
   }
@@ -1189,7 +1191,8 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
    */
   synchronized ReadThreadPoolStats getCurrentStats(double jvmCpuLoad) {
     if (workerPool == null) {
-      return new ReadThreadPoolStats(ZERO, ZERO, ZERO, ZERO, ZERO_D, ZERO_D, ZERO_D, ZERO_D, ZERO_D, EMPTY_STRING, ZERO_D, ZERO);
+      return new ReadThreadPoolStats(ZERO, ZERO, ZERO, ZERO, ZERO_D, ZERO_D,
+          ZERO_D, ZERO_D, ZERO_D, ZERO_D, ZERO_D, EMPTY_STRING, ZERO_D, ZERO);
     }
 
     ThreadPoolExecutor exec = this.workerPool;
@@ -1209,6 +1212,8 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
         ResourceUtilizationUtils.getSystemCpuLoad(),     // System CPU usage (ratio)
         ResourceUtilizationUtils.getAvailableHeapMemory(),      // Free heap (GB)
         ResourceUtilizationUtils.getCommittedHeapMemory(),      // Committed heap (GB)
+        ResourceUtilizationUtils.getUsedHeapMemory(),   // Used heap (GB)
+        ResourceUtilizationUtils.getMaxHeapMemory(),    // Max heap (GB)
         ResourceUtilizationUtils.getMemoryLoad(),                    // used/max
         currentScaleDirection,         // "I", "D", or ""
         getMaxJvmCpuUtilization(),             // Peak JVM CPU usage so far,

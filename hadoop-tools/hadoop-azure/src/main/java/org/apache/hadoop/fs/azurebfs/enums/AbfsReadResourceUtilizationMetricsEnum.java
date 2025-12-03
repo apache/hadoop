@@ -41,16 +41,22 @@ public enum AbfsReadResourceUtilizationMetricsEnum implements
   /** Recent JVM CPU load value as reported by the JVM (0.0 to 1.0). */
   JVM_CPU_UTILIZATION("JC", StatisticTypeEnum.TYPE_GAUGE),
 
-  /** Overall system-wide CPU utilization percentage during write operations. */
+  /** Overall system-wide CPU utilization percentage during read operations. */
   SYSTEM_CPU_UTILIZATION("SC", StatisticTypeEnum.TYPE_GAUGE),
 
-  /** Available heap memory (in GB) measured during write operations. */
+  /** Available heap memory (in GB) measured during read operations. */
   AVAILABLE_MEMORY("AM", StatisticTypeEnum.TYPE_GAUGE),
 
-  /** Committed heap memory (in GB) measured during write operations. */
+  /** Committed heap memory (in GB) measured during read operations. */
   COMMITTED_MEMORY("CM", StatisticTypeEnum.TYPE_GAUGE),
 
-  /** Available heap memory (in GB) measured during write operations. */
+  /** Used heap memory (in GB) measured during read operations. */
+  USED_MEMORY("UM", StatisticTypeEnum.TYPE_GAUGE),
+
+  /** Maximum heap memory (in GB) measured during read operations. */
+  MAX_HEAP_MEMORY("MM", StatisticTypeEnum.TYPE_GAUGE),
+
+  /** Available heap memory (in GB) measured during read operations. */
   MEMORY_LOAD("ML", StatisticTypeEnum.TYPE_GAUGE),
 
   /** Direction of the last scaling decision (e.g., scale-up or scale-down). */

@@ -114,6 +114,34 @@ public final class ResourceUtilizationUtils {
   }
 
   /**
+   * Calculates the used heap memory in gigabytes.
+   * This method returns the amount of heap memory currently used by the JVM.
+   * The result is rounded up to the nearest gigabyte.
+   *
+   * @return the used heap memory in gigabytes
+   */
+  public static long getUsedHeapMemory() {
+    MemoryMXBean osBean = ManagementFactory.getMemoryMXBean();
+    MemoryUsage memoryUsage = osBean.getHeapMemoryUsage();
+    long usedHeapBytes = memoryUsage.getUsed();
+    return (usedHeapBytes + BYTES_PER_GIGABYTE - 1) / BYTES_PER_GIGABYTE;
+  }
+
+  /**
+   * Calculates the maximum heap memory allowed for the JVM in gigabytes.
+   * This is the upper bound the JVM may expand its heap to.
+   *
+   * @return the maximum heap memory in gigabytes
+   */
+  public static long getMaxHeapMemory() {
+    MemoryMXBean osBean = ManagementFactory.getMemoryMXBean();
+    MemoryUsage memoryUsage = osBean.getHeapMemoryUsage();
+    long maxHeapBytes = memoryUsage.getMax();
+    return (maxHeapBytes + BYTES_PER_GIGABYTE - 1) / BYTES_PER_GIGABYTE;
+  }
+
+
+  /**
    * Returns the process ID (PID) of the currently running JVM.
    * This method uses {@link ProcessHandle#current()} to obtain the ID of the
    * Java process.

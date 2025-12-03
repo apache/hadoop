@@ -52,6 +52,12 @@ public enum AbfsWriteResourceUtilizationMetricsEnum implements
   /** Committed heap memory (in GB) measured during write operations. */
   COMMITTED_MEMORY("CM", StatisticTypeEnum.TYPE_GAUGE),
 
+  /** Used heap memory (in GB) measured during write operations. */
+  USED_MEMORY("UM", StatisticTypeEnum.TYPE_GAUGE),
+
+  /** Maximum heap memory (in GB) measured during write operations. */
+  MAX_HEAP_MEMORY("MM", StatisticTypeEnum.TYPE_GAUGE),
+
   /** Available heap memory (in GB) measured during write operations. */
   MEMORY_LOAD("ML", StatisticTypeEnum.TYPE_GAUGE),
 
