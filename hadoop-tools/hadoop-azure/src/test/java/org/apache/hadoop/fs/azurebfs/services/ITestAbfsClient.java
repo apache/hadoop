@@ -32,6 +32,8 @@ import java.util.regex.Pattern;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.Mockito;
 
@@ -45,13 +47,15 @@ import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore;
 import org.apache.hadoop.fs.azurebfs.TestAbfsConfigurationFieldsValidation;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsServiceType;
+import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.constants.HttpOperationType;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsApacheHttpExpect100Exception;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.TokenAccessProviderException;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters;
+import org.apache.hadoop.fs.azurebfs.extensions.SASTokenProvider;
 import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
-import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderFormat;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
@@ -61,12 +65,25 @@ import org.apache.http.HttpResponse;
 
 import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
 import static org.apache.hadoop.fs.azurebfs.ITestAzureBlobFileSystemListStatus.TEST_CONTINUATION_TOKEN;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.APN_VERSION;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.APPEND_ACTION;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CLIENT_VERSION;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.DOT;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EXPECT_100_JDK_ERROR;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.FORWARD_SLASH;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_PATCH;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_PUT;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HUNDRED_CONTINUE;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.JAVA_VENDOR;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.JAVA_VERSION;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.OS_ARCH;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.OS_NAME;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.OS_VERSION;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.SEMICOLON;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.SINGLE_WHITE_SPACE;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_IS_HNS_ENABLED;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_APACHE_HTTP_CLIENT_CACHE_WARMUP_COUNT;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_CLUSTER_NAME;
@@ -75,32 +92,20 @@ import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_VALUE_UNKNOWN;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.EXPECT;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_HTTP_METHOD_OVERRIDE;
+import static org.apache.hadoop.fs.azurebfs.constants.HttpOperationType.APACHE_HTTP_CLIENT;
+import static org.apache.hadoop.fs.azurebfs.constants.HttpOperationType.JDK_HTTP_URL_CONNECTION;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARAM_ACTION;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARAM_POSITION;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_ABFS_ACCOUNT_NAME;
-import static org.apache.hadoop.fs.azurebfs.constants.HttpOperationType.APACHE_HTTP_CLIENT;
-import static org.apache.hadoop.fs.azurebfs.constants.HttpOperationType.JDK_HTTP_URL_CONNECTION;
+import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.TEST_CONFIGURATION_FILE_NAME;
+import static org.apache.hadoop.fs.azurebfs.services.AuthType.SharedKey;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.assertj.core.api.Assumptions.assumeThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.when;
-
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.APN_VERSION;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CLIENT_VERSION;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.DOT;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.FORWARD_SLASH;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.JAVA_VENDOR;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.JAVA_VERSION;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.OS_ARCH;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.OS_NAME;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.OS_VERSION;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.SEMICOLON;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.SINGLE_WHITE_SPACE;
-import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.TEST_CONFIGURATION_FILE_NAME;
-import static org.assertj.core.api.Assumptions.assumeThat;
 
 /**
  * Test useragent of abfs client.
@@ -176,10 +181,10 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
     AbfsClient client;
     if (AbfsServiceType.DFS.equals(config.getFsConfiguredServiceType())) {
       client = new AbfsDfsClient(new URL("https://azure.com"), null,
-          config, (AccessTokenProvider) null, null, abfsClientContext);
+          config, (AccessTokenProvider) null, null, null, abfsClientContext);
     } else {
       client = new AbfsBlobClient(new URL("https://azure.com"), null,
-          config, (AccessTokenProvider) null, null, abfsClientContext);
+          config, (AccessTokenProvider) null, null, null, abfsClientContext);
     }
     String sslProviderName = null;
     if (includeSSLProvider) {
@@ -422,7 +427,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
     if (AbfsServiceType.DFS.equals(abfsConfig.getFsConfiguredServiceType())) {
       testClient = new AbfsDfsClient(
           baseAbfsClientInstance.getBaseUrl(),
-          (currentAuthType == AuthType.SharedKey
+          (currentAuthType == SharedKey
               ? new SharedKeyCredentials(
               abfsConfig.getAccountName().substring(0,
                   abfsConfig.getAccountName().indexOf(DOT)),
@@ -433,11 +438,12 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
               ? abfsConfig.getTokenProvider()
               : null),
           null,
+          null,
           abfsClientContext);
     } else {
       testClient = new AbfsBlobClient(
           baseAbfsClientInstance.getBaseUrl(),
-          (currentAuthType == AuthType.SharedKey
+          (currentAuthType == SharedKey
               ? new SharedKeyCredentials(
               abfsConfig.getAccountName().substring(0,
                   abfsConfig.getAccountName().indexOf(DOT)),
@@ -447,6 +453,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
           (currentAuthType == AuthType.OAuth
               ? abfsConfig.getTokenProvider()
               : null),
+          null,
           null,
           abfsClientContext);
     }
@@ -474,7 +481,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
 
     AbfsClient testClient = new AbfsBlobClient(
         baseAbfsClientInstance.getBaseUrl(),
-        (currentAuthType == AuthType.SharedKey
+        (currentAuthType == SharedKey
             ? new SharedKeyCredentials(
             abfsConfig.getAccountName().substring(0,
                 abfsConfig.getAccountName().indexOf(DOT)),
@@ -484,6 +491,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
         (currentAuthType == AuthType.OAuth
             ? abfsConfig.getTokenProvider()
             : null),
+        null,
         null,
         abfsClientContext);
 
@@ -498,7 +506,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
 
     assumeThat(currentAuthType)
         .as("Auth type must be SharedKey or OAuth for this test")
-        .isIn(AuthType.SharedKey, AuthType.OAuth);
+        .isIn(SharedKey, AuthType.OAuth);
 
     AbfsClient client;
     if (AbfsServiceType.DFS.equals(abfsConfig.getFsConfiguredServiceType())) {
@@ -543,7 +551,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
     ReflectionUtils.setFinalField(AbfsClient.class, client, "xMsVersion", baseAbfsClientInstance.getxMsVersion());
 
     // override auth provider
-    if (currentAuthType == AuthType.SharedKey) {
+    if (currentAuthType == SharedKey) {
       ReflectionUtils.setFinalField(AbfsClient.class, client, "sharedKeyCredentials", new SharedKeyCredentials(
               abfsConfig.getAccountName().substring(0,
                   abfsConfig.getAccountName().indexOf(DOT)),
@@ -765,6 +773,81 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
     Assertions.assertThat(appendRequestParameters.isExpectHeaderEnabled())
             .describedAs("The expect header is not false")
             .isFalse();
+  }
+
+  /**
+   * Parameterized test to verify the correct setup of authentication providers
+   * for each supported AuthType in the Azure Blob FileSystem configuration.
+   * For each AuthType, this test checks that the expected provider(s) are present
+   * and that unsupported providers throw the correct exceptions.
+   *
+   * OAuth: Token provider must be present, SAS provider must throw exception.
+   * SharedKey: Token provider must throw exception, SAS provider must throw exception.
+   * SAS: SAS provider must be present, token provider must throw exception.
+   * UserboundSASWithOAuth: Both AccessTokenProvider and SASTokenProvider must be present.
+   * Custom: Test is skipped.
+   *
+   * @param authType the authentication type to test
+   * @throws Exception if any error occurs during test execution
+   */
+  @ParameterizedTest
+  @EnumSource(AuthType.class)
+  public void testAuthTypeProviderSetup(AuthType authType) throws Exception {
+    if (authType.name().equals("Custom")) {
+      return;
+    }
+
+    this.getConfiguration().set(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME, SharedKey.name());
+    AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(
+        getRawConfiguration());
+    this.getConfiguration().set(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME, authType.name());
+
+    AbfsConfiguration abfsConfig = fs.getAbfsStore().getAbfsConfiguration();
+
+    switch (authType) {
+    case OAuth:
+      assertNotNull(abfsConfig.getTokenProvider(),
+          "OAuth should have token provider");
+      assertThrows(AzureBlobFileSystemException.class,
+          () -> abfsConfig.getSASTokenProvider(),
+          "SharedKey should not have SAS provider");
+      break;
+
+    case SharedKey:
+      assertThrows(TokenAccessProviderException.class,
+          () -> abfsConfig.getTokenProvider(),
+          "SharedKey should not have token provider");
+      assertThrows(AzureBlobFileSystemException.class,
+          () -> abfsConfig.getSASTokenProvider(),
+          "SharedKey should not have SAS provider");
+      break;
+
+    case SAS:
+      if (!abfsConfig.getIsNamespaceEnabledAccount().toBoolean()) {
+        assumeBlobServiceType();
+      }
+      assertThrows(TokenAccessProviderException.class,
+          () -> abfsConfig.getTokenProvider(),
+          "SharedKey should not have token provider");
+      assertNotNull(abfsConfig.getSASTokenProvider(),
+          "SAS should have SAS provider");
+      break;
+
+    case UserboundSASWithOAuth:
+      assumeHnsEnabled();
+      Object[] providers = abfsConfig.getUserBoundSASBothTokenProviders();
+      assertNotNull(providers, "Providers array must not be null");
+      assertTrue(providers[0] instanceof AccessTokenProvider,
+          "First should be AccessTokenProvider");
+      assertTrue(providers[1] instanceof SASTokenProvider,
+          "Second should be SASTokenProvider");
+      break;
+
+    default:
+      fail("Unexpected AuthType: " + authType);
+    }
+
+    fs.close();
   }
 
   @Test

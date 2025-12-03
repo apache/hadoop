@@ -147,6 +147,7 @@ public final class AbfsHttpConstants {
   public static final String APPLICATION_JSON = "application/json";
   public static final String APPLICATION_OCTET_STREAM = "application/octet-stream";
   public static final String APPLICATION_XML = "application/xml";
+  public static final String APPLICATION_X_WWW_FORM_URLENCODED = "application/x-www-form-urlencoded";
   public static final String XMS_PROPERTIES_ENCODING_ASCII = "ISO-8859-1";
   public static final String XMS_PROPERTIES_ENCODING_UNICODE = "UTF-8";
 
@@ -189,7 +190,8 @@ public final class AbfsHttpConstants {
     DEC_12_2019("2019-12-12"),
     APR_10_2021("2021-04-10"),
     AUG_03_2023("2023-08-03"),
-    NOV_04_2024("2024-11-04");
+    NOV_04_2024("2024-11-04"),
+    JUL_05_2025("2025-07-05");
 
     private final String xMsApiVersion;
 

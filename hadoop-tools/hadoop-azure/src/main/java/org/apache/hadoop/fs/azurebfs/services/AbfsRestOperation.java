@@ -595,6 +595,11 @@ public class AbfsRestOperation {
         // do nothing; the SAS token should already be appended to the query string
         httpOperation.setMaskForSAS(); //mask sig/oid from url for logs
         break;
+      case UserboundSASWithOAuth:
+        httpOperation.setRequestProperty(HttpHeaderConfigurations.AUTHORIZATION,
+            client.getAccessToken());
+        httpOperation.setMaskForSAS(); //mask sig/oid from url for logs
+        break;
       case SharedKey:
       default:
         // sign the HTTP request

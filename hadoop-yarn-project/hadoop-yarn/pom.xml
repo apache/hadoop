@@ -244,6 +244,7 @@
     <module>hadoop-yarn-client</module>
     <module>hadoop-yarn-registry</module>
     <module>hadoop-yarn-ui</module>
+    <module>hadoop-yarn-capacity-scheduler-ui</module>
     <module>hadoop-yarn-csi</module>
   </modules>
   <!--  -->

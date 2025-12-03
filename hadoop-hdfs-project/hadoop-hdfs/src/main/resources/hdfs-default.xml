@@ -1398,6 +1398,17 @@
 </property>
 
 <property>
+  <name>dfs.namenode.checkpoint.parallel.upload.enabled</name>
+  <value>false</value>
+  <description>
+  If true, the CheckpointNode will upload the checkpoint image to multiple other
+  NameNodes in parallel, in the cluster with observer namenodes. You should
+  make sure the network bandwidth is sufficient.
+  If false, the fsimage will be uploaded serially to multiple namenodes.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.checkpoint.check.quiet-multiplier</name>
   <value>1.5</value>
   <description>

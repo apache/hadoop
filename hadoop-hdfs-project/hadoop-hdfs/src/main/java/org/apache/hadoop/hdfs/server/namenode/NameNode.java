@@ -143,6 +143,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_IMAGE_PARALLEL_LOAD_DEFAU
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_IMAGE_PARALLEL_LOAD_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_LOCK_DETAILED_METRICS_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_LOCK_DETAILED_METRICS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_MAX_DIRECTORY_ITEMS_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_MAX_DIRECTORY_ITEMS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_READ_LOCK_REPORTING_THRESHOLD_MS_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_READ_LOCK_REPORTING_THRESHOLD_MS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SLOWPEER_COLLECT_INTERVAL_DEFAULT;
@@ -385,7 +387,8 @@ public class NameNode extends ReconfigurableBase implements
           DFS_NAMENODE_LOCK_DETAILED_METRICS_KEY,
           DFS_NAMENODE_WRITE_LOCK_REPORTING_THRESHOLD_MS_KEY,
           DFS_NAMENODE_READ_LOCK_REPORTING_THRESHOLD_MS_KEY,
-          DFS_NAMENODE_SLOWPEER_COLLECT_INTERVAL_KEY));
+          DFS_NAMENODE_SLOWPEER_COLLECT_INTERVAL_KEY,
+          DFS_NAMENODE_MAX_DIRECTORY_ITEMS_KEY));
 
   private static final String USAGE = "Usage: hdfs namenode ["
       + StartupOption.BACKUP.getName() + "] | \n\t["
@@ -2388,6 +2391,8 @@ public class NameNode extends ReconfigurableBase implements
         || property.equals(DFS_NAMENODE_READ_LOCK_REPORTING_THRESHOLD_MS_KEY)
         || property.equals(DFS_NAMENODE_WRITE_LOCK_REPORTING_THRESHOLD_MS_KEY)) {
       return reconfigureFSNamesystemLockMetricsParameters(property, newVal);
+    } else if (property.equals(DFS_NAMENODE_MAX_DIRECTORY_ITEMS_KEY)) {
+      return reconfigureMaxDirItems(newVal);
     } else {
       throw new ReconfigurationException(property, newVal, getConf().get(
           property));
@@ -2803,6 +2808,23 @@ public class NameNode extends ReconfigurableBase implements
       return result;
     } catch (IllegalArgumentException e){
       throw new ReconfigurationException(property, newVal, getConf().get(property), e);
+    }
+  }
+
+  private String reconfigureMaxDirItems(String newVal) throws ReconfigurationException {
+    int newSetting;
+    namesystem.writeLock(RwLockMode.BM);
+    try {
+      getNamesystem().getFSDirectory()
+          .setMaxDirItems(adjustNewVal(DFS_NAMENODE_MAX_DIRECTORY_ITEMS_DEFAULT, newVal));
+      newSetting = getNamesystem().getFSDirectory().getMaxDirItems();
+      LOG.info("RECONFIGURE* changed {} to {}", DFS_NAMENODE_MAX_DIRECTORY_ITEMS_KEY, newSetting);
+      return String.valueOf(newSetting);
+    } catch (IllegalArgumentException e) {
+      throw new ReconfigurationException(DFS_NAMENODE_MAX_DIRECTORY_ITEMS_KEY, newVal,
+          getConf().get(DFS_NAMENODE_MAX_DIRECTORY_ITEMS_KEY), e);
+    } finally {
+      namesystem.writeUnlock(RwLockMode.BM, "reconfigureMaxDirItems");
     }
   }
 
