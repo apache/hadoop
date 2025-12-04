@@ -121,14 +121,14 @@ Normally, declaring the region in `fs.s3a.endpoint.region` should be sufficient 
   endpoint value, S3A will attempt to parse the region from the endpoint and
   configure S3 client to use the region value.
 * If both `fs.s3a.endpoint` and `fs.s3a.endpoint.region` are not set, S3A will
-  use `us-east-2` as default region and enable cross region access. In this case,
+  use `us-east-1` as default region and enable cross region access. In this case,
   S3A does not attempt to override the endpoint while configuring the S3 client.
 * If `fs.s3a.endpoint` is not set and `fs.s3a.endpoint.region` is set to an empty
   string, S3A will configure S3 client without any region or endpoint override.
   This will allow fallback to S3 SDK region resolution chain. More details
   [here](https://docs.aws.amazon.com/sdk-for-java/latest/developer-guide/region-selection.html).
 * If `fs.s3a.endpoint` is set to central endpoint `s3.amazonaws.com` and
-  `fs.s3a.endpoint.region` is not set, S3A will use `us-east-2` as default region
+  `fs.s3a.endpoint.region` is not set, S3A will use `us-east-1` as default region
   and enable cross region access. In this case, S3A does not attempt to override
   the endpoint while configuring the S3 client.
 * If `fs.s3a.endpoint` is set to central endpoint `s3.amazonaws.com` and
@@ -147,7 +147,7 @@ are complex and improving over time. Hence, they may be considered unstable.
 *Important:* do not use `auto`, `ec2`, or `sdk` as these may be used
 in the future for specific region-binding algorithms.
 
-If you are working with third party stores, please check [third party stores in detail](third_party_stores.html).
+If you are working with third party stores, please check [third party stores in detail](./third_party_stores.html).
 
 ### <a name="timeouts"></a> Network timeouts
 

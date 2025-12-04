@@ -92,12 +92,6 @@ public class DefaultS3ClientFactory extends Configured
       LoggerFactory.getLogger(DefaultS3ClientFactory.class);
 
   /**
-   * A one-off warning of default region chains in use.
-   */
-  private static final LogExactlyOnce DEFAULT_REGION_CHAIN =
-      new LogExactlyOnce(LOG);
-
-  /**
    * Message printed when the SDK Region chain is in use.
    */
   private static final String SDK_REGION_CHAIN_IN_USE =
@@ -283,18 +277,7 @@ public class DefaultS3ClientFactory extends Configured
 
   /**
    * This method configures the endpoint and region for a S3 client.
-   * The order of configuration is:
-   *
-   * <ol>
-   * <li>If region is configured via fs.s3a.endpoint.region, use it.</li>
-   * <li>If endpoint is configured via via fs.s3a.endpoint, set it.
-   *     If no region is configured, try to parse region from endpoint. </li>
-   * <li> If no region is configured, and it could not be parsed from the endpoint,
-   *     set the default region as US_EAST_2</li>
-   * <li> If configured region is empty, fallback to SDK resolution chain. </li>
-   * <li> S3 cross region is enabled by default irrespective of region or endpoint
-   *      is set or not.</li>
-   * </ol>
+   * See {@link RegionResolution} for the details.
    * @param builder S3 client builder.
    * @param parameters parameter object
    * @param conf conf configuration object
@@ -314,15 +297,7 @@ public class DefaultS3ClientFactory extends Configured
     // which tests expect.
     builder.fipsEnabled(resolution.isUseFips());
 
-    final RegionResolution.RegionResolutionMechanism mechanism = resolution.getMechanism();
-    if (Sdk == mechanism) {
-      // handing off all resolution to SDK.
-      // region configuration was set to empty string.
-      // allow this if people really want it; it is OK to rely on this
-      // when deployed in EC2.
-      DEFAULT_REGION_CHAIN.info(SDK_REGION_CHAIN_IN_USE);
-      LOG.debug(SDK_REGION_CHAIN_IN_USE);
-    } else {
+    if (Sdk != resolution.getMechanism()) {
 
       // a region has been determined from configuration,
       // or it is falling back to central region.

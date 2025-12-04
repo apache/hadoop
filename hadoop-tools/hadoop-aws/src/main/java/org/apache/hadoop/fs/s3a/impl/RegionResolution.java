@@ -49,8 +49,10 @@ import static org.apache.hadoop.fs.s3a.Constants.EMPTY_REGION;
 import static org.apache.hadoop.fs.s3a.Constants.FIPS_ENDPOINT;
 import static org.apache.hadoop.fs.s3a.Constants.SDK_REGION;
 import static org.apache.hadoop.fs.s3a.Constants.SECURE_CONNECTIONS;
+import static org.apache.hadoop.fs.s3a.impl.RegionResolution.RegionResolutionMechanism.ExternalEndpoint;
+import static org.apache.hadoop.fs.s3a.impl.RegionResolution.RegionResolutionMechanism.FallbackToCentral;
 import static org.apache.hadoop.util.Preconditions.checkArgument;
-import static software.amazon.awssdk.regions.Region.US_EAST_2;
+import static software.amazon.awssdk.regions.Region.US_EAST_1;
 
 /**
  * Region resolution.
@@ -58,11 +60,20 @@ import static software.amazon.awssdk.regions.Region.US_EAST_2;
  * <p>The V1 SDK was happy to take an endpoint and
  * work details out from there, possibly probing us-central-1 and cacheing
  * the result.
- * <p>The V2 SDK like the signing region and endpoint to be declared.
+ * <p>The V2 SDK likes the signing region and endpoint to be declared.
  * The S3A connector has tried to mimic the V1 code, but lacks some features
  * (use of environment variables, probing of EC2 IAM details) for which
  * the SDK is better.
- *
+ * <ol>
+ * <li>If region is configured via fs.s3a.endpoint.region, use it.</li>
+ * <li>If endpoint is configured via via fs.s3a.endpoint, set it.
+ *     If no region is configured, try to parse region from endpoint. </li>
+ * <li> If no region is configured, and it could not be parsed from the endpoint,
+ *     set the default region as US_EAST_2</li>
+ * <li> If configured region is empty, fallback to SDK resolution chain. </li>
+ * <li> S3 cross region is enabled by default irrespective of region or endpoint
+ *      is set or not.</li>
+ * </ol>
  */
 public class RegionResolution {
 
@@ -336,7 +347,7 @@ public class RegionResolution {
 
   /**
    * Parses the endpoint to get the region.
-   * If endpoint is the central one, use US_EAST_2.
+   * If endpoint is the central one, use US_EAST_1.
    * @param endpoint the configure endpoint.
    * @param endpointEndsWithCentral true if the endpoint is configured as central.
    * @return the S3 region resolution if possible from parsing the endpoint
@@ -483,11 +494,11 @@ public class RegionResolution {
       if (!endpointDeclared || isAwsEndpoint(endpointStr)) {
         // still failing to resolve the region
         // fall back to central
-        resolution.withRegion(US_EAST_2, RegionResolutionMechanism.FallbackToCentral);
+        resolution.withRegion(US_EAST_1, FallbackToCentral);
       } else {
         // we are not resolved and not an aws region.
         // set the region to being "external"
-        resolution.withRegion(EXTERNAL_REGION, RegionResolutionMechanism.ExternalEndpoint);
+        resolution.withRegion(EXTERNAL_REGION, ExternalEndpoint);
       }
     }
 
