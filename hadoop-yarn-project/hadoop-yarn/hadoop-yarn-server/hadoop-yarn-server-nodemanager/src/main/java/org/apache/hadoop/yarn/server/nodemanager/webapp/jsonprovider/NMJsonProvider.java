@@ -41,7 +41,7 @@ import java.lang.reflect.Type;
 public class NMJsonProvider extends MOXyJsonProvider {
 
   private boolean isRootElementNeeded (Class<?> type) {
-    return type.equals(ContainerLogsInfoes.class) ? false : true;
+    return !type.equals(ContainerLogsInfoes.class);
   }
 
   @Override
