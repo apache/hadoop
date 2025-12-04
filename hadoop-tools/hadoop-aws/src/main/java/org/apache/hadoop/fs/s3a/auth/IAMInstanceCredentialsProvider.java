@@ -67,7 +67,7 @@ public class IAMInstanceCredentialsProvider
    * How far in advance of credential expiry must IAM credentials be refreshed.
    * See HADOOP-19181. S3A: IAMCredentialsProvider throttling results in AWS auth failures
    */
-  public static final Duration TIME_BEFORE_EXPIRY = Duration.ofMinutes(1);
+  public static final Duration TIME_BEFORE_EXPIRY = Duration.ofMinutes(5);
 
   /**
    * The credentials provider.
