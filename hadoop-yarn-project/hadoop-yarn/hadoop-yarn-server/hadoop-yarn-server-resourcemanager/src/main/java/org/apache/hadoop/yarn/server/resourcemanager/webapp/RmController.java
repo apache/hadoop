@@ -40,9 +40,13 @@ import com.google.inject.Inject;
 // on macOS HFS as its case-insensitive!
 public class RmController extends Controller {
 
+  private RequestContext context;
+  private static final String ABOUT_PAGE_PATH = "cluster/cluster";
+
   @Inject
   RmController(RequestContext ctx) {
     super(ctx);
+    this.context = ctx;
   }
 
   @Override public void index() {
@@ -50,8 +54,12 @@ public class RmController extends Controller {
   }
 
   public void about() {
-    setTitle("About the Cluster");
-    render(AboutPage.class);
+    if (context.getRequest().getRequestURI().contains(ABOUT_PAGE_PATH)) {
+      setTitle("About the Cluster");
+      render(AboutPage.class);
+    } else {
+      index();
+    }
   }
 
   public void app() {
