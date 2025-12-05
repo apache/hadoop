@@ -194,7 +194,7 @@ public class TestAbfsInputStream extends
     return inputStream;
   }
 
-  void queueReadAheads(AbfsInputStream inputStream) {
+  void queueReadAheads(AbfsInputStream inputStream) throws IOException {
     // Mimic AbfsInputStream readAhead queue requests
     getBufferManager()
         .queueReadAhead(inputStream, 0, ONE_KB, inputStream.getTracingContext());
@@ -1215,7 +1215,8 @@ public class TestAbfsInputStream extends
     return fs;
   }
 
-  private void resetReadBufferManager(int bufferSize, int threshold) {
+  private void resetReadBufferManager(int bufferSize, int threshold)
+      throws IOException {
     getBufferManager()
         .testResetReadBufferManager(bufferSize, threshold);
     // Trigger GC as aggressive recreation of ReadBufferManager buffers
@@ -1223,11 +1224,11 @@ public class TestAbfsInputStream extends
     System.gc();
   }
 
-  private ReadBufferManager getBufferManager() {
+  private ReadBufferManager getBufferManager() throws IOException {
     if (getConfiguration().isReadAheadV2Enabled()) {
       ReadBufferManagerV2.setReadBufferManagerConfigs(
           getConfiguration().getReadAheadBlockSize(), getConfiguration());
-      return ReadBufferManagerV2.getBufferManager();
+      return ReadBufferManagerV2.getBufferManager(getFileSystem().getAbfsStore().getClient().getAbfsCounters());
     }
     return ReadBufferManagerV1.getBufferManager();
   }

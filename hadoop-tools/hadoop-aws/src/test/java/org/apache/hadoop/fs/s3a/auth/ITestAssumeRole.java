@@ -102,6 +102,8 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
   private static final Statement STATEMENT_ALL_BUCKET_READ_ACCESS
       = statement(true, S3_ALL_BUCKETS, S3_BUCKET_READ_OPERATIONS);
 
+  public static final String MALFORMED_POLICY_DOCUMENT = "MalformedPolicyDocument";
+
   /**
    * test URI, built in setup.
    */
@@ -244,13 +246,13 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
 
   @Test
   public void testAssumeRoleFSBadPolicy() throws Exception {
-    describe("Attemnpt to create the FS with malformed JSON");
+    describe("Attempt to create the FS with malformed JSON");
     Configuration conf = createAssumedRoleConfig();
     // add some malformed JSON
     conf.set(ASSUMED_ROLE_POLICY,  "}");
     expectFileSystemCreateFailure(conf,
         AWSBadRequestException.class,
-        "JSON");
+        MALFORMED_POLICY_DOCUMENT);
   }
 
   @Test
@@ -261,7 +263,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
     conf.set(ASSUMED_ROLE_POLICY, "{'json':'but not what AWS wants}");
     expectFileSystemCreateFailure(conf,
         AWSBadRequestException.class,
-        "Syntax errors in policy");
+        MALFORMED_POLICY_DOCUMENT);
   }
 
   @Test

@@ -213,6 +213,7 @@ hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static/nvd3-1.8.5.* (css and js
 hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/checker/AbstractFuture.java
 hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/checker/TimeoutFuture.java
 
+at.yawk.lz4:lz4-java:1.9.0
 ch.qos.reload4j:reload4j:1.2.22
 com.aliyun:aliyun-java-core:0.2.11-beta
 com.aliyun:aliyun-java-sdk-core:4.5.10
@@ -426,7 +427,6 @@ org.eclipse.jetty.websocket:javax-websocket-client-impl:9.4.57.v20241219
 org.eclipse.jetty.websocket:javax-websocket-server-impl:9.4.57.v20241219
 org.ehcache:ehcache:3.8.2
 org.ini4j:ini4j:0.5.4
-org.lz4:lz4-java:1.7.1
 org.objenesis:objenesis:2.6
 org.xerial.snappy:snappy-java:1.1.10.4
 org.yaml:snakeyaml:2.0

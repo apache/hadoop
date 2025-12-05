@@ -245,6 +245,28 @@ public final class FileSystemConfigurations {
   public static final int HUNDRED = 100;
   public static final double HUNDRED_D = 100.0;
   public static final long THOUSAND = 1000L;
+  // Indicates a successful scale-up operation
+  public static final int SCALE_UP = 1;
+  // Indicates a successful scale-down operation
+  public static final int SCALE_DOWN = -1;
+  // Indicates a down-scale was requested but already at minimum
+  public static final int NO_SCALE_DOWN_AT_MIN = -2;
+  // Indicates an up-scale was requested but already at maximum
+  public static final int NO_SCALE_UP_AT_MAX = 2;
+  // Indicates no scaling action was taken
+  public static final int SCALE_NONE = 0;
+  // Indicates no action is needed based on current metrics
+  public static final int NO_ACTION_NEEDED = 3;
+  // Indicates a successful scale-up operation
+  public static final String SCALE_DIRECTION_UP = "I";
+  // Indicates a successful scale-down operation
+  public static final String SCALE_DIRECTION_DOWN = "D";
+  // Indicates a down-scale was requested but pool is already at minimum
+  public static final String SCALE_DIRECTION_NO_DOWN_AT_MIN = "-D";
+  // Indicates an up-scale was requested but pool is already at maximum
+  public static final String SCALE_DIRECTION_NO_UP_AT_MAX = "+F";
+  // Indicates no scaling action is needed based on current metrics
+  public static final String SCALE_DIRECTION_NO_ACTION_NEEDED = "NA";
 
   public static final HttpOperationType DEFAULT_NETWORKING_LIBRARY
       = HttpOperationType.APACHE_HTTP_CLIENT;
@@ -345,11 +367,6 @@ public final class FileSystemConfigurations {
   public static final int DEFAULT_WRITE_MEDIUM_CPU_THRESHOLD_PERCENT = 60;
 
   /**
-   * Minimum CPU utilization percentage considered as low threshold for write scaling.
-   */
-  public static final int MIN_WRITE_LOW_CPU_THRESHOLD_PERCENT = 10;
-
-  /**
    * Maximum CPU utilization percentage considered as low threshold for write scaling.
    */
   public static final int MAX_WRITE_LOW_CPU_THRESHOLD_PERCENT = 40;
@@ -388,6 +405,12 @@ public final class FileSystemConfigurations {
    * Default multiplier applied to available memory for high-tier write workloads.
    */
   public static final int DEFAULT_WRITE_HIGH_TIER_MEMORY_MULTIPLIER = 16;
+
+  /** Percentage threshold of heap usage at which memory pressure is considered high. */
+  public static final int DEFAULT_WRITE_HIGH_MEMORY_USAGE_THRESHOLD_PERCENT = 60;
+
+  /** Percentage threshold of heap usage at which memory pressure is considered low. */
+  public static final int DEFAULT_WRITE_LOW_MEMORY_USAGE_THRESHOLD_PERCENT = 30;
 
   public static final boolean DEFAULT_FS_AZURE_ENABLE_CLIENT_TRANSACTION_ID = true;
 

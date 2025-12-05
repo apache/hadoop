@@ -47,6 +47,7 @@ hadoop-yarn-project/hadoop-yarn/hadoop-yarn-ui/src/main/webapp/npm-debug.log
 hadoop-yarn-project/hadoop-yarn/hadoop-yarn-ui/src/main/webapp/testem.log
 hadoop-yarn-project/hadoop-yarn/hadoop-yarn-ui/dist
 hadoop-yarn-project/hadoop-yarn/hadoop-yarn-ui/tmp
+hadoop-yarn-project/hadoop-yarn/hadoop-yarn-capacity-scheduler-ui/src/main/webapp/node_modules/
 yarnregistry.pdf
 patchprocess/
 .history/

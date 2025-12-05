@@ -211,6 +211,13 @@
         <include>**/*</include>
       </includes>
     </fileSet>
+    <fileSet>
+      <directory>hadoop-yarn/hadoop-yarn-capacity-scheduler-ui/target/hadoop-yarn-capacity-scheduler-ui-${project.version}</directory>
+      <outputDirectory>/share/hadoop/${hadoop.component}/webapps/scheduler-ui</outputDirectory>
+      <includes>
+        <include>**/*</include>
+      </includes>
+    </fileSet>
     <!-- Copy dependecies from hadoop-yarn-server-timelineservice as well -->
     <fileSet>
       <directory>hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-timelineservice-hbase/hadoop-yarn-server-timelineservice-hbase-client/target/lib</directory>
@@ -280,6 +287,7 @@
       <excludes>
         <exclude>org.apache.hadoop:hadoop-yarn-server-timelineservice*</exclude>
         <exclude>org.apache.hadoop:hadoop-yarn-ui</exclude>
+        <exclude>org.apache.hadoop:hadoop-yarn-capacity-scheduler-ui</exclude>
         <exclude>org.apache.hadoop:hadoop-yarn-csi</exclude>
       </excludes>
       <binaries>

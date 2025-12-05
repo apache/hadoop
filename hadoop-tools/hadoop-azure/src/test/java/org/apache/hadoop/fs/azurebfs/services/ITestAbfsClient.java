@@ -124,6 +124,8 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
   public static final int REDUCED_BACKOFF_INTERVAL = 100;
   public static final int BUFFER_LENGTH = 5;
   public static final int BUFFER_OFFSET = 0;
+  private static final String RANDOM_URI = "abcd";
+  private static final String RANDOM_FILESYSTEM_ID = "abcde";
 
   private final Pattern userAgentStringPattern;
 
@@ -174,7 +176,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
 
   private String getUserAgentString(AbfsConfiguration config,
       boolean includeSSLProvider) throws IOException, URISyntaxException {
-    AbfsCounters abfsCounters = Mockito.spy(new AbfsCountersImpl(new URI("abcd")));
+    AbfsCounters abfsCounters = Mockito.spy(new AbfsCountersImpl(new URI(RANDOM_URI)));
     AbfsClientContext abfsClientContext = new AbfsClientContextBuilder().withAbfsCounters(abfsCounters).build();
     AbfsClient client;
     if (AbfsServiceType.DFS.equals(config.getFsConfiguredServiceType())) {
@@ -411,7 +413,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
     AbfsPerfTracker tracker = new AbfsPerfTracker("test",
         abfsConfig.getAccountName(),
         abfsConfig);
-    AbfsCounters abfsCounters = Mockito.spy(new AbfsCountersImpl(new URI("abcd")));
+    AbfsCounters abfsCounters = Mockito.spy(new AbfsCountersImpl(new URI(RANDOM_URI)));
 
     AbfsClientContext abfsClientContext =
         new AbfsClientContextBuilder().withAbfsPerfTracker(tracker)
@@ -468,7 +470,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
     AbfsPerfTracker tracker = new AbfsPerfTracker("test",
         abfsConfig.getAccountName(),
         abfsConfig);
-    AbfsCounters abfsCounters = Mockito.spy(new AbfsCountersImpl(new URI("abcd")));
+    AbfsCounters abfsCounters = Mockito.spy(new AbfsCountersImpl(new URI(RANDOM_URI)));
 
     AbfsClientContext abfsClientContext =
         new AbfsClientContextBuilder().withAbfsPerfTracker(tracker)
@@ -500,7 +502,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
       AbfsConfiguration abfsConfig) throws Exception {
     AuthType currentAuthType = abfsConfig.getAuthType(
         abfsConfig.getAccountName());
-    AbfsCounters abfsCounters = Mockito.spy(new AbfsCountersImpl(new URI("abcd")));
+    AbfsCounters abfsCounters = Mockito.spy(new AbfsCountersImpl(new URI(RANDOM_URI)));
 
     assumeThat(currentAuthType)
         .as("Auth type must be SharedKey or OAuth for this test")
@@ -750,8 +752,8 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
             Mockito.nullable(int.class), Mockito.nullable(int.class),
             Mockito.any());
 
-    TracingContext tracingContext = Mockito.spy(new TracingContext("abcd",
-        "abcde", FSOperationType.APPEND,
+    TracingContext tracingContext = Mockito.spy(new TracingContext(RANDOM_URI,
+        RANDOM_FILESYSTEM_ID, FSOperationType.APPEND,
         TracingHeaderFormat.ALL_ID_FORMAT, null));
 
     // Check that expect header is enabled before the append call.

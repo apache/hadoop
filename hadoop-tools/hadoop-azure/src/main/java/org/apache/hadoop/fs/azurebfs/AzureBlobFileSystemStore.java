@@ -205,7 +205,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
   private int blockOutputActiveBlocks;
   /** Bounded ThreadPool for this instance. */
   private ExecutorService boundedThreadPool;
-  private WriteThreadPoolSizeManager poolSizeManager;
+  private WriteThreadPoolSizeManager writeThreadPoolSizeManager;
 
   /** ABFS instance reference to be held by the store to avoid GC close. */
   private BackReference fsBackRef;
@@ -281,11 +281,10 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     this.blockFactory = abfsStoreBuilder.blockFactory;
     this.blockOutputActiveBlocks = abfsStoreBuilder.blockOutputActiveBlocks;
     if (abfsConfiguration.isDynamicWriteThreadPoolEnablement()) {
-      this.poolSizeManager = WriteThreadPoolSizeManager.getInstance(
+      this.writeThreadPoolSizeManager = WriteThreadPoolSizeManager.getInstance(
           getClient().getFileSystem() + "-" + UUID.randomUUID(),
-          abfsConfiguration);
-      poolSizeManager.startCPUMonitoring();
-      this.boundedThreadPool = poolSizeManager.getExecutorService();
+          abfsConfiguration, getClient().getAbfsCounters());
+      this.boundedThreadPool = writeThreadPoolSizeManager.getExecutorService();
     } else {
       this.boundedThreadPool = BlockingThreadPoolExecutorService.newInstance(
           abfsConfiguration.getWriteConcurrentRequestCount(),
@@ -343,7 +342,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     } catch (ExecutionException e) {
       LOG.error("Error freeing leases", e);
     } finally {
-      IOUtils.cleanupWithLogger(LOG, poolSizeManager, getClientHandler());
+      IOUtils.cleanupWithLogger(LOG, writeThreadPoolSizeManager, getClientHandler());
     }
   }
 
@@ -822,6 +821,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
             .withPath(path)
             .withExecutorService(new SemaphoredDelegatingExecutor(boundedThreadPool,
                 blockOutputActiveBlocks, true))
+            .withWriteThreadPoolManager(writeThreadPoolSizeManager)
             .withTracingContext(tracingContext)
             .withAbfsBackRef(fsBackRef)
             .withIngressServiceType(abfsConfiguration.getIngressServiceType())

@@ -149,7 +149,7 @@ public class ITestApacheClientConnectionPool extends
               .build(),
           new AbfsHttpClientConnectionFactory(), keepAliveCache,
           new AbfsConfiguration(new Configuration(), EMPTY_STRING),
-          new URL("https://test.com"), true);
+          new URL("https://abcd.com"), true);
 
       Assertions.assertThat(AbfsApacheHttpClient.usable())
           .describedAs("Apache HttpClient should be not usable")

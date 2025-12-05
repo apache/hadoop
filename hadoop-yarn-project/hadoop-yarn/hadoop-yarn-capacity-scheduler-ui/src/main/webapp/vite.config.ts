@@ -14,6 +14,7 @@ export default defineConfig(({ mode }) => {
   const clusterProxyTarget = env.VITE_CLUSTER_PROXY_TARGET;
 
   return {
+    base: '/scheduler-ui/',
     plugins: [
       tailwindcss(),
       reactRouter(),

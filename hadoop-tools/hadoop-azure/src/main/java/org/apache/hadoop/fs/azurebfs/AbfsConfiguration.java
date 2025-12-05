@@ -545,7 +545,6 @@ public class AbfsConfiguration{
   private int writeMediumCpuThreshold;
 
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_WRITE_LOW_CPU_THRESHOLD_PERCENT,
-      MinValue = MIN_WRITE_LOW_CPU_THRESHOLD_PERCENT,
       MaxValue = MAX_WRITE_LOW_CPU_THRESHOLD_PERCENT,
       DefaultValue = DEFAULT_WRITE_LOW_CPU_THRESHOLD_PERCENT)
   private int writeLowCpuThreshold;
@@ -564,6 +563,16 @@ public class AbfsConfiguration{
       MinValue = MIN_WRITE_HIGH_TIER_MEMORY_MULTIPLIER,
       DefaultValue = DEFAULT_WRITE_HIGH_TIER_MEMORY_MULTIPLIER)
   private int highTierMemoryMultiplier;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey =
+      FS_AZURE_WRITE_HIGH_MEMORY_USAGE_THRESHOLD_PERCENT,
+      DefaultValue = DEFAULT_WRITE_HIGH_MEMORY_USAGE_THRESHOLD_PERCENT)
+  private int writeHighMemoryUsageThresholdPercent;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey =
+      FS_AZURE_WRITE_LOW_MEMORY_USAGE_THRESHOLD_PERCENT,
+      DefaultValue = DEFAULT_WRITE_LOW_MEMORY_USAGE_THRESHOLD_PERCENT)
+  private int writeLowMemoryUsageThresholdPercent;
 
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey =
       FS_AZURE_APACHE_HTTP_CLIENT_MAX_CACHE_SIZE, DefaultValue = DEFAULT_APACHE_HTTP_CLIENT_MAX_CACHE_SIZE,
@@ -1915,6 +1924,14 @@ public class AbfsConfiguration{
 
   public int getHighTierMemoryMultiplier() {
     return highTierMemoryMultiplier;
+  }
+
+  public int getWriteHighMemoryUsageThresholdPercent() {
+    return writeHighMemoryUsageThresholdPercent;
+  }
+
+  public int getWriteLowMemoryUsageThresholdPercent() {
+    return writeLowMemoryUsageThresholdPercent;
   }
 
   public int getMaxWriteRequestsToQueue() {

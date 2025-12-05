@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.IOException;
+import java.net.URI;
 import java.util.Arrays;
 import java.util.Random;
 import java.util.concurrent.ExecutorService;
@@ -31,6 +32,7 @@ import org.mockito.Mockito;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
+import org.apache.hadoop.fs.azurebfs.AbfsCountersImpl;
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
@@ -111,7 +113,7 @@ public final class TestAbfsOutputStream {
    */
   @Test
   public void verifyShortWriteRequest() throws Exception {
-
+    AbfsCounters abfsCounters = Mockito.spy(new AbfsCountersImpl(new URI("abcd")));
     AbfsClientHandler clientHandler = mock(AbfsClientHandler.class);
     AbfsDfsClient client = mock(AbfsDfsClient.class);
     AbfsRestOperation op = mock(AbfsRestOperation.class);
@@ -122,6 +124,8 @@ public final class TestAbfsOutputStream {
     AbfsPerfTracker tracker = new AbfsPerfTracker("test", accountName1, abfsConf);
     when(client.getAbfsPerfTracker()).thenReturn(tracker);
     when(client.getAbfsConfiguration()).thenReturn(abfsConf);
+    when(client.getAbfsCounters()).thenReturn(abfsCounters);
+    when(client.getAbfsCounters().getAbfsWriteResourceUtilizationMetrics()).thenReturn(new AbfsWriteResourceUtilizationMetrics());
     when(client.append(anyString(), any(byte[].class),
         any(AppendRequestParameters.class), any(),
         any(), any(TracingContext.class)))
@@ -178,7 +182,7 @@ public final class TestAbfsOutputStream {
    */
   @Test
   public void verifyWriteRequest() throws Exception {
-
+    AbfsCounters abfsCounters = Mockito.spy(new AbfsCountersImpl(new URI("abcd")));
     AbfsClientHandler clientHandler = mock(AbfsClientHandler.class);
     AbfsDfsClient client = mock(AbfsDfsClient.class);
     AbfsRestOperation op = mock(AbfsRestOperation.class);
@@ -192,7 +196,8 @@ public final class TestAbfsOutputStream {
     TracingContext tracingContext = new TracingContext("test-corr-id",
         "test-fs-id", FSOperationType.WRITE,
         TracingHeaderFormat.ALL_ID_FORMAT, null);
-
+    when(client.getAbfsCounters()).thenReturn(abfsCounters);
+    when(client.getAbfsCounters().getAbfsWriteResourceUtilizationMetrics()).thenReturn(new AbfsWriteResourceUtilizationMetrics());
     when(client.getAbfsPerfTracker()).thenReturn(tracker);
     when(client.append(anyString(), any(byte[].class), any(AppendRequestParameters.class), any(), any(), any(TracingContext.class))).thenReturn(op);
     when(client.flush(anyString(), anyLong(), anyBoolean(), anyBoolean(), any(), isNull(), any(), any(TracingContext.class), anyString())).thenReturn(op);
@@ -256,7 +261,7 @@ public final class TestAbfsOutputStream {
    */
   @Test
   public void verifyWriteRequestOfBufferSizeAndClose() throws Exception {
-
+    AbfsCounters abfsCounters = Mockito.spy(new AbfsCountersImpl(new URI("abcd")));
     AbfsClientHandler clientHandler = mock(AbfsClientHandler.class);
     AbfsDfsClient client = mock(AbfsDfsClient.class);
     AbfsRestOperation op = mock(AbfsRestOperation.class);
@@ -278,6 +283,8 @@ public final class TestAbfsOutputStream {
     when(op.getResult()).thenReturn(httpOp);
     when(clientHandler.getClient(any())).thenReturn(client);
     when(clientHandler.getDfsClient()).thenReturn(client);
+    when(client.getAbfsCounters()).thenReturn(abfsCounters);
+    when(client.getAbfsCounters().getAbfsWriteResourceUtilizationMetrics()).thenReturn(new AbfsWriteResourceUtilizationMetrics());
 
 
     AbfsOutputStream out = Mockito.spy(Mockito.spy(new AbfsOutputStream(
@@ -337,7 +344,7 @@ public final class TestAbfsOutputStream {
    */
   @Test
   public void verifyWriteRequestOfBufferSize() throws Exception {
-
+    AbfsCounters abfsCounters = Mockito.spy(new AbfsCountersImpl(new URI("abcd")));
     AbfsClientHandler clientHandler = mock(AbfsClientHandler.class);
     AbfsDfsClient client = mock(AbfsDfsClient.class);
     AbfsRestOperation op = mock(AbfsRestOperation.class);
@@ -359,6 +366,8 @@ public final class TestAbfsOutputStream {
     when(op.getResult()).thenReturn(httpOp);
     when(clientHandler.getClient(any())).thenReturn(client);
     when(clientHandler.getDfsClient()).thenReturn(client);
+    when(client.getAbfsCounters()).thenReturn(abfsCounters);
+    when(client.getAbfsCounters().getAbfsWriteResourceUtilizationMetrics()).thenReturn(new AbfsWriteResourceUtilizationMetrics());
 
     AbfsOutputStream out = Mockito.spy(new AbfsOutputStream(
         populateAbfsOutputStreamContext(
@@ -402,7 +411,7 @@ public final class TestAbfsOutputStream {
    */
   @Test
   public void verifyWriteRequestOfBufferSizeWithAppendBlob() throws Exception {
-
+    AbfsCounters abfsCounters = Mockito.spy(new AbfsCountersImpl(new URI("abcd")));
     AbfsClientHandler clientHandler = mock(AbfsClientHandler.class);
     AbfsDfsClient client = mock(AbfsDfsClient.class);
     AbfsRestOperation op = mock(AbfsRestOperation.class);
@@ -421,6 +430,8 @@ public final class TestAbfsOutputStream {
         isNull(), any(), any(TracingContext.class), anyString())).thenReturn(op);
     when(clientHandler.getClient(any())).thenReturn(client);
     when(clientHandler.getDfsClient()).thenReturn(client);
+    when(client.getAbfsCounters()).thenReturn(abfsCounters);
+    when(client.getAbfsCounters().getAbfsWriteResourceUtilizationMetrics()).thenReturn(new AbfsWriteResourceUtilizationMetrics());
     AbfsOutputStream out = Mockito.spy(new AbfsOutputStream(
         populateAbfsOutputStreamContext(
             BUFFER_SIZE,
@@ -466,7 +477,7 @@ public final class TestAbfsOutputStream {
    */
   @Test
   public void verifyWriteRequestOfBufferSizeAndHFlush() throws Exception {
-
+    AbfsCounters abfsCounters = Mockito.spy(new AbfsCountersImpl(new URI("abcd")));
     AbfsClientHandler clientHandler = mock(AbfsClientHandler.class);
     AbfsDfsClient client = mock(AbfsDfsClient.class);
     AbfsRestOperation op = mock(AbfsRestOperation.class);
@@ -480,7 +491,8 @@ public final class TestAbfsOutputStream {
     TracingContext tracingContext = new TracingContext(
         abfsConf.getClientCorrelationId(), "test-fs-id",
         FSOperationType.WRITE, abfsConf.getTracingHeaderFormat(), null);
-
+    when(client.getAbfsCounters()).thenReturn(abfsCounters);
+    when(client.getAbfsCounters().getAbfsWriteResourceUtilizationMetrics()).thenReturn(new AbfsWriteResourceUtilizationMetrics());
     when(client.getAbfsPerfTracker()).thenReturn(tracker);
     when(client.append(anyString(), any(byte[].class),
         any(AppendRequestParameters.class), any(), any(), any(TracingContext.class)))
@@ -547,7 +559,7 @@ public final class TestAbfsOutputStream {
    */
   @Test
   public void verifyWriteRequestOfBufferSizeAndFlush() throws Exception {
-
+    AbfsCounters abfsCounters = Mockito.spy(new AbfsCountersImpl(new URI("abcd")));
     AbfsClientHandler clientHandler = mock(AbfsClientHandler.class);
     AbfsDfsClient client = mock(AbfsDfsClient.class);
     AbfsRestOperation op = mock(AbfsRestOperation.class);
@@ -556,6 +568,8 @@ public final class TestAbfsOutputStream {
     conf.set(accountKey1, accountValue1);
     abfsConf = new AbfsConfiguration(conf, accountName1);
     when(client.getAbfsConfiguration()).thenReturn(abfsConf);
+    when(client.getAbfsCounters()).thenReturn(abfsCounters);
+    when(client.getAbfsCounters().getAbfsWriteResourceUtilizationMetrics()).thenReturn(new AbfsWriteResourceUtilizationMetrics());
     AbfsPerfTracker tracker = new AbfsPerfTracker("test", accountName1, abfsConf);
     when(client.getAbfsPerfTracker()).thenReturn(tracker);
     when(client.append(anyString(), any(byte[].class),

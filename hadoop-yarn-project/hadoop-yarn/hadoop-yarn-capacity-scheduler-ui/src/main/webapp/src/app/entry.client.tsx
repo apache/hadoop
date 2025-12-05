@@ -40,6 +40,13 @@ async function enableMocking() {
 }
 
 enableMocking().then(() => {
+  // Handle servlet welcome-file redirect to index.html
+  // React Router doesn't need index.html in the URL, so redirect without it
+  if (window.location.pathname.endsWith('/index.html')) {
+    const newPath = window.location.pathname.replace(/\/index\.html$/, '/');
+    window.history.replaceState(null, '', newPath + window.location.search + window.location.hash);
+  }
+
   startTransition(() => {
     hydrateRoot(
       document,
