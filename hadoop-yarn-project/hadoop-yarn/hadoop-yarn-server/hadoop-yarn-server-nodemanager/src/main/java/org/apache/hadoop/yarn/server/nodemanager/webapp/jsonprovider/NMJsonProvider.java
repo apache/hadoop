@@ -1,5 +1,9 @@
 package org.apache.hadoop.yarn.server.nodemanager.webapp.jsonprovider;
 
+import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.NMDeviceResourceInfo;
+import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.gpu.NMGpuResourceInfo;
+import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.NMResourceInfo;
+import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.gpu.NMGpuResourceInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerLogsInfoes;
 import org.eclipse.persistence.jaxb.MarshallerProperties;
 import org.eclipse.persistence.jaxb.rs.MOXyJsonProvider;
@@ -41,7 +45,9 @@ import java.lang.reflect.Type;
 public class NMJsonProvider extends MOXyJsonProvider {
 
   private boolean isRootElementNeeded (Class<?> type) {
-    return !type.equals(ContainerLogsInfoes.class);
+    return !type.equals(ContainerLogsInfoes.class)
+        && !type.equals(NMGpuResourceInfo.class)
+        && !type.equals(NMDeviceResourceInfo.class);
   }
 
   @Override

@@ -27,19 +27,6 @@ import javax.xml.bind.annotation.XmlSeeAlso;
 
 @XmlRootElement
 @XmlAccessorType(XmlAccessType.FIELD)
-@XmlSeeAlso({NMGpuResourceInfo.class})
+@XmlSeeAlso({NMGpuResourceInfo.class, NMDeviceResourceInfo.class})
 public class NMResourceInfo {
-
-  private long resourceValue;
-
-  public NMResourceInfo() {
-  } // JAXB needs this
-
-  public long getResourceValue() {
-    return resourceValue;
-  }
-
-  public void setResourceValue(long resourceValue) {
-    this.resourceValue = resourceValue;
-  }
 }

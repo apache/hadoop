@@ -19,6 +19,9 @@
 package org.apache.hadoop.yarn.server.nodemanager.webapp;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
+
+import org.apache.hadoop.yarn.server.nodemanager.api.deviceplugin.Device;
+import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.NMDeviceResourceInfo;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.jsonprovider.NMJsonProvider;
 import org.eclipse.persistence.jaxb.rs.MOXyJsonProvider;
 import org.glassfish.jersey.internal.inject.AbstractBinder;
@@ -211,8 +214,13 @@ public class TestNMWebServices extends JerseyTestBase {
 
   private void setupMockPluginsWithNmResourceInfo() throws YarnException {
     ResourcePlugin mockPlugin1 = mock(ResourcePlugin.class);
-    NMResourceInfo nmResourceInfo1 = new NMResourceInfo();
-    nmResourceInfo1.setResourceValue(NM_RESOURCE_VALUE);
+    NMResourceInfo nmResourceInfo1 = new NMResourceInfo() {
+      private long a = NM_RESOURCE_VALUE;
+
+      public long getA() {
+        return a;
+      }
+    };
 
     when(mockPlugin1.getNMResourceInfo()).thenReturn(nmResourceInfo1);
 
@@ -238,16 +246,29 @@ public class TestNMWebServices extends JerseyTestBase {
     List<AssignedGpuDevice> assignedGpuDevices = Arrays.asList(
         new AssignedGpuDevice(2, 2, createContainerId(1)),
         new AssignedGpuDevice(3, 3, createContainerId(2)));
+
     NMResourceInfo nmResourceInfo1 = new NMGpuResourceInfo(gpuDeviceInformation,
         totalGpuDevices,
         assignedGpuDevices);
     when(mockPlugin1.getNMResourceInfo()).thenReturn(nmResourceInfo1);
+
+    NMDeviceResourceInfo nmDeviceResourceInfo = new NMDeviceResourceInfo();
+    nmDeviceResourceInfo.setTotalDevices(Collections.singletonList(
+        Device.Builder.newInstance()
+            .setId(42)
+            .build()
+    ));
+    ResourcePlugin mockPlugin2 = mock(ResourcePlugin.class);
+    when(mockPlugin2.getNMResourceInfo()).thenReturn(nmDeviceResourceInfo);
+
+
 
     ResourcePluginManager pluginManager = createResourceManagerWithPlugins(
         ImmutableMap.<String, ResourcePlugin>builder()
             .put("resource-1", mockPlugin1)
             .put("yarn.io/resource-1", mockPlugin1)
             .put("resource-2", mock(ResourcePlugin.class))
+            .put("resource-3", mockPlugin2)
             .build()
     );
 
@@ -261,14 +282,10 @@ public class TestNMWebServices extends JerseyTestBase {
     return pluginManager;
   }
 
-  private void assertNMResourceInfoResponse(Response response, long value)
-      throws JSONException {
+  private void assertNMResourceInfoResponse(Response response) {
     assertEquals("MediaType of the response is not the expected!",
         MediaType.APPLICATION_JSON + ";" + JettyUtils.UTF_8,
         response.getMediaType().toString());
-    JSONObject json = response.readEntity(JSONObject.class);
-    assertEquals("Unexpected value in the json response!", value,
-        json.getJSONObject("nmResourceInfo").getLong("resourceValue"));
   }
 
   private void assertEmptyNMResourceInfo(Response response) throws JSONException {
@@ -525,23 +542,23 @@ public class TestNMWebServices extends JerseyTestBase {
 
   @Test
   public void testGetNMResourceInfoSuccessful()
-      throws YarnException, JSONException {
+      throws YarnException{
     setupMockPluginsWithNmResourceInfo();
 
     WebTarget r = targetWithJsonObject();
     Response response = getNMResourceResponse(r, "resource-1");
-    assertNMResourceInfoResponse(response, NM_RESOURCE_VALUE);
+    assertNMResourceInfoResponse(response);
   }
 
   @Test
   public void testGetNMResourceInfoEncodedIsSuccessful()
-      throws YarnException, JSONException {
+      throws YarnException{
     setupMockPluginsWithNmResourceInfo();
 
     //test encoded yarn.io/resource-1 path
     WebTarget r = targetWithJsonObject();
     Response response = getNMResourceResponse(r, "yarn.io%2Fresource-1");
-    assertNMResourceInfoResponse(response, NM_RESOURCE_VALUE);
+    assertNMResourceInfoResponse(response);
   }
 
   @Test
@@ -581,14 +598,30 @@ public class TestNMWebServices extends JerseyTestBase {
     assertEquals("MediaType of the response is not the expected!",
         MediaType.APPLICATION_JSON + ";" + JettyUtils.UTF_8,
         response.getMediaType().toString());
-    JSONObject nmGpuResourceInfo = response.readEntity(JSONObject.class);
-    JSONObject json = nmGpuResourceInfo.getJSONObject("nmGpuResourceInfo");
+    JSONObject json = response.readEntity(JSONObject.class);
     assertEquals("Unexpected driverVersion in the json response!",
         "1.2.3", json.getJSONObject("gpuDeviceInformation").getString("driver_version"));
     assertEquals("Unexpected totalGpuDevices in the json response!",
         3, json.getJSONArray("totalGpuDevices").length());
     assertEquals("Unexpected assignedGpuDevices in the json response!",
         2, json.getJSONArray("assignedGpuDevices").length());
+  }
+
+  @Test
+  public void testGetDeviceResourceInfo()
+      throws YarnException, JSONException {
+    setupMockPluginsWithGpuResourceInfo();
+
+    WebTarget r = targetWithJsonObject();
+    Response response = getNMResourceResponse(r, "resource-3");
+    assertEquals("MediaType of the response is not the expected!",
+        MediaType.APPLICATION_JSON + ";" + JettyUtils.UTF_8,
+        response.getMediaType().toString());
+    JSONObject json = response.readEntity(JSONObject.class);
+    assertEquals("Check the first Device ID",42,
+            json.getJSONArray("totalDevices")
+                .getJSONObject(0)
+                .get("id"));
   }
 
   @SuppressWarnings("checkstyle:methodlength")
