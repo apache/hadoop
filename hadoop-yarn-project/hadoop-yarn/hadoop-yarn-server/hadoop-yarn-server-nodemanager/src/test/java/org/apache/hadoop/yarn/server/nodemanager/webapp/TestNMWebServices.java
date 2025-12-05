@@ -930,32 +930,15 @@ public class TestNMWebServices extends JerseyTestBase {
 
   private List<ContainerLogsInfo> readEntity(Response response) throws JSONException {
     JSONObject jsonObject = response.readEntity(JSONObject.class);
-    Iterator<String> keys = jsonObject.keys();
     List<ContainerLogsInfo> list = new ArrayList<>();
 
-    while (keys.hasNext()) {
-      String key = keys.next();
-      JSONObject subJsonObject = jsonObject.getJSONObject(key);
-      Iterator<String> subKeys = subJsonObject.keys();
-      while (subKeys.hasNext()) {
-        String subKeyItem = subKeys.next();
-        Object object = subJsonObject.get(subKeyItem);
+    JSONArray jsonArray = jsonObject.getJSONArray("containerLogsInfo");
 
-        if (object instanceof JSONObject) {
-          JSONObject subKeyItemValue = subJsonObject.getJSONObject(subKeyItem);
-          ContainerLogsInfo containerLogsInfo = parseContainerLogsInfo(subKeyItemValue);
-          list.add(containerLogsInfo);
-        }
+    for (int i = 0; i < jsonArray.length(); i++) {
+      JSONObject subKeyItem = jsonArray.getJSONObject(i);
 
-        if(object instanceof JSONArray) {
-          JSONArray jsonArray = subJsonObject.getJSONArray(subKeyItem);
-          for (int i = 0; i < jsonArray.length(); i++) {
-            JSONObject subKeyItemValue = jsonArray.getJSONObject(i);
-            ContainerLogsInfo containerLogsInfo = parseContainerLogsInfo(subKeyItemValue);
-            list.add(containerLogsInfo);
-          }
-        }
-      }
+      ContainerLogsInfo containerLogsInfo = parseContainerLogsInfo(subKeyItem);
+      list.add(containerLogsInfo);
     }
 
     return list;
@@ -968,15 +951,18 @@ public class TestNMWebServices extends JerseyTestBase {
     String containerId = subKeyItemValue.getString("containerId");
     String nodeId = subKeyItemValue.getString("nodeId");
 
-    JSONObject containerLogInfo = subKeyItemValue.getJSONObject("containerLogInfo");
-    String fileName = containerLogInfo.getString("fileName");
-    String fileSize = containerLogInfo.getString("fileSize");
-    String lastModifiedTime = containerLogInfo.getString("lastModifiedTime");
-
     ContainerLogMeta containerLogMeta = new ContainerLogMeta(containerId, nodeId);
-    containerLogMeta.addLogMeta(fileName, fileSize, lastModifiedTime);
-    ContainerLogsInfo containerLogsInfo =
-        new ContainerLogsInfo(containerLogMeta, logAggregationType);
-    return containerLogsInfo;
+
+    JSONArray containerLogInfo = subKeyItemValue.getJSONArray("containerLogInfo");
+    for (int i = 0; i < containerLogInfo.length(); i++) {
+      JSONObject logEntry = containerLogInfo.getJSONObject(i);
+      containerLogMeta.addLogMeta(
+              logEntry.getString("fileName"),
+              logEntry.getString("fileSize"),
+              logEntry.getString("lastModifiedTime")
+      );
+    }
+
+    return new ContainerLogsInfo(containerLogMeta, logAggregationType);
   }
 }
