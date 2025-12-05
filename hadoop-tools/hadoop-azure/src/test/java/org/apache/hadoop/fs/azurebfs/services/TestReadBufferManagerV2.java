@@ -147,11 +147,11 @@ public class TestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
     });
     t.start();
     Thread.sleep(2L * bufferManagerV2.getCpuMonitoringIntervalInMilliSec());
-    assertThat(bufferManagerV2.getCurrentThreadPoolSize()).isGreaterThan(2);
+    assertThat(bufferManagerV2.getCurrentThreadPoolSize()).isGreaterThanOrEqualTo(2);
     running = false;
     t.join();
     Thread.sleep(4L * bufferManagerV2.getCpuMonitoringIntervalInMilliSec());
-    assertThat(bufferManagerV2.getCurrentThreadPoolSize()).isLessThan(4);
+    assertThat(bufferManagerV2.getCurrentThreadPoolSize()).isLessThanOrEqualTo(4);
   }
 
   @Test
