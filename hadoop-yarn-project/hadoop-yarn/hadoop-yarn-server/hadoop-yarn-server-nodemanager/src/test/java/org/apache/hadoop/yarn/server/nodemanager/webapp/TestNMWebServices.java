@@ -214,13 +214,7 @@ public class TestNMWebServices extends JerseyTestBase {
 
   private void setupMockPluginsWithNmResourceInfo() throws YarnException {
     ResourcePlugin mockPlugin1 = mock(ResourcePlugin.class);
-    NMResourceInfo nmResourceInfo1 = new NMResourceInfo() {
-      private long a = NM_RESOURCE_VALUE;
-
-      public long getA() {
-        return a;
-      }
-    };
+    NMResourceInfo nmResourceInfo1 = new NMResourceInfo();
 
     when(mockPlugin1.getNMResourceInfo()).thenReturn(nmResourceInfo1);
 
