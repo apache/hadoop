@@ -333,7 +333,7 @@ interval. Default value is 60000 (sixty seconds). Set the interval in milli
 seconds.
 * `fs.azure.oauth.token.fetch.retry.delta.backoff`: Back-off interval between
 retries. Multiples of this timespan are used for subsequent retry attempts
- . The default value is 2.
+ . The default value is 2000 (seconds). Set the interval in milliseconds.
 
 ### <a name="shared-key-auth"></a> Default: Shared Key
 
