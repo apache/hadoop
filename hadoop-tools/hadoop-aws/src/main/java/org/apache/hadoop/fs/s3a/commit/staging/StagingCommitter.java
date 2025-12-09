@@ -328,11 +328,6 @@ public class StagingCommitter extends AbstractS3ACommitter {
         String.valueOf(context.getTaskAttemptID().getTaskID()));
   }
 
-  @Override
-  public Path getTempTaskAttemptPath(TaskAttemptContext context) {
-    throw new UnsupportedOperationException("Unimplemented");
-  }
-
   /**
    * Lists the output of a task under the task attempt path. Subclasses can
    * override this method to change how output files are identified.

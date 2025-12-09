@@ -271,6 +271,20 @@ public final class CommitConstants {
       true;
 
   /**
+   * Path in the cluster filesystem (e.g. HDFS) under which the magic
+   * committer saves the per-task .pendingset files which job commit
+   * reads: {@value}.
+   * It must be visible to all tasks and the job committer.
+   * If unset, the job's destination path in S3 is used.
+   * Task output and, unless
+   * {@link #FS_S3A_COMMITTER_MAGIC_TRACK_COMMITS_IN_MEMORY_ENABLED}
+   * is set, the per-file .pending data are still written under the
+   * magic path of the destination.
+   */
+  public static final String FS_S3A_COMMITTER_MAGIC_TMP_PATH =
+      "fs.s3a.committer.magic.tmp.path";
+
+  /**
    * Path  in the cluster filesystem for temporary data: {@value}.
    * This is for HDFS, not the local filesystem.
    * It is only for the summary data of each file, not the actual
