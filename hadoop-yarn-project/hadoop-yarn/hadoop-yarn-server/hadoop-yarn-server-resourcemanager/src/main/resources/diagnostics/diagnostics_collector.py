@@ -18,7 +18,6 @@ from __future__ import print_function
 import argparse
 import sys, os
 import subprocess
-from urllib.request import urlopen, Request
 from datetime import datetime, timedelta
 from urllib import request, error
 import xml.etree.ElementTree as ET
@@ -28,9 +27,7 @@ import time
 TEMP_DIR = "/tmp"
 HADOOP_CONF_DIR = "/etc/hadoop"
 YARN_SITE_XML = "yarn-site.xml"
-MAPRED_SITE_XML = "mapred-site.xml"
 RM_ADDRESS_PROPERTY_NAME = "yarn.resourcemanager.webapp.address"
-JHS_ADDRESS_PROPERTY_NAME = "mapreduce.jobhistory.webapp.address"
 
 RM_LOG_REGEX = r"(?<=\")\/logs.+?RESOURCEMANAGER.+?(?=\")"
 NM_LOG_REGEX = r"(?<=\")\/logs.+?NODEMANAGER.+?(?=\")"
@@ -40,123 +37,21 @@ OUTPUT_TIME_FORMAT_WITHOUT_SECOND = '%Y-%m-%d %H:%M'  # e.g. 2025-05-28 11:57
 NUMBER_OF_JSTACK = 3
 
 
-def application_failed():
-    """
-    Application Logs
-    ResourceManager logs during job duration
-    NodeManager logs from NodeManager where failed containers of jobs run during the duration of containers
-    Job Configuration from MapReduce HistoryServer, Spark HistoryServer, TezHistory URL
-    Job Related Metrics like Container, Attempts.
-    """
-    if args.arguments is None or len(args.arguments) == 0:
-        print("Missing application or job id, exiting...")
-        sys.exit(os.EX_USAGE)
-
-    id = args.arguments[0]
-
-    if "job" in id:
-        output_path = create_output_dir(os.path.join(TEMP_DIR, id))
-
-        # Get job log
-        command = run_cmd_and_save_output(os.path.join(output_path, "job_logs"), id, "mapred", "job", "-logs",
-                              id)  # TODO user permission?
-
-        # Get job status
-        job_status_string = run_command("mapred", "job", "-status", id)
-        write_output(output_path, "job_status", job_status_string)
-
-        # Finding JHS when running Hadoop with Hadock
-        jhs_match = re.search(r'Job Tracking URL\s*:\s*http://([a-zA-Z0-9._-]+:\d+)', job_status_string)
-        if jhs_match:
-            JHS_ADDRESS = jhs_match.group(1)
-            print("Job History Server Address: ", JHS_ADDRESS)
-
-        # Get job attempts
-        job_attempts_string = create_request("http://{}/ws/v1/history/mapreduce/jobs/{}/jobattempts"
-                                                             .format(JHS_ADDRESS, id))
-        write_output(output_path, "job_attempts", job_attempts_string)
-
-        # Get job counters
-        job_counters_string = create_request("http://{}/ws/v1/history/mapreduce/jobs/{}/counters"
-                                                              .format(JHS_ADDRESS, id))
-        write_output(output_path, "job_counters", job_counters_string)
-
-        # Get job conf
-        job_conf = create_request("http://{}/jobhistory/job/{}/conf"
-                                                  .format(JHS_ADDRESS, id), False)
-        write_output(os.path.join(output_path, "conf"), "job_conf.html", job_conf)
-
-        # Get job start_time and end_time
-        start_time, end_time = get_job_time(job_conf)
-        print("Job start time: {}, end time: {}".format(start_time, end_time))
-
-        # TODO Spark HistoryServer/TezHistory URL?
-
-        # Get RM log
-        log_address = get_node_log_address(RM_ADDRESS, RM_LOG_REGEX)
-        write_output(os.path.join(output_path, "node_log"), "resourcemanager_log",
-                     filter_node_log(log_address, start_time, end_time))
-        # TODO filter RM logs for the run duration
-
-        # Get NodeManager logs in the duration of containers belonging to app_id
-        if "nodeHttpAddress" in job_attempts_string:
-            job_attempts = ET.fromstring(job_attempts_string)
-            nm_address = job_attempts.find(".//nodeHttpAddress").text
-            log_address = get_node_log_address(nm_address, NM_LOG_REGEX)
-            write_output(os.path.join(output_path, "node_log"), "nodemanager_log", get_container_log(log_address, id))
-
-        command.communicate()
-        return output_path
-    elif "app" in id:
-        output_path = create_output_dir(os.path.join(TEMP_DIR, id))
-
-        # Get application info
-        app_info_string = create_request("http://{}/ws/v1/cluster/apps/{}"
-                                                         .format(RM_ADDRESS, id))
-        write_output(output_path, "application_info", app_info_string)
-
-        # Get application attempts
-        app_attempts = create_request("http://{}/ws/v1/cluster/apps/{}/appattempts"
-                                                      .format(RM_ADDRESS, id))
-        write_output(output_path, "application_attempts", app_attempts)
-
-        # Get start_time and end_time of the application
-        start_time, end_time = get_application_time(app_info_string)
-
-        # Get RM log
-        log_address = get_node_log_address(RM_ADDRESS, RM_LOG_REGEX)
-        write_output(os.path.join(output_path, "node_log"), "resourcemanager_log",
-                     filter_node_log(log_address, start_time, end_time))
-
-        # Get NodeManager logs in the duration of containers belonging to app_id
-        if "amHostHttpAddress" in app_info_string:
-            app_info = ET.fromstring(app_info_string)
-            nm_address = app_info.find("amHostHttpAddress").text
-            log_address = get_node_log_address(nm_address, NM_LOG_REGEX)
-            write_output(os.path.join(output_path, "node_log"), "nodemanager_log", get_container_log(log_address, id))
-
-        # Get application log
-        command = run_cmd_and_save_output(os.path.join(output_path, "app_logs"), id, "yarn", "logs", "-applicationId",
-                              id)  # TODO user permission?
-
-        command.communicate()
-        return output_path
-    else:
-        "Invalid application or job id."
-        sys.exit(os.EX_USAGE)
-
-
-def application_hanging():
+def application_diagnostic():
     """
         Application Logs, Application Info, Application Attempts
         Multiple JStack of Hanging Containers and NodeManager
         ResourceManager logs during job duration.
         NodeManager logs from NodeManager where hanging containers of jobs run during the duration of containers.
     """
+
+    if args.arguments is None or len(args.arguments) == 0:
+        print("Missing application or job id, exiting...")
+        sys.exit(os.EX_USAGE)
+
     app_id = args.arguments[0]
 
     output_path = create_output_dir(os.path.join(TEMP_DIR, app_id))
-    # TODO: http://nm-http-address:port/ws/v1/node/apps/{appid}
 
     # Get JStack of the hanging containers
     nm_address = get_nodemanager_address(app_id)
@@ -185,15 +80,16 @@ def application_hanging():
 
     # Get NodeManager logs in the duration of containers belonging to app_id
     if "amHostHttpAddress" in app_info:
+        app_info = ET.fromstring(app_info)
+        nm_address = app_info.find("amHostHttpAddress").text
         log_address = get_node_log_address(nm_address, NM_LOG_REGEX)
         write_output(os.path.join(output_path, "node_log"), "nodemanager_log", get_container_log(log_address, app_id))
 
-    # Get application log, may take a long time
+    # Get application log
     command = run_cmd_and_save_output(os.path.join(output_path, "app_logs"), app_id, "yarn", "logs", "-applicationId",
                                       app_id)  # TODO user permission?
 
     command.communicate()
-
     return output_path
 
 
@@ -244,52 +140,6 @@ def scheduler_related_issue():
     print(enable_info_log)
 
     return output_path
-
-
-def rm_nm_start_failure():
-    """
-        ResourceManager and NodeManager log file in the last 10 minutes
-        NodeManager Info
-        YARN and Scheduler Configuration
-    """
-    if args.arguments is None or len(args.arguments) is 0:
-        print("Missing node id, exiting...")
-        sys.exit(os.EX_USAGE)
-
-    node_id = args.arguments[0]
-    output_path = create_output_dir(os.path.join(TEMP_DIR, "node_failure_{}".format(node_id.split(":")[0])))
-
-    # Get node info
-    node_info_string = create_request("http://{}/ws/v1/cluster/nodes/{}"
-                                                      .format(RM_ADDRESS, node_id))
-    write_output(output_path, "node_info", node_info_string)
-
-    # Simulate time last 10 minutes
-    start_time, end_time = (format_datetime_no_seconds(datetime.now() - timedelta(seconds=600)),
-                            format_datetime_no_seconds(datetime.now()))
-
-    # Get RM log in the last 10 minutes
-    log_address = get_node_log_address(RM_ADDRESS, RM_LOG_REGEX)
-    write_output(os.path.join(output_path, "node_log"), "resourcemanager_log",
-                 filter_node_log(log_address, start_time, end_time))
-
-    # Get NM log in the last 10 minutes
-    node_info = ET.fromstring(node_info_string)
-    nm_address = node_info.find("nodeHTTPAddress").text.split(":")[0]
-    log_address = get_node_log_address(nm_address, NM_LOG_REGEX)
-    write_output(os.path.join(output_path, "node_log"), "nodemanager_log",
-                 filter_node_log(log_address, start_time, end_time))
-
-    # Get Scheduler Configuration
-    scheduler_config = create_request("http://{}/ws/v1/cluster/scheduler-conf".format(RM_ADDRESS))
-    write_output(output_path, "scheduler_configuration", scheduler_config)
-
-    # Get YARN configuration yarn-site.xml
-    yarn_conf = run_command("cat", os.path.join(HADOOP_CONF_DIR, YARN_SITE_XML))
-    write_output(output_path, "yarn_site", yarn_conf)
-
-    return output_path
-
 
 ####################################################### Utils Functions ###############################################
 
@@ -400,19 +250,6 @@ def get_application_time(app_info_string):
     return start_time_str, finish_time_str
 
 
-def get_job_time(job_conf):
-    times = re.findall(r'<th>\s*(Started|Finished):\s*</th>\s*<td>\s*(.*?)\s*</td>', job_conf)
-    print("Job time: ", times)
-
-    formatted_times = []
-
-    for _, time in times:
-        formatted_time = datetime.strptime(time, INPUT_TIME_FORMAT).strftime(OUTPUT_TIME_FORMAT)[:-7]  # -7 to omit milliseconds
-        formatted_times.append(formatted_time)
-
-    return formatted_times
-
-
 def get_resourcemanager_pid():
     results = run_command("ps", "aux", "|", "grep", "resourcemanager", "|", "grep", "-v", "grep")
 
@@ -447,10 +284,8 @@ def format_datetime_no_seconds(datetime_obj):
 def main():
 
     ISSUE_MAP = {
-        "application_failed": application_failed,
-        "application_hanging": application_hanging,
+        "application_diagnostic": application_diagnostic,
         "scheduler_related_issue": scheduler_related_issue,
-        "rm_nm_start_failure": rm_nm_start_failure
     }
 
     parser = argparse.ArgumentParser()
@@ -474,16 +309,9 @@ def main():
         print("RM address can't be found, exiting...")
         sys.exit(1)
 
-    global JHS_ADDRESS
-    JHS_ADDRESS = parse_url_from_conf(MAPRED_SITE_XML, JHS_ADDRESS_PROPERTY_NAME)
-    if JHS_ADDRESS is None:
-        print("JHS address can't be found, exiting...")
-        sys.exit(1)
-
     selected_option = ISSUE_MAP[args.command]
     print(selected_option())  # print the resulted output path that will be used by the DiagnosticsService.java
 
 
 if __name__ == "__main__":
     main()
-
