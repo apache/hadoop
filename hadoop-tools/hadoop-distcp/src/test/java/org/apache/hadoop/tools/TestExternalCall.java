@@ -27,13 +27,13 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.Cluster;
 import org.apache.hadoop.mapreduce.JobSubmissionFiles;
 import org.apache.hadoop.tools.util.TestDistCpUtils;
+import org.apache.hadoop.util.ExitUtil;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.security.Permission;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -64,9 +64,11 @@ public class TestExternalCall {
 
   @BeforeEach
   public void setup() {
+    ExitUtil.disableSystemExit();
+    ExitUtil.disableSystemHalt();
+    ExitUtil.resetFirstExitException();
+    ExitUtil.resetFirstHaltException();
 
-    securityManager = System.getSecurityManager();
-    System.setSecurityManager(new NoExitSecurityManager());
     try {
       fs = FileSystem.get(getConf());
       root = new Path("target/tmp").makeQualified(fs.getUri(),
@@ -79,10 +81,12 @@ public class TestExternalCall {
 
   @AfterEach
   public void tearDown() {
-    System.setSecurityManager(securityManager);
+    ExitUtil.resetFirstExitException();
+    ExitUtil.resetFirstHaltException();
   }
+
 /**
- * test methods run end execute of DistCp class. silple copy file
+ * test methods run end execute of DistCp class. simple copy file
  * @throws Exception 
  */
   @Test
@@ -136,7 +140,7 @@ public class TestExternalCall {
       DistCp.main(arg);
       fail();
 
-    } catch (ExitException t) {
+    } catch (ExitUtil.ExitException t) {
       assertTrue(fs.exists(target));
       assertEquals(t.status, 0);
       assertEquals(
@@ -175,33 +179,4 @@ public class TestExternalCall {
   }
 
 
-  private SecurityManager securityManager;
-
-  protected static class ExitException extends SecurityException {
-    private static final long serialVersionUID = -1982617086752946683L;
-    public final int status;
-
-    public ExitException(int status) {
-      super("There is no escape!");
-      this.status = status;
-    }
-  }
-
-  private static class NoExitSecurityManager extends SecurityManager {
-    @Override
-    public void checkPermission(Permission perm) {
-      // allow anything.
-    }
-
-    @Override
-    public void checkPermission(Permission perm, Object context) {
-      // allow anything.
-    }
-
-    @Override
-    public void checkExit(int status) {
-      super.checkExit(status);
-      throw new ExitException(status);
-    }
-  }
 }

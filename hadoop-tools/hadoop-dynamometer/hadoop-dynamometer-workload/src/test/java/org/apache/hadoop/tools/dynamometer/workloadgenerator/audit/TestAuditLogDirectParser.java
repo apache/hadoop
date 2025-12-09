@@ -20,10 +20,10 @@ package org.apache.hadoop.tools.dynamometer.workloadgenerator.audit;
 import java.util.function.Function;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /** Tests for {@link AuditLogDirectParser}. */
 public class TestAuditLogDirectParser {
@@ -32,7 +32,7 @@ public class TestAuditLogDirectParser {
   private AuditLogDirectParser parser;
   private Long sequence = 1L;
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     parser = new AuditLogDirectParser();
     Configuration conf = new Configuration();

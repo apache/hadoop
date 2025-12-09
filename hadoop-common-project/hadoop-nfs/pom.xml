@@ -54,11 +54,6 @@
       <type>test-jar</type>
     </dependency>
     <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
       <groupId>org.mockito</groupId>
       <artifactId>mockito-inline</artifactId>
       <scope>test</scope>
@@ -97,6 +92,31 @@
       <artifactId>assertj-core</artifactId>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.assertj</groupId>
+      <artifactId>assertj-core</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-api</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-params</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-engine</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.platform</groupId>
+      <artifactId>junit-platform-launcher</artifactId>
+      <scope>provided</scope>
+    </dependency>
   </dependencies>
 
   <build>
@@ -105,8 +125,12 @@
         <groupId>com.github.spotbugs</groupId>
         <artifactId>spotbugs-maven-plugin</artifactId>
         <configuration>
-          <excludeFilterFile>${basedir}/dev-support/findbugsExcludeFile.xml
-          </excludeFilterFile>
+          <excludeFilterFiles>
+            <excludeFilterFile>${basedir}/dev-support/findbugsExcludeFile.xml
+            </excludeFilterFile>
+            <excludeFilterFile>${repo.root}/dev-support/findbugs-exclude-global.xml
+            </excludeFilterFile>
+          </excludeFilterFiles>
         </configuration>
       </plugin>
     </plugins>

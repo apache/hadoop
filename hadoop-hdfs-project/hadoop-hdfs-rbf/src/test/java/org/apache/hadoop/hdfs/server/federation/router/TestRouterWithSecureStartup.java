@@ -20,14 +20,13 @@ package org.apache.hadoop.hdfs.server.federation.router;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.contract.router.web.RouterWebHDFSContract;
-import org.junit.Rule;
-import org.junit.Test;
-import static org.junit.Assert.assertNotNull;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import java.io.IOException;
 
 import static org.apache.hadoop.fs.contract.router.SecurityConfUtil.initSecurity;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_KEYTAB_FILE_KEY;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 
 /**
@@ -37,9 +36,6 @@ public class TestRouterWithSecureStartup {
 
   private static final String HTTP_KERBEROS_PRINCIPAL_CONF_KEY =
       "hadoop.http.authentication.kerberos.principal";
-
-  @Rule
-  public ExpectedException exceptionRule = ExpectedException.none();
 
   /*
    * hadoop.http.authentication.kerberos.principal has default value, so if we
@@ -71,8 +67,8 @@ public class TestRouterWithSecureStartup {
       throws Exception {
     Configuration conf = initSecurity();
     conf.unset(configToTest);
-    exceptionRule.expect(IOException.class);
-    exceptionRule.expectMessage(message);
-    RouterWebHDFSContract.createCluster(conf);
+    assertThrows(IOException.class, () -> {
+      RouterWebHDFSContract.createCluster(conf);
+    }, message);
   }
 }

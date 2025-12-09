@@ -17,8 +17,11 @@
  */
 
 package org.apache.hadoop.yarn.util;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 public class TestLRUCache {
   public static final int CACHE_EXPIRE_TIME = 200;
@@ -29,21 +32,21 @@ public class TestLRUCache {
     lruCache.put("2", 1);
     lruCache.put("3", 3);
     lruCache.put("4", 4);
-    Assert.assertEquals(lruCache.size(), 3);
-    Assert.assertNull(lruCache.get("1"));
-    Assert.assertNotNull(lruCache.get("2"));
-    Assert.assertNotNull(lruCache.get("3"));
-    Assert.assertNotNull(lruCache.get("3"));
+    assertEquals(lruCache.size(), 3);
+    assertNull(lruCache.get("1"));
+    assertNotNull(lruCache.get("2"));
+    assertNotNull(lruCache.get("3"));
+    assertNotNull(lruCache.get("3"));
     lruCache.clear();
 
     lruCache.put("1", 1);
     Thread.sleep(201);
-    Assert.assertEquals(lruCache.size(), 1);
+    assertEquals(lruCache.size(), 1);
     lruCache.get("1");
-    Assert.assertEquals(lruCache.size(), 0);
+    assertEquals(lruCache.size(), 0);
     lruCache.put("2", 2);
-    Assert.assertEquals(lruCache.size(), 1);
+    assertEquals(lruCache.size(), 1);
     lruCache.put("3", 3);
-    Assert.assertEquals(lruCache.size(), 2);
+    assertEquals(lruCache.size(), 2);
   }
 }

@@ -312,17 +312,19 @@ understands the risks.
 The configuration option `fs.s3a.create.performance` has the same behavior as
 the `fs.s3a.performance.flag` flag option `create`:
 
-* No overwrite checks are made when creating a file, even if overwrite is set to `false` in the application/library code
+* No overwrite checks are made when creating a file, even if overwrite is set to `false` in the application/library code.
+  Instead S3 conditional creation will be used to perform an atomic overwrite check _when the file write completes_.
 * No checks are made for an object being written above a path containing other objects (i.e. a "directory")
 * No checks are made for a parent path containing an object which is not a directory marker (i.e. a "file")
 
 This saves multiple probes per operation, especially a `LIST` call.
 
-It may however result in
-* Unintentional overwriting of data
-* Creation of directory structures which can no longer be navigated through filesystem APIs.
+It may however result in creation of directory structures which can no longer be navigated through filesystem APIs.
 
 Use with care, and, ideally, enable versioning on the S3 store.
+
+Note that S3 Conditional creation may not be supported on third party stores,
+in which case no overwrite checks are performed at all.
 
 
 ### <a name="mkdir-performance"></a> Mkdir Performance

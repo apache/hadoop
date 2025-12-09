@@ -26,13 +26,13 @@ import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
 import org.apache.hadoop.hdfs.protocol.CachePoolEntry;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
 import org.apache.hadoop.fs.BatchedRemoteIterator.BatchedEntries;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.EnumSet;
 import static org.apache.hadoop.hdfs.server.federation.router.async.utils.AsyncUtil.syncReturn;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Used to test the functionality of {@link RouterAsyncCacheAdmin}.
@@ -40,7 +40,7 @@ import static org.junit.Assert.assertEquals;
 public class TestRouterAsyncCacheAdmin extends RouterAsyncProtocolTestBase {
   private RouterAsyncCacheAdmin asyncCacheAdmin;
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException {
     asyncCacheAdmin = new RouterAsyncCacheAdmin(getRouterAsyncRpcServer());
     FSDataOutputStream fsDataOutputStream = getRouterFs().create(

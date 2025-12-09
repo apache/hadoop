@@ -26,7 +26,6 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import org.junit.Assume;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,8 +45,9 @@ import static org.apache.hadoop.fs.s3a.auth.RoleModel.*;
 import static org.apache.hadoop.fs.s3a.auth.RolePolicies.*;
 import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.DELEGATION_TOKEN_BINDING;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.assertj.core.api.Assumptions.assumeThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Helper class for testing roles.
@@ -164,8 +164,8 @@ public final class RoleTestUtils {
     conf.set(ASSUMED_ROLE_ARN, roleARN);
     conf.set(ASSUMED_ROLE_SESSION_NAME, "test");
     conf.set(ASSUMED_ROLE_SESSION_DURATION, "15m");
-    // force in bucket resolution during startup
-    conf.setInt(S3A_BUCKET_PROBE, 1);
+    // disable bucket resolution during startup as s3 express doesn't like it
+    conf.setInt(S3A_BUCKET_PROBE, 0);
     disableCreateSession(conf);
     disableFilesystemCaching(conf);
     return conf;
@@ -212,8 +212,9 @@ public final class RoleTestUtils {
    */
   public static String probeForAssumedRoleARN(Configuration conf) {
     String arn = conf.getTrimmed(ASSUMED_ROLE_ARN, "");
-    Assume.assumeTrue("No ARN defined in " + ASSUMED_ROLE_ARN,
-        !arn.isEmpty());
+    assumeThat(arn)
+        .as("No ARN defined in " + ASSUMED_ROLE_ARN)
+        .isNotEmpty();
     return arn;
   }
 
@@ -229,15 +230,14 @@ public final class RoleTestUtils {
       final MarshalledCredentials actual) {
     // DO NOT use assertEquals() here, as that could print a secret to
     // the test report.
-    assertEquals(message + ": access key",
-        expected.getAccessKey(),
-        actual.getAccessKey());
-    assertTrue(message + ": secret key",
-        expected.getSecretKey().equals(actual.getSecretKey()));
-    assertEquals(message + ": session token",
-        expected.getSessionToken(),
-        actual.getSessionToken());
-
+    assertEquals(expected.getAccessKey(),
+        actual.getAccessKey(),
+        message + ": access key");
+    assertTrue(expected.getSecretKey().equals(actual.getSecretKey()),
+        message + ": secret key");
+    assertEquals(expected.getSessionToken(),
+        actual.getSessionToken(),
+        message + ": session token");
   }
 
   /**

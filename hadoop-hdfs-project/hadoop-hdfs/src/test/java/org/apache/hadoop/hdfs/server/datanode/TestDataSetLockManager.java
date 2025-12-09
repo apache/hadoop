@@ -19,21 +19,24 @@ package org.apache.hadoop.hdfs.server.datanode;
 
 import org.apache.hadoop.hdfs.server.common.AutoCloseDataSetLock;
 import org.apache.hadoop.hdfs.server.common.DataNodeLockManager.LockLevel;
-import org.junit.Before;
-import org.junit.Test;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 public class TestDataSetLockManager {
   private DataSetLockManager manager;
 
-  @Before
+  @BeforeEach
   public void init() {
     manager = new DataSetLockManager();
   }
 
-  @Test(timeout = 5000)
+  @Test
+  @Timeout(value = 5)
   public void testBaseFunc() {
     manager.addLock(LockLevel.BLOCK_POOl, "BPtest");
     manager.addLock(LockLevel.VOLUME, "BPtest", "Volumetest");
@@ -80,9 +83,10 @@ public class TestDataSetLockManager {
     assertEquals(lastException.getMessage(), "lock Leak");
   }
 
-  @Test(timeout = 5000)
+  @Test
+  @Timeout(value = 5)
   public void testAcquireWriteLockError() throws InterruptedException {
-    Thread t = new Thread(() -> {
+    Thread t = new SubjectInheritingThread(() -> {
       manager.readLock(LockLevel.BLOCK_POOl, "test");
       manager.writeLock(LockLevel.BLOCK_POOl, "test");
     });
@@ -93,7 +97,8 @@ public class TestDataSetLockManager {
     assertEquals(lastException.getMessage(), "lock Leak");
   }
 
-  @Test(timeout = 5000)
+  @Test
+  @Timeout(value = 5)
   public void testLockLeakCheck() {
     manager.writeLock(LockLevel.BLOCK_POOl, "test");
     manager.lockLeakCheck();

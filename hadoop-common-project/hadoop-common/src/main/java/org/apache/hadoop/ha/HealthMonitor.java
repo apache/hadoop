@@ -283,7 +283,7 @@ public class HealthMonitor {
     }
     
     @Override
-    public void run() {
+    public void work() {
       while (shouldRun) {
         try { 
           loopUntilConnected();

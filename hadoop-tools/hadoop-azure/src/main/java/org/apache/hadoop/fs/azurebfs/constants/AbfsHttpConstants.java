@@ -147,6 +147,7 @@ public final class AbfsHttpConstants {
   public static final String APPLICATION_JSON = "application/json";
   public static final String APPLICATION_OCTET_STREAM = "application/octet-stream";
   public static final String APPLICATION_XML = "application/xml";
+  public static final String APPLICATION_X_WWW_FORM_URLENCODED = "application/x-www-form-urlencoded";
   public static final String XMS_PROPERTIES_ENCODING_ASCII = "ISO-8859-1";
   public static final String XMS_PROPERTIES_ENCODING_UNICODE = "UTF-8";
 
@@ -165,6 +166,12 @@ public final class AbfsHttpConstants {
   // The HTTP 100 Continue informational status response code indicates that everything so far
   // is OK and that the client should continue with the request or ignore it if it is already finished.
   public static final String HUNDRED_CONTINUE = "100-continue";
+  /**
+   * HTTP status code indicating that the server has received too many requests and the client should
+   * qualify for retrying the operation, as described in the Microsoft Azure documentation.
+   * {@link "https://learn.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/how-to-use-vm-token#error-handling"}.
+   */
+  public static final int HTTP_TOO_MANY_REQUESTS = 429;
 
   public static final char CHAR_FORWARD_SLASH = '/';
   public static final char CHAR_EXCLAMATION_POINT = '!';
@@ -173,6 +180,10 @@ public final class AbfsHttpConstants {
   public static final char CHAR_EQUALS = '=';
   public static final char CHAR_STAR = '*';
   public static final char CHAR_PLUS = '+';
+  public static final int LOW_HEAP_SPACE_FACTOR = 4;
+  public static final double MEDIUM_HEAP_SPACE_FACTOR = 8;
+
+  public static final int SPLIT_NO_LIMIT = -1;
 
   /**
    * Specifies the version of the REST protocol used for processing the request.
@@ -185,7 +196,8 @@ public final class AbfsHttpConstants {
     DEC_12_2019("2019-12-12"),
     APR_10_2021("2021-04-10"),
     AUG_03_2023("2023-08-03"),
-    NOV_04_2024("2024-11-04");
+    NOV_04_2024("2024-11-04"),
+    JUL_05_2025("2025-07-05");
 
     private final String xMsApiVersion;
 
@@ -199,12 +211,9 @@ public final class AbfsHttpConstants {
     }
 
     public static ApiVersion getCurrentVersion() {
-      return DEC_12_2019;
+      return NOV_04_2024;
     }
   }
-
-  @Deprecated
-  public static final String DECEMBER_2019_API_VERSION = ApiVersion.DEC_12_2019.toString();
 
   /**
    * List of Constants Used by Blob Endpoint Rest APIs.
@@ -219,6 +228,7 @@ public final class AbfsHttpConstants {
   public static final String XML_TAG_RESOURCE_TYPE = "ResourceType";
   public static final String XML_TAG_INVALID_XML = "Invalid XML";
   public static final String XML_TAG_HDI_ISFOLDER = "hdi_isfolder";
+  public static final String XML_TAG_HDI_PERMISSION = "hdi_permission";
   public static final String XML_TAG_ETAG = "Etag";
   public static final String XML_TAG_LAST_MODIFIED_TIME = "Last-Modified";
   public static final String XML_TAG_CREATION_TIME   = "Creation-Time";

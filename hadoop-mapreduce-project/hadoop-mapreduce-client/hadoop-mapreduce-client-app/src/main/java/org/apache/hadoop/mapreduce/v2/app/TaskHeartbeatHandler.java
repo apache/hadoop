@@ -33,8 +33,9 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptDiagnosticsUpdate
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEventType;
 import org.apache.hadoop.service.AbstractService;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.event.EventHandler;
-import org.apache.hadoop.util.Clock;
+import org.apache.hadoop.yarn.util.Clock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -125,7 +126,7 @@ public class TaskHeartbeatHandler extends AbstractService {
 
   @Override
   protected void serviceStart() throws Exception {
-    lostTaskCheckerThread = new Thread(new PingChecker());
+    lostTaskCheckerThread = new SubjectInheritingThread(new PingChecker());
     lostTaskCheckerThread.setName("TaskHeartbeatHandler PingChecker");
     lostTaskCheckerThread.start();
     super.serviceStart();

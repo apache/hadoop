@@ -24,6 +24,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -105,14 +106,14 @@ public class ApplicationMasterLauncher extends AbstractService implements
     launcherPool.shutdown();
   }
 
-  private class LauncherThread extends Thread {
+  private class LauncherThread extends SubjectInheritingThread {
     
     public LauncherThread() {
       super("ApplicationMaster Launcher");
     }
 
     @Override
-    public void run() {
+    public void work() {
       while (!this.isInterrupted()) {
         Runnable toLaunch;
         try {

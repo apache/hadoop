@@ -28,8 +28,8 @@ import org.apache.hadoop.fs.s3a.statistics.impl.EmptyS3AStatisticsContext;
 import org.apache.hadoop.fs.s3a.test.MinimalWriteOperationHelperCallbacks;
 import org.apache.hadoop.fs.statistics.IOStatisticsContext;
 import org.apache.hadoop.util.Progressable;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.ExecutorService;
 
@@ -76,7 +76,7 @@ public class TestS3ABlockOutputStream extends AbstractS3AMockTest {
     return builder;
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     final S3ABlockOutputStream.BlockOutputStreamBuilder
         builder = mockS3ABuilder();
@@ -148,7 +148,7 @@ public class TestS3ABlockOutputStream extends AbstractS3AMockTest {
 
   /**
    * Unless configured to downgrade, the stream will raise exceptions on
-   * Syncable API calls.
+   * Syncable.hsync() API calls.
    */
   @Test
   public void testSyncableUnsupported() throws Exception {
@@ -156,13 +156,13 @@ public class TestS3ABlockOutputStream extends AbstractS3AMockTest {
         builder = mockS3ABuilder();
     builder.withDowngradeSyncableExceptions(false);
     stream = spy(new S3ABlockOutputStream(builder));
-    intercept(UnsupportedOperationException.class, () -> stream.hflush());
+    stream.hflush();
     intercept(UnsupportedOperationException.class, () -> stream.hsync());
   }
 
   /**
    * When configured to downgrade, the stream downgrades on
-   * Syncable API calls.
+   * Syncable.hsync() API calls.
    */
   @Test
   public void testSyncableDowngrade() throws Exception {

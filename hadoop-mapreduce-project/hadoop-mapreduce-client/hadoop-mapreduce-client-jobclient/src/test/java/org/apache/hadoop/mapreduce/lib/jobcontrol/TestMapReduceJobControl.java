@@ -28,6 +28,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.HadoopTestCase;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.MapReduceTestUtil;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
@@ -112,7 +113,7 @@ public class TestMapReduceJobControl extends HadoopTestCase {
     theControl.addJob(cjob2);
     theControl.addJob(cjob3);
     theControl.addJob(cjob4);
-    Thread theController = new Thread(theControl);
+    Thread theController = new SubjectInheritingThread(theControl);
     theController.start();
     return theControl;
   }

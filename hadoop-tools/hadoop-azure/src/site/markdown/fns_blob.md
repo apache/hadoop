@@ -21,7 +21,7 @@ for big data analytics because of being more performant and scalable.
 However, to enable users of legacy WASB Driver to migrate to ABFS driver without
 needing them to upgrade their general purpose V2 accounts (HNS-Disabled), Support
 for FNS accounts is being added to ABFS driver.
-Refer to [WASB Deprication](./wasb.html) for more details.
+Refer to [WASB Deprecation](./wasb.html) for more details.
 
 ## Azure Service Endpoints Used by ABFS Driver
 Azure Services offers two set of endpoints for interacting with storage accounts:
@@ -87,11 +87,11 @@ configured service type.
     </property>
     ```
     - How to configure Shared Key
-      auth: [Shared Key](./abfs.md#a-nameshared-key-autha-default-shared-key)
+      auth: [Shared Key](./index.md#a-nameshared-key-autha-default-shared-key)
     - How to configure
-      OAuth: [OAuth](./abfs.md#a-nameoauth-client-credentialsa-oauth-20-client-credentials)
+      OAuth: [OAuth](./index.md#a-nameoauth-client-credentialsa-oauth-20-client-credentials)
     - How to configure fixed
-      SAS: [Fixed SAS](./abfs.md#using-accountservice-sas-with-abfs)
+      SAS: [Fixed SAS](./index.md#using-accountservice-sas-with-abfs)
 
    OAuth is recommended auth type as it is more secure and flexible.
 

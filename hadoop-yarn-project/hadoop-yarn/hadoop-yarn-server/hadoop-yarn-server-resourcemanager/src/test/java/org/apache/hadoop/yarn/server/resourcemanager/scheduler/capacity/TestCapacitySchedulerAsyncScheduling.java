@@ -31,7 +31,9 @@ import static org.mockito.Mockito.spy;
 
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -79,7 +81,6 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
-import org.junit.contrib.java.lang.system.internal.NoExitSecurityManager;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
@@ -800,7 +801,7 @@ public class TestCapacitySchedulerAsyncScheduling {
     rm.close();
   }
 
-  public static class NMHeartbeatThread extends Thread {
+  public static class NMHeartbeatThread extends SubjectInheritingThread {
     private List<MockNM> mockNMS;
     private int interval;
     private volatile boolean shouldStop = false;
@@ -810,7 +811,7 @@ public class TestCapacitySchedulerAsyncScheduling {
       this.interval = interval;
     }
 
-    public void run() {
+    public void work() {
       while (true) {
         if (shouldStop) {
           break;
@@ -1103,17 +1104,13 @@ public class TestCapacitySchedulerAsyncScheduling {
   @Test
   @Timeout(value = 30)
   public void testAsyncScheduleThreadExit() throws Exception {
+    ExitUtil.disableSystemExit();
+
     // init RM & NM
     final MockRM rm = new MockRM(conf);
     rm.start();
     rm.registerNode("192.168.0.1:1234", 8 * GB);
     rm.drainEvents();
-
-    // Set no exit security manager to catch System.exit
-    SecurityManager originalSecurityManager = System.getSecurityManager();
-    NoExitSecurityManager noExitSecurityManager =
-        new NoExitSecurityManager(originalSecurityManager);
-    System.setSecurityManager(noExitSecurityManager);
 
     // test async-scheduling thread exit
     try{
@@ -1124,11 +1121,14 @@ public class TestCapacitySchedulerAsyncScheduling {
       cs.setResourceCalculator(null);
 
       // wait for RM to be shutdown until timeout
-      GenericTestUtils.waitFor(noExitSecurityManager::isCheckExitCalled,
+      GenericTestUtils.waitFor(() -> ExitUtil.getFirstExitException() != null,
           100, 5000);
     } finally {
-      System.setSecurityManager(originalSecurityManager);
-      rm.stop();
+      ExitUtil.enableSystemExit();
+      ExitUtil.resetFirstExitException();
+      if (rm != null) {
+        rm.stop();
+      }
     }
   }
 

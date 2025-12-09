@@ -31,10 +31,6 @@
   <name>Apache Hadoop Assemblies</name>
   <description>Apache Hadoop Assemblies</description>
 
-  <properties>
-    <failIfNoTests>false</failIfNoTests>
-  </properties>
-
   <build>
     <plugins>
       <plugin>

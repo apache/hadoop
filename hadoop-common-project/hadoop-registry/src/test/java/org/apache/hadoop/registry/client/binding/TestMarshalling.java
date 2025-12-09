@@ -23,29 +23,23 @@ import org.apache.hadoop.registry.client.exceptions.InvalidRecordException;
 import org.apache.hadoop.registry.client.exceptions.NoRecordException;
 import org.apache.hadoop.registry.client.types.ServiceRecord;
 import org.apache.hadoop.registry.client.types.yarn.PersistencePolicies;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TestName;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Test record marshalling
  */
+@Timeout(10)
 public class TestMarshalling extends RegistryTestHelper {
   private static final Logger
       LOG = LoggerFactory.getLogger(TestMarshalling.class);
 
-  @Rule
-  public final Timeout testTimeout = new Timeout(10000);
-  @Rule
-  public TestName methodName = new TestName();
-
   private static RegistryUtils.ServiceRecordMarshal marshal;
 
-  @BeforeClass
+  @BeforeAll
   public static void setupClass() {
     marshal = new RegistryUtils.ServiceRecordMarshal();
   }
@@ -65,53 +59,67 @@ public class TestMarshalling extends RegistryTestHelper {
   }
 
 
-  @Test(expected = NoRecordException.class)
+  @Test
   public void testUnmarshallNoData() throws Throwable {
-    marshal.fromBytes("src", new byte[]{});
+    assertThrows(NoRecordException.class, () -> {
+      marshal.fromBytes("src", new byte[]{});
+    });
   }
 
-  @Test(expected = NoRecordException.class)
+  @Test
   public void testUnmarshallNotEnoughData() throws Throwable {
     // this is nominally JSON -but without the service record header
-    marshal.fromBytes("src", new byte[]{'{','}'}, ServiceRecord.RECORD_TYPE);
+    assertThrows(NoRecordException.class, () -> {
+      marshal.fromBytes("src", new byte[]{'{', '}'}, ServiceRecord.RECORD_TYPE);
+    });
   }
 
-  @Test(expected = InvalidRecordException.class)
+  @Test
   public void testUnmarshallNoBody() throws Throwable {
-    byte[] bytes = "this is not valid JSON at all and should fail".getBytes();
-    marshal.fromBytes("src", bytes);
+    assertThrows(InvalidRecordException.class, () -> {
+      byte[] bytes = "this is not valid JSON at all and should fail".getBytes();
+      marshal.fromBytes("src", bytes);
+    });
   }
 
-  @Test(expected = InvalidRecordException.class)
+  @Test
   public void testUnmarshallWrongType() throws Throwable {
-    byte[] bytes = "{'type':''}".getBytes();
-    ServiceRecord serviceRecord = marshal.fromBytes("marshalling", bytes);
-    RegistryTypeUtils.validateServiceRecord("validating", serviceRecord);
+    assertThrows(InvalidRecordException.class, () -> {
+      byte[] bytes = "{'type':''}".getBytes();
+      ServiceRecord serviceRecord = marshal.fromBytes("marshalling", bytes);
+      RegistryTypeUtils.validateServiceRecord("validating", serviceRecord);
+    });
   }
 
-  @Test(expected = NoRecordException.class)
+  @Test
   public void testUnmarshallWrongLongType() throws Throwable {
-    ServiceRecord record = new ServiceRecord();
-    record.type = "ThisRecordHasALongButNonMatchingType";
-    byte[] bytes = marshal.toBytes(record);
-    ServiceRecord serviceRecord = marshal.fromBytes("marshalling",
-        bytes, ServiceRecord.RECORD_TYPE);
+    assertThrows(NoRecordException.class, () -> {
+      ServiceRecord record = new ServiceRecord();
+      record.type = "ThisRecordHasALongButNonMatchingType";
+      byte[] bytes = marshal.toBytes(record);
+      ServiceRecord serviceRecord = marshal.fromBytes("marshalling",
+          bytes, ServiceRecord.RECORD_TYPE);
+    });
   }
 
-  @Test(expected = NoRecordException.class)
+  @Test
   public void testUnmarshallNoType() throws Throwable {
-    ServiceRecord record = new ServiceRecord();
-    record.type = "NoRecord";
-    byte[] bytes = marshal.toBytes(record);
-    ServiceRecord serviceRecord = marshal.fromBytes("marshalling",
-        bytes, ServiceRecord.RECORD_TYPE);
+    assertThrows(NoRecordException.class, () -> {
+      ServiceRecord record = new ServiceRecord();
+      record.type = "NoRecord";
+      byte[] bytes = marshal.toBytes(record);
+      ServiceRecord serviceRecord = marshal.fromBytes("marshalling",
+          bytes, ServiceRecord.RECORD_TYPE);
+    });
   }
 
-  @Test(expected = InvalidRecordException.class)
+  @Test
   public void testRecordValidationWrongType() throws Throwable {
-    ServiceRecord record = new ServiceRecord();
-    record.type = "NotAServiceRecordType";
-    RegistryTypeUtils.validateServiceRecord("validating", record);
+    assertThrows(InvalidRecordException.class, () -> {
+      ServiceRecord record = new ServiceRecord();
+      record.type = "NotAServiceRecordType";
+      RegistryTypeUtils.validateServiceRecord("validating", record);
+    });
   }
 
   @Test

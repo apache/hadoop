@@ -31,7 +31,7 @@ import java.util.List;
 import java.util.Properties;
 import java.util.StringTokenizer;
 
-import org.junit.BeforeClass;
+import org.junit.jupiter.api.BeforeAll;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.FileUtil;
@@ -42,11 +42,11 @@ import org.apache.hadoop.mapred.RunningJob;
 import org.apache.hadoop.mapred.SkipBadRecords;
 import org.apache.hadoop.mapred.Utils;
 import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestStreamingBadRecords extends ClusterMapReduceTestCase
 {
@@ -66,7 +66,7 @@ public class TestStreamingBadRecords extends ClusterMapReduceTestCase
     UtilTest.makeJavaCommand(BadApp.class, new String[]{"true"});
   private static final int INPUTSIZE=100;
 
-  @BeforeClass
+  @BeforeAll
   public static void setupClass() throws Exception {
     setupClassBase(TestStreamingBadRecords.class);
   }
@@ -78,7 +78,7 @@ public class TestStreamingBadRecords extends ClusterMapReduceTestCase
     utilTest.redirectIfAntJunit();
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     Properties props = new Properties();
     props.setProperty(JTConfig.JT_RETIREJOBS, "false");

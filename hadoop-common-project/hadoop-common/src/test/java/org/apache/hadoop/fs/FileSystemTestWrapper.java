@@ -17,6 +17,10 @@
  */
 package org.apache.hadoop.fs;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.io.DataInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -29,7 +33,6 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.util.Progressable;
-import org.junit.Assert;
 
 /**
  * Helper class for unit tests.
@@ -170,29 +173,29 @@ public final class FileSystemTestWrapper extends FSTestWrapper {
   public void checkFileStatus(String path, fileType expectedType)
       throws IOException {
     FileStatus s = fs.getFileStatus(new Path(path));
-    Assert.assertNotNull(s);
+    assertNotNull(s);
     if (expectedType == fileType.isDir) {
-      Assert.assertTrue(s.isDirectory());
+      assertTrue(s.isDirectory());
     } else if (expectedType == fileType.isFile) {
-      Assert.assertTrue(s.isFile());
+      assertTrue(s.isFile());
     } else if (expectedType == fileType.isSymlink) {
-      Assert.assertTrue(s.isSymlink());
+      assertTrue(s.isSymlink());
     }
-    Assert.assertEquals(fs.makeQualified(new Path(path)), s.getPath());
+    assertEquals(fs.makeQualified(new Path(path)), s.getPath());
   }
 
   public void checkFileLinkStatus(String path, fileType expectedType)
       throws IOException {
     FileStatus s = fs.getFileLinkStatus(new Path(path));
-    Assert.assertNotNull(s);
+    assertNotNull(s);
     if (expectedType == fileType.isDir) {
-      Assert.assertTrue(s.isDirectory());
+      assertTrue(s.isDirectory());
     } else if (expectedType == fileType.isFile) {
-      Assert.assertTrue(s.isFile());
+      assertTrue(s.isFile());
     } else if (expectedType == fileType.isSymlink) {
-      Assert.assertTrue(s.isSymlink());
+      assertTrue(s.isSymlink());
     }
-    Assert.assertEquals(fs.makeQualified(new Path(path)), s.getPath());
+    assertEquals(fs.makeQualified(new Path(path)), s.getPath());
   }
 
   //

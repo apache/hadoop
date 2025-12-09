@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hdfs.web;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.CALLS_REAL_METHODS;
@@ -37,7 +37,7 @@ import java.net.URL;
 import org.apache.hadoop.thirdparty.com.google.common.net.HttpHeaders;
 import org.apache.hadoop.hdfs.web.ByteRangeInputStream.InputStreamAndFileLength;
 import org.apache.hadoop.test.Whitebox;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 public class TestByteRangeInputStream {
@@ -83,20 +83,17 @@ public class TestByteRangeInputStream {
 
     bris.seek(0);
 
-    assertEquals("getPos wrong", 0, bris.getPos());
+    assertEquals(0, bris.getPos(), "getPos wrong");
 
     bris.read();
 
-    assertEquals("Initial call made incorrectly (offset check)",
-        0, bris.startPos);
-    assertEquals("getPos should return 1 after reading one byte", 1,
-        bris.getPos());
+    assertEquals(0, bris.startPos, "Initial call made incorrectly (offset check)");
+    assertEquals(1, bris.getPos(), "getPos should return 1 after reading one byte");
     verify(oMock, times(1)).connect(0, false);
 
     bris.read();
 
-    assertEquals("getPos should return 2 after reading two bytes", 2,
-        bris.getPos());
+    assertEquals(2, bris.getPos(), "getPos should return 2 after reading two bytes");
     // No additional connections should have been made (no seek)
     verify(oMock, times(1)).connect(0, false);
 
@@ -105,10 +102,10 @@ public class TestByteRangeInputStream {
     bris.seek(100);
     bris.read();
 
-    assertEquals("Seek to 100 bytes made incorrectly (offset Check)",
-        100, bris.startPos);
-    assertEquals("getPos should return 101 after reading one byte", 101,
-        bris.getPos());
+    assertEquals(100, bris.startPos,
+        "Seek to 100 bytes made incorrectly (offset Check)");
+    assertEquals(101, bris.getPos(),
+        "getPos should return 101 after reading one byte");
     verify(rMock, times(1)).connect(100, true);
 
     bris.seek(101);
@@ -121,8 +118,7 @@ public class TestByteRangeInputStream {
     bris.seek(2500);
     bris.read();
 
-    assertEquals("Seek to 2500 bytes made incorrectly (offset Check)",
-        2500, bris.startPos);
+    assertEquals(2500, bris.startPos, "Seek to 2500 bytes made incorrectly (offset Check)");
 
     doReturn(getMockConnection(null))
         .when(rMock).connect(anyLong(), anyBoolean());
@@ -131,9 +127,8 @@ public class TestByteRangeInputStream {
       bris.read();
       fail("Exception should be thrown when content-length is not given");
     } catch (IOException e) {
-      assertTrue("Incorrect response message: " + e.getMessage(),
-          e.getMessage().startsWith(HttpHeaders.CONTENT_LENGTH +
-                                    " is missing: "));
+      assertTrue(e.getMessage().startsWith(HttpHeaders.CONTENT_LENGTH + " is missing: "),
+          "Incorrect response message: " + e.getMessage());
     }
     bris.close();
   }
@@ -203,7 +198,7 @@ public class TestByteRangeInputStream {
       errored = true;
       assertEquals("Stream closed", e.getMessage());
     } finally {
-      assertTrue("Read a closed steam", errored);
+      assertTrue(errored, "Read a closed steam");
     }
     verify(bris, times(brisOpens)).openInputStream(Mockito.anyLong());
     verify(bris, times(brisCloses)).close();
@@ -223,35 +218,31 @@ public class TestByteRangeInputStream {
             ByteRangeInputStream.StreamStatus.SEEK);
 
 
-    assertEquals("Before read or seek, available should be same as filelength",
-            65535, bris.available());
+    assertEquals(65535, bris.available(),
+        "Before read or seek, available should be same as filelength");
     verify(bris, times(1)).openInputStream(Mockito.anyLong());
 
     bris.seek(10);
-    assertEquals("Seek 10 bytes, available should return filelength - 10"
-            , 65525,
-            bris.available());
+    assertEquals(65525, bris.available(), "Seek 10 bytes, available should return filelength - 10");
 
     //no more bytes available
     bris.seek(65535);
-    assertEquals("Seek till end of file, available should return 0 bytes", 0,
-            bris.available());
+    assertEquals(0, bris.available(), "Seek till end of file, available should return 0 bytes");
 
     //test reads, seek back to 0 and start reading
     bris.seek(0);
     bris.read();
-    assertEquals("Read 1 byte, available must return  filelength - 1",
-            65534, bris.available());
+    assertEquals(65534, bris.available(), "Read 1 byte, available must return  filelength - 1");
 
     bris.read();
-    assertEquals("Read another 1 byte, available must return  filelength - 2",
-            65533, bris.available());
+    assertEquals(65533, bris.available(),
+        "Read another 1 byte, available must return  filelength - 2");
 
     //seek and read
     bris.seek(100);
     bris.read();
-    assertEquals("Seek to offset 100 and read 1 byte, available should return filelength - 101",
-            65434, bris.available());
+    assertEquals(65434, bris.available(),
+        "Seek to offset 100 and read 1 byte, available should return filelength - 101");
     bris.close();
   }
 
@@ -284,8 +275,7 @@ public class TestByteRangeInputStream {
       bris.available();
       fail("Exception should be thrown when stream is closed");
     }catch(IOException e){
-      assertTrue("Exception when stream is closed",
-              e.getMessage().equals("Stream closed"));
+      assertTrue(e.getMessage().equals("Stream closed"), "Exception when stream is closed");
     }
   }
 

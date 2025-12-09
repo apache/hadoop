@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.router.clientrm;
 
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.Mockito.mock;
 
 import java.io.IOException;
@@ -97,12 +98,11 @@ import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSyst
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
-import org.apache.hadoop.util.Clock;
-import org.apache.hadoop.util.UTCClock;
+import org.apache.hadoop.yarn.util.Clock;
+import org.apache.hadoop.yarn.util.UTCClock;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 
 /**
  * Base class for all the RouterClientRMService test cases. It provides utility
@@ -125,7 +125,7 @@ public abstract class BaseRouterClientRMTest {
   public final static int TEST_MAX_CACHE_SIZE = 10;
 
   protected MockRouterClientRMService getRouterClientRMService() {
-    Assert.assertNotNull(this.clientrmService);
+    assertNotNull(this.clientrmService);
     return this.clientrmService;
   }
 
@@ -154,7 +154,7 @@ public abstract class BaseRouterClientRMTest {
     return schedulerConf;
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     this.conf = createConfiguration();
     this.dispatcher = new AsyncDispatcher();
@@ -171,7 +171,7 @@ public abstract class BaseRouterClientRMTest {
     return this.conf;
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     if (clientrmService != null) {
       clientrmService.stop();

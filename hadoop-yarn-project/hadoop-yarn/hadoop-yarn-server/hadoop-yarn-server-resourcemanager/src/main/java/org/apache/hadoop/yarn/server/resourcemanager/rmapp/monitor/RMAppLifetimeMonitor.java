@@ -33,7 +33,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
 import org.apache.hadoop.yarn.util.AbstractLivelinessMonitor;
-import org.apache.hadoop.util.SystemClock;
+import org.apache.hadoop.yarn.util.SystemClock;
 
 /**
  * This service will monitor the applications against the lifetime value given.

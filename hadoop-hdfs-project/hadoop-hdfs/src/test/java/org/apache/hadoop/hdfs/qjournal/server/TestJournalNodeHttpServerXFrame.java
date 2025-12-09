@@ -21,14 +21,15 @@ import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.qjournal.MiniJournalCluster;
 import org.apache.hadoop.http.HttpServer2;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Test that X-Frame-Options works correctly with JournalNodeHttpServer.
@@ -45,8 +46,8 @@ public class TestJournalNodeHttpServerXFrame {
     cluster = createCluster(xFrameEnabled);
     HttpURLConnection conn = getConn(cluster);
     String xfoHeader = conn.getHeaderField("X-FRAME-OPTIONS");
-    Assert.assertTrue("X-FRAME-OPTIONS is absent in the header", xfoHeader != null);
-    Assert.assertTrue(xfoHeader.endsWith(HttpServer2.XFrameOption.SAMEORIGIN.toString()));
+    assertTrue(xfoHeader != null, "X-FRAME-OPTIONS is absent in the header");
+    assertTrue(xfoHeader.endsWith(HttpServer2.XFrameOption.SAMEORIGIN.toString()));
   }
 
   @Test
@@ -56,10 +57,10 @@ public class TestJournalNodeHttpServerXFrame {
     HttpURLConnection conn = getConn(cluster);
     String xfoHeader = conn.getHeaderField("X-FRAME-OPTIONS");
     System.out.println(xfoHeader);
-    Assert.assertTrue("unexpected X-FRAME-OPTION in header", xfoHeader == null);
+    assertTrue(xfoHeader == null, "unexpected X-FRAME-OPTION in header");
   }
 
-  @After
+  @AfterEach
   public void cleanup() throws IOException {
     if (cluster != null) {
       cluster.shutdown();

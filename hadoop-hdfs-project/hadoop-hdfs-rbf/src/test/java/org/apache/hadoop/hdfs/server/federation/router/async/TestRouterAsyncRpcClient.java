@@ -42,11 +42,11 @@ import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.LambdaTestUtils;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -60,9 +60,9 @@ import static org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.DEFA
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_ASYNC_RPC_HANDLER_COUNT_KEY;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_ASYNC_RPC_RESPONDER_COUNT_KEY;
 import static org.apache.hadoop.hdfs.server.federation.router.async.utils.AsyncUtil.syncReturn;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Used to test the functionality of {@link RouterAsyncRpcClient}.
@@ -86,7 +86,7 @@ public class TestRouterAsyncRpcClient {
    * Start a cluster using a router service that includes 2 namespaces,
    * 6 namenodes and 6 datanodes.
    */
-  @BeforeClass
+  @BeforeAll
   public static void setUpCluster() throws Exception {
     cluster = new MiniRouterDFSCluster(true, 2, 3,
         DEFAULT_HEARTBEAT_INTERVAL_MS, 1000);
@@ -127,7 +127,7 @@ public class TestRouterAsyncRpcClient {
     ns1 = cluster.getNameservices().get(1);
   }
 
-  @AfterClass
+  @AfterAll
   public static void shutdownCluster() {
     if (cluster != null) {
       cluster.shutdown();
@@ -137,7 +137,7 @@ public class TestRouterAsyncRpcClient {
   /**
    * Initialize the mount table, create a RouterAsyncRpcClient object, and create test file.
    */
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     // Create mock locations
     installMockLocations();
@@ -161,7 +161,7 @@ public class TestRouterAsyncRpcClient {
     fsDataOutputStream.close();
   }
 
-  @After
+  @AfterEach
   public void down() throws IOException {
     // clear client context
     CallerContext.setCurrent(null);

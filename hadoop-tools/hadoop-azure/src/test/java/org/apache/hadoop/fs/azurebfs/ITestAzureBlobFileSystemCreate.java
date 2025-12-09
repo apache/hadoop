@@ -33,9 +33,10 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -66,6 +67,7 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 import org.apache.hadoop.fs.azurebfs.services.ITestAbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.RenameAtomicity;
 import org.apache.hadoop.fs.azurebfs.services.TestAbfsClient;
+import org.apache.hadoop.fs.azurebfs.services.VersionedFileStatus;
 import org.apache.hadoop.fs.azurebfs.utils.DirectoryStateHelper;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderValidator;
@@ -87,6 +89,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_MET
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.ROOT_PATH;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENABLE_CLIENT_TRANSACTION_ID;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENABLE_CONDITIONAL_CREATE_OVERWRITE;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENABLE_CREATE_BLOB_IDEMPOTENCY;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENABLE_MKDIR_OVERWRITE;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_MB;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_CLIENT_TRANSACTION_ID;
@@ -95,6 +98,7 @@ import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_CREATE_RECOV
 import static org.apache.hadoop.fs.azurebfs.services.RenameAtomicity.SUFFIX;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertIsFile;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.assertj.core.api.Assumptions.assumeThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -251,8 +255,8 @@ public class ITestAzureBlobFileSystemCreate extends
     doReturn(client).when(store).getClient();
     fs.setWorkingDirectory(new Path(ROOT_PATH));
     fs.mkdirs(new Path(path, "test3"));
-    AzureBlobFileSystemStore.VersionedFileStatus fileStatus
-        = (AzureBlobFileSystemStore.VersionedFileStatus) fs.getFileStatus(path);
+    VersionedFileStatus fileStatus
+        = (VersionedFileStatus) fs.getFileStatus(path);
     new RenameAtomicity(path,
         new Path("/hbase/test4"), renameJson,
         getTestTracingContext(fs, true), fileStatus.getEtag(),
@@ -459,10 +463,18 @@ public class ITestAzureBlobFileSystemCreate extends
 
   public void testCreateFileOverwrite(boolean enableConditionalCreateOverwrite)
       throws Throwable {
+    if (enableConditionalCreateOverwrite) {
+      assumeHnsEnabled();
+      assumeDfsServiceType();
+      assumeThat(getIngressServiceType())
+          .as("DFS service type is required for this test")
+          .isEqualTo(AbfsServiceType.DFS);
+    }
     try (AzureBlobFileSystem currentFs = getFileSystem()) {
       Configuration config = new Configuration(this.getRawConfiguration());
       config.set("fs.azure.enable.conditional.create.overwrite",
           Boolean.toString(enableConditionalCreateOverwrite));
+      config.set("fs.azure.enable.create.idempotency", "false");
       AzureBlobFileSystemStore store = currentFs.getAbfsStore();
       AbfsClient client = store.getClientHandler().getIngressClient();
 
@@ -594,7 +606,11 @@ public class ITestAzureBlobFileSystemCreate extends
   @Test
   public void testNegativeScenariosForCreateOverwriteDisabled()
       throws Throwable {
-
+    assumeHnsEnabled();
+    assumeDfsServiceType();
+    assumeThat(getIngressServiceType())
+        .as("DFS service type is required for this test")
+        .isEqualTo(AbfsServiceType.DFS);
     try (AzureBlobFileSystem currentFs = getFileSystem()) {
       Configuration config = new Configuration(this.getRawConfiguration());
       config.set("fs.azure.enable.conditional.create.overwrite",
@@ -916,7 +932,7 @@ public class ITestAzureBlobFileSystemCreate extends
           // the exception raised in close() must be in the caught exception's
           // suppressed list
           Throwable[] suppressed = fnfe.getSuppressed();
-          assertEquals("suppressed count", 1, suppressed.length);
+          assertEquals(1, suppressed.length, "suppressed count");
           Throwable inner = suppressed[0];
           if (!(inner instanceof IOException)) {
             throw inner;
@@ -1086,6 +1102,7 @@ public class ITestAzureBlobFileSystemCreate extends
       throws Exception {
     Configuration configuration = getRawConfiguration();
     configuration.set(FS_AZURE_ENABLE_CONDITIONAL_CREATE_OVERWRITE, "false");
+    configuration.set(FS_AZURE_ENABLE_CREATE_BLOB_IDEMPOTENCY, "false");
     try (AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(
         configuration)) {
       ExecutorService executorService = Executors.newFixedThreadPool(5);
@@ -2236,6 +2253,98 @@ public class ITestAzureBlobFileSystemCreate extends
   }
 
   /**
+   * Test to simulate a successful create operation followed by a connection reset
+   * on the response, triggering a retry.
+   *
+   * This test verifies that the create operation is retried in the event of a
+   * connection reset during the response phase. The test creates a mock
+   * AzureBlobFileSystem and its associated components to simulate the create
+   * operation and the connection reset. It then verifies that the create
+   * operation is retried once before succeeding.
+   *
+   * @throws Exception if an error occurs during the test execution.
+   */
+  @Test
+  public void testCreateIdempotencyForNonHnsBlob() throws Exception {
+    assumeThat(isAppendBlobEnabled()).as("Not valid for APPEND BLOB").isFalse();
+    assumeHnsDisabled();
+    assumeBlobServiceType();
+    // Create a spy of AzureBlobFileSystem
+    try (AzureBlobFileSystem fs = Mockito.spy(
+        (AzureBlobFileSystem) FileSystem.newInstance(getRawConfiguration()))) {
+      // Create a spy of AzureBlobFileSystemStore
+      AzureBlobFileSystemStore store = Mockito.spy(fs.getAbfsStore());
+
+      // Create spies for the client handler and blob client
+      AbfsClientHandler clientHandler = Mockito.spy(store.getClientHandler());
+      AbfsBlobClient blobClient = Mockito.spy(clientHandler.getBlobClient());
+      fs.getAbfsStore().setClient(blobClient);
+      fs.getAbfsStore().setClientHandler(clientHandler);
+      // Set up the spies to return the mocked objects
+      Mockito.doReturn(clientHandler).when(store).getClientHandler();
+      Mockito.doReturn(blobClient).when(clientHandler).getBlobClient();
+      Mockito.doReturn(blobClient).when(clientHandler).getIngressClient();
+
+      AtomicInteger createCount = new AtomicInteger(0);
+
+      Mockito.doAnswer(answer -> {
+        // Set up the mock for the create operation
+        AbfsClientTestUtil.setMockAbfsRestOperationForCreateOperation(blobClient,
+            (httpOperation) -> {
+              Mockito.doAnswer(invocation -> {
+                // Call the real processResponse method
+                invocation.callRealMethod();
+
+                int currentCount = createCount.incrementAndGet();
+                if (currentCount == 2) {
+                  Mockito.when(httpOperation.getStatusCode())
+                      .thenReturn(
+                          HTTP_INTERNAL_ERROR); // Status code 500 for Internal Server Error
+                  Mockito.when(httpOperation.getStorageErrorMessage())
+                      .thenReturn("CONNECTION_RESET"); // Error message
+                  throw new IOException("Connection Reset");
+                }
+                return null;
+              }).when(httpOperation).processResponse(
+                  Mockito.nullable(byte[].class),
+                  Mockito.anyInt(),
+                  Mockito.anyInt()
+              );
+
+              return httpOperation;
+            });
+        return answer.callRealMethod();
+      }).when(blobClient).createPath(
+          Mockito.anyString(),
+          Mockito.anyBoolean(),
+          Mockito.anyBoolean(),
+          Mockito.any(AzureBlobFileSystemStore.Permissions.class),
+          Mockito.anyBoolean(), Mockito.nullable(String.class), Mockito.any(ContextEncryptionAdapter.class),
+          any(TracingContext.class)
+      );
+
+      Path path = new Path("/test/file");
+      fs.create(path, false);
+      Mockito.verify(blobClient, Mockito.times(1)).createPath(
+          Mockito.anyString(),
+          Mockito.anyBoolean(),
+          Mockito.anyBoolean(),
+          Mockito.any(AzureBlobFileSystemStore.Permissions.class),
+          Mockito.anyBoolean(), Mockito.nullable(String.class), Mockito.any(ContextEncryptionAdapter.class),
+          any(TracingContext.class));
+
+      Mockito.verify(blobClient, Mockito.times(2)).createPathRestOp(
+          Mockito.anyString(),
+          Mockito.anyBoolean(),
+          Mockito.anyBoolean(),
+          Mockito.anyBoolean(),
+          Mockito.nullable(String.class), Mockito.any(ContextEncryptionAdapter.class),
+          any(TracingContext.class));
+      assertIsFile(fs, path);
+    }
+  }
+
+  /**
    * Mocks and returns an instance of {@link AbfsDfsClient} for the given AzureBlobFileSystem.
    * This method sets up the necessary mock behavior for the client handler and ingress client.
    *
@@ -2288,6 +2397,6 @@ public class ITestAzureBlobFileSystemCreate extends
                   null, op);
             }
           }
-        });
+        }, 0);
   }
 }

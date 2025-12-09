@@ -447,7 +447,7 @@ public class ProtobufRpcEngine2 implements RpcEngine {
         long deltaNanos = Time.monotonicNowNanos() - call.getStartHandleTimestampNanos();
         updateProcessingDetails(call, deltaNanos);
         call.setDeferredResponse(RpcWritable.wrap(message));
-        server.updateDeferredMetrics(call, methodName, deltaNanos);
+        server.updateDeferredMetrics(call, methodName);
       }
 
       @Override
@@ -456,7 +456,7 @@ public class ProtobufRpcEngine2 implements RpcEngine {
         updateProcessingDetails(call, deltaNanos);
         call.setDeferredError(t);
         String detailedMetricsName = t.getClass().getSimpleName();
-        server.updateDeferredMetrics(call, detailedMetricsName, deltaNanos);
+        server.updateDeferredMetrics(call, detailedMetricsName);
       }
     }
 

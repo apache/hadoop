@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.hdfs.server.federation.router;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -60,10 +60,10 @@ import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.Time;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test a router end-to-end including the MountTable.
@@ -82,7 +82,7 @@ public class TestRouterMountTable {
   protected static FileSystem nnFs1;
   protected static FileSystem routerFs;
 
-  @BeforeClass
+  @BeforeAll
   public static void globalSetUp() throws Exception {
     startTime = Time.now();
 
@@ -111,7 +111,7 @@ public class TestRouterMountTable {
     mountTable = (MountTableResolver) router.getSubclusterResolver();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() {
     if (cluster != null) {
       cluster.stopRouter(routerContext);
@@ -120,7 +120,7 @@ public class TestRouterMountTable {
     }
   }
 
-  @After
+  @AfterEach
   public void clearMountTable() throws IOException {
     RouterClient client = routerContext.getAdminClient();
     MountTableManager mountTableManager = client.getMountTableManager();

@@ -37,10 +37,11 @@ public class ServiceSASGenerator extends SASGenerator {
     super(accountKey);
   }
 
+  private String permissions = "racwdl";
   public String getContainerSASWithFullControl(String accountName, String containerName) throws
       InvalidConfigurationValueException {
     accountName = getCanonicalAccountName(accountName);
-    String sp = "rcwdl";
+    String sp = permissions;
     String sv = AuthenticationVersion.Feb20.toString();
     String sr = "c";
     String st = ISO_8601_FORMATTER.format(Instant.now().minus(FIVE_MINUTES));
@@ -95,5 +96,14 @@ public class ServiceSASGenerator extends SASGenerator {
     String stringToSign = sb.toString();
     LOG.debug("Service SAS stringToSign: " + stringToSign.replace("\n", "."));
     return computeHmac256(stringToSign);
+  }
+
+  /**
+   * By default, Container SAS has all the available permissions. Use this to
+   * override the default permissions and set as per the requirements.
+   * @param permissions
+   */
+  public void setPermissions(final String permissions) {
+    this.permissions = permissions;
   }
 }

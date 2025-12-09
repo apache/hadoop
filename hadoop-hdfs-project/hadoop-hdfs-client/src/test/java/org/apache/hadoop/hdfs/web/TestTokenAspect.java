@@ -18,13 +18,13 @@
 
 package org.apache.hadoop.hdfs.web;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNotSame;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doReturn;
@@ -55,7 +55,7 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.test.Whitebox;
 import org.apache.hadoop.util.Progressable;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 public class TestTokenAspect {
@@ -253,7 +253,7 @@ public class TestTokenAspect {
     fs.ugi.addToken(token);
     fs.ugi.addToken(new Token<TokenIdentifier>(new byte[0], new byte[0],
         new Text("Other token"), new Text("127.0.0.1:8021")));
-    assertEquals("wrong tokens in user", 2, fs.ugi.getTokens().size());
+    assertEquals(2, fs.ugi.getTokens().size(), "wrong tokens in user");
 
     fs.emulateSecurityEnabled = true;
     fs.initialize(new URI("dummyfs://127.0.0.1:1234"), conf);

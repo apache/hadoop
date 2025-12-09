@@ -27,6 +27,7 @@ import javax.annotation.Nullable;
 
 import software.amazon.awssdk.core.SdkRequest;
 import software.amazon.awssdk.services.s3.model.AbortMultipartUploadRequest;
+import software.amazon.awssdk.services.s3.model.ChecksumAlgorithm;
 import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadRequest;
 import software.amazon.awssdk.services.s3.model.CompletedMultipartUpload;
 import software.amazon.awssdk.services.s3.model.CompletedPart;
@@ -59,11 +60,17 @@ import org.apache.hadoop.fs.s3a.S3AEncryptionMethods;
 import org.apache.hadoop.fs.s3a.api.RequestFactory;
 import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecretOperations;
 import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
+import org.apache.hadoop.fs.s3a.impl.write.WriteObjectFlags;
 
+import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_PART_UPLOAD_TIMEOUT;
+import static org.apache.hadoop.fs.s3a.Constants.IF_NONE_MATCH_STAR;
+import static org.apache.hadoop.fs.s3a.S3AEncryptionMethods.SSE_C;
 import static org.apache.hadoop.fs.s3a.S3AEncryptionMethods.UNKNOWN_ALGORITHM;
 import static org.apache.hadoop.fs.s3a.impl.AWSClientConfig.setRequestTimeout;
+import static org.apache.hadoop.fs.s3a.impl.AWSHeaders.IF_MATCH;
+import static org.apache.hadoop.fs.s3a.impl.AWSHeaders.IF_NONE_MATCH;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.DEFAULT_UPLOAD_PART_COUNT_LIMIT;
 import static org.apache.hadoop.util.Preconditions.checkArgument;
 import static org.apache.hadoop.util.Preconditions.checkNotNull;
@@ -139,6 +146,11 @@ public class RequestFactoryImpl implements RequestFactory {
   private final Duration partUploadTimeout;
 
   /**
+   * Indicates the algorithm used to create the checksum for the object to be uploaded to S3.
+   */
+  private final ChecksumAlgorithm checksumAlgorithm;
+
+  /**
    * Constructor.
    * @param builder builder with all the configuration.
    */
@@ -153,6 +165,7 @@ public class RequestFactoryImpl implements RequestFactory {
     this.storageClass = builder.storageClass;
     this.isMultipartUploadEnabled = builder.isMultipartUploadEnabled;
     this.partUploadTimeout = builder.partUploadTimeout;
+    this.checksumAlgorithm = builder.checksumAlgorithm;
   }
 
   /**
@@ -233,6 +246,10 @@ public class RequestFactoryImpl implements RequestFactory {
 
     if (contentEncoding != null) {
       copyObjectRequestBuilder.contentEncoding(contentEncoding);
+    }
+
+    if (checksumAlgorithm != null) {
+      copyObjectRequestBuilder.checksumAlgorithm(checksumAlgorithm);
     }
 
     return copyObjectRequestBuilder;
@@ -360,6 +377,19 @@ public class RequestFactoryImpl implements RequestFactory {
       setRequestTimeout(putObjectRequestBuilder, partUploadTimeout);
     }
 
+    if (options != null) {
+      if (options.isNoObjectOverwrite()) {
+        LOG.debug("setting If-None-Match");
+        putObjectRequestBuilder.overrideConfiguration(
+                override -> override.putHeader(IF_NONE_MATCH, IF_NONE_MATCH_STAR));
+      }
+      if (options.hasFlag(WriteObjectFlags.ConditionalOverwriteEtag)) {
+        LOG.debug("setting If-Match");
+        putObjectRequestBuilder.overrideConfiguration(
+                override -> override.putHeader(IF_MATCH, options.getEtagOverwrite()));
+      }
+    }
+
     return prepareRequest(putObjectRequestBuilder);
   }
 
@@ -375,6 +405,10 @@ public class RequestFactoryImpl implements RequestFactory {
 
     if (contentEncoding != null && !isDirectoryMarker) {
       putObjectRequestBuilder.contentEncoding(contentEncoding);
+    }
+
+    if (checksumAlgorithm != null) {
+      putObjectRequestBuilder.checksumAlgorithm(checksumAlgorithm);
     }
 
     return putObjectRequestBuilder;
@@ -526,6 +560,10 @@ public class RequestFactoryImpl implements RequestFactory {
       requestBuilder.storageClass(storageClass);
     }
 
+    if (checksumAlgorithm != null) {
+      requestBuilder.checksumAlgorithm(checksumAlgorithm);
+    }
+
     return prepareRequest(requestBuilder);
   }
 
@@ -533,12 +571,36 @@ public class RequestFactoryImpl implements RequestFactory {
   public CompleteMultipartUploadRequest.Builder newCompleteMultipartUploadRequestBuilder(
       String destKey,
       String uploadId,
-      List<CompletedPart> partETags) {
+      List<CompletedPart> partETags,
+      PutObjectOptions putOptions) {
+
     // a copy of the list is required, so that the AWS SDK doesn't
     // attempt to sort an unmodifiable list.
-    CompleteMultipartUploadRequest.Builder requestBuilder =
-        CompleteMultipartUploadRequest.builder().bucket(bucket).key(destKey).uploadId(uploadId)
+    CompleteMultipartUploadRequest.Builder requestBuilder;
+    requestBuilder = CompleteMultipartUploadRequest.builder().bucket(bucket).key(destKey).uploadId(uploadId)
             .multipartUpload(CompletedMultipartUpload.builder().parts(partETags).build());
+
+    if (putOptions.isNoObjectOverwrite()) {
+      LOG.debug("setting If-None-Match");
+      requestBuilder.overrideConfiguration(
+              override -> override.putHeader(IF_NONE_MATCH, IF_NONE_MATCH_STAR));
+    }
+    if (!isEmpty(putOptions.getEtagOverwrite())) {
+      LOG.debug("setting if If-Match");
+      requestBuilder.overrideConfiguration(
+              override -> override.putHeader(IF_MATCH, putOptions.getEtagOverwrite()));
+    }
+
+    // Correct SSE-C request parameters are required for this request when
+    // specifying checksums for each part
+    if (checksumAlgorithm != null && getServerSideEncryptionAlgorithm() == SSE_C) {
+      EncryptionSecretOperations.getSSECustomerKey(encryptionSecrets)
+          .ifPresent(base64customerKey -> requestBuilder
+              .sseCustomerAlgorithm(ServerSideEncryption.AES256.name())
+              .sseCustomerKey(base64customerKey)
+              .sseCustomerKeyMD5(
+                  Md5Utils.md5AsBase64(Base64.getDecoder().decode(base64customerKey))));
+    }
 
     return prepareRequest(requestBuilder);
   }
@@ -618,6 +680,11 @@ public class RequestFactoryImpl implements RequestFactory {
 
     // Set the request timeout for the part upload
     setRequestTimeout(builder, partUploadTimeout);
+
+    if (checksumAlgorithm != null) {
+      builder.checksumAlgorithm(checksumAlgorithm);
+    }
+
     return prepareRequest(builder);
   }
 
@@ -732,6 +799,11 @@ public class RequestFactoryImpl implements RequestFactory {
      */
     private Duration partUploadTimeout = DEFAULT_PART_UPLOAD_TIMEOUT;
 
+    /**
+     * Indicates the algorithm used to create the checksum for the object to be uploaded to S3.
+     */
+    private ChecksumAlgorithm checksumAlgorithm;
+
     private RequestFactoryBuilder() {
     }
 
@@ -839,6 +911,16 @@ public class RequestFactoryImpl implements RequestFactory {
      */
     public RequestFactoryBuilder withPartUploadTimeout(final Duration value) {
       partUploadTimeout = value;
+      return this;
+    }
+
+    /**
+     * Indicates the algorithm used to create the checksum for the object to be uploaded to S3.
+     * @param value new value
+     * @return the builder
+     */
+    public RequestFactoryBuilder withChecksumAlgorithm(final ChecksumAlgorithm value) {
+      checksumAlgorithm = value;
       return this;
     }
   }

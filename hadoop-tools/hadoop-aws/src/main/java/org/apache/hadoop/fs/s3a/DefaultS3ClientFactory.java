@@ -30,6 +30,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import software.amazon.awssdk.awscore.util.AwsHostNameUtils;
+import software.amazon.awssdk.core.checksums.RequestChecksumCalculation;
+import software.amazon.awssdk.core.checksums.ResponseChecksumValidation;
 import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
 import software.amazon.awssdk.core.client.config.SdkAdvancedClientOption;
 import software.amazon.awssdk.core.interceptor.ExecutionInterceptor;
@@ -38,8 +40,10 @@ import software.amazon.awssdk.http.apache.ApacheHttpClient;
 import software.amazon.awssdk.http.auth.spi.scheme.AuthScheme;
 import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient;
 import software.amazon.awssdk.identity.spi.AwsCredentialsIdentity;
+import software.amazon.awssdk.metrics.LoggingMetricPublisher;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.s3accessgrants.plugin.S3AccessGrantsPlugin;
+import software.amazon.awssdk.services.s3.LegacyMd5Plugin;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3AsyncClientBuilder;
 import software.amazon.awssdk.services.s3.S3BaseClientBuilder;
@@ -201,21 +205,52 @@ public class DefaultS3ClientFactory extends Configured
 
     configureEndpointAndRegion(builder, parameters, conf);
 
+    // add a plugin to add a Content-MD5 header.
+    // this is required when performing some operations with third party stores
+    // (for example: bulk delete), and is somewhat harmless when working with AWS S3.
+    if (parameters.isMd5HeaderEnabled()) {
+      LOG.debug("MD5 header enabled");
+      builder.addPlugin(LegacyMd5Plugin.create());
+    }
+
+    //when to calculate request checksums.
+    final RequestChecksumCalculation checksumCalculation =
+        parameters.isChecksumCalculationEnabled()
+            ? RequestChecksumCalculation.WHEN_SUPPORTED
+            : RequestChecksumCalculation.WHEN_REQUIRED;
+    LOG.debug("Using checksum calculation policy: {}", checksumCalculation);
+    builder.requestChecksumCalculation(checksumCalculation);
+
+    // response checksum validation. Slow, even with CRC32 checksums.
+    final ResponseChecksumValidation checksumValidation;
+    checksumValidation = parameters.isChecksumValidationEnabled()
+        ? ResponseChecksumValidation.WHEN_SUPPORTED
+        : ResponseChecksumValidation.WHEN_REQUIRED;
+    LOG.debug("Using checksum validation policy: {}", checksumValidation);
+    builder.responseChecksumValidation(checksumValidation);
+
     maybeApplyS3AccessGrantsConfigurations(builder, conf);
 
     S3Configuration serviceConfiguration = S3Configuration.builder()
         .pathStyleAccessEnabled(parameters.isPathStyleAccess())
-        .checksumValidationEnabled(parameters.isChecksumValidationEnabled())
         .build();
 
     final ClientOverrideConfiguration.Builder override =
         createClientOverrideConfiguration(parameters, conf);
 
-    S3BaseClientBuilder s3BaseClientBuilder = builder
+    S3BaseClientBuilder<BuilderT, ClientT> s3BaseClientBuilder = builder
         .overrideConfiguration(override.build())
         .credentialsProvider(parameters.getCredentialSet())
         .disableS3ExpressSessionAuth(!parameters.isExpressCreateSession())
         .serviceConfiguration(serviceConfiguration);
+
+    if (LOG.isTraceEnabled()) {
+      // if this log is set to "trace" then we turn on logging of SDK metrics.
+      // The metrics itself will log at info; it is just that reflection work
+      // would be needed to change that setting safely for shaded and unshaded aws artifacts.
+      s3BaseClientBuilder.overrideConfiguration(o ->
+          o.addMetricPublisher(LoggingMetricPublisher.create()));
+    }
 
     if (conf.getBoolean(HTTP_SIGNER_ENABLED, HTTP_SIGNER_ENABLED_DEFAULT)) {
       // use an http signer through an AuthScheme

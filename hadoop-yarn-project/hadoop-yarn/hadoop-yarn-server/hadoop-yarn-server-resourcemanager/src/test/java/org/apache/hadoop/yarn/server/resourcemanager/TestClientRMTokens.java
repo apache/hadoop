@@ -17,8 +17,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -41,8 +41,7 @@ import org.apache.hadoop.thirdparty.protobuf.InvalidProtocolBufferException;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.RMDelegationTokenIdentifierData;
-import org.junit.AfterClass;
-import org.junit.Assert;
+import org.junit.jupiter.api.AfterAll;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -78,9 +77,9 @@ import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 
 public class TestClientRMTokens {
@@ -91,7 +90,7 @@ public class TestClientRMTokens {
   // Note : Any test case in ResourceManager package that creates a proxy has
   // to be run with enabling hadoop.security.token.service.use_ip. And reset
   // to false at the end of test class. See YARN-5208
-  @BeforeClass
+  @BeforeAll
   public static void setUp() {
     Configuration conf = new Configuration();
     conf.setBoolean(
@@ -99,7 +98,7 @@ public class TestClientRMTokens {
     SecurityUtil.setConfiguration(conf);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() {
     Configuration conf = new Configuration();
     conf.setBoolean(
@@ -107,7 +106,7 @@ public class TestClientRMTokens {
     SecurityUtil.setConfiguration(conf);
   }
 
-  @Before
+  @BeforeEach
   public void resetSecretManager() {
     RMDelegationTokenIdentifier.Renewer.setSecretManager(null, null);
   }
@@ -149,7 +148,7 @@ public class TestClientRMTokens {
       // Create a user for the renewr and fake the authentication-method
       UserGroupInformation loggedInUser = UserGroupInformation
           .createRemoteUser("testrenewer@APACHE.ORG");
-      Assert.assertEquals("testrenewer", loggedInUser.getShortUserName());
+      assertEquals("testrenewer", loggedInUser.getShortUserName());
       // Default realm is APACHE.ORG
       loggedInUser.setAuthenticationMethod(AuthenticationMethod.KERBEROS);
 

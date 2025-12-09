@@ -65,12 +65,6 @@
     </dependency>
 
     <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <scope>test</scope>
-    </dependency>
-
-    <dependency>
       <groupId>org.apache.zookeeper</groupId>
       <artifactId>zookeeper</artifactId>
     </dependency>
@@ -146,6 +140,27 @@
       <scope>provided</scope>
     </dependency>
 
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-api</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-params</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-engine</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.platform</groupId>
+      <artifactId>junit-platform-launcher</artifactId>
+      <scope>test</scope>
+    </dependency>
+
   </dependencies>
 
   <build>
@@ -178,7 +193,12 @@
         <artifactId>spotbugs-maven-plugin</artifactId>
         <configuration>
           <xmlOutput>true</xmlOutput>
-          <excludeFilterFile>${project.basedir}/dev-support/findbugs-exclude.xml</excludeFilterFile>
+          <excludeFilterFiles>
+            <excludeFilterFile>${project.basedir}/dev-support/findbugs-exclude.xml
+            </excludeFilterFile>
+            <excludeFilterFile>${repo.root}/dev-support/findbugs-exclude-global.xml
+            </excludeFilterFile>
+          </excludeFilterFiles>
           <effort>Max</effort>
         </configuration>
       </plugin>

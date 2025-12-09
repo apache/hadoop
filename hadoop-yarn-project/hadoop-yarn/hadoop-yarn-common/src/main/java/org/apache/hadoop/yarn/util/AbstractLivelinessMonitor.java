@@ -22,13 +22,12 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
-import org.apache.hadoop.util.Clock;
-import org.apache.hadoop.util.MonotonicClock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.service.AbstractService;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 
 /**
  * A simple liveliness monitor with which clients can register, trust the
@@ -68,7 +67,7 @@ public abstract class AbstractLivelinessMonitor<O> extends AbstractService {
   protected void serviceStart() throws Exception {
     assert !stopped : "starting when already stopped";
     resetTimer();
-    checkerThread = new Thread(new PingChecker());
+    checkerThread = new SubjectInheritingThread(new PingChecker());
     checkerThread.setName("Ping Checker for "+getName());
     checkerThread.start();
     super.serviceStart();

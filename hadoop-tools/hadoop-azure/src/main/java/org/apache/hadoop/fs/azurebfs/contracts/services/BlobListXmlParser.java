@@ -207,7 +207,7 @@ public class BlobListXmlParser extends DefaultHandler {
     if (parentNode.equals(AbfsHttpConstants.XML_TAG_METADATA)) {
       currentBlobEntry.addMetadata(currentNode, value);
       // For Marker blobs hdi_isFolder will be present as metadata
-      if (AbfsHttpConstants.XML_TAG_HDI_ISFOLDER.equals(currentNode)) {
+      if (AbfsHttpConstants.XML_TAG_HDI_ISFOLDER.equalsIgnoreCase(currentNode)) {
         currentBlobEntry.setIsDirectory(Boolean.valueOf(value));
       }
     }

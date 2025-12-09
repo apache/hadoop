@@ -30,7 +30,9 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,7 +45,6 @@ import org.apache.hadoop.fs.contract.AbstractContractVectoredReadTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.Constants;
-import org.apache.hadoop.fs.s3a.RangeNotSatisfiableEOFException;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3AInputPolicy;
 import org.apache.hadoop.fs.s3a.S3AInputStream;
@@ -52,6 +53,7 @@ import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.StoreStatisticNames;
 import org.apache.hadoop.fs.statistics.StreamStatisticNames;
 import org.apache.hadoop.test.LambdaTestUtils;
+import org.apache.hadoop.test.tags.IntegrationTest;
 
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_LENGTH;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY;
@@ -63,7 +65,7 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.returnBuffersToPoo
 import static org.apache.hadoop.fs.contract.ContractTestUtils.validateVectoredReadResult;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_VECTOR_READS_MAX_MERGED_READ_SIZE;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_VECTOR_READS_MIN_SEEK_SIZE;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfAnalyticsAcceleratorEnabled;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.disableAnalyticsAccelerator;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyStatisticCounterValue;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsToPrettyString;
 import static org.apache.hadoop.io.Sizes.S_1M;
@@ -72,10 +74,14 @@ import static org.apache.hadoop.test.LambdaTestUtils.interceptFuture;
 import static org.apache.hadoop.test.MoreAsserts.assertEqual;
 
 /**
- * S3A contract tests for vectored reads.
+ * S3A contract tests for vectored reads through the classic input stream.
+ * <p>
  * This is a complex suite as it really is testing the store, so measurements of
  * what IO took place is also performed if the input stream is suitable for this.
  */
+@IntegrationTest
+@ParameterizedClass(name="buffer-{0}")
+@MethodSource("params")
 public class ITestS3AContractVectoredRead extends AbstractContractVectoredReadTest {
 
   private static final Logger LOG = LoggerFactory.getLogger(ITestS3AContractVectoredRead.class);
@@ -90,14 +96,12 @@ public class ITestS3AContractVectoredRead extends AbstractContractVectoredReadTe
   }
 
   /**
-   * Analytics Accelerator Library for Amazon S3 does not support Vectored Reads.
-   * @throws Exception
+   * Create a configuration.
+   * @return a configuration
    */
   @Override
-  public void setup() throws Exception {
-    super.setup();
-    skipIfAnalyticsAcceleratorEnabled(getContract().getConf(),
-        "Analytics Accelerator does not support vectored reads");
+  protected Configuration createConfiguration() {
+    return disableAnalyticsAccelerator(super.createConfiguration());
   }
 
   /**

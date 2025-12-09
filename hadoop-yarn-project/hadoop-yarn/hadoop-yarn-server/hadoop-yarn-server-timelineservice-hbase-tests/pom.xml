@@ -35,11 +35,6 @@
   </properties>
 
   <dependencies>
-    <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <scope>test</scope>
-    </dependency>
 
     <!-- Since hbase 1.0.1 requires an older version of hadoop we enforce an
          older version of hadoop just for the hbase unit tests. We also need to
@@ -71,6 +66,10 @@
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-common</artifactId>
         </exclusion>
+        <exclusion>
+           <groupId>org.apache.hbase</groupId>
+           <artifactId>hbase-shaded-client-byo-hadoop</artifactId>
+         </exclusion>
       </exclusions>
     </dependency>
 
@@ -83,6 +82,10 @@
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-common</artifactId>
         </exclusion>
+        <exclusion>
+           <groupId>org.apache.hbase</groupId>
+           <artifactId>hbase-shaded-client-byo-hadoop</artifactId>
+         </exclusion>
       </exclusions>
     </dependency>
 
@@ -124,11 +127,6 @@
     <dependency>
       <groupId>org.junit.platform</groupId>
       <artifactId>junit-platform-launcher</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.junit.vintage</groupId>
-      <artifactId>junit-vintage-engine</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -224,7 +222,7 @@
         </exclusion>
         <exclusion>
           <groupId>org.glassfish.jersey.test-framework.providers</groupId>
-          <artifactId>jersey-test-framework-provider-grizzly2</artifactId>
+          <artifactId>jersey-test-framework-provider-jetty</artifactId>
         </exclusion>
         <exclusion>
           <groupId>org.glassfish.jersey.test-framework</groupId>

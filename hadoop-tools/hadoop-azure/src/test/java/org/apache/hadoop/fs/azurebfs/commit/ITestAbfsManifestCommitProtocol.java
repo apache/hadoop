@@ -23,6 +23,7 @@ import org.apache.hadoop.fs.azurebfs.contract.ABFSContractTestBinding;
 import org.apache.hadoop.fs.azurebfs.contract.AbfsFileSystemContract;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.TestManifestCommitProtocol;
+import org.junit.jupiter.api.BeforeEach;
 
 import static org.apache.hadoop.fs.azurebfs.commit.AbfsCommitTestHelper.prepareTestConfiguration;
 
@@ -38,6 +39,7 @@ public class ITestAbfsManifestCommitProtocol extends
     binding = new ABFSContractTestBinding();
   }
 
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     binding.setup();

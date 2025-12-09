@@ -31,6 +31,7 @@ import java.util.concurrent.TimeoutException;
 
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.FakeTimer;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -406,10 +407,10 @@ public class TestGroupsCaching {
     FakeGroupMapping.clearBlackList();
     FakeGroupMapping.setGetGroupsDelayMs(100);
 
-    ArrayList<Thread> threads = new ArrayList<Thread>();
+    ArrayList<SubjectInheritingThread> threads = new ArrayList<SubjectInheritingThread>();
     for (int i = 0; i < 10; i++) {
-      threads.add(new Thread() {
-        public void run() {
+      threads.add(new SubjectInheritingThread() {
+        public void work() {
           try {
             assertEquals(2, groups.getGroups("me").size());
           } catch (IOException e) {
@@ -451,10 +452,10 @@ public class TestGroupsCaching {
     timer.advance(400 * 1000);
     Thread.sleep(100);
 
-    ArrayList<Thread> threads = new ArrayList<Thread>();
+    ArrayList<SubjectInheritingThread> threads = new ArrayList<SubjectInheritingThread>();
     for (int i = 0; i < 10; i++) {
-      threads.add(new Thread() {
-        public void run() {
+      threads.add(new SubjectInheritingThread() {
+        public void work() {
           try {
             assertEquals(2, groups.getGroups("me").size());
           } catch (IOException e) {

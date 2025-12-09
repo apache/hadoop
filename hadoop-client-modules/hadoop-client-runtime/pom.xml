@@ -108,6 +108,12 @@
       <scope>runtime</scope>
       <optional>true</optional>
     </dependency>
+    <dependency>
+      <groupId>com.jcraft</groupId>
+      <artifactId>jsch</artifactId>
+      <optional>true</optional>
+      <scope>runtime</scope>
+    </dependency>
   </dependencies>
   <profiles>
     <profile>
@@ -152,6 +158,13 @@
                       <exclude>io.dropwizard.metrics:metrics-core</exclude>
                       <exclude>org.eclipse.jetty:jetty-servlet</exclude>
                       <exclude>org.eclipse.jetty:jetty-security</exclude>
+                      <!-- Excluding Jetty dependencies to resolve `BanDuplicateClasses` issues caused by
+                       duplicate Jetty classes in `hadoop-client-minicluster` and `hadoop-client-runtime`.
+                       so keeping it here leads to conflicts.
+                      -->
+                      <exclude>org.eclipse.jetty:jetty-util</exclude>
+                      <exclude>org.eclipse.jetty:jetty-server</exclude>
+                      <exclude>org.eclipse.jetty:jetty-continuation</exclude>
                       <exclude>org.ow2.asm:*</exclude>
                       <!-- Leave bouncycastle unshaded because it's signed with a special Oracle certificate so it can be a custom JCE security provider -->
                       <exclude>org.bouncycastle:*</exclude>
@@ -169,14 +182,11 @@
                       <exclude>org.glassfish.jersey.core:*</exclude>
                       <exclude>org.glassfish.hk2.external:*</exclude>
                       <exclude>org.glassfish.jaxb:*</exclude>
-                      <exclude>jakarta.ws.rs:*</exclude>
                       <exclude>jakarta.annotation:*</exclude>
                       <exclude>jakarta.validation:*</exclude>
-                      <exclude>jakarta.servlet:*</exclude>
-                      <exclude>javax.annotation:*</exclude>
                       <exclude>org.hamcrest:*</exclude>
+                      <exclude>org.javassist:*</exclude>
                       <exclude>aopalliance:*</exclude>
-                      <exclude>javassist:*</exclude>
                     </excludes>
                   </artifactSet>
                   <filters>

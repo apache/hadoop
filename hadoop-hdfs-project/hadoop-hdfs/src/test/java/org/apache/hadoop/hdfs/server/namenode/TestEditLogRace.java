@@ -18,9 +18,9 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_SET_OWNER;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.argThat;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.spy;
@@ -42,6 +42,8 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import java.util.function.Supplier;
 
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -65,12 +67,11 @@ import org.apache.hadoop.hdfs.util.RwLockMode;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.mockito.ArgumentMatcher;
 import org.slf4j.event.Level;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
@@ -78,13 +79,13 @@ import org.mockito.stubbing.Answer;
  * This class tests various synchronization bugs in FSEditLog rolling
  * and namespace saving.
  */
-@RunWith(Parameterized.class)
+@MethodSource("data")
+@ParameterizedClass
 public class TestEditLogRace {
   static {
     GenericTestUtils.setLogLevel(FSEditLog.LOG, Level.DEBUG);
   }
 
-  @Parameters
   public static Collection<Object[]> data() {
     Collection<Object[]> params = new ArrayList<Object[]>();
     params.add(new Object[]{ false });
@@ -205,7 +206,7 @@ public class TestEditLogRace {
     // Create threads and make them run transactions concurrently.
     for (int i = 0; i < NUM_THREADS; i++) {
       Transactions trans = new Transactions(cluster, caughtErr);
-      new Thread(trans, "TransactionThread-" + i).start();
+      new SubjectInheritingThread(trans, "TransactionThread-" + i).start();
       workers.add(trans);
     }
   }
@@ -265,7 +266,7 @@ public class TestEditLogRace {
         assertEquals(previousLogTxId, nextLog);
         
         File expectedLog = NNStorage.getInProgressEditsFile(sd, previousLogTxId);
-        assertTrue("Expect " + expectedLog + " to exist", expectedLog.exists());
+        assertTrue(expectedLog.exists(), "Expect " + expectedLog + " to exist");
       }
     } finally {
       stopTransactionWorkers();
@@ -359,7 +360,7 @@ public class TestEditLogRace {
         // The checkpoint id should be 1 less than the last written ID, since
         // the log roll writes the "BEGIN" transaction to the new log.
         assertEquals(fsimage.getStorage().getMostRecentCheckpointTxId(),
-                     editLog.getLastWrittenTxId() - 1);
+            editLog.getLastWrittenTxId() - 1);
 
         namesystem.leaveSafeMode(false);
         LOG.info("Save " + i + ": complete");
@@ -425,9 +426,9 @@ public class TestEditLogRace {
           new AtomicReference<Throwable>();
       final CountDownLatch waitToEnterFlush = new CountDownLatch(1);
       
-      final Thread doAnEditThread = new Thread() {
+      final SubjectInheritingThread doAnEditThread = new SubjectInheritingThread() {
         @Override
-        public void run() {
+        public void work() {
           try {
             LOG.info("Starting mkdirs");
             namesystem.mkdirs("/test",
@@ -485,13 +486,11 @@ public class TestEditLogRace {
       assertNull(deferredException.get());
 
       // We did 3 edits: begin, txn, and end
-      assertEquals(3, verifyEditLogs(namesystem, fsimage,
-          NNStorage.getFinalizedEditsFileName(1, 3),
-          1));
+      assertEquals(3,
+          verifyEditLogs(namesystem, fsimage, NNStorage.getFinalizedEditsFileName(1, 3), 1));
       // after the save, just the one "begin"
-      assertEquals(1, verifyEditLogs(namesystem, fsimage,
-          NNStorage.getInProgressEditsFileName(4),
-          4));
+      assertEquals(1,
+          verifyEditLogs(namesystem, fsimage, NNStorage.getInProgressEditsFileName(4), 4));
     } finally {
       LOG.info("Closing nn");
       if(namesystem != null) namesystem.close();
@@ -520,9 +519,9 @@ public class TestEditLogRace {
           new AtomicReference<Throwable>();
       final CountDownLatch sleepingBeforeSync = new CountDownLatch(1);
 
-      final Thread doAnEditThread = new Thread() {
+      final SubjectInheritingThread doAnEditThread = new SubjectInheritingThread() {
         @Override
-        public void run() {
+        public void work() {
           try {
             LOG.info("Starting setOwner");
             namesystem.writeLock(RwLockMode.FS);
@@ -569,13 +568,11 @@ public class TestEditLogRace {
       assertNull(deferredException.get());
 
       // We did 3 edits: begin, txn, and end
-      assertEquals(3, verifyEditLogs(namesystem, fsimage,
-          NNStorage.getFinalizedEditsFileName(1, 3),
-          1));
+      assertEquals(3,
+          verifyEditLogs(namesystem, fsimage, NNStorage.getFinalizedEditsFileName(1, 3), 1));
       // after the save, just the one "begin"
-      assertEquals(1, verifyEditLogs(namesystem, fsimage,
-          NNStorage.getInProgressEditsFileName(4),
-          4));
+      assertEquals(1,
+          verifyEditLogs(namesystem, fsimage, NNStorage.getInProgressEditsFileName(4), 4));
     } finally {
       LOG.info("Closing nn");
       if(namesystem != null) namesystem.close();
@@ -601,7 +598,8 @@ public class TestEditLogRace {
     }
   }
 
-  @Test(timeout=180000)
+  @Test
+  @Timeout(value = 180)
   public void testDeadlock() throws Throwable {
     GenericTestUtils.setLogLevel(FSEditLog.LOG, Level.DEBUG);
     GenericTestUtils.setLogLevel(FSEditLogAsync.LOG, Level.DEBUG);
@@ -640,8 +638,8 @@ public class TestEditLogRace {
                 LOG.info("thread[" + ii +"] edits=" + i);
               }
             }
-            assertTrue("too many edits", done.get());
-            return null;
+                assertTrue(done.get(), "too many edits");
+                return null;
           }
         });
       }

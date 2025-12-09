@@ -24,19 +24,21 @@ import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestUpdateDataNodeCurrentKey {
   private static final short REPLICATION = (short)1;
   private MiniDFSCluster cluster = null;
   private Configuration config;
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException {
     config = new Configuration();
     config.setInt(
@@ -58,7 +60,7 @@ public class TestUpdateDataNodeCurrentKey {
     cluster.waitActive();
   }
 
-  @After
+  @AfterEach
   public void shutDownCluster() throws IOException {
     if (cluster != null) {
       cluster.shutdown();
@@ -72,7 +74,7 @@ public class TestUpdateDataNodeCurrentKey {
     final DataNode dataNode = cluster.getDataNodes().get(0);
     BlockKey currentKey = dataNode.getBlockPoolTokenSecretManager().
         get(bpid).getCurrentKey();
-    Assert.assertTrue(currentKey != null);
+    assertTrue(currentKey != null);
   }
 
   @Test
@@ -88,7 +90,7 @@ public class TestUpdateDataNodeCurrentKey {
     final DataNode dataNode = cluster.getDataNodes().get(0);
     BlockKey currentKey = dataNode.getBlockPoolTokenSecretManager().
         get(bpid).getCurrentKey();
-    Assert.assertEquals(annCurrentKey, currentKey);
+    assertEquals(annCurrentKey, currentKey);
   }
 
   @Test
@@ -102,7 +104,7 @@ public class TestUpdateDataNodeCurrentKey {
 
     final DatanodeInfo[] dataNodeInfos = cluster.getNameNodeRpc(0).
         getDatanodeReport(HdfsConstants.DatanodeReportType.LIVE);
-    Assert.assertEquals(2, dataNodeInfos.length);
+    assertEquals(2, dataNodeInfos.length);
 
     //Simulate nameNode restart
     cluster.restartNameNode(1, true);
@@ -116,7 +118,7 @@ public class TestUpdateDataNodeCurrentKey {
         get(bpid).getCurrentKey();
     BlockKey dn2CurrentKey = newDataNode.getBlockPoolTokenSecretManager().
         get(bpid).getCurrentKey();
-    Assert.assertEquals(dnCurrentKey, dn2CurrentKey);
-    Assert.assertEquals(currentKey, dn2CurrentKey);
+    assertEquals(dnCurrentKey, dn2CurrentKey);
+    assertEquals(currentKey, dn2CurrentKey);
   }
 }

@@ -19,8 +19,8 @@
 package org.apache.hadoop.hdfs.server.federation.router;
 
 import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.createMountTableEntry;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -38,9 +38,9 @@ import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
 import org.apache.hadoop.hdfs.server.federation.StateStoreDFSCluster;
 import org.apache.hadoop.hdfs.server.federation.resolver.order.DestinationOrder;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -56,7 +56,7 @@ public class TestRouterWebHdfsMethods {
   protected static RouterContext router;
   protected static String httpUri;
 
-  @BeforeClass
+  @BeforeAll
   public static void globalSetUp() throws Exception {
     cluster = new StateStoreDFSCluster(false, 2);
     Configuration conf = new RouterConfigBuilder()
@@ -74,7 +74,7 @@ public class TestRouterWebHdfsMethods {
     httpUri = "http://"+router.getHttpAddress();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() {
     if (cluster != null) {
       cluster.shutdown();

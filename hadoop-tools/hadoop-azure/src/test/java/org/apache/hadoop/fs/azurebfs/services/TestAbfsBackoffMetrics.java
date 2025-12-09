@@ -18,9 +18,8 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
-import org.assertj.core.api.Assertions;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import static org.apache.hadoop.fs.azurebfs.enums.AbfsBackoffMetricsEnum.NUMBER_OF_REQUESTS_SUCCEEDED;
 import static org.apache.hadoop.fs.azurebfs.enums.AbfsBackoffMetricsEnum.TOTAL_NUMBER_OF_REQUESTS;
@@ -29,6 +28,7 @@ import static org.apache.hadoop.fs.azurebfs.enums.RetryValue.THREE;
 import static org.apache.hadoop.fs.azurebfs.enums.RetryValue.TWO;
 import static org.apache.hadoop.fs.azurebfs.enums.StatisticTypeEnum.TYPE_COUNTER;
 import static org.apache.hadoop.fs.azurebfs.enums.StatisticTypeEnum.TYPE_GAUGE;
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestAbfsBackoffMetrics {
     private AbfsBackoffMetrics metrics;
@@ -38,7 +38,7 @@ public class TestAbfsBackoffMetrics {
     /**
      * Sets up the test environment by initializing the AbfsBackoffMetrics instance.
      */
-    @Before
+    @BeforeEach
     public void setUp() {
         metrics = new AbfsBackoffMetrics();
     }
@@ -48,12 +48,12 @@ public class TestAbfsBackoffMetrics {
      */
     @Test
     public void retrievesMetricNamesBasedOnStatisticType() {
-        String[] counterMetrics = metrics.getMetricNamesByType(TYPE_COUNTER);
-        String[] gaugeMetrics = metrics.getMetricNamesByType(TYPE_GAUGE);
-        Assertions.assertThat(counterMetrics.length)
+      String[] counterMetrics = metrics.getMetricNamesByType(TYPE_COUNTER);
+      String[] gaugeMetrics = metrics.getMetricNamesByType(TYPE_GAUGE);
+      assertThat(counterMetrics.length)
                 .describedAs("Counter metrics should have 22 elements")
                 .isEqualTo(TOTAL_COUNTERS);
-        Assertions.assertThat(gaugeMetrics.length)
+      assertThat(gaugeMetrics.length)
                 .describedAs("Gauge metrics should have 21 elements")
                 .isEqualTo(TOTAL_GAUGES);
     }
@@ -64,10 +64,10 @@ public class TestAbfsBackoffMetrics {
     @Test
     public void retrievesValueOfSpecificMetric() {
         metrics.setMetricValue(NUMBER_OF_REQUESTS_SUCCEEDED, 5, ONE);
-        Assertions.assertThat(metrics.getMetricValue(NUMBER_OF_REQUESTS_SUCCEEDED, ONE))
+        assertThat(metrics.getMetricValue(NUMBER_OF_REQUESTS_SUCCEEDED, ONE))
                 .describedAs("Number of request succeeded for retry 1 should be 5")
                 .isEqualTo(5);
-        Assertions.assertThat(metrics.getMetricValue(NUMBER_OF_REQUESTS_SUCCEEDED, TWO))
+        assertThat(metrics.getMetricValue(NUMBER_OF_REQUESTS_SUCCEEDED, TWO))
                 .describedAs("Number of request succeeded for other retries except 1 should be 0")
                 .isEqualTo(0);
     }
@@ -78,10 +78,10 @@ public class TestAbfsBackoffMetrics {
     @Test
     public void incrementsValueOfSpecificMetric() {
         metrics.incrementMetricValue(NUMBER_OF_REQUESTS_SUCCEEDED, ONE);
-        Assertions.assertThat(metrics.getMetricValue(NUMBER_OF_REQUESTS_SUCCEEDED, ONE))
+        assertThat(metrics.getMetricValue(NUMBER_OF_REQUESTS_SUCCEEDED, ONE))
                 .describedAs("Number of request succeeded for retry 1 should be 1")
                 .isEqualTo(1);
-        Assertions.assertThat(metrics.getMetricValue(NUMBER_OF_REQUESTS_SUCCEEDED, THREE))
+        assertThat(metrics.getMetricValue(NUMBER_OF_REQUESTS_SUCCEEDED, THREE))
                 .describedAs("Number of request succeeded for other retries except 1 should be 0")
                 .isEqualTo(0);
     }
@@ -91,10 +91,10 @@ public class TestAbfsBackoffMetrics {
      */
     @Test
     public void returnsStringRepresentationOfEmptyBackoffMetrics() {
-        Assertions.assertThat(metrics.getMetricValue(TOTAL_NUMBER_OF_REQUESTS))
+        assertThat(metrics.getMetricValue(TOTAL_NUMBER_OF_REQUESTS))
                 .describedAs("String representation of backoff metrics should be empty")
                 .isEqualTo(0);
-        Assertions.assertThat(metrics.toString())
+        assertThat(metrics.toString())
                 .describedAs("String representation of backoff metrics should be empty")
                 .isEmpty();
     }
@@ -105,10 +105,10 @@ public class TestAbfsBackoffMetrics {
     @Test
     public void returnsStringRepresentationOfBackoffMetrics() {
         metrics.incrementMetricValue(TOTAL_NUMBER_OF_REQUESTS);
-        Assertions.assertThat(metrics.getMetricValue(TOTAL_NUMBER_OF_REQUESTS))
+        assertThat(metrics.getMetricValue(TOTAL_NUMBER_OF_REQUESTS))
                 .describedAs("String representation of backoff metrics should not be empty")
                 .isEqualTo(1);
-        Assertions.assertThat(metrics.toString())
+        assertThat(metrics.toString())
                 .describedAs("String representation of backoff metrics should not be empty")
                 .contains("$TR=1");
     }

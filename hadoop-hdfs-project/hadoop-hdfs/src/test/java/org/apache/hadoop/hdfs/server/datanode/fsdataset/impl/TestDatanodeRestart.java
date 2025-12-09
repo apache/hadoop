@@ -41,8 +41,9 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.Time;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /** Test if a datanode can correctly upgrade itself */
 public class TestDatanodeRestart {
@@ -122,13 +123,13 @@ public class TestDatanodeRestart {
       // check volumeMap: one rwr replica
       String bpid = cluster.getNamesystem().getBlockPoolId();
       ReplicaMap replicas = dataset(dn).volumeMap;
-      Assert.assertEquals(1, replicas.size(bpid));
+      assertEquals(1, replicas.size(bpid));
       ReplicaInfo replica = replicas.replicas(bpid).iterator().next();
-      Assert.assertEquals(ReplicaState.RWR, replica.getState());
+      assertEquals(ReplicaState.RWR, replica.getState());
       if (isCorrupt) {
-        Assert.assertEquals((fileLen-1)/512*512, replica.getNumBytes());
+        assertEquals((fileLen - 1) / 512 * 512, replica.getNumBytes());
       } else {
-        Assert.assertEquals(fileLen, replica.getNumBytes());
+        assertEquals(fileLen, replica.getNumBytes());
       }
       dataset(dn).invalidate(bpid, new Block[]{replica});
     } finally {

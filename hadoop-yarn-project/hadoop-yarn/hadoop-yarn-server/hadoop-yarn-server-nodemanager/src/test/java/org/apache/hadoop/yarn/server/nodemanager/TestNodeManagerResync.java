@@ -48,6 +48,7 @@ import org.apache.hadoop.net.ServerSocketUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.util.Shell;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.api.protocolrecords.ContainerUpdateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.ContainerUpdateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesRequest;
@@ -744,9 +745,9 @@ public class TestNodeManagerResync {
       }
     }
 
-    class ContainerUpdateResourceThread extends Thread {
+    class ContainerUpdateResourceThread extends SubjectInheritingThread {
       @Override
-      public void run() {
+      public void work() {
         // Construct container resource increase request
         List<Token> increaseTokens = new ArrayList<Token>();
         // Add increase request.

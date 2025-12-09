@@ -64,8 +64,12 @@
         <artifactId>spotbugs-maven-plugin</artifactId>
         <configuration>
           <xmlOutput>true</xmlOutput>
-          <excludeFilterFile>${basedir}/dev-support/findbugs-exclude.xml
-          </excludeFilterFile>
+          <excludeFilterFiles>
+            <excludeFilterFile>${basedir}/dev-support/findbugs-exclude.xml
+            </excludeFilterFile>
+            <excludeFilterFile>${repo.root}/dev-support/findbugs-exclude-global.xml
+            </excludeFilterFile>
+          </excludeFilterFiles>
           <effort>Max</effort>
         </configuration>
       </plugin>
@@ -115,12 +119,6 @@
       <artifactId>hadoop-common</artifactId>
       <scope>test</scope>
       <type>test-jar</type>
-    </dependency>
-    <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <version>${junit.version}</version>
-      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.mockito</groupId>
@@ -175,29 +173,9 @@
           <artifactId>log4j-api</artifactId>
           <groupId>org.apache.logging.log4j</groupId>
         </exclusion>
-      </exclusions>
-    </dependency>
-    <dependency>
-      <groupId>org.powermock</groupId>
-      <artifactId>powermock-api-mockito2</artifactId>
-      <version>2.0.9</version>
-      <scope>test</scope>
-      <exclusions>
         <exclusion>
-          <groupId>org.mockito</groupId>
-          <artifactId>mockito-core</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-    <dependency>
-      <groupId>org.powermock</groupId>
-      <artifactId>powermock-module-junit4</artifactId>
-      <version>2.0.9</version>
-      <scope>test</scope>
-      <exclusions>
-        <exclusion>
-          <groupId>org.mockito</groupId>
-          <artifactId>mockito-core</artifactId>
+          <groupId>com.fasterxml.jackson.core</groupId>
+          <artifactId>*</artifactId>
         </exclusion>
       </exclusions>
     </dependency>

@@ -18,21 +18,36 @@
 
 package org.apache.hadoop.fs.contract.s3a;
 
+import java.io.FileNotFoundException;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.contract.AbstractContractMultipartUploaderTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
+import org.apache.hadoop.fs.s3a.impl.ChecksumSupport;
+import org.apache.hadoop.test.tags.IntegrationTest;
+import org.apache.hadoop.test.tags.ScaleTest;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
+import static org.apache.hadoop.fs.s3a.Constants.CHECKSUM_ALGORITHM;
+import static org.apache.hadoop.fs.s3a.Constants.CHECKSUM_GENERATION;
+import static org.apache.hadoop.fs.s3a.S3ATestConstants.DEFAULT_MULTIPART_COMMIT_CONSUMES_UPLOAD_ID;
 import static org.apache.hadoop.fs.s3a.S3ATestConstants.DEFAULT_SCALE_TESTS_ENABLED;
 import static org.apache.hadoop.fs.s3a.S3ATestConstants.KEY_HUGE_PARTITION_SIZE;
 import static org.apache.hadoop.fs.s3a.S3ATestConstants.KEY_SCALE_TESTS_ENABLED;
+import static org.apache.hadoop.fs.s3a.S3ATestConstants.MULTIPART_COMMIT_CONSUMES_UPLOAD_ID;
 import static org.apache.hadoop.fs.s3a.S3ATestConstants.SCALE_TEST_TIMEOUT_MILLIS;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.assume;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.assumeMultipartUploads;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.assumeNotS3ExpressFileSystem;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.disableFilesystemCaching;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestPropertyBool;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestPropertyBytes;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfAnalyticsAcceleratorEnabled;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
+import static org.apache.hadoop.fs.s3a.impl.ChecksumSupport.getChecksumAlgorithm;
 import static org.apache.hadoop.fs.s3a.scale.AbstractSTestS3AHugeFiles.DEFAULT_HUGE_PARTITION_SIZE;
 
 /**
@@ -42,10 +57,14 @@ import static org.apache.hadoop.fs.s3a.scale.AbstractSTestS3AHugeFiles.DEFAULT_H
  * to enable it, and partition size option to control the size of
  * parts uploaded.
  */
+@IntegrationTest
+@ScaleTest
 public class ITestS3AContractMultipartUploader extends
     AbstractContractMultipartUploaderTest {
 
   private int partitionSize;
+
+  private boolean mpuCommitConsumesUploadId;
 
   /**
    * S3 requires a minimum part size of 5MB (except the last part).
@@ -88,9 +107,21 @@ public class ITestS3AContractMultipartUploader extends
 
   @Override
   protected boolean finalizeConsumesUploadIdImmediately() {
-    return false;
+    return mpuCommitConsumesUploadId;
   }
 
+  @Override
+  protected Configuration createConfiguration() {
+    final Configuration conf = super.createConfiguration();
+    // use whatever the default checksum generation option is.
+    removeBaseAndBucketOverrides(conf, CHECKSUM_GENERATION, CHECKSUM_ALGORITHM);
+    conf.setBoolean(CHECKSUM_GENERATION, false);
+    conf.set(CHECKSUM_ALGORITHM, ChecksumSupport.NONE);
+    disableFilesystemCaching(conf);
+    return conf;
+  }
+
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     super.setup();
@@ -102,38 +133,58 @@ public class ITestS3AContractMultipartUploader extends
     assume("Scale test disabled: to enable set property " +
             KEY_SCALE_TESTS_ENABLED,
         enabled);
+    final Configuration fsConf = getFileSystem().getConf();
+    assumeMultipartUploads(fsConf);
     partitionSize = (int) getTestPropertyBytes(conf,
         KEY_HUGE_PARTITION_SIZE,
         DEFAULT_HUGE_PARTITION_SIZE);
+    mpuCommitConsumesUploadId = fsConf.getBoolean(
+        MULTIPART_COMMIT_CONSUMES_UPLOAD_ID,
+        DEFAULT_MULTIPART_COMMIT_CONSUMES_UPLOAD_ID);
+    LOG.info("{} = {}", MULTIPART_COMMIT_CONSUMES_UPLOAD_ID, mpuCommitConsumesUploadId);
+    LOG.info("{} = {}", CHECKSUM_ALGORITHM, getChecksumAlgorithm(fsConf));
   }
 
   /**
    * S3 has no concept of directories, so this test does not apply.
    */
+  @Test
+  @Override
   public void testDirectoryInTheWay() throws Exception {
     skip("Unsupported");
   }
 
+  @Test
   @Override
   public void testMultipartUploadReverseOrder() throws Exception {
     skip("skipped for speed");
   }
 
+  @Test
   @Override
   public void testMultipartUploadReverseOrderNonContiguousPartNumbers() throws Exception {
     assumeNotS3ExpressFileSystem(getFileSystem());
+    final Configuration fsConf = getFileSystem().getConf();
     super.testMultipartUploadReverseOrderNonContiguousPartNumbers();
   }
 
+  @Test
   @Override
   public void testConcurrentUploads() throws Throwable {
     assumeNotS3ExpressFileSystem(getFileSystem());
-    // Currently analytics accelerator does not support reading of files that have been overwritten.
-    // This is because the analytics accelerator library caches metadata and data, and when a file
-    // is overwritten, the old data continues to be used, until it is removed from the cache over
-    // time. This will be fixed in https://github.com/awslabs/analytics-accelerator-s3/issues/218.
-    skipIfAnalyticsAcceleratorEnabled(getContract().getConf(),
-        "Analytics Accelerator currently does not support reading of over written files");
     super.testConcurrentUploads();
+  }
+
+  @Test
+  @Override
+  public void testMultipartUploadAbort() throws Exception {
+    try {
+      super.testMultipartUploadAbort();
+    } catch (FileNotFoundException e) {
+      LOG.info("Multipart upload not found in abort()."
+          + " This is common on third-party stores: {}",
+          e.toString());
+      LOG.debug("Exception: ", e);
+    }
   }
 }

@@ -60,7 +60,7 @@ import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.Time;
-
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.util.functional.InvocationRaisingIOE;
 import org.slf4j.Logger;
@@ -912,12 +912,12 @@ extends AbstractDelegationTokenIdentifier>
     return running;
   }
 
-  private class ExpiredTokenRemover extends Thread {
+  private class ExpiredTokenRemover extends SubjectInheritingThread {
     private long lastMasterKeyUpdate;
     private long lastTokenCacheCleanup;
 
     @Override
-    public void run() {
+    public void work() {
       LOG.info("Starting expired delegation token remover thread, "
           + "tokenRemoverScanInterval=" + tokenRemoverScanInterval
           / (60 * 1000) + " min(s)");

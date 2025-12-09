@@ -22,7 +22,7 @@ import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
 import org.apache.hadoop.hdfs.server.federation.StateStoreDFSCluster;
 import org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys;
 import org.apache.hadoop.hdfs.server.federation.router.TestRouterWebHdfsMethods;
-import org.junit.BeforeClass;
+import org.junit.jupiter.api.BeforeAll;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,7 +33,7 @@ public class TestRouterAsyncWebHdfsMethods extends TestRouterWebHdfsMethods {
   public static final Logger LOG =
       LoggerFactory.getLogger(TestRouterAsyncWebHdfsMethods.class);
 
-  @BeforeClass
+  @BeforeAll
   public static void globalSetUp() throws Exception {
     cluster = new StateStoreDFSCluster(false, 2);
     Configuration conf = new RouterConfigBuilder()

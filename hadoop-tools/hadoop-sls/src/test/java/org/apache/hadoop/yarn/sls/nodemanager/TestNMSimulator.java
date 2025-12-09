@@ -32,17 +32,14 @@ import org.apache.hadoop.yarn.sls.conf.SLSConfiguration;
 import org.apache.hadoop.yarn.sls.scheduler.SLSCapacityScheduler;
 import org.apache.hadoop.yarn.sls.scheduler.SLSFairScheduler;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.Arrays;
 import java.util.Collection;
 
-@RunWith(Parameterized.class)
 public class TestNMSimulator {
   private final int GB = 1024;
   private ResourceManager rm;
@@ -51,7 +48,6 @@ public class TestNMSimulator {
   private Class slsScheduler;
   private Class scheduler;
 
-  @Parameterized.Parameters
   public static Collection<Object[]> params() {
     return Arrays.asList(new Object[][] {
         {SLSFairScheduler.class, FairScheduler.class},
@@ -59,12 +55,12 @@ public class TestNMSimulator {
     });
   }
 
-  public TestNMSimulator(Class slsScheduler, Class scheduler) {
-    this.slsScheduler = slsScheduler;
-    this.scheduler = scheduler;
+  public void initTestNMSimulator(Class pSlsScheduler, Class pScheduler) {
+    this.slsScheduler = pSlsScheduler;
+    this.scheduler = pScheduler;
+    setup();
   }
 
-  @Before
   public void setup() {
     conf = new YarnConfiguration();
     conf.set(YarnConfiguration.RM_SCHEDULER, slsScheduler.getName());
@@ -75,8 +71,10 @@ public class TestNMSimulator {
     rm.start();
   }
 
-  @Test
-  public void testNMSimulator() throws Exception {
+  @ParameterizedTest
+  @MethodSource("params")
+  public void testNMSimulator(Class<?> pSlsScheduler, Class<?> pScheduler) throws Exception {
+    initTestNMSimulator(pSlsScheduler, pScheduler);
     // Register one node
     NMSimulator node1 = new NMSimulator();
     node1.init("/rack1/node1", Resources.createResource(GB * 10, 10), 0, 1000,
@@ -100,10 +98,10 @@ public class TestNMSimulator {
       }
     }, 500, 10000);
 
-    Assert.assertEquals(1, rm.getResourceScheduler().getNumClusterNodes());
-    Assert.assertEquals(GB * 10,
+    Assertions.assertEquals(1, rm.getResourceScheduler().getNumClusterNodes());
+    Assertions.assertEquals(GB * 10,
         rm.getResourceScheduler().getRootQueueMetrics().getAvailableMB());
-    Assert.assertEquals(10,
+    Assertions.assertEquals(10,
         rm.getResourceScheduler().getRootQueueMetrics()
             .getAvailableVirtualCores());
 
@@ -112,24 +110,24 @@ public class TestNMSimulator {
     Container container1 = Container.newInstance(cId1, null, null,
         Resources.createResource(GB, 1), null, null);
     node1.addNewContainer(container1, 100000l, null);
-    Assert.assertTrue("Node1 should have one running container.",
-        node1.getRunningContainers().containsKey(cId1));
+    Assertions.assertTrue(
+       node1.getRunningContainers().containsKey(cId1), "Node1 should have one running container.");
 
     // Allocate one AM container on node1
     ContainerId cId2 = newContainerId(2, 1, 1);
     Container container2 = Container.newInstance(cId2, null, null,
         Resources.createResource(GB, 1), null, null);
     node1.addNewContainer(container2, -1l, null);
-    Assert.assertTrue("Node1 should have one running AM container",
-        node1.getAMContainers().contains(cId2));
+    Assertions.assertTrue(
+       node1.getAMContainers().contains(cId2), "Node1 should have one running AM container");
 
     // Remove containers
     node1.cleanupContainer(cId1);
-    Assert.assertTrue("Container1 should be removed from Node1.",
-        node1.getCompletedContainers().contains(cId1));
+    Assertions.assertTrue(
+       node1.getCompletedContainers().contains(cId1), "Container1 should be removed from Node1.");
     node1.cleanupContainer(cId2);
-    Assert.assertFalse("Container2 should be removed from Node1.",
-        node1.getAMContainers().contains(cId2));
+    Assertions.assertFalse(
+       node1.getAMContainers().contains(cId2), "Container2 should be removed from Node1.");
   }
 
   private ContainerId newContainerId(int appId, int appAttemptId, int cId) {
@@ -139,8 +137,11 @@ public class TestNMSimulator {
             appAttemptId), cId);
   }
 
-  @Test
-  public void testNMSimAppAddedAndRemoved() throws Exception {
+  @ParameterizedTest
+  @MethodSource("params")
+  public void testNMSimAppAddedAndRemoved(Class<?> pSlsScheduler, Class<?> pScheduler)
+    throws Exception {
+    initTestNMSimulator(pSlsScheduler, pScheduler);
     // Register one node
     NMSimulator node = new NMSimulator();
     node.init("/rack1/node1", Resources.createResource(GB * 10, 10), 0, 1000,
@@ -162,8 +163,8 @@ public class TestNMSimulator {
                 .getAvailableMB() > 0,
         500, 10000);
 
-    Assert.assertEquals("Node should have no runningApps.",
-        node.getNode().getRunningApps().size(), 0);
+    Assertions.assertEquals(
+       node.getNode().getRunningApps().size(), 0, "Node should have no runningApps.");
 
     // Allocate one app container on node
     ApplicationId appId = BuilderUtils.newApplicationId(1, 1);
@@ -173,21 +174,24 @@ public class TestNMSimulator {
     Container container = Container.newInstance(cId, null, null,
         Resources.createResource(GB, 1), null, null);
     node.addNewContainer(container, 100000l, appId);
-    Assert.assertTrue("Node should have app: "
-            + appId + " in runningApps list.",
-        node.getNode().getRunningApps().contains(appId));
+    Assertions.assertTrue(
+       node.getNode().getRunningApps().contains(appId), "Node should have app: "
+            + appId + " in runningApps list.");
 
     // Finish the app on the node.
     node.finishApplication(appId);
-    Assert.assertFalse("Node should not have app: "
-            + appId + " in runningApps list.",
-        node.getNode().getRunningApps().contains(appId));
-    Assert.assertEquals("Node should have no runningApps.",
-        node.getNode().getRunningApps().size(), 0);
+    Assertions.assertFalse(
+       node.getNode().getRunningApps().contains(appId), "Node should not have app: "
+            + appId + " in runningApps list.");
+    Assertions.assertEquals(
+       node.getNode().getRunningApps().size(), 0, "Node should have no runningApps.");
   }
 
-  @Test
-  public void testNMSimNullAppAddedAndRemoved() throws Exception {
+  @ParameterizedTest
+  @MethodSource("params")
+  public void testNMSimNullAppAddedAndRemoved(Class<?> pSlsScheduler, Class<?> pScheduler)
+    throws Exception {
+    initTestNMSimulator(pSlsScheduler, pScheduler);
     // Register one node
     NMSimulator node = new NMSimulator();
     node.init("/rack1/node1", Resources.createResource(GB * 10, 10), 0, 1000,
@@ -209,25 +213,25 @@ public class TestNMSimulator {
                 .getAvailableMB() > 0,
         500, 10000);
 
-    Assert.assertEquals("Node should have no runningApps.",
-        node.getNode().getRunningApps().size(), 0);
+    Assertions.assertEquals(
+       node.getNode().getRunningApps().size(), 0, "Node should have no runningApps.");
 
     // Allocate null app container on node
     ContainerId cId = newContainerId(1, 1, 1);
     Container container = Container.newInstance(cId, null, null,
         Resources.createResource(GB, 1), null, null);
     node.addNewContainer(container, 100000l, null);
-    Assert.assertEquals("Node should have no runningApps if appId is null.",
-        node.getNode().getRunningApps().size(), 0);
+    Assertions.assertEquals(
+       node.getNode().getRunningApps().size(), 0, "Node should have no runningApps if appId is null.");
 
     // Finish non-existent app on the node.
     ApplicationId appId = BuilderUtils.newApplicationId(1, 1);
     node.finishApplication(appId);
-    Assert.assertEquals("Node should have no runningApps.",
-        node.getNode().getRunningApps().size(), 0);
+    Assertions.assertEquals(
+       node.getNode().getRunningApps().size(), 0, "Node should have no runningApps.");
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     rm.stop();
   }

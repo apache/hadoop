@@ -33,6 +33,8 @@ import org.apache.hadoop.security.AccessControlException;
 public interface SASTokenProvider {
 
   String CHECK_ACCESS_OPERATION = "check-access";
+  String COPY_BLOB_DST_OPERATION = "copy-blob-dst";
+  String COPY_BLOB_SRC_OPERATION = "copy-blob-src";
   String CREATE_DIRECTORY_OPERATION = "create-directory";
   String CREATE_FILE_OPERATION = "create-file";
   String DELETE_OPERATION = "delete";
@@ -40,7 +42,9 @@ public interface SASTokenProvider {
   String GET_ACL_OPERATION = "get-acl";
   String GET_STATUS_OPERATION = "get-status";
   String GET_PROPERTIES_OPERATION = "get-properties";
+  String LEASE_BLOB_OPERATION = "lease-blob";
   String LIST_OPERATION = "list";
+  String LIST_OPERATION_BLOB = "list-blob";
   String READ_OPERATION = "read";
   String RENAME_SOURCE_OPERATION = "rename-source";
   String RENAME_DESTINATION_OPERATION = "rename-destination";
@@ -49,8 +53,6 @@ public interface SASTokenProvider {
   String SET_PERMISSION_OPERATION = "set-permission";
   String SET_PROPERTIES_OPERATION = "set-properties";
   String WRITE_OPERATION = "write";
-  // Generic HTTP operation can be used with FixedSASTokenProvider.
-  String FIXED_SAS_STORE_OPERATION = "fixed-sas";
 
   /**
    * Initialize authorizer for Azure Blob File System.

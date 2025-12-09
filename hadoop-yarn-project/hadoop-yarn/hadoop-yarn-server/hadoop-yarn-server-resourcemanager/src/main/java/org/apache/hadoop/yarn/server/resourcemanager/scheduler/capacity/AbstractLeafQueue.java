@@ -81,7 +81,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.IteratorSe
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.OrderingPolicy;
 import org.apache.hadoop.yarn.server.utils.Lock;
 import org.apache.hadoop.yarn.server.utils.Lock.NoLock;
-import org.apache.hadoop.util.SystemClock;
+import org.apache.hadoop.yarn.util.SystemClock;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 import org.apache.hadoop.classification.VisibleForTesting;
@@ -1212,6 +1212,11 @@ public class AbstractLeafQueue extends AbstractCSQueue {
          assignmentIterator.hasNext();) {
       FiCaSchedulerApp application = assignmentIterator.next();
 
+      // Skip processing if the application is already removed from the applicationAttemptMap
+      if (!applicationAttemptMap.containsKey(application.getApplicationAttemptId())) {
+        continue;
+      }
+
       ActivitiesLogger.APP.startAppAllocationRecording(activitiesManager,
           node, SystemClock.getInstance().getTime(), application);
 
@@ -1264,7 +1269,10 @@ public class AbstractLeafQueue extends AbstractCSQueue {
         userAssignable = canAssignToUser(clusterResource, application.getUser(),
             userLimit, application, candidates.getPartition(),
             currentResourceLimits);
-        if (!userAssignable && Resources.fitsIn(cul.reservation, appReserved)) {
+        if (!userAssignable
+            && Resources.fitsIn(cul.reservation, appReserved)
+            // Consider updating cul only if the application attempt is active.
+            && applicationAttemptMap.containsKey(application.getApplicationAttemptId())) {
           cul.canAssign = false;
           cul.reservation = appReserved;
         }

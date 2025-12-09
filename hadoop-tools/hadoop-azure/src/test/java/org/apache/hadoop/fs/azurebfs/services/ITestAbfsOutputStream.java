@@ -25,13 +25,16 @@ import java.net.ProtocolException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.security.MessageDigest;
 import java.util.Arrays;
+import java.util.Random;
+import java.util.concurrent.TimeUnit;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Assume;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.Mockito;
 
 import org.apache.hadoop.conf.Configuration;
@@ -48,29 +51,32 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsApacheHttpExpect10
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters;
+import org.apache.hadoop.fs.azurebfs.security.ContextEncryptionAdapter;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.http.HttpResponse;
 
 import static java.net.HttpURLConnection.HTTP_CONFLICT;
+import static java.net.HttpURLConnection.HTTP_UNAVAILABLE;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EXPECT_100_JDK_ERROR;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ABFS_ENABLE_CHECKSUM_VALIDATION;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_IS_EXPECT_HEADER_ENABLED;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.EXPECT;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 /**
  * Test create operation.
  */
-@RunWith(Parameterized.class)
+@ParameterizedClass(name="{0}")
+@MethodSource("params")
 public class ITestAbfsOutputStream extends AbstractAbfsIntegrationTest {
 
   private static final int TEST_EXECUTION_TIMEOUT = 2 * 60 * 1000;
   private static final String TEST_FILE_PATH = "testfile";
   private static final int TEN = 10;
 
-  @Parameterized.Parameter
   public HttpOperationType httpOperationType;
 
-  @Parameterized.Parameters(name = "{0}")
   public static Iterable<Object[]> params() {
     return Arrays.asList(new Object[][]{
         {HttpOperationType.JDK_HTTP_URL_CONNECTION},
@@ -78,9 +84,9 @@ public class ITestAbfsOutputStream extends AbstractAbfsIntegrationTest {
     });
   }
 
-
-  public ITestAbfsOutputStream() throws Exception {
+  public ITestAbfsOutputStream(final HttpOperationType pHttpOperationType) throws Exception {
     super();
+    this.httpOperationType = pHttpOperationType;
   }
 
   @Override
@@ -99,7 +105,7 @@ public class ITestAbfsOutputStream extends AbstractAbfsIntegrationTest {
     AbfsOutputStream stream = (AbfsOutputStream) out.getWrappedStream();
 
       int maxConcurrentRequests
-          = getConfiguration().getWriteMaxConcurrentRequestCount();
+          = getConfiguration().getWriteConcurrentRequestCount();
       if (stream.isAppendBlobStream()) {
         maxConcurrentRequests = 1;
       }
@@ -142,7 +148,8 @@ public class ITestAbfsOutputStream extends AbstractAbfsIntegrationTest {
    * Verify the passing of AzureBlobFileSystem reference to AbfsOutputStream
    * to make sure that the FS instance is not eligible for GC while writing.
    */
-  @Test(timeout = TEST_EXECUTION_TIMEOUT)
+  @Test
+  @Timeout(value = TEST_EXECUTION_TIMEOUT, unit = TimeUnit.MILLISECONDS)
   public void testAzureBlobFileSystemBackReferenceInOutputStream()
       throws Exception {
     byte[] testBytes = new byte[5 * 1024];
@@ -195,7 +202,7 @@ public class ITestAbfsOutputStream extends AbstractAbfsIntegrationTest {
   @Test
   public void testExpect100ContinueFailureInAppend() throws Exception {
     if (!getIsNamespaceEnabled(getFileSystem())) {
-      Assume.assumeFalse("Not valid for APPEND BLOB", isAppendBlobEnabled());
+      assumeThat(isAppendBlobEnabled()).as("Not valid for APPEND BLOB").isFalse();
     }
     Configuration configuration = new Configuration(getRawConfiguration());
     configuration.set(FS_AZURE_ACCOUNT_IS_EXPECT_HEADER_ENABLED, "true");
@@ -309,7 +316,7 @@ public class ITestAbfsOutputStream extends AbstractAbfsIntegrationTest {
   @Test
   public void testValidateGetBlockList() throws Exception {
     AzureBlobFileSystem fs = Mockito.spy(getFileSystem());
-    Assume.assumeTrue(!getIsNamespaceEnabled(fs));
+    assumeThat(getIsNamespaceEnabled(fs)).isFalse();
     AzureBlobFileSystemStore store = Mockito.spy(fs.getAbfsStore());
     assumeBlobServiceType();
 
@@ -348,7 +355,7 @@ public class ITestAbfsOutputStream extends AbstractAbfsIntegrationTest {
   @Test
   public void testNoNetworkCallsForFlush() throws Exception {
     AzureBlobFileSystem fs = Mockito.spy(getFileSystem());
-    Assume.assumeTrue(!getIsNamespaceEnabled(fs));
+    assumeThat(getIsNamespaceEnabled(fs)).isFalse();
     AzureBlobFileSystemStore store = Mockito.spy(fs.getAbfsStore());
     assumeBlobServiceType();
 
@@ -378,7 +385,7 @@ public class ITestAbfsOutputStream extends AbstractAbfsIntegrationTest {
     Mockito.verify(blobClient, Mockito.times(0)).
         flush(Mockito.any(byte[].class), Mockito.anyString(), Mockito.anyBoolean(),
             Mockito.anyString(), Mockito.anyString(), Mockito.anyString(), Mockito.any(),
-            Mockito.any(TracingContext.class));
+            Mockito.any(TracingContext.class), Mockito.anyString());
   }
 
   private AbfsRestOperationException getMockAbfsRestOperationException(int status) {
@@ -391,10 +398,10 @@ public class ITestAbfsOutputStream extends AbstractAbfsIntegrationTest {
   @Test
   public void testNoNetworkCallsForSecondFlush() throws Exception {
     AzureBlobFileSystem fs = Mockito.spy(getFileSystem());
-    Assume.assumeTrue(!getIsNamespaceEnabled(fs));
+    assumeThat(getIsNamespaceEnabled(fs)).isFalse();
     AzureBlobFileSystemStore store = Mockito.spy(fs.getAbfsStore());
     assumeBlobServiceType();
-    Assume.assumeFalse("Not valid for APPEND BLOB", isAppendBlobEnabled());
+    assumeThat(isAppendBlobEnabled()).as("Not valid for APPEND BLOB").isFalse();
 
     // Step 2: Mock the clientHandler to return the blobClient when getBlobClient is called
     AbfsClientHandler clientHandler = Mockito.spy(store.getClientHandler());
@@ -424,6 +431,166 @@ public class ITestAbfsOutputStream extends AbstractAbfsIntegrationTest {
             Mockito.any(TracingContext.class));
     Mockito.verify(blobClient, Mockito.times(1)).
         flush(Mockito.any(byte[].class), Mockito.anyString(), Mockito.anyBoolean(), Mockito.any(), Mockito.any(), Mockito.anyString(), Mockito.any(),
-            Mockito.any(TracingContext.class));
+            Mockito.any(TracingContext.class), Mockito.nullable(String.class));
+  }
+
+  /**
+   * Tests that the message digest is reset when an exception occurs during remote flush.
+   * Simulates a failure in the flush operation and verifies reset is called on MessageDigest.
+   */
+  @Test
+  public void testResetCalledOnExceptionInRemoteFlush() throws Exception {
+    assumeHnsDisabled();
+    assumeBlobServiceType();
+    assumeThat(isAppendBlobEnabled()).as("Not valid for APPEND BLOB").isFalse();
+    AzureBlobFileSystem fs = Mockito.spy(getFileSystem());
+
+    // Create a file and spy on AbfsOutputStream
+    Path path = new Path("/testFile");
+    AbfsOutputStream realOs = (AbfsOutputStream) fs.create(path).getWrappedStream();
+    AbfsOutputStream os = Mockito.spy(realOs);
+    AzureIngressHandler ingressHandler = Mockito.spy(os.getIngressHandler());
+    Mockito.doReturn(ingressHandler).when(os).getIngressHandler();
+    AbfsClient spiedClient = Mockito.spy(ingressHandler.getClient());
+    Mockito.doReturn(spiedClient).when(ingressHandler).getClient();
+    AzureBlobBlockManager blockManager = Mockito.spy((AzureBlobBlockManager) os.getBlockManager());
+    Mockito.doReturn(blockManager).when(ingressHandler).getBlockManager();
+    Mockito.doReturn(true).when(blockManager).hasBlocksToCommit();
+    Mockito.doReturn("dummy-block-id").when(blockManager).getBlockIdToCommit();
+
+    MessageDigest mockMessageDigest = Mockito.mock(MessageDigest.class);
+    Mockito.doReturn(mockMessageDigest).when(os).getFullBlobContentMd5();
+    Mockito.doReturn(os).when(ingressHandler).getAbfsOutputStream();
+    Mockito.doReturn("dummyMd5").when(ingressHandler).computeFullBlobMd5();
+
+    // Simulating the exception in client flush call
+    Mockito.doThrow(
+            new AbfsRestOperationException(HTTP_UNAVAILABLE, "", "", new Exception()))
+        .when(spiedClient).flush(
+            Mockito.any(byte[].class),
+            Mockito.anyString(),
+            Mockito.anyBoolean(),
+            Mockito.nullable(String.class),
+            Mockito.nullable(String.class),
+            Mockito.anyString(),
+            Mockito.nullable(ContextEncryptionAdapter.class),
+            Mockito.any(TracingContext.class), Mockito.nullable(String.class));
+
+    // Triggering the flush to simulate exception
+    try {
+      ingressHandler.remoteFlush(0, false, false, null,
+          getTestTracingContext(fs, true));
+    } catch (AzureBlobFileSystemException e) {
+      //expected exception
+    }
+    // Verify that reset was called on the message digest
+    if (spiedClient.isFullBlobChecksumValidationEnabled()) {
+      Assertions.assertThat(Mockito.mockingDetails(mockMessageDigest).getInvocations()
+          .stream()
+          .filter(i -> i.getMethod().getName().equals("reset"))
+          .count())
+          .as("Expected MessageDigest.reset() to be called exactly once when checksum validation is enabled")
+          .isEqualTo(1);
+    }
+  }
+
+  /**
+   * Tests that the message digest is reset when an exception occurs during remote flush.
+   * Simulates a failure in the flush operation and verifies reset is called on MessageDigest.
+   */
+  @Test
+  public void testNoChecksumComputedWhenConfigFalse()  throws Exception {
+    assumeThat(isAppendBlobEnabled()).as("Not valid for APPEND BLOB").isFalse();
+    assumeBlobServiceType();
+    assumeHnsDisabled();
+    Configuration conf = getRawConfiguration();
+    conf.setBoolean(FS_AZURE_ABFS_ENABLE_CHECKSUM_VALIDATION, false);
+    FileSystem fileSystem = FileSystem.newInstance(conf);
+    try (AzureBlobFileSystem fs = (AzureBlobFileSystem) fileSystem) {
+      AzureBlobFileSystemStore store = Mockito.spy(fs.getAbfsStore());
+
+      // Create spies for the client handler and blob client
+      AbfsClientHandler clientHandler = Mockito.spy(store.getClientHandler());
+      AbfsBlobClient blobClient = Mockito.spy(clientHandler.getBlobClient());
+
+      // Set up the spies to return the mocked objects
+      Mockito.doReturn(clientHandler).when(store).getClientHandler();
+      Mockito.doReturn(blobClient).when(clientHandler).getBlobClient();
+      Mockito.doReturn(blobClient).when(clientHandler).getIngressClient();
+      AbfsOutputStream abfsOutputStream = Mockito.spy(
+          (AbfsOutputStream) fs.create(new Path("/test/file"))
+              .getWrappedStream());
+      AzureIngressHandler ingressHandler = Mockito.spy(
+          abfsOutputStream.getIngressHandler());
+      Mockito.doReturn(ingressHandler)
+          .when(abfsOutputStream)
+          .getIngressHandler();
+      Mockito.doReturn(blobClient).when(ingressHandler).getClient();
+      FSDataOutputStream os = Mockito.spy(
+          new FSDataOutputStream(abfsOutputStream, null));
+      AbfsOutputStream out = (AbfsOutputStream) os.getWrappedStream();
+      byte[] bytes = new byte[1024 * 1024 * 4];
+      new Random().nextBytes(bytes);
+      // Write some bytes and attempt to flush, which should retry
+      out.write(bytes);
+      out.hsync();
+      Assertions.assertThat(Mockito.mockingDetails(blobClient).getInvocations()
+              .stream()
+              .filter(
+                  i -> i.getMethod().getName().equals("addCheckSumHeaderForWrite"))
+              .count())
+          .as("Expected addCheckSumHeaderForWrite() to be called exactly 0 times")
+          .isZero();
+    }
+  }
+
+  /**
+   * Tests that the message digest is reset when an exception occurs during remote flush.
+   * Simulates a failure in the flush operation and verifies reset is called on MessageDigest.
+   */
+  @Test
+  public void testChecksumComputedWhenConfigTrue()  throws Exception {
+    assumeHnsDisabled();
+    assumeBlobServiceType();
+    assumeThat(isAppendBlobEnabled()).as("Not valid for APPEND BLOB")
+        .isFalse();
+    Configuration conf = getRawConfiguration();
+    conf.setBoolean(FS_AZURE_ABFS_ENABLE_CHECKSUM_VALIDATION, true);
+    FileSystem fileSystem = FileSystem.newInstance(conf);
+    try (AzureBlobFileSystem fs = (AzureBlobFileSystem) fileSystem) {
+      AzureBlobFileSystemStore store = Mockito.spy(fs.getAbfsStore());
+      // Create spies for the client handler and blob client
+      AbfsClientHandler clientHandler = Mockito.spy(store.getClientHandler());
+      AbfsBlobClient blobClient = Mockito.spy(clientHandler.getBlobClient());
+
+      // Set up the spies to return the mocked objects
+      Mockito.doReturn(clientHandler).when(store).getClientHandler();
+      Mockito.doReturn(blobClient).when(clientHandler).getBlobClient();
+      Mockito.doReturn(blobClient).when(clientHandler).getIngressClient();
+      AbfsOutputStream abfsOutputStream = Mockito.spy(
+          (AbfsOutputStream) fs.create(new Path("/test/file"))
+              .getWrappedStream());
+      AzureIngressHandler ingressHandler = Mockito.spy(
+          abfsOutputStream.getIngressHandler());
+      Mockito.doReturn(ingressHandler)
+          .when(abfsOutputStream)
+          .getIngressHandler();
+      Mockito.doReturn(blobClient).when(ingressHandler).getClient();
+      FSDataOutputStream os = Mockito.spy(
+          new FSDataOutputStream(abfsOutputStream, null));
+      AbfsOutputStream out = (AbfsOutputStream) os.getWrappedStream();
+      byte[] bytes = new byte[1024 * 1024 * 4];
+      new Random().nextBytes(bytes);
+      // Write some bytes and attempt to flush, which should retry
+      out.write(bytes);
+      out.hsync();
+      Assertions.assertThat(Mockito.mockingDetails(blobClient).getInvocations()
+              .stream()
+              .filter(
+                  i -> i.getMethod().getName().equals("addCheckSumHeaderForWrite"))
+              .count())
+          .as("Expected addCheckSumHeaderForWrite() to be called exactly once")
+          .isEqualTo(1);
+    }
   }
 }

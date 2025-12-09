@@ -85,7 +85,9 @@ public class TestWebServiceClient {
             sslConf.get(SSL_SERVER_TRUSTSTORE_PROP_PREFIX + ".location"),
             sslConf.get(SSL_SERVER_TRUSTSTORE_PROP_PREFIX + ".password"),
             sslConf.get(SSL_SERVER_TRUSTSTORE_PROP_PREFIX + ".type", "jks"))
-        .excludeCiphers(sslConf.get("ssl.server.exclude.cipher.list")).build();
+        .excludeCiphers(sslConf.get("ssl.server.exclude.cipher.list"))
+        .includeCiphers(sslConf.get("ssl.server.include.cipher.list"))
+        .build();
     server.addServlet(SERVLET_NAME_ECHO, SERVLET_PATH_ECHO, EchoServlet.class);
     server.start();
 

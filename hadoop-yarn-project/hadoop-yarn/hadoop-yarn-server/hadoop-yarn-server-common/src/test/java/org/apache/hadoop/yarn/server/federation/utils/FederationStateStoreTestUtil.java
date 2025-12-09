@@ -42,7 +42,7 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterRegister
 import org.apache.hadoop.yarn.server.federation.store.records.GetReservationHomeSubClusterResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.GetReservationHomeSubClusterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterState;
-import org.apache.hadoop.util.MonotonicClock;
+import org.apache.hadoop.yarn.util.MonotonicClock;
 
 /**
  * Utility class for FederationStateStore unit tests.

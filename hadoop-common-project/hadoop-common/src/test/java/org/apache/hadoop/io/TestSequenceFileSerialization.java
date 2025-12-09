@@ -25,18 +25,18 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.SequenceFile.Reader;
 import org.apache.hadoop.io.SequenceFile.Writer;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TestSequenceFileSerialization {
   private Configuration conf;
   private FileSystem fs;
   
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     conf = new Configuration();
     conf.set("io.serializations",
@@ -44,7 +44,7 @@ public class TestSequenceFileSerialization {
     fs = FileSystem.getLocal(conf);  
   }
   
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     fs.close();
   }

@@ -24,7 +24,7 @@ import org.apache.hadoop.hdfs.server.federation.router.FederationUtil;
 import org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.TimeUnit;
@@ -34,9 +34,9 @@ import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_ASYNC_RPC_MAX_ASYNC_CALL_PERMIT_DEFAULT;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_FAIRNESS_ACQUIRE_TIMEOUT;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_MONITOR_NAMENODE;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Test functionality of {@link RouterAsyncRpcFairnessPolicyController).
@@ -116,8 +116,8 @@ public class TestRouterAsyncRpcFairnessPolicyController {
     }
     String infoMsg = String.format(
         RouterAsyncRpcFairnessPolicyController.INIT_MSG, permits);
-    assertTrue("Should contain info message: " + infoMsg,
-        logs.getOutput().contains(infoMsg));
+    assertTrue(logs.getOutput().contains(infoMsg), "Should contain info message: " +
+        infoMsg);
   }
 
   private RouterRpcFairnessPolicyController getFairnessPolicyController(

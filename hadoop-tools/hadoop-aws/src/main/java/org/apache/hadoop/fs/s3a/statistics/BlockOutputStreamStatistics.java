@@ -146,4 +146,14 @@ public interface BlockOutputStreamStatistics extends Closeable,
    * Syncable.hsync() has been invoked.
    */
   void hsyncInvoked();
+
+  /**
+   * Record the outcome of a conditional create operation.
+   * <p>
+   * This method increments the appropriate counter based on whether
+   * the conditional create operation was successful or failed.
+   * @param success {@code true} if the conditional create operation succeeded,
+   *                {@code false} if it failed.
+   */
+  void conditionalCreateOutcome(boolean success);
 }

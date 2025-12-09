@@ -286,7 +286,9 @@ public final class UploadContentProviders {
         // the stream has been recreated for the first time.
         // notify only once for this stream, so as not to flood
         // the logs.
-        LOG.info("Stream recreated: {}", this);
+        // originally logged at info; logs at debug because HADOOP-19516
+        // means that this message is very common with S3 Express stores.
+        LOG.debug("Stream recreated: {}", this);
       }
       return setCurrentStream(createNewStream());
     }

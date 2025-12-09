@@ -26,6 +26,8 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.azure.AbstractWasbTestBase;
 import org.apache.hadoop.fs.azure.AzureBlobStorageTestAccount;
 
+import java.util.concurrent.TimeUnit;
+
 import static org.apache.hadoop.fs.azure.integration.AzureTestUtils.*;
 
 /**
@@ -34,7 +36,7 @@ import static org.apache.hadoop.fs.azure.integration.AzureTestUtils.*;
  * tests if not.
  *
  */
-@Timeout(AzureTestConstants.SCALE_TEST_TIMEOUT_MILLIS)
+@Timeout(value = AzureTestConstants.SCALE_TEST_TIMEOUT_MILLIS, unit = TimeUnit.MILLISECONDS)
 public abstract class AbstractAzureScaleTest
     extends AbstractWasbTestBase implements Sizes {
 

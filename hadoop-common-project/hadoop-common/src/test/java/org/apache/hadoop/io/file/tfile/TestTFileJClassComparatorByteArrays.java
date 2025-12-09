@@ -22,6 +22,7 @@ import java.io.Serializable;
 
 import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.WritableComparator;
+import org.junit.jupiter.api.BeforeEach;
 
 /**
  * 
@@ -34,6 +35,7 @@ public class TestTFileJClassComparatorByteArrays extends TestTFileByteArrays {
   /**
    * Test non-compression codec, using the same test cases as in the ByteArrays.
    */
+  @BeforeEach
   @Override
   public void setUp() throws IOException {
     init(Compression.Algorithm.GZ.getName(),

@@ -99,6 +99,7 @@ import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.Listenable
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListeningExecutorService;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.MoreExecutors;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.hadoop.thirdparty.org.checkerframework.checker.nullness.qual.NonNull;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.CryptoProtocolVersion;
 import org.apache.hadoop.fs.BatchedRemoteIterator.BatchedEntries;
@@ -213,7 +214,7 @@ import org.apache.hadoop.tools.proto.GetUserMappingsProtocolProtos;
 import org.apache.hadoop.tools.protocolPB.GetUserMappingsProtocolPB;
 import org.apache.hadoop.tools.protocolPB.GetUserMappingsProtocolServerSideTranslatorPB;
 import org.apache.hadoop.util.ReflectionUtils;
-import org.checkerframework.checker.nullness.qual.NonNull;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -2507,7 +2508,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
 
     @Override
     public Thread newThread(@NonNull Runnable r) {
-      Thread thread = new Thread(r, namePrefix + threadNumber.getAndIncrement());
+      Thread thread = new SubjectInheritingThread(r, namePrefix + threadNumber.getAndIncrement());
       thread.setDaemon(true);
       return thread;
     }

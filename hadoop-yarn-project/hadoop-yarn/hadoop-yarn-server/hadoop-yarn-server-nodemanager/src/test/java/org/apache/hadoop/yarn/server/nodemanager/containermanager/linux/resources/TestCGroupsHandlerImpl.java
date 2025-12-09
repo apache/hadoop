@@ -46,6 +46,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
@@ -371,7 +372,11 @@ public class TestCGroupsHandlerImpl extends TestCGroupsHandlerBase {
       assertFalse(cpuCgroupMountDir.delete(), "Could not delete cgroups");
       assertFalse(cpuCgroupMountDir.exists(), "Directory should be deleted");
       SecurityManager manager = System.getSecurityManager();
-      System.setSecurityManager(new MockSecurityManagerDenyWrite());
+      try {
+        System.setSecurityManager(new MockSecurityManagerDenyWrite());
+      } catch (UnsupportedOperationException e) {
+        assumeTrue(false, "Test is skipped because SecurityManager cannot be set (JEP 411)");
+      }
       try {
         cGroupsHandler.initializeCGroupController(
             CGroupsHandler.CGroupController.CPU);

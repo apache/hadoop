@@ -313,13 +313,13 @@ public class WriteOperationHelper implements WriteOperations {
     }
     try (AuditSpan span = activateAuditSpan()) {
       CompleteMultipartUploadResponse uploadResult;
-      uploadResult = invoker.retry("Completing multipart upload", destKey,
+      uploadResult = invoker.retry("Completing multipart upload id " + uploadId,
+          destKey,
           true,
           retrying,
           () -> {
             final CompleteMultipartUploadRequest.Builder requestBuilder =
-                getRequestFactory().newCompleteMultipartUploadRequestBuilder(
-                    destKey, uploadId, partETags);
+                getRequestFactory().newCompleteMultipartUploadRequestBuilder(destKey, uploadId, partETags, putOptions);
             return writeOperationHelperCallbacks.completeMultipartUpload(requestBuilder.build());
           });
       return uploadResult;

@@ -36,11 +36,11 @@ import org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys;
 import org.apache.hadoop.hdfs.server.federation.router.RouterRpcServer;
 import org.apache.hadoop.io.erasurecode.ECSchema;
 import org.apache.hadoop.ipc.CallerContext;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import java.io.IOException;
@@ -52,10 +52,10 @@ import static org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.DEFA
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_ASYNC_RPC_HANDLER_COUNT_KEY;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_ASYNC_RPC_RESPONDER_COUNT_KEY;
 import static org.apache.hadoop.hdfs.server.federation.router.async.utils.AsyncUtil.syncReturn;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestRouterAsyncErasureCoding {
   private static Configuration routerConf;
@@ -71,7 +71,7 @@ public class TestRouterAsyncErasureCoding {
 
   private final String testfilePath = "/testdir/testAsyncErasureCoding.file";
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpCluster() throws Exception {
     cluster = new MiniRouterDFSCluster(true, 1, 2,
         DEFAULT_HEARTBEAT_INTERVAL_MS, 1000);
@@ -110,14 +110,14 @@ public class TestRouterAsyncErasureCoding {
     ns0 = cluster.getNameservices().get(0);
   }
 
-  @AfterClass
+  @AfterAll
   public static void shutdownCluster() throws Exception {
     if (cluster != null) {
       cluster.shutdown();
     }
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     router = cluster.getRandomRouter();
     routerFs = router.getFileSystem();
@@ -142,7 +142,7 @@ public class TestRouterAsyncErasureCoding {
     fsDataOutputStream.close();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     // clear client context
     CallerContext.setCurrent(null);

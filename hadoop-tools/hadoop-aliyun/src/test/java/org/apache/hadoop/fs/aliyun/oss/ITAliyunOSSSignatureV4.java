@@ -21,8 +21,8 @@ package org.apache.hadoop.fs.aliyun.oss;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,8 +33,9 @@ import static org.apache.hadoop.fs.aliyun.oss.Constants.REGION_KEY;
 import static org.apache.hadoop.fs.aliyun.oss.Constants.SIGNATURE_VERSION_KEY;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
-import static org.junit.Assert.*;
-import static org.junit.Assume.assumeNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
  * Tests Aliyun OSS system.
@@ -45,7 +46,7 @@ public class ITAliyunOSSSignatureV4 {
   private URI testURI;
   private Path testFile = new Path("ITAliyunOSSSignatureV4/atestr");
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     conf = new Configuration();
     String bucketUri = conf.get("test.fs.oss.name");
@@ -59,7 +60,7 @@ public class ITAliyunOSSSignatureV4 {
     conf.set(REGION_KEY, "cn-hongkong");
     AliyunOSSFileSystem fs = new AliyunOSSFileSystem();
     fs.initialize(testURI, conf);
-    assumeNotNull(fs);
+    assumeTrue(fs != null);
 
     createFile(fs, testFile, true, dataset(256, 0, 255));
     FileStatus status = fs.getFileStatus(testFile);
@@ -71,7 +72,7 @@ public class ITAliyunOSSSignatureV4 {
   public void testDefaultSignatureVersion() throws IOException {
     AliyunOSSFileSystem fs = new AliyunOSSFileSystem();
     fs.initialize(testURI, conf);
-    assumeNotNull(fs);
+    assumeTrue(fs != null);
 
     Path testFile2 = new Path("/test/atestr");
     createFile(fs, testFile2, true, dataset(256, 0, 255));

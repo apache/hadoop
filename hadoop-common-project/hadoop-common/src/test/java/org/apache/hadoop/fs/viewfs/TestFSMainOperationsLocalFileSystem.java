@@ -17,18 +17,11 @@
  */
 package org.apache.hadoop.fs.viewfs;
 
-
-
-import java.io.IOException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSMainOperationsBaseTest;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 
 public class TestFSMainOperationsLocalFileSystem extends FSMainOperationsBaseTest {
   FileSystem fcTarget;
@@ -40,7 +33,7 @@ public class TestFSMainOperationsLocalFileSystem extends FSMainOperationsBaseTes
   }
    
   @Override
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     Configuration conf = new Configuration();
     fcTarget = FileSystem.getLocal(conf);
@@ -48,7 +41,7 @@ public class TestFSMainOperationsLocalFileSystem extends FSMainOperationsBaseTes
   }
 
   @Override
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     super.tearDown();
     ViewFileSystemTestSetup.tearDown(this, fcTarget);

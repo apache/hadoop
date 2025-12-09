@@ -24,6 +24,7 @@ import java.nio.charset.StandardCharsets;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.eclipse.jetty.websocket.api.Session;
 import org.eclipse.jetty.websocket.api.annotations.OnWebSocketClose;
 import org.eclipse.jetty.websocket.api.annotations.OnWebSocketConnect;
@@ -85,7 +86,7 @@ public class ContainerShellWebSocket {
   public void run() {
     try {
       Reader consoleReader = new Reader();
-      Thread inputThread = new Thread(consoleReader, "consoleReader");
+      Thread inputThread = new SubjectInheritingThread(consoleReader, "consoleReader");
       inputThread.start();
       while (mySession.isOpen()) {
         mySession.getRemote().flush();

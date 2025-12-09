@@ -25,7 +25,7 @@ import org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys;
 import org.apache.hadoop.hdfs.server.federation.router.Router;
 import org.apache.hadoop.hdfs.server.federation.router.TestRouterMountTable;
 import org.apache.hadoop.util.Time;
-import org.junit.BeforeClass;
+import org.junit.jupiter.api.BeforeAll;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,7 +35,7 @@ import org.slf4j.LoggerFactory;
 public class TestRouterAsyncMountTable extends TestRouterMountTable {
   public static final Logger LOG = LoggerFactory.getLogger(TestRouterAsyncMountTable.class);
 
-  @BeforeClass
+  @BeforeAll
   public static void globalSetUp() throws Exception {
     startTime = Time.now();
 

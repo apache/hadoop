@@ -18,15 +18,15 @@
 package org.apache.hadoop.io.compress;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.ByteArrayInputStream;
 import java.io.EOFException;
 import java.io.IOException;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class TestDecompressorStream {
   private static final String TEST_STRING =
@@ -36,7 +36,7 @@ public class TestDecompressorStream {
   private Decompressor decompressor;
   private DecompressorStream decompressorStream;
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     bytesIn = new ByteArrayInputStream(TEST_STRING.getBytes());
     decompressor = new FakeDecompressor();

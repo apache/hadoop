@@ -45,9 +45,10 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptStatusUpdateEvent
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskEventType;
 import org.apache.hadoop.service.AbstractService;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
-import org.apache.hadoop.util.Clock;
+import org.apache.hadoop.yarn.util.Clock;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.yarn.event.Event;
@@ -219,7 +220,7 @@ public class DefaultSpeculator extends AbstractService implements
               }
             }
           };
-    speculationBackgroundThread = new Thread
+    speculationBackgroundThread = new SubjectInheritingThread
         (speculationBackgroundCore, "DefaultSpeculator background processing");
     speculationBackgroundThread.start();
 

@@ -56,8 +56,12 @@
         <artifactId>spotbugs-maven-plugin</artifactId>
         <configuration>
           <xmlOutput>true</xmlOutput>
-          <excludeFilterFile>${basedir}/dev-support/findbugs-exclude.xml
-          </excludeFilterFile>
+          <excludeFilterFiles>
+            <excludeFilterFile>${basedir}/dev-support/findbugs-exclude.xml
+            </excludeFilterFile>
+            <excludeFilterFile>${repo.root}/dev-support/findbugs-exclude-global.xml
+            </excludeFilterFile>
+          </excludeFilterFiles>
           <effort>Max</effort>
         </configuration>
       </plugin>
@@ -199,6 +203,13 @@
       <scope>compile</scope>
     </dependency>
 
+    <dependency>
+      <groupId>org.hdrhistogram</groupId>
+      <artifactId>HdrHistogram</artifactId>
+      <version>2.1.12</version>
+      <scope>compile</scope>
+    </dependency>
+
     <!--com.fasterxml.jackson is used by WASB, not ABFS-->
     <!--transitive dependency from Azure SDK-->
     <dependency>
@@ -212,13 +223,6 @@
       <groupId>com.fasterxml.jackson.core</groupId>
       <artifactId>jackson-databind</artifactId>
       <scope>provided</scope>
-    </dependency>
-
-    <!-- dependencies use for test only -->
-    <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <scope>test</scope>
     </dependency>
 
     <dependency>
@@ -323,7 +327,6 @@
     <dependency>
       <groupId>org.mockito</groupId>
       <artifactId>mockito-core</artifactId>
-      <version>4.11.0</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -348,11 +351,6 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>org.hamcrest</groupId>
-      <artifactId>hamcrest-library</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter-api</artifactId>
       <scope>test</scope>
@@ -365,16 +363,6 @@
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter-params</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.junit.platform</groupId>
-      <artifactId>junit-platform-launcher</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.junit.vintage</groupId>
-      <artifactId>junit-vintage-engine</artifactId>
       <scope>test</scope>
     </dependency>
   </dependencies>
@@ -484,7 +472,6 @@
                   <reuseForks>false</reuseForks>
                   <argLine>${maven-surefire-plugin.argLine} -DminiClusterDedicatedDirs=true</argLine>
                   <forkedProcessTimeoutInSeconds>${fs.azure.scale.test.timeout}</forkedProcessTimeoutInSeconds>
-                  <trimStackTrace>false</trimStackTrace>
                   <systemPropertyVariables>
                     <!-- Tell tests that they are being executed in parallel -->
                     <test.parallel.execution>true</test.parallel.execution>
@@ -525,7 +512,6 @@
                 </goals>
                 <configuration>
                   <forkedProcessTimeoutInSeconds>${fs.azure.scale.test.timeout}</forkedProcessTimeoutInSeconds>
-                  <trimStackTrace>false</trimStackTrace>
                   <systemPropertyVariables>
                     <test.parallel.execution>false</test.parallel.execution>
                     <fs.azure.scale.test.enabled>${fs.azure.scale.test.enabled}</fs.azure.scale.test.enabled>
@@ -619,7 +605,6 @@
                   <threadCount>${testsThreadCount}</threadCount>
                   <argLine>${maven-surefire-plugin.argLine} -DminiClusterDedicatedDirs=true</argLine>
                   <forkedProcessTimeoutInSeconds>${fs.azure.scale.test.timeout}</forkedProcessTimeoutInSeconds>
-                  <trimStackTrace>false</trimStackTrace>
                   <systemPropertyVariables>
                     <!-- Tell tests that they are being executed in parallel -->
                     <test.parallel.execution>true</test.parallel.execution>
@@ -668,7 +653,6 @@
                   <!--NOTICE: hadoop contract tests methods can not be ran in parallel-->
                   <argLine>${maven-surefire-plugin.argLine} -DminiClusterDedicatedDirs=true</argLine>
                   <forkedProcessTimeoutInSeconds>${fs.azure.scale.test.timeout}</forkedProcessTimeoutInSeconds>
-                  <trimStackTrace>false</trimStackTrace>
                   <systemPropertyVariables>
                     <!-- Tell tests that they are being executed in parallel -->
                     <test.parallel.execution>true</test.parallel.execution>
@@ -706,7 +690,6 @@
                 <configuration>
                   <!--NOTICE: hadoop contract tests methods can not be run in parallel-->
                   <forkedProcessTimeoutInSeconds>${fs.azure.scale.test.timeout}</forkedProcessTimeoutInSeconds>
-                  <trimStackTrace>false</trimStackTrace>
                   <systemPropertyVariables>
                     <!-- Tell tests that they are being executed sequentially -->
                     <test.parallel.execution>false</test.parallel.execution>
@@ -830,7 +813,6 @@
                   <reuseForks>false</reuseForks>
                   <argLine>${maven-surefire-plugin.argLine} -DminiClusterDedicatedDirs=true</argLine>
                   <forkedProcessTimeoutInSeconds>${fs.azure.scale.test.timeout}</forkedProcessTimeoutInSeconds>
-                  <trimStackTrace>false</trimStackTrace>
                   <systemPropertyVariables>
                     <!-- Tell tests that they are being executed in parallel -->
                     <test.parallel.execution>true</test.parallel.execution>
@@ -893,7 +875,6 @@
                 </goals>
                 <configuration>
                   <forkedProcessTimeoutInSeconds>${fs.azure.scale.test.timeout}</forkedProcessTimeoutInSeconds>
-                  <trimStackTrace>false</trimStackTrace>
                   <systemPropertyVariables>
                     <test.parallel.execution>false</test.parallel.execution>
                     <fs.azure.scale.test.enabled>${fs.azure.scale.test.enabled}</fs.azure.scale.test.enabled>
@@ -956,7 +937,6 @@
                     <http.maxConnections>${http.maxConnections}</http.maxConnections>
                   </systemPropertyVariables>
                   <forkedProcessTimeoutInSeconds>${fs.azure.scale.test.timeout}</forkedProcessTimeoutInSeconds>
-                  <trimStackTrace>false</trimStackTrace>
                 </configuration>
               </execution>
             </executions>

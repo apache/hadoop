@@ -263,8 +263,8 @@ jthrowable newRuntimeError(JNIEnv *env, const char *fmt, ...)
         // Too bad...
         return getPendingExceptionAndClear(env);
     }
-    exc = constructNewObjectOfClass(env, &out, "RuntimeException",
-        "(java/lang/String;)V", jstr);
+    exc = constructNewObjectOfClass(env, &out, "java/lang/RuntimeException",
+        "(Ljava/lang/String;)V", jstr);
     (*env)->DeleteLocalRef(env, jstr);
     // Again, we'll either get an out of memory exception or the
     // RuntimeException we wanted.

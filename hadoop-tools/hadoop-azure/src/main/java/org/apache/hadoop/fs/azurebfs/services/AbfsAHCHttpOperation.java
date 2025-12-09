@@ -91,18 +91,28 @@ public class AbfsAHCHttpOperation extends AbfsHttpOperation {
    */
   private final AbfsApacheHttpClient abfsApacheHttpClient;
 
+  /**
+   * Timeout in milliseconds that defines maximum allowed time to execute operation.
+   * This timeout starts when execution starts and includes E2E processing time of request.
+   * This is based on tail latency observed in the system.
+   */
+  private final long tailLatencyTimeout;
+
   public AbfsAHCHttpOperation(final URL url,
       final String method,
       final List<AbfsHttpHeader> requestHeaders,
       final Duration connectionTimeout,
       final Duration readTimeout,
+      final long tailLatencyTimeout,
       final AbfsApacheHttpClient abfsApacheHttpClient,
       final AbfsClient abfsClient) throws IOException {
-    super(LOG, url, method, requestHeaders, connectionTimeout, readTimeout, abfsClient);
+    super(LOG, url, method, requestHeaders, connectionTimeout, readTimeout,
+        abfsClient);
     this.isPayloadRequest = HTTP_METHOD_PUT.equals(method)
         || HTTP_METHOD_PATCH.equals(method)
         || HTTP_METHOD_POST.equals(method);
     this.abfsApacheHttpClient = abfsApacheHttpClient;
+    this.tailLatencyTimeout = tailLatencyTimeout;
     LOG.debug("Creating AbfsAHCHttpOperation for URL: {}, method: {}",
         url, method);
 
@@ -139,6 +149,14 @@ public class AbfsAHCHttpOperation extends AbfsHttpOperation {
       throw new PathIOException(getUrl().toString(),
           "Unsupported HTTP method: " + getMethod());
     }
+
+    // Set the request headers in the http request object.
+    // Earlier we were setting it just before sending the request.
+    // Setting here ensures that same header will get used while signing
+    // the request as well as validating the request at server's end.
+    for (AbfsHttpHeader header : requestHeaders) {
+      setRequestProperty(header.getName(), header.getValue());
+    }
   }
 
   /**
@@ -148,6 +166,10 @@ public class AbfsAHCHttpOperation extends AbfsHttpOperation {
   @VisibleForTesting
   AbfsManagedHttpClientContext getHttpClientContext() {
     return new AbfsManagedHttpClientContext();
+  }
+
+  long getTailLatencyTimeout() {
+    return tailLatencyTimeout;
   }
 
   /**{@inheritDoc}*/
@@ -163,12 +185,11 @@ public class AbfsAHCHttpOperation extends AbfsHttpOperation {
   /**{@inheritDoc}*/
   @Override
   String getConnProperty(final String key) {
-    for (AbfsHttpHeader header : getRequestHeaders()) {
-      if (header.getName().equals(key)) {
-        return header.getValue();
-      }
+    Header header = httpRequestBase.getFirstHeader(key);
+    if (header == null) {
+      return null;
     }
-    return null;
+    return header.getValue();
   }
 
   /**{@inheritDoc}*/
@@ -196,7 +217,6 @@ public class AbfsAHCHttpOperation extends AbfsHttpOperation {
       final int length) throws IOException {
     try {
       if (!isPayloadRequest) {
-        prepareRequest();
         LOG.debug("Sending request: {}", httpRequestBase);
         httpResponse = executeRequest();
         LOG.debug("Request sent: {}; response {}", httpRequestBase,
@@ -266,7 +286,7 @@ public class AbfsAHCHttpOperation extends AbfsHttpOperation {
     try {
       LOG.debug("Executing request: {}", httpRequestBase);
       HttpResponse response = abfsApacheHttpClient.execute(httpRequestBase,
-          abfsHttpClientContext, getConnectionTimeout(), getReadTimeout());
+          abfsHttpClientContext, getConnectionTimeout(), getReadTimeout(), getTailLatencyTimeout());
       setConnectionTimeMs(abfsHttpClientContext.getConnectTime());
       setSendRequestTimeMs(abfsHttpClientContext.getSendTime());
       setRecvResponseTimeMs(abfsHttpClientContext.getReadTime());
@@ -280,17 +300,20 @@ public class AbfsAHCHttpOperation extends AbfsHttpOperation {
   /**{@inheritDoc}*/
   @Override
   public void setRequestProperty(final String key, final String value) {
-    List<AbfsHttpHeader> headers = getRequestHeaders();
-    if (headers != null) {
-      headers.add(new AbfsHttpHeader(key, value));
+    // Content-Length is managed by HttpClient for entity enclosing requests.
+    // Setting it manually can lead to protocol errors.
+    if (httpRequestBase instanceof HttpEntityEnclosingRequestBase
+        && CONTENT_LENGTH.equals(key)) {
+      return;
     }
+    httpRequestBase.setHeader(key, value);
   }
 
   /**{@inheritDoc}*/
   @Override
   Map<String, List<String>> getRequestProperties() {
     Map<String, List<String>> map = new HashMap<>();
-    for (AbfsHttpHeader header : getRequestHeaders()) {
+    for (Header header : httpRequestBase.getAllHeaders()) {
       map.put(header.getName(),
           new ArrayList<String>() {{
             add(header.getValue());
@@ -306,10 +329,10 @@ public class AbfsAHCHttpOperation extends AbfsHttpOperation {
       return null;
     }
     Header header = httpResponse.getFirstHeader(headerName);
-    if (header != null) {
-      return header.getValue();
+    if (header == null) {
+      return null;
     }
-    return null;
+    return header.getValue();
   }
 
   /**{@inheritDoc}*/
@@ -324,6 +347,22 @@ public class AbfsAHCHttpOperation extends AbfsHttpOperation {
           .add(header.getValue());
     }
     return headers;
+  }
+
+  /**{@inheritDoc}*/
+  @Override
+  public String getResponseHeaderIgnoreCase(final String headerName) {
+    Map<String, List<String>> responseHeaders = getResponseHeaders();
+    if (responseHeaders == null || responseHeaders.isEmpty()) {
+      return null;
+    }
+    // Search for the header value case-insensitively
+    return responseHeaders.entrySet().stream()
+        .filter(entry -> entry.getKey() != null
+            && entry.getKey().equalsIgnoreCase(headerName))
+        .flatMap(entry -> entry.getValue().stream())
+        .findFirst()
+        .orElse(null); // Return null if no match is found
   }
 
   /**{@inheritDoc}*/
@@ -354,7 +393,6 @@ public class AbfsAHCHttpOperation extends AbfsHttpOperation {
           httpEntity);
     }
 
-    prepareRequest();
     try {
       LOG.debug("Sending request: {}", httpRequestBase);
       httpResponse = executeRequest();
@@ -382,24 +420,10 @@ public class AbfsAHCHttpOperation extends AbfsHttpOperation {
     }
   }
 
-  /**
-   * Sets the header on the request.
-   */
-  private void prepareRequest() {
-    final boolean isEntityBasedRequest
-        = httpRequestBase instanceof HttpEntityEnclosingRequestBase;
-    for (AbfsHttpHeader header : getRequestHeaders()) {
-      if (CONTENT_LENGTH.equals(header.getName()) && isEntityBasedRequest) {
-        continue;
-      }
-      httpRequestBase.setHeader(header.getName(), header.getValue());
-    }
-  }
-
   /**{@inheritDoc}*/
   @Override
   public String getRequestProperty(String name) {
-    for (AbfsHttpHeader header : getRequestHeaders()) {
+    for (Header header : httpRequestBase.getAllHeaders()) {
       if (header.getName().equals(name)) {
         String val = header.getValue();
         val = val == null ? EMPTY_STRING : val;

@@ -21,10 +21,12 @@ package org.apache.hadoop.fs.s3a;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.Options;
+import org.apache.hadoop.fs.s3a.impl.ChecksumSupport;
 import org.apache.hadoop.fs.s3a.impl.streams.StreamIntegration;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 
 import java.time.Duration;
+import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 
 import static org.apache.hadoop.io.Sizes.S_128K;
@@ -1339,6 +1341,37 @@ public final class Constants {
   public static final String AWS_SERVICE_IDENTIFIER_DDB = "DDB";
   public static final String AWS_SERVICE_IDENTIFIER_STS = "STS";
 
+  /** Prefix for S3A client-specific properties.
+   * value: {@value}
+   */
+  public static final String FS_S3A_CLIENT_PREFIX = "fs.s3a.client.";
+
+  /** Custom headers postfix.
+   * value: {@value}
+   */
+  public static final String CUSTOM_HEADERS_POSTFIX = ".custom.headers";
+
+  /**
+   * List of custom headers to be set on the service client.
+   * Multiple parameters can be used to specify custom headers.
+   * <pre>
+   * Usage:
+   * fs.s3a.client.s3.custom.headers - Headers to add on all the S3 requests.
+   * fs.s3a.client.sts.custom.headers - Headers to add on all the STS requests.
+   *
+   * Examples:
+   * CustomHeader {@literal ->} 'Header1:Value1'
+   * CustomHeaders {@literal ->} 'Header1=Value1;Value2,Header2=Value1'
+   * </pre>
+   */
+  public static final String CUSTOM_HEADERS_STS =
+      FS_S3A_CLIENT_PREFIX + AWS_SERVICE_IDENTIFIER_STS.toLowerCase(Locale.ROOT)
+          + CUSTOM_HEADERS_POSTFIX;
+
+  public static final String CUSTOM_HEADERS_S3 =
+      FS_S3A_CLIENT_PREFIX + AWS_SERVICE_IDENTIFIER_S3.toLowerCase(Locale.ROOT)
+          + CUSTOM_HEADERS_POSTFIX;
+
   /**
    * How long to wait for the thread pool to terminate when cleaning up.
    * Value: {@value} seconds.
@@ -1522,6 +1555,29 @@ public final class Constants {
    */
   public static final String FS_S3A_PERFORMANCE_FLAGS =
       "fs.s3a.performance.flags";
+
+  /**
+   * Is the create overwrite feature enabled or not?
+   * A configuration option and a path status probe.
+   * Value {@value}.
+   */
+  public static final String FS_S3A_CONDITIONAL_CREATE_ENABLED =
+      "fs.s3a.create.conditional.enabled";
+
+  /**
+   * Default value for {@link #FS_S3A_CONDITIONAL_CREATE_ENABLED}.
+   * Value {@value}.
+   */
+  public static final boolean DEFAULT_FS_S3A_CONDITIONAL_CREATE_ENABLED = true;
+
+  /**
+   * createFile() boolean option toreate a multipart file, always: {@value}.
+   * <p>
+   * This is inefficient and will not work on a store which doesn't support that feature,
+   * so is primarily for testing.
+   */
+  public static final String FS_S3A_CREATE_MULTIPART = "fs.s3a.create.multipart";
+
   /**
    * Prefix for adding a header to the object when created.
    * The actual value must have a "." suffix and then the actual header.
@@ -1782,6 +1838,53 @@ public final class Constants {
   public static final boolean CHECKSUM_VALIDATION_DEFAULT = false;
 
   /**
+   * Should checksums always be generated?
+   * Not all third-party stores like this being enabled for every request.
+   * Value: {@value}.
+   */
+  public static final String CHECKSUM_GENERATION =
+      "fs.s3a.checksum.generation";
+
+  /**
+   * Default value of {@link #CHECKSUM_GENERATION}.
+   * Value: {@value}.
+   */
+  public static final boolean DEFAULT_CHECKSUM_GENERATION = false;
+
+  /**
+   * Indicates the algorithm used to create the checksum for the object
+   * to be uploaded to S3. Unset by default. It supports the following values:
+   * 'CRC32', 'CRC32C', 'SHA1', 'SHA256', 'CRC64_NVME 'NONE', ''.
+   * When checksum calculation is enabled this MUST be set to a valid algorithm.
+   * value:{@value}
+   */
+  public static final String CHECKSUM_ALGORITHM =
+      "fs.s3a.create.checksum.algorithm";
+
+  /**
+   * Default checksum algorithm: {@code "NONE"}.
+   */
+  public static final String DEFAULT_CHECKSUM_ALGORITHM =
+      ChecksumSupport.NONE;
+
+  /**
+   * Send a {@code Content-MD5 header} with every request.
+   * This is required when performing some operations with third party stores
+   * For example: bulk delete).
+   * It is supported by AWS S3, though has unexpected behavior with AWS S3 Express storage.
+   * See https://github.com/aws/aws-sdk-java-v2/issues/6459  for details.
+   */
+  public static final String REQUEST_MD5_HEADER =
+      "fs.s3a.request.md5.header";
+
+  /**
+   * Default value of {@link #REQUEST_MD5_HEADER}.
+   * Value: {@value}.
+   */
+  public static final boolean DEFAULT_REQUEST_MD5_HEADER = true;
+
+
+  /**
    * Are extensions classes, such as {@code fs.s3a.aws.credentials.provider},
    * going to be loaded from the same classloader that loaded
    * the {@link S3AFileSystem}?
@@ -1836,4 +1939,11 @@ public final class Constants {
   public static final String ANALYTICS_ACCELERATOR_CONFIGURATION_PREFIX =
           "fs.s3a.analytics.accelerator";
 
+  /**
+   * Value for the {@code If-None-Match} HTTP header in S3 requests.
+   * Value: {@value}.
+   * More information: <a href="https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutObject.html">
+   *      AWS S3 PutObject API Documentation</a>
+   */
+  public static final String IF_NONE_MATCH_STAR = "*";
 }

@@ -35,6 +35,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -77,9 +78,9 @@ public class TestLocatedFileStatusFetcher extends AbstractHadoopTestBase {
           }
         }, true);
 
-    Thread t = new Thread() {
+    SubjectInheritingThread t = new SubjectInheritingThread() {
       @Override
-      public void run() {
+      public void work() {
         try {
           fetcher.getFileStatuses();
         } catch (Exception e) {

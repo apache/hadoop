@@ -37,22 +37,22 @@ public final class ReplicatedBlockStats {
   private final long missingReplicationOneBlocks;
   private final long bytesInFutureBlocks;
   private final long pendingDeletionBlocks;
-  private final long badlyDistributedBlocks;
+  private final Long badlyDistributedBlocks;
   private final Long highestPriorityLowRedundancyBlocks;
 
   public ReplicatedBlockStats(long lowRedundancyBlocks,
       long corruptBlocks, long missingBlocks,
       long missingReplicationOneBlocks, long bytesInFutureBlocks,
-      long pendingDeletionBlocks, long badlyDistributedBlocks) {
+      long pendingDeletionBlocks) {
     this(lowRedundancyBlocks, corruptBlocks, missingBlocks,
         missingReplicationOneBlocks, bytesInFutureBlocks, pendingDeletionBlocks,
-        badlyDistributedBlocks, null);
+        null, null);
   }
 
   public ReplicatedBlockStats(long lowRedundancyBlocks,
       long corruptBlocks, long missingBlocks,
       long missingReplicationOneBlocks, long bytesInFutureBlocks,
-      long pendingDeletionBlocks, long badlyDistributedBlocks,
+      long pendingDeletionBlocks, Long badlyDistributedBlocks,
       Long highestPriorityLowRedundancyBlocks) {
     this.lowRedundancyBlocks = lowRedundancyBlocks;
     this.corruptBlocks = corruptBlocks;
@@ -89,7 +89,11 @@ public final class ReplicatedBlockStats {
     return pendingDeletionBlocks;
   }
 
-  public long getBadlyDistributedBlocks() {
+  public boolean hasBadlyDistributedBlocks() {
+    return getBadlyDistributedBlocks() != null;
+  }
+
+  public Long getBadlyDistributedBlocks() {
     return badlyDistributedBlocks;
   }
 
@@ -113,8 +117,10 @@ public final class ReplicatedBlockStats {
             getMissingReplicationOneBlocks())
         .append(", BytesInFutureBlocks=").append(getBytesInFutureBlocks())
         .append(", PendingDeletionBlocks=").append(
-            getPendingDeletionBlocks())
-        .append(" , badlyDistributedBlocks=").append(getBadlyDistributedBlocks());
+            getPendingDeletionBlocks());
+    if (hasBadlyDistributedBlocks()) {
+      statsBuilder.append(" , badlyDistributedBlocks=").append(getBadlyDistributedBlocks());
+    }
     if (hasHighestPriorityLowRedundancyBlocks()) {
         statsBuilder.append(", HighestPriorityLowRedundancyBlocks=").append(
             getHighestPriorityLowRedundancyBlocks());
@@ -137,6 +143,7 @@ public final class ReplicatedBlockStats {
     long bytesInFutureBlocks = 0;
     long pendingDeletionBlocks = 0;
     long badlyDistributedBlocks = 0;
+    boolean hasBadlyDistributedBlocks = false;
     long highestPriorityLowRedundancyBlocks = 0;
     boolean hasHighestPriorityLowRedundancyBlocks = false;
 
@@ -148,20 +155,24 @@ public final class ReplicatedBlockStats {
       missingReplicationOneBlocks += stat.getMissingReplicationOneBlocks();
       bytesInFutureBlocks += stat.getBytesInFutureBlocks();
       pendingDeletionBlocks += stat.getPendingDeletionBlocks();
-      badlyDistributedBlocks += stat.getBadlyDistributedBlocks();
+
+      if (stat.hasBadlyDistributedBlocks()) {
+        hasBadlyDistributedBlocks = true;
+        badlyDistributedBlocks += stat.getBadlyDistributedBlocks();
+      }
       if (stat.hasHighestPriorityLowRedundancyBlocks()) {
         hasHighestPriorityLowRedundancyBlocks = true;
         highestPriorityLowRedundancyBlocks +=
             stat.getHighestPriorityLowRedundancyBlocks();
       }
     }
-    if (hasHighestPriorityLowRedundancyBlocks) {
+    if (hasBadlyDistributedBlocks && hasHighestPriorityLowRedundancyBlocks) {
       return new ReplicatedBlockStats(lowRedundancyBlocks, corruptBlocks,
           missingBlocks, missingReplicationOneBlocks, bytesInFutureBlocks,
           pendingDeletionBlocks, badlyDistributedBlocks, highestPriorityLowRedundancyBlocks);
     }
     return new ReplicatedBlockStats(lowRedundancyBlocks, corruptBlocks,
         missingBlocks, missingReplicationOneBlocks, bytesInFutureBlocks,
-        pendingDeletionBlocks, badlyDistributedBlocks);
+        pendingDeletionBlocks);
   }
 }

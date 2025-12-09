@@ -23,11 +23,12 @@ import com.microsoft.azure.storage.blob.CloudBlobClient;
 import com.microsoft.azure.storage.blob.CloudBlobContainer;
 import com.microsoft.azure.storage.blob.CloudBlockBlob;
 
-import org.junit.Assume;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
+
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 /**
  * Test AzureBlobFileSystem back compatibility with WASB.
@@ -42,8 +43,9 @@ public class ITestAzureBlobFileSystemBackCompat extends
   @Test
   public void testBlobBackCompat() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
-    Assume.assumeFalse("This test does not support namespace enabled account",
-        getIsNamespaceEnabled(getFileSystem()));
+    assumeThat(getIsNamespaceEnabled(getFileSystem()))
+        .as("This test does not support namespace enabled account")
+        .isFalse();
     String storageConnectionString = getBlobConnectionString();
     CloudStorageAccount storageAccount = CloudStorageAccount.parse(storageConnectionString);
     CloudBlobClient blobClient = storageAccount.createCloudBlobClient();

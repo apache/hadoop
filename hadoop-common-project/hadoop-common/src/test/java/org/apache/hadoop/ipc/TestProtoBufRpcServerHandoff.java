@@ -31,6 +31,7 @@ import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.thirdparty.protobuf.BlockingService;
 import org.apache.hadoop.thirdparty.protobuf.RpcController;
 import org.apache.hadoop.thirdparty.protobuf.ServiceException;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.protobuf.TestProtos;
 import org.apache.hadoop.ipc.protobuf.TestRpcServiceProtos.TestProtobufRpcHandoffProto;
@@ -43,6 +44,7 @@ import org.slf4j.LoggerFactory;
 import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
 import static org.apache.hadoop.test.MetricsAsserts.assertCounterGt;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestProtoBufRpcServerHandoff {
@@ -144,6 +146,26 @@ public class TestProtoBufRpcServerHandoff {
     assertCounter("RpcProcessingTimeNumOps", 2L, rb);
   }
 
+  @Test
+  public void testUpdateDeferredMetrics() throws Exception {
+    final TestProtoBufRpcServerHandoffProtocol client = RPC.getProxy(
+        TestProtoBufRpcServerHandoffProtocol.class, 1, address, conf);
+
+    ExecutorService executorService = Executors.newFixedThreadPool(1);
+    CompletionService<ClientInvocationCallable> completionService =
+        new ExecutorCompletionService<ClientInvocationCallable>(
+            executorService);
+
+    completionService.submit(new ClientInvocationCallable(client, 2000L));
+    Future<ClientInvocationCallable> future1 = completionService.take();
+    ClientInvocationCallable callable1 = future1.get();
+
+    double deferredProcessingTime = server.getRpcMetrics().getDeferredRpcProcessingTime()
+        .lastStat().max();
+    double processingTime = server.getRpcMetrics().getRpcProcessingTime().lastStat().max();
+    assertEquals(deferredProcessingTime, processingTime);
+  }
+
   private static class ClientInvocationCallable
       implements Callable<ClientInvocationCallable> {
     final TestProtoBufRpcServerHandoffProtocol client;
@@ -198,9 +220,9 @@ public class TestProtoBufRpcServerHandoff {
       final ProtobufRpcEngineCallback2 callback =
           ProtobufRpcEngine2.Server.registerForDeferredResponse2();
       final long sleepTime = request.getSleepTime();
-      new Thread() {
+      new SubjectInheritingThread() {
         @Override
-        public void run() {
+        public void work() {
           try {
             Thread.sleep(sleepTime);
           } catch (InterruptedException e) {

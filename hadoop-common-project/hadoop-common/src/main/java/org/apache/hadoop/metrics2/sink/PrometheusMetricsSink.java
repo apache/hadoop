@@ -19,7 +19,13 @@ package org.apache.hadoop.metrics2.sink;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 import java.util.regex.Matcher;
+
+import org.apache.hadoop.thirdparty.com.google.common.cache.CacheBuilder;
+import org.apache.hadoop.thirdparty.com.google.common.cache.CacheLoader;
+import org.apache.hadoop.thirdparty.com.google.common.cache.LoadingCache;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.UncheckedExecutionException;
 import org.apache.commons.configuration2.SubsetConfiguration;
 import org.apache.hadoop.metrics2.AbstractMetric;
 import org.apache.hadoop.metrics2.MetricType;
@@ -35,6 +41,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 
 import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Metrics sink for prometheus exporter.
@@ -42,6 +50,7 @@ import org.apache.commons.lang3.StringUtils;
  * Stores the metric data in-memory and return with it on request.
  */
 public class PrometheusMetricsSink implements MetricsSink {
+  private static final Logger LOG = LoggerFactory.getLogger(PrometheusMetricsSink.class);
 
   /**
    * Cached output lines for each metrics.
@@ -61,6 +70,17 @@ public class PrometheusMetricsSink implements MetricsSink {
   private static final Pattern NN_TOPMETRICS_TAGS_PATTERN =
       Pattern
           .compile("^op=(?<op>\\w+)(.user=(?<user>.*)|)\\.(TotalCount|count)$");
+
+  /**
+   * A fixed cache for Hadoop metric to Prometheus metric name conversion.
+   */
+  private static final int NORMALIZED_NAME_CACHE_MAX_SIZE = 100_000;
+  private static final CacheLoader<String, String> NORMALIZED_NAME_CACHE_LOADER =
+      CacheLoader.from(PrometheusMetricsSink::normalizeImpl);
+  private static final LoadingCache<String, String> NORMALIZED_NAME_CACHE =
+      CacheBuilder.newBuilder()
+          .maximumSize(NORMALIZED_NAME_CACHE_MAX_SIZE)
+          .build(NORMALIZED_NAME_CACHE_LOADER);
 
   public PrometheusMetricsSink() {
   }
@@ -83,7 +103,21 @@ public class PrometheusMetricsSink implements MetricsSink {
 
   /**
    * Convert CamelCase based names to lower-case names where the separator
-   * is the underscore, to follow prometheus naming conventions.
+   * is the underscore, to follow prometheus naming conventions. This method
+   * utilizes a cache to improve performance.
+   *
+   * <p>
+   *  Reference:
+   *  <ul>
+   *    <li>
+   *      <a href="https://prometheus.io/docs/practices/naming/">
+   *        Metrics and Label Naming</a>
+   *    </li>
+   *    <li>
+   *      <a href="https://prometheus.io/docs/instrumenting/exposition_formats/">
+   *        Exposition formats</a>
+   *    </li>
+   *  </ul>
    *
    * @param metricName metricName.
    * @param recordName recordName.
@@ -93,6 +127,22 @@ public class PrometheusMetricsSink implements MetricsSink {
                                String metricName) {
     String baseName = StringUtils.capitalize(recordName)
         + StringUtils.capitalize(metricName);
+    try {
+      return NORMALIZED_NAME_CACHE.get(baseName);
+    } catch (ExecutionException | UncheckedExecutionException e) {
+      // This should not happen since normalization function do not throw any exception
+      // Nevertheless, we can fall back to uncached implementation if it somehow happens.
+      LOG.warn("Exception encountered when loading metric with base name {} from cache, " +
+          "fall back to uncached normalization implementation", baseName, e);
+      return normalizeImpl(baseName);
+    }
+  }
+
+  /**
+   * Underlying Prometheus normalization implementation.
+   * See {@link PrometheusMetricsSink#prometheusName(String, String)} for more information.
+   */
+  private static String normalizeImpl(String baseName) {
     String[] parts = SPLIT_PATTERN.split(baseName);
     String joined =  String.join("_", parts).toLowerCase();
     return DELIMITERS.matcher(joined).replaceAll("_");

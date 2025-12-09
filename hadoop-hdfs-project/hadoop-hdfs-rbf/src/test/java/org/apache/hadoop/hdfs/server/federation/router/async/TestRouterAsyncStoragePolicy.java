@@ -20,14 +20,14 @@ package org.apache.hadoop.hdfs.server.federation.router.async;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import java.io.IOException;
 
 import static org.apache.hadoop.hdfs.server.federation.router.async.utils.AsyncUtil.syncReturn;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 /**
  * Used to test the functionality of {@link RouterAsyncStoragePolicy}.
@@ -36,7 +36,7 @@ public class TestRouterAsyncStoragePolicy extends RouterAsyncProtocolTestBase {
   private final String testfilePath = "/testdir/testAsyncStoragePolicy.file";
   private RouterAsyncStoragePolicy asyncStoragePolicy;
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException {
     asyncStoragePolicy = new RouterAsyncStoragePolicy(getRouterAsyncRpcServer());
     FSDataOutputStream fsDataOutputStream = getRouterFs().create(

@@ -17,12 +17,12 @@
  */
 package org.apache.hadoop.hdfs.server.federation.router;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -67,10 +67,10 @@ import org.apache.hadoop.hdfs.tools.federation.RouterAdmin;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests router rpc with multiple destination mount table resolver.
@@ -88,7 +88,7 @@ public class TestRouterRPCMultipleDestinationMountTableResolver {
   protected static DistributedFileSystem routerFs;
   protected static RouterRpcServer rpcServer;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
 
     // Build and start a federated cluster
@@ -119,7 +119,7 @@ public class TestRouterRPCMultipleDestinationMountTableResolver {
     rpcServer =routerContext.getRouter().getRpcServer();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() {
     if (cluster != null) {
       cluster.stopRouter(routerContext);
@@ -150,7 +150,7 @@ public class TestRouterRPCMultipleDestinationMountTableResolver {
         1024L);
   }
 
-  @After
+  @AfterEach
   public void resetTestEnvironment() throws IOException {
     RouterClient client = routerContext.getAdminClient();
     MountTableManager mountTableManager = client.getMountTableManager();
@@ -298,8 +298,7 @@ public class TestRouterRPCMultipleDestinationMountTableResolver {
         nnFs0, name, value);
     boolean checkedDir2 = verifyDirectoryLevelInvocations(dirAll, nameSpaceDir,
         nnFs1, name, value);
-    assertTrue("The file didn't existed in either of the subclusters.",
-        checkedDir1 || checkedDir2);
+    assertTrue(checkedDir1 || checkedDir2, "The file didn't existed in either of the subclusters.");
     routerFs.unsetStoragePolicy(mountDir);
     routerFs.removeXAttr(mountDir, name);
     routerFs.unsetErasureCodingPolicy(mountDir);
@@ -308,8 +307,7 @@ public class TestRouterRPCMultipleDestinationMountTableResolver {
         verifyDirectoryLevelUnsetInvocations(dirAll, nnFs0, nameSpaceDir);
     checkedDir2 =
         verifyDirectoryLevelUnsetInvocations(dirAll, nnFs1, nameSpaceDir);
-    assertTrue("The file didn't existed in either of the subclusters.",
-        checkedDir1 || checkedDir2);
+    assertTrue(checkedDir1 || checkedDir2, "The file didn't existed in either of the subclusters.");
 
     // Check invocation for a file.
     routerFs.setOwner(mountFile, "testuser", "testgroup");
@@ -857,7 +855,7 @@ public class TestRouterRPCMultipleDestinationMountTableResolver {
     final Path pathRouterFile = new Path("/mount", pathFile);
     final Path pathLocalFile = new Path("/tmp", pathFile);
     FileStatus fileStatus = routerFs.getFileStatus(pathRouterFile);
-    assertTrue(fileStatus + " should be a file", fileStatus.isFile());
+    assertTrue(fileStatus.isFile(), fileStatus + " should be a file");
     GetDestinationResponse respFile = mountTableManager.getDestination(
         GetDestinationRequest.newInstance(pathRouterFile));
     if (expectFileLocation != null) {
@@ -886,7 +884,7 @@ public class TestRouterRPCMultipleDestinationMountTableResolver {
     final Path pathRouterNestedDir = new Path("/mount", pathNestedDir);
     final Path pathLocalNestedDir = new Path("/tmp", pathNestedDir);
     FileStatus dirStatus = routerFs.getFileStatus(pathRouterNestedDir);
-    assertTrue(dirStatus + " should be a directory", dirStatus.isDirectory());
+    assertTrue(dirStatus.isDirectory(), dirStatus + " should be a directory");
     GetDestinationResponse respDir = mountTableManager.getDestination(
         GetDestinationRequest.newInstance(pathRouterNestedDir));
     assertEqualsCollection(expectDirLocation, respDir.getDestinations());
@@ -905,15 +903,15 @@ public class TestRouterRPCMultipleDestinationMountTableResolver {
     for (String nsId : NS_IDS) {
       final FileSystem fs = getFileSystem(nsId);
       if (expectedLocations.contains(nsId)) {
-        assertTrue(path + " should exist in " + nsId, fs.exists(path));
+        assertTrue(fs.exists(path), path + " should exist in " + nsId);
         final FileStatus status = fs.getFileStatus(path);
         if (isDir) {
-          assertTrue(path + " should be a directory", status.isDirectory());
+          assertTrue(status.isDirectory(), path + " should be a directory");
         } else {
-          assertTrue(path + " should be a file", status.isFile());
+          assertTrue(status.isFile(), path + " should be a file");
         }
       } else {
-        assertFalse(path + " should not exist in " + nsId, fs.exists(path));
+        assertFalse(fs.exists(path), path + " should not exist in " + nsId);
       }
     }
   }

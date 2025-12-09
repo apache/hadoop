@@ -33,6 +33,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 
 import javax.security.auth.callback.Callback;
 import javax.security.auth.callback.CallbackHandler;
@@ -392,14 +393,16 @@ public class SaslDataTransferServer {
       SaslMessageWithHandshake message = readSaslMessageWithHandshakeSecret(in);
       byte[] secret = message.getSecret();
       String bpid = message.getBpid();
+      Map<String, String> dynamicSaslProps = new TreeMap<>(saslProps);
       if (secret != null || bpid != null) {
         // sanity check, if one is null, the other must also not be null
         assert(secret != null && bpid != null);
         String qop = new String(secret, StandardCharsets.UTF_8);
         saslProps.put(Sasl.QOP, qop);
+        dynamicSaslProps.put(Sasl.QOP, qop);
       }
       SaslParticipant sasl = SaslParticipant.createServerSaslParticipant(
-          saslProps, callbackHandler);
+          dynamicSaslProps, callbackHandler);
 
       byte[] remoteResponse = message.getPayload();
       byte[] localResponse = sasl.evaluateChallengeOrResponse(remoteResponse);
@@ -412,7 +415,7 @@ public class SaslDataTransferServer {
       localResponse = sasl.evaluateChallengeOrResponse(remoteResponse);
 
       // SASL handshake is complete
-      checkSaslComplete(sasl, saslProps);
+      checkSaslComplete(sasl, dynamicSaslProps);
 
       CipherOption cipherOption = null;
       negotiatedQOP = sasl.getNegotiatedQop();

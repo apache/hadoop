@@ -117,6 +117,7 @@ import org.apache.hadoop.fs.s3a.impl.BulkDeleteOperation;
 import org.apache.hadoop.fs.s3a.impl.BulkDeleteOperationCallbacksImpl;
 import org.apache.hadoop.fs.s3a.impl.CSES3AFileSystemOperations;
 import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
+import org.apache.hadoop.fs.s3a.impl.ChecksumSupport;
 import org.apache.hadoop.fs.s3a.impl.ClientManager;
 import org.apache.hadoop.fs.s3a.impl.ClientManagerImpl;
 import org.apache.hadoop.fs.s3a.impl.ConfigurationHelper;
@@ -152,6 +153,7 @@ import org.apache.hadoop.fs.s3a.impl.streams.ObjectReadParameters;
 import org.apache.hadoop.fs.s3a.impl.streams.ObjectInputStreamCallbacks;
 import org.apache.hadoop.fs.s3a.impl.streams.StreamFactoryRequirements;
 import org.apache.hadoop.fs.s3a.impl.streams.StreamIntegration;
+import org.apache.hadoop.fs.s3a.impl.write.WriteObjectFlags;
 import org.apache.hadoop.fs.s3a.tools.MarkerToolOperations;
 import org.apache.hadoop.fs.s3a.tools.MarkerToolOperationsImpl;
 import org.apache.hadoop.fs.statistics.DurationTracker;
@@ -225,6 +227,10 @@ import static org.apache.hadoop.fs.CommonConfigurationKeys.IOSTATISTICS_LOGGING_
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY;
 import static org.apache.hadoop.fs.CommonPathCapabilities.DIRECTORY_LISTING_INCONSISTENT;
+import static org.apache.hadoop.fs.Options.CreateFileOptionKeys.FS_OPTION_CREATE_CONDITIONAL_OVERWRITE;
+import static org.apache.hadoop.fs.Options.CreateFileOptionKeys.FS_OPTION_CREATE_CONDITIONAL_OVERWRITE_ETAG;
+import static org.apache.hadoop.fs.Options.CreateFileOptionKeys.FS_OPTION_CREATE_CONTENT_TYPE;
+import static org.apache.hadoop.fs.Options.CreateFileOptionKeys.FS_OPTION_CREATE_IN_CLOSE;
 import static org.apache.hadoop.fs.impl.FlagSet.buildFlagSet;
 import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
 import static org.apache.hadoop.fs.s3a.Constants.*;
@@ -511,6 +517,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    */
   private boolean s3AccessGrantsEnabled;
 
+  /**
+   * Are the conditional create operations enabled?
+   */
+  private boolean conditionalCreateEnabled;
+
   /** Add any deprecated keys. */
   @SuppressWarnings("deprecation")
   private static void addDeprecatedKeys() {
@@ -673,9 +684,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       s3ExpressStore = isS3ExpressStore(bucket, endpoint);
 
       // should the delete also purge uploads?
-      // happens if explicitly enabled, or if the store is S3Express storage.
       dirOperationsPurgeUploads = conf.getBoolean(DIRECTORY_OPERATIONS_PURGE_UPLOADS,
-          s3ExpressStore);
+          DIRECTORY_OPERATIONS_PURGE_UPLOADS_DEFAULT);
 
       this.isMultipartUploadEnabled = conf.getBoolean(MULTIPART_UPLOADS_ENABLED,
           DEFAULT_MULTIPART_UPLOAD_ENABLED);
@@ -693,6 +703,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
             " access points. Upgrading to V2");
         useListV1 = false;
       }
+      conditionalCreateEnabled = conf.getBoolean(FS_S3A_CONDITIONAL_CREATE_ENABLED,
+                DEFAULT_FS_S3A_CONDITIONAL_CREATE_ENABLED);
+
 
       signerManager = new SignerManager(bucket, this, conf, owner);
       signerManager.initCustomSigners();
@@ -1160,10 +1173,15 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         .withTransferManagerExecutor(unboundedThreadPool)
         .withRegion(configuredRegion)
         .withFipsEnabled(fipsEnabled)
+        .withS3ExpressStore(s3ExpressStore)
         .withExpressCreateSession(
             conf.getBoolean(S3EXPRESS_CREATE_SESSION, S3EXPRESS_CREATE_SESSION_DEFAULT))
         .withChecksumValidationEnabled(
             conf.getBoolean(CHECKSUM_VALIDATION, CHECKSUM_VALIDATION_DEFAULT))
+        .withChecksumCalculationEnabled(
+            conf.getBoolean(CHECKSUM_GENERATION, DEFAULT_CHECKSUM_GENERATION))
+        .withMd5HeaderEnabled(conf.getBoolean(REQUEST_MD5_HEADER,
+            DEFAULT_REQUEST_MD5_HEADER))
         .withClientSideEncryptionEnabled(isCSEEnabled)
         .withClientSideEncryptionMaterials(cseMaterials)
         .withAnalyticsAcceleratorEnabled(isAnalyticsAcceleratorEnabled)
@@ -1327,6 +1345,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         .withStorageClass(storageClass)
         .withMultipartUploadEnabled(isMultipartUploadEnabled)
         .withPartUploadTimeout(partUploadTimeout)
+        .withChecksumAlgorithm(ChecksumSupport.getChecksumAlgorithm(getConf()))
         .build();
   }
 
@@ -1905,7 +1924,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         .withCallbacks(createInputStreamCallbacks(auditSpan))
         .withContext(readContext.build())
         .withObjectAttributes(createObjectAttributes(path, fileStatus))
-        .withStreamStatistics(inputStreamStats);
+        .withStreamStatistics(inputStreamStats)
+        .withEncryptionSecrets(getEncryptionSecrets())
+        .withAuditSpan(auditSpan);
+
     return new FSDataInputStream(getStore().readObject(parameters));
   }
 
@@ -2079,20 +2101,66 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     }
     EnumSet<CreateFlag> flags = options.getFlags();
 
-    boolean skipProbes = options.isPerformance() || isUnderMagicCommitPath(path);
-    if (skipProbes) {
-      LOG.debug("Skipping existence/overwrite checks");
-    } else {
+    /*
+     Calculate whether to perform HEAD/LIST checks,
+     and whether the conditional create option should be set.
+     This seems complicated, but comes down to
+     "if explicitly requested and the FS enables it, use".
+     */
+    // create file attributes
+    boolean cCreate = options.isConditionalOverwrite();
+    boolean cEtag = options.isConditionalOverwriteEtag();
+    boolean createPerf = options.isPerformance();
+    boolean overwrite = flags.contains(CreateFlag.OVERWRITE);
+
+    // path attributes
+    boolean magic = isUnderMagicCommitPath(path);
+
+    // store options
+    // is CC available.
+    boolean ccAvailable = conditionalCreateEnabled;
+
+    if (!ccAvailable && (cCreate || cEtag)) {
+      // fail fast if conditional creation is requested on an FS without it.
+      throw new PathIOException(path.toString(), "Conditional Writes Unavailable");
+    }
+
+    // probes to evaluate.
+    Set<StatusProbeEnum> probes = EnumSet.of(
+        StatusProbeEnum.List, StatusProbeEnum.Head);
+
+
+    // the PUT is conditional if requested, or if one of the
+    // this is a performance creation, overwrite has not been requested,
+    // this is not and etag write *and* conditional creation is available.
+    // write is NOT conditional etag write.
+    boolean conditionalPut = cCreate
+        || !(overwrite || cEtag) && ccAvailable && createPerf;
+
+    // skip the HEAD check for many reasons
+    // old: the path is magic, it's an overwrite or the "create" performance is set.
+    // new: also skip if any conditional create operation is in progress
+
+    boolean skipHead =
+        createPerf || magic || overwrite    // classic reasons to skip HEAD
+        || cCreate || cEtag;                // conditional creation
+
+    if (skipHead) {
+      probes.remove(StatusProbeEnum.Head);
+    }
+
+    // list logic
+    boolean skipList = createPerf || magic || cCreate || cEtag;
+    if (skipList) {
+      probes.remove(StatusProbeEnum.List);
+    }
+
+    // if probes are required -request them and evaluate the result.
+    if (!probes.isEmpty()) {
       try {
-        boolean overwrite = flags.contains(CreateFlag.OVERWRITE);
 
         // get the status or throw an FNFE.
-        // when overwriting, there is no need to look for any existing file,
-        // just a directory (for safety)
-        FileStatus status = innerGetFileStatus(path, false,
-            overwrite
-                ? StatusProbeEnum.DIRECTORIES
-                : StatusProbeEnum.ALL);
+        FileStatus status = innerGetFileStatus(path, false, probes);
 
         // if the thread reaches here, there is something at the path
         if (status.isDirectory()) {
@@ -2107,6 +2175,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       } catch (FileNotFoundException e) {
         // this means there is nothing at the path; all good.
       }
+    } else {
+      LOG.debug("Skipping all probes with flags:"
+              + " createPerf={}, magic={}, ccAvailable={}, cCreate={}, cEtag={}",
+          createPerf, magic, ccAvailable, cCreate, cEtag);
     }
     instrumentation.fileCreated();
     final BlockOutputStreamStatistics outputStreamStatistics
@@ -2115,37 +2187,45 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         committerIntegration.createTracker(path, key, outputStreamStatistics);
     String destKey = putTracker.getDestKey();
 
+    EnumSet<WriteObjectFlags> putFlags = options.writeObjectFlags();
+    if (conditionalPut) {
+      putFlags.add(WriteObjectFlags.ConditionalOverwrite);
+    }
+
     // put options are derived from the option builder.
     final PutObjectOptions putOptions =
-        new PutObjectOptions(null, options.getHeaders());
+        new PutObjectOptions(null,
+            options.getHeaders(),
+            putFlags,
+            options.etag());
 
     validateOutputStreamConfiguration(path, getConf());
 
     final S3ABlockOutputStream.BlockOutputStreamBuilder builder =
         S3ABlockOutputStream.builder()
-        .withKey(destKey)
-        .withBlockFactory(blockFactory)
-        .withBlockSize(partSize)
-        .withStatistics(outputStreamStatistics)
-        .withProgress(progress)
-        .withPutTracker(putTracker)
-        .withWriteOperations(
-            createWriteOperationHelper(auditSpan))
-        .withExecutorService(
-            new SemaphoredDelegatingExecutor(
-                boundedThreadPool,
-                blockOutputActiveBlocks,
-                true,
-                outputStreamStatistics))
-        .withDowngradeSyncableExceptions(
+            .withKey(destKey)
+            .withBlockFactory(blockFactory)
+            .withBlockSize(partSize)
+            .withStatistics(outputStreamStatistics)
+            .withProgress(progress)
+            .withPutTracker(putTracker)
+            .withWriteOperations(
+                createWriteOperationHelper(auditSpan))
+            .withExecutorService(
+                new SemaphoredDelegatingExecutor(
+                    boundedThreadPool,
+                    blockOutputActiveBlocks,
+                    true,
+                    outputStreamStatistics))
+            .withDowngradeSyncableExceptions(
             getConf().getBoolean(
                 DOWNGRADE_SYNCABLE_EXCEPTIONS,
                 DOWNGRADE_SYNCABLE_EXCEPTIONS_DEFAULT))
-        .withCSEEnabled(isCSEEnabled)
-        .withPutOptions(putOptions)
-        .withIOStatisticsAggregator(
-            IOStatisticsContext.getCurrentIOStatisticsContext().getAggregator())
-        .withMultipartEnabled(isMultipartUploadEnabled);
+            .withCSEEnabled(isCSEEnabled)
+            .withPutOptions(putOptions)
+            .withIOStatisticsAggregator(
+                IOStatisticsContext.getCurrentIOStatisticsContext().getAggregator())
+            .withMultipartEnabled(isMultipartUploadEnabled);
     return new FSDataOutputStream(
         new S3ABlockOutputStream(builder),
         null);
@@ -3190,7 +3270,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   public PutObjectRequest.Builder newPutObjectRequestBuilder(String key,
       long length,
       boolean isDirectoryMarker) {
-    return requestFactory.newPutObjectRequestBuilder(key, null, length, isDirectoryMarker);
+    return requestFactory.newPutObjectRequestBuilder(key, PutObjectOptions.defaultOptions(), length, isDirectoryMarker);
   }
 
   /**
@@ -5299,6 +5379,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   public boolean hasPathCapability(final Path path, final String capability)
       throws IOException {
     final Path p = makeQualified(path);
+    final S3AStore store = getStore();
     String cap = validatePathCapabilityArgs(p, capability);
     switch (cap) {
 
@@ -5360,10 +5441,19 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     case STORE_CAPABILITY_DIRECTORY_MARKER_MULTIPART_UPLOAD_ENABLED:
       return isMultipartUploadEnabled();
 
-    // create file options
+    // create file options which are always true
+
+    case FS_OPTION_CREATE_IN_CLOSE:
+    case FS_OPTION_CREATE_CONTENT_TYPE:
     case FS_S3A_CREATE_PERFORMANCE:
     case FS_S3A_CREATE_HEADER:
       return true;
+
+    // conditional create requires it to be enabled in the FS.
+    case FS_S3A_CONDITIONAL_CREATE_ENABLED:
+    case FS_OPTION_CREATE_CONDITIONAL_OVERWRITE:
+    case FS_OPTION_CREATE_CONDITIONAL_OVERWRITE_ETAG:
+      return conditionalCreateEnabled;
 
     // is the FS configured for create file performance
     case FS_S3A_CREATE_PERFORMANCE_ENABLED:
@@ -5388,8 +5478,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       }
 
       // ask the store for what capabilities it offers
-      // this may include input and output capabilites -and more
-      if (getStore() != null && getStore().hasPathCapability(path, capability)) {
+      // this includes, store configuration flags, IO capabilites...etc.
+      if (store.hasPathCapability(path, capability)) {
         return true;
       }
 

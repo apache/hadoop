@@ -30,6 +30,7 @@ import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.FileSplit;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
@@ -317,8 +318,8 @@ public class TestLocalRunner {
     FileOutputFormat.setOutputPath(job, outputPath);
 
     final Thread toInterrupt = Thread.currentThread();
-    Thread interrupter = new Thread() {
-      public void run() {
+    SubjectInheritingThread interrupter = new SubjectInheritingThread() {
+      public void work() {
         try {
           Thread.sleep(120*1000); // 2m
           toInterrupt.interrupt();

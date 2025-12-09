@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs;
 
+import java.io.IOException;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.hadoop.classification.VisibleForTesting;
@@ -71,4 +72,6 @@ public class DFSClientFaultInjector {
   public void onCreateBlockReader(LocatedBlock block, int chunkIndex, long offset, long length) {}
 
   public void failCreateBlockReader() throws InvalidBlockTokenException {}
+
+  public void failWhenReadWithStrategy(boolean isRetryRead) throws IOException {};
 }

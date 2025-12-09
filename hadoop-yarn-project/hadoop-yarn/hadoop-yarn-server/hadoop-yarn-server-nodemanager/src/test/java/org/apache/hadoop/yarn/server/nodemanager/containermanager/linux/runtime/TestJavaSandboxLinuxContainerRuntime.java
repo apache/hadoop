@@ -40,6 +40,7 @@ import java.io.OutputStream;
 import java.net.SocketPermission;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.security.AccessControlException;
 import java.security.Permission;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -76,6 +77,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -266,18 +269,30 @@ public class TestJavaSandboxLinuxContainerRuntime {
 
   @Test
   public void testGrant() throws Exception {
-    FilePermission grantPermission =
-        new FilePermission(grantFile.getAbsolutePath(), "read");
-    securityManager.checkPermission(grantPermission);
+    try {
+      FilePermission grantPermission =
+          new FilePermission(grantFile.getAbsolutePath(), "read");
+      securityManager.checkPermission(grantPermission);
+      //Expected
+    } catch (AccessControlException e) {
+      assertTrue(false, "Permission should have been granted");
+    } catch (SecurityException e) {
+      assumeTrue(false, "SecurityManager is non-functional (i.e. Java 24+)");
+    }
   }
 
   @Test
   public void testDeny() throws Exception {
-    assertThrows(java.security.AccessControlException.class, () -> {
+    try {
       FilePermission denyPermission =
           new FilePermission(denyFile.getAbsolutePath(), "read");
       securityManager.checkPermission(denyPermission);
-    });
+      fail("Should have thrown AccessControlException");
+    } catch (AccessControlException e) {
+      //Expected
+    } catch (SecurityException e) {
+      assumeTrue(false, "SecurityManager is non-functional (i.e. Java 24+)");
+    }
   }
 
   @Test

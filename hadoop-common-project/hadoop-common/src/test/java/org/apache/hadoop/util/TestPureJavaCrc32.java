@@ -29,6 +29,7 @@ import java.util.Random;
 import java.util.zip.CRC32;
 import java.util.zip.Checksum;
 
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -316,7 +317,7 @@ public class TestPureJavaCrc32 {
         final int numThreads, final byte[] bytes, final int size)
             throws Exception {
 
-      final Thread[] threads = new Thread[numThreads];
+      final SubjectInheritingThread[] threads = new SubjectInheritingThread[numThreads];
       final BenchResult[] results = new BenchResult[threads.length];
 
       {
@@ -326,11 +327,11 @@ public class TestPureJavaCrc32 {
 
         for(int i = 0; i < threads.length; i++) {
           final int index = i;
-          threads[i] = new Thread() {
+          threads[i] = new SubjectInheritingThread() {
             final Checksum crc = ctor.newInstance();
   
             @Override
-            public void run() {
+            public void work() {
               final long st = System.nanoTime();
               crc.reset();
               for (int i = 0; i < trials; i++) {

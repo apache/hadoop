@@ -159,7 +159,7 @@ public class FSDirectory implements Closeable {
   private final FSNamesystem namesystem;
   private volatile boolean skipQuotaCheck = false; //skip while consuming edits
   private final int maxComponentLength;
-  private final int maxDirItems;
+  private volatile int maxDirItems;
   private final int lsLimit;  // max list limit
   private final int contentCountLimit; // max content summary counts per run
   private final long contentSleepMicroSec;
@@ -216,6 +216,11 @@ public class FSDirectory implements Closeable {
   // If external inode attribute provider is configured, use the new
   // authorizeWithContext() API or not.
   private boolean useAuthorizationWithContextAPI = false;
+
+  // We need a maximum maximum because by default, PB limits message sizes
+  // to 64MB. This means we can only store approximately 6.7 million entries
+  // per directory, but let's use 6.4 million for some safety.
+  private static final int MAX_DIR_ITEMS = 64 * 100 * 1000;
 
   public void setINodeAttributeProvider(
       @Nullable INodeAttributeProvider provider) {
@@ -395,10 +400,6 @@ public class FSDirectory implements Closeable {
     Preconditions.checkArgument(this.inodeXAttrsLimit >= 0,
         "Cannot set a negative limit on the number of xattrs per inode (%s).",
         DFSConfigKeys.DFS_NAMENODE_MAX_XATTRS_PER_INODE_KEY);
-    // We need a maximum maximum because by default, PB limits message sizes
-    // to 64MB. This means we can only store approximately 6.7 million entries
-    // per directory, but let's use 6.4 million for some safety.
-    final int MAX_DIR_ITEMS = 64 * 100 * 1000;
     Preconditions.checkArgument(
         maxDirItems > 0 && maxDirItems <= MAX_DIR_ITEMS, "Cannot set "
             + DFSConfigKeys.DFS_NAMENODE_MAX_DIRECTORY_ITEMS_KEY
@@ -578,6 +579,18 @@ public class FSDirectory implements Closeable {
     }
 
     return Joiner.on(",").skipNulls().join(protectedDirectories);
+  }
+
+  public void setMaxDirItems(int newVal) {
+    Preconditions.checkArgument(
+        newVal > 0 && newVal <= MAX_DIR_ITEMS, "Cannot set "
+            + DFSConfigKeys.DFS_NAMENODE_MAX_DIRECTORY_ITEMS_KEY
+            + " to a value less than 1 or greater than " + MAX_DIR_ITEMS);
+    maxDirItems = newVal;
+  }
+
+  public int getMaxDirItems() {
+    return maxDirItems;
   }
 
   BlockManager getBlockManager() {

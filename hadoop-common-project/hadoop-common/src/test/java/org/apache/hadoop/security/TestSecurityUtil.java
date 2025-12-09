@@ -24,14 +24,20 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.URI;
+import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import javax.security.auth.kerberos.KerberosPrincipal;
 
@@ -499,5 +505,121 @@ public class TestSecurityUtil {
     provider.createCredentialEntry(CommonConfigurationKeys.ZK_AUTH,
         ZK_AUTH_VALUE.toCharArray());
     provider.flush();
+  }
+
+  @Test
+  public void testInitiateHostResolver() throws Exception {
+    // 1. useIP is false and cache interval is 0
+    Configuration conf = new Configuration();
+    conf.setBoolean(CommonConfigurationKeys.HADOOP_SECURITY_TOKEN_SERVICE_USE_IP, false);
+    conf.setTimeDuration(
+        CommonConfigurationKeys.HADOOP_SECURITY_HOSTNAME_CACHE_EXPIRE_INTERVAL_SECONDS,
+        0, TimeUnit.SECONDS);
+    SecurityUtil.setConfiguration(conf);
+    SecurityUtil.HostResolver hostResolver = SecurityUtil.hostResolver;
+    assertTrue(hostResolver instanceof SecurityUtil.QualifiedHostResolver,
+        "Resolver should be a QualifiedHostResolver");
+    SecurityUtil.CacheableHostResolver cacheableHostResolver =
+        (SecurityUtil.QualifiedHostResolver) hostResolver;
+    assertNull(cacheableHostResolver.getCache(),
+        "Cache should be null when caching interval is less than or equal 0");
+
+
+    // 2. useIP is false and cache interval is 10
+    conf.setBoolean(CommonConfigurationKeys.HADOOP_SECURITY_TOKEN_SERVICE_USE_IP, false);
+    conf.setTimeDuration(
+        CommonConfigurationKeys.HADOOP_SECURITY_HOSTNAME_CACHE_EXPIRE_INTERVAL_SECONDS,
+        10, TimeUnit.SECONDS);
+    SecurityUtil.setConfiguration(conf);
+    hostResolver = SecurityUtil.hostResolver;
+    assertTrue(hostResolver instanceof SecurityUtil.QualifiedHostResolver,
+        "Resolver should be a QualifiedHostResolver");
+    cacheableHostResolver = (SecurityUtil.QualifiedHostResolver) hostResolver;
+    assertNotNull(cacheableHostResolver.getCache(),
+        "Cache should be set when caching interval is enabled");
+
+    // 3. useIP is true and cache interval is 0
+    conf.setBoolean(CommonConfigurationKeys.HADOOP_SECURITY_TOKEN_SERVICE_USE_IP, true);
+    conf.setTimeDuration(
+        CommonConfigurationKeys.HADOOP_SECURITY_HOSTNAME_CACHE_EXPIRE_INTERVAL_SECONDS,
+        0, TimeUnit.SECONDS);
+    SecurityUtil.setConfiguration(conf);
+    hostResolver = SecurityUtil.hostResolver;
+    assertTrue(hostResolver instanceof SecurityUtil.StandardHostResolver,
+        "Resolver should be a StandardHostResolver");
+    cacheableHostResolver = (SecurityUtil.StandardHostResolver) hostResolver;
+    assertNull(cacheableHostResolver.getCache(),
+        "Cache should be null when caching interval is less than or equal 0");
+
+    // 4. useIP is true and cache interval is 10
+    conf.setBoolean(CommonConfigurationKeys.HADOOP_SECURITY_TOKEN_SERVICE_USE_IP, true);
+    conf.setTimeDuration(
+        CommonConfigurationKeys.HADOOP_SECURITY_HOSTNAME_CACHE_EXPIRE_INTERVAL_SECONDS,
+        10, TimeUnit.SECONDS);
+    SecurityUtil.setConfiguration(conf);
+    hostResolver = SecurityUtil.hostResolver;
+    assertTrue(hostResolver instanceof SecurityUtil.StandardHostResolver,
+        "Resolver should be a StandardHostResolver");
+    cacheableHostResolver = (SecurityUtil.StandardHostResolver) hostResolver;
+    assertNotNull(cacheableHostResolver.getCache(),
+        "Cache should be set when caching interval is enabled");
+  }
+
+  /**
+   * Test caching behavior in QualifiedHostResolver when caching is enabled.
+   */
+  @Test
+  public void testQualifiedHostResolverCachingEnabled() throws Exception {
+    // Create a QualifiedHostResolver with expiry interval > 0
+    SecurityUtil.QualifiedHostResolver
+        resolver = new SecurityUtil.QualifiedHostResolver(1);
+    testCacheableResolve(resolver);
+  }
+
+  /**
+   * Test caching behavior in StandardHostResolver when caching is enabled.
+   */
+  @Test
+  public void testStandardHostResolverCachingEnabled() throws Exception {
+    // Create a StandardHostResolver with expiry interval > 0
+    SecurityUtil.StandardHostResolver
+        resolver = new SecurityUtil.StandardHostResolver(1);
+    testCacheableResolve(resolver);
+  }
+
+  private void  testCacheableResolve(SecurityUtil.CacheableHostResolver resolver)
+      throws Exception {
+    // Call getByName twice with the same host
+    InetAddress addr1 = resolver.getByName("127.0.0.1");
+    InetAddress addr2 = resolver.getByName("127.0.0.1");
+    assertNotNull(addr1);
+    assertNotNull(addr2);
+    // Both addresses should be the same instance (cached value)
+    assertSame(addr1, addr2);
+
+    // wait for timeout of cache item
+    Thread.sleep(1500);
+    InetAddress addr3 = resolver.getByName("127.0.0.1");
+    assertNotNull(addr3);
+    assertNotSame(addr1, addr3);
+  }
+
+  /**
+   * Test resolving non-existent hostname, show throw UnknownHostException.
+   */
+  @Test
+  public void testInvalidHostThrowsException() {
+    SecurityUtil.StandardHostResolver
+        standardHostResolver = new SecurityUtil.StandardHostResolver(10);
+    String invalidHost = "invalid_host_name_which_does_not_exist";
+    assertThrows(UnknownHostException.class, () -> {
+      standardHostResolver.getByName(invalidHost);
+    }, "Resolving an invalid host should throw UnknownHostException");
+
+    SecurityUtil.QualifiedHostResolver
+        qualifiedHostResolver = new SecurityUtil.QualifiedHostResolver(10);
+    assertThrows(UnknownHostException.class, () -> {
+      qualifiedHostResolver.getByName(invalidHost);
+    }, "Resolving an invalid host should throw UnknownHostException");
   }
 }

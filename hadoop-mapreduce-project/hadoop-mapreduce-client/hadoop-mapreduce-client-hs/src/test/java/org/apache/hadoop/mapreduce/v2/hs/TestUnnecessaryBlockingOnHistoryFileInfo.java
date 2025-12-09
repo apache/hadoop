@@ -26,6 +26,7 @@ import org.apache.hadoop.mapreduce.v2.api.records.impl.pb.JobIdPBImpl;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobIndexInfo;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationIdPBImpl;
 
 import org.junit.jupiter.api.AfterAll;
@@ -106,7 +107,7 @@ public class TestUnnecessaryBlockingOnHistoryFileInfo {
        * files in one child thread.
        */
       createJhistFile(job1);
-      webRequest1 = new Thread(
+      webRequest1 = new SubjectInheritingThread(
           new Runnable() {
             @Override
             public void run() {
@@ -136,7 +137,7 @@ public class TestUnnecessaryBlockingOnHistoryFileInfo {
        * will also see the job history files for job1.
        */
       createJhistFile(job2);
-      webRequest2 = new Thread(
+      webRequest2 = new SubjectInheritingThread(
           new Runnable() {
             @Override
             public void run() {

@@ -24,6 +24,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
@@ -474,6 +475,22 @@ public final class VectoredReadUtils {
     // returned to the reader.
     readData = readData.slice();
     return readData;
+  }
+
+  /**
+   * Default vector IO probes.
+   * These are capabilities which streams that leave vector IO
+   * to the default methods should return when queried for vector capabilities.
+   * @param capability capability to probe for.
+   * @return true if the given capability holds for vectored IO features.
+   */
+  public static boolean hasVectorIOCapability(String capability) {
+    switch (capability.toLowerCase(Locale.ENGLISH)) {
+    case StreamCapabilities.VECTOREDIO:
+      return true;
+    default:
+      return false;
+    }
   }
 
   /**

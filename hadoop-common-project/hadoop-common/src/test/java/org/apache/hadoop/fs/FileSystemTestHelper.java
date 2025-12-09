@@ -25,9 +25,10 @@ import java.util.Random;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.Assert;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
 /**
@@ -241,15 +242,15 @@ public class FileSystemTestHelper {
   public static void checkFileStatus(FileSystem aFs, String path,
       fileType expectedType) throws IOException {
     FileStatus s = aFs.getFileStatus(new Path(path));
-    Assert.assertNotNull(s);
+    assertNotNull(s);
     if (expectedType == fileType.isDir) {
-      Assert.assertTrue(s.isDirectory());
+      assertTrue(s.isDirectory());
     } else if (expectedType == fileType.isFile) {
-      Assert.assertTrue(s.isFile());
+      assertTrue(s.isFile());
     } else if (expectedType == fileType.isSymlink) {
-      Assert.assertTrue(s.isSymlink());
+      assertTrue(s.isSymlink());
     }
-    Assert.assertEquals(aFs.makeQualified(new Path(path)), s.getPath());
+    assertEquals(aFs.makeQualified(new Path(path)), s.getPath());
   }
   
   /**

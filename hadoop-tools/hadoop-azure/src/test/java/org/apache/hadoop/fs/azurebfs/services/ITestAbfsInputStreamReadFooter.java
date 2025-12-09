@@ -32,9 +32,9 @@ import org.apache.hadoop.fs.azurebfs.AbstractAbfsScaleTest;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore;
 
 import org.assertj.core.api.Assertions;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -96,13 +96,13 @@ public class ITestAbfsInputStreamReadFooter extends AbstractAbfsScaleTest {
     this.abfsInputStreamTestUtils = new AbfsInputStreamTestUtils(this);
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void init() {
     executorService = Executors.newFixedThreadPool(
         2 * Runtime.getRuntime().availableProcessors());
   }
 
-  @AfterClass
+  @AfterAll
   public static void close() {
     executorService.shutdown();
   }
@@ -184,11 +184,9 @@ public class ITestAbfsInputStreamReadFooter extends AbstractAbfsScaleTest {
               .get(CONNECTIONS_MADE.getStatName());
 
           if (optimizeFooterRead) {
-            assertEquals(1,
-                requestsMadeAfterTest - requestsMadeBeforeTest);
+            assertEquals(1, requestsMadeAfterTest - requestsMadeBeforeTest);
           } else {
-            assertEquals(3,
-                requestsMadeAfterTest - requestsMadeBeforeTest);
+            assertEquals(3, requestsMadeAfterTest - requestsMadeBeforeTest);
           }
         }
       }
@@ -260,8 +258,8 @@ public class ITestAbfsInputStreamReadFooter extends AbstractAbfsScaleTest {
         try (AzureBlobFileSystem spiedFs = createSpiedFs(
             getRawConfiguration())) {
           String fileName = methodName.getMethodName() + fileId;
-          byte[] fileContent = abfsInputStreamTestUtils.getRandomBytesArray(fileSize);
-          Path testFilePath = abfsInputStreamTestUtils.createFileWithContent(spiedFs, fileName,
+          byte[] fileContent = getRandomBytesArray(fileSize);
+          Path testFilePath = createFileWithContent(spiedFs, fileName,
               fileContent);
           for (int readBufferSize : READ_BUFFER_SIZE) {
             validateSeekAndReadWithConf(spiedFs, optimizeFooterRead, seekTo,
@@ -391,8 +389,8 @@ public class ITestAbfsInputStreamReadFooter extends AbstractAbfsScaleTest {
       futureList.add(executorService.submit(() -> {
         try (AzureBlobFileSystem spiedFs = createSpiedFs(
             getRawConfiguration())) {
-          byte[] fileContent = abfsInputStreamTestUtils.getRandomBytesArray(fileSize);
-          Path testFilePath = abfsInputStreamTestUtils.createFileWithContent(spiedFs, fileName,
+          byte[] fileContent = getRandomBytesArray(fileSize);
+          Path testFilePath = createFileWithContent(spiedFs, fileName,
               fileContent);
           validatePartialReadWithNoData(spiedFs, fileSize, fileContent,
               testFilePath);
@@ -463,8 +461,8 @@ public class ITestAbfsInputStreamReadFooter extends AbstractAbfsScaleTest {
         try (AzureBlobFileSystem spiedFs = createSpiedFs(
             getRawConfiguration())) {
           String fileName = methodName.getMethodName() + fileId;
-          byte[] fileContent = abfsInputStreamTestUtils.getRandomBytesArray(fileSize);
-          Path testFilePath = abfsInputStreamTestUtils.createFileWithContent(spiedFs, fileName,
+          byte[] fileContent = getRandomBytesArray(fileSize);
+          Path testFilePath = createFileWithContent(spiedFs, fileName,
               fileContent);
           validatePartialReadWithSomeData(spiedFs, fileSize, testFilePath,
               fileContent);
@@ -585,8 +583,8 @@ public class ITestAbfsInputStreamReadFooter extends AbstractAbfsScaleTest {
   private Path createPathAndFileWithContent(final AzureBlobFileSystem fs,
       final int fileIdx, final int fileSize) throws Exception {
     String fileName = methodName.getMethodName() + fileIdx;
-    byte[] fileContent = abfsInputStreamTestUtils.getRandomBytesArray(fileSize);
-    return abfsInputStreamTestUtils.createFileWithContent(fs, fileName, fileContent);
+    byte[] fileContent = getRandomBytesArray(fileSize);
+    return createFileWithContent(fs, fileName, fileContent);
   }
 
   private FutureDataInputStreamBuilder getParameterizedBuilder(final Path path,

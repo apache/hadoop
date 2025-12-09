@@ -24,6 +24,7 @@ import org.apache.hadoop.metrics2.MetricsSource;
 import org.apache.hadoop.metrics2.MetricsSystem;
 import org.apache.hadoop.metrics2.impl.MetricsSystemImpl;
 import org.apache.hadoop.test.MetricsAsserts;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -817,7 +818,7 @@ public class TestQueueMetrics {
      * simulate the concurrent calls for QueueMetrics#getQueueMetrics
      */
     // thread A will keep querying the same queue metrics for a specified number of iterations
-    Thread threadA = new Thread(() -> {
+    Thread threadA = new SubjectInheritingThread(() -> {
       try {
         for (int i = 0; i < numIterations; i++) {
           QueueMetrics qm = QueueMetrics.getQueueMetrics().get(queueName);
@@ -833,7 +834,7 @@ public class TestQueueMetrics {
       }
     });
     // thread B will keep adding new queue metrics for a specified number of iterations
-    Thread threadB = new Thread(() -> {
+    Thread threadB = new SubjectInheritingThread(() -> {
       try {
         for (int i = 0; i < numIterations; i++) {
           QueueMetrics.getQueueMetrics().put("q" + i, metrics);

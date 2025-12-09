@@ -23,10 +23,10 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLEncoder;
 
-import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.fs.azurebfs.utils.UriUtils;
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestAbfsHttpOperation {
 
@@ -100,17 +100,16 @@ public class TestAbfsHttpOperation {
       final String url, final String expectedMaskedUrl)
       throws UnsupportedEncodingException, MalformedURLException {
 
-    Assertions.assertThat(UriUtils.getMaskedUrl(new URL(url)))
+    assertThat(UriUtils.getMaskedUrl(new URL(url)))
         .describedAs(url + " (" + scenario + ") after masking should be: "
-            + expectedMaskedUrl).isEqualTo(expectedMaskedUrl);
+        + expectedMaskedUrl).isEqualTo(expectedMaskedUrl);
 
     final String expectedMaskedEncodedUrl = URLEncoder
         .encode(expectedMaskedUrl, "UTF-8");
-    Assertions.assertThat(UriUtils.encodedUrlStr(expectedMaskedUrl))
+    assertThat(UriUtils.encodedUrlStr(expectedMaskedUrl))
         .describedAs(
-            url + " (" + scenario + ") after masking and encoding should "
-                + "be: " + expectedMaskedEncodedUrl)
+        url + " (" + scenario + ") after masking and encoding should "
+        + "be: " + expectedMaskedEncodedUrl)
         .isEqualTo(expectedMaskedEncodedUrl);
   }
-
 }

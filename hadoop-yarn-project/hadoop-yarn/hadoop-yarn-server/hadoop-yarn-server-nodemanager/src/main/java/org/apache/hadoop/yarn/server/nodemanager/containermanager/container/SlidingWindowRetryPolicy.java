@@ -21,7 +21,7 @@ import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.yarn.api.records.ContainerRetryContext;
 import org.apache.hadoop.yarn.api.records.ContainerRetryPolicy;
-import org.apache.hadoop.util.Clock;
+import org.apache.hadoop.yarn.util.Clock;
 
 import java.util.ArrayList;
 import java.util.Iterator;

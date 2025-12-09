@@ -18,14 +18,14 @@
 package org.apache.hadoop.hdfs.protocol;
 
 import org.apache.hadoop.hdfs.server.namenode.ha.ReadOnly;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Testing class for {@link ReadOnly} annotation on {@link ClientProtocol}.
@@ -96,9 +96,8 @@ public class TestReadOnly {
       // with the same name. The assumption is that all these methods should
       // share the same annotation.
       if (m.getName().equals(methodName)) {
-        assertEquals("Expected ReadOnly for method '" + methodName +
-            "' to be " + expected,
-            m.isAnnotationPresent(ReadOnly.class), expected);
+        assertEquals(m.isAnnotationPresent(ReadOnly.class), expected,
+            "Expected ReadOnly for method '" + methodName + "' to be " + expected);
         return;
       }
     }

@@ -77,10 +77,17 @@ public class ResourceHandlerModule {
       cGroupsCpuResourceHandler;
 
   private static void initializeCGroupHandlers(Configuration conf,
-      CGroupsHandler.CGroupController controller) throws ResourceHandlerException {
-    initializeCGroupV1Handler(conf);
-    if (cgroupsV2Enabled && !isMountedInCGroupsV1(controller)) {
+                                               CGroupsHandler.CGroupController controller)
+      throws ResourceHandlerException {
+    if (cgroupsV2Enabled) {
       initializeCGroupV2Handler(conf);
+      if (!isMountedInCGroupsV2(controller)) {
+        LOG.info("Cgroup v2 is enabled but {} is not mounted in cgroups v2, falling back to v1",
+            controller);
+        initializeCGroupV1Handler(conf);
+      }
+    } else {
+      initializeCGroupV1Handler(conf);
     }
   }
 

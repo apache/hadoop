@@ -23,7 +23,7 @@ import org.glassfish.jersey.jettison.JettisonFeature;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.glassfish.jersey.test.JerseyTest;
 import org.glassfish.jersey.test.TestProperties;
-import org.junit.After;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -156,7 +156,7 @@ public class TestSchedConfCLI extends JerseyTest {
     config.setMaximumCapacity(a, 100f);
   }
 
-  @After
+  @AfterEach
   public void cleanUp() throws Exception {
     if (rm != null) {
       rm.stop();

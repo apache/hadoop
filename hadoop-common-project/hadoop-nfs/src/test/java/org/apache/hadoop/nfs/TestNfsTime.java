@@ -17,18 +17,18 @@
  */
 package org.apache.hadoop.nfs;
 
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 
 import org.apache.hadoop.nfs.NfsTime;
 import org.apache.hadoop.oncrpc.XDR;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class TestNfsTime {
   @Test
   public void testConstructor() {
     NfsTime nfstime = new NfsTime(1001);
-    Assert.assertEquals(1, nfstime.getSeconds());
-    Assert.assertEquals(1000000, nfstime.getNseconds());
+    Assertions.assertEquals(1, nfstime.getSeconds());
+    Assertions.assertEquals(1000000, nfstime.getNseconds());
   }
   
   @Test
@@ -42,6 +42,6 @@ public class TestNfsTime {
     NfsTime t2 = NfsTime.deserialize(xdr.asReadOnlyWrap());
     
     // Ensure the NfsTimes are equal
-    Assert.assertEquals(t1, t2);
+    Assertions.assertEquals(t1, t2);
   }
 }

@@ -26,8 +26,8 @@ import java.util.Collections;
 import java.util.List;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Assume;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.apache.commons.lang3.tuple.Triple;
 import org.apache.hadoop.fs.CommonPathCapabilities;
@@ -57,6 +57,7 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.Man
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.UnreliableManifestStoreOperations.SIMULATED_FAILURE;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.AbstractJobOrTaskStage.FAILED_TO_RENAME_PREFIX;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
  * Test renaming files with fault injection.
@@ -103,6 +104,7 @@ public class TestRenameStageFailure extends AbstractManifestCommitterTest {
     return etagsSupported;
   }
 
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     super.setup();
@@ -269,8 +271,8 @@ public class TestRenameStageFailure extends AbstractManifestCommitterTest {
     describe("commit where rename() returns false for one file." +
         " Expect failure to be escalated to an IOE");
 
-    Assume.assumeTrue("not used when resilient commits are available",
-        !resilientCommit);
+    assumeTrue(!resilientCommit,
+        "not used when resilient commits are available");
     // destination directory.
     Path destDir = methodPath();
     StageConfig stageConfig = createStageConfigForJob(JOB1, destDir);

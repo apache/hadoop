@@ -33,6 +33,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
+import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -52,6 +53,7 @@ import org.apache.hadoop.net.ServerSocketUtil;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.JarFinder;
 import org.apache.hadoop.util.Shell;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -332,7 +334,7 @@ public abstract class DistributedShellBaseTest {
     assertTrue(initSuccess);
     LOG.info("Running DS Client");
     final AtomicBoolean result = new AtomicBoolean(false);
-    Thread t = new Thread(() -> {
+    Thread t = new SubjectInheritingThread(() -> {
       try {
         result.set(dsClient.run());
       } catch (Exception e) {
@@ -545,6 +547,20 @@ public abstract class DistributedShellBaseTest {
         getTimelineVersion());
     // setup the configuration of relevant for each TimelineService version.
     customizeConfiguration(conf);
+
+    // To avoid data conflicts between unit tests caused by sharing the common directory
+    // file:/tmp/hadoop-yarn-jenkins/node-labels—such as one test reading data written by another
+    // and resulting in failures—we have optimized the directory logic.
+    // Each unit test will now generate a unique directory path based on its method name.
+    // For example:
+    // file:/tmp/hadoop-yarn-jenkins/<method-name>/node-labels
+    String nodeLabels = "file:///tmp/hadoop-yarn-" +
+        UserGroupInformation.getCurrentUser().getShortUserName() +
+        "/" + methodName + "/node-labels";
+    java.nio.file.Path nodeLabelsPath = Paths.get(nodeLabels);
+    Files.deleteIfExists(nodeLabelsPath);
+    conf.set(YarnConfiguration.FS_NODE_LABELS_STORE_ROOT_DIR, nodeLabels);
+
     // setup the yarn cluster.
     setUpYarnCluster(numNodeManagers, conf);
   }

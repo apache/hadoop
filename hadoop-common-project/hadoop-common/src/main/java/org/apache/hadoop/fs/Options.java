@@ -710,4 +710,114 @@ public final class Options {
     public static final String FS_OPTION_OPENFILE_EC_POLICY =
         FS_OPTION_OPENFILE + "ec.policy";
   }
+
+  /**
+   * The standard {@code createFile()} options.
+   * <p>
+   * If an option is not supported during file creation and it is considered
+   * part of a commit protocol, then, when supplied in a must() option,
+   * it MUST be rejected.
+   */
+  @InterfaceAudience.Public
+  @InterfaceStability.Evolving
+  public interface CreateFileOptionKeys {
+
+    /**
+     * {@code createFile()} option to write a file in the close() operation iff
+     * there is nothing at the destination.
+     * this is the equivalent of {@code create(path, overwrite=true)}
+     * <i>except that the existence check is postponed to the end of the write</i>.
+     * <p>
+     * Value {@value}.
+     * </p>
+     * <p>
+     * This can be set in the builder.
+     * </p>
+     * <ol>
+     *     <li>It is for object stores stores which only upload/manifest files
+     *         at the end of the stream write.</li>
+     *     <li>Streams which support it SHALL not manifest any object to
+     *         the destination path until close()</li>
+     *     <li>It MUST be declared as a stream capability in streams for which
+     *         this overwrite is enabled.</li>
+     *     <li>It MUST be exported as a path capability for all stores where
+     *         the feature is available <i>and</i> enabled</li>
+     *     <li>If passed to a filesystem as a {@code must()} parameter where
+     *         the option value is {@code true}, and it is supported/enabled,
+     *         the FS SHALL omit all overwrite checks in {@code create},
+     *         including for the existence of an object or a directory underneath.
+     *         Instead, during {@code close()} the object will only be manifest
+     *         at the target path if there is no object at the destination.
+     *     </li>
+     *     <li>The existence check and object creation SHALL be atomic.</li>
+     *     <li>If passed to a filesystem as a {@code must()} parameter where
+     *         the option value is {@code true}, and the FS does not recognise
+     *         the feature, or it is recognized but disabled on this FS instance,
+     *         the filesystem SHALL reject the request.
+     *     </li>
+     *     <li>If passed to a filesystem as a {@code opt()} parameter where
+     *         the option value is {@code true}, the filesystem MAY ignore
+     *         the request, or it MAY enable the feature.
+     *         Any filesystem which does not support the feature, including
+     *         from older releases, SHALL ignore it.
+     *     </li>
+     * </ol>
+     */
+    String FS_OPTION_CREATE_CONDITIONAL_OVERWRITE = "fs.option.create.conditional.overwrite";
+
+    /**
+     * Overwrite a file only if there is an Etag match. This option takes a string,
+     *
+     * Value {@value}.
+     * <p>
+     * This is similar to {@link #FS_OPTION_CREATE_CONDITIONAL_OVERWRITE}.
+     * <ol>
+     *   <li>If supported and enabled, it SHALL be declared as a capability of the filesystem</li>
+     *   <li>If supported and enabled, it SHALL be declared as a capability of the stream</li>
+     *   <li>The string passed as the value SHALL be the etag value as returned by
+     *   {@code EtagSource.getEtag()}</li>
+     *   <li>This value MUST NOT be empty</li>
+     *   <li>If passed to a filesystem which supports it, then when the file is created,
+     *       the store SHALL check for the existence of a file/object at the destination
+     *       path.
+     *   </li>
+     *   <li>If there is no object there, the operation SHALL be rejected by raising
+     *       either a {@code org.apache.hadoop.fs.FileAlreadyExistsException}
+     *       exception, or  a{@code java.nio.file.FileAlreadyExistsException}
+     *    </li>
+     *   <li>If there is an object there, its Etag SHALL be compared to the
+     *       value passed here.</li>
+     *   <li>If there is no match, the operation SHALL be rejected by raising
+     *       either a {@code org.apache.hadoop.fs.FileAlreadyExistsException}
+     *       exception, or  a{@code java.nio.file.FileAlreadyExistsException}
+     *    </li>
+     *   <li>If the etag does match, the file SHALL be created.</li>
+     *   <li>The check and create SHALL be atomic</li>
+     *   <li>The check and create MAY be at the end of the write, in {@code close()},
+     *       or it MAY be in the {@code create()} operation. That is: some stores
+     *       MAY perform the check early</li>
+     *   <li>If supported and enabled, stores MAY check for the existence of subdirectories;
+     *       this behavior is implementation-specific.</li>
+     * </ol>
+     */
+    String FS_OPTION_CREATE_CONDITIONAL_OVERWRITE_ETAG =
+        "fs.option.create.conditional.overwrite.etag";
+
+    /**
+     * A flag which requires the filesystem to create files/objects in close(),
+     * rather than create/createFile.
+     * <p>
+     * Object stores with this behavior should also export it as a path capability.
+     *
+     * Value {@value}.
+     */
+    String FS_OPTION_CREATE_IN_CLOSE = "fs.option.create.in.close";
+
+    /**
+     * String to define the content filetype.
+     * Value {@value}.
+     */
+    String FS_OPTION_CREATE_CONTENT_TYPE = "fs.option.create.content.type";
+
+  }
 }

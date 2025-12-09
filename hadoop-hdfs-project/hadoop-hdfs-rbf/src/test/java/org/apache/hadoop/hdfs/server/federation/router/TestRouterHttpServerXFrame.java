@@ -24,8 +24,8 @@ import java.net.URI;
 import java.net.URL;
 
 import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -57,8 +57,8 @@ public class TestRouterHttpServerXFrame {
       conn.connect();
 
       String xfoHeader = conn.getHeaderField("X-FRAME-OPTIONS");
-      Assert.assertNotNull("X-FRAME-OPTIONS is absent in the header", xfoHeader);
-      Assert.assertTrue(xfoHeader.endsWith(SAMEORIGIN.toString()));
+      Assertions.assertNotNull(xfoHeader, "X-FRAME-OPTIONS is absent in the header");
+      Assertions.assertTrue(xfoHeader.endsWith(SAMEORIGIN.toString()));
     } finally {
       router.stop();
       router.close();

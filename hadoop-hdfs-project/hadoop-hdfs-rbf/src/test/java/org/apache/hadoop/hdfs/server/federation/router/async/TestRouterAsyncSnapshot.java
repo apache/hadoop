@@ -26,13 +26,13 @@ import org.apache.hadoop.hdfs.protocol.SnapshotException;
 import org.apache.hadoop.hdfs.protocol.SnapshotStatus;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.test.LambdaTestUtils;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import java.io.IOException;
 
 import static org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffType.MODIFY;
 import static org.apache.hadoop.hdfs.server.federation.router.async.utils.AsyncUtil.syncReturn;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Used to test the functionality of {@link RouterAsyncSnapshot}.
@@ -42,7 +42,7 @@ public class TestRouterAsyncSnapshot extends RouterAsyncProtocolTestBase {
   private FileSystem routerFs;
   private RouterAsyncSnapshot asyncSnapshot;
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException {
     routerFs = getRouterFs();
     asyncSnapshot = new RouterAsyncSnapshot(getRouterAsyncRpcServer());

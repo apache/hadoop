@@ -62,7 +62,10 @@ public final class AbfsErrors {
   /**
    * Exception message on filesystem init if token-provider-auth-type configs are provided
    */
-  public static final String UNAUTHORIZED_SAS = "Incorrect SAS token provider configured for non-hierarchical namespace account.";
+  public static final String UNAUTHORIZED_SAS
+      = "Incorrect SAS token provider configured for non-hierarchical namespace account with DFS service type.";
+  public static final String UNAUTHORIZED_USER_BOUND_SAS
+      = "User bound SAS auth type is not supported on non-hierarchical namespace accounts.";
   public static final String ERR_RENAME_BLOB =
       "FNS-Blob rename was not successful for source and destination path: ";
   public static final String ERR_DELETE_BLOB =
@@ -72,7 +75,11 @@ public final class AbfsErrors {
   public static final String ERR_CREATE_RECOVERY =
       "Error while recovering from create failure.";
   public static final String ERR_RENAME_RECOVERY =
-      "Error while recovering from rename failure.";
+      "Error while recovering from rename failure for path: ";
+  public static final String ERR_BLOB_LIST_PARSING = "Parsing of XML List Response Failed in BlobClient.";
+  public static final String ERR_DFS_LIST_PARSING = "Parsing of Json List Response Failed in DfsClient.";
   public static final String INCORRECT_INGRESS_TYPE = "Ingress Type Cannot be DFS for Blob endpoint configured filesystem.";
+  public static final String ERR_INVALID_ABFS_STATE = "Invalid state for AzureBlobFilesystem. Either Filesystem was closed or not initialized.";
+  public static final String ERR_TAIL_LATENCY_REQUEST_TIMEOUT = "Request Duration Exceeded Tail Latency Threshold.";
   private AbfsErrors() {}
 }

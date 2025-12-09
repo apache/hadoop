@@ -36,6 +36,7 @@ import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.Time;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -309,9 +310,9 @@ public class BalanceProcedureScheduler {
   /**
    * This thread consumes the delayQueue and move the jobs to the runningQueue.
    */
-  class Rooster extends Thread {
+  class Rooster extends SubjectInheritingThread {
     @Override
-    public void run() {
+    public void work() {
       while (running.get()) {
         try {
           DelayWrapper dJob = delayQueue.take();
@@ -327,9 +328,9 @@ public class BalanceProcedureScheduler {
   /**
    * This thread consumes the runningQueue and give the job to the workers.
    */
-  class Reader extends Thread {
+  class Reader extends SubjectInheritingThread {
     @Override
-    public void run() {
+    public void work() {
       while (running.get()) {
         try {
           final BalanceJob job = runningQueue.poll(500, TimeUnit.MILLISECONDS);
@@ -361,9 +362,9 @@ public class BalanceProcedureScheduler {
    * This thread consumes the recoverQueue, recovers the job the adds it to the
    * runningQueue.
    */
-  class Recover extends Thread {
+  class Recover extends SubjectInheritingThread {
     @Override
-    public void run() {
+    public void work() {
       while (running.get()) {
         BalanceJob job = null;
         try {

@@ -110,6 +110,11 @@ public class AzureDfsToBlobIngressFallbackHandler extends AzureDFSIngressHandler
       TracingContext tracingContext) throws IOException {
     AbfsRestOperation op;
     TracingContext tracingContextAppend = new TracingContext(tracingContext);
+    // Fetches write thread pool metrics from the ABFS client and adds them to the tracing context.
+    AbfsWriteResourceUtilizationMetrics writeResourceUtilizationMetrics = getWriteResourceUtilizationMetrics();
+    if (writeResourceUtilizationMetrics != null) {
+      tracingContextAppend.setResourceUtilizationMetricResults(writeResourceUtilizationMetrics.toString());
+    }
     String threadIdStr = String.valueOf(Thread.currentThread().getId());
     tracingContextAppend.setIngressHandler(FALLBACK_APPEND + " T " + threadIdStr);
     tracingContextAppend.setPosition(String.valueOf(blockToUpload.getOffset()));
@@ -230,7 +235,9 @@ public class AzureDfsToBlobIngressFallbackHandler extends AzureDFSIngressHandler
       LOG.trace("Writing current buffer to service at offset {} and path {}", offset, getAbfsOutputStream().getPath());
       AppendRequestParameters reqParams = new AppendRequestParameters(
           offset, 0, bytesLength, AppendRequestParameters.Mode.APPEND_MODE,
-          true, getAbfsOutputStream().getLeaseId(), getAbfsOutputStream().isExpectHeaderEnabled());
+          true, getAbfsOutputStream().getLeaseId(),
+          getAbfsOutputStream().isExpectHeaderEnabled(),
+          getAbfsOutputStream().getMd5());
 
       // Perform the remote write operation.
       AbfsRestOperation op;

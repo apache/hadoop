@@ -24,12 +24,12 @@ import org.apache.hadoop.hdfs.server.federation.router.RouterNamenodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations.BlockWithLocations;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import static org.apache.hadoop.hdfs.server.federation.router.async.utils.AsyncUtil.syncReturn;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 /**
  * Used to test the functionality of {@link RouterAsyncNamenodeProtocol}.
@@ -39,7 +39,7 @@ public class TestRouterAsyncNamenodeProtocol extends RouterAsyncProtocolTestBase
   private RouterAsyncNamenodeProtocol asyncNamenodeProtocol;
   private RouterNamenodeProtocol namenodeProtocol;
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     asyncNamenodeProtocol = new RouterAsyncNamenodeProtocol(getRouterAsyncRpcServer());
     namenodeProtocol = new RouterNamenodeProtocol(getRouterRpcServer());

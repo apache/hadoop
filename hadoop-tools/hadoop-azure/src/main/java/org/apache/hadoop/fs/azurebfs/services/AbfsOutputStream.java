@@ -22,12 +22,16 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.Base64;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.Future;
 import java.util.UUID;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+import org.apache.hadoop.fs.azurebfs.WriteThreadPoolSizeManager;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsServiceType;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidConfigurationValueException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidIngressServiceException;
@@ -58,6 +62,7 @@ import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.Syncable;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.APPEND_ACTION;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.MD5;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.STREAM_ID_LEN;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_WRITE_WITHOUT_LEASE;
 import static org.apache.hadoop.fs.impl.StoreImplementationUtils.isProbeForSyncable;
@@ -150,6 +155,26 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
   /** The handler for managing Abfs client operations. */
   private final AbfsClientHandler clientHandler;
 
+  /**
+   * The `MessageDigest` instance used for computing the incremental MD5 hash
+   * of the data written so far. This is updated as data is written to the stream.
+   */
+  private MessageDigest md5 = null;
+
+  /**
+   * The `MessageDigest` instance used for computing the MD5 hash
+   * of the full blob content. This is updated with all data written to the stream
+   * and represents the complete MD5 checksum of the blob.
+   */
+  private MessageDigest fullBlobContentMd5 = null;
+
+  /**
+   * Instance of {@link WriteThreadPoolSizeManager} used by this class
+   * to dynamically adjust the write thread pool size based on
+   * system resource utilization.
+   */
+  private final WriteThreadPoolSizeManager writeThreadPoolSizeManager;
+
   public AbfsOutputStream(AbfsOutputStreamContext abfsOutputStreamContext)
       throws IOException {
     this.statistics = abfsOutputStreamContext.getStatistics();
@@ -200,8 +225,19 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
     this.serviceTypeAtInit = abfsOutputStreamContext.getIngressServiceType();
     this.currentExecutingServiceType = abfsOutputStreamContext.getIngressServiceType();
     this.clientHandler = abfsOutputStreamContext.getClientHandler();
+    this.writeThreadPoolSizeManager = abfsOutputStreamContext.getWriteThreadPoolSizeManager();
+    // Initialize CPU monitoring if the pool size manager is present
+    initializeMonitoringIfNeeded();
     createIngressHandler(serviceTypeAtInit,
         abfsOutputStreamContext.getBlockFactory(), bufferSize, false, null);
+    try {
+      md5 = MessageDigest.getInstance(MD5);
+      fullBlobContentMd5 = MessageDigest.getInstance(MD5);
+    } catch (NoSuchAlgorithmException e) {
+      if (isChecksumValidationEnabled()) {
+        throw new IOException("MD5 algorithm not available", e);
+      }
+    }
   }
 
   /**
@@ -216,6 +252,21 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
   private final Lock lock = new ReentrantLock();
 
   private volatile boolean switchCompleted = false;
+
+  /**
+   * Starts CPU monitoring in the thread pool size manager if it
+   * is initialized and not already monitoring.
+   */
+  private void initializeMonitoringIfNeeded() {
+    if (writeThreadPoolSizeManager != null && !writeThreadPoolSizeManager.isMonitoringStarted()) {
+      synchronized (this) {
+        // Re-check to avoid a race between threads
+        if (!writeThreadPoolSizeManager.isMonitoringStarted()) {
+          writeThreadPoolSizeManager.startCPUMonitoring();
+        }
+      }
+    }
+  }
 
   /**
    * Creates or retrieves an existing Azure ingress handler based on the service type and provided parameters.
@@ -438,6 +489,14 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
 
     AbfsBlock block = createBlockIfNeeded(position);
     int written = bufferData(block, data, off, length);
+    // Update the incremental MD5 hash with the written data.
+    if (isChecksumValidationEnabled()) {
+      getMessageDigest().update(data, off, written);
+    }
+    // Update the full blob MD5 hash with the written data.
+    if (isFullBlobChecksumValidationEnabled()) {
+      getFullBlobContentMd5().update(data, off, written);
+    }
     int remainingCapacity = block.remainingCapacity();
 
     if (written < length) {
@@ -514,6 +573,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
     outputStreamStatistics.bytesToUpload(bytesLength);
     outputStreamStatistics.writeCurrentBuffer();
     DataBlocks.BlockUploadData blockUploadData = blockToUpload.startUpload();
+    String md5Hash = getClient().isChecksumValidationEnabled() ? getMd5() : null;
     final Future<Void> job =
         executorService.submit(() -> {
           AbfsPerfTracker tracker =
@@ -535,7 +595,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
              * leaseId - The AbfsLeaseId for this request.
              */
             AppendRequestParameters reqParams = new AppendRequestParameters(
-                offset, 0, bytesLength, mode, false, leaseId, isExpectHeaderEnabled);
+                offset, 0, bytesLength, mode, false, leaseId, isExpectHeaderEnabled, md5Hash);
             AbfsRestOperation op;
             try {
               op = remoteWrite(blockToUpload, blockUploadData, reqParams, tracingContext);
@@ -1169,5 +1229,54 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
       }
     }
     return true;
+  }
+
+  /**
+   * Returns the MessageDigest used for computing the incremental MD5 hash
+   * of the data written so far.
+   *
+   * @return the MessageDigest used for partial MD5 calculation.
+   */
+  public MessageDigest getMessageDigest() {
+    return md5;
+  }
+
+  /**
+   * Returns the MessageDigest used for computing the MD5 hash
+   * of the full blob content.
+   *
+   * @return the MessageDigest used for full blob MD5 calculation.
+   */
+  public MessageDigest getFullBlobContentMd5() {
+    return fullBlobContentMd5;
+  }
+
+  /**
+   * @return true if checksum validation is enabled.
+   */
+  public boolean isChecksumValidationEnabled() {
+    return getClient().isChecksumValidationEnabled();
+  }
+
+  /**
+   * @return true if full blob checksum validation is enabled.
+   */
+  public boolean isFullBlobChecksumValidationEnabled() {
+    return getClient().isFullBlobChecksumValidationEnabled();
+  }
+
+  /**
+   * Returns the Base64-encoded MD5 checksum based on the current digest state.
+   * This finalizes the digest calculation. Returns null if the digest is empty.
+   *
+   * @return the Base64-encoded MD5 string, or null if no digest is available.
+   */
+  public String getMd5() {
+    byte[] digest = getMessageDigest().digest();
+    String md5 = null;
+    if (digest.length != 0) {
+      md5 = Base64.getEncoder().encodeToString(digest);
+    }
+    return md5;
   }
 }

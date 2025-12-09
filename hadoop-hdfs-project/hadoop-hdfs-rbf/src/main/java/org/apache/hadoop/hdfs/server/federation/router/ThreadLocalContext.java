@@ -75,9 +75,11 @@ public class ThreadLocalContext {
    * that the task execution reflects the state of the original calling thread.
    */
   public void transfer() {
+    Server.getCurCall().set(null);
     if (call != null) {
       Server.getCurCall().set(call);
     }
+    CallerContext.setCurrent(null);
     if (context != null) {
       CallerContext.setCurrent(context);
     }

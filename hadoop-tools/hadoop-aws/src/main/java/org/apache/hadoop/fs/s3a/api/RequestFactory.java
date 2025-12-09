@@ -168,12 +168,14 @@ public interface RequestFactory {
    * @param destKey destination object key
    * @param uploadId ID of initiated upload
    * @param partETags ordered list of etags
+   * @param putOptions options for the request
    * @return the request builder.
    */
   CompleteMultipartUploadRequest.Builder newCompleteMultipartUploadRequestBuilder(
       String destKey,
       String uploadId,
-      List<CompletedPart> partETags);
+      List<CompletedPart> partETags,
+      PutObjectOptions putOptions);
 
   /**
    * Create a HEAD object request builder.

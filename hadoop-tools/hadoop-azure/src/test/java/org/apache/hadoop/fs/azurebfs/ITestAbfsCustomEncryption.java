@@ -30,9 +30,8 @@ import java.util.Random;
 
 import org.assertj.core.api.Assertions;
 import org.assertj.core.api.Assumptions;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -54,6 +53,7 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsClientUtils;
 import org.apache.hadoop.fs.azurebfs.services.AbfsDfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
+import org.apache.hadoop.fs.azurebfs.services.VersionedFileStatus;
 import org.apache.hadoop.fs.azurebfs.utils.EncryptionType;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.impl.OpenFileParameters;
@@ -62,6 +62,8 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.Lists;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CPK_IN_NON_HNS_ACCOUNT_ERROR_MESSAGE;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
@@ -84,7 +86,8 @@ import static org.apache.hadoop.fs.permission.AclEntryScope.ACCESS;
 import static org.apache.hadoop.fs.permission.AclEntryType.USER;
 import static org.apache.hadoop.fs.permission.FsAction.ALL;
 
-@RunWith(Parameterized.class)
+@ParameterizedClass(name="{0} mode, {2}")
+@MethodSource("params")
 public class ITestAbfsCustomEncryption extends AbstractAbfsIntegrationTest {
 
   public static final String SERVER_FILE_CONTENT = "123";
@@ -96,43 +99,33 @@ public class ITestAbfsCustomEncryption extends AbstractAbfsIntegrationTest {
   private List<AzureBlobFileSystem> fileSystemsOpenedInTest = new ArrayList<>();
 
   // Encryption type used by filesystem while creating file
-  @Parameterized.Parameter
   public EncryptionType fileEncryptionType;
 
   // Encryption type used by filesystem to call different operations
-  @Parameterized.Parameter(1)
   public EncryptionType requestEncryptionType;
 
-  @Parameterized.Parameter(2)
   public FSOperationType operation;
 
-  @Parameterized.Parameter(3)
   public boolean responseHeaderServerEnc;
 
-  @Parameterized.Parameter(4)
   public boolean responseHeaderReqServerEnc;
 
-  @Parameterized.Parameter(5)
   public boolean isExceptionCase;
 
   /**
    * Boolean value to indicate that the server response would have header related
    * to CPK and the test would need to assert its value.
    */
-  @Parameterized.Parameter(6)
   public boolean isCpkResponseHdrExpected;
 
   /**
    * Boolean value to indicate that the server response would have fields related
    * to CPK and the test would need to assert its value.
    */
-  @Parameterized.Parameter(7)
   public Boolean isCpkResponseKeyExpected = false;
 
-  @Parameterized.Parameter(8)
   public Boolean fileSystemListStatusResultToBeUsedForOpeningFile = false;
 
-  @Parameterized.Parameters(name = "{0} mode, {2}")
   public static Iterable<Object[]> params() {
     return Arrays.asList(new Object[][] {
         {ENCRYPTION_CONTEXT, ENCRYPTION_CONTEXT, FSOperationType.READ, true, false, false, true, false, false},
@@ -177,10 +170,24 @@ public class ITestAbfsCustomEncryption extends AbstractAbfsIntegrationTest {
     });
   }
 
-  public ITestAbfsCustomEncryption() throws Exception {
+  public ITestAbfsCustomEncryption(EncryptionType pFileEncryptionType,
+    EncryptionType pRequestEncryptionType, FSOperationType pOperation,
+    boolean pResponseHeaderServerEnc, boolean pResponseHeaderReqServerEnc,
+    boolean pIsExceptionCase, boolean pIsCpkResponseHdrExpected,
+    boolean pFileSystemListStatusResultToBeUsedForOpeningFile) throws Exception {
+
     new Random().nextBytes(cpk);
     cpkSHAEncoded = EncodingHelper.getBase64EncodedString(
         EncodingHelper.getSHA256Hash(cpk));
+    fileEncryptionType = pFileEncryptionType;
+    requestEncryptionType = pRequestEncryptionType;
+    operation = pOperation;
+    responseHeaderServerEnc = pResponseHeaderServerEnc;
+    responseHeaderReqServerEnc = pResponseHeaderReqServerEnc;
+    isExceptionCase = pIsExceptionCase;
+    isCpkResponseHdrExpected = pIsCpkResponseHdrExpected;
+    fileSystemListStatusResultToBeUsedForOpeningFile =
+        pFileSystemListStatusResultToBeUsedForOpeningFile;
   }
 
   @Test
@@ -301,10 +308,10 @@ public class ITestAbfsCustomEncryption extends AbstractAbfsIntegrationTest {
            */
           FileStatus status = fs.listStatus(testPath)[0];
           Assertions.assertThat(status)
-              .isInstanceOf(AzureBlobFileSystemStore.VersionedFileStatus.class);
+              .isInstanceOf(VersionedFileStatus.class);
 
           Assertions.assertThat(
-                  ((AzureBlobFileSystemStore.VersionedFileStatus) status).getEncryptionContext())
+                  ((VersionedFileStatus) status).getEncryptionContext())
               .isNotNull();
 
           try (FSDataInputStream in = fs.openFileWithOptions(testPath,
@@ -319,22 +326,22 @@ public class ITestAbfsCustomEncryption extends AbstractAbfsIntegrationTest {
       case WRITE:
         if (ingressClient instanceof AbfsDfsClient) {
           return ingressClient.flush(path, 3, false, false, null,
-              null, encryptionAdapter, getTestTracingContext(fs, false));
+              null, encryptionAdapter, getTestTracingContext(fs, false), null);
         } else {
           byte[] buffer = generateBlockListXml(EMPTY_STRING).getBytes(StandardCharsets.UTF_8);
           return ingressClient.flush(buffer, path, false, null,
-              null, null, encryptionAdapter, getTestTracingContext(fs, false));
+              null, null, encryptionAdapter, getTestTracingContext(fs, false), null);
         }
       case APPEND:
         if (ingressClient instanceof AbfsDfsClient) {
           return ingressClient.append(path, "val".getBytes(),
               new AppendRequestParameters(3, 0, 3, APPEND_MODE, false, null,
-                  true),
+                  true, null, null),
               null, encryptionAdapter, getTestTracingContext(fs, false));
         } else {
           return ingressClient.append(path, "val".getBytes(),
               new AppendRequestParameters(3, 0, 3, APPEND_MODE, false, null,
-                  true, new BlobAppendRequestParameters(BLOCK_ID, null)),
+                  true, new BlobAppendRequestParameters(BLOCK_ID, null), null),
               null, encryptionAdapter, getTestTracingContext(fs, false));
         }
       case SET_ACL:
@@ -343,7 +350,7 @@ public class ITestAbfsCustomEncryption extends AbstractAbfsIntegrationTest {
           getTestTracingContext(fs, false));
       case LISTSTATUS:
         return client.listPath(path, false, 5, null,
-          getTestTracingContext(fs, true));
+          getTestTracingContext(fs, true), null).getOp();
       case RENAME:
         TracingContext tc = getTestTracingContext(fs, true);
         return client.renamePath(path, new Path(path + "_2").toString(),
@@ -513,6 +520,7 @@ public class ITestAbfsCustomEncryption extends AbstractAbfsIntegrationTest {
     return fs;
   }
 
+  @AfterEach
   @Override
   public void teardown() throws Exception {
     super.teardown();

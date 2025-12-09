@@ -22,7 +22,9 @@ import java.io.IOException;
 import java.time.Duration;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,6 +48,7 @@ import static org.apache.hadoop.fs.s3a.Constants.ASYNC_DRAIN_THRESHOLD;
 import static org.apache.hadoop.fs.s3a.Constants.CHECKSUM_VALIDATION;
 import static org.apache.hadoop.fs.s3a.Constants.ESTABLISH_TIMEOUT;
 import static org.apache.hadoop.fs.s3a.Constants.INPUT_FADVISE;
+import static org.apache.hadoop.fs.s3a.Constants.INPUT_STREAM_TYPE;
 import static org.apache.hadoop.fs.s3a.Constants.MAXIMUM_CONNECTIONS;
 import static org.apache.hadoop.fs.s3a.Constants.MAX_ERROR_RETRIES;
 import static org.apache.hadoop.fs.s3a.Constants.READAHEAD_RANGE;
@@ -55,6 +58,7 @@ import static org.apache.hadoop.fs.s3a.Constants.SOCKET_TIMEOUT;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.disablePrefetching;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.impl.ConfigurationHelper.setDurationAsSeconds;
+import static org.apache.hadoop.fs.s3a.impl.streams.InputStreamType.Classic;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyStatisticCounterValue;
 import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.retrieveIOStatistics;
 import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_ABORTED;
@@ -99,6 +103,7 @@ public class ITestUnbufferDraining extends AbstractS3ACostTest {
   @Override
   public Configuration createConfiguration() {
     Configuration conf = disablePrefetching(super.createConfiguration());
+    conf.setEnum(INPUT_STREAM_TYPE, Classic);
     removeBaseAndBucketOverrides(conf,
         ASYNC_DRAIN_THRESHOLD,
         CHECKSUM_VALIDATION,
@@ -114,6 +119,7 @@ public class ITestUnbufferDraining extends AbstractS3ACostTest {
     return conf;
   }
 
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     super.setup();
@@ -140,6 +146,7 @@ public class ITestUnbufferDraining extends AbstractS3ACostTest {
     }
   }
 
+  @AfterEach
   @Override
   public void teardown() throws Exception {
     super.teardown();

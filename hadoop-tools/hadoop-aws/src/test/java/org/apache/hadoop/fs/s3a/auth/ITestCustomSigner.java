@@ -25,10 +25,14 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 import software.amazon.awssdk.auth.signer.Aws4Signer;
 import software.amazon.awssdk.auth.signer.AwsS3V4Signer;
 import software.amazon.awssdk.auth.signer.internal.AbstractAwsS3V4Signer;
@@ -36,7 +40,6 @@ import software.amazon.awssdk.core.interceptor.ExecutionAttributes;
 import software.amazon.awssdk.core.signer.Signer;
 import software.amazon.awssdk.http.SdkHttpFullRequest;
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -51,21 +54,27 @@ import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.auth.ITestCustomSigner.CustomSignerInitializer.StoreValue;
 import org.apache.hadoop.fs.s3a.auth.delegation.DelegationTokenProvider;
+import org.apache.hadoop.fs.s3a.impl.ChecksumSupport;
 import org.apache.hadoop.security.UserGroupInformation;
 
+import static org.apache.hadoop.fs.s3a.Constants.CHECKSUM_ALGORITHM;
+import static org.apache.hadoop.fs.s3a.Constants.CHECKSUM_VALIDATION;
 import static org.apache.hadoop.fs.s3a.Constants.CUSTOM_SIGNERS;
 import static org.apache.hadoop.fs.s3a.Constants.ENABLE_MULTI_DELETE;
+import static org.apache.hadoop.fs.s3a.Constants.PATH_STYLE_ACCESS;
 import static org.apache.hadoop.fs.s3a.Constants.SIGNING_ALGORITHM_S3;
 import static org.apache.hadoop.fs.s3a.MultipartTestUtils.createMagicFile;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.disableFilesystemCaching;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfNotEnabled;
 
 /**
  * Tests for custom Signers and SignerInitializers.
  * Because the v2 sdk has had some problems with bulk delete
  * and custom signing, this suite is parameterized.
  */
-@RunWith(Parameterized.class)
+@ParameterizedClass(name="bulk-delete={0}")
+@MethodSource("params")
 public class ITestCustomSigner extends AbstractS3ATestBase {
 
   private static final Logger LOG = LoggerFactory
@@ -75,9 +84,15 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
   private static final String TEST_REGION_KEY = "TEST_REGION_KEY";
 
   /**
+   * Is the store using path style access?
+   */
+  private static final AtomicBoolean PATH_STYLE_ACCESS_IN_USE = new AtomicBoolean(false);
+
+  public static final String BUCKET = "bucket";
+
+  /**
    * Parameterization.
    */
-  @Parameterized.Parameters(name = "{0}")
   public static Collection<Object[]> params() {
     return Arrays.asList(new Object[][]{
         {"bulk delete",  true},
@@ -102,11 +117,24 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
   }
 
   @Override
+  protected Configuration createConfiguration() {
+    final Configuration conf = super.createConfiguration();
+    // customer signer doesn't work
+    removeBaseAndBucketOverrides(conf, CHECKSUM_ALGORITHM);
+    return conf;
+  }
+
+  @Override
+  @BeforeEach
   public void setup() throws Exception {
     super.setup();
     final S3AFileSystem fs = getFileSystem();
     final Configuration conf = fs.getConf();
+    if (bulkDelete) {
+      skipIfNotEnabled(conf, ENABLE_MULTI_DELETE, "no bulk delete");
+    }
     endpoint = conf.getTrimmed(Constants.ENDPOINT, Constants.CENTRAL_ENDPOINT);
+    PATH_STYLE_ACCESS_IN_USE.set(conf.getBoolean(PATH_STYLE_ACCESS, false));
     LOG.info("Test endpoint is {}", endpoint);
     regionName = conf.getTrimmed(Constants.AWS_REGION, "");
     if (regionName.isEmpty()) {
@@ -120,6 +148,7 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
   /**
    * Teardown closes all filesystems for the test UGIs.
    */
+  @AfterEach
   @Override
   public void teardown() throws Exception {
     super.teardown();
@@ -153,6 +182,7 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
       throws IOException, InterruptedException {
     Configuration conf = createTestConfig(identifier);
     return ugi.doAs((PrivilegedExceptionAction<S3AFileSystem>) () -> {
+      LOG.info("Performing store operations for {}", ugi.getShortUserName());
       int instantiationCount = CustomSigner.getInstantiationCount();
       int invocationCount = CustomSigner.getInvocationCount();
       S3AFileSystem fs = (S3AFileSystem)finalPath.getFileSystem(conf);
@@ -186,11 +216,13 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
       ContractTestUtils.touch(fs, new Path(subdir, "file1"));
 
       // create a magic file.
-      createMagicFile(fs, subdir);
-      ContentSummary summary = fs.getContentSummary(finalPath);
-      fs.getS3AInternals().abortMultipartUploads(subdir);
-      fs.rename(subdir, new Path(finalPath, "renamed"));
-      fs.delete(finalPath, true);
+      if (fs.isMagicCommitEnabled()) {
+        createMagicFile(fs, subdir);
+        ContentSummary summary = fs.getContentSummary(finalPath);
+        fs.getS3AInternals().abortMultipartUploads(subdir);
+        fs.rename(subdir, new Path(finalPath, "renamed"));
+        fs.delete(finalPath, true);
+      }
       return fs;
     });
   }
@@ -204,10 +236,13 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
   private Configuration createTestConfig(String identifier) {
     Configuration conf = createConfiguration();
 
+    // bulk delete is not disabled; if it has been set to false by the bucket
+    // then one of the test runs will be skipped.
     removeBaseAndBucketOverrides(conf,
+        CHECKSUM_ALGORITHM,
+        CHECKSUM_VALIDATION,
         CUSTOM_SIGNERS,
-        SIGNING_ALGORITHM_S3,
-        ENABLE_MULTI_DELETE);
+        SIGNING_ALGORITHM_S3);
     conf.set(CUSTOM_SIGNERS,
         "CustomS3Signer:" + CustomSigner.class.getName() + ":"
             + CustomSignerInitializer.class.getName());
@@ -216,6 +251,12 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
 
     conf.set(TEST_ID_KEY, identifier);
     conf.set(TEST_REGION_KEY, regionName);
+
+    // Having the checksum algorithm in this test causes
+    // x-amz-sdk-checksum-algorithm specified, but no corresponding
+    // x-amz-checksum-* or x-amz-trailer headers were found
+    conf.set(CHECKSUM_ALGORITHM, ChecksumSupport.NONE);
+    conf.setBoolean(CHECKSUM_VALIDATION, false);
 
     // make absolutely sure there is no caching.
     disableFilesystemCaching(conf);
@@ -265,6 +306,9 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
 
       String host = request.host();
       String bucketName = parseBucketFromHost(host);
+      if (PATH_STYLE_ACCESS_IN_USE.get()) {
+        bucketName = BUCKET;
+      }
       try {
         lastStoreValue = CustomSignerInitializer
             .getStoreValue(bucketName, UserGroupInformation.getCurrentUser());
@@ -307,11 +351,20 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
   public static final class CustomSignerInitializer
       implements AwsSignerInitializer {
 
+    /**
+     * Map of (bucket-name, ugi) -> store value.
+     * <p>
+     * When working with buckets using path-style resolution, the store bucket name
+     * is just {@link #BUCKET}.
+     */
     private static final Map<StoreKey, StoreValue> knownStores = new HashMap<>();
 
     @Override
     public void registerStore(String bucketName, Configuration storeConf,
         DelegationTokenProvider dtProvider, UserGroupInformation storeUgi) {
+      if (PATH_STYLE_ACCESS_IN_USE.get()) {
+        bucketName = BUCKET;
+      }
       StoreKey storeKey = new StoreKey(bucketName, storeUgi);
       StoreValue storeValue = new StoreValue(storeConf, dtProvider);
       LOG.info("Registering store {} with value {}", storeKey, storeValue);
@@ -321,6 +374,9 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
     @Override
     public void unregisterStore(String bucketName, Configuration storeConf,
         DelegationTokenProvider dtProvider, UserGroupInformation storeUgi) {
+      if (PATH_STYLE_ACCESS_IN_USE.get()) {
+        bucketName = BUCKET;
+      }
       StoreKey storeKey = new StoreKey(bucketName, storeUgi);
       LOG.info("Unregistering store {}", storeKey);
       knownStores.remove(storeKey);
@@ -336,9 +392,17 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
     public static StoreValue getStoreValue(String bucketName,
         UserGroupInformation ugi) {
       StoreKey storeKey = new StoreKey(bucketName, ugi);
-      return knownStores.get(storeKey);
+      final StoreValue storeValue = knownStores.get(storeKey);
+      LOG.info("Getting store value for key {}: {}", storeKey, storeValue);
+      return storeValue;
     }
 
+    /**
+     * The key for the signer map: bucket-name and UGI.
+     * <p>
+     * In path-style-access the bucket name is mapped to {@link #BUCKET} so only
+     * one bucket per UGI instance is supported.
+     */
     private static class StoreKey {
       private final String bucketName;
       private final UserGroupInformation ugi;

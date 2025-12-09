@@ -22,8 +22,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Map;
 
-import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CreateFlag;
@@ -37,6 +36,8 @@ import org.apache.hadoop.util.Progressable;
 import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_HEADER;
 import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_PERFORMANCE;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.apache.hadoop.fs.s3a.impl.AWSHeaders.IF_NONE_MATCH;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Unit test of {@link CreateFileBuilder}.
@@ -54,7 +55,7 @@ public class TestCreateFileBuilder extends HadoopTestBase {
 
   private BuilderOutputStream unwrap(FSDataOutputStream out) {
     OutputStream s = out.getWrappedStream();
-    Assertions.assertThat(s)
+    assertThat(s)
         .isInstanceOf(BuilderOutputStream.class);
     return (BuilderOutputStream) s;
   }
@@ -66,7 +67,7 @@ public class TestCreateFileBuilder extends HadoopTestBase {
 
   @Test
   public void testSimpleBuild() throws Throwable {
-    Assertions.assertThat(build(mkBuilder().create()))
+    assertThat(build(mkBuilder().create()))
         .matches(p -> !p.isOverwrite())
         .matches(p -> !p.isPerformance());
   }
@@ -81,7 +82,7 @@ public class TestCreateFileBuilder extends HadoopTestBase {
   public void testPerformanceSupport() throws Throwable {
     CreateFileBuilder builder = mkBuilder().create();
     builder.must(FS_S3A_CREATE_PERFORMANCE, true);
-    Assertions.assertThat(build(builder))
+    assertThat(build(builder))
         .matches(p -> p.isPerformance());
   }
 
@@ -89,11 +90,13 @@ public class TestCreateFileBuilder extends HadoopTestBase {
   public void testHeaderOptions() throws Throwable {
     final CreateFileBuilder builder = mkBuilder().create()
         .must(FS_S3A_CREATE_HEADER + ".retention", "permanent")
+        .must(FS_S3A_CREATE_HEADER + "." + IF_NONE_MATCH, "*")
         .opt(FS_S3A_CREATE_HEADER + ".owner", "engineering");
     final Map<String, String> headers = build(builder).getHeaders();
-    Assertions.assertThat(headers)
+    assertThat(headers)
         .containsEntry("retention", "permanent")
-        .containsEntry("owner", "engineering");
+        .containsEntry("owner", "engineering")
+        .containsEntry(IF_NONE_MATCH, "*");
   }
 
   @Test

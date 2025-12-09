@@ -25,23 +25,30 @@ import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.KeyValueTextInputFormat;
 import org.apache.hadoop.mapred.SequenceFileInputFormat;
 
-import org.junit.Test;
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * This class tests hadoop Streaming's StreamJob class.
  */
 public class TestStreamJob {
   
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testCreateJobWithExtraArgs() throws IOException {
-    ArrayList<String> dummyArgs = new ArrayList<String>();
-    dummyArgs.add("-input"); dummyArgs.add("dummy");
-    dummyArgs.add("-output"); dummyArgs.add("dummy");
-    dummyArgs.add("-mapper"); dummyArgs.add("dummy");
-    dummyArgs.add("dummy");
-    dummyArgs.add("-reducer"); dummyArgs.add("dummy");
-    StreamJob.createJob(dummyArgs.toArray(new String[] {}));
+    assertThrows(IllegalArgumentException.class, () -> {
+      ArrayList<String> dummyArgs = new ArrayList<String>();
+      dummyArgs.add("-input");
+      dummyArgs.add("dummy");
+      dummyArgs.add("-output");
+      dummyArgs.add("dummy");
+      dummyArgs.add("-mapper");
+      dummyArgs.add("dummy");
+      dummyArgs.add("dummy");
+      dummyArgs.add("-reducer");
+      dummyArgs.add("dummy");
+      StreamJob.createJob(dummyArgs.toArray(new String[] {}));
+    });
   }
   
   @Test

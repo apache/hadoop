@@ -726,4 +726,84 @@
     <Package name="org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.placement.schema" />
   </Match>
 
+  <!-- Ignore String == comparison in RMAdminCLI help builders -->
+  <Match>
+    <Class name="org.apache.hadoop.yarn.client.cli.RMAdminCLI" />
+    <Or>
+      <Method name="buildHelpMsg" />
+      <Method name="buildIndividualUsageMsg" />
+    </Or>
+    <Bug pattern="ES_COMPARING_STRINGS_WITH_EQ" />
+  </Match>
+
+  <!-- Ignore EI_EXPOSE_STATIC_REP2 for RMDelegationTokenIdentifier.Renewer#setSecretManager -->
+  <Match>
+    <Class name="org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier$Renewer" />
+    <Method name="setSecretManager" />
+    <Bug pattern="EI_EXPOSE_STATIC_REP2" />
+  </Match>
+
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.federation.cache.FederationCache$CacheRequest" />
+    <Bug pattern="SIC_INNER_SHOULD_BE_STATIC" />
+  </Match>
+
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.sharedcachemanager.webapp.SCMWebServer$SCMWebApp" />
+    <Bug pattern="SIC_INNER_SHOULD_BE_STATIC" />
+  </Match>
+
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.security.BaseContainerTokenSecretManager" />
+    <Field name="currentMasterKey" />
+    <Bug pattern="NP_UNWRITTEN_PUBLIC_OR_PROTECTED_FIELD" />
+  </Match>
+
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.security.BaseNMTokenSecretManager" />
+    <Field name="currentMasterKey" />
+    <Bug pattern="NP_UNWRITTEN_PUBLIC_OR_PROTECTED_FIELD" />
+  </Match>
+
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.security.http.RMAuthenticationFilter" />
+    <Method name="setDelegationTokenSecretManager" />
+    <Bug pattern="EI_EXPOSE_STATIC_REP2" />
+  </Match>
+
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.timeline.security.TimelineAuthenticationFilter" />
+    <Method name="setTimelineDelegationTokenSecretManager" />
+    <Bug pattern="EI_EXPOSE_STATIC_REP2" />
+  </Match>
+
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.nodemanager.webapp.ContainerShellWebSocket" />
+    <Method name="init" />
+    <Bug pattern="EI_EXPOSE_STATIC_REP2" />
+  </Match>
+
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainerLaunch$UnixShellScriptBuilder" />
+    <Method name="errorCheck" />
+    <Bug pattern="UPM_UNCALLED_PRIVATE_METHOD" />
+  </Match>
+
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ResourceLocalizationService$PublicLocalizer" />
+    <Method name="run" />
+    <Bug pattern="NP_NULL_ON_SOME_PATH_EXCEPTION" />
+  </Match>
+
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.gpu.NvidiaDockerV2CommandPlugin" />
+    <Method name="updateDockerRunCommand" />
+    <Bug pattern="SBSC_USE_STRINGBUFFER_CONCATENATION" />
+  </Match>
+
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.WeightQueueCapacityCalculator" />
+    <Method name="calculateMinimumResource" />
+    <Bug pattern="FE_FLOATING_POINT_EQUALITY" />
+  </Match>
 </FindBugsFilter>

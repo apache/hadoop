@@ -26,10 +26,10 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Consumer;
 
-import org.junit.Assume;
-import org.junit.FixMethodOrder;
-import org.junit.Test;
-import org.junit.runners.MethodSorters;
+import org.junit.jupiter.api.TestMethodOrder;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.MethodOrderer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -58,13 +58,14 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.Manifest
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterTestSupport.assertNoFailureStatistics;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterTestSupport.loadSuccessFile;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterTestSupport.validateSuccessFile;
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 /**
  * Runs Terasort against ABFS using the manifest committer.
  * The tests run in sequence, so each operation is isolated.
  * Scale test only (it is big and slow)
  */
-@FixMethodOrder(MethodSorters.NAME_ASCENDING)
+@TestMethodOrder(MethodOrderer.MethodName.class)
 @SuppressWarnings({"StaticNonFinalField", "OptionalUsedAsFieldOrParameterType"})
 public class ITestAbfsTerasort extends AbstractAbfsClusterITest {
 
@@ -119,7 +120,7 @@ public class ITestAbfsTerasort extends AbstractAbfsClusterITest {
   public ITestAbfsTerasort() throws Exception {
   }
 
-
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     // superclass calls requireScaleTestsEnabled();
@@ -183,9 +184,9 @@ public class ITestAbfsTerasort extends AbstractAbfsClusterITest {
    * @param stage stage name
    */
   private static void requireStage(final String stage) {
-    Assume.assumeTrue(
-        "Required stage was not completed: " + stage,
-        COMPLETED_STAGES.get(stage) != null);
+    assumeThat(COMPLETED_STAGES.get(stage))
+        .as("Required stage was not completed: " + stage)
+        .isNotNull();
   }
 
   /**
@@ -218,9 +219,7 @@ public class ITestAbfsTerasort extends AbstractAbfsClusterITest {
       d.close();
     }
     dumpOutputTree(dest);
-    assertEquals(stage
-        + "(" + StringUtils.join(", ", args) + ")"
-        + " failed", 0, result);
+    assertEquals(0, result, stage+ "(" + StringUtils.join(", ", args) + ")"+ " failed");
     final ManifestSuccessData successFile = validateSuccessFile(getFileSystem(), dest,
         minimumFileCount, "");
     final IOStatistics iostats = successFile.getIOStatistics();

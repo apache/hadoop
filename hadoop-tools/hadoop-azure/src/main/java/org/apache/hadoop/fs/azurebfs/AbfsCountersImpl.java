@@ -27,6 +27,8 @@ import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.azurebfs.services.AbfsBackoffMetrics;
 import org.apache.hadoop.fs.azurebfs.services.AbfsCounters;
 import org.apache.hadoop.fs.azurebfs.services.AbfsReadFooterMetrics;
+import org.apache.hadoop.fs.azurebfs.services.AbfsReadResourceUtilizationMetrics;
+import org.apache.hadoop.fs.azurebfs.services.AbfsWriteResourceUtilizationMetrics;
 import org.apache.hadoop.fs.azurebfs.utils.MetricFormat;
 import org.apache.hadoop.fs.statistics.DurationTracker;
 import org.apache.hadoop.fs.statistics.IOStatistics;
@@ -37,6 +39,7 @@ import org.apache.hadoop.metrics2.lib.MetricsRegistry;
 import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 import org.apache.hadoop.metrics2.lib.MutableMetric;
 
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.ATOMIC_RENAME_PATH_ATTEMPTS;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.BYTES_RECEIVED;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.BYTES_SENT;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CALL_APPEND;
@@ -105,6 +108,10 @@ public class AbfsCountersImpl implements AbfsCounters {
 
   private AbfsReadFooterMetrics abfsReadFooterMetrics = null;
 
+  private AbfsWriteResourceUtilizationMetrics abfsWriteResourceUtilizationMetrics = null;
+
+  private AbfsReadResourceUtilizationMetrics abfsReadResourceUtilizationMetrics = null;
+
   private AtomicLong lastExecutionTime = null;
 
   private static final AbfsStatistic[] STATISTIC_LIST = {
@@ -134,7 +141,8 @@ public class AbfsCountersImpl implements AbfsCounters {
       SERVER_UNAVAILABLE,
       RENAME_RECOVERY,
       METADATA_INCOMPLETE_RENAME_FAILURES,
-      RENAME_PATH_ATTEMPTS
+      RENAME_PATH_ATTEMPTS,
+      ATOMIC_RENAME_PATH_ATTEMPTS
   };
 
   private static final AbfsStatistic[] DURATION_TRACKER_LIST = {
@@ -166,6 +174,31 @@ public class AbfsCountersImpl implements AbfsCounters {
     ioStatisticsStore = ioStatisticsStoreBuilder.build();
     lastExecutionTime = new AtomicLong(now());
   }
+
+  /**
+   * Initializes the metrics collector for the read thread pool.
+   * <p>
+   * This method creates a new instance of {@link AbfsReadResourceUtilizationMetrics}
+   * to track performance statistics and operational metrics related to
+   * read operations executed by the thread pool.
+   * </p>
+   */
+  public void initializeReadResourceUtilizationMetrics() {
+    abfsReadResourceUtilizationMetrics = new AbfsReadResourceUtilizationMetrics();
+  }
+
+  /**
+   * Initializes the metrics collector for the write thread pool.
+   * <p>
+   * This method creates a new instance of {@link AbfsWriteResourceUtilizationMetrics}
+   * to track performance statistics and operational metrics related to
+   * write operations executed by the thread pool.
+   * </p>
+   */
+  public void initializeWriteResourceUtilizationMetrics() {
+    abfsWriteResourceUtilizationMetrics = new AbfsWriteResourceUtilizationMetrics();
+  }
+
 
   @Override
   public void initializeMetrics(MetricFormat metricFormat) {
@@ -263,6 +296,22 @@ public class AbfsCountersImpl implements AbfsCounters {
   @Override
   public AbfsReadFooterMetrics getAbfsReadFooterMetrics() {
     return abfsReadFooterMetrics != null ? abfsReadFooterMetrics : null;
+  }
+
+  /**
+   * Returns the write thread pool metrics instance, or {@code null} if uninitialized.
+   */
+  @Override
+  public AbfsWriteResourceUtilizationMetrics getAbfsWriteResourceUtilizationMetrics() {
+    return abfsWriteResourceUtilizationMetrics != null ? abfsWriteResourceUtilizationMetrics : null;
+  }
+
+  /**
+   * Returns the read thread pool metrics instance, or {@code null} if uninitialized.
+   */
+  @Override
+  public AbfsReadResourceUtilizationMetrics getAbfsReadResourceUtilizationMetrics() {
+    return abfsReadResourceUtilizationMetrics != null ? abfsReadResourceUtilizationMetrics : null;
   }
 
   /**

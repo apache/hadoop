@@ -36,8 +36,8 @@ import org.glassfish.jersey.internal.inject.AbstractBinder;
 import org.glassfish.jersey.jettison.JettisonFeature;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.glassfish.jersey.test.TestProperties;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
@@ -55,8 +55,8 @@ import java.io.StringReader;
 import java.util.HashMap;
 import java.util.Map;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -108,7 +108,7 @@ public class TestRMWithCSRFFilter extends JerseyTestBase {
     }
   }
 
-  @Before
+  @BeforeEach
   @Override
   public void setUp() throws Exception {
     super.setUp();
@@ -137,8 +137,8 @@ public class TestRMWithCSRFFilter extends JerseyTestBase {
         .header(RestCsrfPreventionFilter.HEADER_USER_AGENT,"Mozilla/5.0")
         .header("X-XSRF-HEADER", "")
         .get(Response.class);
-    assertTrue("Should have been accepted", response.getStatus() ==
-        Response.Status.OK.getStatusCode());
+    assertTrue(response.getStatus() ==
+        Response.Status.OK.getStatusCode(), "Should have been accepted");
     assertEquals(MediaType.APPLICATION_XML_TYPE + ";" + JettyUtils.UTF_8,
         response.getMediaType().toString());
     String xml = response.readEntity(String.class);
@@ -152,8 +152,8 @@ public class TestRMWithCSRFFilter extends JerseyTestBase {
         .path("info").request("application/xml")
         .header(RestCsrfPreventionFilter.HEADER_USER_AGENT,"Mozilla/5.0")
         .head();
-    assertTrue("Should have been allowed", response.getStatus() ==
-        Response.Status.OK.getStatusCode());
+    assertTrue(response.getStatus() ==
+        Response.Status.OK.getStatusCode(), "Should have been allowed");
   }
 
   @Test
@@ -162,8 +162,8 @@ public class TestRMWithCSRFFilter extends JerseyTestBase {
     Response response = r.path("ws").path("v1").path("cluster")
         .path("info").request("application/xml")
         .get(Response.class);
-    assertTrue("Should have been accepted", response.getStatus() ==
-        Response.Status.OK.getStatusCode());
+    assertTrue(response.getStatus() ==
+        Response.Status.OK.getStatusCode(), "Should have been accepted");
     assertEquals(MediaType.APPLICATION_XML_TYPE + ";" + JettyUtils.UTF_8,
         response.getMediaType().toString());
     String xml = response.readEntity(String.class);
@@ -177,7 +177,7 @@ public class TestRMWithCSRFFilter extends JerseyTestBase {
     is.setCharacterStream(new StringReader(xml));
     Document dom = db.parse(is);
     NodeList nodes = dom.getElementsByTagName("clusterInfo");
-    assertEquals("incorrect number of elements", 1, nodes.getLength());
+    assertEquals(1, nodes.getLength(), "incorrect number of elements");
 
     for (int i = 0; i < nodes.getLength(); i++) {
       Element element = (Element) nodes.item(i);
@@ -209,14 +209,14 @@ public class TestRMWithCSRFFilter extends JerseyTestBase {
                                    String resourceManagerBuildVersion,
                                    String resourceManagerVersion) {
 
-    assertEquals("clusterId doesn't match: ",
-                 ResourceManager.getClusterTimeStamp(), clusterid);
-    assertEquals("startedOn doesn't match: ",
-                 ResourceManager.getClusterTimeStamp(), startedon);
-    assertTrue("stated doesn't match: " + state,
-               state.matches(STATE.INITED.toString()));
-    assertTrue("HA state doesn't match: " + haState,
-               haState.matches("INITIALIZING"));
+    assertEquals(ResourceManager.getClusterTimeStamp(), clusterid,
+        "clusterId doesn't match: ");
+    assertEquals(ResourceManager.getClusterTimeStamp(), startedon,
+        "startedOn doesn't match: ");
+    assertTrue(state.matches(STATE.INITED.toString()),
+        "stated doesn't match: " + state);
+    assertTrue(haState.matches("INITIALIZING"),
+        "HA state doesn't match: " + haState);
 
     WebServicesTestUtils.checkStringMatch("hadoopVersionBuiltOn",
                                           VersionInfo.getDate(), hadoopVersionBuiltOn);
