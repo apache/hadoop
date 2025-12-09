@@ -137,6 +137,55 @@
   </div>
 </div>
 
+<div class="col-md-12">
+  <div class="panel panel-default">
+    <button class="panel-heading" {{action "runDiagnostic" "application_failed"}}>
+        Application Failed
+    </button>
+  </div>
+</div>
+
+<div class="col-md-12">
+  <div class="panel panel-default">
+    <button class="panel-heading" {{action "runDiagnostic" "application_hanging"}}>
+        Application Hanging
+    </button>
+  </div>
+</div>
+
+<div class="col-md-12">
+  <div class="panel panel-default">
+    <button class="panel-heading" {{action "runDiagnostic" "application_hanging"}}>
+        Application Diagnostic
+    </button>
+  </div>
+</div>
+
+{{#if diagnosticResult}}
+<div class="col-md-12 margin-top-20">
+    <div class="panel panel-info text-center">
+      <div class="panel-heading">
+          Diagnostic Result: <strong>{{diagnosticIssueId}}</strong>
+      </div>
+      <div class="panel-body">
+        <ul class="list-group">
+           {{#each diagnosticResult as |file|}}
+              <li class="list-group-item d-flex justify-content-between align-items-center">
+                  <span>{{file.filename}}</span>
+                  <button class="btn btn-sm btn-primary" {{action "downloadFile" file}}>
+                        Download
+                  </button>
+              </li>
+           {{/each}}
+        </ul>
+      </div>
+    </div>
+</div>
+
+{{/if}}
+
+
+
 {{confirm-dialog
   dialogId="stopServiceConfirmDialog"
   message=(concat 'Are you sure you want to stop service "' model.serviceName '" for user "' model.app.user '" ?')

@@ -23,8 +23,45 @@ export default Ember.Controller.extend({
   service: undefined,
   isLoading: false,
   actionResponse: null,
+  diagnosticResult: null,
 
   actions: {
+
+    runDiagnostic(issueId){
+      this.set('isLoading', true);
+      this.set('diagnosticResult', null);
+      this.set('diagnosticIssueId', issueId);
+
+      const appId = this.get('model.appId');
+      const adapter = this.store.adapterFor('common-issue');
+      const url = adapter.urlForQuery({ issueId, appId});
+
+      fetch(url)
+          .then(function (response){
+            if(!response.ok){
+              throw new Error("Network response was not ok");
+            }
+            return response.json();
+          })
+          .then((data) => {
+            this.set('diagnosticResult', data.file || []);
+          })
+          .catch(() => {
+            this.set('actionResponse', { msg: 'Diagnostic Failed!', type: 'error'});
+          })
+          .finally(() => {
+            this.set('isLoading', false);
+          });
+    },
+
+    downloadFile(file) {
+      const blob = new Blob([file.content], {type: file.contentType || 'text/plain'});
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = file.filename || "diagnostic.txt";
+      a.click();
+    },
+
     showStopServiceConfirm() {
       this.set('actionResponse', null);
       Ember.$("#stopServiceConfirmDialog").modal('show');
