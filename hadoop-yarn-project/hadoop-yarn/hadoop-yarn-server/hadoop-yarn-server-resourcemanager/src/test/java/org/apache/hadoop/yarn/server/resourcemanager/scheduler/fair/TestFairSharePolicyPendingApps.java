@@ -22,8 +22,10 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.Fai
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * Test to verify that FairSharePolicy correctly handles queues with
