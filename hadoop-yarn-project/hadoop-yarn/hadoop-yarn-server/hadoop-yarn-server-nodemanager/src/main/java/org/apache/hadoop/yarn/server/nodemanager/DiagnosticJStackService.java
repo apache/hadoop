@@ -21,7 +21,11 @@ import org.apache.hadoop.util.Shell;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.*;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.BufferedReader;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
@@ -34,21 +38,6 @@ public class DiagnosticJStackService {
     private static final Logger LOG = LoggerFactory
             .getLogger(DiagnosticJStackService.class);
     private static final String PYTHON_COMMAND = "python3";
-    private static String scriptLocation = null;
-
-    static {
-        try {
-            // Extract script from JAR to a temp file
-            InputStream in = DiagnosticJStackService.class.getClassLoader()
-                    .getResourceAsStream("diagnostics/jstack_collector.py");
-            File tempScript = File.createTempFile("jstack_collector", ".py");
-            Files.copy(in, tempScript.toPath(), StandardCopyOption.REPLACE_EXISTING);
-            tempScript.setExecutable(true); // Set execute permission
-            scriptLocation = tempScript.getAbsolutePath();
-        } catch (IOException e) {
-            LOG.error("Failed to extract Python script from JAR", e);
-        }
-    }
 
     public static String collectNodeThreadDump(String numberOfJStack)
             throws Exception {
@@ -78,7 +67,7 @@ public class DiagnosticJStackService {
 
     protected static ProcessBuilder createProcessBuilder(String numberOfJStack) {
         List<String> commandList =
-                new ArrayList<>(Arrays.asList(PYTHON_COMMAND, scriptLocation, numberOfJStack));
+                new ArrayList<>(Arrays.asList(PYTHON_COMMAND, getScriptLocation(), numberOfJStack));
 
         return new ProcessBuilder(commandList);
     }
@@ -86,7 +75,7 @@ public class DiagnosticJStackService {
 
     protected static ProcessBuilder createProcessBuilder(String appId, String numberOfJStack) {
         List<String> commandList =
-                new ArrayList<>(Arrays.asList(PYTHON_COMMAND, scriptLocation, appId, numberOfJStack));
+                new ArrayList<>(Arrays.asList(PYTHON_COMMAND, getScriptLocation(), appId, numberOfJStack));
 
         return new ProcessBuilder(commandList);
     }
@@ -129,6 +118,21 @@ public class DiagnosticJStackService {
         }
 
         return outputBuilder.toString();
+    }
+
+    private static String getScriptLocation() {
+        try {
+            // Extract script from JAR to a temp file
+            InputStream in = DiagnosticJStackService.class.getClassLoader()
+                    .getResourceAsStream("diagnostics/jstack_collector.py");
+            File tempScript = File.createTempFile("jstack_collector", ".py");
+            Files.copy(in, tempScript.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            tempScript.setExecutable(true); // Set execute permission
+            return tempScript.getAbsolutePath();
+        } catch (IOException e) {
+            LOG.error("Failed to extract Python script from JAR", e);
+            return null;
+        }
     }
 
 }
