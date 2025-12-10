@@ -2733,7 +2733,7 @@ function hadoop_generic_java_subcmd_handler
 
   # are we actually in daemon mode?
   # if yes, use the daemon logger and the appropriate log file.
-  if [[ "${HADOOP_DAEMON_MODE}" != "default" ]]; then
+  if [[ "${HADOOP_DAEMON_MODE}" != "default" ]] || [[ "${HADOOP_LOG_DAEMON_MODE}" = true ]]; then
     HADOOP_ROOT_LOGGER="${HADOOP_DAEMON_ROOT_LOGGER}"
     if [[ "${HADOOP_SUBCMD_SECURESERVICE}" = true ]]; then
       HADOOP_LOGFILE="hadoop-${HADOOP_SECURE_USER}-${HADOOP_IDENT_STRING}-${HADOOP_SUBCMD}-${HOSTNAME}.log"
