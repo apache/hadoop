@@ -2015,7 +2015,7 @@ public class RouterClientProtocol implements ClientProtocol {
           break;
         }
         RemoteLocation remoteLoc = entry.getKey();
-        String routerPath = ofe.getFilePath().replaceFirst(remoteLoc.getDest(), remoteLoc.getSrc());;
+        String routerPath = ofe.getFilePath().replaceFirst(remoteLoc.getDest(), remoteLoc.getSrc());
         OpenFileEntry newEntry =
             new OpenFileEntry(ofe.getId(), routerPath, ofe.getClientName(),
                 ofe.getClientMachine());
