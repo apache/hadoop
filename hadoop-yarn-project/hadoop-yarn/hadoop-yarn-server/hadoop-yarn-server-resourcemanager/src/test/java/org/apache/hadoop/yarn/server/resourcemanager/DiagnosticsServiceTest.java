@@ -37,6 +37,7 @@ import static org.junit.Assert.fail;
 
 
 public class DiagnosticsServiceTest {
+  private static final String ISSUE_NAME_APP_DIAGNOSTIC = "application_diagnostic";
   private static final String ISSUE_NAME_APP_FAILED = "application_failed";
   private static final String ISSUE_NAME_APP_FAILED_NECESSARY_ARGS =
       "application_failed_necessary_args";
@@ -64,22 +65,14 @@ public class DiagnosticsServiceTest {
     // and one with too many parameters. These should be skipped silently.
     CommonIssues commonIssues = DiagnosticsService.listCommonIssues();
 
-    Assert.assertEquals(4, commonIssues.getIssueList().size());
-    assertIssueEquality(ISSUE_NAME_APP_FAILED,
+    Assert.assertEquals(2, commonIssues.getIssueList().size());
+    assertIssueEquality(ISSUE_NAME_APP_DIAGNOSTIC,
         Collections.singletonList(ISSUE_ARG_APP_ID),
         commonIssues.getIssueList().get(0));
 
-    assertIssueEquality(ISSUE_NAME_APP_HANGING,
-        Arrays.asList(ISSUE_ARG_APP_ID, ISSUE_ARG_NODE_ID),
-        commonIssues.getIssueList().get(1));
-
     assertIssueEquality(ISSUE_NAME_SCHED_ISSUE,
         Collections.emptyList(),
-        commonIssues.getIssueList().get(2));
-
-    assertIssueEquality(ISSUE_NAME_RM_NM_ISSUE,
-        Collections.singletonList(ISSUE_ARG_NODE_ID),
-        commonIssues.getIssueList().get(3));
+        commonIssues.getIssueList().get(1));
   }
 
   @Test(expected = IOException.class)
@@ -121,12 +114,12 @@ public class DiagnosticsServiceTest {
 //    DiagnosticsService.collectIssueDataPath(ISSUE_NAME_APP_HANGING, null);
 //  }
 //
-//  @Test(expected = IOException.class)
-//  public void testCollectIssueDataPathInvalidOutputMissingOutputDir()
-//      throws Exception {
-//    // invalid case: the script doesn't print out the correct output directory
-//    DiagnosticsService.collectIssueDataPath(ISSUE_NAME_SCHED_ISSUE, null);
-//  }
+  @Test(expected = IOException.class)
+  public void testCollectIssueDataPathInvalidOutputMissingOutputDir()
+      throws Exception {
+    // invalid case: the script doesn't print out the correct output directory
+    DiagnosticsService.collectIssueDataPath(ISSUE_NAME_SCHED_ISSUE, null);
+  }
 //
 //  @Test(expected = IOException.class)
 //  public void testCollectIssueDataPathInvalidOutputMissingPrints()
@@ -135,11 +128,11 @@ public class DiagnosticsServiceTest {
 //    DiagnosticsService.collectIssueDataPath(ISSUE_NAME_RM_NM_ISSUE, null);
 //  }
 //
-//  @Test(expected = IOException.class)
-//  public void testCollectIssueDataPathScriptMissing() throws Exception {
-//    DiagnosticsService.setScriptLocation("/src/invalidLocation/script.py");
-//    DiagnosticsService.collectIssueDataPath(ISSUE_NAME_APP_FAILED, null);
-//  }
+  @Test(expected = IOException.class)
+  public void testCollectIssueDataPathScriptMissing() throws Exception {
+    DiagnosticsService.setScriptLocation("/src/invalidLocation/script.py");
+    DiagnosticsService.collectIssueDataPath(ISSUE_NAME_APP_DIAGNOSTIC, null);
+  }
 
   @Test
   public void testParseIssueTypeValidCases() {

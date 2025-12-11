@@ -51,23 +51,7 @@ public final class DiagnosticsService {
   private static final String INCORRECT_NUMBER_OF_PARAMETERS_MESSAGE =
       "Error while parsing diagnostic option, incorrect number of " +
           "parameters. Expected 1 or 2, but got {}. Skipping this option.";
-
-
-  private static String scriptLocation = null;
-
-  static {
-    try {
-      // Extract script from JAR to a temp file
-      InputStream in = DiagnosticsService.class.getClassLoader()
-              .getResourceAsStream("diagnostics/diagnostics_collector.py");
-      File tempScript = File.createTempFile("diagnostics_collector", ".py");
-      Files.copy(in, tempScript.toPath(), StandardCopyOption.REPLACE_EXISTING);
-      tempScript.setExecutable(true); // Set execute permission
-      scriptLocation = tempScript.getAbsolutePath();
-    } catch (IOException e) {
-      LOG.error("Failed to extract Python script from JAR", e);
-    }
-  }
+  private static String scriptLocation;
 
   private DiagnosticsService() {
     // hidden constructor
@@ -152,15 +136,15 @@ public final class DiagnosticsService {
   }
 
   @VisibleForTesting
-  protected static ProcessBuilder createProcessBuilder(CommandArgument argument) {
+  protected static ProcessBuilder createProcessBuilder(CommandArgument argument) throws IOException {
     return createProcessBuilder(argument, null, null);
   }
 
   @VisibleForTesting
   protected static ProcessBuilder createProcessBuilder(
-      CommandArgument argument, String issueId, List<String> additionalArgs) {
+      CommandArgument argument, String issueId, List<String> additionalArgs) throws IOException {
     List<String> commandList =
-        new ArrayList<>(Arrays.asList(PYTHON_COMMAND, scriptLocation,
+        new ArrayList<>(Arrays.asList(PYTHON_COMMAND, getScriptLocation(),
             argument.getShortOption()));
 
     if (argument.equals(CommandArgument.COMMAND)) {
@@ -265,7 +249,28 @@ public final class DiagnosticsService {
       return shortOption;
     }
 
-
-
   }
+
+  private static String getScriptLocation() throws IOException {
+    if (scriptLocation != null) {
+      return scriptLocation;
+    }
+
+    InputStream in = DiagnosticsService.class.getClassLoader()
+            .getResourceAsStream("diagnostics/diagnostics_collector.py");
+
+    if (in == null) {
+      throw new FileNotFoundException(
+              "Resource diagnostics/diagnostics_collector.py not found in classpath");
+    }
+
+    File tempScript = File.createTempFile("diagnostics_collector", ".py");
+    Files.copy(in, tempScript.toPath(), StandardCopyOption.REPLACE_EXISTING);
+    tempScript.setExecutable(true);
+
+    scriptLocation = tempScript.getAbsolutePath();
+    return scriptLocation;
+  }
+
+
 }
