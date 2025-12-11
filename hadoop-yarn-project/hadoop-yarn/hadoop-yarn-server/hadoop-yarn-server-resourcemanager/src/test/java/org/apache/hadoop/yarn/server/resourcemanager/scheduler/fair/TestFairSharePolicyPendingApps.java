@@ -68,8 +68,8 @@ public class TestFairSharePolicyPendingApps {
     // Queue with pending apps should NOT be assigned lowest priority
     // compareDemand() should return 0, allowing progression to Stage 2
     // Result depends on Stage 2 (minShare comparison) or later stages
-    assertNotEquals("Queue with pending apps should not get lowest priority from compareDemand()",
-        1, result);
+    assertNotEquals(1, result,
+        "Queue with pending apps should not get lowest priority from compareDemand()");
   }
 
   /**
@@ -102,8 +102,8 @@ public class TestFairSharePolicyPendingApps {
     int result = policy.getComparator().compare(queueWithPendingApps, emptyQueue);
 
     // Queue with pending apps should get higher priority than truly empty queue
-    assertTrue("Queue with pending apps should have higher priority than truly empty queue",
-        result < 0);
+    assertTrue(result < 0,
+        "Queue with pending apps should have higher priority than truly empty queue");
   }
 
   /**
@@ -135,8 +135,8 @@ public class TestFairSharePolicyPendingApps {
     int result = policy.getComparator().compare(queueBelowMinShare, queueAboveMinShare);
 
     // Queue below minShare should get higher priority (negative result)
-    assertTrue("Queue below minShare with pending apps should get higher priority",
-        result < 0);
+    assertTrue(result < 0,
+        "Queue below minShare with pending apps should get higher priority");
   }
 
   /**
@@ -172,7 +172,7 @@ public class TestFairSharePolicyPendingApps {
     // The comparison should proceed to Stage 2 (minShare) or later
     // queue1 has higher minShare (256GB > 128GB), both at 0% usage
     // So queue1 should get higher priority (negative result)
-    assertTrue("Queues with pending apps should be compared by minShare, not blocked at compareDemand",
-        result < 0);
+    assertTrue(result < 0,
+        "Queues with pending apps should be compared by minShare, not blocked at compareDemand");
   }
 }
