@@ -84,6 +84,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.UserMetricsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.UsersInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.AppAttemptInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.AppAttemptsInfo;
+import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
 import org.apache.hadoop.yarn.webapp.RemoteExceptionData;
 import org.apache.hadoop.yarn.webapp.dao.ConfInfo;
 import org.apache.hadoop.yarn.webapp.dao.SchedConfUpdateInfo;
@@ -193,6 +194,7 @@ public class ClassSerialisationConfig {
       ClusterUserInfo.class,
       ConfInfo.class,
       ContainerLaunchContextInfo.class,
+      ContainersInfo.class,
       DelegationToken.class,
       LabelsToNodesInfo.class,
       LocalResourceInfo.class,
