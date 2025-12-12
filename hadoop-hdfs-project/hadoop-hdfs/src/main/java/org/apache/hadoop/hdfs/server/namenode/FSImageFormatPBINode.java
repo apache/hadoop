@@ -69,6 +69,7 @@ import org.apache.hadoop.hdfs.server.namenode.startupprogress.Phase;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.StartupProgress;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.StartupProgress.Counter;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.Step;
+import org.apache.hadoop.hdfs.util.DelimitedProtoBufParseHelper;
 import org.apache.hadoop.hdfs.util.EnumCounters;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
 
@@ -375,8 +376,12 @@ public final class FSImageFormatPBINode {
       // EOF is encountered at the end of the stream.
       int cntr = 0;
       ArrayList<INode> inodeList = new ArrayList<>();
+      DelimitedProtoBufParseHelper<INodeSection.INode> parseHelper =
+          new DelimitedProtoBufParseHelper<>(in,
+              INodeSection.INode::parseFrom,
+              INodeSection.INode::parseFrom);
       while (true) {
-        INodeSection.INode p = INodeSection.INode.parseDelimitedFrom(in);
+        INodeSection.INode p = parseHelper.parseNext();
         if (p == null) {
           break;
         }

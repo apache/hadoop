@@ -527,6 +527,12 @@ public class PBHelperClient {
 
   public static InputStream vintPrefixed(final InputStream input)
       throws IOException {
+    int size = vintPrefixedSize(input);
+    return new LimitInputStream(input, size);
+  }
+
+  public static int vintPrefixedSize(final InputStream input)
+      throws IOException {
     final int firstByte = input.read();
     if (firstByte == -1) {
       throw new EOFException(
@@ -535,7 +541,7 @@ public class PBHelperClient {
 
     int size = CodedInputStream.readRawVarint32(firstByte, input);
     assert size >= 0;
-    return new LimitInputStream(input, size);
+    return size;
   }
 
   public static CipherOption convert(HdfsProtos.CipherOptionProto proto) {
