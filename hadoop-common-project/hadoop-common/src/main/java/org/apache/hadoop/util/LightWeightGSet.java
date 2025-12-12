@@ -421,4 +421,10 @@ public class LightWeightGSet<K, E extends K> implements GSet<K, E> {
     Arrays.fill(entries, null);
     size = 0;
   }
+
+  @Override
+  public GSetConcurrencyController<K> newConcurrencyController() {
+    return new LightWeightGSetConcurrencyController<>(this);
+  }
+
 }

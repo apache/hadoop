@@ -18,8 +18,15 @@
 package org.apache.hadoop.util;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Iterator;
+import java.util.Queue;
 import java.util.Random;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingDeque;
 
 import org.apache.hadoop.util.LightWeightGSet.LinkedElement;
 import org.junit.jupiter.api.Test;
@@ -27,6 +34,7 @@ import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -113,4 +121,65 @@ public class TestLightWeightGSet {
       assertTrue(iter.next().getVal() <= mode);
     }
   }
+
+  @Test
+  @Timeout(value = 60)
+  public void testLightWeightGSetConcurrencyController() {
+    LightWeightGSet<TestElement, TestElement> set =
+        new LightWeightGSet<>(16);
+    testGSetConcurrencyController(set, set.newConcurrencyController());
+  }
+
+  @Test
+  @Timeout(value = 60)
+  public void testSynchronizedGSetConcurrencyController() {
+    LightWeightGSet<TestElement, TestElement> set =
+        new LightWeightGSet<>(16);
+    testGSetConcurrencyController(set, SynchronizedGSetController.of());
+  }
+
+  private void testGSetConcurrencyController(GSet<TestElement, TestElement> set,
+      GSetConcurrencyController<TestElement> controller) {
+    int numElements = 10000;
+    int numThreads = 10;
+
+    Queue<TestElement> queue = new LinkedBlockingDeque<>();
+    for (int i = 0; i < numElements; i++) {
+      queue.add(new TestElement(i));
+    }
+
+    ExecutorService executorService = Executors.newFixedThreadPool(numThreads);
+    CompletableFuture<?>[] futures = new CompletableFuture<?>[numThreads];
+    for (int i = 0; i < numThreads; i++) {
+      CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
+        while (true) {
+          TestElement next = queue.poll();
+          if (next == null) {
+            break;
+          }
+          controller.doUnderLock(next, () -> {
+            set.put(next);
+            assertEquals(next, set.get(next));
+          });
+          controller.addSize(1);
+        }
+      }, executorService);
+      futures[i] = future;
+    }
+
+    CompletableFuture<Void> all = CompletableFuture.allOf(futures);
+    assertDoesNotThrow(() -> all.get());
+    executorService.shutdown();
+
+    controller.correctSize();
+
+    assertEquals(numElements, set.size());
+
+    Set<Integer> exist = new HashSet<>();
+    for (TestElement e : set) {
+      assertTrue(exist.add(e.getVal()));
+    }
+    assertEquals(numElements, exist.size());
+  }
+
 }

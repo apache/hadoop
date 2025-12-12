@@ -150,4 +150,9 @@ public class LightWeightResizableGSet<K, E extends K>
       resize(capacity * 2);
     }
   }
+
+  @Override
+  public GSetConcurrencyController<K> newConcurrencyController() {
+    return SynchronizedGSetController.of();
+  }
 }

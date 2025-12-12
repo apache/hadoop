@@ -101,4 +101,16 @@ public interface GSet<K, E extends K> extends Iterable<E> {
    * @return the collection of values.
    */
   Collection<E> values();
+
+  /**
+   * Create a new concurrency controller for this GSet.
+   * By default, a {@link SynchronizedGSetController} is returned.
+   * Subclasses may override this method to return a different type of controller.
+   *
+   * @return a new concurrency controller.
+   */
+  default GSetConcurrencyController<K> newConcurrencyController() {
+    return SynchronizedGSetController.of();
+  }
+
 }

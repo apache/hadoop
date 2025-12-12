@@ -254,4 +254,10 @@ public class LightWeightCache<K, E extends K> extends LightWeightGSet<K, E> {
       }
     };
   }
+
+  @Override
+  public GSetConcurrencyController<K> newConcurrencyController() {
+    return SynchronizedGSetController.of();
+  }
+
 }
