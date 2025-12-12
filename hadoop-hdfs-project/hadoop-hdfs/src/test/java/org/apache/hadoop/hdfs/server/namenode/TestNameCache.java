@@ -24,6 +24,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
 /**
  * Test for {@link NameCache} class
  */
@@ -86,4 +89,54 @@ public class TestNameCache {
       assertEquals(lookupCount, cache.getLookupCount());
     }
   }
+
+  @Test
+  public void testInitializeWithMultipleThreads() throws Exception {
+    // Create dictionary with useThreshold 10
+    NameCache<String> cache = new NameCache<>(10);
+    String[] matching = {"part1", "part10000000", "fileabc", "abc", "filepart"};
+    String[] notMatching = {"spart1", "apart", "abcd", "def"};
+
+    int numThreads = 5;
+
+    ExecutorService executorService = Executors.newFixedThreadPool(5);
+
+    for (int i = 0; i <numThreads; i++) {
+      executorService.submit(() -> {
+        for (String s : matching) {
+          cache.put(s);
+          cache.put(s);
+        }
+
+        for (String s : notMatching) {
+          cache.put(s);
+        }
+      });
+    }
+
+    // Mark dictionary as initialized
+    cache.initialized();
+
+    for (String s : matching) {
+      verifyNameReuse(cache, s, true);
+    }
+    // Check dictionary size
+    assertEquals(matching.length, cache.size());
+
+    for (String s : notMatching) {
+      verifyNameReuse(cache, s, false);
+    }
+
+    cache.reset();
+    cache.initialized();
+
+    for (String s : matching) {
+      verifyNameReuse(cache, s, false);
+    }
+
+    for (String s : notMatching) {
+      verifyNameReuse(cache, s, false);
+    }
+  }
+
 }

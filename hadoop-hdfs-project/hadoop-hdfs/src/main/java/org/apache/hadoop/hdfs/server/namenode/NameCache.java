@@ -19,7 +19,11 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.LongAdder;
 
+import org.apache.hadoop.util.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,7 +40,7 @@ import org.slf4j.LoggerFactory;
  * discarded and cache is ready for use.
  * 
  * <p>
- * This class must be synchronized externally.
+ * This class must be synchronized externally after initialized .
  * 
  * @param <K> name to be added to the cache
  */
@@ -45,21 +49,17 @@ class NameCache<K> {
    * Class for tracking use count of a name
    */
   private class UseCount {
-    int count;
+    private final AtomicInteger count = new AtomicInteger();
     final K value;  // Internal value for the name
 
     UseCount(final K value) {
-      count = 1;
       this.value = value;
     }
-    
-    void increment() {
-      count++;
+
+    int incrementAndGet() {
+      return count.incrementAndGet();
     }
-    
-    int get() {
-      return count;
-    }
+
   }
 
   static final Logger LOG = LoggerFactory.getLogger(NameCache.class.getName());
@@ -73,11 +73,13 @@ class NameCache<K> {
   /** of times a cache look up was successful */
   private int lookups = 0;
 
+  private final LongAdder lookupsBeforeInitialized = new LongAdder();
+
   /** Cached names */
   final HashMap<K, K> cache = new HashMap<K, K>();
 
   /** Names and with number of occurrences tracked during initialization */
-  Map<K, UseCount> transientMap = new HashMap<K, UseCount>();
+  Map<K, UseCount> transientMap = new ConcurrentHashMap<>();
 
   /**
    * Constructor
@@ -85,39 +87,37 @@ class NameCache<K> {
    *          cache
    */
   NameCache(int useThreshold) {
+    Preconditions.checkArgument(useThreshold > 0);
     this.useThreshold = useThreshold;
   }
   
   /**
    * Add a given name to the cache or track use count.
    * exist. If the name already exists, then the internal value is returned.
+   * If not initialized, this method is thread safe.
    * 
    * @param name name to be looked up
    * @return internal value for the name if found; otherwise null
    */
   K put(final K name) {
-    K internal = cache.get(name);
-    if (internal != null) {
-      lookups++;
-      return internal;
-    }
-
-    // Track the usage count only during initialization
-    if (!initialized) {
-      UseCount useCount = transientMap.get(name);
-      if (useCount != null) {
-        useCount.increment();
-        if (useCount.get() >= useThreshold) {
-          promote(name);
-        }
-        return useCount.value;
+    if (initialized) {
+      K internal = cache.get(name);
+      if (internal != null) {
+        lookups++;
       }
-      useCount = new UseCount(name);
-      transientMap.put(name, useCount);
+      return internal;
+    } else {
+      UseCount useCount = transientMap.computeIfAbsent(name, UseCount::new);
+      int count = useCount.incrementAndGet();
+      if (count == useThreshold) {
+        promote(useCount);
+      } else if (count > useThreshold) {
+        lookupsBeforeInitialized.increment();
+      }
+      return useCount.value;
     }
-    return null;
   }
-  
+
   /**
    * Lookup count when a lookup for a name returned cached object
    * @return number of successful lookups
@@ -140,16 +140,15 @@ class NameCache<K> {
    * save heap space.
    */
   void initialized() {
+    this.lookups = lookups + lookupsBeforeInitialized.intValue();
     LOG.info("initialized with " + size() + " entries " + lookups + " lookups");
     this.initialized = true;
-    transientMap.clear();
-    transientMap = null;
+    this.transientMap = null;
   }
   
   /** Promote a frequently used name to the cache */
-  private void promote(final K name) {
-    transientMap.remove(name);
-    cache.put(name, name);
+  private synchronized void promote(final UseCount useCount) {
+    cache.put(useCount.value, useCount.value);
     lookups += useThreshold;
   }
 
@@ -157,7 +156,7 @@ class NameCache<K> {
     initialized = false;
     cache.clear();
     if (transientMap == null) {
-      transientMap = new HashMap<K, UseCount>();
+      transientMap = new ConcurrentHashMap<>();
     } else {
       transientMap.clear();
     }
