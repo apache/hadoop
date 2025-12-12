@@ -32,6 +32,11 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.util.GSetConcurrencyController;
+import org.apache.hadoop.util.LockFreeGSetController;
+import org.apache.hadoop.util.SynchronizedGSetController;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
@@ -193,13 +198,19 @@ public final class FSImageFormatPBINode {
       return dir;
     }
 
-    public static void updateBlocksMap(INodeFile file, BlockManager bm) {
+    public static void updateBlocksMap(INodeFile file, BlockManager bm,
+        GSetConcurrencyController<Block> synchronizer) {
       // Add file->block mapping
       final BlockInfo[] blocks = file.getBlocks();
       if (blocks != null) {
         for (int i = 0; i < blocks.length; i++) {
-          file.setBlock(i, bm.addBlockCollectionWithCheck(blocks[i], file));
+          BlockInfo block = blocks[i];
+          int blockIndex = i;
+          synchronizer.doUnderLock(block,
+              () -> file.setBlock(blockIndex, bm.addBlockCollectionWithCheck(block, file))
+          );
         }
+        synchronizer.addSize(blocks.length);
       }
     }
 
@@ -211,15 +222,33 @@ public final class FSImageFormatPBINode {
     private ExecutorService blocksMapUpdateExecutor;
     // update name cache by single thread asynchronously.
     private ExecutorService nameCacheUpdateExecutor;
+    private GSetConcurrencyController<INode> inodeMapSynchronizer =
+        SynchronizedGSetController.of();
+    private GSetConcurrencyController<Block> blockMapSynchronizer =
+        LockFreeGSetController.getInstance();
 
-    Loader(FSNamesystem fsn, final FSImageFormatProtobuf.Loader parent) {
+    Loader(FSNamesystem fsn, final FSImageFormatProtobuf.Loader parent, Configuration conf) {
       this.fsn = fsn;
       this.dir = fsn.dir;
       this.parent = parent;
-      // Note: these executors must be SingleThreadExecutor, as they
-      // are used to modify structures which are not thread safe.
-      blocksMapUpdateExecutor = Executors.newSingleThreadExecutor();
-      nameCacheUpdateExecutor = Executors.newSingleThreadExecutor();
+      setupExecutors(conf);
+    }
+
+    private void setupExecutors(Configuration conf) {
+      int nameCacheUpdateThreadNum = conf.getInt(DFSConfigKeys.DFS_IMAGE_NAME_CACHE_INIT_THREAD_NUM,
+          DFSConfigKeys.DFS_IMAGE_NAME_CACHE_INIT_THREAD_DEFAULT);
+      int blocksMapUpdateThreadNum = conf.getInt(DFSConfigKeys.DFS_IMAGE_BLOCK_MAP_INIT_THREAD_NUM,
+          DFSConfigKeys.DFS_IMAGE_BLOCK_MAP_INIT_THREAD_DEFAULT);
+      this.nameCacheUpdateExecutor = Executors.newFixedThreadPool(nameCacheUpdateThreadNum);
+      this.blocksMapUpdateExecutor = Executors.newFixedThreadPool(blocksMapUpdateThreadNum);
+
+      if (blocksMapUpdateThreadNum > 1) {
+        blockMapSynchronizer = fsn.getBlockManager().newBlockGSetConcurrencyController();
+      }
+      if (conf.getBoolean(DFSConfigKeys.DFS_IMAGE_CONCURRENT_INIT_INODE_MAP_ENABLE,
+          DFSConfigKeys.DFS_IMAGE_CONCURRENT_INIT_INODE_MAP_ENABLE_DEFAULT)) {
+        inodeMapSynchronizer = dir.getINodeMap().newINodeGSetConcurrencyController();
+      }
     }
 
     void loadINodeDirectorySectionInParallel(ExecutorService service,
@@ -329,10 +358,10 @@ public final class FSImageFormatPBINode {
       }
     }
 
-     // update blocks map with non-thread safe
+     // update blocks map with thread safe
     private void updateBlockMapInternal(ArrayList<INode> inodeList) {
       for (INode i : inodeList) {
-        updateBlocksMap(i.asFile(), fsn.getBlockManager());
+        updateBlocksMap(i.asFile(), fsn.getBlockManager(), blockMapSynchronizer);
       }
     }
 
@@ -340,6 +369,7 @@ public final class FSImageFormatPBINode {
       long start = System.currentTimeMillis();
       waitExecutorTerminated(blocksMapUpdateExecutor);
       waitExecutorTerminated(nameCacheUpdateExecutor);
+      blockMapSynchronizer.correctSize();
       LOG.info("Completed update blocks map and name cache, total waiting "
           + "duration {}ms.", (System.currentTimeMillis() - start));
     }
@@ -382,6 +412,7 @@ public final class FSImageFormatPBINode {
               INodeSection.INode::parseFrom);
       while (true) {
         INodeSection.INode p = parseHelper.parseNext();
+
         if (p == null) {
           break;
         }
@@ -391,9 +422,9 @@ public final class FSImageFormatPBINode {
           }
         } else {
           INode n = loadINode(p);
-          synchronized(this) {
-            dir.addToInodeMap(n);
-          }
+          inodeMapSynchronizer.doUnderLock(n,
+              () -> dir.addToInodeMap(n)
+          );
           fillUpInodeList(inodeList, n);
         }
         cntr++;
@@ -467,6 +498,7 @@ public final class FSImageFormatPBINode {
             "parallel, but loaded "+totalLoaded.get()+". The image may " +
             "be corrupt.");
       }
+      inodeMapSynchronizer.correctSize((int) expectedInodes);
       LOG.info("Completed loading all INode sections. Loaded {} inodes.",
           totalLoaded.get());
     }

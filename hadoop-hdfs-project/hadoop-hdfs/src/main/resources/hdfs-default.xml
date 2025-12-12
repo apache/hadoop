@@ -1637,6 +1637,32 @@
 </property>
 
 <property>
+  <name>dfs.image.concurrent.init.inode.map.enable</name>
+  <value>false</value>
+  <description>
+        If true, NameNode will init INodeMap concurrently during startup.
+        The number of threads to use is equal to dfs.image.parallel.threads.
+        This config is effected only when dfs.image.parallel.load is true.
+  </description>
+</property>
+
+<property>
+  <name>dfs.image.name.cache.init.thread.num</name>
+  <value>1</value>
+  <description>
+        The number of threads to use when init NameCache during startup.
+  </description>
+</property>
+
+<property>
+  <name>dfs.image.block.map.init.thread.num</name>
+  <value>1</value>
+  <description>
+        The number of threads to use when init BlocksMap during startup.
+  </description>
+</property>
+
+<property>
   <name>dfs.edit.log.transfer.timeout</name>
   <value>30000</value>
   <description>

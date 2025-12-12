@@ -82,6 +82,7 @@ import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot.Root;
 import org.apache.hadoop.hdfs.server.namenode.XAttrFeature;
 import org.apache.hadoop.hdfs.util.EnumCounters;
 
+import org.apache.hadoop.util.LockFreeGSetController;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.protobuf.ByteString;
 
@@ -294,7 +295,8 @@ public class FSImageFormatPBSnapshot {
     private void addToDeletedList(INode dnode, INodeDirectory parent) {
       dnode.setParent(parent);
       if (dnode.isFile()) {
-        updateBlocksMap(dnode.asFile(), fsn.getBlockManager());
+        updateBlocksMap(dnode.asFile(), fsn.getBlockManager(),
+            LockFreeGSetController.getInstance());
       }
     }
 

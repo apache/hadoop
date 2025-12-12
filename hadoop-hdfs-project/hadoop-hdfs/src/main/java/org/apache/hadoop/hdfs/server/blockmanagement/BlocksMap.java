@@ -23,6 +23,7 @@ import java.util.concurrent.atomic.LongAdder;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.namenode.INodeId;
 import org.apache.hadoop.util.GSet;
+import org.apache.hadoop.util.GSetConcurrencyController;
 import org.apache.hadoop.util.LightWeightGSet;
 
 /**
@@ -248,4 +249,9 @@ class BlocksMap {
   long getECBlockGroups() {
     return totalECBlockGroups.longValue();
   }
+
+  public GSetConcurrencyController<Block> newBlockGSetConcurrencyController() {
+    return blocks.newConcurrencyController();
+  }
+
 }

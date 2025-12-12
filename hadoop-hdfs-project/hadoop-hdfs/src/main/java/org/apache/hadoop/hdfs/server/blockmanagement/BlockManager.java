@@ -127,6 +127,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.ExitUtil;
+import org.apache.hadoop.util.GSetConcurrencyController;
 import org.apache.hadoop.util.LightWeightGSet;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
@@ -5861,4 +5862,9 @@ public class BlockManager implements BlockStatsMXBean {
   public int getMinBlocksForWrite(BlockType blockType) {
     return placementPolicies.getPolicy(blockType).getMinBlocksForWrite();
   }
+
+  public GSetConcurrencyController<Block> newBlockGSetConcurrencyController() {
+    return blocksMap.newBlockGSetConcurrencyController();
+  }
+
 }

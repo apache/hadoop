@@ -1183,6 +1183,18 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       "dfs.image.parallel.threads";
   public static final int DFS_IMAGE_PARALLEL_THREADS_DEFAULT = 4;
 
+  public static final String DFS_IMAGE_CONCURRENT_INIT_INODE_MAP_ENABLE =
+      "dfs.image.concurrent.init.inode.map.enable";
+  public static final boolean DFS_IMAGE_CONCURRENT_INIT_INODE_MAP_ENABLE_DEFAULT = false;
+
+  public static final String DFS_IMAGE_NAME_CACHE_INIT_THREAD_NUM =
+      "dfs.image.name.cache.init.thread.num";
+  public static final int DFS_IMAGE_NAME_CACHE_INIT_THREAD_DEFAULT = 1;
+
+  public static final String DFS_IMAGE_BLOCK_MAP_INIT_THREAD_NUM =
+      "dfs.image.block.map.init.thread.num";
+  public static final int DFS_IMAGE_BLOCK_MAP_INIT_THREAD_DEFAULT = 1;
+
   // Edit Log segment transfer timeout
   public static final String DFS_EDIT_LOG_TRANSFER_TIMEOUT_KEY =
       "dfs.edit.log.transfer.timeout";

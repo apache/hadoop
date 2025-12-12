@@ -372,7 +372,7 @@ public final class FSImageFormatProtobuf {
       FileChannel channel = fin.getChannel();
 
       FSImageFormatPBINode.Loader inodeLoader = new FSImageFormatPBINode.Loader(
-          fsn, this);
+          fsn, this, conf);
       FSImageFormatPBSnapshot.Loader snapshotLoader = new FSImageFormatPBSnapshot.Loader(
           fsn, this);
 

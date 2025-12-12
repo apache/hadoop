@@ -24,6 +24,7 @@ import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.util.GSet;
+import org.apache.hadoop.util.GSetConcurrencyController;
 import org.apache.hadoop.util.LightWeightGSet;
 
 import org.apache.hadoop.util.Preconditions;
@@ -138,4 +139,9 @@ public class INodeMap {
   public void clear() {
     map.clear();
   }
+
+  public GSetConcurrencyController<INode> newINodeGSetConcurrencyController() {
+    return map.newConcurrencyController();
+  }
+
 }

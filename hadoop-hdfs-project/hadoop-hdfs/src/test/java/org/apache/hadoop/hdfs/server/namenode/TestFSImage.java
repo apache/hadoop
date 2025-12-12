@@ -1221,4 +1221,81 @@ public class TestFSImage {
     SnapshotTestHelper.compareDumpedTreeInFile(
         preRestartTree, postRestartTree, true);
   }
+
+  @Test
+  public void testUpdateINodeMapAndBlocksMapAndNameCacheConcurrent() throws IOException {
+    Configuration conf = new Configuration();
+
+    conf.set(DFSConfigKeys.DFS_IMAGE_PARALLEL_LOAD_KEY, "true");
+    conf.set(DFSConfigKeys.DFS_IMAGE_PARALLEL_INODE_THRESHOLD_KEY, "1");
+    conf.set(DFSConfigKeys.DFS_IMAGE_PARALLEL_TARGET_SECTIONS_KEY, "4");
+    conf.set(DFSConfigKeys.DFS_IMAGE_PARALLEL_THREADS_KEY, "4");
+    conf.set(DFSConfigKeys.DFS_IMAGE_CONCURRENT_INIT_INODE_MAP_ENABLE, "true");
+    conf.set(DFSConfigKeys.DFS_IMAGE_NAME_CACHE_INIT_THREAD_NUM, "4");
+    conf.set(DFSConfigKeys.DFS_IMAGE_BLOCK_MAP_INIT_THREAD_NUM, "4");
+
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
+    cluster.waitActive();
+    DistributedFileSystem fs = cluster.getFileSystem();
+    FSDirectory fsdir = cluster.getNameNode().namesystem.getFSDirectory();
+    File workingDir = GenericTestUtils.getTestDir();
+
+    File preRestartTree = new File(workingDir, "preRestartTree");
+    File postRestartTree = new File(workingDir, "postRestartTree");
+
+    Path baseDir = new Path("/user/foo");
+    fs.mkdirs(baseDir);
+    fs.allowSnapshot(baseDir);
+    for (int i = 0; i < 5; i++) {
+      Path dir = new Path(baseDir, Integer.toString(i));
+      fs.mkdirs(dir);
+      for (int j = 0; j < 5; j++) {
+        Path file = new Path(dir, Integer.toString(j));
+        FSDataOutputStream os = fs.create(file);
+        os.write((byte) j);
+        os.close();
+      }
+      fs.createSnapshot(baseDir, "snap_"+i);
+      fs.rename(new Path(dir, "0"), new Path(dir, "renamed"));
+    }
+    SnapshotTestHelper.dumpTree2File(fsdir, preRestartTree);
+
+    long inodeNumPreRestart = cluster.getNameNode().namesystem.getFSDirectory().totalInodes();
+    long blockNumPreRestart = cluster.getNameNode().namesystem.getBlockManager().getTotalBlocks();
+
+    // checkpoint
+    fs.setSafeMode(SafeModeAction.ENTER);
+    fs.saveNamespace();
+    fs.setSafeMode(SafeModeAction.LEAVE);
+
+    cluster.restartNameNode();
+    cluster.waitActive();
+    fs = cluster.getFileSystem();
+    fsdir = cluster.getNameNode().namesystem.getFSDirectory();
+
+    // Ensure all the files created above exist, and blocks is correct.
+    for (int i = 0; i < 5; i++) {
+      Path dir = new Path(baseDir, Integer.toString(i));
+      assertTrue(fs.getFileStatus(dir).isDirectory());
+      for (int j = 0; j < 5; j++) {
+        Path file = new Path(dir, Integer.toString(j));
+        if (j == 0) {
+          file = new Path(dir, "renamed");
+        }
+        FSDataInputStream in = fs.open(file);
+        int n = in.readByte();
+        assertEquals(j, n);
+        in.close();
+      }
+    }
+    SnapshotTestHelper.dumpTree2File(fsdir, postRestartTree);
+    SnapshotTestHelper.compareDumpedTreeInFile(
+        preRestartTree, postRestartTree, true);
+
+    assertEquals(inodeNumPreRestart,
+        cluster.getNameNode().namesystem.getFSDirectory().totalInodes());
+    assertEquals(blockNumPreRestart,
+        cluster.getNameNode().namesystem.getBlockManager().getTotalBlocks());
+  }
+
 }
