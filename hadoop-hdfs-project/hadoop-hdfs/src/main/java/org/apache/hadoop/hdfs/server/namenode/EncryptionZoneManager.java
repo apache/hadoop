@@ -321,10 +321,14 @@ public class EncryptionZoneManager {
       CipherSuite suite, CryptoProtocolVersion version, String keyName) {
     final EncryptionZoneInt ez = new EncryptionZoneInt(
         inodeId, suite, version, keyName);
-    if (encryptionZones == null) {
-      encryptionZones = new TreeMap<>();
+    // during fsimage loading, this method may be called concurrently.
+    // See HDFS-17864 for more detail.
+    synchronized (this) {
+      if (encryptionZones == null) {
+        encryptionZones = new TreeMap<>();
+      }
+      encryptionZones.put(inodeId, ez);
     }
-    encryptionZones.put(inodeId, ez);
   }
 
   /**
