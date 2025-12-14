@@ -71,7 +71,7 @@ class LocalFetcher<K,V> extends Fetcher<K, V> {
     setDaemon(true);
   }
 
-  public void run() {
+  public void work() {
     // Create a worklist of task attempts to work over.
     Set<TaskAttemptID> maps = new HashSet<TaskAttemptID>();
     for (TaskAttemptID map : localMapFiles.keySet()) {

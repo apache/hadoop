@@ -48,6 +48,7 @@ import org.apache.hadoop.mapreduce.v2.app.rm.ContainerAllocatorEvent;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
@@ -237,7 +238,7 @@ public class TestLocalContainerAllocator {
 
     @Override
     protected void startAllocatorThread() {
-      allocatorThread = new Thread();
+      allocatorThread = new SubjectInheritingThread();
     }
 
     @Override

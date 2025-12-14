@@ -44,6 +44,7 @@ import org.apache.hadoop.ipc.Client.ConnectionId;
 import org.apache.hadoop.ipc.RPC.RpcKind;
 import org.apache.hadoop.ipc.Server.Call;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
@@ -104,7 +105,7 @@ public class TestIPCServerResponder {
     }
   }
 
-  private static class Caller extends Thread {
+  private static class Caller extends SubjectInheritingThread {
 
     private Client client;
     private int count;
@@ -119,7 +120,7 @@ public class TestIPCServerResponder {
     }
 
     @Override
-    public void run() {
+    public void work() {
       for (int i = 0; i < count; i++) {
         try {
           int byteSize = RANDOM.nextInt(BYTE_COUNT);

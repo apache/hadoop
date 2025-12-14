@@ -24,6 +24,7 @@ import org.apache.hadoop.ipc.metrics.RpcMetrics;
 
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.thirdparty.protobuf.ServiceException;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -965,7 +966,7 @@ public class TestRPC extends TestRpcBase {
       for (int i = 0; i < numConcurrentRPC; i++) {
         final int num = i;
         final TestRpcService proxy = getClient(addr, conf);
-        Thread rpcThread = new Thread(new Runnable() {
+        Thread rpcThread = new SubjectInheritingThread(new Runnable() {
           @Override
           public void run() {
             try {

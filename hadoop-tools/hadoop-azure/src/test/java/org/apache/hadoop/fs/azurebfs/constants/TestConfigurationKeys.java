@@ -55,6 +55,9 @@ public final class TestConfigurationKeys {
 
   public static final String FS_AZURE_TEST_APP_SERVICE_PRINCIPAL_OBJECT_ID = "fs.azure.test.app.service.principal.object.id";
 
+  public static final String FS_AZURE_TEST_END_USER_TENANT_ID = "fs.azure.test.end.user.tenant.id";
+  public static final String FS_AZURE_TEST_END_USER_OBJECT_ID = "fs.azure.test.end.user.object.id";
+
   public static final String FS_AZURE_TEST_APP_ID = "fs.azure.test.app.id";
 
   public static final String FS_AZURE_TEST_APP_SECRET = "fs.azure.test.app.secret";

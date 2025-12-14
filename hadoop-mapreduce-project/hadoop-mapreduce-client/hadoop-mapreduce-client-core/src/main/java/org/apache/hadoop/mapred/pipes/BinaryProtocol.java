@@ -42,6 +42,7 @@ import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.mapred.InputSplit;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -95,7 +96,7 @@ class BinaryProtocol<K1 extends WritableComparable, V1 extends Writable,
 
   private static class UplinkReaderThread<K2 extends WritableComparable,
                                           V2 extends Writable>  
-    extends Thread {
+    extends SubjectInheritingThread {
     
     private DataInputStream inStream;
     private UpwardProtocol<K2, V2> handler;
@@ -117,7 +118,7 @@ class BinaryProtocol<K1 extends WritableComparable, V1 extends Writable,
       inStream.close();
     }
 
-    public void run() {
+    public void work() {
       while (true) {
         try {
           if (Thread.currentThread().isInterrupted()) {

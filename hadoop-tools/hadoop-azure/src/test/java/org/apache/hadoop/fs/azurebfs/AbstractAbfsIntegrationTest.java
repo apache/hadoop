@@ -38,6 +38,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsServiceType;
@@ -199,6 +200,8 @@ public abstract class AbstractAbfsIntegrationTest extends
     // Only live account without namespace support can run ABFS&WASB
     // compatibility tests
     if (!isIPAddress && (abfsConfig.getAuthType(accountName) != AuthType.SAS)
+        && (abfsConfig.getAuthType(accountName)
+        != AuthType.UserboundSASWithOAuth)
         && !abfs.getIsNamespaceEnabled(getTestTracingContext(
             getFileSystem(), false))) {
       final URI wasbUri = new URI(
@@ -321,6 +324,20 @@ public abstract class AbstractAbfsIntegrationTest extends
         tempFs.create(testPath).close();
       }
       abfsConfig.set(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME, AuthType.SAS.name());
+      usingFilesystemForSASTests = true;
+    }
+  }
+
+  /**
+   * Create a filesystem for user bound SAS tests using the SharedKey authentication.
+   *
+   * @throws Exception
+   */
+  protected void createFilesystemForUserBoundSASTests() throws Exception{
+    try (AzureBlobFileSystem tempFs = (AzureBlobFileSystem) FileSystem.newInstance(rawConfig)){
+      ContractTestUtils.assertPathExists(tempFs, "This path should exist",
+          new Path("/"));
+      abfsConfig.set(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME, AuthType.UserboundSASWithOAuth.name());
       usingFilesystemForSASTests = true;
     }
   }
@@ -587,6 +604,9 @@ public abstract class AbstractAbfsIntegrationTest extends
     assumeThat(currentAuthType).
         as("SAS Based Authentication Not Allowed For Integration Tests").
         isNotEqualTo(AuthType.SAS);
+    assumeThat(currentAuthType).
+        as("User-bound SAS Based Authentication Not Allowed For Integration Tests").
+        isNotEqualTo(AuthType.UserboundSASWithOAuth);
     if (currentAuthType == AuthType.SharedKey) {
       assumeValidTestConfigPresent(getRawConfiguration(), FS_AZURE_ACCOUNT_KEY);
     } else {
@@ -711,10 +731,36 @@ public abstract class AbstractAbfsIntegrationTest extends
         .contains(expectedDns);
   }
 
+  /**
+   * Return array of random bytes of the given length.
+   *
+   * @param length length of the byte array
+   * @return byte array
+   */
   protected byte[] getRandomBytesArray(int length) {
     final byte[] b = new byte[length];
     new Random().nextBytes(b);
     return b;
+  }
+
+  /**
+   * Create a file on the file system with the given file name and content.
+   *
+   * @param fs fileSystem that stores the file
+   * @param fileName name of the file
+   * @param fileContent content of the file
+   *
+   * @return path of the file created
+   * @throws IOException exception in writing file on fileSystem
+   */
+  protected Path createFileWithContent(FileSystem fs, String fileName,
+      byte[] fileContent) throws IOException {
+    Path testFilePath = path(fileName);
+    try (FSDataOutputStream oStream = fs.create(testFilePath)) {
+      oStream.write(fileContent);
+      oStream.flush();
+    }
+    return testFilePath;
   }
 
   /**

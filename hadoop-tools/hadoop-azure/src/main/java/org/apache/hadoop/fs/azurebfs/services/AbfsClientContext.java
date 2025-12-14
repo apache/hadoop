@@ -26,17 +26,19 @@ public class AbfsClientContext {
 
   private final ExponentialRetryPolicy exponentialRetryPolicy;
   private final StaticRetryPolicy staticRetryPolicy;
+  private final TailLatencyRequestTimeoutRetryPolicy tailLatencyRequestTimeoutRetryPolicy;
   private final AbfsPerfTracker abfsPerfTracker;
   private final AbfsCounters abfsCounters;
 
   AbfsClientContext(
       ExponentialRetryPolicy exponentialRetryPolicy,
       StaticRetryPolicy staticRetryPolicy,
+      TailLatencyRequestTimeoutRetryPolicy tailLatencyRequestTimeoutRetryPolicy,
       AbfsPerfTracker abfsPerfTracker,
       AbfsCounters abfsCounters) {
     this.exponentialRetryPolicy = exponentialRetryPolicy;
-
     this.staticRetryPolicy = staticRetryPolicy;
+    this.tailLatencyRequestTimeoutRetryPolicy = tailLatencyRequestTimeoutRetryPolicy;
     this.abfsPerfTracker = abfsPerfTracker;
     this.abfsCounters = abfsCounters;
   }
@@ -47,6 +49,14 @@ public class AbfsClientContext {
 
   public StaticRetryPolicy getStaticRetryPolicy() {
     return staticRetryPolicy;
+  }
+
+  /**
+   * Get Tail Latency Request Timeout Retry Policy.
+   * @return TailLatencyRequestTimeoutRetryPolicy instance.
+   */
+  public TailLatencyRequestTimeoutRetryPolicy getTailLatencyRequestTimeoutRetryPolicy() {
+    return tailLatencyRequestTimeoutRetryPolicy;
   }
 
   public AbfsPerfTracker getAbfsPerfTracker() {

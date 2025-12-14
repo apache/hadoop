@@ -26,6 +26,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -52,9 +53,9 @@ public class TestInstrumentedLock {
     InstrumentedLock lock = new InstrumentedLock(testname, LOG, 0, 300);
     lock.lock();
     try {
-      Thread competingThread = new Thread() {
+      SubjectInheritingThread competingThread = new SubjectInheritingThread() {
         @Override
-        public void run() {
+        public void work() {
           assertFalse(lock.tryLock());
         }
       };
@@ -89,9 +90,9 @@ public class TestInstrumentedLock {
     AutoCloseableLock acl = new AutoCloseableLock(lock);
     try (AutoCloseable localLock = acl.acquire()) {
       assertEquals(acl, localLock);
-      Thread competingThread = new Thread() {
+      SubjectInheritingThread competingThread = new SubjectInheritingThread() {
         @Override
-        public void run() {
+        public void work() {
           assertNotEquals(Thread.currentThread(), lockThread.get());
           assertFalse(lock.tryLock());
         }
@@ -253,7 +254,7 @@ public class TestInstrumentedLock {
 
   private Thread lockUnlockThread(Lock lock) throws InterruptedException {
     CountDownLatch countDownLatch = new CountDownLatch(1);
-    Thread t = new Thread(() -> {
+    Thread t = new SubjectInheritingThread(() -> {
       try {
         assertFalse(lock.tryLock());
         countDownLatch.countDown();

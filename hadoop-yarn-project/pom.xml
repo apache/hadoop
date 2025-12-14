@@ -157,6 +157,13 @@
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-yarn-capacity-scheduler-ui</artifactId>
+      <version>${project.version}</version>
+      <type>${yarn.ui.packaging}</type>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-yarn-server-timelineservice-hbase-server-2</artifactId>
       <version>${project.version}</version>
     </dependency>

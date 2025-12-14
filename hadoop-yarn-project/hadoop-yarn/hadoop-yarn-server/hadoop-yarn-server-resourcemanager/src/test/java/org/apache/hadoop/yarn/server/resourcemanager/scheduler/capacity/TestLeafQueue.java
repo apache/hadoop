@@ -62,6 +62,7 @@ import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.util.Time;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
@@ -1129,7 +1130,7 @@ public class TestLeafQueue {
     // Set up allocation threads
     Thread[] threads = new Thread[numAllocationThreads];
     for (int i = 0; i < numAllocationThreads; i++) {
-      threads[i] = new Thread(new Runnable() {
+      threads[i] = new SubjectInheritingThread(new Runnable() {
         @Override
         public void run() {
           try {
@@ -4386,7 +4387,7 @@ public class TestLeafQueue {
     final List<ConcurrentModificationException> conException =
         new ArrayList<ConcurrentModificationException>();
 
-    Thread submitAndRemove = new Thread(new Runnable() {
+    Thread submitAndRemove = new SubjectInheritingThread(new Runnable() {
 
       @Override
       public void run() {
@@ -4405,7 +4406,7 @@ public class TestLeafQueue {
       }
     }, "SubmitAndRemoveApplicationAttempt Thread");
 
-    Thread getAppsInQueue = new Thread(new Runnable() {
+    Thread getAppsInQueue = new SubjectInheritingThread(new Runnable() {
       List<ApplicationAttemptId> apps = new ArrayList<ApplicationAttemptId>();
 
       @Override

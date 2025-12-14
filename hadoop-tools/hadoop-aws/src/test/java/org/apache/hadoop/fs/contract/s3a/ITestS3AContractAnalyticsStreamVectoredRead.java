@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.contract.s3a;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
@@ -26,6 +27,7 @@ import org.apache.hadoop.fs.FileRange;
 import org.apache.hadoop.fs.contract.AbstractContractVectoredReadTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
+import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.StreamStatisticNames;
 import org.apache.hadoop.test.tags.IntegrationTest;
@@ -36,9 +38,20 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.validateVectoredReadResult;
+import static org.apache.hadoop.fs.s3a.Constants.ANALYTICS_ACCELERATOR_CONFIGURATION_PREFIX;
+import static org.apache.hadoop.fs.s3a.S3ATestConstants.AAL_CACHE_TIMEOUT;
+import static org.apache.hadoop.fs.s3a.S3ATestConstants.AAL_READ_BUFFER_SIZE;
+import static org.apache.hadoop.fs.s3a.S3ATestConstants.AAL_REQUEST_COALESCE_TOLERANCE;
+import static org.apache.hadoop.fs.s3a.S3ATestConstants.AAL_SMALL_OBJECT_PREFETCH_ENABLED;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.enableAnalyticsAccelerator;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipForAnyEncryptionExceptSSES3;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyStatisticCounterValue;
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.ACTION_HTTP_GET_REQUEST;
+import static org.apache.hadoop.io.Sizes.S_16K;
+import static org.apache.hadoop.io.Sizes.S_1K;
+import static org.apache.hadoop.io.Sizes.S_32K;
+
 
 /**
  * S3A contract tests for vectored reads with the Analytics stream.
@@ -57,6 +70,18 @@ public class ITestS3AContractAnalyticsStreamVectoredRead extends AbstractContrac
     super(bufferType);
   }
 
+  private static final String REQUEST_COALESCE_TOLERANCE_KEY =
+          ANALYTICS_ACCELERATOR_CONFIGURATION_PREFIX + "." + AAL_REQUEST_COALESCE_TOLERANCE;
+
+  private static final String READ_BUFFER_SIZE_KEY =
+          ANALYTICS_ACCELERATOR_CONFIGURATION_PREFIX + "." + AAL_READ_BUFFER_SIZE;
+
+  private static final String SMALL_OBJECT_PREFETCH_ENABLED_KEY =
+          ANALYTICS_ACCELERATOR_CONFIGURATION_PREFIX + "." + AAL_SMALL_OBJECT_PREFETCH_ENABLED;
+
+  private static final String CACHE_TIMEOUT_KEY =
+          ANALYTICS_ACCELERATOR_CONFIGURATION_PREFIX + "." + AAL_CACHE_TIMEOUT;
+
   /**
    * Create a configuration.
    * @return a configuration
@@ -64,6 +89,28 @@ public class ITestS3AContractAnalyticsStreamVectoredRead extends AbstractContrac
   @Override
   protected Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
+
+    S3ATestUtils.disableFilesystemCaching(conf);
+
+    removeBaseAndBucketOverrides(conf,
+            REQUEST_COALESCE_TOLERANCE_KEY,
+            READ_BUFFER_SIZE_KEY,
+            SMALL_OBJECT_PREFETCH_ENABLED_KEY,
+            CACHE_TIMEOUT_KEY);
+
+    // Set the coalesce tolerance to 1KB, default is 1MB.
+    conf.setInt(REQUEST_COALESCE_TOLERANCE_KEY, S_16K);
+
+    // Set the minimum block size to 32KB. AAL uses a default block size of 128KB, which means the minimum size a S3
+    // request will be is 128KB. Since the file being read is 128KB, we need to  use this here to demonstrate that
+    // separate GET requests are made for ranges that are not coalesced.
+    conf.setInt(READ_BUFFER_SIZE_KEY, S_32K);
+
+    // Disable small object prefetched, otherwise anything less than 8MB is fetched in a single GET.
+    conf.set(SMALL_OBJECT_PREFETCH_ENABLED_KEY, "false");
+
+    conf.setInt(CACHE_TIMEOUT_KEY, 5000);
+
     enableAnalyticsAccelerator(conf);
     // If encryption is set, some AAL tests will fail.
     // This is because AAL caches the head request response, and uses
@@ -102,21 +149,41 @@ public class ITestS3AContractAnalyticsStreamVectoredRead extends AbstractContrac
 
   @Test
   public void testReadVectoredWithAALStatsCollection() throws Exception {
+    List<FileRange> fileRanges = new ArrayList<>();
+    fileRanges.add(FileRange.createFileRange(0, 100));
+    fileRanges.add(FileRange.createFileRange(800, 200));
+    fileRanges.add(FileRange.createFileRange(4 * S_1K, 4 * S_1K));
+    fileRanges.add(FileRange.createFileRange(80 * S_1K, 4 * S_1K));
 
-    List<FileRange> fileRanges = createSampleNonOverlappingRanges();
     try (FSDataInputStream in = openVectorFile()) {
       in.readVectored(fileRanges, getAllocate());
 
       validateVectoredReadResult(fileRanges, DATASET, 0);
       IOStatistics st = in.getIOStatistics();
 
-      // Statistics such as GET requests will be added after IoStats support.
       verifyStatisticCounterValue(st,
               StreamStatisticNames.STREAM_READ_ANALYTICS_OPENED, 1);
 
       verifyStatisticCounterValue(st,
               StreamStatisticNames.STREAM_READ_VECTORED_OPERATIONS,
               1);
+
+      // Verify ranges are coalesced, we are using a coalescing tolerance of 16KB, so [0-100, 800-200, 4KB-8KB] will
+      // get coalesced into a single range.
+      verifyStatisticCounterValue(st, StreamStatisticNames.STREAM_READ_VECTORED_INCOMING_RANGES, 4);
+      verifyStatisticCounterValue(st, StreamStatisticNames.STREAM_READ_VECTORED_COMBINED_RANGES, 2);
+
+      verifyStatisticCounterValue(st, ACTION_HTTP_GET_REQUEST, 2);
+
+      // read the same ranges again to demonstrate that the data is cached, and no new GETs are made.
+      in.readVectored(fileRanges, getAllocate());
+      verifyStatisticCounterValue(st, ACTION_HTTP_GET_REQUEST, 2);
+
+      // Because of how AAL is currently written, it is not possible to track cache hits that originate from a
+      // readVectored() accurately. For this reason, cache hits from readVectored are currently not tracked, for more
+      // details see: https://github.com/awslabs/analytics-accelerator-s3/issues/359
+      verifyStatisticCounterValue(st, StreamStatisticNames.STREAM_READ_CACHE_HIT, 0);
     }
+
   }
 }

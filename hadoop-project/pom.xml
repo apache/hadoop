@@ -77,6 +77,8 @@
     <!-- httpcomponents versions -->
     <httpclient.version>4.5.13</httpclient.version>
     <httpcore.version>4.4.13</httpcore.version>
+    <httpclient5.version>5.5</httpclient5.version>
+    <httpcore5.version>5.3.6</httpcore5.version>
 
     <!-- SLF4J/LOG4J version -->
     <slf4j.version>1.7.36</slf4j.version>
@@ -98,7 +100,7 @@
     <hadoop.protobuf.version>3.25.5</hadoop.protobuf.version>
     <protoc.path>${env.HADOOP_PROTOC_PATH}</protoc.path>
 
-    <hadoop-thirdparty.version>1.4.0</hadoop-thirdparty.version>
+    <hadoop-thirdparty.version>1.5.0</hadoop-thirdparty.version>
     <hadoop-thirdparty-protobuf.version>${hadoop-thirdparty.version}</hadoop-thirdparty-protobuf.version>
     <hadoop-thirdparty-guava.version>${hadoop-thirdparty.version}</hadoop-thirdparty-guava.version>
     <hadoop-thirdparty-shaded-prefix>org.apache.hadoop.thirdparty</hadoop-thirdparty-shaded-prefix>
@@ -113,7 +115,7 @@
     <guava.version>33.4.8-jre</guava.version>
     <guice.version>5.1.0</guice.version>
 
-    <bouncycastle.version>1.78.1</bouncycastle.version>
+    <bouncycastle.version>1.82</bouncycastle.version>
 
     <!-- Required for testing LDAP integration -->
     <apacheds.version>2.0.0.AM27</apacheds.version>
@@ -147,7 +149,7 @@
     <metrics.version>3.2.4</metrics.version>
     <netty4.version>4.1.127.Final</netty4.version>
     <snappy-java.version>1.1.10.4</snappy-java.version>
-    <lz4-java.version>1.7.1</lz4-java.version>
+    <lz4-java.version>1.9.0</lz4-java.version>
     <byte-buddy.version>1.17.6</byte-buddy.version>
 
     <!-- Maven protoc compiler -->
@@ -209,9 +211,9 @@
     <make-maven-plugin.version>1.0-beta-1</make-maven-plugin.version>
     <surefire.fork.timeout>900</surefire.fork.timeout>
     <aws-java-sdk.version>1.12.720</aws-java-sdk.version>
-    <aws-java-sdk-v2.version>2.29.52</aws-java-sdk-v2.version>
+    <aws-java-sdk-v2.version>2.35.4</aws-java-sdk-v2.version>
     <amazon-s3-encryption-client-java.version>3.1.1</amazon-s3-encryption-client-java.version>
-    <amazon-s3-analyticsaccelerator-s3.version>1.3.0</amazon-s3-analyticsaccelerator-s3.version>
+    <amazon-s3-analyticsaccelerator-s3.version>1.3.1</amazon-s3-analyticsaccelerator-s3.version>
     <aws.eventstream.version>1.0.1</aws.eventstream.version>
     <hsqldb.version>2.7.1</hsqldb.version>
     <frontend-maven-plugin.version>1.11.2</frontend-maven-plugin.version>
@@ -227,14 +229,14 @@
     <swagger-annotations-version>1.5.4</swagger-annotations-version>
     <snakeyaml.version>2.0</snakeyaml.version>
     <sshd.version>2.11.0</sshd.version>
-    <hbase.version>2.6.1-hadoop3</hbase.version>
+    <hbase.version>2.6.3-hadoop3</hbase.version>
     <junit.jupiter.version>5.13.3</junit.jupiter.version>
     <junit.platform.version>1.13.3</junit.platform.version>
     <assertj.version>3.12.2</assertj.version>
     <jline.version>3.9.0</jline.version>
     <mockito.version>4.11.0</mockito.version>
     <solr.version>8.11.2</solr.version>
-    <openssl-wildfly.version>2.1.4.Final</openssl-wildfly.version>
+    <openssl-wildfly.version>2.2.5.Final</openssl-wildfly.version>
     <jsonschema2pojo.version>1.0.2</jsonschema2pojo.version>
     <woodstox.version>5.4.0</woodstox.version>
     <nimbus-jose-jwt.version>10.4</nimbus-jose-jwt.version>
@@ -856,6 +858,28 @@
         <groupId>org.apache.httpcomponents</groupId>
         <artifactId>httpcore</artifactId>
         <version>${httpcore.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.httpcomponents.client5</groupId>
+        <artifactId>httpclient5</artifactId>
+        <version>${httpclient5.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>org.slf4j</groupId>
+            <artifactId>*</artifactId>
+          </exclusion>
+        </exclusions>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.httpcomponents.core5</groupId>
+        <artifactId>httpcore5</artifactId>
+        <version>${httpcore5.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>*</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>commons-codec</groupId>
@@ -1822,6 +1846,17 @@
       </dependency>
       <dependency>
         <groupId>org.apache.hbase</groupId>
+        <artifactId>hbase-shaded-client-byo-hadoop</artifactId>
+        <version>${hbase.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>org.apache.yetus</groupId>
+            <artifactId>audience-annotations</artifactId>
+          </exclusion>
+        </exclusions>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hbase</groupId>
         <artifactId>hbase-client</artifactId>
         <version>${hbase.version}</version>
         <exclusions>
@@ -2055,7 +2090,7 @@
         </exclusions>
       </dependency>
       <dependency>
-        <groupId>org.lz4</groupId>
+        <groupId>at.yawk.lz4</groupId>
         <artifactId>lz4-java</artifactId>
         <version>${lz4-java.version}</version>
       </dependency>
@@ -2157,9 +2192,9 @@
         <version>2.4.4</version>
       </dependency>
       <dependency>
-      <groupId>com.google.cloud</groupId>
-      <artifactId>google-cloud-storage</artifactId>
-      <version>2.52.0</version>
+        <groupId>com.google.cloud</groupId>
+        <artifactId>google-cloud-storage</artifactId>
+        <version>2.52.0</version>
     </dependency>
     </dependencies>
   </dependencyManagement>
@@ -2597,6 +2632,23 @@
       <plugin>
         <groupId>com.google.code.maven-replacer-plugin</groupId>
         <artifactId>replacer</artifactId>
+      </plugin>
+      <plugin>
+        <groupId>org.commonjava.maven.plugins</groupId>
+        <artifactId>directory-maven-plugin</artifactId>
+        <version>1.0</version>
+        <executions>
+          <execution>
+            <id>calc-repo-root</id>
+            <goals>
+              <goal>highest-basedir</goal>
+            </goals>
+            <phase>initialize</phase>
+            <configuration>
+              <property>repo.root</property>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
   </build>

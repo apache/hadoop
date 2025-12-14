@@ -257,5 +257,7 @@ public class TestCommonConfigurationFields extends TestConfigurationFieldsBase {
     xmlPropsToSkipCompare.add("io.seqfile.local.dir");
 
     xmlPropsToSkipCompare.add("hadoop.http.sni.host.check.enabled");
+
+    xmlPrefixToSkipCompare.add("fs.obs.");
   }
 }

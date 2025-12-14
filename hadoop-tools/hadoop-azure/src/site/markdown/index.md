@@ -303,8 +303,10 @@ driven by them.
 3. Deployed in-Azure with the Azure VMs providing OAuth 2.0 tokens to the application, "Managed Instance".
 4. Using Shared Access Signature (SAS) tokens provided by a custom implementation of the SASTokenProvider interface.
 5. By directly configuring a fixed Shared Access Signature (SAS) token in the account configuration settings files.
+6. Using user-bound SAS auth type, which requires both OAuth 2.0 setup (point 2 above) and SAS setup (point 4 above)
 
-Note: SAS Based Authentication should be used only with HNS Enabled accounts.
+Note: While user-bound SAS Authentication is **only supported** with HNS Enabled accounts, we **recommend** using HNS Enabled
+accounts with SAS authentication as well.
 
 What can be changed is what secrets/credentials are used to authenticate the caller.
 
@@ -370,7 +372,21 @@ To retrieve using shell script, specify the path to the script for the config
 `fs.azure.shellkeyprovider.script`. ShellDecryptionKeyProvider class use the
 script specified to retrieve the key.
 
-### <a name="oauth-client-credentials"></a> OAuth 2.0 Client Credentials
+### <a name="oauth-authentication"></a> OAuth 2.0 Authentication
+The below are the main options of identity configurations for OAuth settings.
+All of these would have OAuth set as the auth type
+
+```xml
+<property>
+  <name>fs.azure.account.auth.type</name>
+  <value>OAuth</value>
+  <description>
+    Use OAuth authentication
+  </description>
+</property>
+```
+
+#### <a name="oauth-client-credentials"></a> Client Credentials
 
 OAuth 2.0 credentials of (client id, client secret, endpoint) are provided in the configuration/JCEKS file.
 
@@ -416,7 +432,7 @@ the key names are slightly different here.
 </property>
 ```
 
-### <a name="oauth-user-and-passwd"></a> OAuth 2.0: Username and Password
+#### <a name="oauth-user-and-passwd"></a> Username and Password
 
 An OAuth 2.0 endpoint, username and password are provided in the configuration/JCEKS file.
 
@@ -458,7 +474,7 @@ An OAuth 2.0 endpoint, username and password are provided in the configuration/J
 </property>
 ```
 
-### <a name="oauth-refresh-token"></a> OAuth 2.0: Refresh Token
+#### <a name="oauth-refresh-token"></a> Refresh Token
 
 With an existing Oauth 2.0 token, make a request to the Active Directory endpoint
 `https://login.microsoftonline.com/Common/oauth2/token` for this token to be refreshed.
@@ -501,7 +517,7 @@ With an existing Oauth 2.0 token, make a request to the Active Directory endpoin
 </property>
 ```
 
-### <a name="managed-identity"></a> Azure Managed Identity
+#### <a name="managed-identity"></a> Azure Managed Identity
 
 [Azure Managed Identities](https://docs.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/overview), formerly "Managed Service Identities".
 
@@ -549,7 +565,7 @@ The Azure Portal/CLI is used to create the service identity.
 </property>
 ```
 
-### <a name="workload-identity"></a> Azure Workload Identity
+#### <a name="workload-identity"></a> Azure Workload Identity
 
 [Azure Workload Identities](https://docs.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/overview), formerly "Azure AD pod identity".
 
@@ -782,6 +798,45 @@ requests. User can specify them as fixed SAS Token to be used across all the req
     - fs.azure.sas.fixed.token.CONTAINER_NAME.ACCOUNT_NAME
     - fs.azure.sas.fixed.token.ACCOUNT_NAME
     - fs.azure.sas.fixed.token
+
+### User-bound SAS
+- **Description**: The user-bound SAS auth type allows to track the usage of the SAS token generated- something
+ that was not possible in user-delegation SAS authentication type. Reach out to us at 'askabfs@microsoft.com' for more information.
+ To use this authentication type, both custom SAS token provider class (that implements org.apache.hadoop.fs.azurebfs.extensions.SASTokenProvider) as
+    well as OAuth 2.0 provider type need to be specified.
+    - Refer to 'Shared Access Signature (SAS) Token Provider' section above for user-delegation SAS token provider class details and example class implementation.
+    - There are multiple identity configurations for OAuth settings. Listing the main ones below:
+        - Client Credentials
+        - Custom token provider
+        - Managed Identity
+        - Workload Identity
+
+      Refer to respective OAuth 2.0 sections above to correctly chose the OAuth provider type
+    - NOTE: User-bound SAS Authentication is **only supported** with HNS Enabled accounts.
+
+- **Configuration**: To use this method with ABFS Driver, specify the following properties in your `core-site.xml` file:
+
+    1. Authentication Type:
+        ```xml
+        <property>
+          <name>fs.azure.account.auth.type</name>
+          <value>UserboundSASWithOAuth</value>
+        </property>
+        ```
+    2. OAuth 2.0 Provider Type:
+        ```xml
+        <property>
+          <name>fs.azure.account.oauth.provider.type</name>
+          <value>org.apache.hadoop.fs.azurebfs.oauth2.ADD_CHOSEN_OAUTH_IDENTITY_CONFIGURATION</value>
+        </property>
+       ```
+    3. Custom SAS Token Provider Class:
+        ```xml
+        <property>
+          <name>fs.azure.sas.token.provider.type</name>
+          <value>CUSTOM_SAS_TOKEN_PROVIDER_CLASS</value>
+        </property>
+        ```
 
 ## <a name="technical"></a> Technical notes
 

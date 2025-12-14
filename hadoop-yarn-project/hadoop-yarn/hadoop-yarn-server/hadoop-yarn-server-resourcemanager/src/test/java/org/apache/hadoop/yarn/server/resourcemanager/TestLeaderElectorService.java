@@ -26,6 +26,7 @@ import org.apache.curator.test.TestingCluster;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.HAUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -189,9 +190,9 @@ public class TestLeaderElectorService {
   public void testRMFailToTransitionToActive() throws Exception{
     conf.set(YarnConfiguration.RM_HA_ID, "rm1");
     final AtomicBoolean throwException = new AtomicBoolean(true);
-    Thread launchRM = new Thread() {
+    SubjectInheritingThread launchRM = new SubjectInheritingThread() {
       @Override
-      public void run() {
+      public void work() {
         rm1 = new MockRM(conf, true) {
           @Override
           synchronized void transitionToActive() throws Exception {

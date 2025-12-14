@@ -47,6 +47,7 @@ import org.apache.hadoop.yarn.util.Records;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.service.ServiceOperations;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
@@ -782,9 +783,9 @@ public class TestNMClientAsync {
         recordFactory.newRecordInstance(ContainerLaunchContext.class);
 
     // start container from another thread
-    Thread t = new Thread() {
+    SubjectInheritingThread t = new SubjectInheritingThread() {
       @Override
-      public void run() {
+      public void work() {
         asyncClient.startContainerAsync(container, clc);
       }
     };

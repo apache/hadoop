@@ -57,6 +57,7 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.util.JarFinder;
 import org.apache.hadoop.util.Shell;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -461,7 +462,7 @@ public class TestDynamometerInfra {
     final Client client = new Client(JarFinder.getJar(ApplicationMaster.class),
         JarFinder.getJar(Assertions.class));
     client.setConf(localConf);
-    Thread appThread = new Thread(() -> {
+    Thread appThread = new SubjectInheritingThread(() -> {
       try {
         client.run(new String[] {"-" + Client.MASTER_MEMORY_MB_ARG, "128",
             "-" + Client.CONF_PATH_ARG, confZip.toString(),

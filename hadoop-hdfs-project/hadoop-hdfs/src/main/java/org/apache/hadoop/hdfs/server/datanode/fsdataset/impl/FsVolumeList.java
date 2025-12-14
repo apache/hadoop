@@ -49,6 +49,7 @@ import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.AutoCloseableLock;
 import org.apache.hadoop.util.Time;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 
 class FsVolumeList {
   private final CopyOnWriteArrayList<FsVolumeImpl> volumes =
@@ -260,8 +261,8 @@ class FsVolumeList {
         new ConcurrentHashMap<FsVolumeSpi, IOException>();
     List<Thread> replicaAddingThreads = new ArrayList<Thread>();
     for (final FsVolumeImpl v : volumes) {
-      Thread t = new Thread() {
-        public void run() {
+      Thread t = new SubjectInheritingThread() {
+        public void work() {
           try (FsVolumeReference ref = v.obtainReference()) {
             FsDatasetImpl.LOG.info("Adding replicas to map for block pool " +
                 bpid + " on volume " + v + "...");
@@ -507,8 +508,8 @@ class FsVolumeList {
         new ConcurrentHashMap<FsVolumeSpi, IOException>();
     List<Thread> blockPoolAddingThreads = new ArrayList<Thread>();
     for (final FsVolumeImpl v : volumes) {
-      Thread t = new Thread() {
-        public void run() {
+      Thread t = new SubjectInheritingThread() {
+        public void work() {
           try (FsVolumeReference ref = v.obtainReference()) {
             FsDatasetImpl.LOG.info("Scanning block pool " + bpid +
                 " on volume " + v + "...");

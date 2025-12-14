@@ -44,6 +44,7 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.util.Time;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -709,7 +710,7 @@ public class TestOpenFilesWithSnapshot {
     final AtomicBoolean writerError = new AtomicBoolean(false);
     final CountDownLatch startLatch = new CountDownLatch(1);
     final CountDownLatch deleteLatch = new CountDownLatch(1);
-    Thread t = new Thread(new Runnable() {
+    Thread t = new SubjectInheritingThread(new Runnable() {
       @Override
       public void run() {
         try {

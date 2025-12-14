@@ -38,6 +38,7 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.SocksSocketFactory;
 import org.apache.hadoop.net.StandardSocketFactory;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -63,7 +64,7 @@ public class TestSocketFactory {
   private void startTestServer() throws Exception {
     // start simple tcp server.
     serverRunnable = new ServerRunnable();
-    serverThread = new Thread(serverRunnable);
+    serverThread = new SubjectInheritingThread(serverRunnable);
     serverThread.start();
     final long timeout = System.currentTimeMillis() + START_STOP_TIMEOUT_SEC * 1000;
     while (!serverRunnable.isReady()) {

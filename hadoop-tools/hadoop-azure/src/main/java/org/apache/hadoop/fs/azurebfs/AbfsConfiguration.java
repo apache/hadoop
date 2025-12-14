@@ -396,6 +396,11 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_ENABLE_READAHEAD_V2)
   private boolean isReadAheadV2Enabled;
 
+  @BooleanConfigurationValidatorAnnotation(
+      ConfigurationKey = FS_AZURE_ENABLE_READAHEAD_V2_DYNAMIC_SCALING,
+      DefaultValue = DEFAULT_ENABLE_READAHEAD_V2_DYNAMIC_SCALING)
+  private boolean isReadAheadV2DynamicScalingEnabled;
+
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey =
       FS_AZURE_READAHEAD_V2_MIN_THREAD_POOL_SIZE,
       DefaultValue = DEFAULT_READAHEAD_V2_MIN_THREAD_POOL_SIZE)
@@ -417,6 +422,26 @@ public class AbfsConfiguration{
   private int maxReadAheadV2BufferPoolSize;
 
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey =
+      FS_AZURE_READAHEAD_V2_CPU_MONITORING_INTERVAL_MILLIS,
+      DefaultValue = DEFAULT_READAHEAD_V2_CPU_MONITORING_INTERVAL_MILLIS)
+  private int readAheadV2CpuMonitoringIntervalMillis;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey =
+      FS_AZURE_READAHEAD_V2_THREAD_POOL_UPSCALE_PERCENTAGE,
+      DefaultValue = DEFAULT_READAHEAD_V2_THREAD_POOL_UPSCALE_PERCENTAGE)
+  private int readAheadV2ThreadPoolUpscalePercentage;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey =
+      FS_AZURE_READAHEAD_V2_THREAD_POOL_DOWNSCALE_PERCENTAGE,
+      DefaultValue = DEFAULT_READAHEAD_V2_THREAD_POOL_DOWNSCALE_PERCENTAGE)
+  private int readAheadV2ThreadPoolDownscalePercentage;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey =
+      FS_AZURE_READAHEAD_V2_MEMORY_MONITORING_INTERVAL_MILLIS,
+      DefaultValue = DEFAULT_READAHEAD_V2_MEMORY_MONITORING_INTERVAL_MILLIS)
+  private int readAheadV2MemoryMonitoringIntervalMillis;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey =
       FS_AZURE_READAHEAD_V2_EXECUTOR_SERVICE_TTL_MILLIS,
       DefaultValue = DEFAULT_READAHEAD_V2_EXECUTOR_SERVICE_TTL_MILLIS)
   private int readAheadExecutorServiceTTLMillis;
@@ -425,6 +450,16 @@ public class AbfsConfiguration{
       FS_AZURE_READAHEAD_V2_CACHED_BUFFER_TTL_MILLIS,
       DefaultValue = DEFAULT_READAHEAD_V2_CACHED_BUFFER_TTL_MILLIS)
   private int readAheadV2CachedBufferTTLMillis;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey =
+      FS_AZURE_READAHEAD_V2_CPU_USAGE_THRESHOLD_PERCENT,
+      DefaultValue = DEFAULT_READAHEAD_V2_CPU_USAGE_THRESHOLD_PERCENTAGE)
+  private int readAheadV2CpuUsageThresholdPercent;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey =
+      FS_AZURE_READAHEAD_V2_MEMORY_USAGE_THRESHOLD_PERCENT,
+      DefaultValue = DEFAULT_READAHEAD_V2_MEMORY_USAGE_THRESHOLD_PERCENTAGE)
+  private int readAheadV2MemoryUsageThresholdPercent;
 
   @LongConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_SAS_TOKEN_RENEW_PERIOD_FOR_STREAMS,
       MinValue = 0,
@@ -483,6 +518,62 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_APACHE_HTTP_CLIENT_MAX_IO_EXCEPTION_RETRIES)
   private int maxApacheHttpClientIoExceptionsRetries;
 
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_WRITE_DYNAMIC_THREADPOOL_ENABLEMENT,
+      DefaultValue = DEFAULT_WRITE_DYNAMIC_THREADPOOL_ENABLEMENT)
+  private boolean dynamicWriteThreadPoolEnablement;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_WRITE_THREADPOOL_KEEP_ALIVE_TIME_MILLIS,
+      DefaultValue = DEFAULT_WRITE_THREADPOOL_KEEP_ALIVE_TIME_MILLIS)
+  private int writeThreadPoolKeepAliveTime;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_WRITE_CPU_MONITORING_INTERVAL_MILLIS,
+      MinValue = MIN_WRITE_CPU_MONITORING_INTERVAL_MILLIS,
+      MaxValue = MAX_WRITE_CPU_MONITORING_INTERVAL_MILLIS,
+      DefaultValue = DEFAULT_WRITE_CPU_MONITORING_INTERVAL_MILLIS)
+  private int writeCpuMonitoringInterval;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_WRITE_HIGH_CPU_THRESHOLD_PERCENT,
+      MinValue = MIN_WRITE_HIGH_CPU_THRESHOLD_PERCENT,
+      MaxValue = MAX_WRITE_HIGH_CPU_THRESHOLD_PERCENT,
+      DefaultValue = DEFAULT_WRITE_HIGH_CPU_THRESHOLD_PERCENT)
+  private int writeHighCpuThreshold;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_WRITE_MEDIUM_CPU_THRESHOLD_PERCENT,
+      MinValue = MIN_WRITE_MEDIUM_CPU_THRESHOLD_PERCENT,
+      MaxValue = MAX_WRITE_MEDIUM_CPU_THRESHOLD_PERCENT,
+      DefaultValue = DEFAULT_WRITE_MEDIUM_CPU_THRESHOLD_PERCENT)
+  private int writeMediumCpuThreshold;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_WRITE_LOW_CPU_THRESHOLD_PERCENT,
+      MaxValue = MAX_WRITE_LOW_CPU_THRESHOLD_PERCENT,
+      DefaultValue = DEFAULT_WRITE_LOW_CPU_THRESHOLD_PERCENT)
+  private int writeLowCpuThreshold;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_WRITE_LOW_TIER_MEMORY_MULTIPLIER,
+      MinValue = MIN_WRITE_LOW_TIER_MEMORY_MULTIPLIER,
+      DefaultValue = DEFAULT_WRITE_LOW_TIER_MEMORY_MULTIPLIER)
+  private int lowTierMemoryMultiplier;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_WRITE_MEDIUM_TIER_MEMORY_MULTIPLIER,
+      MinValue = MIN_WRITE_MEDIUM_TIER_MEMORY_MULTIPLIER,
+      DefaultValue = DEFAULT_WRITE_MEDIUM_TIER_MEMORY_MULTIPLIER)
+  private int mediumTierMemoryMultiplier;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_WRITE_HIGH_TIER_MEMORY_MULTIPLIER,
+      MinValue = MIN_WRITE_HIGH_TIER_MEMORY_MULTIPLIER,
+      DefaultValue = DEFAULT_WRITE_HIGH_TIER_MEMORY_MULTIPLIER)
+  private int highTierMemoryMultiplier;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey =
+      FS_AZURE_WRITE_HIGH_MEMORY_USAGE_THRESHOLD_PERCENT,
+      DefaultValue = DEFAULT_WRITE_HIGH_MEMORY_USAGE_THRESHOLD_PERCENT)
+  private int writeHighMemoryUsageThresholdPercent;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey =
+      FS_AZURE_WRITE_LOW_MEMORY_USAGE_THRESHOLD_PERCENT,
+      DefaultValue = DEFAULT_WRITE_LOW_MEMORY_USAGE_THRESHOLD_PERCENT)
+  private int writeLowMemoryUsageThresholdPercent;
+
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey =
       FS_AZURE_APACHE_HTTP_CLIENT_MAX_CACHE_SIZE, DefaultValue = DEFAULT_APACHE_HTTP_CLIENT_MAX_CACHE_SIZE,
       MinValue = MIN_APACHE_HTTP_CLIENT_MAX_CACHE_SIZE, MaxValue = MAX_APACHE_HTTP_CLIENT_MAX_CACHE_SIZE)
@@ -518,6 +609,52 @@ public class AbfsConfiguration{
   @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ENABLE_CREATE_BLOB_IDEMPOTENCY,
       DefaultValue = DEFAULT_FS_AZURE_ENABLE_CREATE_BLOB_IDEMPOTENCY)
   private boolean enableCreateIdempotency;
+
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ENABLE_TAIL_LATENCY_TRACKER,
+      DefaultValue = DEFAULT_FS_AZURE_ENABLE_TAIL_LATENCY_TRACKER)
+  private boolean isTailLatencyTrackerEnabled;
+
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ENABLE_TAIL_LATENCY_REQUEST_TIMEOUT,
+      DefaultValue = DEFAULT_FS_AZURE_ENABLE_TAIL_LATENCY_REQUEST_TIMEOUT)
+  private boolean isTailLatencyRequestTimeoutEnabled;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_TAIL_LATENCY_PERCENTILE,
+      DefaultValue = DEFAULT_FS_AZURE_TAIL_LATENCY_PERCENTILE)
+  private int tailLatencyPercentile;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_TAIL_LATENCY_MIN_DEVIATION,
+      DefaultValue = DEFAULT_FS_AZURE_TAIL_LATENCY_MIN_DEVIATION)
+  private int tailLatencyMinDeviation;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_TAIL_LATENCY_MIN_SAMPLE_SIZE,
+      DefaultValue = DEFAULT_FS_AZURE_TAIL_LATENCY_MIN_SAMPLE_SIZE)
+  private int tailLatencyMinSampleSize;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_TAIL_LATENCY_ANALYSIS_WINDOW_MILLIS,
+      DefaultValue = DEFAULT_FS_AZURE_TAIL_LATENCY_ANALYSIS_WINDOW_MILLIS)
+  private int tailLatencyAnalysisWindowInMillis;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_TAIL_LATENCY_ANALYSIS_WINDOW_GRANULARITY,
+      DefaultValue = DEFAULT_FS_AZURE_TAIL_LATENCY_ANALYSIS_WINDOW_GRANULARITY,
+      MinValue = MIN_FS_AZURE_TAIL_LATENCY_ANALYSIS_WINDOW_GRANULARITY)
+  private int tailLatencyAnalysisWindowGranularity;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_TAIL_LATENCY_PERCENTILE_COMPUTATION_INTERVAL_MILLIS,
+      DefaultValue = DEFAULT_FS_AZURE_TAIL_LATENCY_PERCENTILE_COMPUTATION_INTERVAL_MILLIS)
+  private int tailLatencyPercentileComputationIntervalInMillis;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_TAIL_LATENCY_MAX_RETRY_COUNT,
+      DefaultValue = DEFAULT_FS_AZURE_TAIL_LATENCY_MAX_RETRY_COUNT)
+  private int tailLatencyMaxRetryCount;
+
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ENABLE_PREFETCH_REQUEST_PRIORITY,
+      DefaultValue = DEFAULT_FS_AZURE_ENABLE_PREFETCH_REQUEST_PRIORITY)
+  private boolean enablePrefetchRequestPriority;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_PREFETCH_REQUEST_PRIORITY_VALUE,
+      MinValue = DEFAULT_FS_AZURE_STANDARD_REQUEST_PRIORITY_VALUE,
+      DefaultValue = DEFAULT_FS_AZURE_LOWEST_REQUEST_PRIORITY_VALUE)
+  private int prefetchRequestPriorityValue;
 
   private String clientProvidedEncryptionKey;
   private String clientProvidedEncryptionKeySHA;
@@ -1112,9 +1249,9 @@ public class AbfsConfiguration{
   }
 
   public boolean getCreateRemoteFileSystemDuringInitialization() {
-    // we do not support creating the filesystem when AuthType is SAS
+    // we do not support creating the filesystem when AuthType is SAS or UserboundSASWithOAuth
     return this.createRemoteFileSystemDuringInitialization
-        && this.getAuthType(this.accountName) != AuthType.SAS;
+        && !(validateForSASType(this.getAuthType(this.accountName)));
   }
 
   public boolean getSkipUserGroupMetadataDuringInitialization() {
@@ -1236,6 +1373,14 @@ public class AbfsConfiguration{
     return enableCreateIdempotency;
   }
 
+  public boolean isEnablePrefetchRequestPriority() {
+    return enablePrefetchRequestPriority;
+  }
+
+  public String getPrefetchRequestPriorityValue() {
+    return Integer.toString(prefetchRequestPriorityValue);
+  }
+
   /**
    * Enum config to allow user to pick format of x-ms-client-request-id header
    * @return tracingContextFormat config if valid, else default ALL_ID_FORMAT
@@ -1277,9 +1422,14 @@ public class AbfsConfiguration{
     return this.trackLatency;
   }
 
+  public boolean validateForSASType(AuthType authType){
+    return authType == AuthType.SAS
+        || authType == AuthType.UserboundSASWithOAuth;
+  }
+
   public AccessTokenProvider getTokenProvider() throws TokenAccessProviderException {
     AuthType authType = getEnum(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME, AuthType.SharedKey);
-    if (authType == AuthType.OAuth) {
+    if (authType == AuthType.OAuth || authType == AuthType.UserboundSASWithOAuth) {
       try {
         Class<? extends AccessTokenProvider> tokenProviderClass =
             getTokenProviderClass(authType,
@@ -1427,7 +1577,7 @@ public class AbfsConfiguration{
    * the AbfsConfiguration with which a filesystem is initialized, and eliminate
    * chances of dynamic modifications and spurious situations.<br>
    * @return sasTokenProvider object based on configurations provided
-   * @throws AzureBlobFileSystemException
+   * @throws AzureBlobFileSystemException if SAS token provider initialization fails
    */
   public SASTokenProvider getSASTokenProvider() throws AzureBlobFileSystemException {
     AuthType authType = getEnum(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME, AuthType.SharedKey);
@@ -1474,6 +1624,70 @@ public class AbfsConfiguration{
     }
   }
 
+  /**
+   * Returns the SASTokenProvider implementation to be used to generate user-bound SAS token.
+   * Custom implementation of {@link SASTokenProvider} under th config
+   * "fs.azure.sas.token.provider.type" needs to be provided.
+   * @param authType authentication type
+   * @return sasTokenProvider object based on configurations provided
+   * @throws AzureBlobFileSystemException is user-bound SAS token provider initialization fails
+   */
+  public SASTokenProvider getUserBoundSASTokenProvider(AuthType authType)
+      throws AzureBlobFileSystemException {
+
+    try {
+      Class<? extends SASTokenProvider> customSasTokenProviderImplementation =
+          getTokenProviderClass(authType, FS_AZURE_SAS_TOKEN_PROVIDER_TYPE,
+              null, SASTokenProvider.class);
+
+      if (customSasTokenProviderImplementation == null) {
+        throw new SASTokenProviderException(String.format(
+            "\"%s\" must be set for user-bound SAS auth type.",
+            FS_AZURE_SAS_TOKEN_PROVIDER_TYPE));
+      }
+
+        SASTokenProvider sasTokenProvider = ReflectionUtils.newInstance(
+            customSasTokenProviderImplementation, rawConfig);
+        if (sasTokenProvider == null) {
+          throw new SASTokenProviderException(String.format(
+              "Failed to initialize %s", customSasTokenProviderImplementation));
+        }
+        LOG.trace("Initializing {}", customSasTokenProviderImplementation.getName());
+        sasTokenProvider.initialize(rawConfig, accountName);
+        LOG.trace("{} init complete", customSasTokenProviderImplementation.getName());
+        return sasTokenProvider;
+    } catch (SASTokenProviderException e) {
+      throw e;
+    } catch (Exception e) {
+      throw new SASTokenProviderException(
+          "Unable to load user-bound SAS token provider class: " + e, e);
+    }
+  }
+
+  /**
+   * Returns both the AccessTokenProvider and the SASTokenProvider
+   * when auth type is UserboundSASWithOAuth.
+   *
+   * @return Object[] where:
+   *   [0] = AccessTokenProvider
+   *   [1] = SASTokenProvider
+   * @throws AzureBlobFileSystemException if provider initialization fails
+   */
+  public Object[] getUserBoundSASBothTokenProviders()
+      throws AzureBlobFileSystemException {
+    AuthType authType = getEnum(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME,
+        AuthType.SharedKey);
+    if (authType != AuthType.UserboundSASWithOAuth) {
+      throw new SASTokenProviderException(String.format(
+          "Invalid auth type: %s is being used, expecting user-bound SAS.",
+          authType));
+    }
+
+    AccessTokenProvider tokenProvider = getTokenProvider();
+    SASTokenProvider sasTokenProvider = getUserBoundSASTokenProvider(authType);
+    return new Object[]{tokenProvider, sasTokenProvider};
+  }
+
   public EncryptionContextProvider createEncryptionContextProvider() {
     try {
       String configKey = FS_AZURE_ENCRYPTION_CONTEXT_PROVIDER_TYPE;
@@ -1501,13 +1715,25 @@ public class AbfsConfiguration{
   }
 
   public boolean isReadAheadEnabled() {
-    return this.enabledReadAhead;
+    return enabledReadAhead;
+  }
+
+  /**
+   * Checks if the read-ahead v2 feature is enabled by user.
+   * @return true if read-ahead v2 is enabled, false otherwise.
+   */
+  public boolean isReadAheadV2Enabled() {
+    return isReadAheadV2Enabled;
+  }
+
+  public boolean isReadAheadV2DynamicScalingEnabled() {
+    return isReadAheadV2DynamicScalingEnabled;
   }
 
   public int getMinReadAheadV2ThreadPoolSize() {
     if (minReadAheadV2ThreadPoolSize <= 0) {
       // If the minReadAheadV2ThreadPoolSize is not set, use the default value
-      return 2 * Runtime.getRuntime().availableProcessors();
+      return DEFAULT_READAHEAD_V2_MIN_THREAD_POOL_SIZE;
     }
     return minReadAheadV2ThreadPoolSize;
   }
@@ -1523,7 +1749,7 @@ public class AbfsConfiguration{
   public int getMinReadAheadV2BufferPoolSize() {
     if (minReadAheadV2BufferPoolSize <= 0) {
       // If the minReadAheadV2BufferPoolSize is not set, use the default value
-      return 2 * Runtime.getRuntime().availableProcessors();
+      return DEFAULT_READAHEAD_V2_MIN_BUFFER_POOL_SIZE;
     }
     return minReadAheadV2BufferPoolSize;
   }
@@ -1536,6 +1762,22 @@ public class AbfsConfiguration{
     return maxReadAheadV2BufferPoolSize;
   }
 
+  public int getReadAheadV2CpuMonitoringIntervalMillis() {
+    return readAheadV2CpuMonitoringIntervalMillis;
+  }
+
+  public int getReadAheadV2ThreadPoolUpscalePercentage() {
+    return readAheadV2ThreadPoolUpscalePercentage;
+  }
+
+  public int getReadAheadV2ThreadPoolDownscalePercentage() {
+    return readAheadV2ThreadPoolDownscalePercentage;
+  }
+
+  public int getReadAheadV2MemoryMonitoringIntervalMillis() {
+    return readAheadV2MemoryMonitoringIntervalMillis;
+  }
+
   public int getReadAheadExecutorServiceTTLInMillis() {
     return readAheadExecutorServiceTTLMillis;
   }
@@ -1544,12 +1786,12 @@ public class AbfsConfiguration{
     return readAheadV2CachedBufferTTLMillis;
   }
 
-  /**
-   * Checks if the read-ahead v2 feature is enabled by user.
-   * @return true if read-ahead v2 is enabled, false otherwise.
-   */
-  public boolean isReadAheadV2Enabled() {
-    return this.isReadAheadV2Enabled;
+  public int getReadAheadV2CpuUsageThresholdPercent() {
+    return readAheadV2CpuUsageThresholdPercent;
+  }
+
+  public int getReadAheadV2MemoryUsageThresholdPercent() {
+    return readAheadV2MemoryUsageThresholdPercent;
   }
 
   @VisibleForTesting
@@ -1641,16 +1883,60 @@ public class AbfsConfiguration{
         oauthTokenFetchRetryDeltaBackoff);
   }
 
-  public int getWriteMaxConcurrentRequestCount() {
+  public int getWriteConcurrentRequestCount() {
     if (this.writeMaxConcurrentRequestCount < 1) {
       return 4 * Runtime.getRuntime().availableProcessors();
     }
     return this.writeMaxConcurrentRequestCount;
   }
 
+  public int getWriteThreadPoolKeepAliveTime() {
+    return writeThreadPoolKeepAliveTime;
+  }
+
+  public int getWriteCpuMonitoringInterval() {
+    return writeCpuMonitoringInterval;
+  }
+
+  public boolean isDynamicWriteThreadPoolEnablement() {
+    return dynamicWriteThreadPoolEnablement;
+  }
+
+  public int getWriteLowCpuThreshold() {
+    return writeLowCpuThreshold;
+  }
+
+  public int getWriteMediumCpuThreshold() {
+    return writeMediumCpuThreshold;
+  }
+
+  public int getWriteHighCpuThreshold() {
+    return writeHighCpuThreshold;
+  }
+
+  public int getLowTierMemoryMultiplier() {
+    return lowTierMemoryMultiplier;
+  }
+
+  public int getMediumTierMemoryMultiplier() {
+    return mediumTierMemoryMultiplier;
+  }
+
+  public int getHighTierMemoryMultiplier() {
+    return highTierMemoryMultiplier;
+  }
+
+  public int getWriteHighMemoryUsageThresholdPercent() {
+    return writeHighMemoryUsageThresholdPercent;
+  }
+
+  public int getWriteLowMemoryUsageThresholdPercent() {
+    return writeLowMemoryUsageThresholdPercent;
+  }
+
   public int getMaxWriteRequestsToQueue() {
     if (this.maxWriteRequestsToQueue < 1) {
-      return 2 * getWriteMaxConcurrentRequestCount();
+      return 2 * getWriteConcurrentRequestCount();
     }
     return this.maxWriteRequestsToQueue;
   }
@@ -1823,5 +2109,81 @@ public class AbfsConfiguration{
 
   public int getBlobDeleteDirConsumptionParallelism() {
     return blobDeleteDirConsumptionParallelism;
+  }
+
+  /**
+   * Checks if the tail latency tracker is enabled.
+   * @return true if enabled, false otherwise.
+   */
+  public boolean isTailLatencyTrackerEnabled() {
+    return isTailLatencyTrackerEnabled;
+  }
+
+  /**
+   * Checks if the tail latency request timeout feature is enabled.
+   * @return true if enabled, false otherwise.
+   */
+  public boolean isTailLatencyRequestTimeoutEnabled() {
+    return isTailLatencyTrackerEnabled && isTailLatencyRequestTimeoutEnabled
+        && getPreferredHttpOperationType().equals(HttpOperationType.APACHE_HTTP_CLIENT);
+  }
+
+  /**
+   * Gets the tail latency percentile to be tracked.
+   * @return the tail latency percentile.
+   */
+  public int getTailLatencyPercentile() {
+    return tailLatencyPercentile;
+  }
+
+  /**
+   * Gets the minimum deviation for tail latency tracking.
+   * @return the minimum deviation.
+   */
+  public int getTailLatencyMinDeviation() {
+    return tailLatencyMinDeviation;
+  }
+
+  /**
+   * Gets the minimum sample size for tail latency reporting.
+   * @return the minimum sample size.
+   */
+  public int getTailLatencyMinSampleSize() {
+    return tailLatencyMinSampleSize;
+  }
+
+  /**
+   * Gets the tail latency analysis window in milliseconds.
+   * @return the analysis window in milliseconds.
+   */
+  public int getTailLatencyAnalysisWindowInMillis() {
+    return tailLatencyAnalysisWindowInMillis;
+  }
+
+  /**
+   * Gets the interval for tail latency percentile computation in milliseconds.
+   * @return the computation interval in milliseconds.
+   */
+  public int getTailLatencyComputationIntervalInMillis() {
+    return tailLatencyPercentileComputationIntervalInMillis;
+  }
+
+  /**
+   * Gets the granularity of the tail latency analysis window.
+   * @return the analysis window granularity.
+   */
+  public int getTailLatencyAnalysisWindowGranularity() {
+    if (tailLatencyAnalysisWindowGranularity <= 0) {
+        return MIN_FS_AZURE_TAIL_LATENCY_ANALYSIS_WINDOW_GRANULARITY;
+    }
+    return tailLatencyAnalysisWindowGranularity;
+  }
+
+  /**
+   * Gets the maximum retry count for tail latency requests.
+   * @return the maximum retry count.
+   */
+  public int getTailLatencyMaxRetryCount() {
+    return tailLatencyMaxRetryCount;
   }
 }

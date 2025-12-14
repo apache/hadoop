@@ -63,6 +63,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.store.BlockUploadStatistics;
 import org.apache.hadoop.fs.store.DataBlocks;
 import org.apache.hadoop.test.LambdaTestUtils;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 
 import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
 import static java.net.HttpURLConnection.HTTP_OK;
@@ -1243,7 +1244,7 @@ public class ITestAzureBlobFileSystemAppend extends
       out1.write(bytes1);
 
       //parallel flush call should lead to the first call failing because of md5 mismatch.
-      Thread parallelFlushThread = new Thread(() -> {
+      Thread parallelFlushThread = new SubjectInheritingThread(() -> {
         try {
           out1.hsync();
         } catch (IOException e) {

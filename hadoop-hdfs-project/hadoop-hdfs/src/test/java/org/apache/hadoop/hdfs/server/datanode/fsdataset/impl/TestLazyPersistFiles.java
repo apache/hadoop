@@ -23,6 +23,7 @@ import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.ThreadUtil;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -196,7 +197,7 @@ public class TestLazyPersistFiles extends LazyPersistTestCase {
 
     Thread threads[] = new Thread[NUM_TASKS];
     for (int i = 0; i < NUM_TASKS; i++) {
-      threads[i] = new Thread(readerRunnable);
+      threads[i] = new SubjectInheritingThread(readerRunnable);
       threads[i].start();
     }
 

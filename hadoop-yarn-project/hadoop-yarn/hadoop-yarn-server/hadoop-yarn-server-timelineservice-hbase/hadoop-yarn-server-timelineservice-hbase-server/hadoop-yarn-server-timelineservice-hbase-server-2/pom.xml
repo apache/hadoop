@@ -48,6 +48,10 @@
               <groupId>com.google.inject</groupId>
               <artifactId>guice</artifactId>
             </exclusion>
+            <exclusion>
+              <groupId>org.apache.hbase</groupId>
+              <artifactId>hbase-shaded-client-byo-hadoop</artifactId>
+            </exclusion>
           </exclusions>
         </dependency>
 
@@ -88,6 +92,7 @@
         <dependency>
           <groupId>org.apache.hbase</groupId>
           <artifactId>hbase-common</artifactId>
+          <scope>provided</scope>
           <exclusions>
             <exclusion>
               <groupId>org.apache.hadoop</groupId>
@@ -107,6 +112,7 @@
         <dependency>
           <groupId>org.apache.hbase</groupId>
           <artifactId>hbase-client</artifactId>
+          <scope>provided</scope>
           <exclusions>
             <exclusion>
               <groupId>org.apache.hadoop</groupId>

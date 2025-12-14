@@ -73,6 +73,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.Uninterruptibles;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -235,7 +236,7 @@ public class TestBlockReaderFactory {
     };
     Thread threads[] = new Thread[NUM_THREADS];
     for (int i = 0; i < NUM_THREADS; i++) {
-      threads[i] = new Thread(readerRunnable);
+      threads[i] = new SubjectInheritingThread(readerRunnable);
       threads[i].start();
     }
     Thread.sleep(500);
@@ -334,7 +335,7 @@ public class TestBlockReaderFactory {
     };
     Thread threads[] = new Thread[NUM_THREADS];
     for (int i = 0; i < NUM_THREADS; i++) {
-      threads[i] = new Thread(readerRunnable);
+      threads[i] = new SubjectInheritingThread(readerRunnable);
       threads[i].start();
     }
     gotFailureLatch.await();
@@ -640,7 +641,7 @@ public class TestBlockReaderFactory {
         }
       }
     };
-    Thread thread = new Thread(readerRunnable);
+    Thread thread = new SubjectInheritingThread(readerRunnable);
     thread.start();
 
     // While the thread is reading, send it interrupts.

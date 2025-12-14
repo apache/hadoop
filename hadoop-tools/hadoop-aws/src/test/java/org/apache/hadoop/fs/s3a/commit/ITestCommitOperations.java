@@ -94,6 +94,7 @@ public class ITestCommitOperations extends AbstractCommitITest {
   public void setup() throws Exception {
     FileSystem.closeAll();
     super.setup();
+    assumeMultipartUploads(getFileSystem().getConf());
     verifyIsMagicCommitFS(getFileSystem());
     progress = new ProgressCounter();
     progress.assertCount("progress", 0);

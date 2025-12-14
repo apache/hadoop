@@ -31,6 +31,7 @@ import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 
 import static org.apache.hadoop.fs.azure.ExceptionHandlingTestHelper.*;
 
@@ -94,7 +95,7 @@ public class ITestFileSystemOperationsExceptionHandlingMultiThreaded
       Path testFilePath1 = new Path(base, "test1.dat");
       Path renamePath = new Path(base, "test2.dat");
       getInputStreamToTest(fs, testFilePath1);
-      Thread renameThread = new Thread(
+      Thread renameThread = new SubjectInheritingThread(
           new RenameThread(fs, testFilePath1, renamePath));
       renameThread.start();
 
@@ -121,7 +122,7 @@ public class ITestFileSystemOperationsExceptionHandlingMultiThreaded
       Path renamePath = new Path(base, "test2.dat");
 
       getInputStreamToTest(fs, testFilePath1);
-      Thread renameThread = new Thread(
+      Thread renameThread = new SubjectInheritingThread(
               new RenameThread(fs, testFilePath1, renamePath));
       renameThread.start();
 
@@ -142,7 +143,7 @@ public class ITestFileSystemOperationsExceptionHandlingMultiThreaded
       createEmptyFile(
           getPageBlobTestStorageAccount(),
           testPath);
-      Thread t = new Thread(new DeleteThread(fs, testPath));
+      Thread t = new SubjectInheritingThread(new DeleteThread(fs, testPath));
       t.start();
       while (t.isAlive()) {
         fs.setPermission(testPath,
@@ -161,7 +162,7 @@ public class ITestFileSystemOperationsExceptionHandlingMultiThreaded
       throws Throwable {
     assertThrows(FileNotFoundException.class, () -> {
       createEmptyFile(createTestAccount(), testPath);
-      Thread t = new Thread(new DeleteThread(fs, testPath));
+      Thread t = new SubjectInheritingThread(new DeleteThread(fs, testPath));
       t.start();
       while (t.isAlive()) {
         fs.setPermission(testPath,
@@ -179,7 +180,7 @@ public class ITestFileSystemOperationsExceptionHandlingMultiThreaded
   public void testMultiThreadedPageBlobOpenScenario() throws Throwable {
     assertThrows(FileNotFoundException.class, () -> {
       createEmptyFile(createTestAccount(), testPath);
-      Thread t = new Thread(new DeleteThread(fs, testPath));
+      Thread t = new SubjectInheritingThread(new DeleteThread(fs, testPath));
       t.start();
       while (t.isAlive()) {
         inputStream = fs.open(testPath);
@@ -200,7 +201,7 @@ public class ITestFileSystemOperationsExceptionHandlingMultiThreaded
       createEmptyFile(
           getPageBlobTestStorageAccount(),
           testPath);
-      Thread t = new Thread(new DeleteThread(fs, testPath));
+      Thread t = new SubjectInheritingThread(new DeleteThread(fs, testPath));
       t.start();
 
       while (t.isAlive()) {
@@ -219,7 +220,7 @@ public class ITestFileSystemOperationsExceptionHandlingMultiThreaded
   public void testMultiThreadedBlockBlobSetOwnerScenario() throws Throwable {
     assertThrows(FileNotFoundException.class, () -> {
       createEmptyFile(createTestAccount(), testPath);
-      Thread t = new Thread(new DeleteThread(fs, testPath));
+      Thread t = new SubjectInheritingThread(new DeleteThread(fs, testPath));
       t.start();
       while (t.isAlive()) {
         fs.setOwner(testPath, "testowner", "testgroup");
@@ -237,7 +238,7 @@ public class ITestFileSystemOperationsExceptionHandlingMultiThreaded
       createEmptyFile(
           getPageBlobTestStorageAccount(),
           testPath);
-      Thread t = new Thread(new DeleteThread(fs, testPath));
+      Thread t = new SubjectInheritingThread(new DeleteThread(fs, testPath));
       t.start();
       while (t.isAlive()) {
         fs.setOwner(testPath, "testowner", "testgroup");
@@ -253,7 +254,7 @@ public class ITestFileSystemOperationsExceptionHandlingMultiThreaded
   public void testMultiThreadedBlockBlobListStatusScenario() throws Throwable {
     assertThrows(FileNotFoundException.class, () -> {
       createTestFolder(createTestAccount(), testFolderPath);
-      Thread t = new Thread(new DeleteThread(fs, testFolderPath));
+      Thread t = new SubjectInheritingThread(new DeleteThread(fs, testFolderPath));
       t.start();
       while (t.isAlive()) {
         fs.listStatus(testFolderPath);
@@ -271,7 +272,7 @@ public class ITestFileSystemOperationsExceptionHandlingMultiThreaded
       createTestFolder(
           getPageBlobTestStorageAccount(),
           testFolderPath);
-      Thread t = new Thread(new DeleteThread(fs, testFolderPath));
+      Thread t = new SubjectInheritingThread(new DeleteThread(fs, testFolderPath));
       t.start();
       while (t.isAlive()) {
         fs.listStatus(testFolderPath);
@@ -293,7 +294,7 @@ public class ITestFileSystemOperationsExceptionHandlingMultiThreaded
       Path renamePath = new Path(base, "test2.dat");
 
       getInputStreamToTest(fs, testFilePath1);
-      Thread renameThread = new Thread(
+      Thread renameThread = new SubjectInheritingThread(
               new RenameThread(fs, testFilePath1, renamePath));
       renameThread.start();
 
@@ -318,7 +319,7 @@ public class ITestFileSystemOperationsExceptionHandlingMultiThreaded
       Path renamePath = new Path(base, "test2.dat");
 
       getInputStreamToTest(fs, testFilePath1);
-      Thread renameThread = new Thread(
+      Thread renameThread = new SubjectInheritingThread(
               new RenameThread(fs, testFilePath1, renamePath));
       renameThread.start();
 

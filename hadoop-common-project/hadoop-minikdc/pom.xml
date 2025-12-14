@@ -76,8 +76,12 @@
         <groupId>com.github.spotbugs</groupId>
         <artifactId>spotbugs-maven-plugin</artifactId>
         <configuration>
-          <excludeFilterFile>${basedir}/dev-support/findbugsExcludeFile.xml
-          </excludeFilterFile>
+          <excludeFilterFiles>
+            <excludeFilterFile>${basedir}/dev-support/findbugsExcludeFile.xml
+            </excludeFilterFile>
+            <excludeFilterFile>${repo.root}/dev-support/findbugs-exclude-global.xml
+            </excludeFilterFile>
+          </excludeFilterFiles>
         </configuration>
       </plugin>
     </plugins>

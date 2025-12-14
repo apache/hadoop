@@ -53,6 +53,7 @@ import org.apache.hadoop.test.GenericTestUtils.DelayAnswer;
 import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.ThreadUtil;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.log4j.spi.LoggingEvent;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -483,7 +484,67 @@ public class TestStandbyCheckpoints {
     // Assert that former active did not accept the canceled checkpoint file.
     assertEquals(0, nns[0].getFSImage().getMostRecentCheckpointTxId());
   }
-  
+
+  /**
+   * Test standby namenode upload fsiamge to multiple other namenodes in parallel, in the
+   * cluster with observer namenodes.
+   */
+  @Test
+  @Timeout(value = 300)
+  public void testCheckpointParallelUpload() throws Exception {
+    // Set dfs.namenode.checkpoint.txns differently on the first NN to avoid it
+    // doing checkpoint when it becomes a standby
+    cluster.getConfiguration(0).setInt(
+        DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_TXNS_KEY, 1000);
+
+    // don't compress, we want a big image
+    for (int i = 0; i < NUM_NNS; i++) {
+      cluster.getConfiguration(i).setBoolean(
+          DFSConfigKeys.DFS_IMAGE_COMPRESS_KEY, false);
+    }
+
+    // Throttle SBN upload to make it hang during upload to ANN, and enable parallel upload fsimage.
+    for (int i = 1; i < NUM_NNS; i++) {
+      cluster.getConfiguration(i).setLong(
+          DFSConfigKeys.DFS_IMAGE_TRANSFER_RATE_KEY, 100);
+      cluster.getConfiguration(i).setBoolean(
+          DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_PARALLEL_UPLOAD_ENABLED_KEY, true);
+    }
+    for (int i = 0; i < NUM_NNS; i++) {
+      cluster.restartNameNode(i);
+    }
+
+    // update references to each of the nns
+    setNNs();
+
+    cluster.transitionToActive(0);
+
+    doEdits(0, 100);
+
+    for (int i = 1; i < NUM_NNS; i++) {
+      HATestUtil.waitForStandbyToCatchUp(nns[0], nns[i]);
+      HATestUtil.waitForCheckpoint(cluster, i, ImmutableList.of(104));
+    }
+    cluster.transitionToStandby(0);
+    cluster.transitionToActive(1);
+
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        int transferThreadCount = 0;
+        ThreadMXBean threadBean = ManagementFactory.getThreadMXBean();
+        ThreadInfo[] threads = threadBean.getThreadInfo(
+            threadBean.getAllThreadIds(), 1);
+        for (ThreadInfo thread: threads) {
+          if (thread.getThreadName().startsWith("TransferFsImageUpload")) {
+            transferThreadCount++;
+          }
+        }
+        return transferThreadCount == NUM_NNS - 1;
+      }
+    }, 1000, 30000);
+  }
+
   /**
    * Make sure that clients will receive StandbyExceptions even when a
    * checkpoint is in progress on the SBN, and therefore the StandbyCheckpointer
@@ -559,9 +620,9 @@ public class TestStandbyCheckpoints {
     ThreadUtil.sleepAtLeastIgnoreInterrupts(1000);
     
     // Perform an RPC that needs to take the write lock.
-    Thread t = new Thread() {
+    SubjectInheritingThread t = new SubjectInheritingThread() {
       @Override
-      public void run() {
+      public void work() {
         try {
           nns[1].getRpcServer().restoreFailedStorage("false");
         } catch (IOException e) {
@@ -721,8 +782,51 @@ public class TestStandbyCheckpoints {
     out.write(42);
     out.close();
   }
-  
-  
+
+  /**
+   * Test checkpoint still succeeds when no more than half of the fsimages upload failed.
+   */
+  @Test
+  @Timeout(value = 300)
+  public void testPutFsimagePartFailed() throws Exception {
+    for (int i = 1; i < NUM_NNS; i++) {
+      cluster.shutdownNameNode(i);
+
+      // Make true checkpoint for DFS_NAMENODE_CHECKPOINT_PERIOD_KEY
+      cluster.getConfiguration(i).setInt(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_PERIOD_KEY, 3);
+      cluster.getConfiguration(i).setInt(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_TXNS_KEY, 1000);
+    }
+    doEdits(0, 10);
+    cluster.transitionToStandby(0);
+
+    for (int i = 1; i < NUM_NNS; i++) {
+      cluster.restartNameNode(i, false);
+    }
+    cluster.waitClusterUp();
+    setNNs();
+
+    for (int i = 0; i < NUM_NNS; i++) {
+      // Once the standby catches up, it should do a checkpoint
+      // and save to local directories.
+      HATestUtil.waitForCheckpoint(cluster, i, ImmutableList.of(12));
+    }
+
+    long snnCheckpointTime1 = nns[1].getNamesystem().getStandbyLastCheckpointTime();
+    cluster.transitionToActive(0);
+    cluster.transitionToObserver(2);
+    cluster.shutdownNameNode(2);
+
+    doEdits(11, 20);
+    nns[0].getRpcServer().rollEditLog();
+    HATestUtil.waitForCheckpoint(cluster, 0, ImmutableList.of(23));
+
+    long snnCheckpointTime2 = nns[1].getNamesystem().getStandbyLastCheckpointTime();
+
+    // Make sure that standby namenode checkpoint success and update the lastCheckpointTime
+    // even though it send fsimage to nn2 failed because nn2 is shut down.
+    assertTrue(snnCheckpointTime2 > snnCheckpointTime1);
+  }
+
   /**
    * A codec which just slows down the saving of the image significantly
    * by sleeping a few milliseconds on every write. This makes it easy to

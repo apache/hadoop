@@ -36,7 +36,25 @@ public final class FileSystemConfigurations {
   public static final boolean DEFAULT_FS_AZURE_ACCOUNT_IS_EXPECT_HEADER_ENABLED = true;
   public static final String USER_HOME_DIRECTORY_PREFIX = "/user";
 
-  private static final int SIXTY_SECONDS = 60_000;
+  public static final int SIXTY_SECONDS = 60;
+  public static final int THIRTY_SECONDS = 30;
+  /**
+   * Number of bytes in a gigabyte.
+   */
+  public static final long BYTES_PER_GIGABYTE = 1024L * 1024 * 1024;
+  /**
+   * Factor by which the pool size is increased when CPU utilization is low.
+   */
+  public static final double LOW_CPU_POOL_SIZE_INCREASE_FACTOR = 1.5;
+  public static final double LOW_CPU_HIGH_MEMORY_DECREASE_FACTOR = 0.9;
+  public static final int HIGH_CPU_REDUCTION_FACTOR = 3;
+  public static final int HIGH_CPU_LOW_MEMORY_REDUCTION_FACTOR = 2;
+  public static final int MEDIUM_CPU_REDUCTION_FACTOR = 5;
+  public static final int MEDIUM_CPU_LOW_MEMORY_REDUCTION_FACTOR = 3;
+  public static final int HIGH_MEDIUM_HEAP_FACTOR = 2;
+  public static final double LOW_CPU_HEAP_FACTOR = 0.8;
+
+
 
   // Retry parameter defaults.
   public static final int DEFAULT_MIN_BACKOFF_INTERVAL = 500;  // 500ms
@@ -68,12 +86,12 @@ public final class FileSystemConfigurations {
   public static final int DEFAULT_AZURE_OAUTH_TOKEN_FETCH_RETRY_MAX_ATTEMPTS = 5;
   public static final int DEFAULT_AZURE_OAUTH_TOKEN_FETCH_RETRY_MIN_BACKOFF_INTERVAL = 0;
   public static final int DEFAULT_AZURE_OAUTH_TOKEN_FETCH_RETRY_MAX_BACKOFF_INTERVAL = SIXTY_SECONDS;
-  public static final int DEFAULT_AZURE_OAUTH_TOKEN_FETCH_RETRY_DELTA_BACKOFF = 2;
+  public static final int DEFAULT_AZURE_OAUTH_TOKEN_FETCH_RETRY_DELTA_BACKOFF = 2_000;
 
   public static final int ONE_KB = 1024;
   public static final int ONE_MB = ONE_KB * ONE_KB;
 
-  // Default upload and download buffer size
+  /** Default buffer sizes and optimization flags. */
   public static final int DEFAULT_WRITE_BUFFER_SIZE = 8 * ONE_MB;  // 8 MB
   public static final int APPENDBLOB_MAX_WRITE_BUFFER_SIZE = 4 * ONE_MB;  // 4 MB
   public static final boolean DEFAULT_AZURE_ENABLE_SMALL_WRITE_OPTIMIZATION = false;
@@ -135,12 +153,19 @@ public final class FileSystemConfigurations {
 
   public static final boolean DEFAULT_ENABLE_READAHEAD = true;
   public static final boolean DEFAULT_ENABLE_READAHEAD_V2 = false;
-  public static final int DEFAULT_READAHEAD_V2_MIN_THREAD_POOL_SIZE = -1;
+  public static final boolean DEFAULT_ENABLE_READAHEAD_V2_DYNAMIC_SCALING = false;
+  public static final int DEFAULT_READAHEAD_V2_MIN_THREAD_POOL_SIZE = 8;
   public static final int DEFAULT_READAHEAD_V2_MAX_THREAD_POOL_SIZE = -1;
-  public static final int DEFAULT_READAHEAD_V2_MIN_BUFFER_POOL_SIZE = -1;
+  public static final int DEFAULT_READAHEAD_V2_MIN_BUFFER_POOL_SIZE = 16;
   public static final int DEFAULT_READAHEAD_V2_MAX_BUFFER_POOL_SIZE = -1;
-  public static final int DEFAULT_READAHEAD_V2_EXECUTOR_SERVICE_TTL_MILLIS = 3_000;
+  public static final int DEFAULT_READAHEAD_V2_CPU_MONITORING_INTERVAL_MILLIS = 6_000;
+  public static final int DEFAULT_READAHEAD_V2_THREAD_POOL_UPSCALE_PERCENTAGE = 20;
+  public static final int DEFAULT_READAHEAD_V2_THREAD_POOL_DOWNSCALE_PERCENTAGE = 30;
+  public static final int DEFAULT_READAHEAD_V2_MEMORY_MONITORING_INTERVAL_MILLIS = 6_000;
+  public static final int DEFAULT_READAHEAD_V2_EXECUTOR_SERVICE_TTL_MILLIS = 6_000;
   public static final int DEFAULT_READAHEAD_V2_CACHED_BUFFER_TTL_MILLIS = 6_000;
+  public static final int DEFAULT_READAHEAD_V2_CPU_USAGE_THRESHOLD_PERCENTAGE = 50;
+  public static final int DEFAULT_READAHEAD_V2_MEMORY_USAGE_THRESHOLD_PERCENTAGE = 50;
 
   public static final String DEFAULT_FS_AZURE_USER_AGENT_PREFIX = EMPTY_STRING;
   public static final String DEFAULT_VALUE_UNKNOWN = "UNKNOWN";
@@ -216,8 +241,32 @@ public final class FileSystemConfigurations {
   public static final int RATE_LIMIT_DEFAULT = 1_000;
 
   public static final int ZERO = 0;
+  public static final double ZERO_D = 0.0;
   public static final int HUNDRED = 100;
+  public static final double HUNDRED_D = 100.0;
   public static final long THOUSAND = 1000L;
+  // Indicates a successful scale-up operation
+  public static final int SCALE_UP = 1;
+  // Indicates a successful scale-down operation
+  public static final int SCALE_DOWN = -1;
+  // Indicates a down-scale was requested but already at minimum
+  public static final int NO_SCALE_DOWN_AT_MIN = -2;
+  // Indicates an up-scale was requested but already at maximum
+  public static final int NO_SCALE_UP_AT_MAX = 2;
+  // Indicates no scaling action was taken
+  public static final int SCALE_NONE = 0;
+  // Indicates no action is needed based on current metrics
+  public static final int NO_ACTION_NEEDED = 3;
+  // Indicates a successful scale-up operation
+  public static final String SCALE_DIRECTION_UP = "I";
+  // Indicates a successful scale-down operation
+  public static final String SCALE_DIRECTION_DOWN = "D";
+  // Indicates a down-scale was requested but pool is already at minimum
+  public static final String SCALE_DIRECTION_NO_DOWN_AT_MIN = "-D";
+  // Indicates an up-scale was requested but pool is already at maximum
+  public static final String SCALE_DIRECTION_NO_UP_AT_MAX = "+F";
+  // Indicates no scaling action is needed based on current metrics
+  public static final String SCALE_DIRECTION_NO_ACTION_NEEDED = "NA";
 
   public static final HttpOperationType DEFAULT_NETWORKING_LIBRARY
       = HttpOperationType.APACHE_HTTP_CLIENT;
@@ -262,9 +311,128 @@ public final class FileSystemConfigurations {
 
   public static final int DEFAULT_FS_AZURE_BLOB_DELETE_THREAD = DEFAULT_FS_AZURE_LISTING_ACTION_THREADS;
 
+  /**
+   * Whether dynamic write thread pool adjustment is enabled by default.
+   */
+  public static final boolean DEFAULT_WRITE_DYNAMIC_THREADPOOL_ENABLEMENT = false;
+
+  /**
+   * Default keep-alive time (in milliseconds) for write thread pool threads.
+   */
+  public static final int DEFAULT_WRITE_THREADPOOL_KEEP_ALIVE_TIME_MILLIS = 30_000;
+
+  /**
+   * Minimum interval (in milliseconds) for CPU monitoring during write operations.
+   */
+  public static final int MIN_WRITE_CPU_MONITORING_INTERVAL_MILLIS = 10_000;
+
+  /**
+   * Maximum interval (in milliseconds) for CPU monitoring during write operations.
+   */
+  public static final int MAX_WRITE_CPU_MONITORING_INTERVAL_MILLIS = 60_000;
+
+  /**
+   * Default interval (in milliseconds) for CPU monitoring during write operations.
+   */
+  public static final int DEFAULT_WRITE_CPU_MONITORING_INTERVAL_MILLIS = 15_000;
+
+  /**
+   * Minimum CPU utilization percentage considered as high threshold for write scaling.
+   */
+  public static final int MIN_WRITE_HIGH_CPU_THRESHOLD_PERCENT = 65;
+
+  /**
+   * Maximum CPU utilization percentage considered as high threshold for write scaling.
+   */
+  public static final int MAX_WRITE_HIGH_CPU_THRESHOLD_PERCENT = 90;
+
+  /**
+   * Default CPU utilization percentage considered as high threshold for write scaling.
+   */
+  public static final int DEFAULT_WRITE_HIGH_CPU_THRESHOLD_PERCENT = 80;
+
+  /**
+   * Minimum CPU utilization percentage considered as medium threshold for write scaling.
+   */
+  public static final int MIN_WRITE_MEDIUM_CPU_THRESHOLD_PERCENT = 45;
+
+  /**
+   * Maximum CPU utilization percentage considered as medium threshold for write scaling.
+   */
+  public static final int MAX_WRITE_MEDIUM_CPU_THRESHOLD_PERCENT = 65;
+
+  /**
+   * Default CPU utilization percentage considered as medium threshold for write scaling.
+   */
+  public static final int DEFAULT_WRITE_MEDIUM_CPU_THRESHOLD_PERCENT = 60;
+
+  /**
+   * Maximum CPU utilization percentage considered as low threshold for write scaling.
+   */
+  public static final int MAX_WRITE_LOW_CPU_THRESHOLD_PERCENT = 40;
+
+  /**
+   * Default CPU utilization percentage considered as low threshold for write scaling.
+   */
+  public static final int DEFAULT_WRITE_LOW_CPU_THRESHOLD_PERCENT = 35;
+
+  /**
+   * Minimum multiplier applied to available memory for low-tier write workloads.
+   */
+  public static final int MIN_WRITE_LOW_TIER_MEMORY_MULTIPLIER = 3;
+
+  /**
+   * Default multiplier applied to available memory for low-tier write workloads.
+   */
+  public static final int DEFAULT_WRITE_LOW_TIER_MEMORY_MULTIPLIER = 4;
+
+  /**
+   * Minimum multiplier applied to available memory for medium-tier write workloads.
+   */
+  public static final int MIN_WRITE_MEDIUM_TIER_MEMORY_MULTIPLIER = 6;
+
+  /**
+   * Default multiplier applied to available memory for medium-tier write workloads.
+   */
+  public static final int DEFAULT_WRITE_MEDIUM_TIER_MEMORY_MULTIPLIER = 8;
+
+  /**
+   * Minimum multiplier applied to available memory for high-tier write workloads.
+   */
+  public static final int MIN_WRITE_HIGH_TIER_MEMORY_MULTIPLIER = 12;
+
+  /**
+   * Default multiplier applied to available memory for high-tier write workloads.
+   */
+  public static final int DEFAULT_WRITE_HIGH_TIER_MEMORY_MULTIPLIER = 16;
+
+  /** Percentage threshold of heap usage at which memory pressure is considered high. */
+  public static final int DEFAULT_WRITE_HIGH_MEMORY_USAGE_THRESHOLD_PERCENT = 60;
+
+  /** Percentage threshold of heap usage at which memory pressure is considered low. */
+  public static final int DEFAULT_WRITE_LOW_MEMORY_USAGE_THRESHOLD_PERCENT = 30;
+
   public static final boolean DEFAULT_FS_AZURE_ENABLE_CLIENT_TRANSACTION_ID = true;
 
   public static final boolean DEFAULT_FS_AZURE_ENABLE_CREATE_BLOB_IDEMPOTENCY = true;
+
+  public static final boolean DEFAULT_FS_AZURE_ENABLE_PREFETCH_REQUEST_PRIORITY = true;
+
+  // The default traffic request priority is 3 (from service side)
+  // The lowest priority a request can get is 7
+  public static final int DEFAULT_FS_AZURE_LOWEST_REQUEST_PRIORITY_VALUE = 7;
+  public static final int DEFAULT_FS_AZURE_STANDARD_REQUEST_PRIORITY_VALUE = 3;
+
+  public static final boolean DEFAULT_FS_AZURE_ENABLE_TAIL_LATENCY_TRACKER = false;
+  public static final boolean DEFAULT_FS_AZURE_ENABLE_TAIL_LATENCY_REQUEST_TIMEOUT = false;
+  public static final int DEFAULT_FS_AZURE_TAIL_LATENCY_PERCENTILE = 99;
+  public static final int DEFAULT_FS_AZURE_TAIL_LATENCY_MIN_DEVIATION = 200;
+  public static final int DEFAULT_FS_AZURE_TAIL_LATENCY_MIN_SAMPLE_SIZE = 100;
+  public static final int DEFAULT_FS_AZURE_TAIL_LATENCY_ANALYSIS_WINDOW_MILLIS = 60_000;
+  public static final int DEFAULT_FS_AZURE_TAIL_LATENCY_ANALYSIS_WINDOW_GRANULARITY = 10;
+  public static final int MIN_FS_AZURE_TAIL_LATENCY_ANALYSIS_WINDOW_GRANULARITY = 1;
+  public static final int DEFAULT_FS_AZURE_TAIL_LATENCY_PERCENTILE_COMPUTATION_INTERVAL_MILLIS = 500;
+  public static final int DEFAULT_FS_AZURE_TAIL_LATENCY_MAX_RETRY_COUNT = 1;
 
   private FileSystemConfigurations() {}
 }

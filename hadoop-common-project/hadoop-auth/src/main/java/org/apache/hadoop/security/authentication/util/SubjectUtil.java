@@ -56,6 +56,21 @@ public final class SubjectUtil {
       HAS_CALL_AS ? null : lookupDoAsThrowException();
   private static final MethodHandle CURRENT = lookupCurrent();
 
+  // copied from org.apache.hadoop.util.Shell to break circular dependency
+  // "1.8"->8, "9"->9, "10"->10
+  private static final int JAVA_SPEC_VER = Math.max(8,
+      Integer.parseInt(System.getProperty("java.specification.version").split("\\.")[0]));
+
+  /**
+   * True if the current JVM copies the current JAAS subject into new threads automatically.
+   */
+  public static final boolean THREAD_INHERITS_SUBJECT = checkThreadInheritsSubject();
+
+  /**
+   * Try to return the method handle for Subject#callAs()
+   *
+   * @return the method handle, or null if the Java version does not have it
+   */
   private static MethodHandle lookupCallAs() {
     MethodHandles.Lookup lookup = MethodHandles.lookup();
     try {
@@ -71,6 +86,36 @@ public final class SubjectUtil {
     }
   }
 
+  /**
+   * Determine whether we need to explicitly propagate the Subject into new Threads.
+   *
+   * @return true if new Threads inherit the Subject from the parent
+   */
+  private static boolean checkThreadInheritsSubject() {
+
+    if (JAVA_SPEC_VER <= 21) {
+      return true;
+    } else {
+      // 24+ never inherits the Subject.
+      // For 22 and 23 the behavior actually depends on whether the SecurityManager
+      // is enabled, but this check is only used to determine whether a doAs/callAs
+      // call can be optimized out in SubjectInheritingThread and Daemon.
+      // We accept that possible minor performance cost for those EOL non-LTS versions
+      // to avoid the extra complexity and to prevent the JVM from logging
+      // SecurityManager warnings to the console.
+      return false;
+    }
+  }
+
+  /**
+   * Look up the method handle for Subject#doAs(PrivilegedAction)
+   *
+   * This is only called if Subject#callAs() does not exist.
+   * If we can't fall back to doAs(), that's a hard error.
+   *
+   * @return the method handle
+   * @throws ExceptionInInitializerError if unable to get the method handle
+   */
   private static MethodHandle lookupDoAs() {
     MethodHandles.Lookup lookup = MethodHandles.lookup();
     try {
@@ -82,6 +127,15 @@ public final class SubjectUtil {
     }
   }
 
+  /**
+   * Look up the method handle for Subject#doAs(PrivilegedExceptionAction)
+   *
+   * This is only called if Subject#callAs() does not exist.
+   * If we can't fall back to doAs(), that's a hard error.
+   *
+   * @return the method handle
+   * @throws ExceptionInInitializerError if unable to get the method handle
+   */
   private static MethodHandle lookupDoAsThrowException() {
     MethodHandles.Lookup lookup = MethodHandles.lookup();
     try {
@@ -93,6 +147,15 @@ public final class SubjectUtil {
     }
   }
 
+  /**
+   * Look up the method handle for Subject#current().
+   *
+   * If Subject#current() is not present, fall back to returning
+   * a method handle for Subject.getSubject(AccessController.getContext())
+   *
+   * @return the method handle or null if it does not exist
+   * @throws ExceptionInInitializerError if neither current() nor the fallback is found
+   */
   private static MethodHandle lookupCurrent() {
     MethodHandles.Lookup lookup = MethodHandles.lookup();
     try {
@@ -112,6 +175,15 @@ public final class SubjectUtil {
     }
   }
 
+  /**
+   * Look up the method handle for Subject#getSubject(AccessControlContext)
+   *
+   * This is only called if Subject#current() does not exist.
+   * If we can't fall back to getSubject(), that's a hard error.
+   *
+   * @return the method handle
+   * @throws ExceptionInInitializerError if cannot get the handle
+   */
   private static MethodHandle lookupGetSubject() {
     MethodHandles.Lookup lookup = MethodHandles.lookup();
     try {
@@ -124,6 +196,15 @@ public final class SubjectUtil {
     }
   }
 
+  /**
+   * Look up the method handle for AccessController.getAccessControlContext()
+   *
+   * This is only called if Subject#current() does not exist.
+   * If we can't find this method, then we can't fall back which is hard error.
+   *
+   * @return the method handle
+   * @throws ExceptionInInitializerError if cannot get the handle
+   */
   private static MethodHandle lookupGetContext() {
     try {
       // Use reflection to work with Java versions that have and don't have
@@ -264,6 +345,13 @@ public final class SubjectUtil {
     }
   }
 
+  /**
+   * Convert a Callable into a PrivilegedAction
+   *
+   * @param <T> return type
+   * @param callable to be converted
+   * @return PrivilegedAction wrapping the callable
+   */
   private static <T> PrivilegedAction<T> callableToPrivilegedAction(
       Callable<T> callable) {
     return () -> {
@@ -275,11 +363,25 @@ public final class SubjectUtil {
     };
   }
 
+  /**
+   * Convert a PrivilegedExceptionAction into a Callable
+   *
+   * @param <T> return type
+   * @param action to be wrapped
+   * @return Callable wrapping the action
+   */
   private static <T> Callable<T> privilegedExceptionActionToCallable(
       PrivilegedExceptionAction<T> action) {
     return action::run;
   }
 
+  /**
+   * Convert a PrivilegedAction into a Callable
+   *
+   * @param <T> return type
+   * @param action to be wrapped
+   * @return Callable wrapping the action
+   */
   private static <T> Callable<T> privilegedActionToCallable(
       PrivilegedAction<T> action) {
     return action::run;

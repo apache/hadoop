@@ -257,6 +257,7 @@ hadoop-yarn-project/hadoop-yarn/hadoop-yarn-common/src/main/resources/webapps/st
 hadoop-yarn-project/hadoop-yarn/hadoop-yarn-common/src/main/resources/webapps/static/jquery
 hadoop-yarn-project/hadoop-yarn/hadoop-yarn-common/src/main/resources/webapps/static/jt/jquery.jstree.js
 hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-nodemanager/src/main/resources/TERMINAL
+hadoop-yarn-project/hadoop-yarn/hadoop-yarn-capacity-scheduler-ui/src/main/webapp/node_modules
 
 =======
 For hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-nodemanager/src/main/native/container-executor/impl/utils/cJSON.[ch]:

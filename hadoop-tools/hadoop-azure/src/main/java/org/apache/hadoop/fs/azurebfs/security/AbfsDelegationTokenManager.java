@@ -143,23 +143,38 @@ public class AbfsDelegationTokenManager implements BoundDTExtension {
     return token;
   }
 
+  /** Renews the given delegation token through the configured token manager.
+   * @param token the delegation token to renew
+   * @return the new expiration time of the token
+   * @throws IOException if renewal fails
+   */
   public long renewDelegationToken(Token<?> token)
       throws IOException {
 
     return tokenManager.renewDelegationToken(token);
   }
 
+  /** Cancels the given delegation token through the configured token manager.
+   * @param token the delegation token to cancel
+   * @throws IOException if cancellation fails
+   */
   public void cancelDelegationToken(Token<?> token)
           throws IOException {
 
     tokenManager.cancelDelegationToken(token);
   }
 
+  /** Returns the current {@link CustomDelegationTokenManager} instance (for testing).
+   * @return the token manager instance
+   */
   @VisibleForTesting
   public CustomDelegationTokenManager getTokenManager() {
     return tokenManager;
   }
 
+  /** Returns a string representation of this token manager for debugging purposes.
+   * @return a string describing this instance
+   */
   @Override
   public String toString() {
     final StringBuilder sb = new StringBuilder(

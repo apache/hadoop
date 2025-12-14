@@ -41,6 +41,7 @@ import org.apache.hadoop.fs.s3a.S3ATestUtils;
 
 import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.toChar;
+import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CONDITIONAL_CREATE_ENABLED;
 import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_HEADER;
 import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_PERFORMANCE;
 import static org.apache.hadoop.fs.s3a.Constants.XA_HEADER_PREFIX;
@@ -201,9 +202,14 @@ public class ITestCreateFileCost extends AbstractS3ACostTest {
           () -> buildFile(testFile, false, true,
               GET_FILE_STATUS_ON_FILE));
     } else {
-      // will trigger conditional create and throw RemoteFileChangedException
-      intercept(RemoteFileChangedException.class,
-              () -> buildFile(testFile, false, true, NO_HEAD_OR_LIST));
+      if (getFileSystem().getConf().getBoolean(FS_S3A_CONDITIONAL_CREATE_ENABLED, true)) {
+        // will trigger conditional create and throw RemoteFileChangedException
+        intercept(RemoteFileChangedException.class,
+            () -> buildFile(testFile, false, true, NO_HEAD_OR_LIST));
+      } else {
+        // third party store w/out conditional overwrite support
+        buildFile(testFile, false, true, NO_HEAD_OR_LIST);
+      }
     }
   }
 

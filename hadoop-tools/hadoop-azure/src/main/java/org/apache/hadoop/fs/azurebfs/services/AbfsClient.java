@@ -62,6 +62,7 @@ import org.apache.hadoop.fs.azurebfs.constants.AbfsServiceType;
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.constants.HttpOperationType;
+import org.apache.hadoop.fs.azurebfs.constants.ReadType;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsDriverException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsInvalidChecksumException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
@@ -139,6 +140,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.HTTPS
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.ACCEPT_CHARSET;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.CONTENT_MD5;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.CONTENT_TYPE;
+import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_REQUEST_PRIORITY;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.USER_AGENT;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_ENCRYPTION_ALGORITHM;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_ENCRYPTION_CONTEXT;
@@ -148,6 +150,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X
 import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARAM_RESOURCE;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARAM_TIMEOUT;
 import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.CONNECTION_TIMEOUT_ABBREVIATION;
+import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.TAIL_LATENCY_REQUEST_TIMEOUT_ABBREVIATION;
 
 /**
  * AbfsClient.
@@ -163,6 +166,7 @@ public abstract class AbfsClient implements Closeable {
   private ApiVersion xMsVersion = ApiVersion.getCurrentVersion();
   private final ExponentialRetryPolicy exponentialRetryPolicy;
   private final StaticRetryPolicy staticRetryPolicy;
+  private final TailLatencyRequestTimeoutRetryPolicy tailLatencyRequestTimeoutRetryPolicy;
   private final String filesystem;
   private final AbfsConfiguration abfsConfiguration;
   private final String userAgent;
@@ -188,6 +192,7 @@ public abstract class AbfsClient implements Closeable {
   private EncryptionContextProvider encryptionContextProvider = null;
   private EncryptionType encryptionType = EncryptionType.NONE;
   private final AbfsThrottlingIntercept intercept;
+  private AbfsTailLatencyTracker tailLatencyTracker = null;
 
   private final ListeningScheduledExecutorService executorService;
 
@@ -220,9 +225,11 @@ public abstract class AbfsClient implements Closeable {
     this.abfsConfiguration = abfsConfiguration;
     this.exponentialRetryPolicy = abfsClientContext.getExponentialRetryPolicy();
     this.staticRetryPolicy = abfsClientContext.getStaticRetryPolicy();
+    this.tailLatencyRequestTimeoutRetryPolicy = abfsClientContext.getTailLatencyRequestTimeoutRetryPolicy();
     this.accountName = abfsConfiguration.getAccountName().substring(0, abfsConfiguration.getAccountName().indexOf(AbfsHttpConstants.DOT));
     this.authType = abfsConfiguration.getAuthType(accountName);
     this.intercept = AbfsThrottlingInterceptFactory.getInstance(accountName, abfsConfiguration);
+    this.tailLatencyTracker = AbfsTailLatencyTrackerFactory.getInstance(accountName, abfsConfiguration);
     this.renameResilience = abfsConfiguration.getRenameResilience();
     this.abfsServiceType = abfsServiceType;
 
@@ -305,8 +312,15 @@ public abstract class AbfsClient implements Closeable {
           metricIdlePeriod,
           metricIdlePeriod);
     }
+    // Initialize write thread pool metrics if dynamic write thread pool scaling is enabled.
+    if (abfsConfiguration.isDynamicWriteThreadPoolEnablement()) {
+      abfsCounters.initializeWriteResourceUtilizationMetrics();
+    }
     this.abfsMetricUrl = abfsConfiguration.getMetricUri();
-
+    // Initialize read thread pool metrics if ReadAheadV2 and its dynamic scaling feature are enabled.
+    if (abfsConfiguration.isReadAheadV2Enabled() && abfsConfiguration.isReadAheadV2DynamicScalingEnabled()) {
+      abfsCounters.initializeReadResourceUtilizationMetrics();
+    }
     final Class<? extends IdentityTransformerInterface> identityTransformerClass =
         abfsConfiguration.getRawConfiguration().getClass(FS_AZURE_IDENTITY_TRANSFORM_CLASS, IdentityTransformer.class,
             IdentityTransformerInterface.class);
@@ -337,22 +351,24 @@ public abstract class AbfsClient implements Closeable {
     LOG.trace("primaryUserGroup is {}", this.primaryUserGroup);
   }
 
+
+  /**
+   * Constructs an AbfsClient instance with all authentication and configuration options.
+   *
+   * @param baseUrl The base URL for the ABFS endpoint.
+   * @param sharedKeyCredentials Shared key credentials for authentication.
+   * @param abfsConfiguration The ABFS configuration.
+   * @param tokenProvider The access token provider for OAuth authentication.
+   * @param sasTokenProvider The SAS token provider for SAS authentication.
+   * @param encryptionContextProvider The encryption context provider.
+   * @param abfsClientContext The client context
+   * @param abfsServiceType The ABFS service type (e.g., Blob, DFS).
+   * @throws IOException if initialization fails.
+   */
   public AbfsClient(final URL baseUrl,
       final SharedKeyCredentials sharedKeyCredentials,
       final AbfsConfiguration abfsConfiguration,
       final AccessTokenProvider tokenProvider,
-      final EncryptionContextProvider encryptionContextProvider,
-      final AbfsClientContext abfsClientContext,
-      final AbfsServiceType abfsServiceType)
-      throws IOException {
-    this(baseUrl, sharedKeyCredentials, abfsConfiguration,
-        encryptionContextProvider, abfsClientContext, abfsServiceType);
-    this.tokenProvider = tokenProvider;
-  }
-
-  public AbfsClient(final URL baseUrl,
-      final SharedKeyCredentials sharedKeyCredentials,
-      final AbfsConfiguration abfsConfiguration,
       final SASTokenProvider sasTokenProvider,
       final EncryptionContextProvider encryptionContextProvider,
       final AbfsClientContext abfsClientContext,
@@ -361,6 +377,7 @@ public abstract class AbfsClient implements Closeable {
     this(baseUrl, sharedKeyCredentials, abfsConfiguration,
         encryptionContextProvider, abfsClientContext, abfsServiceType);
     this.sasTokenProvider = sasTokenProvider;
+    this.tokenProvider = tokenProvider;
   }
 
   @Override
@@ -398,16 +415,23 @@ public abstract class AbfsClient implements Closeable {
     return staticRetryPolicy;
   }
 
+  TailLatencyRequestTimeoutRetryPolicy getTailLatencyRequestTimeoutRetryPolicy() {
+    return tailLatencyRequestTimeoutRetryPolicy;
+  }
+
   /**
    * Returns the retry policy to be used for Abfs Rest Operation Failure.
    * @param failureReason helps to decide which type of retryPolicy to be used.
    * @return retry policy to be used.
    */
   public AbfsRetryPolicy getRetryPolicy(final String failureReason) {
-    return CONNECTION_TIMEOUT_ABBREVIATION.equals(failureReason)
-        && getAbfsConfiguration().getStaticRetryForConnectionTimeoutEnabled()
-        ? getStaticRetryPolicy()
-        : getExponentialRetryPolicy();
+    if (CONNECTION_TIMEOUT_ABBREVIATION.equals(failureReason)
+        && getAbfsConfiguration().getStaticRetryForConnectionTimeoutEnabled()) {
+      return getStaticRetryPolicy();
+    } else if (TAIL_LATENCY_REQUEST_TIMEOUT_ABBREVIATION.equals(failureReason)) {
+      return getTailLatencyRequestTimeoutRetryPolicy();
+    }
+    return getExponentialRetryPolicy();
   }
 
   SharedKeyCredentials getSharedKeyCredentials() {
@@ -420,6 +444,14 @@ public abstract class AbfsClient implements Closeable {
 
   public void setEncryptionType(EncryptionType encryptionType) {
     this.encryptionType = encryptionType;
+  }
+
+  /**
+   * Get the tail latency tracker for this account.
+   * @return tail latency tracker if enabled, null otherwise.
+   */
+  public AbfsTailLatencyTracker getTailLatencyTracker() {
+    return tailLatencyTracker;
   }
 
   public EncryptionType getEncryptionType() {
@@ -1157,7 +1189,7 @@ public abstract class AbfsClient implements Closeable {
                                          String cachedSasToken)
       throws SASTokenProviderException {
     String sasToken = null;
-    if (this.authType == AuthType.SAS) {
+    if (getAbfsConfiguration().validateForSASType(this.authType)) {
       try {
         LOG.trace("Fetch SAS token for {} on {}", operation, path);
         if (cachedSasToken == null) {
@@ -1376,6 +1408,21 @@ public abstract class AbfsClient implements Closeable {
       final AppendRequestParameters reqParams) {
     if (reqParams.getMd5() != null) {
       requestHeaders.add(new AbfsHttpHeader(CONTENT_MD5, reqParams.getMd5()));
+    }
+  }
+
+  /**
+   * Add request priority header for prefetch read requests if enabled.
+   *
+   * @param requestHeaders to be updated with request priority header
+   * @param tracingContext tracing context to check read type
+   */
+  protected void addRequestPriorityForPrefetch(List<AbfsHttpHeader> requestHeaders,
+      TracingContext tracingContext) {
+    if (getAbfsConfiguration().isEnablePrefetchRequestPriority()
+        && ReadType.PREFETCH_READ.equals(tracingContext.getReadType())) {
+      requestHeaders.add(new AbfsHttpHeader(X_MS_REQUEST_PRIORITY,
+          getAbfsConfiguration().getPrefetchRequestPriorityValue()));
     }
   }
 
@@ -1838,6 +1885,16 @@ public abstract class AbfsClient implements Closeable {
         operationType, httpMethod, url, requestHeaders);
     successOp.hardSetResult(HttpURLConnection.HTTP_OK);
     return successOp;
+  }
+
+  /**
+   * Retrieves the current read thread pool metrics from the ABFS counters.
+   *
+   * @return an {@link AbfsReadResourceUtilizationMetrics} instance containing
+   *         the latest statistics for the read thread pool
+   */
+  protected AbfsReadResourceUtilizationMetrics retrieveReadResourceUtilizationMetrics() {
+    return getAbfsCounters().getAbfsReadResourceUtilizationMetrics();
   }
 
   /**
