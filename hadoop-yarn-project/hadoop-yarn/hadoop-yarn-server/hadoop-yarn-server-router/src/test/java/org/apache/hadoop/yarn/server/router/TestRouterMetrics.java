@@ -19,7 +19,9 @@ package org.apache.hadoop.yarn.server.router;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -60,6 +62,19 @@ public class TestRouterMetrics {
         metrics.getAppAttemptsFailedRetrieved());
 
     LOG.info("Test: aggregate metrics are updated correctly");
+  }
+
+  @BeforeEach
+  public void setup() {
+    //reset metrics before each test
+    RouterMetrics.destroy();
+    metrics = RouterMetrics.getMetrics();
+  }
+
+  @AfterEach
+  public void tearDown() {
+    RouterMetrics.destroy();
+    metrics = RouterMetrics.getMetrics();
   }
 
   /**
