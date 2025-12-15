@@ -18,9 +18,8 @@
 package org.apache.hadoop.hdfs.protocol.datatransfer.sasl;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.datatransfer.sasl.SaslDataTransferServer.SaslServerCallbackHandler;
-import org.apache.hadoop.security.CustomizedCallbackHandler;
-import org.apache.hadoop.security.SaslRpcServer;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.Assert;
 import org.junit.Test;
@@ -33,18 +32,11 @@ import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_SASL_CUSTOMIZEDCALLBACKHANDLER_CLASS_KEY;
-
 /** For testing {@link CustomizedCallbackHandler}. */
 public class TestCustomizedCallbackHandler {
   static final Logger LOG = LoggerFactory.getLogger(TestCustomizedCallbackHandler.class);
 
   static final AtomicReference<List<Callback>> LAST_CALLBACKS = new AtomicReference<>();
-
-  static void reset() {
-    LAST_CALLBACKS.set(null);
-    CustomizedCallbackHandler.Cache.clear();
-  }
 
   static void runHandleCallbacks(Object caller, List<Callback> callbacks, String name) {
     LOG.info("{}: handling {} for {}", caller.getClass().getSimpleName(), callbacks, name);
@@ -61,9 +53,9 @@ public class TestCustomizedCallbackHandler {
     }
   }
 
-  public static class MyCallback implements Callback { }
+  static class MyCallback implements Callback { }
 
-  public static class MyCallbackHandler implements CustomizedCallbackHandler {
+  static class MyCallbackHandler implements CustomizedCallbackHandler {
     @Override
     public void handleCallbacks(List<Callback> callbacks, String name, char[] password) {
       runHandleCallbacks(this, callbacks, name);
@@ -76,31 +68,23 @@ public class TestCustomizedCallbackHandler {
     final Callback[] callbacks = {new MyCallback()};
 
     // without setting conf, expect UnsupportedCallbackException
-    reset();
     LambdaTestUtils.intercept(UnsupportedCallbackException.class, () -> runTest(conf, callbacks));
 
     // set conf and expect success
-    reset();
-    conf.setClass(HADOOP_SECURITY_SASL_CUSTOMIZEDCALLBACKHANDLER_CLASS_KEY,
+    conf.setClass(HdfsClientConfigKeys.DFS_DATA_TRANSFER_SASL_CUSTOMIZEDCALLBACKHANDLER_CLASS_KEY,
         MyCallbackHandler.class, CustomizedCallbackHandler.class);
-    runTest(conf, callbacks);
-    assertCallbacks(callbacks);
-
-    reset();
-    conf.setClass(HADOOP_SECURITY_SASL_CUSTOMIZEDCALLBACKHANDLER_CLASS_KEY,
-        MyCallbackHandler.class, CustomizedCallbackHandler.class);
-    new SaslRpcServer.SaslDigestCallbackHandler(null, null, conf).handle(callbacks);
+    new SaslServerCallbackHandler(conf, String::toCharArray).handle(callbacks);
     assertCallbacks(callbacks);
   }
 
-  public static class MyCallbackMethod {
+  static class MyCallbackMethod {
     public void handleCallbacks(List<Callback> callbacks, String name, char[] password)
         throws UnsupportedCallbackException {
       runHandleCallbacks(this, callbacks, name);
     }
   }
 
-  public static class MyExceptionMethod {
+  static class MyExceptionMethod {
     public void handleCallbacks(List<Callback> callbacks, String name, char[] password)
         throws UnsupportedCallbackException {
       runHandleCallbacks(this, callbacks, name);
@@ -114,19 +98,16 @@ public class TestCustomizedCallbackHandler {
     final Callback[] callbacks = {new MyCallback()};
 
     // without setting conf, expect UnsupportedCallbackException
-    reset();
     LambdaTestUtils.intercept(UnsupportedCallbackException.class, () -> runTest(conf, callbacks));
 
     // set conf and expect success
-    reset();
-    conf.setClass(HADOOP_SECURITY_SASL_CUSTOMIZEDCALLBACKHANDLER_CLASS_KEY,
+    conf.setClass(HdfsClientConfigKeys.DFS_DATA_TRANSFER_SASL_CUSTOMIZEDCALLBACKHANDLER_CLASS_KEY,
         MyCallbackMethod.class, Object.class);
-    runTest(conf, callbacks);
+    new SaslServerCallbackHandler(conf, String::toCharArray).handle(callbacks);
     assertCallbacks(callbacks);
 
     // set conf and expect exception
-    reset();
-    conf.setClass(HADOOP_SECURITY_SASL_CUSTOMIZEDCALLBACKHANDLER_CLASS_KEY,
+    conf.setClass(HdfsClientConfigKeys.DFS_DATA_TRANSFER_SASL_CUSTOMIZEDCALLBACKHANDLER_CLASS_KEY,
         MyExceptionMethod.class, Object.class);
     LambdaTestUtils.intercept(IOException.class, () -> runTest(conf, callbacks));
   }

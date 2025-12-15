@@ -106,7 +106,7 @@ import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcSaslProto.SaslState;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RPCTraceInfoProto;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.AccessControlException;
-import org.apache.hadoop.security.SaslMechanismFactory;
+import org.apache.hadoop.security.SaslConstants;
 import org.apache.hadoop.security.SaslPropertiesResolver;
 import org.apache.hadoop.security.SaslRpcServer;
 import org.apache.hadoop.security.SaslRpcServer.AuthMethod;
@@ -2144,10 +2144,6 @@ public abstract class Server {
       return Server.this;
     }
 
-    public Configuration getConf() {
-      return Server.this.getConf();
-    }
-
     /* Return true if the connection has no outstanding rpc */
     private boolean isIdle() {
       return rpcCount.get() == 0;
@@ -2611,7 +2607,7 @@ public abstract class Server {
       // accelerate token negotiation by sending initial challenge
       // in the negotiation response
       if (enabledAuthMethods.contains(AuthMethod.TOKEN)
-          && SaslMechanismFactory.isDigestMechanism(AuthMethod.TOKEN.getMechanismName())) {
+          && SaslConstants.SASL_MECHANISM_DEFAULT.equals(AuthMethod.TOKEN.getMechanismName())) {
         saslServer = createSaslServer(AuthMethod.TOKEN);
         byte[] challenge = saslServer.evaluateResponse(new byte[0]);
         RpcSaslProto.Builder negotiateBuilder =

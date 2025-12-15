@@ -31,9 +31,9 @@ import javax.security.sasl.SaslServerFactory;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.protocol.datatransfer.IOStreamPair;
-import org.apache.hadoop.security.SaslMechanismFactory;
 import org.apache.hadoop.security.FastSaslClientFactory;
 import org.apache.hadoop.security.FastSaslServerFactory;
+import org.apache.hadoop.security.SaslConstants;
 import org.apache.hadoop.security.SaslInputStream;
 import org.apache.hadoop.security.SaslOutputStream;
 
@@ -52,7 +52,7 @@ class SaslParticipant {
   // a short string.
   private static final String SERVER_NAME = "0";
   private static final String PROTOCOL = "hdfs";
-  private static final String[] MECHANISM_ARRAY = {SaslMechanismFactory.getMechanism()};
+  private static final String[] MECHANISM_ARRAY = {SaslConstants.SASL_MECHANISM};
   private static final byte[] EMPTY_BYTE_ARRAY = {};
 
   // One of these will always be null.
@@ -127,13 +127,8 @@ class SaslParticipant {
   }
 
   byte[] createFirstMessage() throws SaslException {
-    if (saslClient != null) {
-      return saslClient.hasInitialResponse()
-          ? saslClient.evaluateChallenge(EMPTY_BYTE_ARRAY)
-          : EMPTY_BYTE_ARRAY;
-    }
-    throw new IllegalStateException(
-        "createFirstMessage must only be called for clients");
+    return MECHANISM_ARRAY[0].equals(SaslConstants.SASL_MECHANISM_DEFAULT) ? EMPTY_BYTE_ARRAY
+        : evaluateChallengeOrResponse(EMPTY_BYTE_ARRAY);
   }
 
   /**
