@@ -28,6 +28,7 @@ import java.io.PrintStream;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
+import java.security.GeneralSecurityException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -41,6 +42,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.regex.Pattern;
+import javax.net.ssl.HttpsURLConnection;
 import javax.ws.rs.ProcessingException;
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientRequestContext;
@@ -64,6 +66,7 @@ import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.ssl.SSLFactory;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
@@ -122,6 +125,7 @@ public class LogsCLI extends Configured implements Tool {
   private PrintStream outStream = System.out;
   private YarnClient yarnClient = null;
   private Client webServiceClient = null;
+  private static SSLFactory sslFactory = null;
 
   private static final int DEFAULT_MAX_RETRIES = 30;
   private static final long DEFAULT_RETRY_INTERVAL = 1000;
@@ -428,6 +432,7 @@ public class LogsCLI extends Configured implements Tool {
     LogsCLI logDumper = new LogsCLI();
     logDumper.setConf(conf);
     WebServiceClient.initialize(conf);
+    sslFactory = WebServiceClient.getSSLFactory();
     int exitCode = logDumper.run(args);
     WebServiceClient.destroy();
     System.exit(exitCode);
@@ -1551,18 +1556,29 @@ public class LogsCLI extends Configured implements Tool {
       }
     }
 
-    private void checkUrlConnectivity(URI uri) throws IOException {
+    private void checkUrlConnectivity(URI uri) throws IOException, GeneralSecurityException {
       URL url = uri.toURL();
+      HttpURLConnection connection = null;
+      try {
+        connection = (HttpURLConnection) url.openConnection();
+        if (sslFactory != null) {
+          HttpsURLConnection httpsConn = (HttpsURLConnection) connection;
+          httpsConn.setSSLSocketFactory(sslFactory.createSSLSocketFactory());
+          httpsConn.setHostnameVerifier(sslFactory.getHostnameVerifier());
+        }
+        connection.setRequestMethod("HEAD");
+        connection.setConnectTimeout(TIME_OUT);
+        connection.setReadTimeout(TIME_OUT);
 
-      HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-      connection.setRequestMethod("HEAD");
-      connection.setConnectTimeout(TIME_OUT);
-      connection.setReadTimeout(TIME_OUT);
-
-      // The purpose of getting the `responseCode` here is to check if the service is online.
-      int responseCode = connection.getResponseCode();
-      if (responseCode >= 400) {
-        throw new IOException("URL connectivity check failed with HTTP code " + responseCode);
+        // The purpose of getting the `responseCode` here is to check if the service is online.
+        int responseCode = connection.getResponseCode();
+        if (responseCode >= 400) {
+          throw new IOException("URL connectivity check failed with HTTP code " + responseCode);
+        }
+      } finally {
+        if (connection != null) {
+          connection.disconnect();
+        }
       }
     }
 
