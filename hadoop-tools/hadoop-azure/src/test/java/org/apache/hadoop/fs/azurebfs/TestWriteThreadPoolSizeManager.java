@@ -56,8 +56,8 @@ import static org.mockito.Mockito.when;
 class TestWriteThreadPoolSizeManager extends AbstractAbfsIntegrationTest {
 
   private AbfsConfiguration mockConfig;
-  private static final double HIGH_CPU_UTILIZATION_THRESHOLD = 0.95;
-  private static final double LOW_CPU_UTILIZATION_THRESHOLD = 0.05;
+  private static final long HIGH_CPU_UTILIZATION_THRESHOLD = 95;
+  private static final long LOW_CPU_UTILIZATION_THRESHOLD = 5;
   private static final int LOW_MEMORY_USAGE_THRESHOLD_PERCENT = 100;
   private static final int THREAD_SLEEP_DURATION_MS = 200;
   private static final String TEST_FILE_PATH = "testFilePath";
@@ -75,8 +75,8 @@ class TestWriteThreadPoolSizeManager extends AbstractAbfsIntegrationTest {
   private static final int WAIT_DURATION_MS = 3000;
   private static final int LATCH_TIMEOUT_SECONDS = 60;
   private static final int RESIZE_WAIT_TIME_MS = 6_000;
-  private static final double HIGH_CPU_USAGE_RATIO = 0.95;
-  private static final double LOW_CPU_USAGE_RATIO = 0.05;
+  private static final long HIGH_CPU_USAGE_RATIO = 95;
+  private static final long LOW_CPU_USAGE_RATIO = 5;
   private static final int SLEEP_DURATION_MS = 150;
   private static final int AWAIT_TIMEOUT_SECONDS = 45;
   private static final int RESIZER_JOIN_TIMEOUT_MS = 2_000;
@@ -833,7 +833,8 @@ class TestWriteThreadPoolSizeManager extends AbstractAbfsIntegrationTest {
               .getAbfsWriteResourceUtilizationMetrics();
 
       WriteThreadPoolSizeManager.WriteThreadPoolStats statsBefore =
-          instance.getCurrentStats(ResourceUtilizationUtils.getJvmCpuLoad(), ResourceUtilizationUtils.getMemoryLoad());
+          instance.getCurrentStats(ResourceUtilizationUtils.getJvmCpuLoad(), ResourceUtilizationUtils.getMemoryLoad(), ResourceUtilizationUtils.getUsedHeapMemory(),
+              ResourceUtilizationUtils.getAvailableHeapMemory(), ResourceUtilizationUtils.getCommittedHeapMemory());
 
       ThreadPoolExecutor executor =
           (ThreadPoolExecutor) instance.getExecutorService();
@@ -868,7 +869,8 @@ class TestWriteThreadPoolSizeManager extends AbstractAbfsIntegrationTest {
       Thread.sleep(SLEEP_DURATION_30S_MS);
 
       WriteThreadPoolSizeManager.WriteThreadPoolStats statsAfter =
-          instance.getCurrentStats(ResourceUtilizationUtils.getJvmCpuLoad(), ResourceUtilizationUtils.getMemoryLoad());
+          instance.getCurrentStats(ResourceUtilizationUtils.getJvmCpuLoad(), ResourceUtilizationUtils.getMemoryLoad(), ResourceUtilizationUtils.getUsedHeapMemory(),
+          ResourceUtilizationUtils.getAvailableHeapMemory(), ResourceUtilizationUtils.getCommittedHeapMemory());
 
       //--- Validate that metrics and stats changed ---
       Assertions.assertThat(statsAfter)

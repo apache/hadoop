@@ -18,6 +18,7 @@
 package org.apache.hadoop.fs.azurebfs.services;
 
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
+import org.apache.hadoop.fs.azurebfs.JvmIdProvider;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ReadBufferStatus;
 
 import java.io.IOException;
@@ -68,7 +69,7 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
 
   private static int cpuMonitoringIntervalInMilliSec;
 
-  private static double cpuThreshold;
+  private static long cpuThreshold;
 
   private static int threadPoolUpscalePercentage;
 
@@ -94,7 +95,7 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
 
   private static int memoryMonitoringIntervalInMilliSec;
 
-  private static double memoryThreshold;
+  private static long memoryThreshold;
 
   private final AtomicInteger numberOfActiveBuffers = new AtomicInteger(0);
 
@@ -116,7 +117,7 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
   /* Tracks the last scale direction applied, or empty if none. */
   private volatile String lastScaleDirection = EMPTY_STRING;
   /* Maximum CPU utilization observed during the monitoring interval. */
-  private volatile double maxJvmCpuUtilization = 0.0;
+  private volatile long maxJvmCpuUtilization = 0L;
 
   /**
    * Private constructor to prevent instantiation as this needs to be singleton.
@@ -171,8 +172,7 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
           maxThreadPoolSize = abfsConfiguration.getMaxReadAheadV2ThreadPoolSize();
           cpuMonitoringIntervalInMilliSec
               = abfsConfiguration.getReadAheadV2CpuMonitoringIntervalMillis();
-          cpuThreshold = abfsConfiguration.getReadAheadV2CpuUsageThresholdPercent()
-              / HUNDRED_D;
+          cpuThreshold = abfsConfiguration.getReadAheadV2CpuUsageThresholdPercent();
           threadPoolUpscalePercentage
               = abfsConfiguration.getReadAheadV2ThreadPoolUpscalePercentage();
           threadPoolDownscalePercentage
@@ -185,8 +185,7 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
           memoryMonitoringIntervalInMilliSec
               = abfsConfiguration.getReadAheadV2MemoryMonitoringIntervalMillis();
           memoryThreshold =
-              abfsConfiguration.getReadAheadV2MemoryUsageThresholdPercent()
-                  / HUNDRED_D;
+              abfsConfiguration.getReadAheadV2MemoryUsageThresholdPercent();
           setThresholdAgeMilliseconds(
               abfsConfiguration.getReadAheadV2CachedBufferTTLMillis());
           isDynamicScalingEnabled
@@ -854,7 +853,7 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
    */
   private void adjustThreadPool() {
     int currentPoolSize = workerRefs.size();
-    double cpuLoad = ResourceUtilizationUtils.getJvmCpuLoad();
+    long cpuLoad = ResourceUtilizationUtils.getJvmCpuLoad();
     if (cpuLoad > maxJvmCpuUtilization) {
       maxJvmCpuUtilization = cpuLoad;
     }
@@ -1096,7 +1095,7 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
    * @return the highest JVM CPU utilization percentage recorded
    */
   @VisibleForTesting
-  public double getMaxJvmCpuUtilization() {
+  public long getMaxJvmCpuUtilization() {
     return maxJvmCpuUtilization;
   }
 
@@ -1168,10 +1167,10 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
      */
     public ReadThreadPoolStats(int currentPoolSize,
         int maxPoolSize, int activeThreads, int idleThreads,
-        double jvmCpuLoad,
-        double systemCpuUtilization, double availableHeapGB,
-        double committedHeapGB, double usedHeapGB, double maxHeapGB, double memoryLoad,
-        String lastScaleDirection, double maxCpuUtilization, long jvmProcessId) {
+        long jvmCpuLoad,
+        long systemCpuUtilization, long availableHeapGB,
+        long committedHeapGB, long usedHeapGB, long maxHeapGB, long memoryLoad,
+        String lastScaleDirection, long maxCpuUtilization, long jvmProcessId) {
       super(currentPoolSize, maxPoolSize, activeThreads, idleThreads,
           jvmCpuLoad, systemCpuUtilization, availableHeapGB,
           committedHeapGB, usedHeapGB, maxHeapGB, memoryLoad, lastScaleDirection,
@@ -1189,10 +1188,10 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
    * @return a {@link ReadThreadPoolStats} object containing the current thread pool
    *         and system resource statistics
    */
-  synchronized ReadThreadPoolStats getCurrentStats(double jvmCpuLoad) {
+  synchronized ReadThreadPoolStats getCurrentStats(long jvmCpuLoad) {
     if (workerPool == null) {
-      return new ReadThreadPoolStats(ZERO, ZERO, ZERO, ZERO, ZERO_D, ZERO_D,
-          ZERO_D, ZERO_D, ZERO_D, ZERO_D, ZERO_D, EMPTY_STRING, ZERO_D, ZERO);
+      return new ReadThreadPoolStats(ZERO, ZERO, ZERO, ZERO, ZERO, ZERO,
+          ZERO, ZERO, ZERO, ZERO, ZERO, EMPTY_STRING, ZERO, ZERO);
     }
 
     ThreadPoolExecutor exec = this.workerPool;
@@ -1217,7 +1216,7 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
         ResourceUtilizationUtils.getMemoryLoad(),                    // used/max
         currentScaleDirection,         // "I", "D", or ""
         getMaxJvmCpuUtilization(),             // Peak JVM CPU usage so far,
-        ResourceUtilizationUtils.getJvmProcessId()            // JVM process id.
+        JvmIdProvider.getJvmId()           // JVM process id.
     );
   }
 }

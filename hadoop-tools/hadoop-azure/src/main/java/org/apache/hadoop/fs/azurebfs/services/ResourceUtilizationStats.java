@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
-import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.HUNDRED_D;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.NO_ACTION_NEEDED;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.NO_SCALE_DOWN_AT_MIN;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.NO_SCALE_UP_AT_MAX;
@@ -40,15 +40,15 @@ public abstract class ResourceUtilizationStats {
   private final int maxPoolSize;        // Maximum allowed pool size
   private final int activeThreads;    // Number of threads currently executing tasks
   private final int idleThreads;        // Number of threads not executing tasks
-  private final double jvmCpuLoad;    // Current JVM CPU utilization (%)
-  private final double systemCpuUtilization; // Current system CPU utilization (%)
-  private final double availableHeapGB;       // Available heap memory (GB)
-  private final double committedHeapGB;  // Total committed heap memory (GB)
-  private final double usedHeapGB;        // Used heap memory (GB)
-  private final double maxHeapGB;         // Max heap memory (GB)
-  private final double memoryLoad;  // Heap usage ratio (used/max)
-  private final String lastScaleDirection;  // Last resize direction: "I" (increase) or "D" (decrease)
-  private final double maxCpuUtilization; // Peak JVM CPU observed in the current interval
+  private final long jvmCpuLoad;    // Current JVM CPU utilization (%)
+  private final long systemCpuUtilization; // Current system CPU utilization (%)
+  private final long availableHeapGB;       // Available heap memory (GB)
+  private final long committedHeapGB;  // Total committed heap memory (GB)
+  private final long usedHeapGB;        // Used heap memory (GB)
+  private final long maxHeapGB;         // Max heap memory (GB)
+  private final long memoryLoad;  // Heap usage ratio (used/max)
+  private String lastScaleDirection = EMPTY_STRING;  // Last resize direction: "I" (increase) or "D" (decrease)
+  private long maxCpuUtilization = 0L; // Peak JVM CPU observed in the current interval
   private final long jvmProcessId;   // JVM Process ID
 
   /**
@@ -73,9 +73,9 @@ public abstract class ResourceUtilizationStats {
    */
   public ResourceUtilizationStats(int currentPoolSize,
       int maxPoolSize, int activeThreads, int idleThreads,
-      double jvmCpuLoad, double systemCpuUtilization, double availableHeapGB,
-      double committedHeapGB, double usedHeapGB, double maxHeapGB, double memoryLoad, String lastScaleDirection,
-      double maxCpuUtilization, long jvmProcessId) {
+      long jvmCpuLoad, long systemCpuUtilization, long availableHeapGB,
+      long committedHeapGB, long usedHeapGB, long maxHeapGB, long memoryLoad, String lastScaleDirection,
+      long maxCpuUtilization, long jvmProcessId) {
     this.currentPoolSize = currentPoolSize;
     this.maxPoolSize = maxPoolSize;
     this.activeThreads = activeThreads;
@@ -113,32 +113,32 @@ public abstract class ResourceUtilizationStats {
   }
 
   /** @return the overall system CPU utilization percentage. */
-  public double getSystemCpuUtilization() {
+  public long getSystemCpuUtilization() {
     return systemCpuUtilization;
   }
 
   /** @return the available heap memory in gigabytes. */
-  public double getMemoryUtilization() {
+  public long getMemoryUtilization() {
     return availableHeapGB;
   }
 
   /** @return the total committed heap memory in gigabytes */
-  public double getCommittedHeapGB() {
+  public long getCommittedHeapGB() {
     return committedHeapGB;
   }
 
   /** @return the used heap memory in gigabytes */
-  public double getUsedHeapGB() {
+  public long getUsedHeapGB() {
     return usedHeapGB;
   }
 
   /** @return the max heap memory in gigabytes */
-  public double getMaxHeapGB() {
+  public long getMaxHeapGB() {
     return maxHeapGB;
   }
 
   /** @return the current JVM memory load (used / committed) as a value between 0.0 and 1.0 */
-  public double getMemoryLoad() {
+  public long getMemoryLoad() {
     return memoryLoad;
   }
 
@@ -148,12 +148,12 @@ public abstract class ResourceUtilizationStats {
   }
 
   /** @return the JVM process CPU utilization percentage. */
-  public double getJvmCpuLoad() {
+  public long getJvmCpuLoad() {
     return jvmCpuLoad;
   }
 
   /** @return the max JVM process CPU utilization percentage. */
-  public double getMaxCpuUtilization() {
+  public long getMaxCpuUtilization() {
     return maxCpuUtilization;
   }
 
@@ -190,13 +190,13 @@ public abstract class ResourceUtilizationStats {
   public String toString() {
     return String.format(
         "currentPoolSize=%d, maxPoolSize=%d, activeThreads=%d, idleThreads=%d, "
-            + "jvmCpuLoad=%.2f%%, systemCpuUtilization=%.2f%%, "
-            + "availableHeap=%.2fGB, committedHeap=%.2fGB, memoryLoad=%.2f%%, "
-            + "scaleDirection=%s, maxCpuUtilization=%.2f%%, jvmProcessId=%d",
+            + "jvmCpuLoad=%d, systemCpuUtilization=%d, "
+            + "availableHeap=%d, committedHeap=%d, memoryLoad=%d, "
+            + "scaleDirection=%s, maxCpuUtilization=%d, jvmProcessId=%d",
         currentPoolSize, maxPoolSize, activeThreads,
-        idleThreads, jvmCpuLoad * HUNDRED_D, systemCpuUtilization * HUNDRED_D,
-        availableHeapGB, committedHeapGB, memoryLoad * HUNDRED_D,
-        lastScaleDirection, maxCpuUtilization * HUNDRED_D, jvmProcessId
+        idleThreads, jvmCpuLoad, systemCpuUtilization,
+        availableHeapGB, committedHeapGB, memoryLoad,
+        lastScaleDirection, maxCpuUtilization, jvmProcessId
     );
   }
 }
