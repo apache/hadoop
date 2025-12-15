@@ -151,6 +151,9 @@ public class LogsCLI extends Configured implements Tool {
       if (webServiceClient != null) {
         webServiceClient.close();
       }
+      if (sslFactory != null) {
+        sslFactory.destroy();
+      }
     }
   }
 
