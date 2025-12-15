@@ -43,6 +43,7 @@ import java.util.Set;
 import java.util.Iterator;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
@@ -222,7 +223,10 @@ public final class FSImageFormatProtobuf {
       @Override
       public void work() {
         try {
+          long now = Time.now();
           digest = MD5FileUtils.computeMd5ForFile(file);
+          LOG.info("Computed MD5 for file {} in {}s", file,
+              TimeUnit.MILLISECONDS.toSeconds(Time.now() - now));
         } catch (IOException e) {
           ioe = e;
         } catch (Throwable t) {
