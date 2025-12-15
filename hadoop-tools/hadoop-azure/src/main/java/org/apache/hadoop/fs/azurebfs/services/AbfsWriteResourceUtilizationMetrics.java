@@ -74,15 +74,11 @@ public class AbfsWriteResourceUtilizationMetrics
     return lastPushedVersion.get();
   }
 
-  @Override
-  protected void setLastPushedVersion(long v) {
-    lastPushedVersion.set(v);
-  }
-
   /**
    * Marks the current metrics version as pushed.
    * Must be called only after the metrics string is actually emitted.
    */
+  @Override
   public synchronized void markPushed() {
     lastPushedVersion.set(updateVersion.get());
   }

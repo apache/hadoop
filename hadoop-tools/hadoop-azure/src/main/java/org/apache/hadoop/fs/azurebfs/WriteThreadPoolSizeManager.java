@@ -272,7 +272,6 @@ public final class WriteThreadPoolSizeManager implements Closeable {
       long memoryLoad = ResourceUtilizationUtils.getMemoryLoad();
       long usedHeapMemory = ResourceUtilizationUtils.getUsedHeapMemory();
       long availableMemory = ResourceUtilizationUtils.getAvailableHeapMemory();
-      // Free heap (GB)
       long committedMemory = ResourceUtilizationUtils.getCommittedHeapMemory();
       LOG.debug("The memory load is {} and CPU utilization is {}", memoryLoad, cpuUtilization);
       if (cpuUtilization > (abfsConfiguration.getWriteHighCpuThreshold())) {
@@ -555,12 +554,9 @@ public final class WriteThreadPoolSizeManager implements Closeable {
         activeThreads,                 // Busy threads
         idleThreads,                   // Idle threads
         jvmCpuUtilization,             // JVM CPU usage (ratio)
-        ResourceUtilizationUtils.getSystemCpuLoad(),
-        // System CPU usage (ratio)
-        availableMemory,
-        // Free heap (GB)
-        committedMemory,
-        // Committed heap (GB)
+        ResourceUtilizationUtils.getSystemCpuLoad(), // System CPU usage (ratio)
+        availableMemory, // Free heap (GB)
+        committedMemory, // Committed heap (GB)
         usedMemory,   // Used heap (GB)
         ResourceUtilizationUtils.getMaxHeapMemory(),    // Max heap (GB)
         memoryLoad,                    // used/max

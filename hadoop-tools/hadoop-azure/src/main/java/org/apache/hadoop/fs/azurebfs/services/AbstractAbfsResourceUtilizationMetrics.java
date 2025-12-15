@@ -52,7 +52,7 @@ public abstract class AbstractAbfsResourceUtilizationMetrics<T extends Enum<T> &
   protected abstract boolean isUpdated();
   protected abstract long getUpdateVersion();
   protected abstract long getLastPushedVersion();
-  protected abstract void setLastPushedVersion(long v);
+  public abstract void markPushed();
 
   /**
    * The set of metrics supported by this metrics instance.

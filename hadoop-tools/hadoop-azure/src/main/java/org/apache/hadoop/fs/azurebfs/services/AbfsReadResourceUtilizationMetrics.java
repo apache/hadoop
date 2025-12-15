@@ -66,11 +66,6 @@ public class AbfsReadResourceUtilizationMetrics
     return lastPushedVersion.get();
   }
 
-  @Override
-  protected void setLastPushedVersion(long v) {
-    lastPushedVersion.set(v);
-  }
-
   /**
    * Creates a metrics set for read operations, initializing all
    * metric keys defined in {@link AbfsReadResourceUtilizationMetricsEnum}.
@@ -83,6 +78,7 @@ public class AbfsReadResourceUtilizationMetrics
    * Marks the current metrics version as pushed.
    * Must be called only after the metrics string is actually emitted.
    */
+  @Override
   public synchronized void markPushed() {
     lastPushedVersion.set(updateVersion.get());
   }
