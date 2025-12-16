@@ -26,6 +26,10 @@ import org.junit.jupiter.api.Test;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidConfigurationValueException;
 
 public class TestSimpleRateLimiter {
+
+  /** Number of nanoseconds in one millisecond. */
+  private static final long NANOS_PER_MILLISECOND = 1_000_000L;
+
   /**
    * Verifies that the rate limiter does not introduce unnecessary blocking
    * when calls are naturally spaced apart longer than the required interval.
@@ -41,7 +45,7 @@ public class TestSimpleRateLimiter {
 
     limiter.acquire();
     // Sleep longer than required interval
-    LockSupport.parkNanos(600_000_000L); // 600 ms
+    LockSupport.parkNanos(600 * NANOS_PER_MILLISECOND); // 600 ms
 
     long before = System.nanoTime();
     limiter.acquire();  // Should not block
@@ -50,7 +54,7 @@ public class TestSimpleRateLimiter {
     long elapsed = after - before;
 
     // Should be less than 5ms
-    Assertions.assertThat(elapsed < 5_000_000L)
+    Assertions.assertThat(elapsed < 5 * NANOS_PER_MILLISECOND)
         .describedAs("acquire() should not block when enough time has passed")
         .isTrue();
   }
@@ -64,8 +68,11 @@ public class TestSimpleRateLimiter {
    */
   @Test
   void testRateLimitingDelay() throws InvalidConfigurationValueException {
+    final int permitsPerSecond = 5;
+    final long minTimeAllowed = 180;
+    final long maxTimeAllowed = 260;
     // 5 permits per second → 200ms interval
-    SimpleRateLimiter limiter = new SimpleRateLimiter(5);
+    SimpleRateLimiter limiter = new SimpleRateLimiter(permitsPerSecond);
 
     limiter.acquire(); // First call never waits
 
@@ -73,10 +80,11 @@ public class TestSimpleRateLimiter {
     limiter.acquire(); // Second call immediately → should wait ~200ms
     long after = System.nanoTime();
 
-    long elapsedMs = (after - before) / 1_000_000;
+    long elapsedMs = (after - before) / NANOS_PER_MILLISECOND;
 
     // Expect ~200ms, so allow tolerance
-    Assertions.assertThat(elapsedMs >= 180 && elapsedMs <= 260)
+    Assertions.assertThat(
+            elapsedMs >= minTimeAllowed && elapsedMs <= maxTimeAllowed)
         .describedAs("Expected about 200ms wait, but was " + elapsedMs + " ms")
         .isTrue();
   }
@@ -91,8 +99,11 @@ public class TestSimpleRateLimiter {
    */
   @Test
   void testMultipleBurstCalls() throws InvalidConfigurationValueException {
+    final int permitsPerSecond = 10;
+    final long minTimeAllowed = 350;
+    final long maxTimeAllowed = 550;
     // 10 permits per second → 100ms interval
-    SimpleRateLimiter limiter = new SimpleRateLimiter(10);
+    SimpleRateLimiter limiter = new SimpleRateLimiter(permitsPerSecond);
 
     long totalStart = System.nanoTime();
 
@@ -100,10 +111,11 @@ public class TestSimpleRateLimiter {
       limiter.acquire();
     }
 
-    long totalMs = (System.nanoTime() - totalStart) / 1_000_000;
+    long totalMs = (System.nanoTime() - totalStart) / NANOS_PER_MILLISECOND;
 
     // 5 calls → should take around 400ms (first is free, next 4 need +100ms each)
-    Assertions.assertThat(totalMs >= 350 && totalMs <= 550)
+    Assertions.assertThat(
+            totalMs >= minTimeAllowed && totalMs <= maxTimeAllowed)
         .describedAs("Expected around 400ms total but got " + totalMs + "ms")
         .isTrue();
   }
@@ -123,7 +135,9 @@ public class TestSimpleRateLimiter {
   @Test
   void testMultipleBurstCallsWhenPermitIsLess()
       throws InvalidConfigurationValueException {
-    int permitsPerSecond = 3;
+    final int permitsPerSecond = 3;
+    final long minTimeAllowed = 2700;
+    final long maxTimeAllowed = 3500;
     SimpleRateLimiter limiter = new SimpleRateLimiter(permitsPerSecond);
 
     long start = System.nanoTime();
@@ -133,10 +147,11 @@ public class TestSimpleRateLimiter {
     }
 
     long end = System.nanoTime();
-    long elapsedMs = (end - start) / 1_000_000;
+    long elapsedMs = (end - start) / NANOS_PER_MILLISECOND;
 
     // Expected ~3000ms, allow tolerance due to scheduler delays.
-    Assertions.assertThat(elapsedMs >= 2700 && elapsedMs <= 3500)
+    Assertions.assertThat(
+            elapsedMs >= minTimeAllowed && elapsedMs <= maxTimeAllowed)
         .describedAs("Expected ~3000ms, but got " + elapsedMs + "ms")
         .isTrue();
   }

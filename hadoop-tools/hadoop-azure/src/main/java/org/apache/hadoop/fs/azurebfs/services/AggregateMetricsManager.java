@@ -36,7 +36,7 @@ public final class AggregateMetricsManager {
   /**
    * Singleton instance of AggregateMetricsManager.
    */
-  private static volatile AggregateMetricsManager INSTANCE;
+  private static volatile AggregateMetricsManager instance;
 
   // Map of account name to MetricsBucket.
   private final ConcurrentHashMap<String, MetricsBucket> buckets =
@@ -94,23 +94,21 @@ public final class AggregateMetricsManager {
    */
   public static AggregateMetricsManager get(final long dispatchIntervalInMins,
       final int permitsPerSecond) {
-
-    AggregateMetricsManager instance = INSTANCE;
     if (instance != null) {
       return instance;
     }
 
     synchronized (AggregateMetricsManager.class) {
-      if (INSTANCE == null) {
+      if (instance == null) {
         try {
-          INSTANCE = new AggregateMetricsManager(
+          instance = new AggregateMetricsManager(
               dispatchIntervalInMins, permitsPerSecond);
         } catch (InvalidConfigurationValueException e) {
           throw new RuntimeException(
               "Failed to initialize AggregateMetricsManager", e);
         }
       }
-      return INSTANCE;
+      return instance;
     }
   }
 

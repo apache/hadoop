@@ -31,6 +31,9 @@ public class SimpleRateLimiter {
   /** The next allowed time (in nanoseconds) when a permit may be issued. */
   private final AtomicLong nextAllowedTime = new AtomicLong(0);
 
+  /** Number of nanoseconds in one second. */
+  private static final long NANOS_PER_SECOND = 1_000_000_000L;
+
   /**
    * Creates a rate limiter with a fixed number of permits allowed per second.
    *
@@ -44,7 +47,7 @@ public class SimpleRateLimiter {
       throw new InvalidConfigurationValueException(
           "Aggregated Metrics Per Second Call");
     }
-    this.intervalNanos = 1_000_000_000L / permitsPerSecond;
+    this.intervalNanos = NANOS_PER_SECOND / permitsPerSecond;
   }
 
   /**

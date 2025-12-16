@@ -46,6 +46,9 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.COLON;
 
 public class TestAggregateMetricsManager extends AbstractAbfsIntegrationTest {
 
+  /** Number of nanoseconds in one millisecond. */
+  private static final long NANOS_PER_MILLISECOND = 1_000_000L;
+
   // The manager under test
   private AggregateMetricsManager manager;
 
@@ -269,6 +272,9 @@ public class TestAggregateMetricsManager extends AbstractAbfsIntegrationTest {
   @Test
   public void testMultipleMetricCallsInCaseDataIsMoreThanBufferSize()
       throws Exception {
+    final int metricsDataSize1 = 927; // size of aggregated data for first 3 calls
+    final int metricsDataSize2 = 115; // size of aggregated data for last call
+    final int numberOfMetrics = 25; // total metrics to send
     AtomicInteger calls = new AtomicInteger(0);
     AzureBlobFileSystem azureBlobFileSystem = Mockito.spy(this.getFileSystem());
     AzureBlobFileSystemStore store = Mockito.spy(
@@ -282,17 +288,17 @@ public class TestAggregateMetricsManager extends AbstractAbfsIntegrationTest {
       if (calls.get() < 3) { // first three calls, data size will be 927 chars
         Assertions.assertThat(data.length())
             .describedAs("Aggregated metric data size should be 927 chars")
-            .isEqualTo(927);
+            .isEqualTo(metricsDataSize1);
       } else { // last call, data size will be 115 chars
         Assertions.assertThat(data.length())
             .describedAs("Aggregated metric data size should be 115 chars")
-            .isEqualTo(115);
+            .isEqualTo(metricsDataSize2);
       }
       calls.incrementAndGet();
       return inv.callRealMethod();
     }).when(client).getMetricCall(Mockito.any());
     manager.registerClient("acc1", client);
-    for (int i = 0; i < 25; i++) {
+    for (int i = 0; i < numberOfMetrics; i++) {
       manager.recordMetric("acc1", getMetricsData()
           + "$OT=163$RT=6.024%$TRNR=2543$TR=2706"); // each data is 113 chars
     }
@@ -314,10 +320,10 @@ public class TestAggregateMetricsManager extends AbstractAbfsIntegrationTest {
    */
   @Test
   public void testRateLimitMetricCalls() throws IOException, InterruptedException {
-    int permitsPerSecond = 3;
-    long minIntervalMs = 1_000 / permitsPerSecond; // 333ms
-    double toleranceMs = 15.0; // allow 15ms jitter
-    int numClients = 10;
+    final int permitsPerSecond = 3;
+    final long minIntervalMs = 1_000 / permitsPerSecond; // 333ms
+    final double toleranceMs = 15; // allow 15ms jitter
+    final int numClients = 10;
 
     // Store timestamps for each client
     final List<AtomicLong> times = new ArrayList<>();
@@ -356,10 +362,10 @@ public class TestAggregateMetricsManager extends AbstractAbfsIntegrationTest {
     for (int i = 0; i < times.size(); i++) {
       for (int j = i + 1; j < times.size(); j++) {
         double diffMs = Math.abs(times.get(i).get() - times.get(j).get())
-            / 1_000_000.0;
+            / (double) NANOS_PER_MILLISECOND;
         Assertions.assertThat(diffMs)
             .describedAs(
-                "Expected at least %.3f ms (tolerance %.3f) between metric sends",
+                "Expected at least %d ms (tolerance %.3f) between metric sends",
                 minIntervalMs, toleranceMs)
             .isGreaterThanOrEqualTo(minIntervalMs - toleranceMs);
       }
@@ -520,6 +526,7 @@ public class TestAggregateMetricsManager extends AbstractAbfsIntegrationTest {
    */
   @Test
   void testAggregatedMetricsManagerWithJVMCrash() throws Exception {
+    final int crashExitCode = 134;
     // -------------------------------
     // Program 3 (JVM Crash)
     // -------------------------------
@@ -600,7 +607,7 @@ public class TestAggregateMetricsManager extends AbstractAbfsIntegrationTest {
             + "    }\n"
             + "}\n";
 
-    runProgramAndCaptureOutput(program, false, 134);
+    runProgramAndCaptureOutput(program, false, crashExitCode);
   }
 
   /**
@@ -668,10 +675,11 @@ public class TestAggregateMetricsManager extends AbstractAbfsIntegrationTest {
    */
   private static String readProcessOutput(Process proc)
       throws IOException, InterruptedException {
+    final int maxBufferSize = 4096;
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     Thread t = new Thread(() -> {
       try (InputStream in = proc.getInputStream()) {
-        byte[] buf = new byte[4096];
+        byte[] buf = new byte[maxBufferSize];
         int n;
         while ((n = in.read(buf)) != -1) {
           out.write(buf, 0, n);

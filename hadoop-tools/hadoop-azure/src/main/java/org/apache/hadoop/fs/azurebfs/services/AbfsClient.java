@@ -325,9 +325,9 @@ public abstract class AbfsClient implements Closeable {
                 metricAccountName.substring(0, dotIndex),
                 metricAccountKey);
             hasSeparateMetricAccount = true;
-            setMetricsUrl(metricAccountName.startsWith(HTTPS_SCHEME) ?
-                metricAccountName : HTTPS_SCHEME + COLON +
-                FORWARD_SLASH + FORWARD_SLASH + metricAccountName);
+            setMetricsUrl(metricAccountName.startsWith(HTTPS_SCHEME)
+                ? metricAccountName : HTTPS_SCHEME + COLON
+                + FORWARD_SLASH + FORWARD_SLASH + metricAccountName);
           } catch (IllegalArgumentException e) {
             throw new IOException(
                 "Exception while initializing metric credentials ", e);
