@@ -26,6 +26,12 @@ public class SynchronizedGSetController<K> implements GSetConcurrencyController<
 
   private final Object lock = new Object();
 
+  /**
+   * Create a new SynchronizedGSetController.
+   */
+  private SynchronizedGSetController() {
+  }
+
   @Override
   public Object getLock(K key) {
     return lock;

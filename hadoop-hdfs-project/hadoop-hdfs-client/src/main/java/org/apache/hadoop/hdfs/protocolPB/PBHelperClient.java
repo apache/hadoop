@@ -531,6 +531,9 @@ public class PBHelperClient {
     return new LimitInputStream(input, size);
   }
 
+  /**
+   * Read the size of next message from input stream.
+   */
   public static int vintPrefixedSize(final InputStream input)
       throws IOException {
     final int firstByte = input.read();

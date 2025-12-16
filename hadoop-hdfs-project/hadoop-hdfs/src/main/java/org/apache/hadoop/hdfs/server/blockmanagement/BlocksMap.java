@@ -250,6 +250,9 @@ class BlocksMap {
     return totalECBlockGroups.longValue();
   }
 
+  /**
+   * @return A new concurrency controller for block map.
+   */
   public GSetConcurrencyController<Block> newBlockGSetConcurrencyController() {
     return blocks.newConcurrencyController();
   }

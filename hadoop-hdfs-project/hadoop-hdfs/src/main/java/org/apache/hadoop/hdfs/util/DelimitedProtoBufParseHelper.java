@@ -42,8 +42,10 @@ import java.nio.ByteBuffer;
  *  <li>1. Small messages (≤ buffer size): Reuse pre-allocated ByteBuffer </li>
  *  <li>2. Large messages (> buffer size): Use streaming with LimitInputStream </li>
  * </ul>
- * 
+ *
  * mark sure to specific an appropriate buffer size so that most messages use mode 1
+ *
+ * @param <T> Type of the message.
  */
 public class DelimitedProtoBufParseHelper<T extends GeneratedMessageV3> {
 
@@ -55,8 +57,21 @@ public class DelimitedProtoBufParseHelper<T extends GeneratedMessageV3> {
   private final Parser<ByteBuffer, T> byteParser;
   private final Parser<InputStream, T> streamParser;
 
+  /**
+   * A parser interface defines how to parse Protocol Buffer messages.
+   *
+   * @param <T> Type of the source.
+   * @param <R> Type of the message.
+   */
   @FunctionalInterface
   public interface Parser<T, R extends GeneratedMessageV3> {
+    /**
+     * Parse a Protocol Buffer message from the source.
+     *
+     * @param source the source to parse from
+     * @return the parsed message
+     * @throws IOException if an I/O error occurs
+     */
     R parse(T source) throws IOException;
   }
 
@@ -92,6 +107,7 @@ public class DelimitedProtoBufParseHelper<T extends GeneratedMessageV3> {
    * Parse the next Protocol Buffer message with optimized memory usage.
    *
    * @return Next message object, or null if end of stream is reached
+   * @throws IOException if an I/O error occurs
    */
   public T parseNext() throws IOException {
     int size;

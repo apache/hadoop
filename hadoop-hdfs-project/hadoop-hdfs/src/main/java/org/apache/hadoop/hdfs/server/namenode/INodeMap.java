@@ -140,6 +140,9 @@ public class INodeMap {
     map.clear();
   }
 
+  /**
+   * @return A new concurrency controller for inode map.
+   */
   public GSetConcurrencyController<INode> newINodeGSetConcurrencyController() {
     return map.newConcurrencyController();
   }

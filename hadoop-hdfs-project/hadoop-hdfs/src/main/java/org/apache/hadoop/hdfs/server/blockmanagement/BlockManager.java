@@ -5863,6 +5863,9 @@ public class BlockManager implements BlockStatsMXBean {
     return placementPolicies.getPolicy(blockType).getMinBlocksForWrite();
   }
 
+  /**
+   * @return A new concurrency controller for block map.
+   */
   public GSetConcurrencyController<Block> newBlockGSetConcurrencyController() {
     return blocksMap.newBlockGSetConcurrencyController();
   }

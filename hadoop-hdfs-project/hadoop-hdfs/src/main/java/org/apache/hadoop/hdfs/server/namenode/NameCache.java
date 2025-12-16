@@ -79,7 +79,7 @@ class NameCache<K> {
   final HashMap<K, K> cache = new HashMap<K, K>();
 
   /** Names and with number of occurrences tracked during initialization */
-  Map<K, UseCount> transientMap = new ConcurrentHashMap<>();
+  private Map<K, UseCount> transientMap = new ConcurrentHashMap<>();
 
   /**
    * Constructor

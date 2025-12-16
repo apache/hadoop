@@ -54,7 +54,7 @@ public interface GSetConcurrencyController<K> {
   /**
    * In some scenarios, we already know the final size of the GSet. We can use this method
    * to correct the size directly without calling {@link #addSize(int)} repeatedly.
-   * 
+   *
    * <p>NOTE: Caller is responsible for ensuring the correctness of the given size.</p>
    *
    * @param size the corrected size.

@@ -38,14 +38,14 @@ public class TestDelimitedProtoBufParseHelper {
     String largeMessageStrPrefix = StringUtils.repeat('m', largeMessageSize - 1);
 
     ByteArrayOutputStream output = new ByteArrayOutputStream();
-    for (int i = 0; i < 10; i++) { // write small messages 
+    for (int i = 0; i < 10; i++) { // write small messages
       TestProtos.EchoRequestProto.newBuilder()
           .setMessage(smallMessageStrPrefix + i)
           .build()
           .writeDelimitedTo(output);
     }
 
-    for (int i = 0; i < 10; i++) { // write large messages 
+    for (int i = 0; i < 10; i++) { // write large messages
       TestProtos.EchoRequestProto.newBuilder()
           .setMessage(largeMessageStrPrefix + i)
           .build()
