@@ -26,9 +26,13 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -178,7 +182,7 @@ class TestWriteThreadPoolSizeManager extends AbstractAbfsIntegrationTest {
     try (AzureBlobFileSystem abfs = (AzureBlobFileSystem) fileSystem) {
       WriteThreadPoolSizeManager instance
           = WriteThreadPoolSizeManager.getInstance(abfs.getFileSystemId(),
-          getAbfsStore(abfs).getAbfsConfiguration(),
+         mockConfig,
           abfs.getAbfsClient().getAbfsCounters());
       ExecutorService executor = instance.getExecutorService();
       int initialSize = ((ThreadPoolExecutor) executor).getMaximumPoolSize();
@@ -833,8 +837,11 @@ class TestWriteThreadPoolSizeManager extends AbstractAbfsIntegrationTest {
               .getAbfsWriteResourceUtilizationMetrics();
 
       WriteThreadPoolSizeManager.WriteThreadPoolStats statsBefore =
-          instance.getCurrentStats(ResourceUtilizationUtils.getJvmCpuLoad(), ResourceUtilizationUtils.getMemoryLoad(), ResourceUtilizationUtils.getUsedHeapMemory(),
-              ResourceUtilizationUtils.getAvailableHeapMemory(), ResourceUtilizationUtils.getCommittedHeapMemory());
+          instance.getCurrentStats(ResourceUtilizationUtils.getJvmCpuLoad(),
+              ResourceUtilizationUtils.getMemoryLoad(),
+              ResourceUtilizationUtils.getUsedHeapMemory(),
+              ResourceUtilizationUtils.getAvailableHeapMemory(),
+              ResourceUtilizationUtils.getCommittedHeapMemory());
 
       ThreadPoolExecutor executor =
           (ThreadPoolExecutor) instance.getExecutorService();
@@ -869,8 +876,11 @@ class TestWriteThreadPoolSizeManager extends AbstractAbfsIntegrationTest {
       Thread.sleep(SLEEP_DURATION_30S_MS);
 
       WriteThreadPoolSizeManager.WriteThreadPoolStats statsAfter =
-          instance.getCurrentStats(ResourceUtilizationUtils.getJvmCpuLoad(), ResourceUtilizationUtils.getMemoryLoad(), ResourceUtilizationUtils.getUsedHeapMemory(),
-          ResourceUtilizationUtils.getAvailableHeapMemory(), ResourceUtilizationUtils.getCommittedHeapMemory());
+          instance.getCurrentStats(ResourceUtilizationUtils.getJvmCpuLoad(),
+              ResourceUtilizationUtils.getMemoryLoad(),
+              ResourceUtilizationUtils.getUsedHeapMemory(),
+              ResourceUtilizationUtils.getAvailableHeapMemory(),
+              ResourceUtilizationUtils.getCommittedHeapMemory());
 
       //--- Validate that metrics and stats changed ---
       Assertions.assertThat(statsAfter)
@@ -898,6 +908,55 @@ class TestWriteThreadPoolSizeManager extends AbstractAbfsIntegrationTest {
             .contains("CP=");
       }
       instance.close();
+    }
+  }
+
+  /**
+   * Verifies that the JVM identifier is initialized once and remains
+   * constant across multiple invocations within the same JVM process.
+   */
+  @Test
+  public void testJvmIdIsSingletonWithinJvm() {
+    int firstId = JvmIdProvider.getJvmId();
+    int secondId = JvmIdProvider.getJvmId();
+    int thirdId = JvmIdProvider.getJvmId();
+
+    assertEquals(firstId, secondId,
+        "Subsequent calls to getJvmId() should return the same value");
+    assertEquals(secondId, thirdId,
+        "JVM-scoped identifier must remain constant for the lifetime of the JVM");
+  }
+
+  /**
+   * Verifies that the JVM identifier is safely shared across multiple threads
+   * and that concurrent access returns the same value.
+   *
+   * <p>This test ensures that static initialization of the identifier is
+   * thread-safe and occurs only once per JVM.</p>
+   */
+  @Test
+  public void testJvmIdIsSameAcrossThreads()
+      throws ExecutionException, InterruptedException {
+
+    ExecutorService executor = Executors.newFixedThreadPool(4);
+
+    try {
+      Callable<Integer> task = JvmIdProvider::getJvmId;
+      Future<Integer> f1 = executor.submit(task);
+      Future<Integer> f2 = executor.submit(task);
+      Future<Integer> f3 = executor.submit(task);
+      Future<Integer> f4 = executor.submit(task);
+
+      int expectedId = f1.get();
+      assertEquals(expectedId, f2.get(),
+          "JVM ID should be identical when accessed from different threads");
+      assertEquals(expectedId, f3.get(),
+          "JVM ID should be identical when accessed concurrently");
+      assertEquals(expectedId, f4.get(),
+          "JVM ID should be initialized once and shared across all threads");
+    } finally {
+      executor.shutdown();
+      executor.awaitTermination(5, TimeUnit.SECONDS);
     }
   }
 }

@@ -21,37 +21,50 @@ package org.apache.hadoop.fs.azurebfs;
 import java.util.Random;
 
 /**
- * Provides a JVM-scoped unique identifier.
+ * Provides a JVM-scoped identifier.
  *
  * <p>The identifier is generated once when the class is loaded and remains
- * constant for the lifetime of the JVM. The value is a random 6-digit number
- * in the range {@code [100000, 999999]}.</p>
+ * constant for the lifetime of the JVM. It is derived using a combination of
+ * the current system time and random entropy to reduce the likelihood of
+ * collisions across JVM instances.</p>
+ *
+ * <p>The identifier is intended for lightweight JVM-level identification,
+ * such as tagging metrics or log entries. It provides best-effort uniqueness
+ * and is not guaranteed to be globally unique.</p>
  *
  * <p>This class is utility-only and cannot be instantiated.</p>
  */
 public final class JvmIdProvider {
 
-  /**
-   * A JVM-wide unique identifier generated at class load time.
-   */
-  private static final long JVM_UNIQUE_ID;
+  /** Lower bound (inclusive) for the generated JVM identifier. */
+  private static final int MIN_JVM_ID = 100_000;
+
+  /** Size of the identifier value range. */
+  private static final int JVM_ID_RANGE = 900_000;
+
+  /** Upper bound for random entropy mixed into the identifier. */
+  private static final int RANDOM_ENTROPY_BOUND = 1_000;
+
+  /** JVM-scoped identifier generated at class initialization time. */
+  private static final int JVM_UNIQUE_ID;
 
   static {
-    JVM_UNIQUE_ID = 100000L + new Random().nextInt(900000);
+    long time = System.currentTimeMillis();
+    int random = new Random().nextInt(RANDOM_ENTROPY_BOUND);
+    JVM_UNIQUE_ID = (int) ((time + random) % JVM_ID_RANGE) + MIN_JVM_ID;
   }
 
-  /**
-   * Prevents instantiation.
-   */
+  /** Prevents instantiation. */
   private JvmIdProvider() {
   }
 
   /**
-   * Returns the JVM-scoped unique identifier.
+   * Returns the JVM-scoped identifier.
    *
-   * @return the unique ID for this JVM instance
+   * @return an identifier that remains constant for the lifetime of the JVM
    */
-  public static long getJvmId() {
+  public static int getJvmId() {
     return JVM_UNIQUE_ID;
   }
 }
+

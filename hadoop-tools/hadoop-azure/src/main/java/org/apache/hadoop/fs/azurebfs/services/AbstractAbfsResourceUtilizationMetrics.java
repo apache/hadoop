@@ -19,8 +19,6 @@
 package org.apache.hadoop.fs.azurebfs.services;
 
 import java.util.Arrays;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Stream;
 
 import org.slf4j.Logger;

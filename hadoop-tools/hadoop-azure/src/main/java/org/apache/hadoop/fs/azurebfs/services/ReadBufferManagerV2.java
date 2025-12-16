@@ -52,7 +52,6 @@ import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.S
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.SCALE_DIRECTION_NO_UP_AT_MAX;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.SCALE_DIRECTION_UP;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ZERO;
-import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ZERO_D;
 
 /**
  * The Improved Read Buffer Manager for Rest AbfsClient.
