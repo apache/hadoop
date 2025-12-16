@@ -70,7 +70,6 @@ public class TracingContext {
   private String position = EMPTY_STRING; // position of read/write in remote file
   private String metricResults = EMPTY_STRING;
   private ReadType readType = ReadType.UNKNOWN_READ;
-  private boolean isMetricCall = false;
   private String resourceUtilizationMetricResults = EMPTY_STRING;
 
   /**
@@ -155,7 +154,6 @@ public class TracingContext {
     }
     this.metricResults = originalTracingContext.metricResults;
     this.readType = originalTracingContext.readType;
-    this.isMetricCall = originalTracingContext.isMetricCall;
     this.resourceUtilizationMetricResults = originalTracingContext.resourceUtilizationMetricResults;
   }
 

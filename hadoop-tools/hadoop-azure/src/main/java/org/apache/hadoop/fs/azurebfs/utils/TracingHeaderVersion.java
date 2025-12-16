@@ -51,7 +51,7 @@ public enum TracingHeaderVersion {
   /**
    * Metrics to client request id header.
    */
-  AV0("av0", 15);
+  AV0("av0", 3);
 
   private final String versionString;
   private final int fieldCount;
