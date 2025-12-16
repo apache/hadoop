@@ -224,12 +224,12 @@ com.aliyun:java-trace-api:0.2.11-beta
 com.aliyun.oss:aliyun-sdk-oss:3.13.2
 com.cedarsoftware:java-util:1.9.0
 com.cedarsoftware:json-io:2.5.1
-com.fasterxml.jackson.core:jackson-annotations:2.14.3
-com.fasterxml.jackson.core:jackson-core:2.14.3
-com.fasterxml.jackson.core:jackson-databind:2.14.3
-com.fasterxml.jackson.jaxrs:jackson-jaxrs-base:2.14.3
-com.fasterxml.jackson.jaxrs:jackson-jaxrs-json-provider:2.14.3
-com.fasterxml.jackson.module:jackson-module-jaxb-annotations:2.14.3
+com.fasterxml.jackson.core:jackson-annotations:2.18.5
+com.fasterxml.jackson.core:jackson-core:2.18.5
+com.fasterxml.jackson.core:jackson-databind:2.18.5
+com.fasterxml.jackson.jaxrs:jackson-jaxrs-base:2.18.5
+com.fasterxml.jackson.jaxrs:jackson-jaxrs-json-provider:2.18.5
+com.fasterxml.jackson.module:jackson-module-jaxb-annotations:2.18.5
 com.fasterxml.uuid:java-uuid-generator:3.1.4
 com.fasterxml.woodstox:woodstox-core:5.4.0
 com.github.ben-manes.caffeine:caffeine:2.9.3
@@ -626,7 +626,6 @@ javax.cache:cache-api:1.1.1
 javax.servlet:javax.servlet-api:3.1.0
 javax.servlet.jsp:jsp-api:2.1
 javax.websocket:javax.websocket-api:1.0
-javax.xml.bind:jaxb-api:2.3.1
 
 Eclipse Distribution License (EDL) 1.0
 --------------------------
