@@ -340,21 +340,25 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_SHOULD_EMIT_METRICS_ON_IDLE_TIME)
   private boolean shouldEmitMetricsOnIdleTime;
 
-  @LongConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_METRIC_EMIT_THRESHOLD,
-  DefaultValue = DEFAULT_METRIC_EMIT_THRESHOLD)
-  private long metricEmitThreshold;
+  @LongConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_METRICS_EMIT_THRESHOLD,
+  DefaultValue = DEFAULT_METRICS_EMIT_THRESHOLD)
+  private long metricsEmitThreshold;
 
   @LongConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_METRICS_EMIT_THRESHOLD_INTERVAL_SECS,
       DefaultValue = DEFAULT_METRICS_EMIT_THRESHOLD_INTERVAL_SECS)
   private long metricsEmitThresholdIntervalInSecs;
 
-  @LongConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_METRIC_EMIT_INTERVAL_MINS,
-      DefaultValue = DEFAULT_METRIC_EMIT_INTERVAL_MINS)
-  private long metricEmitIntervalInMins;
+  @LongConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_METRICS_EMIT_INTERVAL_MINS,
+      DefaultValue = DEFAULT_METRICS_EMIT_INTERVAL_MINS)
+  private long metricsEmitIntervalInMins;
 
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_MAX_METRICS_CALLS_PER_SECOND,
       DefaultValue = DEFAULT_MAX_METRICS_CALLS_PER_SECOND)
   private int maxMetricsCallsPerSecond;
+
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey =  FS_AZURE_BACKOFF_RETRY_METRICS_ENABLED,
+      DefaultValue = DEFAULT_BACKOFF_RETRY_METRICS_ENABLED)
+  private boolean backoffRetryMetricsEnabled;
 
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ACCOUNT_OPERATION_IDLE_TIMEOUT,
       DefaultValue = DEFAULT_ACCOUNT_OPERATION_IDLE_TIMEOUT_MS)
@@ -1326,12 +1330,12 @@ public class AbfsConfiguration{
     return shouldEmitMetricsOnIdleTime;
   }
 
-  public long getMetricEmitThreshold() {
-    return metricEmitThreshold;
+  public long getMetricsEmitThreshold() {
+    return metricsEmitThreshold;
   }
 
-  public long getMetricEmitIntervalInMins() {
-    return metricEmitIntervalInMins;
+  public long getMetricsEmitIntervalInMins() {
+    return metricsEmitIntervalInMins;
   }
 
   public long getMetricsEmitThresholdIntervalInSecs() {
@@ -1340,6 +1344,10 @@ public class AbfsConfiguration{
 
   public int getMaxMetricsCallsPerSecond() {
     return maxMetricsCallsPerSecond;
+  }
+
+  public boolean isBackoffRetryMetricsEnabled() {
+    return backoffRetryMetricsEnabled;
   }
 
   public int getAccountOperationIdleTimeout() {

@@ -50,7 +50,7 @@ public class TestAggregateMetricsManager extends AbstractAbfsIntegrationTest {
   private static final long NANOS_PER_MILLISECOND = 1_000_000L;
 
   // The manager under test
-  private AggregateMetricsManager manager;
+  private final AggregateMetricsManager manager;
 
   /**
    * Constructor for TestAggregateMetricsManager.
@@ -59,13 +59,6 @@ public class TestAggregateMetricsManager extends AbstractAbfsIntegrationTest {
    */
   public TestAggregateMetricsManager() throws Exception {
     super();
-  }
-
-  /**
-   * Resets the AggregateMetricsManager instance before each test.
-   */
-  @BeforeEach
-  void resetManager() throws Exception {
     manager = AggregateMetricsManager.get(10, 3);
   }
 

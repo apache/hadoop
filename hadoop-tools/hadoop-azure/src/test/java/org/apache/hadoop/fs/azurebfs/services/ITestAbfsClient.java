@@ -92,7 +92,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_METRIC_ACCOUNT_KEY;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_METRIC_ACCOUNT_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_METRIC_FORMAT;
-import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_METRIC_EMIT_THRESHOLD;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_METRICS_EMIT_THRESHOLD;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.JAVA_VENDOR;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.JAVA_VERSION;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.OS_ARCH;
@@ -1086,7 +1086,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
     Configuration configuration = fs.getAbfsStore()
         .getAbfsConfiguration()
         .getRawConfiguration();
-    configuration.setLong(FS_AZURE_METRIC_EMIT_THRESHOLD, threshold);
+    configuration.setLong(FS_AZURE_METRICS_EMIT_THRESHOLD, threshold);
     configuration.setLong(FS_AZURE_METRICS_EMIT_THRESHOLD_INTERVAL_SECS, totalWaitTime);
     fs = (AzureBlobFileSystem) FileSystem.newInstance(configuration);
 

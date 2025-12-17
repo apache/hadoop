@@ -201,19 +201,22 @@ public class AbfsCountersImpl implements AbfsCounters {
 
 
   @Override
-  public void initializeMetrics(MetricFormat metricFormat) {
+  public void initializeMetrics(final MetricFormat metricFormat,
+      final AbfsConfiguration abfsConfiguration) {
     switch (metricFormat) {
-      case INTERNAL_BACKOFF_METRIC_FORMAT:
-        abfsBackoffMetrics = new AbfsBackoffMetrics();
-        break;
-      case INTERNAL_FOOTER_METRIC_FORMAT:
-        initializeReadFooterMetrics();
-      case INTERNAL_METRIC_FORMAT:
-        abfsBackoffMetrics = new AbfsBackoffMetrics();
-        initializeReadFooterMetrics();
-        break;
-      default:
-        break;
+    case INTERNAL_BACKOFF_METRIC_FORMAT:
+      abfsBackoffMetrics = new AbfsBackoffMetrics(
+          abfsConfiguration.isBackoffRetryMetricsEnabled());
+      break;
+    case INTERNAL_FOOTER_METRIC_FORMAT:
+      initializeReadFooterMetrics();
+    case INTERNAL_METRIC_FORMAT:
+      abfsBackoffMetrics = new AbfsBackoffMetrics(
+          abfsConfiguration.isBackoffRetryMetricsEnabled());
+      initializeReadFooterMetrics();
+      break;
+    default:
+      break;
     }
   }
 

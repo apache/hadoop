@@ -81,10 +81,13 @@ public class AbfsBackoffMetrics extends AbstractAbfsStatisticsSource {
   private static final List<RetryValue> RETRY_LIST = Arrays.asList(
       RetryValue.values());
 
+  private final boolean isRetryMetricEnabled;
+
   /**
    * Constructor to initialize the IOStatisticsStore with counters and gauges.
    */
-  public AbfsBackoffMetrics() {
+  public AbfsBackoffMetrics(final boolean isRetryMetricEnabled) {
+    this.isRetryMetricEnabled = isRetryMetricEnabled;
     IOStatisticsStore ioStatisticsStore = iostatisticsStore()
         .withCounters(getMetricNames(TYPE_COUNTER))
         .withGauges(getMetricNames(TYPE_GAUGE))
@@ -325,7 +328,9 @@ public class AbfsBackoffMetrics extends AbstractAbfsStatisticsSource {
       return EMPTY_STRING;
     }
     StringBuilder metricBuilder = new StringBuilder();
-    getRetryMetrics(metricBuilder);
+    if (isRetryMetricEnabled) {
+      getRetryMetrics(metricBuilder);
+    }
     getBaseMetrics(metricBuilder);
     return metricBuilder.toString();
   }

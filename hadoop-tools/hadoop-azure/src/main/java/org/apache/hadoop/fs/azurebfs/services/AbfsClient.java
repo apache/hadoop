@@ -251,7 +251,7 @@ public abstract class AbfsClient implements Closeable {
     this.renameResilience = abfsConfiguration.getRenameResilience();
     this.fileSystemId = fileSystemId;
     this.aggregateMetricsManager = AggregateMetricsManager.get(
-        abfsConfiguration.getMetricEmitIntervalInMins(),
+        abfsConfiguration.getMetricsEmitIntervalInMins(),
         abfsConfiguration.getMaxMetricsCallsPerSecond());
     this.abfsServiceType = abfsServiceType;
 
@@ -312,7 +312,7 @@ public abstract class AbfsClient implements Closeable {
         String metricAccountName = abfsConfiguration.getMetricAccount();
         String metricAccountKey = abfsConfiguration.getMetricAccountKey();
         this.metricFormat = abfsConfiguration.getMetricFormat();
-        abfsCounters.initializeMetrics(metricFormat);
+        abfsCounters.initializeMetrics(metricFormat, getAbfsConfiguration());
         if (isNotEmpty(metricAccountName) && isNotEmpty(
             metricAccountKey)) {
           int dotIndex = metricAccountName.indexOf(AbfsHttpConstants.DOT);
@@ -347,7 +347,7 @@ public abstract class AbfsClient implements Closeable {
             () -> {
               if (getAbfsCounters().getAbfsBackoffMetrics()
                   .getMetricValue(TOTAL_NUMBER_OF_REQUESTS)
-                  >= getAbfsConfiguration().getMetricEmitThreshold()) {
+                  >= getAbfsConfiguration().getMetricsEmitThreshold()) {
                 emitCollectedMetrics();
               }
             },
@@ -358,8 +358,8 @@ public abstract class AbfsClient implements Closeable {
         // run every metricInterval minutes
         this.metricsEmitScheduler.scheduleAtFixedRate(
             this::emitCollectedMetrics,
-            abfsConfiguration.getMetricEmitIntervalInMins(),
-            abfsConfiguration.getMetricEmitIntervalInMins(),
+            abfsConfiguration.getMetricsEmitIntervalInMins(),
+            abfsConfiguration.getMetricsEmitIntervalInMins(),
             TimeUnit.MINUTES);
 
         // emit metrics based on idea time
@@ -1664,7 +1664,7 @@ public abstract class AbfsClient implements Closeable {
     if (StringUtils.isEmpty(metrics)) {
       return null;
     }
-    abfsCounters.initializeMetrics(metricFormat);
+    abfsCounters.initializeMetrics(metricFormat, getAbfsConfiguration());
     return TracingContext.validateClientCorrelationID(
         abfsConfiguration.getClientCorrelationId()) + COLON + fileSystemId
         + COLON + metrics;

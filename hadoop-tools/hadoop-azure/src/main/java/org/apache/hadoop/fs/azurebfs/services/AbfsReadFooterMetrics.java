@@ -425,8 +425,6 @@ public class AbfsReadFooterMetrics extends AbstractAbfsStatisticsSource {
         fileTypeMetrics.getReadCount() >= 1
             && fileTypeMetrics.getCollectMetrics())) {
       updateMetrics(fileTypeMetrics, len, contentLength, nextReadPos);
-    } else {
-      // update metrics for non-footer reads
     }
   }
 

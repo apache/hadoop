@@ -74,10 +74,11 @@ public final class ConfigurationKeys {
   public static final String FS_AZURE_METRIC_FORMAT = "fs.azure.metric.format";
   public static final String FS_AZURE_METRICS_COLLECTION_ENABLED = "fs.azure.metrics.collection.enabled";
   public static final String FS_AZURE_SHOULD_EMIT_METRICS_ON_IDLE_TIME = "fs.azure.should.emit.metrics.on.idle.time";
-  public static final String FS_AZURE_METRIC_EMIT_THRESHOLD = "fs.azure.metric.emit.threshold";
+  public static final String FS_AZURE_METRICS_EMIT_THRESHOLD = "fs.azure.metrics.emit.threshold";
   public static final String FS_AZURE_METRICS_EMIT_THRESHOLD_INTERVAL_SECS = "fs.azure.metrics.emit.threshold.interval.secs";
-  public static final String FS_AZURE_METRIC_EMIT_INTERVAL_MINS = "fs.azure.metric.emit.interval.mins";
+  public static final String FS_AZURE_METRICS_EMIT_INTERVAL_MINS = "fs.azure.metrics.emit.interval.mins";
   public static final String FS_AZURE_MAX_METRICS_CALLS_PER_SECOND =  "fs.azure.max.metrics.calls.per.second";
+  public static final String FS_AZURE_BACKOFF_RETRY_METRICS_ENABLED = "fs.azure.backoff.retry.metrics.enabled";
 
   public static final String FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME_REGX = "fs\\.azure\\.account\\.key\\.(.*)";
   public static final String FS_AZURE_SECURE_MODE = "fs.azure.secure.mode";
