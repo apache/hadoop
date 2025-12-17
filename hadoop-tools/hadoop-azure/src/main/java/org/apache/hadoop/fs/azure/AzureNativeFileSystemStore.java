@@ -379,6 +379,8 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
       + "exists first. If it is not publicly available, you have to provide "
       + "account credentials.";
 
+  private static boolean wasInitialisedWithDFS = false;
+
   /**
    * A test hook interface that can modify the operation context we use for
    * Azure Storage operations, e.g. to inject errors.
@@ -741,6 +743,37 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
   }
 
   /**
+   * Marks that the file system was initialized with DFS endpoint.
+   * Sets the static flag to true.
+   */
+  void markInitialisedWithDFS() {
+    wasInitialisedWithDFS = true;
+  }
+
+  /**
+   * Checks if the file system was initialized with DFS.
+   *
+   * @return true if initialized with DFS, false otherwise
+   */
+  boolean getWasInitialisedWithDFS() {
+    return wasInitialisedWithDFS;
+  }
+
+  /**
+   * Returns the original account name, replacing ".blob." with ".dfs." if the file system
+   * was initialized with DFS.
+   *
+   * @param accountName the account name to process
+   * @return the original or modified account name depending on initialization
+   */
+  String getOriginalAccountName(String accountName) {
+    if (getWasInitialisedWithDFS()) {
+      return accountName.replace(".blob.", ".dfs.");
+    }
+    return accountName;
+  }
+
+  /**
    * Set the configuration parameters for this client storage session with
    * Azure.
    *
@@ -1096,7 +1129,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
 
       // Check whether we have a shared access signature for that container.
       String propertyValue = sessionConfiguration.get(KEY_ACCOUNT_SAS_PREFIX
-          + containerName + "." + accountName);
+          + containerName + "." + getOriginalAccountName(accountName));
       if (propertyValue != null) {
         // SAS was found. Connect using that.
         connectUsingSASCredentials(accountName, containerName, propertyValue);
@@ -1104,7 +1137,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
       }
 
       // Check whether the account is configured with an account key.
-      propertyValue = getAccountKeyFromConfiguration(accountName,
+      propertyValue = getAccountKeyFromConfiguration(getOriginalAccountName(accountName),
           sessionConfiguration);
       if (StringUtils.isNotEmpty(propertyValue)) {
         // Account key was found.

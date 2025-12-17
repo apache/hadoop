@@ -111,6 +111,11 @@ import com.microsoft.azure.storage.StorageException;
 public class NativeAzureFileSystem extends FileSystem {
   private static final int USER_WX_PERMISION = 0300;
   private static final String USER_HOME_DIR_PREFIX_DEFAULT = "/user";
+  private static final String BLOB_ENDPOINT = ".blob.";
+  private static final String DFS_ENDPOINT = ".dfs.";
+
+  private static boolean isInitialisedWithDfsEndpoint = false;
+
   /**
    * A description of a folder rename operation, including the source and
    * destination keys, and descriptions of the files in the source folder.
@@ -1262,7 +1267,6 @@ public class NativeAzureFileSystem extends FileSystem {
 
   private URI uri;
   private NativeFileSystemStore store;
-  private AzureNativeFileSystemStore actualStore;
   private Path workingDir;
   private AzureFileSystemInstrumentation instrumentation;
   private String metricsSourceName;
@@ -1397,9 +1401,31 @@ public class NativeAzureFileSystem extends FileSystem {
         getConf())));
   }
 
+/**
+ * Converts a DFS endpoint URI to a Blob endpoint URI
+ * If the input URI contains ".dfs.", it replaces it with ".blob." and returns the new URI.
+ * Also sets the isInitialisedWithDfsEndpoint flag to true if conversion occurs.
+ *
+ * @param uri the original URI, possibly with a DFS endpoint
+ * @return a URI with the Blob endpoint if conversion was needed, otherwise the original URI
+ */
+private URI convertToBlobEndpoint(URI uri) {
+  if (uri.toString().contains(DFS_ENDPOINT)) {
+    isInitialisedWithDfsEndpoint = true;
+    LOG.debug("Filesystem initialized with DFS endpoint. Initializing with Blob endpoint instead.");
+    return URI.create(uri.toString().replace(DFS_ENDPOINT, BLOB_ENDPOINT));
+  } else {
+    return uri;
+  }
+}
+
   @Override
   public void initialize(URI uri, Configuration conf)
       throws IOException, IllegalArgumentException {
+
+    // Convert DFS endpoint to Blob endpoint if needed.
+    uri = convertToBlobEndpoint(uri);
+
     // Check authority for the URI to guarantee that it is non-null.
     uri = reconstructAuthorityIfNeeded(uri, conf);
     if (null == uri.getAuthority()) {
@@ -1421,6 +1447,10 @@ public class NativeAzureFileSystem extends FileSystem {
       String sourceDesc = "Azure Storage Volume File System metrics";
       AzureFileSystemMetricsSystem.registerSource(metricsSourceName, sourceDesc,
         instrumentation);
+    }
+
+    if (isInitialisedWithDfsEndpoint) {
+      getStore().markInitialisedWithDFS();
     }
 
     store.initialize(uri, conf, instrumentation);
@@ -1485,12 +1515,12 @@ public class NativeAzureFileSystem extends FileSystem {
   }
 
   private NativeFileSystemStore createDefaultStore(Configuration conf) {
-    actualStore = new AzureNativeFileSystemStore();
+    store = new AzureNativeFileSystemStore();
 
     if (suppressRetryPolicy) {
-      actualStore.suppressRetryPolicy();
+      ((AzureNativeFileSystemStore) store).suppressRetryPolicy();
     }
-    return actualStore;
+    return store;
   }
 
   /**
@@ -1588,7 +1618,7 @@ public class NativeAzureFileSystem extends FileSystem {
    */
   @VisibleForTesting
   public AzureNativeFileSystemStore getStore() {
-    return actualStore;
+    return (AzureNativeFileSystemStore) store;
   }
 
   NativeFileSystemStore getStoreInterface() {

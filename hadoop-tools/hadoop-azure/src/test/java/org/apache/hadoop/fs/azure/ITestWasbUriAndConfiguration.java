@@ -19,6 +19,9 @@
 package org.apache.hadoop.fs.azure;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY;
+import static org.apache.hadoop.fs.azure.AzureBlobStorageTestAccount.WASB_AUTHORITY_DELIMITER;
+import static org.apache.hadoop.fs.azure.AzureBlobStorageTestAccount.setMockAccountKey;
+import static org.apache.hadoop.fs.azure.AzureBlobStorageTestAccount.setMockSASKey;
 import static org.apache.hadoop.fs.azure.NativeAzureFileSystem.RETURN_URI_AS_CANONICAL_SERVICE_NAME_PROPERTY_NAME;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.assertj.core.api.Assumptions.assumeThat;
@@ -28,6 +31,7 @@ import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.lang.reflect.Field;
 import java.net.URI;
 import java.util.Date;
 import java.util.EnumSet;
@@ -61,6 +65,15 @@ public class ITestWasbUriAndConfiguration extends AbstractWasbTestWithTimeout {
 
   private static final int FILE_SIZE = 4096;
   private static final String PATH_DELIMITER = "/";
+  private static final String ACCOUNT_NAME = "account";
+  private static final String CONTAINER_NAME = "container";
+  private static final String WASB_URI_SCHEME  = "wasb://";
+  private static final String BLOB_ENDPOINT_SUFFIX =
+      ".blob.core.windows.net";
+  private static final String DFS_ENDPOINT_SUFFIX =
+      ".dfs.core.windows.net";
+  private static final String CUSTOM_ENDPOINT_SUFFIX =
+      ".custom.core.windows.net";
 
   protected String accountName;
   protected String accountKey;
@@ -75,9 +88,16 @@ public class ITestWasbUriAndConfiguration extends AbstractWasbTestWithTimeout {
   }
 
   @BeforeEach
-  public void setMode() {
+  public void setMode() throws IllegalAccessException, NoSuchFieldException {
     runningInSASMode = AzureBlobStorageTestAccount.createTestConfiguration().
         getBoolean(AzureNativeFileSystemStore.KEY_USE_SECURE_MODE, false);
+    Field isDfsEndpointInitializedField = NativeAzureFileSystem.class.getDeclaredField("isInitialisedWithDfsEndpoint");
+    isDfsEndpointInitializedField.setAccessible(true);
+    isDfsEndpointInitializedField.setBoolean(null, false);
+    
+    Field isStoreInitializedWithDfsField = AzureNativeFileSystemStore.class.getDeclaredField("wasInitialisedWithDFS");
+    isStoreInitializedWithDfsField.setAccessible(true);
+    isStoreInitializedWithDfsField.setBoolean(null, false);
   }
 
   private boolean validateIOStreams(Path filePath) throws IOException {
@@ -252,7 +272,7 @@ public class ITestWasbUriAndConfiguration extends AbstractWasbTestWithTimeout {
   @Test
   public void testConnectToFullyQualifiedAccountMock() throws Exception {
     Configuration conf = new Configuration();
-    AzureBlobStorageTestAccount.setMockAccountKey(conf,
+    setMockAccountKey(conf,
         "mockAccount.mock.authority.net");
     AzureNativeFileSystemStore store = new AzureNativeFileSystemStore();
     MockStorageInterface mockStorage = new MockStorageInterface();
@@ -659,6 +679,206 @@ public class ITestWasbUriAndConfiguration extends AbstractWasbTestWithTimeout {
     } finally {
       testAccount.cleanup();
       FileSystem.closeAll();
+    }
+  }
+
+  private enum AuthType {
+    ACCOUNT_KEY,
+    SAS
+  }
+
+  private enum FsCreationMode {
+    DEFAULT,
+    WITH_STORE
+  }
+
+  /**
+   * Creates a Hadoop {@link Configuration} object and sets up mock credentials
+   * for the specified authentication type and account endpoint.
+   *
+   * @param authType the authentication type to use (ACCOUNT_KEY or SAS)
+   * @param accountEndpoint the account endpoint to use for credentials
+   * @return a {@link Configuration} object with the appropriate mock credentials set
+   */
+  private static Configuration createConf(
+      AuthType authType, String accountEndpoint) {
+
+    Configuration conf = new Configuration();
+
+    if (authType == AuthType.ACCOUNT_KEY) {
+      setMockAccountKey(conf, accountEndpoint);
+    } else if (authType == AuthType.SAS) {
+      setMockSASKey(conf, CONTAINER_NAME, accountEndpoint);
+    }
+
+    return conf;
+  }
+
+  /**
+   * Creates a {@link NativeAzureFileSystem} instance using the default constructor and initializes it with the given URI and configuration.
+   *
+   * @param uri  the URI to initialize the file system with
+   * @param conf the Hadoop configuration
+   * @return a new initialized {@link NativeAzureFileSystem}
+   * @throws Exception if initialization fails
+   */
+  private static NativeAzureFileSystem createFsDefault(URI uri,
+      Configuration conf) throws Exception {
+    NativeAzureFileSystem fs = new NativeAzureFileSystem();
+    fs.initialize(uri, conf);
+    return fs;
+  }
+
+  /**
+   * Creates a {@link NativeAzureFileSystem} instance using a custom store and mock storage interface.
+   *
+   * @param uri  the URI to initialize the file system with
+   * @param conf the Hadoop configuration
+   * @return a new initialized {@link NativeAzureFileSystem}
+   * @throws Exception if initialization fails
+   */
+  private static NativeAzureFileSystem createFsWithStore(URI uri,
+      Configuration conf) throws Exception {
+    AzureNativeFileSystemStore store = new AzureNativeFileSystemStore();
+    MockStorageInterface mockStorage = new MockStorageInterface();
+    store.setAzureStorageInteractionLayer(mockStorage);
+    NativeAzureFileSystem fs = new NativeAzureFileSystem(store);
+    fs.initialize(uri, conf);
+    return fs;
+  }
+
+  /**
+   * Creates a {@link NativeAzureFileSystem} instance based on the specified creation mode.
+   *
+   * @param mode the file system creation mode (DEFAULT or WITH_STORE)
+   * @param uri  the URI to initialize the file system with
+   * @param conf the Hadoop configuration
+   * @return a new initialized {@link NativeAzureFileSystem}
+   * @throws Exception if initialization fails or mode is unknown
+   */
+  private static NativeAzureFileSystem createFs(
+      FsCreationMode mode, URI uri, Configuration conf) throws Exception {
+
+    if (mode == FsCreationMode.DEFAULT) {
+      return createFsDefault(uri, conf);
+    } else if (mode == FsCreationMode.WITH_STORE) {
+      return createFsWithStore(uri, conf);
+    }
+
+    throw new IllegalArgumentException("Unknown FsCreationMode: " + mode);
+  }
+
+  /**
+   * Asserts the transformation of a WASB URI based on the expected endpoint and authentication type.
+   *
+   * @param inputUri            The input URI to test.
+   * @param accountEndpointHost The expected account endpoint host in the transformed URI.
+   * @param expectChange        Whether a transformation of the URI is expected.
+   * @param authType            The authentication type (ACCOUNT_KEY or SAS).
+   * @param mode                The file system creation mode.
+   * @throws Exception if an error occurs during the test.
+   */
+  private static void assertUriTransformation(
+      URI inputUri,
+      String accountEndpointHost,
+      boolean expectChange,
+      AuthType authType,
+      FsCreationMode mode) throws Exception {
+
+    Configuration conf =
+        createConf(authType, inputUri.getHost());
+
+    NativeAzureFileSystem fs = createFs(mode, inputUri, conf);
+    URI resultUri = fs.getUri();
+
+    if (expectChange) {
+      assertTrue(
+          resultUri.toString().contains(accountEndpointHost),
+          "URI should be converted to expected endpoint"
+      );
+      assertFalse(
+          resultUri.toString().contains(inputUri.getHost()),
+          "URI should not contain original endpoint"
+      );
+    } else {
+      assertEquals(
+          inputUri,
+          resultUri,
+          "URI should remain unchanged"
+      );
+    }
+  }
+
+  /**
+   * Tests that a WASB URI using the DFS endpoint is automatically transformed
+   * to use the BLOB endpoint during initialization, for all authentication types
+   * and file system creation modes.
+   */
+  @Test
+  public void testDfsEndpointIsTransformedToBlobEndpoint() throws Exception {
+    URI dfsUri =
+        new URI(WASB_URI_SCHEME + CONTAINER_NAME + WASB_AUTHORITY_DELIMITER
+            + ACCOUNT_NAME
+            + DFS_ENDPOINT_SUFFIX);
+
+    for (AuthType auth : AuthType.values()) {
+      for (FsCreationMode mode : FsCreationMode.values()) {
+        assertUriTransformation(
+            dfsUri,
+            BLOB_ENDPOINT_SUFFIX,
+            true,
+            auth,
+            mode
+        );
+      }
+    }
+  }
+
+  /**
+   * Tests that when a WASB URI already uses the blob endpoint,
+   * the URI remains unchanged after initialization, regardless of authentication type or file system creation mode.
+   */
+  @Test
+  public void testBlobEndpointRemainsUnchangedForBlobUri() throws Exception {
+    URI blobUri =
+        new URI(WASB_URI_SCHEME + CONTAINER_NAME + WASB_AUTHORITY_DELIMITER
+            + ACCOUNT_NAME
+            + BLOB_ENDPOINT_SUFFIX);
+
+    for (AuthType auth : AuthType.values()) {
+      for (FsCreationMode mode : FsCreationMode.values()) {
+        assertUriTransformation(
+            blobUri,
+            blobUri.getHost(),
+            false,
+            auth,
+            mode
+        );
+      }
+    }
+  }
+
+  /**
+   * Tests that when a WASB URI uses a custom endpoint (not blob or dfs),
+   * the URI remains unchanged after initialization, regardless of authentication type or file system creation mode.
+   */
+  @Test
+  public void testCustomEndpointUriRemainsUnchanged() throws Exception {
+    URI customUri =
+        new URI(WASB_URI_SCHEME + CONTAINER_NAME + WASB_AUTHORITY_DELIMITER
+            + ACCOUNT_NAME
+            + CUSTOM_ENDPOINT_SUFFIX);
+
+    for (AuthType auth : AuthType.values()) {
+      for (FsCreationMode mode : FsCreationMode.values()) {
+        assertUriTransformation(
+            customUri,
+            customUri.getHost(),
+            false,
+            auth,
+            mode
+        );
+      }
     }
   }
 }

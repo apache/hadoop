@@ -454,6 +454,20 @@ public final class AzureBlobStorageTestAccount implements AutoCloseable,
         Base64.encode(new byte[] { 1, 2, 3 }));  
   }
 
+  /**
+   * Sets a mock SAS (Shared Access Signature) key in the given configuration for the specified container and account.
+   *
+   * @param conf        The Hadoop configuration to update.
+   * @param container   The name of the container.
+   * @param accountName The name of the account.
+   */
+  public static void setMockSASKey(Configuration conf,
+      String container,
+      String accountName) {
+    conf.set(SAS_PROPERTY_NAME + container + "." + accountName,
+        Base64.encode(new byte[]{1, 2, 3}));
+  }
+
   private static URI createAccountUri(String accountName)
       throws URISyntaxException {
     return new URI(WASB_SCHEME + ":" + PATH_DELIMITER + PATH_DELIMITER
