@@ -1062,7 +1062,8 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
    */
   @Test
   public void testMetricsEmitBasedOnCount() throws Exception {
-    runMetricsEmitTest(10L, true);
+    final long threshold = 10L;
+    runMetricsEmitTest(threshold, true);
   }
 
   /**
@@ -1070,7 +1071,8 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
    */
   @Test
   public void testMetricsEmitWithHighThreshold() throws Exception {
-    runMetricsEmitTest(100L, false);
+    final long threshold = 100L;
+    runMetricsEmitTest(threshold, false);
   }
 
   /**
@@ -1079,11 +1081,11 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
    */
   private void runMetricsEmitTest(long threshold, boolean expectEmit)
       throws Exception {
+    final int totalWaitTime = 30;
     AzureBlobFileSystem fs = getFileSystem();
     Configuration configuration = fs.getAbfsStore()
         .getAbfsConfiguration()
         .getRawConfiguration();
-    int totalWaitTime = 30;
     configuration.setLong(FS_AZURE_METRIC_EMIT_THRESHOLD, threshold);
     configuration.setLong(FS_AZURE_METRICS_EMIT_THRESHOLD_INTERVAL_SECS, totalWaitTime);
     fs = (AzureBlobFileSystem) FileSystem.newInstance(configuration);
@@ -1122,7 +1124,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
       stream.hflush();
       if (fs.getAbfsStore()
           .isAppendBlobKey(fs.makeQualified(testPath).toString())) {
-        totalMetrics += 1;// +1 request
+        totalMetrics += 1; // +1 request
       } else {
         totalMetrics += 2; // +2 requests
       }

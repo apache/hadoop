@@ -40,12 +40,13 @@ public class TestSimpleRateLimiter {
    */
   @Test
   void testNoWaitWhenSpacedOut() throws InvalidConfigurationValueException {
+    final int millisToSleep = 600; // 600 ms
     // 2 permits per second → 500 ms interval
     SimpleRateLimiter limiter = new SimpleRateLimiter(2);
 
     limiter.acquire();
     // Sleep longer than required interval
-    LockSupport.parkNanos(600 * NANOS_PER_MILLISECOND); // 600 ms
+    LockSupport.parkNanos(millisToSleep * NANOS_PER_MILLISECOND);
 
     long before = System.nanoTime();
     limiter.acquire();  // Should not block
