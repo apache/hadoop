@@ -50,7 +50,6 @@ public class TestBlockRecoveryCauseStandbyNameNodeCrash {
   private final int dataBlocks = ecPolicy.getNumDataUnits();
   private final int parityBlocks = ecPolicy.getNumParityUnits();
   private final int cellSize = ecPolicy.getCellSize();
-  private final int stripeSize = dataBlocks * cellSize;
   private final int stripesPerBlock = 4;
   private final int blockSize = cellSize * stripesPerBlock;
 
@@ -111,7 +110,6 @@ public class TestBlockRecoveryCauseStandbyNameNodeCrash {
       final FSDataOutputStream out = dfs.create(p);
       final DFSStripedOutputStream stripedOut = (DFSStripedOutputStream) out
           .getWrappedStream();
-      // 
       for (int pos = 0; pos < (stripesPerBlock * dataBlocks + 1) * curCellSize; pos++) {
         out.write(StripedFileTestUtil.getByte(pos));
       }
@@ -136,7 +134,7 @@ public class TestBlockRecoveryCauseStandbyNameNodeCrash {
    * Stop the block stream without immediately inducing a hard failure.
    * Packets can continue to be queued until the streamer hits a socket timeout.
    *
-   * @param s
+   * @param s the streamer to stop.
    * @throws Exception
    */
   private void stopBlockStream(StripedDataStreamer s) throws Exception {
