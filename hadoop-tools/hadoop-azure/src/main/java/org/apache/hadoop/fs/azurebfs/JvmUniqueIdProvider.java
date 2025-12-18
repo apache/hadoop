@@ -34,7 +34,7 @@ import java.util.Random;
  *
  * <p>This class is utility-only and cannot be instantiated.</p>
  */
-public final class JvmIdProvider {
+public final class JvmUniqueIdProvider {
 
   /** Lower bound (inclusive) for the generated JVM identifier. */
   private static final int MIN_JVM_ID = 100_000;
@@ -55,7 +55,7 @@ public final class JvmIdProvider {
   }
 
   /** Prevents instantiation. */
-  private JvmIdProvider() {
+  private JvmUniqueIdProvider() {
   }
 
   /**

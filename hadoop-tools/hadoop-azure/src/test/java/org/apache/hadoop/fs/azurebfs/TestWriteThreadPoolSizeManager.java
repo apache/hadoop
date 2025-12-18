@@ -917,9 +917,9 @@ class TestWriteThreadPoolSizeManager extends AbstractAbfsIntegrationTest {
    */
   @Test
   public void testJvmIdIsSingletonWithinJvm() {
-    int firstId = JvmIdProvider.getJvmId();
-    int secondId = JvmIdProvider.getJvmId();
-    int thirdId = JvmIdProvider.getJvmId();
+    int firstId = JvmUniqueIdProvider.getJvmId();
+    int secondId = JvmUniqueIdProvider.getJvmId();
+    int thirdId = JvmUniqueIdProvider.getJvmId();
 
     assertEquals(firstId, secondId,
         "Subsequent calls to getJvmId() should return the same value");
@@ -941,7 +941,7 @@ class TestWriteThreadPoolSizeManager extends AbstractAbfsIntegrationTest {
     ExecutorService executor = Executors.newFixedThreadPool(4);
 
     try {
-      Callable<Integer> task = JvmIdProvider::getJvmId;
+      Callable<Integer> task = JvmUniqueIdProvider::getJvmId;
       Future<Integer> f1 = executor.submit(task);
       Future<Integer> f2 = executor.submit(task);
       Future<Integer> f3 = executor.submit(task);

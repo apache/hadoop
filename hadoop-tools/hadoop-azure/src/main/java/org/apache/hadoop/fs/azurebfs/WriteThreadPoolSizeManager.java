@@ -562,7 +562,7 @@ public final class WriteThreadPoolSizeManager implements Closeable {
         memoryLoad,                    // used/max
         currentScaleDirection,         // "I", "D", or ""
         getMaxJvmCpuUtilization(),              // Peak JVM CPU usage so far
-        JvmIdProvider.getJvmId()            // JVM PID
+        JvmUniqueIdProvider.getJvmId()            // JVM PID
     );
   }
 }

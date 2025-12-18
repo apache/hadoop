@@ -18,7 +18,7 @@
 package org.apache.hadoop.fs.azurebfs.services;
 
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
-import org.apache.hadoop.fs.azurebfs.JvmIdProvider;
+import org.apache.hadoop.fs.azurebfs.JvmUniqueIdProvider;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ReadBufferStatus;
 
 import java.io.IOException;
@@ -1215,7 +1215,7 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
         ResourceUtilizationUtils.getMemoryLoad(),                    // used/max
         currentScaleDirection,         // "I", "D", or ""
         getMaxJvmCpuUtilization(),             // Peak JVM CPU usage so far,
-        JvmIdProvider.getJvmId()           // JVM process id.
+        JvmUniqueIdProvider.getJvmId()           // JVM process id.
     );
   }
 }
