@@ -16,10 +16,10 @@
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-main</artifactId>
-    <version>3.4.2.7.3.2.0-SNAPSHOT</version>
+    <version>3.4.2.7.3.2.100-SNAPSHOT</version>
   </parent>
   <artifactId>hadoop-project</artifactId>
-  <version>3.4.2.7.3.2.0-SNAPSHOT</version>
+  <version>3.4.2.7.3.2.100-SNAPSHOT</version>
   <description>Apache Hadoop Project POM</description>
   <name>Apache Hadoop Project POM</name>
   <packaging>pom</packaging>
@@ -47,7 +47,7 @@
     <!-- Version number for xerces used by JDiff -->
     <xerces.jdiff.version>2.12.2</xerces.jdiff.version>
 
-    <kafka.version>3.9.1.7.3.2.0-SNAPSHOT</kafka.version>
+    <kafka.version>3.9.1.7.3.2.100-SNAPSHOT</kafka.version>
 
     <commons-daemon.version>1.0.13</commons-daemon.version>
 
@@ -60,7 +60,7 @@
     <java.security.egd>file:///dev/urandom</java.security.egd>
 
     <!-- avro version -->
-    <avro.version>1.11.3.7.3.2.0-SNAPSHOT</avro.version>
+    <avro.version>1.11.3.7.3.2.100-SNAPSHOT</avro.version>
 
     <!-- jersey version -->
     <jersey2.version>2.47</jersey2.version>
@@ -103,8 +103,8 @@
     <hadoop-thirdparty-shaded-protobuf-prefix>${hadoop-thirdparty-shaded-prefix}.protobuf</hadoop-thirdparty-shaded-protobuf-prefix>
     <hadoop-thirdparty-shaded-guava-prefix>${hadoop-thirdparty-shaded-prefix}.com.google.common</hadoop-thirdparty-shaded-guava-prefix>
 
-    <zookeeper.version>3.8.5.7.3.2.0-SNAPSHOT</zookeeper.version>
-    <curator.version>5.4.0.7.3.2.0-SNAPSHOT</curator.version>
+    <zookeeper.version>3.8.5.7.3.2.100-SNAPSHOT</zookeeper.version>
+    <curator.version>5.4.0.7.3.2.100-SNAPSHOT</curator.version>
     <findbugs.version>3.0.5</findbugs.version>
     <dnsjava.version>3.6.1</dnsjava.version>
 
@@ -234,7 +234,7 @@
     <swagger-annotations-version>1.5.4</swagger-annotations-version>
     <snakeyaml.version>2.0</snakeyaml.version>
     <sshd.version>2.11.0</sshd.version>
-    <hbase.version>2.6.3.7.3.2.0-SNAPSHOT</hbase.version>
+    <hbase.version>2.6.3.7.3.2.100-SNAPSHOT</hbase.version>
     <junit.version>4.13.2</junit.version>
     <junit.jupiter.version>5.8.2</junit.jupiter.version>
     <junit.vintage.version>5.8.2</junit.vintage.version>
@@ -252,10 +252,10 @@
     <yarnpkg.version>v1.22.5</yarnpkg.version>
     <apache-ant.version>1.10.13</apache-ant.version>
     <jmh.version>1.20</jmh.version>
-    <gcs.version>3.1.3.7.3.2.0-SNAPSHOT</gcs.version>
-    <knox.version>2.1.0.7.3.2.0-SNAPSHOT</knox.version>
-    <ranger.version>2.6.0.7.3.2.0-SNAPSHOT</ranger.version>
-    <t9000-core.version>1.0.0.7.3.2.0-SNAPSHOT</t9000-core.version>
+    <gcs.version>3.1.3.7.3.2.100-SNAPSHOT</gcs.version>
+    <knox.version>2.1.0.7.3.2.100-SNAPSHOT</knox.version>
+    <ranger.version>2.6.0.7.3.2.100-SNAPSHOT</ranger.version>
+    <t9000-core.version>1.0.0.7.3.2.100-SNAPSHOT</t9000-core.version>
   </properties>
 
   <dependencyManagement>
