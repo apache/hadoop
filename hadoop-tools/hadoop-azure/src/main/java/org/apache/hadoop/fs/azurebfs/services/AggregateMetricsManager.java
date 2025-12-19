@@ -33,17 +33,15 @@ import org.apache.hadoop.fs.azurebfs.utils.SimpleRateLimiter;
  */
 public final class AggregateMetricsManager {
 
-  /**
-   * Singleton instance of AggregateMetricsManager.
-   */
+  // Singleton instance of AggregateMetricsManager.
   private static volatile AggregateMetricsManager instance;
+
+  // Rate limiter to control the rate of dispatching metrics.
+  private static volatile SimpleRateLimiter rateLimiter;
 
   // Map of account name to MetricsBucket.
   private final ConcurrentHashMap<String, MetricsBucket> buckets =
       new ConcurrentHashMap<>();
-
-  // Rate limiter to control the rate of dispatching metrics.
-  private final SimpleRateLimiter rateLimiter;
 
   // Scheduler for periodic dispatching of metrics.
   private final ScheduledExecutorService scheduler;

@@ -1103,6 +1103,13 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
         .getIngressClient() instanceof AbfsDfsClient) {
       // create file + set properties requests
       totalMetrics += 1;
+    } else if (fs.getAbfsStore()
+        .getClient() instanceof AbfsDfsClient
+        && fs.getAbfsStore()
+        .getClientHandler()
+        .getIngressClient() instanceof AbfsBlobClient
+        && getIsNamespaceEnabled(fs)) {
+      totalMetrics += 2;
     } else {
       // create file + set properties + get properties requests
       totalMetrics += 4;
@@ -1145,7 +1152,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
             "Total requests should match counted requests when threshold is high")
         .isEqualTo(totalMetrics);
     // Wait for emit scheduler to run
-    Thread.sleep(totalWaitTime * 1000); // 20 seconds
+    Thread.sleep(totalWaitTime * 1000); // 30 seconds
 
     if (expectEmit) {
       Assertions.assertThat(currentTotal(fs))

@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.azurebfs.utils;
 
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.locks.LockSupport;
 
 import org.assertj.core.api.Assertions;
@@ -99,7 +100,8 @@ public class TestSimpleRateLimiter {
    * require spacing).
    */
   @Test
-  void testMultipleBurstCalls() throws InvalidConfigurationValueException {
+  void testMultipleBurstCalls()
+      throws InvalidConfigurationValueException, InterruptedException {
     final int permitsPerSecond = 10;
     final long minTimeAllowed = 350;
     final long maxTimeAllowed = 550;
@@ -108,9 +110,18 @@ public class TestSimpleRateLimiter {
 
     long totalStart = System.nanoTime();
 
+    CountDownLatch latch = new CountDownLatch(5);
     for (int i = 0; i < 5; i++) {
-      limiter.acquire();
+      new Thread(() -> {
+        try {
+          limiter.acquire();
+        } finally {
+          latch.countDown();
+        }
+      }).start();
     }
+    //wait for all threads to finish
+    latch.await();
 
     long totalMs = (System.nanoTime() - totalStart) / NANOS_PER_MILLISECOND;
 

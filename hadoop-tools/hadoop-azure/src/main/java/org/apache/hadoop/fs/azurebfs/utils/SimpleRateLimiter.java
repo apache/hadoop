@@ -18,57 +18,56 @@
 
 package org.apache.hadoop.fs.azurebfs.utils;
 
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.LockSupport;
 
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidConfigurationValueException;
 
-public class SimpleRateLimiter {
+public final class SimpleRateLimiter {
 
-  /** The minimum interval between permits, in nanoseconds. */
+  // Interval between permits in nanoseconds.
   private final long intervalNanos;
 
-  /** The next allowed time (in nanoseconds) when a permit may be issued. */
-  private final AtomicLong nextAllowedTime = new AtomicLong(0);
+  // Next allowed time to acquire a permit in nanoseconds.
+  private long nextAllowedTime;
 
   /** Number of nanoseconds in one second. */
   private static final long NANOS_PER_SECOND = 1_000_000_000L;
 
   /**
-   * Creates a rate limiter with a fixed number of permits allowed per second.
+   * Constructs a SimpleRateLimiter that allows the specified number of
+   * permits per second.
    *
-   * @param permitsPerSecond the maximum number of permits allowed per second;
-   *                         must be a positive integer
-   * @throws IllegalArgumentException if {@code permitsPerSecond <= 0}
+   * @param permitsPerSecond Number of permits allowed per second.
+   * @throws InvalidConfigurationValueException if permitsPerSecond is
+   *                                            less than or equal to zero.
    */
   public SimpleRateLimiter(int permitsPerSecond)
       throws InvalidConfigurationValueException {
     if (permitsPerSecond <= 0) {
       throw new InvalidConfigurationValueException(
-          "Aggregated Metrics Per Second Call");
+          "permitsPerSecond must be > 0");
     }
     this.intervalNanos = NANOS_PER_SECOND / permitsPerSecond;
+    this.nextAllowedTime = System.nanoTime();
   }
 
   /**
-   * Acquires a permit from the rate limiter, blocking if necessary to maintain
-   * the configured rate.
-   *
-   * If the current time is earlier than the next allowed permit time, this
-   * method blocks for the required duration. Otherwise, it proceeds
-   * immediately.
+   * Acquires a permit from the rate limiter, blocking until one is available.
    */
-  public void acquire() {
-    while (true) { // In case of failure, it will retry
+  public synchronized void acquire() {
+    while (true) {
       long now = System.nanoTime();
-      long prev = nextAllowedTime.get();
-      long next = Math.max(prev, now) + intervalNanos;
+      long wait = nextAllowedTime - now;
 
-      if (nextAllowedTime.compareAndSet(prev, next)) {
-        long wait = next - now - intervalNanos; // adjust for this permit
-        if (wait > 0) {
-          LockSupport.parkNanos(wait);
-        }
+      if (wait <= 0) {
+        nextAllowedTime = now + intervalNanos;
+        return;
+      }
+
+      LockSupport.parkNanos(wait);
+
+      if (Thread.interrupted()) {
+        Thread.currentThread().interrupt();
         return;
       }
     }

@@ -34,7 +34,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.assertj.core.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
@@ -83,7 +82,7 @@ public class TestAggregateMetricsManager extends AbstractAbfsIntegrationTest {
 
     Mockito.doAnswer(inv -> {
       counter.incrementAndGet();
-      return inv.callRealMethod();
+      return null;
     }).when(client).getMetricCall(Mockito.any());
 
     return client;
@@ -265,7 +264,8 @@ public class TestAggregateMetricsManager extends AbstractAbfsIntegrationTest {
   @Test
   public void testMultipleMetricCallsInCaseDataIsMoreThanBufferSize()
       throws Exception {
-    final int metricsDataSize1 = 927; // size of aggregated data for first 3 calls
+    final int metricsDataSize1
+        = 927; // size of aggregated data for first 3 calls
     final int metricsDataSize2 = 115; // size of aggregated data for last call
     final int numberOfMetrics = 25; // total metrics to send
     AtomicInteger calls = new AtomicInteger(0);
@@ -288,7 +288,7 @@ public class TestAggregateMetricsManager extends AbstractAbfsIntegrationTest {
             .isEqualTo(metricsDataSize2);
       }
       calls.incrementAndGet();
-      return inv.callRealMethod();
+      return null;
     }).when(client).getMetricCall(Mockito.any());
     manager.registerClient("acc1", client);
     for (int i = 0; i < numberOfMetrics; i++) {
@@ -312,7 +312,8 @@ public class TestAggregateMetricsManager extends AbstractAbfsIntegrationTest {
    * the global rate limiter enforces spacing between dispatches.
    */
   @Test
-  public void testRateLimitMetricCalls() throws IOException, InterruptedException {
+  public void testRateLimitMetricCalls()
+      throws IOException, InterruptedException {
     final int permitsPerSecond = 3;
     final long minIntervalMs = 1_000 / permitsPerSecond; // 333ms
     final double toleranceMs = 15; // allow 15ms jitter
@@ -700,7 +701,7 @@ public class TestAggregateMetricsManager extends AbstractAbfsIntegrationTest {
 
     Mockito.doAnswer(inv -> {
       time.set(System.nanoTime());
-      return inv.callRealMethod();
+      return null;
     }).when(client).getMetricCall(Mockito.any());
 
     return client;
