@@ -105,7 +105,7 @@ public class ITestAbfsOutputStream extends AbstractAbfsIntegrationTest {
     AbfsOutputStream stream = (AbfsOutputStream) out.getWrappedStream();
 
       int maxConcurrentRequests
-          = getConfiguration().getWriteConcurrentRequestCount();
+          = getConfiguration().getWriteMaxConcurrentRequestCount();
       if (stream.isAppendBlobStream()) {
         maxConcurrentRequests = 1;
       }
