@@ -156,6 +156,7 @@ public class AzureBlobFileSystem extends FileSystem
    */
   private boolean isClosed = true;
   private final String fileSystemId = UUID.randomUUID().toString();
+  private final String DFS_DOMAIN_INDICATOR = ".dfs.";
 
   private boolean delegationTokenEnabled = false;
   private AbfsDelegationTokenManager delegationTokenManager;
@@ -313,6 +314,14 @@ public class AzureBlobFileSystem extends FileSystem
     } catch (AzureBlobFileSystemException ex) {
       LOG.debug("Failed to determine account type for service type validation", ex);
       throw new InvalidConfigurationValueException(FS_AZURE_ACCOUNT_IS_HNS_ENABLED, ex);
+    }
+
+    // For FNS-DFS accounts, reset the endpoint to Blob and update the tracing
+    // context to add metric to show endpoint conversion.
+    if (!tryGetIsNamespaceEnabled(new TracingContext(initFSTracingContext))
+        && uri.toString().contains(DFS_DOMAIN_INDICATOR)) {
+      abfsStore.resetEndpointforFNS();
+      initFSTracingContext.setFNSEndpointConverted();
     }
 
     // Create the file system if it does not exist.

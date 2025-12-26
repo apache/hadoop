@@ -796,11 +796,19 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       long position,
       String eTag,
       ContextEncryptionAdapter contextEncryptionAdapter,
-      TracingContext tracingContext) {
+      TracingContext tracingContext) throws AzureBlobFileSystemException {
     int bufferSize = abfsConfiguration.getWriteBufferSize();
     if (isAppendBlob && bufferSize > FileSystemConfigurations.APPENDBLOB_MAX_WRITE_BUFFER_SIZE) {
       bufferSize = FileSystemConfigurations.APPENDBLOB_MAX_WRITE_BUFFER_SIZE;
     }
+
+    // Separate ingress service type is only supported for HNS accounts
+    // FNS accounts shall use default service type (Blob) for all operations
+    AbfsServiceType ingressServiceType
+        = client.getIsNamespaceEnabled()
+        ? clientHandler.getDefaultIngressServiceType()
+        : clientHandler.getDefaultServiceType();
+
     return new AbfsOutputStreamContext(abfsConfiguration.getSasTokenRenewPeriodForStreamsInSeconds())
             .withWriteBufferSize(bufferSize)
             .enableExpectHeader(abfsConfiguration.isExpectHeaderEnabled())
@@ -824,7 +832,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
             .withWriteThreadPoolManager(writeThreadPoolSizeManager)
             .withTracingContext(tracingContext)
             .withAbfsBackRef(fsBackRef)
-            .withIngressServiceType(abfsConfiguration.getIngressServiceType())
+            .withIngressServiceType(ingressServiceType)
             .withDFSToBlobFallbackEnabled(abfsConfiguration.isDfsToBlobFallbackEnabled())
             .withETag(eTag)
             .build();
@@ -1904,6 +1912,15 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
   private AbfsPerfInfo startTracking(String callerName, String calleeName) {
     return new AbfsPerfInfo(abfsPerfTracker, callerName, calleeName);
+  }
+
+  /**
+   * Resets the endpoint for FNS accounts to use the BLOB service type.
+   * Updates the client to reflect the new default service type.
+   */
+  public void resetEndpointforFNS() {
+    getClientHandler().setDefaultServiceType(AbfsServiceType.BLOB);
+    this.client = getClientHandler().getClient();
   }
 
   /**

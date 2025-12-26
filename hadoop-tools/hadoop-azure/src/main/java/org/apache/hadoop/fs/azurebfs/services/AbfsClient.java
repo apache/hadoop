@@ -1324,7 +1324,7 @@ public abstract class AbfsClient implements Closeable {
 
   @VisibleForTesting
   String initializeUserAgent(final AbfsConfiguration abfsConfiguration,
-      final String sslProviderName) {
+      final String sslProviderName) throws TrileanConversionException {
 
     StringBuilder sb = new StringBuilder();
 

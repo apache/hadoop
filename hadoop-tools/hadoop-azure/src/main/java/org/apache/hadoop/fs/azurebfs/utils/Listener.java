@@ -32,6 +32,7 @@ public interface Listener {
   Listener getClone();
   void setOperation(FSOperationType operation);
   void updateIngressHandler(String ingressHandler);
+  void updateFNSEndpointConverted();
   void updatePosition(String position);
   void updateReadType(ReadType readType);
 }

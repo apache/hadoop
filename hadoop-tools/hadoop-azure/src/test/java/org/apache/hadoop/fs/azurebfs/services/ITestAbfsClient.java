@@ -850,6 +850,33 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
     fs.close();
   }
 
+  /**
+   * Test to verify that when initializing a filesystem with a DFS endpoint for a FNS account,
+   * we force to Blob endpoint internally.
+   *
+   * @throws Exception if the test fails
+   */
+  @Test
+  public void testFNSDfsUsesBlobInstance() throws Exception {
+    assumeHnsDisabled();
+    String scheme = "abfs";
+    String dfsDomain = "dfs.core.windows.net";
+    String blobDomain = "blob.core.windows.net";
+    String accountNameNoDns = getAccountName().substring(0,
+        getAccountName().indexOf(DOT));
+
+    // Initialize filesystem with DFS endpoint
+    String dfsUri = String.format("%s://%s@%s.%s/", scheme, getFileSystemName(),
+        accountNameNoDns, dfsDomain);
+    AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(
+        new java.net.URI(dfsUri), getRawConfiguration());
+
+    // Filesystem initialization should have forced to use Blob instance for FNS-DFS
+    URL blobClientUrl = fs.getAbfsStore().getClient().getBaseUrl();
+    Assertions.assertThat(blobClientUrl.toString())
+        .contains(blobDomain);
+  }
+
   @Test
   public void testIsNonEmptyDirectory() throws IOException {
     testIsNonEmptyDirectoryInternal(EMPTY_STRING, true, EMPTY_STRING,

@@ -67,6 +67,8 @@ public class TracingContext {
   //final concatenated ID list set into x-ms-client-request-id header
   private String header = EMPTY_STRING;
   private String ingressHandler = EMPTY_STRING;
+  private Boolean FNSEndpointConverted = false;
+  private String FNSEndptConvertedIndicator = "T";
   private String position = EMPTY_STRING; // position of read/write in remote file
   private String metricResults = EMPTY_STRING;
   private ReadType readType = ReadType.UNKNOWN_READ;
@@ -148,6 +150,7 @@ public class TracingContext {
     this.format = originalTracingContext.format;
     this.position = originalTracingContext.getPosition();
     this.ingressHandler = originalTracingContext.getIngressHandler();
+    this.FNSEndpointConverted = originalTracingContext.FNSEndpointConverted;
     this.operatedBlobCount = originalTracingContext.operatedBlobCount;
     if (originalTracingContext.listener != null) {
       this.listener = originalTracingContext.listener.getClone();
@@ -233,11 +236,13 @@ public class TracingContext {
           + opType + COLON
           + getRetryHeader(previousFailure, retryPolicyAbbreviation) + COLON
           + ingressHandler + COLON
+          + (FNSEndpointConverted ? FNSEndptConvertedIndicator : EMPTY_STRING) + COLON
           + position + COLON
           + operatedBlobCount + COLON
           + getOperationSpecificHeader(opType) + COLON
           + httpOperation.getTracingContextSuffix() + COLON
           + metricResults + COLON + resourceUtilizationMetricResults;
+      System.out.println(header);
       break;
     case TWO_ID_FORMAT:
       header = TracingHeaderVersion.getCurrentVersion() + COLON
@@ -368,6 +373,13 @@ public class TracingContext {
     this.ingressHandler = ingressHandler;
     if (listener != null) {
       listener.updateIngressHandler(ingressHandler);
+    }
+  }
+
+  public void setFNSEndpointConverted() {
+    this.FNSEndpointConverted = true;
+    if (listener != null) {
+      listener.updateFNSEndpointConverted();
     }
   }
 
