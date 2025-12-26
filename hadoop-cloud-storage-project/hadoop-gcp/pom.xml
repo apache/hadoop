@@ -441,7 +441,7 @@
             </goals>
             <configuration>
               <!-- build a shellprofile -->
-              <outputFile>${project.basedir}/target/hadoop-tools-deps/${project.artifactId}.tools-optional.txt</outputFile>
+              <outputFile>${project.basedir}/target/hadoop-cloud-storage-deps/${project.artifactId}.cloud-storage-optional.txt</outputFile>
             </configuration>
           </execution>
         </executions>
