@@ -36,6 +36,12 @@ extern crc_pipelined_func_t pipelined_crc32_zlib_func;
 
 #if defined(__riscv) && (__riscv_xlen == 64)
 
+/**
+ * Precomputed constants for CRC32 (zlib polynomial) reduction using
+ * carry-less multiplication. These constants are derived from the
+ * polynomial 0xEDB88320 (reflected) and are used for Barrett reduction
+ * or similar folding algorithms.
+ */
 #define RV_CRC32_CONST_R3 0x01751997d0ULL
 #define RV_CRC32_CONST_R4 0x00ccaa009eULL
 #define RV_CRC32_CONST_R5 0x0163cd6124ULL
@@ -43,6 +49,10 @@ extern crc_pipelined_func_t pipelined_crc32_zlib_func;
 #define RV_CRC32_POLY_TRUE_LE_FULL 0x01DB710641ULL
 #define RV_CRC32_CONST_RU 0x01F7011641ULL
 
+/**
+ * Performs a 64-bit carry-less multiplication (clmul) of two values.
+ * This instruction is part of the RISC-V Zbc extension.
+ */
 static inline uint64_t rv_clmul(uint64_t a, uint64_t b) {
   uint64_t r;
   __asm__ volatile(
@@ -55,6 +65,10 @@ static inline uint64_t rv_clmul(uint64_t a, uint64_t b) {
   return r;
 }
 
+/**
+ * Performs the high 64 bits of a 64-bit carry-less multiplication (clmulh).
+ * This instruction is part of the RISC-V Zbc extension.
+ */
 static inline uint64_t rv_clmulh(uint64_t a, uint64_t b) {
   uint64_t r;
   __asm__ volatile(
@@ -67,6 +81,10 @@ static inline uint64_t rv_clmulh(uint64_t a, uint64_t b) {
   return r;
 }
 
+/**
+ * Fallback bitwise implementation of CRC32 (zlib) for small data chunks
+ * or to handle misaligned data at the beginning/end of a buffer.
+ */
 static inline uint32_t rv_crc32_zlib_bitwise(uint32_t crc, const uint8_t *buf,
                                              size_t len) {
   uint32_t c = crc;
@@ -80,6 +98,10 @@ static inline uint32_t rv_crc32_zlib_bitwise(uint32_t crc, const uint8_t *buf,
   return c;
 }
 
+/**
+ * Hardware-accelerated CRC32 (zlib) calculation using RISC-V Zbc
+ * carry-less multiplication instructions.
+ */
 static uint32_t rv_crc32_zlib_clmul(uint32_t crc, const uint8_t *buf,
                                     size_t len) {
   const uint8_t *p = buf;
@@ -89,6 +111,8 @@ static uint32_t rv_crc32_zlib_clmul(uint32_t crc, const uint8_t *buf,
     return rv_crc32_zlib_bitwise(crc, p, n);
   }
 
+  // Handle misaligned data at the start. This is considered unlikely
+  // in typical Hadoop usage but necessary for correctness.
   uintptr_t mis = (uintptr_t)p & 0xF;
   if (unlikely(mis)) {
     size_t pre = 16 - mis;
@@ -107,6 +131,8 @@ static uint32_t rv_crc32_zlib_clmul(uint32_t crc, const uint8_t *buf,
   const uint64_t C1 = RV_CRC32_CONST_R3;
   const uint64_t C2 = RV_CRC32_CONST_R4;
 
+  // Main loop: process 16 bytes of aligned data per iteration using
+  // carry-less multiplication for high-performance folding.
   while (likely(n >= 16)) {
     uint64_t tL = rv_clmul(C2, x1);
     uint64_t tH = rv_clmulh(C2, x1);
@@ -123,6 +149,7 @@ static uint32_t rv_crc32_zlib_clmul(uint32_t crc, const uint8_t *buf,
     n -= 16;
   }
 
+  // Final reduction and folding of the remaining 16 bytes in the pipeline.
   {
     uint64_t tH = rv_clmulh(x0, C2);
     uint64_t tL = rv_clmul(x0, C2);
@@ -144,6 +171,7 @@ static uint32_t rv_crc32_zlib_clmul(uint32_t crc, const uint8_t *buf,
 
   uint32_t c = (uint32_t)(lo >> 32);
 
+  // Handle any remaining bytes (less than 16) using bitwise fallback.
   if (n) {
     c = rv_crc32_zlib_bitwise(c, p, n);
   }
@@ -159,7 +187,9 @@ static uint32_t rv_crc32_zlib_clmul(uint32_t crc, const uint8_t *buf,
  *   p_buf : The base address of the data buffer. The buffer should be
  *           at least as big as block_size * num_blocks.
  *   block_size : The size of each block in bytes.
- *   num_blocks : The number of blocks to work on. Min = 1, Max = 3
+ *   num_blocks : The number of blocks to work on. Valid values are 1, 2, or 3.
+ *                A value of 0 is treated as a no-op. Any other value will
+ *                trigger an assertion in debug builds.
  */
 static void pipelined_crc32_zlib(uint32_t *crc1, uint32_t *crc2, uint32_t *crc3,
                                  const uint8_t *p_buf, size_t block_size,
