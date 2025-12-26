@@ -19,19 +19,19 @@
 package org.apache.hadoop.fs.azurebfs.services;
 
 import java.util.Arrays;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Stream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.fs.azurebfs.enums.AbfsReadResourceUtilizationMetricsEnum;
 import org.apache.hadoop.fs.azurebfs.enums.StatisticTypeEnum;
 import org.apache.hadoop.fs.azurebfs.enums.AbfsResourceUtilizationMetricsEnum;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_EQUALS;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.HUNDRED_D;
 import static org.apache.hadoop.fs.azurebfs.constants.MetricsConstants.CHAR_DOLLAR;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.iostatisticsStore;
 
@@ -47,21 +47,10 @@ public abstract class AbstractAbfsResourceUtilizationMetrics<T extends Enum<T> &
   private static final Logger LOG = LoggerFactory.getLogger(
       AbstractAbfsResourceUtilizationMetrics.class);
 
-  /**
-   * Tracks whether any metric has been updated at least once.
-   */
-  private final AtomicBoolean updatedAtLeastOnce = new AtomicBoolean(false);
-
-  /**
-   * A version counter incremented each time a metric update occurs.
-   * Used to detect whether metrics have changed since the last serialization.
-   */
-  private final AtomicLong updateVersion = new AtomicLong(0);
-
-  /**
-   * The last version number that was serialized and pushed out.
-   */
-  private final AtomicLong lastPushedVersion = new AtomicLong(-1);
+  protected abstract boolean isUpdated();
+  protected abstract long getUpdateVersion();
+  protected abstract long getLastPushedVersion();
+  public abstract void markPushed();
 
   /**
    * The set of metrics supported by this metrics instance.
@@ -128,56 +117,65 @@ public abstract class AbstractAbfsResourceUtilizationMetrics<T extends Enum<T> &
     }
   }
 
-  /**
-   * Marks that a metric update has occurred.
-   * Increments the version so consumers know that new data is available.
-   */
-  protected void markUpdated() {
-    updatedAtLeastOnce.set(true);
-    updateVersion.incrementAndGet();
-  }
-
-  /**
-   * Returns a flag indicating whether any metric has been updated since initialization.
-   *
-   * @return the {@link AtomicBoolean} tracking whether at least one update occurred
-   */
-  public boolean getUpdatedAtLeastOnce() {
-    return updatedAtLeastOnce.get();
-  }
-
-  /**
-   * Serializes the current metrics to a compact string format suitable for logs.
-   * @return a serialized metrics string or an empty string if no updates occurred
-   */
   @Override
   public String toString() {
-    if (!updatedAtLeastOnce.get()) {
+    if (!isUpdated()) {
       return EMPTY_STRING;
     }
 
-    long currentVersion = updateVersion.get();
-    if (currentVersion == lastPushedVersion.get()) {
+    long currentVersion = getUpdateVersion();
+    if (currentVersion == getLastPushedVersion()) {
       return EMPTY_STRING;
     }
 
-    synchronized (this) {
-      if (currentVersion == lastPushedVersion.get()) {
-        return EMPTY_STRING;
-      }
+    StringBuilder sb = new StringBuilder(operationType).append(CHAR_EQUALS);
 
-      StringBuilder sb = new StringBuilder(operationType).append(CHAR_EQUALS);
+    for (T metric : metrics) {
+      long value = lookupGaugeValue(metric.getName());
 
-      for (T metric : metrics) {
+      if (isMemoryMetric(metric.getName())) {
         sb.append(metric.getName())
             .append(CHAR_EQUALS)
-            .append(lookupGaugeValue(metric.getName()))
+            .append(convertMemoryValue(value))
+            .append(CHAR_DOLLAR);
+      } else {
+        sb.append(metric.getName())
+            .append(CHAR_EQUALS)
+            .append(value)
             .append(CHAR_DOLLAR);
       }
-
-      lastPushedVersion.set(currentVersion);
-      return sb.toString();
     }
+
+    return sb.toString();
+  }
+
+  /**
+   * Determines whether the given metric represents a JVM heap memory metric.
+   *
+   * <p>Memory metrics are identified by their names as defined in
+   * {@link AbfsReadResourceUtilizationMetricsEnum}.</p>
+   *
+   * @param metricName the metric name
+   * @return {@code true} if the metric is a memory metric, {@code false} otherwise
+   */
+  private boolean isMemoryMetric(String metricName) {
+    return metricName.equals(
+        AbfsReadResourceUtilizationMetricsEnum.AVAILABLE_MEMORY.getName())
+        || metricName.equals(
+        AbfsReadResourceUtilizationMetricsEnum.COMMITTED_MEMORY.getName())
+        || metricName.equals(
+        AbfsReadResourceUtilizationMetricsEnum.USED_MEMORY.getName())
+        || metricName.equals(
+        AbfsReadResourceUtilizationMetricsEnum.MAX_HEAP_MEMORY.getName());
+  }
+
+  /**
+   * Converts a raw memory metric value to a decimal representation for logging.
+   *
+   * @param value the raw memory value
+   * @return the converted memory value
+   */
+  private double convertMemoryValue(long value) {
+    return value / HUNDRED_D;
   }
 }
-

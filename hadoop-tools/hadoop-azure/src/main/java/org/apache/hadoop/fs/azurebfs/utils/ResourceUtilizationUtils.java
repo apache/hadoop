@@ -27,139 +27,140 @@ import com.sun.management.OperatingSystemMXBean;
 import org.apache.hadoop.classification.VisibleForTesting;
 
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.BYTES_PER_GIGABYTE;
-import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ZERO;
-import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ZERO_D;
 
 /**
  * Utility class for retrieving JVM- and system-level resource utilization
  * metrics such as CPU load, memory usage, and available heap memory.
+ * All metrics are returned as long values with 2-decimal precision stored as integer (scaled by 100).
  */
 public final class ResourceUtilizationUtils {
+
+  private static final long SCALE_FACTOR = 100L; // 2 decimal places
 
   private ResourceUtilizationUtils() {
     // Prevent instantiation
   }
 
   /**
-   * Calculates the available heap memory in gigabytes.
-   * This method uses {@link Runtime#getRuntime()} to obtain the maximum heap memory
-   * allowed for the JVM and subtracts the currently used memory (total - free)
-   * to determine how much heap memory is still available.
-   * The result is rounded up to the nearest gigabyte.
+   * Scales a double value by {@link #SCALE_FACTOR} to store 2-decimal precision as long.
    *
-   * @return the available heap memory in gigabytes
+   * @param value value to scale
+   * @return scaled long value
+   */
+  private static long scale(double value) {
+    return Math.round(value * SCALE_FACTOR);
+  }
+
+  /**
+   * Returns the available heap memory in gigabytes, calculated as the difference between
+   * the committed heap and used heap memory.
+   * <p>
+   * The result is scaled by 100 for 2-decimal precision.
+   * </p>
+   *
+   * @return available heap memory in GB (scaled by 100)
    */
   public static long getAvailableHeapMemory() {
-    MemoryMXBean osBean = ManagementFactory.getMemoryMXBean();
-    MemoryUsage memoryUsage = osBean.getHeapMemoryUsage();
-    long availableHeapBytes = memoryUsage.getCommitted() - memoryUsage.getUsed();
-    return (availableHeapBytes + BYTES_PER_GIGABYTE - 1) / BYTES_PER_GIGABYTE;
+    MemoryUsage mu = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
+    double gb = (mu.getCommitted() - mu.getUsed()) / (double) BYTES_PER_GIGABYTE;
+    return scale(gb);
   }
 
   /**
-   * Returns the currently committed JVM heap memory in bytes.
-   * This reflects the amount of heap the JVM has reserved from the OS and may grow as needed.
+   * Returns the JVM heap memory currently committed.
+   * <p>
+   * Committed memory is the amount of memory guaranteed to be available for the JVM.
+   * </p>
    *
-   * @return committed heap memory in bytes
+   * @return committed heap memory in GB (scaled by 100)
    */
   @VisibleForTesting
-  public static double getCommittedHeapMemory() {
+  public static long getCommittedHeapMemory() {
     MemoryMXBean osBean = ManagementFactory.getMemoryMXBean();
     MemoryUsage memoryUsage = osBean.getHeapMemoryUsage();
-    return (double) memoryUsage.getCommitted() / BYTES_PER_GIGABYTE;
+    double gb = memoryUsage.getCommitted() / (double) BYTES_PER_GIGABYTE;
+    return scale(gb);
   }
 
   /**
-   * Get the current CPU load of the system.
-   * @return the CPU load as a double value between 0.0 and 1.0
+   * Returns the system-wide CPU load as a fraction (scaled by 100 for 2-decimal precision).
+   * <p>
+   * The value ranges between 0 (no load) and 100 (full load). Returns 0 if CPU load cannot be obtained.
+   * </p>
+   *
+   * @return system CPU load (scaled by 100)
    */
   @VisibleForTesting
-  public static double getSystemCpuLoad() {
-    OperatingSystemMXBean osBean = ManagementFactory.getPlatformMXBean(
-        OperatingSystemMXBean.class);
+  public static long getSystemCpuLoad() {
+    OperatingSystemMXBean osBean = ManagementFactory.getPlatformMXBean(OperatingSystemMXBean.class);
     double cpuLoad = osBean.getSystemCpuLoad();
     if (cpuLoad < 0) {
-      // If the CPU load is not available, return 0.0
-      return 0.0;
+      return 0L;
     }
-    return cpuLoad;
+    return scale(cpuLoad);
   }
 
-
   /**
-   * Gets the current system CPU utilization.
+   * Returns the JVM process CPU load as a fraction (scaled by 100 for 2-decimal precision).
+   * <p>
+   * The value ranges between 0 (no load) and 100 (full CPU used by this process). Returns 0 if CPU load cannot be obtained.
+   * </p>
    *
-   * @return the CPU utilization as a fraction (0.0 to 1.0), or 0.0 if unavailable.
+   * @return JVM process CPU load (scaled by 100)
    */
   @VisibleForTesting
-  public static double getJvmCpuLoad() {
-    OperatingSystemMXBean osBean = ManagementFactory.getPlatformMXBean(
-        OperatingSystemMXBean.class);
+  public static long getJvmCpuLoad() {
+    OperatingSystemMXBean osBean = ManagementFactory.getPlatformMXBean(OperatingSystemMXBean.class);
     double cpuLoad = osBean.getProcessCpuLoad();
-    if (cpuLoad < ZERO) {
-      return ZERO_D;
+    if (cpuLoad < 0) {
+      return 0L;
     }
-    return cpuLoad;
+    return scale(cpuLoad);
   }
 
   /**
-   * Get the current memory load of the JVM.
-   * @return the memory load as a double value between 0.0 and 1.0
+   * Returns the heap memory usage as a fraction of max heap (scaled by 100).
+   *
+   * @return memory load (used/max heap) scaled by 100
    */
   @VisibleForTesting
-  public static double getMemoryLoad() {
+  public static long getMemoryLoad() {
     MemoryMXBean osBean = ManagementFactory.getMemoryMXBean();
     MemoryUsage memoryUsage = osBean.getHeapMemoryUsage();
-    return (double) memoryUsage.getUsed() / memoryUsage.getMax();
+    double memLoad = (double) memoryUsage.getUsed() / memoryUsage.getMax();
+    return scale(memLoad);
   }
 
   /**
-   * Calculates the used heap memory in gigabytes.
-   * This method returns the amount of heap memory currently used by the JVM.
-   * The result is rounded up to the nearest gigabyte.
+   * Returns the currently used heap memory in gigabytes.
    *
-   * @return the used heap memory in gigabytes
+   * @return used heap memory in GB (scaled by 100)
    */
   public static long getUsedHeapMemory() {
-    MemoryMXBean osBean = ManagementFactory.getMemoryMXBean();
-    MemoryUsage memoryUsage = osBean.getHeapMemoryUsage();
-    long usedHeapBytes = memoryUsage.getUsed();
-    return (usedHeapBytes + BYTES_PER_GIGABYTE - 1) / BYTES_PER_GIGABYTE;
+    MemoryUsage mu = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
+    double gb = mu.getUsed() / (double) BYTES_PER_GIGABYTE;
+    return scale(gb);
   }
 
   /**
-   * Calculates the maximum heap memory allowed for the JVM in gigabytes.
-   * This is the upper bound the JVM may expand its heap to.
+   * Returns the maximum heap memory that the JVM can use.
    *
-   * @return the maximum heap memory in gigabytes
+   * @return max heap memory in GB (scaled by 100)
    */
   public static long getMaxHeapMemory() {
-    MemoryMXBean osBean = ManagementFactory.getMemoryMXBean();
-    MemoryUsage memoryUsage = osBean.getHeapMemoryUsage();
-    long maxHeapBytes = memoryUsage.getMax();
-    return (maxHeapBytes + BYTES_PER_GIGABYTE - 1) / BYTES_PER_GIGABYTE;
-  }
-
-
-  /**
-   * Returns the process ID (PID) of the currently running JVM.
-   * This method uses {@link ProcessHandle#current()} to obtain the ID of the
-   * Java process.
-   *
-   * @return the PID of the current JVM process
-   */
-  public static long getJvmProcessId() {
-    return ProcessHandle.current().pid();
+    MemoryUsage mu = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
+    double gb = mu.getMax() / (double) BYTES_PER_GIGABYTE;
+    return scale(gb);
   }
 
   /**
-   * Calculates the available max heap memory in gigabytes.
-   * This method uses {@link Runtime#getRuntime()} to obtain the maximum heap memory
-   * allowed for the JVM and subtracts the currently used memory (total - free)
-   * to determine how much heap memory is still available.
-   * The result is rounded up to the nearest gigabyte.
+   * Returns the available heap memory relative to the max heap.
+   * <p>
+   * This method calculates the difference between max heap and currently used heap,
+   * then converts it to gigabytes rounded up.
+   * </p>
    *
-   * @return the available heap memory in gigabytes
+   * @return available heap memory in GB (rounded up)
    */
   public static long getAvailableMaxHeapMemory() {
     MemoryMXBean osBean = ManagementFactory.getMemoryMXBean();
@@ -168,3 +169,4 @@ public final class ResourceUtilizationUtils {
     return (availableHeapBytes + BYTES_PER_GIGABYTE - 1) / BYTES_PER_GIGABYTE;
   }
 }
+
