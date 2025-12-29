@@ -26,7 +26,6 @@ import java.util.UUID;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.fs.PositionedReadable;
 import org.apache.hadoop.fs.azurebfs.constants.ReadType;
 import org.apache.hadoop.fs.impl.BackReference;
 import org.apache.hadoop.util.Preconditions;
@@ -62,9 +61,9 @@ import static org.apache.hadoop.util.StringUtils.toLowerCase;
 /**
  * The AbfsInputStream for AbfsClient.
  */
-public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
+public abstract class AbfsInputStream extends FSInputStream implements CanUnbuffer,
         StreamCapabilities, IOStatisticsSource {
-  private static final Logger LOG = LoggerFactory.getLogger(AbfsInputStream.class);
+  protected static final Logger LOG = LoggerFactory.getLogger(AbfsInputStream.class);
   //  Footer size is set to qualify for both ORC and parquet files
   public static final int FOOTER_SIZE = 16 * ONE_KB;
   public static final int MAX_OPTIMIZED_READ_ATTEMPTS = 2;
@@ -73,8 +72,8 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   private final AbfsClient client;
   private final Statistics statistics;
   private final String path;
-  private final long contentLength;
-  private final int bufferSize; // default buffer size
+  protected final long contentLength;
+  protected final int bufferSize; // default buffer size
   private final int footerReadSize; // default buffer size to read when reading footer
   private final int readAheadQueueDepth;         // initialized in constructor
   private final String eTag;                  // eTag of the path when InputStream are created
@@ -82,7 +81,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   private final boolean readAheadEnabled; // whether enable readAhead;
   private final boolean readAheadV2Enabled; // whether enable readAhead V2;
   private final String inputStreamId;
-  private final boolean alwaysReadBufferSize;
+  protected final boolean alwaysReadBufferSize;
   /*
    * By default the pread API will do a seek + read as in FSInputStream.
    * The read data will be kept in a buffer. When bufferedPreadDisabled is true,
@@ -92,20 +91,20 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
    */
   private final boolean bufferedPreadDisabled;
   // User configured size of read ahead.
-  private final int readAheadRange;
+  protected final int readAheadRange;
 
-  private boolean firstRead = true;
+  protected boolean firstRead = true;
   // SAS tokens can be re-used until they expire
   private CachedSASToken cachedSasToken;
-  private byte[] buffer = null;            // will be initialized on first use
+  protected byte[] buffer = null;            // will be initialized on first use
 
-  private long fCursor = 0;  // cursor of buffer within file - offset of next byte to read from remote server
-  private long fCursorAfterLastRead = -1;
-  private int bCursor = 0;   // cursor of read within buffer - offset of next byte to be returned from buffer
-  private int limit = 0;     // offset of next byte to be read into buffer from service (i.e., upper marker+1
+  protected long fCursor = 0;  // cursor of buffer within file - offset of next byte to read from remote server
+  protected long fCursorAfterLastRead = -1;
+  protected int bCursor = 0;   // cursor of read within buffer - offset of next byte to be returned from buffer
+  protected int limit = 0;     // offset of next byte to be read into buffer from service (i.e., upper marker+1
   //                                                      of valid bytes in buffer)
   private boolean closed = false;
-  private TracingContext tracingContext;
+  protected TracingContext tracingContext;
   private final ContextEncryptionAdapter contextEncryptionAdapter;
 
   //  Optimisations modify the pointer fields.
@@ -115,20 +114,20 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   private int bCursorBkp;
   private long fCursorBkp;
   private long fCursorAfterLastReadBkp;
-  private final AbfsReadFooterMetrics abfsReadFooterMetrics;
+  protected final AbfsReadFooterMetrics abfsReadFooterMetrics;
   /** Stream statistics. */
-  private final AbfsInputStreamStatistics streamStatistics;
+  protected final AbfsInputStreamStatistics streamStatistics;
   private long bytesFromReadAhead; // bytes read from readAhead; for testing
   private long bytesFromRemoteRead; // bytes read remotely; for testing
   private Listener listener;
-  private final AbfsInputStreamContext context;
+  protected final AbfsInputStreamContext context;
   private IOStatistics ioStatistics;
-  private String filePathIdentifier;
+  protected String filePathIdentifier;
   /**
    * This is the actual position within the object, used by
    * lazy seek to decide whether to seek on the next read or not.
    */
-  private long nextReadPos;
+  protected long nextReadPos;
 
   /** ABFS instance to be held by the input stream to avoid GC close. */
   private final BackReference fsBackRef;
@@ -254,133 +253,11 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   }
 
   @Override
-  public synchronized int read(final byte[] b, final int off, final int len) throws IOException {
-    // check if buffer is null before logging the length
-    if (b != null) {
-      LOG.debug("read requested b.length = {} offset = {} len = {}", b.length,
-          off, len);
-    } else {
-      LOG.debug("read requested b = null offset = {} len = {}", off, len);
-    }
+  public abstract int read(final byte[] b, final int off, final int len) throws IOException;
 
-    int currentOff = off;
-    int currentLen = len;
-    int lastReadBytes;
-    int totalReadBytes = 0;
-    if (streamStatistics != null) {
-      streamStatistics.readOperationStarted();
-    }
-    incrementReadOps();
-    do {
+  protected abstract int readOneBlock(final byte[] b, final int off, final int len) throws IOException;
 
-      // limit is the maximum amount of data present in buffer.
-      // fCursor is the current file pointer. Thus maximum we can
-      // go back and read from buffer is fCursor - limit.
-      // There maybe case that we read less than requested data.
-      long filePosAtStartOfBuffer = fCursor - limit;
-      if (abfsReadFooterMetrics != null) {
-        abfsReadFooterMetrics.updateReadMetrics(filePathIdentifier, len, contentLength, nextReadPos);
-      }
-      if (nextReadPos >= filePosAtStartOfBuffer && nextReadPos <= fCursor) {
-        // Determining position in buffer from where data is to be read.
-        bCursor = (int) (nextReadPos - filePosAtStartOfBuffer);
-
-        // When bCursor == limit, buffer will be filled again.
-        // So in this case we are not actually reading from buffer.
-        if (bCursor != limit && streamStatistics != null) {
-          streamStatistics.seekInBuffer();
-        }
-      } else {
-        // Clearing the buffer and setting the file pointer
-        // based on previous seek() call.
-        fCursor = nextReadPos;
-        limit = 0;
-        bCursor = 0;
-      }
-      if (shouldReadFully()) {
-        lastReadBytes = readFileCompletely(b, currentOff, currentLen);
-      } else if (shouldReadLastBlock()) {
-        lastReadBytes = readLastBlock(b, currentOff, currentLen);
-      } else {
-        lastReadBytes = readOneBlock(b, currentOff, currentLen);
-      }
-      if (lastReadBytes > 0) {
-        currentOff += lastReadBytes;
-        currentLen -= lastReadBytes;
-        totalReadBytes += lastReadBytes;
-      }
-      if (currentLen <= 0 || currentLen > b.length - currentOff) {
-        break;
-      }
-    } while (lastReadBytes > 0);
-    return totalReadBytes > 0 ? totalReadBytes : lastReadBytes;
-  }
-
-  private boolean shouldReadFully() {
-    return this.firstRead && this.context.readSmallFilesCompletely()
-        && this.contentLength <= this.bufferSize;
-  }
-
-  private boolean shouldReadLastBlock() {
-    long footerStart = max(0, this.contentLength - FOOTER_SIZE);
-    return this.firstRead && this.context.optimizeFooterRead()
-        && this.fCursor >= footerStart;
-  }
-
-  private int readOneBlock(final byte[] b, final int off, final int len) throws IOException {
-    if (len == 0) {
-      return 0;
-    }
-    if (!validate(b, off, len)) {
-      return -1;
-    }
-    //If buffer is empty, then fill the buffer.
-    if (bCursor == limit) {
-      //If EOF, then return -1
-      if (fCursor >= contentLength) {
-        return -1;
-      }
-
-      long bytesRead = 0;
-      //reset buffer to initial state - i.e., throw away existing data
-      bCursor = 0;
-      limit = 0;
-      if (buffer == null) {
-        LOG.debug("created new buffer size {}", bufferSize);
-        buffer = new byte[bufferSize];
-      }
-
-      // Reset Read Type back to normal and set again based on code flow.
-      tracingContext.setReadType(ReadType.NORMAL_READ);
-      if (alwaysReadBufferSize) {
-        bytesRead = readInternal(fCursor, buffer, 0, bufferSize, false);
-      } else {
-        // Enable readAhead when reading sequentially
-        if (-1 == fCursorAfterLastRead || fCursorAfterLastRead == fCursor || b.length >= bufferSize) {
-          LOG.debug("Sequential read with read ahead size of {}", bufferSize);
-          bytesRead = readInternal(fCursor, buffer, 0, bufferSize, false);
-        } else {
-          // Enabling read ahead for random reads as well to reduce number of remote calls.
-          int lengthWithReadAhead = Math.min(b.length + readAheadRange, bufferSize);
-          LOG.debug("Random read with read ahead size of {}", lengthWithReadAhead);
-          bytesRead = readInternal(fCursor, buffer, 0, lengthWithReadAhead, true);
-        }
-      }
-      if (firstRead) {
-        firstRead = false;
-      }
-      if (bytesRead == -1) {
-        return -1;
-      }
-
-      limit += bytesRead;
-      fCursor += bytesRead;
-      fCursorAfterLastRead = fCursor;
-    }
-    return copyToUserBuffer(b, off, len);
-  }
-
-  private int readFileCompletely(final byte[] b, final int off, final int len)
+  protected int readFileCompletely(final byte[] b, final int off, final int len)
       throws IOException {
     if (len == 0) {
       return 0;
@@ -397,7 +274,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   }
 
   // To do footer read of files when enabled.
-  private int readLastBlock(final byte[] b, final int off, final int len)
+  protected int readLastBlock(final byte[] b, final int off, final int len)
       throws IOException {
     if (len == 0) {
       return 0;
@@ -472,7 +349,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     this.bCursor = this.bCursorBkp;
   }
 
-  private boolean validate(final byte[] b, final int off, final int len)
+  protected boolean validate(final byte[] b, final int off, final int len)
       throws IOException {
     if (closed) {
       throw new IOException(FSExceptionMessages.STREAM_IS_CLOSED);
@@ -492,7 +369,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     return true;
   }
 
-  private int copyToUserBuffer(byte[] b, int off, int len){
+  protected int copyToUserBuffer(byte[] b, int off, int len){
     //If there is anything in the buffer, then return lesser of (requested bytes) and (bytes in buffer)
     //(bytes returned may be less than requested)
     int bytesRemaining = limit - bCursor;
@@ -511,7 +388,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     return bytesToRead;
   }
 
-  private int readInternal(final long position, final byte[] b, final int offset, final int length,
+  protected int readInternal(final long position, final byte[] b, final int offset, final int length,
                            final boolean bypassReadAhead) throws IOException {
     if (isReadAheadEnabled() && !bypassReadAhead) {
       // try reading from read-ahead
@@ -623,7 +500,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   /**
    * Increment Read Operations.
    */
-  private void incrementReadOps() {
+  protected void incrementReadOps() {
     if (statistics != null) {
       statistics.incrementReadOps(1);
     }

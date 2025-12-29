@@ -148,7 +148,7 @@ public class TestAbfsInputStream extends
       String fileName) throws IOException {
     AbfsInputStreamContext inputStreamContext = new AbfsInputStreamContext(-1);
     // Create AbfsInputStream with the client instance
-    AbfsInputStream inputStream = new AbfsInputStream(
+    AbfsInputStream inputStream = new AbfsAdaptiveInputStream(
         mockAbfsClient,
         null,
         FORWARD_SLASH + fileName,
@@ -176,7 +176,7 @@ public class TestAbfsInputStream extends
       int readAheadBlockSize) throws IOException {
     AbfsInputStreamContext inputStreamContext = new AbfsInputStreamContext(-1);
     // Create AbfsInputStream with the client instance
-    AbfsInputStream inputStream = new AbfsInputStream(
+    AbfsInputStream inputStream = new AbfsAdaptiveInputStream(
         abfsClient,
         null,
         FORWARD_SLASH + fileName,
