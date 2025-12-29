@@ -381,7 +381,7 @@ public class TestTracingContext extends AbstractAbfsIntegrationTest {
     AbfsHttpOperation abfsHttpOperation = Mockito.mock(AbfsHttpOperation.class);
     tracingContext.constructHeader(abfsHttpOperation, null,
         EXPONENTIAL_RETRY_POLICY_ABBREVIATION);
-    String endpointConversionIndicator = tracingContext.getHeader().split(COLON, SPLIT_NO_LIMIT)[9];
+    String endpointConversionIndicator = tracingContext.getHeader().split(COLON, SPLIT_NO_LIMIT)[15];
     Assertions.assertThat(endpointConversionIndicator)
         .describedAs("Endpoint conversion indicator should be present")
         .isNotEmpty();

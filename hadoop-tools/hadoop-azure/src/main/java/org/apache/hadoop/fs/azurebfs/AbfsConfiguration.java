@@ -93,7 +93,7 @@ public class AbfsConfiguration{
   private final String accountName;
   private String fsName;
   // Service type identified from URL used to initialize FileSystem.
-  private final AbfsServiceType fsConfiguredServiceType;
+  private AbfsServiceType fsConfiguredServiceType;
   private final boolean isSecure;
   private static final Logger LOG = LoggerFactory.getLogger(AbfsConfiguration.class);
   private Trilean isNamespaceEnabled = null;
@@ -1797,6 +1797,10 @@ public class AbfsConfiguration{
   @VisibleForTesting
   void setReadAheadEnabled(final boolean enabledReadAhead) {
     this.enabledReadAhead = enabledReadAhead;
+  }
+
+  void setFsConfiguredServiceTypetoBlob() {
+    this.fsConfiguredServiceType = AbfsServiceType.BLOB;
   }
 
   public int getReadAheadRange() {

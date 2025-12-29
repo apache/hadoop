@@ -152,10 +152,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.FILE;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.ROOT_PATH;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.SINGLE_WHITE_SPACE;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.TOKEN_VERSION;
-import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_ABFS_ENDPOINT;
-import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_FOOTER_READ_BUFFER_SIZE;
-import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_BUFFERED_PREAD_DISABLE;
-import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_IDENTITY_TRANSFORM_CLASS;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.*;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.INFINITE_LEASE_DURATION;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.ABFS_BLOB_DOMAIN_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_ENCRYPTION_CONTEXT;
@@ -798,16 +795,18 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       ContextEncryptionAdapter contextEncryptionAdapter,
       TracingContext tracingContext) throws AzureBlobFileSystemException {
     int bufferSize = abfsConfiguration.getWriteBufferSize();
+    getClientHandler().initServiceType(abfsConfiguration);
+
     if (isAppendBlob && bufferSize > FileSystemConfigurations.APPENDBLOB_MAX_WRITE_BUFFER_SIZE) {
       bufferSize = FileSystemConfigurations.APPENDBLOB_MAX_WRITE_BUFFER_SIZE;
     }
 
     // Separate ingress service type is only supported for HNS accounts
     // FNS accounts shall use default service type (Blob) for all operations
-    AbfsServiceType ingressServiceType
-        = client.getIsNamespaceEnabled()
-        ? clientHandler.getDefaultIngressServiceType()
-        : clientHandler.getDefaultServiceType();
+//    AbfsServiceType ingressServiceType
+//        = getClient().getIsNamespaceEnabled()
+//        ? clientHandler.getDefaultIngressServiceType()
+//        : clientHandler.getDefaultServiceType();
 
     return new AbfsOutputStreamContext(abfsConfiguration.getSasTokenRenewPeriodForStreamsInSeconds())
             .withWriteBufferSize(bufferSize)
@@ -832,7 +831,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
             .withWriteThreadPoolManager(writeThreadPoolSizeManager)
             .withTracingContext(tracingContext)
             .withAbfsBackRef(fsBackRef)
-            .withIngressServiceType(ingressServiceType)
+            .withIngressServiceType(clientHandler.getDefaultIngressServiceType())
             .withDFSToBlobFallbackEnabled(abfsConfiguration.isDfsToBlobFallbackEnabled())
             .withETag(eTag)
             .build();
@@ -1919,7 +1918,9 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
    * Updates the client to reflect the new default service type.
    */
   public void resetEndpointforFNS() {
+    getAbfsConfiguration().setFsConfiguredServiceTypetoBlob();
     getClientHandler().setDefaultServiceType(AbfsServiceType.BLOB);
+    getClientHandler().setIngressServiceType(AbfsServiceType.BLOB);
     this.client = getClientHandler().getClient();
   }
 

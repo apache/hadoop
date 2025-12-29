@@ -236,12 +236,12 @@ public class TracingContext {
           + opType + COLON
           + getRetryHeader(previousFailure, retryPolicyAbbreviation) + COLON
           + ingressHandler + COLON
-          + (FNSEndpointConverted ? FNSEndptConvertedIndicator : EMPTY_STRING) + COLON
           + position + COLON
           + operatedBlobCount + COLON
           + getOperationSpecificHeader(opType) + COLON
           + httpOperation.getTracingContextSuffix() + COLON
-          + metricResults + COLON + resourceUtilizationMetricResults;
+          + metricResults + COLON + resourceUtilizationMetricResults + COLON
+          + (FNSEndpointConverted ? FNSEndptConvertedIndicator : EMPTY_STRING);
       System.out.println(header);
       break;
     case TWO_ID_FORMAT:
