@@ -19,17 +19,17 @@
 package org.apache.hadoop.fs.azurebfs.services;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
-import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.NO_ACTION_NEEDED;
-import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.NO_SCALE_DOWN_AT_MIN;
-import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.NO_SCALE_UP_AT_MAX;
-import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.SCALE_DIRECTION_DOWN;
-import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.SCALE_DIRECTION_NO_ACTION_NEEDED;
-import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.SCALE_DIRECTION_NO_DOWN_AT_MIN;
-import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.SCALE_DIRECTION_NO_UP_AT_MAX;
-import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.SCALE_DIRECTION_UP;
-import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.SCALE_DOWN;
-import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.SCALE_NONE;
-import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.SCALE_UP;
+import static org.apache.hadoop.fs.azurebfs.constants.MetricsConstants.NO_ACTION_NEEDED;
+import static org.apache.hadoop.fs.azurebfs.constants.MetricsConstants.NO_SCALE_DOWN_AT_MIN;
+import static org.apache.hadoop.fs.azurebfs.constants.MetricsConstants.NO_SCALE_UP_AT_MAX;
+import static org.apache.hadoop.fs.azurebfs.constants.MetricsConstants.SCALE_DIRECTION_DOWN;
+import static org.apache.hadoop.fs.azurebfs.constants.MetricsConstants.SCALE_DIRECTION_NO_ACTION_NEEDED;
+import static org.apache.hadoop.fs.azurebfs.constants.MetricsConstants.SCALE_DIRECTION_NO_DOWN_AT_MIN;
+import static org.apache.hadoop.fs.azurebfs.constants.MetricsConstants.SCALE_DIRECTION_NO_UP_AT_MAX;
+import static org.apache.hadoop.fs.azurebfs.constants.MetricsConstants.SCALE_DIRECTION_UP;
+import static org.apache.hadoop.fs.azurebfs.constants.MetricsConstants.SCALE_DOWN;
+import static org.apache.hadoop.fs.azurebfs.constants.MetricsConstants.SCALE_NONE;
+import static org.apache.hadoop.fs.azurebfs.constants.MetricsConstants.SCALE_UP;
 
 /**
  * Represents current statistics of the thread pool and system.
