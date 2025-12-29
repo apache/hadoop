@@ -35,9 +35,11 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.api.RequestFactory;
 import org.apache.hadoop.fs.s3a.impl.PutObjectOptions;
 import org.apache.hadoop.fs.s3a.impl.RequestFactoryImpl;
+import org.apache.hadoop.fs.s3a.impl.S3AStoreImpl;
 import org.apache.hadoop.fs.store.audit.AuditSpan;
 import org.apache.hadoop.fs.store.EtagChecksum;
-import org.apache.hadoop.test.LambdaTestUtils;
+import org.apache.hadoop.service.AbstractService;
+import org.apache.hadoop.service.Service;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertLacksPathCapabilities;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
@@ -49,6 +51,8 @@ import static org.apache.hadoop.fs.s3a.Constants.SERVER_SIDE_ENCRYPTION_ALGORITH
 import static org.apache.hadoop.fs.s3a.Constants.SERVER_SIDE_ENCRYPTION_KEY;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.impl.HeaderProcessing.XA_ETAG;
+import static org.apache.hadoop.fs.s3a.impl.write.StoreWriter.STORE_WRITER;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
  * Tests of the S3A FileSystem which don't have a specific home and can share
@@ -113,7 +117,7 @@ public class ITestS3AMiscOperations extends AbstractS3ATestBase {
               PutObjectOptions.defaultOptions(),
               -1, false);
       putObjectRequestBuilder.contentLength(-1L);
-      LambdaTestUtils.intercept(IllegalStateException.class,
+      intercept(IllegalStateException.class,
           () ->  fs.getStore().getStoreWriter().putObjectDirect(
               putObjectRequestBuilder.build(),
               PutObjectOptions.defaultOptions(),
@@ -200,14 +204,14 @@ public class ITestS3AMiscOperations extends AbstractS3ATestBase {
 
   @Test
   public void testNegativeLength() throws Throwable {
-    LambdaTestUtils.intercept(IllegalArgumentException.class,
+    intercept(IllegalArgumentException.class,
         () -> getFileSystem().getFileChecksum(mkFile("negative", HELLO), -1));
   }
 
   @Test
   public void testNegativeLengthDisabledChecksum() throws Throwable {
     enableChecksums(false);
-    LambdaTestUtils.intercept(IllegalArgumentException.class,
+    intercept(IllegalArgumentException.class,
         () -> getFileSystem().getFileChecksum(mkFile("negative", HELLO), -1));
   }
 
@@ -344,6 +348,39 @@ public class ITestS3AMiscOperations extends AbstractS3ATestBase {
     String s = o.toString();
     assertFalse(s.endsWith("/"), role + " has trailing slash " + s);
     return o;
+  }
+
+  @Test
+  public void testStoreServiceLookup() throws Throwable {
+    final S3AStore store = getFileSystem().getStore();
+
+    Assertions.assertThat(store.lookupService(STORE_WRITER, Service.class))
+        .describedAs("service looked up as %s", STORE_WRITER)
+        .isNotNull()
+        .isSameAs(store.getStoreWriter());
+  }
+
+  @Test
+  public void testServiceAddRemove() throws Throwable {
+    S3AStoreImpl storeImpl = (S3AStoreImpl) getFileSystem().getStore();
+    final StubService stub = new StubService();
+    stub.init(new Configuration());
+    stub.start();
+    storeImpl.registerChildService(NAME, stub);
+    Assertions.assertThat(getFileSystem().getStore().lookupService(NAME, StubService.class))
+        .isSameAs(stub);
+    storeImpl.removeService(stub);
+    intercept(IllegalStateException.class, () -> getFileSystem().getStore()
+        .lookupService(NAME, StubService.class));
+  }
+
+  public static final String NAME = "StubService";
+
+  private static final class StubService extends AbstractService {
+
+    private StubService() {
+      super(NAME);
+    }
   }
 
 }

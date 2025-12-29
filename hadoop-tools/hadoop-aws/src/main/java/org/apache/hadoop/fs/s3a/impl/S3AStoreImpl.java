@@ -23,11 +23,13 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.time.Duration;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import javax.annotation.Nullable;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.awscore.exception.AwsServiceException;
@@ -193,7 +195,7 @@ public class S3AStoreImpl
    * Map of services, used for easy lookup and so allow service retrieval to
    * be a stable part of the of S3AStore API.
    */
-  private final Map<String, Service> services = new HashMap<>();
+  private final Map<String, Service> serviceMap = new HashMap<>();
 
   /**
    * Constructor to create S3A store.
@@ -236,8 +238,8 @@ public class S3AStoreImpl
    * @return the service
    * @param <T> type of the service.
    */
-  public <T extends Service> T registerChildService(final String id, final T service) {
-    services.put(id, service);
+  public synchronized <T extends Service> T registerChildService(final String id, final T service) {
+    serviceMap.put(id, service);
     super.addService(service);
     return service;
   }
@@ -253,10 +255,24 @@ public class S3AStoreImpl
     registerChildService(service.getName(), service);
   }
 
+  @Override
+  @VisibleForTesting
+  public synchronized boolean removeService(final Service service) {
+    // cut from service map.
+    for (Iterator<Map.Entry<String, Service>> it = serviceMap.entrySet().iterator();
+        it.hasNext(); ) {
+      Map.Entry<String, Service> entry = it.next();
+      if (entry.getValue() == service) {
+        it.remove();
+      }
+    }
+    return super.removeService(service);
+  }
+
   @SuppressWarnings("unchecked")
   @Override
   public <S extends Service> S lookupService(String id, Class<S> serviceClass) {
-    final Service service = services.get(id);
+    final Service service = serviceMap.get(id);
     checkState(service != null, "No service found for ID " + id);
     checkState(serviceClass.isAssignableFrom(service.getClass()),
         "Service ID %s is of type %s but the desired class is %s",

@@ -121,7 +121,7 @@ public interface S3AStore extends
   }
 
   /**
-   * Look up a service by name, validate its classtype and then return the cast value.
+   * Look up a service by name, validate its class type and then return the cast value.
    * This allows for the lookup of any registered service within the store, if the name
    * and type is known.
    * @param name service name
