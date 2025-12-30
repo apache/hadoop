@@ -2087,6 +2087,11 @@ public class AbfsConfiguration{
     this.isChecksumValidationEnabled = isChecksumValidationEnabled;
   }
 
+  @VisibleForTesting
+  public void setAbfsReadPolicy(String readPolicy) {
+    abfsReadPolicy = readPolicy;
+  }
+
   public boolean isFullBlobChecksumValidationEnabled() {
     return isFullBlobChecksumValidationEnabled;
   }

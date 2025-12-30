@@ -78,6 +78,7 @@ public class AbfsAdaptiveInputStream extends AbfsInputStream {
            * Disable queuing prefetches when random read pattern detected.
            * Instead, read ahead only for readAheadRange above what is asked by caller.
            */
+          tracingContext.setReadType(ReadType.RANDOM_READ);
           int lengthWithReadAhead = Math.min(b.length + readAheadRange, bufferSize);
           LOG.debug("Random read with read ahead size of {}", lengthWithReadAhead);
           bytesRead = readInternal(fCursor, buffer, 0, lengthWithReadAhead, true);

@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -57,17 +58,16 @@ import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderVersion;
 import org.apache.hadoop.fs.impl.OpenFileParameters;
 
+import static org.apache.hadoop.fs.Options.OpenFileOptions.*;
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_AVRO;
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_SEQUENTIAL;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.COLON;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.SPLIT_NO_LIMIT;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENABLE_PREFETCH_REQUEST_PRIORITY;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_MB;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_REQUEST_PRIORITY;
-import static org.apache.hadoop.fs.azurebfs.constants.ReadType.DIRECT_READ;
-import static org.apache.hadoop.fs.azurebfs.constants.ReadType.FOOTER_READ;
-import static org.apache.hadoop.fs.azurebfs.constants.ReadType.MISSEDCACHE_READ;
-import static org.apache.hadoop.fs.azurebfs.constants.ReadType.NORMAL_READ;
-import static org.apache.hadoop.fs.azurebfs.constants.ReadType.PREFETCH_READ;
-import static org.apache.hadoop.fs.azurebfs.constants.ReadType.SMALLFILE_READ;
+import static org.apache.hadoop.fs.azurebfs.constants.ReadType.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -92,8 +92,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * Unit test AbfsInputStream.
  */
-public class TestAbfsInputStream extends
-    AbstractAbfsIntegrationTest {
+public class TestAbfsInputStream extends AbstractAbfsIntegrationTest {
 
   private static final int ONE_KB = 1 * 1024;
   private static final int TWO_KB = 2 * 1024;
@@ -848,6 +847,7 @@ public class TestAbfsInputStream extends
     fileSize = 3 * ONE_MB; // To make sure multiple blocks are read with MR
     totalReadCalls += 3; // 3 block of 1MB.
     Mockito.doReturn(0).when(spiedConfig).getReadAheadQueueDepth();
+    Mockito.doReturn(FS_OPTION_OPENFILE_READ_POLICY_SEQUENTIAL).when(spiedConfig).getAbfsReadPolicy();
     doReturn(true).when(spiedConfig).isReadAheadEnabled();
     testReadTypeInTracingContextHeaderInternal(spiedFs, fileSize, MISSEDCACHE_READ, 3, totalReadCalls);
 
@@ -882,6 +882,15 @@ public class TestAbfsInputStream extends
     testReadTypeInTracingContextHeaderInternal(spiedFs, fileSize, SMALLFILE_READ, 1, totalReadCalls);
 
     /*
+     * Test to verify Random Read Type.
+     * Settin Read Policy to Parquet ensures Random Read Type.
+     */
+    fileSize = 3 * ONE_MB; // To make sure multiple blocks are read.
+    totalReadCalls += 3; // Full file will be read along with footer.
+    doReturn(FS_OPTION_OPENFILE_READ_POLICY_PARQUET).when(spiedConfig).getAbfsReadPolicy();
+    testReadTypeInTracingContextHeaderInternal(spiedFs, fileSize, RANDOM_READ, 1, totalReadCalls);
+
+    /*
      * Test to verify Direct Read Type and a read from random position.
      * Separate AbfsInputStream method needs to be called.
      */
@@ -904,7 +913,7 @@ public class TestAbfsInputStream extends
   private void testReadTypeInTracingContextHeaderInternal(AzureBlobFileSystem fs,
       int fileSize, ReadType readType, int numOfReadCalls, int totalReadCalls) throws Exception {
     Path testPath = createTestFile(fs, fileSize);
-    readFile(fs, testPath, fileSize);
+    readFile(fs, testPath, fileSize, readType);
     assertReadTypeInClientRequestId(fs, numOfReadCalls, totalReadCalls, readType);
   }
 
@@ -935,6 +944,111 @@ public class TestAbfsInputStream extends
     executePrefetchReadTest(tracingContext1, configuration2, false);
     //Non-prefetch read with config enabled
     executePrefetchReadTest(tracingContext1, configuration1, false);
+  }
+
+  /**
+   * Test to verify that the correct AbfsInputStream instance is created
+   * based on the read policy set in AbfsConfiguration.
+   */
+  @Test
+  public void testAbfsInputStreamInstance() throws Exception {
+    AzureBlobFileSystem fs = getFileSystem();
+    Path path = new Path("/testPath");
+    fs.create(path).close();
+
+    // Assert that Sequential Read Policy uses Prefetch Input Stream
+    getAbfsStore(fs).getAbfsConfiguration().setAbfsReadPolicy(FS_OPTION_OPENFILE_READ_POLICY_SEQUENTIAL);
+    InputStream stream = fs.open(path).getWrappedStream();
+    assertThat(stream).isInstanceOf(AbfsPrefetchInputStream.class);
+    stream.close();
+
+    // Assert that Adaptive Read Policy uses Adaptive Input Stream
+    getAbfsStore(fs).getAbfsConfiguration().setAbfsReadPolicy(FS_OPTION_OPENFILE_READ_POLICY_ADAPTIVE);
+    stream = fs.open(path).getWrappedStream();
+    assertThat(stream).isInstanceOf(AbfsAdaptiveInputStream.class);
+    stream.close();
+
+    // Assert that Parquet Read Policy uses Random Input Stream
+    getAbfsStore(fs).getAbfsConfiguration().setAbfsReadPolicy(FS_OPTION_OPENFILE_READ_POLICY_PARQUET);
+    stream = fs.open(path).getWrappedStream();
+    assertThat(stream).isInstanceOf(AbfsRandomInputStream.class);
+    stream.close();
+
+    // Assert that Avro Read Policy uses Adaptive Input Stream
+    getAbfsStore(fs).getAbfsConfiguration().setAbfsReadPolicy(FS_OPTION_OPENFILE_READ_POLICY_AVRO);
+    stream = fs.open(path).getWrappedStream();
+    assertThat(stream).isInstanceOf(AbfsAdaptiveInputStream.class);
+    stream.close();
+  }
+
+  @Test
+  public void testPrefetchInputStreamQueuesPrefetches() throws Exception {
+    AzureBlobFileSystem spiedFs = Mockito.spy(getFileSystem());
+    AzureBlobFileSystemStore spiedStore = Mockito.spy(spiedFs.getAbfsStore());
+    AbfsConfiguration spiedConfig = Mockito.spy(spiedStore.getAbfsConfiguration());
+    AbfsClient spiedClient = Mockito.spy(spiedStore.getClient());
+    Mockito.doReturn(ONE_MB).when(spiedConfig).getReadBufferSize();
+    Mockito.doReturn(ONE_MB).when(spiedConfig).getReadAheadBlockSize();
+    Mockito.doReturn(spiedClient).when(spiedStore).getClient();
+    Mockito.doReturn(spiedStore).when(spiedFs).getAbfsStore();
+    Mockito.doReturn(spiedConfig).when(spiedStore).getAbfsConfiguration();
+
+    int fileSize = 3 * ONE_MB; // To make sure multiple blocks are read.
+    int totalReadCalls = 3;
+    Mockito.doReturn(3).when(spiedConfig).getReadAheadQueueDepth();
+    Mockito.doReturn(FS_OPTION_OPENFILE_READ_POLICY_SEQUENTIAL).when(spiedConfig).getAbfsReadPolicy();
+    testReadTypeInTracingContextHeaderInternal(spiedFs, fileSize, PREFETCH_READ, 3, totalReadCalls);
+  }
+
+  @Test
+  public void testRandomInputStreamDoesNotQueuePrefetches() throws Exception {
+    AzureBlobFileSystem spiedFs = Mockito.spy(getFileSystem());
+    AzureBlobFileSystemStore spiedStore = Mockito.spy(spiedFs.getAbfsStore());
+    AbfsConfiguration spiedConfig = Mockito.spy(spiedStore.getAbfsConfiguration());
+    AbfsClient spiedClient = Mockito.spy(spiedStore.getClient());
+    Mockito.doReturn(ONE_MB).when(spiedConfig).getReadBufferSize();
+    Mockito.doReturn(ONE_MB).when(spiedConfig).getReadAheadBlockSize();
+    Mockito.doReturn(spiedClient).when(spiedStore).getClient();
+    Mockito.doReturn(spiedStore).when(spiedFs).getAbfsStore();
+    Mockito.doReturn(spiedConfig).when(spiedStore).getAbfsConfiguration();
+
+    int fileSize = 3 * ONE_MB; // To make sure multiple blocks are read.
+    int totalReadCalls = 3;
+    Mockito.doReturn(3).when(spiedConfig).getReadAheadQueueDepth();
+    Mockito.doReturn(FS_OPTION_OPENFILE_READ_POLICY_PARQUET).when(spiedConfig).getAbfsReadPolicy();
+    testReadTypeInTracingContextHeaderInternal(spiedFs, fileSize, RANDOM_READ, 3, totalReadCalls);
+  }
+
+  @Test
+  public void testAdaptiveInputStream() throws Exception {
+    AzureBlobFileSystem spiedFs = Mockito.spy(getFileSystem());
+    AzureBlobFileSystemStore spiedStore = Mockito.spy(spiedFs.getAbfsStore());
+    AbfsConfiguration spiedConfig = Mockito.spy(spiedStore.getAbfsConfiguration());
+    AbfsClient spiedClient = Mockito.spy(spiedStore.getClient());
+    Mockito.doReturn(ONE_MB).when(spiedConfig).getReadBufferSize();
+    Mockito.doReturn(ONE_MB).when(spiedConfig).getReadAheadBlockSize();
+    Mockito.doReturn(ONE_KB).when(spiedConfig).getReadAheadRange();
+    Mockito.doReturn(FS_OPTION_OPENFILE_READ_POLICY_ADAPTIVE).when(spiedConfig).getAbfsReadPolicy();
+    Mockito.doReturn(spiedClient).when(spiedStore).getClient();
+    Mockito.doReturn(spiedStore).when(spiedFs).getAbfsStore();
+    Mockito.doReturn(spiedConfig).when(spiedStore).getAbfsConfiguration();
+
+    int fileSize = 10 * ONE_MB;
+    Path testPath = createTestFile(spiedFs, fileSize);
+
+    try (FSDataInputStream iStream = spiedFs.open(testPath)) {
+      assertThat(iStream.getWrappedStream()).isInstanceOf(AbfsAdaptiveInputStream.class);
+
+      // In order reads trigger prefetches in adaptive stream
+      int bytesRead = iStream.read(new byte[2 * ONE_MB], 0, 2 * ONE_MB);
+      assertReadTypeInClientRequestId(spiedFs, 3, 3, PREFETCH_READ);
+      assertThat(bytesRead).isEqualTo(2 * ONE_MB);
+
+      // Out of order seek causes random read
+      iStream.seek(7 * ONE_MB);
+      bytesRead = iStream.read(new byte[ONE_MB/2], 0, ONE_MB/2);
+      assertReadTypeInClientRequestId(spiedFs, 1, 4, RANDOM_READ);
+    }
   }
 
   /*
@@ -1005,8 +1119,15 @@ public class TestAbfsInputStream extends
     return testPath;
   }
 
-  private void readFile(AzureBlobFileSystem fs, Path testPath, int fileSize) throws Exception {
+  private void readFile(AzureBlobFileSystem fs, Path testPath, int fileSize, ReadType readType) throws Exception {
     try (FSDataInputStream iStream = fs.open(testPath)) {
+      if (readType == PREFETCH_READ || readType == MISSEDCACHE_READ) {
+        assertThat(iStream.getWrappedStream()).isInstanceOf(AbfsPrefetchInputStream.class);
+      } else if (readType == NORMAL_READ) {
+        assertThat(iStream.getWrappedStream()).isInstanceOf(AbfsAdaptiveInputStream.class);
+      } else if (readType == RANDOM_READ) {
+        assertThat(iStream.getWrappedStream()).isInstanceOf(AbfsRandomInputStream.class);
+      }
       int bytesRead = iStream.read(new byte[fileSize], 0,
           fileSize);
       assertThat(fileSize)
@@ -1071,8 +1192,14 @@ public class TestAbfsInputStream extends
     }
     assertThat(idList[OPERATION_INDEX]).describedAs("Operation Type Should Be Read")
         .isEqualTo(FSOperationType.READ.toString());
-    assertThat(idList[READTYPE_INDEX]).describedAs("Read type in tracing context header should match")
-        .isEqualTo(readType.toString());
+    if (readType == PREFETCH_READ) {
+      // For prefetch read, it might be missed cache as well.
+      assertThat(idList[READTYPE_INDEX]).describedAs("Read type in tracing context header should match")
+          .isIn(PREFETCH_READ.toString(), MISSEDCACHE_READ.toString());
+    } else {
+      assertThat(idList[READTYPE_INDEX]).describedAs("Read type in tracing context header should match")
+              .isEqualTo(readType.toString());
+    }
   }
 
 

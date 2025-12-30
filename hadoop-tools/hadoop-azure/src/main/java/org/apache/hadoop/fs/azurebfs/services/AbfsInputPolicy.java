@@ -22,7 +22,6 @@ import java.util.Locale;
 
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_ADAPTIVE;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_COLUMNAR;
-import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_HBASE;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_ORC;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_PARQUET;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_RANDOM;
@@ -46,15 +45,10 @@ public enum AbfsInputPolicy {
     return policy;
   }
 
-  String getPolicy() {
-    return policy;
-  }
-
   public static AbfsInputPolicy getPolicy(String name) {
     String trimmed = name.trim().toLowerCase(Locale.ENGLISH);
     switch (trimmed) {
     // all these options currently map to random IO.
-    case FS_OPTION_OPENFILE_READ_POLICY_HBASE:
     case FS_OPTION_OPENFILE_READ_POLICY_RANDOM:
     case FS_OPTION_OPENFILE_READ_POLICY_COLUMNAR:
     case FS_OPTION_OPENFILE_READ_POLICY_ORC:
