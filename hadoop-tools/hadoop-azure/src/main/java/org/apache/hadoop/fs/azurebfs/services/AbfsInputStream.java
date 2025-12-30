@@ -253,9 +253,80 @@ public abstract class AbfsInputStream extends FSInputStream implements CanUnbuff
   }
 
   @Override
-  public abstract int read(final byte[] b, final int off, final int len) throws IOException;
+  public synchronized int read(final byte[] b, final int off, final int len) throws IOException {
+    // check if buffer is null before logging the length
+    if (b != null) {
+      LOG.debug("read requested b.length = {} offset = {} len = {}", b.length,
+              off, len);
+    } else {
+      LOG.debug("read requested b = null offset = {} len = {}", off, len);
+    }
+
+    int currentOff = off;
+    int currentLen = len;
+    int lastReadBytes;
+    int totalReadBytes = 0;
+    if (streamStatistics != null) {
+      streamStatistics.readOperationStarted();
+    }
+    incrementReadOps();
+    do {
+
+      // limit is the maximum amount of data present in buffer.
+      // fCursor is the current file pointer. Thus maximum we can
+      // go back and read from buffer is fCursor - limit.
+      // There maybe case that we read less than requested data.
+      long filePosAtStartOfBuffer = fCursor - limit;
+      if (abfsReadFooterMetrics != null) {
+        abfsReadFooterMetrics.updateReadMetrics(filePathIdentifier, len, contentLength, nextReadPos);
+      }
+      if (nextReadPos >= filePosAtStartOfBuffer && nextReadPos <= fCursor) {
+        // Determining position in buffer from where data is to be read.
+        bCursor = (int) (nextReadPos - filePosAtStartOfBuffer);
+
+        // When bCursor == limit, buffer will be filled again.
+        // So in this case we are not actually reading from buffer.
+        if (bCursor != limit && streamStatistics != null) {
+          streamStatistics.seekInBuffer();
+        }
+      } else {
+        // Clearing the buffer and setting the file pointer
+        // based on previous seek() call.
+        fCursor = nextReadPos;
+        limit = 0;
+        bCursor = 0;
+      }
+      if (shouldReadFully()) {
+        lastReadBytes = readFileCompletely(b, currentOff, currentLen);
+      } else if (shouldReadLastBlock()) {
+        lastReadBytes = readLastBlock(b, currentOff, currentLen);
+      } else {
+        lastReadBytes = readOneBlock(b, currentOff, currentLen);
+      }
+      if (lastReadBytes > 0) {
+        currentOff += lastReadBytes;
+        currentLen -= lastReadBytes;
+        totalReadBytes += lastReadBytes;
+      }
+      if (currentLen <= 0 || currentLen > b.length - currentOff) {
+        break;
+      }
+    } while (lastReadBytes > 0);
+    return totalReadBytes > 0 ? totalReadBytes : lastReadBytes;
+  }
 
   protected abstract int readOneBlock(final byte[] b, final int off, final int len) throws IOException;
+
+  private boolean shouldReadFully() {
+    return this.firstRead && this.context.readSmallFilesCompletely()
+            && this.contentLength <= this.bufferSize;
+  }
+
+  private boolean shouldReadLastBlock() {
+    long footerStart = max(0, this.contentLength - FOOTER_SIZE);
+    return this.firstRead && this.context.optimizeFooterRead()
+            && this.fCursor >= footerStart;
+  }
 
   protected int readFileCompletely(final byte[] b, final int off, final int len)
       throws IOException {

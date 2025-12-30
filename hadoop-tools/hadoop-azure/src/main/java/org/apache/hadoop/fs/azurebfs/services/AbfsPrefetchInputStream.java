@@ -21,14 +21,13 @@ package org.apache.hadoop.fs.azurebfs.services;
 import java.io.IOException;
 
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.azurebfs.constants.ReadType;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
 import static java.lang.Math.max;
 
-public class AbfsAdaptiveInputStream extends AbfsInputStream {
+public class AbfsPrefetchInputStream extends AbfsInputStream {
 
-  public AbfsAdaptiveInputStream(
+  public AbfsPrefetchInputStream(
       final AbfsClient client,
       final FileSystem.Statistics statistics,
       final String path,
@@ -37,7 +36,7 @@ public class AbfsAdaptiveInputStream extends AbfsInputStream {
       final String eTag,
       TracingContext tracingContext) {
     super(client, statistics, path, contentLength,
-        abfsInputStreamContext, eTag, tracingContext);
+            abfsInputStreamContext, eTag, tracingContext);
   }
 
   @Override
@@ -55,7 +54,6 @@ public class AbfsAdaptiveInputStream extends AbfsInputStream {
   public synchronized int read(final byte[] b, final int off, final int len) throws IOException {
     return super.read(b, off, len);
   }
-
 
   @Override
   protected int readOneBlock(final byte[] b, final int off, final int len) throws IOException {
@@ -81,25 +79,11 @@ public class AbfsAdaptiveInputStream extends AbfsInputStream {
         buffer = new byte[bufferSize];
       }
 
-      // Reset Read Type back to normal and set again based on code flow.
-      tracingContext.setReadType(ReadType.NORMAL_READ);
-      if (alwaysReadBufferSize) {
-        bytesRead = readInternal(fCursor, buffer, 0, bufferSize, false);
-      } else {
-        // Enable readAhead when reading sequentially
-        if (-1 == fCursorAfterLastRead || fCursorAfterLastRead == fCursor || b.length >= bufferSize) {
-          LOG.debug("Sequential read with read ahead size of {}", bufferSize);
-          bytesRead = readInternal(fCursor, buffer, 0, bufferSize, false);
-        } else {
-          /*
-           * Disable queuing prefetches when random read pattern detected.
-           * Instead, read ahead only for readAheadRange above what is asked by caller.
-           */
-          int lengthWithReadAhead = Math.min(b.length + readAheadRange, bufferSize);
-          LOG.debug("Random read with read ahead size of {}", lengthWithReadAhead);
-          bytesRead = readInternal(fCursor, buffer, 0, lengthWithReadAhead, true);
-        }
-      }
+      /*
+       * Always start with Prefetch even from first read.
+       * Even if out of order seek comes, prefetches will be triggered for next set of blocks.
+       */
+      bytesRead = readInternal(fCursor, buffer, 0, bufferSize, false);
       if (firstRead) {
         firstRead = false;
       }
