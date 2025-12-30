@@ -1373,7 +1373,7 @@ public abstract class AbfsClient implements Closeable {
     // Add a unique identifier in FNS-Blob user agent string
     // Current filesystem init restricts HNS-Blob combination
     // so namespace check not required.
-    if (abfsConfiguration.getFsConfiguredServiceType() == BLOB) {
+    if (abfsConfiguration.getFsConfiguredServiceTypeFromURL() == BLOB) {
       sb.append(SEMICOLON)
           .append(SINGLE_WHITE_SPACE)
           .append(FNS_BLOB_USER_AGENT_IDENTIFIER);

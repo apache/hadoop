@@ -1558,7 +1558,7 @@ public class AzureBlobFileSystem extends FileSystem
     return true;
   }
 
-  private void createFileSystem(TracingContext tracingContext) throws IOException {
+  void createFileSystem(TracingContext tracingContext) throws IOException {
     LOG.debug(
         "AzureBlobFileSystem.createFileSystem uri: {}", uri);
     try {
@@ -1828,6 +1828,16 @@ public class AzureBlobFileSystem extends FileSystem
     return clientCorrelationId;
   }
 
+  TracingContext initFSTracingContext;
+
+  // Package-private getter for test access to the tracing header
+  String getInitFSTracingHeader() {
+    if (initFSTracingContext != null) {
+      return initFSTracingContext.getHeader();
+    }
+    return null;
+  }
+
   @Override
   public boolean hasPathCapability(final Path path, final String capability)
       throws IOException {
@@ -1870,4 +1880,3 @@ public class AzureBlobFileSystem extends FileSystem
     return abfsCounters != null ? abfsCounters.getIOStatistics() : null;
   }
 }
-

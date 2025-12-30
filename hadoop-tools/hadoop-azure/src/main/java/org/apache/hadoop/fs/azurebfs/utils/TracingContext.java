@@ -354,6 +354,9 @@ public class TracingContext {
   public String getIngressHandler() {
     return ingressHandler;
   }
+  public boolean getFNSEndptConvertedIndicator() {
+    return FNSEndpointConverted;
+  }
 
   /**
    * Gets the position.

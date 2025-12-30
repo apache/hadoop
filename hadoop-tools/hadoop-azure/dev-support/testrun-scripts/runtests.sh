@@ -157,7 +157,7 @@ done
 
 echo ' '
 echo 'Set the active test combination to run the action:'
-select combo in HNS-OAuth-DFS HNS-SharedKey-DFS NonHNS-SharedKey-DFS AppendBlob-HNS-OAuth-DFS NonHNS-SharedKey-Blob NonHNS-OAuth-DFS NonHNS-OAuth-Blob AppendBlob-NonHNS-OAuth-Blob HNS-Oauth-DFS-IngressBlob NonHNS-Oauth-DFS-IngressBlob AllCombinationsTestRun Quit
+select combo in HNS-OAuth-DFS HNS-SharedKey-DFS AppendBlob-HNS-OAuth-DFS NonHNS-SharedKey-Blob NonHNS-OAuth-Blob AppendBlob-NonHNS-OAuth-Blob HNS-Oauth-DFS-IngressBlob AllCombinationsTestRun Quit
 do
    case $combo in
       HNS-OAuth-DFS)

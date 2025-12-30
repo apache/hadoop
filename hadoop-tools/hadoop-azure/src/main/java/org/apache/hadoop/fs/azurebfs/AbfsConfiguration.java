@@ -752,6 +752,10 @@ public class AbfsConfiguration{
     return getCaseInsensitiveEnum(FS_AZURE_FNS_ACCOUNT_SERVICE_TYPE, fsConfiguredServiceType);
   }
 
+  public AbfsServiceType getFsConfiguredServiceTypeFromURL() {
+    return fsConfiguredServiceType;
+  }
+
   /**
    * Returns the service type configured for FNS Accounts to override the
    * service type identified by URL used to initialize the filesystem.
