@@ -40,22 +40,6 @@ public class AbfsPrefetchInputStream extends AbfsInputStream {
   }
 
   @Override
-  public int read(long position, byte[] buffer, int offset, int length)
-      throws IOException {
-    return super.read(position, buffer, offset, length);
-  }
-
-  @Override
-  public int read() throws IOException {
-    return super.read();
-  }
-
-  @Override
-  public synchronized int read(final byte[] b, final int off, final int len) throws IOException {
-    return super.read(b, off, len);
-  }
-
-  @Override
   protected int readOneBlock(final byte[] b, final int off, final int len) throws IOException {
     if (len == 0) {
       return 0;

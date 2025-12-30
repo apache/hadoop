@@ -21,16 +21,12 @@ package org.apache.hadoop.fs.azurebfs.services;
 import java.util.Locale;
 
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_ADAPTIVE;
-import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_AVRO;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_COLUMNAR;
-import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_CSV;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_HBASE;
-import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_JSON;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_ORC;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_PARQUET;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_RANDOM;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_SEQUENTIAL;
-import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_VECTOR;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_WHOLE_FILE;
 
 public enum AbfsInputPolicy {
@@ -66,12 +62,12 @@ public enum AbfsInputPolicy {
       return RANDOM;
 
     // handle the sequential formats.
-    case FS_OPTION_OPENFILE_READ_POLICY_AVRO:
-    case FS_OPTION_OPENFILE_READ_POLICY_CSV:
-    case FS_OPTION_OPENFILE_READ_POLICY_JSON:
     case FS_OPTION_OPENFILE_READ_POLICY_SEQUENTIAL:
     case FS_OPTION_OPENFILE_READ_POLICY_WHOLE_FILE:
       return SEQUENTIAL;
+
+    // Everything else including ABFS Default Policy maps to Adaptive
+    case FS_OPTION_OPENFILE_READ_POLICY_ADAPTIVE:
     default:
       return ADAPTIVE;
     }

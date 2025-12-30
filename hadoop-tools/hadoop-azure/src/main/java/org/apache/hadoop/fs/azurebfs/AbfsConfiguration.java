@@ -656,6 +656,10 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_FS_AZURE_LOWEST_REQUEST_PRIORITY_VALUE)
   private int prefetchRequestPriorityValue;
 
+  @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_READ_POLICY,
+          DefaultValue = DEFAULT_FS_AZURE_READ_POLICY)
+  private String abfsReadPolicy;
+
   private String clientProvidedEncryptionKey;
   private String clientProvidedEncryptionKeySHA;
 
@@ -1379,6 +1383,10 @@ public class AbfsConfiguration{
 
   public String getPrefetchRequestPriorityValue() {
     return Integer.toString(prefetchRequestPriorityValue);
+  }
+
+  public String getAbfsReadPolicy() {
+    return abfsReadPolicy;
   }
 
   /**
