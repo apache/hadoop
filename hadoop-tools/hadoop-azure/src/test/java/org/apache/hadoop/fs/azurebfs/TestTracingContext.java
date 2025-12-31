@@ -21,7 +21,6 @@ package org.apache.hadoop.fs.azurebfs;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -37,8 +36,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.enums.Trilean;
-import org.apache.hadoop.fs.azurebfs.services.AbfsBlobClient;
-import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
@@ -52,7 +49,6 @@ import org.opentest4j.TestAbortedException;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_HYPHEN;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.COLON;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.DOT;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.SPLIT_NO_LIMIT;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_CLIENT_CORRELATIONID;
@@ -352,51 +348,5 @@ public class TestTracingContext extends AbstractAbfsIntegrationTest {
       Assertions.assertThat(previousReqContext.split("_")).describedAs(
           "Only Retry Count should be present").hasSize(1);
     }
-  }
-
-  @Test
-  public void testFNSEndptConversionIndicator() throws Exception {
-    assumeHnsDisabled();
-    String scheme = "abfs";
-    String dfsDomain = "dfs.core.windows.net";
-    String accountNameNoDns = getAccountName().substring(0,
-        getAccountName().indexOf(DOT));
-
-    // Initialize filesystem with DFS endpoint
-    String dfsUri = String.format("%s://%s@%s.%s/", scheme, getFileSystemName(),
-        accountNameNoDns, dfsDomain);
-
-    AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(
-        new java.net.URI(dfsUri), getRawConfiguration());
-
-    // Filesystem initialization should have forced to use Blob instance for FNS-DFS
-    AbfsClient abfsClient = fs.getAbfsStore().getClient();
-    Assertions.assertThat(abfsClient)
-        .as("abfsClient should be instance of AbfsBlobClient")
-        .isInstanceOf(AbfsBlobClient.class);
-
-    TracingContext tracingContext
-        = getTracingContext(fs);
-    tracingContext.setFNSEndpointConverted();
-    AbfsHttpOperation abfsHttpOperation = Mockito.mock(AbfsHttpOperation.class);
-    tracingContext.constructHeader(abfsHttpOperation, null,
-        EXPONENTIAL_RETRY_POLICY_ABBREVIATION);
-    String endpointConversionIndicator = tracingContext.getHeader().split(COLON, SPLIT_NO_LIMIT)[15];
-    Assertions.assertThat(endpointConversionIndicator)
-        .describedAs("Endpoint conversion indicator should be present")
-        .isNotEmpty();
-  }
-
-  private static TracingContext getTracingContext(final AzureBlobFileSystem fs) {
-    final String fileSystemId = fs.getFileSystemId();
-    final String clientCorrelationId = fs.getClientCorrelationId();
-    final TracingHeaderFormat tracingHeaderFormat
-        = TracingHeaderFormat.ALL_ID_FORMAT;
-    return new TracingContext(clientCorrelationId,
-        fileSystemId, FSOperationType.TEST_OP, tracingHeaderFormat,
-        new TracingHeaderValidator(
-            fs.getAbfsStore().getAbfsConfiguration().getClientCorrelationId(),
-            fs.getFileSystemId(), FSOperationType.TEST_OP, false,
-            0));
   }
 }

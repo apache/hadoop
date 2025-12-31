@@ -843,19 +843,25 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
     String scheme = "abfs";
     String dfsDomain = "dfs.core.windows.net";
     String blobDomain = "blob.core.windows.net";
-    String accountNameNoDns = getAccountName().substring(0,
-        getAccountName().indexOf(DOT));
+    Configuration conf = new Configuration(getRawConfiguration());
+    conf.setBoolean(AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION, true);
+
+    String dfsUri = String.format("%s://%s@%s.%s/",
+            scheme, getFileSystemName(),
+            getAccountName().substring(0, getAccountName().indexOf(DOT)),
+            dfsDomain);
 
     // Initialize filesystem with DFS endpoint
-    String dfsUri = String.format("%s://%s@%s.%s/", scheme, getFileSystemName(),
-        accountNameNoDns, dfsDomain);
     AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(
-        new java.net.URI(dfsUri), getRawConfiguration());
+        new URI(dfsUri), conf);
 
     // Filesystem initialization should have forced to use Blob instance for FNS-DFS
-    URL blobClientUrl = fs.getAbfsStore().getClient().getBaseUrl();
-    Assertions.assertThat(blobClientUrl.toString())
-        .contains(blobDomain);
+    AbfsClient abfsClient = fs.getAbfsStore().getClient();
+    Assertions.assertThat(abfsClient)
+            .as("abfsClient should be instance of AbfsBlobClient")
+            .isInstanceOf(AbfsBlobClient.class);
+    Assertions.assertThat(abfsClient.getBaseUrl().toString())
+            .contains(blobDomain);
   }
 
   @Test

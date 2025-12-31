@@ -752,6 +752,11 @@ public class AbfsConfiguration{
     return getCaseInsensitiveEnum(FS_AZURE_FNS_ACCOUNT_SERVICE_TYPE, fsConfiguredServiceType);
   }
 
+  /**
+   * Returns the service type identified from the URL used to initialize the FileSystem.
+   *
+   * @return the configured AbfsServiceType from the URL
+   */
   public AbfsServiceType getFsConfiguredServiceTypeFromURL() {
     return fsConfiguredServiceType;
   }
@@ -1803,6 +1808,10 @@ public class AbfsConfiguration{
     this.enabledReadAhead = enabledReadAhead;
   }
 
+  /**
+   * Sets the configured service type to BLOB.
+   * Majorly required to correctly set user agent for FNS-Blob
+   */
   void setFsConfiguredServiceTypetoBlob() {
     this.fsConfiguredServiceType = AbfsServiceType.BLOB;
   }

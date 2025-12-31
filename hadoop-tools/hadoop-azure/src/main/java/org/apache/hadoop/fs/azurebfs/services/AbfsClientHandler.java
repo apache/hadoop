@@ -100,6 +100,11 @@ public class AbfsClientHandler implements Closeable {
     this.defaultServiceType = defaultServiceType;
   }
 
+  /**
+   * Sets the ingress service type.
+   *
+   * @param ingressServiceType the ingress service type
+   */
   public void setIngressServiceType(AbfsServiceType ingressServiceType) {
     this.ingressServiceType = ingressServiceType;
   }

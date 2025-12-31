@@ -1558,7 +1558,7 @@ public class AzureBlobFileSystem extends FileSystem
     return true;
   }
 
-  void createFileSystem(TracingContext tracingContext) throws IOException {
+  private void createFileSystem(TracingContext tracingContext) throws IOException {
     LOG.debug(
         "AzureBlobFileSystem.createFileSystem uri: {}", uri);
     try {
@@ -1826,16 +1826,6 @@ public class AzureBlobFileSystem extends FileSystem
   @VisibleForTesting
   String getClientCorrelationId() {
     return clientCorrelationId;
-  }
-
-  TracingContext initFSTracingContext;
-
-  // Package-private getter for test access to the tracing header
-  String getInitFSTracingHeader() {
-    if (initFSTracingContext != null) {
-      return initFSTracingContext.getHeader();
-    }
-    return null;
   }
 
   @Override

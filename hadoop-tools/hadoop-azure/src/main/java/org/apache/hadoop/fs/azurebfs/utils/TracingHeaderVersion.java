@@ -44,8 +44,8 @@ public enum TracingHeaderVersion {
    * This version is used for the current tracing header schema.
    * Schema: version:clientCorrelationId:clientRequestId:fileSystemId
    *         :primaryRequestId:streamId:opType:retryHeader:ingressHandler
-   *         :FNSEndptConvertedIndicator:position:operatedBlobCount:operationSpecificHeader
-   *         :httpOperationHeader:aggregatedMetrics:resourceUtilizationMetrics
+   *         :position:operatedBlobCount:operationSpecificHeader:httpOperationHeader
+   *         :aggregatedMetrics:resourceUtilizationMetrics:fnsEndptConvertedIndicator
    */
   V2("v2", 16);
 

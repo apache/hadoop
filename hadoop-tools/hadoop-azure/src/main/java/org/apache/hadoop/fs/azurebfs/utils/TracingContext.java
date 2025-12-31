@@ -67,8 +67,8 @@ public class TracingContext {
   //final concatenated ID list set into x-ms-client-request-id header
   private String header = EMPTY_STRING;
   private String ingressHandler = EMPTY_STRING;
-  private Boolean FNSEndpointConverted = false;
-  private String FNSEndptConvertedIndicator = "T";
+  private Boolean fnsEndpointConverted = false;
+  private String fnsEndptConvertedIndicator = "T";
   private String position = EMPTY_STRING; // position of read/write in remote file
   private String metricResults = EMPTY_STRING;
   private ReadType readType = ReadType.UNKNOWN_READ;
@@ -150,7 +150,7 @@ public class TracingContext {
     this.format = originalTracingContext.format;
     this.position = originalTracingContext.getPosition();
     this.ingressHandler = originalTracingContext.getIngressHandler();
-    this.FNSEndpointConverted = originalTracingContext.FNSEndpointConverted;
+    this.fnsEndpointConverted = originalTracingContext.fnsEndpointConverted;
     this.operatedBlobCount = originalTracingContext.operatedBlobCount;
     if (originalTracingContext.listener != null) {
       this.listener = originalTracingContext.listener.getClone();
@@ -215,6 +215,7 @@ public class TracingContext {
    *   <li>operatedBlobCount - number of blobs operated on by this request</li>
    *   <li>operationSpecificHeader - different operation types can publish info relevant to that operation</li>
    *   <li>httpOperationHeader - suffix for network library used</li>
+   *   <li>fnsEndpointConverted - if endpoint was converted to Blob for FNS accounts</li>
    * </ul>
    * @param httpOperation AbfsHttpOperation instance to set header into
    *                      connection
@@ -241,8 +242,7 @@ public class TracingContext {
           + getOperationSpecificHeader(opType) + COLON
           + httpOperation.getTracingContextSuffix() + COLON
           + metricResults + COLON + resourceUtilizationMetricResults + COLON
-          + (FNSEndpointConverted ? FNSEndptConvertedIndicator : EMPTY_STRING);
-      System.out.println(header);
+          + (fnsEndpointConverted ? fnsEndptConvertedIndicator : EMPTY_STRING);
       break;
     case TWO_ID_FORMAT:
       header = TracingHeaderVersion.getCurrentVersion() + COLON
@@ -354,9 +354,6 @@ public class TracingContext {
   public String getIngressHandler() {
     return ingressHandler;
   }
-  public boolean getFNSEndptConvertedIndicator() {
-    return FNSEndpointConverted;
-  }
 
   /**
    * Gets the position.
@@ -379,8 +376,12 @@ public class TracingContext {
     }
   }
 
+/**
+   * Marks that the endpoint was force converted to Blob for FNS account
+   * Sets the fnsEndpointConverted flag to true and notifies the listener if present.
+   */
   public void setFNSEndpointConverted() {
-    this.FNSEndpointConverted = true;
+    this.fnsEndpointConverted = true;
     if (listener != null) {
       listener.updateFNSEndpointConverted();
     }

@@ -20,14 +20,12 @@ package org.apache.hadoop.fs.azurebfs;
 
 import java.io.FileNotFoundException;
 import java.net.URI;
-import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
-import org.apache.hadoop.fs.azurebfs.security.ContextEncryptionAdapter;
 import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -72,7 +70,7 @@ public class ITestAzureBlobFileSystemInitAndCreate extends
   @BeforeEach
   @Override
   public void setup() throws Exception {
-    //super.setup();
+    super.setup();
   }
 
   @AfterEach
@@ -167,16 +165,27 @@ public class ITestAzureBlobFileSystemInitAndCreate extends
             mockedFs.initialize(fs.getUri(), getRawConfiguration()));
   }
 
+  /**
+   * Test to verify that the fnsEndptConvertedIndicator ("T") is present in the tracing header
+   * after endpoint conversion during AzureBlobFileSystem initialization.
+   *
+   * @throws Exception if any error occurs during the test
+   */
   @Test
-  public void testFNSEndptConvertedIndicatorInHeaderAfterInitialize() throws Exception {
+  public void testFNSEndptConvertedIndicatorInHeader() throws Exception {
+    assumeHnsDisabled();
+    String scheme = "abfs";
+    String dfsDomain = "dfs.core.windows.net";
+    String endptConversionIndicatorInTc = "T";
     Configuration conf = new Configuration(getRawConfiguration());
     conf.setBoolean(AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION, true);
 
     String dfsUri = String.format("%s://%s@%s.%s/",
-            "abfs", getFileSystemName(),
-            getAccountName().substring(0, getAccountName().indexOf('.')),
-            "dfs.core.windows.net");
+            scheme, getFileSystemName(),
+            getAccountName().substring(0, getAccountName().indexOf(DOT)),
+            dfsDomain);
 
+    // Initialize filesystem with DFS endpoint
     AzureBlobFileSystem fs =
             (AzureBlobFileSystem) FileSystem.newInstance(new URI(dfsUri), conf);
 
@@ -187,140 +196,21 @@ public class ITestAzureBlobFileSystemInitAndCreate extends
     Mockito.doReturn(spiedStore).when(spiedFs).getAbfsStore();
     Mockito.doReturn(spiedClient).when(spiedStore).getClient();
 
-// re-init the FS so the spy wiring is used
+    // re-init the FS so the spy wiring is used
     spiedFs.initialize(fs.getUri(), conf);
-
-// ---- Capturing the TracingContext ----
     ArgumentCaptor<TracingContext> ctxCaptor = ArgumentCaptor.forClass(TracingContext.class);
-
-// Trigger the flow
-    //spiedFs.listStatus(new Path("/")); // or whatever causes createFilesystem() internally
-
-// Verify & capture
     verify(spiedClient, atLeastOnce())
             .getFilesystemProperties(ctxCaptor.capture());
 
-// Extract captured value
     TracingContext captured = ctxCaptor.getValue();
-    System.out.print(captured.getFNSEndptConvertedIndicator());
 
     AbfsHttpOperation abfsHttpOperation = Mockito.mock(AbfsHttpOperation.class);
     captured.constructHeader(abfsHttpOperation, null,
             EXPONENTIAL_RETRY_POLICY_ABBREVIATION);
+
+    // The tracing context being used FS Initialization should have the endpoint conversion indicator set to 'T'
     String endpointConversionIndicator = captured.getHeader().split(COLON, SPLIT_NO_LIMIT)[15];
-    System.out.print("hellooo"+captured.getHeader());
-    org.assertj.core.api.Assertions.assertThat(endpointConversionIndicator)
-            .describedAs("Endpoint conversion indicator should be present")
-            .isNotEmpty();
-
-//    List<TracingContext> tracingContextList = ctxCaptor.getAllValues();
-//
-//      for (TracingContext tracingContext : tracingContextList) {
-//          System.out.println(tracingContext);
-//      }
-//    System.out.println("Captured context: " + captured.getHeader());
-
+    Assertions.assertFalse(endpointConversionIndicator.isEmpty(), "Endpoint conversion indicator should be present");
+    Assertions.assertEquals(endptConversionIndicatorInTc, endpointConversionIndicator, "Endpoint conversion indicator should be 'T'");
   }
-
-
-  /**
-   * Test that FNSEndptConvertedIndicator ("T") is added to the header after endpoint conversion in initialize().
-   */
-//  @Test
-//  public void testFNSEndptConvertedIndicatorInHeaderAfterInitialize() throws Exception {
-//      String scheme = "abfs";
-//      String dfsDomain = "dfs.core.windows.net";
-//      String accountNameNoDns = getAccountName().substring(0, getAccountName().indexOf('.'));
-//
-//      Configuration conf = new Configuration(getRawConfiguration());
-//      conf.setBoolean(AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION, true);
-//
-//      String dfsUri = String.format("%s://%s@%s.%s/",
-//              scheme, getFileSystemName(), accountNameNoDns, dfsDomain);
-//
-//      AzureBlobFileSystem fs = (AzureBlobFileSystem)
-//              FileSystem.newInstance(new URI(dfsUri), conf);
-//
-//    AzureBlobFileSystem spiedFs = Mockito.spy(fs);
-//    AzureBlobFileSystemStore spiedStore = Mockito.spy(spiedFs.getAbfsStore());
-//    AbfsClient spiedClient = Mockito.spy(spiedStore.getClient());
-//    Mockito.doReturn(spiedClient).when(spiedStore).getClient();
-//    Mockito.doReturn(spiedStore).when(spiedFs).getAbfsStore();
-//
-//    // Spy FS so private/inner transitions are preserved
-//   // AzureBlobFileSystem fs = Mockito.spy(realFs);
-//
-//// Create a mock store and inject it
-////    AzureBlobFileSystemStore mockStore = Mockito.mock(AzureBlobFileSystemStore.class);
-////    doReturn(mockStore).when(fs).getAbfsStore();
-//
-//      // Initialize (this triggers account check, endpoint reset, and createFileSystem call)
-//    spiedFs.initialize(fs.getUri(), conf);
-//
-//      // Capture the TracingContext passed into createFileSystem
-//    ArgumentCaptor<TracingContext> captor = ArgumentCaptor.forClass(TracingContext.class);
-//
-//// Now call initialize (this triggers the conversion + createFileSystem)
-//
-//// Verify and capture
-////    verify(fs, times(2))
-////            .createFileSystem(captor.capture());
-////
-////    TracingContext ctx = captor.getValue();
-////    System.out.println("hiii"+ctx);
-////    Assertions.assertNotNull(ctx, "Expected a TracingContext passed into createFileSystem");
-////
-////// Now! the header exists
-////    String header = ctx.getHeader();
-////    System.out.println("hiiiiiiiii"+header);
-//
-////    ArgumentCaptor<TracingContext> captor9 = ArgumentCaptor.forClass(TracingContext.class);
-////
-////    verify(spiedFs.getAbfsStore().getClient(), times(1)).createFilesystem(captor9.capture());
-//
-//    TracingContext[] capturedContext = new TracingContext[1];
-//    doAnswer(invocation -> {
-//      capturedContext[0] = invocation.getArgument(0);
-//      return null; // or appropriate return value
-//    }).when(spiedFs.getAbfsStore().getClient()).createFilesystem(any(TracingContext.class));
-//
-////    List<TracingContext> tracingContextList = captor9.getAllValues();
-////    System.out.println(tracingContextList);
-//
-////    Assertions.assertNotNull(header, "Tracing header should be generated");
-////    Assertions.assertTrue(header.endsWith("T"),
-////            "Expected FNSEndptConvertedIndicator 'T' at the end of the header, got: " + header);
-////
-////    System.out.println("Captured Header: " + header);
-//
-//
-//
-////    String scheme = "abfs";
-////    String dfsDomain = "dfs.core.windows.net";
-////    String accountNameNoDns = getAccountName().substring(0,
-////            getAccountName().indexOf("."));
-////    Configuration conf = new Configuration(getRawConfiguration());
-////    conf.setBoolean(AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION, true);
-////
-////    String dfsUri = String.format("%s://%s@%s.%s/", scheme, getFileSystemName(),
-////            accountNameNoDns, dfsDomain);
-////
-////    AzureBlobFileSystem fs = (AzureBlobFileSystem)
-////            FileSystem.newInstance(new URI(dfsUri), conf);
-////
-////    // triggers endpoint conversion but NO header yet
-////    fs.initialize(fs.getUri(), conf);
-////
-////    // FORCE an operation to cause constructHeader() execution
-////    fs.create(new Path("/testHeaderTrigger"));
-////
-////    // Now the tracing header is actually created
-////    String header = fs.getInitFSTracingHeader();
-////    System.out.println("Header = " + header);
-////
-////    Assertions.assertNotNull(header, "Tracing header should be available after actual request");
-////    Assertions.assertTrue(header.endsWith("T"),
-////            "Tracing header should end with 'T' for FNSEndptConvertedIndicator, but was: " + header);
-//  }
-
 }

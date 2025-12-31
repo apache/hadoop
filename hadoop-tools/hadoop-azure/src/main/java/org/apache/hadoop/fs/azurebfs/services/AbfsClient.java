@@ -1324,7 +1324,7 @@ public abstract class AbfsClient implements Closeable {
 
   @VisibleForTesting
   String initializeUserAgent(final AbfsConfiguration abfsConfiguration,
-      final String sslProviderName) throws TrileanConversionException {
+      final String sslProviderName) {
 
     StringBuilder sb = new StringBuilder();
 
@@ -1373,6 +1373,7 @@ public abstract class AbfsClient implements Closeable {
     // Add a unique identifier in FNS-Blob user agent string
     // Current filesystem init restricts HNS-Blob combination
     // so namespace check not required.
+    // We need to rely on URL check to identify Blob service instead of user config
     if (abfsConfiguration.getFsConfiguredServiceTypeFromURL() == BLOB) {
       sb.append(SEMICOLON)
           .append(SINGLE_WHITE_SPACE)
