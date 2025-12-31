@@ -102,31 +102,28 @@ public class DFSTopologyNodeImpl extends InnerNodeImpl {
   }
 
   public int getSubtreeStorageCount(StorageType type) {
-    if (storageTypeCounts.containsKey(type)) {
-      return storageTypeCounts.get(type);
-    } else {
-      return 0;
-    }
+    return storageTypeCounts.getOrDefault(type, 0);
   }
 
-  private void incStorageTypeCount(StorageType type) {
+  private void incStorageTypeCount(StorageType type, DatanodeDescriptor dn) {
     // no locking because the caller is synchronized already
-    if (storageTypeCounts.containsKey(type)) {
-      storageTypeCounts.put(type, storageTypeCounts.get(type)+1);
-    } else {
-      storageTypeCounts.put(type, 1);
-    }
+    storageTypeCounts.merge(type, getNodeCount(dn), Integer::sum);
   }
 
-  private void decStorageTypeCount(StorageType type) {
+  private void decStorageTypeCount(StorageType type, DatanodeDescriptor dn) {
     // no locking because the caller is synchronized already
-    int current = storageTypeCounts.get(type);
-    current -= 1;
-    if (current == 0) {
-      storageTypeCounts.remove(type);
-    } else {
-      storageTypeCounts.put(type, current);
-    }
+    storageTypeCounts.compute(type, (k, v) -> {
+      int result = v - getNodeCount(dn);
+      return result > 0 ? result : null;
+    });
+  }
+
+  /**
+   * By default, one datanode is considered as one node.
+   * Subclass can override this method to implement more complex choose logic.
+   */
+  protected int getNodeCount(DatanodeDescriptor dn) {
+    return 1;
   }
 
   /**
@@ -167,9 +164,9 @@ public class DFSTopologyNodeImpl extends InnerNodeImpl {
           // since this is the parent of n, where n is a datanode,
           // the map must have 1 as the value of all keys
           childrenStorageInfo.get(dnDescriptor.getName()).remove(type);
-          decStorageTypeCount(type);
+          decStorageTypeCount(type, dnDescriptor);
           if (parent != null) {
-            parent.childRemoveStorage(getName(), type);
+            parent.childRemoveStorage(getName(), type, dnDescriptor);
           }
         }
       }
@@ -179,9 +176,9 @@ public class DFSTopologyNodeImpl extends InnerNodeImpl {
           // there is a new type in new storage info, add this locally,
           // as well as all ancestors.
           childrenStorageInfo.get(dnDescriptor.getName()).put(type, 1);
-          incStorageTypeCount(type);
+          incStorageTypeCount(type, dnDescriptor);
           if (parent != null) {
-            parent.childAddStorage(getName(), type);
+            parent.childAddStorage(getName(), type, dnDescriptor);
           }
         }
       }
@@ -224,7 +221,7 @@ public class DFSTopologyNodeImpl extends InnerNodeImpl {
       }
       for (StorageType st : dnDescriptor.getStorageTypes()) {
         childrenStorageInfo.get(dnDescriptor.getName()).put(st, 1);
-        incStorageTypeCount(st);
+        incStorageTypeCount(st, dnDescriptor);
       }
       return true;
     } else {
@@ -258,7 +255,7 @@ public class DFSTopologyNodeImpl extends InnerNodeImpl {
           }
         }
         for (StorageType st : dnDescriptor.getStorageTypes()) {
-          incStorageTypeCount(st);
+          incStorageTypeCount(st, dnDescriptor);
         }
         return true;
       } else {
@@ -272,8 +269,7 @@ public class DFSTopologyNodeImpl extends InnerNodeImpl {
     return childrenStorageInfo;
   }
 
-
-  private DFSTopologyNodeImpl createParentNode(String parentName) {
+  protected DFSTopologyNodeImpl createParentNode(String parentName) {
     return new DFSTopologyNodeImpl(
         parentName, getPath(this), this, this.getLevel() + 1);
   }
@@ -311,7 +307,7 @@ public class DFSTopologyNodeImpl extends InnerNodeImpl {
             childrenMap.remove(n.getName());
             childrenStorageInfo.remove(dnDescriptor.getName());
             for (StorageType st : dnDescriptor.getStorageTypes()) {
-              decStorageTypeCount(st);
+              decStorageTypeCount(st, dnDescriptor);
             }
             numOfLeaves--;
             n.setParent(null);
@@ -346,7 +342,7 @@ public class DFSTopologyNodeImpl extends InnerNodeImpl {
           currentCount.remove(st);
         }
         for (StorageType st : dnDescriptor.getStorageTypes()) {
-          decStorageTypeCount(st);
+          decStorageTypeCount(st, dnDescriptor);
         }
         if (parentNode.getNumOfChildren() == 0) {
           for(int i=0; i < children.size(); i++) {
@@ -374,7 +370,7 @@ public class DFSTopologyNodeImpl extends InnerNodeImpl {
    * @param type the type being incremented.
    */
   public synchronized void childAddStorage(
-      String childName, StorageType type) {
+      String childName, StorageType type, DatanodeDescriptor dn) {
     LOG.debug("child add storage: {}:{}", childName, type);
     // childrenStorageInfo should definitely contain this node already
     // because updateStorage is called after node added
@@ -394,13 +390,9 @@ public class DFSTopologyNodeImpl extends InnerNodeImpl {
       // but no such restriction for inner nodes.
       typeCount.put(type, 1);
     }
-    if (storageTypeCounts.containsKey(type)) {
-      storageTypeCounts.put(type, storageTypeCounts.get(type) + 1);
-    } else {
-      storageTypeCounts.put(type, 1);
-    }
+    incStorageTypeCount(type, dn);
     if (getParent() != null) {
-      ((DFSTopologyNodeImpl)getParent()).childAddStorage(getName(), type);
+      ((DFSTopologyNodeImpl)getParent()).childAddStorage(getName(), type, dn);
     }
   }
 
@@ -411,7 +403,7 @@ public class DFSTopologyNodeImpl extends InnerNodeImpl {
    * @param type the type being removed.
    */
   public synchronized void childRemoveStorage(
-      String childName, StorageType type) {
+      String childName, StorageType type, DatanodeDescriptor dn) {
     LOG.debug("child remove storage: {}:{}", childName, type);
     Preconditions.checkArgument(childrenStorageInfo.containsKey(childName));
     EnumMap<StorageType, Integer> typeCount =
@@ -423,13 +415,9 @@ public class DFSTopologyNodeImpl extends InnerNodeImpl {
       typeCount.remove(type);
     }
     Preconditions.checkArgument(storageTypeCounts.containsKey(type));
-    if (storageTypeCounts.get(type) > 1) {
-      storageTypeCounts.put(type, storageTypeCounts.get(type) - 1);
-    } else {
-      storageTypeCounts.remove(type);
-    }
+    decStorageTypeCount(type, dn);
     if (getParent() != null) {
-      ((DFSTopologyNodeImpl)getParent()).childRemoveStorage(getName(), type);
+      ((DFSTopologyNodeImpl)getParent()).childRemoveStorage(getName(), type, dn);
     }
   }
 }

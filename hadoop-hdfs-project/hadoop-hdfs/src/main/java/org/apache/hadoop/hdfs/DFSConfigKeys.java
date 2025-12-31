@@ -22,6 +22,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.net.DFSNetworkTopology;
+import org.apache.hadoop.hdfs.net.TableDataNodeWeightMapping;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.StoragePolicySatisfierMode;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicyDefault;
@@ -1709,6 +1710,15 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
 
   public static final Class<DFSNetworkTopology> DFS_NET_TOPOLOGY_IMPL_DEFAULT =
       DFSNetworkTopology.class;
+
+  public static final String DFS_NET_TOPOLOGY_WEIGHT_TABLE_FILE_NAME_KEY =
+      "dfs.net.topology.weight.table.file.name";
+
+  public static final String DFS_NET_TOPOLOGY_NODE_WEIGHT_MAPPING_IMPL_KEY =
+      "dfs.net.topology.node.weight.mapping.impl";
+
+  public static final Class<TableDataNodeWeightMapping>
+      DFS_NET_TOPOLOGY_NODE_WEIGHT_MAPPING_IMPL_DEFAULT = TableDataNodeWeightMapping.class;
 
   public static final String DFS_NAMENODE_RPC_ADDRESS_AUXILIARY_KEY =
       HdfsClientConfigKeys.DFS_NAMENODE_RPC_ADDRESS_AUXILIARY_KEY;

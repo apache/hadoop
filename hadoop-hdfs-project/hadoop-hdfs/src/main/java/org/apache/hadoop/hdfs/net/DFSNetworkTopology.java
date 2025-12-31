@@ -32,7 +32,9 @@ import org.apache.hadoop.util.ReflectionUtils;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.Random;
+import java.util.function.Function;
 
 /**
  * The HDFS specific network topology class. The main purpose of doing this
@@ -46,12 +48,20 @@ public class DFSNetworkTopology extends NetworkTopology {
   private static final Random RANDOM = new Random();
 
   public static DFSNetworkTopology getInstance(Configuration conf) {
-
-    DFSNetworkTopology nt = ReflectionUtils.newInstance(conf.getClass(
+    return ReflectionUtils.newInstance(conf.getClass(
         DFSConfigKeys.DFS_NET_TOPOLOGY_IMPL_KEY,
         DFSConfigKeys.DFS_NET_TOPOLOGY_IMPL_DEFAULT,
         DFSNetworkTopology.class), conf);
-    return (DFSNetworkTopology) nt.init(DFSTopologyNodeImpl.FACTORY);
+  }
+
+  public DFSNetworkTopology() {
+    init(DFSTopologyNodeImpl.FACTORY);
+  }
+
+  /**
+   * Initialize the network topology with the given configuration.
+   */
+  public void init(Configuration conf) {
   }
 
   /**
@@ -209,13 +219,7 @@ public class DFSNetworkTopology extends NetworkTopology {
     // check to see if there are nodes satisfying the condition at all
     int availableCount = root.getSubtreeStorageCount(type);
     if (excludeRoot != null && root.isAncestor(excludeRoot)) {
-      if (excludeRoot instanceof DFSTopologyNodeImpl) {
-        availableCount -= ((DFSTopologyNodeImpl)excludeRoot)
-            .getSubtreeStorageCount(type);
-      } else {
-        availableCount -= ((DatanodeDescriptor)excludeRoot)
-            .hasStorageType(type) ? 1 : 0;
-      }
+      availableCount -= getNodeCount(excludeRoot, type);
     }
     if (excludedNodes != null) {
       for (Node excludedNode : excludedNodes) {
@@ -223,12 +227,9 @@ public class DFSNetworkTopology extends NetworkTopology {
             !isNodeInScope(excludedNode, scope)) {
           continue;
         }
-        if (excludedNode instanceof DatanodeDescriptor) {
-          availableCount -= ((DatanodeDescriptor) excludedNode)
-              .hasStorageType(type) ? 1 : 0;
-        } else if (excludedNode instanceof DFSTopologyNodeImpl) {
-          availableCount -= ((DFSTopologyNodeImpl) excludedNode)
-              .getSubtreeStorageCount(type);
+        if (excludedNode instanceof DatanodeDescriptor
+            || excludedNode instanceof DFSTopologyNodeImpl) {
+          availableCount -= getNodeCount(excludedNode, type);
         } else if (excludedNode instanceof DatanodeInfo) {
           // find out the corresponding DatanodeDescriptor object, beacuse
           // we need to get its storage type info.
@@ -240,7 +241,7 @@ public class DFSNetworkTopology extends NetworkTopology {
           if (dn == null) {
             continue;
           }
-          availableCount -= dn.hasStorageType(type)? 1 : 0;
+          availableCount -= getNodeCount(dn, type);
         } else {
           LOG.error("Unexpected node type: {}.", excludedNode.getClass());
         }
@@ -292,7 +293,7 @@ public class DFSNetworkTopology extends NetworkTopology {
       }
       // to this point, all nodes in candidates are valid choices, and they are
       // all datanodes, pick a random one.
-      chosenNode = candidates.get(RANDOM.nextInt(candidates.size()));
+      chosenNode = randomPickFromCandidates(candidates);
     } else {
       // the children are inner nodes
       ArrayList<DFSTopologyNodeImpl> candidates =
@@ -303,31 +304,57 @@ public class DFSNetworkTopology extends NetworkTopology {
       // again, all children are also inner nodes, we can do this cast.
       // to maintain uniformality, the search needs to be based on the counts
       // of valid datanodes. Below is a random weighted choose.
-      int totalCounts = 0;
-      int[] countArray = new int[candidates.size()];
-      for (int i = 0; i < candidates.size(); i++) {
-        DFSTopologyNodeImpl innerNode = candidates.get(i);
-        int subTreeCount = innerNode.getSubtreeStorageCount(type);
-        totalCounts += subTreeCount;
-        countArray[i] = subTreeCount;
-      }
-      // generate a random val between [1, totalCounts]
-      int randomCounts = RANDOM.nextInt(totalCounts) + 1;
-      int idxChosen = 0;
-      // searching for the idxChosen can potentially be done with binary
-      // search, but does not seem to worth it here.
-      for (int i = 0; i < countArray.length; i++) {
-        if (randomCounts <= countArray[i]) {
-          idxChosen = i;
-          break;
-        }
-        randomCounts -= countArray[i];
-      }
-      DFSTopologyNodeImpl nextRoot = candidates.get(idxChosen);
+      DFSTopologyNodeImpl nextRoot = weightedRandomPickFromCandidates(candidates,
+          innerNode -> innerNode.getSubtreeStorageCount(type));
       chosenNode = chooseRandomWithStorageTypeAndExcludeRoot(
           nextRoot, excludeRoot, type, excludedNodes);
     }
     return chosenNode;
+  }
+
+  /**
+   * Randomly pick one node from candidates. Note that the candidates should
+   * be leaf nodes.
+   *
+   * @param candidates the list of nodes to choose from
+   * @return one random node from the list
+   */
+  protected Node randomPickFromCandidates(List<Node> candidates) {
+    return candidates.get(RANDOM.nextInt(candidates.size()));
+  }
+
+  /**
+   * Randomly pick one node from candidates with weight.
+   *
+   * @param candidates   the list of nodes to choose from, can not be empty
+   * @param weightMapper map function to map a node to its weight
+   * @param <N>          the type of the node
+   * @return one random node from the list
+   */
+  protected static <N extends Node> N weightedRandomPickFromCandidates(List<N> candidates,
+      Function<N, Integer> weightMapper) {
+    int totalWeight = 0;
+    int[] weightArray = new int[candidates.size()];
+    for (int i = 0; i < candidates.size(); i++) {
+      N node = candidates.get(i);
+      int nodeWeight = weightMapper.apply(node);
+      totalWeight += nodeWeight;
+      weightArray[i] = nodeWeight;
+    }
+
+    // generate a random val between [1, totalWeight]
+    int randomCounts = RANDOM.nextInt(totalWeight) + 1;
+    int idxChosen = 0;
+    // searching for the idxChosen can potentially be done with binary
+    // search, but does not seem to worth it here.
+    for (int i = 0; i < weightArray.length; i++) {
+      if (randomCounts <= weightArray[i]) {
+        idxChosen = i;
+        break;
+      }
+      randomCounts -= weightArray[i];
+    }
+    return candidates.get(idxChosen);
   }
 
   /**
@@ -350,17 +377,7 @@ public class DFSNetworkTopology extends NetworkTopology {
     if (excludeRoot != null && root.isAncestor(excludeRoot)) {
       // the subtree to be excluded is under the given root,
       // find out the number of nodes to be excluded.
-      if (excludeRoot instanceof DFSTopologyNodeImpl) {
-        // if excludedRoot is an inner node, get the counts of all nodes on
-        // this subtree of that storage type.
-        excludeCount = ((DFSTopologyNodeImpl) excludeRoot)
-            .getSubtreeStorageCount(type);
-      } else {
-        // if excludedRoot is a datanode, simply ignore this one node
-        if (((DatanodeDescriptor) excludeRoot).hasStorageType(type)) {
-          excludeCount = 1;
-        }
-      }
+      excludeCount = getNodeCount(excludeRoot, type);
     }
     // have calculated the number of storage counts to be excluded.
     // walk through all children to check eligibility.
@@ -378,14 +395,15 @@ public class DFSNetworkTopology extends NetworkTopology {
             continue;
           }
           if (isNodeInScope(excludedNode, NodeBase.getPath(node))) {
-            if (excludedNode instanceof DatanodeDescriptor) {
-              storageCount -=
-                  ((DatanodeDescriptor) excludedNode).hasStorageType(type) ?
-                      1 : 0;
-            } else if (excludedNode instanceof DFSTopologyNodeImpl) {
-              storageCount -= ((DFSTopologyNodeImpl) excludedNode)
-                  .getSubtreeStorageCount(type);
+            if (excludedNode instanceof DatanodeDescriptor
+                || excludedNode instanceof DFSTopologyNodeImpl) {
+              storageCount -= getNodeCount(excludedNode, type);
             }
+            // TODO Since the excludedNode may neither be a DatanodeDescriptor or
+            //  DFSTopologyNodeImpl(e.g. excludedNodes in the addBlock RPC of NameNode),
+            //  I think we should find the corresponding dn via getNode(nodeLocation) like
+            //  chooseRandomWithStorageType does. Otherwise we may got null even if 
+            //  availableCount > 0
           }
         }
       }
@@ -395,4 +413,25 @@ public class DFSNetworkTopology extends NetworkTopology {
     }
     return candidates;
   }
+
+  /**
+   * Get the number of nodes that has the storage type under the given node.
+   */
+  protected int getNodeCount(Node node, StorageType st) {
+    if (node instanceof DFSTopologyNodeImpl) {
+      return ((DFSTopologyNodeImpl) node).getSubtreeStorageCount(st);
+    } else {
+      DatanodeDescriptor dn = (DatanodeDescriptor) node;
+      return dn.hasStorageType(st) ? getNodeCount(dn) : 0;
+    }
+  }
+
+  /**
+   * By default, one datanode is considered as one node.
+   * Subclass can override this method to implement more complex choose logic.
+   */
+  protected int getNodeCount(DatanodeDescriptor dn) {
+    return 1;
+  }
+
 }

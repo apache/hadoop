@@ -6350,6 +6350,33 @@
   </property>
 
   <property>
+    <name>dfs.net.topology.node.weight.mapping.impl</name>
+    <value>org.apache.hadoop.hdfs.net.TableDataNodeWeightMapping</value>
+    <description>
+        The implementation class of DataNodeWeightMapping used in HDFS. By default,
+        the class org.apache.hadoop.hdfs.net.TableDataNodeWeightMapping is specified and
+        used in block placement.
+        This property only works when org.apache.hadoop.hdfs.net.DFSNetworkTopology is
+        set to org.apache.hadoop.hdfs.net.DFSNetworkTopologyWithWeight.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.net.topology.weight.table.file.name</name>
+    <value></value>
+    <description>
+        The file name for a datanode weight mapping file, which is used when the
+        dfs.net.topology.node.weight.mapping.impl property is set to
+        org.apache.hadoop.hdfs.net.TableDataNodeWeightMapping.
+        The file format is a two column text file, with columns separated by whitespace.
+        The first column is a DNS or IP address and the second column specifies the
+        weight(non-negative integer) where the address maps.
+        If no entry corresponding to a host in the cluster is found,
+        then 1 is assumed.
+    </description>
+  </property>
+
+  <property>
     <name>dfs.qjm.operations.timeout</name>
     <value>60s</value>
     <description>

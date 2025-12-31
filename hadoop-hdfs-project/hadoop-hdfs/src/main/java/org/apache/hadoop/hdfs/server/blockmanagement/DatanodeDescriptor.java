@@ -530,7 +530,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
         if (!hasStorageType(type) && parent != null) {
           // we are about to add a type this node currently does not have,
           // inform the parent that a new type is added to this datanode
-          parent.childAddStorage(getName(), type);
+          parent.childAddStorage(getName(), type, this);
         }
         storageMap.put(s.getStorageID(), s);
       } else {
@@ -570,7 +570,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
             // type, inform the parent about this.
             if (getParent() instanceof DFSTopologyNodeImpl) {
               ((DFSTopologyNodeImpl) getParent()).childRemoveStorage(getName(),
-                  info.getStorageType());
+                  info.getStorageType(), this);
             }
           }
           LOG.info("Removed storage {} from DataNode {}", storageInfo, this);
@@ -1068,7 +1068,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
         if (!hasStorageType(type) && parent != null) {
           // we are about to add a type this node currently does not have,
           // inform the parent that a new type is added to this datanode
-          parent.childAddStorage(getName(), s.getStorageType());
+          parent.childAddStorage(getName(), s.getStorageType(), this);
         }
         storage = new DatanodeStorageInfo(this, s);
         storageMap.put(s.getStorageID(), storage);
@@ -1083,14 +1083,14 @@ public class DatanodeDescriptor extends DatanodeInfo {
           // we are about to add a type this node currently does not have
           // inform the parent that a new type is added to this datanode
           // if old == new, nothing's changed. don't bother
-          parent.childAddStorage(getName(), newType);
+          parent.childAddStorage(getName(), newType, this);
         }
         storage.updateFromStorage(s);
         storageMap.put(storage.getStorageID(), storage);
         if (oldType != newType && !hasStorageType(oldType) && parent != null) {
           // there is no more old type storage on this datanode, inform parent
           // about this change.
-          parent.childRemoveStorage(getName(), oldType);
+          parent.childRemoveStorage(getName(), oldType, this);
         }
       }
       return storage;

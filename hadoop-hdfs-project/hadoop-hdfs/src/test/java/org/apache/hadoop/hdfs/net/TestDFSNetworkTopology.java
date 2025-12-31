@@ -29,6 +29,9 @@ import org.apache.hadoop.net.Node;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.params.Parameter;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,15 +52,32 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * DFSNetworkTopology.
  */
 @Timeout(30)
+@ParameterizedClass
+@ValueSource(booleans = {false, true})
 public class TestDFSNetworkTopology {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestDFSNetworkTopology.class);
-  private final static DFSNetworkTopology CLUSTER =
-      DFSNetworkTopology.getInstance(new Configuration());
+  private static DFSNetworkTopology CLUSTER;
   private DatanodeDescriptor[] dataNodes;
+
+  @Parameter
+  private boolean useWeightedDFSNetworkTopology;
+
+  static DFSNetworkTopology createDFSNetworkTopology(boolean useWeightedDFSNetworkTopology) {
+    if (!useWeightedDFSNetworkTopology) {
+      return DFSNetworkTopology.getInstance(new Configuration());
+    } else {
+      Configuration conf = new Configuration();
+      conf.set(DFSConfigKeys.DFS_NET_TOPOLOGY_IMPL_KEY, DFSNetworkTopologyWithWeight.class.getName());
+      DFSNetworkTopology topology = DFSNetworkTopology.getInstance(conf);
+      topology.init(conf);
+      return topology;
+    }
+  }
 
   @BeforeEach
   public void setupDatanodes() {
+    CLUSTER = createDFSNetworkTopology(useWeightedDFSNetworkTopology);
     final String[] racks = {
         "/l1/d1/r1", "/l1/d1/r1", "/l1/d1/r2", "/l1/d1/r2", "/l1/d1/r2",
 

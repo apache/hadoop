@@ -28,6 +28,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.Parameter;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,6 +53,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * anyone interested in looking at the numbers can enable them.
  */
 @Disabled
+@ParameterizedClass
+@ValueSource(booleans = {false, true})
 public class TestDFSNetworkTopologyPerformance {
   public static final Logger LOG =
       LoggerFactory.getLogger(TestDFSNetworkTopologyPerformance.class);
@@ -82,6 +87,8 @@ public class TestDFSNetworkTopologyPerformance {
   private long localStart;
   private long localEnd;
 
+  @Parameter
+  private boolean useWeightedDFSNetworkTopology;
 
   @BeforeAll
   public static void init() throws Exception {
@@ -98,7 +105,7 @@ public class TestDFSNetworkTopologyPerformance {
   @BeforeEach
   public void setup() throws Exception {
     cluster = NetworkTopology.getInstance(new Configuration());
-    dfscluster = DFSNetworkTopology.getInstance(new Configuration());
+    dfscluster = TestDFSNetworkTopology.createDFSNetworkTopology(useWeightedDFSNetworkTopology);
     excluded = new HashSet<>();
   }
 

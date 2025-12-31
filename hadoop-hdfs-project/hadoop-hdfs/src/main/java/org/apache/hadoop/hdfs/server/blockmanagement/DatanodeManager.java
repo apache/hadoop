@@ -22,6 +22,7 @@ import static org.apache.hadoop.util.Time.monotonicNow;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.hdfs.net.DFSNetworkTopologyWithWeight;
 import org.apache.hadoop.util.Preconditions;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
@@ -240,6 +241,7 @@ public class DatanodeManager {
         DFSConfigKeys.DFS_USE_DFS_NETWORK_TOPOLOGY_DEFAULT);
     if (useDfsNetworkTopology) {
       networktopology = DFSNetworkTopology.getInstance(conf);
+      ((DFSNetworkTopology) networktopology).init(conf);
     } else {
       networktopology = NetworkTopology.getInstance(conf);
     }
@@ -1369,6 +1371,9 @@ public class DatanodeManager {
     try {
       refreshDatanodes();
       countSoftwareVersions();
+      if (networktopology instanceof DFSNetworkTopologyWithWeight) {
+        ((DFSNetworkTopologyWithWeight) networktopology).reloadMapping();        
+      }
     } finally {
       namesystem.writeUnlock(RwLockMode.GLOBAL, "refreshNodes");
     }
