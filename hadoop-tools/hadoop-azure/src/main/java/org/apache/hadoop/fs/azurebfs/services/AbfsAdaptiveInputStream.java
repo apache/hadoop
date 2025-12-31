@@ -26,6 +26,12 @@ import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
 import static java.lang.Math.max;
 
+/**
+ * Input stream implementation optimized for adaptive read patterns.
+ * This is the default implementation used for cases where user does not specify any input policy.
+ * It switches between sequential and random read optimizations based on the detected read pattern.
+ * It also keeps footer read and small file optimizations enabled.
+ */
 public class AbfsAdaptiveInputStream extends AbfsInputStream {
 
   public AbfsAdaptiveInputStream(
@@ -40,6 +46,9 @@ public class AbfsAdaptiveInputStream extends AbfsInputStream {
         abfsInputStreamContext, eTag, tracingContext);
   }
 
+  /**
+   * {@inheritDoc}
+   */
   @Override
   protected int readOneBlock(final byte[] b, final int off, final int len) throws IOException {
     if (len == 0) {

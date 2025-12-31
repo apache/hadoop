@@ -25,6 +25,11 @@ import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
 import static java.lang.Math.max;
 
+/**
+ * Input stream implementation optimized for prefetching data.
+ * This implementation always prefetches data in advance if enabled
+ * to optimize for sequential read patterns.
+ */
 public class AbfsPrefetchInputStream extends AbfsInputStream {
 
   public AbfsPrefetchInputStream(
@@ -39,6 +44,9 @@ public class AbfsPrefetchInputStream extends AbfsInputStream {
             abfsInputStreamContext, eTag, tracingContext);
   }
 
+  /**
+   * {@inheritDoc}
+   */
   @Override
   protected int readOneBlock(final byte[] b, final int off, final int len) throws IOException {
     if (len == 0) {

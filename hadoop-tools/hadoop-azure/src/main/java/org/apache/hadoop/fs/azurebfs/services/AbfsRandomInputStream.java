@@ -24,8 +24,11 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.azurebfs.constants.ReadType;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
-import static java.lang.Math.max;
-
+/**
+ * Input stream implementation optimized for random read patterns.
+ * This implementation disables prefetching of data blocks instead only
+ * reads ahead for a small range beyond what is requested by the caller.
+ */
 public class AbfsRandomInputStream extends AbfsInputStream {
 
     public AbfsRandomInputStream(

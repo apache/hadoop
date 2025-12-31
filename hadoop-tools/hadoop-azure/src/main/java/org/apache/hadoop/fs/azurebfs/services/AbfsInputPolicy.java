@@ -28,6 +28,10 @@ import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_RE
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_SEQUENTIAL;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_WHOLE_FILE;
 
+/**
+ * Enum for ABFS Input Policies.
+ * Each policy maps to a particular implementation of {@link AbfsInputStream}
+ */
 public enum AbfsInputPolicy {
 
   SEQUENTIAL(FS_OPTION_OPENFILE_READ_POLICY_SEQUENTIAL),
@@ -45,6 +49,11 @@ public enum AbfsInputPolicy {
     return policy;
   }
 
+  /**
+   * Get the enum constant from the string name.
+   * @param name policy name as configured by user
+   * @return the corresponding AbsInputPolicy to be used
+   */
   public static AbfsInputPolicy getPolicy(String name) {
     String trimmed = name.trim().toLowerCase(Locale.ENGLISH);
     switch (trimmed) {

@@ -114,20 +114,20 @@ public abstract class AbfsInputStream extends FSInputStream implements CanUnbuff
   private int bCursorBkp;
   private long fCursorBkp;
   private long fCursorAfterLastReadBkp;
-  protected final AbfsReadFooterMetrics abfsReadFooterMetrics;
+  private final AbfsReadFooterMetrics abfsReadFooterMetrics;
   /** Stream statistics. */
-  protected final AbfsInputStreamStatistics streamStatistics;
+  private final AbfsInputStreamStatistics streamStatistics;
   private long bytesFromReadAhead; // bytes read from readAhead; for testing
   private long bytesFromRemoteRead; // bytes read remotely; for testing
   private Listener listener;
-  protected final AbfsInputStreamContext context;
+  private final AbfsInputStreamContext context;
   private IOStatistics ioStatistics;
-  protected String filePathIdentifier;
+  private String filePathIdentifier;
   /**
    * This is the actual position within the object, used by
    * lazy seek to decide whether to seek on the next read or not.
    */
-  protected long nextReadPos;
+  private long nextReadPos;
 
   /** ABFS instance to be held by the input stream to avoid GC close. */
   private final BackReference fsBackRef;
@@ -315,20 +315,20 @@ public abstract class AbfsInputStream extends FSInputStream implements CanUnbuff
     return totalReadBytes > 0 ? totalReadBytes : lastReadBytes;
   }
 
-  protected abstract int readOneBlock(final byte[] b, final int off, final int len) throws IOException;
-
   private boolean shouldReadFully() {
     return this.firstRead && this.context.readSmallFilesCompletely()
-            && this.contentLength <= this.bufferSize;
+        && this.contentLength <= this.bufferSize;
   }
 
   private boolean shouldReadLastBlock() {
     long footerStart = max(0, this.contentLength - FOOTER_SIZE);
     return this.firstRead && this.context.optimizeFooterRead()
-            && this.fCursor >= footerStart;
+        && this.fCursor >= footerStart;
   }
 
-  protected int readFileCompletely(final byte[] b, final int off, final int len)
+  protected abstract int readOneBlock(final byte[] b, final int off, final int len) throws IOException;
+
+  private int readFileCompletely(final byte[] b, final int off, final int len)
       throws IOException {
     if (len == 0) {
       return 0;
@@ -345,7 +345,7 @@ public abstract class AbfsInputStream extends FSInputStream implements CanUnbuff
   }
 
   // To do footer read of files when enabled.
-  protected int readLastBlock(final byte[] b, final int off, final int len)
+  private int readLastBlock(final byte[] b, final int off, final int len)
       throws IOException {
     if (len == 0) {
       return 0;
@@ -571,7 +571,7 @@ public abstract class AbfsInputStream extends FSInputStream implements CanUnbuff
   /**
    * Increment Read Operations.
    */
-  protected void incrementReadOps() {
+  private void incrementReadOps() {
     if (statistics != null) {
       statistics.incrementReadOps(1);
     }

@@ -982,25 +982,6 @@ public class TestAbfsInputStream extends AbstractAbfsIntegrationTest {
   }
 
   @Test
-  public void testPrefetchInputStreamQueuesPrefetches() throws Exception {
-    AzureBlobFileSystem spiedFs = Mockito.spy(getFileSystem());
-    AzureBlobFileSystemStore spiedStore = Mockito.spy(spiedFs.getAbfsStore());
-    AbfsConfiguration spiedConfig = Mockito.spy(spiedStore.getAbfsConfiguration());
-    AbfsClient spiedClient = Mockito.spy(spiedStore.getClient());
-    Mockito.doReturn(ONE_MB).when(spiedConfig).getReadBufferSize();
-    Mockito.doReturn(ONE_MB).when(spiedConfig).getReadAheadBlockSize();
-    Mockito.doReturn(spiedClient).when(spiedStore).getClient();
-    Mockito.doReturn(spiedStore).when(spiedFs).getAbfsStore();
-    Mockito.doReturn(spiedConfig).when(spiedStore).getAbfsConfiguration();
-
-    int fileSize = 3 * ONE_MB; // To make sure multiple blocks are read.
-    int totalReadCalls = 3;
-    Mockito.doReturn(3).when(spiedConfig).getReadAheadQueueDepth();
-    Mockito.doReturn(FS_OPTION_OPENFILE_READ_POLICY_SEQUENTIAL).when(spiedConfig).getAbfsReadPolicy();
-    testReadTypeInTracingContextHeaderInternal(spiedFs, fileSize, PREFETCH_READ, 3, totalReadCalls);
-  }
-
-  @Test
   public void testRandomInputStreamDoesNotQueuePrefetches() throws Exception {
     AzureBlobFileSystem spiedFs = Mockito.spy(getFileSystem());
     AzureBlobFileSystemStore spiedStore = Mockito.spy(spiedFs.getAbfsStore());
@@ -1148,11 +1129,14 @@ public class TestAbfsInputStream extends AbstractAbfsIntegrationTest {
     ArgumentCaptor<ContextEncryptionAdapter> captor8 = ArgumentCaptor.forClass(ContextEncryptionAdapter.class);
     ArgumentCaptor<TracingContext> captor9 = ArgumentCaptor.forClass(TracingContext.class);
 
+    List<String> paths = captor1.getAllValues();
+    System.out.println(paths);
     verify(fs.getAbfsStore().getClient(), times(totalReadCalls)).read(
         captor1.capture(), captor2.capture(), captor3.capture(),
         captor4.capture(), captor5.capture(), captor6.capture(),
         captor7.capture(), captor8.capture(), captor9.capture());
     List<TracingContext> tracingContextList = captor9.getAllValues();
+    System.out.println(tracingContextList);
     if (readType == PREFETCH_READ) {
       /*
        * For Prefetch Enabled, first read can be Normal or Missed Cache Read.

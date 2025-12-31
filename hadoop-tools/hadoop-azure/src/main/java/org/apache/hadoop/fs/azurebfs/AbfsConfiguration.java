@@ -1385,6 +1385,10 @@ public class AbfsConfiguration{
     return Integer.toString(prefetchRequestPriorityValue);
   }
 
+  /**
+   * Get the ABFS read policy set by user.
+   * @return the ABFS read policy.
+   */
   public String getAbfsReadPolicy() {
     return abfsReadPolicy;
   }
@@ -2087,6 +2091,10 @@ public class AbfsConfiguration{
     this.isChecksumValidationEnabled = isChecksumValidationEnabled;
   }
 
+  /**
+   * Sets the ABFS read policy for testing purposes.
+   * @param readPolicy the read policy to set.
+   */
   @VisibleForTesting
   public void setAbfsReadPolicy(String readPolicy) {
     abfsReadPolicy = readPolicy;
