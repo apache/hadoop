@@ -31,11 +31,9 @@ import org.apache.hadoop.fs.s3a.S3ClientFactory;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 
 import static org.apache.hadoop.fs.s3a.Constants.CENTRAL_ENDPOINT;
-import static org.apache.hadoop.fs.s3a.Constants.EC2_REGION;
 import static org.apache.hadoop.fs.s3a.Constants.SDK_REGION;
 import static org.apache.hadoop.fs.s3a.impl.RegionResolution.ERROR_ENDPOINT_WITH_FIPS;
 import static org.apache.hadoop.fs.s3a.impl.RegionResolution.calculateRegion;
-import static org.apache.hadoop.fs.s3a.impl.RegionResolution.isEc2Region;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
@@ -148,7 +146,7 @@ public class TestRegionResolution extends AbstractHadoopTestBase {
   public void testCentralEndpointNoRegion() throws IOException {
     final RegionResolution.Resolution r =
         resolve(getConfiguration(), CENTRAL_ENDPOINT, null, false,
-            US_EAST_2,
+            US_EAST_1,
             RegionResolution.RegionResolutionMechanism.FallbackToCentral);
     assertEndpoint(r, null);
     assertUseCentralValue(r, true);
@@ -276,39 +274,6 @@ public class TestRegionResolution extends AbstractHadoopTestBase {
     intercept(IllegalArgumentException.class, () ->
         resolve(getConfiguration(), null, "null", false,
             null, null));
-  }
-
-
-  /**
-   * This does attempt to talk to EC2 IAM but it doesn't need cloud credentials
-   * and will succeed whether the information came back or not.
-   * <p>What it does do is validate the codepath.
-   */
-  @Test
-  public void testEC2Region() {
-    describe("Attempt to resolve region through EC2");
-
-    final Configuration conf = new Configuration(false);
-    S3ClientFactory.S3ClientCreationParameters parameters =
-        new S3ClientFactory.S3ClientCreationParameters()
-            .withRegion(EC2_REGION);
-    try {
-      final RegionResolution.Resolution resolved = calculateRegion(parameters, conf);
-      // here the process is under EC2 and a region was returned.
-      LOG.info("EC2 IAM resolved metadata: {}", resolved);
-      assertMechanism(RegionResolution.RegionResolutionMechanism.Ec2Metadata, resolved);
-    } catch (IOException e) {
-      // expected on anything except EC2
-      LOG.info("Expected failure when EC2 IAM is not present", e);
-    }
-  }
-
-  @Test
-  public void testEc2RegionCaseLogic() throws Throwable {
-    Assertions.assertThat(isEc2Region("ec2"))
-        .describedAs("lower case ec2").isTrue();
-    Assertions.assertThat(isEc2Region("EC2"))
-        .describedAs("upper case ec2").isTrue();
   }
 
   @Test

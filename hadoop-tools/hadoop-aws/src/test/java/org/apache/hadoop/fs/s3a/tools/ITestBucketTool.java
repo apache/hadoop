@@ -40,7 +40,6 @@ import static org.apache.hadoop.fs.s3a.S3ATestUtils.assumeNotS3ExpressFileSystem
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.assumeS3ExpressFileSystem;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.assumeStoreAwsHosted;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.expectErrorCode;
-import static org.apache.hadoop.fs.s3a.impl.RegionResolution.isEc2Region;
 import static org.apache.hadoop.fs.s3a.impl.RegionResolution.isSdkRegion;
 import static org.apache.hadoop.fs.s3a.impl.S3ExpressStorage.STORE_CAPABILITY_S3_EXPRESS_STORAGE;
 import static org.apache.hadoop.fs.s3a.tools.BucketTool.CREATE;
@@ -147,7 +146,7 @@ public class ITestBucketTool extends AbstractS3ATestBase {
     assumeStoreAwsHosted(fs);
     // fix a region if resolution is handed down to sdk
     assume("Skipping as SDK region logic active",
-        !isSdkRegion(region) && !isEc2Region(region));
+        !isSdkRegion(region));
     intercept(AWSBadRequestException.class, OWNED,
         () -> bucketTool.exec("bucket", d(CREATE),
             d(OPT_REGION), region,

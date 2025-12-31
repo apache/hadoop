@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.Locale;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -99,13 +100,14 @@ public final class NetworkBinding {
 
   /**
    * Is this an AWS endpoint? looks at end of FQDN.
-   * @param endpoint endpoint
-   * @return true if the endpoint matches the requirements for an aws endpoint.
+   * @param endpoint endpoint.
+   * @return true iff this is non-empty or ends with amazonaws.com or amazonaws.com.cn
    */
   public static boolean isAwsEndpoint(final String endpoint) {
+    final String host = endpoint.toLowerCase(Locale.ROOT);
     return (endpoint.isEmpty()
-        || endpoint.endsWith(".amazonaws.com")
-        || endpoint.endsWith(".amazonaws.com.cn"));
+        || host.endsWith(".amazonaws.com")
+        || host.endsWith(".amazonaws.com.cn"));
   }
 
   /**

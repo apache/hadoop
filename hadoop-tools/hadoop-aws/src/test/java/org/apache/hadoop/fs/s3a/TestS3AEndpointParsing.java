@@ -36,7 +36,7 @@ public class TestS3AEndpointParsing extends AbstractS3AMockTest {
     @Test
     public void testVPCEndpoint() {
         Optional<RegionResolution.Resolution>
-            region = RegionResolution.getS3RegionFromEndpoint(VPC_ENDPOINT, false);
+            region = RegionResolution.determineS3RegionFromEndpoint(VPC_ENDPOINT, false);
         Assertions.assertThat(region).get()
             .extracting(RegionResolution.Resolution::getRegion)
             .isEqualTo(Region.of(US_WEST_2));
@@ -45,7 +45,7 @@ public class TestS3AEndpointParsing extends AbstractS3AMockTest {
     @Test
     public void testNonVPCEndpoint() {
       Optional<RegionResolution.Resolution>
-                  region = RegionResolution.getS3RegionFromEndpoint(NON_VPC_ENDPOINT, false);
+                  region = RegionResolution.determineS3RegionFromEndpoint(NON_VPC_ENDPOINT, false);
         Assertions.assertThat(region).get()
             .extracting(RegionResolution.Resolution::getRegion)
             .isEqualTo(Region.of(EU_WEST_1));

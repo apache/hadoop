@@ -21,7 +21,6 @@ package org.apache.hadoop.fs.s3a.impl;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.Locale;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -31,11 +30,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.awscore.util.AwsHostNameUtils;
 import software.amazon.awssdk.regions.Region;
-import software.amazon.awssdk.regions.providers.InstanceProfileRegionProvider;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.s3a.Invoker;
 import org.apache.hadoop.fs.s3a.Retries;
 import org.apache.hadoop.fs.s3a.S3ClientFactory;
 
@@ -44,11 +41,11 @@ import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_CROSS_REGION_ACCESS_ENAB
 import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_CROSS_REGION_ACCESS_ENABLED_DEFAULT;
 import static org.apache.hadoop.fs.s3a.Constants.CENTRAL_ENDPOINT;
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_SECURE_CONNECTIONS;
-import static org.apache.hadoop.fs.s3a.Constants.EC2_REGION;
 import static org.apache.hadoop.fs.s3a.Constants.EMPTY_REGION;
 import static org.apache.hadoop.fs.s3a.Constants.FIPS_ENDPOINT;
 import static org.apache.hadoop.fs.s3a.Constants.SDK_REGION;
 import static org.apache.hadoop.fs.s3a.Constants.SECURE_CONNECTIONS;
+import static org.apache.hadoop.fs.s3a.impl.NetworkBinding.isAwsEndpoint;
 import static org.apache.hadoop.fs.s3a.impl.RegionResolution.RegionResolutionMechanism.ExternalEndpoint;
 import static org.apache.hadoop.fs.s3a.impl.RegionResolution.RegionResolutionMechanism.FallbackToCentral;
 import static org.apache.hadoop.util.Preconditions.checkArgument;
@@ -123,7 +120,6 @@ public class RegionResolution {
     ExternalEndpoint("External endpoint"),
     FallbackToCentral("Fallback to central endpoint"),
     ParseVpceEndpoint("Parse VPCE Endpoint"),
-    Ec2Metadata("EC2 Metadata"),
     Sdk("SDK resolution chain"),
     Specified("region specified");
 
@@ -353,7 +349,7 @@ public class RegionResolution {
    * @return the S3 region resolution if possible from parsing the endpoint
    */
   @VisibleForTesting
-  public static Optional<Resolution> getS3RegionFromEndpoint(
+  public static Optional<Resolution> determineS3RegionFromEndpoint(
       final String endpoint,
       final boolean endpointEndsWithCentral) {
 
@@ -369,7 +365,7 @@ public class RegionResolution {
             RegionResolutionMechanism.ParseVpceEndpoint));
       }
 
-      LOG.debug("Endpoint {} is not the default; parsing", endpoint);
+      LOG.debug("Endpoint {} is not the default; parsing signing region from name.", endpoint);
       return AwsHostNameUtils.parseSigningRegion(endpoint, S3_SERVICE_NAME)
           .map(r ->
               new Resolution(r, RegionResolutionMechanism.CalculatedFromEndpoint));
@@ -377,19 +373,6 @@ public class RegionResolution {
 
     // No resolution.
     return Optional.empty();
-  }
-
-  /**
-   * Is this an AWS endpoint, that is: has an endpoint been set which matches
-   * amazon.
-   * @param endpoint non-null endpoint URL
-   * @return true if this is amazonaws or amazonaws china
-   */
-  public static boolean isAwsEndpoint(final String endpoint) {
-    final String h = endpoint.toLowerCase(Locale.ROOT);
-    // Common AWS partitions: global (.amazonaws.com) and China (.amazonaws.com.cn).
-    return h.endsWith(".amazonaws.com")
-        || h.endsWith(".amazonaws.com.cn");
   }
 
 
@@ -401,16 +384,6 @@ public class RegionResolution {
   public static boolean isSdkRegion(String configuredRegion) {
     return SDK_REGION.equalsIgnoreCase(configuredRegion)
         || EMPTY_REGION.equalsIgnoreCase(configuredRegion);
-  }
-
-  /**
-   * Does the region name refer to {@code "ec2"} in which case special handling
-   * is required.
-   * @param configuredRegion region in the configuration
-   * @return true if this is considered to refer to an SDK region.
-   */
-  public static boolean isEc2Region(String configuredRegion) {
-    return EC2_REGION.equalsIgnoreCase(configuredRegion);
   }
 
   /**
@@ -431,9 +404,14 @@ public class RegionResolution {
     // endpoint; may be null
     final String endpointStr = parameters.getEndpoint();
     boolean endpointDeclared = endpointStr != null && !endpointStr.isEmpty();
-    // will be null if endpointStr is null/empty
-    final URI endpoint = buildEndpointUri(endpointStr,
-        conf.getBoolean(SECURE_CONNECTIONS, DEFAULT_SECURE_CONNECTIONS));
+    final URI endpoint;
+    if (endpointDeclared) {
+      endpoint = buildEndpointUri(endpointStr,
+          conf.getBoolean(SECURE_CONNECTIONS, DEFAULT_SECURE_CONNECTIONS));
+    } else {
+      // set to null if endpointStr is null/empty
+      endpoint = null;
+    }
 
     final String configuredRegion = parameters.getRegion();
 
@@ -444,10 +422,6 @@ public class RegionResolution {
           "null is region name");
       if (isSdkRegion(configuredRegion)) {
         resolution.withRegion(null, RegionResolutionMechanism.Sdk);
-      } else if (isEc2Region(configuredRegion)) {
-        // special EC2 handling
-        final Resolution r = getS3RegionFromEc2IAM();
-        resolution.withRegion(r.getRegion(), r.getMechanism());
       } else {
         resolution.withRegion(Region.of(configuredRegion),
             RegionResolutionMechanism.Specified);
@@ -461,15 +435,10 @@ public class RegionResolution {
 
     if (!resolution.isRegionResolved()) {
       // parse from the endpoint and set if calculated
-      LOG.debug("Falling back to parsing region endpoint {}; endpointEndsWithCentral={}",
+      LOG.debug("Attempting to determine region from endpoint {}; endpointEndsWithCentral={}",
           endpointStr, endpointEndsWithCentral);
-      final Optional<Resolution> regionFromEndpoint =
-          getS3RegionFromEndpoint(endpointStr, endpointEndsWithCentral);
-      if (regionFromEndpoint.isPresent()) {
-        regionFromEndpoint
-            .map(r ->
-                resolution.withRegion(r.getRegion(), r.getMechanism()));
-      }
+      determineS3RegionFromEndpoint(endpointStr, endpointEndsWithCentral).ifPresent(r ->
+          resolution.withRegion(r.getRegion(), r.getMechanism()));
     }
 
     // cross region setting.
@@ -487,7 +456,6 @@ public class RegionResolution {
       checkArgument(!parameters.isPathStyleAccess(),
           FIPS_PATH_ACCESS_INCOMPATIBLE);
     }
-
 
     if (!resolution.isRegionResolved()) {
       // still not resolved.
@@ -507,17 +475,17 @@ public class RegionResolution {
     // the endpoint with "s3.amazonaws.com" causes 400 Bad Request
     // errors for non-existent buckets and objects.
     // ref: https://github.com/aws/aws-sdk-java-v2/issues/4846
-    if (!endpointEndsWithCentral) {
+    if (endpointEndsWithCentral) {
+      resolution.withUseCentralEndpoint(true);
+    } else {
       LOG.debug("Setting endpoint to {}", endpoint);
       resolution.withEndpointStr(endpointStr)
           .withEndpointUri(endpoint)
           .withUseCentralEndpoint(false);
-    } else {
-      resolution.withUseCentralEndpoint(true);
     }
 
     final Region r = resolution.getRegion();
-    if (r != null && Region.regions().contains(r)) {
+    if (r != null && !Region.regions().contains(r)) {
       // note that the region isn't known.
       // not an issue for third party stores, otherwise it may be a region newer than
       // that expected by the SDK. Hence: only log at debug.
@@ -526,21 +494,4 @@ public class RegionResolution {
     return resolution;
   }
 
-  /**
-   * Probes EC2 Metadata for the region.
-   * This uses a class {@code InstanceProfileRegionProvider} which AWS
-   * declare as for internal use only.
-   * Linking/invocation should be caught and downgraded to returning an empty() option.
-   * @return the region from EC2 IAM.
-   * @throws IOException if the client failed to communicate with the IAM service.
-   */
-  @VisibleForTesting
-  @Retries.OnceTranslated
-  static Resolution getS3RegionFromEc2IAM() throws IOException {
-    return Invoker.once("Resolve EC2 Metadata", "/", () -> {
-      LOG.debug("Resolving region through EC2 Metadata");
-      final Region region = new InstanceProfileRegionProvider().getRegion();
-      return new Resolution(region, RegionResolutionMechanism.Ec2Metadata);
-    });
-  }
 }

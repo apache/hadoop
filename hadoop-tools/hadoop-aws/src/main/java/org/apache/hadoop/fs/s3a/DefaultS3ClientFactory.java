@@ -68,7 +68,6 @@ import static org.apache.hadoop.fs.s3a.Constants.AWS_SERVICE_IDENTIFIER_S3;
 import static org.apache.hadoop.fs.s3a.auth.SignerFactory.createHttpSigner;
 import static org.apache.hadoop.fs.s3a.impl.AWSHeaders.REQUESTER_PAYS_HEADER;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.AUTH_SCHEME_AWS_SIGV_4;
-import static org.apache.hadoop.fs.s3a.impl.RegionResolution.RegionResolutionMechanism.Ec2Metadata;
 import static org.apache.hadoop.fs.s3a.impl.RegionResolution.RegionResolutionMechanism.Sdk;
 import static org.apache.hadoop.fs.s3a.impl.RegionResolution.calculateRegion;
 
