@@ -17,11 +17,11 @@
  */
 package org.apache.hadoop.hdfs.net;
 
-import com.google.common.primitives.Ints;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.LineIterator;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.net.NetworkTopology;
+import org.apache.hadoop.thirdparty.com.google.common.primitives.Ints;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
