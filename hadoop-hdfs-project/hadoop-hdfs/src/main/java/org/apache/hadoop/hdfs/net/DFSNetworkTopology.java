@@ -402,7 +402,7 @@ public class DFSNetworkTopology extends NetworkTopology {
             // TODO Since the excludedNode may neither be a DatanodeDescriptor or
             //  DFSTopologyNodeImpl(e.g. excludedNodes in the addBlock RPC of NameNode),
             //  I think we should find the corresponding dn via getNode(nodeLocation) like
-            //  chooseRandomWithStorageType does. Otherwise we may got null even if 
+            //  chooseRandomWithStorageType does. Otherwise we may got null even if
             //  availableCount > 0
           }
         }

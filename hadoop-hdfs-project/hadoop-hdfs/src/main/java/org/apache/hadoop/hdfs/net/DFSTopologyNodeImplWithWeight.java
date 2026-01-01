@@ -36,7 +36,7 @@ public class DFSTopologyNodeImplWithWeight extends DFSTopologyNodeImpl {
 
     private final DataNodeWeightSupplier weightSupplier;
 
-    public Factory(DataNodeWeightSupplier weightSupplier) {
+    Factory(DataNodeWeightSupplier weightSupplier) {
       this.weightSupplier = weightSupplier;
     }
 

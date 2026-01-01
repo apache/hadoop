@@ -1372,7 +1372,7 @@ public class DatanodeManager {
       refreshDatanodes();
       countSoftwareVersions();
       if (networktopology instanceof DFSNetworkTopologyWithWeight) {
-        ((DFSNetworkTopologyWithWeight) networktopology).reloadMapping();        
+        ((DFSNetworkTopologyWithWeight) networktopology).reloadMapping();
       }
     } finally {
       namesystem.writeUnlock(RwLockMode.GLOBAL, "refreshNodes");

@@ -22,23 +22,23 @@ import java.util.Map;
 
 public class StaticDataNodeWeightMapping extends AbstractDataNodeWeightMapping {
 
-  private static final Map<String, Integer> weightMap = new HashMap<>();
+  private static final Map<String, Integer> WEIGHT_MAP = new HashMap<>();
 
   @Override
   public int resolve(String ipAddress, String hostName) {
     // this class is used for unit test, we should use hostName to get the weight
-    return weightMap.getOrDefault(hostName, DEFAULT_WEIGHT);
+    return WEIGHT_MAP.getOrDefault(hostName, DEFAULT_WEIGHT);
   }
 
   public static void setNodeWeight(String name, int weight) {
-    synchronized (weightMap) {
-      weightMap.put(name, weight);
+    synchronized (WEIGHT_MAP) {
+      WEIGHT_MAP.put(name, weight);
     }
   }
 
   public static void resetMap() {
-    synchronized (weightMap) {
-      weightMap.clear();
+    synchronized (WEIGHT_MAP) {
+      WEIGHT_MAP.clear();
     }
   }
 

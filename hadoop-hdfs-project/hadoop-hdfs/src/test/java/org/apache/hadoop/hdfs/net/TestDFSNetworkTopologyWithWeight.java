@@ -62,7 +62,7 @@ public class TestDFSNetworkTopologyWithWeight {
     private long chosenCount;
     private boolean isExcluded;
 
-    public NodeStatistics(DatanodeDescriptor dn, String rack, int weight,
+    private NodeStatistics(DatanodeDescriptor dn, String rack, int weight,
         StorageType storageType) {
       this.dn = dn;
       this.rack = rack;
@@ -86,8 +86,8 @@ public class TestDFSNetworkTopologyWithWeight {
       return !isExcluded;
     }
 
-    public void setExcluded(boolean isExcluded) {
-      this.isExcluded = isExcluded;
+    public void setExcluded(boolean val) {
+      this.isExcluded = val;
     }
   }
 

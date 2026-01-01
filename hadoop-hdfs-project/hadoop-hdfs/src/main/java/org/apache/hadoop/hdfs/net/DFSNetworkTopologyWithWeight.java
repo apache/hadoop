@@ -47,7 +47,7 @@ import org.apache.hadoop.util.ReflectionUtils;
  *                 /         \
  *            rack1(5)       rack2(1)
  *              |                |
- *  [dn1',dn1',dn1',dn2',dn2']  [dn3']    
+ *  [dn1',dn1',dn1',dn2',dn2']  [dn3']
  * <p>
  * when chooseRandom is invoked on the root, all the virtual nodes have the same
  * probability to be chosen. And if a virtual node is chosen, it will be mapped to

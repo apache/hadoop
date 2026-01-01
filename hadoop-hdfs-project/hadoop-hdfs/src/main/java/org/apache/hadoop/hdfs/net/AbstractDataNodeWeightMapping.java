@@ -20,7 +20,7 @@ package org.apache.hadoop.hdfs.net;
 import org.apache.hadoop.conf.Configuration;
 
 /**
- * This is a base class for DNS to Weight mappings. 
+ * This is a base class for DNS to Weight mappings.
  */
 abstract public class AbstractDataNodeWeightMapping implements DNSToWeightMapping {
 

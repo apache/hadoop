@@ -41,8 +41,8 @@ public class TestTableDataNodeWeightMapping {
   public void testResolve() throws IOException {
     File mapFile = createTempTableFile("testResolve");
     writeTableFile(mapFile,
-        new String[] { ipAddress1, ipAddress2 },
-        new int[] { 6, 3 });
+        new String[]{ipAddress1, ipAddress2},
+        new int[]{6, 3});
 
     TableDataNodeWeightMapping mapping = new TableDataNodeWeightMapping();
     setTableFilePathConfig(mapping, mapFile.getCanonicalPath());
@@ -76,8 +76,8 @@ public class TestTableDataNodeWeightMapping {
     File mapFile = createTempTableFile("testResolve");
 
     writeTableFile(mapFile,
-        new String[] { ipAddress1, ipAddress2 },
-        new int[] { 6, 3 });
+        new String[]{ipAddress1, ipAddress2},
+        new int[]{6, 3});
     TableDataNodeWeightMapping mapping = new TableDataNodeWeightMapping();
     setTableFilePathConfig(mapping, mapFile.getCanonicalPath());
 
@@ -86,8 +86,8 @@ public class TestTableDataNodeWeightMapping {
     assertEquals(DEFAULT_WEIGHT, mapping.resolve(ipAddress3));
 
     writeTableFile(mapFile,
-        new String[] { ipAddress1, ipAddress3 },
-        new int[] { 5, 2 });
+        new String[]{ipAddress1, ipAddress3},
+        new int[]{5, 2});
 
     mapping.reload();
     assertEquals(5, mapping.resolve(ipAddress1));
