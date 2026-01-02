@@ -4460,6 +4460,112 @@
 </property>
 
 <property>
+  <name>dfs.block.replicator.cross.dc.async.enabled</name>
+  <value>false</value>
+  <description>
+      Enables async cross-datacenter write mode for BlockPlacementPolicyAsyncCrossDC.
+      When enabled, only replicas in the writer's local datacenter are returned synchronously,
+      while remote datacenter replicas are written asynchronously in the background.
+      This can reduce write latency for cross-datacenter replication.
+      When disabled, all replicas (both local and remote datacenter) are returned synchronously.
+      Only applies when dfs.block.replicator.classname is set to
+      org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicyCrossDC.
+  </description>
+</property>
+
+<property>
+  <name>dfs.block.replicator.cross.dc.preferred.datacenter</name>
+  <value></value>
+  <description>
+      Specifies the preferred datacenter name (e.g., "/dc1") to be used as the majority
+      datacenter when BlockPlacementPolicyCrossDC needs to delete excess replicas.
+      When the original writer's datacenter cannot be determined, this datacenter will be
+      preferred to maintain more replicas. If not set or empty, the policy will use the
+      datacenter with the most existing replicas as the majority datacenter.
+      Only applies when dfs.block.replicator.classname is set to
+      org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicyCrossDC.
+  </description>
+</property>
+
+<property>
+  <name>dfs.block.replicator.cross.dc.bandwidth.limit.mb</name>
+  <value>5120</value>
+  <description>
+      Bandwidth limit in MB per second for limited sync write mode in BlockPlacementPolicyCrossDC.
+      This setting controls the maximum bandwidth available for cross-datacenter writes before
+      switching from sync to async mode. When paths are configured with limited sync write mode
+      (via dfs.block.replicator.cross.dc.limited.sync.paths), blocks will be written synchronously
+      to all datacenters as long as bandwidth is available within this limit. Once the limit is
+      exceeded, new blocks will be written asynchronously (local DC only) to minimize client latency.
+      The bandwidth limit is enforced using a token bucket algorithm with the refill period specified
+      by dfs.block.replicator.cross.dc.bandwidth.refill.period.sec.
+      Note: This value is in MB (not bytes) to avoid exceeding Bucket4j's maximum refill rate limit.
+      Default value is 5120 MB/s (5 GB/s).
+      Only applies when dfs.block.replicator.classname is set to
+      org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicyCrossDC.
+  </description>
+</property>
+
+<property>
+  <name>dfs.block.replicator.cross.dc.bandwidth.refill.period.sec</name>
+  <value>1</value>
+  <description>
+      Refill period in seconds for the bandwidth limit token bucket in BlockPlacementPolicyCrossDC.
+      This setting defines how often the bandwidth bucket is refilled with tokens equal to
+      dfs.block.replicator.cross.dc.bandwidth.limit.mb. For example, with a bandwidth limit of
+      5120 MB and a refill period of 1 second, the bucket will be refilled with 5120 MB worth
+      of tokens every second, effectively allowing 5120 MB/s of cross-datacenter writes.
+      A shorter refill period (e.g., 1 second) provides finer-grained bandwidth control,
+      while a longer period (e.g., 60 seconds) allows for more bursty traffic patterns.
+      Default value is 1 second.
+      Only applies when dfs.block.replicator.classname is set to
+      org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicyCrossDC.
+  </description>
+</property>
+
+<property>
+  <name>dfs.block.replicator.cross.dc.sync.paths</name>
+  <value></value>
+  <description>
+      Comma-separated list of HDFS paths that should always use sync write mode
+      (replicas written to all datacenters) in BlockPlacementPolicyCrossDC, regardless of
+      bandwidth availability or the dfs.block.replicator.cross.dc.async.enabled setting.
+      Path matching uses prefix-based matching: a configured path "/foo" will match "/foo",
+      "/foo/bar", and "/foo/bar/baz". For example, setting this to "/critical,/important"
+      will ensure all files under /critical and /important directories always use sync write
+      for maximum durability.
+      Priority order: sync paths (highest) > limited sync paths > default async/sync mode.
+      If a path matches both sync and limited sync paths, sync mode takes precedence.
+      Default is empty (no paths force sync write).
+      Only applies when dfs.block.replicator.classname is set to
+      org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicyCrossDC.
+  </description>
+</property>
+
+<property>
+  <name>dfs.block.replicator.cross.dc.limited.sync.paths</name>
+  <value></value>
+  <description>
+      Comma-separated list of HDFS paths that should use bandwidth-based limited sync write mode
+      in BlockPlacementPolicyCrossDC. Files under these paths will dynamically switch between
+      sync and async write modes based on available bandwidth:
+      - When bandwidth is available (within dfs.block.replicator.cross.dc.bandwidth.limit.mb):
+        Sync write to all datacenters for better durability.
+      - When bandwidth limit is exceeded: Async write to local datacenter only for better
+        client latency.
+      Path matching uses prefix-based matching: a configured path "/data" will match "/data",
+      "/data/logs", and "/data/logs/2026". For example, setting this to "/data,/logs" will
+      apply bandwidth-based limited sync write to all files under /data and /logs directories.
+      Priority order: sync paths (highest) > limited sync paths > default async/sync mode.
+      If a path is not matched by sync or limited sync paths, it will use the default mode
+      determined by dfs.block.replicator.cross.dc.async.enabled.
+      Default is empty (no paths use limited sync write).
+      Only applies when dfs.block.replicator.classname is set to
+      org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicyCrossDC.
+  </description>
+</property>
+
+<property>
   <name>dfs.blockreport.incremental.intervalMsec</name>
   <value>0</value>
   <description>
