@@ -31,12 +31,12 @@
 
   <properties>
     <!-- Set the Release year during release -->
-    <release-year>2025</release-year>
+    <release-year>2026</release-year>
 
     <!--Whether to proceed to next module if any test failures exist-->
     <maven.test.failure.ignore>true</maven.test.failure.ignore>
     <maven.test.redirectTestOutputToFile>true</maven.test.redirectTestOutputToFile>
-    <jetty.version>9.4.57.v20241219</jetty.version>
+    <jetty.version>9.4.58.v20250814</jetty.version>
     <test.exclude>_</test.exclude>
     <test.exclude.pattern>_</test.exclude.pattern>
 
@@ -45,7 +45,7 @@
 
     <!-- These 2 versions are defined here because they are used -->
     <!-- JDIFF generation from embedded ant in the antrun plugin -->
-    <jdiff.version>1.0.9</jdiff.version>
+    <jdiff.version>1.1.2-hadoop</jdiff.version>
     <!-- Version number for xerces used by JDiff -->
     <xerces.jdiff.version>2.12.2</xerces.jdiff.version>
 
@@ -71,8 +71,8 @@
     <jaxb.version>2.3.9</jaxb.version>
 
     <!-- jackson versions -->
-    <jackson2.version>2.14.3</jackson2.version>
-    <jackson2.databind.version>2.14.3</jackson2.databind.version>
+    <jackson2.version>2.18.5</jackson2.version>
+    <jackson2.databind.version>2.18.5</jackson2.databind.version>
 
     <!-- httpcomponents versions -->
     <httpclient.version>4.5.13</httpclient.version>
@@ -268,7 +268,7 @@
         <scope>test</scope>
       </dependency>
       <dependency>
-        <groupId>jdiff</groupId>
+        <groupId>io.github.zhtttylz</groupId>
         <artifactId>jdiff</artifactId>
         <version>${jdiff.version}</version>
       </dependency>
@@ -1304,6 +1304,12 @@
         <groupId>com.fasterxml.jackson.module</groupId>
         <artifactId>jackson-module-jaxb-annotations</artifactId>
         <version>${jackson2.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>javax.xml.bind</groupId>
+            <artifactId>jaxb-api</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>com.fasterxml.jackson.dataformat</groupId>
@@ -2632,6 +2638,23 @@
       <plugin>
         <groupId>com.google.code.maven-replacer-plugin</groupId>
         <artifactId>replacer</artifactId>
+      </plugin>
+      <plugin>
+        <groupId>org.commonjava.maven.plugins</groupId>
+        <artifactId>directory-maven-plugin</artifactId>
+        <version>1.0</version>
+        <executions>
+          <execution>
+            <id>calc-repo-root</id>
+            <goals>
+              <goal>highest-basedir</goal>
+            </goals>
+            <phase>initialize</phase>
+            <configuration>
+              <property>repo.root</property>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
   </build>

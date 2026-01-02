@@ -401,7 +401,7 @@
       <Bug pattern="ICAST_QUESTIONABLE_UNSIGNED_RIGHT_SHIFT" />
      </Match>
 
-     <!-- 
+     <!--
 	   False positive of FindBugs complaining that initializationPoller and
 	   started were accessed through
 	   CapacitySchedulerQueueRefresher.refreshQueues without explicitly holding
@@ -409,7 +409,7 @@
 	   JobTracker prior to calling QueueManager.refereshQueues - this is
 	   necessary to ensure the order of locking (TaskScheduler ->
 	   QueueManager).
-     --> 
+     -->
     <Match>
        <Class name="org.apache.hadoop.mapred.CapacityTaskScheduler" />
        <Field name="initializationPoller" />
@@ -553,5 +553,59 @@
     </Or>
     <Method name="onSuccess" />
     <Bug pattern="NP_PARAMETER_MUST_BE_NONNULL_BUT_MARKED_AS_NULLABLE" />
+  </Match>
+
+  <Match>
+    <Class name="org.apache.hadoop.mapreduce.v2.util.MRApps" />
+    <Method name="setupDistributedCacheLocal" />
+    <Bug pattern="ENV_USE_PROPERTY_INSTEAD_OF_ENV" />
+  </Match>
+
+  <Match>
+    <Class name="org.apache.hadoop.mapreduce.jobhistory.JobSubmitted" />
+    <Method name="customDecode" />
+    <Bug pattern="SF_SWITCH_FALLTHROUGH" />
+  </Match>
+
+  <Match>
+    <Class name="org.apache.hadoop.mapreduce.jobhistory.MapAttemptFinished" />
+    <Method name="customDecode" />
+    <Bug pattern="SF_SWITCH_FALLTHROUGH" />
+  </Match>
+
+  <Match>
+    <Class name="org.apache.hadoop.mapreduce.jobhistory.ReduceAttemptFinished" />
+    <Method name="customDecode" />
+    <Bug pattern="SF_SWITCH_FALLTHROUGH" />
+  </Match>
+
+  <Match>
+    <Class name="org.apache.hadoop.mapreduce.jobhistory.TaskAttemptUnsuccessfulCompletion" />
+    <Method name="customDecode" />
+    <Bug pattern="SF_SWITCH_FALLTHROUGH" />
+  </Match>
+
+  <Match>
+    <Class name="org.apache.hadoop.mapreduce.util.ProcessTree" />
+    <Method name="isSetsidSupported" />
+    <Bug pattern="NP_NULL_ON_SOME_PATH_EXCEPTION" />
+  </Match>
+
+  <Match>
+    <Class name="org.apache.hadoop.mapreduce.util.ProcessTree" />
+    <Method name="isProcessGroupAlive" />
+    <Bug pattern="NP_NULL_ON_SOME_PATH_EXCEPTION" />
+  </Match>
+
+  <Match>
+    <Class name="org.apache.hadoop.mapreduce.lib.db.DataDrivenDBInputFormat" />
+    <Method name="getSplits" />
+    <Bug pattern="OBL_UNSATISFIED_OBLIGATION_EXCEPTION_EDGE" />
+  </Match>
+
+  <Match>
+    <Class name="org.apache.hadoop.mapreduce.v2.app.rm.RMContainerAllocator" />
+    <Field name="containersReleased" />
+    <Bug pattern="IS2_INCONSISTENT_SYNC" />
   </Match>
  </FindBugsFilter>

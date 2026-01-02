@@ -17,39 +17,111 @@
  */
 package org.apache.hadoop.classification.tools;
 
-import com.sun.javadoc.DocErrorReporter;
+import jdk.javadoc.doclet.Reporter;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
-class StabilityOptions {
+/**
+ * Doclet option helpers for API stability filtering.
+ */
+public final class StabilityOptions {
+
+  /** Option flag: {@code -stable}. */
   public static final String STABLE_OPTION = "-stable";
+
+  /** Option flag: {@code -evolving}. */
   public static final String EVOLVING_OPTION = "-evolving";
+
+  /** Option flag: {@code -unstable}. */
   public static final String UNSTABLE_OPTION = "-unstable";
 
+  enum Level { STABLE, EVOLVING, UNSTABLE }
+  private static volatile Level level = Level.STABLE;
+
+  static void setLevel(Level l) {
+    if (l != null) {
+      level = l;
+    }
+  }
+
+  private StabilityOptions() {
+  }
+
+  /**
+   * Return option length for a supported stability option.
+   *
+   * @param option option name
+   * @return {@code 1} if supported; otherwise {@code null}
+   */
   public static Integer optionLength(String option) {
     String opt = option.toLowerCase(Locale.ENGLISH);
-    if (opt.equals(UNSTABLE_OPTION)) return 1;
-    if (opt.equals(EVOLVING_OPTION)) return 1;
-    if (opt.equals(STABLE_OPTION)) return 1;
+    if (opt.equals(UNSTABLE_OPTION)) {
+      return 1;
+    }
+    if (opt.equals(EVOLVING_OPTION)) {
+      return 1;
+    }
+    if (opt.equals(STABLE_OPTION)) {
+      return 1;
+    }
     return null;
   }
 
-  public static void validOptions(String[][] options,
-      DocErrorReporter reporter) {
-    for (int i = 0; i < options.length; i++) {
-      String opt = options[i][0].toLowerCase(Locale.ENGLISH);
-      if (opt.equals(UNSTABLE_OPTION)) {
-        RootDocProcessor.stability = UNSTABLE_OPTION;
-      } else if (opt.equals(EVOLVING_OPTION)) {
-        RootDocProcessor.stability = EVOLVING_OPTION;
-      } else if (opt.equals(STABLE_OPTION)) {
-        RootDocProcessor.stability = STABLE_OPTION;
-      }
+  static void setFromOptionName(String optName) {
+    String opt = optName.toLowerCase(Locale.ENGLISH);
+    Level next = null;
+    if (opt.equals(UNSTABLE_OPTION)) {
+      next = Level.UNSTABLE;
+    } else if (opt.equals(EVOLVING_OPTION)) {
+      next = Level.EVOLVING;
+    } else if (opt.equals(STABLE_OPTION)) {
+      next = Level.STABLE;
+    }
+    if (next != null && next.ordinal() > level.ordinal()) {
+      level = next;
     }
   }
-  
+
+  static Level getLevel() {
+    return level;
+  }
+
+  static void applyToRootProcessor() {
+    switch (level) {
+    case UNSTABLE:
+      RootDocProcessor.setStability(UNSTABLE_OPTION);
+      break;
+    case EVOLVING:
+      RootDocProcessor.setStability(EVOLVING_OPTION);
+      break;
+    default:
+      RootDocProcessor.setStability(STABLE_OPTION);
+    }
+  }
+
+  /**
+   * Validate and apply stability options.
+   *
+   * @param options  doclet options
+   * @param reporter reporter
+   */
+  public static void validOptions(String[][] options,
+      Reporter reporter) {
+    for (int i = 0; i < options.length; i++) {
+      String opt = options[i][0].toLowerCase(Locale.ENGLISH);
+      setFromOptionName(opt);
+    }
+    applyToRootProcessor();
+  }
+
+  /**
+   * Filter out stability options from the doclet options array.
+   *
+   * @param options doclet options
+   * @return options without stability flags
+   */
   public static String[][] filterOptions(String[][] options) {
     List<String[]> optionsList = new ArrayList<String[]>();
     for (int i = 0; i < options.length; i++) {

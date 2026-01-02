@@ -19,7 +19,7 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
-import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.HUNDRED_D;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.hadoop.fs.azurebfs.enums.AbfsReadResourceUtilizationMetricsEnum;
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
@@ -37,11 +37,50 @@ public class AbfsReadResourceUtilizationMetrics
     AbstractAbfsResourceUtilizationMetrics<AbfsReadResourceUtilizationMetricsEnum> {
 
   /**
+   * A version counter incremented each time a metric update occurs.
+   * Used to detect whether metrics have changed since the last serialization.
+   */
+  private final AtomicLong updateVersion = new AtomicLong(0);
+
+  /**
+   * The last version number that was serialized and pushed out.
+   */
+  private final AtomicLong lastPushedVersion = new AtomicLong(0);
+
+  @Override
+  protected boolean isUpdated() {
+    return updateVersion.get() > lastPushedVersion.get();
+  }
+
+  protected synchronized void markUpdated() {
+    updateVersion.incrementAndGet();
+  }
+
+  @Override
+  protected long getUpdateVersion() {
+    return updateVersion.get();
+  }
+
+  @Override
+  protected long getLastPushedVersion() {
+    return lastPushedVersion.get();
+  }
+
+  /**
    * Creates a metrics set for read operations, initializing all
    * metric keys defined in {@link AbfsReadResourceUtilizationMetricsEnum}.
    */
   public AbfsReadResourceUtilizationMetrics() {
     super(AbfsReadResourceUtilizationMetricsEnum.values(), FSOperationType.READ.toString());
+  }
+
+  /**
+   * Marks the current metrics version as pushed.
+   * Must be called only after the metrics string is actually emitted.
+   */
+  @Override
+  public synchronized void markPushed() {
+    lastPushedVersion.set(updateVersion.get());
   }
 
   /**
@@ -71,16 +110,16 @@ public class AbfsReadResourceUtilizationMetrics
     setMetricValue(AbfsReadResourceUtilizationMetricsEnum.MAX_POOL_SIZE, stats.getMaxPoolSize());
     setMetricValue(AbfsReadResourceUtilizationMetricsEnum.ACTIVE_THREADS, stats.getActiveThreads());
     setMetricValue(AbfsReadResourceUtilizationMetricsEnum.IDLE_THREADS, stats.getIdleThreads());
-    setMetricValue(AbfsReadResourceUtilizationMetricsEnum.JVM_CPU_UTILIZATION, stats.getJvmCpuLoad() * HUNDRED_D);
-    setMetricValue(AbfsReadResourceUtilizationMetricsEnum.SYSTEM_CPU_UTILIZATION, stats.getSystemCpuUtilization() * HUNDRED_D);
+    setMetricValue(AbfsReadResourceUtilizationMetricsEnum.JVM_CPU_UTILIZATION, stats.getJvmCpuLoad());
+    setMetricValue(AbfsReadResourceUtilizationMetricsEnum.SYSTEM_CPU_UTILIZATION, stats.getSystemCpuUtilization());
     setMetricValue(AbfsReadResourceUtilizationMetricsEnum.AVAILABLE_MEMORY, stats.getMemoryUtilization());
     setMetricValue(AbfsReadResourceUtilizationMetricsEnum.COMMITTED_MEMORY, stats.getCommittedHeapGB());
     setMetricValue(AbfsReadResourceUtilizationMetricsEnum.USED_MEMORY, stats.getUsedHeapGB());
     setMetricValue(AbfsReadResourceUtilizationMetricsEnum.MAX_HEAP_MEMORY, stats.getMaxHeapGB());
-    setMetricValue(AbfsReadResourceUtilizationMetricsEnum.MEMORY_LOAD, stats.getMemoryLoad() * HUNDRED_D);
+    setMetricValue(AbfsReadResourceUtilizationMetricsEnum.MEMORY_LOAD, stats.getMemoryLoad());
     setMetricValue(AbfsReadResourceUtilizationMetricsEnum.LAST_SCALE_DIRECTION,
         stats.getLastScaleDirectionNumeric(stats.getLastScaleDirection()));
-    setMetricValue(AbfsReadResourceUtilizationMetricsEnum.MAX_CPU_UTILIZATION, stats.getMaxCpuUtilization() * HUNDRED_D);
+    setMetricValue(AbfsReadResourceUtilizationMetricsEnum.MAX_CPU_UTILIZATION, stats.getMaxCpuUtilization());
     setMetricValue(AbfsReadResourceUtilizationMetricsEnum.JVM_PROCESS_ID, stats.getJvmProcessId());
 
     markUpdated();

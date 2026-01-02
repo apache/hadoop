@@ -17,31 +17,55 @@
  */
 package org.apache.hadoop.classification.tools;
 
-import com.sun.javadoc.DocErrorReporter;
-import com.sun.javadoc.LanguageVersion;
-import com.sun.javadoc.RootDoc;
+import jdk.javadoc.doclet.DocletEnvironment;
+import jdk.javadoc.doclet.Reporter;
+import javax.lang.model.SourceVersion;
 
 import jdiff.JDiff;
 
 /**
- * A <a href="http://java.sun.com/javase/6/docs/jdk/api/javadoc/doclet/">Doclet</a>
- * for excluding elements that are annotated with
+ * <a href=
+ * "https://docs.oracle.com/en/java/javase/17/docs/api/jdk.javadoc/jdk/javadoc/doclet/Doclet.html">
+ * Doclet</a> for excluding elements that are annotated with
  * {@link org.apache.hadoop.classification.InterfaceAudience.Private} or
  * {@link org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate}.
  * It delegates to the JDiff Doclet, and takes the same options.
  */
-public class ExcludePrivateAnnotationsJDiffDoclet {
-  
-  public static LanguageVersion languageVersion() {
-    return LanguageVersion.JAVA_1_5;
+public final class ExcludePrivateAnnotationsJDiffDoclet {
+
+  /**
+   * Returns the source version used by this doclet.
+   *
+   * @return the supported source version
+   */
+  public static SourceVersion languageVersion() {
+    return SourceVersion.RELEASE_17;
   }
-  
-  public static boolean start(RootDoc root) {
+
+  /**
+   * Legacy doclet entry point used by JDiff/Javadoc.
+   *
+   * @param root the doclet environment
+   * @return true if the doclet completed successfully
+   */
+  public static boolean start(DocletEnvironment root) {
     System.out.println(
         ExcludePrivateAnnotationsJDiffDoclet.class.getSimpleName());
     return JDiff.start(RootDocProcessor.process(root));
   }
-  
+
+  /**
+   * Utility class: provides only static entry points for JDiff.
+   */
+  private ExcludePrivateAnnotationsJDiffDoclet() {
+  }
+
+  /**
+   * Returns the length of a supported option.
+   *
+   * @param option the option name
+   * @return the number of arguments including the option itself
+   */
   public static int optionLength(String option) {
     Integer length = StabilityOptions.optionLength(option);
     if (length != null) {
@@ -49,9 +73,16 @@ public class ExcludePrivateAnnotationsJDiffDoclet {
     }
     return JDiff.optionLength(option);
   }
-  
+
+  /**
+   * Validates options before running the doclet.
+   *
+   * @param options  the options to validate
+   * @param reporter the reporter to use for diagnostics
+   * @return true if the options are valid
+   */
   public static boolean validOptions(String[][] options,
-      DocErrorReporter reporter) {
+      Reporter reporter) {
     StabilityOptions.validOptions(options, reporter);
     String[][] filteredOptions = StabilityOptions.filterOptions(options);
     return JDiff.validOptions(filteredOptions, reporter);
