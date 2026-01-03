@@ -53,7 +53,7 @@ public class TestDFSNetworkTopologyWithWeight {
   /**
    * Helper class to store the information and statistics of a datanode.
    */
-  private static class NodeStatistics {
+  private static final class NodeStatistics {
     private final DatanodeDescriptor dn;
     private final String rack;
     private final int weight;
