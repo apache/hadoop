@@ -51,7 +51,7 @@ RUN apt-get -q update \
     && apt-get -q update \
     && apt-get -q install -y --no-install-recommends $(pkg-resolver/resolve.py ubuntu:focal) \
     && apt-get clean \
-    && update-java-alternatives -s java-1.8.0-openjdk-amd64 \
+    && update-java-alternatives -s java-1.17.0-openjdk-amd64 \
     && rm -rf /var/lib/apt/lists/*
 
 RUN locale-gen en_US.UTF-8
@@ -64,7 +64,7 @@ ENV PYTHONIOENCODING=utf-8
 ENV MAVEN_HOME=/opt/maven
 ENV PATH="${PATH}:${MAVEN_HOME}/bin"
 # JAVA_HOME must be set in Maven >= 3.5.0 (MNG-6003)
-ENV JAVA_HOME /usr/lib/jvm/java-8-openjdk-amd64
+ENV JAVA_HOME /usr/lib/jvm/java-17-openjdk-amd64
 
 #######
 # Set env vars for SpotBugs 4.2.2
