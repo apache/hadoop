@@ -64,7 +64,7 @@ import org.slf4j.LoggerFactory;
  * To implement an atomic append it reads all the data in the original file,
  * writes that to a temporary file, appends the new
  * data there and renames that temporary file to the original path.
- * This is makes the update operation slower and slower the longer an application runs.
+ * This makes the update operation slower and slower the longer an application runs.
  * If any other update comes in while an existing update is in progress,
  * it will read and append to the previous state of the log, losing all changes
  * from the ongoing transaction.
