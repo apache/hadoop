@@ -110,14 +110,17 @@ jthrowable newIOException(JNIEnv* env, const char *fmt, ...)
 
 const char* terror(int errnum)
 {
-// MT-Safe under Solaris or glibc >= 2.32 not supporting sys_errlist/sys_nerr
-#if defined(__sun)
-  #define USE_STR_ERROR
-#elif defined(__GLIBC_PREREQ)
-  #if __GLIBC_PREREQ(2, 32)
-    #define USE_STR_ERROR
+/* STD_ERROR is the new standard. Alpine musc does not want to be 'detected' it want to be pure and modern. Thus we detect the old glib and handle. */  
+#ifdef __GLIBC__
+  #if defined(__GLIBC_PREREQ)
+    #if __GLIBC_PREREQ(2, 32)
+      #define USE_STR_ERROR
+    #endif
   #endif
+#else
+  #define USE_STR_ERROR
 #endif
+
 
 #if defined(USE_STR_ERROR)
   return strerror(errnum); 
