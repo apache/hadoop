@@ -36,7 +36,7 @@
     <!--Whether to proceed to next module if any test failures exist-->
     <maven.test.failure.ignore>true</maven.test.failure.ignore>
     <maven.test.redirectTestOutputToFile>true</maven.test.redirectTestOutputToFile>
-    <jetty.version>9.4.57.v20241219</jetty.version>
+    <jetty.version>9.4.58.v20250814</jetty.version>
     <test.exclude>_</test.exclude>
     <test.exclude.pattern>_</test.exclude.pattern>
 
@@ -45,7 +45,7 @@
 
     <!-- These 2 versions are defined here because they are used -->
     <!-- JDIFF generation from embedded ant in the antrun plugin -->
-    <jdiff.version>1.0.9</jdiff.version>
+    <jdiff.version>1.1.2-hadoop</jdiff.version>
     <!-- Version number for xerces used by JDiff -->
     <xerces.jdiff.version>2.12.2</xerces.jdiff.version>
 
@@ -268,7 +268,7 @@
         <scope>test</scope>
       </dependency>
       <dependency>
-        <groupId>jdiff</groupId>
+        <groupId>io.github.zhtttylz</groupId>
         <artifactId>jdiff</artifactId>
         <version>${jdiff.version}</version>
       </dependency>

@@ -791,7 +791,7 @@
 
   <Match>
     <Class name="org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ResourceLocalizationService$PublicLocalizer" />
-    <Method name="run" />
+    <Method name="work" />
     <Bug pattern="NP_NULL_ON_SOME_PATH_EXCEPTION" />
   </Match>
 
@@ -805,5 +805,10 @@
     <Class name="org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.WeightQueueCapacityCalculator" />
     <Method name="calculateMinimumResource" />
     <Bug pattern="FE_FLOATING_POINT_EQUALITY" />
+  </Match>
+
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.resourcemanager.ResourceManager" />
+    <Bug pattern="IS2_INCONSISTENT_SYNC" />
   </Match>
 </FindBugsFilter>

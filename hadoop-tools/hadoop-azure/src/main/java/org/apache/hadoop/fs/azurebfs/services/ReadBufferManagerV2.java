@@ -1145,7 +1145,7 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
   public static class ReadThreadPoolStats extends ResourceUtilizationStats {
 
     /**
-     * Constructs a {@link .ReadThreadPoolStats} instance containing thread pool
+     * Constructs a {@link ReadThreadPoolStats} instance containing thread pool
      * metrics and JVM/system resource utilization details.
      *
      * @param currentPoolSize the current number of threads in the pool
