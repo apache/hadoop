@@ -84,17 +84,24 @@ pipeline {
         stage ('setup sources') {
             steps {
 
-                dir("${WORKSPACE}/rockylinux-8") {
+                dir("${WORKSPACE}/debian-12") {
                     sh '''#!/usr/bin/env bash
 
-                    cp -Rp ${WORKSPACE}/src ${WORKSPACE}/rockylinux-8
+                    cp -Rp ${WORKSPACE}/src ${WORKSPACE}/debian-12
                     '''
                 }
 
-                dir("${WORKSPACE}/debian-11") {
+                dir("${WORKSPACE}/debian-13") {
                     sh '''#!/usr/bin/env bash
 
-                    cp -Rp ${WORKSPACE}/src ${WORKSPACE}/debian-11
+                    cp -Rp ${WORKSPACE}/src ${WORKSPACE}/debian-13
+                    '''
+                }
+
+                dir("${WORKSPACE}/ubuntu-24") {
+                    sh '''#!/usr/bin/env bash
+
+                    cp -Rp ${WORKSPACE}/src ${WORKSPACE}/ubuntu-24
                     '''
                 }
 
@@ -111,12 +118,12 @@ pipeline {
         // C++/C++ build/platform.
         // This stage serves as a means of cross platform validation, which is
         // really needed to ensure that any C++ related/platform change doesn't
-        // break the Hadoop build on Rocky Linux 8.
-        stage ('precommit-run Rocky Linux 8') {
+        // break the Hadoop build on Debian 12.
+        stage ('precommit-run Debian 12') {
             environment {
-                SOURCEDIR = "${WORKSPACE}/rockylinux-8/src"
-                PATCHDIR = "${WORKSPACE}/rockylinux-8/out"
-                DOCKERFILE = "${SOURCEDIR}/dev-support/docker/Dockerfile_rockylinux_8"
+                SOURCEDIR = "${WORKSPACE}/debian-12/src"
+                PATCHDIR = "${WORKSPACE}/debian-12/out"
+                DOCKERFILE = "${SOURCEDIR}/dev-support/docker/Dockerfile_debian_12"
                 IS_OPTIONAL = 1
             }
 
@@ -136,7 +143,7 @@ pipeline {
                 failure {
                     sh '''#!/usr/bin/env bash
 
-                    cp -Rp "${WORKSPACE}/rockylinux-8/out" "${WORKSPACE}"
+                    cp -Rp "${WORKSPACE}/debian-12/out" "${WORKSPACE}"
                     '''
                     archiveArtifacts "out/**"
                 }
@@ -157,12 +164,12 @@ pipeline {
         // C++/C++ build/platform.
         // This stage serves as a means of cross platform validation, which is
         // really needed to ensure that any C++ related/platform change doesn't
-        // break the Hadoop build on Debian 11.
-        stage ('precommit-run Debian 11') {
+        // break the Hadoop build on Debian 13.
+        stage ('precommit-run Debian 13') {
             environment {
-                SOURCEDIR = "${WORKSPACE}/debian-11/src"
-                PATCHDIR = "${WORKSPACE}/debian-11/out"
-                DOCKERFILE = "${SOURCEDIR}/dev-support/docker/Dockerfile_debian_11"
+                SOURCEDIR = "${WORKSPACE}/debian-13/src"
+                PATCHDIR = "${WORKSPACE}/debian-13/out"
+                DOCKERFILE = "${SOURCEDIR}/dev-support/docker/Dockerfile_debian_13"
                 IS_OPTIONAL = 1
             }
 
@@ -182,7 +189,54 @@ pipeline {
                 failure {
                     sh '''#!/usr/bin/env bash
 
-                    cp -Rp "${WORKSPACE}/debian-11/out" "${WORKSPACE}"
+                    cp -Rp "${WORKSPACE}/debian-13/out" "${WORKSPACE}"
+                    '''
+                    archiveArtifacts "out/**"
+                }
+
+                cleanup() {
+                    script {
+                        sh '''#!/usr/bin/env bash
+
+                        chmod u+x "${SOURCEDIR}/dev-support/jenkins.sh"
+                        "${SOURCEDIR}/dev-support/jenkins.sh" cleanup_ci_proc
+                        '''
+                    }
+                }
+            }
+        }
+
+
+        // This is an optional stage which runs only when there's a change in
+        // C++/C++ build/platform.
+        // This stage serves as a means of cross platform validation, which is
+        // really needed to ensure that any C++ related/platform change doesn't
+        // break the Hadoop build on Ubuntu 24.
+        stage ('precommit-run Ubuntu 24') {
+            environment {
+                SOURCEDIR = "${WORKSPACE}/ubuntu-24/src"
+                PATCHDIR = "${WORKSPACE}/ubuntu-24/out"
+                DOCKERFILE = "${SOURCEDIR}/dev-support/docker/Dockerfile_ubuntu_24"
+                IS_OPTIONAL = 1
+            }
+
+            steps {
+                withCredentials(getGithubCreds()) {
+                    sh '''#!/usr/bin/env bash
+
+                    chmod u+x "${SOURCEDIR}/dev-support/jenkins.sh"
+                    "${SOURCEDIR}/dev-support/jenkins.sh" run_ci
+                    '''
+                }
+            }
+
+            post {
+                // Since this is an optional platform, we want to copy the artifacts
+                // and archive it only if the build fails, to help with debugging.
+                failure {
+                    sh '''#!/usr/bin/env bash
+
+                    cp -Rp "${WORKSPACE}/ubuntu-24/out" "${WORKSPACE}"
                     '''
                     archiveArtifacts "out/**"
                 }
