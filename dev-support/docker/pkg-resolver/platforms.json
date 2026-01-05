@@ -2,6 +2,7 @@
   "ubuntu:focal",
   "ubuntu:focal::arch64",
   "ubuntu:noble",
+  "ubuntu:noble::arch64",
   "rockylinux:8",
   "debian:11",
   "debian:12",
