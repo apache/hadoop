@@ -98,7 +98,7 @@ class AbfsClientThrottlingAnalyzer implements Closeable {
   }
 
   /**
-   * Resumes the timer if it was stopped.
+   * Resumes the timer if it was stopped previously.
    */
   private void resumeTimer() {
     blobMetrics = new AtomicReference<AbfsOperationMetrics>(
