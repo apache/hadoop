@@ -86,7 +86,6 @@ public class TestBlockRecoveryCauseStandbyNameNodeCrash {
     dfs.setErasureCodingPolicy(dir, ecPolicy.getName());
   }
 
-
   @AfterEach
   public void tearDown() {
     if (cluster != null) {
