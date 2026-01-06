@@ -25,7 +25,8 @@ module.exports = function(defaults) {
   var app = new EmberApp(defaults, {
     storeConfigInMeta: false,
     minifyCSS: {
-      enabled: isProd
+      // minify CSS is broken in our setup
+      enabled: false
     },
     minifyJS: {
       // Will be minified by wro4j-maven-plugin for performance
