@@ -39,6 +39,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -61,12 +63,16 @@ import org.apache.hadoop.classification.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.apache.hadoop.yarn.server.timelineservice.storage.FileSystemTimelineWriterImpl.escape;
+
 /**
  *  File System based implementation for TimelineReader. This implementation may
  *  not provide a complete implementation of all the necessary features. This
  *  implementation is provided solely for basic testing purposes, and should not
  *  be used in a non-test situation.
  */
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
 public class FileSystemTimelineReaderImpl extends AbstractService
     implements TimelineReader {
 
@@ -164,7 +170,9 @@ public class FileSystemTimelineReaderImpl extends AbstractService
   private String getFlowRunPath(String userId, String clusterId,
       String flowName, Long flowRunId, String appId) throws IOException {
     if (userId != null && flowName != null && flowRunId != null) {
-      return userId + File.separator + flowName + File.separator + "*" + File.separator + flowRunId;
+      return escape(userId) + File.separator
+          + escape(flowName) + File.separator
+          + "*" + File.separator + flowRunId;
     }
     if (clusterId == null || appId == null) {
       throw new IOException("Unable to get flow info");
