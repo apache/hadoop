@@ -657,7 +657,7 @@ public class AbfsConfiguration{
   private int prefetchRequestPriorityValue;
 
   @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_READ_POLICY,
-          DefaultValue = DEFAULT_FS_AZURE_READ_POLICY)
+          DefaultValue = DEFAULT_AZURE_READ_POLICY)
   private String abfsReadPolicy;
 
   private String clientProvidedEncryptionKey;

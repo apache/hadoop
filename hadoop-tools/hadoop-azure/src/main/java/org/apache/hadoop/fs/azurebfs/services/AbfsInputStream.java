@@ -326,6 +326,14 @@ public abstract class AbfsInputStream extends FSInputStream implements CanUnbuff
         && this.fCursor >= footerStart;
   }
 
+  /**
+   * Read one block of data into buffer.
+   * @param b buffer
+   * @param off offset
+   * @param len length
+   * @return number of bytes read
+   * @throws IOException if there is an error
+   */
   protected abstract int readOneBlock(final byte[] b, final int off, final int len) throws IOException;
 
   private int readFileCompletely(final byte[] b, final int off, final int len)
@@ -420,6 +428,14 @@ public abstract class AbfsInputStream extends FSInputStream implements CanUnbuff
     this.bCursor = this.bCursorBkp;
   }
 
+  /**
+   * Validate the read parameters.
+   * @param b buffer byte array
+   * @param off offset in buffer
+   * @param len length to read
+   * @return true if valid else false
+   * @throws IOException if there is an error
+   */
   protected boolean validate(final byte[] b, final int off, final int len)
       throws IOException {
     if (closed) {
@@ -440,6 +456,13 @@ public abstract class AbfsInputStream extends FSInputStream implements CanUnbuff
     return true;
   }
 
+  /**
+   * Copy data from internal buffer to user buffer.
+   * @param b user buffer
+   * @param off offset
+   * @param len length
+   * @return number of bytes copied
+   */
   protected int copyToUserBuffer(byte[] b, int off, int len){
     //If there is anything in the buffer, then return lesser of (requested bytes) and (bytes in buffer)
     //(bytes returned may be less than requested)
@@ -459,6 +482,16 @@ public abstract class AbfsInputStream extends FSInputStream implements CanUnbuff
     return bytesToRead;
   }
 
+  /**
+   * Internal read method which handles read-ahead logic.
+   * @param position to read from
+   * @param b buffer
+   * @param offset in buffer
+   * @param length to read
+   * @param bypassReadAhead whether to bypass read-ahead
+   * @return number of bytes read
+   * @throws IOException if there is an error
+   */
   protected int readInternal(final long position, final byte[] b, final int offset, final int length,
                            final boolean bypassReadAhead) throws IOException {
     if (isReadAheadEnabled() && !bypassReadAhead) {

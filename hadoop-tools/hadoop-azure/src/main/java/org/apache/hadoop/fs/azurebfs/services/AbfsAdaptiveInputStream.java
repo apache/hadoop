@@ -24,8 +24,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.azurebfs.constants.ReadType;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
-import static java.lang.Math.max;
-
 /**
  * Input stream implementation optimized for adaptive read patterns.
  * This is the default implementation used for cases where user does not specify any input policy.
@@ -34,6 +32,16 @@ import static java.lang.Math.max;
  */
 public class AbfsAdaptiveInputStream extends AbfsInputStream {
 
+  /**
+   * Constructs AbfsAdaptiveInputStream
+   * @param client AbfsClient to be used for read operations
+   * @param statistics to recordinput stream statistics
+   * @param path file path
+   * @param contentLength file content length
+   * @param abfsInputStreamContext input stream context
+   * @param eTag file eTag
+   * @param tracingContext tracing context to trace the read operations
+   */
   public AbfsAdaptiveInputStream(
       final AbfsClient client,
       final FileSystem.Statistics statistics,
