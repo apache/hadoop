@@ -32,21 +32,21 @@ import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_RE
  * Enum for ABFS Input Policies.
  * Each policy maps to a particular implementation of {@link AbfsInputStream}
  */
-public enum AbfsInputPolicy {
+public enum AbfsReadPolicy {
 
   SEQUENTIAL(FS_OPTION_OPENFILE_READ_POLICY_SEQUENTIAL),
   RANDOM(FS_OPTION_OPENFILE_READ_POLICY_RANDOM),
   ADAPTIVE(FS_OPTION_OPENFILE_READ_POLICY_ADAPTIVE);
 
-  private final String policy;
+  private final String readPolicy;
 
-  AbfsInputPolicy(String policy) {
-    this.policy = policy;
+  AbfsReadPolicy(String readPolicy) {
+    this.readPolicy = readPolicy;
   }
 
   @Override
   public String toString() {
-    return policy;
+    return readPolicy;
   }
 
   /**
@@ -54,7 +54,7 @@ public enum AbfsInputPolicy {
    * @param name policy name as configured by user
    * @return the corresponding AbsInputPolicy to be used
    */
-  public static AbfsInputPolicy getPolicy(String name) {
+  public static AbfsReadPolicy getAbfsReadPolicy(String name) {
     String trimmed = name.trim().toLowerCase(Locale.ENGLISH);
     switch (trimmed) {
     // all these options currently map to random IO.

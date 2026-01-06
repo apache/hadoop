@@ -58,16 +58,22 @@ import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderVersion;
 import org.apache.hadoop.fs.impl.OpenFileParameters;
 
-import static org.apache.hadoop.fs.Options.OpenFileOptions.*;
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_ADAPTIVE;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_AVRO;
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_PARQUET;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_SEQUENTIAL;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.COLON;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.SPLIT_NO_LIMIT;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENABLE_PREFETCH_REQUEST_PRIORITY;
-import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_MB;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_REQUEST_PRIORITY;
-import static org.apache.hadoop.fs.azurebfs.constants.ReadType.*;
+import static org.apache.hadoop.fs.azurebfs.constants.ReadType.DIRECT_READ;
+import static org.apache.hadoop.fs.azurebfs.constants.ReadType.FOOTER_READ;
+import static org.apache.hadoop.fs.azurebfs.constants.ReadType.MISSEDCACHE_READ;
+import static org.apache.hadoop.fs.azurebfs.constants.ReadType.NORMAL_READ;
+import static org.apache.hadoop.fs.azurebfs.constants.ReadType.PREFETCH_READ;
+import static org.apache.hadoop.fs.azurebfs.constants.ReadType.RANDOM_READ;
+import static org.apache.hadoop.fs.azurebfs.constants.ReadType.SMALLFILE_READ;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -883,7 +889,7 @@ public class TestAbfsInputStream extends AbstractAbfsIntegrationTest {
 
     /*
      * Test to verify Random Read Type.
-     * Settin Read Policy to Parquet ensures Random Read Type.
+     * Setting Read Policy to Parquet ensures Random Read Type.
      */
     fileSize = 3 * ONE_MB; // To make sure multiple blocks are read.
     totalReadCalls += 3; // Full file will be read along with footer.
@@ -1130,13 +1136,11 @@ public class TestAbfsInputStream extends AbstractAbfsIntegrationTest {
     ArgumentCaptor<TracingContext> captor9 = ArgumentCaptor.forClass(TracingContext.class);
 
     List<String> paths = captor1.getAllValues();
-    System.out.println(paths);
     verify(fs.getAbfsStore().getClient(), times(totalReadCalls)).read(
         captor1.capture(), captor2.capture(), captor3.capture(),
         captor4.capture(), captor5.capture(), captor6.capture(),
         captor7.capture(), captor8.capture(), captor9.capture());
     List<TracingContext> tracingContextList = captor9.getAllValues();
-    System.out.println(tracingContextList);
     if (readType == PREFETCH_READ) {
       /*
        * For Prefetch Enabled, first read can be Normal or Missed Cache Read.

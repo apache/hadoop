@@ -32,6 +32,16 @@ import static java.lang.Math.max;
  */
 public class AbfsPrefetchInputStream extends AbfsInputStream {
 
+  /**
+   * Constructs AbfsPrefetchInputStream
+   * @param client AbfsClient to be used for read operations
+   * @param statistics to recordinput stream statistics
+   * @param path file path
+   * @param contentLength file content length
+   * @param abfsInputStreamContext input stream context
+   * @param eTag file eTag
+   * @param tracingContext tracing context to trace the read operations
+   */
   public AbfsPrefetchInputStream(
       final AbfsClient client,
       final FileSystem.Statistics statistics,

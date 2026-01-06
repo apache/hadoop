@@ -24,10 +24,12 @@ import org.apache.hadoop.fs.azurebfs.contracts.services.ReadBufferStatus;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Stack;
+import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -100,7 +102,8 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
 
   private byte[][] bufferPool;
 
-  private final Stack<Integer> removedBufferList = new Stack<>();
+  private final ConcurrentSkipListSet<Integer> removedBufferList = new ConcurrentSkipListSet<>();
+  private ConcurrentSkipListSet<Integer> freeList = new ConcurrentSkipListSet<>();
 
   private ScheduledExecutorService memoryMonitorThread;
 
@@ -209,7 +212,7 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
       // Start with just minimum number of buffers.
       bufferPool[i]
           = new byte[getReadAheadBlockSize()];  // same buffers are reused. The byte array never goes back to GC
-      getFreeList().add(i);
+      pushToFreeList(i);
       numberOfActiveBuffers.getAndIncrement();
     }
     memoryMonitorThread = Executors.newSingleThreadScheduledExecutor(
@@ -768,12 +771,17 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
     if (memoryLoad < memoryThreshold && getNumBuffers() < maxBufferPoolSize) {
       // Create and Add more buffers in getFreeList().
       int nextIndx = getNumBuffers();
-      if (removedBufferList.isEmpty() && nextIndx < bufferPool.length) {
+      if (removedBufferList.isEmpty()) {
+        if (nextIndx >= bufferPool.length) {
+          printTraceLog("Invalid next index: {}. Current buffer pool size: {}",
+              nextIndx, bufferPool.length);
+          return false;
+        }
         bufferPool[nextIndx] = new byte[getReadAheadBlockSize()];
         pushToFreeList(nextIndx);
       } else {
         // Reuse a removed buffer index.
-        int freeIndex = removedBufferList.pop();
+        int freeIndex = removedBufferList.pollFirst();
         if (freeIndex >= bufferPool.length || bufferPool[freeIndex] != null) {
           printTraceLog("Invalid free index: {}. Current buffer pool size: {}",
               freeIndex, bufferPool.length);
@@ -811,7 +819,7 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
     }
 
     double memoryLoad = ResourceUtilizationUtils.getMemoryLoad();
-    if (isDynamicScalingEnabled && memoryLoad > memoryThreshold) {
+    if (isDynamicScalingEnabled && memoryLoad > memoryThreshold && getNumBuffers() > minBufferPoolSize) {
       synchronized (this) {
         if (isFreeListEmpty()) {
           printTraceLog(
@@ -980,7 +988,7 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
       getReadAheadQueue().clear();
       getInProgressList().clear();
       getCompletedReadList().clear();
-      getFreeList().clear();
+      this.freeList.clear();
       for (int i = 0; i < maxBufferPoolSize; i++) {
         bufferPool[i] = null;
       }
@@ -1023,6 +1031,16 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
     setIsConfigured(false);
   }
 
+  @Override
+  protected List<Integer> getFreeListCopy() {
+    return new ArrayList<>(freeList);
+  }
+
+  @Override
+  protected void clearFreeList() {
+    freeList.clear();
+  }
+
   private static void setBufferManager(ReadBufferManagerV2 manager) {
     bufferManager = manager;
   }
@@ -1060,6 +1078,11 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
   @VisibleForTesting
   public int getMinBufferPoolSize() {
     return minBufferPoolSize;
+  }
+
+  @VisibleForTesting
+  public void setMinBufferPoolSize(int size) {
+    this.minBufferPoolSize = size;
   }
 
   @VisibleForTesting
@@ -1105,30 +1128,15 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
   }
 
   private boolean isFreeListEmpty() {
-    LOCK.lock();
-    try {
-      return getFreeList().isEmpty();
-    } finally {
-      LOCK.unlock();
-    }
+    return this.freeList.isEmpty();
   }
 
   private Integer popFromFreeList() {
-    LOCK.lock();
-    try {
-      return getFreeList().pop();
-    } finally {
-      LOCK.unlock();
-    }
+    return this.freeList.pollFirst();
   }
 
   private void pushToFreeList(int idx) {
-    LOCK.lock();
-    try {
-      getFreeList().push(idx);
-    } finally {
-      LOCK.unlock();
-    }
+    this.freeList.add(idx);
   }
 
   private void incrementActiveBufferCount() {

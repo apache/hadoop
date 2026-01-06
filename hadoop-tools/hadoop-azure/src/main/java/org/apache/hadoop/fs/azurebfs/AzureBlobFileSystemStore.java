@@ -97,7 +97,7 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsClientHandler;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClientRenameResult;
 import org.apache.hadoop.fs.azurebfs.services.AbfsCounters;
 import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
-import org.apache.hadoop.fs.azurebfs.services.AbfsInputPolicy;
+import org.apache.hadoop.fs.azurebfs.services.AbfsReadPolicy;
 import org.apache.hadoop.fs.azurebfs.services.AbfsInputStream;
 import org.apache.hadoop.fs.azurebfs.services.AbfsInputStreamContext;
 import org.apache.hadoop.fs.azurebfs.services.AbfsInputStreamStatisticsImpl;
@@ -950,7 +950,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
       perfInfo.registerSuccess(true);
 
-      AbfsInputPolicy inputPolicy = AbfsInputPolicy.getPolicy(getAbfsConfiguration().getAbfsReadPolicy());
+      AbfsReadPolicy inputPolicy = AbfsReadPolicy.getAbfsReadPolicy(getAbfsConfiguration().getAbfsReadPolicy());
       switch (inputPolicy) {
         case SEQUENTIAL:
           return new AbfsPrefetchInputStream(getClient(), statistics, relativePath,
