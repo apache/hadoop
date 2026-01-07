@@ -73,8 +73,6 @@ public interface TimelineWriter extends Service {
    *
    * Any errors occurring for individual write request objects will be reported
    * in the response.
-   *<p>
-   * This is not invoked anywhere, tested and all implementations return null.
    *
    * @param data
    *          a {@link TimelineEntity} object
@@ -82,7 +80,7 @@ public interface TimelineWriter extends Service {
    *          value.
    * @param track Specifies the track or dimension along which aggregation would
    *     occur. Includes USER, FLOW, QUEUE, etc.
-   * @return a {@link TimelineWriteResponse} object. All implementations return null.
+   * @return a {@link TimelineWriteResponse} object.
    * @throws IOException if there is any exception encountered while aggregating
    *     entities to the backend storage.
    */
