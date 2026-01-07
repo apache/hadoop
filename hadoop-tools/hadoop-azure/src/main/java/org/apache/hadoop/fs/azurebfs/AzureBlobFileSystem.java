@@ -129,6 +129,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE
 import static org.apache.hadoop.fs.azurebfs.constants.FSOperationType.CREATE_FILESYSTEM;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.BLOCK_UPLOAD_ACTIVE_BLOCKS_DEFAULT;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DATA_BLOCKS_BUFFER_DEFAULT;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.ABFS_DFS_DOMAIN_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.InternalConstants.CAPABILITY_SAFE_READAHEAD;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_CREATE_ON_ROOT;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_INVALID_ABFS_STATE;
@@ -156,7 +157,6 @@ public class AzureBlobFileSystem extends FileSystem
    */
   private boolean isClosed = true;
   private final String fileSystemId = UUID.randomUUID().toString();
-  private final String DFS_DOMAIN_INDICATOR = ".dfs.";
 
   private boolean delegationTokenEnabled = false;
   private AbfsDelegationTokenManager delegationTokenManager;
@@ -316,12 +316,17 @@ public class AzureBlobFileSystem extends FileSystem
       throw new InvalidConfigurationValueException(FS_AZURE_ACCOUNT_IS_HNS_ENABLED, ex);
     }
 
-    // For FNS-DFS accounts, reset the endpoint to Blob and update the tracing
-    // context to add metric to show endpoint conversion.
-    if (!tryGetIsNamespaceEnabled(new TracingContext(initFSTracingContext))
-        && uri.toString().contains(DFS_DOMAIN_INDICATOR)) {
-      abfsStore.resetEndpointforFNS();
-      initFSTracingContext.setFNSEndpointConverted();
+    /*
+     * For FNS-DFS accounts, reset the endpoint to Blob and update the tracing
+     * context to add metric to show endpoint conversion.
+     */
+    if (!tryGetIsNamespaceEnabled(new TracingContext(initFSTracingContext))) {
+      // Required to correctly set user agent for FNS-Blob
+      abfsStore.restrictServiceTypeToBlob();
+      if (uri.toString().contains(ABFS_DFS_DOMAIN_NAME)){
+        abfsStore.resetEndpointFromDFSToBlob();
+        initFSTracingContext.setFNSEndpointConverted();
+      }
     }
 
     // Create the file system if it does not exist.

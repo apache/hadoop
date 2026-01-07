@@ -844,7 +844,6 @@ requests. User can specify them as fixed SAS Token to be used across all the req
       implementation that can be used as an example on how to implement your own custom
       SASTokenProvider. This requires the Application credentials to be specifed using
       the following configurations apart from above three:
-  
     4. Delegator App Service Principal Tenant Id:
         ```xml
         <property>

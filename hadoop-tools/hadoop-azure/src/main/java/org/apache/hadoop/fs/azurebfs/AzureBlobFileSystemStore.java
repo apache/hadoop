@@ -798,7 +798,6 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       ContextEncryptionAdapter contextEncryptionAdapter,
       TracingContext tracingContext) {
     int bufferSize = abfsConfiguration.getWriteBufferSize();
-    getClientHandler().initServiceType(abfsConfiguration);
 
     if (isAppendBlob && bufferSize > FileSystemConfigurations.APPENDBLOB_MAX_WRITE_BUFFER_SIZE) {
       bufferSize = FileSystemConfigurations.APPENDBLOB_MAX_WRITE_BUFFER_SIZE;
@@ -827,7 +826,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
             .withWriteThreadPoolManager(writeThreadPoolSizeManager)
             .withTracingContext(tracingContext)
             .withAbfsBackRef(fsBackRef)
-            .withIngressServiceType(clientHandler.getDefaultIngressServiceType())
+            .withIngressServiceType(clientHandler.getIngressServiceType())
             .withDFSToBlobFallbackEnabled(abfsConfiguration.isDfsToBlobFallbackEnabled())
             .withETag(eTag)
             .build();
@@ -1909,15 +1908,18 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     return new AbfsPerfInfo(abfsPerfTracker, callerName, calleeName);
   }
 
+  public void restrictServiceTypeToBlob(){
+    clientHandler.setIngressServiceType(AbfsServiceType.BLOB);
+    getAbfsConfiguration().setFsConfiguredServiceType(AbfsServiceType.BLOB);
+  }
+
   /**
    * Resets all service types to use BLOB.
    * Updates the client to reflect the new default service type.
    */
-  public void resetEndpointforFNS() {
-    getAbfsConfiguration().setFsConfiguredServiceTypetoBlob();
-    getClientHandler().setDefaultServiceType(AbfsServiceType.BLOB);
-    getClientHandler().setIngressServiceType(AbfsServiceType.BLOB);
-    this.client = getClientHandler().getClient();
+  public void resetEndpointFromDFSToBlob() {
+    clientHandler.setDefaultServiceType(AbfsServiceType.BLOB);
+    this.client = clientHandler.getClient();
   }
 
   /**

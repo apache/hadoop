@@ -45,15 +45,20 @@ import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
 import static java.net.HttpURLConnection.HTTP_UNAVAILABLE;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.*;
-import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.*;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.COLON;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.DOT;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.SPLIT_NO_LIMIT;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_IS_HNS_ENABLED;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_INGRESS_SERVICE_TYPE;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.accountProperty;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.ABFS_BLOB_DOMAIN_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.ABFS_DFS_DOMAIN_NAME;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.INCORRECT_INGRESS_TYPE;
 import static org.apache.hadoop.fs.azurebfs.services.RetryPolicyConstants.EXPONENTIAL_RETRY_POLICY_ABBREVIATION;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
 
 import org.junit.jupiter.api.Assertions;
 
@@ -92,16 +97,16 @@ public class ITestAzureBlobFileSystemInitAndCreate extends
         getRawConfiguration()));
     AzureBlobFileSystemStore store = Mockito.spy(fs.getAbfsStore());
     AbfsClient client = Mockito.spy(fs.getAbfsStore().getClient(AbfsServiceType.DFS));
-    doReturn(client).when(store).getClient(AbfsServiceType.DFS);
+    Mockito.doReturn(client).when(store).getClient(AbfsServiceType.DFS);
     store.getAbfsConfiguration().setIsNamespaceEnabledAccountForTesting(Trilean.UNKNOWN);
 
     TracingContext tracingContext = getSampleTracingContext(fs, true);
-    doReturn(Mockito.mock(AbfsRestOperation.class))
+    Mockito.doReturn(Mockito.mock(AbfsRestOperation.class))
         .when(client)
         .getAclStatus(Mockito.anyString(), any(TracingContext.class));
     store.getIsNamespaceEnabled(tracingContext);
 
-    verify(client, Mockito.times(1))
+    Mockito.verify(client, Mockito.times(1))
         .getAclStatus(Mockito.anyString(), any(TracingContext.class));
   }
 
@@ -111,16 +116,16 @@ public class ITestAzureBlobFileSystemInitAndCreate extends
         getRawConfiguration()));
     AzureBlobFileSystemStore store = Mockito.spy(fs.getAbfsStore());
     AbfsClient client = Mockito.spy(fs.getAbfsClient());
-    doReturn(client).when(store).getClient();
+    Mockito.doReturn(client).when(store).getClient();
 
-    doReturn(true)
+    Mockito.doReturn(true)
         .when(store)
         .isNamespaceEnabled();
 
     TracingContext tracingContext = getSampleTracingContext(fs, true);
     store.getIsNamespaceEnabled(tracingContext);
 
-    verify(client, Mockito.times(0))
+    Mockito.verify(client, Mockito.times(0))
         .getAclStatus(Mockito.anyString(), any(TracingContext.class));
   }
 
@@ -186,31 +191,31 @@ public class ITestAzureBlobFileSystemInitAndCreate extends
             dfsDomain);
 
     // Initialize filesystem with DFS endpoint
-    AzureBlobFileSystem fs =
-            (AzureBlobFileSystem) FileSystem.newInstance(new URI(dfsUri), conf);
+    try (AzureBlobFileSystem fs =
+                 (AzureBlobFileSystem) FileSystem.newInstance(new URI(dfsUri), conf)) {
+      AzureBlobFileSystem spiedFs = Mockito.spy(fs);
+      AzureBlobFileSystemStore spiedStore = Mockito.spy(spiedFs.getAbfsStore());
+      AbfsClient spiedClient = Mockito.spy(spiedStore.getClient());
 
-    AzureBlobFileSystem spiedFs = Mockito.spy(fs);
-    AzureBlobFileSystemStore spiedStore = Mockito.spy(spiedFs.getAbfsStore());
-    AbfsClient spiedClient = Mockito.spy(spiedStore.getClient());
+      Mockito.doReturn(spiedStore).when(spiedFs).getAbfsStore();
+      Mockito.doReturn(spiedClient).when(spiedStore).getClient();
 
-    Mockito.doReturn(spiedStore).when(spiedFs).getAbfsStore();
-    Mockito.doReturn(spiedClient).when(spiedStore).getClient();
+      // re-init the FS so the spy wiring is used
+      spiedFs.initialize(fs.getUri(), conf);
+      ArgumentCaptor<TracingContext> ctxCaptor = ArgumentCaptor.forClass(TracingContext.class);
+      Mockito.verify(spiedClient, Mockito.atLeastOnce())
+              .getFilesystemProperties(ctxCaptor.capture());
 
-    // re-init the FS so the spy wiring is used
-    spiedFs.initialize(fs.getUri(), conf);
-    ArgumentCaptor<TracingContext> ctxCaptor = ArgumentCaptor.forClass(TracingContext.class);
-    verify(spiedClient, atLeastOnce())
-            .getFilesystemProperties(ctxCaptor.capture());
+      TracingContext captured = ctxCaptor.getValue();
 
-    TracingContext captured = ctxCaptor.getValue();
+      AbfsHttpOperation abfsHttpOperation = Mockito.mock(AbfsHttpOperation.class);
+      captured.constructHeader(abfsHttpOperation, null,
+              EXPONENTIAL_RETRY_POLICY_ABBREVIATION);
 
-    AbfsHttpOperation abfsHttpOperation = Mockito.mock(AbfsHttpOperation.class);
-    captured.constructHeader(abfsHttpOperation, null,
-            EXPONENTIAL_RETRY_POLICY_ABBREVIATION);
-
-    // The tracing context being used FS Initialization should have the endpoint conversion indicator set to 'T'
-    String endpointConversionIndicator = captured.getHeader().split(COLON, SPLIT_NO_LIMIT)[15];
-    Assertions.assertFalse(endpointConversionIndicator.isEmpty(), "Endpoint conversion indicator should be present");
-    Assertions.assertEquals(endptConversionIndicatorInTc, endpointConversionIndicator, "Endpoint conversion indicator should be 'T'");
+      // The tracing context being used FS Initialization should have the endpoint conversion indicator set to 'T'
+      String endpointConversionIndicator = captured.getHeader().split(COLON, SPLIT_NO_LIMIT)[15];
+      Assertions.assertFalse(endpointConversionIndicator.isEmpty(), "Endpoint conversion indicator should be present");
+      Assertions.assertEquals(endptConversionIndicatorInTc, endpointConversionIndicator, "Endpoint conversion indicator should be 'T'");
+    }
   }
 }
