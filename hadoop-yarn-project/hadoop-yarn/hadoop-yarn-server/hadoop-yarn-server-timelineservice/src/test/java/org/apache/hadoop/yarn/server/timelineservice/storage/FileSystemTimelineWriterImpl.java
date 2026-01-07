@@ -29,6 +29,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.store.LogExactlyOnce;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.AbstractService;
@@ -51,7 +52,27 @@ import org.slf4j.LoggerFactory;
  * This implements a FileSystem based backend for storing application timeline
  * information. This implementation may not provide a complete implementation of
  * all the necessary features. This implementation is provided solely for basic
- * testing purposes, and should not be used in a non-test situation.
+ * testing purposes, and MUST NOT be used in a non-test situation.
+ * <p>
+ *   Key limitations are:
+ *   <ol>
+ *     <li>Inadequate scalability and concurrency for production use</li>
+ *     <li>Weak security: any authenticated caller can add events to any application
+ *         timeline.</li>
+ *   </ol>
+ * <p>
+ * To implement an atomic append it reads all the data in the original file,
+ * writes that to a temporary file, appends the new
+ * data there and renames that temporary file to the original path.
+ * This makes the update operation slower and slower the longer an application runs.
+ * If any other update comes in while an existing update is in progress,
+ * it will read and append to the previous state of the log, losing all changes
+ * from the ongoing transaction.
+ * <p>
+ * This is not a database. Apache HBase is. Use it.
+ * <p>
+ * The only realistic justification for this is if you are writing code which updates
+ * the timeline service and you want something easier to debug in unit tests.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
@@ -89,8 +110,16 @@ public class FileSystemTimelineWriterImpl extends AbstractService
   private static final Logger LOG =
           LoggerFactory.getLogger(FileSystemTimelineWriter.class);
 
+  private static final Logger LOGIMPL =
+      LoggerFactory.getLogger(FileSystemTimelineWriterImpl.class);
+
+  public static final LogExactlyOnce WARNING_OF_USE =
+      new LogExactlyOnce(LOGIMPL);
+
   FileSystemTimelineWriterImpl() {
     super((FileSystemTimelineWriterImpl.class.getName()));
+    WARNING_OF_USE.warn("This timeline writer is neither safe nor scaleable enough to"
+        + " be used in production.");
   }
 
   @Override
@@ -126,21 +155,19 @@ public class FileSystemTimelineWriterImpl extends AbstractService
                                           TimelineEntity entity,
                                           TimelineWriteResponse response)
                                           throws IOException {
-    String entityTypePathStr = clusterId + File.separator + userId +
-        File.separator + escape(flowName) + File.separator +
-        escape(flowVersion) + File.separator + flowRun + File.separator + appId
-        + File.separator + entity.getType();
+    final String entityTypePathStr =
+        buildEntityTypeSubpath(clusterId, userId, flowName, flowVersion, flowRun, appId, entity.getType());
     Path entityTypePath = new Path(entitiesPath, entityTypePathStr);
     try {
       mkdirs(entityTypePath);
       Path filePath =
               new Path(entityTypePath,
-                      entity.getId() + TIMELINE_SERVICE_STORAGE_EXTENSION);
+                      escape(entity.getId(), "id") + TIMELINE_SERVICE_STORAGE_EXTENSION);
       createFileWithRetries(filePath);
 
-      byte[] record =  new StringBuilder()
-              .append(TimelineUtils.dumpTimelineRecordtoJSON(entity))
-              .append("\n").toString().getBytes(StandardCharsets.UTF_8);
+      byte[] record =
+          (TimelineUtils.dumpTimelineRecordtoJSON(entity) + "\n")
+              .getBytes(StandardCharsets.UTF_8);
       writeFileWithRetries(filePath, record);
     } catch (Exception ioe) {
       LOG.warn("Interrupted operation:{}", ioe.getMessage());
@@ -151,6 +178,35 @@ public class FileSystemTimelineWriterImpl extends AbstractService
        */
       response.addError(error);
     }
+  }
+
+  /**
+   * Given the various attributes of an entity, return the string subpath
+   * of the directory.
+   * @param clusterId cluster ID
+   * @param userId user ID
+   * @param flowName flow name
+   * @param flowVersion flow version
+   * @param flowRun flow run
+   * @param appId application ID
+   * @param type entity type
+   * @return the subpath for records.
+   */
+  @VisibleForTesting
+  public static String buildEntityTypeSubpath(final String clusterId,
+      final String userId,
+      final String flowName,
+      final String flowVersion,
+      final long flowRun,
+      final String appId,
+      final String type) {
+    return clusterId
+        + File.separator + userId
+        + File.separator + escape(flowName, "")
+        + File.separator + escape(flowVersion, "")
+        + File.separator + flowRun
+        + File.separator + escape(appId, "")
+        + File.separator + escape(type, "type");
   }
 
   private TimelineWriteError createTimelineWriteError(TimelineEntity entity) {
@@ -316,8 +372,29 @@ public class FileSystemTimelineWriterImpl extends AbstractService
     }
   }
 
-  // specifically escape the separator character
-  private static String escape(String str) {
-    return str.replace(File.separatorChar, '_');
+  /**
+   * Escape filesystem separator character and other URL-unfriendly chars.
+   * @param str input string
+   * @return a string with none of the escaped characters.
+   */
+  @VisibleForTesting
+  public static String escape(String str) {
+    return escape(str, "");
+  }
+
+  /**
+   * Escape filesystem separator character and other URL-unfriendly chars.
+   * Empty strings are mapped to a fallback string, which may itself be empty.
+   * @param str input string
+   * @param fallback fallback char
+   * @return a string with none of the escaped characters.
+   */
+  @VisibleForTesting
+  public static String escape(String str, final String fallback) {
+    return str.isEmpty()
+        ? fallback
+        : str.replace(File.separatorChar, '_')
+            .replace('?', '_')
+            .replace(':', '_');
   }
 }

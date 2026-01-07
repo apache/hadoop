@@ -61,6 +61,7 @@
   },
   "resolutions": {
     "graceful-fs": "^4.2.4",
-    "node-gyp": "5.1.1"
+    "node-gyp": "5.1.1",
+    "mktemp": "0.4.0"
   }
 }
