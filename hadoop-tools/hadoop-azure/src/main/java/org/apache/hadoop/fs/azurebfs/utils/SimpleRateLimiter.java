@@ -18,10 +18,16 @@
 
 package org.apache.hadoop.fs.azurebfs.utils;
 
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.LockSupport;
 
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidConfigurationValueException;
 
+/**
+ * A simple rate limiter that allows a specified number of permits
+ * per second. This implementation uses basic synchronization and
+ * LockSupport for waiting.
+ */
 public final class SimpleRateLimiter {
 
   // Interval between permits in nanoseconds.
@@ -52,9 +58,18 @@ public final class SimpleRateLimiter {
   }
 
   /**
-   * Acquires a permit from the rate limiter, blocking until one is available.
+   * Acquires a permit from the rate limiter, waiting up to the
+   * specified timeout if necessary.
+   *
+   * @param timeout Maximum time to wait for a permit.
+   * @param unit    Time unit of the timeout argument.
    */
-  public synchronized void acquire() {
+  public synchronized void acquire(long timeout, TimeUnit unit) {
+    if (timeout <= 0) {
+      return;
+    }
+
+    final long deadline = System.nanoTime() + unit.toNanos(timeout);
     while (true) {
       long now = System.nanoTime();
       long wait = nextAllowedTime - now;
@@ -64,7 +79,12 @@ public final class SimpleRateLimiter {
         return;
       }
 
-      LockSupport.parkNanos(wait);
+      long remaining = deadline - now;
+      if (remaining <= 0) {
+        return; // timeout expired
+      }
+
+      LockSupport.parkNanos(Math.min(wait, remaining));
 
       if (Thread.interrupted()) {
         Thread.currentThread().interrupt();

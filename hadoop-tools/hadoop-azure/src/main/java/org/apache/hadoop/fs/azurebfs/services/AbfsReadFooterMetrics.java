@@ -37,6 +37,7 @@ import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_UNDERSCORE;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.COLON;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.UNDERSCORE;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_KB;
 import static org.apache.hadoop.fs.azurebfs.constants.MetricsConstants.CHAR_DOLLAR;
 import static org.apache.hadoop.fs.azurebfs.constants.MetricsConstants.DOUBLE_PRECISION_FORMAT;
@@ -67,6 +68,7 @@ public class AbfsReadFooterMetrics extends AbstractAbfsStatisticsSource {
   private static final Logger LOG = LoggerFactory.getLogger(
       AbfsReadFooterMetrics.class);
 
+  // Footer length in KB to identify Parquet files.
   private static final String FOOTER_LENGTH = "20";
 
   private static final List<FileType> FILE_TYPE_LIST =
@@ -109,6 +111,8 @@ public class AbfsReadFooterMetrics extends AbstractAbfsStatisticsSource {
 
     /**
      * Updates the file type based on the metrics collected.
+     * In case the first two reads have equal size and offset differences,
+     * the file is classified as PARQUET; otherwise, it is classified as NON_PARQUET.
      */
     private void updateFileType() {
       if (fileType == null) {
@@ -127,7 +131,7 @@ public class AbfsReadFooterMetrics extends AbstractAbfsStatisticsSource {
      * @return true if the value has equal parts, false otherwise
      */
     private boolean haveEqualValues(String value) {
-      String[] parts = value.split("_");
+      String[] parts = value.split(UNDERSCORE);
       return parts.length == 2
           && parts[0].equals(parts[1]);
     }
@@ -284,12 +288,10 @@ public class AbfsReadFooterMetrics extends AbstractAbfsStatisticsSource {
    * @param fileTypeMetricsMap the map to track file type metrics
    */
   public AbfsReadFooterMetrics(Map<String, FileTypeMetrics> fileTypeMetricsMap) {
-    IOStatisticsStore ioStatisticsStore = iostatisticsStore()
-        .withCounters(getMetricNames(TYPE_COUNTER))
-        .withMeanStatistics(getMetricNames(TYPE_MEAN))
-        .build();
-    setIOStatistics(ioStatisticsStore);
-    this.fileTypeMetricsMap = fileTypeMetricsMap;
+    this();
+    this.fileTypeMetricsMap = fileTypeMetricsMap == null
+        ? new ConcurrentHashMap<>()
+        : fileTypeMetricsMap;
   }
 
   /**
@@ -473,7 +475,7 @@ public class AbfsReadFooterMetrics extends AbstractAbfsStatisticsSource {
       fileTypeMetrics.setCollectMetricsForNextRead(true);
       fileTypeMetrics.setOffsetOfFirstRead(nextReadPos);
       fileTypeMetrics.setSizeReadByFirstRead(
-          len + "_" + Math.abs(contentLength - nextReadPos));
+          len + UNDERSCORE + Math.abs(contentLength - nextReadPos));
     }
   }
 
@@ -495,7 +497,7 @@ public class AbfsReadFooterMetrics extends AbstractAbfsStatisticsSource {
       long offsetDiff = Math.abs(
           nextReadPos - fileTypeMetrics.getOffsetOfFirstRead());
       fileTypeMetrics.setOffsetDiffBetweenFirstAndSecondRead(
-          len + "_" + offsetDiff);
+          len + UNDERSCORE + offsetDiff);
       fileTypeMetrics.setCollectLenMetrics(true);
       fileTypeMetrics.updateFileType();
       updateMetricsData(fileTypeMetrics, len, contentLength);
@@ -530,11 +532,12 @@ public class AbfsReadFooterMetrics extends AbstractAbfsStatisticsSource {
       int len,
       long contentLength) {
     long sizeReadByFirstRead = Long.parseLong(
-        fileTypeMetrics.getSizeReadByFirstRead().split("_")[0]);
+        fileTypeMetrics.getSizeReadByFirstRead().split(UNDERSCORE)[0]);
     long firstOffsetDiff = Long.parseLong(
-        fileTypeMetrics.getSizeReadByFirstRead().split("_")[1]);
+        fileTypeMetrics.getSizeReadByFirstRead().split(UNDERSCORE)[1]);
     long secondOffsetDiff = Long.parseLong(
-        fileTypeMetrics.getOffsetDiffBetweenFirstAndSecondRead().split("_")[1]);
+        fileTypeMetrics.getOffsetDiffBetweenFirstAndSecondRead().split(
+            UNDERSCORE)[1]);
     FileType fileType = fileTypeMetrics.getFileType();
 
     addMeanMetricValue(fileType, AVG_READ_LEN_REQUESTED, len);

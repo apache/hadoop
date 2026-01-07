@@ -295,7 +295,10 @@ public class AbfsRestOperation {
       if (abfsCounters != null) {
         abfsCounters.getLastExecutionTime().set(now());
       }
-      client.timerOrchestrator(TimerFunctionality.RESUME, null);
+      if (client.getAbfsMetricsManager() != null) {
+        client.getAbfsMetricsManager()
+            .timerOrchestrator(TimerFunctionality.RESUME, null);
+      }
       IOStatisticsBinding.trackDurationOfInvocation(abfsCounters,
           AbfsStatistic.getStatNameFromHttpCall(method),
           () -> completeExecute(lastUsedTracingContext));
@@ -583,8 +586,10 @@ public class AbfsRestOperation {
   @VisibleForTesting
   public void signRequest(final AbfsHttpOperation httpOperation, int bytesToSign,
       boolean isMetricCall) throws IOException {
-    if (isMetricCall && client.hasSeparateMetricAccount()) {
-      client.getMetricSharedkeyCredentials().signRequest(httpOperation, bytesToSign);
+    if (isMetricCall && client.getAbfsMetricsManager() != null
+        && client.getAbfsMetricsManager().hasSeparateMetricAccount()) {
+      client.getAbfsMetricsManager().getMetricSharedkeyCredentials()
+          .signRequest(httpOperation, bytesToSign);
     } else {
       switch (client.getAuthType()) {
       case Custom:

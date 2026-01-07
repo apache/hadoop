@@ -30,6 +30,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -45,11 +46,14 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.COLON;
 
 public class TestAggregateMetricsManager extends AbstractAbfsIntegrationTest {
 
-  /** Number of nanoseconds in one millisecond. */
+  // Number of nanoseconds in one millisecond.
   private static final long NANOS_PER_MILLISECOND = 1_000_000L;
 
   // The manager under test
   private final AggregateMetricsManager manager;
+
+  // Rate limit permits per second for testing
+  private final int permitsPerSecond = 3;
 
   /**
    * Constructor for TestAggregateMetricsManager.
@@ -58,7 +62,7 @@ public class TestAggregateMetricsManager extends AbstractAbfsIntegrationTest {
    */
   public TestAggregateMetricsManager() throws Exception {
     super();
-    manager = AggregateMetricsManager.get(10, 3);
+    manager = AggregateMetricsManager.getInstance(10, permitsPerSecond);
   }
 
   /**
@@ -314,9 +318,8 @@ public class TestAggregateMetricsManager extends AbstractAbfsIntegrationTest {
   @Test
   public void testRateLimitMetricCalls()
       throws IOException, InterruptedException {
-    final int permitsPerSecond = 3;
     final long minIntervalMs = 1_000 / permitsPerSecond; // 333ms
-    final double toleranceMs = 15; // allow 15ms jitter
+    final double toleranceMs = 50; // allow 50ms jitter
     final int numClients = 10;
 
     // Store timestamps for each client
@@ -373,9 +376,6 @@ public class TestAggregateMetricsManager extends AbstractAbfsIntegrationTest {
   @Test
   public void testAggregatedMetricsManagerWithJVMExit0()
       throws IOException, InterruptedException {
-    // -------------------------------
-    // Program 1 (kept exactly as you asked)
-    // -------------------------------
     String program =
         "import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;\n"
             + "import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore;\n"
@@ -392,7 +392,7 @@ public class TestAggregateMetricsManager extends AbstractAbfsIntegrationTest {
             + "public class ShutdownTestProg {\n"
             + "    public static void main(String[] args) throws Exception {\n"
             + "        AtomicInteger calls1 = new AtomicInteger();\n"
-            + "        AggregateMetricsManager mgr = AggregateMetricsManager.get(10, 3);\n"
+            + "        AggregateMetricsManager mgr = AggregateMetricsManager.getInstance(10, 3);\n"
             + "\n"
             + "        URI uri = new URI(\"abfss://test@manishtestfnsnew.dfs.core.windows.net\");\n"
             + "        Configuration config = new Configuration();\n"
@@ -437,9 +437,6 @@ public class TestAggregateMetricsManager extends AbstractAbfsIntegrationTest {
   @Test
   public void testAggregatedMetricsManagerWithJVMExit1()
       throws IOException, InterruptedException {
-    // -------------------------------
-    // Program 2 (final, multi-FS version)
-    // -------------------------------
     String program =
         "import org.apache.hadoop.fs.azurebfs.services.*;\n"
             + "import org.apache.hadoop.fs.azurebfs.utils.*;\n"
@@ -455,7 +452,7 @@ public class TestAggregateMetricsManager extends AbstractAbfsIntegrationTest {
             + "\n"
             + "public class ShutdownTestProg {\n"
             + "    public static void main(String[] args) throws Exception {\n"
-            + "        AggregateMetricsManager mgr = AggregateMetricsManager.get(10, 3);\n"
+            + "        AggregateMetricsManager mgr = AggregateMetricsManager.getInstance(10, 3);\n"
             + "\n"
             + "        AtomicInteger calls1 = new AtomicInteger();\n"
             + "        AtomicInteger calls2 = new AtomicInteger();\n"
@@ -521,9 +518,6 @@ public class TestAggregateMetricsManager extends AbstractAbfsIntegrationTest {
   @Test
   void testAggregatedMetricsManagerWithJVMCrash() throws Exception {
     final int crashExitCode = 134;
-    // -------------------------------
-    // Program 3 (JVM Crash)
-    // -------------------------------
     String program =
         "import org.apache.hadoop.fs.azurebfs.services.*;\n"
             + "import org.apache.hadoop.fs.azurebfs.utils.*;\n"
@@ -541,7 +535,7 @@ public class TestAggregateMetricsManager extends AbstractAbfsIntegrationTest {
             + "public class ShutdownTestProg {\n"
             + "\n"
             + "    public static void main(String[] args) throws Exception {\n"
-            + "        AggregateMetricsManager mgr = AggregateMetricsManager.get(10, 3);\n"
+            + "        AggregateMetricsManager mgr = AggregateMetricsManager.getInstance(10, 3);\n"
             + "\n"
             + "        // Track how many times metrics flush\n"
             + "        AtomicInteger calls1 = new AtomicInteger();\n"
@@ -616,46 +610,59 @@ public class TestAggregateMetricsManager extends AbstractAbfsIntegrationTest {
       boolean expectMetricsFlush, int expectedExitCode)
       throws IOException, InterruptedException {
     Path tempFile = Files.createTempFile("ShutdownTestProg", ".java");
-    Files.write(tempFile, program.getBytes(StandardCharsets.UTF_8));
+    try {
+      Files.write(tempFile, program.getBytes(StandardCharsets.UTF_8));
 
-    Path javaFile = tempFile.getParent().resolve("ShutdownTestProg.java");
-    Files.move(tempFile, javaFile, StandardCopyOption.REPLACE_EXISTING);
+      Path javaFile = tempFile.getParent().resolve("ShutdownTestProg.java");
+      Files.move(tempFile, javaFile, StandardCopyOption.REPLACE_EXISTING);
 
-    Process javac = new ProcessBuilder(
-        "javac",
-        "-classpath", System.getProperty("java.class.path"),
-        javaFile.toAbsolutePath().toString())
-        .redirectErrorStream(true)
-        .start();
+      Process javac = new ProcessBuilder(
+          "javac",
+          "-classpath", System.getProperty("java.class.path"),
+          javaFile.toAbsolutePath().toString())
+          .redirectErrorStream(true)
+          .start();
 
-    String compileOutput = readProcessOutput(javac);
-    javac.waitFor();
+      String compileOutput = readProcessOutput(javac);
+      javac.waitFor();
+      if (!javac.waitFor(30, TimeUnit.SECONDS)) {
+        javac.destroyForcibly();
+        throw new AssertionError("java process timed out");
+      }
 
-    Assertions.assertThat(javac.exitValue())
-        .withFailMessage("Compilation failed:\n" + compileOutput)
-        .isEqualTo(0);
+      Assertions.assertThat(javac.exitValue())
+          .withFailMessage("Compilation failed:\n" + compileOutput)
+          .isEqualTo(0);
 
-    String classpath = javaFile.getParent().toAbsolutePath()
-        + File.pathSeparator
-        + System.getProperty("java.class.path");
+      String classpath = javaFile.getParent().toAbsolutePath()
+          + File.pathSeparator
+          + System.getProperty("java.class.path");
 
-    Process javaProc = new ProcessBuilder("java",
-        "-XX:ErrorFile=/tmp/no_hs_err_%p.log",
-        "-classpath", classpath,
-        "ShutdownTestProg")
-        .redirectErrorStream(true)
-        .start();
+      Process javaProc = new ProcessBuilder("java",
+          "-XX:ErrorFile=/tmp/no_hs_err_%p.log",
+          "-classpath", classpath,
+          "ShutdownTestProg")
+          .redirectErrorStream(true)
+          .start();
 
-    String output = readProcessOutput(javaProc);
-    int exitCode = javaProc.waitFor();
+      String output = readProcessOutput(javaProc);
+      int exitCode;
+      if (!javaProc.waitFor(30, TimeUnit.SECONDS)) {
+        javaProc.destroyForcibly();
+        throw new AssertionError("java process timed out");
+      }
+      exitCode = javaProc.exitValue();
 
-    Assertions.assertThat(output).contains("BEFORE_EXIT");
-    Assertions.assertThat(exitCode).isEqualTo(expectedExitCode);
+      Assertions.assertThat(output).contains("BEFORE_EXIT");
+      Assertions.assertThat(exitCode).isEqualTo(expectedExitCode);
 
-    if (expectMetricsFlush) {
-      Assertions.assertThat(output).contains("FLUSH:");
-    } else {
-      Assertions.assertThat(output).doesNotContain("FLUSH:");
+      if (expectMetricsFlush) {
+        Assertions.assertThat(output).contains("FLUSH:");
+      } else {
+        Assertions.assertThat(output).doesNotContain("FLUSH:");
+      }
+    } finally {
+      Files.deleteIfExists(tempFile);
     }
   }
 

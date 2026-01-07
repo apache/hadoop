@@ -324,11 +324,11 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_METRIC_ANALYSIS_TIMEOUT_MS)
   private int metricAnalysisTimeout;
 
-  @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_METRIC_ACCOUNT_NAME,
+  @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_METRICS_ACCOUNT_NAME,
           DefaultValue = EMPTY_STRING)
   private String metricAccount;
 
-  @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_METRIC_ACCOUNT_KEY,
+  @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_METRICS_ACCOUNT_KEY,
           DefaultValue = EMPTY_STRING)
   private String metricAccountKey;
 
@@ -336,8 +336,8 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_METRICS_COLLECTION_ENABLED)
   private boolean metricsCollectionEnabled;
 
-  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_SHOULD_EMIT_METRICS_ON_IDLE_TIME,
-      DefaultValue = DEFAULT_SHOULD_EMIT_METRICS_ON_IDLE_TIME)
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_METRICS_SHOULD_EMIT_ON_IDLE_TIME,
+      DefaultValue = DEFAULT_METRICS_SHOULD_EMIT_ON_IDLE_TIME)
   private boolean shouldEmitMetricsOnIdleTime;
 
   @LongConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_METRICS_EMIT_THRESHOLD,
@@ -352,12 +352,12 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_METRICS_EMIT_INTERVAL_MINS)
   private long metricsEmitIntervalInMins;
 
-  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_MAX_METRICS_CALLS_PER_SECOND,
-      DefaultValue = DEFAULT_MAX_METRICS_CALLS_PER_SECOND)
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_METRICS_MAX_CALLS_PER_SECOND,
+      DefaultValue = DEFAULT_METRICS_MAX_CALLS_PER_SECOND)
   private int maxMetricsCallsPerSecond;
 
-  @BooleanConfigurationValidatorAnnotation(ConfigurationKey =  FS_AZURE_BACKOFF_RETRY_METRICS_ENABLED,
-      DefaultValue = DEFAULT_BACKOFF_RETRY_METRICS_ENABLED)
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_METRICS_BACKOFF_RETRY_ENABLED,
+      DefaultValue = DEFAULT_METRICS_BACKOFF_RETRY_ENABLED)
   private boolean backoffRetryMetricsEnabled;
 
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ACCOUNT_OPERATION_IDLE_TIMEOUT,
@@ -1438,7 +1438,7 @@ public class AbfsConfiguration{
   }
 
   public MetricFormat getMetricFormat() {
-    return getEnum(FS_AZURE_METRIC_FORMAT, MetricFormat.INTERNAL_METRIC_FORMAT);
+    return getEnum(FS_AZURE_METRICS_FORMAT, MetricFormat.INTERNAL_METRIC_FORMAT);
   }
 
   public AuthType getAuthType(String accountName) {

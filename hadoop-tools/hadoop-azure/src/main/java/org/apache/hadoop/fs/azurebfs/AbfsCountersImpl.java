@@ -73,6 +73,7 @@ import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.RENAME_RECOVERY;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.SEND_REQUESTS;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.SERVER_UNAVAILABLE;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.WRITE_THROTTLES;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
 import static org.apache.hadoop.fs.azurebfs.enums.AbfsBackoffMetricsEnum.TOTAL_NUMBER_OF_REQUESTS;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.iostatisticsStore;
 import static org.apache.hadoop.util.Time.now;
@@ -210,6 +211,7 @@ public class AbfsCountersImpl implements AbfsCounters {
       break;
     case INTERNAL_FOOTER_METRIC_FORMAT:
       initializeReadFooterMetrics();
+      break;
     case INTERNAL_METRIC_FORMAT:
       abfsBackoffMetrics = new AbfsBackoffMetrics(
           abfsConfiguration.isBackoffRetryMetricsEnabled());
@@ -226,15 +228,11 @@ public class AbfsCountersImpl implements AbfsCounters {
    * create a new instance with the existing map.
    */
   private void initializeReadFooterMetrics() {
-    if (abfsReadFooterMetrics == null) {
-      abfsReadFooterMetrics = new AbfsReadFooterMetrics();
-    } else {
-      //In case metrics is emitted based on total count, there could be a chance
-      // that file type for which we have calculated the type will be lost.
-      // To avoid that, creating a new instance with existing map.
-      abfsReadFooterMetrics = new AbfsReadFooterMetrics(
-          abfsReadFooterMetrics.getFileTypeMetricsMap());
-    }
+    abfsReadFooterMetrics = new AbfsReadFooterMetrics(
+        abfsReadFooterMetrics == null
+            ? null
+            : abfsReadFooterMetrics.getFileTypeMetricsMap()
+    );
   }
 
   /**
@@ -392,7 +390,7 @@ public class AbfsCountersImpl implements AbfsCounters {
 
   @Override
   public String toString() {
-    String metric = "";
+    String metric = EMPTY_STRING;
     if (abfsBackoffMetrics != null) {
       if (getAbfsBackoffMetrics().getMetricValue(TOTAL_NUMBER_OF_REQUESTS) > 0) {
         metric += "#BO:" + getAbfsBackoffMetrics().toString();

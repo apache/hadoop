@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.azurebfs.utils;
 
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.LockSupport;
 
 import org.assertj.core.api.Assertions;
@@ -45,12 +46,12 @@ public class TestSimpleRateLimiter {
     // 2 permits per second → 500 ms interval
     SimpleRateLimiter limiter = new SimpleRateLimiter(2);
 
-    limiter.acquire();
+    limiter.acquire(5, TimeUnit.SECONDS);
     // Sleep longer than required interval
     LockSupport.parkNanos(millisToSleep * NANOS_PER_MILLISECOND);
 
     long before = System.nanoTime();
-    limiter.acquire();  // Should not block
+    limiter.acquire(5, TimeUnit.SECONDS);  // Should not block
     long after = System.nanoTime();
 
     long elapsed = after - before;
@@ -76,10 +77,10 @@ public class TestSimpleRateLimiter {
     // 5 permits per second → 200ms interval
     SimpleRateLimiter limiter = new SimpleRateLimiter(permitsPerSecond);
 
-    limiter.acquire(); // First call never waits
+    limiter.acquire(5, TimeUnit.SECONDS); // First call never waits
 
     long before = System.nanoTime();
-    limiter.acquire(); // Second call immediately → should wait ~200ms
+    limiter.acquire(5, TimeUnit.SECONDS); // Second call immediately → should wait ~200ms
     long after = System.nanoTime();
 
     long elapsedMs = (after - before) / NANOS_PER_MILLISECOND;
@@ -114,7 +115,7 @@ public class TestSimpleRateLimiter {
     for (int i = 0; i < 5; i++) {
       new Thread(() -> {
         try {
-          limiter.acquire();
+          limiter.acquire(5, TimeUnit.SECONDS);
         } finally {
           latch.countDown();
         }
@@ -155,7 +156,7 @@ public class TestSimpleRateLimiter {
     long start = System.nanoTime();
 
     for (int i = 0; i < 10; i++) {
-      limiter.acquire();
+      limiter.acquire(5, TimeUnit.SECONDS);
     }
 
     long end = System.nanoTime();

@@ -241,7 +241,7 @@ public class TracingContext {
           + operatedBlobCount + COLON
           + getOperationSpecificHeader(opType) + COLON
           + httpOperation.getTracingContextSuffix() + COLON
-          + metricResults + COLON + resourceUtilizationMetricResults;
+          + resourceUtilizationMetricResults;
       break;
     case TWO_ID_FORMAT:
       header = TracingHeaderVersion.getCurrentVersion() + COLON

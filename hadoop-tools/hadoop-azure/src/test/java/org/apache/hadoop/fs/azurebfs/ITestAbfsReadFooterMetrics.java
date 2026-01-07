@@ -21,7 +21,7 @@ package org.apache.hadoop.fs.azurebfs;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.IOSTATISTICS_LOGGING_LEVEL_INFO;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_READ_BUFFER_SIZE;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_WRITE_BUFFER_SIZE;
-import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_METRIC_FORMAT;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_METRICS_FORMAT;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.MIN_BUFFER_SIZE;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_KB;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_MB;
@@ -78,7 +78,7 @@ public class ITestAbfsReadFooterMetrics extends AbstractAbfsScaleTest {
    */
   private Configuration getConfiguration(int bufferSize) {
     final Configuration configuration = getRawConfiguration();
-    configuration.set(FS_AZURE_METRIC_FORMAT, String.valueOf(MetricFormat.INTERNAL_FOOTER_METRIC_FORMAT));
+    configuration.set(FS_AZURE_METRICS_FORMAT, String.valueOf(MetricFormat.INTERNAL_FOOTER_METRIC_FORMAT));
     configuration.setInt(AZURE_READ_BUFFER_SIZE, bufferSize);
     configuration.setInt(AZURE_WRITE_BUFFER_SIZE, bufferSize);
     return configuration;

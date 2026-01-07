@@ -193,6 +193,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
   private final IdentityTransformerInterface identityTransformer;
   private final AbfsPerfTracker abfsPerfTracker;
   private final AbfsCounters abfsCounters;
+  private final String fileSystemId;
 
   /**
    * The set of directories where we should store files as append blobs.
@@ -258,7 +259,8 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     boolean useHttps = (usingOauth || abfsConfiguration.isHttpsAlwaysUsed()) ? true : abfsStoreBuilder.isSecureScheme;
     this.abfsPerfTracker = new AbfsPerfTracker(fileSystemName, accountName, this.abfsConfiguration);
     this.abfsCounters = abfsStoreBuilder.abfsCounters;
-    initializeClient(uri, fileSystemName, accountName, useHttps, abfsStoreBuilder.fileSystemId);
+    this.fileSystemId = abfsStoreBuilder.fileSystemId;
+    initializeClient(uri, fileSystemName, accountName, useHttps);
     final Class<? extends IdentityTransformerInterface> identityTransformerClass =
         abfsStoreBuilder.configuration.getClass(FS_AZURE_IDENTITY_TRANSFORM_CLASS, IdentityTransformer.class,
             IdentityTransformerInterface.class);
@@ -1717,7 +1719,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
    * @throws IOException
    */
   private void initializeClient(URI uri, String fileSystemName,
-      String accountName, boolean isSecure, String fileSystemId)
+      String accountName, boolean isSecure)
       throws IOException {
     if (this.getClient() != null) {
       return;
@@ -1795,7 +1797,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     this.clientHandler = new AbfsClientHandler(baseUrl, creds,
         abfsConfiguration,
         tokenProvider, sasTokenProvider, encryptionContextProvider,
-        populateAbfsClientContext(), fileSystemId);
+        populateAbfsClientContext());
 
     this.setClient(getClientHandler().getClient());
     LOG.trace("AbfsClient init complete");
@@ -1826,6 +1828,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
             new TailLatencyRequestTimeoutRetryPolicy(abfsConfiguration))
         .withAbfsCounters(abfsCounters)
         .withAbfsPerfTracker(abfsPerfTracker)
+        .withFileSystemId(fileSystemId)
         .build();
   }
 

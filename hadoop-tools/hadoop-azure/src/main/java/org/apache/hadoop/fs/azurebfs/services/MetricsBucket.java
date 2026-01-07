@@ -25,15 +25,26 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.fs.azurebfs.utils.SimpleRateLimiter;
+
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CLOSING_SQUARE_BRACKET;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.COLON;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.OPENING_SQUARE_BRACKET;
 
 /**
  * MetricsBucket holds metrics for multiple AbfsClients and
  * dispatches them in batches, respecting rate limits.
  */
 final class MetricsBucket {
+
+  // Logger for the class.
+  private static final Logger LOG = LoggerFactory.getLogger(MetricsBucket.class);
 
   // Rate limiter to control the rate of dispatching metrics.
   private final SimpleRateLimiter rateLimiter;
@@ -134,16 +145,18 @@ final class MetricsBucket {
     // Send outside synchronized block
     if (client != null && batchToSend != null && !batchToSend.isEmpty()) {
       for (String chunk : splitListBySize(batchToSend, MAX_HEADER_SIZE)) {
-        rateLimiter.acquire(); // Rate limiting
+        rateLimiter.acquire(5, TimeUnit.SECONDS); // Rate limiting
         try {
           client.getMetricCall(chunk);
-        } catch (IOException ignored) {}
+        } catch (IOException ignored) {
+          LOG.debug("Failed to send metrics: {}", ignored.getMessage());
+        }
       }
     }
   }
 
   // Check if there are no registered clients
-  public boolean isEmpty() {
+  public synchronized boolean isEmpty() {
     return clients.isEmpty();
   }
 
@@ -161,8 +174,8 @@ final class MetricsBucket {
     List<String> result = new ArrayList<>();
     StringBuilder sb = new StringBuilder();
 
-    for (String s : new ArrayList<>(items)) {
-      String wrapped = "[" + s + "]";
+    for (String s : items) {
+      String wrapped = OPENING_SQUARE_BRACKET + s + CLOSING_SQUARE_BRACKET;
       int additional =
           sb.length() == 0 ? wrapped.length()
               : wrapped.length() + 1;
@@ -182,7 +195,7 @@ final class MetricsBucket {
       }
 
       if (sb.length() > 0) {
-        sb.append(':');
+        sb.append(COLON);
       }
       sb.append(wrapped);
     }

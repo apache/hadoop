@@ -22,6 +22,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidConfigurationValueException;
@@ -60,7 +61,7 @@ public final class AggregateMetricsManager {
           "permitsPerSecond must be > 0");
     }
 
-    this.rateLimiter = new SimpleRateLimiter(permitsPerSecond);
+    rateLimiter = new SimpleRateLimiter(permitsPerSecond);
 
     // Initialize scheduler for periodic dispatching of metrics.
     this.scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
@@ -70,7 +71,7 @@ public final class AggregateMetricsManager {
     });
 
     // Schedule periodic dispatching of metrics.
-    this.scheduler.scheduleAtFixedRate(
+    this.scheduler.scheduleWithFixedDelay(
         this::dispatchMetrics,
         dispatchIntervalInMins,
         dispatchIntervalInMins,
@@ -90,7 +91,7 @@ public final class AggregateMetricsManager {
    * @param permitsPerSecond       Rate limit for dispatching metrics.
    * @return Singleton instance of AggregateMetricsManager.
    */
-  public static AggregateMetricsManager get(final long dispatchIntervalInMins,
+  public static AggregateMetricsManager getInstance(final long dispatchIntervalInMins,
       final int permitsPerSecond) {
     if (instance != null) {
       return instance;
@@ -136,17 +137,17 @@ public final class AggregateMetricsManager {
       return false;
     }
 
-    MetricsBucket bucket = buckets.get(account);
-    if (bucket == null) {
-      return false;
-    }
+    AtomicBoolean isRemoved = new AtomicBoolean(false);
 
-    boolean isRemoved = bucket.deregisterClient(abfsClient);
+    buckets.computeIfPresent(account, (key, bucket) -> {
+      // Deregister the client
+      isRemoved.set(bucket.deregisterClient(abfsClient));
 
-    if (bucket.isEmpty()) {
-      buckets.remove(account, bucket);
-    }
-    return isRemoved;
+      // If bucket became empty, remove it atomically
+      return bucket.isEmpty() ? null : bucket;
+    });
+
+    return isRemoved.get();
   }
 
   /**

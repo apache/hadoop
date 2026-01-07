@@ -27,7 +27,6 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
@@ -41,6 +40,7 @@ import org.mockito.Mockito;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
@@ -56,6 +56,7 @@ import org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes;
 import org.apache.hadoop.fs.azurebfs.constants.HttpOperationType;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsApacheHttpExpect100Exception;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidUriException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.TokenAccessProviderException;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters;
 import org.apache.hadoop.fs.azurebfs.enums.AbfsBackoffMetricsEnum;
@@ -66,6 +67,7 @@ import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderFormat;
 import org.apache.hadoop.fs.azurebfs.utils.UriUtils;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.test.ReflectionUtils;
 import org.apache.http.HttpClientConnection;
 import org.apache.http.HttpResponse;
@@ -89,9 +91,9 @@ import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ALWAYS_USE_HTTPS;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_METRICS_COLLECTION_ENABLED;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_METRICS_EMIT_THRESHOLD_INTERVAL_SECS;
-import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_METRIC_ACCOUNT_KEY;
-import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_METRIC_ACCOUNT_NAME;
-import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_METRIC_FORMAT;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_METRICS_ACCOUNT_KEY;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_METRICS_ACCOUNT_NAME;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_METRICS_FORMAT;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_METRICS_EMIT_THRESHOLD;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.JAVA_VENDOR;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.JAVA_VERSION;
@@ -199,10 +201,10 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
     AbfsClient client;
     if (AbfsServiceType.DFS.equals(config.getFsConfiguredServiceType())) {
       client = new AbfsDfsClient(new URL("https://azure.com"), null,
-          config, (AccessTokenProvider) null, null, null, abfsClientContext, UUID.randomUUID().toString());
+          config, (AccessTokenProvider) null, null, null, abfsClientContext);
     } else {
       client = new AbfsBlobClient(new URL("https://azure.com"), null,
-          config, (AccessTokenProvider) null, null, null, abfsClientContext, UUID.randomUUID().toString());
+          config, (AccessTokenProvider) null, null, null, abfsClientContext);
     }
     String sslProviderName = null;
     if (includeSSLProvider) {
@@ -457,7 +459,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
               : null),
           null,
           null,
-          abfsClientContext, UUID.randomUUID().toString());
+          abfsClientContext);
     } else {
       testClient = new AbfsBlobClient(
           baseAbfsClientInstance.getBaseUrl(),
@@ -473,7 +475,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
               : null),
           null,
           null,
-          abfsClientContext, UUID.randomUUID().toString());
+          abfsClientContext);
     }
 
     return testClient;
@@ -511,7 +513,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
             : null),
         null,
         null,
-        abfsClientContext, UUID.randomUUID().toString());
+        abfsClientContext);
 
     return testClient;
   }
@@ -907,9 +909,9 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
     configuration.setBoolean(
         AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION, false);
     configuration.setBoolean(FS_AZURE_ACCOUNT_IS_HNS_ENABLED, false);
-    configuration.unset(FS_AZURE_METRIC_ACCOUNT_NAME);
-    configuration.unset(FS_AZURE_METRIC_ACCOUNT_KEY);
-    configuration.unset(FS_AZURE_METRIC_FORMAT);
+    configuration.unset(FS_AZURE_METRICS_ACCOUNT_NAME);
+    configuration.unset(FS_AZURE_METRICS_ACCOUNT_KEY);
+    configuration.unset(FS_AZURE_METRICS_FORMAT);
     configuration.setBoolean(FS_AZURE_ALWAYS_USE_HTTPS, true);
     final AzureBlobFileSystem fs = getFileSystem(configuration);
     Assertions.assertThat(
@@ -920,7 +922,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
         .isEqualTo(MetricFormat.INTERNAL_METRIC_FORMAT);
 
     Assertions.assertThat(
-            fs.getAbfsStore().getClient().isMetricCollectionEnabled())
+            fs.getAbfsStore().getClient().getAbfsMetricsManager().isMetricCollectionEnabled())
         .describedAs(
             "Metric collection should be enabled even if metric account is not set")
         .isTrue();
@@ -943,11 +945,46 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
     uriBuilder.setScheme(FileSystemUriSchemes.HTTPS_SCHEME);
     uriBuilder.setHost(fs.getUri().getHost());
     uriBuilder.setPath(FORWARD_SLASH);
-    Assertions.assertThat(fs.getAbfsStore().getClient().getMetricsUrl())
+    Assertions.assertThat(fs.getAbfsStore().getClient().getAbfsMetricsManager().getMetricsUrl())
         .describedAs(
             "In case metric account is not set, account url should be used")
         .isEqualTo(
             UriUtils.changeUrlFromBlobToDfs(uriBuilder.build().toURL()));
+  }
+
+  @Test
+  public void testInvalidMetricAccount() throws Exception {
+    Configuration configuration = getRawConfiguration();
+    configuration.setBoolean(
+        AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION, false);
+    configuration.setBoolean(FS_AZURE_ACCOUNT_IS_HNS_ENABLED, false);
+    configuration.set(FS_AZURE_METRICS_ACCOUNT_NAME, "invalidAccountName!");
+    configuration.set(FS_AZURE_METRICS_ACCOUNT_KEY, "invalidAccountKey!");
+    configuration.unset(FS_AZURE_METRICS_FORMAT); // Use default metric format
+    // Filesystem initialization should not fail if metric account is invalid
+    try (AzureBlobFileSystem fs = getFileSystem(configuration)) {
+      // Incase metric account is invalid, metric collection should be disabled
+      Assertions.assertThat(
+              fs.getAbfsStore()
+                  .getClient()
+                  .getAbfsMetricsManager()
+                  .isMetricCollectionEnabled())
+          .describedAs(
+              "In case metric account is invalid, metric collection should be disabled")
+          .isFalse();
+      fs.create(new Path("/testPath"));
+      FileStatus fileStatus = fs.getFileStatus(new Path("/testPath"));
+      Assertions.assertThat(fileStatus)
+          .describedAs("FileStatus should be returned for the created path")
+          .isNotNull();
+      // Get metrics and it should be null
+      Assertions.assertThat(
+              fs.getAbfsStore().getClient().getAbfsCounters().toString())
+          .describedAs(
+              "In case metric account is invalid, no metrics should be collected")
+          .doesNotContain("#BO:")
+          .doesNotContain("#FO:");
+    }
   }
 
   /**
@@ -963,13 +1000,13 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
     configuration.setBoolean(
         AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION, true);
     configuration.setBoolean(FS_AZURE_ACCOUNT_IS_HNS_ENABLED, false);
-    configuration.unset(FS_AZURE_METRIC_FORMAT);
-    configuration.setEnum(FS_AZURE_METRIC_FORMAT,
+    configuration.unset(FS_AZURE_METRICS_FORMAT);
+    configuration.setEnum(FS_AZURE_METRICS_FORMAT,
         INTERNAL_BACKOFF_METRIC_FORMAT);
     final AzureBlobFileSystem fs = getFileSystem(configuration);
     int totalCalls = 1; // Filesystem initialization call
     Assertions.assertThat(
-            fs.getAbfsStore().getClient().isMetricCollectionEnabled())
+            fs.getAbfsStore().getClient().getAbfsMetricsManager().isMetricCollectionEnabled())
         .describedAs("Metric collection should be enabled by default")
         .isTrue();
 
@@ -1047,13 +1084,13 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
         fs.getAbfsStore()).getAbfsRestOperation(
             AbfsRestOperationType.GetFileSystemProperties,
             HTTP_METHOD_HEAD,
-            fs.getAbfsStore().getClient().getMetricsUrl(),
+            fs.getAbfsStore().getClient().getAbfsMetricsManager().getMetricsUrl(),
             getTestRequestHeaders(fs.getAbfsStore().getClient()))
         .createHttpOperation();
     tracingContext.constructHeader(abfsHttpOperation, null,
         EXPONENTIAL_RETRY_POLICY_ABBREVIATION);
     assertThat(abfsHttpOperation.getClientRequestId())
-        .describedAs("ClientRequestId should be contains Backoff metrics")
+        .describedAs("ClientRequestId should be containing Backoff metrics")
         .contains("#BO:");
   }
 
@@ -1173,7 +1210,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
     // Disabling the aggregate metrics collection
     configuration.setBoolean(FS_AZURE_METRICS_COLLECTION_ENABLED, false);
     AzureBlobFileSystem fs = this.getFileSystem(configuration);
-    Assertions.assertThat(fs.getAbfsStore().getClient().getMetricsEmitScheduler())
+    Assertions.assertThat(fs.getAbfsStore().getClient().getAbfsMetricsManager().getMetricsEmitScheduler())
         .describedAs("Since metrics collection is not enabled, "
             + "scheduler should not be initialised")
         .isNull();
@@ -1181,7 +1218,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
     // Disabling the aggregate metrics collection
     configuration.setBoolean(FS_AZURE_METRICS_COLLECTION_ENABLED, true);
     fs = this.getFileSystem(configuration);
-    Assertions.assertThat(fs.getAbfsStore().getClient().getMetricsEmitScheduler())
+    Assertions.assertThat(fs.getAbfsStore().getClient().getAbfsMetricsManager().getMetricsEmitScheduler())
         .describedAs("Since metrics collection is not enabled, "
             + "scheduler should initialised")
         .isNotNull();
@@ -1314,7 +1351,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
     Configuration conf = fs.getConf();
 
     // This is to avoid actual metric calls during the test
-    conf.unset(FS_AZURE_METRIC_ACCOUNT_NAME);
+    conf.unset(FS_AZURE_METRICS_ACCOUNT_NAME);
 
     // Initialize the file system
     AzureBlobFileSystemStore store = this.getFileSystem(conf).getAbfsStore();
@@ -1561,6 +1598,4 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
           .isEqualTo(keepAliveCache.peekLast());
     }
   }
-
-
 }

@@ -26,7 +26,7 @@ import org.junit.jupiter.api.Test;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_DELETE;
 import static org.apache.hadoop.fs.azurebfs.enums.AbfsBackoffMetricsEnum.NUMBER_OF_REQUESTS_FAILED;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsRestOperationType.DeletePath;
-import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_METRIC_FORMAT;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_METRICS_FORMAT;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
 import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
 import java.util.ArrayList;
@@ -51,7 +51,7 @@ public class TestAbfsRestOperation extends
   public void testBackoffRetryMetrics() throws Exception {
     // Create an AzureBlobFileSystem instance.
     final Configuration configuration = getRawConfiguration();
-    configuration.set(FS_AZURE_METRIC_FORMAT, String.valueOf(MetricFormat.INTERNAL_BACKOFF_METRIC_FORMAT));
+    configuration.set(FS_AZURE_METRICS_FORMAT, String.valueOf(MetricFormat.INTERNAL_BACKOFF_METRIC_FORMAT));
     final AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(configuration);
     AbfsConfiguration abfsConfiguration = fs.getAbfsStore().getAbfsConfiguration();
 
