@@ -23,8 +23,6 @@ import java.io.IOException;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
-import static java.lang.Math.max;
-
 /**
  * Input stream implementation optimized for prefetching data.
  * This implementation always prefetches data in advance if enabled
@@ -66,36 +64,36 @@ public class AbfsPrefetchInputStream extends AbfsInputStream {
       return -1;
     }
     //If buffer is empty, then fill the buffer.
-    if (bCursor == limit) {
+    if (getBCursor() == getLimit()) {
       //If EOF, then return -1
-      if (fCursor >= contentLength) {
+      if (getFCursor() >= getContentLength()) {
         return -1;
       }
 
       long bytesRead = 0;
       //reset buffer to initial state - i.e., throw away existing data
-      bCursor = 0;
-      limit = 0;
-      if (buffer == null) {
-        LOG.debug("created new buffer size {}", bufferSize);
-        buffer = new byte[bufferSize];
+      setBCursor(0);
+      setLimit(0);
+      if (getBuffer() == null) {
+        LOG.debug("created new buffer size {}", getBufferSize());
+        setBuffer(new byte[getBufferSize()]);
       }
 
       /*
        * Always start with Prefetch even from first read.
        * Even if out of order seek comes, prefetches will be triggered for next set of blocks.
        */
-      bytesRead = readInternal(fCursor, buffer, 0, bufferSize, false);
-      if (firstRead) {
-        firstRead = false;
+      bytesRead = readInternal(getFCursor(), getBuffer(), 0, getBufferSize(), false);
+      if (isFirstRead()) {
+        setFirstRead(false);
       }
       if (bytesRead == -1) {
         return -1;
       }
 
-      limit += bytesRead;
-      fCursor += bytesRead;
-      fCursorAfterLastRead = fCursor;
+      setLimit(getLimit() + (int) bytesRead);
+      setFCursor(getFCursor() + bytesRead);
+      setFCursorAfterLastRead(getFCursor());
     }
     return copyToUserBuffer(b, off, len);
   }

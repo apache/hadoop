@@ -72,8 +72,9 @@ public abstract class AbfsInputStream extends FSInputStream implements CanUnbuff
   private final AbfsClient client;
   private final Statistics statistics;
   private final String path;
-  protected final long contentLength;
-  protected final int bufferSize; // default buffer size
+
+  private final long contentLength;
+  private final int bufferSize; // default buffer size
   private final int footerReadSize; // default buffer size to read when reading footer
   private final int readAheadQueueDepth;         // initialized in constructor
   private final String eTag;                  // eTag of the path when InputStream are created
@@ -81,7 +82,7 @@ public abstract class AbfsInputStream extends FSInputStream implements CanUnbuff
   private final boolean readAheadEnabled; // whether enable readAhead;
   private final boolean readAheadV2Enabled; // whether enable readAhead V2;
   private final String inputStreamId;
-  protected final boolean alwaysReadBufferSize;
+  private final boolean alwaysReadBufferSize;
   /*
    * By default the pread API will do a seek + read as in FSInputStream.
    * The read data will be kept in a buffer. When bufferedPreadDisabled is true,
@@ -91,20 +92,21 @@ public abstract class AbfsInputStream extends FSInputStream implements CanUnbuff
    */
   private final boolean bufferedPreadDisabled;
   // User configured size of read ahead.
-  protected final int readAheadRange;
+  private final int readAheadRange;
 
-  protected boolean firstRead = true;
+  private boolean firstRead = true;
+
   // SAS tokens can be re-used until they expire
   private CachedSASToken cachedSasToken;
-  protected byte[] buffer = null;            // will be initialized on first use
+  private byte[] buffer = null;            // will be initialized on first use
 
-  protected long fCursor = 0;  // cursor of buffer within file - offset of next byte to read from remote server
-  protected long fCursorAfterLastRead = -1;
-  protected int bCursor = 0;   // cursor of read within buffer - offset of next byte to be returned from buffer
-  protected int limit = 0;     // offset of next byte to be read into buffer from service (i.e., upper marker+1
+  private long fCursor = 0;  // cursor of buffer within file - offset of next byte to read from remote server
+  private long fCursorAfterLastRead = -1;
+  private int bCursor = 0;   // cursor of read within buffer - offset of next byte to be returned from buffer
+  private int limit = 0;     // offset of next byte to be read into buffer from service (i.e., upper marker+1
   //                                                      of valid bytes in buffer)
   private boolean closed = false;
-  protected TracingContext tracingContext;
+  private TracingContext tracingContext;
   private final ContextEncryptionAdapter contextEncryptionAdapter;
 
   //  Optimisations modify the pointer fields.
@@ -133,6 +135,16 @@ public abstract class AbfsInputStream extends FSInputStream implements CanUnbuff
   private final BackReference fsBackRef;
   private final ReadBufferManager readBufferManager;
 
+  /**
+   * Constructor for AbfsInputStream.
+   * @param client the ABFS client
+   * @param statistics the statistics
+   * @param path the file path
+   * @param contentLength the content length
+   * @param abfsInputStreamContext the input stream context
+   * @param eTag the eTag of the file
+   * @param tracingContext the tracing context
+   */
   public AbfsInputStream(
           final AbfsClient client,
           final Statistics statistics,
@@ -196,6 +208,10 @@ public abstract class AbfsInputStream extends FSInputStream implements CanUnbuff
     }
   }
 
+  /**
+   * Returns the path of file associated with this stream.
+   * @return the path of the file
+   */
   public String getPath() {
     return path;
   }
@@ -334,7 +350,7 @@ public abstract class AbfsInputStream extends FSInputStream implements CanUnbuff
    * @return number of bytes read
    * @throws IOException if there is an error
    */
-  protected abstract int readOneBlock(final byte[] b, final int off, final int len) throws IOException;
+  protected abstract int readOneBlock(byte[] b, int off, int len) throws IOException;
 
   private int readFileCompletely(final byte[] b, final int off, final int len)
       throws IOException {
@@ -709,6 +725,10 @@ public abstract class AbfsInputStream extends FSInputStream implements CanUnbuff
     return nextReadPos < 0 ? 0 : nextReadPos;
   }
 
+  /**
+   * Get the tracing context associated with this stream.
+   * @return the tracing context
+   */
   public TracingContext getTracingContext() {
     return tracingContext;
   }
@@ -782,6 +802,10 @@ public abstract class AbfsInputStream extends FSInputStream implements CanUnbuff
     return buffer;
   }
 
+  protected void setBuffer(byte[] buffer) {
+    this.buffer = buffer;
+  }
+
   /**
    * Checks if any version of read ahead is enabled.
    * If both are disabled, then skip read ahead logic.
@@ -792,21 +816,38 @@ public abstract class AbfsInputStream extends FSInputStream implements CanUnbuff
     return (readAheadEnabled || readAheadV2Enabled) && getReadBufferManager() != null;
   }
 
+  /**
+   * Getter for user configured read ahead range.
+   * @return the read ahead range in int.
+   */
   @VisibleForTesting
   public int getReadAheadRange() {
     return readAheadRange;
   }
 
+  /**
+   * Setter for cachedSasToken.
+   * @param cachedSasToken the cachedSasToken to set
+   */
   @VisibleForTesting
   protected void setCachedSasToken(final CachedSASToken cachedSasToken) {
     this.cachedSasToken = cachedSasToken;
   }
 
+  /**
+   * Getter for inputStreamId.
+   * @return the inputStreamId
+   */
   @VisibleForTesting
   public String getStreamID() {
     return inputStreamId;
   }
 
+  /**
+   * Getter for eTag.
+   *
+   * @return the eTag
+   */
   public String getETag() {
     return eTag;
   }
@@ -821,6 +862,10 @@ public abstract class AbfsInputStream extends FSInputStream implements CanUnbuff
     return streamStatistics;
   }
 
+  /**
+   * Register a listener for this stream.
+   * @param listener1 the listener to register
+   */
   @VisibleForTesting
   public void registerListener(Listener listener1) {
     listener = listener1;
@@ -847,26 +892,46 @@ public abstract class AbfsInputStream extends FSInputStream implements CanUnbuff
     return bytesFromRemoteRead;
   }
 
+  /**
+   * Getter for buffer size.
+   * @return the buffer size
+   */
   @VisibleForTesting
   public int getBufferSize() {
     return bufferSize;
   }
 
+  /**
+   * Getter for footer read buffer size.
+   * @return the footer read buffer size
+   */
   @VisibleForTesting
   protected int getFooterReadBufferSize() {
     return footerReadSize;
   }
 
+  /**
+   * Getter for read ahead queue depth.
+   * @return the read ahead queue depth
+   */
   @VisibleForTesting
   public int getReadAheadQueueDepth() {
     return readAheadQueueDepth;
   }
 
+  /**
+   * Getter for alwaysReadBufferSize.
+   * @return the alwaysReadBufferSize
+   */
   @VisibleForTesting
   public boolean shouldAlwaysReadBufferSize() {
     return alwaysReadBufferSize;
   }
 
+  /**
+   * Get the IOStatistics for the stream.
+   * @return IOStatistics
+   */
   @Override
   public IOStatistics getIOStatistics() {
     return ioStatistics;
@@ -888,48 +953,131 @@ public abstract class AbfsInputStream extends FSInputStream implements CanUnbuff
     return sb.toString();
   }
 
+  /**
+   * Getter for bCursor.
+   * @return the bCursor
+   */
   @VisibleForTesting
   int getBCursor() {
     return this.bCursor;
   }
 
+  /**
+   * Setter for bCursor.
+   * @param bCursor the bCursor to set
+   */
+  protected void setBCursor(int bCursor) {
+    this.bCursor = bCursor;
+  }
+
+  /**
+   * Getter for fCursor.
+   * @return the fCursor
+   */
   @VisibleForTesting
   long getFCursor() {
     return this.fCursor;
   }
 
+  /**
+   * Setter for fCursor.
+   * @param fCursor the fCursor to set
+   */
+  protected void setFCursor(long fCursor) {
+    this.fCursor = fCursor;
+  }
+
+  /**
+   * Getter for fCursorAfterLastRead.
+   * @return the fCursorAfterLastRead
+   */
   @VisibleForTesting
   long getFCursorAfterLastRead() {
     return this.fCursorAfterLastRead;
   }
 
+  /**
+   * Setter for fCursorAfterLastRead.
+   * @param fCursorAfterLastRead the fCursorAfterLastRead to set
+   */
+  protected void setFCursorAfterLastRead(long fCursorAfterLastRead) {
+    this.fCursorAfterLastRead = fCursorAfterLastRead;
+  }
+
+  /**
+   * Getter for limit.
+   * @return the limit
+   */
   @VisibleForTesting
-  long getLimit() {
+  int getLimit() {
     return this.limit;
   }
 
+  /**
+   * Setter for limit.
+   * @param limit the limit to set
+   */
+  protected void setLimit(int limit) {
+    this.limit = limit;
+  }
+
+  /**
+   * Getter for firstRead.
+   * @return the firstRead
+   */
   boolean isFirstRead() {
     return this.firstRead;
   }
 
+  /**
+   * Setter for firstRead.
+   * @param firstRead the firstRead to set
+   */
+  protected void setFirstRead(boolean firstRead) {
+    this.firstRead = firstRead;
+  }
+
+  /**
+   * Getter for fsBackRef.
+   * @return the fsBackRef
+   */
   @VisibleForTesting
   BackReference getFsBackRef() {
     return fsBackRef;
   }
 
+  /**
+   * Getter for readBufferManager.
+   * @return the readBufferManager
+   */
   @VisibleForTesting
   ReadBufferManager getReadBufferManager() {
     return readBufferManager;
   }
 
+  /**
+   * Minimum seek distance for vector reads.
+   * @return the minimum seek distance
+   */
   @Override
   public int minSeekForVectorReads() {
     return S_128K;
   }
 
+  /**
+   * Maximum read size for vector reads.
+   * @return the maximum read size
+   */
   @Override
   public int maxReadSizeForVectorReads() {
     return S_2M;
   }
 
+  /**
+   * Getter for contentLength.
+   * @return the contentLength
+   */
+  protected long getContentLength() {
+    return contentLength;
+  }
 }

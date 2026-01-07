@@ -66,51 +66,51 @@ public class AbfsAdaptiveInputStream extends AbfsInputStream {
       return -1;
     }
     //If buffer is empty, then fill the buffer.
-    if (bCursor == limit) {
+    if (getBCursor() == getLimit()) {
       //If EOF, then return -1
-      if (fCursor >= contentLength) {
+      if (getFCursor() >= getContentLength()) {
         return -1;
       }
 
       long bytesRead = 0;
       //reset buffer to initial state - i.e., throw away existing data
-      bCursor = 0;
-      limit = 0;
-      if (buffer == null) {
-        LOG.debug("created new buffer size {}", bufferSize);
-        buffer = new byte[bufferSize];
+      setBCursor(0);
+      setLimit(0);
+      if (getBuffer() == null) {
+        LOG.debug("created new buffer size {}", getBufferSize());
+        setBuffer(new byte[getBufferSize()]);
       }
 
       // Reset Read Type back to normal and set again based on code flow.
-      tracingContext.setReadType(ReadType.NORMAL_READ);
-      if (alwaysReadBufferSize) {
-        bytesRead = readInternal(fCursor, buffer, 0, bufferSize, false);
+      getTracingContext().setReadType(ReadType.NORMAL_READ);
+      if (shouldAlwaysReadBufferSize()) {
+        bytesRead = readInternal(getFCursor(), getBuffer(), 0, getBufferSize(), false);
       } else {
         // Enable readAhead when reading sequentially
-        if (-1 == fCursorAfterLastRead || fCursorAfterLastRead == fCursor || b.length >= bufferSize) {
-          LOG.debug("Sequential read with read ahead size of {}", bufferSize);
-          bytesRead = readInternal(fCursor, buffer, 0, bufferSize, false);
+        if (-1 == getFCursorAfterLastRead() || getFCursorAfterLastRead() == getFCursor() || b.length >= getBufferSize()) {
+          LOG.debug("Sequential read with read ahead size of {}", getBufferSize());
+          bytesRead = readInternal(getFCursor(), getBuffer(), 0, getBufferSize(), false);
         } else {
           /*
            * Disable queuing prefetches when random read pattern detected.
            * Instead, read ahead only for readAheadRange above what is asked by caller.
            */
-          tracingContext.setReadType(ReadType.RANDOM_READ);
-          int lengthWithReadAhead = Math.min(b.length + readAheadRange, bufferSize);
+          getTracingContext().setReadType(ReadType.RANDOM_READ);
+          int lengthWithReadAhead = Math.min(b.length + getReadAheadRange(), getBufferSize());
           LOG.debug("Random read with read ahead size of {}", lengthWithReadAhead);
-          bytesRead = readInternal(fCursor, buffer, 0, lengthWithReadAhead, true);
+          bytesRead = readInternal(getFCursor(), getBuffer(), 0, lengthWithReadAhead, true);
         }
       }
-      if (firstRead) {
-        firstRead = false;
+      if (isFirstRead()) {
+        setFirstRead(false);
       }
       if (bytesRead == -1) {
         return -1;
       }
 
-      limit += bytesRead;
-      fCursor += bytesRead;
-      fCursorAfterLastRead = fCursor;
+      setLimit(getLimit() + (int) bytesRead);
+      setFCursor(getFCursor() + bytesRead);
+      setFCursorAfterLastRead(getFCursor());
     }
     return copyToUserBuffer(b, off, len);
   }
