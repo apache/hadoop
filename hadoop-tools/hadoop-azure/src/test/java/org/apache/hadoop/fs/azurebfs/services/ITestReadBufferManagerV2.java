@@ -24,7 +24,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-import org.junit.jupiter.api.Test;
+
+import org.assertj.core.api.Assertions;
+import org.junit.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -38,7 +40,6 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.TRUE;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENABLE_READAHEAD_V2;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENABLE_READAHEAD_V2_DYNAMIC_SCALING;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_MB;
-import static org.assertj.core.api.Assertions.assertThat;
 
 public class ITestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
 
@@ -74,8 +75,8 @@ public class ITestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
             try (FSDataInputStream iStream = fs.open(testPaths[idx[0]++])) {
               byte[] buffer = new byte[fileSize];
               int bytesRead = iStream.read(buffer, 0, fileSize);
-              assertThat(bytesRead).isEqualTo(fileSize);
-              assertThat(buffer).isEqualTo(fileContent);
+              Assertions.assertThat(bytesRead).isEqualTo(fileSize);
+              Assertions.assertThat(buffer).isEqualTo(fileContent);
             }
             return null;
           });
@@ -115,8 +116,8 @@ public class ITestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
             try (FSDataInputStream iStream = fs.open(testPath)) {
               byte[] buffer = new byte[fileSize];
               int bytesRead = iStream.read(buffer, 0, fileSize);
-              assertThat(bytesRead).isEqualTo(fileSize);
-              assertThat(buffer).isEqualTo(fileContent);
+              Assertions.assertThat(bytesRead).isEqualTo(fileSize);
+              Assertions.assertThat(buffer).isEqualTo(fileContent);
             }
             return null;
           });

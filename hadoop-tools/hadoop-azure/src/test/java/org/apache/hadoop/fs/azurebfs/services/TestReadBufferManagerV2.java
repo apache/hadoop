@@ -20,7 +20,8 @@ package org.apache.hadoop.fs.azurebfs.services;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.junit.jupiter.api.Test;
+import org.assertj.core.api.Assertions;
+import org.junit.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -63,7 +64,7 @@ public class TestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
   public void testReadBufferManagerV2Init() throws Exception {
     ReadBufferManagerV2.setReadBufferManagerConfigs(getConfiguration().getReadAheadBlockSize(), getConfiguration());
     ReadBufferManagerV2.getBufferManager().testResetReadBufferManager();
-    assertThat(ReadBufferManagerV2.getInstance())
+    Assertions.assertThat(ReadBufferManagerV2.getInstance())
         .as("ReadBufferManager should be uninitialized").isNull();
     intercept(IllegalStateException.class, "ReadBufferManagerV2 is not configured.", () -> {
       ReadBufferManagerV2.getBufferManager();
@@ -73,15 +74,15 @@ public class TestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
     ReadBufferManagerV2 bufferManager = ReadBufferManagerV2.getBufferManager();
     ReadBufferManagerV2 bufferManager2 = ReadBufferManagerV2.getBufferManager();
     ReadBufferManagerV2 bufferManager3 = ReadBufferManagerV2.getInstance();
-    assertThat(bufferManager).isNotNull();
-    assertThat(bufferManager2).isNotNull();
-    assertThat(bufferManager).isSameAs(bufferManager2);
-    assertThat(bufferManager3).isNotNull();
-    assertThat(bufferManager3).isSameAs(bufferManager);
+    Assertions.assertThat(bufferManager).isNotNull();
+    Assertions.assertThat(bufferManager2).isNotNull();
+    Assertions.assertThat(bufferManager).isSameAs(bufferManager2);
+    Assertions.assertThat(bufferManager3).isNotNull();
+    Assertions.assertThat(bufferManager3).isSameAs(bufferManager);
 
     // Verify default values are not invalid.
-    assertThat(bufferManager.getMinBufferPoolSize()).isGreaterThan(0);
-    assertThat(bufferManager.getMaxBufferPoolSize()).isGreaterThan(0);
+    Assertions.assertThat(bufferManager.getMinBufferPoolSize()).isGreaterThan(0);
+    Assertions.assertThat(bufferManager.getMaxBufferPoolSize()).isGreaterThan(0);
   }
 
   /**
@@ -99,7 +100,7 @@ public class TestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
       ReadBufferManagerV2.getBufferManager().testResetReadBufferManager();
       ReadBufferManagerV2.setReadBufferManagerConfigs(abfsConfiguration.getReadAheadBlockSize(), abfsConfiguration);
       ReadBufferManagerV2 bufferManagerV2 = ReadBufferManagerV2.getBufferManager();
-      assertThat(bufferManagerV2.getCpuMonitoringThread())
+      Assertions.assertThat(bufferManagerV2.getCpuMonitoringThread())
           .as("CPU Monitor thread should be initialized").isNotNull();
       bufferManagerV2.resetBufferManager();
     }
@@ -111,7 +112,7 @@ public class TestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
       ReadBufferManagerV2.getBufferManager().testResetReadBufferManager();
       ReadBufferManagerV2.setReadBufferManagerConfigs(abfsConfiguration.getReadAheadBlockSize(), abfsConfiguration);
       ReadBufferManagerV2 bufferManagerV2 = ReadBufferManagerV2.getBufferManager();
-      assertThat(bufferManagerV2.getCpuMonitoringThread())
+      Assertions.assertThat(bufferManagerV2.getCpuMonitoringThread())
           .as("CPU Monitor thread should not be initialized").isNull();
       bufferManagerV2.resetBufferManager();
     }
@@ -130,7 +131,7 @@ public class TestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
     ReadBufferManagerV2.getBufferManager().testResetReadBufferManager();
     ReadBufferManagerV2.setReadBufferManagerConfigs(abfsConfig.getReadAheadBlockSize(), abfsConfig);
     ReadBufferManagerV2 bufferManagerV2 = ReadBufferManagerV2.getBufferManager();
-    assertThat(bufferManagerV2.getCurrentThreadPoolSize()).isEqualTo(2);
+    Assertions.assertThat(bufferManagerV2.getCurrentThreadPoolSize()).isEqualTo(2);
     int[] reqOffset = {0};
     int reqLength = 1;
     Thread t = new Thread(() -> {
@@ -142,11 +143,11 @@ public class TestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
     });
     t.start();
     Thread.sleep(2L * bufferManagerV2.getCpuMonitoringIntervalInMilliSec());
-    assertThat(bufferManagerV2.getCurrentThreadPoolSize()).isGreaterThan(2);
+    Assertions.assertThat(bufferManagerV2.getCurrentThreadPoolSize()).isGreaterThan(2);
     running = false;
     t.join();
     Thread.sleep(4L * bufferManagerV2.getCpuMonitoringIntervalInMilliSec());
-    assertThat(bufferManagerV2.getCurrentThreadPoolSize()).isLessThan(4);
+    Assertions.assertThat(bufferManagerV2.getCurrentThreadPoolSize()).isLessThan(4);
   }
 
   @Test
@@ -162,7 +163,7 @@ public class TestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
     ReadBufferManagerV2.getBufferManager().testResetReadBufferManager();
     ReadBufferManagerV2.setReadBufferManagerConfigs(abfsConfig.getReadAheadBlockSize(), abfsConfig);
     ReadBufferManagerV2 bufferManagerV2 = ReadBufferManagerV2.getBufferManager();
-    assertThat(bufferManagerV2.getCurrentThreadPoolSize()).isEqualTo(2);
+    Assertions.assertThat(bufferManagerV2.getCurrentThreadPoolSize()).isEqualTo(2);
     int[] reqOffset = {0};
     int reqLength = 1;
     running = true;
@@ -175,7 +176,7 @@ public class TestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
     });
     t.start();
     Thread.sleep(2L * bufferManagerV2.getCpuMonitoringIntervalInMilliSec());
-    assertThat(bufferManagerV2.getCurrentThreadPoolSize()).isEqualTo(2);
+    Assertions.assertThat(bufferManagerV2.getCurrentThreadPoolSize()).isEqualTo(2);
     running = false;
     t.join();
   }
@@ -197,9 +198,9 @@ public class TestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
     buff.setStream(inputStream);
     bufferManagerV2.testMimicFullUseAndAddFailedBuffer(buff);
     bufferManagerV2.testMimicFullUseAndAddFailedBuffer(buff);
-    assertThat(bufferManagerV2.getCompletedReadListSize()).isEqualTo(2);
+    Assertions.assertThat(bufferManagerV2.getCompletedReadListSize()).isEqualTo(2);
     Thread.sleep(2L * bufferManagerV2.getMemoryMonitoringIntervalInMilliSec());
-    assertThat(bufferManagerV2.getCompletedReadListSize()).isEqualTo(0);
+    Assertions.assertThat(bufferManagerV2.getCompletedReadListSize()).isEqualTo(0);
   }
 
   @Test
@@ -220,10 +221,10 @@ public class TestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
     buff.setStatus(ReadBufferStatus.READ_FAILED);
     buff.setStream(inputStream);
     bufferManagerV2.testMimicFullUseAndAddFailedBuffer(buff);
-    assertThat(bufferManagerV2.getNumBuffers()).isEqualTo(bufferManagerV2.getMinBufferPoolSize());
+    Assertions.assertThat(bufferManagerV2.getNumBuffers()).isEqualTo(bufferManagerV2.getMinBufferPoolSize());
     bufferManagerV2.queueReadAhead(inputStream, 0, ONE_KB,
         inputStream.getTracingContext());
-    assertThat(bufferManagerV2.getNumBuffers()).isEqualTo(bufferManagerV2.getMinBufferPoolSize());
+    Assertions.assertThat(bufferManagerV2.getNumBuffers()).isEqualTo(bufferManagerV2.getMinBufferPoolSize());
   }
 
   @Test
@@ -244,10 +245,10 @@ public class TestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
     buff.setStatus(ReadBufferStatus.READ_FAILED);
     buff.setStream(inputStream);
     bufferManagerV2.testMimicFullUseAndAddFailedBuffer(buff);
-    assertThat(bufferManagerV2.getNumBuffers()).isEqualTo(bufferManagerV2.getMinBufferPoolSize());
+    Assertions.assertThat(bufferManagerV2.getNumBuffers()).isEqualTo(bufferManagerV2.getMinBufferPoolSize());
     bufferManagerV2.queueReadAhead(inputStream, 0, ONE_KB,
         inputStream.getTracingContext());
-    assertThat(bufferManagerV2.getNumBuffers()).isGreaterThan(bufferManagerV2.getMinBufferPoolSize());
+    Assertions.assertThat(bufferManagerV2.getNumBuffers()).isGreaterThan(bufferManagerV2.getMinBufferPoolSize());
   }
 
   @Test
@@ -261,7 +262,7 @@ public class TestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
     ReadBufferManagerV2.setReadBufferManagerConfigs(abfsConfig.getReadAheadBlockSize(), abfsConfig);
     ReadBufferManagerV2 bufferManagerV2 = ReadBufferManagerV2.getBufferManager();
     int initialBuffers = bufferManagerV2.getMinBufferPoolSize();
-    assertThat(bufferManagerV2.getNumBuffers()).isEqualTo(initialBuffers);
+    Assertions.assertThat(bufferManagerV2.getNumBuffers()).isEqualTo(initialBuffers);
     running = true;
     Thread t = new Thread(() -> {
       while (running) {
@@ -278,7 +279,7 @@ public class TestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
     t.setDaemon(true);
     t.start();
     Thread.sleep(2L * bufferManagerV2.getMemoryMonitoringIntervalInMilliSec());
-    assertThat(bufferManagerV2.getNumBuffers()).isLessThan(initialBuffers);
+    Assertions.assertThat(bufferManagerV2.getNumBuffers()).isLessThan(initialBuffers);
     running = false;
     t.join();
   }
