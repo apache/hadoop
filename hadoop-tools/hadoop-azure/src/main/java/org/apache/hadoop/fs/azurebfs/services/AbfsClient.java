@@ -339,7 +339,7 @@ public abstract class AbfsClient implements Closeable {
       final AbfsServiceType abfsServiceType)
       throws IOException {
     this(baseUrl, sharedKeyCredentials, abfsConfiguration,
-        encryptionContextProvider, abfsClientContext,abfsServiceType);
+        encryptionContextProvider, abfsClientContext, abfsServiceType);
     this.sasTokenProvider = sasTokenProvider;
     this.tokenProvider = tokenProvider;
   }

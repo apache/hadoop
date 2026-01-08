@@ -609,6 +609,7 @@ public class TestAggregateMetricsManager extends AbstractAbfsIntegrationTest {
   private void runProgramAndCaptureOutput(String program,
       boolean expectMetricsFlush, int expectedExitCode)
       throws IOException, InterruptedException {
+    final long waitTimeInSeconds = 30;
     Path tempFile = Files.createTempFile("ShutdownTestProg", ".java");
     try {
       Files.write(tempFile, program.getBytes(StandardCharsets.UTF_8));
@@ -625,7 +626,7 @@ public class TestAggregateMetricsManager extends AbstractAbfsIntegrationTest {
 
       String compileOutput = readProcessOutput(javac);
       javac.waitFor();
-      if (!javac.waitFor(30, TimeUnit.SECONDS)) {
+      if (!javac.waitFor(waitTimeInSeconds, TimeUnit.SECONDS)) {
         javac.destroyForcibly();
         throw new AssertionError("java process timed out");
       }
@@ -647,7 +648,7 @@ public class TestAggregateMetricsManager extends AbstractAbfsIntegrationTest {
 
       String output = readProcessOutput(javaProc);
       int exitCode;
-      if (!javaProc.waitFor(30, TimeUnit.SECONDS)) {
+      if (!javaProc.waitFor(waitTimeInSeconds, TimeUnit.SECONDS)) {
         javaProc.destroyForcibly();
         throw new AssertionError("java process timed out");
       }

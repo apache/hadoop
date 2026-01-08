@@ -91,16 +91,16 @@ public class AbfsMetricsManager {
   private ScheduledExecutorService metricsEmitScheduler = null;
 
   // AbfsConfiguration instance
-  final AbfsConfiguration abfsConfiguration;
+  private final AbfsConfiguration abfsConfiguration;
 
   // AbfsCounters instance
-  final AbfsCounters abfsCounters;
+  private final AbfsCounters abfsCounters;
 
   // File system ID
-  final String fileSystemId;
+  private final String fileSystemId;
 
   // Storage account name
-  final String accountName;
+  private final String accountName;
 
   /**
    * Constructor for AbfsMetricsManager.
