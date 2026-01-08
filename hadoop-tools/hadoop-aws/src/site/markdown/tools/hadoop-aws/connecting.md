@@ -61,7 +61,7 @@ The S3A connector supports S3 cross region access via AWS SDK which is enabled b
 Not supported:
 * AWS [Snowball](https://aws.amazon.com/snowball/).
 
-As of December 2023, AWS S3 uses Transport Layer Security (TLS) [version 1.2](https://aws.amazon.com/blogs/security/tls-1-2-required-for-aws-endpoints/) to secure the communications channel; the S3A client is does this through
+As of December 2023, AWS S3 uses Transport Layer Security (TLS) [version 1.2](https://aws.amazon.com/blogs/security/tls-1-2-required-for-aws-endpoints/) to secure the communications channel; the S3A client does this through
 the Apache [HttpClient library](https://hc.apache.org/index.html).
 
 ### <a name="third-party"></a> Third party stores
@@ -74,81 +74,127 @@ _MUST_ be installed on the JVMs on hosts within the Hadoop cluster.
 See [Working with Third-party S3 Stores](third_party_stores.html) *after* reading this document.
 
 
-## <a name="settings"></a> Connection Settings
+## <a name="settings"></a> Endpoint and Region Settings
 
-There are three core settings to connect to an S3 store, endpoint, region and whether or not to use path style access.
+There are three core settings to connect to an S3 store, endpoint, region and whether to use path style access.
+
+The term "endpoint" means the URL or hostname of the remote s3 store.
+The default S3 endpoint is `s3.amazonaws.com`
+When a request is made to a bucket and path style access is false, the hostname to
+make HTTP requests from is prefixed to the endpoint. A bucket `example` would
+end up with a name `example.s3.amazonaws.com`.
+
+S3 Buckets are hosted in different AWS regions.
+
+Each region has its own S3 endpoint, documented [by Amazon](http://docs.aws.amazon.com/general/latest/gr/rande.html#s3_region).
+
+1. Applications running in EC2 infrastructure do not pay for IO to/from
+   *local S3 buckets*. They will be billed for access to remote buckets. Always
+   use local buckets and local copies of data, wherever possible.
+2. With the V4 signing protocol, AWS requires the explicit region endpoint
+   to be used —hence S3A must be configured to use the specific endpoint. This
+   is done by setting the region in the configuration option `fs.s3a.endpoint.region`,
+   or by explicitly setting `fs.s3a.endpoint` and `fs.s3a.endpoint.region`.
+3. All endpoints other than the default region only support interaction
+   with buckets local to that S3 instance.
+4. Standard S3 buckets support "cross-region" access where use of the original `us-east-1`
+   endpoint allows access to the data, but newer storage types, particularly S3 Express are
+   not supported.
+
+If the wrong endpoint is used, the request will fail. This may be reported as a 301/redirect error,
+or as a "400 Bad Request": take these as cues to check the endpoint setting of
+a bucket.
+
+The up-to-date list of regions is [Available online](https://docs.aws.amazon.com/general/latest/gr/s3.html).
+
+Knowing the region of a bucket is key to be able to communicate and authenticate with
+an S3 bucket.
 
 
 ```xml
-<property>
-  <name>fs.s3a.endpoint</name>
-  <description>AWS S3 endpoint to connect to. An up-to-date list is
-    provided in the AWS Documentation: regions and endpoints. Without this
-    property, the endpoint/hostname of the S3 Store is inferred from
-    the value of fs.s3a.endpoint.region, fs.s3a.endpoint.fips and more.
-  </description>
-</property>
 
 <property>
   <name>fs.s3a.endpoint.region</name>
   <value>REGION</value>
-  <description>AWS Region of the data</description>
+  <description>AWS Region of the bucket</description>
+</property>
+
+<property>
+  <name>fs.s3a.endpoint</name>
+  <description>AWS S3 endpoint to connect to.
+    Leave blank for the SDK to determine it from the region and/or other settings.
+  </description>
 </property>
 
 <property>
   <name>fs.s3a.path.style.access</name>
   <value>false</value>
   <description>Enable S3 path style access by disabling the default virtual hosting behaviour.
-    Needed for AWS PrivateLink, S3 AccessPoints, and, generally, third party stores.
+    Needed for AWS PrivateLink, S3 AccessPoints, and  third party stores.
     Default: false.
   </description>
+</property>
+```
+
+There are also some secondary options. The `fs.s3a.endpoint.fips` is covered in its own section;
+the option `fs.s3a.cross.region.access.enabled` is generally left alone -this SDK feature is
+often critical when configuring a cluster to work with data round the world.
+
+```xml
+<property>
+  <name>fs.s3a.cross.region.access.enabled</name>
+  <value>true</value>
+  <description>SDK to fall back to cross-region bucket access</description>
+</property>
+
+<property>
+  <name>fs.s3a.endpoint.fips</name>
+  <value>false</value>
+  <description>Use the FIPS endpoint</description>
 </property>
 ```
 
 Historically the S3A connector preferred the endpoint as defined by the option `fs.s3a.endpoint`.
 With the move to the AWS V2 SDK, there is more emphasis on the region, set by the `fs.s3a.endpoint.region` option.
 
-Normally, declaring the region in `fs.s3a.endpoint.region` should be sufficient to set up the network connection to correctly connect to an AWS-hosted S3 store.
+Normally, declaring the region in `fs.s3a.endpoint.region` should be sufficient to set up the network
+connection to correctly connect to an _AWS-hosted S3 store_.
+
+When connecting to third-party stores, the `fs.s3a.endpoint` option becomes critical;
+the value of `fs.s3a.endpoint.region` can still tune s3a client behavior.
 
 ### <a name="s3_endpoint_region_details"></a> S3 endpoint and region settings in detail
 
-* Configuration options `fs.s3a.endpoint` and `fs.s3a.endpoint.region` are used to set values
-  for S3 endpoint and region respectively.
-* If `fs.s3a.endpoint.region` is configured with valid AWS region value, S3A will
-  configure the S3 client to use this value. If this is set to a region that does
-  not match your bucket, you will receive a 301 redirect response.
-* If `fs.s3a.endpoint.region` is not set and `fs.s3a.endpoint` is set with a valid
-  endpoint value, S3A will attempt to parse the region from the endpoint and
-  configure S3 client to use the region value.
-  This works for VPCE, amazonaws.com and amazonaws.cn endpoints.
-* If both `fs.s3a.endpoint` and `fs.s3a.endpoint.region` are not set, S3A will
-  use `us-east-1` as default region and enable cross region access. In this case,
-  S3A does not attempt to override the endpoint while configuring the S3 client.
-* If `fs.s3a.endpoint` is not set and `fs.s3a.endpoint.region` is set to an empty
-  string, S3A will configure S3 client without any region or endpoint override.
-  This will allow fallback to S3 SDK region resolution chain. More details
-  [here](https://docs.aws.amazon.com/sdk-for-java/latest/developer-guide/region-selection.html).
-* The same is true if the region is set to `sdk`.
-  This makes explicit what is required, is easier to enter into XML files, and to use as an override option.
-* If `fs.s3a.endpoint` is set to the central endpoint `s3.amazonaws.com` and
-  `fs.s3a.endpoint.region` is not set, S3A will use `us-east-1` as the default region
-  and enable cross region access. In this case, S3A does not attempt to explicitly set
-  the endpoint while configuring the S3 client in the AWS SDK.
-* If `fs.s3a.endpoint` is set to the central endpoint `s3.amazonaws.com` and
-  `fs.s3a.endpoint.region` is also set to some region, S3A will use that region
-  value and enable cross region access. In this case, S3A does not attempt to
-  override the endpoint while configuring the S3 client.
+1. Configuration options `fs.s3a.endpoint.region` and `fs.s3a.endpoint` are used to set values
+   for the S3 region and endpoint respectively.
+2. If `fs.s3a.endpoint.region` is configured with valid AWS region value, S3A will
+   configure the S3 client to use this value. If this is set to a region that does
+   not match your bucket, you will receive a 301 redirect response.
+3. If `fs.s3a.endpoint.region` is not set and `fs.s3a.endpoint` is set to an AWS regional endpoint 
+   S3A will determine the region by parsing the endpoint string.
+   This works for VPCE, `amazonaws.com` and `amazonaws.cn` endpoints.
+4. If `fs.s3a.endpoint.region` is set to `sdk` then region resolution is handled
+   by the SDK. It's process is documented
+   [here](https://docs.aws.amazon.com/sdk-for-java/latest/developer-guide/region-selection.html).
+5. If both `fs.s3a.endpoint` and `fs.s3a.endpoint.region` are unset, S3A will
+   use `us-east-1` as default region and expect cross-region access.
+6. If `fs.s3a.endpoint` is not set and `fs.s3a.endpoint.region` is set to ""
+   string, S3A will use the SDK Resolution, as when the region is set to `sdk`.
+   (this is different from the resolution point 5 as the string is empty, rather than null)
+7. If `fs.s3a.endpoint` is set to the central endpoint `s3.amazonaws.com` and
+   `fs.s3a.endpoint.region` is not set, S3A will use `us-east-1` as the default region
+   and expect cross-region access.
 
-When the cross-region access is enabled while configuring the S3 client, even if the
-region set is incorrect, S3 SDK determines the region. This is done by making the
-request, and if the SDK receives 301 redirect response, it determines the region at
-the cost of a HEAD request, and caches it.
+When the cross-region access is set, the AWS SDK determines the region if when unknown.
+This is done by making the request, and if the SDK receives 301 redirect response, issues
+a HEAD request to the bucket to determine its location.
+This is cached for the duration of the JVM.
 
-Cross-region resolution requires that the host performing the lookup has network access
-to the central region. If it is has been deployed in a EC2 VPC which lacks such network
+This cross-region resolution requires that the host performing the lookup has network access
+to the central region. If the host is in an AWS VPC which lacks such network
 access, cross region lookup will fail.
 
-Please note that some endpoint and region settings that require cross region access
+Please note that some endpoint and region settings that require cross-region access
 are complex and improving over time. Hence, they may be considered unstable.
 
 If you are working with third party stores, please check [third party stores in detail](./third_party_stores.html).
@@ -157,28 +203,37 @@ If this seems confusing: you are correct!
 
 Here is what to do
 
-#### Deploying on EC2 and working with buckets in the local region
+#### Deploying on EC2 and working with AWS S3 buckets mostly in the local region
 
 1. Leave `fs.s3a.endpoint` unset.
 2. Set `fs.s3a.endpoint.region` to `sdk`.
+3. Leave `fs.s3a.cross.region.access.enabled` as `true`.
 
 This hands off resolution to the SDK, which will use the IAM service to determine the local region.
 The SDK will use this to build the endpoint URL and sign all requests.
 
-#### On-prem access to S3 where the bucket region is known
+Remote buckets will be accessed via probes to `s3.amazonaws.com`, relying on
+cross-region access to resolve their location.
+
+
+#### On-prem access to AWS S3 where the bucket region is known
 
 1. Leave `fs.s3a.endpoint` unset.
 2. Set `fs.s3a.endpoint.region` to the region of the bucket.
 
+The AWS SDK will choose the correct endpoint for the bucket region and sign requests
+appropriately.
 
-#### On-prem access to S3 where the bucket region is not known
+#### On-prem access to AWS S3 where the bucket region is **not** known
 
 1. Leave `fs.s3a.endpoint` unset.
-2. Leave `fs.s3a.endpoint.region` unset/set to SDK
-3. Set `fs.s3a.cross.region.access.enabled` to `true` (this is the default).
+2. Set `fs.s3a.endpoint.region` to `sdk`
+3. Leave `fs.s3a.cross.region.access.enabled` as `true`.
 
+The AWS SDK will attempt to connect to the bucket via the central `s3.amazonaws.com` region;
+if it is elsewhere it will determine the correct location.
 
-#### On-prem access to S3 through VPCE
+#### On-prem access to AWS S3 through VPCE
 
 1. Set `fs.s3a.endpoint` to the VPCE endpoint
 2. Set `fs.s3a.endpoint.region` to the region of the bucket, *or leave unset*
@@ -194,10 +249,7 @@ The SDK will use this to build the endpoint URL and sign all requests.
     <name>fs.s3a.bucket.example.path.style.access</name>
     <value>true</value>
   </property>
-
 ```
-
-#### On-prem access where the region 
 
 #### Third party stores
 
@@ -206,7 +258,6 @@ See [Third Party Stores](./third_party_stores.html) for the full details and exa
 to the domain name to which virtual hosts are prefixed.
 * Set `fs.s3a.endpoint.region` to `external`.
 * If working with an HTTP endpoint, set `fs.s3a.bucket.connection.ssl.enabled` to false.
-
 
 
 ### <a name="timeouts"></a> Network timeouts
@@ -345,6 +396,12 @@ Core aspects of pool settings are:
 </property>
 ```
 
+Using OpenSSL is 5-10% faster than using the java 8 TLS implementation, that is: *SQL queries complete faster*.
+
+It is hard to set up and a bit brittle, but if possible, use it!
+
+
+
 ### <a name="proxies"></a> Proxy Settings
 
 Connections to S3A stores can be made through an HTTP or HTTPS proxy.
@@ -402,37 +459,6 @@ if long-lived connections have problems.
 
 
 ##  <a name="per_bucket_endpoints"></a>Using Per-Bucket Configuration to access data round the world
-
-S3 Buckets are hosted in different "regions", the default being "US-East-1".
-The S3A client talks to this region by default, issuing HTTP requests
-to the server `s3.amazonaws.com`.
-
-S3A can work with buckets from any region. Each region has its own
-S3 endpoint, documented [by Amazon](http://docs.aws.amazon.com/general/latest/gr/rande.html#s3_region).
-
-1. Applications running in EC2 infrastructure do not pay for IO to/from
-*local S3 buckets*. They will be billed for access to remote buckets. Always
-use local buckets and local copies of data, wherever possible.
-2. With the V4 signing protocol, AWS requires the explicit region endpoint
-to be used —hence S3A must be configured to use the specific endpoint. This
-is done by setting the regon in the configuration option `fs.s3a.endpoint.region`,
-or by explicitly setting `fs.s3a.endpoint` and `fs.s3a.endpoint.region`.
-3. All endpoints other than the default region only support interaction
-with buckets local to that S3 instance.
-4. Standard S3 buckets support "cross-region" access where use of the original `us-east-1`
-   endpoint allows access to the data, but newer storage types, particularly S3 Express are
-   not supported.
-
-
-If the wrong endpoint is used, the request will fail. This may be reported as a 301/redirect error,
-or as a 400 Bad Request: take these as cues to check the endpoint setting of
-a bucket.
-
-The up to date list of regions is [Available online](https://docs.aws.amazon.com/general/latest/gr/s3.html).
-
-This list can be used to specify the endpoint of individual buckets, for example
-for buckets in the us-west-2 and EU/Ireland endpoints.
-
 
 ```xml
 <property>

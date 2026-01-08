@@ -663,7 +663,7 @@ Use at your own risk. Running the `hadoop-aws` test suite against your store wou
 versions have changed their behavior.
 
 Example settings for a local rust bucket. Note that `fs.s3a.bucket.rustybucket.connection.ssl.enabled` has been set to false
-as the SDK doesn't look at the http/https prefix of the endpoint to determine which protocol to use. 
+as the SDK doesn't look at the http/https prefix of the endpoint to determine which protocol to use.
 
 ```xml
   <property>

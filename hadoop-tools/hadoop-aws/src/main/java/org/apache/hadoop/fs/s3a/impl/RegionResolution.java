@@ -111,17 +111,31 @@ public class RegionResolution {
    */
   public static final Region EXTERNAL_REGION = Region.of(EXTERNAL);
 
+  private RegionResolution() {
+  }
+
   /**
    * How was the region resolved?
    */
   public enum RegionResolutionMechanism {
 
-    CalculatedFromEndpoint("Calculated from endpoint"),
+    /** Endpoint inference. */
+    CalculatedFromEndpoint("Calculated from endpoint."),
+
+    /** It's an external endpoint */
     ExternalEndpoint("External endpoint"),
+
+    /** No resolution: falling back to central endpoint. */
     FallbackToCentral("Fallback to central endpoint"),
+
+    /** Connection is a VPCE endpoint which was parsed for the region. */
     ParseVpceEndpoint("Parse VPCE Endpoint"),
+
+    /** SDK requested. */
     Sdk("SDK resolution chain"),
-    Specified("region specified");
+
+    /** Set in configuration. */
+    Specified("Region specified");
 
     /**
      * Text of the mechanism.
@@ -190,6 +204,7 @@ public class RegionResolution {
      */
     private boolean useCentralEndpoint;
 
+    /** Empty constructor. */
     public Resolution() {
     }
 
@@ -206,14 +221,14 @@ public class RegionResolution {
     /**
      * Set the region.
      * Declares the region as resolved even when the value is null (i.e. resolve to SDK).
-     * @param region region
+     * @param resolvedRegion region
      * @param resolutionMechanism resolution mechanism.
      * @return the builder
      */
     public Resolution withRegion(
-        @Nullable final Region region,
+        @Nullable final Region resolvedRegion,
         final RegionResolutionMechanism resolutionMechanism) {
-      this.region = region;
+      this.region = resolvedRegion;
       this.mechanism = requireNonNull(resolutionMechanism);
       return this;
     }
@@ -248,6 +263,9 @@ public class RegionResolution {
       return this;
     }
 
+    /**
+     * Endpoint URI.
+     */
     public URI getEndpointUri() {
       return endpointUri;
     }
@@ -262,30 +280,53 @@ public class RegionResolution {
       return this;
     }
 
-    public Region getRegion() {
-      return region;
-    }
-
-    public boolean isUseFips() {
-      return useFips;
-    }
-
-    public boolean isCrossRegionAccessEnabled() {
-      return crossRegionAccessEnabled;
-    }
-
-    public RegionResolutionMechanism getMechanism() {
-      return mechanism;
-    }
-
+    /**
+     * Endpoint as string.
+     */
     public String getEndpointStr() {
       return endpointStr;
     }
 
+    /**
+     * Region: if null hand down to the SDK.
+     */
+    public Region getRegion() {
+      return region;
+    }
+
+    /**
+     * Should FIPS be enabled?
+     */
+    public boolean isUseFips() {
+      return useFips;
+    }
+
+    /**
+     * Should cross-region access be enabled?
+     */
+    public boolean isCrossRegionAccessEnabled() {
+      return crossRegionAccessEnabled;
+    }
+
+    /**
+     * How was the region resolved?
+     * Null means unresolved.
+     */
+    public RegionResolutionMechanism getMechanism() {
+      return mechanism;
+    }
+
+    /**
+     * Is the region resolved.
+     * @return true if there's been a resolution.
+     */
     public boolean isRegionResolved() {
       return mechanism != null;
     }
 
+    /**
+     * Use the central endpoint?
+     */
     public boolean isUseCentralEndpoint() {
       return useCentralEndpoint;
     }

@@ -285,8 +285,10 @@ public class DefaultS3ClientFactory extends Configured
    * @return how the region was resolved.
    * @throws IllegalArgumentException if endpoint is set when FIPS is enabled.
    */
-  private <BuilderT extends S3BaseClientBuilder<BuilderT, ClientT>, ClientT> RegionResolution.Resolution configureEndpointAndRegion(
-      BuilderT builder, S3ClientCreationParameters parameters, Configuration conf)  throws IOException {
+  private <BuilderT extends S3BaseClientBuilder<BuilderT, ClientT>, ClientT> RegionResolution.Resolution
+  configureEndpointAndRegion(BuilderT builder,
+      S3ClientCreationParameters parameters,
+      Configuration conf) throws IOException {
 
     final RegionResolution.Resolution resolution =
         calculateRegion(parameters, conf);
