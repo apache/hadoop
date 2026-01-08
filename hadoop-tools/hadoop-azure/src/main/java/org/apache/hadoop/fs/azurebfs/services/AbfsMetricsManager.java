@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.net.URL;
 import java.util.Timer;
@@ -47,7 +48,7 @@ import static org.apache.hadoop.fs.azurebfs.services.AbfsClient.LOG;
  * AbfsMetricsManager is responsible for managing metrics collection
  * and emission for an AbfsClient instance.
  */
-public class AbfsMetricsManager {
+public class AbfsMetricsManager implements Closeable {
 
   // Timer thread name for AbfsMetricsManager
   public static final String ABFS_CLIENT_TIMER_THREAD_NAME
@@ -201,15 +202,18 @@ public class AbfsMetricsManager {
    * This method cancels any running timer tasks, shuts down the metrics emission scheduler,
    * and emits any collected metrics before closing.
    */
-  public void closeMetricsResources() {
+  @Override
+  public void close() {
+    if (runningTimerTask != null) {
+      runningTimerTask.cancel();
+    }
+    if (timer != null) {
+      timer.cancel();
+    }
+    if (metricsEmitScheduler != null && !metricsEmitScheduler.isShutdown()) {
+      metricsEmitScheduler.shutdownNow();
+    }
     if (isMetricCollectionEnabled()) {
-      if (runningTimerTask != null) {
-        runningTimerTask.cancel();
-        timer.cancel();
-      }
-      if (metricsEmitScheduler != null && !metricsEmitScheduler.isShutdown()) {
-        metricsEmitScheduler.shutdownNow();
-      }
       emitCollectedMetrics();
     }
   }

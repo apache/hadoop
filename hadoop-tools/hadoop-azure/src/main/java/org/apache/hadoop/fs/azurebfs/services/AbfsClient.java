@@ -274,7 +274,7 @@ public abstract class AbfsClient implements Closeable {
     this.abfsMetricsManager = new AbfsMetricsManager(abfsConfiguration, abfsCounters,
         baseUrlString, indexLastForwardSlash, accountName, fileSystemId);
     // register the client to Aggregated Metrics Manager
-    getAbfsMetricsManager().getAggregateMetricsManager()
+    abfsMetricsManager.getAggregateMetricsManager()
         .registerClient(accountName, this);
 
     // Initialize write thread pool metrics if dynamic write thread pool scaling is enabled.
@@ -346,9 +346,11 @@ public abstract class AbfsClient implements Closeable {
 
   @Override
   public void close() throws IOException {
-    getAbfsMetricsManager().closeMetricsResources();
-    getAbfsMetricsManager().getAggregateMetricsManager()
-        .deregisterClient(accountName, this);
+    if (abfsMetricsManager != null) {
+      abfsMetricsManager.close();
+      abfsMetricsManager.getAggregateMetricsManager()
+          .deregisterClient(accountName, this);
+    }
     if (keepAliveCache != null) {
       keepAliveCache.close();
     }
@@ -1556,7 +1558,7 @@ public abstract class AbfsClient implements Closeable {
 
     // Construct the URL for the metric call
     // In case of blob storage, the URL is changed to DFS URL
-    final URL url = createRequestUrl(getAbfsMetricsManager().getMetricsUrl(),
+    final URL url = createRequestUrl(abfsMetricsManager.getMetricsUrl(),
         EMPTY_STRING, abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = getAbfsRestOperation(
         AbfsRestOperationType.GetFileSystemProperties,
