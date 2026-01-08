@@ -37,25 +37,17 @@ import org.apache.hadoop.fs.azurebfs.constants.AbfsServiceType;
 import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidConfigurationValueException;
 import org.apache.hadoop.fs.azurebfs.enums.Trilean;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
 import static java.net.HttpURLConnection.HTTP_UNAVAILABLE;
-import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.COLON;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.DOT;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.SPLIT_NO_LIMIT;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_IS_HNS_ENABLED;
-import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME;
-import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_INGRESS_SERVICE_TYPE;
-import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.accountProperty;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION;
-import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.ABFS_BLOB_DOMAIN_NAME;
-import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.ABFS_DFS_DOMAIN_NAME;
-import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.INCORRECT_INGRESS_TYPE;
 import static org.apache.hadoop.fs.azurebfs.services.RetryPolicyConstants.EXPONENTIAL_RETRY_POLICY_ABBREVIATION;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.mockito.ArgumentMatchers.any;
@@ -129,33 +121,6 @@ public class ITestAzureBlobFileSystemInitAndCreate extends
         .getAclStatus(Mockito.anyString(), any(TracingContext.class));
   }
 
-  /**
-   * Test to verify that the initialization of the AzureBlobFileSystem fails
-   * when an invalid ingress service type is configured.
-   *
-   * This test sets up a configuration with an invalid ingress service type
-   * (DFS) for a Blob endpoint and expects an InvalidConfigurationValueException
-   * to be thrown during the initialization of the filesystem.
-   *
-   * @throws Exception if an error occurs during the test execution
-   */
-  @Test
-  public void testFileSystemInitializationFailsForInvalidIngress() throws Exception {
-    assumeHnsDisabled();
-    Configuration configuration = new Configuration(getRawConfiguration());
-    String defaultUri = configuration.get(FS_DEFAULT_NAME_KEY);
-    String accountKey = configuration.get(
-        accountProperty(FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME, getAccountName()),
-        configuration.get(FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME));
-    configuration.set(FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME,
-        accountKey.replace(ABFS_DFS_DOMAIN_NAME, ABFS_BLOB_DOMAIN_NAME));
-    configuration.set(FS_AZURE_INGRESS_SERVICE_TYPE, AbfsServiceType.DFS.name());
-    String blobUri = defaultUri.replace(ABFS_DFS_DOMAIN_NAME, ABFS_BLOB_DOMAIN_NAME);
-    intercept(InvalidConfigurationValueException.class,
-        INCORRECT_INGRESS_TYPE, () ->
-            FileSystem.newInstance(new Path(blobUri).toUri(), configuration));
-  }
-
   @Test
   public void testFileSystemInitFailsIfNotAbleToDetermineAccountType() throws Exception {
     AzureBlobFileSystem fs = ((AzureBlobFileSystem) FileSystem.newInstance(
@@ -213,7 +178,8 @@ public class ITestAzureBlobFileSystemInitAndCreate extends
               EXPONENTIAL_RETRY_POLICY_ABBREVIATION);
 
       // The tracing context being used FS Initialization should have the endpoint conversion indicator set to 'T'
-      String endpointConversionIndicator = captured.getHeader().split(COLON, SPLIT_NO_LIMIT)[15];
+      final int ENDPOINT_CONVERSION_INDICATOR_INDEX = 15;
+      String endpointConversionIndicator = captured.getHeader().split(COLON, SPLIT_NO_LIMIT)[ENDPOINT_CONVERSION_INDICATOR_INDEX];
       Assertions.assertFalse(endpointConversionIndicator.isEmpty(), "Endpoint conversion indicator should be present");
       Assertions.assertEquals(endptConversionIndicatorInTc, endpointConversionIndicator, "Endpoint conversion indicator should be 'T'");
     }

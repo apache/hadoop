@@ -317,11 +317,12 @@ public class AzureBlobFileSystem extends FileSystem
     }
 
     /*
-     * For FNS-DFS accounts, reset the endpoint to Blob and update the tracing
-     * context to add metric to show endpoint conversion.
+     * For FNS accounts, restrict the endpoint and service type to Blob
+     * For FNS-DFS, also update the default client service type to BLOB and update
+     * tracing context to add metric to show endpoint conversion.
      */
     if (!tryGetIsNamespaceEnabled(new TracingContext(initFSTracingContext))) {
-      // Required to correctly set user agent for FNS-Blob
+      // Required to correctly set user agent for FNS-Blob and restrict ingress service type
       abfsStore.restrictServiceTypeToBlob();
       if (uri.toString().contains(ABFS_DFS_DOMAIN_NAME)){
         abfsStore.resetEndpointFromDFSToBlob();

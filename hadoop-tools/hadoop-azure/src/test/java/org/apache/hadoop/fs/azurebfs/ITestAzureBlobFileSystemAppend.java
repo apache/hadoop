@@ -493,6 +493,15 @@ public class ITestAzureBlobFileSystemAppend extends
         .isInstanceOf(AbfsDfsClient.class);
   }
 
+  /**
+   * Validates that the correct ingress handler and client are used for the specified
+   * ingress service type.
+   *
+   * @param ingressServiceType     the ingress service type to test (e.g., DFS or BLOB)
+   * @param expectedIngressHandler the expected class of the AzureIngressHandler
+   * @param expectedClient         the expected class of the AbfsClient
+   * @throws IOException if an I/O error occurs during validation
+   */
   private void validateIngressHandler(AbfsServiceType ingressServiceType,
           Class<? extends AzureIngressHandler> expectedIngressHandler,
           Class<? extends AbfsClient> expectedClient)
