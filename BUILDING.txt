@@ -477,10 +477,9 @@ Installing required dependencies for clean install of macOS 10.14:
 * Install Xcode Command Line Tools
   $ xcode-select --install
 * Install Homebrew
-  $ /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
-* Install OpenJDK 8
-  $ brew tap AdoptOpenJDK/openjdk
-  $ brew cask install temurin17
+  $ /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+* Install OpenJDK 17
+  $ brew install openjdk@17
 * Install maven and tools
   $ brew install maven autoconf automake cmake wget
 * Install native libraries, only openssl is required to compile native code,
