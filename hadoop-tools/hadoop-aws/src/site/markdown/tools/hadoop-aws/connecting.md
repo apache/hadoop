@@ -170,7 +170,7 @@ the value of `fs.s3a.endpoint.region` can still tune s3a client behavior.
 2. If `fs.s3a.endpoint.region` is configured with valid AWS region value, S3A will
    configure the S3 client to use this value. If this is set to a region that does
    not match your bucket, you will receive a 301 redirect response.
-3. If `fs.s3a.endpoint.region` is not set and `fs.s3a.endpoint` is set to an AWS regional endpoint 
+3. If `fs.s3a.endpoint.region` is not set and `fs.s3a.endpoint` is set to an AWS regional endpoint
    S3A will determine the region by parsing the endpoint string.
    This works for VPCE, `amazonaws.com` and `amazonaws.cn` endpoints.
 4. If `fs.s3a.endpoint.region` is set to `sdk` then region resolution is handled

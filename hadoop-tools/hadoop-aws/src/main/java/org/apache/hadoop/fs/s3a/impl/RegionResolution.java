@@ -265,6 +265,7 @@ public class RegionResolution {
 
     /**
      * Endpoint URI.
+     * @return value if set.
      */
     public URI getEndpointUri() {
       return endpointUri;
@@ -282,6 +283,7 @@ public class RegionResolution {
 
     /**
      * Endpoint as string.
+     * @return value if set.
      */
     public String getEndpointStr() {
       return endpointStr;
@@ -289,6 +291,7 @@ public class RegionResolution {
 
     /**
      * Region: if null hand down to the SDK.
+     * @return value if set.
      */
     public Region getRegion() {
       return region;
@@ -296,6 +299,7 @@ public class RegionResolution {
 
     /**
      * Should FIPS be enabled?
+     * @return flag state.
      */
     public boolean isUseFips() {
       return useFips;
@@ -303,6 +307,7 @@ public class RegionResolution {
 
     /**
      * Should cross-region access be enabled?
+     * @return flag state.
      */
     public boolean isCrossRegionAccessEnabled() {
       return crossRegionAccessEnabled;
@@ -311,6 +316,7 @@ public class RegionResolution {
     /**
      * How was the region resolved?
      * Null means unresolved.
+     * @return value if set.
      */
     public RegionResolutionMechanism getMechanism() {
       return mechanism;
@@ -326,6 +332,7 @@ public class RegionResolution {
 
     /**
      * Use the central endpoint?
+     * @return flag state.
      */
     public boolean isUseCentralEndpoint() {
       return useCentralEndpoint;
