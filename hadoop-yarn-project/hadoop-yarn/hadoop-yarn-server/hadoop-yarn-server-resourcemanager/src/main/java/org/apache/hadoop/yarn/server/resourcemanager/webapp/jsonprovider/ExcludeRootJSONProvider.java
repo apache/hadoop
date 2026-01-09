@@ -51,6 +51,7 @@ import org.apache.hadoop.conf.Configuration;
  *
  * <p>
  * During marshalling and unmarshalling, this provider sets the MOXy-specific properties:
+ * </p>
  * <ul>
  *   <li>{@code MarshallerProperties.JSON_INCLUDE_ROOT = false}</li>
  *   <li>{@code MarshallerProperties.JSON_MARSHAL_EMPTY_COLLECTIONS = false}</li>
