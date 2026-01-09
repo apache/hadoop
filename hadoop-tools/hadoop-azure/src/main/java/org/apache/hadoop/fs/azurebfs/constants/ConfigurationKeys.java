@@ -21,7 +21,7 @@ package org.apache.hadoop.fs.azurebfs.constants;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Options;
+import org.apache.hadoop.fs.Options.OpenFileOptions;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.DOT;
 
@@ -218,7 +218,7 @@ public final class ConfigurationKeys {
   public static final String FS_AZURE_READ_AHEAD_BLOCK_SIZE = "fs.azure.read.readahead.blocksize";
   /**
    * Provides hint for the read workload pattern.
-   * Possible Values Exposed in {@link Options.OpenFileOptions}
+   * Possible Values Exposed in {@link OpenFileOptions}
    */
   public static final String FS_AZURE_READ_POLICY = "fs.azure.read.policy";
 

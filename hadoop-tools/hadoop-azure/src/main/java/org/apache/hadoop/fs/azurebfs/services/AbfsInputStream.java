@@ -94,7 +94,7 @@ public abstract class AbfsInputStream extends FSInputStream implements CanUnbuff
   // User configured size of read ahead.
   private final int readAheadRange;
 
-  private boolean firstRead = true;
+  private boolean firstRead = true; // to identify first read for optimizations
 
   // SAS tokens can be re-used until they expire
   private CachedSASToken cachedSasToken;
@@ -798,10 +798,18 @@ public abstract class AbfsInputStream extends FSInputStream implements CanUnbuff
     return StreamCapabilities.UNBUFFER.equals(toLowerCase(capability));
   }
 
+  /**
+   * Getter for buffer.
+   * @return the buffer
+   */
   byte[] getBuffer() {
     return buffer;
   }
 
+  /**
+   * Setter for buffer.
+   * @param buffer the buffer to set
+   */
   protected void setBuffer(byte[] buffer) {
     this.buffer = buffer;
   }

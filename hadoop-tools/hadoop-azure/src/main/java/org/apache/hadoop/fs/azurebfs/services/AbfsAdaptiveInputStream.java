@@ -33,9 +33,9 @@ import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 public class AbfsAdaptiveInputStream extends AbfsInputStream {
 
   /**
-   * Constructs AbfsAdaptiveInputStream
-   * @param client AbfsClient to be used for read operations
-   * @param statistics to recordinput stream statistics
+   * Constructs AbfsAdaptiveInputStream instance.
+   * @param client to be used for read operations
+   * @param statistics to record input stream statistics
    * @param path file path
    * @param contentLength file content length
    * @param abfsInputStreamContext input stream context
@@ -65,15 +65,15 @@ public class AbfsAdaptiveInputStream extends AbfsInputStream {
     if (!validate(b, off, len)) {
       return -1;
     }
-    //If buffer is empty, then fill the buffer.
+    // If buffer is empty, then fill the buffer.
     if (getBCursor() == getLimit()) {
-      //If EOF, then return -1
+      // If EOF, then return -1
       if (getFCursor() >= getContentLength()) {
         return -1;
       }
 
       long bytesRead = 0;
-      //reset buffer to initial state - i.e., throw away existing data
+      // reset buffer to initial state - i.e., throw away existing data
       setBCursor(0);
       setLimit(0);
       if (getBuffer() == null) {

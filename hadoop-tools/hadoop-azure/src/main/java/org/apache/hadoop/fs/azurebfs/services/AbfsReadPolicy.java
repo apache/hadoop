@@ -55,8 +55,8 @@ public enum AbfsReadPolicy {
    * @return the corresponding AbsInputPolicy to be used
    */
   public static AbfsReadPolicy getAbfsReadPolicy(String name) {
-    String trimmed = name.trim().toLowerCase(Locale.ENGLISH);
-    switch (trimmed) {
+    String readPolicyStr = name.trim().toLowerCase(Locale.ENGLISH);
+    switch (readPolicyStr) {
     // all these options currently map to random IO.
     case FS_OPTION_OPENFILE_READ_POLICY_RANDOM:
     case FS_OPTION_OPENFILE_READ_POLICY_COLUMNAR:

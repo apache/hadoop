@@ -100,6 +100,10 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
 
   private byte[][] bufferPool;
 
+  /*
+   * List of buffer indexes that are currently free and can be assigned to new read-ahead requests.
+   * Using a thread safe data structure as multiple threads can access this concurrently.
+   */
   private final ConcurrentSkipListSet<Integer> removedBufferList = new ConcurrentSkipListSet<>();
   private ConcurrentSkipListSet<Integer> freeList = new ConcurrentSkipListSet<>();
 
@@ -986,7 +990,7 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
       getReadAheadQueue().clear();
       getInProgressList().clear();
       getCompletedReadList().clear();
-      this.freeList.clear();
+      clearFreeList();
       for (int i = 0; i < maxBufferPoolSize; i++) {
         bufferPool[i] = null;
       }
@@ -1088,6 +1092,10 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
     return maxBufferPoolSize;
   }
 
+  /**
+   * Gets the maximum buffer pool size.
+   * @return size of the maximum buffer pool
+   */
   @VisibleForTesting
   public int getCurrentThreadPoolSize() {
     return workerRefs.size();
@@ -1103,6 +1111,10 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
     return memoryMonitoringIntervalInMilliSec;
   }
 
+  /**
+   * Returns the scheduled executor service used for CPU monitoring.
+   * @return the ScheduledExecutorService for CPU monitoring tasks
+   */
   @VisibleForTesting
   public ScheduledExecutorService getCpuMonitoringThread() {
     return cpuMonitorThread;
@@ -1119,6 +1131,13 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
     return maxJvmCpuUtilization;
   }
 
+  /**
+   * Calculates the required thread pool size based on the current
+   * read-ahead queue size and in-progress list size, applying a buffer
+   * to accommodate workload fluctuations.
+   *
+   * @return the calculated required thread pool size
+   */
   public int getRequiredThreadPoolSize() {
     return (int) Math.ceil(THREAD_POOL_REQUIREMENT_BUFFER
         * (getReadAheadQueue().size()

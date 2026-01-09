@@ -923,7 +923,7 @@ public class TestAbfsInputStream extends AbstractAbfsIntegrationTest {
     assertReadTypeInClientRequestId(fs, numOfReadCalls, totalReadCalls, readType);
   }
 
-  /*
+  /**
    * Test to verify that both conditions of prefetch read and respective config
    * enabled needs to be true for the priority header to be added
    */
@@ -987,6 +987,10 @@ public class TestAbfsInputStream extends AbstractAbfsIntegrationTest {
     stream.close();
   }
 
+  /**
+   * Test to verify that Random Input Stream does not queue prefetches.
+   * @throws Exception if any error occurs during the test
+   */
   @Test
   public void testRandomInputStreamDoesNotQueuePrefetches() throws Exception {
     AzureBlobFileSystem spiedFs = Mockito.spy(getFileSystem());
@@ -1006,6 +1010,11 @@ public class TestAbfsInputStream extends AbstractAbfsIntegrationTest {
     testReadTypeInTracingContextHeaderInternal(spiedFs, fileSize, RANDOM_READ, 3, totalReadCalls);
   }
 
+  /**
+   * Test to verify that Adaptive Input Stream queues prefetches for in-order reads
+   * and performs random reads for out-of-order seeks.
+   * @throws Exception if any error occurs during the test
+   */
   @Test
   public void testAdaptiveInputStream() throws Exception {
     AzureBlobFileSystem spiedFs = Mockito.spy(getFileSystem());

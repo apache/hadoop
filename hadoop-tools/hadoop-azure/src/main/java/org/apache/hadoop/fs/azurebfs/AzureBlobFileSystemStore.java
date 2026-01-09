@@ -950,30 +950,41 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
       perfInfo.registerSuccess(true);
 
-      AbfsReadPolicy inputPolicy = AbfsReadPolicy.getAbfsReadPolicy(getAbfsConfiguration().getAbfsReadPolicy());
-      switch (inputPolicy) {
-        case SEQUENTIAL:
-          return new AbfsPrefetchInputStream(getClient(), statistics, relativePath,
-                  contentLength, populateAbfsInputStreamContext(
-                  parameters.map(OpenFileParameters::getOptions),
-                  contextEncryptionAdapter),
-                  eTag, tracingContext);
+      return getRelevantInputStream(statistics, relativePath, contentLength,
+          parameters, contextEncryptionAdapter, eTag, tracingContext);
+    }
+  }
 
-        case RANDOM:
-          return new AbfsRandomInputStream(getClient(), statistics, relativePath,
-                  contentLength, populateAbfsInputStreamContext(
-                  parameters.map(OpenFileParameters::getOptions),
-                  contextEncryptionAdapter),
-                  eTag, tracingContext);
+  private AbfsInputStream getRelevantInputStream(final FileSystem.Statistics statistics,
+      final String relativePath,
+      final long contentLength,
+      final Optional<OpenFileParameters> parameters,
+      final ContextEncryptionAdapter contextEncryptionAdapter,
+      final String eTag,
+      TracingContext tracingContext) {
+    AbfsReadPolicy inputPolicy = AbfsReadPolicy.getAbfsReadPolicy(getAbfsConfiguration().getAbfsReadPolicy());
+    switch (inputPolicy) {
+    case SEQUENTIAL:
+      return new AbfsPrefetchInputStream(getClient(), statistics, relativePath,
+          contentLength, populateAbfsInputStreamContext(
+          parameters.map(OpenFileParameters::getOptions),
+          contextEncryptionAdapter),
+          eTag, tracingContext);
 
-        case ADAPTIVE:
-        default:
-          return new AbfsAdaptiveInputStream(getClient(), statistics, relativePath,
-                  contentLength, populateAbfsInputStreamContext(
-                  parameters.map(OpenFileParameters::getOptions),
-                  contextEncryptionAdapter),
-                  eTag, tracingContext);
-      }
+    case RANDOM:
+      return new AbfsRandomInputStream(getClient(), statistics, relativePath,
+          contentLength, populateAbfsInputStreamContext(
+          parameters.map(OpenFileParameters::getOptions),
+          contextEncryptionAdapter),
+          eTag, tracingContext);
+
+    case ADAPTIVE:
+    default:
+      return new AbfsAdaptiveInputStream(getClient(), statistics, relativePath,
+          contentLength, populateAbfsInputStreamContext(
+          parameters.map(OpenFileParameters::getOptions),
+          contextEncryptionAdapter),
+          eTag, tracingContext);
     }
   }
 
