@@ -49,9 +49,7 @@ import org.apache.hadoop.conf.Configuration;
  * their root elements when serialized or deserialized.
  * </p>
  *
- * <p>
  * During marshalling and unmarshalling, this provider sets the MOXy-specific properties:
- * </p>
  * <ul>
  *   <li>{@code MarshallerProperties.JSON_INCLUDE_ROOT = true}</li>
  *   <li>{@code MarshallerProperties.JSON_MARSHAL_EMPTY_COLLECTIONS = false}</li>
