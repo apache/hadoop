@@ -178,8 +178,8 @@ public class ITestAzureBlobFileSystemInitAndCreate extends
               EXPONENTIAL_RETRY_POLICY_ABBREVIATION);
 
       // The tracing context being used FS Initialization should have the endpoint conversion indicator set to 'T'
-      final int ENDPOINT_CONVERSION_INDICATOR_INDEX = 15;
-      String endpointConversionIndicator = captured.getHeader().split(COLON, SPLIT_NO_LIMIT)[ENDPOINT_CONVERSION_INDICATOR_INDEX];
+      final int endpointConversionIndicatorIndex  = 15;
+      String endpointConversionIndicator = captured.getHeader().split(COLON, SPLIT_NO_LIMIT)[endpointConversionIndicatorIndex ];
       Assertions.assertFalse(endpointConversionIndicator.isEmpty(), "Endpoint conversion indicator should be present");
       Assertions.assertEquals(endptConversionIndicatorInTc, endpointConversionIndicator, "Endpoint conversion indicator should be 'T'");
     }

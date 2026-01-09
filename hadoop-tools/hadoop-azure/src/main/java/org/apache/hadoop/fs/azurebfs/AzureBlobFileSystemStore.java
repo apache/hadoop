@@ -1909,20 +1909,13 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
   }
 
   /**
-   * Restricts the service type to BLOB for the current client handler and configuration when FNS account detected
-   * This method sets the ingress service type and the configured service type to {@code AbfsServiceType.BLOB}.
-   */
-  public void restrictServiceTypeToBlob() {
-    clientHandler.setIngressServiceType(AbfsServiceType.BLOB);
-    getAbfsConfiguration().setFsConfiguredServiceType(AbfsServiceType.BLOB);
-  }
-
-  /**
-   * Resets default service type to use BLOB.
+   * Restricts all service types to BLOB when FNS account detected
    * Updates the client to reflect the new default service type.
    */
-  public void resetEndpointFromDFSToBlob() {
+  public void restrictServiceTypeToBlob() {
     clientHandler.setDefaultServiceType(AbfsServiceType.BLOB);
+    clientHandler.setIngressServiceType(AbfsServiceType.BLOB);
+    getAbfsConfiguration().setFsConfiguredServiceType(AbfsServiceType.BLOB);
     this.client = clientHandler.getClient();
   }
 
