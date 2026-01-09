@@ -68,6 +68,7 @@ public class TracingContext {
   private String header = EMPTY_STRING;
   private String ingressHandler = EMPTY_STRING;
   private Boolean fnsEndpointConverted = false;
+  // Represents endpoint was converted to Blob for FNS; "T" stands for "True"
   private String fnsEndptConvertedIndicator = "T";
   private String position = EMPTY_STRING; // position of read/write in remote file
   private String metricResults = EMPTY_STRING;
