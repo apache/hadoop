@@ -361,7 +361,8 @@
       "openjdk-25-jdk"
     ],
     "rockylinux:8": [
-      "java-17-openjdk-devel"
+        "java-17-openjdk-devel",
+        "java-21-openjdk-devel"
     ],
     "ubuntu:focal": [
       "temurin-25-jdk",
