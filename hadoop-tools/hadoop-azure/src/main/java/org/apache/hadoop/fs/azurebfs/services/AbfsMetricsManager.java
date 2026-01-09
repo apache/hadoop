@@ -206,12 +206,15 @@ public class AbfsMetricsManager implements Closeable {
   public void close() {
     if (runningTimerTask != null) {
       runningTimerTask.cancel();
+      runningTimerTask = null;
     }
     if (timer != null) {
       timer.cancel();
+      timer = null;
     }
     if (metricsEmitScheduler != null && !metricsEmitScheduler.isShutdown()) {
       metricsEmitScheduler.shutdownNow();
+      metricsEmitScheduler = null;
     }
     if (isMetricCollectionEnabled()) {
       emitCollectedMetrics();
