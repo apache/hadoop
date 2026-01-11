@@ -284,7 +284,7 @@ void test_get_app_log_dir() {
 
 void test_check_user(int expectedFailure) {
   printf("\nTesting test_check_user\n");
-  struct passwd *user = check_user(username);
+  struct serialized_passwd *user = check_user(username);
   if (user == NULL && !expectedFailure) {
     printf("FAIL: failed check for user %s\n", username);
     exit(1);
@@ -1638,7 +1638,7 @@ int main(int argc, char **argv) {
     username = current_username;
     yarn_username = (argc == 2) ? argv[1] : current_username;
   }
-  struct passwd *username_info = check_user(username);
+  struct serialized_passwd *username_info = check_user(username);
   printf("\nSetting NM UID\n");
   set_nm_uid(username_info->pw_uid, username_info->pw_gid);
 
