@@ -633,6 +633,9 @@ public class MountTableResolver
       if (floorEntry != null && isParentEntry(path, floorEntry.getKey())) {
         return floorEntry.getValue();
       }
+      if ("".equals(path)) {
+        return null;
+      }
       MountTable mountTable;
       Path currentPath = new Path(path);
       while (true) {
