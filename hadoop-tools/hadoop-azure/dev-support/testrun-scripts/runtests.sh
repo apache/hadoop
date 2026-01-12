@@ -106,7 +106,8 @@ if [ "$isCronJob" = "true" ]; then
 #  runAppendBlobNonHNSOAuthBlobTest
 #  runHNSOAuthDFSIngressBlobTest
 #  runNonHNSOAuthDFSIngressBlobTest
-  uploadToAzure
+  uploadAndMail
+  exit 0
 else
   echo 'Ensure below are complete before running script:'
   echo '1. Account specific settings file is present.'
@@ -166,7 +167,6 @@ else
     esac
   done
 fi
-
 
 ## SECTION: COMBINATION DEFINITIONS AND TRIGGER
 

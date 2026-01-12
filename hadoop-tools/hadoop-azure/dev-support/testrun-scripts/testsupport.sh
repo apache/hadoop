@@ -20,6 +20,7 @@ accountSettingsFolderName=accountSettings
 combtestfile=$resourceDir
 combtestfile+=abfs-combination-test-configs.xml
 logdir=dev-support/testlogs/
+ciMailScript=dev-support/testrun-scripts/automatedmail.sh
 
 # Regex to filter out final test stats
 testresultsregex="Tests run: [0-9]+, Failures: [0-9]+, Errors: [0-9]+, Skipped: [0-9]+$"
@@ -75,7 +76,7 @@ checkCronjobDependencies() {
   fi
 }
 
-uploadToAzure() {
+uploadAndMail() {
   accountSettingsDir="src/test/resources/accountSettings/"
   azureConfigFilePath="${accountSettingsDir}runresult${accountConfigFileSuffix}"
   testResultsAccountName=$(xmlstarlet sel -t -v '//property[name = "fs.azure.test.results.account.name"]/value' -n $azureConfigFilePath)
@@ -102,7 +103,7 @@ uploadToAzure() {
   fi
   echo "Upload complete."
 
-  "dev-support/testrun-scripts/automatedmail.sh" "$aggregatedTestResult" || echo "Email failed, continuing"
+  "$ciMailScript" "$aggregatedTestResult" || echo "Email failed, continuing"
 }
 
 triggerRun()
