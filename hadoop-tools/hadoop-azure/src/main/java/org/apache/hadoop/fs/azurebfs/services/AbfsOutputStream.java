@@ -320,7 +320,11 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
       boolean isSwitch,
       AzureBlockManager blockManager) throws IOException {
     this.client = clientHandler.getClient(serviceType);
-    if (isDFSToBlobFallbackEnabled && serviceTypeAtInit != AbfsServiceType.DFS) {
+
+    // Check ingress service type is also set to DFS along with enabling the config for fallback
+    // Separate ingress service type is only allowed for HNS accounts
+    if (isDFSToBlobFallbackEnabled && client.getIsNamespaceEnabled()
+        && serviceTypeAtInit != AbfsServiceType.DFS) {
       throw new InvalidConfigurationValueException(
           "The ingress service type must be configured as DFS");
     }

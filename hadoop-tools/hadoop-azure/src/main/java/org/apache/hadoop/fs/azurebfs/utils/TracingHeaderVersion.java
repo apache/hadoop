@@ -45,9 +45,9 @@ public enum TracingHeaderVersion {
    * Schema: version:clientCorrelationId:clientRequestId:fileSystemId
    *         :primaryRequestId:streamId:opType:retryHeader:ingressHandler
    *         :position:operatedBlobCount:operationSpecificHeader:httpOperationHeader
-   *         :resourceUtilizationMetrics
+   *         :resourceUtilizationMetrics:fnsEndptConvertedIndicator
    */
-  V2("v2", 14),
+  V2("v2", 15),
   /**
    * Version 0 of the aggregated metrics tracing header, which includes
    * a version prefix and has 3 permanent fields.

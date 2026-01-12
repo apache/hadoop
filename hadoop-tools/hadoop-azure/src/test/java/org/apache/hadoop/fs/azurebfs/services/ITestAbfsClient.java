@@ -388,9 +388,8 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
 
   @Test
   // Test to verify the unique identifier in user agent string for FNS-Blob accounts
-  public void verifyUserAgentForFNSBlob() throws Exception {
+  public void verifyUserAgentForFNS() throws Exception {
     assumeHnsDisabled();
-    assumeBlobServiceType();
     final AzureBlobFileSystem fs = getFileSystem();
     final AbfsConfiguration configuration = fs.getAbfsStore()
         .getAbfsConfiguration();
@@ -402,24 +401,6 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
             "User-Agent string for FNS accounts on Blob endpoint should contain "
                 + FNS_BLOB_USER_AGENT_IDENTIFIER)
         .contains(FNS_BLOB_USER_AGENT_IDENTIFIER);
-  }
-
-  @Test
-  // Test to verify that the user agent string for non-FNS-Blob accounts
-  // does not contain the FNS identifier.
-  public void verifyUserAgentForDFS() throws Exception {
-    assumeDfsServiceType();
-    final AzureBlobFileSystem fs = getFileSystem();
-    final AbfsConfiguration configuration = fs.getAbfsStore()
-        .getAbfsConfiguration();
-
-    String userAgentStr = getUserAgentString(configuration, false);
-    verifyBasicInfo(userAgentStr);
-    Assertions.assertThat(userAgentStr)
-        .describedAs(
-            "User-Agent string for non-FNS-Blob accounts should not contain"
-                + FNS_BLOB_USER_AGENT_IDENTIFIER)
-        .doesNotContain(FNS_BLOB_USER_AGENT_IDENTIFIER);
   }
 
   public static AbfsClient createTestClientFromCurrentContext(
@@ -866,6 +847,39 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
     }
 
     fs.close();
+  }
+
+  /**
+   * Test to verify that when initializing a filesystem with a DFS endpoint for a FNS account,
+   * we force to Blob endpoint internally.
+   *
+   * @throws Exception if the test fails
+   */
+  @Test
+  public void testFNSDfsUsesBlobInstance() throws Exception {
+    assumeHnsDisabled();
+    String scheme = "abfs";
+    String dfsDomain = "dfs.core.windows.net";
+    String blobDomain = "blob.core.windows.net";
+    Configuration conf = new Configuration(getRawConfiguration());
+    conf.setBoolean(AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION, true);
+
+    String dfsUri = String.format("%s://%s@%s.%s/",
+            scheme, getFileSystemName(),
+            getAccountName().substring(0, getAccountName().indexOf(DOT)),
+            dfsDomain);
+
+    // Initialize filesystem with DFS endpoint
+    AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(
+        new URI(dfsUri), conf);
+
+    // Filesystem initialization should have forced to use Blob instance for FNS-DFS
+    AbfsClient abfsClient = fs.getAbfsStore().getClient();
+    Assertions.assertThat(abfsClient)
+            .as("abfsClient should be instance of AbfsBlobClient")
+            .isInstanceOf(AbfsBlobClient.class);
+    Assertions.assertThat(abfsClient.getBaseUrl().toString())
+            .contains(blobDomain);
   }
 
   @Test

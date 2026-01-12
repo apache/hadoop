@@ -80,7 +80,6 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.DOT;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.*;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.*;
-import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.INCORRECT_INGRESS_TYPE;
 
 /**
  * Configuration for Azure Blob FileSystem.
@@ -93,7 +92,7 @@ public class AbfsConfiguration{
   private final String accountName;
   private String fsName;
   // Service type identified from URL used to initialize FileSystem.
-  private final AbfsServiceType fsConfiguredServiceType;
+  private AbfsServiceType fsConfiguredServiceTypeFromUrl;
   private final boolean isSecure;
   private static final Logger LOG = LoggerFactory.getLogger(AbfsConfiguration.class);
   private Trilean isNamespaceEnabled = null;
@@ -687,18 +686,18 @@ public class AbfsConfiguration{
    * Constructor for AbfsConfiguration for specified service type.
    * @param rawConfig used to initialize the configuration.
    * @param accountName the name of the azure storage account.
-   * @param fsConfiguredServiceType service type configured for the file system.
+   * @param fsConfiguredServiceTypeFromUrl service type configured for the file system.
    * @throws IllegalAccessException if the field is not accessible.
    * @throws IOException if an I/O error occurs.
    */
   public AbfsConfiguration(final Configuration rawConfig,
       String accountName,
-      AbfsServiceType fsConfiguredServiceType)
+      AbfsServiceType fsConfiguredServiceTypeFromUrl)
       throws IllegalAccessException, IOException {
     this.rawConfig = ProviderUtils.excludeIncompatibleCredentialProviders(
         rawConfig, AzureBlobFileSystem.class);
     this.accountName = accountName;
-    this.fsConfiguredServiceType = fsConfiguredServiceType;
+    this.fsConfiguredServiceTypeFromUrl = fsConfiguredServiceTypeFromUrl;
     this.isSecure = getBoolean(FS_AZURE_SECURE_MODE, false);
 
     Field[] fields = this.getClass().getDeclaredFields();
@@ -725,16 +724,16 @@ public class AbfsConfiguration{
    * @param rawConfig used to initialize the configuration.
    * @param accountName the name of the azure storage account.
    * @param fsName the name of the file system (container name).
-   * @param fsConfiguredServiceType service type configured for the file system.
+   * @param fsConfiguredServiceTypeFromUrl service type configured for the file system.
    * @throws IllegalAccessException if the field is not accessible.
    * @throws IOException if an I/O error occurs.
    */
   public AbfsConfiguration(final Configuration rawConfig,
       String accountName,
       String fsName,
-      AbfsServiceType fsConfiguredServiceType)
+      AbfsServiceType fsConfiguredServiceTypeFromUrl)
       throws IllegalAccessException, IOException {
-    this(rawConfig, accountName, fsConfiguredServiceType);
+    this(rawConfig, accountName, fsConfiguredServiceTypeFromUrl);
     this.fsName = fsName;
   }
 
@@ -773,7 +772,16 @@ public class AbfsConfiguration{
    * @return the service type.
    */
   public AbfsServiceType getFsConfiguredServiceType() {
-    return getCaseInsensitiveEnum(FS_AZURE_FNS_ACCOUNT_SERVICE_TYPE, fsConfiguredServiceType);
+    return getCaseInsensitiveEnum(FS_AZURE_FNS_ACCOUNT_SERVICE_TYPE, fsConfiguredServiceTypeFromUrl);
+  }
+
+  /**
+   * Returns the service type identified from the URL used to initialize the FileSystem.
+   *
+   * @return the configured AbfsServiceType from the URL
+   */
+  public AbfsServiceType getFsConfiguredServiceTypeFromUrl() {
+    return fsConfiguredServiceTypeFromUrl;
   }
 
   /**
@@ -814,13 +822,9 @@ public class AbfsConfiguration{
     if (isHNSEnabled && getConfiguredServiceTypeForFNSAccounts() == AbfsServiceType.BLOB) {
       throw new InvalidConfigurationValueException(
           FS_AZURE_FNS_ACCOUNT_SERVICE_TYPE, "Service Type Cannot be BLOB for HNS Account");
-    } else if (isHNSEnabled && fsConfiguredServiceType == AbfsServiceType.BLOB) {
+    } else if (isHNSEnabled && fsConfiguredServiceTypeFromUrl == AbfsServiceType.BLOB) {
       throw new InvalidConfigurationValueException(FS_DEFAULT_NAME_KEY,
           "Blob Endpoint Url Cannot be used to initialize filesystem for HNS Account");
-    } else if (getFsConfiguredServiceType() == AbfsServiceType.BLOB
-        && getIngressServiceType() == AbfsServiceType.DFS) {
-      throw new InvalidConfigurationValueException(
-          FS_AZURE_INGRESS_SERVICE_TYPE, INCORRECT_INGRESS_TYPE);
     }
   }
 
@@ -1845,6 +1849,14 @@ public class AbfsConfiguration{
   @VisibleForTesting
   void setReadAheadEnabled(final boolean enabledReadAhead) {
     this.enabledReadAhead = enabledReadAhead;
+  }
+
+  /**
+   * Sets the configured service type.
+   * Used to update the service type identified from the URL.
+   */
+  void setFsConfiguredServiceType(AbfsServiceType serviceType) {
+    this.fsConfiguredServiceTypeFromUrl = serviceType;
   }
 
   public int getReadAheadRange() {

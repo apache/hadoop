@@ -802,16 +802,15 @@ requests. User can specify them as fixed SAS Token to be used across all the req
 ### User-bound SAS
 - **Description**: The user-bound SAS auth type allows to track the usage of the SAS token generated- something
  that was not possible in user-delegation SAS authentication type. Reach out to us at 'askabfs@microsoft.com' for more information.
- To use this authentication type, both custom SAS token provider class (that implements org.apache.hadoop.fs.azurebfs.extensions.SASTokenProvider) as
-    well as OAuth 2.0 provider type need to be specified.
-    - Refer to 'Shared Access Signature (SAS) Token Provider' section above for user-delegation SAS token provider class details and example class implementation.
-    - There are multiple identity configurations for OAuth settings. Listing the main ones below:
+- To use this authentication type, both custom SAS token provider class as well as OAuth 2.0 provider type need to be specified.
+    - Read the section below for SAS Token Provider class details and example class implementation.
+    - There are multiple identity configurations for OAuth Token Provider settings. Listing the main ones below:
         - Client Credentials
         - Custom token provider
         - Managed Identity
         - Workload Identity
 
-      Refer to respective OAuth 2.0 sections above to correctly chose the OAuth provider type
+      Refer to respective OAuth 2.0 sections above to correctly choose the OAuth provider type
     - NOTE: User-bound SAS Authentication is **only supported** with HNS Enabled accounts.
 
 - **Configuration**: To use this method with ABFS Driver, specify the following properties in your `core-site.xml` file:
@@ -837,6 +836,57 @@ requests. User can specify them as fixed SAS Token to be used across all the req
           <value>CUSTOM_SAS_TOKEN_PROVIDER_CLASS</value>
         </property>
         ```
+
+    - ABFS allows you to implement your custom SAS Token Provider. The declared class must implement
+      `org.apache.hadoop.fs.azurebfs.extensions.SASTokenProvider`.
+      ABFS Hadoop Driver provides
+      a [MockUserBoundSASTokenProvider](https://github.com/apache/hadoop/blob/trunk/hadoop-tools/hadoop-azure/src/test/java/org/apache/hadoop/fs/azurebfs/extensions/MockUserBoundSASTokenProvider.java)
+      implementation that can be used as an example on how to implement your own custom
+      SASTokenProvider. This requires the Application credentials to be specifed using
+      the following configurations apart from above three:
+    4. Delegator App Service Principal Tenant Id:
+        ```xml
+        <property>
+          <name>fs.azure.test.app.service.principal.tenant.id</name>
+          <value>DELEGATOR_TENANT_ID</value>
+        </property>
+        ```
+    5. Delegator App Service Principal Object Id:
+        ```xml
+        <property>
+          <name>fs.azure.test.app.service.principal.object.id</name>
+          <value>DELEGATOR_OBJECT_ID</value>
+        </property>
+        ```
+    6. End-user App Service Principal Tenant Id:
+       ```xml
+        <property>
+          <name>fs.azure.test.end.user.tenant.id</name>
+          <value>DELEGATED_TENANT_ID</value>
+        </property>
+        ```
+    7. End-user App Service Principal Object Id:
+       ```xml
+       <property>
+         <name>fs.azure.test.end.user.object.id</name>
+         <value>DELEGATED_OBJECT_ID</value>
+       </property>
+       ```
+    8. Delegator App Id:
+       ```xml
+       <property>
+       <name>fs.azure.test.app.id</name>
+       <value>APPLICATION_ID</value>
+       </property>
+       ```
+    9. Delegator App Secret:
+       ```xml
+       <property>
+         <name>fs.azure.test.app.secret</name>
+         <value>APPLICATION_SECRET</value>
+       </property>
+       ```
+    - Add all additional configs required by the chosen OAuth Token provider from the sections above as well.
 
 ## <a name="technical"></a> Technical notes
 

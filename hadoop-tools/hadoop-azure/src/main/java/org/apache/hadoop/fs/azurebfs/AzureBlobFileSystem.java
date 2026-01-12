@@ -129,6 +129,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE
 import static org.apache.hadoop.fs.azurebfs.constants.FSOperationType.CREATE_FILESYSTEM;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.BLOCK_UPLOAD_ACTIVE_BLOCKS_DEFAULT;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DATA_BLOCKS_BUFFER_DEFAULT;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.ABFS_DFS_DOMAIN_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.InternalConstants.CAPABILITY_SAFE_READAHEAD;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_CREATE_ON_ROOT;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_INVALID_ABFS_STATE;
@@ -314,6 +315,18 @@ public class AzureBlobFileSystem extends FileSystem
     } catch (AzureBlobFileSystemException ex) {
       LOG.debug("Failed to determine account type for service type validation", ex);
       throw new InvalidConfigurationValueException(FS_AZURE_ACCOUNT_IS_HNS_ENABLED, ex);
+    }
+
+    /*
+     * For FNS accounts, restrict the endpoint and service type to Blob
+     * For FNS-DFS, also update the tracing context to add metric to show endpoint conversion.
+     */
+    if (!tryGetIsNamespaceEnabled(new TracingContext(initFSTracingContext))) {
+      LOG.debug("FNS account detected; restricting service type to Blob.");
+      abfsStore.restrictServiceTypeToBlob();
+      if (uri.toString().contains(ABFS_DFS_DOMAIN_NAME)) {
+        initFSTracingContext.setFNSEndpointConverted();
+      }
     }
 
     // Create the file system if it does not exist.
@@ -1850,4 +1863,3 @@ public class AzureBlobFileSystem extends FileSystem
     return abfsCounters != null ? abfsCounters.getIOStatistics() : null;
   }
 }
-
