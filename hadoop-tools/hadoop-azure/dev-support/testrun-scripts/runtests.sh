@@ -93,65 +93,80 @@ runHNSOAuthDFSIngressBlobTest()
 
 runTest=false
 cleanUpTestContainers=false
-echo 'Ensure below are complete before running script:'
-echo '1. Account specific settings file is present.'
-echo '   Copy accountName_settings.xml.template to accountName_settings.xml'
-echo '   where accountName in copied file name should be the test account name without domain'
-echo '   (accountName_settings.xml.template is present in src/test/resources/accountName_settings'
-echo '   folder. New account settings file to be added to same folder.)'
-echo '   Follow instructions in the template to populate settings correctly for the account'
-echo '2. In azure-auth-keys.xml, update properties fs.azure.hnsTestAccountName and fs.azure.nonHnsTestAccountName'
-echo '   where accountNames should be the test account names without domain'
-echo ' '
-echo ' '
-echo 'Choose action:'
-echo '[Note - SET_ACTIVE_TEST_CONFIG will help activate the config for IDE/single test class runs]'
-select scriptMode in SET_ACTIVE_TEST_CONFIG RUN_TEST CLEAN_UP_OLD_TEST_CONTAINERS SET_OR_CHANGE_TEST_ACCOUNT PRINT_LOG4J_LOG_PATHS_FROM_LAST_RUN
-do
-  case $scriptMode in
-  SET_ACTIVE_TEST_CONFIG)
-    runTest=false
-    break
-    ;;
-  RUN_TEST)
-    runTest=true
-    read -r -p "Enter parallel test run process count [default - 8]: " processCount
-    processCount=${processCount:-8}
-    break
-    ;;
-  CLEAN_UP_OLD_TEST_CONTAINERS)
-    runTest=false
-    cleanUpTestContainers=true
-    break
-    ;;
-  SET_OR_CHANGE_TEST_ACCOUNT)
-    runTest=false
-    cleanUpTestContainers=false
-    accountSettingsFile="src/test/resources/azure-auth-keys.xml"
-    if [[ ! -f "$accountSettingsFile" ]];
-    then
-      logOutput "No settings present. Creating new settings file ($accountSettingsFile) from template"
-      cp src/test/resources/azure-auth-keys.xml.template $accountSettingsFile
-    fi
 
-    vi $accountSettingsFile
-    exit 0
-    break
-    ;;
-  PRINT_LOG4J_LOG_PATHS_FROM_LAST_RUN)
-    runTest=false
-    cleanUpTestContainers=false
-    logFilePaths=/tmp/logPaths
-    find target/ -name "*output.txt" > $logFilePaths
-    logOutput "$(cat $logFilePaths)"
-    rm $logFilePaths
-    exit 0
-    break
-    ;;
-  *) logOutput "ERROR: Invalid selection"
-      ;;
-   esac
-done
+if [ "$isCronJob" = "true" ]; then
+  runTest=true
+#  runHNSOAuthDFSTest
+#  runHNSSharedKeyDFSTest
+#  runNonHNSSharedKeyDFSTest
+#  runAppendBlobHNSOAuthDFSTest
+#  runNonHNSSharedKeyBlobTest
+#  runNonHNSOAuthDFSTest
+#  runNonHNSOAuthBlobTest
+#  runAppendBlobNonHNSOAuthBlobTest
+#  runHNSOAuthDFSIngressBlobTest
+#  runNonHNSOAuthDFSIngressBlobTest
+  uploadToAzure
+else
+  echo 'Ensure below are complete before running script:'
+  echo '1. Account specific settings file is present.'
+  echo '   Copy accountName_settings.xml.template to accountName_settings.xml'
+  echo '   where accountName in copied file name should be the test account name without domain'
+  echo '   (accountName_settings.xml.template is present in src/test/resources/accountName_settings'
+  echo '   folder. New account settings file to be added to same folder.)'
+  echo '   Follow instructions in the template to populate settings correctly for the account'
+  echo '2. In azure-auth-keys.xml, update properties fs.azure.hnsTestAccountName and fs.azure.nonHnsTestAccountName'
+  echo '   where accountNames should be the test account names without domain'
+  echo ' '
+  echo ' '
+  echo 'Choose action:'
+  echo '[Note - SET_ACTIVE_TEST_CONFIG will help activate the config for IDE/single test class runs]'
+
+  select scriptMode in SET_ACTIVE_TEST_CONFIG RUN_TEST CLEAN_UP_OLD_TEST_CONTAINERS SET_OR_CHANGE_TEST_ACCOUNT PRINT_LOG4J_LOG_PATHS_FROM_LAST_RUN
+  do
+    case $scriptMode in
+      SET_ACTIVE_TEST_CONFIG)
+        runTest=false
+        break
+        ;;
+      RUN_TEST)
+        runTest=true
+        read -r -p "Enter parallel test run process count [default - 8]: " processCount
+        processCount=${processCount:-8}
+        break
+        ;;
+      CLEAN_UP_OLD_TEST_CONTAINERS)
+        runTest=false
+        cleanUpTestContainers=true
+        break
+        ;;
+      SET_OR_CHANGE_TEST_ACCOUNT)
+        runTest=false
+        cleanUpTestContainers=false
+        accountSettingsFile="src/test/resources/azure-auth-keys.xml"
+        if [[ ! -f "$accountSettingsFile" ]]; then
+          logOutput "No settings present. Creating new settings file ($accountSettingsFile) from template"
+          cp src/test/resources/azure-auth-keys.xml.template "$accountSettingsFile"
+        fi
+        vi "$accountSettingsFile"
+        exit 0
+        ;;
+      PRINT_LOG4J_LOG_PATHS_FROM_LAST_RUN)
+        runTest=false
+        cleanUpTestContainers=false
+        logFilePaths=/tmp/logPaths
+        find target/ -name "*output.txt" > "$logFilePaths"
+        logOutput "$(cat "$logFilePaths")"
+        rm "$logFilePaths"
+        exit 0
+        ;;
+      *)
+        logOutput "ERROR: Invalid selection"
+        ;;
+    esac
+  done
+fi
+
 
 ## SECTION: COMBINATION DEFINITIONS AND TRIGGER
 
@@ -211,7 +226,7 @@ do
    esac
 done
 
-if [ $runTest == true ]
+if [[ $runTest && $"$isCronJob" != "true" ]]
 then
   printAggregate
 fi

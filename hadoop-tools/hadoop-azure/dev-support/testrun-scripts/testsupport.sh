@@ -64,6 +64,47 @@ fnsBlobConfigFileCheck() {
   fi
 }
 
+checkCronjobDependencies() {
+  if ! [ "$(command -v az)" ]; then
+    echo "Azure CLI (az) could not be found. Installing Azure CLI..."
+    if ! sudo apt update || ! sudo apt install -y azure-cli; then
+      echo "Failed to install Azure CLI. Exiting..."
+      exit 1
+    fi
+    echo "Azure CLI installed successfully."
+  fi
+}
+
+uploadToAzure() {
+  accountSettingsDir="src/test/resources/accountSettings/"
+  azureConfigFilePath="${accountSettingsDir}runresult${accountConfigFileSuffix}"
+  testResultsAccountName=$(xmlstarlet sel -t -v '//property[name = "fs.azure.test.results.account.name"]/value' -n $azureConfigFilePath)
+  testResultsAccountKey=$(xmlstarlet sel -t -v '//property[name = "fs.azure.test.results.account.key"]/value' -n $azureConfigFilePath)
+  branchName="${branchName,,}"
+  containerName="$(xmlstarlet sel -t -v '//property[name = "fs.azure.container.name"]/value' -n $azureConfigFilePath)"
+  printAggregate
+
+  year=$(date +"%Y")
+  month=$(date +"%m")
+  day=$(date +"%d")
+
+  directoryStructure="$year-$month-$day/$branchName"
+  AggregatedTestFolder="$testOutputLogFolder"
+
+  checkCronjobDependencies
+  if ! az storage container create --name $containerName --account-name $testResultsAccountName --account-key "$testResultsAccountKey"; then
+    echo "Failed to create container. Exiting..."
+    exit 1
+  fi
+  if ! az storage blob upload-batch --destination "$containerName/$directoryStructure" --source $AggregatedTestFolder --account-name $testResultsAccountName --account-key "$testResultsAccountKey"; then
+    echo "Failed upload test results in the destination. Exiting..."
+    exit 1
+  fi
+  echo "Upload complete."
+
+  "dev-support/testrun-scripts/automatedmail.sh" "$aggregatedTestResult" || echo "Email failed, continuing"
+}
+
 triggerRun()
 {
   echo ' '
@@ -215,13 +256,18 @@ init() {
  }
 
  printAggregate() {
+   branchName=$(git rev-parse --abbrev-ref HEAD)
+   commitHash=$(git rev-parse HEAD)
+
+   echo "Branch: $branchName, Commit: $commitHash" >> "$aggregatedTestResult"
+
    echo  :::: AGGREGATED TEST RESULT ::::
    cat "$aggregatedTestResult"
   fullRunEndTime=$(date +%s)
   fullRunTimeInSecs=$((fullRunEndTime - fullRunStartTime))
   mins=$((fullRunTimeInSecs / 60))
   secs=$((fullRunTimeInSecs % 60))
-  printf "\nTime taken: %s mins %s secs.\n" "$mins" "$secs"
+  printf "\nTime taken: %s mins %s secs.\n" "$mins" "$secs" >> "$aggregatedTestResult"
  }
 
 logOutput() {
