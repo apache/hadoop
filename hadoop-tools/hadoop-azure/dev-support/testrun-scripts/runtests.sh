@@ -94,18 +94,16 @@ runHNSOAuthDFSIngressBlobTest()
 runTest=false
 cleanUpTestContainers=false
 
+# This variable is set to true only when the script is triggered from cronjob
 if [ "$isCronJob" = "true" ]; then
   runTest=true
-#  runHNSOAuthDFSTest
-#  runHNSSharedKeyDFSTest
-#  runNonHNSSharedKeyDFSTest
-#  runAppendBlobHNSOAuthDFSTest
-#  runNonHNSSharedKeyBlobTest
-#  runNonHNSOAuthDFSTest
-#  runNonHNSOAuthBlobTest
-#  runAppendBlobNonHNSOAuthBlobTest
-#  runHNSOAuthDFSIngressBlobTest
-#  runNonHNSOAuthDFSIngressBlobTest
+  runHNSOAuthDFSTest
+  runHNSSharedKeyDFSTest
+  runAppendBlobHNSOAuthDFSTest
+  runNonHNSSharedKeyBlobTest
+  runNonHNSOAuthBlobTest
+  runAppendBlobNonHNSOAuthBlobTest
+  runHNSOAuthDFSIngressBlobTest
   uploadAndMail
   exit 0
 else
