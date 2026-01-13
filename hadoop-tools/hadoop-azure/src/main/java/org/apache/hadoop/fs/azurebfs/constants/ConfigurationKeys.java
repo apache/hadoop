@@ -269,7 +269,7 @@ public final class ConfigurationKeys {
   public static final String FS_AZURE_READ_AHEAD_BLOCK_SIZE = "fs.azure.read.readahead.blocksize";
   /**
    * Provides hint for the read workload pattern.
-   * Possible Values Exposed in {@link OpenFileOptions}
+   * Possible Values Exposed in {@link OpenFileOptions#FS_OPTION_OPENFILE_READ_POLICIES}
    */
   public static final String FS_AZURE_READ_POLICY = "fs.azure.read.policy";
 
