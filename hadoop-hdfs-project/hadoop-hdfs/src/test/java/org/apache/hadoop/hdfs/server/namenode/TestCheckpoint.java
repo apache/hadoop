@@ -655,8 +655,8 @@ public class TestCheckpoint {
     
     Mockito.doReturn(true).when(faultInjector)
       .shouldSendShortFile(filePathContaining("fsimage"));
-    String expectedText = Shell.isJavaVersionAtLeast(24) ? "Premature EOF" :
-        "is not of the advertised size";
+    String expectedText = Shell.isJavaVersionAtLeast(24) ? "Premature EOF"
+        : "is not of the advertised size";
     doSendFailTest(expectedText);
   }
 
