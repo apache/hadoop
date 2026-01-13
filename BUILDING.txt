@@ -4,7 +4,7 @@ Build instructions for Hadoop
 Requirements:
 
 * Unix System
-* JDK 1.8
+* JDK 17
 * Maven 3.3 or later
 * Boost 1.86.0 (if compiling native code)
 * Protocol Buffers 3.25.5 (if compiling native code)
@@ -59,9 +59,9 @@ Installing required packages for clean install of Ubuntu 18.04 LTS Desktop.
 (For Ubuntu 20.04, gcc/g++ and cmake bundled with Ubuntu can be used.
 Refer to  dev-support/docker/Dockerfile):
 
-* Open JDK 1.8
+* Open JDK 17
   $ sudo apt-get update
-  $ sudo apt-get -y install openjdk-8-jdk
+  $ sudo apt-get -y install openjdk-17-jdk
 * Maven
   $ sudo apt-get -y install maven
 * Native libraries
@@ -477,10 +477,9 @@ Installing required dependencies for clean install of macOS 10.14:
 * Install Xcode Command Line Tools
   $ xcode-select --install
 * Install Homebrew
-  $ /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
-* Install OpenJDK 8
-  $ brew tap AdoptOpenJDK/openjdk
-  $ brew cask install adoptopenjdk8
+  $ /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+* Install OpenJDK 17
+  $ brew install openjdk@17
 * Install maven and tools
   $ brew install maven autoconf automake cmake wget
 * Install native libraries, only openssl is required to compile native code,
@@ -521,7 +520,7 @@ Building on Rocky Linux 8
 
 * Install development tools such as GCC, autotools, OpenJDK and Maven.
   $ sudo dnf group install --with-optional 'Development Tools'
-  $ sudo dnf install java-1.8.0-openjdk-devel maven
+  $ sudo dnf install java-17-openjdk-devel maven
 
 * Install python2 for building documentation.
   $ sudo dnf install python2
@@ -583,7 +582,7 @@ Building on Windows 10
 Requirements:
 
 * Windows 10
-* JDK 1.8
+* JDK 17
 * Maven 3.3 or later (maven.apache.org)
 * Boost 1.86.0 (boost.org)
 * Protocol Buffers 3.25.5 (https://github.com/protocolbuffers/protobuf/tags)

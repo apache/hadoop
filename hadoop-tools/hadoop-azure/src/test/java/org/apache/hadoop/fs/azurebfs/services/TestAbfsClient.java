@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.azurebfs.services;
 import java.net.URI;
 import java.net.URL;
 import java.util.Map;
+import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
 
@@ -29,13 +30,10 @@ import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.AbfsCountersImpl;
 import org.apache.hadoop.fs.azurebfs.MockIntercept;
 import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
-import org.apache.hadoop.fs.azurebfs.utils.Base64;
-import org.apache.hadoop.fs.azurebfs.utils.MetricFormat;
 
-import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_METRIC_ACCOUNT_KEY;
-import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_METRIC_ACCOUNT_NAME;
-import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_METRIC_FORMAT;
-import static org.apache.hadoop.fs.azurebfs.services.AbfsClient.ABFS_CLIENT_TIMER_THREAD_NAME;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_METRICS_FORMAT;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_METRICS_SHOULD_EMIT_ON_IDLE_TIME;
+import static org.apache.hadoop.fs.azurebfs.services.AbfsMetricsManager.ABFS_CLIENT_TIMER_THREAD_NAME;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
@@ -59,13 +57,15 @@ public class TestAbfsClient {
     public void testTimerInitializationWithoutMetricCollection() throws Exception {
         final Configuration configuration = new Configuration();
         AbfsConfiguration abfsConfiguration = new AbfsConfiguration(configuration, ACCOUNT_NAME);
-        abfsConfiguration.unset(FS_AZURE_METRIC_FORMAT);
+        abfsConfiguration.unset(FS_AZURE_METRICS_FORMAT);
+      configuration.setBoolean(FS_AZURE_METRICS_SHOULD_EMIT_ON_IDLE_TIME, false);
 
         AbfsCounters abfsCounters = spy(new AbfsCountersImpl(new URI("abcd")));
-        AbfsClientContext abfsClientContext = new AbfsClientContextBuilder().withAbfsCounters(abfsCounters).build();
+        AbfsClientContext abfsClientContext = new AbfsClientContextBuilder().withAbfsCounters(abfsCounters)
+            .withFileSystemId(UUID.randomUUID().toString()).build();
 
         // Get an instance of AbfsClient.
-        AbfsClient client = new AbfsDfsClient(new URL("https://azure.com"),
+        AbfsClient client = new AbfsDfsClient(new URL("https://" + ACCOUNT_NAME + "/"),
                 null,
                 abfsConfiguration,
                 (AccessTokenProvider) null,
@@ -73,7 +73,7 @@ public class TestAbfsClient {
                 null,
                 abfsClientContext);
 
-        assertThat(client.getTimer())
+        assertThat(client.getAbfsMetricsManager().getTimer())
                 .describedAs("Timer should not be initialized")
                 .isNull();
 
@@ -93,16 +93,15 @@ public class TestAbfsClient {
     @Test
     public void testTimerInitializationWithMetricCollection() throws Exception {
         final Configuration configuration = new Configuration();
-        configuration.set(FS_AZURE_METRIC_FORMAT, String.valueOf(MetricFormat.INTERNAL_BACKOFF_METRIC_FORMAT));
-        configuration.set(FS_AZURE_METRIC_ACCOUNT_NAME, ACCOUNT_NAME);
-        configuration.set(FS_AZURE_METRIC_ACCOUNT_KEY, Base64.encode(ACCOUNT_KEY.getBytes()));
+        configuration.setBoolean(FS_AZURE_METRICS_SHOULD_EMIT_ON_IDLE_TIME, true);
         AbfsConfiguration abfsConfiguration = new AbfsConfiguration(configuration, ACCOUNT_NAME);
 
         AbfsCounters abfsCounters = spy(new AbfsCountersImpl(new URI("abcd")));
-        AbfsClientContext abfsClientContext = new AbfsClientContextBuilder().withAbfsCounters(abfsCounters).build();
+        AbfsClientContext abfsClientContext = new AbfsClientContextBuilder().withAbfsCounters(abfsCounters)
+            .withFileSystemId(UUID.randomUUID().toString()).build();
 
         // Get an instance of AbfsClient.
-        AbfsClient client = new AbfsDfsClient(new URL("https://azure.com"),
+        AbfsClient client = new AbfsDfsClient(new URL("https://" + ACCOUNT_NAME + "/"),
                 null,
                 abfsConfiguration,
                 (AccessTokenProvider) null,
@@ -110,7 +109,7 @@ public class TestAbfsClient {
                 null,
                 abfsClientContext);
 
-        assertThat(client.getTimer())
+        assertThat(client.getAbfsMetricsManager().getTimer())
                 .describedAs("Timer should be initialized")
                 .isNotNull();
 

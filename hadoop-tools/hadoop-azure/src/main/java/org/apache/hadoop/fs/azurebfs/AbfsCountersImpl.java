@@ -73,6 +73,7 @@ import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.RENAME_RECOVERY;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.SEND_REQUESTS;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.SERVER_UNAVAILABLE;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.WRITE_THROTTLES;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
 import static org.apache.hadoop.fs.azurebfs.enums.AbfsBackoffMetricsEnum.TOTAL_NUMBER_OF_REQUESTS;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.iostatisticsStore;
 import static org.apache.hadoop.util.Time.now;
@@ -201,21 +202,37 @@ public class AbfsCountersImpl implements AbfsCounters {
 
 
   @Override
-  public void initializeMetrics(MetricFormat metricFormat) {
+  public void initializeMetrics(final MetricFormat metricFormat,
+      final AbfsConfiguration abfsConfiguration) {
     switch (metricFormat) {
-      case INTERNAL_BACKOFF_METRIC_FORMAT:
-        abfsBackoffMetrics = new AbfsBackoffMetrics();
-        break;
-      case INTERNAL_FOOTER_METRIC_FORMAT:
-        abfsReadFooterMetrics = new AbfsReadFooterMetrics();
-        break;
-      case INTERNAL_METRIC_FORMAT:
-        abfsBackoffMetrics = new AbfsBackoffMetrics();
-        abfsReadFooterMetrics = new AbfsReadFooterMetrics();
-        break;
-      default:
-        break;
+    case INTERNAL_BACKOFF_METRIC_FORMAT:
+      abfsBackoffMetrics = new AbfsBackoffMetrics(
+          abfsConfiguration.isBackoffRetryMetricsEnabled());
+      break;
+    case INTERNAL_FOOTER_METRIC_FORMAT:
+      initializeReadFooterMetrics();
+      break;
+    case INTERNAL_METRIC_FORMAT:
+      abfsBackoffMetrics = new AbfsBackoffMetrics(
+          abfsConfiguration.isBackoffRetryMetricsEnabled());
+      initializeReadFooterMetrics();
+      break;
+    default:
+      break;
     }
+  }
+
+  /**
+   * Initialize the read footer metrics.
+   * In case the metrics are already initialized,
+   * create a new instance with the existing map.
+   */
+  private void initializeReadFooterMetrics() {
+    abfsReadFooterMetrics = new AbfsReadFooterMetrics(
+        abfsReadFooterMetrics == null
+            ? null
+            : abfsReadFooterMetrics.getFileTypeMetricsMap()
+    );
   }
 
   /**
@@ -373,10 +390,9 @@ public class AbfsCountersImpl implements AbfsCounters {
 
   @Override
   public String toString() {
-    String metric = "";
+    String metric = EMPTY_STRING;
     if (abfsBackoffMetrics != null) {
-      long totalNoRequests = getAbfsBackoffMetrics().getMetricValue(TOTAL_NUMBER_OF_REQUESTS);
-      if (totalNoRequests > 0) {
+      if (getAbfsBackoffMetrics().getMetricValue(TOTAL_NUMBER_OF_REQUESTS) > 0) {
         metric += "#BO:" + getAbfsBackoffMetrics().toString();
       }
     }

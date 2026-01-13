@@ -29,6 +29,7 @@ public class AbfsClientContextBuilder {
   private TailLatencyRequestTimeoutRetryPolicy tailLatencyRequestTimeoutRetryPolicy;
   private AbfsPerfTracker abfsPerfTracker;
   private AbfsCounters abfsCounters;
+  private String fileSystemId;
 
   public AbfsClientContextBuilder withExponentialRetryPolicy(
       final ExponentialRetryPolicy exponentialRetryPolicy) {
@@ -59,6 +60,11 @@ public class AbfsClientContextBuilder {
     return this;
   }
 
+  public AbfsClientContextBuilder withFileSystemId(final String fileSystemId) {
+    this.fileSystemId = fileSystemId;
+    return this;
+  }
+
   /**
    * Build the context and get the instance with the properties selected.
    *
@@ -71,6 +77,6 @@ public class AbfsClientContextBuilder {
         staticRetryPolicy,
         tailLatencyRequestTimeoutRetryPolicy,
         abfsPerfTracker,
-        abfsCounters);
+        abfsCounters, fileSystemId);
   }
 }

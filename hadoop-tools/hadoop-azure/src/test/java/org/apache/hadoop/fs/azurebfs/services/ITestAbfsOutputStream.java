@@ -21,6 +21,8 @@ package org.apache.hadoop.fs.azurebfs.services;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.net.ProtocolException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -30,6 +32,8 @@ import java.util.Arrays;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.hadoop.fs.azurebfs.constants.AbfsServiceType;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidConfigurationValueException;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -54,6 +58,7 @@ import org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters;
 import org.apache.hadoop.fs.azurebfs.security.ContextEncryptionAdapter;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.http.HttpResponse;
+import org.apache.hadoop.fs.store.DataBlocks;
 
 import static java.net.HttpURLConnection.HTTP_CONFLICT;
 import static java.net.HttpURLConnection.HTTP_UNAVAILABLE;
@@ -592,5 +597,110 @@ public class ITestAbfsOutputStream extends AbstractAbfsIntegrationTest {
           .as("Expected addCheckSumHeaderForWrite() to be called exactly once")
           .isEqualTo(1);
     }
+  }
+
+  /**
+   * Tests the selection logic for the DFS-to-Blob fallback handler in AbfsOutputStream.
+   * Verifies:
+   *   For FNS, fallback succeeds regardless of ingress service type.
+   *   For HNS with BLOB ingress, fallback fails with InvalidConfigurationValueException.
+   *   For HNS with DFS ingress, fallback succeeds.
+   */
+  @Test
+  public void testDFSToBlobFallbackHandlerSelection() throws Exception {
+    // Common mocks
+    DataBlocks.BlockFactory blockFactory = Mockito.mock(DataBlocks.BlockFactory.class);
+    AzureBlockManager blockManager = Mockito.mock(AzureBlockManager.class);
+    AbfsClientHandler clientHandler = Mockito.mock(AbfsClientHandler.class);
+    AbfsClient client = Mockito.mock(AbfsClient.class);
+
+    Mockito.when(clientHandler.getClient(Mockito.any())).thenReturn(client);
+
+    Method createNewHandler =
+            AbfsOutputStream.class.getDeclaredMethod(
+                    "createNewHandler",
+                    AbfsServiceType.class,
+                    DataBlocks.BlockFactory.class,
+                    int.class,
+                    boolean.class,
+                    AzureBlockManager.class);
+    createNewHandler.setAccessible(true);
+
+    Field fallbackField =
+            AbfsOutputStream.class.getDeclaredField("isDFSToBlobFallbackEnabled");
+    fallbackField.setAccessible(true);
+
+    Field serviceTypeField =
+            AbfsOutputStream.class.getDeclaredField("serviceTypeAtInit");
+    serviceTypeField.setAccessible(true);
+
+    Field clientHandlerField =
+            AbfsOutputStream.class.getDeclaredField("clientHandler");
+    clientHandlerField.setAccessible(true);
+
+    // FNS case: fallback should succeed regardless of ingress service type
+    // Only setting isDFSToBlobFallbackEnabled config is enough
+    Mockito.when(client.getIsNamespaceEnabled()).thenReturn(false);
+
+    AbfsOutputStream fnsStream =
+            Mockito.mock(AbfsOutputStream.class, Mockito.CALLS_REAL_METHODS);
+
+    fallbackField.set(fnsStream, true);
+    clientHandlerField.set(fnsStream, clientHandler);
+
+    Object fnsHandler =
+            createNewHandler.invoke(
+                    fnsStream,
+                    AbfsServiceType.BLOB,
+                    blockFactory,
+                    1024,
+                    false,
+                    blockManager);
+
+    Assertions.assertThat(fnsHandler)
+            .as("FNS: fallback should succeed regardless of ingress service type")
+            .isInstanceOf(AzureDfsToBlobIngressFallbackHandler.class);
+
+    // HNS case: if ingress service type is BLOB, fallback should fail
+    Mockito.when(client.getIsNamespaceEnabled()).thenReturn(true);
+
+    AbfsOutputStream hnsBlobStream =
+            Mockito.mock(AbfsOutputStream.class, Mockito.CALLS_REAL_METHODS);
+
+    fallbackField.set(hnsBlobStream, true);
+    serviceTypeField.set(hnsBlobStream, AbfsServiceType.BLOB);
+    clientHandlerField.set(hnsBlobStream, clientHandler);
+
+    Assertions.assertThatThrownBy(() ->
+                    createNewHandler.invoke(
+                            hnsBlobStream,
+                            AbfsServiceType.BLOB,
+                            blockFactory,
+                            1024,
+                            false,
+                            blockManager))
+            .as("HNS with BLOB ingress should not allow fallback")
+            .hasCauseInstanceOf(InvalidConfigurationValueException.class);
+
+    // HNS case: if ingress service type is DFS, fallback should succeed
+    AbfsOutputStream hnsDfsStream =
+            Mockito.mock(AbfsOutputStream.class, Mockito.CALLS_REAL_METHODS);
+
+    fallbackField.set(hnsDfsStream, true);
+    serviceTypeField.set(hnsDfsStream, AbfsServiceType.DFS);
+    clientHandlerField.set(hnsDfsStream, clientHandler);
+
+    Object hnsHandler =
+            createNewHandler.invoke(
+                    hnsDfsStream,
+                    AbfsServiceType.DFS,
+                    blockFactory,
+                    1024,
+                    false,
+                    blockManager);
+
+    Assertions.assertThat(hnsHandler)
+            .as("HNS with DFS ingress should allow fallback")
+            .isInstanceOf(AzureDfsToBlobIngressFallbackHandler.class);
   }
 }

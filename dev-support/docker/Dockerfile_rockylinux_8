@@ -43,6 +43,8 @@ RUN yum update -y \
     && yum install -y python3 \
     && yum install -y $(pkg-resolver/resolve.py rockylinux:8)
 
+RUN update-alternatives --set java java-17-openjdk.x86_64
+
 RUN dnf --enablerepo=powertools install -y \
     doxygen \
     snappy-devel \
@@ -85,8 +87,14 @@ ENV INFOPATH="${GCC_HOME}/root/usr/share/info"
 ######
 ENV MAVEN_HOME=/opt/maven
 ENV PATH="${PATH}:${MAVEN_HOME}/bin"
+
+# jenkins.sh sets --java-home to a path with an "-amd64" suffix, which doesn't
+# exist on Rocky. Fake it with symlinks.
+RUN ln -s /usr/lib/jvm/java-17-openjdk /usr/lib/jvm/java-17-openjdk-amd64
+RUN ln -s /usr/lib/jvm/java-21-openjdk /usr/lib/jvm/java-21-openjdk-amd64
+
 # JAVA_HOME must be set in Maven >= 3.5.0 (MNG-6003)
-ENV JAVA_HOME=/usr/lib/jvm/java-1.8.0
+ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk
 
 #######
 # Set env vars for SpotBugs

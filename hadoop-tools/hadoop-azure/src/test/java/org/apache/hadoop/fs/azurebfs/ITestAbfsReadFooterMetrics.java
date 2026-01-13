@@ -21,10 +21,7 @@ package org.apache.hadoop.fs.azurebfs;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.IOSTATISTICS_LOGGING_LEVEL_INFO;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_READ_BUFFER_SIZE;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_WRITE_BUFFER_SIZE;
-import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_METRIC_ACCOUNT_KEY;
-import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_METRIC_ACCOUNT_NAME;
-import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_METRIC_FORMAT;
-import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_METRIC_URI;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_METRICS_FORMAT;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.MIN_BUFFER_SIZE;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_KB;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_MB;
@@ -57,31 +54,13 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderValidator;
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 
-import static org.assertj.core.api.Assumptions.assumeThat;
-
 public class ITestAbfsReadFooterMetrics extends AbstractAbfsScaleTest {
-
-  public ITestAbfsReadFooterMetrics() throws Exception {
-    checkPrerequisites();
-  }
-
-  private void checkPrerequisites(){
-    checkIfConfigIsSet(FS_AZURE_METRIC_ACCOUNT_NAME);
-    checkIfConfigIsSet(FS_AZURE_METRIC_ACCOUNT_KEY);
-    checkIfConfigIsSet(FS_AZURE_METRIC_URI);
-  }
-
-  private void checkIfConfigIsSet(String configKey) {
-    AbfsConfiguration conf = getConfiguration();
-    String value = conf.get(configKey);
-    assumeThat(value)
-        .as(configKey + " config is mandatory for the test to run")
-        .isNotNull()
-        .matches(v -> v.trim().length() > 1, "trimmed length > 1");
-  }
 
   private static final String TEST_PATH = "/testfile";
   private static final String SLEEP_PERIOD = "90000";
+
+  public ITestAbfsReadFooterMetrics() throws Exception {
+  }
 
   /**
    * Integration test for reading footer metrics with both Parquet and non-Parquet reads.
@@ -99,7 +78,7 @@ public class ITestAbfsReadFooterMetrics extends AbstractAbfsScaleTest {
    */
   private Configuration getConfiguration(int bufferSize) {
     final Configuration configuration = getRawConfiguration();
-    configuration.set(FS_AZURE_METRIC_FORMAT, String.valueOf(MetricFormat.INTERNAL_FOOTER_METRIC_FORMAT));
+    configuration.set(FS_AZURE_METRICS_FORMAT, String.valueOf(MetricFormat.INTERNAL_FOOTER_METRIC_FORMAT));
     configuration.setInt(AZURE_READ_BUFFER_SIZE, bufferSize);
     configuration.setInt(AZURE_WRITE_BUFFER_SIZE, bufferSize);
     return configuration;

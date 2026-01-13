@@ -223,9 +223,7 @@ public class ITestAzureBlobFileSystemAppend extends
         createPath(makeQualified(testPath).toUri().getPath(), true, false,
             permissions, false, null,
             null, getTestTracingContext(fs, true));
-    fs.getAbfsStore()
-        .getAbfsConfiguration()
-        .set(FS_AZURE_INGRESS_SERVICE_TYPE, AbfsServiceType.BLOB.name());
+    fs.getAbfsStore().getClientHandler().setIngressServiceType(AbfsServiceType.BLOB);
     FSDataOutputStream outputStream = fs.append(testPath);
     AzureIngressHandler ingressHandler
         = ((AbfsOutputStream) outputStream.getWrappedStream()).getIngressHandler();
@@ -262,9 +260,7 @@ public class ITestAzureBlobFileSystemAppend extends
         createPath(makeQualified(testPath).toUri().getPath(), true, false,
             permissions, false, null,
             null, getTestTracingContext(fs, true));
-    fs.getAbfsStore()
-        .getAbfsConfiguration()
-        .set(FS_AZURE_INGRESS_SERVICE_TYPE, AbfsServiceType.BLOB.name());
+    fs.getAbfsStore().getClientHandler().setIngressServiceType(AbfsServiceType.BLOB);
     ExecutorService executorService = Executors.newFixedThreadPool(5);
     List<Future<?>> futures = new ArrayList<>();
 
@@ -328,9 +324,7 @@ public class ITestAzureBlobFileSystemAppend extends
         createPath(makeQualified(testPath).toUri().getPath(), true, false,
             permissions, false, null,
             null, getTestTracingContext(fs, true));
-    fs.getAbfsStore()
-        .getAbfsConfiguration()
-        .set(FS_AZURE_INGRESS_SERVICE_TYPE, AbfsServiceType.BLOB.name());
+    fs.getAbfsStore().getClientHandler().setIngressServiceType(AbfsServiceType.BLOB);
     FSDataOutputStream out1 = fs.create(testPath);
     fs.getAbfsStore().getClientHandler().getDfsClient().
         createPath(makeQualified(testPath1).toUri().getPath(), true, false,
@@ -389,10 +383,7 @@ public class ITestAzureBlobFileSystemAppend extends
       fs.getAbfsStore()
           .getAbfsConfiguration()
           .setBoolean(FS_AZURE_ENABLE_DFSTOBLOB_FALLBACK, true);
-      fs.getAbfsStore()
-          .getAbfsConfiguration()
-          .set(FS_AZURE_INGRESS_SERVICE_TYPE,
-              String.valueOf(AbfsServiceType.DFS));
+      fs.getAbfsStore().getClientHandler().setIngressServiceType(AbfsServiceType.DFS);
       fs.getAbfsStore().getClientHandler().getBlobClient().
           createPath(makeQualified(testPath).toUri().getPath(), true, false,
               permissions, false, null,
@@ -438,10 +429,7 @@ public class ITestAzureBlobFileSystemAppend extends
       fs.getAbfsStore()
           .getAbfsConfiguration()
           .setBoolean(FS_AZURE_ENABLE_DFSTOBLOB_FALLBACK, true);
-      fs.getAbfsStore()
-          .getAbfsConfiguration()
-          .set(FS_AZURE_INGRESS_SERVICE_TYPE,
-              String.valueOf(AbfsServiceType.DFS));
+      fs.getAbfsStore().getClientHandler().setIngressServiceType(AbfsServiceType.DFS);
       fs.getAbfsStore().getClientHandler().getBlobClient().
           createPath(makeQualified(testPath).toUri().getPath(), true, false,
               permissions, true, null,
@@ -483,9 +471,7 @@ public class ITestAzureBlobFileSystemAppend extends
         createPath(makeQualified(testPath).toUri().getPath(), true, false,
             permissions, true, null,
             null, getTestTracingContext(fs, true));
-    fs.getAbfsStore()
-        .getAbfsConfiguration()
-        .set(FS_AZURE_INGRESS_SERVICE_TYPE, AbfsServiceType.BLOB.name());
+    fs.getAbfsStore().getClientHandler().setIngressServiceType(AbfsServiceType.BLOB);
     FSDataOutputStream outputStream = fs.append(testPath);
     AzureIngressHandler ingressHandler
         = ((AbfsOutputStream) outputStream.getWrappedStream()).getIngressHandler();
@@ -507,59 +493,99 @@ public class ITestAzureBlobFileSystemAppend extends
         .isInstanceOf(AbfsDfsClient.class);
   }
 
-
   /**
-   * Tests the correct retrieval of the AzureIngressHandler based on the configured ingress service type.
+   * Validates that the correct ingress handler and client are used for the specified
+   * ingress service type.
    *
-   * @throws IOException if an I/O error occurs
+   * @param ingressServiceType     the ingress service type to test (e.g., DFS or BLOB)
+   * @param expectedIngressHandler the expected class of the AzureIngressHandler
+   * @param expectedClient         the expected class of the AbfsClient
+   * @throws IOException if an I/O error occurs during validation
    */
-  @Test
-  public void testValidateIngressHandler() throws IOException {
+  private void validateIngressHandler(AbfsServiceType ingressServiceType,
+          Class<? extends AzureIngressHandler> expectedIngressHandler,
+          Class<? extends AbfsClient> expectedClient)
+          throws IOException {
+
     Configuration configuration = getRawConfiguration();
     configuration.set(FS_AZURE_INGRESS_SERVICE_TYPE,
-        AbfsServiceType.BLOB.name());
-    try (AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(
-        configuration)) {
-      Path testPath = path(TEST_FILE_PATH);
-      AzureBlobFileSystemStore.Permissions permissions
-          = new AzureBlobFileSystemStore.Permissions(false,
-          FsPermission.getDefault(), FsPermission.getUMask(fs.getConf()));
-      fs.getAbfsStore().getClientHandler().getBlobClient().
-          createPath(makeQualified(testPath).toUri().getPath(), true,
-              false,
-              permissions, false, null,
-              null, getTestTracingContext(fs, true));
-      FSDataOutputStream outputStream = fs.append(testPath);
-      AzureIngressHandler ingressHandler
-          = ((AbfsOutputStream) outputStream.getWrappedStream()).getIngressHandler();
-      assertThat(ingressHandler)
-          .as("Blob Ingress handler instance is not correct")
-          .isInstanceOf(AzureBlobIngressHandler.class);
-      AbfsClient client = ingressHandler.getClient();
-      assertThat(client)
-          .as("Blob client was not used correctly")
-          .isInstanceOf(AbfsBlobClient.class);
+            ingressServiceType.name());
 
-      Path testPath1 = new Path("testFile1");
-      fs.getAbfsStore().getClientHandler().getBlobClient().
-          createPath(makeQualified(testPath1).toUri().getPath(), true,
-              false,
-              permissions, false, null,
-              null, getTestTracingContext(fs, true));
+    try (AzureBlobFileSystem fs =
+                 (AzureBlobFileSystem) FileSystem.newInstance(configuration)) {
+
+      Path testPath = path(TEST_FILE_PATH);
+      AzureBlobFileSystemStore.Permissions permissions =
+              new AzureBlobFileSystemStore.Permissions(
+                      false,
+                      FsPermission.getDefault(),
+                      FsPermission.getUMask(fs.getConf()));
+
       fs.getAbfsStore()
-          .getAbfsConfiguration()
-          .set(FS_AZURE_INGRESS_SERVICE_TYPE, AbfsServiceType.DFS.name());
-      FSDataOutputStream outputStream1 = fs.append(testPath1);
-      AzureIngressHandler ingressHandler1
-          = ((AbfsOutputStream) outputStream1.getWrappedStream()).getIngressHandler();
-      assertThat(ingressHandler1)
-          .as("DFS Ingress handler instance is not correct")
-          .isInstanceOf(AzureDFSIngressHandler.class);
-      AbfsClient client1 = ingressHandler1.getClient();
-      assertThat(client1)
-          .as("Dfs client was not used correctly")
-          .isInstanceOf(AbfsDfsClient.class);
+              .getClientHandler()
+              .getBlobClient()
+              .createPath(
+                      makeQualified(testPath).toUri().getPath(),
+                      true,
+                      false,
+                      permissions,
+                      false,
+                      null,
+                      null,
+                      getTestTracingContext(fs, true));
+
+      FSDataOutputStream outputStream = fs.append(testPath);
+      AzureIngressHandler ingressHandler =
+              ((AbfsOutputStream) outputStream.getWrappedStream())
+                      .getIngressHandler();
+
+      assertThat(ingressHandler)
+              .as("Unexpected ingress handler type")
+              .isInstanceOf(expectedIngressHandler);
+
+      assertThat(ingressHandler.getClient())
+              .as("Unexpected client used by ingress handler")
+              .isInstanceOf(expectedClient);
     }
+  }
+
+  /**
+   * Validates that for FNS, both DFS and BLOB ingress service types force the use of
+   * AzureBlobIngressHandler and AbfsBlobClient.
+   *
+   * @throws IOException if an I/O error occurs during validation
+   */
+  @Test
+  public void testValidateIngressHandlerForFNS() throws IOException {
+    assumeHnsDisabled();
+
+    validateIngressHandler(AbfsServiceType.DFS,
+            AzureBlobIngressHandler.class,
+            AbfsBlobClient.class);
+    validateIngressHandler(AbfsServiceType.BLOB,
+            AzureBlobIngressHandler.class,
+            AbfsBlobClient.class);
+  }
+
+
+  /**
+   * Validates that for HNS, the correct ingress handler and client
+   * are used for both DFS and BLOB service types.
+   * For DFS ingress service type, expects AzureDFSIngressHandler and AbfsDfsClient.
+   * For BLOB ingress service type, expects AzureBlobIngressHandler and AbfsBlobClient.
+   *
+   * @throws IOException if an I/O error occurs during validation
+   */
+  @Test
+  public void testValidateIngressHandlerForHNS() throws IOException {
+    assumeHnsEnabled();
+
+    validateIngressHandler(AbfsServiceType.DFS,
+            AzureDFSIngressHandler.class,
+            AbfsDfsClient.class);
+    validateIngressHandler(AbfsServiceType.BLOB,
+            AzureBlobIngressHandler.class,
+            AbfsBlobClient.class);
   }
 
   @Test

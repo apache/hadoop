@@ -80,7 +80,6 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.DOT;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.*;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.*;
-import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.INCORRECT_INGRESS_TYPE;
 
 /**
  * Configuration for Azure Blob FileSystem.
@@ -93,7 +92,7 @@ public class AbfsConfiguration{
   private final String accountName;
   private String fsName;
   // Service type identified from URL used to initialize FileSystem.
-  private final AbfsServiceType fsConfiguredServiceType;
+  private AbfsServiceType fsConfiguredServiceTypeFromUrl;
   private final boolean isSecure;
   private static final Logger LOG = LoggerFactory.getLogger(AbfsConfiguration.class);
   private Trilean isNamespaceEnabled = null;
@@ -324,17 +323,41 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_METRIC_ANALYSIS_TIMEOUT_MS)
   private int metricAnalysisTimeout;
 
-  @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_METRIC_URI,
-          DefaultValue = EMPTY_STRING)
-  private String metricUri;
-
-  @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_METRIC_ACCOUNT_NAME,
+  @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_METRICS_ACCOUNT_NAME,
           DefaultValue = EMPTY_STRING)
   private String metricAccount;
 
-  @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_METRIC_ACCOUNT_KEY,
+  @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_METRICS_ACCOUNT_KEY,
           DefaultValue = EMPTY_STRING)
   private String metricAccountKey;
+
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_METRICS_COLLECTION_ENABLED,
+      DefaultValue = DEFAULT_METRICS_COLLECTION_ENABLED)
+  private boolean metricsCollectionEnabled;
+
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_METRICS_SHOULD_EMIT_ON_IDLE_TIME,
+      DefaultValue = DEFAULT_METRICS_SHOULD_EMIT_ON_IDLE_TIME)
+  private boolean shouldEmitMetricsOnIdleTime;
+
+  @LongConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_METRICS_EMIT_THRESHOLD,
+  DefaultValue = DEFAULT_METRICS_EMIT_THRESHOLD)
+  private long metricsEmitThreshold;
+
+  @LongConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_METRICS_EMIT_THRESHOLD_INTERVAL_SECS,
+      DefaultValue = DEFAULT_METRICS_EMIT_THRESHOLD_INTERVAL_SECS)
+  private long metricsEmitThresholdIntervalInSecs;
+
+  @LongConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_METRICS_EMIT_INTERVAL_MINS,
+      DefaultValue = DEFAULT_METRICS_EMIT_INTERVAL_MINS)
+  private long metricsEmitIntervalInMins;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_METRICS_MAX_CALLS_PER_SECOND,
+      DefaultValue = DEFAULT_METRICS_MAX_CALLS_PER_SECOND)
+  private int maxMetricsCallsPerSecond;
+
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_METRICS_BACKOFF_RETRY_ENABLED,
+      DefaultValue = DEFAULT_METRICS_BACKOFF_RETRY_ENABLED)
+  private boolean backoffRetryMetricsEnabled;
 
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ACCOUNT_OPERATION_IDLE_TIMEOUT,
       DefaultValue = DEFAULT_ACCOUNT_OPERATION_IDLE_TIMEOUT_MS)
@@ -667,18 +690,18 @@ public class AbfsConfiguration{
    * Constructor for AbfsConfiguration for specified service type.
    * @param rawConfig used to initialize the configuration.
    * @param accountName the name of the azure storage account.
-   * @param fsConfiguredServiceType service type configured for the file system.
+   * @param fsConfiguredServiceTypeFromUrl service type configured for the file system.
    * @throws IllegalAccessException if the field is not accessible.
    * @throws IOException if an I/O error occurs.
    */
   public AbfsConfiguration(final Configuration rawConfig,
       String accountName,
-      AbfsServiceType fsConfiguredServiceType)
+      AbfsServiceType fsConfiguredServiceTypeFromUrl)
       throws IllegalAccessException, IOException {
     this.rawConfig = ProviderUtils.excludeIncompatibleCredentialProviders(
         rawConfig, AzureBlobFileSystem.class);
     this.accountName = accountName;
-    this.fsConfiguredServiceType = fsConfiguredServiceType;
+    this.fsConfiguredServiceTypeFromUrl = fsConfiguredServiceTypeFromUrl;
     this.isSecure = getBoolean(FS_AZURE_SECURE_MODE, false);
 
     Field[] fields = this.getClass().getDeclaredFields();
@@ -705,16 +728,16 @@ public class AbfsConfiguration{
    * @param rawConfig used to initialize the configuration.
    * @param accountName the name of the azure storage account.
    * @param fsName the name of the file system (container name).
-   * @param fsConfiguredServiceType service type configured for the file system.
+   * @param fsConfiguredServiceTypeFromUrl service type configured for the file system.
    * @throws IllegalAccessException if the field is not accessible.
    * @throws IOException if an I/O error occurs.
    */
   public AbfsConfiguration(final Configuration rawConfig,
       String accountName,
       String fsName,
-      AbfsServiceType fsConfiguredServiceType)
+      AbfsServiceType fsConfiguredServiceTypeFromUrl)
       throws IllegalAccessException, IOException {
-    this(rawConfig, accountName, fsConfiguredServiceType);
+    this(rawConfig, accountName, fsConfiguredServiceTypeFromUrl);
     this.fsName = fsName;
   }
 
@@ -753,7 +776,16 @@ public class AbfsConfiguration{
    * @return the service type.
    */
   public AbfsServiceType getFsConfiguredServiceType() {
-    return getCaseInsensitiveEnum(FS_AZURE_FNS_ACCOUNT_SERVICE_TYPE, fsConfiguredServiceType);
+    return getCaseInsensitiveEnum(FS_AZURE_FNS_ACCOUNT_SERVICE_TYPE, fsConfiguredServiceTypeFromUrl);
+  }
+
+  /**
+   * Returns the service type identified from the URL used to initialize the FileSystem.
+   *
+   * @return the configured AbfsServiceType from the URL
+   */
+  public AbfsServiceType getFsConfiguredServiceTypeFromUrl() {
+    return fsConfiguredServiceTypeFromUrl;
   }
 
   /**
@@ -794,13 +826,9 @@ public class AbfsConfiguration{
     if (isHNSEnabled && getConfiguredServiceTypeForFNSAccounts() == AbfsServiceType.BLOB) {
       throw new InvalidConfigurationValueException(
           FS_AZURE_FNS_ACCOUNT_SERVICE_TYPE, "Service Type Cannot be BLOB for HNS Account");
-    } else if (isHNSEnabled && fsConfiguredServiceType == AbfsServiceType.BLOB) {
+    } else if (isHNSEnabled && fsConfiguredServiceTypeFromUrl == AbfsServiceType.BLOB) {
       throw new InvalidConfigurationValueException(FS_DEFAULT_NAME_KEY,
           "Blob Endpoint Url Cannot be used to initialize filesystem for HNS Account");
-    } else if (getFsConfiguredServiceType() == AbfsServiceType.BLOB
-        && getIngressServiceType() == AbfsServiceType.DFS) {
-      throw new InvalidConfigurationValueException(
-          FS_AZURE_INGRESS_SERVICE_TYPE, INCORRECT_INGRESS_TYPE);
     }
   }
 
@@ -1294,16 +1322,40 @@ public class AbfsConfiguration{
     return this.metricAnalysisTimeout;
   }
 
-  public String getMetricUri() {
-    return metricUri;
-  }
-
   public String getMetricAccount() {
     return metricAccount;
   }
 
   public String getMetricAccountKey() {
     return metricAccountKey;
+  }
+
+  public boolean isMetricsCollectionEnabled() {
+    return metricsCollectionEnabled;
+  }
+
+  public boolean shouldEmitMetricsOnIdleTime() {
+    return shouldEmitMetricsOnIdleTime;
+  }
+
+  public long getMetricsEmitThreshold() {
+    return metricsEmitThreshold;
+  }
+
+  public long getMetricsEmitIntervalInMins() {
+    return metricsEmitIntervalInMins;
+  }
+
+  public long getMetricsEmitThresholdIntervalInSecs() {
+    return metricsEmitThresholdIntervalInSecs;
+  }
+
+  public int getMaxMetricsCallsPerSecond() {
+    return maxMetricsCallsPerSecond;
+  }
+
+  public boolean isBackoffRetryMetricsEnabled() {
+    return backoffRetryMetricsEnabled;
   }
 
   public int getAccountOperationIdleTimeout() {
@@ -1402,7 +1454,7 @@ public class AbfsConfiguration{
   }
 
   public MetricFormat getMetricFormat() {
-    return getEnum(FS_AZURE_METRIC_FORMAT, MetricFormat.EMPTY);
+    return getEnum(FS_AZURE_METRICS_FORMAT, MetricFormat.INTERNAL_METRIC_FORMAT);
   }
 
   public AuthType getAuthType(String accountName) {
@@ -1809,6 +1861,14 @@ public class AbfsConfiguration{
   @VisibleForTesting
   void setReadAheadEnabled(final boolean enabledReadAhead) {
     this.enabledReadAhead = enabledReadAhead;
+  }
+
+  /**
+   * Sets the configured service type.
+   * Used to update the service type identified from the URL.
+   */
+  void setFsConfiguredServiceType(AbfsServiceType serviceType) {
+    this.fsConfiguredServiceTypeFromUrl = serviceType;
   }
 
   public int getReadAheadRange() {

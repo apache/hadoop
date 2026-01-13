@@ -197,6 +197,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
   private final IdentityTransformerInterface identityTransformer;
   private final AbfsPerfTracker abfsPerfTracker;
   private final AbfsCounters abfsCounters;
+  private final String fileSystemId;
 
   /**
    * The set of directories where we should store files as append blobs.
@@ -262,6 +263,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     boolean useHttps = (usingOauth || abfsConfiguration.isHttpsAlwaysUsed()) ? true : abfsStoreBuilder.isSecureScheme;
     this.abfsPerfTracker = new AbfsPerfTracker(fileSystemName, accountName, this.abfsConfiguration);
     this.abfsCounters = abfsStoreBuilder.abfsCounters;
+    this.fileSystemId = abfsStoreBuilder.fileSystemId;
     initializeClient(uri, fileSystemName, accountName, useHttps);
     final Class<? extends IdentityTransformerInterface> identityTransformerClass =
         abfsStoreBuilder.configuration.getClass(FS_AZURE_IDENTITY_TRANSFORM_CLASS, IdentityTransformer.class,
@@ -802,9 +804,11 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       ContextEncryptionAdapter contextEncryptionAdapter,
       TracingContext tracingContext) {
     int bufferSize = abfsConfiguration.getWriteBufferSize();
+
     if (isAppendBlob && bufferSize > FileSystemConfigurations.APPENDBLOB_MAX_WRITE_BUFFER_SIZE) {
       bufferSize = FileSystemConfigurations.APPENDBLOB_MAX_WRITE_BUFFER_SIZE;
     }
+
     return new AbfsOutputStreamContext(abfsConfiguration.getSasTokenRenewPeriodForStreamsInSeconds())
             .withWriteBufferSize(bufferSize)
             .enableExpectHeader(abfsConfiguration.isExpectHeaderEnabled())
@@ -828,7 +832,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
             .withWriteThreadPoolManager(writeThreadPoolSizeManager)
             .withTracingContext(tracingContext)
             .withAbfsBackRef(fsBackRef)
-            .withIngressServiceType(abfsConfiguration.getIngressServiceType())
+            .withIngressServiceType(clientHandler.getIngressServiceType())
             .withDFSToBlobFallbackEnabled(abfsConfiguration.isDfsToBlobFallbackEnabled())
             .withETag(eTag)
             .build();
@@ -1859,6 +1863,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
             new TailLatencyRequestTimeoutRetryPolicy(abfsConfiguration))
         .withAbfsCounters(abfsCounters)
         .withAbfsPerfTracker(abfsPerfTracker)
+        .withFileSystemId(fileSystemId)
         .build();
   }
 
@@ -1940,6 +1945,17 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
   }
 
   /**
+   * Restricts all service types to BLOB when FNS account detected
+   * Updates the client to reflect the new default service type.
+   */
+  public void restrictServiceTypeToBlob() {
+    clientHandler.setDefaultServiceType(AbfsServiceType.BLOB);
+    clientHandler.setIngressServiceType(AbfsServiceType.BLOB);
+    getAbfsConfiguration().setFsConfiguredServiceType(AbfsServiceType.BLOB);
+    this.client = clientHandler.getClient();
+  }
+
+  /**
    * Permissions class contain provided permission and umask in octalNotation.
    * If the object is created for namespace-disabled account, the permission and
    * umask would be null.
@@ -1999,6 +2015,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     private DataBlocks.BlockFactory blockFactory;
     private int blockOutputActiveBlocks;
     private BackReference fsBackRef;
+    private String fileSystemId;
 
     public AzureBlobFileSystemStoreBuilder withUri(URI value) {
       this.uri = value;
@@ -2037,6 +2054,11 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     public AzureBlobFileSystemStoreBuilder withBackReference(
         BackReference fsBackRef) {
       this.fsBackRef = fsBackRef;
+      return this;
+    }
+
+    public AzureBlobFileSystemStoreBuilder withFileSystemId(String fileSystemId) {
+      this.fileSystemId = fileSystemId;
       return this;
     }
 
