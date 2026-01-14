@@ -20,7 +20,6 @@ accountSettingsFolderName=accountSettings
 combtestfile=$resourceDir
 combtestfile+=abfs-combination-test-configs.xml
 logdir=dev-support/testlogs/
-ciMailScript=dev-support/testrun-scripts/automatedmail.sh
 
 # Regex to filter out final test stats
 testresultsregex="Tests run: [0-9]+, Failures: [0-9]+, Errors: [0-9]+, Skipped: [0-9]+$"
@@ -63,47 +62,6 @@ fnsBlobConfigFileCheck() {
   else
     echo "File already exists."
   fi
-}
-
-checkCronjobDependencies() {
-  if ! [ "$(command -v az)" ]; then
-    echo "Azure CLI (az) could not be found. Installing Azure CLI..."
-    if ! sudo apt update || ! sudo apt install -y azure-cli; then
-      echo "Failed to install Azure CLI. Exiting..."
-      exit 1
-    fi
-    echo "Azure CLI installed successfully."
-  fi
-}
-
-uploadAndMail() {
-  accountSettingsDir="src/test/resources/accountSettings/"
-  azureConfigFilePath="${accountSettingsDir}runresult${accountConfigFileSuffix}"
-  testResultsAccountName=$(xmlstarlet sel -t -v '//property[name = "fs.azure.test.results.account.name"]/value' -n $azureConfigFilePath)
-  testResultsAccountKey=$(xmlstarlet sel -t -v '//property[name = "fs.azure.test.results.account.key"]/value' -n $azureConfigFilePath)
-  branchName="${branchName,,}"
-  containerName="$(xmlstarlet sel -t -v '//property[name = "fs.azure.container.name"]/value' -n $azureConfigFilePath)"
-  printAggregate
-
-  year=$(date +"%Y")
-  month=$(date +"%m")
-  day=$(date +"%d")
-
-  directoryStructure="$year-$month-$day/$branchName"
-  AggregatedTestFolder="$testOutputLogFolder"
-
-  checkCronjobDependencies
-  if ! az storage container create --name $containerName --account-name $testResultsAccountName --account-key "$testResultsAccountKey"; then
-    echo "Failed to create container. Exiting..."
-    exit 1
-  fi
-  if ! az storage blob upload-batch --destination "$containerName/$directoryStructure" --source $AggregatedTestFolder --account-name $testResultsAccountName --account-key "$testResultsAccountKey"; then
-    echo "Failed upload test results in the destination. Exiting..."
-    exit 1
-  fi
-  echo "Upload complete."
-
-  "$ciMailScript" "$aggregatedTestResult" || echo "Email failed, continuing"
 }
 
 triggerRun()

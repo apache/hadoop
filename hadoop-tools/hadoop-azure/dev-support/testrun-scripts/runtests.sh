@@ -26,6 +26,7 @@ init
 
 resourceDir=src/test/resources/
 logdir=dev-support/testlogs/
+cirunscript=dev-support/testrun-scripts/uploadandmail.sh
 azureTestXml=azure-auth-keys.xml
 azureTestXmlPath=$resourceDir$azureTestXml
 processCount=8
@@ -96,6 +97,14 @@ cleanUpTestContainers=false
 
 # This variable is set to true only when the script is triggered from cronjob
 if [ "$isCronJob" = "true" ]; then
+
+  if [[ -f "$cirunscript" ]]; then
+      . "$cirunscript"
+  else
+    echo "ERROR: Required script not present. Do not set \"isCronJob\" to true."
+    exit 0
+  fi
+
   runTest=true
   runHNSOAuthDFSTest
   runHNSSharedKeyDFSTest
