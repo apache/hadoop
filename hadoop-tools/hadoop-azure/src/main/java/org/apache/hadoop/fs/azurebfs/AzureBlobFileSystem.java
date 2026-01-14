@@ -216,6 +216,7 @@ public class AzureBlobFileSystem extends FileSystem
             .withBlockFactory(blockFactory)
             .withBlockOutputActiveBlocks(blockOutputActiveBlocks)
             .withBackReference(new BackReference(this))
+            .withFileSystemId(this.fileSystemId)
             .build();
 
     this.abfsStore = new AzureBlobFileSystemStore(systemStoreBuilder);
@@ -840,18 +841,6 @@ public class AzureBlobFileSystem extends FileSystem
   public synchronized void close() throws IOException {
     if (isClosed()) {
       return;
-    }
-    if (getAbfsStore().getClient().isMetricCollectionEnabled()) {
-      TracingContext tracingMetricContext = new TracingContext(
-              clientCorrelationId,
-              fileSystemId, FSOperationType.GET_ATTR, true,
-              tracingHeaderFormat,
-              listener, abfsCounters.toString());
-      try {
-        getAbfsClient().getMetricCall(tracingMetricContext);
-      } catch (IOException e) {
-        throw new IOException(e);
-      }
     }
     // does all the delete-on-exit calls, and may be slow.
     super.close();

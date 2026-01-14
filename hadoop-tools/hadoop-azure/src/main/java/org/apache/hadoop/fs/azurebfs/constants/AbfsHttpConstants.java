@@ -137,6 +137,9 @@ public final class AbfsHttpConstants {
   public static final String HASH = "#";
   public static final String TRUE = "true";
   public static final String ZERO = "0";
+  public static final String UNDERSCORE = "_";
+  public static final String OPENING_SQUARE_BRACKET = "[";
+  public static final String CLOSING_SQUARE_BRACKET = "]";
 
   public static final String PLUS_ENCODE = "%20";
   public static final String FORWARD_SLASH_ENCODE = "%2F";

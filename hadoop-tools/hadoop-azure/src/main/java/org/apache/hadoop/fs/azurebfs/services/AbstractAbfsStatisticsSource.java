@@ -142,6 +142,30 @@ public abstract class AbstractAbfsStatisticsSource implements IOStatisticsSource
     }
 
     /**
+     * Appends the label and value to the StringBuilder if the value is positive.
+     *
+     * @param sb    the StringBuilder to append to
+     * @param label the label to append
+     * @param value the value to check and append
+     */
+    protected void appendIfPositive(StringBuilder sb, String label, long value) {
+      if (value > 0) {
+        sb.append(label).append(value);
+      }
+    }
+
+    /**
+     * Appends the label and value to the StringBuilder unconditionally.
+     *
+     * @param sb    the StringBuilder to append to
+     * @param label the label to append
+     * @param value the value to append
+     */
+    protected void appendAlways(StringBuilder sb, String label, String value) {
+      sb.append(label).append(value);
+    }
+
+    /**
      * Returns a string representation of the AbstractAbfsStatisticsSource.
      *
      * @return a string representation of the AbstractAbfsStatisticsSource

@@ -198,6 +198,10 @@ public class TracingContext {
     this.listener = listener;
   }
 
+  public boolean isMetricCall() {
+    return TracingHeaderFormat.AGGREGATED_METRICS_FORMAT.equals(format);
+  }
+
   /**
    * Concatenate all components separated by (:) into a string and set into
    * X_MS_CLIENT_REQUEST_ID header of the http operation
@@ -242,12 +246,16 @@ public class TracingContext {
           + operatedBlobCount + COLON
           + getOperationSpecificHeader(opType) + COLON
           + httpOperation.getTracingContextSuffix() + COLON
-          + metricResults + COLON + resourceUtilizationMetricResults + COLON
+          + resourceUtilizationMetricResults + COLON
           + (fnsEndpointConverted ? fnsEndptConvertedIndicator : EMPTY_STRING);
       break;
     case TWO_ID_FORMAT:
       header = TracingHeaderVersion.getCurrentVersion() + COLON
           + clientCorrelationID + COLON + clientRequestId;
+      break;
+    case AGGREGATED_METRICS_FORMAT:
+      header = TracingHeaderVersion.getMetricsCurrentVersion() + COLON
+          + metricResults;
       break;
     default:
       //case SINGLE_ID_FORMAT
