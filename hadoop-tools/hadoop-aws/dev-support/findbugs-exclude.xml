@@ -86,4 +86,19 @@
     <Method name="submit"/>
     <Bug pattern="RV_RETURN_VALUE_IGNORED_BAD_PRACTICE"/>
   </Match>
+
+  <Match>
+    <Class name="org.apache.hadoop.fs.s3a.commit.AbstractS3ACommitter"/>
+    <Bug pattern = "CT_CONSTRUCTOR_THROW"/>
+  </Match>
+
+  <Match>
+    <Class name="org.apache.hadoop.fs.s3a.commit.magic.MagicS3GuardCommitter"/>
+    <Bug pattern = "CT_CONSTRUCTOR_THROW"/>
+  </Match>
+
+  <Match>
+    <Class name="org.apache.hadoop.fs.s3a.commit.staging.StagingCommitter"/>
+    <Bug pattern = "CT_CONSTRUCTOR_THROW"/>
+  </Match>
 </FindBugsFilter>
