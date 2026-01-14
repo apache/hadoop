@@ -32,6 +32,7 @@
   <modules>
     <module>hadoop-cloud-storage</module>
     <module>hadoop-cos</module>
+    <module>hadoop-gcp</module>
     <module>hadoop-huaweicloud</module>
     <module>hadoop-tos</module>
   </modules>

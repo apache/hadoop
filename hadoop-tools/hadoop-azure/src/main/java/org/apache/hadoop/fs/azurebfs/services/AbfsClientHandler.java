@@ -92,6 +92,33 @@ public class AbfsClientHandler implements Closeable {
   }
 
   /**
+   * Sets the default service type.
+   *
+   * @param defaultServiceType the service type to set as default
+   */
+  public void setDefaultServiceType(AbfsServiceType defaultServiceType) {
+    this.defaultServiceType = defaultServiceType;
+  }
+
+  /**
+   * Sets the ingress service type.
+   *
+   * @param ingressServiceType the ingress service type
+   */
+  public void setIngressServiceType(AbfsServiceType ingressServiceType) {
+    this.ingressServiceType = ingressServiceType;
+  }
+
+  /**
+   * Gets the default ingress service type.
+   *
+   * @return the default ingress service type
+   */
+  public AbfsServiceType getIngressServiceType() {
+    return ingressServiceType;
+  }
+
+  /**
    * Get the AbfsClient based on the default service type.
    * @return AbfsClient
    */

@@ -25,6 +25,7 @@ import org.apache.hadoop.classification.VisibleForTesting;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.AbfsStatistic;
 import org.apache.hadoop.fs.azurebfs.utils.MetricFormat;
 import org.apache.hadoop.fs.statistics.DurationTracker;
@@ -77,7 +78,8 @@ public interface AbfsCounters extends IOStatisticsSource, DurationTrackerFactory
   @Override
   DurationTracker trackDuration(String key);
 
-  void initializeMetrics(MetricFormat metricFormat);
+  void initializeMetrics(MetricFormat metricFormat,
+      AbfsConfiguration abfsConfiguration);
 
   AbfsBackoffMetrics getAbfsBackoffMetrics();
 

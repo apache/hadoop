@@ -110,7 +110,7 @@ public class AbfsRestOperation {
   private final int maxIoRetries;
   private AbfsHttpOperation result;
   private final AbfsCounters abfsCounters;
-  private AbfsBackoffMetrics abfsBackoffMetrics;
+  private final AbfsBackoffMetrics abfsBackoffMetrics;
   /**
    * This variable contains the reason of last API call within the same
    * AbfsRestOperation object.
@@ -239,6 +239,8 @@ public class AbfsRestOperation {
     this.abfsCounters = client.getAbfsCounters();
     if (abfsCounters != null) {
       this.abfsBackoffMetrics = abfsCounters.getAbfsBackoffMetrics();
+    } else {
+      this.abfsBackoffMetrics = null;
     }
     this.maxIoRetries = abfsConfiguration.getMaxIoRetries();
     this.intercept = client.getIntercept();
@@ -293,7 +295,10 @@ public class AbfsRestOperation {
       if (abfsCounters != null) {
         abfsCounters.getLastExecutionTime().set(now());
       }
-      client.timerOrchestrator(TimerFunctionality.RESUME, null);
+      if (client.getAbfsMetricsManager() != null) {
+        client.getAbfsMetricsManager()
+            .timerOrchestrator(TimerFunctionality.RESUME, null);
+      }
       IOStatisticsBinding.trackDurationOfInvocation(abfsCounters,
           AbfsStatistic.getStatNameFromHttpCall(method),
           () -> completeExecute(lastUsedTracingContext));
@@ -324,8 +329,7 @@ public class AbfsRestOperation {
     retryCount = 0;
     retryPolicy = client.getExponentialRetryPolicy();
     LOG.debug("First execution of REST operation - {}", operationType);
-    long sleepDuration = 0L;
-    if (abfsBackoffMetrics != null) {
+    if (abfsBackoffMetrics != null && !tracingContext.isMetricCall()) {
       synchronized (this) {
         abfsBackoffMetrics.incrementMetricValue(TOTAL_NUMBER_OF_REQUESTS);
       }
@@ -338,7 +342,7 @@ public class AbfsRestOperation {
         LOG.debug("Rest operation {} failed with failureReason: {}. Retrying with retryCount = {}, retryPolicy: {} and sleepInterval: {}",
             operationType, failureReason, retryCount, retryPolicy.getAbbreviation(), retryInterval);
         if (abfsBackoffMetrics != null) {
-          updateBackoffTimeMetrics(retryCount, sleepDuration);
+          updateBackoffTimeMetrics(retryCount, retryInterval);
         }
         Thread.sleep(retryInterval);
       } catch (InterruptedException ex) {
@@ -412,7 +416,7 @@ public class AbfsRestOperation {
       incrementCounter(AbfsStatistic.CONNECTIONS_MADE, 1);
       tracingContext.constructHeader(httpOperation, failureReason, retryPolicy.getAbbreviation());
 
-      signRequest(httpOperation, hasRequestBody ? bufferLength : 0);
+      signRequest(httpOperation, hasRequestBody ? bufferLength : 0, tracingContext.isMetricCall());
 
     } catch (IOException e) {
       LOG.debug("Auth failure: {}, {}", method, url);
@@ -580,9 +584,12 @@ public class AbfsRestOperation {
    * @throws IOException failure
    */
   @VisibleForTesting
-  public void signRequest(final AbfsHttpOperation httpOperation, int bytesToSign) throws IOException {
-    if (client.isSendMetricCall()) {
-      client.getMetricSharedkeyCredentials().signRequest(httpOperation, bytesToSign);
+  public void signRequest(final AbfsHttpOperation httpOperation, int bytesToSign,
+      boolean isMetricCall) throws IOException {
+    if (isMetricCall && client.getAbfsMetricsManager() != null
+        && client.getAbfsMetricsManager().hasSeparateMetricAccount()) {
+      client.getAbfsMetricsManager().getMetricSharedkeyCredentials()
+          .signRequest(httpOperation, bytesToSign);
     } else {
       switch (client.getAuthType()) {
       case Custom:
