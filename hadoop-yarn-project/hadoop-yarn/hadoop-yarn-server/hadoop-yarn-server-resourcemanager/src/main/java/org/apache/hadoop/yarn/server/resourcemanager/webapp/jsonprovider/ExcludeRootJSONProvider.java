@@ -57,7 +57,6 @@ import org.apache.hadoop.conf.Configuration;
  * ensuring that the JSON representation excludes the root element and does not include
  * empty collections. This is useful when interoperating with APIs that expect flat
  * JSON structures or when simplifying payloads for lightweight clients.
- * </p>
  *
  * <p>
  * This class also provides detailed trace-level logging to help developers verify

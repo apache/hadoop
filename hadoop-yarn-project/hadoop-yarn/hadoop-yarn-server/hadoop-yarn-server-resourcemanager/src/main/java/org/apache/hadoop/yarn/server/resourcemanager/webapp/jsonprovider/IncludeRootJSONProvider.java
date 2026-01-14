@@ -55,7 +55,6 @@ import org.apache.hadoop.conf.Configuration;
  *   <li>{@code MarshallerProperties.JSON_MARSHAL_EMPTY_COLLECTIONS = false}</li>
  * </ul>
  * ensuring consistent JSON structure that includes the root element and omits empty collections.
- * </p>
  *
  * <p>
  * This class also provides detailed trace logging to help debug compatibility and data binding
