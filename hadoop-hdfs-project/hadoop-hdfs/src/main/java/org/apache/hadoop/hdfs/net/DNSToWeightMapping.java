@@ -38,6 +38,9 @@ public interface DNSToWeightMapping extends DataNodeWeightSupplier, Configurable
 
   /**
    * Resolves weight for the given IP-address.
+   *
+   * @param ipAddress IP-address
+   * @return resolved weight
    */
   default int resolve(String ipAddress) {
     return resolve(ipAddress, null);

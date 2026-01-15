@@ -24,6 +24,9 @@ import org.apache.hadoop.conf.Configuration;
  */
 abstract public class AbstractDataNodeWeightMapping implements DNSToWeightMapping {
 
+  /**
+   * Default weight for node.
+   */
   protected static final int DEFAULT_WEIGHT = 1;
 
   private Configuration conf;

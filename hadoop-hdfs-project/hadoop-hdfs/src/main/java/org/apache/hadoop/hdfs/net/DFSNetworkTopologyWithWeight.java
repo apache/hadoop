@@ -69,7 +69,7 @@ public class DFSNetworkTopologyWithWeight extends DFSNetworkTopology {
    */
   private final Map<String, Integer> weightMap = new HashMap<>();
 
-  public DFSNetworkTopologyWithWeight() {
+  protected DFSNetworkTopologyWithWeight() {
     init(new DFSTopologyNodeImplWithWeight.Factory(this::getDataNodeWeight));
   }
 

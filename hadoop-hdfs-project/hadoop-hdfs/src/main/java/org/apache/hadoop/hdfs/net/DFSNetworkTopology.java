@@ -54,12 +54,17 @@ public class DFSNetworkTopology extends NetworkTopology {
         DFSNetworkTopology.class), conf);
   }
 
-  public DFSNetworkTopology() {
+  /**
+   * Create a new network topology.
+   */
+  protected DFSNetworkTopology() {
     init(DFSTopologyNodeImpl.FACTORY);
   }
 
   /**
    * Initialize the network topology with the given configuration.
+   *
+   * @param conf the configuration
    */
   public void init(Configuration conf) {
   }
@@ -416,6 +421,10 @@ public class DFSNetworkTopology extends NetworkTopology {
 
   /**
    * Get the number of nodes that has the storage type under the given node.
+   *
+   * @param node inner node or dn
+   * @param st   the storage type
+   * @return number of nodes that has the storage type
    */
   protected int getNodeCount(Node node, StorageType st) {
     if (node instanceof DFSTopologyNodeImpl) {
@@ -429,6 +438,9 @@ public class DFSNetworkTopology extends NetworkTopology {
   /**
    * By default, one datanode is considered as one node.
    * Subclass can override this method to implement more complex choose logic.
+   *
+   * @param dn the datanode
+   * @return the number of nodes represented by this datanode
    */
   protected int getNodeCount(DatanodeDescriptor dn) {
     return 1;

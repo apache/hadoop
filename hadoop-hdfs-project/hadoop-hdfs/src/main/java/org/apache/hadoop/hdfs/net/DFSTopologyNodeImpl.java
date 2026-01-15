@@ -121,6 +121,9 @@ public class DFSTopologyNodeImpl extends InnerNodeImpl {
   /**
    * By default, one datanode is considered as one node.
    * Subclass can override this method to implement more complex choose logic.
+   *
+   * @param dn the datanode
+   * @return the number of nodes represented by this datanode
    */
   protected int getNodeCount(DatanodeDescriptor dn) {
     return 1;
@@ -368,6 +371,7 @@ public class DFSTopologyNodeImpl extends InnerNodeImpl {
    * TODO : this may not happen at all, depending on how heartheat is processed
    * @param childName the name of the child that tries to add the storage type
    * @param type the type being incremented.
+   * @param dn the datanode.
    */
   public synchronized void childAddStorage(
       String childName, StorageType type, DatanodeDescriptor dn) {
@@ -401,6 +405,7 @@ public class DFSTopologyNodeImpl extends InnerNodeImpl {
    *
    * @param childName the name of the child removing a storage type.
    * @param type the type being removed.
+   * @param dn the datanode.
    */
   public synchronized void childRemoveStorage(
       String childName, StorageType type, DatanodeDescriptor dn) {
