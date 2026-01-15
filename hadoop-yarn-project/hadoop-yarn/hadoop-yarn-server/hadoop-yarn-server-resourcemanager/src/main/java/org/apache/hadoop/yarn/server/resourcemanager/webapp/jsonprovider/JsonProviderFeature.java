@@ -44,6 +44,12 @@ import javax.ws.rs.core.FeatureContext;
 public class JsonProviderFeature implements Feature {
 
   /**
+   * Do not use default constructor.
+   */
+  private JsonProviderFeature() {
+  }
+
+  /**
    * Configures the feature by registering the custom JSON providers.
    *
    * @param context the {@link FeatureContext} provided by the JAX-RS runtime
