@@ -25,6 +25,7 @@ import javax.ws.rs.core.FeatureContext;
  * A JAX-RS {@link Feature} that registers custom MOXy JSON providers
  * for handling serialization and deserialization of JSON with or without
  * root elements.
+ *
  * <p>
  * This feature disables MOXy's automatic provider discovery to ensure
  * that the custom providers {@link IncludeRootJSONProvider} and
