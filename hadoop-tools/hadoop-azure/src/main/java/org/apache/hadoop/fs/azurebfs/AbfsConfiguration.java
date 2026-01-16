@@ -51,6 +51,7 @@ import org.apache.hadoop.fs.azurebfs.diagnostics.IntegerConfigurationBasicValida
 import org.apache.hadoop.fs.azurebfs.diagnostics.LongConfigurationBasicValidator;
 import org.apache.hadoop.fs.azurebfs.diagnostics.StringConfigurationBasicValidator;
 import org.apache.hadoop.fs.azurebfs.enums.Trilean;
+import org.apache.hadoop.fs.azurebfs.enums.VectoredReadStrategy;
 import org.apache.hadoop.fs.azurebfs.extensions.CustomTokenProviderAdaptee;
 import org.apache.hadoop.fs.azurebfs.extensions.EncryptionContextProvider;
 import org.apache.hadoop.fs.azurebfs.extensions.SASTokenProvider;
@@ -678,6 +679,18 @@ public class AbfsConfiguration{
       MinValue = DEFAULT_FS_AZURE_STANDARD_REQUEST_PRIORITY_VALUE,
       DefaultValue = DEFAULT_FS_AZURE_LOWEST_REQUEST_PRIORITY_VALUE)
   private int prefetchRequestPriorityValue;
+
+  @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_VECTORED_READ_STRATEGY,
+      DefaultValue = DEFAULT_FS_AZURE_VECTORED_READ_STRATEGY)
+  private String vectoredReadStrategy;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_MIN_SEEK_FOR_VECTORED_READS,
+  DefaultValue = DEFAULT_FS_AZURE_MIN_SEEK_FOR_VECTORED_READS)
+  private int minSeekForVectoredReads;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_MAX_SEEK_FOR_VECTORED_READS,
+      DefaultValue = DEFAULT_FS_AZURE_MAX_SEEK_FOR_VECTORED_READS)
+  private int maxSeekForVectoredReads;
 
   private String clientProvidedEncryptionKey;
   private String clientProvidedEncryptionKeySHA;
@@ -2245,5 +2258,50 @@ public class AbfsConfiguration{
    */
   public int getTailLatencyMaxRetryCount() {
     return tailLatencyMaxRetryCount;
+  }
+
+  /**
+   * Returns the configured vectored read strategy.
+   *
+   * <p>
+   * The configuration value is parsed in a case-insensitive manner and may be
+   * specified either using the enum name (for example,
+   * {@code TPS_OPTIMIZED}) or the short name (for example, {@code TPS}).
+   * </p>
+   *
+   * @return the resolved {@link VectoredReadStrategy}
+   *
+   * @throws IllegalArgumentException if the configured value is invalid
+   */
+  public VectoredReadStrategy getVectoredReadStrategy() {
+    try {
+      return VectoredReadStrategy.fromString(vectoredReadStrategy);
+    } catch (IllegalArgumentException e) {
+      throw new IllegalArgumentException(
+          "Invalid value for " + FS_AZURE_VECTORED_READ_STRATEGY +
+              ": " + vectoredReadStrategy +
+              ". Expected one of: TPS, THROUGHPUT, TPS_OPTIMIZED, THROUGHPUT_OPTIMIZED",
+          e);
+    }
+  }
+
+  /**
+   * Returns the minimum gap between adjacent read ranges that qualifies them
+   * for merging during vectored reads.
+   *
+   * @return minimum gap threshold for range merging
+   */
+  public int getMinSeekForVectoredReads() {
+    return minSeekForVectoredReads;
+  }
+
+  /**
+   * Returns the maximum gap between adjacent read ranges allowed when
+   * considering them for merging during vectored reads.
+   *
+   * @return maximum gap threshold for range merging
+   */
+  public int getMaxSeekForVectoredReads() {
+    return maxSeekForVectoredReads;
   }
 }

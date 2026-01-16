@@ -22,12 +22,18 @@ import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.HttpURLConnection;
+import java.nio.ByteBuffer;
+import java.util.List;
 import java.util.UUID;
+import java.util.function.IntFunction;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.fs.PositionedReadable;
+import org.apache.hadoop.fs.FileRange;
+import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.constants.ReadType;
+import org.apache.hadoop.fs.azurebfs.enums.VectoredReadStrategy;
 import org.apache.hadoop.fs.impl.BackReference;
 import org.apache.hadoop.util.Preconditions;
 
@@ -133,6 +139,8 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   /** ABFS instance to be held by the input stream to avoid GC close. */
   private final BackReference fsBackRef;
   private final ReadBufferManager readBufferManager;
+  private static volatile VectoredReadHandler vectoredReadHandler;
+  private static final ReentrantLock VECTORED_READ_HANDLER_LOCK = new ReentrantLock();
 
   public AbfsInputStream(
           final AbfsClient client,
@@ -314,6 +322,54 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       }
     } while (lastReadBytes > 0);
     return totalReadBytes > 0 ? totalReadBytes : lastReadBytes;
+  }
+
+  /**
+   * Returns the singleton {@link VectoredReadHandler} shared across all streams.
+   *
+   * <p>
+   * The handler is lazily initialized using double-checked locking to ensure
+   * thread-safe, one-time creation with minimal synchronization overhead.
+   * </p>
+   *
+   * @param readBufferManager shared read buffer manager
+   * @param abfsConfiguration ABFS configuration
+   * @return shared {@link VectoredReadHandler}
+   */
+  static VectoredReadHandler getVectoredReadHandler(
+      ReadBufferManager readBufferManager,
+      AbfsConfiguration abfsConfiguration) {
+
+    if (vectoredReadHandler == null) {
+      VECTORED_READ_HANDLER_LOCK.lock();
+      try {
+        if (vectoredReadHandler == null) {
+          vectoredReadHandler =
+              new VectoredReadHandler(
+                  readBufferManager,
+                  abfsConfiguration.getVectoredReadStrategy());
+        }
+      } finally {
+        VECTORED_READ_HANDLER_LOCK.unlock();
+      }
+    }
+    return vectoredReadHandler;
+  }
+
+  /**
+   * {@inheritDoc}
+   * Vectored read implementation for AbfsInputStream.
+   *
+   * @param ranges the byte ranges to read.
+   * @param allocate the function to allocate ByteBuffer.
+   *
+   * @throws IOException IOE if any.
+   */
+  @Override
+  public void readVectored(List<? extends FileRange> ranges,
+      IntFunction<ByteBuffer> allocate) throws IOException {
+    VectoredReadHandler vectoredReadHandler = getVectoredReadHandler(readBufferManager, client.getAbfsConfiguration());
+    vectoredReadHandler.readVectored(this, ranges, allocate);
   }
 
   private boolean shouldReadFully() {
@@ -943,12 +999,11 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
 
   @Override
   public int minSeekForVectorReads() {
-    return S_128K;
+    return client.getAbfsConfiguration().getMinSeekForVectoredReads();
   }
 
   @Override
   public int maxReadSizeForVectorReads() {
-    return S_2M;
+    return client.getAbfsConfiguration().getMaxSeekForVectoredReads();
   }
-
 }

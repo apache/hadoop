@@ -657,5 +657,24 @@ public final class ConfigurationKeys {
    */
   public static final String FS_AZURE_TAIL_LATENCY_MAX_RETRY_COUNT = "fs.azure.tail.latency.max.retry.count";
 
+  /**
+   * Configuration key to control the vectored read strategy used by ABFS: {@value}
+   */
+  public static final String FS_AZURE_VECTORED_READ_STRATEGY = "fs.azure.vectored.read.strategy";
+
+  /**
+   * Configuration key that defines the minimum gap between adjacent read ranges
+   * for merging ranges during vectored reads in ABFS: {@value}.
+   */
+  public static final String FS_AZURE_MIN_SEEK_FOR_VECTORED_READS =
+      "fs.azure.min.seek.for.vectored.reads";
+
+  /**
+   * Configuration key that defines the maximum gap between adjacent read ranges
+   * for merging ranges during vectored reads in ABFS: {@value}.
+   */
+  public static final String FS_AZURE_MAX_SEEK_FOR_VECTORED_READS =
+      "fs.azure.max.seek.for.vectored.reads";
+
   private ConfigurationKeys() {}
 }
