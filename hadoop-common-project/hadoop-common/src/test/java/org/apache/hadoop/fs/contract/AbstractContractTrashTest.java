@@ -184,8 +184,7 @@ public abstract class AbstractContractTrashTest extends AbstractFSContractTestBa
     byte[] data = ContractTestUtils.dataset(256, 'a', 'z');
     ContractTestUtils.writeDataset(fs, fileToDelete, data, data.length, 1024 * 1024, false);
 
-    assertTrue(trashPolicy.moveToTrash(fileToDelete),
-        "Failed to move file " + fileToDelete + " to trash");
+    assertMovedToTrash(trashPolicy, fileToDelete);
     assertPathExists("trash current directory should exist after moveToTrash",
         trashPolicy.getCurrentTrashDir());
     Path expectedCurrentTrashPath = Path.mergePaths(trashPolicy.getCurrentTrashDir(fileToDelete), fileToDelete);;
@@ -247,8 +246,7 @@ public abstract class AbstractContractTrashTest extends AbstractFSContractTestBa
       fileIndex++;
 
       // Move the files to trash
-      assertTrue(trashPolicy.moveToTrash(myFile),
-          "Failed to move file " + myFile + " to trash");
+      assertMovedToTrash(trashPolicy, myFile);
 
       Path trashDir = trashPolicy.getCurrentTrashDir(myFile);
       FileStatus files[] = fs.listStatus(trashDir.getParent());
@@ -292,8 +290,7 @@ public abstract class AbstractContractTrashTest extends AbstractFSContractTestBa
     // Verify that we succeed in removing the file we created
     // This should go into Trash.
     {
-      assertTrue(trash.moveToTrash(myFile),
-          "Failed to move file " + myFile + " to trash");
+      assertMovedToTrash(trash, myFile);
       Path currenTrashDir = trash.getCurrentTrashDir(myFile);
       Path expectedCurrentTrashFile = Path.mergePaths(currenTrashDir, myFile);
       assertPathExists("File should be moved to trash", expectedCurrentTrashFile);
@@ -303,16 +300,14 @@ public abstract class AbstractContractTrashTest extends AbstractFSContractTestBa
     ContractTestUtils.writeTextFile(fs, myFile, "myFileContent", false);
 
     // Verify that we succeed in removing the file we re-created
-    assertTrue(trash.moveToTrash(myFile),
-        "Failed to move file " + myFile + " to trash");
+    assertMovedToTrash(trash, myFile);
 
     // Verify that we can recreated the file
     ContractTestUtils.writeTextFile(fs, myFile, "myFileContent", false);
 
     // Verify that we succeed in removing the whole directory
     // along with the file inside it.
-    assertTrue(trash.moveToTrash(baseDir),
-        "Failed to move directory " + baseDir + " to trash");
+    assertMovedToTrash(trash, baseDir);
     assertPathDoesNotExist("The deleted directory should not exist", baseDir);
     assertPathDoesNotExist("The file under deleted directory should not exist", myFile);
 
@@ -320,8 +315,7 @@ public abstract class AbstractContractTrashTest extends AbstractFSContractTestBa
     mkdirs(baseDir);
 
     // Verify that we succeed in removing the whole directory
-    assertTrue(trash.moveToTrash(baseDir),
-        "Failed to move directory " + baseDir + " to trash");
+    assertMovedToTrash(trash, baseDir);
 
     // Check that we can delete a file from the trash
     {
@@ -351,14 +345,12 @@ public abstract class AbstractContractTrashTest extends AbstractFSContractTestBa
 
     // remove the file first, then remove directory
     {
-      assertTrue(trash.moveToTrash(myFile),
-          "Failed to move file " + myFile + " to trash");
+      assertMovedToTrash(trash, myFile);
       Path currentTrashDir = trash.getCurrentTrashDir(myFile);
       Path trashFilePath = Path.mergePaths(currentTrashDir, myFile);
       assertPathExists("Trash file should exist", trashFilePath);
 
-      assertTrue(trash.moveToTrash(baseDir),
-          "Failed to move directory " + baseDir + " to trash");
+      assertMovedToTrash(trash, baseDir);
       Path trashDirPath = Path.mergePaths(currentTrashDir, baseDir);
       assertPathExists("Trash directory should exist", trashDirPath);
     }
@@ -383,8 +375,7 @@ public abstract class AbstractContractTrashTest extends AbstractFSContractTestBa
         ContractTestUtils.writeTextFile(fs, myFile, "myFileContent", false);
 
         // move file to trash
-        assertTrue(trash.moveToTrash(myFile),
-            "Failed to move file " + myFile + " to trash");
+        assertMovedToTrash(trash, myFile);
       }
 
       // current trash directory
@@ -412,16 +403,13 @@ public abstract class AbstractContractTrashTest extends AbstractFSContractTestBa
 
       // moveToTrash thrice, create checkpoint after the first two
       ContractTestUtils.writeTextFile(fs, myFile, "myFileContent", false);
-      assertTrue(trash.moveToTrash(myFile),
-          "Failed to move file " + myFile + " to trash");
+      assertMovedToTrash(trash, myFile);
       trash.checkpoint();
       ContractTestUtils.writeTextFile(fs, myFile, "myFileContent", false);
-      assertTrue(trash.moveToTrash(myFile),
-          "Failed to move file " + myFile + " to trash");
+      assertMovedToTrash(trash, myFile);
       trash.checkpoint();
       ContractTestUtils.writeTextFile(fs, myFile, "myFileContent", false);
-      assertTrue(trash.moveToTrash(myFile),
-          "Failed to move file " + myFile + " to trash");
+      assertMovedToTrash(trash, myFile);
 
       // There should be two trash checkpoint directories and one current directory
       Path trashRootPath = trash.getCurrentTrashDir(myFile);
@@ -436,5 +424,15 @@ public abstract class AbstractContractTrashTest extends AbstractFSContractTestBa
       fss = fs.listStatus(trashRootParent);
       assertEquals(0, fss.length);
     }
+  }
+
+  private void assertMovedToTrash(Trash trash, Path path) throws IOException {
+    assertTrue(trash.moveToTrash(path),
+        "Failed to move " + path + " to trash");
+  }
+
+  private void assertMovedToTrash(TrashPolicy trashPolicy, Path path) throws IOException {
+    assertTrue(trashPolicy.moveToTrash(path),
+        "Failed to move " + path + " to trash");
   }
 }
