@@ -261,7 +261,7 @@ public abstract class AbstractContractTrashTest extends AbstractFSContractTestBa
       if (checkpoints.size() == 4) {
         // The actual contents should be smaller since the last checkpoint
         // should've been deleted and Current might not have been recreated yet
-        assertTrue(checkpoints.size() > files.length);
+        assertThat(checkpoints).hasSizeGreaterThan(files.length);
         break;
       }
       Thread.sleep(5000);
