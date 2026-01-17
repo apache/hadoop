@@ -38,6 +38,7 @@ import org.apache.hadoop.fs.TrashPolicy;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_CHECKPOINT_INTERVAL_KEY;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_KEY;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Test the {@link TrashPolicy} returned by {@link FileSystem#getTrashPolicy}
@@ -206,7 +207,7 @@ public abstract class AbstractContractTrashTest extends AbstractFSContractTestBa
     assertPathDoesNotExist("the path under current trash directory should not exist after checkpoint",
         expectedCurrentTrashPath);
     FileStatus[] trashRootChildren = ContractTestUtils.listChildren(fs, fs.getTrashRoot(fileToDelete));
-    assertEquals(1, trashRootChildren.length);
+    assertThat(trashRootChildren).hasSize(1);
     FileStatus trashCheckpointDir = trashRootChildren[0];
     Path expectedCheckpointTrashPath = Path.mergePaths(trashCheckpointDir.getPath(), fileToDelete);
     ContractTestUtils.verifyFileContents(fs, expectedCheckpointTrashPath, data);
@@ -217,7 +218,7 @@ public abstract class AbstractContractTrashTest extends AbstractFSContractTestBa
     assertPathDoesNotExist("the path under checkpoint directory should be deleted",
         expectedCheckpointTrashPath);
     trashRootChildren = ContractTestUtils.listChildren(fs, fs.getTrashRoot(fileToDelete));
-    assertEquals(0, trashRootChildren.length);
+    assertThat(trashRootChildren).hasSize(0);
   }
 
   @Test
