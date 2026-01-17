@@ -80,6 +80,7 @@
 #endif
 
 static const int DEFAULT_MIN_USERID = 1000;
+static const char* DEFAULT_CONTAINER_GROUP_MODE = "0770";
 
 static const char* DEFAULT_BANNED_USERS[] = {"yarn", "mapred", "hdfs", "bin", 0};
 
@@ -820,8 +821,7 @@ static int create_container_directories(const char* user, const char *app_id,
   } else {
     sprintf(combined_name, "%s/%s", app_id, container_id);
     char* const* log_dir_ptr;
-    // Log dirs need 750 access
-    const mode_t logdir_perms = S_IRWXU | S_IRGRP | S_IXGRP;
+    const mode_t logdir_perms = get_container_group_mode();
 
     for(log_dir_ptr = log_dir; *log_dir_ptr != NULL; ++log_dir_ptr) {
       char *container_log_dir = get_app_log_directory(*log_dir_ptr, combined_name);
@@ -1073,16 +1073,35 @@ static int change_owner(const char* path, uid_t user, gid_t group) {
   }
 }
 
+mode_t get_container_group_mode(){
+  char *permission_string = get_section_value(CONTAINER_GROUP_MODE_KEY, &executor_cfg);
+  char *default_mode = DEFAULT_CONTAINER_GROUP_MODE;
+  char *endptr;
+  mode_t mode_val;
+  if (permission_string != NULL){
+    mode_val = (mode_t) strtol(permission_string, &endptr, 8);
+    if (*endptr != '\0'){
+      fprintf(LOGFILE, "Illegal value of %s for %s in configuration\n",
+        permission_string, CONTAINER_GROUP_MODE_KEY);
+      exit(1);
+    }
+    free(permission_string);
+  } else {
+    mode_val = (mode_t) strtol(default_mode, &endptr, 8);
+  }
+  return mode_val;
+}
+
+
 /**
  * Create a top level directory for the user.
  * It assumes that the parent directory is *not* writable by the user.
- * It creates directories with 02750 permissions owned by the user
+ * It creates directories with get_container_group_mode() permissions owned by the user
  * and with the group set to the node manager group.
  * return non-0 on failure
  */
 int create_directory_for_user(const char* path) {
-  // set 750 permissions and setgid bit
-  mode_t permissions = S_IRWXU | S_IRGRP | S_IXGRP | S_ISGID;
+  mode_t permissions = get_container_group_mode() | S_ISGID;
   uid_t user = geteuid();
   gid_t group = getegid();
   uid_t root = 0;
@@ -1370,34 +1389,74 @@ int create_container_log_dirs(const char *container_id, const char *app_id,
   return 0;
 }
 
-/**
- * Function to create the application directories.
- * Returns pointer to primary_app_dir or NULL if it fails.
- */
-static char *create_app_dirs(const char *user,
+char* concat(const char *s1, const char *s2) {
+    size_t len1 = strlen(s1);
+    size_t len2 = strlen(s2);
+    char *result = malloc(len1 + len2 + 1);
+    if (result == NULL) {
+        exit(EXIT_FAILURE);
+    }
+    memcpy(result, s1, len1);
+    memcpy(result + len1, s2, len2 + 1);
+    return result;
+}
+
+void maybe_create_appcache(const char *appcache, mode_t permissions){
+  //fprintf(LOGFILE, "Going to create %s\n", appcache);
+  struct stat exists;
+  int stat_res = stat(appcache, &exists);
+  if (stat_res == -1){
+    int mk_res = mkdir(appcache, permissions);
+    fprintf(LOGFILE, "Creating appcache %s result %d\n", appcache, mk_res);
+  }
+}
+
+char *create_app_dirs(const char *user,
                              const char *app_id,
-                             char* const* local_dirs)
-{
+                             char* const* local_dirs) {
   // 750
   mode_t permissions = S_IRWXU | S_IRGRP | S_IXGRP;
   char* const* nm_root;
   char *primary_app_dir = NULL;
-  for(nm_root=local_dirs; *nm_root != NULL; ++nm_root) {
+  for(nm_root = local_dirs; *nm_root != NULL; ++nm_root) {
     char *app_dir = get_app_directory(*nm_root, user, app_id);
-    if (app_dir == NULL) {
-      // try the next one
-    } else if (strstr(app_dir, "..") != 0) {
+    fprintf(LOGFILE, "Appdir %s\n", app_dir);
+    if (app_dir == NULL){
+      free(app_dir);
+      continue;
+    }
+    //implementation node: Could be more thought put in do this detection
+    if (strstr(app_dir, "..") != 0) {
       fprintf(LOGFILE, "Unsupported app directory path detected.\n");
       free(app_dir);
-    } else if (mkdirs(app_dir, permissions) != 0) {
-      free(app_dir);
-    } else if (primary_app_dir == NULL) {
-      primary_app_dir = app_dir;
-    } else {
-      free(app_dir);
+      continue;
     }
-  }
+    char *user_root = get_user_directory(*nm_root, user);
+    char *appcache = concat(user_root, "/appcache");
+    maybe_create_appcache(appcache, permissions);
+    free(user_root);
+    free(appcache);
 
+    struct stat exists;
+    int stat_res = stat(app_dir, &exists);
+    if (stat_res == 0){
+      if (primary_app_dir == NULL) {
+        primary_app_dir = strdup(app_dir);
+      }
+    } else if (stat_res == -1){
+      int mk_res = mkdir(app_dir, permissions);
+      if (mk_res == 0){
+        if (primary_app_dir == NULL) {
+          primary_app_dir = strdup(app_dir);
+        }
+      } else {
+        fprintf(LOGFILE, "Attempted to create appdir %s but failed with %d\n", app_dir, mk_res);
+      }
+    } else {
+      fprintf(LOGFILE, "Unable to stat %s \n", app_dir);
+    }
+    free(app_dir);
+  }
   if (primary_app_dir == NULL) {
     fprintf(LOGFILE, "Did not create any app directories\n");
   }
