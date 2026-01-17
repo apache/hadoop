@@ -149,7 +149,7 @@ public abstract class TrashPolicy extends Configured {
   @Deprecated
   public static TrashPolicy getInstance(Configuration conf, FileSystem fs, Path home) {
     Class<? extends TrashPolicy> trashClass = conf.getClass(
-        "fs.trash.classname", TrashPolicyDefault.class, TrashPolicy.class);
+        CommonConfigurationKeysPublic.FS_TRASH_CLASSNAME_KEY, TrashPolicyDefault.class, TrashPolicy.class);
     TrashPolicy trash = ReflectionUtils.newInstance(trashClass, conf);
     trash.initialize(conf, fs, home); // initialize TrashPolicy
     return trash;

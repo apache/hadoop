@@ -634,7 +634,7 @@ public class TestTrash {
 
     {
       // Test plugged TrashPolicy
-      conf.setClass("fs.trash.classname", TestTrashPolicy.class, TrashPolicy.class);
+      conf.setClass(FS_TRASH_CLASSNAME_KEY, TestTrashPolicy.class, TrashPolicy.class);
       Trash trash = new Trash(conf);
       assertInstanceOf(TestTrashPolicy.class, trash.getTrashPolicy());
     }
@@ -690,7 +690,7 @@ public class TestTrash {
   @Test
   public void testTrashRestarts() throws Exception {
     Configuration conf = new Configuration();
-    conf.setClass("fs.trash.classname",
+    conf.setClass(FS_TRASH_CLASSNAME_KEY,
         AuditableTrashPolicy.class,
         TrashPolicy.class);
     conf.setClass("fs.file.impl", TestLFS.class, FileSystem.class);
@@ -718,7 +718,7 @@ public class TestTrash {
   @Test
   public void testTrashPermission()  throws IOException {
     Configuration conf = new Configuration();
-    conf.setClass("fs.trash.classname",
+    conf.setClass(FS_TRASH_CLASSNAME_KEY,
         TrashPolicyDefault.class,
         TrashPolicy.class);
     conf.setClass("fs.file.impl", TestLFS.class, FileSystem.class);
@@ -1065,7 +1065,7 @@ public class TestTrash {
       long checkpointInterval, long expectedInterval) throws IOException {
     Configuration conf = new Configuration();
     conf.setLong(FS_TRASH_INTERVAL_KEY, trashInterval);
-    conf.set("fs.trash.classname", TrashPolicyDefault.class.getName());
+    conf.set(FS_TRASH_CLASSNAME_KEY, TrashPolicyDefault.class.getName());
     conf.setLong(FS_TRASH_CHECKPOINT_INTERVAL_KEY, checkpointInterval);
     Trash trash = new Trash(conf);
     Emptier emptier = (Emptier)trash.getEmptier();

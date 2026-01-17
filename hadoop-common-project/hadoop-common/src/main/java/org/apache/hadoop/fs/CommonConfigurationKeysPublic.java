@@ -211,6 +211,15 @@ public class CommonConfigurationKeysPublic {
    * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
    * core-default.xml</a>
    */
+  public static final String  FS_TRASH_CLASSNAME_KEY = "fs.trash.classname";
+  /** Default value for FS_TRASH_CLASSNAME_KEY */
+  public static final String  FS_TRASH_CLASSNAME_DEFAULT =
+      "org.apache.hadoop.fs.TrashPolicyDefault";
+  /**
+   * @see
+   * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
+   * core-default.xml</a>
+   */
   public static final String  FS_TRASH_INTERVAL_KEY = "fs.trash.interval";
   /** Default value for FS_TRASH_INTERVAL_KEY */
   public static final long    FS_TRASH_INTERVAL_DEFAULT = 0;
