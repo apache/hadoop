@@ -40,7 +40,7 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -636,7 +636,7 @@ public class TestTrash {
       // Test plugged TrashPolicy
       conf.setClass(FS_TRASH_CLASSNAME_KEY, TestTrashPolicy.class, TrashPolicy.class);
       Trash trash = new Trash(conf);
-      assertInstanceOf(TestTrashPolicy.class, trash.getTrashPolicy());
+      assertThat(trash.getTrashPolicy()).isInstanceOf(TestTrashPolicy.class);
     }
 
     {
@@ -647,7 +647,7 @@ public class TestTrash {
       FileSystem fs = FileSystem.getLocal(conf);
       conf.set("fs.defaultFS", fs.getUri().toString());
       Trash trash = new Trash(fs, conf);
-      assertInstanceOf(TestLFSWithCustomTrashPolicy.CustomTrashPolicy.class, trash.getTrashPolicy());
+      assertThat(trash.getTrashPolicy()).isInstanceOf(TestLFSWithCustomTrashPolicy.CustomTrashPolicy.class);
     }
   }
 
