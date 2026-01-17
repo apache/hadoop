@@ -636,7 +636,7 @@ The path does not have to exist, but the path does need to be valid and reconcil
 * The path returned is a directory
 
 
-###  `TrashPolicy getTrashPolicy(Configuration conf)`
+###  `TrashPolicy getTrashPolicy(Path path, Configuration conf)`
 
 Get the trash policy implementation used by this FileSystem.
 
@@ -665,6 +665,50 @@ The default implementation:
 * FileSystem implementations with multiple child file systems (e.g. `ViewFileSystem`)
   should NOT implement this method since the Hadoop trash mechanism should resolve to the underlying filesystem
   before invoking `getTrashPolicy`.
+* Consistent trash behavior means that invoking the `TrashPolicy` methods in the
+  following order should not result in unexpected results such as files in trash that
+  will never be deleted by trash mechanism.
+  1. `getDeletionInterval()` should return 0 before
+     `initialize(Configuration, FileSystem)` is invoked.
+     The deletion interval should not return negative value. Zero value implies
+     that trash is disabled, which means `isEnabled()` should
+     return false.
+  2. `initialize(Configuration, FileSystem)` should be implemented
+     and ensure that the subsequent `TrashPolicy` operations should work properly
+  3. `isEnabled()` should return true after
+     `initialize(Configuration, FileSystem)` is invoked and
+     initialize the deletion interval to positive value. `isEnabled()`
+     should remain false if the `getDeletionInterval()` returns 0 even after
+     `initialize(Configuration, FileSystem)` has been invoked.
+  4. `moveToTrash(Path)` should move a file or directory to the
+     current trash directory defined `getCurrentTrashDir(Path)`
+     if it's not already in the trash. This implies that
+     the `FileSystem#exists(Path)` should return false for the original path, but
+     should return true for the current trash directory.
+  5. `moveToTrash(Path)` should return false if `isEnabled()` is false or
+     the path is already under `FileSystem#getTrashRoot(Path)`. There should not be any side
+     effect when `moveToTrash(Path)` returns false.
+  6. `createCheckpoint()` should create rename the current trash directory to
+     another trash directory which is not equal to `getCurrentTrashDir(Path)`.
+     `createCheckpoint()` is a no-op if there is no current trash directory.
+  7. `deleteCheckpoint()` should cleanup the all the current
+     and checkpoint directories under `FileSystem#getTrashRoots(boolean)` created before
+     `getDeletionInterval()` minutes ago.
+     Note that the current trash directory `getCurrentTrashDir()` should not be deleted.
+  8. `deleteCheckpointsImmediately()` should cleanup the checkpoint directories under
+     `FileSystem#getTrashRoots(boolean)` regardless of the checkpoint timestamp.
+     Note that the current trash directory `getCurrentTrashDir()` should not be deleted.
+  9. `getEmptier()` returns a runnable that will empty the trash.
+     The effective trash emptier interval should be [0, `getDeletionInterval()`].
+     Zero interval means that the runnable is a no-op and returns immediately.
+     Non-zero trash emptier interval means that the runnable is scheduled to run for
+     each interval (unless it is interrupted). For each interval, the trash emptier carry out the
+     following operations:
+     1. It checks all the trash root directories through `FileSystem getTrashRoots(boolean)` for all users.
+     2. For each trash root directory, it deletes the trash checkpoint directory with checkpoint time older than
+        `getDeletionInterval()`. Afterward, it creates a new trash checkpoint through
+        `createCheckpoint()`. Note that existing checkpoints which has not expired, will not
+        have any change.
 
 ## <a name="state_changing_operations"></a> State Changing Operations
 
