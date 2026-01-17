@@ -25,6 +25,8 @@ import java.util.Set;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -113,6 +115,9 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERV
  */
 public abstract class AbstractContractTrashTest extends AbstractFSContractTestBase {
 
+  protected static final Logger LOG =
+      LoggerFactory.getLogger(AbstractContractTrashTest.class);
+
   @BeforeEach
   @Override
   public void setup() throws Exception {
@@ -132,12 +137,16 @@ public abstract class AbstractContractTrashTest extends AbstractFSContractTestBa
   @AfterEach
   @Override
   public void teardown() throws Exception {
-    final FileSystem fs = getFileSystem();
-    Collection<FileStatus> trashRoots = fs.getTrashRoots(true);
-    for (FileStatus trashRoot : trashRoots) {
-      fs.delete(trashRoot.getPath(), true);
+    try {
+      final FileSystem fs = getFileSystem();
+      Collection<FileStatus> trashRoots = fs.getTrashRoots(true);
+      for (FileStatus trashRoot : trashRoots) {
+        fs.delete(trashRoot.getPath(), true);
+      }
+      super.teardown();
+    } catch (Exception e) {
+      LOG.warn("Exception in teardown", e);
     }
-    super.teardown();
   }
 
   @Test
