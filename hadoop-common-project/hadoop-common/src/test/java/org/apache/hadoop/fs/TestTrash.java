@@ -898,7 +898,7 @@ public class TestTrash {
     }
 
     @Override
-    public TrashPolicy getTrashPolicy(Configuration conf) {
+    public TrashPolicy getTrashPolicy(Path path, Configuration conf) {
       return new CustomTrashPolicy();
     }
 

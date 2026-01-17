@@ -3438,6 +3438,7 @@ public abstract class FileSystem extends Configured
    * situation where a single FileSystem client shares a configuration, but
    * each FileSystem scheme requires a distinct TrashPolicy implementation.
    *
+   * @param path the path that can be used to choose the TrashPolicy implementation.
    * @param conf configuration which can be used to choose the TrashPolicy
    *             implementation.
    * @return TrashPolicy implementation by this filesystem.
@@ -3447,7 +3448,7 @@ public abstract class FileSystem extends Configured
    */
   @InterfaceAudience.Public
   @InterfaceStability.Unstable
-  public TrashPolicy getTrashPolicy(Configuration conf) {
+  public TrashPolicy getTrashPolicy(Path path, Configuration conf) {
     Class<? extends TrashPolicy> trashClass = conf.getClass(
         "fs.trash.classname", TrashPolicyDefault.class, TrashPolicy.class);
     return ReflectionUtils.newInstance(trashClass, conf);

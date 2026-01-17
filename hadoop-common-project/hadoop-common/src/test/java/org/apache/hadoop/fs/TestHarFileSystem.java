@@ -229,7 +229,7 @@ public class TestHarFileSystem {
     public Collection<? extends BlockStoragePolicySpi> getAllStoragePolicies()
         throws IOException;
 
-    public TrashPolicy getTrashPolicy(Configuration conf);
+    public TrashPolicy getTrashPolicy(Path path, Configuration conf);
 
     public Path getTrashRoot(Path path) throws IOException;
 
