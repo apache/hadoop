@@ -29,7 +29,6 @@
         <grpc.version>1.69.0</grpc.version>
         <animal-sniffer.version>1.24</animal-sniffer.version>
         <genrpc.version>1.53.0</genrpc.version>
-        <protoc.version>3.17.3</protoc.version>
     </properties>
 
     <dependencies>
@@ -199,7 +198,7 @@
                 <groupId>io.github.ascopes</groupId>
                 <artifactId>protobuf-maven-plugin</artifactId>
                 <configuration>
-                    <protocVersion>${protoc.version}</protocVersion>
+                    <protocVersion>${hadoop.protobuf.version}</protocVersion>
                     <binaryMavenPlugins>
                         <binaryMavenPlugin>
                             <groupId>io.grpc</groupId>
