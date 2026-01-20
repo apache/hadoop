@@ -345,6 +345,7 @@ function personality_modules
     ;;
     mvninstall)
       extra="-DskipTests"
+      needflags=true
       if [[ "${repostatus}" = branch || "${BUILDMODE}" = full ]]; then
         ordering=.
       fi
