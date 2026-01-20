@@ -66,7 +66,7 @@ public interface Step {
   String getSizeString(long size);
 
   /**
-   * Returns maximum number of disk erros tolerated.
+   * Returns maximum number of disk errors tolerated.
    * @return long.
    */
   long getMaxDiskErrors();

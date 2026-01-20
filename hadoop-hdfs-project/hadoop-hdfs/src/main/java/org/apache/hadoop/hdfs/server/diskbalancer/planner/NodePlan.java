@@ -18,14 +18,17 @@
 package org.apache.hadoop.hdfs.server.diskbalancer.planner;
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import org.apache.hadoop.util.Preconditions;
 
 import java.io.IOException;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * NodePlan is a set of volumeSetPlans.
@@ -151,14 +154,42 @@ public class NodePlan {
   }
 
   /**
-   * Parses a Json string and converts to NodePlan.
+   * Parses a JSON string and converts to NodePlan.
    *
-   * @param json - Json String
+   * @param json - JSON String
    * @return NodePlan
    * @throws IOException
    */
   public static NodePlan parseJson(String json) throws IOException {
-    return READER.readValue(json);
+    JsonNode tree = READER.readTree(json);
+    checkNodes(tree);
+    return READER.readValue(tree);
+  }
+
+  // throws an IOException if any unexpected `@class` values are found
+  // this exception is checked for by the calling code
+  private static void checkNodes(JsonNode node) throws IOException {
+    if (node == null) return;
+
+    // Check Node and Recurse into child nodes
+    if (node.isObject()) {
+      Iterator<Map.Entry<String, JsonNode>> fieldsIterator = node.fields();
+      while (fieldsIterator.hasNext()) {
+        Map.Entry<String, JsonNode> entry = fieldsIterator.next();
+        if ("@class".equals(entry.getKey())) {
+          String textValue = entry.getValue().asText();
+          if (textValue != null && !textValue.isBlank() &&
+                  !textValue.startsWith("org.apache.hadoop.hdfs.server")) {
+            throw new IOException("Invalid @class value in NodePlan JSON: " + textValue);
+          }
+        }
+        checkNodes(entry.getValue());
+      }
+    } else if (node.isArray()) {
+      for (int i = 0; i < node.size(); i++) {
+        checkNodes(node.get(i));
+      }
+    }
   }
 
   /**
