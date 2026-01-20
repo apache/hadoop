@@ -47,7 +47,7 @@ public class JsonProviderFeature implements Feature {
   /**
    * Do not use default constructor.
    */
-  private JsonProviderFeature() {
+  public JsonProviderFeature() {
   }
 
   /**
