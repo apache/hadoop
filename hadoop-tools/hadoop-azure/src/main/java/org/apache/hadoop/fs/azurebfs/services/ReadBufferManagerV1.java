@@ -233,6 +233,7 @@ public final class ReadBufferManagerV1 extends ReadBufferManager {
       buffer.initVectoredUnits();
       buffer.addVectoredUnit(unit);
       buffer.setAllocator(allocator);
+      buffer.setTracingContext(tracingContext);
       /*
        * Perform a final free-list check before consuming pooled memory to
        * ensure buffer availability.
@@ -328,7 +329,7 @@ public final class ReadBufferManagerV1 extends ReadBufferManager {
     }
     if (buffer.getBufferType() == BufferType.VECTORED) {
       try {
-        if (buffer.getStatus() == ReadBufferStatus.AVAILABLE && bytesActuallyRead > 0) {
+        if (result == ReadBufferStatus.AVAILABLE && bytesActuallyRead > 0) {
           getVectoredReadHandler().fanOut(buffer, bytesActuallyRead);
         } else {
           throw new IOException(
