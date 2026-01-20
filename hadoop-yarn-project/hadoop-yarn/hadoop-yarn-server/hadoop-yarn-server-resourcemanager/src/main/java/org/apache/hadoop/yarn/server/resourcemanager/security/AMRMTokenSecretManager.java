@@ -345,10 +345,7 @@ public class AMRMTokenSecretManager extends
 
   private AMRMTokenSecretManagerState getTokenState(RMState state) {
     AMRMTokenSecretManagerState result = state.getAMRMTokenSecretManagerState();
-    if (result != null) {
-      result = validateAndUpdateState(result);
-    }
-    return result;
+    return result == null ? null : validateAndUpdateState(result);
   }
 
   private AMRMTokenSecretManagerState validateAndUpdateState(AMRMTokenSecretManagerState state) {
