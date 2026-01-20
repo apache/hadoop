@@ -19,19 +19,23 @@
 package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
 import java.util.Stack;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.IntFunction;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ReadBufferStatus;
+import org.apache.hadoop.fs.azurebfs.enums.VectoredReadStrategy;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
+import org.apache.hadoop.fs.impl.CombinedFileRange;
 
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_READ_AHEAD_BLOCK_SIZE;
 
@@ -68,6 +72,18 @@ public abstract class ReadBufferManager {
       long requestedOffset,
       int requestedLength,
       TracingContext tracingContext);
+
+  /**
+   * Queues a read-ahead request from {@link AbfsInputStream}
+   * for a given offset in file and given length.
+   *
+   * @param stream the input stream requesting the read-ahead
+   * @param unit buffer-sized vectored read unit to be queued
+   * @param tracingContext the tracing context for diagnostics
+   */
+  abstract boolean queueVectoredRead(AbfsInputStream stream,
+      CombinedFileRange unit,
+      TracingContext tracingContext, IntFunction<ByteBuffer> allocator);
 
   /**
    * Gets a block of data from the prefetched data by ReadBufferManager.
@@ -128,6 +144,14 @@ public abstract class ReadBufferManager {
    */
   @VisibleForTesting
   abstract int getNumBuffers();
+
+  abstract VectoredReadHandler getVectoredReadHandler();
+
+  abstract VectoredReadStrategy getVectoredReadStrategy();
+
+  abstract int getMaxSeekForVectoredReads();
+
+  abstract int getMaxSeekForVectoredReadsThroughput();
 
   /**
    * Attempts to evict buffers based on the eviction policy.

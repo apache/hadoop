@@ -139,8 +139,6 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   /** ABFS instance to be held by the input stream to avoid GC close. */
   private final BackReference fsBackRef;
   private final ReadBufferManager readBufferManager;
-  private static volatile VectoredReadHandler vectoredReadHandler;
-  private static final ReentrantLock VECTORED_READ_HANDLER_LOCK = new ReentrantLock();
 
   public AbfsInputStream(
           final AbfsClient client,
@@ -196,7 +194,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
           readAheadBlockSize, client.getAbfsConfiguration());
       readBufferManager = ReadBufferManagerV2.getBufferManager(client.getAbfsCounters());
     } else {
-      ReadBufferManagerV1.setReadBufferManagerConfigs(readAheadBlockSize);
+      ReadBufferManagerV1.setReadBufferManagerConfigs(readAheadBlockSize, client.getAbfsConfiguration());
       readBufferManager = ReadBufferManagerV1.getBufferManager();
     }
 
@@ -325,51 +323,17 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   }
 
   /**
-   * Returns the singleton {@link VectoredReadHandler} shared across all streams.
-   *
-   * <p>
-   * The handler is lazily initialized using double-checked locking to ensure
-   * thread-safe, one-time creation with minimal synchronization overhead.
-   * </p>
-   *
-   * @param readBufferManager shared read buffer manager
-   * @param abfsConfiguration ABFS configuration
-   * @return shared {@link VectoredReadHandler}
-   */
-  static VectoredReadHandler getVectoredReadHandler(
-      ReadBufferManager readBufferManager,
-      AbfsConfiguration abfsConfiguration) {
-
-    if (vectoredReadHandler == null) {
-      VECTORED_READ_HANDLER_LOCK.lock();
-      try {
-        if (vectoredReadHandler == null) {
-          vectoredReadHandler =
-              new VectoredReadHandler(
-                  readBufferManager,
-                  abfsConfiguration.getVectoredReadStrategy());
-        }
-      } finally {
-        VECTORED_READ_HANDLER_LOCK.unlock();
-      }
-    }
-    return vectoredReadHandler;
-  }
-
-  /**
    * {@inheritDoc}
    * Vectored read implementation for AbfsInputStream.
    *
    * @param ranges the byte ranges to read.
    * @param allocate the function to allocate ByteBuffer.
-   *
-   * @throws IOException IOE if any.
    */
   @Override
   public void readVectored(List<? extends FileRange> ranges,
-      IntFunction<ByteBuffer> allocate) throws IOException {
-    VectoredReadHandler vectoredReadHandler = getVectoredReadHandler(readBufferManager, client.getAbfsConfiguration());
-    vectoredReadHandler.readVectored(this, ranges, allocate);
+      IntFunction<ByteBuffer> allocate) {
+    readBufferManager.getVectoredReadHandler()
+        .readVectored(this, ranges, allocate);
   }
 
   private boolean shouldReadFully() {

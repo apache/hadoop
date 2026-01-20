@@ -17,16 +17,23 @@
  */
 package org.apache.hadoop.fs.azurebfs.services;
 
+import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
+import org.apache.hadoop.fs.azurebfs.constants.ReadType;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ReadBufferStatus;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.concurrent.CountDownLatch;
+import java.util.function.IntFunction;
 
+import org.apache.hadoop.fs.azurebfs.enums.BufferType;
+import org.apache.hadoop.fs.azurebfs.enums.VectoredReadStrategy;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
+import org.apache.hadoop.fs.impl.CombinedFileRange;
 import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.classification.VisibleForTesting;
 
@@ -43,21 +50,37 @@ public final class ReadBufferManagerV1 extends ReadBufferManager {
   private Thread[] threads = new Thread[NUM_THREADS];
   private byte[][] buffers;
   private static ReadBufferManagerV1 bufferManager;
+  private final VectoredReadHandler vectoredReadHandler;
+  private static VectoredReadStrategy vectoredReadStrategy;
+  private static int maxSeekForVectoredReads;
+  private static int maxSeekForeVectoredReadsThroughput;
 
   // hide instance constructor
   private ReadBufferManagerV1() {
+    this.vectoredReadHandler = new VectoredReadHandler(this);
     LOGGER.trace("Creating readbuffer manager with HADOOP-18546 patch");
+  }
+
+  public VectoredReadHandler getVectoredReadHandler() {
+    return vectoredReadHandler;
   }
 
   /**
    * Sets the read buffer manager configurations.
+   *
    * @param readAheadBlockSize the size of the read-ahead block in bytes
+   * @param abfsConfiguration the configuration to set for the ReadBufferManagerV1.
    */
-  public static void setReadBufferManagerConfigs(int readAheadBlockSize) {
+  public static void setReadBufferManagerConfigs(int readAheadBlockSize,
+      AbfsConfiguration abfsConfiguration) {
     if (bufferManager == null) {
       LOGGER.debug(
           "ReadBufferManagerV1 not initialized yet. Overriding readAheadBlockSize as {}",
           readAheadBlockSize);
+      vectoredReadStrategy = abfsConfiguration.getVectoredReadStrategy();
+      maxSeekForVectoredReads = abfsConfiguration.getMaxSeekForVectoredReads();
+      maxSeekForeVectoredReadsThroughput
+          = abfsConfiguration.getMaxSeekForVectoredReadsThroughput();
       setReadAheadBlockSize(readAheadBlockSize);
       setThresholdAgeMilliseconds(DEFAULT_THRESHOLD_AGE_MILLISECONDS);
     }
@@ -144,6 +167,102 @@ public final class ReadBufferManagerV1 extends ReadBufferManager {
   }
 
   /**
+   * Queue a vectored read for a buffer-sized physical read unit.
+   *
+   * <p>The method first attempts to attach the logical unit to an already
+   * in-progress physical read for the same file and offset. If that is not
+   * possible, a free read buffer is acquired and a new backend read is
+   * queued.</p>
+   *
+   * @param stream         input stream for the file being read
+   * @param unit           buffer-sized combined file range to be read
+   * @param tracingContext tracing context used for the backend read request
+   * @param allocator      allocator used to create buffers for vectored fan-out
+   * @return {@code true} if the read was queued or attached to an existing
+   *         in-progress buffer; {@code false} if no buffer was available
+   */
+  boolean queueVectoredRead(AbfsInputStream stream,
+      CombinedFileRange unit,
+      TracingContext tracingContext,
+      IntFunction<ByteBuffer> allocator) {
+    /* Create a child tracing context for vectored read-ahead requests */
+    TracingContext readAheadTracingContext =
+        new TracingContext(tracingContext);
+    readAheadTracingContext.setPrimaryRequestID();
+    readAheadTracingContext.setReadType(ReadType.VECTORED_READ);
+
+    synchronized (this) {
+      /*
+       * Attempt to hitchhike on an existing in-progress physical read if it
+       * covers the requested logical range completely.
+       */
+      if (isAlreadyQueued(stream, unit.getOffset())) {
+        ReadBuffer existing = getFromList(getInProgressList(), stream, unit.getOffset());
+        if (existing != null && stream.getETag().equals(existing.getETag())) {
+          long end = existing.getOffset() + (
+              existing.getStatus() == ReadBufferStatus.AVAILABLE
+                  ? existing.getLength()
+                  : existing.getRequestedLength());
+          if (end >= unit.getOffset() + unit.getLength()) {
+            existing.initVectoredUnits();
+            existing.addVectoredUnit(unit);
+            return true;
+          }
+        }
+      }
+      /*
+       * Ensure a free buffer is available, attempting best-effort recovery
+       * through memory upscaling or eviction if necessary.
+       */
+      if (getFreeList().isEmpty() && !tryEvict()) {
+        return false;
+      }
+      /*
+       * Create a logical ReadBuffer descriptor without binding pooled memory.
+       * This captures metadata required to schedule the physical read.
+       */
+      ReadBuffer buffer = new ReadBuffer();
+      buffer.setStream(stream);
+      buffer.setETag(stream.getETag());
+      buffer.setPath(stream.getPath());
+      buffer.setOffset(unit.getOffset());
+      buffer.setRequestedLength(unit.getLength());
+      buffer.setBufferType(BufferType.VECTORED);
+      buffer.setStatus(ReadBufferStatus.NOT_AVAILABLE);
+      buffer.setLatch(new CountDownLatch(1));
+      buffer.initVectoredUnits();
+      buffer.addVectoredUnit(unit);
+      buffer.setAllocator(allocator);
+      /*
+       * Perform a final free-list check before consuming pooled memory to
+       * ensure buffer availability.
+       */
+      if (getFreeList().isEmpty()) {
+        return false;
+      }
+      Integer bufferIndex = getFreeList().pop();
+      if (bufferIndex >= buffers.length) {
+        /* Defensive guard; should never occur */
+        return false;
+      }
+      /*
+       * Bind the physical buffer and queue the read for asynchronous
+       * execution.
+       */
+      buffer.setBuffer(buffers[bufferIndex]);
+      buffer.setBufferindex(bufferIndex);
+
+      getReadAheadQueue().add(buffer);
+      notifyAll();
+      if (LOGGER.isTraceEnabled()) {
+        LOGGER.trace("Done q-ing readAhead for file {} offset {} buffer idx {}",
+            stream.getPath(), unit.getOffset(), buffer.getBufferindex());
+      }
+      return true;
+    }
+  }
+
+  /**
    * {@inheritDoc}
    */
   @Override
@@ -206,6 +325,24 @@ public final class ReadBufferManagerV1 extends ReadBufferManager {
     if (LOGGER.isTraceEnabled()) {
       LOGGER.trace("ReadBufferWorker completed read file {} for offset {} outcome {} bytes {}",
           buffer.getStream().getPath(),  buffer.getOffset(), result, bytesActuallyRead);
+    }
+    if (buffer.getBufferType() == BufferType.VECTORED) {
+      try {
+        if (buffer.getStatus() == ReadBufferStatus.AVAILABLE && bytesActuallyRead > 0) {
+          getVectoredReadHandler().fanOut(buffer, bytesActuallyRead);
+        } else {
+          throw new IOException(
+              "Vectored read failed for path: " + buffer.getPath()
+                  + ", status=" + buffer.getStatus());
+        }
+      } catch (Exception e) {
+        // Fail all logical FileRange futures
+        getVectoredReadHandler().failBufferFutures(buffer, e);
+        buffer.setStatus( ReadBufferStatus.READ_FAILED);
+      } finally {
+        // Must be cleared before publication / reuse
+        buffer.clearVectoredUnits();
+      }
     }
     synchronized (this) {
       // If this buffer has already been purged during
@@ -609,5 +746,21 @@ public final class ReadBufferManagerV1 extends ReadBufferManager {
 
   private static void setBufferManager(ReadBufferManagerV1 manager) {
     bufferManager = manager;
+  }
+
+
+  @VisibleForTesting
+  public VectoredReadStrategy getVectoredReadStrategy() {
+    return vectoredReadStrategy;
+  }
+
+  @VisibleForTesting
+  public int getMaxSeekForVectoredReads() {
+    return maxSeekForVectoredReads;
+  }
+
+  @VisibleForTesting
+  public int getMaxSeekForVectoredReadsThroughput() {
+    return maxSeekForeVectoredReadsThroughput;
   }
 }

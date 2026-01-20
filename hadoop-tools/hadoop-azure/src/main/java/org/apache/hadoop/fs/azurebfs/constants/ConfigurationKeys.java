@@ -676,5 +676,12 @@ public final class ConfigurationKeys {
   public static final String FS_AZURE_MAX_SEEK_FOR_VECTORED_READS =
       "fs.azure.max.seek.for.vectored.reads";
 
+  /**
+   * Configuration key that defines the maximum gap between adjacent read ranges
+   * for merging ranges during vectored reads in ABFS throughput optimized: {@value}.
+   */
+  public static final String FS_AZURE_MAX_SEEK_FOR_VECTORED_READS_THROUGHPUT =
+      "fs.azure.max.seek.for.vectored.reads.throughput";
+
   private ConfigurationKeys() {}
 }

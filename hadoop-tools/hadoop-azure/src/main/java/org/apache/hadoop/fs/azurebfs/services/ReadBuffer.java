@@ -19,26 +19,46 @@
 package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.IntFunction;
 
 import org.apache.hadoop.fs.azurebfs.contracts.services.ReadBufferStatus;
+import org.apache.hadoop.fs.azurebfs.enums.BufferType;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
+import org.apache.hadoop.fs.impl.CombinedFileRange;
 
 import static org.apache.hadoop.fs.azurebfs.contracts.services.ReadBufferStatus.READ_FAILED;
 
-class ReadBuffer {
+public class ReadBuffer {
 
   private AbfsInputStream stream;
+
   private String eTag;
+
   private String path;                   // path of the file this buffer is for
-  private long offset;                   // offset within the file for the buffer
-  private int length;                    // actual length, set after the buffer is filles
+
+  private long offset;
+      // offset within the file for the buffer
+
+  private int length;
+      // actual length, set after the buffer is filles
+
   private int requestedLength;           // requested length of the read
+
   private byte[] buffer;                 // the buffer itself
-  private int bufferindex = -1;          // index in the buffers array in Buffer manager
+
+  private int bufferindex = -1;
+      // index in the buffers array in Buffer manager
+
   private ReadBufferStatus status;             // status of the buffer
-  private CountDownLatch latch = null;   // signaled when the buffer is done reading, so any client
+
+  private CountDownLatch latch = null;
+      // signaled when the buffer is done reading, so any client
+
   // waiting on this buffer gets unblocked
   private TracingContext tracingContext;
 
@@ -48,6 +68,11 @@ class ReadBuffer {
   private boolean isLastByteConsumed = false;
   private boolean isAnyByteConsumed = false;
   private AtomicInteger refCount = new AtomicInteger(0);
+  private BufferType bufferType = BufferType.NORMAL;
+  // list of combined file ranges for vectored read.
+  private List<CombinedFileRange> vectoredUnits;
+  /* Allocator used for vectored fan-out; captured at queue time */
+  private IntFunction<ByteBuffer> allocator;
 
   private IOException errException = null;
 
@@ -198,5 +223,56 @@ class ReadBuffer {
 
   public boolean isFullyConsumed() {
     return isFirstByteConsumed() && isLastByteConsumed();
+  }
+
+  void initVectoredUnits() {
+    if (vectoredUnits == null) {
+      vectoredUnits = new ArrayList<>();
+    }
+  }
+
+  void addVectoredUnit(CombinedFileRange u) {
+    vectoredUnits.add(u);
+  }
+
+  List<CombinedFileRange> getVectoredUnits() {
+    return vectoredUnits;
+  }
+
+  void clearVectoredUnits() {
+    if (vectoredUnits != null) {
+      vectoredUnits.clear();
+    }
+  }
+
+  public BufferType getBufferType() {
+    return bufferType;
+  }
+
+  public void setBufferType(final BufferType bufferType) {
+    this.bufferType = bufferType;
+  }
+
+  /**
+   * Set the allocator associated with this buffer.
+   *
+   * <p>The same allocator instance may be shared across multiple buffers
+   * belonging to a single vectored read operation. It is captured at
+   * queue time so it is available when the asynchronous read completes.</p>
+   *
+   * @param allocator allocator used for vectored fan-out
+   */
+  public void setAllocator(IntFunction<ByteBuffer> allocator) {
+    this.allocator = allocator;
+  }
+
+  /**
+   * Return the allocator associated with this buffer.
+   *
+   * @return allocator used for vectored fan-out, or {@code null} for
+   *         non-vectored buffers
+   */
+  public IntFunction<ByteBuffer> getAllocator() {
+    return allocator;
   }
 }

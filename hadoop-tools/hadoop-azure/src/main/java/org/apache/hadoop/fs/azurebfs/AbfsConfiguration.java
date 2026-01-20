@@ -692,6 +692,10 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_FS_AZURE_MAX_SEEK_FOR_VECTORED_READS)
   private int maxSeekForVectoredReads;
 
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_MAX_SEEK_FOR_VECTORED_READS_THROUGHPUT,
+      DefaultValue = DEFAULT_FS_AZURE_MAX_SEEK_FOR_VECTORED_READS_THROUGHPUT)
+  private int maxSeekForVectoredReadsThroughput;
+
   private String clientProvidedEncryptionKey;
   private String clientProvidedEncryptionKeySHA;
 
@@ -2303,5 +2307,15 @@ public class AbfsConfiguration{
    */
   public int getMaxSeekForVectoredReads() {
     return maxSeekForVectoredReads;
+  }
+
+  /**
+   * Returns the maximum gap between adjacent read ranges allowed when
+   * considering them for merging during vectored reads throughput optimized..
+   *
+   * @return maximum gap threshold for range merging
+   */
+  public int getMaxSeekForVectoredReadsThroughput() {
+    return maxSeekForVectoredReadsThroughput;
   }
 }

@@ -444,6 +444,7 @@ public final class FileSystemConfigurations {
   public static final String DEFAULT_FS_AZURE_VECTORED_READ_STRATEGY = "TPS";
   public static final int DEFAULT_FS_AZURE_MIN_SEEK_FOR_VECTORED_READS = ONE_MB;
   public static final int DEFAULT_FS_AZURE_MAX_SEEK_FOR_VECTORED_READS = 4 * ONE_MB;
+  public static final int DEFAULT_FS_AZURE_MAX_SEEK_FOR_VECTORED_READS_THROUGHPUT = 8 * ONE_MB;
 
   private FileSystemConfigurations() {}
 }
