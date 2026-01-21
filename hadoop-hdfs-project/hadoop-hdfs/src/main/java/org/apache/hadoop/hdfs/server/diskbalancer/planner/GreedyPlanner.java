@@ -103,7 +103,7 @@ public class GreedyPlanner implements Planner {
       DiskBalancerVolume lowVolume = currentSet.getSortedQueue().first();
       DiskBalancerVolume highVolume = currentSet.getSortedQueue().last();
 
-      Step nextStep = null;
+      MoveStep nextStep = null;
       // ok both volumes bytes used are in the range that we expect
       // Then we create a move request.
       if (!lowVolume.isSkip() && !highVolume.isSkip()) {
@@ -165,7 +165,7 @@ public class GreedyPlanner implements Planner {
    * @param highVolume - High Data Capacity Volume
    * @return Step
    */
-  private Step computeMove(DiskBalancerVolumeSet currentSet,
+  private MoveStep computeMove(DiskBalancerVolumeSet currentSet,
                            DiskBalancerVolume lowVolume,
                            DiskBalancerVolume highVolume) {
     // Compute how many bytes we can move. First Compute the maximum that
@@ -197,7 +197,7 @@ public class GreedyPlanner implements Planner {
 
 
     long bytesToMove = Math.min(maxLowVolumeCanReceive, maxHighVolumeCanGive);
-    Step nextStep = null;
+    MoveStep nextStep = null;
 
     if (bytesToMove > 0) {
       // Create a new step

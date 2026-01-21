@@ -17,7 +17,6 @@
 
 package org.apache.hadoop.hdfs.server.diskbalancer.planner;
 
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
 import com.fasterxml.jackson.databind.ObjectWriter;
@@ -31,9 +30,7 @@ import java.util.List;
  * NodePlan is a set of volumeSetPlans.
  */
 public class NodePlan {
-  @JsonTypeInfo(use = JsonTypeInfo.Id.CLASS,
-      include = JsonTypeInfo.As.PROPERTY, property = "@class")
-  private List<Step> volumeSetPlans;
+  private List<MoveStep> volumeSetPlans;
   private String nodeName;
   private String nodeUUID;
   private int port;
@@ -78,11 +75,11 @@ public class NodePlan {
   }
 
   /**
-   * Returns a Map of  VolumeSetIDs and volumeSetPlans.
+   * Returns a List of Steps.
    *
-   * @return Map
+   * @return List of MoveSteps (changed in v3.5.0, used to be {@link Step}s)
    */
-  public List<Step> getVolumeSetPlans() {
+  public List<MoveStep> getVolumeSetPlans() {
     return volumeSetPlans;
   }
 
@@ -91,7 +88,7 @@ public class NodePlan {
    *
    * @param nextStep - nextStep
    */
-  void addStep(Step nextStep) {
+  void addStep(MoveStep nextStep) {
     Preconditions.checkNotNull(nextStep);
     volumeSetPlans.add(nextStep);
   }
@@ -108,9 +105,9 @@ public class NodePlan {
   /**
    * Sets a volume List plan.
    *
-   * @param volumeSetPlans - List of plans.
+   * @param volumeSetPlans List of MoveSteps (changed in v3.5.0, used to be {@link Step}s)
    */
-  public void setVolumeSetPlans(List<Step> volumeSetPlans) {
+  public void setVolumeSetPlans(List<MoveStep> volumeSetPlans) {
     this.volumeSetPlans = volumeSetPlans;
   }
 
@@ -151,9 +148,9 @@ public class NodePlan {
   }
 
   /**
-   * Parses a Json string and converts to NodePlan.
+   * Parses a JSON string and converts to NodePlan.
    *
-   * @param json - Json String
+   * @param json - JSON String
    * @return NodePlan
    * @throws IOException
    */
@@ -162,9 +159,9 @@ public class NodePlan {
   }
 
   /**
-   * Returns a Json representation of NodePlan.
+   * Returns a JSON representation of NodePlan.
    *
-   * @return - json String
+   * @return - JSON String
    * @throws IOException
    */
   public String toJson() throws IOException {
