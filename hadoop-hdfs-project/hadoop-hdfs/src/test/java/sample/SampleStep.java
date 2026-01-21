@@ -20,71 +20,71 @@ import org.apache.hadoop.hdfs.server.diskbalancer.datamodel.DiskBalancerVolume;
 import org.apache.hadoop.hdfs.server.diskbalancer.planner.Step;
 
 /**
- * A sample Step implementation used in Serde Tests
+ * A sample Step implementation used in Serde Tests.
  */
 public class SampleStep implements Step {
-    private long bytesToMove;
-    private long bandwidth;
-    private long tolerancePercent;
-    private long maxDiskErrors;
+  private long bytesToMove;
+  private long bandwidth;
+  private long tolerancePercent;
+  private long maxDiskErrors;
 
-    @Override
-    public long getBytesToMove() {
-        return bytesToMove;
-    }
+  @Override
+  public long getBytesToMove() {
+    return bytesToMove;
+  }
 
-    @Override
-    public DiskBalancerVolume getDestinationVolume() {
-        return null;
-    }
+  @Override
+  public DiskBalancerVolume getDestinationVolume() {
+    return null;
+  }
 
-    @Override
-    public double getIdealStorage() {
-        return 0;
-    }
+  @Override
+  public double getIdealStorage() {
+    return 0;
+  }
 
-    @Override
-    public DiskBalancerVolume getSourceVolume() {
-        return null;
-    }
+  @Override
+  public DiskBalancerVolume getSourceVolume() {
+    return null;
+  }
 
-    @Override
-    public String getVolumeSetID() {
-        return "";
-    }
+  @Override
+  public String getVolumeSetID() {
+    return "";
+  }
 
-    @Override
-    public String getSizeString(long size) {
-        return Long.toString(size);
-    }
+  @Override
+  public String getSizeString(long size) {
+    return Long.toString(size);
+  }
 
-    @Override
-    public long getMaxDiskErrors() {
-        return maxDiskErrors;
-    }
+  @Override
+  public long getMaxDiskErrors() {
+    return maxDiskErrors;
+  }
 
-    @Override
-    public long getTolerancePercent() {
-        return tolerancePercent;
-    }
+  @Override
+  public long getTolerancePercent() {
+    return tolerancePercent;
+  }
 
-    @Override
-    public long getBandwidth() {
-        return bandwidth;
-    }
+  @Override
+  public long getBandwidth() {
+    return bandwidth;
+  }
 
-    @Override
-    public void setTolerancePercent(long tolerancePercent) {
-        this.tolerancePercent = tolerancePercent;
-    }
+  @Override
+  public void setTolerancePercent(long tolerancePercent) {
+    this.tolerancePercent = tolerancePercent;
+  }
 
-    @Override
-    public void setBandwidth(long bandwidth) {
-        this.bandwidth = bandwidth;
-    }
+  @Override
+  public void setBandwidth(long bandwidth) {
+    this.bandwidth = bandwidth;
+  }
 
-    @Override
-    public void setMaxDiskErrors(long maxDiskErrors) {
-        this.maxDiskErrors = maxDiskErrors;
-    }
+  @Override
+  public void setMaxDiskErrors(long maxDiskErrors) {
+    this.maxDiskErrors = maxDiskErrors;
+  }
 }

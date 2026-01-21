@@ -18,6 +18,7 @@ package org.apache.hadoop.hdfs.server.diskbalancer.planner;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.hadoop.hdfs.server.diskbalancer.datamodel.DiskBalancerVolume;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.jupiter.api.Test;
 import sample.SampleStep;
 
@@ -25,146 +26,145 @@ import java.io.IOException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class TestNodePlan {
 
-    @Test
-    public void testNodePlan() throws IOException {
-        NodePlan nodePlan = new NodePlan("datanode1234", 1234);
-        MoveStep moveStep = new MoveStep();
-        moveStep.setBandwidth(12345);
-        moveStep.setBytesToMove(98765);
-        moveStep.setIdealStorage(1.234);
-        moveStep.setMaxDiskErrors(4567);
-        moveStep.setVolumeSetID("id1234");
-        nodePlan.addStep(moveStep);
-        String json = nodePlan.toJson();
-        assertNotNull(NodePlan.parseJson(json));
+  @Test
+  public void testNodePlan() throws IOException {
+    NodePlan nodePlan = new NodePlan("datanode1234", 1234);
+    MoveStep moveStep = new MoveStep();
+    moveStep.setBandwidth(12345);
+    moveStep.setBytesToMove(98765);
+    moveStep.setIdealStorage(1.234);
+    moveStep.setMaxDiskErrors(4567);
+    moveStep.setVolumeSetID("id1234");
+    nodePlan.addStep(moveStep);
+    String json = nodePlan.toJson();
+    assertNotNull(NodePlan.parseJson(json));
+  }
+
+  @Test
+  public void testNodePlanWithDisallowedStep() throws Exception {
+    NodePlan nodePlan = new NodePlan("datanode1234", 1234);
+    Step sampleStep = new SampleStep();
+    sampleStep.setBandwidth(12345);
+    sampleStep.setMaxDiskErrors(4567);
+    nodePlan.addStep(sampleStep);
+    String json = nodePlan.toJson();
+    IOException ex = LambdaTestUtils.intercept(IOException.class, () -> NodePlan.parseJson(json));
+    assertEquals("Invalid @class value in NodePlan JSON: sample.SampleStep", ex.getMessage());
+  }
+
+  @Test
+  public void testNodePlanWithSecondStepDisallowed() throws Exception {
+    NodePlan nodePlan = new NodePlan("datanode1234", 1234);
+    MoveStep moveStep = new MoveStep();
+    moveStep.setBandwidth(12345);
+    moveStep.setBytesToMove(98765);
+    moveStep.setIdealStorage(1.234);
+    moveStep.setMaxDiskErrors(4567);
+    moveStep.setVolumeSetID("id1234");
+    nodePlan.addStep(moveStep);
+    Step sampleStep = new SampleStep();
+    sampleStep.setBandwidth(12345);
+    sampleStep.setMaxDiskErrors(4567);
+    nodePlan.addStep(sampleStep);
+    String json = nodePlan.toJson();
+    IOException ex = LambdaTestUtils.intercept(IOException.class, () -> NodePlan.parseJson(json));
+    assertEquals("Invalid @class value in NodePlan JSON: sample.SampleStep", ex.getMessage());
+  }
+
+  @Test
+  public void testNodePlanWithNestedDisallowedStep() throws Exception {
+    NodePlan nodePlan = new NodePlan("datanode1234", 1234);
+    NodePlan nodePlan2 = new NodePlan("datanode9876", 9876);
+    SampleStep sampleStep = new SampleStep();
+    sampleStep.setBandwidth(12345);
+    sampleStep.setMaxDiskErrors(4567);
+    nodePlan2.addStep(sampleStep);
+    NestedStep nestedStep = new NestedStep(nodePlan2);
+    nestedStep.setBandwidth(1234);
+    nestedStep.setMaxDiskErrors(456);
+    nodePlan.addStep(nestedStep);
+    String json = nodePlan.toJson();
+    IOException ex = LambdaTestUtils.intercept(IOException.class, () -> NodePlan.parseJson(json));
+    assertEquals("Invalid @class value in NodePlan JSON: sample.SampleStep", ex.getMessage());
+  }
+
+  private static class NestedStep implements Step {
+    @JsonProperty
+    private NodePlan nodePlan;
+
+    NestedStep() {
+      // needed to make Jackson deserialization easier
     }
 
-    @Test
-    public void testNodePlanWithDisallowedStep() throws IOException {
-        NodePlan nodePlan = new NodePlan("datanode1234", 1234);
-        Step sampleStep = new SampleStep();
-        sampleStep.setBandwidth(12345);
-        sampleStep.setMaxDiskErrors(4567);
-        nodePlan.addStep(sampleStep);
-        String json = nodePlan.toJson();
-        IOException ex = assertThrows(IOException.class, () -> NodePlan.parseJson(json));
-        assertEquals("Invalid @class value in NodePlan JSON: sample.SampleStep", ex.getMessage());
+    NestedStep(NodePlan nodePlan) {
+      this.nodePlan = nodePlan;
     }
 
-    @Test
-    public void testNodePlanWithSecondStepDisallowed() throws IOException {
-        NodePlan nodePlan = new NodePlan("datanode1234", 1234);
-        MoveStep moveStep = new MoveStep();
-        moveStep.setBandwidth(12345);
-        moveStep.setBytesToMove(98765);
-        moveStep.setIdealStorage(1.234);
-        moveStep.setMaxDiskErrors(4567);
-        moveStep.setVolumeSetID("id1234");
-        nodePlan.addStep(moveStep);
-        Step sampleStep = new SampleStep();
-        sampleStep.setBandwidth(12345);
-        sampleStep.setMaxDiskErrors(4567);
-        nodePlan.addStep(sampleStep);
-        String json = nodePlan.toJson();
-        IOException ex = assertThrows(IOException.class, () -> NodePlan.parseJson(json));
-        assertEquals("Invalid @class value in NodePlan JSON: sample.SampleStep", ex.getMessage());
+    NodePlan getNodePlan() {
+      return nodePlan;
     }
 
-    @Test
-    public void testNodePlanWithNestedDisallowedStep() throws IOException {
-        NodePlan nodePlan = new NodePlan("datanode1234", 1234);
-        NodePlan nodePlan2 = new NodePlan("datanode9876", 9876);
-        SampleStep sampleStep = new SampleStep();
-        sampleStep.setBandwidth(12345);
-        sampleStep.setMaxDiskErrors(4567);
-        nodePlan2.addStep(sampleStep);
-        NestedStep nestedStep = new NestedStep(nodePlan2);
-        nestedStep.setBandwidth(1234);
-        nestedStep.setMaxDiskErrors(456);
-        nodePlan.addStep(nestedStep);
-        String json = nodePlan.toJson();
-        IOException ex = assertThrows(IOException.class, () -> NodePlan.parseJson(json));
-        assertEquals("Invalid @class value in NodePlan JSON: sample.SampleStep", ex.getMessage());
+    @Override
+    public long getBytesToMove() {
+      return 0;
     }
 
-    private static class NestedStep implements Step {
-        @JsonProperty
-        private NodePlan nodePlan;
-
-        NestedStep() {
-            // needed to make Jackson deserialization easier
-        }
-
-        NestedStep(NodePlan nodePlan) {
-            this.nodePlan = nodePlan;
-        }
-
-        NodePlan getNodePlan() {
-            return nodePlan;
-        }
-
-        @Override
-        public long getBytesToMove() {
-            return 0;
-        }
-
-        @Override
-        public DiskBalancerVolume getDestinationVolume() {
-            return null;
-        }
-
-        @Override
-        public double getIdealStorage() {
-            return 0;
-        }
-
-        @Override
-        public DiskBalancerVolume getSourceVolume() {
-            return null;
-        }
-
-        @Override
-        public String getVolumeSetID() {
-            return "";
-        }
-
-        @Override
-        public String getSizeString(long size) {
-            return "";
-        }
-
-        @Override
-        public long getMaxDiskErrors() {
-            return 0;
-        }
-
-        @Override
-        public long getTolerancePercent() {
-            return 0;
-        }
-
-        @Override
-        public long getBandwidth() {
-            return 0;
-        }
-
-        @Override
-        public void setTolerancePercent(long tolerancePercent) {
-
-        }
-
-        @Override
-        public void setBandwidth(long bandwidth) {
-
-        }
-
-        @Override
-        public void setMaxDiskErrors(long maxDiskErrors) {
-
-        }
+    @Override
+    public DiskBalancerVolume getDestinationVolume() {
+      return null;
     }
+
+    @Override
+    public double getIdealStorage() {
+      return 0;
+    }
+
+    @Override
+    public DiskBalancerVolume getSourceVolume() {
+      return null;
+    }
+
+    @Override
+    public String getVolumeSetID() {
+      return "";
+    }
+
+    @Override
+    public String getSizeString(long size) {
+      return "";
+    }
+
+    @Override
+    public long getMaxDiskErrors() {
+      return 0;
+    }
+
+    @Override
+    public long getTolerancePercent() {
+      return 0;
+    }
+
+    @Override
+    public long getBandwidth() {
+      return 0;
+    }
+
+    @Override
+    public void setTolerancePercent(long tolerancePercent) {
+
+    }
+
+    @Override
+    public void setBandwidth(long bandwidth) {
+
+    }
+
+    @Override
+    public void setMaxDiskErrors(long maxDiskErrors) {
+
+    }
+  }
 }
