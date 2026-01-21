@@ -68,7 +68,7 @@ public class AbfsRandomInputStream extends AbfsInputStream {
     // If buffer is empty, then fill the buffer.
     if (getBCursor() == getLimit()) {
       // If EOF, then return -1
-      if (getFCursor() >= getContentLength()) {
+      if (!(shouldRestrictGpsOnOpenFile() && isFirstRead()) && getFCursor() >= getContentLength()) {
         return -1;
       }
 

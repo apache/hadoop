@@ -436,5 +436,11 @@ public final class FileSystemConfigurations {
   public static final int DEFAULT_FS_AZURE_TAIL_LATENCY_PERCENTILE_COMPUTATION_INTERVAL_MILLIS = 500;
   public static final int DEFAULT_FS_AZURE_TAIL_LATENCY_MAX_RETRY_COUNT = 1;
 
+  /**
+   * If true, restricts GPS (getPathStatus) calls on openFile operations.
+   * Default: false
+   */
+  public static final boolean DEFAULT_FS_AZURE_RESTRICT_GPS_ON_OPENFILE = false;
+
   private FileSystemConfigurations() {}
 }

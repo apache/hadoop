@@ -660,6 +660,10 @@ public class AbfsConfiguration{
           DefaultValue = DEFAULT_AZURE_READ_POLICY)
   private String abfsReadPolicy;
 
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_RESTRICT_GPS_ON_OPENFILE,
+  DefaultValue = DEFAULT_FS_AZURE_RESTRICT_GPS_ON_OPENFILE)
+  private boolean restrictGpsOnOpenFile;
+
   private String clientProvidedEncryptionKey;
   private String clientProvidedEncryptionKeySHA;
 
@@ -1391,6 +1395,10 @@ public class AbfsConfiguration{
    */
   public String getAbfsReadPolicy() {
     return abfsReadPolicy;
+  }
+
+  public boolean shouldRestrictGpsOnOpenFile() {
+    return restrictGpsOnOpenFile;
   }
 
   /**

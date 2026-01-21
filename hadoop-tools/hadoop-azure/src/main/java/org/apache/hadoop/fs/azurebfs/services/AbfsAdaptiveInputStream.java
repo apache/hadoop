@@ -68,7 +68,7 @@ public class AbfsAdaptiveInputStream extends AbfsInputStream {
     // If buffer is empty, then fill the buffer.
     if (getBCursor() == getLimit()) {
       // If EOF, then return -1
-      if (getFCursor() >= getContentLength()) {
+      if (!(shouldRestrictGpsOnOpenFile() && isFirstRead()) && getFCursor() >= getContentLength()) {
         return -1;
       }
 
@@ -83,7 +83,11 @@ public class AbfsAdaptiveInputStream extends AbfsInputStream {
 
       // Reset Read Type back to normal and set again based on code flow.
       getTracingContext().setReadType(ReadType.NORMAL_READ);
-      if (shouldAlwaysReadBufferSize()) {
+      if(shouldRestrictGpsOnOpenFile() && isFirstRead()) {
+        LOG.debug("RestrictGpsOnOpenFile is enabled. Skip readahead.");
+        bytesRead = readInternal(getFCursor(), getBuffer(), 0, getBufferSize(), true);
+      }
+      else if (shouldAlwaysReadBufferSize()) {
         bytesRead = readInternal(getFCursor(), getBuffer(), 0, getBufferSize(), false);
       } else {
         // Enable readAhead when reading sequentially
