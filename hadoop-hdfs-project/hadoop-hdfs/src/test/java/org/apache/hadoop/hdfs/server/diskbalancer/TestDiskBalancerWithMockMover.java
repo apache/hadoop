@@ -616,9 +616,9 @@ public class TestDiskBalancerWithMockMover {
     }
 
     private void setVolumeNames(NodePlan plan) {
-      Iterator<Step> iter = plan.getVolumeSetPlans().iterator();
+      Iterator<MoveStep> iter = plan.getVolumeSetPlans().iterator();
       while (iter.hasNext()) {
-        MoveStep nextStep = (MoveStep) iter.next();
+        MoveStep nextStep = iter.next();
         nextStep.getSourceVolume().setPath(sourcePath);
         nextStep.getSourceVolume().setUuid(sourceUUID);
         nextStep.getDestinationVolume().setPath(destPath);
