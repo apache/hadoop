@@ -166,10 +166,18 @@ public class NodePlan {
     return READER.readValue(tree);
   }
 
-  // throws an IOException if any unexpected `@class` values are found
-  // this exception is checked for by the calling code
+  /**
+   * Iterate through the tree structure beginning at the input `node`. This includes
+   * checking arrays and within JSON object structures (allowing for nested structures)
+   *
+   * @param node a node representing the root of tree structure
+   * @throws IOException if any unexpected `@class` values are found - this is the
+   * pre-existing exception type exposed by the calling code
+   */
   private static void checkNodes(JsonNode node) throws IOException {
-    if (node == null) return;
+    if (node == null) {
+      return;
+    }
 
     // Check Node and Recurse into child nodes
     if (node.isObject()) {
