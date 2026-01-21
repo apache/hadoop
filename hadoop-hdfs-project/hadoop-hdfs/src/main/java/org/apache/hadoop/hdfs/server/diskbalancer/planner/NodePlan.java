@@ -83,7 +83,7 @@ public class NodePlan {
   /**
    * Returns a Map of  VolumeSetIDs and volumeSetPlans.
    *
-   * @return Map
+   * @return List of Steps
    */
   public List<Step> getVolumeSetPlans() {
     return volumeSetPlans;
@@ -201,9 +201,9 @@ public class NodePlan {
   }
 
   /**
-   * Returns a Json representation of NodePlan.
+   * Returns a JSON representation of NodePlan.
    *
-   * @return - json String
+   * @return - JSON String
    * @throws IOException
    */
   public String toJson() throws IOException {
