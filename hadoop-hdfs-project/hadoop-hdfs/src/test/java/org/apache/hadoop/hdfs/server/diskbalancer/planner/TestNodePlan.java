@@ -32,206 +32,207 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 public class TestNodePlan {
 
-    @Test
-    public void testNodePlan() throws IOException {
-        NodePlan nodePlan = new NodePlan("datanode1234", 1234);
-        MoveStep moveStep = new MoveStep();
-        moveStep.setBandwidth(12345);
-        moveStep.setBytesToMove(98765);
-        moveStep.setIdealStorage(1.234);
-        moveStep.setMaxDiskErrors(4567);
-        moveStep.setVolumeSetID("id1234");
-        nodePlan.addStep(moveStep);
-        String json = nodePlan.toJson();
-        assertNotNull(NodePlan.parseJson(json));
-    }
+  @Test
+  public void testNodePlan() throws IOException {
+    NodePlan nodePlan = new NodePlan("datanode1234", 1234);
+    MoveStep moveStep = new MoveStep();
+    moveStep.setBandwidth(12345);
+    moveStep.setBytesToMove(98765);
+    moveStep.setIdealStorage(1.234);
+    moveStep.setMaxDiskErrors(4567);
+    moveStep.setVolumeSetID("id1234");
+    nodePlan.addStep(moveStep);
+    String json = nodePlan.toJson();
+    assertNotNull(NodePlan.parseJson(json));
+  }
 
-    @Test
-    public void testNodePlanWithLegacyJson() throws IOException {
-        LegacyNodePlan nodePlan = new LegacyNodePlan("datanode1234", 1234);
-        MoveStep moveStep = new MoveStep();
-        moveStep.setBandwidth(12345);
-        moveStep.setBytesToMove(98765);
-        moveStep.setIdealStorage(1.234);
-        moveStep.setMaxDiskErrors(4567);
-        moveStep.setVolumeSetID("id1234");
-        nodePlan.addStep(moveStep);
-        String json = nodePlan.toJson();
-        // read the legacy JSON using the NodePlan
-        NodePlan nodePlan2 = NodePlan.parseJson(json);
-        assertNotNull(nodePlan2);
-        assertEquals(nodePlan.getNodeName(), nodePlan2.getNodeName());
-        assertEquals(nodePlan.getPort(), nodePlan2.getPort());
-        assertEquals(1, nodePlan2.getVolumeSetPlans().size());
-        MoveStep moveStep2 = nodePlan2.getVolumeSetPlans().get(0);
-        assertEquals(moveStep.getBandwidth(), moveStep2.getBandwidth());
-        assertEquals(moveStep.getBytesToMove(), moveStep2.getBytesToMove());
-        assertEquals(moveStep.getMaxDiskErrors(), moveStep2.getMaxDiskErrors());
-        assertEquals(moveStep.getTolerancePercent(), moveStep2.getTolerancePercent());
-        assertEquals(moveStep.getIdealStorage(), moveStep2.getIdealStorage());
-        assertEquals(moveStep.getVolumeSetID(), moveStep2.getVolumeSetID());
+  @Test
+  public void testNodePlanWithLegacyJson() throws IOException {
+    LegacyNodePlan nodePlan = new LegacyNodePlan("datanode1234", 1234);
+    MoveStep moveStep = new MoveStep();
+    moveStep.setBandwidth(12345);
+    moveStep.setBytesToMove(98765);
+    moveStep.setIdealStorage(1.234);
+    moveStep.setMaxDiskErrors(4567);
+    moveStep.setVolumeSetID("id1234");
+    nodePlan.addStep(moveStep);
+    String json = nodePlan.toJson();
+    // read the legacy JSON using the NodePlan
+    NodePlan nodePlan2 = NodePlan.parseJson(json);
+    assertNotNull(nodePlan2);
+    assertEquals(nodePlan.getNodeName(), nodePlan2.getNodeName());
+    assertEquals(nodePlan.getPort(), nodePlan2.getPort());
+    assertEquals(1, nodePlan2.getVolumeSetPlans().size());
+    MoveStep moveStep2 = nodePlan2.getVolumeSetPlans().get(0);
+    assertEquals(moveStep.getBandwidth(), moveStep2.getBandwidth());
+    assertEquals(moveStep.getBytesToMove(), moveStep2.getBytesToMove());
+    assertEquals(moveStep.getMaxDiskErrors(), moveStep2.getMaxDiskErrors());
+    assertEquals(moveStep.getTolerancePercent(), moveStep2.getTolerancePercent());
+    assertEquals(moveStep.getIdealStorage(), moveStep2.getIdealStorage());
+    assertEquals(moveStep.getVolumeSetID(), moveStep2.getVolumeSetID());
+  }
+
+  /**
+   * Legacy version of NodePlan before volumeSetPlans was changed to `List<MoveStep>`
+   */
+  private static class LegacyNodePlan {
+    @JsonTypeInfo(use = JsonTypeInfo.Id.CLASS,
+        include = JsonTypeInfo.As.PROPERTY, property = "@class")
+    private List<Step> volumeSetPlans;
+    private String nodeName;
+    private String nodeUUID;
+    private int port;
+    private long timeStamp;
+
+    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ObjectReader READER = MAPPER.readerFor(LegacyNodePlan.class);
+    private static final ObjectWriter WRITER = MAPPER.writerFor(
+        MAPPER.constructType(LegacyNodePlan.class));
+
+    /**
+     * returns timestamp when this plan was created.
+     *
+     * @return long
+     */
+    public long getTimeStamp() {
+      return timeStamp;
     }
 
     /**
-     * Legacy version of NodePlan before volumeSetPlans was changed to `List<MoveStep>`
+     * Sets the timestamp when this plan was created.
+     *
+     * @param timeStamp
      */
-    private static class LegacyNodePlan {
-        @JsonTypeInfo(use = JsonTypeInfo.Id.CLASS,
-                include = JsonTypeInfo.As.PROPERTY, property = "@class")
-        private List<Step> volumeSetPlans;
-        private String nodeName;
-        private String nodeUUID;
-        private int port;
-        private long timeStamp;
-
-        private static final ObjectMapper MAPPER = new ObjectMapper();
-        private static final ObjectReader READER = MAPPER.readerFor(LegacyNodePlan.class);
-        private static final ObjectWriter WRITER = MAPPER.writerFor(
-                MAPPER.constructType(LegacyNodePlan.class));
-        /**
-         * returns timestamp when this plan was created.
-         *
-         * @return long
-         */
-        public long getTimeStamp() {
-            return timeStamp;
-        }
-
-        /**
-         * Sets the timestamp when this plan was created.
-         *
-         * @param timeStamp
-         */
-        public void setTimeStamp(long timeStamp) {
-            this.timeStamp = timeStamp;
-        }
-
-        /**
-         * Constructs an Empty Node Plan.
-         */
-        public LegacyNodePlan() {
-            volumeSetPlans = new LinkedList<>();
-        }
-
-        /**
-         * Constructs an empty NodePlan.
-         */
-        public LegacyNodePlan(String datanodeName, int rpcPort) {
-            volumeSetPlans = new LinkedList<>();
-            this.nodeName = datanodeName;
-            this.port = rpcPort;
-        }
-
-        /**
-         * Returns a Map of  VolumeSetIDs and volumeSetPlans.
-         *
-         * @return Map
-         */
-        public List<Step> getVolumeSetPlans() {
-            return volumeSetPlans;
-        }
-
-        /**
-         * Adds a step to the existing Plan.
-         *
-         * @param nextStep - nextStep
-         */
-        void addStep(Step nextStep) {
-            Preconditions.checkNotNull(nextStep);
-            volumeSetPlans.add(nextStep);
-        }
-
-        /**
-         * Sets Node Name.
-         *
-         * @param nodeName - Name
-         */
-        public void setNodeName(String nodeName) {
-            this.nodeName = nodeName;
-        }
-
-        /**
-         * Sets a volume List plan.
-         *
-         * @param volumeSetPlans - List of plans.
-         */
-        public void setVolumeSetPlans(List<Step> volumeSetPlans) {
-            this.volumeSetPlans = volumeSetPlans;
-        }
-
-        /**
-         * Returns the DataNode URI.
-         *
-         * @return URI
-         */
-        public String getNodeName() {
-            return nodeName;
-        }
-
-        /**
-         * Sets the DataNodeURI.
-         *
-         * @param dataNodeName - String
-         */
-        public void setURI(String dataNodeName) {
-            this.nodeName = dataNodeName;
-        }
-
-        /**
-         * Gets the DataNode RPC Port.
-         *
-         * @return port
-         */
-        public int getPort() {
-            return port;
-        }
-
-        /**
-         * Sets the DataNode RPC Port.
-         *
-         * @param port - int
-         */
-        public void setPort(int port) {
-            this.port = port;
-        }
-
-        /**
-         * Parses a Json string and converts to NodePlan.
-         *
-         * @param json - Json String
-         * @return NodePlan
-         * @throws IOException
-         */
-        public static NodePlan parseJson(String json) throws IOException {
-            return READER.readValue(json);
-        }
-
-        /**
-         * Returns a Json representation of NodePlan.
-         *
-         * @return - json String
-         * @throws IOException
-         */
-        public String toJson() throws IOException {
-            return WRITER.writeValueAsString(this);
-        }
-
-        /**
-         * gets the Node UUID.
-         *
-         * @return Node UUID.
-         */
-        public String getNodeUUID() {
-            return nodeUUID;
-        }
-
-        /**
-         * Sets the Node UUID.
-         *
-         * @param nodeUUID - UUID of the node.
-         */
-        public void setNodeUUID(String nodeUUID) {
-            this.nodeUUID = nodeUUID;
-        }
+    public void setTimeStamp(long timeStamp) {
+      this.timeStamp = timeStamp;
     }
+
+    /**
+     * Constructs an Empty Node Plan.
+     */
+    public LegacyNodePlan() {
+      volumeSetPlans = new LinkedList<>();
+    }
+
+    /**
+     * Constructs an empty NodePlan.
+     */
+    public LegacyNodePlan(String datanodeName, int rpcPort) {
+      volumeSetPlans = new LinkedList<>();
+      this.nodeName = datanodeName;
+      this.port = rpcPort;
+    }
+
+    /**
+     * Returns a Map of  VolumeSetIDs and volumeSetPlans.
+     *
+     * @return Map
+     */
+    public List<Step> getVolumeSetPlans() {
+      return volumeSetPlans;
+    }
+
+    /**
+     * Adds a step to the existing Plan.
+     *
+     * @param nextStep - nextStep
+     */
+    void addStep(Step nextStep) {
+      Preconditions.checkNotNull(nextStep);
+      volumeSetPlans.add(nextStep);
+    }
+
+    /**
+     * Sets Node Name.
+     *
+     * @param nodeName - Name
+     */
+    public void setNodeName(String nodeName) {
+      this.nodeName = nodeName;
+    }
+
+    /**
+     * Sets a volume List plan.
+     *
+     * @param volumeSetPlans - List of plans.
+     */
+    public void setVolumeSetPlans(List<Step> volumeSetPlans) {
+      this.volumeSetPlans = volumeSetPlans;
+    }
+
+    /**
+     * Returns the DataNode URI.
+     *
+     * @return URI
+     */
+    public String getNodeName() {
+      return nodeName;
+    }
+
+    /**
+     * Sets the DataNodeURI.
+     *
+     * @param dataNodeName - String
+     */
+    public void setURI(String dataNodeName) {
+      this.nodeName = dataNodeName;
+    }
+
+    /**
+     * Gets the DataNode RPC Port.
+     *
+     * @return port
+     */
+    public int getPort() {
+      return port;
+    }
+
+    /**
+     * Sets the DataNode RPC Port.
+     *
+     * @param port - int
+     */
+    public void setPort(int port) {
+      this.port = port;
+    }
+
+    /**
+     * Parses a Json string and converts to NodePlan.
+     *
+     * @param json - Json String
+     * @return NodePlan
+     * @throws IOException
+     */
+    public static NodePlan parseJson(String json) throws IOException {
+      return READER.readValue(json);
+    }
+
+    /**
+     * Returns a Json representation of NodePlan.
+     *
+     * @return - json String
+     * @throws IOException
+     */
+    public String toJson() throws IOException {
+      return WRITER.writeValueAsString(this);
+    }
+
+    /**
+     * gets the Node UUID.
+     *
+     * @return Node UUID.
+     */
+    public String getNodeUUID() {
+      return nodeUUID;
+    }
+
+    /**
+     * Sets the Node UUID.
+     *
+     * @param nodeUUID - UUID of the node.
+     */
+    public void setNodeUUID(String nodeUUID) {
+      this.nodeUUID = nodeUUID;
+    }
+  }
 }
