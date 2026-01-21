@@ -151,7 +151,7 @@
                 <configuration>
                   <artifactItems>
                     <artifactItem>
-                      <groupId>jdiff</groupId>
+                      <groupId>io.github.zhtttylz</groupId>
                       <artifactId>jdiff</artifactId>
                       <version>${jdiff.version}</version>
                       <overWrite>false</overWrite>

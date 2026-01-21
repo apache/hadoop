@@ -53,7 +53,6 @@
     <module>hadoop-fs2img</module>
     <module>hadoop-benchmark</module>
     <module>hadoop-compat-bench</module>
-    <module>hadoop-gcp</module>
   </modules>
 
   <build>

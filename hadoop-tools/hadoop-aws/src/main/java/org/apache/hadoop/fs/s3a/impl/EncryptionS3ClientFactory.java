@@ -154,7 +154,7 @@ public class EncryptionS3ClientFactory extends DefaultS3ClientFactory {
         "S3ClientCreationParameters is not initialized");
 
     S3EncryptionClient.Builder s3EncryptionClientBuilder =
-        S3EncryptionClient.builder()
+        S3EncryptionClient.builderV4()
             .wrappedAsyncClient(s3AsyncClient)
             .wrappedClient(s3Client)
             // this is required for doing S3 ranged GET calls
@@ -239,7 +239,7 @@ public class EncryptionS3ClientFactory extends DefaultS3ClientFactory {
         "S3ClientCreationParameters is not initialized");
 
     S3AsyncEncryptionClient.Builder s3EncryptionAsyncClientBuilder =
-        S3AsyncEncryptionClient.builder()
+        S3AsyncEncryptionClient.builderV4()
             .wrappedClient(s3AsyncClient)
             // this is required for doing S3 ranged GET calls
             .enableLegacyUnauthenticatedModes(true)

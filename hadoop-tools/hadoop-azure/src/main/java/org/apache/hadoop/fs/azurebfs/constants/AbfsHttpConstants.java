@@ -137,6 +137,9 @@ public final class AbfsHttpConstants {
   public static final String HASH = "#";
   public static final String TRUE = "true";
   public static final String ZERO = "0";
+  public static final String UNDERSCORE = "_";
+  public static final String OPENING_SQUARE_BRACKET = "[";
+  public static final String CLOSING_SQUARE_BRACKET = "]";
 
   public static final String PLUS_ENCODE = "%20";
   public static final String FORWARD_SLASH_ENCODE = "%2F";
@@ -169,7 +172,7 @@ public final class AbfsHttpConstants {
   /**
    * HTTP status code indicating that the server has received too many requests and the client should
    * qualify for retrying the operation, as described in the Microsoft Azure documentation.
-   * {@link "https://learn.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/how-to-use-vm-token#error-handling"}.
+   * @see "https://learn.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/how-to-use-vm-token#error-handling"
    */
   public static final int HTTP_TOO_MANY_REQUESTS = 429;
 

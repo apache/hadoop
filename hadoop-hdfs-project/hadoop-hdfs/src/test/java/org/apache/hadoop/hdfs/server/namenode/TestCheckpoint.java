@@ -87,6 +87,7 @@ import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.ExitUtil.ExitException;
 import org.apache.hadoop.util.Lists;
+import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.slf4j.event.Level;
@@ -654,7 +655,9 @@ public class TestCheckpoint {
     
     Mockito.doReturn(true).when(faultInjector)
       .shouldSendShortFile(filePathContaining("fsimage"));
-    doSendFailTest("is not of the advertised size");
+    String expectedText = Shell.isJavaVersionAtLeast(24) ? "Premature EOF"
+        : "is not of the advertised size";
+    doSendFailTest(expectedText);
   }
 
   /**
