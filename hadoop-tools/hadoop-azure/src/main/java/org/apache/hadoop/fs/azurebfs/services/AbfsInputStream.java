@@ -802,7 +802,7 @@ public abstract class AbfsInputStream extends FSInputStream implements CanUnbuff
    * Getter for buffer.
    * @return the buffer
    */
-  byte[] getBuffer() {
+  synchronized byte[] getBuffer() {
     return buffer;
   }
 
@@ -810,7 +810,7 @@ public abstract class AbfsInputStream extends FSInputStream implements CanUnbuff
    * Setter for buffer.
    * @param buffer the buffer to set
    */
-  protected void setBuffer(byte[] buffer) {
+  protected synchronized void setBuffer(byte[] buffer) {
     this.buffer = buffer;
   }
 
@@ -966,7 +966,7 @@ public abstract class AbfsInputStream extends FSInputStream implements CanUnbuff
    * @return the bCursor
    */
   @VisibleForTesting
-  int getBCursor() {
+  synchronized int getBCursor() {
     return this.bCursor;
   }
 
@@ -974,7 +974,7 @@ public abstract class AbfsInputStream extends FSInputStream implements CanUnbuff
    * Setter for bCursor.
    * @param bCursor the bCursor to set
    */
-  protected void setBCursor(int bCursor) {
+  protected synchronized void setBCursor(int bCursor) {
     this.bCursor = bCursor;
   }
 
@@ -983,7 +983,7 @@ public abstract class AbfsInputStream extends FSInputStream implements CanUnbuff
    * @return the fCursor
    */
   @VisibleForTesting
-  long getFCursor() {
+  synchronized long getFCursor() {
     return this.fCursor;
   }
 
@@ -991,7 +991,7 @@ public abstract class AbfsInputStream extends FSInputStream implements CanUnbuff
    * Setter for fCursor.
    * @param fCursor the fCursor to set
    */
-  protected void setFCursor(long fCursor) {
+  protected synchronized void setFCursor(long fCursor) {
     this.fCursor = fCursor;
   }
 
@@ -1000,7 +1000,7 @@ public abstract class AbfsInputStream extends FSInputStream implements CanUnbuff
    * @return the fCursorAfterLastRead
    */
   @VisibleForTesting
-  long getFCursorAfterLastRead() {
+  synchronized long getFCursorAfterLastRead() {
     return this.fCursorAfterLastRead;
   }
 
@@ -1008,7 +1008,7 @@ public abstract class AbfsInputStream extends FSInputStream implements CanUnbuff
    * Setter for fCursorAfterLastRead.
    * @param fCursorAfterLastRead the fCursorAfterLastRead to set
    */
-  protected void setFCursorAfterLastRead(long fCursorAfterLastRead) {
+  protected synchronized void setFCursorAfterLastRead(long fCursorAfterLastRead) {
     this.fCursorAfterLastRead = fCursorAfterLastRead;
   }
 
@@ -1017,7 +1017,7 @@ public abstract class AbfsInputStream extends FSInputStream implements CanUnbuff
    * @return the limit
    */
   @VisibleForTesting
-  int getLimit() {
+  synchronized int getLimit() {
     return this.limit;
   }
 
@@ -1025,7 +1025,7 @@ public abstract class AbfsInputStream extends FSInputStream implements CanUnbuff
    * Setter for limit.
    * @param limit the limit to set
    */
-  protected void setLimit(int limit) {
+  protected synchronized void setLimit(int limit) {
     this.limit = limit;
   }
 
