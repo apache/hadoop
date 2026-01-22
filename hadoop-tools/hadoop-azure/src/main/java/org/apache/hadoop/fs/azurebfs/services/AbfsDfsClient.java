@@ -1045,11 +1045,7 @@ public class AbfsDfsClient extends AbfsClient {
     AbfsHttpHeader rangeHeader = new AbfsHttpHeader(RANGE,
         String.format("bytes=%d-%d", position, position + bufferLength - 1));
     requestHeaders.add(rangeHeader);
-
-    // eTag won't be present for first read with restrict GPS on openFile config enabled
-    if (!eTag.isEmpty()){
-      requestHeaders.add(new AbfsHttpHeader(IF_MATCH, eTag));
-    }
+    requestHeaders.add(new AbfsHttpHeader(IF_MATCH, eTag));
 
     // Add request header to fetch MD5 Hash of data returned by server.
     if (isChecksumValidationEnabled(requestHeaders, rangeHeader, bufferLength)) {

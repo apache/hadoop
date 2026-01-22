@@ -27,7 +27,13 @@ import java.util.UUID;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.fs.*;
+import org.apache.hadoop.fs.CanUnbuffer;
+import org.apache.hadoop.fs.FSExceptionMessages;
+import org.apache.hadoop.fs.FSInputStream;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.StreamCapabilities;
+import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
+import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.constants.ReadType;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
 import org.apache.hadoop.fs.impl.BackReference;
@@ -50,11 +56,15 @@ import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.*;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.DIRECTORY;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.ROOT_PATH;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.TRUE;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_KB;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.STREAM_ID_LEN;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_META_HDI_ISFOLDER;
 import static org.apache.hadoop.fs.azurebfs.constants.InternalConstants.CAPABILITY_SAFE_READAHEAD;
+import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.INVALID_RANGE;
+import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.UNAUTHORIZED_BLOB_OVERWRITE;
 import static org.apache.hadoop.io.Sizes.S_128K;
 import static org.apache.hadoop.io.Sizes.S_2M;
 import static org.apache.hadoop.util.StringUtils.toLowerCase;
@@ -135,6 +145,7 @@ public abstract class AbfsInputStream extends FSInputStream implements CanUnbuff
   /** ABFS instance to be held by the input stream to avoid GC close. */
   private final BackReference fsBackRef;
   private final ReadBufferManager readBufferManager;
+  private final String readOnDirectoryErrorMsg = "Read operation not permitted on a directory.";
 
   /**
    * Constructor for AbfsInputStream.
@@ -313,6 +324,8 @@ public abstract class AbfsInputStream extends FSInputStream implements CanUnbuff
         bCursor = 0;
       }
 
+      long nextReadPosForMetric = nextReadPos;
+
       if (shouldReadFully()) {
         lastReadBytes = readFileCompletely(b, currentOff, currentLen);
       } else if (shouldReadLastBlock()) {
@@ -322,7 +335,7 @@ public abstract class AbfsInputStream extends FSInputStream implements CanUnbuff
       }
 
       if (abfsReadFooterMetrics != null) {
-        abfsReadFooterMetrics.updateReadMetrics(filePathIdentifier, len, contentLength, nextReadPos);
+        abfsReadFooterMetrics.updateReadMetrics(filePathIdentifier, len, contentLength, nextReadPosForMetric);
       }
 
       if (lastReadBytes > 0) {
@@ -577,14 +590,39 @@ public abstract class AbfsInputStream extends FSInputStream implements CanUnbuff
     return relPath;
   }
 
+  /**
+   * Creates an exception indicating that a read operation was attempted on a directory.
+   *
+   * @return an {@link AbfsRestOperationException} indicating the operation is not permitted on a directory
+   */
   private IOException directoryReadException() {
     return new AbfsRestOperationException(
             AzureServiceErrorCode.PATH_NOT_FOUND.getStatusCode(),
             AzureServiceErrorCode.PATH_NOT_FOUND.getErrorCode(),
-            "Read operation not permitted on a directory.",
+            readOnDirectoryErrorMsg,
             null);
   }
 
+  /**
+   * Checks if the current path is a directory (for both implicit and explicit) in FNS account.
+   * If the path is a directory, throws an exception indicating that read operations are not permitted.
+   *
+   * @throws IOException if the path is a directory or if there is an error accessing the path status
+   */
+  private void checkIfDirPathInFNS() throws IOException {
+    AbfsHttpOperation gpsOp = client.getPathStatus(
+            getRelativePath(new Path(path)),
+            false,
+            tracingContext,
+            contextEncryptionAdapter).getResult();
+
+    String resourceType =
+            gpsOp.getResponseHeaderIgnoreCase(X_MS_META_HDI_ISFOLDER);
+
+    if (TRUE.equals(resourceType)) {
+      throw directoryReadException();
+    }
+  }
 
   int readRemote(long position, byte[] b, int offset, int length, TracingContext tracingContext) throws IOException {
     if (position < 0) {
@@ -617,14 +655,17 @@ public abstract class AbfsInputStream extends FSInputStream implements CanUnbuff
           tolerateOobAppends ? "*" : eTag, cachedSasToken.get(),
           contextEncryptionAdapter, tracingContext);
 
-      if (shouldRestrictGpsOnOpenFile() && isFirstRead()){
-        String resourceType = op.getResult().getResponseHeader("x-ms-resource-type");
-        if (Objects.equals(resourceType, DIRECTORY)){
+      // Update metadata on first read if restrictGpsOnOpenFile is enabled
+      if (shouldRestrictGpsOnOpenFile() && isFirstRead()) {
+        String resourceType = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_RESOURCE_TYPE);
+        if (Objects.equals(resourceType, DIRECTORY)) {
           throw directoryReadException();
         }
-        contentLength = Long.parseLong(op.getResult().getResponseHeader("Content-Range").split("/")[1]);
+        contentLength = Long.parseLong(op.getResult().getResponseHeader(HttpHeaderConfigurations.CONTENT_RANGE).
+                split(AbfsHttpConstants.FORWARD_SLASH)[1]);
         eTag = op.getResult().getResponseHeader("ETag");
       }
+
       cachedSasToken.update(op.getSasToken());
       LOG.debug("issuing HTTP GET request params position = {} b.length = {} "
           + "offset = {} length = {}", position, b.length, offset, length);
@@ -634,52 +675,40 @@ public abstract class AbfsInputStream extends FSInputStream implements CanUnbuff
       if (ex instanceof AbfsRestOperationException) {
         AbfsRestOperationException ere = (AbfsRestOperationException) ex;
         int status = ere.getStatusCode();
-        if(ere.getErrorMessage().contains("Read operation not permitted on a directory.")){
+        if(ere.getErrorMessage().contains(readOnDirectoryErrorMsg)){
           throw ere;
         }
         boolean isHnsEnabled = client.getIsNamespaceEnabled();
 
-        // Case: 404 NOT FOUND
+        // Case-1: 404 NOT FOUND
         if (status == HttpURLConnection.HTTP_NOT_FOUND) {
-
-          // HNS account → plain FileNotFound
-          if (isHnsEnabled) {
+          /*
+           * If HNS account or restrictGpsOnOpenFile disabled,
+           * we dont need any further checks
+          */
+          if (isHnsEnabled || !shouldRestrictGpsOnOpenFile()) {
             throw new FileNotFoundException(ere.getMessage());
           }
 
-          // FNS account → do GPS check
-          AbfsHttpOperation gpsOp = client.getPathStatus(
-                  getRelativePath(new Path(path)),
-                  false,
-                  tracingContext,
-                  contextEncryptionAdapter).getResult();
+          // FNS account with restrictGpsOnOpenFile enabled
+          try {
+            // Need to rule out if the path is an implicit directory
+            checkIfDirPathInFNS();
 
-          String resourceType =
-                  gpsOp.getResponseHeaderIgnoreCase(X_MS_META_HDI_ISFOLDER);
-
-          if (TRUE.equals(resourceType)) {
-            throw directoryReadException();
+          } catch (AzureBlobFileSystemException gpsEx) {
+            AbfsRestOperationException gpsEre = (AbfsRestOperationException) gpsEx;
+            if(gpsEre.getErrorMessage().contains(readOnDirectoryErrorMsg)){
+              throw gpsEre;
+            }
+            // The file does not exist
+            else throw new FileNotFoundException(gpsEre.getMessage());
           }
-
-          // Not a directory → plain FileNotFound
-          throw new FileNotFoundException(ere.getMessage());
         }
 
-        // Case: 416 + non-namespace-enabled
-        //todo: convert to azureserviceerrorcode
-        if (!isHnsEnabled && status == 416) {
-          AbfsHttpOperation gpsOp = client.getPathStatus(
-                  getRelativePath(new Path(path)),
-                  false,
-                  tracingContext,
-                  contextEncryptionAdapter).getResult();
-
-          String resourceType =
-                  gpsOp.getResponseHeaderIgnoreCase(X_MS_META_HDI_ISFOLDER);
-
-          if (TRUE.equals(resourceType)) {
-            throw directoryReadException();
-          }
+        // Case-2: 416 INVALID RANGE
+        if (!isHnsEnabled && INVALID_RANGE.equals(ere.getErrorCode())) {
+          // Need to rule out if the path is an explicit directory
+          checkIfDirPathInFNS();
         }
 
         // Default: propagate original error

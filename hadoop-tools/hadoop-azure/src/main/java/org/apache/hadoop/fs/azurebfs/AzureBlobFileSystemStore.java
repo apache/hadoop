@@ -145,7 +145,18 @@ import org.apache.http.client.utils.URIBuilder;
 
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.METADATA_INCOMPLETE_RENAME_FAILURES;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.RENAME_RECOVERY;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.*;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_EQUALS;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_FORWARD_SLASH;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_HYPHEN;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_PLUS;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_STAR;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_UNDERSCORE;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.DIRECTORY;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.FILE;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.ROOT_PATH;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.SINGLE_WHITE_SPACE;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.TOKEN_VERSION;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_ABFS_ENDPOINT;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_FOOTER_READ_BUFFER_SIZE;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_BUFFERED_PREAD_DISABLE;
@@ -417,7 +428,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     }
     try {
       LOG.debug("Get root ACL status");
-      getClient(AbfsServiceType.DFS).getAclStatus(ROOT_PATH, tracingContext);
+      getClient(AbfsServiceType.DFS).getAclStatus(AbfsHttpConstants.ROOT_PATH, tracingContext);
       // If getAcl succeeds, namespace is enabled.
       setNamespaceEnabled(true);
     } catch (AbfsRestOperationException ex) {
@@ -554,7 +565,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
   /**
    * Creates an object of {@link ContextEncryptionAdapter}
-   * from a file path. It calls {@link  AbfsClient
+   * from a file path. It calls {@link org.apache.hadoop.fs.azurebfs.services.AbfsClient
    * #getPathStatus(String, boolean, TracingContext, EncryptionAdapter)} method to get
    * contextValue (x-ms-encryption-context) from the server. The contextValue is passed
    * to the constructor of EncryptionAdapter to create the required object of
@@ -563,11 +574,11 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
    * @return <ul>
    *   <li>
    *     {@link NoContextEncryptionAdapter}: if encryptionType is not of type
-   *     {@link EncryptionType#ENCRYPTION_CONTEXT}.
+   *     {@link org.apache.hadoop.fs.azurebfs.utils.EncryptionType#ENCRYPTION_CONTEXT}.
    *   </li>
    *   <li>
    *     new object of {@link ContextProviderEncryptionAdapter} containing required encryptionKeys for the give file:
-   *     if encryptionType is of type {@link EncryptionType#ENCRYPTION_CONTEXT}.
+   *     if encryptionType is of type {@link org.apache.hadoop.fs.azurebfs.utils.EncryptionType#ENCRYPTION_CONTEXT}.
    *   </li>
    * </ul>
    */
@@ -868,6 +879,20 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         tracingContext);
   }
 
+  /**
+   * Creates an exception indicating that openFileForRead was called on a directory.
+   *
+   * @return AbfsRestOperationException with PATH_NOT_FOUND error code and a message
+   * indicating that openFileForRead must be used with files and not directories.
+   */
+  private AbfsRestOperationException openFileForReadDirectoryException() {
+    return new AbfsRestOperationException(
+            AzureServiceErrorCode.PATH_NOT_FOUND.getStatusCode(),
+            AzureServiceErrorCode.PATH_NOT_FOUND.getErrorCode(),
+            "openFileForRead must be used with files and not directories",
+            null);
+  }
+
   public AbfsInputStream openFileForRead(Path path,
       final Optional<OpenFileParameters> parameters,
       final FileSystem.Statistics statistics, TracingContext tracingContext)
@@ -885,8 +910,8 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       ContextEncryptionAdapter contextEncryptionAdapter = NoContextEncryptionAdapter.getInstance();
       /*
       * GetPathStatus API has to be called in case of:
-      *   1.  fileStatus is null or not an object of VersionedFileStatus: as eTag
-      *       would not be there in the fileStatus object.
+      *   1.  restrictGpsOnOpenFile config is disabled AND fileStatus is null or not
+      *       an object of VersionedFileStatus: as eTag would not be there in the fileStatus object.
       *   2.  fileStatus is an object of VersionedFileStatus and the object doesn't
       *       have encryptionContext field when client's encryptionType is
       *       ENCRYPTION_CONTEXT.
@@ -911,11 +936,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
                   encryptionContext.getBytes(StandardCharsets.UTF_8));
         }
         if (parseIsDirectory(resourceType)) {
-          throw new AbfsRestOperationException(
-                  AzureServiceErrorCode.PATH_NOT_FOUND.getStatusCode(),
-                  AzureServiceErrorCode.PATH_NOT_FOUND.getErrorCode(),
-                  "openFileForRead must be used with files and not directories",
-                  null);
+          throw openFileForReadDirectoryException();
         }
       }
       /*
@@ -948,12 +969,15 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         eTag = op.getResponseHeader(HttpHeaderConfigurations.ETAG);
 
         if (parseIsDirectory(resourceType)) {
-          throw new AbfsRestOperationException(
-                  AzureServiceErrorCode.PATH_NOT_FOUND.getStatusCode(),
-                  AzureServiceErrorCode.PATH_NOT_FOUND.getErrorCode(),
-                  "openFileForRead must be used with files and not directories",
-                  null);
+          throw openFileForReadDirectoryException();
         }
+      }
+      /* The only remaining case is:
+       * - restrictGpsOnOpenFile config is enabled with null FileStatus and encryptionType not as ENCRYPTION_CONTEXT
+       * In this case, we don't need to call GetPathStatus API.
+       */
+      else {
+        // do nothing
       }
 
       perfInfo.registerSuccess(true);
@@ -1357,7 +1381,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
   // generate continuation token for xns account
   private String generateContinuationTokenForXns(final String firstEntryName) {
     Preconditions.checkArgument(!Strings.isNullOrEmpty(firstEntryName)
-            && !firstEntryName.startsWith(ROOT_PATH),
+            && !firstEntryName.startsWith(AbfsHttpConstants.ROOT_PATH),
             "startFrom must be a dir/file name and it can not be a full path");
 
     StringBuilder sb = new StringBuilder();
@@ -1377,7 +1401,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
   // generate continuation token for non-xns account
   private String generateContinuationTokenForNonXns(String path, final String firstEntryName) {
     Preconditions.checkArgument(!Strings.isNullOrEmpty(firstEntryName)
-            && !firstEntryName.startsWith(ROOT_PATH),
+            && !firstEntryName.startsWith(AbfsHttpConstants.ROOT_PATH),
             "startFrom must be a dir/file name and it can not be a full path");
 
     // Notice: non-xns continuation token requires full path (first "/" is not included) for startFrom

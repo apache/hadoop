@@ -81,7 +81,7 @@ public class AbfsPrefetchInputStream extends AbfsInputStream {
       }
 
       /*
-        Skips prefetch for the first read if isRestrictGpsOnOpenFile config is enabled.
+        Skips prefetch for the first read if restrictGpsOnOpenFile config is enabled.
         This is required since contentLength is not available yet to determine prefetch block size.
        */
       if(shouldRestrictGpsOnOpenFile() && isFirstRead()) {
@@ -91,7 +91,7 @@ public class AbfsPrefetchInputStream extends AbfsInputStream {
       }
       else {
         /*
-         * Always start with Prefetch even from first read UNLESS isRestrictGpsOnOpenFile config is enabled.
+         * Always start with Prefetch even from first read UNLESS restrictGpsOnOpenFile config is enabled.
          * Even if out of order seek comes, prefetches will be triggered for next set of blocks.
          */
         bytesRead = readInternal(getFCursor(), getBuffer(), 0, getBufferSize(), false);

@@ -256,6 +256,12 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
     return this;
   }
 
+/**
+   * Sets restriction of GPS on open file.
+   *
+   * @param restrictGpsOnOpenFile whether to restrict GPS on open file.
+   * @return this instance.
+   */
   public AbfsInputStreamContext shouldRestrictGpsOnOpenFile(
           final boolean restrictGpsOnOpenFile) {
     this.restrictGpsOnOpenFile = restrictGpsOnOpenFile;
@@ -345,6 +351,7 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
     return readAheadBlockSize;
   }
 
+  /** @return whether restrictGpsOnOpenFile is enabled. */
   public boolean shouldRestrictGpsOnOpenFile() {
     return this.restrictGpsOnOpenFile;
   }

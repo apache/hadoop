@@ -84,7 +84,7 @@ public class AbfsAdaptiveInputStream extends AbfsInputStream {
       // Reset Read Type back to normal and set again based on code flow.
       getTracingContext().setReadType(ReadType.NORMAL_READ);
       if(shouldRestrictGpsOnOpenFile() && isFirstRead()) {
-        LOG.debug("RestrictGpsOnOpenFile is enabled. Skip readahead.");
+        LOG.debug("RestrictGpsOnOpenFile is enabled. Skip readahead for first read.");
         bytesRead = readInternal(getFCursor(), getBuffer(), 0, getBufferSize(), true);
       }
       else if (shouldAlwaysReadBufferSize()) {

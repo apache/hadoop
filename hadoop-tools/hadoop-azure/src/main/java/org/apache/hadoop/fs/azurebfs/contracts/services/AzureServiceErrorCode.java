@@ -66,6 +66,8 @@ public enum AzureServiceErrorCode {
   INVALID_APPEND_OPERATION("InvalidAppendOperation", HttpURLConnection.HTTP_CONFLICT, null),
   UNAUTHORIZED_BLOB_OVERWRITE("UnauthorizedBlobOverwrite", HttpURLConnection.HTTP_FORBIDDEN,
           "This request is not authorized to perform blob overwrites."),
+  INVALID_RANGE("InvalidRange", 416,
+          "The range specified is invalid for the current size of the resource."),
   UNKNOWN(null, -1, null);
 
   private final String errorCode;

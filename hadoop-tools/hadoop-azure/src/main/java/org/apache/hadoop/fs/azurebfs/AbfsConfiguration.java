@@ -1449,6 +1449,10 @@ public class AbfsConfiguration{
     return abfsReadPolicy;
   }
 
+/**
+   * Indicates whether GPS restriction on open file is enabled.
+   * @return true if GPS restriction is enabled on open file, false otherwise.
+   */
   public boolean shouldRestrictGpsOnOpenFile() {
     return restrictGpsOnOpenFile;
   }
