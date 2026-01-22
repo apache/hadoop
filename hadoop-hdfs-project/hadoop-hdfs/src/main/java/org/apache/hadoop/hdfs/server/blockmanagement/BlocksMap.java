@@ -68,6 +68,18 @@ class BlocksMap {
   
   private GSet<Block, BlockInfo> blocks;
 
+  /**
+   * Get the blocks map, throwing an informative exception if closed.
+   * This provides better error messages than NullPointerException.
+   */
+  private GSet<Block, BlockInfo> getBlocksInternal() {
+    GSet<Block, BlockInfo> b = blocks;
+    if (b == null) {
+      throw new IllegalStateException("BlocksMap has been closed and null.");
+    }
+    return b;
+  }
+
   private final LongAdder totalReplicatedBlocks = new LongAdder();
   private final LongAdder totalECBlockGroups = new LongAdder();
 
@@ -108,10 +120,11 @@ class BlocksMap {
    * Add block b belonging to the specified block collection to the map.
    */
   BlockInfo addBlockCollection(BlockInfo b, BlockCollection bc) {
-    BlockInfo info = blocks.get(b);
+    GSet<Block, BlockInfo> blocksMap = getBlocksInternal();
+    BlockInfo info = blocksMap.get(b);
     if (info != b) {
       info = b;
-      blocks.put(info);
+      blocksMap.put(info);
       incrementBlockStat(info);
     }
     info.setBlockCollectionId(bc.getId());
@@ -124,7 +137,7 @@ class BlocksMap {
    * and remove all data-node locations associated with the block.
    */
   void removeBlock(BlockInfo block) {
-    BlockInfo blockInfo = blocks.remove(block);
+    BlockInfo blockInfo = getBlocksInternal().remove(block);
     if (blockInfo == null) {
       return;
     }
@@ -143,15 +156,15 @@ class BlocksMap {
 
   /** Returns the block object if it exists in the map. */
   BlockInfo getStoredBlock(Block b) {
-    return blocks.get(b);
+    return getBlocksInternal().get(b);
   }
 
   /**
-   * Searches for the block in the BlocksMap and 
+   * Searches for the block in the BlocksMap and
    * returns {@link Iterable} of the storages the block belongs to.
    */
   Iterable<DatanodeStorageInfo> getStorages(Block b) {
-    return getStorages(blocks.get(b));
+    return getStorages(getBlocksInternal().get(b));
   }
 
   /**
@@ -169,7 +182,7 @@ class BlocksMap {
 
   /** counts number of containing nodes. Better than using iterator. */
   int numNodes(Block b) {
-    BlockInfo info = blocks.get(b);
+    BlockInfo info = getBlocksInternal().get(b);
     return info == null ? 0 : info.numNodes();
   }
 
@@ -179,7 +192,8 @@ class BlocksMap {
    * only if it does not belong to any file and data-nodes.
    */
   boolean removeNode(Block b, DatanodeDescriptor node) {
-    BlockInfo info = blocks.get(b);
+    GSet<Block, BlockInfo> blocksMap = getBlocksInternal();
+    BlockInfo info = blocksMap.get(b);
     if (info == null)
       return false;
 
@@ -188,7 +202,7 @@ class BlocksMap {
 
     if (info.hasNoStorage()    // no datanodes left
         && info.isDeleted()) { // does not belong to a file
-      blocks.remove(b);  // remove block from the map
+      blocksMap.remove(b);  // remove block from the map
       decrementBlockStat(info);
     }
     return removed;
@@ -213,7 +227,7 @@ class BlocksMap {
   }
 
   Iterable<BlockInfo> getBlocks() {
-    return blocks;
+    return getBlocksInternal();
   }
   
   /** Get the capacity of the HashMap that stores blocks */
