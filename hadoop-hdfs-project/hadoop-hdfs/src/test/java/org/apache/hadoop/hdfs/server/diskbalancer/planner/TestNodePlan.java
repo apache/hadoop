@@ -73,7 +73,7 @@ public class TestNodePlan {
   }
 
   /**
-   * Legacy version of NodePlan before volumeSetPlans was changed to `List<MoveStep>`
+   * Legacy version of NodePlan before volumeSetPlans was changed to `List<MoveStep>`.
    */
   private static class LegacyNodePlan {
     @JsonTypeInfo(use = JsonTypeInfo.Id.CLASS,
@@ -88,6 +88,22 @@ public class TestNodePlan {
     private static final ObjectReader READER = MAPPER.readerFor(LegacyNodePlan.class);
     private static final ObjectWriter WRITER = MAPPER.writerFor(
         MAPPER.constructType(LegacyNodePlan.class));
+
+    /**
+     * Constructs an Empty Node Plan.
+     */
+    LegacyNodePlan() {
+      volumeSetPlans = new LinkedList<>();
+    }
+
+    /**
+     * Constructs an empty NodePlan.
+     */
+    LegacyNodePlan(String datanodeName, int rpcPort) {
+      volumeSetPlans = new LinkedList<>();
+      this.nodeName = datanodeName;
+      this.port = rpcPort;
+    }
 
     /**
      * returns timestamp when this plan was created.
@@ -105,22 +121,6 @@ public class TestNodePlan {
      */
     public void setTimeStamp(long timeStamp) {
       this.timeStamp = timeStamp;
-    }
-
-    /**
-     * Constructs an Empty Node Plan.
-     */
-    public LegacyNodePlan() {
-      volumeSetPlans = new LinkedList<>();
-    }
-
-    /**
-     * Constructs an empty NodePlan.
-     */
-    public LegacyNodePlan(String datanodeName, int rpcPort) {
-      volumeSetPlans = new LinkedList<>();
-      this.nodeName = datanodeName;
-      this.port = rpcPort;
     }
 
     /**

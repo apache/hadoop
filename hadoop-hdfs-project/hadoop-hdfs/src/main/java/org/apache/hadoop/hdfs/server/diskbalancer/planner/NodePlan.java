@@ -17,9 +17,11 @@
 
 package org.apache.hadoop.hdfs.server.diskbalancer.planner;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
 import com.fasterxml.jackson.databind.ObjectWriter;
+import com.fasterxml.jackson.databind.json.JsonMapper;
 import org.apache.hadoop.util.Preconditions;
 
 import java.io.IOException;
@@ -36,10 +38,30 @@ public class NodePlan {
   private int port;
   private long timeStamp;
 
-  private static final ObjectMapper MAPPER = new ObjectMapper();
+  private static final ObjectMapper MAPPER =
+      JsonMapper.builder()
+          .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+          .build();
   private static final ObjectReader READER = MAPPER.readerFor(NodePlan.class);
   private static final ObjectWriter WRITER = MAPPER.writerFor(
       MAPPER.constructType(NodePlan.class));
+
+  /**
+   * Constructs an Empty Node Plan.
+   */
+  public NodePlan() {
+    volumeSetPlans = new LinkedList<>();
+  }
+
+  /**
+   * Constructs an empty NodePlan.
+   */
+  public NodePlan(String datanodeName, int rpcPort) {
+    volumeSetPlans = new LinkedList<>();
+    this.nodeName = datanodeName;
+    this.port = rpcPort;
+  }
+
   /**
    * returns timestamp when this plan was created.
    *
@@ -56,22 +78,6 @@ public class NodePlan {
    */
   public void setTimeStamp(long timeStamp) {
     this.timeStamp = timeStamp;
-  }
-
-  /**
-   * Constructs an Empty Node Plan.
-   */
-  public NodePlan() {
-    volumeSetPlans = new LinkedList<>();
-  }
-
-  /**
-   * Constructs an empty NodePlan.
-   */
-  public NodePlan(String datanodeName, int rpcPort) {
-    volumeSetPlans = new LinkedList<>();
-    this.nodeName = datanodeName;
-    this.port = rpcPort;
   }
 
   /**
