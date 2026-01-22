@@ -24,8 +24,7 @@ import sample.SampleStep;
 
 import java.io.IOException;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestNodePlan {
 
@@ -40,7 +39,7 @@ public class TestNodePlan {
     moveStep.setVolumeSetID("id1234");
     nodePlan.addStep(moveStep);
     String json = nodePlan.toJson();
-    assertNotNull(NodePlan.parseJson(json));
+    assertThat(NodePlan.parseJson(json)).isNotNull();
   }
 
   @Test
@@ -52,7 +51,8 @@ public class TestNodePlan {
     nodePlan.addStep(sampleStep);
     String json = nodePlan.toJson();
     IOException ex = LambdaTestUtils.intercept(IOException.class, () -> NodePlan.parseJson(json));
-    assertEquals("Invalid @class value in NodePlan JSON: sample.SampleStep", ex.getMessage());
+    assertThat(ex.getMessage())
+        .isEqualTo("Invalid @class value in NodePlan JSON: sample.SampleStep");
   }
 
   @Test
@@ -71,7 +71,8 @@ public class TestNodePlan {
     nodePlan.addStep(sampleStep);
     String json = nodePlan.toJson();
     IOException ex = LambdaTestUtils.intercept(IOException.class, () -> NodePlan.parseJson(json));
-    assertEquals("Invalid @class value in NodePlan JSON: sample.SampleStep", ex.getMessage());
+    assertThat(ex.getMessage())
+        .isEqualTo("Invalid @class value in NodePlan JSON: sample.SampleStep");
   }
 
   @Test
@@ -88,7 +89,8 @@ public class TestNodePlan {
     nodePlan.addStep(nestedStep);
     String json = nodePlan.toJson();
     IOException ex = LambdaTestUtils.intercept(IOException.class, () -> NodePlan.parseJson(json));
-    assertEquals("Invalid @class value in NodePlan JSON: sample.SampleStep", ex.getMessage());
+    assertThat(ex.getMessage())
+        .isEqualTo("Invalid @class value in NodePlan JSON: sample.SampleStep");
   }
 
   private static class NestedStep implements Step {
