@@ -67,6 +67,11 @@
     <!-- jersey version -->
     <jersey2.version>2.46</jersey2.version>
 
+    <!-- moxy version -->
+    <eclipse-persistence.version>2.7.14</eclipse-persistence.version>
+    <jsonapi.version>1.1.6</jsonapi.version>
+    <json.version>1.1.4</json.version>
+
     <!-- jaxb version -->
     <jaxb.version>2.3.9</jaxb.version>
 
@@ -159,17 +164,6 @@
     <protobuf-compile.version>3.5.1</protobuf-compile.version>
     <grpc.version>1.10.0</grpc.version>
     <os-maven-plugin.version>1.7.1</os-maven-plugin.version>
-
-    <!-- define the Java language version used by the compiler -->
-    <javac.version>1.8</javac.version>
-
-    <!-- The java version enforced by the maven enforcer -->
-    <!-- more complex patterns can be used here, such as
-       [${javac.version})
-    for an open-ended enforcement
-    -->
-    <enforced.java.version>[${javac.version},)</enforced.java.version>
-    <enforced.maven.version>[3.3.0,)</enforced.maven.version>
 
     <!-- keep this list sync with
          hadoop-common-project/hadoop-common/src/main/bin/hadoop-functions.sh#hadoop_finalize_jpms_opts
@@ -2186,6 +2180,21 @@
         <groupId>org.glassfish.jersey.media</groupId>
         <artifactId>jersey-media-json-jettison</artifactId>
         <version>${jersey2.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.eclipse.persistence</groupId>
+        <artifactId>org.eclipse.persistence.moxy</artifactId>
+        <version>${eclipse-persistence.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>jakarta.json</groupId>
+        <artifactId>jakarta.json-api</artifactId>
+        <version>${jsonapi.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.glassfish</groupId>
+        <artifactId>javax.json</artifactId>
+        <version>${json.version}</version>
       </dependency>
       <dependency>
         <groupId>org.glassfish.jaxb</groupId>

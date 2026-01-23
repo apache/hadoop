@@ -55,7 +55,7 @@ pipeline {
     environment {
         YETUS='yetus'
         // Branch or tag name.  Yetus release tags are 'rel/X.Y.Z'
-        YETUS_VERSION='rel/0.14.0'
+        YETUS_VERSION='a7d29a6a72750a0c5c39512f33945e773e69303e'
     }
 
     parameters {
@@ -71,7 +71,7 @@ pipeline {
                     checkout([
                         $class: 'GitSCM',
                         branches: [[name: "${env.YETUS_VERSION}"]],
-                        userRemoteConfigs: [[ url: 'https://github.com/apache/yetus.git']]]
+                        userRemoteConfigs: [[ url: 'https://github.com/ayushtkn/yetus.git']]]
                     )
                 }
             }
