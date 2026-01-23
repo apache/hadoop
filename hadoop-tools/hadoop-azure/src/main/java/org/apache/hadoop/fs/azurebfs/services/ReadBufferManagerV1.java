@@ -17,25 +17,25 @@
  */
 package org.apache.hadoop.fs.azurebfs.services;
 
-import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
-import org.apache.hadoop.fs.azurebfs.constants.ReadType;
-import org.apache.hadoop.fs.azurebfs.contracts.services.ReadBufferStatus;
-
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.function.IntFunction;
 
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
+import org.apache.hadoop.fs.azurebfs.constants.ReadType;
+import org.apache.hadoop.fs.azurebfs.contracts.services.ReadBufferStatus;
 import org.apache.hadoop.fs.azurebfs.enums.BufferType;
 import org.apache.hadoop.fs.azurebfs.enums.VectoredReadStrategy;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.impl.CombinedFileRange;
 import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
-import org.apache.hadoop.classification.VisibleForTesting;
 
 /**
  * The Read Buffer Manager for Rest AbfsClient.
@@ -197,8 +197,9 @@ public final class ReadBufferManagerV1 extends ReadBufferManager {
        * covers the requested logical range completely.
        */
       if (isAlreadyQueued(stream, unit.getOffset())) {
-        ReadBuffer existing = getFromList(getInProgressList(), stream, unit.getOffset());
-        if (existing != null && stream.getETag().equals(existing.getETag())) {
+        ReadBuffer existing = findQueuedBuffer(stream, unit.getOffset());
+        if (existing != null && stream.getETag()
+            .equals(existing.getStream().getETag())) {
           long end = existing.getOffset() + (
               existing.getStatus() == ReadBufferStatus.AVAILABLE
                   ? existing.getLength()
@@ -206,6 +207,11 @@ public final class ReadBufferManagerV1 extends ReadBufferManager {
           if (end >= unit.getOffset() + unit.getLength()) {
             existing.initVectoredUnits();
             existing.addVectoredUnit(unit);
+            existing.setAllocator(allocator);
+            if (existing.getStatus() == ReadBufferStatus.AVAILABLE) {
+              handleVectoredCompletion(existing, existing.getStatus(),
+                  existing.getLength());
+            }
             return true;
           }
         }
@@ -327,23 +333,9 @@ public final class ReadBufferManagerV1 extends ReadBufferManager {
       LOGGER.trace("ReadBufferWorker completed read file {} for offset {} outcome {} bytes {}",
           buffer.getStream().getPath(),  buffer.getOffset(), result, bytesActuallyRead);
     }
-    if (buffer.getBufferType() == BufferType.VECTORED) {
-      try {
-        if (result == ReadBufferStatus.AVAILABLE && bytesActuallyRead > 0) {
-          getVectoredReadHandler().fanOut(buffer, bytesActuallyRead);
-        } else {
-          throw new IOException(
-              "Vectored read failed for path: " + buffer.getPath()
-                  + ", status=" + buffer.getStatus());
-        }
-      } catch (Exception e) {
-        // Fail all logical FileRange futures
-        getVectoredReadHandler().failBufferFutures(buffer, e);
-        buffer.setStatus( ReadBufferStatus.READ_FAILED);
-      } finally {
-        // Must be cleared before publication / reuse
-        buffer.clearVectoredUnits();
-      }
+    List<CombinedFileRange> vectoredUnits = buffer.getVectoredUnits();
+    if (buffer.getBufferType() == BufferType.VECTORED || (vectoredUnits != null && !vectoredUnits.isEmpty())) {
+      handleVectoredCompletion(buffer, result, bytesActuallyRead);
     }
     synchronized (this) {
       // If this buffer has already been purged during

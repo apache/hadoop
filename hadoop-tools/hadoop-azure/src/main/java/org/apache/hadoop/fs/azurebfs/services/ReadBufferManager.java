@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.azurebfs.services;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
@@ -320,5 +321,90 @@ public abstract class ReadBufferManager {
   protected void testMimicFullUseAndAddFailedBuffer(ReadBuffer buf) {
     freeList.clear();
     completedReadList.add(buf);
+  }
+
+  /**
+   * Finds an existing {@link ReadBuffer} for the given stream whose buffered
+   * range covers the specified logical offset.
+   *
+   * <p>The search is performed in the read-ahead queue, in-progress list,
+   * and completed-read list, in that order.
+   *
+   * @param stream the {@link AbfsInputStream} associated with the read request
+   *
+   * @return a matching {@link ReadBuffer} if one exists, or {@code null} otherwise
+   */
+  ReadBuffer findQueuedBuffer(final AbfsInputStream stream,
+      long requestedOffset) {
+    ReadBuffer buffer;
+    buffer = findInList(getReadAheadQueue(), stream, requestedOffset);
+    if (buffer != null) {
+      return buffer;
+    }
+    buffer = findInList(getInProgressList(), stream, requestedOffset);
+    if (buffer != null) {
+      return buffer;
+    }
+    return findInList(getCompletedReadList(), stream, requestedOffset);
+  }
+
+  /**
+   * Searches the given collection of {@link ReadBuffer}s for one that belongs
+   * to the specified stream and whose buffered range covers the given offset.
+   *
+   * @param buffers the collection of {@link ReadBuffer}s to search
+   * @param stream the {@link AbfsInputStream} associated with the read request
+   *
+   * @return the matching {@link ReadBuffer}, or {@code null} if none is found
+   */
+  ReadBuffer findInList(final Collection<ReadBuffer> buffers,
+      final AbfsInputStream stream, long requestedOffset) {
+    for (ReadBuffer buffer : buffers) {
+      if (buffer.getStream() == stream
+          && requestedOffset >= buffer.getOffset()
+          && requestedOffset < buffer.getOffset()
+          + buffer.getRequestedLength()) {
+        return buffer;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Handle vectored-read completion for a buffer.
+   *
+   * <p>If the buffer participates in a vectored read, this method performs
+   * vectored fan-out exactly once when the physical read completes successfully,
+   * or fails all associated logical ranges on error. Vectored units are cleared
+   * after fan-out is finalized to allow safe publication or reuse of the buffer.</p>
+   *
+   * @param buffer the read buffer whose physical read has completed
+   * @param result the completion status of the physical read
+   * @param bytesActuallyRead number of bytes read from the backend
+   */
+  void handleVectoredCompletion(
+      ReadBuffer buffer,
+      ReadBufferStatus result,
+      int bytesActuallyRead) {
+    try {
+      if (result == ReadBufferStatus.AVAILABLE && bytesActuallyRead > 0) {
+        if (buffer.tryFanOut()) {
+          getVectoredReadHandler().fanOut(buffer, bytesActuallyRead);
+        }
+      } else {
+        throw new IOException(
+            "Vectored read failed for path: " + buffer.getPath()
+                + ", status=" + buffer.getStatus());
+      }
+    } catch (Exception e) {
+      // Fail all logical FileRange futures
+      getVectoredReadHandler().failBufferFutures(buffer, e);
+      buffer.setStatus(ReadBufferStatus.READ_FAILED);
+    } finally {
+      if (buffer.isFanOutDone()) {
+        // Must be cleared before publication / reuse
+        buffer.clearVectoredUnits();
+      }
+    }
   }
 }

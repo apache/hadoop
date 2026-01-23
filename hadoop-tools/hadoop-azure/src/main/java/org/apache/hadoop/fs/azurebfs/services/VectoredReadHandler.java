@@ -26,12 +26,12 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.IntFunction;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.FileRange;
 import org.apache.hadoop.fs.azurebfs.enums.VectoredReadStrategy;
-import org.apache.hadoop.fs.azurebfs.utils.ResourceUtilizationUtils;
 import org.apache.hadoop.fs.impl.CombinedFileRange;
 
-public final class VectoredReadHandler {
+class VectoredReadHandler {
   private final ReadBufferManager readBufferManager;
   private final VectoredReadStrategy strategy;
 
@@ -85,10 +85,7 @@ public final class VectoredReadHandler {
 
       for (CombinedFileRange chunk : chunks) {
         try {
-          boolean queued =
-              readBufferManager.queueVectoredRead(
-                  stream, chunk, stream.getTracingContext(), allocator);
-
+          boolean queued = queueVectoredRead(stream, chunk, allocator);
           if (!queued) {
             /* Fall back to direct read if no buffer is available */
             directRead(stream, chunk, allocator);
@@ -101,6 +98,22 @@ public final class VectoredReadHandler {
     }
   }
 
+  /**
+   * Queues a vectored read request with the buffer manager.
+   * @return true if successfully queued, false if the queue is full and fallback is required.
+   */
+  @VisibleForTesting
+  boolean queueVectoredRead(AbfsInputStream stream, CombinedFileRange unit, IntFunction<ByteBuffer> allocator) {
+    return getReadBufferManager().queueVectoredRead(stream, unit, stream.getTracingContext(), allocator);
+  }
+
+  /**
+   * Accesses the shared manager responsible for coordinating asynchronous read buffers.
+   * @return the {@link ReadBufferManager} instance.
+   */
+  public ReadBufferManager getReadBufferManager() {
+    return readBufferManager;
+  }
 
   /**
    * Split a merged logical range into buffer-sized physical read units.
@@ -219,31 +232,25 @@ public final class VectoredReadHandler {
    * @param bytesRead number of bytes actually read into the buffer
    */
   void fanOut(ReadBuffer buffer, int bytesRead) {
-
     List<CombinedFileRange> units = buffer.getVectoredUnits();
     if (units == null) {
       return;
     }
-
     /* Distribute buffer data to all logical ranges attached to this buffer */
     for (CombinedFileRange unit : units) {
       for (FileRange r : unit.getUnderlying()) {
-
         /* Skip ranges whose futures have been cancelled */
         if (r.getData().isCancelled()) {
           continue;
         }
-
         try {
           /* Compute offset of the logical range relative to the buffer */
           long rel = r.getOffset() - buffer.getOffset();
-
           /* Determine how many bytes are available for this range */
           int available =
               (int) Math.max(
                   0,
                   Math.min(r.getLength(), bytesRead - rel));
-
           /* Allocate output buffer and copy available data */
           ByteBuffer bb = buffer.getAllocator().apply(r.getLength());
           if (available > 0) {
@@ -310,7 +317,7 @@ public final class VectoredReadHandler {
    * @param allocator allocator used to create output buffers for logical ranges
    * @throws IOException if memory pressure is high or the backend read fails
    */
-  private void directRead(
+  void directRead(
       AbfsInputStream stream,
       CombinedFileRange unit,
       IntFunction<ByteBuffer> allocator) throws IOException {
@@ -329,6 +336,5 @@ public final class VectoredReadHandler {
       r.getData().complete(bb);
     }
   }
-
 }
 

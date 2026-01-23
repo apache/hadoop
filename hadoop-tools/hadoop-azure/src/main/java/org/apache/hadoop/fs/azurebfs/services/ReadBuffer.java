@@ -36,29 +36,15 @@ import static org.apache.hadoop.fs.azurebfs.contracts.services.ReadBufferStatus.
 public class ReadBuffer {
 
   private AbfsInputStream stream;
-
   private String eTag;
-
   private String path;                   // path of the file this buffer is for
-
-  private long offset;
-      // offset within the file for the buffer
-
-  private int length;
-      // actual length, set after the buffer is filles
-
+  private long offset;                   // offset within the file for the buffer
+  private int length;                    // actual length, set after the buffer is filles
   private int requestedLength;           // requested length of the read
-
   private byte[] buffer;                 // the buffer itself
-
-  private int bufferindex = -1;
-      // index in the buffers array in Buffer manager
-
+  private int bufferindex = -1;          // index in the buffers array in Buffer manager
   private ReadBufferStatus status;             // status of the buffer
-
-  private CountDownLatch latch = null;
-      // signaled when the buffer is done reading, so any client
-
+  private CountDownLatch latch = null;   // signaled when the buffer is done reading, so any client
   // waiting on this buffer gets unblocked
   private TracingContext tracingContext;
 
@@ -71,8 +57,10 @@ public class ReadBuffer {
   private BufferType bufferType = BufferType.NORMAL;
   // list of combined file ranges for vectored read.
   private List<CombinedFileRange> vectoredUnits;
-  /* Allocator used for vectored fan-out; captured at queue time */
+  // Allocator used for vectored fan-out; captured at queue time */
   private IntFunction<ByteBuffer> allocator;
+  // Tracks whether fanOut has already been executed
+  private final AtomicInteger fanOutDone = new AtomicInteger(0);
 
   private IOException errException = null;
 
@@ -274,5 +262,23 @@ public class ReadBuffer {
    */
   public IntFunction<ByteBuffer> getAllocator() {
     return allocator;
+  }
+
+  /**
+   * Attempt to execute vectored fan-out exactly once for this buffer.
+   *
+   * @return {@code true} if the caller should perform fan-out; {@code false}
+   *         if fan-out has already been executed
+   */
+  boolean tryFanOut() {
+    return fanOutDone.compareAndSet(0, 1);
+  }
+
+  /**
+   * @return {@code true} if vectored fan-out has already been executed
+   *         for this buffer; {@code false} otherwise
+   */
+  boolean isFanOutDone() {
+    return fanOutDone.get() == 1;
   }
 }

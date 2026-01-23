@@ -61,8 +61,6 @@ import static java.lang.Math.min;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_KB;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.STREAM_ID_LEN;
 import static org.apache.hadoop.fs.azurebfs.constants.InternalConstants.CAPABILITY_SAFE_READAHEAD;
-import static org.apache.hadoop.io.Sizes.S_128K;
-import static org.apache.hadoop.io.Sizes.S_2M;
 import static org.apache.hadoop.util.StringUtils.toLowerCase;
 
 /**
@@ -130,6 +128,8 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   private final AbfsInputStreamContext context;
   private IOStatistics ioStatistics;
   private String filePathIdentifier;
+  private VectoredReadHandler vectoredReadHandler;
+
   /**
    * This is the actual position within the object, used by
    * lazy seek to decide whether to seek on the next read or not.
@@ -209,6 +209,14 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
 
   private String createInputStreamId() {
     return StringUtils.right(UUID.randomUUID().toString(), STREAM_ID_LEN);
+  }
+
+  /**
+   * Retrieves the handler responsible for processing vectored read requests.
+   * @return the {@link VectoredReadHandler} instance associated with the buffer manager.
+   */
+  VectoredReadHandler getVectoredReadHandler() {
+    return getReadBufferManager().getVectoredReadHandler();
   }
 
   @Override
@@ -332,8 +340,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   @Override
   public void readVectored(List<? extends FileRange> ranges,
       IntFunction<ByteBuffer> allocate) {
-    readBufferManager.getVectoredReadHandler()
-        .readVectored(this, ranges, allocate);
+    getVectoredReadHandler().readVectored(this, ranges, allocate);
   }
 
   private boolean shouldReadFully() {

@@ -166,7 +166,7 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
     return bufferManager;
   }
 
-  public VectoredReadHandler getVectoredReadHandler() {
+VectoredReadHandler getVectoredReadHandler() {
     return vectoredReadHandler;
   }
 
@@ -375,15 +375,15 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
         new TracingContext(tracingContext);
     readAheadTracingContext.setPrimaryRequestID();
     readAheadTracingContext.setReadType(ReadType.VECTORED_READ);
-
     synchronized (this) {
       /*
        * Attempt to hitchhike on an existing in-progress physical read if it
        * covers the requested logical range completely.
        */
       if (isAlreadyQueued(stream.getETag(), unit.getOffset())) {
-        ReadBuffer existing = getFromList(getInProgressList(), stream.getPath(), unit.getOffset());
-        if (existing != null && stream.getETag().equals(existing.getETag())) {
+        ReadBuffer existing = findQueuedBuffer(stream, unit.getOffset());
+        if (existing != null && stream.getETag()
+            .equals(existing.getStream().getETag())) {
           long end = existing.getOffset() + (
               existing.getStatus() == ReadBufferStatus.AVAILABLE
                   ? existing.getLength()
@@ -391,6 +391,11 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
           if (end >= unit.getOffset() + unit.getLength()) {
             existing.initVectoredUnits();
             existing.addVectoredUnit(unit);
+            existing.setAllocator(allocator);
+            if (existing.getStatus() == ReadBufferStatus.AVAILABLE) {
+              handleVectoredCompletion(existing, existing.getStatus(),
+                  existing.getLength());
+            }
             return true;
           }
         }
@@ -537,23 +542,10 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
         "ReadBufferWorker completed prefetch for file: {} with eTag: {}, for offset: {}, queued by stream: {}, with status: {} and bytes read: {}",
         buffer.getPath(), buffer.getETag(), buffer.getOffset(),
         buffer.getStream().hashCode(), result, bytesActuallyRead);
-    if (buffer.getBufferType() == BufferType.VECTORED) {
-      try {
-        if (result == ReadBufferStatus.AVAILABLE && bytesActuallyRead > 0) {
-          getVectoredReadHandler().fanOut(buffer, bytesActuallyRead);
-        } else {
-          throw new IOException(
-              "Vectored read failed for path: " + buffer.getPath()
-                  + ", status=" + buffer.getStatus());
-        }
-      } catch (Exception e) {
-        // Fail all logical FileRange futures
-        getVectoredReadHandler().failBufferFutures(buffer, e);
-        buffer.setStatus( ReadBufferStatus.READ_FAILED);
-      } finally {
-        // Must be cleared before publication / reuse
-        buffer.clearVectoredUnits();
-      }
+    List<CombinedFileRange> vectoredUnits = buffer.getVectoredUnits();
+    if (buffer.getBufferType() == BufferType.VECTORED || (vectoredUnits != null
+        && !vectoredUnits.isEmpty())) {
+      handleVectoredCompletion(buffer, result, bytesActuallyRead);
     }
     synchronized (this) {
       // If this buffer has already been purged during
