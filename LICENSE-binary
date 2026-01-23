@@ -473,6 +473,7 @@ leveldb v1.13
 com.google.auth:google-auth-library-credentials:1.33.1
 com.google.auth:google-auth-library-oauth2-http:1.33.1
 com.google.protobuf:protobuf-java:2.5.0
+com.google.protobuf:protobuf-java:3.25.5
 com.google.protobuf:protobuf-java:3.25.8
 com.google.re2j:re2j:1.1
 com.jcraft:jsch:0.1.55
