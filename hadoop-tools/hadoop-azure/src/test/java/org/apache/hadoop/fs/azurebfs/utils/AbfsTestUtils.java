@@ -24,23 +24,20 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
-import com.microsoft.azure.storage.CloudStorageAccount;
-import com.microsoft.azure.storage.blob.CloudBlobClient;
-import com.microsoft.azure.storage.blob.CloudBlobContainer;
+import org.opentest4j.TestAbortedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.azure.AzureBlobStorageTestAccount;
 import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
-import org.apache.hadoop.fs.azurebfs.services.AuthType;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.FILE;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_WRITE_BUFFER_SIZE;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.ABFS_SCHEME;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.ABFS_SECURE_SCHEME;
-import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.TEST_CONTAINER_PREFIX;
 import static org.assertj.core.api.Assumptions.assumeThat;
 
 /**
@@ -54,47 +51,6 @@ public final class AbfsTestUtils extends AbstractAbfsIntegrationTest {
 
   public AbfsTestUtils() throws Exception {
     super();
-  }
-
-  /**
-   * If unit tests were interrupted and crushed accidentally, the test containers won't be deleted.
-   * In that case, dev can use this tool to list and delete all test containers.
-   * By default, all test container used in E2E tests sharing same prefix: "abfs-testcontainer-"
-   */
-
-  public void checkContainers() throws Throwable {
-    assumeThat(this.getAuthType()).isEqualTo(AuthType.SharedKey);
-    int count = 0;
-    CloudStorageAccount storageAccount = AzureBlobStorageTestAccount.createTestAccount();
-    CloudBlobClient blobClient = storageAccount.createCloudBlobClient();
-    Iterable<CloudBlobContainer> containers
-            = blobClient.listContainers(TEST_CONTAINER_PREFIX);
-    for (CloudBlobContainer container : containers) {
-      count++;
-      LOG.info("Container {}, URI {}",
-              container.getName(),
-              container.getUri());
-    }
-    LOG.info("Found {} test containers", count);
-  }
-
-
-  public void deleteContainers() throws Throwable {
-    assumeThat(this.getAuthType()).isEqualTo(AuthType.SharedKey);
-    int count = 0;
-    CloudStorageAccount storageAccount = AzureBlobStorageTestAccount.createTestAccount();
-    CloudBlobClient blobClient = storageAccount.createCloudBlobClient();
-    Iterable<CloudBlobContainer> containers
-            = blobClient.listContainers(TEST_CONTAINER_PREFIX);
-    for (CloudBlobContainer container : containers) {
-      LOG.info("Container {} URI {}",
-              container.getName(),
-              container.getUri());
-      if (container.deleteIfExists()) {
-        count++;
-      }
-    }
-    LOG.info("Deleted {} test containers", count);
   }
 
     /**
@@ -131,5 +87,172 @@ public final class AbfsTestUtils extends AbstractAbfsIntegrationTest {
       future.get();
     }
     executorService.shutdown();
+  }
+
+  /**
+   * Prefix for wasb-specific scale tests.
+   */
+  public static String AZURE_SCALE_TEST = "fs.azure.scale.test.";
+
+  /**
+   * Huge file for testing AbfsOutputStream uploads: {@value}
+   */
+  public static String AZURE_SCALE_HUGE_FILE_UPLOAD = AZURE_SCALE_TEST + "huge.upload";
+
+  /**
+   * Default value for Huge file to be tested for AbfsOutputStream uploads:
+   * {@value}
+   */
+  public static int AZURE_SCALE_HUGE_FILE_UPLOAD_DEFAULT = 2 * DEFAULT_WRITE_BUFFER_SIZE;
+
+  /**
+   * Value to set a system property to (in maven) to declare that
+   * a property has been unset.
+   */
+  public static final String UNSET_PROPERTY = "unset";
+
+  /**
+   * Prefix for any cross-filesystem scale test options.
+   */
+  public static String SCALE_TEST = "scale.test.";
+  /**
+   * A property set to true in maven if scale tests are enabled: {@value}.
+   */
+  public static String KEY_SCALE_TESTS_ENABLED = AZURE_SCALE_TEST + "enabled";
+
+  /**
+   * The number of operations to perform: {@value}.
+   */
+  public static String KEY_OPERATION_COUNT = SCALE_TEST + "operation.count";
+  /**
+   * The default number of operations to perform: {@value}.
+   */
+  public static long DEFAULT_OPERATION_COUNT = 2005;
+
+  /**
+   * Default policy on scale tests: {@value}.
+   */
+  public static boolean DEFAULT_SCALE_TESTS_ENABLED = false;
+
+  /**
+   * Timeout in Seconds for Scale Tests: {@value}.
+   */
+  public static int SCALE_TEST_TIMEOUT_SECONDS = 30 * 60;
+
+  public static int SCALE_TEST_TIMEOUT_MILLIS = SCALE_TEST_TIMEOUT_SECONDS * 1000;
+
+  /**
+   * Assume that a condition is met. If not: log at WARN and
+   * then throw an {@link TestAbortedException}.
+   * @param message message in an assumption
+   * @param condition condition to probe
+   */
+  public static void assume(String message, boolean condition) {
+    if (!condition) {
+      LOG.warn(message);
+    }
+    assumeThat(condition).as(message).isTrue();
+  }
+
+  /**
+   * Get a string test property.
+   * <ol>
+   *   <li>Look up configuration value (which can pick up core-default.xml),
+   *       using {@code defVal} as the default value (if conf != null).
+   *   </li>
+   *   <li>Fetch the system property.</li>
+   *   <li>If the system property is not empty or "(unset)":
+   *   it overrides the conf value.
+   *   </li>
+   * </ol>
+   * This puts the build properties in charge of everything. It's not a
+   * perfect design; having maven set properties based on a file, as ant let
+   * you do, is better for customization.
+   *
+   * As to why there's a special (unset) value, see
+   * @see <a href="http://stackoverflow.com/questions/7773134/null-versus-empty-arguments-in-maven">
+   *   Stack Overflow</a>
+   * @param conf config: may be null
+   * @param key key to look up
+   * @param defVal default value
+   * @return the evaluated test property.
+   */
+
+  public static String getTestProperty(Configuration conf,
+      String key,
+      String defVal) {
+    String confVal = conf != null
+        ? conf.getTrimmed(key, defVal)
+        : defVal;
+    String propval = System.getProperty(key);
+    return StringUtils.isNotEmpty(propval) && !UNSET_PROPERTY.equals(propval)
+        ? propval : confVal;
+  }
+
+  /**
+   * Get a long test property.
+   * <ol>
+   *   <li>Look up configuration value (which can pick up core-default.xml),
+   *       using {@code defVal} as the default value (if conf != null).
+   *   </li>
+   *   <li>Fetch the system property.</li>
+   *   <li>If the system property is not empty or "(unset)":
+   *   it overrides the conf value.
+   *   </li>
+   * </ol>
+   * This puts the build properties in charge of everything. It's not a
+   * perfect design; having maven set properties based on a file, as ant let
+   * you do, is better for customization.
+   *
+   * As to why there's a special (unset) value, see
+   * {@link <a href="http://stackoverflow.com/questions/7773134/null-versus-empty-arguments-in-maven">...</a>}
+   * @param conf config: may be null
+   * @param key key to look up
+   * @param defVal default value
+   * @return the evaluated test property.
+   */
+  public static long getTestPropertyLong(Configuration conf,
+      String key, long defVal) {
+    return Long.valueOf(
+        getTestProperty(conf, key, Long.toString(defVal)));
+  }
+
+  /**
+   * Get an integer test property; algorithm described in
+   * {@link #getTestPropertyLong(Configuration, String, long)}.
+   * @param key key to look up
+   * @param defVal default value
+   * @return the evaluated test property.
+   */
+  public static int getTestPropertyInt(Configuration conf,
+      String key, int defVal) {
+    return (int) getTestPropertyLong(conf, key, defVal);
+  }
+
+  /**
+   * Get a boolean test property; algorithm described in
+   * {@link #getTestPropertyLong(Configuration, String, long)}.
+   * @param key key to look up
+   * @param defVal default value
+   * @return the evaluated test property.
+   */
+  public static boolean getTestPropertyBool(Configuration conf,
+      String key,
+      boolean defVal) {
+    return Boolean.valueOf(
+        getTestProperty(conf, key, Boolean.toString(defVal)));
+  }
+
+  /**
+   * Assume that the scale tests are enabled by the relevant system property.
+   */
+  public static void assumeScaleTestsEnabled(Configuration conf) {
+    boolean enabled = getTestPropertyBool(
+        conf,
+        KEY_SCALE_TESTS_ENABLED,
+        DEFAULT_SCALE_TESTS_ENABLED);
+    assume("Scale test disabled: to enable set property "
+            + KEY_SCALE_TESTS_ENABLED,
+        enabled);
   }
 }

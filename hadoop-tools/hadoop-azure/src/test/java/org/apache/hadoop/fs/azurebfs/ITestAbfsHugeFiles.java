@@ -34,10 +34,10 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.store.DataBlocks;
 
-import static org.apache.hadoop.fs.azure.integration.AzureTestConstants.AZURE_SCALE_HUGE_FILE_UPLOAD;
-import static org.apache.hadoop.fs.azure.integration.AzureTestConstants.AZURE_SCALE_HUGE_FILE_UPLOAD_DEFAULT;
-import static org.apache.hadoop.fs.azure.integration.AzureTestUtils.assume;
-import static org.apache.hadoop.fs.azure.integration.AzureTestUtils.getTestPropertyInt;
+import static org.apache.hadoop.fs.azurebfs.utils.AbfsTestUtils.AZURE_SCALE_HUGE_FILE_UPLOAD;
+import static org.apache.hadoop.fs.azurebfs.utils.AbfsTestUtils.AZURE_SCALE_HUGE_FILE_UPLOAD_DEFAULT;
+import static org.apache.hadoop.fs.azurebfs.utils.AbfsTestUtils.assume;
+import static org.apache.hadoop.fs.azurebfs.utils.AbfsTestUtils.getTestPropertyInt;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.DATA_BLOCKS_BUFFER;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_WRITE_BUFFER_SIZE;
 

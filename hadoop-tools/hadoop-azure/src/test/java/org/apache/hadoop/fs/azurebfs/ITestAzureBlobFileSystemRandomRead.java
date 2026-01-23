@@ -108,69 +108,6 @@ public class ITestAzureBlobFileSystemRandomRead extends
   }
 
   /**
-   * Validates the implementation of random read in ABFS
-   * @throws IOException
-   */
-  @Test
-  public void testRandomRead() throws Exception {
-    assumeThat(getIsNamespaceEnabled(getFileSystem()))
-        .as("This test does not support namespace enabled account")
-        .isFalse();
-    assumeThat(isAppendBlobEnabled()).as("Not valid for APPEND BLOB").isFalse();
-    Path testPath = path(TEST_FILE_PREFIX + "_testRandomRead");
-    assumeHugeFileExists(testPath);
-
-    try (
-            FSDataInputStream inputStreamV1
-                    = this.getFileSystem().open(testPath);
-            FSDataInputStream inputStreamV2
-                    = this.getWasbFileSystem().open(testPath);
-    ) {
-      final int bufferSize = 4 * KILOBYTE;
-      byte[] bufferV1 = new byte[bufferSize];
-      byte[] bufferV2 = new byte[bufferV1.length];
-
-      verifyConsistentReads(inputStreamV1, inputStreamV2, bufferV1, bufferV2);
-
-      inputStreamV1.seek(0);
-      inputStreamV2.seek(0);
-
-      verifyConsistentReads(inputStreamV1, inputStreamV2, bufferV1, bufferV2);
-
-      verifyConsistentReads(inputStreamV1, inputStreamV2, bufferV1, bufferV2);
-
-      inputStreamV1.seek(SEEK_POSITION_ONE);
-      inputStreamV2.seek(SEEK_POSITION_ONE);
-
-      inputStreamV1.seek(0);
-      inputStreamV2.seek(0);
-
-      verifyConsistentReads(inputStreamV1, inputStreamV2, bufferV1, bufferV2);
-
-      verifyConsistentReads(inputStreamV1, inputStreamV2, bufferV1, bufferV2);
-
-      verifyConsistentReads(inputStreamV1, inputStreamV2, bufferV1, bufferV2);
-
-      inputStreamV1.seek(SEEK_POSITION_TWO);
-      inputStreamV2.seek(SEEK_POSITION_TWO);
-
-      verifyConsistentReads(inputStreamV1, inputStreamV2, bufferV1, bufferV2);
-
-      inputStreamV1.seek(SEEK_POSITION_THREE);
-      inputStreamV2.seek(SEEK_POSITION_THREE);
-
-      verifyConsistentReads(inputStreamV1, inputStreamV2, bufferV1, bufferV2);
-
-      verifyConsistentReads(inputStreamV1, inputStreamV2, bufferV1, bufferV2);
-
-      inputStreamV1.seek(SEEK_POSITION_FOUR);
-      inputStreamV2.seek(SEEK_POSITION_FOUR);
-
-      verifyConsistentReads(inputStreamV1, inputStreamV2, bufferV1, bufferV2);
-    }
-  }
-
-  /**
    * Validates the implementation of Seekable.seekToNewSource
    * @throws IOException
    */
@@ -426,43 +363,6 @@ public class ITestAzureBlobFileSystemRandomRead extends
                     + " ratio=%3$.2f",
             (long) beforeSeekElapsedMs,
             (long) afterSeekElapsedMs,
-            ratio));
-  }
-
-  @Test
-  @Disabled("HADOOP-16915")
-  public void testRandomReadPerformance() throws Exception {
-    assumeThat(getIsNamespaceEnabled(getFileSystem()))
-        .as("This test does not support namespace enabled account")
-        .isFalse();
-    Path testPath = path(TEST_FILE_PREFIX + "_testRandomReadPerformance");
-    assumeHugeFileExists(testPath);
-
-    final AzureBlobFileSystem abFs = this.getFileSystem();
-    final NativeAzureFileSystem wasbFs = this.getWasbFileSystem();
-
-    final int maxAttempts = 10;
-    final double maxAcceptableRatio = 1.025;
-    double v1ElapsedMs = 0, v2ElapsedMs = 0;
-    double ratio = Double.MAX_VALUE;
-    for (int i = 0; i < maxAttempts && ratio >= maxAcceptableRatio; i++) {
-      v1ElapsedMs = randomRead(1, testPath, wasbFs);
-      v2ElapsedMs = randomRead(2, testPath, abFs);
-
-      ratio = v2ElapsedMs / v1ElapsedMs;
-
-      LOG.info(String.format(
-              "v1ElapsedMs=%1$d, v2ElapsedMs=%2$d, ratio=%3$.2f",
-              (long) v1ElapsedMs,
-              (long) v2ElapsedMs,
-              ratio));
-    }
-    assertTrue(
-           ratio < maxAcceptableRatio, String.format(
-            "Performance of version 2 is not acceptable: v1ElapsedMs=%1$d,"
-                    + " v2ElapsedMs=%2$d, ratio=%3$.2f",
-            (long) v1ElapsedMs,
-            (long) v2ElapsedMs,
             ratio));
   }
 

@@ -23,9 +23,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.azure.integration.AzureTestConstants;
 
-import static org.apache.hadoop.fs.azure.integration.AzureTestUtils.assumeScaleTestsEnabled;
+import static org.apache.hadoop.fs.azurebfs.utils.AbfsTestUtils.DEFAULT_OPERATION_COUNT;
+import static org.apache.hadoop.fs.azurebfs.utils.AbfsTestUtils.KEY_OPERATION_COUNT;
+import static org.apache.hadoop.fs.azurebfs.utils.AbfsTestUtils.SCALE_TEST_TIMEOUT_MILLIS;
+import static org.apache.hadoop.fs.azurebfs.utils.AbfsTestUtils.assumeScaleTestsEnabled;
 
 /**
  * Integration tests at bigger scale; configurable as to
@@ -42,7 +44,7 @@ public class AbstractAbfsScaleTest extends AbstractAbfsIntegrationTest  {
 
   @Override
   protected int getTestTimeoutMillis() {
-    return AzureTestConstants.SCALE_TEST_TIMEOUT_MILLIS;
+    return SCALE_TEST_TIMEOUT_MILLIS;
   }
 
   @BeforeEach
@@ -55,7 +57,7 @@ public class AbstractAbfsScaleTest extends AbstractAbfsIntegrationTest  {
   }
 
   protected long getOperationCount() {
-    return getConfiguration().getLong(AzureTestConstants.KEY_OPERATION_COUNT,
-        AzureTestConstants.DEFAULT_OPERATION_COUNT);
+    return getConfiguration().getLong(KEY_OPERATION_COUNT,
+        DEFAULT_OPERATION_COUNT);
   }
 }
