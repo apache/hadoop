@@ -40,7 +40,13 @@ import org.apache.hadoop.util.Progressable;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
+@Deprecated
 public class NativeAzureFileSystem extends FileSystem {
+
+  public static final String ERROR_MESSAGE =
+      "WASB Driver using wasb(s) schema is No longer Supported. "
+          + "Instead use ABFS Driver for FNS account by changing the scheme to abfs(s)."
+          + "For more details contact askabfs@microsoft.com";
 
   public NativeAzureFileSystem() {
     // set store in initialize()
@@ -53,13 +59,18 @@ public class NativeAzureFileSystem extends FileSystem {
     }
   }
 
+  /**
+   * Fails Any Attempt to use WASB FileSystem Implementation.
+   *
+   * @param uri  the URI of the file system
+   * @param conf the configuration
+   * @throws IOException              on IO problems
+   * @throws IllegalArgumentException if the URI is invalid
+   */
   @Override
   public void initialize(URI uri, Configuration conf)
       throws IOException, IllegalArgumentException {
-    throw new IllegalArgumentException(
-        "WASB Driver using wasb(s) schema is No longer Supported. "
-            + "Please use ABFS Driver by changing the scheme to abfs(s) "
-            + "and using AzureBlobFileSystem class.");
+    throw new IllegalArgumentException(ERROR_MESSAGE);
   }
 
   @Override

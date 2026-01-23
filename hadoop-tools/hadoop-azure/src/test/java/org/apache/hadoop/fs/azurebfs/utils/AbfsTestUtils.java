@@ -35,34 +35,41 @@ import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.FILE;
-import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_WRITE_BUFFER_SIZE;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.ABFS_SCHEME;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.ABFS_SECURE_SCHEME;
+import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_SCALE_TEST_ENABLED;
 import static org.assertj.core.api.Assumptions.assumeThat;
 
 /**
  * Some Utils for ABFS tests.
  */
 public final class AbfsTestUtils extends AbstractAbfsIntegrationTest {
-    private static final Logger LOG =
-            LoggerFactory.getLogger(AbfsTestUtils.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(AbfsTestUtils.class);
 
   private static final int TOTAL_THREADS_IN_POOL = 5;
+  private static final String UNSET_PROPERTY = "unset";
+  private static final int SCALE_TEST_TIMEOUT_SECONDS = 30 * 60;
+  private static final boolean DEFAULT_SCALE_TESTS_ENABLED = false;
+  public static final int SCALE_TEST_TIMEOUT_MILLIS = SCALE_TEST_TIMEOUT_SECONDS
+      * 1000;
 
   public AbfsTestUtils() throws Exception {
     super();
   }
 
-    /**
-     * Turn off FS Caching: use if a filesystem with different options from
-     * the default is required.
-     * @param conf configuration to patch
-     */
-    public static void disableFilesystemCaching(Configuration conf) {
-        // Disabling cache to make sure new configs are picked up.
-        conf.setBoolean(String.format("fs.%s.impl.disable.cache", ABFS_SCHEME), true);
-        conf.setBoolean(String.format("fs.%s.impl.disable.cache", ABFS_SECURE_SCHEME), true);
-    }
+  /**
+   * Turn off FS Caching: use if a filesystem with different options from
+   * the default is required.
+   * @param conf configuration to patch
+   */
+  public static void disableFilesystemCaching(Configuration conf) {
+    // Disabling cache to make sure new configs are picked up.
+    conf.setBoolean(String.format("fs.%s.impl.disable.cache", ABFS_SCHEME),
+        true);
+    conf.setBoolean(
+        String.format("fs.%s.impl.disable.cache", ABFS_SECURE_SCHEME), true);
+  }
 
   /**
    * Helper method to create files in the given directory.
@@ -72,7 +79,9 @@ public final class AbfsTestUtils extends AbstractAbfsIntegrationTest {
    * @param numFiles The number of files to create.
    * @throws ExecutionException, InterruptedException If an error occurs during file creation.
    */
-  public static void createFiles(AzureBlobFileSystem fs, Path path, int numFiles)
+  public static void createFiles(AzureBlobFileSystem fs,
+      Path path,
+      int numFiles)
       throws ExecutionException, InterruptedException {
     ExecutorService executorService =
         Executors.newFixedThreadPool(TOTAL_THREADS_IN_POOL);
@@ -88,58 +97,6 @@ public final class AbfsTestUtils extends AbstractAbfsIntegrationTest {
     }
     executorService.shutdown();
   }
-
-  /**
-   * Prefix for wasb-specific scale tests.
-   */
-  public static String AZURE_SCALE_TEST = "fs.azure.scale.test.";
-
-  /**
-   * Huge file for testing AbfsOutputStream uploads: {@value}
-   */
-  public static String AZURE_SCALE_HUGE_FILE_UPLOAD = AZURE_SCALE_TEST + "huge.upload";
-
-  /**
-   * Default value for Huge file to be tested for AbfsOutputStream uploads:
-   * {@value}
-   */
-  public static int AZURE_SCALE_HUGE_FILE_UPLOAD_DEFAULT = 2 * DEFAULT_WRITE_BUFFER_SIZE;
-
-  /**
-   * Value to set a system property to (in maven) to declare that
-   * a property has been unset.
-   */
-  public static final String UNSET_PROPERTY = "unset";
-
-  /**
-   * Prefix for any cross-filesystem scale test options.
-   */
-  public static String SCALE_TEST = "scale.test.";
-  /**
-   * A property set to true in maven if scale tests are enabled: {@value}.
-   */
-  public static String KEY_SCALE_TESTS_ENABLED = AZURE_SCALE_TEST + "enabled";
-
-  /**
-   * The number of operations to perform: {@value}.
-   */
-  public static String KEY_OPERATION_COUNT = SCALE_TEST + "operation.count";
-  /**
-   * The default number of operations to perform: {@value}.
-   */
-  public static long DEFAULT_OPERATION_COUNT = 2005;
-
-  /**
-   * Default policy on scale tests: {@value}.
-   */
-  public static boolean DEFAULT_SCALE_TESTS_ENABLED = false;
-
-  /**
-   * Timeout in Seconds for Scale Tests: {@value}.
-   */
-  public static int SCALE_TEST_TIMEOUT_SECONDS = 30 * 60;
-
-  public static int SCALE_TEST_TIMEOUT_MILLIS = SCALE_TEST_TIMEOUT_SECONDS * 1000;
 
   /**
    * Assume that a condition is met. If not: log at WARN and
@@ -249,10 +206,10 @@ public final class AbfsTestUtils extends AbstractAbfsIntegrationTest {
   public static void assumeScaleTestsEnabled(Configuration conf) {
     boolean enabled = getTestPropertyBool(
         conf,
-        KEY_SCALE_TESTS_ENABLED,
+        FS_AZURE_SCALE_TEST_ENABLED,
         DEFAULT_SCALE_TESTS_ENABLED);
     assume("Scale test disabled: to enable set property "
-            + KEY_SCALE_TESTS_ENABLED,
+            + FS_AZURE_SCALE_TEST_ENABLED,
         enabled);
   }
 }

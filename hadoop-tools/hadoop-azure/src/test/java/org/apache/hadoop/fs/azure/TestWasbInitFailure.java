@@ -10,14 +10,25 @@ import org.apache.hadoop.fs.FileSystem;
 
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
+/**
+ * Test to verify WASB initialization fails as expected.
+ */
 public class TestWasbInitFailure {
 
+  /**
+   * Test that initialization of Non-secure WASB FileSystem fails as expected.
+   * @throws Exception on any failure
+   */
   @Test
   public void testWasbInitFails() throws Exception {
     URI wasbUri = URI.create("wasb://container@account.blob.core.windows.net");
     assertFailure(wasbUri);
   }
 
+  /**
+   * Test that initialization of Secure WASB FileSystem fails as expected.
+   * @throws Exception on any failure
+   */
   @Test
   public void testSecureWasbInitFails() throws Exception {
     URI wasbUri = URI.create("wasbs://container@account.blob.core.windows.net");
