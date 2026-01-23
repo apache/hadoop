@@ -462,12 +462,12 @@
       <dependency>
         <groupId>com.google.guava</groupId>
         <artifactId>guava</artifactId>
-        <version>33.4.0-jre</version>
+        <version>33.5.0-jre</version>
       </dependency>
       <dependency>
         <groupId>com.google.protobuf</groupId>
         <artifactId>protobuf-java</artifactId>
-        <version>3.25.5</version>
+        <version>3.25.8</version>
       </dependency>
     </dependencies>
   </dependencyManagement>
