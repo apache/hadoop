@@ -22,13 +22,18 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
 import com.fasterxml.jackson.databind.ObjectWriter;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.util.Preconditions;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * NodePlan is a set of volumeSetPlans.
@@ -46,6 +51,10 @@ public class NodePlan {
   private static final ObjectReader READER = MAPPER.readerFor(NodePlan.class);
   private static final ObjectWriter WRITER = MAPPER.writerFor(
       MAPPER.constructType(NodePlan.class));
+  private static final String SUPPORTED_PACKAGES_CONFIG_NAME = "dfs.nodeplan.steps.supported.packages";
+  private static final Configuration CONFIGURATION = new HdfsConfiguration();
+  private static final Set<String> SUPPORTED_PACKAGES = getAllowedPackages();
+
   /**
    * returns timestamp when this plan was created.
    *
@@ -186,8 +195,7 @@ public class NodePlan {
         Map.Entry<String, JsonNode> entry = fieldsIterator.next();
         if ("@class".equals(entry.getKey())) {
           String textValue = entry.getValue().asText();
-          if (textValue != null && !textValue.isBlank() &&
-                  !textValue.startsWith("org.apache.hadoop.hdfs.server")) {
+          if (textValue != null && !textValue.isBlank() && !stepClassIsAllowed(textValue)) {
             throw new IOException("Invalid @class value in NodePlan JSON: " + textValue);
           }
         }
@@ -226,5 +234,26 @@ public class NodePlan {
    */
   public void setNodeUUID(String nodeUUID) {
     this.nodeUUID = nodeUUID;
+  }
+
+  private static boolean stepClassIsAllowed(String className) {
+    for (String pkg : SUPPORTED_PACKAGES) {
+      if (className.startsWith(pkg)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private static Set<String> getAllowedPackages() {
+    String packages = CONFIGURATION.get(SUPPORTED_PACKAGES_CONFIG_NAME);
+    if (packages == null) {
+      return Collections.emptySet();
+    }
+    Set<String> allowedPackages = new LinkedHashSet<>();
+    for (String pkg : packages.split(",")) {
+      allowedPackages.add(pkg.trim());
+    }
+    return allowedPackages;
   }
 }
