@@ -207,7 +207,7 @@ class SortedRanges implements Writable{
   }
   
   public String toString() {
-    StringBuffer sb = new StringBuffer();
+    StringBuilder sb = new StringBuilder();
     Iterator<Range> it = ranges.iterator();
     while(it.hasNext()) {
       Range range = it.next();

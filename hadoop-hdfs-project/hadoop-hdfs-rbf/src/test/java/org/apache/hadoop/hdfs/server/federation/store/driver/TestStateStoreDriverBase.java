@@ -17,11 +17,11 @@
  */
 package org.apache.hadoop.hdfs.server.federation.store.driver;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
@@ -32,6 +32,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Random;
 
 import org.apache.hadoop.conf.Configuration;
@@ -48,8 +49,10 @@ import org.apache.hadoop.hdfs.server.federation.store.records.Query;
 import org.apache.hadoop.hdfs.server.federation.store.records.QueryResult;
 import org.apache.hadoop.hdfs.server.federation.store.records.RouterState;
 import org.apache.hadoop.hdfs.server.federation.store.records.StateStoreVersion;
-import org.junit.After;
-import org.junit.AfterClass;
+import org.apache.hadoop.metrics2.lib.MutableRate;
+
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AfterAll;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -76,7 +79,11 @@ public class TestStateStoreDriverBase {
     return stateStore.getDriver();
   }
 
-  @After
+  protected StateStoreService getStateStoreService() {
+    return stateStore;
+  }
+
+  @AfterEach
   public void cleanMetrics() {
     if (stateStore != null) {
       StateStoreMetrics metrics = stateStore.getMetrics();
@@ -84,10 +91,11 @@ public class TestStateStoreDriverBase {
     }
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownCluster() {
     if (stateStore != null) {
       stateStore.stop();
+      stateStore = null;
     }
   }
 
@@ -119,7 +127,7 @@ public class TestStateStoreDriverBase {
   }
 
   @SuppressWarnings("unchecked")
-  private <T extends BaseRecord> T generateFakeRecord(Class<T> recordClass)
+  protected  <T extends BaseRecord> T generateFakeRecord(Class<T> recordClass)
       throws IllegalArgumentException, IllegalAccessException, IOException {
 
     if (recordClass == MembershipState.class) {
@@ -176,7 +184,7 @@ public class TestStateStoreDriverBase {
       Object data1 = getField(original, key);
       Object data2 = getField(committed, key);
       if (assertEquals) {
-        assertEquals("Field " + key + " does not match", data1, data2);
+        assertEquals(data1, data2, "Field " + key + " does not match");
       } else if (!data1.equals(data2)) {
         ret = false;
       }
@@ -234,6 +242,25 @@ public class TestStateStoreDriverBase {
     assertEquals(11, records2.size());
   }
 
+  public <T extends BaseRecord> void testInsertWithErrorDuringWrite(
+      StateStoreDriver driver, Class<T> recordClass)
+      throws IllegalArgumentException, IllegalAccessException, IOException {
+
+    assertTrue(driver.removeAll(recordClass));
+    QueryResult<T> queryResult0 = driver.get(recordClass);
+    List<T> records0 = queryResult0.getRecords();
+    assertTrue(records0.isEmpty());
+
+    // Insert single
+    BaseRecord record = generateFakeRecord(recordClass);
+    driver.put(record, true, false);
+
+    // Verify that no record was inserted.
+    QueryResult<T> queryResult1 = driver.get(recordClass);
+    List<T> records1 = queryResult1.getRecords();
+    assertEquals(0, records1.size());
+  }
+
   public <T extends BaseRecord> void testFetchErrors(StateStoreDriver driver,
       Class<T> clazz) throws IllegalAccessException, IOException {
 
@@ -281,7 +308,24 @@ public class TestStateStoreDriverBase {
     }
 
     // Verify
-    assertTrue(driver.putAll(insertList, false, true));
+    StateStoreOperationResult result1 = driver.putAll(insertList, false, true);
+    assertTrue(result1.isOperationSuccessful());
+    assertEquals(0, result1.getFailedRecordsKeys().size());
+
+    StateStoreOperationResult result2 = driver.putAll(insertList.subList(0, 1), false, true);
+    assertFalse(result2.isOperationSuccessful());
+    assertEquals(1, result2.getFailedRecordsKeys().size());
+    assertEquals(insertList.get(0).getPrimaryKey(), result2.getFailedRecordsKeys().get(0));
+
+    StateStoreOperationResult result3 = driver.putAll(insertList.subList(0, 2), false, true);
+    assertFalse(result3.isOperationSuccessful());
+    assertEquals(2, result3.getFailedRecordsKeys().size());
+    assertTrue(insertList.stream()
+        .anyMatch(t -> Objects.equals(result3.getFailedRecordsKeys().get(0), t.getPrimaryKey())));
+    assertTrue(insertList.stream()
+        .anyMatch(t -> Objects.equals(result3.getFailedRecordsKeys().get(1), t.getPrimaryKey())));
+
+
     records = driver.get(clazz);
     assertEquals(records.getRecords().size(), 10);
 
@@ -303,8 +347,8 @@ public class TestStateStoreDriverBase {
     // Verify no update occurred, all original records are unchanged
     QueryResult<T> newRecords = driver.get(clazz);
     assertEquals(10, newRecords.getRecords().size());
-    assertEquals("A single entry was improperly updated in the store", 10,
-        countMatchingEntries(records.getRecords(), newRecords.getRecords()));
+    assertEquals(10, countMatchingEntries(records.getRecords(), newRecords.getRecords()),
+        "A single entry was improperly updated in the store");
 
     // Update the entry (allowing updates)
     assertTrue(driver.put(updatedRecord, true, false));
@@ -314,9 +358,8 @@ public class TestStateStoreDriverBase {
     assertEquals(10, newRecords.getRecords().size());
     T record = records.getRecords().get(0);
     if (record.hasOtherFields()) {
-      assertEquals(
-          "Record of type " + clazz + " not updated in the store", 9,
-          countMatchingEntries(records.getRecords(), newRecords.getRecords()));
+      assertEquals(9, countMatchingEntries(records.getRecords(), newRecords.getRecords()),
+          "Record of type " + clazz + " not updated in the store");
     }
   }
 
@@ -358,7 +401,10 @@ public class TestStateStoreDriverBase {
     }
 
     // Verify
-    assertTrue(driver.putAll(insertList, false, true));
+    StateStoreOperationResult result = driver.putAll(insertList, false, true);
+    assertTrue(result.isOperationSuccessful());
+    assertEquals(0, result.getFailedRecordsKeys().size());
+
     records = driver.get(clazz);
     assertEquals(records.getRecords().size(), 10);
 
@@ -555,6 +601,35 @@ public class TestStateStoreDriverBase {
     return getters;
   }
 
+  public long getMountTableCacheLoadSamples(StateStoreDriver driver) throws IOException {
+    final MutableRate mountTableCache = getMountTableCache(driver);
+    return mountTableCache.lastStat().numSamples();
+  }
+
+  private static MutableRate getMountTableCache(StateStoreDriver driver) throws IOException {
+    StateStoreMetrics metrics = stateStore.getMetrics();
+    final Query<MountTable> query = new Query<>(MountTable.newInstance());
+    driver.getMultiple(MountTable.class, query);
+    final Map<String, MutableRate> cacheLoadMetrics = metrics.getCacheLoadMetrics();
+    final MutableRate mountTableCache = cacheLoadMetrics.get("CacheMountTableLoad");
+    assertNotNull(mountTableCache,
+        "CacheMountTableLoad should be present in the state store metrics");
+    return mountTableCache;
+  }
+
+  public void testCacheLoadMetrics(StateStoreDriver driver, long numRefresh,
+      double expectedHigherThan) throws IOException, IllegalArgumentException {
+    final MutableRate mountTableCache = getMountTableCache(driver);
+    // CacheMountTableLoadNumOps
+    final long mountTableCacheLoadNumOps = getMountTableCacheLoadSamples(driver);
+    assertEquals(numRefresh, mountTableCacheLoadNumOps, "Num of samples collected should match");
+    // CacheMountTableLoadAvgTime ms
+    final double mountTableCacheLoadAvgTimeMs = mountTableCache.lastStat().mean();
+    assertTrue(mountTableCacheLoadAvgTimeMs > expectedHigherThan,
+        "Mean time duration for cache load is expected to be higher than " + expectedHigherThan
+            + " ms." + " Actual value: " + mountTableCacheLoadAvgTimeMs);
+  }
+
   /**
    * Get the type of field.
    *
@@ -633,4 +708,5 @@ public class TestStateStoreDriverBase {
     }
     return null;
   }
+
 }

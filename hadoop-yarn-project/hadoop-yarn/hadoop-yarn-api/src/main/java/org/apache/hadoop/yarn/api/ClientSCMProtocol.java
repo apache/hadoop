@@ -55,8 +55,8 @@ public interface ClientSCMProtocol {
    *
    * @param request request to claim a resource in the shared cache
    * @return response indicating if the resource is already in the cache
-   * @throws YarnException
-   * @throws IOException
+   * @throws YarnException exceptions from yarn servers.
+   * @throws IOException io error occur.
    */
   public UseSharedCacheResourceResponse use(
       UseSharedCacheResourceRequest request) throws YarnException, IOException;
@@ -81,8 +81,8 @@ public interface ClientSCMProtocol {
    *
    * @param request request to release a resource in the shared cache
    * @return (empty) response on releasing the resource
-   * @throws YarnException
-   * @throws IOException
+   * @throws YarnException exceptions from yarn servers.
+   * @throws IOException io error occur.
    */
   public ReleaseSharedCacheResourceResponse release(
       ReleaseSharedCacheResourceRequest request) throws YarnException, IOException;

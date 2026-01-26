@@ -18,10 +18,7 @@
 
 package org.apache.hadoop.yarn.server.timelineservice.reader;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineCompareFilter;
@@ -32,20 +29,19 @@ import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineFilte
 import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineKeyValueFilter;
 import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineKeyValuesFilter;
 import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelinePrefixFilter;
-import org.junit.Assert;
-import org.junit.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class TestTimelineReaderWebServicesUtils {
   private static void verifyFilterList(String expr, TimelineFilterList list,
-      TimelineFilterList expectedList) throws Exception {
-    assertNotNull(list);
-    assertTrue("Unexpected List received after parsing expression " + expr +
-        ". Expected=" + expectedList + " but Actual=" + list,
-        list.equals(expectedList));
+      TimelineFilterList expectedList) {
+    assertEquals(expectedList, list);
   }
 
   @Test
-  public void testMetricFiltersParsing() throws Exception {
+  void testMetricFiltersParsing() throws Exception {
     String expr = "(((key11 ne 234 AND key12 gt 23) AND " +
         "(key13 lt 34 OR key14 ge 567)) OR (key21 lt 24 OR key22 le 45))";
     TimelineFilterList expectedList = new TimelineFilterList(
@@ -168,7 +164,7 @@ public class TestTimelineReaderWebServicesUtils {
         TimelineReaderWebServicesUtils.parseMetricFilters(expr), expectedList);
 
     // Test with unnecessary spaces.
-    expr = "  abc ne   234       AND       def           gt 23 OR     rst lt "+
+    expr = "  abc ne   234       AND       def           gt 23 OR     rst lt " +
         "           24     OR xyz     le     456    AND pqr ge 2        ";
     expectedList = new TimelineFilterList(
         new TimelineFilterList(
@@ -283,7 +279,8 @@ public class TestTimelineReaderWebServicesUtils {
     try {
       TimelineReaderWebServicesUtils.parseMetricFilters(expr);
       fail("Improper brackers. Exception should have been thrown.");
-    } catch (TimelineParseException e) {}
+    } catch (TimelineParseException e) {
+    }
 
     expr = "(((key11 ne 234 AND key12 gt v3 OR key13 lt 24 OR key14 le 456 " +
         "AND key15 ge 2) AND (key16 lt 34 OR key17 ge 567)) OR (key21 lt 24 " +
@@ -291,7 +288,8 @@ public class TestTimelineReaderWebServicesUtils {
     try {
       TimelineReaderWebServicesUtils.parseMetricFilters(expr);
       fail("Non Numeric value. Exception should have been thrown.");
-    } catch (TimelineParseException e) {}
+    } catch (TimelineParseException e) {
+    }
 
     expr = "(((key11 ne (234 AND key12 gt 3 OR key13 lt 24 OR key14 le 456 " +
         "AND key15 ge 2) AND (key16 lt 34 OR key17 ge 567)) OR (key21 lt 24 " +
@@ -299,7 +297,8 @@ public class TestTimelineReaderWebServicesUtils {
     try {
       TimelineReaderWebServicesUtils.parseMetricFilters(expr);
       fail("Unexpected opening bracket. Exception should have been thrown.");
-    } catch (TimelineParseException e) {}
+    } catch (TimelineParseException e) {
+    }
 
     expr = "(((k)ey11 ne 234 AND key12 gt 3 OR key13 lt 24 OR key14 le 456 " +
         "AND key15 ge 2) AND (key16 lt 34 OR key17 ge 567)) OR (key21 lt 24 " +
@@ -307,7 +306,8 @@ public class TestTimelineReaderWebServicesUtils {
     try {
       TimelineReaderWebServicesUtils.parseMetricFilters(expr);
       fail("Unexpected closing bracket. Exception should have been thrown.");
-    } catch (TimelineParseException e) {}
+    } catch (TimelineParseException e) {
+    }
 
     expr = "(((key11 rs 234 AND key12 gt 3 OR key13 lt 24 OR key14 le 456 " +
         "AND key15 ge 2) AND (key16 lt 34 OR key17 ge 567)) OR (key21 lt 24 " +
@@ -315,7 +315,8 @@ public class TestTimelineReaderWebServicesUtils {
     try {
       TimelineReaderWebServicesUtils.parseMetricFilters(expr);
       fail("Improper compare op. Exception should have been thrown.");
-    } catch (TimelineParseException e) {}
+    } catch (TimelineParseException e) {
+    }
 
     expr = "(((key11 ne 234 PI key12 gt 3 OR key13 lt 24 OR key14 le 456 " +
         "AND key15 ge 2) AND (key16 lt 34 OR key17 ge 567)) OR (key21 lt 24 " +
@@ -323,7 +324,8 @@ public class TestTimelineReaderWebServicesUtils {
     try {
       TimelineReaderWebServicesUtils.parseMetricFilters(expr);
       fail("Improper op. Exception should have been thrown.");
-    } catch (TimelineParseException e) {}
+    } catch (TimelineParseException e) {
+    }
 
     expr = "(((key11 ne 234 PI key12 gt 3 OR key13 lt 24 OR key14 le 456 " +
         "AND key15 ge 2) AND (key16 lt 34 OR key17 ge 567)) OR (key21 lt 24 " +
@@ -331,32 +333,36 @@ public class TestTimelineReaderWebServicesUtils {
     try {
       TimelineReaderWebServicesUtils.parseMetricFilters(expr);
       fail("Improper op. Exception should have been thrown.");
-    } catch (TimelineParseException e) {}
+    } catch (TimelineParseException e) {
+    }
 
     expr = "(key11 ne 234 AND key12 gt 3)) OR (key13 lt 24 OR key14 le 456)";
     try {
       TimelineReaderWebServicesUtils.parseMetricFilters(expr);
       fail("Unbalanced brackets. Exception should have been thrown.");
-    } catch (TimelineParseException e) {}
+    } catch (TimelineParseException e) {
+    }
 
     expr = "(key11 rne 234 AND key12 gt 3) OR (key13 lt 24 OR key14 le 456)";
     try {
       TimelineReaderWebServicesUtils.parseMetricFilters(expr);
       fail("Invalid compareop. Exception should have been thrown.");
-    } catch (TimelineParseException e) {}
+    } catch (TimelineParseException e) {
+    }
 
     expr = "(key11 ne 234 AND key12 gt 3) OR (key13 lt 24 OR key14 le";
     try {
       TimelineReaderWebServicesUtils.parseMetricFilters(expr);
       fail("Compareop cant be parsed. Exception should have been thrown.");
-    } catch (TimelineParseException e) {}
+    } catch (TimelineParseException e) {
+    }
 
     assertNull(TimelineReaderWebServicesUtils.parseMetricFilters(null));
     assertNull(TimelineReaderWebServicesUtils.parseMetricFilters("   "));
   }
 
   @Test
-  public void testConfigFiltersParsing() throws Exception {
+  void testConfigFiltersParsing() throws Exception {
     String expr = "(((key11 ne 234 AND key12 eq val12) AND " +
         "(key13 ene val13 OR key14 eq 567)) OR (key21 eq val_21 OR key22 eq " +
         "val.22))";
@@ -412,7 +418,7 @@ public class TestTimelineReaderWebServicesUtils {
         parseKVFilters(expr, true), expectedList);
 
     // Test with unnecessary spaces.
-    expr = "  abc ne   234       AND       def           eq 23 OR     rst ene "+
+    expr = "  abc ne   234       AND       def           eq 23 OR     rst ene " +
         "           24     OR xyz     eq     456    AND pqr eq 2        ";
     expectedList = new TimelineFilterList(
         new TimelineFilterList(
@@ -439,10 +445,12 @@ public class TestTimelineReaderWebServicesUtils {
       TimelineReaderWebServicesUtils.parseKVFilters(expr, true);
       fail("Invalid compareop specified for config filters. Should be either" +
           " eq,ne or ene and exception should have been thrown.");
-    } catch (TimelineParseException e){}
+    } catch (TimelineParseException e) {
+    }
   }
+
   @Test
-  public void testInfoFiltersParsing() throws Exception {
+  void testInfoFiltersParsing() throws Exception {
     String expr = "(((key11 ne 234 AND key12 eq val12) AND " +
         "(key13 ene val13 OR key14 eq 567)) OR (key21 eq val_21 OR key22 eq " +
         "5.0))";
@@ -499,7 +507,7 @@ public class TestTimelineReaderWebServicesUtils {
         parseKVFilters(expr, false), expectedList);
 
     // Test with unnecessary spaces.
-    expr = "  abc ne   234       AND       def           eq 23 OR     rst ene "+
+    expr = "  abc ne   234       AND       def           eq 23 OR     rst ene " +
         "           24     OR xyz     eq     456    AND pqr eq 2        ";
     expectedList = new TimelineFilterList(
         new TimelineFilterList(
@@ -524,7 +532,7 @@ public class TestTimelineReaderWebServicesUtils {
     expr = "abdeq";
     try {
       TimelineReaderWebServicesUtils.parseKVFilters(expr, false);
-      Assert.fail("Expression valuation should throw exception.");
+      fail("Expression valuation should throw exception.");
     } catch (TimelineParseException e) {
       // expected: do nothing
     }
@@ -532,7 +540,7 @@ public class TestTimelineReaderWebServicesUtils {
     expr = "abc gt 234 AND defeq";
     try {
       TimelineReaderWebServicesUtils.parseKVFilters(expr, false);
-      Assert.fail("Expression valuation should throw exception.");
+      fail("Expression valuation should throw exception.");
     } catch (TimelineParseException e) {
       // expected: do nothing
     }
@@ -540,14 +548,14 @@ public class TestTimelineReaderWebServicesUtils {
     expr = "((key11 ne 234 AND key12 eq val12) AND (key13eq OR key14 eq va14))";
     try {
       TimelineReaderWebServicesUtils.parseKVFilters(expr, false);
-      Assert.fail("Expression valuation should throw exception.");
+      fail("Expression valuation should throw exception.");
     } catch (TimelineParseException e) {
       // expected: do nothing
     }
   }
 
   @Test
-  public void testEventFiltersParsing() throws Exception {
+  void testEventFiltersParsing() throws Exception {
     String expr = "abc,def";
     TimelineFilterList expectedList = new TimelineFilterList(
         new TimelineExistsFilter(TimelineCompareOp.EQUAL, "abc"),
@@ -641,85 +649,96 @@ public class TestTimelineReaderWebServicesUtils {
     try {
       TimelineReaderWebServicesUtils.parseEventFilters(expr);
       fail("Improper brackets. Exception should have been thrown");
-    } catch (TimelineParseException e){}
+    } catch (TimelineParseException e) {
+    }
 
     expr = "(((!(abc,def,uvc) (OR (rst, uvx)) AND (!(abcdefg) OR !(ghj,tyu)))" +
         " OR ((bcd,tyu) AND uvb))";
     try {
       TimelineReaderWebServicesUtils.parseEventFilters(expr);
       fail("Unexpected opening bracket. Exception should have been thrown");
-    } catch (TimelineParseException e){}
+    } catch (TimelineParseException e) {
+    }
 
     expr = "(((!(abc,def,uvc) OR) (rst, uvx)) AND (!(abcdefg) OR !(ghj,tyu)))" +
         " OR ((bcd,tyu) AND uvb))";
     try {
       TimelineReaderWebServicesUtils.parseEventFilters(expr);
       fail("Unexpected closing bracket. Exception should have been thrown");
-    } catch (TimelineParseException e){}
+    } catch (TimelineParseException e) {
+    }
 
     expr = "(((!(abc,def,uvc) PI (rst, uvx)) AND (!(abcdefg) OR !(ghj,tyu)))" +
         " OR ((bcd,tyu) AND uvb))";
     try {
       TimelineReaderWebServicesUtils.parseEventFilters(expr);
       fail("Invalid op. Exception should have been thrown");
-    } catch (TimelineParseException e){}
+    } catch (TimelineParseException e) {
+    }
 
     expr = "(((!(abc,def,uvc) !OR (rst, uvx)) AND (!(abcdefg) OR !(ghj,tyu)))" +
         " OR ((bcd,tyu) AND uvb))";
     try {
       TimelineReaderWebServicesUtils.parseEventFilters(expr);
       fail("Unexpected ! char. Exception should have been thrown");
-    } catch (TimelineParseException e){}
+    } catch (TimelineParseException e) {
+    }
 
     expr = "abc,def,uvc) OR (rst, uvx)";
     try {
       TimelineReaderWebServicesUtils.parseEventFilters(expr);
       fail("Unexpected closing bracket. Exception should have been thrown");
-    } catch (TimelineParseException e){}
+    } catch (TimelineParseException e) {
+    }
 
     expr = "abc,def,uvc OR )rst, uvx)";
     try {
       TimelineReaderWebServicesUtils.parseEventFilters(expr);
       fail("Unexpected closing bracket. Exception should have been thrown");
-    } catch (TimelineParseException e){}
+    } catch (TimelineParseException e) {
+    }
 
     expr = "abc,def,uvc OR ,rst, uvx)";
     try {
       TimelineReaderWebServicesUtils.parseEventFilters(expr);
       fail("Unexpected delimiter. Exception should have been thrown");
-    } catch (TimelineParseException e){}
+    } catch (TimelineParseException e) {
+    }
 
     expr = "abc,def,uvc OR !  ";
     try {
       TimelineReaderWebServicesUtils.parseEventFilters(expr);
       fail("Unexpected not char. Exception should have been thrown");
-    } catch (TimelineParseException e){}
+    } catch (TimelineParseException e) {
+    }
 
     expr = "(abc,def,uvc)) OR (rst, uvx)";
     try {
       TimelineReaderWebServicesUtils.parseEventFilters(expr);
       fail("Unbalanced brackets. Exception should have been thrown");
-    } catch (TimelineParseException e){}
+    } catch (TimelineParseException e) {
+    }
 
     expr = "(((! ,(abc,def,uvc) OR (rst, uvx)) AND (!(abcdefg) OR !(ghj,tyu" +
         "))) OR ((bcd,tyu) AND uvb))";
     try {
       TimelineReaderWebServicesUtils.parseEventFilters(expr);
       fail("( should follow ! char. Exception should have been thrown");
-    } catch (TimelineParseException e){}
+    } catch (TimelineParseException e) {
+    }
 
     assertNull(TimelineReaderWebServicesUtils.parseEventFilters(null));
     assertNull(TimelineReaderWebServicesUtils.parseEventFilters("   "));
   }
 
   @Test
-  public void testRelationFiltersParsing() throws Exception {
+  void testRelationFiltersParsing() throws Exception {
     String expr = "type1:entity11,type2:entity21:entity22";
     TimelineFilterList expectedList = new TimelineFilterList(
         new TimelineKeyValuesFilter(TimelineCompareOp.EQUAL,
-            "type1", Sets.newHashSet((Object)"entity11")),
+            "type1", Sets.newHashSet((Object) "entity11")),
         new TimelineKeyValuesFilter(TimelineCompareOp.EQUAL,
-            "type2", Sets.newHashSet((Object)"entity21", "entity22"))
+            "type2", Sets.newHashSet((Object) "entity21", "entity22"))
     );
     verifyFilterList(expr, TimelineReaderWebServicesUtils.
         parseRelationFilters(expr), expectedList);
@@ -733,16 +752,16 @@ public class TestTimelineReaderWebServicesUtils {
     expectedList = new TimelineFilterList(Operator.OR,
         new TimelineFilterList(
             new TimelineKeyValuesFilter(TimelineCompareOp.EQUAL,
-                "type1", Sets.newHashSet((Object)"entity11")),
+                "type1", Sets.newHashSet((Object) "entity11")),
             new TimelineKeyValuesFilter(TimelineCompareOp.EQUAL,
-                "type2", Sets.newHashSet((Object)"entity21", "entity22"))
+                "type2", Sets.newHashSet((Object) "entity21", "entity22"))
         ),
         new TimelineFilterList(
             new TimelineKeyValuesFilter(TimelineCompareOp.EQUAL,
                 "type3", Sets.newHashSet(
-                    (Object)"entity31", "entity32", "entity33")),
+                    (Object) "entity31", "entity32", "entity33")),
             new TimelineKeyValuesFilter(TimelineCompareOp.EQUAL,
-                "type1", Sets.newHashSet((Object)"entity11", "entity12"))
+                "type1", Sets.newHashSet((Object) "entity11", "entity12"))
         )
     );
     verifyFilterList(expr, TimelineReaderWebServicesUtils.
@@ -754,25 +773,25 @@ public class TestTimelineReaderWebServicesUtils {
     expectedList = new TimelineFilterList(Operator.OR,
         new TimelineFilterList(
             new TimelineKeyValuesFilter(TimelineCompareOp.NOT_EQUAL,
-                "type1", Sets.newHashSet((Object)"entity11")),
+                "type1", Sets.newHashSet((Object) "entity11")),
             new TimelineKeyValuesFilter(TimelineCompareOp.NOT_EQUAL,
-                "type2", Sets.newHashSet((Object)"entity21", "entity22")),
+                "type2", Sets.newHashSet((Object) "entity21", "entity22")),
             new TimelineKeyValuesFilter(TimelineCompareOp.NOT_EQUAL,
-                "type5", Sets.newHashSet((Object)"entity51"))
+                "type5", Sets.newHashSet((Object) "entity51"))
         ),
         new TimelineFilterList(
             new TimelineKeyValuesFilter(TimelineCompareOp.EQUAL,
                 "type3", Sets.newHashSet(
-                    (Object)"entity31", "entity32", "entity33")),
+                    (Object) "entity31", "entity32", "entity33")),
             new TimelineKeyValuesFilter(TimelineCompareOp.EQUAL,
-                "type1", Sets.newHashSet((Object)"entity11", "entity12"))
+                "type1", Sets.newHashSet((Object) "entity11", "entity12"))
         )
     );
     verifyFilterList(expr, TimelineReaderWebServicesUtils.
         parseRelationFilters(expr), expectedList);
 
     expr = "(((!(type1:entity11,type2:entity21:entity22,type5:entity51) OR " +
-        "(type3:entity31:entity32:entity33,type1:entity11:entity12)) AND "+
+        "(type3:entity31:entity32:entity33,type1:entity11:entity12)) AND " +
         "(!(type11:entity111) OR !(type4:entity43:entity44:entity47:entity49," +
         "type7:entity71))) OR ((type2:entity2,type8:entity88) AND t9:e:e1))";
     expectedList = new TimelineFilterList(Operator.OR,
@@ -780,45 +799,45 @@ public class TestTimelineReaderWebServicesUtils {
             new TimelineFilterList(Operator.OR,
                 new TimelineFilterList(
                     new TimelineKeyValuesFilter(TimelineCompareOp.NOT_EQUAL,
-                        "type1", Sets.newHashSet((Object)"entity11")),
+                        "type1", Sets.newHashSet((Object) "entity11")),
                     new TimelineKeyValuesFilter(TimelineCompareOp.NOT_EQUAL,
                         "type2", Sets.newHashSet(
-                            (Object)"entity21", "entity22")),
+                            (Object) "entity21", "entity22")),
                     new TimelineKeyValuesFilter(TimelineCompareOp.NOT_EQUAL,
-                        "type5", Sets.newHashSet((Object)"entity51"))
+                        "type5", Sets.newHashSet((Object) "entity51"))
                 ),
                 new TimelineFilterList(
                     new TimelineKeyValuesFilter(TimelineCompareOp.EQUAL,
                         "type3", Sets.newHashSet(
-                            (Object)"entity31", "entity32", "entity33")),
+                            (Object) "entity31", "entity32", "entity33")),
                     new TimelineKeyValuesFilter(TimelineCompareOp.EQUAL,
                         "type1", Sets.newHashSet(
-                            (Object)"entity11", "entity12"))
+                            (Object) "entity11", "entity12"))
                 )
             ),
             new TimelineFilterList(Operator.OR,
                 new TimelineFilterList(
                     new TimelineKeyValuesFilter(TimelineCompareOp.NOT_EQUAL,
-                        "type11", Sets.newHashSet((Object)"entity111"))
+                        "type11", Sets.newHashSet((Object) "entity111"))
                 ),
                 new TimelineFilterList(
                     new TimelineKeyValuesFilter(TimelineCompareOp.NOT_EQUAL,
-                        "type4", Sets.newHashSet((Object)"entity43", "entity44",
+                        "type4", Sets.newHashSet((Object) "entity43", "entity44",
                             "entity47", "entity49")),
                     new TimelineKeyValuesFilter(TimelineCompareOp.NOT_EQUAL,
-                        "type7", Sets.newHashSet((Object)"entity71"))
+                        "type7", Sets.newHashSet((Object) "entity71"))
                 )
             )
         ),
         new TimelineFilterList(
             new TimelineFilterList(
                 new TimelineKeyValuesFilter(TimelineCompareOp.EQUAL,
-                    "type2", Sets.newHashSet((Object)"entity2")),
+                    "type2", Sets.newHashSet((Object) "entity2")),
                 new TimelineKeyValuesFilter(TimelineCompareOp.EQUAL,
-                    "type8", Sets.newHashSet((Object)"entity88"))
+                    "type8", Sets.newHashSet((Object) "entity88"))
             ),
             new TimelineKeyValuesFilter(TimelineCompareOp.EQUAL, "t9",
-                Sets.newHashSet((Object)"e", "e1"))
+                Sets.newHashSet((Object) "e", "e1"))
         )
     );
     verifyFilterList(expr, TimelineReaderWebServicesUtils.
@@ -834,18 +853,19 @@ public class TestTimelineReaderWebServicesUtils {
         parseRelationFilters(expr), expectedList);
 
     expr = "(((!(type1 : entity11,type2:entity21:entity22,type5:entity51) OR " +
-        "(type3:entity31:entity32:entity33,type1:entity11:entity12)) AND "+
+        "(type3:entity31:entity32:entity33,type1:entity11:entity12)) AND " +
         "(!(type11:entity111) OR !(type4:entity43:entity44:entity47:entity49," +
         "type7:entity71))) OR ((type2:entity2,type8:entity88) AND t9:e:e1))";
     try {
       TimelineReaderWebServicesUtils.parseRelationFilters(expr);
       fail("Space not allowed in relation expression. Exception should have " +
           "been thrown");
-    } catch (TimelineParseException e){}
+    } catch (TimelineParseException e) {
+    }
   }
 
   @Test
-  public void testDataToRetrieve() throws Exception {
+  void testDataToRetrieve() throws Exception {
     String expr = "abc,def";
     TimelineFilterList expectedList = new TimelineFilterList(Operator.OR,
         new TimelinePrefixFilter(TimelineCompareOp.EQUAL, "abc"),
@@ -913,28 +933,32 @@ public class TestTimelineReaderWebServicesUtils {
     try {
       TimelineReaderWebServicesUtils.parseDataToRetrieve(expr);
       fail("No closing bracket. Exception should have been thrown");
-    } catch (TimelineParseException e){}
+    } catch (TimelineParseException e) {
+    }
 
     expr = "!abc,def,xyz";
     try {
       TimelineReaderWebServicesUtils.parseDataToRetrieve(expr);
       fail("NOT(!) should be followed by opening bracket. Exception should " +
           "have been thrown");
-    } catch (TimelineParseException e){}
+    } catch (TimelineParseException e) {
+    }
 
     expr = "!abc,def,xyz";
     try {
       TimelineReaderWebServicesUtils.parseDataToRetrieve(expr);
       fail("NOT(!) should be followed by opening bracket. Exception should " +
           "have been thrown");
-    } catch (TimelineParseException e){}
+    } catch (TimelineParseException e) {
+    }
 
     expr = "!   r(  abc,def,xyz)";
     try {
       TimelineReaderWebServicesUtils.parseDataToRetrieve(expr);
       fail("NOT(!) should be followed by opening bracket. Exception should " +
           "have been thrown");
-    } catch (TimelineParseException e){}
+    } catch (TimelineParseException e) {
+    }
 
     assertNull(TimelineReaderWebServicesUtils.parseDataToRetrieve(null));
     assertNull(TimelineReaderWebServicesUtils.parseDataToRetrieve("     "));

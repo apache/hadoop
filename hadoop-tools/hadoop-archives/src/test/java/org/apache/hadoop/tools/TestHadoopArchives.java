@@ -23,6 +23,7 @@ import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -45,15 +46,16 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.JarFinder;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
-import org.junit.After;
-import org.junit.Assert;
-import static org.junit.Assert.*;
-import static org.slf4j.LoggerFactory.getLogger;
-import static org.assertj.core.api.Assertions.assertThat;
-
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.event.Level;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.slf4j.LoggerFactory.getLogger;
 
 /**
  * test {@link HadoopArchives}
@@ -81,7 +83,7 @@ public class TestHadoopArchives {
   private static String createFile(Path root, FileSystem fs, String... dirsAndFile
       ) throws IOException {
     String fileBaseName = dirsAndFile[dirsAndFile.length - 1]; 
-    return createFile(root, fs, fileBaseName.getBytes("UTF-8"), dirsAndFile);
+    return createFile(root, fs, fileBaseName.getBytes(StandardCharsets.UTF_8), dirsAndFile);
   }
   
   private static String createFile(Path root, FileSystem fs, byte[] fileContent, String... dirsAndFile
@@ -103,7 +105,7 @@ public class TestHadoopArchives {
     return sb.toString();
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     conf = new Configuration();
     conf.set(CapacitySchedulerConfiguration.PREFIX
@@ -132,7 +134,7 @@ public class TestHadoopArchives {
     fileList.add(createFile(inputPath, fs, "c"));
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (dfscluster != null) {
       dfscluster.shutdown();
@@ -154,7 +156,7 @@ public class TestHadoopArchives {
 
     // compare results:
     final List<String> harPaths = lsr(shell, fullHarPathStr);
-    Assert.assertEquals(originalPaths, harPaths);
+    assertEquals(originalPaths, harPaths);
   }
 
   @Test
@@ -172,7 +174,7 @@ public class TestHadoopArchives {
 
     // compare results:
     final List<String> harPaths = lsr(shell, fullHarPathStr);
-    Assert.assertEquals(originalPaths, harPaths);
+    assertEquals(originalPaths, harPaths);
   }
 
   @Test
@@ -193,10 +195,10 @@ public class TestHadoopArchives {
     createFile(archivePath, fs, harName);
     final String[] args = { "-archiveName", harName, "-p", inputPathStr, "*",
         archivePath.toString() };
-    Assert.assertEquals(-1, ToolRunner.run(har, args));
+    assertEquals(-1, ToolRunner.run(har, args));
     String output = byteStream.toString();
     final Path outputPath = new Path(archivePath, harName);
-    Assert.assertTrue(output.indexOf("Archive path: " + outputPath.toString()
+    assertTrue(output.indexOf("Archive path: " + outputPath.toString()
         + " already exists") != -1);
 
     byteStream.reset();
@@ -206,9 +208,9 @@ public class TestHadoopArchives {
     final Path archivePath2 = new Path(archivePath, "sub1");
     final String[] args2 = { "-archiveName", harName, "-p", inputPathStr, "*",
         archivePath2.toString() };
-    Assert.assertEquals(-1, ToolRunner.run(har, args2));
+    assertEquals(-1, ToolRunner.run(har, args2));
     output = byteStream.toString();
-    Assert.assertTrue(output.indexOf("Destination " + archivePath2.toString()
+    assertTrue(output.indexOf("Destination " + archivePath2.toString()
         + " should be a directory but is a file") != -1);
 
     System.setErr(stderr);
@@ -238,7 +240,7 @@ public class TestHadoopArchives {
 
     // compare results
     final List<String> harPaths = lsr(shell, fullHarPathStr);
-    Assert.assertEquals(originalPaths, harPaths);
+    assertEquals(originalPaths, harPaths);
   }
 
   @Test
@@ -257,7 +259,7 @@ public class TestHadoopArchives {
 
     // compare results:
     final List<String> harPaths = lsr(shell, fullHarPathStr);
-    Assert.assertEquals(originalPaths, harPaths);
+    assertEquals(originalPaths, harPaths);
   }
 
   @Test
@@ -282,7 +284,7 @@ public class TestHadoopArchives {
     // compare results:
     final List<String> harPaths = lsr(shell, fullHarPathStr,
         fullHarPathStr + "/" + glob);
-    Assert.assertEquals(originalPaths, harPaths);
+    assertEquals(originalPaths, harPaths);
   }
 
   private static List<String> lsr(final FsShell shell, String rootDir) throws Exception {
@@ -301,7 +303,7 @@ public class TestHadoopArchives {
     System.setErr(out);
     final String results;
     try {
-      Assert.assertEquals(0, shell.run(new String[] { "-lsr", dir }));
+      assertEquals(0, shell.run(new String[]{"-lsr", dir}));
       results = bytes.toString();
     } finally {
       IOUtils.closeStream(out);
@@ -395,7 +397,7 @@ public class TestHadoopArchives {
           } else if ("zero-length".equals(baseName)) {
             assertEquals(0, actualContentSimple.length);
           } else {
-            String actual = new String(actualContentSimple, "UTF-8");
+            String actual = new String(actualContentSimple, StandardCharsets.UTF_8);
             assertEquals(baseName, actual);
           }
           readFileCount++;
@@ -604,7 +606,7 @@ public class TestHadoopArchives {
   private static void expectSeekIOE(FSDataInputStream fsdis, long seekPos, String message) {
     try {
       fsdis.seek(seekPos);
-      assertTrue(message + " (Position = " + fsdis.getPos() + ")", false);
+      assertTrue(false, message + " (Position = " + fsdis.getPos() + ")");
     } catch (IOException ioe) {
       // okay
     }
@@ -763,7 +765,7 @@ public class TestHadoopArchives {
     while (listFiles.hasNext()) {
       LocatedFileStatus next = listFiles.next();
       if (!next.getPath().toString().endsWith("_SUCCESS")) {
-        assertEquals(next.getPath().toString(), 2, next.getReplication());
+        assertEquals(2, next.getReplication(), next.getPath().toString());
       }
     }
     return fullHarPathStr;

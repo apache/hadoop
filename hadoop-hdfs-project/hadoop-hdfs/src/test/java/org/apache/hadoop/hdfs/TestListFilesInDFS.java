@@ -19,8 +19,8 @@ package org.apache.hadoop.hdfs;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.TestListFiles;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 
 /**
  * This class tests the FileStatus API.
@@ -29,7 +29,7 @@ public class TestListFilesInDFS extends TestListFiles {
 
   private static MiniDFSCluster cluster;
 
-  @BeforeClass
+  @BeforeAll
   public static void testSetUp() throws Exception {
     setTestPaths(new Path("/tmp/TestListFilesInDFS"));
     cluster = new MiniDFSCluster.Builder(conf).build();
@@ -37,7 +37,7 @@ public class TestListFilesInDFS extends TestListFiles {
     fs.delete(TEST_DIR, true);
   }
   
-  @AfterClass
+  @AfterAll
   public static void testShutdown() throws Exception {
     if (cluster != null) {
       fs.close();

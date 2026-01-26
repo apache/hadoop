@@ -19,12 +19,6 @@
 package org.apache.hadoop.yarn.client.cli;
 
 import org.apache.hadoop.classification.VisibleForTesting;
-import com.sun.jersey.api.client.Client;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.WebResource;
-import com.sun.jersey.api.client.WebResource.Builder;
-import com.sun.jersey.client.urlconnection.HttpURLConnectionFactory;
-import com.sun.jersey.client.urlconnection.URLConnectionClientHandler;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.MissingArgumentException;
@@ -37,6 +31,7 @@ import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
 import org.apache.hadoop.security.ssl.SSLFactory;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Tool;
+import org.apache.hadoop.util.XMLUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.webapp.dao.ConfInfo;
 import org.apache.hadoop.yarn.webapp.dao.QueueConfigInfo;
@@ -52,18 +47,27 @@ import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.stream.StreamResult;
 import javax.xml.transform.stream.StreamSource;
+import javax.ws.rs.client.Client;
+import javax.ws.rs.client.ClientBuilder;
+import javax.ws.rs.client.Entity;
+import javax.ws.rs.client.Invocation;
+import javax.ws.rs.client.WebTarget;
+import javax.ws.rs.core.Response;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response.Status;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.io.IOException;
 import java.net.HttpURLConnection;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import org.glassfish.jersey.client.ClientConfig;
+import org.glassfish.jersey.client.ClientProperties;
+import org.glassfish.jersey.client.HttpUrlConnectorProvider;
 
 /**
  * CLI for modifying scheduler configuration.
@@ -190,7 +194,7 @@ public class SchedConfCLI extends Configured implements Tool {
     Source xmlInput = new StreamSource(new StringReader(input));
     StringWriter sw = new StringWriter();
     StreamResult xmlOutput = new StreamResult(sw);
-    TransformerFactory transformerFactory = TransformerFactory.newInstance();
+    TransformerFactory transformerFactory = XMLUtils.newSecureTransformerFactory();
     transformerFactory.setAttribute("indent-number", indent);
     Transformer transformer = transformerFactory.newTransformer();
     transformer.setOutputProperty(OutputKeys.INDENT, "yes");
@@ -198,18 +202,18 @@ public class SchedConfCLI extends Configured implements Tool {
     System.out.println(xmlOutput.getWriter().toString());
   }
 
-  private WebResource initializeWebResource(String webAppAddress) {
+  private WebTarget initializeWebResource(String webAppAddress) {
     Configuration conf = getConf();
     if (YarnConfiguration.useHttps(conf)) {
       sslFactory = new SSLFactory(SSLFactory.Mode.CLIENT, conf);
     }
     client = createWebServiceClient(sslFactory);
-    return client.resource(webAppAddress);
+    return client.target(webAppAddress);
   }
 
   private void destroyClient() {
     if (client != null) {
-      client.destroy();
+      client.close();
     }
     if (sslFactory != null) {
       sslFactory.destroy();
@@ -217,27 +221,25 @@ public class SchedConfCLI extends Configured implements Tool {
   }
 
   @VisibleForTesting
-  int getSchedulerConf(String webAppAddress, WebResource resource)
+  int getSchedulerConf(String webAppAddress, WebTarget resource)
       throws Exception {
-    ClientResponse response = null;
+    Response response = null;
     resource = (resource != null) ? resource :
         initializeWebResource(webAppAddress);
     try {
-      Builder builder;
+      Invocation.Builder builder;
       if (UserGroupInformation.isSecurityEnabled()) {
-        builder = resource
-            .path("ws").path("v1").path("cluster")
-            .path("scheduler-conf").accept(MediaType.APPLICATION_XML);
+        builder = resource.path("ws").path("v1").path("cluster").path("scheduler-conf")
+            .request(MediaType.APPLICATION_XML);
       } else {
-        builder = resource
-            .path("ws").path("v1").path("cluster").path("scheduler-conf")
-            .queryParam("user.name", UserGroupInformation.getCurrentUser()
-            .getShortUserName()).accept(MediaType.APPLICATION_XML);
+        builder = resource.path("ws").path("v1").path("cluster").path("scheduler-conf")
+            .queryParam("user.name", UserGroupInformation.getCurrentUser().getShortUserName())
+            .request(MediaType.APPLICATION_XML);
       }
-      response = builder.get(ClientResponse.class);
+      response = builder.get(Response.class);
       if (response != null) {
         if (response.getStatus() == Status.OK.getStatusCode()) {
-          ConfInfo schedulerConf = response.getEntity(ConfInfo.class);
+          ConfInfo schedulerConf = response.readEntity(ConfInfo.class);
           JAXBContext jaxbContext = JAXBContext.newInstance(ConfInfo.class);
           Marshaller jaxbMarshaller = jaxbContext.createMarshaller();
           StringWriter sw = new StringWriter();
@@ -246,7 +248,7 @@ public class SchedConfCLI extends Configured implements Tool {
           return 0;
         } else {
           System.err.println("Failed to get scheduler configuration: "
-              + response.getEntity(String.class));
+              + response.readEntity(String.class));
         }
       } else {
         System.err.println("Failed to get scheduler configuration: " +
@@ -262,34 +264,30 @@ public class SchedConfCLI extends Configured implements Tool {
   }
 
   @VisibleForTesting
-  int formatSchedulerConf(String webAppAddress, WebResource resource)
+  int formatSchedulerConf(String webAppAddress, WebTarget resource)
       throws Exception {
-    ClientResponse response = null;
+    Response response = null;
     resource = (resource != null) ? resource :
         initializeWebResource(webAppAddress);
     try {
-      Builder builder;
+      Invocation.Builder builder;
       if (UserGroupInformation.isSecurityEnabled()) {
-        builder = resource
-            .path("ws").path("v1").path("cluster")
-            .path("/scheduler-conf/format")
-            .accept(MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON);
+        builder = resource.path("ws").path("v1").path("cluster").path("/scheduler-conf/format")
+            .request(MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON);
       } else {
-        builder = resource
-            .path("ws").path("v1").path("cluster")
-            .path("/scheduler-conf/format").queryParam("user.name",
-            UserGroupInformation.getCurrentUser().getShortUserName())
-            .accept(MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON);
+        builder = resource.path("ws").path("v1").path("cluster").path("/scheduler-conf/format")
+            .queryParam("user.name", UserGroupInformation.getCurrentUser().getShortUserName())
+            .request(MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON);
       }
 
-      response = builder.get(ClientResponse.class);
+      response = builder.get(Response.class);
       if (response != null) {
         if (response.getStatus() == Status.OK.getStatusCode()) {
-          System.out.println(response.getEntity(String.class));
+          System.out.println(response.readEntity(String.class));
           return 0;
         } else {
           System.err.println("Failed to format scheduler configuration: " +
-              response.getEntity(String.class));
+              response.readEntity(String.class));
         }
       } else {
         System.err.println("Failed to format scheduler configuration: " +
@@ -307,30 +305,29 @@ public class SchedConfCLI extends Configured implements Tool {
   @VisibleForTesting
   int updateSchedulerConfOnRMNode(String webAppAddress,
       SchedConfUpdateInfo updateInfo) throws Exception {
-    ClientResponse response = null;
-    WebResource resource = initializeWebResource(webAppAddress);
+    Response response = null;
+    WebTarget resource = initializeWebResource(webAppAddress);
     try {
-      Builder builder = null;
+      Invocation.Builder builder = null;
       if (UserGroupInformation.isSecurityEnabled()) {
-        builder = resource.path("ws").path("v1").path("cluster")
-            .path("scheduler-conf").accept(MediaType.APPLICATION_JSON);
+        builder = resource.path("ws").path("v1").path("cluster").path("scheduler-conf")
+            .request(MediaType.APPLICATION_JSON);
       } else {
         builder = resource.path("ws").path("v1").path("cluster")
-            .queryParam("user.name",
-            UserGroupInformation.getCurrentUser().getShortUserName())
-            .path("scheduler-conf").accept(MediaType.APPLICATION_JSON);
+            .queryParam("user.name", UserGroupInformation.getCurrentUser().getShortUserName())
+            .path("scheduler-conf").request(MediaType.APPLICATION_JSON);
       }
 
-      builder.entity(YarnWebServiceUtils.toJson(updateInfo,
-          SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON);
-      response = builder.put(ClientResponse.class);
+      response = builder.put(
+          Entity.entity(YarnWebServiceUtils.toJson(updateInfo, SchedConfUpdateInfo.class),
+              MediaType.APPLICATION_JSON), Response.class);
       if (response != null) {
         if (response.getStatus() == Status.OK.getStatusCode()) {
           System.out.println("Configuration changed successfully.");
           return 0;
         } else {
           System.err.println("Configuration change unsuccessful: "
-              + response.getEntity(String.class));
+              + response.readEntity(String.class));
         }
       } else {
         System.err.println("Configuration change unsuccessful: null response");
@@ -345,30 +342,26 @@ public class SchedConfCLI extends Configured implements Tool {
   }
 
   private Client createWebServiceClient(SSLFactory clientSslFactory) {
-    Client webServiceClient = new Client(new URLConnectionClientHandler(
-        new HttpURLConnectionFactory() {
-        @Override
-        public HttpURLConnection getHttpURLConnection(URL url)
-            throws IOException {
-          AuthenticatedURL.Token token = new AuthenticatedURL.Token();
-          AuthenticatedURL aUrl;
-          HttpURLConnection conn = null;
-          try {
-            if (clientSslFactory != null) {
-              clientSslFactory.init();
-              aUrl = new AuthenticatedURL(null, clientSslFactory);
-            } else {
-              aUrl = new AuthenticatedURL();
-            }
-            conn = aUrl.openConnection(url, token);
-          } catch (Exception e) {
-            throw new IOException(e);
-          }
-          return conn;
+    ClientConfig cfg = new ClientConfig();
+    cfg.connectorProvider(new HttpUrlConnectorProvider().connectionFactory(url -> {
+      AuthenticatedURL.Token token = new AuthenticatedURL.Token();
+      AuthenticatedURL aUrl;
+      HttpURLConnection conn = null;
+      try {
+        if (clientSslFactory != null) {
+          clientSslFactory.init();
+          aUrl = new AuthenticatedURL(null, clientSslFactory);
+        } else {
+          aUrl = new AuthenticatedURL();
         }
-      }));
-    webServiceClient.setChunkedEncodingSize(null);
-    return webServiceClient;
+        conn = aUrl.openConnection(url, token);
+      } catch (Exception e) {
+        throw new IOException(e);
+      }
+      return conn;
+    }));
+    cfg.property(ClientProperties.CHUNKED_ENCODING_SIZE, null);
+    return ClientBuilder.newClient(cfg);
   }
 
 

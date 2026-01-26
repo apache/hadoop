@@ -20,16 +20,16 @@ package org.apache.hadoop.hdfs.server.federation.store;
 import static org.apache.hadoop.hdfs.server.federation.store.FederationStateStoreTestUtils.newStateStore;
 import static org.apache.hadoop.hdfs.server.federation.store.FederationStateStoreTestUtils.getStateStoreConfiguration;
 import static org.apache.hadoop.hdfs.server.federation.store.FederationStateStoreTestUtils.waitStateStore;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
 
 /**
  * Test the basic {@link StateStoreService} {@link MountTableStore}
@@ -48,7 +48,7 @@ public class TestStateStoreBase {
     return conf;
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void createBase() throws IOException, InterruptedException {
 
     conf = getStateStoreConfiguration();
@@ -58,7 +58,7 @@ public class TestStateStoreBase {
         TimeUnit.HOURS.toMillis(1));
   }
 
-  @AfterClass
+  @AfterAll
   public static void destroyBase() throws Exception {
     if (stateStore != null) {
       stateStore.stop();
@@ -67,7 +67,7 @@ public class TestStateStoreBase {
     }
   }
 
-  @Before
+  @BeforeEach
   public void setupBase() throws IOException, InterruptedException,
       InstantiationException, IllegalAccessException {
     if (stateStore == null) {

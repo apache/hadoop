@@ -75,8 +75,8 @@ public class SimpleCopyListing extends CopyListing {
   private long totalDirs = 0;
   private long totalBytesToCopy = 0;
   private int numListstatusThreads = 1;
-  private final int fileStatusLimit;
-  private final boolean randomizeFileListing;
+  private int fileStatusLimit;
+  private boolean randomizeFileListing;
   private final int maxRetries = 3;
   private CopyFilter copyFilter;
   private DistCpSync distCpSync;
@@ -117,6 +117,17 @@ public class SimpleCopyListing extends CopyListing {
     this.numListstatusThreads = numListstatusThreads;
     this.fileStatusLimit = Math.max(1, fileStatusLimit);
     this.randomizeFileListing = randomizeFileListing;
+  }
+
+  @VisibleForTesting
+  protected void initSimpleCopyListing(Configuration pConfiguration,
+      Credentials pCredentials, int pNumListstatusThreads, int pFileStatusLimit,
+      boolean pRandomizeFileListing) {
+    setConf(pConfiguration);
+    setCredentials(pCredentials);
+    this.numListstatusThreads = pNumListstatusThreads;
+    this.fileStatusLimit = Math.max(1, pFileStatusLimit);
+    this.randomizeFileListing = pRandomizeFileListing;
   }
 
   protected SimpleCopyListing(Configuration configuration,
@@ -234,7 +245,11 @@ public class SimpleCopyListing extends CopyListing {
 
   /**
    * Write a single file/directory to the sequence file.
-   * @throws IOException
+   * @param fileListWriter the list for holding processed results
+   * @param sourceRoot the source dir path for copyListing
+   * @param path add the given path to the file list.
+   * @param context The DistCp context with associated input options
+   * @throws IOException if it fails to add it to the fileList
    */
   private void addToFileListing(SequenceFile.Writer fileListWriter,
       Path sourceRoot, Path path, DistCpContext context) throws IOException {
@@ -265,7 +280,7 @@ public class SimpleCopyListing extends CopyListing {
    * into the list.
    * @param fileListWriter the list for holding processed results
    * @param context The DistCp context with associated input options
-   * @throws IOException
+   * @throws IOException if unable to construct the fileList
    */
   @VisibleForTesting
   protected void doBuildListingWithSnapshotDiff(
@@ -274,6 +289,8 @@ public class SimpleCopyListing extends CopyListing {
     ArrayList<DiffInfo> diffList = distCpSync.prepareDiffListForCopyListing();
     Path sourceRoot = context.getSourcePaths().get(0);
     FileSystem sourceFS = sourceRoot.getFileSystem(getConf());
+    boolean traverseDirectory = getConf().getBoolean(
+        DistCpConstants.CONF_LABEL_DIFF_COPY_LISTING_TRAVERSE_DIRECTORY, true);
 
     try {
       List<FileStatusInfo> fileStatuses = Lists.newArrayList();
@@ -285,25 +302,8 @@ public class SimpleCopyListing extends CopyListing {
           addToFileListing(fileListWriter,
               sourceRoot, diff.getTarget(), context);
         } else if (diff.getType() == SnapshotDiffReport.DiffType.CREATE) {
-          addToFileListing(fileListWriter,
-              sourceRoot, diff.getTarget(), context);
-
-          FileStatus sourceStatus = sourceFS.getFileStatus(diff.getTarget());
-          if (sourceStatus.isDirectory()) {
-            LOG.debug("Adding source dir for traverse: {}",
-                sourceStatus.getPath());
-
-            HashSet<String> excludeList =
-                distCpSync.getTraverseExcludeList(diff.getSource(),
-                    context.getSourcePaths().get(0));
-
-            ArrayList<FileStatus> sourceDirs = new ArrayList<>();
-            sourceDirs.add(sourceStatus);
-
-            new TraverseDirectory(fileListWriter, sourceFS, sourceDirs,
-                sourceRoot, context, excludeList, fileStatuses)
-                .traverseDirectory();
-          }
+          addCreateDiffsToFileListing(fileListWriter, context, sourceRoot,
+              sourceFS, fileStatuses, diff, traverseDirectory);
         }
       }
       if (randomizeFileListing) {
@@ -313,6 +313,43 @@ public class SimpleCopyListing extends CopyListing {
       fileListWriter = null;
     } finally {
       IOUtils.cleanupWithLogger(LOG, fileListWriter);
+    }
+  }
+
+  /**
+   * Handle create Diffs and add to the copyList.
+   * If the path is a directory, iterate it recursively and add the paths
+   * to the result copyList.
+   *
+   * @param fileListWriter the list for holding processed results
+   * @param context The DistCp context with associated input options
+   * @param sourceRoot The rootDir of the source snapshot
+   * @param sourceFS the source Filesystem
+   * @param fileStatuses store the result fileStatuses to add to the copyList
+   * @param diff the SnapshotDiff report
+   * @param traverseDirectory traverse directory recursively and add paths to the copyList
+   * @throws IOException
+   */
+  private void addCreateDiffsToFileListing(SequenceFile.Writer fileListWriter,
+      DistCpContext context, Path sourceRoot, FileSystem sourceFS,
+      List<FileStatusInfo> fileStatuses, DiffInfo diff, boolean traverseDirectory) throws IOException {
+    addToFileListing(fileListWriter, sourceRoot, diff.getTarget(), context);
+
+    if (traverseDirectory) {
+      FileStatus sourceStatus = sourceFS.getFileStatus(diff.getTarget());
+      if (sourceStatus.isDirectory()) {
+        LOG.debug("Adding source dir for traverse: {}", sourceStatus.getPath());
+
+        HashSet<String> excludeList =
+            distCpSync.getTraverseExcludeList(diff.getSource(),
+                context.getSourcePaths().get(0));
+
+        ArrayList<FileStatus> sourceDirs = new ArrayList<>();
+        sourceDirs.add(sourceStatus);
+
+        new TraverseDirectory(fileListWriter, sourceFS, sourceDirs, sourceRoot,
+            context, excludeList, fileStatuses).traverseDirectory();
+      }
     }
   }
 
@@ -332,7 +369,7 @@ public class SimpleCopyListing extends CopyListing {
    *     computed.
    * @param fileListWriter
    * @param context The distcp context with associated input options
-   * @throws IOException
+   * @throws IOException if unable to construct the fileList
    */
   @VisibleForTesting
   protected void doBuildListing(SequenceFile.Writer fileListWriter,

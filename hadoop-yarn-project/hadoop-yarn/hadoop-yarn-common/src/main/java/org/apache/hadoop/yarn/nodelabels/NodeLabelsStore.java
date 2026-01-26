@@ -37,18 +37,24 @@ public interface NodeLabelsStore extends Closeable {
 
   /**
    * Store node {@literal ->} label.
+   * @param nodeToLabels node to labels mapping.
+   * @throws IOException io error occur.
    */
   void updateNodeToLabelsMappings(
       Map<NodeId, Set<String>> nodeToLabels) throws IOException;
 
   /**
    * Store new labels.
+   * @param labels labels.
+   * @throws IOException io error occur.
    */
-  void storeNewClusterNodeLabels(List<NodeLabel> label)
+  void storeNewClusterNodeLabels(List<NodeLabel> labels)
       throws IOException;
 
   /**
    * Remove labels.
+   * @param labels labels.
+   * @throws IOException io error occur.
    */
   void removeClusterNodeLabels(Collection<String> labels)
       throws IOException;
@@ -60,8 +66,8 @@ public interface NodeLabelsStore extends Closeable {
    * ignoreNodeToLabelsMappings will be set to true and recover will be invoked
    * as RM will collect the node labels from NM through registration/HB.
    *
-   * @throws IOException
-   * @throws YarnException
+   * @throws IOException io error occur.
+   * @throws YarnException exceptions from yarn servers.
    */
   void recover() throws IOException, YarnException;
 

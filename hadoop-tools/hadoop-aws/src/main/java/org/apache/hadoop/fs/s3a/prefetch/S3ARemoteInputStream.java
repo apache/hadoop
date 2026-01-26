@@ -36,11 +36,11 @@ import org.apache.hadoop.fs.impl.prefetch.BlockData;
 import org.apache.hadoop.fs.impl.prefetch.FilePosition;
 import org.apache.hadoop.fs.impl.prefetch.Validate;
 import org.apache.hadoop.fs.s3a.S3AInputPolicy;
-import org.apache.hadoop.fs.s3a.S3AInputStream;
 import org.apache.hadoop.fs.s3a.S3AReadOpContext;
 import org.apache.hadoop.fs.s3a.S3ObjectAttributes;
 import org.apache.hadoop.fs.s3a.impl.ChangeTracker;
 import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
+import org.apache.hadoop.fs.s3a.impl.streams.ObjectInputStreamCallbacks;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 
@@ -77,12 +77,16 @@ public abstract class S3ARemoteInputStream
   private volatile boolean closed;
 
   /**
-   * Current position within the file.
+   * Internal position within the file. Updated lazily
+   * after a seek before a read.
    */
   private FilePosition fpos;
 
-  /** The target of the most recent seek operation. */
-  private long seekTargetPos;
+  /**
+   * This is the actual position within the file, used by
+   * lazy seek to decide whether to seek on the next read or not.
+   */
+  private long nextReadPos;
 
   /** Information about each block of the mapped S3 file. */
   private BlockData blockData;
@@ -94,7 +98,7 @@ public abstract class S3ARemoteInputStream
   private S3ObjectAttributes s3Attributes;
 
   /** Callbacks used for interacting with the underlying S3 client. */
-  private S3AInputStream.InputStreamCallbacks client;
+  private ObjectInputStreamCallbacks client;
 
   /** Used for reporting input stream access statistics. */
   private final S3AInputStreamStatistics streamStatistics;
@@ -109,18 +113,18 @@ public abstract class S3ARemoteInputStream
    * Initializes a new instance of the {@code S3ARemoteInputStream} class.
    *
    * @param context read-specific operation context.
+   * @param prefetchOptions prefetch stream specific options
    * @param s3Attributes attributes of the S3 object being read.
    * @param client callbacks used for interacting with the underlying S3 client.
    * @param streamStatistics statistics for this stream.
    *
-   * @throws IllegalArgumentException if context is null.
-   * @throws IllegalArgumentException if s3Attributes is null.
-   * @throws IllegalArgumentException if client is null.
+   * @throws NullPointerException if a required parameter is null.
    */
   public S3ARemoteInputStream(
       S3AReadOpContext context,
+      PrefetchOptions prefetchOptions,
       S3ObjectAttributes s3Attributes,
-      S3AInputStream.InputStreamCallbacks client,
+      ObjectInputStreamCallbacks client,
       S3AInputStreamStatistics streamStatistics) {
 
     this.context = requireNonNull(context);
@@ -139,14 +143,14 @@ public abstract class S3ARemoteInputStream
     setReadahead(context.getReadahead());
 
     long fileSize = s3Attributes.getLen();
-    int bufferSize = context.getPrefetchBlockSize();
+    int bufferSize = prefetchOptions.getPrefetchBlockSize();
 
     this.blockData = new BlockData(fileSize, bufferSize);
     this.fpos = new FilePosition(fileSize, bufferSize);
     this.remoteObject = getS3File();
     this.reader = new S3ARemoteObjectReader(remoteObject);
 
-    this.seekTargetPos = 0;
+    this.nextReadPos = 0;
   }
 
   /**
@@ -212,7 +216,8 @@ public abstract class S3ARemoteInputStream
   public int available() throws IOException {
     throwIfClosed();
 
-    if (!ensureCurrentBuffer()) {
+    // Update the current position in the current buffer, if possible.
+    if (!fpos.setAbsolute(nextReadPos)) {
       return 0;
     }
 
@@ -228,11 +233,7 @@ public abstract class S3ARemoteInputStream
   public long getPos() throws IOException {
     throwIfClosed();
 
-    if (fpos.isValid()) {
-      return fpos.absolute();
-    } else {
-      return seekTargetPos;
-    }
+    return nextReadPos;
   }
 
   /**
@@ -247,10 +248,7 @@ public abstract class S3ARemoteInputStream
     throwIfClosed();
     throwIfInvalidSeek(pos);
 
-    if (!fpos.setAbsolute(pos)) {
-      fpos.invalidate();
-      seekTargetPos = pos;
-    }
+    nextReadPos = pos;
   }
 
   /**
@@ -268,7 +266,7 @@ public abstract class S3ARemoteInputStream
     throwIfClosed();
 
     if (remoteObject.size() == 0
-        || seekTargetPos >= remoteObject.size()) {
+        || nextReadPos >= remoteObject.size()) {
       return -1;
     }
 
@@ -276,6 +274,7 @@ public abstract class S3ARemoteInputStream
       return -1;
     }
 
+    nextReadPos++;
     incrementBytesRead(1);
 
     return fpos.buffer().get() & 0xff;
@@ -315,7 +314,7 @@ public abstract class S3ARemoteInputStream
     }
 
     if (remoteObject.size() == 0
-        || seekTargetPos >= remoteObject.size()) {
+        || nextReadPos >= remoteObject.size()) {
       return -1;
     }
 
@@ -334,6 +333,7 @@ public abstract class S3ARemoteInputStream
       ByteBuffer buf = fpos.buffer();
       int bytesToRead = Math.min(numBytesRemaining, buf.remaining());
       buf.get(buffer, offset, bytesToRead);
+      nextReadPos += bytesToRead;
       incrementBytesRead(bytesToRead);
       offset += bytesToRead;
       numBytesRemaining -= bytesToRead;
@@ -367,12 +367,8 @@ public abstract class S3ARemoteInputStream
     return closed;
   }
 
-  protected long getSeekTargetPos() {
-    return seekTargetPos;
-  }
-
-  protected void setSeekTargetPos(long pos) {
-    seekTargetPos = pos;
+  protected long getNextReadPos() {
+    return nextReadPos;
   }
 
   protected BlockData getBlockData() {
@@ -443,6 +439,18 @@ public abstract class S3ARemoteInputStream
     return false;
   }
 
+  @Override
+  public String toString() {
+    if (isClosed()) {
+      return "closed";
+    }
+
+    StringBuilder sb = new StringBuilder();
+    sb.append(String.format("nextReadPos = (%d)%n", nextReadPos));
+    sb.append(String.format("fpos = (%s)", fpos));
+    return sb.toString();
+  }
+
   protected void throwIfClosed() throws IOException {
     if (closed) {
       throw new IOException(
@@ -453,6 +461,8 @@ public abstract class S3ARemoteInputStream
   protected void throwIfInvalidSeek(long pos) throws EOFException {
     if (pos < 0) {
       throw new EOFException(FSExceptionMessages.NEGATIVE_SEEK + " " + pos);
+    } else if (pos > this.getBlockData().getFileSize()) {
+      throw new EOFException(FSExceptionMessages.CANNOT_SEEK_PAST_EOF + " " + pos);
     }
   }
 

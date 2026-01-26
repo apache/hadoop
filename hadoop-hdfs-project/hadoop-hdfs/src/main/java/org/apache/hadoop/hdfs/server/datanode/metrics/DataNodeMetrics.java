@@ -61,6 +61,8 @@ public class DataNodeMetrics {
   @Metric MutableCounterLong bytesRead;
   @Metric("Milliseconds spent reading")
   MutableCounterLong totalReadTime;
+  @Metric private MutableRate readTransferRate;
+  final private MutableQuantiles[] readTransferRateQuantiles;
   @Metric MutableCounterLong blocksWritten;
   @Metric MutableCounterLong blocksRead;
   @Metric MutableCounterLong blocksReplicated;
@@ -100,7 +102,7 @@ public class DataNodeMetrics {
   final MutableQuantiles[]   ramDiskBlocksLazyPersistWindowMsQuantiles;
 
   @Metric MutableCounterLong fsyncCount;
-  
+
   @Metric MutableCounterLong volumeFailures;
 
   @Metric("Count of network errors on the datanode")
@@ -108,6 +110,12 @@ public class DataNodeMetrics {
 
   @Metric("Count of active dataNode xceivers")
   private MutableGaugeInt dataNodeActiveXceiversCount;
+
+  @Metric("Count of read active dataNode xceivers")
+  private MutableGaugeInt dataNodeReadActiveXceiversCount;
+
+  @Metric("Count of write active dataNode xceivers")
+  private MutableGaugeInt dataNodeWriteActiveXceiversCount;
 
   @Metric("Count of active DataNode packetResponder")
   private MutableGaugeInt dataNodePacketResponderCount;
@@ -124,6 +132,7 @@ public class DataNodeMetrics {
   @Metric MutableRate heartbeatsTotal;
   @Metric MutableRate lifelines;
   @Metric MutableRate blockReports;
+  @Metric private MutableRate blockReportsCreateCostMills;
   @Metric MutableRate incrementalBlockReports;
   @Metric MutableRate cacheReports;
   @Metric MutableRate packetAckRoundTripTimeNanos;
@@ -176,6 +185,8 @@ public class DataNodeMetrics {
   private MutableCounterLong numProcessedCommands;
   @Metric("Rate of processed commands of all BPServiceActors")
   private MutableRate processedCommandsOp;
+  @Metric("Number of blocks in IBRs that failed due to null storage")
+  private MutableCounterLong nullStorageBlockReports;
 
   // FsDatasetImpl local file process metrics.
   @Metric private MutableRate createRbwOp;
@@ -207,6 +218,10 @@ public class DataNodeMetrics {
   @Metric("Milliseconds spent on calling NN rpc")
   private MutableRatesWithAggregation
       nnRpcLatency = registry.newRatesWithAggregation("nnRpcLatency");
+  @Metric("Nanoseconds spent on acquire dataset write lock")
+  private MutableRate acquireDatasetWriteLock;
+  @Metric("Nanoseconds spent on acquire dataset read lock")
+  private MutableRate acquireDatasetReadLock;
 
   final String name;
   JvmMetrics jvmMetrics = null;
@@ -227,6 +242,7 @@ public class DataNodeMetrics {
     sendDataPacketTransferNanosQuantiles = new MutableQuantiles[len];
     ramDiskBlocksEvictionWindowMsQuantiles = new MutableQuantiles[len];
     ramDiskBlocksLazyPersistWindowMsQuantiles = new MutableQuantiles[len];
+    readTransferRateQuantiles = new MutableQuantiles[len];
 
     for (int i = 0; i < len; i++) {
       int interval = intervals[i];
@@ -255,6 +271,10 @@ public class DataNodeMetrics {
           "ramDiskBlocksLazyPersistWindows" + interval + "s",
           "Time between the RamDisk block write and disk persist in ms",
           "ops", "latency", interval);
+      readTransferRateQuantiles[i] = registry.newInverseQuantiles(
+          "readTransferRate" + interval + "s",
+          "Rate at which bytes are read from datanode calculated in bytes per second",
+          "ops", "rate", interval);
     }
   }
 
@@ -308,11 +328,22 @@ public class DataNodeMetrics {
     }
   }
 
+  public void addBlockReportCreateCost(long latency) {
+    blockReportsCreateCostMills.add(latency);
+  }
+
   public void addIncrementalBlockReport(long latency,
       String rpcMetricSuffix) {
     incrementalBlockReports.add(latency);
     if (rpcMetricSuffix != null) {
       nnRpcLatency.add("IncrementalBlockReportsFor" + rpcMetricSuffix, latency);
+    }
+  }
+
+  public void addReadTransferRate(long readTransferRate) {
+    this.readTransferRate.add(readTransferRate);
+    for (MutableQuantiles q : readTransferRateQuantiles) {
+      q.add(readTransferRate);
     }
   }
 
@@ -330,6 +361,10 @@ public class DataNodeMetrics {
 
   public void incrBlocksRemoved(int delta) {
     blocksRemoved.incr(delta);
+  }
+
+  public long getBlocksRemoved() {
+    return blocksRemoved.value();
   }
 
   public void incrBytesWritten(int delta) {
@@ -581,6 +616,30 @@ public class DataNodeMetrics {
     return dataNodeActiveXceiversCount.value();
   }
 
+  public void incrDataNodeReadActiveXceiversCount(){
+    dataNodeReadActiveXceiversCount.incr();
+  }
+
+  public void decrDataNodeReadActiveXceiversCount(){
+    dataNodeReadActiveXceiversCount.decr();
+  }
+
+  public void setDataNodeReadActiveXceiversCount(int value){
+    dataNodeReadActiveXceiversCount.set(value);
+  }
+
+  public void incrDataNodeWriteActiveXceiversCount(){
+    dataNodeWriteActiveXceiversCount.incr();
+  }
+
+  public void decrDataNodeWriteActiveXceiversCount(){
+    dataNodeWriteActiveXceiversCount.decr();
+  }
+
+  public void setDataNodeWriteActiveXceiversCount(int value){
+    dataNodeWriteActiveXceiversCount.set(value);
+  }
+
   public void incrDataNodePacketResponderCount() {
     dataNodePacketResponderCount.incr();
   }
@@ -759,4 +818,15 @@ public class DataNodeMetrics {
     replaceBlockOpToOtherHost.incr();
   }
 
+  public void incrNullStorageBlockReports() {
+    nullStorageBlockReports.incr();
+  }
+
+  public void addAcquireDataSetReadLock(long latency) {
+    acquireDatasetReadLock.add(latency);
+  }
+
+  public void addAcquireDataSetWriteLock(long latency) {
+    acquireDatasetWriteLock.add(latency);
+  }
 }

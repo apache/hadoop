@@ -21,7 +21,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
@@ -177,7 +177,7 @@ public class NodeCLI extends YarnCLI {
   private void listClusterNodes(Set<NodeState> nodeStates) 
             throws YarnException, IOException {
     PrintWriter writer = new PrintWriter(
-        new OutputStreamWriter(sysout, Charset.forName("UTF-8")));
+        new OutputStreamWriter(sysout, StandardCharsets.UTF_8));
     List<NodeReport> nodesReport = client.getNodeReports(
                                        nodeStates.toArray(new NodeState[0]));
     writer.println("Total Nodes:" + nodesReport.size());
@@ -202,7 +202,7 @@ public class NodeCLI extends YarnCLI {
   private void listDetailedClusterNodes(Set<NodeState> nodeStates)
       throws YarnException, IOException {
     PrintWriter writer = new PrintWriter(new OutputStreamWriter(sysout,
-        Charset.forName("UTF-8")));
+        StandardCharsets.UTF_8));
     List<NodeReport> nodesReport = client.getNodeReports(nodeStates
         .toArray(new NodeState[0]));
     writer.println("Total Nodes:" + nodesReport.size());
@@ -265,7 +265,7 @@ public class NodeCLI extends YarnCLI {
     // Use PrintWriter.println, which uses correct platform line ending.
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     PrintWriter nodeReportStr = new PrintWriter(
-        new OutputStreamWriter(baos, Charset.forName("UTF-8")));
+        new OutputStreamWriter(baos, StandardCharsets.UTF_8));
     NodeReport nodeReport = null;
     for (NodeReport report : nodesReport) {
       if (!report.getNodeId().equals(nodeId)) {
@@ -347,7 +347,7 @@ public class NodeCLI extends YarnCLI {
           + nodeIdStr);
     }
     nodeReportStr.close();
-    sysout.println(baos.toString("UTF-8"));
+    sysout.println(new String(baos.toByteArray(), StandardCharsets.UTF_8));
   }
 
   private String getAllValidNodeStates() {

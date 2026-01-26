@@ -606,7 +606,7 @@ public class RMContainerImpl implements RMContainer {
 
       // Tell the app
       container.eventHandler.handle(new RMAppRunningOnNodeEvent(container
-          .getApplicationAttemptId().getApplicationId(), container.nodeId));
+          .getApplicationAttemptId().getApplicationId(), container.nodeId, true));
 
       // Opportunistic containers move directly from NEW to ACQUIRED
       if (container.getState() == RMContainerState.NEW) {
@@ -922,8 +922,8 @@ public class RMContainerImpl implements RMContainer {
 
   /**
    * catch the InvalidStateTransition.
-   * @param state
-   * @param rmContainerEventType
+   * @param state RMContainerState.
+   * @param rmContainerEventType RMContainerEventType.
    */
   @VisibleForTesting
   protected void onInvalidStateTransition(

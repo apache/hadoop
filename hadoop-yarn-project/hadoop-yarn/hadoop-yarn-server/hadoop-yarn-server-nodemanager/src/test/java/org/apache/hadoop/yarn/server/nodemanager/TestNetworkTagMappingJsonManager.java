@@ -20,9 +20,9 @@
 
 package org.apache.hadoop.yarn.server.nodemanager;
 
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -42,9 +42,10 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resource
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.NetworkTagMappingJsonManager.User;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONObject;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 /**
  * Test NetworkTagMapping Json Manager.
@@ -55,7 +56,7 @@ public class TestNetworkTagMappingJsonManager {
   private Configuration conf = new YarnConfiguration();
   private FileSystem fs;
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     fs = FileSystem.get(conf);
     if (fs.exists(jsonDirDirPath)) {
@@ -64,14 +65,15 @@ public class TestNetworkTagMappingJsonManager {
     assertTrue(fs.mkdirs(jsonDirDirPath));
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     if (fs.exists(jsonDirDirPath)) {
       fs.delete(jsonDirDirPath, true);
     }
   }
 
-  @Test (timeout=10000)
+  @Test
+  @Timeout(value = 10)
   public void testNetworkMappingJsonManager() throws Exception {
     Path jsonFilePath = new Path(jsonDirDirPath, "test.json");
     File jsonFile = new File(jsonFilePath.toString());
@@ -166,7 +168,8 @@ public class TestNetworkTagMappingJsonManager {
     }
   }
 
-  @Test (timeout=10000)
+  @Test
+  @Timeout(value = 10)
   public void testNetworkTagIDMatchPattern() throws Exception {
     Path jsonFilePath = new Path(jsonDirDirPath, "test.json");
     File jsonFile = new File(jsonFilePath.toString());

@@ -26,22 +26,25 @@ import java.util.List;
 public interface AutoCreatedQueueManagementPolicy {
 
   /**
-   * Initialize policy
+   * Initialize policy.
    * @param parentQueue parent queue
+   * @throws IOException an I/O exception has occurred.
    */
-  void init(ParentQueue parentQueue) throws IOException;
+  void init(AbstractParentQueue parentQueue) throws IOException;
 
   /**
-   * Reinitialize policy state ( if required )
+   * Reinitialize policy state ( if required ).
    * @param parentQueue parent queue
+   * @throws IOException an I/O exception has occurred.
    */
-  void reinitialize(ParentQueue parentQueue) throws IOException;
+  void reinitialize(AbstractParentQueue parentQueue) throws IOException;
 
   /**
-   * Get initial template for the specified leaf queue
+   * Get initial template for the specified leaf queue.
    * @param leafQueue the leaf queue
    * @return initial leaf queue template configurations and capacities for
    * auto created queue
+   * @throws SchedulerDynamicEditException when get initialLeafQueue Configuration fails.
    */
   AutoCreatedLeafQueueConfig getInitialLeafQueueConfiguration(
       AbstractAutoCreatedLeafQueue leafQueue)
@@ -56,13 +59,17 @@ public interface AutoCreatedQueueManagementPolicy {
    * are done in commitQueueManagementChanges.
    *
    * @return returns a list of suggested QueueEntitlementChange(s) which may
-   * or may not be be enforced by the scheduler
+   * or may not be enforced by the scheduler
+   * @throws SchedulerDynamicEditException when compute QueueManagementChanges fails.
    */
   List<QueueManagementChange> computeQueueManagementChanges()
       throws SchedulerDynamicEditException;
 
   /**
    * Commit/Update state for the specified queue management changes.
+   *
+   * @param queueManagementChanges QueueManagementChange List.
+   * @throws SchedulerDynamicEditException when commit QueueManagementChanges fails.
    */
   void commitQueueManagementChanges(
       List<QueueManagementChange> queueManagementChanges)

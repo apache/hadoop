@@ -26,10 +26,19 @@ import java.util.Set;
 import java.util.HashSet;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
+import org.apache.hadoop.test.LambdaTestUtils;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
+import org.apache.hadoop.yarn.security.client.YARNDelegationTokenIdentifier;
+import org.apache.hadoop.yarn.server.federation.cache.FederationCache;
+import org.apache.hadoop.yarn.server.federation.cache.FederationCache.ApplicationHomeSubClusterCacheResponse;
+import org.apache.hadoop.yarn.server.federation.cache.FederationCache.CacheRequest;
+import org.apache.hadoop.yarn.server.federation.cache.FederationJCache;
 import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
 import org.apache.hadoop.yarn.server.federation.store.impl.MemoryFederationStateStore;
 import org.apache.hadoop.yarn.server.federation.store.records.ApplicationHomeSubCluster;
@@ -37,27 +46,27 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterPolicyConfiguration;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterRMDTSecretManagerState;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterStoreToken;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterRMTokenRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterRMTokenResponse;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
-import javax.cache.Cache;
+import org.ehcache.Cache;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 /**
  * Unit tests for FederationStateStoreFacade.
  */
-@RunWith(Parameterized.class)
 public class TestFederationStateStoreFacade {
 
-  @Parameters
   @SuppressWarnings({"NoWhitespaceAfter"})
   public static Collection<Boolean[]> getParameters() {
-    return Arrays
-        .asList(new Boolean[][] { { Boolean.FALSE }, { Boolean.TRUE } });
+    return Arrays.asList(new Boolean[][]{{Boolean.FALSE}, {Boolean.TRUE}});
   }
 
   private final long clusterTs = System.currentTimeMillis();
@@ -68,19 +77,21 @@ public class TestFederationStateStoreFacade {
   private Configuration conf;
   private FederationStateStore stateStore;
   private FederationStateStoreTestUtil stateStoreTestUtil;
-  private FederationStateStoreFacade facade =
-      FederationStateStoreFacade.getInstance();
+  private FederationStateStoreFacade facade;
+
   private Boolean isCachingEnabled;
 
-  public TestFederationStateStoreFacade(Boolean isCachingEnabled) {
+  private void initTestFederationStateStoreFacade(Boolean pIsCachingEnabled)
+      throws IOException, YarnException {
     conf = new Configuration();
-    if (!(isCachingEnabled.booleanValue())) {
+    if (!(pIsCachingEnabled.booleanValue())) {
       conf.setInt(YarnConfiguration.FEDERATION_CACHE_TIME_TO_LIVE_SECS, 0);
     }
-    this.isCachingEnabled = isCachingEnabled;
+    this.isCachingEnabled = pIsCachingEnabled;
+    facade = FederationStateStoreFacade.getInstance(conf);
+    setUp();
   }
 
-  @Before
   public void setUp() throws IOException, YarnException {
     stateStore = new MemoryFederationStateStore();
     stateStore.init(conf);
@@ -92,102 +103,130 @@ public class TestFederationStateStoreFacade {
     stateStoreTestUtil.addPolicyConfigs(numQueues);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     stateStore.close();
     stateStore = null;
   }
 
-  @Test
-  public void testGetSubCluster() throws YarnException {
+  @ParameterizedTest
+  @MethodSource("getParameters")
+  public void testGetSubCluster(Boolean pIsCachingEnabled)
+      throws YarnException, IOException {
+    initTestFederationStateStoreFacade(pIsCachingEnabled);
     for (int i = 0; i < numSubClusters; i++) {
       SubClusterId subClusterId =
           SubClusterId.newInstance(FederationStateStoreTestUtil.SC_PREFIX + i);
-      Assert.assertEquals(stateStoreTestUtil.querySubClusterInfo(subClusterId),
+      assertEquals(stateStoreTestUtil.querySubClusterInfo(subClusterId),
           facade.getSubCluster(subClusterId));
     }
   }
 
-  @Test
-  public void testInvalidGetSubCluster() throws YarnException {
+  @ParameterizedTest
+  @MethodSource("getParameters")
+  public void testInvalidGetSubCluster(Boolean pIsCachingEnabled)
+      throws YarnException, IOException {
+    initTestFederationStateStoreFacade(pIsCachingEnabled);
     SubClusterId subClusterId =
         SubClusterId.newInstance(FederationStateStoreTestUtil.INVALID);
-    Assert.assertNull(facade.getSubCluster(subClusterId));
+    assertNull(facade.getSubCluster(subClusterId));
   }
 
-  @Test
-  public void testGetSubClusterFlushCache() throws YarnException {
+  @ParameterizedTest
+  @MethodSource("getParameters")
+  public void testGetSubClusterFlushCache(Boolean pIsCachingEnabled)
+      throws YarnException, IOException {
+    initTestFederationStateStoreFacade(pIsCachingEnabled);
     for (int i = 0; i < numSubClusters; i++) {
       SubClusterId subClusterId =
           SubClusterId.newInstance(FederationStateStoreTestUtil.SC_PREFIX + i);
-      Assert.assertEquals(stateStoreTestUtil.querySubClusterInfo(subClusterId),
+      assertEquals(stateStoreTestUtil.querySubClusterInfo(subClusterId),
           facade.getSubCluster(subClusterId, true));
     }
   }
 
-  @Test
-  public void testGetSubClusters() throws YarnException {
+  @ParameterizedTest
+  @MethodSource("getParameters")
+  public void testGetSubClusters(Boolean pIsCachingEnabled)
+      throws YarnException, IOException {
+    initTestFederationStateStoreFacade(pIsCachingEnabled);
     Map<SubClusterId, SubClusterInfo> subClusters =
         facade.getSubClusters(false);
     for (SubClusterId subClusterId : subClusters.keySet()) {
-      Assert.assertEquals(stateStoreTestUtil.querySubClusterInfo(subClusterId),
+      assertEquals(stateStoreTestUtil.querySubClusterInfo(subClusterId),
           subClusters.get(subClusterId));
     }
   }
 
-  @Test
-  public void testGetPolicyConfiguration() throws YarnException {
+  @ParameterizedTest
+  @MethodSource("getParameters")
+  public void testGetPolicyConfiguration(Boolean pIsCachingEnabled)
+      throws YarnException, IOException {
+    initTestFederationStateStoreFacade(pIsCachingEnabled);
     for (int i = 0; i < numQueues; i++) {
       String queue = FederationStateStoreTestUtil.Q_PREFIX + i;
-      Assert.assertEquals(stateStoreTestUtil.queryPolicyConfiguration(queue),
+      assertEquals(stateStoreTestUtil.queryPolicyConfiguration(queue),
           facade.getPolicyConfiguration(queue));
     }
   }
 
-  @Test
-  public void testSubClustersCache() throws YarnException {
+  @ParameterizedTest
+  @MethodSource("getParameters")
+  public void testSubClustersCache(Boolean pIsCachingEnabled)
+      throws YarnException, IOException {
+    initTestFederationStateStoreFacade(pIsCachingEnabled);
     Map<SubClusterId, SubClusterInfo> allClusters =
         facade.getSubClusters(false);
-    Assert.assertEquals(numSubClusters, allClusters.size());
+    assertEquals(numSubClusters, allClusters.size());
     SubClusterId clusterId = new ArrayList<>(allClusters.keySet()).get(0);
     // make  one subcluster down unregister
     stateStoreTestUtil.deRegisterSubCluster(clusterId);
     Map<SubClusterId, SubClusterInfo> activeClusters =
         facade.getSubClusters(true);
-    Assert.assertEquals(numSubClusters - 1, activeClusters.size());
+    assertEquals(numSubClusters - 1, activeClusters.size());
     // Recheck false case.
     allClusters = facade.getSubClusters(false);
-    Assert.assertEquals(numSubClusters, allClusters.size());
+    assertEquals(numSubClusters, allClusters.size());
   }
 
-  @Test
-  public void testInvalidGetPolicyConfiguration() throws YarnException {
-    Assert.assertNull(
-        facade.getPolicyConfiguration(FederationStateStoreTestUtil.INVALID));
+  @ParameterizedTest
+  @MethodSource("getParameters")
+  public void testInvalidGetPolicyConfiguration(Boolean pIsCachingEnabled)
+      throws YarnException, IOException {
+    initTestFederationStateStoreFacade(pIsCachingEnabled);
+    assertNull(facade.getPolicyConfiguration(FederationStateStoreTestUtil.INVALID));
   }
 
-  @Test
-  public void testGetPoliciesConfigurations() throws YarnException {
+  @ParameterizedTest
+  @MethodSource("getParameters")
+  public void testGetPoliciesConfigurations(Boolean pIsCachingEnabled)
+      throws YarnException, IOException {
+    initTestFederationStateStoreFacade(pIsCachingEnabled);
     Map<String, SubClusterPolicyConfiguration> queuePolicies =
         facade.getPoliciesConfigurations();
     for (String queue : queuePolicies.keySet()) {
-      Assert.assertEquals(stateStoreTestUtil.queryPolicyConfiguration(queue),
+      assertEquals(stateStoreTestUtil.queryPolicyConfiguration(queue),
           queuePolicies.get(queue));
     }
   }
 
-  @Test
-  public void testGetHomeSubClusterForApp() throws YarnException {
+  @ParameterizedTest
+  @MethodSource("getParameters")
+  public void testGetHomeSubClusterForApp(Boolean pIsCachingEnabled)
+      throws YarnException, IOException {
+    initTestFederationStateStoreFacade(pIsCachingEnabled);
     for (int i = 0; i < numApps; i++) {
       ApplicationId appId = ApplicationId.newInstance(clusterTs, i);
-      Assert.assertEquals(stateStoreTestUtil.queryApplicationHomeSC(appId),
+      assertEquals(stateStoreTestUtil.queryApplicationHomeSC(appId),
           facade.getApplicationHomeSubCluster(appId));
     }
   }
 
-  @Test
-  public void testAddApplicationHomeSubCluster() throws YarnException {
-
+  @ParameterizedTest
+  @MethodSource("getParameters")
+  public void testAddApplicationHomeSubCluster(Boolean pIsCachingEnabled)
+      throws YarnException, IOException {
+    initTestFederationStateStoreFacade(pIsCachingEnabled);
     // Inserting <AppId, Home1> into FederationStateStore
     ApplicationId appId = ApplicationId.newInstance(clusterTs, numApps + 1);
     SubClusterId subClusterId1 = SubClusterId.newInstance("Home1");
@@ -198,8 +237,8 @@ public class TestFederationStateStoreFacade {
     SubClusterId result =
         facade.addApplicationHomeSubCluster(appHomeSubCluster);
 
-    Assert.assertEquals(facade.getApplicationHomeSubCluster(appId), result);
-    Assert.assertEquals(subClusterId1, result);
+    assertEquals(facade.getApplicationHomeSubCluster(appId), result);
+    assertEquals(subClusterId1, result);
 
     // Inserting <AppId, Home2> into FederationStateStore.
     // The application is already present.
@@ -210,12 +249,15 @@ public class TestFederationStateStoreFacade {
 
     result = facade.addApplicationHomeSubCluster(appHomeSubCluster);
 
-    Assert.assertEquals(facade.getApplicationHomeSubCluster(appId), result);
-    Assert.assertEquals(subClusterId1, result);
+    assertEquals(facade.getApplicationHomeSubCluster(appId), result);
+    assertEquals(subClusterId1, result);
   }
 
-  @Test
-  public void testGetApplicationHomeSubClusterCache() throws YarnException {
+  @ParameterizedTest
+  @MethodSource("getParameters")
+  public void testGetApplicationHomeSubClusterCache(Boolean pIsCachingEnabled)
+      throws Exception {
+    initTestFederationStateStoreFacade(pIsCachingEnabled);
     ApplicationId appId = ApplicationId.newInstance(clusterTs, numApps + 1);
     SubClusterId subClusterId1 = SubClusterId.newInstance("Home1");
 
@@ -224,20 +266,29 @@ public class TestFederationStateStoreFacade {
     SubClusterId subClusterIdAdd = facade.addApplicationHomeSubCluster(appHomeSubCluster);
 
     SubClusterId subClusterIdByFacade = facade.getApplicationHomeSubCluster(appId);
-    Assert.assertEquals(subClusterIdByFacade, subClusterIdAdd);
-    Assert.assertEquals(subClusterId1, subClusterIdAdd);
+    assertEquals(subClusterIdByFacade, subClusterIdAdd);
+    assertEquals(subClusterId1, subClusterIdAdd);
 
     if (isCachingEnabled.booleanValue()) {
-      Cache<Object, Object> cache = facade.getCache();
-      Object cacheKey = facade.getAppHomeSubClusterCacheRequest(appId);
-      Object subClusterIdByCache = cache.get(cacheKey);
-      Assert.assertEquals(subClusterIdByFacade, subClusterIdByCache);
-      Assert.assertEquals(subClusterId1, subClusterIdByCache);
+      FederationCache fedCache = facade.getFederationCache();
+      assert fedCache instanceof FederationJCache;
+      FederationJCache jCache = (FederationJCache) fedCache;
+      String cacheKey = jCache.getAppHomeSubClusterCacheKey(appId);
+      Cache<String, CacheRequest> cache = jCache.getCache();
+      CacheRequest<String, ?> cacheRequest = cache.get(cacheKey);
+      ApplicationHomeSubClusterCacheResponse response =
+          ApplicationHomeSubClusterCacheResponse.class.cast(cacheRequest.getValue());
+      SubClusterId subClusterIdByCache = response.getItem();
+      assertEquals(subClusterIdByFacade, subClusterIdByCache);
+      assertEquals(subClusterId1, subClusterIdByCache);
     }
   }
 
-  @Test
-  public void testStoreNewMasterKey() throws YarnException, IOException {
+  @ParameterizedTest
+  @MethodSource("getParameters")
+  public void testStoreNewMasterKey(Boolean pIsCachingEnabled)
+      throws YarnException, IOException {
+    initTestFederationStateStoreFacade(pIsCachingEnabled);
     // store delegation key;
     DelegationKey key = new DelegationKey(1234, 4321, "keyBytes".getBytes());
     Set<DelegationKey> keySet = new HashSet<>();
@@ -248,11 +299,14 @@ public class TestFederationStateStoreFacade {
         (MemoryFederationStateStore) facade.getStateStore();
     RouterRMDTSecretManagerState secretManagerState =
         federationStateStore.getRouterRMSecretManagerState();
-    Assert.assertEquals(keySet, secretManagerState.getMasterKeyState());
+    assertEquals(keySet, secretManagerState.getMasterKeyState());
   }
 
-  @Test
-  public void testRemoveStoredMasterKey() throws YarnException, IOException {
+  @ParameterizedTest
+  @MethodSource("getParameters")
+  public void testRemoveStoredMasterKey(Boolean pIsCachingEnabled)
+      throws YarnException, IOException {
+    initTestFederationStateStoreFacade(pIsCachingEnabled);
     // store delegation key;
     DelegationKey key = new DelegationKey(4567, 7654, "keyBytes".getBytes());
     Set<DelegationKey> keySet = new HashSet<>();
@@ -267,6 +321,105 @@ public class TestFederationStateStoreFacade {
         (MemoryFederationStateStore) facade.getStateStore();
     RouterRMDTSecretManagerState secretManagerState =
         federationStateStore.getRouterRMSecretManagerState();
-    Assert.assertEquals(keySet, secretManagerState.getMasterKeyState());
+    assertEquals(keySet, secretManagerState.getMasterKeyState());
+  }
+
+  @ParameterizedTest
+  @MethodSource("getParameters")
+  public void testStoreNewToken(Boolean pIsCachingEnabled) throws YarnException, IOException {
+    initTestFederationStateStoreFacade(pIsCachingEnabled);
+    // store new rm-token
+    RMDelegationTokenIdentifier dtId1 = new RMDelegationTokenIdentifier(
+        new Text("owner1"), new Text("renewer1"), new Text("realuser1"));
+    int sequenceNumber = 1;
+    dtId1.setSequenceNumber(sequenceNumber);
+    Long renewDate1 = Time.now();
+    facade.storeNewToken(dtId1, renewDate1);
+
+    // get RouterStoreToken from StateStore
+    RouterStoreToken routerStoreToken = RouterStoreToken.newInstance(dtId1, renewDate1);
+    RouterRMTokenRequest rmTokenRequest = RouterRMTokenRequest.newInstance(routerStoreToken);
+    RouterRMTokenResponse rmTokenResponse = stateStore.getTokenByRouterStoreToken(rmTokenRequest);
+    assertNotNull(rmTokenResponse);
+
+    RouterStoreToken resultStoreToken = rmTokenResponse.getRouterStoreToken();
+    YARNDelegationTokenIdentifier resultTokenIdentifier = resultStoreToken.getTokenIdentifier();
+    assertNotNull(resultStoreToken);
+    assertNotNull(resultTokenIdentifier);
+    assertNotNull(resultStoreToken.getRenewDate());
+
+    assertEquals(dtId1, resultTokenIdentifier);
+    assertEquals(renewDate1, resultStoreToken.getRenewDate());
+    assertEquals(sequenceNumber, resultTokenIdentifier.getSequenceNumber());
+  }
+
+  @ParameterizedTest
+  @MethodSource("getParameters")
+  public void testUpdateNewToken(Boolean pIsCachingEnabled) throws YarnException, IOException {
+    initTestFederationStateStoreFacade(pIsCachingEnabled);
+    // store new rm-token
+    RMDelegationTokenIdentifier dtId1 = new RMDelegationTokenIdentifier(
+        new Text("owner2"), new Text("renewer2"), new Text("realuser2"));
+    int sequenceNumber = 2;
+    dtId1.setSequenceNumber(sequenceNumber);
+    Long renewDate1 = Time.now();
+    facade.storeNewToken(dtId1, renewDate1);
+
+    Long renewDate2 = Time.now();
+    int sequenceNumber2 = 3;
+    dtId1.setSequenceNumber(sequenceNumber2);
+    facade.updateStoredToken(dtId1, renewDate2);
+
+    // get RouterStoreToken from StateStore
+    RouterStoreToken routerStoreToken = RouterStoreToken.newInstance(dtId1, renewDate1);
+    RouterRMTokenRequest rmTokenRequest = RouterRMTokenRequest.newInstance(routerStoreToken);
+    RouterRMTokenResponse rmTokenResponse = stateStore.getTokenByRouterStoreToken(rmTokenRequest);
+    assertNotNull(rmTokenResponse);
+
+    RouterStoreToken resultStoreToken = rmTokenResponse.getRouterStoreToken();
+    YARNDelegationTokenIdentifier resultTokenIdentifier = resultStoreToken.getTokenIdentifier();
+    assertNotNull(resultStoreToken);
+    assertNotNull(resultTokenIdentifier);
+    assertNotNull(resultStoreToken.getRenewDate());
+
+    assertEquals(dtId1, resultTokenIdentifier);
+    assertEquals(renewDate2, resultStoreToken.getRenewDate());
+    assertEquals(sequenceNumber2, resultTokenIdentifier.getSequenceNumber());
+  }
+
+  @ParameterizedTest
+  @MethodSource("getParameters")
+  public void testRemoveStoredToken(Boolean pIsCachingEnabled) throws Exception {
+    initTestFederationStateStoreFacade(pIsCachingEnabled);
+    // store new rm-token
+    RMDelegationTokenIdentifier dtId1 = new RMDelegationTokenIdentifier(
+        new Text("owner3"), new Text("renewer3"), new Text("realuser3"));
+    int sequenceNumber = 3;
+    dtId1.setSequenceNumber(sequenceNumber);
+    Long renewDate1 = Time.now();
+    facade.storeNewToken(dtId1, renewDate1);
+
+    // get RouterStoreToken from StateStore
+    RouterStoreToken routerStoreToken = RouterStoreToken.newInstance(dtId1, renewDate1);
+    RouterRMTokenRequest rmTokenRequest = RouterRMTokenRequest.newInstance(routerStoreToken);
+    RouterRMTokenResponse rmTokenResponse = stateStore.getTokenByRouterStoreToken(rmTokenRequest);
+    assertNotNull(rmTokenResponse);
+
+    RouterStoreToken resultStoreToken = rmTokenResponse.getRouterStoreToken();
+    YARNDelegationTokenIdentifier resultTokenIdentifier = resultStoreToken.getTokenIdentifier();
+    assertNotNull(resultStoreToken);
+    assertNotNull(resultTokenIdentifier);
+    assertNotNull(resultStoreToken.getRenewDate());
+
+    assertEquals(dtId1, resultTokenIdentifier);
+    assertEquals(renewDate1, resultStoreToken.getRenewDate());
+    assertEquals(sequenceNumber, resultTokenIdentifier.getSequenceNumber());
+
+    // remove rm-token
+    facade.removeStoredToken(dtId1);
+
+    // Call again(getTokenByRouterStoreToken) after remove will throw IOException(not exist)
+    LambdaTestUtils.intercept(IOException.class, "RMDelegationToken: " + dtId1 + " does not exist.",
+        () -> stateStore.getTokenByRouterStoreToken(rmTokenRequest));
   }
 }

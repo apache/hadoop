@@ -32,10 +32,9 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.util.Lists;
-import org.junit.Assert;
-import org.junit.Assume;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -55,6 +54,9 @@ import java.util.Set;
 import java.util.zip.GZIPInputStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.apache.hadoop.fs.FileSystem.FS_DEFAULT_NAME_KEY;
 
 /**
@@ -63,7 +65,7 @@ import static org.apache.hadoop.fs.FileSystem.FS_DEFAULT_NAME_KEY;
 public class TestFrameworkUploader {
   private static String testDir;
 
-  @Before
+  @BeforeEach
   public void setUp() {
     String testRootDir =
         new File(System.getProperty("test.build.data", "/tmp"))
@@ -79,11 +81,11 @@ public class TestFrameworkUploader {
    * @throws IOException test failure
    */
   @Test
-  public void testHelp() throws IOException {
+  void testHelp() throws IOException {
     String[] args = new String[]{"-help"};
     FrameworkUploader uploader = new FrameworkUploader();
     boolean success = uploader.parseArguments(args);
-    Assert.assertFalse("Expected to print help", success);
+    assertFalse(success, "Expected to print help");
     assertThat(uploader.input)
         .withFailMessage("Expected ignore run")
         .isNull();
@@ -100,11 +102,11 @@ public class TestFrameworkUploader {
    * @throws IOException test failure
    */
   @Test
-  public void testWrongArgument() throws IOException {
+  void testWrongArgument() throws IOException {
     String[] args = new String[]{"-unexpected"};
     FrameworkUploader uploader = new FrameworkUploader();
     boolean success = uploader.parseArguments(args);
-    Assert.assertFalse("Expected to print help", success);
+    assertFalse(success, "Expected to print help");
   }
 
   /**
@@ -112,7 +114,7 @@ public class TestFrameworkUploader {
    * @throws IOException test failure
    */
   @Test
-  public void testArguments() throws IOException {
+  void testArguments() throws IOException {
     String[] args =
         new String[]{
             "-input", "A",
@@ -126,60 +128,67 @@ public class TestFrameworkUploader {
             "-timeout", "10"};
     FrameworkUploader uploader = new FrameworkUploader();
     boolean success = uploader.parseArguments(args);
-    Assert.assertTrue("Expected to print help", success);
-    Assert.assertEquals("Input mismatch", "A",
-        uploader.input);
-    Assert.assertEquals("Whitelist mismatch", "B",
-        uploader.whitelist);
-    Assert.assertEquals("Blacklist mismatch", "C",
-        uploader.blacklist);
-    Assert.assertEquals("Target mismatch", "hdfs://C:8020/D",
-        uploader.target);
-    Assert.assertEquals("Initial replication mismatch", 100,
-        uploader.initialReplication);
-    Assert.assertEquals("Acceptable replication mismatch", 120,
-        uploader.acceptableReplication);
-    Assert.assertEquals("Final replication mismatch", 140,
-        uploader.finalReplication);
-    Assert.assertEquals("Timeout mismatch", 10,
-        uploader.timeout);
+    assertTrue(success, "Expected to print help");
+    assertEquals("A",
+        uploader.input,
+        "Input mismatch");
+    assertEquals("B",
+        uploader.whitelist,
+        "Whitelist mismatch");
+    assertEquals("C",
+        uploader.blacklist,
+        "Blacklist mismatch");
+    assertEquals("hdfs://C:8020/D",
+        uploader.target,
+        "Target mismatch");
+    assertEquals(100,
+        uploader.initialReplication,
+        "Initial replication mismatch");
+    assertEquals(120,
+        uploader.acceptableReplication,
+        "Acceptable replication mismatch");
+    assertEquals(140,
+        uploader.finalReplication,
+        "Final replication mismatch");
+    assertEquals(10,
+        uploader.timeout,
+        "Timeout mismatch");
   }
 
   /**
    * Test the default ways how to specify filesystems.
    */
   @Test
-  public void testNoFilesystem() throws IOException {
+  void testNoFilesystem() throws IOException {
     FrameworkUploader uploader = new FrameworkUploader();
     boolean success = uploader.parseArguments(new String[]{});
-    Assert.assertTrue("Expected to parse arguments", success);
-    Assert.assertEquals(
-        "Expected",
-        "file:////usr/lib/mr-framework.tar.gz#mr-framework", uploader.target);
+    assertTrue(success, "Expected to parse arguments");
+    assertEquals(
+        "file:////usr/lib/mr-framework.tar.gz#mr-framework", uploader.target, "Expected");
   }
 
   /**
    * Test the default ways how to specify filesystems.
    */
   @Test
-  public void testDefaultFilesystem() throws IOException {
+  void testDefaultFilesystem() throws IOException {
     FrameworkUploader uploader = new FrameworkUploader();
     Configuration conf = new Configuration();
     conf.set(FS_DEFAULT_NAME_KEY, "hdfs://namenode:555");
     uploader.setConf(conf);
     boolean success = uploader.parseArguments(new String[]{});
-    Assert.assertTrue("Expected to parse arguments", success);
-    Assert.assertEquals(
-        "Expected",
+    assertTrue(success, "Expected to parse arguments");
+    assertEquals(
         "hdfs://namenode:555/usr/lib/mr-framework.tar.gz#mr-framework",
-        uploader.target);
+        uploader.target,
+        "Expected");
   }
 
   /**
    * Test the explicit filesystem specification.
    */
   @Test
-  public void testExplicitFilesystem() throws IOException {
+  void testExplicitFilesystem() throws IOException {
     FrameworkUploader uploader = new FrameworkUploader();
     Configuration conf = new Configuration();
     uploader.setConf(conf);
@@ -187,18 +196,18 @@ public class TestFrameworkUploader {
         "-target",
         "hdfs://namenode:555/usr/lib/mr-framework.tar.gz#mr-framework"
     });
-    Assert.assertTrue("Expected to parse arguments", success);
-    Assert.assertEquals(
-        "Expected",
+    assertTrue(success, "Expected to parse arguments");
+    assertEquals(
         "hdfs://namenode:555/usr/lib/mr-framework.tar.gz#mr-framework",
-        uploader.target);
+        uploader.target,
+        "Expected");
   }
 
   /**
    * Test the conflicting filesystem specification.
    */
   @Test
-  public void testConflictingFilesystem() throws IOException {
+  void testConflictingFilesystem() throws IOException {
     FrameworkUploader uploader = new FrameworkUploader();
     Configuration conf = new Configuration();
     conf.set(FS_DEFAULT_NAME_KEY, "hdfs://namenode:555");
@@ -207,11 +216,11 @@ public class TestFrameworkUploader {
         "-target",
         "file:///usr/lib/mr-framework.tar.gz#mr-framework"
     });
-    Assert.assertTrue("Expected to parse arguments", success);
-    Assert.assertEquals(
-        "Expected",
+    assertTrue(success, "Expected to parse arguments");
+    assertEquals(
         "file:///usr/lib/mr-framework.tar.gz#mr-framework",
-        uploader.target);
+        uploader.target,
+        "Expected");
   }
 
   /**
@@ -219,27 +228,27 @@ public class TestFrameworkUploader {
    * @throws IOException test failure
    */
   @Test
-  public void testCollectPackages() throws IOException, UploaderException {
+  void testCollectPackages() throws IOException, UploaderException {
     File parent = new File(testDir);
     try {
       parent.deleteOnExit();
-      Assert.assertTrue("Directory creation failed", parent.mkdirs());
+      assertTrue(parent.mkdirs(), "Directory creation failed");
       File dirA = new File(parent, "A");
-      Assert.assertTrue(dirA.mkdirs());
+      assertTrue(dirA.mkdirs());
       File dirB = new File(parent, "B");
-      Assert.assertTrue(dirB.mkdirs());
+      assertTrue(dirB.mkdirs());
       File jarA = new File(dirA, "a.jar");
-      Assert.assertTrue(jarA.createNewFile());
+      assertTrue(jarA.createNewFile());
       File jarB = new File(dirA, "b.jar");
-      Assert.assertTrue(jarB.createNewFile());
+      assertTrue(jarB.createNewFile());
       File jarC = new File(dirA, "c.jar");
-      Assert.assertTrue(jarC.createNewFile());
+      assertTrue(jarC.createNewFile());
       File txtD = new File(dirA, "d.txt");
-      Assert.assertTrue(txtD.createNewFile());
+      assertTrue(txtD.createNewFile());
       File jarD = new File(dirB, "d.jar");
-      Assert.assertTrue(jarD.createNewFile());
+      assertTrue(jarD.createNewFile());
       File txtE = new File(dirB, "e.txt");
-      Assert.assertTrue(txtE.createNewFile());
+      assertTrue(txtE.createNewFile());
 
       FrameworkUploader uploader = new FrameworkUploader();
       uploader.whitelist = ".*a\\.jar,.*b\\.jar,.*d\\.jar";
@@ -248,19 +257,22 @@ public class TestFrameworkUploader {
           File.pathSeparatorChar +
           dirB.getAbsolutePath() + File.separatorChar + "*";
       uploader.collectPackages();
-      Assert.assertEquals("Whitelist count error", 3,
-          uploader.whitelistedFiles.size());
-      Assert.assertEquals("Blacklist count error", 1,
-          uploader.blacklistedFiles.size());
+      assertEquals(3,
+          uploader.whitelistedFiles.size(),
+          "Whitelist count error");
+      assertEquals(1,
+          uploader.blacklistedFiles.size(),
+          "Blacklist count error");
 
-      Assert.assertTrue("File not collected",
-          uploader.filteredInputFiles.contains(jarA.getAbsolutePath()));
-      Assert.assertFalse("File collected",
-          uploader.filteredInputFiles.contains(jarB.getAbsolutePath()));
-      Assert.assertTrue("File not collected",
-          uploader.filteredInputFiles.contains(jarD.getAbsolutePath()));
-      Assert.assertEquals("Too many whitelists", 2,
-          uploader.filteredInputFiles.size());
+      assertTrue(uploader.filteredInputFiles.contains(jarA.getAbsolutePath()),
+          "File not collected");
+      assertFalse(uploader.filteredInputFiles.contains(jarB.getAbsolutePath()),
+          "File collected");
+      assertTrue(uploader.filteredInputFiles.contains(jarD.getAbsolutePath()),
+          "File not collected");
+      assertEquals(2,
+          uploader.filteredInputFiles.size(),
+          "Too many whitelists");
     } finally {
       FileUtils.deleteDirectory(parent);
     }
@@ -270,10 +282,10 @@ public class TestFrameworkUploader {
    * Test building a tarball from source jars.
    */
   @Test
-  public void testBuildTarBall()
+  void testBuildTarBall()
       throws IOException, UploaderException, InterruptedException {
     String[] testFiles = {"upload.tar", "upload.tar.gz"};
-    for (String testFile: testFiles) {
+    for (String testFile : testFiles) {
       File parent = new File(testDir);
       try {
         parent.deleteOnExit();
@@ -304,14 +316,14 @@ public class TestFrameworkUploader {
           TarArchiveEntry entry2 = result.getNextTarEntry();
           fileNames.add(entry2.getName());
           sizes.add(entry2.getSize());
-          Assert.assertTrue(
-              "File name error", fileNames.contains("a.jar"));
-          Assert.assertTrue(
-              "File size error", sizes.contains((long) 13));
-          Assert.assertTrue(
-              "File name error", fileNames.contains("b.jar"));
-          Assert.assertTrue(
-              "File size error", sizes.contains((long) 14));
+          assertTrue(
+              fileNames.contains("a.jar"), "File name error");
+          assertTrue(
+              sizes.contains((long) 13), "File size error");
+          assertTrue(
+              fileNames.contains("b.jar"), "File name error");
+          assertTrue(
+              sizes.contains((long) 14), "File size error");
         } finally {
           if (result != null) {
             result.close();
@@ -327,7 +339,7 @@ public class TestFrameworkUploader {
    * Test upload to HDFS.
    */
   @Test
-  public void testUpload()
+  void testUpload()
       throws IOException, UploaderException, InterruptedException {
     final String fileName = "/upload.tar.gz";
     File parent = new File(testDir);
@@ -351,14 +363,14 @@ public class TestFrameworkUploader {
         TarArchiveEntry entry2 = archiveInputStream.getNextTarEntry();
         fileNames.add(entry2.getName());
         sizes.add(entry2.getSize());
-        Assert.assertTrue(
-            "File name error", fileNames.contains("a.jar"));
-        Assert.assertTrue(
-            "File size error", sizes.contains((long) 13));
-        Assert.assertTrue(
-            "File name error", fileNames.contains("b.jar"));
-        Assert.assertTrue(
-            "File size error", sizes.contains((long) 14));
+        assertTrue(
+            fileNames.contains("a.jar"), "File name error");
+        assertTrue(
+            sizes.contains((long) 13), "File size error");
+        assertTrue(
+            fileNames.contains("b.jar"), "File name error");
+        assertTrue(
+            sizes.contains((long) 14), "File size error");
       }
     } finally {
       FileUtils.deleteDirectory(parent);
@@ -370,9 +382,9 @@ public class TestFrameworkUploader {
    */
   private FrameworkUploader prepareTree(File parent)
       throws FileNotFoundException {
-    Assert.assertTrue(parent.mkdirs());
+    assertTrue(parent.mkdirs());
     File dirA = new File(parent, "A");
-    Assert.assertTrue(dirA.mkdirs());
+    assertTrue(dirA.mkdirs());
     File jarA = new File(parent, "a.jar");
     PrintStream printStream = new PrintStream(new FileOutputStream(jarA));
     printStream.println("Hello World!");
@@ -393,7 +405,7 @@ public class TestFrameworkUploader {
    * Test regex pattern matching and environment variable replacement.
    */
   @Test
-  public void testEnvironmentReplacement() throws UploaderException {
+  void testEnvironmentReplacement() throws UploaderException {
     String input = "C/$A/B,$B,D";
     Map<String, String> map = new HashMap<>();
     map.put("A", "X");
@@ -401,7 +413,7 @@ public class TestFrameworkUploader {
     map.put("C", "Z");
     FrameworkUploader uploader = new FrameworkUploader();
     String output = uploader.expandEnvironmentVariables(input, map);
-    Assert.assertEquals("Environment not expanded", "C/X/B,Y,D", output);
+    assertEquals("C/X/B,Y,D", output, "Environment not expanded");
 
   }
 
@@ -409,7 +421,7 @@ public class TestFrameworkUploader {
    * Test regex pattern matching and environment variable replacement.
    */
   @Test
-  public void testRecursiveEnvironmentReplacement()
+  void testRecursiveEnvironmentReplacement()
       throws UploaderException {
     String input = "C/$A/B,$B,D";
     Map<String, String> map = new HashMap<>();
@@ -418,7 +430,7 @@ public class TestFrameworkUploader {
     map.put("C", "Y");
     FrameworkUploader uploader = new FrameworkUploader();
     String output = uploader.expandEnvironmentVariables(input, map);
-    Assert.assertEquals("Environment not expanded", "C/X/B,Y,D", output);
+    assertEquals("C/X/B,Y,D", output, "Environment not expanded");
 
   }
 
@@ -426,20 +438,20 @@ public class TestFrameworkUploader {
    * Test native IO.
    */
   @Test
-  public void testNativeIO() throws IOException {
+  void testNativeIO() throws IOException {
     FrameworkUploader uploader = new FrameworkUploader();
     File parent = new File(testDir);
     try {
       // Create a parent directory
       parent.deleteOnExit();
-      Assert.assertTrue(parent.mkdirs());
+      assertTrue(parent.mkdirs());
 
       // Create a target file
       File targetFile = new File(parent, "a.txt");
-      try(FileOutputStream os = new FileOutputStream(targetFile)) {
+      try (FileOutputStream os = new FileOutputStream(targetFile)) {
         IOUtils.writeLines(Lists.newArrayList("a", "b"), null, os, StandardCharsets.UTF_8);
       }
-      Assert.assertFalse(uploader.checkSymlink(targetFile));
+      assertFalse(uploader.checkSymlink(targetFile));
 
       // Create a symlink to the target
       File symlinkToTarget = new File(parent, "symlinkToTarget.txt");
@@ -449,22 +461,22 @@ public class TestFrameworkUploader {
             Paths.get(targetFile.getAbsolutePath()));
       } catch (UnsupportedOperationException e) {
         // Symlinks are not supported, so ignore the test
-        Assume.assumeTrue(false);
+        Assumptions.assumeTrue(false);
       }
-      Assert.assertTrue(uploader.checkSymlink(symlinkToTarget));
+      assertTrue(uploader.checkSymlink(symlinkToTarget));
 
       // Create a symlink to the target with /./ in the path
       symlinkToTarget = new File(parent.getAbsolutePath() +
-            "/./symlinkToTarget2.txt");
+          "/./symlinkToTarget2.txt");
       try {
         Files.createSymbolicLink(
             Paths.get(symlinkToTarget.getAbsolutePath()),
             Paths.get(targetFile.getAbsolutePath()));
       } catch (UnsupportedOperationException e) {
         // Symlinks are not supported, so ignore the test
-        Assume.assumeTrue(false);
+        Assumptions.assumeTrue(false);
       }
-      Assert.assertTrue(uploader.checkSymlink(symlinkToTarget));
+      assertTrue(uploader.checkSymlink(symlinkToTarget));
 
       // Create a symlink outside the current directory
       File symlinkOutside = new File(parent, "symlinkToParent.txt");
@@ -474,9 +486,9 @@ public class TestFrameworkUploader {
             Paths.get(parent.getAbsolutePath()));
       } catch (UnsupportedOperationException e) {
         // Symlinks are not supported, so ignore the test
-        Assume.assumeTrue(false);
+        Assumptions.assumeTrue(false);
       }
-      Assert.assertFalse(uploader.checkSymlink(symlinkOutside));
+      assertFalse(uploader.checkSymlink(symlinkOutside));
     } finally {
       FileUtils.forceDelete(parent);
     }
@@ -484,14 +496,14 @@ public class TestFrameworkUploader {
   }
 
   @Test
-  public void testPermissionSettingsOnRestrictiveUmask()
+  void testPermissionSettingsOnRestrictiveUmask()
       throws Exception {
     File parent = new File(testDir);
     parent.deleteOnExit();
     MiniDFSCluster cluster = null;
 
     try {
-      Assert.assertTrue("Directory creation failed", parent.mkdirs());
+      assertTrue(parent.mkdirs(), "Directory creation failed");
       Configuration hdfsConf = new HdfsConfiguration();
       String namenodeDir = new File(MiniDFSCluster.getBaseDirectory(),
           "name").getAbsolutePath();
@@ -525,7 +537,7 @@ public class TestFrameworkUploader {
 
       FileStatus fileStatus = dfs.getFileStatus(new Path(targetPath));
       FsPermission perm = fileStatus.getPermission();
-      Assert.assertEquals("Permissions", new FsPermission(0644), perm);
+      assertEquals(new FsPermission(0644), perm, "Permissions");
     } finally {
       if (cluster != null) {
         cluster.close();

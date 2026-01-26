@@ -47,11 +47,12 @@ public class PlanQueue extends AbstractManagedParentQueue {
   public PlanQueue(CapacitySchedulerQueueContext queueContext, String queueName,
       CSQueue parent, CSQueue old) throws IOException {
     super(queueContext, queueName, parent, old);
+    super.setupQueueConfigs(queueContext.getClusterResource());
     updateAbsoluteCapacities();
 
     // Set the reservation queue attributes for the Plan
     CapacitySchedulerConfiguration conf = queueContext.getConfiguration();
-    String queuePath = super.getQueuePath();
+    QueuePath queuePath = super.getQueuePathObject();
     int maxAppsForReservation = conf.getMaximumApplicationsPerQueue(queuePath);
     showReservationsAsQueues = conf.getShowReservationAsQueues(queuePath);
     if (maxAppsForReservation < 0) {
@@ -71,7 +72,7 @@ public class PlanQueue extends AbstractManagedParentQueue {
     updateQuotas(configuredUserLimit, configuredUserLimitFactor,
         maxAppsForReservation, configuredMaxAppsPerUserForReservation);
 
-    StringBuffer queueInfo = new StringBuffer();
+    StringBuilder queueInfo = new StringBuilder();
     queueInfo.append("Created Plan Queue: ").append(queueName)
         .append("\nwith capacity: [").append(super.getCapacity())
         .append("]\nwith max capacity: [").append(super.getMaximumCapacity())
@@ -188,7 +189,8 @@ public class PlanQueue extends AbstractManagedParentQueue {
   }
 
   /**
-   * Determine whether to hide/show the ReservationQueues
+   * Determine whether to hide/show the ReservationQueues.
+   * @return true, show ReservationQueues; false, hide ReservationQueues.
    */
   public boolean showReservationsAsQueues() {
     return showReservationsAsQueues;

@@ -29,12 +29,13 @@ import org.apache.hadoop.service.Service.STATE;
 import org.apache.hadoop.service.ServiceStateChangeListener;
 import org.apache.hadoop.tools.GetGroupsTestBase;
 import org.apache.hadoop.util.Tool;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -47,7 +48,7 @@ public class TestGetGroups extends GetGroupsTestBase {
   
   private static Configuration conf;
   
-  @BeforeClass
+  @BeforeAll
   public static void setUpResourceManager() throws InterruptedException {
     conf = new YarnConfiguration();
     resourceManager = new ResourceManager() {
@@ -70,26 +71,26 @@ public class TestGetGroups extends GetGroupsTestBase {
     resourceManager.registerServiceListener(rmStateChangeListener);
 
     resourceManager.init(conf);
-    new Thread() {
-      public void run() {
+    new SubjectInheritingThread() {
+      public void work() {
         resourceManager.start();
       };
     }.start();
 
     boolean rmStarted = rmStartedSignal.await(60000L, TimeUnit.MILLISECONDS);
-    Assert.assertTrue("ResourceManager failed to start up.", rmStarted);
+    Assertions.assertTrue(rmStarted, "ResourceManager failed to start up.");
 
-    LOG.info("ResourceManager RMAdmin address: " +
+    LOG.info("ResourceManager RMAdmin address: {}.",
         conf.get(YarnConfiguration.RM_ADMIN_ADDRESS));
   }
   
   @SuppressWarnings("static-access")
-  @Before
+  @BeforeEach
   public void setUpConf() {
     super.conf = this.conf;
   }
   
-  @AfterClass
+  @AfterAll
   public static void tearDownResourceManager() throws InterruptedException {
     if (resourceManager != null) {
       LOG.info("Stopping ResourceManager...");

@@ -33,6 +33,8 @@ public class ConfInfo {
 
   private ArrayList<ConfItem> property = new ArrayList<>();
 
+  private String subClusterId;
+
   public ConfInfo() {
   } // JAXB needs this
 
@@ -74,5 +76,14 @@ public class ConfInfo {
     public String getValue() {
       return value;
     }
+
+  }
+
+  public String getSubClusterId() {
+    return subClusterId;
+  }
+
+  public void setSubClusterId(String subClusterId) {
+    this.subClusterId = subClusterId;
   }
 }

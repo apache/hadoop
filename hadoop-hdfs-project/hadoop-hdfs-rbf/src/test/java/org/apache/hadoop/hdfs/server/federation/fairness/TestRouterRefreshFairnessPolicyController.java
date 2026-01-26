@@ -22,10 +22,10 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,9 +40,10 @@ import org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys;
 import org.apache.hadoop.hdfs.server.federation.router.RemoteMethod;
 import org.apache.hadoop.hdfs.server.federation.router.RouterRpcClient;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_FAIR_HANDLER_COUNT_KEY_PREFIX;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TestRouterRefreshFairnessPolicyController {
 
@@ -53,12 +54,12 @@ public class TestRouterRefreshFairnessPolicyController {
 
   private StateStoreDFSCluster cluster;
 
-  @BeforeClass
+  @BeforeAll
   public static void setLogLevel() {
     GenericTestUtils.setLogLevel(AbstractRouterRpcFairnessPolicyController.LOG, Level.DEBUG);
   }
 
-  @After
+  @AfterEach
   public void cleanup() {
     if (cluster != null) {
       cluster.shutdown();
@@ -66,7 +67,7 @@ public class TestRouterRefreshFairnessPolicyController {
     }
   }
 
-  @Before
+  @BeforeEach
   public void setupCluster() throws Exception {
     cluster = new StateStoreDFSCluster(false, 2);
     Configuration conf = new RouterConfigBuilder().stateStore().rpc().build();
@@ -133,7 +134,7 @@ public class TestRouterRefreshFairnessPolicyController {
     // Spawn 100 concurrent refresh requests
     Thread[] threads = new Thread[100];
     for (int i = 0; i < 100; i++) {
-      threads[i] = new Thread(() ->
+      threads[i] = new SubjectInheritingThread(() ->
           client.refreshFairnessPolicyController(routerContext.getConf()));
     }
 
@@ -182,7 +183,7 @@ public class TestRouterRefreshFairnessPolicyController {
     final int newNs1Permits = 4;
     conf.setInt(DFS_ROUTER_FAIR_HANDLER_COUNT_KEY_PREFIX + "ns0", newNs0Permits);
     conf.setInt(DFS_ROUTER_FAIR_HANDLER_COUNT_KEY_PREFIX + "ns1", newNs1Permits);
-    Thread threadRefreshController = new Thread(() -> client.
+    Thread threadRefreshController = new SubjectInheritingThread(() -> client.
         refreshFairnessPolicyController(routerContext.getConf()));
     threadRefreshController.start();
     threadRefreshController.join();
@@ -218,7 +219,7 @@ public class TestRouterRefreshFairnessPolicyController {
     RemoteMethod dummyMethod = Mockito.mock(RemoteMethod.class);
     List<Thread> threadAcquirePermits = new ArrayList<>();
     for (int i = 0; i < nThreads; i++) {
-      Thread threadAcquirePermit = new Thread(() -> {
+      Thread threadAcquirePermit = new SubjectInheritingThread(() -> {
         try {
           client.invokeSingle(namespace, dummyMethod);
         } catch (IOException e) {

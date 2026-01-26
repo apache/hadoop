@@ -57,8 +57,11 @@ import org.apache.hadoop.yarn.server.api.records.NodeStatus;
 import org.apache.hadoop.yarn.server.api.records.OpportunisticContainersStatus;
 import org.apache.hadoop.yarn.server.utils.YarnServerBuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 public class TestProtocolRecords {
 
@@ -69,14 +72,14 @@ public class TestProtocolRecords {
     final Resource r = Resource.newInstance(mem, vcores);
     // should be a lightweight SimpleResource which is a private inner class
     // so just verify it's not the heavyweight pb impl.
-    Assert.assertFalse(r instanceof ResourcePBImpl);
-    Assert.assertEquals(mem, r.getMemorySize());
-    Assert.assertEquals(vcores, r.getVirtualCores());
+    assertFalse(r instanceof ResourcePBImpl);
+    assertEquals(mem, r.getMemorySize());
+    assertEquals(vcores, r.getVirtualCores());
 
     ResourceProto proto = ProtoUtils.convertToProtoFormat(r);
-    Assert.assertEquals(mem, proto.getMemory());
-    Assert.assertEquals(vcores, proto.getVirtualCores());
-    Assert.assertEquals(r, ProtoUtils.convertFromProtoFormat(proto));
+    assertEquals(mem, proto.getMemory());
+    assertEquals(vcores, proto.getVirtualCores());
+    assertEquals(r, ProtoUtils.convertFromProtoFormat(proto));
   }
 
   @Test
@@ -93,15 +96,15 @@ public class TestProtocolRecords {
     NMContainerStatus reportProto =
         new NMContainerStatusPBImpl(
           ((NMContainerStatusPBImpl) report).getProto());
-    Assert.assertEquals("diagnostics", reportProto.getDiagnostics());
-    Assert.assertEquals(resource, reportProto.getAllocatedResource());
-    Assert.assertEquals(ContainerExitStatus.ABORTED,
+    assertEquals("diagnostics", reportProto.getDiagnostics());
+    assertEquals(resource, reportProto.getAllocatedResource());
+    assertEquals(ContainerExitStatus.ABORTED,
       reportProto.getContainerExitStatus());
-    Assert.assertEquals(ContainerState.COMPLETE,
+    assertEquals(ContainerState.COMPLETE,
       reportProto.getContainerState());
-    Assert.assertEquals(containerId, reportProto.getContainerId());
-    Assert.assertEquals(Priority.newInstance(10), reportProto.getPriority());
-    Assert.assertEquals(1234, reportProto.getCreationTime());
+    assertEquals(containerId, reportProto.getContainerId());
+    assertEquals(Priority.newInstance(10), reportProto.getPriority());
+    assertEquals(1234, reportProto.getCreationTime());
   }
 
   @Test
@@ -123,16 +126,16 @@ public class TestProtocolRecords {
     RegisterNodeManagerRequest requestProto =
         new RegisterNodeManagerRequestPBImpl(
           ((RegisterNodeManagerRequestPBImpl) request).getProto());
-    Assert.assertEquals(containerReport, requestProto
+    assertEquals(containerReport, requestProto
       .getNMContainerStatuses().get(0));
-    Assert.assertEquals(8080, requestProto.getHttpPort());
-    Assert.assertEquals("NM-version-id", requestProto.getNMVersion());
-    Assert.assertEquals(NodeId.newInstance("1.1.1.1", 1000),
+    assertEquals(8080, requestProto.getHttpPort());
+    assertEquals("NM-version-id", requestProto.getNMVersion());
+    assertEquals(NodeId.newInstance("1.1.1.1", 1000),
       requestProto.getNodeId());
-    Assert.assertEquals(Resource.newInstance(1024, 1),
+    assertEquals(Resource.newInstance(1024, 1),
       requestProto.getResource());
-    Assert.assertEquals(1, requestProto.getRunningApplications().size());
-    Assert.assertEquals(appId, requestProto.getRunningApplications().get(0)); 
+    assertEquals(1, requestProto.getRunningApplications().size());
+    assertEquals(appId, requestProto.getRunningApplications().get(0));
   }
 
   @Test
@@ -163,7 +166,7 @@ public class TestProtocolRecords {
     NodeHeartbeatResponse proto =
         new NodeHeartbeatResponsePBImpl(
           ((NodeHeartbeatResponsePBImpl) record).getProto());
-    Assert.assertEquals(appCredentials, YarnServerBuilderUtils
+    assertEquals(appCredentials, YarnServerBuilderUtils
         .convertFromProtoFormat(proto.getSystemCredentialsForApps()));
   }
 
@@ -191,13 +194,13 @@ public class TestProtocolRecords {
         NodeHeartbeatRequestPBImpl(
         ((NodeHeartbeatRequestPBImpl) record).getProto());
 
-    Assert.assertEquals(123,
+    assertEquals(123,
         pb.getNodeStatus()
             .getOpportunisticContainersStatus().getEstimatedQueueWaitTime());
-    Assert.assertEquals(321,
+    assertEquals(321,
         pb.getNodeStatus().getOpportunisticContainersStatus()
             .getWaitQueueLength());
-    Assert.assertEquals(2, pb.getNodeAttributes().size());
+    assertEquals(2, pb.getNodeAttributes().size());
   }
 
   @Test
@@ -208,10 +211,10 @@ public class TestProtocolRecords {
     status.setHost("locahost123");
     ContainerStatusPBImpl pb =
         new ContainerStatusPBImpl(((ContainerStatusPBImpl) status).getProto());
-    Assert.assertEquals(ips, pb.getIPs());
-    Assert.assertEquals("locahost123", pb.getHost());
-    Assert.assertEquals(ExecutionType.GUARANTEED, pb.getExecutionType());
+    assertEquals(ips, pb.getIPs());
+    assertEquals("locahost123", pb.getHost());
+    assertEquals(ExecutionType.GUARANTEED, pb.getExecutionType());
     status.setIPs(null);
-    Assert.assertNull(status.getIPs());
+    assertNull(status.getIPs());
   }
 }

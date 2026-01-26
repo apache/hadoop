@@ -18,16 +18,21 @@
 
 package org.apache.hadoop.test;
 
-import org.apache.hadoop.util.Preconditions;
-import org.junit.Assert;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.util.Time;
 
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
+import java.util.Collection;
 import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CancellationException;
@@ -35,6 +40,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.stream.Collectors;
 
 /**
  * Class containing methods and associated classes to make the most of Lambda
@@ -476,7 +482,7 @@ public final class LambdaTestUtils {
    * <i>or a subclass</i>.
    * @param contained string which must be in the {@code toString()} value
    * of the exception
-   * @param message any message tho include in exception/log messages
+   * @param message any message to include in exception/log messages
    * @param eval expression to eval
    * @param <T> return type of expression
    * @param <E> exception class
@@ -528,7 +534,7 @@ public final class LambdaTestUtils {
       throws Exception {
     return intercept(clazz, contained,
         "Expecting " + clazz.getName()
-        + (contained != null? (" with text " + contained) : "")
+        + (contained != null ? (" with text " + contained) : "")
         + " but got ",
         () -> {
           eval.call();
@@ -543,7 +549,7 @@ public final class LambdaTestUtils {
    * <i>or a subclass</i>.
    * @param contained string which must be in the {@code toString()} value
    * of the exception
-   * @param message any message tho include in exception/log messages
+   * @param message any message to include in exception/log messages
    * @param eval expression to eval
    * @param <E> exception class
    * @return the caught exception if it was of the expected type
@@ -561,6 +567,105 @@ public final class LambdaTestUtils {
           eval.call();
           return "void";
         });
+  }
+
+  /**
+   * Intercept an exception; throw an {@code AssertionError} if one not raised.
+   * The caught exception is rethrown if it is of the wrong class or
+   * does not contain the text defined in {@code contained}.
+   * <p>
+   * Example: expect deleting a nonexistent file to raise a
+   * {@code FileNotFoundException} with the {@code toString()} value
+   * containing the text {@code "missing"}.
+   * <pre>
+   * FileNotFoundException ioe = interceptAndValidateMessageContains(
+   *   FileNotFoundException.class,
+   *   "missing",
+   *   "path should not be found",
+   *   () -> {
+   *     filesystem.delete(new Path("/missing"), false);
+   *   });
+   * </pre>
+   *
+   * @param clazz class of exception; the raised exception must be this class
+   * <i>or a subclass</i>.
+   * @param contains strings which must be in the {@code toString()} value
+   * of the exception (order does not matter)
+   * @param eval expression to eval
+   * @param <T> return type of expression
+   * @param <E> exception class
+   * @return the caught exception if it was of the expected type and contents
+   * @throws Exception any other exception raised
+   * @throws AssertionError if the evaluation call didn't raise an exception.
+   * The error includes the {@code toString()} value of the result, if this
+   * can be determined.
+   * @see GenericTestUtils#assertExceptionContains(String, Throwable)
+   */
+  public static <T, E extends Throwable> E interceptAndValidateMessageContains(
+          Class<E> clazz,
+          Collection<String> contains,
+          VoidCallable eval)
+          throws Exception {
+    String message = "Expecting " + clazz.getName()
+            + (contains.isEmpty() ? "" : (" with text values " + toString(contains)))
+            + " but got ";
+    return interceptAndValidateMessageContains(clazz, contains, message, eval);
+  }
+
+  /**
+   * Intercept an exception; throw an {@code AssertionError} if one not raised.
+   * The caught exception is rethrown if it is of the wrong class or
+   * does not contain the text defined in {@code contained}.
+   * <p>
+   * Example: expect deleting a nonexistent file to raise a
+   * {@code FileNotFoundException} with the {@code toString()} value
+   * containing the text {@code "missing"}.
+   * <pre>
+   * FileNotFoundException ioe = interceptAndValidateMessageContains(
+   *   FileNotFoundException.class,
+   *   "missing",
+   *   "path should not be found",
+   *   () -> {
+   *     filesystem.delete(new Path("/missing"), false);
+   *   });
+   * </pre>
+   *
+   * @param clazz class of exception; the raised exception must be this class
+   * <i>or a subclass</i>.
+   * @param contains strings which must be in the {@code toString()} value
+   * of the exception (order does not matter)
+   * @param message any message to include in exception/log messages
+   * @param eval expression to eval
+   * @param <T> return type of expression
+   * @param <E> exception class
+   * @return the caught exception if it was of the expected type and contents
+   * @throws Exception any other exception raised
+   * @throws AssertionError if the evaluation call didn't raise an exception.
+   * The error includes the {@code toString()} value of the result, if this
+   * can be determined.
+   * @see GenericTestUtils#assertExceptionContains(String, Throwable)
+   */
+  public static <T, E extends Throwable> E interceptAndValidateMessageContains(
+          Class<E> clazz,
+          Collection<String> contains,
+          String message,
+          VoidCallable eval)
+          throws Exception {
+    E ex;
+    try {
+      eval.call();
+      throw new AssertionError(message);
+    } catch (Throwable e) {
+      if (!clazz.isAssignableFrom(e.getClass())) {
+        throw e;
+      } else {
+        ex = (E) e;
+      }
+    }
+    for (String contained : contains) {
+      GenericTestUtils.assertExceptionContains(contained, ex, message);
+    }
+    return ex;
   }
 
   /**
@@ -598,24 +703,23 @@ public final class LambdaTestUtils {
   public static <T> void assertOptionalEquals(String message,
       T expected,
       Optional<T> actual) {
-    Assert.assertNotNull(message, actual);
-    Assert.assertTrue(message +" -not present", actual.isPresent());
-    Assert.assertEquals(message, expected, actual.get());
+    assertNotNull(actual, message);
+    assertTrue(actual.isPresent(), message +" -not present");
+    assertEquals(expected, actual.get(), message);
   }
 
   /**
    * Assert that an optional value matches an expected one;
    * checks include null and empty on the actual value.
    * @param message message text
-   * @param expected expected value
    * @param actual actual optional value
    * @param <T> type
    */
   public static <T> void assertOptionalUnset(String message,
       Optional<T> actual) {
-    Assert.assertNotNull(message, actual);
+    assertNotNull(actual, message);
     actual.ifPresent(
-        t -> Assert.fail("Expected empty option, got " + t.toString()));
+        t -> fail("Expected empty option, got " + t.toString()));
   }
 
   /**
@@ -641,7 +745,6 @@ public final class LambdaTestUtils {
    * Invoke a callable; wrap all checked exceptions with an
    * AssertionError.
    * @param closure closure to execute
-   * @return the value of the closure
    * @throws AssertionError if the operation raised an IOE or
    * other checked exception.
    */
@@ -667,7 +770,7 @@ public final class LambdaTestUtils {
   public static<T> T notNull(String message, Callable<T> eval)
       throws Exception {
     T t = eval.call();
-    Assert.assertNotNull(message, t);
+    assertNotNull(t, message);
     return t;
   }
 
@@ -819,8 +922,13 @@ public final class LambdaTestUtils {
     if (cause == null || !clazz.isAssignableFrom(cause.getClass())) {
       throw caught;
     } else {
-      return (E) caught;
+      return (E) cause;
     }
+  }
+
+  private static String toString(Collection<String> strings) {
+    return strings.stream()
+        .collect(Collectors.joining(",", "[", "]"));
   }
 
   /**
@@ -1037,3 +1145,4 @@ public final class LambdaTestUtils {
     }
   }
 }
+

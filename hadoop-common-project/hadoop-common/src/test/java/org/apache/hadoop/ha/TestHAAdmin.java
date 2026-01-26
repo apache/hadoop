@@ -17,20 +17,21 @@
  */
 package org.apache.hadoop.ha;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.net.InetSocketAddress;
+import java.nio.charset.StandardCharsets;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,7 +45,7 @@ public class TestHAAdmin {
   private String errOutput;
   private String output;
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException {
     tool = new HAAdmin() {
       @Override
@@ -97,8 +98,8 @@ public class TestHAAdmin {
     outBytes.reset();
     LOG.info("Running: HAAdmin " + Joiner.on(" ").join(args));
     int ret = tool.run(args);
-    errOutput = new String(errOutBytes.toByteArray(), Charsets.UTF_8);
-    output = new String(outBytes.toByteArray(), Charsets.UTF_8);
+    errOutput = new String(errOutBytes.toByteArray(), StandardCharsets.UTF_8);
+    output = new String(outBytes.toByteArray(), StandardCharsets.UTF_8);
     LOG.info("Err_output:\n" + errOutput + "\nOutput:\n" + output);
     return ret;
   }

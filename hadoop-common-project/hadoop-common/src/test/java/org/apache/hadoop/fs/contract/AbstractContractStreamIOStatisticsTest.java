@@ -22,8 +22,9 @@ import java.util.Collections;
 import java.util.List;
 
 import org.assertj.core.api.Assertions;
-import org.junit.AfterClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -65,6 +66,7 @@ public abstract class AbstractContractStreamIOStatisticsTest
   protected static final IOStatisticsSnapshot FILESYSTEM_IOSTATS =
       snapshotIOStatistics();
 
+  @AfterEach
   @Override
   public void teardown() throws Exception {
     final FileSystem fs = getFileSystem();
@@ -77,7 +79,7 @@ public abstract class AbstractContractStreamIOStatisticsTest
   /**
    * Dump the filesystem statistics after the class if contains any values.
    */
-  @AfterClass
+  @AfterAll
   public static void dumpFileSystemIOStatistics() {
     if (!FILESYSTEM_IOSTATS.counters().isEmpty()) {
       // if there is at least one counter

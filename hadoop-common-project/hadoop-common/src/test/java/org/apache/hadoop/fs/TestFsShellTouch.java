@@ -24,9 +24,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.shell.TouchCommands.Touch;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.StringUtils;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,7 +39,7 @@ public class TestFsShellTouch {
   static LocalFileSystem lfs;
   static Path testRootDir;
 
-  @BeforeClass
+  @BeforeAll
   public static void setup() throws Exception {
     Configuration conf = new Configuration();
     shell = new FsShell(conf);
@@ -51,7 +51,7 @@ public class TestFsShellTouch {
     lfs.setWorkingDirectory(testRootDir);
   }
 
-  @Before
+  @BeforeEach
   public void prepFiles() throws Exception {
     lfs.setVerifyChecksum(true);
     lfs.setWriteChecksum(true);

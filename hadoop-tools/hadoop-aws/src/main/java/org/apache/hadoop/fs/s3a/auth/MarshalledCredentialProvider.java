@@ -21,7 +21,7 @@ package org.apache.hadoop.fs.s3a.auth;
 import java.io.IOException;
 import java.net.URI;
 
-import com.amazonaws.auth.AWSCredentials;
+import software.amazon.awssdk.auth.credentials.AwsCredentials;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -40,7 +40,6 @@ import static org.apache.hadoop.fs.s3a.auth.MarshalledCredentialBinding.toAWSCre
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-@SuppressWarnings("deprecation")
 public class MarshalledCredentialProvider extends
     AbstractSessionCredentialsProvider {
 
@@ -85,7 +84,7 @@ public class MarshalledCredentialProvider extends
    * @throws IOException on a failure
    */
   @Override
-  protected AWSCredentials createCredentials(final Configuration config)
+  protected AwsCredentials createCredentials(final Configuration config)
       throws IOException {
     return toAWSCredentials(credentials, typeRequired, component);
   }

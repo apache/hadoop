@@ -21,9 +21,8 @@ package org.apache.hadoop.fs.azure.metrics;
 import java.util.ArrayList;
 import java.util.Date;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 
 /**
  * Internal implementation class to help calculate the current bytes
@@ -31,9 +30,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public final class BandwidthGaugeUpdater {
-  public static final Log LOG = LogFactory
-      .getLog(BandwidthGaugeUpdater.class);
-  
+
   public static final String THREAD_NAME = "AzureNativeFilesystemStore-UploadBandwidthUpdater";
   
   private static final int DEFAULT_WINDOW_SIZE_MS = 1000;
@@ -71,7 +68,7 @@ public final class BandwidthGaugeUpdater {
     this.windowSizeMs = windowSizeMs;
     this.instrumentation = instrumentation;
     if (!manualUpdateTrigger) {
-      uploadBandwidthUpdater = new Thread(new UploadBandwidthUpdater(), THREAD_NAME);
+      uploadBandwidthUpdater = new SubjectInheritingThread(new UploadBandwidthUpdater(), THREAD_NAME);
       uploadBandwidthUpdater.setDaemon(true);
       uploadBandwidthUpdater.start();
     }

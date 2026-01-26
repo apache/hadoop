@@ -13,10 +13,12 @@
  */
 package org.apache.hadoop.security.authentication.util;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import java.util.Properties;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class TestStringSignerSecretProvider {
 
@@ -30,9 +32,9 @@ public class TestStringSignerSecretProvider {
             AuthenticationFilter.SIGNATURE_SECRET, "secret");
     secretProvider.init(secretProviderProps, null, -1);
     byte[] secretBytes = secretStr.getBytes();
-    Assert.assertArrayEquals(secretBytes, secretProvider.getCurrentSecret());
+    assertArrayEquals(secretBytes, secretProvider.getCurrentSecret());
     byte[][] allSecrets = secretProvider.getAllSecrets();
-    Assert.assertEquals(1, allSecrets.length);
-    Assert.assertArrayEquals(secretBytes, allSecrets[0]);
+    assertEquals(1, allSecrets.length);
+    assertArrayEquals(secretBytes, allSecrets[0]);
   }
 }

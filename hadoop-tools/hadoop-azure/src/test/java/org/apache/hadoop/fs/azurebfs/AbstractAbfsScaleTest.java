@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.azurebfs;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,6 +45,7 @@ public class AbstractAbfsScaleTest extends AbstractAbfsIntegrationTest  {
     return AzureTestConstants.SCALE_TEST_TIMEOUT_MILLIS;
   }
 
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     super.setup();

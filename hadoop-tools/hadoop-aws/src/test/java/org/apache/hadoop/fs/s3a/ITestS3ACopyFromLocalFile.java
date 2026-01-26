@@ -19,6 +19,9 @@
 package org.apache.hadoop.fs.s3a;
 
 import java.io.File;
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.Collection;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.contract.AbstractContractCopyFromLocalTest;
@@ -26,16 +29,67 @@ import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.fs.contract.s3a.S3AContract;
 
 import org.apache.hadoop.fs.Path;
-import org.junit.Test;
+import org.apache.hadoop.test.tags.IntegrationTest;
 
+import org.assertj.core.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
+
+import static org.apache.hadoop.fs.s3a.Constants.OPTIMIZED_COPY_FROM_LOCAL;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.disableFilesystemCaching;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestBucketName;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
+/**
+ * Test copying files from the local filesystem to S3A.
+ * Parameterized on whether or not the optimized
+ * copyFromLocalFile is enabled.
+ */
+@IntegrationTest
+@ParameterizedClass(name="optimized-{0}")
+@MethodSource("params")
 public class ITestS3ACopyFromLocalFile extends
         AbstractContractCopyFromLocalTest {
+  /**
+   * Parameterization.
+   */
+  public static Collection<Object[]> params() {
+    return Arrays.asList(new Object[][]{
+        {true},
+        {false},
+    });
+  }
+  private final boolean enabled;
+
+  public ITestS3ACopyFromLocalFile(final boolean enabled) {
+    this.enabled = enabled;
+  }
+
+  @Override
+  protected Configuration createConfiguration() {
+    final Configuration conf = super.createConfiguration();
+
+    removeBaseAndBucketOverrides(getTestBucketName(conf), conf,
+        OPTIMIZED_COPY_FROM_LOCAL);
+    conf.setBoolean(OPTIMIZED_COPY_FROM_LOCAL, enabled);
+    disableFilesystemCaching(conf);
+    return conf;
+  }
 
   @Override
   protected AbstractFSContract createContract(Configuration conf) {
     return new S3AContract(conf);
+  }
+
+  @Test
+  public void testOptionPropagation() throws Throwable {
+    Assertions.assertThat(getFileSystem().hasPathCapability(new Path("/"),
+        OPTIMIZED_COPY_FROM_LOCAL))
+        .describedAs("path capability of %s", OPTIMIZED_COPY_FROM_LOCAL)
+        .isEqualTo(enabled);
+
   }
 
   @Test
@@ -55,5 +109,16 @@ public class ITestS3ACopyFromLocalFile extends
 
     intercept(IllegalArgumentException.class,
         () -> getFileSystem().copyFromLocalFile(true, true, dest, dest));
+  }
+
+  @Test
+  public void testCopyFromLocalWithNoFileScheme() throws IOException {
+    describe("Copying from local file with no file scheme to remote s3 destination");
+    File source = createTempFile("tempData");
+    Path dest = path(getMethodName());
+
+    Path sourcePathWithOutScheme = new Path(source.toURI().getPath());
+    assertNull(sourcePathWithOutScheme.toUri().getScheme());
+    getFileSystem().copyFromLocalFile(true, true, sourcePathWithOutScheme, dest);
   }
 }

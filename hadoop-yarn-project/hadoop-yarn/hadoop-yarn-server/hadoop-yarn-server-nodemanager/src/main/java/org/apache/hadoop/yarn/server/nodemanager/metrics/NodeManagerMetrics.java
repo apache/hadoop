@@ -118,6 +118,9 @@ public class NodeManagerMetrics {
   @Metric("Container localization time in milliseconds")
       MutableRate localizationDurationMillis;
 
+  @Metric("ContainerMonitor time cost in milliseconds")
+  MutableGaugeLong containersMonitorCostTime;
+
   // CHECKSTYLE:ON:VisibilityModifier
 
   private JvmMetrics jvmMetrics = null;
@@ -481,4 +484,9 @@ public class NodeManagerMetrics {
   public void localizationComplete(long downloadMillis) {
     localizationDurationMillis.add(downloadMillis);
   }
+
+  public void addContainerMonitorCostTime(long duration) {
+    containersMonitorCostTime.incr(duration);
+  }
+
 }

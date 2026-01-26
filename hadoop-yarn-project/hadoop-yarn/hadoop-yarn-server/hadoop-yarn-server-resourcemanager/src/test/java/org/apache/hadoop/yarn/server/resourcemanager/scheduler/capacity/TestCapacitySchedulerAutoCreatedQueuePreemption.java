@@ -17,8 +17,9 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler
     .capacity.TestCapacitySchedulerAutoCreatedQueueBase.C;
@@ -26,6 +27,8 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler
     .capacity.TestCapacitySchedulerAutoCreatedQueueBase.D;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler
     .capacity.TestCapacitySchedulerAutoCreatedQueueBase.E;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler
+    .capacity.TestCapacitySchedulerAutoCreatedQueueBase.ROOT;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler
     .capacity.TestCapacitySchedulerAutoCreatedQueueBase.USER0;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler
@@ -45,7 +48,7 @@ public class TestCapacitySchedulerAutoCreatedQueuePreemption
     extends TestCapacitySchedulerSurgicalPreemption {
 
   @Override
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     super.setUp();
   }
@@ -60,7 +63,7 @@ public class TestCapacitySchedulerAutoCreatedQueuePreemption
     //setup new queues with one of them auto enabled
     // Define top-level queues
     // Set childQueue for root
-    conf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] { "c" });
+    conf.setQueues(ROOT, new String[] {"c"});
     conf.setCapacity(C, 100f);
 
     conf.setUserLimitFactor(C, 1.0f);
@@ -91,7 +94,7 @@ public class TestCapacitySchedulerAutoCreatedQueuePreemption
     //setup new queues with one of them auto enabled
     // Define top-level queues
     // Set childQueue for root
-    conf.setQueues(CapacitySchedulerConfiguration.ROOT,
+    conf.setQueues(ROOT,
         new String[] { "c", "d", "e" });
     conf.setCapacity(C, 45f);
     conf.setCapacity(D, 45f);
@@ -120,13 +123,14 @@ public class TestCapacitySchedulerAutoCreatedQueuePreemption
     conf.setAutoCreatedLeafQueueConfigUserLimit(E, 100);
     conf.setAutoCreatedLeafQueueConfigUserLimitFactor(E, 3.0f);
 
-    conf.setQueuePriority(CapacitySchedulerConfiguration.ROOT + ".c", 1);
-    conf.setQueuePriority(CapacitySchedulerConfiguration.ROOT + ".d", 2);
+    conf.setQueuePriority(C, 1);
+    conf.setQueuePriority(D, 2);
 
     return conf;
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testSimpleSurgicalPreemptionOnAutoCreatedLeafQueues()
       throws Exception {
     /**
@@ -160,7 +164,8 @@ public class TestCapacitySchedulerAutoCreatedQueuePreemption
     testSimpleSurgicalPreemption(USER1, USER2, USER1, USER2);
   }
 
-  @Test(timeout = 600000)
+  @Test
+  @Timeout(value = 600)
   public void
       testPreemptionFromHighestPriorityManagedParentQueueAndOldestContainer()
       throws Exception {

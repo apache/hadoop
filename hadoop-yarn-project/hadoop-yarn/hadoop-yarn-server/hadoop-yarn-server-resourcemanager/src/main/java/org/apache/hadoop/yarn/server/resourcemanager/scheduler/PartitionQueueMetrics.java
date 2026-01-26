@@ -78,7 +78,7 @@ public class PartitionQueueMetrics extends QueueMetrics {
       metrics = new PartitionQueueMetrics(this.metricsSystem, this.queueName,
           null, false, this.conf, this.partition);
       users.put(userName, metrics);
-      registerMetrics(
+      metricsSystem.register(
           pSourceName(partitionJMXStr).append(qSourceName(queueName))
               .append(",user=").append(userName).toString(),
           "Metrics for user '" + userName + "' in queue '" + queueName + "'",

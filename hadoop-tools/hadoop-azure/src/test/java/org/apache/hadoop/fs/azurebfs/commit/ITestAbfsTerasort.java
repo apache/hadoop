@@ -26,10 +26,10 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Consumer;
 
-import org.junit.Assume;
-import org.junit.FixMethodOrder;
-import org.junit.Test;
-import org.junit.runners.MethodSorters;
+import org.junit.jupiter.api.TestMethodOrder;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.MethodOrderer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,6 +39,7 @@ import org.apache.hadoop.examples.terasort.TeraSort;
 import org.apache.hadoop.examples.terasort.TeraSortConfigKeys;
 import org.apache.hadoop.examples.terasort.TeraValidate;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsLogging;
 import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
 import org.apache.hadoop.mapred.JobConf;
@@ -52,15 +53,19 @@ import org.apache.hadoop.util.functional.RemoteIterators;
 import static java.util.Optional.empty;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.IOSTATISTICS_LOGGING_LEVEL_INFO;
 import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.snapshotIOStatistics;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_RENAME_FILE;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_SAVE_TASK_MANIFEST;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterTestSupport.assertNoFailureStatistics;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterTestSupport.loadSuccessFile;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterTestSupport.validateSuccessFile;
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 /**
  * Runs Terasort against ABFS using the manifest committer.
  * The tests run in sequence, so each operation is isolated.
  * Scale test only (it is big and slow)
  */
-@FixMethodOrder(MethodSorters.NAME_ASCENDING)
+@TestMethodOrder(MethodOrderer.MethodName.class)
 @SuppressWarnings({"StaticNonFinalField", "OptionalUsedAsFieldOrParameterType"})
 public class ITestAbfsTerasort extends AbstractAbfsClusterITest {
 
@@ -95,6 +100,11 @@ public class ITestAbfsTerasort extends AbstractAbfsClusterITest {
   protected static final IOStatisticsSnapshot JOB_IOSTATS =
       snapshotIOStatistics();
 
+  /**
+   * Map of stage -> success file.
+   */
+  private static final Map<String, ManifestSuccessData> SUCCESS_FILES = new HashMap<>();
+
   /** Base path for all the terasort input and output paths. */
   private Path terasortPath;
 
@@ -110,7 +120,7 @@ public class ITestAbfsTerasort extends AbstractAbfsClusterITest {
   public ITestAbfsTerasort() throws Exception {
   }
 
-
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     // superclass calls requireScaleTestsEnabled();
@@ -174,9 +184,9 @@ public class ITestAbfsTerasort extends AbstractAbfsClusterITest {
    * @param stage stage name
    */
   private static void requireStage(final String stage) {
-    Assume.assumeTrue(
-        "Required stage was not completed: " + stage,
-        COMPLETED_STAGES.get(stage) != null);
+    assumeThat(COMPLETED_STAGES.get(stage))
+        .as("Required stage was not completed: " + stage)
+        .isNotNull();
   }
 
   /**
@@ -188,9 +198,10 @@ public class ITestAbfsTerasort extends AbstractAbfsClusterITest {
    * @param tool tool to run.
    * @param args args for the tool.
    * @param minimumFileCount minimum number of files to have been created
+   * @return the job success file.
    * @throws Exception any failure
    */
-  private void executeStage(
+  private ManifestSuccessData executeStage(
       final String stage,
       final JobConf jobConf,
       final Path dest,
@@ -208,14 +219,23 @@ public class ITestAbfsTerasort extends AbstractAbfsClusterITest {
       d.close();
     }
     dumpOutputTree(dest);
-    assertEquals(stage
-        + "(" + StringUtils.join(", ", args) + ")"
-        + " failed", 0, result);
+    assertEquals(0, result, stage+ "(" + StringUtils.join(", ", args) + ")"+ " failed");
     final ManifestSuccessData successFile = validateSuccessFile(getFileSystem(), dest,
         minimumFileCount, "");
-    JOB_IOSTATS.aggregate(successFile.getIOStatistics());
-
+    final IOStatistics iostats = successFile.getIOStatistics();
+    JOB_IOSTATS.aggregate(iostats);
+    SUCCESS_FILES.put(stage, successFile);
     completedStage(stage, d);
+
+    // now assert there were no failures recorded in the IO statistics
+    // for critical functions.
+    // these include collected statistics from manifest save
+    // operations.
+    assertNoFailureStatistics(iostats,
+        stage,
+        OP_SAVE_TASK_MANIFEST,
+        OP_RENAME_FILE);
+    return successFile;
   }
 
   /**
@@ -319,6 +339,7 @@ public class ITestAbfsTerasort extends AbstractAbfsClusterITest {
     File resultsFile = File.createTempFile("results", ".csv");
     FileUtils.write(resultsFile, text, StandardCharsets.UTF_8);
     LOG.info("Results are in {}\n{}", resultsFile, text);
+    LOG.info("Report directory {}", getReportDir());
   }
 
   /**

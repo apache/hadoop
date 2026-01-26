@@ -20,9 +20,12 @@ package org.apache.hadoop.yarn.server.uam;
 
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
+import java.util.Collections;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeoutException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -30,14 +33,18 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.service.Service;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
+import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.Priority;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
@@ -45,12 +52,18 @@ import org.apache.hadoop.yarn.server.AMHeartbeatRequestHandler;
 import org.apache.hadoop.yarn.server.AMRMClientRelayer;
 import org.apache.hadoop.yarn.server.MockResourceManagerFacade;
 import org.apache.hadoop.yarn.util.AsyncCallback;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Unit test for UnmanagedApplicationManager.
@@ -68,7 +81,7 @@ public class TestUnmanagedApplicationManager {
   private UnmanagedAMPoolManager uamPool;
   private ExecutorService threadpool;
 
-  @Before
+  @BeforeEach
   public void setup() {
     conf.set(YarnConfiguration.RM_CLUSTER_ID, "subclusterId");
     callback = new CountingCallback();
@@ -78,7 +91,7 @@ public class TestUnmanagedApplicationManager {
 
     uam = new TestableUnmanagedApplicationManager(conf,
         attemptId.getApplicationId(), null, "submitter", "appNameSuffix", true,
-        "rm");
+        "rm", null);
 
     threadpool = Executors.newCachedThreadPool();
     uamPool = new TestableUnmanagedAMPoolManager(this.threadpool);
@@ -86,7 +99,7 @@ public class TestUnmanagedApplicationManager {
     uamPool.start();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException, InterruptedException {
     if (uam != null) {
       uam.shutDownConnections();
@@ -113,14 +126,14 @@ public class TestUnmanagedApplicationManager {
         } catch (InterruptedException e) {
         }
       }
-      Assert.assertEquals(
+      assertEquals(0, callBack.requestQueueSize,
           "Non zero pending requests when number of allocate callbacks reaches "
-              + expectCallBackCount,
-          0, callBack.requestQueueSize);
+          + expectCallBackCount);
     }
   }
 
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testBasicUsage()
       throws YarnException, IOException, InterruptedException {
 
@@ -147,7 +160,8 @@ public class TestUnmanagedApplicationManager {
   /*
    * Test re-attaching of an existing UAM. This is for HA of UAM client.
    */
-  @Test(timeout = 5000)
+  @Test
+  @Timeout(value = 5)
   public void testUAMReAttach()
       throws YarnException, IOException, InterruptedException {
 
@@ -181,7 +195,8 @@ public class TestUnmanagedApplicationManager {
         attemptId);
   }
 
-  @Test(timeout = 5000)
+  @Test
+  @Timeout(value = 5)
   public void testReRegister()
       throws YarnException, IOException, InterruptedException {
 
@@ -208,12 +223,13 @@ public class TestUnmanagedApplicationManager {
    * If register is slow, async allocate requests in the meanwhile should not
    * throw or be dropped.
    */
-  @Test(timeout = 5000)
+  @Test
+  @Timeout(value = 5)
   public void testSlowRegisterCall()
       throws YarnException, IOException, InterruptedException {
 
     // Register with wait() in RM in a separate thread
-    Thread registerAMThread = new Thread(new Runnable() {
+    Thread registerAMThread = new SubjectInheritingThread(new Runnable() {
       @Override
       public void run() {
         try {
@@ -273,7 +289,7 @@ public class TestUnmanagedApplicationManager {
     allocateAsync(AllocateRequest.newInstance(0, 0, null, null, null), callback,
         attemptId);
 
-    Assert.assertEquals(0, callback.requestQueueSize);
+    assertEquals(0, callback.requestQueueSize);
 
     // A short wait just in case the allocates get executed
     try {
@@ -281,25 +297,30 @@ public class TestUnmanagedApplicationManager {
     } catch (InterruptedException e) {
     }
 
-    Assert.assertEquals(2, callback.callBackCount);
+    assertEquals(2, callback.callBackCount);
   }
 
-  @Test(expected = Exception.class)
+  @Test
   public void testAllocateWithoutRegister()
       throws YarnException, IOException, InterruptedException {
-    allocateAsync(AllocateRequest.newInstance(0, 0, null, null, null), callback,
-        attemptId);
+    assertThrows(Exception.class, () -> {
+      allocateAsync(AllocateRequest.newInstance(0, 0, null, null, null), callback,
+          attemptId);
+    });
   }
 
-  @Test(expected = Exception.class)
+  @Test
   public void testFinishWithoutRegister()
       throws YarnException, IOException, InterruptedException {
-    finishApplicationMaster(
-        FinishApplicationMasterRequest.newInstance(null, null, null),
-        attemptId);
+    assertThrows(Exception.class, () -> {
+      finishApplicationMaster(
+          FinishApplicationMasterRequest.newInstance(null, null, null),
+          attemptId);
+    });
   }
 
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testForceKill()
       throws YarnException, IOException, InterruptedException {
     launchUAM(attemptId);
@@ -314,12 +335,13 @@ public class TestUnmanagedApplicationManager {
 
     try {
       uam.forceKillApplication();
-      Assert.fail("Should fail because application is already killed");
+      fail("Should fail because application is already killed");
     } catch (YarnException t) {
     }
   }
 
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testShutDownConnections()
       throws YarnException, IOException, InterruptedException {
     launchUAM(attemptId);
@@ -345,23 +367,15 @@ public class TestUnmanagedApplicationManager {
       ApplicationAttemptId appAttemptId)
       throws IOException, InterruptedException {
     return getUGIWithToken(appAttemptId)
-        .doAs(new PrivilegedExceptionAction<Token<AMRMTokenIdentifier>>() {
-          @Override
-          public Token<AMRMTokenIdentifier> run() throws Exception {
-            return uam.launchUAM();
-          }
-        });
+        .doAs((PrivilegedExceptionAction<Token<AMRMTokenIdentifier>>) () -> uam.launchUAM());
   }
 
   protected void reAttachUAM(final Token<AMRMTokenIdentifier> uamToken,
       ApplicationAttemptId appAttemptId)
       throws IOException, InterruptedException {
-    getUGIWithToken(appAttemptId).doAs(new PrivilegedExceptionAction<Object>() {
-      @Override
-      public Token<AMRMTokenIdentifier> run() throws Exception {
-        uam.reAttachUAM(uamToken);
-        return null;
-      }
+    getUGIWithToken(appAttemptId).doAs((PrivilegedExceptionAction<Object>) () -> {
+      uam.reAttachUAM(uamToken);
+      return null;
     });
   }
 
@@ -370,25 +384,16 @@ public class TestUnmanagedApplicationManager {
       ApplicationAttemptId appAttemptId)
       throws YarnException, IOException, InterruptedException {
     return getUGIWithToken(appAttemptId).doAs(
-        new PrivilegedExceptionAction<RegisterApplicationMasterResponse>() {
-          @Override
-          public RegisterApplicationMasterResponse run()
-              throws YarnException, IOException {
-            return uam.registerApplicationMaster(request);
-          }
-        });
+        (PrivilegedExceptionAction<RegisterApplicationMasterResponse>)
+        () -> uam.registerApplicationMaster(request));
   }
 
   protected void allocateAsync(final AllocateRequest request,
-      final AsyncCallback<AllocateResponse> callBack,
-      ApplicationAttemptId appAttemptId)
+      final AsyncCallback<AllocateResponse> callBack, ApplicationAttemptId appAttemptId)
       throws YarnException, IOException, InterruptedException {
-    getUGIWithToken(appAttemptId).doAs(new PrivilegedExceptionAction<Object>() {
-      @Override
-      public Object run() throws YarnException {
-        uam.allocateAsync(request, callBack);
-        return null;
-      }
+    getUGIWithToken(appAttemptId).doAs((PrivilegedExceptionAction<Object>) () -> {
+      uam.allocateAsync(request, callBack);
+      return null;
     });
   }
 
@@ -396,16 +401,9 @@ public class TestUnmanagedApplicationManager {
       final FinishApplicationMasterRequest request,
       ApplicationAttemptId appAttemptId)
       throws YarnException, IOException, InterruptedException {
-    return getUGIWithToken(appAttemptId)
-        .doAs(new PrivilegedExceptionAction<FinishApplicationMasterResponse>() {
-          @Override
-          public FinishApplicationMasterResponse run()
-              throws YarnException, IOException {
-            FinishApplicationMasterResponse response =
-                uam.finishApplicationMaster(request);
-            return response;
-          }
-        });
+    return getUGIWithToken(appAttemptId).doAs(
+        (PrivilegedExceptionAction<FinishApplicationMasterResponse>) () ->
+        uam.finishApplicationMaster(request));
   }
 
   protected class CountingCallback implements AsyncCallback<AllocateResponse> {
@@ -434,8 +432,16 @@ public class TestUnmanagedApplicationManager {
         ApplicationId appId, String queueName, String submitter,
         String appNameSuffix, boolean keepContainersAcrossApplicationAttempts,
         String rmName) {
+      this(conf, appId, queueName, submitter, appNameSuffix,
+          keepContainersAcrossApplicationAttempts, rmName, null);
+    }
+
+    public TestableUnmanagedApplicationManager(Configuration conf,
+        ApplicationId appId, String queueName, String submitter,
+        String appNameSuffix, boolean keepContainersAcrossApplicationAttempts,
+        String rmName, ApplicationSubmissionContext originalApplicationSubmissionContext) {
       super(conf, appId, queueName, submitter, appNameSuffix,
-          keepContainersAcrossApplicationAttempts, rmName);
+          keepContainersAcrossApplicationAttempts, rmName, originalApplicationSubmissionContext);
     }
 
     @Override
@@ -481,16 +487,12 @@ public class TestUnmanagedApplicationManager {
     }
 
     @Override
-    public void run() {
+    public void work() {
       try {
-        getUGIWithToken(attemptId)
-            .doAs(new PrivilegedExceptionAction<Object>() {
-              @Override
-              public Object run() {
-                TestableAMRequestHandlerThread.super.run();
-                return null;
-              }
-            });
+        getUGIWithToken(attemptId).doAs((PrivilegedExceptionAction<Object>) () -> {
+          TestableAMRequestHandlerThread.super.work();
+          return null;
+        });
       } catch (Exception e) {
         LOG.error("Exception running TestableAMRequestHandlerThread", e);
       }
@@ -505,9 +507,11 @@ public class TestUnmanagedApplicationManager {
     @Override
     public UnmanagedApplicationManager createUAM(Configuration configuration,
         ApplicationId appId, String queueName, String submitter, String appNameSuffix,
-        boolean keepContainersAcrossApplicationAttempts, String rmId) {
+        boolean keepContainersAcrossApplicationAttempts, String rmId,
+        ApplicationSubmissionContext originalAppSubmissionContext) {
       return new TestableUnmanagedApplicationManager(configuration, appId, queueName, submitter,
-          appNameSuffix, keepContainersAcrossApplicationAttempts, rmId);
+          appNameSuffix, keepContainersAcrossApplicationAttempts, rmId,
+          originalAppSubmissionContext);
     }
   }
 
@@ -516,30 +520,66 @@ public class TestUnmanagedApplicationManager {
     ApplicationAttemptId attemptId1 =
         ApplicationAttemptId.newInstance(ApplicationId.newInstance(Time.now(), 1), 1);
     Token<AMRMTokenIdentifier> token1 = uamPool.launchUAM("SC-1", this.conf,
-        attemptId1.getApplicationId(), "default", "test-user", "SC-HOME", true, "SC-1");
-    Assert.assertNotNull(token1);
+        attemptId1.getApplicationId(), "default", "test-user", "SC-HOME", true, "SC-1", null);
+    assertNotNull(token1);
 
     ApplicationAttemptId attemptId2 =
         ApplicationAttemptId.newInstance(ApplicationId.newInstance(Time.now(), 2), 1);
     Token<AMRMTokenIdentifier> token2 = uamPool.launchUAM("SC-2", this.conf,
-        attemptId2.getApplicationId(), "default", "test-user", "SC-HOME", true, "SC-2");
-    Assert.assertNotNull(token2);
+        attemptId2.getApplicationId(), "default", "test-user", "SC-HOME", true, "SC-2", null);
+    assertNotNull(token2);
 
     Map<String, UnmanagedApplicationManager> unmanagedAppMasterMap =
         uamPool.getUnmanagedAppMasterMap();
-    Assert.assertNotNull(unmanagedAppMasterMap);
-    Assert.assertEquals(2, unmanagedAppMasterMap.size());
+    assertNotNull(unmanagedAppMasterMap);
+    assertEquals(2, unmanagedAppMasterMap.size());
 
     // try to stop uamPool
     uamPool.stop();
-    Assert.assertTrue(uamPool.waitForServiceToStop(2000));
+    assertTrue(uamPool.waitForServiceToStop(2000));
     // process force finish Application in a separate thread, not blocking the main thread
-    Assert.assertEquals(Service.STATE.STOPPED, uamPool.getServiceState());
+    assertEquals(Service.STATE.STOPPED, uamPool.getServiceState());
 
     // Wait for the thread to terminate, check if uamPool#unmanagedAppMasterMap is 0
     Thread finishApplicationThread = uamPool.getFinishApplicationThread();
     GenericTestUtils.waitFor(() -> !finishApplicationThread.isAlive(),
         100, 2000);
-    Assert.assertEquals(0, unmanagedAppMasterMap.size());
+    assertEquals(0, unmanagedAppMasterMap.size());
+  }
+
+  @Test
+  public void testApplicationAttributes()
+      throws IOException, YarnException, InterruptedException, TimeoutException {
+    long now = Time.now();
+    ApplicationId applicationId = ApplicationId.newInstance(now, 10);
+    ApplicationSubmissionContext appSubmissionContext = ApplicationSubmissionContext.newInstance(
+        applicationId, "test", "default", Priority.newInstance(10), null, true, true, 2,
+        Resource.newInstance(10, 2), "test");
+    Set<String> tags = Collections.singleton("1");
+    appSubmissionContext.setApplicationTags(tags);
+
+    Token<AMRMTokenIdentifier> token1 = uamPool.launchUAM("SC-1", this.conf,
+        applicationId, "default", "test-user", "SC-HOME", true, "SC-1", appSubmissionContext);
+    assertNotNull(token1);
+
+    Map<String, UnmanagedApplicationManager> unmanagedAppMasterMap =
+        uamPool.getUnmanagedAppMasterMap();
+
+    UnmanagedApplicationManager uamApplicationManager = unmanagedAppMasterMap.get("SC-1");
+    assertNotNull(uamApplicationManager);
+
+    ApplicationSubmissionContext appSubmissionContextByUam =
+        uamApplicationManager.getApplicationSubmissionContext();
+
+    assertNotNull(appSubmissionContext);
+    assertEquals(10, appSubmissionContextByUam.getPriority().getPriority());
+    assertEquals("test", appSubmissionContextByUam.getApplicationType());
+    assertEquals(1, appSubmissionContextByUam.getApplicationTags().size());
+
+    uamPool.stop();
+    Thread finishApplicationThread = uamPool.getFinishApplicationThread();
+    GenericTestUtils.waitFor(() -> !finishApplicationThread.isAlive(),
+        100, 2000);
+    assertEquals(0, unmanagedAppMasterMap.size());
   }
 }

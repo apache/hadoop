@@ -21,11 +21,11 @@ import java.io.IOException;
 import java.util.LinkedList;
 import java.util.concurrent.ThreadPoolExecutor;
 
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.RandomUtils;
@@ -38,7 +38,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.shell.CopyCommands.CopyToLocal;
 
 import static org.apache.hadoop.fs.shell.CopyCommandWithMultiThread.DEFAULT_QUEUE_SIZE;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestCopyToLocal {
 
@@ -81,7 +82,7 @@ public class TestCopyToLocal {
     return numTotalFiles;
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void init() throws Exception {
     conf = new Configuration(false);
     conf.set("fs.file.impl", LocalFileSystem.class.getName());
@@ -94,7 +95,7 @@ public class TestCopyToLocal {
     fs.setWorkingDirectory(testDir);
   }
 
-  @AfterClass
+  @AfterAll
   public static void cleanup() throws Exception {
     fs.delete(testDir, true);
     fs.close();
@@ -105,13 +106,14 @@ public class TestCopyToLocal {
     assertEquals(0, cmd.run(args));
   }
 
-  @Before
+  @BeforeEach
   public void initDirectory() throws Exception {
     dir = new Path("dir" + RandomStringUtils.randomNumeric(4));
     numFiles = initialize(dir);
   }
 
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testCopy() throws Exception {
     MultiThreadedCopy copy = new MultiThreadedCopy(1, DEFAULT_QUEUE_SIZE, 0);
     run(copy, new Path(dir, FROM_DIR_NAME).toString(),
@@ -119,21 +121,24 @@ public class TestCopyToLocal {
     assert copy.getExecutor() == null;
   }
 
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testCopyWithThreads() {
     run(new MultiThreadedCopy(5, DEFAULT_QUEUE_SIZE, numFiles), "-t", "5",
         new Path(dir, FROM_DIR_NAME).toString(),
         new Path(dir, TO_DIR_NAME).toString());
   }
 
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testCopyWithThreadWrong() {
     run(new MultiThreadedCopy(1, DEFAULT_QUEUE_SIZE, 0), "-t", "0",
         new Path(dir, FROM_DIR_NAME).toString(),
         new Path(dir, TO_DIR_NAME).toString());
   }
 
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testCopyWithThreadsAndQueueSize() {
     int queueSize = 256;
     run(new MultiThreadedCopy(5, queueSize, numFiles), "-t", "5", "-q",
@@ -142,7 +147,8 @@ public class TestCopyToLocal {
         new Path(dir, TO_DIR_NAME).toString());
   }
 
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testCopyWithThreadsAndQueueSizeWrong() {
     int queueSize = 0;
     run(new MultiThreadedCopy(5, DEFAULT_QUEUE_SIZE, numFiles), "-t", "5", "-q",
@@ -151,7 +157,8 @@ public class TestCopyToLocal {
         new Path(dir, TO_DIR_NAME).toString());
   }
 
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testCopySingleFile() throws Exception {
     Path fromDirPath = new Path(dir, FROM_DIR_NAME);
     Path subFile = new Path(fromDirPath, "file0");
@@ -186,9 +193,9 @@ public class TestCopyToLocal {
     protected void processArguments(LinkedList<PathData> args)
         throws IOException {
       // Check if the number of threads are same as expected
-      Assert.assertEquals(expectedThreads, getThreadCount());
+      assertEquals(expectedThreads, getThreadCount());
       // Check if the queue pool size of executor is same as expected
-      Assert.assertEquals(expectedQueuePoolSize, getThreadPoolQueueSize());
+      assertEquals(expectedQueuePoolSize, getThreadPoolQueueSize());
 
       super.processArguments(args);
 
@@ -198,10 +205,10 @@ public class TestCopyToLocal {
         // 2) There are no active tasks in the executor
         // 3) Executor has shutdown correctly
         ThreadPoolExecutor executor = getExecutor();
-        Assert.assertEquals(expectedCompletedTaskCount,
+        assertEquals(expectedCompletedTaskCount,
             executor.getCompletedTaskCount());
-        Assert.assertEquals(0, executor.getActiveCount());
-        Assert.assertTrue(executor.isTerminated());
+        assertEquals(0, executor.getActiveCount());
+        assertTrue(executor.isTerminated());
       } else {
         assert getExecutor() == null;
       }

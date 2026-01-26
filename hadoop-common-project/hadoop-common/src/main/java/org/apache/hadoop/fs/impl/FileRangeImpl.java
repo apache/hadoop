@@ -34,14 +34,27 @@ public class FileRangeImpl implements FileRange {
   private int length;
   private CompletableFuture<ByteBuffer> reader;
 
-  public FileRangeImpl(long offset, int length) {
+  /**
+   * nullable reference to store in the range.
+   */
+  private final Object reference;
+
+  /**
+   * Create.
+   * @param offset offset in file
+   * @param length length of data to read.
+   * @param reference nullable reference to store in the range.
+   */
+  public FileRangeImpl(long offset, int length, Object reference) {
     this.offset = offset;
     this.length = length;
+    this.reference = reference;
   }
 
   @Override
   public String toString() {
-    return "range[" + offset + "," + (offset + length) + ")";
+    return String.format("range [%d-%d], length=%,d, reference=%s",
+        getOffset(), getOffset() + getLength(), getLength(), getReference());
   }
 
   @Override
@@ -70,5 +83,10 @@ public class FileRangeImpl implements FileRange {
   @Override
   public CompletableFuture<ByteBuffer> getData() {
     return reader;
+  }
+
+  @Override
+  public Object getReference() {
+    return reference;
   }
 }

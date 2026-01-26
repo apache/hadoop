@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager;
 
+import org.apache.hadoop.metrics2.MetricsInfo;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.yarn.metrics.GenericEventTypeMetrics;
 
@@ -31,10 +32,11 @@ public final class GenericEventTypeMetricsManager {
   // Construct a GenericEventTypeMetrics for dispatcher
   public static <T extends Enum<T>> GenericEventTypeMetrics
       create(String dispatcherName, Class<T> eventTypeClass) {
+    MetricsInfo metricsInfo = info("GenericEventTypeMetrics for " + eventTypeClass.getName(),
+        "Metrics for " + dispatcherName);
     return new GenericEventTypeMetrics.EventTypeMetricsBuilder<T>()
         .setMs(DefaultMetricsSystem.instance())
-        .setInfo(info("GenericEventTypeMetrics for " + eventTypeClass.getName(),
-            "Metrics for " + dispatcherName))
+        .setInfo(metricsInfo)
         .setEnumClass(eventTypeClass)
         .setEnums(eventTypeClass.getEnumConstants())
         .build().registerMetrics();

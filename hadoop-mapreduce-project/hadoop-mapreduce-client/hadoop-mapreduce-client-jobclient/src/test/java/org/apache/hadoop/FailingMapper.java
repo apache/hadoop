@@ -22,6 +22,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 
 /**
  * Fails the Mapper. First attempt throws exception. Rest do System.exit.
@@ -33,9 +34,9 @@ public class FailingMapper extends Mapper<Text, Text, Text, Text> {
 
     // Just create a non-daemon thread which hangs forever. MR AM should not be
     // hung by this.
-    new Thread() {
+    new SubjectInheritingThread() {
       @Override
-      public void run() {
+      public void work() {
         synchronized (this) {
           try {
             wait();

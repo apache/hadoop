@@ -246,7 +246,7 @@ class OpenFileCtxCache {
     }
     
     @Override
-    public void run() {
+    public void work() {
       while (shouldRun) {
         scan(streamTimeout);
 

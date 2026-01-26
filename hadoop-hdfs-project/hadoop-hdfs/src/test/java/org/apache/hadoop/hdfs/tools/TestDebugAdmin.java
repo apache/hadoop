@@ -34,9 +34,10 @@ import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.util.StripedBlockUtil;
 import org.apache.hadoop.io.IOUtils;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -45,8 +46,8 @@ import java.util.List;
 import java.util.Random;
 
 import static org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsDatasetTestUtil.*;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestDebugAdmin {
 
@@ -57,7 +58,7 @@ public class TestDebugAdmin {
   private MiniDFSCluster cluster;
   private DebugAdmin admin;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     final File testRoot = new File(TEST_ROOT_DIR);
     testRoot.delete();
@@ -65,7 +66,7 @@ public class TestDebugAdmin {
     admin = new DebugAdmin(conf);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (cluster != null) {
       cluster.shutdown();
@@ -92,7 +93,8 @@ public class TestDebugAdmin {
         bytes.toString().replaceAll(System.lineSeparator(), "");
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testRecoverLease() throws Exception {
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
     cluster.waitActive();
@@ -106,7 +108,8 @@ public class TestDebugAdmin {
         runCmd(new String[]{"recoverLease", "-path", "/foo"}));
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testVerifyMetaCommand() throws Exception {
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
     cluster.waitActive();
@@ -135,7 +138,8 @@ public class TestDebugAdmin {
     );
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testComputeMetaCommand() throws Exception {
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
     cluster.waitActive();
@@ -177,7 +181,8 @@ public class TestDebugAdmin {
     assertTrue(outFile.length() > 0);
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testRecoverLeaseforFileNotFound() throws Exception {
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
     cluster.waitActive();
@@ -186,7 +191,8 @@ public class TestDebugAdmin {
         "Giving up on recoverLease for /foo after 1 try"));
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testVerifyECCommand() throws Exception {
     final ErasureCodingPolicy ecPolicy = SystemErasureCodingPolicies.getByID(
         SystemErasureCodingPolicies.RS_3_2_POLICY_ID);
@@ -194,8 +200,13 @@ public class TestDebugAdmin {
     cluster.waitActive();
     DistributedFileSystem fs = cluster.getFileSystem();
 
-    assertEquals("ret: 1, verifyEC -file <file>  Verify HDFS erasure coding on " +
-        "all block groups of the file.", runCmd(new String[]{"verifyEC"}));
+    assertEquals("ret: 1, verifyEC -file <file> [-blockId <blk_Id>] " +
+        "[-skipFailureBlocks]  -file Verify HDFS erasure coding on all block groups of the file." +
+        "  -skipFailureBlocks specify will skip any block group failures during verify," +
+        "  and continues verify all block groups of the file," +
+        "  the default is not to skip failure blocks." +
+        "  -blockId specify blk_Id to verify for a specific one block group.",
+        runCmd(new String[]{"verifyEC"}));
 
     assertEquals("ret: 1, File /bar does not exist.",
         runCmd(new String[]{"verifyEC", "-file", "/bar"}));
@@ -270,6 +281,41 @@ public class TestDebugAdmin {
         "-out", metaFile.getAbsolutePath()});
     assertTrue(runCmd(new String[]{"verifyEC", "-file", "/ec/foo_corrupt"})
         .contains("Status: ERROR, message: EC compute result not match."));
+
+    // Specify -blockId.
+    Path newFile = new Path(ecDir, "foo_new");
+    DFSTestUtil.createFile(fs, newFile, (int) k, 6 * m, m, repl, seed);
+    blocks = DFSTestUtil.getAllBlocks(fs, newFile);
+    assertEquals(2, blocks.size());
+    blockGroup = (LocatedStripedBlock) blocks.get(0);
+    String blockName = blockGroup.getBlock().getBlockName();
+    assertTrue(runCmd(new String[]{"verifyEC", "-file", "/ec/foo_new", "-blockId", blockName})
+        .contains("ret: 0, Checking EC block group: " + blockName + "Status: OK"));
+
+    // Specify -verifyAllFailures.
+    indexedBlocks = StripedBlockUtil.parseStripedBlockGroup(blockGroup,
+        ecPolicy.getCellSize(), ecPolicy.getNumDataUnits(), ecPolicy.getNumParityUnits());
+    // Try corrupt block 0 in block group.
+    toCorruptLocatedBlock = indexedBlocks[0];
+    toCorruptBlock = toCorruptLocatedBlock.getBlock();
+    datanode = cluster.getDataNode(toCorruptLocatedBlock.getLocations()[0].getIpcPort());
+    blockFile = getBlockFile(datanode.getFSDataset(),
+        toCorruptBlock.getBlockPoolId(), toCorruptBlock.getLocalBlock());
+    metaFile = getMetaFile(datanode.getFSDataset(),
+        toCorruptBlock.getBlockPoolId(), toCorruptBlock.getLocalBlock());
+    metaFile.delete();
+    // Write error bytes to block file and re-generate meta checksum.
+    errorBytes = new byte[1048576];
+    new Random(0x12345678L).nextBytes(errorBytes);
+    FileUtils.writeByteArrayToFile(blockFile, errorBytes);
+    runCmd(new String[]{"computeMeta", "-block", blockFile.getAbsolutePath(),
+        "-out", metaFile.getAbsolutePath()});
+    // VerifyEC and set skipFailureBlocks.
+    LocatedStripedBlock blockGroup2 = (LocatedStripedBlock) blocks.get(1);
+    assertTrue(runCmd(new String[]{"verifyEC", "-file", "/ec/foo_new", "-skipFailureBlocks"})
+        .contains("ret: 1, Checking EC block group: " + blockGroup.getBlock().getBlockName() +
+            "Status: ERROR, message: EC compute result not match." +
+            "Checking EC block group: " + blockGroup2.getBlock().getBlockName() + "Status: OK"));
   }
 
 }

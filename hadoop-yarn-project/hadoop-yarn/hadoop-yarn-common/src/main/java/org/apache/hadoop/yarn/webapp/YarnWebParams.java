@@ -35,10 +35,12 @@ public interface YarnWebParams {
   String APP_STATE = "app.state";
   String APP_START_TIME_BEGIN = "app.started-time.begin";
   String APP_START_TIME_END = "app.started-time.end";
+  String APP_SC = "app.subcluster";
   String APPS_NUM = "apps.num";
   String QUEUE_NAME = "queue.name";
   String NODE_STATE = "node.state";
   String NODE_LABEL = "node.label";
+  String NODE_SC = "node.subcluster";
   String WEB_UI_TYPE = "web.ui.type";
   String NEXT_REFRESH_INTERVAL = "next.refresh.interval";
   String ERROR_MESSAGE = "error.message";

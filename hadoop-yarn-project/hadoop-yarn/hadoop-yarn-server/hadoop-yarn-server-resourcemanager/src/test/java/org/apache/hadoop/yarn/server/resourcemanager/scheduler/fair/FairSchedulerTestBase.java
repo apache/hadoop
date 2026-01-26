@@ -51,10 +51,10 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
-import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
-import org.junit.Assert;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import java.io.File;
@@ -124,7 +124,7 @@ public class FairSchedulerTestBase {
       int memory, int vcores, String host, int priority, int numContainers,
       boolean relaxLocality) {
     ResourceRequest request = recordFactory.newRecordInstance(ResourceRequest.class);
-    request.setCapability(BuilderUtils.newResource(memory, vcores));
+    request.setCapability(Resources.createResource(memory, vcores));
     request.setResourceName(host);
     request.setNumContainers(numContainers);
     Priority prio = recordFactory.newRecordInstance(Priority.class);
@@ -380,9 +380,9 @@ public class FairSchedulerTestBase {
     }
 
     // available resource
-    Assert.assertEquals(resource.getMemorySize(),
+    assertEquals(resource.getMemorySize(),
         app.getCurrentConsumption().getMemorySize());
-    Assert.assertEquals(resource.getVirtualCores(),
+    assertEquals(resource.getVirtualCores(),
         app.getCurrentConsumption().getVirtualCores());
   }
 

@@ -20,11 +20,12 @@ package org.apache.hadoop.mapred;
 
 import java.io.IOException;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.v2.MiniMRYarnCluster;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * A Unit-test to test bringup and shutdown of Mini Map-Reduce Cluster.
@@ -50,7 +51,7 @@ public class TestMiniMRBringup {
       mr = new MiniMRYarnCluster("testMiniMRYarnClusterWithoutJHS");
       mr.init(conf);
       mr.start();
-      Assert.assertEquals(null, mr.getHistoryServer());
+      assertEquals(null, mr.getHistoryServer());
     } finally {
       if (mr != null) {
         mr.stop();

@@ -20,11 +20,11 @@ package org.apache.hadoop.hdfs.server.federation.resolver;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.FEDERATION_MOUNT_TABLE_CACHE_ENABLE;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.FEDERATION_MOUNT_TABLE_MAX_CACHE_SIZE;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_DEFAULT_NAMESERVICE;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -40,8 +40,8 @@ import org.apache.hadoop.hdfs.server.federation.router.Router;
 import org.apache.hadoop.hdfs.server.federation.store.MountTableStore;
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -136,7 +136,7 @@ public class TestMountTableResolver {
     mountTable.addEntry(multiEntry);
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException {
     setupMountTable();
   }
@@ -265,6 +265,9 @@ public class TestMountTableResolver {
 
     mtEntry = mountTable.getMountPoint("/user/a1");
     assertEquals("/user", mtEntry.getSourcePath());
+
+    mtEntry = mountTable.getMountPoint("");
+    assertNull(mtEntry);
   }
 
   @Test
@@ -552,6 +555,16 @@ public class TestMountTableResolver {
 
     assertEquals(100000, mountTable.getMountPoints("/").size());
     assertEquals(100000, mountTable.getMounts("/").size());
+    // test concurrency for mount table cache size when it gets updated frequently
+    for (int i = 0; i < 20; i++) {
+      mountTable.getDestinationForPath("/" + i);
+      if (i >= 10) {
+        assertEquals(TEST_MAX_CACHE_SIZE, mountTable.getCacheSize());
+      } else {
+        assertEquals(i + 1, mountTable.getCacheSize());
+      }
+    }
+    assertEquals(TEST_MAX_CACHE_SIZE, mountTable.getCacheSize());
 
     // Add 1000 entries in deep list
     mountTable.refreshEntries(emptyList);
@@ -728,5 +741,42 @@ public class TestMountTableResolver {
         mountTable.getDestinationForPath("/testInvalidateCache").toString());
     assertEquals("2->/testInvalidateCache/foo", mountTable
         .getDestinationForPath("/testInvalidateCache/foo").toString());
+  }
+
+  /**
+   * Test location cache hit when get destination for path.
+   */
+  @Test
+  public void testLocationCacheHitrate() throws Exception {
+    List<MountTable> entries = new ArrayList<>();
+
+    // Add entry and test location cache
+    Map<String, String> map1 = getMountTableEntry("1", "/testlocationcache");
+    MountTable entry1 = MountTable.newInstance("/testlocationcache", map1);
+    entries.add(entry1);
+
+    Map<String, String> map2 = getMountTableEntry("2",
+        "/anothertestlocationcache");
+    MountTable entry2 = MountTable.newInstance("/anothertestlocationcache",
+        map2);
+    entries.add(entry2);
+
+    mountTable.refreshEntries(entries);
+    mountTable.getLocCacheAccess().reset();
+    mountTable.getLocCacheMiss().reset();
+    assertEquals("1->/testlocationcache",
+        mountTable.getDestinationForPath("/testlocationcache").toString());
+    assertEquals("2->/anothertestlocationcache",
+        mountTable.getDestinationForPath("/anothertestlocationcache")
+            .toString());
+
+    assertEquals(2, mountTable.getLocCacheMiss().intValue());
+    assertEquals("1->/testlocationcache",
+        mountTable.getDestinationForPath("/testlocationcache").toString());
+    assertEquals(3, mountTable.getLocCacheAccess().intValue());
+
+    // Cleanup before exit
+    mountTable.removeEntry("/testlocationcache");
+    mountTable.removeEntry("/anothertestlocationcache");
   }
 }

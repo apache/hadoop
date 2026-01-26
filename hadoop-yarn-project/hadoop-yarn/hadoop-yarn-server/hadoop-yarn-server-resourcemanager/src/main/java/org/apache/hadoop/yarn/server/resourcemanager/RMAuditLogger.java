@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager;
 
-import java.io.UnsupportedEncodingException;
 import java.net.InetAddress;
+import java.nio.charset.StandardCharsets;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -57,6 +57,7 @@ public class RMAuditLogger {
     public static final String GET_APP_PRIORITY = "Get Application Priority";
     public static final String GET_APP_QUEUE = "Get Application Queue";
     public static final String GET_APP_ATTEMPTS = "Get Application Attempts";
+    public static final String GET_APP_REPORT = "Get Application Report";
     public static final String GET_APP_ATTEMPT_REPORT
         = "Get Application Attempt Report";
     public static final String GET_CONTAINERS = "Get Containers";
@@ -159,12 +160,8 @@ public class RMAuditLogger {
     }
     
     if (signature != null) {
-      try {
-        String sigStr = new String(signature, "UTF-8");
-        add(Keys.CALLERSIGNATURE, sigStr, sb);
-      } catch (UnsupportedEncodingException e) {
-        // ignore this signature
-      }
+      String sigStr = new String(signature, StandardCharsets.UTF_8);
+      add(Keys.CALLERSIGNATURE, sigStr, sb);
     }
   }
 
@@ -488,6 +485,7 @@ public class RMAuditLogger {
    * @param description Some additional information as to why the operation
    *                    failed.
    * @param appId ApplicationId in which operation was performed.
+   * @param attemptId Application Attempt Id in which operation was performed.
    *
    * <br><br>
    * Note that the {@link RMAuditLogger} uses tabs ('\t') as a key-val delimiter

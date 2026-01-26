@@ -41,6 +41,17 @@ public abstract class GetApplicationHomeSubClusterRequest {
     return appMapping;
   }
 
+  @Private
+  @Unstable
+  public static GetApplicationHomeSubClusterRequest newInstance(
+      ApplicationId appId, boolean containsAppSubmissionContext) {
+    GetApplicationHomeSubClusterRequest appMapping =
+         Records.newRecord(GetApplicationHomeSubClusterRequest.class);
+    appMapping.setApplicationId(appId);
+    appMapping.setContainsAppSubmissionContext(containsAppSubmissionContext);
+    return appMapping;
+  }
+
   /**
    * Get the {@link ApplicationId} representing the unique identifier of the
    * application.
@@ -61,4 +72,27 @@ public abstract class GetApplicationHomeSubClusterRequest {
   @Unstable
   public abstract void setApplicationId(ApplicationId applicationId);
 
+
+  /**
+   * Get the flag that indicates whether appSubmissionContext should be
+   * returned.
+   * The reason for adding this variable is due to the consideration that
+   * appSubmissionContext is not commonly used and its data size can be large.
+   *
+   * @return whether to return appSubmissionContext.
+   */
+  @Public
+  @Unstable
+  public abstract boolean getContainsAppSubmissionContext();
+
+  /**
+   * Set the flag that indicates whether appSubmissionContext should be
+   * returned.
+   *
+   * @param containsAppSubmissionContext whether to return appSubmissionContext.
+   */
+  @Public
+  @Unstable
+  public abstract void setContainsAppSubmissionContext(
+      boolean containsAppSubmissionContext);
 }

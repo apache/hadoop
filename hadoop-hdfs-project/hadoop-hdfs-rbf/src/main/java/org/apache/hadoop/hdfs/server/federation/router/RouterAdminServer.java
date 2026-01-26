@@ -21,6 +21,7 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PERMISSIONS_ENABLED_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PERMISSIONS_ENABLED_KEY;
 import static org.apache.hadoop.hdfs.server.federation.fairness.RefreshFairnessPolicyControllerHandler.HANDLER_IDENTIFIER;
+import static org.apache.hadoop.hdfs.server.federation.router.async.utils.AsyncUtil.syncReturn;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -31,6 +32,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntriesRequest;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntriesResponse;
 import org.apache.hadoop.util.Preconditions;
 
 import org.apache.hadoop.conf.Configuration;
@@ -209,9 +212,9 @@ public class RouterAdminServer extends AbstractService
         RefreshCallQueueProtocolProtos.RefreshCallQueueProtocolService.
         newReflectiveBlockingService(refreshCallQueueXlator);
 
-    DFSUtil.addPBProtocol(conf, GenericRefreshProtocolPB.class,
+    DFSUtil.addInternalPBProtocol(conf, GenericRefreshProtocolPB.class,
         genericRefreshService, adminServer);
-    DFSUtil.addPBProtocol(conf, RefreshCallQueueProtocolPB.class,
+    DFSUtil.addInternalPBProtocol(conf, RefreshCallQueueProtocolPB.class,
         refreshCallQueueService, adminServer);
 
     registerRefreshFairnessPolicyControllerHandler();
@@ -349,13 +352,24 @@ public class RouterAdminServer extends AbstractService
     MountTable mountTable = request.getEntry();
     verifyMaxComponentLength(mountTable);
     if (this.mountTableCheckDestination) {
-      List<String> nsIds = verifyFileInDestinations(mountTable);
-      if (!nsIds.isEmpty()) {
-        throw new IllegalArgumentException("File not found in downstream " +
-            "nameservices: " + StringUtils.join(",", nsIds));
-      }
+      verifyFileExistenceInDest(mountTable);
     }
     return getMountTableStore().addMountTableEntry(request);
+  }
+
+  @Override
+  public AddMountTableEntriesResponse addMountTableEntries(AddMountTableEntriesRequest request)
+      throws IOException {
+    List<MountTable> mountTables = request.getEntries();
+    for (MountTable mountTable : mountTables) {
+      verifyMaxComponentLength(mountTable);
+    }
+    if (this.mountTableCheckDestination) {
+      for (MountTable mountTable : mountTables) {
+        verifyFileExistenceInDest(mountTable);
+      }
+    }
+    return getMountTableStore().addMountTableEntries(request);
   }
 
   @Override
@@ -366,11 +380,7 @@ public class RouterAdminServer extends AbstractService
     // Checks max component length limit.
     verifyMaxComponentLength(updateEntry);
     if (this.mountTableCheckDestination) {
-      List<String> nsIds = verifyFileInDestinations(updateEntry);
-      if (!nsIds.isEmpty()) {
-        throw new IllegalArgumentException("File not found in downstream " +
-            "nameservices: " + StringUtils.join(",", nsIds));
-      }
+      verifyFileExistenceInDest(updateEntry);
     }
     if (this.router.getSubclusterResolver() instanceof MountTableResolver) {
       MountTableResolver mResolver =
@@ -406,6 +416,14 @@ public class RouterAdminServer extends AbstractService
           request.getEntry(), e.getMessage());
     }
     return response;
+  }
+
+  private void verifyFileExistenceInDest(MountTable mountTable) throws IOException {
+    List<String> nsIds = verifyFileInDestinations(mountTable);
+    if (!nsIds.isEmpty()) {
+      throw new IllegalArgumentException(
+          "File not found in downstream nameservices: " + StringUtils.join(",", nsIds));
+    }
   }
 
   /**
@@ -610,12 +628,15 @@ public class RouterAdminServer extends AbstractService
       Map<RemoteLocation, HdfsFileStatus> responses =
           rpcClient.invokeConcurrent(
               locations, method, false, false, HdfsFileStatus.class);
+      if (rpcServer.isAsync()) {
+        responses = syncReturn(Map.class);
+      }
       for (RemoteLocation location : locations) {
         if (responses.get(location) != null) {
           nsIds.add(location.getNameserviceId());
         }
       }
-    } catch (IOException ioe) {
+    } catch (Exception ioe) {
       LOG.error("Cannot get location for {}: {}",
           src, ioe.getMessage());
     }

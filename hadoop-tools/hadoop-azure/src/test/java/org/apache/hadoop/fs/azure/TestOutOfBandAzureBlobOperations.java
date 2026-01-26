@@ -24,9 +24,9 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests that WASB handles things gracefully when users add blobs to the Azure
@@ -38,14 +38,14 @@ public class TestOutOfBandAzureBlobOperations
   private FileSystem fs;
   private InMemoryBlockBlobStore backingStore;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     testAccount = AzureBlobStorageTestAccount.createMock();
     fs = testAccount.getFileSystem();
     backingStore = testAccount.getMockStorage().getBackingStore();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     testAccount.cleanup();
     fs = null;
@@ -115,7 +115,7 @@ public class TestOutOfBandAzureBlobOperations
       // Trying to delete root/b/c would cause a dilemma for WASB, so
       // it should throw.
       fs.delete(new Path("/root/b/c"), true);
-      assertTrue("Should've thrown.", false);
+      assertTrue(false, "Should've thrown.");
     } catch (AzureException e) {
       assertEquals("File /root/b/c has a parent directory /root/b"
           + " which is also a file. Can't resolve.", e.getMessage());

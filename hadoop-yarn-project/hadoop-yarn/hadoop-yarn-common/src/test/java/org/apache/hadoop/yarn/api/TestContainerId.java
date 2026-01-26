@@ -19,57 +19,61 @@
 
 package org.apache.hadoop.yarn.api;
 
-import org.junit.Assert;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.junit.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestContainerId {
 
   @Test
-  public void testContainerId() {
+  void testContainerId() {
     ContainerId c1 = newContainerId(1, 1, 10l, 1);
     ContainerId c2 = newContainerId(1, 1, 10l, 2);
     ContainerId c3 = newContainerId(1, 1, 10l, 1);
     ContainerId c4 = newContainerId(1, 3, 10l, 1);
     ContainerId c5 = newContainerId(1, 3, 8l, 1);
 
-    Assert.assertTrue(c1.equals(c3));
-    Assert.assertFalse(c1.equals(c2));
-    Assert.assertFalse(c1.equals(c4));
-    Assert.assertFalse(c1.equals(c5));
+    assertEquals(c1, c3);
+    assertNotEquals(c1, c2);
+    assertNotEquals(c1, c4);
+    assertNotEquals(c1, c5);
 
-    Assert.assertTrue(c1.compareTo(c3) == 0);
-    Assert.assertTrue(c1.compareTo(c2) < 0);
-    Assert.assertTrue(c1.compareTo(c4) < 0);
-    Assert.assertTrue(c1.compareTo(c5) > 0);
+    assertTrue(c1.compareTo(c3) == 0);
+    assertTrue(c1.compareTo(c2) < 0);
+    assertTrue(c1.compareTo(c4) < 0);
+    assertTrue(c1.compareTo(c5) > 0);
 
-    Assert.assertTrue(c1.hashCode() == c3.hashCode());
-    Assert.assertFalse(c1.hashCode() == c2.hashCode());
-    Assert.assertFalse(c1.hashCode() == c4.hashCode());
-    Assert.assertFalse(c1.hashCode() == c5.hashCode());
-    
+    assertTrue(c1.hashCode() == c3.hashCode());
+    assertFalse(c1.hashCode() == c2.hashCode());
+    assertFalse(c1.hashCode() == c4.hashCode());
+    assertFalse(c1.hashCode() == c5.hashCode());
+
     long ts = System.currentTimeMillis();
     ContainerId c6 = newContainerId(36473, 4365472, ts, 25645811);
-    Assert.assertEquals("container_10_0001_01_000001", c1.toString());
-    Assert.assertEquals(25645811, 0xffffffffffL & c6.getContainerId());
-    Assert.assertEquals(0, c6.getContainerId() >> 40);
-    Assert.assertEquals("container_" + ts + "_36473_4365472_25645811",
+    assertEquals("container_10_0001_01_000001", c1.toString());
+    assertEquals(25645811, 0xffffffffffL & c6.getContainerId());
+    assertEquals(0, c6.getContainerId() >> 40);
+    assertEquals("container_" + ts + "_36473_4365472_25645811",
         c6.toString());
 
     ContainerId c7 = newContainerId(36473, 4365472, ts, 4298334883325L);
-    Assert.assertEquals(999799999997L, 0xffffffffffL & c7.getContainerId());
-    Assert.assertEquals(3, c7.getContainerId() >> 40);
-    Assert.assertEquals(
+    assertEquals(999799999997L, 0xffffffffffL & c7.getContainerId());
+    assertEquals(3, c7.getContainerId() >> 40);
+    assertEquals(
         "container_e03_" + ts + "_36473_4365472_999799999997",
         c7.toString());
 
     ContainerId c8 = newContainerId(36473, 4365472, ts, 844424930131965L);
-    Assert.assertEquals(1099511627773L, 0xffffffffffL & c8.getContainerId());
-    Assert.assertEquals(767, c8.getContainerId() >> 40);
-    Assert.assertEquals(
+    assertEquals(1099511627773L, 0xffffffffffL & c8.getContainerId());
+    assertEquals(767, c8.getContainerId() >> 40);
+    assertEquals(
         "container_e767_" + ts + "_36473_4365472_1099511627773",
         c8.toString());
   }

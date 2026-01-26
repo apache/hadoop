@@ -246,6 +246,8 @@ public abstract class SchedulerNode {
 
   /**
    * Check if a container is launched by this node.
+   *
+   * @param containerId containerId.
    * @return If the container is launched by the node.
    */
   public synchronized boolean isValidContainer(ContainerId containerId) {

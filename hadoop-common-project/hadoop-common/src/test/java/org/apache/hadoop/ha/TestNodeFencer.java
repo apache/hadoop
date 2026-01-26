@@ -17,7 +17,12 @@
  */
 package org.apache.hadoop.ha;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
 
 import java.net.InetSocketAddress;
 import java.util.List;
@@ -26,9 +31,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.Shell;
-import org.junit.Before;
-import org.junit.Test;
-import org.mockito.Mockito;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class TestNodeFencer {
 
@@ -40,16 +44,16 @@ public class TestNodeFencer {
   private static String FENCER_TRUE_COMMAND_UNIX = "shell(true)";
   private static String FENCER_TRUE_COMMAND_WINDOWS = "shell(rem)";
 
-  @Before
+  @BeforeEach
   public void clearMockState() {
     AlwaysSucceedFencer.fenceCalled = 0;
     AlwaysSucceedFencer.callArgs.clear();
     AlwaysFailFencer.fenceCalled = 0;
     AlwaysFailFencer.callArgs.clear();
     
-    MOCK_TARGET = Mockito.mock(HAServiceTarget.class);
-    Mockito.doReturn("my mock").when(MOCK_TARGET).toString();
-    Mockito.doReturn(new InetSocketAddress("host", 1234))
+    MOCK_TARGET = mock(HAServiceTarget.class);
+    doReturn("my mock").when(MOCK_TARGET).toString();
+    doReturn(new InetSocketAddress("host", 1234))
         .when(MOCK_TARGET).getAddress();
   }
 

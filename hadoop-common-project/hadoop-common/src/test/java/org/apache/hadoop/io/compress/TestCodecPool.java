@@ -17,11 +17,13 @@
  */
 package org.apache.hadoop.io.compress;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.OutputStream;
+import java.lang.reflect.Field;
+import java.util.List;
 import java.util.Random;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
@@ -32,9 +34,13 @@ import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.compress.zlib.BuiltInGzipCompressor;
 import org.apache.hadoop.io.compress.zlib.BuiltInGzipDecompressor;
+import org.apache.hadoop.io.compress.zlib.ZlibCompressor.CompressionLevel;
+import org.apache.hadoop.io.compress.zlib.ZlibFactory;
 import org.apache.hadoop.test.LambdaTestUtils;
-import org.junit.Before;
-import org.junit.Test;
+import org.apache.hadoop.util.ReflectionUtils;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -44,34 +50,40 @@ public class TestCodecPool {
       "Incorrect number of leased (de)compressors";
   DefaultCodec codec;
 
-  @Before
+  @BeforeEach
   public void setup() {
     this.codec = new DefaultCodec();
     this.codec.setConf(new Configuration());
   }
 
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testCompressorPoolCounts() {
     // Get two compressors and return them
     Compressor comp1 = CodecPool.getCompressor(codec);
     Compressor comp2 = CodecPool.getCompressor(codec);
-    assertEquals(LEASE_COUNT_ERR, 2,
-        CodecPool.getLeasedCompressorsCount(codec));
+    assertEquals(2,
+        CodecPool.getLeasedCompressorsCount(codec),
+        LEASE_COUNT_ERR);
 
     CodecPool.returnCompressor(comp2);
-    assertEquals(LEASE_COUNT_ERR, 1,
-        CodecPool.getLeasedCompressorsCount(codec));
+    assertEquals(1,
+        CodecPool.getLeasedCompressorsCount(codec),
+        LEASE_COUNT_ERR);
 
     CodecPool.returnCompressor(comp1);
-    assertEquals(LEASE_COUNT_ERR, 0,
-        CodecPool.getLeasedCompressorsCount(codec));
+    assertEquals(0,
+        CodecPool.getLeasedCompressorsCount(codec),
+        LEASE_COUNT_ERR);
 
     CodecPool.returnCompressor(comp1);
-    assertEquals(LEASE_COUNT_ERR, 0,
-        CodecPool.getLeasedCompressorsCount(codec));
+    assertEquals(0,
+        CodecPool.getLeasedCompressorsCount(codec),
+        LEASE_COUNT_ERR);
   }
 
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testCompressorNotReturnSameInstance() {
     Compressor comp = CodecPool.getCompressor(codec);
     CodecPool.returnCompressor(comp);
@@ -86,28 +98,61 @@ public class TestCodecPool {
     }
   }
 
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
+  public void testCompressorConf() throws Exception {
+    DefaultCodec codec1 = new DefaultCodec();
+    Configuration conf = new Configuration();
+    ZlibFactory.setCompressionLevel(conf, CompressionLevel.TWO);
+    codec1.setConf(conf);
+    Compressor comp1 = CodecPool.getCompressor(codec1);
+    CodecPool.returnCompressor(comp1);
+
+    DefaultCodec codec2 = new DefaultCodec();
+    Configuration conf2 = new Configuration();
+    CompressionLevel newCompressionLevel = CompressionLevel.THREE;
+    ZlibFactory.setCompressionLevel(conf2, newCompressionLevel);
+    codec2.setConf(conf2);
+    Compressor comp2 = CodecPool.getCompressor(codec2);
+    List<Field> fields = ReflectionUtils.getDeclaredFieldsIncludingInherited(comp2.getClass());
+    for (Field field : fields) {
+      if (field.getName().equals("level")) {
+        field.setAccessible(true);
+        Object levelValue = field.get(comp2);
+        if (levelValue instanceof CompressionLevel) {
+          assertEquals(newCompressionLevel, levelValue);
+        } else {
+          assertEquals(3, levelValue);
+        }
+      }
+    }
+    CodecPool.returnCompressor(comp2);
+  }
+
+  @Test
+  @Timeout(value = 10)
   public void testDecompressorPoolCounts() {
     // Get two decompressors and return them
     Decompressor decomp1 = CodecPool.getDecompressor(codec);
     Decompressor decomp2 = CodecPool.getDecompressor(codec);
-    assertEquals(LEASE_COUNT_ERR, 2,
-        CodecPool.getLeasedDecompressorsCount(codec));
+    assertEquals(2,
+        CodecPool.getLeasedDecompressorsCount(codec), LEASE_COUNT_ERR);
 
     CodecPool.returnDecompressor(decomp2);
-    assertEquals(LEASE_COUNT_ERR, 1,
-        CodecPool.getLeasedDecompressorsCount(codec));
+    assertEquals(1,
+        CodecPool.getLeasedDecompressorsCount(codec), LEASE_COUNT_ERR);
 
     CodecPool.returnDecompressor(decomp1);
-    assertEquals(LEASE_COUNT_ERR, 0,
-        CodecPool.getLeasedDecompressorsCount(codec));
+    assertEquals(0,
+        CodecPool.getLeasedDecompressorsCount(codec), LEASE_COUNT_ERR);
 
     CodecPool.returnDecompressor(decomp1);
-    assertEquals(LEASE_COUNT_ERR, 0,
-        CodecPool.getLeasedCompressorsCount(codec));
+    assertEquals(0,
+        CodecPool.getLeasedCompressorsCount(codec), LEASE_COUNT_ERR);
   }
 
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testMultiThreadedCompressorPool() throws InterruptedException {
     final int iterations = 4;
     ExecutorService threadpool = Executors.newFixedThreadPool(3);
@@ -141,10 +186,12 @@ public class TestCodecPool {
     threadpool.shutdown();
     threadpool.awaitTermination(1000, TimeUnit.SECONDS);
 
-    assertEquals(LEASE_COUNT_ERR, 0, CodecPool.getLeasedCompressorsCount(codec));
+    assertEquals(0, CodecPool.getLeasedCompressorsCount(codec),
+        LEASE_COUNT_ERR);
   }
 
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testMultiThreadedDecompressorPool() throws InterruptedException {
     final int iterations = 4;
     ExecutorService threadpool = Executors.newFixedThreadPool(3);
@@ -178,11 +225,12 @@ public class TestCodecPool {
     threadpool.shutdown();
     threadpool.awaitTermination(1000, TimeUnit.SECONDS);
 
-    assertEquals(LEASE_COUNT_ERR, 0,
-        CodecPool.getLeasedDecompressorsCount(codec));
+    assertEquals(0,
+        CodecPool.getLeasedDecompressorsCount(codec), LEASE_COUNT_ERR);
   }
 
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testDecompressorNotReturnSameInstance() {
     Decompressor decomp = CodecPool.getDecompressor(codec);
     CodecPool.returnDecompressor(decomp);
@@ -197,7 +245,8 @@ public class TestCodecPool {
     }
   }
 
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testDoNotPoolCompressorNotUseableAfterReturn() throws Exception {
 
     final GzipCodec gzipCodec = new GzipCodec();
@@ -217,7 +266,8 @@ public class TestCodecPool {
         () -> outputStream.write(1));
   }
 
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testDoNotPoolDecompressorNotUseableAfterReturn() throws Exception {
 
     final GzipCodec gzipCodec = new GzipCodec();

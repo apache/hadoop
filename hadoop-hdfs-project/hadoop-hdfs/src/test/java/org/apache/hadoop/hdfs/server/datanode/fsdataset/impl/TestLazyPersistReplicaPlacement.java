@@ -23,16 +23,15 @@ import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.concurrent.TimeoutException;
 
 import static org.apache.hadoop.fs.StorageType.DEFAULT;
 import static org.apache.hadoop.fs.StorageType.RAM_DISK;
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.fail;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class TestLazyPersistReplicaPlacement extends LazyPersistTestCase {
   @Test
@@ -147,8 +146,8 @@ public class TestLazyPersistReplicaPlacement extends LazyPersistTestCase {
 
     // Since eviction is asynchronous, depending on the timing of eviction
     // wrt writes, we may get 2 or less blocks on RAM disk.
-    assertThat(numBlocksOnRamDisk, is(2));
-    assertThat(numBlocksOnDisk, is(3));
+    assertThat(numBlocksOnRamDisk).isEqualTo(2);
+    assertThat(numBlocksOnDisk).isEqualTo(3);
   }
 
   /**

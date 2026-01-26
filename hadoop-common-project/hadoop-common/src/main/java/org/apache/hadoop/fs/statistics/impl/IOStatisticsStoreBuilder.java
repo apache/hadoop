@@ -68,6 +68,17 @@ public interface IOStatisticsStoreBuilder {
       String... prefixes);
 
   /**
+   * A value which is tracked with counter/min/max/mean.
+   * Similar to {@link #withDurationTracking(String...)}
+   * but without the failure option and with the same name
+   * across all categories.
+   * @param prefixes prefixes to add.
+   * @return the builder
+   */
+  IOStatisticsStoreBuilder withSampleTracking(
+      String... prefixes);
+
+  /**
    * Build the collector.
    * @return a new collector.
    */

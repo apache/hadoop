@@ -93,6 +93,18 @@ final class IOStatisticsStoreBuilderImpl implements
   }
 
   @Override
+  public IOStatisticsStoreBuilderImpl withSampleTracking(
+      final String... prefixes) {
+    for (String p : prefixes) {
+      withCounters(p);
+      withMinimums(p);
+      withMaximums(p);
+      withMeanStatistics(p);
+    }
+    return this;
+  }
+
+  @Override
   public IOStatisticsStore build() {
     return new IOStatisticsStoreImpl(counters, gauges, minimums,
         maximums, meanStatistics);

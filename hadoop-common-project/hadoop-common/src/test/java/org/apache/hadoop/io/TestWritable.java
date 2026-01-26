@@ -27,12 +27,12 @@ import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.ReflectionUtils;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** Unit tests for Writable. */
 public class TestWritable {
@@ -191,21 +191,23 @@ private static final String TEST_WRITABLE_CONFIG_VALUE = TEST_CONFIG_VALUE;
     ShortWritable writable3 = new ShortWritable((short) 256);
     
     final String SHOULD_NOT_MATCH_WITH_RESULT_ONE = "Result should be 1, should not match the writables";
-    assertTrue(SHOULD_NOT_MATCH_WITH_RESULT_ONE,
-        writable1.compareTo(writable2) == 1);
-    assertTrue(SHOULD_NOT_MATCH_WITH_RESULT_ONE, WritableComparator.get(
-        ShortWritable.class).compare(writable1, writable2) == 1);
+    assertTrue(writable1.compareTo(writable2) == 1,
+        SHOULD_NOT_MATCH_WITH_RESULT_ONE);
+    assertTrue(WritableComparator.get(
+        ShortWritable.class).compare(writable1, writable2) == 1,
+        SHOULD_NOT_MATCH_WITH_RESULT_ONE);
 
     final String SHOULD_NOT_MATCH_WITH_RESULT_MINUS_ONE = "Result should be -1, should not match the writables";
-    assertTrue(SHOULD_NOT_MATCH_WITH_RESULT_MINUS_ONE, writable2
-        .compareTo(writable1) == -1);
-    assertTrue(SHOULD_NOT_MATCH_WITH_RESULT_MINUS_ONE, WritableComparator.get(
-        ShortWritable.class).compare(writable2, writable1) == -1);
+    assertTrue(writable2.compareTo(writable1) == -1,
+        SHOULD_NOT_MATCH_WITH_RESULT_MINUS_ONE);
+    assertTrue(WritableComparator.get(
+        ShortWritable.class).compare(writable2, writable1) == -1,
+        SHOULD_NOT_MATCH_WITH_RESULT_MINUS_ONE);
 
     final String SHOULD_MATCH = "Result should be 0, should match the writables";
-    assertTrue(SHOULD_MATCH, writable1.compareTo(writable1) == 0);
-    assertTrue(SHOULD_MATCH, WritableComparator.get(ShortWritable.class)
-        .compare(writable1, writable3) == 0);
+    assertTrue(writable1.compareTo(writable1) == 0, SHOULD_MATCH);
+    assertTrue(WritableComparator.get(ShortWritable.class)
+        .compare(writable1, writable3) == 0, SHOULD_MATCH);
   }
 
   /**

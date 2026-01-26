@@ -20,13 +20,19 @@ package org.apache.hadoop.hdfs;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.RouterFederatedStateProto;
 import org.apache.hadoop.ipc.AlignmentContext;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcRequestHeaderProto;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto;
 
 import java.io.IOException;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.atomic.LongAccumulator;
 import org.apache.hadoop.thirdparty.protobuf.ByteString;
+import org.apache.hadoop.thirdparty.protobuf.InvalidProtocolBufferException;
 
 /**
  * Global State Id context for the client.
@@ -77,10 +83,44 @@ public class ClientGSIContext implements AlignmentContext {
   @Override
   public synchronized void receiveResponseState(RpcResponseHeaderProto header) {
     if (header.hasRouterFederatedState()) {
-      routerFederatedState = header.getRouterFederatedState();
+      routerFederatedState = mergeRouterFederatedState(
+          this.routerFederatedState, header.getRouterFederatedState());
     } else {
       lastSeenStateId.accumulate(header.getStateId());
     }
+  }
+
+  /**
+   * Utility function to parse routerFederatedState field in RPC headers.
+   */
+  public static Map<String, Long> getRouterFederatedStateMap(ByteString byteString) {
+    if (byteString != null) {
+      try {
+        RouterFederatedStateProto federatedState = RouterFederatedStateProto.parseFrom(byteString);
+        return federatedState.getNamespaceStateIdsMap();
+      } catch (InvalidProtocolBufferException e) {
+        // Ignore this exception and will return an empty map
+      }
+    }
+    return Collections.emptyMap();
+  }
+
+  /**
+   * Merge state1 and state2 to get the max value for each namespace.
+   * @param state1 input ByteString.
+   * @param state2 input ByteString.
+   * @return one ByteString object which contains the max value of each namespace.
+   */
+  public static ByteString mergeRouterFederatedState(ByteString state1, ByteString state2) {
+    Map<String, Long> mapping1 = new HashMap<>(getRouterFederatedStateMap(state1));
+    Map<String, Long> mapping2 = getRouterFederatedStateMap(state2);
+    mapping2.forEach((k, v) -> {
+      long localValue = mapping1.getOrDefault(k, 0L);
+      mapping1.put(k, Math.max(v, localValue));
+    });
+    RouterFederatedStateProto.Builder federatedBuilder = RouterFederatedStateProto.newBuilder();
+    mapping1.forEach(federatedBuilder::putNamespaceStateIds);
+    return federatedBuilder.build().toByteString();
   }
 
   /**
@@ -105,5 +145,10 @@ public class ClientGSIContext implements AlignmentContext {
       throws IOException {
     // Do nothing.
     return 0;
+  }
+
+  @VisibleForTesting
+  public ByteString getRouterFederatedState() {
+    return this.routerFederatedState;
   }
 }

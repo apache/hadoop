@@ -17,30 +17,36 @@
  */
 package org.apache.hadoop.hdfs.qjournal.client;
 
-import static org.junit.Assert.*;
-
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.hadoop.metrics2.MetricsSource;
+import org.apache.hadoop.metrics2.MetricsSystem;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.qjournal.client.IPCLoggerChannel;
-import org.apache.hadoop.hdfs.qjournal.client.LoggerTooFarBehindException;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocol;
 import org.apache.hadoop.hdfs.qjournal.protocol.RequestInfo;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeLayoutVersion;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.DelayAnswer;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import java.util.function.Supplier;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class TestIPCLoggerChannel {
   private static final Logger LOG = LoggerFactory.getLogger(
@@ -61,7 +67,7 @@ public class TestIPCLoggerChannel {
   private static final int LIMIT_QUEUE_SIZE_BYTES =
       LIMIT_QUEUE_SIZE_MB * 1024 * 1024;
   
-  @Before
+  @BeforeEach
   public void setupMock() {
     conf.setInt(DFSConfigKeys.DFS_QJOURNAL_QUEUE_SIZE_LIMIT_KEY,
         LIMIT_QUEUE_SIZE_MB);
@@ -177,5 +183,21 @@ public class TestIPCLoggerChannel {
     assertFalse(ch.isOutOfSync());
 
     ch.sendEdits(3L, 3L, 1, FAKE_DATA).get();
+  }
+
+  @Test
+  public void testMetricsRemovedOnClose() {
+    MetricsSystem metricsSystem = DefaultMetricsSystem.instance();
+    String sourceName = "IPCLoggerChannel-"
+        + FAKE_ADDR.getAddress().getHostAddress()
+        + "-" + FAKE_ADDR.getPort();
+    // Ensure the metrics exist
+    MetricsSource source = metricsSystem.getSource(sourceName);
+    assertNotNull(source);
+
+    ch.close();
+    // ensure the metrics are removed.
+    source = metricsSystem.getSource(sourceName);
+    assertNull(source);
   }
 }

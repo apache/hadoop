@@ -68,8 +68,8 @@ The script also requires below inputs:
    Exact fixVersion that we would like to compare all Jira's fixVersions
    with. e.g for 3.3.2 release, it should be 3.3.2.
 
-3. JIRA Project Name:
-   The exact name of Project as case-sensitive e.g HADOOP / OZONE
+3. JIRA Project Name (default Project Name: HADOOP):
+   The exact name of Project as case-sensitive.
 
 4. Path of project's working dir with release branch checked-in:
    Path of project from where we want to compare git hashes from. Local fork
@@ -84,7 +84,7 @@ The script also requires below inputs:
 
 Example of script execution:
 ```
-JIRA Project Name (e.g HADOOP / OZONE etc): HADOOP
+JIRA Project Name (default: HADOOP): HADOOP
 First commit hash to start excluding commits from history: fa4915fdbbbec434ab41786cb17b82938a613f16
 Fix Version: 3.3.2
 Jira server url (default: https://issues.apache.org/jira):

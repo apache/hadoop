@@ -21,10 +21,13 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import java.util.Stack;
+import java.util.function.LongFunction;
 
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.ipc.CallerContext;
+import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.FSExceptionMessages;
@@ -38,6 +41,7 @@ import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
 import org.apache.hadoop.hdfs.server.namenode.INodeAttributeProvider.AccessControlEnforcer;
 import org.apache.hadoop.hdfs.server.namenode.INodeAttributeProvider.AuthorizationContext;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
+import org.apache.hadoop.hdfs.util.RwLockMode;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 
@@ -46,7 +50,7 @@ import org.apache.hadoop.security.UserGroupInformation;
  * The state of this class need not be synchronized as it has data structures that
  * are read-only.
  * 
- * Some of the helper methods are guarded by {@link FSNamesystem#readLock()}.
+ * Some of the helper methods are guarded by {@link FSNamesystem#readLock(RwLockMode)}.
  */
 public class FSPermissionChecker implements AccessControlEnforcer {
   static final Logger LOG = LoggerFactory.getLogger(UserGroupInformation.class);
@@ -86,20 +90,23 @@ public class FSPermissionChecker implements AccessControlEnforcer {
   private final Collection<String> groups;
   private final boolean isSuper;
   private final INodeAttributeProvider attributeProvider;
+  private final AccessControlEnforcer accessControlEnforcer;
   private final boolean authorizeWithContext;
+  private final long accessControlEnforcerReportingThresholdMs;
 
   private static ThreadLocal<String> operationType = new ThreadLocal<>();
 
   protected FSPermissionChecker(String fsOwner, String supergroup,
       UserGroupInformation callerUgi,
       INodeAttributeProvider attributeProvider) {
-    this(fsOwner, supergroup, callerUgi, attributeProvider, false);
+    this(fsOwner, supergroup, callerUgi, attributeProvider, false, 0);
   }
 
   protected FSPermissionChecker(String fsOwner, String supergroup,
       UserGroupInformation callerUgi,
       INodeAttributeProvider attributeProvider,
-      boolean useAuthorizationWithContextAPI) {
+      boolean useAuthorizationWithContextAPI,
+      long accessControlEnforcerReportingThresholdMs) {
     this.fsOwner = fsOwner;
     this.supergroup = supergroup;
     this.callerUgi = callerUgi;
@@ -107,6 +114,7 @@ public class FSPermissionChecker implements AccessControlEnforcer {
     user = callerUgi.getShortUserName();
     isSuper = user.equals(fsOwner) || groups.contains(supergroup);
     this.attributeProvider = attributeProvider;
+    this.accessControlEnforcer = initAccessControlEnforcer();
 
     if (attributeProvider == null) {
       // If attribute provider is null, use FSPermissionChecker default
@@ -117,6 +125,38 @@ public class FSPermissionChecker implements AccessControlEnforcer {
     } else {
       authorizeWithContext = useAuthorizationWithContextAPI;
     }
+    this.accessControlEnforcerReportingThresholdMs
+        = accessControlEnforcerReportingThresholdMs;
+  }
+
+  private String checkAccessControlEnforcerSlowness(
+      long elapsedMs, AccessControlEnforcer ace,
+      boolean checkSuperuser, AuthorizationContext context) {
+    return checkAccessControlEnforcerSlowness(elapsedMs,
+        accessControlEnforcerReportingThresholdMs, ace.getClass(), checkSuperuser,
+        context.getPath(), context.getOperationName(),
+        context.getCallerContext());
+  }
+
+  /** @return the warning message if there is any. */
+  static String checkAccessControlEnforcerSlowness(
+      long elapsedMs, long thresholdMs, Class<? extends AccessControlEnforcer> clazz,
+      boolean checkSuperuser, String path, String op, Object caller) {
+    if (!LOG.isWarnEnabled()) {
+      return null;
+    }
+    if (thresholdMs <= 0) {
+      return null;
+    }
+    if (elapsedMs > thresholdMs) {
+      final String message = clazz + " ran for "
+          + elapsedMs + "ms (threshold=" + thresholdMs + "ms) to check "
+          + (checkSuperuser ? "superuser" : "permission")
+          + " on " + path + " for " + op + " from caller " + caller;
+      LOG.warn(message, new Throwable("TRACE"));
+      return message;
+    }
+    return null;
   }
 
   public static void setOperationType(String opType) {
@@ -139,9 +179,70 @@ public class FSPermissionChecker implements AccessControlEnforcer {
     return attributeProvider;
   }
 
-  private AccessControlEnforcer getAccessControlEnforcer() {
-    return (attributeProvider != null)
-        ? attributeProvider.getExternalAccessControlEnforcer(this) : this;
+  @FunctionalInterface
+  interface CheckPermission {
+    void run() throws AccessControlException;
+  }
+
+  static String runCheckPermission(CheckPermission checker,
+      LongFunction<String> checkElapsedMs) throws AccessControlException {
+    final String message;
+    final long start = Time.monotonicNow();
+    try {
+      checker.run();
+    } finally {
+      final long end = Time.monotonicNow();
+      message = checkElapsedMs.apply(end - start);
+    }
+    return message;
+  }
+
+  private AccessControlEnforcer initAccessControlEnforcer() {
+    final AccessControlEnforcer e = Optional.ofNullable(attributeProvider)
+        .map(p -> p.getExternalAccessControlEnforcer(this))
+        .orElse(this);
+    if (e == this) {
+      return this;
+    }
+    // For an external AccessControlEnforcer, check for slowness.
+    return new AccessControlEnforcer() {
+      @Override
+      public void checkPermission(
+          String filesystemOwner, String superGroup, UserGroupInformation ugi,
+          INodeAttributes[] inodeAttrs, INode[] inodes, byte[][] pathByNameArr,
+          int snapshotId, String path, int ancestorIndex, boolean doCheckOwner,
+          FsAction ancestorAccess, FsAction parentAccess, FsAction access,
+          FsAction subAccess, boolean ignoreEmptyDir)
+          throws AccessControlException {
+        runCheckPermission(
+            () -> e.checkPermission(filesystemOwner, superGroup, ugi,
+                inodeAttrs, inodes, pathByNameArr, snapshotId, path,
+                ancestorIndex, doCheckOwner, ancestorAccess, parentAccess,
+                access, subAccess, ignoreEmptyDir),
+            elapsedMs -> checkAccessControlEnforcerSlowness(elapsedMs,
+                accessControlEnforcerReportingThresholdMs,
+                e.getClass(), false, path, operationType.get(),
+                CallerContext.getCurrent()));
+      }
+
+      @Override
+      public void checkPermissionWithContext(AuthorizationContext context)
+          throws AccessControlException {
+        runCheckPermission(
+            () -> e.checkPermissionWithContext(context),
+            elapsedMs -> checkAccessControlEnforcerSlowness(elapsedMs,
+                e, false, context));
+      }
+
+      @Override
+      public void checkSuperUserPermissionWithContext(
+          AuthorizationContext context) throws AccessControlException {
+        runCheckPermission(
+            () -> e.checkSuperUserPermissionWithContext(context),
+            elapsedMs -> checkAccessControlEnforcerSlowness(elapsedMs,
+                e, true, context));
+      }
+    };
   }
 
   private AuthorizationContext getAuthorizationContextForSuperUser(
@@ -189,7 +290,7 @@ public class FSPermissionChecker implements AccessControlEnforcer {
           + ", operationName=" + FSPermissionChecker.operationType.get()
           + ", path=" + path);
     }
-    getAccessControlEnforcer().checkSuperUserPermissionWithContext(
+    accessControlEnforcer.checkSuperUserPermissionWithContext(
         getAuthorizationContextForSuperUser(path));
   }
 
@@ -208,7 +309,7 @@ public class FSPermissionChecker implements AccessControlEnforcer {
           + ", operationName=" + FSPermissionChecker.operationType.get()
           + ", path=" + path);
     }
-    getAccessControlEnforcer().denyUserAccess(
+    accessControlEnforcer.denyUserAccess(
         getAuthorizationContextForSuperUser(path), errorMessage);
   }
 
@@ -241,7 +342,7 @@ public class FSPermissionChecker implements AccessControlEnforcer {
    * @param ignoreEmptyDir Ignore permission checking for empty directory?
    * @throws AccessControlException
    * 
-   * Guarded by {@link FSNamesystem#readLock()}
+   * Guarded by {@link FSNamesystem#readLock(RwLockMode)}
    * Caller of this method must hold that lock.
    */
   void checkPermission(INodesInPath inodesInPath, boolean doCheckOwner,
@@ -270,7 +371,6 @@ public class FSPermissionChecker implements AccessControlEnforcer {
     String path = inodesInPath.getPath();
     int ancestorIndex = inodes.length - 2;
 
-    AccessControlEnforcer enforcer = getAccessControlEnforcer();
 
     String opType = operationType.get();
     try {
@@ -294,9 +394,9 @@ public class FSPermissionChecker implements AccessControlEnforcer {
             ignoreEmptyDir(ignoreEmptyDir).
             operationName(opType).
             callerContext(CallerContext.getCurrent());
-        enforcer.checkPermissionWithContext(builder.build());
+        accessControlEnforcer.checkPermissionWithContext(builder.build());
       } else {
-        enforcer.checkPermission(fsOwner, supergroup, callerUgi, inodeAttrs,
+        accessControlEnforcer.checkPermission(fsOwner, supergroup, callerUgi, inodeAttrs,
             inodes, components, snapshotId, path, ancestorIndex, doCheckOwner,
             ancestorAccess, parentAccess, access, subAccess, ignoreEmptyDir);
       }
@@ -328,7 +428,6 @@ public class FSPermissionChecker implements AccessControlEnforcer {
         pathComponents.length - 1, inode, snapshotId);
     try {
       INodeAttributes[] iNodeAttr = {nodeAttributes};
-      AccessControlEnforcer enforcer = getAccessControlEnforcer();
       String opType = operationType.get();
       if (this.authorizeWithContext && opType != null) {
         INodeAttributeProvider.AuthorizationContext.Builder builder =
@@ -354,9 +453,9 @@ public class FSPermissionChecker implements AccessControlEnforcer {
             .operationName(opType)
             .callerContext(CallerContext.getCurrent());
 
-        enforcer.checkPermissionWithContext(builder.build());
+        accessControlEnforcer.checkPermissionWithContext(builder.build());
       } else {
-        enforcer.checkPermission(
+        accessControlEnforcer.checkPermission(
             fsOwner, supergroup, callerUgi,
             iNodeAttr, // single inode attr in the array
             new INode[]{inode}, // single inode in the array
@@ -369,6 +468,7 @@ public class FSPermissionChecker implements AccessControlEnforcer {
             false);
       }
     } catch (AccessControlException ace) {
+      LOG.debug("Error while checking permission: ", ace);
       throw new AccessControlException(
           toAccessControlString(nodeAttributes, inode.getFullPathName(),
               access));
@@ -455,7 +555,7 @@ public class FSPermissionChecker implements AccessControlEnforcer {
     return inodeAttrs;
   }
 
-  /** Guarded by {@link FSNamesystem#readLock()} */
+  /** Guarded by {@link FSNamesystem#readLock(RwLockMode)}. */
   private void checkOwner(INodeAttributes[] inodes, byte[][] components, int i)
       throws AccessControlException {
     if (getUser().equals(inodes[i].getUserName())) {
@@ -466,7 +566,7 @@ public class FSPermissionChecker implements AccessControlEnforcer {
         " is not the owner of inode=" + getPath(components, 0, i));
   }
 
-  /** Guarded by {@link FSNamesystem#readLock()}
+  /** Guarded by {@link FSNamesystem#readLock(RwLockMode)}.
    * @throws AccessControlException
    * @throws ParentNotDirectoryException
    * @throws UnresolvedPathException
@@ -480,7 +580,7 @@ public class FSPermissionChecker implements AccessControlEnforcer {
     }
   }
 
-  /** Guarded by {@link FSNamesystem#readLock()} */
+  /** Guarded by {@link FSNamesystem#readLock(RwLockMode)}. */
   private void checkSubAccess(byte[][] components, int pathIdx,
       INode inode, int snapshotId, FsAction access, boolean ignoreEmptyDir)
       throws AccessControlException {
@@ -554,7 +654,7 @@ public class FSPermissionChecker implements AccessControlEnforcer {
     }
   }
 
-  /** Guarded by {@link FSNamesystem#readLock()} */
+  /** Guarded by {@link FSNamesystem#readLock(RwLockMode)}. */
   private void check(INodeAttributes[] inodes, byte[][] components, int i,
       FsAction access) throws AccessControlException {
     INodeAttributes inode = (i >= 0) ? inodes[i] : null;
@@ -668,7 +768,7 @@ public class FSPermissionChecker implements AccessControlEnforcer {
     return !foundMatch && mode.getOtherAction().implies(access);
   }
 
-  /** Guarded by {@link FSNamesystem#readLock()} */
+  /** Guarded by {@link FSNamesystem#readLock(RwLockMode)}. */
   private void checkStickyBit(INodeAttributes[] inodes, byte[][] components,
       int index) throws AccessControlException {
     INodeAttributes parent = inodes[index];

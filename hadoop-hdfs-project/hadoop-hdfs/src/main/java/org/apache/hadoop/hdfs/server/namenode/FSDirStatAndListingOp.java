@@ -41,6 +41,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSDirectory.DirOp;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectorySnapshottableFeature;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
+import org.apache.hadoop.hdfs.util.RwLockMode;
 import org.apache.hadoop.security.AccessControlException;
 
 import java.io.FileNotFoundException;
@@ -262,13 +263,24 @@ class FSDirStatAndListingOp {
             needLocation, false);
         listingCnt++;
         if (listing[i] instanceof HdfsLocatedFileStatus) {
-            // Once we  hit lsLimit locations, stop.
-            // This helps to prevent excessively large response payloads.
-            // Approximate #locations with locatedBlockCount() * repl_factor
-            LocatedBlocks blks =
-                ((HdfsLocatedFileStatus)listing[i]).getLocatedBlocks();
-            locationBudget -= (blks == null) ? 0 :
-               blks.locatedBlockCount() * listing[i].getReplication();
+          // Once we hit lsLimit locations, stop.
+          // This helps to prevent excessively large response payloads.
+          LocatedBlocks blks =
+              ((HdfsLocatedFileStatus) listing[i]).getLocatedBlocks();
+          if (blks != null) {
+            ErasureCodingPolicy ecPolicy = listing[i].getErasureCodingPolicy();
+            if (ecPolicy != null && !ecPolicy.isReplicationPolicy()) {
+              // Approximate #locations with locatedBlockCount() *
+              // internalBlocksNum.
+              locationBudget -= blks.locatedBlockCount() *
+                  (ecPolicy.getNumDataUnits() + ecPolicy.getNumParityUnits());
+            } else {
+              // Approximate #locations with locatedBlockCount() *
+              // replicationFactor.
+              locationBudget -=
+                  blks.locatedBlockCount() * listing[i].getReplication();
+            }
+          }
         }
       }
       // truncate return array if necessary
@@ -433,16 +445,22 @@ class FSDirStatAndListingOp {
       if (isEncrypted) {
         feInfo = FSDirEncryptionZoneOp.getFileEncryptionInfo(fsd, iip);
       }
+      // ComputeFileSize and needLocation need BM lock.
       if (needLocation) {
-        final boolean inSnapshot = snapshot != Snapshot.CURRENT_STATE_ID;
-        final boolean isUc = !inSnapshot && fileNode.isUnderConstruction();
-        final long fileSize = !inSnapshot && isUc
-            ? fileNode.computeFileSizeNotIncludingLastUcBlock() : size;
-        loc = fsd.getBlockManager().createLocatedBlocks(
-            fileNode.getBlocks(snapshot), fileSize, isUc, 0L, size,
-            needBlockToken, inSnapshot, feInfo, ecPolicy);
-        if (loc == null) {
-          loc = new LocatedBlocks();
+        fsd.getFSNamesystem().readLock(RwLockMode.BM);
+        try {
+          final boolean inSnapshot = snapshot != Snapshot.CURRENT_STATE_ID;
+          final boolean isUc = !inSnapshot && fileNode.isUnderConstruction();
+          final long fileSize = !inSnapshot && isUc
+              ? fileNode.computeFileSizeNotIncludingLastUcBlock() : size;
+          loc = fsd.getBlockManager().createLocatedBlocks(
+              fileNode.getBlocks(snapshot), fileSize, isUc, 0L, size,
+              needBlockToken, inSnapshot, feInfo, ecPolicy);
+          if (loc == null) {
+            loc = new LocatedBlocks();
+          }
+        } finally {
+          fsd.getFSNamesystem().readUnlock(RwLockMode.BM, "createFileStatus");
         }
       }
     } else if (node.isDirectory()) {

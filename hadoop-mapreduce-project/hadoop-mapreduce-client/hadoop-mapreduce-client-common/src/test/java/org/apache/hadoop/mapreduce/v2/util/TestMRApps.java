@@ -18,12 +18,13 @@
 
 package org.apache.hadoop.mapreduce.v2.util;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -58,14 +59,15 @@ import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 public class TestMRApps {
   private static File testWorkDir = null;
   
-  @BeforeClass
+  @BeforeAll
   public static void setupTestDirs() throws IOException {
     testWorkDir = new File("target", TestMRApps.class.getCanonicalName());
     delete(testWorkDir);
@@ -73,7 +75,7 @@ public class TestMRApps {
     testWorkDir = testWorkDir.getAbsoluteFile();
   }
   
-  @AfterClass
+  @AfterAll
   public static void cleanupTestDirs() throws IOException {
     if (testWorkDir != null) {
       delete(testWorkDir);
@@ -87,14 +89,16 @@ public class TestMRApps {
     fs.delete(p, true);
   }
 
-  @Test (timeout = 120000)
+  @Test
+  @Timeout(120000)
   public void testJobIDtoString() {
     JobId jid = RecordFactoryProvider.getRecordFactory(null).newRecordInstance(JobId.class);
     jid.setAppId(ApplicationId.newInstance(0, 0));
     assertEquals("job_0_0000", MRApps.toString(jid));
   }
 
-  @Test (timeout = 120000)
+  @Test
+  @Timeout(120000)
   public void testToJobID() {
     JobId jid = MRApps.toJobID("job_1_1");
     assertEquals(1, jid.getAppId().getClusterTimestamp());
@@ -102,13 +106,17 @@ public class TestMRApps {
     assertEquals(1, jid.getId()); // tests against some proto.id and not a job.id field
   }
 
-  @Test (timeout = 120000, expected=IllegalArgumentException.class)
+  @Test
+  @Timeout(120000)
   public void testJobIDShort() {
-    MRApps.toJobID("job_0_0_0");
+    assertThrows(IllegalArgumentException.class, () -> {
+      MRApps.toJobID("job_0_0_0");
+    });
   }
 
   //TODO_get.set
-  @Test (timeout = 120000)
+  @Test
+  @Timeout(120000)
   public void testTaskIDtoString() {
     TaskId tid = RecordFactoryProvider.getRecordFactory(null).newRecordInstance(TaskId.class);
     tid.setJobId(RecordFactoryProvider.getRecordFactory(null).newRecordInstance(JobId.class));
@@ -124,7 +132,8 @@ public class TestMRApps {
     assertEquals("task_0_0000_r_000000", MRApps.toString(tid));
   }
 
-  @Test (timeout = 120000)
+  @Test
+  @Timeout(120000)
   public void testToTaskID() {
     TaskId tid = MRApps.toTaskID("task_1_2_r_3");
     assertEquals(1, tid.getJobId().getAppId().getClusterTimestamp());
@@ -137,28 +146,38 @@ public class TestMRApps {
     assertEquals(TaskType.MAP, tid.getTaskType());
   }
 
-  @Test(timeout = 120000, expected=IllegalArgumentException.class) 
+  @Test
+  @Timeout(120000)
   public void testTaskIDShort() {
-    MRApps.toTaskID("task_0_0000_m");
+    assertThrows(IllegalArgumentException.class, () -> {
+      MRApps.toTaskID("task_0_0000_m");
+    });
   }
 
-  @Test(timeout = 120000, expected=IllegalArgumentException.class) 
+  @Test
+  @Timeout(120000)
   public void testTaskIDBadType() {
-    MRApps.toTaskID("task_0_0000_x_000000");
+    assertThrows(IllegalArgumentException.class, () -> {
+      MRApps.toTaskID("task_0_0000_x_000000");
+    });
   }
 
   //TODO_get.set
-  @Test (timeout = 120000)
+  @Test
+  @Timeout(120000)
   public void testTaskAttemptIDtoString() {
-    TaskAttemptId taid = RecordFactoryProvider.getRecordFactory(null).newRecordInstance(TaskAttemptId.class);
+    TaskAttemptId taid =
+        RecordFactoryProvider.getRecordFactory(null).newRecordInstance(TaskAttemptId.class);
     taid.setTaskId(RecordFactoryProvider.getRecordFactory(null).newRecordInstance(TaskId.class));
     taid.getTaskId().setTaskType(TaskType.MAP);
-    taid.getTaskId().setJobId(RecordFactoryProvider.getRecordFactory(null).newRecordInstance(JobId.class));
+    taid.getTaskId()
+        .setJobId(RecordFactoryProvider.getRecordFactory(null).newRecordInstance(JobId.class));
     taid.getTaskId().getJobId().setAppId(ApplicationId.newInstance(0, 0));
     assertEquals("attempt_0_0000_m_000000_0", MRApps.toString(taid));
   }
 
-  @Test (timeout = 120000)
+  @Test
+  @Timeout(120000)
   public void testToTaskAttemptID() {
     TaskAttemptId taid = MRApps.toTaskAttemptID("attempt_0_1_m_2_3");
     assertEquals(0, taid.getTaskId().getJobId().getAppId().getClusterTimestamp());
@@ -168,23 +187,28 @@ public class TestMRApps {
     assertEquals(3, taid.getId());
   }
 
-  @Test(timeout = 120000, expected=IllegalArgumentException.class) 
+  @Test
+  @Timeout(120000)
   public void testTaskAttemptIDShort() {
-    MRApps.toTaskAttemptID("attempt_0_0_0_m_0");
+    assertThrows(IllegalArgumentException.class, () -> {
+      MRApps.toTaskAttemptID("attempt_0_0_0_m_0");
+    });
   }
 
-  @Test (timeout = 120000)
+  @Test
+  @Timeout(120000)
   public void testGetJobFileWithUser() {
     Configuration conf = new Configuration();
     conf.set(MRJobConfig.MR_AM_STAGING_DIR, "/my/path/to/staging");
-    String jobFile = MRApps.getJobFile(conf, "dummy-user", 
+    String jobFile = MRApps.getJobFile(conf, "dummy-user",
         new JobID("dummy-job", 12345));
-    assertNotNull("getJobFile results in null.", jobFile);
-    assertEquals("jobFile with specified user is not as expected.",
-        "/my/path/to/staging/dummy-user/.staging/job_dummy-job_12345/job.xml", jobFile);
+    assertNotNull(jobFile, "getJobFile results in null.");
+    assertEquals("/my/path/to/staging/dummy-user/.staging/job_dummy-job_12345/job.xml", jobFile,
+        "jobFile with specified user is not as expected.");
   }
 
-  @Test (timeout = 120000)
+  @Test
+  @Timeout(120000)
   public void testSetClasspath() throws IOException {
     Configuration conf = new Configuration();
     conf.setBoolean(MRConfig.MAPREDUCE_APP_SUBMISSION_CROSS_PLATFORM, true);
@@ -192,8 +216,8 @@ public class TestMRApps {
     Map<String, String> environment = new HashMap<String, String>();
     MRApps.setClasspath(environment, job.getConfiguration());
     assertTrue(environment.get("CLASSPATH").startsWith(
-      ApplicationConstants.Environment.PWD.$$()
-          + ApplicationConstants.CLASS_PATH_SEPARATOR));
+        ApplicationConstants.Environment.PWD.$$()
+            + ApplicationConstants.CLASS_PATH_SEPARATOR));
     String yarnAppClasspath = job.getConfiguration().get(
         YarnConfiguration.YARN_APPLICATION_CLASSPATH,
         StringUtils.join(",",
@@ -201,23 +225,24 @@ public class TestMRApps {
     if (yarnAppClasspath != null) {
       yarnAppClasspath =
           yarnAppClasspath.replaceAll(",\\s*",
-            ApplicationConstants.CLASS_PATH_SEPARATOR).trim();
+              ApplicationConstants.CLASS_PATH_SEPARATOR).trim();
     }
     assertTrue(environment.get("CLASSPATH").contains(yarnAppClasspath));
-    String mrAppClasspath = 
+    String mrAppClasspath =
         job.getConfiguration().get(
             MRJobConfig.MAPREDUCE_APPLICATION_CLASSPATH,
             MRJobConfig.DEFAULT_MAPREDUCE_CROSS_PLATFORM_APPLICATION_CLASSPATH);
     if (mrAppClasspath != null) {
       mrAppClasspath =
           mrAppClasspath.replaceAll(",\\s*",
-            ApplicationConstants.CLASS_PATH_SEPARATOR).trim();
+              ApplicationConstants.CLASS_PATH_SEPARATOR).trim();
     }
     assertTrue(environment.get("CLASSPATH").contains(mrAppClasspath));
   }
-  
-  @Test (timeout = 120000)
-  public void testSetClasspathWithArchives () throws IOException {
+
+  @Test
+  @Timeout(120000)
+  public void testSetClasspathWithArchives() throws IOException {
     File testTGZ = new File(testWorkDir, "test.tgz");
     FileOutputStream out = new FileOutputStream(testTGZ);
     out.write(0);
@@ -227,27 +252,28 @@ public class TestMRApps {
     Job job = Job.getInstance(conf);
     conf = job.getConfiguration();
     String testTGZQualifiedPath = FileSystem.getLocal(conf).makeQualified(new Path(
-      testTGZ.getAbsolutePath())).toString();
+        testTGZ.getAbsolutePath())).toString();
     conf.set(MRJobConfig.CLASSPATH_ARCHIVES, testTGZQualifiedPath);
     conf.set(MRJobConfig.CACHE_ARCHIVES, testTGZQualifiedPath + "#testTGZ");
     Map<String, String> environment = new HashMap<String, String>();
     MRApps.setClasspath(environment, conf);
     assertTrue(environment.get("CLASSPATH").startsWith(
-      ApplicationConstants.Environment.PWD.$$() + ApplicationConstants.CLASS_PATH_SEPARATOR));
+        ApplicationConstants.Environment.PWD.$$() + ApplicationConstants.CLASS_PATH_SEPARATOR));
     String confClasspath = job.getConfiguration().get(
         YarnConfiguration.YARN_APPLICATION_CLASSPATH,
         StringUtils.join(",",
             YarnConfiguration.DEFAULT_YARN_CROSS_PLATFORM_APPLICATION_CLASSPATH));
     if (confClasspath != null) {
       confClasspath = confClasspath.replaceAll(",\\s*", ApplicationConstants.CLASS_PATH_SEPARATOR)
-        .trim();
+          .trim();
     }
     assertTrue(environment.get("CLASSPATH").contains(confClasspath));
     assertTrue(environment.get("CLASSPATH").contains("testTGZ"));
   }
 
- @Test (timeout = 120000)
- public void testSetClasspathWithUserPrecendence() {
+  @Test
+  @Timeout(120000)
+  public void testSetClasspathWithUserPrecendence() {
     Configuration conf = new Configuration();
     conf.setBoolean(MRConfig.MAPREDUCE_APP_SUBMISSION_CROSS_PLATFORM, true);
     conf.setBoolean(MRJobConfig.MAPREDUCE_JOB_USER_CLASSPATH_FIRST, true);
@@ -260,13 +286,14 @@ public class TestMRApps {
     String env_str = env.get("CLASSPATH");
     String expectedClasspath = StringUtils.join(ApplicationConstants.CLASS_PATH_SEPARATOR,
         Arrays.asList(ApplicationConstants.Environment.PWD.$$(), "job.jar/*",
-        "job.jar/classes/", "job.jar/lib/*",
-        ApplicationConstants.Environment.PWD.$$() + "/*"));
-    assertTrue("MAPREDUCE_JOB_USER_CLASSPATH_FIRST set, but not taking effect!",
-      env_str.startsWith(expectedClasspath));
+            "job.jar/classes/", "job.jar/lib/*",
+            ApplicationConstants.Environment.PWD.$$() + "/*"));
+    assertTrue(env_str.startsWith(expectedClasspath),
+        "MAPREDUCE_JOB_USER_CLASSPATH_FIRST set, but not taking effect!");
   }
 
-  @Test (timeout = 120000)
+  @Test
+  @Timeout(120000)
   public void testSetClasspathWithNoUserPrecendence() {
     Configuration conf = new Configuration();
     conf.setBoolean(MRConfig.MAPREDUCE_APP_SUBMISSION_CROSS_PLATFORM, true);
@@ -280,14 +307,15 @@ public class TestMRApps {
     String env_str = env.get("CLASSPATH");
     String expectedClasspath = StringUtils.join(ApplicationConstants.CLASS_PATH_SEPARATOR,
         Arrays.asList("job.jar/*", "job.jar/classes/", "job.jar/lib/*",
-        ApplicationConstants.Environment.PWD.$$() + "/*"));
-    assertTrue("MAPREDUCE_JOB_USER_CLASSPATH_FIRST false, and job.jar is not in"
-      + " the classpath!", env_str.contains(expectedClasspath));
-    assertFalse("MAPREDUCE_JOB_USER_CLASSPATH_FIRST false, but taking effect!",
-      env_str.startsWith(expectedClasspath));
+            ApplicationConstants.Environment.PWD.$$() + "/*"));
+    assertTrue(env_str.contains(expectedClasspath),
+        "MAPREDUCE_JOB_USER_CLASSPATH_FIRST false, and job.jar is not in" + " the classpath!");
+    assertFalse(env_str.startsWith(expectedClasspath),
+        "MAPREDUCE_JOB_USER_CLASSPATH_FIRST false, but taking effect!");
   }
-  
-  @Test (timeout = 120000)
+
+  @Test
+  @Timeout(120000)
   public void testSetClasspathWithJobClassloader() throws IOException {
     Configuration conf = new Configuration();
     conf.setBoolean(MRConfig.MAPREDUCE_APP_SUBMISSION_CROSS_PLATFORM, true);
@@ -296,19 +324,18 @@ public class TestMRApps {
     MRApps.setClasspath(env, conf);
     String cp = env.get("CLASSPATH");
     String appCp = env.get("APP_CLASSPATH");
-    assertFalse("MAPREDUCE_JOB_CLASSLOADER true, but job.jar is in the"
-      + " classpath!", cp.contains("jar" + ApplicationConstants.CLASS_PATH_SEPARATOR + "job"));
-    assertFalse("MAPREDUCE_JOB_CLASSLOADER true, but PWD is in the classpath!",
-      cp.contains("PWD"));
+    assertFalse(cp.contains("jar" + ApplicationConstants.CLASS_PATH_SEPARATOR + "job"),
+        "MAPREDUCE_JOB_CLASSLOADER true, but job.jar is in the" + " classpath!");
+    assertFalse(cp.contains("PWD"), "MAPREDUCE_JOB_CLASSLOADER true, but PWD is in the classpath!");
     String expectedAppClasspath = StringUtils.join(ApplicationConstants.CLASS_PATH_SEPARATOR,
-        Arrays.asList(ApplicationConstants.Environment.PWD.$$(), "job.jar/*",
-        "job.jar/classes/", "job.jar/lib/*",
-        ApplicationConstants.Environment.PWD.$$() + "/*"));
-    assertEquals("MAPREDUCE_JOB_CLASSLOADER true, but job.jar is not in the app"
-      + " classpath!", expectedAppClasspath, appCp);
+        Arrays.asList(ApplicationConstants.Environment.PWD.$$(), "job.jar/*", "job.jar/classes/",
+            "job.jar/lib/*", ApplicationConstants.Environment.PWD.$$() + "/*"));
+    assertEquals(expectedAppClasspath, appCp,
+        "MAPREDUCE_JOB_CLASSLOADER true, but job.jar is not in the app" + " classpath!");
   }
 
-  @Test (timeout = 3000000)
+  @Test
+  @Timeout(3000000)
   public void testSetClasspathWithFramework() throws IOException {
     final String FRAMEWORK_NAME = "some-framework-name";
     final String FRAMEWORK_PATH = "some-framework-path#" + FRAMEWORK_NAME;
@@ -320,9 +347,9 @@ public class TestMRApps {
       MRApps.setClasspath(env, conf);
       fail("Failed to catch framework path set without classpath change");
     } catch (IllegalArgumentException e) {
-      assertTrue("Unexpected IllegalArgumentException",
-          e.getMessage().contains("Could not locate MapReduce framework name '"
-              + FRAMEWORK_NAME + "'"));
+      assertTrue(e.getMessage().contains("Could not locate MapReduce framework name '"
+              + FRAMEWORK_NAME + "'"),
+          "Unexpected IllegalArgumentException");
     }
 
     env.clear();
@@ -333,48 +360,50 @@ public class TestMRApps {
         Arrays.asList("job.jar/*", "job.jar/classes/", "job.jar/lib/*",
             ApplicationConstants.Environment.PWD.$$() + "/*"));
     String expectedClasspath = StringUtils.join(ApplicationConstants.CLASS_PATH_SEPARATOR,
-        Arrays.asList(ApplicationConstants.Environment.PWD.$$(),
-            FRAMEWORK_CLASSPATH, stdClasspath));
-    assertEquals("Incorrect classpath with framework and no user precedence",
-        expectedClasspath, env.get("CLASSPATH"));
+        Arrays.asList(ApplicationConstants.Environment.PWD.$$(), FRAMEWORK_CLASSPATH,
+            stdClasspath));
+    assertEquals(expectedClasspath, env.get("CLASSPATH"),
+        "Incorrect classpath with framework and no user precedence");
 
     env.clear();
     conf.setBoolean(MRJobConfig.MAPREDUCE_JOB_USER_CLASSPATH_FIRST, true);
     MRApps.setClasspath(env, conf);
     expectedClasspath = StringUtils.join(ApplicationConstants.CLASS_PATH_SEPARATOR,
-        Arrays.asList(ApplicationConstants.Environment.PWD.$$(),
-            stdClasspath, FRAMEWORK_CLASSPATH));
-    assertEquals("Incorrect classpath with framework and user precedence",
-        expectedClasspath, env.get("CLASSPATH"));
+        Arrays.asList(ApplicationConstants.Environment.PWD.$$(), stdClasspath,
+            FRAMEWORK_CLASSPATH));
+    assertEquals(expectedClasspath, env.get("CLASSPATH"),
+        "Incorrect classpath with framework and user precedence");
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(30000)
   public void testSetupDistributedCacheEmpty() throws IOException {
     Configuration conf = new Configuration();
     Map<String, LocalResource> localResources = new HashMap<String, LocalResource>();
     MRApps.setupDistributedCache(conf, localResources);
-    assertTrue("Empty Config did not produce an empty list of resources",
-        localResources.isEmpty());
+    assertTrue(localResources.isEmpty(),
+        "Empty Config did not produce an empty list of resources");
   }
-  
+
   @SuppressWarnings("deprecation")
-  @Test(timeout = 120000)
+  @Test
+  @Timeout(120000)
   public void testSetupDistributedCacheConflicts() throws Exception {
     Configuration conf = new Configuration();
     conf.setClass("fs.mockfs.impl", MockFileSystem.class, FileSystem.class);
-    
+
     URI mockUri = URI.create("mockfs://mock/");
-    FileSystem mockFs = ((FilterFileSystem)FileSystem.get(mockUri, conf))
+    FileSystem mockFs = ((FilterFileSystem) FileSystem.get(mockUri, conf))
         .getRawFileSystem();
-    
+
     URI archive = new URI("mockfs://mock/tmp/something.zip#something");
     Path archivePath = new Path(archive);
     URI file = new URI("mockfs://mock/tmp/something.txt#something");
     Path filePath = new Path(file);
-    
+
     when(mockFs.resolvePath(archivePath)).thenReturn(archivePath);
     when(mockFs.resolvePath(filePath)).thenReturn(filePath);
-    
+
     Job.addCacheArchive(archive, conf);
     conf.set(MRJobConfig.CACHE_ARCHIVES_TIMESTAMPS, "10");
     conf.set(MRJobConfig.CACHE_ARCHIVES_SIZES, "10");
@@ -383,8 +412,8 @@ public class TestMRApps {
     conf.set(MRJobConfig.CACHE_FILE_TIMESTAMPS, "11");
     conf.set(MRJobConfig.CACHE_FILES_SIZES, "11");
     conf.set(MRJobConfig.CACHE_FILE_VISIBILITIES, "true");
-    Map<String, LocalResource> localResources = 
-      new HashMap<String, LocalResource>();
+    Map<String, LocalResource> localResources =
+        new HashMap<String, LocalResource>();
     MRApps.setupDistributedCache(conf, localResources);
 
     assertEquals(1, localResources.size());
@@ -395,32 +424,33 @@ public class TestMRApps {
     assertEquals(10l, lr.getTimestamp());
     assertEquals(LocalResourceType.ARCHIVE, lr.getType());
   }
-  
+
   @SuppressWarnings("deprecation")
-  @Test(timeout = 120000)
+  @Test
+  @Timeout(120000)
   public void testSetupDistributedCacheConflictsFiles() throws Exception {
     Configuration conf = new Configuration();
     conf.setClass("fs.mockfs.impl", MockFileSystem.class, FileSystem.class);
-    
+
     URI mockUri = URI.create("mockfs://mock/");
-    FileSystem mockFs = ((FilterFileSystem)FileSystem.get(mockUri, conf))
+    FileSystem mockFs = ((FilterFileSystem) FileSystem.get(mockUri, conf))
         .getRawFileSystem();
-    
+
     URI file = new URI("mockfs://mock/tmp/something.zip#something");
     Path filePath = new Path(file);
     URI file2 = new URI("mockfs://mock/tmp/something.txt#something");
     Path file2Path = new Path(file2);
-    
+
     when(mockFs.resolvePath(filePath)).thenReturn(filePath);
     when(mockFs.resolvePath(file2Path)).thenReturn(file2Path);
-    
+
     Job.addCacheFile(file, conf);
     Job.addCacheFile(file2, conf);
     conf.set(MRJobConfig.CACHE_FILE_TIMESTAMPS, "10,11");
     conf.set(MRJobConfig.CACHE_FILES_SIZES, "10,11");
     conf.set(MRJobConfig.CACHE_FILE_VISIBILITIES, "true,true");
-    Map<String, LocalResource> localResources = 
-      new HashMap<String, LocalResource>();
+    Map<String, LocalResource> localResources =
+        new HashMap<String, LocalResource>();
     MRApps.setupDistributedCache(conf, localResources);
 
     assertEquals(1, localResources.size());
@@ -431,25 +461,26 @@ public class TestMRApps {
     assertEquals(10l, lr.getTimestamp());
     assertEquals(LocalResourceType.FILE, lr.getType());
   }
-  
+
   @SuppressWarnings("deprecation")
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(30000)
   public void testSetupDistributedCache() throws Exception {
     Configuration conf = new Configuration();
     conf.setClass("fs.mockfs.impl", MockFileSystem.class, FileSystem.class);
-    
+
     URI mockUri = URI.create("mockfs://mock/");
-    FileSystem mockFs = ((FilterFileSystem)FileSystem.get(mockUri, conf))
+    FileSystem mockFs = ((FilterFileSystem) FileSystem.get(mockUri, conf))
         .getRawFileSystem();
-    
+
     URI archive = new URI("mockfs://mock/tmp/something.zip");
     Path archivePath = new Path(archive);
     URI file = new URI("mockfs://mock/tmp/something.txt#something");
     Path filePath = new Path(file);
-    
+
     when(mockFs.resolvePath(archivePath)).thenReturn(archivePath);
     when(mockFs.resolvePath(filePath)).thenReturn(filePath);
-    
+
     Job.addCacheArchive(archive, conf);
     conf.set(MRJobConfig.CACHE_ARCHIVES_TIMESTAMPS, "10");
     conf.set(MRJobConfig.CACHE_ARCHIVES_SIZES, "10");
@@ -458,8 +489,8 @@ public class TestMRApps {
     conf.set(MRJobConfig.CACHE_FILE_TIMESTAMPS, "11");
     conf.set(MRJobConfig.CACHE_FILES_SIZES, "11");
     conf.set(MRJobConfig.CACHE_FILE_VISIBILITIES, "true");
-    Map<String, LocalResource> localResources = 
-      new HashMap<String, LocalResource>();
+    Map<String, LocalResource> localResources =
+        new HashMap<String, LocalResource>();
     MRApps.setupDistributedCache(conf, localResources);
     assertEquals(2, localResources.size());
     LocalResource lr = localResources.get("something.zip");
@@ -519,35 +550,34 @@ public class TestMRApps {
       "/org/apache/hadoop/fake/Klass"
   };
 
-  private static final String[] DEFAULT_XMLS = new String[] {
-        "core-default.xml",
-      "mapred-default.xml",
-        "hdfs-default.xml",
-        "yarn-default.xml"
-  };
+  private static final String[] DEFAULT_XMLS =
+      new String[] {"core-default.xml", "mapred-default.xml", "hdfs-default.xml",
+          "yarn-default.xml"};
 
   @Test
   public void testSystemClasses() {
     final List<String> systemClasses =
         Arrays.asList(StringUtils.getTrimmedStrings(
-        ApplicationClassLoader.SYSTEM_CLASSES_DEFAULT));
+            ApplicationClassLoader.SYSTEM_CLASSES_DEFAULT));
     for (String defaultXml : DEFAULT_XMLS) {
-      assertTrue(defaultXml + " must be system resource",
-          ApplicationClassLoader.isSystemClass(defaultXml, systemClasses));
+      assertTrue(ApplicationClassLoader.isSystemClass(defaultXml, systemClasses),
+          defaultXml + " must be system resource");
     }
     for (String klass : SYS_CLASSES) {
-      assertTrue(klass + " must be system class",
-          ApplicationClassLoader.isSystemClass(klass, systemClasses));
+      assertTrue(ApplicationClassLoader.isSystemClass(klass, systemClasses),
+          klass + " must be system class");
     }
-    assertFalse("/fake/Klass must not be a system class",
-        ApplicationClassLoader.isSystemClass("/fake/Klass", systemClasses));
+    assertFalse(ApplicationClassLoader.isSystemClass("/fake/Klass", systemClasses),
+        "/fake/Klass must not be a system class");
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testInvalidWebappAddress() throws Exception {
-    Configuration conf = new Configuration();
-    conf.set(JHAdminConfig.MR_HISTORY_WEBAPP_ADDRESS, "19888");
-    MRWebAppUtil.getApplicationWebURLOnJHSWithScheme(
-         conf, ApplicationId.newInstance(0, 1));
+    assertThrows(IllegalArgumentException.class, () -> {
+      Configuration conf = new Configuration();
+      conf.set(JHAdminConfig.MR_HISTORY_WEBAPP_ADDRESS, "19888");
+      MRWebAppUtil.getApplicationWebURLOnJHSWithScheme(
+          conf, ApplicationId.newInstance(0, 1));
+    });
   }
 }

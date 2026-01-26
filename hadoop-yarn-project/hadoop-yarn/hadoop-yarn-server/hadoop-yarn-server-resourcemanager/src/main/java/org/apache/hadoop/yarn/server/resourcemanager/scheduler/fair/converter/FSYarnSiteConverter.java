@@ -49,7 +49,7 @@ public class FSYarnSiteConverter {
         FairSchedulerConfiguration.CONTINUOUS_SCHEDULING_ENABLED,
         FairSchedulerConfiguration.DEFAULT_CONTINUOUS_SCHEDULING_ENABLED)) {
       yarnSiteConfig.setBoolean(
-          CapacitySchedulerConfiguration.SCHEDULE_ASYNCHRONOUSLY_ENABLE, true);
+          CapacitySchedulerConfiguration.SCHEDULE_ASYNCHRONOUSLY_ENABLE, enableAsyncScheduler);
       int interval = conf.getInt(
           FairSchedulerConfiguration.CONTINUOUS_SCHEDULING_SLEEP_MS,
           FairSchedulerConfiguration.DEFAULT_CONTINUOUS_SCHEDULING_SLEEP_MS);

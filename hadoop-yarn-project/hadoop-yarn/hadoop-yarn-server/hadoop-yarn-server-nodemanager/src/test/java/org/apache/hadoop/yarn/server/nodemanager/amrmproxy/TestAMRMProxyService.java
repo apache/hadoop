@@ -41,13 +41,18 @@ import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.server.MockResourceManagerFacade;
 import org.apache.hadoop.yarn.server.nodemanager.amrmproxy.AMRMProxyService.RequestInterceptorChainWrapper;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.RecoveredAMRMProxyState;
 import org.apache.hadoop.yarn.util.Records;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class TestAMRMProxyService extends BaseAMRMProxyTest {
 
@@ -58,6 +63,8 @@ public class TestAMRMProxyService extends BaseAMRMProxyTest {
 
   /**
    * Test if the pipeline is created properly.
+   *
+   * @throws Exception There was an error registerApplicationMaster.
    */
   @Test
   public void testRequestInterceptorChainCreation() throws Exception {
@@ -69,12 +76,11 @@ public class TestAMRMProxyService extends BaseAMRMProxyTest {
       case 0:
       case 1:
       case 2:
-        Assert.assertEquals(PassThroughRequestInterceptor.class.getName(),
+        assertEquals(PassThroughRequestInterceptor.class.getName(),
             root.getClass().getName());
         break;
       case 3:
-        Assert.assertEquals(MockRequestInterceptor.class.getName(), root
-            .getClass().getName());
+        assertEquals(MockRequestInterceptor.class.getName(), root.getClass().getName());
         break;
       }
 
@@ -82,16 +88,15 @@ public class TestAMRMProxyService extends BaseAMRMProxyTest {
       index++;
     }
 
-    Assert.assertEquals(
-        "The number of interceptors in chain does not match",
-        Integer.toString(4), Integer.toString(index));
+    assertEquals(Integer.toString(4), Integer.toString(index),
+        "The number of interceptors in chain does not match");
 
   }
 
   /**
    * Tests registration of a single application master.
    * 
-   * @throws Exception
+   * @throws Exception There was an error registerApplicationMaster.
    */
   @Test
   public void testRegisterOneApplicationMaster() throws Exception {
@@ -99,16 +104,15 @@ public class TestAMRMProxyService extends BaseAMRMProxyTest {
     // manager return it as the queue name. Assert that we received the queue
     // name
     int testAppId = 1;
-    RegisterApplicationMasterResponse response1 =
-        registerApplicationMaster(testAppId);
-    Assert.assertNotNull(response1);
-    Assert.assertEquals(Integer.toString(testAppId), response1.getQueue());
+    RegisterApplicationMasterResponse response1 = registerApplicationMaster(testAppId);
+    assertNotNull(response1);
+    assertEquals(Integer.toString(testAppId), response1.getQueue());
   }
 
   /**
    * Tests the case when interceptor pipeline initialization fails.
    *
-   * @throws IOException
+   * @throws IOException There was an error registerApplicationMaster.
    */
   @Test
   public void testInterceptorInitFailure() throws IOException {
@@ -122,14 +126,13 @@ public class TestAMRMProxyService extends BaseAMRMProxyTest {
     int testAppId = 1;
     try {
       registerApplicationMaster(testAppId);
-      Assert.fail("Should not reach here. Expecting an exception thrown");
+      fail("Should not reach here. Expecting an exception thrown");
     } catch (Exception e) {
       Map<ApplicationId, RequestInterceptorChainWrapper> pipelines =
           getAMRMProxyService().getPipelines();
       ApplicationId id = getApplicationId(testAppId);
-      Assert.assertTrue(
-          "The interceptor pipeline should be removed if initialization fails",
-          pipelines.get(id) == null);
+      assertNull(pipelines.get(id),
+          "The interceptor pipeline should be removed if initialization fails");
     }
   }
 
@@ -137,28 +140,24 @@ public class TestAMRMProxyService extends BaseAMRMProxyTest {
    * Tests the registration of multiple application master serially one at a
    * time.
    * 
-   * @throws Exception
+   * @throws Exception There was an error registerApplicationMaster.
    */
   @Test
   public void testRegisterMultipleApplicationMasters() throws Exception {
     for (int testAppId = 0; testAppId < 3; testAppId++) {
-      RegisterApplicationMasterResponse response =
-          registerApplicationMaster(testAppId);
-      Assert.assertNotNull(response);
-      Assert
-          .assertEquals(Integer.toString(testAppId), response.getQueue());
+      RegisterApplicationMasterResponse response = registerApplicationMaster(testAppId);
+      assertNotNull(response);
+      assertEquals(Integer.toString(testAppId), response.getQueue());
     }
   }
 
   /**
    * Tests the registration of multiple application masters using multiple
    * threads in parallel.
-   * 
-   * @throws Exception
+   *
    */
   @Test
-  public void testRegisterMultipleApplicationMastersInParallel()
-      throws Exception {
+  public void testRegisterMultipleApplicationMastersInParallel() {
     int numberOfRequests = 5;
     ArrayList<String> testContexts =
         CreateTestRequestIdentifiers(numberOfRequests);
@@ -167,10 +166,10 @@ public class TestAMRMProxyService extends BaseAMRMProxyTest {
 
   private ArrayList<String> CreateTestRequestIdentifiers(
       int numberOfRequests) {
-    ArrayList<String> testContexts = new ArrayList<String>();
+    ArrayList<String> testContexts = new ArrayList<>();
     LOG.info("Creating " + numberOfRequests + " contexts for testing");
     for (int ep = 0; ep < numberOfRequests; ep++) {
-      testContexts.add("test-endpoint-" + Integer.toString(ep));
+      testContexts.add("test-endpoint-" + ep);
       LOG.info("Created test context: " + testContexts.get(ep));
     }
     return testContexts;
@@ -181,16 +180,16 @@ public class TestAMRMProxyService extends BaseAMRMProxyTest {
     int testAppId = 1;
     RegisterApplicationMasterResponse registerResponse =
         registerApplicationMaster(testAppId);
-    Assert.assertNotNull(registerResponse);
-    Assert.assertEquals(Integer.toString(testAppId),
+    assertNotNull(registerResponse);
+    assertEquals(Integer.toString(testAppId),
         registerResponse.getQueue());
 
     FinishApplicationMasterResponse finishResponse =
         finishApplicationMaster(testAppId,
             FinalApplicationStatus.SUCCEEDED);
 
-    Assert.assertNotNull(finishResponse);
-    Assert.assertEquals(true, finishResponse.getIsUnregistered());
+    assertNotNull(finishResponse);
+    assertTrue(finishResponse.getIsUnregistered());
   }
 
   @Test
@@ -198,20 +197,19 @@ public class TestAMRMProxyService extends BaseAMRMProxyTest {
     int testAppId = 1;
     RegisterApplicationMasterResponse registerResponse =
         registerApplicationMaster(testAppId);
-    Assert.assertNotNull(registerResponse);
-    Assert.assertEquals(Integer.toString(testAppId),
+    assertNotNull(registerResponse);
+    assertEquals(Integer.toString(testAppId),
         registerResponse.getQueue());
 
     FinishApplicationMasterResponse finishResponse =
         finishApplicationMaster(testAppId, FinalApplicationStatus.FAILED);
 
-    Assert.assertNotNull(finishResponse);
+    assertNotNull(finishResponse);
 
     try {
       // Try to finish an application master that is already finished.
       finishApplicationMaster(testAppId, FinalApplicationStatus.SUCCEEDED);
-      Assert
-          .fail("The request to finish application master should have failed");
+      fail("The request to finish application master should have failed");
     } catch (Throwable ex) {
       // This is expected. So nothing required here.
       LOG.info("Finish registration failed as expected because it was not registered");
@@ -219,12 +217,11 @@ public class TestAMRMProxyService extends BaseAMRMProxyTest {
   }
 
   @Test
-  public void testFinishInvalidApplicationMaster() throws Exception {
+  public void testFinishInvalidApplicationMaster() {
     try {
       // Try to finish an application master that was not registered.
       finishApplicationMaster(4, FinalApplicationStatus.SUCCEEDED);
-      Assert
-          .fail("The request to finish application master should have failed");
+      fail("The request to finish application master should have failed");
     } catch (Throwable ex) {
       // This is expected. So nothing required here.
       LOG.info("Finish registration failed as expected because it was not registered");
@@ -237,8 +234,8 @@ public class TestAMRMProxyService extends BaseAMRMProxyTest {
     for (int index = 0; index < numberOfRequests; index++) {
       RegisterApplicationMasterResponse registerResponse =
           registerApplicationMaster(index);
-      Assert.assertNotNull(registerResponse);
-      Assert.assertEquals(Integer.toString(index),
+      assertNotNull(registerResponse);
+      assertEquals(Integer.toString(index),
           registerResponse.getQueue());
     }
 
@@ -247,19 +244,17 @@ public class TestAMRMProxyService extends BaseAMRMProxyTest {
       FinishApplicationMasterResponse finishResponse =
           finishApplicationMaster(index, FinalApplicationStatus.SUCCEEDED);
 
-      Assert.assertNotNull(finishResponse);
-      Assert.assertEquals(true, finishResponse.getIsUnregistered());
+      assertNotNull(finishResponse);
+      assertTrue(finishResponse.getIsUnregistered());
 
       // Assert that the application has been removed from the collection
-      Assert.assertTrue(this.getAMRMProxyService()
-          .getPipelines().size() == index);
+      assertEquals(this.getAMRMProxyService().getPipelines().size(), index);
     }
 
     try {
       // Try to finish an application master that is already finished.
       finishApplicationMaster(1, FinalApplicationStatus.SUCCEEDED);
-      Assert
-          .fail("The request to finish application master should have failed");
+      fail("The request to finish application master should have failed");
     } catch (Throwable ex) {
       // This is expected. So nothing required here.
       LOG.info("Finish registration failed as expected because it was not registered");
@@ -268,8 +263,7 @@ public class TestAMRMProxyService extends BaseAMRMProxyTest {
     try {
       // Try to finish an application master that was not registered.
       finishApplicationMaster(4, FinalApplicationStatus.SUCCEEDED);
-      Assert
-          .fail("The request to finish application master should have failed");
+      fail("The request to finish application master should have failed");
     } catch (Throwable ex) {
       // This is expected. So nothing required here.
       LOG.info("Finish registration failed as expected because it was not registered");
@@ -280,17 +274,16 @@ public class TestAMRMProxyService extends BaseAMRMProxyTest {
   public void testFinishMultipleApplicationMastersInParallel()
       throws Exception {
     int numberOfRequests = 5;
-    ArrayList<String> testContexts = new ArrayList<String>();
-    LOG.info("Creating " + numberOfRequests + " contexts for testing");
+    ArrayList<String> testContexts = new ArrayList<>();
+    LOG.info("Creating {} contexts for testing", numberOfRequests);
     for (int i = 0; i < numberOfRequests; i++) {
-      testContexts.add("test-endpoint-" + Integer.toString(i));
+      testContexts.add("test-endpoint-" + i);
       LOG.info("Created test context: " + testContexts.get(i));
 
       RegisterApplicationMasterResponse registerResponse =
           registerApplicationMaster(i);
-      Assert.assertNotNull(registerResponse);
-      Assert
-          .assertEquals(Integer.toString(i), registerResponse.getQueue());
+      assertNotNull(registerResponse);
+      assertEquals(Integer.toString(i), registerResponse.getQueue());
     }
 
     finishApplicationMastersInParallel(testContexts);
@@ -301,29 +294,28 @@ public class TestAMRMProxyService extends BaseAMRMProxyTest {
     int testAppId = 1;
     RegisterApplicationMasterResponse registerResponse =
         registerApplicationMaster(testAppId);
-    Assert.assertNotNull(registerResponse);
-    Assert.assertEquals(Integer.toString(testAppId),
+    assertNotNull(registerResponse);
+    assertEquals(Integer.toString(testAppId),
         registerResponse.getQueue());
 
     AllocateResponse allocateResponse = allocate(testAppId);
-    Assert.assertNotNull(allocateResponse);
+    assertNotNull(allocateResponse);
 
     FinishApplicationMasterResponse finishResponse =
         finishApplicationMaster(testAppId,
             FinalApplicationStatus.SUCCEEDED);
 
-    Assert.assertNotNull(finishResponse);
-    Assert.assertEquals(true, finishResponse.getIsUnregistered());
+    assertNotNull(finishResponse);
+    assertTrue(finishResponse.getIsUnregistered());
   }
 
   @Test
-  public void testAllocateRequestWithoutRegistering() throws Exception {
+  public void testAllocateRequestWithoutRegistering() {
 
     try {
       // Try to allocate an application master without registering.
       allocate(1);
-      Assert
-          .fail("The request to allocate application master should have failed");
+      fail("The request to allocate application master should have failed");
     } catch (Throwable ex) {
       // This is expected. So nothing required here.
       LOG.info("AllocateRequest failed as expected because AM was not registered");
@@ -335,7 +327,7 @@ public class TestAMRMProxyService extends BaseAMRMProxyTest {
     int testAppId = 1;
     RegisterApplicationMasterResponse registerResponse =
         registerApplicationMaster(testAppId);
-    Assert.assertNotNull(registerResponse);
+    assertNotNull(registerResponse);
     getContainersAndAssert(testAppId, 1);
     finishApplicationMaster(testAppId, FinalApplicationStatus.SUCCEEDED);
   }
@@ -345,7 +337,7 @@ public class TestAMRMProxyService extends BaseAMRMProxyTest {
     int testAppId = 1;
     RegisterApplicationMasterResponse registerResponse =
         registerApplicationMaster(testAppId);
-    Assert.assertNotNull(registerResponse);
+    assertNotNull(registerResponse);
     getContainersAndAssert(testAppId, 10);
     finishApplicationMaster(testAppId, FinalApplicationStatus.SUCCEEDED);
   }
@@ -355,7 +347,7 @@ public class TestAMRMProxyService extends BaseAMRMProxyTest {
     int testAppId = 1;
     RegisterApplicationMasterResponse registerResponse =
         registerApplicationMaster(testAppId);
-    Assert.assertNotNull(registerResponse);
+    assertNotNull(registerResponse);
     List<Container> containers = getContainersAndAssert(testAppId, 10);
     releaseContainersAndAssert(testAppId, containers);
     finishApplicationMaster(testAppId, FinalApplicationStatus.SUCCEEDED);
@@ -368,7 +360,7 @@ public class TestAMRMProxyService extends BaseAMRMProxyTest {
     for (int testAppId = 0; testAppId < numberOfApps; testAppId++) {
       RegisterApplicationMasterResponse registerResponse =
           registerApplicationMaster(testAppId);
-      Assert.assertNotNull(registerResponse);
+      assertNotNull(registerResponse);
       List<Container> containers = getContainersAndAssert(testAppId, 10);
       releaseContainersAndAssert(testAppId, containers);
     }
@@ -381,51 +373,41 @@ public class TestAMRMProxyService extends BaseAMRMProxyTest {
   public void testAllocateAndReleaseContainersForMultipleAMInParallel()
       throws Exception {
     int numberOfApps = 6;
-    ArrayList<Integer> tempAppIds = new ArrayList<Integer>();
+    ArrayList<Integer> tempAppIds = new ArrayList<>();
     for (int i = 0; i < numberOfApps; i++) {
-      tempAppIds.add(new Integer(i));
+      tempAppIds.add(i);
     }
 
-    final ArrayList<Integer> appIds = tempAppIds;
     List<Integer> responses =
-        runInParallel(appIds, new Function<Integer, Integer>() {
-          @Override
-          public Integer invoke(Integer testAppId) {
-            try {
-              RegisterApplicationMasterResponse registerResponse =
-                  registerApplicationMaster(testAppId);
-              Assert.assertNotNull("response is null", registerResponse);
-              List<Container> containers =
-                  getContainersAndAssert(testAppId, 10);
-              releaseContainersAndAssert(testAppId, containers);
+        runInParallel(tempAppIds, testAppId -> {
+          try {
+            RegisterApplicationMasterResponse registerResponse =
+                registerApplicationMaster(testAppId);
+            assertNotNull(registerResponse, "response is null");
+            List<Container> containers =
+                getContainersAndAssert(testAppId, 10);
+            releaseContainersAndAssert(testAppId, containers);
 
-              LOG.info("Successfully registered application master with appId: "
-                  + testAppId);
-            } catch (Throwable ex) {
-              LOG.error(
-                  "Failed to register application master with appId: "
-                      + testAppId, ex);
-              testAppId = null;
-            }
-
-            return testAppId;
+            LOG.info("Successfully registered application master with appId: {}", testAppId);
+          } catch (Throwable ex) {
+            LOG.error("Failed to register application master with appId: {}", testAppId, ex);
+            testAppId = null;
           }
+
+          return testAppId;
         });
 
-    Assert.assertEquals(
-        "Number of responses received does not match with request",
-        appIds.size(), responses.size());
+    assertEquals(tempAppIds.size(), responses.size(),
+        "Number of responses received does not match with request");
 
     for (Integer testAppId : responses) {
-      Assert.assertNotNull(testAppId);
-      finishApplicationMaster(testAppId.intValue(),
-          FinalApplicationStatus.SUCCEEDED);
+      assertNotNull(testAppId);
+      finishApplicationMaster(testAppId, FinalApplicationStatus.SUCCEEDED);
     }
   }
 
   @Test
-  public void testMultipleAttemptsSameNode()
-      throws YarnException, IOException, Exception {
+  public void testMultipleAttemptsSameNode() throws Exception {
 
     String user = "hadoop";
     ApplicationId appId = ApplicationId.newInstance(1, 1);
@@ -435,23 +417,23 @@ public class TestAMRMProxyService extends BaseAMRMProxyTest {
 
     RegisterApplicationMasterResponse response1 =
         registerApplicationMaster(appId.getId());
-    Assert.assertNotNull(response1);
+    assertNotNull(response1);
 
     AllocateResponse allocateResponse = allocate(appId.getId());
-    Assert.assertNotNull(allocateResponse);
+    assertNotNull(allocateResponse);
 
     // Second Attempt
 
     applicationAttemptId = ApplicationAttemptId.newInstance(appId, 2);
     getAMRMProxyService().initializePipeline(applicationAttemptId, user,
-        new Token<AMRMTokenIdentifier>(), null, null, false, null);
+        new Token<>(), null, null, false, null);
 
     RequestInterceptorChainWrapper chain2 =
         getAMRMProxyService().getPipelines().get(appId);
-    Assert.assertEquals(applicationAttemptId, chain2.getApplicationAttemptId());
+    assertEquals(applicationAttemptId, chain2.getApplicationAttemptId());
 
     allocateResponse = allocate(appId.getId());
-    Assert.assertNotNull(allocateResponse);
+    assertNotNull(allocateResponse);
   }
 
   private List<Container> getContainersAndAssert(int appId,
@@ -461,23 +443,18 @@ public class TestAMRMProxyService extends BaseAMRMProxyTest {
     allocateRequest.setResponseId(1);
 
     List<Container> containers =
-        new ArrayList<Container>(numberOfResourceRequests);
-    List<ResourceRequest> askList =
-        new ArrayList<ResourceRequest>(numberOfResourceRequests);
+        new ArrayList<>(numberOfResourceRequests);
+    List<ResourceRequest> askList = new ArrayList<>(numberOfResourceRequests);
     for (int testAppId = 0; testAppId < numberOfResourceRequests; testAppId++) {
-      askList.add(createResourceRequest(
-          "test-node-" + Integer.toString(testAppId), 6000, 2,
-          testAppId % 5, 1));
+      askList.add(createResourceRequest("test-node-" + testAppId, 6000, 2, testAppId % 5, 1));
     }
 
     allocateRequest.setAskList(askList);
 
     AllocateResponse allocateResponse = allocate(appId, allocateRequest);
-    Assert.assertNotNull("allocate() returned null response",
-        allocateResponse);
-    Assert.assertNull(
-        "new AMRMToken from RM should have been nulled by AMRMProxyService",
-        allocateResponse.getAMRMToken());
+    assertNotNull(allocateResponse, "allocate() returned null response");
+    assertNull(allocateResponse.getAMRMToken(),
+        "new AMRMToken from RM should have been nulled by AMRMProxyService");
 
     containers.addAll(allocateResponse.getAllocatedContainers());
 
@@ -487,38 +464,33 @@ public class TestAMRMProxyService extends BaseAMRMProxyTest {
     while (containers.size() < askList.size() && numHeartbeat++ < 10) {
       allocateResponse =
           allocate(appId, Records.newRecord(AllocateRequest.class));
-      Assert.assertNotNull("allocate() returned null response",
-          allocateResponse);
-      Assert.assertNull(
-          "new AMRMToken from RM should have been nulled by AMRMProxyService",
-          allocateResponse.getAMRMToken());
+      assertNotNull(allocateResponse, "allocate() returned null response");
+      assertNull(allocateResponse.getAMRMToken(),
+          "new AMRMToken from RM should have been nulled by AMRMProxyService");
 
       containers.addAll(allocateResponse.getAllocatedContainers());
 
-      LOG.info("Number of allocated containers in this request: "
-          + Integer.toString(allocateResponse.getAllocatedContainers()
-              .size()));
-      LOG.info("Total number of allocated containers: "
-          + Integer.toString(containers.size()));
+      LOG.info("Number of allocated containers in this request: {}.",
+          allocateResponse.getAllocatedContainers().size());
+      LOG.info("Total number of allocated containers: {}.", containers.size());
       Thread.sleep(10);
     }
 
     // We broadcast the request, the number of containers we received will be
     // higher than we ask
-    Assert.assertTrue("The asklist count is not same as response",
-        askList.size() <= containers.size());
+    assertTrue(askList.size() <= containers.size(),
+        "The asklist count is not same as response");
     return containers;
   }
 
   private void releaseContainersAndAssert(int appId,
       List<Container> containers) throws Exception {
-    Assert.assertTrue(containers.size() > 0);
+    assertTrue(containers.size() > 0);
     AllocateRequest allocateRequest =
         Records.newRecord(AllocateRequest.class);
     allocateRequest.setResponseId(1);
 
-    List<ContainerId> relList =
-        new ArrayList<ContainerId>(containers.size());
+    List<ContainerId> relList = new ArrayList<>(containers.size());
     for (Container container : containers) {
       relList.add(container.getId());
     }
@@ -526,10 +498,9 @@ public class TestAMRMProxyService extends BaseAMRMProxyTest {
     allocateRequest.setReleaseList(relList);
 
     AllocateResponse allocateResponse = allocate(appId, allocateRequest);
-    Assert.assertNotNull(allocateResponse);
-    Assert.assertNull(
-        "new AMRMToken from RM should have been nulled by AMRMProxyService",
-        allocateResponse.getAMRMToken());
+    assertNotNull(allocateResponse);
+    assertNull(allocateResponse.getAMRMToken(),
+        "new AMRMToken from RM should have been nulled by AMRMProxyService");
 
     // We need to make sure all the resource managers received the
     // release list. The containers sent by the mock resource managers will be
@@ -547,32 +518,29 @@ public class TestAMRMProxyService extends BaseAMRMProxyTest {
         && numHeartbeat++ < 10) {
       allocateResponse =
           allocate(appId, Records.newRecord(AllocateRequest.class));
-      Assert.assertNotNull(allocateResponse);
-      Assert.assertNull(
-          "new AMRMToken from RM should have been nulled by AMRMProxyService",
-          allocateResponse.getAMRMToken());
+      assertNotNull(allocateResponse);
+      assertNull(allocateResponse.getAMRMToken(),
+          "new AMRMToken from RM should have been nulled by AMRMProxyService");
 
       newlyFinished = getCompletedContainerIds(
           allocateResponse.getCompletedContainersStatuses());
       containersForReleasedContainerIds.addAll(newlyFinished);
 
-      LOG.info("Number of containers received in this request: "
-          + Integer.toString(allocateResponse.getAllocatedContainers()
-              .size()));
-      LOG.info("Total number of containers received: "
-          + Integer.toString(containersForReleasedContainerIds.size()));
+      LOG.info("Number of containers received in this request: {}.",
+          allocateResponse.getAllocatedContainers().size());
+      LOG.info("Total number of containers received: {}.",
+          containersForReleasedContainerIds.size());
       Thread.sleep(10);
     }
 
-    Assert.assertEquals(relList.size(),
-        containersForReleasedContainerIds.size());
+    assertEquals(relList.size(), containersForReleasedContainerIds.size());
   }
 
   /**
    * Test AMRMProxy restart with recovery.
    */
   @Test
-  public void testRecovery() throws YarnException, Exception {
+  public void testRecovery() throws Exception {
 
     Configuration conf = createConfiguration();
     // Use the MockRequestInterceptorAcrossRestart instead for the chain
@@ -586,47 +554,46 @@ public class TestAMRMProxyService extends BaseAMRMProxyTest {
     int testAppId1 = 1;
     RegisterApplicationMasterResponse registerResponse =
         registerApplicationMaster(testAppId1);
-    Assert.assertNotNull(registerResponse);
-    Assert.assertEquals(Integer.toString(testAppId1),
+    assertNotNull(registerResponse);
+    assertEquals(Integer.toString(testAppId1),
         registerResponse.getQueue());
 
     int testAppId2 = 2;
     registerResponse = registerApplicationMaster(testAppId2);
-    Assert.assertNotNull(registerResponse);
-    Assert.assertEquals(Integer.toString(testAppId2),
+    assertNotNull(registerResponse);
+    assertEquals(Integer.toString(testAppId2),
         registerResponse.getQueue());
 
     AllocateResponse allocateResponse = allocate(testAppId2);
-    Assert.assertNotNull(allocateResponse);
+    assertNotNull(allocateResponse);
 
     // At the time of kill, app1 just registerAM, app2 already did one allocate.
     // Both application should be recovered
     createAndStartAMRMProxyService(conf);
-    Assert.assertTrue(getAMRMProxyService().getPipelines().size() == 2);
+    assertEquals(2, getAMRMProxyService().getPipelines().size());
 
     allocateResponse = allocate(testAppId1);
-    Assert.assertNotNull(allocateResponse);
+    assertNotNull(allocateResponse);
 
     FinishApplicationMasterResponse finishResponse =
         finishApplicationMaster(testAppId1, FinalApplicationStatus.SUCCEEDED);
-    Assert.assertNotNull(finishResponse);
-    Assert.assertEquals(true, finishResponse.getIsUnregistered());
+    assertNotNull(finishResponse);
+    assertTrue(finishResponse.getIsUnregistered());
 
     allocateResponse = allocate(testAppId2);
-    Assert.assertNotNull(allocateResponse);
+    assertNotNull(allocateResponse);
 
     finishResponse =
         finishApplicationMaster(testAppId2, FinalApplicationStatus.SUCCEEDED);
 
-    Assert.assertNotNull(finishResponse);
-    Assert.assertEquals(true, finishResponse.getIsUnregistered());
+    assertNotNull(finishResponse);
+    assertTrue(finishResponse.getIsUnregistered());
 
     int testAppId3 = 3;
     try {
       // Try to finish an application master that is not registered.
       finishApplicationMaster(testAppId3, FinalApplicationStatus.SUCCEEDED);
-      Assert
-          .fail("The Mock RM should complain about not knowing the third app");
+      fail("The Mock RM should complain about not knowing the third app");
     } catch (Throwable ex) {
     }
 
@@ -652,35 +619,33 @@ public class TestAMRMProxyService extends BaseAMRMProxyTest {
 
     RecoveredAMRMProxyState state =
         getNMContext().getNMStateStore().loadAMRMProxyState();
-    Assert.assertEquals(1, state.getAppContexts().size());
+    assertEquals(1, state.getAppContexts().size());
 
     // AMRMProxy restarts and recover
     createAndStartAMRMProxyService(conf);
 
     state = getNMContext().getNMStateStore().loadAMRMProxyState();
     // The app that failed to recover should have been removed from NMSS
-    Assert.assertEquals(0, state.getAppContexts().size());
+    assertEquals(0, state.getAppContexts().size());
   }
 
   @Test
   public void testCheckIfAppExistsInStateStore()
-      throws IOException, YarnException {
+      throws IOException {
     ApplicationId appId = ApplicationId.newInstance(0, 0);
     Configuration conf = createConfiguration();
     conf.setBoolean(YarnConfiguration.FEDERATION_ENABLED, true);
 
     createAndStartAMRMProxyService(conf);
 
-    Assert.assertEquals(false,
-        getAMRMProxyService().checkIfAppExistsInStateStore(appId));
+    assertFalse(getAMRMProxyService().checkIfAppExistsInStateStore(appId));
 
     Configuration distConf = createConfiguration();
     conf.setBoolean(YarnConfiguration.DIST_SCHEDULING_ENABLED, true);
 
     createAndStartAMRMProxyService(distConf);
 
-    Assert.assertEquals(true,
-        getAMRMProxyService().checkIfAppExistsInStateStore(appId));
+    assertTrue(getAMRMProxyService().checkIfAppExistsInStateStore(appId));
   }
 
   /**

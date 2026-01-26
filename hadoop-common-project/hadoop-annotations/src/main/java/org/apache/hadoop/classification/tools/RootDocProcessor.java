@@ -17,235 +17,353 @@
  */
 package org.apache.hadoop.classification.tools;
 
-import com.sun.javadoc.AnnotationDesc;
-import com.sun.javadoc.AnnotationTypeDoc;
-import com.sun.javadoc.ClassDoc;
-import com.sun.javadoc.ConstructorDoc;
-import com.sun.javadoc.Doc;
-import com.sun.javadoc.FieldDoc;
-import com.sun.javadoc.MethodDoc;
-import com.sun.javadoc.PackageDoc;
-import com.sun.javadoc.ProgramElementDoc;
-import com.sun.javadoc.RootDoc;
+import jdk.javadoc.doclet.DocletEnvironment;
+import javax.lang.model.element.AnnotationMirror;
+import javax.lang.model.element.Element;
+import javax.lang.model.element.ElementKind;
+import javax.lang.model.element.ExecutableElement;
+import javax.lang.model.element.PackageElement;
+import javax.lang.model.element.TypeElement;
+import javax.lang.model.element.VariableElement;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.InvocationHandler;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.WeakHashMap;
+import java.util.stream.Collectors;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
 /**
- * Process the {@link RootDoc} by substituting with (nested) proxy objects that
+ * Process the {@link DocletEnvironment} by substituting with (nested) proxy objects that
  * exclude elements with Private or LimitedPrivate annotations.
  * <p>
  * Based on code from http://www.sixlegs.com/blog/java/exclude-javadoc-tag.html.
  */
-class RootDocProcessor {
+final class RootDocProcessor {
 
-  static String stability = StabilityOptions.UNSTABLE_OPTION;
-  static boolean treatUnannotatedClassesAsPrivate = false;
+  private static String stability = StabilityOptions.UNSTABLE_OPTION;
+  private static boolean treatUnannotatedClassesAsPrivate = false;
 
-  public static RootDoc process(RootDoc root) {
-    return (RootDoc) process(root, RootDoc.class);
+  static void setStability(String value) {
+    stability = value;
   }
 
-  private static Object process(Object obj, Class<?> type) {
+  private RootDocProcessor() {
+    // no instances
+  }
+
+
+  static String getStability() {
+    return stability;
+  }
+
+  static void setTreatUnannotatedClassesAsPrivate(boolean value) {
+    treatUnannotatedClassesAsPrivate = value;
+  }
+
+  static boolean isTreatUnannotatedClassesAsPrivate() {
+    return treatUnannotatedClassesAsPrivate;
+  }
+
+  public static DocletEnvironment process(DocletEnvironment root) {
+    return (DocletEnvironment) wrap(root, DocletEnvironment.class);
+  }
+
+  private static final Map<Object, Object> PROXIES = new WeakHashMap<>();
+
+  private static Object wrap(Object obj, Class<?> expectedType) {
     if (obj == null) {
       return null;
     }
-    Class<?> cls = obj.getClass();
-    if (cls.getName().startsWith("com.sun.")) {
-      return getProxy(obj);
-    } else if (obj instanceof Object[]) {
-      Class<?> componentType = type.isArray() ? type.getComponentType()
-          : cls.getComponentType();
-      Object[] array = (Object[]) obj;
-      Object[] newArray = (Object[]) Array.newInstance(componentType,
-          array.length);
-      for (int i = 0; i < array.length; ++i) {
-        newArray[i] = process(array[i], componentType);
-      }
-      return newArray;
+
+    if (obj instanceof DocletEnvironment) {
+      return getProxy(obj, new Class<?>[]{DocletEnvironment.class},
+          new EnvHandler((DocletEnvironment) obj));
     }
+
+    if (obj instanceof Element) {
+      return getElementProxy((Element) obj);
+    }
+
+    if (obj instanceof Set) {
+      return filterAndWrapIterable((Iterable<?>) obj, true);
+    }
+    if (obj instanceof Collection) {
+      return filterAndWrapIterable((Iterable<?>) obj, false);
+    }
+    if (obj instanceof Iterable) {
+      return filterAndWrapIterable((Iterable<?>) obj, false);
+    }
+
+    if (obj.getClass().isArray()) {
+      int len = Array.getLength(obj);
+      Object[] res = new Object[len];
+      for (int i = 0; i < len; i++) {
+        Object v = Array.get(obj, i);
+        res[i] = wrap(v, v != null ? v.getClass() : Object.class);
+      }
+      return res;
+    }
+
     return obj;
   }
 
-  private static Map<Object, Object> proxies =
-    new WeakHashMap<Object, Object>();
-
-  private static Object getProxy(Object obj) {
-    Object proxy = proxies.get(obj);
-    if (proxy == null) {
-      proxy = Proxy.newProxyInstance(obj.getClass().getClassLoader(),
-        obj.getClass().getInterfaces(), new ExcludeHandler(obj));
-      proxies.put(obj, proxy);
+  private static Object getElementProxy(Element el) {
+    Object cached = PROXIES.get(el);
+    if (cached != null) {
+      return cached;
     }
+
+    Set<Class<?>> ifaces = new LinkedHashSet<>();
+    Collections.addAll(ifaces, el.getClass().getInterfaces());
+    ifaces.add(Element.class);
+    if (el instanceof TypeElement) {
+      ifaces.add(TypeElement.class);
+    }
+    if (el instanceof PackageElement) {
+      ifaces.add(PackageElement.class);
+    }
+    if (el instanceof ExecutableElement) {
+      ifaces.add(ExecutableElement.class);
+    }
+    if (el instanceof VariableElement) {
+      ifaces.add(VariableElement.class);
+    }
+
+    Object proxy = getProxy(el, ifaces.toArray(new Class<?>[0]), new ElementHandler(el));
+    PROXIES.put(el, proxy);
     return proxy;
   }
 
-  private static class ExcludeHandler implements InvocationHandler {
-    private Object target;
-
-    public ExcludeHandler(Object target) {
-      this.target = target;
+  private static Object getProxy(Object target, Class<?>[] ifaces, InvocationHandler h) {
+    Object cached = PROXIES.get(target);
+    if (cached != null) {
+      return cached;
     }
+    Object p = Proxy.newProxyInstance(target.getClass().getClassLoader(), ifaces, h);
+    PROXIES.put(target, p);
+    return p;
+  }
 
-    @Override
-    public Object invoke(Object proxy, Method method, Object[] args)
-        throws Throwable {
-      String methodName = method.getName();
-      if (target instanceof Doc) {
-        if (methodName.equals("isIncluded")) {
-          Doc doc = (Doc) target;
-          return !exclude(doc) && doc.isIncluded();
+  @SuppressWarnings("unchecked")
+  private static Object filterAndWrapIterable(Iterable<?> iterable, boolean preserveSet) {
+    if (iterable == null) {
+      return null;
+    }
+    if (preserveSet) {
+      Set<Object> out = new LinkedHashSet<>();
+      for (Object o : iterable) {
+        if (o instanceof Element) {
+          Element el = (Element) o;
+          if (!exclude(el)) {
+            out.add(getElementProxy(el));
+          }
+        } else {
+          out.add(wrap(o, o != null ? o.getClass() : Object.class));
         }
-        if (target instanceof RootDoc) {
-          if (methodName.equals("classes")) {
-            return filter(((RootDoc) target).classes(), ClassDoc.class);
-          } else if (methodName.equals("specifiedClasses")) {
-            return filter(((RootDoc) target).specifiedClasses(), ClassDoc.class);
-          } else if (methodName.equals("specifiedPackages")) {
-            return filter(((RootDoc) target).specifiedPackages(), PackageDoc.class);
+      }
+      return out;
+    } else {
+      List<Object> out = new ArrayList<>();
+      for (Object o : iterable) {
+        if (o instanceof Element) {
+          Element el = (Element) o;
+          if (!exclude(el)) {
+            out.add(getElementProxy(el));
           }
-        } else if (target instanceof ClassDoc) {
-          if (isFiltered(args)) {
-            if (methodName.equals("methods")) {
-              return filter(((ClassDoc) target).methods(true), MethodDoc.class);
-            } else if (methodName.equals("fields")) {
-              return filter(((ClassDoc) target).fields(true), FieldDoc.class);
-            } else if (methodName.equals("innerClasses")) {
-              return filter(((ClassDoc) target).innerClasses(true),
-                  ClassDoc.class);
-            } else if (methodName.equals("constructors")) {
-              return filter(((ClassDoc) target).constructors(true),
-                  ConstructorDoc.class);
-            }
-          } else {
-            if (methodName.equals("methods")) {
-              return filter(((ClassDoc) target).methods(true), MethodDoc.class);
-            }
-          }
-        } else if (target instanceof PackageDoc) {
-          if (methodName.equals("allClasses")) {
-            if (isFiltered(args)) {
-              return filter(((PackageDoc) target).allClasses(true),
-                  ClassDoc.class);
-            } else {
-              return filter(((PackageDoc) target).allClasses(), ClassDoc.class);
-            }
-          } else if (methodName.equals("annotationTypes")) {
-            return filter(((PackageDoc) target).annotationTypes(),
-                AnnotationTypeDoc.class);
-          } else if (methodName.equals("enums")) {
-            return filter(((PackageDoc) target).enums(),
-                ClassDoc.class);
-          } else if (methodName.equals("errors")) {
-            return filter(((PackageDoc) target).errors(),
-                ClassDoc.class);
-          } else if (methodName.equals("exceptions")) {
-            return filter(((PackageDoc) target).exceptions(),
-                ClassDoc.class);
-          } else if (methodName.equals("interfaces")) {
-            return filter(((PackageDoc) target).interfaces(),
-                ClassDoc.class);
-          } else if (methodName.equals("ordinaryClasses")) {
-            return filter(((PackageDoc) target).ordinaryClasses(),
-                ClassDoc.class);
-          }
+        } else {
+          out.add(wrap(o, o != null ? o.getClass() : Object.class));
+        }
+      }
+      return out;
+    }
+  }
+
+  private static Object unwrap(Object maybeProxy) {
+    if (!(maybeProxy instanceof Proxy)) {
+      return maybeProxy;
+    }
+    InvocationHandler ih = Proxy.getInvocationHandler(maybeProxy);
+    if (ih instanceof BaseHandler) {
+      return ((BaseHandler) ih).target;
+    }
+    return maybeProxy;
+  }
+
+  private static boolean exclude(Element el) {
+    boolean sawPublic = false;
+
+    for (AnnotationMirror am : el.getAnnotationMirrors()) {
+      final String qname = am.getAnnotationType().toString();
+
+      if (qname.equals(InterfaceAudience.Private.class.getCanonicalName())
+          || qname.equals(InterfaceAudience.LimitedPrivate.class.getCanonicalName())) {
+        return true;
+      }
+
+      if (stability.equals(StabilityOptions.EVOLVING_OPTION)) {
+        if (qname.equals(InterfaceStability.Unstable.class.getCanonicalName())) {
+          return true;
+        }
+      }
+      if (stability.equals(StabilityOptions.STABLE_OPTION)) {
+        if (qname.equals(InterfaceStability.Unstable.class.getCanonicalName())
+            || qname.equals(InterfaceStability.Evolving.class.getCanonicalName())) {
+          return true;
         }
       }
 
-      if (args != null) {
-        if (methodName.equals("compareTo") || methodName.equals("equals")
-            || methodName.equals("overrides")
-            || methodName.equals("subclassOf")) {
-          args[0] = unwrap(args[0]);
-        }
-      }
-      try {
-        return process(method.invoke(target, args), method.getReturnType());
-      } catch (InvocationTargetException e) {
-        throw e.getTargetException();
+      if (qname.equals(InterfaceAudience.Public.class.getCanonicalName())) {
+        sawPublic = true;
       }
     }
 
-    private static boolean exclude(Doc doc) {
-      AnnotationDesc[] annotations = null;
-      if (doc instanceof ProgramElementDoc) {
-        annotations = ((ProgramElementDoc) doc).annotations();
-      } else if (doc instanceof PackageDoc) {
-        annotations = ((PackageDoc) doc).annotations();
-      }
-      if (annotations != null) {
-        for (AnnotationDesc annotation : annotations) {
-          String qualifiedTypeName = annotation.annotationType().qualifiedTypeName();
-          if (qualifiedTypeName.equals(
-              InterfaceAudience.Private.class.getCanonicalName())
-              || qualifiedTypeName.equals(
-              InterfaceAudience.LimitedPrivate.class.getCanonicalName())) {
-            return true;
-          }
-          if (stability.equals(StabilityOptions.EVOLVING_OPTION)) {
-            if (qualifiedTypeName.equals(
-                InterfaceStability.Unstable.class.getCanonicalName())) {
-              return true;
-            }
-          }
-          if (stability.equals(StabilityOptions.STABLE_OPTION)) {
-            if (qualifiedTypeName.equals(
-                InterfaceStability.Unstable.class.getCanonicalName())
-                || qualifiedTypeName.equals(
-                InterfaceStability.Evolving.class.getCanonicalName())) {
-              return true;
-            }
-          }
-        }
-        for (AnnotationDesc annotation : annotations) {
-          String qualifiedTypeName =
-              annotation.annotationType().qualifiedTypeName();
-          if (qualifiedTypeName.equals(
-              InterfaceAudience.Public.class.getCanonicalName())) {
-            return false;
-          }
-        }
-      }
-      if (treatUnannotatedClassesAsPrivate) {
-        return doc.isClass() || doc.isInterface() || doc.isAnnotationType();
-      }
+    if (sawPublic) {
       return false;
     }
 
-    private static Object[] filter(Doc[] array, Class<?> componentType) {
-      if (array == null || array.length == 0) {
-        return array;
+    if (isTreatUnannotatedClassesAsPrivate()) {
+      ElementKind k = el.getKind();
+      if (k == ElementKind.CLASS || k == ElementKind.INTERFACE ||
+          k == ElementKind.ANNOTATION_TYPE) {
+        return true;
       }
-      List<Object> list = new ArrayList<Object>(array.length);
-      for (Doc entry : array) {
-        if (!exclude(entry)) {
-          list.add(process(entry, componentType));
-        }
-      }
-      return list.toArray((Object[]) Array.newInstance(componentType, list
-          .size()));
     }
 
-    private Object unwrap(Object proxy) {
-      if (proxy instanceof Proxy)
-        return ((ExcludeHandler) Proxy.getInvocationHandler(proxy)).target;
-      return proxy;
-    }
-
-    private boolean isFiltered(Object[] args) {
-      return args != null && Boolean.TRUE.equals(args[0]);
-    }
-
+    return false;
   }
 
+  private static abstract class BaseHandler implements InvocationHandler {
+    private final Object target;
+
+    BaseHandler(Object target) {
+      this.target = target;
+    }
+
+    protected Object getTarget() {
+      return target;
+    }
+
+    Object wrapReturn(Object ret) {
+      if (ret == null) {
+        return null;
+      }
+      if (ret instanceof DocletEnvironment) {
+        return wrap(ret, DocletEnvironment.class);
+      }
+      if (ret instanceof Element) {
+        return getElementProxy((Element) ret);
+      }
+      if (ret instanceof Set) {
+        return filterAndWrapIterable((Set<?>) ret, true);
+      }
+      if (ret instanceof Collection) {
+        return filterAndWrapIterable((Collection<?>) ret, false);
+      }
+      if (ret instanceof Iterable) {
+        return filterAndWrapIterable((Iterable<?>) ret, false);
+      }
+      if (ret.getClass().isArray()) {
+        return wrap(ret, ret.getClass());
+      }
+      return ret;
+    }
+
+    Object[] unwrapArgs(Object[] args) {
+      if (args == null) {
+        return null;
+      }
+      Object[] r = new Object[args.length];
+      for (int i = 0; i < args.length; i++) {
+        r[i] = unwrap(args[i]);
+      }
+      return r;
+    }
+  }
+
+  private static final class EnvHandler extends BaseHandler {
+    private final DocletEnvironment env;
+
+    EnvHandler(DocletEnvironment env) {
+      super(env);
+      this.env = env;
+    }
+
+    @Override
+    public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+      String name = method.getName();
+      Object[] uargs = unwrapArgs(args);
+
+      if ("getDocTrees".equals(name)) {
+        return env.getDocTrees();
+      } else if ("isIncluded".equals(name)) {
+        Element e = (Element) uargs[0];
+        boolean base = env.isIncluded(e);
+        return base && !exclude(e);
+      } else if ("getIncludedElements".equals(name)) {
+        Set<? extends Element> base = env.getIncludedElements();
+        return base.stream()
+            .filter(e -> !exclude(e))
+            .collect(Collectors.toCollection(LinkedHashSet::new));
+      } else if ("getSpecifiedElements".equals(name)) {
+        Set<? extends Element> base = env.getSpecifiedElements();
+        return base.stream()
+            .filter(e -> !exclude(e))
+            .collect(Collectors.toCollection(LinkedHashSet::new));
+      }
+
+      Object ret = method.invoke(getTarget(), uargs);
+      return wrapReturn(ret);
+    }
+  }
+
+  private static final class ElementHandler extends BaseHandler {
+    private final Element element;
+
+    ElementHandler(Element element) {
+      super(element);
+      this.element = element;
+    }
+
+    @Override
+    public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+      String name = method.getName();
+      Object[] uargs = unwrapArgs(args);
+
+      if ("equals".equals(name) && uargs != null && uargs.length == 1) {
+        return Objects.equals(element, unwrap(uargs[0]));
+      }
+      if ("hashCode".equals(name) && (uargs == null || uargs.length == 0)) {
+        return element.hashCode();
+      }
+      if ("toString".equals(name) && (uargs == null || uargs.length == 0)) {
+        return element.toString();
+      }
+
+      if ("getEnclosedElements".equals(name) && (uargs == null || uargs.length == 0)) {
+        List<? extends Element> enclosed = element.getEnclosedElements();
+        List<Element> filtered = new ArrayList<>();
+        for (Element e : enclosed) {
+          if (!exclude(e)) {
+            filtered.add(e);
+          }
+        }
+        return filtered;
+      }
+
+      Object ret = method.invoke(getTarget(), uargs);
+      return wrapReturn(ret);
+    }
+  }
 }

@@ -24,7 +24,7 @@ This filter must be configured in front of all the web application resources tha
 
 The Hadoop Auth and dependent JAR files must be in the web application classpath (commonly the `WEB-INF/lib` directory).
 
-Hadoop Auth uses SLF4J-API for logging. Auth Maven POM dependencies define the SLF4J API dependency but it does not define the dependency on a concrete logging implementation, this must be addded explicitly to the web application. For example, if the web applicationan uses Log4j, the SLF4J-LOG4J12 and LOG4J jar files must be part part of the web application classpath as well as the Log4j configuration file.
+Hadoop Auth uses SLF4J-API for logging. Auth Maven POM dependencies define the SLF4J API dependency but it does not define the dependency on a concrete logging implementation, this must be addded explicitly to the web application. For example, if the web applicationan uses Log4j, the SLF4J-LOG4J12 and LOG4J jar files must be part of the web application classpath as well as the Log4j configuration file.
 
 ### Common Configuration parameters
 
@@ -403,6 +403,21 @@ The following configuration properties are specific to the `zookeeper` implement
 
 *   `signer.secret.provider.zookeeper.kerberos.principal`: Set this to the
     Kerberos principal to use. This only required if using Kerberos.
+
+*   `signer.secret.provider.zookeeper.ssl.enabled` : Set this to true to enable SSL/TLS
+    communication between the server and Zookeeper, if the SignerSecretProvider is zookeeper.
+
+*   `signer.secret.provider.zookeeper.ssl.keystore.location` : Specifies the location of the
+    Zookeeper client's keystore file.
+
+*   `signer.secret.provider.zookeeper.ssl.keystore.password` : Specifies the location of the
+    Zookeeper client's keystore password.
+
+*   `signer.secret.provider.zookeeper.ssl.truststore.location` : Specifies the location of the
+    Zookeeper client's truststore file.
+
+*   `signer.secret.provider.zookeeper.ssl.truststore.password` : Specifies the location of the
+    Zookeeper client's truststore password.
 
 *   `signer.secret.provider.zookeeper.disconnect.on.shutdown`: Whether to close the
     ZooKeeper connection when the provider is shutdown. The default value is `true`.

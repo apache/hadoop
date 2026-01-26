@@ -269,7 +269,7 @@ public class FSImageFormatPBSnapshot {
         }
         diffs.addFirst(diff);
       }
-      file.addSnapshotFeature(diffs);
+      file.loadSnapshotFeature(diffs);
       short repl = file.getPreferredBlockReplication();
       for (BlockInfo b : file.getBlocks()) {
         if (b.getReplication() < repl) {
@@ -530,8 +530,8 @@ public class FSImageFormatPBSnapshot {
           context.checkCancelled();
         }
         if (i % parent.getInodesPerSubSection() == 0) {
-          parent.commitSubSection(headers,
-              FSImageFormatProtobuf.SectionName.SNAPSHOT_DIFF_SUB);
+          parent.commitSubSection(headers, FSImageFormatProtobuf.SectionName.SNAPSHOT_DIFF_SUB);
+          out = parent.getSectionOutputStream();
         }
       }
       parent.commitSectionAndSubSection(headers,

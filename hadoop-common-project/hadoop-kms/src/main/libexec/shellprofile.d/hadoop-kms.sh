@@ -49,6 +49,8 @@ function hadoop_subcommand_kms
     "-Dkms.config.dir=${HADOOP_CONF_DIR}"
   hadoop_add_param HADOOP_OPTS "-Dkms.log.dir=" \
     "-Dkms.log.dir=${HADOOP_LOG_DIR}"
+  hadoop_add_param HADOOP_OPTS "-Dlog4j.configuration=" \
+    "-Dlog4j.configuration=file:${HADOOP_CONF_DIR}/kms-log4j.properties"
 
   if [[ "${HADOOP_DAEMON_MODE}" == "default" ]] ||
      [[ "${HADOOP_DAEMON_MODE}" == "start" ]]; then

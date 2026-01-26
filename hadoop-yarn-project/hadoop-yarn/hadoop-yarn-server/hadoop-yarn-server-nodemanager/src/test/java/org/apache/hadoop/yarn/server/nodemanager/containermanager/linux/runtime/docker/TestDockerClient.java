@@ -28,15 +28,15 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerExecutionException;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.util.Arrays;
 
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 
@@ -45,12 +45,12 @@ public class TestDockerClient {
   private static final File TEST_ROOT_DIR = GenericTestUtils.getTestDir(
       TestDockerClient.class.getName());
 
-  @Before
+  @BeforeEach
   public void setup() {
     TEST_ROOT_DIR.mkdirs();
   }
 
-  @After
+  @AfterEach
   public void cleanup() {
     FileUtil.fullyDelete(TEST_ROOT_DIR);
   }
@@ -78,7 +78,7 @@ public class TestDockerClient {
         mockContext);
     dirsHandler.stop();
     File tmpFile = new File(tmpPath);
-    assertTrue(tmpFile + " was not created", tmpFile.exists());
+    assertTrue(tmpFile.exists(), tmpFile + " was not created");
   }
 
   @Test
@@ -107,8 +107,8 @@ public class TestDockerClient {
           mockContext);
       fail("Expected exception writing command file");
     } catch (ContainerExecutionException e) {
-      assertTrue("Expected key validation error", e.getMessage()
-          .contains("'=' found in entry for docker command file"));
+      assertTrue(e.getMessage().contains("'=' found in entry for docker command file"),
+          "Expected key validation error");
     }
 
     try {
@@ -118,8 +118,8 @@ public class TestDockerClient {
       dockerClient.writeCommandToTempFile(dockerCmd, cid, mockContext);
       fail("Expected exception writing command file");
     } catch (ContainerExecutionException e) {
-      assertTrue("Expected value validation error", e.getMessage()
-          .contains("'\\n' found in entry for docker command file"));
+      assertTrue(e.getMessage().contains("'\\n' found in entry for docker command file"),
+          "Expected value validation error");
     }
     dirsHandler.stop();
   }

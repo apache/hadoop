@@ -21,15 +21,15 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.io.OutputStream;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TestIFileStreams {
   @Test
@@ -75,7 +75,7 @@ public class TestIFileStreams {
       }
       ifis.close();
     } catch (ChecksumException e) {
-      assertEquals("Unexpected bad checksum", DLEN - 1, i);
+      assertEquals(DLEN - 1, i, "Unexpected bad checksum");
       return;
     }
     fail("Did not detect bad data in checksum");
@@ -99,7 +99,7 @@ public class TestIFileStreams {
       }
       ifis.close();
     } catch (ChecksumException e) {
-      assertEquals("Checksum before close", i, DLEN - 8);
+      assertEquals(i, DLEN - 8, "Checksum before close");
       return;
     }
     fail("Did not detect bad data in checksum");

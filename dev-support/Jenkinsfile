@@ -55,7 +55,7 @@ pipeline {
     environment {
         YETUS='yetus'
         // Branch or tag name.  Yetus release tags are 'rel/X.Y.Z'
-        YETUS_VERSION='rel/0.14.0'
+        YETUS_VERSION='a7d29a6a72750a0c5c39512f33945e773e69303e'
     }
 
     parameters {
@@ -71,7 +71,7 @@ pipeline {
                     checkout([
                         $class: 'GitSCM',
                         branches: [[name: "${env.YETUS_VERSION}"]],
-                        userRemoteConfigs: [[ url: 'https://github.com/apache/yetus.git']]]
+                        userRemoteConfigs: [[ url: 'https://github.com/ayushtkn/yetus.git']]]
                     )
                 }
             }
@@ -83,24 +83,18 @@ pipeline {
         // optional stages after the first one.
         stage ('setup sources') {
             steps {
-                dir("${WORKSPACE}/centos-7") {
+
+                dir("${WORKSPACE}/rockylinux-8") {
                     sh '''#!/usr/bin/env bash
 
-                    cp -Rp ${WORKSPACE}/src ${WORKSPACE}/centos-7
+                    cp -Rp ${WORKSPACE}/src ${WORKSPACE}/rockylinux-8
                     '''
                 }
 
-                dir("${WORKSPACE}/centos-8") {
+                dir("${WORKSPACE}/debian-11") {
                     sh '''#!/usr/bin/env bash
 
-                    cp -Rp ${WORKSPACE}/src ${WORKSPACE}/centos-8
-                    '''
-                }
-
-                dir("${WORKSPACE}/debian-10") {
-                    sh '''#!/usr/bin/env bash
-
-                    cp -Rp ${WORKSPACE}/src ${WORKSPACE}/debian-10
+                    cp -Rp ${WORKSPACE}/src ${WORKSPACE}/debian-11
                     '''
                 }
 
@@ -117,58 +111,12 @@ pipeline {
         // C++/C++ build/platform.
         // This stage serves as a means of cross platform validation, which is
         // really needed to ensure that any C++ related/platform change doesn't
-        // break the Hadoop build on Centos 7.
-        stage ('precommit-run Centos 7') {
+        // break the Hadoop build on Rocky Linux 8.
+        stage ('precommit-run Rocky Linux 8') {
             environment {
-                SOURCEDIR = "${WORKSPACE}/centos-7/src"
-                PATCHDIR = "${WORKSPACE}/centos-7/out"
-                DOCKERFILE = "${SOURCEDIR}/dev-support/docker/Dockerfile_centos_7"
-                IS_OPTIONAL = 1
-            }
-
-            steps {
-                withCredentials(getGithubCreds()) {
-                    sh '''#!/usr/bin/env bash
-
-                    chmod u+x "${SOURCEDIR}/dev-support/jenkins.sh"
-                    "${SOURCEDIR}/dev-support/jenkins.sh" run_ci
-                    '''
-                }
-            }
-
-            post {
-                // Since this is an optional platform, we want to copy the artifacts
-                // and archive it only if the build fails, to help with debugging.
-                failure {
-                    sh '''#!/usr/bin/env bash
-
-                    cp -Rp "${WORKSPACE}/centos-7/out" "${WORKSPACE}"
-                    '''
-                    archiveArtifacts "out/**"
-                }
-
-                cleanup() {
-                    script {
-                        sh '''#!/usr/bin/env bash
-
-                        chmod u+x "${SOURCEDIR}/dev-support/jenkins.sh"
-                        "${SOURCEDIR}/dev-support/jenkins.sh" cleanup_ci_proc
-                        '''
-                    }
-                }
-            }
-        }
-
-        // This is an optional stage which runs only when there's a change in
-        // C++/C++ build/platform.
-        // This stage serves as a means of cross platform validation, which is
-        // really needed to ensure that any C++ related/platform change doesn't
-        // break the Hadoop build on Centos 8.
-        stage ('precommit-run Centos 8') {
-            environment {
-                SOURCEDIR = "${WORKSPACE}/centos-8/src"
-                PATCHDIR = "${WORKSPACE}/centos-8/out"
-                DOCKERFILE = "${SOURCEDIR}/dev-support/docker/Dockerfile_centos_8"
+                SOURCEDIR = "${WORKSPACE}/rockylinux-8/src"
+                PATCHDIR = "${WORKSPACE}/rockylinux-8/out"
+                DOCKERFILE = "${SOURCEDIR}/dev-support/docker/Dockerfile_rockylinux_8"
                 IS_OPTIONAL = 1
             }
 
@@ -188,7 +136,7 @@ pipeline {
                 failure {
                     sh '''#!/usr/bin/env bash
 
-                    cp -Rp "${WORKSPACE}/centos-8/out" "${WORKSPACE}"
+                    cp -Rp "${WORKSPACE}/rockylinux-8/out" "${WORKSPACE}"
                     '''
                     archiveArtifacts "out/**"
                 }
@@ -209,12 +157,12 @@ pipeline {
         // C++/C++ build/platform.
         // This stage serves as a means of cross platform validation, which is
         // really needed to ensure that any C++ related/platform change doesn't
-        // break the Hadoop build on Debian 10.
-        stage ('precommit-run Debian 10') {
+        // break the Hadoop build on Debian 11.
+        stage ('precommit-run Debian 11') {
             environment {
-                SOURCEDIR = "${WORKSPACE}/debian-10/src"
-                PATCHDIR = "${WORKSPACE}/debian-10/out"
-                DOCKERFILE = "${SOURCEDIR}/dev-support/docker/Dockerfile_debian_10"
+                SOURCEDIR = "${WORKSPACE}/debian-11/src"
+                PATCHDIR = "${WORKSPACE}/debian-11/out"
+                DOCKERFILE = "${SOURCEDIR}/dev-support/docker/Dockerfile_debian_11"
                 IS_OPTIONAL = 1
             }
 
@@ -234,7 +182,7 @@ pipeline {
                 failure {
                     sh '''#!/usr/bin/env bash
 
-                    cp -Rp "${WORKSPACE}/debian-10/out" "${WORKSPACE}"
+                    cp -Rp "${WORKSPACE}/debian-11/out" "${WORKSPACE}"
                     '''
                     archiveArtifacts "out/**"
                 }

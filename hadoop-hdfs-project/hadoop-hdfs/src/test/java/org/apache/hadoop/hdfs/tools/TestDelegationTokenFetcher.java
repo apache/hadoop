@@ -19,9 +19,13 @@
 package org.apache.hadoop.hdfs.tools;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_ALWAYS_USE_KEY;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doReturn;
@@ -45,10 +49,8 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.tools.FakeRenewer;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -58,26 +60,27 @@ public class TestDelegationTokenFetcher {
 
   private Configuration conf = new Configuration();
 
-  @Rule
-  public TemporaryFolder f = new TemporaryFolder();
   private static final String tokenFile = "token";
 
   /**
    * try to fetch token without http server with IOException
    */
-  @Test(expected = IOException.class)
-  public void testTokenFetchFail() throws Exception {
-    WebHdfsFileSystem fs = mock(WebHdfsFileSystem.class);
-    doThrow(new IOException()).when(fs).getDelegationToken(any());
-    Path p = new Path(f.getRoot().getAbsolutePath(), tokenFile);
-    DelegationTokenFetcher.saveDelegationToken(conf, fs, null, p);
+  @Test
+  public void testTokenFetchFail(@TempDir java.nio.file.Path folder) throws Exception {
+    assertThrows(IOException.class, () -> {
+      WebHdfsFileSystem fs = mock(WebHdfsFileSystem.class);
+      doThrow(new IOException()).when(fs).getDelegationToken(any());
+      Path p = new Path(folder.toAbsolutePath().toString(), tokenFile);
+      DelegationTokenFetcher.saveDelegationToken(conf, fs, null, p);
+    });
   }
 
   /**
    * Call fetch token using http server
    */
   @Test
-  public void expectedTokenIsRetrievedFromHttp() throws Exception {
+  public void expectedTokenIsRetrievedFromHttp(@TempDir java.nio.file.Path folder)
+      throws Exception {
     final Token<DelegationTokenIdentifier> testToken = new Token<DelegationTokenIdentifier>(
         "id".getBytes(), "pwd".getBytes(), FakeRenewer.KIND, new Text(
             "127.0.0.1:1234"));
@@ -85,24 +88,24 @@ public class TestDelegationTokenFetcher {
     WebHdfsFileSystem fs = mock(WebHdfsFileSystem.class);
 
     doReturn(testToken).when(fs).getDelegationToken(any());
-    Path p = new Path(f.getRoot().getAbsolutePath(), tokenFile);
+    Path p = new Path(folder.toAbsolutePath().toString(), tokenFile);
     DelegationTokenFetcher.saveDelegationToken(conf, fs, null, p);
 
     Credentials creds = Credentials.readTokenStorageFile(p, conf);
     Iterator<Token<?>> itr = creds.getAllTokens().iterator();
-    assertTrue("token not exist error", itr.hasNext());
+    assertTrue(itr.hasNext(), "token not exist error");
 
     Token<?> fetchedToken = itr.next();
-    Assert.assertArrayEquals("token wrong identifier error",
-        testToken.getIdentifier(), fetchedToken.getIdentifier());
-    Assert.assertArrayEquals("token wrong password error",
-        testToken.getPassword(), fetchedToken.getPassword());
+    assertArrayEquals(testToken.getIdentifier(), fetchedToken.getIdentifier(),
+        "token wrong identifier error");
+    assertArrayEquals(testToken.getPassword(), fetchedToken.getPassword(),
+        "token wrong password error");
 
     DelegationTokenFetcher.renewTokens(conf, p);
-    Assert.assertEquals(testToken, FakeRenewer.getLastRenewed());
+    assertEquals(testToken, FakeRenewer.getLastRenewed());
 
     DelegationTokenFetcher.cancelTokens(conf, p);
-    Assert.assertEquals(testToken, FakeRenewer.getLastCanceled());
+    assertEquals(testToken, FakeRenewer.getLastCanceled());
   }
 
   /**
@@ -110,18 +113,19 @@ public class TestDelegationTokenFetcher {
    * throw nullPointerException
    */
   @Test
-  public void testReturnedTokenIsNull() throws Exception {
+  public void testReturnedTokenIsNull(@TempDir java.nio.file.Path folder) throws Exception {
     WebHdfsFileSystem fs = mock(WebHdfsFileSystem.class);
     doReturn(null).when(fs).getDelegationToken(anyString());
-    Path p = new Path(f.getRoot().getAbsolutePath(), tokenFile);
+    Path p = new Path(folder.toAbsolutePath().toString(), tokenFile);
     DelegationTokenFetcher.saveDelegationToken(conf, fs, null, p);
     // When Token returned is null, TokenFile should not exist
-    Assert.assertFalse(p.getFileSystem(conf).exists(p));
+    assertFalse(p.getFileSystem(conf).exists(p));
 
   }
 
   @Test
-  public void testDelegationTokenWithoutRenewerViaRPC() throws Exception {
+  public void testDelegationTokenWithoutRenewerViaRPC(@TempDir java.nio.file.Path folder)
+      throws Exception {
     conf.setBoolean(DFS_NAMENODE_DELEGATION_TOKEN_ALWAYS_USE_KEY, true);
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0)
         .build();
@@ -130,23 +134,23 @@ public class TestDelegationTokenFetcher {
       DistributedFileSystem fs = cluster.getFileSystem();
       // Should be able to fetch token without renewer.
       LocalFileSystem localFileSystem = FileSystem.getLocal(conf);
-      Path p = new Path(f.getRoot().getAbsolutePath(), tokenFile);
+      Path p = new Path(folder.toAbsolutePath().toString(), tokenFile);
       p = localFileSystem.makeQualified(p);
       DelegationTokenFetcher.saveDelegationToken(conf, fs, null, p);
       Credentials creds = Credentials.readTokenStorageFile(p, conf);
       Iterator<Token<?>> itr = creds.getAllTokens().iterator();
-      assertTrue("token not exist error", itr.hasNext());
+      assertTrue(itr.hasNext(), "token not exist error");
       final Token token = itr.next();
-      assertNotNull("Token should be there without renewer", token);
+      assertNotNull(token, "Token should be there without renewer");
 
       // Test compatibility of DelegationTokenFetcher.printTokensToString
       String expectedNonVerbose = "Token (HDFS_DELEGATION_TOKEN token 1 for " +
           System.getProperty("user.name") + " with renewer ) for";
       String resNonVerbose =
           DelegationTokenFetcher.printTokensToString(conf, p, false);
-      assertTrue("The non verbose output is expected to start with \""
-          + expectedNonVerbose +"\"",
-          resNonVerbose.startsWith(expectedNonVerbose));
+      assertTrue(resNonVerbose.startsWith(expectedNonVerbose),
+          "The non verbose output is expected to start with \""
+              + expectedNonVerbose + "\"");
       LOG.info(resNonVerbose);
       LOG.info(
           DelegationTokenFetcher.printTokensToString(conf, p, true));

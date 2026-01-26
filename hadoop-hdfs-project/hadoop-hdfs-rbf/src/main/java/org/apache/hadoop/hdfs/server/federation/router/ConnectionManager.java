@@ -36,6 +36,7 @@ import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Time;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.eclipse.jetty.util.ajax.JSON;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -77,10 +78,6 @@ public class ConnectionManager {
    * Global federated namespace context for router.
    */
   private final RouterStateIdContext routerStateIdContext;
-  /**
-   * Map from connection pool ID to namespace.
-   */
-  private final Map<ConnectionPoolId, String> connectionPoolToNamespaceMap;
   /** Max size of queue for creating new connections. */
   private final int creatorQueueMaxSize;
 
@@ -101,11 +98,11 @@ public class ConnectionManager {
    * Creates a proxy client connection pool manager.
    *
    * @param config Configuration for the connections.
+   * @param routerStateIdContext Federated namespace context for router.
    */
   public ConnectionManager(Configuration config, RouterStateIdContext routerStateIdContext) {
     this.conf = config;
     this.routerStateIdContext = routerStateIdContext;
-    this.connectionPoolToNamespaceMap = new HashMap<>();
     // Configure minimum, maximum and active connection pools
     this.maxSize = this.conf.getInt(
         RBFConfigKeys.DFS_ROUTER_NAMENODE_CONNECTION_POOL_SIZE,
@@ -172,13 +169,14 @@ public class ConnectionManager {
         pool.close();
       }
       this.pools.clear();
-      for (String nsID: connectionPoolToNamespaceMap.values()) {
-        routerStateIdContext.removeNamespaceStateId(nsID);
-      }
-      connectionPoolToNamespaceMap.clear();
     } finally {
       writeLock.unlock();
     }
+  }
+
+  @VisibleForTesting
+  public void closeConnectionCreator(){
+    this.creator.shutdown();
   }
 
   /**
@@ -224,20 +222,20 @@ public class ConnectionManager {
               this.minActiveRatio, protocol,
               new PoolAlignmentContext(this.routerStateIdContext, nsId));
           this.pools.put(connectionId, pool);
-          this.connectionPoolToNamespaceMap.put(connectionId, nsId);
         }
-        long clientStateId = RouterStateIdContext.getClientStateIdFromCurrentCall(nsId);
-        pool.getPoolAlignmentContext().advanceClientStateId(clientStateId);
       } finally {
         writeLock.unlock();
       }
     }
 
+    long clientStateId = RouterStateIdContext.getClientStateIdFromCurrentCall(nsId);
+    pool.getPoolAlignmentContext().advanceClientStateId(clientStateId);
+
     ConnectionContext conn = pool.getConnection();
 
     // Add a new connection to the pool if it wasn't usable
     if (conn == null || !conn.isUsable()) {
-      if (!this.creatorQueue.offer(pool)) {
+      if (!this.creatorQueue.contains(pool) && !this.creatorQueue.offer(pool)) {
         LOG.error("Cannot add more than {} connections at the same time",
             this.creatorQueueMaxSize);
       }
@@ -450,11 +448,6 @@ public class ConnectionManager {
         try {
           for (ConnectionPoolId poolId : toRemove) {
             pools.remove(poolId);
-            String nsID = connectionPoolToNamespaceMap.get(poolId);
-            connectionPoolToNamespaceMap.remove(poolId);
-            if (!connectionPoolToNamespaceMap.values().contains(nsID)) {
-              routerStateIdContext.removeNamespaceStateId(nsID);
-            }
           }
         } finally {
           writeLock.unlock();
@@ -466,7 +459,7 @@ public class ConnectionManager {
   /**
    * Thread that creates connections asynchronously.
    */
-  static class ConnectionCreator extends Thread {
+  static class ConnectionCreator extends SubjectInheritingThread {
     /** If the creator is running. */
     private boolean running = true;
     /** Queue to push work to. */
@@ -478,7 +471,7 @@ public class ConnectionManager {
     }
 
     @Override
-    public void run() {
+    public void work() {
       while (this.running) {
         try {
           ConnectionPool pool = this.queue.take();
@@ -495,7 +488,7 @@ public class ConnectionManager {
                   pool.getMaxSize(), pool);
             }
           } catch (IOException e) {
-            LOG.error("Cannot create a new connection", e);
+            LOG.error("Cannot create a new connection for {} {}", pool, e);
           }
         } catch (InterruptedException e) {
           LOG.error("The connection creator was interrupted");

@@ -21,10 +21,15 @@ package org.apache.hadoop.fs.azurebfs;
 import java.net.URI;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.hadoop.classification.VisibleForTesting;
-
+import org.apache.hadoop.fs.azurebfs.services.AbfsBackoffMetrics;
 import org.apache.hadoop.fs.azurebfs.services.AbfsCounters;
+import org.apache.hadoop.fs.azurebfs.services.AbfsReadFooterMetrics;
+import org.apache.hadoop.fs.azurebfs.services.AbfsReadResourceUtilizationMetrics;
+import org.apache.hadoop.fs.azurebfs.services.AbfsWriteResourceUtilizationMetrics;
+import org.apache.hadoop.fs.azurebfs.utils.MetricFormat;
 import org.apache.hadoop.fs.statistics.DurationTracker;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
@@ -34,8 +39,45 @@ import org.apache.hadoop.metrics2.lib.MetricsRegistry;
 import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 import org.apache.hadoop.metrics2.lib.MutableMetric;
 
-import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.*;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.ATOMIC_RENAME_PATH_ATTEMPTS;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.BYTES_RECEIVED;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.BYTES_SENT;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CALL_APPEND;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CALL_CREATE;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CALL_CREATE_NON_RECURSIVE;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CALL_DELETE;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CALL_EXIST;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CALL_GET_DELEGATION_TOKEN;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CALL_GET_FILE_STATUS;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CALL_LIST_STATUS;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CALL_MKDIRS;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CALL_OPEN;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CALL_RENAME;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CONNECTIONS_MADE;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.DIRECTORIES_CREATED;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.DIRECTORIES_DELETED;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.ERROR_IGNORED;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.FILES_CREATED;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.FILES_DELETED;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.GET_RESPONSES;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.HTTP_DELETE_REQUEST;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.HTTP_GET_REQUEST;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.HTTP_HEAD_REQUEST;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.HTTP_PATCH_REQUEST;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.HTTP_POST_REQUEST;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.HTTP_PUT_REQUEST;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.METADATA_INCOMPLETE_RENAME_FAILURES;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.READ_THROTTLES;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.RENAME_PATH_ATTEMPTS;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.RENAME_RECOVERY;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.SEND_REQUESTS;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.SERVER_UNAVAILABLE;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.WRITE_THROTTLES;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
+import static org.apache.hadoop.fs.azurebfs.enums.AbfsBackoffMetricsEnum.TOTAL_NUMBER_OF_REQUESTS;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.iostatisticsStore;
+import static org.apache.hadoop.util.Time.now;
+
 
 /**
  * Instrumentation of Abfs counters.
@@ -62,6 +104,16 @@ public class AbfsCountersImpl implements AbfsCounters {
       new MetricsRegistry("abfsMetrics").setContext(CONTEXT);
 
   private final IOStatisticsStore ioStatisticsStore;
+
+  private AbfsBackoffMetrics abfsBackoffMetrics = null;
+
+  private AbfsReadFooterMetrics abfsReadFooterMetrics = null;
+
+  private AbfsWriteResourceUtilizationMetrics abfsWriteResourceUtilizationMetrics = null;
+
+  private AbfsReadResourceUtilizationMetrics abfsReadResourceUtilizationMetrics = null;
+
+  private AtomicLong lastExecutionTime = null;
 
   private static final AbfsStatistic[] STATISTIC_LIST = {
       CALL_CREATE,
@@ -90,8 +142,8 @@ public class AbfsCountersImpl implements AbfsCounters {
       SERVER_UNAVAILABLE,
       RENAME_RECOVERY,
       METADATA_INCOMPLETE_RENAME_FAILURES,
-      RENAME_PATH_ATTEMPTS
-
+      RENAME_PATH_ATTEMPTS,
+      ATOMIC_RENAME_PATH_ATTEMPTS
   };
 
   private static final AbfsStatistic[] DURATION_TRACKER_LIST = {
@@ -121,6 +173,66 @@ public class AbfsCountersImpl implements AbfsCounters {
       ioStatisticsStoreBuilder.withDurationTracking(durationStats.getStatName());
     }
     ioStatisticsStore = ioStatisticsStoreBuilder.build();
+    lastExecutionTime = new AtomicLong(now());
+  }
+
+  /**
+   * Initializes the metrics collector for the read thread pool.
+   * <p>
+   * This method creates a new instance of {@link AbfsReadResourceUtilizationMetrics}
+   * to track performance statistics and operational metrics related to
+   * read operations executed by the thread pool.
+   * </p>
+   */
+  public void initializeReadResourceUtilizationMetrics() {
+    abfsReadResourceUtilizationMetrics = new AbfsReadResourceUtilizationMetrics();
+  }
+
+  /**
+   * Initializes the metrics collector for the write thread pool.
+   * <p>
+   * This method creates a new instance of {@link AbfsWriteResourceUtilizationMetrics}
+   * to track performance statistics and operational metrics related to
+   * write operations executed by the thread pool.
+   * </p>
+   */
+  public void initializeWriteResourceUtilizationMetrics() {
+    abfsWriteResourceUtilizationMetrics = new AbfsWriteResourceUtilizationMetrics();
+  }
+
+
+  @Override
+  public void initializeMetrics(final MetricFormat metricFormat,
+      final AbfsConfiguration abfsConfiguration) {
+    switch (metricFormat) {
+    case INTERNAL_BACKOFF_METRIC_FORMAT:
+      abfsBackoffMetrics = new AbfsBackoffMetrics(
+          abfsConfiguration.isBackoffRetryMetricsEnabled());
+      break;
+    case INTERNAL_FOOTER_METRIC_FORMAT:
+      initializeReadFooterMetrics();
+      break;
+    case INTERNAL_METRIC_FORMAT:
+      abfsBackoffMetrics = new AbfsBackoffMetrics(
+          abfsConfiguration.isBackoffRetryMetricsEnabled());
+      initializeReadFooterMetrics();
+      break;
+    default:
+      break;
+    }
+  }
+
+  /**
+   * Initialize the read footer metrics.
+   * In case the metrics are already initialized,
+   * create a new instance with the existing map.
+   */
+  private void initializeReadFooterMetrics() {
+    abfsReadFooterMetrics = new AbfsReadFooterMetrics(
+        abfsReadFooterMetrics == null
+            ? null
+            : abfsReadFooterMetrics.getFileTypeMetricsMap()
+    );
   }
 
   /**
@@ -188,6 +300,37 @@ public class AbfsCountersImpl implements AbfsCounters {
     return registry;
   }
 
+  @Override
+  public AbfsBackoffMetrics getAbfsBackoffMetrics() {
+    return abfsBackoffMetrics != null ? abfsBackoffMetrics : null;
+  }
+
+  @Override
+  public AtomicLong getLastExecutionTime() {
+    return lastExecutionTime;
+  }
+
+  @Override
+  public AbfsReadFooterMetrics getAbfsReadFooterMetrics() {
+    return abfsReadFooterMetrics != null ? abfsReadFooterMetrics : null;
+  }
+
+  /**
+   * Returns the write thread pool metrics instance, or {@code null} if uninitialized.
+   */
+  @Override
+  public AbfsWriteResourceUtilizationMetrics getAbfsWriteResourceUtilizationMetrics() {
+    return abfsWriteResourceUtilizationMetrics != null ? abfsWriteResourceUtilizationMetrics : null;
+  }
+
+  /**
+   * Returns the read thread pool metrics instance, or {@code null} if uninitialized.
+   */
+  @Override
+  public AbfsReadResourceUtilizationMetrics getAbfsReadResourceUtilizationMetrics() {
+    return abfsReadResourceUtilizationMetrics != null ? abfsReadResourceUtilizationMetrics : null;
+  }
+
   /**
    * {@inheritDoc}
    *
@@ -243,5 +386,21 @@ public class AbfsCountersImpl implements AbfsCounters {
   @Override
   public DurationTracker trackDuration(String key) {
     return ioStatisticsStore.trackDuration(key);
+  }
+
+  @Override
+  public String toString() {
+    String metric = EMPTY_STRING;
+    if (abfsBackoffMetrics != null) {
+      if (getAbfsBackoffMetrics().getMetricValue(TOTAL_NUMBER_OF_REQUESTS) > 0) {
+        metric += "#BO:" + getAbfsBackoffMetrics().toString();
+      }
+    }
+    if (abfsReadFooterMetrics != null) {
+      if (getAbfsReadFooterMetrics().getTotalFiles() > 0) {
+        metric += "#FO:" + getAbfsReadFooterMetrics().toString();
+      }
+    }
+    return metric;
   }
 }

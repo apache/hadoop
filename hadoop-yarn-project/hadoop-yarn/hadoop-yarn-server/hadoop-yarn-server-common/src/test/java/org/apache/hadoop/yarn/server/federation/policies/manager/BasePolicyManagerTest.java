@@ -19,6 +19,7 @@ package org.apache.hadoop.yarn.server.federation.policies.manager;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyInitializationContext;
 import org.apache.hadoop.yarn.server.federation.policies.amrmproxy.FederationAMRMProxyPolicy;
 import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyInitializationException;
@@ -26,7 +27,9 @@ import org.apache.hadoop.yarn.server.federation.policies.router.FederationRouter
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterPolicyConfiguration;
 import org.apache.hadoop.yarn.server.federation.utils.FederationPoliciesTestUtil;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * This class provides common test methods for testing {@code
@@ -49,22 +52,28 @@ public abstract class BasePolicyManagerTest {
         expectedAMRMProxyPolicy, expectedRouterPolicy);
   }
 
-  @Test(expected = FederationPolicyInitializationException.class)
+  @Test
   public void testSerializeAndInstantiateBad1() throws Exception {
-    serializeAndDeserializePolicyManager(wfp, String.class,
-        expectedAMRMProxyPolicy, expectedRouterPolicy);
+    assertThrows(FederationPolicyInitializationException.class, () -> {
+      serializeAndDeserializePolicyManager(wfp, String.class,
+          expectedAMRMProxyPolicy, expectedRouterPolicy);
+    });
   }
 
-  @Test(expected = AssertionError.class)
+  @Test
   public void testSerializeAndInstantiateBad2() throws Exception {
-    serializeAndDeserializePolicyManager(wfp, expectedPolicyManager,
-        String.class, expectedRouterPolicy);
+    assertThrows(AssertionError.class, () -> {
+      serializeAndDeserializePolicyManager(wfp, expectedPolicyManager,
+          String.class, expectedRouterPolicy);
+    });
   }
 
-  @Test(expected = AssertionError.class)
+  @Test
   public void testSerializeAndInstantiateBad3() throws Exception {
-    serializeAndDeserializePolicyManager(wfp, expectedPolicyManager,
-        expectedAMRMProxyPolicy, String.class);
+    assertThrows(AssertionError.class, () -> {
+      serializeAndDeserializePolicyManager(wfp, expectedPolicyManager,
+          expectedAMRMProxyPolicy, String.class);
+    });
   }
 
   protected static void serializeAndDeserializePolicyManager(
@@ -72,13 +81,14 @@ public abstract class BasePolicyManagerTest {
       Class expAMRMProxyPolicy, Class expRouterPolicy) throws Exception {
 
     // serializeConf it in a context
+    Configuration conf = new Configuration();
     SubClusterPolicyConfiguration fpc = wfp.serializeConf();
     fpc.setType(policyManagerType.getCanonicalName());
     FederationPolicyInitializationContext context =
         new FederationPolicyInitializationContext();
     context.setSubClusterPolicyConfiguration(fpc);
     context
-        .setFederationStateStoreFacade(FederationPoliciesTestUtil.initFacade());
+        .setFederationStateStoreFacade(FederationPoliciesTestUtil.initFacade(conf));
     context.setFederationSubclusterResolver(
         FederationPoliciesTestUtil.initResolver());
     context.setHomeSubcluster(SubClusterId.newInstance("homesubcluster"));

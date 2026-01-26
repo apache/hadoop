@@ -546,8 +546,8 @@ int read_config(const char *file_path, struct configuration *cfg) {
 
   if (cfg->size == 0) {
     free_configuration(cfg);
-    fprintf(ERRORFILE, "Invalid configuration provided in %s\n", file_path);
-    return INVALID_CONFIG_FILE;
+    fprintf(ERRORFILE, "Empty configuration file provided %s\n", file_path);
+    exit(INVALID_CONFIG_FILE);
   }
   return 0;
 }

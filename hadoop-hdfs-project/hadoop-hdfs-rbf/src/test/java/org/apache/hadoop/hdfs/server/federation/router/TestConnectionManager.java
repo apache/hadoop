@@ -19,27 +19,30 @@ package org.apache.hadoop.hdfs.server.federation.router;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.RouterFederatedStateProto;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
+import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.Rule;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 /**
  * Test functionalities of {@link ConnectionManager}, which manages a pool
@@ -58,7 +61,7 @@ public class TestConnectionManager {
   private static final String TEST_NN_ADDRESS = "nn1:8080";
   private static final String UNRESOLVED_TEST_NN_ADDRESS = "unknownhost:8080";
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     conf = new Configuration();
     connManager = new ConnectionManager(conf);
@@ -67,10 +70,7 @@ public class TestConnectionManager {
     connManager.start();
   }
 
-  @Rule
-  public ExpectedException exceptionRule = ExpectedException.none();
-
-  @After
+  @AfterEach
   public void shutdown() {
     if (connManager != null) {
       connManager.close();
@@ -195,13 +195,13 @@ public class TestConnectionManager {
   @Test
   public void testGetConnectionWithException() throws Exception {
     String exceptionCause = "java.net.UnknownHostException: unknownhost";
-    exceptionRule.expect(IllegalArgumentException.class);
-    exceptionRule.expectMessage(exceptionCause);
 
-    // Create a bad connection pool pointing to unresolvable namenode address.
-    ConnectionPool badPool = new ConnectionPool(
-        conf, UNRESOLVED_TEST_NN_ADDRESS, TEST_USER1, 1, 10, 0.5f,
-        ClientProtocol.class, null);
+    assertThrows(IllegalArgumentException.class, () -> {
+      // Create a bad connection pool pointing to unresolvable namenode address.
+      ConnectionPool badPool = new ConnectionPool(
+          conf, UNRESOLVED_TEST_NN_ADDRESS, TEST_USER1, 1, 10, 0.5f,
+          ClientProtocol.class, null);
+    }, exceptionCause);
   }
 
   @Test
@@ -306,12 +306,80 @@ public class TestConnectionManager {
   }
 
   @Test
+  public void testAdvanceClientStateId() throws IOException {
+    // Start one ConnectionManager
+    Configuration tmpConf = new Configuration();
+    ConnectionManager tmpConnManager = new ConnectionManager(tmpConf);
+    tmpConnManager.start();
+    Map<ConnectionPoolId, ConnectionPool> poolMap = tmpConnManager.getPools();
+
+    // Mock one Server.Call with FederatedNamespaceState that ns0 = 1L.
+    Server.Call mockCall1 = new Server.Call(1, 1, null, null,
+        RPC.RpcKind.RPC_BUILTIN, new byte[] {1, 2, 3});
+    Map<String, Long> nsStateId = new HashMap<>();
+    nsStateId.put("ns0", 1L);
+    RouterFederatedStateProto.Builder stateBuilder = RouterFederatedStateProto.newBuilder();
+    nsStateId.forEach(stateBuilder::putNamespaceStateIds);
+    mockCall1.setFederatedNamespaceState(stateBuilder.build().toByteString());
+
+    Server.getCurCall().set(mockCall1);
+
+    // Create one new connection pool
+    tmpConnManager.getConnection(TEST_USER1, TEST_NN_ADDRESS, NamenodeProtocol.class, "ns0");
+    assertEquals(1, poolMap.size());
+    ConnectionPoolId connectionPoolId = new ConnectionPoolId(TEST_USER1,
+        TEST_NN_ADDRESS, NamenodeProtocol.class);
+    ConnectionPool pool = poolMap.get(connectionPoolId);
+    assertEquals(1L, pool.getPoolAlignmentContext().getPoolLocalStateId());
+
+    // Mock one Server.Call with FederatedNamespaceState that ns0 = 2L.
+    Server.Call mockCall2 = new Server.Call(2, 1, null, null,
+        RPC.RpcKind.RPC_BUILTIN, new byte[] {1, 2, 3});
+    nsStateId.clear();
+    nsStateId.put("ns0", 2L);
+    stateBuilder = RouterFederatedStateProto.newBuilder();
+    nsStateId.forEach(stateBuilder::putNamespaceStateIds);
+    mockCall2.setFederatedNamespaceState(stateBuilder.build().toByteString());
+
+    Server.getCurCall().set(mockCall2);
+
+    // Get one existed connection for ns0
+    tmpConnManager.getConnection(TEST_USER1, TEST_NN_ADDRESS, NamenodeProtocol.class, "ns0");
+    assertEquals(1, poolMap.size());
+    pool = poolMap.get(connectionPoolId);
+    assertEquals(2L, pool.getPoolAlignmentContext().getPoolLocalStateId());
+  }
+
+  @Test
   public void testConfigureConnectionActiveRatio() throws IOException {
     // test 1 conn below the threshold and these conns are closed
     testConnectionCleanup(0.8f, 10, 7, 9);
 
     // test 2 conn below the threshold and these conns are closed
     testConnectionCleanup(0.8f, 10, 6, 8);
+  }
+
+  @Test
+  public void testConnectionCreatorWithSamePool() throws IOException {
+    Configuration tmpConf = new Configuration();
+    // Set DFS_ROUTER_MAX_CONCURRENCY_PER_CONNECTION_KEY to 0
+    // for ensuring a pool will be offered in the creatorQueue
+    tmpConf.setInt(
+        RBFConfigKeys.DFS_ROUTER_MAX_CONCURRENCY_PER_CONNECTION_KEY, 0);
+    ConnectionManager tmpConnManager = new ConnectionManager(tmpConf);
+    tmpConnManager.start();
+    // Close ConnectionCreator thread to make sure that new connection will not initialize.
+    tmpConnManager.closeConnectionCreator();
+    // Create same connection pool for simulating concurrency scenario
+    for (int i = 0; i < 3; i++) {
+      tmpConnManager.getConnection(TEST_USER1, TEST_NN_ADDRESS,
+          NamenodeProtocol.class, "ns0");
+    }
+    assertEquals(1, tmpConnManager.getNumCreatingConnections());
+
+    tmpConnManager.getConnection(TEST_USER2, TEST_NN_ADDRESS,
+        NamenodeProtocol.class, "ns0");
+    assertEquals(2, tmpConnManager.getNumCreatingConnections());
   }
 
   private void testConnectionCleanup(float ratio, int totalConns,

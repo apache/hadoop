@@ -20,7 +20,7 @@ package org.apache.hadoop.mapreduce.split;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
 
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
@@ -47,15 +47,8 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceStability.Unstable
 public class JobSplit {
   static final int META_SPLIT_VERSION = 1;
-  static final byte[] META_SPLIT_FILE_HEADER;
-  static {
-    try {
-      META_SPLIT_FILE_HEADER = "META-SPL".getBytes("UTF-8");
-    } catch (UnsupportedEncodingException u) {
-      throw new RuntimeException(u);
-    }
-  } 
-  public static final TaskSplitMetaInfo EMPTY_TASK_SPLIT = 
+  static final byte[] META_SPLIT_FILE_HEADER = "META-SPL".getBytes(StandardCharsets.UTF_8);
+  public static final TaskSplitMetaInfo EMPTY_TASK_SPLIT =
     new TaskSplitMetaInfo();
   
   /**
@@ -130,7 +123,7 @@ public class JobSplit {
     
     @Override
     public String toString() {
-      StringBuffer buf = new StringBuffer();
+      StringBuilder buf = new StringBuilder();
       buf.append("data-size : " + inputDataLength + "\n");
       buf.append("start-offset : " + startOffset + "\n");
       buf.append("locations : " + "\n");

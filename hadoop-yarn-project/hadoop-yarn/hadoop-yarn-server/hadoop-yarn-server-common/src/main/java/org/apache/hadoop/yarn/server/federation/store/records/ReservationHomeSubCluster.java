@@ -94,21 +94,24 @@ public abstract class ReservationHomeSubCluster {
 
   @Override
   public boolean equals(Object obj) {
+
     if (this == obj) {
       return true;
     }
+
     if (obj == null) {
       return false;
     }
-    if (getClass() != obj.getClass()) {
-      return false;
-    }
-    ReservationHomeSubCluster other = (ReservationHomeSubCluster) obj;
 
-    return new EqualsBuilder()
-        .append(this.getReservationId(), other.getReservationId())
-        .append(this.getHomeSubCluster(), other.getHomeSubCluster())
-        .isEquals();
+    if (obj instanceof ReservationHomeSubCluster) {
+      ReservationHomeSubCluster other = (ReservationHomeSubCluster) obj;
+      return new EqualsBuilder()
+          .append(this.getReservationId(), other.getReservationId())
+          .append(this.getHomeSubCluster(), other.getHomeSubCluster())
+          .isEquals();
+    }
+
+    return false;
   }
 
   @Override
@@ -121,9 +124,11 @@ public abstract class ReservationHomeSubCluster {
 
   @Override
   public String toString() {
-    return "ReservationHomeSubCluster [getReservationId()="
-        + getReservationId() + ", getApplicationHomeSubcluster()=" + getHomeSubCluster()
-        + "]";
+    StringBuilder sb = new StringBuilder();
+    sb.append("ReservationHomeSubCluster: [")
+        .append("ReservationId: ").append(getReservationId()).append(", ")
+        .append("HomeSubCluster: ").append(getHomeSubCluster())
+        .append("]");
+    return sb.toString();
   }
-
 }

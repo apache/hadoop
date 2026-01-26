@@ -20,10 +20,10 @@ package org.apache.hadoop.fs;
 
 import static org.apache.hadoop.test.PlatformAssumptions.assumeWindows;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -34,9 +34,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.StringUtils;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -48,7 +48,7 @@ public class TestFsShellCopy {
   static LocalFileSystem lfs;
   static Path testRootDir, srcPath, dstPath;
   
-  @BeforeClass
+  @BeforeAll
   public static void setup() throws Exception {
     conf = new Configuration();
     shell = new FsShell(conf);
@@ -62,7 +62,7 @@ public class TestFsShellCopy {
     dstPath = new Path(testRootDir, "dstFile");
   }
   
-  @Before
+  @BeforeEach
   public void prepFiles() throws Exception {
     lfs.setVerifyChecksum(true);
     lfs.setWriteChecksum(true);

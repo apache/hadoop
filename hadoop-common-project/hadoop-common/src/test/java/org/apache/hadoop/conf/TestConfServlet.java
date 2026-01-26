@@ -27,10 +27,10 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletContext;
-import javax.ws.rs.core.HttpHeaders;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
+import org.apache.hadoop.thirdparty.com.google.common.net.HttpHeaders;
 import org.eclipse.jetty.util.ajax.JSON;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -41,12 +41,19 @@ import org.xml.sax.InputSource;
 import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
 
 import org.apache.hadoop.http.HttpServer2;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.mockito.Mockito;
-import static org.mockito.Mockito.when;
+import org.apache.hadoop.util.XMLUtils;
+
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+
+import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.mock;
-import static org.junit.Assert.*;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Basic test case that the ConfServlet can write configuration
@@ -59,14 +66,17 @@ public class TestConfServlet {
       new HashMap<String, String>();
   private static final Map<String, String> TEST_FORMATS =
       new HashMap<String, String>();
+  private static final Map<String, String> MASK_PROPERTIES = new HashMap<>();
 
-  @BeforeClass
+  @BeforeAll
   public static void initTestProperties() {
     TEST_PROPERTIES.put("test.key1", "value1");
     TEST_PROPERTIES.put("test.key2", "value2");
     TEST_PROPERTIES.put("test.key3", "value3");
     TEST_FORMATS.put(ConfServlet.FORMAT_XML, "application/xml");
     TEST_FORMATS.put(ConfServlet.FORMAT_JSON, "application/json");
+    MASK_PROPERTIES.put("yarn.federation.state-store.sql.username", "admin");
+    MASK_PROPERTIES.put("yarn.federation.state-store.sql.password", "123456");
   }
 
   private Configuration getTestConf() {
@@ -80,6 +90,9 @@ public class TestConfServlet {
     for(String key : TEST_PROPERTIES.keySet()) {
       testConf.set(key, TEST_PROPERTIES.get(key));
     }
+    for(String key : MASK_PROPERTIES.keySet()) {
+      testConf.set(key, MASK_PROPERTIES.get(key));
+    }
     return testConf;
   }
 
@@ -92,10 +105,10 @@ public class TestConfServlet {
     verifyMap.put("application/xml", ConfServlet.FORMAT_XML);
     verifyMap.put("application/json", ConfServlet.FORMAT_JSON);
 
-    HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
+    HttpServletRequest request = mock(HttpServletRequest.class);
     for(String contentTypeExpected : verifyMap.keySet()) {
       String contenTypeActual = verifyMap.get(contentTypeExpected);
-      Mockito.when(request.getHeader(HttpHeaders.ACCEPT))
+      when(request.getHeader(HttpHeaders.ACCEPT))
           .thenReturn(contentTypeExpected);
       assertEquals(contenTypeActual,
           ConfServlet.parseAcceptHeader(request));
@@ -151,9 +164,9 @@ public class TestConfServlet {
         } else {
           // if property name is not empty, and it's not in configuration
           // expect proper error code and error message is set to the response
-          Mockito.verify(response).sendError(
-              Mockito.eq(HttpServletResponse.SC_NOT_FOUND),
-              Mockito.eq("Property " + propertyName + " not found"));
+          verify(response).sendError(
+              eq(HttpServletResponse.SC_NOT_FOUND),
+              eq("Property " + propertyName + " not found"));
         }
       }
     } finally {
@@ -217,8 +230,7 @@ public class TestConfServlet {
     ConfServlet.writeResponse(getTestConf(), sw, "xml");
     String xml = sw.toString();
 
-    DocumentBuilderFactory docBuilderFactory 
-      = DocumentBuilderFactory.newInstance();
+    DocumentBuilderFactory docBuilderFactory = XMLUtils.newSecureDocumentBuilderFactory();
     DocumentBuilder builder = docBuilderFactory.newDocumentBuilder();
     Document doc = builder.parse(new InputSource(new StringReader(xml)));
     NodeList nameNodes = doc.getElementsByTagName("name");
@@ -246,5 +258,64 @@ public class TestConfServlet {
       // expected
     }
     assertEquals("", sw.toString());
+  }
+
+  private void verifyReplaceProperty(Configuration conf, String format,
+      String propertyName) throws Exception {
+    StringWriter sw = null;
+    PrintWriter pw = null;
+    ConfServlet service = null;
+    try {
+      service = new ConfServlet();
+      ServletConfig servletConf = mock(ServletConfig.class);
+      ServletContext context = mock(ServletContext.class);
+      service.init(servletConf);
+      when(context.getAttribute(HttpServer2.CONF_CONTEXT_ATTRIBUTE)).thenReturn(conf);
+      when(service.getServletContext()).thenReturn(context);
+
+      HttpServletRequest request = mock(HttpServletRequest.class);
+      when(request.getHeader(HttpHeaders.ACCEPT)).thenReturn(TEST_FORMATS.get(format));
+      when(request.getParameter("name")).thenReturn(propertyName);
+
+      HttpServletResponse response = mock(HttpServletResponse.class);
+      sw = new StringWriter();
+      pw = new PrintWriter(sw);
+      when(response.getWriter()).thenReturn(pw);
+
+      // response request
+      service.doGet(request, response);
+      String result = sw.toString().trim();
+
+      // For example, for the property yarn.federation.state-store.sql.username,
+      // we set the value to test-user,
+      // which should be replaced by a mask, which should be ******
+      // MASK_PROPERTIES.get("property yarn.federation.state-store.sql.username")
+      // is the value before replacement, test-user
+      // result contains the replaced value, which should be ******
+      assertTrue(result.contains(propertyName));
+      assertFalse(result.contains(MASK_PROPERTIES.get(propertyName)));
+
+    } finally {
+      if (sw != null) {
+        sw.close();
+      }
+      if (pw != null) {
+        pw.close();
+      }
+      if (service != null) {
+        service.destroy();
+      }
+    }
+  }
+
+  @Test
+  public void testReplaceProperty() throws Exception {
+    Configuration configurations = getMultiPropertiesConf();
+
+    for(String format : TEST_FORMATS.keySet()) {
+      for(String key : MASK_PROPERTIES.keySet()) {
+        verifyReplaceProperty(configurations, format, key);
+      }
+    }
   }
 }

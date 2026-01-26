@@ -93,7 +93,7 @@ public class RouterFederationRename {
    * @throws IOException if rename fails.
    * @return true if rename succeeds.
    */
-  boolean routerFedRename(final String src, final String dst,
+  public boolean routerFedRename(final String src, final String dst,
       final List<RemoteLocation> srcLocations,
       final List<RemoteLocation> dstLocations) throws IOException {
     if (!rpcServer.isEnableRenameAcrossNamespace()) {

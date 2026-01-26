@@ -132,7 +132,9 @@ public final class ManifestCommitterConstants {
    * Should dir cleanup do parallel deletion of task attempt dirs
    * before trying to delete the toplevel dirs.
    * For GCS this may deliver speedup, while on ABFS it may avoid
-   * timeouts in certain deployments.
+   * timeouts in certain deployments, something
+   * {@link #OPT_CLEANUP_PARALLEL_DELETE_BASE_FIRST}
+   * can alleviate.
    * Value: {@value}.
    */
   public static final String OPT_CLEANUP_PARALLEL_DELETE =
@@ -144,6 +146,20 @@ public final class ManifestCommitterConstants {
   public static final boolean OPT_CLEANUP_PARALLEL_DELETE_DIRS_DEFAULT = true;
 
   /**
+   * Should parallel cleanup try to delete the base first?
+   * Best for azure as it skips the task attempt deletions unless
+   * the toplevel delete fails.
+   * Value: {@value}.
+   */
+  public static final String OPT_CLEANUP_PARALLEL_DELETE_BASE_FIRST =
+      OPT_PREFIX + "cleanup.parallel.delete.base.first";
+
+  /**
+   * Default value of option {@link #OPT_CLEANUP_PARALLEL_DELETE_BASE_FIRST}:  {@value}.
+   */
+  public static final boolean OPT_CLEANUP_PARALLEL_DELETE_BASE_FIRST_DEFAULT = false;
+
+  /**
    * Threads to use for IO.
    */
   public static final String OPT_IO_PROCESSORS = OPT_PREFIX + "io.threads";
@@ -151,7 +167,7 @@ public final class ManifestCommitterConstants {
   /**
    * Default value:  {@value}.
    */
-  public static final int OPT_IO_PROCESSORS_DEFAULT = 64;
+  public static final int OPT_IO_PROCESSORS_DEFAULT = 32;
 
   /**
    * Directory for saving job summary reports.
@@ -239,6 +255,39 @@ public final class ManifestCommitterConstants {
    */
   public static final String CAPABILITY_DYNAMIC_PARTITIONING =
       "mapreduce.job.committer.dynamic.partitioning";
+
+
+  /**
+   * Queue capacity between task manifest loading an entry file writer.
+   * If more than this number of manifest lists are waiting to be written,
+   * the enqueue is blocking.
+   * There's an expectation that writing to the local file is a lot faster
+   * than the parallelized buffer reads, therefore that this queue can
+   * be emptied at the same rate it is filled.
+   * Value {@value}.
+   */
+  public static final String OPT_WRITER_QUEUE_CAPACITY =
+      OPT_PREFIX + "writer.queue.capacity";
+
+
+  /**
+   * Default value of {@link #OPT_WRITER_QUEUE_CAPACITY}.
+   * Value {@value}.
+   */
+  public static final int DEFAULT_WRITER_QUEUE_CAPACITY = OPT_IO_PROCESSORS_DEFAULT;
+
+  /**
+   * How many attempts to save a task manifest by save and rename
+   * before giving up.
+   * Value: {@value}.
+   */
+  public static final String OPT_MANIFEST_SAVE_ATTEMPTS =
+      OPT_PREFIX + "manifest.save.attempts";
+
+  /**
+   * Default value of {@link #OPT_MANIFEST_SAVE_ATTEMPTS}: {@value}.
+   */
+  public static final int OPT_MANIFEST_SAVE_ATTEMPTS_DEFAULT = 5;
 
   private ManifestCommitterConstants() {
   }

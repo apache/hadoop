@@ -50,6 +50,7 @@ import org.apache.hadoop.util.Lists;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.util.Preconditions;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import org.slf4j.Logger;
@@ -248,7 +249,8 @@ public class StandbyCheckpointer {
     // Do this in a separate thread to avoid blocking transition to active, but don't allow more
     // than the expected number of tasks to run or queue up
     // See HDFS-4816
-    ExecutorService executor = new ThreadPoolExecutor(0, activeNNAddresses.size(), 100,
+    int poolSize = checkpointConf.isParallelUploadEnabled() ? activeNNAddresses.size() : 0;
+    ExecutorService executor = new ThreadPoolExecutor(poolSize, activeNNAddresses.size(), 100,
         TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>(activeNNAddresses.size()),
         uploadThreadFactory);
     // for right now, just match the upload to the nn address by convention. There is no need to
@@ -342,7 +344,7 @@ public class StandbyCheckpointer {
       throw ie;
     }
 
-    if (!ioes.isEmpty()) {
+    if (ioes.size() > activeNNAddresses.size() / 2) {
       throw MultipleIOException.createIOException(ioes);
     }
   }
@@ -375,13 +377,18 @@ public class StandbyCheckpointer {
     return canceledCount;
   }
 
+  @VisibleForTesting
+  public long getLastCheckpointTime() {
+    return lastCheckpointTime;
+  }
+
   private long countUncheckpointedTxns() {
     FSImage img = namesystem.getFSImage();
     return img.getCorrectLastAppliedOrWrittenTxId() -
       img.getStorage().getMostRecentCheckpointTxId();
   }
 
-  private class CheckpointerThread extends Thread {
+  private class CheckpointerThread extends SubjectInheritingThread {
     private volatile boolean shouldRun = true;
     private volatile long preventCheckpointsUntil = 0;
 
@@ -394,7 +401,7 @@ public class StandbyCheckpointer {
     }
 
     @Override
-    public void run() {
+    public void work() {
       // We have to make sure we're logged in as far as JAAS
       // is concerned, in order to use kerberized SSL properly.
       SecurityUtil.doAsLoginUserOrFatal(
@@ -461,7 +468,8 @@ public class StandbyCheckpointer {
           } else if (secsSinceLast >= checkpointConf.getPeriod()) {
             LOG.info("Triggering checkpoint because it has been {} seconds " +
                 "since the last checkpoint, which exceeds the configured " +
-                "interval {}", secsSinceLast, checkpointConf.getPeriod());
+                "interval {}, And now is {}, lastCheckpointTime is {}.",
+                secsSinceLast, checkpointConf.getPeriod(), now, lastCheckpointTime);
             needCheckpoint = true;
           }
 
@@ -487,8 +495,9 @@ public class StandbyCheckpointer {
               namesystem.setCreatedRollbackImages(true);
               namesystem.setNeedRollbackFsImage(false);
             }
-            lastCheckpointTime = now;
-            LOG.info("Checkpoint finished successfully.");
+            lastCheckpointTime = monotonicNow();
+            LOG.info("Checkpoint finished successfully, the lastCheckpointTime is:{}.",
+                lastCheckpointTime);
           }
         } catch (SaveNamespaceCancelledException ce) {
           LOG.info("Checkpoint was cancelled: {}", ce.getMessage());

@@ -68,6 +68,11 @@ public class EncryptionSecrets implements Writable, Serializable {
   private String encryptionKey = "";
 
   /**
+   * Encryption context: base64-encoded UTF-8 string.
+   */
+  private String encryptionContext = "";
+
+  /**
    * This field isn't serialized/marshalled; it is rebuilt from the
    * encryptionAlgorithm field.
    */
@@ -84,23 +89,28 @@ public class EncryptionSecrets implements Writable, Serializable {
    * Create a pair of secrets.
    * @param encryptionAlgorithm algorithm enumeration.
    * @param encryptionKey key/key reference.
+   * @param encryptionContext  base64-encoded string with the encryption context key-value pairs.
    * @throws IOException failure to initialize.
    */
   public EncryptionSecrets(final S3AEncryptionMethods encryptionAlgorithm,
-      final String encryptionKey) throws IOException {
-    this(encryptionAlgorithm.getMethod(), encryptionKey);
+      final String encryptionKey,
+      final String encryptionContext) throws IOException {
+    this(encryptionAlgorithm.getMethod(), encryptionKey, encryptionContext);
   }
 
   /**
    * Create a pair of secrets.
    * @param encryptionAlgorithm algorithm name
    * @param encryptionKey key/key reference.
+   * @param encryptionContext  base64-encoded string with the encryption context key-value pairs.
    * @throws IOException failure to initialize.
    */
   public EncryptionSecrets(final String encryptionAlgorithm,
-      final String encryptionKey) throws IOException {
+      final String encryptionKey,
+      final String encryptionContext) throws IOException {
     this.encryptionAlgorithm = encryptionAlgorithm;
     this.encryptionKey = encryptionKey;
+    this.encryptionContext = encryptionContext;
     init();
   }
 
@@ -114,6 +124,7 @@ public class EncryptionSecrets implements Writable, Serializable {
     new LongWritable(serialVersionUID).write(out);
     Text.writeString(out, encryptionAlgorithm);
     Text.writeString(out, encryptionKey);
+    Text.writeString(out, encryptionContext);
   }
 
   /**
@@ -132,6 +143,7 @@ public class EncryptionSecrets implements Writable, Serializable {
     }
     encryptionAlgorithm = Text.readString(in, MAX_SECRET_LENGTH);
     encryptionKey = Text.readString(in, MAX_SECRET_LENGTH);
+    encryptionContext = Text.readString(in);
     init();
   }
 
@@ -164,6 +176,10 @@ public class EncryptionSecrets implements Writable, Serializable {
     return encryptionKey;
   }
 
+  public String getEncryptionContext() {
+    return encryptionContext;
+  }
+
   /**
    * Does this instance have encryption options?
    * That is: is the algorithm non-null.
@@ -181,6 +197,14 @@ public class EncryptionSecrets implements Writable, Serializable {
     return StringUtils.isNotEmpty(encryptionKey);
   }
 
+  /**
+   * Does this instance have an encryption context?
+   * @return true if there's an encryption context.
+   */
+  public boolean hasEncryptionContext() {
+    return StringUtils.isNotEmpty(encryptionContext);
+  }
+
   @Override
   public boolean equals(final Object o) {
     if (this == o) {
@@ -191,12 +215,13 @@ public class EncryptionSecrets implements Writable, Serializable {
     }
     final EncryptionSecrets that = (EncryptionSecrets) o;
     return Objects.equals(encryptionAlgorithm, that.encryptionAlgorithm)
-        && Objects.equals(encryptionKey, that.encryptionKey);
+        && Objects.equals(encryptionKey, that.encryptionKey)
+        && Objects.equals(encryptionContext, that.encryptionContext);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(encryptionAlgorithm, encryptionKey);
+    return Objects.hash(encryptionAlgorithm, encryptionKey, encryptionContext);
   }
 
   /**

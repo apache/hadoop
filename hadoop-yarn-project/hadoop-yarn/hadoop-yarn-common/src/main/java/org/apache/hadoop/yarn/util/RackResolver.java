@@ -79,8 +79,8 @@ public final class RackResolver {
    * Utility method for getting a hostname resolved to a node in the
    * network topology. This method initializes the class with the
    * right resolver implementation.
-   * @param conf
-   * @param hostName
+   * @param conf configuration.
+   * @param hostName hostname.
    * @return node {@link Node} after resolving the hostname
    */
   public static Node resolve(Configuration conf, String hostName) {
@@ -92,8 +92,8 @@ public final class RackResolver {
    * Utility method for getting a list of hostname resolved to a list of node
    *  in the network topology. This method initializes the class with the
    * right resolver implementation.
-   * @param conf
-   * @param hostNames
+   * @param conf configuration.
+   * @param hostNames list of hostName.
    * @return nodes {@link Node} after resolving the hostnames
    */
   public static List<Node> resolve(
@@ -106,7 +106,7 @@ public final class RackResolver {
    * Utility method for getting a hostname resolved to a node in the
    * network topology. This method doesn't initialize the class.
    * Call {@link #init(Configuration)} explicitly.
-   * @param hostName
+   * @param hostName host name.
    * @return node {@link Node} after resolving the hostname
    */
   public static Node resolve(String hostName) {
@@ -120,7 +120,7 @@ public final class RackResolver {
    * Utility method for getting a list of hostname resolved to a list of node
    *  in the network topology. This method doesn't initialize the class.
    * Call {@link #init(Configuration)} explicitly.
-   * @param hostNames
+   * @param hostNames list of hostNames.
    * @return nodes {@link Node} after resolving the hostnames
    */
   public static List<Node> resolve(List<String> hostNames) {

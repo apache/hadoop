@@ -24,11 +24,11 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 /**
  * Base class for {@link YarnConfigurationStore} implementations.
@@ -42,7 +42,7 @@ public abstract class ConfigurationStoreBaseTest {
 
   abstract YarnConfigurationStore createConfStore();
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     this.conf = new Configuration();
     this.conf.setClass(YarnConfiguration.RM_SCHEDULER,
@@ -62,8 +62,8 @@ public abstract class ConfigurationStoreBaseTest {
 
     confStore.confirmMutation(prepareLogMutation("keyUpdate2", "valUpdate2"),
         false);
-    assertNull("Configuration should not be updated",
-        confStore.retrieve().get("keyUpdate2"));
+    assertNull(confStore.retrieve().get("keyUpdate2"),
+        "Configuration should not be updated");
     confStore.close();
   }
 

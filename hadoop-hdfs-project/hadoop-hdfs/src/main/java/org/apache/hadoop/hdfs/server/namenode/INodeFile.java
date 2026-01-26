@@ -253,9 +253,8 @@ public class INodeFile extends INodeWithAdditionalFields
 
   private BlockInfo[] blocks;
 
-  INodeFile(long id, byte[] name, PermissionStatus permissions, long mtime,
-            long atime, BlockInfo[] blklist, short replication,
-            long preferredBlockSize) {
+  public INodeFile(long id, byte[] name, PermissionStatus permissions, long mtime, long atime,
+      BlockInfo[] blklist, short replication, long preferredBlockSize) {
     this(id, name, permissions, mtime, atime, blklist, replication, null,
         preferredBlockSize, (byte) 0, CONTIGUOUS);
   }
@@ -283,12 +282,6 @@ public class INodeFile extends INodeWithAdditionalFields
     setBlocks(that.blocks);
   }
   
-  public INodeFile(INodeFile that, FileDiffList diffs) {
-    this(that);
-    Preconditions.checkArgument(!that.isWithSnapshot());
-    this.addSnapshotFeature(diffs);
-  }
-
   /** @return true unconditionally. */
   @Override
   public final boolean isFile() {
@@ -458,7 +451,16 @@ public class INodeFile extends INodeWithAdditionalFields
     this.addFeature(sf);
     return sf;
   }
-  
+
+  /** Used by FSImage. */
+  public INodeFile loadSnapshotFeature(FileDiffList diffs) {
+    final FileWithSnapshotFeature sf = addSnapshotFeature(diffs);
+    if (!isInCurrentState()) {
+      sf.deleteCurrentFile();
+    }
+    return this;
+  }
+
   /**
    * If feature list contains a {@link FileWithSnapshotFeature}, return it;
    * otherwise, return null.
@@ -969,6 +971,12 @@ public class INodeFile extends INodeWithAdditionalFields
 
   /**
    * Compute file size of the current file.
+   *
+   * ComputeFileSize only needs the FSLock even through it involves block.
+   * BlockSize only be changed by hsync, addBlock, commitBlockSynchronization,
+   * complete, updatePipeline and forceCompleteBlock, all these operations
+   * already hold the FSWriteLock.
+   * CompleteBlock also hold the FSWriteLock since it needs to update Quota
    * 
    * @param includesLastUcBlock
    *          If the last block is under construction, should it be included?
@@ -1092,7 +1100,12 @@ public class INodeFile extends INodeWithAdditionalFields
   @Override
   public void dumpTreeRecursively(PrintWriter out, StringBuilder prefix,
       final int snapshotId) {
-    super.dumpTreeRecursively(out, prefix, snapshotId);
+    dumpINodeFile(out, prefix, snapshotId);
+  }
+
+  public void dumpINodeFile(PrintWriter out, StringBuilder prefix,
+      final int snapshotId) {
+    dumpINode(out, prefix, snapshotId);
     out.print(", fileSize=" + computeFileSize(snapshotId));
     // only compare the first block
     out.print(", blocks=");

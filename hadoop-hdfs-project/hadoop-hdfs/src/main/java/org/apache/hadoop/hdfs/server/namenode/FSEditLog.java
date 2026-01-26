@@ -1654,18 +1654,31 @@ public class FSEditLog implements LogsPurgeable {
     endTransaction(start);
   }
 
+  void recoverUnclosedStreams() throws IOException {
+    recoverUnclosedStreams(false);
+  }
+
   /**
    * Run recovery on all journals to recover any unclosed segments
    */
-  synchronized void recoverUnclosedStreams() {
+  synchronized void recoverUnclosedStreams(boolean terminateOnFailure) throws IOException {
     Preconditions.checkState(
         state == State.BETWEEN_LOG_SEGMENTS,
         "May not recover segments - wrong state: %s", state);
     try {
       journalSet.recoverUnfinalizedSegments();
     } catch (IOException ex) {
-      // All journals have failed, it is handled in logSync.
-      // TODO: are we sure this is OK?
+      if (terminateOnFailure) {
+        final String msg = "Unable to recover log segments: "
+            + "too few journals successfully recovered.";
+        LOG.error(msg, ex);
+        synchronized (journalSetLock) {
+          IOUtils.cleanupWithLogger(LOG, journalSet);
+        }
+        terminate(1, msg);
+      } else {
+        throw ex;
+      }
     }
   }
   

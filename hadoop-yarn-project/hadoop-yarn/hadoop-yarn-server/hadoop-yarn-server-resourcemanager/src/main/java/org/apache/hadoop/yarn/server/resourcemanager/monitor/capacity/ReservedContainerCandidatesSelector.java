@@ -170,6 +170,9 @@ public class ReservedContainerCandidatesSelector
       Map<ApplicationAttemptId, Set<RMContainer>> selectedCandidates,
       Resource totalPreemptionAllowed, boolean readOnly) {
     RMContainer reservedContainer = node.getReservedContainer();
+    if (reservedContainer == null) {
+      return null;
+    }
     Resource available = Resources.clone(node.getUnallocatedResource());
     Resource totalSelected = Resources.createResource(0);
     List<RMContainer> sortedRunningContainers =

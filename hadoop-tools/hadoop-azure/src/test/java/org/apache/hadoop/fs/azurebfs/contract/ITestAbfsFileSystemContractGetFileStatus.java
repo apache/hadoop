@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.azurebfs.contract;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.contract.AbstractContractGetFileStatusTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
+import org.junit.jupiter.api.BeforeEach;
 
 /**
  * Contract test for getFileStatus operation.
@@ -33,6 +34,7 @@ public class ITestAbfsFileSystemContractGetFileStatus extends AbstractContractGe
     this.isSecure = binding.isSecureMode();
   }
 
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     binding.setup();

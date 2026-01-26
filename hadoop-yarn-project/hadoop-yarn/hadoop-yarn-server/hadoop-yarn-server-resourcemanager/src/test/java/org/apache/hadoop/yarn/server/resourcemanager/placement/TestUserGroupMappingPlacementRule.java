@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.placement;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.isNull;
@@ -42,14 +43,13 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.PrimaryGroupMapping;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.SimpleGroupsMapping;
 import org.apache.hadoop.yarn.util.Records;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class TestUserGroupMappingPlacementRule {
   private final YarnConfiguration conf = new YarnConfiguration();
 
-  @Before
+  @BeforeEach
   public void setup() {
     conf.setClass(CommonConfigurationKeys.HADOOP_SECURITY_GROUP_MAPPING,
         SimpleGroupsMapping.class, GroupMappingServiceProvider.class);
@@ -94,11 +94,11 @@ public class TestUserGroupMappingPlacementRule {
         ApplicationSubmissionContext.class);
     asc.setQueue(inputQueue);
     ApplicationPlacementContext ctx = engine.getPlacementForApp(asc, inputUser);
-    Assert.assertEquals("Queue", expectedQueue,
-        ctx != null ? ctx.getQueue() : inputQueue);
+    assertEquals(expectedQueue,
+        ctx != null ? ctx.getQueue() : inputQueue, "Queue");
     if (ctx != null && expectedParentQueue != null) {
-      Assert.assertEquals("Parent Queue", expectedParentQueue,
-          ctx.getParentQueue());
+      assertEquals(expectedParentQueue,
+          ctx.getParentQueue(), "Parent Queue");
     }
   }
 

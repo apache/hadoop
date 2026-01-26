@@ -19,13 +19,14 @@
 
 package org.apache.hadoop.mapreduce.v2.api.records;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-
 import org.apache.hadoop.mapreduce.v2.util.MRBuilderUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestIds {
 
@@ -38,9 +39,9 @@ public class TestIds {
     JobId j3 = createJobId(ts2, 1);
     JobId j4 = createJobId(ts1, 2);
 
-    assertTrue(j1.equals(j4));
-    assertFalse(j1.equals(j2));
-    assertFalse(j1.equals(j3));
+    assertEquals(j1, j4);
+    assertNotEquals(j1, j2);
+    assertNotEquals(j1, j3);
 
     assertTrue(j1.compareTo(j4) == 0);
     assertTrue(j1.compareTo(j2) > 0);
@@ -65,10 +66,10 @@ public class TestIds {
     TaskId t4 = createTaskId(ts1, 1, 2, TaskType.MAP);
     TaskId t5 = createTaskId(ts2, 1, 1, TaskType.MAP);
 
-    assertTrue(t1.equals(t4));
-    assertFalse(t1.equals(t2));
-    assertFalse(t1.equals(t3));
-    assertFalse(t1.equals(t5));
+    assertEquals(t1, t4);
+    assertNotEquals(t1, t2);
+    assertNotEquals(t1, t3);
+    assertNotEquals(t1, t5);
 
     assertTrue(t1.compareTo(t4) == 0);
     assertTrue(t1.compareTo(t2) < 0);
@@ -96,10 +97,10 @@ public class TestIds {
     TaskAttemptId t5 = createTaskAttemptId(ts1, 2, 1, TaskType.MAP, 3);
     TaskAttemptId t6 = createTaskAttemptId(ts1, 2, 2, TaskType.MAP, 2);
 
-    assertTrue(t1.equals(t6));
-    assertFalse(t1.equals(t2));
-    assertFalse(t1.equals(t3));
-    assertFalse(t1.equals(t5));
+    assertEquals(t1, t6);
+    assertNotEquals(t1, t2);
+    assertNotEquals(t1, t3);
+    assertNotEquals(t1, t5);
 
     assertTrue(t1.compareTo(t6) == 0);
     assertTrue(t1.compareTo(t2) < 0);

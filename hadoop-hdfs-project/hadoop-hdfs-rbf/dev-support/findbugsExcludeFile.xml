@@ -19,4 +19,16 @@
   <Match>
     <Package name="org.apache.hadoop.hdfs.federation.protocol.proto" />
   </Match>
+  <!-- Only to be used by Router Admin while preparing for bulk add request -->
+  <Match>
+    <Class name="org.apache.hadoop.hdfs.tools.federation.AddMountAttributes" />
+    <Method name="getNss" />
+    <Bug pattern="EI_EXPOSE_REP" />
+  </Match>
+  <!-- Only to be used by Router Admin while preparing for bulk add request -->
+  <Match>
+    <Class name="org.apache.hadoop.hdfs.tools.federation.AddMountAttributes" />
+    <Method name="setNss" />
+    <Bug pattern="EI_EXPOSE_REP2" />
+  </Match>
 </FindBugsFilter>

@@ -24,9 +24,9 @@ import org.apache.hadoop.registry.client.api.RegistryConstants;
 import org.apache.hadoop.registry.client.impl.zk.RegistrySecurity;
 import org.apache.zookeeper.ZooDefs;
 import org.apache.zookeeper.data.ACL;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,7 +38,7 @@ import static org.apache.hadoop.registry.client.api.RegistryConstants.*;
 /**
  * Test for registry security operations
  */
-public class TestRegistrySecurityHelper extends Assert {
+public class TestRegistrySecurityHelper extends Assertions {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestRegistrySecurityHelper.class);
 
@@ -55,7 +55,7 @@ public class TestRegistrySecurityHelper extends Assert {
   public static final String REALM_EXAMPLE_COM = "example.com";
   private static RegistrySecurity registrySecurity;
 
-  @BeforeClass
+  @BeforeAll
   public static void setupTestRegistrySecurityHelper() throws IOException {
     Configuration conf = new Configuration();
     conf.setBoolean(KEY_REGISTRY_SECURE, true);
@@ -129,15 +129,16 @@ public class TestRegistrySecurityHelper extends Assert {
     assertEquals(SASL_MAPRED_SHORT, pairs.get(1));
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testBuildAclsNullRealm() throws Throwable {
-    registrySecurity.buildACLs(
-        SASL_YARN_SHORT +
-        ", " +
-        SASL_MAPRED_SHORT,
-        "", ZooDefs.Perms.ALL);
-    fail("");
-
+    assertThrows(IllegalArgumentException.class, () -> {
+      registrySecurity.buildACLs(
+          SASL_YARN_SHORT +
+          ", " +
+          SASL_MAPRED_SHORT,
+          "", ZooDefs.Perms.ALL);
+      fail("");
+    });
   }
 
   @Test
@@ -201,9 +202,8 @@ public class TestRegistrySecurityHelper extends Assert {
     try {
       security.init(conf);
     } catch (Exception e) {
-      assertTrue(
-          "did not find "+ RegistrySecurity.E_NO_KERBEROS + " in " + e,
-          e.toString().contains(RegistrySecurity.E_NO_KERBEROS));
+      assertTrue(e.toString().contains(RegistrySecurity.E_NO_KERBEROS),
+          "did not find "+ RegistrySecurity.E_NO_KERBEROS + " in " + e);
     }
   }
 

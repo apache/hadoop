@@ -25,15 +25,16 @@ import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.BaseContainerManagerTest;
-import org.apache.hadoop.yarn.server.utils.BuilderUtils;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.apache.hadoop.yarn.util.resource.Resources;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Make sure ContainerScheduler related changes are compatible
@@ -46,7 +47,7 @@ public class TestContainerSchedulerBehaviorCompatibility
     super();
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException {
     conf.setInt(YarnConfiguration.NM_VCORES, 1);
     conf.setInt(YarnConfiguration.NM_OPPORTUNISTIC_CONTAINERS_MAX_QUEUE_LENGTH,
@@ -70,7 +71,7 @@ public class TestContainerSchedulerBehaviorCompatibility
     // on the RM side it won't check vcores at all.
     list.add(StartContainerRequest.newInstance(containerLaunchContext,
         createContainerToken(createContainerId(0), DUMMY_RM_IDENTIFIER,
-            context.getNodeId(), user, BuilderUtils.newResource(2048, 4),
+            context.getNodeId(), user, Resources.createResource(2048, 4),
             context.getContainerTokenSecretManager(), null,
             ExecutionType.GUARANTEED)));
 
@@ -91,7 +92,7 @@ public class TestContainerSchedulerBehaviorCompatibility
       nRunningContainers = cs.getNumRunningContainers();
       nTried++;
       if (nTried > maxTry) {
-        Assert.fail("Failed to get either number of queuing containers to 0 or "
+        fail("Failed to get either number of queuing containers to 0 or "
             + "number of running containers to 0, #queued=" + nQueuedContainers
             + ", #running=" + nRunningContainers);
       }

@@ -22,7 +22,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.stream.Collectors;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -90,14 +90,14 @@ public class ITestDirectoryCommitProtocol extends ITestStagingCommitProtocol {
         .collect(Collectors.joining(","));
     String baseConfVal = baseConf
         .getTrimmed(FS_S3A_COMMITTER_STAGING_CONFLICT_MODE);
-    assertEquals("conflict mode in core config from "+ sourceStr,
-        CONFLICT_MODE_APPEND, baseConfVal);
+    assertEquals(CONFLICT_MODE_APPEND, baseConfVal,
+        "conflict mode in core config from "+ sourceStr);
 
     Configuration fsConf = getFileSystem().getConf();
     String conflictModeDefVal = fsConf
         .getTrimmed(FS_S3A_COMMITTER_STAGING_CONFLICT_MODE);
-    assertEquals("conflict mode in filesystem",
-        CONFLICT_MODE_APPEND, conflictModeDefVal);
+    assertEquals(CONFLICT_MODE_APPEND, conflictModeDefVal,
+        "conflict mode in filesystem");
   }
 
   /**

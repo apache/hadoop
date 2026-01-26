@@ -27,8 +27,12 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.fs.CommonPathCapabilities;
+import org.apache.hadoop.fs.aliyun.oss.statistics.BlockOutputStreamStatistics;
+import org.apache.hadoop.fs.aliyun.oss.statistics.impl.OutputStreamStatistics;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.MoreExecutors;
-import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
@@ -59,6 +63,7 @@ import static org.apache.hadoop.fs.aliyun.oss.AliyunOSSUtils.intOption;
 import static org.apache.hadoop.fs.aliyun.oss.AliyunOSSUtils.longOption;
 import static org.apache.hadoop.fs.aliyun.oss.AliyunOSSUtils.objectRepresentsDirectory;
 import static org.apache.hadoop.fs.aliyun.oss.Constants.*;
+import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
 
 /**
  * Implementation of {@link FileSystem} for <a href="https://oss.aliyun.com">
@@ -71,6 +76,9 @@ public class AliyunOSSFileSystem extends FileSystem {
   private String bucket;
   private String username;
   private Path workingDir;
+  private OSSDataBlocks.BlockFactory blockFactory;
+  private BlockOutputStreamStatistics blockOutputStreamStatistics;
+  private int uploadPartSize;
   private int blockOutputActiveBlocks;
   private AliyunOSSFileSystemStore store;
   private int maxKeys;
@@ -128,13 +136,13 @@ public class AliyunOSSFileSystem extends FileSystem {
       // this means the file is not found
     }
 
-    long uploadPartSize = AliyunOSSUtils.getMultipartSizeProperty(getConf(),
-        MULTIPART_UPLOAD_PART_SIZE_KEY, MULTIPART_UPLOAD_PART_SIZE_DEFAULT);
     return new FSDataOutputStream(
         new AliyunOSSBlockOutputStream(getConf(),
             store,
             key,
             uploadPartSize,
+            blockFactory,
+            blockOutputStreamStatistics,
             new SemaphoredDelegatingExecutor(boundedThreadPool,
                 blockOutputActiveBlocks, true)), statistics);
   }
@@ -334,6 +342,7 @@ public class AliyunOSSFileSystem extends FileSystem {
    */
   public void initialize(URI name, Configuration conf) throws IOException {
     super.initialize(name, conf);
+    setConf(conf);
 
     bucket = name.getHost();
     uri = java.net.URI.create(name.getScheme() + "://" + name.getAuthority());
@@ -345,6 +354,16 @@ public class AliyunOSSFileSystem extends FileSystem {
     blockOutputActiveBlocks = intOption(conf,
         UPLOAD_ACTIVE_BLOCKS_KEY, UPLOAD_ACTIVE_BLOCKS_DEFAULT, 1);
 
+    uploadPartSize = (int)AliyunOSSUtils.getMultipartSizeProperty(conf,
+        MULTIPART_UPLOAD_PART_SIZE_KEY, MULTIPART_UPLOAD_PART_SIZE_DEFAULT);
+    String uploadBuffer = conf.getTrimmed(FAST_UPLOAD_BUFFER,
+        DEFAULT_FAST_UPLOAD_BUFFER);
+
+    blockOutputStreamStatistics = new OutputStreamStatistics();
+    blockFactory = OSSDataBlocks.createFactory(this, uploadBuffer);
+    LOG.debug("Using OSSBlockOutputStream with buffer = {}; block={};" +
+            " queue limit={}",
+        uploadBuffer, uploadPartSize, blockOutputActiveBlocks);
     store = new AliyunOSSFileSystemStore();
     store.initialize(name, conf, username, statistics);
     maxKeys = conf.getInt(MAX_PAGING_KEYS_KEY, MAX_PAGING_KEYS_DEFAULT);
@@ -379,8 +398,6 @@ public class AliyunOSSFileSystem extends FileSystem {
     this.boundedCopyThreadPool = BlockingThreadPoolExecutorService.newInstance(
         maxCopyThreads, maxCopyTasks, 60L,
         TimeUnit.SECONDS, "oss-copy-unbounded");
-
-    setConf(conf);
   }
 
 /**
@@ -756,5 +773,30 @@ public class AliyunOSSFileSystem extends FileSystem {
 
   public AliyunOSSFileSystemStore getStore() {
     return store;
+  }
+
+  @VisibleForTesting
+  OSSDataBlocks.BlockFactory getBlockFactory() {
+    return blockFactory;
+  }
+
+  @VisibleForTesting
+  BlockOutputStreamStatistics getBlockOutputStreamStatistics() {
+    return blockOutputStreamStatistics;
+  }
+
+  @Override
+  public boolean hasPathCapability(final Path path, final String capability)
+      throws IOException {
+    final Path p = makeQualified(path);
+    String cap = validatePathCapabilityArgs(p, capability);
+    switch (cap) {
+    // block locations are generated locally
+    case CommonPathCapabilities.VIRTUAL_BLOCK_LOCATIONS:
+      return true;
+
+    default:
+      return super.hasPathCapability(p, cap);
+    }
   }
 }

@@ -119,14 +119,7 @@ Without S3Guard, listing performance may be slower. However, Hadoop 3.3.0+ has s
 improved listing performance ([HADOOP-17400](https://issues.apache.org/jira/browse/HADOOP-17400)
 _Optimize S3A for maximum performance in directory listings_) so this should not be apparent.
 
-We recommend disabling [directory marker deletion](directory_markers.html) to reduce
-the number of DELETE operations made when writing files.
-this reduces the load on the S3 partition and so the risk of throttling, which can
-impact performance.
-This is very important when working with versioned S3 buckets, as the tombstone markers
-created will slow down subsequent listing operations.
-
-Finally, the S3A [auditing](auditing.html) feature adds information to the S3 server logs
+The S3A [auditing](auditing.html) feature adds information to the S3 server logs
 about which jobs, users and filesystem operations have been making S3 requests.
 This auditing information can be used to identify opportunities to reduce load.
 
@@ -139,20 +132,17 @@ This auditing information can be used to identify opportunities to reduce load.
 Prints and optionally checks the status of a bucket.
 
 ```bash
-hadoop s3guard bucket-info [-guarded] [-unguarded] [-auth] [-nonauth] [-magic] [-encryption ENCRYPTION] [-markers MARKER] s3a://BUCKET
+hadoop s3guard bucket-info [-fips] [-magic] [-encryption ENCRYPTION] [-markers MARKER] s3a://BUCKET
 ```
 
 Options
 
-| argument | meaning |
-|-----------|-------------|
-| `-guarded` | Require S3Guard to be enabled. This will now always fail |
-| `-unguarded` | Require S3Guard to be disabled. This will now always succeed |
-| `-auth` | Require the S3Guard mode to be "authoritative". This will now always fail |
-| `-nonauth` | Require the S3Guard mode to be "non-authoritative". This will now always fail |
-| `-magic` | Require the S3 filesystem to be support the "magic" committer |
-| `-markers` | Directory marker status: `aware`, `keep`, `delete`, `authoritative` |
-| `-encryption <type>` | Require a specific encryption algorithm  |
+| argument             | meaning                                                             |
+|----------------------|---------------------------------------------------------------------|
+| `-fips`              | Require FIPS endopint to be in use                                  |
+| `-magic`             | Require the S3 filesystem to be support the "magic" committer       |
+| `-markers`           | Directory marker status: `aware`, `keep`                            |
+| `-encryption <type>` | Require a specific encryption algorithm                             |
 
 The server side encryption options are not directly related to S3Guard, but
 it is often convenient to check them at the same time.
@@ -162,7 +152,6 @@ Example
 ```bash
 > hadoop s3guard bucket-info -magic -markers keep s3a://test-london/
 
-2021-11-22 15:21:00,289 [main] INFO  impl.DirectoryPolicyImpl (DirectoryPolicyImpl.java:getDirectoryPolicy(189)) - Directory markers will be kept
 Filesystem s3a://test-london
 Location: eu-west-2
 
@@ -183,10 +172,7 @@ S3A Committers
 Security
         Delegation token support is disabled
 
-Directory Markers
-        The directory marker policy is "keep"
-        Available Policies: delete, keep, authoritative
-        Authoritative paths: fs.s3a.authoritative.path=
+This version of Hadoop always retains directory markers
 
 ```
 

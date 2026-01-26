@@ -379,21 +379,6 @@
        <Bug code="JLM" />
      </Match>
 
-  <!--
-  OpenStack Swift FS module -closes streams in a different method
-  from where they are opened.
-  -->
-    <Match>
-      <Class name="org.apache.hadoop.fs.swift.snative.SwiftNativeOutputStream"/>
-      <Method name="uploadFileAttempt"/>
-      <Bug pattern="OBL_UNSATISFIED_OBLIGATION"/>
-    </Match>
-    <Match>
-      <Class name="org.apache.hadoop.fs.swift.snative.SwiftNativeOutputStream"/>
-      <Method name="uploadFilePartAttempt"/>
-      <Bug pattern="OBL_UNSATISFIED_OBLIGATION"/>
-    </Match>
-
      <!-- code from maven source, null value is checked at callee side. -->
      <Match>
        <Class name="org.apache.hadoop.util.ComparableVersion$ListItem" />
@@ -466,8 +451,13 @@
   </Match>
 
   <Match>
-    <Class name="org.apache.hadoop.ipc.ProtobufHelper" />
-    <Method name="getFixedByteString" />
+    <Class name="org.apache.hadoop.ipc.internal.ShadedProtobufHelper" />
     <Bug pattern="AT_OPERATION_SEQUENCE_ON_CONCURRENT_ABSTRACTION" />
+  </Match>
+
+  <!-- class cast after an assignableFrom check. -->
+  <Match>
+    <Class name="org.apache.hadoop.util.dynamic.DynMethods" />
+    <Bug pattern="BC_UNCONFIRMED_CAST" />
   </Match>
 </FindBugsFilter>

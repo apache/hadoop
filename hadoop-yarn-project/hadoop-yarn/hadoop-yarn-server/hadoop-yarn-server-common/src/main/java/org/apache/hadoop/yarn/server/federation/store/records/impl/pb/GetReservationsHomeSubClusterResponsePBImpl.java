@@ -122,6 +122,7 @@ public class GetReservationsHomeSubClusterResponsePBImpl
       return;
     }
     this.appsHomeSubCluster = appsHomeSubClusters;
+    addSubClustersInfoToProto();
   }
 
   private void initSubClustersInfoList() {

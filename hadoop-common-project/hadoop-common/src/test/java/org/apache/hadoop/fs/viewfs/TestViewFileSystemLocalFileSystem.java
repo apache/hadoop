@@ -17,16 +17,9 @@
  */
 package org.apache.hadoop.fs.viewfs;
 
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
 import java.io.IOException;
 import java.net.URI;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -34,12 +27,18 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import static org.apache.hadoop.fs.FileSystem.TRASH_PREFIX;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+
 import org.apache.hadoop.security.UserGroupInformation;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * 
@@ -51,11 +50,11 @@ import org.junit.Test;
  */
 
 public class TestViewFileSystemLocalFileSystem extends ViewFileSystemBaseTest {
-  private static final Log LOG =
-      LogFactory.getLog(TestViewFileSystemLocalFileSystem.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestViewFileSystemLocalFileSystem.class);
 
   @Override
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     // create the test root on local_fs
     fsTarget = FileSystem.getLocal(new Configuration());
@@ -97,10 +96,10 @@ public class TestViewFileSystemLocalFileSystem extends ViewFileSystemBaseTest {
     FileSystem lfs = FileSystem.getLocal(testConf);
     for (final URI testUri : testUris) {
       final Path testFile = new Path(new Path(testUri), testFileName);
-      assertTrue(testFile + " should exist!",  lfs.exists(testFile));
+      assertTrue(lfs.exists(testFile), testFile + " should exist!");
       final FSDataInputStream fsdis = lfs.open(testFile);
       try {
-        assertEquals("Wrong file content", testString, fsdis.readUTF());
+        assertEquals(fsdis.readUTF(), testString, "Wrong file content");
       } finally {
         fsdis.close();
       }
@@ -123,14 +122,14 @@ public class TestViewFileSystemLocalFileSystem extends ViewFileSystemBaseTest {
       FileSystem.get(URI.create("viewfs://mt/"), conf);
       fail("Expected bad minReplication exception.");
     } catch (IOException ioe) {
-      assertTrue("No minReplication message",
-          ioe.getMessage().contains("Minimum replication"));
+      assertTrue(ioe.getMessage().contains("Minimum replication"),
+          "No minReplication message");
     }
   }
 
 
   @Override
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     fsTarget.delete(fileSystemTestHelper.getTestRootPath(fsTarget), true);
     super.tearDown();

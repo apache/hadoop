@@ -21,6 +21,7 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.util.Records;
 
 /**
@@ -46,6 +47,31 @@ public abstract class GetApplicationHomeSubClusterResponse {
       ApplicationId appId, SubClusterId homeSubCluster) {
     ApplicationHomeSubCluster applicationHomeSubCluster =
         ApplicationHomeSubCluster.newInstance(appId, homeSubCluster);
+    GetApplicationHomeSubClusterResponse mapResponse =
+        Records.newRecord(GetApplicationHomeSubClusterResponse.class);
+    mapResponse.setApplicationHomeSubCluster(applicationHomeSubCluster);
+    return mapResponse;
+  }
+
+  @Private
+  @Unstable
+  public static GetApplicationHomeSubClusterResponse newInstance(
+      ApplicationId appId, SubClusterId homeSubCluster, long createTime) {
+    ApplicationHomeSubCluster applicationHomeSubCluster =
+        ApplicationHomeSubCluster.newInstance(appId, createTime, homeSubCluster);
+    GetApplicationHomeSubClusterResponse mapResponse =
+        Records.newRecord(GetApplicationHomeSubClusterResponse.class);
+    mapResponse.setApplicationHomeSubCluster(applicationHomeSubCluster);
+    return mapResponse;
+  }
+
+  @Private
+  @Unstable
+  public static GetApplicationHomeSubClusterResponse newInstance(
+      ApplicationId appId, SubClusterId homeSubCluster, long createTime,
+      ApplicationSubmissionContext context) {
+    ApplicationHomeSubCluster applicationHomeSubCluster =
+        ApplicationHomeSubCluster.newInstance(appId, createTime, homeSubCluster, context);
     GetApplicationHomeSubClusterResponse mapResponse =
         Records.newRecord(GetApplicationHomeSubClusterResponse.class);
     mapResponse.setApplicationHomeSubCluster(applicationHomeSubCluster);

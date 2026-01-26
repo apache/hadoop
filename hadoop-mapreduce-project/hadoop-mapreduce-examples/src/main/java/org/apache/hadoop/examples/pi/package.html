@@ -23,7 +23,7 @@
   for large n, say n &gt; 100,000,000.
   For computing the lower bits of &pi;, consider using <i>bbp</i>.
 
-  <h3>The distbbp Program</h3>
+  <h2>The distbbp Program</h2>
   The main class is DistBbp
   and the actually computation is done by DistSum jobs.
   The steps for launching the jobs are:
@@ -39,8 +39,10 @@
     <li>Combine the job outputs and print the &pi; bits.</li>
   </ol>
 
-<table summary="The Bits of Pi"><tr valign=top><td width=420>
-  <h3>The Bits of &pi;</h3>
+<table>
+<caption>"The Bits of Pi"</caption>
+<tr><td>
+  <h2>The Bits of &pi;</h2>
   <p>
 The table on the right are the results computed by distbbp.
 </p>
@@ -56,7 +58,7 @@ The table on the right are the results computed by distbbp.
     <li>The computations in Row 13 and Row 14 were completed on May 20, 2009. 
         It seems that the corresponding bits were never computed before.</li>
 </ul></li>
-<li>The first part of Row 15 (<tt>6216B06</tt>)
+<li>The first part of Row 15 (<code>6216B06</code>)
 
 <ul><li>The first 30% of the computation was done in idle cycles of some 
         clusters spread over 20 days.</li>
@@ -69,7 +71,7 @@ The table on the right are the results computed by distbbp.
         <a href="http://yahoohadoop.tumblr.com/post/98338598026/hadoop-computes-the-10-15-1st-bit-of-%CF%80">this YDN blog</a>.</li>
 
 </ul></li>
-<li>The second part of Row 15 (<tt>D3611</tt>)
+<li>The second part of Row 15 (<code>D3611</code>)
 <ul><li>The starting position is 1,000,000,000,000,053, totally 20 bits.</li>
     <li>Two computations, at positions <i>n</i> and <i>n</i>+4, were performed.
     <li>A single computation was divided into 14,000 jobs
@@ -85,42 +87,42 @@ The table on the right are the results computed by distbbp.
         computed ever in the history.</li>
 </ul></li>
 </ul>
-</td><td width=20></td><td>
-<table border=1 width=400 cellpadding=5 summary="Pi in hex">
-<tr><th width=30></th><th>Position <i>n</i></th><th>&pi; bits (in hex) starting at <i>n</i></th></tr>
+</td><td></td><td>
+<table border=1><caption>"Pi in hex"</caption>
+<tr><th></th><th>Position <i>n</i></th><th>&pi; bits (in hex) starting at <i>n</i></th></tr>
 
-<tr><td align=right>0</td><td align=right>1</td><td><tt>243F6A8885A3</tt><sup>*</sup></td></tr>
-<tr><td align=right>1</td><td align=right>11</td><td><tt>FDAA22168C23</tt></td></tr>
-<tr><td align=right>2</td><td align=right>101</td><td><tt>3707344A409</tt></td></tr>
-<tr><td align=right>3</td><td align=right>1,001</td><td><tt>574E69A458F</tt></td></tr>
+<tr><td>0</td><td>1</td><td><code>243F6A8885A3</code><sup>*</sup></td></tr>
+<tr><td>1</td><td>11</td><td><code>FDAA22168C23</code></td></tr>
+<tr><td>2</td><td>101</td><td><code>3707344A409</code></td></tr>
+<tr><td>3</td><td>1,001</td><td><code>574E69A458F</code></td></tr>
 
-<tr><td align=right>4</td><td align=right>10,001</td><td><tt>44EC5716F2B</tt></td></tr>
-<tr><td align=right>5</td><td align=right>100,001</td><td><tt>944F7A204</tt></td></tr>
-<tr><td align=right>6</td><td align=right>1,000,001</td><td><tt>6FFFA4103</tt></td></tr>
-<tr><td align=right>7</td><td align=right>10,000,001</td><td><tt>6CFDD54E3</tt></td></tr>
-<tr><td align=right>8</td><td align=right>100,000,001</td><td><tt>A306CFA7</tt></td></tr>
+<tr><td>4</td><td>10,001</td><td><code>44EC5716F2B</code></td></tr>
+<tr><td>5</td><td>100,001</td><td><code>944F7A204</code></td></tr>
+<tr><td>6</td><td>1,000,001</td><td><code>6FFFA4103</code></td></tr>
+<tr><td>7</td><td>10,000,001</td><td><code>6CFDD54E3</code></td></tr>
+<tr><td>8</td><td>100,000,001</td><td><code>A306CFA7</code></td></tr>
 
-<tr><td align=right>9</td><td align=right>1,000,000,001</td><td><tt>3E08FF2B</tt></td></tr>
-<tr><td align=right>10</td><td align=right>10,000,000,001</td><td><tt>0A8BD8C0</tt></td></tr>
-<tr><td align=right>11</td><td align=right>100,000,000,001</td><td><tt>B2238C1</tt></td></tr>
-<tr><td align=right>12</td><td align=right>1,000,000,000,001</td><td><tt>0FEE563</tt></td></tr>
-<tr><td align=right>13</td><td align=right>10,000,000,000,001</td><td><tt>896DC3</tt></td></tr>
+<tr><td>9</td><td>1,000,000,001</td><td><code>3E08FF2B</code></td></tr>
+<tr><td>10</td><td>10,000,000,001</td><td><code>0A8BD8C0</code></td></tr>
+<tr><td>11</td><td>100,000,000,001</td><td><code>B2238C1</code></td></tr>
+<tr><td>12</td><td>1,000,000,000,001</td><td><code>0FEE563</code></td></tr>
+<tr><td>13</td><td>10,000,000,000,001</td><td><code>896DC3</code></td></tr>
 
-<tr><td align=right>14</td><td align=right>100,000,000,000,001</td><td><tt>C216EC</tt></td></tr>
-<tr><td align=right>15</td><td align=right>1,000,000,000,000,001</td><td><tt>6216B06</tt> ... <tt>D3611</tt></td></tr>
+<tr><td>14</td><td>100,000,000,000,001</td><td><code>C216EC</code></td></tr>
+<tr><td>15</td><td>1,000,000,000,000,001</td><td><code>6216B06</code> ... <code>D3611</code></td></tr>
 </table>
 
 <sup>*</sup>
 By representing &pi; in decimal, hexadecimal and binary, we have
 
-<table summary="Pi in various formats"><tr>
-  <td>&pi;</td><td>=</td><td><tt>3.1415926535 8979323846 2643383279</tt> ...</td>
+<table><caption>"Pi in various formats"</caption><tr>
+  <td>&pi;</td><td>=</td><td><code>3.1415926535 8979323846 2643383279</code> ...</td>
 </tr><tr>
-  <td></td><td>=</td><td><tt>3.243F6A8885 A308D31319 8A2E037073</tt> ...</td>
+  <td></td><td>=</td><td><code>3.243F6A8885 A308D31319 8A2E037073</code> ...</td>
 </tr><tr>
-  <td></td><td>=</td><td><tt>11.0010010000 1111110110 1010100010</tt> ...</td>
+  <td></td><td>=</td><td><code>11.0010010000 1111110110 1010100010</code> ...</td>
 </tr></table>
-The first ten bits of &pi; are <tt>0010010000</tt>.
+The first ten bits of &pi; are <code>0010010000</code>.
 </td></tr></table>
 
 
@@ -130,7 +132,8 @@ The first ten bits of &pi; are <tt>0010010000</tt>.
 $ hadoop org.apache.hadoop.examples.pi.DistBbp \
          &lt;b&gt; &lt;nThreads&gt; &lt;nJobs&gt; &lt;type&gt; &lt;nPart&gt; &lt;remoteDir&gt; &lt;localDir&gt;</pre>
   And the parameters are:
-  <table summary="command line option">
+  <table>
+    <caption>"command line option"</caption>
     <tr>
       <td>&lt;b&gt;</td>
       <td>The number of bits to skip, i.e. compute the (b+1)th position.</td>

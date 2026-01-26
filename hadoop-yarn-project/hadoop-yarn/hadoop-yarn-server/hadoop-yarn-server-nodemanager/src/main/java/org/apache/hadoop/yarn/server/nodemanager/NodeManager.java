@@ -24,8 +24,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.ipc.CallerContext;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.util.MBeans;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -38,6 +40,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.YarnUncaughtExceptionHandler;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -48,6 +51,7 @@ import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.metrics.GenericEventTypeMetrics;
 import org.apache.hadoop.yarn.server.api.protocolrecords.LogAggregationReport;
 import org.apache.hadoop.yarn.server.api.records.AppCollectorData;
 import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
@@ -144,8 +148,10 @@ public class NodeManager extends CompositeService
   private AtomicBoolean isStopping = new AtomicBoolean(false);
   private boolean rmWorkPreservingRestartEnabled;
   private boolean shouldExitOnShutdownEvent = false;
+  private boolean nmDispatherMetricEnabled;
 
   private NMLogAggregationStatusTracker nmLogAggregationStatusTracker;
+
   /**
    * Default Container State transition listener.
    */
@@ -366,6 +372,10 @@ public class NodeManager extends CompositeService
             .RM_WORK_PRESERVING_RECOVERY_ENABLED,
         YarnConfiguration.DEFAULT_RM_WORK_PRESERVING_RECOVERY_ENABLED);
 
+    nmDispatherMetricEnabled = conf.getBoolean(
+        YarnConfiguration.NM_DISPATCHER_METRIC_ENABLED,
+        YarnConfiguration.DEFAULT_NM_DISPATCHER_METRIC_ENABLED);
+
     try {
       initAndStartRecoveryStore(conf);
     } catch (IOException e) {
@@ -525,9 +535,9 @@ public class NodeManager extends CompositeService
   }
 
   protected void shutDown(final int exitCode) {
-    new Thread() {
+    new SubjectInheritingThread() {
       @Override
-      public void run() {
+      public void work() {
         try {
           NodeManager.this.stop();
         } catch (Throwable t) {
@@ -550,9 +560,9 @@ public class NodeManager extends CompositeService
       // Some other thread is already created for resyncing, do nothing
     } else {
       // We have got the lock, create a new thread
-      new Thread() {
+      new SubjectInheritingThread() {
         @Override
-        public void run() {
+        public void work() {
           try {
             if (!rmWorkPreservingRestartEnabled) {
               LOG.info("Cleaning up running containers on resync");
@@ -1006,8 +1016,17 @@ public class NodeManager extends CompositeService
   /**
    * Unit test friendly.
    */
+  @SuppressWarnings("unchecked")
   protected AsyncDispatcher createNMDispatcher() {
-    return new AsyncDispatcher("NM Event dispatcher");
+    dispatcher = new AsyncDispatcher("NM Event dispatcher");
+    if (nmDispatherMetricEnabled) {
+      GenericEventTypeMetrics<ContainerManagerEventType> eventTypeMetrics =
+          GenericEventTypeMetricsManager.create(dispatcher.getName(),
+          ContainerManagerEventType.class);
+      dispatcher.addMetrics(eventTypeMetrics, eventTypeMetrics.getEnumClass());
+      LOG.info("NM Event dispatcher Metric Initialization Completed.");
+    }
+    return dispatcher;
   }
 
   //For testing
@@ -1039,6 +1058,8 @@ public class NodeManager extends CompositeService
     NodeManager nodeManager = new NodeManager();
     Configuration conf = new YarnConfiguration();
     new GenericOptionsParser(conf, args);
+    CallerContext.setCurrent(new CallerContext.Builder(
+        "nodemanager_" + NetUtils.getLocalHostname()).build());
     nodeManager.initAndStartNodeManager(conf, false);
   }
 
@@ -1051,5 +1072,16 @@ public class NodeManager extends CompositeService
   private NMLogAggregationStatusTracker createNMLogAggregationStatusTracker(
       Context ctxt) {
     return new NMLogAggregationStatusTracker(ctxt);
+  }
+
+  @VisibleForTesting
+  @Private
+  public AsyncDispatcher getDispatcher() {
+    return dispatcher;
+  }
+
+  @VisibleForTesting
+  public void disableWebServer() {
+    removeService(((NMContext) context).webServer);
   }
 }

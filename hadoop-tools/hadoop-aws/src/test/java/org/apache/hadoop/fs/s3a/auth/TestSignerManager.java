@@ -19,43 +19,39 @@ package org.apache.hadoop.fs.s3a.auth;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.security.PrivilegedExceptionAction;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.TimeUnit;
 
-import com.amazonaws.AmazonWebServiceRequest;
-import com.amazonaws.DefaultRequest;
-import com.amazonaws.SignableRequest;
-import com.amazonaws.auth.AWSCredentials;
-import com.amazonaws.auth.Signer;
-import com.amazonaws.auth.SignerFactory;
-import org.assertj.core.api.Assertions;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
+import software.amazon.awssdk.core.interceptor.ExecutionAttributes;
+import software.amazon.awssdk.core.signer.Signer;
+import software.amazon.awssdk.http.SdkHttpFullRequest;
+import software.amazon.awssdk.http.SdkHttpMethod;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.auth.TestSignerManager.SignerInitializerForTest.StoreValue;
 import org.apache.hadoop.fs.s3a.auth.delegation.DelegationTokenProvider;
+import org.apache.hadoop.fs.s3a.impl.InstantiationIOException;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
-import org.apache.hadoop.test.LambdaTestUtils;
+import org.apache.hadoop.test.AbstractHadoopTestBase;
 
 import static org.apache.hadoop.fs.s3a.Constants.CUSTOM_SIGNERS;
+import static org.apache.hadoop.fs.s3a.auth.SignerFactory.S3_V2_SIGNER;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Tests for the SignerManager.
  */
-public class TestSignerManager {
+public class TestSignerManager extends AbstractHadoopTestBase {
 
   private static final Text TEST_TOKEN_KIND = new Text("TestTokenKind");
   private static final Text TEST_TOKEN_SERVICE = new Text("TestTokenService");
@@ -65,10 +61,7 @@ public class TestSignerManager {
   private static final String TESTUSER1 = "testuser1";
   private static final String TESTUSER2 = "testuser2";
 
-  @Rule public Timeout testTimeout = new Timeout(10_000L,
-      TimeUnit.MILLISECONDS);
-
-  @Before
+  @BeforeEach
   public void beforeTest() {
     SignerForTest1.reset();
     SignerForTest2.reset();
@@ -99,11 +92,8 @@ public class TestSignerManager {
     // Make sure the config is respected.
     signerManager.initCustomSigners();
     // Simulate a call from the AWS SDK to create the signer.
-    LambdaTestUtils.intercept(Exception.class,
+    intercept(InstantiationIOException.class,
         () -> SignerFactory.createSigner("testsignerUnregistered", null));
-    // Expecting generic Exception.class to handle future implementation
-    // changes.
-    // For now, this is an NPE
   }
 
   @Test
@@ -115,7 +105,7 @@ public class TestSignerManager {
     signerManager.initCustomSigners();
     Signer s1 = SignerFactory.createSigner("testsigner1", null);
     s1.sign(null, null);
-    Assertions.assertThat(SignerForTest1.initialized)
+    assertThat(SignerForTest1.initialized)
         .as(SignerForTest1.class.getName() + " not initialized")
         .isEqualTo(true);
   }
@@ -131,13 +121,13 @@ public class TestSignerManager {
     signerManager.initCustomSigners();
     Signer s1 = SignerFactory.createSigner("testsigner1", null);
     s1.sign(null, null);
-    Assertions.assertThat(SignerForTest1.initialized)
+    assertThat(SignerForTest1.initialized)
         .as(SignerForTest1.class.getName() + " not initialized")
         .isEqualTo(true);
 
     Signer s2 = SignerFactory.createSigner("testsigner2", null);
     s2.sign(null, null);
-    Assertions.assertThat(SignerForTest2.initialized)
+    assertThat(SignerForTest2.initialized)
         .as(SignerForTest2.class.getName() + " not initialized")
         .isEqualTo(true);
   }
@@ -159,18 +149,18 @@ public class TestSignerManager {
     SignerManager signerManager = new SignerManager("bucket1", dtProvider,
         config, ugi);
     signerManager.initCustomSigners();
-    Assertions.assertThat(SignerInitializerForTest.instanceCount)
+    assertThat(SignerInitializerForTest.instanceCount)
         .as(SignerInitializerForTest.class.getName()
             + " creation count mismatch").isEqualTo(1);
-    Assertions.assertThat(SignerInitializerForTest.registerCount)
+    assertThat(SignerInitializerForTest.registerCount)
         .as(SignerInitializerForTest.class.getName()
             + " registration count mismatch").isEqualTo(1);
-    Assertions.assertThat(SignerInitializerForTest.unregisterCount)
+    assertThat(SignerInitializerForTest.unregisterCount)
         .as(SignerInitializerForTest.class.getName()
             + " registration count mismatch").isEqualTo(0);
 
     signerManager.close();
-    Assertions.assertThat(SignerInitializerForTest.unregisterCount)
+    assertThat(SignerInitializerForTest.unregisterCount)
         .as(SignerInitializerForTest.class.getName()
             + " registration count mismatch").isEqualTo(1);
   }
@@ -197,31 +187,31 @@ public class TestSignerManager {
         config, ugi);
     signerManager.initCustomSigners();
 
-    Assertions.assertThat(SignerInitializerForTest.instanceCount)
+    assertThat(SignerInitializerForTest.instanceCount)
         .as(SignerInitializerForTest.class.getName()
             + " creation count mismatch").isEqualTo(1);
-    Assertions.assertThat(SignerInitializerForTest.registerCount)
+    assertThat(SignerInitializerForTest.registerCount)
         .as(SignerInitializerForTest.class.getName()
             + " registration count mismatch").isEqualTo(1);
-    Assertions.assertThat(SignerInitializerForTest.unregisterCount)
+    assertThat(SignerInitializerForTest.unregisterCount)
         .as(SignerInitializerForTest.class.getName()
             + " registration count mismatch").isEqualTo(0);
 
-    Assertions.assertThat(SignerInitializer2ForTest.instanceCount)
+    assertThat(SignerInitializer2ForTest.instanceCount)
         .as(SignerInitializer2ForTest.class.getName()
             + " creation count mismatch").isEqualTo(1);
-    Assertions.assertThat(SignerInitializer2ForTest.registerCount)
+    assertThat(SignerInitializer2ForTest.registerCount)
         .as(SignerInitializer2ForTest.class.getName()
             + " registration count mismatch").isEqualTo(1);
-    Assertions.assertThat(SignerInitializer2ForTest.unregisterCount)
+    assertThat(SignerInitializer2ForTest.unregisterCount)
         .as(SignerInitializer2ForTest.class.getName()
             + " registration count mismatch").isEqualTo(0);
 
     signerManager.close();
-    Assertions.assertThat(SignerInitializerForTest.unregisterCount)
+    assertThat(SignerInitializerForTest.unregisterCount)
         .as(SignerInitializerForTest.class.getName()
             + " registration count mismatch").isEqualTo(1);
-    Assertions.assertThat(SignerInitializer2ForTest.unregisterCount)
+    assertThat(SignerInitializer2ForTest.unregisterCount)
         .as(SignerInitializer2ForTest.class.getName()
             + " registration count mismatch").isEqualTo(1);
   }
@@ -248,13 +238,13 @@ public class TestSignerManager {
         SignerForInitializerTest.class, SignerInitializerForTest.class, BUCKET2,
         ugiU2);
 
-    Assertions.assertThat(SignerInitializerForTest.instanceCount)
+    assertThat(SignerInitializerForTest.instanceCount)
         .as(SignerInitializerForTest.class.getName()
             + " creation count mismatch").isEqualTo(3);
-    Assertions.assertThat(SignerInitializerForTest.registerCount)
+    assertThat(SignerInitializerForTest.registerCount)
         .as(SignerInitializerForTest.class.getName()
             + " registration count mismatch").isEqualTo(3);
-    Assertions.assertThat(SignerInitializerForTest.unregisterCount)
+    assertThat(SignerInitializerForTest.unregisterCount)
         .as(SignerInitializerForTest.class.getName()
             + " registration count mismatch").isEqualTo(0);
 
@@ -274,7 +264,7 @@ public class TestSignerManager {
     closeAndVerifyNull(signerManagerU2B2, BUCKET2, ugiU2, 1);
     closeAndVerifyNull(signerManagerU2B1, BUCKET1, ugiU2, 0);
 
-    Assertions.assertThat(SignerInitializerForTest.unregisterCount)
+    assertThat(SignerInitializerForTest.unregisterCount)
         .as(SignerInitializerForTest.class.getName()
             + " registration count mismatch").isEqualTo(3);
   }
@@ -284,7 +274,7 @@ public class TestSignerManager {
       throws IOException, InterruptedException {
     ugi.doAs((PrivilegedExceptionAction<Void>) () -> {
       Signer signer = new SignerForInitializerTest();
-      SignableRequest<?> signableRequest = constructSignableRequest(bucket);
+      SdkHttpFullRequest signableRequest = constructSignableRequest(bucket);
       signer.sign(signableRequest, null);
       verifyStoreValueInSigner(expectNullStoreInfo, bucket, identifier);
       return null;
@@ -294,24 +284,24 @@ public class TestSignerManager {
   private void verifyStoreValueInSigner(boolean expectNull, String bucketName,
       String identifier) throws IOException {
     if (expectNull) {
-      Assertions.assertThat(SignerForInitializerTest.retrievedStoreValue)
+      assertThat(SignerForInitializerTest.retrievedStoreValue)
           .as("Retrieved store value expected to be null").isNull();
     } else {
       StoreValue storeValue = SignerForInitializerTest.retrievedStoreValue;
-      Assertions.assertThat(storeValue).as("StoreValue should not be null")
+      assertThat(storeValue).as("StoreValue should not be null")
           .isNotNull();
-      Assertions.assertThat(storeValue.getBucketName())
+      assertThat(storeValue.getBucketName())
           .as("Bucket Name mismatch").isEqualTo(bucketName);
       Configuration conf = storeValue.getStoreConf();
-      Assertions.assertThat(conf).as("Configuration should not be null")
+      assertThat(conf).as("Configuration should not be null")
           .isNotNull();
-      Assertions.assertThat(conf.get(TEST_KEY_IDENTIFIER))
+      assertThat(conf.get(TEST_KEY_IDENTIFIER))
           .as("Identifier mistmatch").isEqualTo(identifier);
       Token<? extends TokenIdentifier> token = storeValue.getDtProvider()
           .getFsDelegationToken();
       String tokenId = new String(token.getIdentifier(),
           StandardCharsets.UTF_8);
-      Assertions.assertThat(tokenId)
+      assertThat(tokenId)
           .as("Mismatch in delegation token identifier").isEqualTo(
           createTokenIdentifierString(identifier, bucketName,
               UserGroupInformation.getCurrentUser().getShortUserName()));
@@ -323,7 +313,7 @@ public class TestSignerManager {
       throws IOException, InterruptedException {
     closeable.close();
     attemptSignAndVerify("dontcare", bucketName, ugi, true);
-    Assertions.assertThat(SignerInitializerForTest.storeCache.size())
+    assertThat(SignerInitializerForTest.storeCache.size())
         .as("StoreCache size mismatch").isEqualTo(expectedCount);
   }
 
@@ -336,8 +326,10 @@ public class TestSignerManager {
     private static boolean initialized = false;
 
     @Override
-    public void sign(SignableRequest<?> request, AWSCredentials credentials) {
+    public SdkHttpFullRequest sign(SdkHttpFullRequest sdkHttpFullRequest,
+        ExecutionAttributes executionAttributes) {
       initialized = true;
+      return sdkHttpFullRequest;
     }
 
     public static void reset() {
@@ -354,8 +346,10 @@ public class TestSignerManager {
     private static boolean initialized = false;
 
     @Override
-    public void sign(SignableRequest<?> request, AWSCredentials credentials) {
+    public SdkHttpFullRequest sign(SdkHttpFullRequest sdkHttpFullRequest,
+        ExecutionAttributes executionAttributes) {
       initialized = true;
+      return sdkHttpFullRequest;
     }
 
     public static void reset() {
@@ -472,11 +466,15 @@ public class TestSignerManager {
     private static StoreValue retrievedStoreValue;
 
     @Override
-    public void sign(SignableRequest<?> request, AWSCredentials credentials) {
-      String bucketName = request.getEndpoint().getHost();
+    public SdkHttpFullRequest sign(SdkHttpFullRequest sdkHttpFullRequest,
+        ExecutionAttributes executionAttributes) {
+      String bucket = sdkHttpFullRequest.host().split("//")[1];
+      // remove trailing slash
+      String bucketName = bucket.substring(0, bucket.length() - 1);
       try {
         retrievedStoreValue = SignerInitializerForTest
             .getStoreInfo(bucketName, UserGroupInformation.getCurrentUser());
+        return sdkHttpFullRequest;
       } catch (IOException e) {
         throw new RuntimeException("Failed to get current ugi", e);
       }
@@ -579,12 +577,22 @@ public class TestSignerManager {
     return identifier + "_" + bucketName + "_" + user;
   }
 
-  private SignableRequest<?> constructSignableRequest(String bucketName)
-      throws URISyntaxException {
-    DefaultRequest signableRequest = new DefaultRequest(
-        AmazonWebServiceRequest.NOOP, "fakeservice");
-    URI uri = new URI("s3://" + bucketName + "/");
-    signableRequest.setEndpoint(uri);
-    return signableRequest;
+  private SdkHttpFullRequest constructSignableRequest(String bucketName) {
+    String host = "s3://" + bucketName + "/";
+    return SdkHttpFullRequest.builder().host(host).protocol("https").method(SdkHttpMethod.GET)
+        .build();
   }
+
+  @Test
+  public void testV2SignerRejected() throws Throwable {
+    intercept(InstantiationIOException.class, "no longer supported",
+        () -> SignerFactory.createSigner(S3_V2_SIGNER, "key"));
+  }
+
+  @Test
+  public void testUnknownSignerRejected() throws Throwable {
+    intercept(InstantiationIOException.class, "unknownSigner",
+        () -> SignerFactory.createSigner("unknownSigner", "key"));
+  }
+
 }

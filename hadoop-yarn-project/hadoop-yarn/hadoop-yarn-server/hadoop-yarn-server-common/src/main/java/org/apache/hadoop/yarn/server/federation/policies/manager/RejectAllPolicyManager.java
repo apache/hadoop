@@ -17,14 +17,16 @@
 
 package org.apache.hadoop.yarn.server.federation.policies.manager;
 
+import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.yarn.server.federation.policies.amrmproxy.RejectAMRMProxyPolicy;
+import org.apache.hadoop.yarn.server.federation.policies.dao.WeightedPolicyInfo;
 import org.apache.hadoop.yarn.server.federation.policies.router.RejectRouterPolicy;
 
 /**
  * This class represents a simple implementation of a {@code
  * FederationPolicyManager}.
  *
- * This policy rejects all reuqests for both router and amrmproxy routing. This
+ * This policy rejects all requests for both router and amrmproxy routing. This
  * is to be used to prevent applications in a specific queue (or if used as
  * default for non-configured queues) from accessing cluster resources.
  */
@@ -37,4 +39,20 @@ public class RejectAllPolicyManager extends AbstractPolicyManager {
     amrmProxyFederationPolicy = RejectAMRMProxyPolicy.class;
   }
 
+  @Override
+  public WeightedPolicyInfo getWeightedPolicyInfo() {
+    throw new NotImplementedException(
+        "RejectAllPolicyManager does not implement getWeightedPolicyInfo.");
+  }
+
+  @Override
+  public void setWeightedPolicyInfo(WeightedPolicyInfo weightedPolicyInfo) {
+    throw new NotImplementedException(
+        "RejectAllPolicyManager does not implement setWeightedPolicyInfo.");
+  }
+
+  @Override
+  public boolean isSupportWeightedPolicyInfo() {
+    return false;
+  }
 }

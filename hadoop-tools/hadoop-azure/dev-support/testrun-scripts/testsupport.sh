@@ -15,85 +15,174 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-testresourcesdir=src/test/resources
-combconfsdir=$testresourcesdir/combinationConfigFiles
-combtestfile=$testresourcesdir/abfs-combination-test-configs.xml
+resourceDir=src/test/resources/
+accountSettingsFolderName=accountSettings
+combtestfile=$resourceDir
+combtestfile+=abfs-combination-test-configs.xml
+logdir=dev-support/testlogs/
 
-logdir=dev-support/testlogs
-testresultsregex="Results:(\n|.)*?Tests run:"
-testresultsfilename=
-starttime=
-threadcount=
-defaultthreadcount=8
+# Regex to filter out final test stats
+testresultsregex="Tests run: [0-9]+, Failures: [0-9]+, Errors: [0-9]+, Skipped: [0-9]+$"
 
-properties=
-values=
+# Regex to filter out the test that failed due to unexpected output or error.
+failedTestRegex1="<<< FAILURE!$"
 
-validate() {
-  if [ -z "$threadcount" ] ; then
-    threadcount=$defaultthreadcount
-  fi
-  numberegex='^[0-9]+$'
-  if ! [[ $threadcount =~ $numberegex ]] ; then
-    echo "Exiting. The script param (threadcount) should be a number"
-    exit -1
-  fi
-  if [ -z "$combination" ]; then
-   echo "Exiting. combination cannot be empty"
-   exit -1
-  fi
-  propertiessize=${#properties[@]}
-  valuessize=${#values[@]}
-  if [ "$propertiessize" -lt 1 ] || [ "$valuessize" -lt 1 ] || [ "$propertiessize" -ne "$valuessize" ]; then
-    echo "Exiting. Both properties and values arrays has to be populated and of same size. Please check for combination $combination"
-    exit -1
-  fi
+# Regex to filter out the test that failed due to runtime exception.
+failedTestRegex2="<<< ERROR!$"
 
-  for filename in "${combinations[@]}"; do
-    if [[ ! -f "$combconfsdir/$filename.xml" ]]; then
-      echo "Exiting. Combination config file ($combconfsdir/$combination.xml) does not exist."
-      exit -1
-    fi
-  done
-}
+# Regex to remove the formatting used by mvn output for better regex matching.
+removeFormattingRegex="s/\x1b\[[0-9;]*m//g"
+accountConfigFileSuffix="_settings.xml"
+separatorbar1="============================================================"
+separatorbar2="------------------------------"
+testOutputLogFolder=$logdir
+testlogfilename=combinationTestLogFile
 
-checkdependencies() {
-  if ! [ "$(command -v pcregrep)" ]; then
-    echo "Exiting. pcregrep is required to run the script."
-    exit -1
-  fi
-  if ! [ "$(command -v xmlstarlet)" ]; then
-    echo "Exiting. xmlstarlet is required to run the script."
-    exit -1
+fullRunStartTime=$(date +%s)
+STARTTIME=$(date +%s)
+ENDTIME=$(date +%s)
+
+outputFormatOn="\033[0;95m"
+outputFormatOff="\033[0m"
+
+# Function to check if the blob config file exists and create one if it doesn't.
+fnsBlobConfigFileCheck() {
+  baseFileName=$1
+  targetWord=".dfs."
+  replacementWord=".blob."
+  accountSettingsDir="src/test/resources/accountSettings/"
+  accountConfigFileSuffix="_settings.xml"
+  sourceFilePath="${accountSettingsDir}${baseFileName}${accountConfigFileSuffix}"
+  targetFilePath="${accountSettingsDir}${baseFileName}_blob${accountConfigFileSuffix}"
+
+  if [ ! -f "$targetFilePath" ]; then
+    cp "$sourceFilePath" "$targetFilePath"
+    sed -i "s/$targetWord/$replacementWord/g" "$targetFilePath"
+    echo "File created and word replaced."
+  else
+    echo "File already exists."
   fi
 }
 
-cleancombinationconfigs() {
-  rm -rf $combconfsdir
-  mkdir -p $combconfsdir
-}
+triggerRun()
+{
+  echo ' '
+  combination=$1
+  accountName=$2
+  runTest=$3
+  processcount=$4
+  cleanUpTestContainers=$5
 
-generateconfigs() {
-  combconffile="$combconfsdir/$combination.xml"
-  rm -rf "$combconffile"
-  cat > "$combconffile" << ENDOFFILE
+  if [ -z "$accountName" ]; then
+    logOutput "ERROR: Test account not configured. Re-run the script and choose SET_OR_CHANGE_TEST_ACCOUNT to configure the test account."
+    exit 1;
+  fi
+  accountConfigFile=$accountSettingsFolderName/$accountName$accountConfigFileSuffix
+  rm -rf $combtestfile
+  cat > $combtestfile << ENDOFFILE
 <configuration>
 
 </configuration>
 ENDOFFILE
-
-  propertiessize=${#properties[@]}
-  valuessize=${#values[@]}
+  propertiessize=${#PROPERTIES[@]}
+  valuessize=${#VALUES[@]}
   if [ "$propertiessize" -ne "$valuessize" ]; then
-    echo "Exiting. Number of properties and values differ for $combination"
-    exit -1
+    logOutput "Exiting. Number of properties and values differ for $combination"
+    exit 1
   fi
+  echo "$separatorbar1"
+  echo "$combination"
+  echo "$separatorbar1"
+
+  # First include the account specific configurations.
+  xmlstarlet ed -P -L -s /configuration -t elem -n include -v "" $combtestfile
+  xmlstarlet ed -P -L -i /configuration/include -t attr -n href -v "$accountConfigFile" $combtestfile
+  xmlstarlet ed -P -L -i /configuration/include -t attr -n xmlns -v "http://www.w3.org/2001/XInclude" $combtestfile
+
+  # Override the combination specific configurations.
   for ((i = 0; i < propertiessize; i++)); do
-    key=${properties[$i]}
-    val=${values[$i]}
+    key=${PROPERTIES[$i]}
+    val=${VALUES[$i]}
+    echo "Combination specific property setting: [ key=$key , value=$val ]"
     changeconf "$key" "$val"
   done
-  formatxml "$combconffile"
+  formatxml "$combtestfile"
+  echo ' '
+  echo "Activated [$combtestfile] - for account: $accountName for combination $combination"
+  testlogfilename="$testOutputLogFolder/Test-Logs-$combination.txt"
+  touch "$testlogfilename"
+
+  if [ "$runTest" == true ]
+  then
+    STARTTIME=$(date +%s)
+    echo "Running test for combination $combination on account $accountName [ProcessCount=$processcount]"
+    logOutput "Test run report can be seen in $testlogfilename"
+    mvn -T 1C -Dparallel-tests=abfs -Dscale -DtestsThreadCount="$processcount" verify >> "$testlogfilename" || true
+    # Remove the formatting used by mvn output for better regex matching.
+    sed -i "$removeFormattingRegex" "$testlogfilename"
+    ENDTIME=$(date +%s)
+    summary
+  fi
+
+  if [ "$cleanUpTestContainers" == true ]
+  then
+    mvn test -Dtest=org.apache.hadoop.fs.azurebfs.utils.CleanupTestContainers >> "$testlogfilename" || true
+    if grep -q "There are test failures" "$testlogfilename";
+    then logOutput "ERROR: All test containers could not be deleted. Detailed error cause in $testlogfilename"
+    pcregrep -M "$testresultsregex" "$testlogfilename"
+    exit 0
+    fi
+
+    logOutput "Delete test containers - complete. Test run logs in - $testlogfilename"
+  fi
+
+}
+
+summary() {
+  {
+    echo ""
+    echo "$separatorbar1"
+    echo "$combination"
+    echo "$separatorbar1"
+    summarycontent
+  } >> "$aggregatedTestResult"
+  printf "\n----- Test results -----\n"
+  summarycontent
+  secondstaken=$((ENDTIME - STARTTIME))
+  mins=$((secondstaken / 60))
+  secs=$((secondstaken % 60))
+  printf "\nTime taken: %s mins %s secs.\n" "$mins" "$secs"
+  logOutput "For Error details refer to Test run report in: $testlogfilename"
+  logOutput "Consolidated test result is saved in: $aggregatedTestResult"
+  echo "$separatorbar2"
+}
+
+summarycontent() {
+  output=$(pcregrep -M "$failedTestRegex1" "$testlogfilename" || true)
+  if [ -n "$output" ]; then
+    echo "$output"
+  fi
+  output=$(pcregrep -M "$failedTestRegex2" "$testlogfilename" || true)
+  if [ -n "$output" ]; then
+    echo ""
+    echo "$output"
+  fi
+  output=$(pcregrep -M "$testresultsregex" "$testlogfilename" || true)
+  if [ -n "$output" ]; then
+    echo ""
+    echo "$output"
+  fi
+}
+
+checkdependencies() {
+  if ! [ "$(command -v pcregrep)" ]; then
+    logOutput "Exiting. pcregrep is required to run the script."
+    exit 1
+  fi
+  if ! [ "$(command -v xmlstarlet)" ]; then
+    logOutput "Exiting. xmlstarlet is required to run the script."
+    exit 1
+  fi
 }
 
 formatxml() {
@@ -101,50 +190,14 @@ formatxml() {
   mv "$1.tmp" "$1"
 }
 
-setactiveconf() {
-  if [[ ! -f "$combconfsdir/$combination.xml" ]]; then
-    echo "Exiting. Combination config file ($combconfsdir/$combination.xml) does not exist."
-    exit -1
-  fi
-  rm -rf $combtestfile
-  cat > $combtestfile << ENDOFFILE
-<configuration>
-
-</configuration>
-ENDOFFILE
-  xmlstarlet ed -P -L -s /configuration -t elem -n include -v "" $combtestfile
-  xmlstarlet ed -P -L -i /configuration/include -t attr -n href -v "combinationConfigFiles/$combination.xml" $combtestfile
-  xmlstarlet ed -P -L -i /configuration/include -t attr -n xmlns -v "http://www.w3.org/2001/XInclude" $combtestfile
-  formatxml $combtestfile
-}
-
 changeconf() {
-  xmlstarlet ed -P -L -d "/configuration/property[name='$1']" "$combconffile"
-  xmlstarlet ed -P -L -s /configuration -t elem -n propertyTMP -v "" -s /configuration/propertyTMP -t elem -n name -v "$1" -r /configuration/propertyTMP -v property "$combconffile"
-  if ! xmlstarlet ed -P -L -s "/configuration/property[name='$1']" -t elem -n value -v "$2" "$combconffile"
+  xmlstarlet ed -P -L -d "/configuration/property[name='$1']" "$combtestfile"
+  xmlstarlet ed -P -L -s /configuration -t elem -n propertyTMP -v "" -s /configuration/propertyTMP -t elem -n name -v "$1" -r /configuration/propertyTMP -v property "$combtestfile"
+  if ! xmlstarlet ed -P -L -s "/configuration/property[name='$1']" -t elem -n value -v "$2" "$combtestfile"
   then
-    echo "Exiting. Changing config property failed."
-    exit -1
+    logOutput "Exiting. Changing config property failed."
+    exit 1
   fi
-}
-
-summary() {
-  {
-    echo ""
-    echo "$combination"
-    echo "========================"
-    pcregrep -M "$testresultsregex" "$testlogfilename"
-  } >> "$testresultsfilename"
-  printf "\n----- Test results -----\n"
-  pcregrep -M "$testresultsregex" "$testlogfilename"
-
-  secondstaken=$((ENDTIME - STARTTIME))
-  mins=$((secondstaken / 60))
-  secs=$((secondstaken % 60))
-  printf "\nTime taken: %s mins %s secs.\n" "$mins" "$secs"
-  echo "Find test logs for the combination ($combination) in: $testlogfilename"
-  echo "Find consolidated test results in: $testresultsfilename"
-  echo "----------"
 }
 
 init() {
@@ -153,89 +206,24 @@ init() {
   then
     echo ""
     echo "Exiting. Build failed."
-    exit -1
-  fi
-  starttime=$(date +"%Y-%m-%d_%H-%M-%S")
-  mkdir -p "$logdir"
-  testresultsfilename="$logdir/$starttime/Test-Results.txt"
-  if [[ -z "$combinations" ]]; then
-    combinations=( $( ls $combconfsdir/*.xml ))
-  fi
-}
-
-runtests() {
-  parseoptions "$@"
-  validate
-  if [ -z "$starttime" ]; then
-    init
-  fi
-  shopt -s nullglob
-  for combconffile in "${combinations[@]}"; do
-    STARTTIME=$(date +%s)
-    combination=$(basename "$combconffile" .xml)
-    mkdir -p "$logdir/$starttime"
-    testlogfilename="$logdir/$starttime/Test-Logs-$combination.txt"
-    printf "\nRunning the combination: %s..." "$combination"
-    setactiveconf
-    mvn -T 1C -Dparallel-tests=abfs -Dscale -DtestsThreadCount=$threadcount verify >> "$testlogfilename" || true
-    ENDTIME=$(date +%s)
-    summary
-  done
-}
-
-begin() {
-  cleancombinationconfigs
-}
-
-parseoptions() {
-runactivate=0
-runtests=0
-  while getopts ":c:a:t:" option; do
-    case "${option}" in
-      a)
-        if [[ "$runactivate" -eq "1" ]]; then
-          echo "-a Option is not multivalued"
-          exit 1
-        fi
-        runactivate=1
-        combination=$(basename "$OPTARG" .xml)
-        ;;
-      c)
-        runtests=1
-        combination=$(basename "$OPTARG" .xml)
-        combinations+=("$combination")
-        ;;
-      t)
-        threadcount=$OPTARG
-        ;;
-      *|?|h)
-        if [[ -z "$combinations" ]]; then
-          combinations=( $( ls $combconfsdir/*.xml ))
-        fi
-      combstr=""
-        for combconffile in "${combinations[@]}"; do
-          combname=$(basename "$combconffile" .xml)
-          combstr="${combname}, ${combstr}"
-        done
-        combstr=${combstr:0:-2}
-
-        echo "Usage: $0 [-n] [-a COMBINATION_NAME] [-c COMBINATION_NAME] [-t THREAD_COUNT]"
-        echo ""
-        echo "Where:"
-        echo "  -a COMBINATION_NAME   Specify the combination name which needs to be activated."
-        echo "                        Configured combinations: ${combstr}"
-        echo "  -c COMBINATION_NAME   Specify the combination name for test runs"
-        echo "  -t THREAD_COUNT       Specify the thread count"
-        exit 1
-        ;;
-    esac
-  done
-  if [[ "$runactivate" -eq "1" && "$runtests" -eq "1" ]]; then
-    echo "Both activate (-a option) and test run combinations (-c option) cannot be specified together"
     exit 1
   fi
-  if [[ "$runactivate" -eq "1" ]]; then
-        setactiveconf
-        exit 0
-  fi
+  starttime=$(date +"%Y-%m-%d_%H-%M-%S")
+  testOutputLogFolder+=$starttime
+  mkdir -p "$testOutputLogFolder"
+  aggregatedTestResult="$testOutputLogFolder/Test-Results.txt"
+ }
+
+ printAggregate() {
+   echo  :::: AGGREGATED TEST RESULT ::::
+   cat "$aggregatedTestResult"
+  fullRunEndTime=$(date +%s)
+  fullRunTimeInSecs=$((fullRunEndTime - fullRunStartTime))
+  mins=$((fullRunTimeInSecs / 60))
+  secs=$((fullRunTimeInSecs % 60))
+  printf "\nTime taken: %s mins %s secs.\n" "$mins" "$secs"
+ }
+
+logOutput() {
+  echo -e "$outputFormatOn" "$1" "$outputFormatOff"
 }

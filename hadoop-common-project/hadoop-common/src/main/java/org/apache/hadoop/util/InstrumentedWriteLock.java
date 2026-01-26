@@ -26,7 +26,7 @@ import org.apache.hadoop.classification.VisibleForTesting;
 import org.slf4j.Logger;
 
 /**
- * This is a wrap class of a <tt>WriteLock</tt>.
+ * This is a wrap class of a <code>WriteLock</code>.
  * It extends the class {@link InstrumentedLock}, and can be used to track
  * whether a specific write lock is being held for too long and log
  * warnings if so.
@@ -36,6 +36,9 @@ import org.slf4j.Logger;
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public class InstrumentedWriteLock extends InstrumentedLock {
+
+  private final ReentrantReadWriteLock readWriteLock;
+  private volatile long writeLockHeldTimeStamp = 0;
 
   public InstrumentedWriteLock(String name, Logger logger,
       ReentrantReadWriteLock readWriteLock,
@@ -50,5 +53,28 @@ public class InstrumentedWriteLock extends InstrumentedLock {
       long minLoggingGapMs, long lockWarningThresholdMs, Timer clock) {
     super(name, logger, readWriteLock.writeLock(), minLoggingGapMs,
         lockWarningThresholdMs, clock);
+    this.readWriteLock = readWriteLock;
+  }
+
+  @Override
+  public void unlock() {
+    boolean needReport = readWriteLock.getWriteHoldCount() == 1;
+    long localWriteReleaseTime = getTimer().monotonicNow();
+    long localWriteAcquireTime = writeLockHeldTimeStamp;
+    getLock().unlock();
+    if (needReport) {
+      writeLockHeldTimeStamp = 0;
+      check(localWriteAcquireTime, localWriteReleaseTime, true);
+    }
+  }
+
+  /**
+   * Starts timing for the instrumented write lock.
+   */
+  @Override
+  protected void startLockTiming() {
+    if (readWriteLock.getWriteHoldCount() == 1) {
+      writeLockHeldTimeStamp = getTimer().monotonicNow();
+    }
   }
 }

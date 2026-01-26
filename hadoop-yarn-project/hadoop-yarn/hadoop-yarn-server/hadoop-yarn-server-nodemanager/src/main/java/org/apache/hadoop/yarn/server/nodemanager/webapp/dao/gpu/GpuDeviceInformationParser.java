@@ -18,20 +18,27 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.webapp.dao.gpu;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.xml.sax.InputSource;
-import org.xml.sax.XMLReader;
-
+import java.io.StringReader;
+import javax.xml.XMLConstants;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.Unmarshaller;
 import javax.xml.parsers.SAXParserFactory;
 import javax.xml.transform.sax.SAXSource;
-import java.io.StringReader;
+
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.yarn.exceptions.YarnException;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.xml.sax.InputSource;
+import org.xml.sax.XMLReader;
+
+import static org.apache.hadoop.util.XMLUtils.EXTERNAL_GENERAL_ENTITIES;
+import static org.apache.hadoop.util.XMLUtils.EXTERNAL_PARAMETER_ENTITIES;
+import static org.apache.hadoop.util.XMLUtils.LOAD_EXTERNAL_DECL;
+import static org.apache.hadoop.util.XMLUtils.VALIDATION;
 
 /**
  * Parse XML and get GPU device information
@@ -68,10 +75,11 @@ public class GpuDeviceInformationParser {
    */
   private SAXParserFactory initSaxParserFactory() throws Exception {
     SAXParserFactory spf = SAXParserFactory.newInstance();
-    spf.setFeature(
-        "http://apache.org/xml/features/nonvalidating/load-external-dtd",
-        false);
-    spf.setFeature("http://xml.org/sax/features/validation", false);
+    spf.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
+    spf.setFeature(LOAD_EXTERNAL_DECL, false);
+    spf.setFeature(EXTERNAL_GENERAL_ENTITIES, false);
+    spf.setFeature(EXTERNAL_PARAMETER_ENTITIES, false);
+    spf.setFeature(VALIDATION, false);
     return spf;
   }
 

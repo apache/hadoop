@@ -51,8 +51,8 @@ public enum SubClusterState {
   /** Subcluster has unregistered. */
   SC_UNREGISTERED;
 
-  public boolean isUnusable() {
-    return (this != SC_RUNNING && this != SC_NEW);
+  public boolean isUsable() {
+    return (this == SC_RUNNING || this == SC_NEW);
   }
 
   public boolean isActive() {
@@ -70,15 +70,15 @@ public enum SubClusterState {
   /**
    * Convert a string into {@code SubClusterState}.
    *
-   * @param x the string to convert in SubClusterState
+   * @param state the string to convert in SubClusterState
    * @return the respective {@code SubClusterState}
    */
-  public static SubClusterState fromString(String x) {
+  public static SubClusterState fromString(String state) {
     try {
-      return SubClusterState.valueOf(x);
+      return SubClusterState.valueOf(state);
     } catch (Exception e) {
-      LOG.error("Invalid SubCluster State value in the StateStore does not"
-          + " match with the YARN Federation standard.");
+      LOG.error("Invalid SubCluster State value({}) in the StateStore does not"
+          + " match with the YARN Federation standard.", state);
       return null;
     }
   }

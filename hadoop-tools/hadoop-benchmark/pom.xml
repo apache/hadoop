@@ -22,11 +22,11 @@
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-project</artifactId>
-    <version>3.4.0-SNAPSHOT</version>
+    <version>3.5.0-SNAPSHOT</version>
     <relativePath>../../hadoop-project/pom.xml</relativePath>
   </parent>
   <artifactId>hadoop-benchmark</artifactId>
-  <version>3.4.0-SNAPSHOT</version>
+  <version>3.5.0-SNAPSHOT</version>
   <packaging>jar</packaging>
 
   <name>Apache Hadoop Common Benchmark</name>
@@ -72,17 +72,14 @@
         </executions>
       </plugin>
       <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>findbugs-maven-plugin</artifactId>
-          <configuration>
-            <excludeFilterFile>${basedir}/src/main/findbugs/exclude.xml</excludeFilterFile>
-          </configuration>
-      </plugin>
-      <plugin>
         <groupId>com.github.spotbugs</groupId>
         <artifactId>spotbugs-maven-plugin</artifactId>
         <configuration>
-          <excludeFilterFile>${basedir}/src/main/findbugs/exclude.xml</excludeFilterFile>
+          <excludeFilterFiles>
+            <excludeFilterFile>${basedir}/src/main/findbugs/exclude.xml</excludeFilterFile>
+            <excludeFilterFile>${repo.root}/dev-support/findbugs-exclude-global.xml
+            </excludeFilterFile>
+          </excludeFilterFiles>
         </configuration>
       </plugin>
       <plugin>

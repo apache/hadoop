@@ -31,7 +31,7 @@ There are a number of goals here:
 having to invoke them.
 1. Allow filesystems with their own optional per-instance features to declare
 whether or not they are active for the specific instance.
-1. Allow for fileystem connectors which work with object stores to expose the
+1. Allow for filesystem connectors which work with object stores to expose the
 fundamental difference in semantics of these stores (e.g: files not visible
 until closed, file rename being `O(data)`), directory rename being non-atomic,
 etc.
@@ -122,7 +122,7 @@ will be permitted on that path by the caller.
 *Duration of availability*
 
 As the state of a remote store changes,so may path capabilities. This
-may be due to changes in the local state of the fileystem (e.g. symbolic links
+may be due to changes in the local state of the filesystem (e.g. symbolic links
 or mount points changing), or changes in its functionality (e.g. a feature
 becoming availaible/unavailable due to operational changes, system upgrades, etc.)
 

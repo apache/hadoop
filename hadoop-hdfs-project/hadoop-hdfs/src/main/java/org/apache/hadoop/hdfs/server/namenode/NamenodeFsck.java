@@ -79,6 +79,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.NumberReplicas;
 import org.apache.hadoop.hdfs.server.datanode.CachingStrategy;
+import org.apache.hadoop.hdfs.util.RwLockMode;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.NodeBase;
@@ -126,6 +127,8 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
   public static final String ENTERING_MAINTENANCE_STATUS =
       "is ENTERING MAINTENANCE";
   public static final String IN_MAINTENANCE_STATUS = "is IN MAINTENANCE";
+  public static final String STALE_STATUS = "is STALE";
+  public static final String EXCESS_STATUS = "is EXCESS";
   public static final String NONEXISTENT_STATUS = "does not exist";
   public static final String FAILURE_STATUS = "FAILED";
   public static final String UNDEFINED = "undefined";
@@ -287,7 +290,8 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
       return;
     }
 
-    namenode.getNamesystem().readLock();
+    // TODO: Just hold the BM read lock.
+    namenode.getNamesystem().readLock(RwLockMode.GLOBAL);
     try {
       //get blockInfo
       Block block = new Block(Block.getBlockId(blockId));
@@ -320,6 +324,10 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
       }
       out.println("No. of corrupted Replica: " +
           numberReplicas.corruptReplicas());
+      // for striped blocks only and number of redundant internal block replicas.
+      if (blockInfo.isStriped()) {
+        out.println("No. of redundant Replica: " + numberReplicas.redundantInternalBlocks());
+      }
       //record datanodes that have corrupted block replica
       Collection<DatanodeDescriptor> corruptionRecord = null;
       if (blockManager.getCorruptReplicas(block) != null) {
@@ -347,7 +355,7 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
       out.print("\n\n" + errMsg);
       LOG.warn("Error in looking up block", e);
     } finally {
-      namenode.getNamesystem().readUnlock("fsck");
+      namenode.getNamesystem().readUnlock(RwLockMode.GLOBAL, "fsck");
     }
   }
 
@@ -366,6 +374,10 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
       out.print(ENTERING_MAINTENANCE_STATUS);
     } else if (this.showMaintenanceState && dn.isInMaintenance()) {
       out.print(IN_MAINTENANCE_STATUS);
+    } else if (dn.isStale(this.staleInterval)) {
+      out.print(STALE_STATUS);
+    } else if (blockManager.isExcess(dn, blockManager.getStoredBlock(block))) {
+      out.print(EXCESS_STATUS);
     } else {
       out.print(HEALTHY_STATUS);
     }
@@ -575,7 +587,7 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
     final String operationName = "fsckGetBlockLocations";
     FSPermissionChecker.setOperationType(operationName);
     FSPermissionChecker pc = fsn.getPermissionChecker();
-    fsn.readLock();
+    fsn.readLock(RwLockMode.GLOBAL);
     try {
       blocks = FSDirStatAndListingOp.getBlockLocations(
           fsn.getFSDirectory(), pc,
@@ -584,7 +596,7 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
     } catch (FileNotFoundException fnfe) {
       blocks = null;
     } finally {
-      fsn.readUnlock(operationName);
+      fsn.readUnlock(RwLockMode.GLOBAL, operationName);
     }
     return blocks;
   }

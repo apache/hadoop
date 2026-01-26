@@ -143,7 +143,7 @@ public class Job extends ControlledJob {
    * is waiting to run, not during or afterwards.
    * 
    * @param dependingJob Job that this Job depends on.
-   * @return <tt>true</tt> if the Job was added.
+   * @return <code>true</code> if the Job was added.
    */
   public synchronized boolean addDependingJob(Job dependingJob) {
     return super.addDependingJob(dependingJob);

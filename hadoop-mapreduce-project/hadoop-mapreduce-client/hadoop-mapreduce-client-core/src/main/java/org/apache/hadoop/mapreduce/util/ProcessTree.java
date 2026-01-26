@@ -24,6 +24,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.util.Shell.ExitCodeException;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -326,7 +327,7 @@ public class ProcessTree {
   /**
    * Helper thread class that kills process-tree with SIGKILL in background
    */
-  static class SigKillThread extends Thread {
+  static class SigKillThread extends SubjectInheritingThread {
     private String pid = null;
     private boolean isProcessGroup = false;
 
@@ -339,7 +340,7 @@ public class ProcessTree {
       sleepTimeBeforeSigKill = interval;
     }
 
-    public void run() {
+    public void work() {
       sigKillInCurrentThread(pid, isProcessGroup, sleepTimeBeforeSigKill);
     }
   }

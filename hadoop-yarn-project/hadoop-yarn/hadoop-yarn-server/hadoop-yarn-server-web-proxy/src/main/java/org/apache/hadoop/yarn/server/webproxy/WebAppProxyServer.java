@@ -86,7 +86,7 @@ public class WebAppProxyServer extends CompositeService {
   }
 
   /**
-   * Log in as the Kerberose principal designated for the proxy
+   * Log in as the Kerberos principal designated for the proxy
    * @param conf the configuration holding this information in it.
    * @throws IOException on any error.
    */

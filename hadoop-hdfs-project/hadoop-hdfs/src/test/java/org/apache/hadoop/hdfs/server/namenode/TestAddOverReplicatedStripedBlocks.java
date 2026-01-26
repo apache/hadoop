@@ -33,22 +33,23 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStriped;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
+import org.apache.hadoop.hdfs.util.RwLockMode;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.BitSet;
 import java.util.List;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
+@Timeout(300)
 public class TestAddOverReplicatedStripedBlocks {
 
   private MiniDFSCluster cluster;
@@ -65,10 +66,7 @@ public class TestAddOverReplicatedStripedBlocks {
   private final int blockSize = stripesPerBlock * cellSize;
   private final int numDNs = groupSize + 3;
 
-  @Rule
-  public Timeout globalTimeout = new Timeout(300000);
-
-  @Before
+  @BeforeEach
   public void setup() throws IOException {
     Configuration conf = new Configuration();
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
@@ -86,7 +84,7 @@ public class TestAddOverReplicatedStripedBlocks {
         ecPolicy.getName());
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     if (cluster != null) {
       cluster.shutdown();
@@ -203,13 +201,15 @@ public class TestAddOverReplicatedStripedBlocks {
     // let a internal block be corrupt
     BlockManager bm = cluster.getNamesystem().getBlockManager();
     List<DatanodeInfo> infos = Arrays.asList(bg.getLocations());
+    cluster.stopDataNode(infos.get(0).getXferAddr());
     List<String> storages = Arrays.asList(bg.getStorageIDs());
-    cluster.getNamesystem().writeLock();
+    cluster.getNamesystem().writeLock(RwLockMode.BM);
     try {
       bm.findAndMarkBlockAsCorrupt(lbs.getLastLocatedBlock().getBlock(),
           infos.get(0), storages.get(0), "TEST");
     } finally {
-      cluster.getNamesystem().writeUnlock();
+      cluster.getNamesystem().writeUnlock(RwLockMode.BM,
+          "testProcessOverReplicatedAndCorruptStripedBlock");
     }
     assertEquals(1, bm.countNodes(bm.getStoredBlock(blockInfo))
         .corruptReplicas());
@@ -236,7 +236,7 @@ public class TestAddOverReplicatedStripedBlocks {
     for (byte index : bg.getBlockIndices()) {
       set.set(index);
     }
-    Assert.assertFalse(set.get(0));
+    assertFalse(set.get(0));
     for (int i = 1; i < groupSize; i++) {
       assertTrue(set.get(i));
     }
@@ -244,7 +244,7 @@ public class TestAddOverReplicatedStripedBlocks {
 
   // This test is going to be rewritten in HDFS-10854. Ignoring this test
   // temporarily as it fails with the fix for HDFS-10301.
-  @Ignore
+  @Disabled
   @Test
   public void testProcessOverReplicatedAndMissingStripedBlock()
       throws Exception {
@@ -293,7 +293,7 @@ public class TestAddOverReplicatedStripedBlocks {
     for (byte index : bg.getBlockIndices()) {
       set.set(index);
     }
-    Assert.assertFalse(set.get(groupSize - 1));
+    assertFalse(set.get(groupSize - 1));
     for (int i = 0; i < groupSize - 1; i++) {
       assertTrue(set.get(i));
     }

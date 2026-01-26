@@ -18,12 +18,12 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 
@@ -34,6 +34,7 @@ import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
@@ -43,13 +44,14 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 public class TestHDFSConcat {
   public static final Logger LOG =
@@ -71,18 +73,18 @@ public class TestHDFSConcat {
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
   }
   
-  @Before
+  @BeforeEach
   public void startUpCluster() throws IOException {
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(REPL_FACTOR).build();
-    assertNotNull("Failed Cluster Creation", cluster);
+    assertNotNull(cluster, "Failed Cluster Creation");
     cluster.waitClusterUp();
     dfs = cluster.getFileSystem();
-    assertNotNull("Failed to get FileSystem", dfs);
+    assertNotNull(dfs, "Failed to get FileSystem");
     nn = cluster.getNameNodeRpc();
-    assertNotNull("Failed to get NameNode", nn);
+    assertNotNull(nn, "Failed to get NameNode");
   }
 
-  @After
+  @AfterEach
   public void shutDownCluster() throws IOException {
     if(dfs != null) {
       dfs.close();
@@ -201,7 +203,7 @@ public class TestHDFSConcat {
     
     //verifications
     // 1. number of blocks
-    assertEquals(trgBlocks, totalBlocks); 
+    assertEquals(trgBlocks, totalBlocks);
         
     // 2. file lengths
     assertEquals(trgLen, totalLen);
@@ -209,7 +211,7 @@ public class TestHDFSConcat {
     // 3. removal of the src file
     for(Path p: files) {
       fStatus = nn.getFileInfo(p.toUri().getPath());
-      assertNull("File " + p + " still exists", fStatus); // file shouldn't exist
+      assertNull(fStatus, "File " + p + " still exists"); // file shouldn't exist
       // try to create fie with the same name
       DFSTestUtil.createFile(dfs, p, fileLen, REPL_FACTOR, 1); 
     }
@@ -290,7 +292,7 @@ public class TestHDFSConcat {
       if(mismatch)
         break;
     }
-    assertFalse("File content of concatenated file is different", mismatch);
+    assertFalse(mismatch, "File content of concatenated file is different");
   }
 
   // test case when final block is not of a full length
@@ -360,7 +362,7 @@ public class TestHDFSConcat {
     
     // 3. removal of the src file
     fStatus = nn.getFileInfo(name2);
-    assertNull("File "+name2+ "still exists", fStatus); // file shouldn't exist
+    assertNull(fStatus, "File " + name2 + "still exists"); // file shouldn't exist
   
     // 4. content
     checkFileContent(byteFileConcat, new byte [] [] {byteFile1, byteFile2});
@@ -445,15 +447,14 @@ public class TestHDFSConcat {
     }
 
     ContentSummary summary = dfs.getContentSummary(foo);
-    Assert.assertEquals(11, summary.getFileCount());
-    Assert.assertEquals(blockSize * REPL_FACTOR +
-            blockSize * 2 * srcRepl * srcNum, summary.getSpaceConsumed());
+    assertEquals(11, summary.getFileCount());
+    assertEquals(blockSize * REPL_FACTOR + blockSize * 2 * srcRepl * srcNum,
+        summary.getSpaceConsumed());
 
     dfs.concat(target, srcs);
     summary = dfs.getContentSummary(foo);
-    Assert.assertEquals(1, summary.getFileCount());
-    Assert.assertEquals(
-        blockSize * REPL_FACTOR + blockSize * 2 * REPL_FACTOR * srcNum,
+    assertEquals(1, summary.getFileCount());
+    assertEquals(blockSize * REPL_FACTOR + blockSize * 2 * REPL_FACTOR * srcNum,
         summary.getSpaceConsumed());
   }
 
@@ -476,23 +477,22 @@ public class TestHDFSConcat {
     }
 
     ContentSummary summary = dfs.getContentSummary(bar);
-    Assert.assertEquals(11, summary.getFileCount());
-    Assert.assertEquals(dsQuota, summary.getSpaceConsumed());
+    assertEquals(11, summary.getFileCount());
+    assertEquals(dsQuota, summary.getSpaceConsumed());
 
     try {
       dfs.concat(target, srcs);
       fail("QuotaExceededException expected");
     } catch (RemoteException e) {
-      Assert.assertTrue(
+      assertTrue(
           e.unwrapRemoteException() instanceof QuotaExceededException);
     }
 
     dfs.setQuota(foo, Long.MAX_VALUE - 1, Long.MAX_VALUE - 1);
     dfs.concat(target, srcs);
     summary = dfs.getContentSummary(bar);
-    Assert.assertEquals(1, summary.getFileCount());
-    Assert.assertEquals(blockSize * repl * (srcNum + 1),
-        summary.getSpaceConsumed());
+    assertEquals(1, summary.getFileCount());
+    assertEquals(blockSize * repl * (srcNum + 1), summary.getSpaceConsumed());
   }
 
   @Test
@@ -508,7 +508,8 @@ public class TestHDFSConcat {
     assertFalse(dfs.exists(src));
   }
 
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testConcatReservedRelativePaths() throws IOException {
     String testPathDir = "/.reserved/raw/ezone";
     Path dir = new Path(testPathDir);
@@ -519,7 +520,7 @@ public class TestHDFSConcat {
     DFSTestUtil.createFile(dfs, src, blockSize, REPL_FACTOR, 1);
     try {
       dfs.concat(trg, new Path[] { src });
-      Assert.fail("Must throw Exception!");
+      fail("Must throw Exception!");
     } catch (IOException e) {
       String errMsg = "Concat operation doesn't support "
           + FSDirectory.DOT_RESERVED_STRING + " relative path : " + trg;
@@ -563,5 +564,98 @@ public class TestHDFSConcat {
     stream.readFully(0, buff, 0, 512);
 
     assertEquals(1, dfs.getContentSummary(new Path(dir)).getFileCount());
+  }
+
+  /**
+   * Verifies concat with wrong user when dfs.permissions.enabled is false.
+   *
+   * @throws IOException
+   */
+  @Test
+  public void testConcatPermissionEnabled() throws Exception {
+    Configuration conf2 = new Configuration();
+    conf2.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
+    conf2.setBoolean(DFSConfigKeys.DFS_PERMISSIONS_ENABLED_KEY, true);
+    MiniDFSCluster cluster2 = new MiniDFSCluster.Builder(conf2).numDataNodes(REPL_FACTOR).build();
+    try {
+      cluster2.waitClusterUp();
+      DistributedFileSystem dfs2 = cluster2.getFileSystem();
+
+      String testPathDir = "/dir2";
+      Path dir = new Path(testPathDir);
+      dfs2.mkdirs(dir);
+      Path trg = new Path(testPathDir, "trg");
+      Path src = new Path(testPathDir, "src");
+      DFSTestUtil.createFile(dfs2, trg, blockSize, REPL_FACTOR, 1);
+      DFSTestUtil.createFile(dfs2, src, blockSize, REPL_FACTOR, 1);
+
+      // Check permissions with the wrong user when dfs.permissions.enabled is true.
+      final UserGroupInformation user =
+          UserGroupInformation.createUserForTesting("theDoctor", new String[] {"tardis"});
+      DistributedFileSystem hdfs1 =
+          (DistributedFileSystem) DFSTestUtil.getFileSystemAs(user, conf2);
+      LambdaTestUtils.intercept(AccessControlException.class,
+          "Permission denied: user=theDoctor, access=WRITE",
+          () -> hdfs1.concat(trg, new Path[] {src}));
+
+      conf2.setBoolean(DFSConfigKeys.DFS_PERMISSIONS_ENABLED_KEY, false);
+      cluster2 = new MiniDFSCluster.Builder(conf2).numDataNodes(REPL_FACTOR).build();
+      cluster2.waitClusterUp();
+      dfs2 = cluster2.getFileSystem();
+      dfs2.mkdirs(dir);
+      DFSTestUtil.createFile(dfs2, trg, blockSize, REPL_FACTOR, 1);
+      DFSTestUtil.createFile(dfs2, src, blockSize, REPL_FACTOR, 1);
+
+      // Check permissions with the wrong user when dfs.permissions.enabled is false.
+      DistributedFileSystem hdfs2 =
+          (DistributedFileSystem) DFSTestUtil.getFileSystemAs(user, conf2);
+      hdfs2.concat(trg, new Path[] {src});
+    } finally {
+      if (cluster2 != null) {
+        cluster2.shutdown();
+      }
+    }
+  }
+
+  /**
+   * Test permissions of Concat operation.
+   */
+  @Test
+  public void testConcatPermissions() throws Exception {
+    String testPathDir = "/dir";
+    Path dir = new Path(testPathDir);
+    dfs.mkdirs(dir);
+    dfs.setPermission(dir, new FsPermission((short) 0777));
+
+    Path dst = new Path(testPathDir, "dst");
+    Path src = new Path(testPathDir, "src");
+    DFSTestUtil.createFile(dfs, dst, blockSize, REPL_FACTOR, 1);
+
+    // Create a user who is not the owner of the file and try concat operation.
+    final UserGroupInformation user =
+        UserGroupInformation.createUserForTesting("theDoctor", new String[] {"group"});
+    DistributedFileSystem dfs2 = (DistributedFileSystem) DFSTestUtil.getFileSystemAs(user, conf);
+
+    // Test 1: User is not the owner of the file and has src & dst permission.
+    DFSTestUtil.createFile(dfs, src, blockSize, REPL_FACTOR, 1);
+    dfs.setPermission(dst, new FsPermission((short) 0777));
+    dfs.setPermission(src, new FsPermission((short) 0777));
+    dfs2.concat(dst, new Path[] {src});
+
+    // Test 2: User is not the owner of the file and has only dst permission.
+    DFSTestUtil.createFile(dfs, src, blockSize, REPL_FACTOR, 1);
+    dfs.setPermission(dst, new FsPermission((short) 0777));
+    dfs.setPermission(src, new FsPermission((short) 0700));
+    LambdaTestUtils.intercept(AccessControlException.class,
+        "Permission denied: user=theDoctor, access=READ",
+        () -> dfs2.concat(dst, new Path[] {src}));
+
+    // Test 3: User is not the owner of the file and has only src permission.
+    DFSTestUtil.createFile(dfs, src, blockSize, REPL_FACTOR, 1);
+    dfs.setPermission(dst, new FsPermission((short) 0700));
+    dfs.setPermission(src, new FsPermission((short) 0777));
+    LambdaTestUtils.intercept(AccessControlException.class,
+        "Permission denied: user=theDoctor, access=WRITE",
+        () -> dfs2.concat(dst, new Path[] {src}));
   }
 }

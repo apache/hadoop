@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hdfs;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.Random;
@@ -30,31 +30,31 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Assertions;
 
 /**
  * This class tests the presence of seek bug as described
- * in HADOOP-508 
+ * in HADOOP-508
  */
 public class TestSeekBug {
   static final long seed = 0xDEADBEEFL;
   static final int ONEMB = 1 << 20;
-  
+
   private void checkAndEraseData(byte[] actual, int from, byte[] expected, String message) {
     for (int idx = 0; idx < actual.length; idx++) {
-      assertEquals(message+" byte "+(from+idx)+" differs. expected "+
-                        expected[from+idx]+" actual "+actual[idx],
-                        actual[idx], expected[from+idx]);
+      assertEquals(actual[idx], expected[from + idx], message + " byte " + (from + idx)
+          + " differs. expected " + expected[from + idx] + " actual " + actual[idx]);
       actual[idx] = 0;
     }
   }
-  
+
   private void seekReadFile(FileSystem fileSys, Path name) throws IOException {
     FSDataInputStream stm = fileSys.open(name, 4096);
     byte[] expected = new byte[ONEMB];
     Random rand = new Random(seed);
     rand.nextBytes(expected);
-    
+
     // First read 128 bytes to set count in BufferedInputStream
     byte[] actual = new byte[128];
     stm.read(actual, 0, actual.length);
@@ -76,14 +76,14 @@ public class TestSeekBug {
    */
   private void smallReadSeek(FileSystem fileSys, Path name) throws IOException {
     if (fileSys instanceof ChecksumFileSystem) {
-      fileSys = ((ChecksumFileSystem)fileSys).getRawFileSystem();
+      fileSys = ((ChecksumFileSystem) fileSys).getRawFileSystem();
     }
     // Make the buffer size small to trigger code for HADOOP-922
     FSDataInputStream stmRaw = fileSys.open(name, 1);
     byte[] expected = new byte[ONEMB];
     Random rand = new Random(seed);
     rand.nextBytes(expected);
-    
+
     // Issue a simple read first.
     byte[] actual = new byte[128];
     stmRaw.seek(100000);
@@ -105,13 +105,13 @@ public class TestSeekBug {
     // all done
     stmRaw.close();
   }
-  
+
   private void cleanupFile(FileSystem fileSys, Path name) throws IOException {
     assertTrue(fileSys.exists(name));
     fileSys.delete(name, true);
     assertTrue(!fileSys.exists(name));
   }
-  
+
   /**
    * Test if the seek bug exists in FSDataInputStream in DFS.
    */
@@ -134,68 +134,72 @@ public class TestSeekBug {
     }
   }
 
- /**
-  * Test (expected to throw IOE) for negative
-  * <code>FSDataInpuStream#seek</code> argument
-  */
-  @Test (expected=IOException.class)
+  /**
+   * Test (expected to throw IOE) for negative.
+   * <code>FSDataInpuStream#seek</code> argument
+   */
+  @Test
   public void testNegativeSeek() throws IOException {
-    Configuration conf = new HdfsConfiguration();
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
-    FileSystem fs = cluster.getFileSystem();
-    try {
-      Path seekFile = new Path("seekboundaries.dat");
-      DFSTestUtil.createFile(
-        fs,
-        seekFile,
-        ONEMB,
-        ONEMB,
-        fs.getDefaultBlockSize(seekFile),
-        fs.getDefaultReplication(seekFile),
-        seed);
-      FSDataInputStream stream = fs.open(seekFile);
-      // Perform "safe seek" (expected to pass)
-      stream.seek(65536);
-      assertEquals(65536, stream.getPos());
-      // expect IOE for this call
-      stream.seek(-73);
-    } finally {
-      fs.close();
-      cluster.shutdown();
-    }
+    Assertions.assertThrows(IOException.class, () -> {
+      Configuration conf = new HdfsConfiguration();
+      MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
+      FileSystem fs = cluster.getFileSystem();
+      try {
+        Path seekFile = new Path("seekboundaries.dat");
+        DFSTestUtil.createFile(
+            fs,
+            seekFile,
+            ONEMB,
+            ONEMB,
+            fs.getDefaultBlockSize(seekFile),
+            fs.getDefaultReplication(seekFile),
+            seed);
+        FSDataInputStream stream = fs.open(seekFile);
+        // Perform "safe seek" (expected to pass)
+        stream.seek(65536);
+        assertEquals(65536, stream.getPos());
+        // expect IOE for this call
+        stream.seek(-73);
+      } finally {
+        fs.close();
+        cluster.shutdown();
+      }
+    });
   }
 
- /**
-  * Test (expected to throw IOE) for <code>FSDataInpuStream#seek</code>
-  * when the position argument is larger than the file size.
-  */
-  @Test (expected=IOException.class)
+  /**
+   * Test (expected to throw IOE) for <code>FSDataInpuStream#seek</code>
+   * when the position argument is larger than the file size.
+   */
+  @Test
   public void testSeekPastFileSize() throws IOException {
-    Configuration conf = new HdfsConfiguration();
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
-    FileSystem fs = cluster.getFileSystem();
-    try {
-      Path seekFile = new Path("seekboundaries.dat");
-      DFSTestUtil.createFile(
-        fs,
-        seekFile,
-        ONEMB,
-        ONEMB,
-        fs.getDefaultBlockSize(seekFile),
-        fs.getDefaultReplication(seekFile),
-        seed);
-      FSDataInputStream stream = fs.open(seekFile);
-      // Perform "safe seek" (expected to pass)
-      stream.seek(65536);
-      assertEquals(65536, stream.getPos());
-      // expect IOE for this call
-      stream.seek(ONEMB + ONEMB + ONEMB);
-    } finally {
-      fs.close();
-      cluster.shutdown();
-    }
+    Assertions.assertThrows(IOException.class, () -> {
+      Configuration conf = new HdfsConfiguration();
+      MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
+      FileSystem fs = cluster.getFileSystem();
+      try {
+        Path seekFile = new Path("seekboundaries.dat");
+        DFSTestUtil.createFile(
+            fs,
+            seekFile,
+            ONEMB,
+            ONEMB,
+            fs.getDefaultBlockSize(seekFile),
+            fs.getDefaultReplication(seekFile),
+            seed);
+        FSDataInputStream stream = fs.open(seekFile);
+        // Perform "safe seek" (expected to pass)
+        stream.seek(65536);
+        assertEquals(65536, stream.getPos());
+        // expect IOE for this call
+        stream.seek(ONEMB + ONEMB + ONEMB);
+      } finally {
+        fs.close();
+        cluster.shutdown();
+      }
+    });
   }
- 
+
   /**
    * Tests if the seek bug exists in FSDataInputStream in LocalFS.
    */

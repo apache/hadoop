@@ -83,7 +83,7 @@ public class ConfBlock extends HtmlBlock {
               __().
       tbody();
       for (ConfEntryInfo entry : info.getProperties()) {
-        StringBuffer buffer = new StringBuffer();
+        StringBuilder buffer = new StringBuilder();
         String[] sources = entry.getSource();
         //Skip the last entry, because it is always the same HDFS file, and
         // output them in reverse order so most recent is output first
@@ -113,7 +113,7 @@ public class ConfBlock extends HtmlBlock {
           __();
     } catch(IOException e) {
       LOG.error("Error while reading "+confPath, e);
-      html.p().__("Sorry got an error while reading conf file. ", confPath);
+      html.p().__("Sorry got an error while reading conf file. ", confPath).__();
     }
   }
 }

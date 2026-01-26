@@ -31,6 +31,7 @@ import org.apache.hadoop.hdfs.protocolPB.DatanodeProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdfs.server.protocol.*;
 import org.apache.hadoop.hdfs.server.protocol.BlockECReconstructionCommand.BlockECReconstructionInfo;
 import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo.BlockStatus;
+import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.Sets;
 
@@ -291,9 +292,8 @@ class BPOfferService {
   void reportBadBlocks(ExtendedBlock block,
                        String storageUuid, StorageType storageType) {
     checkBlock(block);
+    ReportBadBlockAction rbbAction = new ReportBadBlockAction(block, storageUuid, storageType);
     for (BPServiceActor actor : bpServices) {
-      ReportBadBlockAction rbbAction = new ReportBadBlockAction
-          (block, storageUuid, storageType);
       actor.bpThreadEnqueue(rbbAction);
     }
   }
@@ -325,6 +325,12 @@ class BPOfferService {
     final ReceivedDeletedBlockInfo info = new ReceivedDeletedBlockInfo(
         block.getLocalBlock(), status, delHint);
     final DatanodeStorage storage = dn.getFSDataset().getStorage(storageUuid);
+    if (storage == null) {
+      LOG.warn("Trying to add RDBI for null storage UUID {}. Trace: {}", storageUuid,
+          Joiner.on("\n").join(Thread.currentThread().getStackTrace()));
+      getDataNode().getMetrics().incrNullStorageBlockReports();
+      return;
+    }
 
     for (BPServiceActor actor : bpServices) {
       actor.getIbrManager().notifyNamenodeBlock(info, storage,
@@ -428,8 +434,10 @@ class BPOfferService {
       dn.bpRegistrationSucceeded(bpRegistration, getBlockPoolId());
       // Add the initial block token secret keys to the DN's secret manager.
       if (dn.isBlockTokenEnabled) {
+        boolean updateCurrentKey = bpServiceActor.state == null
+            || bpServiceActor.state == HAServiceState.ACTIVE;
         dn.blockPoolTokenSecretManager.addKeys(getBlockPoolId(),
-            reg.getExportedKeys());
+            reg.getExportedKeys(), updateCurrentKey);
       }
     } finally {
       writeUnlock();
@@ -679,15 +687,20 @@ class BPOfferService {
       actor.reRegister();
       return false;
     }
-    writeLock();
+    boolean isActiveActor;
+    InetSocketAddress nnSocketAddress;
+    readLock();
     try {
-      if (actor == bpServiceToActive) {
-        return processCommandFromActive(cmd, actor);
-      } else {
-        return processCommandFromStandby(cmd, actor);
-      }
+      isActiveActor = (actor == bpServiceToActive);
+      nnSocketAddress = actor.getNNSocketAddress();
     } finally {
-      writeUnlock();
+      readUnlock();
+    }
+
+    if (isActiveActor) {
+      return processCommandFromActive(cmd, nnSocketAddress);
+    } else {
+      return processCommandFromStandby(cmd, nnSocketAddress);
     }
   }
 
@@ -715,7 +728,7 @@ class BPOfferService {
    * @throws IOException
    */
   private boolean processCommandFromActive(DatanodeCommand cmd,
-      BPServiceActor actor) throws IOException {
+      InetSocketAddress nnSocketAddress) throws IOException {
     final BlockCommand bcmd = 
       cmd instanceof BlockCommand? (BlockCommand)cmd: null;
     final BlockIdCommand blockIdCmd = 
@@ -768,16 +781,16 @@ class BPOfferService {
       dn.finalizeUpgradeForPool(bp);
       break;
     case DatanodeProtocol.DNA_RECOVERBLOCK:
-      String who = "NameNode at " + actor.getNNSocketAddress();
+      String who = "NameNode at " + nnSocketAddress;
       dn.getBlockRecoveryWorker().recoverBlocks(who,
           ((BlockRecoveryCommand)cmd).getRecoveringBlocks());
       break;
     case DatanodeProtocol.DNA_ACCESSKEYUPDATE:
-      LOG.info("DatanodeCommand action: DNA_ACCESSKEYUPDATE");
+      LOG.info("DatanodeCommand action from active NN {}: DNA_ACCESSKEYUPDATE", nnSocketAddress);
       if (dn.isBlockTokenEnabled) {
         dn.blockPoolTokenSecretManager.addKeys(
             getBlockPoolId(), 
-            ((KeyUpdateCommand) cmd).getExportedKeys());
+            ((KeyUpdateCommand) cmd).getExportedKeys(), true);
       }
       break;
     case DatanodeProtocol.DNA_BALANCERBANDWIDTHUPDATE:
@@ -810,15 +823,15 @@ class BPOfferService {
    * DNA_REGISTER which should be handled earlier itself.
    */
   private boolean processCommandFromStandby(DatanodeCommand cmd,
-      BPServiceActor actor) throws IOException {
+      InetSocketAddress nnSocketAddress) throws IOException {
     switch(cmd.getAction()) {
     case DatanodeProtocol.DNA_ACCESSKEYUPDATE:
       LOG.info("DatanodeCommand action from standby NN {}: DNA_ACCESSKEYUPDATE",
-          actor.getNNSocketAddress());
+          nnSocketAddress);
       if (dn.isBlockTokenEnabled) {
         dn.blockPoolTokenSecretManager.addKeys(
             getBlockPoolId(), 
-            ((KeyUpdateCommand) cmd).getExportedKeys());
+            ((KeyUpdateCommand) cmd).getExportedKeys(), false);
       }
       break;
     case DatanodeProtocol.DNA_TRANSFER:
@@ -831,11 +844,11 @@ class BPOfferService {
     case DatanodeProtocol.DNA_UNCACHE:
     case DatanodeProtocol.DNA_ERASURE_CODING_RECONSTRUCTION:
       LOG.warn("Got a command from standby NN {} - ignoring command: {}",
-          actor.getNNSocketAddress(), cmd.getAction());
+          nnSocketAddress, cmd.getAction());
       break;
     default:
       LOG.warn("Unknown DatanodeCommand action: {} from standby NN {}",
-          cmd.getAction(), actor.getNNSocketAddress());
+          cmd.getAction(), nnSocketAddress);
     }
     return true;
   }

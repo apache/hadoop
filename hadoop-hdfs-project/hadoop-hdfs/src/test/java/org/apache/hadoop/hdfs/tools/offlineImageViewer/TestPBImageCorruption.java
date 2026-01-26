@@ -17,9 +17,10 @@
  */
 package org.apache.hadoop.hdfs.tools.offlineImageViewer;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * Unit tests for PBImageCorruptionType, CorruptionEntryBuilder and
@@ -34,9 +35,11 @@ public class TestPBImageCorruption {
     assertEquals("CorruptNodeWithMissingChild", ct.getType());
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testImproperCorruptionTypeCreation() {
-    PBImageCorruption ct = new PBImageCorruption(210, false, false, 2);
+    assertThrows(IllegalArgumentException.class, () -> {
+      PBImageCorruption ct = new PBImageCorruption(210, false, false, 2);
+    });
   }
 
   @Test

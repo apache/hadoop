@@ -44,14 +44,14 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * An implementation of {@link AsyncChecker} that skips checking recently
- * checked objects. It will enforce at least {@link minMsBetweenChecks}
+ * checked objects. It will enforce at least {@link #minMsBetweenChecks}
  * milliseconds between two successive checks of any one object.
  *
  * It is assumed that the total number of Checkable objects in the system
  * is small, (not more than a few dozen) since the checker uses O(Checkables)
  * storage and also potentially O(Checkables) threads.
  *
- * {@link minMsBetweenChecks} should be configured reasonably
+ * {@link #minMsBetweenChecks} should be configured reasonably
  * by the caller to avoid spinning up too many threads frequently.
  */
 @InterfaceAudience.Private

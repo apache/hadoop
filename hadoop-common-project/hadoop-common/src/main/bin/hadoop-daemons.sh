@@ -16,7 +16,7 @@
 # limitations under the License.
 
 
-# Run a Hadoop command on all slave hosts.
+# Run a Hadoop command on all worker hosts.
 
 function hadoop_usage
 {

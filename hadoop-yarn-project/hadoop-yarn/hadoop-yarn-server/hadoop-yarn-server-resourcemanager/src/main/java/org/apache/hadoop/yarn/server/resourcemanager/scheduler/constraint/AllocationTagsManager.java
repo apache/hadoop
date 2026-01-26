@@ -405,9 +405,10 @@ public class AllocationTagsManager {
 
   /**
    * Helper method to just remove the tags associated with a container.
-   * @param nodeId
-   * @param applicationId
-   * @param allocationTags
+   *
+   * @param nodeId nodeId.
+   * @param applicationId application Id
+   * @param allocationTags application Tags.
    */
   public void removeTags(NodeId nodeId, ApplicationId applicationId,
       Set<String> allocationTags) {
@@ -644,7 +645,7 @@ public class AllocationTagsManager {
    * Returns a map whose key is the allocation tag and value is the
    * count of allocations with this tag.
    *
-   * @param nodeId
+   * @param nodeId nodeId.
    * @return allocation tag to count mapping
    */
   public Map<String, Long> getAllocationTagsWithCount(NodeId nodeId) {

@@ -18,15 +18,18 @@
 
 package org.apache.hadoop.conf;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.ByteArrayOutputStream;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -36,20 +39,24 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
 
 import org.apache.hadoop.fs.CommonConfigurationKeys;
-import org.junit.Assert;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.conf.Configuration.DeprecationDelta;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.Uninterruptibles;
 
- 
+import org.w3c.dom.Document;
+import org.w3c.dom.NodeList;
+
 public class TestConfigurationDeprecation {
   private Configuration conf;
   final static String CONFIG = new File("./test-config" +
@@ -66,12 +73,12 @@ public class TestConfigurationDeprecation {
     Configuration.addDefaultResource("test-fake-default.xml");
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     conf = new Configuration(false);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     new File(CONFIG).delete();
     new File(CONFIG2).delete();
@@ -122,7 +129,7 @@ public class TestConfigurationDeprecation {
   /**
    * This test checks the correctness of loading/setting the properties in terms
    * of occurrence of deprecated keys.
-   * @throws IOException 
+   * @throws IOException
    */
   @Test
   public void testDeprecation() throws IOException {
@@ -319,9 +326,9 @@ public class TestConfigurationDeprecation {
         nKFound = true;
       }
     }
-    assertTrue("regular Key not found", kFound);
-    assertTrue("deprecated Key not found", dKFound);
-    assertTrue("new Key not found", nKFound);
+    assertTrue(kFound, "regular Key not found");
+    assertTrue(dKFound, "deprecated Key not found");
+    assertTrue(nKFound, "new Key not found");
   }
   
   @Test
@@ -353,7 +360,8 @@ public class TestConfigurationDeprecation {
    * and set() on Configuration objects.
    */
   @SuppressWarnings("deprecation")
-  @Test(timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testConcurrentDeprecateAndManipulate() throws Exception {
     final int NUM_THREAD_IDS = 10;
     final int NUM_KEYS_PER_THREAD = 1000;
@@ -395,7 +403,7 @@ public class TestConfigurationDeprecation {
             String testNewKey = getTestKeyName(threadIndex, i) + ".new";
             String value = "value." + threadIndex + "." + i;
             conf.set(testNewKey, value);
-            Assert.assertEquals(value, conf.get(testNewKey));
+            assertEquals(value, conf.get(testNewKey));
           }
           return null;
         }
@@ -458,10 +466,36 @@ public class TestConfigurationDeprecation {
         new Configuration.DeprecationDelta(oldZkAddressKey, newZkAddressKey)});
 
     // ASSERT
-    assertEquals("Property should be accessible through deprecated key",
-        zkAddressValue, conf.get(oldZkAddressKey));
-    assertEquals("Property should be accessible through new key",
-        zkAddressValue, conf.get(newZkAddressKey));
+    assertEquals(zkAddressValue, conf.get(oldZkAddressKey),
+        "Property should be accessible through deprecated key");
+    assertEquals(zkAddressValue, conf.get(newZkAddressKey),
+        "Property should be accessible through new key");
   }
 
+  @Test
+  public void testNoDeprecationsByDefault() throws Exception {
+    // Force initialization to make sure deprecations are recorded for later calls to isDeprecated.
+    new Configuration();
+
+    // This test directly parses the default XML configuration file to check for deprecated
+    // properties, bypassing normalization logic in the Configuration class that might hide them.
+    DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+    DocumentBuilder db = dbf.newDocumentBuilder();
+    List<String> deprecatedProps = new ArrayList<>();
+
+    try (InputStream is = getClass().getResourceAsStream("/core-default.xml")) {
+      Document doc = db.parse(is);
+      NodeList props = doc.getElementsByTagName("name");
+      for (int i = 0; i < props.getLength(); ++i) {
+        String prop = props.item(i).getTextContent();
+        if (Configuration.isDeprecated(prop)) {
+          deprecatedProps.add(prop);
+        }
+      }
+    }
+
+    assertThat(deprecatedProps)
+        .as("By default, deprecated properties should be empty: %s", deprecatedProps)
+        .isEmpty();
+  }
 }

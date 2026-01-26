@@ -17,8 +17,6 @@
 package org.apache.hadoop.yarn.server.federation.policies.router;
 
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -32,9 +30,10 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterIdInfo;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterState;
 import org.apache.hadoop.yarn.server.federation.utils.FederationPoliciesTestUtil;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Simple test class for the {@link PriorityRouterPolicy}. Tests that the
@@ -42,7 +41,7 @@ import org.junit.Test;
  */
 public class TestPriorityRouterPolicy extends BaseRouterPoliciesTest {
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     setPolicy(new PriorityRouterPolicy());
     setPolicyInfo(new WeightedPolicyInfo());
@@ -82,7 +81,7 @@ public class TestPriorityRouterPolicy extends BaseRouterPoliciesTest {
   public void testPickLowestWeight() throws YarnException {
     SubClusterId chosen = ((FederationRouterPolicy) getPolicy())
         .getHomeSubcluster(getApplicationSubmissionContext(), null);
-    Assert.assertEquals("sc5", chosen.getId());
+    assertEquals("sc5", chosen.getId());
   }
 
   @Test
@@ -93,9 +92,9 @@ public class TestPriorityRouterPolicy extends BaseRouterPoliciesTest {
     for (int i = 0; i < 5; i++) {
       SubClusterIdInfo sc = new SubClusterIdInfo("sc" + i);
 
-      SubClusterInfo sci = mock(SubClusterInfo.class);
-      when(sci.getState()).thenReturn(SubClusterState.SC_RUNNING);
-      when(sci.getSubClusterId()).thenReturn(sc.toId());
+      SubClusterInfo sci = SubClusterInfo.newInstance(
+          sc.toId(), "dns1:80", "dns1:81", "dns1:82", "dns1:83", SubClusterState.SC_RUNNING,
+          System.currentTimeMillis(), "something");
       getActiveSubclusters().put(sc.toId(), sci);
       routerWeights.put(sc, 0.0f);
       amrmWeights.put(sc, -1.0f);

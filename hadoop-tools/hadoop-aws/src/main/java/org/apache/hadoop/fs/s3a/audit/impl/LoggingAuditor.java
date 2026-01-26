@@ -23,36 +23,55 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
-import com.amazonaws.AmazonWebServiceRequest;
+import software.amazon.awssdk.awscore.AwsExecutionAttribute;
+import software.amazon.awssdk.core.SdkRequest;
+import software.amazon.awssdk.core.interceptor.Context;
+import software.amazon.awssdk.core.interceptor.ExecutionAttributes;
+import software.amazon.awssdk.http.SdkHttpRequest;
+import software.amazon.awssdk.http.SdkHttpResponse;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.DeleteObjectsRequest;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.audit.AuditConstants;
 import org.apache.hadoop.fs.audit.CommonAuditContext;
 import org.apache.hadoop.fs.s3a.audit.AWSRequestAnalyzer;
 import org.apache.hadoop.fs.s3a.audit.AuditFailureException;
+import org.apache.hadoop.fs.s3a.audit.AuditOperationRejectedException;
 import org.apache.hadoop.fs.s3a.audit.AuditSpanS3A;
+import org.apache.hadoop.fs.store.LogExactlyOnce;
 import org.apache.hadoop.fs.store.audit.HttpReferrerAuditHeader;
 import org.apache.hadoop.security.UserGroupInformation;
 
+import static org.apache.hadoop.fs.audit.AuditConstants.DELETE_KEYS_SIZE;
 import static org.apache.hadoop.fs.audit.AuditConstants.PARAM_FILESYSTEM_ID;
 import static org.apache.hadoop.fs.audit.AuditConstants.PARAM_PRINCIPAL;
 import static org.apache.hadoop.fs.audit.AuditConstants.PARAM_THREAD0;
 import static org.apache.hadoop.fs.audit.AuditConstants.PARAM_TIMESTAMP;
 import static org.apache.hadoop.fs.audit.CommonAuditContext.currentAuditContext;
 import static org.apache.hadoop.fs.audit.CommonAuditContext.currentThreadID;
+import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_MULTIPART_UPLOAD_ENABLED;
+import static org.apache.hadoop.fs.s3a.Constants.MULTIPART_UPLOADS_ENABLED;
+import static org.apache.hadoop.fs.s3a.audit.AWSRequestAnalyzer.isRequestMultipartIO;
 import static org.apache.hadoop.fs.s3a.audit.AWSRequestAnalyzer.isRequestNotAlwaysInSpan;
+import static org.apache.hadoop.fs.s3a.audit.AWSRequestAnalyzer.isRequestAuditedOutsideOfCurrentSpan;
 import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.OUTSIDE_SPAN;
 import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.REFERRER_HEADER_ENABLED;
 import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.REFERRER_HEADER_ENABLED_DEFAULT;
 import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.REFERRER_HEADER_FILTER;
-import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.REJECT_OUT_OF_SPAN_OPERATIONS;
 import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.UNAUDITED_OPERATION;
 import static org.apache.hadoop.fs.s3a.commit.CommitUtils.extractJobID;
 import static org.apache.hadoop.fs.s3a.impl.HeaderProcessing.HEADER_REFERRER;
+import static org.apache.hadoop.fs.s3a.statistics.impl.StatisticsFromAwsSdkImpl.mapErrorStatusCodeToStatisticName;
+import static software.amazon.s3.analyticsaccelerator.request.Constants.OPERATION_NAME;
+import static software.amazon.s3.analyticsaccelerator.request.Constants.SPAN_ID;
 
 /**
  * The LoggingAuditor logs operations at DEBUG (in SDK Request) and
@@ -69,7 +88,6 @@ public class LoggingAuditor
   private static final Logger LOG =
       LoggerFactory.getLogger(LoggingAuditor.class);
 
-
   /**
    * Some basic analysis for the logs.
    */
@@ -79,11 +97,6 @@ public class LoggingAuditor
    * Default span to use when there is no other.
    */
   private AuditSpanS3A warningSpan;
-
-  /**
-   * Should out of scope ops be rejected?
-   */
-  private boolean rejectOutOfSpan;
 
   /**
    * Map of attributes which will be added to all operations.
@@ -109,6 +122,20 @@ public class LoggingAuditor
    * Attributes to filter.
    */
   private Collection<String> filters;
+
+  /**
+   * Does the S3A FS instance being audited have multipart upload enabled?
+   * If not: fail if a multipart upload is initiated.
+   */
+  private boolean isMultipartUploadEnabled;
+
+  /**
+   * Log for warning of problems getting the range of GetObjectRequest
+   * will only log of a problem once per process instance.
+   * This is to avoid logs being flooded with errors.
+   */
+  private static final LogExactlyOnce WARN_INCORRECT_RANGE =
+      new LogExactlyOnce(LOG);
 
   /**
    * Create the auditor.
@@ -140,8 +167,6 @@ public class LoggingAuditor
   @Override
   protected void serviceInit(final Configuration conf) throws Exception {
     super.serviceInit(conf);
-    rejectOutOfSpan = conf.getBoolean(
-        REJECT_OUT_OF_SPAN_OPERATIONS, false);
     // attach the job ID if there is one in the configuration used
     // to create this file.
     String jobID = extractJobID(conf);
@@ -154,6 +179,9 @@ public class LoggingAuditor
     final CommonAuditContext currentContext = currentAuditContext();
     warningSpan = new WarningSpan(OUTSIDE_SPAN,
         currentContext, createSpanID(), null, null);
+    isMultipartUploadEnabled = conf.getBoolean(MULTIPART_UPLOADS_ENABLED,
+              DEFAULT_MULTIPART_UPLOAD_ENABLED);
+    LOG.debug("Initialized {}", this);
   }
 
   @Override
@@ -162,7 +190,8 @@ public class LoggingAuditor
         "LoggingAuditor{");
     sb.append("ID='").append(getAuditorId()).append('\'');
     sb.append(", headerEnabled=").append(headerEnabled);
-    sb.append(", rejectOutOfSpan=").append(rejectOutOfSpan);
+    sb.append(", rejectOutOfSpan=").append(isRejectOutOfSpan());
+    sb.append(", isMultipartUploadEnabled=").append(isMultipartUploadEnabled);
     sb.append('}');
     return sb.toString();
   }
@@ -220,6 +249,18 @@ public class LoggingAuditor
   }
 
   /**
+   * Get the referrer provided the span is an instance or
+   * subclass of LoggingAuditSpan.
+   * @param span span
+   * @return the referrer
+   * @throws ClassCastException if a different span type was passed in
+   */
+  @VisibleForTesting
+  HttpReferrerAuditHeader getReferrer(AuditSpanS3A span) {
+    return ((LoggingAuditSpan) span).getReferrer();
+  }
+
+  /**
    * Span which logs at debug and sets the HTTP referrer on
    * invocations.
    * Note: checkstyle complains that this should be final because
@@ -228,7 +269,35 @@ public class LoggingAuditor
    */
   private class LoggingAuditSpan extends AbstractAuditSpanImpl {
 
-    private final HttpReferrerAuditHeader referrer;
+    private HttpReferrerAuditHeader referrer;
+
+    /**
+     * Builder for the referrer header. Requests that execute outside S3A, such as in AAL, will initially have SpanId
+     * of  the outside-span operation. For such requests, the spanId and operation name in this builder is overwritten
+     * in the modifyHttpRequest execution interceptor.
+     */
+    private final HttpReferrerAuditHeader.Builder headerBuilder;
+
+    /**
+     * Attach Range of data for GetObject Request.
+     * @param request the sdk request to be modified
+     * @param executionAttributes execution attributes for this request
+     */
+    private void attachRangeFromRequest(SdkHttpRequest request,
+        ExecutionAttributes executionAttributes) {
+
+      String operationName = executionAttributes.getAttribute(AwsExecutionAttribute.OPERATION_NAME);
+
+      if (operationName != null && operationName.equals("GetObject")) {
+        if (request.headers() != null && request.headers().get("Range") != null) {
+          String[] rangeHeader = request.headers().get("Range").get(0).split("=");
+          // only set header if range unit is  bytes
+          if (rangeHeader[0].equals("bytes")) {
+            referrer.set(AuditConstants.PARAM_RANGE, rangeHeader[1]);
+          }
+        }
+      }
+    }
 
     private final String description;
 
@@ -240,7 +309,7 @@ public class LoggingAuditor
         final String path2) {
       super(spanId, operationName);
 
-      this.referrer = HttpReferrerAuditHeader.builder()
+      this.headerBuilder = HttpReferrerAuditHeader.builder()
           .withContextId(getAuditorId())
           .withSpanId(spanId)
           .withOperationName(operationName)
@@ -252,8 +321,9 @@ public class LoggingAuditor
               currentThreadID())
           .withAttribute(PARAM_TIMESTAMP, Long.toString(getTimestamp()))
           .withEvaluated(context.getEvaluatedEntries())
-          .withFilter(filters)
-          .build();
+          .withFilter(filters);
+
+      this.referrer = this.headerBuilder.build();
 
       this.description = referrer.buildHttpReferrer();
     }
@@ -300,38 +370,101 @@ public class LoggingAuditor
       referrer.set(key, value);
     }
 
+
+
     /**
-     * Before execution, the logging auditor always builds
-     * the referrer header, saves to the outer class
-     * (where {@link #getLastHeader()} can retrieve it,
+     * Before transmitting a request, the logging auditor
+     * always builds the referrer header, saves to the outer
+     * class (where {@link #getLastHeader()} can retrieve it,
      * and logs at debug.
      * If configured to add the header to the S3 logs, it will
      * be set as the HTTP referrer.
-     * @param request request
-     * @param <T> type of request.
-     * @return the request with any extra headers.
+     * @param context The current state of the execution,
+     *                including the SDK and current HTTP request.
+     * @param executionAttributes A mutable set of attributes scoped
+     *                            to one specific request/response
+     *                            cycle that can be used to give data
+     *                            to future lifecycle methods.
+     * @return The potentially-modified HTTP request that should be
+     *          sent to the service. Must not be null.
      */
     @Override
-    public <T extends AmazonWebServiceRequest> T beforeExecution(
-        final T request) {
+    public SdkHttpRequest modifyHttpRequest(Context.ModifyHttpRequest context,
+        ExecutionAttributes executionAttributes) {
+      SdkHttpRequest httpRequest = context.httpRequest();
+      SdkRequest sdkRequest = context.request();
+
+      // If spanId and operationName are set in execution attributes, then use these values,
+      // instead of the ones in the current span. This is useful when requests are happening in dependencies such as
+      // the analytics accelerator library (AAL), where they cannot be attached to the correct span. In which case, AAL
+      // will attach the current spanId and operationName via execution attributes during it's request creation. These
+      // can then used to update the values in the logger and referrer header. Without this overwriting, the operation
+      // name and corresponding span will be whichever is active on the thread the request is getting executed on.
+      boolean isRequestAuditedOutsideCurrentSpan = isRequestAuditedOutsideOfCurrentSpan(executionAttributes);
+
+      String spanId = isRequestAuditedOutsideCurrentSpan ?
+              executionAttributes.getAttribute(SPAN_ID) : getSpanId();
+
+      String operationName = isRequestAuditedOutsideCurrentSpan ?
+              executionAttributes.getAttribute(OPERATION_NAME) : getOperationName();
+
+      if (isRequestAuditedOutsideCurrentSpan) {
+        this.headerBuilder.withSpanId(spanId);
+        this.headerBuilder.withOperationName(operationName);
+        this.referrer = this.headerBuilder.build();
+      }
+
+      // attach range for GetObject requests
+      attachRangeFromRequest(httpRequest, executionAttributes);
+
+      // for delete op, attach the number of files to delete
+      attachDeleteKeySizeAttribute(sdkRequest);
+
       // build the referrer header
       final String header = referrer.buildHttpReferrer();
       // update the outer class's field.
       setLastHeader(header);
       if (headerEnabled) {
         // add the referrer header
-        request.putCustomRequestHeader(HEADER_REFERRER,
-            header);
+        httpRequest = httpRequest.toBuilder()
+            .appendHeader(HEADER_REFERRER, header)
+            .build();
       }
+
       if (LOG.isDebugEnabled()) {
         LOG.debug("[{}] {} Executing {} with {}; {}",
             currentThreadID(),
-            getSpanId(),
-            getOperationName(),
-            analyzer.analyze(request),
+            spanId,
+            operationName,
+            analyzer.analyze(context.request()),
             header);
       }
-      return request;
+
+      // now see if the request is actually a blocked multipart request
+      if (!isMultipartUploadEnabled && isRequestMultipartIO(sdkRequest)) {
+        throw new AuditOperationRejectedException("Multipart IO request "
+            + sdkRequest + " rejected " + header);
+      }
+
+      return httpRequest;
+    }
+
+    /**
+     * For delete requests, attach delete key size as a referrer attribute.
+     *
+     * @param request the request object.
+     */
+    private void attachDeleteKeySizeAttribute(SdkRequest request) {
+
+      if (request instanceof DeleteObjectsRequest) {
+        int keySize = ((DeleteObjectsRequest) request).delete().objects().size();
+        referrer.set(DELETE_KEYS_SIZE, String.valueOf(keySize));
+      } else if (request instanceof DeleteObjectRequest) {
+        String key = ((DeleteObjectRequest) request).key();
+        if (key != null && key.length() > 0) {
+          referrer.set(DELETE_KEYS_SIZE, "1");
+        }
+      }
     }
 
     @Override
@@ -345,11 +478,27 @@ public class LoggingAuditor
     }
 
     /**
-     * Get the referrer; visible for tests.
+     * Get the referrer.
      * @return the referrer.
      */
-    HttpReferrerAuditHeader getReferrer() {
+    private HttpReferrerAuditHeader getReferrer() {
       return referrer;
+    }
+
+    /**
+     * Execution failure: extract an error code and if this maps to
+     * a statistic name, update that counter.
+     */
+    @Override
+    public void onExecutionFailure(final Context.FailedExecution context,
+        final ExecutionAttributes executionAttributes) {
+      final Optional<SdkHttpResponse> response = context.httpResponse();
+      int sc = response.map(SdkHttpResponse::statusCode).orElse(0);
+      String stat = mapErrorStatusCodeToStatisticName(sc);
+      if (stat != null) {
+        LOG.debug("Incrementing error statistic {}", stat);
+        getIOStatistics().incrementCounter(stat);
+      }
     }
   }
 
@@ -386,15 +535,13 @@ public class LoggingAuditor
     }
 
     @Override
-    public <T extends AmazonWebServiceRequest> T requestCreated(
-        final T request) {
+    public void requestCreated(final SdkRequest.Builder builder) {
       String error = "Creating a request outside an audit span "
-          + analyzer.analyze(request);
+          + analyzer.analyze(builder.build());
       LOG.info(error);
       if (LOG.isDebugEnabled()) {
         LOG.debug(error, new AuditFailureException("unaudited"));
       }
-      return request;
     }
 
     /**
@@ -402,31 +549,35 @@ public class LoggingAuditor
      * increment the failure count.
      * Some requests (e.g. copy part) are not expected in spans due
      * to how they are executed; these do not trigger failures.
-     * @param request request
-     * @param <T> type of request
-     * @return an updated request.
-     * @throws AuditFailureException if failure is enabled.
+     * @param context The current state of the execution, including
+     *                the unmodified SDK request from the service
+     *                client call.
+     * @param executionAttributes A mutable set of attributes scoped
+     *                            to one specific request/response
+     *                            cycle that can be used to give data
+     *                            to future lifecycle methods.
      */
     @Override
-    public <T extends AmazonWebServiceRequest> T beforeExecution(
-        final T request) {
-
+    public void beforeExecution(Context.BeforeExecution context,
+        ExecutionAttributes executionAttributes) {
       String error = "executing a request outside an audit span "
-          + analyzer.analyze(request);
+          + analyzer.analyze(context.request());
       final String unaudited = getSpanId() + " "
           + UNAUDITED_OPERATION + " " + error;
-      if (isRequestNotAlwaysInSpan(request)) {
-        // can get by auditing during a copy, so don't overreact
+      // If request is attached to a span in the modifyHttpRequest, as is the case for requests made by AAL, treat it
+      // as an audited request.
+      if (isRequestNotAlwaysInSpan(context.request())) {
+        // can get by auditing during a copy, so don't overreact.
         LOG.debug(unaudited);
-      } else {
+      } else if (!isRequestAuditedOutsideOfCurrentSpan(executionAttributes)) {
         final RuntimeException ex = new AuditFailureException(unaudited);
         LOG.debug(unaudited, ex);
-        if (rejectOutOfSpan) {
+        if (isRejectOutOfSpan()) {
           throw ex;
         }
       }
       // now hand off to the superclass for its normal preparation
-      return super.beforeExecution(request);
+      super.beforeExecution(context, executionAttributes);
     }
   }
 }

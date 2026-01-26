@@ -65,12 +65,12 @@ public class JQueryUI extends HtmlBlock {
   @Override
   protected void render(Block html) {
     html.link(root_url("static/jquery/themes-1.9.1/base/jquery-ui.css"))
-        .link(root_url("static/dt-1.10.18/css/jquery.dataTables.css"))
-        .link(root_url("static/dt-1.10.18/css/jui-dt.css"))
-        .link(root_url("static/dt-1.10.18/css/custom_datatable.css"))
+        .link(root_url("static/dt-1.11.5/css/jquery.dataTables.css"))
+        .link(root_url("static/dt-1.11.5/css/jui-dt.css"))
+        .link(root_url("static/dt-1.11.5/css/custom_datatable.css"))
         .script(root_url("static/jquery/jquery-3.6.0.min.js"))
-        .script(root_url("static/jquery/jquery-ui-1.13.1.custom.min.js"))
-        .script(root_url("static/dt-1.10.18/js/jquery.dataTables.min.js"))
+        .script(root_url("static/jquery/jquery-ui-1.13.2.custom.min.js"))
+        .script(root_url("static/dt-1.11.5/js/jquery.dataTables.min.js"))
         .script(root_url("static/yarn.dt.plugins.js"))
         .script(root_url("static/dt-sorting/natural.js"))
         .style("#jsnotice { padding: 0.2em; text-align: center; }",
@@ -130,7 +130,7 @@ public class JQueryUI extends HtmlBlock {
         }
         // for inserting stateSaveInit
         int pos = init.indexOf('{') + 1;  
-        init = new StringBuffer(init).insert(pos, stateSaveInit).toString(); 
+        init = new StringBuilder(init).insert(pos, stateSaveInit).toString();
         list.add(join(id, "DataTable =  $('#", id, "').dataTable(", init,
                       ").fnSetFilteringDelay(188);"));
         String postInit = $(postInitID(DATATABLES, id));
@@ -146,7 +146,7 @@ public class JQueryUI extends HtmlBlock {
         init = defaultInit;
       }      
       int pos = init.indexOf('{') + 1;  
-      init = new StringBuffer(init).insert(pos, stateSaveInit).toString();  
+      init = new StringBuilder(init).insert(pos, stateSaveInit).toString();
       list.add(join("  $('", escapeEcmaScript(selector), "').dataTable(", init,
                ").fnSetFilteringDelay(288);"));      
       

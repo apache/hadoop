@@ -22,6 +22,8 @@ import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
 
+import org.junit.jupiter.api.Test;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.http.HttpServer2;
@@ -29,8 +31,11 @@ import org.apache.hadoop.http.TestHttpServer.EchoServlet;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.junit.Assert;
-import org.junit.Test;
+
+import javax.ws.rs.core.Response;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 public class TestWebServiceClient {
 
@@ -43,17 +48,17 @@ public class TestWebServiceClient {
   static final String SERVLET_PATH_ECHO = "/" + SERVLET_NAME_ECHO;
 
   @Test
-  public void testGetWebServiceClient() throws Exception {
+  void testGetWebServiceClient() throws Exception {
     Configuration conf = new Configuration();
     conf.set(YarnConfiguration.YARN_HTTP_POLICY_KEY, "HTTPS_ONLY");
     WebServiceClient.initialize(conf);
     WebServiceClient client = WebServiceClient.getWebServiceClient();
-    Assert.assertNotNull(client.getSSLFactory());
+    assertNotNull(client.getSSLFactory());
     WebServiceClient.destroy();
   }
 
   @Test
-  public void testCreateClient() throws Exception {
+  void testCreateClient() throws Exception {
     Configuration conf = new Configuration();
     conf.set(YarnConfiguration.YARN_HTTP_POLICY_KEY, "HTTPS_ONLY");
     File base = new File(BASEDIR);
@@ -80,7 +85,9 @@ public class TestWebServiceClient {
             sslConf.get(SSL_SERVER_TRUSTSTORE_PROP_PREFIX + ".location"),
             sslConf.get(SSL_SERVER_TRUSTSTORE_PROP_PREFIX + ".password"),
             sslConf.get(SSL_SERVER_TRUSTSTORE_PROP_PREFIX + ".type", "jks"))
-        .excludeCiphers(sslConf.get("ssl.server.exclude.cipher.list")).build();
+        .excludeCiphers(sslConf.get("ssl.server.exclude.cipher.list"))
+        .includeCiphers(sslConf.get("ssl.server.include.cipher.list"))
+        .build();
     server.addServlet(SERVLET_NAME_ECHO, SERVLET_PATH_ECHO, EchoServlet.class);
     server.start();
 
@@ -89,9 +96,8 @@ public class TestWebServiceClient {
     URL u = new URL(baseUrl, SERVLET_PATH_ECHO + "?a=b&c=d");
     WebServiceClient.initialize(sslConf);
     WebServiceClient client = WebServiceClient.getWebServiceClient();
-    HttpURLConnection conn = client.getHttpURLConnectionFactory()
-        .getHttpURLConnection(u);
-    Assert.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
+    Response resp = client.createClient().target(u.toURI()).request().get();
+    assertEquals(HttpURLConnection.HTTP_OK, resp.getStatus());
     WebServiceClient.destroy();
     server.stop();
     FileUtil.fullyDelete(new File(BASEDIR));

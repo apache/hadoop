@@ -40,7 +40,7 @@ public class RpcException extends IOException {
    * @param message message.
    * @param cause that cause this exception
    * @param cause the cause (can be retried by the {@link #getCause()} method).
-   *          (A <tt>null</tt> value is permitted, and indicates that the cause
+   *          (A <code>null</code> value is permitted, and indicates that the cause
    *          is nonexistent or unknown.)
    */
   RpcException(final String message, final Throwable cause) {

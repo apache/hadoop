@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.fs.s3a;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,11 +41,6 @@ public class ITestDowngradeSyncable extends AbstractS3ACostTest {
 
   protected static final Logger LOG =
       LoggerFactory.getLogger(ITestDowngradeSyncable.class);
-
-
-  public ITestDowngradeSyncable() {
-    super(true);
-  }
 
   @Override
   public Configuration createConfiguration() {

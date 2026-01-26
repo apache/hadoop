@@ -21,8 +21,8 @@ package org.apache.hadoop.fs.s3a.impl;
 import javax.net.ssl.HostnameVerifier;
 import java.io.IOException;
 
-import com.amazonaws.ClientConfiguration;
-import com.amazonaws.thirdparty.apache.http.conn.ssl.SSLConnectionSocketFactory;
+import software.amazon.awssdk.http.apache.ApacheHttpClient;
+import software.amazon.awssdk.thirdparty.org.apache.http.conn.ssl.SSLConnectionSocketFactory;
 
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 
@@ -35,13 +35,12 @@ public class ConfigureShadedAWSSocketFactory implements
     NetworkBinding.ConfigureAWSSocketFactory {
 
   @Override
-  public void configureSocketFactory(final ClientConfiguration awsConf,
+  public void configureSocketFactory(final ApacheHttpClient.Builder httpClientBuilder,
       final DelegatingSSLSocketFactory.SSLChannelMode channelMode)
       throws IOException {
     DelegatingSSLSocketFactory.initializeDefaultFactory(channelMode);
-    awsConf.getApacheHttpClientConfig().setSslSocketFactory(
-        new SSLConnectionSocketFactory(
-            DelegatingSSLSocketFactory.getDefaultFactory(),
-            (HostnameVerifier) null));
+    httpClientBuilder.socketFactory(new SSLConnectionSocketFactory(
+        DelegatingSSLSocketFactory.getDefaultFactory(),
+        (HostnameVerifier) null));
   }
 }

@@ -29,6 +29,7 @@ import org.apache.hadoop.oncrpc.RpcCall;
 import org.apache.hadoop.oncrpc.XDR;
 import org.apache.hadoop.oncrpc.security.CredentialsNone;
 import org.apache.hadoop.oncrpc.security.VerifierNone;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 
 // TODO: convert this to Junit
 public class TestUdpServer {
@@ -68,16 +69,16 @@ public class TestUdpServer {
     //testDump();
   }
   
-  static class Runtest1 extends Thread {
+  static class Runtest1 extends SubjectInheritingThread {
     @Override
-    public void run() {
+    public void work() {
       testGetportMount();
     }
   }
   
-  static class Runtest2 extends Thread {
+  static class Runtest2 extends SubjectInheritingThread {
     @Override
-    public void run() {
+    public void work() {
       testDump();
     }
   }

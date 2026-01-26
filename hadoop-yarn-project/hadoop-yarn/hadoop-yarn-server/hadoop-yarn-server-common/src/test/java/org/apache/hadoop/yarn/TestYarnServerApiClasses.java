@@ -18,9 +18,11 @@
 
 package org.apache.hadoop.yarn;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -63,8 +65,7 @@ import org.apache.hadoop.yarn.server.api.records.NodeStatus;
 import org.apache.hadoop.yarn.server.api.records.impl.pb.MasterKeyPBImpl;
 import org.apache.hadoop.yarn.server.api.records.impl.pb.NodeStatusPBImpl;
 import org.apache.hadoop.yarn.server.utils.YarnServerBuilderUtils;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * Simple test classes from org.apache.hadoop.yarn.server.api
@@ -127,14 +128,14 @@ public class TestYarnServerApiClasses {
     assertEquals("localhost", copy.getNodeStatus().getNodeId().getHost());
     assertEquals(collectors, copy.getRegisteringCollectors());
     // check labels are coming with valid values
-    Assert.assertTrue(original.getNodeLabels()
+    assertTrue(original.getNodeLabels()
         .containsAll(copy.getNodeLabels()));
     // check for empty labels
     original.setNodeLabels(new HashSet<NodeLabel> ());
     copy = new NodeHeartbeatRequestPBImpl(
         original.getProto());
-    Assert.assertNotNull(copy.getNodeLabels());
-    Assert.assertEquals(0, copy.getNodeLabels().size());
+    assertNotNull(copy.getNodeLabels());
+    assertEquals(0, copy.getNodeLabels().size());
   }
 
   @Test
@@ -155,7 +156,7 @@ public class TestYarnServerApiClasses {
     NodeHeartbeatRequestPBImpl original = new NodeHeartbeatRequestPBImpl();
     NodeHeartbeatRequestPBImpl copy =
         new NodeHeartbeatRequestPBImpl(original.getProto());
-    Assert.assertNull(copy.getNodeLabels());
+    assertNull(copy.getNodeLabels());
   }
 
   /**
@@ -218,7 +219,7 @@ public class TestYarnServerApiClasses {
         YarnServerBuilderUtils
             .convertFromProtoFormat(copy.getSystemCredentialsForApps())
             .get(getApplicationId(1));
-    Assert.assertNotNull(buffer);
+    assertNotNull(buffer);
     buffer.rewind();
     buf.reset(buffer);
     credentials1Out.readTokenStorageStream(buf);
@@ -370,7 +371,7 @@ public class TestYarnServerApiClasses {
             ((RegisterNodeManagerRequestPBImpl) request).getProto());
 
     // check labels are coming with no values
-    Assert.assertNull(request1.getNodeLabels());
+    assertNull(request1.getNodeLabels());
   }
 
   @Test
@@ -387,14 +388,14 @@ public class TestYarnServerApiClasses {
             ((RegisterNodeManagerRequestPBImpl) request).getProto());
 
     // check labels are coming with valid values
-    Assert.assertEquals(true, nodeLabels.containsAll(copy.getNodeLabels()));
+    assertEquals(true, nodeLabels.containsAll(copy.getNodeLabels()));
 
     // check for empty labels
     request.setNodeLabels(new HashSet<NodeLabel> ());
     copy = new RegisterNodeManagerRequestPBImpl(
         ((RegisterNodeManagerRequestPBImpl) request).getProto());
-    Assert.assertNotNull(copy.getNodeLabels());
-    Assert.assertEquals(0, copy.getNodeLabels().size());
+    assertNotNull(copy.getNodeLabels());
+    assertEquals(0, copy.getNodeLabels().size());
   }
 
   @Test
@@ -405,7 +406,7 @@ public class TestYarnServerApiClasses {
 
     UnRegisterNodeManagerRequestPBImpl copy = new UnRegisterNodeManagerRequestPBImpl(
         request.getProto());
-    Assert.assertEquals(nodeId, copy.getNodeId());
+    assertEquals(nodeId, copy.getNodeId());
   }
 
   private HashSet<NodeLabel> getValidNodeLabels() {

@@ -178,7 +178,6 @@ public class PeriodicRLESparseResourceAllocation
    *          maximum capacity.
    * @param period periodic offset at which capacities are evaluated.
    * @return the maximum {@link Resource} across the specified time instants.
-   * @return true if removal is successful, false otherwise
    */
   public Resource getMaximumPeriodicCapacity(long tick, long period) {
     Resource maxResource;

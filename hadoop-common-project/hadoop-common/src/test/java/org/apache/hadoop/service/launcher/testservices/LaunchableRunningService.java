@@ -21,7 +21,7 @@ package org.apache.hadoop.service.launcher.testservices;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.service.launcher.LaunchableService;
 import org.apache.hadoop.service.launcher.LauncherExitCodes;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -63,7 +63,7 @@ public class LaunchableRunningService extends RunningService implements
   @Override
   public Configuration bindArgs(Configuration config, List<String> args) throws
       Exception {
-    Assert.assertEquals(STATE.NOTINITED, getServiceState());
+    Assertions.assertEquals(STATE.NOTINITED, getServiceState());
     for (String arg : args) {
       LOG.info(arg);
     }

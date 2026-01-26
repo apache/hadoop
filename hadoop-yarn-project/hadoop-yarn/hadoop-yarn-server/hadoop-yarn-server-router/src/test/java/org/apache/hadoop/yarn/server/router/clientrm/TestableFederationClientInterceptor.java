@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.router.clientrm;
 
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.mock;
 
 import java.io.IOException;
@@ -28,16 +29,21 @@ import java.util.Set;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsResponse;
 import org.apache.hadoop.yarn.api.records.NodeAttribute;
 import org.apache.hadoop.yarn.api.records.NodeAttributeType;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.nodelabels.NodeAttributesManager;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
@@ -51,8 +57,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSyst
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.security.QueueACLsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMDelegationTokenSecretManager;
+import org.apache.hadoop.yarn.server.router.security.RouterDelegationTokenSecretManager;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
-import org.junit.Assert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -95,7 +101,7 @@ public class TestableFederationClientInterceptor
           MockNM nm = mockRM.registerNode("127.0.0.1:1234", 8*1024, 4);
           mockNMs.put(subClusterId, nm);
         } catch (Exception e) {
-          Assert.fail(e.getMessage());
+          fail(e.getMessage());
         }
         mockRMs.put(subClusterId, mockRM);
       }
@@ -122,6 +128,11 @@ public class TestableFederationClientInterceptor
       throw new ConnectException("RM is stopped");
     }
 
+    @Override
+    public GetClusterMetricsResponse getClusterMetrics(GetClusterMetricsRequest request)
+        throws YarnException {
+      throw new YarnException("RM is stopped");
+    }
   }
 
   /**
@@ -215,5 +226,32 @@ public class TestableFederationClientInterceptor
     mockNMs.clear();
     mockRMs.clear();
     super.shutdown();
+  }
+
+  public RouterDelegationTokenSecretManager createRouterRMDelegationTokenSecretManager(
+      Configuration conf) {
+
+    long secretKeyInterval = conf.getTimeDuration(
+        YarnConfiguration.RM_DELEGATION_KEY_UPDATE_INTERVAL_KEY,
+        YarnConfiguration.RM_DELEGATION_KEY_UPDATE_INTERVAL_DEFAULT,
+        TimeUnit.MILLISECONDS);
+
+    long tokenMaxLifetime = conf.getTimeDuration(
+        YarnConfiguration.RM_DELEGATION_TOKEN_MAX_LIFETIME_KEY,
+        YarnConfiguration.RM_DELEGATION_TOKEN_MAX_LIFETIME_DEFAULT,
+        TimeUnit.MILLISECONDS);
+
+    long tokenRenewInterval = conf.getTimeDuration(
+        YarnConfiguration.RM_DELEGATION_TOKEN_RENEW_INTERVAL_KEY,
+        YarnConfiguration.RM_DELEGATION_TOKEN_RENEW_INTERVAL_DEFAULT,
+        TimeUnit.MILLISECONDS);
+
+    long removeScanInterval = conf.getTimeDuration(
+        YarnConfiguration.RM_DELEGATION_TOKEN_REMOVE_SCAN_INTERVAL_KEY,
+        YarnConfiguration.RM_DELEGATION_TOKEN_REMOVE_SCAN_INTERVAL_DEFAULT,
+        TimeUnit.MILLISECONDS);
+
+    return new RouterDelegationTokenSecretManager(secretKeyInterval,
+        tokenMaxLifetime, tokenRenewInterval, removeScanInterval, conf);
   }
 }

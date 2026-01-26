@@ -21,9 +21,9 @@ import static java.util.Arrays.asList;
 import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.getFileSystem;
 import static org.apache.hadoop.hdfs.server.federation.MockNamenode.registerSubclusters;
 import static org.apache.hadoop.hdfs.server.federation.store.FederationStateStoreTestUtils.getStateStoreConfiguration;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -34,6 +34,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
+import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -57,9 +58,9 @@ import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.event.Level;
@@ -86,7 +87,7 @@ public class TestRouterNamenodeMonitoring {
   private long initializedTime;
 
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     LOG.info("Initialize the Mock Namenodes to monitor");
     for (String nsId : nsIds) {
@@ -105,7 +106,7 @@ public class TestRouterNamenodeMonitoring {
     initializedTime = Time.now();
   }
 
-  @After
+  @AfterEach
   public void cleanup() throws Exception {
     for (Map<String, MockNamenode> nnNS : nns.values()) {
       for (MockNamenode nn : nnNS.values()) {
@@ -214,12 +215,10 @@ public class TestRouterNamenodeMonitoring {
           "nn0".equals(nnInfo.getNamenodeId())) {
         // The modified date won't be updated in ns0.nn0
         // since it isn't monitored by the Router.
-        assertTrue(nnInfo + " shouldn't be updated: " + diff,
-            modTime < initializedTime);
+        assertTrue(modTime < initializedTime, nnInfo + " shouldn't be updated: " + diff);
       } else {
         // other namnodes should be updated as expected
-        assertTrue(nnInfo + " should be updated: " + diff,
-            modTime > initializedTime);
+        assertTrue(modTime > initializedTime, nnInfo + " should be updated: " + diff);
       }
     }
   }
@@ -277,10 +276,8 @@ public class TestRouterNamenodeMonitoring {
       sb.append(report.getNamenodeId());
       actualSet.add(sb.toString());
     }
-    assertTrue(expected + " does not contain all " + actualSet,
-        expected.containsAll(actualSet));
-    assertTrue(actualSet + " does not contain all " + expected,
-        actualSet.containsAll(expected));
+    assertTrue(expected.containsAll(actualSet), expected + " does not contain all " + actualSet);
+    assertTrue(actualSet.containsAll(expected), actualSet + " does not contain all " + expected);
   }
 
   @Test
@@ -293,7 +290,32 @@ public class TestRouterNamenodeMonitoring {
     verifyUrlSchemes(HttpConfig.Policy.HTTPS_ONLY.name());
   }
 
+  @Test
+  public void testJmxRequestFrequency() {
+    // Disable JMX requests
+    Configuration conf = getNamenodesConfig();
+    conf.setLong(RBFConfigKeys.DFS_ROUTER_NAMENODE_HEARTBEAT_JMX_INTERVAL_MS, -1);
+    verifyUrlSchemes(HttpConfig.Policy.HTTPS_ONLY.name(), conf, 0, 0, 1);
+
+    // Set JMX requests to lower frequency
+    conf = getNamenodesConfig();
+    conf.setLong(RBFConfigKeys.DFS_ROUTER_NAMENODE_HEARTBEAT_JMX_INTERVAL_MS,
+        TimeUnit.MINUTES.toMillis(5));
+    verifyUrlSchemes(HttpConfig.Policy.HTTPS_ONLY.name(), conf, 0, 1, 2);
+
+    // Set JMX requests to default frequency
+    conf = getNamenodesConfig();
+    verifyUrlSchemes(HttpConfig.Policy.HTTPS_ONLY.name(), conf, 0, 2, 2);
+  }
+
   private void verifyUrlSchemes(String scheme) {
+    int httpRequests = HttpConfig.Policy.HTTP_ONLY.name().equals(scheme) ? 1 : 0;
+    int httpsRequests = HttpConfig.Policy.HTTPS_ONLY.name().equals(scheme) ? 1 : 0;
+    verifyUrlSchemes(scheme, getNamenodesConfig(), httpRequests, httpsRequests, 1);
+  }
+
+  private void verifyUrlSchemes(String scheme, Configuration conf, int httpRequests,
+      int httpsRequests, int requestsPerService) {
 
     // Attach our own log appender so we can verify output
     final LogVerificationAppender appender =
@@ -304,7 +326,6 @@ public class TestRouterNamenodeMonitoring {
     GenericTestUtils.setRootLogLevel(Level.DEBUG);
 
     // Setup and start the Router
-    Configuration conf = getNamenodesConfig();
     conf.set(DFSConfigKeys.DFS_HTTP_POLICY_KEY, scheme);
     Configuration routerConf = new RouterConfigBuilder(conf)
         .heartbeat(true)
@@ -318,15 +339,12 @@ public class TestRouterNamenodeMonitoring {
     Collection<NamenodeHeartbeatService> heartbeatServices =
         router.getNamenodeHeartbeatServices();
     for (NamenodeHeartbeatService heartbeatService : heartbeatServices) {
-      heartbeatService.getNamenodeStatusReport();
+      for (int request = 0; request < requestsPerService; request++) {
+        heartbeatService.getNamenodeStatusReport();
+      }
     }
-    if (HttpConfig.Policy.HTTPS_ONLY.name().equals(scheme)) {
-      assertEquals(2, appender.countLinesWithMessage("JMX URL: https://"));
-      assertEquals(0, appender.countLinesWithMessage("JMX URL: http://"));
-    } else {
-      assertEquals(2, appender.countLinesWithMessage("JMX URL: http://"));
-      assertEquals(0, appender.countLinesWithMessage("JMX URL: https://"));
-    }
+    assertEquals(httpsRequests * 2, appender.countLinesWithMessage("JMX URL: https://"));
+    assertEquals(httpRequests * 2, appender.countLinesWithMessage("JMX URL: http://"));
   }
 
   /**

@@ -22,6 +22,7 @@ import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 import org.apache.hadoop.util.Time;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.conf.ReconfigurationUtil.PropertyChange;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -105,15 +106,16 @@ public abstract class ReconfigurableBase
   /**
    * A background thread to apply configuration changes.
    */
-  private static class ReconfigurationThread extends Thread {
+  private static class ReconfigurationThread extends SubjectInheritingThread {
     private ReconfigurableBase parent;
 
     ReconfigurationThread(ReconfigurableBase base) {
+      super();
       this.parent = base;
     }
 
     // See {@link ReconfigurationServlet#applyChanges}
-    public void run() {
+    public void work() {
       LOG.info("Starting reconfiguration task.");
       final Configuration oldConf = parent.getConf();
       final Configuration newConf = parent.getNewConf();

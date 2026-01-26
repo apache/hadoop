@@ -70,6 +70,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ParentQueue;
 
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity
     .TestCapacitySchedulerAutoCreatedQueueBase;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSAppAttempt;
@@ -86,11 +87,10 @@ import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.slf4j.event.Level;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import java.io.File;
 import java.io.IOException;
 import java.net.UnknownHostException;
@@ -109,7 +109,12 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler
     .capacity.TestCapacitySchedulerAutoCreatedQueueBase.USER1;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp
     .RMWebServices.DEFAULT_QUEUE;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -122,11 +127,11 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
   MockRM rm1 = null;
   MockRM rm2 = null;
 
-  public TestWorkPreservingRMRestart(SchedulerType type) throws IOException {
-    super(type);
+  public void initTestWorkPreservingRMRestart(SchedulerType type) throws IOException {
+    initParameterizedSchedulerTestBase(type);
+    setup();
   }
 
-  @Before
   public void setup() throws UnknownHostException {
     GenericTestUtils.setRootLogLevel(Level.DEBUG);
     conf = getConf();
@@ -138,7 +143,7 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
     DefaultMetricsSystem.setMiniClusterMode(true);
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     if (rm1 != null) {
       rm1.stop();
@@ -157,8 +162,11 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
   // Test Strategy: send 3 container recovery reports(AMContainer, running
   // container, completed container) on NM re-registration, check the states of
   // SchedulerAttempt, SchedulerNode etc. are updated accordingly.
-  @Test(timeout = 20000)
-  public void testSchedulerRecovery() throws Exception {
+  @Timeout(20)
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("getParameters")
+  public void testSchedulerRecovery(SchedulerType type) throws Exception {
+    initTestWorkPreservingRMRestart(type);
     conf.setBoolean(CapacitySchedulerConfiguration.ENABLE_USER_METRICS, true);
     conf.set(CapacitySchedulerConfiguration.RESOURCE_CALCULATOR_CLASS,
       DominantResourceCalculator.class.getName());
@@ -217,14 +225,13 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
     AbstractYarnScheduler scheduler =
         (AbstractYarnScheduler) rm2.getResourceScheduler();
     SchedulerNode schedulerNode1 = scheduler.getSchedulerNode(nm1.getNodeId());
+    assertTrue(schedulerNode1
+        .toString().contains(schedulerNode1.getUnallocatedResource().toString()),
+        "SchedulerNode#toString is not in expected format");
     assertTrue(
-        "SchedulerNode#toString is not in expected format",
         schedulerNode1
-        .toString().contains(schedulerNode1.getUnallocatedResource().toString()));
-    assertTrue(
-        "SchedulerNode#toString is not in expected format",
-        schedulerNode1
-        .toString().contains(schedulerNode1.getAllocatedResource().toString()));
+        .toString().contains(schedulerNode1.getAllocatedResource().toString()),
+        "SchedulerNode#toString is not in expected format");
 
     // ********* check scheduler node state.*******
     // 2 running containers.
@@ -297,11 +304,16 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
 
   private CapacitySchedulerConfiguration
       getSchedulerAutoCreatedQueueConfiguration(
-      boolean overrideWithQueueMappings) throws IOException {
+      boolean overrideWithQueueMappings, boolean useFlexibleAQC) {
     CapacitySchedulerConfiguration schedulerConf =
         new CapacitySchedulerConfiguration(conf);
-    TestCapacitySchedulerAutoCreatedQueueBase
-        .setupQueueConfigurationForSingleAutoCreatedLeafQueue(schedulerConf);
+    if (useFlexibleAQC) {
+      TestCapacitySchedulerAutoCreatedQueueBase
+              .setupQueueConfigurationForSingleFlexibleAutoCreatedLeafQueue(schedulerConf);
+    } else {
+      TestCapacitySchedulerAutoCreatedQueueBase
+              .setupQueueConfigurationForSingleAutoCreatedLeafQueue(schedulerConf);
+    }
     TestCapacitySchedulerAutoCreatedQueueBase.setupQueueMappings(schedulerConf,
         "c", overrideWithQueueMappings, new int[] {0, 1});
     return schedulerConf;
@@ -316,8 +328,11 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
   // 5. Check if all running containers are recovered,
   // 6. Verify the scheduler state like attempt info,
   // 7. Verify the queue/user metrics for the dynamic reservable queue.
-  @Test(timeout = 30000)
-  public void testDynamicQueueRecovery() throws Exception {
+  @Timeout(30)
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("getParameters")
+  public void testDynamicQueueRecovery(SchedulerType type) throws Exception {
+    initTestWorkPreservingRMRestart(type);
     conf.setBoolean(CapacitySchedulerConfiguration.ENABLE_USER_METRICS, true);
     conf.set(CapacitySchedulerConfiguration.RESOURCE_CALCULATOR_CLASS,
         DominantResourceCalculator.class.getName());
@@ -506,7 +521,7 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
       }
       retry++;
       if (retry > 30) {
-        Assert.fail("Apps are not scheduled within assumed timeout");
+        fail("Apps are not scheduled within assumed timeout");
       }
     }
 
@@ -567,46 +582,48 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
   private static final String QUEUE_DOESNT_EXIST = "NoSuchQueue";
   private static final String USER_1 = "user1";
   private static final String USER_2 = "user2";
+  private static final String Q_R_PATH = CapacitySchedulerConfiguration.ROOT + "." + R;
+  private static final String Q_A_PATH = Q_R_PATH + "." + A;
+  private static final String Q_B_PATH = Q_R_PATH + "." + B;
+  private static final String Q_B1_PATH = Q_B_PATH + "." + B1;
+  private static final String Q_B2_PATH = Q_B_PATH + "." + B2;
+
+  private static final QueuePath ROOT = new QueuePath(CapacitySchedulerConfiguration.ROOT);
+  private static final QueuePath R_QUEUE_PATH = new QueuePath(Q_R_PATH);
+  private static final QueuePath A_QUEUE_PATH = new QueuePath(Q_A_PATH);
+  private static final QueuePath B_QUEUE_PATH = new QueuePath(Q_B_PATH);
+  private static final QueuePath B1_QUEUE_PATH = new QueuePath(Q_B1_PATH);
+  private static final QueuePath B2_QUEUE_PATH = new QueuePath(Q_B2_PATH);
 
   private void setupQueueConfiguration(CapacitySchedulerConfiguration conf) {
-    conf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] { R });
-    final String Q_R = CapacitySchedulerConfiguration.ROOT + "." + R;
-    conf.setCapacity(Q_R, 100);
-    final String Q_A = Q_R + "." + A;
-    final String Q_B = Q_R + "." + B;
-    conf.setQueues(Q_R, new String[] {A, B});
-    conf.setCapacity(Q_A, 50);
-    conf.setCapacity(Q_B, 50);
+    conf.setQueues(ROOT, new String[] {R});
+    conf.setCapacity(R_QUEUE_PATH, 100);
+    conf.setQueues(R_QUEUE_PATH, new String[] {A, B});
+    conf.setCapacity(A_QUEUE_PATH, 50);
+    conf.setCapacity(B_QUEUE_PATH, 50);
     conf.setDouble(CapacitySchedulerConfiguration
       .MAXIMUM_APPLICATION_MASTERS_RESOURCE_PERCENT, 0.5f);
   }
   
   private void setupQueueConfigurationOnlyA(
       CapacitySchedulerConfiguration conf) {
-    conf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] { R });
-    final String Q_R = CapacitySchedulerConfiguration.ROOT + "." + R;
-    conf.setCapacity(Q_R, 100);
-    final String Q_A = Q_R + "." + A;
-    conf.setQueues(Q_R, new String[] {A});
-    conf.setCapacity(Q_A, 100);
+    conf.setQueues(ROOT, new String[] {R});
+    conf.setCapacity(R_QUEUE_PATH, 100);
+    conf.setQueues(R_QUEUE_PATH, new String[] {A});
+    conf.setCapacity(A_QUEUE_PATH, 100);
     conf.setDouble(CapacitySchedulerConfiguration
       .MAXIMUM_APPLICATION_MASTERS_RESOURCE_PERCENT, 1.0f);
   }
 
   private void setupQueueConfigurationChildOfB(CapacitySchedulerConfiguration conf) {
-    conf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] { R });
-    final String Q_R = CapacitySchedulerConfiguration.ROOT + "." + R;
-    conf.setCapacity(Q_R, 100);
-    final String Q_A = Q_R + "." + A;
-    final String Q_B = Q_R + "." + B;
-    final String Q_B1 = Q_B + "." + B1;
-    final String Q_B2 = Q_B + "." + B2;
-    conf.setQueues(Q_R, new String[] {A, B});
-    conf.setCapacity(Q_A, 50);
-    conf.setCapacity(Q_B, 50);
-    conf.setQueues(Q_B, new String[] {B1, B2});
-    conf.setCapacity(Q_B1, 50);
-    conf.setCapacity(Q_B2, 50);
+    conf.setQueues(ROOT, new String[] {R});
+    conf.setCapacity(R_QUEUE_PATH, 100);
+    conf.setQueues(R_QUEUE_PATH, new String[] {A, B});
+    conf.setCapacity(A_QUEUE_PATH, 50);
+    conf.setCapacity(B_QUEUE_PATH, 50);
+    conf.setQueues(B_QUEUE_PATH, new String[] {B1, B2});
+    conf.setCapacity(B1_QUEUE_PATH, 50);
+    conf.setCapacity(B2_QUEUE_PATH, 50);
     conf.setDouble(CapacitySchedulerConfiguration
         .MAXIMUM_APPLICATION_MASTERS_RESOURCE_PERCENT, 0.5f);
   }
@@ -614,8 +631,11 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
   // 1. submit an app to default queue and let it finish
   // 2. restart rm with no default queue
   // 3. getApplicationReport call should succeed (with no NPE)
-  @Test (timeout = 30000)
-  public void testRMRestartWithRemovedQueue() throws Exception{
+  @Timeout(30)
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("getParameters")
+  public void testRMRestartWithRemovedQueue(SchedulerType type) throws Exception {
+    initTestWorkPreservingRMRestart(type);
     conf.setBoolean(YarnConfiguration.YARN_ACL_ENABLE, true);
     conf.set(YarnConfiguration.YARN_ADMIN_ACL, "");
     rm1 = new MockRM(conf);
@@ -636,9 +656,9 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
     MockRM.finishAMAndVerifyAppState(app1, rm1, nm1, am1);
 
     CapacitySchedulerConfiguration csConf = new CapacitySchedulerConfiguration(conf);
-    csConf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[]{QUEUE_DOESNT_EXIST});
+    csConf.setQueues(ROOT, new String[]{QUEUE_DOESNT_EXIST});
     final String noQueue = CapacitySchedulerConfiguration.ROOT + "." + QUEUE_DOESNT_EXIST;
-    csConf.setCapacity(noQueue, 100);
+    csConf.setCapacity(new QueuePath(noQueue), 100);
     rm2 = new MockRM(csConf, memStore);
 
     rm2.start();
@@ -651,7 +671,7 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
             return rm2.getApplicationReport(app1.getApplicationId());
           }
     });
-    Assert.assertNotNull(report);
+    assertNotNull(report);
   }
 
   // Test CS recovery with multi-level queues and multi-users:
@@ -665,8 +685,11 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
   // 8. nm2 re-syncs back containers belong to user2.
   // 9. Assert the parent queue and 2 leaf queues state and the metrics.
   // 10. Assert each user's consumption inside the queue.
-  @Test (timeout = 30000)
-  public void testCapacitySchedulerRecovery() throws Exception {
+  @Timeout(30)
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("getParameters")
+  public void testCapacitySchedulerRecovery(SchedulerType type) throws Exception {
+    initTestWorkPreservingRMRestart(type);
     if (getSchedulerType() != SchedulerType.CAPACITY) {
       return;
     }
@@ -844,7 +867,7 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
     MockRM rm = new MockRM(csConf, memStore2);
     try {
       rm.start();
-      Assert.fail("QueueException must have been thrown");
+      fail("QueueException must have been thrown");
     } catch (QueueInvalidException e) {
     } finally {
       rm.close();
@@ -858,8 +881,11 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
   //   fail fast config as false and once with fail fast as true.
   //3. Verify that app was killed if fail fast is false.
   //4. Verify that QueueException was thrown if fail fast is true.
-  @Test (timeout = 30000)
-  public void testCapacityLeafQueueBecomesParentOnRecovery() throws Exception {
+  @Timeout(30)
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("getParameters")
+  public void testCapacityLeafQueueBecomesParentOnRecovery(SchedulerType type) throws Exception {
+    initTestWorkPreservingRMRestart(type);
     if (getSchedulerType() != SchedulerType.CAPACITY) {
       return;
     }
@@ -914,8 +940,11 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
   //   false and once with fail fast as true.
   //3. Verify that app was killed if fail fast is false.
   //4. Verify that QueueException was thrown if fail fast is true.
-  @Test (timeout = 30000)
-  public void testCapacitySchedulerQueueRemovedRecovery() throws Exception {
+  @Timeout(30)
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("getParameters")
+  public void testCapacitySchedulerQueueRemovedRecovery(SchedulerType type) throws Exception {
+    initTestWorkPreservingRMRestart(type);
     if (getSchedulerType() != SchedulerType.CAPACITY) {
       return;
     }
@@ -1008,8 +1037,11 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
 
   // Test RM shuts down, in the meanwhile, AM fails. Restarted RM scheduler
   // should not recover the containers that belong to the failed AM.
-  @Test(timeout = 20000)
-  public void testAMfailedBetweenRMRestart() throws Exception {
+  @Timeout(20)
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("getParameters")
+  public void testAMfailedBetweenRMRestart(SchedulerType type) throws Exception {
+    initTestWorkPreservingRMRestart(type);
     conf.setLong(YarnConfiguration.RM_WORK_PRESERVING_RECOVERY_SCHEDULING_WAIT_MS, 0);
     rm1 = new MockRM(conf);
     rm1.start();
@@ -1060,8 +1092,11 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
 
   // Apps already completed before RM restart. Restarted RM scheduler should not
   // recover containers for completed apps.
-  @Test(timeout = 20000)
-  public void testContainersNotRecoveredForCompletedApps() throws Exception {
+  @Timeout(20)
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("getParameters")
+  public void testContainersNotRecoveredForCompletedApps(SchedulerType type) throws Exception {
+    initTestWorkPreservingRMRestart(type);
     rm1 = new MockRM(conf);
     rm1.start();
     MockMemoryRMStateStore memStore =
@@ -1097,8 +1132,11 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
     assertNull(scheduler.getRMContainer(completedContainer.getContainerId()));
   }
 
-  @Test (timeout = 600000)
-  public void testAppReregisterOnRMWorkPreservingRestart() throws Exception {
+  @Timeout(600)
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("getParameters")
+  public void testAppReregisterOnRMWorkPreservingRestart(SchedulerType type) throws Exception {
+    initTestWorkPreservingRMRestart(type);
     conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, 1);
 
     // start RM
@@ -1128,9 +1166,12 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
     rm2.waitForState(app0.getApplicationId(), RMAppState.RUNNING);
     rm2.waitForState(am0.getApplicationAttemptId(), RMAppAttemptState.RUNNING);
   }
-  
-  @Test (timeout = 30000)
-  public void testAMContainerStatusWithRMRestart() throws Exception {  
+
+  @Timeout(30)
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("getParameters")
+  public void testAMContainerStatusWithRMRestart(SchedulerType type) throws Exception {
+    initTestWorkPreservingRMRestart(type);
     rm1 = new MockRM(conf);
     rm1.start();
     MockNM nm1 =
@@ -1142,7 +1183,7 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
     RMAppAttempt attempt0 = app1_1.getCurrentAppAttempt();
     YarnScheduler scheduler = rm1.getResourceScheduler();
 
-    Assert.assertTrue(scheduler.getRMContainer(
+    assertTrue(scheduler.getRMContainer(
         attempt0.getMasterContainer().getId()).isAMContainer());
 
     // Re-start RM
@@ -1158,12 +1199,15 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
     waitForNumContainersToRecover(2, rm2, am1_1.getApplicationAttemptId());
 
     scheduler = rm2.getResourceScheduler();
-    Assert.assertTrue(scheduler.getRMContainer(
+    assertTrue(scheduler.getRMContainer(
         attempt0.getMasterContainer().getId()).isAMContainer());
   }
 
-  @Test (timeout = 20000)
-  public void testRecoverSchedulerAppAndAttemptSynchronously() throws Exception {
+  @Timeout(20)
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("getParameters")
+  public void testRecoverSchedulerAppAndAttemptSynchronously(SchedulerType type) throws Exception {
+    initTestWorkPreservingRMRestart(type);
     // start RM
     rm1 = new MockRM(conf);
     rm1.start();
@@ -1179,7 +1223,7 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
     rm2.start();
     nm1.setResourceTrackerService(rm2.getResourceTrackerService());
     // scheduler app/attempt is immediately available after RM is re-started.
-    Assert.assertNotNull(rm2.getResourceScheduler().getSchedulerAppInfo(
+    assertNotNull(rm2.getResourceScheduler().getSchedulerAppInfo(
       am0.getApplicationAttemptId()));
 
     // getTransferredContainers should not throw NPE.
@@ -1194,8 +1238,11 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
   // Test if RM on recovery receives the container release request from AM
   // before it receives the container status reported by NM for recovery. this
   // container should not be recovered.
-  @Test (timeout = 50000)
-  public void testReleasedContainerNotRecovered() throws Exception {
+  @Timeout(50)
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("getParameters")
+  public void testReleasedContainerNotRecovered(SchedulerType type) throws Exception {
+    initTestWorkPreservingRMRestart(type);
     rm1 = new MockRM(conf);
     MockNM nm1 = new MockNM("h1:1234", 15120, rm1.getResourceTrackerService());
     nm1.registerNode();
@@ -1287,9 +1334,12 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
     }
   }
 
-  @Test (timeout = 20000)
-  public void testNewContainersNotAllocatedDuringSchedulerRecovery()
+  @Timeout(20)
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("getParameters")
+  public void testNewContainersNotAllocatedDuringSchedulerRecovery(SchedulerType type)
       throws Exception {
+    initTestWorkPreservingRMRestart(type);
     conf.setLong(
       YarnConfiguration.RM_WORK_PRESERVING_RECOVERY_SCHEDULING_WAIT_MS, 4000);
     rm1 = new MockRM(conf);
@@ -1324,7 +1374,7 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
     containers.addAll(am1.allocate(new ArrayList<ResourceRequest>(),
       new ArrayList<ContainerId>()).getAllocatedContainers());
     // container is not allocated during scheduling recovery.
-    Assert.assertTrue(containers.isEmpty());
+    assertTrue(containers.isEmpty());
 
     clock.setTime(startTime + 8000);
     nm1.nodeHeartbeat(true);
@@ -1340,9 +1390,12 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
    * Testing to confirm that retried finishApplicationMaster() doesn't throw
    * InvalidApplicationMasterRequest before and after RM restart.
    */
-  @Test (timeout = 20000)
-  public void testRetriedFinishApplicationMasterRequest()
+  @Timeout(20)
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("getParameters")
+  public void testRetriedFinishApplicationMasterRequest(SchedulerType type)
       throws Exception {
+    initTestWorkPreservingRMRestart(type);
     conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, 1);
     // start RM
     rm1 = new MockRM(conf);
@@ -1375,8 +1428,11 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
     am0.unregisterAppAttempt(false);
   }
 
-  @Test (timeout = 30000)
-  public void testAppFailedToRenewTokenOnRecovery() throws Exception {
+  @Timeout(30)
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("getParameters")
+  public void testAppFailedToRenewTokenOnRecovery(SchedulerType type) throws Exception {
+    initTestWorkPreservingRMRestart(type);
     conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
       "kerberos");
     conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, 1);
@@ -1424,8 +1480,11 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
    * Test validateAndCreateResourceRequest fails on recovery, app should ignore
    * this Exception and continue
    */
-  @Test (timeout = 30000)
-  public void testAppFailToValidateResourceRequestOnRecovery() throws Exception{
+  @Timeout(30)
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("getParameters")
+  public void testAppFailToValidateResourceRequestOnRecovery(SchedulerType type) throws Exception {
+    initTestWorkPreservingRMRestart(type);
     rm1 = new MockRM(conf);
     rm1.start();
     MockNM nm1 =
@@ -1444,8 +1503,12 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
     rm2.start();
   }
 
-  @Test(timeout = 20000)
-  public void testContainerCompleteMsgNotLostAfterAMFailedAndRMRestart() throws Exception {
+  @Timeout(20)
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("getParameters")
+  public void testContainerCompleteMsgNotLostAfterAMFailedAndRMRestart(SchedulerType type)
+      throws Exception {
+    initTestWorkPreservingRMRestart(type);
     rm1 = new MockRM(conf);
     rm1.start();
 
@@ -1508,8 +1571,11 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
 
   // Test that if application state was saved, but attempt state was not saved.
   // RM should start correctly.
-  @Test (timeout = 20000)
-  public void testAppStateSavedButAttemptStateNotSaved() throws Exception {
+  @Timeout(20)
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("getParameters")
+  public void testAppStateSavedButAttemptStateNotSaved(SchedulerType type) throws Exception {
+    initTestWorkPreservingRMRestart(type);
     MockMemoryRMStateStore memStore = new MockMemoryRMStateStore() {
       @Override public synchronized void updateApplicationAttemptStateInternal(
           ApplicationAttemptId appAttemptId,
@@ -1547,8 +1613,11 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
     assertEquals(RMAppAttemptState.FINISHED, recoveredApp1.getCurrentAppAttempt().getState());
   }
 
-  @Test(timeout = 600000)
-  public void testUAMRecoveryOnRMWorkPreservingRestart() throws Exception {
+  @Timeout(600)
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("getParameters")
+  public void testUAMRecoveryOnRMWorkPreservingRestart(SchedulerType type) throws Exception {
+    initTestWorkPreservingRMRestart(type);
     conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, 1);
 
     // start RM
@@ -1627,18 +1696,18 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
         schedulerApps.get(recoveredApp.getApplicationId());
     SchedulerApplicationAttempt schedulerAttempt =
         schedulerApp.getCurrentAppAttempt();
-    Assert.assertEquals(numContainers,
+    assertEquals(numContainers,
         schedulerAttempt.getLiveContainers().size());
 
     // Check if UAM is able to heart beat
-    Assert.assertNotNull(am0.doHeartbeat());
+    assertNotNull(am0.doHeartbeat());
     assertUnmanagedAMQueueMetrics(qm2, 1, 0, 1, 0);
 
     // Complete the UAM
     am0.unregisterAppAttempt(false);
     rm2.waitForState(am0.getApplicationAttemptId(), RMAppAttemptState.FINISHED);
     rm2.waitForState(app0.getApplicationId(), RMAppState.FINISHED);
-    Assert.assertEquals(FinalApplicationStatus.SUCCEEDED,
+    assertEquals(FinalApplicationStatus.SUCCEEDED,
         recoveredApp.getFinalApplicationStatus());
     assertUnmanagedAMQueueMetrics(qm2, 1, 0, 0, 1);
 
@@ -1647,22 +1716,113 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
     rm3.start();
     recoveredApp = rm3.getRMContext().getRMApps().get(app0.getApplicationId());
     QueueMetrics qm3 = rm3.getResourceScheduler().getRootQueueMetrics();
-    Assert.assertEquals(RMAppState.FINISHED, recoveredApp.getState());
+    assertEquals(RMAppState.FINISHED, recoveredApp.getState());
     assertUnmanagedAMQueueMetrics(qm2, 1, 0, 0, 1);
+  }
+
+  //   Test behavior of an app if two same name leaf queue with different queuePath
+  //   during work preserving rm restart with %specified mapping Placement Rule.
+  //   Test case does following:
+  //1. Submit an apps to queue root.joe.test.
+  //2. While the applications is running, restart the rm and
+  //   check whether the app submitted to the queue it was submitted initially.
+  //3. Verify that application running successfully.
+  @Timeout(60)
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("getParameters")
+  public void testQueueRecoveryOnRMWorkPreservingRestart(SchedulerType type) throws Exception {
+    initTestWorkPreservingRMRestart(type);
+    if (getSchedulerType() != SchedulerType.CAPACITY) {
+      return;
+    }
+    CapacitySchedulerConfiguration csConf = new CapacitySchedulerConfiguration(conf);
+    final QueuePath defaultPath = new QueuePath(ROOT + "." + "default");
+    final QueuePath joe = new QueuePath(ROOT + "." + "joe");
+    final QueuePath john = new QueuePath(ROOT + "." + "john");
+
+    csConf.setQueues(ROOT, new String[] {"default", "joe", "john"});
+    csConf.setCapacity(joe, 25);
+    csConf.setCapacity(john, 25);
+    csConf.setCapacity(defaultPath, 50);
+
+    csConf.setQueues(joe, new String[] {"test"});
+    csConf.setQueues(john, new String[] {"test"});
+    csConf.setCapacity(new QueuePath(joe.getFullPath(), "test"), 100);
+    csConf.setCapacity(new QueuePath(john.getFullPath(), "test"), 100);
+
+    csConf.set(CapacitySchedulerConfiguration.MAPPING_RULE_JSON,
+        "{\"rules\" : [{\"type\": \"user\", \"policy\" : \"specified\", " +
+        "\"fallbackResult\" : \"skip\", \"matches\" : \"*\"}]}");
+
+    // start RM
+    rm1 = new MockRM(csConf);
+    rm1.start();
+    MockMemoryRMStateStore memStore =
+        (MockMemoryRMStateStore) rm1.getRMStateStore();
+    MockNM nm1 =
+        new MockNM("127.0.0.1:1234", 15120, rm1.getResourceTrackerService());
+    nm1.registerNode();
+
+    RMContext newMockRMContext = rm1.getRMContext();
+    newMockRMContext.setQueuePlacementManager(TestAppManager.createMockPlacementManager(
+        "user1|user2", "test", "root.joe"));
+
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(1024, rm1)
+            .withAppName("app")
+            .withQueue("root.joe.test")
+            .withUser("user1")
+            .withAcls(null)
+            .build();
+
+    RMApp app = MockRMAppSubmitter.submit(rm1, data);
+    MockAM am = MockRM.launchAndRegisterAM(app, rm1, nm1);
+    rm1.waitForState(app.getApplicationId(), RMAppState.RUNNING);
+
+    MockRM rm2 = new MockRM(csConf, memStore) {
+      @Override
+      protected RMAppManager createRMAppManager() {
+        return new RMAppManager(this.rmContext, this.scheduler,
+            this.masterService, this.applicationACLsManager, conf) {
+          @Override
+          ApplicationPlacementContext placeApplication(
+              PlacementManager placementManager,
+              ApplicationSubmissionContext context, String user,
+              boolean isRecovery) throws YarnException {
+            return super.placeApplication(
+                    newMockRMContext.getQueuePlacementManager(), context, user, isRecovery);
+          }
+        };
+      }
+    };
+
+    nm1.setResourceTrackerService(rm2.getResourceTrackerService());
+    rm2.start();
+    RMApp recoveredApp0 =
+        rm2.getRMContext().getRMApps().get(app.getApplicationId());
+
+    rm2.waitForState(recoveredApp0.getApplicationId(), RMAppState.ACCEPTED);
+    am.setAMRMProtocol(rm2.getApplicationMasterService(), rm2.getRMContext());
+    am.registerAppAttempt(true);
+    rm2.waitForState(recoveredApp0.getApplicationId(), RMAppState.RUNNING);
+
+    assertEquals("root.joe.test", recoveredApp0.getQueue());
   }
 
   private void assertUnmanagedAMQueueMetrics(QueueMetrics qm, int appsSubmitted,
       int appsPending, int appsRunning, int appsCompleted) {
-    Assert.assertEquals(appsSubmitted, qm.getUnmanagedAppsSubmitted());
-    Assert.assertEquals(appsPending, qm.getUnmanagedAppsPending());
-    Assert.assertEquals(appsRunning, qm.getUnmanagedAppsRunning());
-    Assert.assertEquals(appsCompleted, qm.getUnmanagedAppsCompleted());
+    assertEquals(appsSubmitted, qm.getUnmanagedAppsSubmitted());
+    assertEquals(appsPending, qm.getUnmanagedAppsPending());
+    assertEquals(appsRunning, qm.getUnmanagedAppsRunning());
+    assertEquals(appsCompleted, qm.getUnmanagedAppsCompleted());
   }
 
 
-  @Test(timeout = 30000)
-  public void testUnknownUserOnRecovery() throws Exception {
-
+  @Timeout(30)
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("getParameters")
+  public void testUnknownUserOnRecovery(SchedulerType type) throws Exception {
+    initTestWorkPreservingRMRestart(type);
     MockRM rm1 = new MockRM(conf);
     rm1.start();
     MockMemoryRMStateStore memStore =
@@ -1703,20 +1863,45 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
     rm2.start();
     RMApp recoveredApp =
         rm2.getRMContext().getRMApps().get(app0.getApplicationId());
-    Assert.assertEquals(RMAppState.KILLED, recoveredApp.getState());
+    assertEquals(RMAppState.KILLED, recoveredApp.getState());
   }
 
-  @Test(timeout = 30000)
-  public void testDynamicAutoCreatedQueueRecoveryWithDefaultQueue()
-      throws Exception {
+  @Timeout(30)
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("getParameters")
+  public void testDynamicFlexibleAutoCreatedQueueRecoveryWithDefaultQueue(
+      SchedulerType type) throws Exception {
+    initTestWorkPreservingRMRestart(type);
     //if queue name is not specified, it should submit to 'default' queue
-    testDynamicAutoCreatedQueueRecovery(USER1, null);
+    testDynamicAutoCreatedQueueRecovery(USER1, null, true);
   }
 
-  @Test(timeout = 30000)
-  public void testDynamicAutoCreatedQueueRecoveryWithOverrideQueueMappingFlag()
-      throws Exception {
-    testDynamicAutoCreatedQueueRecovery(USER1, USER1);
+  @Timeout(30)
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("getParameters")
+  public void testDynamicAutoCreatedQueueRecoveryWithDefaultQueue(
+      SchedulerType type) throws Exception {
+    initTestWorkPreservingRMRestart(type);
+    //if queue name is not specified, it should submit to 'default' queue
+    testDynamicAutoCreatedQueueRecovery(USER1, null, false);
+  }
+
+  @Timeout(30)
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("getParameters")
+  public void testDynamicFlexibleAutoCreatedQueueRecoveryWithOverrideQueueMappingFlag(
+      SchedulerType type) throws Exception {
+    initTestWorkPreservingRMRestart(type);
+    testDynamicAutoCreatedQueueRecovery(USER1, USER1, true);
+  }
+
+  @Timeout(30)
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("getParameters")
+  public void testDynamicAutoCreatedQueueRecoveryWithOverrideQueueMappingFlag(
+      SchedulerType type) throws Exception {
+    initTestWorkPreservingRMRestart(type);
+    testDynamicAutoCreatedQueueRecovery(USER1, USER1, false);
   }
 
   // Test work preserving recovery of apps running on auto-created queues.
@@ -1729,7 +1914,8 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
   // 6. Verify the scheduler state like attempt info,
   // 7. Verify the queue/user metrics for the dynamic auto-created queue.
 
-  public void testDynamicAutoCreatedQueueRecovery(String user, String queueName)
+  public void testDynamicAutoCreatedQueueRecovery(
+      String user, String queueName, boolean useFlexibleAQC)
       throws Exception {
     conf.setBoolean(CapacitySchedulerConfiguration.ENABLE_USER_METRICS, true);
     conf.set(CapacitySchedulerConfiguration.RESOURCE_CALCULATOR_CLASS,
@@ -1739,9 +1925,9 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
     // 1. Set up dynamic auto-created queue.
     CapacitySchedulerConfiguration schedulerConf = null;
     if (queueName == null || queueName.equals(DEFAULT_QUEUE)) {
-      schedulerConf = getSchedulerAutoCreatedQueueConfiguration(false);
+      schedulerConf = getSchedulerAutoCreatedQueueConfiguration(false, useFlexibleAQC);
     } else{
-      schedulerConf = getSchedulerAutoCreatedQueueConfiguration(true);
+      schedulerConf = getSchedulerAutoCreatedQueueConfiguration(true, useFlexibleAQC);
     }
     int containerMemory = 1024;
     Resource containerResource = Resource.newInstance(containerMemory, 1);
@@ -1854,8 +2040,11 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
 
   // Apps already completed before RM restart. Make sure we restore the queue
   // correctly
-  @Test(timeout = 20000)
-  public void testFairSchedulerCompletedAppsQueue() throws Exception {
+  @Timeout(20)
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("getParameters")
+  public void testFairSchedulerCompletedAppsQueue(SchedulerType type) throws Exception {
+    initTestWorkPreservingRMRestart(type);
     if (getSchedulerType() != SchedulerType.FAIR) {
       return;
     }
@@ -1871,10 +2060,10 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
 
     String fsQueueContext = app.getApplicationSubmissionContext().getQueue();
     String fsQueueApp = app.getQueue();
-    assertEquals("Queue in app not equal to submission context", fsQueueApp,
-        fsQueueContext);
+    assertEquals(fsQueueApp,
+        fsQueueContext, "Queue in app not equal to submission context");
     RMAppAttempt rmAttempt = app.getCurrentAppAttempt();
-    assertNotNull("No AppAttempt found", rmAttempt);
+    assertNotNull(rmAttempt, "No AppAttempt found");
 
     rm2 = new MockRM(conf, rm1.getRMStateStore());
     rm2.start();
@@ -1882,12 +2071,12 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
     RMApp recoveredApp =
         rm2.getRMContext().getRMApps().get(app.getApplicationId());
     RMAppAttempt rmAttemptRecovered = recoveredApp.getCurrentAppAttempt();
-    assertNotNull("No AppAttempt found after recovery", rmAttemptRecovered);
+    assertNotNull(rmAttemptRecovered, "No AppAttempt found after recovery");
     String fsQueueContextRecovered =
         recoveredApp.getApplicationSubmissionContext().getQueue();
     String fsQueueAppRecovered = recoveredApp.getQueue();
     assertEquals(RMAppState.FINISHED, recoveredApp.getState());
-    assertEquals("Recovered app queue is not the same as context queue",
-        fsQueueAppRecovered, fsQueueContextRecovered);
+    assertEquals(fsQueueAppRecovered, fsQueueContextRecovered,
+        "Recovered app queue is not the same as context queue");
   }
 }

@@ -57,12 +57,13 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERV
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_KEY;
 import static org.apache.hadoop.fs.FileSystem.TRASH_PREFIX;
 
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import static org.junit.Assert.*;
+import org.apache.hadoop.test.LambdaTestUtils;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -86,7 +87,7 @@ public class TestViewFileSystemHdfs extends ViewFileSystemBaseTest {
     return new FileSystemTestHelper("/tmp/TestViewFileSystemHdfs");
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void clusterSetupAtBegining() throws IOException,
       LoginException, URISyntaxException {
 
@@ -130,7 +131,7 @@ public class TestViewFileSystemHdfs extends ViewFileSystemBaseTest {
   }
 
       
-  @AfterClass
+  @AfterAll
   public static void ClusterShutdownAtEnd() throws Exception {
     if (cluster != null) {
       cluster.shutdown();
@@ -138,7 +139,7 @@ public class TestViewFileSystemHdfs extends ViewFileSystemBaseTest {
   }
 
   @Override
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     // create the test root on local_fs
     fsTarget = fHdfs;
@@ -148,7 +149,7 @@ public class TestViewFileSystemHdfs extends ViewFileSystemBaseTest {
   }
 
   @Override
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     super.tearDown();
   }
@@ -191,34 +192,38 @@ public class TestViewFileSystemHdfs extends ViewFileSystemBaseTest {
 
   @Test
   public void testTrashRootsAfterEncryptionZoneDeletion() throws Exception {
-    final Path zone = new Path("/EZ");
-    fsTarget.mkdirs(zone);
-    final Path zone1 = new Path("/EZ/zone1");
-    fsTarget.mkdirs(zone1);
+    try {
+      final Path zone = new Path("/EZ");
+      fsTarget.mkdirs(zone);
+      final Path zone1 = new Path("/EZ/zone1");
+      fsTarget.mkdirs(zone1);
 
-    DFSTestUtil.createKey("test_key", cluster, CONF);
-    HdfsAdmin hdfsAdmin = new HdfsAdmin(cluster.getURI(0), CONF);
-    final EnumSet<CreateEncryptionZoneFlag> provisionTrash =
-        EnumSet.of(CreateEncryptionZoneFlag.PROVISION_TRASH);
-    hdfsAdmin.createEncryptionZone(zone1, "test_key", provisionTrash);
+      DFSTestUtil.createKey("test_key", cluster, CONF);
+      HdfsAdmin hdfsAdmin = new HdfsAdmin(cluster.getURI(0), CONF);
+      final EnumSet<CreateEncryptionZoneFlag> provisionTrash =
+          EnumSet.of(CreateEncryptionZoneFlag.PROVISION_TRASH);
+      hdfsAdmin.createEncryptionZone(zone1, "test_key", provisionTrash);
 
-    final Path encFile = new Path(zone1, "encFile");
-    DFSTestUtil.createFile(fsTarget, encFile, 10240, (short) 1, 0xFEED);
+      final Path encFile = new Path(zone1, "encFile");
+      DFSTestUtil.createFile(fsTarget, encFile, 10240, (short) 1, 0xFEED);
 
-    Configuration clientConf = new Configuration(CONF);
-    clientConf.setLong(FS_TRASH_INTERVAL_KEY, 1);
-    clientConf.set("fs.default.name", fsTarget.getUri().toString());
-    FsShell shell = new FsShell(clientConf);
+      Configuration clientConf = new Configuration(CONF);
+      clientConf.setLong(FS_TRASH_INTERVAL_KEY, 1);
+      clientConf.set("fs.default.name", fsTarget.getUri().toString());
+      FsShell shell = new FsShell(clientConf);
 
-    //Verify file deletion within EZ
-    DFSTestUtil.verifyDelete(shell, fsTarget, encFile, true);
-    assertTrue("ViewFileSystem trash roots should include EZ file trash",
-        (fsView.getTrashRoots(true).size() == 1));
+      //Verify file deletion within EZ
+      DFSTestUtil.verifyDelete(shell, fsTarget, encFile, true);
+      assertTrue((fsView.getTrashRoots(true).size() == 1),
+          "ViewFileSystem trash roots should include EZ file trash");
 
-    //Verify deletion of EZ
-    DFSTestUtil.verifyDelete(shell, fsTarget, zone, true);
-    assertTrue("ViewFileSystem trash roots should include EZ zone trash",
-        (fsView.getTrashRoots(true).size() == 2));
+      //Verify deletion of EZ
+      DFSTestUtil.verifyDelete(shell, fsTarget, zone, true);
+      assertTrue((fsView.getTrashRoots(true).size() == 2),
+          "ViewFileSystem trash roots should include EZ zone trash");
+    } finally {
+      DFSTestUtil.deleteKey("test_key", cluster);
+    }
   }
 
   @Test
@@ -261,15 +266,15 @@ public class TestViewFileSystemHdfs extends ViewFileSystemBaseTest {
         viewFs.getFileChecksum(mountDataFilePath);
     FileChecksum fileChecksumViaTargetFs =
         fsTarget.getFileChecksum(fsTargetFilePath);
-    assertTrue("File checksum not matching!",
-        fileChecksumViaViewFs.equals(fileChecksumViaTargetFs));
+    assertTrue(fileChecksumViaViewFs.equals(fileChecksumViaTargetFs),
+        "File checksum not matching!");
 
     fileChecksumViaViewFs =
         viewFs.getFileChecksum(mountDataFilePath, fileLength / 2);
     fileChecksumViaTargetFs =
         fsTarget.getFileChecksum(fsTargetFilePath, fileLength / 2);
-    assertTrue("File checksum not matching!",
-        fileChecksumViaViewFs.equals(fileChecksumViaTargetFs));
+    assertTrue(fileChecksumViaViewFs.equals(fileChecksumViaTargetFs),
+        "File checksum not matching!");
   }
 
   //Rename should fail on across different fileSystems
@@ -333,7 +338,7 @@ public class TestViewFileSystemHdfs extends ViewFileSystemBaseTest {
     // 1. test mkdirs
     final Path testDir = new Path("testdir1/sub1/sub3");
     final Path testDir_tmp = new Path("testdir1/sub1/sub3_temp");
-    assertTrue(testDir + ": Failed to create!", nfly.mkdirs(testDir));
+    assertTrue(nfly.mkdirs(testDir), testDir + ": Failed to create!");
 
     // Test renames
     assertTrue(nfly.rename(testDir, testDir_tmp));
@@ -341,7 +346,7 @@ public class TestViewFileSystemHdfs extends ViewFileSystemBaseTest {
 
     for (final URI testUri : testUris) {
       final FileSystem fs = FileSystem.get(testUri, testConf);
-      assertTrue(testDir + " should exist!", fs.exists(testDir));
+      assertTrue(fs.exists(testDir), testDir + " should exist!");
     }
 
     // 2. test write
@@ -357,7 +362,7 @@ public class TestViewFileSystemHdfs extends ViewFileSystemBaseTest {
       final FileSystem fs = FileSystem.get(testUri, testConf);
       final FSDataInputStream fsdis = fs.open(testFile);
       try {
-        assertEquals("Wrong file content", testString, fsdis.readUTF());
+        assertEquals(testString, fsdis.readUTF(), "Wrong file content");
       } finally {
         fsdis.close();
       }
@@ -372,7 +377,7 @@ public class TestViewFileSystemHdfs extends ViewFileSystemBaseTest {
       FSDataInputStream fsDis = null;
       try {
         fsDis = nfly.open(testFile);
-        assertEquals("Wrong file content", testString, fsDis.readUTF());
+        assertEquals(testString, fsDis.readUTF(), "Wrong file content");
       } finally {
         IOUtils.cleanupWithLogger(LOG, fsDis);
         cluster.restartNameNode(i);
@@ -386,7 +391,7 @@ public class TestViewFileSystemHdfs extends ViewFileSystemBaseTest {
     FSDataInputStream fsDis = null;
     try {
       fsDis = nfly.open(testFile);
-      assertEquals("Wrong file content", testString, fsDis.readUTF());
+      assertEquals(testString, fsDis.readUTF(), "Wrong file content");
       assertTrue(fs1.exists(testFile));
     } finally {
       IOUtils.cleanupWithLogger(LOG, fsDis);
@@ -401,18 +406,18 @@ public class TestViewFileSystemHdfs extends ViewFileSystemBaseTest {
       for (final URI testUri : testUris) {
         final FileSystem fs = FileSystem.get(testUri, conf);
         fs.setTimes(testFile, 1L, 1L);
-        assertEquals(testUri + "Set mtime failed!", 1L,
-            fs.getFileStatus(testFile).getModificationTime());
-        assertEquals("nfly file status wrong", expectedMtime,
-            nfly.getFileStatus(testFile).getModificationTime());
+        assertEquals(1L, fs.getFileStatus(testFile).getModificationTime(),
+            testUri + "Set mtime failed!");
+        assertEquals(expectedMtime, nfly.getFileStatus(testFile).getModificationTime(),
+            "nfly file status wrong");
         FSDataInputStream fsDis2 = null;
         try {
           fsDis2 = nfly.open(testFile);
-          assertEquals("Wrong file content", testString, fsDis2.readUTF());
+          assertEquals(testString, fsDis2.readUTF(), "Wrong file content");
           // repair is done, now trying via normal fs
           //
-          assertEquals("Repair most recent failed!", expectedMtime,
-              fs.getFileStatus(testFile).getModificationTime());
+          assertEquals(expectedMtime, fs.getFileStatus(testFile).getModificationTime(),
+              "Repair most recent failed!");
         } finally {
           IOUtils.cleanupWithLogger(LOG, fsDis2);
         }
@@ -484,7 +489,7 @@ public class TestViewFileSystemHdfs extends ViewFileSystemBaseTest {
     FileSystem otherfs = map.get("user1");
     otherfs.mkdirs(user1Path);
     String owner = otherfs.getFileStatus(user1Path).getOwner();
-    assertEquals("The owner did not match ", owner, userUgi.getShortUserName());
+    assertEquals(owner, userUgi.getShortUserName(), "The owner did not match ");
     otherfs.delete(user1Path, false);
   }
 
@@ -505,5 +510,93 @@ public class TestViewFileSystemHdfs extends ViewFileSystemBaseTest {
 
     assertEquals(fs.getFileStatus(subDirOfInternalDir).getPermission(),
         fs.getFileStatus(subDirOfRealDir).getPermission());
+  }
+
+  private Path getViewFsPath(Path path, FileSystem fs) {
+    return fs.makeQualified(path);
+  }
+
+  private Path getViewFsPath(String path, FileSystem fs) {
+    return getViewFsPath(new Path(path), fs);
+  }
+
+  @Test
+  public void testEnclosingRootsBase() throws Exception {
+    try {
+      final Path zone = new Path("/data/EZ");
+      fsTarget.mkdirs(zone);
+      final Path zone1 = new Path("/data/EZ/zone1");
+      fsTarget.mkdirs(zone1);
+
+      DFSTestUtil.createKey("test_key", cluster, 0, CONF);
+      HdfsAdmin hdfsAdmin = new HdfsAdmin(cluster.getURI(0), CONF);
+      final EnumSet<CreateEncryptionZoneFlag> provisionTrash =
+          EnumSet.of(CreateEncryptionZoneFlag.PROVISION_TRASH);
+      hdfsAdmin.createEncryptionZone(zone1, "test_key", provisionTrash);
+      assertEquals(fsView.getEnclosingRoot(zone), getViewFsPath("/data", fsView));
+      assertEquals(fsView.getEnclosingRoot(zone1), getViewFsPath(zone1, fsView));
+
+      Path nn02Ez = new Path("/mountOnNn2/EZ");
+      fsTarget2.mkdirs(nn02Ez);
+      assertEquals(fsView.getEnclosingRoot((nn02Ez)), getViewFsPath("/mountOnNn2", fsView));
+      HdfsAdmin hdfsAdmin2 = new HdfsAdmin(cluster.getURI(1), CONF);
+      DFSTestUtil.createKey("test_key", cluster, 1, CONF);
+      hdfsAdmin2.createEncryptionZone(nn02Ez, "test_key", provisionTrash);
+      assertEquals(fsView.getEnclosingRoot((nn02Ez)), getViewFsPath(nn02Ez, fsView));
+      assertEquals(fsView.getEnclosingRoot(new Path(nn02Ez, "dir/dir2/file")),
+          getViewFsPath(nn02Ez, fsView));
+
+      // With viewfs:// scheme
+      assertEquals(fsView.getEnclosingRoot(fsView.getWorkingDirectory()),
+          getViewFsPath("/user", fsView));
+    } finally {
+      DFSTestUtil.deleteKey("test_key", cluster, 0);
+    }
+  }
+
+  @Test
+  public void testEnclosingRootFailure() throws Exception {
+    LambdaTestUtils.intercept(NotInMountpointException.class,
+        ()-> fsView.getEnclosingRoot(new Path("/does/not/exist")));
+
+    final Path zone = new Path("/data/EZ");
+    Path fs1 = fsTarget.makeQualified(zone);
+
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        ()-> fsView.getEnclosingRoot(fs1));
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        ()-> fsView.getEnclosingRoot(new Path("hdfs://fakeAuthority/")));
+  }
+
+  @Test
+  public void testEnclosingRootWrapped() throws Exception {
+    try {
+      final Path zone = new Path("/data/EZ");
+      fsTarget.mkdirs(zone);
+      final Path zone1 = new Path("/data/EZ/testZone1");
+      fsTarget.mkdirs(zone1);
+
+      DFSTestUtil.createKey("test_key", cluster, 0, CONF);
+      HdfsAdmin hdfsAdmin = new HdfsAdmin(cluster.getURI(0), CONF);
+      final EnumSet<CreateEncryptionZoneFlag> provisionTrash =
+          EnumSet.of(CreateEncryptionZoneFlag.PROVISION_TRASH);
+      hdfsAdmin.createEncryptionZone(zone1, "test_key", provisionTrash);
+
+      UserGroupInformation ugi = UserGroupInformation.createRemoteUser("foo");
+      Path p = ugi.doAs((PrivilegedExceptionAction<Path>) () -> {
+        FileSystem wFs = FileSystem.get(FsConstants.VIEWFS_URI, this.conf);
+        return wFs.getEnclosingRoot(zone);
+      });
+      assertEquals(p, getViewFsPath("/data", fsView));
+      p = ugi.doAs((PrivilegedExceptionAction<Path>) () -> {
+        FileSystem wFs = FileSystem.get(FsConstants.VIEWFS_URI, this.conf);
+        return wFs.getEnclosingRoot(zone1);
+      });
+      assertEquals(p, getViewFsPath(zone1, fsView));
+
+
+    } finally {
+      DFSTestUtil.deleteKey("test_key", cluster, 0);
+    }
   }
 }

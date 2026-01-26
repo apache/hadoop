@@ -17,9 +17,6 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
@@ -35,6 +32,7 @@ import org.apache.hadoop.hdfs.server.namenode.top.metrics.TopMetrics;
 import org.apache.hadoop.hdfs.server.namenode.visitor.INodeCountVisitor;
 import org.apache.hadoop.hdfs.server.namenode.visitor.INodeCountVisitor.Counts;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
+import org.apache.hadoop.hdfs.util.RwLockMode;
 import org.apache.hadoop.util.GSet;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
@@ -46,6 +44,8 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
@@ -79,6 +79,41 @@ public class FsImageValidation {
   static final Logger LOG = LoggerFactory.getLogger(FsImageValidation.class);
 
   static final String FS_IMAGE = "FS_IMAGE";
+
+  /**
+   * Use an environment variable "PRINT_ERROR" to enable/disable printing error messages.
+   * The default is true
+   */
+  static final boolean PRINT_ERROR;
+
+  static {
+    PRINT_ERROR = getEnvBoolean("PRINT_ERROR", true);
+  }
+
+  /**
+   * @return the boolean value of an environment property.
+   *         If the environment property is not set or cannot be parsed as a boolean,
+   *         return the default value.
+   */
+  static boolean getEnvBoolean(String property, boolean defaultValue) {
+    final String env = System.getenv().get(property);
+    final boolean setToNonDefault = ("" + !defaultValue).equalsIgnoreCase(env);
+    // default | setToNonDefault | value
+    // ---------------------------------
+    // true    |    true         | false
+    // true    |    false        | true
+    // false   |    true         | true
+    // false   |    false        | false
+    final boolean value = defaultValue != setToNonDefault;
+    LOG.info("ENV: {} = {} (\"{}\")", property, value, env);
+    return value;
+  }
+
+  static String getEnv(String property) {
+    final String value = System.getenv().get(property);
+    LOG.info("ENV: {} = {}", property, value);
+    return value;
+  }
 
   static FsImageValidation newInstance(String... args) {
     final String f = Cli.parse(args);
@@ -125,15 +160,10 @@ public class FsImageValidation {
     }
 
     static void setLogLevel(Class<?> clazz, Level level) {
-      final Log log = LogFactory.getLog(clazz);
-      if (log instanceof Log4JLogger) {
-        final org.apache.log4j.Logger logger = ((Log4JLogger) log).getLogger();
-        logger.setLevel(level);
-        LOG.info("setLogLevel {} to {}, getEffectiveLevel() = {}",
-            clazz.getName(), level, logger.getEffectiveLevel());
-      } else {
-        LOG.warn("Failed setLogLevel {} to {}", clazz.getName(), level);
-      }
+      final org.apache.log4j.Logger logger = org.apache.log4j.Logger.getLogger(clazz);
+      logger.setLevel(level);
+      LOG.info("setLogLevel {} to {}, getEffectiveLevel() = {}", clazz.getName(), level,
+          logger.getEffectiveLevel());
     }
 
     static String toCommaSeparatedNumber(long n) {
@@ -185,15 +215,22 @@ public class FsImageValidation {
     initConf(conf);
 
     // check INodeReference
+    NameNode.initMetrics(conf, HdfsServerConstants.NamenodeRole.NAMENODE); // to avoid NPE
     final FSNamesystem namesystem = checkINodeReference(conf, errorCount);
 
     // check INodeMap
-    INodeMapValidation.run(namesystem.getFSDirectory(), errorCount);
+    final boolean changed = INodeMapValidation.run(namesystem.getFSDirectory(), errorCount);
     LOG.info(Util.memoryInfo());
 
     final int d = errorCount.get() - initCount;
     if (d > 0) {
       Cli.println("Found %d error(s) in %s", d, fsImageFile.getAbsolutePath());
+    }
+    if (changed) {
+      final File dir = fsImageFile.isDirectory()? fsImageFile: fsImageFile.getParentFile();
+      final Path temp = Files.createTempDirectory(dir.toPath(), "newFsImage");
+      Cli.println("INodeMap changed, save a new FSImage to %s", temp);
+      namesystem.getFSImage().save(namesystem, temp.toFile());
     }
     return d;
   }
@@ -237,18 +274,20 @@ public class FsImageValidation {
 
       final FSImageFormat.LoaderDelegator loader
           = FSImageFormat.newLoader(conf, namesystem);
-      namesystem.writeLock();
+      namesystem.writeLock(RwLockMode.GLOBAL);
       namesystem.getFSDirectory().writeLock();
       try {
         loader.load(fsImageFile, false);
+        fsImage.setLastAppliedTxId(loader);
       } finally {
         namesystem.getFSDirectory().writeUnlock();
-        namesystem.writeUnlock("loadImage");
+        namesystem.writeUnlock(RwLockMode.GLOBAL, "loadImage");
       }
     }
     t.cancel();
-    Cli.println("Loaded %s %s successfully in %s",
-        FS_IMAGE, fsImageFile, StringUtils.formatTime(now() - loadStart));
+    Cli.println("Loaded %s %s with txid %d successfully in %s",
+        FS_IMAGE, fsImageFile, namesystem.getFSImage().getLastAppliedTxId(),
+        StringUtils.formatTime(now() - loadStart));
     return namesystem;
   }
 
@@ -263,27 +302,26 @@ public class FsImageValidation {
   }
 
   static class INodeMapValidation {
-    static Iterable<INodeWithAdditionalFields> iterate(INodeMap map) {
-      return new Iterable<INodeWithAdditionalFields>() {
-        @Override
-        public Iterator<INodeWithAdditionalFields> iterator() {
-          return map.getMapIterator();
-        }
-      };
-    }
-
-    static void run(FSDirectory fsdir, AtomicInteger errorCount) {
+    static boolean run(FSDirectory fsdir, AtomicInteger errorCount) {
+      final String name = INodeMapValidation.class.getSimpleName();
       final int initErrorCount = errorCount.get();
       final Counts counts = INodeCountVisitor.countTree(fsdir.getRoot());
-      for (INodeWithAdditionalFields i : iterate(fsdir.getINodeMap())) {
+      final INodeMap map = fsdir.getINodeMap();
+      final int oldSize = map.size();
+      println("%s INodeMap old size: %d", name, oldSize);
+      for (final Iterator<INodeWithAdditionalFields> j = map.getMapIterator(); j.hasNext();) {
+        final INodeWithAdditionalFields i = j.next();
         if (counts.getCount(i) == 0) {
+          j.remove();
           Cli.printError(errorCount, "%s (%d) is inaccessible (%s)",
               i, i.getId(), i.getFullPathName());
         }
       }
-      println("%s ended successfully: %d error(s) found.",
-          INodeMapValidation.class.getSimpleName(),
+      final int newSize = map.size();
+      println("%s INodeMap new size: %d", name, newSize);
+      println("%s ended successfully: %d error(s) found.", name,
           errorCount.get() - initErrorCount);
+      return newSize != oldSize;
     }
   }
 
@@ -310,10 +348,7 @@ public class FsImageValidation {
     static String parse(String... args) {
       final String f;
       if (args == null || args.length == 0) {
-        f = System.getenv().get(FS_IMAGE);
-        if (f != null) {
-          println("Environment variable %s = %s", FS_IMAGE, f);
-        }
+        f = getEnv(FS_IMAGE);
       } else if (args.length == 1) {
         f = args[0];
       } else {
@@ -348,6 +383,10 @@ public class FsImageValidation {
     static synchronized void printError(AtomicInteger errorCount,
         String format, Object... args) {
       final int count = errorCount.incrementAndGet();
+      if (!PRINT_ERROR) {
+        return;
+      }
+
       final String s = "FSIMAGE_ERROR " + count + ": "
           + String.format(format, args);
       System.out.println(s);

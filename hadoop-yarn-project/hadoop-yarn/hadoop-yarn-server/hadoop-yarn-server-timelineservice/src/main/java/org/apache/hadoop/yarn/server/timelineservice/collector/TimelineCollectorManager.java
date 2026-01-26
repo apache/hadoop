@@ -75,7 +75,7 @@ public class TimelineCollectorManager extends CompositeService {
     String timelineWriterClassName = conf.get(
         YarnConfiguration.TIMELINE_SERVICE_WRITER_CLASS,
             YarnConfiguration.DEFAULT_TIMELINE_SERVICE_WRITER_CLASS);
-    LOG.info("Using TimelineWriter: " + timelineWriterClassName);
+    LOG.info("Using TimelineWriter: {}", timelineWriterClassName);
     try {
       Class<?> timelineWriterClazz = Class.forName(timelineWriterClassName);
       if (TimelineWriter.class.isAssignableFrom(timelineWriterClazz)) {
@@ -139,14 +139,14 @@ public class TimelineCollectorManager extends CompositeService {
           collector.setWriter(writer);
           collector.start();
           collectors.put(appId, collector);
-          LOG.info("the collector for " + appId + " was added");
+          LOG.info("the collector for {} was added", appId);
           collectorInTable = collector;
           postPut(appId, collectorInTable);
         } catch (Exception e) {
           throw new YarnRuntimeException(e);
         }
       } else {
-        LOG.info("the collector for " + appId + " already exists!");
+        LOG.info("the collector for {} already exists!", appId);
       }
     }
     return collectorInTable;
@@ -182,14 +182,14 @@ public class TimelineCollectorManager extends CompositeService {
   public boolean remove(ApplicationId appId) {
     TimelineCollector collector = collectors.remove(appId);
     if (collector == null) {
-      LOG.error("the collector for " + appId + " does not exist!");
+      LOG.error("the collector for {} does not exist!", appId);
     } else {
       synchronized (collector) {
         postRemove(appId, collector);
         // stop the service to do clean up
         collector.stop();
       }
-      LOG.info("The collector service for " + appId + " was removed");
+      LOG.info("The collector service for {} was removed", appId);
     }
     return collector != null;
   }

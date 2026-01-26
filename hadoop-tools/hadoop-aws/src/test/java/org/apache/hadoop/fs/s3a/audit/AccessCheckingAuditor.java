@@ -20,6 +20,9 @@ package org.apache.hadoop.fs.s3a.audit;
 
 import java.io.IOException;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
@@ -33,10 +36,14 @@ public class AccessCheckingAuditor  extends NoopAuditor {
   public static final String CLASS =
       "org.apache.hadoop.fs.s3a.audit.AccessCheckingAuditor";
 
+  private static final Logger LOG =
+       LoggerFactory.getLogger(AccessCheckingAuditor.class);
+
   /** Flag to enable/disable access. */
   private boolean accessAllowed = true;
 
   public AccessCheckingAuditor() {
+    super("AccessCheckingAuditor");
   }
 
   public void setAccessAllowed(final boolean accessAllowed) {
@@ -48,6 +55,9 @@ public class AccessCheckingAuditor  extends NoopAuditor {
       final S3AFileStatus status,
       final FsAction mode)
       throws IOException {
+
+    LOG.debug("Check access to {}; allowed={}",
+        path, accessAllowed);
     return accessAllowed;
   }
 }

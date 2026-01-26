@@ -26,19 +26,23 @@ import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.io.SequenceFile.Metadata;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.DefaultCodec;
+import org.apache.hadoop.io.serializer.Deserializer;
+import org.apache.hadoop.io.serializer.Serialization;
+import org.apache.hadoop.io.serializer.Serializer;
 import org.apache.hadoop.io.serializer.avro.AvroReflectSerialization;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.conf.*;
-import org.assertj.core.api.Assertions;
-import org.junit.Test;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.fail;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import org.mockito.Mockito;
+import org.junit.jupiter.api.Test;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verify;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -63,14 +67,14 @@ public class TestSequenceFile {
     // Test to ensure that deprecated properties have no default
     // references anymore.
     Configuration config = new Configuration();
-    assertNull("The deprecated sort memory property "
+    assertNull(config.get(CommonConfigurationKeys.IO_SORT_MB_KEY),
+        "The deprecated sort memory property "
         + CommonConfigurationKeys.IO_SORT_MB_KEY
-        + " must not exist in any core-*.xml files.",
-        config.get(CommonConfigurationKeys.IO_SORT_MB_KEY));
-    assertNull("The deprecated sort factor property "
+        + " must not exist in any core-*.xml files.");
+    assertNull(config.get(CommonConfigurationKeys.IO_SORT_FACTOR_KEY),
+        "The deprecated sort factor property "
         + CommonConfigurationKeys.IO_SORT_FACTOR_KEY
-        + " must not exist in any core-*.xml files.",
-        config.get(CommonConfigurationKeys.IO_SORT_FACTOR_KEY));
+        + " must not exist in any core-*.xml files.");
 
     // Test deprecated property honoring
     // Set different values for old and new property names
@@ -83,10 +87,10 @@ public class TestSequenceFile {
     config.setInt(CommonConfigurationKeys.SEQ_IO_SORT_FACTOR_KEY, 20);
     SequenceFile.Sorter sorter = new SequenceFile.Sorter(
         fs, Text.class, Text.class, config);
-    assertEquals("Deprecated memory conf must be honored over newer property",
-        10*1024*1024, sorter.getMemory());
-    assertEquals("Deprecated factor conf must be honored over newer property",
-        10, sorter.getFactor());
+    assertEquals(10 * 1024 * 1024, sorter.getMemory(),
+        "Deprecated memory conf must be honored over newer property");
+    assertEquals(10, sorter.getFactor(),
+        "Deprecated factor conf must be honored over newer property");
 
     // Test deprecated properties (graceful deprecation)
     config = new Configuration();
@@ -95,15 +99,14 @@ public class TestSequenceFile {
     config.setInt(CommonConfigurationKeys.IO_SORT_FACTOR_KEY, 10);
     sorter = new SequenceFile.Sorter(
         fs, Text.class, Text.class, config);
-    assertEquals("Deprecated memory property "
+    assertEquals(10 * 1024 * 1024, // In bytes
+        sorter.getMemory(), "Deprecated memory property "
         + CommonConfigurationKeys.IO_SORT_MB_KEY
-        + " must get properly applied.",
-        10*1024*1024, // In bytes
-        sorter.getMemory());
-    assertEquals("Deprecated sort factor property "
+        + " must get properly applied.");
+    assertEquals(10,
+        sorter.getFactor(), "Deprecated sort factor property "
         + CommonConfigurationKeys.IO_SORT_FACTOR_KEY
-        + " must get properly applied.",
-        10, sorter.getFactor());
+        + " must get properly applied.");
 
     // Test regular properties (graceful deprecation)
     config = new Configuration();
@@ -112,15 +115,14 @@ public class TestSequenceFile {
     config.setInt(CommonConfigurationKeys.SEQ_IO_SORT_FACTOR_KEY, 20);
     sorter = new SequenceFile.Sorter(
         fs, Text.class, Text.class, config);
-    assertEquals("Memory property "
+    assertEquals(20 * 1024 * 1024, // In bytes
+        sorter.getMemory(), "Memory property "
         + CommonConfigurationKeys.SEQ_IO_SORT_MB_KEY
-        + " must get properly applied if present.",
-        20*1024*1024, // In bytes
-        sorter.getMemory());
-    assertEquals("Merge factor property "
+        + " must get properly applied if present.");
+    assertEquals(20, sorter.getFactor(),
+        "Merge factor property "
         + CommonConfigurationKeys.SEQ_IO_SORT_FACTOR_KEY
-        + " must get properly applied if present.",
-        20, sorter.getFactor());
+        + " must get properly applied if present.");
   }
 
   public void compressedSeqFileTest(CompressionCodec codec) throws Exception {
@@ -550,12 +552,12 @@ public class TestSequenceFile {
   @Test
   public void testCreateUsesFsArg() throws Exception {
     FileSystem fs = FileSystem.getLocal(conf);
-    FileSystem spyFs = Mockito.spy(fs);
+    FileSystem spyFs = spy(fs);
     Path p = new Path(GenericTestUtils.getTempPath("testCreateUsesFSArg.seq"));
     SequenceFile.Writer writer = SequenceFile.createWriter(
         spyFs, conf, p, NullWritable.class, NullWritable.class);
     writer.close();
-    Mockito.verify(spyFs).getDefaultReplication(p);
+    verify(spyFs).getDefaultReplication(p);
   }
 
   private static class TestFSDataInputStream extends FSDataInputStream {
@@ -602,8 +604,8 @@ public class TestSequenceFile {
       fail("IOException expected.");
     } catch (IOException expected) {}
 
-    assertNotNull(path + " should have been opened.", openedFile[0]);
-    assertTrue("InputStream for " + path + " should have been closed.", openedFile[0].isClosed());
+    assertNotNull(openedFile[0], path + " should have been opened.");
+    assertTrue(openedFile[0].isClosed(), "InputStream for " + path + " should have been closed.");
   }
 
   /**
@@ -740,9 +742,9 @@ public class TestSequenceFile {
       .getTempPath("testSequenceFileWriter.seq"));
     try(SequenceFile.Writer writer = SequenceFile.createWriter(
             fs, conf, p, LongWritable.class, Text.class)) {
-      Assertions.assertThat(writer.hasCapability
+      assertThat(writer.hasCapability
         (StreamCapabilities.HSYNC)).isEqualTo(true);
-      Assertions.assertThat(writer.hasCapability(
+      assertThat(writer.hasCapability(
         StreamCapabilities.HFLUSH)).isEqualTo(true);
       LongWritable key = new LongWritable();
       key.set(1);
@@ -752,7 +754,123 @@ public class TestSequenceFile {
       writer.flush();
       writer.hflush();
       writer.hsync();
-      Assertions.assertThat(fs.getFileStatus(p).getLen()).isGreaterThan(0);
+      assertThat(fs.getFileStatus(p).getLen()).isGreaterThan(0);
+    }
+  }
+
+  @Test
+  public void testSerializationUsingWritableNameAlias() throws IOException {
+    Configuration config = new Configuration();
+    config.set(CommonConfigurationKeys.IO_SERIALIZATIONS_KEY, SimpleSerializer.class.getName());
+    Path path = new Path(System.getProperty("test.build.data", "."),
+        "SerializationUsingWritableNameAlias");
+
+    // write with the original serializable class
+    SequenceFile.Writer writer = SequenceFile.createWriter(
+        config,
+        SequenceFile.Writer.file(path),
+        SequenceFile.Writer.keyClass(SimpleSerializable.class),
+        SequenceFile.Writer.valueClass(SimpleSerializable.class));
+
+    int max = 10;
+    try {
+      SimpleSerializable val = new SimpleSerializable();
+      val.setId(-1);
+      for (int i = 0; i < max; i++) {
+        SimpleSerializable key = new SimpleSerializable();
+        key.setId(i);
+        writer.append(key, val);
+      }
+    } finally {
+      writer.close();
+    }
+
+    // override name so it gets forced to the new serializable
+    WritableName.setName(AnotherSimpleSerializable.class, SimpleSerializable.class.getName());
+
+    // read and expect our new serializable, and all the correct values read
+    SequenceFile.Reader reader = new SequenceFile.Reader(
+        config,
+        SequenceFile.Reader.file(path));
+
+    AnotherSimpleSerializable key = new AnotherSimpleSerializable();
+    int count = 0;
+    while (true) {
+      key = (AnotherSimpleSerializable) reader.next(key);
+      if (key == null) {
+        // make sure we exhausted all the ints we wrote
+        assertEquals(count, max);
+        break;
+      }
+      assertEquals(count++, key.getId());
+    }
+  }
+
+  public static class SimpleSerializable implements Serializable {
+
+    private int id;
+
+    public int getId() {
+      return id;
+    }
+
+    public void setId(int id) {
+      this.id = id;
+    }
+  }
+
+  public static class AnotherSimpleSerializable extends SimpleSerializable {
+  }
+
+  public static class SimpleSerializer implements Serialization<SimpleSerializable> {
+
+    @Override
+    public boolean accept(Class<?> c) {
+      return SimpleSerializable.class.isAssignableFrom(c);
+    }
+
+    @Override
+    public Serializer<SimpleSerializable> getSerializer(Class<SimpleSerializable> c) {
+      return new Serializer<SimpleSerializable>() {
+        private DataOutputStream out;
+        @Override
+        public void open(OutputStream out) throws IOException {
+          this.out = new DataOutputStream(out);
+        }
+
+        @Override
+        public void serialize(SimpleSerializable simpleSerializable) throws IOException {
+          out.writeInt(simpleSerializable.getId());
+        }
+
+        @Override
+        public void close() throws IOException {
+          out.close();
+        }
+      };
+    }
+
+    @Override
+    public Deserializer<SimpleSerializable> getDeserializer(Class<SimpleSerializable> c) {
+      return new Deserializer<SimpleSerializable>() {
+        private DataInputStream dis;
+        @Override
+        public void open(InputStream in) throws IOException {
+          dis = new DataInputStream(in);
+        }
+
+        @Override
+        public SimpleSerializable deserialize(SimpleSerializable simpleSerializable)
+            throws IOException {
+          simpleSerializable.setId(dis.readInt());
+          return simpleSerializable;
+        }
+
+        @Override
+        public void close() throws IOException {
+          dis.close();
+        }
+      };
     }
   }
 

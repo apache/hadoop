@@ -21,7 +21,8 @@ package org.apache.hadoop.fs.contract;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.assertj.core.api.Assertions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,13 +30,13 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.test.LambdaTestUtils;
+import org.apache.hadoop.test.tags.RootFilesystemTest;
 
 import static org.apache.commons.lang3.StringUtils.join;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
@@ -52,11 +53,13 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.treeWalk;
  * Only subclass this for tests against transient filesystems where
  * you don't care about the data.
  */
+@RootFilesystemTest
 public abstract class AbstractContractRootDirectoryTest extends AbstractFSContractTestBase {
   private static final Logger LOG =
       LoggerFactory.getLogger(AbstractContractRootDirectoryTest.class);
   public static final int OBJECTSTORE_RETRY_TIMEOUT = 30000;
 
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     super.setup();
@@ -100,22 +103,18 @@ public abstract class AbstractContractRootDirectoryTest extends AbstractFSContra
     final FileStatus[] originalChildren = listChildren(fs, root);
     LambdaTestUtils.eventually(
         OBJECTSTORE_RETRY_TIMEOUT,
-        new Callable<Void>() {
-          @Override
-          public Void call() throws Exception {
-            FileStatus[] deleted = deleteChildren(fs, root, true);
-            FileStatus[] children = listChildren(fs, root);
-            if (children.length > 0) {
-              fail(String.format(
-                  "After %d attempts: listing after rm /* not empty"
-                      + "\n%s\n%s\n%s",
-                  iterations.incrementAndGet(),
-                  dumpStats("final", children),
+        () -> {
+          iterations.incrementAndGet();
+          FileStatus[] deleted = deleteChildren(fs, root, true);
+          FileStatus[] children = listChildren(fs, root);
+          Assertions.assertThat(children)
+              .describedAs("After %d attempts: listing after rm /* not empty"
+                      + "\ndeleted: %s\n: original %s",
+                  iterations.get(),
                   dumpStats("deleted", deleted),
-                  dumpStats("original", originalChildren)));
-            }
-            return null;
-          }
+                  dumpStats("original", originalChildren))
+              .isEmpty();
+          return null;
         },
         new LambdaTestUtils.ProportionalRetryInterval(50, 1000));
     // then try to delete the empty one
@@ -195,10 +194,9 @@ public abstract class AbstractContractRootDirectoryTest extends AbstractFSContra
     for (FileStatus status : statuses) {
       ContractTestUtils.assertDeleted(fs, status.getPath(), false, true, false);
     }
-    FileStatus[] rootListStatus = fs.listStatus(root);
-    assertEquals("listStatus on empty root-directory returned found: "
-        + join("\n", rootListStatus),
-        0, rootListStatus.length);
+    Assertions.assertThat(fs.listStatus(root))
+        .describedAs("ls /")
+        .hasSize(0);
     assertNoElements("listFiles(/, false)",
         fs.listFiles(root, false));
     assertNoElements("listFiles(/, true)",
@@ -236,16 +234,16 @@ public abstract class AbstractContractRootDirectoryTest extends AbstractFSContra
         fs.listLocatedStatus(root));
     String locatedStatusResult = join(locatedStatusList, "\n");
 
-    assertEquals("listStatus(/) vs listLocatedStatus(/) with \n"
-            + "listStatus =" + listStatusResult
-            +" listLocatedStatus = " + locatedStatusResult,
-        statuses.length, locatedStatusList.size());
+    assertEquals(statuses.length,
+        locatedStatusList.size(), "listStatus(/) vs listLocatedStatus(/) with \n"
+        + "listStatus =" + listStatusResult
+        +" listLocatedStatus = " + locatedStatusResult);
     List<LocatedFileStatus> fileList = toList(fs.listFiles(root, false));
     String listFilesResult = join(fileList, "\n");
-    assertTrue("listStatus(/) vs listFiles(/, false) with \n"
-            + "listStatus = " + listStatusResult
-            + "listFiles = " + listFilesResult,
-        fileList.size() <= statuses.length);
+    assertTrue(fileList.size() <= statuses.length,
+        "listStatus(/) vs listFiles(/, false) with \n"
+        + "listStatus = " + listStatusResult
+        + "listFiles = " + listFilesResult);
     List<FileStatus> statusList = (List<FileStatus>) iteratorToList(
             fs.listStatusIterator(root));
     Assertions.assertThat(statusList)

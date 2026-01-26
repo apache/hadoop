@@ -21,14 +21,15 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.SafeModeAction;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream.SyncFlag;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeFile;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.DiffList;
@@ -37,11 +38,12 @@ import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotTestHelper;
 import org.apache.hadoop.hdfs.server.namenode.visitor.NamespacePrintVisitor;
 import org.apache.hadoop.hdfs.util.Canceler;
+import org.apache.hadoop.hdfs.util.RwLockMode;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.event.Level;
 
 import java.io.File;
@@ -52,8 +54,8 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Random;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Test FSImage save/load when Snapshot is supported
@@ -77,18 +79,21 @@ public class TestFSImageWithSnapshot {
   MiniDFSCluster cluster;
   FSNamesystem fsn;
   DistributedFileSystem hdfs;
-  
-  @Before
-  public void setUp() throws Exception {
-    conf = new Configuration();
-    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(NUM_DATANODES)
-        .build();
+
+  public void createCluster() throws IOException {
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(NUM_DATANODES).build();
     cluster.waitActive();
     fsn = cluster.getNamesystem();
     hdfs = cluster.getFileSystem();
   }
+  
+  @BeforeEach
+  public void setUp() throws Exception {
+    conf = new Configuration();
+    createCluster();
+  }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (cluster != null) {
       cluster.shutdown();
@@ -147,11 +152,11 @@ public class TestFSImageWithSnapshot {
         conf);
     FSImageCompression compression = FSImageCompression.createCompression(conf);
     File imageFile = getImageFile(testDir, txid);
-    fsn.readLock();
+    fsn.readLock(RwLockMode.GLOBAL);
     try {
       saver.save(imageFile, compression);
     } finally {
-      fsn.readUnlock();
+      fsn.readUnlock(RwLockMode.GLOBAL, "saveFSImage");
     }
     return imageFile;
   }
@@ -159,14 +164,14 @@ public class TestFSImageWithSnapshot {
   /** Load the fsimage from a temp file */
   private void loadFSImageFromTempFile(File imageFile) throws IOException {
     FSImageFormat.LoaderDelegator loader = FSImageFormat.newLoader(conf, fsn);
-    fsn.writeLock();
+    fsn.writeLock(RwLockMode.GLOBAL);
     fsn.getFSDirectory().writeLock();
     try {
       loader.load(imageFile, false);
       fsn.getFSDirectory().updateCountForQuota();
     } finally {
       fsn.getFSDirectory().writeUnlock();
-      fsn.writeUnlock();
+      fsn.writeUnlock(RwLockMode.GLOBAL, "loadFSImageFromTempFile");
     }
   }
   
@@ -187,20 +192,18 @@ public class TestFSImageWithSnapshot {
     hdfs = cluster.getFileSystem();
     
     // save namespace and restart cluster
-    hdfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    hdfs.setSafeMode(SafeModeAction.ENTER);
     hdfs.saveNamespace();
-    hdfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+    hdfs.setSafeMode(SafeModeAction.LEAVE);
     cluster.shutdown();
     cluster = new MiniDFSCluster.Builder(conf).format(false)
         .numDataNodes(NUM_DATANODES).build();
     cluster.waitActive();
     fsn = cluster.getNamesystem();
     hdfs = cluster.getFileSystem();
-    
-    INodeDirectory rootNode = fsn.dir.getINode4Write(root.toString())
-        .asDirectory();
-    assertTrue("The children list of root should be empty", 
-        rootNode.getChildrenList(Snapshot.CURRENT_STATE_ID).isEmpty());
+    final INodeDirectory rootNode = fsn.dir.getRoot();
+    assertTrue(rootNode.getChildrenList(Snapshot.CURRENT_STATE_ID).isEmpty(),
+        "The children list of root should be empty");
     // one snapshot on root: s1
     DiffList<DirectoryDiff> diffList = rootNode.getDiffs().asList();
     assertEquals(1, diffList.size());
@@ -214,9 +217,9 @@ public class TestFSImageWithSnapshot {
     assertEquals(root, sdirs[0].getFullPath());
     
     // save namespace and restart cluster
-    hdfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    hdfs.setSafeMode(SafeModeAction.ENTER);
     hdfs.saveNamespace();
-    hdfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+    hdfs.setSafeMode(SafeModeAction.LEAVE);
     cluster.shutdown();
     cluster = new MiniDFSCluster.Builder(conf).format(false)
         .numDataNodes(NUM_DATANODES).build();
@@ -322,22 +325,23 @@ public class TestFSImageWithSnapshot {
     long numSnapshotAfter = fsn.getNumSnapshots();
     SnapshottableDirectoryStatus[] dirAfter = hdfs.getSnapshottableDirListing();
     
-    Assert.assertEquals(numSdirBefore, numSdirAfter);
-    Assert.assertEquals(numSnapshotBefore, numSnapshotAfter);
-    Assert.assertEquals(dirBefore.length, dirAfter.length);
+    assertEquals(numSdirBefore, numSdirAfter);
+    assertEquals(numSnapshotBefore, numSnapshotAfter);
+    assertEquals(dirBefore.length, dirAfter.length);
     List<String> pathListBefore = new ArrayList<String>();
     for (SnapshottableDirectoryStatus sBefore : dirBefore) {
       pathListBefore.add(sBefore.getFullPath().toString());
     }
     for (SnapshottableDirectoryStatus sAfter : dirAfter) {
-      Assert.assertTrue(pathListBefore.contains(sAfter.getFullPath().toString()));
+      assertTrue(pathListBefore.contains(sAfter.getFullPath().toString()));
     }
   }
   
   /**
    * Test the fsimage saving/loading while file appending.
    */
-  @Test (timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testSaveLoadImageWithAppending() throws Exception {
     Path sub1 = new Path(dir, "sub1");
     Path sub1file1 = new Path(sub1, "sub1file1");
@@ -393,7 +397,8 @@ public class TestFSImageWithSnapshot {
   /**
    * Test the fsimage loading while there is file under construction.
    */
-  @Test (timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testLoadImageWithAppending() throws Exception {
     Path sub1 = new Path(dir, "sub1");
     Path sub1file1 = new Path(sub1, "sub1file1");
@@ -408,9 +413,9 @@ public class TestFSImageWithSnapshot {
     out.hsync(EnumSet.of(SyncFlag.UPDATE_LENGTH));      
     
     // save namespace and restart cluster
-    hdfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    hdfs.setSafeMode(SafeModeAction.ENTER);
     hdfs.saveNamespace();
-    hdfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+    hdfs.setSafeMode(SafeModeAction.LEAVE);
     
     cluster.shutdown();
     cluster = new MiniDFSCluster.Builder(conf).format(false)
@@ -424,7 +429,8 @@ public class TestFSImageWithSnapshot {
    * Test fsimage loading when 1) there is an empty file loaded from fsimage,
    * and 2) there is later an append operation to be applied from edit log.
    */
-  @Test (timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testLoadImageWithEmptyFile() throws Exception {
     // create an empty file
     Path file = new Path(dir, "file");
@@ -432,9 +438,9 @@ public class TestFSImageWithSnapshot {
     out.close();
     
     // save namespace
-    hdfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    hdfs.setSafeMode(SafeModeAction.ENTER);
     hdfs.saveNamespace();
-    hdfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+    hdfs.setSafeMode(SafeModeAction.LEAVE);
     
     // append to the empty file
     out = hdfs.append(file);
@@ -466,7 +472,8 @@ public class TestFSImageWithSnapshot {
    * we may save these files/dirs to the fsimage, and cause FileNotFound 
    * Exception while loading fsimage.  
    */
-  @Test (timeout=300000)
+  @Test
+  @Timeout(value = 300)
   public void testSaveLoadImageAfterSnapshotDeletion()
       throws Exception {
     // create initial dir and subdir
@@ -502,9 +509,9 @@ public class TestFSImageWithSnapshot {
     hdfs = cluster.getFileSystem();
     
     // save namespace to fsimage
-    hdfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    hdfs.setSafeMode(SafeModeAction.ENTER);
     hdfs.saveNamespace();
-    hdfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+    hdfs.setSafeMode(SafeModeAction.LEAVE);
     
     cluster.shutdown();
     cluster = new MiniDFSCluster.Builder(conf).format(false)
@@ -512,6 +519,32 @@ public class TestFSImageWithSnapshot {
     cluster.waitActive();
     fsn = cluster.getNamesystem();
     hdfs = cluster.getFileSystem();
+  }
+
+  /**
+   * Test parallel compressed fsimage can be loaded serially.
+   */
+  @Test
+  public void testLoadParallelCompressedImageSerial() throws Exception {
+    int s = 0;
+    cluster.shutdown();
+
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(NUM_DATANODES).build();
+    cluster.waitActive();
+    fsn = cluster.getNamesystem();
+    hdfs = cluster.getFileSystem();
+    hdfs.mkdirs(dir);
+    SnapshotTestHelper.createSnapshot(hdfs, dir, "s");
+
+    Path sub1 = new Path(dir, "sub1");
+    Path sub1file1 = new Path(sub1, "sub1file1");
+    Path sub1file2 = new Path(sub1, "sub1file2");
+    DFSTestUtil.createFile(hdfs, sub1file1, BLOCKSIZE, (short) 1, seed);
+    DFSTestUtil.createFile(hdfs, sub1file2, BLOCKSIZE, (short) 1, seed);
+
+    conf.setBoolean(DFSConfigKeys.DFS_IMAGE_COMPRESS_KEY, false);
+    conf.setBoolean(DFSConfigKeys.DFS_IMAGE_PARALLEL_LOAD_KEY, false);
+    checkImage(s);
   }
 
   void rename(Path src, Path dst) throws Exception {
@@ -536,7 +569,8 @@ public class TestFSImageWithSnapshot {
     printTree("deleted snapshot " + snapshotName);
   }
 
-  @Test (timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testDoubleRename() throws Exception {
     final Path parent = new Path("/parent");
     hdfs.mkdirs(parent);
@@ -584,9 +618,9 @@ public class TestFSImageWithSnapshot {
   void restartCluster() throws Exception {
     final File before = dumpTree2File("before.txt");
 
-    hdfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    hdfs.setSafeMode(SafeModeAction.ENTER);
     hdfs.saveNamespace();
-    hdfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+    hdfs.setSafeMode(SafeModeAction.LEAVE);
 
     cluster.shutdown();
     cluster = new MiniDFSCluster.Builder(conf).format(false)
@@ -610,11 +644,12 @@ public class TestFSImageWithSnapshot {
     output.println(b);
 
     final String s = NamespacePrintVisitor.print2Sting(fsn);
-    Assert.assertEquals(b, s);
+    assertEquals(b, s);
     return b;
   }
 
-  @Test (timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testFSImageWithDoubleRename() throws Exception {
     final Path dir1 = new Path("/dir1");
     final Path dir2 = new Path("/dir2");
@@ -643,9 +678,9 @@ public class TestFSImageWithSnapshot {
     hdfs.delete(renamePath1, true);
     hdfs.deleteSnapshot(dir1, "s1");
     // save namespace and restart cluster
-    hdfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    hdfs.setSafeMode(SafeModeAction.ENTER);
     hdfs.saveNamespace();
-    hdfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+    hdfs.setSafeMode(SafeModeAction.LEAVE);
     cluster.shutdown();
     cluster = new MiniDFSCluster.Builder(conf).format(false)
             .numDataNodes(NUM_DATANODES).build();
@@ -655,7 +690,8 @@ public class TestFSImageWithSnapshot {
   }
 
 
-  @Test (timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testFSImageWithRename1() throws Exception {
     final Path dir1 = new Path("/dir1");
     final Path dir2 = new Path("/dir2");
@@ -688,9 +724,9 @@ public class TestFSImageWithSnapshot {
         new Path("/dir1/.snapshot/s4/dira/dirb/diry/file1")));
 
     // save namespace and restart cluster
-    hdfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    hdfs.setSafeMode(SafeModeAction.ENTER);
     hdfs.saveNamespace();
-    hdfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+    hdfs.setSafeMode(SafeModeAction.LEAVE);
 
     cluster.shutdown();
     cluster = new MiniDFSCluster.Builder(conf).format(false)
@@ -700,7 +736,8 @@ public class TestFSImageWithSnapshot {
     hdfs = cluster.getFileSystem();
   }
 
-  @Test (timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testFSImageWithRename2() throws Exception {
     final Path dir1 = new Path("/dir1");
     final Path dir2 = new Path("/dir2");
@@ -729,9 +766,9 @@ public class TestFSImageWithSnapshot {
     assertTrue(hdfs.exists(file1));
 
     // save namespace and restart cluster
-    hdfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    hdfs.setSafeMode(SafeModeAction.ENTER);
     hdfs.saveNamespace();
-    hdfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+    hdfs.setSafeMode(SafeModeAction.LEAVE);
 
     cluster.shutdown();
     cluster = new MiniDFSCluster.Builder(conf).format(false)
@@ -741,7 +778,8 @@ public class TestFSImageWithSnapshot {
     hdfs = cluster.getFileSystem();
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testFSImageWithRename3() throws Exception {
     final Path dir1 = new Path("/dir1");
     final Path dir2 = new Path("/dir2");
@@ -774,9 +812,9 @@ public class TestFSImageWithSnapshot {
         "/dir1/.snapshot/s4/dira/dirb/diry/file1")));
 
     // save namespace and restart cluster
-    hdfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    hdfs.setSafeMode(SafeModeAction.ENTER);
     hdfs.saveNamespace();
-    hdfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+    hdfs.setSafeMode(SafeModeAction.LEAVE);
 
     cluster.shutdown();
     cluster = new MiniDFSCluster.Builder(conf).format(false)
@@ -786,7 +824,8 @@ public class TestFSImageWithSnapshot {
     hdfs = cluster.getFileSystem();
   }
 
-  @Test (timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testFSImageWithRename4() throws Exception {
     final Path dir1 = new Path("/dir1");
     final Path dir2 = new Path("/dir2");
@@ -819,9 +858,9 @@ public class TestFSImageWithSnapshot {
         new Path("/dir1/.snapshot/s4/dira/dirb/diry/file1")));
 
     // save namespace and restart cluster
-    hdfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    hdfs.setSafeMode(SafeModeAction.ENTER);
     hdfs.saveNamespace();
-    hdfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+    hdfs.setSafeMode(SafeModeAction.LEAVE);
 
     cluster.shutdown();
     cluster = new MiniDFSCluster.Builder(conf).format(false)

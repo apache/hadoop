@@ -18,15 +18,58 @@
 
 package org.apache.hadoop.fs.s3a;
 
+import java.util.Optional;
+
+import static java.util.Optional.empty;
+import static java.util.Optional.of;
+
 /**
  * Simple enum to express {true, false, don't know}.
  */
 public enum Tristate {
+
   // Do not add additional values here.  Logic will assume there are exactly
   // three possibilities.
-  TRUE, FALSE, UNKNOWN;
+  TRUE(of(Boolean.TRUE)),
+  FALSE(of(Boolean.FALSE)),
+  UNKNOWN(empty());
+
+  /**
+   *  Mapping to an optional boolean.
+   */
+  @SuppressWarnings("NonSerializableFieldInSerializableClass")
+  private final Optional<Boolean> mapping;
+
+  Tristate(final Optional<Boolean> t) {
+    mapping = t;
+  }
+
+  /**
+   * Get the boolean mapping, if present.
+   * @return the boolean value, if present.
+   */
+  public Optional<Boolean> getMapping() {
+    return mapping;
+  }
+
+  /**
+   * Does this value map to a boolean.
+   * @return true if the state is one of true or false.
+   */
+  public boolean isBoolean() {
+    return mapping.isPresent();
+  }
 
   public static Tristate fromBool(boolean v) {
     return v ? TRUE : FALSE;
+  }
+
+  /**
+   * Build a tristate from a boolean.
+   * @param b source optional
+   * @return a tristate derived from the argument.
+   */
+  public static Tristate from(Optional<Boolean> b) {
+    return b.map(Tristate::fromBool).orElse(UNKNOWN);
   }
 }

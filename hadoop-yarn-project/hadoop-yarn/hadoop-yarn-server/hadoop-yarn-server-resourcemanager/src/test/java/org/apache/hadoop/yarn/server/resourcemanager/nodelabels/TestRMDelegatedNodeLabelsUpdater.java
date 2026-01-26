@@ -18,7 +18,9 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.nodelabels;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.Map;
@@ -34,12 +36,11 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequ
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceTrackerService;
-import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.YarnVersionInfo;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.apache.hadoop.yarn.util.resource.Resources;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
@@ -48,7 +49,7 @@ public class TestRMDelegatedNodeLabelsUpdater extends NodeLabelTestBase {
   private YarnConfiguration conf;
   private static Map<NodeId, Set<NodeLabel>> nodeLabelsMap = Maps.newHashMap();
 
-  @Before
+  @BeforeEach
   public void setup() {
     conf = new YarnConfiguration();
     conf.setBoolean(YarnConfiguration.NODE_LABELS_ENABLED, true);
@@ -66,10 +67,10 @@ public class TestRMDelegatedNodeLabelsUpdater extends NodeLabelTestBase {
       MockRM rm = new MockRM(conf);
       rm.init(conf);
       rm.start();
-      Assert.fail("Expected an exception");
+      fail("Expected an exception");
     } catch (Exception e) {
       // expected an exception
-      Assert.assertTrue(e.getMessage().contains(
+      assertTrue(e.getMessage().contains(
           "RMNodeLabelsMappingProvider should be configured"));
     }
   }
@@ -133,7 +134,7 @@ public class TestRMDelegatedNodeLabelsUpdater extends NodeLabelTestBase {
         rm.getResourceTrackerService();
     RegisterNodeManagerRequest req =
         Records.newRecord(RegisterNodeManagerRequest.class);
-    Resource capability = BuilderUtils.newResource(1024, 1);
+    Resource capability = Resources.createResource(1024);
     req.setResource(capability);
     req.setNodeId(nodeId);
     req.setHttpPort(1234);

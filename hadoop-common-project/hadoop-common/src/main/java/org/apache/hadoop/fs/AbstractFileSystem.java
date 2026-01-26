@@ -247,7 +247,7 @@ public abstract class AbstractFileSystem implements PathCapabilities {
    * The main factory method for creating a file system. Get a file system for
    * the URI's scheme and authority. The scheme of the <code>uri</code>
    * determines a configuration property name,
-   * <tt>fs.AbstractFileSystem.<i>scheme</i>.impl</tt> whose value names the
+   * <code>fs.AbstractFileSystem.<i>scheme</i>.impl</code> whose value names the
    * AbstractFileSystem class.
    * 
    * The entire URI and conf is passed to the AbstractFileSystem factory method.
@@ -1636,6 +1636,24 @@ public abstract class AbstractFileSystem implements PathCapabilities {
       throws IOException {
     methodNotSupported();
     return null;
+  }
+
+  /**
+   * Return path of the enclosing root for a given path
+   * The enclosing root path is a common ancestor that should be used for temp and staging dirs
+   * as well as within encryption zones and other restricted directories.
+   *
+   * Call makeQualified on the param path to ensure its part of the correct filesystem
+   *
+   * @param path file path to find the enclosing root path for
+   * @return a path to the enclosing root
+   * @throws IOException early checks like failure to resolve path cause IO failures
+   */
+  @InterfaceAudience.Public
+  @InterfaceStability.Unstable
+  public Path getEnclosingRoot(Path path) throws IOException {
+    makeQualified(path);
+    return makeQualified(new Path("/"));
   }
 
   /**

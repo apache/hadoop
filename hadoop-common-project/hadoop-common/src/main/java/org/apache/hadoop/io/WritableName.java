@@ -92,7 +92,7 @@ public class WritableName {
                                             ) throws IOException {
     Class<?> writableClass = NAME_TO_CLASS.get(name);
     if (writableClass != null)
-      return writableClass.asSubclass(Writable.class);
+      return writableClass;
     try {
       return conf.getClassByName(name);
     } catch (ClassNotFoundException e) {

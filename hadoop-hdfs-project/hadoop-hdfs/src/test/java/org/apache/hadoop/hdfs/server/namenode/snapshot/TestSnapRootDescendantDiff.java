@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,23 +17,38 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.fail;
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test snapshot diff report for the snapshot root descendant directory.
  */
-public class TestSnapRootDescendantDiff extends TestSnapshotDiffReport {
-  @Before
+public class TestSnapRootDescendantDiff {
+  {
+    SnapshotTestHelper.disableLogs();
+  }
+
+  private final Path dir = new Path("/" + getClass().getSimpleName());
+  private final Path sub1 = new Path(dir, "sub1");
+
+  protected Configuration conf;
+  protected MiniDFSCluster cluster;
+  protected DistributedFileSystem hdfs;
+  private final Map<Path, Integer> snapshotNumberMap = new HashMap<>();
+
+  @BeforeEach
   public void setUp() throws Exception {
     conf = new Configuration();
     conf.setBoolean(
@@ -51,12 +66,31 @@ public class TestSnapRootDescendantDiff extends TestSnapshotDiffReport {
     hdfs = cluster.getFileSystem();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (cluster != null) {
       cluster.shutdown();
       cluster = null;
     }
+  }
+
+  private Path getSnapRootDir() {
+    return sub1;
+  }
+
+  private String genSnapshotName(Path snapshotDir) {
+    int sNum = -1;
+    if (snapshotNumberMap.containsKey(snapshotDir)) {
+      sNum = snapshotNumberMap.get(snapshotDir);
+    }
+    snapshotNumberMap.put(snapshotDir, ++sNum);
+    return "s" + sNum;
+  }
+
+  void modifyAndCreateSnapshot(Path modifyDir, Path[] snapshotDirs)
+      throws Exception {
+    TestSnapshotDiffReport.modifyAndCreateSnapshot(
+        modifyDir, snapshotDirs, hdfs, this::genSnapshotName);
   }
 
   @Test

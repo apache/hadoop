@@ -18,11 +18,11 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.security;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 
@@ -38,7 +38,8 @@ import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMMemoryStateStoreService;
 import org.apache.hadoop.yarn.server.security.BaseContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
-import org.junit.Test;
+import org.apache.hadoop.yarn.util.resource.Resources;
+import org.junit.jupiter.api.Test;
 
 public class TestNMContainerTokenSecretManager {
 
@@ -122,7 +123,7 @@ public class TestNMContainerTokenSecretManager {
     long rmid = cid.getApplicationAttemptId().getApplicationId()
         .getClusterTimestamp();
     ContainerTokenIdentifier ctid = new ContainerTokenIdentifier(cid,
-        nodeId.toString(), user, BuilderUtils.newResource(1024, 1),
+        nodeId.toString(), user, Resources.createResource(1024),
         System.currentTimeMillis() + 100000L,
         secretMgr.getCurrentKey().getKeyId(), rmid,
         Priority.newInstance(0), 0);

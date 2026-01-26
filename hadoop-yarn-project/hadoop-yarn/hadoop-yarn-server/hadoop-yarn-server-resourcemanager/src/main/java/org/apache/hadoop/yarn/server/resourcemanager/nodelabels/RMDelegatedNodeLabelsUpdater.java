@@ -102,7 +102,8 @@ public class RMDelegatedNodeLabelsUpdater extends CompositeService {
 
   /**
    * Terminate the timer.
-   * @throws Exception
+   *
+   * @throws Exception exception occurs.
    */
   @Override
   protected void serviceStop() throws Exception {

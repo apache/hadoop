@@ -348,10 +348,12 @@ public class PBHelper {
 
   public static NamespaceInfo convert(NamespaceInfoProto info) {
     StorageInfoProto storage = info.getStorageInfo();
-    return new NamespaceInfo(storage.getNamespceID(), storage.getClusterID(),
+    NamespaceInfo nsInfo = new NamespaceInfo(storage.getNamespceID(), storage.getClusterID(),
         info.getBlockPoolID(), storage.getCTime(), info.getBuildVersion(),
         info.getSoftwareVersion(), info.getCapabilities(),
         convert(info.getState()));
+    nsInfo.setStorageInfo(convert(storage, NodeType.NAME_NODE));
+    return nsInfo;
   }
 
   public static NamenodeCommand convert(NamenodeCommandProto cmd) {

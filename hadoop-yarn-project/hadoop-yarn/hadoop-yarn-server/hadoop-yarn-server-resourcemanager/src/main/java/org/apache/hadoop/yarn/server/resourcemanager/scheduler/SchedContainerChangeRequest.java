@@ -65,7 +65,8 @@ public class SchedContainerChangeRequest implements
   }
   /**
    * Delta capacity = target - before, so if it is a decrease request, delta
-   * capacity will be negative
+   * capacity will be negative.
+   * @return delta Capacity.
    */
   public synchronized Resource getDeltaCapacity() {
     // Only calculate deltaCapacity once

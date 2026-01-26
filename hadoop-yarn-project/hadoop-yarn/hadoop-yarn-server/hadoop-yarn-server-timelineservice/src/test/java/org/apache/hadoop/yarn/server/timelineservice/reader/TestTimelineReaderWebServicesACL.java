@@ -18,18 +18,24 @@
 
 package org.apache.hadoop.yarn.server.timelineservice.reader;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
-
+import javax.ws.rs.client.Client;
+import javax.ws.rs.client.ClientBuilder;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
+
+import org.glassfish.jersey.client.ClientConfig;
+import org.glassfish.jersey.client.HttpUrlConnectorProvider;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -38,20 +44,11 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.FileSystemTimelineR
 import org.apache.hadoop.yarn.server.timelineservice.storage.TestFileSystemTimelineReaderImpl;
 import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineReader;
 import org.apache.hadoop.yarn.webapp.YarnJacksonJaxbJsonProvider;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
 
-import com.sun.jersey.api.client.Client;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.ClientResponse.Status;
-import com.sun.jersey.api.client.config.ClientConfig;
-import com.sun.jersey.api.client.config.DefaultClientConfig;
-import com.sun.jersey.client.urlconnection.HttpURLConnectionFactory;
-import com.sun.jersey.client.urlconnection.URLConnectionClientHandler;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Tests ACL check while retrieving entity-types per application.
@@ -66,17 +63,17 @@ public class TestTimelineReaderWebServicesACL {
   private TimelineReaderServer server;
   private static final String ADMIN = "yarn";
 
-  @BeforeClass
+  @BeforeAll
   public static void setup() throws Exception {
     TestFileSystemTimelineReaderImpl.initializeDataDirectory(ROOT_DIR);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     FileUtils.deleteDirectory(new File(ROOT_DIR));
   }
 
-  @Before
+  @BeforeEach
   public void init() throws Exception {
     try {
       Configuration config = new YarnConfiguration();
@@ -97,11 +94,11 @@ public class TestTimelineReaderWebServicesACL {
       server.start();
       serverPort = server.getWebServerPort();
     } catch (Exception e) {
-      Assert.fail("Web server failed to start");
+      fail("Web server failed to start");
     }
   }
 
-  @After
+  @AfterEach
   public void stop() throws Exception {
     if (server != null) {
       server.stop();
@@ -109,28 +106,26 @@ public class TestTimelineReaderWebServicesACL {
     }
   }
 
-  private static ClientResponse verifyHttpResponse(Client client, URI uri,
-      Status expectedStatus) {
-    ClientResponse resp =
-        client.resource(uri).accept(MediaType.APPLICATION_JSON)
-        .type(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+  private static Response verifyHttpResponse(Client client, URI uri,
+      Response.Status expectedStatus) {
+    Response resp = client.target(uri).request(MediaType.APPLICATION_JSON).get(Response.class);
     assertNotNull(resp);
-    assertEquals(resp.getStatusInfo().getStatusCode(),
-        expectedStatus.getStatusCode());
+    assertEquals(resp.getStatusInfo().getStatusCode(), expectedStatus.getStatusCode());
     return resp;
   }
 
   private static Client createClient() {
-    ClientConfig cfg = new DefaultClientConfig();
-    cfg.getClasses().add(YarnJacksonJaxbJsonProvider.class);
-    return new Client(new URLConnectionClientHandler(
-        new DummyURLConnectionFactory()), cfg);
+    ClientConfig cfg = new ClientConfig();
+    cfg.register(YarnJacksonJaxbJsonProvider.class);
+    cfg.connectorProvider(
+        new HttpUrlConnectorProvider().connectionFactory(new DummyURLConnectionFactory()));
+    return ClientBuilder.newClient(cfg);
   }
 
   private static class DummyURLConnectionFactory
-      implements HttpURLConnectionFactory {
+      implements HttpUrlConnectorProvider.ConnectionFactory {
     @Override
-    public HttpURLConnection getHttpURLConnection(final URL url)
+    public HttpURLConnection getConnection(final URL url)
         throws IOException {
       try {
         return (HttpURLConnection)url.openConnection();
@@ -141,38 +136,38 @@ public class TestTimelineReaderWebServicesACL {
   }
 
   @Test
-  public void testGetEntityTypes() throws Exception {
+  void testGetEntityTypes() throws Exception {
     Client client = createClient();
     try {
-      String unAuthorizedUser ="user2";
+      String unAuthorizedUser = "user2";
       URI uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
-          "timeline/apps/app1/entity-types?user.name="+unAuthorizedUser);
+          "timeline/apps/app1/entity-types?user.name=" + unAuthorizedUser);
       String msg = "User " + unAuthorizedUser
           + " is not allowed to read TimelineService V2 data.";
-      ClientResponse resp = verifyHttpResponse(client, uri, Status.FORBIDDEN);
-      assertTrue(resp.getEntity(String.class).contains(msg));
+      Response resp = verifyHttpResponse(client, uri, Response.Status.FORBIDDEN);
+      assertTrue(resp.readEntity(String.class).contains(msg));
 
-      String authorizedUser ="user1";
+      String authorizedUser = "user1";
       uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
-          "timeline/apps/app1/entity-types?user.name="+authorizedUser);
-      verifyHttpResponse(client, uri, Status.OK);
+          "timeline/apps/app1/entity-types?user.name=" + authorizedUser);
+      verifyHttpResponse(client, uri, Response.Status.OK);
 
       uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
-          "timeline/apps/app1/entity-types?user.name="+ADMIN);
-      verifyHttpResponse(client, uri, Status.OK);
+          "timeline/apps/app1/entity-types?user.name=" + ADMIN);
+      verifyHttpResponse(client, uri, Response.Status.OK);
 
       // Verify with Query Parameter userid
       uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
-          "timeline/apps/app1/entity-types?user.name="+authorizedUser
-          + "&userid="+authorizedUser);
-      verifyHttpResponse(client, uri, Status.OK);
+          "timeline/apps/app1/entity-types?user.name=" + authorizedUser
+          + "&userid=" + authorizedUser);
+      verifyHttpResponse(client, uri, Response.Status.OK);
 
       uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
-          "timeline/apps/app1/entity-types?user.name="+authorizedUser
-          + "&userid="+unAuthorizedUser);
-      verifyHttpResponse(client, uri, Status.FORBIDDEN);
+          "timeline/apps/app1/entity-types?user.name=" + authorizedUser
+          + "&userid=" + unAuthorizedUser);
+      verifyHttpResponse(client, uri, Response.Status.FORBIDDEN);
     } finally {
-      client.destroy();
+      client.close();
     }
   }
 

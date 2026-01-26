@@ -66,55 +66,6 @@ Example:
       </property>
     </configuration>
 
-
-### swift://
-
-The OpenStack Swift login details must be defined in the file
-`/hadoop-tools/hadoop-openstack/src/test/resources/contract-test-options.xml`.
-The standard hadoop-common `contract-test-options.xml` resource file cannot be
-used, as that file does not get included in `hadoop-common-test.jar`.
-
-
-In `/hadoop-tools/hadoop-openstack/src/test/resources/contract-test-options.xml`
-the Swift bucket name must be defined in the property `fs.contract.test.fs.swift`,
-along with the login details for the specific Swift service provider in which the
-bucket is posted.
-
-    <configuration>
-      <property>
-        <name>fs.contract.test.fs.swift</name>
-        <value>swift://swiftbucket.rackspace/</value>
-      </property>
-
-      <property>
-        <name>fs.swift.service.rackspace.auth.url</name>
-        <value>https://auth.api.rackspacecloud.com/v2.0/tokens</value>
-        <description>Rackspace US (multiregion)</description>
-      </property>
-
-      <property>
-        <name>fs.swift.service.rackspace.username</name>
-        <value>this-is-your-username</value>
-      </property>
-
-      <property>
-        <name>fs.swift.service.rackspace.region</name>
-        <value>DFW</value>
-      </property>
-
-      <property>
-        <name>fs.swift.service.rackspace.apikey</name>
-        <value>ab0bceyoursecretapikeyffef</value>
-      </property>
-
-    </configuration>
-
-1. Often the different public cloud Swift infrastructures exhibit different behaviors
-(authentication and throttling in particular). We recommand that testers create
-accounts on as many of these providers as possible and test against each of them.
-1. They can be slow, especially remotely. Remote links are also the most likely
-to make eventual-consistency behaviors visible, which is a mixed benefit.
-
 ## Testing a new filesystem
 
 The core of adding a new FileSystem to the contract tests is adding a
@@ -227,8 +178,6 @@ Passing all the FileSystem contract tests does not mean that a filesystem can be
 * Idempotency: if the filesystem implements any retry policy, is idempotent even while other clients manipulate the filesystem?
 * Scalability: does it support files as large as HDFS, or as many in a single directory?
 * Durability: do files actually last -and how long for?
-
-Proof that this is is true is the fact that the Amazon S3 and OpenStack Swift object stores are eventually consistent object stores with non-atomic rename and delete operations. Single threaded test cases are unlikely to see some of the concurrency issues, while consistency is very often only visible in tests that span a datacenter.
 
 There are also some specific aspects of the use of the FileSystem API:
 

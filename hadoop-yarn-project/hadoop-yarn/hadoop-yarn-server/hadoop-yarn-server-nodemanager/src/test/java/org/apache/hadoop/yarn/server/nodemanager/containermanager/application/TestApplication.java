@@ -17,8 +17,17 @@
  */
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.application;
 
-import static org.junit.Assert.assertEquals;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.argThat;
+import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.refEq;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -64,8 +73,7 @@ import org.apache.hadoop.yarn.server.nodemanager.security.NMContainerTokenSecret
 import org.apache.hadoop.yarn.server.nodemanager.security.NMTokenSecretManagerInNM;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatcher;
 
@@ -273,7 +281,7 @@ public class TestApplication {
         ContainerTokenIdentifier identifier =
             wa.getContainerTokenIdentifier(container.getContainerId());
         waitForContainerTokenToExpire(identifier);
-        Assert.assertTrue(wa.context.getContainerTokenSecretManager()
+        assertTrue(wa.context.getContainerTokenSecretManager()
           .isValidStartContainerRequest(identifier));
       }
       assertEquals(ApplicationState.FINISHED, wa.app.getApplicationState());
@@ -349,7 +357,7 @@ public class TestApplication {
         ContainerTokenIdentifier identifier =
             wa.getContainerTokenIdentifier(container.getContainerId());
         waitForContainerTokenToExpire(identifier);
-        Assert.assertTrue(wa.context.getContainerTokenSecretManager()
+        assertTrue(wa.context.getContainerTokenSecretManager()
           .isValidStartContainerRequest(identifier));
       }
       assertEquals(ApplicationState.FINISHED, wa.app.getApplicationState());
@@ -602,7 +610,7 @@ public class TestApplication {
           .put(identifier.getContainerID(), identifier);
         context.getContainerTokenSecretManager().startContainerSuccessful(
           identifier);
-        Assert.assertFalse(context.getContainerTokenSecretManager()
+        assertFalse(context.getContainerTokenSecretManager()
           .isValidStartContainerRequest(identifier));
       }
 

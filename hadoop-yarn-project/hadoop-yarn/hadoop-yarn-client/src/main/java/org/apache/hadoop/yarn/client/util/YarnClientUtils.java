@@ -145,7 +145,7 @@ public abstract class YarnClientUtils {
 
             // Now we only support one property, which is exclusive, so check if
             // key = exclusive and value = {true/false}
-            if (key.equals("exclusive")
+            if ("exclusive".equals(key)
                 && ImmutableSet.of("true", "false").contains(value)) {
               exclusive = Boolean.parseBoolean(value);
             } else {
@@ -249,5 +249,11 @@ public abstract class YarnClientUtils {
           }
         });
     return challenge;
+  }
+
+  public static boolean isYarnFederationEnabled(Configuration conf) {
+    boolean isEnabled = conf.getBoolean(YarnConfiguration.FEDERATION_ENABLED,
+        YarnConfiguration.DEFAULT_FEDERATION_ENABLED);
+    return isEnabled;
   }
 }

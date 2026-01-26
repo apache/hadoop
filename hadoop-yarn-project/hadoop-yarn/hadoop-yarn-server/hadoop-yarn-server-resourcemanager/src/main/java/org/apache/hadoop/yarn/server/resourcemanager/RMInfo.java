@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -27,11 +25,14 @@ import javax.management.NotCompliantMBeanException;
 import javax.management.ObjectName;
 import javax.management.StandardMBean;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * JMX bean for RM info.
  */
 public class RMInfo implements RMInfoMXBean {
-  private static final Log LOG = LogFactory.getLog(RMNMInfo.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RMNMInfo.class);
   private ResourceManager resourceManager;
   private ObjectName rmStatusBeanName;
 

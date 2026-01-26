@@ -25,10 +25,12 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-abstract class MergeThread<T,K,V> extends Thread {
+abstract class MergeThread<T,K,V> extends SubjectInheritingThread {
   
   private static final Logger LOG = LoggerFactory.getLogger(MergeThread.class);
 
@@ -77,7 +79,7 @@ abstract class MergeThread<T,K,V> extends Thread {
     }
   }
 
-  public void run() {
+  public void work() {
     while (true) {
       List<T> inputs = null;
       try {
@@ -109,4 +111,14 @@ abstract class MergeThread<T,K,V> extends Thread {
   }
 
   public abstract void merge(List<T> inputs) throws IOException;
+
+  @VisibleForTesting
+  int getMergeFactor() {
+    return mergeFactor;
+  }
+
+  @VisibleForTesting
+  LinkedList<List<T>> getPendingToBeMerged() {
+    return pendingToBeMerged;
+  }
 }

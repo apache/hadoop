@@ -18,10 +18,9 @@
 
 package org.apache.hadoop.util;
 
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -37,14 +36,17 @@ import java.util.jar.JarInputStream;
 import java.util.jar.JarOutputStream;
 import java.util.jar.Manifest;
 
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 public class TestJarFinder {
 
   @Test
   public void testJar() throws Exception {
 
     //picking a class that is for sure in a JAR in the classpath
-    String jar = JarFinder.getJar(LogFactory.class);
-    Assert.assertTrue(new File(jar).exists());
+    String jar = JarFinder.getJar(LoggerFactory.class);
+    assertTrue(new File(jar).exists());
   }
 
   private static void delete(File file) throws IOException {
@@ -75,7 +77,7 @@ public class TestJarFinder {
     //picking a class that is for sure in a directory in the classpath
     //in this case the JAR is created on the fly
     String jar = JarFinder.getJar(TestJarFinder.class);
-    Assert.assertTrue(new File(jar).exists());
+    assertTrue(new File(jar).exists());
   }
 
   @Test
@@ -102,7 +104,7 @@ public class TestJarFinder {
     JarFinder.jarDir(dir, "", zos);
     JarInputStream jis =
       new JarInputStream(new ByteArrayInputStream(baos.toByteArray()));
-    Assert.assertNotNull(jis.getManifest());
+    assertNotNull(jis.getManifest());
     jis.close();
   }
 
@@ -121,7 +123,7 @@ public class TestJarFinder {
     JarFinder.jarDir(dir, "", zos);
     JarInputStream jis =
       new JarInputStream(new ByteArrayInputStream(baos.toByteArray()));
-    Assert.assertNotNull(jis.getManifest());
+    assertNotNull(jis.getManifest());
     jis.close();
   }
 }

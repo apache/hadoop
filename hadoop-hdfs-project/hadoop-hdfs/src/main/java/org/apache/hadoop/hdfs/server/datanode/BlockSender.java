@@ -32,17 +32,16 @@ import java.nio.channels.FileChannel;
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
 import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.fs.FsTracer;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
-import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.datatransfer.PacketHeader;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.common.DataNodeLockManager.LockLevel;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeReference;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.LengthInputStream;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.ReplicaInputStreams;
 import org.apache.hadoop.hdfs.util.DataTransferThrottler;
@@ -103,7 +102,7 @@ import org.slf4j.Logger;
  */
 class BlockSender implements java.io.Closeable {
   static final Logger LOG = DataNode.LOG;
-  static final Log ClientTraceLog = DataNode.ClientTraceLog;
+  static final Logger CLIENT_TRACE_LOG = DataNode.CLIENT_TRACE_LOG;
   private static final boolean is32Bit = 
       System.getProperty("sun.arch.data.model").equals("32");
   /**
@@ -297,7 +296,12 @@ class BlockSender implements java.io.Closeable {
         (!is32Bit || length <= Integer.MAX_VALUE);
 
       // Obtain a reference before reading data
-      volumeRef = datanode.data.getVolume(block).obtainReference();
+      FsVolumeSpi volume = datanode.data.getVolume(block);
+      if (volume == null) {
+        LOG.warn("Cannot find FsVolumeSpi to obtain a reference for block: {}", block);
+        throw new ReplicaNotFoundException(block);
+      }
+      volumeRef = volume.obtainReference();
 
       /* 
        * (corruptChecksumOK, meta_file_exist): operation
@@ -352,11 +356,8 @@ class BlockSender implements java.io.Closeable {
         } catch (FileNotFoundException e) {
           if ((e.getMessage() != null) && !(e.getMessage()
               .contains("Too many open files"))) {
-            // The replica is on its volume map but not on disk
-            datanode
-                .notifyNamenodeDeletedBlock(block, replica.getStorageUuid());
-            datanode.data.invalidate(block.getBlockPoolId(),
-                new Block[] {block.getLocalBlock()});
+            datanode.data.invalidateMissingBlock(block.getBlockPoolId(),
+                block.getLocalBlock());
           }
           throw e;
         } finally {
@@ -433,12 +434,12 @@ class BlockSender implements java.io.Closeable {
       blockIn = datanode.data.getBlockInputStream(block, offset); // seek to offset
       ris = new ReplicaInputStreams(
           blockIn, checksumIn, volumeRef, fileIoProvider);
-    } catch (IOException ioe) {
+    } catch (Throwable t) {
       IOUtils.cleanupWithLogger(null, volumeRef);
       IOUtils.closeStream(this);
       IOUtils.closeStream(blockIn);
       IOUtils.closeStream(checksumIn);
-      throw ioe;
+      throw t;
     }
   }
 
@@ -655,8 +656,12 @@ class BlockSender implements java.io.Closeable {
           if (ioem.startsWith(EIO_ERROR)) {
             throw new DiskFileCorruptException("A disk IO error occurred", e);
           }
+          String causeMessage = e.getCause() != null ? e.getCause().getMessage() : "";
+          causeMessage = causeMessage != null ? causeMessage : "";
           if (!ioem.startsWith("Broken pipe")
-              && !ioem.startsWith("Connection reset")) {
+              && !ioem.startsWith("Connection reset")
+              && !causeMessage.startsWith("Broken pipe")
+              && !causeMessage.startsWith("Connection reset")) {
             LOG.error("BlockSender.sendChunks() exception: ", e);
             datanode.getBlockScanner().markSuspectBlock(
                 ris.getVolumeRef().getVolume().getStorageID(), block);
@@ -784,7 +789,7 @@ class BlockSender implements java.io.Closeable {
     // Trigger readahead of beginning of file if configured.
     manageOsCache();
 
-    final long startTime = ClientTraceLog.isDebugEnabled() ? System.nanoTime() : 0;
+    final long startTime = CLIENT_TRACE_LOG.isDebugEnabled() ? System.nanoTime() : 0;
     try {
       int maxChunksPerPacket;
       int pktBufSize = PacketHeader.PKT_MAX_HEADER_LEN;
@@ -831,9 +836,9 @@ class BlockSender implements java.io.Closeable {
         sentEntireByteRange = true;
       }
     } finally {
-      if ((clientTraceFmt != null) && ClientTraceLog.isDebugEnabled()) {
+      if ((clientTraceFmt != null) && CLIENT_TRACE_LOG.isDebugEnabled()) {
         final long endTime = System.nanoTime();
-        ClientTraceLog.debug(String.format(clientTraceFmt, totalRead,
+        CLIENT_TRACE_LOG.debug(String.format(clientTraceFmt, totalRead,
             initialOffset, endTime - startTime));
       }
       close();

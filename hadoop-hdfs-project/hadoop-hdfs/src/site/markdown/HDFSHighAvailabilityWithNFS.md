@@ -316,12 +316,14 @@ The order in which you set these configurations is unimportant, but the values y
           <value>hdfs://mycluster</value>
         </property>
 
-*   **dfs.ha.nn.not-become-active-in-safemode** - if prevent safe mode namenodes to become active
+*   **dfs.ha.nn.not-become-active-in-safemode** - if prevent safe mode namenodes to become active or observer
 
     Whether allow namenode to become active when it is in safemode, when it is
     set to true, namenode in safemode will report SERVICE_UNHEALTHY to ZKFC if
     auto failover is on, or will throw exception to fail the transition to
-    active if auto failover is off. For example:
+    active if auto failover is off. If you transition namenode to observer state
+    when it is in safemode, when this configuration is set to true, namenode will throw exception
+    to fail the transition to observer. For example:
 
         <property>
           <name>dfs.ha.nn.not-become-active-in-safemode</name>

@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -114,7 +115,7 @@ class CopyCommands {
 
     private void writeDelimiter(FSDataOutputStream out) throws IOException {
       if (delimiter != null) {
-        out.write(delimiter.getBytes("UTF-8"));
+        out.write(delimiter.getBytes(StandardCharsets.UTF_8));
       }
     }
 
@@ -333,15 +334,24 @@ class CopyCommands {
    */
   public static class AppendToFile extends CommandWithDestination {
     public static final String NAME = "appendToFile";
-    public static final String USAGE = "<localsrc> ... <dst>";
+    public static final String USAGE = "[-n] <localsrc> ... <dst>";
     public static final String DESCRIPTION =
         "Appends the contents of all the given local files to the " +
             "given dst file. The dst file will be created if it does " +
             "not exist. If <localSrc> is -, then the input is read " +
-            "from stdin.";
+            "from stdin. Option -n represents that use NEW_BLOCK create flag to append file.";
 
     private static final int DEFAULT_IO_LENGTH = 1024 * 1024;
     boolean readStdin = false;
+    private boolean appendToNewBlock = false;
+
+    public boolean isAppendToNewBlock() {
+      return appendToNewBlock;
+    }
+
+    public void setAppendToNewBlock(boolean appendToNewBlock) {
+      this.appendToNewBlock = appendToNewBlock;
+    }
 
     // commands operating on local paths have no need for glob expansion
     @Override
@@ -372,6 +382,9 @@ class CopyCommands {
         throw new IOException("missing destination argument");
       }
 
+      CommandFormat cf = new CommandFormat(2, Integer.MAX_VALUE, "n");
+      cf.parse(args);
+      appendToNewBlock = cf.getOpt("n");
       getRemoteDestination(args);
       super.processOptions(args);
     }
@@ -385,7 +398,8 @@ class CopyCommands {
       }
 
       InputStream is = null;
-      try (FSDataOutputStream fos = dst.fs.append(dst.path)) {
+      try (FSDataOutputStream fos = appendToNewBlock ?
+          dst.fs.append(dst.path, true) : dst.fs.append(dst.path)) {
         if (readStdin) {
           if (args.size() == 0) {
             IOUtils.copyBytes(System.in, fos, DEFAULT_IO_LENGTH);

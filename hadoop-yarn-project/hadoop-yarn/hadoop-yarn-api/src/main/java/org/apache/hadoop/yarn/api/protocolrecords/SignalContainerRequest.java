@@ -29,7 +29,7 @@ import org.apache.hadoop.yarn.util.Records;
  * <p>The request sent by the client to the <code>ResourceManager</code>
  * or by the <code>ApplicationMaster</code> to the <code>NodeManager</code>
  * to signal a container.
- * @see SignalContainerCommand </p>
+ * @see SignalContainerCommand
  */
 @Public
 @Evolving
@@ -56,6 +56,7 @@ public abstract class SignalContainerRequest {
 
   /**
    * Set the <code>ContainerId</code> of the container to signal.
+   * @param containerId containerId.
    */
   @Public
   @Unstable
@@ -71,6 +72,7 @@ public abstract class SignalContainerRequest {
 
   /**
    * Set the <code>SignalContainerCommand</code> of the signal request.
+   * @param command signal container command.
    */
   @Public
   @Unstable

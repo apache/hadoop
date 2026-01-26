@@ -68,6 +68,7 @@ import org.apache.hadoop.yarn.server.nodemanager.executor.LocalizerStartContext;
 import org.apache.hadoop.yarn.server.nodemanager.util.ProcessIdFileReader;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainerLaunch.CONTAINER_PRE_LAUNCH_STDERR;
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainerLaunch.CONTAINER_PRE_LAUNCH_STDOUT;
@@ -102,6 +103,7 @@ public abstract class ContainerExecutor implements Configurable {
   private String[] whitelistVars;
   private int exitCodeFileTimeout =
       YarnConfiguration.DEFAULT_NM_CONTAINER_EXECUTOR_EXIT_FILE_TIMEOUT;
+  private int containerExitCode;
 
   @Override
   public void setConf(Configuration conf) {
@@ -170,9 +172,10 @@ public abstract class ContainerExecutor implements Configurable {
    *            for starting a localizer.
    * @throws IOException for most application init failures
    * @throws InterruptedException if application init thread is halted by NM
+   * @throws ConfigurationException if config error was found
    */
   public abstract void startLocalizer(LocalizerStartContext ctx)
-    throws IOException, InterruptedException;
+      throws IOException, InterruptedException, ConfigurationException;
 
   /**
    * Prepare the container prior to the launch environment being written.
@@ -303,7 +306,7 @@ public abstract class ContainerExecutor implements Configurable {
 
     if (pidPath == null) {
       LOG.warn("{} is not active, returning terminated error", containerId);
-
+      containerExitCode = ExitCode.TERMINATED.getExitCode();
       return ExitCode.TERMINATED.getExitCode();
     }
 
@@ -335,7 +338,7 @@ public abstract class ContainerExecutor implements Configurable {
     while (!file.exists() && msecLeft >= 0) {
       if (!isContainerActive(containerId)) {
         LOG.info("{} was deactivated", containerId);
-
+        containerExitCode = ExitCode.TERMINATED.getExitCode();
         return ExitCode.TERMINATED.getExitCode();
       }
 
@@ -350,7 +353,9 @@ public abstract class ContainerExecutor implements Configurable {
     }
 
     try {
-      return Integer.parseInt(FileUtils.readFileToString(file, StandardCharsets.UTF_8).trim());
+      containerExitCode = Integer.parseInt(
+          FileUtils.readFileToString(file, StandardCharsets.UTF_8).trim());
+      return containerExitCode;
     } catch (NumberFormatException e) {
       throw new IOException("Error parsing exit code from pid " + pid, e);
     }
@@ -453,9 +458,7 @@ public abstract class ContainerExecutor implements Configurable {
     }
 
     // dump debugging information if configured
-    if (getConf() != null &&
-        getConf().getBoolean(YarnConfiguration.NM_LOG_CONTAINER_DEBUG_INFO,
-        YarnConfiguration.DEFAULT_NM_LOG_CONTAINER_DEBUG_INFO)) {
+    if (shouldWriteDebugInformation(getConf())) {
       sb.echo("Copying debugging information");
       sb.copyDebugInformation(new Path(outFilename),
           new Path(logDir, outFilename));
@@ -486,6 +489,18 @@ public abstract class ContainerExecutor implements Configurable {
    */
   protected File[] readDirAsUser(String user, Path dir) {
     return new File(dir.toString()).listFiles();
+  }
+
+  private boolean shouldWriteDebugInformation(Configuration config) {
+    return config != null && (
+            config.getBoolean(
+                YarnConfiguration.NM_LOG_CONTAINER_DEBUG_INFO,
+                YarnConfiguration.DEFAULT_NM_LOG_CONTAINER_DEBUG_INFO
+            ) || (
+            config.getBoolean(
+                YarnConfiguration.NM_LOG_CONTAINER_DEBUG_INFO_ON_ERROR,
+                YarnConfiguration.DEFAULT_NM_LOG_CONTAINER_DEBUG_INFO_ON_ERROR
+            ) && containerExitCode != 0));
   }
 
   /**
@@ -837,7 +852,7 @@ public abstract class ContainerExecutor implements Configurable {
    * This class will signal a target container after a specified delay.
    * @see #signalContainer
    */
-  public static class DelayedProcessKiller extends Thread {
+  public static class DelayedProcessKiller extends SubjectInheritingThread {
     private final Container container;
     private final String user;
     private final String pid;
@@ -869,7 +884,7 @@ public abstract class ContainerExecutor implements Configurable {
     }
 
     @Override
-    public void run() {
+    public void work() {
       try {
         Thread.sleep(delay);
         containerExecutor.signalContainer(new ContainerSignalContext.Builder()

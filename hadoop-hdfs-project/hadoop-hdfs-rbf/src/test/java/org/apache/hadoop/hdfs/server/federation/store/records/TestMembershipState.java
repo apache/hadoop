@@ -17,13 +17,13 @@
  */
 package org.apache.hadoop.hdfs.server.federation.store.records;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
 
 import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamenodeServiceState;
 import org.apache.hadoop.hdfs.server.federation.store.driver.StateStoreSerializer;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test the Membership State records.

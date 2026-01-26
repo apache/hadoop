@@ -18,15 +18,15 @@
 
 package org.apache.hadoop.fs.http;
 
-import okhttp3.mockwebserver.MockResponse;
-import okhttp3.mockwebserver.MockWebServer;
-import okhttp3.mockwebserver.RecordedRequest;
+import mockwebserver3.MockResponse;
+import mockwebserver3.MockWebServer;
+import mockwebserver3.RecordedRequest;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 
 import java.io.IOException;
@@ -37,7 +37,7 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.stream.IntStream;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Testing HttpFileSystem.
@@ -45,7 +45,7 @@ import static org.junit.Assert.assertEquals;
 public class TestHttpFileSystem {
   private final Configuration conf = new Configuration(false);
 
-  @Before
+  @BeforeEach
   public void setUp() {
     conf.set("fs.http.impl", HttpFileSystem.class.getCanonicalName());
   }
@@ -55,7 +55,8 @@ public class TestHttpFileSystem {
       InterruptedException {
     final String data = "foo";
     try (MockWebServer server = new MockWebServer()) {
-      IntStream.rangeClosed(1, 3).forEach(i -> server.enqueue(new MockResponse().setBody(data)));
+      final MockResponse response = new MockResponse.Builder().body(data).build();
+      IntStream.rangeClosed(1, 3).forEach(i -> server.enqueue(response));
       server.start();
       URI uri = URI.create(String.format("http://%s:%d", server.getHostName(),
           server.getPort()));
@@ -64,7 +65,7 @@ public class TestHttpFileSystem {
       assertSameData(fs, new Path("/foo"), data);
       assertSameData(fs, new Path("foo"), data);
       RecordedRequest req = server.takeRequest();
-      assertEquals("/foo", req.getPath());
+      assertEquals("/foo", req.getUrl().encodedPath());
     }
   }
 

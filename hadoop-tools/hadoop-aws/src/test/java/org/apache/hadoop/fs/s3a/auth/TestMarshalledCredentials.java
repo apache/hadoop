@@ -21,9 +21,9 @@ package org.apache.hadoop.fs.s3a.auth;
 import java.net.URI;
 import java.net.URISyntaxException;
 
-import com.amazonaws.auth.AWSCredentials;
-import org.junit.Before;
-import org.junit.Test;
+import software.amazon.awssdk.auth.credentials.AwsCredentials;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.S3AEncryptionMethods;
@@ -44,7 +44,7 @@ public class TestMarshalledCredentials extends HadoopTestBase {
 
   private URI bucketURI;
 
-  @Before
+  @BeforeEach
   public void createSessionToken() throws URISyntaxException {
     bucketURI = new URI("s3a://bucket1");
     credentials = new MarshalledCredentials("accessKey",
@@ -80,10 +80,11 @@ public class TestMarshalledCredentials extends HadoopTestBase {
   public void testRoundTripEncryptionData() throws Throwable {
     EncryptionSecrets secrets = new EncryptionSecrets(
         S3AEncryptionMethods.SSE_KMS,
-        "key");
+        "key",
+        "encryptionContext");
     EncryptionSecrets result = S3ATestUtils.roundTrip(secrets,
         new Configuration());
-    assertEquals("round trip", secrets, result);
+    assertEquals(secrets, result, "round trip");
   }
 
   @Test
@@ -94,13 +95,11 @@ public class TestMarshalledCredentials extends HadoopTestBase {
         new Configuration(false),
         credentials,
         MarshalledCredentials.CredentialTypeRequired.SessionOnly);
-    AWSCredentials aws = provider.getCredentials();
-    assertEquals(credentials.toString(),
-        credentials.getAccessKey(),
-        aws.getAWSAccessKeyId());
-    assertEquals(credentials.toString(),
-        credentials.getSecretKey(),
-        aws.getAWSSecretKey());
+    AwsCredentials aws = provider.resolveCredentials();
+    assertEquals(credentials.getAccessKey(),
+        aws.accessKeyId(), credentials.toString());
+    assertEquals(credentials.getSecretKey(),
+        aws.secretAccessKey(), credentials.toString());
     // because the credentials are set to full only, creation will fail
   }
 
@@ -119,7 +118,7 @@ public class TestMarshalledCredentials extends HadoopTestBase {
         MarshalledCredentials.CredentialTypeRequired.FullOnly);
     // because the credentials are set to full only, creation will fail
     intercept(NoAuthWithAWSException.class, "test",
-        () ->  provider.getCredentials());
+        () ->  provider.resolveCredentials());
   }
 
   /**

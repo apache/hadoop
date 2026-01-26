@@ -20,6 +20,6 @@
  * Package org.apache.hadoop.server.util.timeline contains utility classes used
  * by ATSv1 and ATSv2 on the server side.
  */
-@InterfaceAudience.Private
+@Private
 package org.apache.hadoop.yarn.server.util.timeline;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceAudience.Private;

@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.yarn.client.api.async.impl;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.EnumSet;
 import java.util.HashSet;
@@ -51,7 +50,6 @@ import org.apache.hadoop.yarn.client.api.impl.NMClientImpl;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AbstractEvent;
 import org.apache.hadoop.yarn.event.EventHandler;
-import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
 import org.apache.hadoop.yarn.state.InvalidStateTransitionException;
 import org.apache.hadoop.yarn.state.MultipleArcTransition;
@@ -61,6 +59,7 @@ import org.apache.hadoop.yarn.state.StateMachineFactory;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -75,7 +74,7 @@ public class NMClientAsyncImpl extends NMClientAsync {
 
   protected ThreadPoolExecutor threadPool;
   protected int maxThreadPoolSize;
-  protected Thread eventDispatcherThread;
+  protected SubjectInheritingThread eventDispatcherThread;
   protected AtomicBoolean stopped = new AtomicBoolean(false);
   protected BlockingQueue<ContainerEvent> events =
       new LinkedBlockingQueue<ContainerEvent>();
@@ -135,7 +134,7 @@ public class NMClientAsyncImpl extends NMClientAsync {
     this.maxThreadPoolSize = conf.getInt(
         YarnConfiguration.NM_CLIENT_ASYNC_THREAD_POOL_MAX_SIZE,
         YarnConfiguration.DEFAULT_NM_CLIENT_ASYNC_THREAD_POOL_MAX_SIZE);
-    LOG.info("Upper bound of the thread pool size is " + maxThreadPoolSize);
+    LOG.info("Upper bound of the thread pool size is {}.", maxThreadPoolSize);
 
     client.init(conf);
     super.serviceInit(conf);
@@ -153,9 +152,9 @@ public class NMClientAsyncImpl extends NMClientAsync {
     threadPool = new ThreadPoolExecutor(initSize, Integer.MAX_VALUE, 1,
         TimeUnit.HOURS, new LinkedBlockingQueue<Runnable>(), tf);
 
-    eventDispatcherThread = new Thread() {
+    eventDispatcherThread = new SubjectInheritingThread() {
       @Override
-      public void run() {
+      public void work() {
         ContainerEvent event = null;
         Set<String> allNodes = new HashSet<String>();
 
@@ -188,9 +187,8 @@ public class NMClientAsyncImpl extends NMClientAsync {
               // always increasing the pool-size
               int newThreadPoolSize = Math.min(maxThreadPoolSize,
                   idealThreadPoolSize + INITIAL_THREAD_POOL_SIZE);
-              LOG.info("Set NMClientAsync thread pool size to " +
-                  newThreadPoolSize + " as the number of nodes to talk to is "
-                  + nodeNum);
+              LOG.info("Set NMClientAsync thread pool size to {} " +
+                  "as the number of nodes to talk to is {}.", newThreadPoolSize, nodeNum);
               threadPool.setCorePoolSize(newThreadPoolSize);
             }
           }
@@ -254,8 +252,7 @@ public class NMClientAsyncImpl extends NMClientAsync {
     try {
       events.put(new StartContainerEvent(container, containerLaunchContext));
     } catch (InterruptedException e) {
-      LOG.warn("Exception when scheduling the event of starting Container " +
-          container.getId());
+      LOG.warn("Exception when scheduling the event of starting Container {}", container.getId());
       callbackHandler.onStartContainerError(container.getId(), e);
     }
   }
@@ -278,8 +275,8 @@ public class NMClientAsyncImpl extends NMClientAsync {
     try {
       events.put(new UpdateContainerResourceEvent(container, true));
     } catch (InterruptedException e) {
-      LOG.warn("Exception when scheduling the event of increasing resource of "
-          + "Container " + container.getId());
+      LOG.warn("Exception when scheduling the event of increasing " +
+              "resource of Container {}", container.getId());
       handler.onIncreaseContainerResourceError(container.getId(), e);
     }
   }
@@ -302,8 +299,8 @@ public class NMClientAsyncImpl extends NMClientAsync {
     try {
       events.put(new UpdateContainerResourceEvent(container, false));
     } catch (InterruptedException e) {
-      LOG.warn("Exception when scheduling the event of increasing resource of "
-          + "Container " + container.getId());
+      LOG.warn("Exception when scheduling the event of " +
+              "increasing resource of Container {}.", container.getId());
       handler.onUpdateContainerResourceError(container.getId(), e);
     }
   }
@@ -327,8 +324,8 @@ public class NMClientAsyncImpl extends NMClientAsync {
           client.getNodeIdOfStartedContainer(containerId),
           containerLaunchContex, autoCommit));
     } catch (InterruptedException e) {
-      LOG.warn("Exception when scheduling the event of re-initializing of "
-          + "Container " + containerId);
+      LOG.warn("Exception when scheduling the event of " +
+              "re-initializing of Container {}", containerId);
       handler.onContainerReInitializeError(containerId, e);
     }
   }
@@ -351,8 +348,7 @@ public class NMClientAsyncImpl extends NMClientAsync {
           client.getNodeIdOfStartedContainer(containerId),
           null, ContainerEventType.RESTART_CONTAINER));
     } catch (InterruptedException e) {
-      LOG.warn("Exception when scheduling the event of restart of "
-          + "Container " + containerId);
+      LOG.warn("Exception when scheduling the event of restart of Container {}", containerId);
       handler.onContainerRestartError(containerId, e);
     }
   }
@@ -375,8 +371,8 @@ public class NMClientAsyncImpl extends NMClientAsync {
           client.getNodeIdOfStartedContainer(containerId),
           null, ContainerEventType.ROLLBACK_LAST_REINIT));
     } catch (InterruptedException e) {
-      LOG.warn("Exception when scheduling the event Rollback re-initialization"
-          + " of Container " + containerId);
+      LOG.warn("Exception when scheduling the event Rollback " +
+              "re-initialization of Container {}", containerId);
       handler.onRollbackLastReInitializationError(containerId, e);
     }
   }
@@ -399,8 +395,8 @@ public class NMClientAsyncImpl extends NMClientAsync {
           client.getNodeIdOfStartedContainer(containerId),
           null, ContainerEventType.COMMIT_LAST_REINT));
     } catch (InterruptedException e) {
-      LOG.warn("Exception when scheduling the event Commit re-initialization"
-          + " of Container " + containerId);
+      LOG.warn("Exception when scheduling the event " +
+              "Commit re-initialization of Container {}", containerId);
       handler.onCommitLastReInitializationError(containerId, e);
     }
   }
@@ -415,8 +411,7 @@ public class NMClientAsyncImpl extends NMClientAsync {
       events.put(new ContainerEvent(containerId, nodeId, null,
           ContainerEventType.STOP_CONTAINER));
     } catch (InterruptedException e) {
-      LOG.warn("Exception when scheduling the event of stopping Container " +
-          containerId);
+      LOG.warn("Exception when scheduling the event of stopping Container {}", containerId);
       callbackHandler.onStopContainerError(containerId, e);
     }
   }
@@ -426,8 +421,8 @@ public class NMClientAsyncImpl extends NMClientAsync {
       events.put(new ContainerEvent(containerId, nodeId, null,
           ContainerEventType.QUERY_CONTAINER));
     } catch (InterruptedException e) {
-      LOG.warn("Exception when scheduling the event of querying the status" +
-          " of Container " + containerId);
+      LOG.warn("Exception when scheduling the event of querying " +
+              "the status of Container {}", containerId);
       callbackHandler.onGetContainerStatusError(containerId, e);
     }
   }
@@ -636,12 +631,8 @@ public class NMClientAsyncImpl extends NMClientAsync {
                 + "Container " + containerId, thr);
           }
           return ContainerState.RUNNING;
-        } catch (YarnException e) {
+        } catch (Throwable e) {
           return onExceptionRaised(container, event, e);
-        } catch (IOException e) {
-          return onExceptionRaised(container, event, e);
-        } catch (Throwable t) {
-          return onExceptionRaised(container, event, t);
         }
       }
 
@@ -736,7 +727,7 @@ public class NMClientAsyncImpl extends NMClientAsync {
           switch(containerEvent.getType()) {
           case REINITIALIZE_CONTAINER:
             if (!(containerEvent instanceof ReInitializeContainerEvevnt)) {
-              LOG.error("Unexpected Event.. [" +containerEvent.getType() + "]");
+              LOG.error("Unexpected Event.. [{}]", containerEvent.getType());
               return ContainerState.FAILED;
             }
             ReInitializeContainerEvevnt rEvent =
@@ -777,8 +768,8 @@ public class NMClientAsyncImpl extends NMClientAsync {
             }
             break;
           default:
-            LOG.warn("Event of type [" + containerEvent.getType() + "] not" +
-                " expected here..");
+            LOG.warn("Event of type [{}] not" +
+                " expected here..", containerEvent.getType());
             break;
           }
           if (handlerError != null) {
@@ -854,12 +845,8 @@ public class NMClientAsyncImpl extends NMClientAsync {
                 + "Container " + event.getContainerId(), thr);
           }
           return ContainerState.DONE;
-        } catch (YarnException e) {
+        } catch (Throwable e) {
           return onExceptionRaised(container, event, e);
-        } catch (IOException e) {
-          return onExceptionRaised(container, event, e);
-        } catch (Throwable t) {
-          return onExceptionRaised(container, event, t);
         }
       }
 
@@ -952,7 +939,7 @@ public class NMClientAsyncImpl extends NMClientAsync {
     @Override
     public void run() {
       ContainerId containerId = event.getContainerId();
-      LOG.info("Processing Event " + event + " for Container " + containerId);
+      LOG.info("Processing Event {} for Container {}", event, containerId);
       if (event.getType() == ContainerEventType.QUERY_CONTAINER) {
         try {
           ContainerStatus containerStatus = client.getContainerStatus(
@@ -966,17 +953,13 @@ public class NMClientAsyncImpl extends NMClientAsync {
                 "Unchecked exception is thrown from onContainerStatusReceived" +
                     " for Container " + event.getContainerId(), thr);
           }
-        } catch (YarnException e) {
+        } catch (Throwable e) {
           onExceptionRaised(containerId, e);
-        } catch (IOException e) {
-          onExceptionRaised(containerId, e);
-        } catch (Throwable t) {
-          onExceptionRaised(containerId, t);
         }
       } else {
         StatefulContainer container = containers.get(containerId);
         if (container == null) {
-          LOG.info("Container " + containerId + " is already stopped or failed");
+          LOG.info("Container {} is already stopped or failed", containerId);
         } else {
           container.handle(event);
           if (isCompletelyDone(container)) {

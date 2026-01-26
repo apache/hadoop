@@ -20,8 +20,11 @@ package org.apache.hadoop.yarn.server.nodemanager;
 
 import static org.apache.hadoop.fs.CreateFlag.CREATE;
 import static org.apache.hadoop.fs.CreateFlag.OVERWRITE;
-import static org.junit.Assert.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.isA;
@@ -85,10 +88,10 @@ import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerStartContext;
 import org.apache.hadoop.yarn.server.nodemanager.executor.DeletionAsUserContext;
 import org.apache.hadoop.yarn.server.nodemanager.executor.LocalizerStartContext;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
@@ -105,7 +108,7 @@ public class TestDefaultContainerExecutor {
 
   private NumaResourceAllocator numaResourceAllocator;
 
-  @AfterClass
+  @AfterAll
   public static void deleteTmpFiles() throws IOException {
     FileContext lfs = FileContext.getLocalFSFileContext();
     try {
@@ -169,7 +172,7 @@ public class TestDefaultContainerExecutor {
       for (String dir : localDirs) {
         FileStatus stats = lfs.getFileStatus(
             new Path(new Path(dir, ContainerLocalizer.USERCACHE), user));
-        Assert.assertEquals(userCachePerm, stats.getPermission());
+        assertEquals(userCachePerm, stats.getPermission());
       }
 
       for (String dir : localDirs) {
@@ -178,12 +181,12 @@ public class TestDefaultContainerExecutor {
         Path appCachePath = new Path(userCachePath,
             ContainerLocalizer.APPCACHE);
         FileStatus stats = lfs.getFileStatus(appCachePath);
-        Assert.assertEquals(appCachePerm, stats.getPermission());
+        assertEquals(appCachePerm, stats.getPermission());
         stats = lfs.getFileStatus(
             new Path(userCachePath, ContainerLocalizer.FILECACHE));
-        Assert.assertEquals(fileCachePerm, stats.getPermission());
+        assertEquals(fileCachePerm, stats.getPermission());
         stats = lfs.getFileStatus(new Path(appCachePath, appId));
-        Assert.assertEquals(appDirPerm, stats.getPermission());
+        assertEquals(appDirPerm, stats.getPermission());
       }
 
       String[] permissionsArray = { "000", "111", "555", "710", "777" };
@@ -197,7 +200,7 @@ public class TestDefaultContainerExecutor {
 
         for (String dir : logDirs) {
           FileStatus stats = lfs.getFileStatus(new Path(dir, appId));
-          Assert.assertEquals(logDirPerm, stats.getPermission());
+          assertEquals(logDirPerm, stats.getPermission());
           lfs.delete(new Path(dir, appId), true);
         }
       }
@@ -310,7 +313,7 @@ public class TestDefaultContainerExecutor {
     lfs.delete(workDir, true);
     try {
       lfs.getFileStatus(workDir);
-      Assert.fail("Expected FileNotFoundException on " + workDir);
+      fail("Expected FileNotFoundException on " + workDir);
     } catch (FileNotFoundException e) {
       // expected
     }
@@ -326,33 +329,33 @@ public class TestDefaultContainerExecutor {
     Path finalTrustorePath = new Path(workDir,
         ContainerLaunch.TRUSTSTORE_FILE);
 
-    Assert.assertTrue(lfs.getFileStatus(workDir).isDirectory());
-    Assert.assertTrue(lfs.getFileStatus(finalScriptPath).isFile());
-    Assert.assertTrue(lfs.getFileStatus(finalTokensPath).isFile());
+    assertTrue(lfs.getFileStatus(workDir).isDirectory());
+    assertTrue(lfs.getFileStatus(finalScriptPath).isFile());
+    assertTrue(lfs.getFileStatus(finalTokensPath).isFile());
     if (https) {
-      Assert.assertTrue(lfs.getFileStatus(finalKeystorePath).isFile());
-      Assert.assertTrue(lfs.getFileStatus(finalTrustorePath).isFile());
+      assertTrue(lfs.getFileStatus(finalKeystorePath).isFile());
+      assertTrue(lfs.getFileStatus(finalTrustorePath).isFile());
     } else {
       try {
         lfs.getFileStatus(finalKeystorePath);
-        Assert.fail("Expected FileNotFoundException on " + finalKeystorePath);
+        fail("Expected FileNotFoundException on " + finalKeystorePath);
       } catch (FileNotFoundException e) {
         // expected
       }
       try {
         lfs.getFileStatus(finalTrustorePath);
-        Assert.fail("Expected FileNotFoundException on " + finalKeystorePath);
+        fail("Expected FileNotFoundException on " + finalKeystorePath);
       } catch (FileNotFoundException e) {
         // expected
       }
     }
 
-    Assert.assertEquals("script", readStringFromPath(lfs, finalScriptPath));
-    Assert.assertEquals("tokens", readStringFromPath(lfs, finalTokensPath));
+    assertEquals("script", readStringFromPath(lfs, finalScriptPath));
+    assertEquals("tokens", readStringFromPath(lfs, finalTokensPath));
     if (https) {
-      Assert.assertEquals("keystore", readStringFromPath(lfs,
+      assertEquals("keystore", readStringFromPath(lfs,
           finalKeystorePath));
-      Assert.assertEquals("truststore", readStringFromPath(lfs,
+      assertEquals("truststore", readStringFromPath(lfs,
           finalTrustorePath));
     }
   }
@@ -388,8 +391,8 @@ public class TestDefaultContainerExecutor {
           public Object answer(InvocationOnMock invocationOnMock)
               throws Throwable {
             String diagnostics = (String) invocationOnMock.getArguments()[0];
-            assertTrue("Invalid Diagnostics message: " + diagnostics,
-                diagnostics.contains("No such file or directory"));
+            assertTrue(diagnostics.contains("No such file or directory"),
+                "Invalid Diagnostics message: " + diagnostics);
             return null;
           }
         }
@@ -414,10 +417,9 @@ public class TestDefaultContainerExecutor {
           ContainerDiagnosticsUpdateEvent event =
               (ContainerDiagnosticsUpdateEvent) invocationOnMock
                   .getArguments()[0];
-          assertTrue("Invalid Diagnostics message: "
-                  + event.getDiagnosticsUpdate(),
-              event.getDiagnosticsUpdate().contains("No such file or directory")
-          );
+          assertTrue(event.getDiagnosticsUpdate().contains("No such file or directory"),
+              "Invalid Diagnostics message: "
+              + event.getDiagnosticsUpdate());
           return null;
         }
       }).when(container).handle(any(ContainerDiagnosticsUpdateEvent.class));
@@ -465,7 +467,7 @@ public class TestDefaultContainerExecutor {
           .setLocalDirs(localDirs)
           .setLogDirs(logDirs)
           .build());
-      Assert.assertNotSame(0, ret);
+      assertNotSame(0, ret);
     } finally {
       mockExec.deleteAsUser(new DeletionAsUserContext.Builder()
           .setUser(appSubmitter)
@@ -478,7 +480,8 @@ public class TestDefaultContainerExecutor {
     }
   }
 
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testStartLocalizer() throws IOException, InterruptedException,
       YarnException {
 
@@ -600,7 +603,7 @@ public class TestDefaultContainerExecutor {
           .build());
 
     } catch (IOException e) {
-      Assert.fail("StartLocalizer failed to copy token file: "
+      fail("StartLocalizer failed to copy token file: "
           + StringUtils.stringifyException(e));
     } finally {
       mockExec.deleteAsUser(new DeletionAsUserContext.Builder()
@@ -755,7 +758,7 @@ public class TestDefaultContainerExecutor {
 //        new FsPermission(ApplicationLocalizer.LOGDIR_PERM), true);
 //  }
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException, YarnException {
     yarnConfiguration = new YarnConfiguration();
     setNumaConfig();
@@ -855,7 +858,7 @@ public class TestDefaultContainerExecutor {
             ContainerId.fromString("container_1481156246874_0001_01_000004"));
     when(mockContainer.getResource())
             .thenReturn(Resource.newInstance(80000, 2));
-    Assert.assertNull(numaResourceAllocator.allocateNumaNodes(mockContainer));
+    assertNull(numaResourceAllocator.allocateNumaNodes(mockContainer));
 
     // allocates node 1 for memory and cpu
     testAllocateNumaResource("container_1481156246874_0001_01_000005",
@@ -882,7 +885,7 @@ public class TestDefaultContainerExecutor {
     when(mockContainer.getContainerId()).thenReturn(
             ContainerId.fromString("container_1481156246874_0001_01_000004"));
     when(mockContainer.getResource()).thenReturn(Resource.newInstance(2048, 2));
-    Assert.assertNull(numaResourceAllocator.allocateNumaNodes(mockContainer));
+    assertNull(numaResourceAllocator.allocateNumaNodes(mockContainer));
 
     // allocates node 1 for memory and cpu
     testAllocateNumaResource("container_1481156246874_0001_01_000005",
@@ -933,7 +936,7 @@ public class TestDefaultContainerExecutor {
             .thenReturn(Resource.newInstance(1024, 2));
 
     // returns null since there are no sufficient resources available for the request
-    Assert.assertNull(numaResourceAllocator.allocateNumaNodes(mockContainer));
+    assertNull(numaResourceAllocator.allocateNumaNodes(mockContainer));
   }
 
   @Test
@@ -942,7 +945,7 @@ public class TestDefaultContainerExecutor {
     assertEquals(containerExecutor.concatStringCommands(null, new String[]{"hello"})[0],
             new String[]{"hello"}[0]);
     // test both array of string as null
-    Assert.assertNull(containerExecutor.concatStringCommands(null, null));
+    assertNull(containerExecutor.concatStringCommands(null, null));
     // test case when both arrays are not null and of equal length
     String[] res = containerExecutor.concatStringCommands(new String[]{"one"},
             new String[]{"two"});

@@ -38,6 +38,7 @@ import java.io.Serializable;
 import java.io.StringWriter;
 import java.net.URL;
 import java.net.URLConnection;
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -104,7 +105,7 @@ public class NvidiaDockerV1CommandPlugin implements DockerCommandPlugin {
       uc.setRequestProperty("X-Requested-With", "Curl");
 
       StringWriter writer = new StringWriter();
-      IOUtils.copy(uc.getInputStream(), writer, "utf-8");
+      IOUtils.copy(uc.getInputStream(), writer, StandardCharsets.UTF_8);
       cliOptions = writer.toString();
 
       LOG.info("Additional docker CLI options from plugin to run GPU "

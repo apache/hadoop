@@ -22,10 +22,10 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTER
 import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
 import static org.apache.hadoop.test.MetricsAsserts.getLongCounter;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -56,10 +56,12 @@ import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo;
 import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo.BlockStatus;
 import org.apache.hadoop.hdfs.server.protocol.StorageReceivedDeletedBlocks;
+import org.apache.hadoop.hdfs.util.RwLockMode;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.mockito.Mockito;
 import org.slf4j.LoggerFactory;
 import org.slf4j.event.Level;
@@ -96,24 +98,23 @@ public class TestPendingReconstruction {
       System.arraycopy(storages, 0, targets, 0, i);
       pendingReconstructions.increment(block, targets);
     }
-    assertEquals("Size of pendingReconstruction ",
-                 10, pendingReconstructions.size());
-
+    assertEquals(10, pendingReconstructions.size(),
+        "Size of pendingReconstruction ");
 
     //
     // remove one item
     //
     BlockInfo blk = genBlockInfo(8, 8, 0);
     pendingReconstructions.decrement(blk, storages[7]); // removes one replica
-    assertEquals("pendingReconstructions.getNumReplicas ",
-                 7, pendingReconstructions.getNumReplicas(blk));
+    assertEquals(7, pendingReconstructions.getNumReplicas(blk),
+        "pendingReconstructions.getNumReplicas ");
 
     //
     // insert the same item twice should be counted as once
     //
     pendingReconstructions.increment(blk, storages[0]);
-    assertEquals("pendingReconstructions.getNumReplicas ",
-        7, pendingReconstructions.getNumReplicas(blk));
+    assertEquals(7, pendingReconstructions.getNumReplicas(blk),
+        "pendingReconstructions.getNumReplicas ");
 
     for (int i = 0; i < 7; i++) {
       // removes all replicas
@@ -173,7 +174,7 @@ public class TestPendingReconstruction {
     //
     // Verify that everything has timed out.
     //
-    assertEquals("Size of pendingReconstructions ", 0, pendingReconstructions.size());
+    assertEquals(0, pendingReconstructions.size(), "Size of pendingReconstructions ");
     assertEquals(15L, pendingReconstructions.getNumTimedOuts());
     Block[] timedOut = pendingReconstructions.getTimedOutBlocks();
     assertNotNull(timedOut);
@@ -227,8 +228,8 @@ public class TestPendingReconstruction {
       //Save it for later.
       BlockInfo storedBlock = blockInfo;
 
-      assertEquals("Size of pendingReconstructions ", 1,
-          pendingReconstruction.size());
+      assertEquals(1, pendingReconstruction.size(),
+          "Size of pendingReconstructions ");
 
       // Add a second block to pendingReconstructions that has no
       // corresponding entry in blocksmap
@@ -238,8 +239,8 @@ public class TestPendingReconstruction {
           DFSTestUtil.createDatanodeStorageInfos(1));
 
       // verify 2 blocks in pendingReconstructions
-      assertEquals("Size of pendingReconstructions ", 2,
-          pendingReconstruction.size());
+      assertEquals(2, pendingReconstruction.size(),
+          "Size of pendingReconstructions ");
 
       //
       // Wait for everything to timeout.
@@ -264,13 +265,13 @@ public class TestPendingReconstruction {
       // Verify that the generation stamp we will try to replicate
       // is now 1
       for (Block b: neededReconstruction) {
-        assertEquals("Generation stamp is 1 ", 1,
-            b.getGenerationStamp());
+        assertEquals(1, b.getGenerationStamp(),
+            "Generation stamp is 1 ");
       }
 
       // Verify size of neededReconstruction is exactly 1.
-      assertEquals("size of neededReconstruction is 1 ", 1,
-          neededReconstruction.size());
+      assertEquals(1, neededReconstruction.size(),
+          "size of neededReconstruction is 1 ");
 
       // Verify HDFS-11960
       // Stop the replication/redundancy monitor
@@ -283,39 +284,39 @@ public class TestPendingReconstruction {
       // Add a stored block to the pendingReconstruction.
       pendingReconstruction.increment(blockInfo,
           DFSTestUtil.createDatanodeStorageInfos(1));
-      assertEquals("Size of pendingReconstructions ", 1,
-          pendingReconstruction.size());
+      assertEquals(1, pendingReconstruction.size(),
+          "Size of pendingReconstructions ");
 
       // A received IBR processing calls addBlock(). If the gen stamp in the
       // report is not the same, it should stay in pending.
-      fsn.writeLock();
+      fsn.writeLock(RwLockMode.BM);
       try {
         // Use a wrong gen stamp.
         blkManager.addBlock(desc[0].getStorageInfos()[0],
             new Block(1, 1, 0), null);
       } finally {
-        fsn.writeUnlock();
+        fsn.writeUnlock(RwLockMode.BM, "testProcessPendingReconstructions");
       }
 
       // The block should still be pending
-      assertEquals("Size of pendingReconstructions ", 1,
-          pendingReconstruction.size());
+      assertEquals(1, pendingReconstruction.size(),
+          "Size of pendingReconstructions ");
 
       // A block report with the correct gen stamp should remove the record
       // from the pending queue.
-      fsn.writeLock();
+      fsn.writeLock(RwLockMode.BM);
       try {
         blkManager.addBlock(desc[0].getStorageInfos()[0],
             new Block(1, 1, 1), null);
       } finally {
-        fsn.writeUnlock();
+        fsn.writeUnlock(RwLockMode.BM, "testProcessPendingReconstructions");
       }
 
       GenericTestUtils.waitFor(() -> pendingReconstruction.size() == 0, 500,
           10000);
       // The pending queue should be empty.
-      assertEquals("Size of pendingReconstructions ", 0,
-          pendingReconstruction.size());
+      assertEquals(0, pendingReconstruction.size(),
+          "Size of pendingReconstructions ");
     } finally {
       if (cluster != null) {
         cluster.shutdown();
@@ -459,7 +460,7 @@ public class TestPendingReconstruction {
       // 3. mark a couple of blocks as corrupt
       LocatedBlock block = NameNodeAdapter.getBlockLocations(
           cluster.getNameNode(), filePath.toString(), 0, 1).get(0);
-      cluster.getNamesystem().writeLock();
+      cluster.getNamesystem().writeLock(RwLockMode.BM);
       try {
         bm.findAndMarkBlockAsCorrupt(block.getBlock(), block.getLocations()[0],
             "STORAGE_ID", "TEST");
@@ -471,7 +472,7 @@ public class TestPendingReconstruction {
         BlockInfo storedBlock = bm.getStoredBlock(block.getBlock().getLocalBlock());
         assertEquals(bm.pendingReconstruction.getNumReplicas(storedBlock), 2);
       } finally {
-        cluster.getNamesystem().writeUnlock();
+        cluster.getNamesystem().writeUnlock(RwLockMode.BM, "testPendingAndInvalidate");
       }
 
       // 4. delete the file
@@ -497,7 +498,8 @@ public class TestPendingReconstruction {
    * @throws InterruptedException
    * @throws TimeoutException
    */
-  @Test (timeout = 300000)
+  @Test
+  @Timeout(value = 300)
   public void testReplicationCounter() throws IOException,
       InterruptedException, TimeoutException {
     HdfsConfiguration conf = new HdfsConfiguration();
@@ -507,7 +509,7 @@ public class TestPendingReconstruction {
         DATANODE_COUNT).build();
     tmpCluster.waitActive();
     FSNamesystem fsn = tmpCluster.getNamesystem(0);
-    fsn.writeLock();
+    fsn.writeLock(RwLockMode.BM);
 
     try {
       BlockManager bm = fsn.getBlockManager();
@@ -563,7 +565,7 @@ public class TestPendingReconstruction {
       }, 100, 60000);
     } finally {
       tmpCluster.shutdown();
-      fsn.writeUnlock();
+      fsn.writeUnlock(RwLockMode.BM, "testReplicationCounter");
     }
   }
 

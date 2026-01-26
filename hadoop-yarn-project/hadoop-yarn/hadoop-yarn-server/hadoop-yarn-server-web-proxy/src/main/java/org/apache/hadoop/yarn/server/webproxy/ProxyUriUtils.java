@@ -164,13 +164,13 @@ public class ProxyUriUtils {
           originalUri == null ? null : originalUri.getQuery(),
           originalUri == null ? null : originalUri.getFragment());
     } catch (URISyntaxException e) {
-      throw new RuntimeException("Could not proxify "+originalUri,e);
+      throw new RuntimeException("Could not proxy "+originalUri, e);
     }
   }
   
   /**
    * Create a URI form a no scheme Url, such as is returned by the AM.
-   * @param noSchemeUrl the URL formate returned by an AM
+   * @param noSchemeUrl the URL format returned by an AM
    * @return a URI with an http scheme
    * @throws URISyntaxException if the url is not formatted correctly.
    */

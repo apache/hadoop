@@ -33,13 +33,26 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.Private
 @Metrics(about="Per method RPC metrics", context="rpcdetailed")
 public class RpcDetailedMetrics {
+  static final String DEFERRED_PREFIX = "Deferred";
+  static final String OVERALL_PROCESSING_PREFIX = "Overall";
 
+  // per-method RPC processing time
   @Metric MutableRatesWithAggregation rates;
   @Metric MutableRatesWithAggregation deferredRpcRates;
+  /**
+   * per-method overall RPC processing time, from request arrival to when the
+   * response is sent back.
+   */
+  @Metric MutableRatesWithAggregation overallRpcProcessingRates;
 
   static final Logger LOG = LoggerFactory.getLogger(RpcDetailedMetrics.class);
   final MetricsRegistry registry;
   final String name;
+
+  // Mainly to facilitate testing in TestRPC.java
+  public MutableRatesWithAggregation getOverallRpcProcessingRates() {
+    return overallRpcProcessingRates;
+  }
 
   RpcDetailedMetrics(int port) {
     name = "RpcDetailedActivityForPort"+ port;
@@ -61,7 +74,8 @@ public class RpcDetailedMetrics {
    */
   public void init(Class<?> protocol) {
     rates.init(protocol);
-    deferredRpcRates.init(protocol, "Deferred");
+    deferredRpcRates.init(protocol, DEFERRED_PREFIX);
+    overallRpcProcessingRates.init(protocol, OVERALL_PROCESSING_PREFIX);
   }
 
   /**
@@ -76,6 +90,15 @@ public class RpcDetailedMetrics {
 
   public void addDeferredProcessingTime(String name, long processingTime) {
     deferredRpcRates.add(name, processingTime);
+  }
+
+  /**
+   * Add an overall RPC processing time sample.
+   * @param rpcCallName of the RPC call
+   * @param overallProcessingTime  the overall RPC processing time
+   */
+  public void addOverallProcessingTime(String rpcCallName, long overallProcessingTime) {
+    overallRpcProcessingRates.add(rpcCallName, overallProcessingTime);
   }
 
   /**

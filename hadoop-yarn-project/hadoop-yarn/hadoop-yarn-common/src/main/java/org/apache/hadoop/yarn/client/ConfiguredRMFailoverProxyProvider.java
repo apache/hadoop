@@ -21,9 +21,12 @@ package org.apache.hadoop.yarn.client;
 import java.io.Closeable;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -57,7 +60,7 @@ public class ConfiguredRMFailoverProxyProvider<T>
     this.protocol = protocol;
     this.rmProxy.checkAllowedProtocols(this.protocol);
     this.conf = new YarnConfiguration(configuration);
-    Collection<String> rmIds = HAUtil.getRMHAIds(conf);
+    Collection<String> rmIds = getRMIds(conf);
     this.rmServiceIds = rmIds.toArray(new String[rmIds.size()]);
     conf.set(YarnConfiguration.RM_HA_ID, rmServiceIds[currentProxyIndex]);
 
@@ -118,5 +121,47 @@ public class ConfiguredRMFailoverProxyProvider<T>
         RPC.stopProxy(proxy);
       }
     }
+  }
+
+  /**
+   * Get the list of RM IDs.
+   *
+   * @param pConfiguration Configuration.
+   * @return rmId.
+   */
+  private Collection<String> getRMIds(Configuration pConfiguration) {
+    boolean isFederationEnabled = HAUtil.isFederationEnabled(pConfiguration);
+    if (!isFederationEnabled) {
+      return HAUtil.getRMHAIds(pConfiguration);
+    }
+    return getRandomOrderByRandomFlag(pConfiguration);
+  }
+
+  /**
+   * YARN Federation mode, the Router is considered as an RM for the client.
+   * We want the client to be able to randomly
+   * Select a Router and support failover when selecting a Router.
+   * The original code always started trying from the first
+   * Router when the client selected a Router,
+   * but this method will support random Router selection.
+   *
+   * For clusters that have not enabled Federation mode, the behavior remains unchanged.
+   *
+   * @param pConfiguration Configuration.
+   * @return rmIds
+   */
+  private Collection<String> getRandomOrderByRandomFlag(Configuration pConfiguration) {
+    Collection<String> rmIds = HAUtil.getRMHAIds(pConfiguration);
+    boolean isRandomOrder = pConfiguration.getBoolean(
+        YarnConfiguration.FEDERATION_YARN_CLIENT_FAILOVER_RANDOM_ORDER,
+        YarnConfiguration.DEFAULT_FEDERATION_YARN_CLIENT_FAILOVER_RANDOM_ORDER);
+    // If the Random option is not enabled, returns the configured array.
+    if (!isRandomOrder) {
+      return rmIds;
+    }
+    // If the Random option is enabled, returns an array of Random.
+    List<String> rmIdList = new ArrayList<>(rmIds);
+    Collections.shuffle(rmIdList);
+    return rmIdList;
   }
 }

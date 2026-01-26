@@ -1,0 +1,43 @@
+<?xml version="1.0"?>
+<!--
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License. See accompanying LICENSE file.
+-->
+
+<!--
+  This file contains pool and user allocations for the Fair Scheduler.
+  Its format is explained in the Fair Scheduler documentation at
+  http://hadoop.apache.org/docs/current/hadoop-yarn/hadoop-yarn-site/FairScheduler.html.
+  The documentation also includes a sample config file.
+-->
+
+<allocations>
+  <queue name="root">
+    <weight>1.0</weight>
+    <queue name="a">
+      <weight>0.33</weight>
+      <minResources>8192 mb, 4 vcores</minResources>
+      <maxResources>16384 mb, 8 vcores</maxResources>
+    </queue>
+    <queue name="b">
+      <weight>0.33</weight>
+      <minResources>8192 mb, 4 vcores</minResources>
+      <maxResources>16384 mb, 8 vcores</maxResources>
+    </queue>
+    <queue name="c">
+      <weight>0.34</weight>
+      <minResources>8192 mb, 4 vcores</minResources>
+      <maxResources>16384 mb, 8 vcores</maxResources>
+    </queue>
+  </queue>
+  <userMaxAppsDefault>5</userMaxAppsDefault>
+</allocations>

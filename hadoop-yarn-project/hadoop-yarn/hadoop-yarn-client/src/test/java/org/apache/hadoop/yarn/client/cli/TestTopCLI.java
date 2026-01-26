@@ -18,8 +18,14 @@
 
 package org.apache.hadoop.yarn.client.cli;
 
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -27,11 +33,17 @@ import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
+import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Test class for TopCli.
@@ -47,7 +59,10 @@ public class TestTopCLI {
 
   private static Map<String, String> savedStaticResolution = new HashMap<>();
 
-  @BeforeClass
+  private PrintStream stdout;
+  private PrintStream stderr;
+
+  @BeforeAll
   public static void initializeDummyHostnameResolution() throws Exception {
     String previousIpAddress;
     for (String hostName : dummyHostNames) {
@@ -59,13 +74,25 @@ public class TestTopCLI {
     }
   }
 
-  @AfterClass
+  @AfterAll
   public static void restoreDummyHostnameResolution() throws Exception {
     for (Map.Entry<String, String> hostnameToIpEntry : savedStaticResolution
         .entrySet()) {
       NetUtils.addStaticResolution(hostnameToIpEntry.getKey(),
           hostnameToIpEntry.getValue());
     }
+  }
+
+  @BeforeEach
+  public void before() {
+    this.stdout = System.out;
+    this.stderr = System.err;
+  }
+
+  @AfterEach
+  public void after() {
+    System.setOut(this.stdout);
+    System.setErr(this.stderr);
   }
 
   @Test
@@ -83,11 +110,11 @@ public class TestTopCLI {
     topcli.getConf().set(YarnConfiguration.RM_HA_IDS,
         RM1_NODE_ID + "," + RM2_NODE_ID);
     URL clusterUrl = topcli.getHAClusterUrl(conf, RM1_NODE_ID);
-    Assert.assertEquals("http", clusterUrl.getProtocol());
-    Assert.assertEquals(rm1Address, clusterUrl.getAuthority());
+    assertEquals("http", clusterUrl.getProtocol());
+    assertEquals(rm1Address, clusterUrl.getAuthority());
     clusterUrl = topcli.getHAClusterUrl(conf, RM2_NODE_ID);
-    Assert.assertEquals("http", clusterUrl.getProtocol());
-    Assert.assertEquals(rm2Address, clusterUrl.getAuthority());
+    assertEquals("http", clusterUrl.getProtocol());
+    assertEquals(rm2Address, clusterUrl.getAuthority());
     // https
     rm1Address = "host2:9088";
     rm2Address = "host3:9088";
@@ -100,7 +127,47 @@ public class TestTopCLI {
     conf.set(YarnConfiguration.RM_HA_IDS, RM1_NODE_ID + "," + RM2_NODE_ID);
     conf.set(YarnConfiguration.YARN_HTTP_POLICY_KEY, "HTTPS_ONLY");
     clusterUrl = topcli.getHAClusterUrl(conf, RM1_NODE_ID);
-    Assert.assertEquals("https", clusterUrl.getProtocol());
-    Assert.assertEquals(rm1Address, clusterUrl.getAuthority());
+    assertEquals("https", clusterUrl.getProtocol());
+    assertEquals(rm1Address, clusterUrl.getAuthority());
+  }
+
+  @Test
+  public void testHeaderNodeManagers() throws Exception {
+    YarnClusterMetrics ymetrics = mock(YarnClusterMetrics.class);
+    when(ymetrics.getNumNodeManagers()).thenReturn(0);
+    when(ymetrics.getNumDecommissioningNodeManagers()).thenReturn(1);
+    when(ymetrics.getNumDecommissionedNodeManagers()).thenReturn(2);
+    when(ymetrics.getNumActiveNodeManagers()).thenReturn(3);
+    when(ymetrics.getNumLostNodeManagers()).thenReturn(4);
+    when(ymetrics.getNumUnhealthyNodeManagers()).thenReturn(5);
+    when(ymetrics.getNumRebootedNodeManagers()).thenReturn(6);
+    when(ymetrics.getNumShutdownNodeManagers()).thenReturn(7);
+
+    YarnClient client = mock(YarnClient.class);
+    when(client.getYarnClusterMetrics()).thenReturn(ymetrics);
+
+    TopCLI topcli = new TopCLI() {
+      @Override protected void createAndStartYarnClient() {
+      }
+    };
+    topcli.setClient(client);
+    topcli.terminalWidth = 200;
+
+    String actual;
+    try (ByteArrayOutputStream outStream = new ByteArrayOutputStream();
+        PrintStream out = new PrintStream(outStream)) {
+      System.setOut(out);
+      System.setErr(out);
+      topcli.showTopScreen();
+      out.flush();
+      actual = outStream.toString(StandardCharsets.UTF_8.name());
+    }
+
+    String expected = "NodeManager(s)"
+        + ": 0 total, 3 active, 5 unhealthy, 1 decommissioning,"
+        + " 2 decommissioned, 4 lost, 6 rebooted, 7 shutdown";
+    assertTrue(actual.contains(expected),
+        String.format("Expected output to contain [%s], actual output was [%s].",
+        expected, actual));
   }
 }

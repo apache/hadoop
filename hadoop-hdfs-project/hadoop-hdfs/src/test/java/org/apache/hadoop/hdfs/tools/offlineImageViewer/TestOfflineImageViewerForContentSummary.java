@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.tools.offlineImageViewer;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import java.io.File;
 import java.io.IOException;
 import java.net.HttpURLConnection;
@@ -30,15 +30,15 @@ import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.SafeModeAction;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.namenode.FSImageTestUtil;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.net.NetUtils;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests GETCONTENTSUMMARY operation for WebImageViewer
@@ -59,7 +59,7 @@ public class TestOfflineImageViewerForContentSummary {
    * data structure and store its fsimage location. We only want to generate
    * the fsimage file once and use it for multiple tests.
    */
-  @BeforeClass
+  @BeforeAll
   public static void createOriginalFSImage() throws IOException {
     MiniDFSCluster cluster = null;
     Configuration conf = new Configuration();
@@ -102,7 +102,7 @@ public class TestOfflineImageViewerForContentSummary {
       symLinkSummaryForDirContainsFromDFS = hdfs.getContentSummary(new Path(
           "/dirForLinks"));
       // Write results to the fsimage file
-      hdfs.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_ENTER, false);
+      hdfs.setSafeMode(SafeModeAction.ENTER, false);
       hdfs.saveNamespace();
       // Determine the location of the fsimage file
       originalFsimage = FSImageTestUtil.findLatestImageFile(FSImageTestUtil
@@ -117,7 +117,7 @@ public class TestOfflineImageViewerForContentSummary {
     }
   }
 
-  @AfterClass
+  @AfterAll
   public static void deleteOriginalFSImage() {
     if (originalFsimage != null && originalFsimage.exists()) {
       originalFsimage.delete();

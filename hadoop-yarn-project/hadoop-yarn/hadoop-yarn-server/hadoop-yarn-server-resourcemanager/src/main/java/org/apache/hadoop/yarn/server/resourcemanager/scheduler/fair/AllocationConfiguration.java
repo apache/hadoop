@@ -28,6 +28,7 @@ import org.apache.hadoop.yarn.api.records.ReservationACL;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.security.AccessType;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSchedulerConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.allocation.AllocationFileParser;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.allocation.QueueProperties;
 import org.apache.hadoop.yarn.util.resource.Resources;
@@ -108,7 +109,7 @@ public class AllocationConfiguration extends ReservationSchedulerConfiguration {
    *                        configuration.
    * @param allocationFileParser The allocation file parser
    * @param globalReservationQueueConfig The reservation queue config
-   * @throws AllocationConfigurationException
+   * @throws AllocationConfigurationException for any errors.
    */
   public AllocationConfiguration(QueueProperties queueProperties,
       AllocationFileParser allocationFileParser,
@@ -194,14 +195,17 @@ public class AllocationConfiguration extends ReservationSchedulerConfiguration {
    * Get the map of reservation ACLs to {@link AccessControlList} for the
    * specified queue.
    */
-  public Map<ReservationACL, AccessControlList> getReservationAcls(String
+  public Map<ReservationACL, AccessControlList> getReservationAcls(QueuePath
         queue) {
-    return this.resAcls.get(queue);
+    return this.resAcls.get(queue.getFullPath());
   }
 
   /**
    * Get a queue's min share preemption timeout configured in the allocation
    * file, in milliseconds. Return -1 if not set.
+   *
+   * @param queueName queue name.
+   * @return min share preemption timeout, return -1f if not set.
    */
   public long getMinSharePreemptionTimeout(String queueName) {
     Long minSharePreemptionTimeout = minSharePreemptionTimeouts.get(queueName);
@@ -211,6 +215,9 @@ public class AllocationConfiguration extends ReservationSchedulerConfiguration {
   /**
    * Get a queue's fair share preemption timeout configured in the allocation
    * file, in milliseconds. Return -1 if not set.
+   *
+   * @param queueName queue Name.
+   * @return fair share preemption timeout, return -1f if not set.
    */
   public long getFairSharePreemptionTimeout(String queueName) {
     Long fairSharePreemptionTimeout = fairSharePreemptionTimeouts.get(queueName);
@@ -221,6 +228,9 @@ public class AllocationConfiguration extends ReservationSchedulerConfiguration {
   /**
    * Get a queue's fair share preemption threshold in the allocation file.
    * Return -1f if not set.
+   *
+   * @param queueName queue Name.
+   * @return preemption threshold, return -1f if not set.
    */
   public float getFairSharePreemptionThreshold(String queueName) {
     Float fairSharePreemptionThreshold =
@@ -332,52 +342,52 @@ public class AllocationConfiguration extends ReservationSchedulerConfiguration {
   }
 
   @Override
-  public boolean isReservable(String queue) {
-    return reservableQueues.contains(queue);
+  public boolean isReservable(QueuePath queue) {
+    return reservableQueues.contains(queue.getFullPath());
   }
 
   @Override
-  public long getReservationWindow(String queue) {
+  public long getReservationWindow(QueuePath queue) {
     return globalReservationQueueConfig.getReservationWindowMsec();
   }
 
   @Override
-  public float getAverageCapacity(String queue) {
+  public float getAverageCapacity(QueuePath queue) {
     return globalReservationQueueConfig.getAvgOverTimeMultiplier() * 100;
   }
 
   @Override
-  public float getInstantaneousMaxCapacity(String queue) {
+  public float getInstantaneousMaxCapacity(QueuePath queue) {
     return globalReservationQueueConfig.getMaxOverTimeMultiplier() * 100;
   }
 
   @Override
-  public String getReservationAdmissionPolicy(String queue) {
+  public String getReservationAdmissionPolicy(QueuePath queue) {
     return globalReservationQueueConfig.getReservationAdmissionPolicy();
   }
 
   @Override
-  public String getReservationAgent(String queue) {
+  public String getReservationAgent(QueuePath queue) {
     return globalReservationQueueConfig.getReservationAgent();
   }
 
   @Override
-  public boolean getShowReservationAsQueues(String queue) {
+  public boolean getShowReservationAsQueues(QueuePath queue) {
     return globalReservationQueueConfig.shouldShowReservationAsQueues();
   }
 
   @Override
-  public String getReplanner(String queue) {
+  public String getReplanner(QueuePath queue) {
     return globalReservationQueueConfig.getPlanner();
   }
 
   @Override
-  public boolean getMoveOnExpiry(String queue) {
+  public boolean getMoveOnExpiry(QueuePath queue) {
     return globalReservationQueueConfig.shouldMoveOnExpiry();
   }
 
   @Override
-  public long getEnforcementWindow(String queue) {
+  public long getEnforcementWindow(QueuePath queue) {
     return globalReservationQueueConfig.getEnforcementWindowMsec();
   }
 

@@ -258,7 +258,14 @@ public class Path
   private void initialize(String scheme, String authority, String path,
       String fragment) {
     try {
-      this.uri = new URI(scheme, authority, normalizePath(scheme, path), null, fragment)
+      // Normalize the path
+      String normalizedPath = normalizePath(scheme, path);
+
+      // Windows-specific fix: file URIs must start with "/"
+      if ("file".equalsIgnoreCase(scheme) && normalizedPath.matches("^[A-Za-z]:.*")) {
+        normalizedPath = "/" + normalizedPath.replace("\\", "/");
+      }
+      this.uri = new URI(scheme, authority, normalizedPath, null, fragment)
         .normalize();
     } catch (URISyntaxException e) {
       throw new IllegalArgumentException(e);
@@ -465,7 +472,12 @@ public class Path
    * @return a new path with the suffix added
    */
   public Path suffix(String suffix) {
-    return new Path(getParent(), getName()+suffix);
+    Path parent = getParent();
+    if (parent == null) {
+      return new Path("/", getName() + suffix);
+    }
+
+    return new Path(parent, getName() + suffix);
   }
 
   @Override

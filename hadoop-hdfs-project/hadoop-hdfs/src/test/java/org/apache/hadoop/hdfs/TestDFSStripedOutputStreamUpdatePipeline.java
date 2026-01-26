@@ -21,7 +21,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_SIZE_KEY;
@@ -45,7 +46,7 @@ public class TestDFSStripedOutputStreamUpdatePipeline {
       Path filePath = new Path("/test/file");
       FSDataOutputStream out = dfs.create(filePath);
       try {
-        for (int i = 0; i < Long.MAX_VALUE; i++) {
+        for (int i = 0; i < Integer.MAX_VALUE; i++) {
           out.write(i);
           if (i == 1024 * 1024 * 5) {
             cluster.stopDataNode(0);
@@ -66,7 +67,8 @@ public class TestDFSStripedOutputStreamUpdatePipeline {
    * Test writing ec file hang when applying the second block group occurs
    * an addBlock exception (e.g. quota exception).
    */
-  @Test(timeout = 90000)
+  @Test
+  @Timeout(value = 90)
   public void testECWriteHangWhenAddBlockWithException() throws Exception {
     Configuration conf = new HdfsConfiguration();
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 1 * 1024 * 1024);

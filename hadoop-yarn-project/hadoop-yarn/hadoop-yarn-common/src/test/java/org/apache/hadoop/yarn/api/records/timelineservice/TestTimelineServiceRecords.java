@@ -17,22 +17,28 @@
  */
 package org.apache.hadoop.yarn.api.records.timelineservice;
 
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
-import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
-import org.junit.Test;
-import org.junit.Assert;
-
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+
+import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 
 public class TestTimelineServiceRecords {
@@ -40,7 +46,7 @@ public class TestTimelineServiceRecords {
       LoggerFactory.getLogger(TestTimelineServiceRecords.class);
 
   @Test
-  public void testTimelineEntities() throws Exception {
+  void testTimelineEntities() throws Exception {
     TimelineEntity entity = new TimelineEntity();
     entity.setType("test type 1");
     entity.setId("test id 1");
@@ -48,7 +54,7 @@ public class TestTimelineServiceRecords {
     entity.addInfo("test info key 2",
         Arrays.asList("test info value 2", "test info value 3"));
     entity.addInfo("test info key 3", true);
-    Assert.assertTrue(
+    assertTrue(
         entity.getInfo().get("test info key 3") instanceof Boolean);
     entity.addConfig("test config key 1", "test config value 1");
     entity.addConfig("test config key 2", "test config value 2");
@@ -59,43 +65,43 @@ public class TestTimelineServiceRecords {
     metric1.addValue(1L, 1.0F);
     metric1.addValue(3L, 3.0D);
     metric1.addValue(2L, 2);
-    Assert.assertEquals(TimelineMetric.Type.TIME_SERIES, metric1.getType());
+    assertEquals(TimelineMetric.Type.TIME_SERIES, metric1.getType());
     Iterator<Map.Entry<Long, Number>> itr =
         metric1.getValues().entrySet().iterator();
     Map.Entry<Long, Number> entry = itr.next();
-    Assert.assertEquals(new Long(3L), entry.getKey());
-    Assert.assertEquals(3.0D, entry.getValue());
+    assertEquals(Long.valueOf(3L), entry.getKey());
+    assertEquals(3.0D, entry.getValue());
     entry = itr.next();
-    Assert.assertEquals(new Long(2L), entry.getKey());
-    Assert.assertEquals(2, entry.getValue());
+    assertEquals(Long.valueOf(2L), entry.getKey());
+    assertEquals(2, entry.getValue());
     entry = itr.next();
-    Assert.assertEquals(new Long(1L), entry.getKey());
-    Assert.assertEquals(1.0F, entry.getValue());
-    Assert.assertFalse(itr.hasNext());
+    assertEquals(Long.valueOf(1L), entry.getKey());
+    assertEquals(1.0F, entry.getValue());
+    assertFalse(itr.hasNext());
     entity.addMetric(metric1);
 
     TimelineMetric metric2 =
         new TimelineMetric(TimelineMetric.Type.SINGLE_VALUE);
     metric2.setId("test metric id 1");
     metric2.addValue(3L, (short) 3);
-    Assert.assertEquals(TimelineMetric.Type.SINGLE_VALUE, metric2.getType());
-    Assert.assertTrue(
+    assertEquals(TimelineMetric.Type.SINGLE_VALUE, metric2.getType());
+    assertTrue(
         metric2.getValues().values().iterator().next() instanceof Short);
     Map<Long, Number> points = new HashMap<>();
     points.put(4L, 4.0D);
     points.put(5L, 5.0D);
     try {
       metric2.setValues(points);
-      Assert.fail();
+      fail();
     } catch (IllegalArgumentException e) {
-      Assert.assertTrue(e.getMessage().contains(
+      assertTrue(e.getMessage().contains(
           "Values cannot contain more than one point in"));
     }
     try {
       metric2.addValues(points);
-      Assert.fail();
+      fail();
     } catch (IllegalArgumentException e) {
-      Assert.assertTrue(e.getMessage().contains(
+      assertTrue(e.getMessage().contains(
           "Values cannot contain more than one point in"));
     }
     entity.addMetric(metric2);
@@ -104,9 +110,8 @@ public class TestTimelineServiceRecords {
         new TimelineMetric(TimelineMetric.Type.SINGLE_VALUE);
     metric3.setId("test metric id 1");
     metric3.addValue(4L, (short) 4);
-    Assert.assertEquals("metric3 should equal to metric2! ", metric3, metric2);
-    Assert.assertNotEquals("metric1 should not equal to metric2! ",
-        metric1, metric2);
+    assertEquals(metric3, metric2, "metric3 should equal to metric2! ");
+    assertNotEquals(metric1, metric2, "metric1 should not equal to metric2! ");
 
     TimelineEvent event1 = new TimelineEvent();
     event1.setId("test event id 1");
@@ -114,7 +119,7 @@ public class TestTimelineServiceRecords {
     event1.addInfo("test info key 2",
         Arrays.asList("test info value 2", "test info value 3"));
     event1.addInfo("test info key 3", true);
-    Assert.assertTrue(
+    assertTrue(
         event1.getInfo().get("test info key 3") instanceof Boolean);
     event1.setTimestamp(1L);
     entity.addEvent(event1);
@@ -125,19 +130,17 @@ public class TestTimelineServiceRecords {
     event2.addInfo("test info key 2",
         Arrays.asList("test info value 2", "test info value 3"));
     event2.addInfo("test info key 3", true);
-    Assert.assertTrue(
+    assertTrue(
         event2.getInfo().get("test info key 3") instanceof Boolean);
     event2.setTimestamp(2L);
     entity.addEvent(event2);
 
-    Assert.assertFalse("event1 should not equal to event2! ",
-        event1.equals(event2));
+    assertNotEquals(event1, event2);
     TimelineEvent event3 = new TimelineEvent();
     event3.setId("test event id 1");
     event3.setTimestamp(1L);
-    Assert.assertEquals("event1 should equal to event3! ", event3, event1);
-    Assert.assertNotEquals("event1 should not equal to event2! ",
-        event1, event2);
+    assertEquals(event3, event1, "event1 should equal to event3! ");
+    assertNotEquals(event1, event2, "event1 should not equal to event2! ");
 
     entity.setCreatedTime(0L);
     entity.addRelatesToEntity("test type 2", "test id 2");
@@ -153,25 +156,22 @@ public class TestTimelineServiceRecords {
     entities.addEntity(entity2);
     LOG.info(TimelineUtils.dumpTimelineRecordtoJSON(entities, true));
 
-    Assert.assertFalse("entity 1 should not be valid without type and id",
-        entity1.isValid());
+    assertFalse(entity1.isValid(),
+        "entity 1 should not be valid without type and id");
     entity1.setId("test id 2");
     entity1.setType("test type 2");
     entity2.setId("test id 1");
     entity2.setType("test type 1");
 
-    Assert.assertEquals("Timeline entity should equal to entity2! ",
-        entity, entity2);
-    Assert.assertNotEquals("entity1 should not equal to entity! ",
-        entity1, entity);
-    Assert.assertEquals("entity should be less than entity1! ",
-        entity1.compareTo(entity), 1);
-    Assert.assertEquals("entity's hash code should be -28727840 but not "
-        + entity.hashCode(), entity.hashCode(), -28727840);
+    assertEquals(entity, entity2, "Timeline entity should equal to entity2! ");
+    assertNotEquals(entity1, entity, "entity1 should not equal to entity! ");
+    assertEquals(entity1.compareTo(entity), 1, "entity should be less than entity1! ");
+    assertEquals(entity.hashCode(), -28727840, "entity's hash code should be -28727840 but not "
+        + entity.hashCode());
   }
 
   @Test
-  public void testFirstClassCitizenEntities() throws Exception {
+  void testFirstClassCitizenEntities() throws Exception {
     UserEntity user = new UserEntity();
     user.setId("test user id");
 
@@ -245,49 +245,49 @@ public class TestTimelineServiceRecords {
 
 
     // Check parent/children APIs
-    Assert.assertNotNull(app1.getParent());
-    Assert.assertEquals(flow2.getType(), app1.getParent().getType());
-    Assert.assertEquals(flow2.getId(), app1.getParent().getId());
+    assertNotNull(app1.getParent());
+    assertEquals(flow2.getType(), app1.getParent().getType());
+    assertEquals(flow2.getId(), app1.getParent().getId());
     app1.addInfo(ApplicationEntity.PARENT_INFO_KEY, "invalid parent object");
     try {
       app1.getParent();
-      Assert.fail();
+      fail();
     } catch (Exception e) {
-      Assert.assertTrue(e instanceof YarnRuntimeException);
-      Assert.assertTrue(e.getMessage().contains(
+      assertTrue(e instanceof YarnRuntimeException);
+      assertTrue(e.getMessage().contains(
           "Parent info is invalid identifier object"));
     }
 
-    Assert.assertNotNull(app1.getChildren());
-    Assert.assertEquals(1, app1.getChildren().size());
-    Assert.assertEquals(
+    assertNotNull(app1.getChildren());
+    assertEquals(1, app1.getChildren().size());
+    assertEquals(
         appAttempt.getType(), app1.getChildren().iterator().next().getType());
-    Assert.assertEquals(
+    assertEquals(
         appAttempt.getId(), app1.getChildren().iterator().next().getId());
     app1.addInfo(ApplicationEntity.CHILDREN_INFO_KEY,
         Collections.singletonList("invalid children set"));
     try {
       app1.getChildren();
-      Assert.fail();
+      fail();
     } catch (Exception e) {
-      Assert.assertTrue(e instanceof YarnRuntimeException);
-      Assert.assertTrue(e.getMessage().contains(
+      assertTrue(e instanceof YarnRuntimeException);
+      assertTrue(e.getMessage().contains(
           "Children info is invalid identifier set"));
     }
     app1.addInfo(ApplicationEntity.CHILDREN_INFO_KEY,
         Collections.singleton("invalid child object"));
     try {
       app1.getChildren();
-      Assert.fail();
+      fail();
     } catch (Exception e) {
-      Assert.assertTrue(e instanceof YarnRuntimeException);
-      Assert.assertTrue(e.getMessage().contains(
+      assertTrue(e instanceof YarnRuntimeException);
+      assertTrue(e.getMessage().contains(
           "Children info contains invalid identifier object"));
     }
   }
 
   @Test
-  public void testUser() throws Exception {
+  void testUser() throws Exception {
     UserEntity user = new UserEntity();
     user.setId("test user id");
     user.addInfo("test info key 1", "test info value 1");
@@ -296,7 +296,7 @@ public class TestTimelineServiceRecords {
   }
 
   @Test
-  public void testQueue() throws Exception {
+  void testQueue() throws Exception {
     QueueEntity queue = new QueueEntity();
     queue.setId("test queue id");
     queue.addInfo("test info key 1", "test info value 1");

@@ -22,24 +22,28 @@ import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 
 import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 
-@InterfaceAudience.LimitedPrivate({ "MapReduce", "YARN" })
+@LimitedPrivate({ "MapReduce", "YARN" })
 public class RPCUtil {
 
   /**
-   * Returns an instance of {@link YarnException}
+   * Returns an instance of {@link YarnException}.
+   * @param t instance of Throwable.
+   * @return instance of YarnException.
    */
   public static YarnException getRemoteException(Throwable t) {
     return new YarnException(t);
   }
 
   /**
-   * Returns an instance of {@link YarnException}
+   * Returns an instance of {@link YarnException}.
+   * @param message yarn exception message.
+   * @return instance of YarnException.
    */
   public static YarnException getRemoteException(String message) {
     return new YarnException(message);
@@ -92,6 +96,8 @@ public class RPCUtil {
    *          ServiceException
    * @return An instance of the actual exception, which will be a subclass of
    *         {@link YarnException} or {@link IOException}
+   * @throws IOException io error occur.
+   * @throws YarnException exceptions from yarn servers.
    */
   public static Void unwrapAndThrowException(ServiceException se)
       throws IOException, YarnException {

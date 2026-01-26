@@ -24,9 +24,12 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+
+import org.apache.commons.lang3.math.NumberUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -69,8 +72,7 @@ public class AMRMProxyTokenSecretManager extends
 
   private NMStateStoreService nmStateStore;
 
-  private final Set<ApplicationAttemptId> appAttemptSet =
-      new HashSet<ApplicationAttemptId>();
+  private final Set<ApplicationAttemptId> appAttemptSet = new HashSet<>();
 
   /**
    * Create an {@link AMRMProxyTokenSecretManager}.
@@ -88,12 +90,17 @@ public class AMRMProxyTokenSecretManager extends
             YarnConfiguration.DEFAULT_RM_AMRM_TOKEN_MASTER_KEY_ROLLING_INTERVAL_SECS) * 1000;
     // Adding delay = 1.5 * expiry interval makes sure that all active AMs get
     // the updated shared-key.
-    this.activationDelay =
-        (long) (conf.getLong(YarnConfiguration.RM_AM_EXPIRY_INTERVAL_MS,
-            YarnConfiguration.DEFAULT_RM_AM_EXPIRY_INTERVAL_MS) * 1.5);
-    LOG.info("AMRMTokenKeyRollingInterval: " + this.rollingInterval
-        + "ms and AMRMTokenKeyActivationDelay: " + this.activationDelay
-        + " ms");
+    String rmAmExpiryIntervalMS = conf.get(YarnConfiguration.RM_AM_EXPIRY_INTERVAL_MS);
+    if (NumberUtils.isDigits(rmAmExpiryIntervalMS)) {
+      this.activationDelay = (long) (conf.getLong(YarnConfiguration.RM_AM_EXPIRY_INTERVAL_MS,
+          YarnConfiguration.DEFAULT_RM_AM_EXPIRY_INTERVAL_MS) * 1.5);
+    } else {
+      this.activationDelay = (long) (conf.getTimeDuration(
+          YarnConfiguration.RM_AM_EXPIRY_INTERVAL_MS,
+          YarnConfiguration.DEFAULT_RM_AM_EXPIRY_INTERVAL_MS, TimeUnit.MILLISECONDS) * 1.5);
+    }
+    LOG.info("AMRMTokenKeyRollingInterval: {} ms and AMRMTokenKeyActivationDelay: {} ms.",
+        this.rollingInterval, this.activationDelay);
     if (rollingInterval <= activationDelay * 2) {
       throw new IllegalArgumentException(
           YarnConfiguration.RM_AMRM_TOKEN_MASTER_KEY_ROLLING_INTERVAL_SECS
@@ -218,8 +225,7 @@ public class AMRMProxyTokenSecretManager extends
               .getMasterKey().getKeyId());
       byte[] password = this.createPassword(identifier);
       appAttemptSet.add(appAttemptId);
-      return new Token<AMRMTokenIdentifier>(identifier.getBytes(),
-          password, identifier.getKind(), new Text());
+      return new Token<>(identifier.getBytes(), password, identifier.getKind(), new Text());
     } finally {
       this.writeLock.unlock();
     }

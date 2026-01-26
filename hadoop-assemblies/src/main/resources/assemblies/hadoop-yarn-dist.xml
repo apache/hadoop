@@ -6,7 +6,7 @@
    (the "License"); you may not use this file except in compliance with
    the License.  You may obtain a copy of the License at
 
-       http://www.apache.org/licenses/LICENSE-2.01
+       http://www.apache.org/licenses/LICENSE-2.0
 
    Unless required by applicable law or agreed to in writing, software
    distributed under the License is distributed on an "AS IS" BASIS,
@@ -211,6 +211,13 @@
         <include>**/*</include>
       </includes>
     </fileSet>
+    <fileSet>
+      <directory>hadoop-yarn/hadoop-yarn-capacity-scheduler-ui/target/hadoop-yarn-capacity-scheduler-ui-${project.version}</directory>
+      <outputDirectory>/share/hadoop/${hadoop.component}/webapps/scheduler-ui</outputDirectory>
+      <includes>
+        <include>**/*</include>
+      </includes>
+    </fileSet>
     <!-- Copy dependecies from hadoop-yarn-server-timelineservice as well -->
     <fileSet>
       <directory>hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-timelineservice-hbase/hadoop-yarn-server-timelineservice-hbase-client/target/lib</directory>
@@ -245,7 +252,7 @@
     </moduleSet>
     <moduleSet>
       <includes>
-        <include>org.apache.hadoop:${hbase-server-artifactid}</include>
+        <include>org.apache.hadoop:hadoop-yarn-server-timelineservice-hbase-server-2</include>
       </includes>
       <binaries>
         <outputDirectory>share/hadoop/${hadoop.component}/timelineservice</outputDirectory>
@@ -280,6 +287,7 @@
       <excludes>
         <exclude>org.apache.hadoop:hadoop-yarn-server-timelineservice*</exclude>
         <exclude>org.apache.hadoop:hadoop-yarn-ui</exclude>
+        <exclude>org.apache.hadoop:hadoop-yarn-capacity-scheduler-ui</exclude>
         <exclude>org.apache.hadoop:hadoop-yarn-csi</exclude>
       </excludes>
       <binaries>
@@ -309,7 +317,7 @@
         <exclude>org.apache.hadoop:*</exclude>
         <!-- use slf4j from common to avoid multiple binding warnings -->
         <exclude>org.slf4j:slf4j-api</exclude>
-        <exclude>org.slf4j:slf4j-log4j12</exclude>
+        <exclude>org.slf4j:slf4j-reload4j</exclude>
         <exclude>org.hsqldb:hsqldb</exclude>
       </excludes>
     </dependencySet>

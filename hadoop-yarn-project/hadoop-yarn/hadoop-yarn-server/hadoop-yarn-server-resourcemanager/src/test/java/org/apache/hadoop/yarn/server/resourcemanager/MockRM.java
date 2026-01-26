@@ -19,9 +19,13 @@
 package org.apache.hadoop.yarn.server.resourcemanager;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.MockNM.createMockNodeStatus;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -55,8 +59,13 @@ import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.DrainDispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.factories.RecordFactory;
+import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.ipc.RPCUtil;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshServiceAclsRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshServiceAclsResponse;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.AMLauncherEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.ApplicationMasterLauncher;
@@ -94,7 +103,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSe
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.YarnVersionInfo;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
-import org.junit.Assert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.event.Level;
@@ -233,7 +241,7 @@ public class MockRM extends ResourceManager {
       throws InterruptedException {
     drainEventsImplicitly();
     RMApp app = getRMContext().getRMApps().get(appId);
-    Assert.assertNotNull("app shouldn't be null", app);
+    assertNotNull(app, "app shouldn't be null");
     final int timeoutMsecs = 80 * SECOND;
     int timeWaiting = 0;
     while (!finalStates.contains(app.getState())) {
@@ -248,8 +256,8 @@ public class MockRM extends ResourceManager {
     }
 
     LOG.info("App State is : " + app.getState());
-    Assert.assertTrue("App State is not correct (timeout).",
-        finalStates.contains(app.getState()));
+    assertTrue(finalStates.contains(app.getState()),
+        "App State is not correct (timeout).");
   }
 
   /**
@@ -264,7 +272,7 @@ public class MockRM extends ResourceManager {
       throws InterruptedException {
     drainEventsImplicitly();
     RMApp app = getRMContext().getRMApps().get(appId);
-    Assert.assertNotNull("app shouldn't be null", app);
+    assertNotNull(app, "app shouldn't be null");
     final int timeoutMsecs = 80 * SECOND;
     int timeWaiting = 0;
     while (!finalState.equals(app.getState())) {
@@ -279,8 +287,8 @@ public class MockRM extends ResourceManager {
     }
 
     LOG.info("App State is : " + app.getState());
-    Assert.assertEquals("App State is not correct (timeout).", finalState,
-      app.getState());
+    assertEquals(finalState, app.getState(),
+        "App State is not correct (timeout).");
   }
 
   /**
@@ -310,7 +318,7 @@ public class MockRM extends ResourceManager {
       throws InterruptedException {
     drainEventsImplicitly();
     RMApp app = getRMContext().getRMApps().get(attemptId.getApplicationId());
-    Assert.assertNotNull("app shouldn't be null", app);
+    assertNotNull(app, "app shouldn't be null");
     RMAppAttempt attempt = app.getRMAppAttempt(attemptId);
     MockRM.waitForState(attempt, finalState, timeoutMsecs);
   }
@@ -353,8 +361,8 @@ public class MockRM extends ResourceManager {
     }
 
     LOG.info("Attempt State is : " + attempt.getAppAttemptState());
-    Assert.assertEquals("Attempt state is not correct (timeout).", finalState,
-        attempt.getState());
+    assertEquals(finalState, attempt.getState(),
+        "Attempt state is not correct (timeout).");
   }
 
   public void waitForContainerToComplete(RMAppAttempt attempt,
@@ -378,7 +386,7 @@ public class MockRM extends ResourceManager {
   public MockAM waitForNewAMToLaunchAndRegister(ApplicationId appId, int attemptSize,
       MockNM nm) throws Exception {
     RMApp app = getRMContext().getRMApps().get(appId);
-    Assert.assertNotNull(app);
+    assertNotNull(app);
     int timeWaiting = 0;
     while (app.getAppAttempts().size() != attemptSize) {
       if (timeWaiting >= TIMEOUT_MS_FOR_ATTEMPT) {
@@ -601,7 +609,7 @@ public class MockRM extends ResourceManager {
       Thread.sleep(WAIT_MS_PER_LOOP);
       timeWaiting += WAIT_MS_PER_LOOP;
     }
-    Assert.assertNotNull("node shouldn't be null (timedout)", node);
+    assertNotNull(node, "node shouldn't be null (timedout)");
     while (!finalState.equals(node.getState())) {
       if (timeWaiting >= TIMEOUT_MS_FOR_CONTAINER_AND_NODE) {
         break;
@@ -614,22 +622,22 @@ public class MockRM extends ResourceManager {
     }
 
     LOG.info("Node " + nodeId + " State is : " + node.getState());
-    Assert.assertEquals("Node state is not correct (timedout)", finalState,
-        node.getState());
+    assertEquals(finalState, node.getState(),
+        "Node state is not correct (timedout)");
   }
 
   public void sendNodeGracefulDecommission(
       MockNM nm, int timeout) throws Exception {
     RMNodeImpl node = (RMNodeImpl)
         getRMContext().getRMNodes().get(nm.getNodeId());
-    Assert.assertNotNull("node shouldn't be null", node);
+    assertNotNull(node, "node shouldn't be null");
     node.handle(new RMNodeDecommissioningEvent(nm.getNodeId(), timeout));
   }
 
   public void sendNodeEvent(MockNM nm, RMNodeEventType event) throws Exception {
     RMNodeImpl node = (RMNodeImpl)
         getRMContext().getRMNodes().get(nm.getNodeId());
-    Assert.assertNotNull("node shouldn't be null", node);
+    assertNotNull(node, "node shouldn't be null");
     node.handle(new RMNodeEvent(nm.getNodeId(), event));
   }
 
@@ -742,17 +750,7 @@ public class MockRM extends ResourceManager {
         YarnConfiguration.OPPORTUNISTIC_CONTAINER_ALLOCATION_ENABLED,
         YarnConfiguration.DEFAULT_OPPORTUNISTIC_CONTAINER_ALLOCATION_ENABLED)) {
       return new OpportunisticContainerAllocatorAMService(getRMContext(),
-          scheduler) {
-        @Override
-        protected void serviceStart() {
-          // override to not start rpc handler
-        }
-
-        @Override
-        protected void serviceStop() {
-          // don't do anything
-        }
-      };
+          scheduler);
     }
     return new ApplicationMasterService(getRMContext(), scheduler) {
       @Override
@@ -789,6 +787,7 @@ public class MockRM extends ResourceManager {
 
   @Override
   protected AdminService createAdminService() {
+    RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
     return new AdminService(this) {
       @Override
       protected void startServer() {
@@ -798,6 +797,26 @@ public class MockRM extends ResourceManager {
       @Override
       protected void stopServer() {
         // don't do anything
+      }
+
+      @Override
+      public RefreshServiceAclsResponse refreshServiceAcls(RefreshServiceAclsRequest request)
+          throws YarnException, IOException {
+        Configuration config = this.getConfig();
+        boolean authorization =
+            config.getBoolean(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHORIZATION, false);
+        if (!authorization) {
+          throw RPCUtil.getRemoteException(new IOException("Service Authorization (" +
+              CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHORIZATION + ") not enabled."));
+        }
+        return recordFactory.newRecordInstance(RefreshServiceAclsResponse.class);
+      }
+
+      public String[] getGroupsForUser(String user) throws IOException {
+        if ("admin".equals(user)) {
+          return new String[]{"admin"};
+        }
+        return new String[]{};
       }
     };
   }
@@ -856,9 +875,10 @@ public class MockRM extends ResourceManager {
       }
       tick++;
     }
-    Assert.assertNotNull("Timed out waiting for SchedulerApplicationAttempt=" +
-      attemptId + " to be added.", ((AbstractYarnScheduler)
-        rm.getResourceScheduler()).getApplicationAttempt(attemptId));
+    assertNotNull(((AbstractYarnScheduler)
+        rm.getResourceScheduler()).getApplicationAttempt(attemptId),
+        "Timed out waiting for SchedulerApplicationAttempt=" +
+        attemptId + " to be added.");
   }
 
   public static MockAM launchAMWhenAsyncSchedulingEnabled(RMApp app, MockRM rm)
@@ -1006,9 +1026,34 @@ public class MockRM extends ResourceManager {
       Thread.sleep(WAIT_MS_PER_LOOP);
       timeWaiting += WAIT_MS_PER_LOOP;
     }
-    Assert.assertTrue("app is not removed from scheduler (timeout).",
-        !apps.containsKey(appId));
+    assertTrue(!apps.containsKey(appId),
+        "app is not removed from scheduler (timeout).");
     LOG.info("app is removed from scheduler, " + appId);
+  }
+
+  /**
+   * Wait until a container has reached a completion state.
+   * The timeout is 20 seconds.
+   * @param nm A mock nodemanager
+   * @param rm A mock resourcemanager
+   * @param amContainerId The id of an am container
+   * @param container A container
+   * @throws Exception
+   *         if interrupted while waiting for the completion transition
+   *         or an unexpected error while MockNM is hearbeating.
+   */
+  public static void waitForContainerCompletion(MockRM rm, MockNM nm,
+    ContainerId amContainerId, RMContainer container) throws Exception {
+    ContainerId containerId = container.getContainerId();
+    if (null != rm.scheduler.getRMContainer(containerId)) {
+      if (containerId.equals(amContainerId)) {
+        rm.waitForState(nm, containerId, RMContainerState.COMPLETED);
+      } else {
+        rm.waitForState(nm, containerId, RMContainerState.KILLED);
+      }
+    } else {
+      rm.drainEvents();
+    }
   }
 
   private void drainEventsImplicitly() {

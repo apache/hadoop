@@ -59,13 +59,16 @@ public class MountTableProcedure extends BalanceProcedure {
   /**
    * Update mount entry to specified dst uri.
    *
+   * @param name the name of the procedure.
+   * @param nextProcedure the name of the next procedure.
+   * @param delayDuration the delay duration when this procedure is delayed.
    * @param mount the mount entry to be updated.
    * @param dstPath the sub-cluster uri of the dst path.
+   * @param dstNs the destination sub-cluster name service id.
    * @param conf the configuration.
    */
-  public MountTableProcedure(String name, String nextProcedure,
-      long delayDuration, String mount, String dstPath, String dstNs,
-      Configuration conf) throws IOException {
+  public MountTableProcedure(String name, String nextProcedure, long delayDuration,
+      String mount, String dstPath, String dstNs, Configuration conf) {
     super(name, nextProcedure, delayDuration);
     this.mount = mount;
     this.dstPath = dstPath;

@@ -4,10 +4,10 @@ Build instructions for Hadoop
 Requirements:
 
 * Unix System
-* JDK 1.8
+* JDK 17
 * Maven 3.3 or later
-* Boost 1.72 (if compiling native code)
-* Protocol Buffers 3.7.1 (if compiling native code)
+* Boost 1.86.0 (if compiling native code)
+* Protocol Buffers 3.25.5 (if compiling native code)
 * CMake 3.19 or newer (if compiling native code)
 * Zlib devel (if compiling native code)
 * Cyrus SASL devel (if compiling native code)
@@ -29,7 +29,11 @@ This requires a recent version of docker (1.4.1 and higher are known to work).
 On Linux / Mac:
     Install Docker and run this command:
 
-    $ ./start-build-env.sh
+    $ ./start-build-env.sh [OS platform]
+
+   - [OS Platform] One of [rockylinux_8, debian_11, debian_12, debian_13, ubuntu_20, ubuntu_24, windows_10].
+        Default is 'ubuntu_20'.
+        Note: Currently only default ('ubuntu_20') is supported on arm machine
 
 The prompt which is then presented is located at a mounted version of the source tree
 and all required tools for testing and building have been installed and configured.
@@ -55,9 +59,9 @@ Installing required packages for clean install of Ubuntu 18.04 LTS Desktop.
 (For Ubuntu 20.04, gcc/g++ and cmake bundled with Ubuntu can be used.
 Refer to  dev-support/docker/Dockerfile):
 
-* Open JDK 1.8
+* Open JDK 17
   $ sudo apt-get update
-  $ sudo apt-get -y install openjdk-8-jdk
+  $ sudo apt-get -y install openjdk-17-jdk
 * Maven
   $ sudo apt-get -y install maven
 * Native libraries
@@ -74,16 +78,18 @@ Refer to  dev-support/docker/Dockerfile):
   $ ./bootstrap
   $ make -j$(nproc)
   $ sudo make install
-* Protocol Buffers 3.7.1 (required to build native code)
-  $ curl -L -s -S https://github.com/protocolbuffers/protobuf/releases/download/v3.7.1/protobuf-java-3.7.1.tar.gz -o protobuf-3.7.1.tar.gz
-  $ mkdir protobuf-3.7-src
-  $ tar xzf protobuf-3.7.1.tar.gz --strip-components 1 -C protobuf-3.7-src && cd protobuf-3.7-src
-  $ ./configure
-  $ make -j$(nproc)
-  $ sudo make install
+* Protocol Buffers 3.25.5 (required to build native code)
+  $ curl -L https://github.com/protocolbuffers/protobuf/archive/refs/tags/v3.25.5.tar.gz > protobuf-3.25.5.tar.gz
+  $ curl -L https://github.com/abseil/abseil-cpp/archive/refs/tags/20230802.1.tar.gz > abseil-cpp-20230802.1.tar.gz
+  $ tar -zxvf protobuf-3.25.5.tar.gz
+  $ tar -zxvf abseil-cpp-20230802.1.tar.gz --strip-components 1 -C protobuf-3.25.5/third_party/abseil-cpp
+  $ cd protobuf-3.25.5
+  $ cmake -S . -B build -DCMAKE_POSITION_INDEPENDENT_CODE=ON -Dprotobuf_BUILD_TESTS=OFF
+  $ cmake --build build --parallel $(nproc)
+  $ sudo cmake --install build
 * Boost
-  $ curl -L https://sourceforge.net/projects/boost/files/boost/1.72.0/boost_1_72_0.tar.bz2/download > boost_1_72_0.tar.bz2
-  $ tar --bzip2 -xf boost_1_72_0.tar.bz2 && cd boost_1_72_0
+  $ curl -L https://sourceforge.net/projects/boost/files/boost/1.86.0/boost_1_86_0.tar.bz2/download > boost_1_86_0.tar.bz2
+  $ tar --bzip2 -xf boost_1_86_0.tar.bz2 && cd boost_1_86_0
   $ ./bootstrap.sh --prefix=/usr/
   $ ./b2 --without-python
   $ sudo ./b2 --without-python install
@@ -163,14 +169,7 @@ Maven build goals:
  YARN Application Timeline Service V2 build options:
 
    YARN Timeline Service v.2 chooses Apache HBase as the primary backing storage. The supported
-   versions of Apache HBase are 1.2.6 (default) and 2.0.0-beta1.
-
-  * HBase 1.2.6 is used by default to build Hadoop. The official releases are ready to use if you
-    plan on running Timeline Service v2 with HBase 1.2.6.
-
-  * Use -Dhbase.profile=2.0 to build Hadoop with HBase 2.0.0-beta1. Provide this option if you plan
-    on running Timeline Service v2 with HBase 2.0.
-
+   version of Apache HBase is 2.6.1.
 
  Snappy build options:
 
@@ -282,8 +281,7 @@ Maven build goals:
    OWASP's dependency-check plugin will scan the third party dependencies
    of this project for known CVEs (security vulnerabilities against them).
    It will produce a report in target/dependency-check-report.html. To
-   invoke, run 'mvn dependency-check:aggregate'. Note that this plugin
-   requires maven 3.1.1 or greater.
+   invoke, run 'mvn dependency-check:aggregate'.
 
  PMDK library build options:
 
@@ -310,6 +308,40 @@ Maven build goals:
   * -Dbundle.pmdk is used to copy the specified libpmem libraries into the distribution tar
     package. This option requires that -Dpmdk.lib is specified. With -Dbundle.pmdk provided,
     the build will fail if -Dpmdk.lib is not specified.
+
+Controlling the redistribution of the protobuf-2.5 dependency
+
+    The protobuf 2.5.0 library is used at compile time to compile the class
+    org.apache.hadoop.ipc.ProtobufHelper; this class known to have been used by
+    external projects in the past. Protobuf 2.5 is not used directly in
+    the Hadoop codebase; alongside the move to Protobuf 3.x a private successor
+    class, org.apache.hadoop.ipc.internal.ShadedProtobufHelper is now used.
+
+    The hadoop-common module no longer exports its compile-time dependency on
+    protobuf-java-2.5.
+    Any application declaring a dependency on hadoop-commmon will no longer get
+    the artifact added to their classpath.
+    If is still required, then they must explicitly declare it:
+
+      <dependency>
+        <groupId>com.google.protobuf</groupId>
+        <artifactId>protobuf-java</artifactId>
+        <version>2.5.0</version>
+      </dependency>
+
+    In Hadoop builds the scope of the dependency can be set with the
+    option "common.protobuf2.scope".
+    This can be upgraded from "provided" to "compile" on the maven command line:
+
+           -Dcommon.protobuf2.scope=compile
+
+    If this is done then protobuf-java-2.5.0.jar will again be exported as a
+    hadoop-common dependency, and included in the share/hadoop/common/lib/
+    directory of any Hadoop distribution built.
+
+    Note that protobuf-java-2.5.0.jar is still placed in
+    share/hadoop/yarn/timelineservice/lib; this is needed by the hbase client
+    library.
 
 ----------------------------------------------------------------------------------
 Building components separately
@@ -359,6 +391,57 @@ Create a local staging version of the website (in /tmp/hadoop-site)
 Note that the site needs to be built in a second pass after other artifacts.
 
 ----------------------------------------------------------------------------------
+Including Cloud Connector Dependencies in Distributions:
+
+Hadoop distributions include the hadoop modules needed to work with data and services
+on cloud infrastructure
+
+However, dependencies are omitted for all cloud connectors except hadoop-azure
+(abfs:// and wasb://) and possibly hadoop-gcp (gs://) and hadoop-tos (tos://).
+For the latter two modules, it depends on shading options.
+
+For hadoop-aws the AWS SDK bundle.jar is omitted, but everything else is included.
+
+Excluding the extra binaries:
+* Keeps release artifact size below the limit of the ASF distribution network.
+* Reduces download and size overhead in docker usage.
+* Reduces the CVE attack surface and audit-related complaints about those same CVEs.
+* Reduces the risk of classpath conflict.
+
+To produce a build with the specific desired dependencies, the build must be executed
+with the relevant profile of ${module}-package alongside the -Pdist profile.
+
+For example, a build with the hadoop-aws and hadoop-azure-datalake dependencies,
+run with
+
+ mvn package -Pdist -DskipTests -Dhadoop-aws-package -Dhadoop-azure-datalake-package
+
+Available package profiles:
+  hadoop-aliyun-package
+  hadoop-aws-package
+  hadoop-azure-datalake-package
+  hadoop-cos-package
+  hadoop-gcp-package
+  hadoop-huaweicloud-package
+  hadoop-tos-package
+
+To build a complete distribution then with all cloud dependencies included:
+
+mvn package -Pdist -DskipTests -Dtar -Dmaven.javadoc.skip=true \
+ -Dhadoop-aliyun-package \
+ -Dhadoop-aws-package \
+ -Dhadoop-azure-datalake-package \
+ -Dhadoop-cos-package \
+ -Dhadoop-gcp-package \
+ -Dhadoop-huaweicloud-package \
+ -Dhadoop-tos-package
+
+The resulting tar file will be too large to be distributable through ASF infrastructure.
+
+The hadoop-gcp and hadoop-tos artifacts include their dependencies as shaded
+artifacts unless the distribution is built with -DskipShade.
+
+----------------------------------------------------------------------------------
 Installing Hadoop
 
 Look for these HTML files after you build the document by the above commands.
@@ -394,23 +477,23 @@ Installing required dependencies for clean install of macOS 10.14:
 * Install Xcode Command Line Tools
   $ xcode-select --install
 * Install Homebrew
-  $ /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
-* Install OpenJDK 8
-  $ brew tap AdoptOpenJDK/openjdk
-  $ brew cask install adoptopenjdk8
+  $ /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+* Install OpenJDK 17
+  $ brew install openjdk@17
 * Install maven and tools
   $ brew install maven autoconf automake cmake wget
 * Install native libraries, only openssl is required to compile native code,
 you may optionally install zlib, lz4, etc.
   $ brew install openssl
-* Protocol Buffers 3.7.1 (required to compile native code)
-  $ wget https://github.com/protocolbuffers/protobuf/releases/download/v3.7.1/protobuf-java-3.7.1.tar.gz
-  $ mkdir -p protobuf-3.7 && tar zxvf protobuf-java-3.7.1.tar.gz --strip-components 1 -C protobuf-3.7
-  $ cd protobuf-3.7
-  $ ./configure
-  $ make
-  $ make check
-  $ make install
+* Protocol Buffers 3.25.5 (required to build native code)
+  $ curl -L https://github.com/protocolbuffers/protobuf/archive/refs/tags/v3.25.5.tar.gz > protobuf-3.25.5.tar.gz
+  $ curl -L https://github.com/abseil/abseil-cpp/archive/refs/tags/20230802.1.tar.gz > abseil-cpp-20230802.1.tar.gz
+  $ tar -zxvf protobuf-3.25.5.tar.gz
+  $ tar -zxvf abseil-cpp-20230802.1.tar.gz --strip-components 1 -C protobuf-3.25.5/third_party/abseil-cpp
+  $ cd protobuf-3.25.5
+  $ cmake -S . -B build -DCMAKE_POSITION_INDEPENDENT_CODE=ON -Dprotobuf_BUILD_TESTS=OFF
+  $ cmake --build build --parallel $(nproc)
+  $ cmake --install build
   $ protoc --version
 
 Note that building Hadoop 3.1.1/3.1.2/3.2.0 native code from source is broken
@@ -430,29 +513,30 @@ path. This is necessary at least for Homebrewed OpenSSL.
 
 ----------------------------------------------------------------------------------
 
-Building on CentOS 8
+Building on Rocky Linux 8
 
 ----------------------------------------------------------------------------------
 
 
 * Install development tools such as GCC, autotools, OpenJDK and Maven.
   $ sudo dnf group install --with-optional 'Development Tools'
-  $ sudo dnf install java-1.8.0-openjdk-devel maven
+  $ sudo dnf install java-17-openjdk-devel maven
 
 * Install python2 for building documentation.
   $ sudo dnf install python2
 
-* Install Protocol Buffers v3.7.1.
-  $ git clone https://github.com/protocolbuffers/protobuf
-  $ cd protobuf
-  $ git checkout v3.7.1
-  $ autoreconf -i
-  $ ./configure --prefix=/usr/local
-  $ make
-  $ sudo make install
+* Protocol Buffers 3.25.5 (required to build native code)
+  $ curl -L https://github.com/protocolbuffers/protobuf/archive/refs/tags/v3.25.5.tar.gz > protobuf-3.25.5.tar.gz
+  $ curl -L https://github.com/abseil/abseil-cpp/archive/refs/tags/20230802.1.tar.gz > abseil-cpp-20230802.1.tar.gz
+  $ tar -zxvf protobuf-3.25.5.tar.gz
+  $ tar -zxvf abseil-cpp-20230802.1.tar.gz --strip-components 1 -C protobuf-3.25.5/third_party/abseil-cpp
+  $ cd protobuf-3.25.5
+  $ cmake -S . -B build -DCMAKE_POSITION_INDEPENDENT_CODE=ON -Dprotobuf_BUILD_TESTS=OFF
+  $ cmake --build build --parallel $(nproc)
+  $ sudo cmake --install build --prefix /usr/local
   $ cd ..
 
-* Install libraries provided by CentOS 8.
+* Install libraries provided by Rocky Linux 8.
   $ sudo dnf install libtirpc-devel zlib-devel lz4-devel bzip2-devel openssl-devel cyrus-sasl-devel libpmem-devel
 
 * Install GCC 9.3.0
@@ -467,9 +551,9 @@ Building on CentOS 8
   $ sudo make install
 
 * Install boost.
-  $ curl -L -o boost_1_72_0.tar.bz2 https://sourceforge.net/projects/boost/files/boost/1.72.0/boost_1_72_0.tar.bz2/download
-  $ tar xjf boost_1_72_0.tar.bz2
-  $ cd boost_1_72_0
+  $ curl -L -o boost_1_86_0.tar.bz2 https://sourceforge.net/projects/boost/files/boost/1.86.0/boost_1_86_0.tar.bz2/download
+  $ tar xjf boost_1_86_0.tar.bz2
+  $ cd boost_1_86_0
   $ ./bootstrap.sh --prefix=/usr/local
   $ ./b2
   $ sudo ./b2 install
@@ -492,39 +576,66 @@ Building on CentOS 8
 
 ----------------------------------------------------------------------------------
 
-Building on Windows
+Building on Windows 10
 
 ----------------------------------------------------------------------------------
 Requirements:
 
-* Windows System
-* JDK 1.8
-* Maven 3.0 or later
-* Boost 1.72
-* Protocol Buffers 3.7.1
-* CMake 3.19 or newer
-* Visual Studio 2010 Professional or Higher
-* Windows SDK 8.1 (if building CPU rate control for the container executor)
-* zlib headers (if building native code bindings for zlib)
+* Windows 10
+* JDK 17
+* Maven 3.3 or later (maven.apache.org)
+* Boost 1.86.0 (boost.org)
+* Protocol Buffers 3.25.5 (https://github.com/protocolbuffers/protobuf/tags)
+* CMake 3.19 or newer (cmake.org)
+* Visual Studio 2019 (visualstudio.com)
+* Windows SDK 8.1 (optional, if building CPU rate control for the container executor. Get this from
+                   http://msdn.microsoft.com/en-us/windows/bg162891.aspx)
+* Zlib (zlib.net, if building native code bindings for zlib)
+* Git (preferably, get this from https://git-scm.com/download/win since the package also contains
+       Unix command-line tools that are needed during packaging).
+* Python (python.org, for generation of docs using 'mvn site')
 * Internet connection for first build (to fetch all Maven and Hadoop dependencies)
-* Unix command-line tools from GnuWin32: sh, mkdir, rm, cp, tar, gzip. These
-  tools must be present on your PATH.
-* Python ( for generation of docs using 'mvn site')
-
-Unix command-line tools are also included with the Windows Git package which
-can be downloaded from http://git-scm.com/downloads
-
-If using Visual Studio, it must be Professional level or higher.
-Do not use Visual Studio Express.  It does not support compiling for 64-bit,
-which is problematic if running a 64-bit system.
-
-The Windows SDK 8.1 is available to download at:
-
-http://msdn.microsoft.com/en-us/windows/bg162891.aspx
-
-Cygwin is not required.
 
 ----------------------------------------------------------------------------------
+
+Building guidelines:
+
+Hadoop repository provides the Dockerfile for building Hadoop on Windows 10, located at
+dev-support/docker/Dockerfile_windows_10. It is highly recommended to use this and create the
+Docker image for building Hadoop on Windows 10, since you don't have to install anything else
+other than Docker and no additional steps are required in terms of aligning the environment with
+the necessary paths etc.
+
+However, if you still prefer taking the route of not using Docker, this Dockerfile_windows_10 will
+still be immensely useful as a raw guide for all the steps involved in creating the environment
+needed to build Hadoop on Windows 10.
+
+Building using the Docker:
+We first need to build the Docker image for building Hadoop on Windows 10. Run this command from
+the root of the Hadoop repository.
+> docker build -t hadoop-windows-10-builder -f .\dev-support\docker\Dockerfile_windows_10 .\dev-support\docker\
+
+Start the container with the image that we just built.
+> docker run --rm -it hadoop-windows-10-builder
+
+You can now clone the Hadoop repo inside this container and proceed with the build.
+
+NOTE:
+While one may perceive the idea of mounting the locally cloned (on the host filesystem) Hadoop
+repository into the container (using the -v option), we have seen the build to fail owing to some
+files not being able to be located by Maven. Thus, we suggest cloning the Hadoop repository to a
+non-mounted folder inside the container and proceed with the build. When the build is completed,
+you may use the "docker cp" command to copy the built Hadoop tar.gz file from the docker container
+to the host filesystem. If you still would like to mount the Hadoop codebase, a workaround would
+be to copy the mounted Hadoop codebase into another folder (which doesn't point to a mount) in the
+container's filesystem and use this for building.
+
+However, we noticed no build issues when the Maven repository from the host filesystem was mounted
+into the container. One may use this to greatly reduce the build time. Assuming that the Maven
+repository is located at D:\Maven\Repository in the host filesystem, one can use the following
+command to mount the same onto the default Maven repository location while launching the container.
+> docker run --rm -v D:\Maven\Repository:C:\Users\ContainerAdministrator\.m2\repository -it hadoop-windows-10-builder
+
 Building:
 
 Keep the source code tree in a short path to avoid running into problems related
@@ -539,6 +650,22 @@ configure the bit-ness of the build, and set several optional components.
 
 Several tests require that the user must have the Create Symbolic Links
 privilege.
+
+We use vcpkg (https://github.com/microsoft/vcpkg.git) for installing Boost, Protocol buffers,
+OpenSSL and Zlib dependencies. Run the following commands to setup these dependencies.
+> git clone https://github.com/microsoft/vcpkg.git
+> cd vcpkg
+> git fetch --all
+> git checkout 2025.03.19
+> .\bootstrap-vcpkg.bat
+(Assuming that vcpkg was checked out at C:\vcpkg and Hadoop at C:\hadoop)
+> copy C:\hadoop\dev-support\docker\vcpkg\vcpkg.json C:\vcpkg
+> .\vcpkg.exe install --x-install-root .\installed
+
+Set the following environment variables -
+(Assuming that vcpkg was checked out at C:\vcpkg)
+> set PROTOBUF_HOME=C:\vcpkg\installed\x64-windows
+> set MAVEN_OPTS=-Xmx2048M -Xss128M
 
 All Maven goals are the same as described above with the exception that
 native code is built by enabling the 'native-win' Maven profile. -Pnative-win
@@ -556,6 +683,39 @@ with zlib 1.2.7, built using Visual Studio 2010 out of contrib\vstudio\vc10 in
 the zlib 1.2.7 source tree.
 
 http://www.zlib.net/
+
+
+Build command:
+The following command builds all the modules in the Hadoop project and generates the tar.gz file in
+hadoop-dist/target upon successful build. Run these commands from an
+"x64 Native Tools Command Prompt for VS 2019" which can be found under "Visual Studio 2019" in the
+Windows start menu. If you're using the Docker image from Dockerfile_windows_10, you'll be
+logged into "x64 Native Tools Command Prompt for VS 2019" automatically when you start the
+container. The Docker image does not have a full VS install, so you need to add the
+-Dskip.platformToolsetDetection option (already included below in the examples).
+
+> set classpath=
+> set PROTOBUF_HOME=C:\vcpkg\installed\x64-windows
+> mvn clean package -Dhttps.protocols=TLSv1.2 -DskipTests -DskipDocs -Pnative-win,dist -Dskip.platformToolsetDetection^
+    -Drequire.openssl -Drequire.test.libhadoop -Pyarn-ui -Dshell-executable=C:\Git\bin\bash.exe^
+    -Dtar -Dopenssl.prefix=C:\vcpkg\installed\x64-windows^
+    -Dcmake.prefix.path=C:\vcpkg\installed\x64-windows^
+    -Dwindows.cmake.toolchain.file=C:\vcpkg\scripts\buildsystems\vcpkg.cmake -Dwindows.cmake.build.type=RelWithDebInfo^
+    -Dwindows.build.hdfspp.dll=off -Dwindows.no.sasl=on -Duse.platformToolsetVersion=v142
+
+Building the release tarball:
+Assuming that we're still running in the Docker container hadoop-windows-10-builder, run the
+following command to create the Apache Hadoop release tarball -
+
+> set IS_WINDOWS=1
+> set MVN_ARGS="-Dshell-executable=C:\Git\bin\bash.exe -Dhttps.protocols=TLSv1.2 -Pnative-win -Dskip.platformToolsetDetection -Drequire.openssl -Dopenssl.prefix=C:\vcpkg\installed\x64-windows -Dcmake.prefix.path=C:\vcpkg\installed\x64-windows -Dwindows.cmake.toolchain.file=C:\vcpkg\scripts\buildsystems\vcpkg.cmake -Dwindows.cmake.build.type=RelWithDebInfo -Dwindows.build.hdfspp.dll=off -Duse.platformToolsetVersion=v142 -Dwindows.no.sasl=on -DskipTests -DskipDocs -Drequire.test.libhadoop"
+> C:\Git\bin\bash.exe C:\hadoop\dev-support\bin\create-release --mvnargs=%MVN_ARGS%
+
+Note:
+If the building fails due to an issue with long paths, rename the Hadoop root directory to just a
+letter (like 'h') and rebuild -
+
+> C:\Git\bin\bash.exe C:\h\dev-support\bin\create-release --mvnargs=%MVN_ARGS%
 
 ----------------------------------------------------------------------------------
 Building distributions:

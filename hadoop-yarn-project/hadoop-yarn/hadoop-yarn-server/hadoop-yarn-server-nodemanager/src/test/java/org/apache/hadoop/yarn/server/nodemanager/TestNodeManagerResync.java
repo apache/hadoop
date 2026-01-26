@@ -18,7 +18,9 @@
 
 package org.apache.hadoop.yarn.server.nodemanager;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import org.slf4j.Logger;
@@ -46,6 +48,7 @@ import org.apache.hadoop.net.ServerSocketUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.util.Shell;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.api.protocolrecords.ContainerUpdateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.ContainerUpdateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesRequest;
@@ -90,10 +93,10 @@ import org.apache.hadoop.yarn.server.nodemanager.health.NodeHealthCheckerService
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.utils.YarnServerBuilderUtils;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 public class TestNodeManagerResync {
   static final File basedir =
@@ -121,7 +124,7 @@ public class TestNodeManagerResync {
   protected static final Logger LOG =
        LoggerFactory.getLogger(TestNodeManagerResync.class);
 
-  @Before
+  @BeforeEach
   public void setup() throws UnsupportedFileSystemException {
     localFS = FileContext.getLocalFSFileContext();
     tmpDir.mkdirs();
@@ -133,7 +136,7 @@ public class TestNodeManagerResync {
     resyncThreadCount = new AtomicInteger(0);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException, InterruptedException {
     localFS.delete(new Path(basedir.getPath()), true);
     assertionFailedInThread.set(false);
@@ -172,19 +175,19 @@ public class TestNodeManagerResync {
           processStartFile, port);
 
       nm.setExistingContainerId(cId);
-      Assert.assertEquals(1, ((TestNodeManager1) nm).getNMRegistrationCount());
+      assertEquals(1, ((TestNodeManager1) nm).getNMRegistrationCount());
       nm.getNMDispatcher().getEventHandler().handle(resyncEvent);
       try {
         syncBarrier.await();
       } catch (BrokenBarrierException e) {
       }
-      Assert.assertEquals(2, ((TestNodeManager1) nm).getNMRegistrationCount());
+      assertEquals(2, ((TestNodeManager1) nm).getNMRegistrationCount());
       // Only containers should be killed on resync, apps should lie around.
       // That way local resources for apps can be used beyond resync without
       // relocalization
-      Assert.assertTrue(nm.getNMContext().getApplications()
+      assertTrue(nm.getNMContext().getApplications()
           .containsKey(cId.getApplicationAttemptId().getApplicationId()));
-      Assert.assertFalse(assertionFailedInThread.get());
+      assertFalse(assertionFailedInThread.get());
     }
     finally {
       nm.stop();
@@ -192,7 +195,8 @@ public class TestNodeManagerResync {
   }
 
   @SuppressWarnings("resource")
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testNMMultipleResyncEvent()
       throws IOException, InterruptedException {
     TestNodeManager1 nm = new TestNodeManager1(false);
@@ -202,7 +206,7 @@ public class TestNodeManagerResync {
     try {
       nm.init(conf);
       nm.start();
-      Assert.assertEquals(1, nm.getNMRegistrationCount());
+      assertEquals(1, nm.getNMRegistrationCount());
       for (int i = 0; i < resyncEventCount; i++) {
         nm.getNMDispatcher().getEventHandler().handle(resyncEvent);
       }
@@ -219,15 +223,16 @@ public class TestNodeManagerResync {
       LOG.info("Barrier wait done for the resync thread");
 
       // Resync should only happen once
-      Assert.assertEquals(2, nm.getNMRegistrationCount());
-      Assert.assertFalse("NM shutdown called.", isNMShutdownCalled.get());
+      assertEquals(2, nm.getNMRegistrationCount());
+      assertFalse(isNMShutdownCalled.get(), "NM shutdown called.");
     } finally {
       nm.stop();
     }
   }
 
   @SuppressWarnings("resource")
-  @Test(timeout=10000)
+  @Test
+  @Timeout(value = 10)
   public void testNMshutdownWhenResyncThrowException() throws IOException,
       InterruptedException, YarnException {
     NodeManager nm = new TestNodeManager3();
@@ -235,7 +240,7 @@ public class TestNodeManagerResync {
     try {
       nm.init(conf);
       nm.start();
-      Assert.assertEquals(1, ((TestNodeManager3) nm).getNMRegistrationCount());
+      assertEquals(1, ((TestNodeManager3) nm).getNMRegistrationCount());
       nm.getNMDispatcher().getEventHandler()
           .handle(new NodeManagerEvent(NodeManagerEventType.RESYNC));
 
@@ -248,14 +253,15 @@ public class TestNodeManagerResync {
         }
       }
 
-      Assert.assertTrue("NM shutdown not called.", isNMShutdownCalled.get());
+      assertTrue(isNMShutdownCalled.get(), "NM shutdown not called.");
     } finally {
       nm.stop();
     }
   }
 
   @SuppressWarnings("resource")
-  @Test(timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testContainerResourceIncreaseIsSynchronizedWithRMResync()
       throws IOException, InterruptedException, YarnException {
     NodeManager nm = new TestNodeManager4();
@@ -278,7 +284,7 @@ public class TestNodeManagerResync {
       } catch (BrokenBarrierException e) {
         e.printStackTrace();
       }
-      Assert.assertFalse(assertionFailedInThread.get());
+      assertFalse(assertionFailedInThread.get());
     } finally {
       nm.stop();
     }
@@ -315,7 +321,7 @@ public class TestNodeManagerResync {
                 if (registerCount == 0) {
                   // first register, no containers info.
                   try {
-                    Assert.assertEquals(0, request.getNMContainerStatuses()
+                    assertEquals(0, request.getNMContainerStatuses()
                       .size());
                   } catch (AssertionError error) {
                     error.printStackTrace();
@@ -333,8 +339,8 @@ public class TestNodeManagerResync {
                   List<NMContainerStatus> statuses =
                       request.getNMContainerStatuses();
                   try {
-                    Assert.assertEquals(1, statuses.size());
-                    Assert.assertEquals(testCompleteContainer.getContainerId(),
+                    assertEquals(1, statuses.size());
+                    assertEquals(testCompleteContainer.getContainerId(),
                       statuses.get(0).getContainerId());
                   } catch (AssertionError error) {
                     error.printStackTrace();
@@ -352,8 +358,8 @@ public class TestNodeManagerResync {
                 List<ContainerStatus> statuses =
                     request.getNodeStatus().getContainersStatuses();
                 try {
-                  Assert.assertEquals(1, statuses.size());
-                  Assert.assertEquals(testCompleteContainer.getContainerId(),
+                  assertEquals(1, statuses.size());
+                  assertEquals(testCompleteContainer.getContainerId(),
                     statuses.get(0).getContainerId());
                 } catch (AssertionError error) {
                   error.printStackTrace();
@@ -378,7 +384,7 @@ public class TestNodeManagerResync {
         syncBarrier.await();
       } catch (BrokenBarrierException e) {
       }
-      Assert.assertFalse(assertionFailedInThread.get());
+      assertFalse(assertionFailedInThread.get());
     } finally {
       nm.stop();
     }
@@ -488,8 +494,8 @@ public class TestNodeManagerResync {
         try {
           try {
             if (containersShouldBePreserved) {
-              Assert.assertFalse(containers.isEmpty());
-              Assert.assertTrue(containers.containsKey(existingCid));
+              assertFalse(containers.isEmpty());
+              assertTrue(containers.containsKey(existingCid));
               ContainerState state = containers.get(existingCid)
                   .cloneAndGetContainerStatus().getState();
               // Wait till RUNNING state...
@@ -498,14 +504,14 @@ public class TestNodeManagerResync {
                 Thread.sleep(100);
                 counter--;
               }
-              Assert.assertEquals(ContainerState.RUNNING,
+              assertEquals(ContainerState.RUNNING,
                   containers.get(existingCid)
                   .cloneAndGetContainerStatus().getState());
             } else {
               // ensure that containers are empty or are completed before
               // restart nodeStatusUpdater
               if (!containers.isEmpty()) {
-                Assert.assertEquals(ContainerState.COMPLETE,
+                assertEquals(ContainerState.COMPLETE,
                     containers.get(existingCid)
                         .cloneAndGetContainerStatus().getState());
               }
@@ -739,9 +745,9 @@ public class TestNodeManagerResync {
       }
     }
 
-    class ContainerUpdateResourceThread extends Thread {
+    class ContainerUpdateResourceThread extends SubjectInheritingThread {
       @Override
-      public void run() {
+      public void work() {
         // Construct container resource increase request
         List<Token> increaseTokens = new ArrayList<Token>();
         // Add increase request.
@@ -755,10 +761,9 @@ public class TestNodeManagerResync {
             ContainerUpdateResponse updateResponse =
                 getContainerManager()
                     .updateContainer(updateRequest);
-            Assert.assertEquals(
-                1, updateResponse.getSuccessfullyUpdatedContainers()
-                    .size());
-            Assert.assertTrue(updateResponse.getFailedRequests().isEmpty());
+            assertEquals(1,
+                updateResponse.getSuccessfullyUpdatedContainers().size());
+            assertTrue(updateResponse.getFailedRequests().isEmpty());
           } catch (Exception e) {
             e.printStackTrace();
           } finally {

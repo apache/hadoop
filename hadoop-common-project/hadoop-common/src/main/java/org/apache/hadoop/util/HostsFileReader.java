@@ -147,8 +147,8 @@ public class HostsFileReader {
       String filename, InputStream fileInputStream, Map<String, Integer> map)
           throws IOException {
     Document dom;
-    DocumentBuilderFactory builder = DocumentBuilderFactory.newInstance();
     try {
+      DocumentBuilderFactory builder = XMLUtils.newSecureDocumentBuilderFactory();
       DocumentBuilder db = builder.newDocumentBuilder();
       dom = db.parse(fileInputStream);
       // Examples:

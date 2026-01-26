@@ -18,18 +18,21 @@
 
 package org.apache.hadoop.yarn;
 
-import static org.junit.Assert.assertSame;
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.verify;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.util.ExitUtil;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
-import org.junit.Test;
+
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verify;
 
 public class TestYarnUncaughtExceptionHandler {
 
   private static final YarnUncaughtExceptionHandler exHandler =
         new YarnUncaughtExceptionHandler();
+
   /**
    * Throw {@code YarnRuntimeException} inside thread and
    * check {@code YarnUncaughtExceptionHandler} instance
@@ -37,12 +40,12 @@ public class TestYarnUncaughtExceptionHandler {
    * @throws InterruptedException
    */
   @Test
-  public void testUncaughtExceptionHandlerWithRuntimeException()
+  void testUncaughtExceptionHandlerWithRuntimeException()
       throws InterruptedException {
     final YarnUncaughtExceptionHandler spyYarnHandler = spy(exHandler);
     final YarnRuntimeException yarnException = new YarnRuntimeException(
         "test-yarn-runtime-exception");
-    final Thread yarnThread = new Thread(new Runnable() {
+    final Thread yarnThread = new SubjectInheritingThread(new Runnable() {
       @Override
       public void run() {
         throw yarnException;
@@ -67,12 +70,12 @@ public class TestYarnUncaughtExceptionHandler {
    * @throws InterruptedException
    */
   @Test
-  public void testUncaughtExceptionHandlerWithError()
+  void testUncaughtExceptionHandlerWithError()
       throws InterruptedException {
     ExitUtil.disableSystemExit();
     final YarnUncaughtExceptionHandler spyErrorHandler = spy(exHandler);
     final java.lang.Error error = new java.lang.Error("test-error");
-    final Thread errorThread = new Thread(new Runnable() {
+    final Thread errorThread = new SubjectInheritingThread(new Runnable() {
       @Override
       public void run() {
         throw error;
@@ -96,12 +99,12 @@ public class TestYarnUncaughtExceptionHandler {
    * @throws InterruptedException
    */
   @Test
-  public void testUncaughtExceptionHandlerWithOutOfMemoryError()
+  void testUncaughtExceptionHandlerWithOutOfMemoryError()
       throws InterruptedException {
     ExitUtil.disableSystemHalt();
     final YarnUncaughtExceptionHandler spyOomHandler = spy(exHandler);
     final OutOfMemoryError oomError = new OutOfMemoryError("out-of-memory-error");
-    final Thread oomThread = new Thread(new Runnable() {
+    final Thread oomThread = new SubjectInheritingThread(new Runnable() {
       @Override
       public void run() {
         throw oomError;

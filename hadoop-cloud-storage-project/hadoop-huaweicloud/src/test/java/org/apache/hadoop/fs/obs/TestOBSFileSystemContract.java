@@ -18,10 +18,11 @@
 
 package org.apache.hadoop.fs.obs;
 
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystemContractBaseTest;
-import org.junit.Assume;
-import org.junit.Before;
+import org.junit.jupiter.api.BeforeEach;
 
 
 /**
@@ -35,7 +36,7 @@ import org.junit.Before;
  **/
 public class TestOBSFileSystemContract extends FileSystemContractBaseTest {
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     skipTestCheck();
     Configuration conf = new Configuration();
@@ -45,15 +46,15 @@ public class TestOBSFileSystemContract extends FileSystemContractBaseTest {
 
   @Override
   public void testMkdirsWithUmask() {
-    Assume.assumeTrue("unspport.", false);
+    assumeTrue(false, "unspport.");
   }
 
   @Override
   public void testRenameRootDirForbidden() {
-    Assume.assumeTrue("unspport.", false);
+    assumeTrue(false, "unspport.");
   }
 
   public void skipTestCheck() {
-    Assume.assumeTrue(OBSContract.isContractTestEnabled());
+    assumeTrue(OBSContract.isContractTestEnabled());
   }
 }

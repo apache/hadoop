@@ -44,6 +44,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.SchedulingRequest;
 import org.apache.hadoop.yarn.event.EventHandler;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.QueueEntitlement;
@@ -61,12 +62,13 @@ import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.SettableFu
 public interface YarnScheduler extends EventHandler<SchedulerEvent> {
 
   /**
-   * Get queue information
+   * Get queue information.
+   *
    * @param queueName queue name
    * @param includeChildQueues include child queues?
    * @param recursive get children queues?
    * @return queue information
-   * @throws IOException
+   * @throws IOException an I/O exception has occurred.
    */
   @Public
   @Stable
@@ -153,7 +155,8 @@ public interface YarnScheduler extends EventHandler<SchedulerEvent> {
 
   /**
    * Get node resource usage report.
-   * @param nodeId
+   *
+   * @param nodeId nodeId.
    * @return the {@link SchedulerNodeReport} for the node or null
    * if nodeId does not point to a defined node.
    */
@@ -191,10 +194,11 @@ public interface YarnScheduler extends EventHandler<SchedulerEvent> {
   /**
    * Check if the user has permission to perform the operation.
    * If the user has {@link QueueACL#ADMINISTER_QUEUE} permission,
-   * this user can view/modify the applications in this queue
-   * @param callerUGI
-   * @param acl
-   * @param queueName
+   * this user can view/modify the applications in this queue.
+   *
+   * @param callerUGI caller UserGroupInformation.
+   * @param acl queue ACL.
+   * @param queueName queue Name.
    * @return <code>true</code> if the user has the permission,
    *         <code>false</code> otherwise
    */
@@ -212,7 +216,8 @@ public interface YarnScheduler extends EventHandler<SchedulerEvent> {
 
   /**
    * Get the container for the given containerId.
-   * @param containerId
+   *
+   * @param containerId the given containerId.
    * @return the container for the given containerId.
    */
   @LimitedPrivate("yarn")
@@ -220,9 +225,9 @@ public interface YarnScheduler extends EventHandler<SchedulerEvent> {
   public RMContainer getRMContainer(ContainerId containerId);
 
   /**
-   * Moves the given application to the given queue
-   * @param appId
-   * @param newQueue
+   * Moves the given application to the given queue.
+   * @param appId application Id
+   * @param newQueue the given queue.
    * @return the name of the queue the application was placed into
    * @throws YarnException if the move cannot be carried out
    */
@@ -246,9 +251,9 @@ public interface YarnScheduler extends EventHandler<SchedulerEvent> {
    * Completely drain sourceQueue of applications, by moving all of them to
    * destQueue.
    *
-   * @param sourceQueue
-   * @param destQueue
-   * @throws YarnException
+   * @param sourceQueue sourceQueue.
+   * @param destQueue destQueue.
+   * @throws YarnException when yarn exception occur.
    */
   void moveAllApps(String sourceQueue, String destQueue) throws YarnException;
 
@@ -256,7 +261,7 @@ public interface YarnScheduler extends EventHandler<SchedulerEvent> {
    * Terminate all applications in the specified queue.
    *
    * @param queueName the name of queue to be drained
-   * @throws YarnException
+   * @throws YarnException when yarn exception occur.
    */
   void killAllAppsInQueue(String queueName) throws YarnException;
 
@@ -266,7 +271,7 @@ public interface YarnScheduler extends EventHandler<SchedulerEvent> {
    * must be a leaf, etc..).
    *
    * @param queueName name of the queue to remove
-   * @throws YarnException
+   * @throws YarnException when yarn exception occur.
    */
   void removeQueue(String queueName) throws YarnException;
 
@@ -276,7 +281,8 @@ public interface YarnScheduler extends EventHandler<SchedulerEvent> {
    * attached to existing parent, must have zero entitlement).
    *
    * @param newQueue the queue being added.
-   * @throws YarnException
+   * @throws YarnException when yarn exception occur.
+   * @throws IOException when io exception occur.
    */
   void addQueue(Queue newQueue) throws YarnException, IOException;
 
@@ -289,14 +295,15 @@ public interface YarnScheduler extends EventHandler<SchedulerEvent> {
    * @param queue the queue for which we change entitlement
    * @param entitlement the new entitlement for the queue (capacity,
    *              maxCapacity, etc..)
-   * @throws YarnException
+   * @throws YarnException when yarn exception occur.
    */
   void setEntitlement(String queue, QueueEntitlement entitlement)
       throws YarnException;
 
   /**
-   * Gets the list of names for queues managed by the Reservation System
+   * Gets the list of names for queues managed by the Reservation System.
    * @return the list of queues which support reservations
+   * @throws YarnException when yarn exception occur.
    */
   public Set<String> getPlanQueues() throws YarnException;  
 
@@ -322,6 +329,7 @@ public interface YarnScheduler extends EventHandler<SchedulerEvent> {
    * @param applicationId
    *          Application ID
    * @return Updated Priority from scheduler
+   * @throws YarnException when yarn exception occur.
    */
   public Priority checkAndGetApplicationPriority(Priority priorityRequestedByApp,
       UserGroupInformation user, String queuePath, ApplicationId applicationId)
@@ -339,6 +347,7 @@ public interface YarnScheduler extends EventHandler<SchedulerEvent> {
    * @param user who submitted the application
    *
    * @return updated priority
+   * @throws YarnException when yarn exception occur.
    */
   public Priority updateApplicationPriority(Priority newPriority,
       ApplicationId applicationId, SettableFuture<Object> future,
@@ -355,15 +364,18 @@ public interface YarnScheduler extends EventHandler<SchedulerEvent> {
   List<Container> getTransferredContainers(ApplicationAttemptId appAttemptId);
 
   /**
-   * Set the cluster max priority
+   * Set the cluster max priority.
    * 
-   * @param conf
-   * @throws YarnException
+   * @param conf Configuration.
+   * @throws YarnException when yarn exception occur.
    */
   void setClusterMaxPriority(Configuration conf) throws YarnException;
 
   /**
-   * @param attemptId
+   * Get pending resource request for specified application attempt.
+   *
+   * @param attemptId the id of the application attempt
+   * @return pending resource requests.
    */
   List<ResourceRequest> getPendingResourceRequestsForAttempt(
       ApplicationAttemptId attemptId);
@@ -412,11 +424,13 @@ public interface YarnScheduler extends EventHandler<SchedulerEvent> {
    * Queue lifetime.
    * @param queueName Name of the Queue
    * @param lifetime configured application lifetime
+   * @param app details of app
    * @return valid lifetime as per queue
    */
   @Public
   @Evolving
-  long checkAndGetApplicationLifetime(String queueName, long lifetime);
+  long checkAndGetApplicationLifetime(String queueName, long lifetime,
+                                      RMAppImpl app);
 
   /**
    * Get maximum lifetime for a queue.

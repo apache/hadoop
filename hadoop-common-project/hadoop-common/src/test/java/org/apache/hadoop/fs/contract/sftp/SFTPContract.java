@@ -31,12 +31,11 @@ import org.apache.hadoop.fs.FileSystemTestHelper;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.fs.sftp.SFTPFileSystem;
-import org.apache.sshd.common.NamedFactory;
 import org.apache.sshd.server.SshServer;
-import org.apache.sshd.server.auth.UserAuth;
+import org.apache.sshd.server.auth.UserAuthFactory;
 import org.apache.sshd.server.auth.password.UserAuthPasswordFactory;
 import org.apache.sshd.server.keyprovider.SimpleGeneratorHostKeyProvider;
-import org.apache.sshd.server.subsystem.sftp.SftpSubsystemFactory;
+import org.apache.sshd.sftp.server.SftpSubsystemFactory;
 
 public class SFTPContract extends AbstractFSContract {
 
@@ -61,7 +60,7 @@ public class SFTPContract extends AbstractFSContract {
     sshd.setPort(0);
     sshd.setKeyPairProvider(new SimpleGeneratorHostKeyProvider());
 
-    List<NamedFactory<UserAuth>> userAuthFactories = new ArrayList<>();
+    List<UserAuthFactory> userAuthFactories = new ArrayList<>();
     userAuthFactories.add(new UserAuthPasswordFactory());
 
     sshd.setUserAuthFactories(userAuthFactories);

@@ -21,6 +21,9 @@ package org.apache.hadoop.fs.s3a.commit.staging.integration;
 import java.io.IOException;
 import java.util.UUID;
 
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -60,6 +63,7 @@ public class ITestStagingCommitProtocol extends AbstractITCommitProtocol {
     return conf;
   }
 
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     super.setup();
@@ -71,10 +75,9 @@ public class ITestStagingCommitProtocol extends AbstractITCommitProtocol {
         uuid);
     Pair<String, AbstractS3ACommitter.JobUUIDSource> t3 = AbstractS3ACommitter
         .buildJobUUID(conf, JobID.forName("job_" + getJobId()));
-    assertEquals("Job UUID", uuid, t3.getLeft());
-    assertEquals("Job UUID source: " + t3,
-        AbstractS3ACommitter.JobUUIDSource.SparkWriteUUID,
-        t3.getRight());
+    assertEquals(uuid, t3.getLeft(), "Job UUID");
+    assertEquals(AbstractS3ACommitter.JobUUIDSource.SparkWriteUUID,
+        t3.getRight(), "Job UUID source: " + t3);
     Path tempDir = Paths.getLocalTaskAttemptTempDir(conf, uuid,
         getTaskAttempt0());
     rmdir(tempDir, conf);
@@ -109,7 +112,8 @@ public class ITestStagingCommitProtocol extends AbstractITCommitProtocol {
   }
 
   protected void validateTaskAttemptPathDuringWrite(Path p,
-      final long expectedLength) throws IOException {
+      final long expectedLength,
+      String jobId) throws IOException {
     // this is expected to be local FS
     ContractTestUtils.assertPathExists(getLocalFS(), "task attempt", p);
   }
@@ -121,7 +125,7 @@ public class ITestStagingCommitProtocol extends AbstractITCommitProtocol {
     FileSystem localFS = getLocalFS();
     ContractTestUtils.assertPathExists(localFS, "task attempt", p);
     FileStatus st = localFS.getFileStatus(p);
-    assertEquals("file length in " + st, expectedLength, st.getLen());
+    assertEquals(expectedLength, st.getLen(), "file length in " + st);
   }
 
   protected FileSystem getLocalFS() throws IOException {
@@ -139,6 +143,74 @@ public class ITestStagingCommitProtocol extends AbstractITCommitProtocol {
       final TaskAttemptContext context) throws IOException {
     Path wd = context.getWorkingDirectory();
     assertEquals("file", wd.toUri().getScheme());
+  }
+
+  @Test
+  public void testStagingUploadsDirectoryCleanedUp() throws Exception {
+    describe("Assert that the staging uploads directory is cleaned up after successful commit");
+    JobData jobData = startJob(false);
+    JobContext jContext = jobData.getJContext();
+    TaskAttemptContext tContext = jobData.getTContext();
+    StagingCommitter committer = (StagingCommitter) jobData.getCommitter();
+
+    Path stagingUploadsDir = Paths.getStagingUploadsParentDirectory(
+            jContext.getConfiguration(),
+            committer.getUUID());
+
+    ContractTestUtils.assertPathExists(
+            stagingUploadsDir.getFileSystem(jContext.getConfiguration()),
+            "staging uploads path must exist after setupJob",
+            stagingUploadsDir
+    );
+
+    // write output
+    writeTextOutput(tContext);
+
+    // do commit
+    committer.commitTask(tContext);
+
+    commitJob(committer, jContext);
+
+    ContractTestUtils.assertPathDoesNotExist(
+            stagingUploadsDir.getFileSystem(jContext.getConfiguration()),
+            "staging uploads path must not exist after commitJob",
+            stagingUploadsDir
+    );
+  }
+
+  @Test
+  public void testStagingUploadsDirectoryCleanedUpWithFailure() throws Exception {
+    describe("Assert that the staging uploads directory is cleaned up after failed commit");
+    JobData jobData = startJob(new FailingCommitterFactory(), false);
+    JobContext jContext = jobData.getJContext();
+    TaskAttemptContext tContext = jobData.getTContext();
+    StagingCommitter committer = (StagingCommitter) jobData.getCommitter();
+
+    Path stagingUploadsDir = Paths.getStagingUploadsParentDirectory(
+            jContext.getConfiguration(),
+            committer.getUUID());
+
+    ContractTestUtils.assertPathExists(
+            stagingUploadsDir.getFileSystem(jContext.getConfiguration()),
+            "staging uploads path must exist after setupJob",
+            stagingUploadsDir
+    );
+
+    // do commit
+    committer.commitTask(tContext);
+
+    // now fail job
+    expectSimulatedFailureOnJobCommit(jContext, committer);
+
+    commitJob(committer, jContext);
+
+    expectJobCommitToFail(jContext, committer);
+
+    ContractTestUtils.assertPathDoesNotExist(
+            stagingUploadsDir.getFileSystem(jContext.getConfiguration()),
+            "staging uploads path must not exist after commitJob",
+            stagingUploadsDir
+    );
   }
 
   /**

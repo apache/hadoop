@@ -22,26 +22,35 @@ import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStreamReader;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
+import org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.StringUtils;
 
+import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
+import static org.apache.hadoop.fs.s3a.Constants.ENDPOINT;
+import static org.apache.hadoop.fs.s3a.Constants.FIPS_ENDPOINT;
+import static org.apache.hadoop.fs.s3a.Constants.S3_ENCRYPTION_ALGORITHM;
 import static org.apache.hadoop.fs.s3a.MultipartTestUtils.assertNoUploadsAt;
 import static org.apache.hadoop.fs.s3a.MultipartTestUtils.clearAnyUploads;
 import static org.apache.hadoop.fs.s3a.MultipartTestUtils.countUploadsAt;
 import static org.apache.hadoop.fs.s3a.MultipartTestUtils.createPartUpload;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.getLandsatCSVFile;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.assumeMultipartUploads;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.BucketInfo;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.E_BAD_STATE;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.Uploads;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardToolTestHelper.exec;
+import static org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils.isUsingDefaultExternalDataFile;
 
 /**
  * Test S3Guard Tool CLI commands.
@@ -53,35 +62,44 @@ public class ITestS3GuardTool extends AbstractS3GuardToolTestBase {
       "-force", "-verbose"};
 
   @Test
-  public void testLandsatBucketUnguarded() throws Throwable {
-    run(BucketInfo.NAME,
-        "-" + BucketInfo.UNGUARDED_FLAG,
-        getLandsatCSVFile(getConfiguration()));
-  }
-
-  @Test
-  public void testLandsatBucketRequireGuarded() throws Throwable {
-    runToFailure(E_BAD_STATE,
-        BucketInfo.NAME,
-        "-" + BucketInfo.GUARDED_FLAG,
-        getLandsatCSVFile(
-            ITestS3GuardTool.this.getConfiguration()));
-  }
-
-  @Test
-  public void testLandsatBucketRequireUnencrypted() throws Throwable {
-    run(BucketInfo.NAME,
+  public void testExternalBucketRequireUnencrypted() throws Throwable {
+    Configuration conf = getConfiguration();
+    if (isUsingDefaultExternalDataFile(conf)) {
+      removeBaseAndBucketOverrides(conf,
+          S3_ENCRYPTION_ALGORITHM,
+          ENDPOINT);
+    }
+    run(conf, BucketInfo.NAME,
         "-" + BucketInfo.ENCRYPTION_FLAG, "none",
-        getLandsatCSVFile(getConfiguration()));
+        externalBucket());
+  }
+
+  /**
+   * Get the external bucket; this is of the default external file.
+   * If not set to the default value, the test will be skipped.
+   * @return the bucket of the default external file.
+   */
+  private String externalBucket() {
+    Configuration conf = getConfiguration();
+    Path result = PublicDatasetTestUtils.requireDefaultExternalData(conf);
+    final URI uri = result.toUri();
+    final String bucket = uri.getScheme() + "://" + uri.getHost();
+    return bucket;
   }
 
   @Test
-  public void testLandsatBucketRequireEncrypted() throws Throwable {
+  public void testExternalBucketRequireEncrypted() throws Throwable {
+    Configuration conf = getConfiguration();
+    if (isUsingDefaultExternalDataFile(conf)) {
+      removeBaseAndBucketOverrides(conf,
+          ENDPOINT);
+    }
     runToFailure(E_BAD_STATE,
+        conf,
         BucketInfo.NAME,
         "-" + BucketInfo.ENCRYPTION_FLAG,
-        "AES256", getLandsatCSVFile(
-            ITestS3GuardTool.this.getConfiguration()));
+        "AES256",
+        externalBucket());
   }
 
   @Test
@@ -94,22 +112,37 @@ public class ITestS3GuardTool extends AbstractS3GuardToolTestBase {
     LOG.info("Exec output=\n{}", output);
   }
 
-  private final static String UPLOAD_PREFIX = "test-upload-prefix";
+  @Test
+  public void testStoreInfoFips() throws Throwable {
+    final S3AFileSystem fs = getFileSystem();
+    if (!fs.hasPathCapability(new Path("/"), FIPS_ENDPOINT)) {
+      skip("FIPS not enabled");
+    }
+    S3GuardTool.BucketInfo cmd =
+        toClose(new S3GuardTool.BucketInfo(fs.getConf()));
+    String output = exec(cmd, cmd.getName(),
+        "-" + BucketInfo.FIPS_FLAG,
+        fs.getUri().toString());
+    LOG.info("Exec output=\n{}", output);
+  }
+
   private final static String UPLOAD_NAME = "test-upload";
 
   @Test
   public void testUploads() throws Throwable {
+    assumeMultipartUploads(getFileSystem().getConf());
     S3AFileSystem fs = getFileSystem();
-    Path path = path(UPLOAD_PREFIX + "/" + UPLOAD_NAME);
+    Path path = methodPath();
+    Path file = new Path(path, UPLOAD_NAME);
 
     describe("Cleaning up any leftover uploads from previous runs.");
-    final String key = fs.pathToKey(path);
+    final String key = fs.pathToKey(file);
     try {
       // 1. Make sure key doesn't already exist
       clearAnyUploads(fs, path);
 
       // 2. Confirm no uploads are listed via API
-      assertNoUploadsAt(fs, path.getParent());
+      assertNoUploadsAt(fs, path);
 
       // 3. Confirm no uploads are listed via CLI
       describe("Confirming CLI lists nothing.");
@@ -119,19 +152,17 @@ public class ITestS3GuardTool extends AbstractS3GuardToolTestBase {
       describe("Uploading single part.");
       createPartUpload(fs, key, 128, 1);
 
-      assertEquals("Should be one upload", 1, countUploadsAt(fs, path));
+      assertEquals(1, countUploadsAt(fs, path), "Should be one upload");
 
       // 6. Confirm part exists via CLI, direct path and parent path
       describe("Confirming CLI lists one part");
       assertNumUploads(path, 1);
-      assertNumUploads(path.getParent(), 1);
-      // 7. Use CLI to delete part, assert it worked
       describe("Deleting part via CLI");
       assertNumDeleted(fs, path, 1);
 
       // 8. Confirm deletion via API
       describe("Confirming deletion via API");
-      assertEquals("Should be no uploads", 0, countUploadsAt(fs, path));
+      assertEquals(0, countUploadsAt(fs, path), "Should be no uploads");
 
       // 9. Confirm no uploads are listed via CLI
       describe("Confirming CLI lists nothing.");
@@ -144,26 +175,30 @@ public class ITestS3GuardTool extends AbstractS3GuardToolTestBase {
     }
   }
 
+
   @Test
   public void testUploadListByAge() throws Throwable {
     S3AFileSystem fs = getFileSystem();
-    Path path = path(UPLOAD_PREFIX + "/" + UPLOAD_NAME);
+    Path path = methodPath();
+    Path file = new Path(path, UPLOAD_NAME);
+    assumeMultipartUploads(getFileSystem().getConf());
 
     describe("Cleaning up any leftover uploads from previous runs.");
+
+
     // 1. Make sure key doesn't already exist
     clearAnyUploads(fs, path);
 
     // 2. Create a upload part
     describe("Uploading single part.");
-    final String key = fs.pathToKey(path);
+    final String key = fs.pathToKey(file);
     createPartUpload(fs, key, 128, 1);
 
     //try (AuditSpan span = fs.startOperation("multipart", key, null)) {
     try {
 
-      // 3. Confirm it exists via API.. may want to wrap with
-      // LambdaTestUtils.eventually() ?
-      assertEquals("Should be one upload", 1, countUploadsAt(fs, path));
+      // 3. Confirm it exists via API
+      assertEquals(1, countUploadsAt(fs, path), "Should be one upload");
 
       // 4. Confirm part does appear in listing with long age filter
       describe("Confirming CLI older age doesn't list");
@@ -178,14 +213,15 @@ public class ITestS3GuardTool extends AbstractS3GuardToolTestBase {
       // least a second old
       describe("Sleeping 1 second then confirming upload still there");
       Thread.sleep(1000);
-      LambdaTestUtils.eventually(5000, 1000,
-          () -> { assertNumUploadsAge(path, 1, 1); });
+      LambdaTestUtils.eventually(5000, 1000, () -> {
+        assertNumUploadsAge(path, 1, 1);
+      });
 
       // 7. Assert deletion works when age filter matches
       describe("Doing aged deletion");
       uploadCommandAssertCount(fs, ABORT_FORCE_OPTIONS, path, 1, 1);
       describe("Confirming age deletion happened");
-      assertEquals("Should be no uploads", 0, countUploadsAt(fs, path));
+      assertEquals(0, countUploadsAt(fs, path), "Should be no uploads");
     } catch (Throwable t) {
       // Clean up on intermediate failure
       clearAnyUploads(fs, path);
@@ -195,9 +231,13 @@ public class ITestS3GuardTool extends AbstractS3GuardToolTestBase {
 
   @Test
   public void testUploadNegativeExpect() throws Throwable {
-    runToFailure(E_BAD_STATE, Uploads.NAME, "-expect", "1",
-        path("/we/are/almost/postive/this/doesnt/exist/fhfsadfoijew")
-            .toString());
+    Configuration conf = getConfiguration();
+    runToFailure(E_BAD_STATE,
+        conf,
+        Uploads.NAME,
+        "-expect",
+        "1",
+        path("/we/are/almost/postive/this/doesnt/exist/fhfsadfoijew").toString());
   }
 
   private void assertNumUploads(Path path, int numUploads) throws Exception {
@@ -231,8 +271,8 @@ public class ITestS3GuardTool extends AbstractS3GuardToolTestBase {
    *                   search all parts
    * @throws Exception on failure
    */
-  private void uploadCommandAssertCount(S3AFileSystem fs, String options[],
-      Path path, int numUploads, int ageSeconds)
+  private void uploadCommandAssertCount(S3AFileSystem fs, String[] options, Path path,
+      int numUploads, int ageSeconds)
       throws Exception {
     List<String> allOptions = new ArrayList<>();
     List<String> output = new ArrayList<>();
@@ -256,8 +296,8 @@ public class ITestS3GuardTool extends AbstractS3GuardToolTestBase {
           int parsedUploads = Integer.parseInt(fields[1]);
           LOG.debug("Matched CLI output: {} {} {} {}",
               fields[0], fields[1], fields[2], fields[3]);
-          assertEquals("Unexpected number of uploads", numUploads,
-              parsedUploads);
+          assertEquals(numUploads,
+              parsedUploads, "Unexpected number of uploads");
           return;
         }
         LOG.debug("Not matched: {}", line);

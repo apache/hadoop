@@ -34,19 +34,74 @@ public class AppendRequestParameters {
   private final Mode mode;
   private final boolean isAppendBlob;
   private final String leaseId;
+  private boolean isExpectHeaderEnabled;
+  private boolean isRetryDueToExpect;
+  private BlobAppendRequestParameters blobParams;
+  private final String md5;
 
+
+  /**
+   * Constructor to be used for interacting with AbfsDfsClient.
+   * @param position position in remote blob at which append should happen
+   * @param offset position in the buffer to be appended
+   * @param length length of the data to be appended
+   * @param mode mode of the append operation
+   * @param isAppendBlob true if the blob is append-blob
+   * @param leaseId leaseId of the blob to be appended
+   * @param isExpectHeaderEnabled true if the expect header is enabled
+   * @param md5  The Base64-encoded MD5 hash of the block for data integrity validation.
+   */
   public AppendRequestParameters(final long position,
       final int offset,
       final int length,
       final Mode mode,
       final boolean isAppendBlob,
-      final String leaseId) {
+      final String leaseId,
+      final boolean isExpectHeaderEnabled,
+      final String md5) {
     this.position = position;
     this.offset = offset;
     this.length = length;
     this.mode = mode;
     this.isAppendBlob = isAppendBlob;
     this.leaseId = leaseId;
+    this.isExpectHeaderEnabled = isExpectHeaderEnabled;
+    this.isRetryDueToExpect = false;
+    this.blobParams = null;
+    this.md5 = md5;
+  }
+
+  /**
+   * Constructor to be used for interacting with AbfsBlobClient.
+   * @param position position in remote blob at which append should happen
+   * @param offset position in the buffer to be appended
+   * @param length length of the data to be appended
+   * @param mode mode of the append operation
+   * @param isAppendBlob true if the blob is append-blob
+   * @param leaseId leaseId of the blob to be appended
+   * @param isExpectHeaderEnabled true if the expect header is enabled
+   * @param blobParams parameters specific to append operation on Blob Endpoint.
+   * @param md5  The Base64-encoded MD5 hash of the block for data integrity validation.
+   */
+  public AppendRequestParameters(final long position,
+      final int offset,
+      final int length,
+      final Mode mode,
+      final boolean isAppendBlob,
+      final String leaseId,
+      final boolean isExpectHeaderEnabled,
+      final BlobAppendRequestParameters blobParams,
+      final String md5) {
+    this.position = position;
+    this.offset = offset;
+    this.length = length;
+    this.mode = mode;
+    this.isAppendBlob = isAppendBlob;
+    this.leaseId = leaseId;
+    this.isExpectHeaderEnabled = isExpectHeaderEnabled;
+    this.isRetryDueToExpect = false;
+    this.blobParams = blobParams;
+    this.md5 = md5;
   }
 
   public long getPosition() {
@@ -71,5 +126,84 @@ public class AppendRequestParameters {
 
   public String getLeaseId() {
     return this.leaseId;
+  }
+
+  public boolean isExpectHeaderEnabled() {
+    return isExpectHeaderEnabled;
+  }
+
+  public boolean isRetryDueToExpect() {
+    return isRetryDueToExpect;
+  }
+
+  /**
+   * Retrieves the parameters specific to the append operation on the Blob Endpoint.
+   *
+   * @return the {@link BlobAppendRequestParameters} for the append operation.
+   */
+  public BlobAppendRequestParameters getBlobParams() {
+    return blobParams;
+  }
+
+  /**
+   * Returns BlockId of the block blob to be appended.
+   * @return blockId
+   */
+  public String getBlockId() {
+    return getBlobParams().getBlockId();
+  }
+
+  /**
+   * Gets the MD5 hash.
+   *
+   * @return the MD5 hash string
+   */
+  public String getMd5() {
+    return md5;
+  }
+
+  /**
+   * Sets whether the retry is due to the Expect header.
+   *
+   * @param retryDueToExpect true if the retry is due to the Expect header, false otherwise
+   */
+  public void setRetryDueToExpect(boolean retryDueToExpect) {
+    isRetryDueToExpect = retryDueToExpect;
+  }
+
+  /**
+   * Sets whether the Expect header is enabled.
+   *
+   * @param expectHeaderEnabled true if the Expect header is enabled, false otherwise
+   */
+  public void setExpectHeaderEnabled(boolean expectHeaderEnabled) {
+    isExpectHeaderEnabled = expectHeaderEnabled;
+  }
+
+  /**
+   * Sets the Block ID for the block blob to be appended.
+   *
+   * @param blockId the Block ID to set
+   */
+  public void setBlockId(final String blockId) {
+    this.getBlobParams().setBlockId(blockId);
+  }
+
+  /**
+   * Sets the ETag for the block blob.
+   *
+   * @param eTag the ETag to set
+   */
+  public void setEtag(final String eTag) {
+    this.getBlobParams().setETag(eTag);
+  }
+
+  /**
+   * Sets the parameters specific to the append operation on the Blob Endpoint.
+   *
+   * @param blobParams the {@link BlobAppendRequestParameters} to set
+   */
+  public void setBlobParams(BlobAppendRequestParameters blobParams) {
+    this.blobParams = blobParams;
   }
 }

@@ -248,7 +248,10 @@ public class MiniDFSCluster implements AutoCloseable {
             "MiniDFSCluster base directory cannot be null");
       }
       String cdir = conf.get(HDFS_MINIDFS_BASEDIR);
-      if (cdir != null) {
+      // There are tests which restart server, and we want to allow them to restart with the same
+      // configuration.  Although it is an error if the base directory is already set, we'll ignore
+      // cases where the base directory is the same.
+      if (cdir != null && !cdir.equals(basedir.getAbsolutePath())) {
         throw new IllegalArgumentException(
             "MiniDFSCluster base directory already defined (" + cdir + ")");
       }
@@ -2090,6 +2093,25 @@ public class MiniDFSCluster implements AutoCloseable {
   }
 
   /**
+   * Wait for the datanodes in the cluster to process any block
+   * deletions that have already been asynchronously queued.
+   */
+  public void waitForDNDeletions()
+      throws TimeoutException, InterruptedException {
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        for (DataNode dn : getDataNodes()) {
+          if (getFsDatasetTestUtils(dn).getPendingAsyncDeletions() > 0) {
+            return false;
+          }
+        }
+        return true;
+      }
+    }, 1000, 10000);
+  }
+
+  /**
    * Gets the rpc port used by the NameNode, because the caller
    * supplied port is not necessarily the actual port used.
    * Assumption: cluster has a single namenode
@@ -2527,6 +2549,24 @@ public class MiniDFSCluster implements AutoCloseable {
    */
   public boolean restartDataNode(DataNodeProperties dnprop) throws IOException {
     return restartDataNode(dnprop, false);
+  }
+
+  /**
+   * Wait for the datanode to be fully functional i.e. all the BP service threads are alive,
+   * all block pools initiated and also connected to active namenode.
+   *
+   * @param dn Datanode instance.
+   * @param timeout Timeout in millis until when we should wait for datanode to be fully
+   * operational.
+   * @throws InterruptedException If the thread wait is interrupted.
+   * @throws TimeoutException If times out while awaiting the fully operational capability of
+   * datanode.
+   */
+  public void waitDatanodeConnectedToActive(DataNode dn, int timeout)
+      throws InterruptedException, TimeoutException {
+    GenericTestUtils.waitFor(() -> dn.isDatanodeFullyStarted(true),
+        100, timeout, "Datanode is not connected to active namenode even after "
+            + timeout + " ms of waiting");
   }
 
   public void waitDatanodeFullyStarted(DataNode dn, int timeout)

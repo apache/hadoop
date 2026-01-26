@@ -89,13 +89,13 @@ The Timeline Domain offers a namespace for Timeline server allowing
 users to host multiple entities, isolating them from other users and applications.
 Timeline server Security is defined at this level.
 
-A "Domain" primarily stores owner info, read and& write ACL information,
+A "Domain" primarily stores owner info, read and write ACL information,
 created and modified time stamp information. Each Domain is identified by an ID which
 must be unique across all users in the YARN cluster.
 
 #### Timeline Entity
 
-A Timeline Entity contains the the meta information of a conceptual entity
+A Timeline Entity contains the meta information of a conceptual entity
 and its related events.
 
 The entity can be an application, an application attempt, a container or
@@ -199,7 +199,7 @@ to `kerberos`, after which the following configuration options are available:
 | `yarn.timeline-service.http-authentication.type` | Defines authentication used for the timeline server HTTP endpoint. Supported values are: `simple` / `kerberos` / #AUTHENTICATION_HANDLER_CLASSNAME#. Defaults to `simple`. |
 | `yarn.timeline-service.http-authentication.simple.anonymous.allowed` | Indicates if anonymous requests are allowed by the timeline server when using 'simple' authentication. Defaults to `true`. |
 | `yarn.timeline-service.principal` | The Kerberos principal for the timeline server. |
-| `yarn.timeline-service.keytab` | The Kerberos keytab for the timeline server. Defaults on Unix to to `/etc/krb5.keytab`. |
+| `yarn.timeline-service.keytab` | The Kerberos keytab for the timeline server. Defaults on Unix to `/etc/krb5.keytab`. |
 | `yarn.timeline-service.delegation.key.update-interval` | Defaults to `86400000` (1 day). |
 | `yarn.timeline-service.delegation.token.renew-interval` | Defaults to `86400000` (1 day). |
 | `yarn.timeline-service.delegation.token.max-lifetime` | Defaults to `604800000` (7 days). |
@@ -859,7 +859,7 @@ Below is the elements of a single event object.  Note that `value` of
 | Item | Data Type | Description|
 |:---- |:---- |:---- |
 | `eventtype` | string  | The event type |
-| `eventinfo` | map | The information of the event, which is orgainzied in a map of `key` : `value` |
+| `eventinfo` | map | The information of the event, which is organized in a map of `key` : `value` |
 | `timestamp` | long | The timestamp of the event |
 
 ### Response Examples:
@@ -1317,7 +1317,7 @@ None
 | `queue` | string  | The queue to which the application submitted |
 | `appState` | string | The application state according to the ResourceManager - valid values are members of the YarnApplicationState enum: `FINISHED`, `FAILED`, `KILLED` |
 | `finalStatus` | string | The final status of the application if finished - reported by the application itself - valid values are: `UNDEFINED`, `SUCCEEDED`, `FAILED`, `KILLED` |
-| `progress` | float | The reported progress of the application as a percent. Long-lived YARN services may not provide a meaninful value here —or use it as a metric of actual vs desired container counts |
+| `progress` | float | The reported progress of the application as a percent. Long-lived YARN services may not provide a meaningful value here —or use it as a metric of actual vs desired container counts |
 | `trackingUrl` | string | The web URL of the application (via the RM Proxy) |
 | `originalTrackingUrl` | string | The actual web URL of the application |
 | `diagnosticsInfo` | string | Detailed diagnostics information on a completed application|
@@ -2019,7 +2019,7 @@ querying some entities, such as Domains; here the API deliberately
 downgrades permission-denied outcomes as empty and not-founds responses.
 This hides details of other domains from an unauthorized caller.
 1. If the content of timeline entity PUT operations is invalid,
-this failure *will not* result in an HTTP error code being retured.
+this failure *will not* result in an HTTP error code being returned.
 A status code of 200 will be returned —however, there will be an error code
 in the list of failed entities for each entity which could not be added.
 

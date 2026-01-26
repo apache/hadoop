@@ -45,6 +45,7 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.StringInterner;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -1238,9 +1239,9 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
 
   private void retryFetchingAMContainer(final RMAppAttemptImpl appAttempt) {
     // start a new thread so that we are not blocking main dispatcher thread.
-    new Thread() {
+    new SubjectInheritingThread() {
       @Override
-      public void run() {
+      public void work() {
         try {
           Thread.sleep(500);
         } catch (InterruptedException e) {
@@ -2220,13 +2221,22 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
   }
 
   @Override
-  public YarnApplicationAttemptState createApplicationAttemptState() {
-    RMAppAttemptState state = getState();
-    // If AppAttempt is in FINAL_SAVING state, return its previous state.
-    if (state.equals(RMAppAttemptState.FINAL_SAVING)) {
-      state = stateBeforeFinalSaving;
+  public RMAppAttemptState getPreviousState() {
+    this.readLock.lock();
+
+    try {
+      return this.stateMachine.getPreviousState();
+    } finally {
+      this.readLock.unlock();
     }
-    return RMServerUtils.createApplicationAttemptState(state);
+  }
+
+  @Override
+  public YarnApplicationAttemptState createApplicationAttemptState() {
+    return RMServerUtils.convertRmAppAttemptStateToYarnApplicationAttemptState(
+        getState(),
+        stateBeforeFinalSaving
+    );
   }
 
   private void launchAttempt(){

@@ -226,9 +226,8 @@ public class HostRestrictingAuthorizationFilter implements Filter {
     final String query = interaction.getQueryString();
     final String uri = interaction.getRequestURI();
     if (!uri.startsWith(WebHdfsFileSystem.PATH_PREFIX)) {
-      LOG.trace("Rejecting interaction; wrong URI: {}", uri);
-      interaction.sendError(HttpServletResponse.SC_NOT_FOUND,
-          "The request URI must start with " + WebHdfsFileSystem.PATH_PREFIX);
+      LOG.trace("Proceeding with interaction since the request doesn't access WebHDFS API");
+      interaction.proceed();
       return;
     }
     final String path = uri.substring(WebHdfsFileSystem.PATH_PREFIX.length());

@@ -133,6 +133,7 @@ message DatanodeInfoProto {
   optional uint64 lastBlockReportTime = 15 [default = 0];
   optional uint64 lastBlockReportMonotonic = 16 [default = 0];
   optional uint32 numBlocks = 17 [default = 0];
+  optional string softwareVersion = 18;
 }
 
 /**
@@ -722,4 +723,16 @@ message BlockTokenSecretProto {
   repeated StorageTypeProto storageTypes = 7;
   repeated string storageIds = 8;
   optional bytes handshakeSecret = 9;
+}
+
+/////////////////////////////////////////////////
+// Alignment state for namespaces.
+/////////////////////////////////////////////////
+/**
+ * Clients should receive this message in RPC responses and forward it
+ * in RPC requests without interpreting it. It should be encoded
+ * as an obscure byte array when being sent to clients.
+ */
+message RouterFederatedStateProto {
+  map<string, int64> namespaceStateIds = 1; // Last seen state IDs for multiple namespaces.
 }

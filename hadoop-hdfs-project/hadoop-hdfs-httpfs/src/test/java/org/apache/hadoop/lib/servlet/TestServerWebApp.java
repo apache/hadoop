@@ -18,22 +18,25 @@
 
 package org.apache.hadoop.lib.servlet;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import org.apache.hadoop.lib.server.Server;
 import org.apache.hadoop.test.HTestCase;
 import org.apache.hadoop.test.TestDir;
 import org.apache.hadoop.test.TestDirHelper;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.net.InetSocketAddress;
 
 public class TestServerWebApp extends HTestCase {
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void getHomeDirNotDef() {
-    ServerWebApp.getHomeDir("TestServerWebApp00");
+    assertThrows(IllegalArgumentException.class, () -> {
+      ServerWebApp.getHomeDir("TestServerWebApp00");
+    });
   }
 
   @Test
@@ -63,19 +66,21 @@ public class TestServerWebApp extends HTestCase {
     assertEquals(server.getStatus(), Server.Status.SHUTDOWN);
   }
 
-  @Test(expected = RuntimeException.class)
+  @Test
   @TestDir
   public void failedInit() throws Exception {
-    String dir = TestDirHelper.getTestDir().getAbsolutePath();
-    System.setProperty("TestServerWebApp2.home.dir", dir);
-    System.setProperty("TestServerWebApp2.config.dir", dir);
-    System.setProperty("TestServerWebApp2.log.dir", dir);
-    System.setProperty("TestServerWebApp2.temp.dir", dir);
-    System.setProperty("testserverwebapp2.services", "FOO");
-    ServerWebApp server = new ServerWebApp("TestServerWebApp2") {
-    };
+    assertThrows(RuntimeException.class, () -> {
+      String dir = TestDirHelper.getTestDir().getAbsolutePath();
+      System.setProperty("TestServerWebApp2.home.dir", dir);
+      System.setProperty("TestServerWebApp2.config.dir", dir);
+      System.setProperty("TestServerWebApp2.log.dir", dir);
+      System.setProperty("TestServerWebApp2.temp.dir", dir);
+      System.setProperty("testserverwebapp2.services", "FOO");
+      ServerWebApp server = new ServerWebApp("TestServerWebApp2") {
+      };
 
-    server.contextInitialized(null);
+      server.contextInitialized(null);
+    });
   }
 
   @Test
@@ -92,8 +97,8 @@ public class TestServerWebApp extends HTestCase {
     };
 
     InetSocketAddress address = server.resolveAuthority();
-    Assert.assertEquals("localhost", address.getHostName());
-    Assert.assertEquals(14000, address.getPort());
+    Assertions.assertEquals("localhost", address.getHostName());
+    Assertions.assertEquals(14000, address.getPort());
   }
 
 }

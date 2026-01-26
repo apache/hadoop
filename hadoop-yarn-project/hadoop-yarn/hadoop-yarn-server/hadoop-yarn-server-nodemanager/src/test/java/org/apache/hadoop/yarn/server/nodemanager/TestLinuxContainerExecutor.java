@@ -20,12 +20,17 @@ package org.apache.hadoop.yarn.server.nodemanager;
 
 import static org.apache.hadoop.fs.CreateFlag.CREATE;
 import static org.apache.hadoop.fs.CreateFlag.OVERWRITE;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
@@ -33,6 +38,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntime;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerExecutionException;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerRuntimeContext;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerExecContext;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerReapContext;
 import org.slf4j.Logger;
@@ -41,6 +48,7 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.io.PrintWriter;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
@@ -58,6 +66,7 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -75,11 +84,10 @@ import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerStartContext;
 import org.apache.hadoop.yarn.server.nodemanager.executor.DeletionAsUserContext;
 import org.apache.hadoop.yarn.server.nodemanager.executor.LocalizerStartContext;
 import org.apache.hadoop.yarn.server.nodemanager.util.LCEResourcesHandler;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Assume;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 /**
  * This is intended to test the LinuxContainerExecutor code, but because of some
@@ -164,7 +172,7 @@ public class TestLinuxContainerExecutor {
   private Configuration conf;
   private FileContext files;
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     files = FileContext.getLocalFSFileContext();
     Path workSpacePath = new Path(workSpace.getAbsolutePath());
@@ -210,7 +218,7 @@ public class TestLinuxContainerExecutor {
 
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     FileContext.getLocalFSFileContext().delete(
       new Path(workSpace.getAbsolutePath()), true);
@@ -354,7 +362,7 @@ public class TestLinuxContainerExecutor {
   @Test
   public void testContainerLocalizer() throws Exception {
 
-    Assume.assumeTrue(shouldRun());
+    assumeTrue(shouldRun());
 
     String locId = "container_01_01";
     Path nmPrivateContainerTokensPath =
@@ -412,7 +420,7 @@ public class TestLinuxContainerExecutor {
 
   @Test
   public void testContainerLaunch() throws Exception {
-    Assume.assumeTrue(shouldRun());
+    assumeTrue(shouldRun());
     String expectedRunAsUser =
         conf.get(YarnConfiguration.NM_NONSECURE_MODE_LOCAL_USER_KEY,
           YarnConfiguration.DEFAULT_NM_NONSECURE_MODE_LOCAL_USER);
@@ -431,8 +439,8 @@ public class TestLinuxContainerExecutor {
 
   @Test
   public void testNonSecureRunAsSubmitter() throws Exception {
-    Assume.assumeTrue(shouldRun());
-    Assume.assumeFalse(UserGroupInformation.isSecurityEnabled());
+    assumeTrue(shouldRun());
+    assumeFalse(UserGroupInformation.isSecurityEnabled());
     String expectedRunAsUser = appSubmitter;
     conf.set(YarnConfiguration.NM_NONSECURE_MODE_LIMIT_USERS, "false");
     exec.setConf(conf);
@@ -452,11 +460,11 @@ public class TestLinuxContainerExecutor {
 
   @Test
   public void testContainerKill() throws Exception {
-    Assume.assumeTrue(shouldRun());
+    assumeTrue(shouldRun());
 
     final ContainerId sleepId = getNextContainerId();
-    Thread t = new Thread() {
-      public void run() {
+    SubjectInheritingThread t = new SubjectInheritingThread() {
+      public void work() {
         try {
           runAndBlock(sleepId, "sleep", "100");
         } catch (IOException|ConfigurationException e) {
@@ -493,12 +501,12 @@ public class TestLinuxContainerExecutor {
 
   @Test
   public void testCGroups() throws Exception {
-    Assume.assumeTrue(shouldRun());
+    assumeTrue(shouldRun());
     String cgroupsMount = System.getProperty("cgroups.mount");
-    Assume.assumeTrue((cgroupsMount != null) && !cgroupsMount.isEmpty());
+    assumeTrue((cgroupsMount != null) && !cgroupsMount.isEmpty());
 
-    assertTrue("Cgroups mount point does not exist", new File(
-        cgroupsMount).exists());
+    assertTrue(new File(cgroupsMount).exists(),
+        "Cgroups mount point does not exist");
     List<String> cgroupKVs = new ArrayList<>();
 
     String hierarchy = "hadoop-yarn";
@@ -511,13 +519,12 @@ public class TestLinuxContainerExecutor {
     try {
       exec.mountCgroups(cgroupKVs, hierarchy);
       for (String controller : controllers) {
-        assertTrue(controller + " cgroup not mounted", new File(
-            cgroupsMount + "/" + controller + "/tasks").exists());
-        assertTrue(controller + " cgroup hierarchy not created",
-            new File(cgroupsMount + "/" + controller + "/" + hierarchy).exists());
-        assertTrue(controller + " cgroup hierarchy created incorrectly",
-            new File(cgroupsMount + "/" + controller + "/" + hierarchy
-                + "/tasks").exists());
+        assertTrue(new File(cgroupsMount + "/" + controller + "/tasks").exists(),
+            controller + " cgroup not mounted");
+        assertTrue(new File(cgroupsMount + "/" + controller + "/" + hierarchy).exists(),
+            controller + " cgroup hierarchy not created");
+        assertTrue(new File(cgroupsMount + "/" + controller + "/" + hierarchy + "/tasks").exists(),
+            controller + " cgroup hierarchy created incorrectly");
       }
     } catch (IOException ie) {
       fail("Couldn't mount cgroups " + ie.toString());
@@ -527,7 +534,7 @@ public class TestLinuxContainerExecutor {
 
   @Test
   public void testLocalUser() throws Exception {
-    Assume.assumeTrue(shouldRun());
+    assumeTrue(shouldRun());
     try {
       // nonsecure default
       Configuration conf = new YarnConfiguration();
@@ -536,7 +543,7 @@ public class TestLinuxContainerExecutor {
       UserGroupInformation.setConfiguration(conf);
       LinuxContainerExecutor lce = new LinuxContainerExecutor();
       lce.setConf(conf);
-      Assert.assertEquals(
+      assertEquals(
           YarnConfiguration.DEFAULT_NM_NONSECURE_MODE_LOCAL_USER,
           lce.getRunAsUser("foo"));
 
@@ -544,14 +551,14 @@ public class TestLinuxContainerExecutor {
       conf.set(YarnConfiguration.NM_NONSECURE_MODE_LOCAL_USER_KEY, "bar");
       lce = new LinuxContainerExecutor();
       lce.setConf(conf);
-      Assert.assertEquals("bar", lce.getRunAsUser("foo"));
+      assertEquals("bar", lce.getRunAsUser("foo"));
 
       // nonsecure without limits
       conf.set(YarnConfiguration.NM_NONSECURE_MODE_LOCAL_USER_KEY, "bar");
       conf.setBoolean(YarnConfiguration.NM_NONSECURE_MODE_LIMIT_USERS, false);
       lce = new LinuxContainerExecutor();
       lce.setConf(conf);
-      Assert.assertEquals("foo", lce.getRunAsUser("foo"));
+      assertEquals("foo", lce.getRunAsUser("foo"));
 
       // secure
       conf = new YarnConfiguration();
@@ -560,7 +567,7 @@ public class TestLinuxContainerExecutor {
       UserGroupInformation.setConfiguration(conf);
       lce = new LinuxContainerExecutor();
       lce.setConf(conf);
-      Assert.assertEquals("foo", lce.getRunAsUser("foo"));
+      assertEquals("foo", lce.getRunAsUser("foo"));
     } finally {
       Configuration conf = new YarnConfiguration();
       conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
@@ -571,7 +578,7 @@ public class TestLinuxContainerExecutor {
 
   @Test
   public void testNonsecureUsernamePattern() throws Exception {
-    Assume.assumeTrue(shouldRun());
+    assumeTrue(shouldRun());
     try {
       // nonsecure default
       Configuration conf = new YarnConfiguration();
@@ -621,9 +628,10 @@ public class TestLinuxContainerExecutor {
     }
   }
 
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testPostExecuteAfterReacquisition() throws Exception {
-    Assume.assumeTrue(shouldRun());
+    assumeTrue(shouldRun());
     // make up some bogus container ID
     ApplicationId appId = ApplicationId.newInstance(12345, 67890);
     ApplicationAttemptId attemptId =
@@ -653,8 +661,8 @@ public class TestLinuxContainerExecutor {
         .setUser("foouser")
         .setContainerId(cid)
         .build());
-    assertTrue("postExec not called after reacquisition",
-        TestResourceHandler.postExecContainers.contains(cid));
+    assertTrue(TestResourceHandler.postExecContainers.contains(cid),
+        "postExec not called after reacquisition");
   }
 
   @Test
@@ -723,6 +731,44 @@ public class TestLinuxContainerExecutor {
     LinuxContainerExecutor lce = mock(LinuxContainerExecutor.class);
     lce.getLocalResources(container);
     verify(lce, times(1)).getLocalResources(container);
+  }
+
+  @Test
+  public void testSignalContainerFailureWhenExitCodeIsPresentInTheException()
+      throws ContainerExecutionException {
+    LinuxContainerRuntime containerRuntime = mock(LinuxContainerRuntime.class);
+    LinuxContainerExecutor containerExecutor = spy(new LinuxContainerExecutor(
+        containerRuntime));
+    ContainerSignalContext signalContext = new ContainerSignalContext.Builder().build();
+    ContainerExecutionException testException =
+        new ContainerExecutionException("exceptionWithExitCode", 123);
+
+    doNothing().when(containerExecutor).verifyUsernamePattern(any());
+    doThrow(testException)
+        .when(containerRuntime)
+        .signalContainer(any(ContainerRuntimeContext.class));
+
+    assertThrows(IOException.class,
+        () -> containerExecutor.signalContainer(signalContext));
+  }
+
+  @Test
+  public void testSignalContainerFailureWhenExitCodeIsNotPresentInTheException()
+      throws ContainerExecutionException {
+    LinuxContainerRuntime containerRuntime = mock(LinuxContainerRuntime.class);
+    LinuxContainerExecutor containerExecutor = spy(new LinuxContainerExecutor(
+        containerRuntime));
+    ContainerSignalContext signalContext = new ContainerSignalContext.Builder().build();
+    ContainerExecutionException testException =
+        new ContainerExecutionException("exceptionWithoutExitCode");
+
+    doNothing().when(containerExecutor).verifyUsernamePattern(any());
+    doThrow(testException)
+        .when(containerRuntime)
+        .signalContainer(any(ContainerRuntimeContext.class));
+
+    assertThrows(InterruptedIOException.class,
+        () -> containerExecutor.signalContainer(signalContext));
   }
 
   @Deprecated

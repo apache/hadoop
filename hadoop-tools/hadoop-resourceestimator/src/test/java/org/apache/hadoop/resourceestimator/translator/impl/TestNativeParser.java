@@ -20,6 +20,8 @@
 
 package org.apache.hadoop.resourceestimator.translator.impl;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import java.io.IOException;
 import java.text.ParseException;
 import java.util.List;
@@ -36,10 +38,9 @@ import org.apache.hadoop.resourceestimator.skylinestore.impl.InMemoryStore;
 import org.apache.hadoop.resourceestimator.translator.api.LogParser;
 import org.apache.hadoop.resourceestimator.translator.exceptions.DataFieldNotFoundException;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.RLESparseResourceAllocation;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * This sample parser will parse the sample log and extract the resource
@@ -49,7 +50,8 @@ public class TestNativeParser {
   private LogParserUtil logParserUtil = new LogParserUtil();
   private SkylineStore skylineStore;
 
-  @Before public final void setup() throws ResourceEstimatorException {
+  @BeforeEach
+  public final void setup() throws ResourceEstimatorException {
     skylineStore = new InMemoryStore();
     final LogParser nativeParser = new BaseLogParser();
     Configuration config = new Configuration();
@@ -73,42 +75,41 @@ public class TestNativeParser {
         new RecurrenceId("tpch_q12", "tpch_q12_0");
     final Map<RecurrenceId, List<ResourceSkyline>> jobSkylineLists =
         skylineStore.getHistory(recurrenceId);
-    Assert.assertEquals(1, jobSkylineLists.size());
+    assertEquals(1, jobSkylineLists.size());
     final List<ResourceSkyline> jobHistory = jobSkylineLists.get(recurrenceId);
-    Assert.assertEquals(1, jobHistory.size());
+    assertEquals(1, jobHistory.size());
     final ResourceSkyline resourceSkyline = jobHistory.get(0);
-    Assert.assertEquals(0, resourceSkyline.getJobInputDataSize(), 0);
-    Assert.assertEquals("tpch_q12_0", resourceSkyline.getJobId());
-    Assert.assertEquals(0, resourceSkyline.getJobSubmissionTime());
-    Assert.assertEquals(25, resourceSkyline.getJobFinishTime());
-    Assert
-        .assertEquals(1024, resourceSkyline.getContainerSpec().getMemorySize());
-    Assert
-        .assertEquals(1, resourceSkyline.getContainerSpec().getVirtualCores());
+    assertEquals(0, resourceSkyline.getJobInputDataSize(), 0);
+    assertEquals("tpch_q12_0", resourceSkyline.getJobId());
+    assertEquals(0, resourceSkyline.getJobSubmissionTime());
+    assertEquals(25, resourceSkyline.getJobFinishTime());
+    assertEquals(1024, resourceSkyline.getContainerSpec().getMemorySize());
+    assertEquals(1, resourceSkyline.getContainerSpec().getVirtualCores());
     final RLESparseResourceAllocation skylineLists =
         resourceSkyline.getSkylineList();
     int k;
     for (k = 0; k < 10; k++) {
-      Assert.assertEquals(1,
+      assertEquals(1,
           skylineLists.getCapacityAtTime(k).getMemorySize() / 1024);
     }
     for (k = 10; k < 15; k++) {
-      Assert.assertEquals(1074,
+      assertEquals(1074,
           skylineLists.getCapacityAtTime(k).getMemorySize() / 1024);
     }
     for (k = 15; k < 20; k++) {
-      Assert.assertEquals(2538,
+      assertEquals(2538,
           skylineLists.getCapacityAtTime(k).getMemorySize() / 1024);
     }
     for (k = 20; k < 25; k++) {
-      Assert.assertEquals(2468,
+      assertEquals(2468,
           skylineLists.getCapacityAtTime(k).getMemorySize() / 1024);
     }
-    Assert.assertEquals(0,
+    assertEquals(0,
         skylineLists.getCapacityAtTime(25).getMemorySize() / 1024);
   }
 
-  @After public final void cleanUp() {
+  @AfterEach
+  public final void cleanUp() {
     skylineStore = null;
     logParserUtil = null;
   }

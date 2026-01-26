@@ -20,7 +20,9 @@ Hadoop in Secure Mode
 Introduction
 ------------
 
-This document describes how to configure authentication for Hadoop in secure mode. When Hadoop is configured to run in secure mode, each Hadoop service and each user must be authenticated by Kerberos.
+In its default configuration, we expect you to make sure attackers don't have access to your Hadoop cluster by restricting all network access. If you want any restrictions on who can remotely access data or submit work, you MUST secure authentication and access for your Hadoop cluster as described in this document.
+
+When Hadoop is configured to run in secure mode, each Hadoop service and each user must be authenticated by Kerberos.
 
 Forward and reverse host lookup for all service hosts must be configured correctly to allow services to authenticate with each other. Host lookups may be configured using either DNS or `/etc/hosts` files. Working knowledge of Kerberos and DNS is recommended before attempting to configure Hadoop services in Secure Mode.
 
@@ -595,7 +597,7 @@ hadoop kdiag \
   --keytab zk.service.keytab --principal zookeeper/devix.example.org@REALM
 ```
 
-This attempts to to perform all diagnostics without failing early, load in
+This attempts to perform all diagnostics without failing early, load in
 the HDFS and YARN XML resources, require a minimum key length of 1024 bytes,
 and log in as the principal `zookeeper/devix.example.org@REALM`, whose key must be in
 the keytab `zk.service.keytab`

@@ -73,8 +73,8 @@ import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
-import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.Write.RECOVER_LEASE_ON_CLOSE_EXCEPTION_DEFAULT;
-import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.Write.RECOVER_LEASE_ON_CLOSE_EXCEPTION_KEY;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.Write.ECRedundancy.DFS_CLIENT_EC_WRITE_FAILED_BLOCKS_TOLERATED;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.Write.ECRedundancy.DFS_CLIENT_EC_WRITE_FAILED_BLOCKS_TOLERATED_DEFAILT;
 
 /**
  * This class supports writing files in striped layout and erasure coded format.
@@ -286,6 +286,7 @@ public class DFSStripedOutputStream extends DFSOutputStream
   private CompletionService<Void> flushAllExecutorCompletionService;
   private int blockGroupIndex;
   private long datanodeRestartTimeout;
+  private final int failedBlocksTolerated;
 
   /** Construct a new output stream for creating a file. */
   DFSStripedOutputStream(DFSClient dfsClient, String src, HdfsFileStatus stat,
@@ -293,9 +294,7 @@ public class DFSStripedOutputStream extends DFSOutputStream
                          DataChecksum checksum, String[] favoredNodes)
                          throws IOException {
     super(dfsClient, src, stat, flag, progress, checksum, favoredNodes, false);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Creating DFSStripedOutputStream for " + src);
-    }
+    LOG.debug("Creating DFSStripedOutputStream for {}", src);
 
     ecPolicy = stat.getErasureCodingPolicy();
     final int numParityBlocks = ecPolicy.getNumParityUnits();
@@ -327,6 +326,15 @@ public class DFSStripedOutputStream extends DFSOutputStream
     currentPackets = new DFSPacket[streamers.size()];
     datanodeRestartTimeout = dfsClient.getConf().getDatanodeRestartTimeout();
     setCurrentStreamer(0);
+
+    int failedBlocksToleratedTmp = dfsClient.getConfiguration().getInt(
+        DFS_CLIENT_EC_WRITE_FAILED_BLOCKS_TOLERATED,
+        DFS_CLIENT_EC_WRITE_FAILED_BLOCKS_TOLERATED_DEFAILT);
+    if (failedBlocksToleratedTmp < 0) {
+      failedBlocksToleratedTmp = ecPolicy.getNumParityUnits();
+    }
+    failedBlocksTolerated = Math.min(failedBlocksToleratedTmp,
+        ecPolicy.getNumParityUnits());
   }
 
   /** Construct a new output stream for appending to a file. */
@@ -402,16 +410,16 @@ public class DFSStripedOutputStream extends DFSOutputStream
 
     final int failCount = failedStreamers.size() + newFailed.size();
     if (LOG.isDebugEnabled()) {
-      LOG.debug("checkStreamers: " + streamers);
-      LOG.debug("healthy streamer count=" + (numAllBlocks - failCount));
-      LOG.debug("original failed streamers: " + failedStreamers);
-      LOG.debug("newly failed streamers: " + newFailed);
+      LOG.debug("checkStreamers: {}", streamers);
+      LOG.debug("healthy streamer count={}", (numAllBlocks - failCount));
+      LOG.debug("original failed streamers: {}", failedStreamers);
+      LOG.debug("newly failed streamers: {}", newFailed);
     }
-    if (failCount > (numAllBlocks - numDataBlocks)) {
+    if (failCount > failedBlocksTolerated) {
       closeAllStreamers();
       throw new IOException("Failed: the number of failed blocks = "
-          + failCount + " > the number of parity blocks = "
-          + (numAllBlocks - numDataBlocks));
+          + failCount + " > the number of failed blocks tolerated = "
+          + failedBlocksTolerated);
     }
     return newFailed;
   }
@@ -673,9 +681,9 @@ public class DFSStripedOutputStream extends DFSOutputStream
       // for healthy streamers, wait till all of them have fetched the new block
       // and flushed out all the enqueued packets.
       flushAllInternals();
+      // recheck failed streamers again after the flush
+      newFailed = checkStreamers();
     }
-    // recheck failed streamers again after the flush
-    newFailed = checkStreamers();
     while (newFailed.size() > 0) {
       failedStreamers.addAll(newFailed);
       coordinator.clearFailureStates();
@@ -692,7 +700,7 @@ public class DFSStripedOutputStream extends DFSOutputStream
       // 2) create new block outputstream
       newFailed = waitCreatingStreamers(healthySet);
       if (newFailed.size() + failedStreamers.size() >
-          numAllBlocks - numDataBlocks) {
+          failedBlocksTolerated) {
         // The write has failed, Close all the streamers.
         closeAllStreamers();
         throw new IOException(
@@ -1202,9 +1210,7 @@ public class DFSStripedOutputStream extends DFSOutputStream
 
   @Override
   protected synchronized void closeImpl() throws IOException {
-    boolean recoverLeaseOnCloseException = dfsClient.getConfiguration()
-        .getBoolean(RECOVER_LEASE_ON_CLOSE_EXCEPTION_KEY,
-            RECOVER_LEASE_ON_CLOSE_EXCEPTION_DEFAULT);
+    boolean recoverLeaseOnCloseException = dfsClient.getConf().getRecoverLeaseOnCloseException();
     try {
       if (isClosed()) {
         exceptionLastSeen.check(true);

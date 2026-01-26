@@ -26,15 +26,17 @@ import javax.xml.bind.annotation.XmlType;
 
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AbstractCSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AbstractLeafQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AbstractParentQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ParentQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.helper.CapacitySchedulerInfoHelper;
 
 import java.util.ArrayList;
 import java.util.List;
 
+import static org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager.NO_LABEL;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.CapacitySchedulerQueueInfo.getSortedQueueAclInfoList;
 
 @XmlRootElement(name = "capacityScheduler")
@@ -47,6 +49,7 @@ public class CapacitySchedulerInfo extends SchedulerInfo {
   protected float maxCapacity;
   protected float weight;
   protected float normalizedWeight;
+  protected QueueCapacityVectorInfo queueCapacityVectorInfo;
   protected String queueName;
   private String queuePath;
   protected int maxParallelApps;
@@ -76,8 +79,10 @@ public class CapacitySchedulerInfo extends SchedulerInfo {
   public CapacitySchedulerInfo(CSQueue parent, CapacityScheduler cs) {
     this.queueName = parent.getQueueName();
     this.queuePath = parent.getQueuePath();
-    this.usedCapacity = parent.getUsedCapacity() * 100;
+    this.usedCapacity = parent.getUsedCapacity() * 100.0F;
     this.capacity = parent.getCapacity() * 100;
+    this.queueCapacityVectorInfo = new QueueCapacityVectorInfo(
+            parent.getConfiguredCapacityVector(NO_LABEL));
     float max = parent.getMaximumCapacity();
     if (max < EPSILON || max > 1f)
       max = 1f;
@@ -86,8 +91,7 @@ public class CapacitySchedulerInfo extends SchedulerInfo {
     this.normalizedWeight = parent.getQueueCapacities().getNormalizedWeight();
     this.maxParallelApps = parent.getMaxParallelApps();
 
-    capacities = new QueueCapacitiesInfo(parent.getQueueCapacities(),
-        parent.getQueueResourceQuotas(), false);
+    capacities = new QueueCapacitiesInfo(parent, false);
     queues = getQueues(cs, parent);
     health = new CapacitySchedulerHealthInfo(cs);
     maximumAllocation = new ResourceInfo(parent.getMaximumAllocation());
@@ -97,11 +101,11 @@ public class CapacitySchedulerInfo extends SchedulerInfo {
 
     CapacitySchedulerConfiguration conf = cs.getConfiguration();
     queueAcls = new QueueAclsInfo();
-    queueAcls.addAll(getSortedQueueAclInfoList(parent, queueName, conf));
+    queueAcls.addAll(getSortedQueueAclInfoList(parent, new QueuePath(queuePath), conf));
 
     queuePriority = parent.getPriority().getPriority();
-    if (parent instanceof ParentQueue) {
-      ParentQueue queue = (ParentQueue) parent;
+    if (parent instanceof AbstractParentQueue) {
+      AbstractParentQueue queue = (AbstractParentQueue) parent;
       orderingPolicyInfo = queue.getQueueOrderingPolicy()
           .getConfigName();
       autoQueueTemplateProperties = CapacitySchedulerInfoHelper
@@ -121,6 +125,7 @@ public class CapacitySchedulerInfo extends SchedulerInfo {
         .getAutoCreationEligibility(parent);
 
     defaultNodeLabelExpression = parent.getDefaultNodeLabelExpression();
+    schedulerName = "Capacity Scheduler";
   }
 
   public float getCapacity() {

@@ -18,10 +18,8 @@
 
 package org.apache.hadoop.util;
 
-import sun.misc.Signal;
-import sun.misc.SignalHandler;
+import org.slf4j.Logger;
 
-import org.apache.commons.logging.Log;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
@@ -41,13 +39,13 @@ public enum SignalLogger {
   /**
    * Our signal handler.
    */
-  private static class Handler implements SignalHandler {
-    final private LogAdapter LOG;
-    final private SignalHandler prevHandler;
+  private static class Handler implements SignalUtil.Handler {
+    final private Logger log;
+    final private SignalUtil.Handler prevHandler;
 
-    Handler(String name, LogAdapter LOG) {
-      this.LOG = LOG;
-      prevHandler = Signal.handle(new Signal(name), this);
+    Handler(String name, Logger log) {
+      this.log = log;
+      prevHandler = SignalUtil.handle(new SignalUtil.Signal(name), this);
     }
 
     /**
@@ -56,9 +54,8 @@ public enum SignalLogger {
      * @param signal    The incoming signal
      */
     @Override
-    public void handle(Signal signal) {
-      LOG.error("RECEIVED SIGNAL " + signal.getNumber() +
-          ": SIG" + signal.getName());
+    public void handle(SignalUtil.Signal signal) {
+      log.error("RECEIVED SIGNAL {}: SIG{}", signal.getNumber(), signal.getName());
       prevHandler.handle(signal);
     }
   }
@@ -66,32 +63,28 @@ public enum SignalLogger {
   /**
    * Register some signal handlers.
    *
-   * @param LOG        The log4j logfile to use in the signal handlers.
+   * @param log The log4j logfile to use in the signal handlers.
    */
-  public void register(final Log LOG) {
-    register(LogAdapter.create(LOG));
-  }
-
-  void register(final LogAdapter LOG) {
+  public void register(final Logger log) {
     if (registered) {
       throw new IllegalStateException("Can't re-install the signal handlers.");
     }
     registered = true;
     StringBuilder bld = new StringBuilder();
     bld.append("registered UNIX signal handlers for [");
-    final String SIGNALS[] = { "TERM", "HUP", "INT" };
+    final String[] SIGNALS = {"TERM", "HUP", "INT"};
     String separator = "";
     for (String signalName : SIGNALS) {
       try {
-        new Handler(signalName, LOG);
+        new Handler(signalName, log);
         bld.append(separator)
             .append(signalName);
         separator = ", ";
       } catch (Exception e) {
-        LOG.debug(e);
+        log.debug("Error: ", e);
       }
     }
     bld.append("]");
-    LOG.info(bld.toString());
+    log.info(bld.toString());
   }
 }

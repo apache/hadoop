@@ -63,6 +63,7 @@ import org.apache.hadoop.hdfs.server.namenode.sps.StoragePolicySatisfyManager;
 import org.apache.hadoop.hdfs.util.ByteArray;
 import org.apache.hadoop.hdfs.util.EnumCounters;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
+import org.apache.hadoop.hdfs.util.RwLockMode;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Time;
@@ -79,6 +80,7 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.concurrent.ForkJoinPool;
@@ -87,6 +89,8 @@ import java.util.concurrent.RecursiveAction;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.FS_PROTECTED_DIRECTORIES;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_ACCESSTIME_PRECISION_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_ACCESSTIME_PRECISION_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_ACCESS_CONTROL_ENFORCER_REPORTING_THRESHOLD_MS_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_ACCESS_CONTROL_ENFORCER_REPORTING_THRESHOLD_MS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_QUOTA_BY_STORAGETYPE_ENABLED_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_QUOTA_BY_STORAGETYPE_ENABLED_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PROTECTED_SUBDIRECTORIES_ENABLE;
@@ -155,7 +159,7 @@ public class FSDirectory implements Closeable {
   private final FSNamesystem namesystem;
   private volatile boolean skipQuotaCheck = false; //skip while consuming edits
   private final int maxComponentLength;
-  private final int maxDirItems;
+  private volatile int maxDirItems;
   private final int lsLimit;  // max list limit
   private final int contentCountLimit; // max content summary counts per run
   private final long contentSleepMicroSec;
@@ -181,6 +185,8 @@ public class FSDirectory implements Closeable {
    * ACL-related operations.
    */
   private final boolean aclsEnabled;
+  /** Threshold to print a warning. */
+  private final long accessControlEnforcerReportingThresholdMs;
   /**
    * Support for POSIX ACL inheritance. Not final for testing purpose.
    */
@@ -210,6 +216,11 @@ public class FSDirectory implements Closeable {
   // If external inode attribute provider is configured, use the new
   // authorizeWithContext() API or not.
   private boolean useAuthorizationWithContextAPI = false;
+
+  // We need a maximum maximum because by default, PB limits message sizes
+  // to 64MB. This means we can only store approximately 6.7 million entries
+  // per directory, but let's use 6.4 million for some safety.
+  private static final int MAX_DIR_ITEMS = 64 * 100 * 1000;
 
   public void setINodeAttributeProvider(
       @Nullable INodeAttributeProvider provider) {
@@ -257,37 +268,31 @@ public class FSDirectory implements Closeable {
    * remain as placeholders only
    */
   void readLock() {
-    assert namesystem.hasReadLock() : "Should hold namesystem read lock";
+    assert namesystem.hasReadLock(RwLockMode.FS) :
+        "Should hold read lock of namesystem FSLock";
   }
 
   void readUnlock() {
-    assert namesystem.hasReadLock() : "Should hold namesystem read lock";
+    assert namesystem.hasReadLock(RwLockMode.FS) :
+        "Should hold read lock of namesystem FSLock";
   }
 
   void writeLock() {
-    assert namesystem.hasWriteLock() : "Should hold namesystem write lock";
+    assert namesystem.hasWriteLock(RwLockMode.FS) :
+        "Should hold write lock of namesystem FSLock";
   }
 
   void writeUnlock() {
-    assert namesystem.hasWriteLock() : "Should hold namesystem write lock";
+    assert namesystem.hasWriteLock(RwLockMode.FS) :
+        "Should hold write lock of namesystem FSLock";
   }
 
   boolean hasWriteLock() {
-    return namesystem.hasWriteLock();
+    return namesystem.hasWriteLock(RwLockMode.FS);
   }
 
   boolean hasReadLock() {
-    return namesystem.hasReadLock();
-  }
-
-  @Deprecated // dirLock is obsolete, use namesystem.fsLock instead
-  public int getReadHoldCount() {
-    return namesystem.getReadHoldCount();
-  }
-
-  @Deprecated // dirLock is obsolete, use namesystem.fsLock instead
-  public int getWriteHoldCount() {
-    return namesystem.getWriteHoldCount();
+    return namesystem.hasReadLock(RwLockMode.FS);
   }
 
   public int getListLimit() {
@@ -388,13 +393,13 @@ public class FSDirectory implements Closeable {
         DFS_PROTECTED_SUBDIRECTORIES_ENABLE,
         DFS_PROTECTED_SUBDIRECTORIES_ENABLE_DEFAULT);
 
+    this.accessControlEnforcerReportingThresholdMs = conf.getLong(
+        DFS_NAMENODE_ACCESS_CONTROL_ENFORCER_REPORTING_THRESHOLD_MS_KEY,
+        DFS_NAMENODE_ACCESS_CONTROL_ENFORCER_REPORTING_THRESHOLD_MS_DEFAULT);
+
     Preconditions.checkArgument(this.inodeXAttrsLimit >= 0,
         "Cannot set a negative limit on the number of xattrs per inode (%s).",
         DFSConfigKeys.DFS_NAMENODE_MAX_XATTRS_PER_INODE_KEY);
-    // We need a maximum maximum because by default, PB limits message sizes
-    // to 64MB. This means we can only store approximately 6.7 million entries
-    // per directory, but let's use 6.4 million for some safety.
-    final int MAX_DIR_ITEMS = 64 * 100 * 1000;
     Preconditions.checkArgument(
         maxDirItems > 0 && maxDirItems <= MAX_DIR_ITEMS, "Cannot set "
             + DFSConfigKeys.DFS_NAMENODE_MAX_DIRECTORY_ITEMS_KEY
@@ -576,6 +581,18 @@ public class FSDirectory implements Closeable {
     return Joiner.on(",").skipNulls().join(protectedDirectories);
   }
 
+  public void setMaxDirItems(int newVal) {
+    Preconditions.checkArgument(
+        newVal > 0 && newVal <= MAX_DIR_ITEMS, "Cannot set "
+            + DFSConfigKeys.DFS_NAMENODE_MAX_DIRECTORY_ITEMS_KEY
+            + " to a value less than 1 or greater than " + MAX_DIR_ITEMS);
+    maxDirItems = newVal;
+  }
+
+  public int getMaxDirItems() {
+    return maxDirItems;
+  }
+
   BlockManager getBlockManager() {
     return getFSNamesystem().getBlockManager();
   }
@@ -686,7 +703,7 @@ public class FSDirectory implements Closeable {
    * accessible path that also passed additional sanity checks based on how
    * the path will be used as specified by the DirOp.
    *   READ:   Expands reserved paths and performs permission checks
-   *           during traversal.  Raw paths are only accessible by a superuser.
+   *           during traversal.
    *   WRITE:  In addition to READ checks, ensures the path is not a
    *           snapshot path.
    *   CREATE: In addition to WRITE checks, ensures path does not contain
@@ -1000,10 +1017,12 @@ public class FSDirectory implements Closeable {
    * when image/edits have been loaded and the file/dir to be deleted is not
    * contained in snapshots.
    */
-  void updateCountForDelete(final INode inode, final INodesInPath iip) {
+  void updateCountForDelete(final INode inode, final INodesInPath iip,
+      final Optional<QuotaCounts> quotaCounts) {
     if (getFSNamesystem().isImageLoaded() &&
         !inode.isInLatestSnapshot(iip.getLatestSnapshotId())) {
-      QuotaCounts counts = inode.computeQuotaUsage(getBlockStoragePolicySuite());
+      QuotaCounts counts = quotaCounts.orElseGet(() ->
+          inode.computeQuotaUsage(getBlockStoragePolicySuite()));
       unprotectedUpdateCount(iip, iip.length() - 1, counts.negation());
     }
   }
@@ -1100,7 +1119,7 @@ public class FSDirectory implements Closeable {
    */
   public void updateSpaceForCompleteBlock(BlockInfo completeBlk,
       INodesInPath inodes) throws IOException {
-    assert namesystem.hasWriteLock();
+    assert namesystem.hasWriteLock(RwLockMode.GLOBAL);
     INodesInPath iip = inodes != null ? inodes :
         INodesInPath.fromINode(namesystem.getBlockCollection(completeBlk));
     INodeFile fileINode = iip.getLastINode().asFile();
@@ -1190,7 +1209,7 @@ public class FSDirectory implements Closeable {
     cacheName(child);
     writeLock();
     try {
-      return addLastINode(existing, child, modes, true);
+      return addLastINode(existing, child, modes, true, Optional.empty());
     } finally {
       writeUnlock();
     }
@@ -1341,7 +1360,8 @@ public class FSDirectory implements Closeable {
    */
   @VisibleForTesting
   public INodesInPath addLastINode(INodesInPath existing, INode inode,
-      FsPermission modes, boolean checkQuota) throws QuotaExceededException {
+      FsPermission modes, boolean checkQuota, Optional<QuotaCounts> quotaCount)
+      throws QuotaExceededException {
     assert existing.getLastINode() != null &&
         existing.getLastINode().isDirectory();
 
@@ -1372,13 +1392,10 @@ public class FSDirectory implements Closeable {
     // always verify inode name
     verifyINodeName(inode.getLocalNameBytes());
 
-    final boolean isSrcSetSp = inode.isSetStoragePolicy();
-    final byte storagePolicyID = isSrcSetSp ?
-        inode.getLocalStoragePolicyID() :
-        parent.getStoragePolicyID();
-    final QuotaCounts counts = inode
-        .computeQuotaUsage(getBlockStoragePolicySuite(),
-            storagePolicyID, false, Snapshot.CURRENT_STATE_ID);
+    final QuotaCounts counts = quotaCount.orElseGet(() -> inode.
+        computeQuotaUsage(getBlockStoragePolicySuite(),
+            parent.getStoragePolicyID(), false,
+            Snapshot.CURRENT_STATE_ID));
     updateCount(existing, pos, counts, checkQuota);
 
     boolean isRename = (inode.getParent() != null);
@@ -1396,10 +1413,11 @@ public class FSDirectory implements Closeable {
     return INodesInPath.append(existing, inode, inode.getLocalNameBytes());
   }
 
-  INodesInPath addLastINodeNoQuotaCheck(INodesInPath existing, INode i) {
+  INodesInPath addLastINodeNoQuotaCheck(INodesInPath existing, INode i,
+      Optional<QuotaCounts> quotaCount) {
     try {
       // All callers do not have create modes to pass.
-      return addLastINode(existing, i, null, false);
+      return addLastINode(existing, i, null, false, quotaCount);
     } catch (QuotaExceededException e) {
       NameNode.LOG.warn("FSDirectory.addChildNoQuotaCheck - unexpected", e);
     }
@@ -1869,7 +1887,8 @@ public class FSDirectory implements Closeable {
       UserGroupInformation ugi) throws AccessControlException {
     return new FSPermissionChecker(
         fsOwner, superGroup, ugi, getUserFilteredAttributeProvider(ugi),
-        useAuthorizationWithContextAPI);
+        useAuthorizationWithContextAPI,
+        accessControlEnforcerReportingThresholdMs);
   }
 
   void checkOwner(FSPermissionChecker pc, INodesInPath iip)
@@ -2054,8 +2073,12 @@ public class FSDirectory implements Closeable {
     }
   }
 
-  /** Should only be used for tests to reset to any value */
-  void resetLastInodeIdWithoutChecking(long newValue) {
+  /**
+   * Should only be used for tests to reset to any value.
+   * @param newValue new value to set to
+   */
+  @VisibleForTesting
+  public void resetLastInodeIdWithoutChecking(long newValue) {
     inodeId.setCurrentValue(newValue);
   }
 

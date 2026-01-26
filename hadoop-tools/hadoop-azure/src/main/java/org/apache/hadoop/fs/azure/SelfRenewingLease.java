@@ -18,15 +18,16 @@
 
 package org.apache.hadoop.fs.azure;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.azure.StorageInterface.CloudBlobWrapper;
 
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 
 import com.microsoft.azure.storage.AccessCondition;
 import com.microsoft.azure.storage.StorageException;
 import com.microsoft.azure.storage.blob.CloudBlob;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -58,7 +59,7 @@ public class SelfRenewingLease {
 
   // Time to wait to renew lease in milliseconds
   public static final int LEASE_RENEWAL_PERIOD = 40000;
-  private static final Log LOG = LogFactory.getLog(SelfRenewingLease.class);
+  private static final Logger LOG = LoggerFactory.getLogger(SelfRenewingLease.class);
 
   // Used to allocate thread serial numbers in thread name
   private static AtomicInteger threadNumber = new AtomicInteger(0);
@@ -105,7 +106,7 @@ public class SelfRenewingLease {
         }
       }
     }
-    renewer = new Thread(new Renewer());
+    renewer = new SubjectInheritingThread(new Renewer());
 
     // A Renewer running should not keep JVM from exiting, so make it a daemon.
     renewer.setDaemon(true);

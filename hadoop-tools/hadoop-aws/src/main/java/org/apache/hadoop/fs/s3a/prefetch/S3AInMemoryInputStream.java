@@ -26,10 +26,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.impl.prefetch.BufferData;
-import org.apache.hadoop.fs.s3a.S3AInputStream;
+import org.apache.hadoop.fs.impl.prefetch.FilePosition;
 import org.apache.hadoop.fs.s3a.S3AReadOpContext;
 import org.apache.hadoop.fs.s3a.S3ObjectAttributes;
 import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
+import org.apache.hadoop.fs.s3a.impl.streams.ObjectInputStreamCallbacks;
 
 /**
  * Provides an {@code InputStream} that allows reading from an S3 file.
@@ -49,6 +50,7 @@ public class S3AInMemoryInputStream extends S3ARemoteInputStream {
    * Initializes a new instance of the {@code S3AInMemoryInputStream} class.
    *
    * @param context read-specific operation context.
+   * @param prefetchOptions prefetching options.
    * @param s3Attributes attributes of the S3 object being read.
    * @param client callbacks used for interacting with the underlying S3 client.
    * @param streamStatistics statistics for this stream.
@@ -59,10 +61,11 @@ public class S3AInMemoryInputStream extends S3ARemoteInputStream {
    */
   public S3AInMemoryInputStream(
       S3AReadOpContext context,
+      PrefetchOptions prefetchOptions,
       S3ObjectAttributes s3Attributes,
-      S3AInputStream.InputStreamCallbacks client,
+      ObjectInputStreamCallbacks client,
       S3AInputStreamStatistics streamStatistics) {
-    super(context, s3Attributes, client, streamStatistics);
+    super(context, prefetchOptions, s3Attributes, client, streamStatistics);
     int fileSize = (int) s3Attributes.getLen();
     this.buffer = ByteBuffer.allocate(fileSize);
     LOG.debug("Created in-memory input stream for {} (size = {})",
@@ -86,7 +89,12 @@ public class S3AInMemoryInputStream extends S3ARemoteInputStream {
       return false;
     }
 
-    if (!getFilePosition().isValid()) {
+    FilePosition filePosition = getFilePosition();
+    if (filePosition.isValid()) {
+      // Update current position (lazy seek).
+      filePosition.setAbsolute(getNextReadPos());
+    } else {
+      // Read entire file into buffer.
       buffer.clear();
       int numBytesRead =
           getReader().read(buffer, 0, buffer.capacity());
@@ -94,9 +102,9 @@ public class S3AInMemoryInputStream extends S3ARemoteInputStream {
         return false;
       }
       BufferData data = new BufferData(0, buffer);
-      getFilePosition().setData(data, 0, getSeekTargetPos());
+      filePosition.setData(data, 0, getNextReadPos());
     }
 
-    return getFilePosition().buffer().hasRemaining();
+    return filePosition.buffer().hasRemaining();
   }
 }

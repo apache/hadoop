@@ -185,7 +185,7 @@ public class KMSWebServer {
   }
 
   public static void main(String[] args) throws Exception {
-    KMSConfiguration.initLogging();
+    KMSConfiguration.validateSystemProps();
     StringUtils.startupShutdownMessage(KMSWebServer.class, args, LOG);
     Configuration conf = KMSConfiguration.getKMSConf();
     Configuration sslConf = SSLFactory.readSSLConfiguration(conf, SSLFactory.Mode.SERVER);

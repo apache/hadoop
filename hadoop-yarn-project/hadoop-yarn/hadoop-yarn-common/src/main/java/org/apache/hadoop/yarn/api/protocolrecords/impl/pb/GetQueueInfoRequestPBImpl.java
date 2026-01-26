@@ -96,6 +96,22 @@ public class GetQueueInfoRequestPBImpl extends GetQueueInfoRequest {
     builder.setRecursive(recursive);
   }
 
+  @Override
+  public String getSubClusterId() {
+    GetQueueInfoRequestProtoOrBuilder p = viaProto ? proto : builder;
+    return (p.hasSubClusterId()) ? p.getSubClusterId() : "";
+  }
+
+  @Override
+  public void setSubClusterId(String subClusterId) {
+    maybeInitBuilder();
+    if (subClusterId == null) {
+      builder.clearSubClusterId();
+      return;
+    }
+    builder.setSubClusterId(subClusterId);
+  }
+
   private void maybeInitBuilder() {
     if (viaProto || builder == null) {
       builder = GetQueueInfoRequestProto.newBuilder(proto);

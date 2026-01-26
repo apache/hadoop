@@ -18,10 +18,6 @@
 
 package org.apache.hadoop.yarn.logaggregation;
 
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.when;
-import static org.mockito.Mockito.doThrow;
-
 import java.io.BufferedReader;
 import java.io.DataInputStream;
 import java.io.File;
@@ -34,6 +30,7 @@ import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
 import java.io.Writer;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
@@ -41,9 +38,14 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.concurrent.CountDownLatch;
 
-import org.junit.Assert;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileStatus;
@@ -53,6 +55,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.api.TestContainerId;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -62,10 +65,15 @@ import org.apache.hadoop.yarn.logaggregation.AggregatedLogFormat.LogReader;
 import org.apache.hadoop.yarn.logaggregation.AggregatedLogFormat.LogValue;
 import org.apache.hadoop.yarn.logaggregation.AggregatedLogFormat.LogWriter;
 import org.apache.hadoop.yarn.util.Times;
-import org.junit.After;
-import org.junit.Assume;
-import org.junit.Before;
-import org.junit.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.when;
 
 public class TestAggregatedLogFormat {
 
@@ -84,8 +92,8 @@ public class TestAggregatedLogFormat {
     }
   }
 
-  @Before
-  @After
+  @BeforeEach
+  @AfterEach
   public void cleanupTestDir() throws Exception {
     Path workDirPath = new Path(testWorkDir.getAbsolutePath());
     LOG.info("Cleaning test directory [" + workDirPath + "]");
@@ -97,7 +105,7 @@ public class TestAggregatedLogFormat {
   //appending to logs
 
   @Test
-  public void testForCorruptedAggregatedLogs() throws Exception {
+  void testForCorruptedAggregatedLogs() throws Exception {
     Configuration conf = new Configuration();
     File workDir = new File(testWorkDir, "testReadAcontainerLogs1");
     Path remoteAppLogFile =
@@ -112,7 +120,7 @@ public class TestAggregatedLogFormat {
     long numChars = 950000;
 
     writeSrcFileAndALog(srcFilePath, "stdout", numChars, remoteAppLogFile,
-       srcFileRoot, testContainerId);
+        srcFileRoot, testContainerId);
 
     LogReader logReader = new LogReader(conf, remoteAppLogFile);
     LogKey rLogKey = new LogKey();
@@ -121,8 +129,8 @@ public class TestAggregatedLogFormat {
     try {
       LogReader.readAcontainerLogs(dis, writer);
     } catch (Exception e) {
-      if(e.toString().contains("NumberFormatException")) {
-        Assert.fail("Aggregated logs are corrupted.");
+      if (e.toString().contains("NumberFormatException")) {
+        fail("Aggregated logs are corrupted.");
       }
     }
 
@@ -134,10 +142,10 @@ public class TestAggregatedLogFormat {
       // Trying to read a corrupted log file created above should cause
       // log reading to fail below with an IOException.
       logReader = new LogReader(conf, remoteAppLogFile);
-      Assert.fail("Expect IOException from reading corrupt aggregated logs.");
+      fail("Expect IOException from reading corrupt aggregated logs.");
     } catch (IOException ioe) {
       DataInputStream dIS = logReader.next(rLogKey);
-      Assert.assertNull("Input stream not available for reading", dIS);
+      assertNull(dIS, "Input stream not available for reading");
     }
   }
 
@@ -153,7 +161,7 @@ public class TestAggregatedLogFormat {
 
     File outputFile = new File(new File(srcFilePath.toString()), fileName);
     FileOutputStream os = new FileOutputStream(outputFile);
-    final OutputStreamWriter osw = new OutputStreamWriter(os, "UTF8");
+    final OutputStreamWriter osw = new OutputStreamWriter(os, StandardCharsets.UTF_8);
     final int ch = filler;
 
     UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
@@ -167,8 +175,8 @@ public class TestAggregatedLogFormat {
 
       final CountDownLatch latch = new CountDownLatch(1);
 
-      Thread t = new Thread() {
-        public void run() {
+      SubjectInheritingThread t = new SubjectInheritingThread() {
+        public void work() {
           try {
             for (int i = 0; i < length / 3; i++) {
               osw.write(ch);
@@ -198,7 +206,7 @@ public class TestAggregatedLogFormat {
   }
 
   @Test
-  public void testReadAcontainerLogs1() throws Exception {
+  void testReadAcontainerLogs1() throws Exception {
     //Verify the output generated by readAContainerLogs(DataInputStream, Writer, logUploadedTime)
     testReadAcontainerLog(true);
 
@@ -250,12 +258,10 @@ public class TestAggregatedLogFormat {
 
       logWriter.append(logKey, spyLogValue);
     }
-
     // make sure permission are correct on the file
-    FileStatus fsStatus =  fs.getFileStatus(remoteAppLogFile);
-    Assert.assertEquals("permissions on log aggregation file are wrong",  
-      FsPermission.createImmutable((short) 0640), fsStatus.getPermission()); 
-
+    FileStatus fsStatus = fs.getFileStatus(remoteAppLogFile);
+    assertEquals(FsPermission.createImmutable((short) 0640), fsStatus.getPermission(),
+        "permissions on log aggregation file are wrong");
     LogReader logReader = new LogReader(conf, remoteAppLogFile);
     LogKey rLogKey = new LogKey();
     DataInputStream dis = logReader.next(rLogKey);
@@ -283,24 +289,24 @@ public class TestAggregatedLogFormat {
         + numChars + ("\n").length() + ("End of LogType:stdout"
             + System.lineSeparator() + System.lineSeparator()).length();
 
-    Assert.assertTrue("LogType not matched", s.contains("LogType:stdout"));
-    Assert.assertTrue("log file:stderr should not be aggregated.", !s.contains("LogType:stderr"));
-    Assert.assertTrue("log file:logs should not be aggregated.", !s.contains("LogType:logs"));
-    Assert.assertTrue("LogLength not matched", s.contains("LogLength:" + numChars));
-    Assert.assertTrue("Log Contents not matched", s.contains("Log Contents"));
+    assertTrue(s.contains("LogType:stdout"), "LogType not matched");
+    assertTrue(!s.contains("LogType:stderr"), "log file:stderr should not be aggregated.");
+    assertTrue(!s.contains("LogType:logs"), "log file:logs should not be aggregated.");
+    assertTrue(s.contains("LogLength:" + numChars), "LogLength not matched");
+    assertTrue(s.contains("Log Contents"), "Log Contents not matched");
     
     StringBuilder sb = new StringBuilder();
     for (int i = 0 ; i < numChars ; i++) {
       sb.append(filler);
     }
     String expectedContent = sb.toString();
-    Assert.assertTrue("Log content incorrect", s.contains(expectedContent));
+    assertTrue(s.contains(expectedContent), "Log content incorrect");
     
-    Assert.assertEquals(expectedLength, s.length());
+    assertEquals(expectedLength, s.length());
   }
 
   @Test
-  public void testZeroLengthLog() throws IOException {
+  void testZeroLengthLog() throws IOException {
     Configuration conf = new Configuration();
     File workDir = new File(testWorkDir, "testZeroLength");
     Path remoteAppLogFile = new Path(workDir.getAbsolutePath(),
@@ -332,17 +338,18 @@ public class TestAggregatedLogFormat {
     Writer writer = new StringWriter();
     LogReader.readAcontainerLogs(dis, writer);
 
-    Assert.assertEquals("LogType:stdout\n" +
+    assertEquals("LogType:stdout\n" +
         "LogLength:0\n" +
         "Log Contents:\n\n" +
         "End of LogType:stdout\n\n", writer.toString());
   }
 
-  @Test(timeout=10000)
-  public void testContainerLogsFileAccess() throws IOException {
+  @Test
+  @Timeout(10000)
+  void testContainerLogsFileAccess() throws IOException {
     // This test will run only if NativeIO is enabled as SecureIOUtils 
     // require it to be enabled.
-    Assume.assumeTrue(NativeIO.isAvailable());
+    Assumptions.assumeTrue(NativeIO.isAvailable());
     Configuration conf = new Configuration();
     conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
         "kerberos");
@@ -395,7 +402,7 @@ public class TestAggregatedLogFormat {
         new BufferedReader(new FileReader(new File(remoteAppLogFile
             .toUri().getRawPath())));
     String line;
-    StringBuffer sb = new StringBuffer("");
+    StringBuilder sb = new StringBuilder("");
     while ((line = in.readLine()) != null) {
       LOG.info(line);
       sb.append(line);
@@ -415,28 +422,28 @@ public class TestAggregatedLogFormat {
     String stdoutFile1 =
         StringUtils.join(
             File.separator,
-            Arrays.asList(new String[] {
+            Arrays.asList(new String[]{
                 workDir.getAbsolutePath(), "srcFiles",
                 testContainerId1.getApplicationAttemptId().getApplicationId()
-                    .toString(), testContainerId1.toString(), stderr }));
+                    .toString(), testContainerId1.toString(), stderr}));
 
     // The file: stdout is expected to be aggregated.
     String stdoutFile2 =
         StringUtils.join(
             File.separator,
-            Arrays.asList(new String[] {
+            Arrays.asList(new String[]{
                 workDir.getAbsolutePath(), "srcFiles",
                 testContainerId1.getApplicationAttemptId().getApplicationId()
-                    .toString(), testContainerId1.toString(), stdout }));
+                    .toString(), testContainerId1.toString(), stdout}));
     String message2 =
         "Owner '" + expectedOwner + "' for path "
             + stdoutFile2 + " did not match expected owner '"
             + ugi.getShortUserName() + "'";
-    
-    Assert.assertFalse(line.contains(message2));
-    Assert.assertFalse(line.contains(data + testContainerId1.toString()
+
+    assertFalse(line.contains(message2));
+    assertFalse(line.contains(data + testContainerId1.toString()
         + stderr));
-    Assert.assertTrue(line.contains(data + testContainerId1.toString()
+    assertTrue(line.contains(data + testContainerId1.toString()
         + stdout));
   }
   
@@ -468,7 +475,7 @@ public class TestAggregatedLogFormat {
     }
     File outputFile = new File(new File(srcFilePath.toString()), fileName);
     FileOutputStream os = new FileOutputStream(outputFile);
-    OutputStreamWriter osw = new OutputStreamWriter(os, "UTF8");
+    OutputStreamWriter osw = new OutputStreamWriter(os, StandardCharsets.UTF_8);
     return osw;
   }
 }

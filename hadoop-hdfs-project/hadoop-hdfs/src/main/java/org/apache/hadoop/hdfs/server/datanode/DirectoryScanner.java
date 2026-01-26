@@ -38,7 +38,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
@@ -406,6 +406,7 @@ public class DirectoryScanner implements Runnable {
     }
     try {
       reconcile();
+      dataset.setLastDirScannerFinishTime(System.currentTimeMillis());
     } catch (Exception e) {
       // Log and continue - allows Executor to run again next cycle
       LOG.error(
@@ -465,7 +466,7 @@ public class DirectoryScanner implements Runnable {
   public void reconcile() throws IOException {
     LOG.debug("reconcile start DirectoryScanning");
     scan();
-
+    DataNodeFaultInjector.get().waitUntilStorageRemoved();
     // HDFS-14476: run checkAndUpdate with batch to avoid holding the lock too
     // long
     int loopCount = 0;
@@ -508,6 +509,7 @@ public class DirectoryScanner implements Runnable {
 
     // Pre-sort the reports outside of the lock
     blockPoolReport.sortBlocks();
+    DataNodeFaultInjector.get().delayDiffRecord();
 
     for (final String bpid : blockPoolReport.getBlockPoolIds()) {
       List<ScanInfo> blockpoolReport = blockPoolReport.getScanInfo(bpid);

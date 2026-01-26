@@ -219,6 +219,15 @@ public class CommonConfigurationKeysPublic {
    * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
    * core-default.xml</a>
    */
+  public static final String  FS_TRASH_CLEAN_TRASHROOT_ENABLE_KEY =
+      "fs.trash.clean.trashroot.enable";
+  /** Default value for FS_TRASH_CLEAN_TRASHROOT_ENABLE_KEY. */
+  public static final boolean FS_TRASH_CLEAN_TRASHROOT_ENABLE_DEFAULT = false;
+  /**
+   * @see
+   * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
+   * core-default.xml</a>
+   */
   public static final String  FS_CLIENT_TOPOLOGY_RESOLUTION_ENABLED =
       "fs.client.resolve.topology.enabled";
   /** Default value for FS_CLIENT_TOPOLOGY_RESOLUTION_ENABLED. */
@@ -495,6 +504,10 @@ public class CommonConfigurationKeysPublic {
                                                 "ipc.server.log.slow.rpc";
   public static final boolean IPC_SERVER_LOG_SLOW_RPC_DEFAULT = false;
 
+  public static final String IPC_SERVER_LOG_SLOW_RPC_THRESHOLD_MS_KEY =
+      "ipc.server.log.slow.rpc.threshold.ms";
+  public static final long IPC_SERVER_LOG_SLOW_RPC_THRESHOLD_MS_DEFAULT = 0;
+
   public static final String IPC_SERVER_PURGE_INTERVAL_MINUTES_KEY =
     "ipc.server.purge.interval";
   public static final int IPC_SERVER_PURGE_INTERVAL_MINUTES_DEFAULT = 15;
@@ -723,6 +736,12 @@ public class CommonConfigurationKeysPublic {
    */
   public static final String  HADOOP_RPC_PROTECTION =
     "hadoop.rpc.protection";
+  public static final String HADOOP_SECURITY_SASL_MECHANISM_KEY
+      = "hadoop.security.sasl.mechanism";
+  public static final String HADOOP_SECURITY_SASL_MECHANISM_DEFAULT
+      = "DIGEST-MD5";
+  public static final String HADOOP_SECURITY_SASL_CUSTOMIZEDCALLBACKHANDLER_CLASS_KEY
+      = "hadoop.security.sasl.CustomizedCallbackHandler.class";
   /** Class to override Sasl Properties for a connection */
   public static final String  HADOOP_SECURITY_SASL_PROPS_RESOLVER_CLASS =
     "hadoop.security.saslproperties.resolver.class";
@@ -760,6 +779,9 @@ public class CommonConfigurationKeysPublic {
    */
   public static final String HADOOP_SECURITY_CRYPTO_JCE_PROVIDER_KEY =
     "hadoop.security.crypto.jce.provider";
+  public static final String HADOOP_SECURITY_CRYPTO_JCE_PROVIDER_AUTO_ADD_KEY =
+      "hadoop.security.crypto.jce.provider.auto-add";
+  public static final boolean HADOOP_SECURITY_CRYPTO_JCE_PROVIDER_AUTO_ADD_DEFAULT = true;
   /**
    * @see
    * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
@@ -989,6 +1011,15 @@ public class CommonConfigurationKeysPublic {
   public static final String  HADOOP_SECURITY_CREDENTIAL_PASSWORD_FILE_KEY =
       "hadoop.security.credstore.java-keystore-provider.password-file";
 
+  public static final String HADOOP_SECURITY_SECRET_MANAGER_KEY_GENERATOR_ALGORITHM_KEY =
+    "hadoop.security.secret-manager.key-generator.algorithm";
+  public static final String HADOOP_SECURITY_SECRET_MANAGER_KEY_GENERATOR_ALGORITHM_DEFAULT =
+    "HmacSHA1";
+
+  public static final String HADOOP_SECURITY_SECRET_MANAGER_KEY_LENGTH_KEY =
+    "hadoop.security.secret-manager.key-length";
+  public static final int HADOOP_SECURITY_SECRET_MANAGER_KEY_LENGTH_DEFAULT = 64;
+
   /**
    * @see
    * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
@@ -1000,11 +1031,13 @@ public class CommonConfigurationKeysPublic {
       String.join(",",
           "secret$",
           "password$",
+          "username$",
           "ssl.keystore.pass$",
           "fs.s3.*[Ss]ecret.?[Kk]ey",
           "fs.s3a.*.server-side-encryption.key",
           "fs.s3a.encryption.algorithm",
           "fs.s3a.encryption.key",
+          "fs.s3a.encryption.context",
           "fs.azure\\.account.key.*",
           "credential$",
           "oauth.*secret",
@@ -1062,5 +1095,13 @@ public class CommonConfigurationKeysPublic {
   public static final String IPC_SERVER_METRICS_UPDATE_RUNNER_INTERVAL =
       "ipc.server.metrics.update.runner.interval";
   public static final int IPC_SERVER_METRICS_UPDATE_RUNNER_INTERVAL_DEFAULT = 5000;
+
+  /**
+   * @see
+   * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
+   * core-default.xml</a>
+   */
+  public static final String JMX_NAN_FILTER = "hadoop.http.jmx.nan-filter.enabled";
+  public static final boolean JMX_NAN_FILTER_DEFAULT = false;
 }
 

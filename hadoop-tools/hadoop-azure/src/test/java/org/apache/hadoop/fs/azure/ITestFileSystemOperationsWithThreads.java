@@ -18,29 +18,24 @@
 
 package org.apache.hadoop.fs.azure;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
 import java.io.IOException;
 import java.net.URI;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azure.NativeAzureFileSystem.FolderRenamePending;
 import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Tests the Native Azure file system (WASB) using parallel threads for rename and delete operations.
@@ -52,10 +47,7 @@ public class ITestFileSystemOperationsWithThreads extends AbstractWasbTestBase {
   private int iterations = 1;
   private LogCapturer logs = null;
 
-  @Rule
-  public ExpectedException exception = ExpectedException.none();
-
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     super.setUp();
     Configuration conf = fs.getConf();
@@ -70,8 +62,7 @@ public class ITestFileSystemOperationsWithThreads extends AbstractWasbTestBase {
     fs.initialize(uri, conf);
 
     // Capture logs
-    logs = LogCapturer.captureLogs(new Log4JLogger(org.apache.log4j.Logger
-        .getRootLogger()));
+    logs = LogCapturer.captureLogs(LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME));
   }
 
   /*
@@ -207,7 +198,7 @@ public class ITestFileSystemOperationsWithThreads extends AbstractWasbTestBase {
    * @param term search term
    */
   protected void assertInLog(String content, String term) {
-    assertTrue("Empty log", !content.isEmpty());
+    assertTrue(!content.isEmpty(), "Empty log");
     if (!content.contains(term)) {
       String message = "No " + term + " found in logs";
       LOG.error(message);
@@ -222,7 +213,7 @@ public class ITestFileSystemOperationsWithThreads extends AbstractWasbTestBase {
    * @param term search term
    */
   protected void assertNotInLog(String content, String term) {
-    assertTrue("Empty log", !content.isEmpty());
+    assertTrue(!content.isEmpty(), "Empty log");
     if (content.contains(term)) {
       String message = term + " found in logs";
       LOG.error(message);

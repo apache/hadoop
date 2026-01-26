@@ -57,6 +57,7 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -110,7 +111,8 @@ class Application<K1 extends WritableComparable, V1 extends Writable,
     String localPasswordFile = new File(".") + Path.SEPARATOR
         + "jobTokenPassword";
     writePasswordToLocalFile(localPasswordFile, password, conf);
-    env.put("hadoop.pipes.shared.secret.location", localPasswordFile);
+    // FIXME This doesn't seem to be read anywhere
+    env.put("hadoop_pipes_shared_secret_location", localPasswordFile);
  
     List<String> cmd = new ArrayList<String>();
     String interpretor = conf.get(Submitter.INTERPRETOR);
@@ -279,7 +281,7 @@ class Application<K1 extends WritableComparable, V1 extends Writable,
   }
 
   @VisibleForTesting
-  public static class PingSocketCleaner extends Thread {
+  public static class PingSocketCleaner extends SubjectInheritingThread {
     private final ServerSocket serverSocket;
     private final int soTimeout;
 
@@ -290,7 +292,7 @@ class Application<K1 extends WritableComparable, V1 extends Writable,
     }
 
     @Override
-    public void run() {
+    public void work() {
       LOG.info("PingSocketCleaner started...");
       while (!Thread.currentThread().isInterrupted()) {
         Socket clientSocket = null;

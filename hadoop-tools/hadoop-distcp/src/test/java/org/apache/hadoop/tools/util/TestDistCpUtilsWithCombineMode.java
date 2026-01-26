@@ -25,16 +25,16 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Test length and checksums comparison with checksum combine mode.
@@ -47,13 +47,10 @@ public class TestDistCpUtilsWithCombineMode {
   private Configuration config;
   private MiniDFSCluster cluster;
 
-  @Rule
-  public TestName testName = new TestName();
-
-  @Before
-  public void create() throws IOException {
+  @BeforeEach
+  public void create(TestInfo testInfo) throws IOException {
     config = new Configuration();
-    if (testName.getMethodName().contains("WithCombineMode")) {
+    if (testInfo.getDisplayName().contains("WithCombineMode")) {
       config.set("dfs.checksum.combine.mode", "COMPOSITE_CRC");
     }
     config.setLong(
@@ -64,7 +61,7 @@ public class TestDistCpUtilsWithCombineMode {
         .build();
   }
 
-  @After
+  @AfterEach
   public void destroy() {
     if (cluster != null) {
       cluster.shutdown();
@@ -72,9 +69,9 @@ public class TestDistCpUtilsWithCombineMode {
   }
 
   @Test
-  public void testChecksumsComparisonWithCombineMode() throws IOException {
+  public void testChecksumsComparisonWithCombineMode(TestInfo testInfo) throws IOException {
     try {
-      compareSameContentButDiffBlockSizes();
+      compareSameContentButDiffBlockSizes(testInfo.getDisplayName());
     } catch (IOException e) {
       LOG.error("Unexpected exception is found", e);
       throw e;
@@ -82,18 +79,18 @@ public class TestDistCpUtilsWithCombineMode {
   }
 
   @Test
-  public void testChecksumsComparisonWithoutCombineMode() {
+  public void testChecksumsComparisonWithoutCombineMode(TestInfo testInfo) {
     try {
-      compareSameContentButDiffBlockSizes();
-      Assert.fail("Expected comparison to fail");
+      compareSameContentButDiffBlockSizes(testInfo.getDisplayName());
+      fail("Expected comparison to fail");
     } catch (IOException e) {
       GenericTestUtils.assertExceptionContains(
           "Checksum mismatch", e);
     }
   }
 
-  private void compareSameContentButDiffBlockSizes() throws IOException {
-    String base = "/tmp/verify-checksum-" + testName.getMethodName() + "/";
+  private void compareSameContentButDiffBlockSizes(String name) throws IOException {
+    String base = "/tmp/verify-checksum-" + name + "/";
     long seed = System.currentTimeMillis();
     short rf = 2;
 

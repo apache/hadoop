@@ -24,6 +24,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -90,7 +91,7 @@ public class UtilsForTests {
   }
 
   public static String formatBytes(long numBytes) {
-    StringBuffer buf = new StringBuffer();
+    StringBuilder buf = new StringBuilder();
     boolean bDetails = true;
     double num = numBytes;
 
@@ -115,7 +116,7 @@ public class UtilsForTests {
   }
 
   public static String formatBytes2(long numBytes) {
-    StringBuffer buf = new StringBuffer();
+    StringBuilder buf = new StringBuilder();
     long u = 0;
     if (numBytes >= TB) {
       u = numBytes / TB;
@@ -144,7 +145,7 @@ public class UtilsForTests {
   static final String regexpSpecials = "[]()?*+|.!^-\\~@";
 
   public static String regexpEscape(String plain) {
-    StringBuffer buf = new StringBuffer();
+    StringBuilder buf = new StringBuilder();
     char[] ch = plain.toCharArray();
     int csup = ch.length;
     for (int c = 0; c < csup; c++) {
@@ -180,7 +181,7 @@ public class UtilsForTests {
     String contents = null;
     try {
       in.read(buf, 0, len);
-      contents = new String(buf, "UTF-8");
+      contents = new String(buf, StandardCharsets.UTF_8);
     } finally {
       in.close();
     }
@@ -194,7 +195,7 @@ public class UtilsForTests {
     String contents = null;
     try {
       in.read(buf, 0, len);
-      contents = new String(buf, "UTF-8");
+      contents = new String(buf, StandardCharsets.UTF_8);
     } finally {
       in.close();
     }

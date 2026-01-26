@@ -112,6 +112,7 @@ import org.apache.hadoop.hdfs.server.namenode.startupprogress.StartupProgress;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.StartupProgress.Counter;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.Step;
 import org.apache.hadoop.hdfs.util.Holder;
+import org.apache.hadoop.hdfs.util.RwLockMode;
 import org.apache.hadoop.log.LogThrottlingHelper;
 import org.apache.hadoop.util.ChunkedArrayList;
 import org.apache.hadoop.util.Timer;
@@ -132,7 +133,8 @@ public class FSEditLogLoader {
   /** Limit logging about edit loading to every 5 seconds max. */
   @VisibleForTesting
   static final long LOAD_EDIT_LOG_INTERVAL_MS = 5000;
-  private final LogThrottlingHelper loadEditsLogHelper =
+  @VisibleForTesting
+  static final LogThrottlingHelper LOAD_EDITS_LOG_HELPER =
       new LogThrottlingHelper(LOAD_EDIT_LOG_INTERVAL_MS);
 
   private final FSNamesystem fsNamesys;
@@ -170,10 +172,10 @@ public class FSEditLogLoader {
     StartupProgress prog = NameNode.getStartupProgress();
     Step step = createStartupProgressStep(edits);
     prog.beginStep(Phase.LOADING_EDITS, step);
-    fsNamesys.writeLock();
+    fsNamesys.writeLock(RwLockMode.GLOBAL);
     try {
       long startTime = timer.monotonicNow();
-      LogAction preLogAction = loadEditsLogHelper.record("pre", startTime);
+      LogAction preLogAction = LOAD_EDITS_LOG_HELPER.record("pre", startTime);
       if (preLogAction.shouldLog()) {
         FSImage.LOG.info("Start loading edits file " + edits.getName()
             + " maxTxnsToRead = " + maxTxnsToRead +
@@ -182,7 +184,7 @@ public class FSEditLogLoader {
       long numEdits = loadEditRecords(edits, false, expectedStartingTxId,
           maxTxnsToRead, startOpt, recovery);
       long endTime = timer.monotonicNow();
-      LogAction postLogAction = loadEditsLogHelper.record("post", endTime,
+      LogAction postLogAction = LOAD_EDITS_LOG_HELPER.record("post", endTime,
           numEdits, edits.length(), endTime - startTime);
       if (postLogAction.shouldLog()) {
         FSImage.LOG.info("Loaded {} edits file(s) (the last named {}) of " +
@@ -195,7 +197,7 @@ public class FSEditLogLoader {
       return numEdits;
     } finally {
       edits.close();
-      fsNamesys.writeUnlock("loadFSEdits");
+      fsNamesys.writeUnlock(RwLockMode.GLOBAL, "loadFSEdits");
       prog.endStep(Phase.LOADING_EDITS, step);
     }
   }
@@ -217,7 +219,7 @@ public class FSEditLogLoader {
       LOG.trace("Acquiring write lock to replay edit log");
     }
 
-    fsNamesys.writeLock();
+    fsNamesys.writeLock(RwLockMode.GLOBAL);
     FSDirectory fsDir = fsNamesys.dir;
     fsDir.writeLock();
 
@@ -341,7 +343,7 @@ public class FSEditLogLoader {
         in.close();
       }
       fsDir.writeUnlock();
-      fsNamesys.writeUnlock("loadEditRecords");
+      fsNamesys.writeUnlock(RwLockMode.GLOBAL, "loadEditRecords");
 
       if (LOG.isTraceEnabled()) {
         LOG.trace("replaying edit log finished");
@@ -912,6 +914,7 @@ public class FSEditLogLoader {
       fsNamesys.getFSImage().updateStorageVersion();
       fsNamesys.getFSImage().renameCheckpoint(NameNodeFile.IMAGE_ROLLBACK,
           NameNodeFile.IMAGE);
+      fsNamesys.setNeedRollbackFsImage(false);
       break;
     }
     case OP_ADD_CACHE_DIRECTIVE: {

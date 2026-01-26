@@ -27,16 +27,17 @@ import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.tools.util.DistCpUtils;
 import org.apache.hadoop.security.Credentials;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.io.DataOutputStream;
 import java.net.URI;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TestGlobbedCopyListing {
 
@@ -46,7 +47,7 @@ public class TestGlobbedCopyListing {
 
   public static Map<String, String> expectedValues = new HashMap<String, String>();
 
-  @BeforeClass
+  @BeforeAll
   public static void setup() throws Exception {
     cluster = new MiniDFSCluster.Builder(new Configuration()).build();
     createSourceData();
@@ -96,7 +97,7 @@ public class TestGlobbedCopyListing {
         new Path("/tmp/source"), sourcePath));
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() {
     cluster.shutdown();
   }
@@ -134,9 +135,9 @@ public class TestGlobbedCopyListing {
       actualValues.put(value.getPath().toString(), key.toString());
     }
 
-    Assert.assertEquals(expectedValues.size(), actualValues.size());
+    assertEquals(expectedValues.size(), actualValues.size());
     for (Map.Entry<String, String> entry : actualValues.entrySet()) {
-      Assert.assertEquals(entry.getValue(), expectedValues.get(entry.getKey()));
+      assertEquals(entry.getValue(), expectedValues.get(entry.getKey()));
     }
   }
 }

@@ -32,6 +32,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 import javax.net.SocketFactory;
 
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.hdfs.protocolPB.RouterClientProtocolTranslatorPB;
+import org.apache.hadoop.hdfs.protocolPB.RouterGetUserMappingsProtocolTranslatorPB;
+import org.apache.hadoop.hdfs.protocolPB.RouterNamenodeProtocolTranslatorPB;
+import org.apache.hadoop.hdfs.protocolPB.RouterRefreshUserMappingsProtocolTranslatorPB;
 import org.apache.hadoop.ipc.AlignmentContext;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -41,9 +45,7 @@ import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocolPB.ClientNamenodeProtocolPB;
-import org.apache.hadoop.hdfs.protocolPB.ClientNamenodeProtocolTranslatorPB;
 import org.apache.hadoop.hdfs.protocolPB.NamenodeProtocolPB;
-import org.apache.hadoop.hdfs.protocolPB.NamenodeProtocolTranslatorPB;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.retry.RetryPolicy;
@@ -55,10 +57,8 @@ import org.apache.hadoop.security.RefreshUserMappingsProtocol;
 import org.apache.hadoop.security.SaslRpcServer;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.protocolPB.RefreshUserMappingsProtocolClientSideTranslatorPB;
 import org.apache.hadoop.security.protocolPB.RefreshUserMappingsProtocolPB;
 import org.apache.hadoop.tools.GetUserMappingsProtocol;
-import org.apache.hadoop.tools.protocolPB.GetUserMappingsProtocolClientSideTranslatorPB;
 import org.apache.hadoop.tools.protocolPB.GetUserMappingsProtocolPB;
 import org.apache.hadoop.util.Time;
 import org.eclipse.jetty.util.ajax.JSON;
@@ -117,15 +117,15 @@ public class ConnectionPool {
   static {
     PROTO_MAP.put(ClientProtocol.class,
         new ProtoImpl(ClientNamenodeProtocolPB.class,
-            ClientNamenodeProtocolTranslatorPB.class));
+            RouterClientProtocolTranslatorPB.class));
     PROTO_MAP.put(NamenodeProtocol.class, new ProtoImpl(
-        NamenodeProtocolPB.class, NamenodeProtocolTranslatorPB.class));
+        NamenodeProtocolPB.class, RouterNamenodeProtocolTranslatorPB.class));
     PROTO_MAP.put(RefreshUserMappingsProtocol.class,
         new ProtoImpl(RefreshUserMappingsProtocolPB.class,
-            RefreshUserMappingsProtocolClientSideTranslatorPB.class));
+            RouterRefreshUserMappingsProtocolTranslatorPB.class));
     PROTO_MAP.put(GetUserMappingsProtocol.class,
         new ProtoImpl(GetUserMappingsProtocolPB.class,
-            GetUserMappingsProtocolClientSideTranslatorPB.class));
+            RouterGetUserMappingsProtocolTranslatorPB.class));
   }
 
   /** Class to store the protocol implementation. */
@@ -286,8 +286,8 @@ public class ConnectionPool {
       }
       this.connections = tmpConnections;
     }
-    LOG.debug("Expected to remove {} connection and actually removed {} connections",
-        num, removed.size());
+    LOG.debug("Expected to remove {} connection and actually removed {} connections "
+        + "for connectionPool: {}", num, removed.size(), connectionPoolId);
     return removed;
   }
 
@@ -420,16 +420,17 @@ public class ConnectionPool {
    * context for a single user/security context. To maximize throughput it is
    * recommended to use multiple connection per user+server, allowing multiple
    * writes and reads to be dispatched in parallel.
-   * @param <T> Input type T.
    *
    * @param conf Configuration for the connection.
    * @param nnAddress Address of server supporting the ClientProtocol.
    * @param ugi User context.
    * @param proto Interface of the protocol.
    * @param enableMultiSocket Enable multiple socket or not.
+   * @param socketIndex Index for FederationConnectionId.
    * @param alignmentContext Client alignment context.
+   * @param <T> Input type T.
    * @return proto for the target ClientProtocol that contains the user's
-   *         security context.
+   * security context.
    * @throws IOException If it cannot be created.
    */
   protected static <T> ConnectionContext newConnection(Configuration conf,

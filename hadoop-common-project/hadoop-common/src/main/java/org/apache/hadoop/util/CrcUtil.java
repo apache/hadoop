@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,8 +21,8 @@ package org.apache.hadoop.util;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
-import java.io.IOException;
 import java.util.Arrays;
+import java.util.function.ToIntFunction;
 
 /**
  * This class provides utilities for working with CRCs.
@@ -33,6 +33,55 @@ public final class CrcUtil {
   public static final int MULTIPLICATIVE_IDENTITY = 0x80000000;
   public static final int GZIP_POLYNOMIAL = 0xEDB88320;
   public static final int CASTAGNOLI_POLYNOMIAL = 0x82F63B78;
+  private static final long UNIT = 0x8000_0000_0000_0000L;
+
+  /**
+   * @return a * b (mod p),
+   *         where mod p is computed by the given mod function.
+   */
+  static int multiplyMod(int a, int b, ToIntFunction<Long> mod) {
+    final long left  = ((long)a) << 32;
+    final long right = ((long)b) << 32;
+
+    final long product
+        = ((((((left & (UNIT /*  */)) == 0L? 0L : right)
+        ^     ((left & (UNIT >>>  1)) == 0L? 0L : right >>>  1))
+        ^    (((left & (UNIT >>>  2)) == 0L? 0L : right >>>  2)
+        ^     ((left & (UNIT >>>  3)) == 0L? 0L : right >>>  3)))
+        ^   ((((left & (UNIT >>>  4)) == 0L? 0L : right >>>  4)
+        ^     ((left & (UNIT >>>  5)) == 0L? 0L : right >>>  5))
+        ^    (((left & (UNIT >>>  6)) == 0L? 0L : right >>>  6)
+        ^     ((left & (UNIT >>>  7)) == 0L? 0L : right >>>  7))))
+
+        ^  (((((left & (UNIT >>>  8)) == 0L? 0L : right >>>  8)
+        ^     ((left & (UNIT >>>  9)) == 0L? 0L : right >>>  9))
+        ^    (((left & (UNIT >>> 10)) == 0L? 0L : right >>> 10)
+        ^     ((left & (UNIT >>> 11)) == 0L? 0L : right >>> 11)))
+        ^   ((((left & (UNIT >>> 12)) == 0L? 0L : right >>> 12)
+        ^     ((left & (UNIT >>> 13)) == 0L? 0L : right >>> 13))
+        ^    (((left & (UNIT >>> 14)) == 0L? 0L : right >>> 14)
+        ^     ((left & (UNIT >>> 15)) == 0L? 0L : right >>> 15)))))
+
+        ^ ((((((left & (UNIT >>> 16)) == 0L? 0L : right >>> 16)
+        ^     ((left & (UNIT >>> 17)) == 0L? 0L : right >>> 17))
+        ^    (((left & (UNIT >>> 18)) == 0L? 0L : right >>> 18)
+        ^     ((left & (UNIT >>> 19)) == 0L? 0L : right >>> 19)))
+        ^   ((((left & (UNIT >>> 20)) == 0L? 0L : right >>> 20)
+        ^     ((left & (UNIT >>> 21)) == 0L? 0L : right >>> 21))
+        ^    (((left & (UNIT >>> 22)) == 0L? 0L : right >>> 22)
+        ^     ((left & (UNIT >>> 23)) == 0L? 0L : right >>> 23))))
+
+        ^  (((((left & (UNIT >>> 24)) == 0L? 0L : right >>> 24)
+        ^     ((left & (UNIT >>> 25)) == 0L? 0L : right >>> 25))
+        ^    (((left & (UNIT >>> 26)) == 0L? 0L : right >>> 26)
+        ^     ((left & (UNIT >>> 27)) == 0L? 0L : right >>> 27)))
+        ^   ((((left & (UNIT >>> 28)) == 0L? 0L : right >>> 28)
+        ^     ((left & (UNIT >>> 29)) == 0L? 0L : right >>> 29))
+        ^    (((left & (UNIT >>> 30)) == 0L? 0L : right >>> 30)
+        ^     ((left & (UNIT >>> 31)) == 0L? 0L : right >>> 31)))));
+
+    return mod.applyAsInt(product);
+  }
 
   /**
    * Hide default constructor for a static utils class.
@@ -49,7 +98,7 @@ public final class CrcUtil {
    * @param mod mod.
    * @return monomial.
    */
-  public static int getMonomial(long lengthBytes, int mod) {
+  public static int getMonomial(long lengthBytes, ToIntFunction<Long> mod) {
     if (lengthBytes == 0) {
       return MULTIPLICATIVE_IDENTITY;
     } else if (lengthBytes < 0) {
@@ -68,9 +117,9 @@ public final class CrcUtil {
     while (degree > 0) {
       if ((degree & 1) != 0) {
         product = (product == MULTIPLICATIVE_IDENTITY) ? multiplier :
-            galoisFieldMultiply(product, multiplier, mod);
+            multiplyMod(product, multiplier, mod);
       }
-      multiplier = galoisFieldMultiply(multiplier, multiplier, mod);
+      multiplier = multiplyMod(multiplier, multiplier, mod);
       degree >>= 1;
     }
     return product;
@@ -86,8 +135,8 @@ public final class CrcUtil {
    * @return compose with monomial.
    */
   public static int composeWithMonomial(
-      int crcA, int crcB, int monomial, int mod) {
-    return galoisFieldMultiply(crcA, monomial, mod) ^ crcB;
+      int crcA, int crcB, int monomial, ToIntFunction<Long> mod) {
+    return multiplyMod(crcA, monomial, mod) ^ crcB;
   }
 
   /**
@@ -99,7 +148,7 @@ public final class CrcUtil {
    * @param mod mod.
    * @return compose result.
    */
-  public static int compose(int crcA, int crcB, long lengthB, int mod) {
+  public static int compose(int crcA, int crcB, long lengthB, ToIntFunction<Long> mod) {
     int monomial = getMonomial(lengthB, mod);
     return composeWithMonomial(crcA, crcB, monomial, mod);
   }
@@ -112,15 +161,7 @@ public final class CrcUtil {
    */
   public static byte[] intToBytes(int value) {
     byte[] buf = new byte[4];
-    try {
-      writeInt(buf, 0, value);
-    } catch (IOException ioe) {
-      // Since this should only be able to occur from code bugs within this
-      // class rather than user input, we throw as a RuntimeException
-      // rather than requiring this method to declare throwing IOException
-      // for something the caller can't control.
-      throw new RuntimeException(ioe);
-    }
+    writeInt(buf, 0, value);
     return buf;
   }
 
@@ -132,16 +173,14 @@ public final class CrcUtil {
    * @param buf buf size.
    * @param offset offset.
    * @param value value.
-   * @throws IOException raised on errors performing I/O.
    */
-  public static void writeInt(byte[] buf, int offset, int value)
-      throws IOException {
+  public static void writeInt(byte[] buf, int offset, int value) {
     if (offset + 4  > buf.length) {
-      throw new IOException(String.format(
+      throw new ArrayIndexOutOfBoundsException(String.format(
           "writeInt out of bounds: buf.length=%d, offset=%d",
           buf.length, offset));
     }
-    buf[offset + 0] = (byte)((value >>> 24) & 0xff);
+    buf[offset    ] = (byte)((value >>> 24) & 0xff);
     buf[offset + 1] = (byte)((value >>> 16) & 0xff);
     buf[offset + 2] = (byte)((value >>> 8) & 0xff);
     buf[offset + 3] = (byte)(value & 0xff);
@@ -154,20 +193,17 @@ public final class CrcUtil {
    * @param offset offset.
    * @param buf buf.
    * @return int.
-   * @throws IOException raised on errors performing I/O.
    */
-  public static int readInt(byte[] buf, int offset)
-      throws IOException {
+  public static int readInt(byte[] buf, int offset) {
     if (offset + 4  > buf.length) {
-      throw new IOException(String.format(
+      throw new ArrayIndexOutOfBoundsException(String.format(
           "readInt out of bounds: buf.length=%d, offset=%d",
           buf.length, offset));
     }
-    int value = ((buf[offset + 0] & 0xff) << 24) |
+    return      ((buf[offset    ] & 0xff) << 24) |
                 ((buf[offset + 1] & 0xff) << 16) |
                 ((buf[offset + 2] & 0xff) << 8)  |
                 ((buf[offset + 3] & 0xff));
-    return value;
   }
 
   /**
@@ -176,13 +212,11 @@ public final class CrcUtil {
    * formatted value.
    *
    * @param bytes bytes.
-   * @throws IOException raised on errors performing I/O.
    * @return a list of hex formatted values.
    */
-  public static String toSingleCrcString(final byte[] bytes)
-      throws IOException {
+  public static String toSingleCrcString(final byte[] bytes) {
     if (bytes.length != 4) {
-      throw new IOException((String.format(
+      throw new IllegalArgumentException((String.format(
           "Unexpected byte[] length '%d' for single CRC. Contents: %s",
           bytes.length, Arrays.toString(bytes))));
     }
@@ -195,13 +229,11 @@ public final class CrcUtil {
    * hex formatted values.
    *
    * @param bytes bytes.
-   * @throws IOException raised on errors performing I/O.
    * @return a list of hex formatted values.
    */
-  public static String toMultiCrcString(final byte[] bytes)
-      throws IOException {
+  public static String toMultiCrcString(final byte[] bytes) {
     if (bytes.length % 4 != 0) {
-      throw new IOException((String.format(
+      throw new IllegalArgumentException((String.format(
           "Unexpected byte[] length '%d' not divisible by 4. Contents: %s",
           bytes.length, Arrays.toString(bytes))));
     }
@@ -217,40 +249,5 @@ public final class CrcUtil {
     return sb.toString();
   }
 
-  /**
-   * Galois field multiplication of {@code p} and {@code q} with the
-   * generator polynomial {@code m} as the modulus.
-   *
-   * @param m The little-endian polynomial to use as the modulus when
-   *     multiplying p and q, with implicit "1" bit beyond the bottom bit.
-   */
-  private static int galoisFieldMultiply(int p, int q, int m) {
-    int summation = 0;
 
-    // Top bit is the x^0 place; each right-shift increments the degree of the
-    // current term.
-    int curTerm = MULTIPLICATIVE_IDENTITY;
-
-    // Iteratively multiply p by x mod m as we go to represent the q[i] term
-    // (of degree x^i) times p.
-    int px = p;
-
-    while (curTerm != 0) {
-      if ((q & curTerm) != 0) {
-        summation ^= px;
-      }
-
-      // Bottom bit represents highest degree since we're little-endian; before
-      // we multiply by "x" for the next term, check bottom bit to know whether
-      // the resulting px will thus have a term matching the implicit "1" term
-      // of "m" and thus will need to subtract "m" after mutiplying by "x".
-      boolean hasMaxDegree = ((px & 1) != 0);
-      px >>>= 1;
-      if (hasMaxDegree) {
-        px ^= m;
-      }
-      curTerm >>>= 1;
-    }
-    return summation;
-  }
 }

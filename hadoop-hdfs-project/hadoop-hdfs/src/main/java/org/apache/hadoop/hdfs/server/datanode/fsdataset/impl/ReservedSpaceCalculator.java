@@ -46,6 +46,8 @@ public abstract class ReservedSpaceCalculator {
     private DF usage;
     private StorageType storageType;
 
+    private String dir;
+
     public Builder(Configuration conf) {
       this.conf = conf;
     }
@@ -61,6 +63,11 @@ public abstract class ReservedSpaceCalculator {
       return this;
     }
 
+    public Builder setDir(String newDir) {
+      this.dir = newDir;
+      return this;
+    }
+
     ReservedSpaceCalculator build() {
       try {
         Class<? extends ReservedSpaceCalculator> clazz = conf.getClass(
@@ -69,10 +76,10 @@ public abstract class ReservedSpaceCalculator {
             ReservedSpaceCalculator.class);
 
         Constructor constructor = clazz.getConstructor(
-            Configuration.class, DF.class, StorageType.class);
+            Configuration.class, DF.class, StorageType.class, String.class);
 
         return (ReservedSpaceCalculator) constructor.newInstance(
-            conf, usage, storageType);
+            conf, usage, storageType, dir);
       } catch (Exception e) {
         throw new IllegalStateException(
             "Error instantiating ReservedSpaceCalculator", e);
@@ -84,20 +91,30 @@ public abstract class ReservedSpaceCalculator {
   private final Configuration conf;
   private final StorageType storageType;
 
+  private final String dir;
+
   ReservedSpaceCalculator(Configuration conf, DF usage,
-      StorageType storageType) {
+      StorageType storageType, String dir) {
     this.usage = usage;
     this.conf = conf;
     this.storageType = storageType;
+    this.dir = dir;
   }
 
   DF getUsage() {
     return usage;
   }
 
+  String getDir() {
+    return dir;
+  }
+
   long getReservedFromConf(String key, long defaultValue) {
-    return conf.getLong(key + "." + StringUtils.toLowerCase(
-        storageType.toString()), conf.getLongBytes(key, defaultValue));
+    return conf.getLong(
+        key + "." + getDir() + "." + StringUtils.toLowerCase(storageType.toString()),
+        conf.getLong(key + "." + getDir(),
+            conf.getLong(key + "." + StringUtils.toLowerCase(storageType.toString()),
+                conf.getLongBytes(key, defaultValue))));
   }
 
   /**
@@ -117,8 +134,8 @@ public abstract class ReservedSpaceCalculator {
     private final long reservedBytes;
 
     public ReservedSpaceCalculatorAbsolute(Configuration conf, DF usage,
-        StorageType storageType) {
-      super(conf, usage, storageType);
+        StorageType storageType, String dir) {
+      super(conf, usage, storageType, dir);
       this.reservedBytes = getReservedFromConf(DFS_DATANODE_DU_RESERVED_KEY,
           DFS_DATANODE_DU_RESERVED_DEFAULT);
     }
@@ -138,8 +155,8 @@ public abstract class ReservedSpaceCalculator {
     private final long reservedPct;
 
     public ReservedSpaceCalculatorPercentage(Configuration conf, DF usage,
-        StorageType storageType) {
-      super(conf, usage, storageType);
+        StorageType storageType, String dir) {
+      super(conf, usage, storageType, dir);
       this.reservedPct = getReservedFromConf(
           DFS_DATANODE_DU_RESERVED_PERCENTAGE_KEY,
           DFS_DATANODE_DU_RESERVED_PERCENTAGE_DEFAULT);
@@ -162,8 +179,8 @@ public abstract class ReservedSpaceCalculator {
     private final long reservedPct;
 
     public ReservedSpaceCalculatorConservative(Configuration conf, DF usage,
-        StorageType storageType) {
-      super(conf, usage, storageType);
+        StorageType storageType, String dir) {
+      super(conf, usage, storageType, dir);
       this.reservedBytes = getReservedFromConf(DFS_DATANODE_DU_RESERVED_KEY,
           DFS_DATANODE_DU_RESERVED_DEFAULT);
       this.reservedPct = getReservedFromConf(
@@ -197,8 +214,8 @@ public abstract class ReservedSpaceCalculator {
     private final long reservedPct;
 
     public ReservedSpaceCalculatorAggressive(Configuration conf, DF usage,
-        StorageType storageType) {
-      super(conf, usage, storageType);
+        StorageType storageType, String dir) {
+      super(conf, usage, storageType, dir);
       this.reservedBytes = getReservedFromConf(DFS_DATANODE_DU_RESERVED_KEY,
           DFS_DATANODE_DU_RESERVED_DEFAULT);
       this.reservedPct = getReservedFromConf(

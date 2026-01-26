@@ -22,13 +22,20 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.contract.AbstractContractGetFileStatusTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.fs.contract.s3a.S3AContract;
+import org.apache.hadoop.test.tags.IntegrationTest;
+
+import org.junit.jupiter.api.AfterEach;
 
 import static org.apache.hadoop.fs.s3a.Constants.LIST_VERSION;
+import static org.apache.hadoop.fs.s3a.S3ATestConstants.KEY_LIST_V1_ENABLED;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.disableFilesystemCaching;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfNotEnabled;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfS3ExpressBucket;
 
 /**
  * S3A contract tests for getFileStatus, using the v1 List Objects API.
  */
+@IntegrationTest
 public class ITestS3AContractGetFileStatusV1List
     extends AbstractContractGetFileStatusTest {
 
@@ -38,6 +45,7 @@ public class ITestS3AContractGetFileStatusV1List
     return new S3AContract(conf);
   }
 
+  @AfterEach
   @Override
   public void teardown() throws Exception {
     getLogger().info("FS details {}", getFileSystem());
@@ -48,6 +56,9 @@ public class ITestS3AContractGetFileStatusV1List
   protected Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
     disableFilesystemCaching(conf);
+    skipIfNotEnabled(conf, KEY_LIST_V1_ENABLED,
+        "Skipping V1 listing tests");
+    skipIfS3ExpressBucket(conf);
     conf.setInt(Constants.MAX_PAGING_KEYS, 2);
 
     // Use v1 List Objects API

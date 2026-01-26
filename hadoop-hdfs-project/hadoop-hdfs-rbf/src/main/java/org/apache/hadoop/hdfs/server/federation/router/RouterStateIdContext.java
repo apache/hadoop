@@ -19,17 +19,19 @@
 package org.apache.hadoop.hdfs.server.federation.router;
 
 import java.lang.reflect.Method;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.LongAccumulator;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.RouterFederatedStateProto;
 import org.apache.hadoop.hdfs.server.namenode.ha.ReadOnly;
 import org.apache.hadoop.ipc.AlignmentContext;
 import org.apache.hadoop.ipc.RetriableException;
@@ -46,7 +48,7 @@ import org.apache.hadoop.thirdparty.protobuf.InvalidProtocolBufferException;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-class RouterStateIdContext implements AlignmentContext {
+public class RouterStateIdContext implements AlignmentContext {
 
   private final HashSet<String> coordinatedMethods;
   /**
@@ -57,6 +59,10 @@ class RouterStateIdContext implements AlignmentContext {
   private final ConcurrentHashMap<String, LongAccumulator> namespaceIdMap;
   // Size limit for the map of state Ids to send to clients.
   private final int maxSizeOfFederatedStateToPropagate;
+  /** Observer read enabled. Default for all nameservices. */
+  private final boolean observerReadEnabledDefault;
+  /** Nameservice specific overrides of the default setting for enabling observer reads. */
+  private HashSet<String> observerReadEnabledOverrides = new HashSet<>();
 
   RouterStateIdContext(Configuration conf) {
     this.coordinatedMethods = new HashSet<>();
@@ -74,23 +80,48 @@ class RouterStateIdContext implements AlignmentContext {
     maxSizeOfFederatedStateToPropagate =
         conf.getInt(RBFConfigKeys.DFS_ROUTER_OBSERVER_FEDERATED_STATE_PROPAGATION_MAXSIZE,
         RBFConfigKeys.DFS_ROUTER_OBSERVER_FEDERATED_STATE_PROPAGATION_MAXSIZE_DEFAULT);
+
+    this.observerReadEnabledDefault = conf.getBoolean(
+        RBFConfigKeys.DFS_ROUTER_OBSERVER_READ_DEFAULT_KEY,
+        RBFConfigKeys.DFS_ROUTER_OBSERVER_READ_DEFAULT_VALUE);
+    String[] observerReadOverrides =
+        conf.getStrings(RBFConfigKeys.DFS_ROUTER_OBSERVER_READ_OVERRIDES);
+    if (observerReadOverrides != null) {
+      observerReadEnabledOverrides.addAll(Arrays.asList(observerReadOverrides));
+    }
   }
 
   /**
    * Adds the {@link #namespaceIdMap} to the response header that will be sent to a client.
+   *
+   * @param headerBuilder the response header that will be sent to a client.
    */
   public void setResponseHeaderState(RpcResponseHeaderProto.Builder headerBuilder) {
     if (namespaceIdMap.isEmpty()) {
       return;
     }
-    HdfsServerFederationProtos.RouterFederatedStateProto.Builder federatedStateBuilder =
-        HdfsServerFederationProtos.RouterFederatedStateProto.newBuilder();
-    namespaceIdMap.forEach((k, v) -> federatedStateBuilder.putNamespaceStateIds(k, v.get()));
-    headerBuilder.setRouterFederatedState(federatedStateBuilder.build().toByteString());
+    RouterFederatedStateProto.Builder builder = RouterFederatedStateProto.newBuilder();
+    namespaceIdMap.forEach((k, v) -> {
+      if ((v.get() != Long.MIN_VALUE) && isNamespaceObserverReadEligible(k)) {
+        builder.putNamespaceStateIds(k, v.get());
+      }
+    });
+    if (builder.getNamespaceStateIdsCount() <= maxSizeOfFederatedStateToPropagate) {
+      headerBuilder.setRouterFederatedState(builder.build().toByteString());
+    }
   }
 
   public LongAccumulator getNamespaceStateId(String nsId) {
-    return namespaceIdMap.computeIfAbsent(nsId, key -> new LongAccumulator(Math::max, Long.MIN_VALUE));
+    return namespaceIdMap.computeIfAbsent(nsId,
+        key -> new LongAccumulator(Math::max, Long.MIN_VALUE));
+  }
+
+  public List<String> getNamespaces() {
+    return Collections.list(namespaceIdMap.keys());
+  }
+
+  public ConcurrentHashMap<String, LongAccumulator> getNamespaceIdMap() {
+    return namespaceIdMap;
   }
 
   public void removeNamespaceStateId(String nsId) {
@@ -99,12 +130,15 @@ class RouterStateIdContext implements AlignmentContext {
 
   /**
    * Utility function to parse routerFederatedState field in RPC headers.
+   *
+   * @param byteString the byte string of routerFederatedState.
+   * @return the router federated state map.
    */
   public static Map<String, Long> getRouterFederatedStateMap(ByteString byteString) {
     if (byteString != null) {
-      HdfsServerFederationProtos.RouterFederatedStateProto federatedState;
+      RouterFederatedStateProto federatedState;
       try {
-        federatedState = HdfsServerFederationProtos.RouterFederatedStateProto.parseFrom(byteString);
+        federatedState = RouterFederatedStateProto.parseFrom(byteString);
       } catch (InvalidProtocolBufferException e) {
         throw new RuntimeException(e);
       }
@@ -120,7 +154,8 @@ class RouterStateIdContext implements AlignmentContext {
     if (call != null) {
       ByteString callFederatedNamespaceState = call.getFederatedNamespaceState();
       if (callFederatedNamespaceState != null) {
-        Map<String, Long> clientFederatedStateIds = getRouterFederatedStateMap(callFederatedNamespaceState);
+        Map<String, Long> clientFederatedStateIds =
+            getRouterFederatedStateMap(callFederatedNamespaceState);
         clientStateID = clientFederatedStateIds.getOrDefault(nsId, Long.MIN_VALUE);
       }
     }
@@ -129,9 +164,7 @@ class RouterStateIdContext implements AlignmentContext {
 
   @Override
   public void updateResponseState(RpcResponseHeaderProto.Builder header) {
-    if (namespaceIdMap.size() <= maxSizeOfFederatedStateToPropagate) {
-      setResponseHeaderState(header);
-    }
+    setResponseHeaderState(header);
   }
 
   @Override
@@ -164,5 +197,14 @@ class RouterStateIdContext implements AlignmentContext {
   public boolean isCoordinatedCall(String protocolName, String methodName) {
     return protocolName.equals(ClientProtocol.class.getCanonicalName())
         && coordinatedMethods.contains(methodName);
+  }
+
+  /**
+   * Check if a namespace is eligible for observer reads.
+   * @param nsId namespaceID
+   * @return whether the 'namespace' has observer reads enabled.
+   */
+  boolean isNamespaceObserverReadEligible(String nsId) {
+    return observerReadEnabledDefault != observerReadEnabledOverrides.contains(nsId);
   }
 }

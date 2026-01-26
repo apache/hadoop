@@ -20,6 +20,8 @@ package org.apache.hadoop.hdfs.server.federation.router;
 
 import java.io.IOException;
 import java.util.concurrent.atomic.LongAccumulator;
+
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.ipc.AlignmentContext;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos;
 
@@ -62,7 +64,12 @@ public class PoolAlignmentContext implements AlignmentContext {
    */
   @Override
   public void receiveResponseState(RpcHeaderProtos.RpcResponseHeaderProto header) {
-    sharedGlobalStateId.accumulate(header.getStateId());
+    if (header.getStateId() == 0 && sharedGlobalStateId.get() > 0) {
+      sharedGlobalStateId.reset();
+      poolLocalStateId.reset();
+    } else {
+      sharedGlobalStateId.accumulate(header.getStateId());
+    }
   }
 
   /**
@@ -71,8 +78,7 @@ public class PoolAlignmentContext implements AlignmentContext {
    */
   @Override
   public void updateRequestState(RpcHeaderProtos.RpcRequestHeaderProto.Builder header) {
-    long maxStateId = Long.max(poolLocalStateId.get(), sharedGlobalStateId.get());
-    header.setStateId(maxStateId);
+    header.setStateId(poolLocalStateId.get());
   }
 
   /**
@@ -99,5 +105,10 @@ public class PoolAlignmentContext implements AlignmentContext {
 
   public void advanceClientStateId(Long clientStateId) {
     poolLocalStateId.accumulate(clientStateId);
+  }
+
+  @VisibleForTesting
+  public long getPoolLocalStateId() {
+    return this.poolLocalStateId.get();
   }
 }

@@ -345,19 +345,19 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
         long preemptedVcoreSeconds = parseLong(entityInfo,
             ApplicationMetricsConstants.APP_CPU_PREEMPT_METRICS);
         Map<String, Long> resourceSecondsMap = new HashMap<>();
-        Map<String, Long> preemptedResoureSecondsMap = new HashMap<>();
+        Map<String, Long> preemptedResourceSecondsMap = new HashMap<>();
         resourceSecondsMap
             .put(ResourceInformation.MEMORY_MB.getName(), memorySeconds);
         resourceSecondsMap
             .put(ResourceInformation.VCORES.getName(), vcoreSeconds);
-        preemptedResoureSecondsMap.put(ResourceInformation.MEMORY_MB.getName(),
+        preemptedResourceSecondsMap.put(ResourceInformation.MEMORY_MB.getName(),
             preemptedMemorySeconds);
-        preemptedResoureSecondsMap
+        preemptedResourceSecondsMap
             .put(ResourceInformation.VCORES.getName(), preemptedVcoreSeconds);
 
         appResources = ApplicationResourceUsageReport
             .newInstance(0, 0, null, null, null, resourceSecondsMap, 0, 0,
-                preemptedResoureSecondsMap);
+                preemptedResourceSecondsMap);
       }
 
       if (entityInfo.containsKey(ApplicationMetricsConstants.APP_TAGS_INFO)) {

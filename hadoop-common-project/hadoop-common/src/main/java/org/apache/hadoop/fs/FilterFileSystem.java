@@ -733,6 +733,11 @@ public class FilterFileSystem extends FileSystem {
   }
 
   @Override
+  public Path getEnclosingRoot(Path path) throws IOException {
+    return fs.getEnclosingRoot(path);
+  }
+
+  @Override
   public boolean hasPathCapability(final Path path, final String capability)
       throws IOException {
     switch (validatePathCapabilityArgs(makeQualified(path), capability)) {

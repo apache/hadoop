@@ -18,21 +18,15 @@
 
 package org.apache.hadoop.hdfs.server.namenode;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Enumeration;
 import java.util.List;
 import java.util.regex.Pattern;
 
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -47,58 +41,57 @@ import org.apache.hadoop.hdfs.web.WebHdfsTestUtil;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.test.PathUtils;
+import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
 import org.apache.log4j.Appender;
 import org.apache.log4j.AsyncAppender;
-import org.apache.log4j.Level;
-import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
-import org.apache.log4j.PatternLayout;
-import org.apache.log4j.RollingFileAppender;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.LoggerFactory;
 
 /**
  * A JUnit test that audit logs are generated
  */
-@RunWith(Parameterized.class)
+@MethodSource("data")
+@ParameterizedClass
 public class TestAuditLogs {
-  static final String auditLogFile = PathUtils.getTestDirName(TestAuditLogs.class) + "/TestAuditLogs-audit.log";
-  final boolean useAsyncLog;
+
+  private static final org.slf4j.Logger LOG = LoggerFactory.getLogger(TestAuditLogs.class);
+
   final boolean useAsyncEdits;
 
-  @Parameters
+  private static LogCapturer auditLogCapture;
+
   public static Collection<Object[]> data() {
-    Collection<Object[]> params = new ArrayList<Object[]>();
-    params.add(new Object[]{Boolean.FALSE, Boolean.FALSE});
-    params.add(new Object[]{Boolean.TRUE,  Boolean.FALSE});
-    params.add(new Object[]{Boolean.FALSE, Boolean.TRUE});
-    params.add(new Object[]{Boolean.TRUE,  Boolean.TRUE});
+    Collection<Object[]> params = new ArrayList<>();
+    params.add(new Object[]{Boolean.FALSE});
+    params.add(new Object[]{Boolean.TRUE});
     return params;
   }
 
-  public TestAuditLogs(boolean useAsyncLog, boolean useAsyncEdits) {
-    this.useAsyncLog = useAsyncLog;
+  public TestAuditLogs(boolean useAsyncEdits) {
     this.useAsyncEdits = useAsyncEdits;
   }
 
   // Pattern for: 
   // allowed=(true|false) ugi=name ip=/address cmd={cmd} src={path} dst=null perm=null
-  static final Pattern auditPattern = Pattern.compile(
+  private static final Pattern AUDIT_PATTERN = Pattern.compile(
       "allowed=.*?\\s" +
       "ugi=.*?\\s" +
       "ip=/\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\s" +
       "cmd=.*?\\ssrc=.*?\\sdst=null\\s" +
       "perm=.*?");
-  static final Pattern successPattern = Pattern.compile(
+  private static final Pattern SUCCESS_PATTERN = Pattern.compile(
       ".*allowed=true.*");
-  static final Pattern webOpenPattern = Pattern.compile(
+  private static final Pattern FAILURE_PATTERN = Pattern.compile(
+      ".*allowed=false.*");
+  private static final Pattern WEB_OPEN_PATTERN = Pattern.compile(
       ".*cmd=open.*proto=webhdfs.*");
 
   static final String username = "bob";
@@ -112,16 +105,14 @@ public class TestAuditLogs {
   Configuration conf;
   UserGroupInformation userGroupInfo;
 
-  @Before
+  @BeforeEach
   public void setupCluster() throws Exception {
     // must configure prior to instantiating the namesystem because it
     // will reconfigure the logger if async is enabled
-    configureAuditLogs();
     conf = new HdfsConfiguration();
     final long precision = 1L;
     conf.setLong(DFSConfigKeys.DFS_NAMENODE_ACCESSTIME_PRECISION_KEY, precision);
     conf.setLong(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 10000L);
-    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_AUDIT_LOG_ASYNC_KEY, useAsyncLog);
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_EDITS_ASYNC_LOGGING, useAsyncEdits);
     util = new DFSTestUtil.Builder().setName("TestAuditAllowed").
         setNumFiles(20).build();
@@ -130,18 +121,18 @@ public class TestAuditLogs {
     util.createFiles(fs, fileName);
 
     // make sure the appender is what it's supposed to be
-    Logger logger = ((Log4JLogger) FSNamesystem.auditLog).getLogger();
+    Logger logger = org.apache.log4j.Logger.getLogger(
+        "org.apache.hadoop.hdfs.server.namenode.FSNamesystem.audit");
     @SuppressWarnings("unchecked")
     List<Appender> appenders = Collections.list(logger.getAllAppenders());
-    assertEquals(1, appenders.size());
-    assertEquals(useAsyncLog, appenders.get(0) instanceof AsyncAppender);
+    assertTrue(appenders.get(0) instanceof AsyncAppender);
     
     fnames = util.getFileNames(fileName);
     util.waitReplication(fs, fileName, (short)3);
     userGroupInfo = UserGroupInformation.createUserForTesting(username, groups);
  }
 
-  @After
+  @AfterEach
   public void teardownCluster() throws Exception {
     util.cleanup(fs, "/srcdat");
     if (fs != null) {
@@ -154,18 +145,28 @@ public class TestAuditLogs {
     }
   }
 
+  @BeforeAll
+  public static void beforeClass() {
+    auditLogCapture = LogCapturer.captureLogs(FSNamesystem.AUDIT_LOG);
+  }
+
+  @AfterAll
+  public static void afterClass() {
+    auditLogCapture.stopCapturing();
+  }
+
+
   /** test that allowed operation puts proper entry in audit log */
   @Test
   public void testAuditAllowed() throws Exception {
     final Path file = new Path(fnames[0]);
     FileSystem userfs = DFSTestUtil.getFileSystemAs(userGroupInfo, conf);
 
-    setupAuditLogs();
     InputStream istream = userfs.open(file);
     int val = istream.read();
     istream.close();
-    verifyAuditLogs(true);
-    assertTrue("failed to read from file", val >= 0);
+    verifySuccessCommandsAuditLogs(2, fnames[0], "cmd=open");
+    assertTrue(val >= 0, "failed to read from file");
   }
 
   /** test that allowed stat puts proper entry in audit log */
@@ -174,10 +175,9 @@ public class TestAuditLogs {
     final Path file = new Path(fnames[0]);
     FileSystem userfs = DFSTestUtil.getFileSystemAs(userGroupInfo, conf);
 
-    setupAuditLogs();
     FileStatus st = userfs.getFileStatus(file);
-    verifyAuditLogs(true);
-    assertTrue("failed to stat file", st != null && st.isFile());
+    verifySuccessCommandsAuditLogs(2, fnames[0], "cmd=getfileinfo");
+    assertTrue(st != null && st.isFile(), "failed to stat file");
   }
 
   /** test that denied operation puts proper entry in audit log */
@@ -189,15 +189,13 @@ public class TestAuditLogs {
     fs.setPermission(file, new FsPermission((short)0600));
     fs.setOwner(file, "root", null);
 
-    setupAuditLogs();
-
     try {
       userfs.open(file);
       fail("open must not succeed");
     } catch(AccessControlException e) {
       System.out.println("got access denied, as expected.");
     }
-    verifyAuditLogs(false);
+    verifyFailedCommandsAuditLogs(1, fnames[0], "cmd=open");
   }
 
   /** test that access via webhdfs puts proper entry in audit log */
@@ -208,15 +206,13 @@ public class TestAuditLogs {
     fs.setPermission(file, new FsPermission((short)0644));
     fs.setOwner(file, "root", null);
 
-    setupAuditLogs();
-
     WebHdfsFileSystem webfs = WebHdfsTestUtil.getWebHdfsFileSystemAs(userGroupInfo, conf, WebHdfsConstants.WEBHDFS_SCHEME);
     InputStream istream = webfs.open(file);
     int val = istream.read();
     istream.close();
 
-    verifyAuditLogsRepeat(true, 3);
-    assertTrue("failed to read from file", val >= 0);
+    verifySuccessCommandsAuditLogs(3, fnames[0], "cmd=open");
+    assertTrue(val >= 0, "failed to read from file");
   }
 
   /** test that stat via webhdfs puts proper entry in audit log */
@@ -227,13 +223,11 @@ public class TestAuditLogs {
     fs.setPermission(file, new FsPermission((short)0644));
     fs.setOwner(file, "root", null);
 
-    setupAuditLogs();
-
     WebHdfsFileSystem webfs = WebHdfsTestUtil.getWebHdfsFileSystemAs(userGroupInfo, conf, WebHdfsConstants.WEBHDFS_SCHEME);
     FileStatus st = webfs.getFileStatus(file);
 
-    verifyAuditLogs(true);
-    assertTrue("failed to stat file", st != null && st.isFile());
+    verifySuccessCommandsAuditLogs(2, fnames[0], "cmd=getfileinfo");
+    assertTrue(st != null && st.isFile(), "failed to stat file");
   }
 
   /** test that denied access via webhdfs puts proper entry in audit log */
@@ -244,7 +238,6 @@ public class TestAuditLogs {
     fs.setPermission(file, new FsPermission((short)0600));
     fs.setOwner(file, "root", null);
 
-    setupAuditLogs();
     try {
       WebHdfsFileSystem webfs = WebHdfsTestUtil.getWebHdfsFileSystemAs(userGroupInfo, conf, WebHdfsConstants.WEBHDFS_SCHEME);
       InputStream istream = webfs.open(file);
@@ -253,7 +246,7 @@ public class TestAuditLogs {
     } catch(AccessControlException E) {
       System.out.println("got access denied, as expected.");
     }
-    verifyAuditLogsRepeat(false, 2);
+    verifyFailedCommandsAuditLogs(1, fnames[0], "cmd=open");
   }
 
   /** test that open via webhdfs puts proper entry in audit log */
@@ -264,124 +257,61 @@ public class TestAuditLogs {
     fs.setPermission(file, new FsPermission((short)0644));
     fs.setOwner(file, "root", null);
 
-    setupAuditLogs();
-
     WebHdfsFileSystem webfs = WebHdfsTestUtil.getWebHdfsFileSystemAs(userGroupInfo, conf, WebHdfsConstants.WEBHDFS_SCHEME);
     webfs.open(file).read();
 
-    verifyAuditLogsCheckPattern(true, 3, webOpenPattern);
+    verifySuccessCommandsAuditLogs(3, fnames[0], "cmd=open");
   }
 
   /** make sure that "\r\n" isn't made into a newline in audit log */
   @Test
   public void testAuditCharacterEscape() throws Exception {
     final Path file = new Path("foo" + "\r\n" + "bar");
-    setupAuditLogs();
     fs.create(file);
-    verifyAuditLogsRepeat(true, 1);
+    verifySuccessCommandsAuditLogs(1, "foo", "cmd=create");
   }
 
-  /** Sets up log4j logger for auditlogs */
-  private void setupAuditLogs() throws IOException {
-    Logger logger = ((Log4JLogger) FSNamesystem.auditLog).getLogger();
-    // enable logging now that the test is ready to run
-    logger.setLevel(Level.INFO);
-  }
-  
-  private void configureAuditLogs() throws IOException {
-    // Shutdown the LogManager to release all logger open file handles.
-    // Unfortunately, Apache commons logging library does not provide
-    // means to release underlying loggers. For additional info look up
-    // commons library FAQ.
-    LogManager.shutdown();
-
-    File file = new File(auditLogFile);
-    if (file.exists()) {
-      assertTrue(file.delete());
-    }
-    // disable logging while the cluster startup preps files
-    disableAuditLog();
-    PatternLayout layout = new PatternLayout("%m%n");
-    RollingFileAppender appender = new RollingFileAppender(layout, auditLogFile);
-    Logger logger = ((Log4JLogger) FSNamesystem.auditLog).getLogger();
-    logger.addAppender(appender);
-  }
-
-  // Ensure audit log has only one entry
-  private void verifyAuditLogs(boolean expectSuccess) throws IOException {
-    verifyAuditLogsRepeat(expectSuccess, 1);
-  }
-
-  // Ensure audit log has exactly N entries
-  private void verifyAuditLogsRepeat(boolean expectSuccess, int ndupe)
-      throws IOException {
-    // Turn off the logs
-    disableAuditLog();
-
-    // Close the appenders and force all logs to be flushed
-    Logger logger = ((Log4JLogger) FSNamesystem.auditLog).getLogger();
-    Enumeration<?> appenders = logger.getAllAppenders();
-    while (appenders.hasMoreElements()) {
-      Appender appender = (Appender)appenders.nextElement();
-      appender.close();
-    }
-
-    BufferedReader reader = new BufferedReader(new FileReader(auditLogFile));
-    String line = null;
-    boolean ret = true;
-
-    try {
-      for (int i = 0; i < ndupe; i++) {
-        line = reader.readLine();
-        assertNotNull(line);
-        assertTrue("Expected audit event not found in audit log",
-            auditPattern.matcher(line).matches());
-        ret &= successPattern.matcher(line).matches();
+  private void verifySuccessCommandsAuditLogs(int leastExpected, String file, String cmd) {
+    String[] auditLogOutputLines = auditLogCapture.getOutput().split("\\n");
+    int success = 0;
+    for (String auditLogLine : auditLogOutputLines) {
+      if (!auditLogLine.contains("allowed=")) {
+        continue;
       }
-      assertNull("Unexpected event in audit log", reader.readLine());
-      assertTrue("Expected success=" + expectSuccess, ret == expectSuccess);
-    } finally {
-      reader.close();
-    }
-  }
-
-  // Ensure audit log has exactly N entries
-  private void verifyAuditLogsCheckPattern(boolean expectSuccess, int ndupe, Pattern pattern)
-      throws IOException {
-    // Turn off the logs
-    disableAuditLog();
-
-    // Close the appenders and force all logs to be flushed
-    Logger logger = ((Log4JLogger) FSNamesystem.auditLog).getLogger();
-    Enumeration<?> appenders = logger.getAllAppenders();
-    while (appenders.hasMoreElements()) {
-      Appender appender = (Appender)appenders.nextElement();
-      appender.close();
-    }
-
-    BufferedReader reader = new BufferedReader(new FileReader(auditLogFile));
-    String line = null;
-    boolean ret = true;
-    boolean patternMatches = false;
-
-    try {
-        for (int i = 0; i < ndupe; i++) {
-          line = reader.readLine();
-          assertNotNull(line);
-          patternMatches |= pattern.matcher(line).matches();
-          ret &= successPattern.matcher(line).matches();
-        }
-        assertNull("Unexpected event in audit log", reader.readLine());
-        assertTrue("Expected audit event not found in audit log", patternMatches);
-        assertTrue("Expected success=" + expectSuccess, ret == expectSuccess);
-      } finally {
-        reader.close();
+      String line = "allowed=" + auditLogLine.split("allowed=")[1];
+      LOG.info("Line: {}", line);
+      if (SUCCESS_PATTERN.matcher(line).matches() && line.contains(file) && line.contains(cmd)) {
+        assertTrue(AUDIT_PATTERN.matcher(line).matches(),
+            "Expected audit event not found in audit log");
+        LOG.info("Successful verification. Log line: {}", line);
+        success++;
       }
+    }
+    if (success < leastExpected) {
+      throw new AssertionError(
+          "Least expected: " + leastExpected + ". Actual success: " + success);
+    }
   }
 
-  private void disableAuditLog() {
-    GenericTestUtils.disableLog(LoggerFactory.getLogger(
-        FSNamesystem.class.getName() + ".audit"));
+  private void verifyFailedCommandsAuditLogs(int expected, String file, String cmd) {
+    String[] auditLogOutputLines = auditLogCapture.getOutput().split("\\n");
+    int success = 0;
+    for (String auditLogLine : auditLogOutputLines) {
+      if (!auditLogLine.contains("allowed=")) {
+        continue;
+      }
+      String line = "allowed=" + auditLogLine.split("allowed=")[1];
+      LOG.info("Line: {}", line);
+      if (FAILURE_PATTERN.matcher(line).matches() && line.contains(file) && line.contains(
+          cmd)) {
+        assertTrue(AUDIT_PATTERN.matcher(line).matches(),
+            "Expected audit event not found in audit log");
+        LOG.info("Failure verification. Log line: {}", line);
+        success++;
+      }
+    }
+    assertEquals(expected, success, "Expected: " + expected
+        + ". Actual failure: " + success);
   }
 
 }

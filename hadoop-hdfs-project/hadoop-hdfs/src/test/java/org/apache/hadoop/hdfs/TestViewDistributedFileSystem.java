@@ -19,22 +19,30 @@ package org.apache.hadoop.hdfs;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.fs.CommonPathCapabilities;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LeaseRecoverable;
 import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathHandle;
+import org.apache.hadoop.fs.SafeMode;
+import org.apache.hadoop.fs.SafeModeAction;
 import org.apache.hadoop.fs.viewfs.ConfigUtil;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.test.Whitebox;
-import org.junit.Assert;
-import org.junit.Test;
+import org.apache.hadoop.util.functional.ConsumerRaisingIOE;
+
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.net.URI;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.apache.hadoop.fs.CommonPathCapabilities.LEASE_RECOVERABLE;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestViewDistributedFileSystem extends TestDistributedFileSystem{
   @Override
@@ -113,8 +121,8 @@ public class TestViewDistributedFileSystem extends TestDistributedFileSystem{
         final Path renameDir = new Path("/testRename");
         fileSystem.mkdirs(testDir);
         fileSystem.rename(testDir, renameDir, Options.Rename.TO_TRASH);
-        Assert.assertTrue(fileSystem.exists(renameDir));
-        Assert.assertFalse(fileSystem.exists(testDir));
+        Assertions.assertTrue(fileSystem.exists(renameDir));
+        Assertions.assertFalse(fileSystem.exists(testDir));
       }
     } finally {
       if (cluster != null) {
@@ -182,8 +190,7 @@ public class TestViewDistributedFileSystem extends TestDistributedFileSystem{
         // Set Quota via ViewDFS
         fileSystem.setQuota(testDir, 10L, 10L);
         // Check quota through actual DFS
-        assertEquals(10,
-            defaultFs.getQuotaUsage(target).getSpaceQuota());
+        assertEquals(10, defaultFs.getQuotaUsage(target).getSpaceQuota());
       }
     } finally {
       if (cluster != null) {
@@ -191,4 +198,100 @@ public class TestViewDistributedFileSystem extends TestDistributedFileSystem{
       }
     }
   }
+
+  @Test
+  public void testPathCapabilities() throws IOException {
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(getViewFsConfiguration())
+        .numDataNodes(0).build();
+        ViewDistributedFileSystem fileSystem = (ViewDistributedFileSystem) FileSystem.get(
+            cluster.getConfiguration(0))) {
+      final Path testFile = new Path("/test");
+      assertTrue(fileSystem.hasPathCapability(testFile, CommonPathCapabilities.FS_TRUNCATE),
+          "ViewDfs supports truncate");
+      final boolean isLeaseRecoverable = fileSystem.hasPathCapability(testFile, LEASE_RECOVERABLE);
+      assertThat(isLeaseRecoverable).describedAs("path capabilities %s=%s in %s",
+          LEASE_RECOVERABLE, fileSystem.hasPathCapability(testFile, LEASE_RECOVERABLE),
+          fileSystem).isTrue();
+      assertThat(fileSystem).describedAs("filesystem %s", fileSystem)
+          .isInstanceOf(LeaseRecoverable.class);
+      assertThat(fileSystem).describedAs("filesystem %s", fileSystem).isInstanceOf(SafeMode.class);
+    }
+  }
+
+  @Test
+  public void testSafeMode() throws IOException {
+    testSafeMode(this::executeAssertionsWithSafeMode);
+  }
+
+  @Test
+  public void testSafeModeWithDeprecatedAPIs() throws IOException {
+    testSafeMode(this::executeAssertionsWithDeprecatedAPIs);
+  }
+
+  private void testSafeMode(ConsumerRaisingIOE<ViewDistributedFileSystem> executeAssertionsFunction)
+      throws IOException {
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(getViewFsConfiguration())
+        .numDataNodes(0).build();
+        ViewDistributedFileSystem fileSystem = (ViewDistributedFileSystem) FileSystem.get(
+            cluster.getConfiguration(0))) {
+      executeAssertionsFunction.accept(fileSystem);
+    }
+  }
+
+  private SafeMode verifyAndGetSafeModeInstance(FileSystem fs) {
+    assertThat(fs)
+        .describedAs("File system %s must be an instance of %s", fs, SafeMode.class.getClass())
+        .isInstanceOf(SafeMode.class);
+    return (SafeMode) fs;
+  }
+
+  private void executeAssertionsWithSafeMode(ViewDistributedFileSystem fileSystem)
+      throws IOException {
+    SafeMode fsWithSafeMode = verifyAndGetSafeModeInstance(fileSystem);
+    assertSafeModeStatus(fsWithSafeMode, SafeModeAction.GET, false,
+        "Getting the status of safe mode before entering should be off.");
+    assertSafeModeStatus(fsWithSafeMode, SafeModeAction.ENTER, true,
+        "Entering Safe mode and safe mode turns on.");
+    assertSafeModeStatus(fsWithSafeMode, SafeModeAction.GET, true,
+        "Getting the status of safe mode after entering, safe mode should be on.");
+    assertSafeModeStatus(fsWithSafeMode, SafeModeAction.LEAVE, false,
+        "Leaving safe mode, and safe mode switches off.");
+    assertSafeModeStatus(fsWithSafeMode, SafeModeAction.FORCE_EXIT, false,
+        "Force exist safe mode at any time, safe mode should always switches off.");
+  }
+
+  private void executeAssertionsWithDeprecatedAPIs(ViewDistributedFileSystem fileSystem)
+      throws IOException {
+    assertSafeModeStatus(fileSystem, HdfsConstants.SafeModeAction.SAFEMODE_GET, false,
+        "Getting the status of safe mode before entering should be off.");
+    assertSafeModeStatus(fileSystem, HdfsConstants.SafeModeAction.SAFEMODE_ENTER, true,
+        "Entering Safe mode and safe mode turns on.");
+    assertSafeModeStatus(fileSystem, HdfsConstants.SafeModeAction.SAFEMODE_GET, true,
+        "Getting the status of safe mode after entering, safe mode should be on.");
+    assertSafeModeStatus(fileSystem, HdfsConstants.SafeModeAction.SAFEMODE_LEAVE, false,
+        "Leaving safe mode, and safe mode switches off.");
+    assertSafeModeStatus(fileSystem, HdfsConstants.SafeModeAction.SAFEMODE_FORCE_EXIT, false,
+        "Force exist safe mode at any time, safe mode should always switches off.");
+  }
+
+  private void assertSafeModeStatus(SafeMode fsWithSafeMode, SafeModeAction action,
+      boolean expectedStatus, String message) throws IOException {
+    assertThat(fsWithSafeMode.setSafeMode(action)).describedAs(message)
+        .isEqualTo(expectedStatus);
+  }
+
+  private void assertSafeModeStatus(ViewDistributedFileSystem fileSystem,
+      HdfsConstants.SafeModeAction action, boolean expectedStatus, String message)
+      throws IOException {
+    assertThat(fileSystem.setSafeMode(action)).describedAs(message).isEqualTo(expectedStatus);
+  }
+
+  private Configuration getViewFsConfiguration() {
+    Configuration conf = getTestConfiguration();
+    URI defaultUri = URI.create(conf.get(CommonConfigurationKeys.FS_DEFAULT_NAME_KEY));
+    conf.set("fs.viewfs.mounttable." + defaultUri.getHost() + ".linkFallback",
+        defaultUri.toString());
+    return conf;
+  }
+
 }

@@ -586,7 +586,7 @@ public class Client {
           + " exiting. Specified numContainer=" + numContainers);
     }
     
-    nodeLabelExpression = cliParser.getOptionValue("node_label_expression", null);
+    nodeLabelExpression = cliParser.getOptionValue("node_label_expression", () -> null);
 
     clientTimeout = Integer.parseInt(cliParser.getOptionValue("timeout", "600000"));
 
@@ -952,6 +952,8 @@ public class Client {
     vargs.add("\"" + Environment.JAVA_HOME.$$() + "/bin/java\"");
     // Set Xmx based on am memory size
     vargs.add("-Xmx" + amMemory + "m");
+    // JDK17 support
+    vargs.add(ApplicationConstants.JVM_ADD_OPENS_VAR);
     // Set class name 
     vargs.add(appMasterMainClass);
     // Set params for Application Master

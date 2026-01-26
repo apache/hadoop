@@ -20,10 +20,11 @@ package org.apache.hadoop.yarn.client.api;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.eclipse.jetty.websocket.api.Session;
 import org.eclipse.jetty.websocket.api.annotations.OnWebSocketClose;
 import org.eclipse.jetty.websocket.api.annotations.OnWebSocketConnect;
@@ -62,31 +63,30 @@ public class ContainerShellWebSocket {
       session.getRemote().flush();
       sttySet = true;
     }
-    terminal.output().write(message.getBytes(Charset.forName("UTF-8")));
+    terminal.output().write(message.getBytes(StandardCharsets.UTF_8));
     terminal.output().flush();
   }
 
   @OnWebSocketConnect
   public void onConnect(Session s) {
     initTerminal(s);
-    LOG.info(s.getRemoteAddress().getHostString() + " connected!");
+    LOG.info("{} connected!", s.getRemoteAddress().getHostString());
   }
 
   @OnWebSocketClose
   public void onClose(Session session, int status, String reason) {
     if (status==1000) {
-      LOG.info(session.getRemoteAddress().getHostString() +
-          " closed, status: " + status);
+      LOG.info("{} closed, status: {}", session.getRemoteAddress().getHostString(), status);
     } else {
-      LOG.warn(session.getRemoteAddress().getHostString() +
-          " closed, status: " + status + " Reason: " + reason);
+      LOG.warn("{} closed, status:" +
+              " {} Reason: {}.", session.getRemoteAddress().getHostString(), status, reason);
     }
   }
 
   public void run() {
     try {
       Reader consoleReader = new Reader();
-      Thread inputThread = new Thread(consoleReader, "consoleReader");
+      Thread inputThread = new SubjectInheritingThread(consoleReader, "consoleReader");
       inputThread.start();
       while (mySession.isOpen()) {
         mySession.getRemote().flush();

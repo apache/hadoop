@@ -19,9 +19,12 @@
 package org.apache.hadoop.fs.s3a.performance;
 
 import java.io.IOException;
+import java.time.Duration;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,6 +37,7 @@ import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3AInputPolicy;
 import org.apache.hadoop.fs.s3a.S3AInputStream;
+import org.apache.hadoop.fs.s3a.impl.AWSClientConfig;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.io.IOUtils;
 
@@ -41,16 +45,20 @@ import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_RE
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_WHOLE_FILE;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
 import static org.apache.hadoop.fs.s3a.Constants.ASYNC_DRAIN_THRESHOLD;
+import static org.apache.hadoop.fs.s3a.Constants.CHECKSUM_VALIDATION;
 import static org.apache.hadoop.fs.s3a.Constants.ESTABLISH_TIMEOUT;
 import static org.apache.hadoop.fs.s3a.Constants.INPUT_FADVISE;
+import static org.apache.hadoop.fs.s3a.Constants.INPUT_STREAM_TYPE;
 import static org.apache.hadoop.fs.s3a.Constants.MAXIMUM_CONNECTIONS;
 import static org.apache.hadoop.fs.s3a.Constants.MAX_ERROR_RETRIES;
-import static org.apache.hadoop.fs.s3a.Constants.PREFETCH_ENABLED_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.READAHEAD_RANGE;
 import static org.apache.hadoop.fs.s3a.Constants.REQUEST_TIMEOUT;
 import static org.apache.hadoop.fs.s3a.Constants.RETRY_LIMIT;
 import static org.apache.hadoop.fs.s3a.Constants.SOCKET_TIMEOUT;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.disablePrefetching;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
+import static org.apache.hadoop.fs.s3a.impl.ConfigurationHelper.setDurationAsSeconds;
+import static org.apache.hadoop.fs.s3a.impl.streams.InputStreamType.Classic;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyStatisticCounterValue;
 import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.retrieveIOStatistics;
 import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_ABORTED;
@@ -82,55 +90,63 @@ public class ITestUnbufferDraining extends AbstractS3ACostTest {
   public static final int ATTEMPTS = 10;
 
   /**
+   * Should checksums be enabled?
+   */
+  public static final boolean CHECKSUMS = false;
+
+  /**
    * Test FS with a tiny connection pool and
    * no recovery.
    */
   private FileSystem brittleFS;
 
-  /**
-   * Create with markers kept, always.
-   */
-  public ITestUnbufferDraining() {
-    super(false);
-  }
-
   @Override
   public Configuration createConfiguration() {
-    Configuration conf = super.createConfiguration();
+    Configuration conf = disablePrefetching(super.createConfiguration());
+    conf.setEnum(INPUT_STREAM_TYPE, Classic);
     removeBaseAndBucketOverrides(conf,
         ASYNC_DRAIN_THRESHOLD,
+        CHECKSUM_VALIDATION,
         ESTABLISH_TIMEOUT,
         INPUT_FADVISE,
         MAX_ERROR_RETRIES,
         MAXIMUM_CONNECTIONS,
-        PREFETCH_ENABLED_KEY,
         READAHEAD_RANGE,
         REQUEST_TIMEOUT,
         RETRY_LIMIT,
         SOCKET_TIMEOUT);
-
+    conf.setBoolean(CHECKSUM_VALIDATION, CHECKSUMS);
     return conf;
   }
 
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     super.setup();
-
     // now create a new FS with minimal http capacity and recovery
     // a separate one is used to avoid test teardown suffering
     // from the lack of http connections and short timeouts.
-    Configuration conf = getConfiguration();
-    // kick off async drain for any data
-    conf.setInt(ASYNC_DRAIN_THRESHOLD, 1);
-    conf.setInt(MAXIMUM_CONNECTIONS, 2);
-    conf.setInt(MAX_ERROR_RETRIES, 1);
-    conf.setInt(ESTABLISH_TIMEOUT, 1000);
-    conf.setInt(READAHEAD_RANGE, READAHEAD);
-    conf.setInt(RETRY_LIMIT, 1);
+    try {
+      // allow small durations.
+      AWSClientConfig.setMinimumOperationDuration(Duration.ZERO);
+      Configuration conf = getConfiguration();
+      // kick off async drain for any data
+      conf.setInt(ASYNC_DRAIN_THRESHOLD, 1);
+      conf.setInt(MAXIMUM_CONNECTIONS, 2);
+      conf.setInt(MAX_ERROR_RETRIES, 1);
+      conf.setInt(READAHEAD_RANGE, READAHEAD);
+      conf.setInt(RETRY_LIMIT, 1);
+      conf.setBoolean(CHECKSUM_VALIDATION, CHECKSUMS);
+      setDurationAsSeconds(conf, ESTABLISH_TIMEOUT,
+          Duration.ofSeconds(1));
 
-    brittleFS = FileSystem.newInstance(getFileSystem().getUri(), conf);
+      brittleFS = FileSystem.newInstance(getFileSystem().getUri(), conf);
+    } finally {
+      AWSClientConfig.resetMinimumOperationDuration();
+    }
   }
 
+  @AfterEach
   @Override
   public void teardown() throws Exception {
     super.teardown();
@@ -160,7 +176,7 @@ public class ITestUnbufferDraining extends AbstractS3ACostTest {
     int offset = FILE_SIZE - READAHEAD + 1;
     try (FSDataInputStream in = getBrittleFS().openFile(st.getPath())
         .withFileStatus(st)
-        .must(ASYNC_DRAIN_THRESHOLD, 1)
+        .mustLong(ASYNC_DRAIN_THRESHOLD, 1)
         .build().get()) {
       describe("Initiating unbuffer with async drain\n");
       for (int i = 0; i < ATTEMPTS; i++) {
@@ -211,10 +227,20 @@ public class ITestUnbufferDraining extends AbstractS3ACostTest {
    */
   private static void assertReadPolicy(final FSDataInputStream in,
       final S3AInputPolicy policy) {
-    S3AInputStream inner = (S3AInputStream) in.getWrappedStream();
+    S3AInputStream inner = getS3AInputStream(in);
     Assertions.assertThat(inner.getInputPolicy())
         .describedAs("input policy of %s", inner)
         .isEqualTo(policy);
+  }
+
+  /**
+   * Extract the inner stream from an FSDataInputStream.
+   * Because prefetching is disabled, this is always an S3AInputStream.
+   * @param in input stream
+   * @return the inner stream cast to an S3AInputStream.
+   */
+  private static S3AInputStream getS3AInputStream(final FSDataInputStream in) {
+    return (S3AInputStream) in.getWrappedStream();
   }
 
   /**
@@ -235,9 +261,11 @@ public class ITestUnbufferDraining extends AbstractS3ACostTest {
     // open the file at the beginning with a whole file read policy,
     // so even with s3a switching to random on unbuffer,
     // this always does a full GET
+    // also provide a floating point string for the threshold, to
+    // verify it is safely parsed
     try (FSDataInputStream in = getBrittleFS().openFile(st.getPath())
         .withFileStatus(st)
-        .must(ASYNC_DRAIN_THRESHOLD, 1)
+        .must(ASYNC_DRAIN_THRESHOLD, "1.0")
         .must(FS_OPTION_OPENFILE_READ_POLICY,
             FS_OPTION_OPENFILE_READ_POLICY_WHOLE_FILE)
         .build().get()) {

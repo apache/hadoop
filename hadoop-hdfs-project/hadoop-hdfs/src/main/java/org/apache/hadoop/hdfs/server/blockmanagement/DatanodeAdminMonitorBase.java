@@ -123,6 +123,10 @@ public abstract class DatanodeAdminMonitorBase
           DFSConfigKeys
               .DFS_NAMENODE_DECOMMISSION_MAX_CONCURRENT_TRACKED_NODES_DEFAULT;
     }
+
+    LOG.debug("Activating DatanodeAdminMonitor with {} max concurrently tracked nodes.",
+        maxConcurrentTrackedNodes);
+
     processConf();
   }
 
@@ -203,5 +207,23 @@ public abstract class DatanodeAdminMonitorBase
           .limit(numUnhealthyNodesToRequeue);
     }
     return Stream.empty();
+  }
+
+  void addReconstructionBlockIfNeeded(boolean isDecommission, BlockInfo block,
+      NumberReplicas num, int liveReplicas) {
+    boolean neededReconstruction = isDecommission ?
+        blockManager.isNeededReconstruction(block, num) :
+        blockManager.isNeededReconstructionForMaintenance(block, num);
+    if (neededReconstruction) {
+      if (!blockManager.neededReconstruction.contains(block) &&
+          blockManager.pendingReconstruction.getNumReplicas(block) == 0 &&
+          blockManager.isPopulatingReplQueues()) {
+        // Process these blocks only when active NN is out of safe mode.
+        blockManager.neededReconstruction.add(block,
+            liveReplicas, num.readOnlyReplicas(),
+            num.outOfServiceReplicas(),
+            blockManager.getExpectedRedundancyNum(block));
+      }
+    }
   }
 }

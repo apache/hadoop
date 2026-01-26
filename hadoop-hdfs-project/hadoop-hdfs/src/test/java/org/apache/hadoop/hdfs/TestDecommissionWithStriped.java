@@ -17,10 +17,11 @@
  */
 package org.apache.hadoop.hdfs;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -37,6 +38,7 @@ import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileChecksum;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.MiniDFSCluster.DataNodeProperties;
 import org.apache.hadoop.hdfs.client.HdfsDataInputStream;
@@ -62,17 +64,22 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.test.PathUtils;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.MethodOrderer;
+import org.junit.jupiter.api.Order;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestMethodOrder;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.io.TempDir;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * This class tests the decommissioning of datanode with striped blocks.
  */
+@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class TestDecommissionWithStriped {
   private static final Logger LOG = LoggerFactory
       .getLogger(TestDecommissionWithStriped.class);
@@ -90,7 +97,7 @@ public class TestDecommissionWithStriped {
   private Path decommissionDir;
   private Path hostsFile;
   private Path excludeFile;
-  private FileSystem localFileSys;
+  private LocalFileSystem localFileSys;
 
   private Configuration conf;
   private MiniDFSCluster cluster;
@@ -113,14 +120,14 @@ public class TestDecommissionWithStriped {
     return new HdfsConfiguration();
   }
 
-  @Before
-  public void setup() throws IOException {
+  @BeforeEach
+  public void setup(@TempDir java.nio.file.Path baseDir) throws IOException {
     conf = createConfiguration();
     // Set up the hosts/exclude files.
     localFileSys = FileSystem.getLocal(conf);
+    localFileSys.setWorkingDirectory(new Path(baseDir.toAbsolutePath().toString()));
     Path workingDir = localFileSys.getWorkingDirectory();
-    decommissionDir = new Path(workingDir,
-        PathUtils.getTestDirName(getClass()) + "/work-dir/decommission");
+    decommissionDir = new Path(workingDir, "work-dir/decommission");
     hostsFile = new Path(decommissionDir, "hosts");
     excludeFile = new Path(decommissionDir, "exclude");
     writeConfigFile(hostsFile, null);
@@ -162,7 +169,7 @@ public class TestDecommissionWithStriped {
         StripedFileTestUtil.getDefaultECPolicy().getName());
   }
 
-  @After
+  @AfterEach
   public void teardown() throws IOException {
     cleanupFile(localFileSys, decommissionDir);
     if (cluster != null) {
@@ -171,45 +178,51 @@ public class TestDecommissionWithStriped {
     }
   }
 
-  @Test(timeout = 120000)
+  @Test
+  @Timeout(value = 120)
   public void testFileFullBlockGroup() throws Exception {
     LOG.info("Starting test testFileFullBlockGroup");
     testDecommission(blockSize * dataBlocks, 9, 1, "testFileFullBlockGroup");
   }
 
-  @Test(timeout = 120000)
+  @Test
+  @Timeout(value = 120)
   public void testFileMultipleBlockGroups() throws Exception {
     LOG.info("Starting test testFileMultipleBlockGroups");
     int writeBytes = 2 * blockSize * dataBlocks;
     testDecommission(writeBytes, 9, 1, "testFileMultipleBlockGroups");
   }
 
-  @Test(timeout = 120000)
+  @Test
+  @Timeout(value = 120)
   public void testFileSmallerThanOneCell() throws Exception {
     LOG.info("Starting test testFileSmallerThanOneCell");
     testDecommission(cellSize - 1, 4, 1, "testFileSmallerThanOneCell");
   }
 
-  @Test(timeout = 120000)
+  @Test
+  @Timeout(value = 120)
   public void testFileSmallerThanOneStripe() throws Exception {
     LOG.info("Starting test testFileSmallerThanOneStripe");
     testDecommission(cellSize * 2, 5, 1, "testFileSmallerThanOneStripe");
   }
 
-  @Test(timeout = 120000)
+  @Test
+  @Timeout(value = 120)
   public void testDecommissionTwoNodes() throws Exception {
     LOG.info("Starting test testDecommissionTwoNodes");
     testDecommission(blockSize * dataBlocks, 9, 2, "testDecommissionTwoNodes");
   }
 
-  @Test(timeout = 120000)
+  @Test
+  @Timeout(value = 120)
   public void testDecommissionWithURBlockForSameBlockGroup() throws Exception {
     LOG.info("Starting test testDecommissionWithURBlocksForSameBlockGroup");
 
     final Path ecFile = new Path(ecDir, "testDecommissionWithCorruptBlocks");
     int writeBytes = cellSize * dataBlocks * 2;
     writeStripedFile(dfs, ecFile, writeBytes);
-    Assert.assertEquals(0, bm.numOfUnderReplicatedBlocks());
+    assertEquals(0, bm.numOfUnderReplicatedBlocks());
 
     final List<DatanodeInfo> decommisionNodes = new ArrayList<DatanodeInfo>();
     LocatedBlock lb = dfs.getClient().getLocatedBlocks(ecFile.toString(), 0)
@@ -247,14 +260,14 @@ public class TestDecommissionWithStriped {
 
     // Decommission node in a new thread. Verify that node is decommissioned.
     final CountDownLatch decomStarted = new CountDownLatch(0);
-    Thread decomTh = new Thread() {
-      public void run() {
+    SubjectInheritingThread decomTh = new SubjectInheritingThread() {
+      public void work() {
         try {
           decomStarted.countDown();
           decommissionNode(0, decommisionNodes, AdminStates.DECOMMISSIONED);
         } catch (Exception e) {
           LOG.error("Exception while decommissioning", e);
-          Assert.fail("Shouldn't throw exception!");
+          fail("Shouldn't throw exception!");
         }
       };
     };
@@ -280,8 +293,8 @@ public class TestDecommissionWithStriped {
         fsn.getNumDecomLiveDataNodes());
 
     // Ensure decommissioned datanode is not automatically shutdown
-    assertEquals("All datanodes must be alive", numDNs,
-        client.datanodeReport(DatanodeReportType.LIVE).length);
+    assertEquals(numDNs, client.datanodeReport(DatanodeReportType.LIVE).length,
+        "All datanodes must be alive");
 
     assertNull(checkFile(dfs, ecFile, 9, decommisionNodes, numDNs));
     StripedFileTestUtil.checkData(dfs, ecFile, writeBytes, decommisionNodes,
@@ -293,7 +306,8 @@ public class TestDecommissionWithStriped {
    * DN decommission shouldn't reconstruction busy DN block.
    * @throws Exception
    */
-  @Test(timeout = 120000)
+  @Test
+  @Timeout(value = 120)
   public void testDecommissionWithBusyNode() throws Exception {
     byte busyDNIndex = 1;
     byte decommisionDNIndex = 0;
@@ -301,7 +315,7 @@ public class TestDecommissionWithStriped {
     final Path ecFile = new Path(ecDir, "testDecommissionWithBusyNode");
     int writeBytes = cellSize * dataBlocks;
     writeStripedFile(dfs, ecFile, writeBytes);
-    Assert.assertEquals(0, bm.numOfUnderReplicatedBlocks());
+    assertEquals(0, bm.numOfUnderReplicatedBlocks());
     FileChecksum fileChecksum1 = dfs.getFileChecksum(ecFile, writeBytes);
 
     //2. make once DN busy
@@ -325,9 +339,9 @@ public class TestDecommissionWithStriped {
     //4. wait for decommission block to replicate
     Thread.sleep(3000);
     DatanodeStorageInfo[] newDnStorageInfos = bm.getStorages(firstBlock);
-    Assert.assertEquals("Busy DN shouldn't be reconstructed",
-        dnStorageInfos[busyDNIndex].getStorageID(),
-        newDnStorageInfos[busyDNIndex].getStorageID());
+    assertEquals(dnStorageInfos[busyDNIndex].getStorageID(),
+        newDnStorageInfos[busyDNIndex].getStorageID(),
+        "Busy DN shouldn't be reconstructed");
 
     //5. check decommission DN block index, it should be reconstructed again
     LocatedBlocks lbs = cluster.getNameNodeRpc().getBlockLocations(
@@ -340,12 +354,12 @@ public class TestDecommissionWithStriped {
       }
     }
 
-    Assert.assertEquals("Decommission DN block should be reconstructed", 2,
-        decommissionBlockIndexCount);
+    assertEquals(2, decommissionBlockIndexCount,
+        "Decommission DN block should be reconstructed");
 
     FileChecksum fileChecksum2 = dfs.getFileChecksum(ecFile, writeBytes);
-    Assert.assertTrue("Checksum mismatches!",
-        fileChecksum1.equals(fileChecksum2));
+    assertTrue(fileChecksum1.equals(fileChecksum2),
+        "Checksum mismatches!");
   }
 
   /**
@@ -353,7 +367,8 @@ public class TestDecommissionWithStriped {
    * in some case.
    * @throws Exception
    */
-  @Test(timeout = 120000)
+  @Test
+  @Timeout(value = 120)
   public void testDecommission2NodeWithBusyNode() throws Exception {
     byte busyDNIndex = 6;
     byte decommissionDNIndex = 6;
@@ -363,7 +378,7 @@ public class TestDecommissionWithStriped {
     int writeBytes = cellSize * dataBlocks;
     writeStripedFile(dfs, ecFile, writeBytes);
 
-    Assert.assertEquals(0, bm.numOfUnderReplicatedBlocks());
+    assertEquals(0, bm.numOfUnderReplicatedBlocks());
     FileChecksum fileChecksum1 = dfs.getFileChecksum(ecFile, writeBytes);
 
     //2. make once DN busy
@@ -398,13 +413,13 @@ public class TestDecommissionWithStriped {
 
     //7. Busy DN shouldn't be reconstructed
     DatanodeStorageInfo[] newDnStorageInfos = bm.getStorages(firstBlock);
-    Assert.assertEquals("Busy DN shouldn't be reconstructed",
-        dnStorageInfos[busyDNIndex].getStorageID(),
-        newDnStorageInfos[busyDNIndex].getStorageID());
+    assertEquals(dnStorageInfos[busyDNIndex].getStorageID(),
+        newDnStorageInfos[busyDNIndex].getStorageID(),
+        "Busy DN shouldn't be reconstructed");
 
     //8. check the checksum of a file
     FileChecksum fileChecksum2 = dfs.getFileChecksum(ecFile, writeBytes);
-    Assert.assertEquals("Checksum mismatches!", fileChecksum1, fileChecksum2);
+    assertEquals(fileChecksum1, fileChecksum2, "Checksum mismatches!");
 
     //9. check the data is correct
     StripedFileTestUtil.checkData(dfs, ecFile, writeBytes, decommissionNodes,
@@ -423,14 +438,15 @@ public class TestDecommissionWithStriped {
    * Here, this list contains duplicated blocks and does not maintaining any
    * order.
    */
-  @Test(timeout = 120000)
+  @Test
+  @Timeout(value = 120)
   public void testFileChecksumAfterDecommission() throws Exception {
     LOG.info("Starting test testFileChecksumAfterDecommission");
 
     final Path ecFile = new Path(ecDir, "testFileChecksumAfterDecommission");
     int writeBytes = cellSize * dataBlocks;
     writeStripedFile(dfs, ecFile, writeBytes);
-    Assert.assertEquals(0, bm.numOfUnderReplicatedBlocks());
+    assertEquals(0, bm.numOfUnderReplicatedBlocks());
     FileChecksum fileChecksum1 = dfs.getFileChecksum(ecFile, writeBytes);
 
     final List<DatanodeInfo> decommisionNodes = new ArrayList<DatanodeInfo>();
@@ -453,8 +469,63 @@ public class TestDecommissionWithStriped {
     LOG.info("fileChecksum1:" + fileChecksum1);
     LOG.info("fileChecksum2:" + fileChecksum2);
 
-    Assert.assertTrue("Checksum mismatches!",
-        fileChecksum1.equals(fileChecksum2));
+    assertTrue(fileChecksum1.equals(fileChecksum2),
+        "Checksum mismatches!");
+  }
+
+  /**
+   * Test decommission when DN marked as busy.
+   * @throwsException
+   */
+  @Test
+  @Timeout(value = 120)
+  public void testBusyAfterDecommissionNode() throws Exception {
+    int busyDNIndex = 0;
+    //1. create EC file.
+    final Path ecFile = new Path(ecDir, "testBusyAfterDecommissionNode");
+    int writeBytes = cellSize * dataBlocks;
+    writeStripedFile(dfs, ecFile, writeBytes);
+    assertEquals(0, bm.numOfUnderReplicatedBlocks());
+    FileChecksum fileChecksum1 = dfs.getFileChecksum(ecFile, writeBytes);
+
+    //2. make once DN busy.
+    final INodeFile fileNode = cluster.getNamesystem().getFSDirectory()
+        .getINode4Write(ecFile.toString()).asFile();
+    BlockInfo firstBlock = fileNode.getBlocks()[0];
+    DatanodeStorageInfo[] dnStorageInfos = bm.getStorages(firstBlock);
+    DatanodeDescriptor busyNode =
+        dnStorageInfos[busyDNIndex].getDatanodeDescriptor();
+    for (int j = 0; j < replicationStreamsHardLimit; j++) {
+      busyNode.incrementPendingReplicationWithoutTargets();
+    }
+
+    //3. decomission one node.
+    List<DatanodeInfo> decommisionNodes = new ArrayList<>();
+    decommisionNodes.add(busyNode);
+    decommissionNode(0, decommisionNodes, AdminStates.DECOMMISSION_INPROGRESS);
+
+    final List<DatanodeDescriptor> live = new ArrayList<DatanodeDescriptor>();
+    bm.getDatanodeManager().fetchDatanodes(live, null, false);
+    int liveDecommissioning = 0;
+    for (DatanodeDescriptor node : live) {
+      liveDecommissioning += node.isDecommissionInProgress() ? 1 : 0;
+    }
+    assertEquals(decommisionNodes.size(), liveDecommissioning);
+
+    //4. wait for decommission block to replicate.
+    GenericTestUtils.waitFor(() -> bm.getLowRedundancyBlocksCount() == 1,
+        100, 3000);
+
+    int blocksScheduled = 0;
+    final List<DatanodeDescriptor> dnList = new ArrayList<>();
+    fsn.getBlockManager().getDatanodeManager().fetchDatanodes(dnList, null,
+        false);
+    for (DatanodeDescriptor dn : dnList) {
+      blocksScheduled += dn.getBlocksScheduled();
+    }
+    assertEquals(0, blocksScheduled);
+    assertEquals(0, bm.getPendingReconstructionBlocksCount());
+    assertEquals(1, bm.getLowRedundancyBlocksCount());
   }
 
   private void testDecommission(int writeBytes, int storageCount,
@@ -484,8 +555,8 @@ public class TestDecommissionWithStriped {
 
     // Ensure decommissioned datanode is not automatically shutdown
     DFSClient client = getDfsClient(cluster.getNameNode(0), conf);
-    assertEquals("All datanodes must be alive", numDNs,
-        client.datanodeReport(DatanodeReportType.LIVE).length);
+    assertEquals(numDNs, client.datanodeReport(DatanodeReportType.LIVE).length,
+        "All datanodes must be alive");
 
     assertNull(checkFile(dfs, ecFile, storageCount, decommisionNodes, numDNs));
     StripedFileTestUtil.checkData(dfs, ecFile, writeBytes, decommisionNodes,
@@ -531,10 +602,10 @@ public class TestDecommissionWithStriped {
           locToTokenList.get(i);
       DatanodeInfo[] di = lb.getLocations();
       for (int j = 0; j < di.length; j++) {
-        Assert.assertEquals("Block index value mismatches after sorting",
-            (byte) locToIndex.get(di[j]), stripedBlk.getBlockIndices()[j]);
-        Assert.assertEquals("Block token value mismatches after sorting",
-            locToToken.get(di[j]), stripedBlk.getBlockTokens()[j]);
+        assertEquals((byte) locToIndex.get(di[j]), stripedBlk.getBlockIndices()[j],
+            "Block index value mismatches after sorting");
+        assertEquals(locToToken.get(di[j]), stripedBlk.getBlockTokens()[j],
+            "Block token value mismatches after sorting");
       }
     }
   }
@@ -582,16 +653,14 @@ public class TestDecommissionWithStriped {
       localFileSys.delete(name, true);
     }
 
-    FSDataOutputStream stm = localFileSys.create(name);
-
-    if (nodes != null) {
-      for (Iterator<String> it = nodes.iterator(); it.hasNext();) {
-        String node = it.next();
-        stm.writeBytes(node);
-        stm.writeBytes("\n");
+    try (FSDataOutputStream stm = localFileSys.create(name)) {
+      if (nodes != null) {
+        for (String node: nodes) {
+          stm.writeBytes(node);
+          stm.writeBytes("\n");
+        }
       }
     }
-    stm.close();
   }
 
   private void cleanupFile(FileSystem fileSys, Path name) throws IOException {
@@ -620,7 +689,7 @@ public class TestDecommissionWithStriped {
           break;
         }
       }
-      assertTrue("Datanode: " + dn + " is not LIVE", nodeExists);
+      assertTrue(nodeExists, "Datanode: " + dn + " is not LIVE");
       excludeNodes.add(dn.getName());
       LOG.info("Decommissioning node: " + dn.getName());
     }
@@ -672,8 +741,8 @@ public class TestDecommissionWithStriped {
           throws IOException {
     boolean isNodeDown = decommissionedNodes.size() > 0;
     // need a raw stream
-    assertTrue("Not HDFS:" + fileSys.getUri(),
-        fileSys instanceof DistributedFileSystem);
+    assertTrue(fileSys instanceof DistributedFileSystem,
+        "Not HDFS:" + fileSys.getUri());
     HdfsDataInputStream dis = (HdfsDataInputStream) fileSys.open(name);
     Collection<LocatedBlock> dinfo = dis.getAllBlocks();
     for (LocatedBlock blk : dinfo) { // for each block
@@ -727,7 +796,8 @@ public class TestDecommissionWithStriped {
    * Simulate that There are 2 nodes(dn0,dn1) in decommission. Firstly dn0
    * replicates in success, dn1 replicates in failure. Decommissions go on.
    */
-  @Test (timeout = 120000)
+  @Test
+  @Timeout(value = 120)
   public void testDecommissionWithFailedReplicating() throws Exception {
 
     // Write ec file.
@@ -759,7 +829,7 @@ public class TestDecommissionWithStriped {
     DatanodeInfo extraDn = getDatanodeOutOfTheBlock(blk);
     DatanodeDescriptor target = bm.getDatanodeManager()
         .getDatanode(extraDn.getDatanodeUuid());
-    dn0.addBlockToBeReplicated(targetBlk,
+    dn0.addECBlockToBeReplicated(targetBlk,
         new DatanodeStorageInfo[] {target.getStorageInfos()[0]});
 
     // dn0 replicates in success
@@ -836,7 +906,9 @@ public class TestDecommissionWithStriped {
     return null;
   }
 
-  @Test (timeout = 120000)
+  @Test
+  @Order(1)
+  @Timeout(value = 120)
   public void testDecommissionWithMissingBlock() throws Exception {
     // Write ec file.
     Path ecFile = new Path(ecDir, "missingOneInternalBLockFile");
@@ -883,7 +955,7 @@ public class TestDecommissionWithStriped {
         .getDatanode(extraDn.getDatanodeUuid());
     DatanodeDescriptor dnStartIndexDecommission = bm.getDatanodeManager()
         .getDatanode(dnLocs[decommNodeIndex].getDatanodeUuid());
-    dnStartIndexDecommission.addBlockToBeReplicated(targetBlk,
+    dnStartIndexDecommission.addECBlockToBeReplicated(targetBlk,
         new DatanodeStorageInfo[] {target.getStorageInfos()[0]});
 
     // Wait for replication success.
@@ -924,14 +996,14 @@ public class TestDecommissionWithStriped {
     // Handle decommission nodes in a new thread.
     // Verify that nodes are decommissioned.
     final CountDownLatch decomStarted = new CountDownLatch(0);
-    new Thread(
+    new SubjectInheritingThread(
         () -> {
           try {
             decomStarted.countDown();
             decommissionNode(0, decommisionNodes, AdminStates.DECOMMISSIONED);
           } catch (Exception e) {
             LOG.error("Exception while decommissioning", e);
-            Assert.fail("Shouldn't throw exception!");
+            fail("Shouldn't throw exception!");
           }
         }).start();
     decomStarted.await(5, TimeUnit.SECONDS);
@@ -950,7 +1022,8 @@ public class TestDecommissionWithStriped {
     cleanupFile(dfs, ecFile);
   }
 
-  @Test (timeout = 120000)
+  @Test
+  @Timeout(value = 120)
   public void testCountNodes() throws Exception{
     // Write ec file.
     Path ecFile = new Path(ecDir, "testCountNodes");
@@ -972,7 +1045,7 @@ public class TestDecommissionWithStriped {
     DatanodeInfo extraDn = getDatanodeOutOfTheBlock(blk);
     DatanodeDescriptor target = bm.getDatanodeManager()
         .getDatanode(extraDn.getDatanodeUuid());
-    dn0.addBlockToBeReplicated(targetBlk,
+    dn0.addECBlockToBeReplicated(targetBlk,
         new DatanodeStorageInfo[] {target.getStorageInfos()[0]});
 
     // dn0 replicates in success
@@ -1031,7 +1104,8 @@ public class TestDecommissionWithStriped {
    * in decommissioned. array[4] is null, array[5-12]{b[5-8],b[0-3]} are
    * in live.
    */
-  @Test (timeout = 120000)
+  @Test
+  @Timeout(value = 120)
   public void testRecoveryWithDecommission() throws Exception {
     final Path ecFile = new Path(ecDir, "testRecoveryWithDecommission");
     int writeBytes = cellSize * dataBlocks;

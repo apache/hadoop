@@ -18,10 +18,12 @@
 
 package org.apache.hadoop.minikdc;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+
 import org.apache.kerby.kerberos.kerb.keytab.Keytab;
 import org.apache.kerby.kerberos.kerb.type.base.PrincipalName;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import javax.security.auth.Subject;
 import javax.security.auth.kerberos.KerberosPrincipal;
@@ -38,12 +40,39 @@ import java.util.HashMap;
 import java.util.Arrays;
 
 public class TestMiniKdc extends KerberosSecurityTestcase {
-  private static final boolean IBM_JAVA = System.getProperty("java.vendor")
-      .contains("IBM");
+  private static final boolean IBM_JAVA = shouldUseIbmPackages();
+  // duplicated to avoid cycles in the build
+  private static boolean shouldUseIbmPackages() {
+    final List<String> ibmTechnologyEditionSecurityModules = Arrays.asList(
+        "com.ibm.security.auth.module.JAASLoginModule",
+        "com.ibm.security.auth.module.Win64LoginModule",
+        "com.ibm.security.auth.module.NTLoginModule",
+        "com.ibm.security.auth.module.AIX64LoginModule",
+        "com.ibm.security.auth.module.LinuxLoginModule",
+        "com.ibm.security.auth.module.Krb5LoginModule"
+    );
+
+    if (System.getProperty("java.vendor").contains("IBM")) {
+      return ibmTechnologyEditionSecurityModules
+          .stream().anyMatch((module) -> isSystemClassAvailable(module));
+    }
+
+    return false;
+  }
+
+  private static boolean isSystemClassAvailable(String className) {
+    try {
+      Class.forName(className);
+      return true;
+    } catch (Exception ignored) {
+      return false;
+    }
+  }
+
   @Test
   public void testMiniKdcStart() {
     MiniKdc kdc = getKdc();
-    Assert.assertNotSame(0, kdc.getPort());
+    assertNotSame(0, kdc.getPort());
   }
 
   @Test
@@ -60,7 +89,7 @@ public class TestMiniKdc extends KerberosSecurityTestcase {
       principals.add(principalName.getName());
     }
 
-    Assert.assertEquals(new HashSet<String>(Arrays.asList(
+    assertEquals(new HashSet<String>(Arrays.asList(
             "foo/bar@" + kdc.getRealm(), "bar/foo@" + kdc.getRealm())),
             principals);
   }
@@ -117,9 +146,9 @@ public class TestMiniKdc extends KerberosSecurityTestcase {
       options.put("debug", "true");
 
       return new AppConfigurationEntry[]{
-              new AppConfigurationEntry(getKrb5LoginModuleName(),
-                      AppConfigurationEntry.LoginModuleControlFlag.REQUIRED,
-                      options)};
+          new AppConfigurationEntry(getKrb5LoginModuleName(),
+                AppConfigurationEntry.LoginModuleControlFlag.REQUIRED,
+                options)};
     }
   }
 
@@ -143,10 +172,10 @@ public class TestMiniKdc extends KerberosSecurityTestcase {
               KerberosConfiguration.createClientConfig(principal, keytab));
       loginContext.login();
       subject = loginContext.getSubject();
-      Assert.assertEquals(1, subject.getPrincipals().size());
-      Assert.assertEquals(KerberosPrincipal.class,
+      assertEquals(1, subject.getPrincipals().size());
+      assertEquals(KerberosPrincipal.class,
               subject.getPrincipals().iterator().next().getClass());
-      Assert.assertEquals(principal + "@" + kdc.getRealm(),
+      assertEquals(principal + "@" + kdc.getRealm(),
               subject.getPrincipals().iterator().next().getName());
       loginContext.logout();
 
@@ -157,10 +186,10 @@ public class TestMiniKdc extends KerberosSecurityTestcase {
               KerberosConfiguration.createServerConfig(principal, keytab));
       loginContext.login();
       subject = loginContext.getSubject();
-      Assert.assertEquals(1, subject.getPrincipals().size());
-      Assert.assertEquals(KerberosPrincipal.class,
+      assertEquals(1, subject.getPrincipals().size());
+      assertEquals(KerberosPrincipal.class,
               subject.getPrincipals().iterator().next().getClass());
-      Assert.assertEquals(principal + "@" + kdc.getRealm(),
+      assertEquals(principal + "@" + kdc.getRealm(),
               subject.getPrincipals().iterator().next().getName());
       loginContext.logout();
 

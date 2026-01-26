@@ -390,7 +390,7 @@ public class DominantResourceFairnessPolicy extends SchedulingPolicy {
       // share for that resource
       boolean s1Needy = resourceInfo1[dominant1].getValue() <
           minShareInfo1[dominant1].getValue();
-      boolean s2Needy = resourceInfo1[dominant2].getValue() <
+      boolean s2Needy = resourceInfo2[dominant2].getValue() <
           minShareInfo2[dominant2].getValue();
 
       int res;

@@ -801,6 +801,7 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
   }
 
   @Override
+  @SuppressWarnings("deprecation")
   public boolean setSafeMode(HdfsConstants.SafeModeAction action)
       throws IOException {
     if (this.vfs == null) {
@@ -811,6 +812,7 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
   }
 
   @Override
+  @SuppressWarnings("deprecation")
   public boolean setSafeMode(HdfsConstants.SafeModeAction action,
       boolean isChecked) throws IOException {
     if (this.vfs == null) {

@@ -21,8 +21,8 @@ package org.apache.hadoop.fs.impl;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.test.HadoopTestBase;
 import org.apache.hadoop.util.LambdaUtils;
@@ -35,7 +35,7 @@ public class TestFutureIO extends HadoopTestBase {
 
   private ThreadLocal<AtomicInteger> local;
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     local = ThreadLocal.withInitial(() -> new AtomicInteger(1));
   }
@@ -50,8 +50,8 @@ public class TestFutureIO extends HadoopTestBase {
         () -> {
           return getLocal().addAndGet(2);
         });
-    assertEquals("Thread local value", 3, getLocalValue());
-    assertEquals("Evaluated Value", 3, eval.get().intValue());
+    assertEquals(3, getLocalValue(), "Thread local value");
+    assertEquals(3, eval.get().intValue(), "Evaluated Value");
   }
 
   /**
@@ -61,8 +61,8 @@ public class TestFutureIO extends HadoopTestBase {
   public void testEvalAsync() throws Throwable {
     final CompletableFuture<Integer> eval = CompletableFuture.supplyAsync(
         () -> getLocal().addAndGet(2));
-    assertEquals("Thread local value", 1, getLocalValue());
-    assertEquals("Evaluated Value", 3, eval.get().intValue());
+    assertEquals(1, getLocalValue(), "Thread local value");
+    assertEquals(3, eval.get().intValue(), "Evaluated Value");
   }
 
 

@@ -19,12 +19,12 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import org.apache.hadoop.ipc.CallerContext;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
-import static junit.framework.TestCase.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -45,7 +45,7 @@ public class TestAuthorizationContext {
   private String path = "";
   private int ancestorIndex = inodes.length - 2;
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     when(iip.getPathSnapshotId()).thenReturn(snapshotId);
     when(iip.getINodesArray()).thenReturn(inodes);
@@ -103,7 +103,7 @@ public class TestAuthorizationContext {
         thenReturn(mockEnforcer);
 
     FSPermissionChecker checker = new FSPermissionChecker(
-        fsOwner, superGroup, ugi, mockINodeAttributeProvider, false);
+        fsOwner, superGroup, ugi, mockINodeAttributeProvider, false, 0);
 
     when(iip.getPathSnapshotId()).thenReturn(snapshotId);
     when(iip.getINodesArray()).thenReturn(inodes);
@@ -128,7 +128,7 @@ public class TestAuthorizationContext {
 
     // force it to use the new, checkPermissionWithContext API.
     FSPermissionChecker checker = new FSPermissionChecker(
-        fsOwner, superGroup, ugi, mockINodeAttributeProvider, true);
+        fsOwner, superGroup, ugi, mockINodeAttributeProvider, true, 0);
 
     String operationName = "abc";
     FSPermissionChecker.setOperationType(operationName);

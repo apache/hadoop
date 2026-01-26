@@ -16,19 +16,19 @@
  */
 package org.apache.hadoop.yarn.server.timelineservice.storage.common;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.Test;
-
 import org.apache.hadoop.thirdparty.com.google.common.collect.Iterables;
+import org.junit.jupiter.api.Test;
+
+import org.apache.hadoop.hbase.util.Bytes;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class TestSeparator {
 
@@ -40,7 +40,7 @@ public class TestSeparator {
    *
    */
   @Test
-  public void testEncodeDecodeString() {
+  void testEncodeDecodeString() {
 
     for (Separator separator : Separator.values()) {
       testEncodeDecode(separator, "");
@@ -65,11 +65,11 @@ public class TestSeparator {
     String encoded = separator.encode(token);
     String decoded = separator.decode(encoded);
     String msg = "token:" + token + " separator:" + separator + ".";
-    assertEquals(msg, token, decoded);
+    assertEquals(token, decoded, msg);
   }
 
   @Test
-  public void testEncodeDecode() {
+  void testEncodeDecode() {
     testEncodeDecode("Dr.", Separator.QUALIFIERS);
     testEncodeDecode("Heinz", Separator.QUALIFIERS, Separator.QUALIFIERS);
     testEncodeDecode("Doofenshmirtz", Separator.QUALIFIERS, null,
@@ -81,15 +81,16 @@ public class TestSeparator {
         Separator.VALUES, Separator.SPACE);
 
   }
+
   @Test
-  public void testEncodedValues() {
+  void testEncodedValues() {
     testEncodeDecode("Double-escape %2$ and %9$ or %%2$ or %%3$, nor  %%%2$" +
         "= no problem!",
         Separator.QUALIFIERS, Separator.VALUES, Separator.SPACE, Separator.TAB);
   }
 
   @Test
-  public void testSplits() {
+  void testSplits() {
     byte[] maxLongBytes = Bytes.toBytes(Long.MAX_VALUE);
     byte[] maxIntBytes = Bytes.toBytes(Integer.MAX_VALUE);
     for (Separator separator : Separator.values()) {
@@ -128,7 +129,7 @@ public class TestSeparator {
       longVal1Arr = Bytes.add(sepByteArr, Bytes.copy(maxLongBytes,
           sepByteArr.length, 4 - sepByteArr.length), sepByteArr);
       longVal1Arr = Bytes.add(longVal1Arr, Bytes.copy(maxLongBytes, 4, 3 -
-              sepByteArr.length), sepByteArr);
+          sepByteArr.length), sepByteArr);
       arr = separator.join(Bytes.toBytes(separator.encode(str1)), longVal1Arr,
           Bytes.toBytes(separator.encode(str2)), intVal1Arr);
       splits = separator.split(arr, sizes);
@@ -154,14 +155,16 @@ public class TestSeparator {
             Bytes.SIZEOF_INT, 7};
         splits = separator.split(arr, sizes2);
         fail("Exception should have been thrown.");
-      } catch (IllegalArgumentException e) {}
+      } catch (IllegalArgumentException e) {
+      }
 
       try {
         int[] sizes2 = {Separator.VARIABLE_SIZE, Separator.VARIABLE_SIZE, 2,
             Bytes.SIZEOF_LONG};
         splits = separator.split(arr, sizes2);
         fail("Exception should have been thrown.");
-      } catch (IllegalArgumentException e) {}
+      } catch (IllegalArgumentException e) {
+      }
     }
   }
 
@@ -179,7 +182,7 @@ public class TestSeparator {
   }
 
   @Test
-  public void testJoinStripped() {
+  void testJoinStripped() {
     List<String> stringList = new ArrayList<String>(0);
     stringList.add("nothing");
 

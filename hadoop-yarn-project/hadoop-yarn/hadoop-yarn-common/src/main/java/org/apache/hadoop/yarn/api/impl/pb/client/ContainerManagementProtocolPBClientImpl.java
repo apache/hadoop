@@ -109,11 +109,11 @@ public class ContainerManagementProtocolPBClientImpl implements ContainerManagem
         ProtobufRpcEngine2.class);
     UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
 
-    int expireIntvl = conf.getInt(NM_COMMAND_TIMEOUT, DEFAULT_COMMAND_TIMEOUT);
+    int expireInterval = conf.getInt(NM_COMMAND_TIMEOUT, DEFAULT_COMMAND_TIMEOUT);
     proxy =
         (ContainerManagementProtocolPB) RPC.getProxy(ContainerManagementProtocolPB.class,
           clientVersion, addr, ugi, conf,
-          NetUtils.getDefaultSocketFactory(conf), expireIntvl);
+          NetUtils.getDefaultSocketFactory(conf), expireInterval);
   }
 
   @Override

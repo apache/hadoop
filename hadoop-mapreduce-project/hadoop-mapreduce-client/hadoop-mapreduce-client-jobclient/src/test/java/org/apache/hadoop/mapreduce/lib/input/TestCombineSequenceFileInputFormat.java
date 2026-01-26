@@ -18,9 +18,9 @@
 
 package org.apache.hadoop.mapreduce.lib.input;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.io.IOException;
 import java.util.BitSet;
@@ -41,7 +41,8 @@ import org.apache.hadoop.mapreduce.MapReduceTestUtil;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.task.MapContextImpl;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -64,7 +65,8 @@ public class TestCombineSequenceFileInputFormat {
     new Path(new Path(System.getProperty("test.build.data", "."), "data"),
              "TestCombineSequenceFileInputFormat");
 
-  @Test(timeout=10000)
+  @Test
+  @Timeout(value = 10)
   public void testFormat() throws IOException, InterruptedException {
     Job job = Job.getInstance(conf);
 
@@ -95,10 +97,10 @@ public class TestCombineSequenceFileInputFormat {
 
       // we should have a single split as the length is comfortably smaller than
       // the block size
-      assertEquals("We got more than one splits!", 1, splits.size());
+      assertEquals(1, splits.size(), "We got more than one splits!");
       InputSplit split = splits.get(0);
-      assertEquals("It should be CombineFileSplit",
-        CombineFileSplit.class, split.getClass());
+      assertEquals(CombineFileSplit.class, split.getClass(),
+          "It should be CombineFileSplit");
 
       // check the split
       BitSet bits = new BitSet(length);
@@ -109,23 +111,23 @@ public class TestCombineSequenceFileInputFormat {
         context.getTaskAttemptID(), reader, null, null,
         MapReduceTestUtil.createDummyReporter(), split);
       reader.initialize(split, mcontext);
-      assertEquals("reader class is CombineFileRecordReader.",
-        CombineFileRecordReader.class, reader.getClass());
+      assertEquals(CombineFileRecordReader.class, reader.getClass(),
+          "reader class is CombineFileRecordReader.");
 
       try {
         while (reader.nextKeyValue()) {
           IntWritable key = reader.getCurrentKey();
           BytesWritable value = reader.getCurrentValue();
-          assertNotNull("Value should not be null.", value);
+          assertNotNull(value, "Value should not be null.");
           final int k = key.get();
           LOG.debug("read " + k);
-          assertFalse("Key in multiple partitions.", bits.get(k));
+          assertFalse(bits.get(k), "Key in multiple partitions.");
           bits.set(k);
         }
       } finally {
         reader.close();
       }
-      assertEquals("Some keys in no partition.", length, bits.cardinality());
+      assertEquals(length, bits.cardinality(), "Some keys in no partition.");
     }
   }
 

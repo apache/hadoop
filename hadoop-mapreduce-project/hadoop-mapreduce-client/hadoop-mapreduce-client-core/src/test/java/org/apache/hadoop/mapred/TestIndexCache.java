@@ -30,18 +30,21 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.mapreduce.server.tasktracker.TTConfig;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
+import org.apache.hadoop.mapreduce.MRJobConfig;
 
-import org.junit.Before;
-import org.junit.Test;
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class TestIndexCache {
   private JobConf conf;
   private FileSystem fs;
   private Path p;
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     conf = new JobConf();
     fs = FileSystem.getLocal(conf).getRaw();
@@ -56,7 +59,7 @@ public class TestIndexCache {
     r.setSeed(seed);
     System.out.println("seed: " + seed);
     fs.delete(p, true);
-    conf.setInt(TTConfig.TT_INDEX_CACHE, 1);
+    conf.setInt(MRJobConfig.SHUFFLE_INDEX_CACHE, 1);
     final int partsPerMap = 1000;
     final int bytesPerFile = partsPerMap * 24;
     IndexCache cache = new IndexCache(conf);
@@ -127,7 +130,7 @@ public class TestIndexCache {
   public void testBadIndex() throws Exception {
     final int parts = 30;
     fs.delete(p, true);
-    conf.setInt(TTConfig.TT_INDEX_CACHE, 1);
+    conf.setInt(MRJobConfig.SHUFFLE_INDEX_CACHE, 1);
     IndexCache cache = new IndexCache(conf);
 
     Path f = new Path(p, "badindex");
@@ -159,7 +162,7 @@ public class TestIndexCache {
   @Test
   public void testInvalidReduceNumberOrLength() throws Exception {
     fs.delete(p, true);
-    conf.setInt(TTConfig.TT_INDEX_CACHE, 1);
+    conf.setInt(MRJobConfig.SHUFFLE_INDEX_CACHE, 1);
     final int partsPerMap = 1000;
     final int bytesPerFile = partsPerMap * 24;
     IndexCache cache = new IndexCache(conf);
@@ -205,7 +208,7 @@ public class TestIndexCache {
     // fails with probability of 100% on code before MAPREDUCE-2541,
     // so it is repeatable in practice.
     fs.delete(p, true);
-    conf.setInt(TTConfig.TT_INDEX_CACHE, 10);
+    conf.setInt(MRJobConfig.SHUFFLE_INDEX_CACHE, 10);
     // Make a big file so removeMapThread almost surely runs faster than 
     // getInfoThread 
     final int partsPerMap = 100000;
@@ -219,9 +222,9 @@ public class TestIndexCache {
     
     // run multiple times
     for (int i = 0; i < 20; ++i) {
-      Thread getInfoThread = new Thread() {
+      Thread getInfoThread = new SubjectInheritingThread() {
         @Override
-        public void run() {
+        public void work() {
           try {
             cache.getIndexInformation("bigIndex", partsPerMap, big, user);
           } catch (Exception e) {
@@ -229,9 +232,9 @@ public class TestIndexCache {
           }
         }
       };
-      Thread removeMapThread = new Thread() {
+      Thread removeMapThread = new SubjectInheritingThread() {
         @Override
-        public void run() {
+        public void work() {
           cache.removeMap("bigIndex");
         }
       };
@@ -251,7 +254,7 @@ public class TestIndexCache {
   @Test
   public void testCreateRace() throws Exception {
     fs.delete(p, true);
-    conf.setInt(TTConfig.TT_INDEX_CACHE, 1);
+    conf.setInt(MRJobConfig.SHUFFLE_INDEX_CACHE, 1);
     final int partsPerMap = 1000;
     final int bytesPerFile = partsPerMap * 24;
     final IndexCache cache = new IndexCache(conf);
@@ -264,9 +267,9 @@ public class TestIndexCache {
     // run multiple instances
     Thread[] getInfoThreads = new Thread[50];
     for (int i = 0; i < 50; i++) {
-      getInfoThreads[i] = new Thread() {
+      getInfoThreads[i] = new SubjectInheritingThread() {
         @Override
-        public void run() {
+        public void work() {
           try {
             cache.getIndexInformation("racyIndex", partsPerMap, racy, user);
             cache.removeMap("racyIndex");
@@ -283,9 +286,9 @@ public class TestIndexCache {
 
     final Thread mainTestThread = Thread.currentThread();
 
-    Thread timeoutThread = new Thread() {
+    Thread timeoutThread = new SubjectInheritingThread() {
       @Override
-      public void run() {
+      public void work() {
         try {
           Thread.sleep(15000);
           mainTestThread.interrupt();

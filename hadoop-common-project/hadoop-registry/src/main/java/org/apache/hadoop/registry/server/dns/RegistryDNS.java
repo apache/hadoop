@@ -29,6 +29,7 @@ import org.apache.hadoop.registry.client.types.ServiceRecord;
 import org.apache.hadoop.registry.client.types.yarn.YarnRegistryAttributes;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xbill.DNS.CNAMERecord;
@@ -80,6 +81,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
+import java.nio.charset.StandardCharsets;
 import java.security.KeyFactory;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
@@ -173,7 +175,7 @@ public class RegistryDNS extends AbstractService implements DNSOperations,
 
           @Override
           public Thread newThread(Runnable r) {
-            return new Thread(r,
+            return new SubjectInheritingThread(r,
                 "RegistryDNS "
                     + counter.getAndIncrement());
           }
@@ -628,7 +630,7 @@ public class RegistryDNS extends AbstractService implements DNSOperations,
       Name zoneName = zone.getOrigin();
       DNSKEYRecord dnskeyRecord = dnsKeyRecs.get(zoneName);
       if (dnskeyRecord == null) {
-        byte[] key = Base64.decodeBase64(publicKey.getBytes("UTF-8"));
+        byte[] key = Base64.decodeBase64(publicKey.getBytes(StandardCharsets.UTF_8));
         dnskeyRecord = new DNSKEYRecord(zoneName,
             DClass.IN, ttl,
             DNSKEYRecord.Flags.ZONE_KEY,
@@ -1681,7 +1683,7 @@ public class RegistryDNS extends AbstractService implements DNSOperations,
                   DNSSEC.sign(rRset, dnskeyRecord, privateKey,
                       inception, expiration);
               LOG.info("Adding {}", rrsigRecord);
-              rRset.addRR(rrsigRecord);
+              zone.addRecord(rrsigRecord);
 
               //addDSRecord(zone, record.getName(), record.getDClass(),
               //  record.getTTL(), inception, expiration);

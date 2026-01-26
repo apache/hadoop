@@ -27,7 +27,7 @@ import static org.apache.hadoop.yarn.webapp.YarnWebParams.APP_STATE;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.*;
 
 // Do NOT rename/refactor this to RMView as it will wreak havoc
-// on Mac OS HFS
+// on macOS HFS
 public class RmView extends TwoColumnLayout {
   static final int MAX_DISPLAY_ROWS = 100;  // direct table rendering
   static final int MAX_FAST_ROWS = 1000;    // inline js array

@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
+
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.A;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.A1_CAPACITY;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.A2_CAPACITY;
@@ -30,12 +31,12 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.C
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.B3;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.B3_CAPACITY;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.B_CAPACITY;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.ROOT;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.checkQueueStructureCapacities;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.getDefaultCapacities;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import java.util.List;
 
 import org.slf4j.Logger;
@@ -51,9 +52,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerDynamicEditException;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.QueueEntitlement;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class TestCapacitySchedulerDynamicBehavior {
   private static final Logger LOG = LoggerFactory
@@ -63,8 +64,8 @@ public class TestCapacitySchedulerDynamicBehavior {
 
   private MockRM rm;
 
-  @Before
-  public void setUp() {
+  @BeforeEach
+  public void setUp() throws Exception {
     CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
     setupPlanQueueConfiguration(conf);
     conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
@@ -72,6 +73,14 @@ public class TestCapacitySchedulerDynamicBehavior {
     conf.setBoolean(YarnConfiguration.RM_RESERVATION_SYSTEM_ENABLE, false);
     rm = new MockRM(conf);
     rm.start();
+    rm.registerNode("n1:1234", 64 * GB, 64);
+  }
+
+  @AfterEach
+  public void tearDown() {
+    if (rm != null) {
+      rm.stop();
+    }
   }
 
   @Test
@@ -204,8 +213,6 @@ public class TestCapacitySchedulerDynamicBehavior {
     cs.removeQueue("a1");
 
     assertTrue(cs.getQueue("a1") == null);
-
-    rm.stop();
   }
 
   @Test
@@ -240,7 +247,7 @@ public class TestCapacitySchedulerDynamicBehavior {
     String queue =
         scheduler.getApplicationAttempt(appsInB1.get(0)).getQueue()
             .getQueueName();
-    Assert.assertEquals("b1", queue);
+    assertEquals("b1", queue);
 
     List<ApplicationAttemptId> appsInRoot = scheduler.getAppsInQueue("root");
     assertTrue(appsInRoot.contains(appAttemptId));
@@ -266,7 +273,7 @@ public class TestCapacitySchedulerDynamicBehavior {
     queue =
         scheduler.getApplicationAttempt(appsInDefQ.get(0)).getQueue()
             .getQueueName();
-    Assert.assertTrue(queue.equals(defQName));
+    assertTrue(queue.equals(defQName));
 
     appsInA = scheduler.getAppsInQueue("a");
     assertTrue(appsInA.contains(appAttemptId));
@@ -281,13 +288,11 @@ public class TestCapacitySchedulerDynamicBehavior {
 
     appsInB = scheduler.getAppsInQueue("b");
     assertTrue(appsInB.isEmpty());
-
-    rm.stop();
   }
 
   private void setupPlanQueueConfiguration(CapacitySchedulerConfiguration conf) {
 
-    conf.setQueues(CapacitySchedulerConfiguration.ROOT,
+    conf.setQueues(ROOT,
         new String[] { "a", "b" });
 
     conf.setCapacity(A, A_CAPACITY);

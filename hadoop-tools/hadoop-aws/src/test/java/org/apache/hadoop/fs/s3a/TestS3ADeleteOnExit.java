@@ -19,7 +19,7 @@
 package org.apache.hadoop.fs.s3a;
 
 import static org.apache.hadoop.fs.s3a.Constants.FS_S3A;
-import static org.junit.Assert.assertEquals;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.when;
 
@@ -27,15 +27,17 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.Date;
 
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.GetObjectMetadataRequest;
-import com.amazonaws.services.s3.model.ObjectMetadata;
+import org.assertj.core.api.Assertions;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
+import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatcher;
+
 
 /**
  * deleteOnExit test for S3A.
@@ -60,9 +62,8 @@ public class TestS3ADeleteOnExit extends AbstractS3AMockTest {
     // processDeleteOnExit.
     @Override
     protected boolean deleteWithoutCloseCheck(Path f, boolean recursive) throws IOException {
-      boolean result = super.deleteWithoutCloseCheck(f, recursive);
       deleteOnDnExitCount--;
-      return result;
+      return true;
     }
   }
 
@@ -74,25 +75,38 @@ public class TestS3ADeleteOnExit extends AbstractS3AMockTest {
     // unset S3CSE property from config to avoid pathIOE.
     conf.unset(Constants.S3_ENCRYPTION_ALGORITHM);
     testFs.initialize(uri, conf);
-    AmazonS3 testS3 = testFs.getAmazonS3ClientForTesting("mocking");
+    S3Client testS3 = testFs.getS3AInternals().getAmazonS3Client("mocking");
 
     Path path = new Path("/file");
     String key = path.toUri().getPath().substring(1);
-    ObjectMetadata meta = new ObjectMetadata();
-    meta.setContentLength(1L);
-    meta.setLastModified(new Date(2L));
-    when(testS3.getObjectMetadata(argThat(correctGetMetadataRequest(BUCKET, key))))
-            .thenReturn(meta);
+    HeadObjectResponse objectMetadata =
+        HeadObjectResponse.builder().contentLength(1L).lastModified(new Date(2L).toInstant())
+            .build();
+    when(testS3.headObject(argThat(correctGetMetadataRequest(BUCKET, key))))
+            .thenReturn(objectMetadata);
 
     testFs.deleteOnExit(path);
     testFs.close();
-    assertEquals(0, testFs.getDeleteOnDnExitCount());
+    Assertions.assertThat(testFs.getDeleteOnDnExitCount()).isEqualTo(0);
   }
 
-  private ArgumentMatcher<GetObjectMetadataRequest> correctGetMetadataRequest(
+  @Test
+  public void testCreateRequestFactoryWithInvalidChecksumAlgorithm() throws Exception {
+    Configuration conf = createConfiguration();
+    conf.set(Constants.CHECKSUM_ALGORITHM, "INVALID");
+    TestS3AFileSystem testFs  = new TestS3AFileSystem();
+    URI uri = URI.create(FS_S3A + "://" + BUCKET);
+    final IllegalArgumentException exception = intercept(IllegalArgumentException.class,
+        () -> testFs.initialize(uri, conf));
+    Assertions.assertThat(exception.getMessage())
+        .describedAs("Error message should say that INVALID is not supported")
+        .isEqualTo("Checksum algorithm is not supported: INVALID");
+  }
+
+  private ArgumentMatcher<HeadObjectRequest> correctGetMetadataRequest(
           String bucket, String key) {
     return request -> request != null
-            && request.getBucketName().equals(bucket)
-            && request.getKey().equals(key);
+            && request.bucket().equals(bucket)
+            && request.key().equals(key);
   }
 }

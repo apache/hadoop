@@ -19,13 +19,14 @@
 package org.apache.hadoop.yarn.server.resourcemanager.resourcetracker;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.MockNM.createMockNodeStatus;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
-import org.junit.Assert;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -46,10 +47,10 @@ import org.apache.hadoop.yarn.server.resourcemanager.ResourceTrackerService;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
-import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
-import org.junit.Before;
-import org.junit.Test;
+import org.apache.hadoop.yarn.util.resource.Resources;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class TestNMExpiry {
   private static final Logger LOG =
@@ -70,7 +71,7 @@ public class TestNMExpiry {
     }
   }
 
-  @Before
+  @BeforeEach
   public void setUp() {
     Configuration conf = new Configuration();
     // Dispatcher that processes events inline
@@ -101,8 +102,8 @@ public class TestNMExpiry {
     resourceTrackerService.start();
   }
 
-  private class ThirdNodeHeartBeatThread extends Thread {
-    public void run() {
+  private class ThirdNodeHeartBeatThread extends SubjectInheritingThread {
+    public void work() {
       int lastResponseID = 0;
       while (!stopT) {
         try {
@@ -136,7 +137,7 @@ public class TestNMExpiry {
     String hostname1 = "localhost1";
     String hostname2 = "localhost2";
     String hostname3 = "localhost3";
-    Resource capability = BuilderUtils.newResource(1024, 1);
+    Resource capability = Resources.createResource(1024);
 
     NodeStatus mockNodeStatus = createMockNodeStatus();
 
@@ -164,7 +165,7 @@ public class TestNMExpiry {
         wait(100);
       }
     }
-    Assert.assertEquals(2, ClusterMetrics.getMetrics().getNumLostNMs());
+    assertEquals(2, ClusterMetrics.getMetrics().getNumLostNMs());
 
     request3 = recordFactory
         .newRecordInstance(RegisterNodeManagerRequest.class);
@@ -178,7 +179,7 @@ public class TestNMExpiry {
     /* test to see if hostanme 3 does not expire */
     stopT = false;
     new ThirdNodeHeartBeatThread().start();
-    Assert.assertEquals(2,ClusterMetrics.getMetrics().getNumLostNMs());
+    assertEquals(2, ClusterMetrics.getMetrics().getNumLostNMs());
     stopT = true;
   }
 }

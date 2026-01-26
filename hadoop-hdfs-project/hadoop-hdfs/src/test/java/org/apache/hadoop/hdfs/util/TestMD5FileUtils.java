@@ -17,9 +17,10 @@
  */
 package org.apache.hadoop.hdfs.util;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -30,8 +31,8 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.test.PathUtils;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class TestMD5FileUtils {
   private static final File TEST_DIR = PathUtils.getTestDir(TestMD5FileUtils.class);
@@ -43,7 +44,7 @@ public class TestMD5FileUtils {
     DFSTestUtil.generateSequentialBytes(0, TEST_DATA_LEN);
   private static final MD5Hash TEST_MD5 = MD5Hash.digest(TEST_DATA);
   
-  @Before
+  @BeforeEach
   public void setup() throws IOException {
     FileUtil.fullyDelete(TEST_DIR);
     assertTrue(TEST_DIR.mkdirs());
@@ -69,9 +70,11 @@ public class TestMD5FileUtils {
   /**
    * Test when .md5 file does not exist at all
    */
-  @Test(expected=IOException.class)
+  @Test
   public void testVerifyMD5FileMissing() throws Exception {
-    MD5FileUtils.verifySavedMD5(TEST_FILE, TEST_MD5);
+    assertThrows(IOException.class, () -> {
+      MD5FileUtils.verifySavedMD5(TEST_FILE, TEST_MD5);
+    });
   }
 
   /**

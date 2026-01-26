@@ -63,6 +63,15 @@
 </property>
 
 <property>
+  <name>mapreduce.task.spill.files.count.limit</name>
+  <value>-1</value>
+  <description>Number of spill files that can be created by a MapTask.
+  After breaching this, task will fail. Default value for this config is -1
+  which indicates that there is no limit on number of spill files being
+  created</description>
+</property>
+
+<property>
   <name>mapreduce.job.local-fs.single-disk-limit.bytes</name>
   <value>-1</value>
   <description>Enable an in task monitor thread to watch for single disk
@@ -1660,14 +1669,18 @@
   <name>yarn.app.mapreduce.client-am.ipc.max-retries</name>
   <value>3</value>
   <description>The number of client retries to the AM - before reconnecting
-    to the RM to fetch Application Status.</description>
+    to the RM to fetch Application Status.
+    In other words, it is the ipc.client.connect.max.retries to be used during
+    reconnecting to the RM and fetching Application Status.</description>
 </property>
 
 <property>
   <name>yarn.app.mapreduce.client-am.ipc.max-retries-on-timeouts</name>
   <value>3</value>
   <description>The number of client retries on socket timeouts to the AM - before
-    reconnecting to the RM to fetch Application Status.</description>
+    reconnecting to the RM to fetch Application Status.
+    In other words, it is the ipc.client.connect.max.retries.on.timeouts to be used during
+    reconnecting to the RM and fetching Application Status.</description>
 </property>
 
 <property>
@@ -1805,6 +1818,18 @@
    <name>mapreduce.jvm.system-properties-to-log</name>
    <value>os.name,os.version,java.home,java.runtime.version,java.vendor,java.version,java.vm.name,java.class.path,java.io.tmpdir,user.dir,user.name</value>
    <description>Comma-delimited list of system properties to log on mapreduce JVM start</description>
+</property>
+
+<property>
+  <name>mapreduce.jvm.add-opens-as-default</name>
+  <value>false</value>
+  <description>Since on JDK17 it's no longer possible to use the reflection API to
+    access non-public fields and methods add-opens flags should be added to MR AM
+    and map/reduce containers regardless of the user specified java opts. Setting
+    this to true will add the flags to the container launch commands on nodes with
+    JDK17 or higher. Defaults to false, and the setting has no effect on nodes using
+    JDK16 and before.
+  </description>
 </property>
 
 <!-- jobhistory properties -->
@@ -2238,23 +2263,23 @@
   </description>
 </property>
 
-<!-- not yet enabled by default.
-
+<!-- use manifest committer for abfs URLs -->
 <property>
   <name>mapreduce.outputcommitter.factory.scheme.abfs</name>
   <value>org.apache.hadoop.fs.azurebfs.commit.AzureManifestCommitterFactory</value>
   <description>
-    The default committer factory for ABFS is for the manifest committer with
-    abfs-specific tuning.
+    The default committer factory for ABFS is the manifest committer with
+    abfs-specific recovery.
   </description>
 </property>
 
+<!-- use manifest committer for gs URLs -->
 <property>
   <name>mapreduce.outputcommitter.factory.scheme.gs</name>
   <value>org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterFactory</value>
   <description>
-    The default committer factory for google cloud storage is for the manifest committer.
+    The default committer factory for google cloud storage is the manifest committer.
   </description>
 </property>
--->
+
 </configuration>

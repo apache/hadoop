@@ -48,8 +48,8 @@ import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_SAFEMODE_ENABLE;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.FEDERATION_FILE_RESOLVER_CLIENT_CLASS;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.FEDERATION_NAMENODE_RESOLVER_CLIENT_CLASS;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -91,6 +91,7 @@ import org.apache.hadoop.hdfs.server.federation.router.RouterRpcServer;
 import org.apache.hadoop.hdfs.server.namenode.FSImage;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.ha.ConfiguredFailoverProxyProvider;
+import org.apache.hadoop.hdfs.server.namenode.ha.ObserverReadProxyProvider;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.net.NetUtils;
@@ -131,9 +132,9 @@ public class MiniRouterDFSCluster {
   /** Mini cluster. */
   private MiniDFSCluster cluster;
 
-  protected static final long DEFAULT_HEARTBEAT_INTERVAL_MS =
+  public static final long DEFAULT_HEARTBEAT_INTERVAL_MS =
       TimeUnit.SECONDS.toMillis(5);
-  protected static final long DEFAULT_CACHE_INTERVAL_MS =
+  public static final long DEFAULT_CACHE_INTERVAL_MS =
       TimeUnit.SECONDS.toMillis(5);
   /** Heartbeat interval in milliseconds. */
   private long heartbeatInterval;
@@ -230,6 +231,34 @@ public class MiniRouterDFSCluster {
     }
 
     public FileSystem getFileSystem() throws IOException {
+      return DistributedFileSystem.get(conf);
+    }
+
+    public FileSystem getFileSystem(Configuration configuration) throws  IOException {
+      configuration.addResource(conf);
+      return DistributedFileSystem.get(configuration);
+    }
+
+    public FileSystem getFileSystemWithObserverReadProxyProvider() throws IOException {
+      return getFileSystemWithProxyProvider(ObserverReadProxyProvider.class.getName());
+    }
+
+    public FileSystem getFileSystemWithConfiguredFailoverProxyProvider() throws IOException {
+      return getFileSystemWithProxyProvider(ConfiguredFailoverProxyProvider.class.getName());
+    }
+
+    private FileSystem getFileSystemWithProxyProvider(
+        String proxyProviderClassName) throws IOException {
+      conf.set(DFS_NAMESERVICES,
+          conf.get(DFS_NAMESERVICES)+ ",router-service");
+      conf.set(DFS_HA_NAMENODES_KEY_PREFIX + ".router-service", "router1");
+      conf.set(DFS_NAMENODE_RPC_ADDRESS_KEY+ ".router-service.router1",
+          getFileSystemURI().toString());
+
+      conf.set(HdfsClientConfigKeys.Failover.PROXY_PROVIDER_KEY_PREFIX
+          + "." + "router-service", proxyProviderClassName);
+      DistributedFileSystem.setDefaultUri(conf, "hdfs://router-service");
+
       return DistributedFileSystem.get(conf);
     }
 
@@ -1181,5 +1210,14 @@ public class MiniRouterDFSCluster {
     } catch (Exception e) {
       throw new IOException("Cannot wait for the namenodes", e);
     }
+  }
+
+  /**
+   * Get cache flush interval in milliseconds.
+   *
+   * @return Cache flush interval in milliseconds.
+   */
+  public long getCacheFlushInterval() {
+    return cacheFlushInterval;
   }
 }

@@ -42,6 +42,7 @@ import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
 import org.apache.hadoop.util.IndexedSortable;
 import org.apache.hadoop.util.QuickSort;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.util.functional.FutureIO;
 
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY;
@@ -145,11 +146,11 @@ public class TeraInputFormat extends FileInputFormat<Text,Text> {
     for(int i=0; i < samples; ++i) {
       final int idx = i;
       samplerReader[i] = 
-        new Thread (threadGroup,"Sampler Reader " + idx) {
+        new SubjectInheritingThread (threadGroup, "Sampler Reader " + idx) {
         {
           setDaemon(true);
         }
-        public void run() {
+        public void work() {
           long records = 0;
           try {
             TaskAttemptContext context = new TaskAttemptContextImpl(
@@ -236,8 +237,8 @@ public class TeraInputFormat extends FileInputFormat<Text,Text> {
       offset = (RECORD_LENGTH - (start % RECORD_LENGTH)) % RECORD_LENGTH;
       length = ((FileSplit)split).getLength();
       final FutureDataInputStreamBuilder builder = fs.openFile(p)
-          .opt(FS_OPTION_OPENFILE_SPLIT_START, start)
-          .opt(FS_OPTION_OPENFILE_SPLIT_END, start + length)
+          .optLong(FS_OPTION_OPENFILE_SPLIT_START, start)
+          .optLong(FS_OPTION_OPENFILE_SPLIT_END, start + length)
           .opt(FS_OPTION_OPENFILE_READ_POLICY,
               FS_OPTION_OPENFILE_READ_POLICY_SEQUENTIAL);
       in = FutureIO.awaitFuture(builder.build());

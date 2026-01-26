@@ -39,6 +39,7 @@ public class VariableContext {
    * This is our actual variable store.
    */
   private Map<String, String> variables = new HashMap<>();
+  private Map<String, String> originalVariables = new HashMap<>();
 
   /**
    * This is our conditional variable store.
@@ -124,6 +125,10 @@ public class VariableContext {
     return this;
   }
 
+  public void putOriginal(String name, String value) {
+    originalVariables.put(name, value);
+  }
+
   /**
    * This method is used to add a conditional variable to the variable context.
    * @param name Name of the variable
@@ -150,6 +155,10 @@ public class VariableContext {
     return ret == null ? "" : ret;
   }
 
+  public String getOriginal(String name) {
+    return originalVariables.get(name);
+  }
+
   /**
    * Adds a set to the context, each name can only be added once. The extra
    * dataset is different from the regular variables because it cannot be
@@ -170,6 +179,7 @@ public class VariableContext {
   /**
    * Returns the dataset referenced by the name.
    * @param name Name of the set to be returned.
+   * @return the dataset referenced by the name.
    */
   public Set<String> getExtraDataset(String name) {
     return extraDataset.get(name);

@@ -17,8 +17,9 @@
  */
 package org.apache.hadoop.hdfs;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -29,6 +30,8 @@ import java.util.Map;
 import java.util.Random;
 
 import org.apache.hadoop.util.Lists;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.io.TempDir;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -46,12 +49,13 @@ import org.apache.hadoop.hdfs.server.blockmanagement.HostConfigManager;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.hdfs.util.HostsFileWriter;
-import org.junit.After;
-import org.junit.Before;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 
 /**
  * This class provide utilities for testing of the admin operations of nodes.
  */
+@Timeout(600)
 public class AdminStatesBaseTest {
   public static final Logger LOG =
       LoggerFactory.getLogger(AdminStatesBaseTest.class);
@@ -63,6 +67,10 @@ public class AdminStatesBaseTest {
   static final int NAMENODE_REPLICATION_INTERVAL = 1; //replication interval
 
   final private Random myrand = new Random();
+
+  @SuppressWarnings("checkstyle:VisibilityModifier")
+  @TempDir
+  public java.nio.file.Path baseDir;
 
   private HostsFileWriter hostsFileWriter;
   private Configuration conf;
@@ -81,7 +89,7 @@ public class AdminStatesBaseTest {
     return cluster;
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException {
     // Set up the hosts/exclude files.
     hostsFileWriter = new HostsFileWriter();
@@ -108,7 +116,7 @@ public class AdminStatesBaseTest {
 
   }
 
-  @After
+  @AfterEach
   public void teardown() throws IOException {
     hostsFileWriter.cleanup();
     shutdownCluster();
@@ -381,7 +389,7 @@ public class AdminStatesBaseTest {
   protected static void validateCluster(DFSClient client, int numDNs)
       throws IOException {
     DatanodeInfo[] info = client.datanodeReport(DatanodeReportType.LIVE);
-    assertEquals("Number of Datanodes ", numDNs, info.length);
+    assertEquals(numDNs, info.length, "Number of Datanodes ");
   }
 
   /** Start a MiniDFSCluster.
@@ -396,7 +404,7 @@ public class AdminStatesBaseTest {
   protected void startCluster(int numNameNodes, int numDatanodes,
       boolean setupHostsFile, long[] nodesCapacity,
       boolean checkDataNodeHostConfig, boolean federation) throws IOException {
-    MiniDFSCluster.Builder builder = new MiniDFSCluster.Builder(conf)
+    MiniDFSCluster.Builder builder = new MiniDFSCluster.Builder(conf, baseDir.toFile())
         .numDataNodes(numDatanodes);
     if (federation) {
       builder.nnTopology(
@@ -431,7 +439,7 @@ public class AdminStatesBaseTest {
 
 
   protected void startSimpleHACluster(int numDatanodes) throws IOException {
-    cluster = new MiniDFSCluster.Builder(conf)
+    cluster = new MiniDFSCluster.Builder(conf, baseDir.toFile())
         .nnTopology(MiniDFSNNTopology.simpleHATopology()).numDataNodes(
         numDatanodes).build();
     cluster.transitionToActive(0);
@@ -458,6 +466,6 @@ public class AdminStatesBaseTest {
       throws IOException {
     assertTrue(fileSys.exists(name));
     fileSys.delete(name, true);
-    assertTrue(!fileSys.exists(name));
+    assertFalse(fileSys.exists(name));
   }
 }

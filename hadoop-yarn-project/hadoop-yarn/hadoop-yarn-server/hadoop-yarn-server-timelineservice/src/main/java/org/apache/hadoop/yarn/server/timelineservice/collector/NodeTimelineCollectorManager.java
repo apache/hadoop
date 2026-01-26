@@ -38,6 +38,9 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.timelineservice.reader.TimelineDomainReader;
+import org.apache.hadoop.yarn.api.records.timelineservice.reader.TimelineEntitiesReader;
+import org.apache.hadoop.yarn.api.records.timelineservice.writer.TimelineEntitiesWriter;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
@@ -55,6 +58,8 @@ import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.glassfish.jersey.jettison.JettisonFeature;
+import org.glassfish.jersey.server.ResourceConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -181,7 +186,7 @@ public class NodeTimelineCollectorManager extends TimelineCollectorManager {
       return tokenMgrService.renewToken(appCollector.getDelegationTokenForApp(),
           appCollector.getAppDelegationTokenRenewer());
     } else {
-      LOG.info("Delegation token not available for renewal for app " +
+      LOG.info("Delegation token not available for renewal for app {}",
           appCollector.getTimelineEntityContext().getAppId());
       return -1;
     }
@@ -226,7 +231,7 @@ public class NodeTimelineCollectorManager extends TimelineCollectorManager {
           renewalOrRegenerationFuture, tokenId.getMaxDate(),
           tokenId.getRenewer().toString());
     }
-    LOG.info("Generated a new token " + timelineToken + " for app " + appId);
+    LOG.info("Generated a new token {} for app {}", timelineToken, appId);
     return org.apache.hadoop.yarn.api.records.Token.newInstance(
         timelineToken.getIdentifier(), timelineToken.getKind().toString(),
         timelineToken.getPassword(), timelineToken.getService().toString());
@@ -249,7 +254,7 @@ public class NodeTimelineCollectorManager extends TimelineCollectorManager {
       reportNewCollectorInfoToNM(appId, token);
     } catch (YarnException | IOException e) {
       // throw exception here as it cannot be used if failed communicate with NM
-      LOG.error("Failed to communicate with NM Collector Service for " + appId);
+      LOG.error("Failed to communicate with NM Collector Service for {}", appId);
       throw new YarnRuntimeException(e);
     }
   }
@@ -260,7 +265,7 @@ public class NodeTimelineCollectorManager extends TimelineCollectorManager {
       try {
         cancelTokenForAppCollector((AppLevelTimelineCollector) collector);
       } catch (IOException e) {
-        LOG.warn("Failed to cancel token for app collector with appId " +
+        LOG.warn("Failed to cancel token for app collector with appId {}",
             appId, e);
       }
     }
@@ -312,12 +317,7 @@ public class NodeTimelineCollectorManager extends TimelineCollectorManager {
         builder = WebAppUtils.loadSslConfiguration(builder, conf);
       }
       timelineRestServer = builder.build();
-
-      timelineRestServer.addJerseyResourcePackage(
-          TimelineCollectorWebService.class.getPackage().getName() + ";"
-              + GenericExceptionHandler.class.getPackage().getName() + ";"
-              + YarnJacksonJaxbJsonProvider.class.getPackage().getName(),
-          "/*");
+      timelineRestServer.addJerseyResourceConfig(configure(), "/*", null);
       timelineRestServer.setAttribute(COLLECTOR_MANAGER_ATTR_KEY, this);
       timelineRestServer.start();
     } catch (Exception e) {
@@ -328,8 +328,20 @@ public class NodeTimelineCollectorManager extends TimelineCollectorManager {
     //TODO: We need to think of the case of multiple interfaces
     this.timelineRestServerBindAddress = WebAppUtils.getResolvedAddress(
         timelineRestServer.getConnectorAddress(0));
-    LOG.info("Instantiated the per-node collector webapp at " +
+    LOG.info("Instantiated the per-node collector webapp at {}",
         timelineRestServerBindAddress);
+  }
+
+  protected static ResourceConfig configure() {
+    ResourceConfig config = new ResourceConfig();
+    config.packages("org.apache.hadoop.yarn.server.timelineservice.collector");
+    config.register(GenericExceptionHandler.class);
+    config.register(TimelineCollectorWebService.class);
+    config.register(TimelineEntitiesWriter.class);
+    config.register(TimelineEntitiesReader.class);
+    config.register(TimelineDomainReader.class);
+    config.register(new JettisonFeature()).register(YarnJacksonJaxbJsonProvider.class);
+    return config;
   }
 
   private void reportNewCollectorInfoToNM(ApplicationId appId,
@@ -338,8 +350,8 @@ public class NodeTimelineCollectorManager extends TimelineCollectorManager {
     ReportNewCollectorInfoRequest request =
         ReportNewCollectorInfoRequest.newInstance(appId,
             this.timelineRestServerBindAddress, token);
-    LOG.info("Report a new collector for application: " + appId +
-        " to the NM Collector Service.");
+    LOG.info("Report a new collector for application: {}" +
+        " to the NM Collector Service.", appId);
     getNMCollectorService().reportNewCollectorInfo(request);
   }
 
@@ -348,7 +360,7 @@ public class NodeTimelineCollectorManager extends TimelineCollectorManager {
       throws YarnException, IOException {
     GetTimelineCollectorContextRequest request =
         GetTimelineCollectorContextRequest.newInstance(appId);
-    LOG.info("Get timeline collector context for " + appId);
+    LOG.info("Get timeline collector context for {}", appId);
     GetTimelineCollectorContextResponse response =
         getNMCollectorService().getTimelineCollectorContext(request);
     String userId = response.getUserId();
@@ -384,7 +396,7 @@ public class NodeTimelineCollectorManager extends TimelineCollectorManager {
               YarnConfiguration.NM_COLLECTOR_SERVICE_ADDRESS,
               YarnConfiguration.DEFAULT_NM_COLLECTOR_SERVICE_ADDRESS,
               YarnConfiguration.DEFAULT_NM_COLLECTOR_SERVICE_PORT);
-          LOG.info("nmCollectorServiceAddress: " + nmCollectorServiceAddress);
+          LOG.info("nmCollectorServiceAddress: {}", nmCollectorServiceAddress);
           final YarnRPC rpc = YarnRPC.create(conf);
 
           // TODO Security settings.
@@ -418,8 +430,8 @@ public class NodeTimelineCollectorManager extends TimelineCollectorManager {
       // Set renewal or regeneration timer based on delay.
       long renewalDelay = 0;
       if (newExpirationTime > 0) {
-        LOG.info("Renewed token for " + appId + " with new expiration " +
-            "timestamp = " + newExpirationTime);
+        LOG.info("Renewed token for {} with new expiration " +
+            "timestamp = {}", appId, newExpirationTime);
         renewalDelay = getRenewalDelay(newExpirationTime - Time.now());
       }
       long regenerationDelay =
@@ -442,7 +454,7 @@ public class NodeTimelineCollectorManager extends TimelineCollectorManager {
       try {
         reportNewCollectorInfoToNM(appId, token);
       } catch (YarnException e) {
-        LOG.warn("Unable to report regenerated token to NM for " + appId);
+        LOG.warn("Unable to report regenerated token to NM for {}", appId);
       }
     }
 
@@ -450,8 +462,8 @@ public class NodeTimelineCollectorManager extends TimelineCollectorManager {
     public void run() {
       TimelineCollector collector = get(appId);
       if (collector == null) {
-        LOG.info("Cannot find active collector while " + (timerForRenewal ?
-            "renewing" : "regenerating") + " token for " + appId);
+        LOG.info("Cannot find active collector while {} token for {}",
+            (timerForRenewal ? "renewing" : "regenerating"), appId);
         return;
       }
       AppLevelTimelineCollector appCollector =
@@ -466,8 +478,8 @@ public class NodeTimelineCollectorManager extends TimelineCollectorManager {
               regenerateToken(appCollector);
             }
           } catch (Exception e) {
-            LOG.warn("Unable to " + (timerForRenewal ? "renew" : "regenerate") +
-                " token for " + appId, e);
+            LOG.warn("Unable to {} token for {}",
+                (timerForRenewal ? "renew" : "regenerate"), appId, e);
           }
         }
       }

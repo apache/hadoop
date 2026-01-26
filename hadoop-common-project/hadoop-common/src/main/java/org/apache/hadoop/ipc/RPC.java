@@ -90,7 +90,7 @@ public class RPC {
     RPC_BUILTIN ((short) 1),         // Used for built in calls by tests
     RPC_WRITABLE ((short) 2),        // Use WritableRpcEngine 
     RPC_PROTOCOL_BUFFER ((short) 3); // Use ProtobufRpcEngine
-    final static short MAX_INDEX = RPC_PROTOCOL_BUFFER.value; // used for array size
+    final static short MAX_SIZE = RPC_PROTOCOL_BUFFER.value; // used for array size
     private final short value;
 
     RpcKind(short val) {
@@ -896,13 +896,27 @@ public class RPC {
       this.numHandlers = numHandlers;
       return this;
     }
-    
+
     /**
      * @return Default: -1.
      * @param numReaders input numReaders.
+     * @deprecated call {@link #setNumReaders(int value)} instead.
      */
+    @Deprecated
     public Builder setnumReaders(int numReaders) {
       this.numReaders = numReaders;
+      return this;
+    }
+
+    /**
+     * Set the number of reader threads.
+     *
+     * @return this builder.
+     * @param value input numReaders.
+     * @since HADOOP-18625.
+     */
+    public Builder setNumReaders(int value) {
+      this.numReaders = value;
       return this;
     }
     
@@ -1071,11 +1085,12 @@ public class RPC {
    }
 
    ArrayList<Map<ProtoNameVer, ProtoClassProtoImpl>> protocolImplMapArray = 
-       new ArrayList<Map<ProtoNameVer, ProtoClassProtoImpl>>(RpcKind.MAX_INDEX);
-   
+       new ArrayList<Map<ProtoNameVer, ProtoClassProtoImpl>>(RpcKind.MAX_SIZE);
+
+   @SuppressWarnings("checkstyle:Indentation")
    Map<ProtoNameVer, ProtoClassProtoImpl> getProtocolImplMap(RPC.RpcKind rpcKind) {
      if (protocolImplMapArray.size() == 0) {// initialize for all rpc kinds
-       for (int i=0; i <= RpcKind.MAX_INDEX; ++i) {
+       for (int i = 0; i < RpcKind.MAX_SIZE; ++i) {
          protocolImplMapArray.add(
              new HashMap<ProtoNameVer, ProtoClassProtoImpl>(10));
        }

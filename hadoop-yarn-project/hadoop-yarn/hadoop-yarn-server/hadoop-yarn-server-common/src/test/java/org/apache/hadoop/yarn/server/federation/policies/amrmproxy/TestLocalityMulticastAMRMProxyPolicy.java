@@ -18,9 +18,11 @@
 
 package org.apache.hadoop.yarn.server.federation.policies.amrmproxy;
 
-import static org.junit.Assert.fail;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -34,6 +36,7 @@ import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
+import org.apache.hadoop.yarn.api.records.EnhancedHeadroom;
 import org.apache.hadoop.yarn.api.records.NMToken;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -52,9 +55,9 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterPolicyConfiguration;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterState;
 import org.apache.hadoop.yarn.server.federation.utils.FederationPoliciesTestUtil;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -67,7 +70,7 @@ public class TestLocalityMulticastAMRMProxyPolicy
   public static final Logger LOG =
       LoggerFactory.getLogger(TestLocalityMulticastAMRMProxyPolicy.class);
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     setPolicy(new TestableLocalityMulticastAMRMProxyPolicy());
     setPolicyInfo(new WeightedPolicyInfo());
@@ -79,9 +82,9 @@ public class TestLocalityMulticastAMRMProxyPolicy
       SubClusterIdInfo sc = new SubClusterIdInfo("subcluster" + i);
       // sub-cluster 3 is not active
       if (i != 3) {
-        SubClusterInfo sci = mock(SubClusterInfo.class);
-        when(sci.getState()).thenReturn(SubClusterState.SC_RUNNING);
-        when(sci.getSubClusterId()).thenReturn(sc.toId());
+        SubClusterInfo sci = SubClusterInfo.newInstance(
+            sc.toId(), "dns1:80", "dns1:81", "dns1:82", "dns1:83", SubClusterState.SC_RUNNING,
+            System.currentTimeMillis(), "something");
         getActiveSubclusters().put(sc.toId(), sci);
       }
 
@@ -125,19 +128,23 @@ public class TestLocalityMulticastAMRMProxyPolicy
         getActiveSubclusters(), conf);
   }
 
-  @Test(expected = FederationPolicyInitializationException.class)
+  @Test
   public void testNullWeights() throws Exception {
-    getPolicyInfo().setAMRMPolicyWeights(null);
-    initializePolicy();
-    fail();
+    assertThrows(FederationPolicyInitializationException.class, () -> {
+      getPolicyInfo().setAMRMPolicyWeights(null);
+      initializePolicy();
+      fail();
+    });
   }
 
-  @Test(expected = FederationPolicyInitializationException.class)
+  @Test
   public void testEmptyWeights() throws Exception {
-    getPolicyInfo()
-        .setAMRMPolicyWeights(new HashMap<SubClusterIdInfo, Float>());
-    initializePolicy();
-    fail();
+    assertThrows(FederationPolicyInitializationException.class, () -> {
+      getPolicyInfo()
+          .setAMRMPolicyWeights(new HashMap<SubClusterIdInfo, Float>());
+      initializePolicy();
+      fail();
+    });
   }
 
   @Test
@@ -198,7 +205,8 @@ public class TestLocalityMulticastAMRMProxyPolicy
     checkTotalContainerAllocation(response, 100);
   }
 
-  @Test(timeout = 5000)
+  @Test
+  @Timeout(value = 16)
   public void testStressPolicy() throws Exception {
 
     // Tests how the headroom info are used to split based on the capacity
@@ -330,11 +338,14 @@ public class TestLocalityMulticastAMRMProxyPolicy
    * use as the default for when nodes or racks are unknown.
    */
   private void addHomeSubClusterAsActive() {
-    SubClusterInfo sci = mock(SubClusterInfo.class);
-    when(sci.getState()).thenReturn(SubClusterState.SC_RUNNING);
-    when(sci.getSubClusterId()).thenReturn(getHomeSubCluster());
-    getActiveSubclusters().put(getHomeSubCluster(), sci);
-    SubClusterIdInfo sc = new SubClusterIdInfo(getHomeSubCluster().getId());
+
+    SubClusterId homeSubCluster = getHomeSubCluster();
+    SubClusterInfo sci = SubClusterInfo.newInstance(
+        homeSubCluster, "dns1:80", "dns1:81", "dns1:82", "dns1:83", SubClusterState.SC_RUNNING,
+        System.currentTimeMillis(), "something");
+
+    getActiveSubclusters().put(homeSubCluster, sci);
+    SubClusterIdInfo sc = new SubClusterIdInfo(homeSubCluster.getId());
 
     getPolicyInfo().getRouterPolicyWeights().put(sc, 0.1f);
     getPolicyInfo().getAMRMPolicyWeights().put(sc, 0.1f);
@@ -389,34 +400,33 @@ public class TestLocalityMulticastAMRMProxyPolicy
 
     // check that the allocations that show up are what expected
     for (ResourceRequest rr : response.get(getHomeSubCluster())) {
-      Assert.assertTrue(
-          rr.getAllocationRequestId() == 2L || rr.getAllocationRequestId() == 4L
-              || rr.getAllocationRequestId() == 5L);
+      assertTrue(rr.getAllocationRequestId() == 2L || rr.getAllocationRequestId() == 4L
+          || rr.getAllocationRequestId() == 5L);
     }
 
     List<ResourceRequest> rrs =
         response.get(SubClusterId.newInstance("subcluster0"));
     for (ResourceRequest rr : rrs) {
-      Assert.assertTrue(rr.getAllocationRequestId() != 1L);
-      Assert.assertTrue(rr.getAllocationRequestId() != 4L);
+      assertTrue(rr.getAllocationRequestId() != 1L);
+      assertTrue(rr.getAllocationRequestId() != 4L);
     }
 
     for (ResourceRequest rr : response
         .get(SubClusterId.newInstance("subcluster1"))) {
-      Assert.assertTrue(rr.getAllocationRequestId() == 1L
+      assertTrue(rr.getAllocationRequestId() == 1L
           || rr.getAllocationRequestId() == 2L);
     }
 
     for (ResourceRequest rr : response
         .get(SubClusterId.newInstance("subcluster2"))) {
-      Assert.assertTrue(rr.getAllocationRequestId() == 1L
+      assertTrue(rr.getAllocationRequestId() == 1L
           || rr.getAllocationRequestId() == 2L);
     }
 
     for (ResourceRequest rr : response
         .get(SubClusterId.newInstance("subcluster5"))) {
-      Assert.assertTrue(rr.getAllocationRequestId() == 2);
-      Assert.assertTrue(rr.getRelaxLocality());
+      assertTrue(rr.getAllocationRequestId() == 2);
+      assertTrue(rr.getRelaxLocality());
     }
   }
 
@@ -427,19 +437,18 @@ public class TestLocalityMulticastAMRMProxyPolicy
       Map<SubClusterId, List<ResourceRequest>> response, String subCluster,
       long totResourceRequests, long minimumTotalContainers) {
     if (minimumTotalContainers == -1) {
-      Assert.assertNull(response.get(SubClusterId.newInstance(subCluster)));
+      assertNull(response.get(SubClusterId.newInstance(subCluster)));
     } else {
       SubClusterId sc = SubClusterId.newInstance(subCluster);
-      Assert.assertEquals(totResourceRequests, response.get(sc).size());
+      assertEquals(totResourceRequests, response.get(sc).size());
 
       long actualContCount = 0;
       for (ResourceRequest rr : response.get(sc)) {
         actualContCount += rr.getNumContainers();
       }
-      Assert.assertTrue(
+      assertTrue(minimumTotalContainers <= actualContCount,
           "Actual count " + actualContCount + " should be at least "
-              + minimumTotalContainers,
-          minimumTotalContainers <= actualContCount);
+          + minimumTotalContainers);
     }
   }
 
@@ -452,7 +461,7 @@ public class TestLocalityMulticastAMRMProxyPolicy
         actualContCount += rr.getNumContainers();
       }
     }
-    Assert.assertEquals(totalContainers, actualContCount);
+    assertEquals(totalContainers, actualContCount);
   }
 
   private void validateSplit(Map<SubClusterId, List<ResourceRequest>> split,
@@ -488,34 +497,30 @@ public class TestLocalityMulticastAMRMProxyPolicy
         }
         if (!rrs.getKey().equals(getHomeSubCluster()) && fid != null
             && !fid.equals(rrs.getKey())) {
-          Assert.fail("A node-local (or resolvable rack-local) RR should not "
+          fail("A node-local (or resolvable rack-local) RR should not "
               + "be send to an RM other than what it resolves to.");
         }
       }
     }
 
     // check we are not inventing Allocation Ids
-    Assert.assertEquals(originalIds, splitIds);
+    assertEquals(originalIds, splitIds);
 
     // check we are not exceedingly replicating the container asks among
     // RMs (a little is allowed due to rounding of fractional splits)
-    Assert.assertTrue(
+    assertTrue(originalContainers + numUsedSubclusters >= splitContainers,
         " Containers requested (" + splitContainers + ") should "
-            + "not exceed the original count of containers ("
-            + originalContainers + ") by more than the number of subclusters ("
-            + numUsedSubclusters + ")",
-        originalContainers + numUsedSubclusters >= splitContainers);
+        + "not exceed the original count of containers ("
+        + originalContainers + ") by more than the number of subclusters ("
+        + numUsedSubclusters + ")");
 
     // Test target Ids
     for (SubClusterId targetId : split.keySet()) {
-      Assert.assertTrue(
-          "Target subcluster " + targetId + " should be in the active set",
-          getActiveSubclusters().containsKey(targetId));
-      Assert.assertTrue(
-          "Target subclusters (" + targetId + ") should have weight >0 in "
-              + "the policy ",
-          getPolicyInfo().getRouterPolicyWeights()
-              .get(new SubClusterIdInfo(targetId)) > 0);
+      assertTrue(getActiveSubclusters().containsKey(targetId),
+          "Target subcluster " + targetId + " should be in the active set");
+      assertTrue(getPolicyInfo().getRouterPolicyWeights()
+          .get(new SubClusterIdInfo(targetId)) > 0,
+          "Target subclusters (" + targetId + ") should have weight >0 in the policy ");
     }
   }
 
@@ -667,13 +672,13 @@ public class TestLocalityMulticastAMRMProxyPolicy
       for (int j = 0; j < weights.length; j++) {
         sum += allocations.get(j);
         if (allocations.get(j) < expectedMin[j]) {
-          Assert.fail(allocations.get(j) + " at index " + j
+          fail(allocations.get(j) + " at index " + j
               + " should be at least " + expectedMin[j] + ". Allocation array: "
               + printList(allocations));
         }
       }
-      Assert.assertEquals(
-          "Expect sum to be 19 in array: " + printList(allocations), 19, sum);
+      assertEquals(19, sum,
+          "Expect sum to be 19 in array: " + printList(allocations));
     }
   }
 
@@ -813,10 +818,105 @@ public class TestLocalityMulticastAMRMProxyPolicy
         throw new RuntimeException(e);
       }
       // The randomly selected sub-cluster should at least be active
-      Assert.assertTrue(activeClusters.containsKey(originalResult));
+      assertTrue(activeClusters.containsKey(originalResult));
 
-      // Alwasy use home sub-cluster so that unit test is deterministic
+      // Always use home sub-cluster so that unit test is deterministic
       return getHomeSubCluster();
     }
+  }
+
+  /**
+   * Test the rerouting behavior when some subclusters are loaded. Make sure
+   * that the AMRMProxy rerouting decisions attempt to redirect requests
+   * to the least loaded subcluster when load thresholds are exceeded
+   */
+  @Test
+  public void testLoadBasedSubClusterReroute() throws YarnException {
+    int pendingThreshold = 1000;
+
+    LocalityMulticastAMRMProxyPolicy policy = (LocalityMulticastAMRMProxyPolicy) getPolicy();
+    initializePolicy();
+
+    SubClusterId sc0 = SubClusterId.newInstance("0");
+    SubClusterId sc1 = SubClusterId.newInstance("1");
+    SubClusterId sc2 = SubClusterId.newInstance("2");
+    SubClusterId sc3 = SubClusterId.newInstance("3");
+    SubClusterId sc4 = SubClusterId.newInstance("4");
+
+    Set<SubClusterId> scList = new HashSet<>();
+    scList.add(sc0);
+    scList.add(sc1);
+    scList.add(sc2);
+    scList.add(sc3);
+    scList.add(sc4);
+
+    // This cluster is the most overloaded - 4 times the threshold.
+    policy.notifyOfResponse(sc0,
+        getAllocateResponseWithEnhancedHeadroom(4 * pendingThreshold, 0));
+
+    // This cluster is the most overloaded - 4 times the threshold.
+    policy.notifyOfResponse(sc1,
+        getAllocateResponseWithEnhancedHeadroom(4 * pendingThreshold, 0));
+
+    // This cluster is 2 times the threshold, but not the most loaded.
+    policy.notifyOfResponse(sc2,
+        getAllocateResponseWithEnhancedHeadroom(2 * pendingThreshold, 0));
+
+    // This cluster is at the threshold, but not the most loaded.
+    policy.notifyOfResponse(sc3,
+        getAllocateResponseWithEnhancedHeadroom(pendingThreshold, 0));
+
+    // This cluster has zero pending.
+    policy.notifyOfResponse(sc4, getAllocateResponseWithEnhancedHeadroom(0, 0));
+
+    // sc2, sc3 and sc4 should just return the original subcluster.
+    assertEquals(
+        policy.routeNodeRequestIfNeeded(sc2, pendingThreshold, scList), sc2);
+    assertEquals(
+        policy.routeNodeRequestIfNeeded(sc3, pendingThreshold, scList), sc3);
+    assertEquals(
+        policy.routeNodeRequestIfNeeded(sc4, pendingThreshold, scList), sc4);
+
+    // sc0 and sc1 must select from sc0/sc1/sc2/sc3/sc4 according to weights
+    // 1/4, 1/4, 1/2, 1, 2. Let's run tons of random of samples, and verify that
+    // the proportion approximately holds.
+    Map<SubClusterId, Integer> counts = new HashMap<>();
+    counts.put(sc0, 0);
+    counts.put(sc1, 0);
+    counts.put(sc2, 0);
+    counts.put(sc3, 0);
+    counts.put(sc4, 0);
+
+    int n = 100000;
+    for (int i = 0; i < n; i++) {
+      SubClusterId selectedId = policy.routeNodeRequestIfNeeded(sc0, pendingThreshold, scList);
+      counts.put(selectedId, counts.get(selectedId) + 1);
+
+      selectedId = policy.routeNodeRequestIfNeeded(sc1, pendingThreshold, scList);
+      counts.put(selectedId, counts.get(selectedId) + 1);
+
+      // Also try a new SCId that's not active and enabled. Should be rerouted
+      // to sc0-4 with the same distribution as above
+      selectedId = policy.routeNodeRequestIfNeeded(SubClusterId.newInstance("10"),
+          pendingThreshold, scList);
+      counts.put(selectedId, counts.get(selectedId) + 1);
+    }
+
+    // The probability should be 1/16, 1/16, 1/8, 1/4, 1/2R
+    assertEquals((double) counts.get(sc0) / n / 3, 1 / 16.0, 0.01);
+    assertEquals((double) counts.get(sc1) / n / 3, 1 / 16.0, 0.01);
+    assertEquals((double) counts.get(sc2) / n / 3, 1 / 8.0, 0.01);
+    assertEquals((double) counts.get(sc3) / n / 3, 1 / 4.0, 0.01);
+    assertEquals((double) counts.get(sc4) / n / 3, 1 / 2.0, 0.01);
+
+    // Everything should be routed to these five active and enabled SCs
+    assertEquals(5, counts.size());
+  }
+
+  private AllocateResponse getAllocateResponseWithEnhancedHeadroom(int pending, int activeCores) {
+    return AllocateResponse.newInstance(0, null, null,
+        Collections.emptyList(), Resource.newInstance(0, 0), null, 10, null,
+        Collections.emptyList(), null, null, null,
+        EnhancedHeadroom.newInstance(pending, activeCores));
   }
 }

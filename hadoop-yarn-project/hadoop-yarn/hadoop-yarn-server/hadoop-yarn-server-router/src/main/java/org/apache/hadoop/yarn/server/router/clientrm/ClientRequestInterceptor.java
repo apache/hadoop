@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.router.clientrm;
 
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
+import org.apache.hadoop.yarn.server.router.security.RouterDelegationTokenSecretManager;
 
 /**
  * Defines the contract to be implemented by the request interceptor classes,
@@ -62,4 +63,18 @@ public interface ClientRequestInterceptor
    */
   ClientRequestInterceptor getNextInterceptor();
 
+  /**
+   * Set RouterDelegationTokenSecretManager for specific interceptor to support Token operations,
+   * including create Token, update Token, and delete Token.
+   *
+   * @param tokenSecretManager Router DelegationTokenSecretManager
+   */
+  void setTokenSecretManager(RouterDelegationTokenSecretManager tokenSecretManager);
+
+  /**
+   * Get RouterDelegationTokenSecretManager.
+   *
+   * @return Router DelegationTokenSecretManager.
+   */
+  RouterDelegationTokenSecretManager getTokenSecretManager();
 }

@@ -22,8 +22,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.test.GenericTestUtils;
 
-import org.junit.After;
-import org.junit.Before;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 
 import java.io.File;
 import java.io.IOException;
@@ -64,7 +64,7 @@ public abstract class ClusterMapReduceTestCase {
    *
    * @throws Exception
    */
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     startCluster(true, null);
   }
@@ -125,7 +125,7 @@ public abstract class ClusterMapReduceTestCase {
    *
    * @throws Exception
    */
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     stopCluster();
   }

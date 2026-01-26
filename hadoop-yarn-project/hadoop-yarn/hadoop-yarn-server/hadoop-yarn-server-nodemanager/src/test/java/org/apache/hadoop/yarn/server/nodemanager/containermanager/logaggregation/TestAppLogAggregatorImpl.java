@@ -51,9 +51,9 @@ import org.apache.hadoop.yarn.server.nodemanager.security.NMContainerTokenSecret
 import org.apache.hadoop.yarn.server.nodemanager.security.NMTokenSecretManagerInNM;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
@@ -69,7 +69,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
@@ -86,7 +86,7 @@ public class TestAppLogAggregatorImpl {
   private static final File REMOTE_LOG_FILE = new File("target",
       TestAppLogAggregatorImpl.class.getName() + "-remoteLogFile");
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     if(LOCAL_LOG_DIR.exists()) {
       FileUtils.cleanDirectory(LOCAL_LOG_DIR);
@@ -96,7 +96,7 @@ public class TestAppLogAggregatorImpl {
     }
   }
 
-  @After
+  @AfterEach
   public void cleanUp() throws IOException {
     FileUtils.deleteDirectory(LOCAL_LOG_DIR);
     FileUtils.deleteQuietly(REMOTE_LOG_FILE);

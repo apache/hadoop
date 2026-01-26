@@ -49,7 +49,7 @@ public class PartitionInfo {
 
   /**
    * This method will generate a new PartitionInfo object based on two PartitionInfo objects.
-   * The combination process is mainly based on the Resources.add method.
+   * The combination process is mainly based on the Resources. Add method.
    *
    * @param left left PartitionInfo Object.
    * @param right right PartitionInfo Object.

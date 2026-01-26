@@ -18,16 +18,9 @@
 
 package org.apache.hadoop.yarn.api;
 
-import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.NODE;
-import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.RACK;
-import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.cardinality;
-import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.maxCardinality;
-import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.or;
-import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.targetCardinality;
-import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.targetIn;
-import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.PlacementTargets.allocationTag;
-
 import java.util.Iterator;
+
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.yarn.api.pb.PlacementConstraintFromProtoConverter;
 import org.apache.hadoop.yarn.api.pb.PlacementConstraintToProtoConverter;
@@ -40,8 +33,18 @@ import org.apache.hadoop.yarn.proto.YarnProtos.CompositePlacementConstraintProto
 import org.apache.hadoop.yarn.proto.YarnProtos.CompositePlacementConstraintProto.CompositeType;
 import org.apache.hadoop.yarn.proto.YarnProtos.PlacementConstraintProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.SimplePlacementConstraintProto;
-import org.junit.Assert;
-import org.junit.Test;
+
+import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.NODE;
+import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.PlacementTargets.allocationTag;
+import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.RACK;
+import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.cardinality;
+import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.maxCardinality;
+import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.or;
+import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.targetCardinality;
+import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.targetIn;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Test class for {@link PlacementConstraintToProtoConverter} and
@@ -50,10 +53,10 @@ import org.junit.Test;
 public class TestPlacementConstraintPBConversion {
 
   @Test
-  public void testTargetConstraintProtoConverter() {
+  void testTargetConstraintProtoConverter() {
     AbstractConstraint sConstraintExpr =
         targetIn(NODE, allocationTag("hbase-m"));
-    Assert.assertTrue(sConstraintExpr instanceof SingleConstraint);
+    assertTrue(sConstraintExpr instanceof SingleConstraint);
     SingleConstraint single = (SingleConstraint) sConstraintExpr;
     PlacementConstraint sConstraint =
         PlacementConstraints.build(sConstraintExpr);
@@ -63,14 +66,14 @@ public class TestPlacementConstraintPBConversion {
         new PlacementConstraintToProtoConverter(sConstraint);
     PlacementConstraintProto protoConstraint = toProtoConverter.convert();
 
-    Assert.assertTrue(protoConstraint.hasSimpleConstraint());
-    Assert.assertFalse(protoConstraint.hasCompositeConstraint());
+    assertTrue(protoConstraint.hasSimpleConstraint());
+    assertFalse(protoConstraint.hasCompositeConstraint());
     SimplePlacementConstraintProto sProto =
         protoConstraint.getSimpleConstraint();
-    Assert.assertEquals(single.getScope(), sProto.getScope());
-    Assert.assertEquals(single.getMinCardinality(), sProto.getMinCardinality());
-    Assert.assertEquals(single.getMaxCardinality(), sProto.getMaxCardinality());
-    Assert.assertEquals(single.getTargetExpressions().size(),
+    assertEquals(single.getScope(), sProto.getScope());
+    assertEquals(single.getMinCardinality(), sProto.getMinCardinality());
+    assertEquals(single.getMaxCardinality(), sProto.getMaxCardinality());
+    assertEquals(single.getTargetExpressions().size(),
         sProto.getTargetExpressionsList().size());
 
     // Convert from proto.
@@ -79,21 +82,21 @@ public class TestPlacementConstraintPBConversion {
     PlacementConstraint newConstraint = fromProtoConverter.convert();
 
     AbstractConstraint newConstraintExpr = newConstraint.getConstraintExpr();
-    Assert.assertTrue(newConstraintExpr instanceof SingleConstraint);
+    assertTrue(newConstraintExpr instanceof SingleConstraint);
     SingleConstraint newSingle = (SingleConstraint) newConstraintExpr;
-    Assert.assertEquals(single.getScope(), newSingle.getScope());
-    Assert.assertEquals(single.getMinCardinality(),
+    assertEquals(single.getScope(), newSingle.getScope());
+    assertEquals(single.getMinCardinality(),
         newSingle.getMinCardinality());
-    Assert.assertEquals(single.getMaxCardinality(),
+    assertEquals(single.getMaxCardinality(),
         newSingle.getMaxCardinality());
-    Assert.assertEquals(single.getTargetExpressions(),
+    assertEquals(single.getTargetExpressions(),
         newSingle.getTargetExpressions());
   }
 
   @Test
-  public void testCardinalityConstraintProtoConverter() {
+  void testCardinalityConstraintProtoConverter() {
     AbstractConstraint sConstraintExpr = cardinality(RACK, 3, 10);
-    Assert.assertTrue(sConstraintExpr instanceof SingleConstraint);
+    assertTrue(sConstraintExpr instanceof SingleConstraint);
     SingleConstraint single = (SingleConstraint) sConstraintExpr;
     PlacementConstraint sConstraint =
         PlacementConstraints.build(sConstraintExpr);
@@ -111,17 +114,17 @@ public class TestPlacementConstraintPBConversion {
     PlacementConstraint newConstraint = fromProtoConverter.convert();
 
     AbstractConstraint newConstraintExpr = newConstraint.getConstraintExpr();
-    Assert.assertTrue(newConstraintExpr instanceof SingleConstraint);
+    assertTrue(newConstraintExpr instanceof SingleConstraint);
     SingleConstraint newSingle = (SingleConstraint) newConstraintExpr;
     compareSimpleConstraints(single, newSingle);
   }
 
   @Test
-  public void testCompositeConstraintProtoConverter() {
+  void testCompositeConstraintProtoConverter() {
     AbstractConstraint constraintExpr =
         or(targetIn(RACK, allocationTag("spark")), maxCardinality(NODE, 3),
             targetCardinality(RACK, 2, 10, allocationTag("zk")));
-    Assert.assertTrue(constraintExpr instanceof Or);
+    assertTrue(constraintExpr instanceof Or);
     PlacementConstraint constraint = PlacementConstraints.build(constraintExpr);
     Or orExpr = (Or) constraintExpr;
 
@@ -130,14 +133,14 @@ public class TestPlacementConstraintPBConversion {
         new PlacementConstraintToProtoConverter(constraint);
     PlacementConstraintProto protoConstraint = toProtoConverter.convert();
 
-    Assert.assertFalse(protoConstraint.hasSimpleConstraint());
-    Assert.assertTrue(protoConstraint.hasCompositeConstraint());
+    assertFalse(protoConstraint.hasSimpleConstraint());
+    assertTrue(protoConstraint.hasCompositeConstraint());
     CompositePlacementConstraintProto cProto =
         protoConstraint.getCompositeConstraint();
 
-    Assert.assertEquals(CompositeType.OR, cProto.getCompositeType());
-    Assert.assertEquals(3, cProto.getChildConstraintsCount());
-    Assert.assertEquals(0, cProto.getTimedChildConstraintsCount());
+    assertEquals(CompositeType.OR, cProto.getCompositeType());
+    assertEquals(3, cProto.getChildConstraintsCount());
+    assertEquals(0, cProto.getTimedChildConstraintsCount());
     Iterator<AbstractConstraint> orChildren = orExpr.getChildren().iterator();
     Iterator<PlacementConstraintProto> orProtoChildren =
         cProto.getChildConstraintsList().iterator();
@@ -153,9 +156,9 @@ public class TestPlacementConstraintPBConversion {
     PlacementConstraint newConstraint = fromProtoConverter.convert();
 
     AbstractConstraint newConstraintExpr = newConstraint.getConstraintExpr();
-    Assert.assertTrue(newConstraintExpr instanceof Or);
+    assertTrue(newConstraintExpr instanceof Or);
     Or newOrExpr = (Or) newConstraintExpr;
-    Assert.assertEquals(3, newOrExpr.getChildren().size());
+    assertEquals(3, newOrExpr.getChildren().size());
     orChildren = orExpr.getChildren().iterator();
     Iterator<AbstractConstraint> newOrChildren =
         newOrExpr.getChildren().iterator();
@@ -169,26 +172,26 @@ public class TestPlacementConstraintPBConversion {
 
   private void compareSimpleConstraintToProto(SingleConstraint constraint,
       PlacementConstraintProto proto) {
-    Assert.assertTrue(proto.hasSimpleConstraint());
-    Assert.assertFalse(proto.hasCompositeConstraint());
+    assertTrue(proto.hasSimpleConstraint());
+    assertFalse(proto.hasCompositeConstraint());
     SimplePlacementConstraintProto sProto = proto.getSimpleConstraint();
-    Assert.assertEquals(constraint.getScope(), sProto.getScope());
-    Assert.assertEquals(constraint.getMinCardinality(),
+    assertEquals(constraint.getScope(), sProto.getScope());
+    assertEquals(constraint.getMinCardinality(),
         sProto.getMinCardinality());
-    Assert.assertEquals(constraint.getMaxCardinality(),
+    assertEquals(constraint.getMaxCardinality(),
         sProto.getMaxCardinality());
-    Assert.assertEquals(constraint.getTargetExpressions().size(),
+    assertEquals(constraint.getTargetExpressions().size(),
         sProto.getTargetExpressionsList().size());
   }
 
   private void compareSimpleConstraints(SingleConstraint single,
       SingleConstraint newSingle) {
-    Assert.assertEquals(single.getScope(), newSingle.getScope());
-    Assert.assertEquals(single.getMinCardinality(),
+    assertEquals(single.getScope(), newSingle.getScope());
+    assertEquals(single.getMinCardinality(),
         newSingle.getMinCardinality());
-    Assert.assertEquals(single.getMaxCardinality(),
+    assertEquals(single.getMaxCardinality(),
         newSingle.getMaxCardinality());
-    Assert.assertEquals(single.getTargetExpressions(),
+    assertEquals(single.getTargetExpressions(),
         newSingle.getTargetExpressions());
   }
 

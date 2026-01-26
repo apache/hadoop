@@ -25,7 +25,9 @@ import java.nio.file.AccessDeniedException;
 import java.util.concurrent.Callable;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -47,6 +49,7 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
 import static org.apache.hadoop.fs.s3a.Constants.ASSUMED_ROLE_ARN;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.assume;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.lsR;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfS3ExpressBucket;
 import static org.apache.hadoop.fs.s3a.auth.RoleModel.Effects;
 import static org.apache.hadoop.fs.s3a.auth.RoleModel.Statement;
 import static org.apache.hadoop.fs.s3a.auth.RoleModel.directory;
@@ -86,7 +89,9 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
  * To simplify maintenance, the operations tested are broken up into
  * their own methods, with fields used to share the restricted role and
  * created paths.
- *
+ * <p>
+ * Test are skipped if no assumed role was provided, or if the test bucket
+ * is an S3Express bucket, whose permissions model is different.
  */
 public class ITestRestrictedReadAccess extends AbstractS3ATestBase {
 
@@ -154,12 +159,15 @@ public class ITestRestrictedReadAccess extends AbstractS3ATestBase {
    */
   private S3AFileSystem readonlyFS;
 
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     super.setup();
     assumeRoleTests();
+    skipIfS3ExpressBucket(getConfiguration());
   }
 
+  @AfterEach
   @Override
   public void teardown() throws Exception {
     try {
@@ -260,8 +268,7 @@ public class ITestRestrictedReadAccess extends AbstractS3ATestBase {
     // it still has write access, which can be explored in the final
     // step to delete files and directories.
     roleConfig = createAssumedRoleConfig();
-    bindRolePolicyStatements(roleConfig,
-        STATEMENT_ALLOW_SSE_KMS_RW,
+    bindRolePolicyStatements(roleConfig, STATEMENT_ALLOW_KMS_RW,
         statement(true, S3_ALL_BUCKETS, S3_ALL_OPERATIONS),
         new Statement(Effects.Deny)
             .addActions(S3_ALL_GET)

@@ -42,13 +42,22 @@ public class PreemptableResourceCalculator
       LoggerFactory.getLogger(PreemptableResourceCalculator.class);
 
   /**
-   * PreemptableResourceCalculator constructor
+   * PreemptableResourceCalculator constructor.
    *
-   * @param preemptionContext
+   * @param preemptionContext context.
    * @param isReservedPreemptionCandidatesSelector this will be set by
    * different implementation of candidate selectors, please refer to
    * TempQueuePerPartition#offer for details.
    * @param allowQueuesBalanceAfterAllQueuesSatisfied
+   *         Should resources be preempted from an over-served queue when the
+   *         requesting queues are all at or over their guarantees?
+   *         An example is, there're 10 queues under root, guaranteed resource
+   *         of them are all 10%.
+   *         Assume there're two queues are using resources, queueA uses 10%
+   *         queueB uses 90%. For all queues are guaranteed, but it's not fair
+   *         for queueA.
+   *         We wanna make this behavior can be configured. By default it is
+   *         not allowed.
    */
   public PreemptableResourceCalculator(
       CapacitySchedulerPreemptionContext preemptionContext,

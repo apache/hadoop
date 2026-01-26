@@ -305,6 +305,15 @@ public interface MRJobConfig {
     "os.name,os.version,java.home,java.runtime.version,java.vendor," +
     "java.version,java.vm.name,java.class.path,java.io.tmpdir,user.dir,user.name";
 
+  /*
+   * Flag to indicate whether JDK17's required add-opens flags should be added to MR AM and
+   * map/reduce containers regardless of the user specified java opts.
+   */
+  public static final String MAPREDUCE_JVM_ADD_OPENS_JAVA_OPT =
+    "mapreduce.jvm.add-opens-as-default";
+
+  public static final boolean MAPREDUCE_JVM_ADD_OPENS_JAVA_OPT_DEFAULT = false;
+
   public static final String IO_SORT_FACTOR = "mapreduce.task.io.sort.factor";
 
   public static final int DEFAULT_IO_SORT_FACTOR = 10;
@@ -314,6 +323,7 @@ public interface MRJobConfig {
   public static final int DEFAULT_IO_SORT_MB = 100;
 
   public static final String INDEX_CACHE_MEMORY_LIMIT = "mapreduce.task.index.cache.limit.bytes";
+  String SPILL_FILES_COUNT_LIMIT = "mapreduce.task.spill.files.count.limit";
 
   public static final String PRESERVE_FAILED_TASK_FILES = "mapreduce.task.files.preserve.failedtasks";
 
@@ -576,6 +586,8 @@ public interface MRJobConfig {
   
   public static final String MAX_SHUFFLE_FETCH_HOST_FAILURES = "mapreduce.reduce.shuffle.max-host-failures";
   public static final int DEFAULT_MAX_SHUFFLE_FETCH_HOST_FAILURES = 5;
+
+  public static final String SHUFFLE_INDEX_CACHE = "mapreduce.reduce.shuffle.indexcache.mb";
 
   public static final String REDUCE_SKIP_INCR_PROC_COUNT = "mapreduce.reduce.skip.proc-count.auto-incr";
 

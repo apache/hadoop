@@ -38,6 +38,8 @@ import org.apache.hadoop.thirdparty.com.google.common.collect.HashBiMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.apache.hadoop.util.Shell.bashQuote;
+
 /**
  * A simple shell-based implementation of {@link IdMappingServiceProvider} 
  * Map id to user name or group name. It does update every 15 minutes. Only a
@@ -472,26 +474,27 @@ public class ShellBasedIdMapping implements IdMappingServiceProvider {
 
     boolean updated = false;
     updateStaticMapping();
+    String name2 = bashQuote(name);
 
     if (OS.startsWith("Linux") || OS.equals("SunOS") || OS.contains("BSD")) {
       if (isGrp) {
         updated = updateMapInternal(gidNameMap, "group",
-            getName2IdCmdNIX(name, true), ":",
+            getName2IdCmdNIX(name2, true), ":",
             staticMapping.gidMapping);
       } else {
         updated = updateMapInternal(uidNameMap, "user",
-            getName2IdCmdNIX(name, false), ":",
+            getName2IdCmdNIX(name2, false), ":",
             staticMapping.uidMapping);
       }
     } else {
       // Mac
       if (isGrp) {        
         updated = updateMapInternal(gidNameMap, "group",
-            getName2IdCmdMac(name, true), "\\s+",
+            getName2IdCmdMac(name2, true), "\\s+",
             staticMapping.gidMapping);
       } else {
         updated = updateMapInternal(uidNameMap, "user",
-            getName2IdCmdMac(name, false), "\\s+",
+            getName2IdCmdMac(name2, false), "\\s+",
             staticMapping.uidMapping);
       }
     }

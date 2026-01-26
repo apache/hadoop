@@ -23,6 +23,8 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
+import org.apache.hadoop.fs.RawLocalFileSystem;
+import org.apache.hadoop.fs.CommonPathCapabilities;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
@@ -38,15 +40,17 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.tools.mapred.CopyMapper;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.io.FileWriter;
 import java.io.BufferedWriter;
+import java.net.URI;
 import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.ArrayList;
@@ -55,6 +59,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
+
+import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
 public class TestDistCpSync {
   private MiniDFSCluster cluster;
@@ -67,7 +74,7 @@ public class TestDistCpSync {
   private final long BLOCK_SIZE = 1024;
   private final short DATA_NUM = 1;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(DATA_NUM).build();
     cluster.waitActive();
@@ -89,9 +96,10 @@ public class TestDistCpSync {
 
     conf.set(DistCpConstants.CONF_LABEL_TARGET_WORK_PATH, target.toString());
     conf.set(DistCpConstants.CONF_LABEL_TARGET_FINAL_PATH, target.toString());
+    conf.setClass("fs.dummy.impl", DummyFs.class, FileSystem.class);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     IOUtils.cleanupWithLogger(null, dfs);
     if (cluster != null) {
@@ -108,40 +116,40 @@ public class TestDistCpSync {
   @Test
   public void testFallback() throws Exception {
     // the source/target dir are not snapshottable dir
-    Assert.assertFalse(sync());
+    Assertions.assertFalse(sync());
     // make sure the source path has been updated to the snapshot path
     final Path spath = new Path(source,
         HdfsConstants.DOT_SNAPSHOT_DIR + Path.SEPARATOR + "s2");
-    Assert.assertEquals(spath, context.getSourcePaths().get(0));
+    Assertions.assertEquals(spath, context.getSourcePaths().get(0));
 
     // reset source path in options
     context.setSourcePaths(Collections.singletonList(source));
     // the source/target does not have the given snapshots
     dfs.allowSnapshot(source);
     dfs.allowSnapshot(target);
-    Assert.assertFalse(sync());
-    Assert.assertEquals(spath, context.getSourcePaths().get(0));
+    Assertions.assertFalse(sync());
+    Assertions.assertEquals(spath, context.getSourcePaths().get(0));
 
     // reset source path in options
     context.setSourcePaths(Collections.singletonList(source));
     dfs.createSnapshot(source, "s1");
     dfs.createSnapshot(source, "s2");
     dfs.createSnapshot(target, "s1");
-    Assert.assertTrue(sync());
+    Assertions.assertTrue(sync());
 
     // reset source paths in options
     context.setSourcePaths(Collections.singletonList(source));
     // changes have been made in target
     final Path subTarget = new Path(target, "sub");
     dfs.mkdirs(subTarget);
-    Assert.assertFalse(sync());
+    Assertions.assertFalse(sync());
     // make sure the source path has been updated to the snapshot path
-    Assert.assertEquals(spath, context.getSourcePaths().get(0));
+    Assertions.assertEquals(spath, context.getSourcePaths().get(0));
 
     // reset source paths in options
     context.setSourcePaths(Collections.singletonList(source));
     dfs.delete(subTarget, true);
-    Assert.assertTrue(sync());
+    Assertions.assertTrue(sync());
   }
 
   private void enableAndCreateFirstSnapshot() throws Exception {
@@ -152,7 +160,7 @@ public class TestDistCpSync {
   }
 
   private void syncAndVerify() throws Exception {
-    Assert.assertTrue(sync());
+    Assertions.assertTrue(sync());
     verifyCopy(dfs.getFileStatus(source), dfs.getFileStatus(target), false);
   }
 
@@ -258,12 +266,12 @@ public class TestDistCpSync {
     DistCpSync distCpSync = new DistCpSync(context, conf);
 
     // do the sync
-    Assert.assertTrue(distCpSync.sync());
+    Assertions.assertTrue(distCpSync.sync());
 
     // make sure the source path has been updated to the snapshot path
     final Path spath = new Path(source,
             HdfsConstants.DOT_SNAPSHOT_DIR + Path.SEPARATOR + "s2");
-    Assert.assertEquals(spath, context.getSourcePaths().get(0));
+    Assertions.assertEquals(spath, context.getSourcePaths().get(0));
 
     // build copy listing
     final Path listingPath = new Path("/tmp/META/fileList.seq");
@@ -284,10 +292,10 @@ public class TestDistCpSync {
     }
 
     // verify that we only list modified and created files/directories
-    Assert.assertEquals(numCreatedModified, copyListing.size());
+    Assertions.assertEquals(numCreatedModified, copyListing.size());
 
     // verify that we only copied new appended data of f2 and the new file f1
-    Assert.assertEquals(BLOCK_SIZE * 3, stubContext.getReporter()
+    Assertions.assertEquals(BLOCK_SIZE * 3, stubContext.getReporter()
         .getCounter(CopyMapper.Counter.BYTESCOPIED).getValue());
 
     // verify the source and target now has the same structure
@@ -312,7 +320,7 @@ public class TestDistCpSync {
     DFSTestUtil.createFile(dfs, new Path(source, "encz-mock/datedir/file2"),
         BLOCK_SIZE, DATA_NUM, 0);
     dfs.createSnapshot(source, "s2");
-    Assert.assertTrue(dfs.exists(new Path(source, "encz-mock/datedir/file2")));
+    Assertions.assertTrue(dfs.exists(new Path(source, "encz-mock/datedir/file2")));
 
     SnapshotDiffReport report = dfs.getSnapshotDiffReport(source, "s1", "s2");
     System.out.println(report);
@@ -320,11 +328,11 @@ public class TestDistCpSync {
     DistCpSync distCpSync = new DistCpSync(context, conf);
 
     // do the sync
-    Assert.assertTrue(distCpSync.sync());
+    Assertions.assertTrue(distCpSync.sync());
     // make sure the source path has been updated to the snapshot path
     final Path spath = new Path(source,
         HdfsConstants.DOT_SNAPSHOT_DIR + Path.SEPARATOR + "s2");
-    Assert.assertEquals(spath, context.getSourcePaths().get(0));
+    Assertions.assertEquals(spath, context.getSourcePaths().get(0));
 
     // build copy listing
     final Path listingPath = new Path("/tmp/META/fileList.seq");
@@ -342,7 +350,7 @@ public class TestDistCpSync {
         .entrySet()) {
       copyMapper.map(entry.getKey(), entry.getValue(), mapContext);
     }
-    Assert.assertTrue(dfs.exists(new Path(target, "encz-mock/datedir/file2")));
+    Assertions.assertTrue(dfs.exists(new Path(target, "encz-mock/datedir/file2")));
     // verify the source and target now has the same structure
     verifyCopy(dfs.getFileStatus(spath), dfs.getFileStatus(target), false);
   }
@@ -367,7 +375,7 @@ public class TestDistCpSync {
     DFSTestUtil.createFile(dfs, new Path(source, "encz-mock/datedir/file2"),
         BLOCK_SIZE, DATA_NUM, 0);
     dfs.createSnapshot(source, "s2");
-    Assert.assertTrue(dfs.exists(new Path(source, "encz-mock/datedir/file2")));
+    Assertions.assertTrue(dfs.exists(new Path(source, "encz-mock/datedir/file2")));
 
     SnapshotDiffReport report = dfs.getSnapshotDiffReport(source, "s1", "s2");
     System.out.println(report);
@@ -375,11 +383,11 @@ public class TestDistCpSync {
     DistCpSync distCpSync = new DistCpSync(context, conf);
 
     // do the sync
-    Assert.assertTrue(distCpSync.sync());
+    Assertions.assertTrue(distCpSync.sync());
     // make sure the source path has been updated to the snapshot path
     final Path spath = new Path(source,
         HdfsConstants.DOT_SNAPSHOT_DIR + Path.SEPARATOR + "s2");
-    Assert.assertEquals(spath, context.getSourcePaths().get(0));
+    Assertions.assertEquals(spath, context.getSourcePaths().get(0));
 
     // build copy listing
     final Path listingPath = new Path("/tmp/META/fileList.seq");
@@ -397,8 +405,8 @@ public class TestDistCpSync {
         .entrySet()) {
       copyMapper.map(entry.getKey(), entry.getValue(), mapContext);
     }
-    Assert.assertTrue(dfs.exists(new Path(target, "encz-mock/datedir/file2")));
-    Assert.assertTrue(dfs.exists(new Path(target, "trash/datedir/file1")));
+    Assertions.assertTrue(dfs.exists(new Path(target, "encz-mock/datedir/file2")));
+    Assertions.assertTrue(dfs.exists(new Path(target, "trash/datedir/file1")));
     // verify the source and target now has the same structure
     verifyCopy(dfs.getFileStatus(spath), dfs.getFileStatus(target), false);
   }
@@ -423,7 +431,7 @@ public class TestDistCpSync {
     DFSTestUtil.createFile(dfs, new Path(source, "encz-mock/datedir/file2"),
         BLOCK_SIZE, DATA_NUM, 0);
     dfs.createSnapshot(source, "s2");
-    Assert.assertTrue(dfs.exists(new Path(source, "encz-mock/datedir/file2")));
+    Assertions.assertTrue(dfs.exists(new Path(source, "encz-mock/datedir/file2")));
 
     SnapshotDiffReport report = dfs.getSnapshotDiffReport(source, "s1", "s2");
     System.out.println(report);
@@ -436,11 +444,11 @@ public class TestDistCpSync {
     distCpSync.setCopyFilter(regexCopyFilter);
 
     // do the sync
-    Assert.assertTrue(distCpSync.sync());
+    Assertions.assertTrue(distCpSync.sync());
     // make sure the source path has been updated to the snapshot path
     final Path spath = new Path(source,
         HdfsConstants.DOT_SNAPSHOT_DIR + Path.SEPARATOR + "s2");
-    Assert.assertEquals(spath, context.getSourcePaths().get(0));
+    Assertions.assertEquals(spath, context.getSourcePaths().get(0));
 
     // build copy listing
     final Path listingPath = new Path("/tmp/META/fileList.seq");
@@ -458,9 +466,9 @@ public class TestDistCpSync {
         .entrySet()) {
       copyMapper.map(entry.getKey(), entry.getValue(), mapContext);
     }
-    Assert.assertTrue(dfs.exists(new Path(target, "encz-mock/datedir/file2")));
-    Assert.assertFalse(dfs.exists(new Path(target, "encz-mock/datedir/file1")));
-    Assert.assertFalse(dfs.exists(new Path(target, "trash/datedir/file1")));
+    Assertions.assertTrue(dfs.exists(new Path(target, "encz-mock/datedir/file2")));
+    Assertions.assertFalse(dfs.exists(new Path(target, "encz-mock/datedir/file1")));
+    Assertions.assertFalse(dfs.exists(new Path(target, "trash/datedir/file1")));
   }
 
   private Map<Text, CopyListingFileStatus> getListing(Path listingPath)
@@ -508,19 +516,19 @@ public class TestDistCpSync {
   private void verifyCopy(FileSystem sfs, FileSystem tfs,
                           FileStatus s, FileStatus t, boolean compareName)
           throws Exception {
-    Assert.assertEquals(s.isDirectory(), t.isDirectory());
+    Assertions.assertEquals(s.isDirectory(), t.isDirectory());
     if (compareName) {
-      Assert.assertEquals(s.getPath().getName(), t.getPath().getName());
+      Assertions.assertEquals(s.getPath().getName(), t.getPath().getName());
     }
     if (!s.isDirectory()) {
       // verify the file content is the same
       byte[] sbytes = DFSTestUtil.readFileBuffer(sfs, s.getPath());
       byte[] tbytes = DFSTestUtil.readFileBuffer(tfs, t.getPath());
-      Assert.assertArrayEquals(sbytes, tbytes);
+      Assertions.assertArrayEquals(sbytes, tbytes);
     } else {
       FileStatus[] slist = sfs.listStatus(s.getPath());
       FileStatus[] tlist = tfs.listStatus(t.getPath());
-      Assert.assertEquals(slist.length, tlist.length);
+      Assertions.assertEquals(slist.length, tlist.length);
       for (int i = 0; i < slist.length; i++) {
         verifyCopy(sfs, tfs, slist[i], tlist[i], true);
       }
@@ -549,7 +557,7 @@ public class TestDistCpSync {
     // do the sync
     sync();
     // make sure the source path is still unchanged
-    Assert.assertEquals(source, context.getSourcePaths().get(0));
+    Assertions.assertEquals(source, context.getSourcePaths().get(0));
   }
 
   private void initData2(Path dir) throws Exception {
@@ -729,12 +737,12 @@ public class TestDistCpSync {
 
     DistCpSync distCpSync = new DistCpSync(context, conf);
     // do the sync
-    Assert.assertTrue(distCpSync.sync());
+    Assertions.assertTrue(distCpSync.sync());
 
     // make sure the source path has been updated to the snapshot path
     final Path spath = new Path(source,
             HdfsConstants.DOT_SNAPSHOT_DIR + Path.SEPARATOR + "s2");
-    Assert.assertEquals(spath, context.getSourcePaths().get(0));
+    Assertions.assertEquals(spath, context.getSourcePaths().get(0));
 
     // build copy listing
     final Path listingPath = new Path("/tmp/META/fileList.seq");
@@ -756,7 +764,7 @@ public class TestDistCpSync {
     }
 
     // verify that we only list modified and created files/directories
-    Assert.assertEquals(numCreatedModified, copyListing.size());
+    Assertions.assertEquals(numCreatedModified, copyListing.size());
 
     // verify the source and target now has the same structure
     verifyCopy(dfs.getFileStatus(spath), dfs.getFileStatus(target), false);
@@ -963,7 +971,7 @@ public class TestDistCpSync {
       GenericTestUtils.assertExceptionContains(
           "Snapshot s2 should be newer than s1", e);
     }
-    Assert.assertTrue(threwException);
+    Assertions.assertTrue(threwException);
   }
 
   private void initData10(Path dir) throws Exception {
@@ -1054,15 +1062,15 @@ public class TestDistCpSync {
   private void verifySync(FileStatus s, FileStatus t, boolean compareName,
                           String deletedName)
           throws Exception {
-    Assert.assertEquals(s.isDirectory(), t.isDirectory());
+    Assertions.assertEquals(s.isDirectory(), t.isDirectory());
     if (compareName) {
-      Assert.assertEquals(s.getPath().getName(), t.getPath().getName());
+      Assertions.assertEquals(s.getPath().getName(), t.getPath().getName());
     }
     if (!s.isDirectory()) {
       // verify the file content is the same
       byte[] sbytes = DFSTestUtil.readFileBuffer(dfs, s.getPath());
       byte[] tbytes = DFSTestUtil.readFileBuffer(dfs, t.getPath());
-      Assert.assertArrayEquals(sbytes, tbytes);
+      Assertions.assertArrayEquals(sbytes, tbytes);
     } else {
       FileStatus[] slist = dfs.listStatus(s.getPath());
       FileStatus[] tlist = dfs.listStatus(t.getPath());
@@ -1275,5 +1283,64 @@ public class TestDistCpSync {
 
     verifyCopyByFs(sourceFS, targetFS, sourceFS.getFileStatus(sourceFSPath),
         targetFS.getFileStatus(targetFSPath), false);
+  }
+
+  @Test
+  public void testSyncSnapshotDiffWithLocalFileSystem() throws Exception {
+    String[] args = new String[]{"-update", "-diff", "s1", "s2",
+        "file:///source", "file:///target"};
+    LambdaTestUtils.intercept(
+        UnsupportedOperationException.class,
+        "The source file system file does not support snapshot",
+        () -> new DistCp(conf, OptionsParser.parse(args)).execute());
+  }
+
+  @Test
+  public void testSyncSnapshotDiffWithDummyFileSystem() {
+    String[] args =
+        new String[] { "-update", "-diff", "s1", "s2", "dummy:///source",
+            "dummy:///target" };
+    try {
+      FileSystem dummyFs = FileSystem.get(URI.create("dummy:///"), conf);
+      assertThat(dummyFs).isInstanceOf(DummyFs.class);
+      new DistCp(conf, OptionsParser.parse(args)).execute();
+    } catch (UnsupportedOperationException e) {
+      throw e;
+    } catch (Exception e) {
+      // can expect other exceptions as source and target paths
+      // are not created.
+    }
+  }
+
+  public static class DummyFs extends RawLocalFileSystem {
+    public DummyFs() {
+      super();
+    }
+
+    public URI getUri() {
+      return URI.create("dummy:///");
+    }
+
+    @Override
+    public boolean hasPathCapability(Path path, String capability)
+        throws IOException {
+      switch (validatePathCapabilityArgs(makeQualified(path), capability)) {
+      case CommonPathCapabilities.FS_SNAPSHOTS:
+        return true;
+      default:
+        return super.hasPathCapability(path, capability);
+      }
+    }
+
+    @Override
+    public FileStatus getFileStatus(Path f) throws IOException {
+      return new FileStatus();
+    }
+
+    public SnapshotDiffReport getSnapshotDiffReport(final Path snapshotDir,
+        final String fromSnapshot, final String toSnapshot) {
+      return new SnapshotDiffReport(snapshotDir.getName(), fromSnapshot,
+          toSnapshot, new ArrayList<SnapshotDiffReport.DiffReportEntry>());
+    }
   }
 }

@@ -48,6 +48,7 @@ public class RMStateStoreUtils {
    * @param fsIn The {@link DataInputStream} containing RM Delegation Token data
    * @return An {@link RMDelegationTokenIdentifierData} containing the read in
    * RM Delegation Token
+   * @throws IOException an I/O exception has occurred.
    */
   public static RMDelegationTokenIdentifierData
       readRMDelegationTokenIdentifierData(DataInputStream fsIn)

@@ -92,7 +92,7 @@ public class TestAppReportFetcher {
     }
   }
 
-  static class AppReportFetcherForTest extends AppReportFetcher {
+  static class AppReportFetcherForTest extends DefaultAppReportFetcher {
 
     public AppReportFetcherForTest(Configuration conf,
         ApplicationClientProtocol acp) {

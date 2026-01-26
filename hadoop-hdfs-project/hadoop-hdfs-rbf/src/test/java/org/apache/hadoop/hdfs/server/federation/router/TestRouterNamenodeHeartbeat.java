@@ -25,9 +25,10 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMESERVICES;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.NAMENODES;
 import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.NAMESERVICES;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -36,6 +37,7 @@ import java.util.Iterator;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.contract.router.SecurityConfUtil;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.server.federation.MockResolver;
@@ -44,12 +46,12 @@ import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.NamenodeCon
 import org.apache.hadoop.hdfs.server.federation.resolver.ActiveNamenodeResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamenodeContext;
 import org.apache.hadoop.net.MockDomainNameResolver;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.Service.STATE;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TestName;
+import org.apache.hadoop.util.Shell;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test the service that heartbeats the state of the namenodes to the State
@@ -61,10 +63,7 @@ public class TestRouterNamenodeHeartbeat {
   private static ActiveNamenodeResolver namenodeResolver;
   private static List<NamenodeHeartbeatService> services;
 
-  @Rule
-  public TestName name = new TestName();
-
-  @BeforeClass
+  @BeforeAll
   public static void globalSetUp() throws Exception {
 
     cluster = new MiniRouterDFSCluster(true, 2);
@@ -92,7 +91,7 @@ public class TestRouterNamenodeHeartbeat {
     }
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws IOException {
     cluster.shutdown();
     for (NamenodeHeartbeatService service: services) {
@@ -213,18 +212,34 @@ public class TestRouterNamenodeHeartbeat {
 
   @Test
   public void testNamenodeHeartbeatServiceHAServiceProtocolProxy(){
-    testNamenodeHeartbeatServiceHAServiceProtocol(
-        "test-ns", "nn", 1000, -1, -1, 1003,
-        "host01.test:1000", "host02.test:1000");
-    testNamenodeHeartbeatServiceHAServiceProtocol(
-        "test-ns", "nn", 1000, 1001, -1, 1003,
-        "host01.test:1001", "host02.test:1001");
-    testNamenodeHeartbeatServiceHAServiceProtocol(
-        "test-ns", "nn", 1000, -1, 1002, 1003,
-        "host01.test:1002", "host02.test:1002");
-    testNamenodeHeartbeatServiceHAServiceProtocol(
-        "test-ns", "nn", 1000, 1001, 1002, 1003,
-        "host01.test:1002", "host02.test:1002");
+    // JDK-8225499. The string format of unresolved address has been changed.
+    if (Shell.isJavaVersionAtLeast(14)) {
+      testNamenodeHeartbeatServiceHAServiceProtocol(
+          "test-ns", "nn", 1000, -1, -1, 1003,
+          "host01.test/<unresolved>:1000", "host02.test/<unresolved>:1000");
+      testNamenodeHeartbeatServiceHAServiceProtocol(
+          "test-ns", "nn", 1000, 1001, -1, 1003,
+          "host01.test/<unresolved>:1001", "host02.test/<unresolved>:1001");
+      testNamenodeHeartbeatServiceHAServiceProtocol(
+          "test-ns", "nn", 1000, -1, 1002, 1003,
+          "host01.test/<unresolved>:1002", "host02.test/<unresolved>:1002");
+      testNamenodeHeartbeatServiceHAServiceProtocol(
+          "test-ns", "nn", 1000, 1001, 1002, 1003,
+          "host01.test/<unresolved>:1002", "host02.test/<unresolved>:1002");
+    } else {
+      testNamenodeHeartbeatServiceHAServiceProtocol(
+          "test-ns", "nn", 1000, -1, -1, 1003,
+          "host01.test:1000", "host02.test:1000");
+      testNamenodeHeartbeatServiceHAServiceProtocol(
+          "test-ns", "nn", 1000, 1001, -1, 1003,
+          "host01.test:1001", "host02.test:1001");
+      testNamenodeHeartbeatServiceHAServiceProtocol(
+          "test-ns", "nn", 1000, -1, 1002, 1003,
+          "host01.test:1002", "host02.test:1002");
+      testNamenodeHeartbeatServiceHAServiceProtocol(
+          "test-ns", "nn", 1000, 1001, 1002, 1003,
+          "host01.test:1002", "host02.test:1002");
+    }
   }
 
   private void testNamenodeHeartbeatServiceHAServiceProtocol(
@@ -317,5 +332,34 @@ public class TestRouterNamenodeHeartbeat {
         MockDomainNameResolver.DOMAIN + ":" + webAddressPort);
 
     return conf;
+  }
+
+  @Test
+  public void testNamenodeHeartbeatWithSecurity() throws Exception {
+    Configuration conf = SecurityConfUtil.initSecurity();
+    MiniRouterDFSCluster testCluster = null;
+    try {
+      testCluster = new MiniRouterDFSCluster(true, 1, conf);
+      // Start Namenodes and routers
+      testCluster.startCluster(conf);
+      testCluster.startRouters();
+
+      // Register Namenodes to generate a NamenodeStatusReport
+      testCluster.registerNamenodes();
+      testCluster.waitNamenodeRegistration();
+
+      for (MiniRouterDFSCluster.RouterContext routerContext : testCluster.getRouters()) {
+        ActiveNamenodeResolver resolver = routerContext.getRouter().getNamenodeResolver();
+        // Validate that NamenodeStatusReport has been registered
+        assertNotNull(resolver.getNamespaces());
+        assertFalse(resolver.getNamespaces().isEmpty());
+      }
+    } finally {
+      if (testCluster != null) {
+        testCluster.shutdown();
+      }
+      UserGroupInformation.reset();
+      SecurityConfUtil.destroy();
+    }
   }
 }

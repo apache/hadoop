@@ -21,21 +21,25 @@ package org.apache.hadoop.fs.s3a.prefetch;
 
 import java.io.EOFException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.fs.impl.prefetch.ExceptionAsserts;
 import org.apache.hadoop.fs.impl.prefetch.ExecutorServiceFuturePool;
-import org.apache.hadoop.fs.s3a.S3AInputStream;
 import org.apache.hadoop.fs.s3a.S3AReadOpContext;
+import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.S3ObjectAttributes;
 import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
+import org.apache.hadoop.fs.s3a.impl.streams.ObjectInputStreamCallbacks;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 
-import static org.junit.Assert.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Applies the same set of tests to both S3ACachingInputStream and S3AInMemoryInputStream.
@@ -49,36 +53,40 @@ public class TestS3ARemoteInputStream extends AbstractHadoopTestBase {
   private final ExecutorServiceFuturePool futurePool =
       new ExecutorServiceFuturePool(threadPool);
 
-  private final S3AInputStream.InputStreamCallbacks client =
+  private final ObjectInputStreamCallbacks client =
       MockS3ARemoteObject.createClient("bucket");
 
   @Test
   public void testArgChecks() throws Exception {
     S3AReadOpContext readContext =
-        S3APrefetchFakes.createReadContext(futurePool, "key", 10, 10, 1);
+        S3APrefetchFakes.createReadContext(futurePool, "key", 10);
+    PrefetchOptions prefetchOptions = new PrefetchOptions(10, 1);
     S3ObjectAttributes attrs =
         S3APrefetchFakes.createObjectAttributes("bucket", "key", 10);
     S3AInputStreamStatistics stats =
         readContext.getS3AStatisticsContext().newInputStreamStatistics();
 
+    Configuration conf = S3ATestUtils.prepareTestConfiguration(new Configuration());
     // Should not throw.
-    new S3ACachingInputStream(readContext, attrs, client, stats);
+    new S3ACachingInputStream(readContext, prefetchOptions, attrs, client, stats, conf, null);
 
     ExceptionAsserts.assertThrows(
         NullPointerException.class,
-        () -> new S3ACachingInputStream(null, attrs, client, stats));
+        () -> new S3ACachingInputStream(null, null, attrs, client, stats, conf, null));
 
     ExceptionAsserts.assertThrows(
         NullPointerException.class,
-        () -> new S3ACachingInputStream(readContext, null, client, stats));
+        () -> new S3ACachingInputStream(readContext, null, null, client, stats, conf, null));
 
     ExceptionAsserts.assertThrows(
         NullPointerException.class,
-        () -> new S3ACachingInputStream(readContext, attrs, null, stats));
+        () -> new S3ACachingInputStream(readContext, prefetchOptions, attrs, null, stats, conf,
+            null));
 
     ExceptionAsserts.assertThrows(
         NullPointerException.class,
-        () -> new S3ACachingInputStream(readContext, attrs, client, null));
+        () -> new S3ACachingInputStream(readContext, prefetchOptions, attrs, client, null, conf,
+            null));
   }
 
   @Test
@@ -97,7 +105,7 @@ public class TestS3ARemoteInputStream extends AbstractHadoopTestBase {
   private void testRead0SizedFileHelper(S3ARemoteInputStream inputStream,
       int bufferSize)
       throws Exception {
-    assertEquals(0, inputStream.available());
+    assertAvailable(0, inputStream);
     assertEquals(-1, inputStream.read());
     assertEquals(-1, inputStream.read());
 
@@ -121,8 +129,8 @@ public class TestS3ARemoteInputStream extends AbstractHadoopTestBase {
 
   private void testReadHelper(S3ARemoteInputStream inputStream, int bufferSize)
       throws Exception {
-    assertEquals(bufferSize, inputStream.available());
     assertEquals(0, inputStream.read());
+    assertAvailable(bufferSize - 1, inputStream);
     assertEquals(1, inputStream.read());
 
     byte[] buffer = new byte[2];
@@ -170,12 +178,14 @@ public class TestS3ARemoteInputStream extends AbstractHadoopTestBase {
       int bufferSize,
       int fileSize)
       throws Exception {
+    assertAvailable(0, inputStream);
     assertEquals(0, inputStream.getPos());
-    inputStream.seek(7);
-    assertEquals(7, inputStream.getPos());
+    inputStream.seek(bufferSize);
+    assertAvailable(0, inputStream);
+    assertEquals(bufferSize, inputStream.getPos());
     inputStream.seek(0);
+    assertAvailable(0, inputStream);
 
-    assertEquals(bufferSize, inputStream.available());
     for (int i = 0; i < fileSize; i++) {
       assertEquals(i, inputStream.read());
     }
@@ -187,11 +197,20 @@ public class TestS3ARemoteInputStream extends AbstractHadoopTestBase {
       }
     }
 
+    // Can seek to the EOF: read() will then return -1.
+    inputStream.seek(fileSize);
+    assertEquals(-1, inputStream.read());
+
     // Test invalid seeks.
     ExceptionAsserts.assertThrows(
         EOFException.class,
         FSExceptionMessages.NEGATIVE_SEEK,
         () -> inputStream.seek(-1));
+
+    ExceptionAsserts.assertThrows(
+        EOFException.class,
+        FSExceptionMessages.CANNOT_SEEK_PAST_EOF,
+        () -> inputStream.seek(fileSize + 1));
   }
 
   @Test
@@ -217,7 +236,7 @@ public class TestS3ARemoteInputStream extends AbstractHadoopTestBase {
     assertEquals(7, inputStream.getPos());
     inputStream.seek(0);
 
-    assertEquals(bufferSize, inputStream.available());
+    assertAvailable(0, inputStream);
     for (int i = 0; i < fileSize; i++) {
       assertEquals(i, inputStream.read());
     }
@@ -251,9 +270,10 @@ public class TestS3ARemoteInputStream extends AbstractHadoopTestBase {
 
   private void testCloseHelper(S3ARemoteInputStream inputStream, int bufferSize)
       throws Exception {
-    assertEquals(bufferSize, inputStream.available());
+    assertAvailable(0, inputStream);
     assertEquals(0, inputStream.read());
     assertEquals(1, inputStream.read());
+    assertAvailable(bufferSize - 2, inputStream);
 
     inputStream.close();
 
@@ -275,5 +295,12 @@ public class TestS3ARemoteInputStream extends AbstractHadoopTestBase {
 
     // Verify a second close() does not throw.
     inputStream.close();
+  }
+
+  private static void assertAvailable(int expected, InputStream inputStream)
+      throws IOException {
+    assertThat(inputStream.available())
+        .describedAs("Check available bytes on stream %s", inputStream)
+        .isEqualTo(expected);
   }
 }

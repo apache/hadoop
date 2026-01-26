@@ -21,12 +21,13 @@ package org.apache.hadoop.fs.azure;
 import java.net.URI;
 import java.util.StringTokenizer;
 
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
-import org.apache.log4j.Logger;
-import org.junit.Test;
+
+import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test to validate Azure storage client side logging. Tests works only when
@@ -94,8 +95,8 @@ public class ITestNativeAzureFileSystemClientLogging
   @Test
   public void testLoggingEnabled() throws Exception {
 
-    LogCapturer logs = LogCapturer.captureLogs(new Log4JLogger(Logger
-        .getRootLogger()));
+    LogCapturer logs =
+        LogCapturer.captureLogs(LoggerFactory.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME));
 
     // Update configuration based on the Test.
     updateFileSystemConfiguration(true);
@@ -103,21 +104,20 @@ public class ITestNativeAzureFileSystemClientLogging
     performWASBOperations();
 
     String output = getLogOutput(logs);
-    assertTrue("Log entry " + TEMP_DIR + " not found  in " + output,
-        verifyStorageClientLogs(output, TEMP_DIR));
+    assertTrue(verifyStorageClientLogs(output, TEMP_DIR),
+        "Log entry " + TEMP_DIR + " not found  in " + output);
   }
 
   protected String getLogOutput(LogCapturer logs) {
     String output = logs.getOutput();
-    assertTrue("No log created/captured", !output.isEmpty());
+    assertTrue(!output.isEmpty(), "No log created/captured");
     return output;
   }
 
   @Test
   public void testLoggingDisabled() throws Exception {
 
-    LogCapturer logs = LogCapturer.captureLogs(new Log4JLogger(Logger
-        .getRootLogger()));
+    LogCapturer logs = LogCapturer.captureLogs(LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME));
 
     // Update configuration based on the Test.
     updateFileSystemConfiguration(false);
@@ -125,8 +125,8 @@ public class ITestNativeAzureFileSystemClientLogging
     performWASBOperations();
     String output = getLogOutput(logs);
 
-    assertFalse("Log entry " + TEMP_DIR + " found  in " + output,
-        verifyStorageClientLogs(output, TEMP_DIR));
+    assertFalse(verifyStorageClientLogs(output, TEMP_DIR),
+        "Log entry " + TEMP_DIR + " found  in " + output);
   }
 
   @Override

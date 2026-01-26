@@ -19,7 +19,6 @@
 package org.apache.hadoop.yarn.server.federation.policies.amrmproxy;
 
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 import java.util.HashSet;
 import java.util.List;
@@ -34,8 +33,10 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterIdInfo;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterState;
 import org.apache.hadoop.yarn.server.federation.utils.FederationPoliciesTestUtil;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * Simple test class for the {@link RejectAMRMProxyPolicy}.
@@ -43,7 +44,7 @@ import org.junit.Test;
 public class TestRejectAMRMProxyPolicy
     extends BaseFederationPoliciesTest {
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     setPolicy(new RejectAMRMProxyPolicy());
     // needed for base test to work
@@ -51,9 +52,9 @@ public class TestRejectAMRMProxyPolicy
 
     for (int i = 1; i <= 2; i++) {
       SubClusterIdInfo sc = new SubClusterIdInfo("sc" + i);
-      SubClusterInfo sci = mock(SubClusterInfo.class);
-      when(sci.getState()).thenReturn(SubClusterState.SC_RUNNING);
-      when(sci.getSubClusterId()).thenReturn(sc.toId());
+      SubClusterInfo sci = SubClusterInfo.newInstance(
+          sc.toId(), "dns1:80", "dns1:81", "dns1:82", "dns1:83", SubClusterState.SC_RUNNING,
+          System.currentTimeMillis(), "something");
       getActiveSubclusters().put(sc.toId(), sci);
     }
 
@@ -62,16 +63,18 @@ public class TestRejectAMRMProxyPolicy
 
   }
 
-  @Test (expected = FederationPolicyException.class)
+  @Test
   public void testSplitAllocateRequest() throws Exception {
-    // verify the request is broadcasted to all subclusters
-    String[] hosts = new String[] {"host1", "host2" };
-    List<ResourceRequest> resourceRequests = FederationPoliciesTestUtil
-        .createResourceRequests(hosts, 2 * 1024, 2, 1, 3, null, false);
+    assertThrows(FederationPolicyException.class, () -> {
+      // verify the request is broadcasted to all subclusters
+      String[] hosts = new String[] {"host1", "host2" };
+      List<ResourceRequest> resourceRequests = FederationPoliciesTestUtil
+          .createResourceRequests(hosts, 2 * 1024, 2, 1, 3, null, false);
 
-    Map<SubClusterId, List<ResourceRequest>> response =
-        ((FederationAMRMProxyPolicy) getPolicy()).splitResourceRequests(
-            resourceRequests, new HashSet<SubClusterId>());
+      Map<SubClusterId, List<ResourceRequest>> response =
+          ((FederationAMRMProxyPolicy) getPolicy()).splitResourceRequests(
+          resourceRequests, new HashSet<SubClusterId>());
+    });
   }
 
 

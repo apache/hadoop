@@ -18,7 +18,8 @@
 
 package org.apache.hadoop.yarn.server.timelineservice.reader;
 
-import static org.junit.Assert.assertEquals;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.service.Service.STATE;
@@ -26,12 +27,15 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.timelineservice.storage.FileSystemTimelineReaderImpl;
 import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineReader;
-import org.junit.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class TestTimelineReaderServer {
 
-  @Test(timeout = 60000)
-  public void testStartStopServer() throws Exception {
+  @Test
+  @Timeout(60000)
+  void testStartStopServer() throws Exception {
     @SuppressWarnings("resource")
     TimelineReaderServer server = new TimelineReaderServer();
     Configuration config = new YarnConfiguration();
@@ -56,30 +60,36 @@ public class TestTimelineReaderServer {
     }
   }
 
-  @Test(timeout = 60000, expected = YarnRuntimeException.class)
-  public void testTimelineReaderServerWithInvalidTimelineReader() {
-    Configuration conf = new YarnConfiguration();
-    conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
-    conf.setFloat(YarnConfiguration.TIMELINE_SERVICE_VERSION, 2.0f);
-    conf.set(YarnConfiguration.TIMELINE_SERVICE_READER_WEBAPP_ADDRESS,
-        "localhost:0");
-    conf.set(YarnConfiguration.TIMELINE_SERVICE_READER_CLASS,
-        Object.class.getName());
-    runTimelineReaderServerWithConfig(conf);
+  @Test
+  @Timeout(60000)
+  void testTimelineReaderServerWithInvalidTimelineReader() {
+    assertThrows(YarnRuntimeException.class, () -> {
+      Configuration conf = new YarnConfiguration();
+      conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
+      conf.setFloat(YarnConfiguration.TIMELINE_SERVICE_VERSION, 2.0f);
+      conf.set(YarnConfiguration.TIMELINE_SERVICE_READER_WEBAPP_ADDRESS,
+          "localhost:0");
+      conf.set(YarnConfiguration.TIMELINE_SERVICE_READER_CLASS,
+          Object.class.getName());
+      runTimelineReaderServerWithConfig(conf);
+    });
   }
 
-  @Test(timeout = 60000, expected = YarnRuntimeException.class)
-  public void testTimelineReaderServerWithNonexistentTimelineReader() {
-    String nonexistentTimelineReaderClass = "org.apache.org.yarn.server." +
-        "timelineservice.storage.XXXXXXXX";
-    Configuration conf = new YarnConfiguration();
-    conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
-    conf.setFloat(YarnConfiguration.TIMELINE_SERVICE_VERSION, 2.0f);
-    conf.set(YarnConfiguration.TIMELINE_SERVICE_READER_WEBAPP_ADDRESS,
-        "localhost:0");
-    conf.set(YarnConfiguration.TIMELINE_SERVICE_READER_CLASS,
-        nonexistentTimelineReaderClass);
-    runTimelineReaderServerWithConfig(conf);
+  @Test
+  @Timeout(60000)
+  void testTimelineReaderServerWithNonexistentTimelineReader() {
+    assertThrows(YarnRuntimeException.class, () -> {
+      String nonexistentTimelineReaderClass = "org.apache.org.yarn.server." +
+          "timelineservice.storage.XXXXXXXX";
+      Configuration conf = new YarnConfiguration();
+      conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
+      conf.setFloat(YarnConfiguration.TIMELINE_SERVICE_VERSION, 2.0f);
+      conf.set(YarnConfiguration.TIMELINE_SERVICE_READER_WEBAPP_ADDRESS,
+          "localhost:0");
+      conf.set(YarnConfiguration.TIMELINE_SERVICE_READER_CLASS,
+          nonexistentTimelineReaderClass);
+      runTimelineReaderServerWithConfig(conf);
+    });
   }
 
   /**

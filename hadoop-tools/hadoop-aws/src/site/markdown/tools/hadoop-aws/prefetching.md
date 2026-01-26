@@ -39,13 +39,27 @@ Multiple blocks may be read in parallel.
 
 |Property    |Meaning    |Default    |
 |---|---|---|
-|`fs.s3a.prefetch.enabled`    |Enable the prefetch input stream    |`false` |
+| `fs.s3a.input.stream.type` |Uses the prefetch input stream when set to `prefetch`   |`classic` |
+|(deprecated) `fs.s3a.prefetch.enabled`    |Enable the prefetch input stream    |`false` |
 |`fs.s3a.prefetch.block.size`    |Size of a block    |`8M`    |
 |`fs.s3a.prefetch.block.count`    |Number of blocks to prefetch    |`8`    |
 
+The default size of a block is 8MB, and the minimum allowed block size is 1 byte.
+Decreasing block size will increase the number of blocks to be read for a file.
+A smaller block size may negatively impact performance as the number of prefetches required will increase.
+
+The original option to enable prefetching was the boolean option `fs.s3a.prefetch.enabled`.
+
+This has been superseded by the option `fs.s3a.input.stream.type` which now takes an enumeration of values; `prefetch` selects the prefetching stream.
+
+1. The original option is deprecated.
+2. It is supported *provided the option `fs.s3a.input.stream.type` is unset.
+3. The first time a stream created through the `fs.s3a.input.stream.type` option,
+   a warning message is printed.
+
 ### Key Components
 
-`S3PrefetchingInputStream` - When prefetching is enabled, S3AFileSystem will return an instance of
+`S3PrefetchingInputStream` - When the prefetch stream is used, S3AFileSystem will return an instance of
 this class as the input stream.
 Depending on the remote file size, it will either use
 the `S3InMemoryInputStream` or the `S3CachingInputStream` as the underlying input stream.
@@ -158,7 +172,7 @@ The buffer for the block furthest from the current block is released.
 Once a buffer has been acquired by `CachingBlockManager`, if the buffer is in a *READY* state, it is
 returned.
 This means that data was already read into this buffer asynchronously by a prefetch.
-If it's state is *BLANK* then data is read into it using
+If its state is *BLANK* then data is read into it using
 `S3Reader.read(ByteBuffer buffer, long offset, int size).`
 
 For the second read call, `in.read(buffer, 0, 8MB)`, since the block sizes are of 8MB and only 5MB
@@ -170,7 +184,10 @@ The number of blocks to be prefetched is determined by `fs.s3a.prefetch.block.co
 
 ##### Random Reads
 
-If the caller makes the following calls:
+The `CachingInputStream` also caches prefetched blocks. This happens when `read()` is issued
+after a `seek()` outside the current block, but the current block still has not been fully read.
+
+For example, consider the following calls:
 
 ```
 in.read(buffer, 0, 5MB)
@@ -180,13 +197,14 @@ in.seek(2MB)
 in.read(buffer, 0, 4MB)
 ```
 
-The `CachingInputStream` also caches prefetched blocks.
-This happens when a `seek()` is issued for outside the current block and the current block still has
-not been fully read.
+For the above read sequence, after the `seek(10MB)` call is issued, block 0 has not been read
+completely so the subsequent call to `read()` will cache it, on the assumption that the caller
+will probably want to read from it again.
 
-For the above read sequence, when the `seek(10MB)` call is issued, block 0 has not been read
-completely so cache it as the caller will probably want to read from it again.
+After `seek(2MB)` is called, the position is back inside block 0. The next read can now be
+satisfied from the locally cached block file, which is typically orders of magnitude faster
+than a network based read.
 
-When `seek(2MB)` is called, the position is back inside block 0.
-The next read can now be satisfied from the locally cached block file, which is typically orders of
-magnitude faster than a network based read.
+NB: `seek()` is implemented lazily, so it only keeps track of the new position but does not
+otherwise affect the internal state of the stream. Only when a `read()` is issued, it will call
+the `ensureCurrentBuffer()` method and fetch a new block if required.

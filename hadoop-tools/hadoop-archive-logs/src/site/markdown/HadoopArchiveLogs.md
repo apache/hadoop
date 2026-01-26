@@ -76,7 +76,7 @@ The tool works by performing the following procedure:
     - its aggregation status has successfully completed
     - has at least ``-minNumberLogFiles`` log files
     - the sum of its log files size is less than ``-maxTotalLogsSize`` megabytes
- 2. If there are are more than ``-maxEligibleApps`` applications found, the
+ 2. If there are more than ``-maxEligibleApps`` applications found, the
     newest applications are dropped. They can be processed next time.
  3. A shell script is generated based on the eligible applications
  4. The Distributed Shell program is run with the aformentioned script. It

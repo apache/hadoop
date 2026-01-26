@@ -18,16 +18,21 @@
 
 package org.apache.hadoop.hdfs.server.federation.security;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.router.RouterHDFSContract;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
+import org.apache.hadoop.hdfs.server.federation.FederationTestUtils;
 import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
+import org.apache.hadoop.hdfs.server.federation.metrics.RouterMBean;
 import org.apache.hadoop.hdfs.server.federation.router.security.RouterSecurityManager;
 import org.apache.hadoop.hdfs.server.federation.router.Router;
 import org.apache.hadoop.hdfs.server.federation.router.security.token.ZKDelegationTokenSecretManagerImpl;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.util.Metrics2Util.NameValuePair;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -35,21 +40,20 @@ import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSecretManager;
 import org.apache.hadoop.service.ServiceStateException;
-import org.junit.rules.ExpectedException;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.apache.hadoop.fs.contract.router.SecurityConfUtil.initSecurity;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_DELEGATION_TOKEN_DRIVER_CLASS;
+import static org.apache.hadoop.hdfs.server.federation.metrics.TestRBFMetrics.ROUTER_BEAN;
 
-import org.hamcrest.core.StringContains;
 import java.io.IOException;
 import java.util.List;
 
@@ -68,7 +72,7 @@ public class TestRouterSecurityManager {
 
   private static RouterSecurityManager securityManager = null;
 
-  @BeforeClass
+  @BeforeAll
   public static void createMockSecretManager() throws IOException {
     AbstractDelegationTokenSecretManager<DelegationTokenIdentifier>
         mockDelegationTokenSecretManager =
@@ -76,10 +80,15 @@ public class TestRouterSecurityManager {
     mockDelegationTokenSecretManager.startThreads();
     securityManager =
         new RouterSecurityManager(mockDelegationTokenSecretManager);
+    DefaultMetricsSystem.setMiniClusterMode(true);
   }
 
-  @Rule
-  public ExpectedException exceptionRule = ExpectedException.none();
+  private Router initializeAndStartRouter(Configuration configuration) {
+    Router router = new Router();
+    router.init(configuration);
+    router.start();
+    return router;
+  }
 
   @Test
   public void testCreateSecretManagerUsingReflection() throws IOException {
@@ -117,13 +126,10 @@ public class TestRouterSecurityManager {
 
     // Cancel the delegation token
     securityManager.cancelDelegationToken(token);
-
-    String exceptionCause = "Renewal request for unknown token";
-    exceptionRule.expect(SecretManager.InvalidToken.class);
-    exceptionRule.expectMessage(exceptionCause);
-
-    // This throws an exception as token has been cancelled.
-    securityManager.renewDelegationToken(token);
+    assertThrows(SecretManager.InvalidToken.class, () -> {
+      // This throws an exception as token has been cancelled.
+      securityManager.renewDelegationToken(token);
+    });
   }
 
   @Test
@@ -209,11 +215,11 @@ public class TestRouterSecurityManager {
 
     // Verify an invalid password
     String exceptionCause = "password doesn't match";
-    exceptionRule.expect(SecretManager.InvalidToken.class);
-    exceptionRule.expectMessage(
-        StringContains.containsString(exceptionCause));
+    SecretManager.InvalidToken exception = assertThrows(SecretManager.InvalidToken.class, () -> {
+      securityManager.verifyToken(token.decodeIdentifier(), new byte[10]);
+    });
 
-    securityManager.verifyToken(token.decodeIdentifier(), new byte[10]);
+    assertTrue(exception.getMessage().contains(exceptionCause));
   }
 
   @Test
@@ -227,9 +233,8 @@ public class TestRouterSecurityManager {
         .build();
 
     conf.addResource(routerConf);
-    Router router = new Router();
-    router.init(conf);
-    router.start();
+
+    Router router = initializeAndStartRouter(conf);
 
     UserGroupInformation ugi =
         UserGroupInformation.createUserForTesting(
@@ -257,6 +262,40 @@ public class TestRouterSecurityManager {
   private static String[] getUserGroupForTesting() {
     String[] groupsForTesting = {"router_group"};
     return groupsForTesting;
+  }
+
+  @Test
+  public void testGetTopTokenRealOwners() throws Exception {
+    // Create conf and start routers with only an RPC service
+    Configuration conf = initSecurity();
+
+    Configuration routerConf = new RouterConfigBuilder()
+        .metrics()
+        .rpc()
+        .build();
+    conf.addResource(routerConf);
+
+    Router router = initializeAndStartRouter(conf);
+
+    // Create credentials
+    UserGroupInformation ugi =
+            UserGroupInformation.createUserForTesting("router", getUserGroupForTesting());
+    RouterSecurityManager.createCredentials(router, ugi, "some_renewer");
+
+    String host = Path.WINDOWS ? "127.0.0.1" : "localhost";
+    String expectedOwner = "router/" + host + "@EXAMPLE.COM";
+
+    // Fetch the top token owners string
+    RouterMBean bean = FederationTestUtils.getBean(
+        ROUTER_BEAN, RouterMBean.class);
+    String topTokenRealOwners = bean.getTopTokenRealOwners();
+
+    // Verify the token details with the expectedOwner
+    JsonNode topTokenRealOwnersList = new ObjectMapper().readTree(topTokenRealOwners);
+    assertEquals(expectedOwner, topTokenRealOwnersList.get(0).get("name").asText(),
+        "The key:name contains incorrect value " + topTokenRealOwners);
+    // Destroy the cluster
+    RouterHDFSContract.destroyCluster();
   }
 
   @Test

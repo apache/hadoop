@@ -19,6 +19,7 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -26,9 +27,8 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem.FSNamesystemAuditLogger;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
+
+import org.junit.jupiter.api.Test;
 import org.slf4j.event.Level;
 
 import java.net.Inet4Address;
@@ -43,11 +43,9 @@ import static org.mockito.Mockito.*;
 /**
  * Test that the HDFS Audit logger respects DFS_NAMENODE_AUDIT_LOG_DEBUG_CMDLIST. 
  */
+@Timeout(300)
 public class TestAuditLogAtDebug {
   static final Logger LOG = LoggerFactory.getLogger(TestAuditLogAtDebug.class);
-
-  @Rule
-  public Timeout timeout = new Timeout(300000);
   
   private static final String DUMMY_COMMAND_1 = "dummycommand1";
   private static final String DUMMY_COMMAND_2 = "dummycommand2";
@@ -61,7 +59,7 @@ public class TestAuditLogAtDebug {
                Joiner.on(",").join(debugCommands.get()));
     }
     logger.initialize(conf);
-    GenericTestUtils.setLogLevel(FSNamesystem.auditLog, level);
+    GenericTestUtils.setLogLevel(FSNamesystem.AUDIT_LOG, level);
     return spy(logger);
   }
   

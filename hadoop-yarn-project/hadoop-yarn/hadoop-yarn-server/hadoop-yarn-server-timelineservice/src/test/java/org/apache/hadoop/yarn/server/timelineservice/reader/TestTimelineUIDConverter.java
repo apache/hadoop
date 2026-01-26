@@ -18,16 +18,16 @@
 
 package org.apache.hadoop.yarn.server.timelineservice.reader;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.fail;
+import org.junit.jupiter.api.Test;
 
-import org.junit.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class TestTimelineUIDConverter {
 
   @Test
-  public void testUIDEncodingDecoding() throws Exception {
+  void testUIDEncodingDecoding() throws Exception {
     TimelineReaderContext context = new TimelineReaderContext(
         "!cluster", "!b*o*!xer", "oozie*", null, null, null, null);
     String uid = TimelineUIDConverter.FLOW_UID.encodeUID(context);
@@ -80,7 +80,7 @@ public class TestTimelineUIDConverter {
   }
 
   @Test
-  public void testUIDNotProperlyEscaped() throws Exception {
+  void testUIDNotProperlyEscaped() throws Exception {
     try {
       TimelineUIDConverter.FLOW_UID.decodeUID("*!cluster!*!b*o***!xer!oozie**");
       fail("UID not properly escaped. Exception should have been thrown.");

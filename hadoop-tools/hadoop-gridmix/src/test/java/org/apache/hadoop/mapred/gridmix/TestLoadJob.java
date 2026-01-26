@@ -18,9 +18,10 @@
 package org.apache.hadoop.mapred.gridmix;
 
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.event.Level;
 
@@ -43,12 +44,12 @@ public class TestLoadJob extends CommonJobTest {
   }
 
 
-  @BeforeClass
+  @BeforeAll
   public static void init() throws IOException {
     GridmixTestUtils.initCluster(TestLoadJob.class);
   }
 
-  @AfterClass
+  @AfterAll
   public static void shutDown() throws IOException {
     GridmixTestUtils.shutdownCluster();
   }
@@ -57,7 +58,8 @@ public class TestLoadJob extends CommonJobTest {
   /*
   * test serial policy  with LoadJob. Task should execute without exceptions
   */
-  @Test (timeout=500000)
+  @Test
+  @Timeout(value = 500)
   public void testSerialSubmit() throws Exception {
     policy = GridmixJobSubmissionPolicy.SERIAL;
     LOG.info("Serial started at " + System.currentTimeMillis());
@@ -69,7 +71,8 @@ public class TestLoadJob extends CommonJobTest {
   /*
    * test reply policy with LoadJob
    */
-  @Test  (timeout=500000)
+  @Test
+  @Timeout(value = 500)
   public void testReplaySubmit() throws Exception {
     policy = GridmixJobSubmissionPolicy.REPLAY;
     LOG.info(" Replay started at " + System.currentTimeMillis());

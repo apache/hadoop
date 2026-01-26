@@ -336,6 +336,16 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
       ExtendedBlock b, boolean allowLazyPersist) throws IOException;
 
   /**
+   * Creates a RBW replica and returns the meta info of the replica
+   *
+   * @param b block
+   * @return the meta info of the replica which is being written to
+   * @throws IOException if an error occurs
+   */
+  ReplicaHandler createRbw(StorageType storageType, String storageId,
+      ExtendedBlock b, boolean allowLazyPersist, long newGS) throws IOException;
+
+  /**
    * Recovers a RBW replica and returns the meta info of the replica.
    * 
    * @param b block
@@ -468,7 +478,7 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
   boolean isValidRbw(ExtendedBlock b);
 
   /**
-   * Invalidates the specified blocks
+   * Invalidates the specified blocks.
    * @param bpid Block pool Id
    * @param invalidBlks - the blocks to be invalidated
    * @throws IOException
@@ -476,7 +486,14 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
   void invalidate(String bpid, Block invalidBlks[]) throws IOException;
 
   /**
-   * Caches the specified blocks
+   * Invalidate a block which is not found on disk.
+   * @param bpid the block pool ID.
+   * @param block The block to be invalidated.
+   */
+  void invalidateMissingBlock(String bpid, Block block) throws IOException;
+
+  /**
+   * Caches the specified block
    * @param bpid Block pool id
    * @param blockIds - block ids to cache
    */
@@ -685,4 +702,10 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
    * Get the volume list.
    */
   List<FsVolumeImpl> getVolumeList();
+
+  /**
+   * Set the last time in milliseconds when the directory scanner successfully ran.
+   * @param time the last time in milliseconds when the directory scanner successfully ran.
+   */
+  default void setLastDirScannerFinishTime(long time) {}
 }

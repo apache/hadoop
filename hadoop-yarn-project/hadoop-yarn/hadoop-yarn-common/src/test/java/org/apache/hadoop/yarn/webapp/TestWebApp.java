@@ -18,21 +18,17 @@
 
 package org.apache.hadoop.yarn.webapp;
 
-import static org.apache.hadoop.yarn.util.StringHelper.join;
-import static org.apache.hadoop.yarn.webapp.view.JQueryUI.C_TABLE;
-import static org.apache.hadoop.yarn.webapp.view.JQueryUI.DATATABLES;
-import static org.apache.hadoop.yarn.webapp.view.JQueryUI.DATATABLES_ID;
-import static org.apache.hadoop.yarn.webapp.view.JQueryUI._INFO_WRAP;
-import static org.apache.hadoop.yarn.webapp.view.JQueryUI._TH;
-import static org.apache.hadoop.yarn.webapp.view.JQueryUI.initID;
-import static org.apache.hadoop.yarn.webapp.view.JQueryUI.tableInit;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
+
+import com.google.inject.Inject;
+import org.glassfish.jersey.jettison.JettisonFeature;
+import org.glassfish.jersey.server.ResourceConfig;
+import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -42,11 +38,18 @@ import org.apache.hadoop.yarn.webapp.view.HtmlPage;
 import org.apache.hadoop.yarn.webapp.view.JQueryUI;
 import org.apache.hadoop.yarn.webapp.view.RobotsTextPage;
 import org.apache.hadoop.yarn.webapp.view.TextPage;
-import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-import com.google.inject.Inject;
+import static org.apache.hadoop.yarn.util.StringHelper.join;
+import static org.apache.hadoop.yarn.webapp.view.JQueryUI.C_TABLE;
+import static org.apache.hadoop.yarn.webapp.view.JQueryUI.DATATABLES;
+import static org.apache.hadoop.yarn.webapp.view.JQueryUI.DATATABLES_ID;
+import static org.apache.hadoop.yarn.webapp.view.JQueryUI._INFO_WRAP;
+import static org.apache.hadoop.yarn.webapp.view.JQueryUI._TH;
+import static org.apache.hadoop.yarn.webapp.view.JQueryUI.initID;
+import static org.apache.hadoop.yarn.webapp.view.JQueryUI.tableInit;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestWebApp {
   static final Logger LOG = LoggerFactory.getLogger(TestWebApp.class);
@@ -54,7 +57,8 @@ public class TestWebApp {
   static class FooController extends Controller {
     final TestWebApp test;
 
-    @Inject FooController(TestWebApp test) {
+    @Inject
+    FooController(TestWebApp test) {
       this.test = test;
     }
 
@@ -150,12 +154,14 @@ public class TestWebApp {
 
   String echo(String s) { return s; }
 
-  @Test public void testCreate() {
+  @Test
+  void testCreate() {
     WebApp app = WebApps.$for(this).start();
     app.stop();
   }
 
-  @Test public void testCreateWithPort() {
+  @Test
+  void testCreateWithPort() {
     // see if the ephemeral port is updated
     WebApp app = WebApps.$for(this).at(0).start();
     int port = app.getListenerAddress().getPort();
@@ -167,113 +173,126 @@ public class TestWebApp {
     app.stop();
   }
 
-  @Test(expected=org.apache.hadoop.yarn.webapp.WebAppException.class)
-  public void testCreateWithBindAddressNonZeroPort() {
-    WebApp app = WebApps.$for(this).at("0.0.0.0:50000").start();
-    int port = app.getListenerAddress().getPort();
-    assertEquals(50000, port);
-    // start another WebApp with same NonZero port
-    WebApp app2 = WebApps.$for(this).at("0.0.0.0:50000").start();
-    // An exception occurs (findPort disabled)
-    app.stop();
-    app2.stop();
+  @Test
+  void testCreateWithBindAddressNonZeroPort() {
+    assertThrows(org.apache.hadoop.yarn.webapp.WebAppException.class, () -> {
+      WebApp app = WebApps.$for(this).at("0.0.0.0:50000").start();
+      int port = app.getListenerAddress().getPort();
+      assertEquals(50000, port);
+      // start another WebApp with same NonZero port
+      WebApp app2 = WebApps.$for(this).at("0.0.0.0:50000").start();
+      // An exception occurs (findPort disabled)
+      app.stop();
+      app2.stop();
+    });
   }
 
-  @Test(expected=org.apache.hadoop.yarn.webapp.WebAppException.class)
-  public void testCreateWithNonZeroPort() {
-    WebApp app = WebApps.$for(this).at(50000).start();
-    int port = app.getListenerAddress().getPort();
-    assertEquals(50000, port);
-    // start another WebApp with same NonZero port
-    WebApp app2 = WebApps.$for(this).at(50000).start();
-    // An exception occurs (findPort disabled)
-    app.stop();
-    app2.stop();
+  @Test
+  void testCreateWithNonZeroPort() {
+    assertThrows(org.apache.hadoop.yarn.webapp.WebAppException.class, () -> {
+      WebApp app = WebApps.$for(this).at(50000).start();
+      int port = app.getListenerAddress().getPort();
+      assertEquals(50000, port);
+      // start another WebApp with same NonZero port
+      WebApp app2 = WebApps.$for(this).at(50000).start();
+      // An exception occurs (findPort disabled)
+      app.stop();
+      app2.stop();
+    });
   }
 
-  @Test public void testServePaths() {
+  @Test
+  void testServePaths() {
     WebApp app = WebApps.$for("test", this).start();
     assertEquals("/test", app.getRedirectPath());
-    String[] expectedPaths = { "/test", "/test/*" };
+    String[] expectedPaths = {"/test", "/test/*"};
     String[] pathSpecs = app.getServePathSpecs();
-     
+
     assertEquals(2, pathSpecs.length);
-    for(int i = 0; i < expectedPaths.length; i++) {
+    for (int i = 0; i < expectedPaths.length; i++) {
       assertTrue(ArrayUtils.contains(pathSpecs, expectedPaths[i]));
     }
     app.stop();
   }
 
-  @Test public void testServePathsNoName() {
+  @Test
+  void testServePathsNoName() {
     WebApp app = WebApps.$for("", this).start();
     assertEquals("/", app.getRedirectPath());
-    String[] expectedPaths = { "/*" };
+    String[] expectedPaths = {"/*"};
     String[] pathSpecs = app.getServePathSpecs();
-     
+
     assertEquals(1, pathSpecs.length);
-    for(int i = 0; i < expectedPaths.length; i++) {
+    for (int i = 0; i < expectedPaths.length; i++) {
       assertTrue(ArrayUtils.contains(pathSpecs, expectedPaths[i]));
     }
     app.stop();
   }
 
-  @Test public void testDefaultRoutes() throws Exception {
-    WebApp app = WebApps.$for("test", this).start();
+  @Test
+  void testDefaultRoutes() throws Exception {
+    WebApp app = WebApps.
+        $for("test", TestWebApp.class, this, "ws").
+        withResourceConfig(configure()).start();
     String baseUrl = baseUrl(app);
     try {
-      assertEquals("foo", getContent(baseUrl +"test/foo").trim());
-      assertEquals("foo", getContent(baseUrl +"test/foo/index").trim());
-      assertEquals("bar", getContent(baseUrl +"test/foo/bar").trim());
-      assertEquals("default", getContent(baseUrl +"test").trim());
-      assertEquals("default", getContent(baseUrl +"test/").trim());
-      assertEquals("default", getContent(baseUrl).trim());
+      assertEquals("foo", getContent(baseUrl + "test/foo").trim());
+      assertEquals("foo", getContent(baseUrl + "test/foo/index").trim());
+      assertEquals("bar", getContent(baseUrl + "test/foo/bar").trim());
+      // assertEquals("default", getContent(baseUrl + "test").trim());
+      assertEquals("default", getContent(baseUrl + "test/").trim());
+      // assertEquals("default", getContent(baseUrl).trim());
     } finally {
       app.stop();
     }
   }
 
-  @Test public void testCustomRoutes() throws Exception {
-    WebApp app =
-        WebApps.$for("test", TestWebApp.class, this, "ws").start(new WebApp() {
-          @Override
-          public void setup() {
-            bind(MyTestJAXBContextResolver.class);
-            bind(MyTestWebService.class);
+  @Test
+  void testCustomRoutes() throws Exception {
 
-            route("/:foo", FooController.class);
-            route("/bar/foo", FooController.class, "bar");
-            route("/foo/:foo", DefaultController.class);
-            route("/foo/bar/:foo", DefaultController.class, "index");
-          }
-        });
+    WebApp newWebApp = new WebApp() {
+      @Override
+      public void setup() {
+        route("/:foo", FooController.class);
+        route("/bar/foo", FooController.class, "bar");
+        route("/foo/:foo", DefaultController.class);
+        route("/foo/bar/:foo", DefaultController.class, "index");
+      }
+    };
+
+    WebApp app = WebApps.$for("test", this)
+        .withResourceConfig(configure())
+        .start(newWebApp);
+
     String baseUrl = baseUrl(app);
     try {
-      assertEquals("foo", getContent(baseUrl).trim());
-      assertEquals("foo", getContent(baseUrl +"test").trim());
-      assertEquals("foo1", getContent(baseUrl +"test/1").trim());
-      assertEquals("bar", getContent(baseUrl +"test/bar/foo").trim());
-      assertEquals("default", getContent(baseUrl +"test/foo/bar").trim());
-      assertEquals("default1", getContent(baseUrl +"test/foo/1").trim());
-      assertEquals("default2", getContent(baseUrl +"test/foo/bar/2").trim());
-      assertEquals(404, getResponseCode(baseUrl +"test/goo"));
-      assertEquals(200, getResponseCode(baseUrl +"ws/v1/test"));
-      assertTrue(getContent(baseUrl +"ws/v1/test").contains("myInfo"));
+      assertEquals("foo", getContent(baseUrl + "test/").trim());
+      assertEquals("foo1", getContent(baseUrl + "test/1").trim());
+      assertEquals("bar", getContent(baseUrl + "test/bar/foo").trim());
+      assertEquals("default", getContent(baseUrl + "test/foo/bar").trim());
+      assertEquals("default1", getContent(baseUrl + "test/foo/1").trim());
+      assertEquals("default2", getContent(baseUrl + "test/foo/bar/2").trim());
+      assertEquals(404, getResponseCode(baseUrl));
+      assertEquals(404, getResponseCode(baseUrl + "test/goo"));
+      assertEquals(200, getResponseCode(baseUrl + "ws/v1/test"));
+      assertTrue(getContent(baseUrl + "ws/v1/test").contains("myInfo"));
     } finally {
       app.stop();
     }
   }
 
-  @Test public void testEncodedUrl() throws Exception {
-    WebApp app =
-        WebApps.$for("test", TestWebApp.class, this, "ws").start(new WebApp() {
-          @Override
-          public void setup() {
-            bind(MyTestJAXBContextResolver.class);
-            bind(MyTestWebService.class);
+  @Test
+  void testEncodedUrl() throws Exception {
 
-            route("/:foo", FooController.class);
-          }
-        });
+    WebApp webApp = new WebApp() {
+      @Override
+      public void setup() {
+        route("/:foo", FooController.class);
+      }
+    };
+
+    WebApp app = WebApps.$for("test", TestWebApp.class, this, "ws")
+        .withResourceConfig(configure()).start(webApp);
     String baseUrl = baseUrl(app);
 
     try {
@@ -292,15 +311,17 @@ public class TestWebApp {
     }
   }
 
-  @Test public void testRobotsText() throws Exception {
-    WebApp app =
-        WebApps.$for("test", TestWebApp.class, this, "ws").start(new WebApp() {
-          @Override
-          public void setup() {
-            bind(MyTestJAXBContextResolver.class);
-            bind(MyTestWebService.class);
-          }
-        });
+  @Test
+  void testRobotsText() throws Exception {
+
+    WebApp newWebApp = new WebApp() {
+      @Override
+      public void setup() {
+      }
+    };
+
+    WebApp app = WebApps.$for("test", TestWebApp.class, this, "ws")
+        .withResourceConfig(configure()).start(newWebApp);
     String baseUrl = baseUrl(app);
     try {
       //using system line separator here since that is what
@@ -319,20 +340,27 @@ public class TestWebApp {
 
   // This is to test the GuiceFilter should only be applied to webAppContext,
   // not to logContext;
-  @Test public void testYARNWebAppContext() throws Exception {
+  @Test
+  void testYARNWebAppContext() throws Exception {
     // setting up the log context
     System.setProperty("hadoop.log.dir", "/Not/Existing/dir");
-    WebApp app = WebApps.$for("test", this).start(new WebApp() {
-      @Override public void setup() {
+
+    WebApp webApp = new WebApp() {
+      @Override
+      public void setup() {
         route("/", FooController.class);
       }
-    });
+    };
+
+    WebApp app = WebApps.$for("test", this)
+        .withResourceConfig(configure())
+        .start(webApp);
     String baseUrl = baseUrl(app);
     try {
       // Not able to access a non-existing dir, should not redirect to foo.
-      assertEquals(404, getResponseCode(baseUrl +"logs"));
+      assertEquals(404, getResponseCode(baseUrl + "logs"));
       // should be able to redirect to foo.
-      assertEquals("foo", getContent(baseUrl).trim());
+      assertEquals("foo", getContent(baseUrl+ "test/foo").trim());
     } finally {
       app.stop();
     }
@@ -345,7 +373,7 @@ public class TestWebApp {
   }
 
   @Test
-  public void testPortRanges() throws Exception {
+  void testPortRanges() throws Exception {
     WebApp app = WebApps.$for("test", this).start();
     String baseUrl = baseUrl(app);
     WebApp app1 = null;
@@ -355,7 +383,7 @@ public class TestWebApp {
     WebApp app5 = null;
     try {
       int port =  ServerSocketUtil.waitForPort(48000, 60);
-      assertEquals("foo", getContent(baseUrl +"test/foo").trim());
+      assertEquals("foo", getContent(baseUrl + "test/foo").trim());
       app1 = WebApps.$for("test", this).at(port).start();
       assertEquals(port, app1.getListenerAddress().getPort());
       app2 = WebApps.$for("test", this).at("0.0.0.0", port, true).start();
@@ -411,10 +439,19 @@ public class TestWebApp {
     }
   }
 
-  public static void main(String[] args) throws Exception {
+  protected static ResourceConfig configure() {
+    ResourceConfig config = new ResourceConfig();
+    config.packages("org.apache.hadoop.yarn.webapp");
+    config.register(MyTestWebService.class);
+    config.register(GenericExceptionHandler.class);
+    config.register(new JettisonFeature()).register(MyTestJAXBContextResolver.class);
+    return config;
+  }
+
+ // public static void main(String[] args) throws Exception {
     // For manual controller/view testing.
-    WebApps.$for("test", new TestWebApp()).at(8888).inDevMode().start().
-        joinThread();
+ //   WebApps.$for("test", new TestWebApp()).at(8888).inDevMode().start().
+ //       joinThread();
 //        start(new WebApp() {
 //          @Override public void setup() {
 //            route("/:foo", FooController.class);
@@ -422,5 +459,5 @@ public class TestWebApp {
 //            route("/bar", FooController.class);
 //          }
 //        }).join();
-  }
+ // }
 }

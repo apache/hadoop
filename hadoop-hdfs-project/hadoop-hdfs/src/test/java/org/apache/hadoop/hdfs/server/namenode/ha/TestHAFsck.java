@@ -17,11 +17,15 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
+import java.util.Arrays;
+
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.Parameter;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.slf4j.event.Level;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -32,15 +36,31 @@ import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.tools.DFSck;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.ToolRunner;
-import org.slf4j.event.Level;
-import org.junit.Test;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+@ParameterizedClass(name = "ProxyProvider: {0}")
+@MethodSource("data")
 public class TestHAFsck {
   
   static {
     GenericTestUtils.setLogLevel(DFSUtil.LOG, Level.TRACE);
   }
-  
+
+  @Parameter(0)
+  private String proxyProvider;
+
+  public String getProxyProvider() {
+    return proxyProvider;
+  }
+
+  public static Iterable<Object[]> data() {
+    return Arrays.asList(new Object[][]
+        {{ConfiguredFailoverProxyProvider.class.getName()},
+        {RequestHedgingProxyProvider.class.getName()}});
+  }
+
   /**
    * Test that fsck still works with HA enabled.
    */
@@ -65,9 +85,9 @@ public class TestHAFsck {
       cluster.transitionToActive(0);
       
       // Make sure conf has the relevant HA configs.
-      HATestUtil.setFailoverConfigurations(cluster, conf, "ha-nn-uri-0", 0);
+      HATestUtil.setFailoverConfigurations(cluster, conf, "ha-nn-uri-0", getProxyProvider(), 0);
       
-      fs = HATestUtil.configureFailoverFs(cluster, conf);
+      fs = FileSystem.get(conf);
       fs.mkdirs(new Path("/test1"));
       fs.mkdirs(new Path("/test2"));
       

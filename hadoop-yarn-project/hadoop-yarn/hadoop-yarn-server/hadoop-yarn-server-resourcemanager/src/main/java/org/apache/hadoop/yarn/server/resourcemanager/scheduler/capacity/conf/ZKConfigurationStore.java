@@ -64,6 +64,7 @@ public class ZKConfigurationStore extends YarnConfigurationStore {
   private static final String CONF_VERSION_PATH = "CONF_VERSION";
   private static final String NODEEXISTS_MSG = "Encountered NodeExists error."
       + " Skipping znode creation since another RM has already created it";
+  private String znodeParentPath;
   private String zkVersionPath;
   private String logsPath;
   private String confStorePath;
@@ -78,7 +79,7 @@ public class ZKConfigurationStore extends YarnConfigurationStore {
       RMContext rmContext) throws Exception {
     this.conf = config;
 
-    String znodeParentPath = conf.get(
+    this.znodeParentPath = conf.get(
         YarnConfiguration.RM_SCHEDCONF_STORE_ZK_PARENT_PATH,
         YarnConfiguration.DEFAULT_RM_SCHEDCONF_STORE_ZK_PARENT_PATH);
 
@@ -144,7 +145,7 @@ public class ZKConfigurationStore extends YarnConfigurationStore {
 
   @Override
   public void format() throws Exception {
-    zkManager.delete(confStorePath);
+    zkManager.delete(znodeParentPath);
   }
 
   @Override

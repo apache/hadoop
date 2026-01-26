@@ -18,9 +18,11 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.com.nec;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertFalse;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyChar;
@@ -39,26 +41,21 @@ import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.Shell.CommandExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.api.deviceplugin.Device;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 /**
  * Unit tests for VEDeviceDiscoverer class.
  *
  */
-@RunWith(MockitoJUnitRunner.class)
+@ExtendWith(MockitoExtension.class)
 public class TestVEDeviceDiscoverer {
   private static final Comparator<Device> DEVICE_COMPARATOR =
       Comparator.comparingInt(Device::getId);
-
-  @Rule
-  public ExpectedException expected = ExpectedException.none();
 
   @Mock
   private UdevUtil udevUtil;
@@ -69,7 +66,7 @@ public class TestVEDeviceDiscoverer {
   private String testFolder;
   private VEDeviceDiscoverer discoverer;
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException {
     Function<String[], CommandExecutor> commandExecutorProvider =
         (String[] cmd) -> mockCommandExecutor;
@@ -78,7 +75,7 @@ public class TestVEDeviceDiscoverer {
     setupTestDirectory();
   }
 
-  @After
+  @AfterEach
   public void teardown() throws IOException {
     if (testFolder != null) {
       File f = new File(testFolder);
@@ -96,13 +93,13 @@ public class TestVEDeviceDiscoverer {
 
     Set<Device> devices = discoverer.getDevicesFromPath(testFolder);
 
-    assertEquals("Number of devices", 1, devices.size());
+    assertEquals(1, devices.size(), "Number of devices");
     Device device = devices.iterator().next();
-    assertEquals("Device ID", 0, device.getId());
-    assertEquals("Major number", 8, device.getMajorNumber());
-    assertEquals("Minor number", 1, device.getMinorNumber());
-    assertEquals("Status", "ONLINE", device.getStatus());
-    assertTrue("Device is not healthy", device.isHealthy());
+    assertEquals(0, device.getId(), "Device ID");
+    assertEquals(8, device.getMajorNumber(), "Major number");
+    assertEquals(1, device.getMinorNumber(), "Minor number");
+    assertEquals("ONLINE", device.getStatus(), "Status");
+    assertTrue(device.isHealthy(), "Device is not healthy");
   }
 
   @Test
@@ -119,30 +116,30 @@ public class TestVEDeviceDiscoverer {
 
     Set<Device> devices = discoverer.getDevicesFromPath(testFolder);
 
-    assertEquals("Number of devices", 3, devices.size());
+    assertEquals(3, devices.size(), "Number of devices");
     List<Device> devicesList = Lists.newArrayList(devices);
     devicesList.sort(DEVICE_COMPARATOR);
 
     Device device0 = devicesList.get(0);
-    assertEquals("Device ID", 0, device0.getId());
-    assertEquals("Major number", 8, device0.getMajorNumber());
-    assertEquals("Minor number", 1, device0.getMinorNumber());
-    assertEquals("Status", "ONLINE", device0.getStatus());
-    assertTrue("Device is not healthy", device0.isHealthy());
+    assertEquals(0, device0.getId(), "Device ID");
+    assertEquals(8, device0.getMajorNumber(), "Major number");
+    assertEquals(1, device0.getMinorNumber(), "Minor number");
+    assertEquals("ONLINE", device0.getStatus(), "Status");
+    assertTrue(device0.isHealthy(), "Device is not healthy");
 
     Device device1 = devicesList.get(1);
-    assertEquals("Device ID", 1, device1.getId());
-    assertEquals("Major number", 9, device1.getMajorNumber());
-    assertEquals("Minor number", 1, device1.getMinorNumber());
-    assertEquals("Status", "ONLINE", device1.getStatus());
-    assertTrue("Device is not healthy", device1.isHealthy());
+    assertEquals(1, device1.getId(), "Device ID");
+    assertEquals(9, device1.getMajorNumber(), "Major number");
+    assertEquals(1, device1.getMinorNumber(), "Minor number");
+    assertEquals("ONLINE", device1.getStatus(), "Status");
+    assertTrue(device1.isHealthy(), "Device is not healthy");
 
     Device device2 = devicesList.get(2);
-    assertEquals("Device ID", 2, device2.getId());
-    assertEquals("Major number", 10, device2.getMajorNumber());
-    assertEquals("Minor number", 1, device2.getMinorNumber());
-    assertEquals("Status", "ONLINE", device2.getStatus());
-    assertTrue("Device is not healthy", device2.isHealthy());
+    assertEquals(2, device2.getId(), "Device ID");
+    assertEquals(10, device2.getMajorNumber(), "Major number");
+    assertEquals(1, device2.getMinorNumber(), "Minor number");
+    assertEquals("ONLINE", device2.getStatus(), "Status");
+    assertTrue(device2.isHealthy(), "Device is not healthy");
   }
 
   @Test
@@ -155,13 +152,13 @@ public class TestVEDeviceDiscoverer {
 
     Set<Device> devices = discoverer.getDevicesFromPath(testFolder);
 
-    assertEquals("Number of devices", 1, devices.size());
+    assertEquals(1, devices.size(), "Number of devices");
     Device device = devices.iterator().next();
-    assertEquals("Device ID", 0, device.getId());
-    assertEquals("Major number", 8, device.getMajorNumber());
-    assertEquals("Minor number", 1, device.getMinorNumber());
-    assertEquals("Status", "Unknown (-1)", device.getStatus());
-    assertFalse("Device should not be healthy", device.isHealthy());
+    assertEquals(0, device.getId(), "Device ID");
+    assertEquals(8, device.getMajorNumber(), "Major number");
+    assertEquals(1, device.getMinorNumber(), "Minor number");
+    assertEquals("Unknown (-1)", device.getStatus(), "Status");
+    assertFalse(device.isHealthy(), "Device should not be healthy");
   }
 
   @Test
@@ -174,13 +171,13 @@ public class TestVEDeviceDiscoverer {
 
     Set<Device> devices = discoverer.getDevicesFromPath(testFolder);
 
-    assertEquals("Number of devices", 1, devices.size());
+    assertEquals(1, devices.size(), "Number of devices");
     Device device = devices.iterator().next();
-    assertEquals("Device ID", 0, device.getId());
-    assertEquals("Major number", 8, device.getMajorNumber());
-    assertEquals("Minor number", 1, device.getMinorNumber());
-    assertEquals("Status", "Unknown (5)", device.getStatus());
-    assertFalse("Device should not be healthy", device.isHealthy());
+    assertEquals(0, device.getId(), "Device ID");
+    assertEquals(8, device.getMajorNumber(), "Major number");
+    assertEquals(1, device.getMinorNumber(), "Minor number");
+    assertEquals("Unknown (5)", device.getStatus(), "Status");
+    assertFalse(device.isHealthy(), "Device should not be healthy");
   }
 
   @Test
@@ -201,16 +198,16 @@ public class TestVEDeviceDiscoverer {
     devicesList.sort(DEVICE_COMPARATOR);
 
     Device device0 = devicesList.get(0);
-    assertEquals("Major number", 16, device0.getMajorNumber());
-    assertEquals("Minor number", 1, device0.getMinorNumber());
+    assertEquals(16, device0.getMajorNumber(), "Major number");
+    assertEquals(1, device0.getMinorNumber(), "Minor number");
 
     Device device1 = devicesList.get(1);
-    assertEquals("Major number", 29, device1.getMajorNumber());
-    assertEquals("Minor number", 2, device1.getMinorNumber());
+    assertEquals(29, device1.getMajorNumber(), "Major number");
+    assertEquals(2, device1.getMinorNumber(), "Minor number");
 
     Device device2 = devicesList.get(2);
-    assertEquals("Major number", 4, device2.getMajorNumber());
-    assertEquals("Minor number", 60, device2.getMinorNumber());
+    assertEquals(4, device2.getMajorNumber(), "Major number");
+    assertEquals(60, device2.getMinorNumber(), "Minor number");
   }
 
   @Test
@@ -231,24 +228,24 @@ public class TestVEDeviceDiscoverer {
 
     Set<Device> devices = discoverer.getDevicesFromPath(testFolder);
 
-    assertEquals("Number of devices", 1, devices.size());
+    assertEquals(1, devices.size(), "Number of devices");
     Device device = devices.iterator().next();
-    assertEquals("Device ID", 0, device.getId());
-    assertEquals("Major number", 8, device.getMajorNumber());
-    assertEquals("Minor number", 1, device.getMinorNumber());
-    assertEquals("Status", "ONLINE", device.getStatus());
-    assertTrue("Device is not healthy", device.isHealthy());
+    assertEquals(0, device.getId(), "Device ID");
+    assertEquals(8, device.getMajorNumber(), "Major number");
+    assertEquals(1, device.getMinorNumber(), "Minor number");
+    assertEquals("ONLINE", device.getStatus(), "Status");
+    assertTrue(device.isHealthy(), "Device is not healthy");
   }
 
   @Test
   public void testNonBlockOrCharFilesAreRejected() throws IOException {
-    expected.expect(IllegalArgumentException.class);
-    expected.expectMessage("File is neither a char nor block device");
-    createVeSlotFile(0);
-    when(mockCommandExecutor.getOutput()).thenReturn(
-        "0:0:regular file");
-
-    discoverer.getDevicesFromPath(testFolder);
+    IllegalArgumentException exception =
+          assertThrows(IllegalArgumentException.class, () -> {
+            createVeSlotFile(0);
+            when(mockCommandExecutor.getOutput()).thenReturn("0:0:regular file");
+            discoverer.getDevicesFromPath(testFolder);
+          });
+    assertThat(exception.getMessage()).contains("File is neither a char nor block device");
   }
 
   private void setupTestDirectory() throws IOException {

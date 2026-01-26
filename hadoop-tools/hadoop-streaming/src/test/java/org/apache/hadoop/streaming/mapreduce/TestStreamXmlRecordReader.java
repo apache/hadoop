@@ -18,12 +18,13 @@
 
 package org.apache.hadoop.streaming.mapreduce;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
@@ -37,9 +38,9 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * This class tests StreamXmlRecordReader The test creates an XML file, uses
@@ -88,21 +89,21 @@ public class TestStreamXmlRecordReader {
     String contents = null;
     try {
       in.readFully(in.getPos(), buf);
-      contents = new String(buf, "UTF-8");
+      contents = new String(buf, StandardCharsets.UTF_8);
     } finally {
       in.close();
     }
     return contents;
   }
 
-  @Before
+  @BeforeEach
   public void createInput() throws IOException {
     FileOutputStream out = new FileOutputStream(INPUT_FILE.getAbsoluteFile());
     String dummyXmlStartTag = "<PATTERN>\n";
     String dummyXmlEndTag = "</PATTERN>\n";
-    out.write(dummyXmlStartTag.getBytes("UTF-8"));
-    out.write(input.getBytes("UTF-8"));
-    out.write(dummyXmlEndTag.getBytes("UTF-8"));
+    out.write(dummyXmlStartTag.getBytes(StandardCharsets.UTF_8));
+    out.write(input.getBytes(StandardCharsets.UTF_8));
+    out.write(dummyXmlEndTag.getBytes(StandardCharsets.UTF_8));
     out.close();
   }
 
@@ -136,7 +137,7 @@ public class TestStreamXmlRecordReader {
 
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     fs.delete(OUTPUT_DIR, true);
   }

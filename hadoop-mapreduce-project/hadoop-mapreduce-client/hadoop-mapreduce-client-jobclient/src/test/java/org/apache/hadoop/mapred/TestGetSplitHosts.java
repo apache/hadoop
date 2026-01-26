@@ -20,8 +20,8 @@ package org.apache.hadoop.mapred;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.net.NetworkTopology;
 
-import org.junit.Test;
-import static org.junit.Assert.assertTrue;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestGetSplitHosts {
   @Test

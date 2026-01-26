@@ -21,13 +21,13 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 
 /** Tests for block generation via {@link GenerateBlockImagesDriver}. */
@@ -40,7 +40,7 @@ public class TestBlockGen {
   private static final String BLOCK_LIST_OUTPUT_DIR_NAME = "blockLists";
   private Path tmpPath;
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     Configuration conf = new Configuration();
     dfsCluster = new MiniDFSCluster.Builder(conf).build();
@@ -57,7 +57,7 @@ public class TestBlockGen {
         new Path(tmpPath, FS_IMAGE_NAME));
   }
 
-  @After
+  @AfterEach
   public void cleanUp() {
     dfsCluster.shutdown();
   }

@@ -131,5 +131,7 @@ public interface MRConfig {
   String MASTER_WEBAPP_UI_ACTIONS_ENABLED =
       "mapreduce.webapp.ui-actions.enabled";
   boolean DEFAULT_MASTER_WEBAPP_UI_ACTIONS_ENABLED = true;
+  String MULTIPLE_OUTPUTS_CLOSE_THREAD_COUNT = "mapreduce.multiple-outputs-close-threads";
+  int DEFAULT_MULTIPLE_OUTPUTS_CLOSE_THREAD_COUNT = 10;
 }
   

@@ -36,7 +36,7 @@ public class TestYarnConfigurationFields extends TestConfigurationFieldsBase {
   @SuppressWarnings({"deprecation", "methodlength"})
   @Override
   public void initializeMemberVariables() {
-    xmlFilename = new String("yarn-default.xml");
+    xmlFilename = "yarn-default.xml";
     configurationClasses = new Class[] { YarnConfiguration.class };
 
     // Allocate for usage
@@ -142,7 +142,6 @@ public class TestYarnConfigurationFields extends TestConfigurationFieldsBase {
         .add(YarnConfiguration.RM_SYSTEM_METRICS_PUBLISHER_ENABLED);
 
     // skip deprecated ZooKeeper settings
-    configurationPropsToSkipCompare.add(YarnConfiguration.RM_ZK_ADDRESS);
     configurationPropsToSkipCompare.add(YarnConfiguration.RM_ZK_NUM_RETRIES);
     configurationPropsToSkipCompare.add(YarnConfiguration.RM_ZK_TIMEOUT_MS);
     configurationPropsToSkipCompare.add(
@@ -223,6 +222,20 @@ public class TestYarnConfigurationFields extends TestConfigurationFieldsBase {
         "yarn.log-aggregation.file-controller.TFile.class");
     // Add the filters used for checking for collision of default values.
     initDefaultValueCollisionCheck();
+
+    configurationPropsToSkipCompare.add(YarnConfiguration.LOG_AGGREGATION_REMOTE_APP_LOG_DIR_FMT);
+    configurationPropsToSkipCompare.add(
+        YarnConfiguration.LOG_AGGREGATION_REMOTE_APP_LOG_DIR_SUFFIX_FMT);
+    configurationPropsToSkipCompare.add(YarnConfiguration.LOG_AGGREGATION_FILE_CONTROLLER_FMT);
+    configurationPropsToSkipCompare.add(YarnConfiguration.NM_AUX_SERVICE_FMT);
+    configurationPropsToSkipCompare.add(
+        YarnConfiguration.NM_HEALTH_CHECK_SCRIPT_TIMEOUT_MS_TEMPLATE);
+    configurationPropsToSkipCompare.add(YarnConfiguration.NM_HEALTH_CHECK_SCRIPT_OPTS_TEMPLATE);
+    configurationPropsToSkipCompare.add(YarnConfiguration.NM_HEALTH_CHECK_SCRIPT_PATH_TEMPLATE);
+    configurationPropsToSkipCompare.add(
+        YarnConfiguration.NM_HEALTH_CHECK_SCRIPT_INTERVAL_MS_TEMPLATE);
+    configurationPropsToSkipCompare.add(YarnConfiguration.NM_AUX_SERVICE_REMOTE_CLASSPATH);
+    configurationPropsToSkipCompare.add(YarnConfiguration.LINUX_CONTAINER_RUNTIME_CLASS_FMT);
   }
 
   /**

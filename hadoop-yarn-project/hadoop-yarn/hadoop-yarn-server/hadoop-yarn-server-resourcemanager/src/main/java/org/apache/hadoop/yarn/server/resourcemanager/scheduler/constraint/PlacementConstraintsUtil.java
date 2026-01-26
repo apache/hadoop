@@ -347,7 +347,7 @@ public final class PlacementConstraintsUtil {
    * @param atm allocation tags manager
    * @param dcOpt optional diagnostics collector
    * @return true if the given node satisfies the constraint of the request
-   * @throws InvalidAllocationTagsQueryException
+   * @throws InvalidAllocationTagsQueryException if given string is not in valid format.
    */
   public static boolean canSatisfyConstraints(ApplicationId applicationId,
       SchedulingRequest request, SchedulerNode schedulerNode,

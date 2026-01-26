@@ -90,6 +90,22 @@ public class YarnClusterMetricsPBImpl extends YarnClusterMetrics {
   }
 
   @Override
+  public int getNumDecommissioningNodeManagers() {
+    YarnClusterMetricsProtoOrBuilder p = viaProto ? proto : builder;
+    if (p.hasNumDecommissioningNms()) {
+      return (p.getNumDecommissioningNms());
+    }
+    return 0;
+  }
+
+  @Override
+  public void
+      setNumDecommissioningNodeManagers(int numDecommissioningNodeManagers) {
+    maybeInitBuilder();
+    builder.setNumDecommissioningNms(numDecommissioningNodeManagers);
+  }
+
+  @Override
   public int getNumDecommissionedNodeManagers() {
     YarnClusterMetricsProtoOrBuilder p = viaProto ? proto : builder;
     if (p.hasNumDecommissionedNms()) {
@@ -164,5 +180,20 @@ public class YarnClusterMetricsPBImpl extends YarnClusterMetrics {
   public void setNumRebootedNodeManagers(int numRebootedNodeManagers) {
     maybeInitBuilder();
     builder.setNumRebootedNms((numRebootedNodeManagers));
+  }
+
+  @Override
+  public int getNumShutdownNodeManagers() {
+    YarnClusterMetricsProtoOrBuilder p = viaProto ? proto : builder;
+    if (p.hasNumShutdownNms()) {
+      return (p.getNumShutdownNms());
+    }
+    return 0;
+  }
+
+  @Override
+  public void setNumShutdownNodeManagers(int numShutdownNodeManagers) {
+    maybeInitBuilder();
+    builder.setNumShutdownNms(numShutdownNodeManagers);
   }
 }

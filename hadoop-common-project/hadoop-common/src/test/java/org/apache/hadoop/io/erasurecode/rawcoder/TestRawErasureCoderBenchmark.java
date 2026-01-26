@@ -17,9 +17,10 @@
  */
 package org.apache.hadoop.io.erasurecode.rawcoder;
 
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
+
 import org.apache.hadoop.io.erasurecode.ErasureCodeNative;
-import org.junit.Assume;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for the raw erasure coder benchmark tool.
@@ -55,7 +56,7 @@ public class TestRawErasureCoderBenchmark {
 
   @Test
   public void testISALCoder() throws Exception {
-    Assume.assumeTrue(ErasureCodeNative.isNativeCodeLoaded());
+    assumeTrue(ErasureCodeNative.isNativeCodeLoaded());
     // ISA-L coder
     RawErasureCoderBenchmark.performBench("encode",
         RawErasureCoderBenchmark.CODER.ISAL_CODER, 5, 300, 64);

@@ -271,9 +271,11 @@ public class NodeAttributesManagerImpl extends NodeAttributesManager {
   }
 
   /**
-   * @param nodeAttributeMapping
-   * @param newAttributesToBeAdded
-   * @param isRemoveOperation : to indicate whether its a remove operation.
+   * Validate for attributes.
+   *
+   * @param nodeAttributeMapping NodeAttribute Mapping
+   * @param newAttributesToBeAdded new Attributes ToBeAdded
+   * @param isRemoveOperation : to indicate whether it's a remove operation.
    * @return Map of String to Map of NodeAttribute to AttributeValue
    * @throws IOException : on invalid mapping in the current request or against
    *           already existing NodeAttributes.
@@ -328,12 +330,13 @@ public class NodeAttributesManagerImpl extends NodeAttributesManager {
   }
 
   /**
+   * Validate For AttributeType Mismatch.
    *
-   * @param isRemoveOperation
-   * @param attribute
-   * @param newAttributes
-   * @return Whether its a new Attribute added
-   * @throws IOException
+   * @param isRemoveOperation to indicate whether it's a remove operation.
+   * @param attribute NodeAttribute.
+   * @param newAttributes new Attributes.
+   * @return Whether it's a new Attribute added
+   * @throws IOException an I/O exception of some sort has occurred.
    */
   private boolean validateForAttributeTypeMismatch(boolean isRemoveOperation,
       NodeAttribute attribute,
@@ -610,7 +613,7 @@ public class NodeAttributesManagerImpl extends NodeAttributesManager {
     }
 
     public Host(String hostName) {
-      this(hostName, new HashMap<NodeAttribute, AttributeValue>());
+      this(hostName, new ConcurrentHashMap<NodeAttribute, AttributeValue>());
     }
 
     public Host(String hostName,
@@ -738,7 +741,14 @@ public class NodeAttributesManagerImpl extends NodeAttributesManager {
     if (host == null || host.attributes == null) {
       return;
     }
-    newNodeToAttributesMap.put(hostName, host.attributes.keySet());
+    // Use read lock and create defensive copy since
+    // other threads might access host.attributes
+    readLock.lock();
+    try {
+      newNodeToAttributesMap.put(hostName, new HashSet<>(host.attributes.keySet()));
+    } finally {
+      readLock.unlock();
+    }
 
     // Notify RM
     if (rmContext != null && rmContext.getDispatcher() != null) {

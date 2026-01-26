@@ -159,9 +159,9 @@ public abstract class AbstractRequestInterceptor implements
    * @return the NMSS instance
    */
   public NMStateStoreService getNMStateStore() {
-    if (this.appContext == null || this.appContext.getNMCotext() == null) {
+    if (this.appContext == null || this.appContext.getNMContext() == null) {
       return null;
     }
-    return this.appContext.getNMCotext().getNMStateStore();
+    return this.appContext.getNMContext().getNMStateStore();
   }
 }

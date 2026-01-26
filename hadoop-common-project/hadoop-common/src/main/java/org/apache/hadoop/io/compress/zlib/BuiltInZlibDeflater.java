@@ -57,7 +57,7 @@ public class BuiltInZlibDeflater extends Deflater implements Compressor {
   /**
    * reinit the compressor with the given configuration. It will reset the
    * compressor's compression level and compression strategy. Different from
-   * <tt>ZlibCompressor</tt>, <tt>BuiltInZlibDeflater</tt> only support three
+   * <code>ZlibCompressor</code>, <code>BuiltInZlibDeflater</code> only support three
    * kind of compression strategy: FILTERED, HUFFMAN_ONLY and DEFAULT_STRATEGY.
    * It will use DEFAULT_STRATEGY as default if the configured compression
    * strategy is not supported.

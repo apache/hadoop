@@ -30,6 +30,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -65,7 +66,6 @@ import org.apache.hadoop.util.Lists;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 
 /**
  * Negotiates SASL for DataTransferProtocol on behalf of a client.  There are
@@ -347,7 +347,7 @@ public class SaslDataTransferClient {
     return encryptionKey.keyId + NAME_DELIMITER +
         encryptionKey.blockPoolId + NAME_DELIMITER +
         new String(Base64.encodeBase64(encryptionKey.nonce, false),
-            Charsets.UTF_8);
+            StandardCharsets.UTF_8);
   }
 
   /**
@@ -450,7 +450,7 @@ public class SaslDataTransferClient {
   private void updateToken(Token<BlockTokenIdentifier> accessToken,
       SecretKey secretKey, Map<String, String> saslProps)
       throws IOException {
-    byte[] newSecret = saslProps.get(Sasl.QOP).getBytes(Charsets.UTF_8);
+    byte[] newSecret = saslProps.get(Sasl.QOP).getBytes(StandardCharsets.UTF_8);
     BlockTokenIdentifier bkid = accessToken.decodeIdentifier();
     bkid.setHandshakeMsg(newSecret);
     byte[] bkidBytes = bkid.getBytes();
@@ -471,7 +471,7 @@ public class SaslDataTransferClient {
    */
   private static String buildUserName(Token<BlockTokenIdentifier> blockToken) {
     return new String(Base64.encodeBase64(blockToken.getIdentifier(), false),
-        Charsets.UTF_8);
+        StandardCharsets.UTF_8);
   }
 
   /**
@@ -483,7 +483,7 @@ public class SaslDataTransferClient {
    */
   private char[] buildClientPassword(Token<BlockTokenIdentifier> blockToken) {
     return new String(Base64.encodeBase64(blockToken.getPassword(), false),
-        Charsets.UTF_8).toCharArray();
+        StandardCharsets.UTF_8).toCharArray();
   }
 
   /**
@@ -519,25 +519,25 @@ public class SaslDataTransferClient {
       // In which case there will be no encrypted secret sent from NN.
       BlockTokenIdentifier blockTokenIdentifier =
           accessToken.decodeIdentifier();
+      final byte[] first = sasl.createFirstMessage();
       if (blockTokenIdentifier != null) {
         byte[] handshakeSecret =
             accessToken.decodeIdentifier().getHandshakeMsg();
         if (handshakeSecret == null || handshakeSecret.length == 0) {
           LOG.debug("Handshake secret is null, "
               + "sending without handshake secret.");
-          sendSaslMessage(out, new byte[0]);
+          sendSaslMessage(out, first);
         } else {
           LOG.debug("Sending handshake secret.");
           BlockTokenIdentifier identifier = new BlockTokenIdentifier();
           identifier.readFields(new DataInputStream(
               new ByteArrayInputStream(accessToken.getIdentifier())));
           String bpid = identifier.getBlockPoolId();
-          sendSaslMessageHandshakeSecret(out, new byte[0],
-              handshakeSecret, bpid);
+          sendSaslMessageHandshakeSecret(out, first, handshakeSecret, bpid);
         }
       } else {
         LOG.debug("Block token id is null, sending without handshake secret.");
-        sendSaslMessage(out, new byte[0]);
+        sendSaslMessage(out, first);
       }
 
       // step 1
@@ -565,6 +565,7 @@ public class SaslDataTransferClient {
           cipherOptions.add(option);
         }
       }
+      LOG.debug("{}: cipherOptions={}", sasl, cipherOptions);
       sendSaslMessageAndNegotiationCipherOptions(out, localResponse,
           cipherOptions);
 

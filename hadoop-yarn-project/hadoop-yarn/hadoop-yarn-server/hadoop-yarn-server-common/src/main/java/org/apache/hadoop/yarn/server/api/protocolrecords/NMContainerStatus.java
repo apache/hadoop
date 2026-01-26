@@ -120,14 +120,18 @@ public abstract class NMContainerStatus {
   public abstract void setPriority(Priority priority);
 
   /**
-   * Get the time when the container is created
+   * Get the time when the container is created.
+   *
+   * @return CreationTime.
    */
   public abstract long getCreationTime();
 
   public abstract void setCreationTime(long creationTime);
   
   /**
-   * Get the node-label-expression in the original ResourceRequest
+   * Get the node-label-expression in the original ResourceRequest.
+   *
+   * @return NodeLabelExpression.
    */
   public abstract String getNodeLabelExpression();
 
@@ -167,6 +171,7 @@ public abstract class NMContainerStatus {
 
   /**
    * Get and set the Allocation tags associated with the container.
+   * @return Allocation tags.
    */
   public Set<String> getAllocationTags() {
     return Collections.emptySet();

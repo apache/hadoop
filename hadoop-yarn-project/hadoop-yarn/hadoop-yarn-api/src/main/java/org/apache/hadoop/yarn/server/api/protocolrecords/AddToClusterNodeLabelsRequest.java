@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.api.protocolrecords;
 import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.util.Records;
@@ -39,9 +40,38 @@ public abstract class AddToClusterNodeLabelsRequest {
 
   @Public
   @Unstable
+  public static AddToClusterNodeLabelsRequest newInstance(String subClusterId,
+      List<NodeLabel> nodeLabels) {
+    AddToClusterNodeLabelsRequest request = Records
+        .newRecord(AddToClusterNodeLabelsRequest.class);
+    request.setNodeLabels(nodeLabels);
+    request.setSubClusterId(subClusterId);
+    return request;
+  }
+
+  @Public
+  @Unstable
   public abstract void setNodeLabels(List<NodeLabel> nodeLabels);
 
   @Public
   @Unstable
   public abstract List<NodeLabel> getNodeLabels();
+
+  /**
+   * Get the subClusterId.
+   *
+   * @return subClusterId.
+   */
+  @Public
+  @InterfaceStability.Evolving
+  public abstract String getSubClusterId();
+
+  /**
+   * Set the subClusterId.
+   *
+   * @param subClusterId subCluster Id.
+   */
+  @Public
+  @InterfaceStability.Evolving
+  public abstract void setSubClusterId(String subClusterId);
 }

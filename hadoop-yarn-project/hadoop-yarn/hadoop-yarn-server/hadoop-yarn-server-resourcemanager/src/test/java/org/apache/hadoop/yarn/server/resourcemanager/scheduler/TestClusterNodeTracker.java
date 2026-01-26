@@ -30,11 +30,11 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSSchedulerNode;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Test class to verify ClusterNodeTracker. Using FSSchedulerNode without
@@ -44,13 +44,13 @@ public class TestClusterNodeTracker {
   private ClusterNodeTracker<FSSchedulerNode> nodeTracker;
   private ClusterMetrics metrics;
 
-  @Before
+  @BeforeEach
   public void setup() {
     metrics = ClusterMetrics.getMetrics();
     nodeTracker = new ClusterNodeTracker<>();
   }
 
-  @After
+  @AfterEach
   public void teardown() {
     ClusterMetrics.destroy();
   }
@@ -67,33 +67,33 @@ public class TestClusterNodeTracker {
   @Test
   public void testGetNodeCount() {
     addEight4x4Nodes();
-    assertEquals("Incorrect number of nodes in the cluster",
-        8, nodeTracker.nodeCount());
+    assertEquals(8, nodeTracker.nodeCount(),
+        "Incorrect number of nodes in the cluster");
 
-    assertEquals("Incorrect number of nodes in each rack",
-        4, nodeTracker.nodeCount("rack0"));
+    assertEquals(4, nodeTracker.nodeCount("rack0"),
+        "Incorrect number of nodes in each rack");
   }
 
   @Test
   public void testIncrCapability() {
     addEight4x4Nodes();
-    assertEquals("Cluster Capability Memory incorrect",
-        metrics.getCapabilityMB(), (4096 * 8));
-    assertEquals("Cluster Capability Vcores incorrect",
-        metrics.getCapabilityVirtualCores(), 4 * 8);
+    assertEquals(metrics.getCapabilityMB(), (4096 * 8),
+        "Cluster Capability Memory incorrect");
+    assertEquals(metrics.getCapabilityVirtualCores(), 4 * 8,
+        "Cluster Capability Vcores incorrect");
   }
 
   @Test
   public void testGetNodesForResourceName() throws Exception {
     addEight4x4Nodes();
-    assertEquals("Incorrect number of nodes matching ANY",
-        8, nodeTracker.getNodesByResourceName(ResourceRequest.ANY).size());
+    assertEquals(8, nodeTracker.getNodesByResourceName(ResourceRequest.ANY).size(),
+        "Incorrect number of nodes matching ANY");
 
-    assertEquals("Incorrect number of nodes matching rack",
-        4, nodeTracker.getNodesByResourceName("rack0").size());
+    assertEquals(4, nodeTracker.getNodesByResourceName("rack0").size(),
+        "Incorrect number of nodes matching rack");
 
-    assertEquals("Incorrect number of nodes matching node",
-        1, nodeTracker.getNodesByResourceName("host0").size());
+    assertEquals(1, nodeTracker.getNodesByResourceName("host0").size(),
+        "Incorrect number of nodes matching node");
   }
 
   @Test
@@ -113,8 +113,9 @@ public class TestClusterNodeTracker {
 
     Resource result = nodeTracker.getMaxAllowedAllocation();
 
-    assertEquals("With no nodes added, the ClusterNodeTracker did not return "
-        + "the configured max allocation", maximum, result);
+    assertEquals(maximum, result,
+        "With no nodes added, the ClusterNodeTracker did not return "
+        + "the configured max allocation");
 
     List<RMNode> smallNodes =
         MockNodes.newNodes(1, 1, Resource.newInstance(1024, 2,
@@ -133,52 +134,51 @@ public class TestClusterNodeTracker {
 
     result = nodeTracker.getMaxAllowedAllocation();
 
-    assertEquals("With a single node added, the ClusterNodeTracker did not "
-        + "return that node's resources as the maximum allocation",
-        mediumNodes.get(0).getTotalCapability(), result);
+    assertEquals(mediumNodes.get(0).getTotalCapability(), result,
+        "With a single node added, the ClusterNodeTracker did not "
+        + "return that node's resources as the maximum allocation");
 
     nodeTracker.addNode(smallNode);
 
     result = nodeTracker.getMaxAllowedAllocation();
 
-    assertEquals("With two nodes added, the ClusterNodeTracker did not "
+    assertEquals(Resource.newInstance(4096, 2, Collections.singletonMap("test1", 4L)),
+        result, "With two nodes added, the ClusterNodeTracker did not "
         + "return a the maximum allocation that was the max of their aggregate "
-        + "resources",
-        Resource.newInstance(4096, 2, Collections.singletonMap("test1", 4L)),
-        result);
+        + "resources");
 
     nodeTracker.removeNode(smallNode.getNodeID());
 
     result = nodeTracker.getMaxAllowedAllocation();
 
-    assertEquals("After removing a node, the ClusterNodeTracker did not "
-        + "recalculate the adjusted maximum allocation correctly",
-        mediumNodes.get(0).getTotalCapability(), result);
+    assertEquals(mediumNodes.get(0).getTotalCapability(), result,
+        "After removing a node, the ClusterNodeTracker did not "
+        + "recalculate the adjusted maximum allocation correctly");
 
     nodeTracker.addNode(largeNode);
 
     result = nodeTracker.getMaxAllowedAllocation();
 
-    assertEquals("With two nodes added, the ClusterNodeTracker did not "
+    assertEquals(Resource.newInstance(10240, 4, Collections.singletonMap("test1", 2L)),
+        result, "With two nodes added, the ClusterNodeTracker did not "
         + "return a the maximum allocation that was the max of their aggregate "
-        + "resources",
-        Resource.newInstance(10240, 4, Collections.singletonMap("test1", 2L)),
-        result);
+        + "resources");
 
     nodeTracker.removeNode(largeNode.getNodeID());
 
     result = nodeTracker.getMaxAllowedAllocation();
 
-    assertEquals("After removing a node, the ClusterNodeTracker did not "
-        + "recalculate the adjusted maximum allocation correctly",
-        mediumNodes.get(0).getTotalCapability(), result);
+    assertEquals(mediumNodes.get(0).getTotalCapability(), result,
+        "After removing a node, the ClusterNodeTracker did not "
+        + "recalculate the adjusted maximum allocation correctly");
 
     nodeTracker.removeNode(mediumNode.getNodeID());
 
     result = nodeTracker.getMaxAllowedAllocation();
 
-    assertEquals("After removing all nodes, the ClusterNodeTracker did not "
-        + "return the configured maximum allocation", maximum, result);
+    assertEquals(maximum, result,
+        "After removing all nodes, the ClusterNodeTracker did not "
+        + "return the configured maximum allocation");
 
     nodeTracker.addNode(smallNode);
     nodeTracker.addNode(mediumNode);
@@ -186,11 +186,10 @@ public class TestClusterNodeTracker {
 
     result = nodeTracker.getMaxAllowedAllocation();
 
-    assertEquals("With three nodes added, the ClusterNodeTracker did not "
+    assertEquals(Resource.newInstance(10240, 4, Collections.singletonMap("test1", 4L)),
+        result, "With three nodes added, the ClusterNodeTracker did not "
         + "return a the maximum allocation that was the max of their aggregate "
-        + "resources",
-        Resource.newInstance(10240, 4, Collections.singletonMap("test1", 4L)),
-        result);
+        + "resources");
 
     nodeTracker.removeNode(smallNode.getNodeID());
     nodeTracker.removeNode(mediumNode.getNodeID());
@@ -198,7 +197,7 @@ public class TestClusterNodeTracker {
 
     result = nodeTracker.getMaxAllowedAllocation();
 
-    assertEquals("After removing all nodes, the ClusterNodeTracker did not "
-        + "return the configured maximum allocation", maximum, result);
+    assertEquals(maximum, result, "After removing all nodes, the ClusterNodeTracker did not "
+        + "return the configured maximum allocation");
   }
 }

@@ -15,6 +15,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+/**
+ * Various native IO-related calls not available in Java.  These
+ * functions should generally be used alongside a fallback to another
+ * more portable mechanism.
+ */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 package org.apache.hadoop.io.nativeio;

@@ -483,6 +483,7 @@ public class FSLeafQueue extends FSQueue {
   /**
    * TODO: Based on how frequently this is called, we might want to club
    * counting pending and active apps in the same method.
+   * @return active apps.
    */
   public int getNumActiveApps() {
     int numActiveApps = 0;

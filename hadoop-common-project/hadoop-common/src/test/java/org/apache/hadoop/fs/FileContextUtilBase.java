@@ -19,15 +19,15 @@ package org.apache.hadoop.fs;
 
 import static org.apache.hadoop.fs.FileContextTestHelper.readFile;
 import static org.apache.hadoop.fs.FileContextTestHelper.writeFile;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Arrays;
 
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.StringUtils;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.event.Level;
 
 /**
@@ -57,12 +57,12 @@ public abstract class FileContextUtilBase {
     }
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     fc.mkdir(fileContextTestHelper.getTestRootPath(fc), FileContext.DEFAULT_PERM, true);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (fc != null) {
       fc.delete(fileContextTestHelper.getTestRootPath(fc), true);
@@ -80,10 +80,10 @@ public abstract class FileContextUtilBase {
     fc.util().copy(file1, file2);
 
     // verify that newly copied file2 exists
-    assertTrue("Failed to copy file2  ", fc.util().exists(file2));
+    assertTrue(fc.util().exists(file2), "Failed to copy file2  ");
     // verify that file2 contains test string
-    assertTrue("Copied files does not match ",Arrays.equals(ts.getBytes(),
-        readFile(fc,file2,ts.getBytes().length)));
+    assertTrue(Arrays.equals(ts.getBytes(),
+         readFile(fc, file2, ts.getBytes().length)), "Copied files does not match ");
   }
 
   @Test
@@ -103,9 +103,9 @@ public abstract class FileContextUtilBase {
     fc.util().copy(dir1, dir2);
 
     // verify that newly copied file2 exists
-    assertTrue("Failed to copy file2  ", fc.util().exists(file2));
+    assertTrue(fc.util().exists(file2), "Failed to copy file2  ");
     // verify that file2 contains test string
-    assertTrue("Copied files does not match ",Arrays.equals(ts.getBytes(),
-        readFile(fc,file2,ts.getBytes().length)));
+    assertTrue(Arrays.equals(ts.getBytes(),
+        readFile(fc, file2, ts.getBytes().length)), "Copied files does not match ");
   }
 }

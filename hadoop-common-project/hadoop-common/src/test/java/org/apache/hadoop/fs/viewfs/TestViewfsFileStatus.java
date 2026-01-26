@@ -33,13 +33,15 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * The FileStatus is being serialized in MR as jobs are submitted.
@@ -51,13 +53,13 @@ public class TestViewfsFileStatus {
   private static final File TEST_DIR = GenericTestUtils.getTestDir(
       TestViewfsFileStatus.class.getSimpleName());
 
-  @Before
+  @BeforeEach
   public void setUp() {
     FileUtil.fullyDelete(TEST_DIR);
     assertTrue(TEST_DIR.mkdirs());
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     FileUtil.fullyDelete(TEST_DIR);
   }
@@ -83,9 +85,9 @@ public class TestViewfsFileStatus {
       FileStatus stat = vfs.getFileStatus(path);
       assertEquals(content.length, stat.getLen());
       ContractTestUtils.assertNotErasureCoded(vfs, path);
-      assertTrue(path + " should have erasure coding unset in " +
-          "FileStatus#toString(): " + stat,
-          stat.toString().contains("isErasureCoded=false"));
+      assertTrue(stat.toString().contains("isErasureCoded=false"),
+          path + " should have erasure coding unset in " +
+          "FileStatus#toString(): " + stat);
 
       // check serialization/deserialization
       DataOutputBuffer dob = new DataOutputBuffer();
@@ -180,7 +182,7 @@ public class TestViewfsFileStatus {
     Mockito.verify(mockFS).getFileChecksum(new Path("someFile"));
   }
 
-  @AfterClass
+  @AfterAll
   public static void cleanup() throws IOException {
     FileUtil.fullyDelete(TEST_DIR);
   }

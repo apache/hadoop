@@ -26,7 +26,6 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
 import java.security.NoSuchAlgorithmException;
-import java.security.Security;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
@@ -35,17 +34,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.crypto.CryptoUtils;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 
 import javax.crypto.KeyGenerator;
 
-import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_CRYPTO_JCE_PROVIDER_KEY;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_CRYPTO_JCEKS_KEY_SERIALFILTER;
 
 /**
@@ -410,10 +408,7 @@ public abstract class KeyProvider implements Closeable {
                       JCEKS_KEY_SERIALFILTER_DEFAULT);
       System.setProperty(JCEKS_KEY_SERIAL_FILTER, serialFilter);
     }
-    String jceProvider = conf.get(HADOOP_SECURITY_CRYPTO_JCE_PROVIDER_KEY);
-    if (BouncyCastleProvider.PROVIDER_NAME.equals(jceProvider)) {
-      Security.addProvider(new BouncyCastleProvider());
-    }
+    CryptoUtils.getJceProvider(conf);
   }
 
   /**
@@ -639,13 +634,14 @@ public abstract class KeyProvider implements Closeable {
   public abstract void flush() throws IOException;
 
   /**
-   * Split the versionName in to a base name. Converts "/aaa/bbb/3" to
+   * Split the versionName in to a base name. Converts "/aaa/bbb@3" to
    * "/aaa/bbb".
    * @param versionName the version name to split
    * @return the base name of the key
    * @throws IOException raised on errors performing I/O.
    */
   public static String getBaseName(String versionName) throws IOException {
+    Objects.requireNonNull(versionName, "VersionName cannot be null");
     int div = versionName.lastIndexOf('@');
     if (div == -1) {
       throw new IOException("No version in key path " + versionName);

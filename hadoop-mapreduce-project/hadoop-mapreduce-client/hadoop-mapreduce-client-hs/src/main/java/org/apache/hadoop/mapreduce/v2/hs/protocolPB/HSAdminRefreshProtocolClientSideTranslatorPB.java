@@ -22,7 +22,6 @@ import java.io.Closeable;
 import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
-import org.apache.hadoop.ipc.ProtobufHelper;
 import org.apache.hadoop.ipc.ProtocolMetaInterface;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RpcClientUtil;
@@ -34,7 +33,8 @@ import org.apache.hadoop.mapreduce.v2.hs.proto.HSAdminRefreshProtocolProtos.Refr
 import org.apache.hadoop.mapreduce.v2.hs.proto.HSAdminRefreshProtocolProtos.RefreshLogRetentionSettingsRequestProto;
 
 import org.apache.hadoop.thirdparty.protobuf.RpcController;
-import org.apache.hadoop.thirdparty.protobuf.ServiceException;
+
+import static org.apache.hadoop.ipc.internal.ShadedProtobufHelper.ipc;
 
 @Private
 public class HSAdminRefreshProtocolClientSideTranslatorPB implements
@@ -73,43 +73,27 @@ public class HSAdminRefreshProtocolClientSideTranslatorPB implements
 
   @Override
   public void refreshAdminAcls() throws IOException {
-    try {
-      rpcProxy.refreshAdminAcls(NULL_CONTROLLER,
-          VOID_REFRESH_ADMIN_ACLS_REQUEST);
-    } catch (ServiceException se) {
-      throw ProtobufHelper.getRemoteException(se);
-    }
+    ipc(() -> rpcProxy.refreshAdminAcls(NULL_CONTROLLER,
+        VOID_REFRESH_ADMIN_ACLS_REQUEST));
   }
 
 
   @Override
   public void refreshLoadedJobCache() throws IOException {
-    try {
-      rpcProxy.refreshLoadedJobCache(NULL_CONTROLLER,
-          VOID_REFRESH_LOADED_JOB_CACHE_REQUEST);
-    } catch (ServiceException se) {
-      throw ProtobufHelper.getRemoteException(se);
-    }
+    ipc(() -> rpcProxy.refreshLoadedJobCache(NULL_CONTROLLER,
+        VOID_REFRESH_LOADED_JOB_CACHE_REQUEST));
   }
   
   @Override
   public void refreshJobRetentionSettings() throws IOException {
-    try {
-      rpcProxy.refreshJobRetentionSettings(NULL_CONTROLLER,
-          VOID_REFRESH_JOB_RETENTION_SETTINGS_REQUEST);
-    } catch (ServiceException se) {
-      throw ProtobufHelper.getRemoteException(se);
-    }
+    ipc(() -> rpcProxy.refreshJobRetentionSettings(NULL_CONTROLLER,
+        VOID_REFRESH_JOB_RETENTION_SETTINGS_REQUEST));
   }
 
   @Override
   public void refreshLogRetentionSettings() throws IOException {
-    try {
-      rpcProxy.refreshLogRetentionSettings(NULL_CONTROLLER,
-          VOID_REFRESH_LOG_RETENTION_SETTINGS_REQUEST);
-    } catch (ServiceException se) {
-      throw ProtobufHelper.getRemoteException(se);
-    }
+    ipc(() -> rpcProxy.refreshLogRetentionSettings(NULL_CONTROLLER,
+        VOID_REFRESH_LOG_RETENTION_SETTINGS_REQUEST));
   }
 
   @Override

@@ -100,7 +100,10 @@ public final class IOStatisticsContextIntegration {
    * @return an instance of IOStatisticsContext.
    */
   private static IOStatisticsContext createNewInstance(Long key) {
-    return new IOStatisticsContextImpl(key, INSTANCE_ID.getAndIncrement());
+    IOStatisticsContextImpl instance =
+        new IOStatisticsContextImpl(key, INSTANCE_ID.getAndIncrement());
+    LOG.debug("Created instance {}", instance);
+    return instance;
   }
 
   /**
@@ -131,9 +134,11 @@ public final class IOStatisticsContextIntegration {
       IOStatisticsContext statisticsContext) {
     if (isThreadIOStatsEnabled) {
       if (statisticsContext == null) {
+        // new value is null, so remove it
         ACTIVE_IOSTATS_CONTEXT.removeForCurrentThread();
-      }
-      if (ACTIVE_IOSTATS_CONTEXT.getForCurrentThread() != statisticsContext) {
+      } else {
+        // the setter is efficient in that it does not create a new
+        // reference if the context is unchanged.
         ACTIVE_IOSTATS_CONTEXT.setForCurrentThread(statisticsContext);
       }
     }

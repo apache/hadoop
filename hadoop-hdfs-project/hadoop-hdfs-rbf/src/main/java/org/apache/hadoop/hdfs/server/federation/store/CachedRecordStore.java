@@ -100,7 +100,7 @@ public abstract class CachedRecordStore<R extends BaseRecord>
    * @throws StateStoreUnavailableException If the cache is not initialized.
    */
   private void checkCacheAvailable() throws StateStoreUnavailableException {
-    if (!this.initialized) {
+    if (!getDriver().isDriverReady() || !this.initialized) {
       throw new StateStoreUnavailableException(
           "Cached State Store not initialized, " +
           getRecordClass().getSimpleName() + " records not valid");
@@ -113,6 +113,7 @@ public abstract class CachedRecordStore<R extends BaseRecord>
     if (force || isUpdateTime()) {
       List<R> newRecords = null;
       long t = -1;
+      long startTime = Time.monotonicNow();
       try {
         QueryResult<R> result = getDriver().get(getRecordClass());
         newRecords = result.getRecords();
@@ -125,7 +126,6 @@ public abstract class CachedRecordStore<R extends BaseRecord>
       } catch (IOException e) {
         LOG.error("Cannot get \"{}\" records from the State Store",
             getRecordClass().getSimpleName());
-        this.initialized = false;
         return false;
       }
 
@@ -144,6 +144,7 @@ public abstract class CachedRecordStore<R extends BaseRecord>
       StateStoreMetrics metrics = getDriver().getMetrics();
       if (metrics != null) {
         String recordName = getRecordClass().getSimpleName();
+        metrics.setCacheLoading(recordName, Time.monotonicNow() - startTime);
         metrics.setCacheSize(recordName, this.records.size());
       }
 
@@ -181,24 +182,19 @@ public abstract class CachedRecordStore<R extends BaseRecord>
     for (R record : newRecords) {
       if (record.shouldBeDeleted(currentDriverTime)) {
         String recordName = StateStoreUtils.getRecordName(record.getClass());
-        if (getDriver().remove(record)) {
-          deleteRecords.add(record);
-          LOG.info("Deleted State Store record {}: {}", recordName, record);
-        } else {
-          LOG.warn("Couldn't delete State Store record {}: {}", recordName,
-              record);
-        }
-      } else if (record.checkExpired(currentDriverTime)) {
+        LOG.info("State Store record to delete {}: {}", recordName, record);
+        deleteRecords.add(record);
+      } else if (!record.isExpired() && record.checkExpired(currentDriverTime)) {
         String recordName = StateStoreUtils.getRecordName(record.getClass());
         LOG.info("Override State Store record {}: {}", recordName, record);
         commitRecords.add(record);
       }
     }
-    if (commitRecords.size() > 0) {
-      getDriver().putAll(commitRecords, true, false);
-    }
-    if (deleteRecords.size() > 0) {
-      newRecords.removeAll(deleteRecords);
+    List<R> removedRecords = getDriver().handleOverwriteAndDelete(commitRecords, deleteRecords);
+    // In driver async mode, driver will return null and skip the next block.
+    // newRecords might be stale as a result but will sort itself out the next override cycle.
+    if (removedRecords != null && !removedRecords.isEmpty()) {
+      newRecords.removeAll(removedRecords);
     }
   }
 

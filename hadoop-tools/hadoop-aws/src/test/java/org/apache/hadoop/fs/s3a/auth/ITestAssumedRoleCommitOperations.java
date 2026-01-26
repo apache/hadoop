@@ -20,6 +20,8 @@ package org.apache.hadoop.fs.s3a.auth;
 
 import java.io.IOException;
 
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,6 +32,7 @@ import org.apache.hadoop.fs.s3a.commit.ITestCommitOperations;
 
 import static org.apache.hadoop.fs.s3a.Constants.ASSUMED_ROLE_ARN;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.assume;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.disableCreateSession;
 import static org.apache.hadoop.fs.s3a.auth.RoleModel.*;
 import static org.apache.hadoop.fs.s3a.auth.RolePolicies.*;
 import static org.apache.hadoop.fs.s3a.auth.RoleTestUtils.*;
@@ -54,6 +57,12 @@ public class ITestAssumedRoleCommitOperations extends ITestCommitOperations {
   private S3AFileSystem roleFS;
 
   @Override
+  protected Configuration createConfiguration() {
+    return disableCreateSession(super.createConfiguration());
+  }
+
+  @BeforeEach
+  @Override
   public void setup() throws Exception {
     super.setup();
     assumeRoleTests();
@@ -62,7 +71,8 @@ public class ITestAssumedRoleCommitOperations extends ITestCommitOperations {
     Configuration conf = newAssumedRoleConfig(getConfiguration(),
         getAssumedRoleARN());
     bindRolePolicyStatements(conf,
-        STATEMENT_ALLOW_SSE_KMS_RW,
+        STATEMENT_ALLOW_KMS_RW,
+        STATEMENT_S3EXPRESS,
         statement(true, S3_ALL_BUCKETS, S3_BUCKET_READ_OPERATIONS),
         new RoleModel.Statement(RoleModel.Effects.Allow)
             .addActions(S3_PATH_RW_OPERATIONS)
@@ -71,6 +81,7 @@ public class ITestAssumedRoleCommitOperations extends ITestCommitOperations {
     roleFS = (S3AFileSystem) restrictedDir.getFileSystem(conf);
   }
 
+  @AfterEach
   @Override
   public void teardown() throws Exception {
     cleanupWithLogger(LOG, roleFS);

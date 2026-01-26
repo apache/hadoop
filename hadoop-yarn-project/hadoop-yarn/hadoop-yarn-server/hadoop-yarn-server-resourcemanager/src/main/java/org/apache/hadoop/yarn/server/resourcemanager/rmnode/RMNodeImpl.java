@@ -35,7 +35,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
-import org.apache.commons.collections.keyvalue.DefaultMapEntry;
+import org.apache.commons.collections4.keyvalue.DefaultMapEntry;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.slf4j.Logger;
@@ -224,6 +224,9 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       .addTransition(NodeState.NEW, NodeState.DECOMMISSIONED,
           RMNodeEventType.DECOMMISSION,
           new DeactivateNodeTransition(NodeState.DECOMMISSIONED))
+      .addTransition(NodeState.NEW, NodeState.LOST,
+          RMNodeEventType.EXPIRE,
+          new DeactivateNodeTransition(NodeState.LOST))
       .addTransition(NodeState.NEW, NodeState.NEW,
           RMNodeEventType.FINISHED_CONTAINERS_PULLED_BY_AM,
           new AddContainersToBeRemovedFromNMTransition())
@@ -958,6 +961,16 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
         if (previousRMNode != null) {
           ClusterMetrics.getMetrics().decrDecommisionedNMs();
         }
+
+        // Check if the node was lost before
+        NodeId lostNodeId = NodesListManager.createLostNodeId(nodeId.getHost());
+        RMNode previousRMLostNode = rmNode.context.getInactiveRMNodes().remove(lostNodeId);
+        if (previousRMLostNode != null) {
+          // Remove the record of the lost node and update the metrics
+          rmNode.context.getRMNodes().remove(lostNodeId);
+          ClusterMetrics.getMetrics().decrNumLostNMs();
+        }
+
         containers = startEvent.getNMContainerStatuses();
         final Resource allocatedResource = Resource.newInstance(
             Resources.none());
@@ -1203,8 +1216,8 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
 
   /**
    * Put a node in deactivated (decommissioned or shutdown) status.
-   * @param rmNode
-   * @param finalState
+   * @param rmNode RMNode.
+   * @param finalState NodeState.
    */
   public static void deactivateNode(RMNodeImpl rmNode, NodeState finalState) {
 
@@ -1226,8 +1239,8 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
 
   /**
    * Report node is RUNNING.
-   * @param rmNode
-   * @param containers
+   * @param rmNode RMNode.
+   * @param containers NMContainerStatus List.
    */
   public static void reportNodeRunning(RMNodeImpl rmNode,
       List<NMContainerStatus> containers) {
@@ -1242,8 +1255,8 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
 
   /**
    * Report node is UNUSABLE and update metrics.
-   * @param rmNode
-   * @param finalState
+   * @param rmNode RMNode.
+   * @param finalState NodeState.
    */
   public static void reportNodeUnusable(RMNodeImpl rmNode,
       NodeState finalState) {

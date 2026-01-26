@@ -41,6 +41,14 @@ import org.apache.hadoop.classification.InterfaceStability;
 public final class StreamStatisticNames {
 
   /**
+   * Count of Stream leaks from an application which
+   * is not cleaning up correctly.
+   * Value :{@value}.
+   */
+  public static final String STREAM_LEAKS =
+      "stream_leaks";
+
+  /**
    * Count of times the TCP stream was aborted.
    * Value: {@value}.
    */
@@ -88,6 +96,20 @@ public final class StreamStatisticNames {
    * Value: {@value}.
    */
   public static final String STREAM_READ_OPENED = "stream_read_opened";
+
+  /**
+   * Total count of times an analytics input stream was opened.
+   *
+   * Value: {@value}.
+   */
+  public static final String STREAM_READ_ANALYTICS_OPENED = "stream_read_analytics_opened";
+
+  /**
+   * Total count of times object stream factory was closed.
+   *
+   * Value: {@value}.
+   */
+  public static final String ANALYTICS_STREAM_FACTORY_CLOSED = "analytics_stream_factory_closed";
 
   /**
    * Count of exceptions raised during input stream reads.
@@ -454,6 +476,35 @@ public final class StreamStatisticNames {
    */
   public static final String STREAM_READ_BLOCK_ACQUIRE_AND_READ
       = "stream_read_block_acquire_read";
+
+  /**
+   * Total number of blocks evicted from the disk cache.
+   */
+  public static final String STREAM_EVICT_BLOCKS_FROM_FILE_CACHE
+      = "stream_evict_blocks_from_cache";
+
+  /**
+   * Track duration of LRU cache eviction for disk cache.
+   */
+  public static final String STREAM_FILE_CACHE_EVICTION
+      = "stream_file_cache_eviction";
+
+  /**
+   * Bytes that were prefetched by the stream.
+   */
+  public static final String STREAM_READ_PREFETCHED_BYTES = "stream_read_prefetched_bytes";
+
+  /**
+   * Tracks failures in footer parsing.
+   */
+  public static final String STREAM_READ_PARQUET_FOOTER_PARSING_FAILED
+          = "stream_read_parquet_footer_parsing_failed";
+
+  /**
+   * A cache hit occurs when the request range can be satisfied by the data in the cache.
+   */
+  public static final String STREAM_READ_CACHE_HIT = "stream_read_cache_hit";
+
 
   private StreamStatisticNames() {
   }

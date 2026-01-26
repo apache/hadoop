@@ -28,9 +28,9 @@ import org.apache.hadoop.hdfs.web.oauth2.ConfCredentialBasedAccessTokenProvider;
 import org.apache.hadoop.hdfs.web.oauth2.CredentialBasedAccessTokenProvider;
 import org.apache.hadoop.hdfs.web.oauth2.OAuth2ConnectionConfigurator;
 import org.apache.http.HttpStatus;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockserver.client.MockServerClient;
 import org.mockserver.integration.ClientAndServer;
 import org.mockserver.model.Header;
@@ -51,7 +51,7 @@ import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.OAUTH_REFRESH_U
 import static org.apache.hadoop.hdfs.web.oauth2.OAuth2Constants.ACCESS_TOKEN;
 import static org.apache.hadoop.hdfs.web.oauth2.OAuth2Constants.EXPIRES_IN;
 import static org.apache.hadoop.hdfs.web.oauth2.OAuth2Constants.TOKEN_TYPE;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockserver.integration.ClientAndServer.startClientAndServer;
 import static org.mockserver.matchers.Times.exactly;
 import static org.mockserver.model.HttpRequest.request;
@@ -72,11 +72,11 @@ public class TestWebHDFSOAuth2 {
   public final static String AUTH_TOKEN = "0123456789abcdef";
   public final static Header AUTH_TOKEN_HEADER = new Header("AUTHORIZATION", OAuth2ConnectionConfigurator.HEADER + AUTH_TOKEN);
 
-  @Before
+  @BeforeEach
   public void startMockOAuthServer() {
     mockOAuthServer = startClientAndServer(OAUTH_PORT);
   }
-  @Before
+  @BeforeEach
   public void startMockWebHDFSServer() {
     System.setProperty("hadoop.home.dir", System.getProperty("user.dir"));
 
@@ -205,12 +205,12 @@ public class TestWebHDFSOAuth2 {
 
   }
 
-  @After
+  @AfterEach
   public void stopMockWebHDFSServer() {
       mockWebHDFS.stop();
   }
 
-  @After
+  @AfterEach
   public void stopMockOAuthServer() {
     mockOAuthServer.stop();
   }

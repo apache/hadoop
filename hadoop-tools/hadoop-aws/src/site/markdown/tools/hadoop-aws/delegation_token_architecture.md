@@ -89,7 +89,7 @@ of:
 * A set of AWS session credentials
   (`fs.s3a.access.key`, `fs.s3a.secret.key`, `fs.s3a.session.token`).
 
-These credentials are obtained from the AWS Secure Token Service (STS) when the the token is issued.
+These credentials are obtained from the AWS Secure Token Service (STS) when the token is issued.
 * A set of AWS session credentials binding the user to a specific AWS IAM Role,
 further restricted to only access the S3 bucket.
 Again, these credentials are requested when the token is issued.
@@ -188,7 +188,7 @@ If it was deployed unbonded, the DT Binding is asked to create a new DT.
 
 It is up to the binding what it includes in the token identifier, and how it obtains them.
 This new token identifier is included in a token which has a "canonical service name" of
-the URI of the filesystem (e.g "s3a://landsat-pds").
+the URI of the filesystem (e.g "s3a://noaa-isd-pds").
 
 The issued/reissued token identifier can be marshalled and reused.
 

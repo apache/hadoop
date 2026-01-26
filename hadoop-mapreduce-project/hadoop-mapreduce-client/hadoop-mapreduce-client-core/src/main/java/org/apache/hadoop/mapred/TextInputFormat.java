@@ -19,6 +19,7 @@
 package org.apache.hadoop.mapred;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -27,7 +28,6 @@ import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.compress.*;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 
 /** 
  * An {@link InputFormat} for plain text files.  Files are broken into lines.
@@ -62,7 +62,7 @@ public class TextInputFormat extends FileInputFormat<LongWritable, Text>
     String delimiter = job.get("textinputformat.record.delimiter");
     byte[] recordDelimiterBytes = null;
     if (null != delimiter) {
-      recordDelimiterBytes = delimiter.getBytes(Charsets.UTF_8);
+      recordDelimiterBytes = delimiter.getBytes(StandardCharsets.UTF_8);
     }
     return new LineRecordReader(job, (FileSplit) genericSplit,
         recordDelimiterBytes);

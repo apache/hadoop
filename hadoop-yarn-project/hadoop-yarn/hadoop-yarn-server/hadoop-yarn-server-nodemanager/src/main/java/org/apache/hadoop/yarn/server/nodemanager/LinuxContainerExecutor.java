@@ -48,7 +48,9 @@ import org.apache.hadoop.classification.VisibleForTesting;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.net.InetSocketAddress;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -175,8 +177,12 @@ public class LinuxContainerExecutor extends ContainerExecutor {
     COULD_NOT_CREATE_WORK_DIRECTORIES(35),
     COULD_NOT_CREATE_APP_LOG_DIRECTORIES(36),
     COULD_NOT_CREATE_TMP_DIRECTORIES(37),
-    ERROR_CREATE_CONTAINER_DIRECTORIES_ARGUMENTS(38);
-
+    ERROR_CREATE_CONTAINER_DIRECTORIES_ARGUMENTS(38),
+    CANNOT_GET_EXECUTABLE_NAME_FROM_READLINK(80),
+    TOO_LONG_EXECUTOR_PATH(81),
+    CANNOT_GET_EXECUTABLE_NAME_FROM_KERNEL(82),
+    CANNOT_GET_EXECUTABLE_NAME_FROM_PID(83),
+    WRONG_PATH_OF_EXECUTABLE(84);
     private final int code;
 
     ExitCode(int exitCode) {
@@ -383,7 +389,7 @@ public class LinuxContainerExecutor extends ContainerExecutor {
 
   @Override
   public void startLocalizer(LocalizerStartContext ctx)
-      throws IOException, InterruptedException {
+      throws IOException, InterruptedException, ConfigurationException {
     Path nmPrivateContainerTokensPath = ctx.getNmPrivateContainerTokens();
     InetSocketAddress nmAddr = ctx.getNmAddr();
     String user = ctx.getUser();
@@ -434,9 +440,9 @@ public class LinuxContainerExecutor extends ContainerExecutor {
     localizerArgs = replaceWithContainerLogDir(localizerArgs, containerLogDir);
 
     initializeContainerOp.appendArgs(localizerArgs);
+    Configuration conf = super.getConf();
 
     try {
-      Configuration conf = super.getConf();
       PrivilegedOperationExecutor privilegedOperationExecutor =
           getPrivilegedOperationExecutor();
 
@@ -446,7 +452,28 @@ public class LinuxContainerExecutor extends ContainerExecutor {
     } catch (PrivilegedOperationException e) {
       int exitCode = e.getExitCode();
       LOG.warn("Exit code from container {} startLocalizer is : {}",
-          locId, exitCode, e);
+            locId, exitCode, e);
+
+      if (exitCode ==
+          ExitCode.INVALID_CONTAINER_EXEC_PERMISSIONS.getExitCode() ||
+          exitCode == ExitCode.INVALID_CONFIG_FILE.getExitCode()) {
+        throw new ConfigurationException("Application " + appId + " initialization failed" +
+            " (exitCode=" + exitCode + ") with an unrecoverable config error. " +
+            "Output: " + e.getOutput(), e);
+      }
+
+      // Check if the failure was due to a missing container-executor binary
+      Throwable cause = e.getCause() != null ? e.getCause() : e;
+      if (cause instanceof IOException) {
+        IOException io = (IOException) cause;
+        String containerExecutorPath = getContainerExecutorExecutablePath(conf);
+        if (io.getMessage() != null && io.getMessage().contains("Cannot run program \"" +
+            containerExecutorPath + "\"")) {
+          throw new ConfigurationException("Application " + appId + " initialization failed" +
+              "(exitCode=" + exitCode + "). Container executor not found at "
+              + containerExecutorPath, e);
+        }
+      }
 
       throw new IOException("Application " + appId + " initialization failed" +
           " (exitCode=" + exitCode + ") with output: " + e.getOutput(), e);
@@ -783,9 +810,18 @@ public class LinuxContainerExecutor extends ContainerExecutor {
       LOG.warn("Error in signalling container {} with {}; exit = {}",
           pid, signal, retCode, e);
       logOutput(e.getOutput());
-      throw new IOException("Problem signalling container " + pid + " with "
-          + signal + "; output: " + e.getOutput() + " and exitCode: "
-          + retCode, e);
+
+      // In ContainerExecutionException -1 is the default value for the exit code.
+      // If it remained unset, we can treat the signalling as interrupted.
+      if (retCode == ContainerExecutionException.getDefaultExitCode()) {
+        throw new InterruptedIOException("Signalling container " + pid + " with "
+            + signal + " is interrupted; output: " + e.getOutput() + " and exitCode: "
+            + retCode);
+      } else {
+        throw new IOException("Problem signalling container " + pid + " with "
+            + signal + "; output: " + e.getOutput() + " and exitCode: "
+            + retCode, e);
+      }
     }
     return true;
   }
@@ -1050,7 +1086,7 @@ public class LinuxContainerExecutor extends ContainerExecutor {
     if (file.createNewFile()) {
       FileOutputStream output = new FileOutputStream(file);
       try {
-        output.write(spec.getBytes("UTF-8"));
+        output.write(spec.getBytes(StandardCharsets.UTF_8));
       } finally {
         output.close();
       }

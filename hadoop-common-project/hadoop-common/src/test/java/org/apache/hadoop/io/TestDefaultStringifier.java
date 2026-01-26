@@ -22,11 +22,12 @@ import java.io.IOException;
 import java.util.Random;
 
 import org.apache.hadoop.conf.Configuration;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.junit.Assert.assertEquals;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TestDefaultStringifier {
 
@@ -92,13 +93,13 @@ public class TestDefaultStringifier {
     DefaultStringifier.store(conf,text, keyName);
 
     Text claimedText = DefaultStringifier.load(conf, keyName, Text.class);
-    assertEquals("DefaultStringifier#load() or #store() might be flawed"
-        , text, claimedText);
+    assertEquals(text, claimedText,
+        "DefaultStringifier#load() or #store() might be flawed");
 
   }
 
   @Test
-  public void testStoreLoadArray() throws IOException {
+  public void testStoreLoadArray() throws Exception {
     LOG.info("Testing DefaultStringifier#storeArray() and #loadArray()");
     conf.set("io.serializations", "org.apache.hadoop.io.serializer.JavaSerialization");
 
@@ -107,11 +108,13 @@ public class TestDefaultStringifier {
     Integer[] array = new Integer[] {1,2,3,4,5};
 
 
+    intercept(IndexOutOfBoundsException.class, () ->
+        DefaultStringifier.storeArray(conf, new Integer[] {}, keyName));
     DefaultStringifier.storeArray(conf, array, keyName);
 
     Integer[] claimedArray = DefaultStringifier.<Integer>loadArray(conf, keyName, Integer.class);
     for (int i = 0; i < array.length; i++) {
-      assertEquals("two arrays are not equal", array[i], claimedArray[i]);
+      assertEquals(array[i], claimedArray[i], "two arrays are not equal");
     }
 
   }

@@ -25,12 +25,27 @@ package org.apache.hadoop.fs.azurebfs.services;
 public class AbfsClientContextBuilder {
 
   private ExponentialRetryPolicy exponentialRetryPolicy;
+  private StaticRetryPolicy staticRetryPolicy;
+  private TailLatencyRequestTimeoutRetryPolicy tailLatencyRequestTimeoutRetryPolicy;
   private AbfsPerfTracker abfsPerfTracker;
   private AbfsCounters abfsCounters;
+  private String fileSystemId;
 
   public AbfsClientContextBuilder withExponentialRetryPolicy(
       final ExponentialRetryPolicy exponentialRetryPolicy) {
     this.exponentialRetryPolicy = exponentialRetryPolicy;
+    return this;
+  }
+
+  public AbfsClientContextBuilder withStaticRetryPolicy(
+      final StaticRetryPolicy staticRetryPolicy) {
+    this.staticRetryPolicy = staticRetryPolicy;
+    return this;
+  }
+
+  public AbfsClientContextBuilder withTailLatencyRequestTimeoutRetryPolicy(
+      final TailLatencyRequestTimeoutRetryPolicy tailLatencyRequestTimeoutRetryPolicy) {
+    this.tailLatencyRequestTimeoutRetryPolicy = tailLatencyRequestTimeoutRetryPolicy;
     return this;
   }
 
@@ -45,6 +60,11 @@ public class AbfsClientContextBuilder {
     return this;
   }
 
+  public AbfsClientContextBuilder withFileSystemId(final String fileSystemId) {
+    this.fileSystemId = fileSystemId;
+    return this;
+  }
+
   /**
    * Build the context and get the instance with the properties selected.
    *
@@ -52,7 +72,11 @@ public class AbfsClientContextBuilder {
    */
   public AbfsClientContext build() {
     //validate the values
-    return new AbfsClientContext(exponentialRetryPolicy, abfsPerfTracker,
-        abfsCounters);
+    return new AbfsClientContext(
+        exponentialRetryPolicy,
+        staticRetryPolicy,
+        tailLatencyRequestTimeoutRetryPolicy,
+        abfsPerfTracker,
+        abfsCounters, fileSystemId);
   }
 }

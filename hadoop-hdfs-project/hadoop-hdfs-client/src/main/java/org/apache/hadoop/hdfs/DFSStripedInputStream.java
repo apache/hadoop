@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs;
 
+import java.net.InetSocketAddress;
+import java.util.Map;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.ReadOption;
@@ -331,15 +333,17 @@ public class DFSStripedInputStream extends DFSInputStream {
    * its ThreadLocal.
    *
    * @param stats striped read stats
+   * @param readTimeMS read time metrics in ms
+   *
    */
-  void updateReadStats(final StripedBlockUtil.BlockReadStats stats) {
+  void updateReadStats(final StripedBlockUtil.BlockReadStats stats, long readTimeMS) {
     if (stats == null) {
       return;
     }
     updateReadStatistics(readStatistics, stats.getBytesRead(),
         stats.isShortCircuit(), stats.getNetworkDistance());
     dfsClient.updateFileSystemReadStats(stats.getNetworkDistance(),
-        stats.getBytesRead());
+        stats.getBytesRead(), readTimeMS);
     assert readStatistics.getBlockType() == BlockType.STRIPED;
     dfsClient.updateFileSystemECReadStats(stats.getBytesRead());
   }
@@ -391,37 +395,53 @@ public class DFSStripedInputStream extends DFSInputStream {
       throw new IOException("Stream closed");
     }
 
+    // Number of bytes already read into buffer.
+    int result = 0;
     int len = strategy.getTargetLength();
     CorruptedBlocks corruptedBlocks = new CorruptedBlocks();
     if (pos < getFileLength()) {
-      try {
-        if (pos > blockEnd) {
-          blockSeekTo(pos);
-        }
-        int realLen = (int) Math.min(len, (blockEnd - pos + 1L));
-        synchronized (infoLock) {
-          if (locatedBlocks.isLastBlockComplete()) {
-            realLen = (int) Math.min(realLen,
-                locatedBlocks.getFileLength() - pos);
+      int retries = 2;
+      boolean isRetryRead = false;
+      while (retries > 0) {
+        try {
+          if (pos > blockEnd || isRetryRead) {
+            blockSeekTo(pos);
           }
-        }
+          int realLen = (int) Math.min(len, (blockEnd - pos + 1L));
+          synchronized (infoLock) {
+            if (locatedBlocks.isLastBlockComplete()) {
+              realLen = (int) Math.min(realLen,
+                  locatedBlocks.getFileLength() - pos);
+            }
+          }
 
-        /** Number of bytes already read into buffer */
-        int result = 0;
-        while (result < realLen) {
-          if (!curStripeRange.include(getOffsetInBlockGroup())) {
-            readOneStripe(corruptedBlocks);
+          while (result < realLen) {
+            if (!curStripeRange.include(getOffsetInBlockGroup())) {
+              DFSClientFaultInjector.get().failWhenReadWithStrategy(isRetryRead);
+              readOneStripe(corruptedBlocks);
+            }
+            int ret = copyToTargetBuf(strategy, realLen - result);
+            result += ret;
+            pos += ret;
+            len -= ret;
           }
-          int ret = copyToTargetBuf(strategy, realLen - result);
-          result += ret;
-          pos += ret;
+          return result;
+        } catch (IOException ioe) {
+          retries--;
+          if (retries > 0) {
+            DFSClient.LOG.info(
+                "DFSStripedInputStream read meets exception:{}, will retry again.",
+                ioe.toString());
+            isRetryRead = true;
+          } else {
+            throw ioe;
+          }
+        } finally {
+          // Check if need to report block replicas corruption either read
+          // was successful or ChecksumException occurred.
+          reportCheckSumFailure(corruptedBlocks, getCurrentBlockLocationsLength(),
+              true);
         }
-        return result;
-      } finally {
-        // Check if need to report block replicas corruption either read
-        // was successful or ChecksumException occurred.
-        reportCheckSumFailure(corruptedBlocks, getCurrentBlockLocationsLength(),
-            true);
       }
     }
     return -1;
@@ -477,10 +497,14 @@ public class DFSStripedInputStream extends DFSInputStream {
 
   /**
    * Real implementation of pread.
+   * <p>
+   * Note: exceptionMap is not populated with ioExceptions as what we added for DFSInputStream. If
+   * you need this function, please implement it.
    */
   @Override
   protected void fetchBlockByteRange(LocatedBlock block, long start,
-      long end, ByteBuffer buf, CorruptedBlocks corruptedBlocks)
+      long end, ByteBuffer buf, CorruptedBlocks corruptedBlocks,
+      final Map<InetSocketAddress, List<IOException>> exceptionMap)
       throws IOException {
     // Refresh the striped block group
     LocatedStripedBlock blockGroup = getBlockGroupAt(block.getStartOffset());

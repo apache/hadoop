@@ -21,7 +21,6 @@ import javax.annotation.Nonnull;
 import java.io.Closeable;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InterruptedIOException;
 import java.lang.ref.WeakReference;
 import java.lang.ref.ReferenceQueue;
 import java.net.URI;
@@ -57,6 +56,7 @@ import org.apache.hadoop.fs.Options.ChecksumOpt;
 import org.apache.hadoop.fs.Options.HandleOpt;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.impl.AbstractFSBuilderImpl;
+import org.apache.hadoop.fs.impl.DefaultBulkDeleteOperation;
 import org.apache.hadoop.fs.impl.FutureDataInputStreamBuilderImpl;
 import org.apache.hadoop.fs.impl.OpenFileParameters;
 import org.apache.hadoop.fs.permission.AclEntry;
@@ -81,6 +81,7 @@ import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.tracing.Tracer;
 import org.apache.hadoop.tracing.TraceScope;
 import org.apache.hadoop.util.Preconditions;
@@ -170,7 +171,8 @@ import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapa
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public abstract class FileSystem extends Configured
-    implements Closeable, DelegationTokenIssuer, PathCapabilities {
+    implements Closeable, DelegationTokenIssuer,
+        PathCapabilities, BulkDeleteSource {
   public static final String FS_DEFAULT_NAME_KEY =
                    CommonConfigurationKeys.FS_DEFAULT_NAME_KEY;
   public static final String DEFAULT_FS =
@@ -1545,6 +1547,39 @@ public abstract class FileSystem extends Configured
       Progressable progress) throws IOException;
 
   /**
+   * Append to an existing file (optional operation).
+   * @param f the existing file to be appended.
+   * @param appendToNewBlock whether to append data to a new block
+   * instead of the end of the last partial block
+   * @throws IOException IO failure
+   * @throws UnsupportedOperationException if the operation is unsupported
+   *         (default).
+   * @return output stream.
+   */
+  public FSDataOutputStream append(Path f, boolean appendToNewBlock) throws IOException {
+    return append(f, getConf().getInt(IO_FILE_BUFFER_SIZE_KEY,
+        IO_FILE_BUFFER_SIZE_DEFAULT), null, appendToNewBlock);
+  }
+
+  /**
+   * Append to an existing file (optional operation).
+   * This function is used for being overridden by some FileSystem like DistributedFileSystem
+   * @param f the existing file to be appended.
+   * @param bufferSize the size of the buffer to be used.
+   * @param progress for reporting progress if it is not null.
+   * @param appendToNewBlock whether to append data to a new block
+   * instead of the end of the last partial block
+   * @throws IOException IO failure
+   * @throws UnsupportedOperationException if the operation is unsupported
+   *         (default).
+   * @return output stream.
+   */
+  public FSDataOutputStream append(Path f, int bufferSize,
+      Progressable progress, boolean appendToNewBlock) throws IOException {
+    return append(f, bufferSize, progress);
+  }
+
+  /**
    * Concat existing files together.
    * @param trg the path to the target destination.
    * @param psrcs the paths to the sources to use for the concatenation.
@@ -2144,34 +2179,34 @@ public abstract class FileSystem extends Configured
    * <dl>
    *  <dd>
    *   <dl>
-   *    <dt> <tt> ? </tt>
+   *    <dt> <code> ? </code>
    *    <dd> Matches any single character.
    *
-   *    <dt> <tt> * </tt>
+   *    <dt> <code> * </code>
    *    <dd> Matches zero or more characters.
    *
-   *    <dt> <tt> [<i>abc</i>] </tt>
+   *    <dt> <code> [<i>abc</i>] </code>
    *    <dd> Matches a single character from character set
-   *     <tt>{<i>a,b,c</i>}</tt>.
+   *     <code>{<i>a,b,c</i>}</code>.
    *
-   *    <dt> <tt> [<i>a</i>-<i>b</i>] </tt>
+   *    <dt> <code> [<i>a</i>-<i>b</i>] </code>
    *    <dd> Matches a single character from the character range
-   *     <tt>{<i>a...b</i>}</tt>.  Note that character <tt><i>a</i></tt> must be
-   *     lexicographically less than or equal to character <tt><i>b</i></tt>.
+   *     <code>{<i>a...b</i>}</code>.  Note that character <code><i>a</i></code> must be
+   *     lexicographically less than or equal to character <code><i>b</i></code>.
    *
-   *    <dt> <tt> [^<i>a</i>] </tt>
+   *    <dt> <code> [^<i>a</i>] </code>
    *    <dd> Matches a single character that is not from character set or range
-   *     <tt>{<i>a</i>}</tt>.  Note that the <tt>^</tt> character must occur
+   *     <code>{<i>a</i>}</code>.  Note that the <code>^</code> character must occur
    *     immediately to the right of the opening bracket.
    *
-   *    <dt> <tt> \<i>c</i> </tt>
+   *    <dt> <code> \<i>c</i> </code>
    *    <dd> Removes (escapes) any special meaning of character <i>c</i>.
    *
-   *    <dt> <tt> {ab,cd} </tt>
-   *    <dd> Matches a string from the string set <tt>{<i>ab, cd</i>} </tt>
+   *    <dt> <code> {ab,cd} </code>
+   *    <dd> Matches a string from the string set <code>{<i>ab, cd</i>} </code>
    *
-   *    <dt> <tt> {ab,c{de,fh}} </tt>
-   *    <dd> Matches a string from the string set <tt>{<i>ab, cde, cfh</i>}</tt>
+   *    <dt> <code> {ab,c{de,fh}} </code>
+   *    <dd> Matches a string from the string set <code>{<i>ab, cde, cfh</i>}</code>
    *
    *   </dl>
    *  </dd>
@@ -2381,8 +2416,14 @@ public abstract class FileSystem extends Configured
         if (stat.isFile()) { // file
           curFile = stat;
         } else if (recursive) { // directory
-          itors.push(curItor);
-          curItor = listLocatedStatus(stat.getPath());
+          try {
+            RemoteIterator<LocatedFileStatus> newDirItor = listLocatedStatus(stat.getPath());
+            itors.push(curItor);
+            curItor = newDirItor;
+          } catch (FileNotFoundException ignored) {
+            LOGGER.debug("Directory {} deleted while attempting for recursive listing",
+                stat.getPath());
+          }
         }
       }
 
@@ -3447,12 +3488,16 @@ public abstract class FileSystem extends Configured
   public boolean hasPathCapability(final Path path, final String capability)
       throws IOException {
     switch (validatePathCapabilityArgs(makeQualified(path), capability)) {
-    case CommonPathCapabilities.FS_SYMLINKS:
-      // delegate to the existing supportsSymlinks() call.
-      return supportsSymlinks() && areSymlinksEnabled();
-    default:
-      // the feature is not implemented.
-      return false;
+      case CommonPathCapabilities.BULK_DELETE:
+        // bulk delete has default implementation which
+        // can called on any FileSystem.
+        return true;
+      case CommonPathCapabilities.FS_SYMLINKS:
+        // delegate to the existing supportsSymlinks() call.
+        return supportsSymlinks() && areSymlinksEnabled();
+      default:
+        // the feature is not implemented.
+        return false;
     }
   }
 
@@ -3537,7 +3582,15 @@ public abstract class FileSystem extends Configured
       throw new UnsupportedFileSystemException("No FileSystem for scheme "
           + "\"" + scheme + "\"");
     }
-    LOGGER.debug("FS for {} is {}", scheme, clazz);
+    if (LOGGER.isDebugEnabled()) {
+      LOGGER.debug("FS for {} is {}", scheme, clazz);
+      final String jarLocation = ClassUtil.findContainingJar(clazz);
+      if (jarLocation != null) {
+        LOGGER.debug("Jar location for {} : {}", clazz, jarLocation);
+      } else {
+        LOGGER.debug("Class location for {} : {}", clazz, ClassUtil.findClassLocation(clazz));
+      }
+    }
     return clazz;
   }
 
@@ -3564,9 +3617,9 @@ public abstract class FileSystem extends Configured
       } catch (IOException | RuntimeException e) {
         // exception raised during initialization.
         // log summary at warn and full stack at debug
-        LOGGER.warn("Failed to initialize fileystem {}: {}",
+        LOGGER.warn("Failed to initialize filesystem {}: {}",
             uri, e.toString());
-        LOGGER.debug("Failed to initialize fileystem", e);
+        LOGGER.debug("Failed to initialize filesystem", e);
         // then (robustly) close the FS, so as to invoke any
         // cleanup code.
         IOUtils.cleanupWithLogger(LOGGER, fs);
@@ -3647,11 +3700,7 @@ public abstract class FileSystem extends Configured
       // to construct an instance.
       try (DurationInfo d = new DurationInfo(LOGGER, false,
           "Acquiring creator semaphore for %s", uri)) {
-        creatorPermits.acquire();
-      } catch (InterruptedException e) {
-        // acquisition was interrupted; convert to an IOE.
-        throw (IOException)new InterruptedIOException(e.toString())
-            .initCause(e);
+        creatorPermits.acquireUninterruptibly();
       }
       FileSystem fsToClose = null;
       try {
@@ -3908,6 +3957,7 @@ public abstract class FileSystem extends Configured
       private volatile long bytesReadDistanceOfThreeOrFour;
       private volatile long bytesReadDistanceOfFiveOrLarger;
       private volatile long bytesReadErasureCoded;
+      private volatile long remoteReadTimeMS;
 
       /**
        * Add another StatisticsData object to this one.
@@ -3925,6 +3975,7 @@ public abstract class FileSystem extends Configured
         this.bytesReadDistanceOfFiveOrLarger +=
             other.bytesReadDistanceOfFiveOrLarger;
         this.bytesReadErasureCoded += other.bytesReadErasureCoded;
+        this.remoteReadTimeMS += other.remoteReadTimeMS;
       }
 
       /**
@@ -3943,6 +3994,7 @@ public abstract class FileSystem extends Configured
         this.bytesReadDistanceOfFiveOrLarger =
             -this.bytesReadDistanceOfFiveOrLarger;
         this.bytesReadErasureCoded = -this.bytesReadErasureCoded;
+        this.remoteReadTimeMS = -this.remoteReadTimeMS;
       }
 
       @Override
@@ -3991,6 +4043,10 @@ public abstract class FileSystem extends Configured
       public long getBytesReadErasureCoded() {
         return bytesReadErasureCoded;
       }
+
+      public long getRemoteReadTimeMS() {
+        return remoteReadTimeMS;
+      }
     }
 
     private interface StatisticsAggregator<T> {
@@ -4032,10 +4088,11 @@ public abstract class FileSystem extends Configured
     static {
       STATS_DATA_REF_QUEUE = new ReferenceQueue<>();
       // start a single daemon cleaner thread
-      STATS_DATA_CLEANER = new Thread(new StatisticsDataReferenceCleaner());
+      STATS_DATA_CLEANER = new SubjectInheritingThread(new StatisticsDataReferenceCleaner());
       STATS_DATA_CLEANER.
           setName(StatisticsDataReferenceCleaner.class.getName());
       STATS_DATA_CLEANER.setDaemon(true);
+      STATS_DATA_CLEANER.setContextClassLoader(null);
       STATS_DATA_CLEANER.start();
     }
 
@@ -4219,6 +4276,14 @@ public abstract class FileSystem extends Configured
     }
 
     /**
+     * Increment the time taken to read bytes from remote in the statistics.
+     * @param durationMS time taken in ms to read bytes from remote
+     */
+    public void increaseRemoteReadTime(final long durationMS) {
+      getThreadStatistics().remoteReadTimeMS += durationMS;
+    }
+
+    /**
      * Apply the given aggregator to all StatisticsData objects associated with
      * this Statistics object.
      *
@@ -4363,6 +4428,25 @@ public abstract class FileSystem extends Configured
         break;
       }
       return bytesRead;
+    }
+
+    /**
+     * Get total time taken in ms for bytes read from remote.
+     * @return time taken in ms for remote bytes read.
+     */
+    public long getRemoteReadTime() {
+      return visitAll(new StatisticsAggregator<Long>() {
+        private long remoteReadTimeMS = 0;
+
+        @Override
+        public void accept(StatisticsData data) {
+          remoteReadTimeMS += data.remoteReadTimeMS;
+        }
+
+        public Long aggregate() {
+          return remoteReadTimeMS;
+        }
+      });
     }
 
     /**
@@ -4877,6 +4961,24 @@ public abstract class FileSystem extends Configured
   }
 
   /**
+   * Return path of the enclosing root for a given path.
+   * The enclosing root path is a common ancestor that should be used for temp and staging dirs
+   * as well as within encryption zones and other restricted directories.
+   *
+   * Call makeQualified on the param path to ensure its part of the correct filesystem.
+   *
+   * @param path file path to find the enclosing root path for
+   * @return a path to the enclosing root
+   * @throws IOException early checks like failure to resolve path cause IO failures
+   */
+  @InterfaceAudience.Public
+  @InterfaceStability.Unstable
+  public Path getEnclosingRoot(Path path) throws IOException {
+    this.makeQualified(path);
+    return this.makeQualified(new Path("/"));
+  }
+
+  /**
    * Create a multipart uploader.
    * @param basePath file path under which all files are uploaded
    * @return a MultipartUploaderBuilder object to build the uploader
@@ -4888,5 +4990,19 @@ public abstract class FileSystem extends Configured
       throws IOException {
     methodNotSupported();
     return null;
+  }
+
+  /**
+   * Create a bulk delete operation.
+   * The default implementation returns an instance of {@link DefaultBulkDeleteOperation}.
+   * @param path base path for the operation.
+   * @return an instance of the bulk delete.
+   * @throws IllegalArgumentException any argument is invalid.
+   * @throws IOException if there is an IO problem.
+   */
+  @Override
+  public BulkDelete createBulkDelete(Path path)
+          throws IllegalArgumentException, IOException {
+    return new DefaultBulkDeleteOperation(path, this);
   }
 }

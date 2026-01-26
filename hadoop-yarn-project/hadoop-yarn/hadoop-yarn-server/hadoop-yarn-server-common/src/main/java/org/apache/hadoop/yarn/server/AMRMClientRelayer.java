@@ -28,6 +28,7 @@ import java.util.Set;
 import java.util.TreeSet;
 
 import org.apache.hadoop.HadoopIllegalArgumentException;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
@@ -132,14 +133,21 @@ public class AMRMClientRelayer implements ApplicationMasterProtocol {
 
   private AMRMClientRelayerMetrics metrics;
 
+  private ContainerAllocationHistory allocationHistory;
+
   public AMRMClientRelayer(ApplicationMasterProtocol rmClient,
       ApplicationId appId, String rmId) {
     this.resetResponseId = -1;
     this.metrics = AMRMClientRelayerMetrics.getInstance();
-    this.rmId = "";
     this.rmClient = rmClient;
     this.appId = appId;
     this.rmId = rmId;
+  }
+
+  public AMRMClientRelayer(ApplicationMasterProtocol rmClient,
+      ApplicationId appId, String rmId, Configuration conf) {
+    this(rmClient, appId, rmId);
+    this.allocationHistory = new ContainerAllocationHistory(conf);
   }
 
   public void setAMRegistrationRequest(
@@ -444,6 +452,8 @@ public class AMRMClientRelayer implements ApplicationMasterProtocol {
         if (this.knownContainers.add(container.getId())) {
           this.metrics.addFulfilledQPS(this.rmId, AMRMClientRelayerMetrics
               .getRequestType(container.getExecutionType()), 1);
+          long currentTime = System.currentTimeMillis();
+          long fulfillLatency = -1;
           if (container.getAllocationRequestId() != 0) {
             Integer count = this.pendingCountForMetrics
                 .get(container.getAllocationRequestId());
@@ -453,13 +463,14 @@ public class AMRMClientRelayer implements ApplicationMasterProtocol {
               this.metrics.decrClientPending(this.rmId,
                   AMRMClientRelayerMetrics
                       .getRequestType(container.getExecutionType()), 1);
-              this.metrics.addFulfillLatency(this.rmId,
-                  AMRMClientRelayerMetrics
-                      .getRequestType(container.getExecutionType()),
-                  System.currentTimeMillis() - this.askTimeStamp
-                      .get(container.getAllocationRequestId()));
+              fulfillLatency = currentTime - this.askTimeStamp.get(
+                  container.getAllocationRequestId());
+              AMRMClientRelayerMetrics.RequestType requestType = AMRMClientRelayerMetrics
+                  .getRequestType(container.getExecutionType());
+              this.metrics.addFulfillLatency(this.rmId, requestType, fulfillLatency);
             }
           }
+          addAllocationHistoryEntry(container, currentTime, fulfillLatency);
         }
       }
     }
@@ -574,6 +585,38 @@ public class AMRMClientRelayer implements ApplicationMasterProtocol {
     // comparing. So we need to make sure the new RR override the old if any
     this.ask.remove(remoteRequest);
     this.ask.add(remoteRequest);
+  }
+
+  public ContainerAllocationHistory getAllocationHistory() {
+    return this.allocationHistory;
+  }
+
+  private void addAllocationHistoryEntry(Container container, long fulfillTimeStamp,
+      long fulfillLatency) {
+    ResourceRequestSetKey key = ResourceRequestSetKey.extractMatchingKey(container,
+        this.remotePendingAsks.keySet());
+    if (key == null) {
+      LOG.info("allocation history ignoring {}, no matching request key found.", container);
+      return;
+    }
+    this.allocationHistory.addAllocationEntry(container, this.remotePendingAsks.get(key),
+        fulfillTimeStamp, fulfillLatency);
+  }
+
+  public void gatherReadOnlyPendingAsksInfo(Map<ResourceRequestSetKey,
+      ResourceRequestSet> pendingAsks, Map<ResourceRequestSetKey, Long> pendingTime) {
+    pendingAsks.clear();
+    pendingTime.clear();
+    synchronized (this) {
+      pendingAsks.putAll(this.remotePendingAsks);
+      for (ResourceRequestSetKey key : pendingAsks.keySet()) {
+        Long startTime = this.askTimeStamp.get(key.getAllocationRequestId());
+        if (startTime != null) {
+          long elapsedMs = System.currentTimeMillis() - startTime;
+          pendingTime.put(key, elapsedMs);
+        }
+      }
+    }
   }
 
   @VisibleForTesting

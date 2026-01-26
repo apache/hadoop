@@ -140,14 +140,14 @@ public class MutableStat extends MutableMetric {
     if (all || changed()) {
       numSamples += intervalStat.numSamples();
       builder.addCounter(numInfo, numSamples)
-             .addGauge(avgInfo, lastStat().mean());
+             .addGauge(avgInfo, intervalStat.mean());
       if (extended) {
-        builder.addGauge(stdevInfo, lastStat().stddev())
-               .addGauge(iMinInfo, lastStat().min())
-               .addGauge(iMaxInfo, lastStat().max())
+        builder.addGauge(stdevInfo, intervalStat.stddev())
+               .addGauge(iMinInfo, intervalStat.min())
+               .addGauge(iMaxInfo, intervalStat.max())
                .addGauge(minInfo, minMax.min())
                .addGauge(maxInfo, minMax.max())
-               .addGauge(iNumInfo, lastStat().numSamples());
+               .addGauge(iNumInfo, intervalStat.numSamples());
       }
       if (changed()) {
         if (numSamples > 0) {

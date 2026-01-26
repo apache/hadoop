@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.SafeModeAction;
 import org.apache.hadoop.hdfs.DFSStripedOutputStream;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
@@ -31,7 +32,6 @@ import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.LocatedStripedBlock;
@@ -51,11 +51,10 @@ import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo.BlockStat
 import org.apache.hadoop.hdfs.server.protocol.StorageBlockReport;
 import org.apache.hadoop.hdfs.server.protocol.StorageReceivedDeletedBlocks;
 import org.apache.hadoop.io.IOUtils;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.Rule;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -63,11 +62,12 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_DEFAULT;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 
+@Timeout(300)
 public class TestAddStripedBlocks {
   private final ErasureCodingPolicy ecPolicy =
       StripedFileTestUtil.getDefaultECPolicy();
@@ -80,10 +80,7 @@ public class TestAddStripedBlocks {
   private MiniDFSCluster cluster;
   private DistributedFileSystem dfs;
 
-  @Rule
-  public Timeout globalTimeout = new Timeout(300000);
-
-  @Before
+  @BeforeEach
   public void setup() throws IOException {
     HdfsConfiguration conf = new HdfsConfiguration();
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(groupSize).build();
@@ -93,7 +90,7 @@ public class TestAddStripedBlocks {
     dfs.getClient().setErasureCodingPolicy("/", ecPolicy.getName());
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     if (cluster != null) {
       cluster.shutdown();
@@ -163,7 +160,8 @@ public class TestAddStripedBlocks {
     DFSTestUtil.flushInternal(out);
   }
 
-  @Test (timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testAddStripedBlock() throws Exception {
     final Path file = new Path("/file1");
     // create an empty file
@@ -194,9 +192,9 @@ public class TestAddStripedBlocks {
 
       // save namespace, restart namenode, and check
       dfs = cluster.getFileSystem();
-      dfs.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_ENTER);
+      dfs.setSafeMode(SafeModeAction.ENTER);
       dfs.saveNamespace();
-      dfs.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_LEAVE);
+      dfs.setSafeMode(SafeModeAction.LEAVE);
       cluster.restartNameNode(true);
       fsdir = cluster.getNamesystem().getFSDirectory();
       fileNode = fsdir.getINode4Write(file.toString()).asFile();
@@ -485,17 +483,17 @@ public class TestAddStripedBlocks {
       out.write("this is a replicated file".getBytes());
     }
     BlockLocation[] locations = dfs.getFileBlockLocations(replicated, 0, 100);
-    assertEquals("There should be exactly one Block present",
-        1, locations.length);
-    assertFalse("The file is Striped", locations[0].isStriped());
+    assertEquals(1, locations.length,
+        "There should be exactly one Block present");
+    assertFalse(locations[0].isStriped(), "The file is Striped");
 
     Path striped = new Path("/blockLocation/striped");
     try (FSDataOutputStream out = dfs.createFile(striped).recursive().build()) {
       out.write("this is a striped file".getBytes());
     }
     locations = dfs.getFileBlockLocations(striped, 0, 100);
-    assertEquals("There should be exactly one Block present",
-        1, locations.length);
-    assertTrue("The file is not Striped", locations[0].isStriped());
+    assertEquals(1, locations.length,
+        "There should be exactly one Block present");
+    assertTrue(locations[0].isStriped(), "The file is not Striped");
   }
 }

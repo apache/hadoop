@@ -17,8 +17,8 @@
  *******************************************************************************/
 package org.apache.hadoop.yarn.server.resourcemanager.reservation;
 
-import static junit.framework.TestCase.fail;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
 import java.io.IOException;
@@ -33,33 +33,25 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.junit.Before;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.BeforeEach;
 
 import net.jcip.annotations.NotThreadSafe;
 
 /**
  * This class is a base test for {@code SharingPolicy} implementors.
  */
-@RunWith(value = Parameterized.class)
 @NotThreadSafe
 @SuppressWarnings("VisibilityModifier")
 public abstract class BaseSharingPolicyTest {
 
-  @Parameterized.Parameter(value = 0)
   public long duration;
 
-  @Parameterized.Parameter(value = 1)
   public double height;
 
-  @Parameterized.Parameter(value = 2)
   public int numSubmissions;
 
-  @Parameterized.Parameter(value = 3)
   public String recurrenceExpression;
 
-  @Parameterized.Parameter(value = 4)
   public Class expectedError;
 
   private long step;
@@ -75,7 +67,7 @@ public abstract class BaseSharingPolicyTest {
 
   protected ReservationSchedulerConfiguration conf;
 
-  @Before
+  @BeforeEach
   public void setup() {
     // 1 sec step
     step = 1000L;
@@ -138,7 +130,7 @@ public abstract class BaseSharingPolicyTest {
                 "dedicated", rstart, rend, reservationIntervalResourceMap, res,
                 minAlloc);
 
-        assertTrue(plan.toString(), plan.addReservation(resAlloc, false));
+        assertTrue(plan.addReservation(resAlloc, false), plan.toString());
       }
       // fail if error was expected
       if (expectedError != null) {

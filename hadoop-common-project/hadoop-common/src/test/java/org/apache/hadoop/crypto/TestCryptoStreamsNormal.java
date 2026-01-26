@@ -24,10 +24,11 @@ import java.io.InputStream;
 import java.io.OutputStream;
 
 import org.apache.hadoop.conf.Configuration;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 /**
  * Test crypto streams using normal stream which does not support the 
@@ -45,13 +46,13 @@ public class TestCryptoStreamsNormal extends CryptoStreamsTestBase {
   private byte[] buffer;
   private int bufferLen;
   
-  @BeforeClass
+  @BeforeAll
   public static void init() throws Exception {
     Configuration conf = new Configuration();
     codec = CryptoCodec.getInstance(conf);
   }
   
-  @AfterClass
+  @AfterAll
   public static void shutdown() throws Exception {
   }
 
@@ -81,62 +82,73 @@ public class TestCryptoStreamsNormal extends CryptoStreamsTestBase {
         key, iv);
   }
   
-  @Ignore("Wrapped stream doesn't support Syncable")
+  @Disabled("Wrapped stream doesn't support Syncable")
   @Override
-  @Test(timeout=10000)
+  @Test
+  @Timeout(value = 10)
   public void testSyncable() throws IOException {}
   
-  @Ignore("Wrapped stream doesn't support PositionedRead")
+  @Disabled("Wrapped stream doesn't support PositionedRead")
   @Override
-  @Test(timeout=10000)
+  @Test
+  @Timeout(value = 10)
   public void testPositionedRead() throws IOException {}
 
-  @Ignore("Wrapped stream doesn't support ByteBufferPositionedReadable")
+  @Disabled("Wrapped stream doesn't support ByteBufferPositionedReadable")
   @Override
-  @Test(timeout=10000)
+  @Test
+  @Timeout(value = 10)
   public void testPositionedReadWithByteBuffer() throws IOException {}
 
-  @Ignore("Wrapped stream doesn't support ByteBufferPositionedReadable")
+  @Disabled("Wrapped stream doesn't support ByteBufferPositionedReadable")
   @Override
-  @Test(timeout=10000)
+  @Test
+  @Timeout(value = 10)
   public void testByteBufferReadFully() throws Exception {}
 
-  @Ignore("Wrapped stream doesn't support ReadFully")
+  @Disabled("Wrapped stream doesn't support ReadFully")
   @Override
-  @Test(timeout=10000)
+  @Test
+  @Timeout(value = 10)
   public void testReadFully() throws IOException {}
   
-  @Ignore("Wrapped stream doesn't support Seek")
+  @Disabled("Wrapped stream doesn't support Seek")
   @Override
-  @Test(timeout=10000)
+  @Test
+  @Timeout(value = 10)
   public void testSeek() throws IOException {}
   
-  @Ignore("Wrapped stream doesn't support ByteBufferRead")
+  @Disabled("Wrapped stream doesn't support ByteBufferRead")
   @Override
-  @Test(timeout=10000)
+  @Test
+  @Timeout(value = 10)
   public void testByteBufferRead() throws IOException {}
 
-  @Ignore("Wrapped stream doesn't support ByteBufferPositionedReadable")
+  @Disabled("Wrapped stream doesn't support ByteBufferPositionedReadable")
   @Override
-  @Test(timeout=10000)
+  @Test
+  @Timeout(value = 10)
   public void testByteBufferPread() throws IOException {}
   
-  @Ignore("Wrapped stream doesn't support ByteBufferRead, Seek")
+  @Disabled("Wrapped stream doesn't support ByteBufferRead, Seek")
   @Override
-  @Test(timeout=10000)
+  @Test
+  @Timeout(value = 10)
   public void testCombinedOp() throws IOException {}
   
-  @Ignore("Wrapped stream doesn't support SeekToNewSource")
+  @Disabled("Wrapped stream doesn't support SeekToNewSource")
   @Override
-  @Test(timeout=10000)
+  @Test
+  @Timeout(value = 10)
   public void testSeekToNewSource() throws IOException {}
   
-  @Ignore("Wrapped stream doesn't support HasEnhancedByteBufferAccess")
+  @Disabled("Wrapped stream doesn't support HasEnhancedByteBufferAccess")
   @Override
-  @Test(timeout=10000)
+  @Test
+  @Timeout(value = 10)
   public void testHasEnhancedByteBufferAccess() throws IOException {}
 
-  @Ignore("ByteArrayInputStream does not support unbuffer")
+  @Disabled("ByteArrayInputStream does not support unbuffer")
   @Override
   @Test
   public void testUnbuffer() throws Exception {}

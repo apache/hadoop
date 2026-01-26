@@ -26,6 +26,7 @@ import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.yarn.conf.HAUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
@@ -71,7 +72,11 @@ public class WebAppProxy extends AbstractService {
     String[] proxyParts = proxy.split(":");
     proxyHost = proxyParts[0];
 
-    fetcher = new AppReportFetcher(conf);
+    if (HAUtil.isFederationEnabled(conf)) {
+      fetcher = new FedAppReportFetcher(conf);
+    } else {
+      fetcher = new DefaultAppReportFetcher(conf);
+    }
     bindAddress = conf.get(YarnConfiguration.PROXY_ADDRESS);
     if(bindAddress == null || bindAddress.isEmpty()) {
       throw new YarnRuntimeException(YarnConfiguration.PROXY_ADDRESS +
@@ -156,5 +161,10 @@ public class WebAppProxy extends AbstractService {
   @VisibleForTesting
   String getBindAddress() {
     return bindAddress + ":" + port;
+  }
+
+  @VisibleForTesting
+  public AppReportFetcher getFetcher() {
+    return fetcher;
   }
 }

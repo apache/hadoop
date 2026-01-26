@@ -34,4 +34,8 @@ public class InvalidConfigurationValueException extends AzureBlobFileSystemExcep
   public InvalidConfigurationValueException(String configKey) {
     super("Invalid configuration value detected for " + configKey);
   }
+
+  public InvalidConfigurationValueException(String configKey, String message) {
+    super(String.format("Invalid configuration value detected for \"%s\". %s ", configKey, message));
+  }
 }

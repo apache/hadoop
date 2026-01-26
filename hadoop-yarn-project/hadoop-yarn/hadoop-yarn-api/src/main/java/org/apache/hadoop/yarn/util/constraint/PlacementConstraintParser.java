@@ -165,7 +165,8 @@ public final class PlacementConstraintParser {
 
     /**
      * Validate the schema before actual parsing the expression.
-     * @throws PlacementConstraintParseException
+     * @throws PlacementConstraintParseException when the placement constraint parser
+     * fails to parse an expression.
      */
     default void validate() throws PlacementConstraintParseException {
       // do nothing
@@ -405,6 +406,10 @@ public final class PlacementConstraintParser {
         // multiple values are present for same attribute, it will also be
         // coming as next token. for example, java=1.8,1.9 or python!=2.
         if (attributeKV.countTokens() > 1) {
+          if (!constraintEntities.isEmpty()) {
+            throw new PlacementConstraintParseException(
+                "expecting valid expression like k=v or k!=v or k=v1,v2");
+          }
           opCode = getAttributeOpCode(currentTag);
           attributeName = attributeKV.nextToken();
           currentTag = attributeKV.nextToken();
@@ -633,9 +638,10 @@ public final class PlacementConstraintParser {
 
     /**
      * Parses source tags from expression "sourceTags(numOfAllocations)".
-     * @param expr
+     * @param expr expression string.
      * @return source tags, see {@link SourceTags}
-     * @throws PlacementConstraintParseException
+     * @throws PlacementConstraintParseException when the placement constraint parser
+     * fails to parse an expression.
      */
     public static SourceTags parseFrom(String expr)
         throws PlacementConstraintParseException {
@@ -718,7 +724,8 @@ public final class PlacementConstraintParser {
    * </ul>
    * @param expression expression string.
    * @return a map of source tags to placement constraint mapping.
-   * @throws PlacementConstraintParseException
+   * @throws PlacementConstraintParseException when the placement constraint parser
+   * fails to parse an expression.
    */
   public static Map<SourceTags, PlacementConstraint> parsePlacementSpec(
       String expression) throws PlacementConstraintParseException {

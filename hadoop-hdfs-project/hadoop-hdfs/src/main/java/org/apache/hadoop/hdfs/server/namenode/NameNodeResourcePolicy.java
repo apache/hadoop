@@ -20,6 +20,8 @@ package org.apache.hadoop.hdfs.server.namenode;
 import java.util.Collection;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Given a set of checkable resources, this class is capable of determining
@@ -38,6 +40,9 @@ final class NameNodeResourcePolicy {
    * @return true if and only if there are sufficient NN resources to
    *         continue logging edits.
    */
+  private static final Logger LOG =
+      LoggerFactory.getLogger(NameNodeResourcePolicy.class.getName());
+
   static boolean areResourcesAvailable(
       Collection<? extends CheckableNameNodeResource> resources,
       int minimumRedundantResources) {
@@ -73,8 +78,14 @@ final class NameNodeResourcePolicy {
       // required resources available.
       return requiredResourceCount > 0;
     } else {
-      return redundantResourceCount - disabledRedundantResourceCount >=
-          minimumRedundantResources;
+      final boolean areResourceAvailable =
+          redundantResourceCount - disabledRedundantResourceCount >= minimumRedundantResources;
+      if (!areResourceAvailable) {
+        LOG.info("Resources not available. Details: redundantResourceCount={},"
+                + " disabledRedundantResourceCount={}, minimumRedundantResources={}.",
+            redundantResourceCount, disabledRedundantResourceCount, minimumRedundantResources);
+      }
+      return areResourceAvailable;
     }
   }
 }

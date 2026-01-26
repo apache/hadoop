@@ -29,6 +29,7 @@ import javax.xml.transform.stream.StreamResult;
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -65,6 +66,8 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystemTestHelper;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.SafeModeAction;
+import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
@@ -72,21 +75,26 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.XAttrHelper;
 import org.apache.hadoop.hdfs.protocol.AddErasureCodingPolicyResponse;
 import org.apache.hadoop.hdfs.protocol.BlockType;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyState;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
+import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
 import org.apache.hadoop.hdfs.server.namenode.FSImageTestUtil;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto;
+import org.apache.hadoop.hdfs.server.namenode.FsImageProto.INodeSection.XAttrCompactProto;
+import org.apache.hadoop.hdfs.server.namenode.FsImageProto.INodeSection.XAttrFeatureProto;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeLayoutVersion;
+import org.apache.hadoop.hdfs.server.namenode.XAttrFormat;
 import org.apache.hadoop.hdfs.util.MD5FileUtils;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.MD5Hash;
+import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.io.erasurecode.ECSchema;
 import org.apache.hadoop.io.erasurecode.ErasureCodeConstants;
 import org.apache.hadoop.net.NetUtils;
@@ -95,15 +103,15 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.Lists;
+import org.apache.hadoop.util.XMLUtils;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 import org.apache.hadoop.thirdparty.protobuf.ByteString;
 
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.event.Level;
@@ -134,9 +142,12 @@ import static org.apache.hadoop.hdfs.tools.offlineImageViewer.PBImageXmlWriter.E
 import static org.apache.hadoop.hdfs.tools.offlineImageViewer.PBImageXmlWriter.ERASURE_CODING_SECTION_SCHEMA;
 import static org.apache.hadoop.hdfs.tools.offlineImageViewer.PBImageXmlWriter.ERASURE_CODING_SECTION_SCHEMA_CODEC_NAME;
 import static org.apache.hadoop.hdfs.tools.offlineImageViewer.PBImageXmlWriter.ERASURE_CODING_SECTION_SCHEMA_OPTION;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
@@ -166,7 +177,8 @@ public class TestOfflineImageViewer {
   // data structure and store its fsimage location.
   // We only want to generate the fsimage file once and use it for
   // multiple tests.
-  @BeforeClass
+  @SuppressWarnings("checkstyle:MethodLength")
+  @BeforeAll
   public static void createOriginalFSImage() throws IOException {
     defaultTimeZone = TimeZone.getDefault();
     TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
@@ -357,9 +369,9 @@ public class TestOfflineImageViewer {
       filesECCount++;
 
       // Write results to the fsimage file
-      hdfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER, false);
+      hdfs.setSafeMode(SafeModeAction.ENTER, false);
       hdfs.saveNamespace();
-      hdfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE, false);
+      hdfs.setSafeMode(SafeModeAction.LEAVE, false);
 
       // Determine location of fsimage file
       originalFsimage = FSImageTestUtil.findLatestImageFile(FSImageTestUtil
@@ -375,7 +387,7 @@ public class TestOfflineImageViewer {
     }
   }
 
-  @AfterClass
+  @AfterAll
   public static void deleteOriginalFSImage() throws IOException {
     FileUtils.deleteQuietly(tempDir);
     if (originalFsimage != null && originalFsimage.exists()) {
@@ -393,15 +405,17 @@ public class TestOfflineImageViewer {
     return hdfs.getFileStatus(new Path(file));
   }
 
-  @Test(expected = IOException.class)
+  @Test
   public void testTruncatedFSImage() throws IOException {
-    File truncatedFile = new File(tempDir, "truncatedFsImage");
-    PrintStream output = new PrintStream(NullOutputStream.NULL_OUTPUT_STREAM);
-    copyPartOfFile(originalFsimage, truncatedFile);
-    try (RandomAccessFile r = new RandomAccessFile(truncatedFile, "r")) {
-      new FileDistributionCalculator(new Configuration(), 0, 0, false, output)
-        .visit(r);
-    }
+    assertThrows(IOException.class, () -> {
+      File truncatedFile = new File(tempDir, "truncatedFsImage");
+      PrintStream output = new PrintStream(NullOutputStream.INSTANCE);
+      copyPartOfFile(originalFsimage, truncatedFile);
+      try (RandomAccessFile r = new RandomAccessFile(truncatedFile, "r")) {
+        new FileDistributionCalculator(new Configuration(), 0, 0, false, output)
+            .visit(r);
+      }
+    });
   }
 
   private void copyPartOfFile(File src, File dest) throws IOException {
@@ -515,14 +529,14 @@ public class TestOfflineImageViewer {
         if (currentInodeName != null && currentInodeName.length() > 0) {
           if (currentBlockType != null && currentBlockType.equalsIgnoreCase(
               BlockType.STRIPED.name())) {
-            Assert.assertEquals("INode '"
-                    + currentInodeName + "' has unexpected EC Policy!",
-                Byte.parseByte(currentECPolicy),
-                SystemErasureCodingPolicies.XOR_2_1_POLICY_ID);
-            Assert.assertEquals("INode '"
-                    + currentInodeName + "' has unexpected replication!",
-                currentRepl,
-                Short.toString(INodeFile.DEFAULT_REPL_FOR_STRIPED_BLOCKS));
+            assertEquals(Byte.parseByte(currentECPolicy),
+                SystemErasureCodingPolicies.XOR_2_1_POLICY_ID,
+                "INode '"
+                    + currentInodeName + "' has unexpected EC Policy!");
+            assertEquals(currentRepl,
+                Short.toString(INodeFile.DEFAULT_REPL_FOR_STRIPED_BLOCKS),
+                "INode '"
+                    + currentInodeName + "' has unexpected replication!");
           }
         }
         isInode = false;
@@ -565,7 +579,7 @@ public class TestOfflineImageViewer {
     try (RandomAccessFile r = new RandomAccessFile(originalFsimage, "r")) {
       v.visit(r);
     }
-    SAXParserFactory spf = SAXParserFactory.newInstance();
+    SAXParserFactory spf = XMLUtils.newSecureSAXParserFactory();
     SAXParser parser = spf.newSAXParser();
     final String xml = output.toString();
     ECXMLHandler ecxmlHandler = new ECXMLHandler();
@@ -718,7 +732,13 @@ public class TestOfflineImageViewer {
         .build();
   }
 
-  private FsImageProto.INodeSection.INode createSampleDirInode() {
+  private FsImageProto.INodeSection.INode createSampleDirInode()
+      throws IOException {
+    return createSampleDirInode(false);
+  }
+
+  private FsImageProto.INodeSection.INode createSampleDirInode(
+      boolean builXAttr) throws IOException {
     FsImageProto.INodeSection.AclFeatureProto.Builder acl =
         FsImageProto.INodeSection.AclFeatureProto.newBuilder()
             .addEntries(2);
@@ -728,6 +748,19 @@ public class TestOfflineImageViewer {
             .setNsQuota(700)
             .setModificationTime(SAMPLE_TIMESTAMP)
             .setAcl(acl);
+    if (builXAttr) {
+      ByteArrayOutputStream bOut = new ByteArrayOutputStream();
+      DataOutputStream dOut = new DataOutputStream(bOut);
+      WritableUtils.writeString(dOut, "test-value");
+      XAttr a = XAttrHelper.buildXAttr("system.hdfs", bOut.toByteArray());
+      XAttrFeatureProto.Builder b = XAttrFeatureProto.newBuilder();
+      XAttrCompactProto.Builder xAttrCompactBuilder = XAttrCompactProto.newBuilder();
+      int v = XAttrFormat.toInt(a);
+      xAttrCompactBuilder.setName(v);
+      xAttrCompactBuilder.setValue(PBHelperClient.getByteString(a.getValue()));
+      b.addXAttrs(xAttrCompactBuilder.build());
+      directory.setXAttrs(b);
+    }
 
     return FsImageProto.INodeSection.INode.newBuilder()
         .setType(FsImageProto.INodeSection.INode.Type.DIRECTORY)
@@ -753,6 +786,11 @@ public class TestOfflineImageViewer {
 
   private PBImageDelimitedTextWriter createDelimitedWriterSpy()
       throws IOException {
+    return createDelimitedWriterSpy(false);
+  }
+
+  private PBImageDelimitedTextWriter createDelimitedWriterSpy(boolean printECPolicy)
+      throws IOException {
     FsPermission fsPermission = new FsPermission(
         FsAction.ALL,
         FsAction.WRITE_EXECUTE,
@@ -763,7 +801,9 @@ public class TestOfflineImageViewer {
         fsPermission);
 
     PBImageDelimitedTextWriter writer = new
-        PBImageDelimitedTextWriter(null, ",", "");
+        PBImageDelimitedTextWriter(null, ",", "", false,
+        printECPolicy, 1, "-", new Configuration());
+
     PBImageDelimitedTextWriter writerSpy = spy(writer);
     when(writerSpy.getPermission(anyLong())).thenReturn(permStatus);
     return writerSpy;
@@ -783,6 +823,14 @@ public class TestOfflineImageViewer {
                 ",0,0,0,700,1000,drwx-wx-w-+,user_1,group_1",
         createDelimitedWriterSpy().getEntry("/path/",
             createSampleDirInode()));
+  }
+
+  @Test
+  public void testECXAttr() throws IOException {
+    assertEquals("/path/dir,0,2000-01-01 00:00,1970-01-01 00:00" +
+            ",0,0,0,700,1000,drwx-wx-w-+,user_1,group_1,-",
+        createDelimitedWriterSpy(true).getEntry("/path/",
+            createSampleDirInode(true)));
   }
 
   @Test
@@ -845,8 +893,7 @@ public class TestOfflineImageViewer {
     int status =
         OfflineImageViewerPB.run(new String[] { "-i",
             originalFsimage.getAbsolutePath(), "-o", "-", "-p", "invalid" });
-    assertTrue("Exit code returned for invalid processor option is incorrect",
-        status != 0);
+    assertTrue(status != 0, "Exit code returned for invalid processor option is incorrect");
   }
 
   @Test
@@ -857,40 +904,40 @@ public class TestOfflineImageViewer {
     try {
       System.setOut(out);
       int status = OfflineImageViewerPB.run(new String[] { "-h" });
-      assertTrue("Exit code returned for help option is incorrect", status == 0);
-      Assert.assertFalse(
-          "Invalid Command error displayed when help option is passed.", bytes
-              .toString().contains("Error parsing command-line options"));
+      assertTrue(status == 0, "Exit code returned for help option is incorrect");
+      assertFalse(bytes.toString().contains("Error parsing command-line options"),
+          "Invalid Command error displayed when help option is passed.");
       status =
           OfflineImageViewerPB.run(new String[] { "-h", "-i",
               originalFsimage.getAbsolutePath(), "-o", "-", "-p",
               "FileDistribution", "-maxSize", "512", "-step", "8" });
-      Assert.assertTrue(
-          "Exit code returned for help with other option is incorrect",
-          status == -1);
+      assertTrue(status == -1,
+          "Exit code returned for help with other option is incorrect");
     } finally {
       System.setOut(oldOut);
       IOUtils.closeStream(out);
     }
   }
 
-  @Test(expected = IOException.class)
+  @Test
   public void testDelimitedWithExistingFolder() throws IOException,
       InterruptedException {
-    File tempDelimitedDir = null;
-    try {
-      String tempDelimitedDirName = "tempDirDelimited";
-      String tempDelimitedDirPath = new FileSystemTestHelper().
-          getTestRootDir() + "/" + tempDelimitedDirName;
-      tempDelimitedDir = new File(tempDelimitedDirPath);
-      Assert.assertTrue("Couldn't create temp directory!",
-          tempDelimitedDir.mkdirs());
-      testPBDelimitedWriter(tempDelimitedDirPath);
-    } finally {
-      if (tempDelimitedDir != null) {
-        FileUtils.deleteDirectory(tempDelimitedDir);
+    assertThrows(IOException.class, () -> {
+      File tempDelimitedDir = null;
+      try {
+        String tempDelimitedDirName = "tempDirDelimited";
+        String tempDelimitedDirPath = new FileSystemTestHelper().
+            getTestRootDir() + "/" + tempDelimitedDirName;
+        tempDelimitedDir = new File(tempDelimitedDirPath);
+        assertTrue(tempDelimitedDir.mkdirs(),
+            "Couldn't create temp directory!");
+        testPBDelimitedWriter(tempDelimitedDirPath);
+      } finally {
+        if (tempDelimitedDir != null) {
+          FileUtils.deleteDirectory(tempDelimitedDir);
+        }
       }
-    }
+    });
   }
 
   private void testPBDelimitedWriter(String db)
@@ -1028,13 +1075,13 @@ public class TestOfflineImageViewer {
 
   private void deleteINodeFromXML(File inputFile, File outputFile,
       List<Long> corruptibleIds) throws Exception {
-    DocumentBuilderFactory docFactory = DocumentBuilderFactory.newInstance();
+    DocumentBuilderFactory docFactory = XMLUtils.newSecureDocumentBuilderFactory();
     DocumentBuilder docBuilder = docFactory.newDocumentBuilder();
     Document doc = docBuilder.parse(inputFile);
 
     properINodeDelete(corruptibleIds, doc);
 
-    TransformerFactory transformerFactory = TransformerFactory.newInstance();
+    TransformerFactory transformerFactory = XMLUtils.newSecureTransformerFactory();
     Transformer transformer = transformerFactory.newTransformer();
     DOMSource source = new DOMSource(doc);
     StreamResult result = new StreamResult(outputFile);
@@ -1184,7 +1231,7 @@ public class TestOfflineImageViewer {
     }
     // The XML file we wrote based on the re-created fsimage should be the
     // same as the one we dumped from the original fsimage.
-    Assert.assertEquals("",
+    assertEquals("",
         GenericTestUtils.getFilesDiff(reverseImageXml, reverseImage2Xml));
   }
 
@@ -1212,8 +1259,8 @@ public class TestOfflineImageViewer {
     }
     try {
       OfflineImageReconstructor.run(imageWrongVersion.getAbsolutePath(),
-          imageWrongVersion.getAbsolutePath() + ".out"); 
-      Assert.fail("Expected OfflineImageReconstructor to fail with " +
+          imageWrongVersion.getAbsolutePath() + ".out");
+      fail("Expected OfflineImageReconstructor to fail with " +
           "version mismatch.");
     } catch (Throwable t) {
       GenericTestUtils.assertExceptionContains("Layout version mismatch.", t);
@@ -1284,7 +1331,7 @@ public class TestOfflineImageViewer {
       }
 
       // Write results to the fsimage file
-      hdfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER, false);
+      hdfs.setSafeMode(SafeModeAction.ENTER, false);
       hdfs.saveNamespace();
       // Determine location of fsimage file
       fsimageFile =
@@ -1316,7 +1363,7 @@ public class TestOfflineImageViewer {
       // and don't need to do the following operations.
       OfflineImageViewer.main(new String[] {"-i", "-", "-o", "-", "-p",
           "FileDistribution", "-maxSize", "512", "-step", "8", "-h"});
-      Assert.assertFalse(bytes.toString().contains(
+      assertFalse(bytes.toString().contains(
           "Error parsing command-line options: "));
     } finally {
       System.setOut(oldOut);
@@ -1337,7 +1384,7 @@ public class TestOfflineImageViewer {
               "FileDistribution", "-maxSize", "512", "-step", "8",
               "-format"});
       assertEquals(0, status);
-      Assert.assertTrue(bytes.toString().contains("(0 B, 8 B]"));
+      assertTrue(bytes.toString().contains("(0 B, 8 B]"));
     } finally {
       System.setOut(oldOut);
       IOUtils.closeStream(out);
@@ -1370,10 +1417,9 @@ public class TestOfflineImageViewer {
     v.visit(new RandomAccessFile(originalFsimage, "r"));
     final String xml = output.toString();
 
-    DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+    DocumentBuilderFactory dbf = XMLUtils.newSecureDocumentBuilderFactory();
     DocumentBuilder db = dbf.newDocumentBuilder();
-    InputSource is = new InputSource();
-    is.setCharacterStream(new StringReader(xml));
+    InputSource is = new InputSource(new StringReader(xml));
     Document dom = db.parse(is);
     NodeList ecSection = dom.getElementsByTagName(ERASURE_CODING_SECTION_NAME);
     assertEquals(1, ecSection.getLength());

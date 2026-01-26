@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.federation.store.driver;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -56,7 +57,7 @@ public interface StateStoreRecordOperations {
    * @param clazz Class of record to fetch.
    * @param query Query to filter results.
    * @return A single record matching the query. Null if there are no matching
-   *         records or more than one matching record in the store.
+   *         records.
    * @throws IOException If multiple records match or if the data store cannot
    *           be queried.
    */
@@ -107,12 +108,11 @@ public interface StateStoreRecordOperations {
    * @param allowUpdate True if update of exiting record is allowed.
    * @param errorIfExists True if an error should be returned when inserting
    *          an existing record. Only used if allowUpdate = false.
-   * @return true if all operations were successful.
-   *
+   * @return The result of the putAll operation.
    * @throws IOException Throws exception if unable to query the data store.
    */
   @AtMostOnce
-  <T extends BaseRecord> boolean putAll(
+  <T extends BaseRecord> StateStoreOperationResult putAll(
       List<T> records, boolean allowUpdate, boolean errorIfExists)
           throws IOException;
 
@@ -129,6 +129,17 @@ public interface StateStoreRecordOperations {
   <T extends BaseRecord> boolean remove(T record) throws IOException;
 
   /**
+   * Remove multiple records.
+   *
+   * @param <T> Record class of the records.
+   * @param records Records to be removed.
+   * @return Map of record to a boolean indicating if the record has being removed successfully.
+   * @throws IOException Throws exception if unable to query the data store.
+   */
+  @AtMostOnce
+  <T extends BaseRecord> Map<T, Boolean> removeMultiple(List<T> records) throws IOException;
+
+  /**
    * Remove all records of this class from the store.
    *
    * @param <T> Record class of the records.
@@ -143,8 +154,9 @@ public interface StateStoreRecordOperations {
    * Remove multiple records of a specific class that match a query. Requires
    * the getAll implementation to fetch fresh records on each call.
    *
-   * @param <T> Record class of the records.
+   * @param clazz The class to match the records with.
    * @param query Query to filter what to remove.
+   * @param <T> Record class of the records.
    * @return The number of records removed.
    * @throws IOException Throws exception if unable to query the data store.
    */
@@ -152,4 +164,17 @@ public interface StateStoreRecordOperations {
   <T extends BaseRecord> int remove(Class<T> clazz, Query<T> query)
       throws IOException;
 
+  /**
+   * Remove all records of a specific class that match any query in a list of queries.
+   * Requires the getAll implementation to fetch fresh records on each call.
+   *
+   * @param clazz The class to match the records with.
+   * @param queries Queries (logical OR) to filter what to remove.
+   * @param <T> Record class of the records.
+   * @return Map of query to number of records removed by that query.
+   * @throws IOException Throws exception if unable to query the data store.
+   */
+  @AtMostOnce
+  <T extends BaseRecord> Map<Query<T>, Integer> remove(Class<T> clazz, List<Query<T>> queries)
+      throws IOException;
 }

@@ -31,7 +31,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.io.Writer;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -287,7 +287,7 @@ public class AggregatedLogFormat {
           this.uploadedFiles.add(logFile);
         } catch (IOException e) {
           String message = logErrorMessage(logFile, e);
-          out.write(message.getBytes(Charset.forName("UTF-8")));
+          out.write(message.getBytes(StandardCharsets.UTF_8));
         } finally {
           IOUtils.cleanupWithLogger(LOG, in);
         }
@@ -587,7 +587,7 @@ public class AggregatedLogFormat {
             fileContext.openFile(remoteAppLogFile)
                 .opt(FS_OPTION_OPENFILE_READ_POLICY,
                     FS_OPTION_OPENFILE_READ_POLICY_SEQUENTIAL)
-                .opt(FS_OPTION_OPENFILE_LENGTH,
+                .optLong(FS_OPTION_OPENFILE_LENGTH,
                     status.getLen())   // file length hint for object stores
                 .build());
         reader = new TFile.Reader(this.fsDataIStream,
@@ -783,7 +783,10 @@ public class AggregatedLogFormat {
       OutputStream os = null;
       PrintStream ps = null;
       try {
-        os = new WriterOutputStream(writer, Charset.forName("UTF-8"));
+        os = WriterOutputStream.builder()
+                .setWriter(writer)
+                .setCharset(StandardCharsets.UTF_8)
+                .get();
         ps = new PrintStream(os);
         while (true) {
           try {
@@ -919,6 +922,7 @@ public class AggregatedLogFormat {
      * @param logUploadedTime the log uploaded time stamp
      * @param logType the given log type
      * @throws IOException if we can not read the container logs
+     * @return If logType contains fileType, return 1, otherwise return 0.
      */
     public static int readContainerLogsForALogType(
         DataInputStream valueStream, PrintStream out, long logUploadedTime,
@@ -934,7 +938,9 @@ public class AggregatedLogFormat {
      * @param out the output print stream
      * @param logUploadedTime the log uploaded time stamp
      * @param logType the given log type
+     * @param bytes log bytes.
      * @throws IOException if we can not read the container logs
+     * @return If logType contains fileType, return 1, otherwise return 0.
      */
     public static int readContainerLogsForALogType(
         DataInputStream valueStream, PrintStream out, long logUploadedTime,
@@ -1060,7 +1066,7 @@ public class AggregatedLogFormat {
             new BoundedInputStream(valueStream, currentLogLength);
         currentLogData.setPropagateClose(false);
         currentLogISR = new InputStreamReader(currentLogData,
-            Charset.forName("UTF-8"));
+            StandardCharsets.UTF_8);
         currentLogType = logType;
       } catch (EOFException e) {
       }

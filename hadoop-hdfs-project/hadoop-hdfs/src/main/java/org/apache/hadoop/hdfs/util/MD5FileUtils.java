@@ -23,6 +23,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.security.DigestInputStream;
 import java.security.MessageDigest;
@@ -35,7 +36,6 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.util.StringUtils;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 
 /**
  * Static functions for dealing with files of the same format
@@ -68,14 +68,14 @@ public abstract class MD5FileUtils {
   /**
    * Read the md5 file stored alongside the given data file
    * and match the md5 file content.
-   * @param dataFile the file containing data
+   * @param md5File the file containing md5 data
    * @return a matcher with two matched groups
    *   where group(1) is the md5 string and group(2) is the data file path.
    */
   private static Matcher readStoredMd5(File md5File) throws IOException {
     BufferedReader reader =
         new BufferedReader(new InputStreamReader(
-            Files.newInputStream(md5File.toPath()), Charsets.UTF_8));
+            Files.newInputStream(md5File.toPath()), StandardCharsets.UTF_8));
     String md5Line;
     try {
       md5Line = reader.readLine();
@@ -155,7 +155,7 @@ public abstract class MD5FileUtils {
     String md5Line = digestString + " *" + dataFile.getName() + "\n";
 
     AtomicFileOutputStream afos = new AtomicFileOutputStream(md5File);
-    afos.write(md5Line.getBytes(Charsets.UTF_8));
+    afos.write(md5Line.getBytes(StandardCharsets.UTF_8));
     afos.close();
 
     if (LOG.isDebugEnabled()) {

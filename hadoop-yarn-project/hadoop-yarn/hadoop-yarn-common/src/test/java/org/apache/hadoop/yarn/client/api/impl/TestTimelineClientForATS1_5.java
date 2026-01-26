@@ -18,20 +18,18 @@
 
 package org.apache.hadoop.yarn.client.api.impl;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.reset;
-
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 
+import javax.ws.rs.client.Client;
+import javax.ws.rs.core.Response;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
@@ -42,13 +40,18 @@ import org.apache.hadoop.yarn.api.records.timeline.TimelineDomain;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntityGroupId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
 
-import com.sun.jersey.api.client.Client;
-import com.sun.jersey.api.client.ClientResponse;
+import net.jodah.failsafe.RetryPolicy;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 public class TestTimelineClientForATS1_5 {
 
@@ -61,7 +64,7 @@ public class TestTimelineClientForATS1_5 {
   private TimelineWriter spyTimelineWriter;
   private UserGroupInformation authUgi;
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     localFS = FileContext.getLocalFSFileContext();
     localActiveDir =
@@ -85,7 +88,7 @@ public class TestTimelineClientForATS1_5 {
     return conf;
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (client != null) {
       client.stop();
@@ -94,13 +97,13 @@ public class TestTimelineClientForATS1_5 {
   }
 
   @Test
-  public void testPostEntities() throws Exception {
+  void testPostEntities() throws Exception {
     client = createTimelineClient(getConfigurations());
     verifyForPostEntities(false);
   }
 
   @Test
-  public void testPostEntitiesToKeepUnderUserDir() throws Exception {
+  void testPostEntitiesToKeepUnderUserDir() throws Exception {
     YarnConfiguration conf = getConfigurations();
     conf.setBoolean(
         YarnConfiguration.TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_WITH_USER_DIR,
@@ -137,7 +140,7 @@ public class TestTimelineClientForATS1_5 {
       TimelineEntity[] entityTDB = new TimelineEntity[1];
       entityTDB[0] = entities[0];
       verify(spyTimelineWriter, times(1)).putEntities(entityTDB);
-      Assert.assertTrue(localFS.util().exists(
+      assertTrue(localFS.util().exists(
           new Path(getAppAttemptDir(attemptId1, storeInsideUserDir),
               "summarylog-"
             + attemptId1.toString())));
@@ -152,32 +155,32 @@ public class TestTimelineClientForATS1_5 {
       client.putEntities(attemptId2, groupId2, entities);
       verify(spyTimelineWriter, times(0)).putEntities(
         any(TimelineEntity[].class));
-      Assert.assertTrue(localFS.util().exists(
+      assertTrue(localFS.util().exists(
           new Path(getAppAttemptDir(attemptId2, storeInsideUserDir),
               "summarylog-"
             + attemptId2.toString())));
-      Assert.assertTrue(localFS.util().exists(
+      assertTrue(localFS.util().exists(
           new Path(getAppAttemptDir(attemptId2, storeInsideUserDir),
               "entitylog-"
             + groupId.toString())));
-      Assert.assertTrue(localFS.util().exists(
+      assertTrue(localFS.util().exists(
           new Path(getAppAttemptDir(attemptId2, storeInsideUserDir),
               "entitylog-"
             + groupId2.toString())));
       reset(spyTimelineWriter);
     } catch (Exception e) {
-      Assert.fail("Exception is not expected. " + e);
+      fail("Exception is not expected. " + e);
     }
   }
 
   @Test
-  public void testPutDomain() {
+  void testPutDomain() {
     client = createTimelineClient(getConfigurations());
     verifyForPutDomain(false);
   }
 
   @Test
-  public void testPutDomainToKeepUnderUserDir() {
+  void testPutDomainToKeepUnderUserDir() {
     YarnConfiguration conf = getConfigurations();
     conf.setBoolean(
         YarnConfiguration.TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_WITH_USER_DIR,
@@ -200,12 +203,12 @@ public class TestTimelineClientForATS1_5 {
 
       client.putDomain(attemptId1, domain);
       verify(spyTimelineWriter, times(0)).putDomain(domain);
-      Assert.assertTrue(localFS.util()
+      assertTrue(localFS.util()
           .exists(new Path(getAppAttemptDir(attemptId1, storeInsideUserDir),
               "domainlog-" + attemptId1.toString())));
       reset(spyTimelineWriter);
     } catch (Exception e) {
-      Assert.fail("Exception is not expected." + e);
+      fail("Exception is not expected." + e);
     }
   }
 
@@ -237,7 +240,7 @@ public class TestTimelineClientForATS1_5 {
 
   private static TimelineDomain generateDomain() {
     TimelineDomain domain = new TimelineDomain();
-    domain.setId("namesapce id");
+    domain.setId("namespace id");
     domain.setDescription("domain description");
     domain.setOwner("domain owner");
     domain.setReaders("domain_reader");
@@ -251,14 +254,14 @@ public class TestTimelineClientForATS1_5 {
     TimelineClientImpl client = new TimelineClientImpl() {
       @Override
       protected TimelineWriter createTimelineWriter(Configuration conf,
-          UserGroupInformation authUgi, Client client, URI resURI)
+          UserGroupInformation uAuthUgi, Client paramClient, URI resURI,
+          RetryPolicy<Object> retryPolicy)
           throws IOException {
         TimelineWriter timelineWriter =
-            new FileSystemTimelineWriter(conf, authUgi, client, resURI) {
-              public ClientResponse doPostingObject(Object object, String path) {
-                ClientResponse response = mock(ClientResponse.class);
-                when(response.getStatusInfo()).thenReturn(
-                    ClientResponse.Status.OK);
+            new FileSystemTimelineWriter(conf, uAuthUgi, paramClient, resURI, retryPolicy) {
+              public Response doPostingObject(Object object, String path) {
+                Response response = mock(Response.class);
+                when(response.getStatusInfo()).thenReturn(Response.Status.OK);
                 return response;
               }
             };

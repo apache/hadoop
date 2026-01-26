@@ -24,6 +24,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsAggregator;
 import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
+import org.apache.hadoop.fs.statistics.IOStatisticsSetters;
 import org.apache.hadoop.fs.statistics.MeanStatistic;
 
 /**
@@ -31,6 +32,7 @@ import org.apache.hadoop.fs.statistics.MeanStatistic;
  * use in classes which track statistics for reporting.
  */
 public interface IOStatisticsStore extends IOStatistics,
+    IOStatisticsSetters,
     IOStatisticsAggregator,
     DurationTrackerFactory {
 
@@ -57,24 +59,6 @@ public interface IOStatisticsStore extends IOStatistics,
   long incrementCounter(String key, long value);
 
   /**
-   * Set a counter.
-   *
-   * No-op if the counter is unknown.
-   * @param key statistics key
-   * @param value value to set
-   */
-  void setCounter(String key, long value);
-
-  /**
-   * Set a gauge.
-   *
-   * No-op if the gauge is unknown.
-   * @param key statistics key
-   * @param value value to set
-   */
-  void setGauge(String key, long value);
-
-  /**
    * Increment a gauge.
    * <p>
    * No-op if the gauge is unknown.
@@ -86,14 +70,6 @@ public interface IOStatisticsStore extends IOStatistics,
   long incrementGauge(String key, long value);
 
   /**
-   * Set a maximum.
-   * No-op if the maximum is unknown.
-   * @param key statistics key
-   * @param value value to set
-   */
-  void setMaximum(String key, long value);
-
-  /**
    * Increment a maximum.
    * <p>
    * No-op if the maximum is unknown.
@@ -103,16 +79,6 @@ public interface IOStatisticsStore extends IOStatistics,
    * @return new value or 0 if the key is unknown
    */
   long incrementMaximum(String key, long value);
-
-  /**
-   * Set a minimum.
-   * <p>
-   * No-op if the minimum is unknown.
-   * </p>
-   * @param key statistics key
-   * @param value value to set
-   */
-  void setMinimum(String key, long value);
 
   /**
    * Increment a minimum.
@@ -146,16 +112,6 @@ public interface IOStatisticsStore extends IOStatistics,
    * @param value sample value
    */
   void addMaximumSample(String key, long value);
-
-  /**
-   * Set a mean statistic to a given value.
-   * <p>
-   * No-op if the key is unknown.
-   * </p>
-   * @param key statistic key
-   * @param value new value.
-   */
-  void setMeanStatistic(String key, MeanStatistic value);
 
   /**
    * Add a sample to the mean statistics.

@@ -24,13 +24,13 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.ws.rs.core.HttpHeaders;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.http.HttpServer2;
 
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.net.HttpHeaders;
 
 /**
  * A servlet to print out the running configuration data.
@@ -98,7 +98,7 @@ public class ConfServlet extends HttpServlet {
     if (FORMAT_JSON.equals(format)) {
       Configuration.dumpConfiguration(conf, propertyName, out);
     } else if (FORMAT_XML.equals(format)) {
-      conf.writeXml(propertyName, out);
+      conf.writeXml(propertyName, out, conf);
     } else {
       throw new BadFormatException("Bad format: " + format);
     }

@@ -32,7 +32,7 @@ public interface Evaluable<T> {
    * of current class.
    *
    * @param target a generic type target that impacts this evaluation.
-   * @throws YarnException
+   * @throws YarnException if evaluate error.
    */
   void evaluate(T target) throws YarnException;
 }

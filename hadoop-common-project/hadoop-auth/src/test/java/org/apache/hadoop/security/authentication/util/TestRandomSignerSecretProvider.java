@@ -17,9 +17,11 @@ import java.util.Random;
 
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
@@ -50,28 +52,28 @@ public class TestRandomSignerSecretProvider {
 
       byte[] currentSecret = secretProvider.getCurrentSecret();
       byte[][] allSecrets = secretProvider.getAllSecrets();
-      Assert.assertArrayEquals(secret1, currentSecret);
-      Assert.assertEquals(2, allSecrets.length);
-      Assert.assertArrayEquals(secret1, allSecrets[0]);
-      Assert.assertNull(allSecrets[1]);
+      assertArrayEquals(secret1, currentSecret);
+      assertEquals(2, allSecrets.length);
+      assertArrayEquals(secret1, allSecrets[0]);
+      assertNull(allSecrets[1]);
       verify(secretProvider, timeout(timeout).atLeastOnce()).rollSecret();
       secretProvider.realRollSecret();
 
       currentSecret = secretProvider.getCurrentSecret();
       allSecrets = secretProvider.getAllSecrets();
-      Assert.assertArrayEquals(secret2, currentSecret);
-      Assert.assertEquals(2, allSecrets.length);
-      Assert.assertArrayEquals(secret2, allSecrets[0]);
-      Assert.assertArrayEquals(secret1, allSecrets[1]);
+      assertArrayEquals(secret2, currentSecret);
+      assertEquals(2, allSecrets.length);
+      assertArrayEquals(secret2, allSecrets[0]);
+      assertArrayEquals(secret1, allSecrets[1]);
       verify(secretProvider, timeout(timeout).atLeast(2)).rollSecret();
       secretProvider.realRollSecret();
 
       currentSecret = secretProvider.getCurrentSecret();
       allSecrets = secretProvider.getAllSecrets();
-      Assert.assertArrayEquals(secret3, currentSecret);
-      Assert.assertEquals(2, allSecrets.length);
-      Assert.assertArrayEquals(secret3, allSecrets[0]);
-      Assert.assertArrayEquals(secret2, allSecrets[1]);
+      assertArrayEquals(secret3, currentSecret);
+      assertEquals(2, allSecrets.length);
+      assertArrayEquals(secret3, allSecrets[0]);
+      assertArrayEquals(secret2, allSecrets[1]);
       verify(secretProvider, timeout(timeout).atLeast(3)).rollSecret();
       secretProvider.realRollSecret();
     } finally {

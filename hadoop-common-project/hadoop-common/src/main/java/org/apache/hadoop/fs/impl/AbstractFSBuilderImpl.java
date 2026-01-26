@@ -44,11 +44,13 @@ import static org.apache.hadoop.util.Preconditions.checkNotNull;
  * with option support.
  *
  * <code>
- *   .opt("foofs:option.a", true)
- *   .opt("foofs:option.b", "value")
+ *   .opt("fs.s3a.open.option.caching", true)
+ *   .opt("fs.option.openfile.read.policy", "random, adaptive")
  *   .opt("fs.s3a.open.option.etag", "9fe4c37c25b")
- *   .must("foofs:cache", true)
- *   .must("barfs:cache-size", 256 * 1024 * 1024)
+ *   .optLong("fs.option.openfile.length", 1_500_000_000_000)
+ *   .must("fs.option.openfile.buffer.size", 256_000)
+ *   .mustLong("fs.option.openfile.split.start", 256_000_000)
+ *   .mustLong("fs.option.openfile.split.end", 512_000_000)
  *   .build();
  * </code>
  *
@@ -64,6 +66,7 @@ import static org.apache.hadoop.util.Preconditions.checkNotNull;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
+@SuppressWarnings({"deprecation", "unused"})
 public abstract class
     AbstractFSBuilderImpl<S, B extends FSBuilder<S, B>>
     implements FSBuilder<S, B> {
@@ -178,10 +181,7 @@ public abstract class
    */
   @Override
   public B opt(@Nonnull final String key, boolean value) {
-    mandatoryKeys.remove(key);
-    optionalKeys.add(key);
-    options.setBoolean(key, value);
-    return getThisBuilder();
+    return opt(key, Boolean.toString(value));
   }
 
   /**
@@ -191,18 +191,17 @@ public abstract class
    */
   @Override
   public B opt(@Nonnull final String key, int value) {
-    mandatoryKeys.remove(key);
-    optionalKeys.add(key);
-    options.setInt(key, value);
-    return getThisBuilder();
+    return optLong(key, value);
   }
 
   @Override
   public B opt(@Nonnull final String key, final long value) {
-    mandatoryKeys.remove(key);
-    optionalKeys.add(key);
-    options.setLong(key, value);
-    return getThisBuilder();
+    return optLong(key, value);
+  }
+
+  @Override
+  public B optLong(@Nonnull final String key, final long value) {
+    return opt(key, Long.toString(value));
   }
 
   /**
@@ -212,10 +211,7 @@ public abstract class
    */
   @Override
   public B opt(@Nonnull final String key, float value) {
-    mandatoryKeys.remove(key);
-    optionalKeys.add(key);
-    options.setFloat(key, value);
-    return getThisBuilder();
+    return optLong(key, (long) value);
   }
 
   /**
@@ -225,10 +221,17 @@ public abstract class
    */
   @Override
   public B opt(@Nonnull final String key, double value) {
-    mandatoryKeys.remove(key);
-    optionalKeys.add(key);
-    options.setDouble(key, value);
-    return getThisBuilder();
+    return optLong(key, (long) value);
+  }
+
+  /**
+   * Set optional double parameter for the Builder.
+   *
+   * @see #opt(String, String)
+   */
+  @Override
+  public B optDouble(@Nonnull final String key, double value) {
+    return opt(key, Double.toString(value));
   }
 
   /**
@@ -264,10 +267,22 @@ public abstract class
    */
   @Override
   public B must(@Nonnull final String key, boolean value) {
-    mandatoryKeys.add(key);
-    optionalKeys.remove(key);
-    options.setBoolean(key, value);
-    return getThisBuilder();
+    return must(key, Boolean.toString(value));
+  }
+
+  @Override
+  public B mustLong(@Nonnull final String key, final long value) {
+    return must(key, Long.toString(value));
+  }
+
+  /**
+   * Set optional double parameter for the Builder.
+   *
+   * @see #opt(String, String)
+   */
+  @Override
+  public B mustDouble(@Nonnull final String key, double value) {
+    return must(key, Double.toString(value));
   }
 
   /**
@@ -277,44 +292,22 @@ public abstract class
    */
   @Override
   public B must(@Nonnull final String key, int value) {
-    mandatoryKeys.add(key);
-    optionalKeys.remove(key);
-    options.setInt(key, value);
-    return getThisBuilder();
+    return mustLong(key, value);
   }
 
   @Override
   public B must(@Nonnull final String key, final long value) {
-    mandatoryKeys.add(key);
-    optionalKeys.remove(key);
-    options.setLong(key, value);
-    return getThisBuilder();
+    return mustLong(key, value);
   }
 
-  /**
-   * Set mandatory float option.
-   *
-   * @see #must(String, String)
-   */
   @Override
-  public B must(@Nonnull final String key, float value) {
-    mandatoryKeys.add(key);
-    optionalKeys.remove(key);
-    options.setFloat(key, value);
-    return getThisBuilder();
+  public B must(@Nonnull final String key, final float value) {
+    return mustLong(key, (long) value);
   }
 
-  /**
-   * Set mandatory double option.
-   *
-   * @see #must(String, String)
-   */
   @Override
   public B must(@Nonnull final String key, double value) {
-    mandatoryKeys.add(key);
-    optionalKeys.remove(key);
-    options.setDouble(key, value);
-    return getThisBuilder();
+    return mustLong(key, (long) value);
   }
 
   /**

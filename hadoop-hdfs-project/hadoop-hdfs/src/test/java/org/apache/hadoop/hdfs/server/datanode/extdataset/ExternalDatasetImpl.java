@@ -154,6 +154,12 @@ public class ExternalDatasetImpl implements FsDatasetSpi<ExternalVolumeImpl> {
   }
 
   @Override
+  public ReplicaHandler createRbw(StorageType storageType, String storageId,
+      ExtendedBlock b, boolean allowLazyPersist, long newGS) throws IOException {
+    return createRbw(storageType, storageId, b, allowLazyPersist);
+  }
+
+  @Override
   public ReplicaHandler recoverRbw(ExtendedBlock b, long newGS,
       long minBytesRcvd, long maxBytesRcvd) throws IOException {
     return new ReplicaHandler(new ExternalReplicaInPipeline(), null);
@@ -228,6 +234,10 @@ public class ExternalDatasetImpl implements FsDatasetSpi<ExternalVolumeImpl> {
 
   @Override
   public void invalidate(String bpid, Block[] invalidBlks) throws IOException {
+  }
+
+  @Override
+  public void invalidateMissingBlock(String bpid, Block block) {
   }
 
   @Override
@@ -472,5 +482,15 @@ public class ExternalDatasetImpl implements FsDatasetSpi<ExternalVolumeImpl> {
   @Override
   public List<FsVolumeImpl> getVolumeList() {
     return null;
+  }
+
+  @Override
+  public long getLastDirScannerFinishTime() {
+    return 0L;
+  }
+
+  @Override
+  public long getPendingAsyncDeletions() {
+    return 0;
   }
 }

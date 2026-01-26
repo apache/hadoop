@@ -87,6 +87,12 @@ public class MappingRuleMatchers {
       }
 
       String substituted = variables.replaceVariables(value);
+
+      String originalVariableValue = variables.getOriginal(variable);
+      if (originalVariableValue != null) {
+        return substituted.equals(originalVariableValue);
+      }
+
       return substituted.equals(variables.get(variable));
     }
 

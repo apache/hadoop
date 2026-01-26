@@ -21,8 +21,6 @@ package org.apache.hadoop.fs.azure;
 import java.net.HttpURLConnection;
 import java.util.Date;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 
 import com.microsoft.azure.storage.OperationContext;
@@ -30,6 +28,8 @@ import com.microsoft.azure.storage.RequestResult;
 import com.microsoft.azure.storage.ResponseReceivedEvent;
 import com.microsoft.azure.storage.SendingRequestEvent;
 import com.microsoft.azure.storage.StorageEvent;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /*
  * Self throttling is implemented by hooking into send & response callbacks 
@@ -63,8 +63,7 @@ import com.microsoft.azure.storage.StorageEvent;
  */
 @InterfaceAudience.Private
 public class SelfThrottlingIntercept {
-  public static final Log LOG = LogFactory
-      .getLog(SelfThrottlingIntercept.class);
+  public static final Logger LOG = LoggerFactory.getLogger(SelfThrottlingIntercept.class);
 
   private final float readFactor;
   private final float writeFactor;

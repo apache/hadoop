@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.timeline;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.util.Preconditions;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -35,7 +36,7 @@ import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeMap;
 
-import org.apache.commons.collections.map.LRUMap;
+import org.apache.commons.collections4.map.LRUMap;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -389,7 +390,7 @@ public class RollingLevelDBTimelineStore extends AbstractService implements
     super.serviceStop();
   }
 
-  private class EntityDeletionThread extends Thread {
+  private class EntityDeletionThread extends SubjectInheritingThread {
     private final long ttl;
     private final long ttlInterval;
 
@@ -404,7 +405,7 @@ public class RollingLevelDBTimelineStore extends AbstractService implements
     }
 
     @Override
-    public void run() {
+    public void work() {
       Thread.currentThread().setName("Leveldb Timeline Store Retention");
       while (true) {
         long timestamp = System.currentTimeMillis() - ttl;

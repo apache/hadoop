@@ -33,6 +33,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.cache.CacheBuilder;
 import org.apache.hadoop.thirdparty.com.google.common.cache.CacheLoader;
@@ -268,12 +269,24 @@ public class ValueQueue <E> {
    * Initializes the Value Queues for the provided keys by calling the
    * fill Method with "numInitValues" values
    * @param keyNames Array of key Names
-   * @throws ExecutionException executionException.
+   * @throws IOException if initialization fails for any provided keys
    */
-  public void initializeQueuesForKeys(String... keyNames)
-      throws ExecutionException {
+  public void initializeQueuesForKeys(String... keyNames) throws IOException {
+    int successfulInitializations = 0;
+    ExecutionException lastException = null;
+
     for (String keyName : keyNames) {
-      keyQueues.get(keyName);
+      try {
+        keyQueues.get(keyName);
+        successfulInitializations++;
+      } catch (ExecutionException e) {
+        lastException = e;
+      }
+    }
+
+    if (keyNames.length > 0 && successfulInitializations != keyNames.length) {
+      throw new IOException(String.format("Failed to initialize %s queues for the provided keys.",
+          keyNames.length - successfulInitializations), lastException);
     }
   }
 
@@ -317,8 +330,9 @@ public class ValueQueue <E> {
   /**
    * Get size of the Queue for keyName. This is only used in unit tests.
    * @param keyName the key name
-   * @return int queue size
+   * @return int queue size. Zero means the queue is empty or the key does not exist.
    */
+  @VisibleForTesting
   public int getSize(String keyName) {
     readLock(keyName);
     try {
@@ -326,10 +340,12 @@ public class ValueQueue <E> {
       // since that will have the side effect of populating the cache.
       Map<String, LinkedBlockingQueue<E>> map =
           keyQueues.getAllPresent(Arrays.asList(keyName));
-      if (map.get(keyName) == null) {
+      final LinkedBlockingQueue<E> linkedQueue = map.get(keyName);
+      if (linkedQueue == null) {
         return 0;
+      } else {
+        return linkedQueue.size();
       }
-      return map.get(keyName).size();
     } finally {
       readUnlock(keyName);
     }

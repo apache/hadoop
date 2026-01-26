@@ -53,8 +53,8 @@ public interface SCMUploaderProtocol {
    *          to the shared cache
    * @return response indicating if the newly uploaded resource should be
    *         deleted
-   * @throws YarnException
-   * @throws IOException
+   * @throws YarnException exceptions from yarn servers.
+   * @throws IOException if there are I/O errors.
    */
   public SCMUploaderNotifyResponse
       notify(SCMUploaderNotifyRequest request)
@@ -73,8 +73,8 @@ public interface SCMUploaderProtocol {
    *
    * @param request whether the resource can be uploaded to the shared cache
    * @return response indicating if resource can be uploaded to the shared cache
-   * @throws YarnException
-   * @throws IOException
+   * @throws YarnException exceptions from yarn servers.
+   * @throws IOException if there are I/O errors.
    */
   public SCMUploaderCanUploadResponse
       canUpload(SCMUploaderCanUploadRequest request)

@@ -59,6 +59,7 @@ import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 import org.apache.hadoop.util.JvmPauseMonitor;
 import org.apache.hadoop.util.Time;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -391,9 +392,9 @@ public class Router extends CompositeService implements
    * Shutdown the router.
    */
   public void shutDown() {
-    new Thread() {
+    new SubjectInheritingThread() {
       @Override
-      public void run() {
+      public void work() {
         Router.this.stop();
       }
     }.start();
@@ -409,7 +410,7 @@ public class Router extends CompositeService implements
    * @return New Router RPC Server.
    * @throws IOException If the router RPC server was not started.
    */
-  protected RouterRpcServer createRpcServer() throws IOException {
+  public RouterRpcServer createRpcServer() throws IOException {
     return new RouterRpcServer(this.conf, this, this.getNamenodeResolver(),
         this.getSubclusterResolver());
   }
@@ -670,6 +671,9 @@ public class Router extends CompositeService implements
 
   /**
    * Compare router state.
+   *
+   * @param routerState the router service state.
+   * @return true if the given router state is same as the state maintained by the router object.
    */
   public boolean isRouterState(RouterServiceState routerState) {
     return routerState.equals(this.state);
@@ -725,9 +729,10 @@ public class Router extends CompositeService implements
   }
 
   /**
-   * Get the Namenode metrics.
+   * Get the namenode metrics.
    *
-   * @return Namenode metrics.
+   * @return the namenode metrics.
+   * @throws IOException if the namenode metrics are not initialized.
    */
   public NamenodeBeanMetrics getNamenodeMetrics() throws IOException {
     if (this.metrics == null) {
@@ -864,7 +869,8 @@ public class Router extends CompositeService implements
 
   /**
    * Set router configuration.
-   * @param conf
+   *
+   * @param conf the configuration.
    */
   @VisibleForTesting
   public void setConf(Configuration conf) {

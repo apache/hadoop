@@ -17,12 +17,12 @@
  */
 package org.apache.hadoop.http;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.minikdc.MiniKdc;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.AuthenticationFilterInitializer;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.KerberosTestUtils;
 import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
@@ -34,10 +34,9 @@ import org.apache.hadoop.security.authentication.util.SignerSecretProvider;
 import org.apache.hadoop.security.authentication.util.StringSignerSecretProviderCreator;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.authorize.ProxyUsers;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.Assert;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -46,14 +45,14 @@ import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
 import java.util.Properties;
-import static org.junit.Assert.assertTrue;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * This class is tested for http server with SPNEGO authentication.
  */
 public class TestHttpServerWithSpnego {
-
-  static final Log LOG = LogFactory.getLog(TestHttpServerWithSpnego.class);
 
   private static final String SECRET_STR = "secret";
   private static final String HTTP_USER = "HTTP";
@@ -71,7 +70,7 @@ public class TestHttpServerWithSpnego {
   private static MiniKdc testMiniKDC;
   private static File secretFile = new File(testRootDir, SECRET_STR);
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     try {
       testMiniKDC = new MiniKdc(MiniKdc.createConf(), testRootDir);
@@ -79,14 +78,14 @@ public class TestHttpServerWithSpnego {
       testMiniKDC.createPrincipal(
           httpSpnegoKeytabFile, HTTP_USER + "/localhost");
     } catch (Exception e) {
-      assertTrue("Couldn't setup MiniKDC", false);
+      assertTrue(false, "Couldn't setup MiniKDC");
     }
     Writer w = new FileWriter(secretFile);
     w.write("secret");
     w.close();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() {
     if (testMiniKDC != null) {
       testMiniKDC.stop();
@@ -108,7 +107,9 @@ public class TestHttpServerWithSpnego {
    */
   @Test
   public void testAuthenticationWithProxyUser() throws Exception {
-    Configuration spengoConf = getSpengoConf(new Configuration());
+    Configuration spnegoConf = getSpnegoConf(new Configuration());
+    spnegoConf.set(HttpServer2.FILTER_INITIALIZER_PROPERTY,
+        ProxyUserAuthenticationFilterInitializer.class.getName());
 
     //setup logs dir
     System.setProperty("hadoop.log.dir", testRootDir.getAbsolutePath());
@@ -122,15 +123,15 @@ public class TestHttpServerWithSpnego {
         new String[]{"groupC"});
 
     // Make userA impersonate users in groupB
-    spengoConf.set("hadoop.proxyuser.userA.hosts", "*");
-    spengoConf.set("hadoop.proxyuser.userA.groups", "groupB");
-    ProxyUsers.refreshSuperUserGroupsConfiguration(spengoConf);
+    spnegoConf.set("hadoop.proxyuser.userA.hosts", "*");
+    spnegoConf.set("hadoop.proxyuser.userA.groups", "groupB");
+    ProxyUsers.refreshSuperUserGroupsConfiguration(spnegoConf);
 
     HttpServer2 httpServer = null;
     try {
       // Create http server to test.
       httpServer = getCommonBuilder()
-          .setConf(spengoConf)
+          .setConf(spnegoConf)
           .setACL(new AccessControlList("userA groupA"))
           .build();
       httpServer.start();
@@ -153,7 +154,7 @@ public class TestHttpServerWithSpnego {
         HttpURLConnection conn = authUrl
             .openConnection(new URL(serverURL + servlet + "?doAs=userB"),
             token);
-        Assert.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
+        assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
       }
 
       // userA cannot impersonate userC, it fails.
@@ -162,7 +163,7 @@ public class TestHttpServerWithSpnego {
         HttpURLConnection conn = authUrl
             .openConnection(new URL(serverURL + servlet + "?doAs=userC"),
             token);
-        Assert.assertEquals(HttpURLConnection.HTTP_FORBIDDEN,
+        assertEquals(HttpURLConnection.HTTP_FORBIDDEN,
             conn.getResponseCode());
       }
 
@@ -173,7 +174,7 @@ public class TestHttpServerWithSpnego {
           new String[]{"logLevel", "logs"}) {
         HttpURLConnection conn = authUrl
             .openConnection(new URL(serverURL + servlet), token);
-        Assert.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
+        assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
       }
 
       // Setup token for userB
@@ -184,8 +185,50 @@ public class TestHttpServerWithSpnego {
           new String[]{"logLevel", "logs"}) {
         HttpURLConnection conn = authUrl
             .openConnection(new URL(serverURL + servlet), token);
-        Assert.assertEquals(HttpURLConnection.HTTP_FORBIDDEN,
+        assertEquals(HttpURLConnection.HTTP_FORBIDDEN,
             conn.getResponseCode());
+      }
+
+    } finally {
+      if (httpServer != null) {
+        httpServer.stop();
+      }
+    }
+  }
+
+  @Test
+  public void testAuthenticationToAllowList() throws Exception {
+    Configuration spnegoConf = getSpnegoConf(new Configuration());
+    String[] allowList = new String[] {"/jmx", "/prom"};
+    String[] denyList = new String[] {"/conf", "/stacks", "/logLevel"};
+    spnegoConf.set(PREFIX + "kerberos.endpoint.whitelist", String.join(",", allowList));
+    spnegoConf.set(CommonConfigurationKeysPublic.HADOOP_PROMETHEUS_ENABLED, "true");
+    spnegoConf.set(HttpServer2.FILTER_INITIALIZER_PROPERTY,
+        AuthenticationFilterInitializer.class.getName());
+
+    //setup logs dir
+    System.setProperty("hadoop.log.dir", testRootDir.getAbsolutePath());
+
+    HttpServer2 httpServer = null;
+    try {
+      // Create http server to test.
+      httpServer = getCommonBuilder().setConf(spnegoConf).setSecurityEnabled(true)
+          .setUsernameConfKey(PREFIX + "kerberos.principal")
+          .setKeytabConfKey(PREFIX + "kerberos.keytab").build();
+      httpServer.start();
+
+      String serverURL = "http://" + NetUtils.getHostPortString(httpServer.getConnectorAddress(0));
+
+      // endpoints in whitelist should not require Kerberos authentication
+      for (String endpoint : allowList) {
+        HttpURLConnection conn = (HttpURLConnection) new URL(serverURL + endpoint).openConnection();
+        assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
+      }
+
+      // endpoints not in whitelist should require Kerberos authentication
+      for (String endpoint : denyList) {
+        HttpURLConnection conn = (HttpURLConnection) new URL(serverURL + endpoint).openConnection();
+        assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED, conn.getResponseCode());
       }
 
     } finally {
@@ -213,10 +256,8 @@ public class TestHttpServerWithSpnego {
     return new Signer(secretProvider);
   }
 
-  private Configuration getSpengoConf(Configuration conf) {
+  private Configuration getSpnegoConf(Configuration conf) {
     conf = new Configuration();
-    conf.set(HttpServer2.FILTER_INITIALIZER_PROPERTY,
-        ProxyUserAuthenticationFilterInitializer.class.getName());
     conf.set(PREFIX + "type", "kerberos");
     conf.setBoolean(PREFIX + "simple.anonymous.allowed", false);
     conf.set(PREFIX + "signature.secret.file",

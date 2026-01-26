@@ -244,9 +244,9 @@ class BlockReaderLocalLegacy implements BlockReader {
     } catch (IOException e) {
       // remove from cache
       localDatanodeInfo.removeBlockLocalPathInfo(blk);
-      LOG.warn("BlockReaderLocalLegacy: Removing " + blk
-          + " from cache because local file " + pathinfo.getBlockPath()
-          + " could not be opened.");
+      LOG.warn("BlockReaderLocalLegacy: Removing {}"
+          + " from cache because local file {}"
+          + " could not be opened.", blk, pathinfo.getBlockPath());
       throw e;
     } finally {
       if (localBlockReader == null) {
@@ -503,7 +503,7 @@ class BlockReaderLocalLegacy implements BlockReader {
    *          byte buffer to write bytes to. If checksums are not required, buf
    *          can have any number of bytes remaining, otherwise there must be a
    *          multiple of the checksum chunk size remaining.
-   * @return <tt>max(min(totalBytesRead, len) - offsetFromChunkBoundary, 0)</tt>
+   * @return <code>max(min(totalBytesRead, len) - offsetFromChunkBoundary, 0)</code>
    *         that is, the the number of useful bytes (up to the amount
    *         requested) readable from the buffer by the client.
    */

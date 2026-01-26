@@ -37,7 +37,7 @@ import org.apache.hadoop.yarn.webapp.YarnWebParams;
 import com.google.inject.Inject;
 
 // Do NOT rename/refactor this to RMView as it will wreak havoc
-// on Mac OS HFS as its case-insensitive!
+// on macOS HFS as its case-insensitive!
 public class RmController extends Controller {
 
   @Inject

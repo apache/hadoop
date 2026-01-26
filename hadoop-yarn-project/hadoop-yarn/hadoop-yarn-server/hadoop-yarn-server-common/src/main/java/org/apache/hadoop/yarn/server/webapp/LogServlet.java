@@ -20,8 +20,6 @@ package org.apache.hadoop.yarn.server.webapp;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
-import com.sun.jersey.api.client.ClientHandlerException;
-import com.sun.jersey.api.client.UniformInterfaceException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -90,7 +88,7 @@ public class LogServlet extends Configured {
 
   @VisibleForTesting
   public String getNMWebAddressFromRM(String nodeId)
-      throws ClientHandlerException, UniformInterfaceException, JSONException {
+      throws JSONException {
     return LogWebServiceUtils.getNMWebAddressFromRM(getConf(), nodeId);
   }
 
@@ -187,7 +185,10 @@ public class LogServlet extends Configured {
    * Returns the user qualified path name of the remote log directory for
    * each pre-configured log aggregation file controller.
    *
+   * @param user remoteUser.
+   * @param applicationId applicationId.
    * @return {@link Response} object containing remote log dir path names
+   * @throws IOException if there are I/O errors.
    */
   public Response getRemoteLogDirPath(String user, String applicationId)
       throws IOException {

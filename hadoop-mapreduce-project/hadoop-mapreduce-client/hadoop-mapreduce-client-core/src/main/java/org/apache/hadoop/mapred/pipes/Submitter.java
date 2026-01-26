@@ -30,7 +30,6 @@ import java.util.StringTokenizer;
 import org.apache.commons.cli.BasicParser;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
-import org.apache.commons.cli.OptionBuilder;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.cli.Parser;
@@ -83,7 +82,9 @@ public class Submitter extends Configured implements Tool {
   public static final String IS_JAVA_REDUCE = "mapreduce.pipes.isjavareducer";
   public static final String PARTITIONER = "mapreduce.pipes.partitioner";
   public static final String INPUT_FORMAT = "mapreduce.pipes.inputformat";
-  public static final String PORT = "mapreduce.pipes.command.port";
+  // This is used as an environment variable, which doesn't allow dots.
+  // FIXME This also seems to be used only for tests
+  public static final String PORT = "mapreduce_pipes_command_port";
   
   public Submitter() {
     this(new Configuration());
@@ -346,12 +347,14 @@ public class Submitter extends Configured implements Tool {
     
     void addOption(String longName, boolean required, String description, 
                    String paramName) {
-      Option option = OptionBuilder.withArgName(paramName).hasArgs(1).withDescription(description).isRequired(required).create(longName);
+      Option option = Option.builder(longName).argName(paramName)
+          .hasArg().desc(description).required(required).build();
       options.addOption(option);
     }
     
     void addArgument(String name, boolean required, String description) {
-      Option option = OptionBuilder.withArgName(name).hasArgs(1).withDescription(description).isRequired(required).create();
+      Option option = Option.builder().argName(name)
+          .hasArg().desc(description).required(required).build();
       options.addOption(option);
 
     }

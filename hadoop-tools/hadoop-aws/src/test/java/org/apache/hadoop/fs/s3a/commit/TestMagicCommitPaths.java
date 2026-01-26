@@ -23,8 +23,8 @@ import java.util.Arrays;
 import java.util.List;
 
 import org.apache.hadoop.util.Lists;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.fs.Path;
 
@@ -35,19 +35,19 @@ import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
 /**
  * Tests for {@link MagicCommitPaths} path operations.
  */
-public class TestMagicCommitPaths extends Assert {
+public class TestMagicCommitPaths extends Assertions {
 
   private static final List<String> MAGIC_AT_ROOT =
-      list(MAGIC);
+      list(MAGIC_PATH_PREFIX);
   private static final List<String> MAGIC_AT_ROOT_WITH_CHILD =
-      list(MAGIC, "child");
+      list(MAGIC_PATH_PREFIX, "child");
   private static final List<String> MAGIC_WITH_CHILD =
-      list("parent", MAGIC, "child");
+      list("parent", MAGIC_PATH_PREFIX, "child");
   private static final List<String> MAGIC_AT_WITHOUT_CHILD =
-      list("parent", MAGIC);
+      list("parent", MAGIC_PATH_PREFIX);
 
   private static final List<String> DEEP_MAGIC =
-      list("parent1", "parent2", MAGIC, "child1", "child2");
+      list("parent1", "parent2", MAGIC_PATH_PREFIX, "child1", "child2");
 
   public static final String[] EMPTY = {};
 
@@ -161,40 +161,44 @@ public class TestMagicCommitPaths extends Assert {
   @Test
   public void testFinalDestinationMagic1() {
     assertEquals(l("first", "2"),
-        finalDestination(l("first", MAGIC, "2")));
+        finalDestination(l("first", MAGIC_PATH_PREFIX, "2")));
   }
 
   @Test
   public void testFinalDestinationMagic2() {
     assertEquals(l("first", "3.txt"),
-        finalDestination(l("first", MAGIC, "2", "3.txt")));
+        finalDestination(l("first", MAGIC_PATH_PREFIX, "2", "3.txt")));
   }
 
   @Test
   public void testFinalDestinationRootMagic2() {
     assertEquals(l("3.txt"),
-        finalDestination(l(MAGIC, "2", "3.txt")));
+        finalDestination(l(MAGIC_PATH_PREFIX, "2", "3.txt")));
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testFinalDestinationMagicNoChild() {
-    finalDestination(l(MAGIC));
+    Assertions.assertThrows(IllegalArgumentException.class, () -> {
+      finalDestination(l(MAGIC_PATH_PREFIX));
+    });
   }
 
   @Test
   public void testFinalDestinationBaseDirectChild() {
-    finalDestination(l(MAGIC, BASE, "3.txt"));
+    finalDestination(l(MAGIC_PATH_PREFIX, BASE, "3.txt"));
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testFinalDestinationBaseNoChild() {
-    assertEquals(l(), finalDestination(l(MAGIC, BASE)));
+    Assertions.assertThrows(IllegalArgumentException.class, () -> {
+      assertEquals(l(), finalDestination(l(MAGIC_PATH_PREFIX, BASE)));
+    });
   }
 
   @Test
   public void testFinalDestinationBaseSubdirsChild() {
     assertEquals(l("2", "3.txt"),
-        finalDestination(l(MAGIC, "4", BASE, "2", "3.txt")));
+        finalDestination(l(MAGIC_PATH_PREFIX, "4", BASE, "2", "3.txt")));
   }
 
   /**
@@ -203,7 +207,7 @@ public class TestMagicCommitPaths extends Assert {
   @Test
   public void testFinalDestinationIgnoresBaseBeforeMagic() {
     assertEquals(l(BASE, "home", "3.txt"),
-        finalDestination(l(BASE, "home", MAGIC, "2", "3.txt")));
+        finalDestination(l(BASE, "home", MAGIC_PATH_PREFIX, "2", "3.txt")));
   }
 
   /** varargs to array. */
@@ -235,8 +239,8 @@ public class TestMagicCommitPaths extends Assert {
 
   private void assertPathSplits(String pathString, String[] expected) {
     Path path = new Path(pathString);
-    assertArrayEquals("From path " + path, expected,
-        splitPathToElements(path).toArray());
+    assertArrayEquals(expected,
+        splitPathToElements(path).toArray(), "From path " + path);
   }
 
   private void assertListEquals(String[] expected, List<String> actual) {

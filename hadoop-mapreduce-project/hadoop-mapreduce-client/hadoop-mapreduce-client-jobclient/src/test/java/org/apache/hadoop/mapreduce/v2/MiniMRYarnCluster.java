@@ -45,6 +45,7 @@ import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.service.Service;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.JarFinder;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.MiniYARNCluster;
@@ -106,7 +107,7 @@ public class MiniMRYarnCluster extends MiniYARNCluster {
               JHAdminConfig.DEFAULT_MR_HISTORY_WEBAPP_ADDRESS,
               JHAdminConfig.DEFAULT_MR_HISTORY_WEBAPP_PORT);    }
     address = NetUtils.getConnectAddress(address);
-    StringBuffer sb = new StringBuffer();
+    StringBuilder sb = new StringBuilder();
     InetAddress resolved = address.getAddress();
     if (resolved == null || resolved.isAnyLocalAddress() || 
         resolved.isLoopbackAddress()) {
@@ -266,8 +267,8 @@ public class MiniMRYarnCluster extends MiniYARNCluster {
         }
         historyServer = new JobHistoryServer();
         historyServer.init(getConfig());
-        new Thread() {
-          public void run() {
+        new SubjectInheritingThread() {
+          public void work() {
             historyServer.start();
           };
         }.start();

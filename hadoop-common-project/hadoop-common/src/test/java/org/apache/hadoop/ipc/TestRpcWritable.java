@@ -26,10 +26,12 @@ import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.ipc.protobuf.TestProtos.EchoRequestProto;
 import org.apache.hadoop.util.Time;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.thirdparty.protobuf.Message;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestRpcWritable {//extends TestRpcBase {
 
@@ -49,8 +51,8 @@ public class TestRpcWritable {//extends TestRpcBase {
     // deserial
     LongWritable actual = RpcWritable.wrap(new LongWritable())
         .readFrom(bb);
-    Assert.assertEquals(writable, actual);
-    Assert.assertEquals(0, bb.remaining());
+    assertEquals(writable, actual);
+    assertEquals(0, bb.remaining());
   }
 
   @Test
@@ -61,8 +63,8 @@ public class TestRpcWritable {//extends TestRpcBase {
 
     Message actual = RpcWritable.wrap(EchoRequestProto.getDefaultInstance())
         .readFrom(bb);
-    Assert.assertEquals(message1, actual);
-    Assert.assertEquals(0, bb.remaining());
+    assertEquals(message1, actual);
+    assertEquals(0, bb.remaining());
   }
 
   @Test
@@ -75,23 +77,23 @@ public class TestRpcWritable {//extends TestRpcBase {
 
     ByteBuffer bb = ByteBuffer.wrap(baos.toByteArray());
     RpcWritable.Buffer buf = RpcWritable.Buffer.wrap(bb);
-    Assert.assertEquals(baos.size(), bb.remaining());
-    Assert.assertEquals(baos.size(), buf.remaining());
+    assertEquals(baos.size(), bb.remaining());
+    assertEquals(baos.size(), buf.remaining());
 
     Object actual = buf.getValue(EchoRequestProto.getDefaultInstance());
-    Assert.assertEquals(message1, actual);
-    Assert.assertTrue(bb.remaining() > 0);
-    Assert.assertEquals(bb.remaining(), buf.remaining());
+    assertEquals(message1, actual);
+    assertTrue(bb.remaining() > 0);
+    assertEquals(bb.remaining(), buf.remaining());
 
     actual = buf.getValue(EchoRequestProto.getDefaultInstance());
-    Assert.assertEquals(message2, actual);
-    Assert.assertTrue(bb.remaining() > 0);
-    Assert.assertEquals(bb.remaining(), buf.remaining());
+    assertEquals(message2, actual);
+    assertTrue(bb.remaining() > 0);
+    assertEquals(bb.remaining(), buf.remaining());
 
     actual = buf.newInstance(LongWritable.class, null);
-    Assert.assertEquals(writable, actual);
-    Assert.assertEquals(0, bb.remaining());
-    Assert.assertEquals(0, buf.remaining());
+    assertEquals(writable, actual);
+    assertEquals(0, bb.remaining());
+    assertEquals(0, buf.remaining());
   }
 
   @Test
@@ -103,27 +105,27 @@ public class TestRpcWritable {//extends TestRpcBase {
     message2.writeDelimitedTo(dos);
     ByteBuffer bb = ByteBuffer.wrap(baos.toByteArray());
     RpcWritable.Buffer buf1 = RpcWritable.Buffer.wrap(bb);
-    Assert.assertEquals(baos.size(), bb.remaining());
-    Assert.assertEquals(baos.size(), buf1.remaining());
+    assertEquals(baos.size(), bb.remaining());
+    assertEquals(baos.size(), buf1.remaining());
 
     Object actual = buf1.newInstance(LongWritable.class, null);
-    Assert.assertEquals(writable, actual);
+    assertEquals(writable, actual);
     int left = bb.remaining();
-    Assert.assertTrue(left > 0);
-    Assert.assertEquals(left, buf1.remaining());
+    assertTrue(left > 0);
+    assertEquals(left, buf1.remaining());
 
     // original bb now appears empty, but rpc writable has a slice of the bb.
     RpcWritable.Buffer buf2 = buf1.newInstance(RpcWritable.Buffer.class, null);
-    Assert.assertEquals(0, bb.remaining());
-    Assert.assertEquals(0, buf1.remaining());
-    Assert.assertEquals(left, buf2.remaining());
+    assertEquals(0, bb.remaining());
+    assertEquals(0, buf1.remaining());
+    assertEquals(left, buf2.remaining());
 
     actual = buf2.getValue(EchoRequestProto.getDefaultInstance());
-    Assert.assertEquals(message1, actual);
-    Assert.assertTrue(buf2.remaining() > 0);
+    assertEquals(message1, actual);
+    assertTrue(buf2.remaining() > 0);
 
     actual = buf2.getValue(EchoRequestProto.getDefaultInstance());
-    Assert.assertEquals(message2, actual);
-    Assert.assertEquals(0, buf2.remaining());
+    assertEquals(message2, actual);
+    assertEquals(0, buf2.remaining());
   }
 }

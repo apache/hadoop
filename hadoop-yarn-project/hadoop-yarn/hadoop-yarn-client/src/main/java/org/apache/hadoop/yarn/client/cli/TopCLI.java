@@ -63,6 +63,7 @@ import org.apache.hadoop.security.authentication.client.KerberosAuthenticator;
 import org.apache.hadoop.security.ssl.SSLFactory;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.Priority;
@@ -339,9 +340,11 @@ public class TopCLI extends YarnCLI {
     int totalNodes;
     int runningNodes;
     int unhealthyNodes;
+    int decommissioningNodes;
     int decommissionedNodes;
     int lostNodes;
     int rebootedNodes;
+    int shutdownNodes;
   }
 
   private static class QueueMetrics {
@@ -365,9 +368,9 @@ public class TopCLI extends YarnCLI {
     long pendingContainers;
   }
 
-  private class KeyboardMonitor extends Thread {
+  private class KeyboardMonitor extends SubjectInheritingThread {
 
-    public void run() {
+    public void work() {
       Scanner keyboard = new Scanner(System.in, "UTF-8");
       while (runKeyboardMonitor.get()) {
         String in = keyboard.next();
@@ -696,6 +699,8 @@ public class TopCLI extends YarnCLI {
       return nodeInfo;
     }
 
+    nodeInfo.decommissioningNodes =
+        yarnClusterMetrics.getNumDecommissioningNodeManagers();
     nodeInfo.decommissionedNodes =
         yarnClusterMetrics.getNumDecommissionedNodeManagers();
     nodeInfo.totalNodes = yarnClusterMetrics.getNumNodeManagers();
@@ -703,6 +708,7 @@ public class TopCLI extends YarnCLI {
     nodeInfo.lostNodes = yarnClusterMetrics.getNumLostNodeManagers();
     nodeInfo.unhealthyNodes = yarnClusterMetrics.getNumUnhealthyNodeManagers();
     nodeInfo.rebootedNodes = yarnClusterMetrics.getNumRebootedNodeManagers();
+    nodeInfo.shutdownNodes = yarnClusterMetrics.getNumShutdownNodeManagers();
     return nodeInfo;
   }
 
@@ -880,11 +886,11 @@ public class TopCLI extends YarnCLI {
     ret.append(CLEAR_LINE)
         .append(limitLineLength(String.format(
             "NodeManager(s)"
-                + ": %d total, %d active, %d unhealthy, %d decommissioned,"
-                + " %d lost, %d rebooted%n",
+                + ": %d total, %d active, %d unhealthy, %d decommissioning,"
+                + " %d decommissioned, %d lost, %d rebooted, %d shutdown%n",
             nodes.totalNodes, nodes.runningNodes, nodes.unhealthyNodes,
-            nodes.decommissionedNodes, nodes.lostNodes,
-            nodes.rebootedNodes), terminalWidth, true));
+            nodes.decommissioningNodes, nodes.decommissionedNodes, nodes.lostNodes,
+            nodes.rebootedNodes, nodes.shutdownNodes), terminalWidth, true));
 
     ret.append(CLEAR_LINE)
         .append(limitLineLength(String.format(
@@ -1039,7 +1045,8 @@ public class TopCLI extends YarnCLI {
     }
   }
 
-  protected void showTopScreen() {
+  @VisibleForTesting
+  void showTopScreen() {
     List<ApplicationInformation> appsInfo = new ArrayList<>();
     List<ApplicationReport> apps;
     try {
@@ -1223,7 +1230,7 @@ public class TopCLI extends YarnCLI {
 
   private void addShutdownHook() {
     //clear screen when the program exits
-    Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+    Runtime.getRuntime().addShutdownHook(new SubjectInheritingThread(() -> {
       clearScreen();
     }));
   }

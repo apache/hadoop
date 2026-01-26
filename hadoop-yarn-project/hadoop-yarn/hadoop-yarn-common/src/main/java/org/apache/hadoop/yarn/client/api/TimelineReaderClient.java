@@ -42,6 +42,8 @@ public abstract class TimelineReaderClient extends CompositeService {
 
   /**
    * Create a new instance of Timeline Reader Client.
+   *
+   * @return instance of Timeline Reader Client.
    */
   @InterfaceAudience.Public
   public static TimelineReaderClient createTimelineReaderClient() {
@@ -59,7 +61,7 @@ public abstract class TimelineReaderClient extends CompositeService {
    * @param fields Fields to be fetched. Defaults to INFO.
    * @param filters Filters to be applied while fetching entities.
    * @return entity of the application
-   * @throws IOException
+   * @throws IOException io error occur.
    */
   public abstract  TimelineEntity getApplicationEntity(
       ApplicationId appId, String fields, Map<String, String> filters)
@@ -71,7 +73,7 @@ public abstract class TimelineReaderClient extends CompositeService {
    * @param fields Fields to be fetched. Defaults to INFO.
    * @param filters Filters to be applied while fetching entities.
    * @return entity associated with application attempt
-   * @throws IOException
+   * @throws IOException io error occur.
    */
   public abstract  TimelineEntity getApplicationAttemptEntity(
       ApplicationAttemptId appAttemptId, String fields,
@@ -85,7 +87,7 @@ public abstract class TimelineReaderClient extends CompositeService {
    * @param limit Number of entities to return.
    * @param fromId Retrieve next set of generic ids from given fromId
    * @return list of application attempt entities
-   * @throws IOException
+   * @throws IOException io error occur.
    */
   public abstract  List<TimelineEntity> getApplicationAttemptEntities(
       ApplicationId appId, String fields, Map<String, String> filters,
@@ -97,7 +99,7 @@ public abstract class TimelineReaderClient extends CompositeService {
    * @param fields Fields to be fetched. Defaults to INFO.
    * @param filters Filters to be applied while fetching entities.
    * @return timeline entity for container
-   * @throws IOException
+   * @throws IOException io error occur.
    */
   public abstract  TimelineEntity getContainerEntity(
       ContainerId containerId, String fields, Map<String, String> filters)
@@ -111,7 +113,7 @@ public abstract class TimelineReaderClient extends CompositeService {
    * @param limit Number of entities to return.
    * @param fromId Retrieve next set of generic ids from given fromId
    * @return list of entities
-   * @throws IOException
+   * @throws IOException io error occur.
    */
   public abstract List<TimelineEntity> getContainerEntities(
       ApplicationId appId, String fields,

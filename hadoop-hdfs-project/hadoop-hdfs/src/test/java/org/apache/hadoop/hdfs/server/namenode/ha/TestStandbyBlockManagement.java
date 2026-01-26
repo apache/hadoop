@@ -29,10 +29,11 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.event.Level;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Makes sure that standby doesn't do the unnecessary block management such as
@@ -49,7 +50,8 @@ public class TestStandbyBlockManagement {
     DFSTestUtil.setNameNodeLogLevel(Level.TRACE);
   }
 
-  @Test(timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testInvalidateBlock() throws Exception {
     Configuration conf = new Configuration();
     HAUtil.setAllowStandbyReads(conf, true);
@@ -82,19 +84,72 @@ public class TestStandbyBlockManagement {
       nn1.getRpcServer().rollEditLog();
 
       // standby nn doesn't need to invalidate blocks.
-      assertEquals(0,
-          nn2.getNamesystem().getBlockManager().getPendingDeletionBlocksCount());
+      assertEquals(0, nn2.getNamesystem().getBlockManager().getPendingDeletionBlocksCount());
 
       cluster.triggerHeartbeats();
       cluster.triggerBlockReports();
 
       // standby nn doesn't need to invalidate blocks.
-      assertEquals(0,
-          nn2.getNamesystem().getBlockManager().getPendingDeletionBlocksCount());
+      assertEquals(0, nn2.getNamesystem().getBlockManager().getPendingDeletionBlocksCount());
 
     } finally {
       cluster.shutdown();
     }
   }
 
+  /**
+   * Test Standby/Observer NameNode should not handle redundant replica block logic
+   * when set decrease replication.
+   * @throws Exception
+   */
+  @Test
+  @Timeout(value = 60)
+  public void testNotHandleRedundantReplica() throws Exception {
+    Configuration conf = new Configuration();
+    HAUtil.setAllowStandbyReads(conf, true);
+    conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, 1);
+
+    // Create HA Cluster.
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .nnTopology(MiniDFSNNTopology.simpleHATopology()).numDataNodes(4).build()) {
+      cluster.waitActive();
+      cluster.transitionToActive(0);
+
+      NameNode nn1 = cluster.getNameNode(0);
+      assertEquals("ACTIVE", nn1.getNamesystem().getState().name());
+      NameNode nn2 = cluster.getNameNode(1);
+      assertEquals("STANDBY", nn2.getNamesystem().getState().name());
+
+      cluster.triggerHeartbeats();
+      // Sending the FBR.
+      cluster.triggerBlockReports();
+
+      // Default excessRedundancyMap size as 0.
+      assertEquals(0, nn1.getNamesystem().getBlockManager().getExcessBlocksCount());
+      assertEquals(0, nn2.getNamesystem().getBlockManager().getExcessBlocksCount());
+
+      FileSystem fs = HATestUtil.configureFailoverFs(cluster, conf);
+
+      // Create test file.
+      Path file = new Path("/test");
+      long fileLength = 512;
+      DFSTestUtil.createFile(fs, file, fileLength, (short) 4, 0L);
+      DFSTestUtil.waitReplication(fs, file, (short) 4);
+
+      // Set decrease 3 replication.
+      fs.setReplication(file, (short) 3);
+      HATestUtil.waitForStandbyToCatchUp(nn1, nn2);
+
+      // Make sure the DN has deleted the block and report to NNs.
+      cluster.triggerHeartbeats();
+      HATestUtil.waitForDNDeletions(cluster);
+      cluster.triggerDeletionReports();
+
+      DFSTestUtil.waitReplication(fs, file, (short) 3);
+
+      // Delete excess replica, active and standby nn excessRedundancyMap size as 0.
+      assertEquals(0, nn1.getNamesystem().getBlockManager().getExcessBlocksCount());
+      assertEquals(0, nn2.getNamesystem().getBlockManager().getExcessBlocksCount());
+    }
+  }
 }

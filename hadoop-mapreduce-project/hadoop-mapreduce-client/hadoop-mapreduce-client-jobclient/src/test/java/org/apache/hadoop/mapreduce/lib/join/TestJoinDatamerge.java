@@ -33,25 +33,25 @@ import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
 
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestJoinDatamerge {
 
   private static MiniDFSCluster cluster = null;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     Configuration conf = new Configuration();
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     if (cluster != null) {
       cluster.shutdown();
@@ -116,7 +116,7 @@ public class TestJoinDatamerge {
 
     public void setup(Context context) {
       srcs = context.getConfiguration().getInt("testdatamerge.sources", 0);
-      assertTrue("Invalid src count: " + srcs, srcs > 0);
+      assertTrue(srcs > 0, "Invalid src count: " + srcs);
     }
   }
 
@@ -128,7 +128,7 @@ public class TestJoinDatamerge {
 
     public void setup(Context context) {
       srcs = context.getConfiguration().getInt("testdatamerge.sources", 0);
-      assertTrue("Invalid src count: " + srcs, srcs > 0);
+      assertTrue(srcs > 0, "Invalid src count: " + srcs);
     }
 
     public void reduce(IntWritable key, Iterable<IntWritable> values,
@@ -137,7 +137,7 @@ public class TestJoinDatamerge {
       for (IntWritable value : values) {
         seen += value.get();
       }
-      assertTrue("Bad count for " + key.get(), verify(key.get(), seen));
+      assertTrue(verify(key.get(), seen), "Bad count for " + key.get());
       context.write(key, new IntWritable(seen));
     }
     
@@ -150,10 +150,10 @@ public class TestJoinDatamerge {
         throws IOException, InterruptedException {
       int k = key.get();
       final String kvstr = "Unexpected tuple: " + stringify(key, val);
-      assertTrue(kvstr, 0 == k % (srcs * srcs));
+      assertTrue(0 == k % (srcs * srcs), kvstr);
       for (int i = 0; i < val.size(); ++i) {
         final int vali = ((IntWritable)val.get(i)).get();
-        assertTrue(kvstr, (vali - i) * srcs == 10 * k);
+        assertTrue((vali - i) * srcs == 10 * k, kvstr);
       }
       context.write(key, one);
       // If the user modifies the key or any of the values in the tuple, it
@@ -181,18 +181,18 @@ public class TestJoinDatamerge {
       final String kvstr = "Unexpected tuple: " + stringify(key, val);
       if (0 == k % (srcs * srcs)) {
         for (int i = 0; i < val.size(); ++i) {
-          assertTrue(kvstr, val.get(i) instanceof IntWritable);
+          assertTrue(val.get(i) instanceof IntWritable, kvstr);
           final int vali = ((IntWritable)val.get(i)).get();
-          assertTrue(kvstr, (vali - i) * srcs == 10 * k);
+          assertTrue((vali - i) * srcs == 10 * k, kvstr);
         }
       } else {
         for (int i = 0; i < val.size(); ++i) {
           if (i == k % srcs) {
-            assertTrue(kvstr, val.get(i) instanceof IntWritable);
+            assertTrue(val.get(i) instanceof IntWritable, kvstr);
             final int vali = ((IntWritable)val.get(i)).get();
-            assertTrue(kvstr, srcs * (vali - i) == 10 * (k - i));
+            assertTrue(srcs * (vali - i) == 10 * (k - i), kvstr);
           } else {
-            assertTrue(kvstr, !val.has(i));
+            assertTrue(!val.has(i), kvstr);
           }
         }
       }
@@ -224,10 +224,10 @@ public class TestJoinDatamerge {
       final int vali = val.get();
       final String kvstr = "Unexpected tuple: " + stringify(key, val);
       if (0 == k % (srcs * srcs)) {
-        assertTrue(kvstr, vali == k * 10 / srcs + srcs - 1);
+        assertTrue(vali == k * 10 / srcs + srcs - 1, kvstr);
       } else {
         final int i = k % srcs;
-        assertTrue(kvstr, srcs * (vali - i) == 10 * (k - i));
+        assertTrue(srcs * (vali - i) == 10 * (k - i), kvstr);
       }
       context.write(key, one);
       //If the user modifies the key or any of the values in the tuple, it
@@ -267,7 +267,7 @@ public class TestJoinDatamerge {
     job.setOutputKeyClass(IntWritable.class);
     job.setOutputValueClass(IntWritable.class);
     job.waitForCompletion(true);
-    assertTrue("Job failed", job.isSuccessful());
+    assertTrue(job.isSuccessful(), "Job failed");
     if ("outer".equals(jointype)) {
       checkOuterConsistency(job, src);
     }
@@ -289,18 +289,18 @@ public class TestJoinDatamerge {
     Path outf = FileOutputFormat.getOutputPath(job);
     FileStatus[] outlist = cluster.getFileSystem().listStatus(outf, new 
                              Utils.OutputFileUtils.OutputFilesFilter());
-    assertEquals("number of part files is more than 1. It is" + outlist.length,
-      1, outlist.length);
-    assertTrue("output file with zero length" + outlist[0].getLen(),
-      0 < outlist[0].getLen());
+    assertEquals(1, outlist.length,
+        "number of part files is more than 1. It is" + outlist.length);
+    assertTrue(0 < outlist[0].getLen(),
+        "output file with zero length" + outlist[0].getLen());
     SequenceFile.Reader r =
       new SequenceFile.Reader(cluster.getFileSystem(),
           outlist[0].getPath(), job.getConfiguration());
     IntWritable k = new IntWritable();
     IntWritable v = new IntWritable();
     while (r.next(k, v)) {
-      assertEquals("counts does not match", v.get(),
-        countProduct(k, src, job.getConfiguration()));
+      assertEquals(v.get(), countProduct(k, src, job.getConfiguration()),
+          "counts does not match");
     }
     r.close();
   }
@@ -394,7 +394,7 @@ public class TestJoinDatamerge {
     job.setOutputValueClass(TupleWritable.class);
     job.setOutputFormatClass(SequenceFileOutputFormat.class);
     job.waitForCompletion(true);
-    assertTrue("Job failed", job.isSuccessful());
+    assertTrue(job.isSuccessful(), "Job failed");
 
     FileStatus[] outlist = cluster.getFileSystem().listStatus(outf, 
                              new Utils.OutputFileUtils.OutputFilesFilter());

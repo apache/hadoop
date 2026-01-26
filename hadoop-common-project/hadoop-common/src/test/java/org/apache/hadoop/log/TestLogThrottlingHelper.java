@@ -19,12 +19,13 @@ package org.apache.hadoop.log;
 
 import org.apache.hadoop.log.LogThrottlingHelper.LogAction;
 import org.apache.hadoop.util.FakeTimer;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Tests for {@link LogThrottlingHelper}.
@@ -36,7 +37,7 @@ public class TestLogThrottlingHelper {
   private LogThrottlingHelper helper;
   private FakeTimer timer;
 
-  @Before
+  @BeforeEach
   public void setup() {
     timer = new FakeTimer();
     helper = new LogThrottlingHelper(LOG_PERIOD, null, timer);
@@ -93,11 +94,13 @@ public class TestLogThrottlingHelper {
     }
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testLoggingWithInconsistentValues() {
-    assertTrue(helper.record(1, 2).shouldLog());
-    helper.record(1, 2);
-    helper.record(1, 2, 3);
+    assertThrows(IllegalArgumentException.class, () -> {
+      assertTrue(helper.record(1, 2).shouldLog());
+      helper.record(1, 2);
+      helper.record(1, 2, 3);
+    });
   }
 
   @Test
@@ -140,6 +143,18 @@ public class TestLogThrottlingHelper {
     assertTrue(helper.record("foo", LOG_PERIOD * 2).shouldLog());
     // The timing of "bar" shouldn't matter as it is dependent on "foo"
     assertTrue(helper.record("bar", 0).shouldLog());
+  }
+
+  @Test
+  public void testInfrequentPrimaryAndDependentLoggers() {
+    helper = new LogThrottlingHelper(LOG_PERIOD, "foo", timer);
+
+    assertTrue(helper.record("foo", 0).shouldLog());
+    assertTrue(helper.record("bar", 0).shouldLog());
+
+    // Both should log once the period has elapsed
+    assertTrue(helper.record("foo", LOG_PERIOD).shouldLog());
+    assertTrue(helper.record("bar", LOG_PERIOD).shouldLog());
   }
 
   @Test

@@ -581,7 +581,7 @@ This will delete the containers; the output log of the test run will
 provide the details and summary of the operation.
 
 
-## Testing the Azure ABFS Client
+# Testing the Azure ABFS Client
 
 Azure Data Lake Storage Gen 2 (ADLS Gen 2) is a set of capabilities dedicated to
 big data analytics, built on top of Azure Blob Storage. The ABFS and ABFSS
@@ -602,26 +602,78 @@ various test combinations, it will:
 2. Run tests for all combinations
 3. Summarize results across all the test combination runs.
 
-As a pre-requisite step, fill config values for test accounts and credentials
-needed for authentication in `src/test/resources/azure-auth-keys.xml.template`
-and rename as `src/test/resources/azure-auth-keys.xml`.
+Below are the pre-requisite steps to follow:
+1. Copy `./src/test/resources/azure-auth-keys.xml.template` to
+`./src/test/resources/azure-auth-keys.xml`
+1. Update account names that should be used in the test run for HNS and non-HNS
+combinations in the 2 properties present in the xml (account name should be
+without domain part), namely
+   1. `fs.azure.hnsTestAccountName`: Specify the HNS Enabled Account
+   2. `fs.azure.nonHnsTestAccountName`: Specify the HNS Disabled Account
 
-**To add a new test combination:** Templates for mandatory test combinations
-for PR validation are present in `dev-support/testrun-scripts/runtests.sh`.
-If a new one needs to be added, add a combination set within
-`dev-support/testrun-scripts/runtests.sh` similar to the ones already defined
-and
-1. Provide a new combination name
-2. Update properties and values array which need to be effective for the test
-combination
-3. Call generateconfigs
+   Note: `azure-auth-keys.xml` is listed in .gitignore, so any accidental account name leak is prevented.
+
+    ```
+    XInclude is supported, so for extra security secrets may be
+    kept out of the source tree then referenced through an XInclude element:
+
+          <include xmlns="http://www.w3.org/2001/XInclude"
+            href="/users/self/.secrets/auth-keys.xml" />
+    ```
+
+1. Create account config files (one config file per account) in folder:
+
+        ./src/test/resources/accountSettings/
+   Follow the instruction in the start of the template file
+
+        accountName_settings.xml.template
+   within accountSettings folder while creating account config file.
+   New files created in folder accountSettings is listed in .gitignore to
+   prevent accidental cred leaks.
+
+You are all set to run the test script.
 
 **To run PR validation:** Running command
-* `dev-support/testrun-scripts/runtests.sh` will generate configurations for
-each of the combinations defined and run tests for all the combinations.
-* `dev-support/testrun-scripts/runtests.sh -c {combinationname}` Specific
-combinations can be provided with -c option. If combinations are provided
-with -c option, tests for only those combinations will be run.
+* `dev-support/testrun-scripts/runtests.sh` will prompt as below:
+```bash
+Choose action:
+[Note - SET_ACTIVE_TEST_CONFIG will help activate the config for IDE/single test class runs]
+1) SET_ACTIVE_TEST_CONFIG               4) SET_OR_CHANGE_TEST_ACCOUNT
+2) RUN_TEST                             5) PRINT_LOG4J_LOG_PATHS_FROM_LAST_RUN
+3) CLEAN_UP_OLD_TEST_CONTAINERS
+#? 2
+```
+Enter 1: for setting active combination for IDE test run/single mvn test class runs.
+
+Enter 2: for choosing the combination to choose for mvn full test suite.
+
+Enter 3: For clean-up of any abruptly ending test leaving auto generated test
+container on the account.
+
+Enter 4: To create/modify the config file that decides the account to use for specific test combination.
+
+Enter 5: To print the log4j paths the last test runs.
+
+On next prompt, current list of combinations to choose are provided.
+Sample for Run_TEST action:
+```bash
+Enter parallel test run process count [default - 8]: 4
+Set the active test combination to run the action:
+1) HNS-OAuth               3) nonHNS-SharedKey        5) AllCombinationsTestRun
+2) HNS-SharedKey           4) AppendBlob-HNS-OAuth    6) Quit
+#? 1
+
+============================================================
+HNS-OAuth
+============================================================
+Combination specific property setting: [ key=fs.azure.account.auth.type , value=OAuth ]
+
+Activated [src/test/resources/abfs-combination-test-configs.xml] - for account: snvijayacontracttest for combination HNS-OAuth
+Running test for combination HNS-OAuth on account snvijayacontracttest [ProcessCount=4]
+Test run report can be seen in dev-support/testlogs/2022-10-07_05-23-22/Test-Logs-HNS-OAuth.txt
+````
+
+Provide the option for the action chosen first.
 
 **Test logs:** Test runs will create a folder within dev-support/testlogs to
 save the test logs. Folder name will be the test start timestamp. The mvn verify
@@ -632,25 +684,58 @@ consolidated results of all the combination runs will be saved into a file as
 Test-Results.log in the same folder. When run for PR validation, the
 consolidated test results needs to be pasted into the PR comment section.
 
-**To generate config for use in IDE:** Running command with -a (activate) option
-`dev-support/testrun-scripts/runtests.sh -a {combination name}` will update
-the effective config relevant for the specific test combination. Hence the same
-config files used by the mvn test runs can be used for IDE without any manual
-updates needed within config file.
+**Aggregated Test Results**: `Test-Results.txt` file will show the aggregated results
+across all th combinations ran as part of script in following format
+```bash
+    ============================================================
+    HNS-OAuth
+    ============================================================
+    [ERROR] testAbfsHttpSendStatistics(org.apache.hadoop.fs.azurebfs.ITestAbfsNetworkStatistics)  Time elapsed: 3.137 s  <<< FAILURE!
+    [ERROR] testBlobDataContributor(org.apache.hadoop.fs.azurebfs.ITestAzureBlobFileSystemOauth)  Time elapsed: 4.154 s  <<< ERROR!
 
-**Other command line options:**
-* -a <COMBINATION_NAME> Specify the combination name which needs to be
-activated. This is to be used to generate config for use in IDE.
-* -c <COMBINATION_NAME> Specify the combination name for test runs. If this
-config is specified, tests for only the specified combinations will run. All
-combinations of tests will be running if this config is not specified.
-* -t <THREAD_COUNT> ABFS mvn tests are run in parallel mode. Tests by default
-are run with 8 thread count. It can be changed by providing -t <THREAD_COUNT>
+    [WARNING] Tests run: 137, Failures: 0, Errors: 0, Skipped: 2
+    [ERROR] Tests run: 623, Failures: 1, Errors: 0, Skipped: 73
+    [ERROR] Tests run: 340, Failures: 0, Errors: 1, Skipped: 55
 
-In order to test ABFS, please add the following configuration to your
-`src/test/resources/azure-auth-keys.xml` file. Note that the ABFS tests include
-compatibility tests which require WASB credentials, in addition to the ABFS
-credentials.
+    ============================================================
+    HNS-SharedKey
+    ============================================================
+    [ERROR] testAbfsHttpSendStatistics(org.apache.hadoop.fs.azurebfs.ITestAbfsNetworkStatistics)  Time elapsed: 2.175 s  <<< FAILURE!
+
+    [WARNING] Tests run: 137, Failures: 0, Errors: 0, Skipped: 3
+    [ERROR] Tests run: 623, Failures: 1, Errors: 0, Skipped: 42
+    [WARNING] Tests run: 340, Failures: 0, Errors: 0, Skipped: 41
+
+    ============================================================
+    NonHNS-SharedKey
+    ============================================================
+    [ERROR] testNonRecursiveDeleteWithPagination(org.apache.hadoop.fs.azurebfs.services.ITestAbfsPaginatedDelete)  Time elapsed: 0.85 s  <<< ERROR!
+
+    [WARNING] Tests run: 137, Failures: 0, Errors: 0, Skipped: 9
+    [ERROR] Tests run: 607, Failures: 1, Errors: 1, Skipped: 269
+    [WARNING] Tests run: 340, Failures: 0, Errors: 0, Skipped: 44
+
+    ============================================================
+    AppendBlob-HNS-OAuth
+    ============================================================
+
+    [WARNING] Tests run: 137, Failures: 0, Errors: 0, Skipped: 2
+    [ERROR] Tests run: 623, Failures: 0, Errors: 0, Skipped: 73
+    [ERROR] Tests run: 340, Failures: 0, Errors: 0, Skipped: 79
+```
+
+**To add a new test combination:** Templates for mandatory test combinations
+for PR validation are present in `dev-support/testrun-scripts/runtests.sh`.
+If a new one needs to be added, add a combination to
+`dev-support/testrun-scripts/runtests.sh`.
+(Refer to current active combinations within
+`SECTION: COMBINATION DEFINITIONS AND TRIGGER` and
+`SECTION: TEST COMBINATION METHODS` in the script).
+
+**Test Configuration Details:**
+
+ Note that the ABFS tests include compatibility tests which require WASB
+ credentials, in addition to the ABFS credentials.
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -791,6 +876,42 @@ hierarchical namespace enabled, and set the following configuration settings:
      <name>fs.azure.account.oauth2.client.id.{ABFS_ACCOUNT_NAME}</name>
      <value>{client id}</value>
      <description>AAD client id.</description>
+   </property>
+  -->
+
+  <!--2.5. If "WorkloadIdentityTokenProvider" is set as key provider, uncomment below and
+           set tenant, client id and token file path.
+
+           All service principals must have federated identity credentials for Kubernetes.
+           See Azure docs: https://learn.microsoft.com/en-us/azure/active-directory/workload-identities/workload-identity-federation-create-trust?pivots=identity-wif-apps-methods-azp#kubernetes
+
+           Retrieve the Azure identity token from kubernetes:
+           1. Create AKS cluster with Workload Identity: https://learn.microsoft.com/en-us/azure/aks/workload-identity-deploy-cluster
+           2. Create the pod:
+              kubectl apply -f src/test/resources/workload-identity-pod.yaml
+           3. After the pod is running, retrieve the identity token from the pod logs:
+              kubectl logs pod/workload-identity
+           4. Save the identity token to the token file path specified below.
+
+           The Azure identity token expires after 1 hour.
+  -->
+  <!--
+   <property>
+     <name>fs.azure.account.oauth2.msi.tenant.{ABFS_ACCOUNT_NAME}</name>
+     <value>{tenantGuid}</value>
+     <description>msi tenantGuid.</description>
+   </property>
+
+   <property>
+     <name>fs.azure.account.oauth2.client.id.{ABFS_ACCOUNT_NAME}</name>
+     <value>{client id}</value>
+     <description>AAD client id.</description>
+   </property>
+
+   <property>
+     <name>fs.azure.account.oauth2.client.token.file.{ABFS_ACCOUNT_NAME}</name>
+     <value>{token file path}</value>
+     <description>Azure identity token file path.</description>
    </property>
   -->
 

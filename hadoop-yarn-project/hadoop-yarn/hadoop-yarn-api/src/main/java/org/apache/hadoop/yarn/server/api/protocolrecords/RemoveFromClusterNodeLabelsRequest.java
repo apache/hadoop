@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.api.protocolrecords;
 import java.util.Set;
 
 import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.yarn.util.Records;
 
@@ -35,6 +36,15 @@ public abstract class RemoveFromClusterNodeLabelsRequest {
     return request;
   }
 
+  public static RemoveFromClusterNodeLabelsRequest newInstance(String subClusterId,
+      Set<String> labels) {
+    RemoveFromClusterNodeLabelsRequest request =
+        Records.newRecord(RemoveFromClusterNodeLabelsRequest.class);
+    request.setNodeLabels(labels);
+    request.setSubClusterId(subClusterId);
+    return request;
+  }
+
   @Public
   @Evolving
   public abstract void setNodeLabels(Set<String> labels);
@@ -42,4 +52,22 @@ public abstract class RemoveFromClusterNodeLabelsRequest {
   @Public
   @Evolving
   public abstract Set<String> getNodeLabels();
+
+  /**
+   * Get the subClusterId.
+   *
+   * @return subClusterId.
+   */
+  @Public
+  @InterfaceStability.Evolving
+  public abstract String getSubClusterId();
+
+  /**
+   * Set the subClusterId.
+   *
+   * @param subClusterId subCluster Id.
+   */
+  @Public
+  @InterfaceStability.Evolving
+  public abstract void setSubClusterId(String subClusterId);
 }

@@ -27,15 +27,16 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.util.Time;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.mockito.Mockito;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Date;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * This class tests the sorting of located blocks based on
@@ -62,9 +63,10 @@ public class TestSortLocatedBlock {
    * or
    * (d4 -> d3 -> d1 -> d2 -> d0).
    */
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testWithStaleDatanodes() throws IOException {
-    long blockID = Long.MIN_VALUE;
+    long blockID = Long.MAX_VALUE;
     int totalDns = 5;
     DatanodeInfo[] locs = new DatanodeInfo[totalDns];
 
@@ -115,8 +117,7 @@ public class TestSortLocatedBlock {
     assertEquals(locs[1].getIpAddr(), locations[2].getIpAddr());
     // decommissioned
     assertEquals(true,
-        decommissionedNodes.contains(locations[3])
-        && decommissionedNodes.contains(locations[4]));
+        decommissionedNodes.contains(locations[3]) && decommissionedNodes.contains(locations[4]));
   }
 
   /**
@@ -125,19 +126,20 @@ public class TestSortLocatedBlock {
    *
    * After sorting the expected datanodes list will be:
    * live -> slow -> stale -> staleAndSlow ->
-   * entering_maintenance -> decommissioned.
+   * entering_maintenance -> decommissioning -> decommissioned.
    *
    * avoidStaleDataNodesForRead=true && avoidSlowDataNodesForRead=true
-   * d5 -> d4 -> d3 -> d2 -> d1 -> d0
+   * d6 -> d5 -> d4 -> d3 -> d2 -> d1 -> d0
    */
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testAviodStaleAndSlowDatanodes() throws IOException {
     DatanodeManager dm = mockDatanodeManager(true, true);
     DatanodeInfo[] locs = mockDatanodes(dm);
 
     ArrayList<LocatedBlock> locatedBlocks = new ArrayList<>();
     locatedBlocks.add(new LocatedBlock(
-        new ExtendedBlock("pool", Long.MIN_VALUE,
+        new ExtendedBlock("pool", Long.MAX_VALUE,
             1024L, new Date().getTime()), locs));
 
     // sort located blocks
@@ -148,19 +150,21 @@ public class TestSortLocatedBlock {
     DatanodeInfoWithStorage[] locations = locatedBlock.getLocations();
 
     // assert location order:
-    // live -> stale -> entering_maintenance -> decommissioned
+    // live -> stale -> entering_maintenance -> decommissioning -> decommissioned
     // live
-    assertEquals(locs[5].getIpAddr(), locations[0].getIpAddr());
+    assertEquals(locs[6].getIpAddr(), locations[0].getIpAddr());
     // slow
-    assertEquals(locs[4].getIpAddr(), locations[1].getIpAddr());
+    assertEquals(locs[5].getIpAddr(), locations[1].getIpAddr());
     // stale
-    assertEquals(locs[3].getIpAddr(), locations[2].getIpAddr());
+    assertEquals(locs[4].getIpAddr(), locations[2].getIpAddr());
     // stale and slow
-    assertEquals(locs[2].getIpAddr(), locations[3].getIpAddr());
+    assertEquals(locs[3].getIpAddr(), locations[3].getIpAddr());
     // entering_maintenance
-    assertEquals(locs[1].getIpAddr(), locations[4].getIpAddr());
+    assertEquals(locs[2].getIpAddr(), locations[4].getIpAddr());
+    // decommissioning
+    assertEquals(locs[1].getIpAddr(), locations[5].getIpAddr());
     // decommissioned
-    assertEquals(locs[0].getIpAddr(), locations[5].getIpAddr());
+    assertEquals(locs[0].getIpAddr(), locations[6].getIpAddr());
   }
 
   /**
@@ -169,19 +173,20 @@ public class TestSortLocatedBlock {
    *
    * After sorting the expected datanodes list will be:
    * (live <-> slow) -> (stale <-> staleAndSlow) ->
-   * entering_maintenance -> decommissioned.
+   * entering_maintenance -> decommissioning -> decommissioned.
    *
    * avoidStaleDataNodesForRead=true && avoidSlowDataNodesForRead=false
-   * (d5 <-> d4) -> (d3 <-> d2) -> d1 -> d0
+   * (d6 <-> d5) -> (d4 <-> d3) -> d2 -> d1 -> d0
    */
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testAviodStaleDatanodes() throws IOException {
     DatanodeManager dm = mockDatanodeManager(true, false);
     DatanodeInfo[] locs = mockDatanodes(dm);
 
     ArrayList<LocatedBlock> locatedBlocks = new ArrayList<>();
     locatedBlocks.add(new LocatedBlock(
-        new ExtendedBlock("pool", Long.MIN_VALUE,
+        new ExtendedBlock("pool", Long.MAX_VALUE,
             1024L, new Date().getTime()), locs));
 
     // sort located blocks
@@ -192,21 +197,23 @@ public class TestSortLocatedBlock {
     DatanodeInfoWithStorage[] locations = locatedBlock.getLocations();
 
     // assert location order:
-    // live -> stale -> entering_maintenance -> decommissioned
+    // live -> stale -> entering_maintenance -> decommissioning -> decommissioned.
     // live
     assertTrue((locs[5].getIpAddr() == locations[0].getIpAddr() &&
-        locs[4].getIpAddr() == locations[1].getIpAddr()) ||
+        locs[6].getIpAddr() == locations[1].getIpAddr()) ||
         (locs[5].getIpAddr() == locations[1].getIpAddr() &&
-            locs[4].getIpAddr() == locations[0].getIpAddr()));
+            locs[6].getIpAddr() == locations[0].getIpAddr()));
     // stale
-    assertTrue((locs[3].getIpAddr() == locations[2].getIpAddr() &&
-        locs[2].getIpAddr() == locations[3].getIpAddr()) ||
-        (locs[3].getIpAddr() == locations[3].getIpAddr() &&
-            locs[2].getIpAddr() == locations[2].getIpAddr()));
+    assertTrue((locs[4].getIpAddr() == locations[3].getIpAddr() &&
+        locs[3].getIpAddr() == locations[2].getIpAddr()) ||
+        (locs[4].getIpAddr() == locations[2].getIpAddr() &&
+            locs[3].getIpAddr() == locations[3].getIpAddr()));
     // entering_maintenance
-    assertEquals(locs[1].getIpAddr(), locations[4].getIpAddr());
+    assertEquals(locs[2].getIpAddr(), locations[4].getIpAddr());
+    // decommissioning
+    assertEquals(locs[1].getIpAddr(), locations[5].getIpAddr());
     // decommissioned
-    assertEquals(locs[0].getIpAddr(), locations[5].getIpAddr());
+    assertEquals(locs[0].getIpAddr(), locations[6].getIpAddr());
   }
 
   /**
@@ -215,19 +222,20 @@ public class TestSortLocatedBlock {
    *
    * After sorting the expected datanodes list will be:
    * (live <-> stale) -> (slow <-> staleAndSlow) ->
-   * entering_maintenance -> decommissioned.
+   * entering_maintenance -> decommissioning -> decommissioned.
    *
    * avoidStaleDataNodesForRead=false && avoidSlowDataNodesForRead=true
-   * (d5 -> d3) -> (d4 <-> d2) -> d1 -> d0
+   * (d6 -> d4) -> (d5 <-> d3) -> d2 -> d1 -> d0
    */
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testAviodSlowDatanodes() throws IOException {
     DatanodeManager dm = mockDatanodeManager(false, true);
     DatanodeInfo[] locs = mockDatanodes(dm);
 
     ArrayList<LocatedBlock> locatedBlocks = new ArrayList<>();
     locatedBlocks.add(new LocatedBlock(
-        new ExtendedBlock("pool", Long.MIN_VALUE,
+        new ExtendedBlock("pool", Long.MAX_VALUE,
             1024L, new Date().getTime()), locs));
 
     // sort located blocks
@@ -238,34 +246,88 @@ public class TestSortLocatedBlock {
     DatanodeInfoWithStorage[] locations = locatedBlock.getLocations();
 
     // assert location order:
-    // live -> slow -> entering_maintenance -> decommissioned
+    // live -> slow -> entering_maintenance -> decommissioning -> decommissioned.
     // live
-    assertTrue((locs[5].getIpAddr() == locations[0].getIpAddr() &&
-        locs[3].getIpAddr() == locations[1].getIpAddr()) ||
-        (locs[5].getIpAddr() == locations[1].getIpAddr() &&
-            locs[3].getIpAddr() == locations[0].getIpAddr()));
+    assertTrue((locs[6].getIpAddr() == locations[0].getIpAddr() &&
+        locs[4].getIpAddr() == locations[1].getIpAddr()) ||
+        (locs[6].getIpAddr() == locations[1].getIpAddr() &&
+            locs[4].getIpAddr() == locations[0].getIpAddr()));
     // slow
-    assertTrue((locs[4].getIpAddr() == locations[2].getIpAddr() &&
-        locs[2].getIpAddr() == locations[3].getIpAddr()) ||
-        (locs[4].getIpAddr() == locations[3].getIpAddr() &&
-            locs[2].getIpAddr() == locations[2].getIpAddr()));
+    assertTrue((locs[5].getIpAddr() == locations[2].getIpAddr() &&
+        locs[3].getIpAddr() == locations[3].getIpAddr()) ||
+        (locs[5].getIpAddr() == locations[3].getIpAddr() &&
+            locs[3].getIpAddr() == locations[2].getIpAddr()));
     // entering_maintenance
-    assertEquals(locs[1].getIpAddr(), locations[4].getIpAddr());
+    assertEquals(locs[2].getIpAddr(), locations[4].getIpAddr());
+    // decommissioning
+    assertEquals(locs[1].getIpAddr(), locations[5].getIpAddr());
     // decommissioned
-    assertEquals(locs[0].getIpAddr(), locations[5].getIpAddr());
+    assertEquals(locs[0].getIpAddr(), locations[6].getIpAddr());
+  }
+
+  /**
+   * Test to verify sorting with multiple state
+   * datanodes exists in storage lists.
+   *
+   * After sorting the expected datanodes list will be:
+   * (live <-> stale <-> slow <-> staleAndSlow) ->
+   * entering_maintenance -> decommissioning -> decommissioned.
+   *
+   * avoidStaleDataNodesForRead=false && avoidSlowDataNodesForRead=false
+   * (d6 <-> d5 <-> d4 <-> d3) -> d2 -> d1 -> d0
+   */
+  @Test
+  @Timeout(value = 30)
+  public void testWithServiceComparator() throws IOException {
+    DatanodeManager dm = mockDatanodeManager(false, false);
+    DatanodeInfo[] locs = mockDatanodes(dm);
+
+    // mark live/slow/stale datanodes
+    ArrayList<DatanodeInfo> list = new ArrayList<>();
+    for (DatanodeInfo loc : locs) {
+      list.add(loc);
+    }
+
+    // generate blocks
+    ArrayList<LocatedBlock> locatedBlocks = new ArrayList<>();
+    locatedBlocks.add(new LocatedBlock(
+        new ExtendedBlock("pool", Long.MAX_VALUE,
+            1024L, new Date().getTime()), locs));
+
+    // sort located blocks
+    dm.sortLocatedBlocks(null, locatedBlocks);
+
+    // get locations after sorting
+    LocatedBlock locatedBlock = locatedBlocks.get(0);
+    DatanodeInfoWithStorage[] locations = locatedBlock.getLocations();
+
+    // assert location order:
+    // live/slow/stale -> entering_maintenance -> decommissioning -> decommissioned.
+    // live/slow/stale
+    assertTrue(list.contains(locations[0]) &&
+        list.contains(locations[1]) &&
+        list.contains(locations[2]) &&
+        list.contains(locations[3]));
+    // entering_maintenance
+    assertEquals(locs[2].getIpAddr(), locations[4].getIpAddr());
+    // decommissioning
+    assertEquals(locs[1].getIpAddr(), locations[5].getIpAddr());
+    // decommissioned
+    assertEquals(locs[0].getIpAddr(), locations[6].getIpAddr());
   }
 
   /**
    * We mock the following list of datanodes, and create LocatedBlock.
    * d0 - decommissioned
-   * d1 - entering_maintenance
-   * d2 - stale and slow
-   * d3 - stale
-   * d4 - slow
-   * d5 - live(in-service)
+   * d1 - decommissioning
+   * d2 - entering_maintenance
+   * d3 - stale and slow
+   * d4 - stale
+   * d5 - slow
+   * d6 - live(in-service)
    */
   private static DatanodeInfo[] mockDatanodes(DatanodeManager dm) {
-    int totalDns = 6;
+    int totalDns = 7;
     DatanodeInfo[] locs = new DatanodeInfo[totalDns];
 
     // create datanodes
@@ -276,17 +338,19 @@ public class TestSortLocatedBlock {
     }
     // set decommissioned state
     locs[0].setDecommissioned();
+    // set decommissioning state
+    locs[1].startDecommission();
     // set entering_maintenance state
-    locs[1].startMaintenance();
+    locs[2].startMaintenance();
     // set stale and slow state
-    locs[2].setLastUpdateMonotonic(Time.monotonicNow() -
-        DFSConfigKeys.DFS_NAMENODE_STALE_DATANODE_INTERVAL_DEFAULT * 1000 - 1);
-    dm.addSlowPeers(locs[2].getDatanodeUuid());
-    // set stale state
     locs[3].setLastUpdateMonotonic(Time.monotonicNow() -
         DFSConfigKeys.DFS_NAMENODE_STALE_DATANODE_INTERVAL_DEFAULT * 1000 - 1);
+    dm.addSlowPeers(locs[3].getDatanodeUuid());
+    // set stale state
+    locs[4].setLastUpdateMonotonic(Time.monotonicNow() -
+        DFSConfigKeys.DFS_NAMENODE_STALE_DATANODE_INTERVAL_DEFAULT * 1000 - 1);
     // set slow state
-    dm.addSlowPeers(locs[4].getDatanodeUuid());
+    dm.addSlowPeers(locs[5].getDatanodeUuid());
 
     return locs;
   }

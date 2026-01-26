@@ -34,10 +34,12 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
-import org.junit.Ignore;
-import org.junit.Test;
-import static org.junit.Assert.*;
-@Ignore
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+
+@Disabled
 public class TestHistograms {
 
   /**
@@ -71,7 +73,7 @@ public class TestHistograms {
       if (fileName.startsWith("input")) {
         String testName = fileName.substring("input".length());
         Path goldFilePath = new Path(rootInputFile, "gold"+testName);
-        assertTrue("Gold file dies not exist", lfs.exists(goldFilePath));
+        assertTrue(lfs.exists(goldFilePath), "Gold file dies not exist");
         LoggedDiscreteCDF newResult = histogramFileToCDF(filePath, lfs);
         System.out.println("Testing a Histogram for " + fileName);
         FSDataInputStream goldStream = lfs.open(goldFilePath);
@@ -106,12 +108,11 @@ public class TestHistograms {
     List<Long> measurements = data.getData();
     List<Long> typeProbeData = new HistogramRawTestData().getData();
 
-    assertTrue(
+    assertTrue(measurements.getClass() == typeProbeData.getClass(),
         "The data attribute of a jackson-reconstructed HistogramRawTestData "
-            + " should be a " + typeProbeData.getClass().getName()
-            + ", like a virgin HistogramRawTestData, but it's a "
-            + measurements.getClass().getName(),
-        measurements.getClass() == typeProbeData.getClass());
+        + " should be a " + typeProbeData.getClass().getName()
+        + ", like a virgin HistogramRawTestData, but it's a "
+        + measurements.getClass().getName());
 
     for (int j = 0; j < measurements.size(); ++j) {
       hist.enter(measurements.get(j));

@@ -17,9 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.datanode.web.webhdfs;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
-import com.sun.jersey.api.ParamException;
-import com.sun.jersey.api.container.ContainerException;
+import org.glassfish.jersey.server.ParamException;
+import org.glassfish.jersey.server.ContainerException;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
@@ -32,6 +31,7 @@ import org.apache.hadoop.security.token.SecretManager;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 
 import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_LENGTH;
 import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_TYPE;
@@ -83,7 +83,7 @@ class ExceptionHandler {
       s = INTERNAL_SERVER_ERROR;
     }
 
-    final byte[] js = JsonUtil.toJsonString(e).getBytes(Charsets.UTF_8);
+    final byte[] js = JsonUtil.toJsonString(e).getBytes(StandardCharsets.UTF_8);
     DefaultFullHttpResponse resp =
       new DefaultFullHttpResponse(HTTP_1_1, s, Unpooled.wrappedBuffer(js));
 

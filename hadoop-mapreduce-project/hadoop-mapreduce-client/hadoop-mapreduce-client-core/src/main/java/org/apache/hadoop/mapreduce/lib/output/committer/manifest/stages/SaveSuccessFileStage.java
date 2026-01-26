@@ -28,6 +28,7 @@ import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.ManifestS
 
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.SUCCESS_MARKER;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.TMP_SUFFIX;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_SAVE_SUMMARY_FILE;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_STAGE_JOB_COMMIT;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_STAGE_JOB_SAVE_SUCCESS;
 
@@ -72,7 +73,7 @@ public class SaveSuccessFileStage extends
     LOG.debug("{}: Saving _SUCCESS file to {} via {}", successFile,
         getName(),
         successTempFile);
-    save(successData, successTempFile, successFile);
+    saveManifest(() -> successData, successTempFile, successFile, OP_SAVE_SUMMARY_FILE);
     return successFile;
   }
 

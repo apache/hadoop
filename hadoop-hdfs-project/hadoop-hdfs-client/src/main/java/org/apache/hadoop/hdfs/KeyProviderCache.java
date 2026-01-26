@@ -68,8 +68,11 @@ public class KeyProviderCache {
         })
         .build();
 
-    ShutdownHookManager.get().addShutdownHook(new KeyProviderCacheFinalizer(),
-        SHUTDOWN_HOOK_PRIORITY);
+    // Register the shutdown hook when not in shutdown
+    if (!ShutdownHookManager.get().isShutdownInProgress()) {
+      ShutdownHookManager.get().addShutdownHook(
+          new KeyProviderCacheFinalizer(), SHUTDOWN_HOOK_PRIORITY);
+    }
   }
 
   public KeyProvider get(final Configuration conf,

@@ -21,14 +21,18 @@ package org.apache.hadoop.fs.s3a.auth.delegation;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletionService;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
 
+import org.apache.hadoop.test.tags.LoadTest;
+import org.apache.hadoop.test.tags.ScaleTest;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -76,6 +80,8 @@ import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.DELEG
  * @see <a href="https://github.com/steveloughran/datasets/releases/tag/tag_2018-09-17-aws">
  *   AWS STS login throttling statistics</a>
  */
+@LoadTest
+@ScaleTest
 public class ILoadTestSessionCredentials extends S3AScaleTestBase {
 
   private static final Logger LOG =
@@ -115,14 +121,14 @@ public class ILoadTestSessionCredentials extends S3AScaleTestBase {
     return DELEGATION_TOKEN_SESSION_BINDING;
   }
 
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     super.setup();
     assumeSessionTestsEnabled(getConfiguration());
     S3AFileSystem fileSystem = getFileSystem();
-    assertNotNull(
-        "No delegation tokens in FS",
-        fileSystem.getCanonicalServiceName());
+    assertNotNull(fileSystem.getCanonicalServiceName(),
+        "No delegation tokens in FS");
     dataDir = GenericTestUtils.getTestDir("kerberos");
     dataDir.mkdirs();
   }
@@ -134,7 +140,7 @@ public class ILoadTestSessionCredentials extends S3AScaleTestBase {
   @Test
   public void testCreate10Tokens() throws Throwable {
     File file = fetchTokens(10);
-    String csv = FileUtils.readFileToString(file, "UTF-8");
+    String csv = FileUtils.readFileToString(file, StandardCharsets.UTF_8);
     LOG.info("CSV data\n{}", csv);
   }
 

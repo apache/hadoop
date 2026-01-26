@@ -20,9 +20,10 @@ package org.apache.hadoop.hdfs.server.namenode;
 import static org.apache.hadoop.hdfs.server.namenode.TestEditLog.TXNS_PER_FAIL;
 import static org.apache.hadoop.hdfs.server.namenode.TestEditLog.TXNS_PER_ROLL;
 import static org.apache.hadoop.hdfs.server.namenode.TestEditLog.setupEdits;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.io.FilenameFilter;
@@ -44,10 +45,8 @@ import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
 import org.apache.hadoop.hdfs.server.namenode.TestEditLog.AbortSpec;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.NativeCodeLoader;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
@@ -64,10 +63,7 @@ public class TestFileJournalManager {
     EditLogFileOutputStream.setShouldSkipFsyncForTesting(true);
   }
 
-  @Rule
-  public ExpectedException exception = ExpectedException.none();
-
-  @Before
+  @BeforeEach
   public void setUp() {
     conf = new Configuration();
   }
@@ -155,8 +151,7 @@ public class TestFileJournalManager {
     StorageDirectory sd = storage.dirIterator(NameNodeDirType.EDITS).next();
 
     FileJournalManager jm = new FileJournalManager(conf, sd, storage);
-    assertEquals(5*TXNS_PER_ROLL + TXNS_PER_FAIL, 
-                 getNumberOfTransactions(jm, 1, true, false));
+    assertEquals(5 * TXNS_PER_ROLL + TXNS_PER_FAIL, getNumberOfTransactions(jm, 1, true, false));
   }
 
   /**
@@ -182,8 +177,7 @@ public class TestFileJournalManager {
     
     sd = dirs.next();
     jm = new FileJournalManager(conf, sd, storage);
-    assertEquals(5*TXNS_PER_ROLL + TXNS_PER_FAIL, getNumberOfTransactions(jm, 1,
-        true, false));
+    assertEquals(5 * TXNS_PER_ROLL + TXNS_PER_FAIL, getNumberOfTransactions(jm, 1, true, false));
 
     sd = dirs.next();
     jm = new FileJournalManager(conf, sd, storage);
@@ -211,18 +205,15 @@ public class TestFileJournalManager {
     Iterator<StorageDirectory> dirs = storage.dirIterator(NameNodeDirType.EDITS);
     StorageDirectory sd = dirs.next();
     FileJournalManager jm = new FileJournalManager(conf, sd, storage);
-    assertEquals(5*TXNS_PER_ROLL + TXNS_PER_FAIL, getNumberOfTransactions(jm, 1,
-        true, false));
+    assertEquals(5 * TXNS_PER_ROLL + TXNS_PER_FAIL, getNumberOfTransactions(jm, 1, true, false));
     
     sd = dirs.next();
     jm = new FileJournalManager(conf, sd, storage);
-    assertEquals(5*TXNS_PER_ROLL + TXNS_PER_FAIL, getNumberOfTransactions(jm, 1,
-        true, false));
+    assertEquals(5 * TXNS_PER_ROLL + TXNS_PER_FAIL, getNumberOfTransactions(jm, 1, true, false));
 
     sd = dirs.next();
     jm = new FileJournalManager(conf, sd, storage);
-    assertEquals(5*TXNS_PER_ROLL + TXNS_PER_FAIL, getNumberOfTransactions(jm, 1,
-        true, false));
+    assertEquals(5 * TXNS_PER_ROLL + TXNS_PER_FAIL, getNumberOfTransactions(jm, 1, true, false));
   }
 
   /** 
@@ -237,23 +228,24 @@ public class TestFileJournalManager {
     raf.close();
   }
   
-  @Test(expected=IllegalStateException.class)
+  @Test
   public void testFinalizeErrorReportedToNNStorage() throws IOException, InterruptedException {
-    File f = new File(TestEditLog.TEST_DIR + "/filejournaltestError");
-    // abort after 10th roll
-    NNStorage storage = setupEdits(Collections.<URI>singletonList(f.toURI()),
-                                   10, new AbortSpec(10, 0));
-    StorageDirectory sd = storage.dirIterator(NameNodeDirType.EDITS).next();
+    assertThrows(IllegalStateException.class, () -> {
+      File f = new File(TestEditLog.TEST_DIR + "/filejournaltestError");
+      NNStorage storage = setupEdits(Collections.<URI>singletonList(f.toURI()),
+          10, new AbortSpec(10, 0));
+      StorageDirectory sd = storage.dirIterator(NameNodeDirType.EDITS).next();
+      FileJournalManager jm = new FileJournalManager(conf, sd, storage);
+      String sdRootPath = sd.getRoot().getAbsolutePath();
+      FileUtil.chmod(sdRootPath, "-w", true);
+      try {
+        jm.finalizeLogSegment(0, 1);
+      } finally {
+        FileUtil.chmod(sdRootPath, "+w", true);
+        assertTrue(storage.getRemovedStorageDirs().contains(sd));
+      }
+    });
 
-    FileJournalManager jm = new FileJournalManager(conf, sd, storage);
-    String sdRootPath = sd.getRoot().getAbsolutePath();
-    FileUtil.chmod(sdRootPath, "-w", true);
-    try {
-      jm.finalizeLogSegment(0, 1);
-    } finally {
-      FileUtil.chmod(sdRootPath, "+w", true);
-      assertTrue(storage.getRemovedStorageDirs().contains(sd));
-    }
   }
 
   /** 
@@ -272,15 +264,14 @@ public class TestFileJournalManager {
 
     FileJournalManager jm = new FileJournalManager(conf, sd, storage);
     long expectedTotalTxnCount = TXNS_PER_ROLL*10 + TXNS_PER_FAIL;
-    assertEquals(expectedTotalTxnCount, getNumberOfTransactions(jm, 1,
-        true, false));
+    assertEquals(expectedTotalTxnCount, getNumberOfTransactions(jm, 1, true, false));
 
     long skippedTxns = (3*TXNS_PER_ROLL); // skip first 3 files
     long startingTxId = skippedTxns + 1; 
 
     long numLoadable = getNumberOfTransactions(jm, startingTxId,
         true, false);
-    assertEquals(expectedTotalTxnCount - skippedTxns, numLoadable); 
+    assertEquals(expectedTotalTxnCount - skippedTxns, numLoadable);
   }
 
   /**
@@ -301,8 +292,8 @@ public class TestFileJournalManager {
     // 10 rolls, so 11 rolled files, 110 txids total.
     final int TOTAL_TXIDS = 10 * 11;
     for (int txid = 1; txid <= TOTAL_TXIDS; txid++) {
-      assertEquals((TOTAL_TXIDS - txid) + 1, getNumberOfTransactions(jm, txid,
-          true, false));
+      assertEquals((TOTAL_TXIDS - txid) + 1,
+          getNumberOfTransactions(jm, txid, true, false));
     }
   }
 
@@ -340,8 +331,8 @@ public class TestFileJournalManager {
     assertEquals(0, getNumberOfTransactions(jm, startGapTxId, true, true));
 
     // rolled 10 times so there should be 11 files.
-    assertEquals(11*TXNS_PER_ROLL - endGapTxId, 
-                 getNumberOfTransactions(jm, endGapTxId + 1, true, true));
+    assertEquals(11 * TXNS_PER_ROLL - endGapTxId,
+        getNumberOfTransactions(jm, endGapTxId + 1, true, true));
   }
 
   /** 
@@ -368,8 +359,7 @@ public class TestFileJournalManager {
     corruptAfterStartSegment(files[0]);
 
     FileJournalManager jm = new FileJournalManager(conf, sd, storage);
-    assertEquals(10*TXNS_PER_ROLL+1, 
-                 getNumberOfTransactions(jm, 1, true, false));
+    assertEquals(10 * TXNS_PER_ROLL + 1, getNumberOfTransactions(jm, 1, true, false));
   }
 
   @Test
@@ -387,17 +377,19 @@ public class TestFileJournalManager {
     assertEquals("[101,200],[1001,1100]", getLogsAsString(fjm, 101));
     assertEquals("[101,200],[1001,1100]", getLogsAsString(fjm, 150));
     assertEquals("[1001,1100]", getLogsAsString(fjm, 201));
-    assertEquals("Asking for a newer log than exists should return empty list",
-        "", getLogsAsString(fjm, 9999));
+    assertEquals("", getLogsAsString(fjm, 9999),
+        "Asking for a newer log than exists should return empty list");
   }
 
   /**
    * tests that passing an invalid dir to matchEditLogs throws IOException 
    */
-  @Test(expected = IOException.class)
+  @Test
   public void testMatchEditLogInvalidDirThrowsIOException() throws IOException {
-    File badDir = new File("does not exist");
-    FileJournalManager.matchEditLogs(badDir);
+    assertThrows(IOException.class, () -> {
+      File badDir = new File("does not exist");
+      FileJournalManager.matchEditLogs(badDir);
+    });
   }
   
   private static EditLogInputStream getJournalInputStream(FileJournalManager jm,
@@ -446,7 +438,7 @@ public class TestFileJournalManager {
     EditLogInputStream elis = getJournalInputStream(jm, 5, true);
     try {
       FSEditLogOp op = elis.readOp();
-      assertEquals("read unexpected op", op.getTransactionId(), 5);
+      assertEquals(op.getTransactionId(), 5, "read unexpected op");
     } finally {
       IOUtils.cleanupWithLogger(LOG, elis);
     }
@@ -499,11 +491,13 @@ public class TestFileJournalManager {
     FileJournalManager jm = null;
     try {
       jm = new FileJournalManager(conf, sd, storage);
-      exception.expect(IOException.class);
+
+      final FileJournalManager j = jm;
+      IOException ex = assertThrows(IOException.class, () ->
+          j.doPreUpgrade());
       if (NativeCodeLoader.isNativeCodeLoaded()) {
-        exception.expectMessage("failure in native rename");
+        assertTrue(ex.getMessage().contains("failure in native rename"));
       }
-      jm.doPreUpgrade();
     } finally {
       IOUtils.cleanupWithLogger(LOG, jm);
       // Restore permissions on storage directory and make sure we can delete.

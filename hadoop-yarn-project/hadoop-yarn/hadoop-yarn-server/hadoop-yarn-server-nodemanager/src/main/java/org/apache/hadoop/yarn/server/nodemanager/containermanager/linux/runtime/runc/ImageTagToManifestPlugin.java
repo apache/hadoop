@@ -20,8 +20,6 @@
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.runc;
 
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -45,6 +43,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.DEFAULT_NM_RUNC_CACHE_REFRESH_INTERVAL;
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.DEFAULT_NM_RUNC_IMAGE_TOPLEVEL_DIR;
@@ -78,8 +78,7 @@ public class ImageTagToManifestPlugin extends AbstractService
   private String manifestDir;
   private String localImageTagToHashFile;
 
-  private static final Log LOG = LogFactory.getLog(
-      ImageTagToManifestPlugin.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ImageTagToManifestPlugin.class);
 
   private static final int SHA256_HASH_LENGTH = 64;
   private static final String ALPHA_NUMERIC = "[a-zA-Z0-9]+";

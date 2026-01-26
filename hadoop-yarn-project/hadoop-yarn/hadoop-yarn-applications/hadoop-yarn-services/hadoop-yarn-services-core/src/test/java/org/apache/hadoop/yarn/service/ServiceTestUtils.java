@@ -51,14 +51,14 @@ import org.apache.hadoop.yarn.service.utils.ServiceApiUtil;
 import org.apache.hadoop.yarn.service.utils.SliderFileSystem;
 import org.apache.hadoop.yarn.util.LinuxResourceCalculatorPlugin;
 import org.apache.hadoop.yarn.util.ProcfsBasedProcessTree;
-import org.junit.rules.TestWatcher;
-import org.junit.runner.Description;
+import org.junit.jupiter.api.extension.AfterEachCallback;
+import org.junit.jupiter.api.extension.BeforeEachCallback;
+import org.junit.jupiter.api.extension.ExtensionContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URL;
@@ -253,7 +253,7 @@ public class ServiceTestUtils {
     zkCluster.start();
     conf.set(YarnConfiguration.RM_ZK_ADDRESS, zkCluster.getConnectString());
     conf.set(KEY_REGISTRY_ZK_QUORUM, zkCluster.getConnectString());
-    LOG.info("ZK cluster: " + zkCluster.getConnectString());
+    LOG.info("ZK cluster: {}.", zkCluster.getConnectString());
 
     curatorService = new CuratorService("testCuratorService");
     curatorService.init(conf);
@@ -270,9 +270,8 @@ public class ServiceTestUtils {
     conf.set(YARN_SERVICE_BASE_PATH, basedir.getAbsolutePath());
 
     if (yarnCluster == null) {
-      yarnCluster =
-          new MiniYARNCluster(this.getClass().getSimpleName(), 1,
-              numNodeManager, 1, 1);
+      yarnCluster = new MiniYARNCluster(this.getClass().getSimpleName(), 1,
+          numNodeManager, 1, 1);
       yarnCluster.init(conf);
       yarnCluster.start();
 
@@ -293,10 +292,10 @@ public class ServiceTestUtils {
       yarnClusterConfig.writeXml(bytesOut);
       bytesOut.close();
       //write the bytes to the file in the classpath
-      OutputStream os = new FileOutputStream(new File(url.getPath()));
+      OutputStream os = Files.newOutputStream(new File(url.getPath()).toPath());
       os.write(bytesOut.toByteArray());
       os.close();
-      LOG.info("Write yarn-site.xml configs to: " + url);
+      LOG.info("Write yarn-site.xml configs to: {}.", url);
     }
     if (hdfsCluster == null) {
       HdfsConfiguration hdfsConfig = new HdfsConfiguration();
@@ -307,7 +306,7 @@ public class ServiceTestUtils {
     try {
       Thread.sleep(2000);
     } catch (InterruptedException e) {
-      LOG.info("setup thread sleep interrupted. message=" + e.getMessage());
+      LOG.error("setup thread sleep interrupted.", e);
     }
   }
 
@@ -395,17 +394,22 @@ public class ServiceTestUtils {
    * Watcher to initialize yarn service base path under target and deletes the
    * the test directory when finishes.
    */
-  public static class ServiceFSWatcher extends TestWatcher {
+  public static class ServiceFSWatcher implements BeforeEachCallback, AfterEachCallback {
     private YarnConfiguration conf;
     private SliderFileSystem fs;
     private java.nio.file.Path serviceBasePath;
 
     @Override
-    protected void starting(Description description) {
+    public void afterEach(ExtensionContext context) throws Exception {
+      delete(context);
+    }
+
+    @Override
+    public void beforeEach(ExtensionContext context) throws Exception {
       conf = new YarnConfiguration();
-      delete(description);
+      delete(context);
       serviceBasePath = Paths.get("target",
-          description.getClassName(), description.getMethodName());
+          getClassName(context), getMethodName(context));
       conf.set(YARN_SERVICE_BASE_PATH, serviceBasePath.toString());
       try {
         Files.createDirectories(serviceBasePath);
@@ -417,14 +421,17 @@ public class ServiceTestUtils {
       }
     }
 
-    @Override
-    protected void finished(Description description) {
-      delete(description);
+    private void delete(ExtensionContext context) {
+      FileUtils.deleteQuietly(Paths.get("target", getClassName(context)).toFile());
     }
 
-    private void delete(Description description) {
-      FileUtils.deleteQuietly(Paths.get("target",
-          description.getClassName()).toFile());
+    private String getClassName(ExtensionContext context) {
+      Class<?> requiredTestClass = context.getRequiredTestClass();
+      return requiredTestClass.getName();
+    }
+
+    private String getMethodName(ExtensionContext context) {
+      return context.getTestMethod().get().getName();
     }
 
     /**
@@ -478,13 +485,12 @@ public class ServiceTestUtils {
             if (component.getContainers().size() == exampleApp
                 .getComponent(component.getName()).getNumberOfContainers()) {
               for (Container container : component.getContainers()) {
-                LOG.info(
-                    "Container state " + container.getState() + ", component "
-                        + component.getName());
+                LOG.info("Container state {}, component {}.",
+                    container.getState(), component.getName());
                 if (container.getState() == ContainerState.READY) {
                   totalReadyContainers++;
                   allContainers.put(component.getName(), container.getId());
-                  LOG.info("Found 1 ready container " + container.getId());
+                  LOG.info("Found 1 ready container {}.", container.getId());
                 }
               }
             } else {

@@ -93,8 +93,10 @@ public class RouterMasterKeyRequestPBImpl extends RouterMasterKeyRequest {
     maybeInitBuilder();
     if (masterKey == null) {
       builder.clearRouterMasterKey();
+      return;
     }
     this.routerMasterKey = masterKey;
+    builder.setRouterMasterKey(convertToProtoFormat(masterKey));
   }
 
   @Override

@@ -27,47 +27,50 @@ import java.util.List;
 
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobHistoryUtils;
-import org.junit.Assert;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.SafeModeAction;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.v2.hs.HistoryFileManager.HistoryFileInfo;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobIndexInfo;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.ControlledClock;
 import org.apache.hadoop.yarn.util.SystemClock;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 public class TestHistoryFileManager {
   private static MiniDFSCluster dfsCluster = null;
   private static MiniDFSCluster dfsCluster2 = null;
   private static String coreSitePath;
 
-  @Rule
-  public TestName name = new TestName();
-
-  @BeforeClass
+  @BeforeAll
   public static void setUpClass() throws Exception {
     coreSitePath = "." + File.separator + "target" + File.separator +
-            "test-classes" + File.separator + "core-site.xml";
+        "test-classes" + File.separator + "core-site.xml";
     Configuration conf = new HdfsConfiguration();
     Configuration conf2 = new HdfsConfiguration();
     dfsCluster = new MiniDFSCluster.Builder(conf).build();
@@ -77,61 +80,63 @@ public class TestHistoryFileManager {
     dfsCluster2 = new MiniDFSCluster.Builder(conf2).build();
   }
 
-  @AfterClass
+  @AfterAll
   public static void cleanUpClass() throws Exception {
     dfsCluster.shutdown();
     dfsCluster2.shutdown();
   }
 
-  @After
+  @AfterEach
   public void cleanTest() throws Exception {
     new File(coreSitePath).delete();
     dfsCluster.getFileSystem().setSafeMode(
-        HdfsConstants.SafeModeAction.SAFEMODE_LEAVE);
+        SafeModeAction.LEAVE);
     dfsCluster2.getFileSystem().setSafeMode(
-        HdfsConstants.SafeModeAction.SAFEMODE_LEAVE);
+        SafeModeAction.LEAVE);
   }
 
-  private String getDoneDirNameForTest() {
-    return "/" + name.getMethodName();
+  private String getDoneDirNameForTest(String name) {
+    return "/" + name;
   }
 
-  private String getIntermediateDoneDirNameForTest() {
-    return "/intermediate_" + name.getMethodName();
+  private String getIntermediateDoneDirNameForTest(String name) {
+    return "/intermediate_" + name;
   }
 
-  private void testTryCreateHistoryDirs(Configuration conf, boolean expected)
+  private void testTryCreateHistoryDirs(Configuration conf, boolean expected, String methodName)
       throws Exception {
-    conf.set(JHAdminConfig.MR_HISTORY_DONE_DIR, getDoneDirNameForTest());
-    conf.set(JHAdminConfig.MR_HISTORY_INTERMEDIATE_DONE_DIR, getIntermediateDoneDirNameForTest());
+    conf.set(JHAdminConfig.MR_HISTORY_DONE_DIR, getDoneDirNameForTest(methodName));
+    conf.set(JHAdminConfig.MR_HISTORY_INTERMEDIATE_DONE_DIR,
+        getIntermediateDoneDirNameForTest(methodName));
     HistoryFileManager hfm = new HistoryFileManager();
     hfm.conf = conf;
-    Assert.assertEquals(expected, hfm.tryCreatingHistoryDirs(false));
+    assertEquals(expected, hfm.tryCreatingHistoryDirs(false));
   }
 
   @Test
-  public void testCreateDirsWithoutFileSystem() throws Exception {
+  public void testCreateDirsWithoutFileSystem(TestInfo testInfo) throws Exception {
     Configuration conf = new YarnConfiguration();
     conf.set(FileSystem.FS_DEFAULT_NAME_KEY, "hdfs://localhost:1");
-    testTryCreateHistoryDirs(conf, false);
+    testTryCreateHistoryDirs(conf, false, testInfo.getDisplayName());
   }
 
   @Test
-  public void testCreateDirsWithFileSystem() throws Exception {
+  public void testCreateDirsWithFileSystem(TestInfo testInfo) throws Exception {
     dfsCluster.getFileSystem().setSafeMode(
-        HdfsConstants.SafeModeAction.SAFEMODE_LEAVE);
-    Assert.assertFalse(dfsCluster.getFileSystem().isInSafeMode());
-    testTryCreateHistoryDirs(dfsCluster.getConfiguration(0), true);
+        SafeModeAction.LEAVE);
+    assertFalse(dfsCluster.getFileSystem().isInSafeMode());
+    testTryCreateHistoryDirs(dfsCluster.getConfiguration(0), true,
+        testInfo.getDisplayName());
   }
 
   @Test
-  public void testCreateDirsWithAdditionalFileSystem() throws Exception {
+  public void testCreateDirsWithAdditionalFileSystem(TestInfo testInfo) throws Exception {
     dfsCluster.getFileSystem().setSafeMode(
-        HdfsConstants.SafeModeAction.SAFEMODE_LEAVE);
+        SafeModeAction.LEAVE);
     dfsCluster2.getFileSystem().setSafeMode(
-        HdfsConstants.SafeModeAction.SAFEMODE_LEAVE);
-    Assert.assertFalse(dfsCluster.getFileSystem().isInSafeMode());
-    Assert.assertFalse(dfsCluster2.getFileSystem().isInSafeMode());
+        SafeModeAction.LEAVE);
+    assertFalse(dfsCluster.getFileSystem().isInSafeMode());
+    assertFalse(dfsCluster2.getFileSystem().isInSafeMode());
 
     // Set default configuration to the first cluster
     Configuration conf = new Configuration(false);
@@ -141,25 +146,28 @@ public class TestHistoryFileManager {
     conf.writeXml(os);
     os.close();
 
-    testTryCreateHistoryDirs(dfsCluster2.getConfiguration(0), true);
+    testTryCreateHistoryDirs(dfsCluster2.getConfiguration(0), true,
+        testInfo.getDisplayName());
 
     // Directories should be created only in the default file system (dfsCluster)
-    Assert.assertTrue(dfsCluster.getFileSystem()
-            .exists(new Path(getDoneDirNameForTest())));
-    Assert.assertTrue(dfsCluster.getFileSystem()
-            .exists(new Path(getIntermediateDoneDirNameForTest())));
-    Assert.assertFalse(dfsCluster2.getFileSystem()
-            .exists(new Path(getDoneDirNameForTest())));
-    Assert.assertFalse(dfsCluster2.getFileSystem()
-            .exists(new Path(getIntermediateDoneDirNameForTest())));
+    String displayName = testInfo.getDisplayName();
+    assertTrue(dfsCluster.getFileSystem().
+        exists(new Path(getDoneDirNameForTest(displayName))));
+    assertTrue(dfsCluster.getFileSystem().
+        exists(new Path(getIntermediateDoneDirNameForTest(displayName))));
+    assertFalse(dfsCluster2.getFileSystem().
+        exists(new Path(getDoneDirNameForTest(displayName))));
+    assertFalse(dfsCluster2.getFileSystem().
+        exists(new Path(getIntermediateDoneDirNameForTest(displayName))));
   }
 
   @Test
-  public void testCreateDirsWithFileSystemInSafeMode() throws Exception {
+  public void testCreateDirsWithFileSystemInSafeMode(TestInfo testInfo) throws Exception {
     dfsCluster.getFileSystem().setSafeMode(
-        HdfsConstants.SafeModeAction.SAFEMODE_ENTER);
-    Assert.assertTrue(dfsCluster.getFileSystem().isInSafeMode());
-    testTryCreateHistoryDirs(dfsCluster.getConfiguration(0), false);
+        SafeModeAction.ENTER);
+    assertTrue(dfsCluster.getFileSystem().isInSafeMode());
+    testTryCreateHistoryDirs(dfsCluster.getConfiguration(0), false,
+        testInfo.getDisplayName());
   }
 
   private void testCreateHistoryDirs(Configuration conf, Clock clock)
@@ -175,18 +183,18 @@ public class TestHistoryFileManager {
   public void testCreateDirsWithFileSystemBecomingAvailBeforeTimeout()
       throws Exception {
     dfsCluster.getFileSystem().setSafeMode(
-        HdfsConstants.SafeModeAction.SAFEMODE_ENTER);
-    Assert.assertTrue(dfsCluster.getFileSystem().isInSafeMode());
-    new Thread() {
+        SafeModeAction.ENTER);
+    assertTrue(dfsCluster.getFileSystem().isInSafeMode());
+    new SubjectInheritingThread() {
       @Override
-      public void run() {
+      public void work() {
         try {
           Thread.sleep(500);
           dfsCluster.getFileSystem().setSafeMode(
-              HdfsConstants.SafeModeAction.SAFEMODE_LEAVE);
-          Assert.assertTrue(dfsCluster.getFileSystem().isInSafeMode());
+              SafeModeAction.LEAVE);
+          assertTrue(dfsCluster.getFileSystem().isInSafeMode());
         } catch (Exception ex) {
-          Assert.fail(ex.toString());
+          fail(ex.toString());
         }
       }
     }.start();
@@ -194,26 +202,28 @@ public class TestHistoryFileManager {
         SystemClock.getInstance());
   }
 
-  @Test(expected = YarnRuntimeException.class)
+  @Test
   public void testCreateDirsWithFileSystemNotBecomingAvailBeforeTimeout()
       throws Exception {
     dfsCluster.getFileSystem().setSafeMode(
-        HdfsConstants.SafeModeAction.SAFEMODE_ENTER);
-    Assert.assertTrue(dfsCluster.getFileSystem().isInSafeMode());
+        SafeModeAction.ENTER);
+    assertTrue(dfsCluster.getFileSystem().isInSafeMode());
     final ControlledClock clock = new ControlledClock();
     clock.setTime(1);
-    new Thread() {
+    new SubjectInheritingThread() {
       @Override
-      public void run() {
+      public void work() {
         try {
           Thread.sleep(500);
           clock.setTime(3000);
         } catch (Exception ex) {
-          Assert.fail(ex.toString());
+          fail(ex.toString());
         }
       }
     }.start();
-    testCreateHistoryDirs(dfsCluster.getConfiguration(0), clock);
+    assertThrows(YarnRuntimeException.class, () -> {
+      testCreateHistoryDirs(dfsCluster.getConfiguration(0), clock);
+    });
   }
 
   @Test
@@ -228,7 +238,7 @@ public class TestHistoryFileManager {
 
     //primarily, succcess is that an exception was not thrown.  Also nice to
     //check this
-    Assert.assertNotNull(lfs);
+    assertNotNull(lfs);
 
   }
 
@@ -248,7 +258,7 @@ public class TestHistoryFileManager {
     HistoryFileInfo info = hmTest.getHistoryFileInfo(null, null,
         summaryFile, jobIndexInfo, false);
     info.moveToDone();
-    Assert.assertFalse(info.didMoveFail());
+    assertFalse(info.didMoveFail());
   }
 
   @Test
@@ -274,8 +284,8 @@ public class TestHistoryFileManager {
         jobIndexInfo, false);
 
     Job job = info.loadJob();
-    Assert.assertTrue("Should return an instance of UnparsedJob to indicate" +
-        " the job history file is not parsed", job instanceof UnparsedJob);
+    assertTrue(job instanceof UnparsedJob, "Should return an instance of UnparsedJob to indicate" +
+        " the job history file is not parsed");
   }
 
   @Test
@@ -307,9 +317,8 @@ public class TestHistoryFileManager {
         null, jobIndexInfo, false);
 
     Job job = info.loadJob();
-    Assert.assertTrue("Should return an instance of CompletedJob as " +
-        "a result of parsing the job history file of the job",
-        job instanceof CompletedJob);
+    assertTrue(job instanceof CompletedJob, "Should return an instance of CompletedJob as " +
+        "a result of parsing the job history file of the job");
   }
 
   @Test
@@ -336,10 +345,8 @@ public class TestHistoryFileManager {
         null, jobIndexInfo, false);
 
     Job job = info.loadJob();
-    Assert.assertTrue("Should return an instance of CompletedJob as " +
-            "a result of parsing the job history file of the job",
-        job instanceof CompletedJob);
-
+    assertTrue(job instanceof CompletedJob, "Should return an instance of CompletedJob as " +
+        "a result of parsing the job history file of the job");
   }
 
   /**
@@ -386,10 +393,10 @@ public class TestHistoryFileManager {
         jobIndexInfo, false);
     info.moveToDone();
 
-    Assert.assertFalse(info.isMovePending());
-    Assert.assertEquals(doneHistoryFilePath.toString(),
+    assertFalse(info.isMovePending());
+    assertEquals(doneHistoryFilePath.toString(),
         info.getHistoryFile().toUri().getPath());
-    Assert.assertEquals(doneConfFilePath.toString(),
+    assertEquals(doneConfFilePath.toString(),
         info.getConfFile().toUri().getPath());
   }
 

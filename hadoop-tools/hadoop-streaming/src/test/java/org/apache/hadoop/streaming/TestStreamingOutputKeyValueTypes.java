@@ -26,8 +26,8 @@ import org.apache.hadoop.mapred.Reducer;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.TextInputFormat;
 import org.apache.hadoop.mapreduce.MRJobConfig;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.Iterator;
@@ -45,7 +45,7 @@ public class TestStreamingOutputKeyValueTypes extends TestStreaming {
     input = "one line dummy input\n";
   }
 
-  @Before
+  @BeforeEach
   @Override
   public void setUp() throws IOException {
     args.clear();
