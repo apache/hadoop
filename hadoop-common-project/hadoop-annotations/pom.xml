@@ -37,6 +37,11 @@
     </dependency>
   </dependencies>
 
+  <properties>
+    <!-- Workaround to access JavaDoc internal tool package -->
+    <maven.compiler.release/>
+  </properties>
+
   <build>
     <plugins>
       <plugin>
@@ -46,6 +51,8 @@
           <compilerArgs>
             <arg>--add-modules</arg>
             <arg>jdk.javadoc</arg>
+            <arg>--add-exports</arg>
+            <arg>jdk.javadoc/jdk.javadoc.internal.tool=ALL-UNNAMED</arg>
           </compilerArgs>
         </configuration>
       </plugin>

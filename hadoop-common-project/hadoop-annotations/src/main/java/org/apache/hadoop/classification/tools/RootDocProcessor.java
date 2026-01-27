@@ -77,7 +77,8 @@ final class RootDocProcessor {
   }
 
   public static DocletEnvironment process(DocletEnvironment root) {
-    return (DocletEnvironment) wrap(root, DocletEnvironment.class);
+    DocletEnvironment wrapped = (DocletEnvironment) wrap(root, DocletEnvironment.class);
+    return new HadoopDocEnvImpl(root, wrapped);
   }
 
   private static final Map<Object, Object> PROXIES = new WeakHashMap<>();

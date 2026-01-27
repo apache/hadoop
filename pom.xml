@@ -704,7 +704,21 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
                   <packages>org.apache.hadoop.yarn*</packages>
                 </group>
               </groups>
-
+              <doclet>org.apache.hadoop.classification.tools.IncludePublicAnnotationsStandardDoclet</doclet>
+              <docletArtifacts>
+                <docletArtifact>
+                  <groupId>org.apache.hadoop</groupId>
+                  <artifactId>hadoop-annotations</artifactId>
+                  <version>${project.version}</version>
+                </docletArtifact>
+              </docletArtifacts>
+              <additionalJOptions>
+                <additionalJOption>-J--add-exports=jdk.javadoc/jdk.javadoc.internal.tool=ALL-UNNAMED</additionalJOption>
+              </additionalJOptions>
+              <additionalOptions>
+                <additionalOption>--add-exports</additionalOption>
+                <additionalOption>jdk.javadoc/jdk.javadoc.internal.tool=ALL-UNNAMED</additionalOption>
+              </additionalOptions>
               <!-- switch on dependency-driven aggregation -->
               <includeDependencySources>false</includeDependencySources>
 
