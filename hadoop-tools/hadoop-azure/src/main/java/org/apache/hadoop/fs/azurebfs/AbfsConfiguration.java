@@ -2303,10 +2303,9 @@ public class AbfsConfiguration{
       return VectoredReadStrategy.fromString(vectoredReadStrategy);
     } catch (IllegalArgumentException e) {
       throw new IllegalArgumentException(
-          "Invalid value for " + FS_AZURE_VECTORED_READ_STRATEGY +
-              ": " + vectoredReadStrategy +
-              ". Expected one of: TPS, THROUGHPUT, TPS_OPTIMIZED, THROUGHPUT_OPTIMIZED",
-          e);
+          "Invalid value for " + FS_AZURE_VECTORED_READ_STRATEGY
+              + ": " + vectoredReadStrategy
+              + ". Expected one of: TPS, THROUGHPUT, TPS_OPTIMIZED, THROUGHPUT_OPTIMIZED",  e);
     }
   }
 
