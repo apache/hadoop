@@ -29,11 +29,9 @@ import org.apache.hadoop.util.Preconditions;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Iterator;
-import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * NodePlan is a set of volumeSetPlans.
@@ -53,7 +51,7 @@ public class NodePlan {
       MAPPER.constructType(NodePlan.class));
   private static final String SUPPORTED_PACKAGES_CONFIG_NAME = "dfs.nodeplan.steps.supported.packages";
   private static final Configuration CONFIGURATION = new HdfsConfiguration();
-  private static final Set<String> SUPPORTED_PACKAGES = getAllowedPackages();
+  private static final List<String> SUPPORTED_PACKAGES = getAllowedPackages();
 
   /**
    * returns timestamp when this plan was created.
@@ -245,15 +243,22 @@ public class NodePlan {
     return false;
   }
 
-  private static Set<String> getAllowedPackages() {
+  private static List<String> getAllowedPackages() {
     String packages = CONFIGURATION.get(SUPPORTED_PACKAGES_CONFIG_NAME);
-    if (packages == null) {
-      return Collections.emptySet();
+    return parseCsvLine(packages);
+  }
+
+  static List<String> parseCsvLine(final String line) {
+    if (line == null) {
+      return Collections.emptyList();
     }
-    Set<String> allowedPackages = new LinkedHashSet<>();
-    for (String pkg : packages.split(",")) {
-      allowedPackages.add(pkg.trim());
+    List<String> values = new LinkedList<>();
+    for (String value : line.split(",")) {
+      String trimmedValue = value.trim();
+      if (!trimmedValue.isBlank()) {
+        values.add(trimmedValue);
+      }
     }
-    return allowedPackages;
+    return values;
   }
 }
