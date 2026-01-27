@@ -696,6 +696,10 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_FS_AZURE_MAX_SEEK_FOR_VECTORED_READS_THROUGHPUT)
   private int maxSeekForVectoredReadsThroughput;
 
+  @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_READ_POLICY,
+          DefaultValue = DEFAULT_AZURE_READ_POLICY)
+  private String abfsReadPolicy;
+
   private String clientProvidedEncryptionKey;
   private String clientProvidedEncryptionKeySHA;
 
@@ -1451,6 +1455,14 @@ public class AbfsConfiguration{
   }
 
   /**
+   * Get the ABFS read policy set by user.
+   * @return the ABFS read policy.
+   */
+  public String getAbfsReadPolicy() {
+    return abfsReadPolicy;
+  }
+
+  /**
    * Enum config to allow user to pick format of x-ms-client-request-id header
    * @return tracingContextFormat config if valid, else default ALL_ID_FORMAT
    */
@@ -2154,6 +2166,15 @@ public class AbfsConfiguration{
   @VisibleForTesting
   public void setIsChecksumValidationEnabled(boolean isChecksumValidationEnabled) {
     this.isChecksumValidationEnabled = isChecksumValidationEnabled;
+  }
+
+  /**
+   * Sets the ABFS read policy for testing purposes.
+   * @param readPolicy the read policy to set.
+   */
+  @VisibleForTesting
+  public void setAbfsReadPolicy(String readPolicy) {
+    abfsReadPolicy = readPolicy;
   }
 
   public boolean isFullBlobChecksumValidationEnabled() {

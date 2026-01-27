@@ -22,6 +22,7 @@ import org.apache.hadoop.fs.azurebfs.utils.MetricFormat;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Options.OpenFileOptions;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.DOT;
 
@@ -266,6 +267,12 @@ public final class ConfigurationKeys {
   public static final String FS_AZURE_READ_AHEAD_QUEUE_DEPTH = "fs.azure.readaheadqueue.depth";
   public static final String FS_AZURE_ALWAYS_READ_BUFFER_SIZE = "fs.azure.read.alwaysReadBufferSize";
   public static final String FS_AZURE_READ_AHEAD_BLOCK_SIZE = "fs.azure.read.readahead.blocksize";
+  /**
+   * Provides hint for the read workload pattern.
+   * Possible Values Exposed in {@link OpenFileOptions#FS_OPTION_OPENFILE_READ_POLICIES}
+   */
+  public static final String FS_AZURE_READ_POLICY = "fs.azure.read.policy";
+
   /** Provides a config control to enable or disable ABFS Flush operations -
    *  HFlush and HSync. Default is true. **/
   public static final String FS_AZURE_ENABLE_FLUSH = "fs.azure.enable.flush";

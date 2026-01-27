@@ -28,12 +28,22 @@ import org.apache.http.HttpResponse;
  */
 public class HttpResponseException extends IOException {
   private final HttpResponse httpResponse;
+
+  /**
+   * Constructor for HttpResponseException.
+   * @param s the exception message
+   * @param httpResponse the HttpResponse object
+   */
   public HttpResponseException(final String s, final HttpResponse httpResponse) {
     super(s);
     Objects.requireNonNull(httpResponse, "httpResponse should be non-null");
     this.httpResponse = httpResponse;
   }
 
+  /**
+   * Gets the HttpResponse associated with this exception.
+   * @return the HttpResponse
+   */
   public HttpResponse getHttpResponse() {
     return httpResponse;
   }

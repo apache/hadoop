@@ -24,6 +24,7 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Stack;
 import java.util.concurrent.CountDownLatch;
 import java.util.function.IntFunction;
 
@@ -49,6 +50,7 @@ public final class ReadBufferManagerV1 extends ReadBufferManager {
 
   private Thread[] threads = new Thread[NUM_THREADS];
   private byte[][] buffers;
+  private Stack<Integer> freeList = new Stack<>();   // indices in buffers[] array that are available
   private static ReadBufferManagerV1 bufferManager;
   private final VectoredReadHandler vectoredReadHandler;
   private static VectoredReadStrategy vectoredReadStrategy;
@@ -737,10 +739,18 @@ public final class ReadBufferManagerV1 extends ReadBufferManager {
     setBufferManager(null); // reset the singleton instance
   }
 
+  @Override
+  protected List<Integer> getFreeListCopy() {
+    return new ArrayList<>(freeList);
+  }
+
+  private Stack<Integer> getFreeList() {
+    return freeList;
+  }
+
   private static void setBufferManager(ReadBufferManagerV1 manager) {
     bufferManager = manager;
   }
-
 
   @VisibleForTesting
   public VectoredReadStrategy getVectoredReadStrategy() {
@@ -755,5 +765,10 @@ public final class ReadBufferManagerV1 extends ReadBufferManager {
   @VisibleForTesting
   public int getMaxSeekForVectoredReadsThroughput() {
     return maxSeekForeVectoredReadsThroughput;
+  }
+
+  @Override
+  protected void clearFreeList() {
+    getFreeList().clear();
   }
 }

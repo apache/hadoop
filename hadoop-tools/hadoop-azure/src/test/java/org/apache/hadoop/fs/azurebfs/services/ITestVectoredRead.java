@@ -16,13 +16,18 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileRange;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
 import org.apache.hadoop.fs.impl.CombinedFileRange;
 
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_READAHEAD_V2_MEMORY_USAGE_THRESHOLD_PERCENT;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_VECTORED_READ_STRATEGY;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_MB;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.validateVectoredReadResult;
 
@@ -403,7 +408,8 @@ public class ITestVectoredRead extends AbstractAbfsIntegrationTest {
         }
         Thread.sleep(10);
       }
-      assertNotNull(inProgress, "Expected buffer to be in inProgressList while completion is blocked");
+      assertNotNull(inProgress,
+          "Expected buffer to be in inProgressList while completion is blocked");
 
       /* 3. Submit another normal read while buffer is in progress */
       Future<?> r2 = exec.submit(() -> {
@@ -437,6 +443,55 @@ public class ITestVectoredRead extends AbstractAbfsIntegrationTest {
       validateVectoredReadResult(ranges, fileContent, 0);
 
       exec.shutdownNow();
+    }
+  }
+
+  @Test
+  public void testThroughputOptimizedReadVectored() throws Exception {
+    Configuration configuration = getRawConfiguration();
+    configuration.set(FS_AZURE_VECTORED_READ_STRATEGY, "TPS");
+    FileSystem fileSystem = FileSystem.newInstance(configuration);
+    try (AzureBlobFileSystem abfs = (AzureBlobFileSystem) fileSystem) {
+      String fileName = methodName.getMethodName();
+      byte[] fileContent = getRandomBytesArray(32 * ONE_MB);
+      Path testFilePath = createFileWithContent(abfs, fileName, fileContent);
+      List<FileRange> fileRanges = new ArrayList<>();
+      // 0.0 – 3.8 MB
+      fileRanges.add(FileRange.createFileRange(0L, (int) (3.8 * ONE_MB)));
+      // 4.0 – 7.2 MB
+      fileRanges.add(FileRange.createFileRange((long) (4.0 * ONE_MB),
+          (int) (3.2 * ONE_MB)));
+      // 8.0 – 10.0 MB
+      fileRanges.add(FileRange.createFileRange((long) (8.0 * ONE_MB),
+          (int) (2.0 * ONE_MB)));
+      // 12.0 – 16.0 MB
+      fileRanges.add(FileRange.createFileRange((long) (12.0 * ONE_MB),
+          (int) (4.0 * ONE_MB)));
+      // 16.0 – 18.0 MB
+      fileRanges.add(FileRange.createFileRange((long) (16.0 * ONE_MB),
+          (int) (2.0 * ONE_MB)));
+      IntFunction<ByteBuffer> allocate = ByteBuffer::allocate;
+      try (FSDataInputStream in =
+               abfs.openFile(testFilePath).build().get()) {
+        AbfsInputStream abfsIn = (AbfsInputStream) in.getWrappedStream();
+        AbfsInputStream spyIn = Mockito.spy(abfsIn);
+        spyIn.readVectored(fileRanges, allocate);
+        CompletableFuture<?>[] futures =
+            new CompletableFuture<?>[fileRanges.size()];
+        int i = 0;
+        for (FileRange range : fileRanges) {
+          futures[i++] = range.getData();
+        }
+        CompletableFuture.allOf(futures).get();
+        validateVectoredReadResult(fileRanges, fileContent, 0);
+        Mockito.verify(spyIn, Mockito.times(5))
+            .readRemote(
+                Mockito.anyLong(),
+                Mockito.any(byte[].class),
+                Mockito.anyInt(),
+                Mockito.anyInt(),
+                Mockito.any());
+      }
     }
   }
 }
