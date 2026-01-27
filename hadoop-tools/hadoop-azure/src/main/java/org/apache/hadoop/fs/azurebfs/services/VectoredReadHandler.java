@@ -26,6 +26,9 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.IntFunction;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.FileRange;
 import org.apache.hadoop.fs.azurebfs.enums.VectoredReadStrategy;
@@ -39,6 +42,8 @@ import org.apache.hadoop.fs.impl.CombinedFileRange;
  * dedicated components.
  */
 class VectoredReadHandler {
+
+  private static final Logger LOG = LoggerFactory.getLogger(VectoredReadHandler.class);
 
   /**
    * Manages allocation, lifecycle, and reuse of read buffers
@@ -62,6 +67,7 @@ class VectoredReadHandler {
   VectoredReadHandler(ReadBufferManager readBufferManager) {
     this.readBufferManager = readBufferManager;
     this.strategy = readBufferManager.getVectoredReadStrategy();
+    LOG.debug("VectoredReadHandler initialized with strategy={}", strategy);
   }
 
   /**
@@ -83,6 +89,8 @@ class VectoredReadHandler {
       AbfsInputStream stream,
       List<? extends FileRange> ranges,
       IntFunction<ByteBuffer> allocator) {
+    LOG.debug("readVectored invoked: stream={}, ranges={}",
+        stream, ranges.size());
 
     /* Initialize a future for each logical file range */
     for (FileRange r : ranges) {
@@ -95,9 +103,13 @@ class VectoredReadHandler {
             ? readBufferManager.getMaxSeekForVectoredReads()
             : readBufferManager.getMaxSeekForVectoredReadsThroughput();
 
+    LOG.debug("Using maxSpan={} for strategy={}", maxSpan, strategy);
+
     /* Merge logical ranges using a span-first coalescing strategy */
     List<CombinedFileRange> merged =
         mergeBySpanAndGap(ranges, maxSpan);
+
+    LOG.debug("Merged logical ranges into {} combined ranges", merged.size());
 
     /* Read buffer size acts as a hard upper bound for physical reads */
     int readBufferSize = ReadBufferManager.getReadAheadBlockSize();
@@ -107,14 +119,21 @@ class VectoredReadHandler {
       List<CombinedFileRange> chunks =
           splitByBufferSize(unit, readBufferSize);
 
+      LOG.debug("Combined range offset={}, length={} split into {} chunks",
+          unit.getOffset(), unit.getLength(), chunks.size());
+
       for (CombinedFileRange chunk : chunks) {
         try {
           boolean queued = queueVectoredRead(stream, chunk, allocator);
           if (!queued) {
+            LOG.debug("Queue failed; falling back to directRead for offset={}, length={}",
+                chunk.getOffset(), chunk.getLength());
             /* Fall back to direct read if no buffer is available */
             directRead(stream, chunk, allocator);
           }
         } catch (Exception e) {
+          LOG.debug("Exception during vectored read chunk offset={}, length={}",
+              chunk.getOffset(), chunk.getLength(), e);
           /* Propagate failure to all logical ranges in this unit */
           failUnit(chunk, e);
         }
@@ -128,6 +147,8 @@ class VectoredReadHandler {
    */
   @VisibleForTesting
   boolean queueVectoredRead(AbfsInputStream stream, CombinedFileRange unit, IntFunction<ByteBuffer> allocator) {
+    LOG.debug("queueVectoredRead offset={}, length={}",
+        unit.getOffset(), unit.getLength());
     return getReadBufferManager().queueVectoredRead(stream, unit, stream.getTracingContext(), allocator);
   }
 
@@ -154,6 +175,8 @@ class VectoredReadHandler {
   private List<CombinedFileRange> splitByBufferSize(
       CombinedFileRange unit,
       int bufferSize) {
+    LOG.debug("splitByBufferSize offset={}, length={}, bufferSize={}",
+        unit.getOffset(), unit.getLength(), bufferSize);
 
     List<CombinedFileRange> parts = new ArrayList<>();
 
@@ -186,7 +209,7 @@ class VectoredReadHandler {
       parts.add(part);
       start = partEnd;
     }
-
+    LOG.debug("splitByBufferSize produced {} parts", parts.size());
     return parts;
   }
 
@@ -205,6 +228,8 @@ class VectoredReadHandler {
   private List<CombinedFileRange> mergeBySpanAndGap(
       List<? extends FileRange> ranges,
       int maxSpan) {
+    LOG.debug("mergeBySpanAndGap ranges={}, maxSpan={}",
+        ranges.size(), maxSpan);
     List<FileRange> sortedRanges = new ArrayList<>(ranges);
     sortedRanges.sort(Comparator.comparingLong(FileRange::getOffset));
 
@@ -238,7 +263,7 @@ class VectoredReadHandler {
     if (current != null) {
       out.add(current);
     }
-
+    LOG.debug("mergeBySpanAndGap produced {} combined ranges", out.size());
     return out;
   }
 
@@ -259,6 +284,8 @@ class VectoredReadHandler {
     if (units == null) {
       return;
     }
+    LOG.debug("fanOut bufferOffset={}, bytesRead={}, units={}",
+        buffer.getOffset(), bytesRead, units.size());
     /* Distribute buffer data to all logical ranges attached to this buffer */
     for (CombinedFileRange unit : units) {
       for (FileRange r : unit.getUnderlying()) {
@@ -281,7 +308,11 @@ class VectoredReadHandler {
           }
           bb.flip();
           r.getData().complete(bb);
+          LOG.debug("fanOut completed logical range offset={}, length={}",
+              r.getOffset(), r.getLength());
         } catch (Exception e) {
+          LOG.debug("fanOut failed for logical range offset={}",
+              r.getOffset(), e);
           /* Propagate failure to the affected logical range */
           r.getData().completeExceptionally(e);
         }
@@ -315,7 +346,7 @@ class VectoredReadHandler {
     if (units == null) {
       return;
     }
-
+    LOG.debug("failBufferFutures bufferOffset={}", buffer.getOffset(), t);
     /* Propagate failure to all logical ranges attached to this buffer */
     for (CombinedFileRange unit : units) {
       for (FileRange r : unit.getUnderlying()) {
@@ -344,6 +375,8 @@ class VectoredReadHandler {
       AbfsInputStream stream,
       CombinedFileRange unit,
       IntFunction<ByteBuffer> allocator) throws IOException {
+    LOG.debug("directRead offset={}, length={}",
+        unit.getOffset(), unit.getLength());
     /* Read the entire combined range into a temporary buffer */
     byte[] tmp = new byte[unit.getLength()];
     stream.readRemote(unit.getOffset(), tmp, 0, unit.getLength(),
@@ -358,6 +391,8 @@ class VectoredReadHandler {
       bb.flip();
       r.getData().complete(bb);
     }
+    LOG.debug("directRead completed offset={}, length={}",
+        unit.getOffset(), unit.getLength());
   }
 }
 
