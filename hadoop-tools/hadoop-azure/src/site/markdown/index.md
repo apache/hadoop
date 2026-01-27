@@ -108,7 +108,7 @@ Blob API is not yet supported for hierarchical namespace accounts. ErrorCode: Bl
 The ABFS driver also has support for non-hierarchical namespace (FNS) accounts to help users
 migrating from the legacy WASB driver. See [FNS-Blob](./fns_blob.html) for more details.
 The service does not recommend using the DFS endpoint for FNS accounts. DFS endpoint over FNS account
-has now been **DEPRECATED**. All requests detected over FNS account are automatically switched to Blob endpoint.
+has now been **REMOVED**. All requests detected over FNS account are automatically switched to Blob endpoint.
 
 ### <a name="creating"></a> Creating an Azure Storage Account
 
