@@ -205,14 +205,13 @@ class VectoredReadHandler {
   private List<CombinedFileRange> mergeBySpanAndGap(
       List<? extends FileRange> ranges,
       int maxSpan) {
-
-    /* Sort ranges by starting offset for span-based merging */
-    ranges.sort(Comparator.comparingLong(FileRange::getOffset));
+    List<FileRange> sortedRanges = new ArrayList<>(ranges);
+    sortedRanges.sort(Comparator.comparingLong(FileRange::getOffset));
 
     List<CombinedFileRange> out = new ArrayList<>();
     CombinedFileRange current = null;
 
-    for (FileRange r : ranges) {
+    for (FileRange r : sortedRanges) {
       long rOffset = r.getOffset();
       long rEnd = rOffset + r.getLength();
 
