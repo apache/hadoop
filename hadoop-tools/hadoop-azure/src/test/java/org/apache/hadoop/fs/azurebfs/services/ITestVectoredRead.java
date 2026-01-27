@@ -28,6 +28,7 @@ import org.apache.hadoop.fs.impl.CombinedFileRange;
 
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_VECTORED_READ_STRATEGY;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_MB;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ZERO;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.validateVectoredReadResult;
 
 public class ITestVectoredRead extends AbstractAbfsIntegrationTest {
@@ -86,6 +87,11 @@ public class ITestVectoredRead extends AbstractAbfsIntegrationTest {
   public ITestVectoredRead() throws Exception {
   }
 
+  /**
+   * Verifies basic correctness of vectored reads using simple disjoint ranges.
+   * Compares vectored read output against a full sequential read to ensure
+   * data integrity is preserved.
+   */
   @Test
   public void testDisjointRangesWithVectoredRead() throws Throwable {
     int fileSize = ONE_MB;
@@ -110,6 +116,11 @@ public class ITestVectoredRead extends AbstractAbfsIntegrationTest {
     }
   }
 
+  /**
+   * Ensures disjoint but mergeable ranges result in fewer backend reads.
+   * Validates that vectored read coalescing reduces remote calls
+   * while still returning correct data.
+   */
   @Test
   public void testVectoredReadDisjointRangesExpectTwoBackendReads()
       throws Exception {
@@ -151,6 +162,11 @@ public class ITestVectoredRead extends AbstractAbfsIntegrationTest {
     }
   }
 
+  /**
+   * Validates fallback behavior when vectored read queuing fails.
+   * Ensures the implementation switches to direct reads and still
+   * completes all requested ranges correctly.
+   */
   @Test
   public void testVectoredReadFallsBackToDirectReadWhenQueuingFails()
       throws Exception {
@@ -193,6 +209,11 @@ public class ITestVectoredRead extends AbstractAbfsIntegrationTest {
     }
   }
 
+  /**
+   * Tests vectored read correctness with multiple non-contiguous ranges.
+   * Confirms that all ranges are read correctly even when more than two
+   * disjoint segments are requested.
+   */
   @Test
   public void testMultipleDisjointRangesWithVectoredRead() throws Throwable {
     int fileSize = ONE_MB;
@@ -218,6 +239,11 @@ public class ITestVectoredRead extends AbstractAbfsIntegrationTest {
     }
   }
 
+  /**
+   * Exercises vectored reads on a large file with many scattered ranges.
+   * Ensures correctness and stability of vectored read logic under
+   * high-offset and large-file conditions.
+   */
   @Test
   public void test_045_vectoredIOHugeFile() throws Throwable {
     int fileSize = DATA_100_MB;
@@ -247,6 +273,10 @@ public class ITestVectoredRead extends AbstractAbfsIntegrationTest {
     }
   }
 
+  /**
+   * Verifies that vectored reads and sequential reads can execute concurrently.
+   * Ensures correct behavior when prefetch and vectored I/O overlap in time.
+   */
   @Test
   public void testSimultaneousPrefetchAndVectoredRead() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
@@ -290,6 +320,11 @@ public class ITestVectoredRead extends AbstractAbfsIntegrationTest {
     }
   }
 
+  /**
+   * Tests concurrent access using separate streams on different files.
+   * Ensures vectored reads on one file do not interfere with sequential
+   * reads and readahead on another file.
+   */
   @Test
   public void testConcurrentStreamsOnDifferentFiles() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
@@ -359,6 +394,11 @@ public class ITestVectoredRead extends AbstractAbfsIntegrationTest {
     }
   }
 
+  /**
+   * Validates that vectored reads can reuse an in-progress prefetch buffer.
+   * Ensures no redundant backend read is issued when data is already
+   * available via readahead.
+   */
   @Test
   public void testVectoredReadHitchhikesOnExistingPrefetch() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
@@ -387,7 +427,7 @@ public class ITestVectoredRead extends AbstractAbfsIntegrationTest {
       vRanges.get(0).getData().get();
 
       // 4. Validate Data Integrity
-      validateVectoredReadResult(vRanges, fileContent, 0);
+      validateVectoredReadResult(vRanges, fileContent, ZERO);
 
       // 5. THE CRITICAL VALIDATION:
       // Even though we did a manual read and a vectored read,
@@ -402,6 +442,11 @@ public class ITestVectoredRead extends AbstractAbfsIntegrationTest {
     }
   }
 
+  /**
+   * Ensures multiple reads issued while a buffer is in progress eventually
+   * complete successfully. Verifies correct synchronization between
+   * in-progress buffers and new vectored read requests.
+   */
   @Test
   public void testMultipleReadsWhileBufferInProgressEventuallyComplete()
       throws Exception {
@@ -489,6 +534,11 @@ public class ITestVectoredRead extends AbstractAbfsIntegrationTest {
     }
   }
 
+  /**
+   * Verifies vectored read behavior under throughput-optimized strategy.
+   * Confirms that ranges are split as expected and that the number of
+   * backend reads matches the throughput-oriented execution model.
+   */
   @Test
   public void testThroughputOptimizedReadVectored() throws Exception {
     Configuration configuration = getRawConfiguration();
