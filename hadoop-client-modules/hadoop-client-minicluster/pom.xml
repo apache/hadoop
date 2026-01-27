@@ -720,6 +720,13 @@
                         <exclude>**/*.java</exclude>
                       </excludes>
                     </filter>
+                    <!-- Some of our dependencies include html, so remove it. -->
+                    <filter>
+                      <artifact>*:*</artifact>
+                      <excludes>
+                        <exclude>**/*.html</exclude>
+                      </excludes>
+                    </filter>
                     <!-- We pull in several test jars; keep out the actual test classes -->
                     <filter>
                       <artifact>*:*</artifact>

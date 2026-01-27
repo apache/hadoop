@@ -36,14 +36,13 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.reader.ApplicationSubmissionContextInfoReader;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.writer.ApplicationSubmissionContextInfoWriter;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.writer.SchedConfUpdateInfoWriter;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.jsonprovider.ExcludeRootJSONProvider;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.jsonprovider.IncludeRootJSONProvider;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.jsonprovider.JsonProviderFeature;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.dao.QueueConfigInfo;
 import org.apache.hadoop.yarn.webapp.dao.SchedConfUpdateInfo;
 import org.glassfish.jersey.internal.inject.AbstractBinder;
-import org.glassfish.jersey.jettison.JettisonFeature;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -83,11 +82,9 @@ public class TestRMWebServicesCapacitySchedulerConfigMutation extends JerseyTest
     config.register(RMWebServices.class);
     config.register(new JerseyBinder());
     config.register(GenericExceptionHandler.class);
-    config.register(ApplicationSubmissionContextInfoWriter.class);
-    config.register(SchedConfUpdateInfoWriter.class);
-    config.register(ApplicationSubmissionContextInfoReader.class);
     config.register(TestRMWebServicesAppsModification.TestRMCustomAuthFilter.class);
-    config.register(new JettisonFeature()).register(JAXBContextResolver.class);
+    config.register(JsonProviderFeature.class);
+    config.register(JAXBContextResolver.class);
     return config;
   }
 
@@ -161,7 +158,9 @@ public class TestRMWebServicesCapacitySchedulerConfigMutation extends JerseyTest
     QueueConfigInfo b = new QueueConfigInfo("root.a", capacityChange);
     updateInfo.getUpdateQueueInfo().add(b);
 
-    Response response = target().register(SchedConfUpdateInfoWriter.class)
+    Response response = target()
+        .register(new IncludeRootJSONProvider())
+        .register(new ExcludeRootJSONProvider())
         .path("ws/v1/cluster/scheduler-conf")
         .queryParam("user.name", userName)
         .request(MediaType.APPLICATION_JSON)
