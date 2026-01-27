@@ -20,7 +20,6 @@ package org.apache.hadoop.fs.azurebfs.constants;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.fs.azurebfs.enums.VectoredReadStrategy;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_ADAPTIVE;

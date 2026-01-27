@@ -31,11 +31,35 @@ import org.apache.hadoop.fs.FileRange;
 import org.apache.hadoop.fs.azurebfs.enums.VectoredReadStrategy;
 import org.apache.hadoop.fs.impl.CombinedFileRange;
 
+/**
+ * Handles vectored read operations by coordinating with a ReadBufferManager
+ * and applying the configured VectoredReadStrategy.
+ * This class acts as the orchestration layer that decides how vectored reads
+ * are executed, while delegating buffer management and read behavior to
+ * dedicated components.
+ */
 class VectoredReadHandler {
+
+  /**
+   * Manages allocation, lifecycle, and reuse of read buffers
+   * used during vectored read operations.
+   */
   private final ReadBufferManager readBufferManager;
+
+  /**
+   * Strategy defining how vectored reads should be performed.
+   */
   private final VectoredReadStrategy strategy;
 
-  public VectoredReadHandler(ReadBufferManager readBufferManager) {
+  /**
+   * Creates a VectoredReadHandler using the provided ReadBufferManager.
+   * The vectored read strategy is obtained from the manager to ensure
+   * consistent configuration across the read pipeline.
+   *
+   * @param readBufferManager manager responsible for buffer handling
+   *                          and providing the vectored read strategy
+   */
+  VectoredReadHandler(ReadBufferManager readBufferManager) {
     this.readBufferManager = readBufferManager;
     this.strategy = readBufferManager.getVectoredReadStrategy();
   }

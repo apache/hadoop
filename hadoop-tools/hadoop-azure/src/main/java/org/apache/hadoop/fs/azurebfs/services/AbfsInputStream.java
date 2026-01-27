@@ -26,14 +26,11 @@ import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.UUID;
 import java.util.function.IntFunction;
-import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.FileRange;
-import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.constants.ReadType;
-import org.apache.hadoop.fs.azurebfs.enums.VectoredReadStrategy;
 import org.apache.hadoop.fs.impl.BackReference;
 import org.apache.hadoop.util.Preconditions;
 
