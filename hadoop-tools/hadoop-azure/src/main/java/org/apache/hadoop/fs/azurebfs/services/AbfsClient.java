@@ -276,11 +276,6 @@ public abstract class AbfsClient implements Closeable {
     // register the client to Aggregated Metrics Manager
     abfsMetricsManager.getAggregateMetricsManager()
         .registerClient(accountName, this);
-
-    // Initialize write thread pool metrics if dynamic write thread pool scaling is enabled.
-    if (abfsConfiguration.isDynamicWriteThreadPoolEnablement()) {
-      abfsCounters.initializeWriteResourceUtilizationMetrics();
-    }
     // Initialize read thread pool metrics if ReadAheadV2 and its dynamic scaling feature are enabled.
     if (abfsConfiguration.isReadAheadV2Enabled() && abfsConfiguration.isReadAheadV2DynamicScalingEnabled()) {
       abfsCounters.initializeReadResourceUtilizationMetrics();

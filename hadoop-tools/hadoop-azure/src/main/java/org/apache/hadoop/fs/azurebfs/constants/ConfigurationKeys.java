@@ -567,43 +567,6 @@ public final class ConfigurationKeys {
   /**Maximum number of thread per blob-delete orchestration: {@value}*/
   public static final String FS_AZURE_BLOB_DIR_DELETE_MAX_THREAD = "fs.azure.blob.dir.delete.max.thread";
 
-  /** Configuration key for the keep-alive time (ms) for the write thread pool. Value: {@value}. */
-  public static final String FS_AZURE_WRITE_THREADPOOL_KEEP_ALIVE_TIME_MILLIS = "fs.azure.write.threadpool.keep.alive.time.millis";
-
-  /** Configuration key for the CPU monitoring interval (ms) during write operations. Value: {@value}. */
-  public static final String FS_AZURE_WRITE_CPU_MONITORING_INTERVAL_MILLIS = "fs.azure.write.cpu.monitoring.interval.millis";
-
-  /** Configuration key to enable or disable dynamic write thread pool adjustment. Value: {@value}. */
-  public static final String FS_AZURE_WRITE_DYNAMIC_THREADPOOL_ENABLEMENT = "fs.azure.write.dynamic.threadpool.enablement";
-
-  /** Configuration key for the high CPU utilization threshold (%) for write scaling. Value: {@value}. */
-  public static final String FS_AZURE_WRITE_HIGH_CPU_THRESHOLD_PERCENT = "fs.azure.write.high.cpu.threshold.percent";
-
-  /** Configuration key for the medium CPU utilization threshold (%) for write scaling. Value: {@value}. */
-  public static final String FS_AZURE_WRITE_MEDIUM_CPU_THRESHOLD_PERCENT = "fs.azure.write.medium.cpu.threshold.percent";
-
-  /** Configuration key for the low CPU utilization threshold (%) for write scaling. Value: {@value}. */
-  public static final String FS_AZURE_WRITE_LOW_CPU_THRESHOLD_PERCENT = "fs.azure.write.low.cpu.threshold.percent";
-
-  /** Configuration key for the low-tier memory multiplier for write workloads. Value: {@value}. */
-  public static final String FS_AZURE_WRITE_LOW_TIER_MEMORY_MULTIPLIER = "fs.azure.write.low.tier.memory.multiplier";
-
-  /** Configuration key for the medium-tier memory multiplier for write workloads. Value: {@value}. */
-  public static final String FS_AZURE_WRITE_MEDIUM_TIER_MEMORY_MULTIPLIER = "fs.azure.write.medium.tier.memory.multiplier";
-
-  /** Configuration key for the high-tier memory multiplier for write workloads. Value: {@value}. */
-  public static final String FS_AZURE_WRITE_HIGH_TIER_MEMORY_MULTIPLIER = "fs.azure.write.high.tier.memory.multiplier";
-
-  /**
-   * Threshold percentage for high memory usage to scale up/down the buffer pool size in write code.
-   */
-  public static final String FS_AZURE_WRITE_HIGH_MEMORY_USAGE_THRESHOLD_PERCENT = "fs.azure.write.high.memory.usage.threshold.percent";
-
-  /**
-   * Threshold percentage for low memory usage to scale up/down the buffer pool size in write code.
-   */
-  public static final String FS_AZURE_WRITE_LOW_MEMORY_USAGE_THRESHOLD_PERCENT = "fs.azure.write.low.memory.usage.threshold.percent";
-
   /**Flag to enable/disable sending client transactional ID during create/rename operations: {@value}*/
   public static final String FS_AZURE_ENABLE_CLIENT_TRANSACTION_ID = "fs.azure.enable.client.transaction.id";
   /**Flag to enable/disable create idempotency during create operation: {@value}*/
