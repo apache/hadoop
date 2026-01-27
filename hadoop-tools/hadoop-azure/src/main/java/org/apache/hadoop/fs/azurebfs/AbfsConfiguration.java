@@ -62,6 +62,7 @@ import org.apache.hadoop.fs.azurebfs.oauth2.MsiTokenProvider;
 import org.apache.hadoop.fs.azurebfs.oauth2.RefreshTokenBasedTokenProvider;
 import org.apache.hadoop.fs.azurebfs.oauth2.UserPasswordTokenProvider;
 import org.apache.hadoop.fs.azurebfs.oauth2.WorkloadIdentityTokenProvider;
+import org.apache.hadoop.fs.azurebfs.oauth2.PassthroughTokenProvider;
 import org.apache.hadoop.fs.azurebfs.security.AbfsDelegationTokenManager;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.fs.azurebfs.services.ExponentialRetryPolicy;
@@ -1585,6 +1586,11 @@ public class AbfsConfiguration{
                 authority, tenantGuid, clientId, tokenFile);
             LOG.trace("WorkloadIdentityTokenProvider initialized with file-based token");
           }
+        } else if (tokenProviderClass == PassthroughTokenProvider.class) {
+          String token = getPasswordString(FS_AZURE_ACCOUNT_OAUTH_PASSTHROUGH_TOKEN);
+          String expiresOn = getPasswordString(FS_AZURE_ACCOUNT_OAUTH_PASSTHROUGH_EXPIRES_ON);
+          tokenProvider = new PassthroughTokenProvider(token, Integer.parseInt(expiresOn));
+          LOG.trace("PassthroughTokenProvider initialized");
         } else {
           throw new IllegalArgumentException("Failed to initialize " + tokenProviderClass);
         }

@@ -451,6 +451,10 @@ public final class ConfigurationKeys {
   public static final String FS_AZURE_ACCOUNT_OAUTH_REFRESH_TOKEN = "fs.azure.account.oauth2.refresh.token";
   /** Key for oauth AAD refresh token endpoint: {@value}. */
   public static final String FS_AZURE_ACCOUNT_OAUTH_REFRESH_TOKEN_ENDPOINT = "fs.azure.account.oauth2.refresh.token.endpoint";
+  /** Key for oauth token passed in from outside: {@value}. */
+  public static final String FS_AZURE_ACCOUNT_OAUTH_PASSTHROUGH_TOKEN = "fs.azure.account.oauth2.passthrough.token";
+  /** Key for oauth token expires_on passed in from outside: {@value}. */
+  public static final String FS_AZURE_ACCOUNT_OAUTH_PASSTHROUGH_EXPIRES_ON = "fs.azure.account.oauth2.passthrough.expires_on";
   /** Key for oauth AAD workload identity token file path: {@value}. */
   public static final String FS_AZURE_ACCOUNT_OAUTH_TOKEN_FILE = "fs.azure.account.oauth2.token.file";
   /** Key for custom client assertion provider class for WorkloadIdentityTokenProvider */
