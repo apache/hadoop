@@ -33,7 +33,7 @@ supports HNS Enabled Accounts only.
 
 To enable ABFS Driver to work with FNS Accounts, support for Blob Endpoint is being added.
 This is because Azure services do not recommend using DFS Endpoint for FNS Accounts.
-FNS over DFS endpoint is **REMOVAL**. All requests will be switched to Blob endpoint internally if
+FNS over DFS endpoint is **REMOVED**. All requests will be switched to Blob endpoint internally if
 account is detected as FNS.
 
 ABFS Driver will only allow FNS Accounts to be accessed using Blob Endpoint.
