@@ -31,7 +31,7 @@ Azure Services offers two set of endpoints for interacting with storage accounts
 The ABFS Driver by default is designed to work with DFS Endpoint only which primarily
 supports HNS Enabled Accounts only.
 
-To enable ABFS Driver to work with FNS Accounts, Support for Blob Endpoint is being added.
+To enable ABFS Driver to work with FNS Accounts, Support for Blob Endpoint is added.
 This is because Azure services do not recommend using DFS Endpoint for FNS Accounts.
 ABFS Driver will only allow FNS Accounts to be accessed using Blob Endpoint.
 HNS Enabled accounts will still use DFS Endpoint which continues to be the
