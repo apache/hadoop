@@ -93,19 +93,7 @@ public class TestNodePlan {
     assertThat(ex.getMessage())
         .isEqualTo("Invalid @class value in NodePlan JSON: sample.SampleStep");
   }
-
-  @Test
-  public void testCsvParseLine() throws Exception {
-    assertThat(NodePlan.parseCsvLine(null)).isEmpty();
-    assertThat(NodePlan.parseCsvLine("")).isEmpty();
-    assertThat(NodePlan.parseCsvLine(" ")).isEmpty();
-    assertThat(NodePlan.parseCsvLine("abc")).isEqualTo(List.of("abc"));
-    assertThat(NodePlan.parseCsvLine("abc ")).isEqualTo(List.of("abc"));
-    assertThat(NodePlan.parseCsvLine("abc, ")).isEqualTo(List.of("abc"));
-    assertThat(NodePlan.parseCsvLine("abc,def")).isEqualTo(List.of("abc", "def"));
-    assertThat(NodePlan.parseCsvLine("abc, def")).isEqualTo(List.of("abc", "def"));
-  }
-
+  
   private static class NestedStep implements Step {
     @JsonProperty
     private NodePlan nodePlan;

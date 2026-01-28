@@ -6714,7 +6714,7 @@
   </property>
   <property>
     <name>dfs.nodeplan.steps.supported.packages</name>
-    <value>org.apache.hadoop.hdfs.server</value>
+    <value>org.apache.hadoop.hdfs.server.diskbalancer.planner</value>
     <description>
       Only Step implementations in the named packages will be accepted when deserializing.
       If you have more than one package, separate the packages using commas.

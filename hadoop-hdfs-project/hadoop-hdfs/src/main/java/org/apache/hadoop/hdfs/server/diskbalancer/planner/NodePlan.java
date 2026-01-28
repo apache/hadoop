@@ -27,11 +27,13 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.util.Preconditions;
 
 import java.io.IOException;
-import java.util.Collections;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+
+import static org.apache.hadoop.hdfs.DFSConfigKeys.SUPPORTED_PACKAGES_CONFIG_NAME;
 
 /**
  * NodePlan is a set of volumeSetPlans.
@@ -49,9 +51,8 @@ public class NodePlan {
   private static final ObjectReader READER = MAPPER.readerFor(NodePlan.class);
   private static final ObjectWriter WRITER = MAPPER.writerFor(
       MAPPER.constructType(NodePlan.class));
-  private static final String SUPPORTED_PACKAGES_CONFIG_NAME = "dfs.nodeplan.steps.supported.packages";
   private static final Configuration CONFIGURATION = new HdfsConfiguration();
-  private static final List<String> SUPPORTED_PACKAGES = getAllowedPackages();
+  private static final Collection<String> SUPPORTED_PACKAGES = getAllowedPackages();
 
   /**
    * returns timestamp when this plan was created.
@@ -243,22 +244,11 @@ public class NodePlan {
     return false;
   }
 
-  private static List<String> getAllowedPackages() {
-    String packages = CONFIGURATION.get(SUPPORTED_PACKAGES_CONFIG_NAME);
-    return parseCsvLine(packages);
-  }
-
-  static List<String> parseCsvLine(final String line) {
-    if (line == null) {
-      return Collections.emptyList();
-    }
-    List<String> values = new LinkedList<>();
-    for (String value : line.split(",")) {
-      String trimmedValue = value.trim();
-      if (!trimmedValue.isBlank()) {
-        values.add(trimmedValue);
-      }
-    }
-    return values;
+  private static Collection<String> getAllowedPackages() {
+    return CONFIGURATION.getStringCollection(SUPPORTED_PACKAGES_CONFIG_NAME)
+        .stream()
+        .map(String::trim)
+        .filter(s -> !s.isEmpty())
+        .toList();
   }
 }
