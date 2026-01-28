@@ -28,7 +28,6 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsBackoffMetrics;
 import org.apache.hadoop.fs.azurebfs.services.AbfsCounters;
 import org.apache.hadoop.fs.azurebfs.services.AbfsReadFooterMetrics;
 import org.apache.hadoop.fs.azurebfs.services.AbfsReadResourceUtilizationMetrics;
-import org.apache.hadoop.fs.azurebfs.services.AbfsWriteResourceUtilizationMetrics;
 import org.apache.hadoop.fs.azurebfs.utils.MetricFormat;
 import org.apache.hadoop.fs.statistics.DurationTracker;
 import org.apache.hadoop.fs.statistics.IOStatistics;
@@ -109,8 +108,6 @@ public class AbfsCountersImpl implements AbfsCounters {
 
   private AbfsReadFooterMetrics abfsReadFooterMetrics = null;
 
-  private AbfsWriteResourceUtilizationMetrics abfsWriteResourceUtilizationMetrics = null;
-
   private AbfsReadResourceUtilizationMetrics abfsReadResourceUtilizationMetrics = null;
 
   private AtomicLong lastExecutionTime = null;
@@ -186,18 +183,6 @@ public class AbfsCountersImpl implements AbfsCounters {
    */
   public void initializeReadResourceUtilizationMetrics() {
     abfsReadResourceUtilizationMetrics = new AbfsReadResourceUtilizationMetrics();
-  }
-
-  /**
-   * Initializes the metrics collector for the write thread pool.
-   * <p>
-   * This method creates a new instance of {@link AbfsWriteResourceUtilizationMetrics}
-   * to track performance statistics and operational metrics related to
-   * write operations executed by the thread pool.
-   * </p>
-   */
-  public void initializeWriteResourceUtilizationMetrics() {
-    abfsWriteResourceUtilizationMetrics = new AbfsWriteResourceUtilizationMetrics();
   }
 
 
@@ -313,14 +298,6 @@ public class AbfsCountersImpl implements AbfsCounters {
   @Override
   public AbfsReadFooterMetrics getAbfsReadFooterMetrics() {
     return abfsReadFooterMetrics != null ? abfsReadFooterMetrics : null;
-  }
-
-  /**
-   * Returns the write thread pool metrics instance, or {@code null} if uninitialized.
-   */
-  @Override
-  public AbfsWriteResourceUtilizationMetrics getAbfsWriteResourceUtilizationMetrics() {
-    return abfsWriteResourceUtilizationMetrics != null ? abfsWriteResourceUtilizationMetrics : null;
   }
 
   /**

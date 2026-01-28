@@ -236,15 +236,4 @@ public abstract class AzureIngressHandler {
     }
     return fullBlobMd5;
   }
-
-  /**
-   * Helper that returns the write thread-pool metrics from the client's counters, if available.
-   *
-   * @return the {@link AbfsWriteResourceUtilizationMetrics} instance or {@code null} when not present
-   */
-  protected AbfsWriteResourceUtilizationMetrics getWriteResourceUtilizationMetrics() {
-    return getAbfsOutputStream().getClient()
-        .getAbfsCounters()
-        .getAbfsWriteResourceUtilizationMetrics();
-  }
 }

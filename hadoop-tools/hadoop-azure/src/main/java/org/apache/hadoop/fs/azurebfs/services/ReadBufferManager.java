@@ -23,7 +23,6 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
-import java.util.Stack;
 import java.util.concurrent.locks.ReentrantLock;
 
 import org.slf4j.Logger;
@@ -45,7 +44,6 @@ public abstract class ReadBufferManager {
   private static int thresholdAgeMilliseconds;
   private static int blockSize = DEFAULT_READ_AHEAD_BLOCK_SIZE; // default block size for read-ahead in bytes
 
-  private Stack<Integer> freeList = new Stack<>();   // indices in buffers[] array that are available
   private Queue<ReadBuffer> readAheadQueue = new LinkedList<>(); // queue of requests that are not picked up by any worker thread yet
   private LinkedList<ReadBuffer> inProgressList = new LinkedList<>(); // requests being processed by worker threads
   private LinkedList<ReadBuffer> completedReadList = new LinkedList<>(); // buffers available for reading
@@ -201,15 +199,6 @@ public abstract class ReadBufferManager {
   }
 
   /**
-   * Gets the stack of free buffer indices.
-   *
-   * @return the stack of free buffer indices
-   */
-  Stack<Integer> getFreeList() {
-    return freeList;
-  }
-
-  /**
    * Gets the queue of read-ahead requests.
    *
    * @return the queue of {@link ReadBuffer} objects in the read-ahead queue
@@ -243,9 +232,7 @@ public abstract class ReadBufferManager {
    * @return a list of free buffer indices
    */
   @VisibleForTesting
-  List<Integer> getFreeListCopy() {
-    return new ArrayList<>(freeList);
-  }
+  abstract List<Integer> getFreeListCopy();
 
   /**
    * Gets a copy of the read-ahead queue.
@@ -294,7 +281,9 @@ public abstract class ReadBufferManager {
    */
   @VisibleForTesting
   protected void testMimicFullUseAndAddFailedBuffer(ReadBuffer buf) {
-    freeList.clear();
+    clearFreeList();
     completedReadList.add(buf);
   }
+
+  abstract void clearFreeList();
 }

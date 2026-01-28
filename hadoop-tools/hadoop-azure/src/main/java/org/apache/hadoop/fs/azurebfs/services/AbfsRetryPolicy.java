@@ -41,6 +41,11 @@ public abstract class AbfsRetryPolicy {
    */
   private final String retryPolicyAbbreviation;
 
+  /**
+   * Constructor to initialize max retry count and abbreviation
+   * @param maxRetryCount maximum retry count
+   * @param retryPolicyAbbreviation abbreviation for retry policy
+   */
   protected AbfsRetryPolicy(final int maxRetryCount, final String retryPolicyAbbreviation) {
     this.maxRetryCount = maxRetryCount;
     this.retryPolicyAbbreviation = retryPolicyAbbreviation;

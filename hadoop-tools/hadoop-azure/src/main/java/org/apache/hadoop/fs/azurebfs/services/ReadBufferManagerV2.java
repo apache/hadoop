@@ -27,7 +27,7 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Stack;
+import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -46,12 +46,12 @@ import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.HUNDRED_D;
-import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.SCALE_DIRECTION_DOWN;
-import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.SCALE_DIRECTION_NO_ACTION_NEEDED;
-import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.SCALE_DIRECTION_NO_DOWN_AT_MIN;
-import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.SCALE_DIRECTION_NO_UP_AT_MAX;
-import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.SCALE_DIRECTION_UP;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ZERO;
+import static org.apache.hadoop.fs.azurebfs.constants.MetricsConstants.SCALE_DIRECTION_DOWN;
+import static org.apache.hadoop.fs.azurebfs.constants.MetricsConstants.SCALE_DIRECTION_NO_ACTION_NEEDED;
+import static org.apache.hadoop.fs.azurebfs.constants.MetricsConstants.SCALE_DIRECTION_NO_DOWN_AT_MIN;
+import static org.apache.hadoop.fs.azurebfs.constants.MetricsConstants.SCALE_DIRECTION_NO_UP_AT_MAX;
+import static org.apache.hadoop.fs.azurebfs.constants.MetricsConstants.SCALE_DIRECTION_UP;
 
 /**
  * The Improved Read Buffer Manager for Rest AbfsClient.
@@ -100,7 +100,12 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
 
   private byte[][] bufferPool;
 
-  private final Stack<Integer> removedBufferList = new Stack<>();
+  /*
+   * List of buffer indexes that are currently free and can be assigned to new read-ahead requests.
+   * Using a thread safe data structure as multiple threads can access this concurrently.
+   */
+  private final ConcurrentSkipListSet<Integer> removedBufferList = new ConcurrentSkipListSet<>();
+  private ConcurrentSkipListSet<Integer> freeList = new ConcurrentSkipListSet<>();
 
   private ScheduledExecutorService memoryMonitorThread;
 
@@ -209,7 +214,7 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
       // Start with just minimum number of buffers.
       bufferPool[i]
           = new byte[getReadAheadBlockSize()];  // same buffers are reused. The byte array never goes back to GC
-      getFreeList().add(i);
+      pushToFreeList(i);
       numberOfActiveBuffers.getAndIncrement();
     }
     memoryMonitorThread = Executors.newSingleThreadScheduledExecutor(
@@ -768,12 +773,17 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
     if (memoryLoad < memoryThreshold && getNumBuffers() < maxBufferPoolSize) {
       // Create and Add more buffers in getFreeList().
       int nextIndx = getNumBuffers();
-      if (removedBufferList.isEmpty() && nextIndx < bufferPool.length) {
+      if (removedBufferList.isEmpty()) {
+        if (nextIndx >= bufferPool.length) {
+          printTraceLog("Invalid next index: {}. Current buffer pool size: {}",
+              nextIndx, bufferPool.length);
+          return false;
+        }
         bufferPool[nextIndx] = new byte[getReadAheadBlockSize()];
         pushToFreeList(nextIndx);
       } else {
         // Reuse a removed buffer index.
-        int freeIndex = removedBufferList.pop();
+        int freeIndex = removedBufferList.pollFirst();
         if (freeIndex >= bufferPool.length || bufferPool[freeIndex] != null) {
           printTraceLog("Invalid free index: {}. Current buffer pool size: {}",
               freeIndex, bufferPool.length);
@@ -811,7 +821,7 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
     }
 
     double memoryLoad = ResourceUtilizationUtils.getMemoryLoad();
-    if (isDynamicScalingEnabled && memoryLoad > memoryThreshold) {
+    if (isDynamicScalingEnabled && memoryLoad > memoryThreshold && getNumBuffers() > minBufferPoolSize) {
       synchronized (this) {
         if (isFreeListEmpty()) {
           printTraceLog(
@@ -980,7 +990,7 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
       getReadAheadQueue().clear();
       getInProgressList().clear();
       getCompletedReadList().clear();
-      getFreeList().clear();
+      clearFreeList();
       for (int i = 0; i < maxBufferPoolSize; i++) {
         bufferPool[i] = null;
       }
@@ -1023,6 +1033,16 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
     setIsConfigured(false);
   }
 
+  @Override
+  protected List<Integer> getFreeListCopy() {
+    return new ArrayList<>(freeList);
+  }
+
+  @Override
+  protected void clearFreeList() {
+    freeList.clear();
+  }
+
   private static void setBufferManager(ReadBufferManagerV2 manager) {
     bufferManager = manager;
   }
@@ -1063,10 +1083,19 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
   }
 
   @VisibleForTesting
+  public void setMinBufferPoolSize(int size) {
+    this.minBufferPoolSize = size;
+  }
+
+  @VisibleForTesting
   public int getMaxBufferPoolSize() {
     return maxBufferPoolSize;
   }
 
+  /**
+   * Gets the maximum buffer pool size.
+   * @return size of the maximum buffer pool
+   */
   @VisibleForTesting
   public int getCurrentThreadPoolSize() {
     return workerRefs.size();
@@ -1082,6 +1111,10 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
     return memoryMonitoringIntervalInMilliSec;
   }
 
+  /**
+   * Returns the scheduled executor service used for CPU monitoring.
+   * @return the ScheduledExecutorService for CPU monitoring tasks
+   */
   @VisibleForTesting
   public ScheduledExecutorService getCpuMonitoringThread() {
     return cpuMonitorThread;
@@ -1098,6 +1131,13 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
     return maxJvmCpuUtilization;
   }
 
+  /**
+   * Calculates the required thread pool size based on the current
+   * read-ahead queue size and in-progress list size, applying a buffer
+   * to accommodate workload fluctuations.
+   *
+   * @return the calculated required thread pool size
+   */
   public int getRequiredThreadPoolSize() {
     return (int) Math.ceil(THREAD_POOL_REQUIREMENT_BUFFER
         * (getReadAheadQueue().size()
@@ -1105,30 +1145,15 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
   }
 
   private boolean isFreeListEmpty() {
-    LOCK.lock();
-    try {
-      return getFreeList().isEmpty();
-    } finally {
-      LOCK.unlock();
-    }
+    return this.freeList.isEmpty();
   }
 
   private Integer popFromFreeList() {
-    LOCK.lock();
-    try {
-      return getFreeList().pop();
-    } finally {
-      LOCK.unlock();
-    }
+    return this.freeList.pollFirst();
   }
 
   private void pushToFreeList(int idx) {
-    LOCK.lock();
-    try {
-      getFreeList().push(idx);
-    } finally {
-      LOCK.unlock();
-    }
+    this.freeList.add(idx);
   }
 
   private void incrementActiveBufferCount() {
