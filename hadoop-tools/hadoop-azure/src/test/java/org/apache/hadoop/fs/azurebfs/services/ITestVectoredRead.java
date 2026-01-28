@@ -1,9 +1,28 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.apache.hadoop.fs.azurebfs.services;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Random;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -27,6 +46,7 @@ import org.apache.hadoop.fs.azurebfs.enums.VectoredReadStrategy;
 import org.apache.hadoop.fs.impl.CombinedFileRange;
 
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_VECTORED_READ_STRATEGY;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_KB;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_MB;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ZERO;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.validateVectoredReadResult;
@@ -245,7 +265,7 @@ public class ITestVectoredRead extends AbstractAbfsIntegrationTest {
    * high-offset and large-file conditions.
    */
   @Test
-  public void test_045_vectoredIOHugeFile() throws Throwable {
+  public void testVectoredIOHugeFile() throws Throwable {
     int fileSize = DATA_100_MB;
     final AzureBlobFileSystem fs = getFileSystem();
     String fileName = methodName.getMethodName() + 1;
@@ -486,7 +506,7 @@ public class ITestVectoredRead extends AbstractAbfsIntegrationTest {
 
       /* 2. Explicitly validate buffer is in inProgressList */
       ReadBuffer inProgress = null;
-      for (int i = 0; i <LOOKUP_RETRIES ; i++) {
+      for (int i = 0;  i <LOOKUP_RETRIES;  i++) {
         synchronized (rbm) {
           inProgress = rbm.findInList(
               rbm.getInProgressList(), spyIn, 0);
@@ -585,6 +605,71 @@ public class ITestVectoredRead extends AbstractAbfsIntegrationTest {
                 Mockito.anyInt(),
                 Mockito.any());
       }
+    }
+  }
+
+  /**
+   * Compares performance of many random reads using:
+   * 1. Individual random (non-vectored) reads
+   * 2. A single vectored read covering the same offsets
+   *
+   * All non-vectored reads complete first, followed by vectored reads.
+   * This is a relative performance test intended to catch regressions,
+   * not to assert absolute timing guarantees.
+   */
+  @Test
+  public void testRandomReadsNonVectoredThenVectoredPerformance()
+      throws Exception {
+    final AzureBlobFileSystem fs = getFileSystem();
+    // File large enough to amplify performance differences
+    final int fileSize = 128 * ONE_MB;
+    final int readSize = 64 * ONE_KB;
+    final int readCount = 512;
+    byte[] fileContent = getRandomBytesArray(fileSize);
+    Path testPath =
+        createFileWithContent(fs, methodName.getMethodName(), fileContent);
+    // Generate deterministic random offsets
+    List<Long> offsets = new ArrayList<>();
+    Random rnd = new Random(12345L);
+    for (int i = 0; i < readCount; i++) {
+      long offset = Math.abs(rnd.nextLong())
+          % (fileSize - readSize);
+      offsets.add(offset);
+    }
+    // Build vectored ranges from the same offsets
+    List<FileRange> vectoredRanges = new ArrayList<>();
+    for (long offset : offsets) {
+      vectoredRanges.add(
+          FileRange.createFileRange(offset, readSize));
+    }
+    try (FSDataInputStream in = fs.openFile(testPath).build().get()) {
+      /* ----------------------------------------------------
+       * Phase 1: Random non-vectored reads
+       * ---------------------------------------------------- */
+      byte[] buffer = new byte[readSize];
+      long nonVectoredStartNs = System.nanoTime();
+      for (long offset : offsets) {
+        in.seek(offset);
+        in.read(buffer, 0, readSize);
+      }
+      long nonVectoredTimeNs =
+          System.nanoTime() - nonVectoredStartNs;
+      /* ----------------------------------------------------
+       * Phase 2: Vectored reads (after all non-vectored reads)
+       * ---------------------------------------------------- */
+      long vectoredStartNs = System.nanoTime();
+      in.readVectored(vectoredRanges, ByteBuffer::allocate);
+      CompletableFuture.allOf(
+              vectoredRanges.stream()
+                  .map(FileRange::getData)
+                  .toArray(CompletableFuture[]::new))
+          .get();
+      long vectoredTimeNs =
+          System.nanoTime() - vectoredStartNs;
+      assertTrue(vectoredTimeNs < nonVectoredTimeNs,
+          String.format("Vectored read time %d ns not faster than " +
+                  "non-vectored time %d ns",
+              vectoredTimeNs, nonVectoredTimeNs));
     }
   }
 }

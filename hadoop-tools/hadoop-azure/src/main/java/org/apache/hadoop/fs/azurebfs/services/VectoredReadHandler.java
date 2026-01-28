@@ -31,7 +31,9 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.FileRange;
+import org.apache.hadoop.fs.azurebfs.constants.ReadType;
 import org.apache.hadoop.fs.azurebfs.enums.VectoredReadStrategy;
+import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.impl.CombinedFileRange;
 
 /**
@@ -149,7 +151,9 @@ class VectoredReadHandler {
   boolean queueVectoredRead(AbfsInputStream stream, CombinedFileRange unit, IntFunction<ByteBuffer> allocator) {
     LOG.debug("queueVectoredRead offset={}, length={}",
         unit.getOffset(), unit.getLength());
-    return getReadBufferManager().queueVectoredRead(stream, unit, stream.getTracingContext(), allocator);
+    TracingContext tracingContext = stream.getTracingContext();
+    tracingContext.setReadType(ReadType.VECTORED_READ);
+    return getReadBufferManager().queueVectoredRead(stream, unit, tracingContext, allocator);
   }
 
   /**
