@@ -25,6 +25,7 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
+import org.apache.hadoop.fs.s3a.Constants;
 import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListeningExecutorService;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.MoreExecutors;
@@ -50,6 +51,16 @@ import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.submit;
 
 /**
  * Implementation of the delete() operation.
+ * A non-empty directory, as well as a directory where its emptiness
+ * is unknown, is deleted by listing all contained files (or objects
+ * with matching key prefix), then deleting those files (objects) in
+ * bulk delete requests, and finally deleting the (then) empty
+ * directory itself.
+ * <p>
+ * When "fs.s3a.delete.non-empty-directory.enabled" is true, only
+ * one delete request is send for the directory (key prefix). The
+ * S3 endpoint has to support this feature.
+ * <p>
  * This issues only one bulk delete at a time,
  * intending to update S3Guard after every request succeeded.
  * Now that S3Guard has been removed, it
@@ -65,7 +76,6 @@ import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.submit;
  * Any exploration of options here MUST be done with performance
  * measurements taken from test runs in EC2 against local S3 stores,
  * so as to ensure network latencies do not skew the results.
-
  */
 public class DeleteOperation extends ExecutingStoreOperation<Boolean> {
 
@@ -167,6 +177,16 @@ public class DeleteOperation extends ExecutingStoreOperation<Boolean> {
   /**
    * Delete a file or directory tree.
    * <p>
+   * A non-empty directory, as well as a directory where its emptiness
+   * is unknown, is deleted by listing all contained files (or objects
+   * with matching key prefix), then deleting those files (objects) in
+   * bulk delete requests, and finally deleting the (then) empty
+   * directory itself.
+   * <p>
+   * When "fs.s3a.delete.non-empty-directory.enabled" is true, only
+   * one delete request is send for the directory (key prefix). The
+   * S3 endpoint has to support this feature.
+   * <p>
    * This call does not create any fake parent directory; that is
    * left to the caller.
    * The actual delete call is done in a separate thread.
@@ -221,13 +241,26 @@ public class DeleteOperation extends ExecutingStoreOperation<Boolean> {
       if (!recursive && status.isEmptyDirectory() == Tristate.FALSE) {
         throw new PathIsNotEmptyDirectoryException(path.toString());
       }
-      if (status.isEmptyDirectory() == Tristate.TRUE) {
-        LOG.debug("deleting empty directory {}", path);
+      boolean deleteNonEmptyDirectory =
+          context.getConfiguration().getBoolean(Constants.DELETE_NON_EMPTY_DIRECTORY_ENABLED, false);
+      if (deleteNonEmptyDirectory) {
+        LOG.debug("can delete non-empty directories");
+      }
+      if (status.isEmptyDirectory() == Tristate.TRUE || deleteNonEmptyDirectory) {
+        if (status.isEmptyDirectory() == Tristate.TRUE) {
+          LOG.debug("deleting empty directory {}", path);
+        } else if(status.isEmptyDirectory() == Tristate.FALSE) {
+          LOG.debug("deleting non-empty directory {}", path);
+        } else {
+          LOG.debug("deleting directory {}", path);
+        }
         deleteObjectAtPath(path, key, false);
       } else {
+        if(status.isEmptyDirectory() == Tristate.FALSE) {
+          LOG.debug("recursively deleting non-empty directory {}", path);
+        }
         deleteDirectoryTree(path, key);
       }
-
     } else {
       // simple file.
       LOG.debug("deleting simple file {}", path);

@@ -1868,6 +1868,17 @@ public final class Constants {
       ChecksumSupport.NONE;
 
   /**
+   * Indicates the S3 endpoint is capable of deleting directories that are not empty.
+   * Usually, a non-empty directory is deleted by listing all contained files (objects),
+   * then deleting those files in bulk delete operations, and finally deleting the
+   * (then) empty directory itself. Setting this option to true will only request the
+   * deletion of the directory itself. The S3 endpoint has to support this feature.
+   * value:{@value}
+   */
+  public static final String DELETE_NON_EMPTY_DIRECTORY_ENABLED =
+          "fs.s3a.delete.non-empty-directory.enabled";
+
+  /**
    * Send a {@code Content-MD5 header} with every request.
    * This is required when performing some operations with third party stores
    * For example: bulk delete).
