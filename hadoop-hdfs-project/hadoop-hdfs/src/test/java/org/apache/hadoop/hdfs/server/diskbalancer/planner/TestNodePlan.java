@@ -16,14 +16,14 @@
  */
 package org.apache.hadoop.hdfs.server.diskbalancer.planner;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.hadoop.hdfs.server.diskbalancer.datamodel.DiskBalancerVolume;
-import org.apache.hadoop.test.LambdaTestUtils;
+import java.io.IOException;
+
 import org.junit.jupiter.api.Test;
 import sample.SampleStep;
 
-import java.io.IOException;
-import java.util.List;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.hadoop.hdfs.server.diskbalancer.datamodel.DiskBalancerVolume;
+import org.apache.hadoop.test.LambdaTestUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -50,10 +50,7 @@ public class TestNodePlan {
     sampleStep.setBandwidth(12345);
     sampleStep.setMaxDiskErrors(4567);
     nodePlan.addStep(sampleStep);
-    String json = nodePlan.toJson();
-    IOException ex = LambdaTestUtils.intercept(IOException.class, () -> NodePlan.parseJson(json));
-    assertThat(ex.getMessage())
-        .isEqualTo("Invalid @class value in NodePlan JSON: sample.SampleStep");
+    assertNodePlanInvalid(nodePlan);
   }
 
   @Test
@@ -70,10 +67,7 @@ public class TestNodePlan {
     sampleStep.setBandwidth(12345);
     sampleStep.setMaxDiskErrors(4567);
     nodePlan.addStep(sampleStep);
-    String json = nodePlan.toJson();
-    IOException ex = LambdaTestUtils.intercept(IOException.class, () -> NodePlan.parseJson(json));
-    assertThat(ex.getMessage())
-        .isEqualTo("Invalid @class value in NodePlan JSON: sample.SampleStep");
+    assertNodePlanInvalid(nodePlan);
   }
 
   @Test
@@ -88,10 +82,14 @@ public class TestNodePlan {
     nestedStep.setBandwidth(1234);
     nestedStep.setMaxDiskErrors(456);
     nodePlan.addStep(nestedStep);
-    String json = nodePlan.toJson();
-    IOException ex = LambdaTestUtils.intercept(IOException.class, () -> NodePlan.parseJson(json));
-    assertThat(ex.getMessage())
-        .isEqualTo("Invalid @class value in NodePlan JSON: sample.SampleStep");
+    assertNodePlanInvalid(nodePlan);
+  }
+
+  private void assertNodePlanInvalid(final NodePlan nodePlan) throws Exception {
+    LambdaTestUtils.intercept(
+        IOException.class,
+        "Invalid @class value in NodePlan JSON: sample.SampleStep",
+        () -> NodePlan.parseJson(nodePlan.toJson()));
   }
   
   private static class NestedStep implements Step {
