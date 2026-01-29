@@ -63,10 +63,8 @@ Refer to  dev-support/docker/Dockerfile):
   $ sudo apt-get update
   $ sudo apt-get -y install openjdk-17-jdk
 * Maven
-  $ sudo apt-get -y install maven
-
-  Note: Above command might not the required Maven version i.e.3.9.9 or later.
-  In that case, download and install Maven manually from https://maven.apache.org/download.cgi
+  Most package managers do not install required version of Maven i.e. 3.9.9 or later.
+  Download and Install Maven manually from https://maven.apache.org/install.html
 * Native libraries
   $ sudo apt-get -y install build-essential autoconf automake libtool cmake zlib1g-dev pkg-config libssl-dev libsasl2-dev
 * GCC 9.3.0
