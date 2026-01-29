@@ -37,11 +37,6 @@
     </dependency>
   </dependencies>
 
-  <properties>
-    <!-- Workaround to access JavaDoc internal tool package -->
-    <maven.compiler.release/>
-  </properties>
-
   <build>
     <plugins>
       <plugin>

@@ -2316,8 +2316,15 @@
           <version>${maven-javadoc-plugin.version}</version>
           <configuration>
             <doclint>all</doclint>
+            <additionalJOptions>
+              <!-- To fix doclet runtime error -->
+              <additionalJOption>-J--add-exports=jdk.javadoc/jdk.javadoc.internal.tool=ALL-UNNAMED</additionalJOption>
+            </additionalJOptions>
             <additionalOptions>
-                <additionalOption>-Xmaxwarns 10000</additionalOption>
+              <!-- To fix doclet compile error -->
+              <additionalOption>--add-exports</additionalOption>
+              <additionalOption>jdk.javadoc/jdk.javadoc.internal.tool=ALL-UNNAMED</additionalOption>
+              <additionalOption>-Xmaxwarns 10000</additionalOption>
             </additionalOptions>
           </configuration>
         </plugin>
@@ -2832,7 +2839,8 @@
       </activation>
       <properties>
         <javac.version>17</javac.version>
-        <maven.compiler.release>${javac.version}</maven.compiler.release>
+        <maven.compiler.source>${javac.version}</maven.compiler.source>
+        <maven.compiler.target>${javac.version}</maven.compiler.target>
       </properties>
     </profile>
     <profile>

@@ -116,8 +116,8 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
     <clover-maven-plugin.version>4.4.1</clover-maven-plugin.version>
     <maven-bundle-plugin.version>2.5.0</maven-bundle-plugin.version>
     <lifecycle-mapping.version>1.0.0</lifecycle-mapping.version>
-    <maven-checkstyle-plugin.version>3.1.0</maven-checkstyle-plugin.version>
-    <checkstyle.version>8.29</checkstyle.version>
+    <maven-checkstyle-plugin.version>3.6.0</maven-checkstyle-plugin.version>
+    <checkstyle.version>11.1.0</checkstyle.version>
     <dependency-check-maven.version>7.1.1</dependency-check-maven.version>
     <spotbugs.version>4.9.7</spotbugs.version>
     <spotbugs-maven-plugin.version>4.9.7.0</spotbugs-maven-plugin.version>
@@ -713,9 +713,11 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
                 </docletArtifact>
               </docletArtifacts>
               <additionalJOptions>
+                <!-- To fix doclet runtime error -->
                 <additionalJOption>-J--add-exports=jdk.javadoc/jdk.javadoc.internal.tool=ALL-UNNAMED</additionalJOption>
               </additionalJOptions>
               <additionalOptions>
+                <!-- To fix doclet compile error -->
                 <additionalOption>--add-exports</additionalOption>
                 <additionalOption>jdk.javadoc/jdk.javadoc.internal.tool=ALL-UNNAMED</additionalOption>
               </additionalOptions>
