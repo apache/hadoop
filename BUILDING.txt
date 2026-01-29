@@ -5,7 +5,7 @@ Requirements:
 
 * Unix System
 * JDK 17
-* Maven 3.9.9 or later
+* Maven 3.9.11 or later
 * Boost 1.86.0 (if compiling native code)
 * Protocol Buffers 3.25.5 (if compiling native code)
 * CMake 3.19 or newer (if compiling native code)
@@ -63,8 +63,17 @@ Refer to  dev-support/docker/Dockerfile):
   $ sudo apt-get update
   $ sudo apt-get -y install openjdk-17-jdk
 * Maven
-  Most package managers do not install required version of Maven i.e. 3.9.9 or later.
-  Download and Install Maven manually from https://maven.apache.org/install.html
+  Most package managers do not install required version of Maven i.e. 3.9.11 or later.
+  Following commands download and install Maven manually
+  $ curl -L https://repo.maven.apache.org/maven2/org/apache/maven/apache-maven/3.9.11/apache-maven-3.9.11-bin.tar.gz > apache-maven-3.9.11-bin.tar.gz
+  $ tar -zxvf apache-maven-3.9.11-bin.tar.gz -C /opt
+  $ sudo ln -s /opt/apache-maven-3.9.11/bin/mvn /usr/bin
+  $ sudo nano /etc/profile.d/maven.sh
+  $ export M2_HOME=/opt/maven
+  $ export MAVEN_HOME=/opt/maven
+  $ export PATH=${M2_HOME}/bin:${PATH}
+  $ sudo chmod +x /etc/profile.d/maven.sh
+  $ source /etc/profile.d/maven.sh
 * Native libraries
   $ sudo apt-get -y install build-essential autoconf automake libtool cmake zlib1g-dev pkg-config libssl-dev libsasl2-dev
 * GCC 9.3.0
@@ -584,7 +593,7 @@ Requirements:
 
 * Windows 10
 * JDK 17
-* Maven 3.9.9 or later (maven.apache.org)
+* Maven 3.9.11 or later (maven.apache.org)
 * Boost 1.86.0 (boost.org)
 * Protocol Buffers 3.25.5 (https://github.com/protocolbuffers/protobuf/tags)
 * CMake 3.19 or newer (cmake.org)
