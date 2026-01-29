@@ -54,11 +54,18 @@ public class RMWebApp extends WebApp implements YarnWebParams {
     this.rm = rm;
   }
 
-  public ResourceConfig resourceConfig() {
+  public ResourceConfig resourceConfig(Configuration yarnConfiguration) {
     ResourceConfig config = new ResourceConfig();
-    config.packages("org.apache.hadoop.yarn.server.resourcemanager.webapp");
     config.register(new JerseyBinder());
-    config.register(RMWebServices.class);
+
+    Class webService = yarnConfiguration.getClass(
+        YarnConfiguration.YARN_WEBAPP_CUSTOM_WEBSERVICE_CLASS,
+        RMWebServices.class);
+    config.register(webService);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Registered webservice class is {}", webService.getName());
+    }
+
     config.register(GenericExceptionHandler.class);
     config.register(JsonProviderFeature.class);
     config.register(JAXBContextResolver.class);
