@@ -18,7 +18,7 @@ Azure Data Lake Storage Gen 2 (ADLS Gen 2) is a set of capabilities dedicated to
 big data analytics, built on top of Azure Blob Storage. The ABFS and ABFSS
 schemes target the ADLS Gen 2 REST API now having support for both HNS and FNS Accounts.
 ADLS Gen 2 with HNS Enabled using DFS Endpoint offers better performance and
-scalability.  ADLS Gen 2 also offers authentication and authorization compatible
+scalability. ADLS Gen 2 also offers authentication and authorization compatible
 with the Hadoop Distributed File System permissions model when hierarchical
 namespace is enabled for the storage account.
 

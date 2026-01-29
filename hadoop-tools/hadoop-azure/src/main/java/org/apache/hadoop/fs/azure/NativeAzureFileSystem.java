@@ -43,19 +43,21 @@ import org.apache.hadoop.util.Progressable;
 @Deprecated
 public class NativeAzureFileSystem extends FileSystem {
 
+  private static final String SCHEME = "wasb";
+  private static final String SECURE_SCHEME = "wasbs";
+
   public static final String ERROR_MESSAGE =
-      "WASB Driver using wasb(s) schema is No longer Supported. "
+      "WASB Driver using wasb(s) schema is no longer supported. "
           + "Instead use ABFS Driver for FNS account by changing the scheme to abfs(s)."
           + "For more details contact askabfs@microsoft.com";
 
   public NativeAzureFileSystem() {
-    // set store in initialize()
   }
 
   public static class Secure extends NativeAzureFileSystem {
     @Override
     public String getScheme() {
-      return "wasbs";
+      return SECURE_SCHEME;
     }
   }
 
@@ -70,12 +72,12 @@ public class NativeAzureFileSystem extends FileSystem {
   @Override
   public void initialize(URI uri, Configuration conf)
       throws IOException, IllegalArgumentException {
-    throw new IllegalArgumentException(ERROR_MESSAGE);
+    throw new UnsupportedOperationException(ERROR_MESSAGE);
   }
 
   @Override
   public String getScheme() {
-    return "wasb";
+    return SCHEME;
   }
 
   @Override
@@ -86,7 +88,7 @@ public class NativeAzureFileSystem extends FileSystem {
   @Override
   public FSDataInputStream open(final Path path, final int i)
       throws IOException {
-    return null;
+    throw new UnsupportedOperationException(ERROR_MESSAGE);
   }
 
   @Override
@@ -97,7 +99,7 @@ public class NativeAzureFileSystem extends FileSystem {
       final short i1,
       final long l,
       final Progressable progressable) throws IOException {
-    return null;
+    throw new UnsupportedOperationException(ERROR_MESSAGE);
   }
 
   @Override
@@ -105,43 +107,43 @@ public class NativeAzureFileSystem extends FileSystem {
       final int i,
       final Progressable progressable)
       throws IOException {
-    return null;
+    throw new UnsupportedOperationException(ERROR_MESSAGE);
   }
 
   @Override
   public boolean rename(final Path path, final Path path1) throws IOException {
-    return false;
+    throw new UnsupportedOperationException(ERROR_MESSAGE);
   }
 
   @Override
   public boolean delete(final Path path, final boolean b) throws IOException {
-    return false;
+    throw new UnsupportedOperationException(ERROR_MESSAGE);
   }
 
   @Override
   public FileStatus[] listStatus(final Path path)
-      throws FileNotFoundException, IOException {
-    return new FileStatus[0];
+      throws IOException {
+    throw new UnsupportedOperationException(ERROR_MESSAGE);
   }
 
   @Override
   public void setWorkingDirectory(final Path path) {
-
+    throw new UnsupportedOperationException(ERROR_MESSAGE);
   }
 
   @Override
   public Path getWorkingDirectory() {
-    return null;
+    throw new UnsupportedOperationException(ERROR_MESSAGE);
   }
 
   @Override
   public boolean mkdirs(final Path path, final FsPermission fsPermission)
       throws IOException {
-    return false;
+    throw new UnsupportedOperationException(ERROR_MESSAGE);
   }
 
   @Override
   public FileStatus getFileStatus(final Path path) throws IOException {
-    return null;
+    throw new UnsupportedOperationException(ERROR_MESSAGE);
   }
 }
