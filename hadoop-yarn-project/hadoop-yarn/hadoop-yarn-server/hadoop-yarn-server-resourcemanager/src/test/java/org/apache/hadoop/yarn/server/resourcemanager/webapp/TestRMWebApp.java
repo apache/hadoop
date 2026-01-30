@@ -427,10 +427,10 @@ public class TestRMWebApp {
     conf.set(YarnConfiguration.YARN_WEBAPP_CUSTOM_WEBSERVICE_CLASS,
         "org.apache.hadoop.yarn.server.resourcemanager.webapp.TestRMWebApp$CustomRMWebServices");
 
-    ResourceConfig rc = rmWebApp.resourceConfig(conf);
+    ResourceConfig resourceConfig = rmWebApp.resourceConfig(conf);
 
-    assertTrue(rc.isRegistered(CustomRMWebServices.class));
-    assertFalse(rc.isRegistered(RMWebServices.class));
+    assertTrue(resourceConfig.isRegistered(CustomRMWebServices.class));
+    assertFalse(resourceConfig.isRegistered(RMWebServices.class));
   }
 
   private class CustomRMWebServices extends RMWebServices {
