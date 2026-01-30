@@ -22,13 +22,14 @@ cd "$(dirname "$0")" # connect to root
 OS_PLATFORM="${1:-}"
 [ "$#" -gt 0 ] && shift
 
-DEFAULT_OS_PLATFORM="ubuntu_20"
+DEFAULT_OS_PLATFORM="ubuntu_24"
 
 OS_PLATFORM_SUFFIX=""
 
-if [[ -n ${OS_PLATFORM} ]] && [[ "${OS_PLATFORM}" != "${DEFAULT_OS_PLATFORM}" ]]; then
-  # ubuntu_20 (default) platform does not have suffix in Dockerfile.
+if [[ -n ${OS_PLATFORM} ]]; then
   OS_PLATFORM_SUFFIX="_${OS_PLATFORM}"
+else
+  OS_PLATFORM_SUFFIX="_${DEFAULT_OS_PLATFORM}"
 fi
 
 DOCKER_DIR=dev-support/docker
