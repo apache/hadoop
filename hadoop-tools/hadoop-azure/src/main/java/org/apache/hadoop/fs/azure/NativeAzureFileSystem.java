@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.fs.azure;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -46,7 +45,7 @@ public class NativeAzureFileSystem extends FileSystem {
   private static final String SCHEME = "wasb";
   private static final String SECURE_SCHEME = "wasbs";
 
-  public static final String ERROR_MESSAGE =
+  public static final String WASB_INIT_ERROR_MESSAGE =
       "WASB Driver using wasb(s) schema is no longer supported. "
           + "Instead use ABFS Driver for FNS account by changing the scheme to abfs(s)."
           + "For more details contact askabfs@microsoft.com";
@@ -67,12 +66,12 @@ public class NativeAzureFileSystem extends FileSystem {
    * @param uri  the URI of the file system
    * @param conf the configuration
    * @throws IOException              on IO problems
-   * @throws IllegalArgumentException if the URI is invalid
+   * @throws UnsupportedOperationException if the URI is invalid
    */
   @Override
   public void initialize(URI uri, Configuration conf)
-      throws IOException, IllegalArgumentException {
-    throw new UnsupportedOperationException(ERROR_MESSAGE);
+      throws IOException, UnsupportedOperationException {
+    throw new UnsupportedOperationException(WASB_INIT_ERROR_MESSAGE);
   }
 
   @Override
@@ -88,7 +87,7 @@ public class NativeAzureFileSystem extends FileSystem {
   @Override
   public FSDataInputStream open(final Path path, final int i)
       throws IOException {
-    throw new UnsupportedOperationException(ERROR_MESSAGE);
+    throw new UnsupportedOperationException(WASB_INIT_ERROR_MESSAGE);
   }
 
   @Override
@@ -99,7 +98,7 @@ public class NativeAzureFileSystem extends FileSystem {
       final short i1,
       final long l,
       final Progressable progressable) throws IOException {
-    throw new UnsupportedOperationException(ERROR_MESSAGE);
+    throw new UnsupportedOperationException(WASB_INIT_ERROR_MESSAGE);
   }
 
   @Override
@@ -107,43 +106,43 @@ public class NativeAzureFileSystem extends FileSystem {
       final int i,
       final Progressable progressable)
       throws IOException {
-    throw new UnsupportedOperationException(ERROR_MESSAGE);
+    throw new UnsupportedOperationException(WASB_INIT_ERROR_MESSAGE);
   }
 
   @Override
   public boolean rename(final Path path, final Path path1) throws IOException {
-    throw new UnsupportedOperationException(ERROR_MESSAGE);
+    throw new UnsupportedOperationException(WASB_INIT_ERROR_MESSAGE);
   }
 
   @Override
   public boolean delete(final Path path, final boolean b) throws IOException {
-    throw new UnsupportedOperationException(ERROR_MESSAGE);
+    throw new UnsupportedOperationException(WASB_INIT_ERROR_MESSAGE);
   }
 
   @Override
   public FileStatus[] listStatus(final Path path)
       throws IOException {
-    throw new UnsupportedOperationException(ERROR_MESSAGE);
+    throw new UnsupportedOperationException(WASB_INIT_ERROR_MESSAGE);
   }
 
   @Override
   public void setWorkingDirectory(final Path path) {
-    throw new UnsupportedOperationException(ERROR_MESSAGE);
+    throw new UnsupportedOperationException(WASB_INIT_ERROR_MESSAGE);
   }
 
   @Override
   public Path getWorkingDirectory() {
-    throw new UnsupportedOperationException(ERROR_MESSAGE);
+    throw new UnsupportedOperationException(WASB_INIT_ERROR_MESSAGE);
   }
 
   @Override
   public boolean mkdirs(final Path path, final FsPermission fsPermission)
       throws IOException {
-    throw new UnsupportedOperationException(ERROR_MESSAGE);
+    throw new UnsupportedOperationException(WASB_INIT_ERROR_MESSAGE);
   }
 
   @Override
   public FileStatus getFileStatus(final Path path) throws IOException {
-    throw new UnsupportedOperationException(ERROR_MESSAGE);
+    throw new UnsupportedOperationException(WASB_INIT_ERROR_MESSAGE);
   }
 }

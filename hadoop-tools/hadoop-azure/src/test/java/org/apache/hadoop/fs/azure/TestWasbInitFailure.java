@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 
+import static org.apache.hadoop.fs.azure.NativeAzureFileSystem.WASB_INIT_ERROR_MESSAGE;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
@@ -37,16 +38,16 @@ public class TestWasbInitFailure {
 
   private void assertFailure(URI uri) throws Exception {
     Configuration conf = new Configuration();
-    IllegalArgumentException ex = intercept(IllegalArgumentException.class, () -> {
+    UnsupportedOperationException ex = intercept(UnsupportedOperationException.class, () -> {
       FileSystem.newInstance(uri, conf).close();
     });
     Assertions.assertThat(ex.getMessage())
-        .contains("WASB Driver using wasb(s) schema is No longer Supported.");
+        .contains(WASB_INIT_ERROR_MESSAGE);
 
-    ex = intercept(IllegalArgumentException.class, () -> {
+    ex = intercept(UnsupportedOperationException.class, () -> {
       FileSystem.get(uri, conf).close();
     });
     Assertions.assertThat(ex.getMessage())
-        .contains("WASB Driver using wasb(s) schema is No longer Supported.");
+        .contains(WASB_INIT_ERROR_MESSAGE);
   }
 }
