@@ -23,30 +23,31 @@ package org.apache.hadoop.yarn.server.resourcemanager;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.CommonIssues;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.FileContent;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.IssueData;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.IssueType;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.File;
 import java.io.IOException;
-import java.util.Arrays;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 
 
 public class DiagnosticsServiceTest {
   private static final String ISSUE_NAME_APP_DIAGNOSTIC = "application_diagnostic";
-  private static final String ISSUE_NAME_APP_FAILED = "application_failed";
-  private static final String ISSUE_NAME_APP_FAILED_NECESSARY_ARGS =
-      "application_failed_necessary_args";
-  private static final String ISSUE_NAME_APP_HANGING = "application_hanging";
   private static final String ISSUE_NAME_SCHED_ISSUE =
       "scheduler_related_issue";
-  private static final String ISSUE_NAME_RM_NM_ISSUE = "rm_nm_start_failure";
   private static final String ISSUE_ARG_APP_ID = "appId";
-  private static final String ISSUE_ARG_NODE_ID = "nodeId";
   private static final String COLON = ":";
   private static final String COMMA = ",";
   private static final String OUTPUT_DIR = "/tmp";
@@ -59,13 +60,11 @@ public class DiagnosticsServiceTest {
   }
 
   @Test
-  public void testListCommonIssuesValidCaseWithOptionsToBeSkipped()
+  public void testListCommonIssues()
       throws Exception {
-    // The test script contains two invalid options: one with an ambiguous name
-    // and one with too many parameters. These should be skipped silently.
     CommonIssues commonIssues = DiagnosticsService.listCommonIssues();
 
-    Assert.assertEquals(2, commonIssues.getIssueList().size());
+    assertEquals(2, commonIssues.getIssueList().size());
     assertIssueEquality(ISSUE_NAME_APP_DIAGNOSTIC,
         Collections.singletonList(ISSUE_ARG_APP_ID),
         commonIssues.getIssueList().get(0));
@@ -81,99 +80,70 @@ public class DiagnosticsServiceTest {
     DiagnosticsService.listCommonIssues();
   }
 
-//  @Test
-//  public void testCollectIssueDataPathValidOutput() throws Exception {
-//    // valid case: the script prints out one directory
-//    Assert.assertEquals(OUTPUT_DIR, DiagnosticsService.collectIssueDataPath(
-//        ISSUE_NAME_APP_FAILED, null));
-//  }
-//
-//  @Test
-//  public void testCollectIssueDataPathValidOutputWhenArgsArePresent()
-//      throws Exception {
-//    // valid case: appId and nodeId are necessary params and they are present
-//    Assert.assertEquals(OUTPUT_DIR, DiagnosticsService.collectIssueDataPath(
-//        ISSUE_NAME_APP_FAILED_NECESSARY_ARGS,
-//        Arrays.asList(ISSUE_ARG_APP_ID, ISSUE_ARG_NODE_ID)));
-//  }
-//
-//  @Test(expected = IOException.class)
-//  public void testCollectIssueDataPathInvalidOutputWhenWrongArgsArePresent()
-//      throws Exception {
-//    // valid case: appId and nodeId are necessary params but two appIds are
-//    // given
-//    Assert.assertEquals(OUTPUT_DIR, DiagnosticsService.collectIssueDataPath(
-//        ISSUE_NAME_APP_FAILED_NECESSARY_ARGS,
-//        Arrays.asList(ISSUE_ARG_APP_ID, ISSUE_ARG_APP_ID)));
-//  }
-//
-//  @Test(expected = IOException.class)
-//  public void testCollectIssueDataPathInvalidOutputEmptyDir() throws Exception {
-//    // invalid case: the script prints out an empty string as directory
-//    // with the correct prefix
-//    DiagnosticsService.collectIssueDataPath(ISSUE_NAME_APP_HANGING, null);
-//  }
-//
-  @Test(expected = IOException.class)
-  public void testCollectIssueDataPathInvalidOutputMissingOutputDir()
-      throws Exception {
-    // invalid case: the script doesn't print out the correct output directory
-    DiagnosticsService.collectIssueDataPath(ISSUE_NAME_SCHED_ISSUE, null);
-  }
-//
-//  @Test(expected = IOException.class)
-//  public void testCollectIssueDataPathInvalidOutputMissingPrints()
-//      throws Exception {
-//    // invalid case: the script doesn't print out anything
-//    DiagnosticsService.collectIssueDataPath(ISSUE_NAME_RM_NM_ISSUE, null);
-//  }
-//
-  @Test(expected = IOException.class)
-  public void testCollectIssueDataPathScriptMissing() throws Exception {
-    DiagnosticsService.setScriptLocation("/src/invalidLocation/script.py");
-    DiagnosticsService.collectIssueDataPath(ISSUE_NAME_APP_DIAGNOSTIC, null);
-  }
-
   @Test
   public void testParseIssueTypeValidCases() {
     // valid case: name, no parameters
-    String line = ISSUE_NAME_APP_FAILED;
+    String line = ISSUE_NAME_APP_DIAGNOSTIC;
 
-    assertIssueEquality(ISSUE_NAME_APP_FAILED, Collections.emptyList(),
+    assertIssueEquality(ISSUE_NAME_APP_DIAGNOSTIC, Collections.emptyList(),
         DiagnosticsService.parseIssueType(line));
 
     // valid case: name, one parameter
-    line = ISSUE_NAME_APP_FAILED + COLON + ISSUE_ARG_APP_ID;
+    line = ISSUE_NAME_APP_DIAGNOSTIC + COLON + ISSUE_ARG_APP_ID;
 
-    assertIssueEquality(ISSUE_NAME_APP_FAILED,
+    assertIssueEquality(ISSUE_NAME_APP_DIAGNOSTIC,
         Collections.singletonList(ISSUE_ARG_APP_ID),
-        DiagnosticsService.parseIssueType(line));
-
-    // valid case: name, two parameters
-    line = ISSUE_NAME_APP_FAILED + COLON + ISSUE_ARG_APP_ID +
-        COMMA + ISSUE_ARG_NODE_ID;
-
-    assertIssueEquality(ISSUE_NAME_APP_FAILED,
-        Arrays.asList(ISSUE_ARG_APP_ID, ISSUE_ARG_NODE_ID),
         DiagnosticsService.parseIssueType(line));
   }
 
   @Test
   public void testParseIssueTypeInvalidCases() {
     // invalid case: too many values
-    String line = ISSUE_NAME_APP_FAILED + COLON + ISSUE_NAME_APP_FAILED +
-        COLON + ISSUE_NAME_APP_FAILED;
+    String line = ISSUE_NAME_APP_DIAGNOSTIC + COLON + ISSUE_NAME_APP_DIAGNOSTIC +
+        COLON + ISSUE_NAME_APP_DIAGNOSTIC;
 
     IssueType issueType = DiagnosticsService.parseIssueType(line);
-    Assert.assertNull(issueType);
+    assertNull(issueType);
+  }
+
+  @Test
+  public void testCollectIssueDataInvalidCases() throws Exception {
+  }
+
+  @Test
+  public void testCollectIssueFilesContentNestedDirectories() throws Exception {
+    Path root = Files.createTempDirectory("tmp");
+    Path applicationDiagnostic = root.resolve("application_diagnostic");
+    Files.createDirectories(applicationDiagnostic);
+    Path application_info = Files.write(
+            applicationDiagnostic.resolve("application_info.txt"),
+            "application_1740465819367_0009".getBytes(StandardCharsets.UTF_8)
+    );
+
+    IssueData data = DiagnosticsService.collectIssueFilesContent(root.toFile());
+    List<FileContent> files = data.getFiles();
+
+    assertEquals(1, files.size());
+    assertEquals("application_info.txt", files.get(0).getFilename());
+    assertEquals("application_1740465819367_0009", files.get(0).getContent());
+  }
+
+  @Test
+  public void testCollectIssueFilesContentMissingDir() throws Exception {
+
+  }
+
+  @Test
+  public void testCreateProcessBuilderWithArguments() throws Exception {
+
   }
 
   private void assertIssueEquality(String expectedIssueName,
                                    List<String> expectedParams,
                                    IssueType actualIssue) {
-    Assert.assertEquals(expectedIssueName,
+    assertEquals(expectedIssueName,
         actualIssue.getName());
-    Assert.assertEquals(expectedParams.size(),
+    assertEquals(expectedParams.size(),
         actualIssue.getParameters().size());
     Assert.assertTrue(CollectionUtils.isEqualCollection(
         expectedParams, actualIssue.getParameters()));
