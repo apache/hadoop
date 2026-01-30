@@ -91,7 +91,7 @@ public class TestNodePlan {
         "Invalid @class value in NodePlan JSON: sample.SampleStep",
         () -> NodePlan.parseJson(nodePlan.toJson()));
   }
-  
+
   private static class NestedStep implements Step {
     @JsonProperty
     private NodePlan nodePlan;
