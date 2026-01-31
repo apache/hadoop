@@ -205,7 +205,7 @@
 
     <menu name="Reference" inherit="top">
       <item name="Changelog and Release Notes" href="hadoop-project-dist/hadoop-common/release/"/>
-      <item name="Java API docs" href="../apidocs/index.html"/>
+      <item name="Java API docs" href="api/index.html"/>
       <item name="Unix Shell API" href="hadoop-project-dist/hadoop-common/UnixShellAPI.html"/>
       <item name="Metrics" href="hadoop-project-dist/hadoop-common/Metrics.html"/>
     </menu>
