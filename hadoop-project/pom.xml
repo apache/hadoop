@@ -2833,17 +2833,6 @@
       </dependencyManagement>
     </profile>
     <profile>
-      <id>jdk17+</id>
-      <activation>
-        <jdk>[17,)</jdk>
-      </activation>
-      <properties>
-        <javac.version>17</javac.version>
-        <maven.compiler.source>${javac.version}</maven.compiler.source>
-        <maven.compiler.target>${javac.version}</maven.compiler.target>
-      </properties>
-    </profile>
-    <profile>
       <id>quiet-surefire</id>
       <activation>
         <activeByDefault>false</activeByDefault>

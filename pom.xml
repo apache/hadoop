@@ -548,6 +548,9 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-compiler-plugin</artifactId>
           <version>${maven-compiler-plugin.version}</version>
+          <configuration>
+            <release>${javac.version}</release>
+          </configuration>
         </plugin>
       </plugins>
     </pluginManagement>
