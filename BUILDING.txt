@@ -5,7 +5,7 @@ Requirements:
 
 * Unix System
 * JDK 17
-* Maven 3.9.11 or later (optional if using ./mvnw)
+* Maven 3.9.11 or later (optional, a compatible version is automatically downloaded if using ./mvnw)
 * Boost 1.86.0 (if compiling native code)
 * Protocol Buffers 3.25.5 (if compiling native code)
 * CMake 3.19 or newer (if compiling native code)
@@ -583,7 +583,7 @@ Requirements:
 
 * Windows 10
 * JDK 17
-* Maven 3.9.11 or later (maven.apache.org, optional if using mvnw.cmd)
+* Maven 3.9.11 or later (maven.apache.org, optional, a compatible version is automatically downloaded if using mvnw.cmd)
 * Boost 1.86.0 (boost.org)
 * Protocol Buffers 3.25.5 (https://github.com/protocolbuffers/protobuf/tags)
 * CMake 3.19 or newer (cmake.org)
