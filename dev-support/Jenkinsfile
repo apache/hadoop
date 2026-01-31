@@ -98,10 +98,10 @@ pipeline {
                     '''
                 }
 
-                dir("${WORKSPACE}/ubuntu-focal") {
+                dir("${WORKSPACE}/ubuntu-noble") {
                     sh '''#!/usr/bin/env bash
 
-                    cp -Rp ${WORKSPACE}/src ${WORKSPACE}/ubuntu-focal
+                    cp -Rp ${WORKSPACE}/src ${WORKSPACE}/ubuntu-noble
                     '''
                 }
             }
@@ -229,8 +229,8 @@ pipeline {
                                               usernameVariable: 'GITHUB_USER')]) {
                             sh '''#!/usr/bin/env bash
 
-                            # Copy the artifacts of Ubuntu focal build to workspace
-                            cp -Rp "${WORKSPACE}/ubuntu-focal/out" "${WORKSPACE}"
+                            # Copy the artifacts of Ubuntu Noble build to workspace
+                            cp -Rp "${WORKSPACE}/ubuntu-noble/out" "${WORKSPACE}"
 
                             # Send Github status
                             chmod u+x "${SOURCEDIR}/dev-support/jenkins.sh"
