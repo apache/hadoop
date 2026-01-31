@@ -201,12 +201,12 @@ function set_defaults
 
   DOCKER=false
   DOCKERCACHE=false
-  DOCKERFILE="${BASEDIR}/dev-support/docker/Dockerfile"
+  DOCKERFILE="${BASEDIR}/dev-support/docker/Dockerfile_ubuntu_24"
   DOCKERRAN=false
 
   CPU_ARCH=$(echo "$MACHTYPE" | cut -d- -f1)
   if [[ "$CPU_ARCH" = "aarch64" || "$CPU_ARCH" = "arm64" ]]; then
-    DOCKERFILE="${BASEDIR}/dev-support/docker/Dockerfile_aarch64"
+    DOCKERFILE="${BASEDIR}/dev-support/docker/Dockerfile_ubuntu_24_aarch64"
   fi
 
   # Extract Java version from ${BASEDIR}/pom.xml
