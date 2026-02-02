@@ -520,7 +520,7 @@ em-table v0.1.6
 ember v2.2.0
 ember-array-contains-helper v1.0.2
 ember-bootstrap v0.5.1
-ember-cli v1.13.13
+ember-cli v2.6.0
 ember-cli-app-version v1.0.0
 ember-cli-babel v5.1.6
 ember-cli-content-security-policy v0.4.0
@@ -532,6 +532,7 @@ ember-cli-inject-live-reload v1.4.0
 ember-cli-jquery-ui v0.0.20
 ember-cli-qunit v1.2.1
 ember-cli-release v0.2.8
+ember-cli-sass v10.0.1
 ember-cli-shims v0.0.6
 ember-cli-sri v1.2.1
 ember-cli-test-loader v0.2.1
