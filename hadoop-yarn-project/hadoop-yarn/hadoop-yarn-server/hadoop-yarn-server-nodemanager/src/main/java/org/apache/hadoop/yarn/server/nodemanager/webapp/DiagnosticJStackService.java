@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.nodemanager;
+package org.apache.hadoop.yarn.server.nodemanager.webapp;
 
 import org.apache.hadoop.util.Shell;
 import org.slf4j.Logger;
@@ -65,7 +65,7 @@ public class DiagnosticJStackService {
         return executeCommand(pb);
     }
 
-    protected static ProcessBuilder createProcessBuilder(String numberOfJStack) {
+    public static ProcessBuilder createProcessBuilder(String numberOfJStack) {
         List<String> commandList =
                 new ArrayList<>(Arrays.asList(PYTHON_COMMAND, getScriptLocation(), numberOfJStack));
 
@@ -73,7 +73,7 @@ public class DiagnosticJStackService {
     }
 
 
-    protected static ProcessBuilder createProcessBuilder(String appId, String numberOfJStack) {
+    public static ProcessBuilder createProcessBuilder(String appId, String numberOfJStack) {
         List<String> commandList =
                 new ArrayList<>(Arrays.asList(PYTHON_COMMAND, getScriptLocation(), appId, numberOfJStack));
 

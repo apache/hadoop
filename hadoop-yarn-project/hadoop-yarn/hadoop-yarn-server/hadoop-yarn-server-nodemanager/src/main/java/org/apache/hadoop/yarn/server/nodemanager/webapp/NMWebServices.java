@@ -31,7 +31,6 @@ import java.util.Map.Entry;
 import java.util.Set;
 
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.yarn.server.nodemanager.DiagnosticJStackService;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.records.AuxServiceRecord;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.records.AuxServiceRecords;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.ResourcePlugin;

@@ -76,7 +76,7 @@ def main():
 
     # app_id = "application_1748517687882_0013"
 
-    if "app" in sys.argv[0] > 1:
+    if sys.argv[1].startswith("application_"):
         app_id = sys.argv[1]
         number_of_jstack= int(sys.argv[2])
         pids = get_app_pid(app_id)
