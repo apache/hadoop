@@ -27,10 +27,10 @@ import java.nio.charset.StandardCharsets;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TestTypedBytesStreaming {
 
@@ -65,8 +65,8 @@ public class TestTypedBytesStreaming {
     };
   }
 
-  @Before
-  @After
+  @BeforeEach
+  @AfterEach
   public void cleanupOutput() throws Exception {
     FileUtil.fullyDelete(OUTPUT_DIR.getAbsoluteFile());
     INPUT_FILE.delete();

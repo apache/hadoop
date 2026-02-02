@@ -109,7 +109,9 @@ public enum AbfsStatistic {
       "Number of times rename operation failed due to metadata being "
           + "incomplete"),
   RENAME_PATH_ATTEMPTS("rename_path_attempts",
-      "Number of times we attempt to rename a path internally");
+      "Number of times we attempt to rename a path internally"),
+  ATOMIC_RENAME_PATH_ATTEMPTS("atomic_rename_path_attempts",
+      "Number of times atomic rename attempted");
 
   private String statName;
   private String statDescription;

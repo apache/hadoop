@@ -18,7 +18,6 @@
 package org.apache.hadoop.yarn.server.router.webapp;
 
 import com.google.inject.Inject;
-import com.sun.jersey.api.client.Client;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
@@ -34,6 +33,8 @@ import org.apache.hadoop.yarn.server.router.Router;
 import org.apache.hadoop.yarn.webapp.YarnWebParams;
 import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
+
+import javax.ws.rs.client.Client;
 
 import static org.apache.hadoop.yarn.webapp.YarnWebParams.NODE_SC;
 
@@ -129,7 +130,7 @@ public class NodeLabelsBlock extends RouterBlock {
         .genericForward(webAddress, null, NodeLabelsInfo.class, HTTPMethods.GET,
         RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.GET_RM_NODE_LABELS, null, null, conf,
         client);
-    client.destroy();
+    client.close();
     return nodes;
   }
 

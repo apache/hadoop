@@ -63,6 +63,7 @@ import org.apache.hadoop.hdfs.server.namenode.sps.StoragePolicySatisfyManager;
 import org.apache.hadoop.hdfs.util.ByteArray;
 import org.apache.hadoop.hdfs.util.EnumCounters;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
+import org.apache.hadoop.hdfs.util.RwLockMode;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Time;
@@ -158,7 +159,7 @@ public class FSDirectory implements Closeable {
   private final FSNamesystem namesystem;
   private volatile boolean skipQuotaCheck = false; //skip while consuming edits
   private final int maxComponentLength;
-  private final int maxDirItems;
+  private volatile int maxDirItems;
   private final int lsLimit;  // max list limit
   private final int contentCountLimit; // max content summary counts per run
   private final long contentSleepMicroSec;
@@ -216,6 +217,11 @@ public class FSDirectory implements Closeable {
   // authorizeWithContext() API or not.
   private boolean useAuthorizationWithContextAPI = false;
 
+  // We need a maximum maximum because by default, PB limits message sizes
+  // to 64MB. This means we can only store approximately 6.7 million entries
+  // per directory, but let's use 6.4 million for some safety.
+  private static final int MAX_DIR_ITEMS = 64 * 100 * 1000;
+
   public void setINodeAttributeProvider(
       @Nullable INodeAttributeProvider provider) {
     attributeProvider = provider;
@@ -262,37 +268,31 @@ public class FSDirectory implements Closeable {
    * remain as placeholders only
    */
   void readLock() {
-    assert namesystem.hasReadLock() : "Should hold namesystem read lock";
+    assert namesystem.hasReadLock(RwLockMode.FS) :
+        "Should hold read lock of namesystem FSLock";
   }
 
   void readUnlock() {
-    assert namesystem.hasReadLock() : "Should hold namesystem read lock";
+    assert namesystem.hasReadLock(RwLockMode.FS) :
+        "Should hold read lock of namesystem FSLock";
   }
 
   void writeLock() {
-    assert namesystem.hasWriteLock() : "Should hold namesystem write lock";
+    assert namesystem.hasWriteLock(RwLockMode.FS) :
+        "Should hold write lock of namesystem FSLock";
   }
 
   void writeUnlock() {
-    assert namesystem.hasWriteLock() : "Should hold namesystem write lock";
+    assert namesystem.hasWriteLock(RwLockMode.FS) :
+        "Should hold write lock of namesystem FSLock";
   }
 
   boolean hasWriteLock() {
-    return namesystem.hasWriteLock();
+    return namesystem.hasWriteLock(RwLockMode.FS);
   }
 
   boolean hasReadLock() {
-    return namesystem.hasReadLock();
-  }
-
-  @Deprecated // dirLock is obsolete, use namesystem.fsLock instead
-  public int getReadHoldCount() {
-    return namesystem.getReadHoldCount();
-  }
-
-  @Deprecated // dirLock is obsolete, use namesystem.fsLock instead
-  public int getWriteHoldCount() {
-    return namesystem.getWriteHoldCount();
+    return namesystem.hasReadLock(RwLockMode.FS);
   }
 
   public int getListLimit() {
@@ -400,10 +400,6 @@ public class FSDirectory implements Closeable {
     Preconditions.checkArgument(this.inodeXAttrsLimit >= 0,
         "Cannot set a negative limit on the number of xattrs per inode (%s).",
         DFSConfigKeys.DFS_NAMENODE_MAX_XATTRS_PER_INODE_KEY);
-    // We need a maximum maximum because by default, PB limits message sizes
-    // to 64MB. This means we can only store approximately 6.7 million entries
-    // per directory, but let's use 6.4 million for some safety.
-    final int MAX_DIR_ITEMS = 64 * 100 * 1000;
     Preconditions.checkArgument(
         maxDirItems > 0 && maxDirItems <= MAX_DIR_ITEMS, "Cannot set "
             + DFSConfigKeys.DFS_NAMENODE_MAX_DIRECTORY_ITEMS_KEY
@@ -585,6 +581,18 @@ public class FSDirectory implements Closeable {
     return Joiner.on(",").skipNulls().join(protectedDirectories);
   }
 
+  public void setMaxDirItems(int newVal) {
+    Preconditions.checkArgument(
+        newVal > 0 && newVal <= MAX_DIR_ITEMS, "Cannot set "
+            + DFSConfigKeys.DFS_NAMENODE_MAX_DIRECTORY_ITEMS_KEY
+            + " to a value less than 1 or greater than " + MAX_DIR_ITEMS);
+    maxDirItems = newVal;
+  }
+
+  public int getMaxDirItems() {
+    return maxDirItems;
+  }
+
   BlockManager getBlockManager() {
     return getFSNamesystem().getBlockManager();
   }
@@ -695,7 +703,7 @@ public class FSDirectory implements Closeable {
    * accessible path that also passed additional sanity checks based on how
    * the path will be used as specified by the DirOp.
    *   READ:   Expands reserved paths and performs permission checks
-   *           during traversal.  Raw paths are only accessible by a superuser.
+   *           during traversal.
    *   WRITE:  In addition to READ checks, ensures the path is not a
    *           snapshot path.
    *   CREATE: In addition to WRITE checks, ensures path does not contain
@@ -1111,7 +1119,7 @@ public class FSDirectory implements Closeable {
    */
   public void updateSpaceForCompleteBlock(BlockInfo completeBlk,
       INodesInPath inodes) throws IOException {
-    assert namesystem.hasWriteLock();
+    assert namesystem.hasWriteLock(RwLockMode.GLOBAL);
     INodesInPath iip = inodes != null ? inodes :
         INodesInPath.fromINode(namesystem.getBlockCollection(completeBlk));
     INodeFile fileINode = iip.getLastINode().asFile();
@@ -2065,8 +2073,12 @@ public class FSDirectory implements Closeable {
     }
   }
 
-  /** Should only be used for tests to reset to any value */
-  void resetLastInodeIdWithoutChecking(long newValue) {
+  /**
+   * Should only be used for tests to reset to any value.
+   * @param newValue new value to set to
+   */
+  @VisibleForTesting
+  public void resetLastInodeIdWithoutChecking(long newValue) {
     inodeId.setCurrentValue(newValue);
   }
 

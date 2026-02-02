@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.azurebfs.services;
 
 import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
 
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.DOT;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_BACKOFF_INTERVAL;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_MAX_BACKOFF_INTERVAL;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_MAX_IO_RETRIES;
@@ -28,17 +29,17 @@ import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENABLE_AUTOTHROTTLING;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.MIN_BUFFER_SIZE;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_ABFS_ACCOUNT1_NAME;
+import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_ACCOUNT_KEY;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_ACCOUNT_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.TEST_CONFIGURATION_FILE_NAME;
 
-import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import org.apache.hadoop.fs.FSDataInputStream;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Assume;
 import org.mockito.Mockito;
 
 import java.net.URI;
@@ -47,7 +48,7 @@ import java.util.Random;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
 
@@ -65,7 +66,9 @@ public class ITestExponentialRetryPolicy extends AbstractAbfsIntegrationTest {
   private static final String TEST_PATH = "/testfile";
   private static final double MULTIPLYING_FACTOR = 1.5;
   private static final int ANALYSIS_PERIOD = 10000;
-
+  private static final String DUMMY_ACCOUNT_NAME = "dummy.dfs.core.windows.net";
+  private static final String DUMMY_ACCOUNT_NAME_1 = "dummy1.dfs.core.windows.net";
+  private static final String DUMMY_ACCOUNT_KEY = "dummyKey";
 
   public ITestExponentialRetryPolicy() throws Exception {
     super();
@@ -93,15 +96,37 @@ public class ITestExponentialRetryPolicy extends AbstractAbfsIntegrationTest {
   }
 
   @Test
+  public void testClientSideThrottlingConfigs() throws Exception {
+    final Configuration configuration = new Configuration();
+    configuration.setBoolean(FS_AZURE_ENABLE_AUTOTHROTTLING, true);
+    AbfsConfiguration abfsConfiguration = new AbfsConfiguration(configuration,
+            DUMMY_ACCOUNT_NAME);
+   Assertions.assertThat(abfsConfiguration.isAutoThrottlingEnabled())
+            .describedAs("Client-side throttling enabled by configuration key")
+            .isTrue();
+
+    configuration.unset(FS_AZURE_ENABLE_AUTOTHROTTLING);
+    AbfsConfiguration abfsConfiguration2 = new AbfsConfiguration(configuration,
+            DUMMY_ACCOUNT_NAME);
+    Assertions.assertThat(abfsConfiguration2.isAutoThrottlingEnabled())
+            .describedAs("Client-side throttling should be disabled by default")
+            .isFalse();
+  }
+
+  @Test
   public void testThrottlingIntercept() throws Exception {
     AzureBlobFileSystem fs = getFileSystem();
     final Configuration configuration = new Configuration();
     configuration.addResource(TEST_CONFIGURATION_FILE_NAME);
     configuration.setBoolean(FS_AZURE_ENABLE_AUTOTHROTTLING, false);
+    configuration.set(FS_AZURE_ACCOUNT_KEY + DOT + DUMMY_ACCOUNT_NAME,
+        DUMMY_ACCOUNT_KEY);
+    configuration.set(FS_AZURE_ACCOUNT_KEY + DOT + DUMMY_ACCOUNT_NAME_1,
+        DUMMY_ACCOUNT_KEY);
 
     // On disabling throttling AbfsNoOpThrottlingIntercept object is returned
     AbfsConfiguration abfsConfiguration = new AbfsConfiguration(configuration,
-        "dummy.dfs.core.windows.net");
+        DUMMY_ACCOUNT_NAME);
     AbfsThrottlingIntercept intercept;
     AbfsClient abfsClient = ITestAbfsClient.createTestClientFromCurrentContext(fs.getAbfsStore().getClient(), abfsConfiguration);
     intercept = abfsClient.getIntercept();
@@ -113,7 +138,7 @@ public class ITestExponentialRetryPolicy extends AbstractAbfsIntegrationTest {
     configuration.setBoolean(FS_AZURE_ACCOUNT_LEVEL_THROTTLING_ENABLED, true);
     // On enabling throttling AbfsClientThrottlingIntercept object is returned
     AbfsConfiguration abfsConfiguration1 = new AbfsConfiguration(configuration,
-        "dummy1.dfs.core.windows.net");
+        DUMMY_ACCOUNT_NAME_1);
     AbfsClient abfsClient1 = ITestAbfsClient.createTestClientFromCurrentContext(fs.getAbfsStore().getClient(), abfsConfiguration1);
     intercept = abfsClient1.getIntercept();
     Assertions.assertThat(intercept)
@@ -129,8 +154,8 @@ public class ITestExponentialRetryPolicy extends AbstractAbfsIntegrationTest {
       // check if accountName is set using different config key
       accountName = config.get(FS_AZURE_ABFS_ACCOUNT1_NAME);
     }
-    assumeTrue("Not set: " + FS_AZURE_ABFS_ACCOUNT1_NAME,
-        accountName != null && !accountName.isEmpty());
+    assumeTrue(accountName != null && !accountName.isEmpty(),
+        "Not set: " + FS_AZURE_ABFS_ACCOUNT1_NAME);
 
     Configuration rawConfig1 = new Configuration();
     rawConfig1.addResource(TEST_CONFIGURATION_FILE_NAME);
@@ -148,8 +173,8 @@ public class ITestExponentialRetryPolicy extends AbstractAbfsIntegrationTest {
     AbfsThrottlingIntercept instance1 = AbfsThrottlingInterceptFactory.getInstance(accountName, configuration);
     String accountName1 = config.get(FS_AZURE_ABFS_ACCOUNT1_NAME);
 
-    assumeTrue("Not set: " + FS_AZURE_ABFS_ACCOUNT1_NAME,
-        accountName1 != null && !accountName1.isEmpty());
+    assumeTrue(accountName1 != null && !accountName1.isEmpty(),
+        "Not set: " + FS_AZURE_ABFS_ACCOUNT1_NAME);
 
     AbfsThrottlingIntercept instance2 = AbfsThrottlingInterceptFactory.getInstance(accountName1, configuration);
     //if singleton is enabled, for different accounts both the instances should return same value
@@ -181,8 +206,8 @@ public class ITestExponentialRetryPolicy extends AbstractAbfsIntegrationTest {
     AzureBlobFileSystem fs = getFileSystem();
     AbfsClient client = fs.getAbfsStore().getClient();
     AbfsConfiguration configuration1 = client.getAbfsConfiguration();
-    Assume.assumeTrue(configuration1.isAutoThrottlingEnabled());
-    Assume.assumeTrue(configuration1.accountThrottlingEnabled());
+    assumeTrue(configuration1.isAutoThrottlingEnabled());
+    assumeTrue(configuration1.accountThrottlingEnabled());
 
     AbfsClientThrottlingIntercept accountIntercept
         = (AbfsClientThrottlingIntercept) client.getIntercept();
@@ -208,8 +233,8 @@ public class ITestExponentialRetryPolicy extends AbstractAbfsIntegrationTest {
     AzureBlobFileSystem fs1 = new AzureBlobFileSystem();
     Configuration config = new Configuration(getRawConfiguration());
     String accountName1 = config.get(FS_AZURE_ABFS_ACCOUNT1_NAME);
-    assumeTrue("Not set: " + FS_AZURE_ABFS_ACCOUNT1_NAME,
-        accountName1 != null && !accountName1.isEmpty());
+    assumeTrue(accountName1 != null && !accountName1.isEmpty(),
+        "Not set: " + FS_AZURE_ABFS_ACCOUNT1_NAME);
     final String abfsUrl1 = this.getFileSystemName() + "12" + "@" + accountName1;
     URI defaultUri1 = null;
     defaultUri1 = new URI("abfss", abfsUrl1, null, null, null);

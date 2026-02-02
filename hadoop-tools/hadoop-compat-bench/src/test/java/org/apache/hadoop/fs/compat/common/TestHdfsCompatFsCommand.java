@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.fs.compat.common;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.apache.hadoop.fs.compat.HdfsCompatTool;
 import org.apache.hadoop.fs.compat.hdfs.HdfsCompatMiniCluster;
@@ -25,8 +26,7 @@ import org.apache.hadoop.fs.compat.cases.HdfsCompatAclTestCases;
 import org.apache.hadoop.fs.compat.cases.HdfsCompatMkdirTestCases;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -47,8 +47,8 @@ public class TestHdfsCompatFsCommand {
       HdfsCompatCommand cmd = new TestCommand(uri, suite, conf);
       cmd.initialize();
       HdfsCompatReport report = cmd.apply();
-      Assert.assertEquals(7, report.getPassedCase().size());
-      Assert.assertEquals(0, report.getFailedCase().size());
+      assertEquals(7, report.getPassedCase().size());
+      assertEquals(0, report.getFailedCase().size());
       show(conf, report);
     } finally {
       if (cluster != null) {
@@ -65,8 +65,8 @@ public class TestHdfsCompatFsCommand {
     HdfsCompatCommand cmd = new TestCommand(uri, suite, conf);
     cmd.initialize();
     HdfsCompatReport report = cmd.apply();
-    Assert.assertEquals(1, report.getPassedCase().size());
-    Assert.assertEquals(6, report.getFailedCase().size());
+    assertEquals(1, report.getPassedCase().size());
+    assertEquals(6, report.getFailedCase().size());
     show(conf, report);
     cleanup(cmd, conf);
   }
@@ -79,8 +79,8 @@ public class TestHdfsCompatFsCommand {
     HdfsCompatCommand cmd = new TestCommand(uri, suite, conf);
     cmd.initialize();
     HdfsCompatReport report = cmd.apply();
-    Assert.assertEquals(0, report.getPassedCase().size());
-    Assert.assertEquals(6, report.getFailedCase().size());
+    assertEquals(0, report.getPassedCase().size());
+    assertEquals(6, report.getFailedCase().size());
     show(conf, report);
     cleanup(cmd, conf);
   }

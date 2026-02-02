@@ -45,6 +45,7 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.StringInterner;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -1238,9 +1239,9 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
 
   private void retryFetchingAMContainer(final RMAppAttemptImpl appAttempt) {
     // start a new thread so that we are not blocking main dispatcher thread.
-    new Thread() {
+    new SubjectInheritingThread() {
       @Override
-      public void run() {
+      public void work() {
         try {
           Thread.sleep(500);
         } catch (InterruptedException e) {

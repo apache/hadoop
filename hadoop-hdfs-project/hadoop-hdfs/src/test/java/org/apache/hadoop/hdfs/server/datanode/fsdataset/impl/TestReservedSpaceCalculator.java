@@ -20,8 +20,8 @@ package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.DF;
 import org.apache.hadoop.fs.StorageType;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DU_RESERVED_KEY;
@@ -31,7 +31,8 @@ import static org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.ReservedSpac
 import static org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.ReservedSpaceCalculator.ReservedSpaceCalculatorAggressive;
 import static org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.ReservedSpaceCalculator.ReservedSpaceCalculatorConservative;
 import static org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.ReservedSpaceCalculator.ReservedSpaceCalculatorPercentage;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.when;
 
 /**
@@ -43,7 +44,7 @@ public class TestReservedSpaceCalculator {
   private DF usage;
   private ReservedSpaceCalculator reserved;
 
-  @Before
+  @BeforeEach
   public void setUp() {
     conf = new Configuration();
     usage = Mockito.mock(DF.class);
@@ -217,13 +218,15 @@ public class TestReservedSpaceCalculator {
     checkReserved(StorageType.DISK, 10000, 4000, dir3);
   }
 
-  @Test(expected = IllegalStateException.class)
+  @Test
   public void testInvalidCalculator() {
-    conf.set(DFS_DATANODE_DU_RESERVED_CALCULATOR_KEY, "INVALIDTYPE");
-    reserved = new ReservedSpaceCalculator.Builder(conf)
-        .setUsage(usage)
-        .setStorageType(StorageType.DISK)
-        .build();
+    assertThrows(IllegalStateException.class, () -> {
+      conf.set(DFS_DATANODE_DU_RESERVED_CALCULATOR_KEY, "INVALIDTYPE");
+      reserved = new ReservedSpaceCalculator.Builder(conf)
+          .setUsage(usage)
+          .setStorageType(StorageType.DISK)
+          .build();
+    });
   }
 
   private void checkReserved(StorageType storageType,

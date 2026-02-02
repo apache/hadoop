@@ -34,12 +34,14 @@ import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.checkpoint.TaskCheckpointID;
 import org.apache.hadoop.util.ExitUtil;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Assert;
-import org.junit.Test;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TestTaskProgressReporter {
   private static int statusUpdateTimes = 0;
@@ -181,17 +183,18 @@ public class TestTaskProgressReporter {
     }
   }
 
-  @Before
+  @BeforeEach
   public void setup() {
     statusUpdateTimes = 0;
   }
 
-  @After
+  @AfterEach
   public void cleanup() {
     FileSystem.clearStatistics();
   }
 
-  @Test(timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testScratchDirSize() throws Exception {
     String tmpPath = TEST_DIR + "/testBytesWrittenLimit-tmpFile-"
         + new Random(System.currentTimeMillis()).nextInt();
@@ -250,7 +253,7 @@ public class TestTaskProgressReporter {
     task.setConf(conf);
     DummyTaskReporter reporter = new DummyTaskReporter(task);
     reporter.startDiskLimitCheckerThreadIfNeeded();
-    Thread t = new Thread(reporter);
+    Thread t = new SubjectInheritingThread(reporter);
     t.setUncaughtExceptionHandler(h);
     reporter.setProgressFlag();
     t.start();
@@ -260,17 +263,18 @@ public class TestTaskProgressReporter {
     task.done(fakeUmbilical, reporter);
     reporter.resetDoneFlag();
     t.join(1000L);
-    Assert.assertEquals(fastFail, threadExited);
+    assertEquals(fastFail, threadExited);
   }
 
-  @Test (timeout=10000)
+  @Test
+  @Timeout(value = 10)
   public void testTaskProgress() throws Exception {
     JobConf job = new JobConf();
     job.setLong(MRJobConfig.TASK_PROGRESS_REPORT_INTERVAL, 1000);
     Task task = new DummyTask();
     task.setConf(job);
     DummyTaskReporter reporter = new DummyTaskReporter(task);
-    Thread t = new Thread(reporter);
+    Thread t = new SubjectInheritingThread(reporter);
     t.start();
     Thread.sleep(2100);
     task.setTaskDone();
@@ -279,13 +283,15 @@ public class TestTaskProgressReporter {
     assertThat(statusUpdateTimes).isEqualTo(2);
   }
 
-  @Test(timeout=10000)
+  @Test
+  @Timeout(value = 10)
   public void testBytesWrittenRespectingLimit() throws Exception {
     // add 1024 to the limit to account for writes not controlled by the test
     testBytesWrittenLimit(LOCAL_BYTES_WRITTEN + 1024, false);
   }
 
-  @Test(timeout=10000)
+  @Test
+  @Timeout(value = 10)
   public void testBytesWrittenExceedingLimit() throws Exception {
     testBytesWrittenLimit(LOCAL_BYTES_WRITTEN - 1, true);
   }
@@ -323,7 +329,7 @@ public class TestTaskProgressReporter {
     Task task = new DummyTask();
     task.setConf(conf);
     DummyTaskReporter reporter = new DummyTaskReporter(task);
-    Thread t = new Thread(reporter);
+    Thread t = new SubjectInheritingThread(reporter);
     t.setUncaughtExceptionHandler(h);
     reporter.setProgressFlag();
 
@@ -335,6 +341,6 @@ public class TestTaskProgressReporter {
     task.setTaskDone();
     reporter.resetDoneFlag();
     t.join();
-    Assert.assertEquals(failFast, threadExited);
+    assertEquals(failFast, threadExited);
   }
 }

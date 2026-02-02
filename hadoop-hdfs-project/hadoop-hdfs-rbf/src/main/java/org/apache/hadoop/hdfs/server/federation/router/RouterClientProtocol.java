@@ -22,6 +22,7 @@ import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_SERV
 import static org.apache.hadoop.hdfs.server.federation.router.FederationUtil.updateMountPointStatus;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.CryptoProtocolVersion;
+import org.apache.hadoop.fs.BatchedRemoteIterator;
 import org.apache.hadoop.fs.BatchedRemoteIterator.BatchedEntries;
 import org.apache.hadoop.fs.CacheFlag;
 import org.apache.hadoop.fs.ContentSummary;
@@ -83,8 +84,13 @@ import org.apache.hadoop.hdfs.server.federation.resolver.ActiveNamenodeResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamespaceInfo;
 import org.apache.hadoop.hdfs.server.federation.resolver.FileSubclusterResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.MountTableResolver;
+import org.apache.hadoop.hdfs.server.federation.resolver.PathLocation;
 import org.apache.hadoop.hdfs.server.federation.resolver.RemoteLocation;
 import org.apache.hadoop.hdfs.server.federation.resolver.RouterResolveException;
+import org.apache.hadoop.hdfs.server.federation.router.async.AsyncErasureCoding;
+import org.apache.hadoop.hdfs.server.federation.router.async.RouterAsyncCacheAdmin;
+import org.apache.hadoop.hdfs.server.federation.router.async.RouterAsyncSnapshot;
+import org.apache.hadoop.hdfs.server.federation.router.async.RouterAsyncStoragePolicy;
 import org.apache.hadoop.hdfs.server.federation.router.security.RouterSecurityManager;
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
@@ -166,7 +172,7 @@ public class RouterClientProtocol implements ClientProtocol {
   /** Router security manager to handle token operations. */
   private RouterSecurityManager securityManager = null;
 
-  RouterClientProtocol(Configuration conf, RouterRpcServer rpcServer) {
+  public RouterClientProtocol(Configuration conf, RouterRpcServer rpcServer) {
     this.rpcServer = rpcServer;
     this.rpcClient = rpcServer.getRPCClient();
     this.subclusterResolver = rpcServer.getSubclusterResolver();
@@ -194,10 +200,17 @@ public class RouterClientProtocol implements ClientProtocol {
     this.superGroup = conf.get(
         DFSConfigKeys.DFS_PERMISSIONS_SUPERUSERGROUP_KEY,
         DFSConfigKeys.DFS_PERMISSIONS_SUPERUSERGROUP_DEFAULT);
-    this.erasureCoding = new ErasureCoding(rpcServer);
-    this.storagePolicy = new RouterStoragePolicy(rpcServer);
-    this.snapshotProto = new RouterSnapshot(rpcServer);
-    this.routerCacheAdmin = new RouterCacheAdmin(rpcServer);
+    if (rpcServer.isAsync()) {
+      this.erasureCoding = new AsyncErasureCoding(rpcServer);
+      this.storagePolicy = new RouterAsyncStoragePolicy(rpcServer);
+      this.snapshotProto = new RouterAsyncSnapshot(rpcServer);
+      this.routerCacheAdmin = new RouterAsyncCacheAdmin(rpcServer);
+    } else {
+      this.erasureCoding = new ErasureCoding(rpcServer);
+      this.storagePolicy = new RouterStoragePolicy(rpcServer);
+      this.snapshotProto = new RouterSnapshot(rpcServer);
+      this.routerCacheAdmin = new RouterCacheAdmin(rpcServer);
+    }
     this.securityManager = rpcServer.getRouterSecurityManager();
     this.rbfRename = new RouterFederationRename(rpcServer, conf);
     this.defaultNameServiceEnabled = conf.getBoolean(
@@ -347,7 +360,7 @@ public class RouterClientProtocol implements ClientProtocol {
    * @throws IOException If this path is not fault tolerant or the exception
    *                     should not be retried (e.g., NSQuotaExceededException).
    */
-  private List<RemoteLocation> checkFaultTolerantRetry(
+  protected List<RemoteLocation> checkFaultTolerantRetry(
       final RemoteMethod method, final String src, final IOException ioe,
       final RemoteLocation excludeLoc, final List<RemoteLocation> locations)
           throws IOException {
@@ -820,7 +833,7 @@ public class RouterClientProtocol implements ClientProtocol {
   /**
    * For {@link #getListing(String,byte[],boolean) GetLisiting} to sort results.
    */
-  private static class GetListingComparator
+  protected static class GetListingComparator
       implements Comparator<byte[]>, Serializable {
     @Override
     public int compare(byte[] o1, byte[] o2) {
@@ -830,6 +843,10 @@ public class RouterClientProtocol implements ClientProtocol {
 
   private static GetListingComparator comparator =
       new GetListingComparator();
+
+  public static GetListingComparator getComparator() {
+    return comparator;
+  }
 
   @Override
   public DirectoryListing getListing(String src, byte[] startAfter,
@@ -1104,7 +1121,7 @@ public class RouterClientProtocol implements ClientProtocol {
     return mergeDtanodeStorageReport(dnSubcluster);
   }
 
-  private DatanodeStorageReport[] mergeDtanodeStorageReport(
+  protected DatanodeStorageReport[] mergeDtanodeStorageReport(
       Map<String, DatanodeStorageReport[]> dnSubcluster) {
     // Avoid repeating machines in multiple subclusters
     Map<String, DatanodeStorageReport> datanodesMap = new LinkedHashMap<>();
@@ -1335,20 +1352,23 @@ public class RouterClientProtocol implements ClientProtocol {
   }
 
   /**
-   * Get all the locations of the path for {@link this#getContentSummary(String)}.
+   * Get all the locations of the path for {@link RouterClientProtocol#getContentSummary(String)}.
    * For example, there are some mount points:
-   *   /a -> ns0 -> /a
-   *   /a/b -> ns0 -> /a/b
-   *   /a/b/c -> ns1 -> /a/b/c
+   * <p>
+   *   /a - [ns0 - /a]
+   *   /a/b - [ns0 - /a/b]
+   *   /a/b/c - [ns1 - /a/b/c]
+   * </p>
    * When the path is '/a', the result of locations should be
    * [RemoteLocation('/a', ns0, '/a'), RemoteLocation('/a/b/c', ns1, '/a/b/c')]
    * When the path is '/b', will throw NoLocationException.
+   *
    * @param path the path to get content summary
    * @return one list contains all the remote location
-   * @throws IOException
+   * @throws IOException if an I/O error occurs
    */
   @VisibleForTesting
-  List<RemoteLocation> getLocationsForContentSummary(String path) throws IOException {
+  protected List<RemoteLocation> getLocationsForContentSummary(String path) throws IOException {
     // Try to get all the locations of the path.
     final Map<String, List<RemoteLocation>> ns2Locations = getAllLocations(path);
     if (ns2Locations.isEmpty()) {
@@ -1959,8 +1979,68 @@ public class RouterClientProtocol implements ClientProtocol {
   public BatchedEntries<OpenFileEntry> listOpenFiles(long prevId,
       EnumSet<OpenFilesIterator.OpenFilesType> openFilesTypes, String path)
           throws IOException {
-    rpcServer.checkOperation(NameNode.OperationCategory.READ, false);
-    return null;
+    rpcServer.checkOperation(NameNode.OperationCategory.READ, true);
+    List<RemoteLocation> locations = rpcServer.getLocationsForPath(path, false, false);
+    RemoteMethod method =
+        new RemoteMethod("listOpenFiles", new Class<?>[] {long.class, EnumSet.class, String.class},
+            prevId, openFilesTypes, new RemoteParam());
+    Map<RemoteLocation, BatchedEntries> results =
+        rpcClient.invokeConcurrent(locations, method, true, false, -1, BatchedEntries.class);
+
+    // Get the largest inodeIds for each namespace, and the smallest inodeId of them
+    // then ignore all entries above this id to keep a consistent prevId for the next listOpenFiles
+    long minOfMax = Long.MAX_VALUE;
+    for (BatchedEntries nsEntries : results.values()) {
+      // Only need to care about namespaces that still have more files to report
+      if (!nsEntries.hasMore()) {
+        continue;
+      }
+      long max = 0;
+      for (int i = 0; i < nsEntries.size(); i++) {
+        max = Math.max(max, ((OpenFileEntry) nsEntries.get(i)).getId());
+      }
+      minOfMax = Math.min(minOfMax, max);
+    }
+    // Concatenate all entries into one result, sorted by inodeId
+    boolean hasMore = false;
+    Map<String, OpenFileEntry> routerEntries = new HashMap<>();
+    Map<String, RemoteLocation> resolvedPaths = new HashMap<>();
+    for (Map.Entry<RemoteLocation, BatchedEntries> entry : results.entrySet()) {
+      BatchedEntries nsEntries = entry.getValue();
+      hasMore |= nsEntries.hasMore();
+      for (int i = 0; i < nsEntries.size(); i++) {
+        OpenFileEntry ofe = (OpenFileEntry) nsEntries.get(i);
+        if (ofe.getId() > minOfMax) {
+          hasMore = true;
+          break;
+        }
+        RemoteLocation remoteLoc = entry.getKey();
+        String routerPath = ofe.getFilePath().replaceFirst(remoteLoc.getDest(), remoteLoc.getSrc());
+        OpenFileEntry newEntry =
+            new OpenFileEntry(ofe.getId(), routerPath, ofe.getClientName(),
+                ofe.getClientMachine());
+        // An existing file already resolves to the same path.
+        // Resolve according to mount table and keep the best path.
+        if (resolvedPaths.containsKey(routerPath)) {
+          PathLocation pathLoc = subclusterResolver.getDestinationForPath(routerPath);
+          List<String> namespaces = pathLoc.getDestinations().stream().map(
+              RemoteLocation::getNameserviceId).collect(
+                  Collectors.toList());
+          int existingIdx = namespaces.indexOf(resolvedPaths.get(routerPath).getNameserviceId());
+          int currentIdx = namespaces.indexOf(remoteLoc.getNameserviceId());
+          if (currentIdx < existingIdx && currentIdx != -1) {
+            routerEntries.put(routerPath, newEntry);
+            resolvedPaths.put(routerPath, remoteLoc);
+          }
+        } else {
+          routerEntries.put(routerPath, newEntry);
+          resolvedPaths.put(routerPath, remoteLoc);
+        }
+      }
+    }
+    List<OpenFileEntry> entryList = new ArrayList<>(routerEntries.values());
+    entryList.sort(Comparator.comparingLong(OpenFileEntry::getId));
+    return new BatchedRemoteIterator.BatchedListEntries<>(entryList, hasMore);
   }
 
   @Override
@@ -2039,7 +2119,7 @@ public class RouterClientProtocol implements ClientProtocol {
    *         replacement value.
    * @throws IOException If the dst paths could not be determined.
    */
-  private RemoteParam getRenameDestinations(
+  protected RemoteParam getRenameDestinations(
       final List<RemoteLocation> srcLocations,
       final List<RemoteLocation> dstLocations) throws IOException {
 
@@ -2087,7 +2167,7 @@ public class RouterClientProtocol implements ClientProtocol {
    * @param summaries Collection of individual summaries.
    * @return Aggregated content summary.
    */
-  private ContentSummary aggregateContentSummary(
+  protected ContentSummary aggregateContentSummary(
       Collection<ContentSummary> summaries) {
     if (summaries.size() == 1) {
       return summaries.iterator().next();
@@ -2142,7 +2222,7 @@ public class RouterClientProtocol implements ClientProtocol {
    *         everywhere.
    * @throws IOException If all the locations throw an exception.
    */
-  private HdfsFileStatus getFileInfoAll(final List<RemoteLocation> locations,
+  protected HdfsFileStatus getFileInfoAll(final List<RemoteLocation> locations,
       final RemoteMethod method) throws IOException {
     return getFileInfoAll(locations, method, -1);
   }
@@ -2157,15 +2237,15 @@ public class RouterClientProtocol implements ClientProtocol {
    *         everywhere.
    * @throws IOException If all the locations throw an exception.
    */
-  private HdfsFileStatus getFileInfoAll(final List<RemoteLocation> locations,
+  protected HdfsFileStatus getFileInfoAll(final List<RemoteLocation> locations,
       final RemoteMethod method, long timeOutMs) throws IOException {
 
-    // Get the file info from everybody
+    // Get the file info from everybody.
     Map<RemoteLocation, HdfsFileStatus> results =
         rpcClient.invokeConcurrent(locations, method, false, false, timeOutMs,
             HdfsFileStatus.class);
     int children = 0;
-    // We return the first file
+    // We return the first file.
     HdfsFileStatus dirStatus = null;
     for (RemoteLocation loc : locations) {
       HdfsFileStatus fileStatus = results.get(loc);
@@ -2186,12 +2266,11 @@ public class RouterClientProtocol implements ClientProtocol {
 
   /**
    * Get the permissions for the parent of a child with given permissions.
-   * Add implicit u+wx permission for parent. This is based on
-   * @{FSDirMkdirOp#addImplicitUwx}.
+   * Add implicit u+wx permission for parent. This is based on FSDirMkdirOp#addImplicitUwx.
    * @param mask The permission mask of the child.
    * @return The permission mask of the parent.
    */
-  private static FsPermission getParentPermission(final FsPermission mask) {
+  protected static FsPermission getParentPermission(final FsPermission mask) {
     FsPermission ret = new FsPermission(
         mask.getUserAction().or(FsAction.WRITE_EXECUTE),
         mask.getGroupAction(),
@@ -2208,7 +2287,7 @@ public class RouterClientProtocol implements ClientProtocol {
    * @return New HDFS file status representing a mount point.
    */
   @VisibleForTesting
-  HdfsFileStatus getMountPointStatus(
+  protected HdfsFileStatus getMountPointStatus(
       String name, int childrenNum, long date) {
     return getMountPointStatus(name, childrenNum, date, true);
   }
@@ -2223,7 +2302,7 @@ public class RouterClientProtocol implements ClientProtocol {
    * @return New HDFS file status representing a mount point.
    */
   @VisibleForTesting
-  HdfsFileStatus getMountPointStatus(
+  protected HdfsFileStatus getMountPointStatus(
       String name, int childrenNum, long date, boolean setPath) {
     long modTime = date;
     long accessTime = date;
@@ -2300,7 +2379,7 @@ public class RouterClientProtocol implements ClientProtocol {
    * @param path Name of the path to start checking dates from.
    * @return Map with the modification dates for all sub-entries.
    */
-  private Map<String, Long> getMountPointDates(String path) {
+  protected Map<String, Long> getMountPointDates(String path) {
     Map<String, Long> ret = new TreeMap<>();
     if (subclusterResolver instanceof MountTableResolver) {
       try {
@@ -2361,9 +2440,15 @@ public class RouterClientProtocol implements ClientProtocol {
   }
 
   /**
-   * Get listing on remote locations.
+   * Get a partial listing of the indicated directory.
+   *
+   * @param src the directory name
+   * @param startAfter the name to start after
+   * @param needLocation if blockLocations need to be returned
+   * @return a partial listing starting after startAfter
+   * @throws IOException if other I/O error occurred
    */
-  private List<RemoteResult<RemoteLocation, DirectoryListing>> getListingInt(
+  protected List<RemoteResult<RemoteLocation, DirectoryListing>> getListingInt(
       String src, byte[] startAfter, boolean needLocation) throws IOException {
     try {
       List<RemoteLocation> locations =
@@ -2400,9 +2485,9 @@ public class RouterClientProtocol implements ClientProtocol {
    * @param startAfter starting listing from client, used to define listing
    *                   start boundary
    * @param remainingEntries how many entries left from subcluster
-   * @return
+   * @return true if should add mount point, otherwise false;
    */
-  private static boolean shouldAddMountPoint(
+  protected static boolean shouldAddMountPoint(
       byte[] mountPoint, byte[] lastEntry, byte[] startAfter,
       int remainingEntries) {
     if (comparator.compare(mountPoint, startAfter) > 0 &&
@@ -2425,7 +2510,7 @@ public class RouterClientProtocol implements ClientProtocol {
    * @throws IOException if unable to get the file status.
    */
   @VisibleForTesting
-  boolean isMultiDestDirectory(String src) throws IOException {
+  public boolean isMultiDestDirectory(String src) throws IOException {
     try {
       if (rpcServer.isPathAll(src)) {
         List<RemoteLocation> locations;
@@ -2448,5 +2533,61 @@ public class RouterClientProtocol implements ClientProtocol {
 
   public int getRouterFederationRenameCount() {
     return rbfRename.getRouterFederationRenameCount();
+  }
+
+  public RouterRpcServer getRpcServer() {
+    return rpcServer;
+  }
+
+  public RouterRpcClient getRpcClient() {
+    return rpcClient;
+  }
+
+  public FileSubclusterResolver getSubclusterResolver() {
+    return subclusterResolver;
+  }
+
+  public ActiveNamenodeResolver getNamenodeResolver() {
+    return namenodeResolver;
+  }
+
+  public long getServerDefaultsLastUpdate() {
+    return serverDefaultsLastUpdate;
+  }
+
+  public long getServerDefaultsValidityPeriod() {
+    return serverDefaultsValidityPeriod;
+  }
+
+  public boolean isAllowPartialList() {
+    return allowPartialList;
+  }
+
+  public long getMountStatusTimeOut() {
+    return mountStatusTimeOut;
+  }
+
+  public String getSuperUser() {
+    return superUser;
+  }
+
+  public String getSuperGroup() {
+    return superGroup;
+  }
+
+  public RouterStoragePolicy getStoragePolicy() {
+    return storagePolicy;
+  }
+
+  public void setServerDefaultsLastUpdate(long serverDefaultsLastUpdate) {
+    this.serverDefaultsLastUpdate = serverDefaultsLastUpdate;
+  }
+
+  public RouterFederationRename getRbfRename() {
+    return rbfRename;
+  }
+
+  public RouterSecurityManager getSecurityManager() {
+    return securityManager;
   }
 }

@@ -22,7 +22,8 @@ import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -35,6 +36,7 @@ import org.apache.hadoop.fs.contract.AbstractFSContract;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_READ_AHEAD_RANGE;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_READ_BUFFER_SIZE;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.MIN_BUFFER_SIZE;
+import static org.apache.hadoop.fs.azurebfs.utils.AbfsTestUtils.disableFilesystemCaching;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
 import static org.apache.hadoop.util.functional.FutureIO.awaitFuture;
@@ -53,6 +55,7 @@ public class ITestAbfsFileSystemContractSeek extends AbstractContractSeekTest{
     this.isSecure = binding.isSecureMode();
   }
 
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     binding.setup();
@@ -68,6 +71,7 @@ public class ITestAbfsFileSystemContractSeek extends AbstractContractSeekTest{
   protected AbstractFSContract createContract(final Configuration conf) {
     conf.setInt(AZURE_READ_AHEAD_RANGE, MIN_BUFFER_SIZE);
     conf.setInt(AZURE_READ_BUFFER_SIZE, MIN_BUFFER_SIZE);
+    disableFilesystemCaching(conf);
     return new AbfsFileSystemContract(conf, isSecure);
   }
 
@@ -89,8 +93,8 @@ public class ITestAbfsFileSystemContractSeek extends AbstractContractSeekTest{
       AbfsInputStream inStream = ((AbfsInputStream) in.getWrappedStream());
       AbfsInputStreamStatisticsImpl streamStatistics =
               (AbfsInputStreamStatisticsImpl) inStream.getStreamStatistics();
-      assertEquals(String.format("Value of %s is not set correctly", AZURE_READ_AHEAD_RANGE),
-              MIN_BUFFER_SIZE, inStream.getReadAheadRange());
+      assertEquals(MIN_BUFFER_SIZE, inStream.getReadAheadRange(),
+          String.format("Value of %s is not set correctly", AZURE_READ_AHEAD_RANGE));
 
       long remoteReadOperationsOldVal = streamStatistics.getRemoteReadOperations();
       Assertions.assertThat(remoteReadOperationsOldVal)

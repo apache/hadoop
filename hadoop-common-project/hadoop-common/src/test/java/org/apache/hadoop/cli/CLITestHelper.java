@@ -26,8 +26,8 @@ import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.XMLUtils;
 
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -85,7 +85,7 @@ public class CLITestHelper {
             testConfigFile, e);
         success = false;
       }
-      assertTrue("Error reading test config file", success);
+      assertTrue(success, "Error reading test config file");
     }
   }
 
@@ -113,7 +113,7 @@ public class CLITestHelper {
     readTestConfigFile();
     
     conf = new Configuration();
-    conf.setBoolean(CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION, 
+    conf.setBoolean(CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION,
                     true);
 
     clitestDataDir = new File(TEST_CACHE_DATA_DIR).
@@ -262,10 +262,9 @@ public class CLITestHelper {
     	LOG.info("NONE");
     }
 
-    assertTrue("One of the tests failed. " +
-    		"See the Detailed results to identify " +
-    		"the command that failed", overallResults);
-    
+    assertTrue(overallResults, "One of the tests failed. " +
+        "See the Detailed results to identify " +
+        "the command that failed");
   }
   
   /**
@@ -310,8 +309,8 @@ public class CLITestHelper {
    *********************************/
   
   public void testAll() {
-    assertTrue("Number of tests has to be greater then zero",
-      testsFromConfigFile.size() > 0);
+    assertTrue(testsFromConfigFile.size() > 0,
+        "Number of tests has to be greater then zero");
     LOG.info("TestAll");
     // Run the tests defined in the testConf.xml config file.
     for (int index = 0; index < testsFromConfigFile.size(); index++) {

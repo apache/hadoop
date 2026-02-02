@@ -466,10 +466,12 @@ public class LinuxContainerExecutor extends ContainerExecutor {
       Throwable cause = e.getCause() != null ? e.getCause() : e;
       if (cause instanceof IOException) {
         IOException io = (IOException) cause;
-        if (io.getMessage().contains("No such file or directory")) {
+        String containerExecutorPath = getContainerExecutorExecutablePath(conf);
+        if (io.getMessage() != null && io.getMessage().contains("Cannot run program \"" +
+            containerExecutorPath + "\"")) {
           throw new ConfigurationException("Application " + appId + " initialization failed" +
               "(exitCode=" + exitCode + "). Container executor not found at "
-              + getContainerExecutorExecutablePath(conf), e);
+              + containerExecutorPath, e);
         }
       }
 

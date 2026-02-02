@@ -30,14 +30,14 @@ import org.apache.hadoop.mapreduce.MapReduceTestUtil;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.task.MapContextImpl;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.util.List;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TestNLineInputFormat {
   private static int MAX_LENGTH = 200;
@@ -96,15 +96,15 @@ public class TestNLineInputFormat {
     List<InputSplit> splits = format.getSplits(job);
     int count = 0;
     for (int i = 0; i < splits.size(); i++) {
-      assertEquals("There are no split locations", 0,
-                   splits.get(i).getLocations().length);
+      assertEquals(0,
+          splits.get(i).getLocations().length, "There are no split locations");
       TaskAttemptContext context = MapReduceTestUtil.
         createDummyMapTaskAttemptContext(job.getConfiguration());
       RecordReader<LongWritable, Text> reader = format.createRecordReader(
         splits.get(i), context);
       Class<?> clazz = reader.getClass();
-      assertEquals("reader class is LineRecordReader.", 
-        LineRecordReader.class, clazz);
+      assertEquals(LineRecordReader.class, clazz,
+          "reader class is LineRecordReader.");
       MapContext<LongWritable, Text, LongWritable, Text> mcontext = 
         new MapContextImpl<LongWritable, Text, LongWritable, Text>(
           job.getConfiguration(), context.getTaskAttemptID(), reader, null,
@@ -120,11 +120,11 @@ public class TestNLineInputFormat {
         reader.close();
       }
       if ( i == splits.size() - 1) {
-        assertEquals("number of lines in split(" + i + ") is wrong" ,
-                     lastN, count);
+        assertEquals(lastN, count,
+            "number of lines in split(" + i + ") is wrong");
       } else {
-        assertEquals("number of lines in split(" + i + ") is wrong" ,
-                     expectedN, count);
+        assertEquals(expectedN, count,
+            "number of lines in split(" + i + ") is wrong");
       }
     }
   }

@@ -30,10 +30,12 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * 1) save xattrs, restart NN, assert xattrs reloaded from edit log, 
@@ -53,7 +55,7 @@ public class TestFSImageWithXAttr {
   private static final String name3 = "user.a3";
   private static final byte[] value3 = {};
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws IOException {
     conf = new Configuration();
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_XATTRS_ENABLED_KEY, true);
@@ -61,7 +63,7 @@ public class TestFSImageWithXAttr {
     cluster.waitActive();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() {
     if (cluster != null) {
       cluster.shutdown();
@@ -80,20 +82,20 @@ public class TestFSImageWithXAttr {
     restart(fs, persistNamespace);
     
     Map<String, byte[]> xattrs = fs.getXAttrs(path);
-    Assert.assertEquals(xattrs.size(), 3);
-    Assert.assertArrayEquals(value1, xattrs.get(name1));
-    Assert.assertArrayEquals(value2, xattrs.get(name2));
-    Assert.assertArrayEquals(value3, xattrs.get(name3));
+    assertEquals(xattrs.size(), 3);
+    assertArrayEquals(value1, xattrs.get(name1));
+    assertArrayEquals(value2, xattrs.get(name2));
+    assertArrayEquals(value3, xattrs.get(name3));
     
     fs.setXAttr(path, name1, newValue1, EnumSet.of(XAttrSetFlag.REPLACE));
     
     restart(fs, persistNamespace);
     
     xattrs = fs.getXAttrs(path);
-    Assert.assertEquals(xattrs.size(), 3);
-    Assert.assertArrayEquals(newValue1, xattrs.get(name1));
-    Assert.assertArrayEquals(value2, xattrs.get(name2));
-    Assert.assertArrayEquals(value3, xattrs.get(name3));
+    assertEquals(xattrs.size(), 3);
+    assertArrayEquals(newValue1, xattrs.get(name1));
+    assertArrayEquals(value2, xattrs.get(name2));
+    assertArrayEquals(value3, xattrs.get(name3));
 
     fs.removeXAttr(path, name1);
     fs.removeXAttr(path, name2);
@@ -101,7 +103,7 @@ public class TestFSImageWithXAttr {
 
     restart(fs, persistNamespace);
     xattrs = fs.getXAttrs(path);
-    Assert.assertEquals(xattrs.size(), 0);
+    assertEquals(xattrs.size(), 0);
   }
 
   @Test

@@ -30,11 +30,11 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.MapReduceTestUtil;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.fail;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestMapReduceChain extends HadoopTestCase {
 
@@ -110,31 +110,31 @@ public class TestMapReduceChain extends HadoopTestCase {
         LongWritable.class, Text.class, null);
 
     job.waitForCompletion(true);
-    assertTrue("Job failed", job.isSuccessful());
+    assertTrue(job.isSuccessful(), "Job failed");
 
     String str = "flag not set";
-    assertTrue(str, getFlag(conf, "map.setup.A"));
-    assertTrue(str, getFlag(conf, "map.setup.B"));
-    assertTrue(str, getFlag(conf, "map.setup.C"));
-    assertTrue(str, getFlag(conf, "reduce.setup.R"));
-    assertTrue(str, getFlag(conf, "map.setup.D"));
-    assertTrue(str, getFlag(conf, "map.setup.E"));
-    assertTrue(str, getFlag(conf, "map.setup.F"));
+    assertTrue(getFlag(conf, "map.setup.A"), str);
+    assertTrue(getFlag(conf, "map.setup.B"), str);
+    assertTrue(getFlag(conf, "map.setup.C"), str);
+    assertTrue(getFlag(conf, "reduce.setup.R"), str);
+    assertTrue(getFlag(conf, "map.setup.D"), str);
+    assertTrue(getFlag(conf, "map.setup.E"), str);
+    assertTrue(getFlag(conf, "map.setup.F"), str);
 
-    assertTrue(str, getFlag(conf, "map.A.value.1"));
-    assertTrue(str, getFlag(conf, "map.A.value.2"));
-    assertTrue(str, getFlag(conf, "map.B.value.1A"));
-    assertTrue(str, getFlag(conf, "map.B.value.2A"));
-    assertTrue(str, getFlag(conf, "map.C.value.1AB"));
-    assertTrue(str, getFlag(conf, "map.C.value.2AB"));
-    assertTrue(str, getFlag(conf, "reduce.R.value.1ABC"));
-    assertTrue(str, getFlag(conf, "reduce.R.value.2ABC"));
-    assertTrue(str, getFlag(conf, "map.D.value.1ABCR"));
-    assertTrue(str, getFlag(conf, "map.D.value.2ABCR"));
-    assertTrue(str, getFlag(conf, "map.E.value.1ABCRD"));
-    assertTrue(str, getFlag(conf, "map.E.value.2ABCRD"));
-    assertTrue(str, getFlag(conf, "map.F.value.1ABCRDE"));
-    assertTrue(str, getFlag(conf, "map.F.value.2ABCRDE"));
+    assertTrue(getFlag(conf, "map.A.value.1"), str);
+    assertTrue(getFlag(conf, "map.A.value.2"), str);
+    assertTrue(getFlag(conf, "map.B.value.1A"), str);
+    assertTrue(getFlag(conf, "map.B.value.2A"), str);
+    assertTrue(getFlag(conf, "map.C.value.1AB"), str);
+    assertTrue(getFlag(conf, "map.C.value.2AB"), str);
+    assertTrue(getFlag(conf, "reduce.R.value.1ABC"), str);
+    assertTrue(getFlag(conf, "reduce.R.value.2ABC"), str);
+    assertTrue(getFlag(conf, "map.D.value.1ABCR"), str);
+    assertTrue(getFlag(conf, "map.D.value.2ABCR"), str);
+    assertTrue(getFlag(conf, "map.E.value.1ABCRD"), str);
+    assertTrue(getFlag(conf, "map.E.value.2ABCRD"), str);
+    assertTrue(getFlag(conf, "map.F.value.1ABCRDE"), str);
+    assertTrue(getFlag(conf, "map.F.value.2ABCRDE"), str);
 
     assertTrue(getFlag(conf, "map.cleanup.A"));
     assertTrue(getFlag(conf, "map.cleanup.B"));
@@ -144,8 +144,8 @@ public class TestMapReduceChain extends HadoopTestCase {
     assertTrue(getFlag(conf, "map.cleanup.E"));
     assertTrue(getFlag(conf, "map.cleanup.F"));
 
-    assertEquals("Outputs doesn't match", expectedOutput, MapReduceTestUtil
-        .readOutput(outDir, conf));
+    assertEquals(expectedOutput, MapReduceTestUtil
+        .readOutput(outDir, conf), "Outputs doesn't match");
   }
 
   public static class AMap extends IDMap {

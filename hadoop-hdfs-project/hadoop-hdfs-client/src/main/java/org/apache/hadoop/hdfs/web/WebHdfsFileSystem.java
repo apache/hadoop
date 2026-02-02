@@ -31,7 +31,6 @@ import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.lang.reflect.InvocationTargetException;
 import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
@@ -845,16 +844,7 @@ public class WebHdfsFileSystem extends FileSystem
           if (node == null) {
             node = url.getAuthority();
           }
-          try {
-            IOException newIoe = ioe.getClass().getConstructor(String.class)
-                .newInstance(node + ": " + ioe.getMessage());
-            newIoe.initCause(ioe.getCause());
-            newIoe.setStackTrace(ioe.getStackTrace());
-            ioe = newIoe;
-          } catch (NoSuchMethodException | SecurityException 
-                   | InstantiationException | IllegalAccessException
-                   | IllegalArgumentException | InvocationTargetException e) {
-          }
+          ioe = NetUtils.addNodeNameToIOException(ioe, node);
           shouldRetry(ioe, retry);
         }
       }

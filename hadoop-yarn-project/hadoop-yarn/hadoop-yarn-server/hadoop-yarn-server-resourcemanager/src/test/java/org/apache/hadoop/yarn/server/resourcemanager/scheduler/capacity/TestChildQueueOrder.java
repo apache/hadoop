@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.eq;
@@ -58,9 +58,9 @@ import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -82,7 +82,7 @@ public class TestChildQueueOrder {
   private final ResourceCalculator resourceComparator =
     new DefaultResourceCalculator();
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     rmContext = TestUtils.getMockRMContext();
     conf = new YarnConfiguration();
@@ -444,7 +444,7 @@ public class TestChildQueueOrder {
         ((ParentQueue)root).getChildQueuesToPrint());
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
   }
 }

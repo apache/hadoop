@@ -30,12 +30,15 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.IntFunction;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,31 +47,41 @@ import org.apache.hadoop.fs.FileRange;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.impl.TrackingByteBufferPool;
 import org.apache.hadoop.io.ElasticByteBufferPool;
 import org.apache.hadoop.io.WeakReferencedElasticByteBufferPool;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
-import org.apache.hadoop.util.functional.FutureIO;
 
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_LENGTH;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_VECTOR;
+import static org.apache.hadoop.fs.StreamCapabilities.VECTOREDIO_BUFFERS_SLICED;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.VECTORED_READ_OPERATION_TEST_TIMEOUT_SECONDS;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertDatasetEquals;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.range;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.returnBuffersToPoolPostRead;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.validateVectoredReadResult;
+import static org.apache.hadoop.io.Sizes.S_128K;
+import static org.apache.hadoop.io.Sizes.S_4K;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.apache.hadoop.test.LambdaTestUtils.interceptFuture;
 import static org.apache.hadoop.util.functional.FutureIO.awaitFuture;
 
-@RunWith(Parameterized.class)
+/**
+ * Test Vectored Reads.
+ * <p>
+ * Both the original readVectored(allocator) and the readVectored(allocator, release)
+ * operations are tested.
+ */
+@ParameterizedClass(name="buffer-{0}")
+@MethodSource("params")
 public abstract class AbstractContractVectoredReadTest extends AbstractFSContractTestBase {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(AbstractContractVectoredReadTest.class);
 
-  public static final int DATASET_LEN = 64 * 1024;
+  public static final int DATASET_LEN = S_128K;
   protected static final byte[] DATASET = ContractTestUtils.dataset(DATASET_LEN, 'a', 32);
   protected static final String VECTORED_READ_FILE_NAME = "vectored_file.txt";
 
@@ -85,19 +98,27 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
 
   private final String bufferType;
 
+  private final boolean isDirect;
+
   /**
    * Path to the vector file.
    */
   private Path vectorPath;
 
-  @Parameterized.Parameters(name = "Buffer type : {0}")
+  /**
+   * Counter of buffer releases.
+   * Because not all implementations release buffers on failures,
+   * this is not yet used in assertions.
+   */
+  private final AtomicInteger bufferReleases = new AtomicInteger();
+
   public static List<String> params() {
     return Arrays.asList("direct", "array");
   }
 
-  public AbstractContractVectoredReadTest(String bufferType) {
+  protected AbstractContractVectoredReadTest(String bufferType) {
     this.bufferType = bufferType;
-    final boolean isDirect = !"array".equals(bufferType);
+    this.isDirect = !"array".equals(bufferType);
     this.allocate = size -> pool.getBuffer(isDirect, size);
   }
 
@@ -110,6 +131,15 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
   }
 
   /**
+   * The buffer release operation.
+   */
+  protected void release(ByteBuffer buffer) {
+    LOG.info("Released buffer {}", buffer);
+    bufferReleases.incrementAndGet();
+    pool.putBuffer(buffer);
+  }
+
+  /**
    * Get the vector IO buffer pool.
    * @return a pool.
    */
@@ -118,6 +148,7 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
     return pool;
   }
 
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     super.setup();
@@ -126,6 +157,7 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
     createFile(fs, vectorPath, true, DATASET);
   }
 
+  @AfterEach
   @Override
   public void teardown() throws Exception {
     pool.release();
@@ -164,7 +196,7 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
       fileRanges.add(fileRange);
     }
     try (FSDataInputStream in = openVectorFile()) {
-      in.readVectored(fileRanges, allocate);
+      in.readVectored(fileRanges, allocate, this::release);
       CompletableFuture<?>[] completableFutures = new CompletableFuture<?>[fileRanges.size()];
       int i = 0;
       for (FileRange res : fileRanges) {
@@ -186,7 +218,7 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
       in.readVectored(fileRanges, allocate);
       byte[] readFullRes = new byte[100];
       in.readFully(100, readFullRes);
-      ByteBuffer vecRes = FutureIO.awaitFuture(fileRanges.get(0).getData());
+      ByteBuffer vecRes = awaitFuture(fileRanges.get(0).getData());
       Assertions.assertThat(vecRes)
               .describedAs("Result from vectored read and readFully must match")
               .isEqualByComparingTo(ByteBuffer.wrap(readFullRes));
@@ -201,7 +233,7 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
     range(fileRanges, 0, DATASET_LEN);
     try (FSDataInputStream in = openVectorFile()) {
       in.readVectored(fileRanges, allocate);
-      ByteBuffer vecRes = FutureIO.awaitFuture(fileRanges.get(0).getData());
+      ByteBuffer vecRes = awaitFuture(fileRanges.get(0).getData());
       Assertions.assertThat(vecRes)
               .describedAs("Result from vectored read and readFully must match")
               .isEqualByComparingTo(ByteBuffer.wrap(DATASET));
@@ -220,7 +252,7 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
     range(fileRanges, 4_000 + 101, 100);
     range(fileRanges, 16_000 + 101, 100);
     try (FSDataInputStream in = openVectorFile()) {
-      in.readVectored(fileRanges, allocate);
+      in.readVectored(fileRanges, allocate, this::release);
       validateVectoredReadResult(fileRanges, DATASET, 0);
       returnBuffersToPoolPostRead(fileRanges, pool);
     }
@@ -263,7 +295,7 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
                     .withFileStatus(fileStatus)
                     .build();
     try (FSDataInputStream in = builder.get()) {
-      in.readVectored(fileRanges, allocate);
+      in.readVectored(fileRanges, allocate, this::release);
       validateVectoredReadResult(fileRanges, DATASET, 0);
       returnBuffersToPoolPostRead(fileRanges, pool);
     }
@@ -301,7 +333,7 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
     } else {
       try (FSDataInputStream in = openVectorFile()) {
         List<FileRange> fileRanges = getSampleSameRanges();
-        in.readVectored(fileRanges, allocate);
+        in.readVectored(fileRanges, allocate, this::release);
         validateVectoredReadResult(fileRanges, DATASET, 0);
         returnBuffersToPoolPostRead(fileRanges, pool);
       }
@@ -352,7 +384,7 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
     range(fileRanges, offset, length);
     range(fileRanges, offset + length, length);
     try (FSDataInputStream in = openVectorFile()) {
-      in.readVectored(fileRanges, allocate);
+      in.readVectored(fileRanges, allocate, this::release);
       validateVectoredReadResult(fileRanges, DATASET, 0);
       returnBuffersToPoolPostRead(fileRanges, pool);
     }
@@ -408,12 +440,12 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
   private void expectEOFinRead(final List<FileRange> fileRanges) throws Exception {
     LOG.info("Expecting late EOF failure");
     try (FSDataInputStream in = openVectorFile()) {
-      in.readVectored(fileRanges, allocate);
+      in.readVectored(fileRanges, allocate, this::release);
       for (FileRange res : fileRanges) {
         CompletableFuture<ByteBuffer> data = res.getData();
         interceptFuture(EOFException.class,
             "",
-            ContractTestUtils.VECTORED_READ_OPERATION_TEST_TIMEOUT_SECONDS,
+            VECTORED_READ_OPERATION_TEST_TIMEOUT_SECONDS,
             TimeUnit.SECONDS,
             data);
       }
@@ -429,6 +461,16 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
   @Test
   public void testNegativeOffsetRange()  throws Exception {
     verifyExceptionalVectoredRead(range(-1, 50), EOFException.class);
+  }
+
+  @Test
+  public void testNullReleaseOperation()  throws Exception {
+
+    final List<FileRange> range = range(0, 10);
+    try (FSDataInputStream in = openVectorFile()) {
+      intercept(NullPointerException.class, () ->
+          in.readVectored(range, allocate, null));
+    }
   }
 
   @Test
@@ -469,7 +511,7 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
     List<FileRange> fileRanges2 = createSampleNonOverlappingRanges();
     try (FSDataInputStream in = openVectorFile()) {
       in.readVectored(fileRanges1, allocate);
-      in.readVectored(fileRanges2, allocate);
+      in.readVectored(fileRanges2, allocate, this::release);
       validateVectoredReadResult(fileRanges2, DATASET, 0);
       validateVectoredReadResult(fileRanges1, DATASET, 0);
       returnBuffersToPoolPostRead(fileRanges1, pool);
@@ -524,7 +566,7 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
       CompletableFuture<ByteBuffer> data = res.getData();
       // Read the data and perform custom operation. Here we are just
       // validating it with original data.
-      FutureIO.awaitFuture(data.thenAccept(buffer -> {
+      awaitFuture(data.thenAccept(buffer -> {
         assertDatasetEquals((int) res.getOffset(),
                 "vecRead", buffer, res.getLength(), DATASET);
         // return buffer to the pool once read.
@@ -585,5 +627,62 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
         return "triggered read of " + fileRanges.size() + " ranges" + " against " + in;
       });
     }
+  }
+
+  @Test
+  public void testBufferSlicing() throws Throwable {
+    describe("Test buffer slicing behavior in vectored IO");
+
+    final int numBuffers = 8;
+    final int bufferSize = S_4K;
+    long offset = 0;
+    final List<FileRange> fileRanges = new ArrayList<>();
+    for (int i = 0; i < numBuffers; i++) {
+      fileRanges.add(FileRange.createFileRange(offset, bufferSize));
+      // increment and add a non-binary-aligned gap, so as to force
+      // offsets to be misaligned with possible page sizes.
+      offset += bufferSize + 4000;
+    }
+    TrackingByteBufferPool trackerPool = TrackingByteBufferPool.wrap(getPool());
+    int unknownBuffers = 0;
+    boolean slicing;
+    try (FSDataInputStream in = openVectorFile()) {
+      slicing = in.hasCapability(VECTOREDIO_BUFFERS_SLICED);
+      LOG.info("Slicing is {} for vectored IO with stream {}", slicing, in);
+      in.readVectored(fileRanges, s -> trackerPool.getBuffer(isDirect, s), trackerPool::putBuffer);
+
+      // check that all buffers are from the the pool, unless they are sliced.
+      for (FileRange res : fileRanges) {
+        CompletableFuture<ByteBuffer> data = res.getData();
+        ByteBuffer buffer = awaitFuture(data);
+        Assertions.assertThat(buffer)
+            .describedAs("Buffer must not be null")
+            .isNotNull();
+        Assertions.assertThat(slicing || trackerPool.containsBuffer(buffer))
+            .describedAs("Buffer must be from the pool")
+            .isTrue();
+        try {
+          trackerPool.putBuffer(buffer);
+        } catch (TrackingByteBufferPool.ReleasingUnallocatedByteBufferException e) {
+          // this can happen if the buffer was sliced, as it is not in the pool.
+          if (!slicing) {
+            throw e;
+          }
+          LOG.info("Sliced buffer detected: {}", buffer);
+          unknownBuffers++;
+        }
+      }
+    }
+    try {
+      trackerPool.close();
+    } catch (TrackingByteBufferPool.LeakedByteBufferException e) {
+      if (!slicing) {
+        throw e;
+      }
+      LOG.info("Slicing is enabled; we saw leaked buffers: {} after {}"
+              + " releases of unknown buffers",
+          e.getCount(), unknownBuffers);
+    }
+
   }
 }

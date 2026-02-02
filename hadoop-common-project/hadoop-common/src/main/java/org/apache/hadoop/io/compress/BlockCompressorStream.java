@@ -54,7 +54,11 @@ public class BlockCompressorStream extends CompressorStream {
   public BlockCompressorStream(OutputStream out, Compressor compressor, 
                                int bufferSize, int compressionOverhead) {
     super(out, compressor, bufferSize);
-    MAX_INPUT_SIZE = bufferSize - compressionOverhead;
+    if (bufferSize - compressionOverhead >= 0) {
+      MAX_INPUT_SIZE = bufferSize - compressionOverhead;
+    } else {
+      throw new IllegalArgumentException("buffer size is less than compression overhead");
+    }
   }
 
   /**

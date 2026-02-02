@@ -25,13 +25,13 @@ import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.SequenceFile;
 import org.slf4j.Logger;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.BitSet;
 import java.util.Random;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 public class TestSequenceFileInputFormat {
   private static final Logger LOG = FileInputFormat.LOG;
@@ -102,7 +102,7 @@ public class TestSequenceFileInputFormat {
               // LOG.info("splits["+j+"]="+splits[j]+" : " + key.get());
               // LOG.info("@"+reader.getPos());
               // }
-              assertFalse("Key in multiple partitions.", bits.get(key.get()));
+              assertFalse(bits.get(key.get()), "Key in multiple partitions.");
               bits.set(key.get());
               count++;
             }
@@ -111,7 +111,7 @@ public class TestSequenceFileInputFormat {
             reader.close();
           }
         }
-        assertEquals("Some keys in no partition.", length, bits.cardinality());
+        assertEquals(length, bits.cardinality(), "Some keys in no partition.");
       }
 
     }

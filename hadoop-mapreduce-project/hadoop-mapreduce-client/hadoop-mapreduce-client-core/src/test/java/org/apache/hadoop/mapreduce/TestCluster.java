@@ -19,15 +19,15 @@ package org.apache.hadoop.mapreduce;
 
 import org.apache.hadoop.conf.Configuration;
 
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.times;
-import static org.junit.Assert.assertNotNull;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import org.apache.hadoop.mapreduce.protocol.ClientProtocol;
 import org.apache.hadoop.mapreduce.protocol.ClientProtocolProvider;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -55,7 +55,7 @@ public class TestCluster {
 
     // Check that we get the acceptable client, even after
     // failure in instantiation.
-    assertNotNull("ClientProtocol is expected", testCluster.getClient());
+    assertNotNull(testCluster.getClient(), "ClientProtocol is expected");
     // Check if we do not try to load the providers after a failure.
     verify(iterator, times(2)).next();
   }

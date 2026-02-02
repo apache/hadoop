@@ -19,10 +19,10 @@ package org.apache.hadoop.io.file.tfile;
 import java.io.IOException;
 import java.util.Random;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -116,10 +116,10 @@ public class TestTFileSplit {
       BytesWritable value = new BytesWritable();
       long x=startRec;
       while (!scanner.atEnd()) {
-        assertEquals("Incorrect RecNum returned by scanner", scanner.getRecordNum(), x);
+        assertEquals(scanner.getRecordNum(), x, "Incorrect RecNum returned by scanner");
         scanner.entry().get(key, value);
         ++count;
-        assertEquals("Incorrect RecNum returned by scanner", scanner.getRecordNum(), x);
+        assertEquals(scanner.getRecordNum(), x, "Incorrect RecNum returned by scanner");
         scanner.advance();
         ++x;
       }
@@ -147,34 +147,34 @@ public class TestTFileSplit {
       end += (totalRecs / 2);
     end += (totalRecs / 2) + 1;
 
-    assertEquals("RecNum for offset=0 should be 0", 0, reader
-        .getRecordNumNear(0));
+    assertEquals(0, reader.getRecordNumNear(0),
+        "RecNum for offset=0 should be 0");
     for (long x : new long[] { fileLen, fileLen + 1, 2 * fileLen }) {
-      assertEquals("RecNum for offset>=fileLen should be total entries",
-          totalRecs, reader.getRecordNumNear(x));
+      assertEquals(totalRecs, reader.getRecordNumNear(x),
+          "RecNum for offset>=fileLen should be total entries");
     }
 
     for (long i = 0; i < 100; ++i) {
-      assertEquals("Locaton to RecNum conversion not symmetric", i, reader
-          .getRecordNumByLocation(reader.getLocationByRecordNum(i)));
+      assertEquals(i, reader.getRecordNumByLocation(reader.getLocationByRecordNum(i)),
+          "Locaton to RecNum conversion not symmetric");
     }
 
     for (long i = 1; i < 100; ++i) {
       long x = totalRecs - i;
-      assertEquals("Locaton to RecNum conversion not symmetric", x, reader
-          .getRecordNumByLocation(reader.getLocationByRecordNum(x)));
+      assertEquals(x, reader.getRecordNumByLocation(reader.getLocationByRecordNum(x)),
+          "Locaton to RecNum conversion not symmetric");
     }
 
     for (long i = begin; i < end; ++i) {
-      assertEquals("Locaton to RecNum conversion not symmetric", i, reader
-          .getRecordNumByLocation(reader.getLocationByRecordNum(i)));
+      assertEquals(i, reader.getRecordNumByLocation(reader.getLocationByRecordNum(i)),
+          "Locaton to RecNum conversion not symmetric");
     }
 
     for (int i = 0; i < 1000; ++i) {
       long x = random.nextLong() % totalRecs;
       if (x < 0) x += totalRecs;
-      assertEquals("Locaton to RecNum conversion not symmetric", x, reader
-          .getRecordNumByLocation(reader.getLocationByRecordNum(x)));
+      assertEquals(x, reader.getRecordNumByLocation(reader.getLocationByRecordNum(x)),
+          "Locaton to RecNum conversion not symmetric");
     }
   }
 

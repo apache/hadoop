@@ -27,17 +27,18 @@ import java.util.Arrays;
 import java.util.Map;
 
 import org.apache.hadoop.oncrpc.RpcReply;
-import org.junit.Assert;
 
 import org.apache.hadoop.oncrpc.RpcCall;
 import org.apache.hadoop.oncrpc.XDR;
 import org.apache.hadoop.oncrpc.security.CredentialsNone;
 import org.apache.hadoop.oncrpc.security.VerifierNone;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestPortmap {
   private static Portmap pm = new Portmap();
@@ -45,18 +46,19 @@ public class TestPortmap {
   private static final int RETRY_TIMES = 5;
   private int xid;
 
-  @BeforeClass
+  @BeforeAll
   public static void setup() throws InterruptedException {
     pm.start(SHORT_TIMEOUT_MILLISECONDS, new InetSocketAddress("localhost", 0),
         new InetSocketAddress("localhost", 0));
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() {
     pm.shutdown();
   }
 
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testIdle() throws InterruptedException, IOException {
     Socket s = new Socket();
     try {
@@ -68,17 +70,18 @@ public class TestPortmap {
         Thread.sleep(SHORT_TIMEOUT_MILLISECONDS);
       }
 
-      Assert.assertTrue("Failed to connect to the server", s.isConnected()
-          && i < RETRY_TIMES);
+      assertTrue(s.isConnected() && i < RETRY_TIMES,
+          "Failed to connect to the server");
 
       int b = s.getInputStream().read();
-      Assert.assertTrue("The server failed to disconnect", b == -1);
+      assertTrue(b == -1, "The server failed to disconnect");
     } finally {
       s.close();
     }
   }
 
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testRegistration() throws IOException, InterruptedException, IllegalAccessException {
     XDR req = new XDR();
     RpcCall.getInstance(++xid, RpcProgramPortmap.PROGRAM,
@@ -125,6 +128,6 @@ public class TestPortmap {
         break;
       }
     }
-    Assert.assertTrue("Registration failed", found);
+    assertTrue(found, "Registration failed");
   }
 }

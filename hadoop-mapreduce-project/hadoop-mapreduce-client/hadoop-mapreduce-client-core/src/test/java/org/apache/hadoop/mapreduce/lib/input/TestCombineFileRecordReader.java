@@ -22,7 +22,6 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.File;
 
-import org.junit.Assert;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
@@ -35,8 +34,9 @@ import org.apache.hadoop.mapred.Task.TaskReporter;
 
 import org.mockito.Mockito;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
@@ -86,7 +86,7 @@ public class TestCombineFileRecordReader {
       cfrr.initialize(combineFileSplit,taskAttemptContext);
 
       verify(reporter).progress();
-      Assert.assertFalse(cfrr.nextKeyValue());
+      assertFalse(cfrr.nextKeyValue());
       verify(reporter, times(3)).progress();
     } finally {
       FileUtil.fullyDelete(new File(outDir.toString()));

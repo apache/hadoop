@@ -62,6 +62,7 @@ import org.apache.hadoop.mapreduce.v2.app.rm.preemption.AMPreemptionPolicy;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringInterner;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
@@ -111,7 +112,7 @@ public class RMContainerAllocator extends RMContainerRequestor
   public static final String RAMPDOWN_DIAGNOSTIC = "Reducer preempted "
       + "to make room for pending map attempts";
 
-  private Thread eventHandlingThread;
+  private SubjectInheritingThread eventHandlingThread;
   private final AtomicBoolean stopped;
 
   static {
@@ -246,10 +247,10 @@ public class RMContainerAllocator extends RMContainerRequestor
 
   @Override
   protected void serviceStart() throws Exception {
-    this.eventHandlingThread = new Thread() {
+    this.eventHandlingThread = new SubjectInheritingThread() {
       @SuppressWarnings("unchecked")
       @Override
-      public void run() {
+      public void work() {
 
         ContainerAllocatorEvent event;
 

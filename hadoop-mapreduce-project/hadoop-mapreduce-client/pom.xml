@@ -125,11 +125,6 @@
       <artifactId>guice-servlet</artifactId>
     </dependency>
     <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
       <groupId>io.netty</groupId>
       <artifactId>netty-all</artifactId>
     </dependency>
@@ -154,9 +149,26 @@
       <scope>provided</scope>
     </dependency>
     <dependency>
-      <groupId>com.sun.jersey.jersey-test-framework</groupId>
-      <artifactId>jersey-test-framework-grizzly2</artifactId>
+      <groupId>org.glassfish.jersey.test-framework</groupId>
+      <artifactId>jersey-test-framework-core</artifactId>
       <scope>test</scope>
+        <exclusions>
+            <exclusion>
+                <artifactId>junit-jupiter</artifactId>
+                <groupId>org.junit.jupiter</groupId>
+            </exclusion>
+        </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>org.glassfish.jersey.test-framework.providers</groupId>
+      <artifactId>jersey-test-framework-provider-jetty</artifactId>
+      <scope>test</scope>
+        <exclusions>
+            <exclusion>
+                <artifactId>junit-jupiter</artifactId>
+                <groupId>org.junit.jupiter</groupId>
+            </exclusion>
+        </exclusions>
     </dependency>
   </dependencies>
  
@@ -167,7 +179,11 @@
         <artifactId>spotbugs-maven-plugin</artifactId>
          <configuration>
           <xmlOutput>true</xmlOutput>
-          <excludeFilterFile>${mr.basedir}/dev-support/findbugs-exclude.xml</excludeFilterFile>
+           <excludeFilterFiles>
+             <excludeFilterFile>${mr.basedir}/dev-support/findbugs-exclude.xml</excludeFilterFile>
+             <excludeFilterFile>${repo.root}/dev-support/findbugs-exclude-global.xml
+             </excludeFilterFile>
+           </excludeFilterFiles>
           <effort>Max</effort>
        </configuration>
      </plugin>
@@ -230,7 +246,7 @@
                 <configuration>
                   <artifactItems>
                     <artifactItem>
-                      <groupId>jdiff</groupId>
+                      <groupId>io.github.zhtttylz</groupId>
                       <artifactId>jdiff</artifactId>
                       <version>${jdiff.version}</version>
                       <overWrite>false</overWrite>

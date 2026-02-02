@@ -20,8 +20,9 @@ package org.apache.hadoop.hdfs;
 import java.util.Random;
 import org.apache.hadoop.hdfs.protocol.datatransfer.PacketHeader;
 import org.apache.hadoop.io.DataOutputBuffer;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class TestDFSPacket {
   private static final int chunkSize = 512;
@@ -59,7 +60,7 @@ public class TestDFSPacket {
                                              int off2, int len) {
     for (int i = 0; i < len; i++) {
       if (buf1[off1 + i] != buf2[off2 + i]) {
-        Assert.fail("arrays differ at byte " + i + ". " +
+        fail("arrays differ at byte " + i + ". " +
             "The first array has " + (int) buf1[off1 + i] +
             ", but the second array has " + (int) buf2[off2 + i]);
       }

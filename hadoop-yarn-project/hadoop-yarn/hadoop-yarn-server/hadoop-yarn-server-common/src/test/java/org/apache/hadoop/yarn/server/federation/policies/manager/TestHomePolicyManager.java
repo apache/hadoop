@@ -19,14 +19,14 @@ package org.apache.hadoop.yarn.server.federation.policies.manager;
 
 import org.apache.hadoop.yarn.server.federation.policies.amrmproxy.HomeAMRMProxyPolicy;
 import org.apache.hadoop.yarn.server.federation.policies.router.UniformRandomRouterPolicy;
-import org.junit.Before;
+import org.junit.jupiter.api.BeforeEach;
 
 /**
  * Simple test of {@link HomePolicyManager}.
  */
 public class TestHomePolicyManager extends BasePolicyManagerTest {
 
-  @Before
+  @BeforeEach
   public void setup() {
 
     wfp = new HomePolicyManager();

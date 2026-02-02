@@ -558,6 +558,7 @@ The table below provides a summary of each option.
 | `fs.s3a.committer.threads` | Number of threads in committers for parallel operations on files.| -4 |
 | `fs.s3a.committer.generate.uuid` | Generate a Job UUID if none is passed down from Spark | `false` |
 | `fs.s3a.committer.require.uuid` |Require the Job UUID to be passed down from Spark | `false` |
+| `fs.s3a.committer.magic.cleanup.enabled` | Cleanup the magic path after the job is committed. | `true` |
 
 The examples below shows how these options can be configured in XML.
 
@@ -1058,3 +1059,20 @@ one of the following conditions are met
 1. The committer is being used in spark, and the version of spark being used does not
    set the `spark.sql.sources.writeJobUUID` property.
    Either upgrade to a new spark release, or set `fs.s3a.committer.generate.uuid` to true.
+
+### Long Job Completion Time Due to Magic Committer Cleanup
+When using the S3A Magic Committer in large Spark or MapReduce jobs, job completion can be significantly delayed
+due to the cleanup of temporary files (such as those under the `__magic` directory).
+This happens because deleting many small files in S3 is a slow and expensive operation, especially at scale.
+In some cases, the cleanup phase alone can take several minutes or more — even after all data has already been written.
+
+To reduce this overhead, Hadoop 3.4.2+ introduced a configuration option in
+[HADOOP-18568](https://issues.apache.org/jira/browse/HADOOP-18568) that allows users to disable this automatic cleanup
+and use lifecycle policies instead to clean up the temporary files.
+#### Configuration
+```xml
+<property>
+  <name>fs.s3a.committer.magic.cleanup.enabled</name>
+  <value>false</value>
+</property>
+```

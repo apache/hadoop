@@ -38,6 +38,9 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.timelineservice.reader.TimelineDomainReader;
+import org.apache.hadoop.yarn.api.records.timelineservice.reader.TimelineEntitiesReader;
+import org.apache.hadoop.yarn.api.records.timelineservice.writer.TimelineEntitiesWriter;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
@@ -55,6 +58,8 @@ import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.glassfish.jersey.jettison.JettisonFeature;
+import org.glassfish.jersey.server.ResourceConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -312,12 +317,7 @@ public class NodeTimelineCollectorManager extends TimelineCollectorManager {
         builder = WebAppUtils.loadSslConfiguration(builder, conf);
       }
       timelineRestServer = builder.build();
-
-      timelineRestServer.addJerseyResourcePackage(
-          TimelineCollectorWebService.class.getPackage().getName() + ";"
-              + GenericExceptionHandler.class.getPackage().getName() + ";"
-              + YarnJacksonJaxbJsonProvider.class.getPackage().getName(),
-          "/*");
+      timelineRestServer.addJerseyResourceConfig(configure(), "/*", null);
       timelineRestServer.setAttribute(COLLECTOR_MANAGER_ATTR_KEY, this);
       timelineRestServer.start();
     } catch (Exception e) {
@@ -330,6 +330,18 @@ public class NodeTimelineCollectorManager extends TimelineCollectorManager {
         timelineRestServer.getConnectorAddress(0));
     LOG.info("Instantiated the per-node collector webapp at {}",
         timelineRestServerBindAddress);
+  }
+
+  protected static ResourceConfig configure() {
+    ResourceConfig config = new ResourceConfig();
+    config.packages("org.apache.hadoop.yarn.server.timelineservice.collector");
+    config.register(GenericExceptionHandler.class);
+    config.register(TimelineCollectorWebService.class);
+    config.register(TimelineEntitiesWriter.class);
+    config.register(TimelineEntitiesReader.class);
+    config.register(TimelineDomainReader.class);
+    config.register(new JettisonFeature()).register(YarnJacksonJaxbJsonProvider.class);
+    return config;
   }
 
   private void reportNewCollectorInfoToNM(ApplicationId appId,

@@ -19,14 +19,14 @@ package org.apache.hadoop.yarn.server.federation.policies.manager;
 
 import org.apache.hadoop.yarn.server.federation.policies.amrmproxy.BroadcastAMRMProxyPolicy;
 import org.apache.hadoop.yarn.server.federation.policies.router.UniformRandomRouterPolicy;
-import org.junit.Before;
+import org.junit.jupiter.api.BeforeEach;
 
 /**
  * Simple test of {@link UniformBroadcastPolicyManager}.
  */
 public class TestUniformBroadcastPolicyManager extends BasePolicyManagerTest {
 
-  @Before
+  @BeforeEach
   public void setup() {
     //config policy
     wfp = new UniformBroadcastPolicyManager();

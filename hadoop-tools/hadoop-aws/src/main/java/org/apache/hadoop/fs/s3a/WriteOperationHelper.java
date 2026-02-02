@@ -288,9 +288,7 @@ public class WriteOperationHelper implements WriteOperations {
 
   /**
    * Finalize a multipart PUT operation.
-   * This completes the upload, and, if that works, calls
-   * {@link WriteOperationHelperCallbacks#finishedWrite(String, long, PutObjectOptions)}
-   * to update the filesystem.
+   * This completes the upload.
    * Retry policy: retrying, translated.
    * @param destKey destination of the commit
    * @param uploadId multipart operation Id
@@ -315,17 +313,15 @@ public class WriteOperationHelper implements WriteOperations {
     }
     try (AuditSpan span = activateAuditSpan()) {
       CompleteMultipartUploadResponse uploadResult;
-      uploadResult = invoker.retry("Completing multipart upload", destKey,
+      uploadResult = invoker.retry("Completing multipart upload id " + uploadId,
+          destKey,
           true,
           retrying,
           () -> {
             final CompleteMultipartUploadRequest.Builder requestBuilder =
-                getRequestFactory().newCompleteMultipartUploadRequestBuilder(
-                    destKey, uploadId, partETags);
+                getRequestFactory().newCompleteMultipartUploadRequestBuilder(destKey, uploadId, partETags, putOptions);
             return writeOperationHelperCallbacks.completeMultipartUpload(requestBuilder.build());
           });
-      writeOperationHelperCallbacks.finishedWrite(destKey, length,
-          putOptions);
       return uploadResult;
     }
   }
@@ -469,6 +465,7 @@ public class WriteOperationHelper implements WriteOperations {
    * @param destKey destination key of ongoing operation
    * @param uploadId ID of ongoing upload
    * @param partNumber current part number of the upload
+   * @param isLastPart is this the last part?
    * @param size amount of data
    * @return the request builder.
    * @throws IllegalArgumentException if the parameters are invalid.
@@ -480,6 +477,7 @@ public class WriteOperationHelper implements WriteOperations {
       String destKey,
       String uploadId,
       int partNumber,
+      boolean isLastPart,
       long size) throws IOException {
     return once("upload part request", destKey,
         withinAuditSpan(getAuditSpan(), () ->
@@ -487,6 +485,7 @@ public class WriteOperationHelper implements WriteOperations {
                 destKey,
                 uploadId,
                 partNumber,
+                isLastPart,
                 size)));
   }
 
@@ -544,8 +543,6 @@ public class WriteOperationHelper implements WriteOperations {
   /**
    * This completes a multipart upload to the destination key via
    * {@code finalizeMultipartUpload()}.
-   * Markers are never deleted on commit; this avoids having to
-   * issue many duplicate deletions.
    * Retry policy: retrying, translated.
    * Retries increment the {@code errorCount} counter.
    * @param destKey destination
@@ -571,7 +568,7 @@ public class WriteOperationHelper implements WriteOperations {
         uploadId,
         partETags,
         length,
-        PutObjectOptions.keepingDirs(),
+        PutObjectOptions.defaultOptions(),
         Invoker.NO_OP);
   }
 
@@ -667,21 +664,6 @@ public class WriteOperationHelper implements WriteOperations {
         RequestBody body,
         DurationTrackerFactory durationTrackerFactory)
         throws AwsServiceException, UncheckedIOException;
-
-    /**
-     * Perform post-write actions.
-     * <p>
-     * This operation MUST be called after any PUT/multipart PUT completes
-     * successfully.
-     * @param key key written to
-     * @param length total length of file written
-     * @param putOptions put object options
-     */
-    @Retries.RetryExceptionsSwallowed
-    void finishedWrite(
-        String key,
-        long length,
-        PutObjectOptions putOptions);
   }
 
 }

@@ -20,15 +20,15 @@ package org.apache.hadoop.hdfs.web;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.util.JsonSerialization;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 public class TestJsonUtilClient {
   @Test
@@ -36,7 +36,7 @@ public class TestJsonUtilClient {
     List<String> strList = new ArrayList<String>(Arrays.asList("aaa", "bbb", "ccc"));
 
     String[] strArr = JsonUtilClient.toStringArray(strList);
-    assertEquals("Expected 3 items in the array", 3, strArr.length);
+    assertEquals(3, strArr.length, "Expected 3 items in the array");
     assertEquals("aaa", strArr[0]);
     assertEquals("bbb", strArr[1]);
     assertEquals("ccc", strArr[2]);

@@ -80,6 +80,7 @@ import org.apache.hadoop.util.DiskValidatorFactory;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.apache.hadoop.util.concurrent.HadoopScheduledThreadPoolExecutor;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.LocalResource;
@@ -343,30 +344,34 @@ public class ResourceLocalizationService extends CompositeService
       LocalResourceTrackerState state) throws URISyntaxException, IOException {
     try (RecoveryIterator<LocalizedResourceProto> it =
              state.getCompletedResourcesIterator()) {
-      while (it != null && it.hasNext()) {
-        LocalizedResourceProto proto = it.next();
-        LocalResource rsrc = new LocalResourcePBImpl(proto.getResource());
-        LocalResourceRequest req = new LocalResourceRequest(rsrc);
-        LOG.debug("Recovering localized resource {} at {}",
-            req, proto.getLocalPath());
-        tracker.handle(new ResourceRecoveredEvent(req,
-            new Path(proto.getLocalPath()), proto.getSize()));
+      if (it != null) {
+        while (it.hasNext()) {
+          LocalizedResourceProto proto = it.next();
+          LocalResource rsrc = new LocalResourcePBImpl(proto.getResource());
+          LocalResourceRequest req = new LocalResourceRequest(rsrc);
+          LOG.debug("Recovering localized resource {} at {}",
+              req, proto.getLocalPath());
+          tracker.handle(new ResourceRecoveredEvent(req,
+              new Path(proto.getLocalPath()), proto.getSize()));
+        }
       }
     }
 
     try (RecoveryIterator<Map.Entry<LocalResourceProto, Path>> it =
              state.getStartedResourcesIterator()) {
-      while (it != null && it.hasNext()) {
-        Map.Entry<LocalResourceProto, Path> entry = it.next();
-        LocalResource rsrc = new LocalResourcePBImpl(entry.getKey());
-        LocalResourceRequest req = new LocalResourceRequest(rsrc);
-        Path localPath = entry.getValue();
-        tracker.handle(new ResourceRecoveredEvent(req, localPath, 0));
+      if(it != null) {
+        while (it.hasNext()) {
+          Map.Entry<LocalResourceProto, Path> entry = it.next();
+          LocalResource rsrc = new LocalResourcePBImpl(entry.getKey());
+          LocalResourceRequest req = new LocalResourceRequest(rsrc);
+          Path localPath = entry.getValue();
+          tracker.handle(new ResourceRecoveredEvent(req, localPath, 0));
 
-        // delete any in-progress localizations, containers will request again
-        LOG.info("Deleting in-progress localization for " + req + " at "
-            + localPath);
-        tracker.remove(tracker.getLocalizedResource(req), delService);
+          // delete any in-progress localizations, containers will request again
+          LOG.info("Deleting in-progress localization for " + req + " at "
+               + localPath);
+          tracker.remove(tracker.getLocalizedResource(req), delService);
+        }
       }
     }
 
@@ -857,7 +862,7 @@ public class ResourceLocalizationService extends CompositeService
   }
 
 
-  class PublicLocalizer extends Thread {
+  class PublicLocalizer extends SubjectInheritingThread {
 
     final FileContext lfs;
     final Configuration conf;
@@ -971,7 +976,7 @@ public class ResourceLocalizationService extends CompositeService
     }
 
     @Override
-    public void run() {
+    public void work() {
       try {
         // TODO shutdown, better error handling esp. DU
         while (!Thread.currentThread().isInterrupted()) {
@@ -1026,7 +1031,7 @@ public class ResourceLocalizationService extends CompositeService
    * access to user's credentials. One {@link LocalizerRunner} per localizerId.
    * 
    */
-  class LocalizerRunner extends Thread {
+  class LocalizerRunner extends SubjectInheritingThread {
 
     final LocalizerContext context;
     final String localizerId;
@@ -1250,7 +1255,7 @@ public class ResourceLocalizationService extends CompositeService
 
     @Override
     @SuppressWarnings("unchecked") // dispatcher not typed
-    public void run() {
+    public void work() {
       Path nmPrivateCTokensPath = null;
       Throwable exception = null;
       try {
@@ -1401,7 +1406,7 @@ public class ResourceLocalizationService extends CompositeService
     return fingerprint.toString();
   }
 
-  static class CacheCleanup extends Thread {
+  static class CacheCleanup extends SubjectInheritingThread {
 
     private final Dispatcher dispatcher;
 
@@ -1412,7 +1417,7 @@ public class ResourceLocalizationService extends CompositeService
 
     @Override
     @SuppressWarnings("unchecked") // dispatcher not typed
-    public void run() {
+    public void work() {
       dispatcher.getEventHandler().handle(
           new LocalizationEvent(LocalizationEventType.CACHE_CLEANUP));
     }

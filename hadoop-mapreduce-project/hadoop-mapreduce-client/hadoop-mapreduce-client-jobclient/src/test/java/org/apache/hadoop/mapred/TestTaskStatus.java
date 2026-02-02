@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.mapred;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TestTaskStatus {
 
@@ -52,25 +52,24 @@ public class TestTaskStatus {
     // first try to set the finish time before
     // start time is set.
     status.setFinishTime(currentTime);
-    assertEquals("Finish time of the task status set without start time", 0,
-        status.getFinishTime());
+    assertEquals(0,
+        status.getFinishTime(), "Finish time of the task status set without start time");
     // Now set the start time to right time.
     status.setStartTime(currentTime);
-    assertEquals("Start time of the task status not set correctly.",
-        currentTime, status.getStartTime());
+    assertEquals(currentTime, status.getStartTime(),
+        "Start time of the task status not set correctly.");
     // try setting wrong start time to task status.
     long wrongTime = -1;
     status.setStartTime(wrongTime);
-    assertEquals(
-        "Start time of the task status is set to wrong negative value",
-        currentTime, status.getStartTime());
+    assertEquals(currentTime, status.getStartTime(),
+        "Start time of the task status is set to wrong negative value");
     // finally try setting wrong finish time i.e. negative value.
     status.setFinishTime(wrongTime);
-    assertEquals("Finish time of task status is set to wrong negative value",
-        0, status.getFinishTime());
+    assertEquals(0, status.getFinishTime(),
+        "Finish time of task status is set to wrong negative value");
     status.setFinishTime(currentTime);
-    assertEquals("Finish time of the task status not set correctly.",
-        currentTime, status.getFinishTime());
+    assertEquals(currentTime, status.getFinishTime(),
+        "Finish time of the task status not set correctly.");
     
     // test with null task-diagnostics
     TaskStatus ts = ((TaskStatus)status.clone());
@@ -117,19 +116,19 @@ public class TestTaskStatus {
         return false;
       }
     };
-    assertEquals("Small diagnostic info test failed", 
-                 status.getDiagnosticInfo(), test);
-    assertEquals("Small state string test failed", status.getStateString(), 
-                 test);
+    assertEquals(status.getDiagnosticInfo(), test,
+        "Small diagnostic info test failed");
+    assertEquals(status.getStateString(), test,
+        "Small state string test failed");
     
     // now append some small string and check
     String newDInfo = test.concat(test);
     status.setDiagnosticInfo(test);
     status.setStateString(newDInfo);
-    assertEquals("Small diagnostic info append failed", 
-                 newDInfo, status.getDiagnosticInfo());
-    assertEquals("Small state-string append failed", 
-                 newDInfo, status.getStateString());
+    assertEquals(newDInfo, status.getDiagnosticInfo(),
+        "Small diagnostic info append failed");
+    assertEquals(newDInfo, status.getStateString(),
+        "Small state-string append failed");
     
     // update the status with small state strings
     TaskStatus newStatus = (TaskStatus)status.clone();
@@ -138,47 +137,47 @@ public class TestTaskStatus {
     status.statusUpdate(newStatus);
     newDInfo = newDInfo.concat(newStatus.getDiagnosticInfo());
     
-    assertEquals("Status-update on diagnostic-info failed", 
-                 newDInfo, status.getDiagnosticInfo());
-    assertEquals("Status-update on state-string failed", 
-                 newSInfo, status.getStateString());
+    assertEquals(newDInfo, status.getDiagnosticInfo(),
+        "Status-update on diagnostic-info failed");
+    assertEquals(newSInfo, status.getStateString(),
+        "Status-update on state-string failed");
     
     newSInfo = "hi2";
     status.statusUpdate(0, newSInfo, null);
-    assertEquals("Status-update on state-string failed", 
-                 newSInfo, status.getStateString());
+    assertEquals(newSInfo, status.getStateString(),
+        "Status-update on state-string failed");
     
     newSInfo = "hi3";
     status.statusUpdate(null, 0, newSInfo, null, 0);
-    assertEquals("Status-update on state-string failed", 
-                 newSInfo, status.getStateString());
+    assertEquals(newSInfo, status.getStateString(),
+        "Status-update on state-string failed");
     
     
     // now append each with large string
     String large = "hihihihihihihihihihi"; // 20 chars
     status.setDiagnosticInfo(large);
     status.setStateString(large);
-    assertEquals("Large diagnostic info append test failed", 
-                 maxSize, status.getDiagnosticInfo().length());
-    assertEquals("Large state-string append test failed",
-                 maxSize, status.getStateString().length());
+    assertEquals(maxSize, status.getDiagnosticInfo().length(),
+        "Large diagnostic info append test failed");
+    assertEquals(maxSize, status.getStateString().length(),
+        "Large state-string append test failed");
     
     // update a large status with large strings
     newStatus.setDiagnosticInfo(large + "0");
     newStatus.setStateString(large + "1");
     status.statusUpdate(newStatus);
-    assertEquals("Status-update on diagnostic info failed",
-                 maxSize, status.getDiagnosticInfo().length());
-    assertEquals("Status-update on state-string failed", 
-                 maxSize, status.getStateString().length());
+    assertEquals(maxSize, status.getDiagnosticInfo().length(),
+        "Status-update on diagnostic info failed");
+    assertEquals(maxSize, status.getStateString().length(),
+        "Status-update on state-string failed");
     
     status.statusUpdate(0, large + "2", null);
-    assertEquals("Status-update on state-string failed", 
-                 maxSize, status.getStateString().length());
+    assertEquals(maxSize, status.getStateString().length(),
+        "Status-update on state-string failed");
     
     status.statusUpdate(null, 0, large + "3", null, 0);
-    assertEquals("Status-update on state-string failed", 
-                 maxSize, status.getStateString().length());
+    assertEquals(maxSize, status.getStateString().length(),
+        "Status-update on state-string failed");
     
     // test passing large string in constructor
     status = new TaskStatus(null, 0, 0, null, large, large, null, null, 
@@ -197,9 +196,9 @@ public class TestTaskStatus {
         return false;
       }
     };
-    assertEquals("Large diagnostic info test failed", 
-                maxSize, status.getDiagnosticInfo().length());
-    assertEquals("Large state-string test failed", 
-                 maxSize, status.getStateString().length());
+    assertEquals(maxSize, status.getDiagnosticInfo().length(),
+        "Large diagnostic info test failed");
+    assertEquals(maxSize, status.getStateString().length(),
+        "Large state-string test failed");
   }
 }

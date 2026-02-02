@@ -27,12 +27,12 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
 import java.util.function.IntFunction;
 
-import org.assertj.core.api.Assertions;
 import org.assertj.core.api.ListAssert;
 import org.assertj.core.api.ObjectAssert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
@@ -40,6 +40,8 @@ import org.apache.hadoop.fs.ByteBufferPositionedReadable;
 import org.apache.hadoop.fs.FileRange;
 import org.apache.hadoop.fs.PositionedReadable;
 import org.apache.hadoop.fs.VectoredReadUtils;
+import org.apache.hadoop.io.ByteBufferPool;
+import org.apache.hadoop.io.ElasticByteBufferPool;
 import org.apache.hadoop.test.HadoopTestBase;
 
 import static java.util.Arrays.asList;
@@ -54,6 +56,7 @@ import static org.apache.hadoop.fs.VectoredReadUtils.validateAndSortRanges;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.apache.hadoop.test.MoreAsserts.assertFutureCompletedSuccessfully;
 import static org.apache.hadoop.test.MoreAsserts.assertFutureFailedExceptionally;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Test behavior of {@link VectoredReadUtils}.
@@ -75,11 +78,11 @@ public class TestVectoredReadUtils extends HadoopTestBase {
     // ensure we don't make unnecessary slices
     ByteBuffer slice = VectoredReadUtils.sliceTo(buffer, 100,
         createFileRange(100, size));
-    Assertions.assertThat(buffer)
+    assertThat(buffer)
             .describedAs("Slicing on the same offset shouldn't " +
                     "create a new buffer")
             .isEqualTo(slice);
-    Assertions.assertThat(slice.position())
+    assertThat(slice.position())
         .describedAs("Slicing should return buffers starting from position 0")
         .isEqualTo(0);
 
@@ -90,19 +93,19 @@ public class TestVectoredReadUtils extends HadoopTestBase {
     slice = VectoredReadUtils.sliceTo(buffer, offset,
         createFileRange(offset + sliceStart, sliceLength));
     // make sure they aren't the same, but use the same backing data
-    Assertions.assertThat(buffer)
+    assertThat(buffer)
         .describedAs("Slicing on new offset should create a new buffer")
         .isNotEqualTo(slice);
-    Assertions.assertThat(buffer.array())
+    assertThat(buffer.array())
         .describedAs("Slicing should use the same underlying data")
         .isEqualTo(slice.array());
-    Assertions.assertThat(slice.position())
+    assertThat(slice.position())
         .describedAs("Slicing should return buffers starting from position 0")
         .isEqualTo(0);
     // test the contents of the slice
     intBuffer = slice.asIntBuffer();
     for(int i=0; i < sliceLength / Integer.BYTES; ++i) {
-      assertEquals("i = " + i, i + sliceStart / Integer.BYTES, intBuffer.get());
+      assertEquals(i + sliceStart / Integer.BYTES, intBuffer.get(), "i = " + i);
     }
   }
 
@@ -113,11 +116,11 @@ public class TestVectoredReadUtils extends HadoopTestBase {
   @Test
   public void testRounding() {
     for (int i = 5; i < 10; ++i) {
-      assertEquals("i = " + i, 5, VectoredReadUtils.roundDown(i, 5));
-      assertEquals("i = " + i, 10, VectoredReadUtils.roundUp(i + 1, 5));
+      assertEquals(5, VectoredReadUtils.roundDown(i, 5), "i = " + i);
+      assertEquals(10, VectoredReadUtils.roundUp(i + 1, 5), "i = " + i);
     }
-    assertEquals("Error while roundDown", 13, VectoredReadUtils.roundDown(13, 1));
-    assertEquals("Error while roundUp", 13, VectoredReadUtils.roundUp(13, 1));
+    assertEquals(13, VectoredReadUtils.roundDown(13, 1), "Error while roundDown");
+    assertEquals(13, VectoredReadUtils.roundUp(13, 1), "Error while roundUp");
   }
 
   /**
@@ -132,32 +135,32 @@ public class TestVectoredReadUtils extends HadoopTestBase {
     CombinedFileRange mergeBase = new CombinedFileRange(2000, 3000, base);
 
     // test when the gap between is too big
-    assertFalse("Large gap ranges shouldn't get merged", mergeBase.merge(5000, 6000,
-        createFileRange(5000, 1000), 2000, 4000));
+    assertFalse(mergeBase.merge(5000, 6000,
+        createFileRange(5000, 1000), 2000, 4000), "Large gap ranges shouldn't get merged");
     assertUnderlyingSize(mergeBase,
         "Number of ranges in merged range shouldn't increase",
         1);
     assertFileRange(mergeBase, 2000, 1000);
 
     // test when the total size gets exceeded
-    assertFalse("Large size ranges shouldn't get merged",
+    assertFalse(
         mergeBase.merge(5000, 6000,
-        createFileRange(5000, 1000), 2001, 3999));
-    assertEquals("Number of ranges in merged range shouldn't increase",
-        1, mergeBase.getUnderlying().size());
+        createFileRange(5000, 1000), 2001, 3999), "Large size ranges shouldn't get merged");
+    assertEquals(1, mergeBase.getUnderlying().size(),
+        "Number of ranges in merged range shouldn't increase");
     assertFileRange(mergeBase, 2000, 1000);
 
     // test when the merge works
-    assertTrue("ranges should get merged ", mergeBase.merge(5000, 6000,
+    assertTrue(mergeBase.merge(5000, 6000,
         createFileRange(5000, 1000, tracker2),
-        2001, 4000));
+        2001, 4000), "ranges should get merged ");
     assertUnderlyingSize(mergeBase, "merge list after merge", 2);
     assertFileRange(mergeBase, 2000, 4000);
 
-    Assertions.assertThat(mergeBase.getUnderlying().get(0).getReference())
+    assertThat(mergeBase.getUnderlying().get(0).getReference())
         .describedAs("reference of range %s", mergeBase.getUnderlying().get(0))
         .isSameAs(tracker1);
-    Assertions.assertThat(mergeBase.getUnderlying().get(1).getReference())
+    assertThat(mergeBase.getUnderlying().get(1).getReference())
         .describedAs("reference of range %s", mergeBase.getUnderlying().get(1))
         .isSameAs(tracker2);
 
@@ -165,8 +168,8 @@ public class TestVectoredReadUtils extends HadoopTestBase {
     mergeBase = new CombinedFileRange(200, 300, base);
     assertFileRange(mergeBase, 200, 100);
 
-    assertTrue("ranges should get merged ", mergeBase.merge(500, 600,
-        createFileRange(5000, 1000), 201, 400));
+    assertTrue(mergeBase.merge(500, 600,
+        createFileRange(5000, 1000), 201, 400), "ranges should get merged ");
     assertUnderlyingSize(mergeBase, "merge list after merge", 2);
     assertFileRange(mergeBase, 200, 400);
   }
@@ -181,7 +184,7 @@ public class TestVectoredReadUtils extends HadoopTestBase {
       final CombinedFileRange combinedFileRange,
       final String description,
       final int expected) {
-    return Assertions.assertThat(combinedFileRange.getUnderlying())
+    return assertThat(combinedFileRange.getUnderlying())
         .describedAs(description)
         .hasSize(expected);
   }
@@ -264,13 +267,13 @@ public class TestVectoredReadUtils extends HadoopTestBase {
   private static <ELEMENT extends FileRange> void assertFileRange(
       ELEMENT range, long start, int length) {
 
-    Assertions.assertThat(range)
+    assertThat(range)
         .describedAs("file range %s", range)
         .isNotNull();
-    Assertions.assertThat(range.getOffset())
+    assertThat(range.getOffset())
         .describedAs("offset of %s", range)
         .isEqualTo(start);
-    Assertions.assertThat(range.getLength())
+    assertThat(range.getLength())
         .describedAs("length of %s", range)
         .isEqualTo(length);
   }
@@ -288,10 +291,10 @@ public class TestVectoredReadUtils extends HadoopTestBase {
         );
     final FileRange[] rangeArray = sortRanges(input);
     final List<? extends FileRange> rangeList = sortRangeList(input);
-    Assertions.assertThat(rangeArray)
+    assertThat(rangeArray)
         .describedAs("range array from sortRanges()")
         .isSortedAccordingTo(Comparator.comparingLong(FileRange::getOffset));
-    Assertions.assertThat(rangeList.toArray(new FileRange[0]))
+    assertThat(rangeList.toArray(new FileRange[0]))
         .describedAs("range from sortRangeList()")
         .isEqualTo(rangeArray);
   }
@@ -308,7 +311,7 @@ public class TestVectoredReadUtils extends HadoopTestBase {
       ELEMENT range, long offset, int length, Object reference) {
 
     assertFileRange(range, offset, length);
-    Assertions.assertThat(range.getReference())
+    assertThat(range.getReference())
         .describedAs("reference field of file range %s", range)
         .isEqualTo(reference);
   }
@@ -339,7 +342,7 @@ public class TestVectoredReadUtils extends HadoopTestBase {
   private static <ELEMENT extends FileRange> ListAssert<ELEMENT> assertRangeListSize(
       final List<ELEMENT> ranges,
       final int size) {
-    return Assertions.assertThat(ranges)
+    return assertThat(ranges)
         .describedAs("coalesced ranges")
         .hasSize(size);
   }
@@ -354,7 +357,7 @@ public class TestVectoredReadUtils extends HadoopTestBase {
   private static <ELEMENT extends FileRange> ListAssert<ELEMENT> assertRangesCountAtLeast(
       final List<ELEMENT> ranges,
       final int size) {
-    return Assertions.assertThat(ranges)
+    return assertThat(ranges)
         .describedAs("coalesced ranges")
         .hasSizeGreaterThanOrEqualTo(size);
   }
@@ -389,7 +392,7 @@ public class TestVectoredReadUtils extends HadoopTestBase {
       List<? extends FileRange> input,
       int chunkSize,
       int minimumSeek) {
-    Assertions.assertThat(isOrderedDisjoint(input, chunkSize, minimumSeek))
+    assertThat(isOrderedDisjoint(input, chunkSize, minimumSeek))
         .describedAs("ranges are ordered and disjoint")
         .isTrue();
   }
@@ -404,7 +407,7 @@ public class TestVectoredReadUtils extends HadoopTestBase {
       List<ELEMENT> input,
       int chunkSize,
       int minimumSeek) {
-    Assertions.assertThat(isOrderedDisjoint(input, chunkSize, minimumSeek))
+    assertThat(isOrderedDisjoint(input, chunkSize, minimumSeek))
         .describedAs("Ranges are non disjoint/ordered")
         .isFalse();
   }
@@ -423,7 +426,7 @@ public class TestVectoredReadUtils extends HadoopTestBase {
     assertIsNotOrderedDisjoint(input, 100, 800);
     List<CombinedFileRange> outputList = mergeSortedRanges(
             sortRangeList(input), 1, 1001, 2500);
-    Assertions.assertThat(outputList)
+    assertThat(outputList)
             .describedAs("merged range size")
             .hasSize(1);
     CombinedFileRange output = outputList.get(0);
@@ -548,10 +551,10 @@ public class TestVectoredReadUtils extends HadoopTestBase {
         ByteBuffer::allocate);
     assertFutureCompletedSuccessfully(result);
     ByteBuffer buffer = result.get();
-    assertEquals("Size of result buffer", 100, buffer.remaining());
+    assertEquals(100, buffer.remaining(), "Size of result buffer");
     byte b = 0;
     while (buffer.remaining() > 0) {
-      assertEquals("remain = " + buffer.remaining(), b++, buffer.get());
+      assertEquals(b++, buffer.get(), "remain = " + buffer.remaining());
     }
   }
 
@@ -594,7 +597,7 @@ public class TestVectoredReadUtils extends HadoopTestBase {
             allocate);
     assertFutureCompletedSuccessfully(result);
     ByteBuffer buffer = result.get();
-    assertEquals("Size of result buffer", 100, buffer.remaining());
+    assertEquals(100, buffer.remaining(), "Size of result buffer");
     validateBuffer("buffer", buffer, 0);
 
 
@@ -636,8 +639,8 @@ public class TestVectoredReadUtils extends HadoopTestBase {
   private static void validateBuffer(String message, ByteBuffer buffer, int start) {
     byte expected = (byte) start;
     while (buffer.remaining() > 0) {
-      assertEquals(message + " remain: " + buffer.remaining(), expected,
-          buffer.get());
+      assertEquals(expected,
+          buffer.get(), message + " remain: " + buffer.remaining());
       // increment with wrapping.
       expected = (byte) (expected + 1);
     }
@@ -665,7 +668,7 @@ public class TestVectoredReadUtils extends HadoopTestBase {
     runAndValidateVectoredRead(input);
     // look up by name and validate.
     final FileRange r1 = retrieve(input, "1");
-    Assertions.assertThat(r1.getData().get().limit())
+    assertThat(r1.getData().get().limit())
         .describedAs("Data limit of %s", r1)
         .isEqualTo(0);
   }
@@ -685,7 +688,7 @@ public class TestVectoredReadUtils extends HadoopTestBase {
   }
 
   /**
-   * Mock run a vectored read and validate the results with the assertions.
+   * Mock run a vectored read and validate the results with the
    * <ol>
    *   <li> {@code ByteBufferPositionedReadable.readFully()} is invoked once per range.</li>
    *   <li> The buffers are filled with data</li>
@@ -822,5 +825,50 @@ public class TestVectoredReadUtils extends HadoopTestBase {
         validateAndSortRanges(
             asList(createFileRange(length - 1, 2)),
             Optional.of(length)));
+  }
+
+  @Test
+  public void testVectorIOBufferPool() throws Throwable {
+    ElasticByteBufferPool elasticByteBufferPool = new ElasticByteBufferPool();
+
+    // inlined lambda to assert the pool size
+    Consumer<Integer> assertPoolSizeEquals = (size) -> {
+      assertThat(elasticByteBufferPool.size(false))
+          .describedAs("Pool size")
+          .isEqualTo(size);
+    };
+
+    // build vector pool from the buffer pool operations converted to
+    // allocate and release lambda expressions
+    ByteBufferPool vectorBuffers = new VectorIOBufferPool(
+        r -> elasticByteBufferPool.getBuffer(false, r),
+        elasticByteBufferPool::putBuffer);
+
+    assertPoolSizeEquals.accept(0);
+
+    final ByteBuffer b1 = vectorBuffers.getBuffer(false, 100);
+    final ByteBuffer b2 = vectorBuffers.getBuffer(false, 50);
+
+    // return the first buffer for a pool size of 1
+    vectorBuffers.putBuffer(b1);
+    assertPoolSizeEquals.accept(1);
+
+    // expect the returned buffer back
+    ByteBuffer b3 = vectorBuffers.getBuffer(true, 100);
+    assertThat(b3)
+        .describedAs("buffer returned from a get after a previous one was returned")
+        .isSameAs(b1);
+    assertPoolSizeEquals.accept(0);
+
+    // return them all
+    vectorBuffers.putBuffer(b2);
+    vectorBuffers.putBuffer(b3);
+    assertPoolSizeEquals.accept(2);
+
+    // release does not propagate
+    vectorBuffers.release();
+    assertPoolSizeEquals.accept(2);
+
+    elasticByteBufferPool.release();
   }
 }

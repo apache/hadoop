@@ -31,8 +31,7 @@ import org.apache.hadoop.yarn.resourcetypes.ResourceTypesTestHelper;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
 import org.apache.hadoop.yarn.util.resource.CustomResourceTypesConfigurationProvider;
 import org.apache.hadoop.yarn.webapp.View;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -41,6 +40,7 @@ import java.util.Map;
 
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB;
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 
 /**
@@ -87,7 +87,7 @@ public class ContainerBlockTest {
     ContainerInfo containerInfo = new ContainerInfo(containerReport);
     String resources = block.getResources(containerInfo);
 
-    Assert.assertEquals("8192 Memory, 4 VCores, 5 yarn.io/gpu", resources);
+    assertEquals("8192 Memory, 4 VCores, 5 yarn.io/gpu", resources);
   }
 
 }

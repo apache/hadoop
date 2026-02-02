@@ -24,6 +24,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.AbstractService;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.service.SystemServiceManager;
@@ -127,7 +128,7 @@ public class SystemServiceManagerImpl extends AbstractService
     launchUserService(syncUserServices);
     // Create a thread and submit services in background otherwise it
     // block RM switch time.
-    serviceLaucher = new Thread(createRunnable());
+    serviceLaucher = new SubjectInheritingThread(createRunnable());
     serviceLaucher.setName("System service launcher");
     serviceLaucher.start();
   }

@@ -31,9 +31,9 @@ import org.apache.hadoop.hdfs.server.namenode.EncryptionFaultInjector;
 import org.apache.hadoop.hdfs.server.namenode.EncryptionZoneManager;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.event.Level;
@@ -59,7 +59,7 @@ public class TestEnclosingRoot extends AbstractHadoopTestBase {
         new Path(testRootDir.toString(), "test.jks").toUri();
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     conf = new HdfsConfiguration();
     fsHelper = new FileSystemTestHelper();
@@ -90,7 +90,7 @@ public class TestEnclosingRoot extends AbstractHadoopTestBase {
         .getProvider());
   }
 
-  @After
+  @AfterEach
   public void teardown() {
     try {
       if (cluster != null) {

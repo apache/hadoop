@@ -37,9 +37,13 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterIdInfo;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterPolicyConfiguration;
 import org.apache.hadoop.yarn.server.federation.utils.FederationPoliciesTestUtil;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Test class to validate the correctness of LocalityRouterPolicy.
@@ -66,7 +70,7 @@ public class TestLocalityRouterPolicy extends TestWeightedRandomRouterPolicy {
    * SubCluster2-RACK3-HOST3<=>subcluster2
    */
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     setPolicy(new LocalityRouterPolicy());
     setPolicyInfo(new WeightedPolicyInfo());
@@ -117,12 +121,12 @@ public class TestLocalityRouterPolicy extends TestWeightedRandomRouterPolicy {
     if (getActiveSubclusters().containsKey(
         getFederationPolicyContext().getFederationSubclusterResolver()
             .getSubClusterForNode("node1").getId())) {
-      Assert.assertEquals(
+      assertEquals(
           getFederationPolicyContext().getFederationSubclusterResolver()
               .getSubClusterForNode("node1"), chosen);
     }
     // Regardless, we should choose an active SubCluster
-    Assert.assertTrue(getActiveSubclusters().containsKey(chosen));
+    assertTrue(getActiveSubclusters().containsKey(chosen));
   }
 
   /**
@@ -145,9 +149,9 @@ public class TestLocalityRouterPolicy extends TestWeightedRandomRouterPolicy {
     asc.setAMContainerResourceRequests(requests);
     try {
       ((FederationRouterPolicy) getPolicy()).getHomeSubcluster(asc, null);
-      Assert.fail();
+      fail();
     } catch (FederationPolicyException e) {
-      Assert.assertTrue(
+      assertTrue(
           e.getMessage().startsWith("Invalid number of resource requests: "));
     }
   }
@@ -177,7 +181,7 @@ public class TestLocalityRouterPolicy extends TestWeightedRandomRouterPolicy {
     try {
       ((FederationRouterPolicy) getPolicy()).getHomeSubcluster(asc, null);
     } catch (FederationPolicyException e) {
-      Assert.fail();
+      fail();
     }
   }
 
@@ -220,9 +224,9 @@ public class TestLocalityRouterPolicy extends TestWeightedRandomRouterPolicy {
       SubClusterId targetId =
           ((FederationRouterPolicy) getPolicy()).getHomeSubcluster(asc, null);
       // The selected subcluster HAS no to be the same as the one blacklisted.
-      Assert.assertNotEquals(targetId.getId(), subClusterToBlacklist);
+      assertNotEquals(targetId.getId(), subClusterToBlacklist);
     } catch (FederationPolicyException e) {
-      Assert.fail();
+      fail();
     }
 
     // Set again the previous value for the other tests
@@ -268,9 +272,9 @@ public class TestLocalityRouterPolicy extends TestWeightedRandomRouterPolicy {
       SubClusterId targetId =
           ((FederationRouterPolicy) getPolicy()).getHomeSubcluster(asc, null);
       // The selected subcluster HAS no to be the same as the one blacklisted.
-      Assert.assertNotEquals(targetId.getId(), subClusterToBlacklist);
+      assertNotEquals(targetId.getId(), subClusterToBlacklist);
     } catch (FederationPolicyException e) {
-      Assert.fail();
+      fail();
     }
 
     // Set again the previous value for the other tests

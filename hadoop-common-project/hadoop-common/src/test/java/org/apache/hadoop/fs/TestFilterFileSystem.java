@@ -18,8 +18,16 @@
 
 package org.apache.hadoop.fs;
 
-import static org.junit.Assert.*;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.reset;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
@@ -36,8 +44,8 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.DelegationTokenIssuer;
 import org.apache.hadoop.util.Progressable;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 
 public class TestFilterFileSystem {
@@ -45,7 +53,7 @@ public class TestFilterFileSystem {
   private static final Logger LOG = FileSystem.LOG;
   private static final Configuration conf = new Configuration();
 
-  @BeforeClass
+  @BeforeAll
   public static void setup() {
     conf.set("fs.flfs.impl", FilterLocalFileSystem.class.getName());
     conf.setBoolean("fs.flfs.impl.disable.cache", true);
@@ -179,8 +187,8 @@ public class TestFilterFileSystem {
         }
       }
     }
-    assertTrue((errors + " methods were not overridden correctly - see" +
-        " log"), errors <= 0);
+    assertTrue(errors <= 0, (errors + " methods were not overridden correctly - see" +
+        " log"));
   }
   
   @Test
@@ -299,11 +307,8 @@ public class TestFilterFileSystem {
     try (FilterFileSystem flfs = new FilterLocalFileSystem()) {
       flfs.initialize(URI.create("filter:/"), conf);
       Path src = new Path("/src");
-      assertFalse(
-          "hasPathCapability(FS_MULTIPART_UPLOADER) should have failed for "
-              + flfs,
-          flfs.hasPathCapability(src,
-              CommonPathCapabilities.FS_MULTIPART_UPLOADER));
+      assertFalse(flfs.hasPathCapability(src, CommonPathCapabilities.FS_MULTIPART_UPLOADER),
+          "hasPathCapability(FS_MULTIPART_UPLOADER) should have failed for " + flfs);
     }
   }
 
@@ -325,7 +330,7 @@ public class TestFilterFileSystem {
     int depth = 0;
     while (true) {
       depth++; 
-      assertFalse("depth "+depth+">"+expectDepth, depth > expectDepth);
+      assertFalse(depth > expectDepth, "depth "+depth+">"+expectDepth);
       assertEquals(conf, fs.getConf());
       if (!(fs instanceof FilterFileSystem)) {
         break;

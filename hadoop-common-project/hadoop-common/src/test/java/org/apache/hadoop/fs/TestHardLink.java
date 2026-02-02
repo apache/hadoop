@@ -25,11 +25,13 @@ import java.io.IOException;
 import java.util.Arrays;
 
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.After;
-import static org.junit.Assert.*;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import static org.apache.hadoop.fs.HardLink.*;
 
@@ -85,7 +87,7 @@ public class TestHardLink {
    * Assure clean environment for start of testing
    * @throws IOException
    */
-  @BeforeClass
+  @BeforeAll
   public static void setupClean() {
     //delete source and target directories if they exist
     FileUtil.fullyDelete(src);
@@ -100,7 +102,7 @@ public class TestHardLink {
   /**
    * Initialize clean environment for start of each test
    */
-  @Before
+  @BeforeEach
   public void setupDirs() throws IOException {
     //check that we start out with empty top-level test data directory
     assertFalse(src.exists());
@@ -176,7 +178,7 @@ public class TestHardLink {
     assertTrue(fetchFileContents(x3_mult).equals(str3));
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     setupClean();
   }

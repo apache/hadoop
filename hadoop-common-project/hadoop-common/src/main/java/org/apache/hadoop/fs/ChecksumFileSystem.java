@@ -29,9 +29,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.function.Consumer;
 import java.util.function.IntFunction;
 import java.util.zip.CRC32;
 
@@ -56,6 +58,7 @@ import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_ST
 import static org.apache.hadoop.fs.VectoredReadUtils.validateAndSortRanges;
 import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
 import static org.apache.hadoop.fs.impl.StoreImplementationUtils.isProbeForSyncable;
+import static org.apache.hadoop.io.Sizes.S_0;
 
 /****************************************************************
  * Abstract Checksumed FileSystem.
@@ -98,6 +101,14 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
   @Override
   public void setVerifyChecksum(boolean verifyChecksum) {
     this.verifyChecksum = verifyChecksum;
+  }
+
+  /**
+   * Is checksum verification enabled?
+   * @return true if files are to be verified through checksums.
+   */
+  public boolean getVerifyChecksum() {
+    return verifyChecksum;
   }
 
   @Override
@@ -164,7 +175,8 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
 
   /*******************************************************
    * For open()'s FSInputStream
-   * It verifies that data matches checksums.
+   * It verifies that data matches checksums iff the data
+   * file has matching checksums.
    *******************************************************/
   private static class ChecksumFSInputChecker extends FSInputChecker implements
       IOStatisticsSource, StreamCapabilities {
@@ -426,7 +438,17 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
     }
 
     /**
+     * Turn off range merging to make buffer recycling more likely (but not guaranteed).
+     * @return 0, always
+     */
+    @Override
+    public int maxReadSizeForVectorReads() {
+      return S_0;
+    }
+
+    /**
      * Vectored read.
+     * <p>
      * If the file has no checksums: delegate to the underlying stream.
      * If the file is checksummed: calculate the checksum ranges as
      * well as the data ranges, read both, and validate the checksums
@@ -438,12 +460,21 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
     @Override
     public void readVectored(List<? extends FileRange> ranges,
                              IntFunction<ByteBuffer> allocate) throws IOException {
+      readVectored(ranges, allocate, (b) -> { });
+    }
+
+    @Override
+    public void readVectored(final List<? extends FileRange> ranges,
+        final IntFunction<ByteBuffer> allocate,
+        final Consumer<ByteBuffer> release) throws IOException {
 
       // If the stream doesn't have checksums, just delegate.
-      if (sums == null) {
+      if (dataStreamToHandleVectorIO()) {
+        LOG.debug("No checksums for vectored read, delegating to inner stream");
         datas.readVectored(ranges, allocate);
         return;
       }
+      LOG.debug("Checksum vectored read for {} ranges", ranges.size());
       final long length = getFileLength();
       final List<? extends FileRange> sorted = validateAndSortRanges(ranges,
           Optional.of(length));
@@ -462,8 +493,8 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
       }
       List<CombinedFileRange> checksumRanges = findChecksumRanges(dataRanges,
           bytesPerSum, minSeek, maxSize);
-      sums.readVectored(checksumRanges, allocate);
-      datas.readVectored(dataRanges, allocate);
+      sums.readVectored(checksumRanges, allocate, release);
+      datas.readVectored(dataRanges, allocate, release);
       for(CombinedFileRange checksumRange: checksumRanges) {
         for(FileRange dataRange: checksumRange.getUnderlying()) {
           // when we have both the ranges, validate the checksum
@@ -481,9 +512,37 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
       }
     }
 
+    /**
+     * Predicate to determine whether vector reads should be directly
+     * handled by the data stream, rather than processing
+     * the ranges in this class, processing which includes checksum validation.
+     * <p>
+     * Vector reading is delegated whenever there are no checksums for
+     * the data file, or when validating checksums has been delegated.
+     * @return true if vector reads are to be directly handled by
+     * the data stream.
+     */
+    private boolean dataStreamToHandleVectorIO() {
+      return sums == null;
+    }
+
+    /**
+     * For this stream, declare that range merging may take place;
+     * otherwise delegate to the inner stream.
+     * @param capability string to query the stream support for.
+     * @return true for sliced vector IO if checksum validation
+     * is taking place. False if no checksums are present for the validation.
+     * For all other probes: pass to the wrapped stream
+     */
     @Override
     public boolean hasCapability(String capability) {
-      return datas.hasCapability(capability);
+      switch (capability.toLowerCase(Locale.ENGLISH)) {
+        // slicing can take place during coalescing and checksumming
+      case StreamCapabilities.VECTOREDIO_BUFFERS_SLICED:
+        return !dataStreamToHandleVectorIO();
+      default:
+        return datas.hasCapability(capability);
+      }
     }
   }
 
@@ -1134,6 +1193,9 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
     case CommonPathCapabilities.FS_APPEND:
     case CommonPathCapabilities.FS_CONCAT:
       return false;
+    case StreamCapabilities.VECTOREDIO_BUFFERS_SLICED:
+      return getVerifyChecksum();
+
     default:
       return super.hasPathCapability(p, capability);
     }

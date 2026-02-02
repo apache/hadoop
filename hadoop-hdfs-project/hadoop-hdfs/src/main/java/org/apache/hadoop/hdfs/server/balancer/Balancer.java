@@ -38,11 +38,14 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import javax.management.ObjectName;
+
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.source.JvmMetrics;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.hdfs.DFSUtilClient;
+import org.apache.hadoop.net.NetworkTopology;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
@@ -65,6 +68,7 @@ import org.apache.hadoop.hdfs.server.namenode.UnsupportedActionException;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorageReport;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -75,6 +79,7 @@ import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
 import org.apache.hadoop.util.Preconditions;
+import org.apache.hadoop.util.VersionInfo;
 
 /** <p>The balancer is a tool that balances disk space usage on an HDFS cluster
  * when some datanodes become full or when new empty nodes join the cluster.
@@ -179,7 +184,7 @@ import org.apache.hadoop.util.Preconditions;
  */
 
 @InterfaceAudience.Private
-public class Balancer {
+public class Balancer implements BalancerMXBean {
   static final Logger LOG = LoggerFactory.getLogger(Balancer.class);
 
   static final Path BALANCER_ID_PATH = new Path("/system/balancer.id");
@@ -195,6 +200,12 @@ public class Balancer {
       + "\tIncludes only the specified datanodes."
       + "\n\t[-source [-f <hosts-file> | <comma-separated list of hosts>]]"
       + "\tPick only the specified datanodes as source nodes."
+      + "\n\t[-excludeSource [-f <hosts-file> | <comma-separated list of hosts>]]"
+      + "\tExcludes the specified datanodes to be selected as a source."
+      + "\n\t[-target [-f <hosts-file> | <comma-separated list of hosts>]]"
+      + "\tPick only the specified datanodes as target nodes."
+      + "\n\t[-excludeTarget [-f <hosts-file> | <comma-separated list of hosts>]]"
+      + "\tExcludes the specified datanodes from being selected as a target."
       + "\n\t[-blockpools <comma-separated list of blockpool ids>]"
       + "\tThe balancer will only run on blockpools included in this list."
       + "\n\t[-idleiterations <idleiterations>]"
@@ -224,6 +235,9 @@ public class Balancer {
   private final NameNodeConnector nnc;
   private final BalancingPolicy policy;
   private final Set<String> sourceNodes;
+  private final Set<String> excludedSourceNodes;
+  private final Set<String> targetNodes;
+  private final Set<String> excludedTargetNodes;
   private final boolean runDuringUpgrade;
   private final double threshold;
   private final long maxSizeToMove;
@@ -231,6 +245,7 @@ public class Balancer {
   private final boolean sortTopNodes;
   private final int limitOverUtilizedNum;
   private final BalancerMetrics metrics;
+  private ObjectName balancerInfoBeanName;
 
   // all data node lists
   private final Collection<Source> overUtilized = new LinkedList<Source>();
@@ -246,7 +261,7 @@ public class Balancer {
   private static void checkReplicationPolicyCompatibility(Configuration conf
       ) throws UnsupportedActionException {
     BlockPlacementPolicies placementPolicies =
-        new BlockPlacementPolicies(conf, null, null, null);
+        new BlockPlacementPolicies(conf, null, NetworkTopology.getInstance(conf), null);
     if (!(placementPolicies.getPolicy(CONTIGUOUS) instanceof
         BlockPlacementPolicyDefault)) {
       throw new UnsupportedActionException(
@@ -353,6 +368,9 @@ public class Balancer {
     this.threshold = p.getThreshold();
     this.policy = p.getBalancingPolicy();
     this.sourceNodes = p.getSourceNodes();
+    this.excludedSourceNodes = p.getExcludedSourceNodes();
+    this.targetNodes = p.getTargetNodes();
+    this.excludedTargetNodes = p.getExcludedTargetNodes();
     this.runDuringUpgrade = p.getRunDuringUpgrade();
     this.sortTopNodes = p.getSortTopNodes();
     this.limitOverUtilizedNum = p.getLimitOverUtilizedNum();
@@ -364,6 +382,8 @@ public class Balancer {
         DFSConfigKeys.DFS_BLOCK_SIZE_KEY,
         DFSConfigKeys.DFS_BLOCK_SIZE_DEFAULT);
     this.metrics = BalancerMetrics.create(this);
+
+    registerBalancerMXBean();
   }
   
   private static long getCapacity(DatanodeStorageReport report, StorageType t) {
@@ -411,7 +431,10 @@ public class Balancer {
     long overLoadedBytes = 0L, underLoadedBytes = 0L;
     for(DatanodeStorageReport r : reports) {
       final DDatanode dn = dispatcher.newDatanode(r.getDatanodeInfo());
-      final boolean isSource = Util.isIncluded(sourceNodes, dn.getDatanodeInfo());
+      final boolean isValidSource = Util.isIncluded(sourceNodes, dn.getDatanodeInfo()) &&
+          !Util.isExcluded(excludedSourceNodes, dn.getDatanodeInfo());
+      final boolean isValidTarget = Util.isIncluded(targetNodes, dn.getDatanodeInfo()) &&
+          !Util.isExcluded(excludedTargetNodes, dn.getDatanodeInfo());
       for(StorageType t : StorageType.getMovableTypes()) {
         final Double utilization = policy.getUtilization(r, t);
         if (utilization == null) { // datanode does not have such storage type
@@ -419,10 +442,15 @@ public class Balancer {
         }
         
         final double average = policy.getAvgUtilization(t);
-        if (utilization >= average && !isSource) {
-          LOG.info(dn + "[" + t + "] has utilization=" + utilization
-              + " >= average=" + average
-              + " but it is not specified as a source; skipping it.");
+        if (utilization >= average && !isValidSource) {
+          LOG.info("{} [{}] utilization {} >= average {}, but it's either not specified"
+                  + " or excluded as a source; skipping.", dn, t, utilization, average);
+          continue;
+        }
+        if (utilization <= average && !isValidTarget) {
+          LOG.info("{} [{}] utilization {} <= average {}, but it's either not specified"
+                  + " or excluded as a target; skipping.",
+              dn, t, utilization, average);
           continue;
         }
 
@@ -659,6 +687,13 @@ public class Balancer {
             left.getDatanodeInfo(), right.getDatanodeInfo());
   }
 
+  /**
+   * Register BalancerMXBean.
+   */
+  private void registerBalancerMXBean() {
+    balancerInfoBeanName = MBeans.register("Balancer", "BalancerInfo", this);
+  }
+
   /* reset all fields in a balancer preparing for the next iteration */
   void resetData(Configuration conf) {
     this.overUtilized.clear();
@@ -666,11 +701,32 @@ public class Balancer {
     this.belowAvgUtilized.clear();
     this.underUtilized.clear();
     this.policy.reset();
-    dispatcher.reset(conf);
+    this.dispatcher.reset(conf);
+    DefaultMetricsSystem.removeSourceName(metrics.getName());
+    if (balancerInfoBeanName != null) {
+      MBeans.unregister(balancerInfoBeanName);
+      balancerInfoBeanName = null;
+    }
   }
 
   NameNodeConnector getNnc() {
     return nnc;
+  }
+
+  @Override
+  public String getVersion() {
+    return VersionInfo.getVersion() + ", r" + VersionInfo.getRevision();
+  }
+
+  @Override
+  public String getSoftwareVersion() {
+    return VersionInfo.getVersion();
+  }
+
+  @Override
+  public String getCompileInfo() {
+    return VersionInfo.getDate() + " by " + VersionInfo.getUser() + " from "
+        + VersionInfo.getBranch();
   }
 
   static class Result {
@@ -829,12 +885,16 @@ public class Balancer {
     LOG.info("included nodes = " + p.getIncludedNodes());
     LOG.info("excluded nodes = " + p.getExcludedNodes());
     LOG.info("source nodes = " + p.getSourceNodes());
+    LOG.info("excluded source nodes = " + p.getExcludedSourceNodes());
+    LOG.info("target nodes = " + p.getTargetNodes());
+    LOG.info("excluded target nodes = " + p.getExcludedTargetNodes());
     checkKeytabAndInit(conf);
     System.out.println("Time Stamp               Iteration#"
         + "  Bytes Already Moved  Bytes Left To Move  Bytes Being Moved"
         + "  NameNode");
     
     List<NameNodeConnector> connectors = Collections.emptyList();
+    BalancerHttpServer balancerHttpServer = startBalancerHttpServer(conf);
     try {
       connectors = NameNodeConnector.newNameNodeConnectors(namenodes, nsIds,
           Balancer.class.getSimpleName(), BALANCER_ID_PATH, conf,
@@ -847,6 +907,9 @@ public class Balancer {
           if (p.getBlockPools().size() == 0
               || p.getBlockPools().contains(nnc.getBlockpoolID())) {
             final Balancer b = new Balancer(nnc, p, conf);
+            if (balancerHttpServer != null) {
+              balancerHttpServer.setBalancerAttribute(b);
+            }
             final Result r = b.runOneIteration();
             r.print(iteration, nnc, System.out);
 
@@ -872,6 +935,9 @@ public class Balancer {
     } finally {
       for(NameNodeConnector nnc : connectors) {
         IOUtils.cleanupWithLogger(LOG, nnc);
+      }
+      if (balancerHttpServer != null) {
+        balancerHttpServer.stop();
       }
     }
     return ExitStatus.SUCCESS.getExitCode();
@@ -942,6 +1008,18 @@ public class Balancer {
 
   static void stop() {
     serviceRunning = false;
+  }
+
+  private static BalancerHttpServer startBalancerHttpServer(Configuration conf) throws IOException {
+    boolean httpServerEnabled = conf.getBoolean(DFSConfigKeys.DFS_BALANCER_HTTPSERVER_ENABLED_KEY,
+        DFSConfigKeys.DFS_BALANCER_HTTPSERVER_ENABLED_DEFAULT);
+    if (httpServerEnabled) {
+      BalancerHttpServer balancerHttpServer = new BalancerHttpServer(conf);
+      balancerHttpServer.start();
+      return balancerHttpServer;
+    } else {
+      return null;
+    }
   }
 
   private static void checkKeytabAndInit(Configuration conf)
@@ -1016,6 +1094,10 @@ public class Balancer {
     static BalancerParameters parse(String[] args) {
       Set<String> excludedNodes = null;
       Set<String> includedNodes = null;
+      Set<String> sourceNodes = null;
+      Set<String> excludedSourceNodes = null;
+      Set<String> targetNodes = null;
+      Set<String> excludedTargetNodes = null;
       BalancerParameters.Builder b = new BalancerParameters.Builder();
 
       if (args != null) {
@@ -1056,9 +1138,21 @@ public class Balancer {
               i = processHostList(args, i, "include", includedNodes);
               b.setIncludedNodes(includedNodes);
             } else if ("-source".equalsIgnoreCase(args[i])) {
-              Set<String> sourceNodes = new HashSet<>();
+              sourceNodes = new HashSet<>();
               i = processHostList(args, i, "source", sourceNodes);
               b.setSourceNodes(sourceNodes);
+            } else if ("-excludeSource".equalsIgnoreCase(args[i])) {
+              excludedSourceNodes = new HashSet<>();
+              i = processHostList(args, i, "exclude source", excludedSourceNodes);
+              b.setExcludedSourceNodes(excludedSourceNodes);
+            } else if ("-target".equalsIgnoreCase(args[i])) {
+              targetNodes = new HashSet<>();
+              i = processHostList(args, i, "target", targetNodes);
+              b.setTargetNodes(targetNodes);
+            } else if ("-excludeTarget".equalsIgnoreCase(args[i])) {
+              excludedTargetNodes = new HashSet<>();
+              i = processHostList(args, i, "exclude target", excludedTargetNodes);
+              b.setExcludedTargetNodes(excludedTargetNodes);
             } else if ("-blockpools".equalsIgnoreCase(args[i])) {
               Preconditions.checkArgument(
                   ++i < args.length,
@@ -1111,6 +1205,10 @@ public class Balancer {
           }
           Preconditions.checkArgument(excludedNodes == null || includedNodes == null,
               "-exclude and -include options cannot be specified together.");
+          Preconditions.checkArgument(excludedSourceNodes == null || sourceNodes == null,
+              "-excludeSource and -source options cannot be specified together.");
+          Preconditions.checkArgument(excludedTargetNodes == null || targetNodes == null,
+              "-excludeTarget and -target options cannot be specified together.");
         } catch(RuntimeException e) {
           printUsage(System.err);
           throw e;

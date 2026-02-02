@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.util.curator;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -43,9 +43,9 @@ import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.client.ZKClientConfig;
 import org.apache.zookeeper.data.ACL;
 import org.apache.zookeeper.data.Stat;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test the manager for ZooKeeper Curator.
@@ -55,7 +55,7 @@ public class TestZKCuratorManager {
   private TestingServer server;
   private ZKCuratorManager curator;
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     this.server = new TestingServer();
 
@@ -66,7 +66,7 @@ public class TestZKCuratorManager {
     this.curator.start(zkHostPort);
   }
 
-  @After
+  @AfterEach
   public void teardown() throws Exception {
     this.curator.close();
     if (this.server != null) {
@@ -231,14 +231,15 @@ public class TestZKCuratorManager {
 
   private void validateJaasConfiguration(String clientConfig, String principal, String keytab,
       ZooKeeper zk) {
-    assertEquals("Validate that expected clientConfig is set in ZK config", clientConfig,
-        zk.getClientConfig().getProperty(ZKClientConfig.LOGIN_CONTEXT_NAME_KEY));
+    assertEquals(clientConfig,
+        zk.getClientConfig().getProperty(ZKClientConfig.LOGIN_CONTEXT_NAME_KEY),
+        "Validate that expected clientConfig is set in ZK config");
 
     AppConfigurationEntry[] entries = javax.security.auth.login.Configuration.getConfiguration()
         .getAppConfigurationEntry(clientConfig);
-    assertEquals("Validate that expected principal is set in Jaas config", principal,
-        entries[0].getOptions().get("principal"));
-    assertEquals("Validate that expected keytab is set in Jaas config", keytab,
-        entries[0].getOptions().get("keyTab"));
+    assertEquals(principal, entries[0].getOptions().get("principal"),
+        "Validate that expected principal is set in Jaas config");
+    assertEquals(keytab, entries[0].getOptions().get("keyTab"),
+        "Validate that expected keytab is set in Jaas config");
   }
 }

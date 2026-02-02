@@ -18,19 +18,18 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.fasterxml.jackson.core.JsonFactory;
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.core.JsonToken;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,7 +38,15 @@ import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AbfsPerfLoggable;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultSchema;
+import org.apache.hadoop.fs.azurebfs.contracts.services.StorageErrorResponseSchema;
 import org.apache.hadoop.fs.azurebfs.utils.UriUtils;
+
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.BLOCKLIST;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EQUAL;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.TRUE;
+import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_META_HDI_ISFOLDER;
+import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARAM_COMP;
 
 /**
  * Base Http operation class for orchestrating server IO calls. Child classes would
@@ -54,13 +61,14 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
 
   private static final int CLEAN_UP_BUFFER_SIZE = 64 * 1024;
 
-  private static final int ONE_THOUSAND = 1000;
+  public static final int ONE_THOUSAND = 1000;
 
   private static final int ONE_MILLION = ONE_THOUSAND * ONE_THOUSAND;
 
   private final String method;
   private final URL url;
   private String maskedUrl;
+  private AbfsClient client;
   private String maskedEncodedUrl;
   private int statusCode;
   private String statusDescription;
@@ -69,6 +77,8 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
   private String requestId = "";
   private String expectedAppendPos = "";
   private ListResultSchema listResultSchema = null;
+  private InputStream listResultStream = null;
+  private List<String> blockIdList = null;
 
   // metrics
   private int bytesSent;
@@ -113,13 +123,14 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
       final String method,
       final List<AbfsHttpHeader> requestHeaders,
       final Duration connectionTimeout,
-      final Duration readTimeout) {
+      final Duration readTimeout, AbfsClient abfsClient) {
     this.log = log;
     this.url = url;
     this.method = method;
     this.requestHeaders = requestHeaders;
     this.connectionTimeout = (int) connectionTimeout.toMillis();
     this.readTimeout = (int) readTimeout.toMillis();
+    this.client = abfsClient;
   }
 
   /**
@@ -212,6 +223,10 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
     return listResultSchema;
   }
 
+  public InputStream getListResultStream() {
+    return listResultStream;
+  }
+
   /**
    * Get response header value for the given headerKey.
    *
@@ -219,6 +234,16 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
    * @return header value.
    */
   public abstract String getResponseHeader(String httpHeader);
+
+  public abstract Map<String, List<String>> getResponseHeaders();
+
+  /**
+   * Get response header value for the given headerKey ignoring case.
+   *
+   * @param httpHeader header key.
+   * @return header value.
+   */
+  public abstract String getResponseHeaderIgnoreCase(String httpHeader);
 
   // Returns a trace message for the request
   @Override
@@ -381,9 +406,12 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
 
         // this is a list operation and need to retrieve the data
         // need a better solution
-        if (AbfsHttpConstants.HTTP_METHOD_GET.equals(this.method)
-            && buffer == null) {
-          parseListFilesResponse(stream);
+        if (AbfsHttpConstants.HTTP_METHOD_GET.equals(this.method) && buffer == null) {
+          if (url.toString().contains(QUERY_PARAM_COMP + EQUAL + BLOCKLIST)) {
+            parseBlockListResponse(stream);
+          } else {
+            parseListPathResponse(stream);
+          }
         } else {
           if (buffer != null) {
             while (totalBytesRead < length) {
@@ -411,6 +439,11 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
             method, getMaskedUrl(), ex.getMessage());
         log.debug("IO Error: ", ex);
         throw ex;
+      } catch (Exception ex) {
+        log.warn("Unexpected error: {} {}: {}",
+            method, getMaskedUrl(), ex.getMessage());
+        log.debug("Unexpected Error: ", ex);
+        throw new IOException(ex);
       } finally {
         this.recvResponseTimeMs += elapsedTimeMs(startTime);
         this.bytesReceived = totalBytesRead;
@@ -447,40 +480,15 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
       if (stream == null) {
         return;
       }
-      JsonFactory jf = new JsonFactory();
-      try (JsonParser jp = jf.createParser(stream)) {
-        String fieldName, fieldValue;
-        jp.nextToken();  // START_OBJECT - {
-        jp.nextToken();  // FIELD_NAME - "error":
-        jp.nextToken();  // START_OBJECT - {
-        jp.nextToken();
-        while (jp.hasCurrentToken()) {
-          if (jp.getCurrentToken() == JsonToken.FIELD_NAME) {
-            fieldName = jp.getCurrentName();
-            jp.nextToken();
-            fieldValue = jp.getText();
-            switch (fieldName) {
-              case "code":
-                storageErrorCode = fieldValue;
-                break;
-              case "message":
-                storageErrorMessage = fieldValue;
-                break;
-              case "ExpectedAppendPos":
-                expectedAppendPos = fieldValue;
-                break;
-              default:
-                break;
-            }
-          }
-          jp.nextToken();
-        }
-      }
+      StorageErrorResponseSchema storageErrorResponse = client.processStorageErrorResponse(stream);
+      storageErrorCode = storageErrorResponse.getStorageErrorCode();
+      storageErrorMessage = storageErrorResponse.getStorageErrorMessage();
+      expectedAppendPos = storageErrorResponse.getExpectedAppendPos();
     } catch (IOException ex) {
       // Ignore errors that occur while attempting to parse the storage
       // error, since the response may have been handled by the HTTP driver
       // or for other reasons have an unexpected
-      log.debug("ExpectedError: ", ex);
+      log.debug("Error parsing storage error response", ex);
     }
   }
 
@@ -491,31 +499,34 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
    */
   protected abstract InputStream getErrorStream() throws IOException;
 
+  private void parseBlockListResponse(final InputStream stream) throws IOException {
+    if (stream == null || blockIdList != null) {
+      return;
+    }
+    blockIdList = client.parseBlockListResponse(stream);
+  }
+
   /**
-   * Parse the list file response
-   *
-   * @param stream InputStream contains the list results.
-   * @throws IOException if the response cannot be deserialized.
+   * Parse the list path response from the network stream and save response into a buffer.
+   * @param stream Network InputStream.
+   * @throws IOException if an error occurs while reading the stream.
    */
-  private void parseListFilesResponse(final InputStream stream)
-      throws IOException {
-    if (stream == null) {
+  private void parseListPathResponse(final InputStream stream) throws IOException {
+    if (stream == null || listResultStream != null) {
       return;
     }
-
-    if (listResultSchema != null) {
-      // already parse the response
-      return;
+    try (ByteArrayOutputStream buffer = new ByteArrayOutputStream()) {
+      byte[] tempBuffer = new byte[CLEAN_UP_BUFFER_SIZE];
+      int bytesRead;
+      while ((bytesRead = stream.read(tempBuffer, 0, CLEAN_UP_BUFFER_SIZE)) != -1) {
+        buffer.write(tempBuffer, 0, bytesRead);
+      }
+      listResultStream = new ByteArrayInputStream(buffer.toByteArray());
     }
+  }
 
-    try {
-      final ObjectMapper objectMapper = new ObjectMapper();
-      this.listResultSchema = objectMapper.readValue(stream,
-          ListResultSchema.class);
-    } catch (IOException ex) {
-      log.error("Unable to deserialize list results", ex);
-      throw ex;
-    }
+  public List<String> getBlockIdList() {
+    return blockIdList;
   }
 
   /**
@@ -594,7 +605,6 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
   public final long getRecvLatency() {
     return recvResponseTimeMs;
   }
-
   /**
    * Set response status code for the server call.
    *
@@ -620,7 +630,7 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
     requestId = getResponseHeader(
         HttpHeaderConfigurations.X_MS_REQUEST_ID);
     if (requestId == null) {
-      requestId = AbfsHttpConstants.EMPTY_STRING;
+      requestId = EMPTY_STRING;
     }
   }
 
@@ -681,6 +691,14 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
    */
   protected boolean isConnectionDisconnectedOnError() {
     return connectionDisconnectedOnError;
+  }
+
+  /**
+   * Sets the list result schema after parsing done on Client.
+   * @param listResultSchema ListResultSchema
+   */
+  protected void setListResultSchema(final ListResultSchema listResultSchema) {
+    this.listResultSchema = listResultSchema;
   }
 
   public static class AbfsHttpOperationWithFixedResult extends AbfsHttpOperation {
@@ -758,7 +776,18 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
 
     @Override
     public String getResponseHeader(final String httpHeader) {
-      return "";
+      return EMPTY_STRING;
+    }
+
+    @Override
+    public Map<String, List<String>> getResponseHeaders() {
+      return new HashMap<>();
+    }
+
+    /**{@inheritDoc}*/
+    @Override
+    public String getResponseHeaderIgnoreCase(final String headerName) {
+      return EMPTY_STRING;
     }
 
     @Override
@@ -767,6 +796,213 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
         final int length)
         throws IOException {
 
+    }
+  }
+
+  /**
+   * Dummy Result to be returned for getFileStatus for implicit directory paths.
+   * Blob Endpoint is not capable of understanding implicit paths and handling
+   * on client side is needed to make sure HDFS compatibility holds.
+   */
+  public static class AbfsHttpOperationWithFixedResultForGetFileStatus extends AbfsHttpOperation {
+
+    public AbfsHttpOperationWithFixedResultForGetFileStatus(final URL url,
+        final String method,
+        final int httpStatus) {
+      super(url, method, httpStatus);
+    }
+
+    @Override
+    public String getResponseHeader(final String httpHeader) {
+      // Directories on FNS-Blob are identified by a special metadata header.
+      if (httpHeader.equals(X_MS_META_HDI_ISFOLDER)) {
+        return TRUE;
+      }
+      return EMPTY_STRING;
+    }
+
+    @Override
+    public Map<String, List<String>> getResponseHeaders() {
+      return new HashMap<>();
+    }
+
+    /**{@inheritDoc}*/
+    @Override
+    public String getResponseHeaderIgnoreCase(final String httpHeader) {
+      // Directories on FNS-Blob are identified by a special metadata header.
+      if (httpHeader.equalsIgnoreCase(X_MS_META_HDI_ISFOLDER)) {
+        return TRUE;
+      }
+      return EMPTY_STRING;
+    }
+
+    @Override
+    public void processResponse(final byte[] buffer,
+        final int offset,
+        final int length)
+        throws IOException {
+
+    }
+
+    @Override
+    public void setRequestProperty(final String key, final String value) {
+
+    }
+
+    @Override
+    protected InputStream getContentInputStream() throws IOException {
+      return null;
+    }
+
+    @Override
+    protected InputStream getErrorStream() throws IOException {
+      return null;
+    }
+
+    @Override
+    String getConnProperty(final String key) {
+      return null;
+    }
+
+    @Override
+    URL getConnUrl() {
+      return null;
+    }
+
+    @Override
+    Integer getConnResponseCode() throws IOException {
+      return null;
+    }
+
+    @Override
+    String getConnResponseMessage() throws IOException {
+      return null;
+    }
+
+    @Override
+    Map<String, List<String>> getRequestProperties() {
+      return null;
+    }
+
+    @Override
+    String getRequestProperty(final String headerName) {
+      return null;
+    }
+
+    @Override
+    public String getTracingContextSuffix() {
+      return null;
+    }
+
+    @Override
+    public void sendPayload(final byte[] buffer,
+        final int offset,
+        final int length)
+        throws IOException {
+
+    }
+  }
+
+  /**
+   * Dummy Result to be returned for listBlobs for paths existing as files.
+   * Blob Endpoint listing returns empty results and client handling
+   * is needed to make sure HDFS compatibility holds.
+   */
+  public static class AbfsHttpOperationWithFixedResultForGetListStatus extends AbfsHttpOperation {
+    private final ListResultSchema hardSetListResultSchema;
+
+    public AbfsHttpOperationWithFixedResultForGetListStatus(final URL url,
+        final String method,
+        final int httpStatus,
+        final ListResultSchema listResult) {
+      super(url, method, httpStatus);
+      hardSetListResultSchema = listResult;
+    }
+
+    @Override
+    public ListResultSchema getListResultSchema() {
+      return hardSetListResultSchema;
+    }
+
+    @Override
+    public void processResponse(final byte[] buffer,
+        final int offset,
+        final int length)
+        throws IOException {
+
+    }
+
+    @Override
+    public void setRequestProperty(final String key, final String value) {
+
+    }
+
+    @Override
+    protected InputStream getContentInputStream() throws IOException {
+      return null;
+    }
+
+    @Override
+    protected InputStream getErrorStream() throws IOException {
+      return null;
+    }
+
+    @Override
+    String getConnProperty(final String key) {
+      return null;
+    }
+
+    @Override
+    URL getConnUrl() {
+      return null;
+    }
+
+    @Override
+    Integer getConnResponseCode() throws IOException {
+      return null;
+    }
+
+    @Override
+    String getConnResponseMessage() throws IOException {
+      return null;
+    }
+
+    @Override
+    Map<String, List<String>> getRequestProperties() {
+      return null;
+    }
+
+    @Override
+    String getRequestProperty(final String headerName) {
+      return null;
+    }
+
+    @Override
+    public String getTracingContextSuffix() {
+      return null;
+    }
+
+    @Override
+    public String getResponseHeader(final String httpHeader) {
+      return EMPTY_STRING;
+    }
+
+    @Override
+    public Map<String, List<String>> getResponseHeaders() {
+      return new HashMap<>();
+    }
+
+    /**{@inheritDoc}*/
+    @Override
+    public String getResponseHeaderIgnoreCase(final String headerName) {
+      return EMPTY_STRING;
+    }
+
+    @Override
+    public void sendPayload(final byte[] buffer,
+        final int offset,
+        final int length)
+        throws IOException {
     }
   }
 }

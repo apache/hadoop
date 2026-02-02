@@ -17,7 +17,8 @@
  */
 package org.apache.hadoop.ha;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -30,8 +31,9 @@ import org.apache.hadoop.ha.HealthMonitor.Callback;
 import org.apache.hadoop.ha.HealthMonitor.State;
 import org.apache.hadoop.util.Time;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -47,7 +49,7 @@ public class TestHealthMonitor {
 
   private DummyHAService svc;
   
-  @Before
+  @BeforeEach
   public void setupHM() throws InterruptedException, IOException {
     Configuration conf = new Configuration();
     conf.setInt(CommonConfigurationKeys.IPC_CLIENT_CONNECT_MAX_RETRIES_KEY, 1);
@@ -78,7 +80,8 @@ public class TestHealthMonitor {
         new InetSocketAddress("0.0.0.0", 0), true);
   }
 
-  @Test(timeout=15000)
+  @Test
+  @Timeout(value = 15)
   public void testMonitor() throws Exception {
     LOG.info("Mocking bad health check, waiting for UNHEALTHY");
     svc.isHealthy = false;
@@ -112,7 +115,8 @@ public class TestHealthMonitor {
    * Test that the proper state is propagated when the health monitor
    * sees an uncaught exception in its thread.
    */
-  @Test(timeout=15000)
+  @Test
+  @Timeout(value = 15)
   public void testHealthMonitorDies() throws Exception {
     LOG.info("Mocking RTE in health monitor, waiting for FAILED");
     throwOOMEOnCreate = true;
@@ -128,7 +132,8 @@ public class TestHealthMonitor {
    * health monitor and thus change its state to FAILED
    * @throws Exception
    */
-  @Test(timeout=15000)
+  @Test
+  @Timeout(value = 15)
   public void testCallbackThrowsRTE() throws Exception {
     hm.addCallback(new Callback() {
       @Override

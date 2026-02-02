@@ -18,9 +18,9 @@
 package org.apache.hadoop.fs.shell;
 
 import static org.apache.hadoop.test.PlatformAssumptions.assumeWindows;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.File;
 import java.io.IOException;
@@ -32,10 +32,10 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Shell;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 public class TestPathData {
   private static final String TEST_ROOT_DIR =
@@ -44,7 +44,7 @@ public class TestPathData {
   protected FileSystem fs;
   protected Path testDir;
   
-  @Before
+  @BeforeEach
   public void initialize() throws Exception {
     conf = new Configuration();
     fs = FileSystem.getLocal(conf);
@@ -64,13 +64,14 @@ public class TestPathData {
     fs.create(new Path("d2","f3"));
   }
 
-  @After
+  @AfterEach
   public void cleanup() throws Exception {
     fs.delete(testDir, true);
     fs.close();
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testWithDirStringAndConf() throws Exception {
     String dirString = "d1";
     PathData item = new PathData(dirString, conf);
@@ -83,7 +84,8 @@ public class TestPathData {
     checkPathData(dirString, item);
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testUnqualifiedUriContents() throws Exception {
     String dirString = "d1";
     PathData item = new PathData(dirString, conf);
@@ -94,7 +96,8 @@ public class TestPathData {
     );
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testQualifiedUriContents() throws Exception {
     String dirString = fs.makeQualified(new Path("d1")).toString();
     PathData item = new PathData(dirString, conf);
@@ -105,7 +108,8 @@ public class TestPathData {
     );
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testCwdContents() throws Exception {
     String dirString = Path.CUR_DIR;
     PathData item = new PathData(dirString, conf);
@@ -116,7 +120,8 @@ public class TestPathData {
     );
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testToFile() throws Exception {
     PathData item = new PathData(".", conf);
     assertEquals(new File(testDir.toString()), item.toFile());
@@ -126,7 +131,8 @@ public class TestPathData {
     assertEquals(new File(testDir + "/d1/f1"), item.toFile());
   }
 
-  @Test (timeout = 5000)
+  @Test
+  @Timeout(value = 5)
   public void testToFileRawWindowsPaths() throws Exception {
     assumeWindows();
 
@@ -153,7 +159,8 @@ public class TestPathData {
     assertEquals(new File(testDir + "\\foo\\bar"), item.toFile());
   }
 
-  @Test (timeout = 5000)
+  @Test
+  @Timeout(value = 5)
   public void testInvalidWindowsPath() throws Exception {
     assumeWindows();
 
@@ -171,7 +178,8 @@ public class TestPathData {
     }
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testAbsoluteGlob() throws Exception {
     PathData[] items = PathData.expandAsGlob(testDir+"/d1/f1*", conf);
     assertEquals(
@@ -199,7 +207,8 @@ public class TestPathData {
     );
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testRelativeGlob() throws Exception {
     PathData[] items = PathData.expandAsGlob("d1/f1*", conf);
     assertEquals(
@@ -208,7 +217,8 @@ public class TestPathData {
     );
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testRelativeGlobBack() throws Exception {
     fs.setWorkingDirectory(new Path("d1"));
     PathData[] items = PathData.expandAsGlob("../d2/*", conf);
@@ -226,7 +236,7 @@ public class TestPathData {
     fs.setPermission(obscuredDir, new FsPermission((short)0)); //no access
     try {
       PathData.expandAsGlob("foo/*", conf);
-      Assert.fail("Should throw IOException");
+      fail("Should throw IOException");
     } catch (IOException ioe) {
       // expected
     } finally {
@@ -235,7 +245,8 @@ public class TestPathData {
     }
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testWithStringAndConfForBuggyPath() throws Exception {
     String dirString = "file:///tmp";
     Path tmpDir = new Path(dirString);
@@ -249,13 +260,11 @@ public class TestPathData {
   }
 
   public void checkPathData(String dirString, PathData item) throws Exception {
-    assertEquals("checking fs", fs, item.fs);
-    assertEquals("checking string", dirString, item.toString());
-    assertEquals("checking path",
-        fs.makeQualified(new Path(item.toString())), item.path
-    );
-    assertTrue("checking exist", item.stat != null);
-    assertTrue("checking isDir", item.stat.isDirectory());
+    assertEquals(fs, item.fs, "checking fs");
+    assertEquals(dirString, item.toString(), "checking string");
+    assertEquals(fs.makeQualified(new Path(item.toString())), item.path, "checking path");
+    assertTrue(item.stat != null, "checking exist");
+    assertTrue(item.stat.isDirectory(), "checking isDir");
   }
   
   /* junit does a lousy job of comparing arrays

@@ -35,6 +35,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FileSystem;
@@ -68,11 +69,16 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Timeout.ThreadMode.SEPARATE_THREAD;
 
+@Timeout(value=10, unit = TimeUnit.SECONDS, threadMode = SEPARATE_THREAD)
 public class TestPipeApplication {
   private static File workSpace = new File("target",
           TestPipeApplication.class.getName() + "-workSpace");
@@ -82,7 +88,7 @@ public class TestPipeApplication {
   /**
    * test PipesMapRunner    test the transfer data from reader
    *
-   * @throws Exception
+   * @throws Exception The exception thrown during unit testing.
    */
   @Test
   public void testRunner() throws Exception {
@@ -270,8 +276,6 @@ public class TestPipeApplication {
     Submitter.setJavaPartitioner(conf, partitioner.getClass());
 
     assertEquals(PipesPartitioner.class, (Submitter.getJavaPartitioner(conf)));
-    // test going to call main method with System.exit(). Change Security
-    SecurityManager securityManager = System.getSecurityManager();
     // store System.out
     PrintStream oldps = System.out;
     ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -284,7 +288,7 @@ public class TestPipeApplication {
     } catch (ExitUtil.ExitException e) {
       // System.exit prohibited! output message test
       assertTrue(out.toString().contains(""));
-      assertTrue(out.toString(), out.toString().contains("pipes"));
+      assertTrue(out.toString().contains("pipes"), out.toString());
       assertTrue(out.toString().contains("[-input <path>] // Input directory"));
       assertTrue(out.toString()
               .contains("[-output <path>] // Output directory"));
@@ -328,8 +332,6 @@ public class TestPipeApplication {
               + "archives to be unarchived on the compute machines"));
     } finally {
       System.setOut(oldps);
-      // restore
-      System.setSecurityManager(securityManager);
       if (psw != null) {
         // remove password files
         for (File file : psw) {
@@ -343,7 +345,7 @@ public class TestPipeApplication {
       String[] args = new String[22];
       File input = new File(workSpace + File.separator + "input");
       if (!input.exists()) {
-        Assert.assertTrue(input.createNewFile());
+        assertTrue(input.createNewFile());
       }
       File outPut = new File(workSpace + File.separator + "output");
       FileUtil.fullyDelete(outPut);
@@ -379,7 +381,6 @@ public class TestPipeApplication {
 
     } finally {
       System.setOut(oldps);
-      System.setSecurityManager(securityManager);
     }
 
   }
@@ -518,8 +519,8 @@ public class TestPipeApplication {
     }
 
     @Override
-    public void run() {
-      super.run();
+    public void work() {
+      super.work();
     }
 
     protected void closeSocketInternal(Socket clientSocket) {
@@ -617,7 +618,8 @@ public class TestPipeApplication {
     if (clazz == null) {
       os.write(("ls ").getBytes());
     } else {
-      os.write(("java -cp " + classpath + " " + clazz).getBytes());
+      // On Java 8 java.home returns "${JAVA_HOME}/jre", but that's good enough for this test
+      os.write((System.getProperty("java.home") + "/bin/java -cp " + classpath + " " + clazz).getBytes());
     }
     os.flush();
     os.close();

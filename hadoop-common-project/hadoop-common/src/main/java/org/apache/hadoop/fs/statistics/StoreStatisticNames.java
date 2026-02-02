@@ -467,6 +467,12 @@ public final class StoreStatisticNames {
   public static final String MULTIPART_UPLOAD_LIST
       = "multipart_upload_list";
 
+  public static final String CONDITIONAL_CREATE
+          = "conditional_create";
+
+  public static final String CONDITIONAL_CREATE_FAILED
+          = "conditional_create_failed";
+
   private StoreStatisticNames() {
   }
 

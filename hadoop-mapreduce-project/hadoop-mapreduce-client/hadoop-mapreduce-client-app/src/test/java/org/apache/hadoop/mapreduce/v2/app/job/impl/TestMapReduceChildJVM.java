@@ -22,7 +22,6 @@ import java.util.ArrayList;
 import java.util.Map;
 
 import org.apache.hadoop.mapreduce.TaskType;
-import org.junit.Assert;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapred.JobConf;
@@ -37,16 +36,22 @@ import org.apache.hadoop.mapreduce.v2.app.launcher.ContainerLauncherEvent;
 import org.apache.hadoop.mapreduce.v2.app.launcher.ContainerRemoteLaunchEvent;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestMapReduceChildJVM {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(TestMapReduceChildJVM.class);
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testCommandLine() throws Exception {
 
     MyMRApp app = new MyMRApp(1, 0, true, this.getClass().getName(), true);
@@ -56,7 +61,7 @@ public class TestMapReduceChildJVM {
     app.waitForState(job, JobState.SUCCEEDED);
     app.verifyCompleted();
 
-    Assert.assertEquals(
+    assertEquals(
       "[" + MRApps.crossPlatformify("JAVA_HOME") + "/bin/java" +
       " -Djava.net.preferIPv4Stack=true" +
       " -Dhadoop.metrics.log.level=WARN " +
@@ -72,23 +77,24 @@ public class TestMapReduceChildJVM {
       " 1><LOG_DIR>/stdout" +
       " 2><LOG_DIR>/stderr ]", app.launchCmdList.get(0));
     
-    Assert.assertTrue("HADOOP_ROOT_LOGGER not set for job",
-      app.cmdEnvironment.containsKey("HADOOP_ROOT_LOGGER"));
-    Assert.assertEquals("INFO,console",
-      app.cmdEnvironment.get("HADOOP_ROOT_LOGGER"));
-    Assert.assertTrue("HADOOP_CLIENT_OPTS not set for job",
-      app.cmdEnvironment.containsKey("HADOOP_CLIENT_OPTS"));
-    Assert.assertEquals("", app.cmdEnvironment.get("HADOOP_CLIENT_OPTS"));
+    assertTrue(app.cmdEnvironment.containsKey("HADOOP_ROOT_LOGGER"),
+        "HADOOP_ROOT_LOGGER not set for job");
+    assertEquals("INFO,console", app.cmdEnvironment.get("HADOOP_ROOT_LOGGER"));
+    assertTrue(app.cmdEnvironment.containsKey("HADOOP_CLIENT_OPTS"),
+        "HADOOP_CLIENT_OPTS not set for job");
+    assertEquals("", app.cmdEnvironment.get("HADOOP_CLIENT_OPTS"));
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testReduceCommandLineWithSeparateShuffle() throws Exception {
     final Configuration conf = new Configuration();
     conf.setBoolean(MRJobConfig.REDUCE_SEPARATE_SHUFFLE_LOG, true);
     testReduceCommandLine(conf);
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testReduceCommandLineWithSeparateCRLAShuffle() throws Exception {
     final Configuration conf = new Configuration();
     conf.setBoolean(MRJobConfig.REDUCE_SEPARATE_SHUFFLE_LOG, true);
@@ -97,7 +103,8 @@ public class TestMapReduceChildJVM {
     testReduceCommandLine(conf);
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testReduceCommandLine() throws Exception {
     final Configuration conf = new Configuration();
     testReduceCommandLine(conf);
@@ -120,7 +127,7 @@ public class TestMapReduceChildJVM {
         ? "shuffleCRLA"
         : "shuffleCLA";
 
-    Assert.assertEquals(
+    assertEquals(
         "[" + MRApps.crossPlatformify("JAVA_HOME") + "/bin/java" +
             " -Djava.net.preferIPv4Stack=true" +
             " -Dhadoop.metrics.log.level=WARN " +
@@ -140,16 +147,16 @@ public class TestMapReduceChildJVM {
             " 1><LOG_DIR>/stdout" +
             " 2><LOG_DIR>/stderr ]", app.launchCmdList.get(0));
 
-    Assert.assertTrue("HADOOP_ROOT_LOGGER not set for job",
-        app.cmdEnvironment.containsKey("HADOOP_ROOT_LOGGER"));
-    Assert.assertEquals("INFO,console",
-        app.cmdEnvironment.get("HADOOP_ROOT_LOGGER"));
-    Assert.assertTrue("HADOOP_CLIENT_OPTS not set for job",
-        app.cmdEnvironment.containsKey("HADOOP_CLIENT_OPTS"));
-    Assert.assertEquals("", app.cmdEnvironment.get("HADOOP_CLIENT_OPTS"));
+    assertTrue(app.cmdEnvironment.containsKey("HADOOP_ROOT_LOGGER"),
+        "HADOOP_ROOT_LOGGER not set for job");
+    assertEquals("INFO,console", app.cmdEnvironment.get("HADOOP_ROOT_LOGGER"));
+    assertTrue(app.cmdEnvironment.containsKey("HADOOP_CLIENT_OPTS"),
+        "HADOOP_CLIENT_OPTS not set for job");
+    assertEquals("", app.cmdEnvironment.get("HADOOP_CLIENT_OPTS"));
   }
   
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testCommandLineWithLog4JConfig() throws Exception {
 
     MyMRApp app = new MyMRApp(1, 0, true, this.getClass().getName(), true);
@@ -162,7 +169,7 @@ public class TestMapReduceChildJVM {
     app.waitForState(job, JobState.SUCCEEDED);
     app.verifyCompleted();
 
-    Assert.assertEquals(
+    assertEquals(
       "[" + MRApps.crossPlatformify("JAVA_HOME") + "/bin/java" +
       " -Djava.net.preferIPv4Stack=true" +
       " -Dhadoop.metrics.log.level=WARN " +
@@ -204,10 +211,8 @@ public class TestMapReduceChildJVM {
         MRJobConfig.DEFAULT_HEAP_MEMORY_MB_RATIO);
 
     // Verify map and reduce java opts are not set by default
-    Assert.assertNull("Default map java opts!",
-        conf.get(MRJobConfig.MAP_JAVA_OPTS));
-    Assert.assertNull("Default reduce java opts!",
-        conf.get(MRJobConfig.REDUCE_JAVA_OPTS));
+    assertNull(conf.get(MRJobConfig.MAP_JAVA_OPTS), "Default map java opts!");
+    assertNull(conf.get(MRJobConfig.REDUCE_JAVA_OPTS), "Default reduce java opts!");
     // Set the memory-mbs and java-opts
     if (mapMb > 0) {
       conf.setInt(MRJobConfig.MAP_MEMORY_MB, mapMb);
@@ -243,8 +248,8 @@ public class TestMapReduceChildJVM {
             : MRJobConfig.REDUCE_JAVA_OPTS);
         heapMb = JobConf.parseMaximumHeapSizeMB(javaOpts);
       }
-      Assert.assertEquals("Incorrect heapsize in the command opts",
-          heapMb, JobConf.parseMaximumHeapSizeMB(cmd));
+      assertEquals(heapMb, JobConf.parseMaximumHeapSizeMB(cmd),
+          "Incorrect heapsize in the command opts");
     }
   }
 
@@ -289,13 +294,12 @@ public class TestMapReduceChildJVM {
     app.waitForState(job, JobState.SUCCEEDED);
     app.verifyCompleted();
     
-    Assert.assertTrue("HADOOP_ROOT_LOGGER not set for job",
-        app.cmdEnvironment.containsKey("HADOOP_ROOT_LOGGER"));
-    Assert.assertEquals("WARN,console",
-        app.cmdEnvironment.get("HADOOP_ROOT_LOGGER"));
-    Assert.assertTrue("HADOOP_CLIENT_OPTS not set for job",
-        app.cmdEnvironment.containsKey("HADOOP_CLIENT_OPTS"));
-    Assert.assertEquals("test", app.cmdEnvironment.get("HADOOP_CLIENT_OPTS"));
+    assertTrue(app.cmdEnvironment.containsKey("HADOOP_ROOT_LOGGER"),
+        "HADOOP_ROOT_LOGGER not set for job");
+    assertEquals("WARN,console", app.cmdEnvironment.get("HADOOP_ROOT_LOGGER"));
+    assertTrue(app.cmdEnvironment.containsKey("HADOOP_CLIENT_OPTS"),
+        "HADOOP_CLIENT_OPTS not set for job");
+    assertEquals("test", app.cmdEnvironment.get("HADOOP_CLIENT_OPTS"));
 
     // Try one more.
     app = new MyMRApp(1, 0, true, this.getClass().getName(), true);
@@ -305,10 +309,9 @@ public class TestMapReduceChildJVM {
     app.waitForState(job, JobState.SUCCEEDED);
     app.verifyCompleted();
     
-    Assert.assertTrue("HADOOP_ROOT_LOGGER not set for job",
-        app.cmdEnvironment.containsKey("HADOOP_ROOT_LOGGER"));
-    Assert.assertEquals("trace",
-        app.cmdEnvironment.get("HADOOP_ROOT_LOGGER"));
+    assertTrue(app.cmdEnvironment.containsKey("HADOOP_ROOT_LOGGER"),
+        "HADOOP_ROOT_LOGGER not set for job");
+    assertEquals("trace", app.cmdEnvironment.get("HADOOP_ROOT_LOGGER"));
 
     // Try one using the mapreduce.task.env.var=value syntax
     app = new MyMRApp(1, 0, true, this.getClass().getName(), true);
@@ -319,9 +322,8 @@ public class TestMapReduceChildJVM {
     app.waitForState(job, JobState.SUCCEEDED);
     app.verifyCompleted();
 
-    Assert.assertTrue("HADOOP_ROOT_LOGGER not set for job",
-        app.cmdEnvironment.containsKey("HADOOP_ROOT_LOGGER"));
-    Assert.assertEquals("DEBUG,console",
-        app.cmdEnvironment.get("HADOOP_ROOT_LOGGER"));
+    assertTrue(app.cmdEnvironment.containsKey("HADOOP_ROOT_LOGGER"),
+        "HADOOP_ROOT_LOGGER not set for job");
+    assertEquals("DEBUG,console", app.cmdEnvironment.get("HADOOP_ROOT_LOGGER"));
   }
 }

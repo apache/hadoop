@@ -25,14 +25,14 @@ import org.apache.hadoop.fs.*;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /** Support for flat files of binary key/value pairs. */
 public class TestSetFile {
@@ -67,10 +67,13 @@ public class TestSetFile {
       int size = 10;
       writeData(fs, size);
       SetFile.Reader reader = createReader(fs);
-      assertTrue("testSetFileWithConstruction1 error !!!", reader.next(new IntWritable(0)));
+      assertTrue(reader.next(new IntWritable(0)),
+          "testSetFileWithConstruction1 error !!!");
       // don't know why reader.get(i) return i+1
-      assertEquals("testSetFileWithConstruction2 error !!!", new IntWritable(size/2 + 1), reader.get(new IntWritable(size/2)));      
-      assertNull("testSetFileWithConstruction3 error !!!", reader.get(new IntWritable(size*2)));
+      assertEquals(new IntWritable(size/2 + 1), reader.get(new IntWritable(size/2)),
+          "testSetFileWithConstruction2 error !!!");
+      assertNull(reader.get(new IntWritable(size*2)),
+          "testSetFileWithConstruction3 error !!!");
     } catch (Exception ex) {
       fail("testSetFileWithConstruction error !!!");    
     }

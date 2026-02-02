@@ -18,9 +18,10 @@
 
 package org.apache.hadoop.streaming;
 
-import org.junit.Test;
-import org.junit.Before;
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.*;
 import java.util.*;
@@ -62,7 +63,7 @@ public class TestStreamingExitStatus
     };
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     UtilTest.recursiveDelete(TEST_DIR);
     assertTrue(TEST_DIR.mkdirs());
@@ -80,9 +81,9 @@ public class TestStreamingExitStatus
     returnStatus = job.go();
     
     if (exitStatusIsFailure) {
-      assertEquals("Streaming Job failure code expected", /*job not successful:*/1, returnStatus);
+      assertEquals(/*job not successful:*/1, returnStatus, "Streaming Job failure code expected");
     } else {
-      assertEquals("Streaming Job expected to succeed", 0, returnStatus);
+      assertEquals(0, returnStatus, "Streaming Job expected to succeed");
     }
   }
 

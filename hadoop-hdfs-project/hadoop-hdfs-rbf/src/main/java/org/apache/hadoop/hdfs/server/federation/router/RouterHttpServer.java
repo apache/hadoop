@@ -82,7 +82,7 @@ public class RouterHttpServer extends AbstractService {
   protected void serviceStart() throws Exception {
     // Build and start server
     String webApp = "router";
-    HttpServer2.Builder builder = DFSUtil.httpServerTemplateForNNAndJN(
+    HttpServer2.Builder builder = DFSUtil.getHttpServerTemplate(
         this.conf, this.httpAddress, this.httpsAddress, webApp,
         RBFConfigKeys.DFS_ROUTER_KERBEROS_INTERNAL_SPNEGO_PRINCIPAL_KEY,
         RBFConfigKeys.DFS_ROUTER_KEYTAB_FILE_KEY);

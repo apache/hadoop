@@ -17,7 +17,8 @@
  */
 package org.apache.hadoop.hdfs;
 
-import org.junit.rules.TemporaryFolder;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
@@ -41,12 +42,9 @@ import org.apache.hadoop.io.erasurecode.ErasureCoderOptions;
 import org.apache.hadoop.io.erasurecode.rawcoder.NativeRSRawErasureCoderFactory;
 import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureDecoder;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -54,18 +52,22 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Random;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.spy;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.io.TempDir;
 
+@Timeout(300)
 public class TestDFSStripedInputStream {
 
   public static final Logger LOG =
@@ -84,17 +86,15 @@ public class TestDFSStripedInputStream {
   private int blockSize;
   private int blockGroupSize;
 
-  @Rule
-  public Timeout globalTimeout = new Timeout(300000);
-
-  @Rule
-  public TemporaryFolder baseDir = new TemporaryFolder();
+  @SuppressWarnings("checkstyle:VisibilityModifier")
+  @TempDir
+  java.nio.file.Path baseDir;
 
   public ErasureCodingPolicy getEcPolicy() {
     return StripedFileTestUtil.getDefaultECPolicy();
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException {
     /*
      * Initialize erasure coding policy.
@@ -119,7 +119,7 @@ public class TestDFSStripedInputStream {
   }
 
   private void startUp() throws IOException {
-    cluster = new MiniDFSCluster.Builder(conf, baseDir.getRoot()).numDataNodes(
+    cluster = new MiniDFSCluster.Builder(conf, baseDir.toFile()).numDataNodes(
         dataBlocks + parityBlocks).build();
     cluster.waitActive();
     for (DataNode dn : cluster.getDataNodes()) {
@@ -132,7 +132,7 @@ public class TestDFSStripedInputStream {
         .setErasureCodingPolicy(dirPath.toString(), ecPolicy.getName());
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     if (cluster != null) {
       cluster.shutdown();
@@ -218,9 +218,8 @@ public class TestDFSStripedInputStream {
       int ret = in.read(startOffset, buf, 0, fileLen);
       assertEquals(remaining, ret);
       for (int i = 0; i < remaining; i++) {
-        Assert.assertEquals("Byte at " + (startOffset + i) + " should be the " +
-                "same",
-            expected[startOffset + i], buf[i]);
+        assertEquals(expected[startOffset + i], buf[i],
+            "Byte at " + (startOffset + i) + " should be the " + "same");
       }
     }
     in.close();
@@ -739,4 +738,63 @@ public class TestDFSStripedInputStream {
     assertEquals(rangesExpected, ranges);
   }
 
+  @Test
+  public void testStatefulReadRetryWhenMoreThanParityFailOnce() throws Exception {
+    HdfsConfiguration hdfsConf = new HdfsConfiguration();
+    String testBaseDir = "/testECRead";
+    String testfileName = "testfile";
+    DFSClientFaultInjector old = DFSClientFaultInjector.get();
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(hdfsConf)
+        .numDataNodes(9).build()) {
+      cluster.waitActive();
+      final DistributedFileSystem dfs = cluster.getFileSystem();
+      Path dir = new Path(testBaseDir);
+      assertTrue(dfs.mkdirs(dir));
+      dfs.enableErasureCodingPolicy("RS-6-3-1024k");
+      dfs.setErasureCodingPolicy(dir, "RS-6-3-1024k");
+      assertEquals("RS-6-3-1024k", dfs.getErasureCodingPolicy(dir).getName());
+
+      int writeBufSize = 30 * 1024 * 1024 + 1;
+      byte[] writeBuf = new byte[writeBufSize];
+      try (FSDataOutputStream fsdos = dfs.create(
+          new Path(testBaseDir + Path.SEPARATOR + testfileName))) {
+        Random random = new Random();
+        random.nextBytes(writeBuf);
+        fsdos.write(writeBuf, 0, writeBuf.length);
+        Thread.sleep(1000);
+      }
+      FileStatus fileStatus = dfs.getFileStatus(
+          new Path(testBaseDir + Path.SEPARATOR + testfileName));
+      assertEquals(writeBufSize, fileStatus.getLen());
+
+      DFSClientFaultInjector.set(new DFSClientFaultInjector() {
+        @Override
+        public void failWhenReadWithStrategy(boolean isRetryRead) throws IOException {
+          if (!isRetryRead) {
+            throw new IOException("Mock more than parity num blocks fail when readOneStripe.");
+          }
+        }
+      });
+
+      // We use unaligned buffer size to trigger some corner cases.
+      byte[] readBuf = new byte[4095];
+      byte[] totalReadBuf = new byte[writeBufSize]; // Buffer to store all read data
+      int ret = 0;
+      int totalReadBytes = 0;
+      try (FSDataInputStream fsdis = dfs.open(
+          new Path(testBaseDir + Path.SEPARATOR + testfileName))) {
+        while((ret = fsdis.read(readBuf)) > 0) {
+          System.arraycopy(readBuf, 0, totalReadBuf, totalReadBytes, ret);
+          totalReadBytes += ret;
+        }
+
+        // Compare the read data with the original writeBuf.
+        assertEquals(writeBufSize, totalReadBytes, "Total bytes read should match writeBuf size");
+        assertArrayEquals(writeBuf, totalReadBuf, "Read data should match original write data");
+      }
+      assertTrue(dfs.delete(new Path(testBaseDir + Path.SEPARATOR + testfileName), true));
+    } finally {
+      DFSClientFaultInjector.set(old);
+    }
+  }
 }

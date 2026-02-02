@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.s3a.audit;
 
 import java.io.IOException;
+import java.util.EnumSet;
 import java.util.List;
 
 import software.amazon.awssdk.core.interceptor.ExecutionInterceptor;
@@ -90,4 +91,10 @@ public interface AuditManagerS3A extends Service,
    */
   boolean checkAccess(Path path, S3AFileStatus status, FsAction mode)
       throws IOException;
+
+  /**
+   * Update audit flags, especially the out of span rejection option.
+   * @param flags audit flags.
+   */
+  void setAuditFlags(EnumSet<AuditorFlags> flags);
 }

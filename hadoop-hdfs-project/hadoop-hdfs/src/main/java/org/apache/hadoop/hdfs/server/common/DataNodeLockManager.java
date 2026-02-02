@@ -24,12 +24,17 @@ package org.apache.hadoop.hdfs.server.common;
 public interface DataNodeLockManager<T extends AutoCloseDataSetLock> {
 
   /**
-   * Acquire block pool level first if you want to Acquire volume lock.
+   * Acquire block pool level and volume level lock first if you want to acquire dir lock.
    * Or only acquire block pool level lock.
+   * There are several locking sequential patterns as below:
+   * 1. block pool
+   * 2. block pool -&gt; volume
+   * 3. block pool level -&gt; volume -&gt; dir
    */
   enum LockLevel {
     BLOCK_POOl,
-    VOLUME
+    VOLUME,
+    DIR
   }
 
   /**

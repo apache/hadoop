@@ -19,8 +19,8 @@ package org.apache.hadoop.tools.dynamometer.blockgenerator;
 
 import java.util.HashMap;
 import java.util.Map;
-import org.junit.Test;
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
 
 
 /** Tests for {@link XMLParser}. */

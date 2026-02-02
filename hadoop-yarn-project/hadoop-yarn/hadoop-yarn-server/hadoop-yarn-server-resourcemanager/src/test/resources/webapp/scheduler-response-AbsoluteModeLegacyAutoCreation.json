@@ -43,7 +43,6 @@
             "vCores" : 0,
             "resourceInformations" : {
               "resourceInformation" : [ {
-                "attributes" : { },
                 "maximumAllocation" : 9223372036854775807,
                 "minimumAllocation" : 0,
                 "name" : "memory-mb",
@@ -51,7 +50,6 @@
                 "units" : "Mi",
                 "value" : 0
               }, {
-                "attributes" : { },
                 "maximumAllocation" : 9223372036854775807,
                 "minimumAllocation" : 0,
                 "name" : "vcores",
@@ -93,7 +91,6 @@
                 "vCores" : 28,
                 "resourceInformations" : {
                   "resourceInformation" : [ {
-                    "attributes" : { },
                     "maximumAllocation" : 9223372036854775807,
                     "minimumAllocation" : 0,
                     "name" : "memory-mb",
@@ -101,7 +98,6 @@
                     "units" : "Mi",
                     "value" : 28672
                   }, {
-                    "attributes" : { },
                     "maximumAllocation" : 9223372036854775807,
                     "minimumAllocation" : 0,
                     "name" : "vcores",
@@ -116,7 +112,6 @@
                 "vCores" : 0,
                 "resourceInformations" : {
                   "resourceInformation" : [ {
-                    "attributes" : { },
                     "maximumAllocation" : 8192,
                     "minimumAllocation" : 1024,
                     "name" : "memory-mb",
@@ -124,7 +119,6 @@
                     "units" : "Mi",
                     "value" : 0
                   }, {
-                    "attributes" : { },
                     "maximumAllocation" : 4,
                     "minimumAllocation" : 1,
                     "name" : "vcores",
@@ -139,7 +133,6 @@
                 "vCores" : 28,
                 "resourceInformations" : {
                   "resourceInformation" : [ {
-                    "attributes" : { },
                     "maximumAllocation" : 9223372036854775807,
                     "minimumAllocation" : 0,
                     "name" : "memory-mb",
@@ -147,7 +140,6 @@
                     "units" : "Mi",
                     "value" : 28672
                   }, {
-                    "attributes" : { },
                     "maximumAllocation" : 9223372036854775807,
                     "minimumAllocation" : 0,
                     "name" : "vcores",
@@ -162,7 +154,6 @@
                 "vCores" : 32,
                 "resourceInformations" : {
                   "resourceInformation" : [ {
-                    "attributes" : { },
                     "maximumAllocation" : 9223372036854775807,
                     "minimumAllocation" : 0,
                     "name" : "memory-mb",
@@ -170,7 +161,6 @@
                     "units" : "Mi",
                     "value" : 32768
                   }, {
-                    "attributes" : { },
                     "maximumAllocation" : 9223372036854775807,
                     "minimumAllocation" : 0,
                     "name" : "vcores",
@@ -190,7 +180,6 @@
                 "vCores" : 0,
                 "resourceInformations" : {
                   "resourceInformation" : [ {
-                    "attributes" : { },
                     "maximumAllocation" : 9223372036854775807,
                     "minimumAllocation" : 0,
                     "name" : "memory-mb",
@@ -198,7 +187,6 @@
                     "units" : "Mi",
                     "value" : 0
                   }, {
-                    "attributes" : { },
                     "maximumAllocation" : 9223372036854775807,
                     "minimumAllocation" : 0,
                     "name" : "vcores",
@@ -213,7 +201,6 @@
                 "vCores" : 0,
                 "resourceInformations" : {
                   "resourceInformation" : [ {
-                    "attributes" : { },
                     "maximumAllocation" : 9223372036854775807,
                     "minimumAllocation" : 0,
                     "name" : "memory-mb",
@@ -221,7 +208,6 @@
                     "units" : "Mi",
                     "value" : 0
                   }, {
-                    "attributes" : { },
                     "maximumAllocation" : 9223372036854775807,
                     "minimumAllocation" : 0,
                     "name" : "vcores",
@@ -236,7 +222,6 @@
                 "vCores" : 0,
                 "resourceInformations" : {
                   "resourceInformation" : [ {
-                    "attributes" : { },
                     "maximumAllocation" : 9223372036854775807,
                     "minimumAllocation" : 0,
                     "name" : "memory-mb",
@@ -244,7 +229,6 @@
                     "units" : "Mi",
                     "value" : 0
                   }, {
-                    "attributes" : { },
                     "maximumAllocation" : 9223372036854775807,
                     "minimumAllocation" : 0,
                     "name" : "vcores",
@@ -259,7 +243,6 @@
                 "vCores" : 0,
                 "resourceInformations" : {
                   "resourceInformation" : [ {
-                    "attributes" : { },
                     "maximumAllocation" : 9223372036854775807,
                     "minimumAllocation" : 0,
                     "name" : "memory-mb",
@@ -267,7 +250,6 @@
                     "units" : "Mi",
                     "value" : 0
                   }, {
-                    "attributes" : { },
                     "maximumAllocation" : 9223372036854775807,
                     "minimumAllocation" : 0,
                     "name" : "vcores",
@@ -282,7 +264,6 @@
                 "vCores" : 1,
                 "resourceInformations" : {
                   "resourceInformation" : [ {
-                    "attributes" : { },
                     "maximumAllocation" : 9223372036854775807,
                     "minimumAllocation" : 0,
                     "name" : "memory-mb",
@@ -290,7 +271,6 @@
                     "units" : "Mi",
                     "value" : 4096
                   }, {
-                    "attributes" : { },
                     "maximumAllocation" : 9223372036854775807,
                     "minimumAllocation" : 0,
                     "name" : "vcores",
@@ -305,7 +285,6 @@
                 "vCores" : 0,
                 "resourceInformations" : {
                   "resourceInformation" : [ {
-                    "attributes" : { },
                     "maximumAllocation" : 9223372036854775807,
                     "minimumAllocation" : 0,
                     "name" : "memory-mb",
@@ -313,7 +292,6 @@
                     "units" : "Mi",
                     "value" : 0
                   }, {
-                    "attributes" : { },
                     "maximumAllocation" : 9223372036854775807,
                     "minimumAllocation" : 0,
                     "name" : "vcores",
@@ -330,7 +308,6 @@
             "vCores" : 28,
             "resourceInformations" : {
               "resourceInformation" : [ {
-                "attributes" : { },
                 "maximumAllocation" : 9223372036854775807,
                 "minimumAllocation" : 0,
                 "name" : "memory-mb",
@@ -338,7 +315,6 @@
                 "units" : "Mi",
                 "value" : 28672
               }, {
-                "attributes" : { },
                 "maximumAllocation" : 9223372036854775807,
                 "minimumAllocation" : 0,
                 "name" : "vcores",
@@ -353,7 +329,6 @@
             "vCores" : 32,
             "resourceInformations" : {
               "resourceInformation" : [ {
-                "attributes" : { },
                 "maximumAllocation" : 9223372036854775807,
                 "minimumAllocation" : 0,
                 "name" : "memory-mb",
@@ -361,7 +336,6 @@
                 "units" : "Mi",
                 "value" : 32768
               }, {
-                "attributes" : { },
                 "maximumAllocation" : 9223372036854775807,
                 "minimumAllocation" : 0,
                 "name" : "vcores",
@@ -376,7 +350,6 @@
             "vCores" : 4,
             "resourceInformations" : {
               "resourceInformation" : [ {
-                "attributes" : { },
                 "maximumAllocation" : 9223372036854775807,
                 "minimumAllocation" : 0,
                 "name" : "memory-mb",
@@ -384,7 +357,6 @@
                 "units" : "Mi",
                 "value" : 8192
               }, {
-                "attributes" : { },
                 "maximumAllocation" : 9223372036854775807,
                 "minimumAllocation" : 0,
                 "name" : "vcores",
@@ -431,7 +403,6 @@
             "vCores" : 1,
             "resourceInformations" : {
               "resourceInformation" : [ {
-                "attributes" : { },
                 "maximumAllocation" : 9223372036854775807,
                 "minimumAllocation" : 0,
                 "name" : "memory-mb",
@@ -439,7 +410,6 @@
                 "units" : "Mi",
                 "value" : 4096
               }, {
-                "attributes" : { },
                 "maximumAllocation" : 9223372036854775807,
                 "minimumAllocation" : 0,
                 "name" : "vcores",
@@ -454,7 +424,6 @@
             "vCores" : 0,
             "resourceInformations" : {
               "resourceInformation" : [ {
-                "attributes" : { },
                 "maximumAllocation" : 9223372036854775807,
                 "minimumAllocation" : 0,
                 "name" : "memory-mb",
@@ -462,7 +431,6 @@
                 "units" : "Mi",
                 "value" : 0
               }, {
-                "attributes" : { },
                 "maximumAllocation" : 9223372036854775807,
                 "minimumAllocation" : 0,
                 "name" : "vcores",
@@ -477,7 +445,6 @@
             "vCores" : 1,
             "resourceInformations" : {
               "resourceInformation" : [ {
-                "attributes" : { },
                 "maximumAllocation" : 9223372036854775807,
                 "minimumAllocation" : 0,
                 "name" : "memory-mb",
@@ -485,7 +452,6 @@
                 "units" : "Mi",
                 "value" : 4096
               }, {
-                "attributes" : { },
                 "maximumAllocation" : 9223372036854775807,
                 "minimumAllocation" : 0,
                 "name" : "vcores",
@@ -538,7 +504,6 @@
                 "vCores" : 0,
                 "resourceInformations" : {
                   "resourceInformation" : [ {
-                    "attributes" : { },
                     "maximumAllocation" : 9223372036854775807,
                     "minimumAllocation" : 0,
                     "name" : "memory-mb",
@@ -546,7 +511,6 @@
                     "units" : "Mi",
                     "value" : 0
                   }, {
-                    "attributes" : { },
                     "maximumAllocation" : 9223372036854775807,
                     "minimumAllocation" : 0,
                     "name" : "vcores",
@@ -588,7 +552,6 @@
                     "vCores" : 2,
                     "resourceInformations" : {
                       "resourceInformation" : [ {
-                        "attributes" : { },
                         "maximumAllocation" : 9223372036854775807,
                         "minimumAllocation" : 0,
                         "name" : "memory-mb",
@@ -596,7 +559,6 @@
                         "units" : "Mi",
                         "value" : 2048
                       }, {
-                        "attributes" : { },
                         "maximumAllocation" : 9223372036854775807,
                         "minimumAllocation" : 0,
                         "name" : "vcores",
@@ -611,7 +573,6 @@
                     "vCores" : 0,
                     "resourceInformations" : {
                       "resourceInformation" : [ {
-                        "attributes" : { },
                         "maximumAllocation" : 8192,
                         "minimumAllocation" : 1024,
                         "name" : "memory-mb",
@@ -619,7 +580,6 @@
                         "units" : "Mi",
                         "value" : 0
                       }, {
-                        "attributes" : { },
                         "maximumAllocation" : 4,
                         "minimumAllocation" : 1,
                         "name" : "vcores",
@@ -634,7 +594,6 @@
                     "vCores" : 2,
                     "resourceInformations" : {
                       "resourceInformation" : [ {
-                        "attributes" : { },
                         "maximumAllocation" : 9223372036854775807,
                         "minimumAllocation" : 0,
                         "name" : "memory-mb",
@@ -642,7 +601,6 @@
                         "units" : "Mi",
                         "value" : 2048
                       }, {
-                        "attributes" : { },
                         "maximumAllocation" : 9223372036854775807,
                         "minimumAllocation" : 0,
                         "name" : "vcores",
@@ -657,7 +615,6 @@
                     "vCores" : 32,
                     "resourceInformations" : {
                       "resourceInformation" : [ {
-                        "attributes" : { },
                         "maximumAllocation" : 9223372036854775807,
                         "minimumAllocation" : 0,
                         "name" : "memory-mb",
@@ -665,7 +622,6 @@
                         "units" : "Mi",
                         "value" : 32768
                       }, {
-                        "attributes" : { },
                         "maximumAllocation" : 9223372036854775807,
                         "minimumAllocation" : 0,
                         "name" : "vcores",
@@ -685,7 +641,6 @@
                     "vCores" : 0,
                     "resourceInformations" : {
                       "resourceInformation" : [ {
-                        "attributes" : { },
                         "maximumAllocation" : 9223372036854775807,
                         "minimumAllocation" : 0,
                         "name" : "memory-mb",
@@ -693,7 +648,6 @@
                         "units" : "Mi",
                         "value" : 0
                       }, {
-                        "attributes" : { },
                         "maximumAllocation" : 9223372036854775807,
                         "minimumAllocation" : 0,
                         "name" : "vcores",
@@ -708,7 +662,6 @@
                     "vCores" : 0,
                     "resourceInformations" : {
                       "resourceInformation" : [ {
-                        "attributes" : { },
                         "maximumAllocation" : 9223372036854775807,
                         "minimumAllocation" : 0,
                         "name" : "memory-mb",
@@ -716,7 +669,6 @@
                         "units" : "Mi",
                         "value" : 0
                       }, {
-                        "attributes" : { },
                         "maximumAllocation" : 9223372036854775807,
                         "minimumAllocation" : 0,
                         "name" : "vcores",
@@ -731,7 +683,6 @@
                     "vCores" : 0,
                     "resourceInformations" : {
                       "resourceInformation" : [ {
-                        "attributes" : { },
                         "maximumAllocation" : 9223372036854775807,
                         "minimumAllocation" : 0,
                         "name" : "memory-mb",
@@ -739,7 +690,6 @@
                         "units" : "Mi",
                         "value" : 0
                       }, {
-                        "attributes" : { },
                         "maximumAllocation" : 9223372036854775807,
                         "minimumAllocation" : 0,
                         "name" : "vcores",
@@ -754,7 +704,6 @@
                     "vCores" : 0,
                     "resourceInformations" : {
                       "resourceInformation" : [ {
-                        "attributes" : { },
                         "maximumAllocation" : 9223372036854775807,
                         "minimumAllocation" : 0,
                         "name" : "memory-mb",
@@ -762,7 +711,6 @@
                         "units" : "Mi",
                         "value" : 0
                       }, {
-                        "attributes" : { },
                         "maximumAllocation" : 9223372036854775807,
                         "minimumAllocation" : 0,
                         "name" : "vcores",
@@ -777,7 +725,6 @@
                     "vCores" : 1,
                     "resourceInformations" : {
                       "resourceInformation" : [ {
-                        "attributes" : { },
                         "maximumAllocation" : 9223372036854775807,
                         "minimumAllocation" : 0,
                         "name" : "memory-mb",
@@ -785,7 +732,6 @@
                         "units" : "Mi",
                         "value" : 4096
                       }, {
-                        "attributes" : { },
                         "maximumAllocation" : 9223372036854775807,
                         "minimumAllocation" : 0,
                         "name" : "vcores",
@@ -800,7 +746,6 @@
                     "vCores" : 0,
                     "resourceInformations" : {
                       "resourceInformation" : [ {
-                        "attributes" : { },
                         "maximumAllocation" : 9223372036854775807,
                         "minimumAllocation" : 0,
                         "name" : "memory-mb",
@@ -808,7 +753,6 @@
                         "units" : "Mi",
                         "value" : 0
                       }, {
-                        "attributes" : { },
                         "maximumAllocation" : 9223372036854775807,
                         "minimumAllocation" : 0,
                         "name" : "vcores",
@@ -825,7 +769,6 @@
                 "vCores" : 2,
                 "resourceInformations" : {
                   "resourceInformation" : [ {
-                    "attributes" : { },
                     "maximumAllocation" : 9223372036854775807,
                     "minimumAllocation" : 0,
                     "name" : "memory-mb",
@@ -833,7 +776,6 @@
                     "units" : "Mi",
                     "value" : 2048
                   }, {
-                    "attributes" : { },
                     "maximumAllocation" : 9223372036854775807,
                     "minimumAllocation" : 0,
                     "name" : "vcores",
@@ -848,7 +790,6 @@
                 "vCores" : 32,
                 "resourceInformations" : {
                   "resourceInformation" : [ {
-                    "attributes" : { },
                     "maximumAllocation" : 9223372036854775807,
                     "minimumAllocation" : 0,
                     "name" : "memory-mb",
@@ -856,7 +797,6 @@
                     "units" : "Mi",
                     "value" : 32768
                   }, {
-                    "attributes" : { },
                     "maximumAllocation" : 9223372036854775807,
                     "minimumAllocation" : 0,
                     "name" : "vcores",
@@ -871,7 +811,6 @@
                 "vCores" : 4,
                 "resourceInformations" : {
                   "resourceInformation" : [ {
-                    "attributes" : { },
                     "maximumAllocation" : 9223372036854775807,
                     "minimumAllocation" : 0,
                     "name" : "memory-mb",
@@ -879,7 +818,6 @@
                     "units" : "Mi",
                     "value" : 8192
                   }, {
-                    "attributes" : { },
                     "maximumAllocation" : 9223372036854775807,
                     "minimumAllocation" : 0,
                     "name" : "vcores",
@@ -926,7 +864,6 @@
                 "vCores" : 1,
                 "resourceInformations" : {
                   "resourceInformation" : [ {
-                    "attributes" : { },
                     "maximumAllocation" : 9223372036854775807,
                     "minimumAllocation" : 0,
                     "name" : "memory-mb",
@@ -934,7 +871,6 @@
                     "units" : "Mi",
                     "value" : 4096
                   }, {
-                    "attributes" : { },
                     "maximumAllocation" : 9223372036854775807,
                     "minimumAllocation" : 0,
                     "name" : "vcores",
@@ -949,7 +885,6 @@
                 "vCores" : 0,
                 "resourceInformations" : {
                   "resourceInformation" : [ {
-                    "attributes" : { },
                     "maximumAllocation" : 9223372036854775807,
                     "minimumAllocation" : 0,
                     "name" : "memory-mb",
@@ -957,7 +892,6 @@
                     "units" : "Mi",
                     "value" : 0
                   }, {
-                    "attributes" : { },
                     "maximumAllocation" : 9223372036854775807,
                     "minimumAllocation" : 0,
                     "name" : "vcores",
@@ -972,7 +906,6 @@
                 "vCores" : 1,
                 "resourceInformations" : {
                   "resourceInformation" : [ {
-                    "attributes" : { },
                     "maximumAllocation" : 9223372036854775807,
                     "minimumAllocation" : 0,
                     "name" : "memory-mb",
@@ -980,7 +913,6 @@
                     "units" : "Mi",
                     "value" : 4096
                   }, {
-                    "attributes" : { },
                     "maximumAllocation" : 9223372036854775807,
                     "minimumAllocation" : 0,
                     "name" : "vcores",
@@ -1003,7 +935,6 @@
             "vCores" : 0,
             "resourceInformations" : {
               "resourceInformation" : [ {
-                "attributes" : { },
                 "maximumAllocation" : 9223372036854775807,
                 "minimumAllocation" : 0,
                 "name" : "memory-mb",
@@ -1011,7 +942,6 @@
                 "units" : "Mi",
                 "value" : 0
               }, {
-                "attributes" : { },
                 "maximumAllocation" : 9223372036854775807,
                 "minimumAllocation" : 0,
                 "name" : "vcores",
@@ -1053,7 +983,6 @@
                 "vCores" : 4,
                 "resourceInformations" : {
                   "resourceInformation" : [ {
-                    "attributes" : { },
                     "maximumAllocation" : 9223372036854775807,
                     "minimumAllocation" : 0,
                     "name" : "memory-mb",
@@ -1061,7 +990,6 @@
                     "units" : "Mi",
                     "value" : 4096
                   }, {
-                    "attributes" : { },
                     "maximumAllocation" : 9223372036854775807,
                     "minimumAllocation" : 0,
                     "name" : "vcores",
@@ -1076,7 +1004,6 @@
                 "vCores" : 0,
                 "resourceInformations" : {
                   "resourceInformation" : [ {
-                    "attributes" : { },
                     "maximumAllocation" : 8192,
                     "minimumAllocation" : 1024,
                     "name" : "memory-mb",
@@ -1084,7 +1011,6 @@
                     "units" : "Mi",
                     "value" : 0
                   }, {
-                    "attributes" : { },
                     "maximumAllocation" : 4,
                     "minimumAllocation" : 1,
                     "name" : "vcores",
@@ -1099,7 +1025,6 @@
                 "vCores" : 4,
                 "resourceInformations" : {
                   "resourceInformation" : [ {
-                    "attributes" : { },
                     "maximumAllocation" : 9223372036854775807,
                     "minimumAllocation" : 0,
                     "name" : "memory-mb",
@@ -1107,7 +1032,6 @@
                     "units" : "Mi",
                     "value" : 4096
                   }, {
-                    "attributes" : { },
                     "maximumAllocation" : 9223372036854775807,
                     "minimumAllocation" : 0,
                     "name" : "vcores",
@@ -1122,7 +1046,6 @@
                 "vCores" : 32,
                 "resourceInformations" : {
                   "resourceInformation" : [ {
-                    "attributes" : { },
                     "maximumAllocation" : 9223372036854775807,
                     "minimumAllocation" : 0,
                     "name" : "memory-mb",
@@ -1130,7 +1053,6 @@
                     "units" : "Mi",
                     "value" : 32768
                   }, {
-                    "attributes" : { },
                     "maximumAllocation" : 9223372036854775807,
                     "minimumAllocation" : 0,
                     "name" : "vcores",
@@ -1150,7 +1072,6 @@
                 "vCores" : 0,
                 "resourceInformations" : {
                   "resourceInformation" : [ {
-                    "attributes" : { },
                     "maximumAllocation" : 9223372036854775807,
                     "minimumAllocation" : 0,
                     "name" : "memory-mb",
@@ -1158,7 +1079,6 @@
                     "units" : "Mi",
                     "value" : 0
                   }, {
-                    "attributes" : { },
                     "maximumAllocation" : 9223372036854775807,
                     "minimumAllocation" : 0,
                     "name" : "vcores",
@@ -1173,7 +1093,6 @@
                 "vCores" : 0,
                 "resourceInformations" : {
                   "resourceInformation" : [ {
-                    "attributes" : { },
                     "maximumAllocation" : 9223372036854775807,
                     "minimumAllocation" : 0,
                     "name" : "memory-mb",
@@ -1181,7 +1100,6 @@
                     "units" : "Mi",
                     "value" : 0
                   }, {
-                    "attributes" : { },
                     "maximumAllocation" : 9223372036854775807,
                     "minimumAllocation" : 0,
                     "name" : "vcores",
@@ -1196,7 +1114,6 @@
                 "vCores" : 0,
                 "resourceInformations" : {
                   "resourceInformation" : [ {
-                    "attributes" : { },
                     "maximumAllocation" : 9223372036854775807,
                     "minimumAllocation" : 0,
                     "name" : "memory-mb",
@@ -1204,7 +1121,6 @@
                     "units" : "Mi",
                     "value" : 0
                   }, {
-                    "attributes" : { },
                     "maximumAllocation" : 9223372036854775807,
                     "minimumAllocation" : 0,
                     "name" : "vcores",
@@ -1221,7 +1137,6 @@
             "vCores" : 4,
             "resourceInformations" : {
               "resourceInformation" : [ {
-                "attributes" : { },
                 "maximumAllocation" : 9223372036854775807,
                 "minimumAllocation" : 0,
                 "name" : "memory-mb",
@@ -1229,7 +1144,6 @@
                 "units" : "Mi",
                 "value" : 4096
               }, {
-                "attributes" : { },
                 "maximumAllocation" : 9223372036854775807,
                 "minimumAllocation" : 0,
                 "name" : "vcores",
@@ -1244,7 +1158,6 @@
             "vCores" : 32,
             "resourceInformations" : {
               "resourceInformation" : [ {
-                "attributes" : { },
                 "maximumAllocation" : 9223372036854775807,
                 "minimumAllocation" : 0,
                 "name" : "memory-mb",
@@ -1252,7 +1165,6 @@
                 "units" : "Mi",
                 "value" : 32768
               }, {
-                "attributes" : { },
                 "maximumAllocation" : 9223372036854775807,
                 "minimumAllocation" : 0,
                 "name" : "vcores",
@@ -1267,7 +1179,6 @@
             "vCores" : 4,
             "resourceInformations" : {
               "resourceInformation" : [ {
-                "attributes" : { },
                 "maximumAllocation" : 9223372036854775807,
                 "minimumAllocation" : 0,
                 "name" : "memory-mb",
@@ -1275,7 +1186,6 @@
                 "units" : "Mi",
                 "value" : 8192
               }, {
-                "attributes" : { },
                 "maximumAllocation" : 9223372036854775807,
                 "minimumAllocation" : 0,
                 "name" : "vcores",
@@ -1348,7 +1258,6 @@
             "vCores" : 0,
             "resourceInformations" : {
               "resourceInformation" : [ {
-                "attributes" : { },
                 "maximumAllocation" : 8192,
                 "minimumAllocation" : 1024,
                 "name" : "memory-mb",
@@ -1356,7 +1265,6 @@
                 "units" : "Mi",
                 "value" : 0
               }, {
-                "attributes" : { },
                 "maximumAllocation" : 4,
                 "minimumAllocation" : 1,
                 "name" : "vcores",
@@ -1371,7 +1279,6 @@
             "vCores" : 0,
             "resourceInformations" : {
               "resourceInformation" : [ {
-                "attributes" : { },
                 "maximumAllocation" : 8192,
                 "minimumAllocation" : 1024,
                 "name" : "memory-mb",
@@ -1379,7 +1286,6 @@
                 "units" : "Mi",
                 "value" : 0
               }, {
-                "attributes" : { },
                 "maximumAllocation" : 4,
                 "minimumAllocation" : 1,
                 "name" : "vcores",
@@ -1394,7 +1300,6 @@
             "vCores" : 32,
             "resourceInformations" : {
               "resourceInformation" : [ {
-                "attributes" : { },
                 "maximumAllocation" : 9223372036854775807,
                 "minimumAllocation" : 0,
                 "name" : "memory-mb",
@@ -1402,7 +1307,6 @@
                 "units" : "Mi",
                 "value" : 32768
               }, {
-                "attributes" : { },
                 "maximumAllocation" : 9223372036854775807,
                 "minimumAllocation" : 0,
                 "name" : "vcores",
@@ -1417,7 +1321,6 @@
             "vCores" : 32,
             "resourceInformations" : {
               "resourceInformation" : [ {
-                "attributes" : { },
                 "maximumAllocation" : 9223372036854775807,
                 "minimumAllocation" : 0,
                 "name" : "memory-mb",
@@ -1425,7 +1328,6 @@
                 "units" : "Mi",
                 "value" : 32768
               }, {
-                "attributes" : { },
                 "maximumAllocation" : 9223372036854775807,
                 "minimumAllocation" : 0,
                 "name" : "vcores",
@@ -1468,7 +1370,6 @@
             "vCores" : 0,
             "resourceInformations" : {
               "resourceInformation" : [ {
-                "attributes" : { },
                 "maximumAllocation" : 9223372036854775807,
                 "minimumAllocation" : 0,
                 "name" : "memory-mb",
@@ -1476,7 +1377,6 @@
                 "units" : "Mi",
                 "value" : 0
               }, {
-                "attributes" : { },
                 "maximumAllocation" : 9223372036854775807,
                 "minimumAllocation" : 0,
                 "name" : "vcores",
@@ -1494,7 +1394,6 @@
             "vCores" : 0,
             "resourceInformations" : {
               "resourceInformation" : [ {
-                "attributes" : { },
                 "maximumAllocation" : 9223372036854775807,
                 "minimumAllocation" : 0,
                 "name" : "memory-mb",
@@ -1502,7 +1401,6 @@
                 "units" : "Mi",
                 "value" : 0
               }, {
-                "attributes" : { },
                 "maximumAllocation" : 9223372036854775807,
                 "minimumAllocation" : 0,
                 "name" : "vcores",
@@ -1520,7 +1418,6 @@
             "vCores" : 0,
             "resourceInformations" : {
               "resourceInformation" : [ {
-                "attributes" : { },
                 "maximumAllocation" : 9223372036854775807,
                 "minimumAllocation" : 0,
                 "name" : "memory-mb",
@@ -1528,7 +1425,6 @@
                 "units" : "Mi",
                 "value" : 0
               }, {
-                "attributes" : { },
                 "maximumAllocation" : 9223372036854775807,
                 "minimumAllocation" : 0,
                 "name" : "vcores",
@@ -1545,7 +1441,6 @@
         "vCores" : 4,
         "resourceInformations" : {
           "resourceInformation" : [ {
-            "attributes" : { },
             "maximumAllocation" : 9223372036854775807,
             "minimumAllocation" : 0,
             "name" : "memory-mb",
@@ -1553,7 +1448,6 @@
             "units" : "Mi",
             "value" : 8192
           }, {
-            "attributes" : { },
             "maximumAllocation" : 9223372036854775807,
             "minimumAllocation" : 0,
             "name" : "vcores",

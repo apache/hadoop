@@ -19,6 +19,7 @@ package org.apache.hadoop.yarn.api.records.timelineservice;
 
 import javax.xml.bind.annotation.XmlElement;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
@@ -27,6 +28,7 @@ import org.apache.hadoop.classification.InterfaceStability;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class FlowRunEntity extends HierarchicalTimelineEntity {
   public static final String USER_INFO_KEY =
       TimelineEntity.SYSTEM_INFO_KEY_PREFIX + "USER";
@@ -107,7 +109,7 @@ public class FlowRunEntity extends HierarchicalTimelineEntity {
     addInfo(FLOW_RUN_ID_INFO_KEY, runId);
   }
 
-  public long getStartTime() {
+  public Long getStartTime() {
     return getCreatedTime();
   }
 

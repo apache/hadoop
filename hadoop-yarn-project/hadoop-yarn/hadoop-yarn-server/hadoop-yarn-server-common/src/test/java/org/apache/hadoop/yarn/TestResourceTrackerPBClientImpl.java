@@ -35,11 +35,13 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequ
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.UnRegisterNodeManagerRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.UnRegisterNodeManagerResponse;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Test ResourceTrackerPBClientImpl. this class should have methods
@@ -52,7 +54,7 @@ public class TestResourceTrackerPBClientImpl {
   private final static org.apache.hadoop.yarn.factories.RecordFactory recordFactory = RecordFactoryProvider
       .getRecordFactory(null);
 
-  @BeforeClass
+  @BeforeAll
   public static void start() {
     InetSocketAddress address = new InetSocketAddress(0);
     Configuration configuration = new Configuration();
@@ -67,7 +69,7 @@ public class TestResourceTrackerPBClientImpl {
 
   }
 
-  @AfterClass
+  @AfterAll
   public static void stop() {
     if (server != null) {
       server.stop();

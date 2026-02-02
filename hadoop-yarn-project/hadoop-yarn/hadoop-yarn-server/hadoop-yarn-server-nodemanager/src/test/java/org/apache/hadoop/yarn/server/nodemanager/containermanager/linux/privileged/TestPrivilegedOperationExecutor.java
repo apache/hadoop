@@ -22,9 +22,8 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privile
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -32,6 +31,9 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class TestPrivilegedOperationExecutor {
   private static final Logger LOG =
@@ -54,7 +56,7 @@ public class TestPrivilegedOperationExecutor {
   private PrivilegedOperation opTasks2;
   private PrivilegedOperation opTasks3;
 
-  @Before
+  @BeforeEach
   public void setup() {
     localDataDir = System.getProperty("test.build.data");
     customExecutorPath = localDataDir + "/bin/container-executor";
@@ -100,17 +102,17 @@ public class TestPrivilegedOperationExecutor {
         : new File("").getAbsolutePath();
     String expectedPath = yarnHome + "/bin/container-executor";
 
-    Assert.assertEquals(expectedPath, containerExePath);
+    assertEquals(expectedPath, containerExePath);
 
     containerExePath = PrivilegedOperationExecutor
         .getContainerExecutorExecutablePath(emptyConf);
-    Assert.assertEquals(expectedPath, containerExePath);
+    assertEquals(expectedPath, containerExePath);
 
     //if NM_LINUX_CONTAINER_EXECUTOR_PATH is set, this must be returned
     expectedPath = customExecutorPath;
     containerExePath = PrivilegedOperationExecutor
         .getContainerExecutorExecutablePath(confWithExecutorPath);
-    Assert.assertEquals(expectedPath, containerExePath);
+    assertEquals(expectedPath, containerExePath);
   }
 
   @Test
@@ -123,9 +125,9 @@ public class TestPrivilegedOperationExecutor {
 
     //No arguments added - so the resulting array should consist of
     //1)full path to executor 2) cli switch
-    Assert.assertEquals(2, cmdArray.length);
-    Assert.assertEquals(customExecutorPath, cmdArray[0]);
-    Assert.assertEquals(op.getOperationType().getOption(), cmdArray[1]);
+    assertEquals(2, cmdArray.length);
+    assertEquals(customExecutorPath, cmdArray[0]);
+    assertEquals(op.getOperationType().getOption(), cmdArray[1]);
 
     //other (dummy) arguments to tc modify state
     String[] additionalArgs = { "cmd_file_1", "cmd_file_2", "cmd_file_3"};
@@ -136,13 +138,13 @@ public class TestPrivilegedOperationExecutor {
     //Resulting array should be of length 2 greater than the number of
     //additional arguments added.
 
-    Assert.assertEquals(2 + additionalArgs.length, cmdArray.length);
-    Assert.assertEquals(customExecutorPath, cmdArray[0]);
-    Assert.assertEquals(op.getOperationType().getOption(), cmdArray[1]);
+    assertEquals(2 + additionalArgs.length, cmdArray.length);
+    assertEquals(customExecutorPath, cmdArray[0]);
+    assertEquals(op.getOperationType().getOption(), cmdArray[1]);
 
     //Rest of args should be same as additional args.
     for (int i = 0; i < additionalArgs.length; ++i) {
-      Assert.assertEquals(additionalArgs[i], cmdArray[2 + i]);
+      assertEquals(additionalArgs[i], cmdArray[2 + i]);
     }
 
     //Now test prefix commands
@@ -151,23 +153,23 @@ public class TestPrivilegedOperationExecutor {
     int prefixLength = prefixCommands.size();
     //Resulting array should be of length of prefix command args + 2 (exec
     // path + switch) + length of additional args.
-    Assert.assertEquals(prefixLength + 2 + additionalArgs.length,
+    assertEquals(prefixLength + 2 + additionalArgs.length,
         cmdArray.length);
 
     //Prefix command array comes first
     for (int i = 0; i < prefixLength; ++i) {
-      Assert.assertEquals(prefixCommands.get(i), cmdArray[i]);
+      assertEquals(prefixCommands.get(i), cmdArray[i]);
     }
 
     //Followed by the container executor path and the cli switch
-    Assert.assertEquals(customExecutorPath, cmdArray[prefixLength]);
-    Assert.assertEquals(op.getOperationType().getOption(),
+    assertEquals(customExecutorPath, cmdArray[prefixLength]);
+    assertEquals(op.getOperationType().getOption(),
         cmdArray[prefixLength + 1]);
 
     //Followed by the rest of the args
     //Rest of args should be same as additional args.
     for (int i = 0; i < additionalArgs.length; ++i) {
-      Assert.assertEquals(additionalArgs[i], cmdArray[prefixLength + 2 + i]);
+      assertEquals(additionalArgs[i], cmdArray[prefixLength + 2 + i]);
     }
   }
 
@@ -181,7 +183,7 @@ public class TestPrivilegedOperationExecutor {
 
     try {
       PrivilegedOperationExecutor.squashCGroupOperations(ops);
-      Assert.fail("Expected squash operation to fail with an exception!");
+      fail("Expected squash operation to fail with an exception!");
     } catch (PrivilegedOperationException e) {
       LOG.info("Caught expected exception : " + e);
     }
@@ -193,7 +195,7 @@ public class TestPrivilegedOperationExecutor {
 
     try {
       PrivilegedOperationExecutor.squashCGroupOperations(ops);
-      Assert.fail("Expected squash operation to fail with an exception!");
+      fail("Expected squash operation to fail with an exception!");
     } catch (PrivilegedOperationException e) {
       LOG.info("Caught expected exception : " + e);
     }
@@ -222,12 +224,12 @@ public class TestPrivilegedOperationExecutor {
           .append(cGroupTasks3).toString();
 
       //We expect axactly one argument
-      Assert.assertEquals(1, op.getArguments().size());
+      assertEquals(1, op.getArguments().size());
       //Squashed list of tasks files
-      Assert.assertEquals(expected, op.getArguments().get(0));
+      assertEquals(expected, op.getArguments().get(0));
     } catch (PrivilegedOperationException e) {
       LOG.info("Caught unexpected exception : " + e);
-      Assert.fail("Caught unexpected exception: " + e);
+      fail("Caught unexpected exception: " + e);
     }
   }
 }

@@ -26,8 +26,14 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import static org.apache.hadoop.fs.FileSystemTestHelper.*;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.*;
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class TestChecksumFileSystem {
   static final String TEST_ROOT_DIR =
@@ -35,7 +41,7 @@ public class TestChecksumFileSystem {
 
   static LocalFileSystem localFs;
 
-  @Before
+  @BeforeEach
   public void resetLocalFs() throws Exception {
     localFs = FileSystem.getLocal(new Configuration());
     localFs.setVerifyChecksum(true);
@@ -77,12 +83,12 @@ public class TestChecksumFileSystem {
     readFile(localFs, testPath, 1025);
 
     localFs.delete(localFs.getChecksumFile(testPath), true);
-    assertTrue("checksum deleted", !localFs.exists(localFs.getChecksumFile(testPath)));
+    assertTrue(!localFs.exists(localFs.getChecksumFile(testPath)), "checksum deleted");
     
     //copying the wrong checksum file
     FileUtil.copy(localFs, localFs.getChecksumFile(testPath11), localFs, 
         localFs.getChecksumFile(testPath),false,true,localFs.getConf());
-    assertTrue("checksum exists", localFs.exists(localFs.getChecksumFile(testPath)));
+    assertTrue(localFs.exists(localFs.getChecksumFile(testPath)), "checksum exists");
     
     boolean errorRead = false;
     try {
@@ -90,12 +96,12 @@ public class TestChecksumFileSystem {
     }catch(ChecksumException ie) {
       errorRead = true;
     }
-    assertTrue("error reading", errorRead);
+    assertTrue(errorRead, "error reading");
     
     //now setting verify false, the read should succeed
     localFs.setVerifyChecksum(false);
     String str = readFile(localFs, testPath, 1024).toString();
-    assertTrue("read", "testing".equals(str));
+    assertTrue("testing".equals(str), "read");
   }
 
   @Test
@@ -153,7 +159,7 @@ public class TestChecksumFileSystem {
     // telling it not to verify checksums, should avoid issue.
     localFs.setVerifyChecksum(false);
     String str = readFile(localFs, testPath, 1024).toString();
-    assertTrue("read", "testing truncation".equals(str));
+    assertTrue("testing truncation".equals(str), "read");
   }
   
   @Test
@@ -164,13 +170,11 @@ public class TestChecksumFileSystem {
     
     localFs.setVerifyChecksum(true);
     in = localFs.open(testPath);
-    assertTrue("stream is input checker",
-        in.getWrappedStream() instanceof FSInputChecker);
+    assertTrue(in.getWrappedStream() instanceof FSInputChecker, "stream is input checker");
     
     localFs.setVerifyChecksum(false);
     in = localFs.open(testPath);
-    assertFalse("stream is not input checker",
-        in.getWrappedStream() instanceof FSInputChecker);
+    assertFalse(in.getWrappedStream() instanceof FSInputChecker, "stream is not input checker");
   }
   
   @Test
@@ -200,7 +204,7 @@ public class TestChecksumFileSystem {
     } catch (ChecksumException ce) {
       e = ce;
     } finally {
-      assertNotNull("got checksum error", e);
+      assertNotNull(e, "got checksum error");
     }
 
     localFs.setVerifyChecksum(false);

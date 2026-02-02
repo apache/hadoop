@@ -19,6 +19,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.service.Service;
+import org.apache.hadoop.test.TestName;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
@@ -58,10 +59,9 @@ import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatcher;
 import org.mockito.invocation.InvocationOnMock;
@@ -81,11 +81,11 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType.MARK_CONTAINER_FOR_KILLABLE;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType.MARK_CONTAINER_FOR_PREEMPTION;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
@@ -148,11 +148,12 @@ public class TestProportionalCapacityPreemptionPolicy {
     public int getValue() {
       return this.value;
     }
-  };  
+  };
 
-  @Rule public TestName name = new TestName();
+  @RegisterExtension
+  private TestName name = new TestName();
 
-  @Before
+  @BeforeEach
   @SuppressWarnings("unchecked")
   public void setup() {
     conf = new CapacitySchedulerConfiguration(new Configuration(false));
@@ -400,8 +401,8 @@ public class TestProportionalCapacityPreemptionPolicy {
     ApplicationAttemptId expectedAttemptOnQueueB = 
         ApplicationAttemptId.newInstance(
             appA.getApplicationId(), appA.getAttemptId());
-    assertTrue("appA should be running on queueB",
-        mCS.getAppsInQueue("queueB").contains(expectedAttemptOnQueueB));
+    assertTrue(mCS.getAppsInQueue("queueB").contains(expectedAttemptOnQueueB),
+        "appA should be running on queueB");
     verify(mDisp, times(10)).handle(argThat(new IsPreemptionRequestFor(appA)));
 
     // Need to call setup() again to reset mDisp
@@ -418,10 +419,10 @@ public class TestProportionalCapacityPreemptionPolicy {
             appC.getApplicationId(), appC.getAttemptId());
     // Now, all of queueB's (appA) over capacity is not preemptable, so neither
     // is queueA's. Verify that capacity is taken from queueE (appC).
-    assertTrue("appB should be running on queueC",
-        mCS.getAppsInQueue("queueC").contains(expectedAttemptOnQueueC));
-    assertTrue("appC should be running on queueE",
-        mCS.getAppsInQueue("queueE").contains(expectedAttemptOnQueueE));
+    assertTrue(mCS.getAppsInQueue("queueC").contains(expectedAttemptOnQueueC),
+        "appB should be running on queueC");
+    assertTrue(mCS.getAppsInQueue("queueE").contains(expectedAttemptOnQueueE),
+        "appC should be running on queueE");
     // Resources should have come from queueE (appC) and neither of queueA's
     // children.
     verify(mDisp, never()).handle(argThat(new IsPreemptionRequestFor(appA)));
@@ -1082,44 +1083,74 @@ public class TestProportionalCapacityPreemptionPolicy {
   }
 
   @Test
-  public void testLeafQueueNameExtraction() throws Exception {
-    ProportionalCapacityPreemptionPolicy policy =
-        buildPolicy(Q_DATA_FOR_IGNORE);
+  public void testLeafQueueNameExtractionWithFlexibleAQC() throws Exception {
+    ProportionalCapacityPreemptionPolicy policy = buildPolicy(Q_DATA_FOR_IGNORE);
     ParentQueue root = (ParentQueue) mCS.getRootQueue();
+
     root.addDynamicParentQueue("childlessFlexible");
-    List<CSQueue> queues = root.getChildQueues();
-    ArrayList<CSQueue> extendedQueues = new ArrayList<>();
-    LinkedList<ParentQueue> pqs = new LinkedList<>();
-    ParentQueue dynamicParent = mockParentQueue(
-        null, 0, pqs);
-    when(dynamicParent.getQueuePath()).thenReturn("root.dynamicParent");
-    when(dynamicParent.getQueueCapacities()).thenReturn(
-        new QueueCapacities(false));
-    QueueResourceQuotas dynamicParentQr = new QueueResourceQuotas();
-    dynamicParentQr.setEffectiveMaxResource(Resource.newInstance(1, 1));
-    dynamicParentQr.setEffectiveMinResource(Resources.createResource(1));
-    dynamicParentQr.setEffectiveMaxResource(RMNodeLabelsManager.NO_LABEL,
-        Resource.newInstance(1, 1));
-    dynamicParentQr.setEffectiveMinResource(RMNodeLabelsManager.NO_LABEL,
-        Resources.createResource(1));
-    when(dynamicParent.getQueueResourceQuotas()).thenReturn(dynamicParentQr);
-    when(dynamicParent.getEffectiveCapacity(RMNodeLabelsManager.NO_LABEL))
-        .thenReturn(Resources.createResource(1));
-    when(dynamicParent.getEffectiveMaxCapacity(RMNodeLabelsManager.NO_LABEL))
-        .thenReturn(Resource.newInstance(1, 1));
-    ResourceUsage resUsage = new ResourceUsage();
-    resUsage.setUsed(Resources.createResource(1024));
-    resUsage.setReserved(Resources.createResource(1024));
-    when(dynamicParent.getQueueResourceUsage()).thenReturn(resUsage);
-    when(dynamicParent.isEligibleForAutoQueueCreation()).thenReturn(true);
-    extendedQueues.add(dynamicParent);
-    extendedQueues.addAll(queues);
-    when(root.getChildQueues()).thenReturn(extendedQueues);
+    ParentQueue dynamicParent = setupDynamicParentQueue("root.dynamicParent", true);
+    extendRootQueueWithMock(root, dynamicParent);
 
     policy.editSchedule();
+    assertFalse(policy.getLeafQueueNames().contains( "root.dynamicParent"),
+            "root.dynamicLegacyParent" + " should not be a LeafQueue candidate");
+  }
 
-    assertFalse("dynamicParent should not be a LeafQueue " +
-        "candidate", policy.getLeafQueueNames().contains("root.dynamicParent"));
+  @Test
+  public void testLeafQueueNameExtractionWithLegacyAQC() throws Exception {
+    ProportionalCapacityPreemptionPolicy policy = buildPolicy(Q_DATA_FOR_IGNORE);
+    ParentQueue root = (ParentQueue) mCS.getRootQueue();
+
+    root.addDynamicParentQueue("childlessLegacy");
+    ParentQueue dynamicParent = setupDynamicParentQueue("root.dynamicLegacyParent", false);
+    extendRootQueueWithMock(root, dynamicParent);
+
+    policy.editSchedule();
+    assertFalse(policy.getLeafQueueNames().contains( "root.dynamicLegacyParent"),
+            "root.dynamicLegacyParent" + " should not be a LeafQueue candidate");
+  }
+
+  private ParentQueue setupDynamicParentQueue(String queuePath, boolean isFlexible) {
+    ParentQueue dynamicParent = mockParentQueue(null, 0, new LinkedList<>());
+    mockQueueFields(dynamicParent, queuePath);
+
+    if (isFlexible) {
+      when(dynamicParent.isEligibleForAutoQueueCreation()).thenReturn(true);
+    } else {
+      when(dynamicParent.isEligibleForLegacyAutoQueueCreation()).thenReturn(true);
+    }
+
+    return dynamicParent;
+  }
+
+  private void extendRootQueueWithMock(ParentQueue root, ParentQueue mockQueue) {
+    List<CSQueue> queues = root.getChildQueues();
+    ArrayList<CSQueue> extendedQueues = new ArrayList<>();
+    extendedQueues.add(mockQueue);
+    extendedQueues.addAll(queues);
+    when(root.getChildQueues()).thenReturn(extendedQueues);
+  }
+
+  private void mockQueueFields(ParentQueue queue, String queuePath) {
+    when(queue.getQueuePath()).thenReturn(queuePath);
+    when(queue.getQueueCapacities()).thenReturn(new QueueCapacities(false));
+
+    QueueResourceQuotas qrq = new QueueResourceQuotas();
+    qrq.setEffectiveMaxResource(Resource.newInstance(1, 1));
+    qrq.setEffectiveMinResource(Resources.createResource(1));
+    qrq.setEffectiveMaxResource(RMNodeLabelsManager.NO_LABEL, Resource.newInstance(1, 1));
+    qrq.setEffectiveMinResource(RMNodeLabelsManager.NO_LABEL, Resources.createResource(1));
+
+    when(queue.getQueueResourceQuotas()).thenReturn(qrq);
+    when(queue.getEffectiveCapacity(RMNodeLabelsManager.NO_LABEL))
+        .thenReturn(Resources.createResource(1));
+    when(queue.getEffectiveMaxCapacity(RMNodeLabelsManager.NO_LABEL))
+        .thenReturn(Resource.newInstance(1, 1));
+
+    ResourceUsage usage = new ResourceUsage();
+    usage.setUsed(Resources.createResource(1024));
+    usage.setReserved(Resources.createResource(1024));
+    when(queue.getQueueResourceUsage()).thenReturn(usage);
   }
 
   static class IsPreemptionRequestFor
@@ -1368,6 +1399,10 @@ public class TestProportionalCapacityPreemptionPolicy {
       Resource[] used, Resource[] pending, Resource[] reserved, int[] apps,
       Resource[] gran) {
     LeafQueue lq = mock(LeafQueue.class);
+
+    String queuePath = p.getQueuePath() + ".queue" + (char)('A' + i - 1);
+    when(mCS.getQueue(queuePath)).thenReturn(lq);
+
     ResourceCalculator rc = mCS.getResourceCalculator();
     List<ApplicationAttemptId> appAttemptIdList = 
         new ArrayList<ApplicationAttemptId>();

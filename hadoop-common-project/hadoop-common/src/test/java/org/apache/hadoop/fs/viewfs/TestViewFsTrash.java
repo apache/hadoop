@@ -29,12 +29,11 @@ import org.apache.hadoop.fs.TestTrash;
 import org.apache.hadoop.fs.Trash;
 import org.apache.hadoop.fs.TrashPolicyDefault;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.*;
 import static org.apache.hadoop.fs.viewfs.Constants.*;
-import static org.junit.Assert.*;
 
 public class TestViewFsTrash {
   FileSystem fsTarget;  // the target file system - the mount will point here
@@ -42,7 +41,7 @@ public class TestViewFsTrash {
   Configuration conf;
   private FileSystemTestHelper fileSystemTestHelper;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     Configuration targetFSConf = new Configuration();
     targetFSConf.setClass("fs.file.impl", TestTrash.TestLFS.class, FileSystem.class);
@@ -62,7 +61,7 @@ public class TestViewFsTrash {
 
   }
  
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     ViewFileSystemTestSetup.tearDown(fileSystemTestHelper, fsTarget);
     fsTarget.delete(new Path(fsTarget.getHomeDirectory(), ".Trash/Current"),

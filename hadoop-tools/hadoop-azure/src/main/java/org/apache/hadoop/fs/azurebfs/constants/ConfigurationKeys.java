@@ -18,9 +18,13 @@
 
 package org.apache.hadoop.fs.azurebfs.constants;
 
+import org.apache.hadoop.fs.azurebfs.utils.MetricFormat;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Options.OpenFileOptions;
+
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.DOT;
 
 /**
  * Responsible to keep all the Azure Blob File System configurations keys in Hadoop configuration file.
@@ -67,9 +71,59 @@ public final class ConfigurationKeys {
    */
   public static final String FS_AZURE_ACCOUNT_IS_EXPECT_HEADER_ENABLED = "fs.azure.account.expect.header.enabled";
   public static final String FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME = "fs.azure.account.key";
-  public static final String FS_AZURE_METRIC_ACCOUNT_NAME = "fs.azure.metric.account.name";
-  public static final String FS_AZURE_METRIC_ACCOUNT_KEY = "fs.azure.metric.account.key";
-  public static final String FS_AZURE_METRIC_URI = "fs.azure.metric.uri";
+
+  /**
+   * Config to set separate metrics account in case user don't want to use
+   * existing storage account for metrics collection.
+   * Value: {@value}.
+   */
+  public static final String FS_AZURE_METRICS_ACCOUNT_NAME = "fs.azure.metrics.account.name";
+  /**
+   * Config to set metrics account key for @FS_AZURE_METRICS_ACCOUNT_NAME.
+   * Value: {@value}.
+   */
+  public static final String FS_AZURE_METRICS_ACCOUNT_KEY = "fs.azure.metrics.account.key";
+  /**
+   * Config to set metrics format. Possible values are {@link MetricFormat}
+   * Value: {@value}.
+   */
+  public static final String FS_AZURE_METRICS_FORMAT = "fs.azure.metrics.format";
+  /**
+   * Config to enable or disable metrics collection.
+   * Value: {@value}.
+   */
+  public static final String FS_AZURE_METRICS_COLLECTION_ENABLED = "fs.azure.metrics.collection.enabled";
+  /**
+   * Config to enable or disable emitting metrics when idle time exceeds threshold.
+   * Value: {@value}.
+   */
+  public static final String FS_AZURE_METRICS_SHOULD_EMIT_ON_IDLE_TIME = "fs.azure.metrics.should.emit.on.idle.time";
+  /**
+   * Config to set threshold for emitting metrics when number of operations exceeds threshold.
+   * Value: {@value}.
+   */
+  public static final String FS_AZURE_METRICS_EMIT_THRESHOLD = "fs.azure.metrics.emit.threshold";
+  /**
+   * Config to set interval in seconds to check for threshold breach for emitting metrics.
+   * If the number of operations exceed threshold within this interval, metrics will be emitted.
+   * Value: {@value}.
+   */
+  public static final String FS_AZURE_METRICS_EMIT_THRESHOLD_INTERVAL_SECS = "fs.azure.metrics.emit.threshold.interval.secs";
+  /**
+   * Config to set interval in minutes for emitting metrics in regular time intervals.
+   * Value: {@value}.
+   */
+  public static final String FS_AZURE_METRICS_EMIT_INTERVAL_MINS = "fs.azure.metrics.emit.interval.mins";
+  /**
+   * Config to set maximum metrics calls per second.
+   * Value: {@value}.
+   */
+  public static final String FS_AZURE_METRICS_MAX_CALLS_PER_SECOND =  "fs.azure.metrics.max.calls.per.second";
+  /**
+   * Config to enable or disable backoff retry metrics collection.
+   * Value: {@value}.
+   */
+  public static final String FS_AZURE_METRICS_BACKOFF_RETRY_ENABLED = "fs.azure.metrics.backoff.retry.enabled";
 
   public static final String FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME_REGX = "fs\\.azure\\.account\\.key\\.(.*)";
   public static final String FS_AZURE_SECURE_MODE = "fs.azure.secure.mode";
@@ -94,6 +148,13 @@ public final class ConfigurationKeys {
    * Value: {@value}.
    */
   public static final String AZURE_HTTP_READ_TIMEOUT = "fs.azure.http.read.timeout";
+
+  /**
+   * Config to set HTTP Expect100-Continue Wait Timeout Value for Rest Operations.
+   * Value: {@value}.
+   */
+  public static final String AZURE_EXPECT_100CONTINUE_WAIT_TIMEOUT
+      = "fs.azure.http.expect.100continue.wait.timeout";
 
   //  Retry strategy for getToken calls
   public static final String AZURE_OAUTH_TOKEN_FETCH_RETRY_COUNT = "fs.azure.oauth.token.fetch.retry.max.retries";
@@ -206,6 +267,12 @@ public final class ConfigurationKeys {
   public static final String FS_AZURE_READ_AHEAD_QUEUE_DEPTH = "fs.azure.readaheadqueue.depth";
   public static final String FS_AZURE_ALWAYS_READ_BUFFER_SIZE = "fs.azure.read.alwaysReadBufferSize";
   public static final String FS_AZURE_READ_AHEAD_BLOCK_SIZE = "fs.azure.read.readahead.blocksize";
+  /**
+   * Provides hint for the read workload pattern.
+   * Possible Values Exposed in {@link OpenFileOptions#FS_OPTION_OPENFILE_READ_POLICIES}
+   */
+  public static final String FS_AZURE_READ_POLICY = "fs.azure.read.policy";
+
   /** Provides a config control to enable or disable ABFS Flush operations -
    *  HFlush and HSync. Default is true. **/
   public static final String FS_AZURE_ENABLE_FLUSH = "fs.azure.enable.flush";
@@ -222,7 +289,6 @@ public final class ConfigurationKeys {
    * character constraints are not satisfied. **/
   public static final String FS_AZURE_CLIENT_CORRELATIONID = "fs.azure.client.correlationid";
   public static final String FS_AZURE_TRACINGHEADER_FORMAT = "fs.azure.tracingheader.format";
-  public static final String FS_AZURE_METRIC_FORMAT = "fs.azure.metric.format";
   public static final String FS_AZURE_CLUSTER_NAME = "fs.azure.cluster.name";
   public static final String FS_AZURE_CLUSTER_TYPE = "fs.azure.cluster.type";
   public static final String FS_AZURE_SSL_CHANNEL_MODE_KEY = "fs.azure.ssl.channel.mode";
@@ -257,10 +323,96 @@ public final class ConfigurationKeys {
   public static final String AZURE_KEY_ACCOUNT_SHELLKEYPROVIDER_SCRIPT = "fs.azure.shellkeyprovider.script";
 
   /**
-   * Enable or disable readahead buffer in AbfsInputStream.
+   * Enable or disable readahead V1 in AbfsInputStream.
    * Value: {@value}.
    */
   public static final String FS_AZURE_ENABLE_READAHEAD = "fs.azure.enable.readahead";
+  /**
+   * Enable or disable readahead V2 in AbfsInputStream. This will work independent of V1.
+   * Value: {@value}.
+   */
+  public static final String FS_AZURE_ENABLE_READAHEAD_V2 = "fs.azure.enable.readahead.v2";
+
+  /**
+   * Enable or disable dynamic scaling of thread pool and buffer pool of readahead V2.
+   * Value: {@value}.
+   */
+  public static final String FS_AZURE_ENABLE_READAHEAD_V2_DYNAMIC_SCALING = "fs.azure.enable.readahead.v2.dynamic.scaling";
+
+  /**
+   * Enable or disable request priority for prefetch requests
+   * Value: {@value}.
+   */
+  public static final String FS_AZURE_ENABLE_PREFETCH_REQUEST_PRIORITY = "fs.azure.enable.prefetch.request.priority";
+
+  /**
+   * Request priority value for prefetch requests
+   * Value: {@value}.
+   */
+  public static final String FS_AZURE_PREFETCH_REQUEST_PRIORITY_VALUE = "fs.azure.prefetch.request.priority.value";
+
+  /**
+   * Minimum number of prefetch threads in the thread pool for readahead V2.
+   * {@value }
+   */
+  public static final String FS_AZURE_READAHEAD_V2_MIN_THREAD_POOL_SIZE = "fs.azure.readahead.v2.min.thread.pool.size";
+  /**
+   * Maximum number of prefetch threads in the thread pool for readahead V2.
+   * {@value }
+   */
+  public static final String FS_AZURE_READAHEAD_V2_MAX_THREAD_POOL_SIZE = "fs.azure.readahead.v2.max.thread.pool.size";
+  /**
+   * Minimum size of the buffer pool for caching prefetched data for readahead V2.
+   * {@value }
+   */
+  public static final String FS_AZURE_READAHEAD_V2_MIN_BUFFER_POOL_SIZE = "fs.azure.readahead.v2.min.buffer.pool.size";
+  /**
+   * Maximum size of the buffer pool for caching prefetched data for readahead V2.
+   * {@value }
+   */
+  public static final String FS_AZURE_READAHEAD_V2_MAX_BUFFER_POOL_SIZE = "fs.azure.readahead.v2.max.buffer.pool.size";
+
+  /**
+   * Interval in milliseconds for periodic monitoring of CPU usage and up/down scaling thread pool size accordingly.
+   * {@value }
+   */
+  public static final String FS_AZURE_READAHEAD_V2_CPU_MONITORING_INTERVAL_MILLIS = "fs.azure.readahead.v2.cpu.monitoring.interval.millis";
+
+  /**
+   * Percentage by which the thread pool size should be upscaled when CPU usage is low.
+   */
+  public static final String FS_AZURE_READAHEAD_V2_THREAD_POOL_UPSCALE_PERCENTAGE = "fs.azure.readahead.v2.thread.pool.upscale.percentage";
+
+  /**
+   * Percentage by which the thread pool size should be downscaled when CPU usage is high.
+   */
+  public static final String FS_AZURE_READAHEAD_V2_THREAD_POOL_DOWNSCALE_PERCENTAGE = "fs.azure.readahead.v2.thread.pool.downscale.percentage";
+
+  /**
+   * Interval in milliseconds for periodic monitoring of memory usage and up/down scaling buffer pool size accordingly.
+   * {@value }
+   */
+  public static final String FS_AZURE_READAHEAD_V2_MEMORY_MONITORING_INTERVAL_MILLIS = "fs.azure.readahead.v2.memory.monitoring.interval.millis";
+
+  /**
+   * TTL in milliseconds for the idle threads in executor service used by read ahead v2.
+   */
+  public static final String FS_AZURE_READAHEAD_V2_EXECUTOR_SERVICE_TTL_MILLIS = "fs.azure.readahead.v2.executor.service.ttl.millis";
+
+  /**
+   * TTL in milliseconds for the cached buffers in buffer pool used by read ahead v2.
+   */
+  public static final String FS_AZURE_READAHEAD_V2_CACHED_BUFFER_TTL_MILLIS = "fs.azure.readahead.v2.cached.buffer.ttl.millis";
+
+  /**
+   * Threshold percentage for CPU usage to scale up/down the thread pool size in read ahead v2.
+   */
+  public static final String FS_AZURE_READAHEAD_V2_CPU_USAGE_THRESHOLD_PERCENT = "fs.azure.readahead.v2.cpu.usage.threshold.percent";
+
+  /**
+   * Threshold percentage for memory usage to scale up/down the buffer pool size in read ahead v2.
+   */
+  public static final String FS_AZURE_READAHEAD_V2_MEMORY_USAGE_THRESHOLD_PERCENT = "fs.azure.readahead.v2.memory.usage.threshold.percent";
 
   /** Setting this true will make the driver use it's own RemoteIterator implementation */
   public static final String FS_AZURE_ENABLE_ABFS_LIST_ITERATOR = "fs.azure.enable.abfslistiterator";
@@ -301,6 +453,8 @@ public final class ConfigurationKeys {
   public static final String FS_AZURE_ACCOUNT_OAUTH_REFRESH_TOKEN_ENDPOINT = "fs.azure.account.oauth2.refresh.token.endpoint";
   /** Key for oauth AAD workload identity token file path: {@value}. */
   public static final String FS_AZURE_ACCOUNT_OAUTH_TOKEN_FILE = "fs.azure.account.oauth2.token.file";
+  /** Key for custom client assertion provider class for WorkloadIdentityTokenProvider */
+  public static final String FS_AZURE_ACCOUNT_OAUTH_CLIENT_ASSERTION_PROVIDER_TYPE = "fs.azure.account.oauth2.client.assertion.provider.type";
   /** Key for enabling the tracking of ABFS API latency and sending the latency numbers to the ABFS API service */
   public static final String FS_AZURE_ABFS_LATENCY_TRACK = "fs.azure.abfs.latency.track";
 
@@ -318,8 +472,15 @@ public final class ConfigurationKeys {
   /** Add extra layer of verification of the integrity of the request content during transport: {@value}. */
   public static final String FS_AZURE_ABFS_ENABLE_CHECKSUM_VALIDATION = "fs.azure.enable.checksum.validation";
 
+  /** Add extra layer of verification of the integrity of the full blob request content during transport: {@value}. */
+  public static final String FS_AZURE_ENABLE_FULL_BLOB_CHECKSUM_VALIDATION = "fs.azure.enable.full.blob.checksum.validation";
+
   public static String accountProperty(String property, String account) {
-    return property + "." + account;
+    return property + DOT + account;
+  }
+
+  public static String containerProperty(String property, String fsName, String account) {
+    return property + DOT + fsName + DOT + account;
   }
 
   public static final String FS_AZURE_ENABLE_DELEGATION_TOKEN = "fs.azure.enable.delegation.token";
@@ -356,8 +517,115 @@ public final class ConfigurationKeys {
    */
   public static final String FS_AZURE_APACHE_HTTP_CLIENT_MAX_IO_EXCEPTION_RETRIES = "fs.azure.apache.http.client.max.io.exception.retries";
   /**Maximum ApacheHttpClient-connection cache size at filesystem level: {@value}*/
-  public static final String FS_AZURE_APACHE_HTTP_CLIENT_MAX_CACHE_CONNECTION_SIZE = "fs.azure.apache.http.client.max.cache.connection.size";
-  /**Maximum idle time for a ApacheHttpClient-connection: {@value}*/
-  public static final String FS_AZURE_APACHE_HTTP_CLIENT_IDLE_CONNECTION_TTL = "fs.azure.apache.http.client.idle.connection.ttl";
+  public static final String FS_AZURE_APACHE_HTTP_CLIENT_MAX_CACHE_SIZE = "fs.azure.apache.http.client.max.cache.size";
+  /**
+   * Defines number of connections to establish during warmup phase
+   * of ApacheHttpClient connection cache: {@value}
+   */
+  public static final String FS_AZURE_APACHE_HTTP_CLIENT_CACHE_WARMUP_COUNT = "fs.azure.apache.http.client.cache.warmup.count";
+  /**
+   * Defines number of connections to establish during refresh phase
+   * of ApacheHttpClient connection cache: {@value}
+   */
+  public static final String FS_AZURE_APACHE_HTTP_CLIENT_CACHE_REFRESH_COUNT = "fs.azure.apache.http.client.cache.refresh.count";
+  /**
+   * Defines time duration to wait for ApacheHttpClient connection
+   * cache to warmup/ refresh: {@value}
+   */
+  public static final String FS_AZURE_APACHE_HTTP_CLIENT_MAX_REFRESH_WAIT_TIME_MILLIS = "fs.azure.apache.http.client.max.refresh.wait.time.millis";
+  /**
+   * Minimum number of cached connections in ApacheHttpClient cache
+   * below which refresh will be triggered. {@value}
+   */
+  public static final String FS_AZURE_APACHE_HTTP_CLIENT_MIN_TRIGGER_REFRESH_COUNT = "fs.azure.apache.http.client.min.trigger.refresh.count";
+  /**
+   * Time duration to wait for ApacheHttpClient connection cache to warmup/refresh: {@value}
+   */
+  public static final String FS_AZURE_APACHE_HTTP_CLIENT_WARMUP_CACHE_TIMEOUT_MILLIS = "fs.azure.apache.http.client.warmup.cache.timeout.millis";
+  /**
+   * Blob copy API is an async API, this configuration defines polling duration
+   * for checking copy status: {@value}
+   */
+  public static final String FS_AZURE_BLOB_COPY_PROGRESS_WAIT_MILLIS = "fs.azure.blob.copy.progress.wait.millis";
+  /**
+   * Maximum time to wait for a blob copy operation to complete: {@value}
+   */
+  public static final String FS_AZURE_BLOB_COPY_MAX_WAIT_MILLIS = "fs.azure.blob.copy.max.wait.millis";
+  /**Blob rename lease refresh duration: {@value}*/
+  public static final String FS_AZURE_BLOB_ATOMIC_RENAME_LEASE_REFRESH_DURATION
+          = "fs.azure.blob.atomic.rename.lease.refresh.duration";
+  /**Maximum number of blob information enqueued in memory for rename or delete orchestration: {@value}*/
+  public static final String FS_AZURE_PRODUCER_QUEUE_MAX_SIZE = "fs.azure.blob.dir.list.producer.queue.max.size";
+  /**
+   * Maximum consumer lag (count of blob information which is yet to be taken for operation)
+   * in blob listing which can be tolerated before making producer to wait for
+   * consumer lag to become tolerable: {@value}.
+   */
+  public static final String FS_AZURE_CONSUMER_MAX_LAG = "fs.azure.blob.dir.list.consumer.max.lag";
+  /**Maximum number of thread per blob-rename orchestration: {@value}*/
+  public static final String FS_AZURE_BLOB_DIR_RENAME_MAX_THREAD = "fs.azure.blob.dir.rename.max.thread";
+  /**Maximum number of thread per blob-delete orchestration: {@value}*/
+  public static final String FS_AZURE_BLOB_DIR_DELETE_MAX_THREAD = "fs.azure.blob.dir.delete.max.thread";
+
+  /**Flag to enable/disable sending client transactional ID during create/rename operations: {@value}*/
+  public static final String FS_AZURE_ENABLE_CLIENT_TRANSACTION_ID = "fs.azure.enable.client.transaction.id";
+  /**Flag to enable/disable create idempotency during create operation: {@value}*/
+  public static final String FS_AZURE_ENABLE_CREATE_BLOB_IDEMPOTENCY = "fs.azure.enable.create.blob.idempotency";
+
+  /**
+   * Flag to enable/disable tail latency tracker for AbfsRestOperation.
+   * When enabled, Client observed E2E latency will be tracked by a histogram.
+   * Regular p50, p99 and configured percentile latencies will be reported.
+   */
+  public static final String FS_AZURE_ENABLE_TAIL_LATENCY_TRACKER = "fs.azure.enable.tail.latency.tracker";
+
+  /**
+   * Flag to enable/disable tail latency based timeout for AbfsRestOperation.
+   * When enabled, if an operation's latency exceeds the currently reported tail
+   * latency by the tracker, the ongoing socket connection will be closed and
+   * the operation will be retried, up to the configured max retry count: {@value}
+   */
+  public static final String FS_AZURE_ENABLE_TAIL_LATENCY_REQUEST_TIMEOUT = "fs.azure.enable.tail.latency.timeout";
+
+  /**
+   * The percentile value to be considered as tail latency value.
+   * Default is 99.0 (99th percentile): {@value}
+   */
+  public static final String FS_AZURE_TAIL_LATENCY_PERCENTILE = "fs.azure.tail.latency.percentile";
+
+  /**
+   * The minimum deviation (in percentage) between p50 and tail latency
+   * percentile to trigger tail latency based request timeout: {@value}
+   */
+  public static final String FS_AZURE_TAIL_LATENCY_MIN_DEVIATION = "fs.azure.tail.latency.min.deviation";
+
+  /**
+   * The minimum sample size required before the histogram starts reporting latency data: {@value}
+   */
+  public static final String FS_AZURE_TAIL_LATENCY_MIN_SAMPLE_SIZE = "fs.azure.tail.latency.min.sample.size";
+
+  /**
+   * The time window (in milliseconds) over which the tail latency analysis is performed.
+   * Until the whole window is filled, the histogram will not report any latency data: {@value}
+   */
+  public static final String FS_AZURE_TAIL_LATENCY_ANALYSIS_WINDOW_MILLIS = "fs.azure.tail.latency.analysis.window.millis";
+
+  /**
+   * The granularity (in milliseconds) at which the tail latency analysis window is divided.
+   * This is to make sliding window calculations efficient and robust: {@value}
+   */
+  public static final String FS_AZURE_TAIL_LATENCY_ANALYSIS_WINDOW_GRANULARITY = "fs.azure.tail.latency.analysis.window.granularity";
+
+  /**
+   * Interval (in milliseconds) at which the tail latency percentile is computed
+   * and updated by the background thread for each operation type: {@value}
+   */
+  public static final String FS_AZURE_TAIL_LATENCY_PERCENTILE_COMPUTATION_INTERVAL_MILLIS = "fs.azure.tail.latency.percentile.computation.interval.millis";
+
+  /**
+   * Maximum number of retries for an operation when tail latency based timeout occur: {@value}
+   */
+  public static final String FS_AZURE_TAIL_LATENCY_MAX_RETRY_COUNT = "fs.azure.tail.latency.max.retry.count";
+
   private ConfigurationKeys() {}
 }

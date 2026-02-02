@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.resourcetracker;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
@@ -46,10 +49,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEv
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 @SuppressWarnings("rawtypes")
 public class TestRMNMRPCResponseId {
@@ -57,7 +59,7 @@ public class TestRMNMRPCResponseId {
   ResourceTrackerService resourceTrackerService;
   private NodeId nodeId;
 
-  @Before
+  @BeforeEach
   public void setUp() {
     Configuration conf = new Configuration();
     // Dispatcher that processes events inline
@@ -86,7 +88,7 @@ public class TestRMNMRPCResponseId {
     resourceTrackerService.init(conf);
   }
   
-  @After
+  @AfterEach
   public void tearDown() {
     /* do nothing */
   }
@@ -121,20 +123,20 @@ public class TestRMNMRPCResponseId {
     nodeStatus.setResponseId(0);
     NodeHeartbeatResponse response = resourceTrackerService.nodeHeartbeat(
         nodeHeartBeatRequest);
-    Assert.assertTrue(response.getResponseId() == 1);
+    assertTrue(response.getResponseId() == 1);
 
     nodeStatus.setResponseId(response.getResponseId());
     response = resourceTrackerService.nodeHeartbeat(nodeHeartBeatRequest);
-    Assert.assertTrue(response.getResponseId() == 2);   
+    assertTrue(response.getResponseId() == 2);
 
     /* try calling with less response id */
     response = resourceTrackerService.nodeHeartbeat(nodeHeartBeatRequest);
-    Assert.assertTrue(response.getResponseId() == 2);
+    assertTrue(response.getResponseId() == 2);
 
     nodeStatus.setResponseId(0);
     response = resourceTrackerService.nodeHeartbeat(nodeHeartBeatRequest);
-    Assert.assertTrue(NodeAction.RESYNC.equals(response.getNodeAction()));
-    Assert.assertEquals("Too far behind rm response id:2 nm response id:0",
+    assertTrue(NodeAction.RESYNC.equals(response.getNodeAction()));
+    assertEquals("Too far behind rm response id:2 nm response id:0",
       response.getDiagnosticsMessage());
   }
 }

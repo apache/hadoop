@@ -26,7 +26,10 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.PrivilegedExceptionAction;
 import java.security.Security;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 
 import javax.security.auth.callback.Callback;
 import javax.security.auth.callback.CallbackHandler;
@@ -43,15 +46,15 @@ import org.apache.commons.codec.binary.Base64;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.ipc.RetriableException;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.ipc.Server.Connection;
-import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_SASL_CUSTOMIZEDCALLBACKHANDLER_CLASS_KEY;
 
 /**
  * A utility class for dealing with SASL on RPC server
@@ -223,15 +226,19 @@ public class SaslRpcServer {
     SIMPLE((byte) 80, ""),
     KERBEROS((byte) 81, "GSSAPI"),
     @Deprecated
-    DIGEST((byte) 82, SaslConstants.SASL_MECHANISM),
-    TOKEN((byte) 82, SaslConstants.SASL_MECHANISM),
+    DIGEST((byte) 82, SaslMechanismFactory::getMechanism),
+    TOKEN((byte) 82, SaslMechanismFactory::getMechanism),
     PLAIN((byte) 83, "PLAIN");
 
     /** The code for this method. */
     public final byte code;
-    public final String mechanismName;
+    private final Supplier<String> mechanismName;
 
     private AuthMethod(byte code, String mechanismName) { 
+      this(code, () -> mechanismName);
+    }
+
+    AuthMethod(byte code, Supplier<String> mechanismName) {
       this.code = code;
       this.mechanismName = mechanismName;
     }
@@ -249,7 +256,7 @@ public class SaslRpcServer {
      * @return mechanismName.
      */
     public String getMechanismName() {
-      return mechanismName;
+      return mechanismName.get();
     }
 
     /**
@@ -276,28 +283,44 @@ public class SaslRpcServer {
   /** CallbackHandler for SASL mechanism. */
   @InterfaceStability.Evolving
   public static class SaslDigestCallbackHandler implements CallbackHandler {
+    private final CustomizedCallbackHandler customizedCallbackHandler;
     private SecretManager<TokenIdentifier> secretManager;
     private Server.Connection connection; 
     
     public SaslDigestCallbackHandler(
         SecretManager<TokenIdentifier> secretManager,
         Server.Connection connection) {
-      this.secretManager = secretManager;
-      this.connection = connection;
+      this(secretManager, connection, connection.getConf());
     }
 
-    private char[] getPassword(TokenIdentifier tokenid) throws InvalidToken,
-        StandbyException, RetriableException, IOException {
+    public SaslDigestCallbackHandler(
+        SecretManager<TokenIdentifier> secretManager,
+        Server.Connection connection,
+        Configuration conf) {
+      this.secretManager = secretManager;
+      this.connection = connection;
+      this.customizedCallbackHandler = CustomizedCallbackHandler.get(
+          HADOOP_SECURITY_SASL_CUSTOMIZEDCALLBACKHANDLER_CLASS_KEY, conf);
+    }
+
+    private char[] getPassword(TokenIdentifier tokenid) throws IOException {
       return encodePassword(secretManager.retriableRetrievePassword(tokenid));
     }
 
+    private char[] getPassword(String name) throws IOException {
+      final TokenIdentifier tokenIdentifier = getIdentifier(name, secretManager);
+      final UserGroupInformation user = tokenIdentifier.getUser();
+      connection.attemptingUser = user;
+      LOG.debug("SASL server callback: setting password for client: {}", user);
+      return getPassword(tokenIdentifier);
+    }
+
     @Override
-    public void handle(Callback[] callbacks) throws InvalidToken,
-        UnsupportedCallbackException, StandbyException, RetriableException,
-        IOException {
+    public void handle(Callback[] callbacks) throws UnsupportedCallbackException, IOException {
       NameCallback nc = null;
       PasswordCallback pc = null;
       AuthorizeCallback ac = null;
+      List<Callback> unknownCallbacks = null;
       for (Callback callback : callbacks) {
         if (callback instanceof AuthorizeCallback) {
           ac = (AuthorizeCallback) callback;
@@ -308,20 +331,14 @@ public class SaslRpcServer {
         } else if (callback instanceof RealmCallback) {
           continue; // realm is ignored
         } else {
-          throw new UnsupportedCallbackException(callback,
-              "Unrecognized SASL Callback");
+          if (unknownCallbacks == null) {
+            unknownCallbacks = new ArrayList<>();
+          }
+          unknownCallbacks.add(callback);
         }
       }
       if (pc != null) {
-        TokenIdentifier tokenIdentifier = getIdentifier(nc.getDefaultName(),
-            secretManager);
-        char[] password = getPassword(tokenIdentifier);
-        UserGroupInformation user = null;
-        user = tokenIdentifier.getUser(); // may throw exception
-        connection.attemptingUser = user;
-
-        LOG.debug("SASL server callback: setting password for client: {}", user);
-        pc.setPassword(password);
+        pc.setPassword(getPassword(nc.getDefaultName()));
       }
       if (ac != null) {
         String authid = ac.getAuthenticationID();
@@ -340,6 +357,11 @@ public class SaslRpcServer {
           }
           ac.setAuthorizedID(authzid);
         }
+      }
+      if (unknownCallbacks != null) {
+        final String name = nc != null ? nc.getDefaultName() : null;
+        final char[] password = name != null ? getPassword(name) : null;
+        customizedCallbackHandler.handleCallbacks(unknownCallbacks, name, password);
       }
     }
   }

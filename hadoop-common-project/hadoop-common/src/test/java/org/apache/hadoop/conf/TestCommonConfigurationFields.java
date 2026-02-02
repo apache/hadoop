@@ -149,6 +149,12 @@ public class TestCommonConfigurationFields extends TestConfigurationFieldsBase {
     xmlPropsToSkipCompare.add("fs.azure.saskey.usecontainersaskeyforallaccess");
     xmlPropsToSkipCompare.add("fs.azure.user.agent.prefix");
 
+    // GS properties are in a different class
+    // - org.apache.hadoop.fs.gs.GoogleHadoopFileSystemConfiguration
+    xmlPrefixToSkipCompare.add("gs.");
+    xmlPrefixToSkipCompare.add("fs.gs.");
+    xmlPropsToSkipCompare.add("fs.AbstractFileSystem.gs.impl");
+
     // Properties in enable callqueue overflow trigger failover for stateless servers.
     xmlPropsToSkipCompare.add("ipc.[port_number].callqueue.overflow.trigger.failover");
     xmlPropsToSkipCompare.add("ipc.callqueue.overflow.trigger.failover");
@@ -227,6 +233,7 @@ public class TestCommonConfigurationFields extends TestConfigurationFieldsBase {
     xmlPropsToSkipCompare.add("hadoop.common.configuration.version");
     // - org.apache.hadoop.fs.FileSystem
     xmlPropsToSkipCompare.add("fs.har.impl.disable.cache");
+    xmlPropsToSkipCompare.add("fs.hdfs.impl.disable.cache");
 
     // - package org.apache.hadoop.tracing.TraceUtils ?
     xmlPropsToSkipCompare.add("hadoop.htrace.span.receiver.classes");
@@ -250,5 +257,7 @@ public class TestCommonConfigurationFields extends TestConfigurationFieldsBase {
     xmlPropsToSkipCompare.add("io.seqfile.local.dir");
 
     xmlPropsToSkipCompare.add("hadoop.http.sni.host.check.enabled");
+
+    xmlPrefixToSkipCompare.add("fs.obs.");
   }
 }

@@ -31,6 +31,8 @@ import java.io.PrintStream;
 import java.util.Arrays;
 import java.util.List;
 
+import static org.apache.hadoop.hdfs.server.federation.router.async.utils.AsyncUtil.syncReturn;
+
 /**
  * A servlet to print out the network topology from router.
  */
@@ -49,9 +51,19 @@ public class RouterNetworkTopologyServlet extends NetworkTopologyServlet {
     }
 
     Router router = RouterHttpServer.getRouterFromContext(context);
-    DatanodeInfo[] datanodeReport =
-        router.getRpcServer().getDatanodeReport(
-            HdfsConstants.DatanodeReportType.ALL);
+    DatanodeInfo[] datanodeReport = null;
+    if (router.getRpcServer().isAsync()) {
+      router.getRpcServer().getDatanodeReportAsync(
+          HdfsConstants.DatanodeReportType.ALL, true, 0);
+      try {
+        datanodeReport = syncReturn(DatanodeInfo[].class);
+      } catch (Exception e) {
+        throw new IOException(e);
+      }
+    } else {
+      datanodeReport = router.getRpcServer().getDatanodeReport(
+          HdfsConstants.DatanodeReportType.ALL);
+    }
     List<Node> datanodeInfos = Arrays.asList(datanodeReport);
 
     try (PrintStream out = new PrintStream(

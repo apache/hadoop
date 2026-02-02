@@ -236,9 +236,6 @@ public interface HdfsClientConfigKeys {
   String DFS_DATA_TRANSFER_SASL_PROPS_RESOLVER_CLASS_KEY =
       "dfs.data.transfer.saslproperties.resolver.class";
 
-  String DFS_DATA_TRANSFER_SASL_CUSTOMIZEDCALLBACKHANDLER_CLASS_KEY
-      = "dfs.data.transfer.sasl.CustomizedCallbackHandler.class";
-
   String DFS_ENCRYPT_DATA_TRANSFER_CIPHER_KEY_BITLENGTH_KEY =
       "dfs.encrypt.data.transfer.cipher.key.bitlength";
   int    DFS_ENCRYPT_DATA_TRANSFER_CIPHER_KEY_BITLENGTH_DEFAULT = 128;
@@ -429,6 +426,13 @@ public interface HdfsClientConfigKeys {
       String  COUNT_RESET_TIME_PERIOD_MS_KEY =
           PREFIX + "count-reset-time-period-ms";
       long    COUNT_RESET_TIME_PERIOD_MS_DEFAULT = 10 * MS_PER_SECOND;
+    }
+
+    @SuppressWarnings("checkstyle:InterfaceIsType")
+    interface ECRedundancy {
+      String DFS_CLIENT_EC_WRITE_FAILED_BLOCKS_TOLERATED =
+          "dfs.client.ec.write.failed.blocks.tolerated";
+      int DFS_CLIENT_EC_WRITE_FAILED_BLOCKS_TOLERATED_DEFAILT = -1;
     }
   }
 

@@ -23,13 +23,17 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TestName;
-import static org.mockito.Mockito.*;
-import static org.junit.Assert.*;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.mockito.Mockito.mock;
 
 /**
  * A test class for InstrumentedLock.
@@ -38,21 +42,20 @@ public class TestInstrumentedLock {
 
   static final Logger LOG = LoggerFactory.getLogger(TestInstrumentedLock.class);
 
-  @Rule public TestName name = new TestName();
-
   /**
    * Test exclusive access of the lock.
    * @throws Exception
    */
-  @Test(timeout=10000)
-  public void testMultipleThread() throws Exception {
-    String testname = name.getMethodName();
+  @Test
+  @Timeout(value = 10)
+  public void testMultipleThread(TestInfo testInfo) throws Exception {
+    String testname = testInfo.getDisplayName();
     InstrumentedLock lock = new InstrumentedLock(testname, LOG, 0, 300);
     lock.lock();
     try {
-      Thread competingThread = new Thread() {
+      SubjectInheritingThread competingThread = new SubjectInheritingThread() {
         @Override
-        public void run() {
+        public void work() {
           assertFalse(lock.tryLock());
         }
       };
@@ -67,9 +70,10 @@ public class TestInstrumentedLock {
    * Test the correctness with try-with-resource syntax.
    * @throws Exception
    */
-  @Test(timeout=10000)
-  public void testTryWithResourceSyntax() throws Exception {
-    String testname = name.getMethodName();
+  @Test
+  @Timeout(value = 10)
+  public void testTryWithResourceSyntax(TestInfo testInfo) throws Exception {
+    String testname = testInfo.getDisplayName();
     final AtomicReference<Thread> lockThread = new AtomicReference<>(null);
     Lock lock = new InstrumentedLock(testname, LOG, 0, 300) {
       @Override
@@ -86,9 +90,9 @@ public class TestInstrumentedLock {
     AutoCloseableLock acl = new AutoCloseableLock(lock);
     try (AutoCloseable localLock = acl.acquire()) {
       assertEquals(acl, localLock);
-      Thread competingThread = new Thread() {
+      SubjectInheritingThread competingThread = new SubjectInheritingThread() {
         @Override
-        public void run() {
+        public void work() {
           assertNotEquals(Thread.currentThread(), lockThread.get());
           assertFalse(lock.tryLock());
         }
@@ -105,9 +109,10 @@ public class TestInstrumentedLock {
    * and not log warning otherwise.
    * @throws Exception
    */
-  @Test(timeout=10000)
-  public void testLockLongHoldingReport() throws Exception {
-    String testname = name.getMethodName();
+  @Test
+  @Timeout(value = 10)
+  public void testLockLongHoldingReport(TestInfo testInfo) throws Exception {
+    String testname = testInfo.getDisplayName();
     final AtomicLong time = new AtomicLong(0);
     Timer mclock = new Timer() {
       @Override
@@ -172,9 +177,10 @@ public class TestInstrumentedLock {
    * threshold and not log warning otherwise.
    * @throws Exception
    */
-  @Test(timeout=10000)
-  public void testLockLongWaitReport() throws Exception {
-    String testname = name.getMethodName();
+  @Test
+  @Timeout(value = 10)
+  public void testLockLongWaitReport(TestInfo testInfo) throws Exception {
+    String testname = testInfo.getDisplayName();
     final AtomicLong time = new AtomicLong(0);
     Timer mclock = new Timer() {
       @Override
@@ -248,7 +254,7 @@ public class TestInstrumentedLock {
 
   private Thread lockUnlockThread(Lock lock) throws InterruptedException {
     CountDownLatch countDownLatch = new CountDownLatch(1);
-    Thread t = new Thread(() -> {
+    Thread t = new SubjectInheritingThread(() -> {
       try {
         assertFalse(lock.tryLock());
         countDownLatch.countDown();

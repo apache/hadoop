@@ -18,7 +18,10 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.fpga;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
@@ -66,19 +69,14 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.fpga.FpgaDevice;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
 import org.apache.hadoop.yarn.util.resource.CustomResourceTypesConfigurationProvider;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.thirdparty.com.google.common.io.FileWriteMode;
 import org.apache.hadoop.thirdparty.com.google.common.io.Files;
 
 public class TestFpgaResourceHandlerImpl {
-  @Rule
-  public ExpectedException expected = ExpectedException.none();
 
   private static final String HASHABLE_STRING = "abcdef";
   private static final String EXPECTED_HASH =
@@ -103,7 +101,7 @@ public class TestFpgaResourceHandlerImpl {
     return f.getAbsolutePath();
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException, YarnException {
     CustomResourceTypesConfigurationProvider.
         initResourceTypes(ResourceInformation.FPGA_URI);
@@ -138,7 +136,7 @@ public class TestFpgaResourceHandlerImpl {
         .write(HASHABLE_STRING);
   }
 
-  @After
+  @AfterEach
   public void teardown() {
     if (dummyAocx != null) {
       dummyAocx.delete();
@@ -155,9 +153,9 @@ public class TestFpgaResourceHandlerImpl {
     verify(mockVendorPlugin, times(2)).initPlugin(configuration);
     verify(mockCGroupsHandler, times(1)).initializeCGroupController(
         CGroupsHandler.CGroupController.DEVICES);
-    Assert.assertEquals(5, fpgaResourceHandler.getFpgaAllocator()
+    assertEquals(5, fpgaResourceHandler.getFpgaAllocator()
         .getAvailableFpgaCount());
-    Assert.assertEquals(5, fpgaResourceHandler.getFpgaAllocator()
+    assertEquals(5, fpgaResourceHandler.getFpgaAllocator()
         .getAllowedFpga().size());
     // Case 2. subset of devices
     fpgaResourceHandler = new FpgaResourceHandlerImpl(mockContext,
@@ -166,7 +164,7 @@ public class TestFpgaResourceHandlerImpl {
     allowed = "0,1,2";
     configuration.set(YarnConfiguration.NM_FPGA_ALLOWED_DEVICES, allowed);
     fpgaResourceHandler.bootstrap(configuration);
-    Assert.assertEquals(3,
+    assertEquals(3,
         fpgaResourceHandler.getFpgaAllocator().getAllowedFpga().size());
     List<FpgaDevice> allowedDevices =
         fpgaResourceHandler.getFpgaAllocator().getAllowedFpga();
@@ -177,9 +175,9 @@ public class TestFpgaResourceHandlerImpl {
           check = true;
         }
       }
-      Assert.assertTrue("Minor:" + s +" found", check);
+      assertTrue(check, "Minor:" + s +" found");
     }
-    Assert.assertEquals(3,
+    assertEquals(3,
         fpgaResourceHandler.getFpgaAllocator().getAvailableFpgaCount());
 
     // Case 3. User configuration contains invalid minor device number
@@ -189,9 +187,9 @@ public class TestFpgaResourceHandlerImpl {
     allowed = "0,1,7";
     configuration.set(YarnConfiguration.NM_FPGA_ALLOWED_DEVICES, allowed);
     fpgaResourceHandler.bootstrap(configuration);
-    Assert.assertEquals(2,
+    assertEquals(2,
         fpgaResourceHandler.getFpgaAllocator().getAvailableFpgaCount());
-    Assert.assertEquals(2,
+    assertEquals(2,
         fpgaResourceHandler.getFpgaAllocator().getAllowedFpga().size());
   }
 
@@ -202,9 +200,9 @@ public class TestFpgaResourceHandlerImpl {
     String allowed = "0,1,7";
     configuration.set(YarnConfiguration.NM_FPGA_ALLOWED_DEVICES, allowed);
     fpgaResourceHandler.bootstrap(configuration);
-    Assert.assertEquals(2,
+    assertEquals(2,
         fpgaResourceHandler.getFpgaAllocator().getAllowedFpga().size());
-    Assert.assertEquals(2,
+    assertEquals(2,
         fpgaResourceHandler.getFpgaAllocator().getAvailableFpgaCount());
 
     String[] invalidAllowedStrings = {"a,1,2,", "a,1,2", "0,1,2,#", "a", "1,"};
@@ -216,7 +214,7 @@ public class TestFpgaResourceHandlerImpl {
       } catch (ResourceHandlerException e) {
         invalidConfiguration = true;
       }
-      Assert.assertTrue(invalidConfiguration);
+      assertTrue(invalidConfiguration);
     }
 
     String[] allowedStrings = {"1,2", "1"};
@@ -228,7 +226,7 @@ public class TestFpgaResourceHandlerImpl {
       } catch (ResourceHandlerException e) {
         invalidConfiguration = true;
       }
-      Assert.assertFalse(invalidConfiguration);
+      assertFalse(invalidConfiguration);
     }
   }
 
@@ -244,7 +242,7 @@ public class TestFpgaResourceHandlerImpl {
     } catch (ResourceHandlerException e) {
       invalidConfiguration = true;
     }
-    Assert.assertTrue(invalidConfiguration);
+    assertTrue(invalidConfiguration);
   }
 
   @Test
@@ -254,12 +252,12 @@ public class TestFpgaResourceHandlerImpl {
     fpgaResourceHandler.bootstrap(configuration);
     // Case 1. The id-0 container request 1 FPGA of IntelOpenCL type and GEMM IP
     fpgaResourceHandler.preStart(mockContainer(0, 1, "GEMM"));
-    Assert.assertEquals(1, fpgaResourceHandler.getFpgaAllocator().getUsedFpgaCount());
+    assertEquals(1, fpgaResourceHandler.getFpgaAllocator().getUsedFpgaCount());
     verifyDeniedDevices(getContainerId(0), Arrays.asList(1, 2));
     List<FpgaDevice> list = fpgaResourceHandler.getFpgaAllocator()
         .getUsedFpga().get(getContainerId(0).toString());
     for (FpgaDevice device : list) {
-      Assert.assertEquals("IP should be updated to GEMM", "GEMM", device.getIPID());
+      assertEquals("GEMM", device.getIPID(), "IP should be updated to GEMM");
     }
     // Case 2. The id-1 container request 3 FPGA of IntelOpenCL and GEMM IP. this should fail
     boolean flag = false;
@@ -268,26 +266,26 @@ public class TestFpgaResourceHandlerImpl {
     } catch (ResourceHandlerException e) {
       flag = true;
     }
-    Assert.assertTrue(flag);
+    assertTrue(flag);
     // Case 3. Release the id-0 container
     fpgaResourceHandler.postComplete(getContainerId(0));
-    Assert.assertEquals(0,
+    assertEquals(0,
         fpgaResourceHandler.getFpgaAllocator().getUsedFpgaCount());
-    Assert.assertEquals(3,
+    assertEquals(3,
         fpgaResourceHandler.getFpgaAllocator().getAvailableFpgaCount());
     // Now we have enough devices, re-allocate for the id-1 container
     fpgaResourceHandler.preStart(mockContainer(1, 3, "GEMM"));
     // Id-1 container should have 0 denied devices
     verifyDeniedDevices(getContainerId(1), new ArrayList<>());
-    Assert.assertEquals(3,
+    assertEquals(3,
         fpgaResourceHandler.getFpgaAllocator().getUsedFpgaCount());
-    Assert.assertEquals(0,
+    assertEquals(0,
         fpgaResourceHandler.getFpgaAllocator().getAvailableFpgaCount());
     // Release container id-1
     fpgaResourceHandler.postComplete(getContainerId(1));
-    Assert.assertEquals(0,
+    assertEquals(0,
         fpgaResourceHandler.getFpgaAllocator().getUsedFpgaCount());
-    Assert.assertEquals(3,
+    assertEquals(3,
         fpgaResourceHandler.getFpgaAllocator().getAvailableFpgaCount());
     // Case 4. Now all 3 devices should have IPID GEMM
     // Try container id-2 and id-3
@@ -299,32 +297,32 @@ public class TestFpgaResourceHandlerImpl {
     list = fpgaResourceHandler.getFpgaAllocator()
         .getUsedFpga().get(getContainerId(3).toString());
     for (FpgaDevice device : list) {
-      Assert.assertEquals("IPID should be GEMM", "GEMM", device.getIPID());
+      assertEquals("GEMM", device.getIPID(), "IPID should be GEMM");
     }
-    Assert.assertEquals(2,
+    assertEquals(2,
         fpgaResourceHandler.getFpgaAllocator().getUsedFpgaCount());
-    Assert.assertEquals(1,
+    assertEquals(1,
         fpgaResourceHandler.getFpgaAllocator().getAvailableFpgaCount());
     fpgaResourceHandler.postComplete(getContainerId(3));
-    Assert.assertEquals(0,
+    assertEquals(0,
         fpgaResourceHandler.getFpgaAllocator().getUsedFpgaCount());
-    Assert.assertEquals(3,
+    assertEquals(3,
         fpgaResourceHandler.getFpgaAllocator().getAvailableFpgaCount());
 
     // Case 5. id-4 request 0 FPGA device
     fpgaResourceHandler.preStart(mockContainer(4, 0, ""));
     // Deny all devices for id-4
     verifyDeniedDevices(getContainerId(4), Arrays.asList(0, 1, 2));
-    Assert.assertEquals(0,
+    assertEquals(0,
         fpgaResourceHandler.getFpgaAllocator().getUsedFpgaCount());
-    Assert.assertEquals(3,
+    assertEquals(3,
         fpgaResourceHandler.getFpgaAllocator().getAvailableFpgaCount());
 
     // Case 6. id-5 with invalid FPGA device
     try {
       fpgaResourceHandler.preStart(mockContainer(5, -2, ""));
     } catch (ResourceHandlerException e) {
-      Assert.assertTrue(true);
+      assertTrue(true);
     }
   }
 
@@ -336,7 +334,7 @@ public class TestFpgaResourceHandlerImpl {
     fpgaResourceHandler.bootstrap(configuration);
     // The id-0 container request 3 FPGA of IntelOpenCL type and GEMM IP
     fpgaResourceHandler.preStart(mockContainer(0, 3, "GEMM"));
-    Assert.assertEquals(3,
+    assertEquals(3,
         fpgaResourceHandler.getFpgaAllocator().getUsedFpgaCount());
     List<FpgaDevice> list =
         fpgaResourceHandler
@@ -345,8 +343,8 @@ public class TestFpgaResourceHandlerImpl {
             .get(getContainerId(0).toString());
     fpgaResourceHandler.postComplete(getContainerId(0));
     for (FpgaDevice device : list) {
-      Assert.assertEquals("IP should be updated to GEMM", "GEMM",
-          device.getIPID());
+      assertEquals("GEMM", device.getIPID(),
+          "IP should be updated to GEMM");
     }
 
     // Case 1. id-1 container request preStart, with no plugin.configureIP called
@@ -419,9 +417,9 @@ public class TestFpgaResourceHandlerImpl {
     // NM start
     configuration.set(YarnConfiguration.NM_FPGA_ALLOWED_DEVICES, "0,1,2");
     fpgaResourceHandler.bootstrap(configuration);
-    Assert.assertEquals(0,
+    assertEquals(0,
         fpgaResourceHandler.getFpgaAllocator().getUsedFpgaCount());
-    Assert.assertEquals(3,
+    assertEquals(3,
         fpgaResourceHandler.getFpgaAllocator().getAvailableFpgaCount());
     // Case 1. try recover state for id-0 container
     fpgaResourceHandler.reacquireContainer(getContainerId(0));
@@ -438,7 +436,7 @@ public class TestFpgaResourceHandlerImpl {
         count++;
       }
     }
-    Assert.assertEquals("Unexpected used minor number in allocator",2, count);
+    assertEquals(2, count, "Unexpected used minor number in allocator");
     List<FpgaDevice> available =
         fpgaResourceHandler
             .getFpgaAllocator()
@@ -450,8 +448,7 @@ public class TestFpgaResourceHandlerImpl {
         count++;
       }
     }
-    Assert.assertEquals("Unexpected available minor number in allocator",
-        1, count);
+    assertEquals(1, count, "Unexpected available minor number in allocator");
 
 
     // Case 2. Recover a not allowed device with minor number 5
@@ -467,10 +464,10 @@ public class TestFpgaResourceHandlerImpl {
     } catch (ResourceHandlerException e) {
       flag = true;
     }
-    Assert.assertTrue(flag);
-    Assert.assertEquals(2,
+    assertTrue(flag);
+    assertEquals(2,
         fpgaResourceHandler.getFpgaAllocator().getUsedFpgaCount());
-    Assert.assertEquals(1,
+    assertEquals(1,
         fpgaResourceHandler.getFpgaAllocator().getAvailableFpgaCount());
 
     // Case 3. recover a already used device by other container
@@ -486,10 +483,10 @@ public class TestFpgaResourceHandlerImpl {
     } catch (ResourceHandlerException e) {
       flag = true;
     }
-    Assert.assertTrue(flag);
-    Assert.assertEquals(2,
+    assertTrue(flag);
+    assertEquals(2,
         fpgaResourceHandler.getFpgaAllocator().getUsedFpgaCount());
-    Assert.assertEquals(1,
+    assertEquals(1,
         fpgaResourceHandler.getFpgaAllocator().getAvailableFpgaCount());
 
     // Case 4. recover a normal container c3 with remaining minor device number 2
@@ -500,19 +497,20 @@ public class TestFpgaResourceHandlerImpl {
     // Mock we've stored the c2 states
     mockStateStoreForContainer(c3, assigned);
     fpgaResourceHandler.reacquireContainer(getContainerId(3));
-    Assert.assertEquals(3,
+    assertEquals(3,
         fpgaResourceHandler.getFpgaAllocator().getUsedFpgaCount());
-    Assert.assertEquals(0,
+    assertEquals(0,
         fpgaResourceHandler.getFpgaAllocator().getAvailableFpgaCount());
   }
 
   @Test
   public void testSha256CalculationFails() throws ResourceHandlerException {
-    expected.expect(ResourceHandlerException.class);
-    expected.expectMessage("Could not calculate SHA-256");
-
-    dummyAocx.delete();
-    fpgaResourceHandler.preStart(mockContainer(0, 1, "GEMM"));
+    ResourceHandlerException exception =
+        assertThrows(ResourceHandlerException.class, () -> {
+          dummyAocx.delete();
+          fpgaResourceHandler.preStart(mockContainer(0, 1, "GEMM"));
+        });
+    assertEquals("Could not calculate SHA-256", exception.getMessage());
   }
 
   @Test
@@ -531,7 +529,7 @@ public class TestFpgaResourceHandlerImpl {
     List<FpgaDevice> devices =
         fpgaResourceHandler.getFpgaAllocator().getAllowedFpga();
     FpgaDevice device = devices.get(0);
-    assertEquals("Hash value", EXPECTED_HASH, device.getAocxHash());
+    assertEquals(EXPECTED_HASH, device.getAocxHash(), "Hash value");
   }
 
   private void verifyDeniedDevices(ContainerId containerId,

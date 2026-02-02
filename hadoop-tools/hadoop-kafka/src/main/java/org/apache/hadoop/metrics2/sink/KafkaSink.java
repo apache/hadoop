@@ -111,6 +111,8 @@ public class KafkaSink implements MetricsSink, Closeable {
       LOG.warn("Error getting Hostname, going to continue");
     }
 
+    System.setProperty("org.apache.kafka.automatic.config.providers", "none");
+
     try {
       // Create the producer object.
       producer = new KafkaProducer<Integer, byte[]>(props);

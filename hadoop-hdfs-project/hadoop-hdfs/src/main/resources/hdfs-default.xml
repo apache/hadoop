@@ -1398,6 +1398,17 @@
 </property>
 
 <property>
+  <name>dfs.namenode.checkpoint.parallel.upload.enabled</name>
+  <value>false</value>
+  <description>
+  If true, the CheckpointNode will upload the checkpoint image to multiple other
+  NameNodes in parallel, in the cluster with observer namenodes. You should
+  make sure the network bandwidth is sufficient.
+  If false, the fsimage will be uploaded serially to multiple namenodes.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.checkpoint.check.quiet-multiplier</name>
   <value>1.5</value>
   <description>
@@ -2638,15 +2649,6 @@
     SaslPropertiesResolver used to resolve the QOP used for a connection to the
     DataNode when reading or writing block data. If not specified, the value of
     hadoop.security.saslproperties.resolver.class is used as the default value.
-  </description>
-</property>
-
-<property>
-  <name>dfs.data.transfer.sasl.CustomizedCallbackHandler.class</name>
-  <value></value>
-  <description>
-    Some security provider may define a new javax.security.auth.callback.Callback.
-    This property allows users to configure a customized callback handler.
   </description>
 </property>
 
@@ -3933,6 +3935,19 @@
 </property>
 
 <property>
+  <name>dfs.client.ec.write.failed.blocks.tolerated</name>
+  <value>-1</value>
+  <description>
+    Provide extra tolerated failed streamer for ec policy to prevent
+    the potential data loss. For example, if we use RS-6-3-1024K ec policy.
+    We can write successfully when there are 3 failure streamers. But if one of the six
+    replicas lost during reconstruction, we may lose the data forever.
+    It should better configured between [0, numParityBlocks], the default value is -1 which
+    means the parity block number of the specified ec policy we are using.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.quota.init-threads</name>
   <value>12</value>
   <description>
@@ -3977,6 +3992,15 @@
     ensures each replica has an unique upgrade domain. When the number of
     replicas is greater than this value, the policy ensures the number of
     unique domains is at least this value.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.lock.model.provider.class</name>
+  <value>org.apache.hadoop.hdfs.server.namenode.fgl.GlobalFSNamesystemLock</value>
+  <description>
+    An implementation class of FSNamesystem lock.
+    Defaults to GlobalFSNamesystemLock.class
   </description>
 </property>
 
@@ -4122,6 +4146,60 @@
     Keytab based login can be enabled with dfs.balancer.keytab.enabled.
   </description>
 </property>
+
+  <property>
+    <name>dfs.balancer.kerberos.internal.spnego.principal</name>
+    <value></value>
+    <description>
+      Kerberos SPNEGO principal name used by the balancer.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.balancer.httpserver.enabled</name>
+    <value>false</value>
+    <description>
+      If true, balancer will start httpserver.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.balancer.http-address</name>
+    <value>0.0.0.0:8590</value>
+    <description>
+      The balancer http server address and port.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.balancer.http-bind-host</name>
+    <value></value>
+    <description>
+      The actual address the HTTP server will bind to. If this optional address
+      is set, it overrides only the hostname portion of
+      dfs.balancer.http-address. This is useful for making the Balancer
+      HTTP server listen on all interfaces by setting it to 0.0.0.0.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.balancer.https-address</name>
+    <value>0.0.0.0:8591</value>
+    <description>
+      The balancer HTTPS server address and port.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.balancer.https-bind-host</name>
+    <value></value>
+    <description>
+      The actual address the HTTP server will bind to. If this optional address
+      is set, it overrides only the hostname portion of
+      dfs.balancer.https-address. This is useful for making the Balancer
+      HTTP server listen on all interfaces by setting it to 0.0.0.0.
+    </description>
+  </property>
 
 <property>
   <name>dfs.http.client.retry.policy.enabled</name>
@@ -6388,6 +6466,15 @@
     <description>
       Whether the corrupt replicas should be deleted immediately, irrespective
       of other replicas on stale storages..
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.namenode.random.node.order.enabled</name>
+    <value>false</value>
+    <description>
+      Whether to randomized the order of data nodes of a block or sort by network
+      distance (default behavior) before returning to clients.
     </description>
   </property>
 

@@ -25,7 +25,7 @@ import java.util.Map;
 
 import org.assertj.core.api.AbstractStringAssert;
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -57,10 +57,6 @@ public class ITestXAttrCost extends AbstractS3ACostTest {
 
   private static final int GET_METADATA_ON_OBJECT = 1;
   private static final int GET_METADATA_ON_DIR = GET_METADATA_ON_OBJECT * 2;
-
-  public ITestXAttrCost() {
-    super(true);
-  }
 
   @Test
   public void testXAttrRoot() throws Throwable {

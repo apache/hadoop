@@ -99,7 +99,7 @@ public class CommonStub {
   }
 
   protected void initSoket() throws Exception {
-    int port = Integer.parseInt(System.getenv("mapreduce.pipes.command.port"));
+    int port = Integer.parseInt(System.getenv(Submitter.PORT));
 
     java.net.InetAddress address = java.net.InetAddress.getLocalHost();
 

@@ -46,10 +46,10 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -70,6 +70,10 @@ import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.targetCar
 import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.targetIn;
 import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.targetNotIn;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 /**
  * This tests end2end workflow of the constraint placement framework.
  */
@@ -82,7 +86,7 @@ public class TestPlacementProcessor {
   private MockRM rm;
   private DrainDispatcher dispatcher;
 
-  @Before
+  @BeforeEach
   public void createAndStartRM() {
     CapacitySchedulerConfiguration csConf =
         new CapacitySchedulerConfiguration();
@@ -107,14 +111,15 @@ public class TestPlacementProcessor {
     rm.start();
   }
 
-  @After
+  @AfterEach
   public void stopRM() {
     if (rm != null) {
       rm.stop();
     }
   }
 
-  @Test(timeout = 300000)
+  @Test
+  @Timeout(value = 300)
   public void testAntiAffinityPlacement() throws Exception {
     HashMap<NodeId, MockNM> nodes = new HashMap<>();
     MockNM nm1 = new MockNM("h1:1234", 4096, rm.getResourceTrackerService());
@@ -157,18 +162,19 @@ public class TestPlacementProcessor {
     waitForContainerAllocation(nodes.values(), am1,
         allocatedContainers, new ArrayList<>(), 4);
 
-    Assert.assertEquals(4, allocatedContainers.size());
+    assertEquals(4, allocatedContainers.size());
     Set<NodeId> nodeIds = allocatedContainers.stream().map(x -> x.getNodeId())
         .collect(Collectors.toSet());
     // Ensure unique nodes (antiaffinity)
-    Assert.assertEquals(4, nodeIds.size());
+    assertEquals(4, nodeIds.size());
 
     QueueMetrics metrics = rm.getResourceScheduler().getRootQueueMetrics();
     // Verify Metrics
     verifyMetrics(metrics, 11264, 11, 5120, 5, 5);
   }
 
-  @Test(timeout = 300000)
+  @Test
+  @Timeout(value = 300)
   public void testMutualAntiAffinityPlacement() throws Exception {
     HashMap<NodeId, MockNM> nodes = new HashMap<>();
     MockNM nm1 = new MockNM("h1:1234", 4096, rm.getResourceTrackerService());
@@ -219,18 +225,19 @@ public class TestPlacementProcessor {
     waitForContainerAllocation(nodes.values(), am1,
         allocatedContainers, new ArrayList<>(), 5);
 
-    Assert.assertEquals(5, allocatedContainers.size());
+    assertEquals(5, allocatedContainers.size());
     Set<NodeId> nodeIds = allocatedContainers.stream().map(x -> x.getNodeId())
         .collect(Collectors.toSet());
     // Ensure unique nodes (antiaffinity)
-    Assert.assertEquals(5, nodeIds.size());
+    assertEquals(5, nodeIds.size());
 
     QueueMetrics metrics = rm.getResourceScheduler().getRootQueueMetrics();
     // Verify Metrics
     verifyMetrics(metrics, 14336, 14, 6144, 6, 6);
   }
 
-  @Test(timeout = 300000)
+  @Test
+  @Timeout(value = 300)
   public void testCardinalityPlacement() throws Exception {
     HashMap<NodeId, MockNM> nodes = new HashMap<>();
     MockNM nm1 = new MockNM("h1:1234", 8192, rm.getResourceTrackerService());
@@ -277,13 +284,13 @@ public class TestPlacementProcessor {
     waitForContainerAllocation(nodes.values(), am1,
         allocatedContainers, new ArrayList<>(), 8);
 
-    Assert.assertEquals(8, allocatedContainers.size());
+    assertEquals(8, allocatedContainers.size());
     Map<NodeId, Long> nodeIdContainerIdMap =
         allocatedContainers.stream().collect(
             Collectors.groupingBy(c -> c.getNodeId(), Collectors.counting()));
     // Ensure no more than 4 containers per node
     for (NodeId n : nodeIdContainerIdMap.keySet()) {
-      Assert.assertTrue(nodeIdContainerIdMap.get(n) < 5);
+      assertTrue(nodeIdContainerIdMap.get(n) < 5);
     }
 
     QueueMetrics metrics = rm.getResourceScheduler().getRootQueueMetrics();
@@ -291,7 +298,8 @@ public class TestPlacementProcessor {
     verifyMetrics(metrics, 23552, 23, 9216, 9, 9);
   }
 
-  @Test(timeout = 300000)
+  @Test
+  @Timeout(value = 300)
   public void testAffinityPlacement() throws Exception {
     HashMap<NodeId, MockNM> nodes = new HashMap<>();
     MockNM nm1 = new MockNM("h1:1234", 8192, rm.getResourceTrackerService());
@@ -336,18 +344,19 @@ public class TestPlacementProcessor {
     waitForContainerAllocation(nodes.values(), am1,
         allocatedContainers, new ArrayList<>(), 5);
 
-    Assert.assertEquals(5, allocatedContainers.size());
+    assertEquals(5, allocatedContainers.size());
     Set<NodeId> nodeIds = allocatedContainers.stream().map(x -> x.getNodeId())
         .collect(Collectors.toSet());
     // Ensure all containers end up on the same node (affinity)
-    Assert.assertEquals(1, nodeIds.size());
+    assertEquals(1, nodeIds.size());
 
     QueueMetrics metrics = rm.getResourceScheduler().getRootQueueMetrics();
     // Verify Metrics
     verifyMetrics(metrics, 26624, 26, 6144, 6, 6);
   }
 
-  @Test(timeout = 300000)
+  @Test
+  @Timeout(value = 300)
   public void testComplexPlacement() throws Exception {
     HashMap<NodeId, MockNM> nodes = new HashMap<>();
     MockNM nm1 = new MockNM("h1:1234", 4096, rm.getResourceTrackerService());
@@ -398,13 +407,13 @@ public class TestPlacementProcessor {
     waitForContainerAllocation(nodes.values(), am1,
         allocatedContainers, new ArrayList<>(), 6);
 
-    Assert.assertEquals(6, allocatedContainers.size());
+    assertEquals(6, allocatedContainers.size());
     Map<NodeId, Long> nodeIdContainerIdMap =
         allocatedContainers.stream().collect(
             Collectors.groupingBy(c -> c.getNodeId(), Collectors.counting()));
     // Ensure no more than 3 containers per node (1 'bar', 2 'foo')
     for (NodeId n : nodeIdContainerIdMap.keySet()) {
-      Assert.assertTrue(nodeIdContainerIdMap.get(n) < 4);
+      assertTrue(nodeIdContainerIdMap.get(n) < 4);
     }
 
     QueueMetrics metrics = rm.getResourceScheduler().getRootQueueMetrics();
@@ -412,7 +421,8 @@ public class TestPlacementProcessor {
     verifyMetrics(metrics, 9216, 9, 7168, 7, 7);
   }
 
-  @Test(timeout = 300000)
+  @Test
+  @Timeout(value = 300)
   public void testSchedulerRejection() throws Exception {
     stopRM();
     CapacitySchedulerConfiguration csConf =
@@ -494,14 +504,14 @@ public class TestPlacementProcessor {
       }
     }
 
-    Assert.assertEquals(3, allocatedContainers.size());
+    assertEquals(3, allocatedContainers.size());
     Set<NodeId> nodeIds = allocatedContainers.stream()
         .map(x -> x.getNodeId()).collect(Collectors.toSet());
     // Ensure unique nodes
-    Assert.assertEquals(3, nodeIds.size());
+    assertEquals(3, nodeIds.size());
     RejectedSchedulingRequest rej = rejectedReqs.get(0);
-    Assert.assertEquals(4, rej.getRequest().getAllocationRequestId());
-    Assert.assertEquals(RejectionReason.COULD_NOT_SCHEDULE_ON_NODE,
+    assertEquals(4, rej.getRequest().getAllocationRequestId());
+    assertEquals(RejectionReason.COULD_NOT_SCHEDULE_ON_NODE,
         rej.getReason());
 
     QueueMetrics metrics = rm.getResourceScheduler().getRootQueueMetrics();
@@ -509,7 +519,8 @@ public class TestPlacementProcessor {
     verifyMetrics(metrics, 12288, 12, 4096, 4, 4);
   }
 
-  @Test(timeout = 300000)
+  @Test
+  @Timeout(value = 300)
   public void testNodeCapacityRejection() throws Exception {
     HashMap<NodeId, MockNM> nodes = new HashMap<>();
     MockNM nm1 = new MockNM("h1:1234", 4096, rm.getResourceTrackerService());
@@ -573,14 +584,14 @@ public class TestPlacementProcessor {
       }
     }
 
-    Assert.assertEquals(3, allocatedContainers.size());
+    assertEquals(3, allocatedContainers.size());
     Set<NodeId> nodeIds = allocatedContainers.stream()
         .map(x -> x.getNodeId()).collect(Collectors.toSet());
     // Ensure unique nodes
-    Assert.assertEquals(3, nodeIds.size());
+    assertEquals(3, nodeIds.size());
     RejectedSchedulingRequest rej = rejectedReqs.get(0);
-    Assert.assertEquals(4, rej.getRequest().getAllocationRequestId());
-    Assert.assertEquals(RejectionReason.COULD_NOT_PLACE_ON_NODE,
+    assertEquals(4, rej.getRequest().getAllocationRequestId());
+    assertEquals(RejectionReason.COULD_NOT_PLACE_ON_NODE,
         rej.getReason());
 
     QueueMetrics metrics = rm.getResourceScheduler().getRootQueueMetrics();
@@ -588,7 +599,8 @@ public class TestPlacementProcessor {
     verifyMetrics(metrics, 12288, 12, 4096, 4, 4);
   }
 
-  @Test(timeout = 300000)
+  @Test
+  @Timeout(value = 300)
   public void testRePlacementAfterSchedulerRejection() throws Exception {
     stopRM();
     CapacitySchedulerConfiguration csConf =
@@ -672,18 +684,19 @@ public class TestPlacementProcessor {
       }
     }
 
-    Assert.assertEquals(4, allocatedContainers.size());
+    assertEquals(4, allocatedContainers.size());
     Set<NodeId> nodeIds = allocatedContainers.stream()
         .map(x -> x.getNodeId()).collect(Collectors.toSet());
     // Ensure unique nodes
-    Assert.assertEquals(4, nodeIds.size());
+    assertEquals(4, nodeIds.size());
 
     QueueMetrics metrics = rm.getResourceScheduler().getRootQueueMetrics();
     // Verify Metrics
     verifyMetrics(metrics, 15360, 19, 9216, 5, 5);
   }
 
-  @Test(timeout = 300000)
+  @Test
+  @Timeout(value = 300)
   public void testPlacementRejection() throws Exception {
     HashMap<NodeId, MockNM> nodes = new HashMap<>();
     MockNM nm1 = new MockNM("h1:1234", 4096, rm.getResourceTrackerService());
@@ -748,13 +761,13 @@ public class TestPlacementProcessor {
       }
     }
 
-    Assert.assertEquals(4, allocatedContainers.size());
+    assertEquals(4, allocatedContainers.size());
     Set<NodeId> nodeIds = allocatedContainers.stream()
         .map(x -> x.getNodeId()).collect(Collectors.toSet());
     // Ensure unique nodes
-    Assert.assertEquals(4, nodeIds.size());
+    assertEquals(4, nodeIds.size());
     RejectedSchedulingRequest rej = rejectedReqs.get(0);
-    Assert.assertEquals(COULD_NOT_PLACE_ON_NODE,
+    assertEquals(COULD_NOT_PLACE_ON_NODE,
         rej.getReason());
 
     QueueMetrics metrics = rm.getResourceScheduler().getRootQueueMetrics();
@@ -762,7 +775,8 @@ public class TestPlacementProcessor {
     verifyMetrics(metrics, 11264, 11, 5120, 5, 5);
   }
 
-  @Test(timeout = 300000)
+  @Test
+  @Timeout(value = 300)
   public void testAndOrPlacement() throws Exception {
     HashMap<NodeId, MockNM> nodes = new HashMap<>();
     MockNM nm1 = new MockNM("h1:1234", 40960, 100,
@@ -824,7 +838,7 @@ public class TestPlacementProcessor {
     waitForContainerAllocation(nodes.values(), am1,
         allocatedContainers, new ArrayList<>(), 3);
     printTags(nodes.values(), rm.getRMContext().getAllocationTagsManager());
-    Assert.assertEquals(3, allocatedContainers.size());
+    assertEquals(3, allocatedContainers.size());
 
     /** Testing AND placement constraint**/
     // Now allocates a bar container, as restricted by the AND constraint,
@@ -837,7 +851,7 @@ public class TestPlacementProcessor {
     waitForContainerAllocation(nodes.values(), am1,
         allocatedContainers, new ArrayList<>(), 1);
     printTags(nodes.values(), rm.getRMContext().getAllocationTagsManager());
-    Assert.assertEquals(1, allocatedContainers.size());
+    assertEquals(1, allocatedContainers.size());
     NodeId barNode = allocatedContainers.get(0).getNodeId();
 
     // Sends another 3 bar request, 2 of them can be allocated
@@ -854,15 +868,15 @@ public class TestPlacementProcessor {
     waitForContainerAllocation(nodes.values(), am1,
         allocatedContainers, rejectedContainers, 2);
     printTags(nodes.values(), rm.getRMContext().getAllocationTagsManager());
-    Assert.assertEquals(2, allocatedContainers.size());
-    Assert.assertTrue(allocatedContainers.stream().allMatch(
+    assertEquals(2, allocatedContainers.size());
+    assertTrue(allocatedContainers.stream().allMatch(
         container -> container.getNodeId().equals(barNode)));
 
     // The third request could not be satisfied because it violates
     // the cardinality constraint. Validate rejected request correctly
     // capture this.
-    Assert.assertEquals(1, rejectedContainers.size());
-    Assert.assertEquals(COULD_NOT_PLACE_ON_NODE,
+    assertEquals(1, rejectedContainers.size());
+    assertEquals(COULD_NOT_PLACE_ON_NODE,
         rejectedContainers.get(0).getReason());
 
     /** Testing OR placement constraint**/
@@ -884,10 +898,10 @@ public class TestPlacementProcessor {
 
     // All 20 containers should be allocated onto nodes besides nm5,
     // because moo affinity to foo or bar which only exists on rest of nodes.
-    Assert.assertEquals(20, allocatedContainers.size());
+    assertEquals(20, allocatedContainers.size());
     for (Container mooContainer : allocatedContainers) {
       // nm5 has no moo allocated containers.
-      Assert.assertFalse(mooContainer.getNodeId().equals(nm5.getNodeId()));
+      assertFalse(mooContainer.getNodeId().equals(nm5.getNodeId()));
     }
   }
 
@@ -946,12 +960,12 @@ public class TestPlacementProcessor {
   private static void verifyMetrics(QueueMetrics metrics, long availableMB,
       int availableVirtualCores, long allocatedMB,
       int allocatedVirtualCores, int allocatedContainers) {
-    Assert.assertEquals(availableMB, metrics.getAvailableMB());
-    Assert.assertEquals(availableVirtualCores,
+    assertEquals(availableMB, metrics.getAvailableMB());
+    assertEquals(availableVirtualCores,
         metrics.getAvailableVirtualCores());
-    Assert.assertEquals(allocatedMB, metrics.getAllocatedMB());
-    Assert.assertEquals(allocatedVirtualCores,
+    assertEquals(allocatedMB, metrics.getAllocatedMB());
+    assertEquals(allocatedVirtualCores,
         metrics.getAllocatedVirtualCores());
-    Assert.assertEquals(allocatedContainers, metrics.getAllocatedContainers());
+    assertEquals(allocatedContainers, metrics.getAllocatedContainers());
   }
 }

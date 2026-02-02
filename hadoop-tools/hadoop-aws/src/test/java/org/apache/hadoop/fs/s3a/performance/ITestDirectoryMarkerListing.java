@@ -22,21 +22,20 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
 
 import org.assertj.core.api.Assertions;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
@@ -50,11 +49,7 @@ import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3AUtils;
 import org.apache.hadoop.fs.store.audit.AuditSpan;
 
-
 import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
-import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_MARKER_POLICY;
-import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_MARKER_POLICY_DELETE;
-import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_MARKER_POLICY_KEEP;
 import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_PERFORMANCE;
 import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_PERFORMANCE_FLAGS;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestBucketName;
@@ -85,7 +80,6 @@ import static org.apache.hadoop.util.functional.RemoteIterators.foreach;
  * <p></p>
  * s3a create performance is disabled for consistent assertions.
  */
-@RunWith(Parameterized.class)
 public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
 
   private static final Logger LOG =
@@ -100,17 +94,6 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
   private static final String MARKER_PEER = "markerpeer";
 
   /**
-   * Parameterization.
-   */
-  @Parameterized.Parameters(name = "{0}")
-  public static Collection<Object[]> params() {
-    return Arrays.asList(new Object[][]{
-        {"keep-markers",  true},
-        {"delete-markers", false},
-    });
-  }
-
-  /**
    * Does rename copy markers?
    * Value: {@value}
    * <p></p>
@@ -119,21 +102,6 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
    * The full marker-optimized releases: no.
    */
   private static final boolean RENAME_COPIES_MARKERS = false;
-
-  /**
-   * Test configuration name.
-   */
-  private final String name;
-
-  /**
-   * Does this test configuration keep markers?
-   */
-  private final boolean keepMarkers;
-
-  /**
-   * Is this FS deleting markers?
-   */
-  private final boolean isDeletingMarkers;
 
   /**
    * Path to a directory which has a marker.
@@ -187,27 +155,14 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
    */
   private String markerPeerKey;
 
-  public ITestDirectoryMarkerListing(final String name,
-      final boolean keepMarkers) {
-    this.name = name;
-    this.keepMarkers = keepMarkers;
-    this.isDeletingMarkers = !keepMarkers;
-  }
-
   @Override
   protected Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
     String bucketName = getTestBucketName(conf);
 
-    // directory marker options
     removeBaseAndBucketOverrides(bucketName, conf,
-        DIRECTORY_MARKER_POLICY,
         FS_S3A_CREATE_PERFORMANCE,
         FS_S3A_PERFORMANCE_FLAGS);
-    conf.set(DIRECTORY_MARKER_POLICY,
-        keepMarkers
-            ? DIRECTORY_MARKER_POLICY_KEEP
-            : DIRECTORY_MARKER_POLICY_DELETE);
     conf.setBoolean(FS_S3A_CREATE_PERFORMANCE, false);
     return conf;
   }
@@ -215,6 +170,7 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
   /**
    * The setup phase includes creating the test objects.
    */
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     super.setup();
@@ -230,6 +186,7 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
    * Teardown deletes the objects created before
    * the superclass does the directory cleanup.
    */
+  @AfterEach
   @Override
   public void teardown() throws Exception {
     if (s3client != null) {
@@ -449,10 +406,6 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
 
   /**
    * Rename the base directory, expect the source files to move.
-   * <p></p>
-   * Whether or not the marker itself is copied depends on whether
-   * the release's rename operation explicitly skips
-   * markers on renames.
    */
   @Test
   public void testRenameBase() throws Throwable {
@@ -480,14 +433,8 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
     assertIsFile(destMarkerPeer);
     head(destFileKeyUnderMarker);
 
-    // probe for the marker based on expected rename
-    // behavior
-    if (RENAME_COPIES_MARKERS) {
-      head(destMarkerKeySlash);
-    } else {
-      head404(destMarkerKeySlash);
-    }
-
+    // rename doesn't copy non-leaf markers
+    head404(destMarkerKeySlash);
   }
 
   /**
@@ -520,11 +467,7 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
     assertRenamed(src, dest);
     assertIsFile(new Path(dest, file));
     assertIsDirectory(srcDir);
-    if (isDeletingMarkers) {
-      head404(markerKeySlash);
-    } else {
-      head(markerKeySlash);
-    }
+    head(markerKeySlash);
   }
 
   /**
@@ -557,11 +500,7 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
     assertRenamed(src, dest);
     assertIsFile(dest);
     assertIsDirectory(srcDir);
-    if (isDeletingMarkers) {
-      head404(markerKeySlash);
-    } else {
-      head(markerKeySlash);
-    }
+    head(markerKeySlash);
   }
 
   /**
@@ -580,8 +519,8 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
     head(srcKey);
     Path dest = markerDir;
     // renamed into the dest dir
-    assertFalse("rename(" + src + ", " + dest + ") should have failed",
-        getFileSystem().rename(src, dest));
+    assertFalse(getFileSystem().rename(src, dest),
+        "rename(" + src + ", " + dest + ") should have failed");
     // source is still there
     assertIsDirectory(src);
     head(srcKey);
@@ -615,6 +554,7 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
         s3client.putObject(b -> b.bucket(bucket).key(key),
             RequestBody.fromString(content)));
   }
+
   /**
    * Delete an object; exceptions are swallowed.
    * @param key key
@@ -650,7 +590,7 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
   private void head404(final String key) throws Exception {
     intercept(FileNotFoundException.class, "",
         "Expected 404 of " + key, () ->
-        head(key));
+            head(key));
   }
 
   /**
@@ -718,7 +658,7 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
    * @param stat status object
    */
   private void assertIsFileAtPath(final Path path, final FileStatus stat) {
-    assertTrue("Is not file " + stat, stat.isFile());
+    assertTrue(stat.isFile(), "Is not file " + stat);
     assertPathEquals(path, stat);
   }
 
@@ -728,8 +668,8 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
    * @param stat status object
    */
   private void assertPathEquals(final Path path, final FileStatus stat) {
-    assertEquals("filename is not the expected path :" + stat,
-        path, stat.getPath());
+    assertEquals(path, stat.getPath(),
+        "filename is not the expected path :" + stat);
   }
 
   /**
@@ -783,8 +723,8 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
    */
   private void assertRenamed(final Path src, final Path dest)
       throws IOException {
-    assertTrue("rename(" + src + ", " + dest + ") failed",
-        getFileSystem().rename(src, dest));
+    assertTrue(getFileSystem().rename(src, dest),
+        "rename(" + src + ", " + dest + ") failed");
   }
 
   /**

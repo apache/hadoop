@@ -22,6 +22,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.net.URI;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -34,15 +35,16 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.util.Sets;
 import org.assertj.core.api.Assertions;
-import org.junit.FixMethodOrder;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
-import org.junit.runner.RunWith;
-import org.junit.runners.MethodSorters;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestMethodOrder;
+import org.junit.jupiter.api.MethodOrderer;
+import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -71,8 +73,10 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.DurationInfo;
 
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.assumeMultipartUploads;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.disableFilesystemCaching;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.lsR;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.S3AUtils.applyLocatedFiles;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.FS_S3A_COMMITTER_STAGING_TMP_PATH;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.MAGIC_PATH_PREFIX;
@@ -80,6 +84,8 @@ import static org.apache.hadoop.fs.s3a.commit.CommitConstants._SUCCESS;
 import static org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants.FS_S3A_COMMITTER_UUID;
 import static org.apache.hadoop.fs.s3a.commit.staging.Paths.getMultipartUploadCommitsDirectory;
 import static org.apache.hadoop.fs.s3a.commit.staging.StagingCommitterConstants.STAGING_UPLOADS;
+import static org.apache.hadoop.mapred.JobConf.MAPRED_TASK_ENV;
+import static org.apache.hadoop.mapreduce.lib.input.FileInputFormat.LIST_STATUS_NUM_THREADS;
 
 /**
  * Test an MR Job with all the different committers.
@@ -102,12 +108,15 @@ import static org.apache.hadoop.fs.s3a.commit.staging.StagingCommitterConstants.
  *   </li>
  *   <li>
  *     The test suites are declared to be executed in ascending order, so
- *     that for a specific binding, the order is {@link #test_000()},
- *     {@link #test_100()} {@link #test_200_execute()} and finally
+ *     that for a specific binding, the order is
+ *     {@link #test_000()},
+ *     {@link #test_100()}
+ *     {@link #test_200_execute()} and finally
  *     {@link #test_500()}.
  *   </li>
  *   <li>
- *     {@link #test_000()} calls {@link CommitterTestBinding#validate()} to
+ *     {@link #test_000()} calls
+ *     {@link CommitterTestBinding#validate()} to
  *     as to validate the state of the committer. This is primarily to
  *     verify that the binding setup mechanism is working.
  *   </li>
@@ -117,7 +126,8 @@ import static org.apache.hadoop.fs.s3a.commit.staging.StagingCommitterConstants.
  *     for any preflight tests.
  *   </li>
  *   <li>
- *     The {@link #test_200_execute()} test runs the MR job for that
+ *     The {@link #test_200_execute()}
+ *     test runs the MR job for that
  *     particular binding with standard reporting and verification of the
  *     outcome.
  *   </li>
@@ -133,8 +143,9 @@ import static org.apache.hadoop.fs.s3a.commit.staging.StagingCommitterConstants.
  * generally no useful information about the job in the local S3AFileSystem
  * instance.
  */
-@RunWith(Parameterized.class)
-@FixMethodOrder(MethodSorters.NAME_ASCENDING)
+@TestMethodOrder(MethodOrderer.Alphanumeric.class)
+@ParameterizedClass(name="binding={0}")
+@MethodSource("params")
 public class ITestS3ACommitterMRJob extends AbstractYarnClusterITest {
 
   private static final Logger LOG =
@@ -145,7 +156,6 @@ public class ITestS3ACommitterMRJob extends AbstractYarnClusterITest {
    *
    * @return the committer binding for this run.
    */
-  @Parameterized.Parameters(name = "{0}")
   public static Collection<Object[]> params() {
     return Arrays.asList(new Object[][]{
         {new DirectoryCommitterTestBinding()},
@@ -159,6 +169,9 @@ public class ITestS3ACommitterMRJob extends AbstractYarnClusterITest {
    */
   private final CommitterTestBinding committerTestBinding;
 
+  @TempDir
+  private java.nio.file.Path localFilesDir;
+
   /**
    * Parameterized constructor.
    * @param committerTestBinding binding for the test.
@@ -169,8 +182,10 @@ public class ITestS3ACommitterMRJob extends AbstractYarnClusterITest {
   }
 
   @Override
+  @BeforeEach
   public void setup() throws Exception {
     super.setup();
+    assumeMultipartUploads(getFileSystem().getConf());
     // configure the test binding for this specific test case.
     committerTestBinding.setup(getClusterBinding(), getFileSystem());
   }
@@ -179,11 +194,11 @@ public class ITestS3ACommitterMRJob extends AbstractYarnClusterITest {
   protected Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
     disableFilesystemCaching(conf);
+    removeBaseAndBucketOverrides(conf,
+        LIST_STATUS_NUM_THREADS);
+    conf.setInt(LIST_STATUS_NUM_THREADS, 16);
     return conf;
   }
-
-  @Rule
-  public final TemporaryFolder localFilesDir = new TemporaryFolder();
 
   @Override
   protected String committerName() {
@@ -196,8 +211,8 @@ public class ITestS3ACommitterMRJob extends AbstractYarnClusterITest {
   @Test
   public void test_000() throws Throwable {
     committerTestBinding.validate();
-
   }
+
   @Test
   public void test_100() throws Throwable {
     committerTestBinding.test_100();
@@ -206,6 +221,7 @@ public class ITestS3ACommitterMRJob extends AbstractYarnClusterITest {
   @Test
   public void test_200_execute() throws Exception {
     describe("Run an MR with committer %s", committerName());
+    LOG.info("Local Temp directory is {}", localFilesDir);
 
     S3AFileSystem fs = getFileSystem();
     // final dest is in S3A
@@ -222,7 +238,7 @@ public class ITestS3ACommitterMRJob extends AbstractYarnClusterITest {
     List<String> expectedFiles = new ArrayList<>(numFiles);
     Set<String> expectedKeys = Sets.newHashSet();
     for (int i = 0; i < numFiles; i += 1) {
-      File file = localFilesDir.newFile(i + ".text");
+      File file = localFilesDir.resolve(i + ".text").toFile();
       try (FileOutputStream out = new FileOutputStream(file)) {
         out.write(("file " + i).getBytes(StandardCharsets.UTF_8));
       }
@@ -239,7 +255,7 @@ public class ITestS3ACommitterMRJob extends AbstractYarnClusterITest {
     mrJob.setOutputFormatClass(LoggingTextOutputFormat.class);
     FileOutputFormat.setOutputPath(mrJob, outputPath);
 
-    File mockResultsFile = localFilesDir.newFile("committer.bin");
+    File mockResultsFile = localFilesDir.resolve("committer.bin").toFile();
     mockResultsFile.delete();
     String committerPath = "file:" + mockResultsFile;
     jobConf.set("mock-results-file", committerPath);
@@ -248,8 +264,10 @@ public class ITestS3ACommitterMRJob extends AbstractYarnClusterITest {
     jobConf.set(FS_S3A_COMMITTER_UUID, commitUUID);
 
     mrJob.setInputFormatClass(TextInputFormat.class);
-    FileInputFormat.addInputPath(mrJob,
-        new Path(localFilesDir.getRoot().toURI()));
+
+    final URI inputPath = localFilesDir.toUri();
+    LOG.info("Job input path {}", inputPath);
+    FileInputFormat.addInputPath(mrJob, new Path(inputPath));
 
     mrJob.setMapperClass(MapClass.class);
     mrJob.setNumReduceTasks(0);
@@ -260,7 +278,7 @@ public class ITestS3ACommitterMRJob extends AbstractYarnClusterITest {
       Path log4jPath = new Path(log4j.toURI());
       LOG.debug("Using log4j path {}", log4jPath);
       mrJob.addFileToClassPath(log4jPath);
-      String sysprops = String.format("-Xmx128m -Dlog4j.configuration=%s",
+      String sysprops = String.format("-Xmx256m -Dlog4j.configuration=%s",
           log4j);
       jobConf.set(JobConf.MAPRED_MAP_TASK_JAVA_OPTS, sysprops);
       jobConf.set(JobConf.MAPRED_REDUCE_TASK_JAVA_OPTS, sysprops);
@@ -338,6 +356,8 @@ public class ITestS3ACommitterMRJob extends AbstractYarnClusterITest {
   @Override
   protected void applyCustomConfigOptions(final JobConf jobConf)
       throws IOException {
+    jobConf.set(MAPRED_TASK_ENV, "AWS_REGION=" + jobConf.get(Constants.AWS_REGION));
+    jobConf.set("yarn.app.mapreduce.am.env", "AWS_REGION=" + jobConf.get(Constants.AWS_REGION));
     committerTestBinding.applyCustomConfigOptions(jobConf);
   }
 
@@ -512,9 +532,9 @@ public class ITestS3ACommitterMRJob extends AbstractYarnClusterITest {
      * @throws Throwable failure.
      */
     public void validate() throws Throwable {
-      assertNotNull("Not bound to a cluster", binding);
-      assertNotNull("No cluster filesystem", getClusterFS());
-      assertNotNull("No yarn cluster", binding.getYarn());
+      assertNotNull(binding, "Not bound to a cluster");
+      assertNotNull(getClusterFS(), "No cluster filesystem");
+      assertNotNull(binding.getYarn(), "No yarn cluster");
     }
   }
 

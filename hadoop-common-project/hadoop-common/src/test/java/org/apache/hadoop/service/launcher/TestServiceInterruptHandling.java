@@ -22,7 +22,7 @@ import org.apache.hadoop.service.BreakableService;
 import org.apache.hadoop.service.launcher.testservices.FailureTestService;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.ExitUtil;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -68,10 +68,10 @@ public class TestServiceInterruptHandling
     }
     //the service is now stopped
     assertStopped(service);
-    assertTrue("isSignalAlreadyReceived() == false in " + escalator,
-        escalator.isSignalAlreadyReceived());
-    assertFalse("isForcedShutdownTimedOut() == true in " + escalator,
-        escalator.isForcedShutdownTimedOut());
+    assertTrue(escalator.isSignalAlreadyReceived(),
+        "isSignalAlreadyReceived() == false in " + escalator);
+    assertFalse(escalator.isForcedShutdownTimedOut(),
+        "isForcedShutdownTimedOut() == true in " + escalator);
 
     // now interrupt it a second time and expect it to escalate to a halt
     try {
@@ -99,8 +99,8 @@ public class TestServiceInterruptHandling
       assertExceptionDetails(EXIT_INTERRUPTED, "", e);
     }
 
-    assertTrue("isForcedShutdownTimedOut() == false in " + escalator,
-        escalator.isForcedShutdownTimedOut());
+    assertTrue(escalator.isForcedShutdownTimedOut(),
+        "isForcedShutdownTimedOut() == false in " + escalator);
   }
 
   private static class InterruptCatcher implements IrqHandler.Interrupted {

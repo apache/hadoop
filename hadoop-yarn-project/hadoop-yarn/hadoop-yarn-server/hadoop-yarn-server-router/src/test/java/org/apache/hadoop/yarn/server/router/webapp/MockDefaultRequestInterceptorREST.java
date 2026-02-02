@@ -217,7 +217,10 @@ public class MockDefaultRequestInterceptorREST
             applicationCounter.incrementAndGet());
     NewApplication appId =
         new NewApplication(applicationId.toString(), new ResourceInfo());
-    return Response.status(Status.OK).entity(appId).build();
+    Response response = Mockito.mock(Response.class);
+    Mockito.when(response.readEntity(NewApplication.class)).thenReturn(appId);
+    Mockito.when(response.getStatus()).thenReturn(HttpServletResponse.SC_OK);
+    return response;
   }
 
   @Override
@@ -315,7 +318,7 @@ public class MockDefaultRequestInterceptorREST
     NodeInfo node = null;
     SubClusterId subCluster = getSubClusterId();
     String subClusterId = subCluster.getId();
-    if (nodeId.contains(subClusterId) || nodeId.contains("test")) {
+    if (nodeId == null || nodeId.contains(subClusterId) || nodeId.contains("test")) {
       node = new NodeInfo();
       node.setId(nodeId);
       node.setLastHealthUpdate(Integer.parseInt(getSubClusterId().getId()));
@@ -1250,13 +1253,15 @@ public class MockDefaultRequestInterceptorREST
 
   public Response replaceLabelsOnNodes(NodeToLabelsEntryList newNodeToLabels,
       HttpServletRequest hsr) throws IOException {
-    return super.replaceLabelsOnNodes(newNodeToLabels, hsr);
+    return Response.status(Status.OK).entity(
+        "subCluster-0:Success,subCluster-1:Success,subCluster-2:Success,subCluster-3:Success,")
+        .build();
   }
 
   @Override
   public Response replaceLabelsOnNode(Set<String> newNodeLabelsName,
       HttpServletRequest hsr, String nodeId) throws Exception {
-    return super.replaceLabelsOnNode(newNodeLabelsName, hsr, nodeId);
+    return Response.status(Status.OK).entity("subCluster#3:Success;").build();
   }
 
   public ActivitiesInfo getActivities(HttpServletRequest hsr, String nodeId, String groupBy) {
@@ -1355,6 +1360,7 @@ public class MockDefaultRequestInterceptorREST
   @Override
   public Response removeFromClusterNodeLabels(Set<String> oldNodeLabels, HttpServletRequest hsr)
       throws Exception {
+    Response response = Mockito.mock(Response.class);
     // If oldNodeLabels contains ALL, we let all subclusters pass
     if (oldNodeLabels.contains("ALL")) {
       return Response.status(Status.OK).build();
@@ -1362,9 +1368,11 @@ public class MockDefaultRequestInterceptorREST
       SubClusterId subClusterId = getSubClusterId();
       String id = subClusterId.getId();
       if (StringUtils.contains("A0", id)) {
-        return Response.status(Status.OK).build();
+        Mockito.when(response.getStatus()).thenReturn(HttpServletResponse.SC_OK);
+        return response;
       } else {
-        return Response.status(Status.BAD_REQUEST).entity(null).build();
+        Mockito.when(response.getStatus()).thenReturn(HttpServletResponse.SC_BAD_REQUEST);
+        return response;
       }
     }
     throw new YarnException("removeFromClusterNodeLabels Error");

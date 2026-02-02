@@ -24,8 +24,10 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.fs.azurebfs.services.AbfsBackoffMetrics;
 import org.apache.hadoop.fs.azurebfs.services.AbfsCounters;
 import org.apache.hadoop.fs.azurebfs.services.AbfsReadFooterMetrics;
+import org.apache.hadoop.fs.azurebfs.services.AbfsReadResourceUtilizationMetrics;
 import org.apache.hadoop.fs.azurebfs.utils.MetricFormat;
 import org.apache.hadoop.fs.statistics.DurationTracker;
 import org.apache.hadoop.fs.statistics.IOStatistics;
@@ -36,6 +38,7 @@ import org.apache.hadoop.metrics2.lib.MetricsRegistry;
 import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 import org.apache.hadoop.metrics2.lib.MutableMetric;
 
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.ATOMIC_RENAME_PATH_ATTEMPTS;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.BYTES_RECEIVED;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.BYTES_SENT;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CALL_APPEND;
@@ -69,6 +72,8 @@ import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.RENAME_RECOVERY;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.SEND_REQUESTS;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.SERVER_UNAVAILABLE;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.WRITE_THROTTLES;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
+import static org.apache.hadoop.fs.azurebfs.enums.AbfsBackoffMetricsEnum.TOTAL_NUMBER_OF_REQUESTS;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.iostatisticsStore;
 import static org.apache.hadoop.util.Time.now;
 
@@ -103,6 +108,8 @@ public class AbfsCountersImpl implements AbfsCounters {
 
   private AbfsReadFooterMetrics abfsReadFooterMetrics = null;
 
+  private AbfsReadResourceUtilizationMetrics abfsReadResourceUtilizationMetrics = null;
+
   private AtomicLong lastExecutionTime = null;
 
   private static final AbfsStatistic[] STATISTIC_LIST = {
@@ -132,7 +139,8 @@ public class AbfsCountersImpl implements AbfsCounters {
       SERVER_UNAVAILABLE,
       RENAME_RECOVERY,
       METADATA_INCOMPLETE_RENAME_FAILURES,
-      RENAME_PATH_ATTEMPTS
+      RENAME_PATH_ATTEMPTS,
+      ATOMIC_RENAME_PATH_ATTEMPTS
   };
 
   private static final AbfsStatistic[] DURATION_TRACKER_LIST = {
@@ -165,22 +173,51 @@ public class AbfsCountersImpl implements AbfsCounters {
     lastExecutionTime = new AtomicLong(now());
   }
 
+  /**
+   * Initializes the metrics collector for the read thread pool.
+   * <p>
+   * This method creates a new instance of {@link AbfsReadResourceUtilizationMetrics}
+   * to track performance statistics and operational metrics related to
+   * read operations executed by the thread pool.
+   * </p>
+   */
+  public void initializeReadResourceUtilizationMetrics() {
+    abfsReadResourceUtilizationMetrics = new AbfsReadResourceUtilizationMetrics();
+  }
+
+
   @Override
-  public void initializeMetrics(MetricFormat metricFormat) {
+  public void initializeMetrics(final MetricFormat metricFormat,
+      final AbfsConfiguration abfsConfiguration) {
     switch (metricFormat) {
-      case INTERNAL_BACKOFF_METRIC_FORMAT:
-        abfsBackoffMetrics = new AbfsBackoffMetrics();
-        break;
-      case INTERNAL_FOOTER_METRIC_FORMAT:
-        abfsReadFooterMetrics = new AbfsReadFooterMetrics();
-        break;
-      case INTERNAL_METRIC_FORMAT:
-        abfsBackoffMetrics = new AbfsBackoffMetrics();
-        abfsReadFooterMetrics = new AbfsReadFooterMetrics();
-        break;
-      default:
-        break;
+    case INTERNAL_BACKOFF_METRIC_FORMAT:
+      abfsBackoffMetrics = new AbfsBackoffMetrics(
+          abfsConfiguration.isBackoffRetryMetricsEnabled());
+      break;
+    case INTERNAL_FOOTER_METRIC_FORMAT:
+      initializeReadFooterMetrics();
+      break;
+    case INTERNAL_METRIC_FORMAT:
+      abfsBackoffMetrics = new AbfsBackoffMetrics(
+          abfsConfiguration.isBackoffRetryMetricsEnabled());
+      initializeReadFooterMetrics();
+      break;
+    default:
+      break;
     }
+  }
+
+  /**
+   * Initialize the read footer metrics.
+   * In case the metrics are already initialized,
+   * create a new instance with the existing map.
+   */
+  private void initializeReadFooterMetrics() {
+    abfsReadFooterMetrics = new AbfsReadFooterMetrics(
+        abfsReadFooterMetrics == null
+            ? null
+            : abfsReadFooterMetrics.getFileTypeMetricsMap()
+    );
   }
 
   /**
@@ -264,6 +301,14 @@ public class AbfsCountersImpl implements AbfsCounters {
   }
 
   /**
+   * Returns the read thread pool metrics instance, or {@code null} if uninitialized.
+   */
+  @Override
+  public AbfsReadResourceUtilizationMetrics getAbfsReadResourceUtilizationMetrics() {
+    return abfsReadResourceUtilizationMetrics != null ? abfsReadResourceUtilizationMetrics : null;
+  }
+
+  /**
    * {@inheritDoc}
    *
    * Method to aggregate all the counters in the MetricRegistry and form a
@@ -322,20 +367,15 @@ public class AbfsCountersImpl implements AbfsCounters {
 
   @Override
   public String toString() {
-    String metric = "";
+    String metric = EMPTY_STRING;
     if (abfsBackoffMetrics != null) {
-      long totalNoRequests = getAbfsBackoffMetrics().getTotalNumberOfRequests();
-      if (totalNoRequests > 0) {
+      if (getAbfsBackoffMetrics().getMetricValue(TOTAL_NUMBER_OF_REQUESTS) > 0) {
         metric += "#BO:" + getAbfsBackoffMetrics().toString();
       }
     }
     if (abfsReadFooterMetrics != null) {
-      Map<String, AbfsReadFooterMetrics> metricsMap = getAbfsReadFooterMetrics().getMetricsMap();
-      if (metricsMap != null && !(metricsMap.isEmpty())) {
-        String readFooterMetric = getAbfsReadFooterMetrics().toString();
-        if (!readFooterMetric.equals("")) {
-          metric += "#FO:" + getAbfsReadFooterMetrics().toString();
-        }
+      if (getAbfsReadFooterMetrics().getTotalFiles() > 0) {
+        metric += "#FO:" + getAbfsReadFooterMetrics().toString();
       }
     }
     return metric;

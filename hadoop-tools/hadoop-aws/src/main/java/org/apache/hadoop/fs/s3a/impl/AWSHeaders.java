@@ -38,6 +38,8 @@ public interface AWSHeaders {
   String DATE = "Date";
   String ETAG = "ETag";
   String LAST_MODIFIED = "Last-Modified";
+  String IF_NONE_MATCH = "If-None-Match";
+  String IF_MATCH = "If-Match";
 
   /*
    * Amazon HTTP Headers used by S3A.
@@ -82,6 +84,11 @@ public interface AWSHeaders {
    * Content encryption algorithm, such as "AES/GCM/NoPadding".
    */
   String CRYPTO_CEK_ALGORITHM = "x-amz-cek-alg";
+
+  /**
+   * Header for unencrypted content length of an object: {@value}.
+   */
+  String UNENCRYPTED_CONTENT_LENGTH = "x-amz-unencrypted-content-length";
 
   /**
    * Headers in request indicating that the requester must be charged for data

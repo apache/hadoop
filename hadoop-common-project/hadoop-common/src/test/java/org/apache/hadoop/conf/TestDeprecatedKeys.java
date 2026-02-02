@@ -22,8 +22,9 @@ import java.io.ByteArrayOutputStream;
 import java.util.Map;
 
 import org.apache.hadoop.fs.CommonConfigurationKeys;
-import org.junit.Test;
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestDeprecatedKeys {
  
@@ -95,9 +96,9 @@ public class TestDeprecatedKeys {
         nK2Found = true;
       }
     }
-    assertTrue("regular Key not found", kFound);
-    assertTrue("deprecated Key not found", dKFound);
-    assertTrue("new Key 1 not found", nK1Found);
-    assertTrue("new Key 2 not found", nK2Found);
+    assertTrue(kFound, "regular Key not found");
+    assertTrue(dKFound, "deprecated Key not found");
+    assertTrue(nK1Found, "new Key 1 not found");
+    assertTrue(nK2Found, "new Key 2 not found");
   }
 }

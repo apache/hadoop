@@ -1367,4 +1367,14 @@ public class StringUtils {
       return wrappedLine.toString();
     }
   }
+
+  /**
+   * Checks whether the given string is not {@code null} and has a length greater than zero.
+   *
+   * @param str the string to check
+   * @return {@code true} if the string is not {@code null} and not empty; {@code false} otherwise
+   */
+  public static boolean hasLength(String str) {
+    return str != null && !str.isEmpty();
+  }
 }

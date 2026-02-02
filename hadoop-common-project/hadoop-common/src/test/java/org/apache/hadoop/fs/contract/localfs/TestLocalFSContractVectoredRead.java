@@ -23,7 +23,6 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ChecksumException;
@@ -36,12 +35,18 @@ import org.apache.hadoop.fs.contract.AbstractContractVectoredReadTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
+
 import static org.apache.hadoop.fs.contract.ContractTestUtils.validateVectoredReadResult;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
+@ParameterizedClass(name="buffer-{0}")
+@MethodSource("params")
 public class TestLocalFSContractVectoredRead extends AbstractContractVectoredReadTest {
 
-  public TestLocalFSContractVectoredRead(String bufferType) {
+  public TestLocalFSContractVectoredRead(final String bufferType) {
     super(bufferType);
   }
 
@@ -74,6 +79,13 @@ public class TestLocalFSContractVectoredRead extends AbstractContractVectoredRea
     validateCheckReadException(testPath, length, smallFileRanges);
   }
 
+  /**
+   * Verify that checksum validation works through vectored reads.
+   * @param testPath path to the file to be tested
+   * @param length length of the file to be created
+   * @param ranges ranges to be read from the file
+   * @throws Exception any exception other than ChecksumException
+   */
   private void validateCheckReadException(Path testPath,
                                           int length,
                                           List<FileRange> ranges) throws Exception {
@@ -104,6 +116,7 @@ public class TestLocalFSContractVectoredRead extends AbstractContractVectoredRea
           () -> validateVectoredReadResult(ranges, datasetCorrupted, 0));
     }
   }
+
   @Test
   public void tesChecksumVectoredReadBoundaries() throws Exception {
     Path testPath = path("boundary_range_checksum_file");

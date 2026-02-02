@@ -25,15 +25,15 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperationExecutor;
-import org.junit.After;
-import org.junit.Before;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.security.Permission;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
 /**
@@ -46,7 +46,7 @@ public abstract class TestCGroupsHandlerBase {
   protected CGroupsHandler.CGroupController controller;
   protected String controllerPath;
 
-  @Before
+  @BeforeEach
   public void setup() {
     privilegedOperationExecutorMock = mock(PrivilegedOperationExecutor.class);
 
@@ -64,7 +64,7 @@ public abstract class TestCGroupsHandlerBase {
     controllerPath = getControllerFilePath(controller.getName());
   }
 
-  @After
+  @AfterEach
   public void teardown() {
     FileUtil.fullyDelete(new File(tmpPath));
   }
@@ -116,7 +116,7 @@ public abstract class TestCGroupsHandlerBase {
    */
   protected File createEmptyMtabFile() throws IOException {
     File emptyMtab = new File(tmpPath, "mtab");
-    assertTrue("New file should have been created", emptyMtab.createNewFile());
+    assertTrue(emptyMtab.createNewFile(), "New file should have been created");
     return emptyMtab;
   }
 

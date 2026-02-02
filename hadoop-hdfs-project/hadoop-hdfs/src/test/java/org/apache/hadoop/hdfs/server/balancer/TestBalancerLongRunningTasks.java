@@ -27,6 +27,7 @@ import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -46,9 +47,12 @@ import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.LazyPersistTestCase;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.metrics2.MetricsSystem;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.After;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.event.Level;
@@ -74,8 +78,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_LAZY_PERSIST_FILE_SCRUB_INTERVAL_SEC;
 import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Some long running Balancer tasks.
@@ -98,7 +102,7 @@ public class TestBalancerLongRunningTasks {
   private final static Path FILE_PATH = new Path(FILE_NAME);
   private MiniDFSCluster cluster;
 
-  @After
+  @AfterEach
   public void shutdown() throws Exception {
     if (cluster != null) {
       cluster.shutdown();
@@ -156,7 +160,8 @@ public class TestBalancerLongRunningTasks {
    * Replica in (DN0,SSD) should not be moved to (DN1,SSD).
    * Otherwise DN1 has 2 replicas.
    */
-  @Test(timeout = 100000)
+  @Test
+  @Timeout(value = 100)
   public void testTwoReplicaShouldNotInSameDN() throws Exception {
     final Configuration conf = new HdfsConfiguration();
 
@@ -215,7 +220,8 @@ public class TestBalancerLongRunningTasks {
    * One DN has two files on RAM_DISK, other DN has no files on RAM_DISK.
    * Then verify that the balancer does not migrate files on RAM_DISK across DN.
    */
-  @Test(timeout = 300000)
+  @Test
+  @Timeout(value = 300)
   public void testBalancerWithRamDisk() throws Exception {
     final int seed = 0xFADED;
     final short replicationFactor = 1;
@@ -282,7 +288,8 @@ public class TestBalancerLongRunningTasks {
   /**
    * Balancer should not move blocks with size < minBlockSize.
    */
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testMinBlockSizeAndSourceNodes() throws Exception {
     final Configuration conf = new HdfsConfiguration();
     initConf(conf);
@@ -402,7 +409,8 @@ public class TestBalancerLongRunningTasks {
    *
    * @throws Exception
    */
-  @Test(timeout = 100000)
+  @Test
+  @Timeout(value = 100)
   public void testUpgradeDomainPolicyAfterBalance() throws Exception {
     final Configuration conf = new HdfsConfiguration();
     initConf(conf);
@@ -422,7 +430,8 @@ public class TestBalancerLongRunningTasks {
    *
    * @throws Exception
    */
-  @Test(timeout = 100000)
+  @Test
+  @Timeout(value = 100)
   public void testRackPolicyAfterBalance() throws Exception {
     final Configuration conf = new HdfsConfiguration();
     initConf(conf);
@@ -502,7 +511,8 @@ public class TestBalancerLongRunningTasks {
    *
    * @throws Exception
    */
-  @Test(timeout = 100000)
+  @Test
+  @Timeout(value = 100)
   public void testBalancerWithPinnedBlocks() throws Exception {
     // This test assumes stick-bit based block pin mechanism available only
     // in Linux/Unix. It can be unblocked on Windows when HDFS-7759 is ready to
@@ -556,7 +566,8 @@ public class TestBalancerLongRunningTasks {
     assertEquals(ExitStatus.NO_MOVE_PROGRESS.getExitCode(), r);
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testBalancerWithSortTopNodes() throws Exception {
     final Configuration conf = new HdfsConfiguration();
     initConf(conf);
@@ -663,16 +674,17 @@ public class TestBalancerLongRunningTasks {
     // Hence, overall total blocks moved by HDFS balancer would be either of these 2 options:
     // a) 2 blocks of total size (100B + 100B)
     // b) 3 blocks of total size (50B + 100B + 100B)
-    assertTrue("BalancerResult is not as expected. " + balancerResult,
-        (balancerResult.getBytesAlreadyMoved() == 200
+    assertTrue((balancerResult.getBytesAlreadyMoved() == 200
             && balancerResult.getBlocksMoved() == 2)
             || (balancerResult.getBytesAlreadyMoved() == 250
-            && balancerResult.getBlocksMoved() == 3));
+            && balancerResult.getBlocksMoved() == 3),
+        "BalancerResult is not as expected. " + balancerResult);
     // 100% and 95% used nodes will be balanced, so top used will be 900
     assertEquals(900, maxUsage);
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testBalancerWithLimitOverUtilizedNum() throws Exception {
     final Configuration conf = new HdfsConfiguration();
     // Init the config (block size to 100)
@@ -759,12 +771,72 @@ public class TestBalancerLongRunningTasks {
       }
       // The maxUsage value is 950, only 100% of the nodes will be balanced
       assertEquals(950, maxUsage);
-      assertTrue("BalancerResult is not as expected. " + balancerResult,
-          (balancerResult.getBytesAlreadyMoved() == 100 && balancerResult.getBlocksMoved() == 1));
+      assertTrue(
+          (balancerResult.getBytesAlreadyMoved() == 100 && balancerResult.getBlocksMoved() == 1),
+          "BalancerResult is not as expected. " + balancerResult);
     }
   }
 
-  @Test(timeout = 100000)
+  @Test
+  @Timeout(value = 60)
+  public void testBalancerMetricsDuplicate() throws Exception {
+    final Configuration conf = new HdfsConfiguration();
+    // Init the config (block size to 100)
+    initConf(conf);
+    final long totalCapacity = 1000L;
+    final int numOfOverUtilizedDn = 1;
+    final int numOfUnderUtilizedDn = 2;
+    final int totalNumOfDn = numOfOverUtilizedDn + numOfUnderUtilizedDn;
+    final long[] capacityArray = new long[totalNumOfDn];
+    Arrays.fill(capacityArray, totalCapacity);
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(totalNumOfDn)
+        .simulatedCapacities(capacityArray)
+        .build()) {
+      cluster.setDataNodesDead();
+      List<DataNode> dataNodes = cluster.getDataNodes();
+
+      DataNodeTestUtils.triggerHeartbeat(dataNodes.get(0));
+      DataNodeTestUtils.triggerBlockReport(dataNodes.get(0));
+      // Create nodes with: 100%
+      TestBalancer.createFile(cluster, new Path("test_big" + 0), 1000, (short) 1, 0);
+      cluster.setDataNodesDead();
+
+      // Two UnderUtilized in the cluster, execute at least twice: b.runOneIteration()
+      for (int i = 1; i <= numOfUnderUtilizedDn; i++) {
+        DataNodeTestUtils.triggerHeartbeat(dataNodes.get(i));
+        DataNodeTestUtils.triggerBlockReport(dataNodes.get(i));
+        // Create nodes with: 0%
+        TestBalancer.createFile(cluster, new Path("test_small" + i), 0, (short) 1, 0);
+        cluster.setDataNodesDead();
+      }
+
+      cluster.triggerDeletionReports();
+      cluster.triggerBlockReports();
+      cluster.triggerHeartbeats();
+
+      Collection<URI> namenodes = DFSUtil.getInternalNsRpcUris(conf);
+      Collection<String> nsIds = DFSUtilClient.getNameServiceIds(conf);
+      assertEquals(1, namenodes.size());
+
+      // Throw an error when we double-initialize BalancerMetrics
+      DefaultMetricsSystem.setMiniClusterMode(false);
+      MetricsSystem instance = DefaultMetricsSystem.instance();
+      // Avoid the impact of cluster metric, remove cluster JvmMetrics
+      instance.unregisterSource("JvmMetrics");
+
+      final BalancerParameters balancerParameters = Balancer.Cli.parse(new String[] {
+          "-policy", BalancingPolicy.Node.INSTANCE.getName(),
+          "-threshold", "10",
+      });
+      int r = Balancer.run(namenodes, nsIds, balancerParameters, conf);
+      assertEquals(ExitStatus.SUCCESS.getExitCode(), r);
+      DefaultMetricsSystem.setMiniClusterMode(true);
+    }
+  }
+
+  @Test
+  @Timeout(value = 100)
   public void testMaxIterationTime() throws Exception {
     final Configuration conf = new HdfsConfiguration();
     initConf(conf);
@@ -821,8 +893,8 @@ public class TestBalancerLongRunningTasks {
           // (highly unlikely) and then a block is moved unexpectedly,
           // IN_PROGRESS will be reported. This is highly unlikely unexpected
           // case. See HDFS-15989.
-          assertEquals("We expect ExitStatus.NO_MOVE_PROGRESS to be reported.",
-              ExitStatus.NO_MOVE_PROGRESS, r.getExitStatus());
+          assertEquals(ExitStatus.NO_MOVE_PROGRESS, r.getExitStatus(),
+              "We expect ExitStatus.NO_MOVE_PROGRESS to be reported.");
           assertEquals(0, r.getBlocksMoved());
         }
       } finally {

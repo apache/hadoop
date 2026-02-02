@@ -34,10 +34,10 @@ import org.apache.hadoop.hdfs.server.federation.store.protocol.*;
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Time;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,10 +46,10 @@ import java.net.URISyntaxException;
 import java.util.Collections;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_KEY;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 /**
  * This is a test through the Router move data to the Trash.
@@ -78,7 +78,7 @@ public class TestRouterTrash {
   private static final String TRASH_ROOT = "/user/" + TEST_USER + "/.Trash";
   private static final String CURRENT = "/Current";
 
-  @BeforeClass
+  @BeforeAll
   public static void globalSetUp() throws Exception {
     // Build and start a federated cluster
     cluster = new StateStoreDFSCluster(false, 2);
@@ -107,7 +107,7 @@ public class TestRouterTrash {
     mountTable = (MountTableResolver) router.getSubclusterResolver();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() {
     if (cluster != null) {
       cluster.stopRouter(routerContext);
@@ -116,7 +116,7 @@ public class TestRouterTrash {
     }
   }
 
-  @After
+  @AfterEach
   public void clearMountTable() throws IOException {
     RouterClient client = routerContext.getAdminClient();
     MountTableManager mountTableManager = client.getMountTableManager();
@@ -131,7 +131,7 @@ public class TestRouterTrash {
     }
   }
 
-  @After
+  @AfterEach
   public void clearFile() throws IOException {
     FileStatus[] fileStatuses = nnFs.listStatus(new Path("/"));
     for (FileStatus file : fileStatuses) {

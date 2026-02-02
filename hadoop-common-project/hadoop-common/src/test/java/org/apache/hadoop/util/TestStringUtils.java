@@ -24,12 +24,13 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.apache.hadoop.util.StringUtils.STRING_COLLECTION_SPLIT_EQUALS_INVALID_ARG;
 import static org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix.long2String;
 import static org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix.string2long;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.fail;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -48,8 +49,8 @@ import org.apache.commons.lang3.time.FastDateFormat;
 import org.apache.hadoop.test.UnitTestcaseTimeLimit;
 import org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
 
-import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 public class TestStringUtils extends UnitTestcaseTimeLimit {
   final private static String NULL_STR = null;
@@ -66,7 +67,8 @@ public class TestStringUtils extends UnitTestcaseTimeLimit {
   final private static FastDateFormat FAST_DATE_FORMAT =
       FastDateFormat.getInstance("d-MMM-yyyy HH:mm:ss");
   
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testEscapeString() throws Exception {
     assertEquals(NULL_STR, StringUtils.escapeString(NULL_STR));
     assertEquals(EMPTY_STR, StringUtils.escapeString(EMPTY_STR));
@@ -80,7 +82,8 @@ public class TestStringUtils extends UnitTestcaseTimeLimit {
         StringUtils.escapeString(STR_WITH_BOTH2));
   }
   
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testSplit() throws Exception {
     assertEquals(NULL_STR, StringUtils.split(NULL_STR));
     String[] splits = StringUtils.split(EMPTY_STR);
@@ -110,7 +113,8 @@ public class TestStringUtils extends UnitTestcaseTimeLimit {
     assertEquals(ESCAPED_STR_WITH_BOTH2, splits[0]);    
   }
   
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testSimpleSplit() throws Exception {
     final String[] TO_TEST = {
         "a/b/c",
@@ -120,13 +124,13 @@ public class TestStringUtils extends UnitTestcaseTimeLimit {
         "/",
         "////"};
     for (String testSubject : TO_TEST) {
-      assertArrayEquals("Testing '" + testSubject + "'",
-        testSubject.split("/"),
-        StringUtils.split(testSubject, '/'));
+      assertArrayEquals(testSubject.split("/"),
+          StringUtils.split(testSubject, '/'), "Testing '" + testSubject + "'");
     }
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testUnescapeString() throws Exception {
     assertEquals(NULL_STR, StringUtils.unEscapeString(NULL_STR));
     assertEquals(EMPTY_STR, StringUtils.unEscapeString(EMPTY_STR));
@@ -158,7 +162,8 @@ public class TestStringUtils extends UnitTestcaseTimeLimit {
         StringUtils.unEscapeString(ESCAPED_STR_WITH_BOTH2));
   }
   
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testTraditionalBinaryPrefix() throws Exception {
     //test string2long(..)
     String[] symbol = {"k", "m", "g", "t", "p", "e"};
@@ -241,19 +246,19 @@ public class TestStringUtils extends UnitTestcaseTimeLimit {
         { // n = 2^e
           final long n = 1L << e;
           final String expected = (n/p.value) + " " + p.symbol;
-          assertEquals("n=" + n, expected, long2String(n, null, 2));
+          assertEquals(expected, long2String(n, null, 2), "n=" + n);
         }
   
         { // n = 2^e + 1
           final long n = (1L << e) + 1;
           final String expected = (n/p.value) + trailingZeros + p.symbol;
-          assertEquals("n=" + n, expected, long2String(n, null, decimalPlace));
+          assertEquals(expected, long2String(n, null, decimalPlace), "n=" + n);
         }
   
         { // n = 2^e - 1
           final long n = (1L << e) - 1;
           final String expected = ((n+1)/p.value) + trailingZeros + p.symbol;
-          assertEquals("n=" + n, expected, long2String(n, null, decimalPlace));
+          assertEquals(expected, long2String(n, null, decimalPlace), "n=" + n);
         }
       }
     }
@@ -284,7 +289,8 @@ public class TestStringUtils extends UnitTestcaseTimeLimit {
     assertEquals("0.5430%", StringUtils.formatPercent(0.00543, 4));
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testJoin() {
     List<String> s = new ArrayList<String>();
     s.add("a");
@@ -300,7 +306,8 @@ public class TestStringUtils extends UnitTestcaseTimeLimit {
     assertEquals("a:b:c", StringUtils.join(':', s.subList(0, 3)));
   }
   
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testGetTrimmedStrings() throws Exception {
     String compactDirList = "/spindle1/hdfs,/spindle2/hdfs,/spindle3/hdfs";
     String spacedDirList = "/spindle1/hdfs, /spindle2/hdfs, /spindle3/hdfs";
@@ -322,7 +329,8 @@ public class TestStringUtils extends UnitTestcaseTimeLimit {
     assertArrayEquals(emptyArray, estring);
   } 
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testCamelize() {
     // common use cases
     assertEquals("Map", StringUtils.camelize("MAP"));
@@ -358,7 +366,8 @@ public class TestStringUtils extends UnitTestcaseTimeLimit {
     assertEquals("Zz", StringUtils.camelize("zZ"));
   }
   
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testStringToURI() {
     String[] str = new String[] { "file://" };
     try {
@@ -369,20 +378,19 @@ public class TestStringUtils extends UnitTestcaseTimeLimit {
     }
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testSimpleHostName() {
-    assertEquals("Should return hostname when FQDN is specified",
-            "hadoop01",
-            StringUtils.simpleHostname("hadoop01.domain.com"));
-    assertEquals("Should return hostname when only hostname is specified",
-            "hadoop01",
-            StringUtils.simpleHostname("hadoop01"));
-    assertEquals("Should not truncate when IP address is passed",
-            "10.10.5.68",
-            StringUtils.simpleHostname("10.10.5.68"));
+    assertEquals("hadoop01", StringUtils.simpleHostname("hadoop01.domain.com"),
+        "Should return hostname when FQDN is specified");
+    assertEquals("hadoop01", StringUtils.simpleHostname("hadoop01"),
+        "Should return hostname when only hostname is specified");
+    assertEquals("10.10.5.68", StringUtils.simpleHostname("10.10.5.68"),
+        "Should not truncate when IP address is passed");
   }
 
-  @Test (timeout = 5000)
+  @Test
+  @Timeout(value = 5)
   public void testReplaceTokensShellEnvVars() {
     Pattern pattern = StringUtils.SHELL_ENV_VAR_PATTERN;
     Map<String, String> replacements = new HashMap<String, String>();
@@ -403,7 +411,8 @@ public class TestStringUtils extends UnitTestcaseTimeLimit {
       replacements));
   }
 
-  @Test (timeout = 5000)
+  @Test
+  @Timeout(value = 5)
   public void testReplaceTokensWinEnvVars() {
     Pattern pattern = StringUtils.WIN_ENV_VAR_PATTERN;
     Map<String, String> replacements = new HashMap<String, String>();
@@ -471,8 +480,8 @@ public class TestStringUtils extends UnitTestcaseTimeLimit {
               FAST_DATE_FORMAT, start, end);
           String formattedTime2 = StringUtils.getFormattedTimeWithDiff(
               FAST_DATE_FORMAT, start, end);
-          assertTrue("Method returned inconsistent results indicative of"
-              + " a race condition", formattedTime1.equals(formattedTime2));
+          assertTrue(formattedTime1.equals(formattedTime2),
+              "Method returned inconsistent results indicative of a race condition");
 
         }
       });
@@ -487,16 +496,14 @@ public class TestStringUtils extends UnitTestcaseTimeLimit {
     long timeDiff = 523452311;
     String timeDiffStr = "99hrs, 59mins, 59sec";
 
-    assertEquals("Incorrect time diff string returned", timeDiffStr,
-        StringUtils.formatTimeSortable(timeDiff));
+    assertEquals(timeDiffStr, StringUtils.formatTimeSortable(timeDiff),
+        "Incorrect time diff string returned");
   }
 
   @Test
   public void testIsAlpha() {
-    assertTrue("Reported hello as non-alpha string",
-        StringUtils.isAlpha("hello"));
-    assertFalse("Reported hello1 as alpha string",
-        StringUtils.isAlpha("hello1"));
+    assertTrue(StringUtils.isAlpha("hello"), "Reported hello as non-alpha string");
+    assertFalse(StringUtils.isAlpha("hello1"), "Reported hello1 as alpha string");
   }
 
   @Test
@@ -504,8 +511,8 @@ public class TestStringUtils extends UnitTestcaseTimeLimit {
     String htmlStr = "<p>Hello. How are you?</p>";
     String escapedStr = "&lt;p&gt;Hello. How are you?&lt;/p&gt;";
 
-    assertEquals("Incorrect escaped HTML string returned",
-        escapedStr, StringUtils.escapeHTML(htmlStr));
+    assertEquals(escapedStr, StringUtils.escapeHTML(htmlStr),
+        "Incorrect escaped HTML string returned");
   }
 
   @Test
@@ -521,21 +528,18 @@ public class TestStringUtils extends UnitTestcaseTimeLimit {
   public void testStringCollectionSplitByEqualsSuccess() {
     Map<String, String> splitMap =
         StringUtils.getTrimmedStringCollectionSplitByEquals("");
-    Assertions
-        .assertThat(splitMap)
+    assertThat(splitMap)
         .describedAs("Map of key value pairs split by equals(=) and comma(,)")
         .hasSize(0);
 
     splitMap = StringUtils.getTrimmedStringCollectionSplitByEquals(null);
-    Assertions
-        .assertThat(splitMap)
+    assertThat(splitMap)
         .describedAs("Map of key value pairs split by equals(=) and comma(,)")
         .hasSize(0);
 
     splitMap = StringUtils.getTrimmedStringCollectionSplitByEquals(
         "element.first.key1 = element.first.val1");
-    Assertions
-        .assertThat(splitMap)
+    assertThat(splitMap)
         .describedAs("Map of key value pairs split by equals(=) and comma(,)")
         .hasSize(1)
         .containsEntry("element.first.key1", "element.first.val1");
@@ -543,8 +547,7 @@ public class TestStringUtils extends UnitTestcaseTimeLimit {
     splitMap = StringUtils.getTrimmedStringCollectionSplitByEquals(
         "element.xyz.key1 =element.abc.val1 , element.xyz.key2= element.abc.val2");
 
-    Assertions
-        .assertThat(splitMap)
+    assertThat(splitMap)
         .describedAs("Map of key value pairs split by equals(=) and comma(,)")
         .hasSize(2)
         .containsEntry("element.xyz.key1", "element.abc.val1")
@@ -558,8 +561,7 @@ public class TestStringUtils extends UnitTestcaseTimeLimit {
             + " element.xyz.key6      =       element.abc.val6 \n , \n"
             + "element.xyz.key7=element.abc.val7,\n");
 
-    Assertions
-        .assertThat(splitMap)
+    assertThat(splitMap)
         .describedAs("Map of key value pairs split by equals(=) and comma(,)")
         .hasSize(7)
         .containsEntry("element.xyz.key1", "element.abc.val1")
@@ -572,8 +574,7 @@ public class TestStringUtils extends UnitTestcaseTimeLimit {
 
     splitMap = StringUtils.getTrimmedStringCollectionSplitByEquals(
         "element.first.key1 = element.first.val2 ,element.first.key1 =element.first.val1");
-    Assertions
-        .assertThat(splitMap)
+    assertThat(splitMap)
         .describedAs("Map of key value pairs split by equals(=) and comma(,)")
         .hasSize(1)
         .containsEntry("element.first.key1", "element.first.val1");
@@ -581,16 +582,14 @@ public class TestStringUtils extends UnitTestcaseTimeLimit {
     splitMap = StringUtils.getTrimmedStringCollectionSplitByEquals(
         ",,, , ,, ,element.first.key1 = element.first.val2 ,"
             + "element.first.key1 = element.first.val1 , ,,, ,");
-    Assertions
-        .assertThat(splitMap)
+    assertThat(splitMap)
         .describedAs("Map of key value pairs split by equals(=) and comma(,)")
         .hasSize(1)
         .containsEntry("element.first.key1", "element.first.val1");
 
     splitMap = StringUtils.getTrimmedStringCollectionSplitByEquals(
         ",, , ,      ,, ,");
-    Assertions
-        .assertThat(splitMap)
+    assertThat(splitMap)
         .describedAs("Map of key value pairs split by equals(=) and comma(,)")
         .hasSize(0);
 
@@ -634,7 +633,7 @@ public class TestStringUtils extends UnitTestcaseTimeLimit {
   }
 
   // Benchmark for StringUtils split
-  public static void main(String []args) {
+  /*public static void main(String []args) {
     final String TO_SPLIT = "foo,bar,baz,blah,blah";
     for (boolean useOurs : new boolean[] { false, true }) {
       for (int outer=0; outer < 10; outer++) {
@@ -658,5 +657,5 @@ public class TestStringUtils extends UnitTestcaseTimeLimit {
         }
       }
     }
-  }
+  }*/
 }

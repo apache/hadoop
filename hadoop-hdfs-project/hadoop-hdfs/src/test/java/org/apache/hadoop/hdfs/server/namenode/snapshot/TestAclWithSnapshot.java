@@ -21,7 +21,12 @@ import static org.apache.hadoop.hdfs.server.namenode.AclTestHelpers.*;
 import static org.apache.hadoop.fs.permission.AclEntryScope.*;
 import static org.apache.hadoop.fs.permission.AclEntryType.*;
 import static org.apache.hadoop.fs.permission.FsAction.*;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.List;
@@ -50,12 +55,10 @@ import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Lists;
 
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests interaction of ACLs with snapshots.
@@ -74,17 +77,14 @@ public class TestAclWithSnapshot {
   private static Path path, snapshotPath;
   private static String snapshotName;
 
-  @Rule
-  public ExpectedException exception = ExpectedException.none();
-
-  @BeforeClass
+  @BeforeAll
   public static void init() throws Exception {
     conf = new Configuration();
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_ACLS_ENABLED_KEY, true);
     initCluster(true);
   }
 
-  @AfterClass
+  @AfterAll
   public static void shutdown() throws Exception {
     IOUtils.cleanupWithLogger(null, hdfs, fsAsBruce, fsAsDiana);
     if (cluster != null) {
@@ -92,7 +92,7 @@ public class TestAclWithSnapshot {
     }
   }
 
-  @Before
+  @BeforeEach
   public void setUp() {
     ++pathCount;
     path = new Path("/p" + pathCount);
@@ -119,16 +119,16 @@ public class TestAclWithSnapshot {
     // Both original and snapshot still have same ACL.
     AclStatus s = hdfs.getAclStatus(path);
     AclEntry[] returned = s.getEntries().toArray(new AclEntry[0]);
-    assertArrayEquals(new AclEntry[] {
-      aclEntry(ACCESS, USER, "bruce", READ_EXECUTE),
-      aclEntry(ACCESS, GROUP, NONE) }, returned);
+    assertArrayEquals(new AclEntry[]{aclEntry(ACCESS, USER, "bruce", READ_EXECUTE),
+            aclEntry(ACCESS, GROUP, NONE)},
+        returned);
     assertPermission((short)010750, path);
 
     s = hdfs.getAclStatus(snapshotPath);
     returned = s.getEntries().toArray(new AclEntry[0]);
-    assertArrayEquals(new AclEntry[] {
-      aclEntry(ACCESS, USER, "bruce", READ_EXECUTE),
-      aclEntry(ACCESS, GROUP, NONE) }, returned);
+    assertArrayEquals(new AclEntry[]{aclEntry(ACCESS, USER, "bruce", READ_EXECUTE),
+            aclEntry(ACCESS, GROUP, NONE)},
+        returned);
     assertPermission((short)010750, snapshotPath);
 
     assertDirPermissionGranted(fsAsBruce, BRUCE, snapshotPath);
@@ -153,16 +153,14 @@ public class TestAclWithSnapshot {
       Path snapshotPath) throws Exception {
     AclStatus s = hdfs.getAclStatus(path);
     AclEntry[] returned = s.getEntries().toArray(new AclEntry[0]);
-    assertArrayEquals(new AclEntry[] {
-      aclEntry(ACCESS, USER, "diana", READ_EXECUTE),
-      aclEntry(ACCESS, GROUP, NONE) }, returned);
+    assertArrayEquals(new AclEntry[]{aclEntry(ACCESS, USER, "diana", READ_EXECUTE),
+        aclEntry(ACCESS, GROUP, NONE)}, returned);
     assertPermission((short)010550, path);
 
     s = hdfs.getAclStatus(snapshotPath);
     returned = s.getEntries().toArray(new AclEntry[0]);
-    assertArrayEquals(new AclEntry[] {
-      aclEntry(ACCESS, USER, "bruce", READ_EXECUTE),
-      aclEntry(ACCESS, GROUP, NONE) }, returned);
+    assertArrayEquals(new AclEntry[]{aclEntry(ACCESS, USER, "bruce", READ_EXECUTE),
+        aclEntry(ACCESS, GROUP, NONE)}, returned);
     assertPermission((short)010750, snapshotPath);
 
     assertDirPermissionDenied(fsAsBruce, BRUCE, path);
@@ -302,16 +300,16 @@ public class TestAclWithSnapshot {
     // Both original and snapshot still have same ACL.
     AclStatus s = hdfs.getAclStatus(path);
     AclEntry[] returned = s.getEntries().toArray(new AclEntry[0]);
-    assertArrayEquals(new AclEntry[] {
-      aclEntry(ACCESS, USER, "bruce", READ_EXECUTE),
-      aclEntry(ACCESS, GROUP, NONE) }, returned);
+    assertArrayEquals(new AclEntry[]{aclEntry(ACCESS, USER, "bruce", READ_EXECUTE),
+            aclEntry(ACCESS, GROUP, NONE)},
+        returned);
     assertPermission((short)010750, path);
 
     s = hdfs.getAclStatus(snapshotPath);
     returned = s.getEntries().toArray(new AclEntry[0]);
-    assertArrayEquals(new AclEntry[] {
-      aclEntry(ACCESS, USER, "bruce", READ_EXECUTE),
-      aclEntry(ACCESS, GROUP, NONE) }, returned);
+    assertArrayEquals(new AclEntry[]{aclEntry(ACCESS, USER, "bruce", READ_EXECUTE),
+            aclEntry(ACCESS, GROUP, NONE)},
+        returned);
     assertPermission((short)010750, snapshotPath);
 
     assertDirPermissionGranted(fsAsBruce, BRUCE, snapshotPath);
@@ -336,9 +334,9 @@ public class TestAclWithSnapshot {
 
     s = hdfs.getAclStatus(snapshotPath);
     returned = s.getEntries().toArray(new AclEntry[0]);
-    assertArrayEquals(new AclEntry[] {
-      aclEntry(ACCESS, USER, "bruce", READ_EXECUTE),
-      aclEntry(ACCESS, GROUP, NONE) }, returned);
+    assertArrayEquals(new AclEntry[]{aclEntry(ACCESS, USER, "bruce", READ_EXECUTE),
+            aclEntry(ACCESS, GROUP, NONE)},
+        returned);
     assertPermission((short)010750, snapshotPath);
 
     assertDirPermissionDenied(fsAsBruce, BRUCE, path);
@@ -511,22 +509,18 @@ public class TestAclWithSnapshot {
 
     AclStatus s = hdfs.getAclStatus(path);
     AclEntry[] returned = s.getEntries().toArray(new AclEntry[0]);
-    assertArrayEquals(new AclEntry[] {
-      aclEntry(DEFAULT, USER, ALL),
-      aclEntry(DEFAULT, USER, "bruce", READ_EXECUTE),
-      aclEntry(DEFAULT, GROUP, NONE),
-      aclEntry(DEFAULT, MASK, READ_EXECUTE),
-      aclEntry(DEFAULT, OTHER, NONE) }, returned);
+    assertArrayEquals(new AclEntry[]{aclEntry(DEFAULT, USER, ALL),
+            aclEntry(DEFAULT, USER, "bruce", READ_EXECUTE), aclEntry(DEFAULT, GROUP, NONE),
+            aclEntry(DEFAULT, MASK, READ_EXECUTE), aclEntry(DEFAULT, OTHER, NONE)},
+        returned);
     assertPermission((short)010700, path);
 
     s = hdfs.getAclStatus(snapshotPath);
     returned = s.getEntries().toArray(new AclEntry[0]);
-    assertArrayEquals(new AclEntry[] {
-      aclEntry(DEFAULT, USER, ALL),
-      aclEntry(DEFAULT, USER, "bruce", READ_EXECUTE),
-      aclEntry(DEFAULT, GROUP, NONE),
-      aclEntry(DEFAULT, MASK, READ_EXECUTE),
-      aclEntry(DEFAULT, OTHER, NONE) }, returned);
+    assertArrayEquals(new AclEntry[]{aclEntry(DEFAULT, USER, ALL),
+            aclEntry(DEFAULT, USER, "bruce", READ_EXECUTE), aclEntry(DEFAULT, GROUP, NONE),
+            aclEntry(DEFAULT, MASK, READ_EXECUTE), aclEntry(DEFAULT, OTHER, NONE)},
+        returned);
     assertPermission((short)010700, snapshotPath);
 
     assertDirPermissionDenied(fsAsBruce, BRUCE, snapshotPath);
@@ -538,8 +532,9 @@ public class TestAclWithSnapshot {
     SnapshotTestHelper.createSnapshot(hdfs, path, snapshotName);
     List<AclEntry> aclSpec = Lists.newArrayList(
       aclEntry(DEFAULT, USER, "bruce", READ_EXECUTE));
-    exception.expect(SnapshotAccessControlException.class);
-    hdfs.modifyAclEntries(snapshotPath, aclSpec);
+    assertThrows(SnapshotAccessControlException.class, () -> {
+      hdfs.modifyAclEntries(snapshotPath, aclSpec);
+    });
   }
 
   @Test
@@ -548,24 +543,27 @@ public class TestAclWithSnapshot {
     SnapshotTestHelper.createSnapshot(hdfs, path, snapshotName);
     List<AclEntry> aclSpec = Lists.newArrayList(
       aclEntry(DEFAULT, USER, "bruce"));
-    exception.expect(SnapshotAccessControlException.class);
-    hdfs.removeAclEntries(snapshotPath, aclSpec);
+    assertThrows(SnapshotAccessControlException.class, () -> {
+      hdfs.removeAclEntries(snapshotPath, aclSpec);
+    });
   }
 
   @Test
   public void testRemoveDefaultAclSnapshotPath() throws Exception {
     FileSystem.mkdirs(hdfs, path, FsPermission.createImmutable((short)0700));
     SnapshotTestHelper.createSnapshot(hdfs, path, snapshotName);
-    exception.expect(SnapshotAccessControlException.class);
-    hdfs.removeDefaultAcl(snapshotPath);
+    assertThrows(SnapshotAccessControlException.class, () -> {
+      hdfs.removeDefaultAcl(snapshotPath);
+    });
   }
 
   @Test
   public void testRemoveAclSnapshotPath() throws Exception {
     FileSystem.mkdirs(hdfs, path, FsPermission.createImmutable((short)0700));
     SnapshotTestHelper.createSnapshot(hdfs, path, snapshotName);
-    exception.expect(SnapshotAccessControlException.class);
-    hdfs.removeAcl(snapshotPath);
+    assertThrows(SnapshotAccessControlException.class, () -> {
+      hdfs.removeAcl(snapshotPath);
+    });
   }
 
   @Test
@@ -574,8 +572,9 @@ public class TestAclWithSnapshot {
     SnapshotTestHelper.createSnapshot(hdfs, path, snapshotName);
     List<AclEntry> aclSpec = Lists.newArrayList(
       aclEntry(DEFAULT, USER, "bruce"));
-    exception.expect(SnapshotAccessControlException.class);
-    hdfs.setAcl(snapshotPath, aclSpec);
+    assertThrows(SnapshotAccessControlException.class, () -> {
+      hdfs.setAcl(snapshotPath, aclSpec);
+    });
   }
 
   @Test
@@ -596,16 +595,16 @@ public class TestAclWithSnapshot {
 
     AclStatus s = hdfs.getAclStatus(filePath);
     AclEntry[] returned = s.getEntries().toArray(new AclEntry[0]);
-    assertArrayEquals(new AclEntry[] {
-      aclEntry(ACCESS, USER, "bruce", READ_WRITE),
-      aclEntry(ACCESS, GROUP, NONE) }, returned);
+    assertArrayEquals(new AclEntry[]{aclEntry(ACCESS, USER, "bruce", READ_WRITE),
+            aclEntry(ACCESS, GROUP, NONE)},
+        returned);
     assertPermission((short)010660, filePath);
 
     s = hdfs.getAclStatus(fileSnapshotPath);
     returned = s.getEntries().toArray(new AclEntry[0]);
-    assertArrayEquals(new AclEntry[] {
-      aclEntry(ACCESS, USER, "bruce", READ_WRITE),
-      aclEntry(ACCESS, GROUP, NONE) }, returned);
+    assertArrayEquals(new AclEntry[]{aclEntry(ACCESS, USER, "bruce", READ_WRITE),
+            aclEntry(ACCESS, GROUP, NONE)},
+        returned);
     assertPermission((short)010660, filePath);
 
     aclSpec = Lists.newArrayList(
@@ -631,16 +630,16 @@ public class TestAclWithSnapshot {
 
     AclStatus s = hdfs.getAclStatus(filePath);
     AclEntry[] returned = s.getEntries().toArray(new AclEntry[0]);
-    assertArrayEquals(new AclEntry[] {
-      aclEntry(ACCESS, USER, "bruce", READ_WRITE),
-      aclEntry(ACCESS, GROUP, NONE) }, returned);
+    assertArrayEquals(new AclEntry[]{aclEntry(ACCESS, USER, "bruce", READ_WRITE),
+            aclEntry(ACCESS, GROUP, NONE)},
+        returned);
     assertPermission((short)010660, filePath);
 
     s = hdfs.getAclStatus(fileSnapshotPath);
     returned = s.getEntries().toArray(new AclEntry[0]);
-    assertArrayEquals(new AclEntry[] {
-      aclEntry(ACCESS, USER, "bruce", READ_WRITE),
-      aclEntry(ACCESS, GROUP, NONE) }, returned);
+    assertArrayEquals(new AclEntry[]{aclEntry(ACCESS, USER, "bruce", READ_WRITE),
+            aclEntry(ACCESS, GROUP, NONE)},
+        returned);
     assertPermission((short)010660, filePath);
 
     aclSpec = Lists.newArrayList(
@@ -666,8 +665,8 @@ public class TestAclWithSnapshot {
         aclEntry(ACCESS, GROUP, "testdeduplicategroup", ALL));
     hdfs.mkdirs(path);
     hdfs.modifyAclEntries(path, aclSpec);
-    assertEquals("One more ACL feature should be unique", startSize + 1,
-        AclStorage.getUniqueAclFeatures().getUniqueElementsSize());
+    assertEquals(startSize + 1, AclStorage.getUniqueAclFeatures().getUniqueElementsSize(),
+        "One more ACL feature should be unique");
     Path subdir = new Path(path, "sub-dir");
     hdfs.mkdirs(subdir);
     Path file = new Path(path, "file");
@@ -677,15 +676,15 @@ public class TestAclWithSnapshot {
       // create the snapshot with root directory having ACLs should refer to
       // same ACLFeature without incrementing the reference count
       aclFeature = FSAclBaseTest.getAclFeature(path, cluster);
-      assertEquals("Reference count should be one before snapshot", 1,
-          aclFeature.getRefCount());
+      assertEquals(1, aclFeature.getRefCount(),
+          "Reference count should be one before snapshot");
       Path snapshotPath = SnapshotTestHelper.createSnapshot(hdfs, path,
           snapshotName);
       AclFeature snapshotAclFeature = FSAclBaseTest.getAclFeature(snapshotPath,
           cluster);
       assertSame(aclFeature, snapshotAclFeature);
-      assertEquals("Reference count should be increased", 2,
-          snapshotAclFeature.getRefCount());
+      assertEquals(2, snapshotAclFeature.getRefCount(),
+          "Reference count should be increased");
     }
     {
       // deleting the snapshot with root directory having ACLs should not alter
@@ -695,15 +694,16 @@ public class TestAclWithSnapshot {
     {
       hdfs.modifyAclEntries(subdir, aclSpec);
       aclFeature = FSAclBaseTest.getAclFeature(subdir, cluster);
-      assertEquals("Reference count should be 1", 1, aclFeature.getRefCount());
+      assertEquals(1, aclFeature.getRefCount(),
+          "Reference count should be 1");
       Path snapshotPath = SnapshotTestHelper.createSnapshot(hdfs, path,
           snapshotName);
       Path subdirInSnapshot = new Path(snapshotPath, "sub-dir");
       AclFeature snapshotAcl = FSAclBaseTest.getAclFeature(subdirInSnapshot,
           cluster);
       assertSame(aclFeature, snapshotAcl);
-      assertEquals("Reference count should remain same", 1,
-          aclFeature.getRefCount());
+      assertEquals(1, aclFeature.getRefCount(),
+          "Reference count should remain same");
 
       // Delete the snapshot with sub-directory containing the ACLs should not
       // alter the reference count for AclFeature
@@ -712,15 +712,16 @@ public class TestAclWithSnapshot {
     {
       hdfs.modifyAclEntries(file, aclSpec);
       aclFeature = FSAclBaseTest.getAclFeature(file, cluster);
-      assertEquals("Reference count should be 1", 1, aclFeature.getRefCount());
+      assertEquals(1, aclFeature.getRefCount(),
+          "Reference count should be 1");
       Path snapshotPath = SnapshotTestHelper.createSnapshot(hdfs, path,
           snapshotName);
       Path fileInSnapshot = new Path(snapshotPath, file.getName());
       AclFeature snapshotAcl = FSAclBaseTest.getAclFeature(fileInSnapshot,
           cluster);
       assertSame(aclFeature, snapshotAcl);
-      assertEquals("Reference count should remain same", 1,
-          aclFeature.getRefCount());
+      assertEquals(1, aclFeature.getRefCount(),
+          "Reference count should remain same");
 
       // Delete the snapshot with contained file having ACLs should not
       // alter the reference count for AclFeature
@@ -735,8 +736,8 @@ public class TestAclWithSnapshot {
       AclFeature snapshotAcl = FSAclBaseTest.getAclFeature(snapshotPath,
           cluster);
       aclFeature = FSAclBaseTest.getAclFeature(path, cluster);
-      assertEquals("Before modification same ACL should be referenced twice", 2,
-          aclFeature.getRefCount());
+      assertEquals(2, aclFeature.getRefCount(),
+          "Before modification same ACL should be referenced twice");
       List<AclEntry> newAcl = Lists.newArrayList(aclEntry(ACCESS, USER,
           "testNewUser", ALL));
       hdfs.modifyAclEntries(path, newAcl);
@@ -745,10 +746,10 @@ public class TestAclWithSnapshot {
           snapshotPath, cluster);
       assertSame(snapshotAcl, snapshotAclPostModification);
       assertNotSame(aclFeature, snapshotAclPostModification);
-      assertEquals("Old ACL feature reference count should be same", 1,
-          snapshotAcl.getRefCount());
-      assertEquals("New ACL feature reference should be used", 1,
-          aclFeature.getRefCount());
+      assertEquals(1, snapshotAcl.getRefCount(),
+          "Old ACL feature reference count should be same");
+      assertEquals(1, aclFeature.getRefCount(),
+          "New ACL feature reference should be used");
       deleteSnapshotWithAclAndVerify(aclFeature, path, startSize);
     }
     {
@@ -765,9 +766,10 @@ public class TestAclWithSnapshot {
       hdfs.modifyAclEntries(subdir, newAcl);
       aclFeature = FSAclBaseTest.getAclFeature(subdir, cluster);
       assertNotSame(aclFeature, snapshotAclFeature);
-      assertEquals("Reference count should remain same", 1,
-          snapshotAclFeature.getRefCount());
-      assertEquals("New AclFeature should be used", 1, aclFeature.getRefCount());
+      assertEquals(1, snapshotAclFeature.getRefCount(),
+          "Reference count should remain same");
+      assertEquals(1, aclFeature.getRefCount(),
+          "New AclFeature should be used");
 
       deleteSnapshotWithAclAndVerify(aclFeature, subdir, startSize);
     }
@@ -785,8 +787,8 @@ public class TestAclWithSnapshot {
       hdfs.modifyAclEntries(file, newAcl);
       aclFeature = FSAclBaseTest.getAclFeature(file, cluster);
       assertNotSame(aclFeature, snapshotAclFeature);
-      assertEquals("Reference count should remain same", 1,
-          snapshotAclFeature.getRefCount());
+      assertEquals(1, snapshotAclFeature.getRefCount(),
+          "Reference count should remain same");
       deleteSnapshotWithAclAndVerify(aclFeature, file, startSize);
     }
     {
@@ -814,14 +816,14 @@ public class TestAclWithSnapshot {
       assertSame(dirAcl, snapshotDirAclFeature);
       hdfs.delete(subdir, true);
       assertEquals(
-          "Original ACLs references should be maintained for snapshot", 1,
-          snapshotFileAclFeature.getRefCount());
+          1, snapshotFileAclFeature.getRefCount(),
+          "Original ACLs references should be maintained for snapshot");
       assertEquals(
-          "Original ACLs references should be maintained for snapshot", 1,
-          snapshotDirAclFeature.getRefCount());
+          1, snapshotDirAclFeature.getRefCount(),
+          "Original ACLs references should be maintained for snapshot");
       hdfs.deleteSnapshot(path, snapshotName);
-      assertEquals("ACLs should be deleted from snapshot", startSize, AclStorage
-          .getUniqueAclFeatures().getUniqueElementsSize());
+      assertEquals(startSize, AclStorage.getUniqueAclFeatures().getUniqueElementsSize(),
+          "ACLs should be deleted from snapshot");
     }
   }
 
@@ -831,14 +833,13 @@ public class TestAclWithSnapshot {
     AclFeature afterDeleteAclFeature = FSAclBaseTest.getAclFeature(
         pathToCheckAcl, cluster);
     assertSame(aclFeature, afterDeleteAclFeature);
-    assertEquals("Reference count should remain same"
-        + " even after deletion of snapshot", 1,
-        afterDeleteAclFeature.getRefCount());
+    assertEquals(1, afterDeleteAclFeature.getRefCount(),
+        "Reference count should remain same" + " even after deletion of snapshot");
 
     hdfs.removeAcl(pathToCheckAcl);
-    assertEquals("Reference count should be 0", 0, aclFeature.getRefCount());
-    assertEquals("Unique ACL features should remain same", totalAclFeatures,
-        AclStorage.getUniqueAclFeatures().getUniqueElementsSize());
+    assertEquals(0, aclFeature.getRefCount(), "Reference count should be 0");
+    assertEquals(totalAclFeatures, AclStorage.getUniqueAclFeatures().getUniqueElementsSize(),
+        "Unique ACL features should remain same");
   }
 
   /**

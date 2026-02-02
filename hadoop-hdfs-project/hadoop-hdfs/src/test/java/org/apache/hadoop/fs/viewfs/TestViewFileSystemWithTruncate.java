@@ -31,13 +31,14 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Verify truncate through ViewFileSystem functionality.
@@ -54,7 +55,7 @@ public class TestViewFileSystemWithTruncate {
   private FileSystemTestHelper fileSystemTestHelper =
       new FileSystemTestHelper("/tmp/TestViewFileSystemWithXAttrs");
 
-  @BeforeClass
+  @BeforeAll
   public static void clusterSetupAtBeginning() throws IOException {
     cluster = new MiniDFSCluster.Builder(clusterConf)
         .nnTopology(MiniDFSNNTopology.simpleFederatedTopology(2))
@@ -64,14 +65,14 @@ public class TestViewFileSystemWithTruncate {
     fHdfs = cluster.getFileSystem(0);
   }
 
-  @AfterClass
+  @AfterAll
   public static void clusterShutdownAtEnd() throws Exception {
     if (cluster != null) {
       cluster.shutdown();
     }
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     fsTarget = fHdfs;
     targetTestRoot = fileSystemTestHelper.getAbsoluteTestRootPath(fsTarget);
@@ -90,12 +91,13 @@ public class TestViewFileSystemWithTruncate {
         .addLink(fsViewConf, mountOnNn1.toString(), targetTestRoot.toUri());
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     fsTarget.delete(fileSystemTestHelper.getTestRootPath(fsTarget), true);
   }
 
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testTruncateWithViewFileSystem()
       throws Exception {
     Path filePath = new Path(mountOnNn1 + "/ttest");
@@ -104,8 +106,8 @@ public class TestViewFileSystemWithTruncate {
     out.writeBytes("drtatedasfdasfgdfas");
     out.close();
     int newLength = 10;
-    assertTrue("ViewFS supports truncate",
-        fsView.hasPathCapability(filePath, CommonPathCapabilities.FS_TRUNCATE));
+    assertTrue(fsView.hasPathCapability(filePath, CommonPathCapabilities.FS_TRUNCATE),
+        "ViewFS supports truncate");
     boolean isReady = fsView.truncate(filePath, newLength);
     if (!isReady) {
       GenericTestUtils.waitFor(new Supplier<Boolean>() {

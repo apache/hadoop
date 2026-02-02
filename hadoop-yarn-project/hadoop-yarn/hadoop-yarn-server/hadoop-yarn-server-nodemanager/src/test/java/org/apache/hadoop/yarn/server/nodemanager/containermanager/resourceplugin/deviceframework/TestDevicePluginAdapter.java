@@ -54,10 +54,9 @@ import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.NMDeviceResourceInfo;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.TestResourceUtils;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -74,6 +73,10 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -105,7 +108,7 @@ public class TestDevicePluginAdapter {
   private CGroupsHandler mockCGroupsHandler;
   private PrivilegedOperationExecutor mockPrivilegedExecutor;
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     this.conf = new YarnConfiguration();
     // setup resource-types.xml
@@ -117,7 +120,7 @@ public class TestDevicePluginAdapter {
     mockPrivilegedExecutor = mock(PrivilegedOperationExecutor.class);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     // cleanup resource-types.xml
     File dest = new File(this.tempResourceTypesFile);
@@ -167,7 +170,7 @@ public class TestDevicePluginAdapter {
     verify(mockCGroupsHandler).initializeCGroupController(
         CGroupsHandler.CGroupController.DEVICES);
     int size = dmm.getAvailableDevices(resourceName);
-    Assert.assertEquals(3, size);
+    assertEquals(3, size);
     // Case 1. A container c1 requests 1 device
     Container c1 = mockContainerWithDeviceRequest(1,
         resourceName,
@@ -175,13 +178,13 @@ public class TestDevicePluginAdapter {
     // preStart
     adapter.getDeviceResourceHandler().preStart(c1);
     // check book keeping
-    Assert.assertEquals(2,
+    assertEquals(2,
         dmm.getAvailableDevices(resourceName));
-    Assert.assertEquals(1,
+    assertEquals(1,
         dmm.getAllUsedDevices().get(resourceName).size());
-    Assert.assertEquals(3,
+    assertEquals(3,
         dmm.getAllAllowedDevices().get(resourceName).size());
-    Assert.assertEquals(1,
+    assertEquals(1,
         dmm.getAllocatedDevices(resourceName, c1.getContainerId()).size());
     verify(mockShellWrapper, times(2)).getDeviceFileType(anyString());
     // check device cgroup create operation
@@ -189,11 +192,11 @@ public class TestDevicePluginAdapter {
         "c-256:1-rwm,c-256:2-rwm", "256:0");
     // postComplete
     adapter.getDeviceResourceHandler().postComplete(getContainerId(1));
-    Assert.assertEquals(3,
+    assertEquals(3,
         dmm.getAvailableDevices(resourceName));
-    Assert.assertEquals(0,
+    assertEquals(0,
         dmm.getAllUsedDevices().get(resourceName).size());
-    Assert.assertEquals(3,
+    assertEquals(3,
         dmm.getAllAllowedDevices().get(resourceName).size());
     // check cgroup delete operation
     verify(mockCGroupsHandler).deleteCGroup(
@@ -211,13 +214,13 @@ public class TestDevicePluginAdapter {
     // preStart
     adapter.getDeviceResourceHandler().preStart(c2);
     // check book keeping
-    Assert.assertEquals(0,
+    assertEquals(0,
         dmm.getAvailableDevices(resourceName));
-    Assert.assertEquals(3,
+    assertEquals(3,
         dmm.getAllUsedDevices().get(resourceName).size());
-    Assert.assertEquals(3,
+    assertEquals(3,
         dmm.getAllAllowedDevices().get(resourceName).size());
-    Assert.assertEquals(3,
+    assertEquals(3,
         dmm.getAllocatedDevices(resourceName, c2.getContainerId()).size());
     verify(mockShellWrapper, times(0)).getDeviceFileType(anyString());
     // check device cgroup create operation
@@ -229,11 +232,11 @@ public class TestDevicePluginAdapter {
         null, "256:0,256:1,256:2");
     // postComplete
     adapter.getDeviceResourceHandler().postComplete(getContainerId(2));
-    Assert.assertEquals(3,
+    assertEquals(3,
         dmm.getAvailableDevices(resourceName));
-    Assert.assertEquals(0,
+    assertEquals(0,
         dmm.getAllUsedDevices().get(resourceName).size());
-    Assert.assertEquals(3,
+    assertEquals(3,
         dmm.getAllAllowedDevices().get(resourceName).size());
     // check cgroup delete operation
     verify(mockCGroupsHandler).deleteCGroup(
@@ -251,11 +254,11 @@ public class TestDevicePluginAdapter {
     // preStart
     adapter.getDeviceResourceHandler().preStart(c3);
     // check book keeping
-    Assert.assertEquals(3,
+    assertEquals(3,
         dmm.getAvailableDevices(resourceName));
-    Assert.assertEquals(0,
+    assertEquals(0,
         dmm.getAllUsedDevices().get(resourceName).size());
-    Assert.assertEquals(3,
+    assertEquals(3,
         dmm.getAllAllowedDevices().get(resourceName).size());
     verify(mockShellWrapper, times(3)).getDeviceFileType(anyString());
     // check device cgroup create operation
@@ -267,13 +270,13 @@ public class TestDevicePluginAdapter {
         "c-256:0-rwm,c-256:1-rwm,c-256:2-rwm", null);
     // postComplete
     adapter.getDeviceResourceHandler().postComplete(getContainerId(3));
-    Assert.assertEquals(3,
+    assertEquals(3,
         dmm.getAvailableDevices(resourceName));
-    Assert.assertEquals(0,
+    assertEquals(0,
         dmm.getAllUsedDevices().get(resourceName).size());
-    Assert.assertEquals(3,
+    assertEquals(3,
         dmm.getAllAllowedDevices().get(resourceName).size());
-    Assert.assertEquals(0,
+    assertEquals(0,
         dmm.getAllocatedDevices(resourceName, c3.getContainerId()).size());
     // check cgroup delete operation
     verify(mockCGroupsHandler).deleteCGroup(
@@ -293,7 +296,7 @@ public class TestDevicePluginAdapter {
         ArgumentCaptor.forClass(PrivilegedOperation.class);
     verify(mockPrivilegedExecutor, times(invokeTimesOfPrivilegedExecutor))
         .executePrivilegedOperation(args.capture(), eq(true));
-    Assert.assertEquals(PrivilegedOperation.OperationType.DEVICE,
+    assertEquals(PrivilegedOperation.OperationType.DEVICE,
         args.getValue().getOperationType());
     List<String> expectedArgs = new ArrayList<>();
     expectedArgs.add(DeviceResourceHandlerImpl.CONTAINER_ID_CLI_OPTION);
@@ -306,7 +309,7 @@ public class TestDevicePluginAdapter {
       expectedArgs.add(DeviceResourceHandlerImpl.ALLOWED_DEVICES_CLI_OPTION);
       expectedArgs.add(allowedParam);
     }
-    Assert.assertArrayEquals(expectedArgs.toArray(),
+    assertArrayEquals(expectedArgs.toArray(),
         args.getValue().getArguments().toArray());
   }
 
@@ -411,7 +414,7 @@ public class TestDevicePluginAdapter {
     adapter.createResourceHandler(context,
         mockCGroupsHandler, mockPrivilegedExecutor);
     adapter.getDeviceResourceHandler().bootstrap(conf);
-    Assert.assertEquals(3,
+    assertEquals(3,
         dmm.getAllAllowedDevices().get(resourceName).size());
     // mock NMStateStore
     Device storedDevice = Device.Builder.newInstance()
@@ -438,14 +441,14 @@ public class TestDevicePluginAdapter {
     runningContainersMap.put(getContainerId(0), nmContainer);
     adapter.getDeviceResourceHandler().reacquireContainer(
         getContainerId(0));
-    Assert.assertEquals(3,
+    assertEquals(3,
         dmm.getAllAllowedDevices().get(resourceName).size());
-    Assert.assertEquals(1,
+    assertEquals(1,
         dmm.getAllUsedDevices().get(resourceName).size());
-    Assert.assertEquals(2,
+    assertEquals(2,
         dmm.getAvailableDevices(resourceName));
     Map<Device, ContainerId> used = dmm.getAllUsedDevices().get(resourceName);
-    Assert.assertTrue(used.keySet().contains(storedDevice));
+    assertTrue(used.keySet().contains(storedDevice));
 
     // Test case 2. c1 wants get recovered.
     // But stored device is already allocated to c2
@@ -463,18 +466,16 @@ public class TestDevicePluginAdapter {
     } catch (ResourceHandlerException e) {
       caughtException = true;
     }
-    Assert.assertTrue(
-        "Should fail since requested device is assigned already",
-        caughtException);
+    assertTrue(caughtException, "Should fail since requested device is assigned already");
     // don't affect c0 allocation state
-    Assert.assertEquals(3,
+    assertEquals(3,
         dmm.getAllAllowedDevices().get(resourceName).size());
-    Assert.assertEquals(1,
+    assertEquals(1,
         dmm.getAllUsedDevices().get(resourceName).size());
-    Assert.assertEquals(2,
+    assertEquals(2,
         dmm.getAvailableDevices(resourceName));
     used = dmm.getAllUsedDevices().get(resourceName);
-    Assert.assertTrue(used.keySet().contains(storedDevice));
+    assertTrue(used.keySet().contains(storedDevice));
   }
 
   @Test
@@ -521,13 +522,13 @@ public class TestDevicePluginAdapter {
     } catch (ResourceHandlerException e) {
       exception = true;
     }
-    Assert.assertTrue("Should throw exception in preStart", exception);
+    assertTrue(exception, "Should throw exception in preStart");
     // no device assigned
-    Assert.assertEquals(3,
+    assertEquals(3,
         dmm.getAllAllowedDevices().get(resourceName).size());
-    Assert.assertEquals(0,
+    assertEquals(0,
         dmm.getAllUsedDevices().get(resourceName).size());
-    Assert.assertEquals(3,
+    assertEquals(3,
         dmm.getAvailableDevices(resourceName));
 
   }
@@ -564,7 +565,7 @@ public class TestDevicePluginAdapter {
         mockCGroupsHandler, mockPrivilegedExecutor);
     adapter.getDeviceResourceHandler().bootstrap(conf);
     int size = dmm.getAvailableDevices(resourceName);
-    Assert.assertEquals(3, size);
+    assertEquals(3, size);
 
     // A container c1 requests 1 device
     Container c1 = mockContainerWithDeviceRequest(0,
@@ -575,11 +576,11 @@ public class TestDevicePluginAdapter {
     // Use customized scheduler
     verify(spyPlugin, times(1)).allocateDevices(
         anySet(), anyInt(), anyMap());
-    Assert.assertEquals(2,
+    assertEquals(2,
         dmm.getAvailableDevices(resourceName));
-    Assert.assertEquals(1,
+    assertEquals(1,
         dmm.getAllUsedDevices().get(resourceName).size());
-    Assert.assertEquals(3,
+    assertEquals(3,
         dmm.getAllAllowedDevices().get(resourceName).size());
   }
 
@@ -641,7 +642,7 @@ public class TestDevicePluginAdapter {
         mockCGroupsHandler, mockPrivilegedExecutor);
     adapter.getDeviceResourceHandler().bootstrap(conf);
     int size = dmm.getAvailableDevices(resourceName);
-    Assert.assertEquals(3, size);
+    assertEquals(3, size);
 
     // A container c1 requests 1 device
     Container c1 = mockContainerWithDeviceRequest(0,
@@ -650,29 +651,29 @@ public class TestDevicePluginAdapter {
     // preStart
     adapter.getDeviceResourceHandler().preStart(c1);
     // check book keeping
-    Assert.assertEquals(2,
+    assertEquals(2,
         dmm.getAvailableDevices(resourceName));
-    Assert.assertEquals(1,
+    assertEquals(1,
         dmm.getAllUsedDevices().get(resourceName).size());
-    Assert.assertEquals(3,
+    assertEquals(3,
         dmm.getAllAllowedDevices().get(resourceName).size());
     // get REST return value
     NMDeviceResourceInfo response =
         (NMDeviceResourceInfo) adapter.getNMResourceInfo();
-    Assert.assertEquals(1, response.getAssignedDevices().size());
-    Assert.assertEquals(3, response.getTotalDevices().size());
+    assertEquals(1, response.getAssignedDevices().size());
+    assertEquals(3, response.getTotalDevices().size());
     Device device = response.getAssignedDevices().get(0).getDevice();
     String cId = response.getAssignedDevices().get(0).getContainerId();
-    Assert.assertTrue(dmm.getAllAllowedDevices().get(resourceName)
+    assertTrue(dmm.getAllAllowedDevices().get(resourceName)
         .contains(device));
-    Assert.assertTrue(dmm.getAllUsedDevices().get(resourceName)
+    assertTrue(dmm.getAllUsedDevices().get(resourceName)
         .containsValue(ContainerId.fromString(cId)));
     //finish container
     adapter.getDeviceResourceHandler().postComplete(getContainerId(0));
     response =
         (NMDeviceResourceInfo) adapter.getNMResourceInfo();
-    Assert.assertEquals(0, response.getAssignedDevices().size());
-    Assert.assertEquals(3, response.getTotalDevices().size());
+    assertEquals(0, response.getAssignedDevices().size());
+    assertEquals(3, response.getTotalDevices().size());
   }
 
   /**
@@ -739,9 +740,9 @@ public class TestDevicePluginAdapter {
     verify(spyPlugin).onDevicesAllocated(
         allocatedDevice,
         YarnRuntimeType.RUNTIME_DOCKER);
-    Assert.assertEquals("nvidia-docker", dvc.getDriverName());
-    Assert.assertEquals("create", dvc.getSubCommand());
-    Assert.assertEquals("nvidia_driver_352.68", dvc.getVolumeName());
+    assertEquals("nvidia-docker", dvc.getDriverName());
+    assertEquals("create", dvc.getSubCommand());
+    assertEquals("nvidia_driver_352.68", dvc.getVolumeName());
 
     // then the DockerLinuxContainerRuntime will update docker run command
     DockerRunCommand drc =
@@ -762,9 +763,9 @@ public class TestDevicePluginAdapter {
     verify(spyDmm, times(0)).getAllocatedDevices(resourceName,
         c1.getContainerId());
     String runStr = drc.toString();
-    Assert.assertTrue(
+    assertTrue(
         runStr.contains("nvidia_driver_352.68:/usr/local/nvidia:ro"));
-    Assert.assertTrue(runStr.contains("/dev/hdwA0:/dev/hdwA0"));
+    assertTrue(runStr.contains("/dev/hdwA0:/dev/hdwA0"));
     // Third, cleanup in getCleanupDockerVolumesCommand
     dcp.getCleanupDockerVolumesCommand(c1);
     // Ensure device plugin's onDeviceReleased is invoked
@@ -842,7 +843,7 @@ public class TestDevicePluginAdapter {
         allocatedDevice,
         YarnRuntimeType.RUNTIME_DOCKER);
     // No volume creation request
-    Assert.assertNull(dvc);
+    assertNull(dvc);
 
     // then the DockerLinuxContainerRuntime will update docker run command
     DockerRunCommand drc =
@@ -861,8 +862,8 @@ public class TestDevicePluginAdapter {
     // ensure that allocation is get once from device mapping manager
     verify(spyDmm, times(0)).getAllocatedDevices(resourceName,
         c1.getContainerId());
-    Assert.assertEquals("0,1", drc.getEnv().get("NVIDIA_VISIBLE_DEVICES"));
-    Assert.assertTrue(drc.toString().contains("runtime=nvidia"));
+    assertEquals("0,1", drc.getEnv().get("NVIDIA_VISIBLE_DEVICES"));
+    assertTrue(drc.toString().contains("runtime=nvidia"));
     // Third, cleanup in getCleanupDockerVolumesCommand
     dcp.getCleanupDockerVolumesCommand(c1);
     // Ensure device plugin's onDeviceReleased is invoked

@@ -17,13 +17,14 @@
  */
 package org.apache.hadoop.io;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Map;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 /**
  * Tests SortedMapWritable
@@ -118,14 +119,14 @@ public class TestSortedMapWritable {
     
     // Sanity checks
     failureReason = "SortedMapWritable couldn't be initialized. Got null reference";
-    assertNotNull(failureReason, mapA);
-    assertNotNull(failureReason, mapB);
+    assertNotNull(mapA, failureReason);
+    assertNotNull(mapB, failureReason);
     
     // Basic null check
-    assertFalse("equals method returns true when passed null", mapA.equals(null));
+    assertFalse(mapA.equals(null), "equals method returns true when passed null");
     
     // When entry set is empty, they should be equal
-    assertTrue("Two empty SortedMapWritables are no longer equal", mapA.equals(mapB));
+    assertTrue(mapA.equals(mapB), "Two empty SortedMapWritables are no longer equal");
     
     // Setup
     Text[] keys = {
@@ -143,40 +144,40 @@ public class TestSortedMapWritable {
     
     // entrySets are different
     failureReason = "Two SortedMapWritables with different data are now equal";
-    assertTrue(failureReason, mapA.hashCode() != mapB.hashCode());
-    assertTrue(failureReason, !mapA.equals(mapB));
-    assertTrue(failureReason, !mapB.equals(mapA));
+    assertTrue(mapA.hashCode() != mapB.hashCode(), failureReason);
+    assertTrue(!mapA.equals(mapB), failureReason);
+    assertTrue(!mapB.equals(mapA), failureReason);
     
     mapA.put(keys[1], values[1]);
     mapB.put(keys[0], values[0]);
     
     // entrySets are now same
     failureReason = "Two SortedMapWritables with same entry sets formed in different order are now different";
-    assertEquals(failureReason, mapA.hashCode(), mapB.hashCode());
-    assertTrue(failureReason, mapA.equals(mapB));
-    assertTrue(failureReason, mapB.equals(mapA));
+    assertEquals(mapA.hashCode(), mapB.hashCode(), failureReason);
+    assertTrue(mapA.equals(mapB), failureReason);
+    assertTrue(mapB.equals(mapA), failureReason);
     
     // Let's check if entry sets of same keys but different values
     mapA.put(keys[0], values[1]);
     mapA.put(keys[1], values[0]);
     
     failureReason = "Two SortedMapWritables with different content are now equal";
-    assertTrue(failureReason, mapA.hashCode() != mapB.hashCode());
-    assertTrue(failureReason, !mapA.equals(mapB));
-    assertTrue(failureReason, !mapB.equals(mapA));
+    assertTrue(mapA.hashCode() != mapB.hashCode(), failureReason);
+    assertTrue(!mapA.equals(mapB), failureReason);
+    assertTrue(!mapB.equals(mapA), failureReason);
   }
 
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testPutAll() {
     SortedMapWritable<Text> map1 = new SortedMapWritable<Text>();
     SortedMapWritable<Text> map2 = new SortedMapWritable<Text>();
     map1.put(new Text("key"), new Text("value"));
     map2.putAll(map1);
 
-    assertEquals("map1 entries don't match map2 entries", map1, map2);
-    assertTrue(
-        "map2 doesn't have class information from map1",
-        map2.classToIdMap.containsKey(Text.class)
-            && map2.idToClassMap.containsValue(Text.class));
+    assertEquals(map1, map2, "map1 entries don't match map2 entries");
+    assertTrue(map2.classToIdMap.containsKey(Text.class)
+        && map2.idToClassMap.containsValue(Text.class),
+        "map2 doesn't have class information from map1");
   }
 }

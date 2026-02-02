@@ -22,8 +22,9 @@ import java.io.File;
 import java.util.UUID;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,7 +41,7 @@ import org.apache.hadoop.fs.s3a.performance.AbstractS3ACostTest;
 import static org.apache.hadoop.fs.s3a.Constants.BUFFER_DIR;
 import static org.apache.hadoop.fs.s3a.Constants.ENDPOINT;
 import static org.apache.hadoop.fs.s3a.Constants.PREFETCH_BLOCK_SIZE_KEY;
-import static org.apache.hadoop.fs.s3a.Constants.PREFETCH_ENABLED_KEY;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.enablePrefetching;
 import static org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils.getExternalData;
 import static org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils.isUsingDefaultExternalDataFile;
 import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
@@ -68,11 +69,7 @@ public class ITestS3APrefetchingCacheFiles extends AbstractS3ACostTest {
 
   private String bufferDir;
 
-  public ITestS3APrefetchingCacheFiles() {
-    super(true);
-  }
-
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     super.setup();
     // Sets BUFFER_DIR by calling S3ATestUtils#prepareTestConfiguration
@@ -88,10 +85,9 @@ public class ITestS3APrefetchingCacheFiles extends AbstractS3ACostTest {
     Configuration configuration = super.createConfiguration();
     if (isUsingDefaultExternalDataFile(configuration)) {
       S3ATestUtils.removeBaseAndBucketOverrides(configuration,
-          PREFETCH_ENABLED_KEY,
           ENDPOINT);
     }
-    configuration.setBoolean(PREFETCH_ENABLED_KEY, true);
+    enablePrefetching(configuration);
     // use a small block size unless explicitly set in the test config.
     configuration.setInt(PREFETCH_BLOCK_SIZE_KEY, BLOCK_SIZE);
     // patch buffer dir with a unique path for test isolation.
@@ -101,6 +97,7 @@ public class ITestS3APrefetchingCacheFiles extends AbstractS3ACostTest {
     return configuration;
   }
 
+  @AfterEach
   @Override
   public synchronized void teardown() throws Exception {
     super.teardown();
@@ -146,14 +143,14 @@ public class ITestS3APrefetchingCacheFiles extends AbstractS3ACostTest {
         Path path = new Path(tmpFile.getAbsolutePath());
         FileStatus stat = localFs.getFileStatus(path);
         ContractTestUtils.assertIsFile(path, stat);
-        assertEquals("File length not matching with prefetchBlockSize", prefetchBlockSize,
-            stat.getLen());
-        assertEquals("User permissions should be RW", FsAction.READ_WRITE,
-            stat.getPermission().getUserAction());
-        assertEquals("Group permissions should be NONE", FsAction.NONE,
-            stat.getPermission().getGroupAction());
-        assertEquals("Other permissions should be NONE", FsAction.NONE,
-            stat.getPermission().getOtherAction());
+        assertEquals(prefetchBlockSize,
+            stat.getLen(), "File length not matching with prefetchBlockSize");
+        assertEquals(FsAction.READ_WRITE,
+            stat.getPermission().getUserAction(), "User permissions should be RW");
+        assertEquals(FsAction.NONE,
+            stat.getPermission().getGroupAction(), "Group permissions should be NONE");
+        assertEquals(FsAction.NONE,
+            stat.getPermission().getOtherAction(), "Other permissions should be NONE");
       }
     }
   }

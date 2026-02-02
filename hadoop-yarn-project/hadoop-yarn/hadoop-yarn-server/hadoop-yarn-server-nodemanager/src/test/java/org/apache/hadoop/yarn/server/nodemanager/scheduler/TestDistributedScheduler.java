@@ -48,9 +48,7 @@ import org.apache.hadoop.yarn.server.scheduler.DistributedOpportunisticContainer
 import org.apache.hadoop.yarn.server.scheduler.OpportunisticContainerAllocator;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
-import org.junit.Assert;
-import org.junit.Test;
-import org.mockito.Mockito;
+import org.junit.jupiter.api.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
@@ -61,6 +59,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * Test cases for {@link DistributedScheduler}.
@@ -82,9 +86,9 @@ public class TestDistributedScheduler {
         RemoteNode.newInstance(NodeId.newInstance("d", 4), "http://d:4")));
 
     final AtomicBoolean flipFlag = new AtomicBoolean(true);
-    Mockito.when(
+    when(
         finalReqIntcptr.allocateForDistributedScheduling(
-            Mockito.any(DistributedSchedulingAllocateRequest.class)))
+           any(DistributedSchedulingAllocateRequest.class)))
         .thenAnswer(new Answer<DistributedSchedulingAllocateResponse>() {
           @Override
           public DistributedSchedulingAllocateResponse answer(
@@ -126,18 +130,18 @@ public class TestDistributedScheduler {
     // Verify 4 containers were allocated
     AllocateResponse allocateResponse =
         distributedScheduler.allocate(allocateRequest);
-    Assert.assertEquals(4, allocateResponse.getAllocatedContainers().size());
+    assertEquals(4, allocateResponse.getAllocatedContainers().size());
 
     // Verify equal distribution on hosts a, b, c and d, and none on e / f
     // NOTE: No more than 1 container will be allocated on a node in the
     //       top k list per allocate call.
     Map<NodeId, List<ContainerId>> allocs = mapAllocs(allocateResponse, 4);
-    Assert.assertEquals(1, allocs.get(NodeId.newInstance("a", 1)).size());
-    Assert.assertEquals(1, allocs.get(NodeId.newInstance("b", 2)).size());
-    Assert.assertEquals(1, allocs.get(NodeId.newInstance("c", 3)).size());
-    Assert.assertEquals(1, allocs.get(NodeId.newInstance("d", 4)).size());
-    Assert.assertNull(allocs.get(NodeId.newInstance("e", 5)));
-    Assert.assertNull(allocs.get(NodeId.newInstance("f", 6)));
+    assertEquals(1, allocs.get(NodeId.newInstance("a", 1)).size());
+    assertEquals(1, allocs.get(NodeId.newInstance("b", 2)).size());
+    assertEquals(1, allocs.get(NodeId.newInstance("c", 3)).size());
+    assertEquals(1, allocs.get(NodeId.newInstance("d", 4)).size());
+    assertNull(allocs.get(NodeId.newInstance("e", 5)));
+    assertNull(allocs.get(NodeId.newInstance("f", 6)));
 
     // New Allocate request
     allocateRequest = Records.newRecord(AllocateRequest.class);
@@ -147,17 +151,17 @@ public class TestDistributedScheduler {
 
     // Verify 4 containers were allocated
     allocateResponse = distributedScheduler.allocate(allocateRequest);
-    Assert.assertEquals(4, allocateResponse.getAllocatedContainers().size());
+    assertEquals(4, allocateResponse.getAllocatedContainers().size());
 
     // Verify new containers are equally distribution on hosts c and d,
     // and none on a or b
     allocs = mapAllocs(allocateResponse, 4);
-    Assert.assertEquals(1, allocs.get(NodeId.newInstance("c", 3)).size());
-    Assert.assertEquals(1, allocs.get(NodeId.newInstance("d", 4)).size());
-    Assert.assertEquals(1, allocs.get(NodeId.newInstance("e", 5)).size());
-    Assert.assertEquals(1, allocs.get(NodeId.newInstance("f", 6)).size());
-    Assert.assertNull(allocs.get(NodeId.newInstance("a", 1)));
-    Assert.assertNull(allocs.get(NodeId.newInstance("b", 2)));
+    assertEquals(1, allocs.get(NodeId.newInstance("c", 3)).size());
+    assertEquals(1, allocs.get(NodeId.newInstance("d", 4)).size());
+    assertEquals(1, allocs.get(NodeId.newInstance("e", 5)).size());
+    assertEquals(1, allocs.get(NodeId.newInstance("f", 6)).size());
+    assertNull(allocs.get(NodeId.newInstance("a", 1)));
+    assertNull(allocs.get(NodeId.newInstance("b", 2)));
 
     // Ensure the DistributedScheduler respects the list order..
     // The first request should be allocated to "c" since it is ranked higher
@@ -169,7 +173,7 @@ public class TestDistributedScheduler {
     allocateRequest.setAskList(Arrays.asList(guaranteedReq, opportunisticReq));
     allocateResponse = distributedScheduler.allocate(allocateRequest);
     allocs = mapAllocs(allocateResponse, 1);
-    Assert.assertEquals(1, allocs.get(NodeId.newInstance("c", 3)).size());
+    assertEquals(1, allocs.get(NodeId.newInstance("c", 3)).size());
 
     allocateRequest = Records.newRecord(AllocateRequest.class);
     opportunisticReq =
@@ -177,7 +181,7 @@ public class TestDistributedScheduler {
     allocateRequest.setAskList(Arrays.asList(guaranteedReq, opportunisticReq));
     allocateResponse = distributedScheduler.allocate(allocateRequest);
     allocs = mapAllocs(allocateResponse, 1);
-    Assert.assertEquals(1, allocs.get(NodeId.newInstance("f", 6)).size());
+    assertEquals(1, allocs.get(NodeId.newInstance("f", 6)).size());
 
     allocateRequest = Records.newRecord(AllocateRequest.class);
     opportunisticReq =
@@ -185,7 +189,7 @@ public class TestDistributedScheduler {
     allocateRequest.setAskList(Arrays.asList(guaranteedReq, opportunisticReq));
     allocateResponse = distributedScheduler.allocate(allocateRequest);
     allocs = mapAllocs(allocateResponse, 1);
-    Assert.assertEquals(1, allocs.get(NodeId.newInstance("c", 3)).size());
+    assertEquals(1, allocs.get(NodeId.newInstance("c", 3)).size());
   }
 
   private void registerAM(DistributedScheduler distributedScheduler,
@@ -202,9 +206,9 @@ public class TestDistributedScheduler {
     distSchedRegisterResponse.setMinContainerResource(
         Resource.newInstance(512, 2));
     distSchedRegisterResponse.setNodesForScheduling(nodeList);
-    Mockito.when(
+    when(
         finalReqIntcptr.registerApplicationMasterForDistributedScheduling(
-            Mockito.any(RegisterApplicationMasterRequest.class)))
+            any(RegisterApplicationMasterRequest.class)))
         .thenReturn(distSchedRegisterResponse);
 
     distributedScheduler.registerApplicationMaster(
@@ -213,8 +217,8 @@ public class TestDistributedScheduler {
 
   private RequestInterceptor setup(Configuration conf,
       DistributedScheduler distributedScheduler) {
-    NodeStatusUpdater nodeStatusUpdater = Mockito.mock(NodeStatusUpdater.class);
-    Mockito.when(nodeStatusUpdater.getRMIdentifier()).thenReturn(12345l);
+    NodeStatusUpdater nodeStatusUpdater = mock(NodeStatusUpdater.class);
+    when(nodeStatusUpdater.getRMIdentifier()).thenReturn(12345L);
     NMContainerTokenSecretManager nmContainerTokenSecretManager = new
         NMContainerTokenSecretManager(conf);
     MasterKey mKey = new MasterKey() {
@@ -243,7 +247,7 @@ public class TestDistributedScheduler {
         ApplicationAttemptId.newInstance(ApplicationId.newInstance(1, 1), 1),
         containerAllocator, nmTokenSecretManagerInNM, "test");
 
-    RequestInterceptor finalReqIntcptr = Mockito.mock(RequestInterceptor.class);
+    RequestInterceptor finalReqIntcptr = mock(RequestInterceptor.class);
     distributedScheduler.setNextInterceptor(finalReqIntcptr);
     return finalReqIntcptr;
   }
@@ -273,13 +277,13 @@ public class TestDistributedScheduler {
 
   private Map<NodeId, List<ContainerId>> mapAllocs(
       AllocateResponse allocateResponse, int expectedSize) throws Exception {
-    Assert.assertEquals(expectedSize,
+    assertEquals(expectedSize,
         allocateResponse.getAllocatedContainers().size());
     Map<NodeId, List<ContainerId>> allocs = new HashMap<>();
     for (Container c : allocateResponse.getAllocatedContainers()) {
       ContainerTokenIdentifier cTokId = BuilderUtils
           .newContainerTokenIdentifier(c.getContainerToken());
-      Assert.assertEquals(
+      assertEquals(
           c.getNodeId().getHost() + ":" + c.getNodeId().getPort(),
           cTokId.getNmHostAddress());
       List<ContainerId> cIds = allocs.get(c.getNodeId());

@@ -28,6 +28,7 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageState;
+import org.apache.hadoop.hdfs.util.RwLockMode;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.StringUtils;
 
@@ -218,11 +219,11 @@ public class BackupImage extends FSImage {
       }
       lastAppliedTxId = logLoader.getLastAppliedTxId();
 
-      getNamesystem().writeLock();
+      getNamesystem().writeLock(RwLockMode.FS);
       try {
         getNamesystem().dir.updateCountForQuota();
       } finally {
-        getNamesystem().writeUnlock("applyEdits");
+        getNamesystem().writeUnlock(RwLockMode.FS, "applyEdits");
       }
     } finally {
       backupInputStream.clear();

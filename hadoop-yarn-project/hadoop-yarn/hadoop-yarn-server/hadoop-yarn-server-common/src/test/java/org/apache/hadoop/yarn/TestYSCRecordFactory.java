@@ -18,14 +18,15 @@
 
 package org.apache.hadoop.yarn;
 
-import org.junit.Assert;
-
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factories.impl.pb.RecordFactoryPBImpl;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.NodeHeartbeatRequestPBImpl;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class TestYSCRecordFactory {
   
@@ -34,10 +35,10 @@ public class TestYSCRecordFactory {
     RecordFactory pbRecordFactory = RecordFactoryPBImpl.get();
     try {
       NodeHeartbeatRequest request = pbRecordFactory.newRecordInstance(NodeHeartbeatRequest.class);
-      Assert.assertEquals(NodeHeartbeatRequestPBImpl.class, request.getClass());
+      assertEquals(NodeHeartbeatRequestPBImpl.class, request.getClass());
     } catch (YarnRuntimeException e) {
       e.printStackTrace();
-      Assert.fail("Failed to crete record");
+      fail("Failed to crete record");
     }
     
   }

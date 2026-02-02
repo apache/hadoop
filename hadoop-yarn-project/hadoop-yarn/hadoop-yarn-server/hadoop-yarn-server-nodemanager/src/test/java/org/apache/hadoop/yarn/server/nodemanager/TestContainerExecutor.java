@@ -48,13 +48,14 @@ import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerExecContext;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerReacquisitionContext;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerReapContext;
 import org.apache.hadoop.yarn.server.nodemanager.util.NodeManagerHardwareUtils;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static org.apache.hadoop.test.PlatformAssumptions.assumeWindows;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
@@ -68,28 +69,30 @@ public class TestContainerExecutor {
   
   private ContainerExecutor containerExecutor = new DefaultContainerExecutor();
 
-  @Test (timeout = 5000)
+  @Test
+  @Timeout(value = 5)
   public void testRunCommandNoPriority() throws Exception {
     Configuration conf = new Configuration();
     String[] command = containerExecutor.getRunCommand("echo", "group1", "user", null, conf);
-    assertTrue("first command should be the run command for the platform", 
-               command[0].equals(Shell.WINUTILS) || command[0].equals("bash"));  
+    assertTrue(command[0].equals(Shell.WINUTILS) || command[0].equals("bash"),
+        "first command should be the run command for the platform");
   }
 
-  @Test (timeout = 5000)
+  @Test
+  @Timeout(value = 5)
   public void testRunCommandwithPriority() throws Exception {
     Configuration conf = new Configuration();
     conf.setInt(YarnConfiguration.NM_CONTAINER_EXECUTOR_SCHED_PRIORITY, 2);
     String[] command = containerExecutor.getRunCommand("echo", "group1", "user", null, conf);
     if (Shell.WINDOWS) {
       // windows doesn't currently support
-      assertEquals("first command should be the run command for the platform", 
-               Shell.WINUTILS, command[0]); 
+      assertEquals(Shell.WINUTILS, command[0],
+          "first command should be the run command for the platform");
     } else {
-      assertEquals("first command should be nice", "nice", command[0]); 
-      assertEquals("second command should be -n", "-n", command[1]); 
-      assertEquals("third command should be the priority", Integer.toString(2),
-                   command[2]); 
+      assertEquals("nice", command[0], "first command should be nice");
+      assertEquals("-n", command[1], "second command should be -n");
+      assertEquals(Integer.toString(2), command[2],
+          "third command should be the priority");
     }
 
     // test with negative number
@@ -97,17 +100,18 @@ public class TestContainerExecutor {
     command = containerExecutor.getRunCommand("echo", "group1", "user", null, conf);
     if (Shell.WINDOWS) {
       // windows doesn't currently support
-      assertEquals("first command should be the run command for the platform", 
-               Shell.WINUTILS, command[0]); 
+      assertEquals(Shell.WINUTILS, command[0],
+          "first command should be the run command for the platform");
     } else {
-      assertEquals("first command should be nice", "nice", command[0]); 
-      assertEquals("second command should be -n", "-n", command[1]); 
-      assertEquals("third command should be the priority", Integer.toString(-5),
-                    command[2]); 
+      assertEquals("nice", command[0], "first command should be nice");
+      assertEquals("-n", command[1], "second command should be -n");
+      assertEquals(Integer.toString(-5),
+          command[2], "third command should be the priority");
     }
   }
 
-  @Test (timeout = 5000)
+  @Test
+  @Timeout(value = 5)
   public void testRunCommandWithNoResources() {
     assumeWindows();
     Configuration conf = new Configuration();
@@ -116,10 +120,11 @@ public class TestContainerExecutor {
     // Assert the cpu and memory limits are set correctly in the command
     String[] expected = { Shell.WINUTILS, "task", "create", "-m", "-1", "-c",
         "-1", "group1", "cmd /c " + "echo" };
-    Assert.assertTrue(Arrays.equals(expected, command));
+    assertTrue(Arrays.equals(expected, command));
   }
 
-  @Test (timeout = 5000)
+  @Test
+  @Timeout(value = 5)
   public void testRunCommandWithMemoryOnlyResources() {
     assumeWindows();
     Configuration conf = new Configuration();
@@ -129,10 +134,11 @@ public class TestContainerExecutor {
     // Assert the cpu and memory limits are set correctly in the command
     String[] expected = { Shell.WINUTILS, "task", "create", "-m", "1024", "-c",
         "-1", "group1", "cmd /c " + "echo" };
-    Assert.assertTrue(Arrays.equals(expected, command));
+    assertTrue(Arrays.equals(expected, command));
   }
 
-  @Test (timeout = 5000)
+  @Test
+  @Timeout(value = 5)
   public void testRunCommandWithCpuAndMemoryResources() {
     assumeWindows();
     int containerCores = 1;
@@ -144,39 +150,39 @@ public class TestContainerExecutor {
         containerExecutor.getRunCommand("echo", "group1", null, null, conf,
           Resource.newInstance(1024, 1));
     int nodeVCores = NodeManagerHardwareUtils.getVCores(conf);
-    Assert.assertEquals(YarnConfiguration.DEFAULT_NM_VCORES, nodeVCores);
+    assertEquals(YarnConfiguration.DEFAULT_NM_VCORES, nodeVCores);
     int cpuRate = Math.min(10000, (containerCores * 10000) / nodeVCores);
 
     // Assert the cpu and memory limits are set correctly in the command
     String[] expected =
         {Shell.WINUTILS, "task", "create", "-m", "1024", "-c",
             String.valueOf(cpuRate), "group1", "cmd /c " + "echo" };
-    Assert.assertEquals(Arrays.toString(expected), Arrays.toString(command));
+    assertEquals(Arrays.toString(expected), Arrays.toString(command));
 
     conf.setBoolean(YarnConfiguration.NM_ENABLE_HARDWARE_CAPABILITY_DETECTION,
         true);
     int nodeCPUs = NodeManagerHardwareUtils.getNodeCPUs(conf);
     float yarnCPUs = NodeManagerHardwareUtils.getContainersCPUs(conf);
     nodeVCores = NodeManagerHardwareUtils.getVCores(conf);
-    Assert.assertEquals(nodeCPUs, (int) yarnCPUs);
-    Assert.assertEquals(nodeCPUs, nodeVCores);
+    assertEquals(nodeCPUs, (int) yarnCPUs);
+    assertEquals(nodeCPUs, nodeVCores);
     command =
         containerExecutor.getRunCommand("echo", "group1", null, null, conf,
           Resource.newInstance(1024, 1));
     cpuRate = Math.min(10000, (containerCores * 10000) / nodeVCores);
     expected[6] = String.valueOf(cpuRate);
-    Assert.assertEquals(Arrays.toString(expected), Arrays.toString(command));
+    assertEquals(Arrays.toString(expected), Arrays.toString(command));
 
     int yarnCpuLimit = 80;
     conf.setInt(YarnConfiguration.NM_RESOURCE_PERCENTAGE_PHYSICAL_CPU_LIMIT,
         yarnCpuLimit);
     yarnCPUs = NodeManagerHardwareUtils.getContainersCPUs(conf);
     nodeVCores = NodeManagerHardwareUtils.getVCores(conf);
-    Assert.assertEquals(nodeCPUs * 0.8, yarnCPUs, 0.01);
+    assertEquals(nodeCPUs * 0.8, yarnCPUs, 0.01);
     if (nodeCPUs == 1) {
-      Assert.assertEquals(1, nodeVCores);
+      assertEquals(1, nodeVCores);
     } else {
-      Assert.assertEquals((int) (nodeCPUs * 0.8), nodeVCores);
+      assertEquals((int) (nodeCPUs * 0.8), nodeVCores);
     }
     command =
         containerExecutor.getRunCommand("echo", "group1", null, null, conf,
@@ -185,7 +191,7 @@ public class TestContainerExecutor {
     int containerPerc = (yarnCpuLimit * containerCores) / nodeVCores;
     cpuRate = Math.min(10000, 100 * containerPerc);
     expected[6] = String.valueOf(cpuRate);
-    Assert.assertEquals(Arrays.toString(expected), Arrays.toString(command));
+    assertEquals(Arrays.toString(expected), Arrays.toString(command));
   }
 
   @Test
@@ -206,7 +212,7 @@ public class TestContainerExecutor {
       containerExecutor.execContainer(ctx);
     } catch (Exception e) {
       // socket exception should be thrown immediately, without RPC retries.
-      Assert.assertTrue(e instanceof ContainerExecutionException);
+      assertTrue(e instanceof ContainerExecutionException);
     }
   }
 
@@ -228,7 +234,7 @@ public class TestContainerExecutor {
         .thenReturn(localResources);
     when(container.getUser()).thenReturn(System.getProperty("user.name"));
     containerExecutor.cleanupBeforeRelaunch(container);
-    Assert.assertTrue(!Files.exists(linkName));
+    assertTrue(!Files.exists(linkName));
   }
 
   /**

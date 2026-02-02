@@ -337,53 +337,6 @@ then delete.
 Once a bucket is converted to being versioned, it cannot be converted back
 to being unversioned.
 
-
-## <a name="marker"></a> Testing Different Marker Retention Policy
-
-Hadoop supports [different policies for directory marker retention](directory_markers.html)
--essentially the classic "delete" and the higher-performance "keep" options; "authoritative"
-is just "keep" restricted to a part of the bucket.
-
-
-Example: test with `markers=keep`
-
-```
-mvn verify -Dparallel-tests -DtestsThreadCount=4 -Dmarkers=keep
-```
-
-This is the default and does not need to be explicitly set.
-
-Example: test with `markers=delete`
-
-```
-mvn verify -Dparallel-tests -DtestsThreadCount=4 -Dmarkers=delete
-```
-
-Example: test with `markers=authoritative`
-
-```
-mvn verify -Dparallel-tests -DtestsThreadCount=4 -Dmarkers=authoritative
-```
-
-This final option is of limited use unless paths in the bucket have actually been configured to be
-of mixed status; unless anything is set up then the outcome should equal that of "delete"
-
-### Enabling auditing of markers
-
-To enable an audit of the output directory of every test suite,
-enable the option `fs.s3a.directory.marker.audit`
-
-```
--Dfs.s3a.directory.marker.audit=true
-```
-
-When set, if the marker policy is to delete markers under the test output directory, then
-the marker tool audit command will be run. This will fail if a marker was found.
-
-This adds extra overhead to every operation, but helps verify that the connector is
-not keeping markers where it needs to be deleting them -and hence backwards compatibility
-is maintained.
-
 ## <a name="enabling-prefetch"></a> Enabling prefetch for all tests
 
 The tests are run with prefetch if the `prefetch` property is set in the
@@ -628,6 +581,21 @@ on third party stores.
     <name>test.fs.s3a.create.create.acl.enabled</name>
     <value>false</value>
   </property>
+  <property>
+    <name>test.fs.s3a.performance.enabled</name>
+    <value>false</value>
+  </property>
+
+  <!--
+   If the store reports errors when trying to list/abort completed multipart uploads,
+   expect failures in ITestUploadRecovery and ITestS3AContractMultipartUploader.
+   The tests can be reconfigured to expect failure.
+   Note how this can be set as a per-bucket option.
+  -->
+  <property>
+    <name>fs.s3a.ext.test.multipart.commit.consumes.upload.id</name>
+    <value>true</value>
+  </property>
 ```
 
 See [Third Party Stores](third_party_stores.html) for more on this topic.
@@ -767,9 +735,35 @@ Tests in `ITestS3AContentEncoding` may need disabling
     <value>false</value>
   </property>
 ```
+
+### Disabling tests running in performance mode
+
+Some tests running in performance mode turn off the safety checks. They expect operations which break POSIX semantics to succeed.
+For stores with stricter semantics, these test cases must be disabled.
+```xml
+  <property>
+    <name>test.fs.s3a.performance.enabled</name>
+    <value>false</value>
+  </property>
+```
+
+### Changing expectations on multipart upload retries: `ITestS3AContractMultipartUploader` and `ITestUploadRecovery`
+
+If the store reports errors when trying to list/abort completed multipart uploads,
+expect failures in `ITestUploadRecovery` and `ITestS3AContractMultipartUploader`.
+The tests can be reconfigured to expect failure by setting the option
+`fs.s3a.ext.test.multipart.commit.consumes.upload.id` to true.
+
+Note how this can be set as a per-bucket option.
+
+```xml
+  <property>
+    <name>fs.s3a.ext.test.multipart.commit.consumes.upload.id</name>
+    <value>true</value>
+  </property>
+```
 ### Tests which may fail (and which you can ignore)
 
-* `ITestS3AContractMultipartUploader` tests `testMultipartUploadAbort` and `testSingleUpload` raising `FileNotFoundException`
 * `ITestS3AMiscOperations.testEmptyFileChecksums`: if the FS encrypts data always.
 
 ## <a name="debugging"></a> Debugging Test failures
@@ -868,10 +862,15 @@ Key features of `AbstractS3ATestBase`
 * `getFileSystem()` returns the S3A Filesystem bonded to the contract test Filesystem
 defined in `fs.s3a.contract.test`
 * will automatically skip all tests if that URL is unset.
-* Extends  `AbstractFSContractTestBase` and `Assert` for all their methods.
+* Extends  `AbstractFSContractTestBase`
+* Uses AssertJ for all assertions, _not_ those of JUnit5.
 
 Having shared base classes may help reduce future maintenance too. Please
-use them/
+use them.
+
+We adopted AssertJ assertions long before the move to JUnit5.
+While there are still many tests with legacy JUnit 1.x assertions, all new test cases
+should use AssertJ assertions and MUST NOT use JUnit5.
 
 ### Secure
 
@@ -904,7 +903,7 @@ against other regions, or with third party S3 implementations. Thus the
 URL can be overridden for testing elsewhere.
 
 
-### Works With Other S3 Stored
+### Works With Other S3 Stores
 
 Don't assume AWS S3 US-East only, do allow for working with external S3 implementations.
 Those may be behind the latest S3 API features, not support encryption, session

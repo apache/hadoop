@@ -36,6 +36,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.yarn.server.resourcemanager.RMCriticalThreadUncaughtExceptionHandler;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.ApplicationPlacementContext;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.CSMappingPlacementRule;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.PlacementFactory;
@@ -52,6 +53,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Time;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
@@ -603,7 +605,10 @@ public class CapacityScheduler extends
           if (candidates == null) {
             continue;
           }
-          cs.allocateContainersToNode(candidates, false);
+          int nodesPerPartitionCount = candidates.getAllNodes().size();
+          for (int i = 0; i < nodesPerPartitionCount; i++) {
+            cs.allocateContainersToNode(candidates, false);
+          }
         }
       }
 
@@ -619,7 +624,10 @@ public class CapacityScheduler extends
         if (candidates == null) {
           continue;
         }
-        cs.allocateContainersToNode(candidates, false);
+        int nodesPerPartitionCount = candidates.getAllNodes().size();
+        for (int i = 0; i < nodesPerPartitionCount; i++) {
+          cs.allocateContainersToNode(candidates, false);
+        }
       }
 
     }
@@ -631,7 +639,7 @@ public class CapacityScheduler extends
     this.asyncSchedulingConf = conf;
   }
 
-  static class AsyncScheduleThread extends Thread {
+  static class AsyncScheduleThread extends SubjectInheritingThread {
 
     private final CapacityScheduler cs;
     private AtomicBoolean runSchedules = new AtomicBoolean(false);
@@ -643,7 +651,7 @@ public class CapacityScheduler extends
     }
 
     @Override
-    public void run() {
+    public void work() {
       int debuggingLogCounter = 0;
       while (!Thread.currentThread().isInterrupted()) {
         try {
@@ -684,7 +692,7 @@ public class CapacityScheduler extends
 
   }
 
-  static class ResourceCommitterService extends Thread {
+  static class ResourceCommitterService extends SubjectInheritingThread {
     private final CapacityScheduler cs;
     private BlockingQueue<ResourceCommitRequest<FiCaSchedulerApp, FiCaSchedulerNode>>
         backlogs = new LinkedBlockingQueue<>();
@@ -695,7 +703,7 @@ public class CapacityScheduler extends
     }
 
     @Override
-    public void run() {
+    public void work() {
       while (!Thread.currentThread().isInterrupted()) {
         try {
           ResourceCommitRequest<FiCaSchedulerApp, FiCaSchedulerNode> request =
@@ -3543,7 +3551,10 @@ public class CapacityScheduler extends
 
         this.asyncSchedulerThreads = new ArrayList<>();
         for (int i = 0; i < maxAsyncSchedulingThreads; i++) {
-          asyncSchedulerThreads.add(new AsyncScheduleThread(cs));
+          AsyncScheduleThread ast = new AsyncScheduleThread(cs);
+          ast.setUncaughtExceptionHandler(
+              new RMCriticalThreadUncaughtExceptionHandler(cs.rmContext));
+          asyncSchedulerThreads.add(ast);
         }
         this.resourceCommitterService = new ResourceCommitterService(cs);
       }

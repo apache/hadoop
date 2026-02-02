@@ -509,6 +509,7 @@ public class HadoopArchiveLogs implements Tool {
       fw = FileWriterWithEncoding.builder()
               .setFile(localScript)
               .setCharset(StandardCharsets.UTF_8)
+              .setCharsetEncoder(StandardCharsets.UTF_8.newEncoder())
               .get();
       fw.write("#!/bin/bash\nset -e\nset -x\n");
       int containerCount = 1;

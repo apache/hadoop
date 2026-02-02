@@ -17,13 +17,14 @@
  */
 package org.apache.hadoop.oncrpc;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import org.apache.hadoop.oncrpc.RpcAcceptedReply.AcceptState;
 import org.apache.hadoop.oncrpc.RpcReply.ReplyState;
 import org.apache.hadoop.oncrpc.security.Verifier;
 import org.apache.hadoop.oncrpc.security.VerifierNone;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test for {@link RpcAcceptedReply}
@@ -39,9 +40,10 @@ public class TestRpcAcceptedReply {
     assertEquals(AcceptState.SYSTEM_ERR, AcceptState.fromValue(5));
   }
 
-  @Test(expected = IndexOutOfBoundsException.class)
+  @Test
   public void testAcceptStateFromInvalidValue() {
-    AcceptState.fromValue(6);
+    assertThrows(IndexOutOfBoundsException.class, () ->
+        AcceptState.fromValue(6));
   }
 
   @Test

@@ -44,7 +44,11 @@
         <artifactId>spotbugs-maven-plugin</artifactId>
          <configuration>
           <xmlOutput>true</xmlOutput>
-          <excludeFilterFile>${yarn.basedir}/dev-support/findbugs-exclude.xml</excludeFilterFile>
+           <excludeFilterFiles>
+             <excludeFilterFile>${yarn.basedir}/dev-support/findbugs-exclude.xml</excludeFilterFile>
+             <excludeFilterFile>${repo.root}/dev-support/findbugs-exclude-global.xml
+             </excludeFilterFile>
+           </excludeFilterFiles>
           <effort>Max</effort>
         </configuration>
       </plugin>
@@ -147,7 +151,7 @@
                 <configuration>
                   <artifactItems>
                     <artifactItem>
-                      <groupId>jdiff</groupId>
+                      <groupId>io.github.zhtttylz</groupId>
                       <artifactId>jdiff</artifactId>
                       <version>${jdiff.version}</version>
                       <overWrite>false</overWrite>
@@ -244,6 +248,7 @@
     <module>hadoop-yarn-client</module>
     <module>hadoop-yarn-registry</module>
     <module>hadoop-yarn-ui</module>
+    <module>hadoop-yarn-capacity-scheduler-ui</module>
     <module>hadoop-yarn-csi</module>
   </modules>
   <!--  -->

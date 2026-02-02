@@ -32,6 +32,7 @@ import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.awscore.exception.AwsServiceException;
+import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
@@ -42,6 +43,10 @@ import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.DeleteObjectResponse;
 import software.amazon.awssdk.services.s3.model.DeleteObjectsRequest;
 import software.amazon.awssdk.services.s3.model.DeleteObjectsResponse;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectResponse;
+import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
+import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.S3Error;
@@ -52,34 +57,53 @@ import software.amazon.awssdk.transfer.s3.model.CompletedFileUpload;
 import software.amazon.awssdk.transfer.s3.model.FileUpload;
 import software.amazon.awssdk.transfer.s3.model.UploadFileRequest;
 
+import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocalDirAllocator;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.s3a.Invoker;
 import org.apache.hadoop.fs.s3a.ProgressableProgressListener;
 import org.apache.hadoop.fs.s3a.Retries;
 import org.apache.hadoop.fs.s3a.S3AInstrumentation;
 import org.apache.hadoop.fs.s3a.S3AStorageStatistics;
 import org.apache.hadoop.fs.s3a.S3AStore;
+import org.apache.hadoop.fs.s3a.S3AUtils;
 import org.apache.hadoop.fs.s3a.Statistic;
 import org.apache.hadoop.fs.s3a.UploadInfo;
 import org.apache.hadoop.fs.s3a.api.RequestFactory;
 import org.apache.hadoop.fs.s3a.audit.AuditSpanS3A;
+import org.apache.hadoop.fs.s3a.impl.streams.FactoryBindingParameters;
+import org.apache.hadoop.fs.s3a.impl.streams.InputStreamType;
+import org.apache.hadoop.fs.s3a.impl.streams.ObjectInputStream;
+import org.apache.hadoop.fs.s3a.impl.streams.ObjectInputStreamFactory;
+import org.apache.hadoop.fs.s3a.impl.streams.ObjectReadParameters;
+import org.apache.hadoop.fs.s3a.impl.streams.StreamFactoryRequirements;
 import org.apache.hadoop.fs.s3a.statistics.S3AStatisticsContext;
+import org.apache.hadoop.fs.statistics.DurationTracker;
 import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.store.audit.AuditSpanSource;
+import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.util.DurationInfo;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.util.RateLimiting;
 import org.apache.hadoop.util.functional.Tuples;
 
 import static java.util.Objects.requireNonNull;
+import static org.apache.hadoop.fs.s3a.Constants.BUFFER_DIR;
+import static org.apache.hadoop.fs.s3a.Constants.HADOOP_TMP_DIR;
 import static org.apache.hadoop.fs.s3a.S3AUtils.extractException;
 import static org.apache.hadoop.fs.s3a.S3AUtils.getPutRequestLength;
 import static org.apache.hadoop.fs.s3a.S3AUtils.isThrottleException;
+import static org.apache.hadoop.fs.s3a.Statistic.ACTION_HTTP_HEAD_REQUEST;
 import static org.apache.hadoop.fs.s3a.Statistic.IGNORED_ERRORS;
 import static org.apache.hadoop.fs.s3a.Statistic.MULTIPART_UPLOAD_PART_PUT;
 import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_BULK_DELETE_REQUEST;
 import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_DELETE_OBJECTS;
 import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_DELETE_REQUEST;
+import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_METADATA_REQUESTS;
 import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_PUT_BYTES;
 import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_PUT_BYTES_PENDING;
 import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_PUT_REQUESTS_ACTIVE;
@@ -90,16 +114,21 @@ import static org.apache.hadoop.fs.s3a.Statistic.STORE_IO_THROTTLED;
 import static org.apache.hadoop.fs.s3a.Statistic.STORE_IO_THROTTLE_RATE;
 import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.isObjectNotFound;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.DELETE_CONSIDERED_IDEMPOTENT;
+import static org.apache.hadoop.fs.s3a.impl.streams.StreamIntegration.factoryFromConfig;
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.ACTION_HTTP_GET_REQUEST;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDurationOfOperation;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDurationOfSupplier;
 import static org.apache.hadoop.util.Preconditions.checkArgument;
+import static org.apache.hadoop.util.StringUtils.toLowerCase;
 
 /**
  * Store Layer.
  * This is where lower level storage operations are intended
  * to move.
  */
-public class S3AStoreImpl implements S3AStore {
+public class S3AStoreImpl
+    extends CompositeService
+    implements S3AStore, ObjectInputStreamFactory {
 
   private static final Logger LOG = LoggerFactory.getLogger(S3AStoreImpl.class);
 
@@ -155,7 +184,20 @@ public class S3AStoreImpl implements S3AStore {
    */
   private final FileSystem.Statistics fsStatistics;
 
-  /** Constructor to create S3A store. */
+  /**
+   * Allocator of local FS storage.
+   */
+  private LocalDirAllocator directoryAllocator;
+
+  /**
+   * Factory for input streams.
+   */
+  private ObjectInputStreamFactory objectInputStreamFactory;
+
+  /**
+   * Constructor to create S3A store.
+   * Package private, as {@link S3AStoreBuilder} creates them.
+   * */
   S3AStoreImpl(StoreContextFactory storeContextFactory,
       ClientManager clientManager,
       DurationTrackerFactory durationTrackerFactory,
@@ -166,25 +208,91 @@ public class S3AStoreImpl implements S3AStore {
       RateLimiting writeRateLimiter,
       AuditSpanSource<AuditSpanS3A> auditSpanSource,
       @Nullable FileSystem.Statistics fsStatistics) {
-    this.storeContextFactory = requireNonNull(storeContextFactory);
+    super("S3AStore");
+    this.auditSpanSource = requireNonNull(auditSpanSource);
     this.clientManager = requireNonNull(clientManager);
     this.durationTrackerFactory = requireNonNull(durationTrackerFactory);
+    this.fsStatistics = fsStatistics;
     this.instrumentation = requireNonNull(instrumentation);
     this.statisticsContext = requireNonNull(statisticsContext);
+    this.storeContextFactory = requireNonNull(storeContextFactory);
     this.storageStatistics = requireNonNull(storageStatistics);
     this.readRateLimiter = requireNonNull(readRateLimiter);
     this.writeRateLimiter = requireNonNull(writeRateLimiter);
-    this.auditSpanSource = requireNonNull(auditSpanSource);
     this.storeContext = requireNonNull(storeContextFactory.createStoreContext());
-    this.fsStatistics = fsStatistics;
-    this.invoker = storeContext.getInvoker();
-    this.bucket = storeContext.getBucket();
-    this.requestFactory = storeContext.getRequestFactory();
+
+    this.invoker = requireNonNull(storeContext.getInvoker());
+    this.bucket = requireNonNull(storeContext.getBucket());
+    this.requestFactory = requireNonNull(storeContext.getRequestFactory());
+    addService(clientManager);
+  }
+
+  /**
+   * Create and initialize any subsidiary services, including the input stream factory.
+   * @param conf configuration
+   */
+  @Override
+  protected void serviceInit(final Configuration conf) throws Exception {
+
+    // create and register the stream factory, which will
+    // then follow the service lifecycle
+    objectInputStreamFactory = factoryFromConfig(conf);
+    addService(objectInputStreamFactory);
+
+    // init all child services, including the stream factory
+    super.serviceInit(conf);
+
+    // pass down extra information to the stream factory.
+    finishStreamFactoryInit();
   }
 
   @Override
-  public void close() {
-    clientManager.close();
+  protected void serviceStart() throws Exception {
+    super.serviceStart();
+    initLocalDirAllocator();
+  }
+
+  /**
+   * Return the store path capabilities.
+   * If the object stream factory is non-null, hands off the
+   * query to that factory if not handled here.
+   * @param path path to query the capability of.
+   * @param capability non-null, non-empty string to query the path for support.
+   * @return known capabilities
+   */
+  @Override
+  public boolean hasPathCapability(final Path path, final String capability) {
+    switch (toLowerCase(capability)) {
+    case StreamCapabilities.IOSTATISTICS:
+      return true;
+    default:
+      return inputStreamHasCapability(capability);
+    }
+  }
+
+  /**
+   * Return the capabilities of input streams created
+   * through the store.
+   * @param capability string to query the stream support for.
+   * @return capabilities declared supported in streams.
+   */
+  @Override
+  public boolean inputStreamHasCapability(final String capability) {
+    if (objectInputStreamFactory != null) {
+      return objectInputStreamFactory.hasCapability(capability);
+    }
+    return false;
+  }
+
+  /**
+   * Initialize dir allocator if not already initialized.
+   */
+  private void initLocalDirAllocator() {
+    String key = BUFFER_DIR;
+    if (StringUtils.isEmpty(getConfig().getTrimmed(key))) {
+      key = HADOOP_TMP_DIR;
+    }
+    directoryAllocator = new LocalDirAllocator(key);
   }
 
   /** Acquire write capacity for rate limiting {@inheritDoc}. */
@@ -245,6 +353,11 @@ public class S3AStoreImpl implements S3AStore {
   @Override
   public S3Client getOrCreateAsyncS3ClientUnchecked() throws UncheckedIOException {
     return clientManager.getOrCreateAsyncS3ClientUnchecked();
+  }
+
+  @Override
+  public S3Client getOrCreateUnencryptedS3Client() throws IOException {
+    return clientManager.getOrCreateUnencryptedS3Client();
   }
 
   @Override
@@ -541,6 +654,102 @@ public class S3AStoreImpl implements S3AStore {
   }
 
   /**
+   * Performs a HEAD request on an S3 object to retrieve its metadata.
+   *
+   * @param key           The S3 object key to perform the HEAD operation on
+   * @param changeTracker Tracks changes to the object's metadata across operations
+   * @param changeInvoker The invoker responsible for executing the HEAD request with retries
+   * @param fsHandler     Handler for filesystem-level operations and configurations
+   * @param operation     Description of the operation being performed for tracking purposes
+   * @return              HeadObjectResponse containing the object's metadata
+   * @throws IOException  If the HEAD request fails, object doesn't exist, or other I/O errors occur
+   */
+  @Override
+  @Retries.RetryRaw
+  public HeadObjectResponse headObject(String key,
+      ChangeTracker changeTracker,
+      Invoker changeInvoker,
+      S3AFileSystemOperations fsHandler,
+      String operation) throws IOException {
+    HeadObjectResponse response = getStoreContext().getInvoker()
+        .retryUntranslated("HEAD " + key, true,
+            () -> {
+              HeadObjectRequest.Builder requestBuilder =
+                  getRequestFactory().newHeadObjectRequestBuilder(key);
+              incrementStatistic(OBJECT_METADATA_REQUESTS);
+              DurationTracker duration =
+                  getDurationTrackerFactory().trackDuration(ACTION_HTTP_HEAD_REQUEST.getSymbol());
+              try {
+                LOG.debug("HEAD {} with change tracker {}", key, changeTracker);
+                if (changeTracker != null) {
+                  changeTracker.maybeApplyConstraint(requestBuilder);
+                }
+                HeadObjectResponse headObjectResponse =
+                    getS3Client().headObject(requestBuilder.build());
+                if (fsHandler != null) {
+                  long length =
+                      fsHandler.getS3ObjectSize(key, headObjectResponse.contentLength(), this,
+                          headObjectResponse);
+                  // overwrite the content length
+                  headObjectResponse = headObjectResponse.toBuilder().contentLength(length).build();
+                }
+                if (changeTracker != null) {
+                  changeTracker.processMetadata(headObjectResponse, operation);
+                }
+                return headObjectResponse;
+              } catch (AwsServiceException ase) {
+                if (!isObjectNotFound(ase)) {
+                  // file not found is not considered a failure of the call,
+                  // so only switch the duration tracker to update failure
+                  // metrics on other exception outcomes.
+                  duration.failed();
+                }
+                throw ase;
+              } finally {
+                // update the tracker.
+                duration.close();
+              }
+            });
+    incrementReadOperations();
+    return response;
+  }
+
+  /**
+   * Retrieves a specific byte range of an S3 object as a stream.
+   *
+   * @param key    The S3 object key to retrieve
+   * @param start  The starting byte position (inclusive) of the range to retrieve
+   * @param end    The ending byte position (inclusive) of the range to retrieve
+   * @return       A ResponseInputStream containing the requested byte range of the S3 object
+   * @throws IOException  If the object cannot be retrieved other I/O errors occur
+   * @see GetObjectResponse  For additional metadata about the retrieved object
+   */
+  @Override
+  @Retries.RetryRaw
+  public ResponseInputStream<GetObjectResponse> getRangedS3Object(String key,
+      long start,
+      long end) throws IOException {
+    final GetObjectRequest request = getRequestFactory().newGetObjectRequestBuilder(key)
+        .range(S3AUtils.formatRange(start, end))
+        .build();
+    DurationTracker duration = getDurationTrackerFactory()
+        .trackDuration(ACTION_HTTP_GET_REQUEST);
+    ResponseInputStream<GetObjectResponse> objectRange;
+    try {
+      objectRange = getStoreContext().getInvoker()
+          .retryUntranslated("GET Ranged Object " + key, true,
+              () -> getS3Client().getObject(request));
+
+    } catch (IOException ex) {
+      duration.failed();
+      throw ex;
+    } finally {
+      duration.close();
+    }
+    return objectRange;
+  }
+
+  /**
    * {@inheritDoc}.
    */
   @Override
@@ -697,4 +906,106 @@ public class S3AStoreImpl implements S3AStore {
     return getS3Client().completeMultipartUpload(request);
   }
 
+  /**
+   * Get the directory allocator.
+   * @return the directory allocator
+   */
+  @Override
+  public LocalDirAllocator getDirectoryAllocator() {
+    return directoryAllocator;
+  }
+
+  /**
+   * Demand create the directory allocator, then create a temporary file.
+   * This does not mark the file for deletion when a process exits.
+   * Pass in a file size of {@link LocalDirAllocator#SIZE_UNKNOWN} if the
+   * size is unknown.
+   * {@link LocalDirAllocator#createTmpFileForWrite(String, long, Configuration)}.
+   * @param pathStr prefix for the temporary file
+   * @param size the size of the file that is going to be written
+   * @param conf the Configuration object
+   * @return a unique temporary file
+   * @throws IOException IO problems
+   */
+  @Override
+  public File createTemporaryFileForWriting(String pathStr,
+      long size,
+      Configuration conf) throws IOException {
+    requireNonNull(directoryAllocator, "directory allocator not initialized");
+    Path path = directoryAllocator.getLocalPathForWrite(pathStr,
+        size, conf);
+    File dir = new File(path.getParent().toUri().getPath());
+    String prefix = path.getName();
+    // create a temp file on this directory
+    return File.createTempFile(prefix, null, dir);
+  }
+
+  /*
+   =============== BEGIN ObjectInputStreamFactory ===============
+   */
+
+  /**
+   * All stream factory initialization required after {@code Service.init()},
+   * after all other services have themselves been initialized.
+   */
+  private void finishStreamFactoryInit() throws IOException {
+    // must be on be invoked during service initialization
+    Preconditions.checkState(isInState(STATE.INITED),
+        "Store is in wrong state: %s", getServiceState());
+    Preconditions.checkState(clientManager.isInState(STATE.INITED),
+        "Client Manager is in wrong state: %s", clientManager.getServiceState());
+
+    // finish initialization and pass down callbacks to self
+    objectInputStreamFactory.bind(new FactoryBindingParameters(new FactoryCallbacks()));
+  }
+
+  @Override /* ObjectInputStreamFactory */
+  public ObjectInputStream readObject(ObjectReadParameters parameters)
+      throws IOException {
+    parameters.withDirectoryAllocator(getDirectoryAllocator());
+    return objectInputStreamFactory.readObject(parameters.validate());
+  }
+
+  @Override /* ObjectInputStreamFactory */
+  public StreamFactoryRequirements factoryRequirements() {
+    return objectInputStreamFactory.factoryRequirements();
+  }
+
+  /**
+   * This operation is not implemented, as
+   * is this class which invokes it on the actual factory.
+   * @param factoryBindingParameters ignored
+   * @throws UnsupportedOperationException always
+   */
+  @Override /* ObjectInputStreamFactory */
+  public void bind(final FactoryBindingParameters factoryBindingParameters) {
+    throw new UnsupportedOperationException("Not supported");
+  }
+
+  @Override /* ObjectInputStreamFactory */
+  public InputStreamType streamType() {
+    return objectInputStreamFactory.streamType();
+  }
+
+  /**
+   * Callbacks from {@link ObjectInputStreamFactory} instances.
+   */
+  private class FactoryCallbacks implements StreamFactoryCallbacks {
+
+    @Override
+    public S3Client getOrCreateSyncClient() throws IOException {
+      LOG.debug("Stream factory requested sync client");
+      return clientManager().getOrCreateS3Client();
+    }
+
+    @Override
+    public void incrementFactoryStatistic(Statistic statistic) {
+      incrementStatistic(statistic);
+    }
+
+  }
+
+  /*
+   =============== END ObjectInputStreamFactory ===============
+   */
 }

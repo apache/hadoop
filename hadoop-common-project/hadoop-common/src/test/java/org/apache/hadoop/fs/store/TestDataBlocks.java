@@ -21,7 +21,7 @@ package org.apache.hadoop.fs.store;
 import java.io.IOException;
 import java.util.Random;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -32,9 +32,9 @@ import org.apache.hadoop.test.LambdaTestUtils;
 import static org.apache.hadoop.fs.store.DataBlocks.DATA_BLOCKS_BUFFER_ARRAY;
 import static org.apache.hadoop.fs.store.DataBlocks.DATA_BLOCKS_BUFFER_DISK;
 import static org.apache.hadoop.fs.store.DataBlocks.DATA_BLOCKS_BYTEBUFFER;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * UTs to test {@link DataBlocks} functionalities.
@@ -86,13 +86,12 @@ public class TestDataBlocks {
     // Verify DataBlock state is at Writing.
     dataBlock.verifyState(DataBlocks.DataBlock.DestState.Writing);
     // Verify that the DataBlock has data written.
-    assertTrue("Expected Data block to have data", dataBlock.hasData());
+    assertTrue(dataBlock.hasData(), "Expected Data block to have data");
     // Verify the size of data.
-    assertEquals("Mismatch in data size in block", ONE_KB,
-        dataBlock.dataSize());
+    assertEquals(ONE_KB, dataBlock.dataSize(), "Mismatch in data size in block");
     // Verify that no capacity is left in the data block to write more.
-    assertFalse("Expected the data block to have no capacity to write 1 byte "
-        + "of data", dataBlock.hasCapacity(1));
+    assertFalse(dataBlock.hasCapacity(1),
+        "Expected the data block to have no capacity to write 1 byte of data");
   }
 
   /**
@@ -110,8 +109,8 @@ public class TestDataBlocks {
     byte[] bytesWritten = blockUploadData.toByteArray();
     // Verify that we can call toByteArray() more than once and gives the
     // same byte[].
-    assertEquals("Mismatch in byteArray provided by toByteArray() the second "
-        + "time", bytesWritten, blockUploadData.toByteArray());
+    assertEquals(bytesWritten, blockUploadData.toByteArray(),
+        "Mismatch in byteArray provided by toByteArray() the second time");
     IOUtils.close(blockUploadData);
     // Verify that after closing blockUploadData, we can't call toByteArray().
     LambdaTestUtils.intercept(IllegalStateException.class,

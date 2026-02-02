@@ -22,13 +22,12 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.UUID;
 
-import org.junit.Assume;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
 
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
 import org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.SASTokenProviderException;
 import org.apache.hadoop.fs.azurebfs.extensions.MockSASTokenProvider;
@@ -36,12 +35,16 @@ import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_IS_HNS_ENABLED;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_SAS_TOKEN_PROVIDER_TYPE;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.MOCK_SASTOKENPROVIDER_FAIL_INIT;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.MOCK_SASTOKENPROVIDER_RETURN_EMPTY_SAS_TOKEN;
 import static org.apache.hadoop.fs.azurebfs.utils.AclTestHelpers.aclEntry;
 import static org.apache.hadoop.fs.permission.AclEntryScope.ACCESS;
 import static org.apache.hadoop.fs.permission.AclEntryType.GROUP;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 /**
  * Test Perform Authorization Check operation
@@ -56,17 +59,18 @@ public class ITestAzureBlobFileSystemAuthorization extends AbstractAbfsIntegrati
 
   public ITestAzureBlobFileSystemAuthorization() throws Exception {
     // The mock SAS token provider relies on the account key to generate SAS.
-    Assume.assumeTrue(this.getAuthType() == AuthType.SharedKey);
+    assumeThat(this.getAuthType()).isEqualTo(AuthType.SharedKey);
   }
 
+  @BeforeEach
   @Override
   public void setup() throws Exception {
-    boolean isHNSEnabled = this.getConfiguration().getBoolean(
+    boolean isHNSEnabled = getConfiguration().getBoolean(
         TestConfigurationKeys.FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT, false);
-    Assume.assumeTrue(isHNSEnabled);
+    assumeThat(isHNSEnabled).isTrue();
     loadConfiguredFileSystem();
-    this.getConfiguration().set(ConfigurationKeys.FS_AZURE_SAS_TOKEN_PROVIDER_TYPE, TEST_AUTHZ_CLASS);
-    this.getConfiguration().set(ConfigurationKeys.FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME, "SAS");
+    getConfiguration().set(FS_AZURE_SAS_TOKEN_PROVIDER_TYPE, TEST_AUTHZ_CLASS);
+    getConfiguration().set(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME, AuthType.SAS.toString());
     super.setup();
   }
 
@@ -75,13 +79,15 @@ public class ITestAzureBlobFileSystemAuthorization extends AbstractAbfsIntegrati
     final AzureBlobFileSystem fs = this.getFileSystem();
 
     final AzureBlobFileSystem testFs = new AzureBlobFileSystem();
-    Configuration testConfig = this.getConfiguration().getRawConfiguration();
-    testConfig.set(ConfigurationKeys.FS_AZURE_SAS_TOKEN_PROVIDER_TYPE, TEST_ERR_AUTHZ_CLASS);
-    testConfig.set(MOCK_SASTOKENPROVIDER_FAIL_INIT, "true");
+    Configuration testConfig = new Configuration(this.getConfiguration().getRawConfiguration());
+    testConfig.set(FS_AZURE_SAS_TOKEN_PROVIDER_TYPE, TEST_ERR_AUTHZ_CLASS);
+    testConfig.setBoolean(MOCK_SASTOKENPROVIDER_FAIL_INIT, true);
+    // Setting IS_HNS_ENABLED to avoid the exception thrown by the HNS check.
+    testConfig.setBoolean(FS_AZURE_ACCOUNT_IS_HNS_ENABLED, this.getIsNamespaceEnabled(fs));
 
     intercept(SASTokenProviderException.class,
         ()-> {
-          testFs.initialize(fs.getUri(), this.getConfiguration().getRawConfiguration());
+          testFs.initialize(fs.getUri(), testConfig);
         });
   }
 
@@ -90,12 +96,13 @@ public class ITestAzureBlobFileSystemAuthorization extends AbstractAbfsIntegrati
     final AzureBlobFileSystem fs = this.getFileSystem();
 
     final AzureBlobFileSystem testFs = new AzureBlobFileSystem();
-    Configuration testConfig = this.getConfiguration().getRawConfiguration();
-    testConfig.set(ConfigurationKeys.FS_AZURE_SAS_TOKEN_PROVIDER_TYPE, TEST_ERR_AUTHZ_CLASS);
-    testConfig.set(MOCK_SASTOKENPROVIDER_RETURN_EMPTY_SAS_TOKEN, "true");
+    Configuration testConfig = new Configuration(this.getConfiguration().getRawConfiguration());
+    testConfig.set(FS_AZURE_SAS_TOKEN_PROVIDER_TYPE, TEST_ERR_AUTHZ_CLASS);
+    testConfig.setBoolean(MOCK_SASTOKENPROVIDER_RETURN_EMPTY_SAS_TOKEN, true);
+    // Setting IS_HNS_ENABLED to avoid the exception thrown by the HNS check.
+    testConfig.setBoolean(FS_AZURE_ACCOUNT_IS_HNS_ENABLED, this.getIsNamespaceEnabled(fs));
 
-    testFs.initialize(fs.getUri(),
-        this.getConfiguration().getRawConfiguration());
+    testFs.initialize(fs.getUri(), testConfig);
     intercept(SASTokenProviderException.class,
         () -> {
           testFs.create(new org.apache.hadoop.fs.Path("/testFile")).close();
@@ -107,10 +114,13 @@ public class ITestAzureBlobFileSystemAuthorization extends AbstractAbfsIntegrati
     final AzureBlobFileSystem fs = this.getFileSystem();
 
     final AzureBlobFileSystem testFs = new AzureBlobFileSystem();
-    Configuration testConfig = this.getConfiguration().getRawConfiguration();
-    testConfig.set(ConfigurationKeys.FS_AZURE_SAS_TOKEN_PROVIDER_TYPE, TEST_ERR_AUTHZ_CLASS);
+    Configuration testConfig = new Configuration(this.getConfiguration().getRawConfiguration());
+    testConfig.set(FS_AZURE_SAS_TOKEN_PROVIDER_TYPE, TEST_ERR_AUTHZ_CLASS);
+    testConfig.setBoolean(MOCK_SASTOKENPROVIDER_RETURN_EMPTY_SAS_TOKEN, true);
+    // Setting IS_HNS_ENABLED to avoid the exception thrown by the HNS check.
+    testConfig.setBoolean(FS_AZURE_ACCOUNT_IS_HNS_ENABLED, this.getIsNamespaceEnabled(fs));
 
-    testFs.initialize(fs.getUri(), this.getConfiguration().getRawConfiguration());
+    testFs.initialize(fs.getUri(), testConfig);
     intercept(SASTokenProviderException.class,
         ()-> {
           testFs.create(new org.apache.hadoop.fs.Path("/testFile")).close();
@@ -208,55 +218,55 @@ public class ITestAzureBlobFileSystemAuthorization extends AbstractAbfsIntegrati
 
   @Test
   public void testSetOwnerUnauthorized() throws Exception {
-    Assume.assumeTrue(getIsNamespaceEnabled(getFileSystem()));
+    assumeThat(getIsNamespaceEnabled(getFileSystem())).isTrue();
     runTest(FileSystemOperations.SetOwner, true);
   }
 
   @Test
   public void testSetPermissionUnauthorized() throws Exception {
-    Assume.assumeTrue(getIsNamespaceEnabled(getFileSystem()));
+    assumeThat(getIsNamespaceEnabled(getFileSystem())).isTrue();
     runTest(FileSystemOperations.SetPermissions, true);
   }
 
   @Test
   public void testModifyAclEntriesUnauthorized() throws Exception {
-    Assume.assumeTrue(getIsNamespaceEnabled(getFileSystem()));
+    assumeThat(getIsNamespaceEnabled(getFileSystem())).isTrue();
     runTest(FileSystemOperations.ModifyAclEntries, true);
   }
 
   @Test
   public void testRemoveAclEntriesUnauthorized() throws Exception {
-    Assume.assumeTrue(getIsNamespaceEnabled(getFileSystem()));
+    assumeThat(getIsNamespaceEnabled(getFileSystem())).isTrue();
     runTest(FileSystemOperations.RemoveAclEntries, true);
   }
 
   @Test
   public void testRemoveDefaultAclUnauthorized() throws Exception {
-    Assume.assumeTrue(getIsNamespaceEnabled(getFileSystem()));
+    assumeThat(getIsNamespaceEnabled(getFileSystem())).isTrue();
     runTest(FileSystemOperations.RemoveDefaultAcl, true);
   }
 
   @Test
   public void testRemoveAclUnauthorized() throws Exception {
-    Assume.assumeTrue(getIsNamespaceEnabled(getFileSystem()));
+    assumeThat(getIsNamespaceEnabled(getFileSystem())).isTrue();
     runTest(FileSystemOperations.RemoveAcl, true);
   }
 
   @Test
   public void testSetAclUnauthorized() throws Exception {
-    Assume.assumeTrue(getIsNamespaceEnabled(getFileSystem()));
+    assumeThat(getIsNamespaceEnabled(getFileSystem())).isTrue();
     runTest(FileSystemOperations.SetAcl, true);
   }
 
   @Test
   public void testGetAclStatusAuthorized() throws Exception {
-    Assume.assumeTrue(getIsNamespaceEnabled(getFileSystem()));
+    assumeThat(getIsNamespaceEnabled(getFileSystem())).isTrue();
     runTest(FileSystemOperations.GetAcl, false);
   }
 
   @Test
   public void testGetAclStatusUnauthorized() throws Exception {
-    Assume.assumeTrue(getIsNamespaceEnabled(getFileSystem()));
+    assumeThat(getIsNamespaceEnabled(getFileSystem())).isTrue();
     runTest(FileSystemOperations.GetAcl, true);
   }
 

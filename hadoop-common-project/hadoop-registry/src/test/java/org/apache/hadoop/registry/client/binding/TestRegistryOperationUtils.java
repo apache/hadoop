@@ -19,19 +19,18 @@
 package org.apache.hadoop.registry.client.binding;
 
 import org.apache.hadoop.security.UserGroupInformation;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for the {@link RegistryUtils} class
  */
-public class TestRegistryOperationUtils extends Assert {
+public class TestRegistryOperationUtils extends Assertions {
 
   @Test
   public void testUsernameExtractionEnvVarOverrride() throws Throwable {
     String whoami = RegistryUtils.getCurrentUsernameUnencoded("drwho");
     assertEquals("drwho", whoami);
-
   }
 
   @Test

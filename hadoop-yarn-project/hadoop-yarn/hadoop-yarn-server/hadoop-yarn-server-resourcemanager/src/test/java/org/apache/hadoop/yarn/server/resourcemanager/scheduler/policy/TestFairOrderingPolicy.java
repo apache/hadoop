@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.*;
 
@@ -33,13 +33,14 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestFairOrderingPolicy {
 
@@ -52,14 +53,13 @@ public class TestFairOrderingPolicy {
     MockSchedulableEntity r1 = new MockSchedulableEntity();
     MockSchedulableEntity r2 = new MockSchedulableEntity();
 
-    assertEquals("Comparator Output", 0,
-        policy.getComparator().compare(r1, r2));
+    assertEquals(0, policy.getComparator().compare(r1, r2), "Comparator Output");
 
     //consumption
     r1.setUsed(Resources.createResource(1, 0));
     AbstractComparatorOrderingPolicy.updateSchedulingResourceUsage(
       r1.getSchedulingResourceUsage());
-    Assert.assertTrue(policy.getComparator().compare(r1, r2) > 0);
+    assertTrue(policy.getComparator().compare(r1, r2) > 0);
   }
 
   @Test
@@ -71,8 +71,7 @@ public class TestFairOrderingPolicy {
     MockSchedulableEntity r2 = new MockSchedulableEntity();
 
     //No changes, equal
-    assertEquals("Comparator Output", 0,
-        policy.getComparator().compare(r1, r2));
+    assertEquals(0, policy.getComparator().compare(r1, r2), "Comparator Output");
 
     r1.setUsed(Resources.createResource(4 * GB));
     r2.setUsed(Resources.createResource(4 * GB));
@@ -86,8 +85,7 @@ public class TestFairOrderingPolicy {
       r2.getSchedulingResourceUsage());
 
     //Same, equal
-    assertEquals("Comparator Output", 0,
-        policy.getComparator().compare(r1, r2));
+    assertEquals(0, policy.getComparator().compare(r1, r2), "Comparator Output");
 
     r2.setUsed(Resources.createResource(5 * GB));
     r2.setPending(Resources.createResource(5 * GB));
@@ -97,13 +95,13 @@ public class TestFairOrderingPolicy {
 
     //More demand and consumption, but not enough more demand to overcome
     //additional consumption
-    Assert.assertTrue(policy.getComparator().compare(r1, r2) < 0);
+    assertTrue(policy.getComparator().compare(r1, r2) < 0);
 
     //High demand, enough to reverse sbw
     r2.setPending(Resources.createResource(100 * GB));
     AbstractComparatorOrderingPolicy.updateSchedulingResourceUsage(
       r2.getSchedulingResourceUsage());
-    Assert.assertTrue(policy.getComparator().compare(r1, r2) > 0);
+    assertTrue(policy.getComparator().compare(r1, r2) > 0);
   }
 
   @Test
@@ -183,8 +181,8 @@ public class TestFairOrderingPolicy {
     // Get LeafQueue
     LeafQueue lq = (LeafQueue) cs.getQueue("default");
     OrderingPolicy<FiCaSchedulerApp> policy = lq.getOrderingPolicy();
-    Assert.assertTrue(policy instanceof FairOrderingPolicy);
-    Assert.assertTrue(((FairOrderingPolicy<FiCaSchedulerApp>)policy).getSizeBasedWeight());
+    assertTrue(policy instanceof FairOrderingPolicy);
+    assertTrue(((FairOrderingPolicy<FiCaSchedulerApp>)policy).getSizeBasedWeight());
 
     rm.registerNode("h1:1234", 10 * GB);
 
@@ -226,21 +224,20 @@ public class TestFairOrderingPolicy {
             .build();
     MockRMAppSubmitter.submit(rm, data);
 
-    Assert.assertEquals(1, lq.getNumActiveApplications());
-    Assert.assertEquals(3, lq.getNumPendingApplications());
+    assertEquals(1, lq.getNumActiveApplications());
+    assertEquals(3, lq.getNumPendingApplications());
 
     // Try allocate once, #active-apps and #pending-apps should be still correct
     cs.handle(new NodeUpdateSchedulerEvent(
         rm.getRMContext().getRMNodes().get(NodeId.newInstance("h1", 1234))));
-    Assert.assertEquals(1, lq.getNumActiveApplications());
-    Assert.assertEquals(3, lq.getNumPendingApplications());
+    assertEquals(1, lq.getNumActiveApplications());
+    assertEquals(3, lq.getNumPendingApplications());
   }
 
   public void checkIds(Iterator<MockSchedulableEntity> si,
       String[] ids) {
     for (int i = 0;i < ids.length;i++) {
-      Assert.assertEquals(si.next().getId(),
-        ids[i]);
+      assertEquals(si.next().getId(), ids[i]);
     }
   }
 
@@ -264,8 +261,8 @@ public class TestFairOrderingPolicy {
         .updateSchedulingResourceUsage(r2.getSchedulingResourceUsage());
 
     // Same, equal
-    assertEquals("Comparator Output", 0,
-        policy.getComparator().compare(r1, r2));
+    assertEquals(0, policy.getComparator().compare(r1, r2),
+        "Comparator Output");
 
     r1.setUsed(Resources.createResource(4 * GB));
     r2.setUsed(Resources.createResource(8 * GB));
@@ -278,7 +275,7 @@ public class TestFairOrderingPolicy {
     AbstractComparatorOrderingPolicy
         .updateSchedulingResourceUsage(r2.getSchedulingResourceUsage());
 
-    Assert.assertTrue(policy.getComparator().compare(r1, r2) < 0);
+    assertTrue(policy.getComparator().compare(r1, r2) < 0);
   }
 
   @Test
@@ -293,20 +290,19 @@ public class TestFairOrderingPolicy {
     assertEquals(r1.getStartTime(), r2.getStartTime());
 
     // No changes, equal
-    assertEquals("Comparator Output", 0,
-        policy.getComparator().compare(r1, r2));
+    assertEquals(0, policy.getComparator().compare(r1, r2), "Comparator Output");
 
     // R2 has been started after R1
     r1.setStartTime(5);
     r2.setStartTime(10);
 
-    Assert.assertTrue(policy.getComparator().compare(r1, r2) < 0);
+    assertTrue(policy.getComparator().compare(r1, r2) < 0);
 
     // R1 has been started after R2
     r1.setStartTime(10);
     r2.setStartTime(5);
 
-    Assert.assertTrue(policy.getComparator().compare(r1, r2) > 0);
+    assertTrue(policy.getComparator().compare(r1, r2) > 0);
   }
 
   @Test
@@ -325,8 +321,7 @@ public class TestFairOrderingPolicy {
         .updateSchedulingResourceUsage(r2.getSchedulingResourceUsage());
 
     // Same, equal
-    assertEquals("Comparator Output", 0,
-        policy.getComparator().compare(r1, r2));
+    assertEquals(0, policy.getComparator().compare(r1, r2), "Comparator Output");
 
     // Compare demands ensures entity without resource demands gets lower
     // priority
@@ -337,7 +332,7 @@ public class TestFairOrderingPolicy {
     AbstractComparatorOrderingPolicy
         .updateSchedulingResourceUsage(r2.getSchedulingResourceUsage());
 
-    Assert.assertTrue(policy.getComparator().compare(r1, r2) > 0);
+    assertTrue(policy.getComparator().compare(r1, r2) > 0);
 
     // When both entity has certain demands, then there is no actual comparison
     r1.setPending(Resources.createResource(4 * GB));
@@ -347,8 +342,8 @@ public class TestFairOrderingPolicy {
     AbstractComparatorOrderingPolicy
         .updateSchedulingResourceUsage(r2.getSchedulingResourceUsage());
 
-    assertEquals("Comparator Output", 0,
-        policy.getComparator().compare(r1, r2));
+    assertEquals(0, policy.getComparator().compare(r1, r2),
+        "Comparator Output");
   }
 
   @Test
@@ -388,6 +383,6 @@ public class TestFairOrderingPolicy {
       policy.removeSchedulableEntity(entities.get(i));
     }
 
-    Assert.assertEquals(5, policy.getNumSchedulableEntities());
+    assertEquals(5, policy.getNumSchedulableEntities());
   }
 }

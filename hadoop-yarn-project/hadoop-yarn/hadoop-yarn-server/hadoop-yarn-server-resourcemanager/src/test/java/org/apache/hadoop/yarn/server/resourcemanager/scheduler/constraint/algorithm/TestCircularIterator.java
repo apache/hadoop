@@ -17,8 +17,10 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.algorithm;
 
-import org.junit.Assert;
-import org.junit.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
+
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -39,7 +41,7 @@ public class TestCircularIterator {
     while (ci.hasNext()) {
       sb.append(ci.next());
     }
-    Assert.assertEquals("abcd", sb.toString());
+    assertEquals("abcd", sb.toString());
 
     Iterator<String> lIter = list.iterator();
     lIter.next();
@@ -49,7 +51,7 @@ public class TestCircularIterator {
     while (ci.hasNext()) {
       sb.append(ci.next());
     }
-    Assert.assertEquals("cdab", sb.toString());
+    assertEquals("cdab", sb.toString());
 
     lIter = list.iterator();
     lIter.next();
@@ -60,7 +62,7 @@ public class TestCircularIterator {
     while (ci.hasNext()) {
       sb.append(ci.next());
     }
-    Assert.assertEquals("xdabc", sb.toString());
+    assertEquals("xdabc", sb.toString());
 
     list = Arrays.asList("a");
     lIter = list.iterator();
@@ -70,13 +72,13 @@ public class TestCircularIterator {
     while (ci.hasNext()) {
       sb.append(ci.next());
     }
-    Assert.assertEquals("ya", sb.toString());
+    assertEquals("ya", sb.toString());
 
     try {
       list = new ArrayList<>();
       lIter = list.iterator();
       new CircularIterator<>("y", lIter, list);
-      Assert.fail("Should fail..");
+      fail("Should fail..");
     } catch (Exception e) {
       // foo bar
     }

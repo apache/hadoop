@@ -21,6 +21,9 @@ package org.apache.hadoop.yarn.server.applicationhistoryservice.webapp;
 import java.util.Collections;
 import java.util.Set;
 
+import javax.inject.Inject;
+import javax.inject.Named;
+import javax.inject.Singleton;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.DefaultValue;
@@ -34,7 +37,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
@@ -55,8 +58,6 @@ import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 import org.apache.hadoop.yarn.webapp.BadRequestException;
-import com.google.inject.Inject;
-import com.google.inject.Singleton;
 
 @Singleton
 @Path("/ws/v1/applicationhistory")
@@ -65,8 +66,9 @@ public class AHSWebServices extends WebServices {
   private LogServlet logServlet;
 
   @Inject
-  public AHSWebServices(ApplicationBaseProtocol appBaseProt,
-      Configuration conf) {
+  public AHSWebServices(
+      final @Named("appBaseProt") ApplicationBaseProtocol appBaseProt,
+      final @Named("conf") Configuration conf) {
     super(appBaseProt);
     this.logServlet = new LogServlet(conf, this);
   }
@@ -87,9 +89,9 @@ public class AHSWebServices extends WebServices {
       MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
   public AppsInfo get(@Context HttpServletRequest req,
       @Context HttpServletResponse res) {
-    return getApps(req, res, null, Collections.<String> emptySet(), null, null,
+    return getApps(req, res, null, Collections.emptySet(), null, null,
       null, null, null, null, null, null, null,
-        Collections.<String> emptySet());
+        Collections.emptySet());
   }
 
   @GET
@@ -303,13 +305,13 @@ public class AHSWebServices extends WebServices {
   }
 
   @VisibleForTesting
-  @InterfaceAudience.Private
+  @Private
   LogServlet getLogServlet() {
     return this.logServlet;
   }
 
   @VisibleForTesting
-  @InterfaceAudience.Private
+  @Private
   void setLogServlet(LogServlet logServlet) {
     this.logServlet = logServlet;
   }

@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.numa;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -38,8 +38,8 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Reso
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperation;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.ResourceHandlerException;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test class for NumaResourceHandlerImpl.
@@ -51,7 +51,7 @@ public class TestNumaResourceHandlerImpl {
   private NumaResourceHandlerImpl numaResourceHandler;
   private Container mockContainer;
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException, ResourceHandlerException {
     conf = new YarnConfiguration();
     setNumaTopologyConfigs();

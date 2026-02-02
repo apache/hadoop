@@ -79,7 +79,7 @@ class JournaledEditsCache {
   private static final long INVALID_TXN_ID = -1;
 
   /** The capacity, in bytes, of this cache. */
-  private final int capacity;
+  private final long capacity;
 
   /**
    * Read/write lock pair wrapped in AutoCloseable; these refer to the same
@@ -117,7 +117,7 @@ class JournaledEditsCache {
    */
   private long initialTxnId;
   /** The current total size of all buffers in this cache. */
-  private int totalSize;
+  private long totalSize;
 
   // ** End lock-protected fields **
 
@@ -128,8 +128,8 @@ class JournaledEditsCache {
         String.format("Cache config %s is set at %f, it should be a positive float value, " +
             "less than 1.0. The recommended value is less than 0.9.",
             DFSConfigKeys.DFS_JOURNALNODE_EDIT_CACHE_SIZE_FRACTION_KEY, fraction));
-    capacity = conf.getInt(DFSConfigKeys.DFS_JOURNALNODE_EDIT_CACHE_SIZE_KEY,
-        (int) (Runtime.getRuntime().maxMemory() * fraction));
+    capacity = conf.getLong(DFSConfigKeys.DFS_JOURNALNODE_EDIT_CACHE_SIZE_KEY,
+        (long) (Runtime.getRuntime().maxMemory() * fraction));
     if (capacity > 0.9 * Runtime.getRuntime().maxMemory()) {
       Journal.LOG.warn(String.format("Cache capacity is set at %d bytes but " +
           "maximum JVM memory is only %d bytes. It is recommended that you " +
@@ -424,7 +424,7 @@ class JournaledEditsCache {
   }
 
   @VisibleForTesting
-  int getCapacity() {
+  long getCapacity() {
     return capacity;
   }
 

@@ -37,10 +37,13 @@ import java.util.HashSet;
 import java.util.concurrent.TimeUnit;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.ws.rs.client.Client;
+import javax.ws.rs.client.ClientBuilder;
+import javax.ws.rs.client.Entity;
+import javax.ws.rs.client.Invocation.Builder;
+import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
-import javax.ws.rs.core.Response.ResponseBuilder;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -71,17 +74,12 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.PartitionInfo;
 import org.apache.hadoop.yarn.server.uam.UnmanagedApplicationManager;
 import org.apache.hadoop.yarn.webapp.BadRequestException;
+import org.apache.hadoop.yarn.webapp.ConflictException;
 import org.apache.hadoop.yarn.webapp.ForbiddenException;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
+import org.glassfish.jersey.client.ClientProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.sun.jersey.api.ConflictException;
-import com.sun.jersey.api.client.Client;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.WebResource;
-import com.sun.jersey.api.client.WebResource.Builder;
-import com.sun.jersey.core.util.MultivaluedMapImpl;
 
 /**
  * The Router webservice util class.
@@ -121,14 +119,13 @@ public final class RouterWebServiceUtil {
       final Map<String, String[]> additionalParam, Configuration conf,
       Client client) {
 
-    UserGroupInformation callerUGI = null;
+    UserGroupInformation callerUGI;
 
     if (hsr != null) {
       callerUGI = RMWebAppUtil.getCallerUserGroupInformation(hsr, true);
     } else {
       // user not required
       callerUGI = UserGroupInformation.createRemoteUser(user);
-
     }
 
     if (callerUGI == null) {
@@ -137,47 +134,45 @@ public final class RouterWebServiceUtil {
     }
 
     try {
-      return callerUGI.doAs(new PrivilegedExceptionAction<T>() {
-        @SuppressWarnings("unchecked")
-        @Override
-        public T run() {
+      return callerUGI.doAs((PrivilegedExceptionAction<T>) () -> {
 
-          Map<String, String[]> paramMap = null;
+        Map<String, String[]> paramMap = null;
 
-          // We can have hsr or additionalParam. There are no case with both.
-          if (hsr != null) {
-            paramMap = hsr.getParameterMap();
-          } else if (additionalParam != null) {
-            paramMap = additionalParam;
+        // We can have hsr or additionalParam. There are no case with both.
+        if (hsr != null) {
+          paramMap = hsr.getParameterMap();
+        } else if (additionalParam != null) {
+          paramMap = additionalParam;
+        }
+
+        Response response = RouterWebServiceUtil.invokeRMWebService(
+            webApp, targetPath, method, (hsr == null) ? null : hsr.getPathInfo(), paramMap,
+            formParam, getMediaTypeFromHttpServletRequest(hsr, returnType), conf, client);
+
+        try {
+          if(returnType == Response.class) {
+            return returnType.cast(response);
           }
 
-          ClientResponse response = RouterWebServiceUtil
-              .invokeRMWebService(webApp, targetPath, method,
-                  (hsr == null) ? null : hsr.getPathInfo(), paramMap, formParam,
-                  getMediaTypeFromHttpServletRequest(hsr, returnType), conf,
-                  client);
-          if (Response.class.equals(returnType)) {
-            return (T) RouterWebServiceUtil.clientResponseToResponse(response);
+          // YARN RM can answer with Status.OK or it throws an exception
+          if (response.getStatus() == SC_OK) {
+            T t = response.readEntity(returnType);
+            return t;
           }
 
-          try {
-            // YARN RM can answer with Status.OK or it throws an exception
-            if (response.getStatus() == SC_OK) {
-              return response.getEntity(returnType);
+          if (response.getStatus() == SC_NO_CONTENT) {
+            try {
+              return returnType.getConstructor().newInstance();
+            } catch (RuntimeException | ReflectiveOperationException e) {
+              LOG.error("Cannot create empty entity for {}", returnType, e);
             }
-            if (response.getStatus() == SC_NO_CONTENT) {
-              try {
-                return returnType.getConstructor().newInstance();
-              } catch (RuntimeException | ReflectiveOperationException e) {
-                LOG.error("Cannot create empty entity for {}", returnType, e);
-              }
-            }
-            RouterWebServiceUtil.retrieveException(response);
-            return null;
-          } finally {
-            if (response != null) {
-              response.close();
-            }
+          }
+
+          RouterWebServiceUtil.retrieveException(response);
+          return null;
+        } finally {
+          if (response != null && returnType != Response.class) {
+            response.close();
           }
         }
       });
@@ -201,7 +196,8 @@ public final class RouterWebServiceUtil {
    * @param client same client used to reduce number of clients created
    * @return Client response to REST call
    */
-  private static ClientResponse invokeRMWebService(String webApp, String path,
+  @SuppressWarnings("checkstyle:parameternumber")
+  private static Response invokeRMWebService(String webApp, String path,
       HTTPMethods method, String additionalPath,
       Map<String, String[]> queryParams, Object formParam, String mediaType,
       Configuration conf, Client client) {
@@ -210,78 +206,57 @@ public final class RouterWebServiceUtil {
     String scheme = YarnConfiguration.useHttps(conf) ? "https://" : "http://";
     String webAddress = scheme + socketAddress.getHostName() + ":"
         + socketAddress.getPort();
-    WebResource webResource = client.resource(webAddress).path(path);
+    Client client1 = ClientBuilder.newClient();
+    WebTarget webResource = client1.target(webAddress);
 
     if (additionalPath != null && !additionalPath.isEmpty()) {
       webResource = webResource.path(additionalPath);
+    } else {
+      webResource = webResource.path(path);
     }
 
-    if (queryParams != null && !queryParams.isEmpty()) {
-      MultivaluedMap<String, String> paramMap = new MultivaluedMapImpl();
+    LOG.info("webApp:{}, path:{}, method:{}, additionalPath:{}, queryParams:{}, " +
+        "formParam:{}, mediaType:{}, conf:{}", webApp, path, method, additionalPath,
+        queryParams, formParam, mediaType, conf);
 
+    if (queryParams != null && !queryParams.isEmpty()) {
       for (Entry<String, String[]> param : queryParams.entrySet()) {
         String[] values = param.getValue();
         for (int i = 0; i < values.length; i++) {
-          paramMap.add(param.getKey(), values[i]);
+          webResource = webResource.queryParam(param.getKey(), values[i]);
         }
       }
-      webResource = webResource.queryParams(paramMap);
     }
 
-    Builder builder = null;
-    if (formParam != null) {
-      builder = webResource.entity(formParam, mediaType);
-      builder = builder.accept(mediaType);
-    } else {
-      builder = webResource.accept(mediaType);
-    }
+    Builder builder = webResource.request(mediaType);
 
-    ClientResponse response = null;
+    Response response = null;
 
     try {
       switch (method) {
       case DELETE:
-        response = builder.delete(ClientResponse.class);
+        response = builder.delete(Response.class);
         break;
       case GET:
-        response = builder.get(ClientResponse.class);
+        response = builder.get(Response.class);
         break;
       case POST:
-        response = builder.post(ClientResponse.class);
+        response = builder.post(Entity.entity(formParam, mediaType));
         break;
       case PUT:
-        response = builder.put(ClientResponse.class);
+        response = builder.put(Entity.entity(formParam, mediaType), Response.class);
         break;
       default:
         break;
       }
     } finally {
-      client.destroy();
+      client.close();
     }
-
     return response;
   }
 
-  public static Response clientResponseToResponse(ClientResponse r) {
-    if (r == null) {
-      return null;
-    }
-    // copy the status code
-    ResponseBuilder rb = Response.status(r.getStatus());
-    // copy all the headers
-    for (Entry<String, List<String>> entry : r.getHeaders().entrySet()) {
-      for (String value : entry.getValue()) {
-        rb.header(entry.getKey(), value);
-      }
-    }
-    // copy the entity
-    rb.entity(r.getEntityInputStream());
-    // return the response
-    return rb.build();
-  }
-
-  public static void retrieveException(ClientResponse response) {
-    String serverErrorMsg = response.getEntity(String.class);
+  public static void retrieveException(Response response) {
+    String serverErrorMsg = response.readEntity(String.class);
     int status = response.getStatus();
     if (status == 400) {
       throw new BadRequestException(serverErrorMsg);
@@ -295,7 +270,6 @@ public final class RouterWebServiceUtil {
     if (status == 409) {
       throw new ConflictException(serverErrorMsg);
     }
-
   }
 
   /**
@@ -362,7 +336,7 @@ public final class RouterWebServiceUtil {
    * @return a jersey client
    */
   protected static Client createJerseyClient(Configuration conf) {
-    Client client = Client.create();
+    Client client = ClientBuilder.newClient();
 
     long checkConnectTimeOut = conf.getLong(YarnConfiguration.ROUTER_WEBAPP_CONNECT_TIMEOUT, 0);
     int connectTimeOut = (int) conf.getTimeDuration(YarnConfiguration.ROUTER_WEBAPP_CONNECT_TIMEOUT,
@@ -374,20 +348,20 @@ public final class RouterWebServiceUtil {
       connectTimeOut = (int) TimeUnit.MILLISECONDS.convert(
           YarnConfiguration.DEFAULT_ROUTER_WEBAPP_CONNECT_TIMEOUT, TimeUnit.MILLISECONDS);
     }
-    client.setConnectTimeout(connectTimeOut);
+    client.property(ClientProperties.CONNECT_TIMEOUT, connectTimeOut);
 
     long checkReadTimeout = conf.getLong(YarnConfiguration.ROUTER_WEBAPP_READ_TIMEOUT, 0);
     int readTimeout = (int) conf.getTimeDuration(YarnConfiguration.ROUTER_WEBAPP_READ_TIMEOUT,
         YarnConfiguration.DEFAULT_ROUTER_WEBAPP_READ_TIMEOUT, TimeUnit.MILLISECONDS);
 
-    if (checkReadTimeout < 0) {
+    if (checkReadTimeout < 0 || checkReadTimeout > Integer.MAX_VALUE) {
       LOG.warn("Configuration {} = {} ms error. We will use the default value({} ms).",
           YarnConfiguration.ROUTER_WEBAPP_CONNECT_TIMEOUT, connectTimeOut,
           YarnConfiguration.DEFAULT_ROUTER_WEBAPP_CONNECT_TIMEOUT);
       readTimeout = (int) TimeUnit.MILLISECONDS.convert(
           YarnConfiguration.DEFAULT_ROUTER_WEBAPP_CONNECT_TIMEOUT, TimeUnit.MILLISECONDS);
     }
-    client.setReadTimeout(readTimeout);
+    client.property(ClientProperties.READ_TIMEOUT, readTimeout);
 
     return client;
   }
@@ -552,7 +526,6 @@ public final class RouterWebServiceUtil {
       // By default, we return XML for REST call without HttpServletRequest
       return MediaType.APPLICATION_XML;
     }
-    // TODO
     if (!returnType.equals(Response.class)) {
       return MediaType.APPLICATION_XML;
     }

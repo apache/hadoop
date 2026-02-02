@@ -20,8 +20,9 @@ package org.apache.hadoop.yarn.server.api;
 
 import org.apache.hadoop.yarn.conf.HAUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Test ServerRMProxy.
@@ -35,7 +36,7 @@ public class TestServerRMProxy {
     try {
       ServerRMProxy.createRMProxy(conf, DistributedSchedulingAMProtocol.class);
     } catch (Exception e) {
-      Assert.fail("DistributedSchedulingAMProtocol fail in non HA");
+      fail("DistributedSchedulingAMProtocol fail in non HA");
     }
 
     // HA is enabled
@@ -46,7 +47,7 @@ public class TestServerRMProxy {
     try {
       ServerRMProxy.createRMProxy(conf, DistributedSchedulingAMProtocol.class);
     } catch (Exception e) {
-      Assert.fail("DistributedSchedulingAMProtocol fail in HA");
+      fail("DistributedSchedulingAMProtocol fail in HA");
     }
   }
 }

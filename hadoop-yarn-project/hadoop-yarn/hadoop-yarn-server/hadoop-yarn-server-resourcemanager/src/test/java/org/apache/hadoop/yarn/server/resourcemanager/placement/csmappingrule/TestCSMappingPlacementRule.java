@@ -33,9 +33,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueManager;
 import org.apache.hadoop.yarn.util.Records;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,17 +42,19 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import static junit.framework.TestCase.assertEquals;
-import static junit.framework.TestCase.assertNotNull;
-import static junit.framework.TestCase.assertNull;
-import static junit.framework.TestCase.assertTrue;
-import static junit.framework.TestCase.fail;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_GROUP_MAPPING;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -63,8 +64,8 @@ public class TestCSMappingPlacementRule {
   private static final Logger LOG = LoggerFactory
       .getLogger(TestCSMappingPlacementRule.class);
 
-  @Rule
-  public TemporaryFolder folder = new TemporaryFolder();
+  @TempDir
+  private Path folder;
   
   private Map<String, Set<String>> userGroups =
       ImmutableMap.<String, Set<String>>builder()
@@ -185,11 +186,11 @@ public class TestCSMappingPlacementRule {
       ApplicationSubmissionContext asc, String user, String expectedQueue) {
     try {
       ApplicationPlacementContext apc = engine.getPlacementForApp(asc, user);
-      assertNotNull(message, apc);
+      assertNotNull(apc, message);
       String queue = apc.getParentQueue() == null ? "" :
           (apc.getParentQueue() + DOT);
       queue += apc.getQueue();
-      assertEquals(message, expectedQueue,  queue);
+      assertEquals(expectedQueue,  queue, message);
     } catch (YarnException e) {
       LOG.error(message, e);
       fail(message);
@@ -199,7 +200,7 @@ public class TestCSMappingPlacementRule {
   private void assertNullResult(String message, CSMappingPlacementRule engine,
                         ApplicationSubmissionContext asc, String user) {
     try {
-      assertNull(message, engine.getPlacementForApp(asc, user));
+      assertNull(engine.getPlacementForApp(asc, user), message);
     } catch (YarnException e) {
       LOG.error(message, e);
       fail(message);
@@ -628,15 +629,14 @@ public class TestCSMappingPlacementRule {
 
 
   void assertConfigTestResult(List<MappingRule> rules) {
-    assertEquals("We only specified one rule", 1, rules.size());
+    assertEquals(1, rules.size(), "We only specified one rule");
     MappingRule rule = rules.get(0);
     String ruleStr = rule.toString();
-    assertTrue("Rule's matcher variable should be %user",
-        ruleStr.contains("variable='%user'"));
-    assertTrue("Rule's match value should be bob",
-        ruleStr.contains("value='bob'"));
-    assertTrue("Rule's action should be place to queue", ruleStr.contains(
-        "action=PlaceToQueueAction{queueName='%primary_group'"));
+    assertTrue(ruleStr.contains("variable='%user'"),
+        "Rule's matcher variable should be %user");
+    assertTrue(ruleStr.contains("value='bob'"), "Rule's match value should be bob");
+    assertTrue(ruleStr.contains("action=PlaceToQueueAction{queueName='%primary_group'"),
+        "Rule's action should be place to queue");
   }
 
   @Test
@@ -677,27 +677,31 @@ public class TestCSMappingPlacementRule {
     conf.set(CapacitySchedulerConfiguration.MAPPING_RULE_JSON, "");
 
     List<MappingRule> rules = conf.getMappingRules();
-    assertEquals("We expect no rules", 0, rules.size());
+    assertEquals(0, rules.size(), "We expect no rules");
   }
 
-  @Test(expected = IOException.class)
+  @Test
   public void testInvalidJSONConfiguration() throws IOException {
-    CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
-    conf.set(CapacitySchedulerConfiguration.MAPPING_RULE_FORMAT,
-        CapacitySchedulerConfiguration.MAPPING_RULE_FORMAT_JSON);
-    conf.set(CapacitySchedulerConfiguration.MAPPING_RULE_JSON,
-        "I'm a bad JSON, since I'm not a JSON.");
-    List<MappingRule> rules = conf.getMappingRules();
+    assertThrows(IOException.class, ()->{
+      CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
+      conf.set(CapacitySchedulerConfiguration.MAPPING_RULE_FORMAT,
+              CapacitySchedulerConfiguration.MAPPING_RULE_FORMAT_JSON);
+      conf.set(CapacitySchedulerConfiguration.MAPPING_RULE_JSON,
+              "I'm a bad JSON, since I'm not a JSON.");
+      List<MappingRule> rules = conf.getMappingRules();
+    });
   }
 
-  @Test(expected = IOException.class)
+  @Test
   public void testMissingJSONFileConfiguration() throws IOException {
-    CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
-    conf.set(CapacitySchedulerConfiguration.MAPPING_RULE_FORMAT,
-        CapacitySchedulerConfiguration.MAPPING_RULE_FORMAT_JSON);
-    conf.set(CapacitySchedulerConfiguration.MAPPING_RULE_JSON_FILE,
-        "/dev/null/nofile");
-    List<MappingRule> rules = conf.getMappingRules();
+    assertThrows(IOException.class, ()->{
+      CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
+      conf.set(CapacitySchedulerConfiguration.MAPPING_RULE_FORMAT,
+              CapacitySchedulerConfiguration.MAPPING_RULE_FORMAT_JSON);
+      conf.set(CapacitySchedulerConfiguration.MAPPING_RULE_JSON_FILE,
+              "/dev/null/nofile");
+      List<MappingRule> rules = conf.getMappingRules();
+    });
   }
 
   @Test
@@ -706,7 +710,7 @@ public class TestCSMappingPlacementRule {
     conf.set(CapacitySchedulerConfiguration.MAPPING_RULE_FORMAT,
         CapacitySchedulerConfiguration.MAPPING_RULE_FORMAT_JSON);
 
-    File jsonFile = folder.newFile("testJSONFileConfiguration.json");
+    File jsonFile = folder.resolve("testJSONFileConfiguration.json").toFile();
 
     BufferedWriter writer = new BufferedWriter(new FileWriter(jsonFile));
     try {

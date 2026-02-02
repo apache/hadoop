@@ -19,8 +19,10 @@
 package org.apache.hadoop.hdfs.util;
 
 import org.apache.hadoop.hdfs.server.namenode.AclFeature;
-import org.junit.Assert;
-import org.junit.Test;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Verify ReferenceCount map in concurrent scenarios.
@@ -37,28 +39,28 @@ public class TestReferenceCountMap {
     ReferenceCountMap<AclFeature> countMap = new ReferenceCountMap<>();
     countMap.put(aclFeature1);
     countMap.put(aclFeature2);
-    Assert.assertEquals(1, countMap.getReferenceCount(aclFeature1));
-    Assert.assertEquals(1, countMap.getReferenceCount(aclFeature2));
+    assertEquals(1, countMap.getReferenceCount(aclFeature1));
+    assertEquals(1, countMap.getReferenceCount(aclFeature2));
 
     countMap.put(aclFeature1);
     countMap.put(aclFeature2);
-    Assert.assertEquals(2, countMap.getReferenceCount(aclFeature1));
-    Assert.assertEquals(2, countMap.getReferenceCount(aclFeature2));
+    assertEquals(2, countMap.getReferenceCount(aclFeature1));
+    assertEquals(2, countMap.getReferenceCount(aclFeature2));
 
     countMap.put(aclFeature1);
-    Assert.assertEquals(3, countMap.getReferenceCount(aclFeature1));
+    assertEquals(3, countMap.getReferenceCount(aclFeature1));
     countMap.put(aclFeature1);
-    Assert.assertEquals(4, countMap.getReferenceCount(aclFeature1));
-    Assert.assertEquals(2, countMap.getReferenceCount(aclFeature2));
+    assertEquals(4, countMap.getReferenceCount(aclFeature1));
+    assertEquals(2, countMap.getReferenceCount(aclFeature2));
 
     //Delete operations:
     countMap.remove(aclFeature1);
     countMap.remove(aclFeature2);
-    Assert.assertEquals(3, countMap.getReferenceCount(aclFeature1));
-    Assert.assertEquals(1, countMap.getReferenceCount(aclFeature2));
+    assertEquals(3, countMap.getReferenceCount(aclFeature1));
+    assertEquals(1, countMap.getReferenceCount(aclFeature2));
 
     //Verify unique elements in map
-    Assert.assertEquals(2, countMap.getUniqueElementsSize());
+    assertEquals(2, countMap.getUniqueElementsSize());
   }
 
   @Test
@@ -73,24 +75,24 @@ public class TestReferenceCountMap {
 
     putThread1.join();
     putThread2.join();
-    Assert.assertEquals(2 * LOOP_COUNTER,
+    assertEquals(2 * LOOP_COUNTER,
         countMap.getReferenceCount(aclFeature1));
-    Assert.assertEquals(2 * LOOP_COUNTER,
+    assertEquals(2 * LOOP_COUNTER,
         countMap.getReferenceCount(aclFeature2));
 
     removeThread1.start();
     removeThread1.join();
-    Assert.assertEquals(LOOP_COUNTER, countMap.getReferenceCount(aclFeature1));
-    Assert.assertEquals(LOOP_COUNTER, countMap.getReferenceCount(aclFeature2));
+    assertEquals(LOOP_COUNTER, countMap.getReferenceCount(aclFeature1));
+    assertEquals(LOOP_COUNTER, countMap.getReferenceCount(aclFeature2));
   }
 
-  class PutThread extends Thread {
+  class PutThread extends SubjectInheritingThread {
     private ReferenceCountMap<AclFeature> referenceCountMap;
     PutThread(ReferenceCountMap<AclFeature> referenceCountMap) {
       this.referenceCountMap = referenceCountMap;
     }
     @Override
-    public void run() {
+    public void work() {
       for (int i = 0; i < LOOP_COUNTER; i++) {
         referenceCountMap.put(aclFeature1);
         referenceCountMap.put(aclFeature2);
@@ -98,13 +100,13 @@ public class TestReferenceCountMap {
     }
   };
 
-  class RemoveThread extends Thread {
+  class RemoveThread extends SubjectInheritingThread {
     private ReferenceCountMap<AclFeature> referenceCountMap;
     RemoveThread(ReferenceCountMap<AclFeature> referenceCountMap) {
       this.referenceCountMap = referenceCountMap;
     }
     @Override
-    public void run() {
+    public void work() {
       for (int i = 0; i < LOOP_COUNTER; i++) {
         referenceCountMap.remove(aclFeature1);
         referenceCountMap.remove(aclFeature2);

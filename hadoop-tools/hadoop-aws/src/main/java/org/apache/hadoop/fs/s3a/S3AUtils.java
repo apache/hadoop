@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.s3a;
 
+import software.amazon.awssdk.awscore.exception.AwsErrorDetails;
 import software.amazon.awssdk.awscore.exception.AwsServiceException;
 import software.amazon.awssdk.core.exception.AbortedException;
 import software.amazon.awssdk.core.exception.ApiCallAttemptTimeoutException;
@@ -80,6 +81,7 @@ import static org.apache.hadoop.fs.s3a.AWSCredentialProviderList.maybeTranslateC
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.audit.AuditIntegration.maybeTranslateAuditException;
 import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.isUnknownBucket;
+import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.maybeProcessEncryptionClientException;
 import static org.apache.hadoop.fs.s3a.impl.InstantiationIOException.instantiationException;
 import static org.apache.hadoop.fs.s3a.impl.InstantiationIOException.isAbstract;
 import static org.apache.hadoop.fs.s3a.impl.InstantiationIOException.isNotInstanceOf;
@@ -184,6 +186,8 @@ public final class S3AUtils {
       path = "/";
     }
 
+    exception = maybeProcessEncryptionClientException(exception);
+
     if (!(exception instanceof AwsServiceException)) {
       // exceptions raised client-side: connectivity, auth, network problems...
       Exception innerCause = containsInterruptedException(exception);
@@ -237,8 +241,13 @@ public final class S3AUtils {
           ? (S3Exception) ase
           : null;
       int status = ase.statusCode();
-      if (ase.awsErrorDetails() != null) {
-        message = message + ":" + ase.awsErrorDetails().errorCode();
+      // error details, may be null
+      final AwsErrorDetails errorDetails = ase.awsErrorDetails();
+      // error code, will be null if errorDetails is null
+      String errorCode = "";
+      if (errorDetails != null) {
+        errorCode = errorDetails.errorCode();
+        message = message + ":" + errorCode;
       }
 
       // big switch on the HTTP status code.
@@ -305,6 +314,8 @@ public final class S3AUtils {
       // precondition failure: the object is there, but the precondition
       // (e.g. etag) didn't match. Assume remote file change during
       // rename or status passed in to openfile had an etag which didn't match.
+      // See the SC_200 handler for the treatment of the S3 Express failure
+      // variant.
       case SC_412_PRECONDITION_FAILED:
         ioe = new RemoteFileChangedException(path, message, "", ase);
         break;
@@ -348,6 +359,16 @@ public final class S3AUtils {
           // failure during a bulk delete
           return ((MultiObjectDeleteException) exception)
               .translateException(message);
+        }
+        if (PRECONDITION_FAILED.equals(errorCode)) {
+          // S3 Express stores report conflict in conditional writes
+          // as a 200 + an error code of "PreconditionFailed".
+          // This is mapped to RemoteFileChangedException for consistency
+          // with SC_412_PRECONDITION_FAILED handling.
+          return new RemoteFileChangedException(path,
+              operation,
+              exception.getMessage(),
+              exception);
         }
         // other 200: FALL THROUGH
 
@@ -529,7 +550,7 @@ public final class S3AUtils {
    * @param owner owner of the file
    * @param eTag S3 object eTag or null if unavailable
    * @param versionId S3 object versionId or null if unavailable
-   * @param isCSEEnabled is client side encryption enabled?
+   * @param size s3 object size
    * @return a status entry
    */
   public static S3AFileStatus createFileStatus(Path keyPath,
@@ -538,12 +559,7 @@ public final class S3AUtils {
       String owner,
       String eTag,
       String versionId,
-      boolean isCSEEnabled) {
-    long size = s3Object.size();
-    // check if cse is enabled; strip out constant padding length.
-    if (isCSEEnabled && size >= CSE_PADDING_LENGTH) {
-      size -= CSE_PADDING_LENGTH;
-    }
+      long size) {
     return createFileStatus(keyPath,
         objectRepresentsDirectory(s3Object.key()),
         size, Date.from(s3Object.lastModified()), blockSize, owner, eTag, versionId);
@@ -726,7 +742,6 @@ public final class S3AUtils {
    */
   public static S3xLoginHelper.Login getAWSAccessKeys(URI name,
       Configuration conf) throws IOException {
-    S3xLoginHelper.rejectSecretsInURIs(name);
     Configuration c = ProviderUtils.excludeIncompatibleCredentialProviders(
         conf, S3AFileSystem.class);
     String bucket = name != null ? name.getHost() : "";

@@ -27,7 +27,7 @@ import org.apache.hadoop.fs.contract.AbstractFSContractTestBase;
 import org.apache.hadoop.fs.contract.hdfs.HDFSContract;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 
 /**
  * The contract of Router-based Federated HDFS.
@@ -109,7 +109,7 @@ public class RouterHDFSContract extends HDFSContract {
 
   public static FileSystem getFileSystem() throws IOException {
     //assumes cluster is not null
-    Assert.assertNotNull("cluster not created", cluster);
+    Assertions.assertNotNull(cluster, "cluster not created");
     return cluster.getRandomRouter().getFileSystem();
   }
 

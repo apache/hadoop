@@ -20,6 +20,9 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
@@ -39,10 +42,9 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperation;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperationExecutor;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -65,7 +67,7 @@ public class TestNetworkPacketTaggingHandlerImpl {
   private ContainerId containerIdMock;
   private Container containerMock;
 
-  @Before
+  @BeforeEach
   public void setup() {
     privilegedOperationExecutorMock = mock(PrivilegedOperationExecutor.class);
     cGroupsHandlerMock = mock(CGroupsHandler.class);
@@ -99,7 +101,7 @@ public class TestNetworkPacketTaggingHandlerImpl {
       verifyNoMoreInteractions(cGroupsHandlerMock);
     } catch (ResourceHandlerException e) {
       LOG.error("Unexpected exception: " + e);
-      Assert.fail("Caught unexpected ResourceHandlerException!");
+      fail("Caught unexpected ResourceHandlerException!");
     }
   }
 
@@ -113,7 +115,7 @@ public class TestNetworkPacketTaggingHandlerImpl {
       testPostComplete(handlerImpl);
     } catch (ResourceHandlerException e) {
       LOG.error("Unexpected exception: " + e);
-      Assert.fail("Caught unexpected ResourceHandlerException!");
+      fail("Caught unexpected ResourceHandlerException!");
     }
   }
 
@@ -136,7 +138,7 @@ public class TestNetworkPacketTaggingHandlerImpl {
 
     //Now check the privileged operations being returned
     //We expect one operations - for adding pid to tasks file
-    Assert.assertEquals(1, ops.size());
+    assertEquals(1, ops.size());
 
     //Verify that the add pid op is correct
     PrivilegedOperation addPidOp = ops.get(0);
@@ -144,10 +146,10 @@ public class TestNetworkPacketTaggingHandlerImpl {
         TEST_TASKS_FILE;
     List<String> addPidOpArgs = addPidOp.getArguments();
 
-    Assert.assertEquals(PrivilegedOperation.OperationType.ADD_PID_TO_CGROUP,
+    assertEquals(PrivilegedOperation.OperationType.ADD_PID_TO_CGROUP,
         addPidOp.getOperationType());
-    Assert.assertEquals(1, addPidOpArgs.size());
-    Assert.assertEquals(expectedAddPidOpArg, addPidOpArgs.get(0));
+    assertEquals(1, addPidOpArgs.size());
+    assertEquals(expectedAddPidOpArg, addPidOpArgs.get(0));
   }
 
   private void testPostComplete(NetworkPacketTaggingHandlerImpl handlerImpl)
@@ -160,7 +162,7 @@ public class TestNetworkPacketTaggingHandlerImpl {
         eq(CGroupsHandler.CGroupController.NET_CLS), eq(TEST_CONTAINER_ID_STR));
 
     //We don't expect any operations to be returned here
-    Assert.assertNull(ops);
+    assertNull(ops);
   }
 
   private NetworkPacketTaggingHandlerImpl
@@ -175,7 +177,7 @@ public class TestNetworkPacketTaggingHandlerImpl {
     };
   }
 
-  @After
+  @AfterEach
   public void teardown() {
     FileUtil.fullyDelete(new File(tmpPath));
   }

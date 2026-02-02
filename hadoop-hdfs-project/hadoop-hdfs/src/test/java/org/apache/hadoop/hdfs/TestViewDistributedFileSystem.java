@@ -32,18 +32,17 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.test.Whitebox;
 import org.apache.hadoop.util.functional.ConsumerRaisingIOE;
 
-import org.assertj.core.api.Assertions;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.net.URI;
 
 import static org.apache.hadoop.fs.CommonPathCapabilities.LEASE_RECOVERABLE;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestViewDistributedFileSystem extends TestDistributedFileSystem{
   @Override
@@ -122,8 +121,8 @@ public class TestViewDistributedFileSystem extends TestDistributedFileSystem{
         final Path renameDir = new Path("/testRename");
         fileSystem.mkdirs(testDir);
         fileSystem.rename(testDir, renameDir, Options.Rename.TO_TRASH);
-        Assert.assertTrue(fileSystem.exists(renameDir));
-        Assert.assertFalse(fileSystem.exists(testDir));
+        Assertions.assertTrue(fileSystem.exists(renameDir));
+        Assertions.assertFalse(fileSystem.exists(testDir));
       }
     } finally {
       if (cluster != null) {
@@ -191,8 +190,7 @@ public class TestViewDistributedFileSystem extends TestDistributedFileSystem{
         // Set Quota via ViewDFS
         fileSystem.setQuota(testDir, 10L, 10L);
         // Check quota through actual DFS
-        assertEquals(10,
-            defaultFs.getQuotaUsage(target).getSpaceQuota());
+        assertEquals(10, defaultFs.getQuotaUsage(target).getSpaceQuota());
       }
     } finally {
       if (cluster != null) {
@@ -208,8 +206,8 @@ public class TestViewDistributedFileSystem extends TestDistributedFileSystem{
         ViewDistributedFileSystem fileSystem = (ViewDistributedFileSystem) FileSystem.get(
             cluster.getConfiguration(0))) {
       final Path testFile = new Path("/test");
-      assertTrue("ViewDfs supports truncate",
-          fileSystem.hasPathCapability(testFile, CommonPathCapabilities.FS_TRUNCATE));
+      assertTrue(fileSystem.hasPathCapability(testFile, CommonPathCapabilities.FS_TRUNCATE),
+          "ViewDfs supports truncate");
       final boolean isLeaseRecoverable = fileSystem.hasPathCapability(testFile, LEASE_RECOVERABLE);
       assertThat(isLeaseRecoverable).describedAs("path capabilities %s=%s in %s",
           LEASE_RECOVERABLE, fileSystem.hasPathCapability(testFile, LEASE_RECOVERABLE),
@@ -241,7 +239,7 @@ public class TestViewDistributedFileSystem extends TestDistributedFileSystem{
   }
 
   private SafeMode verifyAndGetSafeModeInstance(FileSystem fs) {
-    Assertions.assertThat(fs)
+    assertThat(fs)
         .describedAs("File system %s must be an instance of %s", fs, SafeMode.class.getClass())
         .isInstanceOf(SafeMode.class);
     return (SafeMode) fs;
@@ -278,15 +276,14 @@ public class TestViewDistributedFileSystem extends TestDistributedFileSystem{
 
   private void assertSafeModeStatus(SafeMode fsWithSafeMode, SafeModeAction action,
       boolean expectedStatus, String message) throws IOException {
-    Assertions.assertThat(fsWithSafeMode.setSafeMode(action)).describedAs(message)
+    assertThat(fsWithSafeMode.setSafeMode(action)).describedAs(message)
         .isEqualTo(expectedStatus);
   }
 
   private void assertSafeModeStatus(ViewDistributedFileSystem fileSystem,
       HdfsConstants.SafeModeAction action, boolean expectedStatus, String message)
       throws IOException {
-    Assertions.assertThat(fileSystem.setSafeMode(action)).describedAs(message)
-        .isEqualTo(expectedStatus);
+    assertThat(fileSystem.setSafeMode(action)).describedAs(message).isEqualTo(expectedStatus);
   }
 
   private Configuration getViewFsConfiguration() {

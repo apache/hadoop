@@ -33,9 +33,9 @@ import java.util.Set;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.helper.XmlCustomResourceTypeTestCase.toXml;
 import static org.apache.hadoop.yarn.webapp.WebServicesTestUtils.getXmlLong;
 import static org.apache.hadoop.yarn.webapp.WebServicesTestUtils.getXmlString;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * This test helper class is primarily used by
@@ -62,8 +62,8 @@ public class FairSchedulerXmlVerifications {
       Set<String> resourceCategories) {
     for (String resourceCategory : resourceCategories) {
       boolean hasResourceCategory = hasChild(queue, resourceCategory);
-      assertTrue("Queue " + queue + " does not have resource category key: "
-          + resourceCategory, hasResourceCategory);
+      assertTrue(hasResourceCategory, "Queue " + queue + " does not have resource category key: "
+          + resourceCategory);
       verifyResourceContainsDefaultResourceTypes(
               (Element) queue.getElementsByTagName(resourceCategory).item(0));
     }
@@ -74,15 +74,16 @@ public class FairSchedulerXmlVerifications {
     Object memory = opt(element, "memory");
     Object vCores = opt(element, "vCores");
 
-    assertNotNull("Key 'memory' not found in: " + element, memory);
-    assertNotNull("Key 'vCores' not found in: " + element, vCores);
+    assertNotNull(memory, "Key 'memory' not found in: " + element);
+    assertNotNull(vCores, "Key 'vCores' not found in: " + element);
   }
 
   private void verifyResourcesContainCustomResourceTypes(Element queue,
       Set<String> resourceCategories) {
     for (String resourceCategory : resourceCategories) {
-      assertTrue("Queue " + queue + " does not have key for resourceCategory: "
-          + resourceCategory, hasChild(queue, resourceCategory));
+      assertTrue(hasChild(queue, resourceCategory),
+          "Queue " + queue + " does not have key for resourceCategory: "
+          + resourceCategory);
       verifyResourceContainsCustomResourceTypes(
               (Element) queue.getElementsByTagName(resourceCategory).item(0));
     }
@@ -90,11 +91,9 @@ public class FairSchedulerXmlVerifications {
 
   private void verifyResourceContainsCustomResourceTypes(
       Element resourceCategory) {
-    assertEquals(
-        toXml(resourceCategory)
-            + " should have only one resourceInformations child!",
-        1, resourceCategory.getElementsByTagName("resourceInformations")
-            .getLength());
+    assertEquals(1, resourceCategory.getElementsByTagName("resourceInformations")
+        .getLength(), toXml(resourceCategory)
+        + " should have only one resourceInformations child!");
     Element resourceInformations = (Element) resourceCategory
         .getElementsByTagName("resourceInformations").item(0);
 
@@ -102,9 +101,8 @@ public class FairSchedulerXmlVerifications {
         resourceInformations.getElementsByTagName("resourceInformation");
 
     // customResources will include vcores / memory as well
-    assertEquals(
-        "Different number of custom resource types found than expected",
-        customResourceTypes.size(), customResources.getLength() - 2);
+    assertEquals(customResourceTypes.size(), customResources.getLength() - 2,
+        "Different number of custom resource types found than expected");
 
     for (int i = 0; i < customResources.getLength(); i++) {
       Element customResource = (Element) customResources.item(i);
@@ -118,14 +116,13 @@ public class FairSchedulerXmlVerifications {
         continue;
       }
 
-      assertTrue("Custom resource type " + name + " not found",
-          customResourceTypes.contains(name));
+      assertTrue(customResourceTypes.contains(name),
+          "Custom resource type " + name + " not found");
       assertEquals("k", unit);
       assertEquals(ResourceTypes.COUNTABLE,
           ResourceTypes.valueOf(resourceType));
-      assertNotNull("Resource value should not be null for resource type "
-          + resourceType + ", listing xml contents: " + toXml(customResource),
-          value);
+      assertNotNull(value, "Resource value should not be null for resource type "
+          + resourceType + ", listing xml contents: " + toXml(customResource));
     }
   }
 

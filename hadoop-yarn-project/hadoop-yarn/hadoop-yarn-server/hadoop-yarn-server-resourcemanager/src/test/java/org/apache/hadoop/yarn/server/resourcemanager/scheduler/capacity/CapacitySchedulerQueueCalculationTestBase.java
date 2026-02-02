@@ -26,7 +26,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NullRMNodeLabels
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
-import org.junit.Before;
+import org.junit.jupiter.api.BeforeEach;
 
 import java.io.IOException;
 
@@ -52,7 +52,7 @@ public class CapacitySchedulerQueueCalculationTestBase {
   protected CapacitySchedulerConfiguration csConf;
   protected NullRMNodeLabelsManager mgr;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     csConf = new CapacitySchedulerConfiguration();
     csConf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,

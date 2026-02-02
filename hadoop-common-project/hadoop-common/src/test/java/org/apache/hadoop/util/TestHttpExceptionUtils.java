@@ -19,9 +19,7 @@ package org.apache.hadoop.util;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.hadoop.test.LambdaTestUtils;
-import org.junit.Assert;
-import org.junit.Test;
-import org.mockito.Mockito;
+import org.junit.jupiter.api.Test;
 
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.MediaType;
@@ -37,27 +35,34 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
 public class TestHttpExceptionUtils {
 
   @Test
   public void testCreateServletException() throws IOException {
     StringWriter writer = new StringWriter();
     PrintWriter printWriter = new PrintWriter(writer);
-    HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
-    Mockito.when(response.getWriter()).thenReturn(printWriter);
+    HttpServletResponse response = mock(HttpServletResponse.class);
+    when(response.getWriter()).thenReturn(printWriter);
     int status = HttpServletResponse.SC_INTERNAL_SERVER_ERROR;
     Exception ex = new IOException("Hello IOEX");
     HttpExceptionUtils.createServletExceptionResponse(response, status, ex);
-    Mockito.verify(response).setStatus(status);
-    Mockito.verify(response).setContentType(Mockito.eq("application/json"));
+    verify(response).setStatus(status);
+    verify(response).setContentType(eq("application/json"));
     ObjectMapper mapper = new ObjectMapper();
     Map json = mapper.readValue(writer.toString(), Map.class);
     json = (Map) json.get(HttpExceptionUtils.ERROR_JSON);
-    Assert.assertEquals(IOException.class.getName(),
+    assertEquals(IOException.class.getName(),
         json.get(HttpExceptionUtils.ERROR_CLASSNAME_JSON));
-    Assert.assertEquals(IOException.class.getSimpleName(),
+    assertEquals(IOException.class.getSimpleName(),
         json.get(HttpExceptionUtils.ERROR_EXCEPTION_JSON));
-    Assert.assertEquals("Hello IOEX",
+    assertEquals("Hello IOEX",
         json.get(HttpExceptionUtils.ERROR_MESSAGE_JSON));
   }
 
@@ -66,32 +71,32 @@ public class TestHttpExceptionUtils {
     Exception ex = new IOException("Hello IOEX");
     Response response = HttpExceptionUtils.createJerseyExceptionResponse(
         Response.Status.INTERNAL_SERVER_ERROR, ex);
-    Assert.assertEquals(Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(),
+    assertEquals(Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(),
         response.getStatus());
-    Assert.assertArrayEquals(
+    assertArrayEquals(
         Arrays.asList(MediaType.APPLICATION_JSON_TYPE).toArray(),
         response.getMetadata().get("Content-Type").toArray());
     Map entity = (Map) response.getEntity();
     entity = (Map) entity.get(HttpExceptionUtils.ERROR_JSON);
-    Assert.assertEquals(IOException.class.getName(),
+    assertEquals(IOException.class.getName(),
         entity.get(HttpExceptionUtils.ERROR_CLASSNAME_JSON));
-    Assert.assertEquals(IOException.class.getSimpleName(),
+    assertEquals(IOException.class.getSimpleName(),
         entity.get(HttpExceptionUtils.ERROR_EXCEPTION_JSON));
-    Assert.assertEquals("Hello IOEX",
+    assertEquals("Hello IOEX",
         entity.get(HttpExceptionUtils.ERROR_MESSAGE_JSON));
   }
 
   @Test
   public void testValidateResponseOK() throws IOException {
-    HttpURLConnection conn = Mockito.mock(HttpURLConnection.class);
-    Mockito.when(conn.getResponseCode()).thenReturn(HttpURLConnection.HTTP_CREATED);
+    HttpURLConnection conn = mock(HttpURLConnection.class);
+    when(conn.getResponseCode()).thenReturn(HttpURLConnection.HTTP_CREATED);
     HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_CREATED);
   }
 
   @Test
   public void testValidateResponseFailNoErrorMessage() throws Exception {
-    HttpURLConnection conn = Mockito.mock(HttpURLConnection.class);
-    Mockito.when(conn.getResponseCode()).thenReturn(HttpURLConnection.HTTP_BAD_REQUEST);
+    HttpURLConnection conn = mock(HttpURLConnection.class);
+    when(conn.getResponseCode()).thenReturn(HttpURLConnection.HTTP_BAD_REQUEST);
     LambdaTestUtils.intercept(IOException.class,
         () -> HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_CREATED));
   }
@@ -100,13 +105,13 @@ public class TestHttpExceptionUtils {
   public void testValidateResponseNonJsonErrorMessage() throws Exception {
     String msg = "stream";
     InputStream is = new ByteArrayInputStream(msg.getBytes(StandardCharsets.UTF_8));
-    HttpURLConnection conn = Mockito.mock(HttpURLConnection.class);
-    Mockito.when(conn.getErrorStream()).thenReturn(is);
-    Mockito.when(conn.getResponseMessage()).thenReturn("msg");
-    Mockito.when(conn.getResponseCode()).thenReturn(HttpURLConnection.HTTP_BAD_REQUEST);
+    HttpURLConnection conn = mock(HttpURLConnection.class);
+    when(conn.getErrorStream()).thenReturn(is);
+    when(conn.getResponseMessage()).thenReturn("msg");
+    when(conn.getResponseCode()).thenReturn(HttpURLConnection.HTTP_BAD_REQUEST);
     LambdaTestUtils.interceptAndValidateMessageContains(IOException.class,
         Arrays.asList(Integer.toString(HttpURLConnection.HTTP_BAD_REQUEST), "msg",
-          "com.fasterxml.jackson.core.JsonParseException"),
+        "com.fasterxml.jackson.core.JsonParseException"),
         () -> HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_CREATED));
   }
 
@@ -121,10 +126,10 @@ public class TestHttpExceptionUtils {
     ObjectMapper jsonMapper = new ObjectMapper();
     String msg = jsonMapper.writeValueAsString(response);
     InputStream is = new ByteArrayInputStream(msg.getBytes(StandardCharsets.UTF_8));
-    HttpURLConnection conn = Mockito.mock(HttpURLConnection.class);
-    Mockito.when(conn.getErrorStream()).thenReturn(is);
-    Mockito.when(conn.getResponseMessage()).thenReturn("msg");
-    Mockito.when(conn.getResponseCode()).thenReturn(HttpURLConnection.HTTP_BAD_REQUEST);
+    HttpURLConnection conn = mock(HttpURLConnection.class);
+    when(conn.getErrorStream()).thenReturn(is);
+    when(conn.getResponseMessage()).thenReturn("msg");
+    when(conn.getResponseCode()).thenReturn(HttpURLConnection.HTTP_BAD_REQUEST);
     LambdaTestUtils.intercept(IllegalStateException.class,
         "EX",
         () -> HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_CREATED));
@@ -142,13 +147,13 @@ public class TestHttpExceptionUtils {
     ObjectMapper jsonMapper = new ObjectMapper();
     String msg = jsonMapper.writeValueAsString(response);
     InputStream is = new ByteArrayInputStream(msg.getBytes(StandardCharsets.UTF_8));
-    HttpURLConnection conn = Mockito.mock(HttpURLConnection.class);
-    Mockito.when(conn.getErrorStream()).thenReturn(is);
-    Mockito.when(conn.getResponseMessage()).thenReturn("msg");
-    Mockito.when(conn.getResponseCode()).thenReturn(HttpURLConnection.HTTP_BAD_REQUEST);
+    HttpURLConnection conn = mock(HttpURLConnection.class);
+    when(conn.getErrorStream()).thenReturn(is);
+    when(conn.getResponseMessage()).thenReturn("msg");
+    when(conn.getResponseCode()).thenReturn(HttpURLConnection.HTTP_BAD_REQUEST);
     LambdaTestUtils.interceptAndValidateMessageContains(IOException.class,
         Arrays.asList(Integer.toString(HttpURLConnection.HTTP_BAD_REQUEST),
-          "foo.FooException", "EX"),
+        "foo.FooException", "EX"),
         () -> HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_CREATED));
   }
 
@@ -164,13 +169,13 @@ public class TestHttpExceptionUtils {
     ObjectMapper jsonMapper = new ObjectMapper();
     String msg = jsonMapper.writeValueAsString(response);
     InputStream is = new ByteArrayInputStream(msg.getBytes(StandardCharsets.UTF_8));
-    HttpURLConnection conn = Mockito.mock(HttpURLConnection.class);
-    Mockito.when(conn.getErrorStream()).thenReturn(is);
-    Mockito.when(conn.getResponseMessage()).thenReturn("msg");
-    Mockito.when(conn.getResponseCode()).thenReturn(HttpURLConnection.HTTP_BAD_REQUEST);
+    HttpURLConnection conn = mock(HttpURLConnection.class);
+    when(conn.getErrorStream()).thenReturn(is);
+    when(conn.getResponseMessage()).thenReturn("msg");
+    when(conn.getResponseCode()).thenReturn(HttpURLConnection.HTTP_BAD_REQUEST);
     LambdaTestUtils.interceptAndValidateMessageContains(IOException.class,
         Arrays.asList(Integer.toString(HttpURLConnection.HTTP_BAD_REQUEST),
-          "java.lang.String", "EX"),
+        "java.lang.String", "EX"),
         () -> HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_CREATED));
   }
 }

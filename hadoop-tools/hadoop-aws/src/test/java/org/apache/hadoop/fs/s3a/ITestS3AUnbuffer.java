@@ -30,7 +30,8 @@ import org.apache.hadoop.fs.statistics.StreamStatisticNames;
 import org.apache.hadoop.io.IOUtils;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
@@ -56,6 +57,7 @@ public class ITestS3AUnbuffer extends AbstractS3ATestBase {
 
   private Path dest;
 
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     super.setup();
@@ -79,8 +81,8 @@ public class ITestS3AUnbuffer extends AbstractS3ATestBase {
       int bytesToRead = 8;
       readAndAssertBytesRead(inputStream, bytesToRead);
       assertTrue(isObjectStreamOpen(inputStream));
-      assertTrue("No IOstatistics from " + inputStream,
-          iostats.aggregate(inputStream.getIOStatistics()));
+      assertTrue(iostats.aggregate(inputStream.getIOStatistics()),
+          "No IOstatistics from " + inputStream);
       verifyStatisticCounterValue(iostats,
           StreamStatisticNames.STREAM_READ_BYTES,
           bytesToRead);
@@ -186,10 +188,10 @@ public class ITestS3AUnbuffer extends AbstractS3ATestBase {
         .hasFieldOrPropertyWithValue("bytesRead",
             expectedFinalBytesRead)
         .hasFieldOrPropertyWithValue("totalBytesRead", expectedTotalBytesRead);
-    assertEquals("S3AInputStream statistics were not updated properly in "
-        + streamStatsStr,
-        expectedFinalBytesRead,
-            streamStatistics.getBytesRead());
+    assertEquals(expectedFinalBytesRead,
+        streamStatistics.getBytesRead(),
+        "S3AInputStream statistics were not updated properly in "
+        + streamStatsStr);
   }
 
   private boolean isObjectStreamOpen(FSDataInputStream inputStream) {
@@ -209,8 +211,9 @@ public class ITestS3AUnbuffer extends AbstractS3ATestBase {
    */
   private static void readAndAssertBytesRead(FSDataInputStream inputStream,
                                         int bytesToRead) throws IOException {
-    assertEquals("S3AInputStream#read did not read the correct number of " +
-                    "bytes", bytesToRead,
-            inputStream.read(new byte[bytesToRead]));
+    assertEquals(bytesToRead,
+        inputStream.read(new byte[bytesToRead]),
+        "S3AInputStream#read did not read the correct number of " +
+        "bytes");
   }
 }

@@ -34,6 +34,7 @@ import software.amazon.awssdk.transfer.s3.S3TransferManager;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.s3a.impl.CSEMaterials;
 import org.apache.hadoop.fs.s3a.statistics.StatisticsFromAwsSdk;
 
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_ENDPOINT;
@@ -119,6 +120,23 @@ public interface S3ClientFactory {
     private StatisticsFromAwsSdk metrics;
 
     /**
+     * Is CSE enabled?
+     * The default value is {@value}.
+     */
+    private Boolean isCSEEnabled = false;
+
+    /**
+     * KMS region.
+     * This is only used if CSE is enabled.
+     */
+    private String kmsRegion;
+
+    /**
+     * Client side encryption materials.
+     */
+    private CSEMaterials cseMaterials;
+
+    /**
      * Use (deprecated) path style access.
      */
     private boolean pathStyleAccess;
@@ -170,6 +188,11 @@ public interface S3ClientFactory {
     private String region;
 
     /**
+     * Is this an S3 Express store?
+     */
+    private boolean s3ExpressStore;
+
+    /**
      * Enable S3Express create session.
      */
     private boolean expressCreateSession = S3EXPRESS_CREATE_SESSION_DEFAULT;
@@ -183,6 +206,22 @@ public interface S3ClientFactory {
      * Is FIPS enabled?
      */
     private boolean fipsEnabled;
+
+    /**
+     * Is analytics accelerator enabled?
+     */
+    private boolean isAnalyticsAcceleratorEnabled;
+
+    /**
+     * Is the MD5 Header Enabled?
+     */
+    private boolean md5HeaderEnabled;
+
+    /**
+     * Is Checksum calculation Enabled?
+     */
+    private boolean checksumCalculationEnabled;
+
 
     /**
      * List of execution interceptors to include in the chain
@@ -232,10 +271,18 @@ public interface S3ClientFactory {
       return this;
     }
 
+    /**
+     * Is this a requester pays bucket?
+     * @return true if the bucket is requester pays.
+     */
     public boolean isRequesterPays() {
       return requesterPays;
     }
 
+    /**
+     * Get the credentials.
+     * @return the credential provider.
+     */
     public AwsCredentialsProvider getCredentialSet() {
       return credentialSet;
     }
@@ -252,6 +299,10 @@ public interface S3ClientFactory {
       return this;
     }
 
+    /**
+     * Get UA suffix.
+     * @return suffix.
+     */
     public String getUserAgentSuffix() {
       return userAgentSuffix;
     }
@@ -429,11 +480,102 @@ public interface S3ClientFactory {
     }
 
     /**
+     * Set the client side encryption flag.
+     *
+     * @param value new value
+     * @return the builder
+     */
+    public S3ClientCreationParameters withClientSideEncryptionEnabled(final boolean value) {
+      this.isCSEEnabled = value;
+      return this;
+    }
+
+    /**
+     * Set the analytics accelerator enabled flag.
+     *
+     * @param value new value
+     * @return the builder
+     */
+    public S3ClientCreationParameters withAnalyticsAcceleratorEnabled(final boolean value) {
+      this.isAnalyticsAcceleratorEnabled = value;
+      return this;
+    }
+
+    /**
+     * Set the KMS client region.
+     * This is required for CSE-KMS
+     *
+     * @param value new value
+     * @return the builder
+     */
+    public S3ClientCreationParameters withKMSRegion(final String value) {
+      this.kmsRegion = value;
+      return this;
+    }
+
+    /**
+     * Get the client side encryption flag.
+     * @return client side encryption flag
+     */
+    public boolean isClientSideEncryptionEnabled() {
+      return this.isCSEEnabled;
+    }
+
+    /**
+     * Get the analytics accelerator enabled flag.
+     * @return analytics accelerator enabled flag.
+     */
+    public boolean isAnalyticsAcceleratorEnabled() {
+      return this.isAnalyticsAcceleratorEnabled;
+    }
+
+    /**
+     * Set the client side encryption materials.
+     *
+     * @param value new value
+     * @return the builder
+     */
+    public S3ClientCreationParameters withClientSideEncryptionMaterials(final CSEMaterials value) {
+      this.cseMaterials = value;
+      return this;
+    }
+
+    /**
+     * Get the client side encryption materials.
+     * @return client side encryption materials
+     */
+    public CSEMaterials getClientSideEncryptionMaterials() {
+      return this.cseMaterials;
+    }
+
+    /**
      * Get the region.
      * @return invoker
      */
     public String getRegion() {
       return region;
+    }
+
+    /**
+     * Get the KMS region.
+     * @return Configured KMS region.
+     */
+    public String getKmsRegion() {
+      return kmsRegion;
+    }
+
+    public boolean isS3ExpressStore() {
+      return s3ExpressStore;
+    }
+
+    /**
+     * Set builder value.
+     * @param value new value
+     * @return the builder
+     */
+    public S3ClientCreationParameters withS3ExpressStore(final boolean value) {
+      s3ExpressStore = value;
+      return this;
     }
 
     /**
@@ -464,8 +606,44 @@ public interface S3ClientFactory {
       return this;
     }
 
+    /**
+     * Is checksum validation on every request enabled?
+     * @return true if validation is on every request.
+     */
     public boolean isChecksumValidationEnabled() {
       return checksumValidationEnabled;
+    }
+
+    /**
+     * Should MD5 headers be added?
+     * @return true to always add an MD5 header.
+     */
+    public boolean isMd5HeaderEnabled() {
+      return md5HeaderEnabled;
+    }
+
+    /**
+     * Set builder value.
+     * @param value new value
+     * @return the builder
+     */
+    public S3ClientCreationParameters withMd5HeaderEnabled(final boolean value) {
+      md5HeaderEnabled = value;
+      return this;
+    }
+
+    public boolean isChecksumCalculationEnabled() {
+      return checksumCalculationEnabled;
+    }
+
+    /**
+     * Set builder value.
+     * @param value new value
+     * @return the builder
+     */
+    public S3ClientCreationParameters withChecksumCalculationEnabled(final boolean value) {
+      checksumCalculationEnabled = value;
+      return this;
     }
 
     @Override
@@ -480,8 +658,10 @@ public interface S3ClientFactory {
           ", multiPartThreshold=" + multiPartThreshold +
           ", multipartCopy=" + multipartCopy +
           ", region='" + region + '\'' +
+          ", s3ExpressStore=" + s3ExpressStore +
           ", expressCreateSession=" + expressCreateSession +
           ", checksumValidationEnabled=" + checksumValidationEnabled +
+          ", md5HeaderEnabled=" + md5HeaderEnabled +
           '}';
     }
 

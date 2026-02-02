@@ -69,6 +69,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.Shell;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
@@ -129,7 +130,7 @@ import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 import org.apache.log4j.LogManager;
 
 import org.apache.hadoop.classification.VisibleForTesting;
-import com.sun.jersey.api.client.ClientHandlerException;
+import javax.ws.rs.ProcessingException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -1647,7 +1648,7 @@ public class ApplicationMaster {
           putContainerEntity(timelineClient,
               container.getId().getApplicationAttemptId(),
               entity));
-    } catch (YarnException | IOException | ClientHandlerException e) {
+    } catch (YarnException | IOException | ProcessingException e) {
       LOG.error("Container start event could not be published for "
           + container.getId().toString(), e);
     }
@@ -1677,7 +1678,7 @@ public class ApplicationMaster {
           putContainerEntity(timelineClient,
               container.getContainerId().getApplicationAttemptId(),
               entity));
-    } catch (YarnException | IOException | ClientHandlerException e) {
+    } catch (YarnException | IOException | ProcessingException e) {
       LOG.error("Container end event could not be published for "
           + container.getContainerId().toString(), e);
     }
@@ -1712,7 +1713,7 @@ public class ApplicationMaster {
     try {
       TimelinePutResponse response = timelineClient.putEntities(entity);
       processTimelineResponseErrors(response);
-    } catch (YarnException | IOException | ClientHandlerException e) {
+    } catch (YarnException | IOException | ProcessingException e) {
       LOG.error("App Attempt "
           + (appEvent.equals(DSEvent.DS_APP_ATTEMPT_START) ? "start" : "end")
           + " event could not be published for "
@@ -1761,7 +1762,7 @@ public class ApplicationMaster {
     LaunchContainerRunnable runnableLaunchContainer =
         new LaunchContainerRunnable(allocatedContainer, containerListener,
             shellId);
-    return new Thread(runnableLaunchContainer);
+    return new SubjectInheritingThread(runnableLaunchContainer);
   }
 
   private void publishContainerStartEventOnTimelineServiceV2(
@@ -1845,7 +1846,7 @@ public class ApplicationMaster {
     try {
       processTimelineResponseErrors(putContainerEntity(timelineClient,
           containerId.getApplicationAttemptId(), entityV1));
-    } catch (YarnException | IOException | ClientHandlerException e) {
+    } catch (YarnException | IOException | ProcessingException e) {
       LOG.error("Container end event could not be published for {}",
           containerId, e);
     }

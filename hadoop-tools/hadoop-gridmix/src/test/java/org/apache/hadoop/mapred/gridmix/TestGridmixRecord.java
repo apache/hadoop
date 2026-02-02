@@ -17,12 +17,15 @@
  */
 package org.apache.hadoop.mapred.gridmix;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Random;
 
-import org.junit.Test;
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -90,7 +93,7 @@ public class TestGridmixRecord {
     // verify written contents match
     assertEquals(out1.getLength(), out2.getLength());
     // assumes that writes will grow buffer deterministically
-    assertEquals("Bad test", out1.getData().length, out2.getData().length);
+    assertEquals(out1.getData().length, out2.getData().length, "Bad test");
     assertArrayEquals(out1.getData(), out2.getData());
   }
 
@@ -114,7 +117,7 @@ public class TestGridmixRecord {
       // verify written contents match
       assertEquals(out1.getLength(), out2.getLength());
       // assumes that writes will grow buffer deterministically
-      assertEquals("Bad test", out1.getData().length, out2.getData().length);
+      assertEquals(out1.getData().length, out2.getData().length, "Bad test");
       assertArrayEquals(out1.getData(), out2.getData());
     }
   }

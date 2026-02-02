@@ -32,10 +32,10 @@ import org.apache.hadoop.fs.impl.prefetch.BlockManager;
 import org.apache.hadoop.fs.impl.prefetch.BlockManagerParameters;
 import org.apache.hadoop.fs.impl.prefetch.BufferData;
 import org.apache.hadoop.fs.impl.prefetch.FilePosition;
-import org.apache.hadoop.fs.s3a.S3AInputStream;
 import org.apache.hadoop.fs.s3a.S3AReadOpContext;
 import org.apache.hadoop.fs.s3a.S3ObjectAttributes;
 import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
+import org.apache.hadoop.fs.s3a.impl.streams.ObjectInputStreamCallbacks;
 
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_PREFETCH_MAX_BLOCKS_COUNT;
 import static org.apache.hadoop.fs.s3a.Constants.PREFETCH_MAX_BLOCKS_COUNT;
@@ -63,25 +63,25 @@ public class S3ACachingInputStream extends S3ARemoteInputStream {
    * Initializes a new instance of the {@code S3ACachingInputStream} class.
    *
    * @param context read-specific operation context.
-   * @param s3Attributes attributes of the S3 object being read.
+   * @param prefetchOptions prefetch stream specific options
+   * @param s3Attributes attributes of the S3a object being read.
    * @param client callbacks used for interacting with the underlying S3 client.
    * @param streamStatistics statistics for this stream.
    * @param conf the configuration.
    * @param localDirAllocator the local dir allocator instance.
-   * @throws IllegalArgumentException if context is null.
-   * @throws IllegalArgumentException if s3Attributes is null.
-   * @throws IllegalArgumentException if client is null.
+   * @throws NullPointerException if a required parameter is null.
    */
   public S3ACachingInputStream(
       S3AReadOpContext context,
+      PrefetchOptions prefetchOptions,
       S3ObjectAttributes s3Attributes,
-      S3AInputStream.InputStreamCallbacks client,
+      ObjectInputStreamCallbacks client,
       S3AInputStreamStatistics streamStatistics,
       Configuration conf,
       LocalDirAllocator localDirAllocator) {
-    super(context, s3Attributes, client, streamStatistics);
+    super(context, prefetchOptions, s3Attributes, client, streamStatistics);
 
-    this.numBlocksToPrefetch = this.getContext().getPrefetchBlockCount();
+    this.numBlocksToPrefetch = prefetchOptions.getPrefetchBlockCount();
     int bufferPoolSize = this.numBlocksToPrefetch + 1;
     BlockManagerParameters blockManagerParamsBuilder =
         new BlockManagerParameters()

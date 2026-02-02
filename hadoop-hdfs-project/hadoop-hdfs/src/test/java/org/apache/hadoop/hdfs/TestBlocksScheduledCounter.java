@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -35,8 +35,9 @@ import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
-import org.junit.After;
-import org.junit.Test;
+import org.apache.hadoop.hdfs.util.RwLockMode;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * This class tests DatanodeDescriptor.getBlocksScheduled() at the
@@ -47,7 +48,7 @@ public class TestBlocksScheduledCounter {
   MiniDFSCluster cluster = null;
   FileSystem fs = null;
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     if (fs != null) {
       fs.close();
@@ -104,8 +105,8 @@ public class TestBlocksScheduledCounter {
     ArrayList<DatanodeDescriptor> dnList = new ArrayList<DatanodeDescriptor>();
     datanodeManager.fetchDatanodes(dnList, dnList, false);
     for (DatanodeDescriptor descriptor : dnList) {
-      assertEquals("Blocks scheduled should be 0 for " + descriptor.getName(),
-          0, descriptor.getBlocksScheduled());
+      assertEquals(0, descriptor.getBlocksScheduled(),
+          "Blocks scheduled should be 0 for " + descriptor.getName());
     }
 
     cluster.getDataNodes().get(0).shutdown();
@@ -120,21 +121,21 @@ public class TestBlocksScheduledCounter {
 
     DatanodeDescriptor abandonedDn = datanodeManager.getDatanode(cluster
         .getDataNodes().get(0).getDatanodeId());
-    assertEquals("for the abandoned dn scheduled counts should be 0", 0,
-        abandonedDn.getBlocksScheduled());
+    assertEquals(0, abandonedDn.getBlocksScheduled(),
+        "for the abandoned dn scheduled counts should be 0");
 
     for (DatanodeDescriptor descriptor : dnList) {
       if (descriptor.equals(abandonedDn)) {
         continue;
       }
-      assertEquals("Blocks scheduled should be 1 for " + descriptor.getName(),
-          1, descriptor.getBlocksScheduled());
+      assertEquals(1, descriptor.getBlocksScheduled(),
+          "Blocks scheduled should be 1 for " + descriptor.getName());
     }
     // close the file and the counter should go to zero.
     out.close();
     for (DatanodeDescriptor descriptor : dnList) {
-      assertEquals("Blocks scheduled should be 0 for " + descriptor.getName(),
-          0, descriptor.getBlocksScheduled());
+      assertEquals(0, descriptor.getBlocksScheduled(),
+          "Blocks scheduled should be 0 for " + descriptor.getName());
     }
   }
 
@@ -175,7 +176,7 @@ public class TestBlocksScheduledCounter {
           .getBlockLocations(cluster.getNameNode(), filePath.toString(), 0, 1)
           .get(0);
       DatanodeInfo[] locs = block.getLocations();
-      cluster.getNamesystem().writeLock();
+      cluster.getNamesystem().writeLock(RwLockMode.BM);
       try {
         bm.findAndMarkBlockAsCorrupt(block.getBlock(), locs[0], "STORAGE_ID",
             "TEST");
@@ -185,7 +186,8 @@ public class TestBlocksScheduledCounter {
         BlockManagerTestUtil.updateState(bm);
         assertEquals(1L, bm.getPendingReconstructionBlocksCount());
       } finally {
-        cluster.getNamesystem().writeUnlock();
+        cluster.getNamesystem().writeUnlock(RwLockMode.BM,
+            "findAndMarkBlockAsCorrupt");
       }
 
       // 4. delete the file
@@ -238,13 +240,14 @@ public class TestBlocksScheduledCounter {
         DataNodeTestUtils.setHeartbeatsDisabledForTests(dn, true);
       }
 
-      cluster.getNamesystem().writeLock();
+      cluster.getNamesystem().writeLock(RwLockMode.BM);
       try {
         BlockManagerTestUtil.computeAllPendingWork(bm);
         BlockManagerTestUtil.updateState(bm);
         assertEquals(1L, bm.getPendingReconstructionBlocksCount());
       } finally {
-        cluster.getNamesystem().writeUnlock();
+        cluster.getNamesystem().writeUnlock(RwLockMode.BM,
+            "testBlocksScheduledCounterOnTruncate");
       }
 
       // 5.truncate the file whose block exists in pending reconstruction

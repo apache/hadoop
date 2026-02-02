@@ -49,9 +49,8 @@ import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.mockito.ArgumentMatcher;
 
 import java.io.IOException;
@@ -62,6 +61,7 @@ import java.util.Map;
 
 import org.apache.hadoop.yarn.event.Event;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -106,7 +106,7 @@ public class ProportionalCapacityPreemptionPolicyMockFramework {
   }
 
   @SuppressWarnings("unchecked")
-  @Before
+  @BeforeEach
   public void setup() {
     resetResourceInformationMap();
 
@@ -147,7 +147,7 @@ public class ProportionalCapacityPreemptionPolicyMockFramework {
     clusterResource = Resource.newInstance(0, 0);
   }
 
-  @After
+  @AfterEach
   public void cleanup() {
     resetResourceInformationMap();
   }
@@ -252,7 +252,7 @@ public class ProportionalCapacityPreemptionPolicyMockFramework {
         num++;
       }
     }
-    Assert.assertEquals(expectedContainersNumber, num);
+    assertEquals(expectedContainersNumber, num);
   }
 
   public FiCaSchedulerApp getApp(String queueName, int appId) {
@@ -268,28 +268,28 @@ public class ProportionalCapacityPreemptionPolicyMockFramework {
   protected void checkAbsCapacities(CSQueue queue, String partition,
       float guaranteed, float max, float used) {
     QueueCapacities qc = queue.getQueueCapacities();
-    Assert.assertEquals(guaranteed, qc.getAbsoluteCapacity(partition),
+    assertEquals(guaranteed, qc.getAbsoluteCapacity(partition),
         ALLOWED_CAPACITY_DELTA);
-    Assert.assertEquals(max, qc.getAbsoluteMaximumCapacity(partition),
+    assertEquals(max, qc.getAbsoluteMaximumCapacity(partition),
         ALLOWED_CAPACITY_DELTA);
-    Assert.assertEquals(used, qc.getAbsoluteUsedCapacity(partition),
+    assertEquals(used, qc.getAbsoluteUsedCapacity(partition),
         ALLOWED_CAPACITY_DELTA);
   }
 
   protected void checkPendingResource(CSQueue queue, String partition,
       int pending) {
     ResourceUsage ru = queue.getQueueResourceUsage();
-    Assert.assertEquals(pending, ru.getPending(partition).getMemorySize());
+    assertEquals(pending, ru.getPending(partition).getMemorySize());
   }
 
   protected void checkPriority(CSQueue queue, int expectedPriority) {
-    Assert.assertEquals(expectedPriority, queue.getPriority().getPriority());
+    assertEquals(expectedPriority, queue.getPriority().getPriority());
   }
 
   protected void checkReservedResource(CSQueue queue, String partition,
       int reserved) {
     ResourceUsage ru = queue.getQueueResourceUsage();
-    Assert.assertEquals(reserved, ru.getReserved(partition).getMemorySize());
+    assertEquals(reserved, ru.getReserved(partition).getMemorySize());
   }
 
   public static class IsPreemptionRequestForQueueAndNode

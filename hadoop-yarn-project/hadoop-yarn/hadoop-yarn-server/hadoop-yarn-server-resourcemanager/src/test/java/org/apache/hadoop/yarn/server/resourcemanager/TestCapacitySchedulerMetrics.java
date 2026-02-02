@@ -18,6 +18,11 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NullRMNodeLabelsManager;
@@ -27,9 +32,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerMetrics;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.concurrent.TimeoutException;
@@ -67,7 +71,7 @@ public class TestCapacitySchedulerMetrics {
     nm2.nodeHeartbeat(true);
 
     CapacitySchedulerMetrics csMetrics = CapacitySchedulerMetrics.getMetrics();
-    Assert.assertNotNull(csMetrics);
+    assertNotNull(csMetrics);
     try {
       GenericTestUtils.waitFor(()
           -> csMetrics.getNumOfNodeUpdate() == 2, 100, 3000);
@@ -75,11 +79,11 @@ public class TestCapacitySchedulerMetrics {
           .waitFor(() -> csMetrics.getNumOfSchedulerNodeHBInterval() == 2,
               100, 3000);
     } catch(TimeoutException e) {
-      Assert.fail("CS metrics not updated on node-update events.");
+      fail("CS metrics not updated on node-update events.");
     }
 
-    Assert.assertEquals(0, csMetrics.getNumOfAllocates());
-    Assert.assertEquals(0, csMetrics.getNumOfCommitSuccess());
+    assertEquals(0, csMetrics.getNumOfAllocates());
+    assertEquals(0, csMetrics.getNumOfCommitSuccess());
 
     RMApp rmApp = MockRMAppSubmitter.submit(rm,
         MockRMAppSubmissionData.Builder.createWithMemory(1024, rm)
@@ -108,16 +112,16 @@ public class TestCapacitySchedulerMetrics {
           .waitFor(() -> csMetrics.getNumOfSchedulerNodeHBInterval() == 4,
               100, 3000);
       // For async mode, the number of alloc might be bigger than 1
-      Assert.assertTrue(csMetrics.getNumOfAllocates() > 0);
+      assertTrue(csMetrics.getNumOfAllocates() > 0);
       // But there will be only 2 successful commit (1 AM + 1 task)
       GenericTestUtils.waitFor(()
           -> csMetrics.getNumOfCommitSuccess() == 2, 100, 3000);
     } catch(TimeoutException e) {
-      Assert.fail("CS metrics not updated on node-update events.");
+      fail("CS metrics not updated on node-update events.");
     }
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     if (rm != null) {
       rm.stop();

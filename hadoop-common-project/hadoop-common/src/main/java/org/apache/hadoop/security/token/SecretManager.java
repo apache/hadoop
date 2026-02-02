@@ -27,8 +27,13 @@ import javax.crypto.Mac;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.ipc.RetriableException;
 import org.apache.hadoop.ipc.StandbyException;
 
@@ -40,6 +45,63 @@ import org.apache.hadoop.ipc.StandbyException;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public abstract class SecretManager<T extends TokenIdentifier> {
+
+  public static final Logger LOG = LoggerFactory.getLogger(SecretManager.class);
+
+  private static String selectedAlgorithm;
+  private static int selectedLength;
+
+  /**
+   * Key generator to use.
+   */
+  private static boolean keygenInitialized;
+  private final Object keyGenLock = new Object();
+  private volatile KeyGenerator keyGen;
+
+  /**
+   * A thread local store for the Macs.
+   */
+  private static boolean macInitialized;
+  private static final ThreadLocal<Mac> threadLocalMac =
+      ThreadLocal.withInitial(SecretManager::createMac);
+
+  private static boolean secretKeyInitialized;
+
+  static {
+    update(new Configuration());
+  }
+
+  private static final String UPDATE_LOG_TEMPLATE =
+      "{} was already initialized with older config, those will not be updated." +
+          "Hint: If you turn on debug log you can see when it is happening. Thread: {}";
+  /**
+   * Updates the selected cryptographic algorithm and key length using the provided
+   * Hadoop {@link Configuration}. This method reads the values for
+   * {@code HADOOP_SECURITY_SECRET_MANAGER_KEY_GENERATOR_ALGORITHM_KEY} and
+   * {@code HADOOP_SECURITY_SECRET_MANAGER_KEY_LENGTH_KEY}, or uses default values if not set.
+   *
+   * @param conf the configuration object containing cryptographic settings
+   */
+  public static synchronized void update(Configuration conf) {
+    if (keygenInitialized) {
+      LOG.warn(UPDATE_LOG_TEMPLATE, "KeyGenerator", Thread.currentThread());
+    }
+    if (macInitialized) {
+      LOG.warn(UPDATE_LOG_TEMPLATE, "Mac", Thread.currentThread());
+    }
+    if (secretKeyInitialized) {
+      LOG.warn(UPDATE_LOG_TEMPLATE, "SecretKey", Thread.currentThread());
+    }
+    selectedAlgorithm = conf.get(
+        CommonConfigurationKeysPublic.HADOOP_SECURITY_SECRET_MANAGER_KEY_GENERATOR_ALGORITHM_KEY,
+        CommonConfigurationKeysPublic.HADOOP_SECURITY_SECRET_MANAGER_KEY_GENERATOR_ALGORITHM_DEFAULT);
+    LOG.debug("Selected hash algorithm: {}", selectedAlgorithm);
+    selectedLength = conf.getInt(
+        CommonConfigurationKeysPublic.HADOOP_SECURITY_SECRET_MANAGER_KEY_LENGTH_KEY,
+        CommonConfigurationKeysPublic.HADOOP_SECURITY_SECRET_MANAGER_KEY_LENGTH_DEFAULT);
+    LOG.debug("Selected hash key length: {}", selectedLength);
+  }
+
   /**
    * The token was invalid and the message explains why.
    */
@@ -107,57 +169,27 @@ public abstract class SecretManager<T extends TokenIdentifier> {
   public void checkAvailableForRead() throws StandbyException {
     // Default to being available for read.
   }
-  
-  /**
-   * The name of the hashing algorithm.
-   */
-  private static final String DEFAULT_HMAC_ALGORITHM = "HmacSHA1";
-
-  /**
-   * The length of the random keys to use.
-   */
-  private static final int KEY_LENGTH = 64;
-
-  /**
-   * A thread local store for the Macs.
-   */
-  private static final ThreadLocal<Mac> threadLocalMac =
-    new ThreadLocal<Mac>(){
-    @Override
-    protected Mac initialValue() {
-      try {
-        return Mac.getInstance(DEFAULT_HMAC_ALGORITHM);
-      } catch (NoSuchAlgorithmException nsa) {
-        throw new IllegalArgumentException("Can't find " + DEFAULT_HMAC_ALGORITHM +
-                                           " algorithm.");
-      }
-    }
-  };
-
-  /**
-   * Key generator to use.
-   */
-  private final KeyGenerator keyGen;
-  {
-    try {
-      keyGen = KeyGenerator.getInstance(DEFAULT_HMAC_ALGORITHM);
-      keyGen.init(KEY_LENGTH);
-    } catch (NoSuchAlgorithmException nsa) {
-      throw new IllegalArgumentException("Can't find " + DEFAULT_HMAC_ALGORITHM +
-      " algorithm.");
-    }
-  }
 
   /**
    * Generate a new random secret key.
    * @return the new key
    */
   protected SecretKey generateSecret() {
-    SecretKey key;
-    synchronized (keyGen) {
-      key = keyGen.generateKey();
+    synchronized (keyGenLock) {
+      if (keyGen == null) {
+        keyGen = createKeyGenerator();
+      }
+      return keyGen.generateKey();
     }
-    return key;
+  }
+
+  /**
+   * Validate the secretKey length is equal to the selected config.
+   * @param secretKey secretKey
+   * @return true if the secretKey length is equal to the currently configured length
+   */
+  protected boolean validateSecretKeyLength(byte[] secretKey) {
+    return secretKey.length * 8 == selectedLength;
   }
 
   /**
@@ -185,6 +217,46 @@ public abstract class SecretManager<T extends TokenIdentifier> {
    * @return the secret key
    */
   protected static SecretKey createSecretKey(byte[] key) {
-    return new SecretKeySpec(key, DEFAULT_HMAC_ALGORITHM);
+    LOG.debug("Creating secretKey with algorithm {} with thread {}",
+        selectedAlgorithm, Thread.currentThread());
+    secretKeyInitialized = true;
+    return new SecretKeySpec(key, selectedAlgorithm);
+  }
+
+  /**
+   * Creates a new {@link KeyGenerator} instance configured with the currently selected
+   * algorithm and key length.
+   *
+   * @return a new {@code KeyGenerator} instance
+   * @throws IllegalArgumentException if the specified algorithm is not available
+   */
+  private static synchronized KeyGenerator createKeyGenerator() {
+    LOG.debug("Creating key generator instance {} - {} bit with thread {}",
+        selectedAlgorithm, selectedLength, Thread.currentThread());
+    try {
+      KeyGenerator keyGen = KeyGenerator.getInstance(selectedAlgorithm);
+      keyGen.init(selectedLength);
+      keygenInitialized = true;
+      return keyGen;
+    } catch (NoSuchAlgorithmException nsa) {
+      throw new IllegalArgumentException("Can't find " + selectedAlgorithm, nsa);
+    }
+  }
+
+  /**
+   * Creates a new {@link Mac} instance using the currently selected algorithm.
+   *
+   * @return a new {@code Mac} instance
+   * @throws IllegalArgumentException if the specified algorithm is not available
+   */
+  private static synchronized Mac createMac() {
+    LOG.debug("Creating mac instance {} with thread {}", selectedAlgorithm, Thread.currentThread());
+    try {
+      Mac mac = Mac.getInstance(selectedAlgorithm);
+      macInitialized = true;
+      return mac;
+    } catch (NoSuchAlgorithmException nsa) {
+      throw new IllegalArgumentException("Can't find " + selectedAlgorithm, nsa);
+    }
   }
 }

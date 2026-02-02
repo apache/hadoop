@@ -18,7 +18,10 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -68,9 +71,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptR
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.PendingAsk;
 import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
@@ -104,7 +107,7 @@ public class TestNodeLabelContainerAllocation {
   
   RMNodeLabelsManager mgr;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     conf = new YarnConfiguration();
     conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
@@ -161,10 +164,10 @@ public class TestNodeLabelContainerAllocation {
     YarnScheduler scheduler = rm.getRMContext().getScheduler();
     SchedulerAppReport appReport = scheduler.getSchedulerAppInfo(attemptId);
 
-    Assert.assertTrue(appReport.getLiveContainers().size() > 0);
+    assertTrue(appReport.getLiveContainers().size() > 0);
     for (RMContainer c : appReport.getLiveContainers()) {
       if (c.getContainerId().equals(containerId)) {
-        Assert.assertEquals(host, c.getAllocatedNode().getHost());
+        assertEquals(host, c.getAllocatedNode().getHost());
       }
     }
   }
@@ -176,7 +179,8 @@ public class TestNodeLabelContainerAllocation {
   }
   
   
-  @Test (timeout = 300000)
+  @Test
+  @Timeout(value = 300)
   public void testContainerAllocationWithSingleUserLimits() throws Exception {
     final RMNodeLabelsManager mgr = new NullRMNodeLabelsManager();
     mgr.init(conf);
@@ -217,13 +221,13 @@ public class TestNodeLabelContainerAllocation {
     ContainerId containerId =
         ContainerId.newContainerId(am1.getApplicationAttemptId(), 2);
     am1.allocate("*", 1024, 1, new ArrayList<ContainerId>(), "");
-    Assert.assertTrue(rm1.waitForState(nm3, containerId,
+    assertTrue(rm1.waitForState(nm3, containerId,
           RMContainerState.ALLOCATED));
     // Cannot allocate 2nd label=empty container
     containerId =
         ContainerId.newContainerId(am1.getApplicationAttemptId(), 3);
     am1.allocate("*", 1024, 1, new ArrayList<ContainerId>(), "");
-    Assert.assertFalse(rm1.waitForState(nm3, containerId,
+    assertFalse(rm1.waitForState(nm3, containerId,
           RMContainerState.ALLOCATED));
 
     // A has default user limit = 100, so it can use all resource in label = x
@@ -232,13 +236,14 @@ public class TestNodeLabelContainerAllocation {
       containerId =
           ContainerId.newContainerId(am1.getApplicationAttemptId(), id);
       am1.allocate("*", 1024, 1, new ArrayList<ContainerId>(), "x");
-      Assert.assertTrue(rm1.waitForState(nm1, containerId,
+      assertTrue(rm1.waitForState(nm1, containerId,
           RMContainerState.ALLOCATED));
     }
     rm1.close();
   }
   
-  @Test(timeout = 300000)
+  @Test
+  @Timeout(value = 300)
   public void testContainerAllocateWithComplexLabels() throws Exception {
     /*
      * Queue structure:
@@ -315,7 +320,7 @@ public class TestNodeLabelContainerAllocation {
     am1.allocate("*", 1024, 1, new ArrayList<ContainerId>(), "y");
     containerId =
         ContainerId.newContainerId(am1.getApplicationAttemptId(), 2L);
-    Assert.assertTrue(rm1.waitForState(nm2, containerId,
+    assertTrue(rm1.waitForState(nm2, containerId,
         RMContainerState.ALLOCATED));
     checkTaskContainersHost(am1.getApplicationAttemptId(), containerId, rm1,
         "h2");
@@ -338,9 +343,9 @@ public class TestNodeLabelContainerAllocation {
     // (Maximum capacity reached)
     am2.allocate("*", 1024, 1, new ArrayList<ContainerId>());
     containerId = ContainerId.newContainerId(am2.getApplicationAttemptId(), 2);
-    Assert.assertFalse(rm1.waitForState(nm4, containerId,
+    assertFalse(rm1.waitForState(nm4, containerId,
         RMContainerState.ALLOCATED));
-    Assert.assertFalse(rm1.waitForState(nm5, containerId,
+    assertFalse(rm1.waitForState(nm5, containerId,
         RMContainerState.ALLOCATED));
     
     // launch an app to queue b2
@@ -359,9 +364,9 @@ public class TestNodeLabelContainerAllocation {
     // y,z). Will successfully allocate on nm3
     am3.allocate("*", 1024, 1, new ArrayList<ContainerId>(), "y");
     containerId = ContainerId.newContainerId(am3.getApplicationAttemptId(), 2);
-    Assert.assertFalse(rm1.waitForState(nm1, containerId,
+    assertFalse(rm1.waitForState(nm1, containerId,
         RMContainerState.ALLOCATED));
-    Assert.assertTrue(rm1.waitForState(nm3, containerId,
+    assertTrue(rm1.waitForState(nm3, containerId,
         RMContainerState.ALLOCATED));
     checkTaskContainersHost(am3.getApplicationAttemptId(), containerId, rm1,
         "h3");
@@ -370,7 +375,7 @@ public class TestNodeLabelContainerAllocation {
     // Will successfully allocate on nm4 only.
     am3.allocate("*", 1024, 1, new ArrayList<ContainerId>(), "z");
     containerId = ContainerId.newContainerId(am3.getApplicationAttemptId(), 3L);
-    Assert.assertTrue(rm1.waitForState(nm4, containerId,
+    assertTrue(rm1.waitForState(nm4, containerId,
         RMContainerState.ALLOCATED));
     checkTaskContainersHost(am3.getApplicationAttemptId(), containerId, rm1,
         "h4");
@@ -378,7 +383,8 @@ public class TestNodeLabelContainerAllocation {
     rm1.close();
   }
 
-  @Test (timeout = 120000)
+  @Test
+  @Timeout(value = 120)
   public void testContainerAllocateWithLabels() throws Exception {
     // set node -> label
     mgr.addToCluserNodeLabelsWithDefaultExclusivity(ImmutableSet.of("x", "y"));
@@ -418,9 +424,9 @@ public class TestNodeLabelContainerAllocation {
     am1.allocate("*", 1024, 1, new ArrayList<ContainerId>(), "x");
     containerId =
         ContainerId.newContainerId(am1.getApplicationAttemptId(), 2);
-    Assert.assertFalse(rm1.waitForState(nm2, containerId,
+    assertFalse(rm1.waitForState(nm2, containerId,
         RMContainerState.ALLOCATED));
-    Assert.assertTrue(rm1.waitForState(nm1, containerId,
+    assertTrue(rm1.waitForState(nm1, containerId,
         RMContainerState.ALLOCATED));
     checkTaskContainersHost(am1.getApplicationAttemptId(), containerId, rm1,
         "h1");
@@ -441,9 +447,9 @@ public class TestNodeLabelContainerAllocation {
     // request a container.
     am2.allocate("*", 1024, 1, new ArrayList<ContainerId>(), "y");
     containerId = ContainerId.newContainerId(am2.getApplicationAttemptId(), 2);
-    Assert.assertFalse(rm1.waitForState(nm1, containerId,
+    assertFalse(rm1.waitForState(nm1, containerId,
         RMContainerState.ALLOCATED));
-    Assert.assertTrue(rm1.waitForState(nm2, containerId,
+    assertTrue(rm1.waitForState(nm2, containerId,
         RMContainerState.ALLOCATED));
     checkTaskContainersHost(am2.getApplicationAttemptId(), containerId, rm1,
         "h2");
@@ -464,9 +470,9 @@ public class TestNodeLabelContainerAllocation {
     // request a container.
     am3.allocate("*", 1024, 1, new ArrayList<ContainerId>());
     containerId = ContainerId.newContainerId(am3.getApplicationAttemptId(), 2);
-    Assert.assertFalse(rm1.waitForState(nm2, containerId,
+    assertFalse(rm1.waitForState(nm2, containerId,
         RMContainerState.ALLOCATED));
-    Assert.assertTrue(rm1.waitForState(nm3, containerId,
+    assertTrue(rm1.waitForState(nm3, containerId,
         RMContainerState.ALLOCATED));
     checkTaskContainersHost(am3.getApplicationAttemptId(), containerId, rm1,
         "h3");
@@ -474,7 +480,8 @@ public class TestNodeLabelContainerAllocation {
     rm1.close();
   }
   
-  @Test (timeout = 120000)
+  @Test
+  @Timeout(value = 120)
   public void testContainerAllocateWithDefaultQueueLabels() throws Exception {
     // This test is pretty much similar to testContainerAllocateWithLabel.
     // Difference is, this test doesn't specify label expression in ResourceRequest,
@@ -518,9 +525,9 @@ public class TestNodeLabelContainerAllocation {
     am1.allocate("*", 1024, 1, new ArrayList<ContainerId>());
     containerId =
         ContainerId.newContainerId(am1.getApplicationAttemptId(), 2);
-    Assert.assertFalse(rm1.waitForState(nm3, containerId,
+    assertFalse(rm1.waitForState(nm3, containerId,
         RMContainerState.ALLOCATED));
-    Assert.assertTrue(rm1.waitForState(nm1, containerId,
+    assertTrue(rm1.waitForState(nm1, containerId,
         RMContainerState.ALLOCATED));
     checkTaskContainersHost(am1.getApplicationAttemptId(), containerId, rm1,
         "h1");
@@ -541,9 +548,9 @@ public class TestNodeLabelContainerAllocation {
     // request a container.
     am2.allocate("*", 1024, 1, new ArrayList<ContainerId>());
     containerId = ContainerId.newContainerId(am2.getApplicationAttemptId(), 2);
-    Assert.assertFalse(rm1.waitForState(nm3, containerId,
+    assertFalse(rm1.waitForState(nm3, containerId,
         RMContainerState.ALLOCATED));
-    Assert.assertTrue(rm1.waitForState(nm2, containerId,
+    assertTrue(rm1.waitForState(nm2, containerId,
         RMContainerState.ALLOCATED));
     checkTaskContainersHost(am2.getApplicationAttemptId(), containerId, rm1,
         "h2");
@@ -564,9 +571,9 @@ public class TestNodeLabelContainerAllocation {
     // request a container.
     am3.allocate("*", 1024, 1, new ArrayList<ContainerId>());
     containerId = ContainerId.newContainerId(am3.getApplicationAttemptId(), 2);
-    Assert.assertFalse(rm1.waitForState(nm2, containerId,
+    assertFalse(rm1.waitForState(nm2, containerId,
         RMContainerState.ALLOCATED));
-    Assert.assertTrue(rm1.waitForState(nm3, containerId,
+    assertTrue(rm1.waitForState(nm3, containerId,
         RMContainerState.ALLOCATED));
     checkTaskContainersHost(am3.getApplicationAttemptId(), containerId, rm1,
         "h3");
@@ -574,7 +581,8 @@ public class TestNodeLabelContainerAllocation {
     rm1.close();
   }
 
-  @Test (timeout = 120000)
+  @Test
+  @Timeout(value = 120)
   public void testContainerReservationWithLabels() throws Exception {
     // This test is pretty much similar to testContainerAllocateWithLabel.
     // Difference is, this test doesn't specify label expression in
@@ -637,29 +645,30 @@ public class TestNodeLabelContainerAllocation {
     // Check if a 4G container allocated for app1, and 4G is reserved
     FiCaSchedulerApp schedulerApp1 = cs.getApplicationAttempt(am1
         .getApplicationAttemptId());
-    Assert.assertEquals(2, schedulerApp1.getLiveContainers().size());
-    Assert.assertTrue(schedulerApp1.getReservedContainers().size() > 0);
-    Assert.assertEquals(9 * GB, cs.getRootQueue().getQueueResourceUsage()
+    assertEquals(2, schedulerApp1.getLiveContainers().size());
+    assertTrue(schedulerApp1.getReservedContainers().size() > 0);
+    assertEquals(9 * GB, cs.getRootQueue().getQueueResourceUsage()
         .getUsed("x").getMemorySize());
-    Assert.assertEquals(4 * GB, cs.getRootQueue().getQueueResourceUsage()
+    assertEquals(4 * GB, cs.getRootQueue().getQueueResourceUsage()
         .getReserved("x").getMemorySize());
-    Assert.assertEquals(4 * GB,
+    assertEquals(4 * GB,
         leafQueue.getQueueResourceUsage().getReserved("x").getMemorySize());
 
     // Cancel asks of app2 and re-kick RM
     am1.allocate("*", 4 * GB, 0, new ArrayList<ContainerId>());
     cs.handle(new NodeUpdateSchedulerEvent(rmNode1));
 
-    Assert.assertEquals(5 * GB, cs.getRootQueue().getQueueResourceUsage()
+    assertEquals(5 * GB, cs.getRootQueue().getQueueResourceUsage()
         .getUsed("x").getMemorySize());
-    Assert.assertEquals(0, cs.getRootQueue().getQueueResourceUsage()
+    assertEquals(0, cs.getRootQueue().getQueueResourceUsage()
         .getReserved("x").getMemorySize());
-    Assert.assertEquals(0, leafQueue.getQueueResourceUsage().getReserved("x")
+    assertEquals(0, leafQueue.getQueueResourceUsage().getReserved("x")
         .getMemorySize());
     rm1.close();
   }
 
-  @Test (timeout = 120000)
+  @Test
+  @Timeout(value = 120)
   public void testContainerReservationContinueLookingWithLabels()
       throws Exception {
     // set node -> label
@@ -708,15 +717,15 @@ public class TestNodeLabelContainerAllocation {
     checkTaskContainersHost(am1.getApplicationAttemptId(), containerId, rm1,
         "h1");
 
-    Assert.assertEquals(1, schedulerApp1.getLiveContainers().size());
-    Assert.assertFalse(schedulerApp1.getReservedContainers().size() > 0);
-    Assert.assertEquals(2 * GB, cs.getRootQueue().getQueueResourceUsage()
+    assertEquals(1, schedulerApp1.getLiveContainers().size());
+    assertFalse(schedulerApp1.getReservedContainers().size() > 0);
+    assertEquals(2 * GB, cs.getRootQueue().getQueueResourceUsage()
         .getUsed("x").getMemorySize());
-    Assert.assertEquals(0 * GB, cs.getRootQueue().getQueueResourceUsage()
+    assertEquals(0 * GB, cs.getRootQueue().getQueueResourceUsage()
         .getReserved("x").getMemorySize());
-    Assert.assertEquals(2 * GB,
+    assertEquals(2 * GB,
         leafQueue.getQueueResourceUsage().getUsed("x").getMemorySize());
-    Assert.assertEquals(0 * GB,
+    assertEquals(0 * GB,
         leafQueue.getQueueResourceUsage().getReserved("x").getMemorySize());
 
     // request map containers for app1.
@@ -730,15 +739,15 @@ public class TestNodeLabelContainerAllocation {
     checkTaskContainersHost(am1.getApplicationAttemptId(), containerId, rm1,
         "h1");
 
-    Assert.assertEquals(2, schedulerApp1.getLiveContainers().size());
-    Assert.assertFalse(schedulerApp1.getReservedContainers().size() > 0);
-    Assert.assertEquals(7 * GB, cs.getRootQueue().getQueueResourceUsage()
+    assertEquals(2, schedulerApp1.getLiveContainers().size());
+    assertFalse(schedulerApp1.getReservedContainers().size() > 0);
+    assertEquals(7 * GB, cs.getRootQueue().getQueueResourceUsage()
         .getUsed("x").getMemorySize());
-    Assert.assertEquals(0 * GB, cs.getRootQueue().getQueueResourceUsage()
+    assertEquals(0 * GB, cs.getRootQueue().getQueueResourceUsage()
         .getReserved("x").getMemorySize());
-    Assert.assertEquals(7 * GB,
+    assertEquals(7 * GB,
         leafQueue.getQueueResourceUsage().getUsed("x").getMemorySize());
-    Assert.assertEquals(0 * GB,
+    assertEquals(0 * GB,
         leafQueue.getQueueResourceUsage().getReserved("x").getMemorySize());
 
     // Do node heartbeat to allocate second mapper on node2
@@ -750,15 +759,15 @@ public class TestNodeLabelContainerAllocation {
         "h2");
 
     // node1 7 GB used, node2 5 GB used
-    Assert.assertEquals(3, schedulerApp1.getLiveContainers().size());
-    Assert.assertFalse(schedulerApp1.getReservedContainers().size() > 0);
-    Assert.assertEquals(12 * GB, cs.getRootQueue().getQueueResourceUsage()
+    assertEquals(3, schedulerApp1.getLiveContainers().size());
+    assertFalse(schedulerApp1.getReservedContainers().size() > 0);
+    assertEquals(12 * GB, cs.getRootQueue().getQueueResourceUsage()
         .getUsed("x").getMemorySize());
-    Assert.assertEquals(0 * GB, cs.getRootQueue().getQueueResourceUsage()
+    assertEquals(0 * GB, cs.getRootQueue().getQueueResourceUsage()
         .getReserved("x").getMemorySize());
-    Assert.assertEquals(12 * GB,
+    assertEquals(12 * GB,
         leafQueue.getQueueResourceUsage().getUsed("x").getMemorySize());
-    Assert.assertEquals(0 * GB,
+    assertEquals(0 * GB,
         leafQueue.getQueueResourceUsage().getReserved("x").getMemorySize());
 
     // request reducer containers for app1.
@@ -768,15 +777,15 @@ public class TestNodeLabelContainerAllocation {
     cs.handle(new NodeUpdateSchedulerEvent(rmNode1));
 
     // node1 7 GB used and 3 GB reserved, node2 5 GB used
-    Assert.assertEquals(3, schedulerApp1.getLiveContainers().size());
-    Assert.assertEquals(1, schedulerApp1.getReservedContainers().size());
-    Assert.assertEquals(15 * GB, cs.getRootQueue().getQueueResourceUsage()
+    assertEquals(3, schedulerApp1.getLiveContainers().size());
+    assertEquals(1, schedulerApp1.getReservedContainers().size());
+    assertEquals(15 * GB, cs.getRootQueue().getQueueResourceUsage()
         .getUsed("x").getMemorySize());
-    Assert.assertEquals(3 * GB, cs.getRootQueue().getQueueResourceUsage()
+    assertEquals(3 * GB, cs.getRootQueue().getQueueResourceUsage()
         .getReserved("x").getMemorySize());
-    Assert.assertEquals(15 * GB,
+    assertEquals(15 * GB,
         leafQueue.getQueueResourceUsage().getUsed("x").getMemorySize());
-    Assert.assertEquals(3 * GB,
+    assertEquals(3 * GB,
         leafQueue.getQueueResourceUsage().getReserved("x").getMemorySize());
 
     // Do node heartbeat to allocate container for second reducer on node2
@@ -789,21 +798,22 @@ public class TestNodeLabelContainerAllocation {
         "h2");
 
     // node1 7 GB used and 0 GB reserved, node2 8 GB used
-    Assert.assertEquals(4, schedulerApp1.getLiveContainers().size());
-    Assert.assertEquals(0, schedulerApp1.getReservedContainers().size());
-    Assert.assertEquals(15 * GB, cs.getRootQueue().getQueueResourceUsage()
+    assertEquals(4, schedulerApp1.getLiveContainers().size());
+    assertEquals(0, schedulerApp1.getReservedContainers().size());
+    assertEquals(15 * GB, cs.getRootQueue().getQueueResourceUsage()
         .getUsed("x").getMemorySize());
-    Assert.assertEquals(0 * GB, cs.getRootQueue().getQueueResourceUsage()
+    assertEquals(0 * GB, cs.getRootQueue().getQueueResourceUsage()
         .getReserved("x").getMemorySize());
-    Assert.assertEquals(15 * GB,
+    assertEquals(15 * GB,
         leafQueue.getQueueResourceUsage().getUsed("x").getMemorySize());
-    Assert.assertEquals(0 * GB,
+    assertEquals(0 * GB,
         leafQueue.getQueueResourceUsage().getReserved("x").getMemorySize());
 
     rm1.close();
   }
 
-  @Test (timeout = 120000)
+  @Test
+  @Timeout(value = 120)
   public void testContainerReservationContinueLookingWithDefaultLabels()
       throws Exception {
     // This is the same as testContainerReservationContinueLookingWithLabels,
@@ -853,15 +863,15 @@ public class TestNodeLabelContainerAllocation {
     checkTaskContainersHost(am1.getApplicationAttemptId(), containerId, rm1,
         "h1");
 
-    Assert.assertEquals(1, schedulerApp1.getLiveContainers().size());
-    Assert.assertFalse(schedulerApp1.getReservedContainers().size() > 0);
-    Assert.assertEquals(2 * GB, cs.getRootQueue().getQueueResourceUsage()
+    assertEquals(1, schedulerApp1.getLiveContainers().size());
+    assertFalse(schedulerApp1.getReservedContainers().size() > 0);
+    assertEquals(2 * GB, cs.getRootQueue().getQueueResourceUsage()
         .getUsed("x").getMemorySize());
-    Assert.assertEquals(0 * GB, cs.getRootQueue().getQueueResourceUsage()
+    assertEquals(0 * GB, cs.getRootQueue().getQueueResourceUsage()
         .getReserved("x").getMemorySize());
-    Assert.assertEquals(2 * GB,
+    assertEquals(2 * GB,
         leafQueue.getQueueResourceUsage().getUsed("x").getMemorySize());
-    Assert.assertEquals(0 * GB,
+    assertEquals(0 * GB,
         leafQueue.getQueueResourceUsage().getReserved("x").getMemorySize());
 
     // request map containers for app1.
@@ -875,15 +885,15 @@ public class TestNodeLabelContainerAllocation {
     checkTaskContainersHost(am1.getApplicationAttemptId(), containerId, rm1,
         "h1");
 
-    Assert.assertEquals(2, schedulerApp1.getLiveContainers().size());
-    Assert.assertFalse(schedulerApp1.getReservedContainers().size() > 0);
-    Assert.assertEquals(7 * GB, cs.getRootQueue().getQueueResourceUsage()
+    assertEquals(2, schedulerApp1.getLiveContainers().size());
+    assertFalse(schedulerApp1.getReservedContainers().size() > 0);
+    assertEquals(7 * GB, cs.getRootQueue().getQueueResourceUsage()
         .getUsed("x").getMemorySize());
-    Assert.assertEquals(0 * GB, cs.getRootQueue().getQueueResourceUsage()
+    assertEquals(0 * GB, cs.getRootQueue().getQueueResourceUsage()
         .getReserved("x").getMemorySize());
-    Assert.assertEquals(7 * GB,
+    assertEquals(7 * GB,
         leafQueue.getQueueResourceUsage().getUsed("x").getMemorySize());
-    Assert.assertEquals(0 * GB,
+    assertEquals(0 * GB,
         leafQueue.getQueueResourceUsage().getReserved("x").getMemorySize());
 
     // Do node heartbeat to allocate second mapper on node2
@@ -895,15 +905,15 @@ public class TestNodeLabelContainerAllocation {
         "h2");
 
     // node1 7 GB used, node2 5 GB used
-    Assert.assertEquals(3, schedulerApp1.getLiveContainers().size());
-    Assert.assertFalse(schedulerApp1.getReservedContainers().size() > 0);
-    Assert.assertEquals(12 * GB, cs.getRootQueue().getQueueResourceUsage()
+    assertEquals(3, schedulerApp1.getLiveContainers().size());
+    assertFalse(schedulerApp1.getReservedContainers().size() > 0);
+    assertEquals(12 * GB, cs.getRootQueue().getQueueResourceUsage()
         .getUsed("x").getMemorySize());
-    Assert.assertEquals(0 * GB, cs.getRootQueue().getQueueResourceUsage()
+    assertEquals(0 * GB, cs.getRootQueue().getQueueResourceUsage()
         .getReserved("x").getMemorySize());
-    Assert.assertEquals(12 * GB,
+    assertEquals(12 * GB,
         leafQueue.getQueueResourceUsage().getUsed("x").getMemorySize());
-    Assert.assertEquals(0 * GB,
+    assertEquals(0 * GB,
         leafQueue.getQueueResourceUsage().getReserved("x").getMemorySize());
 
     // request reducer containers for app1.
@@ -913,15 +923,15 @@ public class TestNodeLabelContainerAllocation {
     cs.handle(new NodeUpdateSchedulerEvent(rmNode1));
 
     // node1 7 GB used and 3 GB reserved, node2 5 GB used
-    Assert.assertEquals(3, schedulerApp1.getLiveContainers().size());
-    Assert.assertEquals(1, schedulerApp1.getReservedContainers().size());
-    Assert.assertEquals(15 * GB, cs.getRootQueue().getQueueResourceUsage()
+    assertEquals(3, schedulerApp1.getLiveContainers().size());
+    assertEquals(1, schedulerApp1.getReservedContainers().size());
+    assertEquals(15 * GB, cs.getRootQueue().getQueueResourceUsage()
         .getUsed("x").getMemorySize());
-    Assert.assertEquals(3 * GB, cs.getRootQueue().getQueueResourceUsage()
+    assertEquals(3 * GB, cs.getRootQueue().getQueueResourceUsage()
         .getReserved("x").getMemorySize());
-    Assert.assertEquals(15 * GB,
+    assertEquals(15 * GB,
         leafQueue.getQueueResourceUsage().getUsed("x").getMemorySize());
-    Assert.assertEquals(3 * GB,
+    assertEquals(3 * GB,
         leafQueue.getQueueResourceUsage().getReserved("x").getMemorySize());
 
     // Do node heartbeat to allocate container for second reducer on node2
@@ -934,21 +944,22 @@ public class TestNodeLabelContainerAllocation {
         "h2");
 
     // node1 7 GB used and 0 GB reserved, node2 8 GB used
-    Assert.assertEquals(4, schedulerApp1.getLiveContainers().size());
-    Assert.assertEquals(0, schedulerApp1.getReservedContainers().size());
-    Assert.assertEquals(15 * GB, cs.getRootQueue().getQueueResourceUsage()
+    assertEquals(4, schedulerApp1.getLiveContainers().size());
+    assertEquals(0, schedulerApp1.getReservedContainers().size());
+    assertEquals(15 * GB, cs.getRootQueue().getQueueResourceUsage()
         .getUsed("x").getMemorySize());
-    Assert.assertEquals(0 * GB, cs.getRootQueue().getQueueResourceUsage()
+    assertEquals(0 * GB, cs.getRootQueue().getQueueResourceUsage()
         .getReserved("x").getMemorySize());
-    Assert.assertEquals(15 * GB,
+    assertEquals(15 * GB,
         leafQueue.getQueueResourceUsage().getUsed("x").getMemorySize());
-    Assert.assertEquals(0 * GB,
+    assertEquals(0 * GB,
         leafQueue.getQueueResourceUsage().getReserved("x").getMemorySize());
 
     rm1.close();
   }
 
-  @Test (timeout = 120000)
+  @Test
+  @Timeout(value = 120)
   public void testRMContainerLeakInLeafQueue() throws Exception {
     // set node -> label
     mgr.addToCluserNodeLabelsWithDefaultExclusivity(ImmutableSet.of("x"));
@@ -1006,22 +1017,22 @@ public class TestNodeLabelContainerAllocation {
     // Check if a 4G container allocated for app1, and 4G is reserved
     FiCaSchedulerApp schedulerApp1 =
         cs.getApplicationAttempt(am1.getApplicationAttemptId());
-    Assert.assertEquals(1, schedulerApp1.getLiveContainers().size());
-    Assert.assertEquals(1, schedulerApp1.getReservedContainers().size());
+    assertEquals(1, schedulerApp1.getLiveContainers().size());
+    assertEquals(1, schedulerApp1.getReservedContainers().size());
 
     // kill app2 then do node heartbeat 1 time
     // scheduler will allocate a container from the reserved container on nm1
     rm1.killApp(app2.getApplicationId());
     rm1.waitForState(app2.getApplicationId(), RMAppState.KILLED);
     cs.handle(new NodeUpdateSchedulerEvent(rmNode1));
-    Assert.assertEquals(2, schedulerApp1.getLiveContainers().size());
-    Assert.assertEquals(0, schedulerApp1.getReservedContainers().size());
+    assertEquals(2, schedulerApp1.getLiveContainers().size());
+    assertEquals(0, schedulerApp1.getReservedContainers().size());
 
     // After kill app1, LeafQueue#ignorePartitionExclusivityRMContainers should
     // be clean, otherwise resource leak happened
     rm1.killApp(app1.getApplicationId());
     rm1.waitForState(app1.getApplicationId(), RMAppState.KILLED);
-    Assert.assertEquals(0, leafQueue.getIgnoreExclusivityRMContainers().size());
+    assertEquals(0, leafQueue.getIgnoreExclusivityRMContainers().size());
 
     rm1.close();
   }
@@ -1033,7 +1044,7 @@ public class TestNodeLabelContainerAllocation {
     PendingAsk ask =
         app.getAppSchedulingInfo().getPendingAsk(
             TestUtils.toSchedulerKey(priority), "*");
-    Assert.assertEquals(memory,
+    assertEquals(memory,
         ask.getPerAllocationResource().getMemorySize() * ask
             .getCount());
   }
@@ -1042,7 +1053,7 @@ public class TestNodeLabelContainerAllocation {
       int numContainers) {
     CapacityScheduler cs = (CapacityScheduler) rm.getRMContext().getScheduler();
     SchedulerNode node = cs.getSchedulerNode(nodeId);
-    Assert.assertEquals(numContainers, node.getNumContainers());
+    assertEquals(numContainers, node.getNumContainers());
   }
 
   /**
@@ -1142,10 +1153,9 @@ public class TestNodeLabelContainerAllocation {
       int priority, String expectedPartition) {
     for (SchedulerRequestKey key : info.getSchedulerKeys()) {
       if (key.getPriority().getPriority() == priority) {
-        Assert.assertEquals("Expected partition is " + expectedPartition,
-            expectedPartition,
-            info.getAppPlacementAllocator(key)
-                .getPrimaryRequestedNodePartition());
+        assertEquals(expectedPartition,
+            info.getAppPlacementAllocator(key).getPrimaryRequestedNodePartition(),
+            "Expected partition is " + expectedPartition);
       }
     }
   }
@@ -1239,7 +1249,7 @@ public class TestNodeLabelContainerAllocation {
         num++;
       }
     }
-    Assert.assertEquals(expectedNum, num);
+    assertEquals(expectedNum, num);
   }
   
   @Test
@@ -1352,7 +1362,7 @@ public class TestNodeLabelContainerAllocation {
     for (int i = 2; i < 2 + 6; i++) {
       nextContainerId =
           ContainerId.newContainerId(am1.getApplicationAttemptId(), i);
-      Assert.assertTrue(rm1.waitForState(Arrays.asList(nm1, nm2),
+      assertTrue(rm1.waitForState(Arrays.asList(nm1, nm2),
           nextContainerId, RMContainerState.ALLOCATED));
     }
     // no more container allocated on nm1
@@ -1638,7 +1648,7 @@ public class TestNodeLabelContainerAllocation {
     // NM2 can allocate 10 containers totally, exclude already allocated AM
     // container, we will wait 9 to fulfill non-partitioned node, and need wait
     // one more cycle before allocating to non-partitioned node 
-    Assert.assertEquals(10, cycleWaited);
+    assertEquals(10, cycleWaited);
     
     // Both NM1/NM2 launched 10 containers, cluster resource is exhausted
     checkLaunchedContainerNumOnNode(rm1, nm1.getNodeId(), 10);
@@ -1695,23 +1705,22 @@ public class TestNodeLabelContainerAllocation {
       cs.handle(new NodeUpdateSchedulerEvent(rmNode1));
     }
 
-    Assert.assertTrue(
-        "Scheduler diagnostics should have reason for not assigning the node",
-        app.getDiagnostics().toString().contains(
-            CSAMContainerLaunchDiagnosticsConstants.SKIP_AM_ALLOCATION_IN_IGNORE_EXCLUSIVE_MODE));
+    assertTrue(app.getDiagnostics().toString().contains(
+        CSAMContainerLaunchDiagnosticsConstants.SKIP_AM_ALLOCATION_IN_IGNORE_EXCLUSIVE_MODE),
+        "Scheduler diagnostics should have reason for not assigning the node");
 
-    Assert.assertTrue(
-        "Scheduler diagnostics should have last processed node information",
-        app.getDiagnostics().toString().contains(
-            CSAMContainerLaunchDiagnosticsConstants.LAST_NODE_PROCESSED_MSG
-                + nodeIdStr + " ( Partition : [x]"));
-    Assert.assertEquals(0, cs.getSchedulerNode(nm1.getNodeId())
+    assertTrue(app.getDiagnostics().toString().contains(
+        CSAMContainerLaunchDiagnosticsConstants.LAST_NODE_PROCESSED_MSG
+        + nodeIdStr + " ( Partition : [x]"),
+        "Scheduler diagnostics should have last processed node information");
+    assertEquals(0, cs.getSchedulerNode(nm1.getNodeId())
         .getNumContainers());
     
     rm1.close();
   }
 
-  @Test(timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void
       testQueueMaxCapacitiesWillNotBeHonoredWhenNotRespectingExclusivity()
           throws Exception {
@@ -1795,20 +1804,20 @@ public class TestNodeLabelContainerAllocation {
     }
     
     // app1 gets all resource in partition=x
-    Assert.assertEquals(10, schedulerNode1.getNumContainers());
+    assertEquals(10, schedulerNode1.getNumContainers());
 
     // check non-exclusive containers of LeafQueue is correctly updated
     LeafQueue leafQueue = (LeafQueue) cs.getQueue("a");
-    Assert.assertFalse(leafQueue.getIgnoreExclusivityRMContainers().containsKey(
+    assertFalse(leafQueue.getIgnoreExclusivityRMContainers().containsKey(
         "y"));
-    Assert.assertEquals(10,
+    assertEquals(10,
         leafQueue.getIgnoreExclusivityRMContainers().get("x").size());
 
     // completes all containers of app1, ignoreExclusivityRMContainers should be
     // updated as well.
     cs.handle(new AppAttemptRemovedSchedulerEvent(
         am1.getApplicationAttemptId(), RMAppAttemptState.FINISHED, false));
-    Assert.assertFalse(leafQueue.getIgnoreExclusivityRMContainers().containsKey(
+    assertFalse(leafQueue.getIgnoreExclusivityRMContainers().containsKey(
         "x"));
 
     rm1.close();
@@ -1818,11 +1827,11 @@ public class TestNodeLabelContainerAllocation {
       String nodePartition, float usedCapacity, float absoluteUsedCapacity) {
     float epsilon = 1e-6f;
     CSQueue queue = cs.getQueue(queueName);
-    Assert.assertNotNull("Failed to get queue=" + queueName, queue);
+    assertNotNull(queue, "Failed to get queue=" + queueName);
 
-    Assert.assertEquals(usedCapacity, queue.getQueueCapacities()
+    assertEquals(usedCapacity, queue.getQueueCapacities()
         .getUsedCapacity(nodePartition), epsilon);
-    Assert.assertEquals(absoluteUsedCapacity, queue.getQueueCapacities()
+    assertEquals(absoluteUsedCapacity, queue.getQueueCapacities()
         .getAbsoluteUsedCapacity(nodePartition), epsilon);
   }
   
@@ -2604,18 +2613,18 @@ public class TestNodeLabelContainerAllocation {
     }
 
     // app1 gets all resource in partition=x
-    Assert.assertEquals(5, schedulerNode1.getNumContainers());
+    assertEquals(5, schedulerNode1.getNumContainers());
 
     SchedulerNodeReport reportNm1 = rm1.getResourceScheduler()
         .getNodeReport(nm1.getNodeId());
-    Assert.assertEquals(5 * GB, reportNm1.getUsedResource().getMemorySize());
-    Assert.assertEquals(5 * GB,
+    assertEquals(5 * GB, reportNm1.getUsedResource().getMemorySize());
+    assertEquals(5 * GB,
         reportNm1.getAvailableResource().getMemorySize());
 
     SchedulerNodeReport reportNm2 = rm1.getResourceScheduler()
         .getNodeReport(nm2.getNodeId());
-    Assert.assertEquals(0 * GB, reportNm2.getUsedResource().getMemorySize());
-    Assert.assertEquals(10 * GB,
+    assertEquals(0 * GB, reportNm2.getUsedResource().getMemorySize());
+    assertEquals(10 * GB,
         reportNm2.getAvailableResource().getMemorySize());
 
     assertEquals(0 * GB, leafQueueA.getMetrics().getAvailableMB());
@@ -2764,16 +2773,16 @@ public class TestNodeLabelContainerAllocation {
     }
 
     // app1 gets all resource in partition=x (non-exclusive)
-    Assert.assertEquals(3, schedulerNode1.getNumContainers());
+    assertEquals(3, schedulerNode1.getNumContainers());
     SchedulerNodeReport reportNm1 = rm1.getResourceScheduler()
         .getNodeReport(nm1.getNodeId());
-    Assert.assertEquals(3 * GB, reportNm1.getUsedResource().getMemorySize());
-    Assert.assertEquals(7 * GB,
+    assertEquals(3 * GB, reportNm1.getUsedResource().getMemorySize());
+    assertEquals(7 * GB,
         reportNm1.getAvailableResource().getMemorySize());
     SchedulerNodeReport reportNm2 = rm1.getResourceScheduler()
         .getNodeReport(nm2.getNodeId());
-    Assert.assertEquals(1 * GB, reportNm2.getUsedResource().getMemorySize());
-    Assert.assertEquals(9 * GB,
+    assertEquals(1 * GB, reportNm2.getUsedResource().getMemorySize());
+    assertEquals(9 * GB,
         reportNm2.getAvailableResource().getMemorySize());
     assertEquals(7 * GB, partXMetrics.getAvailableMB(), delta);
     assertEquals(9 * GB, partDefaultMetrics.getAvailableMB(), delta);
@@ -2821,8 +2830,8 @@ public class TestNodeLabelContainerAllocation {
 
     cs.handle(new NodeUpdateSchedulerEvent(rmNode2));
 
-    Assert.assertEquals(2, schedulerNode2.getNumContainers());
-    Assert.assertEquals(3, schedulerNode1.getNumContainers());
+    assertEquals(2, schedulerNode2.getNumContainers());
+    assertEquals(3, schedulerNode1.getNumContainers());
 
     // 3GB is used from label x quota. 2GB used from default label.
     // So 0.5 GB is remaining from default label.
@@ -2996,18 +3005,18 @@ public class TestNodeLabelContainerAllocation {
     }
 
     // app1 gets all resource in partition=x
-    Assert.assertEquals(6, schedulerNode1.getNumContainers());
+    assertEquals(6, schedulerNode1.getNumContainers());
 
     SchedulerNodeReport reportNm1 = rm1.getResourceScheduler()
         .getNodeReport(nm1.getNodeId());
-    Assert.assertEquals(6 * GB, reportNm1.getUsedResource().getMemorySize());
-    Assert.assertEquals(4 * GB,
+    assertEquals(6 * GB, reportNm1.getUsedResource().getMemorySize());
+    assertEquals(4 * GB,
         reportNm1.getAvailableResource().getMemorySize());
 
     SchedulerNodeReport reportNm2 = rm1.getResourceScheduler()
         .getNodeReport(nm2.getNodeId());
-    Assert.assertEquals(0 * GB, reportNm2.getUsedResource().getMemorySize());
-    Assert.assertEquals(12 * GB,
+    assertEquals(0 * GB, reportNm2.getUsedResource().getMemorySize());
+    assertEquals(12 * GB,
         reportNm2.getAvailableResource().getMemorySize());
 
     assertEquals(12 * GB, leafQueueA.getMetrics().getAvailableMB());
@@ -3036,16 +3045,16 @@ public class TestNodeLabelContainerAllocation {
     }
 
     // app1 gets all resource in partition=x
-    Assert.assertEquals(6, schedulerNode2.getNumContainers());
+    assertEquals(6, schedulerNode2.getNumContainers());
 
     reportNm1 = rm1.getResourceScheduler().getNodeReport(nm1.getNodeId());
-    Assert.assertEquals(6 * GB, reportNm1.getUsedResource().getMemorySize());
-    Assert.assertEquals(4 * GB,
+    assertEquals(6 * GB, reportNm1.getUsedResource().getMemorySize());
+    assertEquals(4 * GB,
         reportNm1.getAvailableResource().getMemorySize());
 
     reportNm2 = rm1.getResourceScheduler().getNodeReport(nm2.getNodeId());
-    Assert.assertEquals(6 * GB, reportNm2.getUsedResource().getMemorySize());
-    Assert.assertEquals(6 * GB,
+    assertEquals(6 * GB, reportNm2.getUsedResource().getMemorySize());
+    assertEquals(6 * GB,
         reportNm2.getAvailableResource().getMemorySize());
 
     assertEquals(6 * GB, leafQueueA.getMetrics().getAvailableMB());
@@ -3174,17 +3183,17 @@ public class TestNodeLabelContainerAllocation {
     }
 
     // app1 gets all resource in partition=x
-    Assert.assertEquals(6, schedulerNode1.getNumContainers());
+    assertEquals(6, schedulerNode1.getNumContainers());
 
     SchedulerNodeReport reportNm1 = rm1.getResourceScheduler()
         .getNodeReport(nm1.getNodeId());
-    Assert.assertEquals(6 * GB, reportNm1.getUsedResource().getMemorySize());
-    Assert.assertEquals(4 * GB, reportNm1.getAvailableResource().getMemorySize());
+    assertEquals(6 * GB, reportNm1.getUsedResource().getMemorySize());
+    assertEquals(4 * GB, reportNm1.getAvailableResource().getMemorySize());
 
     SchedulerNodeReport reportNm2 = rm1.getResourceScheduler()
         .getNodeReport(nm2.getNodeId());
-    Assert.assertEquals(0 * GB, reportNm2.getUsedResource().getMemorySize());
-    Assert.assertEquals(12 * GB,
+    assertEquals(0 * GB, reportNm2.getUsedResource().getMemorySize());
+    assertEquals(12 * GB,
         reportNm2.getAvailableResource().getMemorySize());
 
     assertEquals(0 * GB, queueAMetrics.getAllocatedMB());
@@ -3224,16 +3233,16 @@ public class TestNodeLabelContainerAllocation {
     }
 
     // app1 gets all resource in partition=x
-    Assert.assertEquals(6, schedulerNode2.getNumContainers());
+    assertEquals(6, schedulerNode2.getNumContainers());
 
     reportNm1 = rm1.getResourceScheduler().getNodeReport(nm1.getNodeId());
-    Assert.assertEquals(6 * GB, reportNm1.getUsedResource().getMemorySize());
-    Assert.assertEquals(4 * GB,
+    assertEquals(6 * GB, reportNm1.getUsedResource().getMemorySize());
+    assertEquals(4 * GB,
         reportNm1.getAvailableResource().getMemorySize());
 
     reportNm2 = rm1.getResourceScheduler().getNodeReport(nm2.getNodeId());
-    Assert.assertEquals(6 * GB, reportNm2.getUsedResource().getMemorySize());
-    Assert.assertEquals(6 * GB,
+    assertEquals(6 * GB, reportNm2.getUsedResource().getMemorySize());
+    assertEquals(6 * GB,
         reportNm2.getAvailableResource().getMemorySize());
 
     assertEquals(6 * GB, leafQueueA.getMetrics().getAvailableMB());
@@ -3363,8 +3372,8 @@ public class TestNodeLabelContainerAllocation {
 
     SchedulerNodeReport reportNm1 = rm1.getResourceScheduler()
         .getNodeReport(nm1.getNodeId());
-    Assert.assertEquals(6 * GB, reportNm1.getUsedResource().getMemorySize());
-    Assert.assertEquals(14 * GB,
+    assertEquals(6 * GB, reportNm1.getUsedResource().getMemorySize());
+    assertEquals(14 * GB,
         reportNm1.getAvailableResource().getMemorySize());
 
     // Try to launch app2 in a2, asked 2GB, should success
@@ -3390,8 +3399,8 @@ public class TestNodeLabelContainerAllocation {
 
     reportNm1 = rm1.getResourceScheduler()
         .getNodeReport(nm1.getNodeId());
-    Assert.assertEquals(10 * GB, reportNm1.getUsedResource().getMemorySize());
-    Assert.assertEquals(10 * GB,
+    assertEquals(10 * GB, reportNm1.getUsedResource().getMemorySize());
+    assertEquals(10 * GB,
         reportNm1.getAvailableResource().getMemorySize());
 
     // Kill all apps in queue a2
@@ -3419,8 +3428,8 @@ public class TestNodeLabelContainerAllocation {
     checkNumOfContainersInAnAppOnGivenNode(4, nm1.getNodeId(),
         cs.getApplicationAttempt(am3.getApplicationAttemptId()));
 
-    Assert.assertEquals(10 * GB, reportNm1.getUsedResource().getMemorySize());
-    Assert.assertEquals(10 * GB,
+    assertEquals(10 * GB, reportNm1.getUsedResource().getMemorySize());
+    assertEquals(10 * GB,
         reportNm1.getAvailableResource().getMemorySize());
 
     // Kill all apps in queue a1
@@ -3450,8 +3459,8 @@ public class TestNodeLabelContainerAllocation {
     checkNumOfContainersInAnAppOnGivenNode(6, nm1.getNodeId(),
         cs.getApplicationAttempt(am4.getApplicationAttemptId()));
 
-    Assert.assertEquals(10 * GB, reportNm1.getUsedResource().getMemorySize());
-    Assert.assertEquals(10 * GB,
+    assertEquals(10 * GB, reportNm1.getUsedResource().getMemorySize());
+    assertEquals(10 * GB,
         reportNm1.getAvailableResource().getMemorySize());
 
     rm1.close();

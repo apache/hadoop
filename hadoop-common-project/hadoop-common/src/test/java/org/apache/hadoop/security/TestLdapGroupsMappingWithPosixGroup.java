@@ -37,15 +37,16 @@ import javax.naming.directory.Attributes;
 import javax.naming.directory.SearchControls;
 
 import org.apache.hadoop.conf.Configuration;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @SuppressWarnings("unchecked")
 public class TestLdapGroupsMappingWithPosixGroup
   extends TestLdapGroupsMappingBase {
 
-  @Before
+  @BeforeEach
   public void setupMocks() throws NamingException {
     Attribute uidNumberAttr = mock(Attribute.class);
     Attribute gidNumberAttr = mock(Attribute.class);
@@ -90,11 +91,11 @@ public class TestLdapGroupsMappingWithPosixGroup
     // regardless of input
     List<String> groups = groupsMapping.getGroups("some_user");
 
-    Assert.assertEquals(expectedGroups, groups);
+    assertEquals(expectedGroups, groups);
 
     groupsMapping.getConf().set(LdapGroupsMapping.POSIX_UID_ATTR_KEY, "uid");
 
-    Assert.assertEquals(expectedGroups, groups);
+    assertEquals(expectedGroups, groups);
 
     // We should have searched for a user, and then two groups
     verify(getContext(), times(searchTimes)).search(anyString(),

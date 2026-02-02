@@ -19,17 +19,17 @@ package org.apache.hadoop.util;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.apache.hadoop.util.FindClass;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Test the find class logic
  */
-public class TestFindClass extends Assert {
+public class TestFindClass extends Assertions {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestFindClass.class);
 

@@ -22,7 +22,7 @@ import org.apache.hadoop.service.launcher.testservices.FailInConstructorService;
 import org.apache.hadoop.service.launcher.testservices.FailInInitService;
 import org.apache.hadoop.service.launcher.testservices.FailInStartService;
 import org.apache.hadoop.service.launcher.testservices.FailingStopInStartService;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * Explore the ways in which the launcher is expected to (safely) fail.

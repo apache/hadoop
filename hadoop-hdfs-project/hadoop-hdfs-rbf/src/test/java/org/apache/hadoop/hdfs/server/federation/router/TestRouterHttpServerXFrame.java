@@ -23,12 +23,12 @@ import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URL;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
 
 import static org.apache.hadoop.http.HttpServer2.XFrameOption.SAMEORIGIN;
 
@@ -39,7 +39,9 @@ public class TestRouterHttpServerXFrame {
 
   @Test
   public void testRouterXFrame() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = new RouterConfigBuilder()
+        .http()
+        .build();
     conf.setBoolean(DFSConfigKeys.DFS_XFRAME_OPTION_ENABLED, true);
     conf.set(DFSConfigKeys.DFS_XFRAME_OPTION_VALUE, SAMEORIGIN.toString());
 
@@ -55,8 +57,8 @@ public class TestRouterHttpServerXFrame {
       conn.connect();
 
       String xfoHeader = conn.getHeaderField("X-FRAME-OPTIONS");
-      Assert.assertNotNull("X-FRAME-OPTIONS is absent in the header", xfoHeader);
-      Assert.assertTrue(xfoHeader.endsWith(SAMEORIGIN.toString()));
+      Assertions.assertNotNull(xfoHeader, "X-FRAME-OPTIONS is absent in the header");
+      Assertions.assertTrue(xfoHeader.endsWith(SAMEORIGIN.toString()));
     } finally {
       router.stop();
       router.close();

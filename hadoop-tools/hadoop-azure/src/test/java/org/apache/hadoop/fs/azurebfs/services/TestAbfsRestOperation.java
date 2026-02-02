@@ -22,15 +22,15 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.utils.MetricFormat;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_DELETE;
+import static org.apache.hadoop.fs.azurebfs.enums.AbfsBackoffMetricsEnum.NUMBER_OF_REQUESTS_FAILED;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsRestOperationType.DeletePath;
-import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_METRIC_FORMAT;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_METRICS_FORMAT;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
 import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
 import java.util.ArrayList;
 import java.util.Arrays;
-import org.junit.Assert;
 import java.net.HttpURLConnection;
 
 public class TestAbfsRestOperation extends
@@ -51,7 +51,7 @@ public class TestAbfsRestOperation extends
   public void testBackoffRetryMetrics() throws Exception {
     // Create an AzureBlobFileSystem instance.
     final Configuration configuration = getRawConfiguration();
-    configuration.set(FS_AZURE_METRIC_FORMAT, String.valueOf(MetricFormat.INTERNAL_BACKOFF_METRIC_FORMAT));
+    configuration.set(FS_AZURE_METRICS_FORMAT, String.valueOf(MetricFormat.INTERNAL_BACKOFF_METRIC_FORMAT));
     final AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(configuration);
     AbfsConfiguration abfsConfiguration = fs.getAbfsStore().getAbfsConfiguration();
 
@@ -72,8 +72,9 @@ public class TestAbfsRestOperation extends
     }
 
     // For retry count greater than the max configured value, the request should fail.
-    Assert.assertEquals("Number of failed requests does not match expected value.",
-            "3", String.valueOf(testClient.getAbfsCounters().getAbfsBackoffMetrics().getNumberOfRequestsFailed()));
+    assertEquals("3", String.valueOf(testClient.getAbfsCounters().getAbfsBackoffMetrics().
+        getMetricValue(NUMBER_OF_REQUESTS_FAILED)),
+        "Number of failed requests does not match expected value.");
 
     // Close the AzureBlobFileSystem.
     fs.close();

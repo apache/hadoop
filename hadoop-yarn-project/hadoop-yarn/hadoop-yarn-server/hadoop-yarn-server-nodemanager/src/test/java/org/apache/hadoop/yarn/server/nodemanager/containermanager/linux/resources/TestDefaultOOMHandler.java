@@ -28,7 +28,7 @@ import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerSignalContext;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.concurrent.ConcurrentHashMap;
@@ -37,6 +37,7 @@ import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.r
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.CGroupsHandler.CGROUP_PARAM_MEMORY_MEMSW_USAGE_BYTES;
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.CGroupsHandler.CGROUP_PARAM_MEMORY_OOM_CONTROL;
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.CGroupsHandler.CGROUP_PARAM_MEMORY_USAGE_BYTES;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -51,59 +52,63 @@ public class TestDefaultOOMHandler {
   /**
    * Test an OOM situation where there are no containers that can be killed.
    */
-  @Test(expected = YarnRuntimeException.class)
+  @Test
   public void testExceptionThrownWithNoContainersToKill() throws Exception {
-    Context context = mock(Context.class);
+    assertThrows(YarnRuntimeException.class, () -> {
+      Context context = mock(Context.class);
 
-    when(context.getContainers()).thenReturn(new ConcurrentHashMap<>(0));
+      when(context.getContainers()).thenReturn(new ConcurrentHashMap<>(0));
 
-    CGroupsHandler cGroupsHandler = mock(CGroupsHandler.class);
-    when(cGroupsHandler.getCGroupParam(
-        CGroupsHandler.CGroupController.MEMORY,
-        "",
-        CGROUP_PARAM_MEMORY_OOM_CONTROL))
-        .thenReturn("under_oom 1").thenReturn("under_oom 0");
+      CGroupsHandler cGroupsHandler = mock(CGroupsHandler.class);
+      when(cGroupsHandler.getCGroupParam(
+          CGroupsHandler.CGroupController.MEMORY,
+          "",
+          CGROUP_PARAM_MEMORY_OOM_CONTROL))
+          .thenReturn("under_oom 1").thenReturn("under_oom 0");
 
-    DefaultOOMHandler handler = new DefaultOOMHandler(context, false) {
-      @Override
-      protected CGroupsHandler getCGroupsHandler() {
-        return cGroupsHandler;
-      }
-    };
+      DefaultOOMHandler handler = new DefaultOOMHandler(context, false) {
+        @Override
+        protected CGroupsHandler getCGroupsHandler() {
+          return cGroupsHandler;
+        }
+      };
 
-    handler.run();
+      handler.run();
+    });
   }
 
   /**
    * Test an OOM situation where there are no running containers that
    * can be killed.
    */
-  @Test(expected = YarnRuntimeException.class)
+  @Test
   public void testExceptionThrownWithNoRunningContainersToKill()
       throws Exception {
-    ConcurrentHashMap<ContainerId, Container> containers =
-        new ConcurrentHashMap<>();
-    Container c1 = createContainer(1, true, 1L, false);
-    containers.put(c1.getContainerId(), c1);
+    assertThrows(YarnRuntimeException.class, () -> {
+      ConcurrentHashMap<ContainerId, Container> containers =
+          new ConcurrentHashMap<>();
+      Container c1 = createContainer(1, true, 1L, false);
+      containers.put(c1.getContainerId(), c1);
 
-    Context context = mock(Context.class);
-    when(context.getContainers()).thenReturn(containers);
+      Context context = mock(Context.class);
+      when(context.getContainers()).thenReturn(containers);
 
-    CGroupsHandler cGroupsHandler = mock(CGroupsHandler.class);
-    when(cGroupsHandler.getCGroupParam(
-        CGroupsHandler.CGroupController.MEMORY,
-        "",
-        CGROUP_PARAM_MEMORY_OOM_CONTROL))
-        .thenReturn("under_oom 1").thenReturn("under_oom 0");
+      CGroupsHandler cGroupsHandler = mock(CGroupsHandler.class);
+      when(cGroupsHandler.getCGroupParam(
+          CGroupsHandler.CGroupController.MEMORY,
+          "",
+          CGROUP_PARAM_MEMORY_OOM_CONTROL))
+          .thenReturn("under_oom 1").thenReturn("under_oom 0");
 
-    DefaultOOMHandler handler = new DefaultOOMHandler(context, false) {
-      @Override
-      protected CGroupsHandler getCGroupsHandler() {
-        return cGroupsHandler;
-      }
-    };
+      DefaultOOMHandler handler = new DefaultOOMHandler(context, false) {
+        @Override
+        protected CGroupsHandler getCGroupsHandler() {
+          return cGroupsHandler;
+        }
+      };
 
-    handler.run();
+      handler.run();
+    });
   }
 
   /**
@@ -489,46 +494,46 @@ public class TestDefaultOOMHandler {
    * running as processes. Their cgroup.procs file is not available,
    * so kill them won't succeed.
    */
-  @Test(expected = YarnRuntimeException.class)
+  @Test
   public void testExceptionThrownWhenNoContainersKilledSuccessfully()
       throws Exception {
-    ConcurrentHashMap<ContainerId, Container> containers =
-        new ConcurrentHashMap<>();
-    Container c1 = createContainer(1, false, 1L, true);
-    containers.put(c1.getContainerId(), c1);
-    Container c2 = createContainer(2, false, 2L, true);
-    containers.put(c2.getContainerId(), c2);
+    assertThrows(YarnRuntimeException.class, () -> {
+      ConcurrentHashMap<ContainerId, Container> containers =
+          new ConcurrentHashMap<>();
+      Container c1 = createContainer(1, false, 1L, true);
+      containers.put(c1.getContainerId(), c1);
+      Container c2 = createContainer(2, false, 2L, true);
+      containers.put(c2.getContainerId(), c2);
 
-    ContainerExecutor ex = createContainerExecutor(containers);
-    Context context = mock(Context.class);
-    when(context.getContainers()).thenReturn(containers);
-    when(context.getContainerExecutor()).thenReturn(ex);
+      ContainerExecutor ex = createContainerExecutor(containers);
+      Context context = mock(Context.class);
+      when(context.getContainers()).thenReturn(containers);
+      when(context.getContainerExecutor()).thenReturn(ex);
 
-    CGroupsHandler cGroupsHandler = mock(CGroupsHandler.class);
-    when(cGroupsHandler.getCGroupParam(
-        CGroupsHandler.CGroupController.MEMORY,
-        "",
-        CGROUP_PARAM_MEMORY_OOM_CONTROL))
-        .thenReturn("under_oom 1").thenReturn("under_oom 0");
-    // c1 process has not started, hence no cgroup.procs file yet
-    when(cGroupsHandler.getCGroupParam(CGroupsHandler.CGroupController.MEMORY,
-        c1.getContainerId().toString(), CGROUP_PROCS_FILE))
-        .thenThrow(
-            new ResourceHandlerException(CGROUP_PROCS_FILE + " not found"));
-    // c2 process has not started, hence no cgroup.procs file yet
-    when(cGroupsHandler.getCGroupParam(CGroupsHandler.CGroupController.MEMORY,
-        c2.getContainerId().toString(), CGROUP_PROCS_FILE))
-        .thenThrow(
-            new ResourceHandlerException(CGROUP_PROCS_FILE + " not found"));
+      CGroupsHandler cGroupsHandler = mock(CGroupsHandler.class);
+      when(cGroupsHandler.getCGroupParam(
+          CGroupsHandler.CGroupController.MEMORY,
+          "",
+          CGROUP_PARAM_MEMORY_OOM_CONTROL))
+          .thenReturn("under_oom 1").thenReturn("under_oom 0");
+      // c1 process has not started, hence no cgroup.procs file yet
+      when(cGroupsHandler.getCGroupParam(CGroupsHandler.CGroupController.MEMORY,
+          c1.getContainerId().toString(), CGROUP_PROCS_FILE))
+          .thenThrow(new ResourceHandlerException(CGROUP_PROCS_FILE + " not found"));
+      // c2 process has not started, hence no cgroup.procs file yet
+      when(cGroupsHandler.getCGroupParam(CGroupsHandler.CGroupController.MEMORY,
+          c2.getContainerId().toString(), CGROUP_PROCS_FILE))
+          .thenThrow(new ResourceHandlerException(CGROUP_PROCS_FILE + " not found"));
 
-    DefaultOOMHandler handler =
-        new DefaultOOMHandler(context, false) {
-          @Override
-          protected CGroupsHandler getCGroupsHandler() {
-            return cGroupsHandler;
-          }
-        };
-    handler.run();
+      DefaultOOMHandler handler =
+          new DefaultOOMHandler(context, false) {
+            @Override
+            protected CGroupsHandler getCGroupsHandler() {
+              return cGroupsHandler;
+            }
+          };
+      handler.run();
+    });
   }
 
   /**
@@ -1160,69 +1165,70 @@ public class TestDefaultOOMHandler {
    * OOM is not resolved even after killing all running containers.
    * A YarnRuntimeException is excepted to be thrown.
    */
-  @Test(expected = YarnRuntimeException.class)
+  @Test
   public void testOOMUnresolvedAfterKillingAllContainers() throws Exception {
-    int currentContainerId = 0;
+    assertThrows(YarnRuntimeException.class, () -> {
+      int currentContainerId = 0;
 
-    ConcurrentHashMap<ContainerId, Container> containers =
-        new ConcurrentHashMap<>();
-    Container c1 = createContainer(currentContainerId++, false, 1, true);
-    containers.put(c1.getContainerId(), c1);
-    Container c2 = createContainer(currentContainerId++, false, 2, true);
-    containers.put(c2.getContainerId(), c2);
-    Container c3 = createContainer(currentContainerId++, true, 3, true);
-    containers.put(c3.getContainerId(), c3);
+      ConcurrentHashMap<ContainerId, Container> containers =
+          new ConcurrentHashMap<>();
+      Container c1 = createContainer(currentContainerId++, false, 1, true);
+      containers.put(c1.getContainerId(), c1);
+      Container c2 = createContainer(currentContainerId++, false, 2, true);
+      containers.put(c2.getContainerId(), c2);
+      Container c3 = createContainer(currentContainerId++, true, 3, true);
+      containers.put(c3.getContainerId(), c3);
 
-    ContainerExecutor ex = createContainerExecutor(containers);
-    Context context = mock(Context.class);
-    when(context.getContainers()).thenReturn(containers);
-    when(context.getContainerExecutor()).thenReturn(ex);
+      ContainerExecutor ex = createContainerExecutor(containers);
+      Context context = mock(Context.class);
+      when(context.getContainers()).thenReturn(containers);
+      when(context.getContainerExecutor()).thenReturn(ex);
 
-    CGroupsHandler cGroupsHandler = mock(CGroupsHandler.class);
-    when(cGroupsHandler.getCGroupParam(
-        CGroupsHandler.CGroupController.MEMORY,
-        "",
-        CGROUP_PARAM_MEMORY_OOM_CONTROL))
-        .thenReturn("under_oom 1")
-        .thenReturn("under_oom 1")
-        .thenReturn("under_oom 1")
-        .thenReturn("under_oom 1");
-    when(cGroupsHandler.getCGroupParam(CGroupsHandler.CGroupController.MEMORY,
-        c1.getContainerId().toString(), CGROUP_PROCS_FILE))
-        .thenReturn("1234").thenReturn("");
-    when(cGroupsHandler.getCGroupParam(CGroupsHandler.CGroupController.MEMORY,
-        c1.getContainerId().toString(), CGROUP_PARAM_MEMORY_USAGE_BYTES))
-        .thenReturn(getMB(9));
-    when(cGroupsHandler.getCGroupParam(CGroupsHandler.CGroupController.MEMORY,
-        c1.getContainerId().toString(), CGROUP_PARAM_MEMORY_MEMSW_USAGE_BYTES))
-        .thenReturn(getMB(9));
-    when(cGroupsHandler.getCGroupParam(CGroupsHandler.CGroupController.MEMORY,
-        c2.getContainerId().toString(), CGROUP_PROCS_FILE))
-        .thenReturn("1235").thenReturn("");
-    when(cGroupsHandler.getCGroupParam(CGroupsHandler.CGroupController.MEMORY,
-        c2.getContainerId().toString(), CGROUP_PARAM_MEMORY_USAGE_BYTES))
-        .thenReturn(getMB(9));
-    when(cGroupsHandler.getCGroupParam(CGroupsHandler.CGroupController.MEMORY,
-        c2.getContainerId().toString(), CGROUP_PARAM_MEMORY_MEMSW_USAGE_BYTES))
-        .thenReturn(getMB(9));
-    when(cGroupsHandler.getCGroupParam(CGroupsHandler.CGroupController.MEMORY,
-        c3.getContainerId().toString(), CGROUP_PROCS_FILE))
-        .thenReturn("1236").thenReturn("");
-    when(cGroupsHandler.getCGroupParam(CGroupsHandler.CGroupController.MEMORY,
-        c3.getContainerId().toString(), CGROUP_PARAM_MEMORY_USAGE_BYTES))
-        .thenReturn(getMB(9));
-    when(cGroupsHandler.getCGroupParam(CGroupsHandler.CGroupController.MEMORY,
-        c3.getContainerId().toString(), CGROUP_PARAM_MEMORY_MEMSW_USAGE_BYTES))
-        .thenReturn(getMB(9));
+      CGroupsHandler cGroupsHandler = mock(CGroupsHandler.class);
+      when(cGroupsHandler.getCGroupParam(
+          CGroupsHandler.CGroupController.MEMORY,
+          "",
+          CGROUP_PARAM_MEMORY_OOM_CONTROL))
+          .thenReturn("under_oom 1")
+          .thenReturn("under_oom 1")
+          .thenReturn("under_oom 1")
+          .thenReturn("under_oom 1");
+      when(cGroupsHandler.getCGroupParam(CGroupsHandler.CGroupController.MEMORY,
+          c1.getContainerId().toString(), CGROUP_PROCS_FILE))
+          .thenReturn("1234").thenReturn("");
+      when(cGroupsHandler.getCGroupParam(CGroupsHandler.CGroupController.MEMORY,
+          c1.getContainerId().toString(), CGROUP_PARAM_MEMORY_USAGE_BYTES))
+          .thenReturn(getMB(9));
+      when(cGroupsHandler.getCGroupParam(CGroupsHandler.CGroupController.MEMORY,
+          c1.getContainerId().toString(), CGROUP_PARAM_MEMORY_MEMSW_USAGE_BYTES))
+          .thenReturn(getMB(9));
+      when(cGroupsHandler.getCGroupParam(CGroupsHandler.CGroupController.MEMORY,
+          c2.getContainerId().toString(), CGROUP_PROCS_FILE))
+          .thenReturn("1235").thenReturn("");
+      when(cGroupsHandler.getCGroupParam(CGroupsHandler.CGroupController.MEMORY,
+          c2.getContainerId().toString(), CGROUP_PARAM_MEMORY_USAGE_BYTES))
+          .thenReturn(getMB(9));
+      when(cGroupsHandler.getCGroupParam(CGroupsHandler.CGroupController.MEMORY,
+          c2.getContainerId().toString(), CGROUP_PARAM_MEMORY_MEMSW_USAGE_BYTES))
+          .thenReturn(getMB(9));
+      when(cGroupsHandler.getCGroupParam(CGroupsHandler.CGroupController.MEMORY,
+          c3.getContainerId().toString(), CGROUP_PROCS_FILE))
+          .thenReturn("1236").thenReturn("");
+      when(cGroupsHandler.getCGroupParam(CGroupsHandler.CGroupController.MEMORY,
+          c3.getContainerId().toString(), CGROUP_PARAM_MEMORY_USAGE_BYTES))
+          .thenReturn(getMB(9));
+      when(cGroupsHandler.getCGroupParam(CGroupsHandler.CGroupController.MEMORY,
+          c3.getContainerId().toString(), CGROUP_PARAM_MEMORY_MEMSW_USAGE_BYTES))
+          .thenReturn(getMB(9));
 
-    DefaultOOMHandler handler =
-        new DefaultOOMHandler(context, false) {
+      DefaultOOMHandler handler = new DefaultOOMHandler(context, false) {
           @Override
           protected CGroupsHandler getCGroupsHandler() {
             return cGroupsHandler;
           }
-        };
-    handler.run();
+      };
+      handler.run();
+    });
   }
 
   private static ContainerId createContainerId(int id) {

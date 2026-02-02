@@ -25,6 +25,7 @@ import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.hdfs.protocol.ZoneReencryptionStatus;
 import org.apache.hadoop.hdfs.server.namenode.ReencryptionHandler.ReencryptionBatch;
+import org.apache.hadoop.hdfs.util.RwLockMode;
 import org.apache.hadoop.ipc.RetriableException;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.StopWatch;
@@ -434,7 +435,7 @@ public final class ReencryptionUpdater implements Runnable {
 
     boolean shouldRetry;
     do {
-      dir.getFSNamesystem().writeLock();
+      dir.getFSNamesystem().writeLock(RwLockMode.FS);
       try {
         throttleTimerLocked.start();
         processTask(task);
@@ -452,7 +453,7 @@ public final class ReencryptionUpdater implements Runnable {
         task.processed = true;
         shouldRetry = false;
       } finally {
-        dir.getFSNamesystem().writeUnlock("reencryptUpdater");
+        dir.getFSNamesystem().writeUnlock(RwLockMode.FS, "reencryptUpdater");
         throttleTimerLocked.stop();
       }
       // logSync regardless, to prevent edit log buffer overflow triggering
@@ -500,7 +501,7 @@ public final class ReencryptionUpdater implements Runnable {
 
   private synchronized void checkPauseForTesting() throws InterruptedException {
     assert !dir.hasWriteLock();
-    assert !dir.getFSNamesystem().hasWriteLock();
+    assert !dir.getFSNamesystem().hasWriteLock(RwLockMode.FS);
     if (pauseAfterNthCheckpoint != 0) {
       ZoneSubmissionTracker tracker =
           handler.unprotectedGetTracker(pauseZoneId);

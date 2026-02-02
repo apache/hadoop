@@ -23,8 +23,6 @@ import java.io.IOException;
 import java.util.EnumSet;
 import java.util.List;
 
-import org.junit.Assert;
-
 import org.apache.avro.AvroRemoteException;
 import org.apache.hadoop.mapreduce.SleepJob;
 import org.apache.hadoop.conf.Configuration;
@@ -47,11 +45,15 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.util.Records;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestMRJobsWithHistoryService {
 
@@ -77,7 +79,7 @@ public class TestMRJobsWithHistoryService {
       new Path("target", TestMRJobs.class.getName() + "-tmpDir"));
   static Path APP_JAR = new Path(TEST_ROOT_DIR, "MRAppJar.jar");
 
-  @Before
+  @BeforeEach
   public void setup() throws InterruptedException, IOException {
 
     if (!(new File(MiniMRYarnCluster.APPJAR)).exists()) {
@@ -98,7 +100,7 @@ public class TestMRJobsWithHistoryService {
     localFs.setPermission(APP_JAR, new FsPermission("700"));
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     if (!(new File(MiniMRYarnCluster.APPJAR)).exists()) {
       LOG.info("MRAppJar " + MiniMRYarnCluster.APPJAR
@@ -111,7 +113,8 @@ public class TestMRJobsWithHistoryService {
     }
   }
 
-  @Test (timeout = 90000)
+  @Test
+  @Timeout(value = 90)
   public void testJobHistoryData() throws IOException, InterruptedException,
       AvroRemoteException, ClassNotFoundException {
     if (!(new File(MiniMRYarnCluster.APPJAR)).exists()) {
@@ -148,14 +151,14 @@ public class TestMRJobsWithHistoryService {
         break;
       }
     }
-    Assert.assertEquals(RMAppState.FINISHED, mrCluster.getResourceManager()
+    assertEquals(RMAppState.FINISHED, mrCluster.getResourceManager()
       .getRMContext().getRMApps().get(appID).getState());
     Counters counterHS = job.getCounters();
     //TODO the Assert below worked. need to check
     //Should we compare each field or convert to V2 counter and compare
     LOG.info("CounterHS " + counterHS);
     LOG.info("CounterMR " + counterMR);
-    Assert.assertEquals(counterHS, counterMR);
+    assertEquals(counterHS, counterMR);
     
     HSClientProtocol historyClient = instantiateHistoryProxy();
     GetJobReportRequest gjReq = Records.newRecord(GetJobReportRequest.class);
@@ -166,16 +169,16 @@ public class TestMRJobsWithHistoryService {
 
   private void verifyJobReport(JobReport jobReport, JobId jobId) {
     List<AMInfo> amInfos = jobReport.getAMInfos();
-    Assert.assertEquals(1, amInfos.size());
+    assertEquals(1, amInfos.size());
     AMInfo amInfo = amInfos.get(0);
     ApplicationAttemptId appAttemptId = ApplicationAttemptId.newInstance(jobId.getAppId(), 1);
     ContainerId amContainerId = ContainerId.newContainerId(appAttemptId, 1);
-    Assert.assertEquals(appAttemptId, amInfo.getAppAttemptId());
-    Assert.assertEquals(amContainerId, amInfo.getContainerId());
-    Assert.assertTrue(jobReport.getSubmitTime() > 0);
-    Assert.assertTrue(jobReport.getStartTime() > 0
+    assertEquals(appAttemptId, amInfo.getAppAttemptId());
+    assertEquals(amContainerId, amInfo.getContainerId());
+    assertTrue(jobReport.getSubmitTime() > 0);
+    assertTrue(jobReport.getStartTime() > 0
         && jobReport.getStartTime() >= jobReport.getSubmitTime());
-    Assert.assertTrue(jobReport.getFinishTime() > 0
+    assertTrue(jobReport.getFinishTime() > 0
         && jobReport.getFinishTime() >= jobReport.getStartTime());
   }
   

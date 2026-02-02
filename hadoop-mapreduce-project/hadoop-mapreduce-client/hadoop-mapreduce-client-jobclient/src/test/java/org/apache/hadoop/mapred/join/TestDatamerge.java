@@ -49,23 +49,24 @@ import org.apache.hadoop.mapred.Utils;
 import org.apache.hadoop.mapred.lib.IdentityMapper;
 import org.apache.hadoop.mapred.lib.IdentityReducer;
 import org.apache.hadoop.util.ReflectionUtils;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertFalse;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestDatamerge {
 
   private static MiniDFSCluster cluster = null;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     Configuration conf = new Configuration();
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
   }
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (cluster != null) {
       cluster.shutdown();
@@ -131,7 +132,7 @@ public class TestDatamerge {
     public void close() { }
     public void configure(JobConf job) {
       srcs = job.getInt("testdatamerge.sources", 0);
-      assertTrue("Invalid src count: " + srcs, srcs > 0);
+      assertTrue(srcs > 0, "Invalid src count: " + srcs);
     }
     public abstract void map(IntWritable key, V val,
         OutputCollector<IntWritable, IntWritable> out, Reporter reporter)
@@ -143,7 +144,7 @@ public class TestDatamerge {
       while (values.hasNext()) {
         seen += values.next().get();
       }
-      assertTrue("Bad count for " + key.get(), verify(key.get(), seen));
+      assertTrue(verify(key.get(), seen), "Bad count for " + key.get());
     }
     public abstract boolean verify(int key, int occ);
   }
@@ -155,10 +156,10 @@ public class TestDatamerge {
         throws IOException {
       int k = key.get();
       final String kvstr = "Unexpected tuple: " + stringify(key, val);
-      assertTrue(kvstr, 0 == k % (srcs * srcs));
+      assertEquals(0, k % (srcs * srcs), kvstr);
       for (int i = 0; i < val.size(); ++i) {
         final int vali = ((IntWritable)val.get(i)).get();
-        assertTrue(kvstr, (vali - i) * srcs == 10 * k);
+        assertEquals((vali - i) * srcs, 10 * k, kvstr);
       }
       out.collect(key, one);
     }
@@ -177,18 +178,18 @@ public class TestDatamerge {
       final String kvstr = "Unexpected tuple: " + stringify(key, val);
       if (0 == k % (srcs * srcs)) {
         for (int i = 0; i < val.size(); ++i) {
-          assertTrue(kvstr, val.get(i) instanceof IntWritable);
+          assertTrue(val.get(i) instanceof IntWritable, kvstr);
           final int vali = ((IntWritable)val.get(i)).get();
-          assertTrue(kvstr, (vali - i) * srcs == 10 * k);
+          assertEquals((vali - i) * srcs, 10 * k, kvstr);
         }
       } else {
         for (int i = 0; i < val.size(); ++i) {
           if (i == k % srcs) {
-            assertTrue(kvstr, val.get(i) instanceof IntWritable);
+            assertTrue(val.get(i) instanceof IntWritable, kvstr);
             final int vali = ((IntWritable)val.get(i)).get();
-            assertTrue(kvstr, srcs * (vali - i) == 10 * (k - i));
+            assertEquals(srcs * (vali - i), 10 * (k - i), kvstr);
           } else {
-            assertTrue(kvstr, !val.has(i));
+            assertFalse(val.has(i), kvstr);
           }
         }
       }
@@ -210,10 +211,10 @@ public class TestDatamerge {
       final int vali = val.get();
       final String kvstr = "Unexpected tuple: " + stringify(key, val);
       if (0 == k % (srcs * srcs)) {
-        assertTrue(kvstr, vali == k * 10 / srcs + srcs - 1);
+        assertEquals(vali, k * 10 / srcs + srcs - 1, kvstr);
       } else {
         final int i = k % srcs;
-        assertTrue(kvstr, srcs * (vali - i) == 10 * (k - i));
+        assertEquals(srcs * (vali - i), 10 * (k - i), kvstr);
       }
       out.collect(key, one);
     }

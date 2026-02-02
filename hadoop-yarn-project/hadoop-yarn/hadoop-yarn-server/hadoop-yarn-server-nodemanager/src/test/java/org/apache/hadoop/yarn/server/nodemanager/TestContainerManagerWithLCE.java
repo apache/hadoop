@@ -20,6 +20,9 @@ package org.apache.hadoop.yarn.server.nodemanager;
 
 import java.io.File;
 import java.io.IOException;
+
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -28,8 +31,8 @@ import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.TestContainerManager;
-import org.junit.After;
-import org.junit.Assume;
+
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class TestContainerManagerWithLCE extends TestContainerManager {
 
@@ -49,10 +52,10 @@ public class TestContainerManagerWithLCE extends TestContainerManager {
         TestContainerManagerWithLCE.class.getName() + "-tmpDir");
   }
 
+  @BeforeEach
   @Override
   public void setup() throws IOException {
-    Assume.assumeTrue("LCE binary path is not passed. Not running the test",
-        shouldRunTest());
+    assumeTrue(shouldRunTest(), "LCE binary path is not passed. Not running the test");
     super.setup();
     localFS.setPermission(new Path(localDir.getCanonicalPath()),
         new FsPermission(
@@ -62,7 +65,7 @@ public class TestContainerManagerWithLCE extends TestContainerManager {
             (short) 0777));
   }
 
-  @After
+  @AfterEach
   @Override
   public void tearDown() throws IOException, InterruptedException {
     if (shouldRunTest()) {

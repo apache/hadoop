@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.federation.store.records;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
 import java.util.List;
@@ -31,7 +31,7 @@ import org.apache.hadoop.hdfs.server.federation.router.RouterServiceState;
 import org.apache.hadoop.hdfs.server.federation.store.StateStoreService;
 import org.apache.hadoop.hdfs.server.federation.store.driver.StateStoreDriver;
 import org.apache.hadoop.hdfs.server.federation.store.driver.StateStoreSerializer;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test the Router State records.

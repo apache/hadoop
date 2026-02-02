@@ -18,13 +18,15 @@
 
 package org.apache.hadoop.fs.azurebfs;
 
+import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.util.Arrays;
 import java.util.HashSet;
 
+import org.apache.commons.codec.binary.Base64;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import org.apache.hadoop.conf.Configuration;
@@ -34,14 +36,18 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsInvalidChecksumException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters;
+import org.apache.hadoop.fs.azurebfs.contracts.services.BlobAppendRequestParameters;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
+import org.apache.hadoop.fs.azurebfs.services.AbfsOutputStream;
 import org.apache.hadoop.fs.impl.OpenFileParameters;
 
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_BUFFERED_PREAD_DISABLE;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.BLOCK_ID_LENGTH;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_MB;
 import static org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters.Mode.APPEND_MODE;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.mockito.ArgumentMatchers.any;
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 /**
  * Test For Verifying Checksum Related Operations
@@ -69,16 +75,19 @@ public class ITestAzureBlobFileSystemChecksum extends AbstractAbfsIntegrationTes
   @Test
   public void testAppendWithChecksumAtDifferentOffsets() throws Exception {
     AzureBlobFileSystem fs = getConfiguredFileSystem(MB_4, MB_4, true);
-    AbfsClient client = fs.getAbfsStore().getClient();
+    if (!getIsNamespaceEnabled(fs)) {
+      assumeThat(isAppendBlobEnabled()).as("Not valid for APPEND BLOB").isFalse();
+    }
+    AbfsClient client = fs.getAbfsStore().getClientHandler().getIngressClient();
     Path path = path("testPath" + getMethodName());
-    fs.create(path);
+    AbfsOutputStream os = (AbfsOutputStream) fs.create(path).getWrappedStream();
     byte[] data = generateRandomBytes(MB_4);
     int pos = 0;
 
-    pos += appendWithOffsetHelper(client, path, data, fs, pos, 0);
-    pos += appendWithOffsetHelper(client, path, data, fs, pos, ONE_MB);
-    pos += appendWithOffsetHelper(client, path, data, fs, pos, MB_2);
-    appendWithOffsetHelper(client, path, data, fs, pos, MB_4 - 1);
+    pos += appendWithOffsetHelper(os, client, path, data, fs, pos, 0, client.computeMD5Hash(data, 0, data.length));
+    pos += appendWithOffsetHelper(os, client, path, data, fs, pos, ONE_MB, client.computeMD5Hash(data, ONE_MB, data.length - ONE_MB));
+    pos += appendWithOffsetHelper(os, client, path, data, fs, pos, MB_2, client.computeMD5Hash(data, MB_2, data.length-MB_2));
+    appendWithOffsetHelper(os, client, path, data, fs, pos, MB_4 - 1, client.computeMD5Hash(data, MB_4 - 1, data.length - (MB_4 - 1)));
     fs.close();
   }
 
@@ -107,16 +116,17 @@ public class ITestAzureBlobFileSystemChecksum extends AbstractAbfsIntegrationTes
   @Test
   public void testAbfsInvalidChecksumExceptionInAppend() throws Exception {
     AzureBlobFileSystem fs = getConfiguredFileSystem(MB_4, MB_4, true);
-    AbfsClient spiedClient = Mockito.spy(fs.getAbfsStore().getClient());
+    AbfsClient spiedClient = Mockito.spy(fs.getAbfsStore().getClientHandler().getIngressClient());
     Path path = path("testPath" + getMethodName());
-    fs.create(path);
+    AbfsOutputStream os = Mockito.spy((AbfsOutputStream) fs.create(path).getWrappedStream());
     byte[] data= generateRandomBytes(MB_4);
     String invalidMD5Hash = spiedClient.computeMD5Hash(
             INVALID_MD5_TEXT.getBytes(), 0, INVALID_MD5_TEXT.length());
     Mockito.doReturn(invalidMD5Hash).when(spiedClient).computeMD5Hash(any(),
         any(Integer.class), any(Integer.class));
+    Mockito.doReturn(invalidMD5Hash).when(os).getMd5();
     AbfsRestOperationException ex = intercept(AbfsInvalidChecksumException.class, () -> {
-      appendWithOffsetHelper(spiedClient, path, data, fs, 0, 0);
+      appendWithOffsetHelper(os, spiedClient, path, data, fs, 0, 0, invalidMD5Hash);
     });
 
     Assertions.assertThat(ex.getErrorCode())
@@ -164,6 +174,20 @@ public class ITestAzureBlobFileSystemChecksum extends AbstractAbfsIntegrationTes
   }
 
   /**
+   * Helper method that generates blockId.
+   * @param position The offset needed to generate blockId.
+   * @return String representing the block ID generated.
+   */
+  private String generateBlockId(AbfsOutputStream os, long position) {
+    String streamId = os.getStreamID();
+    String streamIdHash = Integer.toString(streamId.hashCode());
+    String blockId = String.format("%d_%s", position, streamIdHash);
+    byte[] blockIdByteArray = new byte[BLOCK_ID_LENGTH];
+    System.arraycopy(blockId.getBytes(), 0, blockIdByteArray, 0, Math.min(BLOCK_ID_LENGTH, blockId.length()));
+    return new String(Base64.encodeBase64(blockIdByteArray), StandardCharsets.UTF_8);
+  }
+
+  /**
    * Verify that the checksum computed on client side matches with the one
    * computed at server side. If not, request will fail with 400 Bad request.
    * @param client
@@ -173,10 +197,13 @@ public class ITestAzureBlobFileSystemChecksum extends AbstractAbfsIntegrationTes
    * @param offset
    * @throws Exception
    */
-  private int appendWithOffsetHelper(AbfsClient client, Path path,
-      byte[] data, AzureBlobFileSystem fs, final int pos, final int offset) throws Exception {
+  private int appendWithOffsetHelper(AbfsOutputStream os, AbfsClient client, Path path,
+      byte[] data, AzureBlobFileSystem fs, final int pos, final int offset, String md5) throws Exception {
+    String blockId = generateBlockId(os, pos);
+    String eTag = os.getIngressHandler().getETag();
     AppendRequestParameters reqParams = new AppendRequestParameters(
-        pos, offset, data.length - offset, APPEND_MODE, isAppendBlobEnabled(), null, true);
+        pos, offset, data.length - offset, APPEND_MODE, isAppendBlobEnabled(), null, true,
+        new BlobAppendRequestParameters(blockId, eTag), md5);
     client.append(path.toUri().getPath(), data, reqParams, null, null,
         getTestTracingContext(fs, false));
     return reqParams.getLength();

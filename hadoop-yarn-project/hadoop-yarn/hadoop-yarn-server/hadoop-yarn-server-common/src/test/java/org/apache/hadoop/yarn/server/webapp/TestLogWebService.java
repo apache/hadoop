@@ -24,9 +24,8 @@ import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntityType;
 import org.apache.hadoop.yarn.server.metrics.ApplicationMetricsConstants;
 import org.apache.hadoop.yarn.server.metrics.ContainerMetricsConstants;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import javax.servlet.http.HttpServletRequest;
@@ -34,6 +33,8 @@ import javax.ws.rs.core.MultivaluedMap;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * test class for log web service.
@@ -48,7 +49,7 @@ public class TestLogWebService {
   private Map<String, TimelineEntity> entities;
   private String nodeHttpAddress = "localhost:0";
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     appId = ApplicationId.fromString("application_1518143905142_509690");
     cId =
@@ -66,8 +67,8 @@ public class TestLogWebService {
   public void testGetApp() {
     BasicAppInfo app =
         logWebService.getApp(request, appId.toString(), null);
-    Assert.assertEquals("RUNNING", app.getAppState().toString());
-    Assert.assertEquals(user, app.getUser());
+    assertEquals("RUNNING", app.getAppState().toString());
+    assertEquals(user, app.getUser());
   }
 
   @Test
@@ -75,7 +76,7 @@ public class TestLogWebService {
     String address = logWebService
         .getNodeHttpAddress(request, appId.toString(), null, cId.toString(),
             null);
-    Assert.assertEquals(this.nodeHttpAddress, address);
+    assertEquals(this.nodeHttpAddress, address);
   }
 
   class LogWebServiceTest extends LogWebService {

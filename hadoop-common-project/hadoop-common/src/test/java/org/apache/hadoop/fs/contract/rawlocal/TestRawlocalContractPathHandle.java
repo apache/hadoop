@@ -18,17 +18,13 @@
 package org.apache.hadoop.fs.contract.rawlocal;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.contract.AbstractContractPathHandleTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
-import org.apache.hadoop.fs.contract.rawlocal.RawlocalFSContract;
 
 public class TestRawlocalContractPathHandle
     extends AbstractContractPathHandleTest {
 
-  public TestRawlocalContractPathHandle(String testname,
-      Options.HandleOpt[] opts, boolean serialized) {
-    super(testname, opts, serialized);
+  public TestRawlocalContractPathHandle() {
   }
 
   @Override

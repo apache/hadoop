@@ -129,10 +129,11 @@ as implicitly set in `pos`.
 #### Preconditions
 
     isOpen(FSDIS)
-    buffer != null else raise NullPointerException
-    length >= 0
-    offset < len(buffer)
-    length <= len(buffer) - offset
+    buffer != null else raise NullPointerException, IllegalArgumentException
+    offset >= 0 else raise IndexOutOfBoundsException
+    length >= 0 else raise IndexOutOfBoundsException, IllegalArgumentException
+    offset < len(buffer) else raise IndexOutOfBoundsException
+    length <= len(buffer) - offset else raise IndexOutOfBoundsException
     pos >= 0 else raise EOFException, IOException
 
 Exceptions that may be raised on precondition failure are
@@ -174,6 +175,19 @@ What is critical is that unless the destination buffer size is 0, the call
 must block until at least one byte is returned. Thus, for any data source
 of length greater than zero, repeated invocations of this `read()` operation
 will eventually read all the data.
+
+#### Implementation Notes
+
+1. If the caller passes a `null` buffer, then an unchecked exception MUST be thrown. The base JDK
+`InputStream` implementation throws `NullPointerException`. HDFS historically used
+`IllegalArgumentException`. Implementations MAY use either of these.
+1. If the caller passes a negative value for `length`, then an unchecked exception MUST be thrown.
+The base JDK `InputStream` implementation throws `IndexOutOfBoundsException`. HDFS historically used
+`IllegalArgumentException`. Implementations MAY use either of these.
+1. Reads through any method MUST return the same data.
+1. Callers MAY interleave calls to different read methods (single-byte and multi-byte) on the same
+stream. The stream MUST return the same underlying data, regardless of the specific read calls or
+their ordering.
 
 ### <a name="Seekable.seek"></a>`Seekable.seek(s)`
 
@@ -527,7 +541,7 @@ end of first and start of next range is more than this value.
 #### `maxReadSizeForVectorReads()`
 
 Maximum number of bytes which can be read in one go after merging the ranges.
-Two ranges won't be merged if the combined data to be read It's okay we have a look at what we do right now for readOkayis more than this value.
+Two ranges won't be merged if the combined data to be read.
 Essentially setting this to 0 will disable the merging of ranges.
 
 #### Concurrency
@@ -633,7 +647,7 @@ For details see [HADOOP-19291](https://issues.apache.org/jira/browse/HADOOP-1929
 For reliable use with older hadoop releases with the API: sort the list of ranges
 and check for overlaps before calling `readVectored()`.
 
-*Direct Buffer Reads*
+#### Direct Buffer Reads
 
 Releases without [HADOOP-19101](https://issues.apache.org/jira/browse/HADOOP-19101)
 _Vectored Read into off-heap buffer broken in fallback implementation_ can read data
@@ -651,6 +665,77 @@ support through an explicit `hasCapability()` probe:
 Stream.hasCapability("in:readvectored")
 ```
 
-Given the HADOOP-18296 problem with `ChecksumFileSystem` and direct buffers, across all releases,
-it is best to avoid using this API in production with direct buffers.
+#### Buffer Slicing
+
+[HADOOP-18296](https://issues.apache.org/jira/browse/HADOOP-18296),
+_Memory fragmentation in ChecksumFileSystem Vectored IO implementation_
+highlights that `ChecksumFileSystem` (which the default implementation of `file://`
+subclasses), may return buffers which are sliced subsets of buffers allocated
+through the `allocate()` function passed in.
+
+This will happen during reads with and without range coalescing.
+
+Checksum verification may be disabled by setting the option
+`fs.file.checksum.verify` to false (Hadoop 3.4.2 and later).
+
+```xml
+<property>
+  <name>fs.file.checksum.verify</name>
+  <value>false</value>
+</property>
+```
+
+(As you would expect, disabling checksum verification means that errors
+reading data may not be detected during the read operation.
+Use with care in production.)
+
+Filesystem instances which split buffers during vector read operations
+MUST declare this by returning `true`
+to the path capabilities probe `fs.capability.vectoredio.sliced`,
+and for the open stream in its `hasCapability()` method.
+
+
+The local filesystem will not slice buffers if the checksum file
+of `filename + ".crc"` is not found. This is not declared in the
+filesystem `hasPathCapability(filename, "fs.capability.vectoredio.sliced")`
+call, as no checks for the checksum file are made then.
+This cannot be relied on in production, but it may be useful when
+testing for buffer recycling with Hadoop releases 3.4.1 and earlier.
+
+*Implementors Notes*
+
+* Don't slice buffers. `ChecksumFileSystem` has to be considered an outlier which
+  needs to be addressed in future.
+* Always free buffers in error handling code paths.
+* When handling errors in coalesced ranges, don't release buffers for any sub-ranges
+  which have already completed.
+
+Handling failures in coalesced ranges is complicated. Recent implementations, such as
+`org.apache.hadoop.fs.s3a.impl.streams.AnalyticsStream` omit range coalescing,
+relying solely on parallel HTTP for performance.
+
+
+## `void readVectored(List<? extends FileRange> ranges, IntFunction<ByteBuffer> allocate, Consumer<ByteBuffer> release)`
+
+This is the extension of `readVectored/2` with an additional `release` consumer operation to release buffers.
+
+The specification and rules of this method are exactly those of the other operation, with
+the addition of:
+
+Preconditions
+```
+if release = null raise NullPointerException
+```
+
+* If a read operation fails due to an `IOException` or similar, the implementation of `readVectored()`,
+  SHOULD call `release(buffer)` with the buffer created by invoking the `allocate()` function into which
+  the data was being read.
+* Implementations MUST NOT call `release(buffer)` with any non-null buffer _not_ obtained through `allocate()`.
+* Implementations MUST only call `release(buffer)` when a failure has occurred and the future is about to have `Future.completedExceptionally()` invoked.
+
+It is an extension to the original Vector Read API -not all versions of Hadoop with the original `readVectored()` call define it.
+If used directly in application code, that application is restricting itself to later versions
+of the API.
+
+If used via reflection, if this method is not found, fall back to the original method.
 

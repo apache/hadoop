@@ -18,9 +18,17 @@
 
 package org.apache.hadoop.fs.s3a.audit.impl;
 
+import java.util.EnumSet;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.s3a.audit.AuditIntegration;
+import org.apache.hadoop.fs.s3a.audit.AuditorFlags;
 import org.apache.hadoop.fs.s3a.audit.OperationAuditor;
 import org.apache.hadoop.fs.s3a.audit.OperationAuditorOptions;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
@@ -37,6 +45,9 @@ import static java.util.Objects.requireNonNull;
  */
 public abstract class AbstractOperationAuditor extends AbstractService
     implements OperationAuditor {
+
+  private static final Logger LOG =
+      LoggerFactory.getLogger(AbstractOperationAuditor.class);
 
   /**
    * Base of IDs is a UUID.
@@ -61,6 +72,11 @@ public abstract class AbstractOperationAuditor extends AbstractService
   private OperationAuditorOptions options;
 
   /**
+   * Should out of span requests be rejected?
+   */
+  private AtomicBoolean rejectOutOfSpan = new AtomicBoolean(false);
+
+  /**
    * Auditor ID as a UUID.
    */
   private final UUID auditorUUID = UUID.randomUUID();
@@ -70,6 +86,11 @@ public abstract class AbstractOperationAuditor extends AbstractService
    * in request contexts.
    */
   private final String auditorID = auditorUUID.toString();
+
+  /**
+   * Audit flags which can be passed down to subclasses.
+   */
+  private EnumSet<AuditorFlags> auditorFlags;
 
   /**
    * Construct.
@@ -89,6 +110,15 @@ public abstract class AbstractOperationAuditor extends AbstractService
     this.options = opts;
     this.iostatistics = requireNonNull(opts.getIoStatisticsStore());
     init(opts.getConfiguration());
+  }
+
+  @Override
+  protected void serviceInit(final Configuration conf) throws Exception {
+    super.serviceInit(conf);
+    setRejectOutOfSpan(AuditIntegration.isRejectOutOfSpan(conf));
+    LOG.debug("{}: Out of span operations will be {}",
+        getName(),
+        isRejectOutOfSpan() ? "rejected" : "ignored");
   }
 
   @Override
@@ -120,4 +150,53 @@ public abstract class AbstractOperationAuditor extends AbstractService
     return String.format("%s-%08d",
         auditorID, SPAN_ID_COUNTER.incrementAndGet());
   }
+
+  /**
+   * Should out of scope ops be rejected?
+   * @return true if out of span calls should be rejected.
+   */
+  protected boolean isRejectOutOfSpan() {
+    return rejectOutOfSpan.get();
+  }
+
+  /**
+   * Enable/disable out of span rejection.
+   * @param rejectOutOfSpan new value.
+   */
+  protected void setRejectOutOfSpan(boolean rejectOutOfSpan) {
+    this.rejectOutOfSpan.set(rejectOutOfSpan);
+  }
+
+  /**
+   * Update Auditor flags.
+   * Calls {@link #auditorFlagsChanged(EnumSet)} after the update.
+   * @param flags audit flags.
+   */
+  @Override
+  public void setAuditFlags(final EnumSet<AuditorFlags> flags) {
+    auditorFlags = flags;
+    auditorFlagsChanged(flags);
+  }
+
+  /**
+   * Get the current set of auditor flags.
+   *
+   * @return the current set of auditor flags.
+   */
+  public EnumSet<AuditorFlags> getAuditorFlags() {
+    return auditorFlags;
+  }
+
+  /**
+   * Notification that the auditor flags have been updated.
+   * @param flags audit flags.
+   */
+  protected void auditorFlagsChanged(EnumSet<AuditorFlags> flags) {
+    // if out of band operations are allowed, configuration settings are overridden
+    if (flags.contains(AuditorFlags.PermitOutOfBandOperations)) {
+      LOG.debug("Out of span operations are required by the stream factory");
+      setRejectOutOfSpan(false);
+    }
+  }
+
 }

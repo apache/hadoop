@@ -27,18 +27,20 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStoreTestBase.TestDispatcher;
 import org.apache.hadoop.util.ZKUtil;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 
 import org.apache.zookeeper.server.auth.DigestAuthenticationProvider;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.security.NoSuchAlgorithmException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class TestZKRMStateStoreZKClientConnections {
   private static final Logger LOG =
@@ -60,13 +62,13 @@ public class TestZKRMStateStoreZKClientConnections {
 
   private TestingServer testingServer;
 
-  @Before
+  @BeforeEach
   public void setupZKServer() throws Exception {
     testingServer = new TestingServer();
     testingServer.start();
   }
 
-  @After
+  @AfterEach
   public void cleanupZKServer() throws Exception {
     testingServer.stop();
   }
@@ -96,7 +98,8 @@ public class TestZKRMStateStoreZKClientConnections {
     }
   }
 
-  @Test (timeout = 20000)
+  @Test
+  @Timeout(value = 20)
   public void testZKClientRetry() throws Exception {
     TestZKClient zkClientTester = new TestZKClient();
     final String path = "/test";
@@ -110,9 +113,9 @@ public class TestZKRMStateStoreZKClientConnections {
     final AtomicBoolean assertionFailedInThread = new AtomicBoolean(false);
 
     testingServer.stop();
-    Thread clientThread = new Thread() {
+    SubjectInheritingThread clientThread = new SubjectInheritingThread() {
       @Override
-      public void run() {
+      public void work() {
         try {
           store.getData(path);
         } catch (Exception e) {
@@ -124,10 +127,11 @@ public class TestZKRMStateStoreZKClientConnections {
     Thread.sleep(2000);
     testingServer.start();
     clientThread.join();
-    Assert.assertFalse(assertionFailedInThread.get());
+    assertFalse(assertionFailedInThread.get());
   }
 
-  @Test(timeout = 20000)
+  @Test
+  @Timeout(value = 20)
   public void testSetZKAcl() {
     TestZKClient zkClientTester = new TestZKClient();
     YarnConfiguration conf = new YarnConfiguration();
@@ -140,7 +144,8 @@ public class TestZKRMStateStoreZKClientConnections {
     }
   }
 
-  @Test(timeout = 20000)
+  @Test
+  @Timeout(value = 20)
   public void testInvalidZKAclConfiguration() {
     TestZKClient zkClientTester = new TestZKClient();
     YarnConfiguration conf = new YarnConfiguration();

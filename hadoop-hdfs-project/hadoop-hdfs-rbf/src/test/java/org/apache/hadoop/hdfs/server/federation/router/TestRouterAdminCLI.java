@@ -18,10 +18,10 @@
 package org.apache.hadoop.hdfs.server.federation.router;
 
 import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.createNamenodeReport;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -63,10 +63,10 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.Whitebox;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import java.util.function.Supplier;
@@ -90,7 +90,7 @@ public class TestRouterAdminCLI {
   private static final PrintStream OLD_OUT = System.out;
   private static final PrintStream OLD_ERR = System.err;
 
-  @BeforeClass
+  @BeforeAll
   public static void globalSetUp() throws Exception {
     cluster = new StateStoreDFSCluster(false, 1,
         MultipleDestinationMountTableResolver.class);
@@ -145,14 +145,14 @@ public class TestRouterAdminCLI {
 
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownCluster() {
     cluster.stopRouter(routerContext);
     cluster.shutdown();
     cluster = null;
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     // set back system out/err
     System.setOut(OLD_OUT);
@@ -214,8 +214,8 @@ public class TestRouterAdminCLI {
     System.setOut(new PrintStream(out));
     assertEquals(0, ToolRunner.run(admin, argv));
     String response = out.toString();
-    assertTrue("The response should have " + src + ": " + response, response.contains(src));
-    assertTrue("The response should have " + dest + ": " + response, response.contains(dest));
+    assertTrue(response.contains(src), "The response should have " + src + ": " + response);
+    assertTrue(response.contains(dest), "The response should have " + dest + ": " + response);
   }
 
   @Test
@@ -347,21 +347,21 @@ public class TestRouterAdminCLI {
     argv = new String[] {"-ls", src};
     assertEquals(0, ToolRunner.run(admin, argv));
     String response = out.toString();
-    assertTrue("Wrong response: " + response, response.contains(src));
+    assertTrue(response.contains(src), "Wrong response: " + response);
 
     // Test with not-normalized src input
     argv = new String[] {"-ls", srcWithSlash};
     assertEquals(0, ToolRunner.run(admin, argv));
     response = out.toString();
-    assertTrue("Wrong response: " + response, response.contains(src));
+    assertTrue(response.contains(src), "Wrong response: " + response);
 
     // Test with wrong number of arguments
     argv = new String[] {"-ls", srcWithSlash, "check", "check2"};
     System.setErr(new PrintStream(err));
     ToolRunner.run(admin, argv);
     response = err.toString();
-    assertTrue("Wrong response: " + response,
-        response.contains("Too many arguments, Max=2 argument allowed"));
+    assertTrue(response.contains("Too many arguments, Max=2 argument allowed"),
+        "Wrong response: " + response);
 
     out.reset();
     GetMountTableEntriesRequest getRequest = GetMountTableEntriesRequest
@@ -374,11 +374,10 @@ public class TestRouterAdminCLI {
     argv = new String[] {"-ls"};
     assertEquals(0, ToolRunner.run(admin, argv));
     response = out.toString();
-    assertTrue("Wrong response: " + response, response.contains(src));
+    assertTrue(response.contains(src), "Wrong response: " + response);
     // verify if all the mount table are listed
     for (MountTable entry : getResponse.getEntries()) {
-      assertTrue("Wrong response: " + response,
-          response.contains(entry.getSourcePath()));
+      assertTrue(response.contains(entry.getSourcePath()), "Wrong response: " + response);
     }
   }
 
@@ -403,9 +402,8 @@ public class TestRouterAdminCLI {
     argv = new String[] {"-ls", "-d"};
     assertEquals(0, ToolRunner.run(admin, argv));
     response =  out.toString();
-    assertTrue("Wrong response: " + response, response.contains("Read-Only"));
-    assertTrue("Wrong response: " + response,
-        response.contains("Fault-Tolerant"));
+    assertTrue(response.contains("Read-Only"), "Wrong response: " + response);
+    assertTrue(response.contains("Fault-Tolerant"), "Wrong response: " + response);
   }
 
   @Test
@@ -581,8 +579,8 @@ public class TestRouterAdminCLI {
       // update mount table using normal user
       argv = new String[]{"-update", "/testpath3-1", "ns0", "/testdir3-2",
           "-owner", TEST_USER, "-group", TEST_USER, "-mode", "777"};
-      assertEquals("Normal user update mount table which created by " +
-          "superuser unexpected.", -1, ToolRunner.run(admin, argv));
+      assertEquals(-1, ToolRunner.run(admin, argv), "Normal user update mount table " +
+          "which created by superuser unexpected.");
     } finally {
       // set back login user
       UserGroupInformation.setLoginUser(superUser);
@@ -610,8 +608,7 @@ public class TestRouterAdminCLI {
 
       String[] argv = new String[]{"-add", "/testpath4-1", "ns0", "/testdir4-1",
           "-owner", testUserA, "-group", testGroup, "-mode", "775"};
-      assertEquals("Normal user can't add mount table unexpected.", 0,
-          ToolRunner.run(admin, argv));
+      assertEquals(0, ToolRunner.run(admin, argv), "Normal user can't add mount table unexpected.");
 
       stateStore.loadCache(MountTableStoreImpl.class, true);
       // update mount point with userb which is same group with owner.
@@ -620,8 +617,8 @@ public class TestRouterAdminCLI {
       UserGroupInformation.setLoginUser(userB);
       argv = new String[]{"-update", "/testpath4-1", "ns0", "/testdir4-2",
           "-owner", testUserA, "-group", testGroup, "-mode", "775"};
-      assertEquals("Another user in same group can't update mount table " +
-          "unexpected.", 0, ToolRunner.run(admin, argv));
+      assertEquals(0, ToolRunner.run(admin, argv), "Another user in same group can't update " +
+          "mount table unexpected.");
 
       stateStore.loadCache(MountTableStoreImpl.class, true);
       // update mount point with userc which is not same group with owner.
@@ -630,9 +627,9 @@ public class TestRouterAdminCLI {
       UserGroupInformation.setLoginUser(userC);
       argv = new String[]{"-update", "/testpath4-1", "ns0", "/testdir4-3",
           "-owner", testUserA, "-group", testGroup, "-mode", "775"};
-      assertEquals("Another user not in same group have no permission but " +
-              "update mount table successful unexpected.", -1,
-          ToolRunner.run(admin, argv));
+      assertEquals(-1, ToolRunner.run(admin, argv),
+          "Another user not in same group have no " +
+              "permission but update mount table successful unexpected.");
 
       stateStore.loadCache(MountTableStoreImpl.class, true);
       // add mount point with userd but immediate parent of mount point
@@ -643,8 +640,7 @@ public class TestRouterAdminCLI {
       argv = new String[]{"-add", "/testpath4-1/foo/bar", "ns0",
           "/testdir4-1/foo/bar", "-owner", testUserD, "-group", testGroup,
           "-mode", "775"};
-      assertEquals("Normal user can't add mount table unexpected.", 0,
-          ToolRunner.run(admin, argv));
+      assertEquals(0, ToolRunner.run(admin, argv), "Normal user can't add mount table unexpected.");
 
       // test remove mount point with userc.
       UserGroupInformation.setLoginUser(userC);
@@ -653,8 +649,8 @@ public class TestRouterAdminCLI {
 
       // test remove mount point with userb.
       UserGroupInformation.setLoginUser(userB);
-      assertEquals("Another user in same group can't remove mount table " +
-          "unexpected.", 0, ToolRunner.run(admin, argv));
+      assertEquals(0, ToolRunner.run(admin, argv), "Another user in same group can't " +
+          "remove mount table unexpected.");
     } finally {
       // set back login user
       UserGroupInformation.setLoginUser(superUser);
@@ -685,13 +681,13 @@ public class TestRouterAdminCLI {
       UserGroupInformation.setLoginUser(superUser);
       argv = new String[]{"-update", "/testpath5-1", "ns0", "/testdir5-2",
           "-owner", testUserA, "-group", testGroup, "-mode", "755"};
-      assertEquals("Super user can't update mount table unexpected.", 0,
-          ToolRunner.run(admin, argv));
+      assertEquals(0, ToolRunner.run(admin, argv),
+          "Super user can't update mount table unexpected.");
 
       // test remove mount point with super user.
       argv = new String[]{"-rm", "/testpath5-1"};
-      assertEquals("Super user can't remove mount table unexpected.", 0,
-          ToolRunner.run(admin, argv));
+      assertEquals(0, ToolRunner.run(admin, argv),
+          "Super user can't remove mount table unexpected.");
     } finally {
       // set back login user
       UserGroupInformation.setLoginUser(superUser);
@@ -817,20 +813,20 @@ public class TestRouterAdminCLI {
     System.setOut(new PrintStream(out));
     String[] argv = new String[] {"-add", src, nsId};
     assertEquals(-1, ToolRunner.run(admin, argv));
-    assertTrue("Wrong message: " + out, out.toString().contains(
+    assertTrue(out.toString().contains(
         "\t[-add <source> <nameservice1, nameservice2, ...> <destination> "
             + "[-readonly] [-faulttolerant] "
             + "[-order HASH|LOCAL|RANDOM|HASH_ALL|SPACE|LEADER_FOLLOWER] "
-            + "-owner <owner> -group <group> -mode <mode>]"));
+            + "-owner <owner> -group <group> -mode <mode>]"), "Wrong message: " + out);
     out.reset();
 
     argv = new String[] {"-update", src, nsId};
     assertEquals(-1, ToolRunner.run(admin, argv));
-    assertTrue("Wrong message: " + out, out.toString().contains(
+    assertTrue(out.toString().contains(
         "\t[-update <source> [<nameservice1, nameservice2, ...> <destination>] "
             + "[-readonly true|false] [-faulttolerant true|false] "
             + "[-order HASH|LOCAL|RANDOM|HASH_ALL|SPACE|LEADER_FOLLOWER] "
-            + "-owner <owner> -group <group> -mode <mode>]"));
+            + "-owner <owner> -group <group> -mode <mode>]"), "Wrong message: " + out);
     out.reset();
 
     argv = new String[] {"-rm"};
@@ -904,7 +900,7 @@ public class TestRouterAdminCLI {
         + "\t[-getDisabledNameservices]\n"
         + "\t[-refresh]\n"
         + "\t[-refreshRouterArgs <host:ipc_port> <key> [arg1..argn]]";
-    assertTrue("Wrong message: " + out, out.toString().contains(expected));
+    assertTrue(out.toString().contains(expected), "Wrong message: " + out);
     out.reset();
   }
 
@@ -1144,14 +1140,12 @@ public class TestRouterAdminCLI {
     out.reset();
     assertEquals(-1, ToolRunner.run(admin,
         new String[] {"-safemode", "get", "-random", "check" }));
-    assertTrue(err.toString(), err.toString()
-        .contains("safemode: Too many arguments, Max=1 argument allowed only"));
+    assertTrue(err.toString()
+        .contains("safemode: Too many arguments, Max=1 argument allowed only"), err.toString());
     err.reset();
 
-    assertEquals(-1,
-        ToolRunner.run(admin, new String[] {"-safemode", "check" }));
-    assertTrue(err.toString(),
-        err.toString().contains("safemode: Invalid argument: check"));
+    assertEquals(-1, ToolRunner.run(admin, new String[] {"-safemode", "check" }));
+    assertTrue(err.toString().contains("safemode: Invalid argument: check"), err.toString());
     err.reset();
   }
 
@@ -1170,8 +1164,7 @@ public class TestRouterAdminCLI {
     RBFMetrics metrics = router.getMetrics();
     String jsonString = metrics.getRouterStatus();
     String result = router.getNamenodeMetrics().getSafemode();
-    assertTrue("Wrong safe mode message: " + result,
-        result.startsWith("Safe mode is ON."));
+    assertTrue(result.startsWith("Safe mode is ON."), "Wrong safe mode message: " + result);
 
     // verify state using RBFMetrics
     assertEquals(RouterServiceState.SAFEMODE.toString(), jsonString);
@@ -1183,7 +1176,7 @@ public class TestRouterAdminCLI {
         ToolRunner.run(admin, new String[] {"-safemode", "leave" }));
     jsonString = metrics.getRouterStatus();
     result = router.getNamenodeMetrics().getSafemode();
-    assertEquals("Wrong safe mode message: " + result, "", result);
+    assertEquals("", result, "Wrong safe mode message: " + result);
 
     // verify state
     assertEquals(RouterServiceState.RUNNING.toString(), jsonString);
@@ -1273,8 +1266,7 @@ public class TestRouterAdminCLI {
     System.setOut(new PrintStream(out));
     assertEquals(0, ToolRunner.run(admin,
         new String[] {"-getDisabledNameservices"}));
-    assertTrue("ns0 should be reported: " + out,
-        out.toString().contains("ns0"));
+    assertTrue(out.toString().contains("ns0"), "ns0 should be reported: " + out);
 
     // Enable a name service and check if it's there
     assertEquals(0, ToolRunner.run(admin,
@@ -1284,22 +1276,20 @@ public class TestRouterAdminCLI {
     stateStore.loadCache(DisabledNameserviceStoreImpl.class, true);
     assertEquals(0, ToolRunner.run(admin,
         new String[] {"-getDisabledNameservices"}));
-    assertFalse("ns0 should not be reported: " + out,
-        out.toString().contains("ns0"));
+    assertFalse(out.toString().contains("ns0"), "ns0 should not be reported: " + out);
 
     // Wrong commands
     System.setErr(new PrintStream(err));
     assertEquals(-1, ToolRunner.run(admin,
         new String[] {"-nameservice", "enable"}));
     String msg = "Not enough parameters specificed for cmd -nameservice";
-    assertTrue("Got error: " + err.toString(),
-        err.toString().startsWith(msg));
+    assertTrue(err.toString().startsWith(msg), "Got error: " + err.toString());
 
     err.reset();
     assertEquals(-1, ToolRunner.run(admin,
         new String[] {"-nameservice", "wrong", "ns0"}));
-    assertTrue("Got error: " + err.toString(),
-        err.toString().startsWith("nameservice: Unknown command: wrong"));
+    assertTrue(err.toString().startsWith("nameservice: Unknown command: wrong"),
+        "Got error: " + err.toString());
 
     err.reset();
     ToolRunner.run(admin,
@@ -1357,8 +1347,8 @@ public class TestRouterAdminCLI {
     String[] argv = new String[] {"-update", src, nsId, dest};
     // Update shall fail if the mount entry doesn't exist.
     assertEquals(-1, ToolRunner.run(admin, argv));
-    assertTrue(err.toString(), err.toString()
-        .contains("update: /test-updateNonExistingMounttable doesn't exist."));
+    assertTrue(err.toString()
+        .contains("update: /test-updateNonExistingMounttable doesn't exist."), err.toString());
   }
 
   @Test
@@ -1510,30 +1500,28 @@ public class TestRouterAdminCLI {
     argv = new String[] {"-update", "/noMount", "-readonly", "false"};
     System.setErr(new PrintStream(err));
     assertEquals(-1, ToolRunner.run(admin, argv));
-    assertTrue(err.toString(),
-        err.toString().contains("update: /noMount doesn't exist."));
+    assertTrue(err.toString().contains("update: /noMount doesn't exist."), err.toString());
     err.reset();
 
     // Check update if no true/false value is passed for readonly.
     argv = new String[] {"-update", src, "-readonly", "check"};
     assertEquals(-1, ToolRunner.run(admin, argv));
-    assertTrue(err.toString(), err.toString().contains("update: "
-        + "Invalid argument: check. Please specify either true or false."));
+    assertTrue(err.toString().contains("update: "
+        + "Invalid argument: check. Please specify either true or false."), err.toString());
     err.reset();
 
     // Check update with missing value is passed for faulttolerant.
     argv = new String[] {"-update", src, "ns1", "/tmp", "-faulttolerant"};
     assertEquals(-1, ToolRunner.run(admin, argv));
-    assertTrue(err.toString(),
-        err.toString().contains("update: Unable to parse arguments:"
-            + " no value provided for -faulttolerant"));
+    assertTrue(err.toString().contains("update: Unable to parse arguments:"
+            + " no value provided for -faulttolerant"), err.toString());
     err.reset();
 
     // Check update with invalid order.
     argv = new String[] {"-update", src, "ns1", "/tmp", "-order", "Invalid"};
     assertEquals(-1, ToolRunner.run(admin, argv));
-    assertTrue(err.toString(), err.toString().contains(
-        "update: Unable to parse arguments: Cannot parse order: Invalid"));
+    assertTrue(err.toString().contains(
+        "update: Unable to parse arguments: Cannot parse order: Invalid"), err.toString());
     err.reset();
   }
 
@@ -1752,9 +1740,9 @@ public class TestRouterAdminCLI {
         counter.put(nsId, new AtomicInteger(1));
       }
     }
-    assertEquals("Wrong counter size: " + counter, 2, counter.size());
-    assertTrue(counter + " should contain ns0", counter.containsKey("ns0"));
-    assertTrue(counter + " should contain ns1", counter.containsKey("ns1"));
+    assertEquals(2, counter.size(), "Wrong counter size: " + counter);
+    assertTrue(counter.containsKey("ns0"), counter + " should contain ns0");
+    assertTrue(counter.containsKey("ns1"), counter + " should contain ns1");
 
     // Bad cases
     argv = new String[] {"-getDestination"};
@@ -1770,16 +1758,16 @@ public class TestRouterAdminCLI {
     String[] argv = new String[] {"-add", "/mntft", "ns01", "/tmp",
         "-faulttolerant"};
     assertEquals(-1, ToolRunner.run(admin, argv));
-    assertTrue(err.toString(), err.toString().contains(
-        "Invalid entry, fault tolerance requires multiple destinations"));
+    assertTrue(err.toString().contains(
+        "Invalid entry, fault tolerance requires multiple destinations"), err.toString());
     err.reset();
 
     System.setErr(new PrintStream(err));
     argv = new String[] {"-add", "/mntft", "ns0,ns1", "/tmp",
         "-order", "HASH", "-faulttolerant"};
     assertEquals(-1, ToolRunner.run(admin, argv));
-    assertTrue(err.toString(), err.toString().contains(
-        "Invalid entry, fault tolerance only supported for ALL order"));
+    assertTrue(err.toString().contains(
+        "Invalid entry, fault tolerance only supported for ALL order"), err.toString());
     err.reset();
 
     argv = new String[] {"-add", "/mntft", "ns0,ns1", "/tmp",
@@ -1946,8 +1934,8 @@ public class TestRouterAdminCLI {
     // mount points were already added
     assertNotEquals(0, ToolRunner.run(admin, argv));
 
-    assertTrue("The error message should return failed entries",
-        err.toString().contains("Cannot add mount points: [/testAddMultiMountPoints-01"));
+    assertTrue(err.toString().contains("Cannot add mount points: [/testAddMultiMountPoints-01"),
+        "The error message should return failed entries");
   }
 
   private void addMountTable(String src, String nsId, String dst)

@@ -18,10 +18,10 @@
 
 package org.apache.hadoop.yarn.server.utils;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.lang.reflect.InvocationHandler;
@@ -31,7 +31,7 @@ import java.lang.reflect.Proxy;
 
 import org.iq80.leveldb.DBException;
 import org.iq80.leveldb.DBIterator;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class TestLeveldbIterator {
   private static class CallInfo {
@@ -79,16 +79,16 @@ public class TestLeveldbIterator {
     LeveldbIterator iter = new LeveldbIterator(dbiter);
     for (CallInfo ci : RTEXC_METHODS) {
       Method method = iter.getClass().getMethod(ci.methodName, ci.argTypes);
-      assertNotNull("unable to locate method " + ci.methodName, method);
+      assertNotNull(method, "unable to locate method " + ci.methodName);
       try {
         method.invoke(iter, ci.args);
         fail("operation should have thrown");
       } catch (InvocationTargetException ite) {
         Throwable exc = ite.getTargetException();
-        assertTrue("Method " + ci.methodName + " threw non-DBException: "
-            + exc, exc instanceof DBException);
-        assertFalse("Method " + ci.methodName + " double-wrapped DBException",
-            exc.getCause() instanceof DBException);
+        assertTrue(exc instanceof DBException,
+            "Method " + ci.methodName + " threw non-DBException: " + exc);
+        assertFalse(exc.getCause() instanceof DBException,
+            "Method " + ci.methodName + " double-wrapped DBException");
       }
     }
 

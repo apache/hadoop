@@ -22,7 +22,8 @@ import static org.apache.hadoop.fs.permission.AclEntryType.*;
 import static org.apache.hadoop.fs.permission.FsAction.*;
 import static org.apache.hadoop.hdfs.server.namenode.AclTestHelpers.*;
 import static org.apache.hadoop.hdfs.server.namenode.AclTransformation.*;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.List;
 
@@ -33,7 +34,7 @@ import org.apache.hadoop.util.Lists;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests operations that modify ACLs.  All tests in this suite have been
@@ -309,58 +310,66 @@ public class TestAclTransformation {
     assertEquals(existing, filterAclEntriesByAclSpec(existing, aclSpec));
   }
 
-  @Test(expected=AclException.class)
+  @Test
   public void testFilterAclEntriesByAclSpecRemoveAccessMaskRequired()
       throws AclException {
-    List<AclEntry> existing = new ImmutableList.Builder<AclEntry>()
-      .add(aclEntry(ACCESS, USER, ALL))
-      .add(aclEntry(ACCESS, USER, "bruce", READ))
-      .add(aclEntry(ACCESS, GROUP, READ))
-      .add(aclEntry(ACCESS, MASK, ALL))
-      .add(aclEntry(ACCESS, OTHER, NONE))
-      .build();
-    List<AclEntry> aclSpec = Lists.newArrayList(
-      aclEntry(ACCESS, MASK));
-    filterAclEntriesByAclSpec(existing, aclSpec);
+    assertThrows(AclException.class, () -> {
+      List<AclEntry> existing = new ImmutableList.Builder<AclEntry>()
+          .add(aclEntry(ACCESS, USER, ALL))
+          .add(aclEntry(ACCESS, USER, "bruce", READ))
+          .add(aclEntry(ACCESS, GROUP, READ))
+          .add(aclEntry(ACCESS, MASK, ALL))
+          .add(aclEntry(ACCESS, OTHER, NONE))
+          .build();
+      List<AclEntry> aclSpec = Lists.newArrayList(
+          aclEntry(ACCESS, MASK));
+      filterAclEntriesByAclSpec(existing, aclSpec);
+    });
   }
 
-  @Test(expected=AclException.class)
+  @Test
   public void testFilterAclEntriesByAclSpecRemoveDefaultMaskRequired()
       throws AclException {
-    List<AclEntry> existing = new ImmutableList.Builder<AclEntry>()
-      .add(aclEntry(ACCESS, USER, ALL))
-      .add(aclEntry(ACCESS, GROUP, READ))
-      .add(aclEntry(ACCESS, OTHER, NONE))
-      .add(aclEntry(DEFAULT, USER, ALL))
-      .add(aclEntry(DEFAULT, USER, "bruce", READ))
-      .add(aclEntry(DEFAULT, GROUP, READ))
-      .add(aclEntry(DEFAULT, MASK, ALL))
-      .add(aclEntry(DEFAULT, OTHER, NONE))
-      .build();
-    List<AclEntry> aclSpec = Lists.newArrayList(
-      aclEntry(DEFAULT, MASK));
-    filterAclEntriesByAclSpec(existing, aclSpec);
+    assertThrows(AclException.class, () -> {
+      List<AclEntry> existing = new ImmutableList.Builder<AclEntry>()
+          .add(aclEntry(ACCESS, USER, ALL))
+          .add(aclEntry(ACCESS, GROUP, READ))
+          .add(aclEntry(ACCESS, OTHER, NONE))
+          .add(aclEntry(DEFAULT, USER, ALL))
+          .add(aclEntry(DEFAULT, USER, "bruce", READ))
+          .add(aclEntry(DEFAULT, GROUP, READ))
+          .add(aclEntry(DEFAULT, MASK, ALL))
+          .add(aclEntry(DEFAULT, OTHER, NONE))
+          .build();
+      List<AclEntry> aclSpec = Lists.newArrayList(
+          aclEntry(DEFAULT, MASK));
+      filterAclEntriesByAclSpec(existing, aclSpec);
+    });
   }
 
-  @Test(expected=AclException.class)
+  @Test
   public void testFilterAclEntriesByAclSpecInputTooLarge() throws AclException {
-    List<AclEntry> existing = new ImmutableList.Builder<AclEntry>()
-      .add(aclEntry(ACCESS, USER, ALL))
-      .add(aclEntry(ACCESS, GROUP, READ))
-      .add(aclEntry(ACCESS, OTHER, NONE))
-      .build();
-    filterAclEntriesByAclSpec(existing, ACL_SPEC_TOO_LARGE);
+    assertThrows(AclException.class, () -> {
+      List<AclEntry> existing = new ImmutableList.Builder<AclEntry>()
+          .add(aclEntry(ACCESS, USER, ALL))
+          .add(aclEntry(ACCESS, GROUP, READ))
+          .add(aclEntry(ACCESS, OTHER, NONE))
+          .build();
+      filterAclEntriesByAclSpec(existing, ACL_SPEC_TOO_LARGE);
+    });
   }
 
-  @Test(expected = AclException.class)
+  @Test
   public void testFilterDefaultAclEntriesByAclSpecInputTooLarge()
       throws AclException {
-    List<AclEntry> existing = new ImmutableList.Builder<AclEntry>()
-        .add(aclEntry(DEFAULT, USER, ALL))
-        .add(aclEntry(DEFAULT, GROUP, READ))
-        .add(aclEntry(DEFAULT, OTHER, NONE))
-        .build();
-    filterAclEntriesByAclSpec(existing, ACL_SPEC_DEFAULT_TOO_LARGE);
+    assertThrows(AclException.class, () -> {
+      List<AclEntry> existing = new ImmutableList.Builder<AclEntry>()
+          .add(aclEntry(DEFAULT, USER, ALL))
+          .add(aclEntry(DEFAULT, GROUP, READ))
+          .add(aclEntry(DEFAULT, OTHER, NONE))
+          .build();
+      filterAclEntriesByAclSpec(existing, ACL_SPEC_DEFAULT_TOO_LARGE);
+    });
   }
 
   @Test
@@ -721,99 +730,113 @@ public class TestAclTransformation {
     assertEquals(existing, mergeAclEntries(existing, aclSpec));
   }
 
-  @Test(expected=AclException.class)
+  @Test
   public void testMergeAclEntriesInputTooLarge() throws AclException {
-    List<AclEntry> existing = new ImmutableList.Builder<AclEntry>()
-      .add(aclEntry(ACCESS, USER, ALL))
-      .add(aclEntry(ACCESS, GROUP, READ))
-      .add(aclEntry(ACCESS, OTHER, NONE))
-      .build();
-    mergeAclEntries(existing, ACL_SPEC_TOO_LARGE);
+    assertThrows(AclException.class, () -> {
+      List<AclEntry> existing = new ImmutableList.Builder<AclEntry>()
+          .add(aclEntry(ACCESS, USER, ALL))
+          .add(aclEntry(ACCESS, GROUP, READ))
+          .add(aclEntry(ACCESS, OTHER, NONE))
+          .build();
+      mergeAclEntries(existing, ACL_SPEC_TOO_LARGE);
+    });
   }
 
-  @Test(expected=AclException.class)
+  @Test
   public void testMergeAclDefaultEntriesInputTooLarge() throws AclException {
-    List<AclEntry> existing = new ImmutableList.Builder<AclEntry>()
-      .add(aclEntry(DEFAULT, USER, ALL))
-      .add(aclEntry(DEFAULT, GROUP, READ))
-      .add(aclEntry(DEFAULT, OTHER, NONE))
-      .build();
-    mergeAclEntries(existing, ACL_SPEC_DEFAULT_TOO_LARGE);
+    assertThrows(AclException.class, () -> {
+      List<AclEntry> existing = new ImmutableList.Builder<AclEntry>()
+          .add(aclEntry(DEFAULT, USER, ALL))
+          .add(aclEntry(DEFAULT, GROUP, READ))
+          .add(aclEntry(DEFAULT, OTHER, NONE))
+          .build();
+      mergeAclEntries(existing, ACL_SPEC_DEFAULT_TOO_LARGE);
+    });
   }
 
-  @Test(expected=AclException.class)
+  @Test
   public void testMergeAclEntriesResultTooLarge() throws AclException {
-    ImmutableList.Builder<AclEntry> aclBuilder =
-      new ImmutableList.Builder<AclEntry>()
-        .add(aclEntry(ACCESS, USER, ALL));
-    for (int i = 1; i <= 28; ++i) {
-      aclBuilder.add(aclEntry(ACCESS, USER, "user" + i, READ));
-    }
-    aclBuilder
-      .add(aclEntry(ACCESS, GROUP, READ))
-      .add(aclEntry(ACCESS, MASK, READ))
-      .add(aclEntry(ACCESS, OTHER, NONE));
-    List<AclEntry> existing = aclBuilder.build();
-    List<AclEntry> aclSpec = Lists.newArrayList(
-      aclEntry(ACCESS, USER, "bruce", READ));
-    mergeAclEntries(existing, aclSpec);
+    assertThrows(AclException.class, () -> {
+      ImmutableList.Builder<AclEntry> aclBuilder =
+          new ImmutableList.Builder<AclEntry>()
+              .add(aclEntry(ACCESS, USER, ALL));
+      for (int i = 1; i <= 28; ++i) {
+        aclBuilder.add(aclEntry(ACCESS, USER, "user" + i, READ));
+      }
+      aclBuilder
+          .add(aclEntry(ACCESS, GROUP, READ))
+          .add(aclEntry(ACCESS, MASK, READ))
+          .add(aclEntry(ACCESS, OTHER, NONE));
+      List<AclEntry> existing = aclBuilder.build();
+      List<AclEntry> aclSpec = Lists.newArrayList(
+          aclEntry(ACCESS, USER, "bruce", READ));
+      mergeAclEntries(existing, aclSpec);
+    });
   }
 
-  @Test(expected = AclException.class)
+  @Test
   public void testMergeAclDefaultEntriesResultTooLarge() throws AclException {
-    ImmutableList.Builder<AclEntry> aclBuilder =
-        new ImmutableList.Builder<AclEntry>()
-        .add(aclEntry(DEFAULT, USER, ALL));
-    for (int i = 1; i <= 28; ++i) {
-      aclBuilder.add(aclEntry(DEFAULT, USER, "user" + i, READ));
-    }
-    aclBuilder
-    .add(aclEntry(DEFAULT, GROUP, READ))
-    .add(aclEntry(DEFAULT, MASK, READ))
-    .add(aclEntry(DEFAULT, OTHER, NONE));
-    List<AclEntry> existing = aclBuilder.build();
-    List<AclEntry> aclSpec = Lists.newArrayList(
-         aclEntry(DEFAULT, USER, "bruce", READ));
-    mergeAclEntries(existing, aclSpec);
+    assertThrows(AclException.class, () -> {
+      ImmutableList.Builder<AclEntry> aclBuilder =
+          new ImmutableList.Builder<AclEntry>()
+              .add(aclEntry(DEFAULT, USER, ALL));
+      for (int i = 1; i <= 28; ++i) {
+        aclBuilder.add(aclEntry(DEFAULT, USER, "user" + i, READ));
+      }
+      aclBuilder
+          .add(aclEntry(DEFAULT, GROUP, READ))
+          .add(aclEntry(DEFAULT, MASK, READ))
+          .add(aclEntry(DEFAULT, OTHER, NONE));
+      List<AclEntry> existing = aclBuilder.build();
+      List<AclEntry> aclSpec = Lists.newArrayList(
+          aclEntry(DEFAULT, USER, "bruce", READ));
+      mergeAclEntries(existing, aclSpec);
+    });
   }
 
-  @Test(expected=AclException.class)
+  @Test
   public void testMergeAclEntriesDuplicateEntries() throws AclException {
-    List<AclEntry> existing = new ImmutableList.Builder<AclEntry>()
-      .add(aclEntry(ACCESS, USER, ALL))
-      .add(aclEntry(ACCESS, GROUP, READ))
-      .add(aclEntry(ACCESS, OTHER, NONE))
-      .build();
-    List<AclEntry> aclSpec = Lists.newArrayList(
-      aclEntry(ACCESS, USER, "bruce", ALL),
-      aclEntry(ACCESS, USER, "diana", READ_WRITE),
-      aclEntry(ACCESS, USER, "clark", READ),
-      aclEntry(ACCESS, USER, "bruce", READ_EXECUTE));
-    mergeAclEntries(existing, aclSpec);
+    assertThrows(AclException.class, () -> {
+      List<AclEntry> existing = new ImmutableList.Builder<AclEntry>()
+          .add(aclEntry(ACCESS, USER, ALL))
+          .add(aclEntry(ACCESS, GROUP, READ))
+          .add(aclEntry(ACCESS, OTHER, NONE))
+          .build();
+      List<AclEntry> aclSpec = Lists.newArrayList(
+          aclEntry(ACCESS, USER, "bruce", ALL),
+          aclEntry(ACCESS, USER, "diana", READ_WRITE),
+          aclEntry(ACCESS, USER, "clark", READ),
+          aclEntry(ACCESS, USER, "bruce", READ_EXECUTE));
+      mergeAclEntries(existing, aclSpec);
+    });
   }
 
-  @Test(expected=AclException.class)
+  @Test
   public void testMergeAclEntriesNamedMask() throws AclException {
-    List<AclEntry> existing = new ImmutableList.Builder<AclEntry>()
-      .add(aclEntry(ACCESS, USER, ALL))
-      .add(aclEntry(ACCESS, GROUP, READ))
-      .add(aclEntry(ACCESS, OTHER, NONE))
-      .build();
-    List<AclEntry> aclSpec = Lists.newArrayList(
-      aclEntry(ACCESS, MASK, "bruce", READ_EXECUTE));
-    mergeAclEntries(existing, aclSpec);
+    assertThrows(AclException.class, () -> {
+      List<AclEntry> existing = new ImmutableList.Builder<AclEntry>()
+          .add(aclEntry(ACCESS, USER, ALL))
+          .add(aclEntry(ACCESS, GROUP, READ))
+          .add(aclEntry(ACCESS, OTHER, NONE))
+          .build();
+      List<AclEntry> aclSpec = Lists.newArrayList(
+          aclEntry(ACCESS, MASK, "bruce", READ_EXECUTE));
+      mergeAclEntries(existing, aclSpec);
+    });
   }
 
-  @Test(expected=AclException.class)
+  @Test
   public void testMergeAclEntriesNamedOther() throws AclException {
-    List<AclEntry> existing = new ImmutableList.Builder<AclEntry>()
-      .add(aclEntry(ACCESS, USER, ALL))
-      .add(aclEntry(ACCESS, GROUP, READ))
-      .add(aclEntry(ACCESS, OTHER, NONE))
-      .build();
-    List<AclEntry> aclSpec = Lists.newArrayList(
-      aclEntry(ACCESS, OTHER, "bruce", READ_EXECUTE));
-    mergeAclEntries(existing, aclSpec);
+    assertThrows(AclException.class, () -> {
+      List<AclEntry> existing = new ImmutableList.Builder<AclEntry>()
+          .add(aclEntry(ACCESS, USER, ALL))
+          .add(aclEntry(ACCESS, GROUP, READ))
+          .add(aclEntry(ACCESS, OTHER, NONE))
+          .build();
+      List<AclEntry> aclSpec = Lists.newArrayList(
+          aclEntry(ACCESS, OTHER, "bruce", READ_EXECUTE));
+      mergeAclEntries(existing, aclSpec);
+    });
   }
 
   @Test
@@ -1121,138 +1144,156 @@ public class TestAclTransformation {
     assertEquals(expected, replaceAclEntries(existing, aclSpec));
   }
 
-  @Test(expected=AclException.class)
+  @Test
   public void testReplaceAclEntriesInputTooLarge() throws AclException {
-    List<AclEntry> existing = new ImmutableList.Builder<AclEntry>()
-      .add(aclEntry(ACCESS, USER, ALL))
-      .add(aclEntry(ACCESS, GROUP, READ))
-      .add(aclEntry(ACCESS, OTHER, NONE))
-      .build();
-    replaceAclEntries(existing, ACL_SPEC_TOO_LARGE);
+    assertThrows(AclException.class, () -> {
+      List<AclEntry> existing = new ImmutableList.Builder<AclEntry>()
+          .add(aclEntry(ACCESS, USER, ALL))
+          .add(aclEntry(ACCESS, GROUP, READ))
+          .add(aclEntry(ACCESS, OTHER, NONE))
+          .build();
+      replaceAclEntries(existing, ACL_SPEC_TOO_LARGE);
+    });
   }
 
-  @Test(expected=AclException.class)
+  @Test
   public void testReplaceAclDefaultEntriesInputTooLarge() throws AclException {
-    List<AclEntry> existing = new ImmutableList.Builder<AclEntry>()
-      .add(aclEntry(DEFAULT, USER, ALL))
-      .add(aclEntry(DEFAULT, GROUP, READ))
-      .add(aclEntry(DEFAULT, OTHER, NONE))
-      .build();
-    replaceAclEntries(existing, ACL_SPEC_DEFAULT_TOO_LARGE);
+    assertThrows(AclException.class, () -> {
+      List<AclEntry> existing = new ImmutableList.Builder<AclEntry>()
+          .add(aclEntry(DEFAULT, USER, ALL))
+          .add(aclEntry(DEFAULT, GROUP, READ))
+          .add(aclEntry(DEFAULT, OTHER, NONE))
+          .build();
+      replaceAclEntries(existing, ACL_SPEC_DEFAULT_TOO_LARGE);
+    });
   }
 
-  @Test(expected=AclException.class)
+  @Test
   public void testReplaceAclEntriesResultTooLarge() throws AclException {
-    List<AclEntry> existing = new ImmutableList.Builder<AclEntry>()
-      .add(aclEntry(ACCESS, USER, ALL))
-      .add(aclEntry(ACCESS, GROUP, READ))
-      .add(aclEntry(ACCESS, OTHER, NONE))
-      .build();
-    List<AclEntry> aclSpec = Lists.newArrayListWithCapacity(32);
-    aclSpec.add(aclEntry(ACCESS, USER, ALL));
-    for (int i = 1; i <= 29; ++i) {
-      aclSpec.add(aclEntry(ACCESS, USER, "user" + i, READ));
-    }
-    aclSpec.add(aclEntry(ACCESS, GROUP, READ));
-    aclSpec.add(aclEntry(ACCESS, OTHER, NONE));
+    assertThrows(AclException.class, () -> {
+      List<AclEntry> existing = new ImmutableList.Builder<AclEntry>()
+          .add(aclEntry(ACCESS, USER, ALL))
+          .add(aclEntry(ACCESS, GROUP, READ))
+          .add(aclEntry(ACCESS, OTHER, NONE))
+          .build();
+      List<AclEntry> aclSpec = Lists.newArrayListWithCapacity(32);
+      aclSpec.add(aclEntry(ACCESS, USER, ALL));
+      for (int i = 1; i <= 29; ++i) {
+        aclSpec.add(aclEntry(ACCESS, USER, "user" + i, READ));
+      }
+      aclSpec.add(aclEntry(ACCESS, GROUP, READ));
+      aclSpec.add(aclEntry(ACCESS, OTHER, NONE));
+      replaceAclEntries(existing, aclSpec);
+    });
     // The ACL spec now has 32 entries.  Automatic mask calculation will push it
-    // over the limit to 33.
-    replaceAclEntries(existing, aclSpec);
+
   }
 
-  @Test(expected=AclException.class)
+  @Test
   public void testReplaceAclEntriesDuplicateEntries() throws AclException {
-    List<AclEntry> existing = new ImmutableList.Builder<AclEntry>()
-      .add(aclEntry(ACCESS, USER, ALL))
-      .add(aclEntry(ACCESS, GROUP, READ))
-      .add(aclEntry(ACCESS, OTHER, NONE))
-      .build();
-    List<AclEntry> aclSpec = Lists.newArrayList(
-      aclEntry(ACCESS, USER, ALL),
-      aclEntry(ACCESS, USER, "bruce", ALL),
-      aclEntry(ACCESS, USER, "diana", READ_WRITE),
-      aclEntry(ACCESS, USER, "clark", READ),
-      aclEntry(ACCESS, USER, "bruce", READ_EXECUTE),
-      aclEntry(ACCESS, GROUP, READ),
-      aclEntry(ACCESS, OTHER, NONE));
-    replaceAclEntries(existing, aclSpec);
+    assertThrows(AclException.class, () -> {
+      List<AclEntry> existing = new ImmutableList.Builder<AclEntry>()
+          .add(aclEntry(ACCESS, USER, ALL))
+          .add(aclEntry(ACCESS, GROUP, READ))
+          .add(aclEntry(ACCESS, OTHER, NONE))
+          .build();
+      List<AclEntry> aclSpec = Lists.newArrayList(
+          aclEntry(ACCESS, USER, ALL),
+          aclEntry(ACCESS, USER, "bruce", ALL),
+          aclEntry(ACCESS, USER, "diana", READ_WRITE),
+          aclEntry(ACCESS, USER, "clark", READ),
+          aclEntry(ACCESS, USER, "bruce", READ_EXECUTE),
+          aclEntry(ACCESS, GROUP, READ),
+          aclEntry(ACCESS, OTHER, NONE));
+      replaceAclEntries(existing, aclSpec);
+    });
   }
 
-  @Test(expected=AclException.class)
+  @Test
   public void testReplaceAclEntriesNamedMask() throws AclException {
-    List<AclEntry> existing = new ImmutableList.Builder<AclEntry>()
-      .add(aclEntry(ACCESS, USER, ALL))
-      .add(aclEntry(ACCESS, GROUP, READ))
-      .add(aclEntry(ACCESS, OTHER, NONE))
-      .build();
-    List<AclEntry> aclSpec = Lists.newArrayList(
-      aclEntry(ACCESS, USER, ALL),
-      aclEntry(ACCESS, GROUP, READ),
-      aclEntry(ACCESS, OTHER, NONE),
-      aclEntry(ACCESS, MASK, "bruce", READ_EXECUTE));
-    replaceAclEntries(existing, aclSpec);
+    assertThrows(AclException.class, () -> {
+      List<AclEntry> existing = new ImmutableList.Builder<AclEntry>()
+          .add(aclEntry(ACCESS, USER, ALL))
+          .add(aclEntry(ACCESS, GROUP, READ))
+          .add(aclEntry(ACCESS, OTHER, NONE))
+          .build();
+      List<AclEntry> aclSpec = Lists.newArrayList(
+          aclEntry(ACCESS, USER, ALL),
+          aclEntry(ACCESS, GROUP, READ),
+          aclEntry(ACCESS, OTHER, NONE),
+          aclEntry(ACCESS, MASK, "bruce", READ_EXECUTE));
+      replaceAclEntries(existing, aclSpec);
+    });
   }
 
-  @Test(expected=AclException.class)
+  @Test
   public void testReplaceAclEntriesNamedOther() throws AclException {
-    List<AclEntry> existing = new ImmutableList.Builder<AclEntry>()
-      .add(aclEntry(ACCESS, USER, ALL))
-      .add(aclEntry(ACCESS, GROUP, READ))
-      .add(aclEntry(ACCESS, OTHER, NONE))
-      .build();
-    List<AclEntry> aclSpec = Lists.newArrayList(
-      aclEntry(ACCESS, USER, ALL),
-      aclEntry(ACCESS, GROUP, READ),
-      aclEntry(ACCESS, OTHER, NONE),
-      aclEntry(ACCESS, OTHER, "bruce", READ_EXECUTE));
-    replaceAclEntries(existing, aclSpec);
+    assertThrows(AclException.class, () -> {
+      List<AclEntry> existing = new ImmutableList.Builder<AclEntry>()
+          .add(aclEntry(ACCESS, USER, ALL))
+          .add(aclEntry(ACCESS, GROUP, READ))
+          .add(aclEntry(ACCESS, OTHER, NONE))
+          .build();
+      List<AclEntry> aclSpec = Lists.newArrayList(
+          aclEntry(ACCESS, USER, ALL),
+          aclEntry(ACCESS, GROUP, READ),
+          aclEntry(ACCESS, OTHER, NONE),
+          aclEntry(ACCESS, OTHER, "bruce", READ_EXECUTE));
+      replaceAclEntries(existing, aclSpec);
+    });
   }
 
-  @Test(expected=AclException.class)
+  @Test
   public void testReplaceAclEntriesMissingUser() throws AclException {
-    List<AclEntry> existing = new ImmutableList.Builder<AclEntry>()
-      .add(aclEntry(ACCESS, USER, ALL))
-      .add(aclEntry(ACCESS, GROUP, READ))
-      .add(aclEntry(ACCESS, OTHER, NONE))
-      .build();
-    List<AclEntry> aclSpec = Lists.newArrayList(
-      aclEntry(ACCESS, USER, "bruce", READ_WRITE),
-      aclEntry(ACCESS, GROUP, READ_EXECUTE),
-      aclEntry(ACCESS, GROUP, "sales", ALL),
-      aclEntry(ACCESS, MASK, ALL),
-      aclEntry(ACCESS, OTHER, NONE));
-    replaceAclEntries(existing, aclSpec);
+    assertThrows(AclException.class, () -> {
+      List<AclEntry> existing = new ImmutableList.Builder<AclEntry>()
+          .add(aclEntry(ACCESS, USER, ALL))
+          .add(aclEntry(ACCESS, GROUP, READ))
+          .add(aclEntry(ACCESS, OTHER, NONE))
+          .build();
+      List<AclEntry> aclSpec = Lists.newArrayList(
+          aclEntry(ACCESS, USER, "bruce", READ_WRITE),
+          aclEntry(ACCESS, GROUP, READ_EXECUTE),
+          aclEntry(ACCESS, GROUP, "sales", ALL),
+          aclEntry(ACCESS, MASK, ALL),
+          aclEntry(ACCESS, OTHER, NONE));
+      replaceAclEntries(existing, aclSpec);
+    });
   }
 
-  @Test(expected=AclException.class)
+  @Test
   public void testReplaceAclEntriesMissingGroup() throws AclException {
-    List<AclEntry> existing = new ImmutableList.Builder<AclEntry>()
-      .add(aclEntry(ACCESS, USER, ALL))
-      .add(aclEntry(ACCESS, GROUP, READ))
-      .add(aclEntry(ACCESS, OTHER, NONE))
-      .build();
-    List<AclEntry> aclSpec = Lists.newArrayList(
-      aclEntry(ACCESS, USER, ALL),
-      aclEntry(ACCESS, USER, "bruce", READ_WRITE),
-      aclEntry(ACCESS, GROUP, "sales", ALL),
-      aclEntry(ACCESS, MASK, ALL),
-      aclEntry(ACCESS, OTHER, NONE));
-    replaceAclEntries(existing, aclSpec);
+    assertThrows(AclException.class, () -> {
+      List<AclEntry> existing = new ImmutableList.Builder<AclEntry>()
+          .add(aclEntry(ACCESS, USER, ALL))
+          .add(aclEntry(ACCESS, GROUP, READ))
+          .add(aclEntry(ACCESS, OTHER, NONE))
+          .build();
+      List<AclEntry> aclSpec = Lists.newArrayList(
+          aclEntry(ACCESS, USER, ALL),
+          aclEntry(ACCESS, USER, "bruce", READ_WRITE),
+          aclEntry(ACCESS, GROUP, "sales", ALL),
+          aclEntry(ACCESS, MASK, ALL),
+          aclEntry(ACCESS, OTHER, NONE));
+      replaceAclEntries(existing, aclSpec);
+    });
   }
 
-  @Test(expected=AclException.class)
+  @Test
   public void testReplaceAclEntriesMissingOther() throws AclException {
-    List<AclEntry> existing = new ImmutableList.Builder<AclEntry>()
-      .add(aclEntry(ACCESS, USER, ALL))
-      .add(aclEntry(ACCESS, GROUP, READ))
-      .add(aclEntry(ACCESS, OTHER, NONE))
-      .build();
-    List<AclEntry> aclSpec = Lists.newArrayList(
-      aclEntry(ACCESS, USER, ALL),
-      aclEntry(ACCESS, USER, "bruce", READ_WRITE),
-      aclEntry(ACCESS, GROUP, READ_EXECUTE),
-      aclEntry(ACCESS, GROUP, "sales", ALL),
-      aclEntry(ACCESS, MASK, ALL));
-    replaceAclEntries(existing, aclSpec);
+    assertThrows(AclException.class, () -> {
+      List<AclEntry> existing = new ImmutableList.Builder<AclEntry>()
+          .add(aclEntry(ACCESS, USER, ALL))
+          .add(aclEntry(ACCESS, GROUP, READ))
+          .add(aclEntry(ACCESS, OTHER, NONE))
+          .build();
+      List<AclEntry> aclSpec = Lists.newArrayList(
+          aclEntry(ACCESS, USER, ALL),
+          aclEntry(ACCESS, USER, "bruce", READ_WRITE),
+          aclEntry(ACCESS, GROUP, READ_EXECUTE),
+          aclEntry(ACCESS, GROUP, "sales", ALL),
+          aclEntry(ACCESS, MASK, ALL));
+      replaceAclEntries(existing, aclSpec);
+    });
   }
 }

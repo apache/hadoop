@@ -19,6 +19,7 @@
 #define HDFSPP_STATINFO_H_
 
 #include <string>
+#include <cstdint>
 
 namespace hdfs {
 

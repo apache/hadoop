@@ -112,6 +112,7 @@ import org.apache.hadoop.hdfs.server.namenode.startupprogress.StartupProgress;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.StartupProgress.Counter;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.Step;
 import org.apache.hadoop.hdfs.util.Holder;
+import org.apache.hadoop.hdfs.util.RwLockMode;
 import org.apache.hadoop.log.LogThrottlingHelper;
 import org.apache.hadoop.util.ChunkedArrayList;
 import org.apache.hadoop.util.Timer;
@@ -171,7 +172,7 @@ public class FSEditLogLoader {
     StartupProgress prog = NameNode.getStartupProgress();
     Step step = createStartupProgressStep(edits);
     prog.beginStep(Phase.LOADING_EDITS, step);
-    fsNamesys.writeLock();
+    fsNamesys.writeLock(RwLockMode.GLOBAL);
     try {
       long startTime = timer.monotonicNow();
       LogAction preLogAction = LOAD_EDITS_LOG_HELPER.record("pre", startTime);
@@ -196,7 +197,7 @@ public class FSEditLogLoader {
       return numEdits;
     } finally {
       edits.close();
-      fsNamesys.writeUnlock("loadFSEdits");
+      fsNamesys.writeUnlock(RwLockMode.GLOBAL, "loadFSEdits");
       prog.endStep(Phase.LOADING_EDITS, step);
     }
   }
@@ -218,7 +219,7 @@ public class FSEditLogLoader {
       LOG.trace("Acquiring write lock to replay edit log");
     }
 
-    fsNamesys.writeLock();
+    fsNamesys.writeLock(RwLockMode.GLOBAL);
     FSDirectory fsDir = fsNamesys.dir;
     fsDir.writeLock();
 
@@ -342,7 +343,7 @@ public class FSEditLogLoader {
         in.close();
       }
       fsDir.writeUnlock();
-      fsNamesys.writeUnlock("loadEditRecords");
+      fsNamesys.writeUnlock(RwLockMode.GLOBAL, "loadEditRecords");
 
       if (LOG.isTraceEnabled()) {
         LOG.trace("replaying edit log finished");

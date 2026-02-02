@@ -41,6 +41,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
+import javax.inject.Inject;
+import javax.inject.Singleton;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.Consumes;
@@ -228,8 +230,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.classification.VisibleForTesting;
-import com.google.inject.Inject;
-import com.google.inject.Singleton;
 
 @Singleton
 @Path(RMWSConsts.RM_WEB_SERVICE_PATH)
@@ -270,7 +270,8 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
       "Hadoop-YARN-RM-Delegation-Token";
 
   @Inject
-  public RMWebServices(final ResourceManager rm, Configuration conf) {
+  public RMWebServices(final @javax.inject.Named("rm") ResourceManager rm,
+      @javax.inject.Named("conf") Configuration conf) {
     // don't inject, always take appBaseRoot from RM.
     super(null);
     this.rm = rm;
@@ -2983,6 +2984,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
   @Path(RMWSConsts.SIGNAL_TO_CONTAINER)
   @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
       MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  @Consumes({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   @Override
   public Response signalToContainer(
       @PathParam(RMWSConsts.CONTAINERID) String containerId,
@@ -3007,7 +3009,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
       return Response.status(Status.INTERNAL_SERVER_ERROR)
           .entity(e.getMessage()).build();
     }
-    return Response.status(Status.OK).build();
+    return Response.status(Status.OK).entity("signal success").build();
   }
 
   @GET
@@ -3023,5 +3025,10 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
   @VisibleForTesting
   public LRUCache<AppsCacheKey, AppsInfo> getAppsLRUCache(){
     return appsLRUCache;
+  }
+
+  @VisibleForTesting
+  public void setResponse(HttpServletResponse response) {
+    this.response = response;
   }
 }

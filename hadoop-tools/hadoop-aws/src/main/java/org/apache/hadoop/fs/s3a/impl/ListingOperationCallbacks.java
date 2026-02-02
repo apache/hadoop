@@ -21,6 +21,8 @@ package org.apache.hadoop.fs.s3a.impl;
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 
+import software.amazon.awssdk.services.s3.model.S3Object;
+
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.Retries;
@@ -104,6 +106,15 @@ public interface ListingOperationCallbacks {
    * @return the default block size for the path's filesystem
    */
   long getDefaultBlockSize(Path path);
+
+  /**
+   * Get the S3 object size.
+   * If the object is encrypted, the unpadded size will be returned.
+   * @param s3Object S3object
+   * @return plaintext S3 object size
+   * @throws IOException IO problems
+   */
+  long getObjectSize(S3Object s3Object) throws IOException;
 
   /**
    * Get the maximum key count.

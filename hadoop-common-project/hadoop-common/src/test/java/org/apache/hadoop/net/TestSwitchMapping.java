@@ -20,15 +20,15 @@ package org.apache.hadoop.net;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
 /**
  * Test some other details of the switch mapping
  */
-public class TestSwitchMapping extends Assert {
+public class TestSwitchMapping extends Assertions {
 
 
   /**
@@ -40,8 +40,8 @@ public class TestSwitchMapping extends Assert {
   @Test
   public void testStandaloneClassesAssumedMultiswitch() throws Throwable {
     DNSToSwitchMapping mapping = new StandaloneSwitchMapping();
-    assertFalse("Expected to be multi switch " + mapping,
-                AbstractDNSToSwitchMapping.isMappingSingleSwitch(mapping));
+    assertFalse(AbstractDNSToSwitchMapping.isMappingSingleSwitch(mapping),
+        "Expected to be multi switch " + mapping);
   }
 
 
@@ -55,8 +55,8 @@ public class TestSwitchMapping extends Assert {
   public void testCachingRelays() throws Throwable {
     CachedDNSToSwitchMapping mapping =
         new CachedDNSToSwitchMapping(new StandaloneSwitchMapping());
-    assertFalse("Expected to be multi switch " + mapping,
-                mapping.isSingleSwitch());
+    assertFalse(mapping.isSingleSwitch(),
+        "Expected to be multi switch " + mapping);
   }
 
 
@@ -73,12 +73,12 @@ public class TestSwitchMapping extends Assert {
     conf.set(CommonConfigurationKeys.NET_TOPOLOGY_SCRIPT_FILE_NAME_KEY,
              scriptname);
     ScriptBasedMapping scriptMapping = new ScriptBasedMapping(conf);
-    assertTrue("Did not find " + scriptname + " in " + scriptMapping,
-               scriptMapping.toString().contains(scriptname));
+    assertTrue(scriptMapping.toString().contains(scriptname),
+        "Did not find " + scriptname + " in " + scriptMapping);
     CachedDNSToSwitchMapping mapping =
         new CachedDNSToSwitchMapping(scriptMapping);
-    assertTrue("Did not find " + scriptname + " in " + mapping,
-               mapping.toString().contains(scriptname));
+    assertTrue(mapping.toString().contains(scriptname),
+        "Did not find " + scriptname + " in " + mapping);
   }
 
   /**
@@ -91,14 +91,12 @@ public class TestSwitchMapping extends Assert {
   public void testCachingRelaysStringOperationsToNullScript() throws Throwable {
     Configuration conf = new Configuration();
     ScriptBasedMapping scriptMapping = new ScriptBasedMapping(conf);
-    assertTrue("Did not find " + ScriptBasedMapping.NO_SCRIPT
-                   + " in " + scriptMapping,
-               scriptMapping.toString().contains(ScriptBasedMapping.NO_SCRIPT));
+    assertTrue(scriptMapping.toString().contains(ScriptBasedMapping.NO_SCRIPT),
+        "Did not find " + ScriptBasedMapping.NO_SCRIPT + " in " + scriptMapping);
     CachedDNSToSwitchMapping mapping =
         new CachedDNSToSwitchMapping(scriptMapping);
-    assertTrue("Did not find " + ScriptBasedMapping.NO_SCRIPT
-                   + " in " + mapping,
-               mapping.toString().contains(ScriptBasedMapping.NO_SCRIPT));
+    assertTrue(mapping.toString().contains(ScriptBasedMapping.NO_SCRIPT),
+        "Did not find " + ScriptBasedMapping.NO_SCRIPT + " in " + mapping);
   }
 
   @Test

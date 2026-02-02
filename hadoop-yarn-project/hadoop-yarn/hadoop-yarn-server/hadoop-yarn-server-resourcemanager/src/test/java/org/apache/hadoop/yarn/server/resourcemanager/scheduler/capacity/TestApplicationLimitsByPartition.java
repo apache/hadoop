@@ -17,9 +17,11 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
-
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
@@ -66,11 +68,10 @@ import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.mockito.ArgumentMatchers;
-import org.mockito.Mockito;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
@@ -94,7 +95,7 @@ public class TestApplicationLimitsByPartition {
   private final ResourceCalculator resourceCalculator =
       new DefaultResourceCalculator();
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     conf = new YarnConfiguration();
     conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
@@ -123,7 +124,8 @@ public class TestApplicationLimitsByPartition {
         RMNodeLabelsManager.EMPTY_STRING_SET));
   }
 
-  @Test(timeout = 120000)
+  @Test
+  @Timeout(value = 120)
   public void testAMResourceLimitWithLabels() throws Exception {
     /*
      * Test Case:
@@ -198,22 +200,22 @@ public class TestApplicationLimitsByPartition {
 
     CapacityScheduler cs = (CapacityScheduler) rm1.getResourceScheduler();
     LeafQueue leafQueue = (LeafQueue) cs.getQueue("a1");
-    Assert.assertNotNull(leafQueue);
+    assertNotNull(leafQueue);
 
     // Only one AM will be activated here and second AM will be still
     // pending.
-    Assert.assertEquals(2, leafQueue.getNumActiveApplications());
-    Assert.assertEquals(1, leafQueue.getNumPendingApplications());
-    Assert.assertTrue("AM diagnostics not set properly", app1.getDiagnostics()
-        .toString().contains(AMState.ACTIVATED.getDiagnosticMessage()));
-    Assert.assertTrue("AM diagnostics not set properly", app2.getDiagnostics()
-        .toString().contains(AMState.ACTIVATED.getDiagnosticMessage()));
-    Assert.assertTrue("AM diagnostics not set properly",
-        pendingApp.getDiagnostics().toString()
-            .contains(AMState.INACTIVATED.getDiagnosticMessage()));
-    Assert.assertTrue("AM diagnostics not set properly",
-        pendingApp.getDiagnostics().toString().contains(
-            CSAMContainerLaunchDiagnosticsConstants.QUEUE_AM_RESOURCE_LIMIT_EXCEED));
+    assertEquals(2, leafQueue.getNumActiveApplications());
+    assertEquals(1, leafQueue.getNumPendingApplications());
+    assertTrue(app1.getDiagnostics().toString().contains(
+        AMState.ACTIVATED.getDiagnosticMessage()), "AM diagnostics not set properly");
+    assertTrue(app2.getDiagnostics().toString().contains(AMState.ACTIVATED.getDiagnosticMessage()),
+        "AM diagnostics not set properly");
+    assertTrue(pendingApp.getDiagnostics().toString()
+        .contains(AMState.INACTIVATED.getDiagnosticMessage()),
+        "AM diagnostics not set properly");
+    assertTrue(pendingApp.getDiagnostics().toString().contains(
+        CSAMContainerLaunchDiagnosticsConstants.QUEUE_AM_RESOURCE_LIMIT_EXCEED),
+        "AM diagnostics not set properly");
 
     // Now verify the same test case in Queue C1 where label is not configured.
     // Submit an app to Queue C1 with empty label
@@ -253,29 +255,30 @@ public class TestApplicationLimitsByPartition {
     pendingApp = MockRMAppSubmitter.submit(rm1, data);
 
     leafQueue = (LeafQueue) cs.getQueue("c1");
-    Assert.assertNotNull(leafQueue);
+    assertNotNull(leafQueue);
 
     // 2 apps will be activated, third one will be pending as am-limit
     // is reached.
-    Assert.assertEquals(2, leafQueue.getNumActiveApplications());
-    Assert.assertEquals(1, leafQueue.getNumPendingApplications());
-    Assert.assertTrue("AM diagnostics not set properly",
-        pendingApp.getDiagnostics().toString()
-            .contains(AMState.INACTIVATED.getDiagnosticMessage()));
-    Assert.assertTrue("AM diagnostics not set properly",
-        pendingApp.getDiagnostics().toString().contains(
-            CSAMContainerLaunchDiagnosticsConstants.QUEUE_AM_RESOURCE_LIMIT_EXCEED));
+    assertEquals(2, leafQueue.getNumActiveApplications());
+    assertEquals(1, leafQueue.getNumPendingApplications());
+    assertTrue(pendingApp.getDiagnostics().toString()
+        .contains(AMState.INACTIVATED.getDiagnosticMessage()),
+        "AM diagnostics not set properly");
+    assertTrue(pendingApp.getDiagnostics().toString().contains(
+        CSAMContainerLaunchDiagnosticsConstants.QUEUE_AM_RESOURCE_LIMIT_EXCEED),
+        "AM diagnostics not set properly");
 
     rm1.killApp(app3.getApplicationId());
     Thread.sleep(1000);
 
     // After killing one running app, pending app will also get activated.
-    Assert.assertEquals(2, leafQueue.getNumActiveApplications());
-    Assert.assertEquals(0, leafQueue.getNumPendingApplications());
+    assertEquals(2, leafQueue.getNumActiveApplications());
+    assertEquals(0, leafQueue.getNumPendingApplications());
     rm1.close();
   }
 
-  @Test(timeout = 120000)
+  @Test
+  @Timeout(value = 120)
   public void testAtleastOneAMRunPerPartition() throws Exception {
     /*
      * Test Case:
@@ -343,11 +346,11 @@ public class TestApplicationLimitsByPartition {
 
     CapacityScheduler cs = (CapacityScheduler) rm1.getResourceScheduler();
     LeafQueue leafQueue = (LeafQueue) cs.getQueue("a1");
-    Assert.assertNotNull(leafQueue);
+    assertNotNull(leafQueue);
 
     // Only 1 app will be activated as am-limit for partition "x" is 0.15
-    Assert.assertEquals(1, leafQueue.getNumActiveApplications());
-    Assert.assertEquals(1, leafQueue.getNumPendingApplications());
+    assertEquals(1, leafQueue.getNumActiveApplications());
+    assertEquals(1, leafQueue.getNumPendingApplications());
 
     // Now verify the same test case in Queue C1 which takes default label
     // to see queue level am-resource-limit is still working as expected.
@@ -379,15 +382,16 @@ public class TestApplicationLimitsByPartition {
     MockRMAppSubmitter.submit(rm1, data);
 
     leafQueue = (LeafQueue) cs.getQueue("c1");
-    Assert.assertNotNull(leafQueue);
+    assertNotNull(leafQueue);
 
     // 1 app will be activated (and it has AM resource more than queue limit)
-    Assert.assertEquals(1, leafQueue.getNumActiveApplications());
-    Assert.assertEquals(1, leafQueue.getNumPendingApplications());
+    assertEquals(1, leafQueue.getNumActiveApplications());
+    assertEquals(1, leafQueue.getNumPendingApplications());
     rm1.close();
   }
 
-  @Test(timeout = 120000)
+  @Test
+  @Timeout(value = 120)
   public void testDefaultAMLimitFromQueueForPartition() throws Exception {
     /*
      * Test Case:
@@ -446,24 +450,25 @@ public class TestApplicationLimitsByPartition {
 
     CapacityScheduler cs = (CapacityScheduler) rm1.getResourceScheduler();
     LeafQueue leafQueue = (LeafQueue) cs.getQueue("a1");
-    Assert.assertNotNull(leafQueue);
+    assertNotNull(leafQueue);
 
     // Only 1 app will be activated as am-limit for queue is 0.2 and same is
     // used for partition "x" also.
-    Assert.assertEquals(1, leafQueue.getNumActiveApplications());
-    Assert.assertEquals(1, leafQueue.getNumPendingApplications());
-    Assert.assertTrue("AM diagnostics not set properly", app1.getDiagnostics()
-        .toString().contains(AMState.ACTIVATED.getDiagnosticMessage()));
-    Assert.assertTrue("AM diagnostics not set properly",
-        pendingApp.getDiagnostics().toString()
-            .contains(AMState.INACTIVATED.getDiagnosticMessage()));
-    Assert.assertTrue("AM diagnostics not set properly",
-        pendingApp.getDiagnostics().toString()
-            .contains(CSAMContainerLaunchDiagnosticsConstants.QUEUE_AM_RESOURCE_LIMIT_EXCEED));
+    assertEquals(1, leafQueue.getNumActiveApplications());
+    assertEquals(1, leafQueue.getNumPendingApplications());
+    assertTrue(app1.getDiagnostics().toString().contains(AMState.ACTIVATED.getDiagnosticMessage()),
+        "AM diagnostics not set properly");
+    assertTrue(pendingApp.getDiagnostics().toString()
+        .contains(AMState.INACTIVATED.getDiagnosticMessage()),
+        "AM diagnostics not set properly");
+    assertTrue(pendingApp.getDiagnostics().toString()
+        .contains(CSAMContainerLaunchDiagnosticsConstants.QUEUE_AM_RESOURCE_LIMIT_EXCEED),
+        "AM diagnostics not set properly");
     rm1.close();
   }
 
-  @Test(timeout = 120000)
+  @Test
+  @Timeout(value = 120)
   public void testUserAMResourceLimitWithLabels() throws Exception {
     /*
      * Test Case:
@@ -533,12 +538,12 @@ public class TestApplicationLimitsByPartition {
 
     CapacityScheduler cs = (CapacityScheduler) rm1.getResourceScheduler();
     LeafQueue leafQueue = (LeafQueue) cs.getQueue("a1");
-    Assert.assertNotNull(leafQueue);
+    assertNotNull(leafQueue);
 
     // Verify active applications count in this queue.
-    Assert.assertEquals(2, leafQueue.getNumActiveApplications());
-    Assert.assertEquals(1, leafQueue.getNumActiveApplications(user_0));
-    Assert.assertEquals(0, leafQueue.getNumPendingApplications());
+    assertEquals(2, leafQueue.getNumActiveApplications());
+    assertEquals(1, leafQueue.getNumActiveApplications(user_0));
+    assertEquals(0, leafQueue.getNumPendingApplications());
 
     // Submit 3rd app to Queue A1 for label X for user1. Now user1 will have
     // 2 applications (2 GB resource) and user0 will have one app (1GB).
@@ -573,19 +578,19 @@ public class TestApplicationLimitsByPartition {
     RMApp pendingApp = MockRMAppSubmitter.submit(rm1, data);
 
     // Verify active applications count per user and also in queue level.
-    Assert.assertEquals(3, leafQueue.getNumActiveApplications());
-    Assert.assertEquals(1, leafQueue.getNumActiveApplications(user_0));
-    Assert.assertEquals(2, leafQueue.getNumActiveApplications(user_1));
-    Assert.assertEquals(1, leafQueue.getNumPendingApplications(user_1));
-    Assert.assertEquals(1, leafQueue.getNumPendingApplications());
+    assertEquals(3, leafQueue.getNumActiveApplications());
+    assertEquals(1, leafQueue.getNumActiveApplications(user_0));
+    assertEquals(2, leafQueue.getNumActiveApplications(user_1));
+    assertEquals(1, leafQueue.getNumPendingApplications(user_1));
+    assertEquals(1, leafQueue.getNumPendingApplications());
 
     //verify Diagnostic messages
-    Assert.assertTrue("AM diagnostics not set properly",
-        pendingApp.getDiagnostics().toString()
-            .contains(AMState.INACTIVATED.getDiagnosticMessage()));
-    Assert.assertTrue("AM diagnostics not set properly",
-        pendingApp.getDiagnostics().toString().contains(
-            CSAMContainerLaunchDiagnosticsConstants.USER_AM_RESOURCE_LIMIT_EXCEED));
+    assertTrue(pendingApp.getDiagnostics().toString()
+        .contains(AMState.INACTIVATED.getDiagnosticMessage()),
+        "AM diagnostics not set properly");
+    assertTrue(pendingApp.getDiagnostics().toString().contains(
+        CSAMContainerLaunchDiagnosticsConstants.USER_AM_RESOURCE_LIMIT_EXCEED),
+        "AM diagnostics not set properly");
     rm1.close();
   }
 
@@ -684,7 +689,7 @@ public class TestApplicationLimitsByPartition {
 
     CapacityScheduler cs = (CapacityScheduler) rm1.getResourceScheduler();
     LeafQueue leafQueue = (LeafQueue) cs.getQueue("a1");
-    Assert.assertNotNull(leafQueue);
+    assertNotNull(leafQueue);
 
     /*
      *  capacity of queue A  -> 50% for label Y
@@ -696,8 +701,8 @@ public class TestApplicationLimitsByPartition {
      *  AM resource percent config for queue A1 -> 0.25
      *        ==> 2.5Gb (3 Gb) is max-am-resource-limit
      */
-    Assert.assertEquals(2, leafQueue.getNumActiveApplications());
-    Assert.assertEquals(1, leafQueue.getNumPendingApplications());
+    assertEquals(2, leafQueue.getNumActiveApplications());
+    assertEquals(1, leafQueue.getNumPendingApplications());
 
     // Submit app3 with 1Gb AM resource to Queue B1 (no_label)
     MockRMAppSubmissionData data1 =
@@ -723,7 +728,7 @@ public class TestApplicationLimitsByPartition {
     MockRMAppSubmitter.submit(rm1, data);
 
     leafQueue = (LeafQueue) cs.getQueue("b1");
-    Assert.assertNotNull(leafQueue);
+    assertNotNull(leafQueue);
 
     /*
      *  capacity of queue B  -> 90% for queue
@@ -738,8 +743,8 @@ public class TestApplicationLimitsByPartition {
      *
      *  Only one app will be activated and all othe will be pending.
      */
-    Assert.assertEquals(1, leafQueue.getNumActiveApplications());
-    Assert.assertEquals(1, leafQueue.getNumPendingApplications());
+    assertEquals(1, leafQueue.getNumActiveApplications());
+    assertEquals(1, leafQueue.getNumPendingApplications());
 
     rm1.close();
   }
@@ -824,16 +829,16 @@ public class TestApplicationLimitsByPartition {
     when(amResourceRequest.getCapability()).thenReturn(amResource);
     when(rmApp.getAMResourceRequests()).thenReturn(
         Collections.singletonList(amResourceRequest));
-    Mockito.doReturn(rmApp)
+    doReturn(rmApp)
         .when(spyApps).get(ArgumentMatchers.<ApplicationId>any());
     when(spyRMContext.getRMApps()).thenReturn(spyApps);
     RMAppAttempt rmAppAttempt = mock(RMAppAttempt.class);
     when(rmApp.getRMAppAttempt(any()))
         .thenReturn(rmAppAttempt);
     when(rmApp.getCurrentAppAttempt()).thenReturn(rmAppAttempt);
-    Mockito.doReturn(rmApp)
+    doReturn(rmApp)
         .when(spyApps).get(ArgumentMatchers.<ApplicationId>any());
-    Mockito.doReturn(true).when(spyApps)
+    doReturn(true).when(spyApps)
         .containsKey(ArgumentMatchers.<ApplicationId>any());
 
     Priority priority_1 = TestUtils.createMockPriority(1);
@@ -1008,19 +1013,17 @@ public class TestApplicationLimitsByPartition {
             .withQueue(queueName)
             .build());
 
-    Assert.assertEquals("PendingApplications should be 1", 1,
-        queueA.getNumPendingApplications());
-    Assert.assertEquals("Active applications should be 2", 2,
-        queueA.getNumActiveApplications());
+    assertEquals(1, queueA.getNumPendingApplications(), "PendingApplications should be 1");
+    assertEquals(2, queueA.getNumActiveApplications(), "Active applications should be 2");
     // AMLimit is 2048,7
-    Assert.assertEquals(2048,
+    assertEquals(2048,
         queueA.getQueueResourceUsage().getAMLimit().getMemorySize());
-    Assert.assertEquals(7,
+    assertEquals(7,
         queueA.getQueueResourceUsage().getAMLimit().getVirtualCores());
     // Used AM Resource is 2048,2
-    Assert.assertEquals(2048,
+    assertEquals(2048,
         queueA.getQueueResourceUsage().getAMUsed().getMemorySize());
-    Assert.assertEquals(2,
+    assertEquals(2,
         queueA.getQueueResourceUsage().getAMUsed().getVirtualCores());
 
     rm.close();

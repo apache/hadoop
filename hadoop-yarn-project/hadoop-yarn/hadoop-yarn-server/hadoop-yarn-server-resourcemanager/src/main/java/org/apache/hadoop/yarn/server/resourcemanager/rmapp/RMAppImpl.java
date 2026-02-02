@@ -1018,7 +1018,7 @@ public class RMAppImpl implements RMApp, Recoverable {
   private void processNodeUpdate(RMAppNodeUpdateType type, RMNode node) {
     NodeState nodeState = node.getState();
     updatedNodes.put(node, RMAppNodeUpdateType.convertToNodeUpdateType(type));
-    LOG.debug("Received node update event:{} for node:{} with state:",
+    LOG.debug("Received node update event:{} for node:{} with state:{}",
         type, node, nodeState);
   }
 

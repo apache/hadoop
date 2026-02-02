@@ -41,13 +41,18 @@ import org.apache.hadoop.io.compress.Compressor;
 import org.apache.hadoop.io.compress.Decompressor;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Progressable;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.*;
-
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.when;
 
 public class TestMapFile {
   private static final Logger LOG = LoggerFactory.getLogger(TestMapFile.class);
@@ -56,11 +61,11 @@ public class TestMapFile {
   
   private static Configuration conf = new Configuration();
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     LocalFileSystem fs = FileSystem.getLocal(conf);
     if (fs.exists(TEST_DIR) && !fs.delete(TEST_DIR, true)) {
-      Assert.fail("Can't clean up test root dir");
+      fail("Can't clean up test root dir");
     }
     fs.mkdirs(TEST_DIR);
   }
@@ -183,7 +188,7 @@ public class TestMapFile {
       // Assert that null is returned if key is > last entry in mapfile.
       key = new Text("92");
       closest = (Text) reader.getClosest(key, value);
-      assertNull("Not null key in testGetClosestWithNewCode", closest);
+      assertNull(closest, "Not null key in testGetClosestWithNewCode");
 
       // If we were looking for the key before, we should get the last key
       closest = (Text) reader.getClosest(key, value, true);
@@ -264,8 +269,8 @@ public class TestMapFile {
       MapFile.rename(spyFs, oldDir.toString(), newDir.toString());
       fail("testRenameWithException no exception error !!!");
     } catch (IOException ex) {
-      assertEquals("testRenameWithException invalid IOExceptionMessage !!!",
-          ex.getMessage(), ERROR_MESSAGE);
+      assertEquals(ex.getMessage(), ERROR_MESSAGE,
+          "testRenameWithException invalid IOExceptionMessage !!!");
     } finally {
       IOUtils.cleanupWithLogger(LOG, writer);
     }
@@ -291,8 +296,8 @@ public class TestMapFile {
       MapFile.rename(spyFs, oldDir.toString(), newDir.toString());
       fail("testRenameWithException no exception error !!!");
     } catch (IOException ex) {
-      assertTrue("testRenameWithFalse invalid IOExceptionMessage error !!!", ex
-          .getMessage().startsWith(ERROR_MESSAGE));
+      assertTrue(ex.getMessage().startsWith(ERROR_MESSAGE),
+          "testRenameWithFalse invalid IOExceptionMessage error !!!");
     } finally {
       IOUtils.cleanupWithLogger(LOG, writer);
     }
@@ -318,8 +323,8 @@ public class TestMapFile {
           MapFile.Writer.valueClass(Text.class));
       fail("testWriteWithFailDirCreation error !!!");
     } catch (IOException ex) {
-      assertTrue("testWriteWithFailDirCreation ex error !!!", ex.getMessage()
-          .startsWith(ERROR_MESSAGE));
+      assertTrue(ex.getMessage().startsWith(ERROR_MESSAGE),
+          "testWriteWithFailDirCreation ex error !!!");
     } finally {
       IOUtils.cleanupWithLogger(LOG, writer);
     }
@@ -344,8 +349,8 @@ public class TestMapFile {
       reader = createReader(TEST_METHOD_KEY, IntWritable.class);
       IntWritable expectedKey = new IntWritable(0);
       reader.finalKey(expectedKey);
-      assertEquals("testOnFinalKey not same !!!", expectedKey, new IntWritable(
-          9));
+      assertEquals(expectedKey, new IntWritable(9),
+          "testOnFinalKey not same !!!");
     } catch (IOException ex) {
       fail("testOnFinalKey error !!!");
     } finally {
@@ -364,10 +369,10 @@ public class TestMapFile {
     try {
       createWriter("testKeyValueClasses.mapfile", IntWritable.class, Text.class)
         .close();
-      assertNotNull("writer key class null error !!!",
-          MapFile.Writer.keyClass(keyClass));
-      assertNotNull("writer value class null error !!!",
-          MapFile.Writer.valueClass(valueClass));
+      assertNotNull(MapFile.Writer.keyClass(keyClass),
+          "writer key class null error !!!");
+      assertNotNull(MapFile.Writer.valueClass(valueClass),
+          "writer value class null error !!!");
     } catch (IOException ex) {
       fail(ex.getMessage());
     }
@@ -446,10 +451,10 @@ public class TestMapFile {
         }
         reader.reset();
       }
-      assertTrue("reader seek error !!!",
-          reader.seek(new IntWritable(SIZE / 2)));
-      assertFalse("reader seek error !!!",
-          reader.seek(new IntWritable(SIZE * 2)));
+      assertTrue(reader.seek(new IntWritable(SIZE / 2)),
+          "reader seek error !!!");
+      assertFalse(reader.seek(new IntWritable(SIZE * 2)),
+          "reader seek error !!!");
     } catch (IOException ex) {
       fail("reader seek error !!!");
     } finally {
@@ -479,8 +484,8 @@ public class TestMapFile {
         isDeleted = indexFile.delete();
 
       if (isDeleted)
-        assertTrue("testFix error !!!",
-            MapFile.fix(fs, dir, IntWritable.class, Text.class, true, conf) == PAIR_SIZE);
+        assertTrue(MapFile.fix(fs, dir, IntWritable.class, Text.class, true, conf) == PAIR_SIZE,
+            "testFix error !!!");
     } catch (Exception ex) {
       fail("testFix error !!!");
     } finally {
@@ -521,9 +526,8 @@ public class TestMapFile {
       Path index = new Path(dir, MapFile.INDEX_FILE_NAME);
       fs.rename(index, index.suffix(".orig"));
 
-      assertEquals("No of valid MapFile entries wrong", size,
-                   MapFile.fix(fs, dir, IntWritable.class, Text.class,
-                               false, conf));
+      assertEquals(size, MapFile.fix(fs, dir, IntWritable.class, Text.class, false, conf),
+          "No of valid MapFile entries wrong");
       reader = new MapFile.Reader(dir, conf);
       IntWritable key;
       Text val = new Text();
@@ -534,8 +538,8 @@ public class TestMapFile {
           notFound++;
         }
       }
-      assertEquals("With MapFile.fix-ed index, could not get entries # ",
-                   0, notFound);
+      assertEquals(0, notFound,
+          "With MapFile.fix-ed index, could not get entries # ");
     } finally {
       IOUtils.cleanupWithLogger(null, writer, reader);
       if (fs.exists(dir)) {
@@ -585,8 +589,8 @@ public class TestMapFile {
       reader = new MapFile.Reader(fs, path,
           WritableComparator.get(IntWritable.class), conf);
       assertNotNull(reader);
-      assertNotNull("reader key is null !!!", reader.getKeyClass());
-      assertNotNull("reader value in null", reader.getValueClass());
+      assertNotNull(reader.getKeyClass(), "reader key is null !!!");
+      assertNotNull(reader.getValueClass(), "reader value in null");
     } catch (IOException e) {
       fail(e.getMessage());
     } finally {
@@ -633,8 +637,8 @@ public class TestMapFile {
           MapFile.Writer.valueClass(IntWritable.class));
       fail("fail in testPathExplosionWriterCreation !!!");
     } catch (IOException ex) {
-      assertEquals("testPathExplosionWriterCreation ex message error !!!",
-          ex.getMessage(), TEST_ERROR_MESSAGE);
+      assertEquals(ex.getMessage(), TEST_ERROR_MESSAGE,
+          "testPathExplosionWriterCreation ex message error !!!");
     } catch (Exception e) {
       fail("fail in testPathExplosionWriterCreation. Other ex !!!");
     } finally {
@@ -829,8 +833,8 @@ public class TestMapFile {
         Text value = startValue;
         IntWritable prev = new IntWritable(start);
         while (reader.next(key, value)) {
-          assertTrue("Next key should be always equal or more",
-              prev.get() <= key.get());
+          assertTrue(prev.get() <= key.get(),
+              "Next key should be always equal or more");
           assertEquals(expectedIterator.next().intValue(), key.get());
           prev.set(key.get());
         }
@@ -841,8 +845,8 @@ public class TestMapFile {
     // inputs should be deleted
     for (int j = 0; j < in.length; j++) {
       Path path = in[j];
-      assertFalse("inputs should be deleted",
-          path.getFileSystem(conf).exists(path));
+      assertFalse(path.getFileSystem(conf).exists(path),
+          "inputs should be deleted");
     }
   }
 }

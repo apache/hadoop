@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.minikdc;
 
-import org.junit.After;
-import org.junit.Before;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 
 import java.io.File;
 import java.util.Properties;
@@ -40,7 +40,7 @@ public class KerberosSecurityTestcase {
   private File workDir;
   private Properties conf;
 
-  @Before
+  @BeforeEach
   public void startMiniKdc() throws Exception {
     createTestDir();
     createMiniKdcConf();
@@ -65,7 +65,7 @@ public class KerberosSecurityTestcase {
     conf = MiniKdc.createConf();
   }
 
-  @After
+  @AfterEach
   public void stopMiniKdc() {
     if (kdc != null) {
       kdc.stop();

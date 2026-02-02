@@ -47,6 +47,7 @@ import org.apache.hadoop.util.JvmPauseMonitor;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.VersionInfo;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.yarn.YarnUncaughtExceptionHandler;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -202,7 +203,7 @@ public class Router extends CompositeService {
   }
 
   protected void shutDown() {
-    new Thread(Router.this::stop).start();
+    new SubjectInheritingThread(Router.this::stop).start();
   }
 
   protected RouterClientRMService createClientRMProxyService() {
@@ -234,7 +235,7 @@ public class Router extends CompositeService {
     RMWebAppUtil.setupSecurityAndFilters(conf, null);
 
     Builder<Object> builder =
-        WebApps.$for("cluster", null, null, "ws").with(conf).at(webAppAddress);
+        WebApps.$for("cluster", null, null, "router-ws").with(conf).at(webAppAddress);
     if (RouterServerUtil.isRouterWebProxyEnable(conf)) {
       fetcher = new FedAppReportFetcher(conf);
       builder.withServlet(ProxyUriUtils.PROXY_SERVLET_NAME, ProxyUriUtils.PROXY_PATH_SPEC,
@@ -244,7 +245,9 @@ public class Router extends CompositeService {
       String[] proxyParts = proxyHostAndPort.split(":");
       builder.withAttribute(WebAppProxy.PROXY_HOST_ATTRIBUTE, proxyParts[0]);
     }
-    webApp = builder.start(new RouterWebApp(this), getUIWebAppContext());
+    RouterWebApp routerWebApp = new RouterWebApp(this);
+    builder.withResourceConfig(routerWebApp.resourceConfig());
+    webApp = builder.start(routerWebApp, getUIWebAppContext());
   }
 
   private WebAppContext getUIWebAppContext() {

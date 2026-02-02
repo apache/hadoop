@@ -1,0 +1,343 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements. See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership. The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+package org.apache.hadoop.fs.s3a.impl.streams;
+
+import java.io.EOFException;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
+import java.util.function.IntFunction;
+import java.util.Optional;
+
+import org.apache.hadoop.fs.s3a.S3AEncryptionMethods;
+import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecretOperations;
+import software.amazon.s3.analyticsaccelerator.S3SeekableInputStreamFactory;
+import software.amazon.s3.analyticsaccelerator.S3SeekableInputStream;
+import software.amazon.s3.analyticsaccelerator.common.ObjectRange;
+import software.amazon.s3.analyticsaccelerator.request.EncryptionSecrets;
+import software.amazon.s3.analyticsaccelerator.request.ObjectMetadata;
+import software.amazon.s3.analyticsaccelerator.request.StreamAuditContext;
+import software.amazon.s3.analyticsaccelerator.util.InputPolicy;
+import software.amazon.s3.analyticsaccelerator.util.OpenStreamInformation;
+import software.amazon.s3.analyticsaccelerator.util.S3URI;
+import software.amazon.s3.analyticsaccelerator.util.RequestCallback;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.fs.FSExceptionMessages;
+import org.apache.hadoop.fs.StreamCapabilities;
+import org.apache.hadoop.fs.s3a.Retries;
+import org.apache.hadoop.fs.s3a.S3AInputPolicy;
+import org.apache.hadoop.fs.s3a.S3ObjectAttributes;
+import org.apache.hadoop.fs.FileRange;
+import org.apache.hadoop.fs.VectoredReadUtils;
+
+import static org.apache.hadoop.fs.VectoredReadUtils.LOG_BYTE_BUFFER_RELEASED;
+
+
+/**
+ * Analytics stream creates a stream using aws-analytics-accelerator-s3. This stream supports
+ * parquet specific optimisations such as parquet-aware prefetching. For more details, see
+ * https://github.com/awslabs/analytics-accelerator-s3.
+ */
+public class AnalyticsStream extends ObjectInputStream implements StreamCapabilities {
+
+  private S3SeekableInputStream inputStream;
+  private long lastReadCurrentPos = 0;
+  private volatile boolean closed;
+
+  public static final Logger LOG = LoggerFactory.getLogger(AnalyticsStream.class);
+
+  public AnalyticsStream(final ObjectReadParameters parameters,
+      final S3SeekableInputStreamFactory s3SeekableInputStreamFactory) throws IOException {
+    super(InputStreamType.Analytics, parameters);
+    S3ObjectAttributes s3Attributes = parameters.getObjectAttributes();
+
+    this.inputStream = s3SeekableInputStreamFactory.createStream(S3URI.of(s3Attributes.getBucket(),
+        s3Attributes.getKey()), buildOpenStreamInformation(parameters));
+    getS3AStreamStatistics().streamOpened(InputStreamType.Analytics);
+  }
+
+  @Override
+  public int read() throws IOException {
+    throwIfClosed();
+
+    getS3AStreamStatistics().readOperationStarted(getPos(), 1);
+
+    int bytesRead;
+    try {
+      bytesRead = inputStream.read();
+    } catch (IOException ioe) {
+      onReadFailure(ioe);
+      throw ioe;
+    }
+
+    if (bytesRead != -1) {
+      incrementBytesRead(1);
+    }
+
+    return bytesRead;
+  }
+
+  @Override
+  public void seek(long pos) throws IOException {
+    throwIfClosed();
+    if (pos < 0) {
+      throw new EOFException(FSExceptionMessages.NEGATIVE_SEEK
+          + " " + pos);
+    }
+    inputStream.seek(pos);
+  }
+
+
+  @Override
+  public synchronized long getPos() {
+    if (!closed) {
+      lastReadCurrentPos = inputStream.getPos();
+    }
+    return lastReadCurrentPos;
+  }
+
+
+  /**
+   * Reads the last n bytes from the stream into a byte buffer. Blocks until end of stream is
+   * reached. Leaves the position of the stream unaltered.
+   *
+   * @param buf buffer to read data into
+   * @param off start position in buffer at which data is written
+   * @param len the number of bytes to read; the n-th byte should be the last byte of the stream.
+   * @return the total number of bytes read into the buffer
+   * @throws IOException if an I/O error occurs
+   */
+  public int readTail(byte[] buf, int off, int len) throws IOException {
+    throwIfClosed();
+    getS3AStreamStatistics().readOperationStarted(getPos(), len);
+
+    int bytesRead;
+    try {
+      bytesRead = inputStream.readTail(buf, off, len);
+    } catch (IOException ioe) {
+      onReadFailure(ioe);
+      throw ioe;
+    }
+
+    if (bytesRead > 0) {
+      incrementBytesRead(bytesRead);
+    }
+
+    return bytesRead;
+  }
+
+  @Override
+  public int read(byte[] buf, int off, int len) throws IOException {
+    throwIfClosed();
+
+    getS3AStreamStatistics().readOperationStarted(getPos(), len);
+
+    int bytesRead;
+    try {
+      bytesRead = inputStream.read(buf, off, len);
+    } catch (IOException ioe) {
+      onReadFailure(ioe);
+      throw ioe;
+    }
+
+    if (bytesRead > 0) {
+      incrementBytesRead(bytesRead);
+    }
+
+    return bytesRead;
+  }
+
+  /**
+   * Pass to {@link #readVectored(List, IntFunction, Consumer)}
+   * with the {@link VectoredReadUtils#LOG_BYTE_BUFFER_RELEASED} releaser.
+   * {@inheritDoc}
+   */
+  @Override
+  public void readVectored(List<? extends FileRange> ranges,
+                                        IntFunction<ByteBuffer> allocate) throws IOException {
+    readVectored(ranges, allocate, LOG_BYTE_BUFFER_RELEASED);
+  }
+
+  /**
+   * Pass to {@link #readVectored(List, IntFunction, Consumer)}
+   * with the {@link VectoredReadUtils#LOG_BYTE_BUFFER_RELEASED} releaser.
+   * {@inheritDoc}
+   */
+  @Override
+  public void readVectored(final List<? extends FileRange> ranges,
+                           final IntFunction<ByteBuffer> allocate,
+                           final Consumer<ByteBuffer> release) throws IOException {
+    LOG.debug("AAL: Starting vectored read on path {} for ranges {} ", getPathStr(), ranges);
+    throwIfClosed();
+
+    List<ObjectRange> objectRanges = new ArrayList<>();
+
+    for (FileRange range : ranges) {
+      CompletableFuture<ByteBuffer> result = new CompletableFuture<>();
+      ObjectRange objectRange = new ObjectRange(result, range.getOffset(), range.getLength());
+      objectRanges.add(objectRange);
+      range.setData(result);
+    }
+
+    inputStream.readVectored(objectRanges, allocate, release);
+  }
+
+  @Override
+  public boolean seekToNewSource(long l) throws IOException {
+    return false;
+  }
+
+  @Override
+  public int available() throws IOException {
+    throwIfClosed();
+    return super.available();
+  }
+
+  @Override
+  protected boolean isStreamOpen() {
+    return !isClosed();
+  }
+
+  protected boolean isClosed() {
+    return inputStream == null;
+  }
+
+  @Override
+  protected void abortInFinalizer() {
+    getS3AStreamStatistics().streamLeaked();
+    try {
+      close();
+    } catch (IOException ignored) {
+
+    }
+  }
+
+  @Override
+  public synchronized void close() throws IOException {
+    if(!closed) {
+      closed = true;
+      try {
+        inputStream.close();
+        inputStream = null;
+        super.close();
+      } catch (IOException ioe) {
+        LOG.debug("Failure closing stream {}: ", getKey());
+        throw ioe;
+      }
+    }
+  }
+
+  /**
+   * Close the stream on read failure.
+   * No attempt to recover from failure
+   *
+   * @param ioe exception caught.
+   */
+  @Retries.OnceTranslated
+  private void onReadFailure(IOException ioe) throws IOException {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Got exception while trying to read from stream {}, " +
+              "not trying to recover:",
+              getKey(), ioe);
+    } else {
+      LOG.info("Got exception while trying to read from stream {}, " +
+              "not trying to recover:",
+              getKey(), ioe);
+    }
+    this.close();
+  }
+
+  private OpenStreamInformation buildOpenStreamInformation(ObjectReadParameters parameters) {
+
+    final RequestCallback requestCallback = new AnalyticsRequestCallback(getS3AStreamStatistics());
+
+    OpenStreamInformation.OpenStreamInformationBuilder openStreamInformationBuilder =
+        OpenStreamInformation.builder()
+            .inputPolicy(mapS3AInputPolicyToAAL(parameters.getContext()
+            .getInputPolicy()))
+            .requestCallback(requestCallback);
+
+    if (parameters.getObjectAttributes().getETag() != null) {
+      openStreamInformationBuilder.objectMetadata(ObjectMetadata.builder()
+          .contentLength(parameters.getObjectAttributes().getLen())
+          .etag(parameters.getObjectAttributes().getETag()).build());
+    }
+
+
+    if (parameters.getEncryptionSecrets().getEncryptionMethod() == S3AEncryptionMethods.SSE_C) {
+      EncryptionSecretOperations.getSSECustomerKey(parameters.getEncryptionSecrets())
+              .ifPresent(base64customerKey -> openStreamInformationBuilder.encryptionSecrets(
+              EncryptionSecrets.builder().sseCustomerKey(Optional.of(base64customerKey)).build()));
+    }
+
+    openStreamInformationBuilder.streamAuditContext(StreamAuditContext.builder()
+                    .operationName(parameters.getAuditSpan().getOperationName())
+                    .spanId(parameters.getAuditSpan().getSpanId())
+                    .build());
+
+    return openStreamInformationBuilder.build();
+  }
+
+  /**
+   * If S3A's input policy is Sequential, that is, if the file format to be read is sequential
+   * (CSV, JSON), or the file policy passed down is WHOLE_FILE, then AAL's parquet specific
+   * optimisations will be turned off, regardless of the file extension. This is to allow for
+   * applications like DISTCP that read parquet files, but will read them whole, and so do not
+   * follow the typical parquet read patterns of reading footer first etc. and will not benefit
+   * from parquet optimisations.
+   * Else, AAL will make a decision on which optimisations based on the file extension,
+   * if the file ends in .par or .parquet, then parquet specific optimisations are used.
+   *
+   * @param inputPolicy S3A's input file policy passed down when opening the file
+   * @return the AAL read policy
+   */
+  private InputPolicy mapS3AInputPolicyToAAL(S3AInputPolicy inputPolicy) {
+    switch (inputPolicy) {
+    case Sequential:
+      return InputPolicy.Sequential;
+    default:
+      return InputPolicy.None;
+    }
+  }
+
+  protected void throwIfClosed() throws IOException {
+    if (closed) {
+      throw new IOException(getKey() + ": " + FSExceptionMessages.STREAM_IS_CLOSED);
+    }
+  }
+
+  /**
+   * Increment the bytes read counter if there is a stats instance
+   * and the number of bytes read is more than zero.
+   * @param bytesRead number of bytes read
+   */
+  private void incrementBytesRead(long bytesRead) {
+    getS3AStreamStatistics().bytesRead(bytesRead);
+    if (getContext().getStats() != null && bytesRead > 0) {
+      getContext().getStats().incrementBytesRead(bytesRead);
+    }
+  }
+}

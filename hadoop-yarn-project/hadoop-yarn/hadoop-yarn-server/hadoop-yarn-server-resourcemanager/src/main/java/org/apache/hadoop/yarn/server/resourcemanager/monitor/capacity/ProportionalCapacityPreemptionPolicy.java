@@ -22,6 +22,7 @@ import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AbstractParentQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AbstractLeafQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
@@ -40,8 +41,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity
-    .ManagedParentQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacities;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.preemption.PreemptableQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.ContainerPreemptEvent;
@@ -430,12 +429,14 @@ public class ProportionalCapacityPreemptionPolicy
   }
 
   private Set<String> getLeafQueueNames(TempQueuePerPartition q) {
-    // Also exclude ParentQueues, which might be without children
-    if (CollectionUtils.isEmpty(q.children)
-        && !(q.parentQueue instanceof ManagedParentQueue)
-        && (q.parentQueue == null
-        || !q.parentQueue.isEligibleForAutoQueueCreation())) {
-      return ImmutableSet.of(q.queueName);
+    // Only consider this a leaf queue if:
+    // It is a concrete leaf queue (not a childless parent)
+    if (CollectionUtils.isEmpty(q.children)) {
+      CSQueue queue = scheduler.getQueue(q.queueName);
+      if (queue instanceof AbstractLeafQueue) {
+        return ImmutableSet.of(q.queueName);
+      }
+      return Collections.emptySet();
     }
 
     Set<String> leafQueueNames = new HashSet<>();

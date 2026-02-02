@@ -23,6 +23,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.Shell;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -55,7 +56,7 @@ import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.r
  * events of all the containers together, and if we go over the limit picks
  * a container to kill. The algorithm that picks the container is a plugin.
  */
-public class CGroupElasticMemoryController extends Thread {
+public class CGroupElasticMemoryController extends SubjectInheritingThread {
   protected static final Logger LOG = LoggerFactory
       .getLogger(CGroupElasticMemoryController.class);
   private final Clock clock = new MonotonicClock();
@@ -238,7 +239,7 @@ public class CGroupElasticMemoryController extends Thread {
    * reasons.
    */
   @Override
-  public void run() {
+  public void work() {
     ExecutorService executor = null;
     try {
       // Disable OOM killer and set a limit.

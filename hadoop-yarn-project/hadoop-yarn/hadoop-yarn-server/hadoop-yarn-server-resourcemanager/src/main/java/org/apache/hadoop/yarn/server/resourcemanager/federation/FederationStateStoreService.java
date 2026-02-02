@@ -31,6 +31,7 @@ import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -89,6 +90,7 @@ import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade
 import org.apache.hadoop.yarn.server.records.Version;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.JAXBContextResolver;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.MonotonicClock;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
@@ -121,6 +123,7 @@ public class FederationStateStoreService extends AbstractService
   private String cleanUpThreadNamePrefix = "FederationStateStoreService-Clean-Thread";
   private int cleanUpRetryCountNum;
   private long cleanUpRetrySleepTime;
+  private JAXBContextResolver resolver;
 
   public FederationStateStoreService(RMContext rmContext) {
     super(FederationStateStoreService.class.getName());
@@ -181,6 +184,8 @@ public class FederationStateStoreService extends AbstractService
 
     this.metrics = FederationStateStoreServiceMetrics.getMetrics();
     LOG.info("Initialized federation statestore service metrics.");
+
+    this.resolver = new JAXBContextResolver(conf);
 
     super.serviceInit(conf);
   }
@@ -252,7 +257,7 @@ public class FederationStateStoreService extends AbstractService
           "Failed to register Federation membership with the StateStore", e);
     }
     stateStoreHeartbeat = new FederationStateStoreHeartbeat(subClusterId,
-        stateStoreClient, rmContext.getScheduler());
+        stateStoreClient, rmContext.getScheduler(), resolver);
     scheduledExecutorService =
         HadoopExecutors.newSingleThreadScheduledExecutor();
     scheduledExecutorService.scheduleWithFixedDelay(stateStoreHeartbeat,
@@ -597,7 +602,7 @@ public class FederationStateStoreService extends AbstractService
    */
   public void createCleanUpFinishApplicationThread(String stage) {
     String threadName = cleanUpThreadNamePrefix + "-" + stage;
-    Thread finishApplicationThread = new Thread(createCleanUpFinishApplicationThread());
+    Thread finishApplicationThread = new SubjectInheritingThread(createCleanUpFinishApplicationThread());
     finishApplicationThread.setName(threadName);
     finishApplicationThread.start();
     LOG.info("CleanUpFinishApplicationThread has been started {}.", threadName);

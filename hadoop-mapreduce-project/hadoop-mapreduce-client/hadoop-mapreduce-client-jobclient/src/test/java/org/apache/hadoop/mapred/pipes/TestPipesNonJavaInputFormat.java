@@ -29,11 +29,11 @@ import org.apache.hadoop.mapred.RecordReader;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.pipes.TestPipeApplication.FakeSplit;
 import org.apache.hadoop.util.StringUtils;
-import org.junit.Assert;
-import org.junit.Test;
-import static org.junit.Assert.*;
-import static org.mockito.Mockito.*;
-
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
 
 public class TestPipesNonJavaInputFormat {
   private static File workSpace = new File("target",
@@ -57,16 +57,16 @@ public class TestPipesNonJavaInputFormat {
     // input and output files
     File input1 = new File(workSpace + File.separator + "input1");
     if (!input1.getParentFile().exists()) {
-      Assert.assertTrue(input1.getParentFile().mkdirs());
+      assertTrue(input1.getParentFile().mkdirs());
     }
 
     if (!input1.exists()) {
-      Assert.assertTrue(input1.createNewFile());
+      assertTrue(input1.createNewFile());
     }
 
     File input2 = new File(workSpace + File.separator + "input2");
     if (!input2.exists()) {
-      Assert.assertTrue(input2.createNewFile());
+      assertTrue(input2.createNewFile());
     }
     // set data for splits
     conf.set(org.apache.hadoop.mapreduce.lib.input.FileInputFormat.INPUT_DIR,

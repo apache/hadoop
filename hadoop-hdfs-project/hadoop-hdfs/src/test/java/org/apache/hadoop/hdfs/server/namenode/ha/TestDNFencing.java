@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 
@@ -50,16 +50,18 @@ import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.datanode.InternalDataNodeTestUtils;
+import org.apache.hadoop.hdfs.server.datanode.ReplicaNotFoundException;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
+import org.apache.hadoop.hdfs.util.RwLockMode;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.DelayAnswer;
 import org.apache.hadoop.util.Lists;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.slf4j.Logger;
@@ -83,7 +85,7 @@ public class TestDNFencing {
     DFSTestUtil.setNameNodeLogLevel(Level.TRACE);
   }
   
-  @Before
+  @BeforeEach
   public void setupCluster() throws Exception {
     conf = new Configuration();
     conf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, SMALL_BLOCK);
@@ -112,7 +114,7 @@ public class TestDNFencing {
     fs = HATestUtil.configureFailoverFs(cluster, conf);
   }
   
-  @After
+  @AfterEach
   public void shutdownCluster() throws Exception {
     if (cluster != null) {
       banner("Shutting down cluster. NN1 metadata:");
@@ -146,8 +148,7 @@ public class TestDNFencing {
     cluster.transitionToActive(1);
     
     // Check that the standby picked up the replication change.
-    assertEquals(1,
-        nn2.getRpcServer().getFileInfo(TEST_FILE).getReplication());
+    assertEquals(1, nn2.getRpcServer().getFileInfo(TEST_FILE).getReplication());
 
     // Dump some info for debugging purposes.
     banner("NN2 Metadata immediately after failover");
@@ -237,8 +238,7 @@ public class TestDNFencing {
     cluster.transitionToActive(1);
 
     // Check that the standby picked up the replication change.
-    assertEquals(1,
-        nn2.getRpcServer().getFileInfo(TEST_FILE).getReplication());
+    assertEquals(1, nn2.getRpcServer().getFileInfo(TEST_FILE).getReplication());
 
     // Dump some info for debugging purposes.
     banner("Metadata immediately after failover");
@@ -337,8 +337,7 @@ public class TestDNFencing {
     cluster.transitionToActive(1);
 
     // Check that the standby picked up the replication change.
-    assertEquals(1,
-        nn2.getRpcServer().getFileInfo(TEST_FILE).getReplication());
+    assertEquals(1, nn2.getRpcServer().getFileInfo(TEST_FILE).getReplication());
 
     // Dump some info for debugging purposes.
     banner("Metadata immediately after failover");
@@ -441,8 +440,8 @@ public class TestDNFencing {
     }
 
     cluster.triggerBlockReports();
-    assertEquals("The queue should only have the latest report for each DN",
-        3, nn2.getNamesystem().getPendingDataNodeMessageCount());
+    assertEquals(3, nn2.getNamesystem().getPendingDataNodeMessageCount(),
+        "The queue should only have the latest report for each DN");
 
     // case 2: append to file and call hflush after write
     try {
@@ -454,8 +453,8 @@ public class TestDNFencing {
       IOUtils.closeStream(out);
       cluster.triggerHeartbeats();
     }
-    assertEquals("The queue should only have the latest report for each DN",
-        3, nn2.getNamesystem().getPendingDataNodeMessageCount());
+    assertEquals(3, nn2.getNamesystem().getPendingDataNodeMessageCount(),
+        "The queue should only have the latest report for each DN");
 
     // case 3: similar to case 2, except no hflush is called.
     try {
@@ -478,8 +477,8 @@ public class TestDNFencing {
 
     cluster.triggerBlockReports();
 
-    assertEquals("The queue should only have the latest report for each DN",
-        3, nn2.getNamesystem().getPendingDataNodeMessageCount());
+    assertEquals(3, nn2.getNamesystem().getPendingDataNodeMessageCount(),
+        "The queue should only have the latest report for each DN");
 
     cluster.transitionToStandby(0);
     cluster.transitionToActive(1);
@@ -568,13 +567,13 @@ public class TestDNFencing {
   }
 
   private void doMetasave(NameNode nn2) {
-    nn2.getNamesystem().writeLock();
+    nn2.getNamesystem().writeLock(RwLockMode.BM);
     try {
       PrintWriter pw = new PrintWriter(System.err);
       nn2.getNamesystem().getBlockManager().metaSave(pw);
       pw.flush();
     } finally {
-      nn2.getNamesystem().writeUnlock();
+      nn2.getNamesystem().writeUnlock(RwLockMode.BM, "metaSave");
     }
   }
 
@@ -596,9 +595,13 @@ public class TestDNFencing {
       throws IOException {
     int count = 0;
     for (DataNode dn : cluster.getDataNodes()) {
-      if (DataNodeTestUtils.getFSDataset(dn).getStoredBlock(
-          block.getBlockPoolId(), block.getBlockId()) != null) {
-        count++;
+      try {
+        if (DataNodeTestUtils.getFSDataset(dn).getStoredBlock(
+            block.getBlockPoolId(), block.getBlockId()) != null) {
+          count++;
+        }
+      } catch (ReplicaNotFoundException e) {
+        continue;
       }
     }
     return count;

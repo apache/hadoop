@@ -25,9 +25,10 @@ import org.apache.hadoop.yarn.server.federation.policies.dao.WeightedPolicyInfo;
 import org.apache.hadoop.yarn.server.federation.policies.router.PriorityRouterPolicy;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterIdInfo;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Simple test of {@link PriorityBroadcastPolicyManager}.
@@ -36,7 +37,7 @@ public class TestPriorityBroadcastPolicyManager extends BasePolicyManagerTest {
 
   private WeightedPolicyInfo policyInfo;
 
-  @Before
+  @BeforeEach
   public void setup() {
     // configure a policy
 
@@ -65,7 +66,7 @@ public class TestPriorityBroadcastPolicyManager extends BasePolicyManagerTest {
         expectedAMRMProxyPolicy, expectedRouterPolicy);
 
     // check the policyInfo propagates through ser/der correctly
-    Assert.assertEquals(
+    assertEquals(
         ((PriorityBroadcastPolicyManager) wfp).getWeightedPolicyInfo(),
         policyInfo);
   }

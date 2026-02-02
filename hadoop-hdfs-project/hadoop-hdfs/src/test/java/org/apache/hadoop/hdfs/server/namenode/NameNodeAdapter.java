@@ -46,6 +46,7 @@ import org.apache.hadoop.hdfs.server.protocol.HeartbeatResponse;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.SlowPeerReports;
+import org.apache.hadoop.hdfs.util.RwLockMode;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.security.AccessControlException;
@@ -82,13 +83,13 @@ public class NameNodeAdapter {
     // consistent with FSNamesystem#getFileInfo()
     final String operationName = needBlockToken ? "open" : "getfileinfo";
     FSPermissionChecker.setOperationType(operationName);
-    namenode.getNamesystem().readLock();
+    namenode.getNamesystem().readLock(RwLockMode.FS);
     try {
       return FSDirStatAndListingOp.getFileInfo(namenode.getNamesystem()
           .getFSDirectory(), pc, src, resolveLink, needLocation,
           needBlockToken);
     } finally {
-      namenode.getNamesystem().readUnlock();
+      namenode.getNamesystem().readUnlock(RwLockMode.FS, "getFileInfo");
     }
   }
   
@@ -201,11 +202,11 @@ public class NameNodeAdapter {
    */
   public static DatanodeDescriptor getDatanode(final FSNamesystem ns,
       DatanodeID id) throws IOException {
-    ns.readLock();
+    ns.readLock(RwLockMode.BM);
     try {
       return ns.getBlockManager().getDatanodeManager().getDatanode(id);
     } finally {
-      ns.readUnlock();
+      ns.readUnlock(RwLockMode.BM, "getDatanode");
     }
   }
   
@@ -229,7 +230,7 @@ public class NameNodeAdapter {
   public static BlockInfo addBlockNoJournal(final FSNamesystem fsn,
       final String src, final DatanodeStorageInfo[] targets)
       throws IOException {
-    fsn.writeLock();
+    fsn.writeLock(RwLockMode.GLOBAL);
     try {
       INodeFile file = (INodeFile)fsn.getFSDirectory().getINode(src);
       Block newBlock = fsn.createNewBlock(BlockType.CONTIGUOUS);
@@ -238,17 +239,17 @@ public class NameNodeAdapter {
           fsn, src, inodesInPath, newBlock, targets, BlockType.CONTIGUOUS);
       return file.getLastBlock();
     } finally {
-      fsn.writeUnlock();
+      fsn.writeUnlock(RwLockMode.GLOBAL, "addBlockNoJournal");
     }
   }
 
   public static void persistBlocks(final FSNamesystem fsn,
       final String src, final INodeFile file) throws IOException {
-    fsn.writeLock();
+    fsn.writeLock(RwLockMode.FS);
     try {
       FSDirWriteFileOp.persistBlocks(fsn.getFSDirectory(), src, file, true);
     } finally {
-      fsn.writeUnlock();
+      fsn.writeUnlock(RwLockMode.FS, "persistBlocks");
     }
   }
 

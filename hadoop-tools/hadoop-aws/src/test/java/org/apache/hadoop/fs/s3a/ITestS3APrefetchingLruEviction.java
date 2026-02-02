@@ -28,9 +28,10 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,8 +44,8 @@ import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.test.LambdaTestUtils;
 
 import static org.apache.hadoop.fs.s3a.Constants.PREFETCH_BLOCK_SIZE_KEY;
-import static org.apache.hadoop.fs.s3a.Constants.PREFETCH_ENABLED_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.PREFETCH_MAX_BLOCKS_COUNT;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.enablePrefetching;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertThatStatisticCounter;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyStatisticCounterValues;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyStatisticGaugeValue;
@@ -55,12 +56,12 @@ import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_B
 /**
  * Test the prefetching input stream with LRU cache eviction on S3ACachingInputStream.
  */
-@RunWith(Parameterized.class)
+@ParameterizedClass(name="max-blocks-{0}")
+@MethodSource("params")
 public class ITestS3APrefetchingLruEviction extends AbstractS3ACostTest {
 
   private final String maxBlocks;
 
-  @Parameterized.Parameters(name = "max-blocks-{0}")
   public static Collection<Object[]> params() {
     return Arrays.asList(new Object[][]{
         {"1"},
@@ -69,7 +70,6 @@ public class ITestS3APrefetchingLruEviction extends AbstractS3ACostTest {
   }
 
   public ITestS3APrefetchingLruEviction(final String maxBlocks) {
-    super(true);
     this.maxBlocks = maxBlocks;
   }
 
@@ -86,11 +86,10 @@ public class ITestS3APrefetchingLruEviction extends AbstractS3ACostTest {
 
   @Override
   public Configuration createConfiguration() {
-    Configuration conf = super.createConfiguration();
-    S3ATestUtils.removeBaseAndBucketOverrides(conf, PREFETCH_ENABLED_KEY);
-    S3ATestUtils.removeBaseAndBucketOverrides(conf, PREFETCH_MAX_BLOCKS_COUNT);
-    S3ATestUtils.removeBaseAndBucketOverrides(conf, PREFETCH_BLOCK_SIZE_KEY);
-    conf.setBoolean(PREFETCH_ENABLED_KEY, true);
+    Configuration conf = enablePrefetching(super.createConfiguration());
+    S3ATestUtils.removeBaseAndBucketOverrides(conf,
+        PREFETCH_MAX_BLOCKS_COUNT,
+        PREFETCH_BLOCK_SIZE_KEY);
     conf.setInt(PREFETCH_MAX_BLOCKS_COUNT, Integer.parseInt(maxBlocks));
     conf.setInt(PREFETCH_BLOCK_SIZE_KEY, BLOCK_SIZE);
     return conf;

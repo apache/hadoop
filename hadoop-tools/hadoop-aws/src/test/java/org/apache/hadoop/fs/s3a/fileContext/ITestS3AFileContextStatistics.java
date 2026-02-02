@@ -13,7 +13,6 @@
  */
 package org.apache.hadoop.fs.s3a.fileContext;
 
-import java.io.IOException;
 import java.net.URI;
 
 import org.slf4j.Logger;
@@ -24,23 +23,19 @@ import org.apache.hadoop.fs.FCStatisticsBaseTest;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.s3a.S3AEncryptionMethods;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.auth.STSClientFactory;
+import org.apache.hadoop.test.tags.IntegrationTest;
 
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 
-import static org.apache.hadoop.fs.s3a.S3ATestConstants.KMS_KEY_GENERATION_REQUEST_PARAMS_BYTES_WRITTEN;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestBucketName;
-import static org.apache.hadoop.fs.s3a.S3AUtils.getEncryptionAlgorithm;
-import static org.apache.hadoop.fs.s3a.S3AUtils.getS3EncryptionKey;
-import static org.apache.hadoop.fs.s3a.impl.InternalConstants.CSE_PADDING_LENGTH;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * S3a implementation of FCStatisticsBaseTest.
  */
+@IntegrationTest
 public class ITestS3AFileContextStatistics extends FCStatisticsBaseTest {
 
   private static final Logger LOG =
@@ -49,7 +44,7 @@ public class ITestS3AFileContextStatistics extends FCStatisticsBaseTest {
   private Path testRootPath;
   private Configuration conf;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     conf = new Configuration();
     fc = S3ATestUtils.createTestFileContext(conf);
@@ -59,7 +54,7 @@ public class ITestS3AFileContextStatistics extends FCStatisticsBaseTest {
     FileContext.clearStatistics();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     S3ATestUtils.callQuietly(LOG,
         () -> fc != null && fc.delete(testRootPath, true));
@@ -68,36 +63,18 @@ public class ITestS3AFileContextStatistics extends FCStatisticsBaseTest {
   @Override
   protected void verifyReadBytes(FileSystem.Statistics stats) {
     // one blockSize for read, one for pread
-    Assert.assertEquals(2 * blockSize, stats.getBytesRead());
+    assertEquals(2 * blockSize, stats.getBytesRead());
   }
 
   /**
    * A method to verify the bytes written.
-   * <br>
-   * NOTE: if Client side encryption is enabled, expected bytes written
-   * should increase by 16(padding of data) + bytes for the key ID set + 94(KMS
-   * key generation) in case of storage type CryptoStorageMode as
-   * ObjectMetadata(Default). If Crypto Storage mode is instruction file then
-   * add additional bytes as that file is stored separately and would account
-   * for bytes written.
-   *
    * @param stats Filesystem statistics.
    */
   @Override
-  protected void verifyWrittenBytes(FileSystem.Statistics stats)
-      throws IOException {
+  protected void verifyWrittenBytes(FileSystem.Statistics stats) {
     //No extra bytes are written
-    long expectedBlockSize = blockSize;
-    if (S3AEncryptionMethods.CSE_KMS.getMethod()
-        .equals(getEncryptionAlgorithm(getTestBucketName(conf), conf)
-            .getMethod())) {
-      String keyId = getS3EncryptionKey(getTestBucketName(conf), conf);
-      // Adding padding length and KMS key generation bytes written.
-      expectedBlockSize += CSE_PADDING_LENGTH + keyId.getBytes().length +
-          KMS_KEY_GENERATION_REQUEST_PARAMS_BYTES_WRITTEN;
-    }
-    Assert.assertEquals("Mismatch in bytes written", expectedBlockSize,
-        stats.getBytesWritten());
+    assertEquals(blockSize,
+        stats.getBytesWritten(), "Mismatch in bytes written");
   }
 
   @Override

@@ -43,6 +43,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.tools.rumen.JobStoryProducer;
 import org.apache.hadoop.tools.rumen.ZombieJobProducer;
 import org.slf4j.Logger;
@@ -627,7 +628,7 @@ public class Gridmix extends Configured implements Tool {
    * pipeline abort its progress, waiting for each to exit and killing
    * any jobs still running on the cluster.
    */
-  class Shutdown extends Thread {
+  class Shutdown extends SubjectInheritingThread {
 
     static final long FAC_SLEEP = 1000;
     static final long SUB_SLEEP = 4000;
@@ -647,7 +648,7 @@ public class Gridmix extends Configured implements Tool {
     }
 
     @Override
-    public void run() {
+    public void work() {
       LOG.info("Exiting...");
       try {
         killComponent(factory, FAC_SLEEP);   // read no more tasks

@@ -19,15 +19,19 @@ package org.apache.hadoop.crypto;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.assertj.core.api.Assertions;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
-import org.junit.Assert;
-import org.junit.Test;
+
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.event.Level;
 
 import java.security.Provider;
 import java.security.Security;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_CRYPTO_JCE_PROVIDER_AUTO_ADD_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_CRYPTO_JCE_PROVIDER_AUTO_ADD_KEY;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_CRYPTO_JCE_PROVIDER_KEY;
@@ -38,23 +42,25 @@ public class TestCryptoUtils {
     GenericTestUtils.setLogLevel(CryptoUtils.LOG, Level.TRACE);
   }
 
-  @Test(timeout = 1_000)
+  @Test
+  @Timeout(value = 1)
   public void testProviderName() {
-    Assert.assertEquals(CryptoUtils.BOUNCY_CASTLE_PROVIDER_NAME, BouncyCastleProvider.PROVIDER_NAME);
+    assertEquals(CryptoUtils.BOUNCY_CASTLE_PROVIDER_NAME, BouncyCastleProvider.PROVIDER_NAME);
   }
 
   static void assertRemoveProvider() {
     Security.removeProvider(BouncyCastleProvider.PROVIDER_NAME);
-    Assert.assertNull(Security.getProvider(BouncyCastleProvider.PROVIDER_NAME));
+    assertNull(Security.getProvider(BouncyCastleProvider.PROVIDER_NAME));
   }
 
   static void assertSetProvider(Configuration conf) {
     conf.set(HADOOP_SECURITY_CRYPTO_JCE_PROVIDER_KEY, CryptoUtils.BOUNCY_CASTLE_PROVIDER_NAME);
     final String providerFromConf = CryptoUtils.getJceProvider(conf);
-    Assert.assertEquals(CryptoUtils.BOUNCY_CASTLE_PROVIDER_NAME, providerFromConf);
+    assertEquals(CryptoUtils.BOUNCY_CASTLE_PROVIDER_NAME, providerFromConf);
   }
 
-  @Test(timeout = 5_000)
+  @Test
+  @Timeout(value = 5)
   public void testAutoAddDisabled() {
     assertRemoveProvider();
 
@@ -63,26 +69,26 @@ public class TestCryptoUtils {
 
     assertSetProvider(conf);
 
-    Assert.assertNull(Security.getProvider(BouncyCastleProvider.PROVIDER_NAME));
+    assertNull(Security.getProvider(BouncyCastleProvider.PROVIDER_NAME));
   }
 
-  @Test(timeout = 5_000)
+  @Test
+  @Timeout(value = 5)
   public void testAutoAddEnabled() {
     assertRemoveProvider();
 
     final Configuration conf = new Configuration();
-    Assertions.assertThat(conf.get(HADOOP_SECURITY_CRYPTO_JCE_PROVIDER_AUTO_ADD_KEY))
+    assertThat(conf.get(HADOOP_SECURITY_CRYPTO_JCE_PROVIDER_AUTO_ADD_KEY))
         .describedAs("conf: " + HADOOP_SECURITY_CRYPTO_JCE_PROVIDER_AUTO_ADD_KEY)
         .isEqualToIgnoringCase("true");
-    Assert.assertTrue(HADOOP_SECURITY_CRYPTO_JCE_PROVIDER_AUTO_ADD_DEFAULT);
+    assertTrue(HADOOP_SECURITY_CRYPTO_JCE_PROVIDER_AUTO_ADD_DEFAULT);
 
     conf.set(HADOOP_SECURITY_CRYPTO_JCE_PROVIDER_KEY, CryptoUtils.BOUNCY_CASTLE_PROVIDER_NAME);
     final String providerFromConf = CryptoUtils.getJceProvider(conf);
-    Assert.assertEquals(CryptoUtils.BOUNCY_CASTLE_PROVIDER_NAME, providerFromConf);
+    assertEquals(CryptoUtils.BOUNCY_CASTLE_PROVIDER_NAME, providerFromConf);
 
     final Provider provider = Security.getProvider(BouncyCastleProvider.PROVIDER_NAME);
-    Assertions.assertThat(provider)
-        .isInstanceOf(BouncyCastleProvider.class);
+    assertThat(provider).isInstanceOf(BouncyCastleProvider.class);
 
     assertRemoveProvider();
   }

@@ -23,15 +23,17 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.ResourceUnitCapacityType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.QueueCapacityVectorEntry;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
 import static org.apache.hadoop.yarn.api.records.ResourceInformation.MEMORY_URI;
 import static org.apache.hadoop.yarn.api.records.ResourceInformation.VCORES_URI;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueueUtils.EPSILON;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestQueueCapacityVector {
   private static final String CUSTOM_RESOURCE = "custom";
@@ -40,7 +42,7 @@ public class TestQueueCapacityVector {
 
   private final YarnConfiguration conf = new YarnConfiguration();
 
-  @Before
+  @BeforeEach
   public void setUp() {
     conf.set(YarnConfiguration.RESOURCE_TYPES, CUSTOM_RESOURCE);
     ResourceUtils.resetResourceTypes(conf);
@@ -54,19 +56,19 @@ public class TestQueueCapacityVector {
     capacityVector.setResource(VCORES_URI, 6, ResourceUnitCapacityType.PERCENTAGE);
 
     // custom is not set, defaults to 0
-    Assert.assertEquals(1, capacityVector.getResourceNamesByCapacityType(
+    assertEquals(1, capacityVector.getResourceNamesByCapacityType(
         ResourceUnitCapacityType.ABSOLUTE).size());
-    Assert.assertTrue(capacityVector.getResourceNamesByCapacityType(
+    assertTrue(capacityVector.getResourceNamesByCapacityType(
         ResourceUnitCapacityType.ABSOLUTE).contains(CUSTOM_RESOURCE));
 
-    Assert.assertEquals(2, capacityVector.getResourceNamesByCapacityType(
+    assertEquals(2, capacityVector.getResourceNamesByCapacityType(
         ResourceUnitCapacityType.PERCENTAGE).size());
-    Assert.assertTrue(capacityVector.getResourceNamesByCapacityType(
+    assertTrue(capacityVector.getResourceNamesByCapacityType(
         ResourceUnitCapacityType.PERCENTAGE).contains(VCORES_URI));
-    Assert.assertTrue(capacityVector.getResourceNamesByCapacityType(
+    assertTrue(capacityVector.getResourceNamesByCapacityType(
         ResourceUnitCapacityType.PERCENTAGE).contains(MEMORY_URI));
-    Assert.assertEquals(10, capacityVector.getResource(MEMORY_URI).getResourceValue(), EPSILON);
-    Assert.assertEquals(6, capacityVector.getResource(VCORES_URI).getResourceValue(), EPSILON);
+    assertEquals(10, capacityVector.getResource(MEMORY_URI).getResourceValue(), EPSILON);
+    assertEquals(6, capacityVector.getResource(VCORES_URI).getResourceValue(), EPSILON);
   }
 
   @Test
@@ -77,10 +79,10 @@ public class TestQueueCapacityVector {
     capacityVector.setResource(VCORES_URI, 6, ResourceUnitCapacityType.PERCENTAGE);
     capacityVector.setResource(CUSTOM_RESOURCE, 3, ResourceUnitCapacityType.ABSOLUTE);
 
-    Assert.assertTrue(capacityVector.isResourceOfType(MEMORY_URI, ResourceUnitCapacityType.WEIGHT));
-    Assert.assertTrue(capacityVector.isResourceOfType(VCORES_URI,
+    assertTrue(capacityVector.isResourceOfType(MEMORY_URI, ResourceUnitCapacityType.WEIGHT));
+    assertTrue(capacityVector.isResourceOfType(VCORES_URI,
         ResourceUnitCapacityType.PERCENTAGE));
-    Assert.assertTrue(capacityVector.isResourceOfType(CUSTOM_RESOURCE,
+    assertTrue(capacityVector.isResourceOfType(CUSTOM_RESOURCE,
         ResourceUnitCapacityType.ABSOLUTE));
   }
 
@@ -89,12 +91,12 @@ public class TestQueueCapacityVector {
     QueueCapacityVector capacityVector = QueueCapacityVector.newInstance();
     List<QueueCapacityVectorEntry> entries = Lists.newArrayList(capacityVector);
 
-    Assert.assertEquals(3, entries.size());
+    assertEquals(3, entries.size());
 
     QueueCapacityVector emptyCapacityVector = new QueueCapacityVector();
     List<QueueCapacityVectorEntry> emptyEntries = Lists.newArrayList(emptyCapacityVector);
 
-    Assert.assertEquals(0, emptyEntries.size());
+    assertEquals(0, emptyEntries.size());
   }
 
   @Test
@@ -105,24 +107,24 @@ public class TestQueueCapacityVector {
     capacityVector.setResource(VCORES_URI, 6, ResourceUnitCapacityType.PERCENTAGE);
     capacityVector.setResource(CUSTOM_RESOURCE, 3, ResourceUnitCapacityType.ABSOLUTE);
 
-    Assert.assertEquals(MIXED_CAPACITY_VECTOR_STRING, capacityVector.toString());
+    assertEquals(MIXED_CAPACITY_VECTOR_STRING, capacityVector.toString());
 
     QueueCapacityVector emptyCapacityVector = new QueueCapacityVector();
-    Assert.assertEquals("[]", emptyCapacityVector.toString());
+    assertEquals("[]", emptyCapacityVector.toString());
   }
 
   @Test
   public void testIsMixedType() {
     // Starting from ABSOLUTE mode
     QueueCapacityVector capacityVector = QueueCapacityVector.newInstance();
-    Assert.assertFalse(capacityVector.isMixedCapacityVector());
+    assertFalse(capacityVector.isMixedCapacityVector());
 
     capacityVector.setResource(VCORES_URI, 6, ResourceUnitCapacityType.PERCENTAGE);
     capacityVector.setResource(MEMORY_URI, 10, ResourceUnitCapacityType.PERCENTAGE);
     capacityVector.setResource(CUSTOM_RESOURCE, 3, ResourceUnitCapacityType.PERCENTAGE);
-    Assert.assertFalse(capacityVector.isMixedCapacityVector());
+    assertFalse(capacityVector.isMixedCapacityVector());
 
     capacityVector.setResource(VCORES_URI, 6, ResourceUnitCapacityType.WEIGHT);
-    Assert.assertTrue(capacityVector.isMixedCapacityVector());
+    assertTrue(capacityVector.isMixedCapacityVector());
   }
 }

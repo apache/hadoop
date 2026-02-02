@@ -30,12 +30,15 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.util.StringUtils;
-import org.junit.Test;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class TestNativeAzureFileSystemConcurrency extends AbstractWasbTestBase {
   private InMemoryBlockBlobStore backingStore;
 
   @Override
+  @BeforeEach
   public void setUp() throws Exception {
     super.setUp();
     backingStore = getTestAccount().getMockStorage().getBackingStore();
@@ -95,8 +98,8 @@ public class TestNativeAzureFileSystemConcurrency extends AbstractWasbTestBase {
     FSDataOutputStream outputStream = fs.create(filePath);
     // Make sure I can't see the temporary blob if I ask for a listing
     FileStatus[] listOfRoot = fs.listStatus(new Path("/"));
-    assertEquals("Expected one file listed, instead got: "
-        + toString(listOfRoot), 1, listOfRoot.length);
+    assertEquals(1, listOfRoot.length, "Expected one file listed, instead got: "
+        + toString(listOfRoot));
     assertEquals(fs.makeQualified(filePath), listOfRoot[0].getPath());
     outputStream.close();
   }
@@ -147,7 +150,7 @@ public class TestNativeAzureFileSystemConcurrency extends AbstractWasbTestBase {
       final ConcurrentLinkedQueue<Throwable> exceptionsEncountered = new ConcurrentLinkedQueue<Throwable>();
       for (int i = 0; i < numThreads; i++) {
         final Path threadLocalFile = new Path("/myFile" + i);
-        threads[i] = new Thread(new Runnable() {
+        threads[i] = new SubjectInheritingThread(new Runnable() {
           @Override
           public void run() {
             try {
@@ -169,10 +172,8 @@ public class TestNativeAzureFileSystemConcurrency extends AbstractWasbTestBase {
       for (Thread t : threads) {
         t.join();
       }
-      assertTrue(
-          "Encountered exceptions: "
-              + StringUtils.join("\r\n", selectToString(exceptionsEncountered)),
-          exceptionsEncountered.isEmpty());
+      assertTrue(exceptionsEncountered.isEmpty(), "Encountered exceptions: "
+          + StringUtils.join("\r\n", selectToString(exceptionsEncountered)));
       tearDown();
       setUp();
     }

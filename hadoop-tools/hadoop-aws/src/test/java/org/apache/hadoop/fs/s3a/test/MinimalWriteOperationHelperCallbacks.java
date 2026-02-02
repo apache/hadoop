@@ -30,7 +30,6 @@ import software.amazon.awssdk.services.s3.model.UploadPartRequest;
 import software.amazon.awssdk.services.s3.model.UploadPartResponse;
 
 import org.apache.hadoop.fs.s3a.WriteOperationHelper;
-import org.apache.hadoop.fs.s3a.impl.PutObjectOptions;
 import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
 
 /**
@@ -70,11 +69,5 @@ public class MinimalWriteOperationHelperCallbacks
     return s3clientSupplier.get().uploadPart(request, body);
   }
 
-  @Override
-  public void finishedWrite(final String key,
-      final long length,
-      final PutObjectOptions putOptions) {
-
-  }
 }
 

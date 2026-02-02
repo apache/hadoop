@@ -42,6 +42,7 @@ import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.util.ShutdownHookManager;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 
@@ -57,7 +58,7 @@ import org.apache.hadoop.classification.VisibleForTesting;
 @Evolving
 public class AsyncDispatcher extends AbstractService implements Dispatcher {
 
-  private static final Logger LOG =
+  protected static final Logger LOG =
       LoggerFactory.getLogger(AsyncDispatcher.class);
   private static final Marker FATAL =
       MarkerFactory.getMarker("FATAL");
@@ -164,13 +165,18 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
             if (printTrigger) {
               //Log the latest dispatch event type
               // may cause the too many events queued
-              LOG.info("Latest dispatch event type: " + event.getType());
+              logTriggered("Latest dispatch event type: " + event.getType());
               printTrigger = false;
             }
           }
         }
       }
     };
+  }
+
+  // This is a separate method to make it overridable for testing
+  protected void logTriggered(String message) {
+    LOG.info(message);
   }
 
   @VisibleForTesting
@@ -213,7 +219,7 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
   protected void serviceStart() throws Exception {
     //start all the components
     super.serviceStart();
-    eventHandlingThread = new Thread(createThread());
+    eventHandlingThread = new SubjectInheritingThread(createThread());
     eventHandlingThread.setName(dispatcherThreadName);
     eventHandlingThread.start();
   }
@@ -279,7 +285,7 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
           && (ShutdownHookManager.get().isShutdownInProgress()) == false
           && stopped == false) {
         stopped = true;
-        Thread shutDownThread = new Thread(createShutDownThread());
+        Thread shutDownThread = new SubjectInheritingThread(createShutDownThread());
         shutDownThread.setName("AsyncDispatcher ShutDown handler");
         shutDownThread.start();
       }

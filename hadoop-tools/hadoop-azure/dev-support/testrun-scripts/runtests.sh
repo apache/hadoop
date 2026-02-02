@@ -32,36 +32,63 @@ processCount=8
 
 ## SECTION: TEST COMBINATION METHODS
 
-runHNSOAuthTest()
+runHNSOAuthDFSTest()
 {
   accountName=$(xmlstarlet sel -t -v '//property[name = "fs.azure.hnsTestAccountName"]/value' -n $azureTestXmlPath)
   PROPERTIES=("fs.azure.account.auth.type")
   VALUES=("OAuth")
-  triggerRun "HNS-OAuth" "$accountName" "$runTest" $processCount "$cleanUpTestContainers"
+  triggerRun "HNS-OAuth-DFS" "$accountName" "$runTest" $processCount "$cleanUpTestContainers"
 }
 
-runHNSSharedKeyTest()
+runHNSSharedKeyDFSTest()
 {
   accountName=$(xmlstarlet sel -t -v '//property[name = "fs.azure.hnsTestAccountName"]/value' -n $azureTestXmlPath)
   PROPERTIES=("fs.azure.account.auth.type")
   VALUES=("SharedKey")
-  triggerRun "HNS-SharedKey" "$accountName"  "$runTest" $processCount "$cleanUpTestContainers"
+  triggerRun "HNS-SharedKey-DFS" "$accountName"  "$runTest" $processCount "$cleanUpTestContainers"
 }
 
-runNonHNSSharedKeyTest()
-{
-  accountName=$(xmlstarlet sel -t -v '//property[name = "fs.azure.nonHnsTestAccountName"]/value' -n $azureTestXmlPath)
-  PROPERTIES=("fs.azure.account.auth.type")
-  VALUES=("SharedKey")
-  triggerRun "NonHNS-SharedKey" "$accountName" "$runTest" $processCount "$cleanUpTestContainers"
-}
-
-runAppendBlobHNSOAuthTest()
+runAppendBlobHNSOAuthDFSTest()
 {
   accountName=$(xmlstarlet sel -t -v '//property[name = "fs.azure.hnsTestAccountName"]/value' -n $azureTestXmlPath)
   PROPERTIES=("fs.azure.account.auth.type" "fs.azure.test.appendblob.enabled")
   VALUES=("OAuth" "true")
-  triggerRun "AppendBlob-HNS-OAuth" "$accountName" "$runTest" $processCount "$cleanUpTestContainers"
+  triggerRun "AppendBlob-HNS-OAuth-DFS" "$accountName" "$runTest" $processCount "$cleanUpTestContainers"
+}
+
+runNonHNSSharedKeyBlobTest()
+{
+  accountName=$(xmlstarlet sel -t -v '//property[name = "fs.azure.nonHnsTestAccountName"]/value' -n $azureTestXmlPath)
+  fnsBlobConfigFileCheck "$accountName"
+  PROPERTIES=("fs.azure.account.auth.type")
+  VALUES=("SharedKey")
+  triggerRun "NonHNS-SharedKey-Blob" "${accountName}_blob" "$runTest" $processCount "$cleanUpTestContainers"
+}
+
+runNonHNSOAuthBlobTest()
+{
+  accountName=$(xmlstarlet sel -t -v '//property[name = "fs.azure.nonHnsTestAccountName"]/value' -n $azureTestXmlPath)
+  fnsBlobConfigFileCheck "$accountName"
+  PROPERTIES=("fs.azure.account.auth.type")
+  VALUES=("OAuth")
+  triggerRun "NonHNS-OAuth-Blob" "${accountName}_blob" "$runTest" $processCount "$cleanUpTestContainers"
+}
+
+runAppendBlobNonHNSOAuthBlobTest()
+{
+  accountName=$(xmlstarlet sel -t -v '//property[name = "fs.azure.nonHnsTestAccountName"]/value' -n $azureTestXmlPath)
+  fnsBlobConfigFileCheck "$accountName"
+  PROPERTIES=("fs.azure.account.auth.type" "fs.azure.test.appendblob.enabled")
+  VALUES=("OAuth" "true")
+  triggerRun "AppendBlob-NonHNS-OAuth-Blob" "${accountName}_blob" "$runTest" $processCount "$cleanUpTestContainers"
+}
+
+runHNSOAuthDFSIngressBlobTest()
+{
+  accountName=$(xmlstarlet sel -t -v '//property[name = "fs.azure.hnsTestAccountName"]/value' -n $azureTestXmlPath)
+  PROPERTIES=("fs.azure.account.auth.type" "fs.azure.ingress.service.type")
+  VALUES=("OAuth" "blob")
+  triggerRun "HNS-Oauth-DFS-IngressBlob" "$accountName" "$runTest" $processCount "$cleanUpTestContainers"
 }
 
 runTest=false
@@ -130,23 +157,35 @@ done
 
 echo ' '
 echo 'Set the active test combination to run the action:'
-select combo in HNS-OAuth HNS-SharedKey nonHNS-SharedKey AppendBlob-HNS-OAuth AllCombinationsTestRun Quit
+select combo in HNS-OAuth-DFS HNS-SharedKey-DFS AppendBlob-HNS-OAuth-DFS NonHNS-SharedKey-Blob NonHNS-OAuth-Blob AppendBlob-NonHNS-OAuth-Blob HNS-Oauth-DFS-IngressBlob AllCombinationsTestRun Quit
 do
    case $combo in
-      HNS-OAuth)
-         runHNSOAuthTest
+      HNS-OAuth-DFS)
+         runHNSOAuthDFSTest
          break
          ;;
-      HNS-SharedKey)
-         runHNSSharedKeyTest
+      HNS-SharedKey-DFS)
+         runHNSSharedKeyDFSTest
          break
          ;;
-      nonHNS-SharedKey)
-         runNonHNSSharedKeyTest
+       AppendBlob-HNS-OAuth-DFS)
+         runAppendBlobHNSOAuthDFSTest
          break
          ;;
-       AppendBlob-HNS-OAuth)
-         runAppendBlobHNSOAuthTest
+       NonHNS-SharedKey-Blob)
+         runNonHNSSharedKeyBlobTest
+         break
+         ;;
+        NonHNS-OAuth-Blob)
+         runNonHNSOAuthBlobTest
+         break
+         ;;
+        AppendBlob-NonHNS-OAuth-Blob)
+         runAppendBlobNonHNSOAuthBlobTest
+         break
+         ;;
+        HNS-Oauth-DFS-IngressBlob)
+         runHNSOAuthDFSIngressBlobTest
          break
          ;;
       AllCombinationsTestRun)
@@ -155,10 +194,13 @@ do
           logOutput "ERROR: Invalid selection for SET_ACTIVE_TEST_CONFIG. This is applicable only for RUN_TEST."
           break
         fi
-         runHNSOAuthTest
-         runHNSSharedKeyTest
-         runNonHNSSharedKeyTest
-         runAppendBlobHNSOAuthTest ## Keep this as the last run scenario always
+        runHNSOAuthDFSTest
+        runHNSSharedKeyDFSTest
+        runAppendBlobHNSOAuthDFSTest
+        runNonHNSSharedKeyBlobTest
+        runNonHNSOAuthBlobTest
+        runAppendBlobNonHNSOAuthBlobTest
+        runHNSOAuthDFSIngressBlobTest
          break
          ;;
       Quit)

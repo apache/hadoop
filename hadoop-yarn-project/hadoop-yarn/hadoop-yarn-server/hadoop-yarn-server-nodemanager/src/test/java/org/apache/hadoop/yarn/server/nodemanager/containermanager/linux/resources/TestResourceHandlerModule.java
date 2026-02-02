@@ -21,13 +21,16 @@
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,7 +44,7 @@ public class TestResourceHandlerModule {
   private Configuration emptyConf;
   private Configuration networkEnabledConf;
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     emptyConf = new YarnConfiguration();
     networkEnabledConf = new YarnConfiguration();
@@ -58,12 +61,12 @@ public class TestResourceHandlerModule {
       //is explicitly enabled
       OutboundBandwidthResourceHandler resourceHandler = ResourceHandlerModule
           .initOutboundBandwidthResourceHandler(emptyConf);
-      Assert.assertNull(resourceHandler);
+      assertNull(resourceHandler);
 
       //When network as a resource is enabled this should be non-null
       resourceHandler = ResourceHandlerModule
           .initOutboundBandwidthResourceHandler(networkEnabledConf);
-      Assert.assertNotNull(resourceHandler);
+      assertNotNull(resourceHandler);
 
       //Ensure that outbound bandwidth resource handler is present in the chain
       ResourceHandlerChain resourceHandlerChain = ResourceHandlerModule
@@ -75,12 +78,12 @@ public class TestResourceHandlerModule {
         //Exactly one resource handler in chain
         assertThat(resourceHandlers).hasSize(1);
         //Same instance is expected to be in the chain.
-        Assert.assertTrue(resourceHandlers.get(0) == resourceHandler);
+        assertTrue(resourceHandlers.get(0) == resourceHandler);
       } else {
-        Assert.fail("Null returned");
+        fail("Null returned");
       }
     } catch (ResourceHandlerException e) {
-      Assert.fail("Unexpected ResourceHandlerException: " + e);
+      fail("Unexpected ResourceHandlerException: " + e);
     }
   }
 
@@ -89,13 +92,13 @@ public class TestResourceHandlerModule {
 
     DiskResourceHandler handler =
         ResourceHandlerModule.initDiskResourceHandler(emptyConf);
-    Assert.assertNull(handler);
+    assertNull(handler);
 
     Configuration diskConf = new YarnConfiguration();
     diskConf.setBoolean(YarnConfiguration.NM_DISK_RESOURCE_ENABLED, true);
 
     handler = ResourceHandlerModule.initDiskResourceHandler(diskConf);
-    Assert.assertNotNull(handler);
+    assertNotNull(handler);
 
     ResourceHandlerChain resourceHandlerChain =
         ResourceHandlerModule.getConfiguredResourceHandlerChain(diskConf,
@@ -106,9 +109,9 @@ public class TestResourceHandlerModule {
       // Exactly one resource handler in chain
       assertThat(resourceHandlers).hasSize(1);
       // Same instance is expected to be in the chain.
-      Assert.assertTrue(resourceHandlers.get(0) == handler);
+      assertTrue(resourceHandlers.get(0) == handler);
     } else {
-      Assert.fail("Null returned");
+      fail("Null returned");
     }
   }
 }

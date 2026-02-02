@@ -29,6 +29,7 @@ import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.util.Lists;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CreateFlag;
@@ -75,6 +76,7 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo;
 import org.apache.hadoop.hdfs.server.protocol.StorageReceivedDeletedBlocks;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
+import org.apache.hadoop.hdfs.util.RwLockMode;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.erasurecode.ECSchema;
@@ -86,9 +88,9 @@ import org.apache.hadoop.test.MetricsAsserts;
 import org.apache.hadoop.util.GSet;
 import org.apache.hadoop.util.LightWeightGSet;
 import org.slf4j.event.Level;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.mockito.Mockito;
 
 import java.io.BufferedReader;
@@ -121,11 +123,11 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState.UNDER_CONSTRUCTION;
 import static org.apache.hadoop.test.MetricsAsserts.getLongCounter;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
@@ -158,7 +160,7 @@ public class TestBlockManager {
   private long mockINodeId;
 
 
-  @Before
+  @BeforeEach
   public void setupMockCluster() throws IOException {
     Configuration conf = new HdfsConfiguration();
     conf.set(DFSConfigKeys.NET_TOPOLOGY_SCRIPT_FILE_NAME_KEY,
@@ -166,6 +168,10 @@ public class TestBlockManager {
     fsn = Mockito.mock(FSNamesystem.class);
     Mockito.doReturn(true).when(fsn).hasWriteLock();
     Mockito.doReturn(true).when(fsn).hasReadLock();
+    Mockito.doReturn(true).when(fsn).hasWriteLock(RwLockMode.GLOBAL);
+    Mockito.doReturn(true).when(fsn).hasReadLock(RwLockMode.GLOBAL);
+    Mockito.doReturn(true).when(fsn).hasWriteLock(RwLockMode.BM);
+    Mockito.doReturn(true).when(fsn).hasReadLock(RwLockMode.BM);
     Mockito.doReturn(true).when(fsn).isRunning();
     //Make shouldPopulaeReplQueues return true
     HAContext haContext = Mockito.mock(HAContext.class);
@@ -235,12 +241,12 @@ public class TestBlockManager {
 
     DatanodeStorageInfo[] pipeline = scheduleSingleReplication(blockInfo);
     assertEquals(2, pipeline.length);
-    assertTrue("Source of replication should be one of the nodes the block " +
-        "was on. Was: " + pipeline[0],
-        origStorages.contains(pipeline[0]));
-    assertTrue("Destination of replication should be on the other rack. " +
-        "Was: " + pipeline[1],
-        rackB.contains(pipeline[1].getDatanodeDescriptor()));
+    assertTrue(origStorages.contains(pipeline[0]),
+        "Source of replication should be one of the nodes the block " + "was on. Was: "
+            + pipeline[0]);
+    assertTrue(rackB.contains(pipeline[1].getDatanodeDescriptor()),
+        "Destination of replication should be on the other rack. " +
+            "Was: " + pipeline[1]);
   }
   
 
@@ -269,10 +275,10 @@ public class TestBlockManager {
     List<DatanodeDescriptor> decomNodes = startDecommission(0, 1);
     
     DatanodeStorageInfo[] pipeline = scheduleSingleReplication(blockInfo);
-    assertTrue("Source of replication should be one of the nodes the block " +
-        "was on. Was: " + pipeline[0],
-        origStorages.contains(pipeline[0]));
-    assertEquals("Should have three targets", 3, pipeline.length);
+    assertTrue(origStorages.contains(pipeline[0]),
+        "Source of replication should be one of the nodes the block " + "was on. Was: "
+            + pipeline[0]);
+    assertEquals(3, pipeline.length, "Should have three targets");
     
     boolean foundOneOnRackA = false;
     for (int i = 1; i < pipeline.length; i++) {
@@ -283,10 +289,10 @@ public class TestBlockManager {
       assertFalse(decomNodes.contains(target));
       assertFalse(origNodes.contains(target));
     }
-    
-    assertTrue("Should have at least one target on rack A. Pipeline: " +
-        Joiner.on(",").join(pipeline),
-        foundOneOnRackA);
+
+    assertTrue(foundOneOnRackA,
+        "Should have at least one target on rack A. Pipeline: " +
+            Joiner.on(",").join(pipeline));
   }
   
 
@@ -313,10 +319,10 @@ public class TestBlockManager {
     List<DatanodeDescriptor> decomNodes = startDecommission(0, 1, 3);
     
     DatanodeStorageInfo[] pipeline = scheduleSingleReplication(blockInfo);
-    assertTrue("Source of replication should be one of the nodes the block " +
-        "was on. Was: " + pipeline[0],
-        origStorages.contains(pipeline[0]));
-    assertEquals("Should have three targets", 4, pipeline.length);
+    assertTrue(origStorages.contains(pipeline[0]),
+        "Source of replication should be one of the nodes the block " + "was on. Was: "
+            + pipeline[0]);
+    assertEquals(4, pipeline.length, "Should have three targets");
     
     boolean foundOneOnRackA = false;
     boolean foundOneOnRackB = false;
@@ -331,12 +337,12 @@ public class TestBlockManager {
       assertFalse(origNodes.contains(target));
     }
     
-    assertTrue("Should have at least one target on rack A. Pipeline: " +
-        Joiner.on(",").join(pipeline),
-        foundOneOnRackA);
-    assertTrue("Should have at least one target on rack B. Pipeline: " +
-        Joiner.on(",").join(pipeline),
-        foundOneOnRackB);
+    assertTrue(foundOneOnRackA,
+        "Should have at least one target on rack A. Pipeline: " +
+            Joiner.on(",").join(pipeline));
+    assertTrue(foundOneOnRackB,
+        "Should have at least one target on rack B. Pipeline: " +
+            Joiner.on(",").join(pipeline));
   }
 
   /**
@@ -368,11 +374,11 @@ public class TestBlockManager {
     List<DatanodeDescriptor> decomNodes = startDecommission(0, 1, 2);
     
     DatanodeStorageInfo[] pipeline = scheduleSingleReplication(blockInfo);
-    assertTrue("Source of replication should be one of the nodes the block " +
-        "was on. Was: " + pipeline[0],
-        origStorages.contains(pipeline[0]));
+    assertTrue(origStorages.contains(pipeline[0]),
+        "Source of replication should be one of the nodes the block " + "was on. Was: "
+            + pipeline[0]);
     // Only up to two nodes can be picked per rack when there are two racks.
-    assertEquals("Should have two targets", 2, pipeline.length);
+    assertEquals(2, pipeline.length, "Should have two targets");
     
     boolean foundOneOnRackB = false;
     for (int i = 1; i < pipeline.length; i++) {
@@ -384,9 +390,8 @@ public class TestBlockManager {
       assertFalse(origNodes.contains(target));
     }
     
-    assertTrue("Should have at least one target on rack B. Pipeline: " +
-        Joiner.on(",").join(pipeline),
-        foundOneOnRackB);
+    assertTrue(foundOneOnRackB,
+        "Should have at least one target on rack B. Pipeline: " + Joiner.on(",").join(pipeline));
     
     // Mark the block as received on the target nodes in the pipeline
     fulfillPipeline(blockInfo, pipeline);
@@ -423,14 +428,15 @@ public class TestBlockManager {
     List<DatanodeDescriptor> origNodes = rackA;
     BlockInfo blockInfo = addBlockOnNodes(testIndex, origNodes);
     DatanodeStorageInfo pipeline[] = scheduleSingleReplication(blockInfo);
-    
-    assertEquals(2, pipeline.length); // single new copy
-    assertTrue("Source of replication should be one of the nodes the block " +
-        "was on. Was: " + pipeline[0],
-        origNodes.contains(pipeline[0].getDatanodeDescriptor()));
-    assertTrue("Destination of replication should be on the other rack. " +
-        "Was: " + pipeline[1],
-        rackB.contains(pipeline[1].getDatanodeDescriptor()));
+
+    assertEquals(2,
+        pipeline.length); // single new copy
+    assertTrue(origNodes.contains(pipeline[0].getDatanodeDescriptor()),
+        "Source of replication should be one of the nodes the block " + "was on. Was: " +
+            pipeline[0]);
+    assertTrue(rackB.contains(pipeline[1].getDatanodeDescriptor()),
+        "Destination of replication should be on the other rack. " +
+            "Was: " + pipeline[1]);
   }
   
   @Test
@@ -459,7 +465,8 @@ public class TestBlockManager {
         bm.countNodes(block, fsn.isInStartupSafeMode())));
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testNeededReconstructionWhileAppending() throws IOException {
     Configuration conf = new HdfsConfiguration();
     String src = "/test-file";
@@ -511,7 +518,8 @@ public class TestBlockManager {
     }
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testDeleteCorruptReplicaWithStatleStorages() throws Exception {
     Configuration conf = new HdfsConfiguration();
     conf.setInt(HdfsClientConfigKeys.BlockWrite.ReplaceDatanodeOnFailure.
@@ -640,13 +648,13 @@ public class TestBlockManager {
     list_all.add(new ArrayList<BlockInfo>()); // for priority 0
     list_all.add(list_p1); // for priority 1
 
-    assertEquals("Block not initially pending reconstruction", 0,
-        bm.pendingReconstruction.getNumReplicas(block));
+    assertEquals(0, bm.pendingReconstruction.getNumReplicas(block),
+        "Block not initially pending reconstruction");
     assertEquals(
-        "computeBlockReconstructionWork should indicate reconstruction is needed",
-        1, bm.computeReconstructionWorkForBlocks(list_all));
-    assertTrue("reconstruction is pending after work is computed",
-        bm.pendingReconstruction.getNumReplicas(block) > 0);
+        1, bm.computeReconstructionWorkForBlocks(list_all),
+        "computeBlockReconstructionWork should indicate reconstruction is needed");
+    assertTrue(bm.pendingReconstruction.getNumReplicas(block) > 0,
+        "reconstruction is pending after work is computed");
 
     LinkedListMultimap<DatanodeStorageInfo, BlockTargetPair> repls =
         getAllPendingReconstruction();
@@ -696,10 +704,7 @@ public class TestBlockManager {
     List<DatanodeDescriptor> cntNodes = new LinkedList<DatanodeDescriptor>();
     List<DatanodeStorageInfo> liveNodes = new LinkedList<DatanodeStorageInfo>();
 
-    assertNotNull("Chooses source node for a highest-priority replication"
-        + " even if all available source nodes have reached their replication"
-        + " limits below the hard limit.",
-        bm.chooseSourceDatanodes(
+    assertNotNull(bm.chooseSourceDatanodes(
             bm.getStoredBlock(aBlock),
             cntNodes,
             liveNodes,
@@ -707,11 +712,12 @@ public class TestBlockManager {
             new ArrayList<Byte>(),
             new ArrayList<Byte>(),
             new ArrayList<Byte>(),
-            LowRedundancyBlocks.QUEUE_HIGHEST_PRIORITY)[0]);
+            LowRedundancyBlocks.QUEUE_HIGHEST_PRIORITY)[0],
+        "Chooses source node for a highest-priority replication"
+            + " even if all available source nodes have reached their replication"
+            + " limits below the hard limit.");
 
-    assertEquals("Does not choose a source node for a less-than-highest-priority"
-            + " replication since all available source nodes have reached"
-            + " their replication limits.", 0,
+    assertEquals(0,
         bm.chooseSourceDatanodes(
             bm.getStoredBlock(aBlock),
             cntNodes,
@@ -720,14 +726,16 @@ public class TestBlockManager {
             new ArrayList<Byte>(),
             new ArrayList<Byte>(),
             new ArrayList<Byte>(),
-            LowRedundancyBlocks.QUEUE_VERY_LOW_REDUNDANCY).length);
+            LowRedundancyBlocks.QUEUE_VERY_LOW_REDUNDANCY).length,
+        "Does not choose a source node for a less-than-highest-priority"
+            + " replication since all available source nodes have reached"
+            + " their replication limits.");
 
     // Increase the replication count to test replication count > hard limit
     DatanodeStorageInfo targets[] = { origNodes.get(1).getStorageInfos()[0] };
     origNodes.get(0).addBlockToBeReplicated(aBlock, targets);
 
-    assertEquals("Does not choose a source node for a highest-priority"
-            + " replication when all available nodes exceed the hard limit.", 0,
+    assertEquals(0,
         bm.chooseSourceDatanodes(
             bm.getStoredBlock(aBlock),
             cntNodes,
@@ -736,7 +744,9 @@ public class TestBlockManager {
             new ArrayList<Byte>(),
             new ArrayList<Byte>(),
             new ArrayList<Byte>(),
-            LowRedundancyBlocks.QUEUE_HIGHEST_PRIORITY).length);
+            LowRedundancyBlocks.QUEUE_HIGHEST_PRIORITY).length,
+        "Does not choose a source node for a highest-priority"
+            + " replication when all available nodes exceed the hard limit.");
   }
 
   @Test
@@ -793,15 +803,15 @@ public class TestBlockManager {
             excludeReconstructedIndices,
             LowRedundancyBlocks.QUEUE_VERY_LOW_REDUNDANCY);
 
-    assertEquals("Choose the source node for reconstruction with one node reach"
+    assertEquals(4, numReplicas.liveReplicas(),
+        "Choose the source node for reconstruction with one node reach"
             + " the MAX maxReplicationStreams, the numReplicas still return the"
-            + " correct live replicas.", 4,
-            numReplicas.liveReplicas());
+            + " correct live replicas.");
 
-    assertEquals("Choose the source node for reconstruction with one node reach"
+    assertEquals(1, numReplicas.redundantInternalBlocks(),
+        "Choose the source node for reconstruction with one node reach"
             + " the MAX maxReplicationStreams, the numReplicas should return"
-            + " the correct redundant Internal Blocks.", 1,
-            numReplicas.redundantInternalBlocks());
+            + " the correct redundant Internal Blocks.");
   }
 
   @Test
@@ -857,12 +867,10 @@ public class TestBlockManager {
         liveBusyBlockIndices,
         excludeReconstructedIndices,
         LowRedundancyBlocks.QUEUE_HIGHEST_PRIORITY);
-    assertEquals("There are 5 live replicas in " +
-            "[ds2, ds3, ds4, ds5, ds6] datanodes ",
-        5, numReplicas.liveReplicas());
-    assertEquals("The ds1 datanode is in decommissioning, " +
-            "so there is no redundant replica",
-        0, numReplicas.redundantInternalBlocks());
+    assertEquals(5, numReplicas.liveReplicas(),
+        "There are 5 live replicas in " + "[ds2, ds3, ds4, ds5, ds6] datanodes ");
+    assertEquals(0, numReplicas.redundantInternalBlocks(),
+        "The ds1 datanode is in decommissioning, " + "so there is no redundant replica");
   }
 
   @Test
@@ -1030,10 +1038,7 @@ public class TestBlockManager {
     List<DatanodeDescriptor> cntNodes = new LinkedList<DatanodeDescriptor>();
     List<DatanodeStorageInfo> liveNodes = new LinkedList<DatanodeStorageInfo>();
 
-    assertNotNull("Chooses decommissioning source node for a normal replication"
-        + " if all available source nodes have reached their replication"
-        + " limits below the hard limit.",
-        bm.chooseSourceDatanodes(
+    assertNotNull(bm.chooseSourceDatanodes(
             bm.getStoredBlock(aBlock),
             cntNodes,
             liveNodes,
@@ -1041,15 +1046,16 @@ public class TestBlockManager {
             new LinkedList<Byte>(),
             new ArrayList<Byte>(),
             new ArrayList<Byte>(),
-            LowRedundancyBlocks.QUEUE_LOW_REDUNDANCY)[0]);
-
+            LowRedundancyBlocks.QUEUE_LOW_REDUNDANCY)[0],
+        "Chooses decommissioning source node for a normal replication"
+            + " if all available source nodes have reached their replication"
+            + " limits below the hard limit.");
 
     // Increase the replication count to test replication count > hard limit
     DatanodeStorageInfo targets[] = { origNodes.get(1).getStorageInfos()[0] };
     origNodes.get(0).addBlockToBeReplicated(aBlock, targets);
 
-    assertEquals("Does not choose a source decommissioning node for a normal"
-        + " replication when all available nodes exceed the hard limit.", 0,
+    assertEquals(0,
         bm.chooseSourceDatanodes(
             bm.getStoredBlock(aBlock),
             cntNodes,
@@ -1058,7 +1064,9 @@ public class TestBlockManager {
             new LinkedList<Byte>(),
             new ArrayList<Byte>(),
             new ArrayList<Byte>(),
-            LowRedundancyBlocks.QUEUE_LOW_REDUNDANCY).length);
+            LowRedundancyBlocks.QUEUE_LOW_REDUNDANCY).length,
+        "Does not choose a source decommissioning node for a normal"
+            + " replication when all available nodes exceed the hard limit.");
   }
 
   @Test
@@ -1299,8 +1307,8 @@ public class TestBlockManager {
     bm.setInitializedReplQueues(true);
     bm.processIncrementalBlockReport(node, srdb);
     // Needed replications should still be 0.
-    assertEquals("UC block was incorrectly added to needed Replications",
-        0, bm.neededReconstruction.size());
+    assertEquals(0, bm.neededReconstruction.size(),
+        "UC block was incorrectly added to needed Replications");
     bm.setInitializedReplQueues(false);
   }
 
@@ -1395,11 +1403,11 @@ public class TestBlockManager {
     BlockPlacementPolicyDefault policyDefault =
         (BlockPlacementPolicyDefault) bm.getBlockPlacementPolicy();
     excessTypes.add(StorageType.DEFAULT);
-    Assert.assertTrue(policyDefault.useDelHint(delHint, null, moreThan1Racks,
+    assertTrue(policyDefault.useDelHint(delHint, null, moreThan1Racks,
         null, excessTypes));
     excessTypes.remove(0);
     excessTypes.add(StorageType.SSD);
-    Assert.assertFalse(policyDefault.useDelHint(delHint, null, moreThan1Racks,
+    assertFalse(policyDefault.useDelHint(delHint, null, moreThan1Racks,
         null, excessTypes));
   }
 
@@ -1517,7 +1525,7 @@ public class TestBlockManager {
       Thread[] writers = new Thread[numWriters];
       for (int i=0; i < writers.length; i++) {
         final Path p = new Path("/writer"+i);
-        writers[i] = new Thread(new Runnable() {
+        writers[i] = new SubjectInheritingThread(new Runnable() {
           @Override
           public void run() {
             try {
@@ -1566,7 +1574,8 @@ public class TestBlockManager {
     }
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testBlockManagerMachinesArray() throws Exception {
     final Configuration conf = new HdfsConfiguration();
     final MiniDFSCluster cluster =
@@ -1587,7 +1596,7 @@ public class TestBlockManager {
       final String bpid = cluster.getNamesystem().getBlockPoolId();
       File storageDir = cluster.getInstanceStorageDir(0, 0);
       File dataDir = MiniDFSCluster.getFinalizedDir(storageDir, bpid);
-      assertTrue("Data directory does not exist", dataDir.exists());
+      assertTrue(dataDir.exists(), "Data directory does not exist");
       BlockInfo blockInfo =
           blockManager.blocksMap.getBlocks().iterator().next();
       ExtendedBlock blk = new ExtendedBlock(bpid, blockInfo.getBlockId(),
@@ -1619,7 +1628,7 @@ public class TestBlockManager {
       }
       failedStorageDataNode.updateHeartbeat(reports.toArray(StorageReport
           .EMPTY_ARRAY), 0L, 0L, 0, 0, null);
-      ns.writeLock();
+      ns.writeLock(RwLockMode.BM);
       DatanodeStorageInfo corruptStorageInfo= null;
       for(int i=0; i<corruptStorageDataNode.getStorageInfos().length; i++) {
         corruptStorageInfo = corruptStorageDataNode.getStorageInfos()[i];
@@ -1633,16 +1642,15 @@ public class TestBlockManager {
       blockManager.findAndMarkBlockAsCorrupt(blk, corruptStorageDataNode,
           corruptStorageInfo.getStorageID(),
           CorruptReplicasMap.Reason.ANY.toString());
-      ns.writeUnlock();
+      ns.writeUnlock(RwLockMode.BM, "testBlockManagerMachinesArray");
       BlockInfo[] blockInfos = new BlockInfo[] {blockInfo};
-      ns.readLock();
+      ns.readLock(RwLockMode.BM);
       LocatedBlocks locatedBlocks =
           blockManager.createLocatedBlocks(blockInfos, 3L, false, 0L, 3L,
               false, false, null, null);
-      assertTrue("Located Blocks should exclude corrupt" +
-              "replicas and failed storages",
-          locatedBlocks.getLocatedBlocks().size() == 1);
-      ns.readUnlock();
+      assertTrue(locatedBlocks.getLocatedBlocks().size() == 1,
+          "Located Blocks should exclude corrupt" + "replicas and failed storages");
+      ns.readUnlock(RwLockMode.BM, "open");
     } finally {
       if (cluster != null) {
         cluster.shutdown();
@@ -1671,18 +1679,18 @@ public class TestBlockManager {
           break;
         }
       }
-      assertTrue("Unexpected text in metasave," +
-              "was expecting corrupt blocks section!", foundIt);
+      assertTrue(foundIt, "Unexpected text in metasave," +
+          "was expecting corrupt blocks section!");
       corruptBlocksLine = reader.readLine();
       String regex = "Block=blk_[0-9]+_[0-9]+\\tSize=.*\\tNode=.*" +
           "\\tStorageID=.*\\tStorageState.*" +
           "\\tTotalReplicas=.*\\tReason=GENSTAMP_MISMATCH";
-      assertTrue("Unexpected corrupt block section in metasave!",
-          corruptBlocksLine.matches(regex));
+      assertTrue(corruptBlocksLine.matches(regex),
+          "Unexpected corrupt block section in metasave!");
       corruptBlocksLine = reader.readLine();
       regex = "Metasave: Number of datanodes.*";
-      assertTrue("Unexpected corrupt block section in metasave!",
-          corruptBlocksLine.matches(regex));
+      assertTrue(corruptBlocksLine.matches(regex),
+          "Unexpected corrupt block section in metasave!");
     } finally {
       if (reader != null)
         reader.close();
@@ -1709,7 +1717,8 @@ public class TestBlockManager {
             any(DatanodeDescriptor.class));
   }
 
-  @Test (timeout = 300000)
+  @Test
+  @Timeout(value = 300)
   public void testPlacementPolicySatisfied() throws Exception {
     LOG.info("Starting testPlacementPolicySatisfied.");
     final String[] initialRacks = new String[]{
@@ -1804,13 +1813,11 @@ public class TestBlockManager {
           + ", DataNode: " + dn.getDatanodeDescriptor().getXferAddr());
     }
     if (isBlockPlacementSatisfied) {
-      assertTrue("Block group of " + file + "should be placement" +
-              " policy satisfied, currently!",
-          blockManager.isPlacementPolicySatisfied(blockInfo));
+      assertTrue(blockManager.isPlacementPolicySatisfied(blockInfo),
+          "Block group of " + file + "should be placement" + " policy satisfied, currently!");
     } else {
-      assertFalse("Block group of " + file + " should be placement" +
-              " policy unsatisfied, currently!",
-          blockManager.isPlacementPolicySatisfied(blockInfo));
+      assertFalse(blockManager.isPlacementPolicySatisfied(blockInfo),
+          "Block group of " + file + " should be placement" + " policy unsatisfied, currently!");
     }
   }
 
@@ -1840,8 +1847,8 @@ public class TestBlockManager {
         buffer.append(line);
       }
       String output = buffer.toString();
-      assertTrue("Metasave output should not have null block ",
-          output.contains("Block blk_0_0 is Null"));
+      assertTrue(output.contains("Block blk_0_0 is Null"),
+          "Metasave output should not have null block ");
 
     } finally {
       reader.close();
@@ -1868,14 +1875,14 @@ public class TestBlockManager {
         buffer.append(line);
       }
       String output = buffer.toString();
-      assertTrue("Metasave output should have reported missing blocks.",
-          output.contains("Metasave: Blocks currently missing: 1"));
-      assertTrue("There should be 0 blocks waiting for reconstruction",
-          output.contains("Metasave: Blocks waiting for reconstruction: 0"));
+      assertTrue(output.contains("Metasave: Blocks currently missing: 1"),
+          "Metasave output should have reported missing blocks.");
+      assertTrue(output.contains("Metasave: Blocks waiting for reconstruction: 0"),
+          "There should be 0 blocks waiting for reconstruction");
       String blockNameGS = block.getBlockName() + "_" +
           block.getGenerationStamp();
-      assertTrue("Block " + blockNameGS + " should be MISSING.",
-          output.contains(blockNameGS + " MISSING"));
+      assertTrue(output.contains(blockNameGS + " MISSING"),
+          "Block " + blockNameGS + " should be MISSING.");
     } finally {
       reader.close();
       file.delete();
@@ -1941,18 +1948,18 @@ public class TestBlockManager {
         System.out.println(line);
       }
       String output = buffer.toString();
-      assertTrue("Metasave output should not have reported " +
-              "missing blocks.",
-          output.contains("Metasave: Blocks currently missing: 0"));
-      assertTrue("There should be 1 block waiting for reconstruction",
-          output.contains("Metasave: Blocks waiting for reconstruction: 1"));
+      assertTrue(output.contains("Metasave: Blocks currently missing: 0"),
+          "Metasave output should not have reported " +
+              "missing blocks.");
+      assertTrue(output.contains("Metasave: Blocks waiting for reconstruction: 1"),
+          "There should be 1 block waiting for reconstruction");
       String blockNameGS = block.getBlockName() + "_" +
           block.getGenerationStamp();
-      assertTrue("Block " + blockNameGS +
-              " should be list as maintenance.",
-          output.contains(blockNameGS + " (replicas: live: 1 decommissioning " +
+      assertTrue(output.contains(blockNameGS +
+              " (replicas: live: 1 decommissioning " +
               "and decommissioned: 0 corrupt: 0 in excess: " +
-              "0 maintenance mode: 1)"));
+              "0 maintenance mode: 1)"),
+          "Block " + blockNameGS + " should be list as maintenance.");
     } finally {
       reader.close();
       file.delete();
@@ -1996,18 +2003,18 @@ public class TestBlockManager {
         buffer.append(line);
       }
       String output = buffer.toString();
-      assertTrue("Metasave output should not have reported " +
-              "missing blocks.",
-          output.contains("Metasave: Blocks currently missing: 0"));
-      assertTrue("There should be 1 block waiting for reconstruction",
-          output.contains("Metasave: Blocks waiting for reconstruction: 1"));
+      assertTrue(output.contains("Metasave: Blocks currently missing: 0"),
+          "Metasave output should not have reported " +
+              "missing blocks.");
+      assertTrue(output.contains("Metasave: Blocks waiting for reconstruction: 1"),
+          "There should be 1 block waiting for reconstruction");
       String blockNameGS = block.getBlockName() + "_" +
           block.getGenerationStamp();
-      assertTrue("Block " + blockNameGS +
-              " should be list as maintenance.",
-          output.contains(blockNameGS + " (replicas: live: 1 decommissioning " +
-              "and decommissioned: 1 corrupt: 0 in excess: " +
-              "0 maintenance mode: 0)"));
+      assertTrue(output.contains(blockNameGS +
+          " (replicas: live: 1 decommissioning " +
+          "and decommissioned: 1 corrupt: 0 in excess: " +
+          "0 maintenance mode: 0)"), "Block " + blockNameGS +
+          " should be list as maintenance.");
     } finally {
       reader.close();
       file.delete();
@@ -2130,7 +2137,8 @@ public class TestBlockManager {
    * to set the numBytes of the block to NO_ACK,
    * the DataNode processing will not report incremental blocks.
    */
-  @Test(timeout = 360000)
+  @Test
+  @Timeout(value = 360)
   public void testBlockReportSetNoAckBlockToInvalidate() throws Exception {
     Configuration conf = new HdfsConfiguration();
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 500);
@@ -2210,7 +2218,8 @@ public class TestBlockManager {
    * @throws InterruptedException
    * @throws TimeoutException
    */
-  @Test(timeout = 360000)
+  @Test
+  @Timeout(value = 360)
   public void testProcessTimedOutExcessBlocks() throws IOException,
       InterruptedException, TimeoutException {
     Configuration config = new HdfsConfiguration();

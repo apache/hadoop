@@ -34,8 +34,8 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.BaseContainerM
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.BaseContainerSchedulerTest;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerState;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -44,6 +44,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeoutException;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Tests the behavior of {@link ContainerScheduler} when its queueing policy
@@ -57,6 +59,7 @@ public class TestContainerSchedulerOppContainersByResources
       throws UnsupportedFileSystemException {
   }
 
+  @BeforeEach
   @Override
   public void setup() throws IOException {
     conf.set(YarnConfiguration.NM_OPPORTUNISTIC_CONTAINERS_QUEUE_POLICY,
@@ -137,15 +140,15 @@ public class TestContainerSchedulerOppContainersByResources
     // Check that nothing is queued
     ContainerScheduler containerScheduler =
         containerManager.getContainerScheduler();
-    Assert.assertEquals(0,
+    assertEquals(0,
         containerScheduler.getNumQueuedContainers());
-    Assert.assertEquals(0,
+    assertEquals(0,
         containerScheduler.getNumQueuedGuaranteedContainers());
-    Assert.assertEquals(0,
+    assertEquals(0,
         containerScheduler.getNumQueuedOpportunisticContainers());
-    Assert.assertEquals(0,
+    assertEquals(0,
         metrics.getQueuedOpportunisticContainers());
-    Assert.assertEquals(0, metrics.getQueuedGuaranteedContainers());
+    assertEquals(0, metrics.getQueuedGuaranteedContainers());
   }
 
   /**

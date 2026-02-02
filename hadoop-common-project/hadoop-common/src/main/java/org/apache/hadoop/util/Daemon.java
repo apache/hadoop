@@ -18,25 +18,74 @@
 
 package org.apache.hadoop.util;
 
+import java.security.PrivilegedAction;
 import java.util.concurrent.ThreadFactory;
+
+import javax.security.auth.Subject;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.security.authentication.util.SubjectUtil;
 
-/** A thread that has called {@link Thread#setDaemon(boolean) } with true.*/
-@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
+/**
+ * A thread that has called {@link Thread#setDaemon(boolean) } with true.
+ * <p>
+ * The runnable code must either be specified in the runnable parameter or in
+ * the overridden work() method.
+ * <p>
+ * See {@link org.apache.hadoop.util.concurrent.SubjectInheritingThread} for the Subject inheritance behavior this
+ * class adds.
+ *
+ */
+@InterfaceAudience.LimitedPrivate({ "HDFS", "MapReduce" })
 @InterfaceStability.Unstable
 public class Daemon extends Thread {
 
-  {
-    setDaemon(true);                              // always a daemon
+  Subject startSubject;
+
+  @Override
+  public final void start() {
+    if (!SubjectUtil.THREAD_INHERITS_SUBJECT) {
+      startSubject = SubjectUtil.current();
+    }
+    super.start();
   }
 
   /**
-   * Provide a factory for named daemon threads,
-   * for use in ExecutorServices constructors
+   * Override this instead of run()
    */
-  @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
+  public void work() {
+    if (runnable != null) {
+      runnable.run();
+    }
+  }
+
+  @Override
+  public final void run() {
+    if (!SubjectUtil.THREAD_INHERITS_SUBJECT) {
+      SubjectUtil.doAs(startSubject, new PrivilegedAction<Void>() {
+
+        @Override
+        public Void run() {
+          work();
+          return null;
+        }
+
+      });
+    } else {
+      work();
+    }
+  }
+
+  {
+    setDaemon(true); // always a daemon
+  }
+
+  /**
+   * Provide a factory for named daemon threads, for use in ExecutorServices
+   * constructors
+   */
+  @InterfaceAudience.LimitedPrivate({ "HDFS", "MapReduce" })
   public static class DaemonFactory extends Daemon implements ThreadFactory {
 
     @Override
@@ -47,6 +96,7 @@ public class Daemon extends Thread {
   }
 
   Runnable runnable = null;
+
   /** Construct a daemon thread. */
   public Daemon() {
     super();
@@ -54,23 +104,25 @@ public class Daemon extends Thread {
 
   /**
    * Construct a daemon thread.
+   *
    * @param runnable runnable.
    */
   public Daemon(Runnable runnable) {
     super(runnable);
     this.runnable = runnable;
-    this.setName(((Object)runnable).toString());
+    this.setName(((Object) runnable).toString());
   }
 
   /**
    * Construct a daemon thread to be part of a specified thread group.
-   * @param group thread group.
+   *
+   * @param group    thread group.
    * @param runnable runnable.
    */
   public Daemon(ThreadGroup group, Runnable runnable) {
     super(group, runnable);
     this.runnable = runnable;
-    this.setName(((Object)runnable).toString());
+    this.setName(((Object) runnable).toString());
   }
 
   public Runnable getRunnable() {

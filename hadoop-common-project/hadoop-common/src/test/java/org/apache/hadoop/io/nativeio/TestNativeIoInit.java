@@ -17,12 +17,14 @@
  */
 package org.apache.hadoop.io.nativeio;
 
-import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.io.IOException;
 
 import org.apache.hadoop.fs.Path;
-import org.junit.Test;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 /**
  * Separate class to ensure forked Tests load the static blocks again.
@@ -40,17 +42,18 @@ public class TestNativeIoInit {
    * Expected: Loading these two static blocks separately should not result in
    * deadlock.
    */
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testDeadlockLinux() throws Exception {
-    Thread one = new Thread() {
+    Thread one = new SubjectInheritingThread() {
       @Override
-      public void run() {
+      public void work() {
         NativeIO.isAvailable();
       }
     };
-    Thread two = new Thread() {
+    Thread two = new SubjectInheritingThread() {
       @Override
-      public void run() {
+      public void work() {
         NativeIO.POSIX.isAvailable();
       }
     };
@@ -60,18 +63,19 @@ public class TestNativeIoInit {
     two.join();
   }
 
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testDeadlockWindows() throws Exception {
-    assumeTrue("Expected windows", Path.WINDOWS);
-    Thread one = new Thread() {
+    assumeTrue(Path.WINDOWS, "Expected windows");
+    SubjectInheritingThread one = new SubjectInheritingThread() {
       @Override
-      public void run() {
+      public void work() {
         NativeIO.isAvailable();
       }
     };
-    Thread two = new Thread() {
+    SubjectInheritingThread two = new SubjectInheritingThread() {
       @Override
-      public void run() {
+      public void work() {
         try {
           NativeIO.Windows.extendWorkingSetSize(100);
         } catch (IOException e) {

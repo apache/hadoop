@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.federation.metrics;
 
+import static org.apache.hadoop.hdfs.server.federation.router.async.utils.AsyncUtil.syncReturn;
 import static org.apache.hadoop.util.Time.now;
 
 import java.io.IOException;
@@ -385,6 +386,16 @@ public class NamenodeBeanMetrics
   }
 
   @Override
+  public long getNumberOfBadlyDistributedBlocks() {
+    try {
+      return getRBFMetrics().getNumberOfBadlyDistributedBlocks();
+    } catch (IOException e) {
+      LOG.debug("Failed to get number of badly distributed blocks", e);
+    }
+    return 0;
+  }
+
+  @Override
   public long getHighestPriorityLowRedundancyReplicatedBlocks() {
     try {
       return getRBFMetrics().getHighestPriorityLowRedundancyReplicatedBlocks();
@@ -469,6 +480,9 @@ public class NamenodeBeanMetrics
           this.router.getRpcServer().getClientProtocolModule();
       DatanodeStorageReport[] datanodeStorageReports =
           clientProtocol.getDatanodeStorageReport(type, false, dnReportTimeOut);
+      if (router.getRpcServer().isAsync()) {
+        datanodeStorageReports = syncReturn(DatanodeStorageReport[].class);
+      }
       for (DatanodeStorageReport datanodeStorageReport : datanodeStorageReports) {
         DatanodeInfo node = datanodeStorageReport.getDatanodeInfo();
         StorageReport[] storageReports = datanodeStorageReport.getStorageReports();
@@ -502,7 +516,7 @@ public class NamenodeBeanMetrics
       LOG.error("Cannot get {} nodes, Router in safe mode", type);
     } catch (SubClusterTimeoutException e) {
       LOG.error("Cannot get {} nodes, subclusters timed out responding", type);
-    } catch (IOException e) {
+    } catch (Exception e) {
       LOG.error("Cannot get " + type + " nodes", e);
     }
     return JSON.toString(info);

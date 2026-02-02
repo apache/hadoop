@@ -95,8 +95,13 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>com.sun.jersey.jersey-test-framework</groupId>
-      <artifactId>jersey-test-framework-grizzly2</artifactId>
+      <groupId>org.glassfish.jersey.test-framework</groupId>
+      <artifactId>jersey-test-framework-core</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.glassfish.jersey.test-framework.providers</groupId>
+      <artifactId>jersey-test-framework-provider-jetty</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -160,7 +165,12 @@
         <artifactId>spotbugs-maven-plugin</artifactId>
          <configuration>
           <xmlOutput>true</xmlOutput>
-          <excludeFilterFile>${mr.examples.basedir}/dev-support/findbugs-exclude.xml</excludeFilterFile>
+           <excludeFilterFiles>
+             <excludeFilterFile>${mr.examples.basedir}/dev-support/findbugs-exclude.xml
+             </excludeFilterFile>
+             <excludeFilterFile>${repo.root}/dev-support/findbugs-exclude-global.xml
+             </excludeFilterFile>
+           </excludeFilterFiles>
           <effort>Max</effort>
         </configuration>
       </plugin>

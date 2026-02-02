@@ -24,7 +24,8 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -52,13 +53,15 @@ import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_OPERATIONS_PURGE_UPLO
 import static org.apache.hadoop.fs.s3a.Constants.ESTABLISH_TIMEOUT;
 import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_PERFORMANCE;
 import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_PERFORMANCE_FLAGS;
+import static org.apache.hadoop.fs.s3a.Constants.INPUT_STREAM_TYPE;
+import static org.apache.hadoop.fs.s3a.Constants.INPUT_STREAM_TYPE_CLASSIC;
 import static org.apache.hadoop.fs.s3a.Constants.MAXIMUM_CONNECTIONS;
 import static org.apache.hadoop.fs.s3a.Constants.MAX_ERROR_RETRIES;
 import static org.apache.hadoop.fs.s3a.Constants.PART_UPLOAD_TIMEOUT;
-import static org.apache.hadoop.fs.s3a.Constants.PREFETCH_ENABLED_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.REQUEST_TIMEOUT;
 import static org.apache.hadoop.fs.s3a.Constants.RETRY_LIMIT;
 import static org.apache.hadoop.fs.s3a.Constants.SOCKET_TIMEOUT;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.disablePrefetching;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.MAGIC_PATH_PREFIX;
 import static org.apache.hadoop.fs.s3a.impl.ConfigurationHelper.setDurationAsMillis;
@@ -104,16 +107,16 @@ public class ITestConnectionTimeouts extends AbstractS3ATestBase {
    * @return a configuration to use for the brittle FS.
    */
   private Configuration timingOutConfiguration() {
-    Configuration conf = new Configuration(getConfiguration());
+    Configuration conf = disablePrefetching(new Configuration(getConfiguration()));
     removeBaseAndBucketOverrides(conf,
         CONNECTION_TTL,
         CONNECTION_ACQUISITION_TIMEOUT,
         CONNECTION_IDLE_TIME,
         ESTABLISH_TIMEOUT,
+        INPUT_STREAM_TYPE,
         MAX_ERROR_RETRIES,
         MAXIMUM_CONNECTIONS,
         PART_UPLOAD_TIMEOUT,
-        PREFETCH_ENABLED_KEY,
         REQUEST_TIMEOUT,
         SOCKET_TIMEOUT,
         FS_S3A_CREATE_PERFORMANCE,
@@ -125,7 +128,8 @@ public class ITestConnectionTimeouts extends AbstractS3ATestBase {
     conf.setInt(MAX_ERROR_RETRIES, 0);
     // needed to ensure that streams are kept open.
     // without this the tests is unreliable in batch runs.
-    conf.setBoolean(PREFETCH_ENABLED_KEY, false);
+    disablePrefetching(conf);
+    conf.set(INPUT_STREAM_TYPE, INPUT_STREAM_TYPE_CLASSIC);
     conf.setInt(RETRY_LIMIT, 0);
     conf.setBoolean(FS_S3A_CREATE_PERFORMANCE, true);
     final Duration ms10 = Duration.ofMillis(10);
@@ -134,6 +138,7 @@ public class ITestConnectionTimeouts extends AbstractS3ATestBase {
     return conf;
   }
 
+  @AfterEach
   @Override
   public void teardown() throws Exception {
     AWSClientConfig.resetMinimumOperationDuration();
@@ -145,6 +150,7 @@ public class ITestConnectionTimeouts extends AbstractS3ATestBase {
    */
   @Test
   public void testGeneratePoolTimeouts() throws Throwable {
+    skipIfClientSideEncryption();
     AWSClientConfig.setMinimumOperationDuration(Duration.ZERO);
     Configuration conf = timingOutConfiguration();
     Path path = methodPath();
@@ -186,10 +192,11 @@ public class ITestConnectionTimeouts extends AbstractS3ATestBase {
    */
   @Test
   public void testObjectUploadTimeouts() throws Throwable {
+    skipIfClientSideEncryption();
     AWSClientConfig.setMinimumOperationDuration(Duration.ZERO);
     final Path dir = methodPath();
     Path file = new Path(dir, "file");
-    Configuration conf = new Configuration(getConfiguration());
+    Configuration conf = new Configuration(getFileSystem().getConf());
     removeBaseAndBucketOverrides(conf,
         PART_UPLOAD_TIMEOUT,
         REQUEST_TIMEOUT,
@@ -256,20 +263,21 @@ public class ITestConnectionTimeouts extends AbstractS3ATestBase {
 
       // and try a multipart upload to verify that its requests also outlast
       // the short requests
-      SdkFaultInjector.setRequestFailureConditions(999,
-          SdkFaultInjector::isPartUpload);
-      Path magicFile = new Path(dir, MAGIC_PATH_PREFIX + "0001/__base/file2");
-      totalSleepTime.set(0);
-      OperationDuration dur2 = new DurationInfo(LOG, "Creating File");
-      ContractTestUtils.createFile(brittleFS, magicFile, true, DATASET);
-      dur2.finished();
-      Assertions.assertThat(totalSleepTime.get())
-          .describedAs("total sleep time of magic write")
-          .isGreaterThan(0);
-      Assertions.assertThat(dur2.asDuration())
-          .describedAs("Duration of magic write")
-          .isGreaterThan(shortTimeout);
-      brittleFS.delete(dir, true);
+      if (fs.isMagicCommitEnabled()) {
+        SdkFaultInjector.setRequestFailureConditions(999,
+            SdkFaultInjector::isPartUpload);
+        Path magicFile = new Path(dir, MAGIC_PATH_PREFIX + "0001/__base/file2");
+        totalSleepTime.set(0);
+        OperationDuration dur2 = new DurationInfo(LOG, "Creating File");
+        ContractTestUtils.createFile(brittleFS, magicFile, true, DATASET);
+        dur2.finished();
+        Assertions.assertThat(totalSleepTime.get())
+            .describedAs("total sleep time of magic write")
+            .isGreaterThan(0);
+        Assertions.assertThat(dur2.asDuration())
+            .describedAs("Duration of magic write")
+            .isGreaterThan(shortTimeout);
+      }
     }
   }
 }

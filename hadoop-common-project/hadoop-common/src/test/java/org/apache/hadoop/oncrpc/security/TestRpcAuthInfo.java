@@ -17,11 +17,12 @@
  */
 package org.apache.hadoop.oncrpc.security;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import org.apache.hadoop.oncrpc.security.RpcAuthInfo;
 import org.apache.hadoop.oncrpc.security.RpcAuthInfo.AuthFlavor;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for {@link RpcAuthInfo}
@@ -36,8 +37,9 @@ public class TestRpcAuthInfo {
     assertEquals(AuthFlavor.RPCSEC_GSS, AuthFlavor.fromValue(6));
   }
 
-  @Test(expected=IllegalArgumentException.class)
+  @Test
   public void testInvalidAuthFlavor() {
-    assertEquals(AuthFlavor.AUTH_NONE, AuthFlavor.fromValue(4));
+    assertThrows(IllegalArgumentException.class, ()->
+        assertEquals(AuthFlavor.AUTH_NONE, AuthFlavor.fromValue(4)));
   }
 }

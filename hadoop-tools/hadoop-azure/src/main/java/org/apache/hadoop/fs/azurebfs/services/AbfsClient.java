@@ -19,14 +19,16 @@
 package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.Closeable;
+import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
+import java.lang.reflect.InvocationTargetException;
 import java.net.HttpURLConnection;
-import java.net.InetAddress;
 import java.net.MalformedURLException;
+import java.net.URI;
 import java.net.URL;
 import java.net.URLEncoder;
-import java.net.UnknownHostException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
@@ -34,27 +36,59 @@ import java.util.Base64;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Locale;
-import java.util.Timer;
-import java.util.TimerTask;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
-import org.apache.hadoop.fs.azurebfs.constants.HttpOperationType;
-import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsInvalidChecksumException;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsDriverException;
-import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
-import org.apache.hadoop.fs.azurebfs.utils.MetricFormat;
-import org.apache.hadoop.fs.store.LogExactlyOnce;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore.Permissions;
+import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
+import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.ApiVersion;
+import org.apache.hadoop.fs.azurebfs.constants.AbfsServiceType;
+import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
+import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
+import org.apache.hadoop.fs.azurebfs.constants.HttpOperationType;
+import org.apache.hadoop.fs.azurebfs.constants.ReadType;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsDriverException;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsInvalidChecksumException;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidAbfsRestOperationException;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidConfigurationValueException;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidFileSystemPropertyException;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidUriException;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.SASTokenProviderException;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.TrileanConversionException;
+import org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters;
+import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
+import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultEntrySchema;
+import org.apache.hadoop.fs.azurebfs.contracts.services.StorageErrorResponseSchema;
 import org.apache.hadoop.fs.azurebfs.extensions.EncryptionContextProvider;
+import org.apache.hadoop.fs.azurebfs.extensions.ExtensionHelper;
+import org.apache.hadoop.fs.azurebfs.extensions.SASTokenProvider;
+import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
+import org.apache.hadoop.fs.azurebfs.oauth2.IdentityTransformer;
+import org.apache.hadoop.fs.azurebfs.oauth2.IdentityTransformerInterface;
 import org.apache.hadoop.fs.azurebfs.security.ContextEncryptionAdapter;
+import org.apache.hadoop.fs.azurebfs.utils.DateTimeUtils;
 import org.apache.hadoop.fs.azurebfs.utils.EncryptionType;
+import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
+import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderFormat;
+import org.apache.hadoop.fs.permission.FsAction;
+import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.fs.store.LogExactlyOnce;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.FutureCallback;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.Futures;
@@ -64,23 +98,6 @@ import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListeningS
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.MoreExecutors;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.util.Preconditions;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.ApiVersion;
-import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidUriException;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.SASTokenProviderException;
-import org.apache.hadoop.fs.azurebfs.extensions.ExtensionHelper;
-import org.apache.hadoop.fs.azurebfs.extensions.SASTokenProvider;
-import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
-import org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters;
-import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
-import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
-import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
@@ -108,6 +125,8 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.PLUS_ENC
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.SEMICOLON;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.SINGLE_WHITE_SPACE;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.UTF_8;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsServiceType.BLOB;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_IDENTITY_TRANSFORM_CLASS;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_DELETE_CONSIDERED_IDEMPOTENT;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_MB;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.SERVER_SIDE_ENCRYPTION_ALGORITHM;
@@ -115,6 +134,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.HTTPS
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.ACCEPT_CHARSET;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.CONTENT_MD5;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.CONTENT_TYPE;
+import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_REQUEST_PRIORITY;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.USER_AGENT;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_ENCRYPTION_ALGORITHM;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_ENCRYPTION_CONTEXT;
@@ -124,6 +144,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X
 import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARAM_RESOURCE;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARAM_TIMEOUT;
 import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.CONNECTION_TIMEOUT_ABBREVIATION;
+import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.TAIL_LATENCY_REQUEST_TIMEOUT_ABBREVIATION;
 
 /**
  * AbfsClient.
@@ -131,46 +152,47 @@ import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.CONNEC
 public abstract class AbfsClient implements Closeable {
   public static final Logger LOG = LoggerFactory.getLogger(AbfsClient.class);
   public static final String HUNDRED_CONTINUE_USER_AGENT = SINGLE_WHITE_SPACE + HUNDRED_CONTINUE + SEMICOLON;
-  public static final String ABFS_CLIENT_TIMER_THREAD_NAME = "abfs-timer-client";
+  public static final String FNS_BLOB_USER_AGENT_IDENTIFIER = "FNS";
 
   private final URL baseUrl;
   private final SharedKeyCredentials sharedKeyCredentials;
   private ApiVersion xMsVersion = ApiVersion.getCurrentVersion();
   private final ExponentialRetryPolicy exponentialRetryPolicy;
   private final StaticRetryPolicy staticRetryPolicy;
+  private final TailLatencyRequestTimeoutRetryPolicy tailLatencyRequestTimeoutRetryPolicy;
   private final String filesystem;
   private final AbfsConfiguration abfsConfiguration;
   private final String userAgent;
   private final AbfsPerfTracker abfsPerfTracker;
   private String clientProvidedEncryptionKey = null;
   private String clientProvidedEncryptionKeySHA = null;
+  private final IdentityTransformerInterface identityTransformer;
+  private final String userName;
+  private String primaryUserGroup;
 
   private final String accountName;
   private final AuthType authType;
   private AccessTokenProvider tokenProvider;
   private SASTokenProvider sasTokenProvider;
   private final AbfsCounters abfsCounters;
-  private Timer timer;
-  private final String abfsMetricUrl;
-  private boolean isMetricCollectionEnabled = false;
-  private final MetricFormat metricFormat;
-  private final AtomicBoolean isMetricCollectionStopped;
-  private final int metricAnalysisPeriod;
-  private final int metricIdlePeriod;
   private EncryptionContextProvider encryptionContextProvider = null;
   private EncryptionType encryptionType = EncryptionType.NONE;
   private final AbfsThrottlingIntercept intercept;
+  private AbfsTailLatencyTracker tailLatencyTracker = null;
 
   private final ListeningScheduledExecutorService executorService;
 
   private boolean renameResilience;
-  private TimerTask runningTimerTask;
-  private boolean isSendMetricCall;
-  private SharedKeyCredentials metricSharedkeyCredentials = null;
 
   private KeepAliveCache keepAliveCache;
 
   private AbfsApacheHttpClient abfsApacheHttpClient;
+
+  private final AbfsMetricsManager abfsMetricsManager;
+
+  private final String fileSystemId;
+
+  private AbfsServiceType abfsServiceType;
 
   /**
    * logging the rename failure if metadata is in an incomplete state.
@@ -181,22 +203,29 @@ public abstract class AbfsClient implements Closeable {
       final SharedKeyCredentials sharedKeyCredentials,
       final AbfsConfiguration abfsConfiguration,
       final EncryptionContextProvider encryptionContextProvider,
-      final AbfsClientContext abfsClientContext) throws IOException {
+      final AbfsClientContext abfsClientContext,
+      final AbfsServiceType abfsServiceType) throws IOException {
     this.baseUrl = baseUrl;
     this.sharedKeyCredentials = sharedKeyCredentials;
     String baseUrlString = baseUrl.toString();
-    this.filesystem = baseUrlString.substring(baseUrlString.lastIndexOf(FORWARD_SLASH) + 1);
+    int indexLastForwardSlash = baseUrlString.lastIndexOf(FORWARD_SLASH);
+    this.filesystem = baseUrlString.substring(indexLastForwardSlash + 1);
     this.abfsConfiguration = abfsConfiguration;
     this.exponentialRetryPolicy = abfsClientContext.getExponentialRetryPolicy();
     this.staticRetryPolicy = abfsClientContext.getStaticRetryPolicy();
+    this.tailLatencyRequestTimeoutRetryPolicy = abfsClientContext.getTailLatencyRequestTimeoutRetryPolicy();
     this.accountName = abfsConfiguration.getAccountName().substring(0, abfsConfiguration.getAccountName().indexOf(AbfsHttpConstants.DOT));
     this.authType = abfsConfiguration.getAuthType(accountName);
     this.intercept = AbfsThrottlingInterceptFactory.getInstance(accountName, abfsConfiguration);
+    this.tailLatencyTracker = AbfsTailLatencyTrackerFactory.getInstance(accountName, abfsConfiguration);
     this.renameResilience = abfsConfiguration.getRenameResilience();
+    this.fileSystemId = abfsClientContext.getFileSystemId();
+    this.abfsServiceType = abfsServiceType;
 
     if (encryptionContextProvider != null) {
       this.encryptionContextProvider = encryptionContextProvider;
-      xMsVersion = ApiVersion.APR_10_2021; // will be default once server change deployed
+      // Version update needed to support x-ms-encryption-context header
+      // @link https://learn.microsoft.com/en-us/rest/api/storageservices/put-block?tabs=microsoft-entra-id}
       encryptionType = EncryptionType.ENCRYPTION_CONTEXT;
     } else if (abfsConfiguration.getEncodedClientProvidedEncryptionKey() != null) {
       clientProvidedEncryptionKey =
@@ -224,10 +253,13 @@ public abstract class AbfsClient implements Closeable {
         == HttpOperationType.APACHE_HTTP_CLIENT) {
       keepAliveCache = new KeepAliveCache(abfsConfiguration);
 
+      // Warm up the connection pool during client initialization to avoid latency during first request.
+      // Since for every filesystem instance, we create both DFS and Blob client instance,
+      // so warmup is done only for the default client.
       abfsApacheHttpClient = new AbfsApacheHttpClient(
           DelegatingSSLSocketFactory.getDefaultFactory(),
-          abfsConfiguration.getHttpReadTimeout(),
-          keepAliveCache);
+          abfsConfiguration, keepAliveCache, baseUrl,
+          abfsConfiguration.getFsConfiguredServiceType() == abfsServiceType);
     }
 
     this.userAgent = initializeUserAgent(abfsConfiguration, sslProviderName);
@@ -238,70 +270,90 @@ public abstract class AbfsClient implements Closeable {
         new ThreadFactoryBuilder().setNameFormat("AbfsClient Lease Ops").setDaemon(true).build();
     this.executorService = MoreExecutors.listeningDecorator(
         HadoopExecutors.newScheduledThreadPool(this.abfsConfiguration.getNumLeaseThreads(), tf));
-    this.metricFormat = abfsConfiguration.getMetricFormat();
-    this.isMetricCollectionStopped = new AtomicBoolean(false);
-    this.metricAnalysisPeriod = abfsConfiguration.getMetricAnalysisTimeout();
-    this.metricIdlePeriod = abfsConfiguration.getMetricIdleTimeout();
-    if (!metricFormat.toString().equals("")) {
-      isMetricCollectionEnabled = true;
-      abfsCounters.initializeMetrics(metricFormat);
-      String metricAccountName = abfsConfiguration.getMetricAccount();
-      int dotIndex = metricAccountName.indexOf(AbfsHttpConstants.DOT);
-      if (dotIndex <= 0) {
-        throw new InvalidUriException(
-                metricAccountName + " - account name is not fully qualified.");
-      }
-      String metricAccountKey = abfsConfiguration.getMetricAccountKey();
+
+    this.abfsMetricsManager = new AbfsMetricsManager(abfsConfiguration, abfsCounters,
+        baseUrlString, indexLastForwardSlash, accountName, fileSystemId);
+    // register the client to Aggregated Metrics Manager
+    abfsMetricsManager.getAggregateMetricsManager()
+        .registerClient(accountName, this);
+    // Initialize read thread pool metrics if ReadAheadV2 and its dynamic scaling feature are enabled.
+    if (abfsConfiguration.isReadAheadV2Enabled() && abfsConfiguration.isReadAheadV2DynamicScalingEnabled()) {
+      abfsCounters.initializeReadResourceUtilizationMetrics();
+    }
+    final Class<? extends IdentityTransformerInterface> identityTransformerClass =
+        abfsConfiguration.getRawConfiguration().getClass(FS_AZURE_IDENTITY_TRANSFORM_CLASS, IdentityTransformer.class,
+            IdentityTransformerInterface.class);
+    try {
+      this.identityTransformer = identityTransformerClass.getConstructor(
+          Configuration.class).newInstance(abfsConfiguration.getRawConfiguration());
+    } catch (IllegalAccessException | InstantiationException | IllegalArgumentException
+             | InvocationTargetException | NoSuchMethodException e) {
+      LOG.error("IdentityTransformer Init Failed", e);
+      throw new IOException(e);
+    }
+    LOG.trace("IdentityTransformer init complete");
+
+    UserGroupInformation userGroupInformation = UserGroupInformation.getCurrentUser();
+    this.userName = userGroupInformation.getShortUserName();
+    LOG.trace("UGI init complete");
+    if (!abfsConfiguration.getSkipUserGroupMetadataDuringInitialization()) {
       try {
-        metricSharedkeyCredentials = new SharedKeyCredentials(metricAccountName.substring(0, dotIndex),
-                metricAccountKey);
-      } catch (IllegalArgumentException e) {
-        throw new IOException("Exception while initializing metric credentials " + e);
+        this.primaryUserGroup = userGroupInformation.getPrimaryGroupName();
+      } catch (IOException ex) {
+        LOG.error("Failed to get primary group for {}, using user name as primary group name", userName);
+        this.primaryUserGroup = userName;
       }
+    } else {
+      //Provide a default group name
+      this.primaryUserGroup = userName;
     }
-    if (isMetricCollectionEnabled) {
-      this.timer = new Timer(
-              ABFS_CLIENT_TIMER_THREAD_NAME, true);
-      timer.schedule(new TimerTaskImpl(),
-          metricIdlePeriod,
-          metricIdlePeriod);
-    }
-    this.abfsMetricUrl = abfsConfiguration.getMetricUri();
+    LOG.trace("primaryUserGroup is {}", this.primaryUserGroup);
   }
 
-  public AbfsClient(final URL baseUrl, final SharedKeyCredentials sharedKeyCredentials,
-                    final AbfsConfiguration abfsConfiguration,
-                    final AccessTokenProvider tokenProvider,
-                    final EncryptionContextProvider encryptionContextProvider,
-                    final AbfsClientContext abfsClientContext)
-      throws IOException {
-    this(baseUrl, sharedKeyCredentials, abfsConfiguration,
-        encryptionContextProvider, abfsClientContext);
-    this.tokenProvider = tokenProvider;
-  }
 
-  public AbfsClient(final URL baseUrl, final SharedKeyCredentials sharedKeyCredentials,
-                    final AbfsConfiguration abfsConfiguration,
-                    final SASTokenProvider sasTokenProvider,
-                    final EncryptionContextProvider encryptionContextProvider,
-                    final AbfsClientContext abfsClientContext)
+  /**
+   * Constructs an AbfsClient instance with all authentication and configuration options.
+   *
+   * @param baseUrl The base URL for the ABFS endpoint.
+   * @param sharedKeyCredentials Shared key credentials for authentication.
+   * @param abfsConfiguration The ABFS configuration.
+   * @param tokenProvider The access token provider for OAuth authentication.
+   * @param sasTokenProvider The SAS token provider for SAS authentication.
+   * @param encryptionContextProvider The encryption context provider.
+   * @param abfsClientContext The client context
+   * @param abfsServiceType The ABFS service type (e.g., Blob, DFS).
+   * @throws IOException if initialization fails.
+   */
+  public AbfsClient(final URL baseUrl,
+      final SharedKeyCredentials sharedKeyCredentials,
+      final AbfsConfiguration abfsConfiguration,
+      final AccessTokenProvider tokenProvider,
+      final SASTokenProvider sasTokenProvider,
+      final EncryptionContextProvider encryptionContextProvider,
+      final AbfsClientContext abfsClientContext,
+      final AbfsServiceType abfsServiceType)
       throws IOException {
     this(baseUrl, sharedKeyCredentials, abfsConfiguration,
-        encryptionContextProvider, abfsClientContext);
+        encryptionContextProvider, abfsClientContext, abfsServiceType);
     this.sasTokenProvider = sasTokenProvider;
+    this.tokenProvider = tokenProvider;
   }
 
   @Override
   public void close() throws IOException {
-    if (isMetricCollectionEnabled && runningTimerTask != null) {
-      runningTimerTask.cancel();
-      timer.cancel();
+    if (abfsMetricsManager != null) {
+      abfsMetricsManager.close();
+      abfsMetricsManager.getAggregateMetricsManager()
+          .deregisterClient(accountName, this);
     }
     if (keepAliveCache != null) {
       keepAliveCache.close();
     }
     if (abfsApacheHttpClient != null) {
       abfsApacheHttpClient.close();
+    }
+    if (intercept != null) {
+      IOUtils.cleanupWithLogger(LOG, intercept);
     }
     if (tokenProvider instanceof Closeable) {
       IOUtils.cleanupWithLogger(LOG,
@@ -326,28 +378,39 @@ public abstract class AbfsClient implements Closeable {
     return staticRetryPolicy;
   }
 
+  TailLatencyRequestTimeoutRetryPolicy getTailLatencyRequestTimeoutRetryPolicy() {
+    return tailLatencyRequestTimeoutRetryPolicy;
+  }
+
   /**
    * Returns the retry policy to be used for Abfs Rest Operation Failure.
    * @param failureReason helps to decide which type of retryPolicy to be used.
    * @return retry policy to be used.
    */
   public AbfsRetryPolicy getRetryPolicy(final String failureReason) {
-    return CONNECTION_TIMEOUT_ABBREVIATION.equals(failureReason)
-        && getAbfsConfiguration().getStaticRetryForConnectionTimeoutEnabled()
-        ? getStaticRetryPolicy()
-        : getExponentialRetryPolicy();
+    if (CONNECTION_TIMEOUT_ABBREVIATION.equals(failureReason)
+        && getAbfsConfiguration().getStaticRetryForConnectionTimeoutEnabled()) {
+      return getStaticRetryPolicy();
+    } else if (TAIL_LATENCY_REQUEST_TIMEOUT_ABBREVIATION.equals(failureReason)) {
+      return getTailLatencyRequestTimeoutRetryPolicy();
+    }
+    return getExponentialRetryPolicy();
   }
 
   SharedKeyCredentials getSharedKeyCredentials() {
     return sharedKeyCredentials;
   }
 
-  SharedKeyCredentials getMetricSharedkeyCredentials() {
-    return metricSharedkeyCredentials;
-  }
-
   public void setEncryptionType(EncryptionType encryptionType) {
     this.encryptionType = encryptionType;
+  }
+
+  /**
+   * Get the tail latency tracker for this account.
+   * @return tail latency tracker if enabled, null otherwise.
+   */
+  public AbfsTailLatencyTracker getTailLatencyTracker() {
+    return tailLatencyTracker;
   }
 
   public EncryptionType getEncryptionType() {
@@ -356,6 +419,14 @@ public abstract class AbfsClient implements Closeable {
 
   AbfsThrottlingIntercept getIntercept() {
     return intercept;
+  }
+
+  /**
+   * @return AbfsMetricsManager instance.
+   */
+  @VisibleForTesting
+  public AbfsMetricsManager getAbfsMetricsManager() {
+    return abfsMetricsManager;
   }
 
   /**
@@ -379,11 +450,11 @@ public abstract class AbfsClient implements Closeable {
    * @return common request headers
    */
   protected List<AbfsHttpHeader> createCommonHeaders(ApiVersion xMsVersion) {
-    final List<AbfsHttpHeader> requestHeaders = new ArrayList<AbfsHttpHeader>();
+    final List<AbfsHttpHeader> requestHeaders = new ArrayList<>();
     requestHeaders.add(new AbfsHttpHeader(X_MS_VERSION, xMsVersion.toString()));
     requestHeaders.add(new AbfsHttpHeader(ACCEPT_CHARSET, UTF_8));
     requestHeaders.add(new AbfsHttpHeader(CONTENT_TYPE, EMPTY_STRING));
-    requestHeaders.add(new AbfsHttpHeader(USER_AGENT, userAgent));
+    requestHeaders.add(new AbfsHttpHeader(USER_AGENT, getUserAgent()));
     return requestHeaders;
   }
 
@@ -479,12 +550,24 @@ public abstract class AbfsClient implements Closeable {
    * @param listMaxResults maximum number of blobs to return.
    * @param continuation marker to specify the continuation token.
    * @param tracingContext for tracing the server calls.
-   * @return executed rest operation containing response from server.
+   * @param uri to be used for the path conversion.
+   * @return {@link ListResponseData}. containing listing response.
    * @throws AzureBlobFileSystemException if rest operation or response parsing fails.
    */
-  public abstract AbfsRestOperation listPath(String relativePath, boolean recursive,
-      int listMaxResults, String continuation, TracingContext tracingContext)
-      throws IOException;
+  public abstract ListResponseData listPath(String relativePath, boolean recursive,
+      int listMaxResults, String continuation, TracingContext tracingContext, URI uri) throws IOException;
+
+  /**
+   * Post-processing of the list operation.
+   * @param relativePath which is used to list the blobs.
+   * @param fileStatuses list of file statuses to be processed.
+   * @param tracingContext for tracing the server calls.
+   * @param uri to be used for the path conversion.
+   * @return list of file statuses to be returned.
+   * @throws AzureBlobFileSystemException if rest operation fails.
+   */
+  public abstract List<FileStatus> postListProcessing(String relativePath,
+      List<FileStatus> fileStatuses, TracingContext tracingContext, URI uri) throws AzureBlobFileSystemException;
 
   /**
    * Retrieves user-defined metadata on filesystem.
@@ -522,8 +605,8 @@ public abstract class AbfsClient implements Closeable {
    * the path.
    * @param contextEncryptionAdapter: object that contains the encryptionContext and
    * encryptionKey created from the developer provided implementation of
-   * {@link org.apache.hadoop.fs.azurebfs.extensions.EncryptionContextProvider}
-   * @param tracingContext: Object of {@link org.apache.hadoop.fs.azurebfs.utils.TracingContext}
+   * {@link EncryptionContextProvider}
+   * @param tracingContext: Object of {@link TracingContext}
    * correlating to the current fs.create() request.
    * @return object of {@link AbfsRestOperation} which contain all the information
    * about the communication with the server. The information is in
@@ -541,14 +624,50 @@ public abstract class AbfsClient implements Closeable {
       TracingContext tracingContext) throws AzureBlobFileSystemException;
 
   /**
+   * Conditionally creates or overwrites a file at the specified relative path.
+   * This method ensures that the file is created or overwritten based on the provided parameters.
+   *
+   * @param relativePath The relative path of the file to be created or overwritten.
+   * @param statistics The file system statistics to be updated.
+   * @param permissions The permissions to be set on the file.
+   * @param isAppendBlob Specifies if the file is an append blob.
+   * @param contextEncryptionAdapter The encryption context adapter for handling encryption.
+   * @param tracingContext The tracing context for tracking the operation.
+   * @return An AbfsRestOperation object containing the result of the operation.
+   * @throws IOException If an I/O error occurs during the operation.
+   */
+  public abstract AbfsRestOperation conditionalCreateOverwriteFile(String relativePath,
+      FileSystem.Statistics statistics,
+      Permissions permissions,
+      boolean isAppendBlob,
+      ContextEncryptionAdapter contextEncryptionAdapter,
+      TracingContext tracingContext) throws IOException;
+
+  /**
+   * Performs a pre-check for a createNonRecursivePreCheck operation. Checks if parentPath
+   * exists or not.
+   *
+   * @param parentPath parent path of the file to be created.
+   * @param tracingContext trace context
+   *
+   * @throws IOException if parentPath does not exist or server error.
+   */
+  public abstract void createNonRecursivePreCheck(Path parentPath,
+      TracingContext tracingContext)
+      throws IOException;
+
+  /**
    * Acquire lease on specified path.
    * @param path on which lease has to be acquired.
    * @param duration for which lease has to be acquired.
+   * @param eTag required to acquire lease on the path.
    * @param tracingContext for tracing the server calls.
    * @return executed rest operation containing response from server.
    * @throws AzureBlobFileSystemException if rest operation fails.
    */
-  public abstract AbfsRestOperation acquireLease(String path, int duration,
+  public abstract AbfsRestOperation acquireLease(String path,
+      int duration,
+      String eTag,
       TracingContext tracingContext) throws AzureBlobFileSystemException;
 
   /**
@@ -600,7 +719,6 @@ public abstract class AbfsClient implements Closeable {
    * @param sourceEtag                etag of source file. may be null or empty
    * @param isMetadataIncompleteState was there a rename failure due to
    *                                  incomplete metadata state?
-   * @param isNamespaceEnabled        whether namespace enabled account or not
    * @return AbfsClientRenameResult result of rename operation indicating the
    * AbfsRest operation, rename recovery and incomplete metadata state failure.
    * @throws AzureBlobFileSystemException failure, excluding any recovery from overload failures.
@@ -611,8 +729,7 @@ public abstract class AbfsClient implements Closeable {
       String continuation,
       TracingContext tracingContext,
       String sourceEtag,
-      boolean isMetadataIncompleteState,
-      boolean isNamespaceEnabled)
+      boolean isMetadataIncompleteState)
       throws IOException;
 
   /**
@@ -620,7 +737,7 @@ public abstract class AbfsClient implements Closeable {
    * @param result executed rest operation containing response from server.
    * @return True if the path is a directory, False otherwise.
    */
-  protected abstract boolean checkIsDir(AbfsHttpOperation result);
+  public abstract boolean checkIsDir(AbfsHttpOperation result);
 
   /**
    * Creates a rest operation for rename.
@@ -773,26 +890,31 @@ public abstract class AbfsClient implements Closeable {
    * @param leaseId if there is an active lease on the path.
    * @param contextEncryptionAdapter to provide encryption context.
    * @param tracingContext for tracing the server calls.
+   * @param blobMd5  The Base64-encoded MD5 hash of the blob for data integrity validation.
    * @return executed rest operation containing response from server.
    * @throws AzureBlobFileSystemException if rest operation fails.
    */
   public abstract AbfsRestOperation flush(String path, long position,
       boolean retainUncommittedData, boolean isClose,
       String cachedSasToken, String leaseId,
-      ContextEncryptionAdapter contextEncryptionAdapter, TracingContext tracingContext)
+      ContextEncryptionAdapter contextEncryptionAdapter, TracingContext tracingContext, String blobMd5)
       throws AzureBlobFileSystemException;
 
   /**
-   * Flush previously uploaded data to a file.
-   * @param buffer containing blockIds to be flushed.
-   * @param path on which data has to be flushed.
-   * @param isClose specify if this is the last flush to the file.
-   * @param cachedSasToken to be used for the authenticating operation.
-   * @param leaseId if there is an active lease on the path.
-   * @param eTag to specify conditional headers.
-   * @param tracingContext for tracing the server calls.
-   * @return executed rest operation containing response from server.
-   * @throws AzureBlobFileSystemException if rest operation fails.
+   * Flushes previously uploaded data to the specified path.
+   *
+   * @param buffer The buffer containing block IDs to be flushed.
+   * @param path The file path to which data should be flushed.
+   * @param isClose True if this is the final flush (i.e., the file is being closed).
+   * @param cachedSasToken SAS token used for authentication (if applicable).
+   * @param leaseId Lease ID, if a lease is active on the file.
+   * @param eTag ETag used for conditional request headers (e.g., If-Match).
+   * @param contextEncryptionAdapter Adapter to provide encryption context, if encryption is enabled.
+   * @param tracingContext Context for tracing the server calls.
+   * @param blobMd5 The Base64-encoded MD5 hash of the blob for data integrity validation.
+   * @return The executed {@link AbfsRestOperation} containing the server response.
+   *
+   * @throws AzureBlobFileSystemException if the flush operation fails.
    */
   public abstract AbfsRestOperation flush(byte[] buffer,
       String path,
@@ -800,7 +922,8 @@ public abstract class AbfsClient implements Closeable {
       String cachedSasToken,
       String leaseId,
       String eTag,
-      TracingContext tracingContext) throws AzureBlobFileSystemException;
+      ContextEncryptionAdapter contextEncryptionAdapter,
+      TracingContext tracingContext, String blobMd5) throws AzureBlobFileSystemException;
 
   /**
    * Set the properties of a file or directory.
@@ -859,14 +982,12 @@ public abstract class AbfsClient implements Closeable {
    * @param recursive if the path is a directory, delete recursively.
    * @param continuation to specify continuation token.
    * @param tracingContext for tracing the server calls.
-   * @param isNamespaceEnabled specify if the namespace is enabled.
    * @return executed rest operation containing response from server.
    * @throws AzureBlobFileSystemException if rest operation fails.
    */
   public abstract AbfsRestOperation deletePath(String path, boolean recursive,
       String continuation,
-      TracingContext tracingContext,
-      boolean isNamespaceEnabled)
+      TracingContext tracingContext)
       throws AzureBlobFileSystemException;
 
   /**
@@ -891,14 +1012,12 @@ public abstract class AbfsClient implements Closeable {
         && DEFAULT_DELETE_CONSIDERED_IDEMPOTENT) {
       // Server has returned HTTP 404, which means path no longer
       // exists. Assuming delete result to be idempotent, return success.
-      final AbfsRestOperation successOp = getAbfsRestOperation(
+      LOG.debug("Returning success response from delete idempotency logic");
+      return getSuccessOp(
           AbfsRestOperationType.DeletePath,
           HTTP_METHOD_DELETE,
           op.getUrl(),
           op.getRequestHeaders());
-      successOp.hardSetResult(HttpURLConnection.HTTP_OK);
-      LOG.debug("Returning success response from delete idempotency logic");
-      return successOp;
     }
 
     return op;
@@ -1037,7 +1156,7 @@ public abstract class AbfsClient implements Closeable {
                                          String cachedSasToken)
       throws SASTokenProviderException {
     String sasToken = null;
-    if (this.authType == AuthType.SAS) {
+    if (getAbfsConfiguration().validateForSASType(this.authType)) {
       try {
         LOG.trace("Fetch SAS token for {} on {}", operation, path);
         if (cachedSasToken == null) {
@@ -1218,6 +1337,16 @@ public abstract class AbfsClient implements Closeable {
     sb.append(FORWARD_SLASH);
     sb.append(abfsConfiguration.getClusterType());
 
+    // Add a unique identifier in FNS-Blob user agent string
+    // Current filesystem init restricts HNS-Blob combination
+    // so namespace check not required.
+    // We need to rely on URL check to identify Blob service instead of user config
+    if (abfsConfiguration.getFsConfiguredServiceTypeFromUrl() == BLOB) {
+      sb.append(SEMICOLON)
+          .append(SINGLE_WHITE_SPACE)
+          .append(FNS_BLOB_USER_AGENT_IDENTIFIER);
+    }
+
     sb.append(")");
 
     appendIfNotEmpty(sb, abfsConfiguration.getCustomUserAgentPrefix(), false);
@@ -1239,17 +1368,30 @@ public abstract class AbfsClient implements Closeable {
 
   /**
    * Add MD5 hash as request header to the append request.
+   *
    * @param requestHeaders to be updated with checksum header
    * @param reqParams for getting offset and length
-   * @param buffer for getting input data for MD5 computation
-   * @throws AbfsRestOperationException if Md5 computation fails
    */
   protected void addCheckSumHeaderForWrite(List<AbfsHttpHeader> requestHeaders,
-      final AppendRequestParameters reqParams, final byte[] buffer)
-      throws AbfsRestOperationException {
-    String md5Hash = computeMD5Hash(buffer, reqParams.getoffset(),
-        reqParams.getLength());
-    requestHeaders.add(new AbfsHttpHeader(CONTENT_MD5, md5Hash));
+      final AppendRequestParameters reqParams) {
+    if (reqParams.getMd5() != null) {
+      requestHeaders.add(new AbfsHttpHeader(CONTENT_MD5, reqParams.getMd5()));
+    }
+  }
+
+  /**
+   * Add request priority header for prefetch read requests if enabled.
+   *
+   * @param requestHeaders to be updated with request priority header
+   * @param tracingContext tracing context to check read type
+   */
+  protected void addRequestPriorityForPrefetch(List<AbfsHttpHeader> requestHeaders,
+      TracingContext tracingContext) {
+    if (getAbfsConfiguration().isEnablePrefetchRequestPriority()
+        && ReadType.PREFETCH_READ.equals(tracingContext.getReadType())) {
+      requestHeaders.add(new AbfsHttpHeader(X_MS_REQUEST_PRIORITY,
+          getAbfsConfiguration().getPrefetchRequestPriorityValue()));
+    }
   }
 
   /**
@@ -1300,12 +1442,23 @@ public abstract class AbfsClient implements Closeable {
   /**
    * Conditions check for allowing checksum support for write operation.
    * Server will support this if client sends the MD5 Hash as a request header.
-   * For azure stoage service documentation and more details refer to
+   * For azure storage service documentation and more details refer to
    * <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/path/update">Path - Update Azure Rest API</a>.
    * @return true if checksum validation enabled.
    */
   protected boolean isChecksumValidationEnabled() {
     return getAbfsConfiguration().getIsChecksumValidationEnabled();
+  }
+
+  /**
+   * Conditions check for allowing checksum support for write operation.
+   * Server will support this if client sends the MD5 Hash as a request header.
+   * For azure storage service documentation and more details refer to
+   * <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/path/update">Path - Update Azure Rest API</a>.
+   * @return true if full blob checksum validation enabled.
+   */
+  protected boolean isFullBlobChecksumValidationEnabled() {
+    return getAbfsConfiguration().isFullBlobChecksumValidationEnabled();
   }
 
   /**
@@ -1387,124 +1540,40 @@ public abstract class AbfsClient implements Closeable {
   }
 
   /**
-   * Retrieves a TracingContext object configured for metric tracking.
-   * This method creates a TracingContext object with the validated client correlation ID,
-   * the host name of the local machine (or "UnknownHost" if unable to determine),
-   * the file system operation type set to GET_ATTR, and additional configuration parameters
-   * for metric tracking.
-   * The TracingContext is intended for use in tracking metrics related to Azure Blob FileSystem (ABFS) operations.
-   *
-   * @return A TracingContext object configured for metric tracking.
-   */
-  private TracingContext getMetricTracingContext() {
-    String hostName;
-    try {
-      hostName = InetAddress.getLocalHost().getHostName();
-    } catch (UnknownHostException e) {
-      hostName = "UnknownHost";
-    }
-    return new TracingContext(TracingContext.validateClientCorrelationID(
-        abfsConfiguration.getClientCorrelationId()),
-        hostName, FSOperationType.GET_ATTR, true,
-        abfsConfiguration.getTracingHeaderFormat(),
-        null, abfsCounters.toString());
-  }
-
-  /**
-   * Synchronized method to suspend or resume timer.
-   * @param timerFunctionality resume or suspend.
-   * @param timerTask The timertask object.
-   * @return true or false.
-   */
-  boolean timerOrchestrator(TimerFunctionality timerFunctionality, TimerTask timerTask) {
-    switch (timerFunctionality) {
-      case RESUME:
-        if (isMetricCollectionEnabled && isMetricCollectionStopped.get()) {
-          synchronized (this) {
-            if (isMetricCollectionStopped.get()) {
-              resumeTimer();
-            }
-          }
-        }
-        break;
-      case SUSPEND:
-        long now = System.currentTimeMillis();
-        long lastExecutionTime = abfsCounters.getLastExecutionTime().get();
-        if (isMetricCollectionEnabled && (now - lastExecutionTime >= metricAnalysisPeriod)) {
-          synchronized (this) {
-            if (!isMetricCollectionStopped.get()) {
-              timerTask.cancel();
-              timer.purge();
-              isMetricCollectionStopped.set(true);
-              return true;
-            }
-          }
-        }
-        break;
-      default:
-        break;
-    }
-    return false;
-  }
-
-  private void resumeTimer() {
-    isMetricCollectionStopped.set(false);
-    timer.schedule(new TimerTaskImpl(),
-        metricIdlePeriod,
-        metricIdlePeriod);
-  }
-
-  /**
    * Initiates a metric call to the Azure Blob FileSystem (ABFS) for retrieving file system properties.
    * This method performs a HEAD request to the specified metric URL, using default headers and query parameters.
    *
-   * @param tracingContext The tracing context to be used for capturing tracing information.
+   * @param metricsData The tracing context to be used for capturing tracing information.
    * @throws IOException throws IOException.
    */
-  public void getMetricCall(TracingContext tracingContext) throws IOException {
-    this.isSendMetricCall = true;
+  public void getMetricCall(String metricsData) throws IOException {
+    if (StringUtils.isEmpty(metricsData)) {
+      return;
+    }
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
-    final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
+    final AbfsUriQueryBuilder abfsUriQueryBuilder
+        = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_RESOURCE, FILESYSTEM);
 
-    final URL url = createRequestUrl(new URL(abfsMetricUrl), EMPTY_STRING, abfsUriQueryBuilder.toString());
-
+    // Construct the URL for the metric call
+    // In case of blob storage, the URL is changed to DFS URL
+    final URL url = createRequestUrl(abfsMetricsManager.getMetricsUrl(),
+        EMPTY_STRING, abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = getAbfsRestOperation(
-            AbfsRestOperationType.GetFileSystemProperties,
-            HTTP_METHOD_HEAD,
-            url,
-            requestHeaders);
+        AbfsRestOperationType.GetFileSystemProperties,
+        HTTP_METHOD_HEAD,
+        url,
+        requestHeaders);
+    TracingContext tracingContext = new TracingContext(
+        TracingContext.validateClientCorrelationID(
+            abfsConfiguration.getClientCorrelationId()),
+        fileSystemId, FSOperationType.GET_ATTR, true,
+        TracingHeaderFormat.AGGREGATED_METRICS_FORMAT,
+        null, metricsData);
     try {
       op.execute(tracingContext);
-    } finally {
-      this.isSendMetricCall = false;
-    }
-  }
-
-  public boolean isSendMetricCall() {
-    return isSendMetricCall;
-  }
-
-  public boolean isMetricCollectionEnabled() {
-    return isMetricCollectionEnabled;
-  }
-
-  class TimerTaskImpl extends TimerTask {
-    TimerTaskImpl() {
-      runningTimerTask = this;
-    }
-    @Override
-    public void run() {
-      try {
-        if (timerOrchestrator(TimerFunctionality.SUSPEND, this)) {
-            try {
-              getMetricCall(getMetricTracingContext());
-            } finally {
-              abfsCounters.initializeMetrics(metricFormat);
-            }
-        }
-      } catch (IOException e) {
-      }
+    } catch (AzureBlobFileSystemException e) {
+      // Ignore the exception and continue.
     }
   }
 
@@ -1551,7 +1620,8 @@ public abstract class AbfsClient implements Closeable {
    * @param requestHeaders  The list of HTTP headers for the request.
    * @return An AbfsRestOperation instance.
    */
-  AbfsRestOperation getAbfsRestOperation(final AbfsRestOperationType operationType,
+  @VisibleForTesting
+  public AbfsRestOperation getAbfsRestOperation(final AbfsRestOperationType operationType,
       final String httpMethod,
       final URL url,
       final List<AbfsHttpHeader> requestHeaders) {
@@ -1598,16 +1668,163 @@ public abstract class AbfsClient implements Closeable {
     return keepAliveCache;
   }
 
-  @VisibleForTesting
-  protected Timer getTimer() {
-    return timer;
-  }
-
   protected String getUserAgent() {
     return userAgent;
   }
 
+  /**
+   * Checks if the namespace is enabled.
+   * Filesystem init will fail if namespace is not correctly configured,
+   * so instead of swallowing the exception, we should throw the exception
+   * in case namespace is not configured correctly.
+   *
+   * @return True if the namespace is enabled, false otherwise.
+   * @throws AzureBlobFileSystemException if the conversion fails.
+   */
+  public boolean getIsNamespaceEnabled() throws AzureBlobFileSystemException {
+    try {
+      return getAbfsConfiguration().getIsNamespaceEnabledAccount().toBoolean();
+    } catch (TrileanConversionException ex) {
+      LOG.error("Failed to convert namespace enabled account property to boolean", ex);
+      throw new InvalidConfigurationValueException("Failed to determine account type", ex);
+    }
+  }
+
   protected boolean isRenameResilience() {
     return renameResilience;
+  }
+
+  /**
+   * Parses response of Listing API from server based on Endpoint used.
+   * @param result AbfsHttpOperation of list Operation.
+   * @param uri to be used for the path conversion.
+   * @return {@link ListResponseData} containing the list of entries.
+   * @throws IOException if parsing fails
+   */
+  public abstract ListResponseData parseListPathResults(AbfsHttpOperation result, URI uri) throws IOException;
+
+  /**
+   * Parses response of Get Block List from server based on Endpoint used.
+   * @param stream InputStream of the response
+   * @return List of block IDs
+   * @throws IOException if parsing fails
+   */
+  public abstract List<String> parseBlockListResponse(InputStream stream) throws IOException;
+
+  /**
+   * Parses response from ErrorStream returned by server based on Endpoint used.
+   * @param stream InputStream of the response
+   * @return StorageErrorResponseSchema
+   * @throws IOException if parsing fails
+   */
+  public abstract StorageErrorResponseSchema processStorageErrorResponse(InputStream stream) throws IOException;
+
+  /**
+   * Returns user-defined metadata from server response based on Endpoint used.
+   * @param result response from server
+   * @return user-defined metadata key-value pairs
+   * @throws InvalidFileSystemPropertyException if parsing fails
+   * @throws InvalidAbfsRestOperationException if parsing fails
+   */
+  public abstract Hashtable<String, String> getXMSProperties(AbfsHttpOperation result)
+      throws InvalidFileSystemPropertyException,
+      InvalidAbfsRestOperationException;
+
+  /**
+   * Encode attribute with encoding based on Endpoint used.
+   * @param value to be encoded
+   * @return encoded value
+   * @throws UnsupportedEncodingException if encoding fails
+   */
+  public abstract byte[] encodeAttribute(String value) throws UnsupportedEncodingException;
+
+  /**
+   * Decode attribute with decoding based on Endpoint used.
+   * @param value to be decoded
+   * @return decoded value
+   * @throws UnsupportedEncodingException if decoding fails
+   */
+  public abstract String decodeAttribute(byte[] value) throws UnsupportedEncodingException;
+
+  /**
+   * Get the dummy success operation.
+   * @param operationType type of the operation
+   * @param httpMethod http method
+   * @param url url to be used
+   * @param requestHeaders list of headers to be sent with the request
+   * @return success operation
+   */
+  protected AbfsRestOperation getSuccessOp(final AbfsRestOperationType operationType,
+      final String httpMethod, final URL url,
+      final List<AbfsHttpHeader> requestHeaders) {
+    final AbfsRestOperation successOp = getAbfsRestOperation(
+        operationType, httpMethod, url, requestHeaders);
+    successOp.hardSetResult(HttpURLConnection.HTTP_OK);
+    return successOp;
+  }
+
+  /**
+   * Retrieves the current read thread pool metrics from the ABFS counters.
+   *
+   * @return an {@link AbfsReadResourceUtilizationMetrics} instance containing
+   *         the latest statistics for the read thread pool
+   */
+  protected AbfsReadResourceUtilizationMetrics retrieveReadResourceUtilizationMetrics() {
+    return getAbfsCounters().getAbfsReadResourceUtilizationMetrics();
+  }
+
+  /**
+   * Creates a VersionedFileStatus object from the ListResultEntrySchema.
+   * @param entry ListResultEntrySchema object.
+   * @param uri to be used for the path conversion.
+   * @return VersionedFileStatus object.
+   * @throws AzureBlobFileSystemException if transformation fails.
+   */
+  protected VersionedFileStatus getVersionedFileStatusFromEntry(
+      ListResultEntrySchema entry, URI uri) throws AzureBlobFileSystemException {
+    long blockSize = abfsConfiguration.getAzureBlockSize();
+    String owner = null, group = null;
+    try{
+      if (identityTransformer != null) {
+        owner = identityTransformer.transformIdentityForGetRequest(entry.owner(),
+            true, userName);
+        group = identityTransformer.transformIdentityForGetRequest(entry.group(),
+            false, primaryUserGroup);
+      }
+    } catch (IOException ex) {
+      LOG.error("Failed to get owner/group for path {}", entry.name(), ex);
+      throw new AbfsDriverException(ex);
+    }
+    final String encryptionContext = entry.getXMsEncryptionContext();
+    final FsPermission fsPermission = entry.permissions() == null
+        ? new AbfsPermission(FsAction.ALL, FsAction.ALL, FsAction.ALL)
+        : AbfsPermission.valueOf(entry.permissions());
+    final boolean hasAcl = AbfsPermission.isExtendedAcl(entry.permissions());
+
+    long lastModifiedMillis = 0;
+    long contentLength = entry.contentLength() == null ? 0 : entry.contentLength();
+    boolean isDirectory = entry.isDirectory() != null && entry.isDirectory();
+    if (entry.lastModified() != null && !entry.lastModified().isEmpty()) {
+      lastModifiedMillis = DateTimeUtils.parseLastModifiedTime(
+          entry.lastModified());
+    }
+
+    Path entryPath = new Path(File.separator + entry.name());
+    if (uri != null) {
+      entryPath = entryPath.makeQualified(uri, entryPath);
+    }
+    return new VersionedFileStatus(
+        owner,
+        group,
+        fsPermission,
+        hasAcl,
+        contentLength,
+        isDirectory,
+        1,
+        blockSize,
+        lastModifiedMillis,
+        entryPath,
+        entry.eTag(),
+        encryptionContext);
   }
 }

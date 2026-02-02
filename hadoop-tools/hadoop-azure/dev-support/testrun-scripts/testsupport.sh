@@ -45,6 +45,25 @@ ENDTIME=$(date +%s)
 outputFormatOn="\033[0;95m"
 outputFormatOff="\033[0m"
 
+# Function to check if the blob config file exists and create one if it doesn't.
+fnsBlobConfigFileCheck() {
+  baseFileName=$1
+  targetWord=".dfs."
+  replacementWord=".blob."
+  accountSettingsDir="src/test/resources/accountSettings/"
+  accountConfigFileSuffix="_settings.xml"
+  sourceFilePath="${accountSettingsDir}${baseFileName}${accountConfigFileSuffix}"
+  targetFilePath="${accountSettingsDir}${baseFileName}_blob${accountConfigFileSuffix}"
+
+  if [ ! -f "$targetFilePath" ]; then
+    cp "$sourceFilePath" "$targetFilePath"
+    sed -i "s/$targetWord/$replacementWord/g" "$targetFilePath"
+    echo "File created and word replaced."
+  else
+    echo "File already exists."
+  fi
+}
+
 triggerRun()
 {
   echo ' '

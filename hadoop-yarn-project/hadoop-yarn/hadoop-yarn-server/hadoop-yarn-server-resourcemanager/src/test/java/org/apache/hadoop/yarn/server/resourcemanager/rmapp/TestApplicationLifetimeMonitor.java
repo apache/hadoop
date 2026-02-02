@@ -18,8 +18,9 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.rmapp;
 
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -63,17 +64,14 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 import org.apache.hadoop.yarn.util.Times;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.event.Level;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Timeout;
 
 /**
  * Test class for application life time monitor feature test.
  */
-@RunWith(Parameterized.class)
 public class TestApplicationLifetimeMonitor {
   private final long maxLifetime = 30L;
   private static final QueuePath ROOT = new QueuePath(CapacitySchedulerConfiguration.ROOT);
@@ -83,7 +81,6 @@ public class TestApplicationLifetimeMonitor {
 
   private YarnConfiguration conf;
 
-  @Parameterized.Parameters
   public static Collection<Object[]> data() {
     Collection<Object[]> params = new ArrayList<Object[]>();
     params.add(new Object[]{CapacityScheduler.class});
@@ -93,11 +90,12 @@ public class TestApplicationLifetimeMonitor {
 
   private Class scheduler;
 
-  public TestApplicationLifetimeMonitor(Class schedulerParameter) {
+  private void initTestApplicationLifetimeMonitor(Class schedulerParameter)
+      throws IOException {
     scheduler = schedulerParameter;
+    setup();
   }
 
-  @Before
   public void setup() throws IOException {
     if (scheduler.equals(CapacityScheduler.class)) {
       // Since there is limited lifetime monitoring support in fair scheduler
@@ -118,9 +116,12 @@ public class TestApplicationLifetimeMonitor {
         3000L);
   }
 
-  @Test(timeout = 60000)
-  public void testApplicationLifetimeMonitor()
+  @Timeout(value = 60)
+  @ParameterizedTest
+  @MethodSource("data")
+  public void testApplicationLifetimeMonitor(Class schedulerParameter)
       throws Exception {
+    initTestApplicationLifetimeMonitor(schedulerParameter);
     MockRM rm = null;
     try {
       rm = new MockRM(conf);
@@ -167,8 +168,8 @@ public class TestApplicationLifetimeMonitor {
           rm.sendAMLaunched(app1.getCurrentAppAttempt().getAppAttemptId());
       am1.registerAppAttempt();
       rm.waitForState(app1.getApplicationId(), RMAppState.KILLED);
-      Assert.assertTrue("Application killed before lifetime value",
-          (System.currentTimeMillis() - app1.getSubmitTime()) > 10000);
+      assertTrue((System.currentTimeMillis() - app1.getSubmitTime()) > 10000,
+          "Application killed before lifetime value");
 
       Map<ApplicationTimeoutType, String> updateTimeout =
           new HashMap<ApplicationTimeoutType, String>();
@@ -196,8 +197,8 @@ public class TestApplicationLifetimeMonitor {
       long afterUpdate =
           applicationTimeouts.get(ApplicationTimeoutType.LIFETIME);
 
-      Assert.assertTrue("Application lifetime value not updated",
-          afterUpdate > beforeUpdate);
+      assertTrue(afterUpdate > beforeUpdate,
+          "Application lifetime value not updated");
 
       // verify for application report.
       RecordFactory recordFactory =
@@ -208,17 +209,16 @@ public class TestApplicationLifetimeMonitor {
       Map<ApplicationTimeoutType, ApplicationTimeout> appTimeouts = rm
           .getRMContext().getClientRMService().getApplicationReport(appRequest)
           .getApplicationReport().getApplicationTimeouts();
-      Assert.assertTrue("Application Timeout are empty.",
-          !appTimeouts.isEmpty());
+      assertTrue(!appTimeouts.isEmpty(), "Application Timeout are empty.");
       ApplicationTimeout timeout =
           appTimeouts.get(ApplicationTimeoutType.LIFETIME);
-      Assert.assertTrue("Application remaining time is incorrect",
-          timeout.getRemainingTime() > 0);
+      assertTrue(timeout.getRemainingTime() > 0,
+          "Application remaining time is incorrect");
 
       rm.waitForState(app2.getApplicationId(), RMAppState.KILLED);
       // verify for app killed with updated lifetime
-      Assert.assertTrue("Application killed before lifetime value",
-          app2.getFinishTime() > afterUpdate);
+      assertTrue(app2.getFinishTime() > afterUpdate,
+          "Application killed before lifetime value");
 
       if (scheduler.equals(CapacityScheduler.class)) {
         // Supported only on capacity scheduler
@@ -228,19 +228,21 @@ public class TestApplicationLifetimeMonitor {
         // so killed after queue max lifetime.
         rm.waitForState(app4.getApplicationId(), RMAppState.KILLED);
         long totalTimeRun = app4.getFinishTime() - app4.getSubmitTime();
-        Assert.assertTrue("Application killed before lifetime value",
-            totalTimeRun > (maxLifetime * 1000));
-        Assert.assertTrue(
-            "Application killed before lifetime value " + totalTimeRun,
-            totalTimeRun < ((maxLifetime + 10L) * 1000));
+        assertTrue(totalTimeRun > (maxLifetime * 1000),
+            "Application killed before lifetime value");
+        assertTrue(totalTimeRun < ((maxLifetime + 10L) * 1000),
+            "Application killed before lifetime value " + totalTimeRun);
       }
     } finally {
       stopRM(rm);
     }
   }
 
-  @Test(timeout = 180000)
-  public void testApplicationLifetimeOnRMRestart() throws Exception {
+  @Timeout(value = 180)
+  @ParameterizedTest
+  @MethodSource("data")
+  public void testApplicationLifetimeOnRMRestart(Class schedulerParameter) throws Exception {
+    initTestApplicationLifetimeMonitor(schedulerParameter);
     conf.setBoolean(YarnConfiguration.RECOVERY_ENABLED, true);
     conf.setBoolean(YarnConfiguration.RM_WORK_PRESERVING_RECOVERY_ENABLED,
         true);
@@ -310,14 +312,16 @@ public class TestApplicationLifetimeMonitor {
 
     // wait for app life time and application to be in killed state.
     rm2.waitForState(recoveredApp1.getApplicationId(), RMAppState.KILLED);
-    Assert.assertTrue("Application killed before lifetime value",
-        recoveredApp1.getFinishTime() > (recoveredApp1.getSubmitTime()
-            + appLifetime * 1000));
+    assertTrue(recoveredApp1.getFinishTime() > (recoveredApp1.getSubmitTime()
+        + appLifetime * 1000), "Application killed before lifetime value");
   }
 
-  @Test(timeout = 60000)
-  public void testUpdateApplicationTimeoutForStateStoreUpdateFail()
+  @Timeout(value = 60)
+  @ParameterizedTest
+  @MethodSource("data")
+  public void testUpdateApplicationTimeoutForStateStoreUpdateFail(Class schedulerParameter)
       throws Exception {
+    initTestApplicationLifetimeMonitor(schedulerParameter);
     MockRM rm1 = null;
     try {
       MemoryRMStateStore memStore = new MemoryRMStateStore() {
@@ -375,8 +379,8 @@ public class TestApplicationLifetimeMonitor {
         fail("Update application should fail.");
       } catch (YarnException e) {
         // expected
-        assertTrue("State-store exception does not containe appId",
-            e.getMessage().contains(app1.getApplicationId().toString()));
+        assertTrue(e.getMessage().contains(app1.getApplicationId().toString()),
+            "State-store exception does not containe appId");
       }
 
       applicationTimeouts = app1.getApplicationTimeouts();
@@ -384,19 +388,22 @@ public class TestApplicationLifetimeMonitor {
       long afterUpdate =
           applicationTimeouts.get(ApplicationTimeoutType.LIFETIME);
 
-      Assert.assertEquals("Application timeout is updated", beforeUpdate,
-          afterUpdate);
+      assertEquals(beforeUpdate, afterUpdate,
+          "Application timeout is updated");
       rm1.waitForState(app1.getApplicationId(), RMAppState.KILLED);
       // verify for app killed with updated lifetime
-      Assert.assertTrue("Application killed before lifetime value",
-          app1.getFinishTime() > afterUpdate);
+      assertTrue(app1.getFinishTime() > afterUpdate,
+          "Application killed before lifetime value");
     } finally {
       stopRM(rm1);
     }
   }
 
-  @Test(timeout = 120000)
-  public void testInheritAppLifetimeFromParentQueue() throws Exception {
+  @Timeout(value = 120)
+  @ParameterizedTest
+  @MethodSource("data")
+  public void testInheritAppLifetimeFromParentQueue(Class schedulerParameter) throws Exception {
+    initTestApplicationLifetimeMonitor(schedulerParameter);
     YarnConfiguration yarnConf = conf;
     long maxRootLifetime = 20L;
     long defaultRootLifetime = 10L;
@@ -436,29 +443,31 @@ public class TestApplicationLifetimeMonitor {
         rm.waitForState(app1.getApplicationId(), RMAppState.KILLED);
         long totalTimeRun = app1.getFinishTime() - app1.getSubmitTime();
         // Child queue should have inherited parent max and default lifetimes.
-        Assert.assertEquals("Child queue max lifetime should have overridden"
-            + " parent value",
-            maxRootLifetime,
-            csched.getQueue(CQ1).getMaximumApplicationLifetime());
-        Assert.assertEquals("Child queue default lifetime should have"
-            + "  overridden parent value",
-            defaultRootLifetime,
-            csched.getQueue(CQ1).getDefaultApplicationLifetime());
+        assertEquals(maxRootLifetime,
+            csched.getQueue(CQ1).getMaximumApplicationLifetime(),
+            "Child queue max lifetime should have overridden"
+            + " parent value");
+        assertEquals(defaultRootLifetime,
+            csched.getQueue(CQ1).getDefaultApplicationLifetime(),
+            "Child queue default lifetime should have"
+            + "  overridden parent value");
         // app1 (run in the 'child1' queue) should have run longer than the
         // default lifetime but less than the max lifetime.
-        Assert.assertTrue("Application killed before default lifetime value",
-            totalTimeRun > (defaultRootLifetime * 1000));
-        Assert.assertTrue(
-            "Application killed after max lifetime value " + totalTimeRun,
-            totalTimeRun < (maxRootLifetime * 1000));
+        assertTrue(totalTimeRun > (defaultRootLifetime * 1000),
+            "Application killed before default lifetime value");
+        assertTrue(totalTimeRun < (maxRootLifetime * 1000),
+            "Application killed after max lifetime value " + totalTimeRun);
       }
     } finally {
       stopRM(rm);
     }
   }
 
-  @Test(timeout = 120000)
-  public void testOverrideParentQueueMaxAppLifetime() throws Exception {
+  @Timeout(value = 120)
+  @ParameterizedTest
+  @MethodSource("data")
+  public void testOverrideParentQueueMaxAppLifetime(Class schedulerParameter) throws Exception {
+    initTestApplicationLifetimeMonitor(schedulerParameter);
     YarnConfiguration yarnConf = conf;
     long maxRootLifetime = 20L;
     long maxChildLifetime = 40L;
@@ -501,23 +510,26 @@ public class TestApplicationLifetimeMonitor {
         rm.waitForState(app1.getApplicationId(), RMAppState.KILLED);
         long totalTimeRun = app1.getFinishTime() - app1.getSubmitTime();
         // Child queue's max lifetime can override parent's and be larger.
-        Assert.assertTrue("Application killed before default lifetime value",
-            (maxRootLifetime < maxChildLifetime)
-              && (totalTimeRun > (maxChildLifetime * 1000)));
-        Assert.assertEquals("Root queue max lifetime property set incorrectly",
-            maxRootLifetime,
-            csched.getRootQueue().getMaximumApplicationLifetime());
-        Assert.assertEquals("Child queue max lifetime should have overridden"
-            + " parent value", maxChildLifetime,
-            csched.getQueue(CQ1).getMaximumApplicationLifetime());
+        assertTrue((maxRootLifetime < maxChildLifetime) &&
+            (totalTimeRun > (maxChildLifetime * 1000)),
+            "Application killed before default lifetime value");
+        assertEquals(maxRootLifetime, csched.getRootQueue().getMaximumApplicationLifetime(),
+            "Root queue max lifetime property set incorrectly");
+        assertEquals(maxChildLifetime, csched.getQueue(CQ1).getMaximumApplicationLifetime(),
+            "Child queue max lifetime should have overridden"
+            + " parent value");
       }
     } finally {
       stopRM(rm);
     }
   }
 
-  @Test(timeout = 120000)
-  public void testOverrideParentQueueDefaultAppLifetime() throws Exception {
+  @Timeout(value = 120)
+  @ParameterizedTest
+  @MethodSource("data")
+  public void testOverrideParentQueueDefaultAppLifetime(
+      Class schedulerParameter) throws Exception {
+    initTestApplicationLifetimeMonitor(schedulerParameter);
     YarnConfiguration yarnConf = conf;
     long maxRootLifetime = -1L;
     long maxChildLifetime = -1L;
@@ -560,19 +572,17 @@ public class TestApplicationLifetimeMonitor {
         long totalTimeRun = app1.getFinishTime() - app1.getSubmitTime();
         // app1 (run in 'child1' queue) should have overridden the parent's
         // default lifetime.
-        Assert.assertTrue("Application killed before default lifetime value",
-            totalTimeRun > (defaultChildLifetime * 1000));
+        assertTrue(totalTimeRun > (defaultChildLifetime * 1000),
+            "Application killed before default lifetime value");
         // Root and child queue's max lifetime should be -1.
-        Assert.assertEquals("Root queue max lifetime property set incorrectly",
-            maxRootLifetime,
-            csched.getRootQueue().getMaximumApplicationLifetime());
-        Assert.assertEquals("Child queue max lifetime property set incorrectly",
-            maxChildLifetime,
-            csched.getQueue(CQ1).getMaximumApplicationLifetime());
+        assertEquals(maxRootLifetime, csched.getRootQueue().getMaximumApplicationLifetime(),
+            "Root queue max lifetime property set incorrectly");
+        assertEquals(maxChildLifetime, csched.getQueue(CQ1).getMaximumApplicationLifetime(),
+            "Child queue max lifetime property set incorrectly");
         // 'child1' queue's default lifetime should have overridden parent's.
-        Assert.assertEquals("Child queue default lifetime should have"
-            + " overridden parent value", defaultChildLifetime,
-            csched.getQueue(CQ1).getDefaultApplicationLifetime());
+        assertEquals(defaultChildLifetime, csched.getQueue(CQ1).getDefaultApplicationLifetime(),
+            "Child queue default lifetime should have"
+            + " overridden parent value");
       }
     } finally {
       stopRM(rm);

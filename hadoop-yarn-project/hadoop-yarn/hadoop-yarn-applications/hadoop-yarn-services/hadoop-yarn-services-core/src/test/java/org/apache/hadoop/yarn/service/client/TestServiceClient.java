@@ -49,9 +49,8 @@ import org.apache.hadoop.yarn.service.conf.YarnServiceConf;
 import org.apache.hadoop.yarn.service.exceptions.ErrorStrings;
 import org.apache.hadoop.yarn.service.utils.FilterUtils;
 import org.apache.hadoop.yarn.service.utils.ServiceApiUtil;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -60,7 +59,10 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.mockito.ArgumentMatchers.any;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -72,8 +74,8 @@ public class TestServiceClient {
   private static final Logger LOG = LoggerFactory.getLogger(
       TestServiceClient.class);
 
-  @Rule
-  public ServiceTestUtils.ServiceFSWatcher rule =
+  @RegisterExtension
+  private ServiceTestUtils.ServiceFSWatcher rule =
       new ServiceTestUtils.ServiceFSWatcher();
 
   @Test
@@ -89,12 +91,12 @@ public class TestServiceClient {
     client.getConfig().set("yarn.service.classpath", "{{VAR_1}},{{VAR_2}}");
     String newPath = client.addAMEnv().get("CLASSPATH");
 
-    Assert.assertEquals(originalPath + "<CPS>{{VAR_1}}<CPS>{{VAR_2}}", newPath);
+    assertEquals(originalPath + "<CPS>{{VAR_1}}<CPS>{{VAR_2}}", newPath);
     //restoring the original value for service classpath
     client.getConfig().set("yarn.service.classpath", oldParam);
 
     newPath = client.addAMEnv().get("CLASSPATH");
-    Assert.assertEquals(originalPath, newPath);
+    assertEquals(originalPath, newPath);
 
     client.stop();
   }
@@ -109,11 +111,11 @@ public class TestServiceClient {
     try {
       client.initiateUpgrade(service);
     } catch (YarnException ex) {
-      Assert.assertEquals(ErrorStrings.SERVICE_UPGRADE_DISABLED,
+      assertEquals(ErrorStrings.SERVICE_UPGRADE_DISABLED,
           ex.getMessage());
       return;
     }
-    Assert.fail();
+    fail();
   }
 
   @Test
@@ -127,8 +129,8 @@ public class TestServiceClient {
 
     Service fromFs = ServiceApiUtil.loadServiceUpgrade(rule.getFs(),
         service.getName(), service.getVersion());
-    Assert.assertEquals(service.getName(), fromFs.getName());
-    Assert.assertEquals(service.getVersion(), fromFs.getVersion());
+    assertEquals(service.getName(), fromFs.getName());
+    assertEquals(service.getVersion(), fromFs.getVersion());
     client.stop();
   }
 
@@ -149,7 +151,7 @@ public class TestServiceClient {
     client.actionUpgrade(service, comp.getContainers());
     CompInstancesUpgradeResponseProto response = client.getLastProxyResponse(
         CompInstancesUpgradeResponseProto.class);
-    Assert.assertNotNull("upgrade did not complete", response);
+    assertNotNull(response, "upgrade did not complete");
     client.stop();
   }
 
@@ -169,11 +171,11 @@ public class TestServiceClient {
 
     ComponentContainers[] compContainers = client.getContainers(
         service.getName(), Lists.newArrayList("compa"), "v1", null);
-    Assert.assertEquals("num comp", 1, compContainers.length);
-    Assert.assertEquals("comp name", "compa",
-        compContainers[0].getComponentName());
-    Assert.assertEquals("num containers", 2,
-        compContainers[0].getContainers().size());
+    assertEquals(1, compContainers.length, "num comp");
+    assertEquals("compa",
+        compContainers[0].getComponentName(), "comp name");
+    assertEquals(2,
+        compContainers[0].getContainers().size(), "num containers");
     client.stop();
   }
 
@@ -191,13 +193,13 @@ public class TestServiceClient {
     try {
       client.initiateUpgrade(service);
     } catch (YarnException ex) {
-      Assert.assertEquals("All the components of the service " +
+      assertEquals("All the components of the service " +
               service.getName() + " have " + Component.RestartPolicyEnum.NEVER
               + " restart policy, so it cannot be upgraded.",
           ex.getMessage());
       return;
     }
-    Assert.fail();
+    fail();
   }
 
   private Service createService() throws IOException,
@@ -241,8 +243,8 @@ public class TestServiceClient {
 
       ApplicationAttemptReport attemptReport =
           ApplicationAttemptReport.newInstance(client.attemptId, "localhost", 0,
-              null, null, null,
-              YarnApplicationAttemptState.RUNNING, null);
+          null, null, null,
+          YarnApplicationAttemptState.RUNNING, null);
       when(yarnClient.getApplicationAttemptReport(any()))
           .thenReturn(attemptReport);
       when(yarnClient.getApplicationReport(client.appId)).thenReturn(appReport);

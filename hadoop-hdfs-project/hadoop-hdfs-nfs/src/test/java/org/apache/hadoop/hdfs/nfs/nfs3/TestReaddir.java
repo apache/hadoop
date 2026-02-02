@@ -18,7 +18,9 @@
 
 package org.apache.hadoop.hdfs.nfs.nfs3;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -40,11 +42,10 @@ import org.apache.hadoop.oncrpc.XDR;
 import org.apache.hadoop.oncrpc.security.SecurityHandler;
 import org.apache.hadoop.security.authorize.DefaultImpersonationProvider;
 import org.apache.hadoop.security.authorize.ProxyUsers;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.mockito.Mockito;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test READDIR and READDIRPLUS request with zero, nonzero cookies
@@ -59,7 +60,7 @@ public class TestReaddir {
   static String testdir = "/tmp";
   static SecurityHandler securityHandler;
 
-  @BeforeClass
+  @BeforeAll
   public static void setup() throws Exception {
     String currentUser = System.getProperty("user.name");
     config.set(
@@ -84,19 +85,19 @@ public class TestReaddir {
 
     nfsd = (RpcProgramNfs3) nfs3.getRpcProgram();
 
-    securityHandler = Mockito.mock(SecurityHandler.class);
-    Mockito.when(securityHandler.getUser()).thenReturn(
+    securityHandler = mock(SecurityHandler.class);
+    when(securityHandler.getUser()).thenReturn(
         System.getProperty("user.name"));
   }
 
-  @AfterClass
+  @AfterAll
   public static void shutdown() throws Exception {
     if (cluster != null) {
       cluster.shutdown();
     }
   }
 
-  @Before
+  @BeforeEach
   public void createFiles() throws IllegalArgumentException, IOException {
     hdfs.delete(new Path(testdir), true);
     hdfs.mkdirs(new Path(testdir));

@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.nodelabels;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.Sets;
@@ -29,10 +32,9 @@ import org.apache.hadoop.yarn.nodelabels.NodeAttributeStore;
 import org.apache.hadoop.yarn.nodelabels.NodeAttributesManager;
 import org.apache.hadoop.yarn.nodelabels.NodeLabelUtil;
 import org.apache.hadoop.yarn.server.resourcemanager.NodeAttributeTestUtils;
-import org.junit.Test;
-import org.junit.Before;
-import org.junit.After;
-import org.junit.Assert;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterEach;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -51,7 +53,7 @@ public class TestNodeAttributesManager {
   private final static String[] HOSTNAMES =
       new String[] {"host1", "host2", "host3"};
 
-  @Before
+  @BeforeEach
   public void init() throws IOException {
     Configuration conf = new Configuration();
     attributesManager = new NodeAttributesManagerImpl();
@@ -62,7 +64,7 @@ public class TestNodeAttributesManager {
     attributesManager.start();
   }
 
-  @After
+  @AfterEach
   public void cleanUp() {
     if (attributesManager != null) {
       attributesManager.stop();
@@ -102,8 +104,8 @@ public class TestNodeAttributesManager {
     attributesManager.addNodeAttributes(toAddAttributes);
     nodeAttributes = attributesManager.getAttributesForNode(HOSTNAMES[0]);
 
-    Assert.assertEquals(3, nodeAttributes.size());
-    Assert.assertTrue(sameAttributeSet(toAddAttributes.get(HOSTNAMES[0]),
+    assertEquals(3, nodeAttributes.size());
+    assertTrue(sameAttributeSet(toAddAttributes.get(HOSTNAMES[0]),
         nodeAttributes.keySet()));
 
     // Add 2 attributes to host2
@@ -116,12 +118,12 @@ public class TestNodeAttributesManager {
 
     // Verify host1 attributes are still valid.
     nodeAttributes = attributesManager.getAttributesForNode(HOSTNAMES[0]);
-    Assert.assertEquals(3, nodeAttributes.size());
+    assertEquals(3, nodeAttributes.size());
 
     // Verify new added host2 attributes are correctly updated.
     nodeAttributes = attributesManager.getAttributesForNode(HOSTNAMES[1]);
-    Assert.assertEquals(2, nodeAttributes.size());
-    Assert.assertTrue(sameAttributeSet(toAddAttributes.get(HOSTNAMES[1]),
+    assertEquals(2, nodeAttributes.size());
+    assertTrue(sameAttributeSet(toAddAttributes.get(HOSTNAMES[1]),
         nodeAttributes.keySet()));
 
     // Cluster wide, it only has 3 attributes.
@@ -130,17 +132,17 @@ public class TestNodeAttributesManager {
     //  yarn.test1.io/A3
     Set<NodeAttribute> clusterAttributes = attributesManager
         .getClusterNodeAttributes(Sets.newHashSet(PREFIXES[0]));
-    Assert.assertEquals(3, clusterAttributes.size());
+    assertEquals(3, clusterAttributes.size());
 
     // Query for attributes under a non-exist prefix,
     // ensure it returns an empty set.
     clusterAttributes = attributesManager
         .getClusterNodeAttributes(Sets.newHashSet("non_exist_prefix"));
-    Assert.assertEquals(0, clusterAttributes.size());
+    assertEquals(0, clusterAttributes.size());
 
     // Not provide any prefix, ensure it returns all attributes.
     clusterAttributes = attributesManager.getClusterNodeAttributes(null);
-    Assert.assertEquals(3, clusterAttributes.size());
+    assertEquals(3, clusterAttributes.size());
 
     // Add some other attributes with different prefixes on host1 and host2.
     toAddAttributes.clear();
@@ -160,10 +162,10 @@ public class TestNodeAttributesManager {
     attributesManager.addNodeAttributes(toAddAttributes);
 
     nodeAttributes = attributesManager.getAttributesForNode(HOSTNAMES[0]);
-    Assert.assertEquals(13, nodeAttributes.size());
+    assertEquals(13, nodeAttributes.size());
 
     nodeAttributes = attributesManager.getAttributesForNode(HOSTNAMES[1]);
-    Assert.assertEquals(22, nodeAttributes.size());
+    assertEquals(22, nodeAttributes.size());
   }
 
   @Test
@@ -210,20 +212,20 @@ public class TestNodeAttributesManager {
     attributesManager.addNodeAttributes(toAddAttributes);
 
     nodeAttributes = attributesManager.getAttributesForNode(HOSTNAMES[0]);
-    Assert.assertEquals(8, nodeAttributes.size());
+    assertEquals(8, nodeAttributes.size());
 
     nodeAttributes = attributesManager.getAttributesForNode(HOSTNAMES[1]);
-    Assert.assertEquals(4, nodeAttributes.size());
+    assertEquals(4, nodeAttributes.size());
 
     allAttributesPerPrefix = attributesManager
         .getClusterNodeAttributes(Sets.newHashSet(PREFIXES[0]));
-    Assert.assertEquals(3, allAttributesPerPrefix.size());
+    assertEquals(3, allAttributesPerPrefix.size());
     allAttributesPerPrefix = attributesManager
         .getClusterNodeAttributes(Sets.newHashSet(PREFIXES[1]));
-    Assert.assertEquals(5, allAttributesPerPrefix.size());
+    assertEquals(5, allAttributesPerPrefix.size());
     allAttributesPerPrefix = attributesManager
         .getClusterNodeAttributes(Sets.newHashSet(PREFIXES[2]));
-    Assert.assertEquals(2, allAttributesPerPrefix.size());
+    assertEquals(2, allAttributesPerPrefix.size());
 
     // Remove "yarn.test1.io/A_2" from host1
     Set<NodeAttribute> attributes2rm1 = new HashSet<>();
@@ -233,7 +235,7 @@ public class TestNodeAttributesManager {
     attributesManager.removeNodeAttributes(toRemoveAttributes);
 
     nodeAttributes = attributesManager.getAttributesForNode(HOSTNAMES[0]);
-    Assert.assertEquals(7, nodeAttributes.size());
+    assertEquals(7, nodeAttributes.size());
 
     // Remove again, but give a non-exist attribute name
     attributes2rm1.clear();
@@ -244,7 +246,7 @@ public class TestNodeAttributesManager {
     attributesManager.removeNodeAttributes(toRemoveAttributes);
 
     nodeAttributes = attributesManager.getAttributesForNode(HOSTNAMES[0]);
-    Assert.assertEquals(7, nodeAttributes.size());
+    assertEquals(7, nodeAttributes.size());
 
     // Remove "yarn.test1.io/A_2" from host2 too,
     // by then there will be no such attribute exist in the cluster.
@@ -261,7 +263,7 @@ public class TestNodeAttributesManager {
     // us A_1 and A_3.
     allAttributesPerPrefix = attributesManager
         .getClusterNodeAttributes(Sets.newHashSet(PREFIXES[0]));
-    Assert.assertEquals(2, allAttributesPerPrefix.size());
+    assertEquals(2, allAttributesPerPrefix.size());
   }
 
   @Test
@@ -281,7 +283,7 @@ public class TestNodeAttributesManager {
 
     attributesManager.addNodeAttributes(toAddAttributes);
     nodeAttributes = attributesManager.getAttributesForNode(HOSTNAMES[0]);
-    Assert.assertEquals(3, nodeAttributes.size());
+    assertEquals(3, nodeAttributes.size());
 
     // Add 10 distributed node attributes to host1
     //  nn.yarn.io/dist-node-attribute1=dist_v1_1
@@ -294,10 +296,10 @@ public class TestNodeAttributesManager {
             10, "dist-node-attribute", "dist_v1"));
     attributesManager.addNodeAttributes(toAddAttributes);
     nodeAttributes = attributesManager.getAttributesForNode(HOSTNAMES[0]);
-    Assert.assertEquals(13, nodeAttributes.size());
+    assertEquals(13, nodeAttributes.size());
     clusterAttributes = attributesManager.getClusterNodeAttributes(
         Sets.newHashSet(NodeAttribute.PREFIX_DISTRIBUTED, PREFIXES[0]));
-    Assert.assertEquals(13, clusterAttributes.size());
+    assertEquals(13, clusterAttributes.size());
 
     // Replace by prefix
     // Same distributed attributes names, but different values.
@@ -308,24 +310,24 @@ public class TestNodeAttributesManager {
     attributesManager.replaceNodeAttributes(NodeAttribute.PREFIX_DISTRIBUTED,
         ImmutableMap.of(HOSTNAMES[0], toReplaceAttributes));
     nodeAttributes = attributesManager.getAttributesForNode(HOSTNAMES[0]);
-    Assert.assertEquals(8, nodeAttributes.size());
+    assertEquals(8, nodeAttributes.size());
     clusterAttributes = attributesManager.getClusterNodeAttributes(
         Sets.newHashSet(NodeAttribute.PREFIX_DISTRIBUTED, PREFIXES[0]));
-    Assert.assertEquals(8, clusterAttributes.size());
+    assertEquals(8, clusterAttributes.size());
 
     // Now we have 5 distributed attributes
     filteredAttributes = NodeLabelUtil.filterAttributesByPrefix(
         nodeAttributes.keySet(), NodeAttribute.PREFIX_DISTRIBUTED);
-    Assert.assertEquals(5, filteredAttributes.size());
+    assertEquals(5, filteredAttributes.size());
     // Values are updated to have prefix dist_v2
-    Assert.assertTrue(filteredAttributes.stream().allMatch(
+    assertTrue(filteredAttributes.stream().allMatch(
         nodeAttribute ->
             nodeAttribute.getAttributeValue().startsWith("dist_v2")));
 
     // We still have 3 yarn.test1.io attributes
     filteredAttributes = NodeLabelUtil.filterAttributesByPrefix(
         nodeAttributes.keySet(), PREFIXES[0]);
-    Assert.assertEquals(3, filteredAttributes.size());
+    assertEquals(3, filteredAttributes.size());
 
     // Replace with prefix
     // Different attribute names
@@ -335,16 +337,16 @@ public class TestNodeAttributesManager {
     attributesManager.replaceNodeAttributes(NodeAttribute.PREFIX_DISTRIBUTED,
         ImmutableMap.of(HOSTNAMES[0], toReplaceAttributes));
     nodeAttributes = attributesManager.getAttributesForNode(HOSTNAMES[0]);
-    Assert.assertEquals(4, nodeAttributes.size());
+    assertEquals(4, nodeAttributes.size());
     clusterAttributes = attributesManager.getClusterNodeAttributes(
         Sets.newHashSet(NodeAttribute.PREFIX_DISTRIBUTED));
-    Assert.assertEquals(1, clusterAttributes.size());
+    assertEquals(1, clusterAttributes.size());
     NodeAttribute attr = clusterAttributes.iterator().next();
-    Assert.assertEquals("dist-node-attribute-v2_0",
+    assertEquals("dist-node-attribute-v2_0",
         attr.getAttributeKey().getAttributeName());
-    Assert.assertEquals(NodeAttribute.PREFIX_DISTRIBUTED,
+    assertEquals(NodeAttribute.PREFIX_DISTRIBUTED,
         attr.getAttributeKey().getAttributePrefix());
-    Assert.assertEquals("dist_v3_0", attr.getAttributeValue());
+    assertEquals("dist_v3_0", attr.getAttributeValue());
 
     // Replace all attributes
     toReplaceMap.put(HOSTNAMES[0],
@@ -352,13 +354,13 @@ public class TestNodeAttributesManager {
     attributesManager.replaceNodeAttributes(null, toReplaceMap);
 
     nodeAttributes = attributesManager.getAttributesForNode(HOSTNAMES[0]);
-    Assert.assertEquals(2, nodeAttributes.size());
+    assertEquals(2, nodeAttributes.size());
     clusterAttributes = attributesManager
         .getClusterNodeAttributes(Sets.newHashSet(PREFIXES[1]));
-    Assert.assertEquals(2, clusterAttributes.size());
+    assertEquals(2, clusterAttributes.size());
     clusterAttributes = attributesManager
         .getClusterNodeAttributes(Sets.newHashSet(
             NodeAttribute.PREFIX_DISTRIBUTED));
-    Assert.assertEquals(0, clusterAttributes.size());
+    assertEquals(0, clusterAttributes.size());
   }
 }

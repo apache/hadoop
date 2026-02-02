@@ -18,7 +18,8 @@
 
 package org.apache.hadoop.test;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,9 +27,9 @@ import org.slf4j.LoggerFactory;
 import java.util.function.Supplier;
 import org.slf4j.event.Level;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class TestGenericTestUtils extends GenericTestUtils {
 
@@ -85,7 +86,8 @@ public class TestGenericTestUtils extends GenericTestUtils {
     }
   }
 
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testLogCapturer() {
     final Logger log = LoggerFactory.getLogger(TestGenericTestUtils.class);
     LogCapturer logCapturer = LogCapturer.captureLogs(log);
@@ -103,7 +105,8 @@ public class TestGenericTestUtils extends GenericTestUtils {
     assertTrue(logCapturer.getOutput().isEmpty());
   }
 
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testLogCapturerSlf4jLogger() {
     final Logger logger = LoggerFactory.getLogger(TestGenericTestUtils.class);
     LogCapturer logCapturer = LogCapturer.captureLogs(logger);

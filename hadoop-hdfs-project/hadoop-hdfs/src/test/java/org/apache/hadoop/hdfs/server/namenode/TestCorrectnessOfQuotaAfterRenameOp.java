@@ -30,8 +30,8 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.PathUtils;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
@@ -44,7 +44,7 @@ public class TestCorrectnessOfQuotaAfterRenameOp {
   private static MiniDFSCluster cluster;
   private static DistributedFileSystem dfs;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws IOException {
     HdfsConfiguration conf = new HdfsConfiguration();
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();

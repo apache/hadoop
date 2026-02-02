@@ -262,6 +262,7 @@ import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.tracing.TraceUtils;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.tracing.Tracer;
 import org.eclipse.jetty.util.ajax.JSON;
 
@@ -512,7 +513,7 @@ public class DataNode extends ReconfigurableBase
     this.pipelineSupportSlownode = false;
     this.socketFactory = NetUtils.getDefaultSocketFactory(conf);
     this.dnConf = new DNConf(this);
-    this.dataSetLockManager = new DataSetLockManager(conf);
+    this.dataSetLockManager = new DataSetLockManager(conf, this);
     initOOBTimeout();
     storageLocationChecker = null;
     volumeChecker = new DatasetVolumeChecker(conf, new Timer());
@@ -535,7 +536,7 @@ public class DataNode extends ReconfigurableBase
     super(conf);
     this.tracer = createTracer(conf);
     this.fileIoProvider = new FileIoProvider(conf, this);
-    this.dataSetLockManager = new DataSetLockManager(conf);
+    this.dataSetLockManager = new DataSetLockManager(conf, this);
     this.blockScanner = new BlockScanner(this);
     this.lastDiskErrorCheck = 0;
     this.maxNumberOfBlocksToLog = conf.getLong(DFS_MAX_NUM_BLOCKS_TO_LOG_KEY,
@@ -3855,8 +3856,8 @@ public class DataNode extends ReconfigurableBase
 
     // Asynchronously start the shutdown process so that the rpc response can be
     // sent back.
-    Thread shutdownThread = new Thread("Async datanode shutdown thread") {
-      @Override public void run() {
+    Thread shutdownThread = new SubjectInheritingThread("Async datanode shutdown thread") {
+      @Override public void work() {
         if (!shutdownForUpgrade) {
           // Delay the shutdown a bit if not doing for restart.
           try {

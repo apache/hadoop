@@ -24,11 +24,11 @@ import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.verif
 import static org.apache.hadoop.hdfs.server.federation.store.FederationStateStoreTestUtils.clearRecords;
 import static org.apache.hadoop.hdfs.server.federation.store.FederationStateStoreTestUtils.createMockRegistrationForNamenode;
 import static org.apache.hadoop.hdfs.server.federation.store.FederationStateStoreTestUtils.synchronizeRecords;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.spy;
@@ -58,9 +58,9 @@ import org.apache.hadoop.hdfs.server.federation.store.records.MembershipState;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.DelayAnswer;
 import org.apache.hadoop.util.Time;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -74,7 +74,7 @@ public class TestStateStoreMembershipState extends TestStateStoreBase {
 
   private static MembershipStore membershipStore;
 
-  @BeforeClass
+  @BeforeAll
   public static void create() {
     // Reduce expirations to 2 seconds
     getConf().setLong(
@@ -86,7 +86,7 @@ public class TestStateStoreMembershipState extends TestStateStoreBase {
         TimeUnit.SECONDS.toMillis(2));
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException, InterruptedException {
 
     membershipStore =

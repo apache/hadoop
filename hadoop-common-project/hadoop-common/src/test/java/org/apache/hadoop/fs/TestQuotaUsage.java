@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.fs;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class TestQuotaUsage {
 
@@ -27,9 +27,9 @@ public class TestQuotaUsage {
   @Test
   public void testConstructorEmpty() {
     QuotaUsage quotaUsage = new QuotaUsage.Builder().build();
-    assertEquals("getQuota", -1, quotaUsage.getQuota());
-    assertEquals("getSpaceConsumed", 0, quotaUsage.getSpaceConsumed());
-    assertEquals("getSpaceQuota", -1, quotaUsage.getSpaceQuota());
+    assertEquals(-1, quotaUsage.getQuota(), "getQuota");
+    assertEquals(0, quotaUsage.getSpaceConsumed(), "getSpaceConsumed");
+    assertEquals(-1, quotaUsage.getSpaceQuota(), "getSpaceQuota");
   }
 
   // check the full constructor with quota information
@@ -43,12 +43,12 @@ public class TestQuotaUsage {
     QuotaUsage quotaUsage = new QuotaUsage.Builder().
         fileAndDirectoryCount(fileAndDirCount).quota(quota).
         spaceConsumed(spaceConsumed).spaceQuota(spaceQuota).build();
-    assertEquals("getFileAndDirectoryCount", fileAndDirCount,
-        quotaUsage.getFileAndDirectoryCount());
-    assertEquals("getQuota", quota, quotaUsage.getQuota());
-    assertEquals("getSpaceConsumed", spaceConsumed,
-        quotaUsage.getSpaceConsumed());
-    assertEquals("getSpaceQuota", spaceQuota, quotaUsage.getSpaceQuota());
+    assertEquals(fileAndDirCount,
+        quotaUsage.getFileAndDirectoryCount(), "getFileAndDirectoryCount");
+    assertEquals(quota, quotaUsage.getQuota(), "getQuota");
+    assertEquals(spaceConsumed,
+        quotaUsage.getSpaceConsumed(), "getSpaceConsumed");
+    assertEquals(spaceQuota, quotaUsage.getSpaceQuota(), "getSpaceQuota");
   }
 
   // check the constructor with quota information
@@ -59,12 +59,12 @@ public class TestQuotaUsage {
     QuotaUsage quotaUsage = new QuotaUsage.Builder().
         fileAndDirectoryCount(fileAndDirCount).
         spaceConsumed(spaceConsumed).build();
-    assertEquals("getFileAndDirectoryCount", fileAndDirCount,
-        quotaUsage.getFileAndDirectoryCount());
-    assertEquals("getQuota", -1, quotaUsage.getQuota());
-    assertEquals("getSpaceConsumed", spaceConsumed,
-        quotaUsage.getSpaceConsumed());
-    assertEquals("getSpaceQuota", -1, quotaUsage.getSpaceQuota());
+    assertEquals(fileAndDirCount,
+        quotaUsage.getFileAndDirectoryCount(), "getFileAndDirectoryCount");
+    assertEquals(-1, quotaUsage.getQuota(), "getQuota");
+    assertEquals(spaceConsumed,
+        quotaUsage.getSpaceConsumed(), "getSpaceConsumed");
+    assertEquals(-1, quotaUsage.getSpaceQuota(), "getSpaceQuota");
   }
 
   // check the header

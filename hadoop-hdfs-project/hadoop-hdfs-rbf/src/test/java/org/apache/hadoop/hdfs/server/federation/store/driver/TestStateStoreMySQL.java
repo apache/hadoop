@@ -24,10 +24,10 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreMySQLImpl;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import static org.apache.hadoop.hdfs.server.federation.store.FederationStateStoreTestUtils.*;
 
@@ -37,7 +37,7 @@ import static org.apache.hadoop.hdfs.server.federation.store.FederationStateStor
 public class TestStateStoreMySQL extends TestStateStoreDriverBase {
   private static final String CONNECTION_URL = "jdbc:derby:memory:StateStore";
 
-  @BeforeClass
+  @BeforeAll
   public static void initDatabase() throws Exception {
     Connection connection =  DriverManager.getConnection(CONNECTION_URL + ";create=true");
     Statement s =  connection.createStatement();
@@ -52,12 +52,12 @@ public class TestStateStoreMySQL extends TestStateStoreDriverBase {
     getStateStore(conf);
   }
 
-  @Before
+  @BeforeEach
   public void startup() throws IOException {
     removeAll(getStateStoreDriver());
   }
 
-  @AfterClass
+  @AfterAll
   public static void cleanupDatabase() {
     try {
       DriverManager.getConnection(CONNECTION_URL + ";drop=true");

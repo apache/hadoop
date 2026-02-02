@@ -55,12 +55,16 @@ public final class TestConfigurationKeys {
 
   public static final String FS_AZURE_TEST_APP_SERVICE_PRINCIPAL_OBJECT_ID = "fs.azure.test.app.service.principal.object.id";
 
+  public static final String FS_AZURE_TEST_END_USER_TENANT_ID = "fs.azure.test.end.user.tenant.id";
+  public static final String FS_AZURE_TEST_END_USER_OBJECT_ID = "fs.azure.test.end.user.object.id";
+
   public static final String FS_AZURE_TEST_APP_ID = "fs.azure.test.app.id";
 
   public static final String FS_AZURE_TEST_APP_SECRET = "fs.azure.test.app.secret";
 
   public static final String FS_AZURE_TEST_CPK_ENABLED_SECONDARY_ACCOUNT = "fs.azure.test.cpk-enabled-secondary-account";
   public static final String FS_AZURE_TEST_CPK_ENABLED_SECONDARY_ACCOUNT_KEY = "fs.azure.test.cpk-enabled-secondary-account.key";
+  public static final String FS_AZURE_TEST_FIXED_SAS_TOKEN = "fs.azure.test.fixed.sas.token";
 
   public static final String TEST_CONFIGURATION_FILE_NAME = "azure-test.xml";
   public static final String TEST_CONTAINER_PREFIX = "abfs-testcontainer-";

@@ -24,9 +24,9 @@ import org.apache.hadoop.registry.client.impl.zk.ZKPathDumper;
 import org.apache.hadoop.registry.client.impl.zk.CuratorService;
 import org.apache.hadoop.registry.client.impl.zk.RegistrySecurity;
 import org.apache.zookeeper.CreateMode;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,12 +43,12 @@ public class TestSecureRegistry extends AbstractSecureRegistryTest {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestSecureRegistry.class);
 
-  @Before
+  @BeforeEach
   public void beforeTestSecureZKService() throws Throwable {
       enableKerberosDebugging();
   }
 
-  @After
+  @AfterEach
   public void afterTestSecureZKService() throws Throwable {
     disableKerberosDebugging();
     RegistrySecurity.clearZKSaslClientProperties();

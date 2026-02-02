@@ -18,10 +18,11 @@
 
 package org.apache.hadoop.mapreduce.v2.app.webapp;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.mockito.Mockito.mock;
 
 import java.io.File;
 import java.io.IOException;
@@ -29,7 +30,12 @@ import java.io.OutputStream;
 import java.io.StringReader;
 import java.util.Map;
 
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.client.WebTarget;
+import javax.ws.rs.core.Application;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
@@ -46,27 +52,22 @@ import org.apache.hadoop.mapreduce.v2.app.job.Job;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.util.XMLUtils;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
-import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 
-import com.google.inject.Guice;
-import com.google.inject.servlet.ServletModule;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.WebResource;
-import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
-import com.sun.jersey.test.framework.WebAppDescriptor;
-
+import org.glassfish.jersey.internal.inject.AbstractBinder;
+import org.glassfish.jersey.jettison.JettisonFeature;
+import org.glassfish.jersey.server.ResourceConfig;
 /**
  * Test the app master web service Rest API for getting the job conf. This
  * requires created a temporary configuration file.
@@ -81,13 +82,22 @@ public class TestAMWebServicesJobConf extends JerseyTestBase {
   private static File testConfDir = new File("target",
       TestAMWebServicesJobConf.class.getSimpleName() + "confDir");
 
-  private static class WebServletModule extends ServletModule {
+  @Override
+  protected Application configure() {
+    ResourceConfig config = new ResourceConfig();
+    config.register(new JerseyBinder());
+    config.register(AMWebServices.class);
+    config.register(GenericExceptionHandler.class);
+    config.register(JAXBContextResolver.class);
+    config.register(new JettisonFeature());
+    return config;
+  }
 
+  private static class JerseyBinder extends AbstractBinder {
     @Override
-    protected void configureServlets() {
+    protected void configure() {
 
-      Path confPath = new Path(testConfDir.toString(),
-          MRJobConfig.JOB_CONF_FILE);
+      Path confPath = new Path(testConfDir.toString(), MRJobConfig.JOB_CONF_FILE);
       Configuration config = new Configuration();
 
       FileSystem localFs;
@@ -110,113 +120,96 @@ public class TestAMWebServicesJobConf extends JerseyTestBase {
       }
 
       appContext = new MockAppContext(0, 2, 1, confPath);
-
-      bind(JAXBContextResolver.class);
-      bind(AMWebServices.class);
-      bind(GenericExceptionHandler.class);
-      bind(AppContext.class).toInstance(appContext);
-      bind(Configuration.class).toInstance(conf);
-
-      serve("/*").with(GuiceContainer.class);
+      App app = new App(appContext);
+      bind(appContext).to(AppContext.class).named("am");
+      bind(app).to(App.class).named("app");
+      bind(conf).to(Configuration.class).named("conf");
+      final HttpServletResponse response = mock(HttpServletResponse.class);
+      final HttpServletRequest request = mock(HttpServletRequest.class);
+      bind(response).to(HttpServletResponse.class);
+      bind(request).to(HttpServletRequest.class);
     }
-  };
-
-  static {
-    GuiceServletConfig.setInjector(
-        Guice.createInjector(new WebServletModule()));
   }
 
-  @Before
-  @Override
-  public void setUp() throws Exception {
-    super.setUp();
+
+  @BeforeAll
+  public static void setTestConfDir() throws Exception {
     testConfDir.mkdir();
-    GuiceServletConfig.setInjector(
-        Guice.createInjector(new WebServletModule()));
   }
 
-  @AfterClass
+  @AfterAll
   static public void stop() {
     FileUtil.fullyDelete(testConfDir);
   }
 
-  public TestAMWebServicesJobConf() {
-    super(new WebAppDescriptor.Builder(
-        "org.apache.hadoop.mapreduce.v2.app.webapp")
-        .contextListenerClass(GuiceServletConfig.class)
-        .filterClass(com.google.inject.servlet.GuiceFilter.class)
-        .contextPath("jersey-guice-filter").servletPath("/").build());
-  }
-
   @Test
-  public void testJobConf() throws JSONException, Exception {
-    WebResource r = resource();
+  public void testJobConf() throws Exception {
+    WebTarget r = targetWithJsonObject();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {
       String jobId = MRApps.toString(id);
 
-      ClientResponse response = r.path("ws").path("v1").path("mapreduce")
+      Response response = r.path("ws").path("v1").path("mapreduce")
           .path("jobs").path(jobId).path("conf")
-          .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-          response.getType().toString());
-      JSONObject json = response.getEntity(JSONObject.class);
-      assertEquals("incorrect number of elements", 1, json.length());
+          .request(MediaType.APPLICATION_JSON).get(Response.class);
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
+          response.getMediaType().toString());
+      JSONObject json = response.readEntity(JSONObject.class);
+      assertEquals(1, json.length(), "incorrect number of elements");
       JSONObject info = json.getJSONObject("conf");
       verifyAMJobConf(info, jobsMap.get(id));
     }
   }
 
   @Test
-  public void testJobConfSlash() throws JSONException, Exception {
-    WebResource r = resource();
+  public void testJobConfSlash() throws Exception {
+    WebTarget r = targetWithJsonObject();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {
       String jobId = MRApps.toString(id);
-
-      ClientResponse response = r.path("ws").path("v1").path("mapreduce")
+      Response response = r.path("ws").path("v1").path("mapreduce")
           .path("jobs").path(jobId).path("conf/")
-          .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-          response.getType().toString());
-      JSONObject json = response.getEntity(JSONObject.class);
-      assertEquals("incorrect number of elements", 1, json.length());
+          .request(MediaType.APPLICATION_JSON).get(Response.class);
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
+          response.getMediaType().toString());
+      JSONObject json = response.readEntity(JSONObject.class);
+      assertEquals(1, json.length(), "incorrect number of elements");
       JSONObject info = json.getJSONObject("conf");
       verifyAMJobConf(info, jobsMap.get(id));
     }
   }
 
   @Test
-  public void testJobConfDefault() throws JSONException, Exception {
-    WebResource r = resource();
+  public void testJobConfDefault() throws Exception {
+    WebTarget r = targetWithJsonObject();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {
       String jobId = MRApps.toString(id);
 
-      ClientResponse response = r.path("ws").path("v1").path("mapreduce")
-          .path("jobs").path(jobId).path("conf").get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-          response.getType().toString());
-      JSONObject json = response.getEntity(JSONObject.class);
-      assertEquals("incorrect number of elements", 1, json.length());
+      Response response = r.path("ws").path("v1").path("mapreduce")
+          .path("jobs").path(jobId).path("conf").request().get(Response.class);
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
+          response.getMediaType().toString());
+      JSONObject json = response.readEntity(JSONObject.class);
+      assertEquals(1, json.length(), "incorrect number of elements");
       JSONObject info = json.getJSONObject("conf");
       verifyAMJobConf(info, jobsMap.get(id));
     }
   }
 
   @Test
-  public void testJobConfXML() throws JSONException, Exception {
-    WebResource r = resource();
+  public void testJobConfXML() throws Exception {
+    WebTarget r = target();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {
       String jobId = MRApps.toString(id);
 
-      ClientResponse response = r.path("ws").path("v1").path("mapreduce")
+      Response response = r.path("ws").path("v1").path("mapreduce")
           .path("jobs").path(jobId).path("conf")
-          .accept(MediaType.APPLICATION_XML).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_XML_TYPE + "; " + JettyUtils.UTF_8,
-          response.getType().toString());
-      String xml = response.getEntity(String.class);
+          .request(MediaType.APPLICATION_XML).get(Response.class);
+      assertEquals(MediaType.APPLICATION_XML_TYPE + ";" + JettyUtils.UTF_8,
+          response.getMediaType().toString());
+      String xml = response.readEntity(String.class);
       DocumentBuilderFactory dbf = XMLUtils.newSecureDocumentBuilderFactory();
       DocumentBuilder db = dbf.newDocumentBuilder();
       InputSource is = new InputSource();
@@ -229,7 +222,7 @@ public class TestAMWebServicesJobConf extends JerseyTestBase {
 
   public void verifyAMJobConf(JSONObject info, Job job) throws JSONException {
 
-    assertEquals("incorrect number of elements", 2, info.length());
+    assertEquals(2, info.length(), "incorrect number of elements");
 
     WebServicesTestUtils.checkStringMatch("path", job.getConfFile().toString(),
         info.getString("path"));
@@ -240,14 +233,14 @@ public class TestAMWebServicesJobConf extends JerseyTestBase {
       JSONObject prop = properties.getJSONObject(i);
       String name = prop.getString("name");
       String value = prop.getString("value");
-      assertTrue("name not set", (name != null && !name.isEmpty()));
-      assertTrue("value not set", (value != null && !value.isEmpty()));
+      assertTrue((name != null && !name.isEmpty()), "name not set");
+      assertTrue((value != null && !value.isEmpty()), "value not set");
     }
   }
 
   public void verifyAMJobConfXML(NodeList nodes, Job job) {
 
-    assertEquals("incorrect number of elements", 1, nodes.getLength());
+    assertEquals(1, nodes.getLength(), "incorrect number of elements");
 
     for (int i = 0; i < nodes.getLength(); i++) {
       Element element = (Element) nodes.item(i);
@@ -260,11 +253,11 @@ public class TestAMWebServicesJobConf extends JerseyTestBase {
 
       for (int j = 0; j < properties.getLength(); j++) {
         Element property = (Element) properties.item(j);
-        assertNotNull("should have counters in the web service info", property);
+        assertNotNull(property, "should have counters in the web service info");
         String name = WebServicesTestUtils.getXmlString(property, "name");
         String value = WebServicesTestUtils.getXmlString(property, "value");
-        assertTrue("name not set", (name != null && !name.isEmpty()));
-        assertTrue("name not set", (value != null && !value.isEmpty()));
+        assertTrue((name != null && !name.isEmpty()), "name not set");
+        assertTrue((value != null && !value.isEmpty()), "name not set");
       }
     }
   }

@@ -17,8 +17,9 @@
  */
 package org.apache.hadoop.oncrpc;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TestXDR {
   static final int WRITE_VALUE=23;
@@ -29,8 +30,7 @@ public class TestXDR {
 
     XDR r = w.asReadOnlyWrap();
     for (int i = 0; i < times; ++i)
-      Assert.assertEquals(
-              WRITE_VALUE,r.readInt());
+      assertEquals(WRITE_VALUE, r.readInt());
   }
 
   private void serializeLong(int times) {
@@ -40,7 +40,7 @@ public class TestXDR {
 
     XDR r = w.asReadOnlyWrap();
     for (int i = 0; i < times; ++i)
-      Assert.assertEquals(WRITE_VALUE, r.readHyper());
+      assertEquals(WRITE_VALUE, r.readHyper());
   }
 
   @Test

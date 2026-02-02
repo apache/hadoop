@@ -19,10 +19,9 @@
 package org.apache.hadoop.fs.s3a.impl.logging;
 
 import org.assertj.core.api.AbstractStringAssert;
-import org.assertj.core.api.Assertions;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,6 +34,7 @@ import static org.apache.hadoop.fs.s3a.impl.logging.LogControllerFactory.createC
 import static org.apache.hadoop.fs.s3a.impl.logging.LogControllerFactory.createLog4JController;
 import static org.apache.hadoop.test.GenericTestUtils.LogCapturer.captureLogs;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Unit test for log controller factory.
@@ -73,7 +73,7 @@ public class TestLogControllerFactory extends AbstractHadoopTestBase {
   /**
    * Setup: create the contract then init it.
    */
-  @Before
+  @BeforeEach
   public void setup() {
     controller = requireNonNull(createLog4JController());
     capturer = captureLogs(LOG);
@@ -83,7 +83,7 @@ public class TestLogControllerFactory extends AbstractHadoopTestBase {
   /**
    * Teardown.
    */
-  @After
+  @AfterEach
   public void teardown() {
     if (capturer != null) {
       capturer.stopCapturing();
@@ -95,7 +95,7 @@ public class TestLogControllerFactory extends AbstractHadoopTestBase {
    */
   @Test
   public void testInstantationWrongClass() throws Throwable {
-    Assertions.assertThat(createController(CLASSNAME))
+    assertThat(createController(CLASSNAME))
         .describedAs("controller of wrong type")
         .isNull();
   }
@@ -106,7 +106,7 @@ public class TestLogControllerFactory extends AbstractHadoopTestBase {
    */
   @Test
   public void testInstantationNoClass() throws Throwable {
-    Assertions.assertThat(createController("not.a.class"))
+    assertThat(createController("not.a.class"))
         .describedAs("missing class")
         .isNull();
   }
@@ -125,7 +125,7 @@ public class TestLogControllerFactory extends AbstractHadoopTestBase {
         failing.setLevel(CLASSNAME, LogControl.LogLevel.DEBUG));
 
     // outer one doesn't
-    Assertions.assertThat(failing.setLogLevel(CLASSNAME, LogControl.LogLevel.DEBUG))
+    assertThat(failing.setLogLevel(CLASSNAME, LogControl.LogLevel.DEBUG))
         .describedAs("Invocation of setLogLevel()")
         .isFalse();
   }
@@ -174,7 +174,7 @@ public class TestLogControllerFactory extends AbstractHadoopTestBase {
     capturer.clearOutput();
     setLogLevel(level);
     logMessages();
-    return Assertions.assertThat(capturer.getOutput())
+    return assertThat(capturer.getOutput())
         .describedAs("captured output")
         .contains(contains);
   }
@@ -184,7 +184,7 @@ public class TestLogControllerFactory extends AbstractHadoopTestBase {
    * @param level level to set to.
    */
   private void setLogLevel(final LogControl.LogLevel level) {
-    Assertions.assertThat(controller.setLogLevel(CLASSNAME, level))
+    assertThat(controller.setLogLevel(CLASSNAME, level))
         .describedAs("Set log level %s", level)
         .isTrue();
   }

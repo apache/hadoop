@@ -809,7 +809,7 @@ This product includes software developed by Apache
  PureJavaCrc32C from apache-hadoop-common http://hadoop.apache.org/
  (Apache 2.0 license)
 
-This library containd statically linked libstdc++. This inclusion is allowed by
+This library contains statically linked libstdc++. This inclusion is allowed by
 "GCC RUntime Library Exception"
 http://gcc.gnu.org/onlinedocs/libstdc++/manual/license.html
 
@@ -825,3 +825,10 @@ Copyright 2009-2018 The Apache Software Foundation
 
 This product includes software developed at
 The Apache Software Foundation (http://www.apache.org/).
+
+This product includes code from uriparser2, a C and C++ library for URI parsing.
+
+  * LICENSE:
+    * license/LICENSE-uriparser2.txt (MIT License)
+  * HOMEPAGE:
+    * https://github.com/bnoordhuis/uriparser2

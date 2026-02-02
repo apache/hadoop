@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.yarn.server.nodemanager.health;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

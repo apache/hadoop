@@ -35,9 +35,7 @@ import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys;
 import org.apache.hadoop.fs.azurebfs.services.AbfsOutputStream;
 import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderValidator;
-import org.hamcrest.core.IsEqual;
-import org.hamcrest.core.IsNot;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -48,6 +46,7 @@ import org.apache.hadoop.fs.Path;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_APPEND_BLOB_KEY;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertHasStreamCapabilities;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertLacksStreamCapabilities;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Test flush operation.
@@ -94,8 +93,8 @@ public class ITestAzureBlobFileSystemFlush extends AbstractAbfsScaleTest {
       while (inputStream.available() != 0) {
         int result = inputStream.read(r);
 
-        assertNotEquals("read returned -1", -1, result);
-        assertArrayEquals("buffer read from stream", r, b);
+        assertNotEquals(-1, result, "read returned -1");
+        assertArrayEquals(r, b, "buffer read from stream");
       }
     }
   }
@@ -170,7 +169,7 @@ public class ITestAzureBlobFileSystemFlush extends AbstractAbfsScaleTest {
     es.shutdownNow();
     FileStatus fileStatus = fs.getFileStatus(testFilePath);
     long expectedWrites = (long) TEST_BUFFER_SIZE * FLUSH_TIMES;
-    assertEquals("Wrong file length in " + testFilePath, expectedWrites, fileStatus.getLen());
+    assertEquals(expectedWrites, fileStatus.getLen(), "Wrong file length in " + testFilePath);
   }
 
   @Test
@@ -234,7 +233,7 @@ public class ITestAzureBlobFileSystemFlush extends AbstractAbfsScaleTest {
         .setDisableOutputStreamFlush(disableOutputStreamFlush);
 
     final Path testFilePath = path(methodName.getMethodName());
-    byte[] buffer = getRandomBytesArray();
+    byte[] buffer = getRandomBytesArray(TEST_FILE_LENGTH);
     // The test case must write "fs.azure.write.request.size" bytes
     // to the stream in order for the data to be uploaded to storage.
     assertTrue(fs.getAbfsStore().getAbfsConfiguration().getWriteBufferSize()
@@ -266,7 +265,7 @@ public class ITestAzureBlobFileSystemFlush extends AbstractAbfsScaleTest {
   @Test
   public void testHflushWithFlushEnabled() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
-    byte[] buffer = getRandomBytesArray();
+    byte[] buffer = getRandomBytesArray(TEST_FILE_LENGTH);
     String fileName = UUID.randomUUID().toString();
     final Path testFilePath = path(fileName);
 
@@ -279,7 +278,7 @@ public class ITestAzureBlobFileSystemFlush extends AbstractAbfsScaleTest {
   @Test
   public void testHflushWithFlushDisabled() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
-    byte[] buffer = getRandomBytesArray();
+    byte[] buffer = getRandomBytesArray(TEST_FILE_LENGTH);
     final Path testFilePath = path(methodName.getMethodName());
     boolean isAppendBlob = false;
     if (fs.getAbfsStore().isAppendBlobKey(fs.makeQualified(testFilePath).toString())) {
@@ -296,7 +295,7 @@ public class ITestAzureBlobFileSystemFlush extends AbstractAbfsScaleTest {
   @Test
   public void testHsyncWithFlushEnabled() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
-    byte[] buffer = getRandomBytesArray();
+    byte[] buffer = getRandomBytesArray(TEST_FILE_LENGTH);
 
     final Path testFilePath = path(methodName.getMethodName());
 
@@ -308,6 +307,11 @@ public class ITestAzureBlobFileSystemFlush extends AbstractAbfsScaleTest {
 
   @Test
   public void testTracingHeaderForAppendBlob() throws Exception {
+    AzureBlobFileSystem fs1 = getFileSystem();
+    // AppendBlob not supported for FNS over DFS endpoint.
+    if (!getIsNamespaceEnabled(fs1)) {
+      assumeBlobServiceType();
+    }
     Configuration config = new Configuration(this.getRawConfiguration());
     config.set(FS_AZURE_APPEND_BLOB_KEY, "abfss:/");
     config.set(TestConfigurationKeys.FS_AZURE_TEST_APPENDBLOB_ENABLED, "true");
@@ -328,7 +332,7 @@ public class ITestAzureBlobFileSystemFlush extends AbstractAbfsScaleTest {
   @Test
   public void testStreamCapabilitiesWithFlushDisabled() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
-    byte[] buffer = getRandomBytesArray();
+    byte[] buffer = getRandomBytesArray(TEST_FILE_LENGTH);
 
     final Path testFilePath = path(methodName.getMethodName());
 
@@ -345,7 +349,7 @@ public class ITestAzureBlobFileSystemFlush extends AbstractAbfsScaleTest {
   @Test
   public void testStreamCapabilitiesWithFlushEnabled() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
-    byte[] buffer = getRandomBytesArray();
+    byte[] buffer = getRandomBytesArray(TEST_FILE_LENGTH);
     final Path testFilePath = path(methodName.getMethodName());
     try (FSDataOutputStream stream = getStreamAfterWrite(fs, testFilePath, buffer, true)) {
       assertHasStreamCapabilities(stream,
@@ -361,7 +365,7 @@ public class ITestAzureBlobFileSystemFlush extends AbstractAbfsScaleTest {
   @Test
   public void testHsyncWithFlushDisabled() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
-    byte[] buffer = getRandomBytesArray();
+    byte[] buffer = getRandomBytesArray(TEST_FILE_LENGTH);
     final Path testFilePath = path(methodName.getMethodName());
     boolean isAppendBlob = false;
     if (fs.getAbfsStore().isAppendBlobKey(fs.makeQualified(testFilePath).toString())) {
@@ -372,12 +376,6 @@ public class ITestAzureBlobFileSystemFlush extends AbstractAbfsScaleTest {
       /* For Appendlob flush is not needed to update data on server */
       validate(fs, testFilePath, buffer, isAppendBlob);
     }
-  }
-
-  private byte[] getRandomBytesArray() {
-    final byte[] b = new byte[TEST_FILE_LENGTH];
-    new Random().nextBytes(b);
-    return b;
   }
 
   private FSDataOutputStream getStreamAfterWrite(AzureBlobFileSystem fs, Path path, byte[] buffer, boolean enableFlush) throws IOException {
@@ -395,15 +393,11 @@ public class ITestAzureBlobFileSystemFlush extends AbstractAbfsScaleTest {
       int numBytesRead = stream.read(readBuffer, 0, readBuffer.length);
 
       if (isEqual) {
-        assertArrayEquals(
-            "Bytes read do not match bytes written.",
-            writeBuffer,
-            readBuffer);
+        assertArrayEquals(writeBuffer, readBuffer, "Bytes read do not match bytes written.");
       } else {
-        assertThat(
-            "Bytes read unexpectedly match bytes written.",
-            readBuffer,
-            IsNot.not(IsEqual.equalTo(writeBuffer)));
+        assertThat(readBuffer)
+            .as("Bytes read unexpectedly match bytes written.")
+            .isNotEqualTo(writeBuffer);
       }
     } finally {
       stream.close();
@@ -415,14 +409,14 @@ public class ITestAzureBlobFileSystemFlush extends AbstractAbfsScaleTest {
       byte[] readBuffer = new byte[TEST_FILE_LENGTH];
       int numBytesRead = inputStream.read(readBuffer, 0, readBuffer.length);
       if (isEqual) {
-        assertArrayEquals(
-                String.format("Bytes read do not match bytes written to %1$s", filePath), writeBuffer, readBuffer);
+        assertArrayEquals(writeBuffer, readBuffer,
+            String.format("Bytes read do not match bytes written to %1$s", filePath));
       } else {
-        assertThat(
-                String.format("Bytes read unexpectedly match bytes written to %1$s",
-                        filePath),
-                readBuffer,
-                IsNot.not(IsEqual.equalTo(writeBuffer)));
+        String message = String.format(
+            "Bytes read unexpectedly match bytes written to %s", filePath);
+        assertThat(readBuffer)
+            .as(message)
+            .isNotEqualTo(writeBuffer);
       }
     }
   }

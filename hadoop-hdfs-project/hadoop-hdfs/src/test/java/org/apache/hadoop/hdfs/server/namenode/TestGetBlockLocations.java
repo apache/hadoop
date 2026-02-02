@@ -23,7 +23,9 @@ import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory.DirOp;
 import org.apache.hadoop.hdfs.server.namenode.NameNode.OperationCategory;
-import org.junit.Test;
+import org.apache.hadoop.hdfs.util.RwLockMode;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
@@ -51,7 +53,8 @@ public class TestGetBlockLocations {
   private static final String RESERVED_PATH =
       "/.reserved/.inodes/" + MOCK_INODE_ID;
 
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testResolveReservedPath() throws IOException {
     FSNamesystem fsn = setupFileSystem();
     FSEditLog editlog = fsn.getEditLog();
@@ -60,7 +63,8 @@ public class TestGetBlockLocations {
     fsn.close();
   }
 
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testGetBlockLocationsRacingWithDelete() throws IOException {
     FSNamesystem fsn = spy(setupFileSystem());
     final FSDirectory fsd = fsn.getFSDirectory();
@@ -72,14 +76,15 @@ public class TestGetBlockLocations {
       @Override
       public Void answer(InvocationOnMock invocation) throws Throwable {
         if(!deleted[0]) {
-          fsn.writeLock();
+          fsn.writeLock(RwLockMode.GLOBAL);
           try {
             INodesInPath iip = fsd.getINodesInPath(FILE_PATH, DirOp.READ);
             FSDirDeleteOp.delete(fsd, iip, new INode.BlocksMapUpdateInfo(),
                                  new ArrayList<INode>(), new ArrayList<Long>(),
                                  now());
           } finally {
-            fsn.writeUnlock();
+            fsn.writeUnlock(RwLockMode.GLOBAL,
+                "testGetBlockLocationsRacingWithDelete");
           }
           deleted[0] = true;
         }
@@ -93,7 +98,8 @@ public class TestGetBlockLocations {
     fsn.close();
   }
 
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testGetBlockLocationsRacingWithRename() throws IOException {
     FSNamesystem fsn = spy(setupFileSystem());
     final FSDirectory fsd = fsn.getFSDirectory();
@@ -106,14 +112,14 @@ public class TestGetBlockLocations {
       @Override
       public Void answer(InvocationOnMock invocation) throws Throwable {
         if (!renamed[0]) {
-          fsn.writeLock();
+          fsn.writeLock(RwLockMode.FS);
           try {
             FSDirRenameOp.renameTo(fsd, fsd.getPermissionChecker(), FILE_PATH,
                                    DST_PATH, new INode.BlocksMapUpdateInfo(),
                                    false);
             renamed[0] = true;
           } finally {
-            fsn.writeUnlock();
+            fsn.writeUnlock(RwLockMode.FS, "testGetBlockLocationsRacingWithRename");
           }
         }
         invocation.callRealMethod();
@@ -142,13 +148,13 @@ public class TestGetBlockLocations {
         perm, 1, 1, new BlockInfo[] {}, (short) 1,
         DFS_BLOCK_SIZE_DEFAULT);
 
-    fsn.writeLock();
+    fsn.writeLock(RwLockMode.FS);
     try {
       final FSDirectory fsd = fsn.getFSDirectory();
       INodesInPath iip = fsd.getINodesInPath("/", DirOp.READ);
       fsd.addINode(iip, file, null);
     } finally {
-      fsn.writeUnlock();
+      fsn.writeUnlock(RwLockMode.FS, "setupFileSystem");
     }
     return fsn;
   }

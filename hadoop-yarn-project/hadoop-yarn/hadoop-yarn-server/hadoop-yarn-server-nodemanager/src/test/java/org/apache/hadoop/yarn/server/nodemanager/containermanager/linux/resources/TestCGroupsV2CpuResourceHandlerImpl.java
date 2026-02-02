@@ -29,13 +29,15 @@ import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperation;
 import org.apache.hadoop.yarn.util.ResourceCalculatorPlugin;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -52,7 +54,7 @@ public class TestCGroupsV2CpuResourceHandlerImpl {
   private ResourceCalculatorPlugin plugin;
   final int numProcessors = 4;
 
-  @Before
+  @BeforeEach
   public void setup() {
     mockCGroupsHandler = mock(CGroupsHandler.class);
     when(mockCGroupsHandler.getPathForCGroup(any(), any())).thenReturn(".");
@@ -75,7 +77,7 @@ public class TestCGroupsV2CpuResourceHandlerImpl {
     verify(mockCGroupsHandler, times(0))
         .updateCGroupParam(CGroupsHandler.CGroupController.CPU, "",
             CGroupsHandler.CGROUP_CPU_MAX, "");
-    Assert.assertNull(ret);
+    assertNull(ret);
   }
 
   @Test
@@ -95,7 +97,7 @@ public class TestCGroupsV2CpuResourceHandlerImpl {
     verify(mockCGroupsHandler, times(1))
         .updateCGroupParam(CGroupsHandler.CGroupController.CPU, "",
             CGroupsHandler.CGROUP_CPU_MAX, cpuMaxValue);
-    Assert.assertNull(ret);
+    assertNull(ret);
   }
 
   @Test
@@ -117,7 +119,7 @@ public class TestCGroupsV2CpuResourceHandlerImpl {
     verify(mockCGroupsHandler, times(1))
         .updateCGroupParam(CGroupsHandler.CGroupController.CPU, "",
             CGroupsHandler.CGROUP_CPU_MAX, "max 100000");
-    Assert.assertNull(ret);
+    assertNull(ret);
   }
 
   @Test
@@ -257,7 +259,7 @@ public class TestCGroupsV2CpuResourceHandlerImpl {
   @Test
   public void testReacquireContainer() throws Exception {
     ContainerId containerIdMock = mock(ContainerId.class);
-    Assert.assertNull(
+    assertNull(
         cGroupsCpuResourceHandler.reacquireContainer(containerIdMock));
   }
 
@@ -266,14 +268,14 @@ public class TestCGroupsV2CpuResourceHandlerImpl {
     String id = "container_01_01";
     ContainerId mockContainerId = mock(ContainerId.class);
     when(mockContainerId.toString()).thenReturn(id);
-    Assert.assertNull(cGroupsCpuResourceHandler.postComplete(mockContainerId));
+    assertNull(cGroupsCpuResourceHandler.postComplete(mockContainerId));
     verify(mockCGroupsHandler, times(1))
         .deleteCGroup(CGroupsHandler.CGroupController.CPU, id);
   }
 
   @Test
   public void testTeardown() throws Exception {
-    Assert.assertNull(cGroupsCpuResourceHandler.teardown());
+    assertNull(cGroupsCpuResourceHandler.teardown());
   }
 
   @Test
@@ -300,14 +302,14 @@ public class TestCGroupsV2CpuResourceHandlerImpl {
   }
 
   private void validatePrivilegedOperationList(List<PrivilegedOperation> ops, String path) {
-    Assert.assertNotNull(ops);
-    Assert.assertEquals(1, ops.size());
+    assertNotNull(ops);
+    assertEquals(1, ops.size());
     PrivilegedOperation op = ops.get(0);
-    Assert.assertEquals(PrivilegedOperation.OperationType.ADD_PID_TO_CGROUP,
+    assertEquals(PrivilegedOperation.OperationType.ADD_PID_TO_CGROUP,
         op.getOperationType());
     List<String> args = op.getArguments();
-    Assert.assertEquals(1, args.size());
-    Assert.assertEquals(PrivilegedOperation.CGROUP_ARG_PREFIX + path,
+    assertEquals(1, args.size());
+    assertEquals(PrivilegedOperation.CGROUP_ARG_PREFIX + path,
         args.get(0));
   }
 }

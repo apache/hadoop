@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.hdfs.util.RwLockMode;
 import org.apache.hadoop.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -72,14 +73,14 @@ public class SnapshotDeletionGc {
 
   private void gcDeletedSnapshot(String name) {
     final Snapshot.Root deleted;
-    namesystem.readLock();
+    namesystem.readLock(RwLockMode.FS);
     try {
       deleted = namesystem.getSnapshotManager().chooseDeletedSnapshot();
     } catch (Throwable e) {
       LOG.error("Failed to chooseDeletedSnapshot", e);
       throw e;
     } finally {
-      namesystem.readUnlock("gcDeletedSnapshot");
+      namesystem.readUnlock(RwLockMode.FS, "gcDeletedSnapshot");
     }
     if (deleted == null) {
       LOG.trace("{}: no snapshots are marked as deleted.", name);

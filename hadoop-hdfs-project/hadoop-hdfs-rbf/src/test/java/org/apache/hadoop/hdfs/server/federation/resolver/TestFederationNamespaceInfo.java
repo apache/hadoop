@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.federation.resolver;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.Set;
 import java.util.TreeSet;

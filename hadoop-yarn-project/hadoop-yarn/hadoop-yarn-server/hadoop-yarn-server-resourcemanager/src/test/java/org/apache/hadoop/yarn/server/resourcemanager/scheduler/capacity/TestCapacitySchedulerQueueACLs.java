@@ -17,7 +17,7 @@
 */
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -32,7 +32,7 @@ import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.QueueACLsTestBase;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class TestCapacitySchedulerQueueACLs extends QueueACLsTestBase {
   @Override
@@ -177,7 +177,7 @@ public class TestCapacitySchedulerQueueACLs extends QueueACLsTestBase {
         (CapacityScheduler) resourceManager.getResourceScheduler();
     cs.setQueueManager(qm);
 
-    assertEquals("checkAccess() failed", expectedResult,
-        cs.checkAccess(mockUGI, QueueACL.ADMINISTER_QUEUE, queueName));
+    assertEquals(expectedResult,
+        cs.checkAccess(mockUGI, QueueACL.ADMINISTER_QUEUE, queueName), "checkAccess() failed");
   }
 }

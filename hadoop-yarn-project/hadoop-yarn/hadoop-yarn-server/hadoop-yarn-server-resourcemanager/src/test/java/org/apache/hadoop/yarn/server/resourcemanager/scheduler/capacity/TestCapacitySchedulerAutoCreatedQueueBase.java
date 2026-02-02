@@ -72,9 +72,8 @@ import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.YarnVersionInfo;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -96,10 +95,10 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler
     .capacity.CapacitySchedulerConfiguration.DOT;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler
     .capacity.CapacitySchedulerConfiguration.FAIR_APP_ORDERING_POLICY;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class TestCapacitySchedulerAutoCreatedQueueBase {
 
@@ -226,7 +225,7 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
     }
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     QueueMetrics.clearQueueMetrics();
     CapacitySchedulerConfiguration conf = setupSchedulerConfiguration();
@@ -521,7 +520,7 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
     conf.setAutoQueueCreationV2Enabled(C, true);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (mockRM != null) {
       mockRM.stop();
@@ -696,7 +695,7 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
             .withAmLabel(nodeLabel)
             .build();
     RMApp app = MockRMAppSubmitter.submit(mockRM, data);
-    Assert.assertEquals(app.getAmNodeLabelExpression(), nodeLabel);
+    assertEquals(app.getAmNodeLabelExpression(), nodeLabel);
     // check preconditions
     List<ApplicationAttemptId> appsInC = cs.getAppsInQueue(PARENT_QUEUE);
     assertEquals(1, appsInC.size());

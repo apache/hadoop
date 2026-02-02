@@ -28,8 +28,9 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.RegisterNodeManagerRequestPBImpl;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TestRegisterNodeManagerRequest {
   @Test
@@ -52,15 +53,15 @@ public class TestRegisterNodeManagerRequest {
             ((RegisterNodeManagerRequestPBImpl) request).getProto());
 
     // check values
-    Assert.assertEquals(request1.getNMContainerStatuses().size(), request
+    assertEquals(request1.getNMContainerStatuses().size(), request
         .getNMContainerStatuses().size());
-    Assert.assertEquals(request1.getNMContainerStatuses().get(0).getContainerId(),
+    assertEquals(request1.getNMContainerStatuses().get(0).getContainerId(),
         request.getNMContainerStatuses().get(0).getContainerId());
-    Assert.assertEquals(request1.getRunningApplications().size(), request
+    assertEquals(request1.getRunningApplications().size(), request
         .getRunningApplications().size());
-    Assert.assertEquals(request1.getRunningApplications().get(0), request
+    assertEquals(request1.getRunningApplications().get(0), request
         .getRunningApplications().get(0));
-    Assert.assertEquals(request1.getRunningApplications().get(1), request
+    assertEquals(request1.getRunningApplications().get(1), request
         .getRunningApplications().get(1));
   }
   
@@ -76,7 +77,7 @@ public class TestRegisterNodeManagerRequest {
             ((RegisterNodeManagerRequestPBImpl) request).getProto());
 
     // check values
-    Assert.assertEquals(0, request1.getNMContainerStatuses().size());
-    Assert.assertEquals(0, request1.getRunningApplications().size());
+    assertEquals(0, request1.getNMContainerStatuses().size());
+    assertEquals(0, request1.getRunningApplications().size());
   }
 }

@@ -39,7 +39,8 @@ Multiple blocks may be read in parallel.
 
 |Property    |Meaning    |Default    |
 |---|---|---|
-|`fs.s3a.prefetch.enabled`    |Enable the prefetch input stream    |`false` |
+| `fs.s3a.input.stream.type` |Uses the prefetch input stream when set to `prefetch`   |`classic` |
+|(deprecated) `fs.s3a.prefetch.enabled`    |Enable the prefetch input stream    |`false` |
 |`fs.s3a.prefetch.block.size`    |Size of a block    |`8M`    |
 |`fs.s3a.prefetch.block.count`    |Number of blocks to prefetch    |`8`    |
 
@@ -47,9 +48,18 @@ The default size of a block is 8MB, and the minimum allowed block size is 1 byte
 Decreasing block size will increase the number of blocks to be read for a file.
 A smaller block size may negatively impact performance as the number of prefetches required will increase.
 
+The original option to enable prefetching was the boolean option `fs.s3a.prefetch.enabled`.
+
+This has been superseded by the option `fs.s3a.input.stream.type` which now takes an enumeration of values; `prefetch` selects the prefetching stream.
+
+1. The original option is deprecated.
+2. It is supported *provided the option `fs.s3a.input.stream.type` is unset.
+3. The first time a stream created through the `fs.s3a.input.stream.type` option,
+   a warning message is printed.
+
 ### Key Components
 
-`S3PrefetchingInputStream` - When prefetching is enabled, S3AFileSystem will return an instance of
+`S3PrefetchingInputStream` - When the prefetch stream is used, S3AFileSystem will return an instance of
 this class as the input stream.
 Depending on the remote file size, it will either use
 the `S3InMemoryInputStream` or the `S3CachingInputStream` as the underlying input stream.

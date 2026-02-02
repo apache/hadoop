@@ -30,10 +30,9 @@ import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.runc.HdfsManifestToResourcesPlugin;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.runc.ImageManifest;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,6 +42,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.NM_RUNC_IMAGE_TOPLEVEL_DIR;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -62,14 +62,14 @@ public class TestHdfsManifestToResourcesPlugin {
   private static final String CONFIG_MEDIA_TYPE =
       "application/vnd.docker.container.image.v1+json";
 
-  @Before
+  @BeforeEach
   public void setup() {
     conf = new Configuration();
     File tmpDir = new File(tmpPath);
     tmpDir.mkdirs();
   }
 
-  @After
+  @AfterEach
   public void cleanUp() throws IOException {
     File tmpDir = new File(tmpPath);
     FileUtils.deleteDirectory(tmpDir);
@@ -134,8 +134,8 @@ public class TestHdfsManifestToResourcesPlugin {
         LocalResourceType.FILE, LocalResourceVisibility.PUBLIC,
         size2, modTime);
 
-    Assert.assertEquals(rsrc1, returnedLayers.get(0));
-    Assert.assertEquals(rsrc2, returnedLayers.get(1));
+    assertEquals(rsrc1, returnedLayers.get(0));
+    assertEquals(rsrc2, returnedLayers.get(1));
 
   }
 
@@ -177,6 +177,6 @@ public class TestHdfsManifestToResourcesPlugin {
         LocalResourceType.FILE, LocalResourceVisibility.PUBLIC,
         size, modTime);
 
-    Assert.assertEquals(rsrc, returnedLayer);
+    assertEquals(rsrc, returnedLayer);
   }
 }

@@ -29,9 +29,9 @@ import static org.apache.hadoop.yarn.webapp.WebServicesTestUtils.getXmlFloat;
 import static org.apache.hadoop.yarn.webapp.WebServicesTestUtils.getXmlInt;
 import static org.apache.hadoop.yarn.webapp.WebServicesTestUtils.getXmlLong;
 import static org.apache.hadoop.yarn.webapp.WebServicesTestUtils.getXmlString;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Contains all value verifications that are needed to verify {@link AppInfo}
@@ -60,75 +60,69 @@ public final class AppInfoXmlVerifications {
             app.getApplicationType(), getXmlString(info, "applicationType"));
     checkStringMatch("queue", app.getQueue(),
             getXmlString(info, "queue"));
-    assertEquals("priority doesn't match", 0, getXmlInt(info, "priority"));
+    assertEquals(0, getXmlInt(info, "priority"), "priority doesn't match");
     checkStringMatch("state", app.getState().toString(),
             getXmlString(info, "state"));
     checkStringMatch("finalStatus", app
             .getFinalApplicationStatus().toString(),
             getXmlString(info, "finalStatus"));
-    assertEquals("progress doesn't match", 0, getXmlFloat(info, "progress"),
-        0.0);
+    assertEquals(0, getXmlFloat(info, "progress"),
+        0.0, "progress doesn't match");
     if ("UNASSIGNED".equals(getXmlString(info, "trackingUI"))) {
       checkStringMatch("trackingUI", "UNASSIGNED",
               getXmlString(info, "trackingUI"));
     }
     WebServicesTestUtils.checkStringEqual("diagnostics",
             app.getDiagnostics().toString(), getXmlString(info, "diagnostics"));
-    assertEquals("clusterId doesn't match",
-            ResourceManager.getClusterTimeStamp(),
-            getXmlLong(info, "clusterId"));
-    assertEquals("startedTime doesn't match", app.getStartTime(),
-            getXmlLong(info, "startedTime"));
-    assertEquals("finishedTime doesn't match", app.getFinishTime(),
-            getXmlLong(info, "finishedTime"));
-    assertTrue("elapsed time not greater than 0",
-            getXmlLong(info, "elapsedTime") > 0);
+    assertEquals(ResourceManager.getClusterTimeStamp(),
+        getXmlLong(info, "clusterId"), "clusterId doesn't match");
+    assertEquals(app.getStartTime(),
+        getXmlLong(info, "startedTime"), "startedTime doesn't match");
+    assertEquals(app.getFinishTime(),
+        getXmlLong(info, "finishedTime"), "finishedTime doesn't match");
+    assertTrue(getXmlLong(info, "elapsedTime") > 0,
+        "elapsed time not greater than 0");
     checkStringMatch("amHostHttpAddress", app
                     .getCurrentAppAttempt().getMasterContainer()
                     .getNodeHttpAddress(),
             getXmlString(info, "amHostHttpAddress"));
-    assertTrue("amContainerLogs doesn't match",
-        getXmlString(info, "amContainerLogs").startsWith("http://"));
-    assertTrue("amContainerLogs doesn't contain user info",
-        getXmlString(info, "amContainerLogs").endsWith("/" + app.getUser()));
-    assertEquals("allocatedMB doesn't match", 1024,
-            getXmlInt(info, "allocatedMB"));
-    assertEquals("allocatedVCores doesn't match", 1,
-            getXmlInt(info, "allocatedVCores"));
-    assertEquals("queueUsagePerc doesn't match", 50.0f,
-            getXmlFloat(info, "queueUsagePercentage"), 0.01f);
-    assertEquals("clusterUsagePerc doesn't match", 50.0f,
-            getXmlFloat(info, "clusterUsagePercentage"), 0.01f);
-    assertEquals("numContainers doesn't match", 1,
-        getXmlInt(info, "runningContainers"));
-    assertNotNull("preemptedResourceSecondsMap should not be null",
-            info.getElementsByTagName("preemptedResourceSecondsMap"));
-    assertEquals("preemptedResourceMB doesn't match", app
-                    .getRMAppMetrics().getResourcePreempted().getMemorySize(),
-            getXmlInt(info, "preemptedResourceMB"));
-    assertEquals("preemptedResourceVCores doesn't match", app
-                    .getRMAppMetrics().getResourcePreempted().getVirtualCores(),
-            getXmlInt(info, "preemptedResourceVCores"));
-    assertEquals("numNonAMContainerPreempted doesn't match", app
-                    .getRMAppMetrics().getNumNonAMContainersPreempted(),
-            getXmlInt(info, "numNonAMContainerPreempted"));
-    assertEquals("numAMContainerPreempted doesn't match", app
-                    .getRMAppMetrics().getNumAMContainersPreempted(),
-            getXmlInt(info, "numAMContainerPreempted"));
-    assertEquals("Log aggregation Status doesn't match", app
-                    .getLogAggregationStatusForAppReport().toString(),
-            getXmlString(info, "logAggregationStatus"));
-    assertEquals("unmanagedApplication doesn't match", app
-                    .getApplicationSubmissionContext().getUnmanagedAM(),
-            getXmlBoolean(info, "unmanagedApplication"));
-    assertEquals("unmanagedApplication doesn't match",
-            app.getApplicationSubmissionContext().getNodeLabelExpression(),
-            getXmlString(info, "appNodeLabelExpression"));
-    assertEquals("unmanagedApplication doesn't match",
-            app.getAMResourceRequests().get(0).getNodeLabelExpression(),
-            getXmlString(info, "amNodeLabelExpression"));
-    assertEquals("amRPCAddress",
-            AppInfo.getAmRPCAddressFromRMAppAttempt(app.getCurrentAppAttempt()),
-            getXmlString(info, "amRPCAddress"));
+    assertTrue(getXmlString(info, "amContainerLogs").startsWith("http://"),
+        "amContainerLogs doesn't match");
+    assertTrue(getXmlString(info, "amContainerLogs").endsWith("/" + app.getUser()),
+        "amContainerLogs doesn't contain user info");
+    assertEquals(1024, getXmlInt(info, "allocatedMB"), "allocatedMB doesn't match");
+    assertEquals(1, getXmlInt(info, "allocatedVCores"),
+        "allocatedVCores doesn't match");
+    assertEquals(50.0f, getXmlFloat(info, "queueUsagePercentage"), 0.01f,
+        "queueUsagePerc doesn't match");
+    assertEquals(50.0f, getXmlFloat(info, "clusterUsagePercentage"), 0.01f,
+        "clusterUsagePerc doesn't match");
+    assertEquals(1, getXmlInt(info, "runningContainers"),
+        "numContainers doesn't match");
+    assertNotNull(info.getElementsByTagName("preemptedResourceSecondsMap"),
+        "preemptedResourceSecondsMap should not be null");
+    assertEquals(app.getRMAppMetrics().getResourcePreempted().getMemorySize(),
+        getXmlInt(info, "preemptedResourceMB"), "preemptedResourceMB doesn't match");
+    assertEquals(app.getRMAppMetrics().getResourcePreempted().getVirtualCores(),
+        getXmlInt(info, "preemptedResourceVCores"), "preemptedResourceVCores doesn't match");
+    assertEquals(app.getRMAppMetrics().getNumNonAMContainersPreempted(),
+        getXmlInt(info, "numNonAMContainerPreempted"), "numNonAMContainerPreempted doesn't match");
+    assertEquals(app.getRMAppMetrics().getNumAMContainersPreempted(),
+        getXmlInt(info, "numAMContainerPreempted"),
+        "numAMContainerPreempted doesn't match");
+    assertEquals(app.getLogAggregationStatusForAppReport().toString(),
+        getXmlString(info, "logAggregationStatus"),
+        "Log aggregation Status doesn't match");
+    assertEquals(app.getApplicationSubmissionContext().getUnmanagedAM(),
+        getXmlBoolean(info, "unmanagedApplication"),
+        "unmanagedApplication doesn't match");
+    assertEquals(app.getApplicationSubmissionContext().getNodeLabelExpression(),
+        getXmlString(info, "appNodeLabelExpression"),
+        "unmanagedApplication doesn't match");
+    assertEquals(app.getAMResourceRequests().get(0).getNodeLabelExpression(),
+        getXmlString(info, "amNodeLabelExpression"),
+        "unmanagedApplication doesn't match");
+    assertEquals(AppInfo.getAmRPCAddressFromRMAppAttempt(app.getCurrentAppAttempt()),
+        getXmlString(info, "amRPCAddress"), "amRPCAddress");
   }
 }

@@ -19,10 +19,12 @@
 package org.apache.hadoop.yarn.server.timelineservice.storage.flow;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -59,10 +61,9 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.common.ColumnHelper
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.HBaseTimelineServerUtils;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.LongConverter;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimestampGenerator;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests the FlowRun and FlowActivity Tables.
@@ -78,12 +79,21 @@ public class TestHBaseStorageFlowRunCompaction {
   private final byte[] aFamily = Bytes.toBytes("family");
   private final byte[] aQualifier = Bytes.toBytes("qualifier");
 
-  @BeforeClass
+  @BeforeAll
   public static void setupBeforeClass() throws Exception {
     util = new HBaseTestingUtility();
     Configuration conf = util.getConfiguration();
     conf.setInt("hfile.format.version", 3);
-    util.startMiniCluster();
+    try {
+      util.startMiniCluster();
+    } catch (Exception e) {
+      // TODO catch InaccessibleObjectException directly once Java 8 support is dropped
+      if (e.getClass().getSimpleName().equals("InaccessibleObjectException")) {
+        assumeTrue(false, "Could not start HBase because of HBASE-29234");
+      } else {
+        throw e;
+      }
+    }
     DataGeneratorForTest.createSchema(util.getConfiguration());
   }
 
@@ -335,8 +345,8 @@ public class TestHBaseStorageFlowRunCompaction {
     // flush and compact all the regions of the primary table
     int regionNum = HBaseTimelineServerUtils.flushCompactTableRegions(
         server, flowRunTable);
-    assertTrue("Didn't find any regions for primary table!",
-        regionNum > 0);
+    assertTrue(regionNum > 0,
+        "Didn't find any regions for primary table!");
 
     // check flow run for one flow many apps
     checkFlowRunTable(cluster, user, flow, runid, c1, 4);
@@ -490,7 +500,7 @@ public class TestHBaseStorageFlowRunCompaction {
         assertTrue(returnTs >= currentTimestamp);
       } else {
         // raise a failure since we expect only these two values back
-        Assert.fail();
+        fail();
       }
     }
   }
@@ -576,7 +586,7 @@ public class TestHBaseStorageFlowRunCompaction {
         assertTrue(returnTs <= cellTsNotFinalStart * count);
       } else {
         // raise a failure since we expect only these values back
-        Assert.fail();
+        fail();
       }
     }
   }
@@ -691,7 +701,7 @@ public class TestHBaseStorageFlowRunCompaction {
         assertTrue(returnTs <= cellTsFinalStartNotExpire + countFinalNotExpire);
       } else {
         // raise a failure since we expect only these values back
-        Assert.fail();
+        fail();
       }
     }
   }
@@ -755,7 +765,7 @@ public class TestHBaseStorageFlowRunCompaction {
       assertTrue(returnTs != inputTs1);
     } else {
       // raise a failure since we expect only these two values back
-      Assert.fail();
+      fail();
     }
   }
 
@@ -850,7 +860,7 @@ public class TestHBaseStorageFlowRunCompaction {
     assertEquals(0, cells.size());
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     if (util != null) {
       util.shutdownMiniCluster();

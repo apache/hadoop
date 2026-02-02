@@ -26,10 +26,12 @@ import org.apache.hadoop.yarn.server.timelineservice.documentstore.collection.do
 import org.apache.hadoop.yarn.server.timelineservice.documentstore.collection.document.entity.TimelineMetricSubDoc;
 import org.apache.hadoop.yarn.server.timelineservice.documentstore.collection.document.flowactivity.FlowActivityDocument;
 import org.apache.hadoop.yarn.server.timelineservice.documentstore.collection.document.flowrun.FlowRunDocument;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 /**
  * Timeline Entity Document merge and aggregation test.
@@ -47,26 +49,26 @@ public class TestDocumentOperations {
     TimelineEntityDocument expectedEntityDoc =
         DocumentStoreTestUtils.bakeTimelineEntityDoc();
 
-    Assert.assertEquals(1, actualEntityDoc.getInfo().size());
-    Assert.assertEquals(0, actualEntityDoc.getMetrics().size());
-    Assert.assertEquals(0, actualEntityDoc.getEvents().size());
-    Assert.assertEquals(0, actualEntityDoc.getConfigs().size());
-    Assert.assertEquals(0, actualEntityDoc.getIsRelatedToEntities().size());
-    Assert.assertEquals(0, actualEntityDoc.getRelatesToEntities().size());
+    assertEquals(1, actualEntityDoc.getInfo().size());
+    assertEquals(0, actualEntityDoc.getMetrics().size());
+    assertEquals(0, actualEntityDoc.getEvents().size());
+    assertEquals(0, actualEntityDoc.getConfigs().size());
+    assertEquals(0, actualEntityDoc.getIsRelatedToEntities().size());
+    assertEquals(0, actualEntityDoc.getRelatesToEntities().size());
 
     actualEntityDoc.merge(expectedEntityDoc);
 
-    Assert.assertEquals(expectedEntityDoc.getInfo().size(),
+    assertEquals(expectedEntityDoc.getInfo().size(),
         actualEntityDoc.getInfo().size());
-    Assert.assertEquals(expectedEntityDoc.getMetrics().size(),
+    assertEquals(expectedEntityDoc.getMetrics().size(),
         actualEntityDoc.getMetrics().size());
-    Assert.assertEquals(expectedEntityDoc.getEvents().size(),
+    assertEquals(expectedEntityDoc.getEvents().size(),
         actualEntityDoc.getEvents().size());
-    Assert.assertEquals(expectedEntityDoc.getConfigs().size(),
+    assertEquals(expectedEntityDoc.getConfigs().size(),
         actualEntityDoc.getConfigs().size());
-    Assert.assertEquals(expectedEntityDoc.getRelatesToEntities().size(),
+    assertEquals(expectedEntityDoc.getRelatesToEntities().size(),
         actualEntityDoc.getIsRelatedToEntities().size());
-    Assert.assertEquals(expectedEntityDoc.getRelatesToEntities().size(),
+    assertEquals(expectedEntityDoc.getRelatesToEntities().size(),
         actualEntityDoc.getRelatesToEntities().size());
   }
 
@@ -76,27 +78,27 @@ public class TestDocumentOperations {
     FlowActivityDocument expectedFlowActivityDoc =
         DocumentStoreTestUtils.bakeFlowActivityDoc();
 
-    Assert.assertEquals(0, actualFlowActivityDoc.getDayTimestamp());
-    Assert.assertEquals(0, actualFlowActivityDoc.getFlowActivities().size());
-    Assert.assertNull(actualFlowActivityDoc.getFlowName());
-    Assert.assertEquals(TimelineEntityType.YARN_FLOW_ACTIVITY.toString(),
+    assertEquals(0, actualFlowActivityDoc.getDayTimestamp());
+    assertEquals(0, actualFlowActivityDoc.getFlowActivities().size());
+    assertNull(actualFlowActivityDoc.getFlowName());
+    assertEquals(TimelineEntityType.YARN_FLOW_ACTIVITY.toString(),
         actualFlowActivityDoc.getType());
-    Assert.assertNull(actualFlowActivityDoc.getUser());
-    Assert.assertNull(actualFlowActivityDoc.getId());
+    assertNull(actualFlowActivityDoc.getUser());
+    assertNull(actualFlowActivityDoc.getId());
 
     actualFlowActivityDoc.merge(expectedFlowActivityDoc);
 
-    Assert.assertEquals(expectedFlowActivityDoc.getDayTimestamp(),
+    assertEquals(expectedFlowActivityDoc.getDayTimestamp(),
         actualFlowActivityDoc.getDayTimestamp());
-    Assert.assertEquals(expectedFlowActivityDoc.getFlowActivities().size(),
+    assertEquals(expectedFlowActivityDoc.getFlowActivities().size(),
         actualFlowActivityDoc.getFlowActivities().size());
-    Assert.assertEquals(expectedFlowActivityDoc.getFlowName(),
+    assertEquals(expectedFlowActivityDoc.getFlowName(),
         actualFlowActivityDoc.getFlowName());
-    Assert.assertEquals(expectedFlowActivityDoc.getType(),
+    assertEquals(expectedFlowActivityDoc.getType(),
         actualFlowActivityDoc.getType());
-    Assert.assertEquals(expectedFlowActivityDoc.getUser(),
+    assertEquals(expectedFlowActivityDoc.getUser(),
         actualFlowActivityDoc.getUser());
-    Assert.assertEquals(expectedFlowActivityDoc.getId(),
+    assertEquals(expectedFlowActivityDoc.getId(),
         actualFlowActivityDoc.getId());
 
     expectedFlowActivityDoc.addFlowActivity(FLOW_NAME,
@@ -104,17 +106,17 @@ public class TestDocumentOperations {
 
     actualFlowActivityDoc.merge(expectedFlowActivityDoc);
 
-    Assert.assertEquals(expectedFlowActivityDoc.getDayTimestamp(),
+    assertEquals(expectedFlowActivityDoc.getDayTimestamp(),
         actualFlowActivityDoc.getDayTimestamp());
-    Assert.assertEquals(expectedFlowActivityDoc.getFlowActivities().size(),
+    assertEquals(expectedFlowActivityDoc.getFlowActivities().size(),
         actualFlowActivityDoc.getFlowActivities().size());
-    Assert.assertEquals(expectedFlowActivityDoc.getFlowName(),
+    assertEquals(expectedFlowActivityDoc.getFlowName(),
         actualFlowActivityDoc.getFlowName());
-    Assert.assertEquals(expectedFlowActivityDoc.getType(),
+    assertEquals(expectedFlowActivityDoc.getType(),
         actualFlowActivityDoc.getType());
-    Assert.assertEquals(expectedFlowActivityDoc.getUser(),
+    assertEquals(expectedFlowActivityDoc.getUser(),
         actualFlowActivityDoc.getUser());
-    Assert.assertEquals(expectedFlowActivityDoc.getId(),
+    assertEquals(expectedFlowActivityDoc.getId(),
         actualFlowActivityDoc.getId());
   }
 
@@ -135,43 +137,43 @@ public class TestDocumentOperations {
         timelineMetric);
     expectedFlowRunDoc.getMetrics().put(MEMORY_ID, metricSubDoc);
 
-    Assert.assertNull(actualFlowRunDoc.getClusterId());
-    Assert.assertNull(actualFlowRunDoc.getFlowName());
-    Assert.assertNull(actualFlowRunDoc.getFlowRunId());
-    Assert.assertNull(actualFlowRunDoc.getFlowVersion());
-    Assert.assertNull(actualFlowRunDoc.getId());
-    Assert.assertNull(actualFlowRunDoc.getUsername());
-    Assert.assertEquals(actualFlowRunDoc.getType(), TimelineEntityType.
+    assertNull(actualFlowRunDoc.getClusterId());
+    assertNull(actualFlowRunDoc.getFlowName());
+    assertNull(actualFlowRunDoc.getFlowRunId());
+    assertNull(actualFlowRunDoc.getFlowVersion());
+    assertNull(actualFlowRunDoc.getId());
+    assertNull(actualFlowRunDoc.getUsername());
+    assertEquals(actualFlowRunDoc.getType(), TimelineEntityType.
         YARN_FLOW_RUN.toString());
-    Assert.assertEquals(0, actualFlowRunDoc.getMinStartTime());
-    Assert.assertEquals(0, actualFlowRunDoc.getMaxEndTime());
-    Assert.assertEquals(0, actualFlowRunDoc.getMetrics().size());
+    assertEquals(0, actualFlowRunDoc.getMinStartTime());
+    assertEquals(0, actualFlowRunDoc.getMaxEndTime());
+    assertEquals(0, actualFlowRunDoc.getMetrics().size());
 
     actualFlowRunDoc.merge(expectedFlowRunDoc);
 
-    Assert.assertEquals(expectedFlowRunDoc.getClusterId(),
+    assertEquals(expectedFlowRunDoc.getClusterId(),
         actualFlowRunDoc.getClusterId());
-    Assert.assertEquals(expectedFlowRunDoc.getFlowName(),
+    assertEquals(expectedFlowRunDoc.getFlowName(),
         actualFlowRunDoc.getFlowName());
-    Assert.assertEquals(expectedFlowRunDoc.getFlowRunId(),
+    assertEquals(expectedFlowRunDoc.getFlowRunId(),
         actualFlowRunDoc.getFlowRunId());
-    Assert.assertEquals(expectedFlowRunDoc.getFlowVersion(),
+    assertEquals(expectedFlowRunDoc.getFlowVersion(),
         actualFlowRunDoc.getFlowVersion());
-    Assert.assertEquals(expectedFlowRunDoc.getId(), actualFlowRunDoc.getId());
-    Assert.assertEquals(expectedFlowRunDoc.getUsername(),
+    assertEquals(expectedFlowRunDoc.getId(), actualFlowRunDoc.getId());
+    assertEquals(expectedFlowRunDoc.getUsername(),
         actualFlowRunDoc.getUsername());
-    Assert.assertEquals(expectedFlowRunDoc.getType(),
+    assertEquals(expectedFlowRunDoc.getType(),
         actualFlowRunDoc.getType());
-    Assert.assertEquals(expectedFlowRunDoc.getMinStartTime(),
+    assertEquals(expectedFlowRunDoc.getMinStartTime(),
         actualFlowRunDoc.getMinStartTime());
-    Assert.assertEquals(expectedFlowRunDoc.getMaxEndTime(),
+    assertEquals(expectedFlowRunDoc.getMaxEndTime(),
         actualFlowRunDoc.getMaxEndTime());
-    Assert.assertEquals(expectedFlowRunDoc.getMetrics().size(),
+    assertEquals(expectedFlowRunDoc.getMetrics().size(),
         actualFlowRunDoc.getMetrics().size());
 
     actualFlowRunDoc.merge(expectedFlowRunDoc);
 
-    Assert.assertEquals(value + value, actualFlowRunDoc.getMetrics()
+    assertEquals(value + value, actualFlowRunDoc.getMetrics()
         .get(MEMORY_ID).getSingleDataValue());
   }
 }

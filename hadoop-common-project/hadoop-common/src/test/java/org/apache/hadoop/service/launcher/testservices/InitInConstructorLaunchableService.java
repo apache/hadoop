@@ -20,7 +20,7 @@ package org.apache.hadoop.service.launcher.testservices;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.service.launcher.AbstractLaunchableService;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 
 import java.util.List;
 
@@ -41,23 +41,23 @@ public class InitInConstructorLaunchableService extends
 
   @Override
   public void init(Configuration conf) {
-    Assert.assertEquals(STATE.NOTINITED, getServiceState());
+    Assertions.assertEquals(STATE.NOTINITED, getServiceState());
     super.init(conf);
   }
 
   @Override
   public Configuration bindArgs(Configuration config, List<String> args)
       throws Exception {
-    Assert.assertEquals(STATE.INITED, getServiceState());
-    Assert.assertTrue(isInState(STATE.INITED));
-    Assert.assertNotSame(getConfig(), config);
+    Assertions.assertEquals(STATE.INITED, getServiceState());
+    Assertions.assertTrue(isInState(STATE.INITED));
+    Assertions.assertNotSame(getConfig(), config);
     return null;
   }
 
   @Override
   public int execute() throws Exception {
-    Assert.assertEquals(STATE.STARTED, getServiceState());
-    Assert.assertSame(originalConf, getConfig());
+    Assertions.assertEquals(STATE.STARTED, getServiceState());
+    Assertions.assertSame(originalConf, getConfig());
     return super.execute();
   }
 }
