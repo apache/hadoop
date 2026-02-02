@@ -98,10 +98,10 @@ pipeline {
                     '''
                 }
 
-                dir("${WORKSPACE}/ubuntu-focal") {
+                dir("${WORKSPACE}/ubuntu-noble") {
                     sh '''#!/usr/bin/env bash
 
-                    cp -Rp ${WORKSPACE}/src ${WORKSPACE}/ubuntu-focal
+                    cp -Rp ${WORKSPACE}/src ${WORKSPACE}/ubuntu-noble
                     '''
                 }
             }
@@ -199,13 +199,13 @@ pipeline {
             }
         }
 
-        // We want to use Ubuntu Focal as our main CI and thus, this stage
+        // We want to use Ubuntu Noble as our main CI and thus, this stage
         // isn't optional (runs for all the PRs).
-        stage ('precommit-run Ubuntu focal') {
+        stage ('precommit-run Ubuntu Noble') {
             environment {
-                SOURCEDIR = "${WORKSPACE}/ubuntu-focal/src"
-                PATCHDIR = "${WORKSPACE}/ubuntu-focal/out"
-                DOCKERFILE = "${SOURCEDIR}/dev-support/docker/Dockerfile"
+                SOURCEDIR = "${WORKSPACE}/ubuntu-noble/src"
+                PATCHDIR = "${WORKSPACE}/ubuntu-noble/out"
+                DOCKERFILE = "${SOURCEDIR}/dev-support/docker/Dockerfile_ubuntu_24"
                 IS_OPTIONAL = 0
             }
 
@@ -229,8 +229,8 @@ pipeline {
                                               usernameVariable: 'GITHUB_USER')]) {
                             sh '''#!/usr/bin/env bash
 
-                            # Copy the artifacts of Ubuntu focal build to workspace
-                            cp -Rp "${WORKSPACE}/ubuntu-focal/out" "${WORKSPACE}"
+                            # Copy the artifacts of Ubuntu Noble build to workspace
+                            cp -Rp "${WORKSPACE}/ubuntu-noble/out" "${WORKSPACE}"
 
                             # Send Github status
                             chmod u+x "${SOURCEDIR}/dev-support/jenkins.sh"
