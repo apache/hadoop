@@ -48,13 +48,11 @@ import org.apache.hadoop.yarn.webapp.BadRequestException;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URLEncodedUtils;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.container.ContainerRequestContext;
-
 
 @Private
 @Evolving
@@ -545,7 +543,6 @@ public class WebAppUtils {
       password = null;
       LOG.error("Unable to retrieve password for alias: {}", alias, ioe);
     }
-
     return password;
   }
 
