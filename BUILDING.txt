@@ -338,10 +338,6 @@ Controlling the redistribution of the protobuf-2.5 dependency
     hadoop-common dependency, and included in the share/hadoop/common/lib/
     directory of any Hadoop distribution built.
 
-    Note that protobuf-java-2.5.0.jar is still placed in
-    share/hadoop/yarn/timelineservice/lib; this is needed by the hbase client
-    library.
-
 ----------------------------------------------------------------------------------
 Building components separately
 
@@ -413,7 +409,7 @@ with the relevant profile of ${module}-package alongside the -Pdist profile.
 For example, a build with the hadoop-aws and hadoop-azure-datalake dependencies,
 run with
 
- mvn package -Pdist -DskipTests -Dhadoop-aws-package -Dhadoop-azure-datalake-package
+ mvn package -Pdist -DskipTests -Dtar -Dhadoop-aws-package -Dhadoop-azure-datalake-package
 
 Available package profiles:
   hadoop-aliyun-package

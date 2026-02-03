@@ -162,6 +162,9 @@ mvn package -Pdist -DskipTests -Dtar -Dmaven.javadoc.skip=true \
       <id>dist</id>
       <activation>
         <activeByDefault>false</activeByDefault>
+        <property>
+          <name>tar</name>
+        </property>
       </activation>
       <build>
         <plugins>
