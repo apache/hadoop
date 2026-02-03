@@ -152,53 +152,38 @@ mvn package -Pdist -DskipTests -Dtar -Dmaven.javadoc.skip=true \
         <configuration>
         </configuration>
       </plugin>
+      <plugin>
+         <groupId>org.apache.maven.plugins</groupId>
+         <artifactId>maven-assembly-plugin</artifactId>
+         <dependencies>
+           <dependency>
+             <groupId>org.apache.hadoop</groupId>
+             <artifactId>hadoop-assemblies</artifactId>
+             <version>${project.version}</version>
+           </dependency>
+         </dependencies>
+         <executions>
+           <execution>
+             <id>dist</id>
+             <phase>prepare-package</phase>
+             <goals>
+               <goal>single</goal>
+             </goals>
+             <configuration>
+               <appendAssemblyId>false</appendAssemblyId>
+               <attach>false</attach>
+               <finalName>${project.artifactId}-${project.version}</finalName>
+               <descriptorRefs>
+                 <descriptorRef>hadoop-cloud-storage</descriptorRef>
+               </descriptorRefs>
+             </configuration>
+           </execution>
+         </executions>
+       </plugin>
     </plugins>
   </build>
 
   <profiles>
-
-    <!-- distribution profile builds the artifacts. -->
-    <profile>
-      <id>dist</id>
-      <activation>
-        <activeByDefault>false</activeByDefault>
-        <property>
-          <name>tar</name>
-        </property>
-      </activation>
-      <build>
-        <plugins>
-         <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-assembly-plugin</artifactId>
-            <dependencies>
-              <dependency>
-                <groupId>org.apache.hadoop</groupId>
-                <artifactId>hadoop-assemblies</artifactId>
-                <version>${project.version}</version>
-              </dependency>
-            </dependencies>
-            <executions>
-              <execution>
-                <id>dist</id>
-                <phase>prepare-package</phase>
-                <goals>
-                  <goal>single</goal>
-                </goals>
-                <configuration>
-                  <appendAssemblyId>false</appendAssemblyId>
-                  <attach>false</attach>
-                  <finalName>${project.artifactId}-${project.version}</finalName>
-                  <descriptorRefs>
-                    <descriptorRef>hadoop-cloud-storage</descriptorRef>
-                  </descriptorRefs>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
 
     <!-- Pull in aliyun -->
     <profile>
