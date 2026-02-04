@@ -66,7 +66,6 @@ public class WebAppUtils {
       "ssl.server.keystore.keypassword";
   public static final String HTTPS_PREFIX = "https://";
   public static final String HTTP_PREFIX = "http://";
-  public static final Logger LOG = LoggerFactory.getLogger(WebAppUtils.class);
 
   public static void setRMWebAppPort(Configuration conf, int port) {
     String hostname = getRMWebAppURLWithoutScheme(conf);

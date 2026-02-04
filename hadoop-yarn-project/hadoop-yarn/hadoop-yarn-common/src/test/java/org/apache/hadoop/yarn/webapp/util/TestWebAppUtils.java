@@ -113,7 +113,8 @@ public class TestWebAppUtils {
   void testGetPasswordIOException() throws Exception {
     Configuration mockConf = Mockito.mock(Configuration.class);
 
-    Mockito.when(mockConf.getPassword("error-alias")).thenThrow(new IOException("Simulated IO error"));
+    Mockito.when(mockConf.getPassword("error-alias"))
+            .thenThrow(new IOException("Simulated IO error"));
 
     assertNull(WebAppUtils.getPassword(mockConf, "error-alias"));
   }
