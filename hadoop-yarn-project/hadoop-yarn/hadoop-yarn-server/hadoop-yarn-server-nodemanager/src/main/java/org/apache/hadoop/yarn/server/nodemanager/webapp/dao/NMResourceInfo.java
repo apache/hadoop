@@ -18,24 +18,15 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.webapp.dao;
 
+import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.gpu.NMGpuResourceInfo;
+
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.XmlSeeAlso;
 
 @XmlRootElement
 @XmlAccessorType(XmlAccessType.FIELD)
+@XmlSeeAlso({NMGpuResourceInfo.class, NMDeviceResourceInfo.class})
 public class NMResourceInfo {
-
-  private long resourceValue;
-
-  public NMResourceInfo() {
-  } // JAXB needs this
-
-  public long getResourceValue() {
-    return resourceValue;
-  }
-
-  public void setResourceValue(long resourceValue) {
-    this.resourceValue = resourceValue;
-  }
 }
