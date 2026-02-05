@@ -21,118 +21,114 @@ import org.apache.hadoop.util.Shell;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
+
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.BufferedReader;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 public class DiagnosticJStackService {
 
     private static final Logger LOG = LoggerFactory
             .getLogger(DiagnosticJStackService.class);
-    private static final String PYTHON_COMMAND = "python3";
 
-    public static String collectNodeThreadDump(String numberOfJStack)
+    public static String collectNodeThreadDump(int numberOfJStack)
             throws Exception {
         if (Shell.WINDOWS) {
             throw new UnsupportedOperationException("Not implemented for Windows");
         }
 
-        ProcessBuilder pb = createProcessBuilder(numberOfJStack);
+        List<String> nodeManagerPids = getNodeManagerPids();
 
-        return executeCommand(pb);
+        return runJStack(nodeManagerPids, numberOfJStack);
 
     }
 
 
 
-    public static String collectApplicationThreadDump(String appId, String numberOfJStack)
+    public static String collectApplicationThreadDump(String appId, int numberOfJStack)
             throws Exception {
         if (Shell.WINDOWS) {
             throw new UnsupportedOperationException("Not implemented for Windows.");
         }
-        ProcessBuilder pb = createProcessBuilder(appId, numberOfJStack);
+        List<String> applicationPids = getApplicationPids(appId);
 
-        LOG.info("Diagnostic process environment: {}", pb.environment());
-
-        return executeCommand(pb);
-    }
-
-    public static ProcessBuilder createProcessBuilder(String numberOfJStack) {
-        List<String> commandList =
-                new ArrayList<>(Arrays.asList(PYTHON_COMMAND, getScriptLocation(), numberOfJStack));
-
-        return new ProcessBuilder(commandList);
+        return runJStack(applicationPids, numberOfJStack);
     }
 
 
-    public static ProcessBuilder createProcessBuilder(String appId, String numberOfJStack) {
-        List<String> commandList =
-                new ArrayList<>(Arrays.asList(PYTHON_COMMAND, getScriptLocation(), appId, numberOfJStack));
-
-        return new ProcessBuilder(commandList);
+    public static List<String> getNodeManagerPids() throws IOException {
+        Shell.ShellCommandExecutor cmd = new Shell.ShellCommandExecutor(
+                new String[]{
+                        "bash",
+                        "-c",
+                        "ps aux | grep nodemanager | grep -v grep"
+                },
+                null,
+                null,
+                10_000
+        );
+        cmd.execute();
+        return extractPids(cmd.getOutput());
     }
 
-    private static String executeCommand(ProcessBuilder pb)
-            throws Exception {
-        Process process = pb.start();
-        int exitCode;
-        StringBuilder outputBuilder = new StringBuilder();
-        StringBuilder errorBuilder = new StringBuilder();
+    public static List<String> getApplicationPids(String appId) throws IOException {
+        String psCmd = "ps aux | grep jvm/java | grep " + appId + " | grep -v -e /bin/bash -e grep";
 
-        try (
-                BufferedReader stdoutReader = new BufferedReader(new InputStreamReader(process.getInputStream(),
-                        StandardCharsets.UTF_8));
-                BufferedReader stderrReader = new BufferedReader(new InputStreamReader(process.getErrorStream(),
-                        StandardCharsets.UTF_8));
-        ) {
+        Shell.ShellCommandExecutor cmd = new Shell.ShellCommandExecutor(
+                new String[]{ "bash", "-c", psCmd},
+                null,
+                null,
+                10_000
+        );
 
-            String line;
-            while ((line = stdoutReader.readLine()) != null) {
-                outputBuilder.append(line).append("\n");
+        cmd.execute();
+        return extractPids(cmd.getOutput());
+    }
+
+    public static List<String> extractPids(String psOutput) {
+
+        LOG.info("Process output: " + psOutput);
+
+        List<String> pids = new ArrayList<>();
+        for(String line : psOutput.split("\n")) {
+            // root       414  1.3  1.7 8124480 434520 ?      Sl   11:36
+            String [] parts = line.trim().split("\\s+");
+            if (parts.length > 1){
+                pids.add(parts[1]);
             }
-
-            while ((line = stderrReader.readLine()) != null) {
-                errorBuilder.append(line).append("\n");
-            }
-            if (!errorBuilder.toString().isEmpty()) {
-                LOG.error("Python script stderr: {}", errorBuilder);
-            }
-
-            process.waitFor();
-        } catch (Exception e) {
-            LOG.error("Error getting JStack: {}", pb.command());
-            throw e;
-        }
-        exitCode = process.exitValue();
-        if (exitCode != 0) {
-            throw new IOException("The JStack collector script exited with non-zero " +
-                    "exit code: " + exitCode);
         }
 
-        return outputBuilder.toString();
+        return pids;
     }
 
-    private static String getScriptLocation() {
-        try {
-            // Extract script from JAR to a temp file
-            InputStream in = DiagnosticJStackService.class.getClassLoader()
-                    .getResourceAsStream("diagnostics/jstack_collector.py");
-            File tempScript = File.createTempFile("jstack_collector", ".py");
-            Files.copy(in, tempScript.toPath(), StandardCopyOption.REPLACE_EXISTING);
-            tempScript.setExecutable(true); // Set execute permission
-            return tempScript.getAbsolutePath();
-        } catch (IOException e) {
-            LOG.error("Failed to extract Python script from JAR", e);
-            return null;
+
+    public static String runJStack(List<String> pids, int numJStacks) throws IOException {
+        StringBuilder result = new StringBuilder();
+
+        for(String pid : pids){
+
+            Shell.ShellCommandExecutor cmd =
+                    new Shell.ShellCommandExecutor(
+                            new String[]{"jstack", pid},
+                            null,
+                            null,
+                            60_000
+                    );
+
+            for (int i = 0; i < numJStacks; i++) {
+                cmd.execute();
+
+                result.append("--- JStack iteration -")
+                        .append(i)
+                        .append(" for PID: ")
+                        .append(pid)
+                        .append("---\n")
+                        .append(cmd.getOutput())
+                        .append("\n");
+            }
         }
+
+        return result.toString();
     }
 
 }

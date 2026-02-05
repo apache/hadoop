@@ -109,6 +109,7 @@ public class NMWebServices {
   private String redirectWSUrl;
   private LogAggregationFileControllerFactory factory;
   private boolean filterAppsByUser = false;
+  private boolean isJStackEndpointsEnable = true;
 
   @javax.ws.rs.core.Context
   private HttpServletRequest request;
@@ -133,6 +134,10 @@ public class NMWebServices {
     this.filterAppsByUser = this.nmContext.getConf().getBoolean(
         YarnConfiguration.FILTER_ENTITY_LIST_BY_USER,
         YarnConfiguration.DEFAULT_DISPLAY_APPS_FOR_LOGGED_IN_USER);
+    this.isJStackEndpointsEnable = this.nmContext.getConf().getBoolean(
+            YarnConfiguration.NM_JSTACK_ENDPOINTS_ENABLED,
+            YarnConfiguration.DEFAULT_NM_JSTACK_ENDPOINTS_ENABLED
+    );
   }
 
   public NMWebServices(final Context nm, final ResourceView view,
@@ -274,15 +279,20 @@ public class NMWebServices {
 
   @GET
   @Path("/jstack/{numberOfJStack}")
-  public Response getNodeThreadDump(@PathParam("numberOfJStack") String numberOfJStack)
-  { // Make sure the NodeManager have python3 install
-    try {
-      return Response.status(Status.OK)
-              .entity(DiagnosticJStackService.collectNodeThreadDump(numberOfJStack))
+  public Response getNodeThreadDump(@PathParam("numberOfJStack") int numberOfJStack)
+  {
+    if (isJStackEndpointsEnable) {
+      try {
+        return Response.status(Status.OK)
+                .entity(DiagnosticJStackService.collectNodeThreadDump(numberOfJStack))
+                .build();
+      } catch (Exception e) {
+        throw new WebAppException("Error collection NodeManager JStack: " + e.getMessage() + ". " +
+                "For more information please check the NodeManager logs.");
+      }
+    } else {
+      return Response.status(Status.METHOD_NOT_ALLOWED)
               .build();
-    } catch (Exception e) {
-      throw new WebAppException("Error collection NodeManager JStack: " + e.getMessage() + ". " +
-              "For more information please check the NodeManager logs.");
     }
   }
 
@@ -291,16 +301,22 @@ public class NMWebServices {
   @Path("/apps/{appid}/jstack/{numberOfJStack}")
   @Produces({MediaType.TEXT_PLAIN})
   public Response getApplicationJStack(@PathParam("appid") String appId,
-                                       @PathParam("numberOfJStack") String numberOfJStack)
-  { // Make sure the NodeManager have python3 install
-    try {
-      return Response.status(Status.OK)
-              .entity(DiagnosticJStackService.collectApplicationThreadDump(appId, numberOfJStack))
-              .build();
-    } catch (Exception e) {
-      throw new WebAppException("Error collecting Application JStack: " + e.getMessage() + ". " +
-              "For more information please check the NodeManager logs.");
+                                       @PathParam("numberOfJStack") int numberOfJStack)
+  {
+    if (isJStackEndpointsEnable) {
+      try {
+        return Response.status(Status.OK)
+                .entity(DiagnosticJStackService.collectApplicationThreadDump(appId, numberOfJStack))
+                .build();
+      } catch (Exception e) {
+        throw new WebAppException("Error collecting Application JStack: " + e.getMessage() + ". " +
+                "For more information please check the NodeManager logs.");
+      }
+    } else {
+      return  Response.status(Status.METHOD_NOT_ALLOWED)
+                  .build();
     }
+
   }
 
   /**

@@ -20,54 +20,48 @@ package org.apache.hadoop.yarn.server.nodemanager;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.DiagnosticJStackService;
 import org.junit.jupiter.api.Test;
 
-import java.lang.reflect.Method;
+
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 
 public class TestDiagnosticJStackService {
 
-    @Test
-    public void testScriptLocationShouldReturnExistingExecutableFile(){
-        String scriptPath = callPrivateGetScriptLocation();
-        assertNotNull(scriptPath, "Script location should not be null");
-    }
+
 
     @Test
-    public void testCreateProcessBuilderAppCommandNumJStackOption(){
-        ProcessBuilder pb = DiagnosticJStackService
-                .createProcessBuilder("5");
+    public void testExtractPidsFromEmptyProcessOutput(){
+        String psOutput = "";
 
-        List<String> cmd = pb.command();
-        assertEquals(3, cmd.size());
-        assertEquals("python3", cmd.get(0));
-        assertTrue(cmd.get(1).contains("jstack_collector"), "Script path should contain jstack_collector");
-        assertEquals("5", cmd.get(2));
+        List<String> pids = DiagnosticJStackService.extractPids(psOutput);
+
+        assertTrue(pids.isEmpty());
+
     }
 
     @Test
-    public void testCreateProcessBuilderAppCommandAppIdJStackOption(){
-        ProcessBuilder pb = DiagnosticJStackService
-                .createProcessBuilder("app_123", "5");
+    public void testExtractPidsFromOneProcessOutput(){
+        String psOutput = "root       414  1.3  1.7 8124480 434520 ?      Sl   11:36";
 
-        List<String> cmd = pb.command();
-        assertEquals(4, cmd.size());
-        assertEquals("python3", cmd.get(0));
-        assertTrue(cmd.get(1).contains("jstack_collector"), "Script path should contain jstack_collector");
-        assertEquals("app_123", cmd.get(2));
-        assertEquals("5", cmd.get(3));
+        List<String> pids = DiagnosticJStackService.extractPids(psOutput);
+
+        assertEquals("414", pids.get(0));
+
     }
 
-    private String callPrivateGetScriptLocation() {
-        try {
-            Method m = DiagnosticJStackService.class.getDeclaredMethod("getScriptLocation");
-            m.setAccessible(true);
-            return (String) m.invoke(null);
-        } catch (Exception e){
-            throw new RuntimeException(e);
-        }
+    @Test
+    public void testExtractPidsFromMultipleProcessOutputs(){
+        String psOutput = """
+                root       414  1.3  1.7 8124480 434520 ?      Sl   11:36
+                root       420  1.3  1.7 8124480 434520 ?      Sl   11:36
+                """;
+
+        List<String> pids = DiagnosticJStackService.extractPids(psOutput);
+
+        assertEquals("414", pids.get(0));
+        assertEquals("420", pids.get(1));
     }
+
 }
