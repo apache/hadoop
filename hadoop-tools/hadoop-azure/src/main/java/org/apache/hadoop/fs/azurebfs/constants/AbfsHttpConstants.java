@@ -250,6 +250,22 @@ public final class AbfsHttpConstants {
   public static final String XML_TAG_COMMITTED_BLOCKS = "CommittedBlocks";
   public static final String XML_TAG_BLOCK_NAME = "Block";
   public static final String PUT_BLOCK_LIST = "PutBlockList";
+  // ===== List Containers (Blob Endpoint) XML Tags =====
+  public static final String XML_TAG_CONTAINERS = "Containers";
+  public static final String XML_TAG_CONTAINER = "Container";
+  public static final String XML_TAG_VERSION = "Version";
+  public static final String XML_TAG_DELETED = "Deleted";
+  public static final String XML_TAG_PREFIX = "Prefix";
+  public static final String XML_TAG_MARKER = "Marker";
+  public static final String XML_TAG_MAX_RESULTS = "MaxResults";
+  public static final String XML_TAG_LEASE_STATUS = "LeaseStatus";
+  public static final String XML_TAG_LEASE_STATE = "LeaseState";
+  public static final String XML_TAG_LEASE_DURATION = "LeaseDuration";
+  public static final String XML_TAG_PUBLIC_ACCESS = "PublicAccess";
+  public static final String XML_TAG_HAS_IMMUTABILITY_POLICY = "HasImmutabilityPolicy";
+  public static final String XML_TAG_HAS_LEGAL_HOLD = "HasLegalHold";
+  public static final String XML_TAG_DELETED_TIME = "DeletedTime";
+  public static final String XML_TAG_REMAINING_RETENTION_DAYS = "RemainingRetentionDays";
 
   /**
    * Value that differentiates categories of the HTTP status.
