@@ -65,20 +65,31 @@ public class ContainerListXmlParser extends DefaultHandler {
     this.responseData = responseData;
   }
 
+  /**
+   * {@inheritDoc}
+   *
+   * @param uri namespace URI
+   * @param localName local element name
+   * @param qName qualified name
+   * @param attributes element attributes
+   */
   @Override
   public void startElement(
       final String uri,
       final String localName,
       final String qName,
-      final Attributes attributes) throws SAXException {
-
+      final Attributes attributes) {
     elements.push(localName);
-
     if (AbfsHttpConstants.XML_TAG_CONTAINER.equals(localName)) {
       currentContainer = new ContainerListEntrySchema();
     }
   }
 
+  /**
+   * {@inheritDoc}
+   *
+   * Initializes container parsing when a container element is encountered.
+   */
   @Override
   public void endElement(
       final String uri,
@@ -101,83 +112,59 @@ public class ContainerListXmlParser extends DefaultHandler {
       value = null;
     }
 
-    /* ================= Container fields ================= */
-
     if (currentContainer != null) {
-
       if (AbfsHttpConstants.XML_TAG_NAME.equals(currentNode)
           && AbfsHttpConstants.XML_TAG_CONTAINER.equals(parentNode)) {
         currentContainer.setName(value);
       }
-
       if (AbfsHttpConstants.XML_TAG_VERSION.equals(currentNode)) {
         currentContainer.setVersion(value);
       }
-
       if (AbfsHttpConstants.XML_TAG_DELETED.equals(currentNode)) {
         currentContainer.setDeleted(Boolean.parseBoolean(value));
       }
-
-      /* ================= Properties ================= */
-
       if (AbfsHttpConstants.XML_TAG_PROPERTIES.equals(parentNode)) {
-
         if (AbfsHttpConstants.XML_TAG_LAST_MODIFIED_TIME.equals(currentNode)
             && value != null) {
           currentContainer.setLastModified(
               DateTimeUtils.parseLastModifiedTime(value));
         }
-
         if (AbfsHttpConstants.XML_TAG_ETAG.equals(currentNode)) {
           currentContainer.setETag(value);
         }
-
         if (AbfsHttpConstants.XML_TAG_LEASE_STATUS.equals(currentNode)) {
           currentContainer.setLeaseStatus(value);
         }
-
         if (AbfsHttpConstants.XML_TAG_LEASE_STATE.equals(currentNode)) {
           currentContainer.setLeaseState(value);
         }
-
         if (AbfsHttpConstants.XML_TAG_LEASE_DURATION.equals(currentNode)) {
           currentContainer.setLeaseDuration(value);
         }
-
         if (AbfsHttpConstants.XML_TAG_PUBLIC_ACCESS.equals(currentNode)) {
           currentContainer.setPublicAccess(value);
         }
-
         if (AbfsHttpConstants.XML_TAG_HAS_IMMUTABILITY_POLICY.equals(currentNode)) {
           currentContainer.setHasImmutabilityPolicy(Boolean.parseBoolean(value));
         }
-
         if (AbfsHttpConstants.XML_TAG_HAS_LEGAL_HOLD.equals(currentNode)) {
           currentContainer.setHasLegalHold(Boolean.parseBoolean(value));
         }
-
         if (AbfsHttpConstants.XML_TAG_DELETED_TIME.equals(currentNode)
             && value != null) {
           currentContainer.setDeletedTime(
               DateTimeUtils.parseLastModifiedTime(value));
         }
-
         if (AbfsHttpConstants.XML_TAG_REMAINING_RETENTION_DAYS.equals(currentNode)
             && value != null) {
           currentContainer.setRemainingRetentionDays(
               Integer.parseInt(value));
         }
       }
-
-      /* ================= Metadata ================= */
-
       if (AbfsHttpConstants.XML_TAG_METADATA.equals(parentNode)) {
         currentContainer.addMetadata(currentNode, value);
       }
     }
-
-    /* ================= End Container ================= */
-
     if (AbfsHttpConstants.XML_TAG_CONTAINER.equals(currentNode)) {
       if (currentContainer != null) {
         responseData.addContainer(currentContainer);
@@ -185,28 +172,27 @@ public class ContainerListXmlParser extends DefaultHandler {
       currentContainer = null;
     }
 
-    /* ================= Enumeration ================= */
-
     if (AbfsHttpConstants.XML_TAG_PREFIX.equals(currentNode)) {
       responseData.setPrefix(value);
     }
-
     if (AbfsHttpConstants.XML_TAG_MARKER.equals(currentNode)) {
       responseData.setMarker(value);
     }
-
     if (AbfsHttpConstants.XML_TAG_MAX_RESULTS.equals(currentNode)
         && value != null) {
       responseData.setMaxResults(Integer.parseInt(value));
     }
-
     if (AbfsHttpConstants.XML_TAG_NEXT_MARKER.equals(currentNode)) {
       responseData.setContinuationToken(value);
     }
-
     bld = new StringBuilder();
   }
 
+  /**
+   * {@inheritDoc}
+   *
+   * Accumulates character data for the current XML element during parsing.
+   */
   @Override
   public void characters(
       final char[] ch,
