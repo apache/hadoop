@@ -898,58 +898,62 @@ public class ITestAzureBlobFileSystemListStatus extends
     final AzureBlobFileSystem fs = getFileSystem();
     final AbfsBlobClient blobClient =
         fs.getAbfsStore().getClientHandler().getBlobClient();
-
     final TracingContext tracingContext =
         getTestTracingContext(fs, true);
 
-    // Container (filesystem) names
-    String container1 = "abfs-test-container-listtest1";
-    String container2 = "abfs-test-container-listtest2";
+    // DFS- and Blob-compliant container (filesystem) names
+    String container1 = "abfs-test-listtest1";
+    String container2 = "abfs-test-listtest2";
 
-    // Create files inside the containers to ensure they exist
-    AzureBlobFileSystem fs1 =
-        (AzureBlobFileSystem) FileSystem.get(
-            new URI("abfs://" + container1 + "@" + fs.getUri().getAuthority()),
-            fs.getConf());
+    AzureBlobFileSystem fs1 = null;
+    AzureBlobFileSystem fs2 = null;
 
-    AzureBlobFileSystem fs2 =
-        (AzureBlobFileSystem) FileSystem.get(
-            new URI("abfs://" + container2 + "@" + fs.getUri().getAuthority()),
-            fs.getConf());
+    try {
+      String account = fs.getAbfsStore()
+          .getAbfsConfiguration().getAccountName();
 
-    fs1.mkdirs(new Path("/dir1"));
-    fs1.create(new Path("/dir1/file1")).close();
+      fs1 = (AzureBlobFileSystem) FileSystem.get(
+          new URI("abfs://" + container1 + "@" + account), fs.getConf());
+      fs2 = (AzureBlobFileSystem) FileSystem.get(
+          new URI("abfs://" + container2 + "@" + account), fs.getConf());
 
-    fs2.mkdirs(new Path("/dir2"));
-    fs2.create(new Path("/dir2/file2")).close();
+      fs1.mkdirs(new Path("/dir1"));
+      fs1.create(new Path("/dir1/file1")).close();
+      fs2.mkdirs(new Path("/dir2"));
+      fs2.create(new Path("/dir2/file2")).close();
 
-    /* ================= List Containers ================= */
+      ContainerListResponseData response =
+          blobClient.listContainers("abfs-test-", null, tracingContext);
 
-    ContainerListResponseData response =
-        blobClient.listContainers("abfs-test-container", null, tracingContext);
+      assertThat(response)
+          .describedAs("listContainers response should not be null")
+          .isNotNull();
 
-    assertThat(response)
-        .describedAs("listContainers response should not be null")
-        .isNotNull();
+      assertThat(response.getContainers())
+          .describedAs("Container list should contain created test containers")
+          .extracting(ContainerListEntrySchema::getName)
+          .contains(container1, container2);
 
-    assertThat(response.getContainers())
-        .describedAs("Container list should contain created test containers")
-        .extracting(ContainerListEntrySchema::getName)
-        .contains(container1, container2);
+      boolean deleted1 = deleteContainer(blobClient, container1, tracingContext);
+      boolean deleted2 = deleteContainer(blobClient, container2, tracingContext);
 
-    /* ================= Delete Containers ================= */
+      assertThat(deleted1)
+          .describedAs("First container should be deleted or already absent")
+          .isTrue();
+      assertThat(deleted2)
+          .describedAs("Second container should be deleted or already absent")
+          .isTrue();
 
-    boolean deleted1 = deleteContainer(blobClient, container1, tracingContext);
-    boolean deleted2 = deleteContainer(blobClient, container2, tracingContext);
-
-    assertThat(deleted1)
-        .describedAs("First container should be deleted or already absent")
-        .isTrue();
-
-    assertThat(deleted2)
-        .describedAs("Second container should be deleted or already absent")
-        .isTrue();
+    } finally {
+      if (fs1 != null) {
+        fs1.close();
+      }
+      if (fs2 != null) {
+        fs2.close();
+      }
+    }
   }
+
 
   private boolean deleteContainer(
       AbfsBlobClient blobClient,
