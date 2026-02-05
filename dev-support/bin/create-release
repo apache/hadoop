@@ -586,6 +586,15 @@ function makearelease
 
   # Stage BIN tarball
   run cd "${BASEDIR}"
+
+  # look for hadoop-aws in dir
+  echo "scanning binary dir tree for hadoop-aws"
+  run find "${BASEDIR}/hadoop-dist/target/hadoop-${HADOOP_VERSION}" -name "hadoop-aws*" -print
+
+  # look for hadoop-aws in tar.gz
+  echo "scanning hadoop-dist/target/for hadoop-aws"
+  run tar --list -zf "${BASEDIR}/hadoop-dist/target/hadoop-${HADOOP_VERSION}.tar.gz" | grep hadoop-aws
+
   run mv \
     "${BASEDIR}/hadoop-dist/target/hadoop-${HADOOP_VERSION}.tar.gz" \
     "${ARTIFACTS_DIR}/hadoop-${HADOOP_VERSION}${RC_LABEL}.tar.gz"
@@ -645,6 +654,10 @@ function makearelease
   run cp -r "${BASEDIR}/target/r${HADOOP_VERSION}"/* "hadoop-${HADOOP_VERSION}/share/doc/hadoop/"
   run tar -czpf "hadoop-${HADOOP_VERSION}${RC_LABEL}.tar.gz" "hadoop-${HADOOP_VERSION}"
   run rm -rf "hadoop-${HADOOP_VERSION}"
+
+  # look for hadoop-aws in tar.gz
+  echo "scanning final tar for hadoop-aws"
+  run tar --list -zf "hadoop-${HADOOP_VERSION}${RC_LABEL}.tar.gz"  | grep hadoop-aws
 
 }
 
