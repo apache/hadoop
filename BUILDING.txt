@@ -88,8 +88,8 @@ Refer to  dev-support/docker/Dockerfile_ubuntu_20):
   $ cmake --build build --parallel $(nproc)
   $ sudo cmake --install build
 * Boost
-  $ curl -L https://sourceforge.net/projects/boost/files/boost/1.86.0/boost_1_86_0.tar.bz2/download > boost_1_86_0.tar.bz2
-  $ tar --bzip2 -xf boost_1_86_0.tar.bz2 && cd boost_1_86_0
+  $ curl -L https://github.com/boostorg/boost/releases/download/boost-1.86.0/boost-1.86.0-b2-nodocs.tar.gz > boost-1.86.0.tar.gz
+  $ tar -zxf boost-1.86.0.tar.gz && cd boost-1.86.0
   $ ./bootstrap.sh --prefix=/usr/
   $ ./b2 --without-python
   $ sudo ./b2 --without-python install
@@ -551,9 +551,9 @@ Building on Rocky Linux 8
   $ sudo make install
 
 * Install boost.
-  $ curl -L -o boost_1_86_0.tar.bz2 https://sourceforge.net/projects/boost/files/boost/1.86.0/boost_1_86_0.tar.bz2/download
-  $ tar xjf boost_1_86_0.tar.bz2
-  $ cd boost_1_86_0
+  $ curl -L -o boost-1.86.0.tar.gz https://github.com/boostorg/boost/releases/download/boost-1.86.0/boost-1.86.0-b2-nodocs.tar.gz
+  $ tar -xzf boost-1.86.0.tar.gz
+  $ cd boost-1.86.0
   $ ./bootstrap.sh --prefix=/usr/local
   $ ./b2
   $ sudo ./b2 install
