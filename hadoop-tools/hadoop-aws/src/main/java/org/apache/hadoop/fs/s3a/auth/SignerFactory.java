@@ -35,10 +35,12 @@ import software.amazon.awssdk.identity.spi.AwsCredentialsIdentity;
 import software.amazon.awssdk.identity.spi.IdentityProvider;
 import software.amazon.awssdk.identity.spi.IdentityProviders;
 
+import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.S3AUtils;
 import org.apache.hadoop.fs.s3a.impl.InstantiationIOException;
 
+import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.fs.s3a.Constants.HTTP_SIGNER_CLASS_NAME;
 import static org.apache.hadoop.fs.s3a.impl.InstantiationIOException.unavailable;
 import static org.apache.hadoop.util.Preconditions.checkArgument;
@@ -100,15 +102,17 @@ public final class SignerFactory {
 
   /**
    * Create an instance of the given signer.
-   *
+   * If a signer is Configurable, call setConf on it with the passed in config.
    * @param signerType The signer type.
+   * @param conf configuration to init with
    * @param configKey Config key used to configure the signer.
    * @return The new signer instance.
    * @throws InstantiationIOException instantiation problems.
    * @throws IOException on any other problem.
    *
    */
-  public static Signer createSigner(String signerType, String configKey) throws IOException {
+  public static Signer createSigner(String signerType, final Configuration conf, String configKey)
+      throws IOException {
     if (S3_V2_SIGNER.equals(signerType)) {
       throw unavailable(null, null, configKey, S3_V2_SIGNER + " is no longer supported");
     }
@@ -124,7 +128,10 @@ public final class SignerFactory {
     Signer signer =
         S3AUtils.getInstanceFromReflection(className, null, null, Signer.class, "create",
             configKey);
-
+    requireNonNull(conf);
+    if (signer instanceof Configurable sc) {
+      sc.setConf(conf);
+    }
     return signer;
   }
 

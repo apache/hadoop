@@ -44,6 +44,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileSystem;
@@ -205,6 +206,9 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
           .as("Configuration TEST_KEY mismatch in %s", CustomSigner.description())
           .isEqualTo(identifier);
 
+      Assertions.assertThat(CustomSigner.getLastConfiguration())
+          .isSameAs(fs.getConf());
+
       // now do some more operations to make sure all is good.
       final Path subdir = new Path(finalPath, "year=1970/month=1/day=1");
       fs.mkdirs(subdir);
@@ -269,8 +273,8 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
   }
 
   @Private
-  public static final class CustomSigner extends AbstractAwsS3V4Signer implements Signer {
-
+  public static final class CustomSigner extends AbstractAwsS3V4Signer implements Signer,
+      Configurable {
 
     private static final AtomicInteger INSTANTIATION_COUNT =
         new AtomicInteger(0);
@@ -279,9 +283,25 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
 
     private static StoreValue lastStoreValue;
 
+    private static Configuration lastConfiguration;
+
     public CustomSigner() {
       int c = INSTANTIATION_COUNT.incrementAndGet();
       LOG.info("Creating Signer #{}", c);
+    }
+
+    @Override
+    public void setConf(final Configuration conf) {
+      lastConfiguration = conf;
+    }
+
+    @Override
+    public Configuration getConf() {
+      return lastConfiguration;
+    }
+
+    public static Configuration getLastConfiguration() {
+      return lastConfiguration;
     }
 
     /**
