@@ -143,7 +143,7 @@ public class AmIpFilter implements Filter {
         method.equalsIgnoreCase("TRACK"))) {
       httpResp.sendError(HttpServletResponse.SC_METHOD_NOT_ALLOWED);
       return;
-    }      
+    }
 
     LOG.debug("Remote address for request is: {}", httpReq.getRemoteAddr());
 
