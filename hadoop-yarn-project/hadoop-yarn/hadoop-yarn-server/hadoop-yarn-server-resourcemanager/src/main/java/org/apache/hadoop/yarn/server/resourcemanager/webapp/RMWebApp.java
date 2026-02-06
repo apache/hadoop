@@ -61,9 +61,7 @@ public class RMWebApp extends WebApp implements YarnWebParams {
     Class webService = config.getClass(YarnConfiguration.YARN_WEBAPP_CUSTOM_WEBSERVICE_CLASS,
         RMWebServices.class);
     resourceConfig.register(webService);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Registered webservice class is {}", webService.getName());
-    }
+    LOG.debug("Registered webservice class is {}", webService.getName());
 
     resourceConfig.register(GenericExceptionHandler.class);
     resourceConfig.register(JsonProviderFeature.class);
