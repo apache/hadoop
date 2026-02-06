@@ -27,7 +27,7 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.net.DFSNetworkTopologyWithDatacenterCount;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.test.PathUtils;
-import org.junit.Before;
+import org.junit.jupiter.api.BeforeEach;
 
 /**
  * Base class for BlockPlacementPolicyCrossDC tests.
@@ -41,7 +41,7 @@ abstract public class BaseReplicationPolicyCrossDCTest extends BaseReplicationPo
   }
 
   @Override
-  @Before
+  @BeforeEach
   public void setupCluster() throws Exception {
     Configuration conf = new HdfsConfiguration();
     dataNodes = getDatanodeDescriptors(conf);

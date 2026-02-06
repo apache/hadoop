@@ -17,14 +17,14 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * This class tests the BlockPlacementPolicyCrossDC with async cross-DC write enabled.
@@ -72,7 +72,7 @@ public class TestBlockPlacementPolicyCrossDCAsyncEnabled extends BaseReplication
 
     // When async mode is enabled, only local DC replicas should be returned
     // For replication factor 3: ceil(3/2) = 2 in local DC
-    assertEquals("Should return only local datacenter replicas", 2, targets.length);
+    assertEquals(2, targets.length, "Should return only local datacenter replicas");
 
     // Count replicas per datacenter
     int dc1Count = 0;
@@ -87,8 +87,8 @@ public class TestBlockPlacementPolicyCrossDCAsyncEnabled extends BaseReplication
       }
     }
 
-    assertEquals("Should have 2 replicas in local datacenter", 2, dc1Count);
-    assertEquals("Should have 0 replicas in remote datacenter", 0, dc2Count);
+    assertEquals(2, dc1Count, "Should have 2 replicas in local datacenter");
+    assertEquals(0, dc2Count, "Should have 0 replicas in remote datacenter");
   }
 
   /**
@@ -100,10 +100,9 @@ public class TestBlockPlacementPolicyCrossDCAsyncEnabled extends BaseReplication
   @Test
   public void testChooseTargetWithReplicationFactor4() {
     DatanodeStorageInfo[] targets = chooseTarget(4, dataNodes[0]);
-
     // When async mode is enabled, only local DC replicas should be returned
     // For replication factor 4: ceil(4/2) = 2 in local DC
-    assertEquals("Should return only local datacenter replicas", 2, targets.length);
+    assertEquals(2, targets.length, "Should return only local datacenter replicas");
 
     // Count replicas per datacenter
     int dc1Count = 0;
@@ -118,8 +117,8 @@ public class TestBlockPlacementPolicyCrossDCAsyncEnabled extends BaseReplication
       }
     }
 
-    assertEquals("Should have 2 replicas in local datacenter", 2, dc1Count);
-    assertEquals("Should have 0 replicas in remote datacenter", 0, dc2Count);
+    assertEquals(2, dc1Count, "Should have 2 replicas in local datacenter");
+    assertEquals(0, dc2Count, "Should have 0 replicas in remote datacenter");
   }
 
   /**
@@ -134,7 +133,7 @@ public class TestBlockPlacementPolicyCrossDCAsyncEnabled extends BaseReplication
 
     // When async mode is enabled, only local DC replicas should be returned
     // For replication factor 5: ceil(5/2) = 3 in local DC
-    assertEquals("Should return only local datacenter replicas", 3, targets.length);
+    assertEquals(3, targets.length, "Should return only local datacenter replicas");
 
     // Count replicas per datacenter
     int dc1Count = 0;
@@ -149,8 +148,8 @@ public class TestBlockPlacementPolicyCrossDCAsyncEnabled extends BaseReplication
       }
     }
 
-    assertEquals("Should have 3 replicas in local datacenter", 3, dc1Count);
-    assertEquals("Should have 0 replicas in remote datacenter", 0, dc2Count);
+    assertEquals(3, dc1Count, "Should have 3 replicas in local datacenter");
+    assertEquals(0, dc2Count, "Should have 0 replicas in remote datacenter");
   }
 
   /**
@@ -165,7 +164,7 @@ public class TestBlockPlacementPolicyCrossDCAsyncEnabled extends BaseReplication
 
     // When async mode is enabled, only local DC replicas should be returned
     // For replication factor 2: ceil(2/2) = 1 in local DC
-    assertEquals("Should return only local datacenter replicas", 1, targets.length);
+    assertEquals(1, targets.length, "Should return only local datacenter replicas");
 
     // Count replicas per datacenter
     int dc1Count = 0;
@@ -180,8 +179,8 @@ public class TestBlockPlacementPolicyCrossDCAsyncEnabled extends BaseReplication
       }
     }
 
-    assertEquals("Should have 1 replica in local datacenter", 1, dc1Count);
-    assertEquals("Should have 0 replicas in remote datacenter", 0, dc2Count);
+    assertEquals(1, dc1Count, "Should have 1 replica in local datacenter");
+    assertEquals(0, dc2Count, "Should have 0 replicas in remote datacenter");
   }
 
   /**
@@ -196,7 +195,7 @@ public class TestBlockPlacementPolicyCrossDCAsyncEnabled extends BaseReplication
 
     // When async mode is enabled and writer is in dc2, only dc2 replicas should be returned
     // For replication factor 3: ceil(3/2) = 2 in local DC (dc2)
-    assertEquals("Should return only local datacenter replicas", 2, targets.length);
+    assertEquals(2, targets.length, "Should return only local datacenter replicas");
 
     // Count replicas per datacenter
     int dc1Count = 0;
@@ -211,17 +210,17 @@ public class TestBlockPlacementPolicyCrossDCAsyncEnabled extends BaseReplication
       }
     }
 
-    assertEquals("Should have 2 replicas in local datacenter (dc2)", 2, dc2Count);
-    assertEquals("Should have 0 replicas in remote datacenter (dc1)", 0, dc1Count);
+    assertEquals(2, dc2Count, "Should have 2 replicas in local datacenter (dc2)");
+    assertEquals(0, dc1Count, "Should have 0 replicas in remote datacenter (dc1)");
 
     BlockPlacementStatus status = replicator.verifyBlockPlacement(DatanodeStorageInfo.toDatanodeInfos(targets), 3);
 
-    assertFalse("Policy should NOT be satisfied when block is not in preferred DC",
-        status.isPlacementPolicySatisfied());
+    assertFalse(status.isPlacementPolicySatisfied(),
+        "Policy should NOT be satisfied when block is not in preferred DC");
 
     // Should require 2 additional replicas for preferred DC
-    assertEquals("Should require 2 additional replicas (min(ceil(3/2), 2) - 0 = 2)",
-        2, status.getAdditionalReplicasRequired());
+    assertEquals(2, status.getAdditionalReplicasRequired(),
+        "Should require 2 additional replicas (min(ceil(3/2), 2) - 0 = 2)");
   }
 
   /**
@@ -233,11 +232,11 @@ public class TestBlockPlacementPolicyCrossDCAsyncEnabled extends BaseReplication
   public void testSingleReplica() {
     DatanodeStorageInfo[] targets = chooseTarget(1, dataNodes[0]);
 
-    assertEquals("Should return 1 replica", 1, targets.length);
+    assertEquals(1, targets.length, "Should return 1 replica");
 
     // Single replica should be in the local datacenter
     String location = targets[0].getDatanodeDescriptor().getNetworkLocation();
-    assertTrue("Single replica should be in dc1", location.startsWith("/dc1"));
+    assertTrue(location.startsWith("/dc1"), "Single replica should be in dc1");
   }
 
   /**
@@ -252,7 +251,7 @@ public class TestBlockPlacementPolicyCrossDCAsyncEnabled extends BaseReplication
 
     // When async mode is enabled, only local DC replicas should be returned
     // For replication factor 6: ceil(6/2) = 3 in local DC
-    assertEquals("Should return only local datacenter replicas", 3, targets.length);
+    assertEquals(3, targets.length, "Should return only local datacenter replicas");
 
     // Count replicas per datacenter
     int dc1Count = 0;
@@ -267,7 +266,7 @@ public class TestBlockPlacementPolicyCrossDCAsyncEnabled extends BaseReplication
       }
     }
 
-    assertEquals("Should have 3 replicas in local datacenter", 3, dc1Count);
-    assertEquals("Should have 0 replicas in remote datacenter", 0, dc2Count);
+    assertEquals(3, dc1Count, "Should have 3 replicas in local datacenter");
+    assertEquals(0, dc2Count, "Should have 0 replicas in remote datacenter");
   }
 }

@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -34,7 +34,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.net.Node;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * This class tests the BlockPlacementPolicyCrossDC with async cross-DC write disabled (default).
@@ -93,8 +93,8 @@ public class TestBlockPlacementPolicyCrossDCAsyncDisabled extends BaseReplicatio
     }
 
     // For replication factor 3 with async disabled: ceil(3/2) = 2 in local DC, floor(3/2) = 1 in remote DC
-    assertEquals("Should have 2 replicas in local datacenter", 2, dc1Count);
-    assertEquals("Should have 1 replica in remote datacenter", 1, dc2Count);
+    assertEquals(2, dc1Count, "Should have 2 replicas in local datacenter");
+    assertEquals(1, dc2Count, "Should have 1 replica in remote datacenter");
   }
 
   /**
@@ -122,8 +122,8 @@ public class TestBlockPlacementPolicyCrossDCAsyncDisabled extends BaseReplicatio
     }
 
     // For replication factor 5 with async disabled: ceil(5/2) = 3 in local DC, floor(5/2) = 2 in remote DC
-    assertEquals("Should have 3 replicas in local datacenter", 3, dc1Count);
-    assertEquals("Should have 2 replicas in remote datacenter", 2, dc2Count);
+    assertEquals(3, dc1Count, "Should have 3 replicas in local datacenter");
+    assertEquals(2, dc2Count, "Should have 2 replicas in remote datacenter");
   }
 
   /**
@@ -151,8 +151,8 @@ public class TestBlockPlacementPolicyCrossDCAsyncDisabled extends BaseReplicatio
     }
 
     // For replication factor 2 with async disabled: ceil(2/2) = 1 in local DC, floor(2/2) = 1 in remote DC
-    assertEquals("Should have 1 replica in local datacenter", 1, dc1Count);
-    assertEquals("Should have 1 replica in remote datacenter", 1, dc2Count);
+    assertEquals(1, dc1Count, "Should have 1 replica in local datacenter");
+    assertEquals(1, dc2Count, "Should have 1 replica in remote datacenter");
   }
 
   /**
@@ -171,7 +171,7 @@ public class TestBlockPlacementPolicyCrossDCAsyncDisabled extends BaseReplicatio
     }
 
     // Should use at least 2 different racks
-    assertTrue("Should use at least 2 different racks", racks.size() >= 2);
+    assertTrue(racks.size() >= 2, "Should use at least 2 different racks");
   }
 
   /**
@@ -190,8 +190,8 @@ public class TestBlockPlacementPolicyCrossDCAsyncDisabled extends BaseReplicatio
 
     // Verify excluded nodes are not in targets
     for (DatanodeStorageInfo target : targets) {
-      assertFalse("Excluded node should not be in targets",
-          excludedNodes.contains(target.getDatanodeDescriptor()));
+      assertFalse(excludedNodes.contains(target.getDatanodeDescriptor()),
+          "Excluded node should not be in targets");
     }
   }
 
@@ -225,8 +225,8 @@ public class TestBlockPlacementPolicyCrossDCAsyncDisabled extends BaseReplicatio
     // When writer is in dc2, dc2 becomes the local datacenter
     // For replication factor 3: 2 in local DC (dc2), 1 in remote DC (dc1)
     // dc1 preferred dfs.block.replicator.cross.dc.preferred.datacenter=/dc1
-    assertEquals("Should have 1 replicas in local datacenter (dc2)", 1, dc2Count);
-    assertEquals("Should have 2 replica in remote datacenter (dc1)", 2, dc1Count);
+    assertEquals(1, dc2Count, "Should have 1 replicas in local datacenter (dc2)");
+    assertEquals(2, dc1Count, "Should have 2 replica in remote datacenter (dc1)");
   }
 
   /**
@@ -243,8 +243,8 @@ public class TestBlockPlacementPolicyCrossDCAsyncDisabled extends BaseReplicatio
     String writerLocation = dataNodes[0].getNetworkLocation();
     String firstReplicaLocation = targets[0].getDatanodeDescriptor().getNetworkLocation();
 
-    assertTrue("First replica should be in same datacenter as writer",
-        writerLocation.substring(0, 4).equals(firstReplicaLocation.substring(0, 4)));
+    assertTrue(writerLocation.substring(0, 4).equals(firstReplicaLocation.substring(0, 4)),
+        "First replica should be in same datacenter as writer");
   }
 
   /**
@@ -258,7 +258,7 @@ public class TestBlockPlacementPolicyCrossDCAsyncDisabled extends BaseReplicatio
 
     // Single replica should be in the local datacenter
     String location = targets[0].getDatanodeDescriptor().getNetworkLocation();
-    assertTrue("Single replica should be in dc1", location.startsWith("/dc1"));
+    assertTrue(location.startsWith("/dc1"), "Single replica should be in dc1");
   }
 
   /**
@@ -278,8 +278,8 @@ public class TestBlockPlacementPolicyCrossDCAsyncDisabled extends BaseReplicatio
 
     // Verify targets don't include already chosen node
     for (DatanodeStorageInfo target : targets) {
-      assertFalse("Should not include already chosen node",
-          target.equals(storages[0]));
+      assertFalse(target.equals(storages[0]),
+          "Should not include already chosen node");
     }
   }
 
@@ -294,7 +294,7 @@ public class TestBlockPlacementPolicyCrossDCAsyncDisabled extends BaseReplicatio
     DatanodeStorageInfo[] targets = chooseTarget(4, dataNodes[0]);
 
     // When async mode is disabled, all replicas should be returned
-    assertEquals("Should return all replicas", 4, targets.length);
+    assertEquals(4, targets.length, "Should return all replicas");
 
     // Count replicas per datacenter
     int dc1Count = 0;
@@ -310,8 +310,8 @@ public class TestBlockPlacementPolicyCrossDCAsyncDisabled extends BaseReplicatio
     }
 
     // For replication factor 4 with async disabled: 2 in local DC, 2 in remote DC
-    assertEquals("Should have 2 replicas in local datacenter", 2, dc1Count);
-    assertEquals("Should have 2 replicas in remote datacenter", 2, dc2Count);
+    assertEquals(2, dc1Count, "Should have 2 replicas in local datacenter");
+    assertEquals(2, dc2Count, "Should have 2 replicas in remote datacenter");
   }
 
   /**
@@ -326,8 +326,8 @@ public class TestBlockPlacementPolicyCrossDCAsyncDisabled extends BaseReplicatio
       uniqueNodes.add(target.getDatanodeDescriptor());
     }
 
-    assertEquals("All targets should be on different datanodes",
-        targets.length, uniqueNodes.size());
+    assertEquals(targets.length, uniqueNodes.size(),
+        "All targets should be on different datanodes");
   }
 
   /**
@@ -355,8 +355,8 @@ public class TestBlockPlacementPolicyCrossDCAsyncDisabled extends BaseReplicatio
 
     // For replication factor 6: 6/2 = 3 in local DC
     // however dc1 4, dc2 2 nodes.
-    assertEquals("Should have 4 replicas in local datacenter", 4, dc1Count);
-    assertEquals("Should have 2 replicas in remote datacenter", 2, dc2Count);
+    assertEquals(4, dc1Count, "Should have 4 replicas in local datacenter");
+    assertEquals(2, dc2Count, "Should have 2 replicas in remote datacenter");
   }
 
   /**
@@ -402,7 +402,7 @@ public class TestBlockPlacementPolicyCrossDCAsyncDisabled extends BaseReplicatio
         new ArrayList<StorageType>(), null, null);
 
     // Should delete 3 replicas (6 - 3 = 3)
-    assertEquals("Should delete 3 replicas", 3, toDelete.size());
+    assertEquals(3, toDelete.size(), "Should delete 3 replicas");
 
     // Calculate remaining replicas
     List<DatanodeStorageInfo> remaining = new ArrayList<>(availableReplicas);
@@ -414,8 +414,8 @@ public class TestBlockPlacementPolicyCrossDCAsyncDisabled extends BaseReplicatio
     int dc2Count = counts[1];
 
     // Expected: dc1(2), dc2(1) - maintaining cross-DC policy
-    assertEquals("Should have 2 replicas remaining in dc1", 2, dc1Count);
-    assertEquals("Should have 1 replica remaining in dc2", 1, dc2Count);
+    assertEquals(2, dc1Count, "Should have 2 replicas remaining in dc1");
+    assertEquals(1, dc2Count, "Should have 1 replica remaining in dc2");
   }
 
   /**
@@ -440,7 +440,7 @@ public class TestBlockPlacementPolicyCrossDCAsyncDisabled extends BaseReplicatio
         new ArrayList<StorageType>(), null, null);
 
     // Should delete 1 replica (4 - 3 = 1)
-    assertEquals("Should delete 1 replica", 1, toDelete.size());
+    assertEquals(1, toDelete.size(), "Should delete 1 replica");
 
     // Calculate remaining replicas
     List<DatanodeStorageInfo> remaining = new ArrayList<>(availableReplicas);
@@ -452,8 +452,8 @@ public class TestBlockPlacementPolicyCrossDCAsyncDisabled extends BaseReplicatio
     int dc2Count = counts[1];
 
     // Expected: dc1(2), dc2(1) - maintaining cross-DC policy
-    assertEquals("Should have 2 replicas remaining in dc1", 2, dc1Count);
-    assertEquals("Should have 1 replica remaining in dc2", 1, dc2Count);
+    assertEquals(2, dc1Count, "Should have 2 replicas remaining in dc1");
+    assertEquals(1, dc2Count, "Should have 1 replica remaining in dc2");
   }
 
   /**
@@ -479,7 +479,7 @@ public class TestBlockPlacementPolicyCrossDCAsyncDisabled extends BaseReplicatio
         new ArrayList<StorageType>(), null, null);
 
     // Should delete 2 replicas (5 - 3 = 2)
-    assertEquals("Should delete 2 replicas", 2, toDelete.size());
+    assertEquals(2, toDelete.size(), "Should delete 2 replicas");
 
     // Calculate remaining replicas
     List<DatanodeStorageInfo> remaining = new ArrayList<>(availableReplicas);
@@ -491,13 +491,13 @@ public class TestBlockPlacementPolicyCrossDCAsyncDisabled extends BaseReplicatio
     int dc2Count = counts[1];
 
     // Expected: dc1(2), dc2(1) - should delete from over-represented dc1
-    assertEquals("Should have 2 replicas remaining in dc1", 2, dc1Count);
-    assertEquals("Should have 1 replica remaining in dc2", 1, dc2Count);
+    assertEquals(2, dc1Count, "Should have 2 replicas remaining in dc1");
+    assertEquals(1, dc2Count, "Should have 1 replica remaining in dc2");
 
     // Verify that all deleted replicas are from dc1
     for (DatanodeStorageInfo deleted : toDelete) {
       String location = deleted.getDatanodeDescriptor().getNetworkLocation();
-      assertTrue("Deleted replica should be from dc1", location.startsWith("/dc1"));
+      assertTrue(location.startsWith("/dc1"), "Deleted replica should be from dc1");
     }
   }
 
@@ -524,7 +524,7 @@ public class TestBlockPlacementPolicyCrossDCAsyncDisabled extends BaseReplicatio
         new ArrayList<StorageType>(), null, null);
 
     // Should delete 1 replica (5 - 4 = 1)
-    assertEquals("Should delete 1 replica", 1, toDelete.size());
+    assertEquals(1, toDelete.size(), "Should delete 1 replica");
 
     // Calculate remaining replicas
     List<DatanodeStorageInfo> remaining = new ArrayList<>(availableReplicas);
@@ -536,13 +536,13 @@ public class TestBlockPlacementPolicyCrossDCAsyncDisabled extends BaseReplicatio
     int dc2Count = counts[1];
 
     // Expected: dc1(2), dc2(2) - should delete from over-represented dc1
-    assertEquals("Should have 2 replicas remaining in dc1", 2, dc1Count);
-    assertEquals("Should have 2 replicas remaining in dc2", 2, dc2Count);
+    assertEquals(2, dc1Count, "Should have 2 replicas remaining in dc1");
+    assertEquals(2, dc2Count, "Should have 2 replicas remaining in dc2");
 
     // Verify that deleted replica is from dc1
     DatanodeStorageInfo deleted = toDelete.get(0);
     String location = deleted.getDatanodeDescriptor().getNetworkLocation();
-    assertTrue("Deleted replica should be from dc1", location.startsWith("/dc1"));
+    assertTrue(location.startsWith("/dc1"), "Deleted replica should be from dc1");
   }
 
   /**
@@ -582,8 +582,8 @@ public class TestBlockPlacementPolicyCrossDCAsyncDisabled extends BaseReplicatio
     BlockPlacementStatus status = replicator.verifyBlockPlacement(
         remainingNodes, expectedNumOfReplicas);
 
-    assertTrue("Block placement policy should be satisfied after deletion",
-        status.isPlacementPolicySatisfied());
+    assertTrue(status.isPlacementPolicySatisfied(),
+        "Block placement policy should be satisfied after deletion");
   }
 
   /**
@@ -607,7 +607,7 @@ public class TestBlockPlacementPolicyCrossDCAsyncDisabled extends BaseReplicatio
         new ArrayList<StorageType>(), null, null);
 
     // Should not delete any replicas
-    assertEquals("Should not delete any replicas", 0, toDelete.size());
+    assertEquals(0, toDelete.size(), "Should not delete any replicas");
   }
 
   /**
@@ -626,7 +626,7 @@ public class TestBlockPlacementPolicyCrossDCAsyncDisabled extends BaseReplicatio
         dataNodes[0], chosenNodes, false, null, BLOCK_SIZE,
         org.apache.hadoop.hdfs.TestBlockStoragePolicy.DEFAULT_STORAGE_POLICY, null);
 
-    assertEquals("Should add 1 replica", 1, newTargets.length);
+    assertEquals(1, newTargets.length, "Should add 1 replica");
 
     // Combine existing and new replicas
     List<DatanodeStorageInfo> allReplicas = new ArrayList<>(chosenNodes);
@@ -638,8 +638,8 @@ public class TestBlockPlacementPolicyCrossDCAsyncDisabled extends BaseReplicatio
     int dc2Count = counts[1];
 
     // Expected: dc1(2), dc2(1) - maintaining cross-DC policy
-    assertEquals("Should have 2 replicas in dc1", 2, dc1Count);
-    assertEquals("Should have 1 replica in dc2", 1, dc2Count);
+    assertEquals(2, dc1Count, "Should have 2 replicas in dc1");
+    assertEquals(1, dc2Count, "Should have 1 replica in dc2");
   }
 
   /**
@@ -658,7 +658,7 @@ public class TestBlockPlacementPolicyCrossDCAsyncDisabled extends BaseReplicatio
         dataNodes[0], chosenNodes, false, null, BLOCK_SIZE,
         org.apache.hadoop.hdfs.TestBlockStoragePolicy.DEFAULT_STORAGE_POLICY, null);
 
-    assertEquals("Should add 1 replica", 1, newTargets.length);
+    assertEquals(1, newTargets.length, "Should add 1 replica");
 
     // Combine existing and new replicas
     List<DatanodeStorageInfo> allReplicas = new ArrayList<>(chosenNodes);
@@ -670,12 +670,12 @@ public class TestBlockPlacementPolicyCrossDCAsyncDisabled extends BaseReplicatio
     int dc2Count = counts[1];
 
     // Expected: dc1(2), dc2(1) - new replica should go to dc2
-    assertEquals("Should have 2 replicas in dc1", 2, dc1Count);
-    assertEquals("Should have 1 replica in dc2", 1, dc2Count);
+    assertEquals(2, dc1Count, "Should have 2 replicas in dc1");
+    assertEquals(1, dc2Count, "Should have 1 replica in dc2");
 
     // Verify the new replica is in dc2
     String newLocation = newTargets[0].getDatanodeDescriptor().getNetworkLocation();
-    assertTrue("New replica should be in dc2", newLocation.startsWith("/dc2"));
+    assertTrue(newLocation.startsWith("/dc2"), "New replica should be in dc2");
   }
 
   /**
@@ -693,7 +693,7 @@ public class TestBlockPlacementPolicyCrossDCAsyncDisabled extends BaseReplicatio
         dataNodes[0], chosenNodes, false, null, BLOCK_SIZE,
         org.apache.hadoop.hdfs.TestBlockStoragePolicy.DEFAULT_STORAGE_POLICY, null);
 
-    assertEquals("Should add 2 replicas", 2, newTargets.length);
+    assertEquals(2, newTargets.length, "Should add 2 replicas");
 
     // Combine existing and new replicas
     List<DatanodeStorageInfo> allReplicas = new ArrayList<>(chosenNodes);
@@ -705,8 +705,8 @@ public class TestBlockPlacementPolicyCrossDCAsyncDisabled extends BaseReplicatio
     int dc2Count = counts[1];
 
     // Expected: dc1(2), dc2(1) - maintaining cross-DC policy
-    assertEquals("Should have 2 replicas in dc1", 2, dc1Count);
-    assertEquals("Should have 1 replica in dc2", 1, dc2Count);
+    assertEquals(2, dc1Count, "Should have 2 replicas in dc1");
+    assertEquals(1, dc2Count, "Should have 1 replica in dc2");
   }
 
   /**
@@ -726,7 +726,7 @@ public class TestBlockPlacementPolicyCrossDCAsyncDisabled extends BaseReplicatio
         null, chosenNodes, false, null, BLOCK_SIZE,
         org.apache.hadoop.hdfs.TestBlockStoragePolicy.DEFAULT_STORAGE_POLICY, null);
 
-    assertEquals("Should add 2 replicas", 2, newTargets.length);
+    assertEquals(2, newTargets.length, "Should add 2 replicas");
 
     // Combine existing and new replicas
     List<DatanodeStorageInfo> allReplicas = new ArrayList<>(chosenNodes);
@@ -738,8 +738,8 @@ public class TestBlockPlacementPolicyCrossDCAsyncDisabled extends BaseReplicatio
     int dc2Count = counts[1];
 
     // Expected: dc1(3), dc2(2) - maintaining cross-DC policy for RF=5
-    assertEquals("Should have 3 replicas in dc1", 3, dc1Count);
-    assertEquals("Should have 2 replicas in dc2", 2, dc2Count);
+    assertEquals(3, dc1Count, "Should have 3 replicas in dc1");
+    assertEquals(2, dc2Count, "Should have 2 replicas in dc2");
   }
 
   /**
@@ -771,8 +771,8 @@ public class TestBlockPlacementPolicyCrossDCAsyncDisabled extends BaseReplicatio
     BlockPlacementStatus status = replicator.verifyBlockPlacement(
         allNodes, 3);
 
-    assertTrue("Block placement policy should be satisfied after replication",
-        status.isPlacementPolicySatisfied());
+    assertTrue(status.isPlacementPolicySatisfied(),
+        "Block placement policy should be satisfied after replication");
   }
 
   /**
@@ -793,7 +793,7 @@ public class TestBlockPlacementPolicyCrossDCAsyncDisabled extends BaseReplicatio
         dataNodes[0], chosenNodes, false, null, BLOCK_SIZE,
         org.apache.hadoop.hdfs.TestBlockStoragePolicy.DEFAULT_STORAGE_POLICY, null);
 
-    assertEquals("Should add 1 replica", 1, newTargets.length);
+    assertEquals(1, newTargets.length, "Should add 1 replica");
 
     // Combine existing and new replicas
     List<DatanodeStorageInfo> allReplicas = new ArrayList<>(chosenNodes);
@@ -805,12 +805,12 @@ public class TestBlockPlacementPolicyCrossDCAsyncDisabled extends BaseReplicatio
     int dc2Count = counts[1];
 
     // Expected: dc1(2), dc2(1) - new replica should restore dc2
-    assertEquals("Should have 2 replicas in dc1", 2, dc1Count);
-    assertEquals("Should have 1 replica in dc2", 1, dc2Count);
+    assertEquals(2, dc1Count, "Should have 2 replicas in dc1");
+    assertEquals(1, dc2Count, "Should have 1 replica in dc2");
 
     // Verify the new replica is in dc2 (restoring cross-DC diversity)
     String newLocation = newTargets[0].getDatanodeDescriptor().getNetworkLocation();
-    assertTrue("New replica should restore dc2", newLocation.startsWith("/dc2"));
+    assertTrue(newLocation.startsWith("/dc2"), "New replica should restore dc2");
   }
 
   /**
@@ -834,7 +834,7 @@ public class TestBlockPlacementPolicyCrossDCAsyncDisabled extends BaseReplicatio
         null, chosenNodes, false, null, BLOCK_SIZE,
         org.apache.hadoop.hdfs.TestBlockStoragePolicy.DEFAULT_STORAGE_POLICY, null);
 
-    assertEquals("Should add 1 replica", 1, newTargets.length);
+    assertEquals(1, newTargets.length, "Should add 1 replica");
 
     // Combine existing and new replicas
     List<DatanodeStorageInfo> allReplicas = new ArrayList<>(chosenNodes);
@@ -846,13 +846,13 @@ public class TestBlockPlacementPolicyCrossDCAsyncDisabled extends BaseReplicatio
     int dc2Count = counts[1];
 
     // Expected: dc1(2), dc2(2) - new replica should go to dc2 to balance
-    assertEquals("Should have 2 replicas in dc1", 2, dc1Count);
-    assertEquals("Should have 2 replicas in dc2", 2, dc2Count);
+    assertEquals(2, dc1Count, "Should have 2 replicas in dc1");
+    assertEquals(2, dc2Count, "Should have 2 replicas in dc2");
 
     // Verify the new replica is in dc2 (balancing the distribution)
     String newLocation = newTargets[0].getDatanodeDescriptor().getNetworkLocation();
-    assertTrue("New replica should be in dc2 to balance distribution",
-        newLocation.startsWith("/dc2"));
+    assertTrue(newLocation.startsWith("/dc2"),
+        "New replica should be in dc2 to balance distribution");
   }
 
   /**
@@ -873,7 +873,7 @@ public class TestBlockPlacementPolicyCrossDCAsyncDisabled extends BaseReplicatio
         dataNodes[0], chosenNodes, false, null, BLOCK_SIZE,
         org.apache.hadoop.hdfs.TestBlockStoragePolicy.DEFAULT_STORAGE_POLICY, null);
 
-    assertEquals("Should add 2 replicas", 2, newTargets.length);
+    assertEquals(2, newTargets.length, "Should add 2 replicas");
 
     // Combine existing and new replicas
     List<DatanodeStorageInfo> allReplicas = new ArrayList<>(chosenNodes);
@@ -885,8 +885,8 @@ public class TestBlockPlacementPolicyCrossDCAsyncDisabled extends BaseReplicatio
     int dc2Count = counts[1];
 
     // Expected: dc1(3), dc2(2) - should add 1 to dc1, 1 to dc2
-    assertEquals("Should have 3 replicas in dc1", 3, dc1Count);
-    assertEquals("Should have 2 replicas in dc2", 2, dc2Count);
+    assertEquals(3, dc1Count, "Should have 3 replicas in dc1");
+    assertEquals(2, dc2Count, "Should have 2 replicas in dc2");
 
     // Count new replicas per datacenter
     int newDc1Count = 0;
@@ -901,8 +901,8 @@ public class TestBlockPlacementPolicyCrossDCAsyncDisabled extends BaseReplicatio
     }
 
     // Should add 1 to each DC to maintain balance
-    assertEquals("Should add 1 replica to dc1", 1, newDc1Count);
-    assertEquals("Should add 1 replica to dc2", 1, newDc2Count);
+    assertEquals(1, newDc1Count, "Should add 1 replica to dc1");
+    assertEquals(1, newDc2Count, "Should add 1 replica to dc2");
   }
 
   /**
@@ -923,7 +923,7 @@ public class TestBlockPlacementPolicyCrossDCAsyncDisabled extends BaseReplicatio
         dataNodes[0], chosenNodes, false, null, BLOCK_SIZE,
         org.apache.hadoop.hdfs.TestBlockStoragePolicy.DEFAULT_STORAGE_POLICY, null);
 
-    assertEquals("Should add 3 replicas", 3, newTargets.length);
+    assertEquals(3, newTargets.length, "Should add 3 replicas");
 
     // Combine existing and new replicas
     List<DatanodeStorageInfo> allReplicas = new ArrayList<>(chosenNodes);
@@ -936,7 +936,7 @@ public class TestBlockPlacementPolicyCrossDCAsyncDisabled extends BaseReplicatio
 
     // Expected: dc1(4), dc2(2) for RF=6
     // We have 4 nodes in dc1, 2 nodes in dc2
-    assertEquals("Should have 4 replicas in dc1", 4, dc1Count);
-    assertEquals("Should have 2 replicas in dc2", 2, dc2Count);
+    assertEquals(4, dc1Count, "Should have 4 replicas in dc1");
+    assertEquals(2, dc2Count, "Should have 2 replicas in dc2");
   }
 }
