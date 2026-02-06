@@ -20,25 +20,25 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 
 public class BlockPlacementStatusWithCrossDC implements BlockPlacementStatus {
 
-  private final int requiredDatacenters;
-  private final int currentDatacenters;
-  private final int neededReplicaCount;
-  private final int totalDatacenters;
+  private final int minDatacentersRequired;
+  private final int datacenterCountOfBlock;
+  private final int additionalReplicasForPreferredDC;
+  private final int datacenterCountOfCluster;
 
-  public BlockPlacementStatusWithCrossDC(int currentDatacenters, int requiredDatacenters,
-      int neededReplicaCount, int totalDatacenters) {
-    this.currentDatacenters = currentDatacenters;
-    this.requiredDatacenters = requiredDatacenters;
-    this.neededReplicaCount = neededReplicaCount;
-    this.totalDatacenters = totalDatacenters;
+  public BlockPlacementStatusWithCrossDC(int datacenterCountOfBlock, int minDatacentersRequired,
+      int additionalReplicasForPreferredDC, int datacenterCountOfCluster) {
+    this.datacenterCountOfBlock = datacenterCountOfBlock;
+    this.minDatacentersRequired = minDatacentersRequired;
+    this.additionalReplicasForPreferredDC = additionalReplicasForPreferredDC;
+    this.datacenterCountOfCluster = datacenterCountOfCluster;
   }
 
   @Override
   public boolean isPlacementPolicySatisfied() {
     // If cluster has fewer datacenters than required, consider policy satisfied
     // to avoid infinite replication loops
-    return (currentDatacenters >= requiredDatacenters || currentDatacenters >= totalDatacenters)
-        && neededReplicaCount <= 0;
+    return (datacenterCountOfBlock >= minDatacentersRequired || datacenterCountOfBlock >= datacenterCountOfCluster)
+        && additionalReplicasForPreferredDC <= 0;
   }
 
   @Override
@@ -54,12 +54,12 @@ public class BlockPlacementStatusWithCrossDC implements BlockPlacementStatus {
     if (isPlacementPolicySatisfied()) {
       return 0;
     }
-    if (neededReplicaCount > 0) {
-      return neededReplicaCount;
+    if (additionalReplicasForPreferredDC > 0) {
+      return additionalReplicasForPreferredDC;
     }
 
-    if (totalDatacenters > 1) {
-      return Math.min(requiredDatacenters - currentDatacenters, totalDatacenters);
+    if (datacenterCountOfCluster > 1) {
+      return Math.min(minDatacentersRequired - datacenterCountOfBlock, datacenterCountOfCluster);
     }
     return 0;
   }

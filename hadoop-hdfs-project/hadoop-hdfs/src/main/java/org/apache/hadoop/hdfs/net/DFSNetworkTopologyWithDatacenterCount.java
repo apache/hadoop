@@ -27,41 +27,60 @@ import java.util.concurrent.atomic.AtomicInteger;
  * This is used by BlockPlacementPolicyCrossDC to efficiently get the datacenter count
  * without iterating through all nodes on every verifyBlockPlacement call.
  *
- * Thread-safe: Uses ConcurrentHashMap with AtomicInteger for lock-free operations.
+ * Thread-safe: The add/remove operations are protected by netlock.writeLock() to ensure
+ * atomicity between datacenterNodeCounts updates and the parent topology changes.
  */
 public class DFSNetworkTopologyWithDatacenterCount extends DFSNetworkTopology {
 
   // Map from datacenter name to node count in that datacenter
-  // Using ConcurrentHashMap + AtomicInteger for thread-safety
   private final ConcurrentHashMap<String, AtomicInteger> datacenterNodeCounts =
       new ConcurrentHashMap<>();
 
   @Override
   public void add(Node node) {
-    if (node != null) {
-      String dc = getDatacenter(node);
-      // Atomically increment count (creates with value 1 if not present)
-      datacenterNodeCounts.computeIfAbsent(dc, k -> new AtomicInteger(0))
-          .incrementAndGet();
+    netlock.writeLock().lock();
+    try {
+      beforeMapUpdateInAdd();
+      if (node != null) {
+        String dc = getDatacenter(node);
+        datacenterNodeCounts.computeIfAbsent(dc, k -> new AtomicInteger(0))
+            .incrementAndGet();
+      }
+      super.add(node);
+    } finally {
+      netlock.writeLock().unlock();
     }
-    super.add(node);
   }
 
   @Override
   public void remove(Node node) {
-    super.remove(node);
-    if (node != null) {
-      String dc = getDatacenter(node);
-      AtomicInteger count = datacenterNodeCounts.get(dc);
-      if (count != null) {
-        int newCount = count.decrementAndGet();
-        if (newCount <= 0) {
-          // Remove the datacenter entry if no nodes remain
-          // Use remove(key, value) for thread-safe conditional removal
-          datacenterNodeCounts.remove(dc, count);
+    netlock.writeLock().lock();
+    try {
+      super.remove(node);
+      if (node != null) {
+        String dc = getDatacenter(node);
+        AtomicInteger count = datacenterNodeCounts.get(dc);
+        if (count != null) {
+          int newCount = count.decrementAndGet();
+          afterDecrementInRemove();
+          if (newCount <= 0) {
+            datacenterNodeCounts.remove(dc, count);
+          }
         }
       }
+    } finally {
+      netlock.writeLock().unlock();
     }
+  }
+
+  /** Hook for testing - called before map update in add(). */
+  protected void beforeMapUpdateInAdd() {
+    // No-op in production. Overridden in tests to inject delay.
+  }
+
+  /** Hook for testing - called after decrement in remove(). */
+  protected void afterDecrementInRemove() {
+    // No-op in production. Overridden in tests to inject delay.
   }
 
   /**
