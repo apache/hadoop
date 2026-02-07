@@ -29,7 +29,17 @@ This requires a recent version of docker (1.4.1 and higher are known to work).
 On Linux / Mac:
     Install Docker and run this command:
 
-    $ ./start-build-env.sh [OS platform]
+    $ [CPU_ARCH=<arch>] ./start-build-env.sh [OS platform]
+
+   - [CPU_ARCH=<arch>] One of [x86_64, amd64, aarch64, arm64].
+        Default is output of 'uname -m'. Set to 'x86_64' on arm machine
+        (e.g. Apple M1) to create an x86_64 container.
+        Note:
+          CPU arch emulation may have significant performance overhead.
+          To enable cross-platform container support, run this command first:
+          $ docker run --rm --privileged tonistiigi/binfmt --install amd64,arm64
+          To run an x86_64 container on arm machine, use this command:
+          $ CPU_ARCH=x86_64 ./start-build-env.sh ubuntu_24
 
    - [OS Platform] One of [rockylinux_8, debian_11, debian_12, debian_13, ubuntu_20, ubuntu_24, windows_10].
         Default is 'ubuntu_24'.
