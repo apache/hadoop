@@ -43,6 +43,9 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import javax.annotation.Nullable;
 
+import org.apache.hadoop.fs.EmptyTrashPolicy;
+import org.apache.hadoop.fs.TrashPolicy;
+import org.apache.hadoop.util.ReflectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -122,6 +125,7 @@ import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.*;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CPK_IN_NON_HNS_ACCOUNT_ERROR_MESSAGE;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsServiceType.DFS;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.DATA_BLOCKS_BUFFER;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ABFS_TRASH_CLASSNAME;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_IS_HNS_ENABLED;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_BLOCK_UPLOAD_ACTIVE_BLOCKS;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_BLOCK_UPLOAD_BUFFER_DIR;
@@ -1834,6 +1838,13 @@ public class AzureBlobFileSystem extends FileSystem
   @VisibleForTesting
   String getClientCorrelationId() {
     return clientCorrelationId;
+  }
+
+  @Override
+  public TrashPolicy getTrashPolicy(Path path, Configuration conf) {
+    Class<? extends TrashPolicy> trashClass = conf.getClass(
+        FS_AZURE_ABFS_TRASH_CLASSNAME, EmptyTrashPolicy.class, TrashPolicy.class);
+    return ReflectionUtils.newInstance(trashClass, conf);
   }
 
   @Override

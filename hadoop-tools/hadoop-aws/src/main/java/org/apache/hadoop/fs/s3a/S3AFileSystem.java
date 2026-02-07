@@ -96,11 +96,13 @@ import org.apache.hadoop.fs.BulkDelete;
 import org.apache.hadoop.fs.CommonPathCapabilities;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.CreateFlag;
+import org.apache.hadoop.fs.EmptyTrashPolicy;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FSDataOutputStreamBuilder;
 import org.apache.hadoop.fs.Globber;
 import org.apache.hadoop.fs.Options;
+import org.apache.hadoop.fs.TrashPolicy;
 import org.apache.hadoop.fs.impl.FlagSet;
 import org.apache.hadoop.fs.impl.OpenFileParameters;
 import org.apache.hadoop.fs.permission.FsAction;
@@ -217,6 +219,7 @@ import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.RateLimitingFactory;
+import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.SemaphoredDelegatingExecutor;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.apache.hadoop.util.functional.CallableRaisingIOE;
@@ -5372,6 +5375,13 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    */
   public CommitterStatistics newCommitterStatistics() {
     return statisticsContext.newCommitterStatistics();
+  }
+
+  @Override
+  public TrashPolicy getTrashPolicy(Path path, Configuration conf) {
+    Class<? extends TrashPolicy> trashClass = conf.getClass(
+        FS_S3A_TRASH_CLASSNAME, EmptyTrashPolicy.class, TrashPolicy.class);
+    return ReflectionUtils.newInstance(trashClass, conf);
   }
 
   @SuppressWarnings("deprecation")

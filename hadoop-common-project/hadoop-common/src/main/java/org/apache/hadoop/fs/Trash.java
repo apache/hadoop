@@ -180,7 +180,7 @@ public class Trash extends Configured {
    *
    * @return TrashPolicy.
    */
-  TrashPolicy getTrashPolicy() {
+  public TrashPolicy getTrashPolicy() {
     return trashPolicy;
   }
 

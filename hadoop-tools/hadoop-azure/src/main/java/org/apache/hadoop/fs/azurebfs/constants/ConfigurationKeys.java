@@ -633,5 +633,15 @@ public final class ConfigurationKeys {
    */
   public static final String FS_AZURE_RESTRICT_GPS_ON_OPENFILE = "fs.azure.restrict.gps.on.openfile";
 
+  /**
+   * Trash policy for ABFS.
+   */
+  public static final String FS_AZURE_ABFS_TRASH_CLASSNAME = "fs.abfs.trash.classname";
+
+  /**
+   * Trash policy for ABFSS.
+   */
+  public static final String FS_AZURE_ABFSS_TRASH_CLASSNAME = "fs.abfss.trash.classname";
+
   private ConfigurationKeys() {}
 }

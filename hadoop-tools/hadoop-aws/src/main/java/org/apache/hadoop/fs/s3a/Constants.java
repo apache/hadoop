@@ -1948,4 +1948,9 @@ public final class Constants {
    *      AWS S3 PutObject API Documentation</a>
    */
   public static final String IF_NONE_MATCH_STAR = "*";
+
+  /**
+   * Trash policy for S3A.
+   */
+  public static final String FS_S3A_TRASH_CLASSNAME = "fs.s3a.trash.classname";
 }

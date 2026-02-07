@@ -19,7 +19,14 @@
 package org.apache.hadoop.fs.azurebfs;
 
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.EmptyTrashPolicy;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.TrashPolicy;
 import org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes;
+import org.apache.hadoop.util.ReflectionUtils;
+
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ABFSS_TRASH_CLASSNAME;
 
 /**
  * A secure {@link org.apache.hadoop.fs.FileSystem} for reading and writing files stored on <a
@@ -35,5 +42,12 @@ public class SecureAzureBlobFileSystem extends AzureBlobFileSystem {
   @Override
   public String getScheme() {
     return FileSystemUriSchemes.ABFS_SECURE_SCHEME;
+  }
+
+  @Override
+  public TrashPolicy getTrashPolicy(Path path, Configuration conf) {
+    Class<? extends TrashPolicy> trashClass = conf.getClass(
+        FS_AZURE_ABFSS_TRASH_CLASSNAME, EmptyTrashPolicy.class, TrashPolicy.class);
+    return ReflectionUtils.newInstance(trashClass, conf);
   }
 }

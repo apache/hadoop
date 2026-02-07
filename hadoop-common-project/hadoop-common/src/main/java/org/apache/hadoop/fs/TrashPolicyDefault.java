@@ -68,7 +68,7 @@ public class TrashPolicyDefault extends TrashPolicy {
   /** Format of checkpoint directories used prior to Hadoop 0.23. */
   private static final DateFormat OLD_CHECKPOINT =
       new SimpleDateFormat("yyMMddHHmm");
-  private static final int MSECS_PER_MINUTE = 60*1000;
+  private static final int MSECS_PER_MINUTE = 60_000;
 
   private long emptierInterval;
 
@@ -159,7 +159,7 @@ public class TrashPolicyDefault extends TrashPolicy {
     for (int i = 0; i < 2; i++) {
       try {
         if (!fs.mkdirs(baseTrashPath, PERMISSION)) {      // create current
-          LOG.warn("Can't create(mkdir) trash directory: " + baseTrashPath);
+          LOG.warn("Can't create(mkdir) trash directory: {}", baseTrashPath);
           return false;
         }
       } catch (FileAlreadyExistsException | ParentNotDirectoryException e) {
@@ -177,7 +177,7 @@ public class TrashPolicyDefault extends TrashPolicy {
         --i;
         continue;
       } catch (IOException e) {
-        LOG.warn("Can't create trash directory: " + baseTrashPath, e);
+        LOG.warn("Can't create trash directory: {}", baseTrashPath, e);
         cause = e;
         break;
       }
@@ -193,7 +193,7 @@ public class TrashPolicyDefault extends TrashPolicy {
         // move to current trash
         fs.rename(path, trashPath,
             Rename.TO_TRASH);
-        LOG.info("Moved: '" + path + "' to trash at: " + trashPath);
+        LOG.info("Moved: '{}' to trash at: {}", path, trashPath);
         return true;
       } catch (IOException e) {
         cause = e;
@@ -213,7 +213,7 @@ public class TrashPolicyDefault extends TrashPolicy {
   public void createCheckpoint(Date date) throws IOException {
     Collection<FileStatus> trashRoots = fs.getTrashRoots(false);
     for (FileStatus trashRoot: trashRoots) {
-      LOG.info("TrashPolicyDefault#createCheckpoint for trashRoot: " +
+      LOG.info("TrashPolicyDefault#createCheckpoint for trashRoot: {}",
           trashRoot.getPath());
       createCheckpoint(trashRoot.getPath(), date);
     }
@@ -232,7 +232,7 @@ public class TrashPolicyDefault extends TrashPolicy {
   private void deleteCheckpoint(boolean deleteImmediately) throws IOException {
     Collection<FileStatus> trashRoots = fs.getTrashRoots(false);
     for (FileStatus trashRoot : trashRoots) {
-      LOG.info("TrashPolicyDefault#deleteCheckpoint for trashRoot: " +
+      LOG.info("TrashPolicyDefault#deleteCheckpoint for trashRoot: {}",
           trashRoot.getPath());
       deleteCheckpoint(trashRoot.getPath(), deleteImmediately);
     }
@@ -262,17 +262,16 @@ public class TrashPolicyDefault extends TrashPolicy {
       this.conf = conf;
       this.emptierInterval = emptierInterval;
       if (emptierInterval > deletionInterval || emptierInterval <= 0) {
-        LOG.info("The configured checkpoint interval is " +
-                 (emptierInterval / MSECS_PER_MINUTE) + " minutes." +
-                 " Using an interval of " +
-                 (deletionInterval / MSECS_PER_MINUTE) +
-                 " minutes that is used for deletion instead");
+        LOG.info("The configured checkpoint interval is {} minutes."
+                + " Using an interval of {} minutes that is used for deletion instead",
+            emptierInterval / MSECS_PER_MINUTE,
+            deletionInterval / MSECS_PER_MINUTE);
         this.emptierInterval = deletionInterval;
       }
-      LOG.info("Namenode trash configuration: Deletion interval = "
-          + (deletionInterval / MSECS_PER_MINUTE)
-          + " minutes, Emptier interval = "
-          + (this.emptierInterval / MSECS_PER_MINUTE) + " minutes.");
+      LOG.info("Namenode trash configuration: Deletion interval = {} minutes."
+              + " Emptier interval = {} minutes.",
+          deletionInterval / MSECS_PER_MINUTE,
+          emptierInterval / MSECS_PER_MINUTE);
     }
 
     @Override
@@ -296,15 +295,17 @@ public class TrashPolicyDefault extends TrashPolicy {
             trashRoots = fs.getTrashRoots(true);      // list all trash dirs
 
             for (FileStatus trashRoot : trashRoots) {   // dump each trash
-              if (!trashRoot.isDirectory())
+              if (!trashRoot.isDirectory()) {
+                LOG.debug("Trash root {} is not a directory: {}",
+                    trashRoot.getPath(), trashRoot);
                 continue;
+              }
               try {
                 TrashPolicyDefault trash = new TrashPolicyDefault(fs, conf);
                 trash.deleteCheckpoint(trashRoot.getPath(), false);
                 trash.createCheckpoint(trashRoot.getPath(), new Date(now));
               } catch (IOException e) {
-                LOG.warn("Trash caught: "+e+". Skipping " +
-                    trashRoot.getPath() + ".");
+                LOG.warn("Trash caught:{} Skipping {}", e, trashRoot.getPath());
               } 
             }
           }
@@ -347,20 +348,29 @@ public class TrashPolicyDefault extends TrashPolicy {
     while (true) {
       try {
         fs.rename(current, checkpoint, Rename.NONE);
-        LOG.info("Created trash checkpoint: " + checkpoint.toUri().getPath());
+        LOG.info("Created trash checkpoint: {}", checkpoint.toUri().getPath());
         break;
       } catch (FileAlreadyExistsException e) {
         if (++attempt > 1000) {
-          throw new IOException("Failed to checkpoint trash: " + checkpoint);
+          throw new IOException("Failed to checkpoint trash: " + checkpoint, e);
         }
         checkpoint = checkpointBase.suffix("-" + attempt);
       }
     }
   }
 
+  /**
+   * Delete trash directories under a checkpoint older than the interval,
+   * or, if {@code deleteImmediately} is true, all entries.
+   * It is not an error if invoked on a trash root which doesn't exist.
+   * @param trashRoot trash root.
+   * @param deleteImmediately should all entries be deleted
+   * @return the number of entries deleted.
+   * @throws IOException failure in listing or delete() calls
+   */
   private void deleteCheckpoint(Path trashRoot, boolean deleteImmediately)
       throws IOException {
-    LOG.info("TrashPolicyDefault#deleteCheckpoint for trashRoot: " + trashRoot);
+    LOG.info("TrashPolicyDefault#deleteCheckpoint for trashRoot: {}", trashRoot);
 
     FileStatus[] dirs = null;
     try {
