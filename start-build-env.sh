@@ -49,7 +49,7 @@ if [ ! -e "${DOCKER_FILE}" ] ; then
   exit 1
 fi
 
-docker build ${DOCKER_PLATFORM_ARGS} -t hadoop-build -f $DOCKER_FILE $DOCKER_DIR
+docker build ${DOCKER_PLATFORM_ARGS} -t hadoop-build -f "${DOCKER_FILE}" "${DOCKER_DIR}"
 
 USER_NAME=${SUDO_USER:=$USER}
 USER_ID=$(id -u "${USER_NAME}")
@@ -102,7 +102,7 @@ ENV HOME="${DOCKER_HOME_DIR}"
 
 UserSpecificDocker
 
-#If this env varible is empty, docker will be started
+# If this env variable is empty, docker will be started
 # in non interactive mode
 DOCKER_INTERACTIVE_RUN=${DOCKER_INTERACTIVE_RUN-"-i -t"}
 
