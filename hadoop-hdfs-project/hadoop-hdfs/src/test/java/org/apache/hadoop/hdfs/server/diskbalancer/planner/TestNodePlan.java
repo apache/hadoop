@@ -18,7 +18,7 @@ package org.apache.hadoop.hdfs.server.diskbalancer.planner;
 
 import java.io.IOException;
 
-timport org.junit.Test;
+import org.junit.Test;
 import sample.SampleStep;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
