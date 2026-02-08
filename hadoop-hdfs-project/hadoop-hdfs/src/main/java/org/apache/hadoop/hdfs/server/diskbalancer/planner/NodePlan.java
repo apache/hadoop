@@ -32,6 +32,7 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.SUPPORTED_PACKAGES_CONFIG_NAME;
 
@@ -194,7 +195,7 @@ public class NodePlan {
         Map.Entry<String, JsonNode> entry = fieldsIterator.next();
         if ("@class".equals(entry.getKey())) {
           String textValue = entry.getValue().asText();
-          if (textValue != null && !textValue.isBlank() && !stepClassIsAllowed(textValue)) {
+          if (textValue != null && !textValue.isEmpty() && !stepClassIsAllowed(textValue)) {
             throw new IOException("Invalid @class value in NodePlan JSON: " + textValue);
           }
         }
@@ -249,6 +250,6 @@ public class NodePlan {
         .stream()
         .map(String::trim)
         .filter(s -> !s.isEmpty())
-        .toList();
+        .collect(Collectors.toList());
   }
 }
