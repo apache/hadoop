@@ -110,6 +110,7 @@ DOCKER_INTERACTIVE_RUN=${DOCKER_INTERACTIVE_RUN-"-i -t"}
 # within the container and use the result on your normal
 # system.  And this also is a significant speedup in subsequent
 # builds because the dependencies are downloaded only once.
+# shellcheck disable=SC2086
 docker run "${DOCKER_PLATFORM_ARGS[@]}" --rm=true ${DOCKER_INTERACTIVE_RUN} \
   -v "${PWD}:${DOCKER_HOME_DIR}/hadoop${V_OPTS:-}" \
   -w "${DOCKER_HOME_DIR}/hadoop" \
