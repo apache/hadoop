@@ -45,7 +45,7 @@ import { CompareButton } from '~/features/queue-comparison/components/CompareBut
 import { NodeLabelSelector } from '~/components/search/NodeLabelSelector';
 import { CapacityEditorDialog } from './CapacityEditorDialog';
 import { LegacyModeDocumentation } from './LegacyModeDocumentation';
-import { getMergedConfigData } from '~/utils/configUtils';
+import { mergeStagedConfig } from '~/utils/configUtils';
 import { SPECIAL_VALUES } from '~/types';
 
 export interface QueueVisualizationContainerProps {
@@ -73,7 +73,7 @@ const FlowInner: React.FC = () => {
   const { theme } = useTheme();
 
   // Get legacy mode status considering staged changes
-  const mergedData = getMergedConfigData(configData, stagedChanges);
+  const mergedData = mergeStagedConfig(configData, stagedChanges);
   const legacyModeEnabled = mergedData.get(SPECIAL_VALUES.LEGACY_MODE_PROPERTY) !== 'false';
 
   const { nodes, edges, isLoading, loadError, applyError } = useQueueTreeData();
