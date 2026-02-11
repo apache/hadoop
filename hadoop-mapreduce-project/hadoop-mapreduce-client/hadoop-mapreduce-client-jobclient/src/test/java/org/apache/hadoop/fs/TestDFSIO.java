@@ -538,7 +538,7 @@ public class TestDFSIO implements Tool {
 
     FileInputFormat.setInputPaths(job, getControlDir(config));
     if (null == job.getClass("mapred.input.format.class", null)) {
-        job.setInputFormat(SequenceFileInputFormat.class);
+      job.setInputFormat(SequenceFileInputFormat.class);
     }
 
     job.setMapperClass(mapperClass);
