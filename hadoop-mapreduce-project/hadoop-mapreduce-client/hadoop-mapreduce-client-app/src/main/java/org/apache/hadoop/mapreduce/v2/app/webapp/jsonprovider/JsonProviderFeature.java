@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * <p>
- * http://www.apache.org/licenses/LICENSE-2.0
- * <p>
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,26 +16,20 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.mapreduce.v2.app.webapp.dao;
+package org.apache.hadoop.mapreduce.v2.app.webapp.jsonprovider;
 
-import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
-import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
+import javax.ws.rs.core.Feature;
+import javax.ws.rs.core.FeatureContext;
 
-import javax.xml.bind.annotation.XmlRootElement;
-import javax.xml.bind.annotation.XmlType;
+import org.glassfish.jersey.CommonProperties;
 
-@XmlRootElement(name = "taskAttempt")
-@XmlType(name = "")
-public class MapTaskAttemptInfo extends TaskAttemptInfo {
-
-  public MapTaskAttemptInfo() {
-  }
-
-  public MapTaskAttemptInfo(TaskAttempt ta) {
-    this(ta, false);
-  }
-
-  public MapTaskAttemptInfo(TaskAttempt ta, Boolean isRunning) {
-    super(ta, TaskType.MAP, isRunning);
+public class JsonProviderFeature implements Feature {
+  @Override
+  public boolean configure(FeatureContext context) {
+    //Auto discovery should be disabled to ensure the custom providers will be used
+    context.property(CommonProperties.MOXY_JSON_FEATURE_DISABLE, true);
+    context.register(IncludeRootJSONProvider.class, 2001);
+    context.register(ExcludeRootJSONProvider.class, 2002);
+    return true;
   }
 }
