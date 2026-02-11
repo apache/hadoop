@@ -19,11 +19,11 @@ package org.apache.hadoop.hdfs.server.diskbalancer.planner;
 import java.io.IOException;
 
 import org.junit.jupiter.api.Test;
-import sample.SampleStep;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.hadoop.hdfs.server.diskbalancer.datamodel.DiskBalancerVolume;
 import org.apache.hadoop.test.LambdaTestUtils;
+import org.apache.hadoop.test.SampleStep;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -88,7 +88,7 @@ public class TestNodePlan {
   private void assertNodePlanInvalid(final NodePlan nodePlan) throws Exception {
     LambdaTestUtils.intercept(
         IOException.class,
-        "Invalid @class value in NodePlan JSON: sample.SampleStep",
+        "Invalid @class value in NodePlan JSON",
         () -> NodePlan.parseJson(nodePlan.toJson()));
   }
 
