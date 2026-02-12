@@ -63,7 +63,8 @@ class TruncateOp extends Operation {
     try {
       Path fn = getTruncateFile();
       boolean waitOnTruncate = getConfig().shouldWaitOnTruncate();
-      long currentSize = fs.getFileStatus(fn).getLen();
+      FileStatus fileStatus = fs.getFileStatus(fn);
+      long currentSize = fileStatus.getLen();
       // determine file status for file length requirement
       // to know if should fill in partial bytes
       Range<Long> truncateSizeRange = getConfig().getTruncateSize();
@@ -72,6 +73,17 @@ class TruncateOp extends Operation {
       }
       long truncateSize = Math.max(0L,
           currentSize - Range.betweenPositive(getRandom(), truncateSizeRange));
+      
+      // Adjust truncateSize to block boundary to avoid incomplete blocks
+      long blockSize = fileStatus.getBlockSize();
+      long adjustedTruncateSize = adjustToBlockBoundary(truncateSize, blockSize);
+      if (adjustedTruncateSize != truncateSize) {
+        LOG.info("Truncate size adjusted from {} to {} to align with block boundary (block size: {})",
+            Helper.toByteInfo(truncateSize), Helper.toByteInfo(adjustedTruncateSize),
+            Helper.toByteInfo(blockSize));
+        truncateSize = adjustedTruncateSize;
+      }
+      
       long timeTaken = 0;
       LOG.info("Attempting to truncate file at " + fn + " to size "
           + Helper.toByteInfo(truncateSize));
@@ -103,6 +115,40 @@ class TruncateOp extends Operation {
       recordOpTime(out, opStart);
     }
     return out;
+  }
+
+  /**
+   * Adjust truncate size to block boundary to avoid incomplete blocks.
+   * If the requested size falls within a block, adjust it down to the
+   * start of that block (i.e., the end of the previous block).
+   *
+   * @param requestedSize the requested truncate size
+   * @param blockSize the block size of the file
+   * @return adjusted size that aligns with block boundary
+   */
+  private long adjustToBlockBoundary(long requestedSize, long blockSize) {
+    if (blockSize <= 0) {
+      // Invalid block size, return original size
+      return requestedSize;
+    }
+    
+    if (requestedSize == 0) {
+      // Truncate to 0 is always at block boundary
+      return requestedSize;
+    }
+    
+    // Calculate which block boundary the requested size falls on
+    // Round down to the nearest block boundary
+    long blockIndex = requestedSize / blockSize;
+    long adjustedSize = blockIndex * blockSize;
+    
+    // If requestedSize is exactly at a block boundary, return it
+    if (requestedSize == adjustedSize) {
+      return requestedSize;
+    }
+    
+    // Otherwise, return the start of the block (end of previous block)
+    return adjustedSize;
   }
 
   private void waitForRecovery(FileSystem fs, Path fn, long newLength)
