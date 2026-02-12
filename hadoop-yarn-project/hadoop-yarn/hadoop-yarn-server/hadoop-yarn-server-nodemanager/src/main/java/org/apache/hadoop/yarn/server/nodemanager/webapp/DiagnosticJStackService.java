@@ -31,8 +31,10 @@ public class DiagnosticJStackService {
     private static final Logger LOG = LoggerFactory
             .getLogger(DiagnosticJStackService.class);
 
+    private DiagnosticJStackService() {}
+
     public static String collectNodeThreadDump(int numberOfJStack)
-            throws Exception {
+            throws IOException {
         if (Shell.WINDOWS) {
             throw new UnsupportedOperationException("Not implemented for Windows");
         }
@@ -46,7 +48,11 @@ public class DiagnosticJStackService {
 
 
     public static String collectApplicationThreadDump(String appId, int numberOfJStack)
-            throws Exception {
+            throws IOException {
+        if(!appId.matches("application_\\d{13}_\\d{4}")) {
+            throw new RuntimeException("Invalid application id: " + appId);
+        }
+
         if (Shell.WINDOWS) {
             throw new UnsupportedOperationException("Not implemented for Windows.");
         }
@@ -61,7 +67,7 @@ public class DiagnosticJStackService {
                 new String[]{
                         "bash",
                         "-c",
-                        "ps aux | grep nodemanager | grep -v grep"
+                        "ps aux | grep org.apache.hadoop.yarn.server.nodemanager.NodeManager | grep -v grep"
                 },
                 null,
                 null,

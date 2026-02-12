@@ -109,7 +109,7 @@ public class NMWebServices {
   private String redirectWSUrl;
   private LogAggregationFileControllerFactory factory;
   private boolean filterAppsByUser = false;
-  private boolean isJStackEndpointsEnable = true;
+  private boolean isJStackEndpointsEnable = false;
 
   @javax.ws.rs.core.Context
   private HttpServletRequest request;
@@ -274,48 +274,6 @@ public class NMWebServices {
     }
     return new ContainerInfo(this.nmContext, container, uriInfo.getBaseUri()
         .toString(), webapp.name(), hsr.getRemoteUser());
-
-  }
-
-  @GET
-  @Path("/jstack/{numberOfJStack}")
-  public Response getNodeThreadDump(@PathParam("numberOfJStack") int numberOfJStack)
-  {
-    if (isJStackEndpointsEnable) {
-      try {
-        return Response.status(Status.OK)
-                .entity(DiagnosticJStackService.collectNodeThreadDump(numberOfJStack))
-                .build();
-      } catch (Exception e) {
-        throw new WebAppException("Error collection NodeManager JStack: " + e.getMessage() + ". " +
-                "For more information please check the NodeManager logs.");
-      }
-    } else {
-      return Response.status(Status.METHOD_NOT_ALLOWED)
-              .build();
-    }
-  }
-
-
-  @GET
-  @Path("/apps/{appid}/jstack/{numberOfJStack}")
-  @Produces({MediaType.TEXT_PLAIN})
-  public Response getApplicationJStack(@PathParam("appid") String appId,
-                                       @PathParam("numberOfJStack") int numberOfJStack)
-  {
-    if (isJStackEndpointsEnable) {
-      try {
-        return Response.status(Status.OK)
-                .entity(DiagnosticJStackService.collectApplicationThreadDump(appId, numberOfJStack))
-                .build();
-      } catch (Exception e) {
-        throw new WebAppException("Error collecting Application JStack: " + e.getMessage() + ". " +
-                "For more information please check the NodeManager logs.");
-      }
-    } else {
-      return  Response.status(Status.METHOD_NOT_ALLOWED)
-                  .build();
-    }
 
   }
 
@@ -672,6 +630,60 @@ public class NMWebServices {
       return Response.status(Status.INTERNAL_SERVER_ERROR).entity(e).build();
     }
     return Response.ok().build();
+  }
+
+
+  @GET
+  @Path("/jstack/{numberOfJStack}")
+  public Response getNodeThreadDump(@PathParam("numberOfJStack") int numberOfJStack)
+  {
+    if (isJStackEndpointsEnable) {
+      try {
+        return Response.status(Status.OK)
+                .entity(DiagnosticJStackService.collectNodeThreadDump(numberOfJStack))
+                .build();
+      } catch (IOException e){
+        throw new WebAppException("Shell command has failed: " + e.getMessage() + ". " +
+                "For more information please check the NodeManager logs.");
+      } catch (Exception e) {
+        throw new WebAppException(
+                "Unexpected error collection NodeManager JStack: " + e.getMessage() + ". " +
+                "For more information please check the NodeManager logs.");
+      }
+    } else {
+      return Response.status(Status.METHOD_NOT_ALLOWED)
+              .build();
+    }
+  }
+
+
+  @GET
+  @Path("/apps/{appid}/jstack/{numberOfJStack}")
+  @Produces({MediaType.TEXT_PLAIN})
+  public Response getApplicationJStack(@PathParam("appid") String appId,
+                                       @PathParam("numberOfJStack") int numberOfJStack)
+  {
+    if (isJStackEndpointsEnable) {
+      try {
+        return Response.status(Status.OK)
+                .entity(DiagnosticJStackService.collectApplicationThreadDump(appId, numberOfJStack))
+                .build();
+      } catch (RuntimeException e){
+        throw new WebAppException(
+                "The applicationId is invalid: " + appId + "." + e.getMessage());
+      } catch (IOException e){
+        throw new WebAppException("Shell command has failed: " + e.getMessage() + ". " +
+                "For more information please check the NodeManager logs.");
+      } catch (Exception e) {
+        throw new WebAppException(
+                "Unexpected error collecting Application JStack: " + e.getMessage() + ". " +
+                "For more information please check the NodeManager logs.");
+      }
+    } else {
+      return  Response.status(Status.METHOD_NOT_ALLOWED)
+              .build();
+    }
+
   }
 
   private long parseLongParam(String bytes) {

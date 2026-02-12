@@ -5854,6 +5854,17 @@
     <value>50000</value>
   </property>
 
+
+  <property>
+    <description>
+      This configuration will be used to turn on/turn off nodemanager jstack endpoints
+      /ws/v1/node/jstack/{numberOfJStack} and /ws/v1/node/apps/{appid}/jstack/{numberOfJStack}.
+      The purpose is to minimise security risk. By default is set to false.
+    </description>
+    <name>yarn.nodemanager.jstack-endpoints.enabled</name>
+    <value>false</value>
+  </property>
+
   <property>
     <description>
       Set the connect timeout interval, in milliseconds.

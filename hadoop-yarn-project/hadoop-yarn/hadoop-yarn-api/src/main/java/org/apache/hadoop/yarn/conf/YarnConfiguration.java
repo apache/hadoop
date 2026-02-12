@@ -2315,10 +2315,10 @@ public class YarnConfiguration extends Configuration {
   public static final String LINUX_CONTAINER_RUNTIME_PREFIX = NM_PREFIX +
       "runtime.linux.";
 
-  /** Flag to turn on/off jstack endpoints for NodeManager. By default is True **/
+  /** Flag to turn on/off jstack endpoints for NodeManager. By default is False **/
   public static final String NM_JSTACK_ENDPOINTS_ENABLED =
           NM_PREFIX + "jstack-endpoints.enabled";
-  public static final boolean DEFAULT_NM_JSTACK_ENDPOINTS_ENABLED = true;
+  public static final boolean DEFAULT_NM_JSTACK_ENDPOINTS_ENABLED = false;
 
   /**
    * Comma separated list of runtimes that are allowed when using
