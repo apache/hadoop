@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
-import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.FairSharePolicy;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.jupiter.api.Test;
@@ -124,7 +123,8 @@ public class TestFairSharePolicyPendingApps {
     // Queue above minShare
     FSLeafQueue queueAboveMinShare = mock(FSLeafQueue.class);
     when(queueAboveMinShare.getDemand()).thenReturn(Resources.createResource(200 * 1024, 10));
-    when(queueAboveMinShare.getResourceUsage()).thenReturn(Resources.createResource(200 * 1024, 10));
+    when(queueAboveMinShare.getResourceUsage()).thenReturn(
+        Resources.createResource(200 * 1024, 10));
     when(queueAboveMinShare.getMinShare()).thenReturn(Resources.createResource(128 * 1024, 1));
     when(queueAboveMinShare.getNumRunnableApps()).thenReturn(5);
     when(queueAboveMinShare.getWeight()).thenReturn(1.0f);
