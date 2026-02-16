@@ -2105,7 +2105,8 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
 
   /**
    * Returns count of blocks with one or more replicas missing.
-   * @throws IOException
+   * @return count of normal low redundancy blocks.
+   * @throws IOException if the RPC call fails.
    */
   public long getNormalLowRedundancyBlocksCount() throws IOException {
     return getStateByIndex(ClientProtocol.
@@ -2114,7 +2115,8 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
 
   /**
    * Returns count of blocks that are badly distributed as per BPP.
-   * @throws IOException
+   * @return count of badly distributed blocks.
+   * @throws IOException if the RPC call fails.
    */
   public long getBadlyDistributedBlocksCount() throws IOException {
     return getStateByIndex(ClientProtocol.
@@ -2125,7 +2127,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    * Returns number of bytes that reside in Blocks with future generation
    * stamps.
    * @return Bytes in Blocks with future generation stamps.
-   * @throws IOException
+   * @throws IOException if the RPC call fails.
    */
   public long getBytesInFutureBlocks() throws IOException {
     return getStateByIndex(ClientProtocol.
