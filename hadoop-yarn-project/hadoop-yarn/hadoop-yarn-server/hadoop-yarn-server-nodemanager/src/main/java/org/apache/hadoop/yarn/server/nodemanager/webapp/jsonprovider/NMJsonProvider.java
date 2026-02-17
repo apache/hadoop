@@ -42,7 +42,7 @@ import java.lang.reflect.Type;
 @Consumes(MediaType.APPLICATION_JSON)
 public class NMJsonProvider extends MOXyJsonProvider {
 
-  private boolean isRootElementNeeded (Class<?> type) {
+  private boolean isRootElementNeeded(Class<?> type) {
     return !type.equals(ContainerLogsInfoes.class)
         && !type.equals(NMGpuResourceInfo.class)
         && !type.equals(NMDeviceResourceInfo.class);
@@ -63,6 +63,8 @@ public class NMJsonProvider extends MOXyJsonProvider {
       throws JAXBException {
     marshaller.setProperty(MarshallerProperties.JSON_MARSHAL_EMPTY_COLLECTIONS, false);
     marshaller.setProperty(MarshallerProperties.JSON_INCLUDE_ROOT, isRootElementNeeded(type));
-    marshaller.setProperty(MarshallerProperties.JSON_REDUCE_ANY_ARRAYS, type.equals(ContainerLogsInfoes.class));
+    marshaller.setProperty(
+            MarshallerProperties.JSON_REDUCE_ANY_ARRAYS, type.equals(ContainerLogsInfoes.class)
+    );
   }
 }
