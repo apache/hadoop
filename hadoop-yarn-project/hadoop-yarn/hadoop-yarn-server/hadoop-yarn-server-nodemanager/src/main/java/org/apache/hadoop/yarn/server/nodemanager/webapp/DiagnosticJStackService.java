@@ -17,6 +17,7 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.webapp;
 
+
 import org.apache.hadoop.util.Shell;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,6 +26,10 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class DiagnosticJStackService {
 
@@ -39,9 +44,9 @@ public class DiagnosticJStackService {
             throw new UnsupportedOperationException("Not implemented for Windows");
         }
 
-        List<String> nodeManagerPids = getNodeManagerPids();
+        long nodeManagerPid = getNodeManagerPid();
 
-        return runJStack(nodeManagerPids, numberOfJStack);
+        return runJStack(nodeManagerPid, numberOfJStack);
 
     }
 
@@ -56,28 +61,17 @@ public class DiagnosticJStackService {
         if (Shell.WINDOWS) {
             throw new UnsupportedOperationException("Not implemented for Windows.");
         }
-        List<String> applicationPids = getApplicationPids(appId);
+        List<Long> applicationPids = getApplicationPids(appId);
 
         return runJStack(applicationPids, numberOfJStack);
     }
 
 
-    public static List<String> getNodeManagerPids() throws IOException {
-        Shell.ShellCommandExecutor cmd = new Shell.ShellCommandExecutor(
-                new String[]{
-                        "bash",
-                        "-c",
-                        "ps aux | grep org.apache.hadoop.yarn.server.nodemanager.NodeManager | grep -v grep"
-                },
-                null,
-                null,
-                10_000
-        );
-        cmd.execute();
-        return extractPids(cmd.getOutput());
+    public static long getNodeManagerPid() {
+        return ProcessHandle.current().pid();
     }
 
-    public static List<String> getApplicationPids(String appId) throws IOException {
+    public static List<Long> getApplicationPids(String appId) throws IOException {
         String psCmd = "ps aux | grep jvm/java | grep " + appId + " | grep -v -e /bin/bash -e grep";
 
         Shell.ShellCommandExecutor cmd = new Shell.ShellCommandExecutor(
@@ -91,16 +85,16 @@ public class DiagnosticJStackService {
         return extractPids(cmd.getOutput());
     }
 
-    public static List<String> extractPids(String psOutput) {
+    public static List<Long> extractPids(String psOutput) {
 
         LOG.info("Process output: " + psOutput);
 
-        List<String> pids = new ArrayList<>();
+        List<Long> pids = new ArrayList<>();
         for(String line : psOutput.split("\n")) {
             // root       414  1.3  1.7 8124480 434520 ?      Sl   11:36
             String [] parts = line.trim().split("\\s+");
             if (parts.length > 1){
-                pids.add(parts[1]);
+                pids.add(Long.valueOf(parts[1]));
             }
         }
 
@@ -108,33 +102,51 @@ public class DiagnosticJStackService {
     }
 
 
-    public static String runJStack(List<String> pids, int numJStacks) throws IOException {
+    public static String runJStack(List<Long> pids, int numJStacks) throws IOException {
         StringBuilder result = new StringBuilder();
 
-        for(String pid : pids){
-
-            Shell.ShellCommandExecutor cmd =
-                    new Shell.ShellCommandExecutor(
-                            new String[]{"jstack", pid},
-                            null,
-                            null,
-                            60_000
-                    );
-
-            for (int i = 0; i < numJStacks; i++) {
-                cmd.execute();
-
-                result.append("--- JStack iteration -")
-                        .append(i)
-                        .append(" for PID: ")
-                        .append(pid)
-                        .append("---\n")
-                        .append(cmd.getOutput())
-                        .append("\n");
-            }
+        for(Long pid : pids){
+            result.append(runJStack(pid, numJStacks));
         }
 
         return result.toString();
     }
+
+    public static String runJStack(long pid, int numJStacks) throws IOException {
+        Optional<ProcessHandle> processHandle = ProcessHandle.of(pid);
+
+        if (processHandle.isEmpty()){
+            throw new IOException("Process with PID " + pid + " is no longer exists");
+        }
+
+        String processOwner = processHandle.get().info().user().orElse("root");
+
+
+        Shell.ShellCommandExecutor cmd =
+                new Shell.ShellCommandExecutor(
+                        new String[]{"sudo", "-u", processOwner, "jstack", String.valueOf(pid)},
+                        null,
+                        null,
+                        60_000
+                );
+
+        StringBuilder result = new StringBuilder();
+
+        for (int i = 0; i < numJStacks; i++) {
+            cmd.execute();
+
+            result.append("--- JStack iteration -")
+                    .append(i)
+                    .append(" for PID: ")
+                    .append(pid)
+                    .append("---\n")
+                    .append(cmd.getOutput())
+                    .append("\n");
+        }
+
+
+        return result.toString();
+    }
+
 
 }
