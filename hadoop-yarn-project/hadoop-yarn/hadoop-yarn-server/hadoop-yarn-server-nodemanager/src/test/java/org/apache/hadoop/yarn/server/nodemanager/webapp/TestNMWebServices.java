@@ -624,7 +624,8 @@ public class TestNMWebServices extends JerseyTestBase {
         .getApplicationAttemptId();
     final ApplicationId appId = appAttemptId.getApplicationId();
     final String appIdStr = appId.toString();
-    final String filename = "logfile1";
+    final String filename1 = "logfile1";
+    final String filename2 = "logfile2";
     nmContext.getApplications().put(appId, new ApplicationImpl(null, "user",
         appId, null, nmContext));
     
@@ -634,22 +635,32 @@ public class TestNMWebServices extends JerseyTestBase {
     nmContext.getContainers().put(containerId, container);
     
     // write out log file
-    Path path = dirsHandler.getLogPathForWrite(
+    Path path1 = dirsHandler.getLogPathForWrite(
         ContainerLaunch.getRelativeContainerLogDir(
-            appIdStr, containerIdStr) + "/" + filename, false);
-    
-    File logFile = new File(path.toUri().getPath());
-    logFile.deleteOnExit();
-    if (logFile.getParentFile().exists()) {
-      FileUtils.deleteDirectory(logFile.getParentFile());
+            appIdStr, containerIdStr) + "/" + filename1, false);
+
+    File logFile1 = new File(path1.toUri().getPath());
+    logFile1.deleteOnExit();
+    if (logFile1.getParentFile().exists()) {
+      FileUtils.deleteDirectory(logFile1.getParentFile());
     }
-    assertTrue(logFile.getParentFile().mkdirs(), "Failed to create log dir");
-    PrintWriter pw = new PrintWriter(logFile);
+    assertTrue(logFile1.getParentFile().mkdirs(), "Failed to create log dir");
+    PrintWriter pw = new PrintWriter(logFile1);
     pw.print(logMessage);
     pw.close();
 
+    Path path2 = dirsHandler.getLogPathForWrite(
+            ContainerLaunch.getRelativeContainerLogDir(
+                    appIdStr, containerIdStr) + "/" + filename2, false);
+
+    File logFile2 = new File(path2.toUri().getPath());
+    logFile2.deleteOnExit();
+    PrintWriter pw2 = new PrintWriter(logFile2);
+    pw2.print("This is a second log file to force JSON array serialization.");
+    pw2.close();
+
     // ask for it
-    Response response = target.path(filename)
+    Response response = target.path(filename1)
         .request(MediaType.TEXT_PLAIN).get(Response.class);
     String responseText = response.readEntity(String.class);
     String responseLogMessage = getLogContext(responseText);
@@ -659,7 +670,7 @@ public class TestNMWebServices extends JerseyTestBase {
     // specify how many bytes we should get from logs
     // specify a position number, it would get the first n bytes from
     // container log
-    response = target.path(filename)
+    response = target.path(filename1)
         .queryParam("size", "5")
         .request(MediaType.TEXT_PLAIN).get(Response.class);
     responseText = response.readEntity(String.class);
@@ -672,7 +683,7 @@ public class TestNMWebServices extends JerseyTestBase {
 
     // specify the bytes which is larger than the actual file size,
     // we would get the full logs
-    response = target.path(filename)
+    response = target.path(filename1)
         .queryParam("size", "10000")
         .request(MediaType.TEXT_PLAIN).get(Response.class);
     responseText = response.readEntity(String.class);
@@ -682,7 +693,7 @@ public class TestNMWebServices extends JerseyTestBase {
 
     // specify a negative number, it would get the last n bytes from
     // container log
-    response = target.path(filename)
+    response = target.path(filename1)
         .queryParam("size", "-5")
         .request(MediaType.TEXT_PLAIN).get(Response.class);
     responseText = response.readEntity(String.class);
@@ -693,7 +704,7 @@ public class TestNMWebServices extends JerseyTestBase {
         responseLogMessage);
     assertTrue(fullTextSize >= responseLogMessage.getBytes().length);
 
-    response = target.path(filename)
+    response = target.path(filename1)
         .queryParam("size", "-10000")
         .request(MediaType.TEXT_PLAIN).get(Response.class);
     responseText = response.readEntity(String.class);
@@ -703,7 +714,7 @@ public class TestNMWebServices extends JerseyTestBase {
     assertEquals(logMessage, responseLogMessage);
 
     // ask and download it
-    response = target.path(filename)
+    response = target.path(filename1)
         .queryParam("format", "octet-stream")
         .request(MediaType.TEXT_PLAIN).get(Response.class);
     responseText = response.readEntity(String.class);
@@ -714,7 +725,7 @@ public class TestNMWebServices extends JerseyTestBase {
         response.getMediaType().toString());
 
     // specify a invalid format value
-    response = target.path(filename)
+    response = target.path(filename1)
         .queryParam("format", "123")
         .request(MediaType.TEXT_PLAIN).get(Response.class);
     responseText = response.readEntity(String.class);
@@ -743,14 +754,15 @@ public class TestNMWebServices extends JerseyTestBase {
         ContainerLogAggregationType.LOCAL.toString());
     List<ContainerLogFileInfo> logMeta = responseList.get(0)
         .getContainerLogsInfo();
-    assertEquals(1, logMeta.size());
-    assertThat(logMeta.get(0).getFileName()).isEqualTo(filename);
+    assertEquals(2, logMeta.size());
+    assertThat(logMeta.get(0).getFileName()).isEqualTo(filename1);
+    assertThat(logMeta.get(1).getFileName()).isEqualTo(filename2);
 
     // now create an aggregated log in Remote File system
     File tempLogDir = new File("target",
         TestNMWebServices.class.getSimpleName() + "temp-log-dir");
     try {
-      String aggregatedLogFile = filename + "-aggregated";
+      String aggregatedLogFile = filename1 + "-aggregated";
       String aggregatedLogMessage = "This is aggregated ;og.";
       TestContainerLogsUtils.createContainerLogFileInRemoteFS(
           nmContext.getConf(), FileSystem.get(nmContext.getConf()),
@@ -776,8 +788,9 @@ public class TestNMWebServices extends JerseyTestBase {
           assertEquals(logInfo.getLogType(),
               ContainerLogAggregationType.LOCAL.toString());
           List<ContainerLogFileInfo> meta = logInfo.getContainerLogsInfo();
-          assertEquals(1, meta.size());
-          assertThat(meta.get(0).getFileName()).isEqualTo(filename);
+          assertEquals(2, meta.size());
+          assertThat(meta.get(0).getFileName()).isEqualTo(filename1);
+          assertThat(meta.get(1).getFileName()).isEqualTo(filename2);
         }
       }
 
@@ -786,8 +799,8 @@ public class TestNMWebServices extends JerseyTestBase {
           nmContext.getConf(), FileSystem.get(nmContext.getConf()),
           tempLogDir.getAbsolutePath(), appId,
           Collections.singletonMap(containerId, aggregatedLogMessage),
-          nmContext.getNodeId(), filename, "user", true);
-      response = target.path(filename)
+          nmContext.getNodeId(), filename1, "user", true);
+      response = target.path(filename1)
           .request(MediaType.TEXT_PLAIN).get(Response.class);
       responseText = response.readEntity(String.class);
       assertTrue(responseText.contains("LogAggregationType: "
@@ -802,7 +815,7 @@ public class TestNMWebServices extends JerseyTestBase {
     // After container is completed, it is removed from nmContext
     nmContext.getContainers().remove(containerId);
     assertNull(nmContext.getContainers().get(containerId));
-    response = target.path(filename).request(MediaType.TEXT_PLAIN)
+    response = target.path(filename1).request(MediaType.TEXT_PLAIN)
         .get(Response.class);
     responseText = response.readEntity((String.class));
     assertTrue(responseText.contains(logMessage));
@@ -930,36 +943,46 @@ public class TestNMWebServices extends JerseyTestBase {
     JSONObject jsonObject = response.readEntity(JSONObject.class);
     List<ContainerLogsInfo> list = new ArrayList<>();
 
-    JSONArray jsonArray = jsonObject
-            .getJSONObject("containerLogsInfo")
-            .getJSONArray("containerLogInfo");
+    Object containerLogsTypeInfo = jsonObject.get("containerLogsInfo");
 
-    for (int i = 0; i < jsonArray.length(); i++) {
-      JSONObject subKeyItem = jsonArray.getJSONObject(i);
-
-      ContainerLogsInfo containerLogsInfo = parseContainerLogsInfo(subKeyItem);
-      list.add(containerLogsInfo);
+    if (containerLogsTypeInfo instanceof JSONArray) {
+      JSONArray containerLogsInfoArr = (JSONArray) containerLogsTypeInfo;
+      for (int i = 0; i < containerLogsInfoArr.length(); i++) {
+        list.add(parseContainerLogsInfo(containerLogsInfoArr.getJSONObject(i)));
+      }
+    } else if (containerLogsTypeInfo instanceof JSONObject) {
+      list.add(parseContainerLogsInfo((JSONObject) containerLogsTypeInfo));
     }
 
     return list;
   }
 
-  private ContainerLogsInfo parseContainerLogsInfo(JSONObject subKeyItemValue)
+  private ContainerLogsInfo parseContainerLogsInfo(JSONObject jsonLogsInfo)
       throws JSONException {
 
-    String logAggregationType = subKeyItemValue.getString("logAggregationType");
-    String containerId = subKeyItemValue.getString("containerId");
-    String nodeId = subKeyItemValue.getString("nodeId");
+    String logAggregationType = jsonLogsInfo.getString("logAggregationType");
+    String containerId = jsonLogsInfo.getString("containerId");
+    String nodeId = jsonLogsInfo.getString("nodeId");
 
     ContainerLogMeta containerLogMeta = new ContainerLogMeta(containerId, nodeId);
 
-    JSONArray containerLogInfo = subKeyItemValue.getJSONArray("containerLogInfo");
-    for (int i = 0; i < containerLogInfo.length(); i++) {
-      JSONObject logEntry = containerLogInfo.getJSONObject(i);
+    Object containerLogTypeInfo = jsonLogsInfo.get("containerLogInfo");
+    if (containerLogTypeInfo instanceof JSONArray) {
+      JSONArray containerLogInfoArr = (JSONArray) containerLogTypeInfo;
+      for (int i = 0; i < containerLogInfoArr.length(); i++) {
+        JSONObject logEntry = containerLogInfoArr.getJSONObject(i);
+        containerLogMeta.addLogMeta(
+                logEntry.getString("fileName"),
+                logEntry.getString("fileSize"),
+                logEntry.getString("lastModifiedTime")
+        );
+      }
+    } else if (containerLogTypeInfo instanceof JSONObject) {
+      JSONObject containerLogInfoObj = jsonLogsInfo.getJSONObject("containerLogInfo");
       containerLogMeta.addLogMeta(
-              logEntry.getString("fileName"),
-              logEntry.getString("fileSize"),
-              logEntry.getString("lastModifiedTime")
+              containerLogInfoObj.getString("fileName"),
+              containerLogInfoObj.getString("fileSize"),
+              containerLogInfoObj.getString("lastModifiedTime")
       );
     }
 
