@@ -930,7 +930,9 @@ public class TestNMWebServices extends JerseyTestBase {
     JSONObject jsonObject = response.readEntity(JSONObject.class);
     List<ContainerLogsInfo> list = new ArrayList<>();
 
-    JSONArray jsonArray = jsonObject.getJSONArray("containerLogsInfo");
+    JSONArray jsonArray = jsonObject
+            .getJSONObject("containerLogsInfo")
+            .getJSONArray("containerLogInfo");
 
     for (int i = 0; i < jsonArray.length(); i++) {
       JSONObject subKeyItem = jsonArray.getJSONObject(i);
