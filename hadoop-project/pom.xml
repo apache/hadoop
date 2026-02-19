@@ -193,7 +193,7 @@
     <trimStackTrace>false</trimStackTrace>
 
     <maven-clean-plugin.version>3.1.0</maven-clean-plugin.version>
-    <maven-install-plugin.version>2.5.1</maven-install-plugin.version>
+    <maven-install-plugin.version>3.1.4</maven-install-plugin.version>
     <maven-resources-plugin.version>2.6</maven-resources-plugin.version>
     <maven-shade-plugin.version>3.6.0</maven-shade-plugin.version>
     <maven-jar-plugin.version>2.5</maven-jar-plugin.version>
