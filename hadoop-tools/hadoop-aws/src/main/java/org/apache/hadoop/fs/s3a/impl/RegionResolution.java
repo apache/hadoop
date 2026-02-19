@@ -33,7 +33,6 @@ import software.amazon.awssdk.regions.Region;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.s3a.Retries;
 import org.apache.hadoop.fs.s3a.S3ClientFactory;
 
 import static java.util.Objects.requireNonNull;
@@ -442,7 +441,6 @@ public class RegionResolution {
    * @throws IOException if the client failed to communicate with the IAM service.
    * @throws IllegalArgumentException failure to parse endpoint, or FIPS settings.
    */
-  @Retries.OnceTranslated
   public static Resolution calculateRegion(
       final S3ClientFactory.S3ClientCreationParameters parameters,
       final Configuration conf) throws IOException {

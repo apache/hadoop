@@ -91,12 +91,6 @@ public class DefaultS3ClientFactory extends Configured
       LoggerFactory.getLogger(DefaultS3ClientFactory.class);
 
   /**
-   * Message printed when the SDK Region chain is in use.
-   */
-  private static final String SDK_REGION_CHAIN_IN_USE =
-      "S3A filesystem client is using the SDK region resolution chain.";
-
-  /**
    * A one-off log stating whether S3 Access Grants are enabled.
    */
   private static final LogExactlyOnce LOG_S3AG_ENABLED = new LogExactlyOnce(LOG);
