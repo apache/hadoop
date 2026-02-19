@@ -752,11 +752,16 @@ public class TestNMWebServices extends JerseyTestBase {
     assertEquals(1, responseList.size());
     assertEquals(responseList.get(0).getLogType(),
         ContainerLogAggregationType.LOCAL.toString());
-    List<ContainerLogFileInfo> logMeta = responseList.get(0)
-        .getContainerLogsInfo();
-    assertEquals(2, logMeta.size());
-    assertThat(logMeta.get(0).getFileName()).isEqualTo(filename1);
-    assertThat(logMeta.get(1).getFileName()).isEqualTo(filename2);
+
+    for (ContainerLogsInfo logInfo : responseList) {
+      assertEquals(logInfo.getLogType(),
+              ContainerLogAggregationType.LOCAL.toString());
+      List<ContainerLogFileInfo> logMeta = logInfo
+              .getContainerLogsInfo();
+      assertEquals(2, logMeta.size());
+      assertThat(logMeta.get(0).getFileName()).isEqualTo(filename1);
+      assertThat(logMeta.get(1).getFileName()).isEqualTo(filename2);
+    }
 
     // now create an aggregated log in Remote File system
     File tempLogDir = new File("target",
