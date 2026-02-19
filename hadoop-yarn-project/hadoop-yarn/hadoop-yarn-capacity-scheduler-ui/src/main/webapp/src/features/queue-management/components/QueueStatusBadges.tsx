@@ -126,6 +126,13 @@ export const QueueStatusBadges: React.FC<QueueStatusBadgesProps> = ({
               'min-w-[28px] justify-center',
               getCapacityModeBadgeClass(),
             )}
+            aria-label={
+              capacityMode === 'weight'
+                ? 'Weight-based capacity'
+                : capacityMode === 'absolute'
+                  ? 'Absolute capacity'
+                  : 'Percentage capacity'
+            }
           >
             {getCapacityModeIcon()}
           </Badge>
@@ -145,6 +152,7 @@ export const QueueStatusBadges: React.FC<QueueStatusBadgesProps> = ({
           <Badge
             variant={getStateVariant()}
             className={cn(baseIconBadgeClasses, 'min-w-[28px] justify-center')}
+            aria-label={`Queue is ${state.toLowerCase()}`}
           >
             {getStateIcon(state)}
           </Badge>
@@ -162,6 +170,7 @@ export const QueueStatusBadges: React.FC<QueueStatusBadgesProps> = ({
                 baseIconBadgeClasses,
                 'flex items-center gap-1 text-queue-modified border-queue-modified/30',
               )}
+              aria-label={`Will change to ${stagedState.toLowerCase()}`}
             >
               <ArrowRight className="w-4 h-4" />
               {getStateIcon(stagedState)}
@@ -184,6 +193,7 @@ export const QueueStatusBadges: React.FC<QueueStatusBadgesProps> = ({
                   ? 'text-queue-running border-queue-running/30'
                   : 'text-queue-modified border-queue-modified/30',
               )}
+              aria-label={`${autoCreationStatus.status === 'flexible' ? 'Flexible auto-queue creation' : 'Legacy auto-queue creation'}${autoCreationStatus.isStaged ? ' (staged)' : ''}`}
             >
               {autoCreationStatus.status === 'flexible' ? (
                 <Sparkles className="w-4 h-4" />
@@ -247,6 +257,7 @@ export const QueueStatusBadges: React.FC<QueueStatusBadgesProps> = ({
                     ? 'text-queue-modified border-queue-modified/30'
                     : 'text-queue-deleted border-queue-deleted/30',
               )}
+              aria-label={`Queue ${stagedStatus === 'new' ? 'will be created' : stagedStatus === 'modified' ? 'has modifications' : 'will be deleted'}`}
             >
               {getModificationIcon()}
             </Badge>
@@ -269,6 +280,7 @@ export const QueueStatusBadges: React.FC<QueueStatusBadgesProps> = ({
             <Badge
               variant="outline"
               className={cn(baseIconBadgeClasses, 'flex items-center gap-1 text-sm')}
+              aria-label={`Showing capacity for partition: ${labelInfo.label}`}
             >
               <Tag className="w-4 h-4" />
               <span className="text-xs">{labelInfo.label}</span>

@@ -121,8 +121,9 @@ export const SearchBar: React.FC<SearchBarProps> = ({ placeholder = 'Search...',
       <div className="relative">
         <Search
           className={cn(
-            'absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground transition-all duration-200',
-            isSearching && 'animate-pulse',
+            'absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground transition-all duration-300',
+            isSearching && 'animate-pulse text-primary',
+            isSearchFocused && 'text-primary scale-110',
           )}
         />
         <Input
@@ -158,9 +159,11 @@ export const SearchBar: React.FC<SearchBarProps> = ({ placeholder = 'Search...',
       </div>
 
       {isSearchFocused && (
-        <div className="absolute right-0 top-full mt-1 text-xs text-muted-foreground z-50 bg-background p-1 rounded shadow-sm transition-opacity duration-200">
-          <kbd className="rounded border px-1">⌘G</kbd> to focus •
-          <kbd className="rounded border px-1 ml-1">Esc</kbd> to clear
+        <div className="absolute right-0 top-full mt-2 text-xs text-muted-foreground z-50 bg-popover/95 backdrop-blur-sm p-2 rounded-lg shadow-lg border transition-all duration-200 animate-in fade-in-0 slide-in-from-top-1">
+          <kbd className="rounded-md border bg-muted px-1.5 py-0.5 font-mono text-[10px]">⌘G</kbd>
+          <span className="mx-1.5">focus</span>
+          <kbd className="rounded-md border bg-muted px-1.5 py-0.5 font-mono text-[10px]">Esc</kbd>
+          <span className="ml-1.5">clear</span>
         </div>
       )}
     </div>

@@ -269,16 +269,16 @@ describe('SearchBar', () => {
       render(<SearchBar />);
 
       expect(screen.getByText(/⌘G/)).toBeInTheDocument();
-      expect(screen.getByText(/to focus/)).toBeInTheDocument();
+      expect(screen.getByText(/focus/)).toBeInTheDocument();
       expect(screen.getByText(/Esc/)).toBeInTheDocument();
-      expect(screen.getByText(/to clear/)).toBeInTheDocument();
+      expect(screen.getByText(/clear/)).toBeInTheDocument();
     });
 
     it('should not display keyboard shortcuts hint when not focused', () => {
       render(<SearchBar />);
 
       expect(screen.queryByText(/⌘G/)).not.toBeInTheDocument();
-      expect(screen.queryByText(/to focus/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/focus/)).not.toBeInTheDocument();
     });
   });
 

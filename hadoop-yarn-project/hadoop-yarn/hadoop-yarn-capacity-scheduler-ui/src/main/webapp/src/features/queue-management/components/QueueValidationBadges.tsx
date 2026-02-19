@@ -56,7 +56,7 @@ export const QueueValidationBadges: React.FC<QueueValidationBadgesProps> = ({
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger>
-                  <Badge variant="destructive" className="h-6 px-2">
+                  <Badge variant="destructive" className="h-6 px-2" aria-label={`${errors.length} validation error${errors.length === 1 ? '' : 's'}`}>
                     <AlertCircle className="h-3 w-3 mr-1" />
                     {errors.length}
                   </Badge>
@@ -81,6 +81,7 @@ export const QueueValidationBadges: React.FC<QueueValidationBadgesProps> = ({
                   <Badge
                       variant="outline"
                       className="h-6 px-2 border-amber-500 text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30"
+                      aria-label={`${warnings.length} validation warning${warnings.length === 1 ? '' : 's'}`}
                   >
                     <AlertTriangle className="h-3 w-3 mr-1" />
                     {warnings.length}
@@ -106,6 +107,7 @@ export const QueueValidationBadges: React.FC<QueueValidationBadgesProps> = ({
                   <Badge
                       variant="outline"
                       className="h-6 px-2 border-orange-500 text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-950/30"
+                      aria-label={`Affected by validation issues from ${errorSource ? `queue "${errorSource}"` : 'child queues'}`}
                   >
                     <AlertTriangle className="h-3 w-3 mr-1" />
                     Child
