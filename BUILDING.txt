@@ -539,13 +539,6 @@ Building on Rocky Linux 8
   $ sudo dnf -y install gcc-toolset-9-gcc gcc-toolset-9-gcc-c++
   $ source /opt/rh/gcc-toolset-9/enable
 
-* Install CMake 3.19
-  $ curl -L https://cmake.org/files/v3.19/cmake-3.19.0.tar.gz > cmake-3.19.0.tar.gz
-  $ tar -zxvf cmake-3.19.0.tar.gz && cd cmake-3.19.0
-  $ ./bootstrap
-  $ make -j$(nproc)
-  $ sudo make install
-
 * Install boost.
   $ curl -L -o boost-1.86.0.tar.gz https://github.com/boostorg/boost/releases/download/boost-1.86.0/boost-1.86.0-b2-nodocs.tar.gz
   $ tar -xzf boost-1.86.0.tar.gz

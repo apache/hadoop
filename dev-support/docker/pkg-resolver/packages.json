@@ -54,7 +54,8 @@
   "cmake": {
     "debian:13": "cmake",
     "ubuntu:noble": "cmake",
-    "ubuntu:noble::arch64": "cmake"
+    "ubuntu:noble::arch64": "cmake",
+    "rockylinux:8": "cmake"
   },
   "curl": {
     "debian:13": [
