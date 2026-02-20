@@ -121,12 +121,14 @@ pipeline {
             }
 
             steps {
-                withCredentials(getGithubCreds()) {
+                catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
+                    withCredentials(getGithubCreds()) {
                         sh '''#!/usr/bin/env bash
 
                         chmod u+x "${SOURCEDIR}/dev-support/jenkins.sh"
                         "${SOURCEDIR}/dev-support/jenkins.sh" run_ci
                         '''
+                    }
                 }
             }
 
@@ -167,12 +169,14 @@ pipeline {
             }
 
             steps {
-                withCredentials(getGithubCreds()) {
-                    sh '''#!/usr/bin/env bash
+                catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
+                    withCredentials(getGithubCreds()) {
+                        sh '''#!/usr/bin/env bash
 
-                    chmod u+x "${SOURCEDIR}/dev-support/jenkins.sh"
-                    "${SOURCEDIR}/dev-support/jenkins.sh" run_ci
-                    '''
+                        chmod u+x "${SOURCEDIR}/dev-support/jenkins.sh"
+                        "${SOURCEDIR}/dev-support/jenkins.sh" run_ci
+                        '''
+                    }
                 }
             }
 
