@@ -336,6 +336,7 @@
                       <includes>
                         <include>io.grpc.**</include>
                         <include>io.opencensus.**</include>
+                        <include>io.opentelemetry.**</include>
                         <include>io.perfmark.**</include>
                       </includes>
                     </relocation>
@@ -468,6 +469,17 @@
         <groupId>com.google.protobuf</groupId>
         <artifactId>protobuf-java</artifactId>
         <version>3.25.5</version>
+      </dependency>
+      <!--
+      Upgrade OpenTelemetry to 1.59.0. Earlier versions produced a JEP 238
+      multi-release jar, which would complicate shading.
+      -->
+      <dependency>
+        <groupId>io.opentelemetry</groupId>
+        <artifactId>opentelemetry-bom</artifactId>
+        <version>1.59.0</version>
+        <type>pom</type>
+        <scope>import</scope>
       </dependency>
     </dependencies>
   </dependencyManagement>

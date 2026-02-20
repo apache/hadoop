@@ -42,10 +42,16 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
-        <configuration>
+        <!-- override the parent config to use source and target
+             instead of release to use JDK internal API -->
+        <configuration combine.self="override">
+          <source>${javac.version}</source>
+          <target>${javac.version}</target>
           <compilerArgs>
             <arg>--add-modules</arg>
             <arg>jdk.javadoc</arg>
+            <arg>--add-exports</arg>
+            <arg>jdk.javadoc/jdk.javadoc.internal.tool=ALL-UNNAMED</arg>
           </compilerArgs>
         </configuration>
       </plugin>

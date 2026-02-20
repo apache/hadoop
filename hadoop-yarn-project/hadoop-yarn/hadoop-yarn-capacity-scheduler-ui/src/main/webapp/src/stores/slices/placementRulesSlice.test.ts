@@ -23,7 +23,7 @@ import type { YarnApiClient } from '~/lib/api/YarnApiClient';
 import type { PlacementRule } from '~/types/features/placement-rules';
 import { SPECIAL_VALUES } from '~/types/constants/special-values';
 import { extractPlacementRulesFromConfig } from '~/features/placement-rules/utils/placementRulesUtils';
-import { getMergedConfigData } from '~/utils/configUtils';
+import { mergeStagedConfig } from '~/utils/configUtils';
 
 // Mock the utils module
 vi.mock('~/features/placement-rules/utils/placementRulesUtils');
@@ -93,8 +93,8 @@ describe('placementRulesSlice', () => {
 
   describe('loadPlacementRules', () => {
     beforeEach(() => {
-      // Mock getMergedConfigData to return the input config as-is by default
-      vi.mocked(getMergedConfigData).mockImplementation((config) => config);
+      // Mock mergeStagedConfig to return the input config as-is by default
+      vi.mocked(mergeStagedConfig).mockImplementation((config) => config);
     });
 
     it('should load JSON format rules successfully', () => {
@@ -206,7 +206,7 @@ describe('placementRulesSlice', () => {
     it('should consider staged changes when loading placement rules', () => {
       const store = createTestStore();
       const mockExtract = vi.mocked(extractPlacementRulesFromConfig);
-      const mockGetMergedConfig = vi.mocked(getMergedConfigData);
+      const mockGetMergedConfig = vi.mocked(mergeStagedConfig);
 
       // Mock original config with legacy format
       const originalConfig = new Map([
@@ -254,7 +254,7 @@ describe('placementRulesSlice', () => {
 
       store.getState().loadPlacementRules();
 
-      // Verify getMergedConfigData was called with correct parameters
+      // Verify mergeStagedConfig was called with correct parameters
       expect(mockGetMergedConfig).toHaveBeenCalledWith(originalConfig, stagedChanges);
 
       // Verify that JSON format was detected and rules loaded
@@ -646,8 +646,8 @@ describe('placementRulesSlice', () => {
 
   describe('auto-staging format when rules are changed', () => {
     beforeEach(() => {
-      // Mock getMergedConfigData to return the input config as-is by default
-      vi.mocked(getMergedConfigData).mockImplementation((config) => config);
+      // Mock mergeStagedConfig to return the input config as-is by default
+      vi.mocked(mergeStagedConfig).mockImplementation((config) => config);
     });
 
     it('should auto-stage format to json when updating a rule with legacy format but no legacy rules', () => {

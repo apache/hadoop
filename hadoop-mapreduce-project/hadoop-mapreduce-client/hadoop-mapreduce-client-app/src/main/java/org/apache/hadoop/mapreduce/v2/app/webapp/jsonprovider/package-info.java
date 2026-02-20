@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,31 +16,7 @@
  * limitations under the License.
  */
 
-
-import { useSchedulerStore } from '~/stores/schedulerStore';
-
-export function usePlacementRules() {
-  const { rules, selectedRuleIndex, addRule, updateRule, selectRule, isLoadingRules, rulesError } =
-    useSchedulerStore((state) => ({
-      rules: state.rules,
-      selectedRuleIndex: state.selectedRuleIndex,
-      addRule: state.addRule,
-      updateRule: state.updateRule,
-      selectRule: state.selectRule,
-      isLoadingRules: state.isLoadingRules,
-      rulesError: state.rulesError,
-    }));
-
-  const selectedRule = selectedRuleIndex !== null ? rules[selectedRuleIndex] : null;
-
-  return {
-    rules,
-    selectedRule,
-    selectedRuleIndex,
-    addRule,
-    updateRule,
-    selectRule,
-    isLoadingRules,
-    rulesError,
-  };
-}
+/**
+ * Jersey2 JSON provider classes for the MapReduce Application web UI.
+ */
+package org.apache.hadoop.mapreduce.v2.app.webapp.jsonprovider;

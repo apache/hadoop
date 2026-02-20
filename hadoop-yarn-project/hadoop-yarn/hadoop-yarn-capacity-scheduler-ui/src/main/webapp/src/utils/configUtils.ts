@@ -57,8 +57,6 @@ export function mergeStagedConfig(
   return merged;
 }
 
-export const getMergedConfigData = mergeStagedConfig;
-
 export function getEffectivePropertyValue(
   configData: Map<string, string>,
   stagedChanges: StagedChange[],

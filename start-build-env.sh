@@ -25,6 +25,7 @@ OS_PLATFORM="${1:-}"
 DEFAULT_OS_PLATFORM="ubuntu_24"
 
 OS_PLATFORM_SUFFIX=""
+DOCKER_PLATFORM_ARGS=()
 
 if [[ -n ${OS_PLATFORM} ]]; then
   OS_PLATFORM_SUFFIX="_${OS_PLATFORM}"
@@ -35,9 +36,12 @@ fi
 DOCKER_DIR=dev-support/docker
 DOCKER_FILE="${DOCKER_DIR}/Dockerfile${OS_PLATFORM_SUFFIX}"
 
-CPU_ARCH=$(echo "$MACHTYPE" | cut -d- -f1)
-if [[ "$CPU_ARCH" == "aarch64" || "$CPU_ARCH" == "arm64" ]]; then
+CPU_ARCH=${CPU_ARCH:-$(uname -m)}
+if [[ "$CPU_ARCH" == "x86_64" || "$CPU_ARCH" == "amd64" ]]; then
+  DOCKER_PLATFORM_ARGS=("--platform" "linux/amd64")
+elif [[ "$CPU_ARCH" == "aarch64" || "$CPU_ARCH" == "arm64" ]]; then
   DOCKER_FILE="${DOCKER_DIR}/Dockerfile${OS_PLATFORM_SUFFIX}_aarch64"
+  DOCKER_PLATFORM_ARGS=("--platform" "linux/arm64")
 fi
 
 if [ ! -e "${DOCKER_FILE}" ] ; then
@@ -45,7 +49,7 @@ if [ ! -e "${DOCKER_FILE}" ] ; then
   exit 1
 fi
 
-docker build -t hadoop-build -f $DOCKER_FILE $DOCKER_DIR
+docker build "${DOCKER_PLATFORM_ARGS[@]}" -t hadoop-build -f "${DOCKER_FILE}" "${DOCKER_DIR}"
 
 USER_NAME=${SUDO_USER:=$USER}
 USER_ID=$(id -u "${USER_NAME}")
@@ -87,7 +91,7 @@ fi
 # Set the home directory in the Docker container.
 DOCKER_HOME_DIR=${DOCKER_HOME_DIR:-/home/${USER_NAME}}
 
-docker build -t "hadoop-build${OS_PLATFORM_SUFFIX}-${USER_ID}" - <<UserSpecificDocker
+docker build "${DOCKER_PLATFORM_ARGS[@]}" -t "hadoop-build${OS_PLATFORM_SUFFIX}-${USER_ID}" - <<UserSpecificDocker
 FROM hadoop-build
 RUN rm -f /var/log/faillog /var/log/lastlog
 RUN userdel -r \$(getent passwd ${USER_ID} | cut -d: -f1) 2>/dev/null || :
@@ -98,7 +102,7 @@ ENV HOME="${DOCKER_HOME_DIR}"
 
 UserSpecificDocker
 
-#If this env varible is empty, docker will be started
+# If this env variable is empty, docker will be started
 # in non interactive mode
 DOCKER_INTERACTIVE_RUN=${DOCKER_INTERACTIVE_RUN-"-i -t"}
 
@@ -106,7 +110,8 @@ DOCKER_INTERACTIVE_RUN=${DOCKER_INTERACTIVE_RUN-"-i -t"}
 # within the container and use the result on your normal
 # system.  And this also is a significant speedup in subsequent
 # builds because the dependencies are downloaded only once.
-docker run --rm=true $DOCKER_INTERACTIVE_RUN \
+# shellcheck disable=SC2086
+docker run "${DOCKER_PLATFORM_ARGS[@]}" --rm=true ${DOCKER_INTERACTIVE_RUN} \
   -v "${PWD}:${DOCKER_HOME_DIR}/hadoop${V_OPTS:-}" \
   -w "${DOCKER_HOME_DIR}/hadoop" \
   -v "${HOME}/.m2:${DOCKER_HOME_DIR}/.m2${V_OPTS:-}" \
