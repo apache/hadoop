@@ -18,14 +18,24 @@
 package org.apache.hadoop.yarn.server.nodemanager.webapp;
 
 
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.util.Shell;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.server.nodemanager.Context;
+import org.apache.hadoop.yarn.server.nodemanager.DefaultContainerExecutor;
+import org.apache.hadoop.yarn.server.nodemanager.NodeManager;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 
+import javax.inject.Inject;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
@@ -33,10 +43,14 @@ import java.util.stream.Stream;
 
 public class DiagnosticJStackService {
 
+    private final Context context;
     private static final Logger LOG = LoggerFactory
             .getLogger(DiagnosticJStackService.class);
 
-    private DiagnosticJStackService() {}
+    public DiagnosticJStackService(Context context) {
+        this.context = context;
+    }
+
 
     public static String collectNodeThreadDump(int numberOfJStack)
             throws IOException {
@@ -44,7 +58,7 @@ public class DiagnosticJStackService {
             throw new UnsupportedOperationException("Not implemented for Windows");
         }
 
-        long nodeManagerPid = getNodeManagerPid();
+        String nodeManagerPid = getNodeManagerPid();
 
         return runJStack(nodeManagerPid, numberOfJStack);
 
@@ -52,7 +66,7 @@ public class DiagnosticJStackService {
 
 
 
-    public static String collectApplicationThreadDump(String appId, int numberOfJStack)
+    public String collectApplicationThreadDump(String appId, int numberOfJStack)
             throws IOException {
         if(!appId.matches("application_\\d{13}_\\d{4}")) {
             throw new RuntimeException("Invalid application id: " + appId);
@@ -61,17 +75,47 @@ public class DiagnosticJStackService {
         if (Shell.WINDOWS) {
             throw new UnsupportedOperationException("Not implemented for Windows.");
         }
-        List<Long> applicationPids = getApplicationPids(appId);
+
+
+
+        List<String> applicationPids = getApplicationPids(appId);
 
         return runJStack(applicationPids, numberOfJStack);
     }
 
 
-    public static long getNodeManagerPid() {
-        return ProcessHandle.current().pid();
+    public static String getNodeManagerPid() {
+        return String.valueOf(ProcessHandle.current().pid());
     }
 
-    public static List<Long> getApplicationPids(String appId) throws IOException {
+    public List<String> getApplicationPids(String appId) throws IOException {
+        // List<String> pids = new ArrayList<>();
+
+        ApplicationId appIdObj = ApplicationId.fromString(appId);
+        Application app = context.getApplications().get(appIdObj);
+        if (app != null) {
+            Map<ContainerId, Container> containers = app.getContainers();
+            for (ContainerId containerId : containers.keySet()){
+                LOG.info("Found container: {}", containerId);
+                String pidForContainerId = context.getContainerExecutor().getProcessId(containerId);
+                LOG.info("Parent PID for container: {}", pidForContainerId);
+
+                Optional<ProcessHandle> parentProcess = ProcessHandle.of(Long.parseLong(pidForContainerId));
+                parentProcess.ifPresent(processHandle -> processHandle.descendants().forEach(
+                        childProcess -> {
+                            Optional<String> cmd = childProcess.info().command();
+                            if (cmd.isPresent() && cmd.get().contains("java")) {
+                                LOG.info("Found actual java pid: {}", childProcess.pid());
+                            }
+                        }
+                ));
+
+                // pids.add(pidForContainerId);
+            }
+        }
+
+        // return pids;
+
         String psCmd = "ps aux | grep jvm/java | grep " + appId + " | grep -v -e /bin/bash -e grep";
 
         Shell.ShellCommandExecutor cmd = new Shell.ShellCommandExecutor(
@@ -83,18 +127,19 @@ public class DiagnosticJStackService {
 
         cmd.execute();
         return extractPids(cmd.getOutput());
+
     }
 
-    public static List<Long> extractPids(String psOutput) {
+    public static List<String> extractPids(String psOutput) {
 
         LOG.info("Process output: " + psOutput);
 
-        List<Long> pids = new ArrayList<>();
+        List<String> pids = new ArrayList<>();
         for(String line : psOutput.split("\n")) {
             // root       414  1.3  1.7 8124480 434520 ?      Sl   11:36
             String [] parts = line.trim().split("\\s+");
             if (parts.length > 1){
-                pids.add(Long.valueOf(parts[1]));
+                pids.add(parts[1]);
             }
         }
 
@@ -102,18 +147,18 @@ public class DiagnosticJStackService {
     }
 
 
-    public static String runJStack(List<Long> pids, int numJStacks) throws IOException {
+    public static String runJStack(List<String> pids, int numJStacks) throws IOException {
         StringBuilder result = new StringBuilder();
 
-        for(Long pid : pids){
+        for(String pid : pids){
             result.append(runJStack(pid, numJStacks));
         }
 
         return result.toString();
     }
 
-    public static String runJStack(long pid, int numJStacks) throws IOException {
-        Optional<ProcessHandle> processHandle = ProcessHandle.of(pid);
+    public static String runJStack(String pid, int numJStacks) throws IOException {
+        Optional<ProcessHandle> processHandle = ProcessHandle.of(Long.parseLong(pid));
 
         if (processHandle.isEmpty()){
             throw new IOException("Process with PID " + pid + " is no longer exists");
@@ -124,7 +169,7 @@ public class DiagnosticJStackService {
 
         Shell.ShellCommandExecutor cmd =
                 new Shell.ShellCommandExecutor(
-                        new String[]{"sudo", "-u", processOwner, "jstack", String.valueOf(pid)},
+                        new String[]{"sudo", "-u", processOwner, "jstack", pid},
                         null,
                         null,
                         60_000

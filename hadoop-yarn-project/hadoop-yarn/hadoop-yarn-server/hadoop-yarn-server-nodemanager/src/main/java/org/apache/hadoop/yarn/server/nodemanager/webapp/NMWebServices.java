@@ -665,8 +665,10 @@ public class NMWebServices {
   {
     if (isJStackEndpointsEnable) {
       try {
+        DiagnosticJStackService diagnosticJStackService = new DiagnosticJStackService(this.nmContext);
+
         return Response.status(Status.OK)
-                .entity(DiagnosticJStackService.collectApplicationThreadDump(appId, numberOfJStack))
+                .entity(diagnosticJStackService.collectApplicationThreadDump(appId, numberOfJStack))
                 .build();
       } catch (RuntimeException e){
         throw new WebAppException(

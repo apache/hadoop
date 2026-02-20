@@ -35,7 +35,7 @@ public class TestDiagnosticJStackService {
     public void testExtractPidsFromEmptyProcessOutput(){
         String psOutput = "";
 
-        List<Long> pids = DiagnosticJStackService.extractPids(psOutput);
+        List<String> pids = DiagnosticJStackService.extractPids(psOutput);
 
         assertTrue(pids.isEmpty());
 
@@ -45,9 +45,9 @@ public class TestDiagnosticJStackService {
     public void testExtractPidsFromOneProcessOutput(){
         String psOutput = "root       414  1.3  1.7 8124480 434520 ?      Sl   11:36";
 
-        List<Long> pids = DiagnosticJStackService.extractPids(psOutput);
+        List<String> pids = DiagnosticJStackService.extractPids(psOutput);
 
-        assertEquals(414, pids.get(0));
+        assertEquals("414", pids.get(0));
 
     }
 
@@ -58,10 +58,10 @@ public class TestDiagnosticJStackService {
                 root       420  1.3  1.7 8124480 434520 ?      Sl   11:36
                 """;
 
-        List<Long> pids = DiagnosticJStackService.extractPids(psOutput);
+        List<String> pids = DiagnosticJStackService.extractPids(psOutput);
 
-        assertEquals(414, pids.get(0));
-        assertEquals(420, pids.get(1));
+        assertEquals("414", pids.get(0));
+        assertEquals("420", pids.get(1));
     }
 
 }
