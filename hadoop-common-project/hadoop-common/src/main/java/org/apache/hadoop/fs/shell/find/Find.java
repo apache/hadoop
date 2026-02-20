@@ -81,7 +81,21 @@ public class Find extends FsCommand {
 
     // Navigation Expressions
     // Matcher Expressions
+    addExpression(Atime.class);
+    addExpression(Blocksize.class);
+    addExpression(Empty.class);
+    addExpression(Group.class);
+    addExpression(Mtime.class);
     addExpression(Name.class);
+    addExpression(Newer.class);
+    addExpression(Nogroup.class);
+    addExpression(Nouser.class);
+    addExpression(Perm.class);
+    addExpression(Regex.class);
+    addExpression(Replicas.class);
+    addExpression(Size.class);
+    addExpression(Type.class);
+    addExpression(User.class);
 
     DESCRIPTION = buildDescription(ExpressionFactory.getExpressionFactory());
 
