@@ -18,28 +18,20 @@
 package org.apache.hadoop.yarn.server.nodemanager.webapp;
 
 
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
-import org.apache.hadoop.yarn.server.nodemanager.DefaultContainerExecutor;
-import org.apache.hadoop.yarn.server.nodemanager.NodeManager;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-
-import javax.inject.Inject;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 public class DiagnosticJStackService {
 
@@ -58,13 +50,11 @@ public class DiagnosticJStackService {
             throw new UnsupportedOperationException("Not implemented for Windows");
         }
 
-        String nodeManagerPid = getNodeManagerPid();
+        long nodeManagerPid = getNodeManagerPid();
 
         return runJStack(nodeManagerPid, numberOfJStack);
 
     }
-
-
 
     public String collectApplicationThreadDump(String appId, int numberOfJStack)
             throws IOException {
@@ -76,57 +66,37 @@ public class DiagnosticJStackService {
             throw new UnsupportedOperationException("Not implemented for Windows.");
         }
 
-
-
-        List<String> applicationPids = getApplicationPids(appId);
+        List<Long> applicationPids = getApplicationPids(appId);
 
         return runJStack(applicationPids, numberOfJStack);
     }
 
 
-    public static String getNodeManagerPid() {
-        return String.valueOf(ProcessHandle.current().pid());
+    public static long getNodeManagerPid() {
+        return ProcessHandle.current().pid();
     }
 
-    public List<String> getApplicationPids(String appId) throws IOException {
-        // List<String> pids = new ArrayList<>();
+    public List<Long> getApplicationPids(String appId){
+        List<Long> pids = new ArrayList<>();
 
         ApplicationId appIdObj = ApplicationId.fromString(appId);
         Application app = context.getApplications().get(appIdObj);
         if (app != null) {
             Map<ContainerId, Container> containers = app.getContainers();
             for (ContainerId containerId : containers.keySet()){
-                LOG.info("Found container: {}", containerId);
-                String pidForContainerId = context.getContainerExecutor().getProcessId(containerId);
-                LOG.info("Parent PID for container: {}", pidForContainerId);
+                long pidForContainerId = Long.parseLong(context.getContainerExecutor().getProcessId(containerId));
 
-                Optional<ProcessHandle> parentProcess = ProcessHandle.of(Long.parseLong(pidForContainerId));
-                parentProcess.ifPresent(processHandle -> processHandle.descendants().forEach(
-                        childProcess -> {
-                            Optional<String> cmd = childProcess.info().command();
-                            if (cmd.isPresent() && cmd.get().contains("java")) {
-                                LOG.info("Found actual java pid: {}", childProcess.pid());
-                            }
-                        }
-                ));
+                ProcessHandle.of(pidForContainerId).ifPresent(parentProcess ->
+                        parentProcess.descendants()
+                                .filter(childProcess -> childProcess.info().command().orElse("").contains("java"))
+                                .map(ProcessHandle::pid)
+                                .forEach(pids::add)
+                );
 
-                // pids.add(pidForContainerId);
             }
         }
 
-        // return pids;
-
-        String psCmd = "ps aux | grep jvm/java | grep " + appId + " | grep -v -e /bin/bash -e grep";
-
-        Shell.ShellCommandExecutor cmd = new Shell.ShellCommandExecutor(
-                new String[]{ "bash", "-c", psCmd},
-                null,
-                null,
-                10_000
-        );
-
-        cmd.execute();
-        return extractPids(cmd.getOutput());
+        return pids;
 
     }
 
@@ -147,29 +117,29 @@ public class DiagnosticJStackService {
     }
 
 
-    public static String runJStack(List<String> pids, int numJStacks) throws IOException {
+    public static String runJStack(List<Long> pids, int numJStacks) throws IOException {
         StringBuilder result = new StringBuilder();
 
-        for(String pid : pids){
+        for(Long pid : pids){
             result.append(runJStack(pid, numJStacks));
         }
 
         return result.toString();
     }
 
-    public static String runJStack(String pid, int numJStacks) throws IOException {
-        Optional<ProcessHandle> processHandle = ProcessHandle.of(Long.parseLong(pid));
+    public static String runJStack(long pid, int numJStacks) throws IOException {
+        Optional<ProcessHandle> processHandle = ProcessHandle.of(pid);
 
         if (processHandle.isEmpty()){
             throw new IOException("Process with PID " + pid + " is no longer exists");
         }
 
         String processOwner = processHandle.get().info().user().orElse("root");
-
+        String stringPid = String.valueOf(pid);
 
         Shell.ShellCommandExecutor cmd =
                 new Shell.ShellCommandExecutor(
-                        new String[]{"sudo", "-u", processOwner, "jstack", pid},
+                        new String[]{"sudo", "-u", processOwner, "jstack", stringPid},
                         null,
                         null,
                         60_000
@@ -179,14 +149,9 @@ public class DiagnosticJStackService {
 
         for (int i = 0; i < numJStacks; i++) {
             cmd.execute();
-
-            result.append("--- JStack iteration -")
-                    .append(i)
-                    .append(" for PID: ")
-                    .append(pid)
-                    .append("---\n")
-                    .append(cmd.getOutput())
-                    .append("\n");
+            result.append(String.format(
+                    "--- JStack iteration %d for PID: %d ---\n%s\n", i, pid, cmd.getOutput()
+            ));
         }
 
 
