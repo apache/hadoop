@@ -85,8 +85,8 @@
   },
   "fuse": {
     "debian:13": [
-      "fuse3",
-      "libfuse3-dev"
+      "fuse",
+      "libfuse-dev"
     ],
     "ubuntu:noble": [
       "fuse",
