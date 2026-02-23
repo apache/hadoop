@@ -34,8 +34,10 @@ import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.Enumeration;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import javax.servlet.ServletContext;
@@ -50,6 +52,7 @@ import javax.ws.rs.core.UriBuilderException;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -77,6 +80,11 @@ import org.apache.http.impl.client.HttpClientBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.apache.hadoop.security.authentication.server.JWTRedirectAuthenticationHandler.DEFAULT_JWT_COOKIE_NAME;
+import static org.apache.hadoop.security.authentication.server.JWTRedirectAuthenticationHandler.JWT_COOKIE_NAME;
+import static org.apache.hadoop.yarn.server.webproxy.ProxyUtils.getCookie;
+import static org.apache.hadoop.yarn.server.webproxy.ProxyUtils.setCookies;
+
 public class WebAppProxyServlet extends HttpServlet {
   private static final long serialVersionUID = 1L;
   private static final Logger LOG = LoggerFactory.getLogger(
@@ -99,6 +107,7 @@ public class WebAppProxyServlet extends HttpServlet {
   private transient List<TrackingUriPlugin> trackingUriPlugins;
   private final String failurePageUrlBase;
   private transient YarnConfiguration conf;
+  private final String jwtCookieName;
 
   /**
    * HTTP methods.
@@ -137,6 +146,7 @@ public class WebAppProxyServlet extends HttpServlet {
     this.failurePageUrlBase =
         StringHelper.pjoin(WebAppUtils.getResolvedRMWebAppURLWithScheme(conf),
           "cluster", "failure");
+    this.jwtCookieName = conf.get(JWT_COOKIE_NAME, DEFAULT_JWT_COOKIE_NAME);
   }
 
   private String getRmAppPageUrlBase(ApplicationId id) throws YarnException, IOException {
@@ -311,11 +321,19 @@ public class WebAppProxyServlet extends HttpServlet {
       }
     }
 
+    Map<String, String> cookies = new HashMap<>();
     String user = req.getRemoteUser();
-    if (user != null && !user.isEmpty()) {
-      base.setHeader("Cookie",
-          PROXY_USER_COOKIE_NAME + "=" + URLEncoder.encode(user, "ASCII"));
+    if (StringUtils.hasLength(user)) {
+      LOG.debug("Cookie {} will be set", PROXY_USER_COOKIE_NAME);
+      cookies.put(PROXY_USER_COOKIE_NAME, URLEncoder.encode(user, "ASCII"));
     }
+    String jwtCookie = getCookie(req, jwtCookieName);
+    if (StringUtils.hasLength(jwtCookie)) {
+      LOG.debug("Cookie {} will be set", jwtCookieName);
+      cookies.put(jwtCookieName, jwtCookie);
+    }
+    setCookies(base, cookies);
+
     OutputStream out = resp.getOutputStream();
     HttpClient client = httpClientBuilder.build();
     try {
@@ -335,7 +353,7 @@ public class WebAppProxyServlet extends HttpServlet {
       base.releaseConnection();
     }
   }
-  
+
   private static String getCheckCookieName(ApplicationId id){
     return "checked_"+id;
   }

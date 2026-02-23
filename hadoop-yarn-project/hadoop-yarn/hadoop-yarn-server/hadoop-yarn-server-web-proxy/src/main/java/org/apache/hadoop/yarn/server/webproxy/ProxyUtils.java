@@ -20,16 +20,21 @@ package org.apache.hadoop.yarn.server.webproxy;
 
 import org.apache.hadoop.yarn.webapp.MimeType;
 import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
+import org.apache.http.client.methods.HttpRequestBase;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
+import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.EnumSet;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * Class containing general purpose proxy utilities
@@ -121,5 +126,41 @@ public class ProxyUtils {
     if (!(req instanceof HttpServletRequest)) {
       throw new ServletException(E_HTTP_HTTPS_ONLY);
     }
+  }
+
+  /**
+   * Returns the value of a cookie with the given name from the HTTP servlet request.
+   * Cookie name comparison is case-insensitive. If the request contains no cookies
+   * or the specified cookie is not present, this method returns {@code null}.
+   *
+   * @param req the HTTP servlet request containing cookies
+   * @param cookieName the name of the cookie to retrieve
+   * @return the cookie value, or {@code null} if not found
+   */
+  public static String getCookie(HttpServletRequest req, String cookieName) {
+    Cookie[] cookies = req.getCookies();
+    if (cookies != null) {
+      for (Cookie cookie : cookies) {
+        if (cookieName.equalsIgnoreCase(cookie.getName())) {
+          return cookie.getValue();
+        }
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Sets the {@code Cookie} header on the given HTTP request using the provided cookies.
+   * Cookies are formatted according to the standard HTTP header syntax:
+   * {@code name=value; name2=value2}.
+   *
+   * @param req the HTTP request on which to set the cookie header
+   * @param cookies a map of cookie names to cookie values
+   */
+  public static void setCookies(HttpRequestBase req, Map<String, String> cookies) {
+    req.setHeader("Cookie", cookies.entrySet()
+        .stream()
+        .map(entry -> entry.getKey() + "=" + entry.getValue())
+        .collect(Collectors.joining("; ")));
   }
 }

@@ -71,7 +71,7 @@ import com.nimbusds.jose.crypto.RSASSAVerifier;
  */
 public class JWTRedirectAuthenticationHandler extends
     AltKerberosAuthenticationHandler {
-  private static Logger LOG = LoggerFactory
+  private static final Logger LOG = LoggerFactory
       .getLogger(JWTRedirectAuthenticationHandler.class);
 
   public static final String AUTHENTICATION_PROVIDER_URL =
@@ -79,11 +79,12 @@ public class JWTRedirectAuthenticationHandler extends
   public static final String PUBLIC_KEY_PEM = "public.key.pem";
   public static final String EXPECTED_JWT_AUDIENCES = "expected.jwt.audiences";
   public static final String JWT_COOKIE_NAME = "jwt.cookie.name";
+  public static final String DEFAULT_JWT_COOKIE_NAME = "hadoop-jwt";
   private static final String ORIGINAL_URL_QUERY_PARAM = "originalUrl=";
   private String authenticationProviderUrl = null;
   private RSAPublicKey publicKey = null;
   private List<String> audiences = null;
-  private String cookieName = "hadoop-jwt";
+  private String cookieName = DEFAULT_JWT_COOKIE_NAME;
 
   /**
    * Primarily for testing, this provides a way to set the publicKey for
