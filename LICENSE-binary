@@ -440,6 +440,7 @@ atlaskit/pragmatic-drag-and-drop 1.7.4
 atlaskit/pragmatic-drag-and-drop-auto-scroll 2.1.1
 atlaskit/pragmatic-drag-and-drop-hitbox 1.1.0
 typescript 5.8.3
+baseline-browser-mapping 2.10.0
 --------------------------------------------------------------------------------
 This product bundles various third-party components under other open source
 licenses. This section summarizes those components and their licenses.

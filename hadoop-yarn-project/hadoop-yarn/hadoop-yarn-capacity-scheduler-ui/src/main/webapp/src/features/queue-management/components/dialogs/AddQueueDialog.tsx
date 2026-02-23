@@ -167,7 +167,7 @@ export function AddQueueDialog({ open, parentQueuePath, onClose }: AddQueueDialo
           <div className="flex items-start gap-2 p-3 rounded-md bg-muted/50 text-sm text-muted-foreground">
             <Info className="h-4 w-4 mt-0.5 flex-shrink-0" />
             <span>
-              After creating the queue, you&apos;ll be able to set capacity for this queue and
+              After creating the queue, you will be able to set capacity for this queue and
               adjust sibling capacities in the capacity editor.
             </span>
           </div>
