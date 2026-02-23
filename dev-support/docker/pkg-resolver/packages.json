@@ -1,33 +1,42 @@
 {
   "ant": {
+    "debian:12": "ant",
     "debian:13": "ant",
     "ubuntu:noble": "ant",
     "ubuntu:noble::arch64": "ant",
     "rockylinux:8": "ant"
   },
   "apt-utils": {
+    "debian:12": "apt-utils",
     "debian:13": "apt-utils",
     "ubuntu:noble": "apt-utils",
     "ubuntu:noble::arch64": "apt-utils"
   },
   "automake": {
+    "debian:12": "automake",
     "debian:13": "automake",
     "ubuntu:noble": "automake",
     "ubuntu:noble::arch64": "automake",
     "rockylinux:8": "automake"
   },
   "bats": {
+    "debian:12": "bats",
     "debian:13": "bats",
     "ubuntu:noble": "bats",
     "ubuntu:noble::arch64": "bats",
     "rockylinux:8": "bats"
   },
   "build-essential": {
+    "debian:12": "build-essential",
     "debian:13": "build-essential",
     "ubuntu:noble": "build-essential",
     "ubuntu:noble::arch64": "build-essential"
   },
   "bzip2": {
+    "debian:12": [
+      "bzip2",
+      "libbz2-dev"
+    ],
     "debian:13": [
       "bzip2",
       "libbz2-dev"
@@ -46,18 +55,24 @@
     ]
   },
   "clang": {
+    "debian:12": "clang",
     "debian:13": "clang",
     "ubuntu:noble": "clang",
     "ubuntu:noble::arch64": "clang",
     "rockylinux:8": "clang"
   },
   "cmake": {
+    "debian:12": "cmake",
     "debian:13": "cmake",
     "ubuntu:noble": "cmake",
     "ubuntu:noble::arch64": "cmake",
     "rockylinux:8": "cmake"
   },
   "curl": {
+    "debian:12": [
+      "curl",
+      "libcurl4-openssl-dev"
+    ],
     "debian:13": [
       "curl",
       "libcurl4-openssl-dev"
@@ -76,6 +91,7 @@
     ]
   },
   "doxygen": {
+    "debian:12": "doxygen",
     "debian:13": "doxygen",
     "ubuntu:noble": "doxygen",
     "ubuntu:noble::arch64": "doxygen"
@@ -84,6 +100,10 @@
     "rockylinux:8": "dnf"
   },
   "fuse": {
+    "debian:12": [
+      "fuse",
+      "libfuse-dev"
+    ],
     "debian:13": [
       "fuse",
       "libfuse-dev"
@@ -103,6 +123,10 @@
     ]
   },
   "gcc": {
+    "debian:12": [
+      "gcc",
+      "g++"
+    ],
     "debian:13": [
       "gcc",
       "g++"
@@ -117,33 +141,39 @@
     ]
   },
   "git": {
+    "debian:12": "git",
     "debian:13": "git",
     "ubuntu:noble": "git",
     "ubuntu:noble::arch64": "git",
     "rockylinux:8": "git"
   },
   "gnupg-agent": {
+    "debian:12": "gnupg-agent",
     "debian:13": "gnupg-agent",
     "ubuntu:noble": "gnupg-agent",
     "ubuntu:noble::arch64": "gnupg-agent"
   },
   "hugo": {
+    "debian:12": "hugo",
     "debian:13": "hugo",
     "ubuntu:noble": "hugo",
     "ubuntu:noble::arch64": "hugo"
   },
   "libbcprov-java": {
+    "debian:12": "libbcprov-java",
     "debian:13": "libbcprov-java",
     "ubuntu:noble": "libbcprov-java",
     "ubuntu:noble::arch64": "libbcprov-java"
   },
   "libtool": {
+    "debian:12": "libtool",
     "debian:13": "libtool",
     "ubuntu:noble": "libtool",
     "ubuntu:noble::arch64": "libtool",
     "rockylinux:8": "libtool"
   },
   "openssl": {
+    "debian:12": "libssl-dev",
     "debian:13": "libssl-dev",
     "ubuntu:noble": "libssl-dev",
     "ubuntu:noble::arch64": "libssl-dev",
@@ -156,6 +186,10 @@
     ]
   },
   "protocol-buffers": {
+    "debian:12": [
+      "libprotobuf-dev",
+      "libprotoc-dev"
+    ],
     "debian:13": [
       "libprotobuf-dev",
       "libprotoc-dev"
@@ -170,20 +204,27 @@
     ]
   },
   "procps": {
+    "debian:12": "procps",
     "debian:13": "procps"
   },
   "sasl": {
+    "debian:12": "libsasl2-dev",
     "debian:13": "libsasl2-dev",
     "ubuntu:noble": "libsasl2-dev",
     "ubuntu:noble::arch64": "libsasl2-dev",
     "rockylinux:8": "cyrus-sasl-devel"
   },
   "snappy": {
+    "debian:12": "libsnappy-dev",
     "debian:13": "libsnappy-dev",
     "ubuntu:noble": "libsnappy-dev",
     "ubuntu:noble::arch64": "libsnappy-dev"
   },
   "zlib": {
+    "debian:12": [
+      "libzstd-dev",
+      "zlib1g-dev"
+    ],
     "debian:13": [
       "libzstd-dev",
       "zlib1g-dev"
@@ -202,23 +243,30 @@
     ]
   },
   "locales": {
+    "debian:12": "locales",
     "debian:13": "locales",
     "ubuntu:noble": "locales",
     "ubuntu:noble::arch64": "locales"
   },
   "libtirpc-devel": {
+    "debian:12": "libtirpc-dev",
     "debian:13": "libtirpc-dev",
     "rockylinux:8": "libtirpc-devel",
     "ubuntu:noble": "libtirpc-dev",
     "ubuntu:noble::arch64": "libtirpc-dev"
   },
   "make": {
+    "debian:12": "make",
     "debian:13": "make",
     "ubuntu:noble": "make",
     "ubuntu:noble::arch64": "make",
     "rockylinux:8": "make"
   },
   "java": {
+    "debian:12": [
+      "openjdk-17-jdk",
+      "temurin-25-jdk"
+    ],
     "debian:13": [
       "temurin-17-jdk",
       "openjdk-25-jdk"
@@ -239,18 +287,27 @@
     ]
   },
   "pinentry-curses": {
+    "debian:12": "pinentry-curses",
     "debian:13": "pinentry-curses",
     "ubuntu:noble": "pinentry-curses",
     "ubuntu:noble::arch64": "pinentry-curses",
     "rockylinux:8": "pinentry-curses"
   },
   "pkg-config": {
+    "debian:12": "pkg-config",
     "debian:13": "pkg-config",
     "ubuntu:noble": "pkg-config",
     "ubuntu:noble::arch64": "pkg-config",
     "rockylinux:8": "pkg-config"
   },
   "python": {
+    "debian:12": [
+      "python3",
+      "python3-pip",
+      "python3-pkg-resources",
+      "python3-setuptools",
+      "python3-wheel"
+    ],
     "debian:13": [
       "python3",
       "python3-pip",
@@ -280,12 +337,14 @@
     ]
   },
   "rsync": {
+    "debian:12": "rsync",
     "debian:13": "rsync",
     "ubuntu:noble": "rsync",
     "ubuntu:noble::arch64": "rsync",
     "rockylinux:8": "rsync"
   },
   "shellcheck": {
+    "debian:12": "shellcheck",
     "debian:13": "shellcheck",
     "ubuntu:noble": "shellcheck",
     "ubuntu:noble::arch64": "shellcheck"
@@ -298,18 +357,21 @@
     "ubuntu:noble::arch64": "software-properties-common"
   },
   "sudo": {
+    "debian:12": "sudo",
     "debian:13": "sudo",
     "ubuntu:noble": "sudo",
     "ubuntu:noble::arch64": "sudo",
     "rockylinux:8": "sudo"
   },
   "valgrind": {
+    "debian:12": "valgrind",
     "debian:13": "valgrind",
     "ubuntu:noble": "valgrind",
     "ubuntu:noble::arch64": "valgrind",
     "rockylinux:8": "valgrind"
   },
   "yasm": {
+    "debian:12": "yasm",
     "debian:13": "yasm",
     "ubuntu:noble": "yasm",
     "ubuntu:noble::arch64": "yasm"

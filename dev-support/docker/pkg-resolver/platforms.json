@@ -2,5 +2,6 @@
   "ubuntu:noble",
   "ubuntu:noble::arch64",
   "rockylinux:8",
+  "debian:12",
   "debian:13"
 ]

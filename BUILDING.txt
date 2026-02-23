@@ -41,7 +41,7 @@ On Linux / Mac:
           To run an x86_64 container on arm machine, use this command:
           $ CPU_ARCH=x86_64 ./start-build-env.sh ubuntu_24
 
-   - [OS Platform] One of [rockylinux_8, debian_13, ubuntu_24, windows_10].
+   - [OS Platform] One of [rockylinux_8, debian_12, debian_13, ubuntu_24, windows_10].
         Default is 'ubuntu_24'.
         Note: Currently only ubuntu is supported on arm machine
 
