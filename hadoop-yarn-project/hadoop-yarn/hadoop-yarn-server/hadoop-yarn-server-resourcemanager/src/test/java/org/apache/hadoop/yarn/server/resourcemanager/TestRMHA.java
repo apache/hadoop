@@ -67,6 +67,7 @@ import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.DrainDispatcher;
 import org.apache.hadoop.yarn.event.Event;
 import org.apache.hadoop.yarn.event.EventHandler;
+import org.apache.hadoop.yarn.event.InlineDispatcher;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationStateData;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemoryRMStateStore;
@@ -490,6 +491,16 @@ public class TestRMHA extends AbstractHadoopTestBase {
     };
     memStore.init(conf);
     rm = new MockRM(conf, memStore) {
+      @Override
+      protected Dispatcher createDispatcher() {
+        return new InlineDispatcher();
+      }
+
+      @Override
+      public void drainEvents() {
+        // InlineDispatcher dispatches synchronously; nothing to drain here.
+      }
+
       @Override
       void stopActiveServices() {
         try {
