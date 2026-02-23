@@ -31,6 +31,7 @@ import {
 import '@xyflow/react/dist/style.css';
 import { Alert, AlertDescription, AlertTitle } from '~/components/ui/alert';
 import { AlertCircle, Tag, Search, X, Info } from 'lucide-react';
+import { useShallow } from 'zustand/react/shallow';
 import { useSchedulerStore } from '~/stores/schedulerStore';
 import {
   useQueueTreeData,
@@ -61,15 +62,26 @@ const edgeTypes = {
 };
 
 const FlowInner: React.FC = () => {
+  // State values (trigger re-renders only when these specific values change)
   const {
-    selectQueue,
     stagedChanges,
     searchQuery,
     selectedNodeLabelFilter,
-    getSearchResults,
     configData,
     isComparisonModeActive,
-  } = useSchedulerStore();
+  } = useSchedulerStore(
+    useShallow((s) => ({
+      stagedChanges: s.stagedChanges,
+      searchQuery: s.searchQuery,
+      selectedNodeLabelFilter: s.selectedNodeLabelFilter,
+      configData: s.configData,
+      isComparisonModeActive: s.isComparisonModeActive,
+    })),
+  );
+
+  // Actions (stable references, never trigger re-renders)
+  const selectQueue = useSchedulerStore((s) => s.selectQueue);
+  const getSearchResults = useSchedulerStore((s) => s.getSearchResults);
   const { theme } = useTheme();
 
   // Get legacy mode status considering staged changes

@@ -48,9 +48,16 @@ describe('SearchBar', () => {
     getFilteredSettings: mockGetFilteredSettings,
   };
 
+  function mockStore(overrides: Record<string, any> = {}) {
+    const state = { ...defaultStoreState, ...overrides };
+    vi.mocked(useSchedulerStore).mockImplementation((selector?: any) => {
+      return selector ? selector(state) : state;
+    });
+  }
+
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(useSchedulerStore).mockReturnValue(defaultStoreState);
+    mockStore();
     vi.mocked(useDebounce).mockImplementation((value) => value);
     mockGetFilteredQueues.mockReturnValue(null);
     mockGetFilteredNodes.mockReturnValue([]);
@@ -78,8 +85,7 @@ describe('SearchBar', () => {
       vi.clearAllMocks();
 
       // Test nodes context
-      vi.mocked(useSchedulerStore).mockReturnValue({
-        ...defaultStoreState,
+      mockStore({
         searchContext: 'nodes',
         getFilteredQueues: mockGetFilteredQueues,
         getFilteredNodes: mockGetFilteredNodes,
@@ -90,8 +96,7 @@ describe('SearchBar', () => {
       unmount1();
 
       // Test settings context
-      vi.mocked(useSchedulerStore).mockReturnValue({
-        ...defaultStoreState,
+      mockStore({
         searchContext: 'settings',
         getFilteredQueues: mockGetFilteredQueues,
         getFilteredNodes: mockGetFilteredNodes,
@@ -109,8 +114,7 @@ describe('SearchBar', () => {
     it('should display clear button and match count when search has value', () => {
       // Mock the store to have an active search with results
       // Use settings context to match the filtered settings we're providing
-      vi.mocked(useSchedulerStore).mockReturnValue({
-        ...defaultStoreState,
+      mockStore({
         searchQuery: 'test',
         searchContext: 'settings',
         getFilteredQueues: () => null,
@@ -130,8 +134,7 @@ describe('SearchBar', () => {
     it('should display singular match for count of 1', () => {
       // Mock the store to have an active search with 1 result
       // Use settings context to match the filtered settings we're providing
-      vi.mocked(useSchedulerStore).mockReturnValue({
-        ...defaultStoreState,
+      mockStore({
         searchQuery: 'test',
         searchContext: 'settings',
         getFilteredQueues: () => null,
@@ -225,8 +228,7 @@ describe('SearchBar', () => {
 
     it('should clear search on Escape when focused', async () => {
       const user = userEvent.setup();
-      vi.mocked(useSchedulerStore).mockReturnValue({
-        ...defaultStoreState,
+      mockStore({
         isSearchFocused: true,
         getFilteredQueues: mockGetFilteredQueues,
         getFilteredNodes: mockGetFilteredNodes,
@@ -258,8 +260,7 @@ describe('SearchBar', () => {
     });
 
     it('should display keyboard shortcuts hint when focused', () => {
-      vi.mocked(useSchedulerStore).mockReturnValue({
-        ...defaultStoreState,
+      mockStore({
         isSearchFocused: true,
         getFilteredQueues: mockGetFilteredQueues,
         getFilteredNodes: mockGetFilteredNodes,

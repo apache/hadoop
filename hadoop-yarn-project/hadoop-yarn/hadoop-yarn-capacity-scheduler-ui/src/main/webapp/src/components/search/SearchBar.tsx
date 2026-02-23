@@ -27,6 +27,7 @@ import { Input } from '~/components/ui/input';
 import { Button } from '~/components/ui/button';
 import { Badge } from '~/components/ui/badge';
 import { cn } from '~/utils/cn';
+import { useShallow } from 'zustand/react/shallow';
 import { useSchedulerStore } from '~/stores/schedulerStore';
 import { useDebounce } from '~/hooks/useDebounce';
 import { calculateSearchResults } from '~/utils/searchUtils';
@@ -37,17 +38,22 @@ interface SearchBarProps {
 }
 
 export const SearchBar: React.FC<SearchBarProps> = ({ placeholder = 'Search...', className }) => {
-  const {
-    searchQuery,
-    searchContext,
-    isSearchFocused,
-    setSearchQuery,
-    clearSearch,
-    setSearchFocused,
-    getFilteredQueues,
-    getFilteredNodes,
-    getFilteredSettings,
-  } = useSchedulerStore();
+  // State values (trigger re-renders only when these specific values change)
+  const { searchQuery, searchContext, isSearchFocused } = useSchedulerStore(
+    useShallow((s) => ({
+      searchQuery: s.searchQuery,
+      searchContext: s.searchContext,
+      isSearchFocused: s.isSearchFocused,
+    })),
+  );
+
+  // Actions (stable references, never trigger re-renders)
+  const setSearchQuery = useSchedulerStore((s) => s.setSearchQuery);
+  const clearSearch = useSchedulerStore((s) => s.clearSearch);
+  const setSearchFocused = useSchedulerStore((s) => s.setSearchFocused);
+  const getFilteredQueues = useSchedulerStore((s) => s.getFilteredQueues);
+  const getFilteredNodes = useSchedulerStore((s) => s.getFilteredNodes);
+  const getFilteredSettings = useSchedulerStore((s) => s.getFilteredSettings);
 
   const inputRef = useRef<HTMLInputElement>(null);
   const [localQuery, setLocalQuery] = useState(searchQuery);

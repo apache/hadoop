@@ -29,6 +29,7 @@ import {
 import { Button } from '~/components/ui/button';
 import { Badge } from '~/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '~/components/ui/alert';
+import { useShallow } from 'zustand/react/shallow';
 import { useSchedulerStore } from '~/stores/schedulerStore';
 import type { StagedChange } from '~/types';
 import { QueueChangeGroup } from './QueueChangeGroup';
@@ -46,8 +47,19 @@ interface StagedChangesPanelProps {
 export function StagedChangesPanel({ open, onClose, onOpen }: StagedChangesPanelProps) {
   const [isApplying, setIsApplying] = useState(false);
 
-  const { stagedChanges, revertChange, clearAllChanges, applyChanges, applyError, isReadOnly } =
-    useSchedulerStore();
+  // State values (trigger re-renders only when these specific values change)
+  const { stagedChanges, applyError, isReadOnly } = useSchedulerStore(
+    useShallow((s) => ({
+      stagedChanges: s.stagedChanges,
+      applyError: s.applyError,
+      isReadOnly: s.isReadOnly,
+    })),
+  );
+
+  // Actions (stable references, never trigger re-renders)
+  const revertChange = useSchedulerStore((s) => s.revertChange);
+  const clearAllChanges = useSchedulerStore((s) => s.clearAllChanges);
+  const applyChanges = useSchedulerStore((s) => s.applyChanges);
 
   // Group changes by queue path for organized display
   const changesByQueue = stagedChanges.reduce(

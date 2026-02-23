@@ -19,6 +19,7 @@
 
 import React from 'react';
 import { Monitor, HardDrive, Cpu, X } from 'lucide-react';
+import { useShallow } from 'zustand/react/shallow';
 import { useSchedulerStore } from '~/stores/schedulerStore';
 import { Badge } from '~/components/ui/badge';
 import { Button } from '~/components/ui/button';
@@ -48,15 +49,20 @@ interface NodesPanelProps {
 }
 
 export const NodesPanel: React.FC<NodesPanelProps> = ({ selectedLabel }) => {
-  const {
-    nodes,
-    nodeToLabels,
-    nodeLabels,
-    assignNodeToLabel,
-    isLoading,
-    searchQuery,
-    getFilteredNodes,
-  } = useSchedulerStore();
+  // State values (trigger re-renders only when these specific values change)
+  const { nodes, nodeToLabels, nodeLabels, isLoading, searchQuery } = useSchedulerStore(
+    useShallow((s) => ({
+      nodes: s.nodes,
+      nodeToLabels: s.nodeToLabels,
+      nodeLabels: s.nodeLabels,
+      isLoading: s.isLoading,
+      searchQuery: s.searchQuery,
+    })),
+  );
+
+  // Actions (stable references, never trigger re-renders)
+  const assignNodeToLabel = useSchedulerStore((s) => s.assignNodeToLabel);
+  const getFilteredNodes = useSchedulerStore((s) => s.getFilteredNodes);
 
   // Create a map of nodeId -> labels for quick lookup
   const nodeLabelsMap = new Map<string, string[]>();
