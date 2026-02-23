@@ -32,6 +32,11 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/**
+ * This looks like a test, but it is really a command to invoke to
+ * clean up containers created in other test runs.
+ *
+ */
 public class CleanupTestContainers extends AbstractAbfsIntegrationTest {
   private static final Logger LOG = LoggerFactory.getLogger(CleanupTestContainers.class);
   private static final String CONTAINER_PREFIX = "abfs-testcontainer-";

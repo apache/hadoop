@@ -131,10 +131,6 @@ public class DelegationSASGeneratorVersionJuly5 extends SASGenerator {
         sr = "d";
         sdd = path.equals(ROOT_PATH)? "0": Integer.toString(StringUtils.countMatches(path, "/"));
         break;
-       case SASTokenProvider.LIST_CONTAINERS_OPERATION:
-         sp = "l";     // list
-         sr = "s";     // service
-         break;
       case SASTokenProvider.GET_PROPERTIES_OPERATION:
       case SASTokenProvider.READ_OPERATION:
       case SASTokenProvider.COPY_BLOB_SRC_OPERATION:

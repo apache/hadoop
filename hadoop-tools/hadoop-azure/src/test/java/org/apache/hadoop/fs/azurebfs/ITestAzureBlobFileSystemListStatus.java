@@ -893,6 +893,15 @@ public class ITestAzureBlobFileSystemListStatus extends
     testIsDirectory(true, "HDI_ISFOLDER", "Hdi_ISFOLDER1", "Test");
   }
 
+  /**
+   * Tests container listing and deletion using {@link AbfsBlobClient}.
+   *
+   * Creates two containers, verifies they are returned by
+   * {@code listContainers} using a prefix filter, and then
+   * deletes them via the Blob endpoint.
+   *
+   * @throws Exception if any filesystem or container operation fails
+   */
   @Test
   public void testListAndDeleteContainers() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
@@ -900,51 +909,46 @@ public class ITestAzureBlobFileSystemListStatus extends
         fs.getAbfsStore().getClientHandler().getBlobClient();
     final TracingContext tracingContext =
         getTestTracingContext(fs, true);
-
-    // DFS- and Blob-compliant container (filesystem) names
+    // Blob/DFS-compliant container names
     String container1 = "abfs-test-listtest1";
     String container2 = "abfs-test-listtest2";
-
     AzureBlobFileSystem fs1 = null;
     AzureBlobFileSystem fs2 = null;
 
     try {
-      String account = fs.getAbfsStore()
-          .getAbfsConfiguration().getAccountName();
-
+      // Resolve account name for constructing container URIs
+      String account = fs.getAbfsStore().getAbfsConfiguration().getAccountName();
+      // Create filesystem instances for both containers
       fs1 = (AzureBlobFileSystem) FileSystem.get(
           new URI("abfs://" + container1 + "@" + account), fs.getConf());
       fs2 = (AzureBlobFileSystem) FileSystem.get(
           new URI("abfs://" + container2 + "@" + account), fs.getConf());
-
+      // Create sample content to ensure containers are initialized
       fs1.mkdirs(new Path("/dir1"));
       fs1.create(new Path("/dir1/file1")).close();
       fs2.mkdirs(new Path("/dir2"));
       fs2.create(new Path("/dir2/file2")).close();
-
+      // List containers with prefix filter
       ContainerListResponseData response =
           blobClient.listContainers("abfs-test-", null, tracingContext);
-
       assertThat(response)
           .describedAs("listContainers response should not be null")
           .isNotNull();
-
       assertThat(response.getContainers())
           .describedAs("Container list should contain created test containers")
           .extracting(ContainerListEntrySchema::getName)
           .contains(container1, container2);
-
+      // Delete containers
       boolean deleted1 = deleteContainer(blobClient, container1, tracingContext);
       boolean deleted2 = deleteContainer(blobClient, container2, tracingContext);
-
       assertThat(deleted1)
           .describedAs("First container should be deleted or already absent")
           .isTrue();
       assertThat(deleted2)
           .describedAs("Second container should be deleted or already absent")
           .isTrue();
-
     } finally {
+      // Ensure filesystem instances are closed
       if (fs1 != null) {
         fs1.close();
       }
@@ -954,7 +958,18 @@ public class ITestAzureBlobFileSystemListStatus extends
     }
   }
 
-
+  /**
+   * Deletes a container using {@link AbfsBlobClient}.
+   *
+   * <p>Azure Blob delete semantics:
+   * <ul>
+   *   <li>202 (Accepted) – deletion request accepted</li>
+   *   <li>404 (Not Found) – container already deleted (idempotent success)</li>
+   * </ul>
+   *
+   * @return {@code true} if deletion is successful or container is already absent
+   * @throws Exception if the REST operation fails
+   */
   private boolean deleteContainer(
       AbfsBlobClient blobClient,
       String container,
@@ -962,9 +977,6 @@ public class ITestAzureBlobFileSystemListStatus extends
     AbfsRestOperation op =
         blobClient.deleteContainer(container, tracingContext);
     int status = op.getResult().getStatusCode();
-    // Azure Blob semantics:
-    // 202 = delete accepted
-    // 404 = already deleted (idempotent success)
     return status == HttpURLConnection.HTTP_ACCEPTED
         || status == HttpURLConnection.HTTP_NOT_FOUND;
   }

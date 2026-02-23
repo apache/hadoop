@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.azurebfs.contracts.services;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * List result entry schema for the Azure Blob Storage List Containers API.
@@ -78,7 +79,7 @@ public class ContainerListEntrySchema implements ListResultEntrySchema {
    */
   @Override
   public String lastModified() {
-    return lastModified != null ? String.valueOf(lastModified) : null;
+    return Objects.toString(lastModified, null);
   }
 
   /**

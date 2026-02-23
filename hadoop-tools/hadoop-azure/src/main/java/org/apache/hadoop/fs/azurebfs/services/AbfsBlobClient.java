@@ -2379,7 +2379,7 @@ public class AbfsBlobClient extends AbfsClient {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
     final AbfsUriQueryBuilder queryBuilder = createDefaultUriQueryBuilder();
     queryBuilder.addQuery(QUERY_PARAM_COMP, LIST);
-    if (prefix != null && !prefix.isEmpty()) {
+    if (!StringUtils.isEmpty(prefix)) {
       queryBuilder.addQuery(QUERY_PARAM_PREFIX, prefix);
     }
     queryBuilder.addQuery(HttpQueryParams.QUERY_PARAM_MARKER, continuation);
@@ -2406,23 +2406,22 @@ public class AbfsBlobClient extends AbfsClient {
       final AbfsHttpOperation result)
       throws AzureBlobFileSystemException {
     try (InputStream stream = result.getListResultStream()) {
-      try {
-        final SAXParser saxParser = saxParserThreadLocal.get();
-        saxParser.reset();
-        final ContainerListResponseData responseData =
-            new ContainerListResponseData();
-        saxParser.parse(stream, new ContainerListXmlParser(responseData));
-        LOG.debug("ListContainers listed {} containers with {} as continuation token",
-            responseData.getContainers().size(),
-            responseData.getContinuationToken());
-        return responseData;
-      } catch (SAXException | IOException ex) {
-        throw new AbfsDriverException(ERR_BLOB_LIST_PARSING, ex);
-      }
+      final SAXParser saxParser = saxParserThreadLocal.get();
+      saxParser.reset();
+      final ContainerListResponseData responseData =
+          new ContainerListResponseData();
+      saxParser.parse(stream, new ContainerListXmlParser(responseData));
+      LOG.debug("ListContainers listed {} containers with {} as continuation token",
+          responseData.getContainers().size(),
+          responseData.getContinuationToken());
+      return responseData;
     } catch (AbfsDriverException ex) {
-      // Throw as it is to avoid multiple wrapping.
+      // Avoid multiple wrapping
       LOG.error("Unable to deserialize list containers response", ex);
       throw ex;
+    } catch (SAXException | IOException ex) {
+      LOG.error("Unable to deserialize list containers response", ex);
+      throw new AbfsDriverException(ERR_BLOB_LIST_PARSING, ex);
     } catch (Exception ex) {
       LOG.error("Unable to get stream for list containers response", ex);
       throw new AbfsDriverException(ERR_BLOB_LIST_PARSING, ex);
@@ -2441,23 +2440,20 @@ public class AbfsBlobClient extends AbfsClient {
       final String container,
       final TracingContext tracingContext)
       throws AzureBlobFileSystemException, MalformedURLException {
-
-    if (container == null || container.isEmpty()) {
+    if (StringUtils.isEmpty(container)) {
       throw new AbfsDriverException(
           "Container name must not be null or empty",
           new IllegalArgumentException("container"));
     }
-
-    if (container.indexOf(FORWARD_SLASH) >= 0) {
+    if (container.contains(FORWARD_SLASH)) {
       throw new AbfsDriverException(
           "Invalid container name (must not contain '/'): " + container,
           new IllegalArgumentException(container));
     }
-
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
     final AbfsUriQueryBuilder queryBuilder = createDefaultUriQueryBuilder();
     queryBuilder.addQuery(QUERY_PARAM_RESTYPE, CONTAINER);
-    appendSASTokenToQuery(container, SASTokenProvider.DELETE_OPERATION, queryBuilder);
+    appendSASTokenToQuery(container, SASTokenProvider.DELETE_CONTAINERS_OPERATION, queryBuilder);
     final URL accountUrl = new URL(getBaseUrl().getProtocol(), getBaseUrl().getHost(), ROOT_PATH);
     final URL url = createRequestUrl(accountUrl, container, queryBuilder.toString());
     final AbfsRestOperation op = getAbfsRestOperation(
