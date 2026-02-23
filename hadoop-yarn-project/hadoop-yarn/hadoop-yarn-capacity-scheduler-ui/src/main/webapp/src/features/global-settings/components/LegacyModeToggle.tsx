@@ -34,7 +34,7 @@ import { AlertCircle, AlertTriangle, ChevronDown, ChevronUp, Info } from 'lucide
 import { useSchedulerStore } from '~/stores/schedulerStore';
 import { validateQueue } from '~/features/validation/service';
 import type { ValidationIssue } from '~/types';
-import { getMergedConfigData } from '~/utils/configUtils';
+import { mergeStagedConfig } from '~/utils/configUtils';
 import { cn } from '~/utils/cn';
 import { SPECIAL_VALUES } from '~/types';
 import type { StagedChange } from '~/types';
@@ -99,8 +99,8 @@ export const LegacyModeToggle: React.FC<LegacyModeToggleProps> = ({
     ];
 
     // Create merged config data with simulated changes
-    const simulatedMergedData = getMergedConfigData(configData, simulatedStagedChanges);
-    const currentMergedData = getMergedConfigData(configData, stagedChanges);
+    const simulatedMergedData = mergeStagedConfig(configData, simulatedStagedChanges);
+    const currentMergedData = mergeStagedConfig(configData, stagedChanges);
 
     // Helper to get all queues recursively
     const getAllQueues = (

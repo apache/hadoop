@@ -159,6 +159,7 @@
 
     <!-- Maven protoc compiler -->
     <protobuf-maven-plugin.version>0.5.1</protobuf-maven-plugin.version>
+    <ascopes.protobuf-maven-plugin.version>4.1.3</ascopes.protobuf-maven-plugin.version>
     <maven-replacer-plugin.version>1.5.3</maven-replacer-plugin.version>
 
     <protobuf-compile.version>3.5.1</protobuf-compile.version>
@@ -2433,6 +2434,11 @@
               </configuration>
             </execution>
           </executions>
+        </plugin>
+        <plugin>
+          <groupId>io.github.ascopes</groupId>
+          <artifactId>protobuf-maven-plugin</artifactId>
+          <version>${ascopes.protobuf-maven-plugin.version}</version>
         </plugin>
         <!-- Modify the generated source to use our shaded protobuf -->
         <plugin>

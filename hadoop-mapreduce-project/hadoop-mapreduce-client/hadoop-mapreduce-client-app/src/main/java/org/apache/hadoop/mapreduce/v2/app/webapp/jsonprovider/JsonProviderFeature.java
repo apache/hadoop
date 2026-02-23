@@ -16,13 +16,20 @@
  * limitations under the License.
  */
 
+package org.apache.hadoop.mapreduce.v2.app.webapp.jsonprovider;
 
-export { PlacementRules } from './components/PlacementRules';
-export { PlacementRuleForm } from './components/PlacementRuleForm';
-export { PlacementRulesList } from './components/PlacementRulesList';
-export { PlacementRulesMigrationDialog } from './components/MigrationDialog';
-export {
-  placementRuleFormSchema,
-  type PlacementRuleFormData,
-} from './schemas/placement-rule-schema';
-export { migrateLegacyRules } from './utils/migration';
+import javax.ws.rs.core.Feature;
+import javax.ws.rs.core.FeatureContext;
+
+import org.glassfish.jersey.CommonProperties;
+
+public class JsonProviderFeature implements Feature {
+  @Override
+  public boolean configure(FeatureContext context) {
+    //Auto discovery should be disabled to ensure the custom providers will be used
+    context.property(CommonProperties.MOXY_JSON_FEATURE_DISABLE, true);
+    context.register(IncludeRootJSONProvider.class, 2001);
+    context.register(ExcludeRootJSONProvider.class, 2002);
+    return true;
+  }
+}

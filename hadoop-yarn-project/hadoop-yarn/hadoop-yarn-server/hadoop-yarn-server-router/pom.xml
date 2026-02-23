@@ -126,6 +126,12 @@
       <artifactId>mockito-inline</artifactId>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.eclipse.persistence</groupId>
+      <artifactId>org.eclipse.persistence.core</artifactId>
+      <version>${eclipse-persistence.version}</version>
+      <scope>test</scope>
+    </dependency>
 
     <dependency>
       <groupId>com.google.inject</groupId>
