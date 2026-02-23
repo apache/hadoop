@@ -37,6 +37,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
 
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -112,7 +114,7 @@ public class TestThrottledAsyncCheckerTimeout {
 
     assertThat(numCallbackInvocationsFailure.get()).isEqualTo(1L);
     assertThat(numCallbackInvocationsSuccess.get()).isEqualTo(0L);
-    assertTrue(throwable[0] instanceof TimeoutException);
+    assertInstanceOf(TimeoutException.class, throwable[0]);
   }
 
   @Test
@@ -196,7 +198,7 @@ public class TestThrottledAsyncCheckerTimeout {
       Thread.sleep(DISK_CHECK_TIMEOUT);
     }
 
-    assertTrue(throwable[0] == null);
+    assertNull(throwable[0]);
   }
 
   /**
