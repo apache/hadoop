@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.security.token;
 
-import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 import org.apache.hadoop.thirdparty.com.google.common.primitives.Bytes;
 
 import org.apache.commons.codec.binary.Base64;
@@ -33,11 +32,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.security.MessageDigest;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.ServiceConfigurationError;
-import java.util.ServiceLoader;
-import java.util.UUID;
+import java.util.*;
 
 /**
  * The client-side form of the token.
@@ -128,13 +123,16 @@ public class Token<T extends TokenIdentifier> implements Writable {
     Class<? extends TokenIdentifier> cls = null;
     synchronized (Token.class) {
       if (tokenKindMap == null) {
-        tokenKindMap = Maps.newHashMap();
-        // start the service load process; it's only in the "next()" calls
-        // where implementations are loaded.
+        tokenKindMap = new HashMap<>();
+        // start the service load process;
+        // both "hasNext()" and "next()" calls might trigger implementations loading.
         final Iterator<TokenIdentifier> tokenIdentifiers =
             ServiceLoader.load(TokenIdentifier.class).iterator();
-        while (tokenIdentifiers.hasNext()) {
+        while (true) {
           try {
+            if (!tokenIdentifiers.hasNext()) {
+              break;
+            }
             TokenIdentifier id = tokenIdentifiers.next();
             LOG.debug("Added {}:{} into tokenKindMap", id.getKind(), id.getClass());
             tokenKindMap.put(id.getKind(), id.getClass());
@@ -451,7 +449,7 @@ public class Token<T extends TokenIdentifier> implements Writable {
         Bytes.concat(kind.getBytes(), identifier, password)).toString();
   }
 
-  private static ServiceLoader<TokenRenewer> renewers =
+  private final static ServiceLoader<TokenRenewer> renewers =
       ServiceLoader.load(TokenRenewer.class);
 
   private synchronized TokenRenewer getRenewer() throws IOException {
@@ -461,14 +459,18 @@ public class Token<T extends TokenIdentifier> implements Writable {
     renewer = TRIVIAL_RENEWER;
     synchronized (renewers) {
       Iterator<TokenRenewer> it = renewers.iterator();
-      while (it.hasNext()) {
+      // both "hasNext()" and "next()" calls might trigger implementations loading.
+      while (true) {
         try {
+          if (!it.hasNext()) {
+            break;
+          }
           TokenRenewer candidate = it.next();
           if (candidate.handleKind(this.kind)) {
             renewer = candidate;
             return renewer;
           }
-        } catch (ServiceConfigurationError e) {
+        } catch (ServiceConfigurationError | LinkageError e) {
           // failure to load a token implementation
           // log at debug and continue.
           LOG.debug("Failed to load token renewer implementation", e);
