@@ -22,8 +22,6 @@ import java.util.Collections;
 import java.util.Set;
 import java.util.HashSet;
 import java.util.Arrays;
-
-
 import javax.inject.Singleton;
 import javax.ws.rs.ext.ContextResolver;
 import javax.ws.rs.ext.Provider;
