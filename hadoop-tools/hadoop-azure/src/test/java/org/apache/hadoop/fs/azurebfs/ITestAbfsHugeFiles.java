@@ -34,10 +34,9 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.store.DataBlocks;
 
-import static org.apache.hadoop.fs.azure.integration.AzureTestConstants.AZURE_SCALE_HUGE_FILE_UPLOAD;
-import static org.apache.hadoop.fs.azure.integration.AzureTestConstants.AZURE_SCALE_HUGE_FILE_UPLOAD_DEFAULT;
-import static org.apache.hadoop.fs.azure.integration.AzureTestUtils.assume;
-import static org.apache.hadoop.fs.azure.integration.AzureTestUtils.getTestPropertyInt;
+import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_SCALE_TEST_HUGE_UPLOAD;
+import static org.apache.hadoop.fs.azurebfs.utils.AbfsTestUtils.assume;
+import static org.apache.hadoop.fs.azurebfs.utils.AbfsTestUtils.getTestPropertyInt;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.DATA_BLOCKS_BUFFER;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_WRITE_BUFFER_SIZE;
 
@@ -55,8 +54,9 @@ public class ITestAbfsHugeFiles extends AbstractAbfsScaleTest {
 
   // Set the HUGE_FILE.
   static {
+    int defaultValue = 2 * DEFAULT_WRITE_BUFFER_SIZE;
     HUGE_FILE = getTestPropertyInt(new Configuration(),
-        AZURE_SCALE_HUGE_FILE_UPLOAD, AZURE_SCALE_HUGE_FILE_UPLOAD_DEFAULT);
+        FS_AZURE_SCALE_TEST_HUGE_UPLOAD, defaultValue);
   }
 
   // Writing block size to be used in this test.
