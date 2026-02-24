@@ -18,7 +18,7 @@
 
 
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { createSchedulerStore, traverseQueueTree } from '~/stores/schedulerStore';
+import { createSchedulerStore } from '~/stores/schedulerStore';
 import { buildMutationRequest } from '~/features/staged-changes/utils/mutationBuilder';
 import type { YarnApiClient } from '~/lib/api/YarnApiClient';
 import type {
@@ -31,8 +31,45 @@ import type {
   VersionResponse,
   SchedulerResponse,
 } from '~/types';
-import { QUEUE_TYPES, SPECIAL_VALUES } from '~/types/constants';
+import { CONFIG_PREFIXES, QUEUE_TYPES, SPECIAL_VALUES } from '~/types/constants';
 import { AUTO_CREATION_PROPS } from '~/types/constants/auto-creation';
+
+/**
+ * Local helper: traverse queue tree and apply a visitor function.
+ * Combines queue info with configured properties from configData.
+ */
+function traverseQueueTree(
+  queueInfo: QueueInfo,
+  configData: Map<string, string>,
+  visitor: (queue: QueueInfo & { configured: Record<string, string> }) => void,
+): void {
+  const configured: Record<string, string> = {};
+
+  const prefix = `${CONFIG_PREFIXES.BASE}.${queueInfo.queuePath}.`;
+  for (const [key, value] of configData.entries()) {
+    if (key.startsWith(prefix)) {
+      const property = key.substring(prefix.length);
+      configured[property] = value;
+    }
+  }
+
+  const combinedQueue = {
+    ...queueInfo,
+    configured,
+  };
+
+  visitor(combinedQueue);
+
+  if (queueInfo.queues?.queue) {
+    const children = Array.isArray(queueInfo.queues.queue)
+      ? queueInfo.queues.queue
+      : [queueInfo.queues.queue];
+
+    for (const child of children) {
+      traverseQueueTree(child, configData, visitor);
+    }
+  }
+}
 
 const toEntryRecord = (entries?: Array<{ key: string; value: string }>) =>
   Object.fromEntries((entries ?? []).map(({ key, value }) => [key, value]));

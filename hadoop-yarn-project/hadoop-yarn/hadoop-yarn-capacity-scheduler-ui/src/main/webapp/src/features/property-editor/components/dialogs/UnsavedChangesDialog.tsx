@@ -57,11 +57,11 @@ export const UnsavedChangesDialog: React.FC<UnsavedChangesDialogProps> = ({
           </DialogDescription>
         </DialogHeader>
         <DialogFooter className="gap-2">
-          <Button variant="outline" onClick={onDiscard} disabled={isSaving}>
-            Discard Changes
-          </Button>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving}>
             Cancel
+          </Button>
+          <Button variant="destructive" onClick={onDiscard} disabled={isSaving}>
+            Discard Changes
           </Button>
           <Button onClick={onSave} disabled={isSaving}>
             {isSaving ? (

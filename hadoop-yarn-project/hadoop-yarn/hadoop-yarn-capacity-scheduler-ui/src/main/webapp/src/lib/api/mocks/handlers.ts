@@ -91,12 +91,6 @@ const staticHandlers: HttpHandler[] = [
     return HttpResponse.json(data);
   }),
 
-  http.get(`${baseUrl}/get-labels-to-nodes`, async () => {
-    const response = await fetch(`${MOCK_ASSET_BASE}/get-labels-to-nodes.json`);
-    const data = await response.json();
-    return HttpResponse.json(data);
-  }),
-
   http.post(`${baseUrl}/add-node-labels`, async ({ request }) => {
     const body = await request.json();
     console.log('Mock: Adding node labels:', body);

@@ -34,27 +34,36 @@ public enum TracingHeaderVersion {
   /**
    * Version 1 of the tracing header, which includes a version prefix and has 13 permanent fields.
    * This version is used for the current tracing header schema.
+   *
+   * <pre>{@code
    * Schema: version:clientCorrelationId:clientRequestId:fileSystemId
    *         :primaryRequestId:streamId:opType:retryHeader:ingressHandler
    *         :position:operatedBlobCount:operationSpecificHeader:httpOperationHeader
+   * }</pre>
    */
   V1("v1", 13),
   /**
    * Version 2 of the tracing header, which includes a version prefix and has 16 permanent fields.
    * This version is used for the current tracing header schema.
+   *
+   * <pre>{@code
    * Schema: version:clientCorrelationId:clientRequestId:fileSystemId
    *         :primaryRequestId:streamId:opType:retryHeader:ingressHandler
    *         :position:operatedBlobCount:operationSpecificHeader:httpOperationHeader
    *         :resourceUtilizationMetrics:fnsEndptConvertedIndicator
+   * }</pre>
    */
   V2("v2", 15),
   /**
    * Version 0 of the aggregated metrics tracing header, which includes
    * a version prefix and has 3 permanent fields.
    * This version is used for the aggregated metrics tracing header schema.
+   *
+   * <pre>{@code
    * Schema: metricsVersion:List<AggregatedMetrics>
    *      where AggregatedMetrics = clientCorrelationId:fileSystemId:aggregated-metrics
    *      and AggregatedMetrics is enclosed within [] and separated by :
+   * }</pre>
    */
   AV0("av0", 3);
 

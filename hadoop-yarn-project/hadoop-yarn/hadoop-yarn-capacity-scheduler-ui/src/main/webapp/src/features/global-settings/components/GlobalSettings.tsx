@@ -18,6 +18,7 @@
 
 
 import React from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { useSchedulerStore } from '~/stores/schedulerStore';
 import { globalPropertyDefinitions } from '~/config/properties/global-properties';
 import { SPECIAL_VALUES, type PropertyCategory } from '~/types';
@@ -41,17 +42,22 @@ import {
 } from '~/features/property-editor/constants/categoryConfig';
 
 export const GlobalSettings: React.FC = () => {
-  const {
-    getGlobalPropertyValue,
-    getQueuePropertyValue,
-    stageGlobalChange,
-    stagedChanges,
-    searchQuery,
-    getFilteredSettings,
-    applyError,
-    configData,
-    schedulerData,
-  } = useSchedulerStore();
+  // State values (trigger re-renders only when these specific values change)
+  const { stagedChanges, searchQuery, applyError, configData, schedulerData } = useSchedulerStore(
+    useShallow((s) => ({
+      stagedChanges: s.stagedChanges,
+      searchQuery: s.searchQuery,
+      applyError: s.applyError,
+      configData: s.configData,
+      schedulerData: s.schedulerData,
+    })),
+  );
+
+  // Actions (stable references, never trigger re-renders)
+  const getGlobalPropertyValue = useSchedulerStore((s) => s.getGlobalPropertyValue);
+  const getQueuePropertyValue = useSchedulerStore((s) => s.getQueuePropertyValue);
+  const stageGlobalChange = useSchedulerStore((s) => s.stageGlobalChange);
+  const getFilteredSettings = useSchedulerStore((s) => s.getFilteredSettings);
   const { validateGlobalProperty } = useGlobalPropertyValidation();
 
   // Use filtered settings if search is active
@@ -188,6 +194,30 @@ export const GlobalSettings: React.FC = () => {
         </Alert>
       )}
 
+      {categories.length > 1 && (
+        <nav className="flex flex-wrap gap-2" aria-label="Settings sections">
+          {categories.map((category) => {
+            const label = categoryConfig[category]?.label || `${category} Settings`;
+            return (
+              <a
+                key={category}
+                href={`#section-${category}`}
+                onClick={(e) => {
+                  e.preventDefault();
+                  document
+                    .getElementById(`section-${category}`)
+                    ?.scrollIntoView({ behavior: 'smooth' });
+                }}
+                className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+              >
+                {categoryConfig[category]?.icon}
+                {label}
+              </a>
+            );
+          })}
+        </nav>
+      )}
+
       {categories.length > 0 ? (
         <Accordion type="multiple" defaultValue={categories} className="space-y-4">
           {categories.map((category) => {
@@ -197,7 +227,12 @@ export const GlobalSettings: React.FC = () => {
             );
 
             return (
-              <AccordionItem key={category} value={category} className="border rounded-lg">
+              <AccordionItem
+                key={category}
+                value={category}
+                className="border rounded-lg"
+                id={`section-${category}`}
+              >
                 <AccordionTrigger className="px-6 hover:no-underline">
                   <div className="flex items-center gap-2">
                     {categoryConfig[category]?.icon}

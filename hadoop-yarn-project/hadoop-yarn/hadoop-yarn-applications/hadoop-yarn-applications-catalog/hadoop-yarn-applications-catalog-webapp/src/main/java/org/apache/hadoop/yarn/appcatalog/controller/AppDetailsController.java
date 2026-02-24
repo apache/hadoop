@@ -52,6 +52,7 @@ public class AppDetailsController {
   /**
    * List detail information about the deployed application.
    *
+   * <pre>{@code
    * @apiGroup AppDetailController
    * @apiName getDetails
    * @api {get} /app_details/config/{id}  Check config of application instance.
@@ -113,8 +114,10 @@ public class AppDetailsController {
    *           }
    *        }
    *     }
-   * @param id - Application ID
-   * @return application entry-
+   * }</pre>
+   *
+   * @param id Application ID
+   * @return application entry
    */
   @Path("config/{id}")
   @GET
@@ -127,10 +130,12 @@ public class AppDetailsController {
   /**
    * Check application status.
    *
+   * <pre>{@code
    * @apiGroup AppDetailController
    * @apiName getStatus
    * @api {get} /app_details/status/{id}  Check status of application instance.
    * @apiParam {String} id Application ID to check.
+   * @apiSuccess {Object} text Give status
    * @apiSuccessExample {json} Success-Response:
    *     HTTP/1.1 200 OK
    *     {
@@ -195,8 +200,9 @@ public class AppDetailsController {
    *           }
    *        }
    *     }
-   * @apiSuccess {Object} text Give status
-   * @param id - Application ID
+   * }</pre>
+   *
+   * @param id Application ID
    * @return application entry
    */
   @Path("status/{id}")
@@ -213,13 +219,16 @@ public class AppDetailsController {
   /**
    * Stop an application.
    *
+   * <pre>{@code
    * @apiGroup AppDetailController
    * @apiName stopApp
    * @api {post} /app_details/stop/{id}  Stop one instance of application.
    * @apiParam {String} id Application ID to stop.
    * @apiSuccess {String} text Give deployment status
    * @apiError BadRequest Requested application does not stop.
-   * @param id - Application ID
+   * }</pre>
+   *
+   * @param id Application ID
    * @return Web response code
    */
   @Path("stop/{id}")
@@ -242,13 +251,16 @@ public class AppDetailsController {
   /**
    * Restart an application.
    *
+   * <pre>{@code
    * @apiGroup AppDetailController
    * @apiName restartApp
    * @api {post} /app_details/restart/{id}  Restart one instance of application.
    * @apiParam {String} id Application ID to restart.
    * @apiSuccess {String} text Give deployment status
    * @apiError BadRequest Requested application does not restart.
-   * @param id - Application ID
+   * }</pre>
+   *
+   * @param id Application ID
    * @return Web response code
    */
   @Path("restart/{id}")
@@ -271,12 +283,15 @@ public class AppDetailsController {
   /**
    * Upgrade an application.
    *
+   * <pre>{@code
    * @apiGroup AppDetailController
    * @apiName upgradeApp
    * @api {put} /app_details/upgrade/{id} Upgrade one instance of application.
    * @apiParam {String} id Application Name to upgrade.
    * @apiSuccess {String} text
    * @apiError BadRequest Requested application does not upgrade.
+   * }</pre>
+   *
    * @return Web response code
    */
   @Path("upgrade/{id}")

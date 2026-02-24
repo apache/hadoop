@@ -18,7 +18,8 @@
 
 
 import React, { useState } from 'react';
-import { Tag, Plus, Trash2, Shield } from 'lucide-react';
+import { Tag, Plus, Trash2, Shield, Tags } from 'lucide-react';
+import { useShallow } from 'zustand/react/shallow';
 import { useSchedulerStore } from '~/stores/schedulerStore';
 import { Button } from '~/components/ui/button';
 import { Badge } from '~/components/ui/badge';
@@ -26,14 +27,19 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '~/comp
 import { AddLabelDialog } from '~/features/node-labels';
 
 export const NodeLabelsPanel: React.FC = () => {
-  const {
-    nodeLabels,
-    selectedNodeLabel,
-    selectNodeLabel,
-    addNodeLabel,
-    removeNodeLabel,
-    isLoading,
-  } = useSchedulerStore();
+  // State values (trigger re-renders only when these specific values change)
+  const { nodeLabels, selectedNodeLabel, isLoading } = useSchedulerStore(
+    useShallow((s) => ({
+      nodeLabels: s.nodeLabels,
+      selectedNodeLabel: s.selectedNodeLabel,
+      isLoading: s.isLoading,
+    })),
+  );
+
+  // Actions (stable references, never trigger re-renders)
+  const selectNodeLabel = useSchedulerStore((s) => s.selectNodeLabel);
+  const addNodeLabel = useSchedulerStore((s) => s.addNodeLabel);
+  const removeNodeLabel = useSchedulerStore((s) => s.removeNodeLabel);
 
   const [addDialogOpen, setAddDialogOpen] = useState(false);
 
@@ -142,11 +148,24 @@ export const NodeLabelsPanel: React.FC = () => {
 
           {nodeLabels.length === 0 && (
             <li>
-              <div className="py-8 text-center">
-                <p className="text-sm text-muted-foreground">No node labels found</p>
-                <p className="text-xs text-muted-foreground">
-                  Click "Add" to create the first label
+              <div className="flex flex-col items-center py-10 text-center">
+                <div className="mb-3 rounded-full bg-muted p-3">
+                  <Tags className="h-6 w-6 text-muted-foreground" />
+                </div>
+                <p className="mb-1 text-sm font-medium">No node labels found</p>
+                <p className="mb-4 max-w-[220px] text-xs text-muted-foreground">
+                  Node labels let you partition cluster nodes for dedicated resource allocation.
                 </p>
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={() => setAddDialogOpen(true)}
+                  disabled={isLoading}
+                  className="gap-2"
+                >
+                  <Plus className="h-4 w-4" />
+                  Create First Label
+                </Button>
               </div>
             </li>
           )}

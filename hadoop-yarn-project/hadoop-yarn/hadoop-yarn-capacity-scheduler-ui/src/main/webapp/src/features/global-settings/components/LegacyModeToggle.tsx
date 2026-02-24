@@ -31,10 +31,11 @@ import {
   DialogTrigger,
 } from '~/components/ui/dialog';
 import { AlertCircle, AlertTriangle, ChevronDown, ChevronUp, Info } from 'lucide-react';
+import { useShallow } from 'zustand/react/shallow';
 import { useSchedulerStore } from '~/stores/schedulerStore';
 import { validateQueue } from '~/features/validation/service';
 import type { ValidationIssue } from '~/types';
-import { getMergedConfigData } from '~/utils/configUtils';
+import { mergeStagedConfig } from '~/utils/configUtils';
 import { cn } from '~/utils/cn';
 import { SPECIAL_VALUES } from '~/types';
 import type { StagedChange } from '~/types';
@@ -67,7 +68,15 @@ export const LegacyModeToggle: React.FC<LegacyModeToggleProps> = ({
   searchQuery,
 }) => {
   const [showPreview, setShowPreview] = useState(false);
-  const { schedulerData, configData, stagedChanges } = useSchedulerStore();
+
+  // State values (trigger re-renders only when these specific values change)
+  const { schedulerData, configData, stagedChanges } = useSchedulerStore(
+    useShallow((s) => ({
+      schedulerData: s.schedulerData,
+      configData: s.configData,
+      stagedChanges: s.stagedChanges,
+    })),
+  );
 
   const currentEnabled = value === 'true';
 
@@ -99,8 +108,8 @@ export const LegacyModeToggle: React.FC<LegacyModeToggleProps> = ({
     ];
 
     // Create merged config data with simulated changes
-    const simulatedMergedData = getMergedConfigData(configData, simulatedStagedChanges);
-    const currentMergedData = getMergedConfigData(configData, stagedChanges);
+    const simulatedMergedData = mergeStagedConfig(configData, simulatedStagedChanges);
+    const currentMergedData = mergeStagedConfig(configData, stagedChanges);
 
     // Helper to get all queues recursively
     const getAllQueues = (
