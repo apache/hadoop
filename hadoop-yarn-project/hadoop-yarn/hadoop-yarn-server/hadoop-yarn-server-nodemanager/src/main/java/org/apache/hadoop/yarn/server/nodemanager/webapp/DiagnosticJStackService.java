@@ -32,6 +32,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Arrays;
 
 public class DiagnosticJStackService {
 
@@ -88,7 +89,8 @@ public class DiagnosticJStackService {
 
                 ProcessHandle.of(pidForContainerId).ifPresent(parentProcess ->
                         parentProcess.descendants()
-                                .filter(childProcess -> childProcess.info().command().orElse("").contains("java"))
+                                .filter(childProcess ->
+                                        childProcess.info().command().orElse("").contains("java"))
                                 .map(ProcessHandle::pid)
                                 .forEach(pids::add)
                 );
@@ -98,22 +100,6 @@ public class DiagnosticJStackService {
 
         return pids;
 
-    }
-
-    public static List<String> extractPids(String psOutput) {
-
-        LOG.info("Process output: " + psOutput);
-
-        List<String> pids = new ArrayList<>();
-        for(String line : psOutput.split("\n")) {
-            // root       414  1.3  1.7 8124480 434520 ?      Sl   11:36
-            String [] parts = line.trim().split("\\s+");
-            if (parts.length > 1){
-                pids.add(parts[1]);
-            }
-        }
-
-        return pids;
     }
 
 
@@ -135,15 +121,12 @@ public class DiagnosticJStackService {
         }
 
         String processOwner = processHandle.get().info().user().orElse("root");
-        String stringPid = String.valueOf(pid);
+        String[] jstackCommand = {"sudo", "-u", processOwner, "jstack", String.valueOf(pid)};
+
+        LOG.info("Running JStack command: {}", Arrays.toString(jstackCommand));
 
         Shell.ShellCommandExecutor cmd =
-                new Shell.ShellCommandExecutor(
-                        new String[]{"sudo", "-u", processOwner, "jstack", stringPid},
-                        null,
-                        null,
-                        60_000
-                );
+                new Shell.ShellCommandExecutor(jstackCommand, null, null, 60_000);
 
         StringBuilder result = new StringBuilder();
 
@@ -153,7 +136,6 @@ public class DiagnosticJStackService {
                     "--- JStack iteration %d for PID: %d ---\n%s\n", i, pid, cmd.getOutput()
             ));
         }
-
 
         return result.toString();
     }
