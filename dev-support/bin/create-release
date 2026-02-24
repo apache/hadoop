@@ -212,7 +212,7 @@ function set_defaults
   # Extract Java version from ${BASEDIR}/pom.xml
   # doing this outside of maven means we can do this before
   # the docker container comes up...
-  JVM_VERSION=$(grep "<javac.version>" "${BASEDIR}/hadoop-project/pom.xml" \
+  JVM_VERSION=$(grep "<javac.version>" "${BASEDIR}/pom.xml" \
     | head -1 \
     | sed  -e 's|^ *<javac.version>||' -e 's|</javac.version>.*$||')
 
