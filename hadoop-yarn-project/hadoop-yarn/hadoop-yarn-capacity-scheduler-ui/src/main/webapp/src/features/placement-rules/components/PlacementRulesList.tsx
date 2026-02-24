@@ -26,25 +26,40 @@ import { PlacementRuleForm } from './PlacementRuleForm';
 import { PlacementRulesTable } from './PlacementRulesTable';
 import { PolicyReferenceDialog } from './PolicyReferenceDialog';
 import { PlacementRulesMigrationDialog } from './MigrationDialog';
+import { useShallow } from 'zustand/react/shallow';
 import { useSchedulerStore } from '~/stores/schedulerStore';
 import type { PlacementRule } from '~/types/features/placement-rules';
 
 export function PlacementRulesList() {
+  // State values (trigger re-renders only when these specific values change)
   const {
     rules,
     selectedRuleIndex,
-    addRule,
-    deleteRule,
-    reorderRules,
-    selectRule,
-    loadPlacementRules,
     isLegacyMode,
     legacyRules,
     configData,
     stagedChanges,
     formatWarning,
     applyError,
-  } = useSchedulerStore();
+  } = useSchedulerStore(
+    useShallow((s) => ({
+      rules: s.rules,
+      selectedRuleIndex: s.selectedRuleIndex,
+      isLegacyMode: s.isLegacyMode,
+      legacyRules: s.legacyRules,
+      configData: s.configData,
+      stagedChanges: s.stagedChanges,
+      formatWarning: s.formatWarning,
+      applyError: s.applyError,
+    })),
+  );
+
+  // Actions (stable references, never trigger re-renders)
+  const addRule = useSchedulerStore((s) => s.addRule);
+  const deleteRule = useSchedulerStore((s) => s.deleteRule);
+  const reorderRules = useSchedulerStore((s) => s.reorderRules);
+  const selectRule = useSchedulerStore((s) => s.selectRule);
+  const loadPlacementRules = useSchedulerStore((s) => s.loadPlacementRules);
 
   const [showAddForm, setShowAddForm] = useState(false);
   const [showMigrationDialog, setShowMigrationDialog] = useState(false);

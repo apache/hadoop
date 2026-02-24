@@ -2110,4 +2110,10 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final long DFS_LEASE_HARDLIMIT_DEFAULT =
       HdfsClientConfigKeys.DFS_LEASE_HARDLIMIT_DEFAULT;
 
+  /**
+   * List of packages from which Step implementations will be loaded when deserializing
+   * Node Plans: {@value}.
+   */
+  public static final String SUPPORTED_PACKAGES_CONFIG_NAME =
+      "dfs.nodeplan.steps.supported.packages";
 }

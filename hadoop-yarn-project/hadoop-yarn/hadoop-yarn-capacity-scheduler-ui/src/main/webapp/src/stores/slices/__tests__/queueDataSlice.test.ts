@@ -20,9 +20,45 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { createSchedulerStore } from '~/stores/schedulerStore';
 import { YarnApiClient } from '~/lib/api/YarnApiClient';
-import { traverseQueueTree } from '~/stores/slices/queueDataSlice';
 import type { QueueInfo, SchedulerInfo } from '~/types';
-import { SPECIAL_VALUES } from '~/types';
+import { SPECIAL_VALUES, CONFIG_PREFIXES } from '~/types';
+
+/**
+ * Local helper: traverse queue tree and apply a visitor function.
+ * Combines queue info with configured properties from configData.
+ */
+function traverseQueueTree(
+  queueInfo: QueueInfo,
+  configData: Map<string, string>,
+  visitor: (queue: QueueInfo & { configured: Record<string, string> }) => void,
+): void {
+  const configured: Record<string, string> = {};
+
+  const prefix = `${CONFIG_PREFIXES.BASE}.${queueInfo.queuePath}.`;
+  for (const [key, value] of configData.entries()) {
+    if (key.startsWith(prefix)) {
+      const property = key.substring(prefix.length);
+      configured[property] = value;
+    }
+  }
+
+  const combinedQueue = {
+    ...queueInfo,
+    configured,
+  };
+
+  visitor(combinedQueue);
+
+  if (queueInfo.queues?.queue) {
+    const children = Array.isArray(queueInfo.queues.queue)
+      ? queueInfo.queues.queue
+      : [queueInfo.queues.queue];
+
+    for (const child of children) {
+      traverseQueueTree(child, configData, visitor);
+    }
+  }
+}
 
 describe('queueDataSlice', () => {
   const createTestStore = () => {

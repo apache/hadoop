@@ -33,6 +33,7 @@ import {
 } from '~/components/ui/dialog';
 import { Alert, AlertDescription } from '~/components/ui/alert';
 import { AlertCircle, CheckCircle2 } from 'lucide-react';
+import { useShallow } from 'zustand/react/shallow';
 import { useSchedulerStore } from '~/stores/schedulerStore';
 import type { MigrationResult } from '~/types/features/placement-rules';
 
@@ -45,7 +46,15 @@ export const PlacementRulesMigrationDialog = ({
   open,
   onOpenChange,
 }: PlacementRulesMigrationDialogProps) => {
-  const { legacyRules, migrateLegacyRules: storeMigrateLegacyRules } = useSchedulerStore();
+  // State values (trigger re-renders only when these specific values change)
+  const { legacyRules } = useSchedulerStore(
+    useShallow((s) => ({
+      legacyRules: s.legacyRules,
+    })),
+  );
+
+  // Actions (stable references, never trigger re-renders)
+  const storeMigrateLegacyRules = useSchedulerStore((s) => s.migrateLegacyRules);
 
   const [migrationResult, setMigrationResult] = useState<MigrationResult | null>(null);
   const [isMigrating, setIsMigrating] = useState(false);

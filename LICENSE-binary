@@ -346,14 +346,14 @@ io.opencensus:opencensus-api:0.31.1
 io.opencensus:opencensus-contrib-grpc-metrics:0.12.3
 io.opencensus:opencensus-contrib-http-util:0.31.1
 io.opentelemetry.contrib:opentelemetry-gcp-resources:1.37.0-alpha
-io.opentelemetry:opentelemetry-api:1.47.0
-io.opentelemetry:opentelemetry-context:1.47.0
-io.opentelemetry:opentelemetry-sdk-common:1.47.0
-io.opentelemetry:opentelemetry-sdk-extension-autoconfigure-spi:1.47.0
-io.opentelemetry:opentelemetry-sdk:1.47.0
-io.opentelemetry:opentelemetry-sdk-logs:1.47.0
-io.opentelemetry:opentelemetry-sdk-metrics:1.47.0
-io.opentelemetry:opentelemetry-sdk-trace:1.47.0
+io.opentelemetry:opentelemetry-api:1.59.0
+io.opentelemetry:opentelemetry-context:1.59.0
+io.opentelemetry:opentelemetry-sdk-common:1.59.0
+io.opentelemetry:opentelemetry-sdk-extension-autoconfigure-spi:1.59.0
+io.opentelemetry:opentelemetry-sdk:1.59.0
+io.opentelemetry:opentelemetry-sdk-logs:1.59.0
+io.opentelemetry:opentelemetry-sdk-metrics:1.59.0
+io.opentelemetry:opentelemetry-sdk-trace:1.59.0
 io.opentelemetry.semconv:opentelemetry-semconv:1.29.0-alpha
 io.opentracing:opentracing-api:0.33.0.jar
 io.opentracing:opentracing-noop:0.33.0.jar
@@ -440,6 +440,7 @@ atlaskit/pragmatic-drag-and-drop 1.7.4
 atlaskit/pragmatic-drag-and-drop-auto-scroll 2.1.1
 atlaskit/pragmatic-drag-and-drop-hitbox 1.1.0
 typescript 5.8.3
+baseline-browser-mapping 2.10.0
 --------------------------------------------------------------------------------
 This product bundles various third-party components under other open source
 licenses. This section summarizes those components and their licenses.
@@ -520,7 +521,7 @@ em-table v0.1.6
 ember v2.2.0
 ember-array-contains-helper v1.0.2
 ember-bootstrap v0.5.1
-ember-cli v1.13.13
+ember-cli v2.6.0
 ember-cli-app-version v1.0.0
 ember-cli-babel v5.1.6
 ember-cli-content-security-policy v0.4.0
@@ -532,6 +533,7 @@ ember-cli-inject-live-reload v1.4.0
 ember-cli-jquery-ui v0.0.20
 ember-cli-qunit v1.2.1
 ember-cli-release v0.2.8
+ember-cli-sass v10.0.1
 ember-cli-shims v0.0.6
 ember-cli-sri v1.2.1
 ember-cli-test-loader v0.2.1

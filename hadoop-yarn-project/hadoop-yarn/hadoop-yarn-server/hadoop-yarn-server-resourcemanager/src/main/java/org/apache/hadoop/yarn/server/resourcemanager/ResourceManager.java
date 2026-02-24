@@ -1522,7 +1522,7 @@ public class ResourceManager extends CompositeService
 
     try {
       RMWebApp rmWebApp = new RMWebApp(this);
-      builder.withResourceConfig(rmWebApp.resourceConfig());
+      builder.withResourceConfig(rmWebApp.resourceConfig(conf));
       webApp = builder.start(rmWebApp, uiWebAppContext, schedulerUiWebAppContext);
     } catch (WebAppException e) {
       webApp = e.getWebApp();

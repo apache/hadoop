@@ -20,10 +20,10 @@
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-main</artifactId>
-    <version>3.5.0-SNAPSHOT</version>
+    <version>3.6.0-SNAPSHOT</version>
   </parent>
   <artifactId>hadoop-project</artifactId>
-  <version>3.5.0-SNAPSHOT</version>
+  <version>3.6.0-SNAPSHOT</version>
   <description>Apache Hadoop Project POM</description>
   <name>Apache Hadoop Project POM</name>
   <packaging>pom</packaging>
@@ -159,6 +159,7 @@
 
     <!-- Maven protoc compiler -->
     <protobuf-maven-plugin.version>0.5.1</protobuf-maven-plugin.version>
+    <ascopes.protobuf-maven-plugin.version>4.1.3</ascopes.protobuf-maven-plugin.version>
     <maven-replacer-plugin.version>1.5.3</maven-replacer-plugin.version>
 
     <protobuf-compile.version>3.5.1</protobuf-compile.version>
@@ -2316,8 +2317,15 @@
           <version>${maven-javadoc-plugin.version}</version>
           <configuration>
             <doclint>all</doclint>
+            <additionalJOptions>
+              <!-- To fix doclet runtime error -->
+              <additionalJOption>-J--add-exports=jdk.javadoc/jdk.javadoc.internal.tool=ALL-UNNAMED</additionalJOption>
+            </additionalJOptions>
             <additionalOptions>
-                <additionalOption>-Xmaxwarns 10000</additionalOption>
+              <!-- To fix doclet compile error -->
+              <additionalOption>--add-exports</additionalOption>
+              <additionalOption>jdk.javadoc/jdk.javadoc.internal.tool=ALL-UNNAMED</additionalOption>
+              <additionalOption>-Xmaxwarns 10000</additionalOption>
             </additionalOptions>
           </configuration>
         </plugin>
@@ -2426,6 +2434,11 @@
               </configuration>
             </execution>
           </executions>
+        </plugin>
+        <plugin>
+          <groupId>io.github.ascopes</groupId>
+          <artifactId>protobuf-maven-plugin</artifactId>
+          <version>${ascopes.protobuf-maven-plugin.version}</version>
         </plugin>
         <!-- Modify the generated source to use our shaded protobuf -->
         <plugin>
@@ -2824,16 +2837,6 @@
 
         </dependencies>
       </dependencyManagement>
-    </profile>
-    <profile>
-      <id>jdk17+</id>
-      <activation>
-        <jdk>[17,)</jdk>
-      </activation>
-      <properties>
-        <javac.version>17</javac.version>
-        <maven.compiler.release>${javac.version}</maven.compiler.release>
-      </properties>
     </profile>
     <profile>
       <id>quiet-surefire</id>
