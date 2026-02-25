@@ -91,11 +91,6 @@ export const serverHandlers = [
     return HttpResponse.json(data);
   }),
 
-  http.get('/ws/v1/cluster/get-labels-to-nodes', () => {
-    const data = loadMockData('get-labels-to-nodes.json');
-    return HttpResponse.json(data);
-  }),
-
   http.post('/ws/v1/cluster/add-node-labels', async ({ request }) => {
     const body = await request.json();
     console.log('Mock: Adding node labels:', body);

@@ -29,6 +29,7 @@ import {
 import { Button } from '~/components/ui/button';
 import { Badge } from '~/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '~/components/ui/alert';
+import { useShallow } from 'zustand/react/shallow';
 import { useSchedulerStore } from '~/stores/schedulerStore';
 import type { StagedChange } from '~/types';
 import { QueueChangeGroup } from './QueueChangeGroup';
@@ -46,8 +47,19 @@ interface StagedChangesPanelProps {
 export function StagedChangesPanel({ open, onClose, onOpen }: StagedChangesPanelProps) {
   const [isApplying, setIsApplying] = useState(false);
 
-  const { stagedChanges, revertChange, clearAllChanges, applyChanges, applyError, isReadOnly } =
-    useSchedulerStore();
+  // State values (trigger re-renders only when these specific values change)
+  const { stagedChanges, applyError, isReadOnly } = useSchedulerStore(
+    useShallow((s) => ({
+      stagedChanges: s.stagedChanges,
+      applyError: s.applyError,
+      isReadOnly: s.isReadOnly,
+    })),
+  );
+
+  // Actions (stable references, never trigger re-renders)
+  const revertChange = useSchedulerStore((s) => s.revertChange);
+  const clearAllChanges = useSchedulerStore((s) => s.clearAllChanges);
+  const applyChanges = useSchedulerStore((s) => s.applyChanges);
 
   // Group changes by queue path for organized display
   const changesByQueue = stagedChanges.reduce(
@@ -116,17 +128,21 @@ export function StagedChangesPanel({ open, onClose, onOpen }: StagedChangesPanel
   // Show floating button when panel is closed and there are staged changes
   if (!open && stagedChanges.length > 0) {
     return (
-      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50">
+      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
         <Button
           variant="default"
           size="lg"
-          className="relative shadow-lg rounded-full px-6"
+          className="relative shadow-xl hover:shadow-2xl rounded-full px-8 py-6 backdrop-blur-sm bg-primary/95 hover:bg-primary transition-all duration-300 hover:scale-105 animate-in fade-in slide-in-from-bottom-4"
           onClick={onOpen}
           data-staged-changes-trigger
         >
-          <Gauge className="h-5 w-5 mr-2" />
-          View Staged Changes
-          <Badge variant="destructive" className="absolute -top-2 -right-2">
+          <span className="absolute inset-0 rounded-full bg-primary/20 animate-pulse" />
+          <Gauge className="h-5 w-5 mr-2 relative z-10" />
+          <span className="relative z-10 font-semibold">View Staged Changes</span>
+          <Badge
+            variant="destructive"
+            className="absolute -top-2 -right-2 shadow-lg animate-bounce"
+          >
             {stagedChanges.length}
           </Badge>
         </Button>
@@ -139,7 +155,7 @@ export function StagedChangesPanel({ open, onClose, onOpen }: StagedChangesPanel
       <DrawerContent className="max-h-[85vh]">
         <div className="flex flex-col h-full max-h-[85vh]">
           {/* Header */}
-          <DrawerHeader className="border-b pb-4">
+          <DrawerHeader className="border-b pb-4 bg-gradient-to-r from-muted/30 to-transparent">
             <div className="space-y-3">
               {applyError && (
                 <Alert variant="destructive">
@@ -150,8 +166,10 @@ export function StagedChangesPanel({ open, onClose, onOpen }: StagedChangesPanel
               )}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <DrawerTitle>Staged Changes</DrawerTitle>
-                  <Badge variant="secondary">
+                  <DrawerTitle className="text-xl font-bold tracking-tight">
+                    Staged Changes
+                  </DrawerTitle>
+                  <Badge variant="secondary" className="font-semibold">
                     {stagedChanges.length} {stagedChanges.length === 1 ? 'change' : 'changes'}
                   </Badge>
                 </div>

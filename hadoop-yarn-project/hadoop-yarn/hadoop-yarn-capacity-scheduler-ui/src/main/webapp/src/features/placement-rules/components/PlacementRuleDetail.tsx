@@ -22,13 +22,23 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '~/com
 import { Button } from '~/components/ui/button';
 import { Separator } from '~/components/ui/separator';
 import { Badge } from '~/components/ui/badge';
+import { useShallow } from 'zustand/react/shallow';
 import { useSchedulerStore } from '~/stores/schedulerStore';
 import { PlacementRuleForm } from './PlacementRuleForm';
 import { getPolicyDescription } from '~/features/placement-rules/constants/policy-descriptions';
 import type { PlacementRule } from '~/types/features/placement-rules';
 
 export function PlacementRuleDetail() {
-  const { rules, selectedRuleIndex, updateRule } = useSchedulerStore();
+  // State values (trigger re-renders only when these specific values change)
+  const { rules, selectedRuleIndex } = useSchedulerStore(
+    useShallow((s) => ({
+      rules: s.rules,
+      selectedRuleIndex: s.selectedRuleIndex,
+    })),
+  );
+
+  // Actions (stable references, never trigger re-renders)
+  const updateRule = useSchedulerStore((s) => s.updateRule);
   const [isEditing, setIsEditing] = useState(false);
 
   if (selectedRuleIndex === null || !rules[selectedRuleIndex]) {

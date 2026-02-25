@@ -52,8 +52,11 @@ describe('DeleteQueueDialog', () => {
     expect(screen.getByRole('dialog')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /delete queue/i })).toBeInTheDocument();
     expect(screen.getByText(/Are you sure you want to delete the queue/)).toBeInTheDocument();
-    expect(screen.getByText('team1')).toBeInTheDocument();
+    // Queue name appears twice: in the prompt and in the confirmation label
+    expect(screen.getAllByText('team1')).toHaveLength(2);
     expect(screen.getByText(/This action cannot be undone/)).toBeInTheDocument();
+    // Confirmation input should exist
+    expect(screen.getByLabelText(/Type.*team1.*to confirm/)).toBeInTheDocument();
   });
 
   it('should stage queue removal on confirmation', async () => {
@@ -63,6 +66,15 @@ describe('DeleteQueueDialog', () => {
     render(<DeleteQueueDialog open={true} queuePath="root.production.team1" onClose={onClose} />);
 
     const deleteButton = screen.getByRole('button', { name: /delete queue/i });
+    // Button should be disabled until confirmation text is entered
+    expect(deleteButton).toBeDisabled();
+
+    // Type the queue name to confirm
+    const confirmInput = screen.getByLabelText(/Type.*team1.*to confirm/);
+    await user.type(confirmInput, 'team1');
+
+    // Now button should be enabled
+    expect(deleteButton).not.toBeDisabled();
     await user.click(deleteButton);
 
     expect(mockDeleteQueue).toHaveBeenCalledWith('root.production.team1');
@@ -127,10 +139,16 @@ describe('DeleteQueueDialog', () => {
     ).toBeInTheDocument();
   });
 
-  it('should use danger variant for delete button', () => {
+  it('should use danger variant for delete button', async () => {
+    const user = userEvent.setup();
     render(<DeleteQueueDialog open={true} queuePath="root.default" onClose={vi.fn()} />);
 
+    // Type confirmation to enable the button for class check
+    const confirmInput = screen.getByLabelText(/Type.*default.*to confirm/);
+    await user.type(confirmInput, 'default');
+
     const deleteButton = screen.getByRole('button', { name: /delete queue/i });
-    expect(deleteButton).toHaveClass('bg-destructive');
+    // Destructive buttons use gradient styling
+    expect(deleteButton).toHaveClass('from-destructive');
   });
 });

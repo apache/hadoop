@@ -58,11 +58,18 @@ describe('NodeLabelsPanel', () => {
     nodeToLabels: [],
   };
 
+  function mockStore(overrides: Record<string, any> = {}) {
+    const state = { ...defaultStoreState, ...overrides };
+    vi.mocked(useSchedulerStore).mockImplementation((selector?: any) => {
+      return selector ? selector(state) : state;
+    });
+    vi.mocked(useSchedulerStore).getState = mockGetState;
+  }
+
   beforeEach(() => {
     vi.clearAllMocks();
     mockConsoleError.mockClear();
-    vi.mocked(useSchedulerStore).mockReturnValue(defaultStoreState);
-    vi.mocked(useSchedulerStore).getState = mockGetState;
+    mockStore();
     mockGetState.mockReturnValue({ nodeToLabels: [] });
     vi.mocked(validateLabelRemoval).mockReturnValue({ valid: true });
   });
@@ -76,7 +83,30 @@ describe('NodeLabelsPanel', () => {
       render(<NodeLabelsPanel />);
 
       expect(screen.getByText('No node labels found')).toBeInTheDocument();
-      expect(screen.getByText('Click "Add" to create the first label')).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          'Node labels let you partition cluster nodes for dedicated resource allocation.',
+        ),
+      ).toBeInTheDocument();
+    });
+
+    it('should show CTA button in empty state', () => {
+      render(<NodeLabelsPanel />);
+
+      const ctaButton = screen.getByRole('button', { name: /create first label/i });
+      expect(ctaButton).toBeInTheDocument();
+      expect(ctaButton).not.toBeDisabled();
+    });
+
+    it('should open add dialog when CTA button is clicked', async () => {
+      render(<NodeLabelsPanel />);
+
+      const ctaButton = screen.getByRole('button', { name: /create first label/i });
+      await userEvent.click(ctaButton as HTMLElement);
+
+      await waitFor(() => {
+        expect(screen.getByRole('dialog')).toBeInTheDocument();
+      });
     });
 
     it('should show correct label count for empty state', () => {
@@ -94,8 +124,7 @@ describe('NodeLabelsPanel', () => {
     ];
 
     it('should display all node labels', () => {
-      vi.mocked(useSchedulerStore).mockReturnValue({
-        ...defaultStoreState,
+      mockStore({
         nodeLabels: mockLabels,
       });
 
@@ -107,8 +136,7 @@ describe('NodeLabelsPanel', () => {
     });
 
     it('should show correct label count', () => {
-      vi.mocked(useSchedulerStore).mockReturnValue({
-        ...defaultStoreState,
+      mockStore({
         nodeLabels: mockLabels,
       });
 
@@ -118,8 +146,7 @@ describe('NodeLabelsPanel', () => {
     });
 
     it('should display exclusive badge for exclusive labels', () => {
-      vi.mocked(useSchedulerStore).mockReturnValue({
-        ...defaultStoreState,
+      mockStore({
         nodeLabels: mockLabels,
       });
 
@@ -130,8 +157,7 @@ describe('NodeLabelsPanel', () => {
     });
 
     it('should show shield icon for exclusive labels', () => {
-      vi.mocked(useSchedulerStore).mockReturnValue({
-        ...defaultStoreState,
+      mockStore({
         nodeLabels: mockLabels,
       });
 
@@ -146,8 +172,7 @@ describe('NodeLabelsPanel', () => {
     });
 
     it('should handle singular vs plural label text', () => {
-      vi.mocked(useSchedulerStore).mockReturnValue({
-        ...defaultStoreState,
+      mockStore({
         nodeLabels: [getMockNodeLabel()],
       });
 
@@ -164,8 +189,7 @@ describe('NodeLabelsPanel', () => {
     ];
 
     it('should call selectNodeLabel when clicking on a label', async () => {
-      vi.mocked(useSchedulerStore).mockReturnValue({
-        ...defaultStoreState,
+      mockStore({
         nodeLabels: mockLabels,
       });
 
@@ -178,8 +202,7 @@ describe('NodeLabelsPanel', () => {
     });
 
     it('should deselect label when clicking on selected label', async () => {
-      vi.mocked(useSchedulerStore).mockReturnValue({
-        ...defaultStoreState,
+      mockStore({
         nodeLabels: mockLabels,
         selectedNodeLabel: 'gpu',
       });
@@ -193,8 +216,7 @@ describe('NodeLabelsPanel', () => {
     });
 
     it('should highlight selected label', () => {
-      vi.mocked(useSchedulerStore).mockReturnValue({
-        ...defaultStoreState,
+      mockStore({
         nodeLabels: mockLabels,
         selectedNodeLabel: 'highmem',
       });
@@ -219,8 +241,7 @@ describe('NodeLabelsPanel', () => {
     });
 
     it('should disable add button when loading', () => {
-      vi.mocked(useSchedulerStore).mockReturnValue({
-        ...defaultStoreState,
+      mockStore({
         isLoading: true,
       });
 
@@ -247,8 +268,7 @@ describe('NodeLabelsPanel', () => {
         getMockNodeLabel({ name: 'highmem' }),
       ];
 
-      vi.mocked(useSchedulerStore).mockReturnValue({
-        ...defaultStoreState,
+      mockStore({
         nodeLabels: mockLabels,
       });
 
@@ -343,8 +363,7 @@ describe('NodeLabelsPanel', () => {
     ];
 
     beforeEach(() => {
-      vi.mocked(useSchedulerStore).mockReturnValue({
-        ...defaultStoreState,
+      mockStore({
         nodeLabels: mockLabels,
       });
     });
@@ -355,8 +374,7 @@ describe('NodeLabelsPanel', () => {
         getMockNodeLabel({ name: 'gpu', exclusivity: true }),
       ];
 
-      vi.mocked(useSchedulerStore).mockReturnValue({
-        ...defaultStoreState,
+      mockStore({
         nodeLabels: mockLabelsWithDefault,
       });
 
@@ -430,8 +448,7 @@ describe('NodeLabelsPanel', () => {
     });
 
     it('should disable delete button when loading', () => {
-      vi.mocked(useSchedulerStore).mockReturnValue({
-        ...defaultStoreState,
+      mockStore({
         nodeLabels: mockLabels,
         isLoading: true,
       });
@@ -472,8 +489,7 @@ describe('NodeLabelsPanel', () => {
     ];
 
     it('should show hover effect on labels', () => {
-      vi.mocked(useSchedulerStore).mockReturnValue({
-        ...defaultStoreState,
+      mockStore({
         nodeLabels: mockLabels,
       });
 
@@ -488,8 +504,7 @@ describe('NodeLabelsPanel', () => {
     });
 
     it('should show cursor pointer on labels', () => {
-      vi.mocked(useSchedulerStore).mockReturnValue({
-        ...defaultStoreState,
+      mockStore({
         nodeLabels: mockLabels,
       });
 
@@ -510,8 +525,7 @@ describe('NodeLabelsPanel', () => {
     ];
 
     it('should have accessible list structure', () => {
-      vi.mocked(useSchedulerStore).mockReturnValue({
-        ...defaultStoreState,
+      mockStore({
         nodeLabels: mockLabels,
       });
 
@@ -525,8 +539,7 @@ describe('NodeLabelsPanel', () => {
     });
 
     it('should have accessible tooltips for delete buttons', () => {
-      vi.mocked(useSchedulerStore).mockReturnValue({
-        ...defaultStoreState,
+      mockStore({
         nodeLabels: mockLabels,
       });
 
