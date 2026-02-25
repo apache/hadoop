@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.yarn.server.webproxy;
 
+import org.apache.commons.collections4.MapUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.yarn.webapp.MimeType;
 import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
 import org.apache.http.client.methods.HttpRequestBase;
@@ -135,13 +137,13 @@ public class ProxyUtils {
    *
    * @param req the HTTP servlet request containing cookies
    * @param cookieName the name of the cookie to retrieve
-   * @return the cookie value, or {@code null} if not found
+   * @return the cookie value, or {@code null} if not found or cookieName is blank
    */
   public static String getCookie(HttpServletRequest req, String cookieName) {
     Cookie[] cookies = req.getCookies();
-    if (cookies != null) {
+    if (cookies != null && StringUtils.isNotBlank(cookieName)) {
       for (Cookie cookie : cookies) {
-        if (cookieName.equalsIgnoreCase(cookie.getName())) {
+        if (cookieName.equals(cookie.getName())) {
           return cookie.getValue();
         }
       }
@@ -158,6 +160,9 @@ public class ProxyUtils {
    * @param cookies a map of cookie names to cookie values
    */
   public static void setCookies(HttpRequestBase req, Map<String, String> cookies) {
+    if (MapUtils.isEmpty(cookies)) {
+      return;
+    }
     req.setHeader("Cookie", cookies.entrySet()
         .stream()
         .map(entry -> entry.getKey() + "=" + entry.getValue())

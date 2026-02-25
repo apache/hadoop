@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.webproxy;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
 import javax.servlet.http.Cookie;
@@ -30,7 +31,9 @@ import org.apache.http.client.methods.HttpRequestBase;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -65,4 +68,18 @@ public class TestProxyUtils {
     assertEquals("bar=222; foo=foo_value", valueCaptor.getValue());
   }
 
+  @Test
+  void testSetEmptyCookie() {
+    HttpRequestBase mock = mock(HttpRequestBase.class);
+    ProxyUtils.setCookies(mock, new HashMap<>());
+    verify(mock, never()).setHeader(anyString(), anyString());
+  }
+
+
+  @Test
+  void testSetNullCookie() {
+    HttpRequestBase mock = mock(HttpRequestBase.class);
+    ProxyUtils.setCookies(mock, null);
+    verify(mock, never()).setHeader(anyString(), anyString());
+  }
 }

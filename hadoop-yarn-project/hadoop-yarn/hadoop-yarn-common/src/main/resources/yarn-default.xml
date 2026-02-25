@@ -2832,6 +2832,16 @@
     <value>60000</value>
   </property>
 
+  <property>
+    <description>When enabled, the proxy extracts the configured JWT cookie
+      (typically "hadoop-jwt") from the incoming request and includes it in proxied requests.
+      This allows the AM web interface to recognize the authenticated user without
+      requiring a separate login. When disabled, no JWT cookie is forwarded,
+      isolating AM UIs from RM-level authentication.</description>
+    <name>yarn.resourcemanager.proxy.jwt-forward.enabled</name>
+    <value>true</value>
+  </property>
+
   <!-- Applications' Configuration -->
 
   <property>

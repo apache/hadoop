@@ -2846,6 +2846,10 @@ public class YarnConfiguration extends Configuration {
   public static final int DEFAULT_RM_PROXY_CONNECTION_TIMEOUT =
       60000;
 
+  public static final String RM_PROXY_JWT_FORWARD_ENABLED = RM_PREFIX + "proxy.jwt-forward.enabled";
+
+  public static final boolean DEFAULT_RM_PROXY_JWT_FORWARD_ENABLED = true;
+
   /**
    * Interval of time the linux container executor should try cleaning up
    * cgroups entry when cleaning up a container. This is required due to what 

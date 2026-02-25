@@ -82,6 +82,8 @@ import org.slf4j.LoggerFactory;
 
 import static org.apache.hadoop.security.authentication.server.JWTRedirectAuthenticationHandler.DEFAULT_JWT_COOKIE_NAME;
 import static org.apache.hadoop.security.authentication.server.JWTRedirectAuthenticationHandler.JWT_COOKIE_NAME;
+import static org.apache.hadoop.yarn.conf.YarnConfiguration.DEFAULT_RM_PROXY_JWT_FORWARD_ENABLED;
+import static org.apache.hadoop.yarn.conf.YarnConfiguration.RM_PROXY_JWT_FORWARD_ENABLED;
 import static org.apache.hadoop.yarn.server.webproxy.ProxyUtils.getCookie;
 import static org.apache.hadoop.yarn.server.webproxy.ProxyUtils.setCookies;
 
@@ -146,7 +148,11 @@ public class WebAppProxyServlet extends HttpServlet {
     this.failurePageUrlBase =
         StringHelper.pjoin(WebAppUtils.getResolvedRMWebAppURLWithScheme(conf),
           "cluster", "failure");
-    this.jwtCookieName = conf.get(JWT_COOKIE_NAME, DEFAULT_JWT_COOKIE_NAME);
+    boolean jwtForwardEnabled =
+        conf.getBoolean(RM_PROXY_JWT_FORWARD_ENABLED, DEFAULT_RM_PROXY_JWT_FORWARD_ENABLED);
+    this.jwtCookieName = jwtForwardEnabled
+        ? conf.get(JWT_COOKIE_NAME, DEFAULT_JWT_COOKIE_NAME)
+        : null;
   }
 
   private String getRmAppPageUrlBase(ApplicationId id) throws YarnException, IOException {
@@ -325,7 +331,7 @@ public class WebAppProxyServlet extends HttpServlet {
     String user = req.getRemoteUser();
     if (StringUtils.hasLength(user)) {
       LOG.debug("Cookie {} will be set", PROXY_USER_COOKIE_NAME);
-      cookies.put(PROXY_USER_COOKIE_NAME, URLEncoder.encode(user, "ASCII"));
+      cookies.put(PROXY_USER_COOKIE_NAME, URLEncoder.encode(user, StandardCharsets.US_ASCII));
     }
     String jwtCookie = getCookie(req, jwtCookieName);
     if (StringUtils.hasLength(jwtCookie)) {
