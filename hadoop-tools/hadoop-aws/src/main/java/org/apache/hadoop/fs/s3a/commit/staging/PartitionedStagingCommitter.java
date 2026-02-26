@@ -36,6 +36,7 @@ import org.apache.hadoop.fs.s3a.commit.files.PendingSet;
 import org.apache.hadoop.fs.s3a.commit.files.PersistentCommitData;
 import org.apache.hadoop.fs.s3a.commit.files.SinglePendingCommit;
 import org.apache.hadoop.fs.s3a.commit.impl.CommitContext;
+import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.functional.TaskPool;
@@ -70,6 +71,12 @@ public class PartitionedStagingCommitter extends StagingCommitter {
 
   public PartitionedStagingCommitter(Path outputPath,
       TaskAttemptContext context)
+      throws IOException {
+    super(outputPath, context);
+  }
+
+  public PartitionedStagingCommitter(Path outputPath,
+      JobContext context)
       throws IOException {
     super(outputPath, context);
   }

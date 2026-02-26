@@ -23,6 +23,7 @@ import java.io.IOException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.commit.AbstractS3ACommitterFactory;
+import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.output.PathOutputCommitter;
 
@@ -41,6 +42,13 @@ public class MagicS3GuardCommitterFactory
   public PathOutputCommitter createTaskCommitter(S3AFileSystem fileSystem,
       Path outputPath,
       TaskAttemptContext context) throws IOException {
+    return new MagicS3GuardCommitter(outputPath, context);
+  }
+
+  @Override
+  public PathOutputCommitter createJobCommitter(S3AFileSystem fileSystem,
+      Path outputPath,
+      JobContext context) throws IOException {
     return new MagicS3GuardCommitter(outputPath, context);
   }
 

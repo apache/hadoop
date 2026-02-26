@@ -58,6 +58,11 @@ public class DirectoryStagingCommitter extends StagingCommitter {
     super(outputPath, context);
   }
 
+  public DirectoryStagingCommitter(Path outputPath, JobContext context)
+      throws IOException {
+    super(outputPath, context);
+  }
+
   @Override
   public String getName() {
     return NAME;

@@ -134,6 +134,37 @@ public class StagingCommitter extends AbstractS3ACommitter {
     LOG.debug("Conflict resolution mode: {}", mode);
   }
 
+  /**
+   * Committer for a single task attempt.
+   * @param outputPath final output path
+   * @param context job context
+   * @throws IOException on a failure
+   */
+  public StagingCommitter(Path outputPath,
+      JobContext context) throws IOException {
+    super(outputPath, context);
+    this.constructorOutputPath = requireNonNull(getOutputPath(), "output path");
+    Configuration conf = getConf();
+    this.uploadPartSize = conf.getLongBytes(
+        MULTIPART_SIZE, DEFAULT_MULTIPART_SIZE);
+    this.uniqueFilenames = conf.getBoolean(
+        FS_S3A_COMMITTER_STAGING_UNIQUE_FILENAMES,
+        DEFAULT_STAGING_COMMITTER_UNIQUE_FILENAMES);
+    setWorkPath(buildWorkPath(context, getUUID()));
+    this.wrappedCommitter = createWrappedCommitter(context, conf);
+    setOutputPath(constructorOutputPath);
+    Path finalOutputPath = requireNonNull(getOutputPath(),
+        "Output path cannot be null");
+    S3AFileSystem fs = getS3AFileSystem(finalOutputPath,
+        context.getConfiguration(), false);
+    s3KeyPrefix = fs.pathToKey(finalOutputPath);
+    LOG.debug("{}: final output path is {}", getRole(), finalOutputPath);
+    // forces evaluation and caching of the resolution mode.
+    ConflictResolution mode = getConflictResolutionMode(getJobContext(),
+        fs.getConf());
+    LOG.debug("Conflict resolution mode: {}", mode);
+  }
+
   @Override
   public String getName() {
     return NAME;

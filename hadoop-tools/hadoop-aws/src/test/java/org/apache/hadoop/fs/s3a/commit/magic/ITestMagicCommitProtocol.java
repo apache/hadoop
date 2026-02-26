@@ -25,6 +25,9 @@ import java.util.Collection;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.JobContextImpl;
+import org.assertj.core.api.Assertions;
 
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
@@ -214,6 +217,20 @@ public class ITestMagicCommitProtocol extends AbstractITCommitProtocol {
         .doesNotContain("/" + MAGIC_PATH_PREFIX + committer.getUUID() + "/")
         .doesNotContain(BASE)
         .contains(ta0);
+  }
+
+  @Test
+  public void testCommitterJobContextPath() throws Throwable {
+    TaskAttemptContext tContext = new TaskAttemptContextImpl(
+            getConfiguration(),
+            getTaskAttempt0());
+    JobContext jobContext = new JobContextImpl(
+        new JobConf(getConfiguration()), tContext.getJobID());
+    MagicS3GuardCommitter committer1 = createCommitter(getOutDir(), tContext);
+    MagicS3GuardCommitter committer2 = new MagicS3GuardCommitter(getOutDir(), jobContext);
+    //Task specific segment of working path is 3 levels deep beyond the job specific segment
+    Assertions.assertThat(committer2.getJobAttemptPath(jobContext))
+        .isEqualTo(committer1.getTaskAttemptPath(tContext).getParent().getParent().getParent());
   }
 
   /**
