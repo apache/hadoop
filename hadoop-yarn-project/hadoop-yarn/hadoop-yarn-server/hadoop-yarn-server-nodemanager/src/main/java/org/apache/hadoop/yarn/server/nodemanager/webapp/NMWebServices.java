@@ -639,8 +639,9 @@ public class NMWebServices {
   {
     if (isJStackEndpointsEnable) {
       try {
+        DiagnosticJStackService diagnosticJStackService = new DiagnosticJStackService(this.nmContext);
         return Response.status(Status.OK)
-                .entity(DiagnosticJStackService.collectNodeThreadDump(numberOfJStack))
+                .entity(diagnosticJStackService.collectNodeThreadDump(numberOfJStack))
                 .build();
       } catch (IOException e){
         throw new WebAppException("Shell command has failed: " + e.getMessage() + ". " +
@@ -682,7 +683,7 @@ public class NMWebServices {
                 "For more information please check the NodeManager logs.");
       }
     } else {
-      return  Response.status(Status.METHOD_NOT_ALLOWED)
+      return Response.status(Status.METHOD_NOT_ALLOWED)
               .build();
     }
 

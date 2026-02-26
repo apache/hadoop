@@ -18,6 +18,7 @@
 package org.apache.hadoop.yarn.server.nodemanager.webapp;
 
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -44,17 +45,13 @@ public class DiagnosticJStackService {
         this.context = context;
     }
 
-
-    public static String collectNodeThreadDump(int numberOfJStack)
+    public String collectNodeThreadDump(int numberOfJStack)
             throws IOException {
-        if (Shell.WINDOWS) {
-            throw new UnsupportedOperationException("Not implemented for Windows");
-        }
+        checkShellNotWindows();
 
-        long nodeManagerPid = getNodeManagerPid();
+        long nodeManagerPid = ProcessHandle.current().pid();
 
         return runJStack(nodeManagerPid, numberOfJStack);
-
     }
 
     public String collectApplicationThreadDump(String appId, int numberOfJStack)
@@ -62,22 +59,21 @@ public class DiagnosticJStackService {
         if(!appId.matches("application_\\d{13}_\\d{4}")) {
             throw new RuntimeException("Invalid application id: " + appId);
         }
-
-        if (Shell.WINDOWS) {
-            throw new UnsupportedOperationException("Not implemented for Windows.");
-        }
+        checkShellNotWindows();
 
         List<Long> applicationPids = getApplicationPids(appId);
 
         return runJStack(applicationPids, numberOfJStack);
     }
 
-
-    public static long getNodeManagerPid() {
-        return ProcessHandle.current().pid();
+    private void checkShellNotWindows() {
+        if (Shell.WINDOWS) {
+            throw new UnsupportedOperationException("Not implemented for Windows.");
+        }
     }
 
-    public List<Long> getApplicationPids(String appId){
+    @VisibleForTesting
+    List<Long> getApplicationPids(String appId){
         List<Long> pids = new ArrayList<>();
 
         ApplicationId appIdObj = ApplicationId.fromString(appId);
@@ -102,8 +98,7 @@ public class DiagnosticJStackService {
 
     }
 
-
-    public static String runJStack(List<Long> pids, int numJStacks) throws IOException {
+    private String runJStack(List<Long> pids, int numJStacks) throws IOException {
         StringBuilder result = new StringBuilder();
 
         for(Long pid : pids){
@@ -113,7 +108,7 @@ public class DiagnosticJStackService {
         return result.toString();
     }
 
-    public static String runJStack(long pid, int numJStacks) throws IOException {
+    private String runJStack(long pid, int numJStacks) throws IOException {
         Optional<ProcessHandle> processHandle = ProcessHandle.of(pid);
 
         if (processHandle.isEmpty()){

@@ -17,16 +17,138 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.webapp;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.util.Shell;
+import org.apache.hadoop.yarn.server.nodemanager.NodeManager;
 import org.junit.jupiter.api.Test;
+import org.mockito.MockedConstruction;
+import org.mockito.MockedStatic;
 
-
+import java.io.IOException;
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.mockConstruction;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.anyLong;
+import static org.mockito.Mockito.spy;
 
 
 public class TestDiagnosticJStackService {
+
+    private static final int NUMBER_OF_JSTACKS = 3;
+    private static final String DUMMY_JSTACK =
+            "Full thread dump OpenJDK 64-Bit Server VM (17.0.15+6-Ubuntu-0ubuntu120.04...";
+
+    private static final NodeManager.NMContext nmContext = new NodeManager.NMContext(
+            null, null, null
+            , null, null, false, new Configuration()
+    );
+    private static final DiagnosticJStackService diagnosticJStackService
+            = spy(new DiagnosticJStackService(nmContext));
+
+
+    @Test
+    public void testWrongApplicationId() {
+        String applicationId = "app_29042";
+
+        assertThrows(RuntimeException.class,
+                () -> diagnosticJStackService.collectApplicationThreadDump(applicationId, 3));
+    }
+
+    @Test
+    public void testCollectNodeThreadDump_Success() {
+        // No need to mock ProcessID, as it will take the unit test JVM PID
+        try(MockedConstruction<Shell.ShellCommandExecutor> mockedConstruction =
+                mockConstruction(Shell.ShellCommandExecutor.class,
+                    (mock, context) -> when(mock.getOutput()).thenReturn(DUMMY_JSTACK)
+                ) // Wrap mockConstruction here to automatically close it
+        ){
+            String result = diagnosticJStackService.collectNodeThreadDump(NUMBER_OF_JSTACKS);
+
+            assertEquals(1, mockedConstruction.constructed().size(),
+                    "ShellCommandExecutor should be instantiated once only");
+
+            Shell.ShellCommandExecutor mockExecutor = mockedConstruction.constructed().get(0);
+
+            // Verify the number of method calls
+            verify(mockExecutor, times(NUMBER_OF_JSTACKS)).execute();
+            verify(mockExecutor, times(NUMBER_OF_JSTACKS)).getOutput();
+
+            assertTrue(result.contains("--- JStack iteration 0"));
+            assertTrue(result.contains("--- JStack iteration 1"));
+            assertTrue(result.contains("--- JStack iteration 2"));
+            assertTrue(result.contains(DUMMY_JSTACK));
+
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Test
+    public void testCollectApplicationThreadDump_Success() {
+        String applicationId = "application_1771512066750_0001";
+
+        List<Long> pids = List.of(23L, 12L, 531L);
+
+        doReturn(pids).when(diagnosticJStackService).getApplicationPids(applicationId);
+
+        ProcessHandle mockProcessHandle = mock(ProcessHandle.class);
+        ProcessHandle.Info mockPhInfo = mock(ProcessHandle.Info.class);
+
+        when(mockProcessHandle.info()).thenReturn(mockPhInfo);
+        when(mockPhInfo.user()).thenReturn(Optional.empty());
+
+        try(MockedStatic<ProcessHandle> mockedStaticProcess = mockStatic(ProcessHandle.class);
+            MockedConstruction<Shell.ShellCommandExecutor> mockedConstruction =
+                    mockConstruction(Shell.ShellCommandExecutor.class,
+                          (mock, context) -> when(mock.getOutput()).thenReturn(DUMMY_JSTACK))
+            // Wrap mockedStatic & mockedConstruction here to automatically close them
+        ){
+            mockedStaticProcess.when(() -> ProcessHandle.of(anyLong())).thenReturn(Optional.of(mockProcessHandle));
+
+            String result = diagnosticJStackService.collectApplicationThreadDump(applicationId, NUMBER_OF_JSTACKS);
+
+            assertEquals(pids.size(), mockedConstruction.constructed().size(),
+                    "ShellCommandExecutor should be instantiated for each PID");
+
+            Shell.ShellCommandExecutor mockExecutor1 = mockedConstruction.constructed().get(0);
+            // Verify the number of method calls
+            verify(mockExecutor1, times(NUMBER_OF_JSTACKS)).execute();
+            verify(mockExecutor1, times(NUMBER_OF_JSTACKS)).getOutput();
+
+            assertTrue(result.contains("--- JStack iteration 0 for PID: 23 ---"));
+            assertTrue(result.contains("--- JStack iteration 0 for PID: 12 ---"));
+            assertTrue(result.contains("--- JStack iteration 0 for PID: 531 ---"));
+            assertTrue(result.contains(DUMMY_JSTACK));
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+    }
+
+
+    @Test
+    public void testCollectApplicationThreadDumpWhenProcessIdNotAlive() {
+        String applicationId = "application_1771512066750_0001";
+        int numJStacks = 3;
+        List<Long> pids = List.of(23L);
+
+        doReturn(pids).when(diagnosticJStackService).getApplicationPids(applicationId);
+
+        assertThrows(IOException.class,
+                () -> diagnosticJStackService.collectApplicationThreadDump(applicationId, numJStacks),
+        "Since we did not mock ProcessHandle.of to return non empty, it will consider this PID is dead");
+
+    }
 
 
 
