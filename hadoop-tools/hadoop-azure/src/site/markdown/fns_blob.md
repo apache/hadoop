@@ -25,15 +25,15 @@ Refer to [WASB Deprecation](./wasb.html) for more details.
 
 ## Azure Service Endpoints Used by ABFS Driver
 Azure Services offers two set of endpoints for interacting with storage accounts:
-1. [Azure Blob Storage](./blobEndpoint.md) referred as Blob Endpoint
+1. [Azure Blob Storage](./blobEndpoint.html) referred as Blob Endpoint
 2. [Azure Data Lake Storage](https://learn.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/operation-groups) referred as DFS Endpoint
 
 The ABFS Driver by default is designed to work with DFS Endpoint only which primarily
 supports HNS Enabled Accounts only.
 
-To enable ABFS Driver to work with FNS Accounts, support for Blob Endpoint is being added.
+To enable ABFS Driver to work with FNS Accounts, support for Blob Endpoint is added.
 This is because Azure services do not recommend using DFS Endpoint for FNS Accounts.
-FNS over DFS endpoint is **REMOVED**. All requests will be switched to Blob endpoint internally if
+FNS over DFS endpoint is therefore **REMOVED**. All requests will be switched to Blob endpoint internally if
 account is detected as FNS.
 
 ABFS Driver will only allow FNS Accounts to be accessed using Blob Endpoint.
@@ -90,11 +90,11 @@ configured service type. Choosing a separate ingress service is **only supported
     </property>
     ```
     - How to configure Shared Key
-      auth: [Shared Key](./index.md#a-nameshared-key-autha-default-shared-key)
+      auth: [Shared Key](./index.html#a-nameshared-key-autha-default-shared-key)
     - How to configure
-      OAuth: [OAuth](./index.md#a-nameoauth-client-credentialsa-oauth-20-client-credentials)
+      OAuth: [OAuth](./index.html#a-nameoauth-client-credentialsa-oauth-20-client-credentials)
     - How to configure fixed
-      SAS: [Fixed SAS](./index.md#using-accountservice-sas-with-abfs)
+      SAS: [Fixed SAS](./index.html#using-accountservice-sas-with-abfs)
 
    OAuth is recommended auth type as it is more secure and flexible.
 

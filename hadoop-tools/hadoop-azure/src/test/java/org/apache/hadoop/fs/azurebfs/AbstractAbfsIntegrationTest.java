@@ -50,9 +50,6 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsOutputStream;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.fs.azurebfs.services.ITestAbfsClient;
-import org.apache.hadoop.fs.azure.AzureNativeFileSystemStore;
-import org.apache.hadoop.fs.azure.NativeAzureFileSystem;
-import org.apache.hadoop.fs.azure.metrics.AzureFileSystemInstrumentation;
 import org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
@@ -64,11 +61,8 @@ import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.IOUtils;
 
-import static org.apache.hadoop.fs.azure.AzureBlobStorageTestAccount.WASB_ACCOUNT_NAME_DOMAIN_SUFFIX;
-import static org.apache.hadoop.fs.azure.NativeAzureFileSystem.APPEND_SUPPORT_ENABLE_PROPERTY_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.COLON;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.FORWARD_SLASH;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.TRUE;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.*;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.ABFS_BLOB_DOMAIN_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.ABFS_DFS_DOMAIN_NAME;
@@ -90,7 +84,6 @@ public abstract class AbstractAbfsIntegrationTest extends
       LoggerFactory.getLogger(AbstractAbfsIntegrationTest.class);
 
   private boolean isIPAddress;
-  private NativeAzureFileSystem wasb;
   private AzureBlobFileSystem abfs;
   private String abfsScheme;
 
@@ -196,44 +189,11 @@ public abstract class AbstractAbfsIntegrationTest extends
   public void setup() throws Exception {
     //Create filesystem first to make sure getWasbFileSystem() can return an existing filesystem.
     createFileSystem();
-
-    // Only live account without namespace support can run ABFS&WASB
-    // compatibility tests
-    if (!isIPAddress && (abfsConfig.getAuthType(accountName) != AuthType.SAS)
-        && (abfsConfig.getAuthType(accountName)
-        != AuthType.UserboundSASWithOAuth)
-        && !abfs.getIsNamespaceEnabled(getTestTracingContext(
-            getFileSystem(), false))) {
-      final URI wasbUri = new URI(
-          abfsUrlToWasbUrl(getTestUrl(), abfsConfig.isHttpsAlwaysUsed()));
-      final AzureNativeFileSystemStore azureNativeFileSystemStore =
-          new AzureNativeFileSystemStore();
-
-      // update configuration with wasb credentials
-      String accountNameWithoutDomain = accountName.split("\\.")[0];
-      String wasbAccountName = accountNameWithoutDomain + WASB_ACCOUNT_NAME_DOMAIN_SUFFIX;
-      String keyProperty = FS_AZURE_ACCOUNT_KEY + "." + wasbAccountName;
-      if (rawConfig.get(keyProperty) == null) {
-        rawConfig.set(keyProperty, getAccountKey());
-      }
-      rawConfig.set(APPEND_SUPPORT_ENABLE_PROPERTY_NAME, TRUE);
-
-      azureNativeFileSystemStore.initialize(
-          wasbUri,
-          rawConfig,
-          new AzureFileSystemInstrumentation(rawConfig));
-
-      wasb = new NativeAzureFileSystem(azureNativeFileSystemStore);
-      wasb.initialize(wasbUri, rawConfig);
-    }
   }
 
   @AfterEach
   public void teardown() throws Exception {
     try {
-      IOUtils.closeStream(wasb);
-      wasb = null;
-
       if (abfs == null) {
         return;
       }
@@ -367,11 +327,6 @@ public abstract class AbstractAbfsIntegrationTest extends
       abfs = (AzureBlobFileSystem) FileSystem.newInstance(rawConfig);
     }
     return abfs;
-  }
-
-
-  protected NativeAzureFileSystem getWasbFileSystem() {
-    return wasb;
   }
 
   protected String getHostName() {

@@ -33,9 +33,9 @@ You can set this locally in your `.profile`/`.bashrc`, but note it won't
 propagate to jobs running in-cluster.
 
 See also:
-* [FNS (non-HNS)](./fns_blob.html)
-* [Legacy-Deprecated-WASB](./wasb.html)
-* [Testing](./testing_azure.html)
+* [ABFS Driver for FNS (non-HNS) Accounts](./fns_blob.html)
+* [Deprecated WASB Driver for FNS (non-HNS) Accounts](./wasb.html)
+* [Testing of ABFS Driver](./testing_azure.html)
 * [WASB Migration Config Support](./wasbToAbfsMigration.html)
 
 ## <a name="features"></a> Features of the ABFS connector.
