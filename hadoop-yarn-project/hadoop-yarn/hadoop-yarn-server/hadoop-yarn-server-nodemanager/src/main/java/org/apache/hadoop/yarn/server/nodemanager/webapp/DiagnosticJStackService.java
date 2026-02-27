@@ -37,103 +37,99 @@ import java.util.Arrays;
 
 public class DiagnosticJStackService {
 
-    private final Context context;
-    private static final Logger LOG = LoggerFactory
-            .getLogger(DiagnosticJStackService.class);
+  private final Context context;
+  private static final Logger LOG = LoggerFactory.getLogger(DiagnosticJStackService.class);
 
-    public DiagnosticJStackService(Context context) {
-        this.context = context;
+  public DiagnosticJStackService(Context context) {
+    this.context = context;
+  }
+
+  public String collectNodeThreadDump(int numberOfJStack) throws IOException {
+    checkShellNotWindows();
+
+    long nodeManagerPid = ProcessHandle.current().pid();
+
+    return runJStack(nodeManagerPid, numberOfJStack);
+  }
+
+  public String collectApplicationThreadDump(String appId, int numberOfJStack) throws IOException {
+    if(!appId.matches("application_\\d{13}_\\d{4}")) {
+      throw new RuntimeException("Invalid application id: " + appId);
+    }
+    checkShellNotWindows();
+
+    List<Long> applicationPids = getApplicationPids(appId);
+
+    return runJStack(applicationPids, numberOfJStack);
+  }
+
+  private void checkShellNotWindows() {
+    if (Shell.WINDOWS) {
+      throw new UnsupportedOperationException("Not implemented for Windows.");
+    }
+  }
+
+  @VisibleForTesting
+  List<Long> getApplicationPids(String appId){
+    List<Long> pids = new ArrayList<>();
+
+    ApplicationId appIdObj = ApplicationId.fromString(appId);
+    Application app = context.getApplications().get(appIdObj);
+    if (app != null) {
+      Map<ContainerId, Container> containers = app.getContainers();
+      for (ContainerId containerId : containers.keySet()){
+        long pidForContainerId = Long.parseLong(context.getContainerExecutor().getProcessId(containerId));
+
+        ProcessHandle.of(pidForContainerId).ifPresent(parentProcess ->
+          parentProcess.descendants()
+            .filter(childProcess ->
+              childProcess.info().command().orElse("").contains("java"))
+                .map(ProcessHandle::pid)
+                .forEach(pids::add)
+        );
+      }
     }
 
-    public String collectNodeThreadDump(int numberOfJStack)
-            throws IOException {
-        checkShellNotWindows();
+    LOG.info("Application PIDs: {}", pids);
 
-        long nodeManagerPid = ProcessHandle.current().pid();
+    return pids;
+  }
 
-        return runJStack(nodeManagerPid, numberOfJStack);
+  private String runJStack(List<Long> pids, int numJStacks) throws IOException {
+    StringBuilder result = new StringBuilder();
+
+    for(Long pid : pids){
+      result.append(runJStack(pid, numJStacks));
     }
 
-    public String collectApplicationThreadDump(String appId, int numberOfJStack)
-            throws IOException {
-        if(!appId.matches("application_\\d{13}_\\d{4}")) {
-            throw new RuntimeException("Invalid application id: " + appId);
-        }
-        checkShellNotWindows();
+    return result.toString();
+  }
 
-        List<Long> applicationPids = getApplicationPids(appId);
+  private String runJStack(long pid, int numJStacks) throws IOException {
+    Optional<ProcessHandle> processHandle = ProcessHandle.of(pid);
 
-        return runJStack(applicationPids, numberOfJStack);
+    if (processHandle.isEmpty()){
+      throw new IOException("Process with PID " + pid + " is no longer exists");
     }
 
-    private void checkShellNotWindows() {
-        if (Shell.WINDOWS) {
-            throw new UnsupportedOperationException("Not implemented for Windows.");
-        }
+    String processOwner = processHandle.get().info().user().orElse("root");
+    String[] jstackCommand = {"sudo", "-u", processOwner, "jstack", String.valueOf(pid)};
+
+    LOG.info("Running JStack command: {}", Arrays.toString(jstackCommand));
+
+    Shell.ShellCommandExecutor cmd =
+      new Shell.ShellCommandExecutor(jstackCommand, null, null, 60_000);
+
+    StringBuilder result = new StringBuilder();
+
+    for (int i = 0; i < numJStacks; i++) {
+      cmd.execute();
+      result.append(String.format(
+        "--- JStack iteration %d for PID: %d ---%n%s%n", i, pid, cmd.getOutput()));
     }
 
-    @VisibleForTesting
-    List<Long> getApplicationPids(String appId){
-        List<Long> pids = new ArrayList<>();
-
-        ApplicationId appIdObj = ApplicationId.fromString(appId);
-        Application app = context.getApplications().get(appIdObj);
-        if (app != null) {
-            Map<ContainerId, Container> containers = app.getContainers();
-            for (ContainerId containerId : containers.keySet()){
-                long pidForContainerId = Long.parseLong(context.getContainerExecutor().getProcessId(containerId));
-
-                ProcessHandle.of(pidForContainerId).ifPresent(parentProcess ->
-                        parentProcess.descendants()
-                                .filter(childProcess ->
-                                        childProcess.info().command().orElse("").contains("java"))
-                                .map(ProcessHandle::pid)
-                                .forEach(pids::add)
-                );
-
-            }
-        }
-
-        return pids;
-
-    }
-
-    private String runJStack(List<Long> pids, int numJStacks) throws IOException {
-        StringBuilder result = new StringBuilder();
-
-        for(Long pid : pids){
-            result.append(runJStack(pid, numJStacks));
-        }
-
-        return result.toString();
-    }
-
-    private String runJStack(long pid, int numJStacks) throws IOException {
-        Optional<ProcessHandle> processHandle = ProcessHandle.of(pid);
-
-        if (processHandle.isEmpty()){
-            throw new IOException("Process with PID " + pid + " is no longer exists");
-        }
-
-        String processOwner = processHandle.get().info().user().orElse("root");
-        String[] jstackCommand = {"sudo", "-u", processOwner, "jstack", String.valueOf(pid)};
-
-        LOG.info("Running JStack command: {}", Arrays.toString(jstackCommand));
-
-        Shell.ShellCommandExecutor cmd =
-                new Shell.ShellCommandExecutor(jstackCommand, null, null, 60_000);
-
-        StringBuilder result = new StringBuilder();
-
-        for (int i = 0; i < numJStacks; i++) {
-            cmd.execute();
-            result.append(String.format(
-                    "--- JStack iteration %d for PID: %d ---\n%s\n", i, pid, cmd.getOutput()
-            ));
-        }
-
-        return result.toString();
-    }
+    return result.toString();
+  }
 
 
 }
