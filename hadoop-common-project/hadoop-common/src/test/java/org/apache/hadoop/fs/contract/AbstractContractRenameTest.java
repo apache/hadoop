@@ -351,4 +351,16 @@ public abstract class AbstractContractRenameTest extends
     assertPathExists(action, renameSrc);
   }
 
+  @Test
+  public void testRenameEmptyDirectory() throws Throwable {
+    var fs = getFileSystem();
+    var basePath = methodPath();
+    var source = new Path(basePath, "empty");
+    var dest = new Path(basePath, "dest");
+    fs.mkdirs(source);
+    fs.rename(source, dest);
+    assertPathExists("empty dir rename", dest);
+    assertPathDoesNotExist("empty dir rename", source);
+  }
+
 }
