@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,24 +16,10 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.nodemanager.webapp.dao;
+/**
+ * Package org.apache.hadoop.yarn.server.nodemanager.webapp.jsonprovider contains classes
+ * for handling json response format mostly to provide backward-compatibility with jersey1.
+ */
 
-import javax.xml.bind.annotation.XmlAccessType;
-import javax.xml.bind.annotation.XmlAccessorType;
-import javax.xml.bind.annotation.XmlRootElement;
+package org.apache.hadoop.yarn.server.nodemanager.webapp.jsonprovider;
 
-@XmlRootElement
-@XmlAccessorType(XmlAccessType.FIELD)
-public class NMResourceInfo {
-  private long resourceValue;
-
-  public NMResourceInfo() {} // JAXB needs this
-
-  public long getResourceValue() {
-    return resourceValue;
-  }
-
-  public void setResourceValue(long resourceValue) {
-    this.resourceValue = resourceValue;
-  }
-}

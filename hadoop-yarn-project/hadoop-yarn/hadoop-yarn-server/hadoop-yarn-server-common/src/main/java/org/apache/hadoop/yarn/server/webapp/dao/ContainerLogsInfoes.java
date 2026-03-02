@@ -16,24 +16,28 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.nodemanager.webapp.dao;
+package org.apache.hadoop.yarn.server.webapp.dao;
 
-import javax.xml.bind.annotation.XmlAccessType;
-import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlRootElement;
+import java.util.List;
 
 @XmlRootElement
-@XmlAccessorType(XmlAccessType.FIELD)
-public class NMResourceInfo {
-  private long resourceValue;
+public class ContainerLogsInfoes {
+  private List<ContainerLogsInfo> containerLogsInfo;
 
-  public NMResourceInfo() {} // JAXB needs this
 
-  public long getResourceValue() {
-    return resourceValue;
+  public ContainerLogsInfoes(List<ContainerLogsInfo> containerLogsInfo) {
+    this.containerLogsInfo = containerLogsInfo;
   }
 
-  public void setResourceValue(long resourceValue) {
-    this.resourceValue = resourceValue;
+  public ContainerLogsInfoes() {
+  }
+
+  public List<ContainerLogsInfo> getContainerLogsInfo() {
+    return containerLogsInfo;
+  }
+
+  public void setContainerLogsInfo(List<ContainerLogsInfo> containerLogsInfo) {
+    this.containerLogsInfo = containerLogsInfo;
   }
 }

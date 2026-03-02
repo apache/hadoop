@@ -225,6 +225,10 @@
       <groupId>org.glassfish.jersey.media</groupId>
       <artifactId>jersey-media-json-jettison</artifactId>
     </dependency>
+    <dependency>
+      <groupId>org.eclipse.persistence</groupId>
+      <artifactId>org.eclipse.persistence.moxy</artifactId>
+    </dependency>
   </dependencies>
 
   <profiles>
