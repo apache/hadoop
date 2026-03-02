@@ -4626,6 +4626,17 @@
 
   <property>
     <description>
+      ZK read-retry seconds when using zookeeper-based configuration store.
+      Should the ZK configuration store being formatted while one of the RM
+      is in the INIT state, allow retries using this interval in the hope that the store will be
+      re-populated with some data soon.
+    </description>
+    <name>yarn.scheduler.configuration.zk-store.read-retry-secs</name>
+    <value>3</value>
+  </property>
+
+  <property>
+    <description>
       Provides an option for client to load supported resource types from RM
       instead of depending on local resource-types.xml file.
     </description>

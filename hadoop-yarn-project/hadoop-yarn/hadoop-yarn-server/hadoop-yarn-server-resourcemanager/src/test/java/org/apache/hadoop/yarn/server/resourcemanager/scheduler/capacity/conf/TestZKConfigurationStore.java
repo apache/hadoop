@@ -198,7 +198,28 @@ public class TestZKConfigurationStore extends
     prepareLogMutation("key1", "val1");
 
     data = ((ZKConfigurationStore) confStore).getZkData(logsPath);
-    assertNull(data, "Failed to Disable Audit Logs");
+    assertEquals(0, data.length, "Failed to Disable Audit Logs");
+  }
+
+  @Test
+  public void testZkData() throws Exception {
+    conf.setInt(YarnConfiguration.RM_SCHEDCONF_STORE_ZK_READ_RETRY_SECS, 0);
+    schedConf.set("key", "val");
+    confStore.initialize(conf, schedConf, rmContext);
+    String confStorePath = getZkPath("CONF_STORE");
+    byte[] data = ((ZKConfigurationStore) confStore).getZkData(confStorePath);
+    assertTrue(data.length > 0, "ConfStore data expected to be not null.");
+  }
+
+  @Test
+  public void testEmptyZkData() throws Exception {
+    conf.setInt(YarnConfiguration.RM_SCHEDCONF_STORE_ZK_READ_RETRY_SECS, 0);
+    schedConf.set("key", "val");
+    confStore.initialize(conf, schedConf, rmContext);
+    confStore.format();
+    String confStorePath = getZkPath("CONF_STORE");
+    byte[] data = ((ZKConfigurationStore) confStore).getZkData(confStorePath);
+    assertEquals(0, data.length, "ConfStore data expected to be empty.");
   }
 
   public Configuration createRMHAConf(String rmIds, String rmId,
