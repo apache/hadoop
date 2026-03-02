@@ -22,6 +22,7 @@ import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
@@ -34,11 +35,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Arrays;
+import java.util.stream.Stream;
 
 public class DiagnosticJStackService {
 
-  private final Context context;
   private static final Logger LOG = LoggerFactory.getLogger(DiagnosticJStackService.class);
+  private final Context context;
 
   public DiagnosticJStackService(Context context) {
     this.context = context;
@@ -53,12 +55,10 @@ public class DiagnosticJStackService {
   }
 
   public String collectApplicationThreadDump(String appId, int numberOfJStack) throws IOException {
-    if(!appId.matches("application_\\d{13}_\\d{4}")) {
-      throw new RuntimeException("Invalid application id: " + appId);
-    }
     checkShellNotWindows();
 
-    List<Long> applicationPids = getApplicationPids(appId);
+    ApplicationId applicationId = ApplicationId.fromString(appId);
+    List<Long> applicationPids = getApplicationPids(applicationId);
 
     return runJStack(applicationPids, numberOfJStack);
   }
@@ -69,25 +69,25 @@ public class DiagnosticJStackService {
     }
   }
 
-  @VisibleForTesting
-  List<Long> getApplicationPids(String appId){
+  protected List<Long> getApplicationPids(ApplicationId appId){
     List<Long> pids = new ArrayList<>();
 
-    ApplicationId appIdObj = ApplicationId.fromString(appId);
-    Application app = context.getApplications().get(appIdObj);
-    if (app != null) {
-      Map<ContainerId, Container> containers = app.getContainers();
-      for (ContainerId containerId : containers.keySet()){
-        long pidForContainerId = Long.parseLong(context.getContainerExecutor().getProcessId(containerId));
+    Application app = context.getApplications().get(appId);
+    if (app == null){
+      throw new YarnRuntimeException("Application " + appId + " does not exist");
+    }
 
-        ProcessHandle.of(pidForContainerId).ifPresent(parentProcess ->
-          parentProcess.descendants()
-            .filter(childProcess ->
-              childProcess.info().command().orElse("").contains("java"))
-                .map(ProcessHandle::pid)
-                .forEach(pids::add)
-        );
-      }
+    for (ContainerId containerId : app.getContainers().keySet()){
+      String pidForContainerIdStr = context.getContainerExecutor().getProcessId(containerId);
+      long pidForContainerId = Long.parseLong(pidForContainerIdStr);
+
+      ProcessHandle.of(pidForContainerId).ifPresent(handle ->
+        handle.descendants() // Get only the java processId of containerId's children
+          .filter(childProcess -> childProcess.info().command().orElse("").contains("java"))
+          .map(ProcessHandle::pid)
+          .forEach(pids::add)
+      );
+
     }
 
     LOG.info("Application PIDs: {}", pids);

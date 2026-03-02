@@ -19,6 +19,7 @@ package org.apache.hadoop.yarn.server.nodemanager.webapp;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.Shell;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedConstruction;
@@ -95,7 +96,8 @@ public class TestDiagnosticJStackService {
 
     @Test
     public void testCollectApplicationThreadDump_Success() {
-        String applicationId = "application_1771512066750_0001";
+        String applicationIdStr = "application_1771512066750_0001";
+        ApplicationId applicationId = ApplicationId.fromString(applicationIdStr);
 
         List<Long> pids = List.of(23L, 12L, 531L);
 
@@ -115,7 +117,7 @@ public class TestDiagnosticJStackService {
         ){
             mockedStaticProcess.when(() -> ProcessHandle.of(anyLong())).thenReturn(Optional.of(mockProcessHandle));
 
-            String result = diagnosticJStackService.collectApplicationThreadDump(applicationId, NUMBER_OF_JSTACKS);
+            String result = diagnosticJStackService.collectApplicationThreadDump(applicationIdStr, NUMBER_OF_JSTACKS);
 
             assertEquals(pids.size(), mockedConstruction.constructed().size(),
                     "ShellCommandExecutor should be instantiated for each PID");
@@ -138,14 +140,16 @@ public class TestDiagnosticJStackService {
 
     @Test
     public void testCollectApplicationThreadDumpWhenProcessIdNotAlive() {
-        String applicationId = "application_1771512066750_0001";
+        String applicationIdStr = "application_1771512066750_0001";
+        ApplicationId applicationId = ApplicationId.fromString(applicationIdStr);
+
         int numJStacks = 3;
         List<Long> pids = List.of(23L);
 
         doReturn(pids).when(diagnosticJStackService).getApplicationPids(applicationId);
 
         assertThrows(IOException.class,
-                () -> diagnosticJStackService.collectApplicationThreadDump(applicationId, numJStacks),
+                () -> diagnosticJStackService.collectApplicationThreadDump(applicationIdStr, numJStacks),
         "Since we did not mock ProcessHandle.of to return non empty, it will consider this PID is dead");
 
     }
