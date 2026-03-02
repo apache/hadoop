@@ -305,7 +305,7 @@ public class DatanodeHttpServer implements Closeable {
       httpAddress = getChannelLocalAddress(httpServer, infoAddr);
       conf.set(DFSConfigKeys.DFS_DATANODE_HTTP_ADDRESS_KEY,
           NetUtils.getHostPortString(httpAddress));
-      LOG.info("Listening HTTP traffic on {}", httpAddress);
+      LOG.info("Listening for HTTP traffic on {}", httpAddress);
     }
 
     if (httpsServer != null) {
@@ -316,7 +316,7 @@ public class DatanodeHttpServer implements Closeable {
       httpsAddress = getChannelLocalAddress(httpsServer, secInfoSocAddr);
       conf.set(DFSConfigKeys.DFS_DATANODE_HTTPS_ADDRESS_KEY,
           NetUtils.getHostPortString(httpsAddress));
-      LOG.info("Listening HTTPS traffic on {}", httpsAddress);
+      LOG.info("Listening for HTTPS traffic on {}", httpsAddress);
     }
   }
 

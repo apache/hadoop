@@ -222,7 +222,7 @@ public abstract class GenericTestUtils {
     }
     File dir = new File(prop).getAbsoluteFile();
     if (dir.mkdirs() && !dir.exists()) {
-      throw new IllegalArgumentException("File " + dir + " should exist");
+      throw new IllegalStateException("Directory " + dir + " not created");
     }
     return dir;
   }
