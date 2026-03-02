@@ -91,8 +91,8 @@ public class DatanodeHttpServer implements Closeable {
   private final ServerBootstrap httpServer;
   private final SSLFactory sslFactory;
   private final ServerBootstrap httpsServer;
-  private final Configuration conf;
-  private final Configuration confForCreate;
+  private volatile Configuration conf;
+  private volatile Configuration confForCreate;
   private InetSocketAddress httpAddress;
   private InetSocketAddress httpsAddress;
 
@@ -330,6 +330,24 @@ public class DatanodeHttpServer implements Closeable {
       }
     }
     return (InetSocketAddress) f.channel().localAddress();
+  }
+
+  /**
+   * Update the configuration used by the HTTP server to reflect newly-added
+   * nameservices (e.g. after {@code DataNode#refreshNamenodes}).  Subsequent
+   * WebHDFS connections will pick up the new configuration; in-flight
+   * connections are unaffected.
+   *
+   * @param newConf the updated {@link Configuration}.
+   */
+  public void updateConf(Configuration newConf) {
+    this.conf = newConf;
+    Configuration newConfForCreate = new Configuration(newConf);
+    newConfForCreate.set(FsPermission.UMASK_LABEL, "000");
+    this.confForCreate = newConfForCreate;
+    infoServer.setAttribute(HttpServer2.CONF_CONTEXT_ATTRIBUTE, newConf);
+    infoServer.setAttribute(JspHelper.CURRENT_CONF, newConf);
+    LOG.info("DatanodeHttpServer configuration updated for new nameservices.");
   }
 
   @Override
