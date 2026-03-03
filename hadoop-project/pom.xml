@@ -154,7 +154,7 @@
     <metrics.version>3.2.4</metrics.version>
     <netty4.version>4.1.127.Final</netty4.version>
     <snappy-java.version>1.1.10.4</snappy-java.version>
-    <lz4-java.version>1.10.2</lz4-java.version>
+    <lz4-java.version>1.10.4</lz4-java.version>
     <byte-buddy.version>1.17.6</byte-buddy.version>
 
     <!-- Maven protoc compiler -->

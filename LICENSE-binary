@@ -211,7 +211,7 @@ to be inclusive of all which may be included:
 
 hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static/nvd3-1.8.5.* (css and js files)
 
-at.yawk.lz4:lz4-java:1.10.2
+at.yawk.lz4:lz4-java:1.10.4
 ch.qos.reload4j:reload4j:1.2.22
 com.aliyun:aliyun-java-core:0.2.11-beta
 com.aliyun:aliyun-java-sdk-core:4.5.10
