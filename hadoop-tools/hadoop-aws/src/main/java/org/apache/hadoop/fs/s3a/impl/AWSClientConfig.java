@@ -415,11 +415,7 @@ public final class AWSClientConfig {
       if (!signerOverride.isEmpty()) {
         LOG.debug("Signer override for {} = {}", awsServiceIdentifier, signerOverride);
         clientConfig.putAdvancedOption(SdkAdvancedClientOption.SIGNER,
-<<<<<<< HEAD
-            SignerFactory.createSigner(conf, signerOverride, configKey));
-=======
             SignerFactory.createSigner(signerOverride, conf, configKey));
->>>>>>> origin/trunk
       }
     }
   }
