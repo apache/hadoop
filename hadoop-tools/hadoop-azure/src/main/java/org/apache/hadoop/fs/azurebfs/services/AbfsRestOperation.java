@@ -47,6 +47,7 @@ import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
 import org.apache.hadoop.fs.azurebfs.enums.RetryValue;
 import org.apache.http.impl.execchain.RequestAbortedException;
 
+import static java.net.HttpURLConnection.HTTP_OK;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.PUT_BLOCK_LIST;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ZERO;
 import static org.apache.hadoop.fs.azurebfs.enums.AbfsBackoffMetricsEnum.MAX_RETRY_COUNT;
@@ -80,6 +81,8 @@ public class AbfsRestOperation {
   private final AbfsClient client;
   // Return intercept instance
   private final AbfsThrottlingIntercept intercept;
+  // Tail Latency tracker
+  private final AbfsTailLatencyTracker tailLatencyTracker;
   // the HTTP method (PUT, PATCH, POST, GET, HEAD, or DELETE)
   private final String method;
   // full URL including query parameters
@@ -107,13 +110,19 @@ public class AbfsRestOperation {
   private final int maxIoRetries;
   private AbfsHttpOperation result;
   private final AbfsCounters abfsCounters;
-  private AbfsBackoffMetrics abfsBackoffMetrics;
+  private final AbfsBackoffMetrics abfsBackoffMetrics;
   /**
    * This variable contains the reason of last API call within the same
    * AbfsRestOperation object.
    */
   private String failureReason;
   private AbfsRetryPolicy retryPolicy;
+
+  /**
+   * Flag to indicate whether Tail Latency Timeout should be applied for the request.
+   * This is normally true, but will be set to false if all the retries for Tail Latency Timeout are exhausted.
+   */
+  private boolean shouldTailLatencyTimeout = true;
 
   private final AbfsConfiguration abfsConfiguration;
 
@@ -230,9 +239,12 @@ public class AbfsRestOperation {
     this.abfsCounters = client.getAbfsCounters();
     if (abfsCounters != null) {
       this.abfsBackoffMetrics = abfsCounters.getAbfsBackoffMetrics();
+    } else {
+      this.abfsBackoffMetrics = null;
     }
     this.maxIoRetries = abfsConfiguration.getMaxIoRetries();
     this.intercept = client.getIntercept();
+    this.tailLatencyTracker = client.getTailLatencyTracker();
     this.abfsConfiguration = abfsConfiguration;
     this.retryPolicy = client.getExponentialRetryPolicy();
   }
@@ -283,7 +295,10 @@ public class AbfsRestOperation {
       if (abfsCounters != null) {
         abfsCounters.getLastExecutionTime().set(now());
       }
-      client.timerOrchestrator(TimerFunctionality.RESUME, null);
+      if (client.getAbfsMetricsManager() != null) {
+        client.getAbfsMetricsManager()
+            .timerOrchestrator(TimerFunctionality.RESUME, null);
+      }
       IOStatisticsBinding.trackDurationOfInvocation(abfsCounters,
           AbfsStatistic.getStatNameFromHttpCall(method),
           () -> completeExecute(lastUsedTracingContext));
@@ -314,8 +329,7 @@ public class AbfsRestOperation {
     retryCount = 0;
     retryPolicy = client.getExponentialRetryPolicy();
     LOG.debug("First execution of REST operation - {}", operationType);
-    long sleepDuration = 0L;
-    if (abfsBackoffMetrics != null) {
+    if (abfsBackoffMetrics != null && !tracingContext.isMetricCall()) {
       synchronized (this) {
         abfsBackoffMetrics.incrementMetricValue(TOTAL_NUMBER_OF_REQUESTS);
       }
@@ -328,7 +342,7 @@ public class AbfsRestOperation {
         LOG.debug("Rest operation {} failed with failureReason: {}. Retrying with retryCount = {}, retryPolicy: {} and sleepInterval: {}",
             operationType, failureReason, retryCount, retryPolicy.getAbbreviation(), retryInterval);
         if (abfsBackoffMetrics != null) {
-          updateBackoffTimeMetrics(retryCount, sleepDuration);
+          updateBackoffTimeMetrics(retryCount, retryInterval);
         }
         Thread.sleep(retryInterval);
       } catch (InterruptedException ex) {
@@ -402,7 +416,7 @@ public class AbfsRestOperation {
       incrementCounter(AbfsStatistic.CONNECTIONS_MADE, 1);
       tracingContext.constructHeader(httpOperation, failureReason, retryPolicy.getAbbreviation());
 
-      signRequest(httpOperation, hasRequestBody ? bufferLength : 0);
+      signRequest(httpOperation, hasRequestBody ? bufferLength : 0, tracingContext.isMetricCall());
 
     } catch (IOException e) {
       LOG.debug("Auth failure: {}, {}", method, url);
@@ -520,6 +534,15 @@ public class AbfsRestOperation {
         }
       }
       if (!retryPolicy.shouldRetry(retryCount, -1)) {
+        /*
+         * If a request is failing with TailLatencyTimeout exception.
+         * it should be retried without Tail Latency Timeout exception should not be returned to caller.
+         */
+        if (retryPolicy instanceof TailLatencyRequestTimeoutRetryPolicy) {
+          // Disable Tail Latency Timeout for the next retry.
+          shouldTailLatencyTimeout = false;
+          return false;
+        }
         updateBackoffMetrics(retryCount, httpOperation.getStatusCode());
         throw new InvalidAbfsRestOperationException(ex, retryCount);
       }
@@ -530,6 +553,12 @@ public class AbfsRestOperation {
       // Also Update in case of any unhandled exception is thrown.
       if (shouldUpdateCSTMetrics(statusCode) && !wasKnownExceptionThrown) {
         intercept.updateMetrics(operationType, httpOperation);
+      }
+
+      // Update Tail Latency Tracker only for successful requests.
+      if (tailLatencyTracker != null && (statusCode >= HTTP_OK && statusCode < HttpURLConnection.HTTP_MULT_CHOICE)) {
+        tailLatencyTracker.updateLatency(operationType,
+            httpOperation.getSendLatency() + httpOperation.getRecvLatency());
       }
     }
 
@@ -555,9 +584,12 @@ public class AbfsRestOperation {
    * @throws IOException failure
    */
   @VisibleForTesting
-  public void signRequest(final AbfsHttpOperation httpOperation, int bytesToSign) throws IOException {
-    if (client.isSendMetricCall()) {
-      client.getMetricSharedkeyCredentials().signRequest(httpOperation, bytesToSign);
+  public void signRequest(final AbfsHttpOperation httpOperation, int bytesToSign,
+      boolean isMetricCall) throws IOException {
+    if (isMetricCall && client.getAbfsMetricsManager() != null
+        && client.getAbfsMetricsManager().hasSeparateMetricAccount()) {
+      client.getAbfsMetricsManager().getMetricSharedkeyCredentials()
+          .signRequest(httpOperation, bytesToSign);
     } else {
       switch (client.getAuthType()) {
       case Custom:
@@ -568,6 +600,11 @@ public class AbfsRestOperation {
         break;
       case SAS:
         // do nothing; the SAS token should already be appended to the query string
+        httpOperation.setMaskForSAS(); //mask sig/oid from url for logs
+        break;
+      case UserboundSASWithOAuth:
+        httpOperation.setRequestProperty(HttpHeaderConfigurations.AUTHORIZATION,
+            client.getAccessToken());
         httpOperation.setMaskForSAS(); //mask sig/oid from url for logs
         break;
       case SharedKey:
@@ -611,10 +648,34 @@ public class AbfsRestOperation {
 
   @VisibleForTesting
   AbfsAHCHttpOperation createAbfsAHCHttpOperation() throws IOException {
+    long tailLatency = getTailLatencyTimeoutIfEnabled();
     return new AbfsAHCHttpOperation(url, method, requestHeaders,
         Duration.ofMillis(client.getAbfsConfiguration().getHttpConnectionTimeout()),
         Duration.ofMillis(client.getAbfsConfiguration().getHttpReadTimeout()),
-        client.getAbfsApacheHttpClient(), client);
+        tailLatency, client.getAbfsApacheHttpClient(), client);
+  }
+
+  /**
+   * Get Tail Latency Timeout value if profiling is enabled, timeout is enabled
+   * and retries due to tail latency request timeout is allowed.
+   * @return tail latency timeout value else return zero.
+   */
+  long getTailLatencyTimeoutIfEnabled() {
+    if (isTailLatencyTimeoutEnabled() && shouldTailLatencyTimeout) {
+      return (long) tailLatencyTracker.getTailLatency(this.operationType);
+    }
+    return ZERO;
+  }
+
+  /**
+   * Checks if Tail Latency Timeout is enabled for the request.
+   * @return true if Tail Latency Timeout is enabled.
+   */
+  boolean isTailLatencyTimeoutEnabled() {
+    return tailLatencyTracker != null
+        && abfsConfiguration.isTailLatencyRequestTimeoutEnabled()
+        && abfsConfiguration.getPreferredHttpOperationType() == HttpOperationType.APACHE_HTTP_CLIENT
+        && isApacheClientUsable();
   }
 
   /**

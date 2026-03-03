@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.util.Time;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.CGroupElasticMemoryController;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.ResourceHandlerModule;
@@ -489,13 +490,13 @@ public class ContainersMonitorImpl extends AbstractService implements
                                   curMemUsageOfAgedProcesses, limit);
   }
 
-  private class MonitoringThread extends Thread {
+  private class MonitoringThread extends SubjectInheritingThread {
     MonitoringThread() {
       super("Container Monitor");
     }
 
     @Override
-    public void run() {
+    public void work() {
 
       while (!stopped && !Thread.currentThread().isInterrupted()) {
         long start = Time.monotonicNow();
@@ -884,13 +885,13 @@ public class ContainersMonitorImpl extends AbstractService implements
     }
   }
 
-  private class LogMonitorThread extends Thread {
+  private class LogMonitorThread extends SubjectInheritingThread {
     LogMonitorThread() {
       super("Container Log Monitor");
     }
 
     @Override
-    public void run() {
+    public void work() {
       while (!stopped && !Thread.currentThread().isInterrupted()) {
         for (Entry<ContainerId, ProcessTreeInfo> entry :
             trackingContainers.entrySet()) {

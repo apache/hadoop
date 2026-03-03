@@ -789,6 +789,7 @@ public class TestYarnNativeServices extends ServiceTestUtils {
     compCounts.put("compa", 4L);
     exampleApp.getComponent("compa").setNumberOfContainers(4L);
     client.flexByRestService(exampleApp.getName(), compCounts);
+    waitForServiceToLeaveStable(client, exampleApp, 10_000, "compa");
     try {
       // Wait for 6 secs (window 3 secs + 1 for next poll + 2 for buffer). Since
       // the service will never go to stable state (because of anti-affinity the
@@ -815,6 +816,7 @@ public class TestYarnNativeServices extends ServiceTestUtils {
     compCounts.put("compa", 5L);
     exampleApp.getComponent("compa").setNumberOfContainers(5L);
     client.flexByRestService(exampleApp.getName(), compCounts);
+    waitForServiceToLeaveStable(client, exampleApp, 10_000, "compa");
     try {
       // Wait for 14 secs (window 3 secs + 1 for next poll + 2 for buffer + 5
       // secs of service wait before shutting down + 3 secs app cleanup so that
@@ -858,6 +860,46 @@ public class TestYarnNativeServices extends ServiceTestUtils {
         index++;
       }
     }
+  }
+
+  /**
+   * Wait for the service to leave STABLE state after a flex operation.
+   * This ensures the flex has taken effect before proceeding.
+   *
+   * @param client the service client
+   * @param service the service being flexed
+   * @param waitForMillis maximum wait time in milliseconds
+   * @param componentNames the component names to check for non-stable state
+   * @throws TimeoutException if service doesn't leave stable within timeout
+   * @throws InterruptedException if wait is interrupted
+   */
+  private void waitForServiceToLeaveStable(ServiceClient client, Service service,
+      int waitForMillis, String... componentNames)
+      throws TimeoutException, InterruptedException {
+    GenericTestUtils.waitFor(() -> {
+      try {
+        Service status = client.getStatus(service.getName());
+        if (status.getState() != ServiceState.STABLE) {
+          return true;
+        }
+        if (componentNames == null || componentNames.length == 0) {
+          return false;
+        }
+        for (String componentName : componentNames) {
+          Component component = status.getComponent(componentName);
+          if (component == null) {
+            return false;
+          }
+          if (component.getState() != ComponentState.STABLE) {
+            return true;
+          }
+        }
+        return false;
+      } catch (Exception e) {
+        LOG.debug("Waiting for service to leave STABLE failed to fetch status", e);
+        return false;
+      }
+    }, 500, waitForMillis);
   }
 
 

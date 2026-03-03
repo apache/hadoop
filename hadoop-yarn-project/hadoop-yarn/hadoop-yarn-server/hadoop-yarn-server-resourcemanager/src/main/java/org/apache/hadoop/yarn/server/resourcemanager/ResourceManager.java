@@ -57,6 +57,7 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.curator.ZKCuratorManager;
 import org.apache.hadoop.util.VersionInfo;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.YarnUncaughtExceptionHandler;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -189,6 +190,11 @@ public class ResourceManager extends CompositeService
    * UI2 webapp name
    */
   public static final String UI2_WEBAPP_NAME = "/ui2";
+
+  /*
+   * Scheduler UI webapp name
+   */
+  public static final String SCHEDULER_UI_WEBAPP_NAME = "/scheduler-ui";
 
   /**
    * "Always On" services. Services that need to run always irrespective of
@@ -1135,7 +1141,7 @@ public class ResourceManager extends CompositeService
     SchedulerEventDispatcher(String name, int samplesPerMin) {
       super(scheduler, name);
       this.eventProcessorMonitor =
-          new Thread(new EventProcessorMonitor(getEventProcessorId(),
+          new SubjectInheritingThread(new EventProcessorMonitor(getEventProcessorId(),
               samplesPerMin));
       this.eventProcessorMonitor
           .setName("ResourceManager Event Processor Monitor");
@@ -1218,9 +1224,13 @@ public class ResourceManager extends CompositeService
    * Transition to standby state in a new thread. The transition operation is
    * asynchronous to avoid deadlock caused by cyclic dependency.
    */
-  private void handleTransitionToStandByInNewThread() {
+  private synchronized void handleTransitionToStandByInNewThread() {
+    if (rmContext.getHAServiceState() == HAServiceProtocol.HAServiceState.STANDBY) {
+      LOG.info("RM already in standby state");
+      return;
+    }
     Thread standByTransitionThread =
-        new Thread(activeServices.standByTransitionRunnable);
+        new SubjectInheritingThread(activeServices.standByTransitionRunnable);
     standByTransitionThread.setName("StandByTransitionThread");
     standByTransitionThread.start();
   }
@@ -1408,9 +1418,7 @@ public class ResourceManager extends CompositeService
         false)) {
       String apiPackages = "org.apache.hadoop.yarn.service.webapp;" +
           "org.apache.hadoop.yarn.webapp";
-      params.put("com.sun.jersey.config.property.resourceConfigClass",
-          "com.sun.jersey.api.core.PackagesResourceConfig");
-      params.put("com.sun.jersey.config.property.packages", apiPackages);
+      params.put("jersey.config.server.provider.packages", apiPackages);
     }
 
     Builder<ResourceManager> builder =
@@ -1463,13 +1471,45 @@ public class ResourceManager extends CompositeService
         }
       }
       if (onDiskPath == null || onDiskPath.isEmpty()) {
-          LOG.error("No war file or webapps found for ui2 !");
+        LOG.error("No war file or webapps found for ui2!");
       } else {
         if (onDiskPath.endsWith(".war")) {
           uiWebAppContext.setWar(onDiskPath);
           LOG.info("Using war file at: {}.", onDiskPath);
         } else {
           uiWebAppContext.setResourceBase(onDiskPath);
+          LOG.info("Using webapps at: {}.", onDiskPath);
+        }
+      }
+    }
+
+    WebAppContext schedulerUiWebAppContext = null;
+    if (getConfig().getBoolean(YarnConfiguration.YARN_WEBAPP_SCHEDULER_UI_ENABLE,
+        YarnConfiguration.DEFAULT_YARN_WEBAPP_SCHEDULER_UI_ENABLE)) {
+      String onDiskPath = getConfig()
+          .get(YarnConfiguration.YARN_WEBAPP_SCHEDULER_UI_WARFILE_PATH);
+
+      schedulerUiWebAppContext = new WebAppContext();
+      schedulerUiWebAppContext.setContextPath(SCHEDULER_UI_WEBAPP_NAME);
+
+      if (onDiskPath == null) {
+        String war = "hadoop-yarn-capacity-scheduler-ui-" + VersionInfo.getVersion() + ".war";
+        URL url = getClass().getClassLoader().getResource(war);
+
+        if (url == null) {
+          onDiskPath = getWebAppsPath("scheduler-ui");
+        } else {
+          onDiskPath = url.getFile();
+        }
+      }
+      if (onDiskPath == null || onDiskPath.isEmpty()) {
+        LOG.error("No war file or webapps found for scheduler-ui!");
+      } else {
+        if (onDiskPath.endsWith(".war")) {
+          schedulerUiWebAppContext.setWar(onDiskPath);
+          LOG.info("Using war file at: {}.", onDiskPath);
+        } else {
+          schedulerUiWebAppContext.setResourceBase(onDiskPath);
           LOG.info("Using webapps at: {}.", onDiskPath);
         }
       }
@@ -1482,8 +1522,8 @@ public class ResourceManager extends CompositeService
 
     try {
       RMWebApp rmWebApp = new RMWebApp(this);
-      builder.withResourceConfig(rmWebApp.resourceConfig());
-      webApp = builder.start(rmWebApp, uiWebAppContext);
+      builder.withResourceConfig(rmWebApp.resourceConfig(conf));
+      webApp = builder.start(rmWebApp, uiWebAppContext, schedulerUiWebAppContext);
     } catch (WebAppException e) {
       webApp = e.getWebApp();
       throw e;

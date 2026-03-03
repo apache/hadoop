@@ -56,6 +56,7 @@ import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_PERFORMANCE;
 import static org.apache.hadoop.fs.s3a.Constants.MAX_ERROR_RETRIES;
 import static org.apache.hadoop.fs.s3a.Constants.MULTIPART_SIZE;
 import static org.apache.hadoop.fs.s3a.Constants.RETRY_HTTP_5XX_ERRORS;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.assumeMultipartUploads;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestPropertyInt;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_MULTIPART_UPLOAD_ABORTED;
@@ -84,6 +85,9 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
  * <p>
  * Marked as a scale test even though it tries to aggressively abort streams being written
  * and should, if working, complete fast.
+ * <p>
+ * Assumes multipart uploads are enabled; single part upload interruptions aren't the complicated
+ * ones.
  */
 @ParameterizedClass(name = "{0}-{1}")
 @MethodSource("params")
@@ -171,6 +175,7 @@ public class ITestS3ABlockOutputStreamInterruption extends S3AScaleTestBase {
   public void setup() throws Exception {
     SdkFaultInjector.resetFaultInjector();
     super.setup();
+    assumeMultipartUploads(getFileSystem().getConf());
   }
 
   @AfterEach
@@ -287,6 +292,7 @@ public class ITestS3ABlockOutputStreamInterruption extends S3AScaleTestBase {
   @Test
   public void testPartUploadFailure() throws Throwable {
     describe("Trigger a failure during a multipart upload");
+    assumeMultipartUploads(getFileSystem().getConf());
     int len = 6 * _1MB;
     final byte[] dataset = dataset(len, 'a', 'z' - 'a');
     final String text = "Simulated failure";

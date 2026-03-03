@@ -892,13 +892,6 @@
 </property>
 
 <property>
-  <name>io.bytes.per.checksum</name>
-  <value>512</value>
-  <description>The number of bytes per checksum.  Must not be larger than
-  io.file.buffer.size.</description>
-</property>
-
-<property>
   <name>io.skip.checksum.errors</name>
   <value>false</value>
   <description>If true, when a checksum error is encountered while
@@ -1095,13 +1088,6 @@
   uri's scheme determines the config property (fs.SCHEME.impl) naming
   the FileSystem implementation class.  The uri's authority is used to
   determine the host, port, etc. for a filesystem.</description>
-</property>
-
-<property>
-  <name>fs.default.name</name>
-  <value>file:///</value>
-  <description>Deprecated. Use (fs.defaultFS) property
-  instead</description>
 </property>
 
 <property>
@@ -4693,6 +4679,12 @@ The switch to turn S3A auditing on or off.
       Minimum size in bytes of the read range for Cloud Storage request when
       opening a new stream to read an object.
     </description>
+  </property>
+
+  <property>
+    <name>fs.obs.impl</name>
+    <value>org.apache.hadoop.fs.obs.OBSFileSystem</value>
+    <description>The FileSystem for obs: uris.</description>
   </property>
 
 </configuration>

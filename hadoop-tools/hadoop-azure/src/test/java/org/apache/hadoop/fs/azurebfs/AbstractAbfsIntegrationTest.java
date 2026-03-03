@@ -38,6 +38,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsServiceType;
@@ -49,9 +50,6 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsOutputStream;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.fs.azurebfs.services.ITestAbfsClient;
-import org.apache.hadoop.fs.azure.AzureNativeFileSystemStore;
-import org.apache.hadoop.fs.azure.NativeAzureFileSystem;
-import org.apache.hadoop.fs.azure.metrics.AzureFileSystemInstrumentation;
 import org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
@@ -63,11 +61,8 @@ import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.IOUtils;
 
-import static org.apache.hadoop.fs.azure.AzureBlobStorageTestAccount.WASB_ACCOUNT_NAME_DOMAIN_SUFFIX;
-import static org.apache.hadoop.fs.azure.NativeAzureFileSystem.APPEND_SUPPORT_ENABLE_PROPERTY_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.COLON;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.FORWARD_SLASH;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.TRUE;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.*;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.ABFS_BLOB_DOMAIN_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.ABFS_DFS_DOMAIN_NAME;
@@ -89,7 +84,6 @@ public abstract class AbstractAbfsIntegrationTest extends
       LoggerFactory.getLogger(AbstractAbfsIntegrationTest.class);
 
   private boolean isIPAddress;
-  private NativeAzureFileSystem wasb;
   private AzureBlobFileSystem abfs;
   private String abfsScheme;
 
@@ -195,42 +189,11 @@ public abstract class AbstractAbfsIntegrationTest extends
   public void setup() throws Exception {
     //Create filesystem first to make sure getWasbFileSystem() can return an existing filesystem.
     createFileSystem();
-
-    // Only live account without namespace support can run ABFS&WASB
-    // compatibility tests
-    if (!isIPAddress && (abfsConfig.getAuthType(accountName) != AuthType.SAS)
-        && !abfs.getIsNamespaceEnabled(getTestTracingContext(
-            getFileSystem(), false))) {
-      final URI wasbUri = new URI(
-          abfsUrlToWasbUrl(getTestUrl(), abfsConfig.isHttpsAlwaysUsed()));
-      final AzureNativeFileSystemStore azureNativeFileSystemStore =
-          new AzureNativeFileSystemStore();
-
-      // update configuration with wasb credentials
-      String accountNameWithoutDomain = accountName.split("\\.")[0];
-      String wasbAccountName = accountNameWithoutDomain + WASB_ACCOUNT_NAME_DOMAIN_SUFFIX;
-      String keyProperty = FS_AZURE_ACCOUNT_KEY + "." + wasbAccountName;
-      if (rawConfig.get(keyProperty) == null) {
-        rawConfig.set(keyProperty, getAccountKey());
-      }
-      rawConfig.set(APPEND_SUPPORT_ENABLE_PROPERTY_NAME, TRUE);
-
-      azureNativeFileSystemStore.initialize(
-          wasbUri,
-          rawConfig,
-          new AzureFileSystemInstrumentation(rawConfig));
-
-      wasb = new NativeAzureFileSystem(azureNativeFileSystemStore);
-      wasb.initialize(wasbUri, rawConfig);
-    }
   }
 
   @AfterEach
   public void teardown() throws Exception {
     try {
-      IOUtils.closeStream(wasb);
-      wasb = null;
-
       if (abfs == null) {
         return;
       }
@@ -325,6 +288,20 @@ public abstract class AbstractAbfsIntegrationTest extends
     }
   }
 
+  /**
+   * Create a filesystem for user bound SAS tests using the SharedKey authentication.
+   *
+   * @throws Exception
+   */
+  protected void createFilesystemForUserBoundSASTests() throws Exception{
+    try (AzureBlobFileSystem tempFs = (AzureBlobFileSystem) FileSystem.newInstance(rawConfig)){
+      ContractTestUtils.assertPathExists(tempFs, "This path should exist",
+          new Path("/"));
+      abfsConfig.set(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME, AuthType.UserboundSASWithOAuth.name());
+      usingFilesystemForSASTests = true;
+    }
+  }
+
   public AzureBlobFileSystem getFileSystem() throws IOException {
     return abfs;
   }
@@ -350,11 +327,6 @@ public abstract class AbstractAbfsIntegrationTest extends
       abfs = (AzureBlobFileSystem) FileSystem.newInstance(rawConfig);
     }
     return abfs;
-  }
-
-
-  protected NativeAzureFileSystem getWasbFileSystem() {
-    return wasb;
   }
 
   protected String getHostName() {
@@ -587,6 +559,9 @@ public abstract class AbstractAbfsIntegrationTest extends
     assumeThat(currentAuthType).
         as("SAS Based Authentication Not Allowed For Integration Tests").
         isNotEqualTo(AuthType.SAS);
+    assumeThat(currentAuthType).
+        as("User-bound SAS Based Authentication Not Allowed For Integration Tests").
+        isNotEqualTo(AuthType.UserboundSASWithOAuth);
     if (currentAuthType == AuthType.SharedKey) {
       assumeValidTestConfigPresent(getRawConfiguration(), FS_AZURE_ACCOUNT_KEY);
     } else {
@@ -711,10 +686,36 @@ public abstract class AbstractAbfsIntegrationTest extends
         .contains(expectedDns);
   }
 
+  /**
+   * Return array of random bytes of the given length.
+   *
+   * @param length length of the byte array
+   * @return byte array
+   */
   protected byte[] getRandomBytesArray(int length) {
     final byte[] b = new byte[length];
     new Random().nextBytes(b);
     return b;
+  }
+
+  /**
+   * Create a file on the file system with the given file name and content.
+   *
+   * @param fs fileSystem that stores the file
+   * @param fileName name of the file
+   * @param fileContent content of the file
+   *
+   * @return path of the file created
+   * @throws IOException exception in writing file on fileSystem
+   */
+  protected Path createFileWithContent(FileSystem fs, String fileName,
+      byte[] fileContent) throws IOException {
+    Path testFilePath = path(fileName);
+    try (FSDataOutputStream oStream = fs.create(testFilePath)) {
+      oStream.write(fileContent);
+      oStream.flush();
+    }
+    return testFilePath;
   }
 
   /**

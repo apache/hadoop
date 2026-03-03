@@ -59,6 +59,7 @@ import org.apache.hadoop.security.alias.CredentialProvider;
 import org.apache.hadoop.security.alias.CredentialProviderFactory;
 import org.apache.hadoop.security.alias.JavaKeyStoreProvider;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -414,7 +415,7 @@ public class TestLdapGroupsMapping extends TestLdapGroupsMappingBase {
       // Below we create a LDAP server which will accept a client request;
       // but it will never reply to the bind (connect) request.
       // Client of this LDAP server is expected to get a connection timeout.
-      final Thread ldapServer = new Thread(new Runnable() {
+      final Thread ldapServer = new SubjectInheritingThread(new Runnable() {
         @Override
         public void run() {
           try {
@@ -469,7 +470,7 @@ public class TestLdapGroupsMapping extends TestLdapGroupsMappingBase {
       // authenticate it successfully; but it will never reply to the following
       // query request.
       // Client of this LDAP server is expected to get a read timeout.
-      final Thread ldapServer = new Thread(new Runnable() {
+      final Thread ldapServer = new SubjectInheritingThread(new Runnable() {
         @Override
         public void run() {
           try {

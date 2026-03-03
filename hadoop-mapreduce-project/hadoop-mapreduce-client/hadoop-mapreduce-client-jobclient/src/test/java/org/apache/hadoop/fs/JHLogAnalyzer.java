@@ -44,6 +44,7 @@ import org.apache.hadoop.io.compress.GzipCodec;
 import org.apache.hadoop.mapred.*;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -178,7 +179,7 @@ public class JHLogAnalyzer {
     public String toString() {return statName;}
   }
 
-  private static class FileCreateDaemon extends Thread {
+  private static class FileCreateDaemon extends SubjectInheritingThread {
     private static final int NUM_CREATE_THREADS = 10;
     private static volatile int numFinishedThreads;
     private static volatile int numRunningThreads;
@@ -194,7 +195,7 @@ public class JHLogAnalyzer {
       this.end = end;
     }
 
-    public void run() {
+    public void work() {
       try {
         for(int i=start; i < end; i++) {
           String name = getFileName(i);

@@ -40,6 +40,7 @@ import org.junit.jupiter.api.Timeout;
 
 import java.util.function.Supplier;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.Uninterruptibles;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -73,9 +74,9 @@ public abstract class FCStatisticsBaseTest {
     stats.incrementWriteOps(123);
     assertEquals(123, stats.getWriteOps());
     
-    Thread thread = new Thread() {
+    SubjectInheritingThread thread = new SubjectInheritingThread() {
       @Override
-      public void run() {
+      public void work() {
         stats.incrementWriteOps(1);
       }
     };

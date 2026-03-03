@@ -22,6 +22,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_ADAPTIVE;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
 
 /**
@@ -36,7 +37,12 @@ public final class FileSystemConfigurations {
   public static final boolean DEFAULT_FS_AZURE_ACCOUNT_IS_EXPECT_HEADER_ENABLED = true;
   public static final String USER_HOME_DIRECTORY_PREFIX = "/user";
 
-  private static final int SIXTY_SECONDS = 60_000;
+  public static final int SIXTY_SECONDS = 60;
+  public static final int THIRTY_SECONDS = 30;
+  /**
+   * Number of bytes in a gigabyte.
+   */
+  public static final long BYTES_PER_GIGABYTE = 1024L * 1024 * 1024;
 
   // Retry parameter defaults.
   public static final int DEFAULT_MIN_BACKOFF_INTERVAL = 500;  // 500ms
@@ -68,12 +74,12 @@ public final class FileSystemConfigurations {
   public static final int DEFAULT_AZURE_OAUTH_TOKEN_FETCH_RETRY_MAX_ATTEMPTS = 5;
   public static final int DEFAULT_AZURE_OAUTH_TOKEN_FETCH_RETRY_MIN_BACKOFF_INTERVAL = 0;
   public static final int DEFAULT_AZURE_OAUTH_TOKEN_FETCH_RETRY_MAX_BACKOFF_INTERVAL = SIXTY_SECONDS;
-  public static final int DEFAULT_AZURE_OAUTH_TOKEN_FETCH_RETRY_DELTA_BACKOFF = 2;
+  public static final int DEFAULT_AZURE_OAUTH_TOKEN_FETCH_RETRY_DELTA_BACKOFF = 2_000;
 
   public static final int ONE_KB = 1024;
   public static final int ONE_MB = ONE_KB * ONE_KB;
 
-  // Default upload and download buffer size
+  /** Default buffer sizes and optimization flags. */
   public static final int DEFAULT_WRITE_BUFFER_SIZE = 8 * ONE_MB;  // 8 MB
   public static final int APPENDBLOB_MAX_WRITE_BUFFER_SIZE = 4 * ONE_MB;  // 4 MB
   public static final boolean DEFAULT_AZURE_ENABLE_SMALL_WRITE_OPTIMIZATION = false;
@@ -90,6 +96,7 @@ public final class FileSystemConfigurations {
   public static final long MAX_AZURE_BLOCK_SIZE = 256 * 1024 * 1024L; // changing default abfs blocksize to 256MB
   public static final String AZURE_BLOCK_LOCATION_HOST_DEFAULT = "localhost";
   public static final int DEFAULT_AZURE_LIST_MAX_RESULTS = 5000;
+  public static final String DEFAULT_AZURE_READ_POLICY = FS_OPTION_OPENFILE_READ_POLICY_ADAPTIVE;
 
   public static final String SERVER_SIDE_ENCRYPTION_ALGORITHM = "AES256";
 
@@ -118,6 +125,13 @@ public final class FileSystemConfigurations {
   public static final boolean DEFAULT_ENABLE_AUTOTHROTTLING = false;
   public static final int DEFAULT_METRIC_IDLE_TIMEOUT_MS = 60_000;
   public static final int DEFAULT_METRIC_ANALYSIS_TIMEOUT_MS = 60_000;
+  public static final boolean DEFAULT_METRICS_COLLECTION_ENABLED = true;
+  public static final boolean DEFAULT_METRICS_SHOULD_EMIT_ON_IDLE_TIME = false;
+  public static final long DEFAULT_METRICS_EMIT_THRESHOLD = 100_000L;
+  public static final long DEFAULT_METRICS_EMIT_THRESHOLD_INTERVAL_SECS = 60;
+  public static final long DEFAULT_METRICS_EMIT_INTERVAL_MINS = 60;
+  public static final int DEFAULT_METRICS_MAX_CALLS_PER_SECOND = 3;
+  public static final boolean DEFAULT_METRICS_BACKOFF_RETRY_ENABLED = false;
   public static final boolean DEFAULT_FS_AZURE_ACCOUNT_LEVEL_THROTTLING_ENABLED = true;
   public static final int DEFAULT_ACCOUNT_OPERATION_IDLE_TIMEOUT_MS = 60_000;
   public static final int DEFAULT_ANALYSIS_PERIOD_MS = 10_000;
@@ -135,12 +149,19 @@ public final class FileSystemConfigurations {
 
   public static final boolean DEFAULT_ENABLE_READAHEAD = true;
   public static final boolean DEFAULT_ENABLE_READAHEAD_V2 = false;
-  public static final int DEFAULT_READAHEAD_V2_MIN_THREAD_POOL_SIZE = -1;
+  public static final boolean DEFAULT_ENABLE_READAHEAD_V2_DYNAMIC_SCALING = false;
+  public static final int DEFAULT_READAHEAD_V2_MIN_THREAD_POOL_SIZE = 8;
   public static final int DEFAULT_READAHEAD_V2_MAX_THREAD_POOL_SIZE = -1;
-  public static final int DEFAULT_READAHEAD_V2_MIN_BUFFER_POOL_SIZE = -1;
+  public static final int DEFAULT_READAHEAD_V2_MIN_BUFFER_POOL_SIZE = 16;
   public static final int DEFAULT_READAHEAD_V2_MAX_BUFFER_POOL_SIZE = -1;
-  public static final int DEFAULT_READAHEAD_V2_EXECUTOR_SERVICE_TTL_MILLIS = 3_000;
+  public static final int DEFAULT_READAHEAD_V2_CPU_MONITORING_INTERVAL_MILLIS = 6_000;
+  public static final int DEFAULT_READAHEAD_V2_THREAD_POOL_UPSCALE_PERCENTAGE = 20;
+  public static final int DEFAULT_READAHEAD_V2_THREAD_POOL_DOWNSCALE_PERCENTAGE = 30;
+  public static final int DEFAULT_READAHEAD_V2_MEMORY_MONITORING_INTERVAL_MILLIS = 6_000;
+  public static final int DEFAULT_READAHEAD_V2_EXECUTOR_SERVICE_TTL_MILLIS = 6_000;
   public static final int DEFAULT_READAHEAD_V2_CACHED_BUFFER_TTL_MILLIS = 6_000;
+  public static final int DEFAULT_READAHEAD_V2_CPU_USAGE_THRESHOLD_PERCENTAGE = 50;
+  public static final int DEFAULT_READAHEAD_V2_MEMORY_USAGE_THRESHOLD_PERCENTAGE = 50;
 
   public static final String DEFAULT_FS_AZURE_USER_AGENT_PREFIX = EMPTY_STRING;
   public static final String DEFAULT_VALUE_UNKNOWN = "UNKNOWN";
@@ -216,7 +237,9 @@ public final class FileSystemConfigurations {
   public static final int RATE_LIMIT_DEFAULT = 1_000;
 
   public static final int ZERO = 0;
+  public static final double ZERO_D = 0.0;
   public static final int HUNDRED = 100;
+  public static final double HUNDRED_D = 100.0;
   public static final long THOUSAND = 1000L;
 
   public static final HttpOperationType DEFAULT_NETWORKING_LIBRARY
@@ -265,6 +288,24 @@ public final class FileSystemConfigurations {
   public static final boolean DEFAULT_FS_AZURE_ENABLE_CLIENT_TRANSACTION_ID = true;
 
   public static final boolean DEFAULT_FS_AZURE_ENABLE_CREATE_BLOB_IDEMPOTENCY = true;
+
+  public static final boolean DEFAULT_FS_AZURE_ENABLE_PREFETCH_REQUEST_PRIORITY = true;
+
+  // The default traffic request priority is 3 (from service side)
+  // The lowest priority a request can get is 7
+  public static final int DEFAULT_FS_AZURE_LOWEST_REQUEST_PRIORITY_VALUE = 7;
+  public static final int DEFAULT_FS_AZURE_STANDARD_REQUEST_PRIORITY_VALUE = 3;
+
+  public static final boolean DEFAULT_FS_AZURE_ENABLE_TAIL_LATENCY_TRACKER = false;
+  public static final boolean DEFAULT_FS_AZURE_ENABLE_TAIL_LATENCY_REQUEST_TIMEOUT = false;
+  public static final int DEFAULT_FS_AZURE_TAIL_LATENCY_PERCENTILE = 99;
+  public static final int DEFAULT_FS_AZURE_TAIL_LATENCY_MIN_DEVIATION = 200;
+  public static final int DEFAULT_FS_AZURE_TAIL_LATENCY_MIN_SAMPLE_SIZE = 100;
+  public static final int DEFAULT_FS_AZURE_TAIL_LATENCY_ANALYSIS_WINDOW_MILLIS = 60_000;
+  public static final int DEFAULT_FS_AZURE_TAIL_LATENCY_ANALYSIS_WINDOW_GRANULARITY = 10;
+  public static final int MIN_FS_AZURE_TAIL_LATENCY_ANALYSIS_WINDOW_GRANULARITY = 1;
+  public static final int DEFAULT_FS_AZURE_TAIL_LATENCY_PERCENTILE_COMPUTATION_INTERVAL_MILLIS = 500;
+  public static final int DEFAULT_FS_AZURE_TAIL_LATENCY_MAX_RETRY_COUNT = 1;
 
   private FileSystemConfigurations() {}
 }

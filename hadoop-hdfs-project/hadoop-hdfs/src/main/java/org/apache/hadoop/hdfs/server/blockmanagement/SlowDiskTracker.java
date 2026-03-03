@@ -34,6 +34,7 @@ import org.apache.hadoop.hdfs.server.protocol.SlowDiskReports;
 import org.apache.hadoop.hdfs.server.protocol.SlowDiskReports.DiskOp;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.Timer;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -152,7 +153,7 @@ public class SlowDiskTracker {
   public void updateSlowDiskReportAsync(long now) {
     if (isUpdateInProgress.compareAndSet(false, true)) {
       lastUpdateTime = now;
-      new Thread(new Runnable() {
+      new SubjectInheritingThread(new Runnable() {
         @Override
         public void run() {
           slowDisksReport = getSlowDisks(diskIDLatencyMap,

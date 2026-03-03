@@ -30,6 +30,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.JobID;
 import org.apache.hadoop.mapreduce.lib.jobcontrol.ControlledJob;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -110,7 +111,7 @@ public class TestJobControl {
     theControl.addJob(job_3);
     theControl.addJob(job_4);
 
-    Thread theController = new Thread(theControl);
+    Thread theController = new SubjectInheritingThread(theControl);
     theController.start();
     while (!theControl.allFinished()) {
 

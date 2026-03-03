@@ -82,6 +82,7 @@ import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -441,7 +442,7 @@ public class TestDataNodeVolumeFailure {
     BPServiceActor actor = service.getBPServiceActors().get(0);
     DatanodeRegistration bpRegistration = actor.getBpRegistration();
 
-    Thread register = new Thread(() -> {
+    Thread register = new SubjectInheritingThread(() -> {
       try {
         service.registrationSucceeded(actor, bpRegistration);
       } catch (IOException e) {

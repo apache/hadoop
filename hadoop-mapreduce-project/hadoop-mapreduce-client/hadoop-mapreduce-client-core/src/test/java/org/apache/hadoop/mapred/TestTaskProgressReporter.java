@@ -34,6 +34,7 @@ import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.checkpoint.TaskCheckpointID;
 import org.apache.hadoop.util.ExitUtil;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -252,7 +253,7 @@ public class TestTaskProgressReporter {
     task.setConf(conf);
     DummyTaskReporter reporter = new DummyTaskReporter(task);
     reporter.startDiskLimitCheckerThreadIfNeeded();
-    Thread t = new Thread(reporter);
+    Thread t = new SubjectInheritingThread(reporter);
     t.setUncaughtExceptionHandler(h);
     reporter.setProgressFlag();
     t.start();
@@ -273,7 +274,7 @@ public class TestTaskProgressReporter {
     Task task = new DummyTask();
     task.setConf(job);
     DummyTaskReporter reporter = new DummyTaskReporter(task);
-    Thread t = new Thread(reporter);
+    Thread t = new SubjectInheritingThread(reporter);
     t.start();
     Thread.sleep(2100);
     task.setTaskDone();
@@ -328,7 +329,7 @@ public class TestTaskProgressReporter {
     Task task = new DummyTask();
     task.setConf(conf);
     DummyTaskReporter reporter = new DummyTaskReporter(task);
-    Thread t = new Thread(reporter);
+    Thread t = new SubjectInheritingThread(reporter);
     t.setUncaughtExceptionHandler(h);
     reporter.setProgressFlag();
 

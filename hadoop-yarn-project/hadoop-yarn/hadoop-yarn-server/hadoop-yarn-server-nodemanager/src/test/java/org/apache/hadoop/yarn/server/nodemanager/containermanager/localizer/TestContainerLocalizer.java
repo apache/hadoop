@@ -74,6 +74,7 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
@@ -321,9 +322,9 @@ public class TestContainerLocalizer {
     FakeContainerLocalizer localizerB = testB.init();
 
     // run localization
-    Thread threadA = new Thread() {
+    SubjectInheritingThread threadA = new SubjectInheritingThread() {
       @Override
-      public void run() {
+      public void work() {
         try {
           localizerA.runLocalization(nmAddr);
         } catch (Exception e) {
@@ -331,9 +332,9 @@ public class TestContainerLocalizer {
         }
       }
     };
-    Thread threadB = new Thread() {
+    SubjectInheritingThread threadB = new SubjectInheritingThread() {
       @Override
-      public void run() {
+      public void work() {
         try {
           localizerB.runLocalization(nmAddr);
         } catch (Exception e) {

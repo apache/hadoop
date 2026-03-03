@@ -49,6 +49,10 @@ public enum ReadType {
    */
   SMALLFILE_READ("SR"),
   /**
+   * Reads from Random Input Stream with read ahead up to readAheadRange
+   */
+  RANDOM_READ("RR"),
+  /**
    * None of the above read types were applicable.
    */
   UNKNOWN_READ("UR");

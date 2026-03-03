@@ -47,6 +47,7 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.TestName;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -248,7 +249,7 @@ public class TestBlockRecovery2 {
       final DataNode dataNode = cluster.getDataNodes().get(0);
 
       final AtomicBoolean recoveryInitResult = new AtomicBoolean(true);
-      Thread recoveryThread = new Thread(() -> {
+      Thread recoveryThread = new SubjectInheritingThread(() -> {
         try {
           DatanodeInfo[] locations = block.getLocations();
           final BlockRecoveryCommand.RecoveringBlock recoveringBlock =
@@ -367,7 +368,7 @@ public class TestBlockRecovery2 {
       // write 5MB File
       AppendTestUtil.write(stm, 0, 1024 * 1024 * 5);
       final AtomicReference<Throwable> err = new AtomicReference<>();
-      Thread t = new Thread(() -> {
+      Thread t = new SubjectInheritingThread(() -> {
         try {
           stm.close();
         } catch (Throwable t1) {

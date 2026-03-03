@@ -23,7 +23,6 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
-import java.util.Stack;
 import java.util.concurrent.locks.ReentrantLock;
 
 import org.slf4j.Logger;
@@ -45,7 +44,6 @@ public abstract class ReadBufferManager {
   private static int thresholdAgeMilliseconds;
   private static int blockSize = DEFAULT_READ_AHEAD_BLOCK_SIZE; // default block size for read-ahead in bytes
 
-  private Stack<Integer> freeList = new Stack<>();   // indices in buffers[] array that are available
   private Queue<ReadBuffer> readAheadQueue = new LinkedList<>(); // queue of requests that are not picked up by any worker thread yet
   private LinkedList<ReadBuffer> inProgressList = new LinkedList<>(); // requests being processed by worker threads
   private LinkedList<ReadBuffer> completedReadList = new LinkedList<>(); // buffers available for reading
@@ -118,7 +116,6 @@ public abstract class ReadBufferManager {
    * @param stream the input stream whose buffers should be purged.
    */
   abstract void purgeBuffersForStream(AbfsInputStream stream);
-
 
   // Following Methods are for testing purposes only and should not be used in production code.
 
@@ -202,20 +199,11 @@ public abstract class ReadBufferManager {
   }
 
   /**
-   * Gets the stack of free buffer indices.
-   *
-   * @return the stack of free buffer indices
-   */
-  public Stack<Integer> getFreeList() {
-    return freeList;
-  }
-
-  /**
    * Gets the queue of read-ahead requests.
    *
    * @return the queue of {@link ReadBuffer} objects in the read-ahead queue
    */
-  public Queue<ReadBuffer> getReadAheadQueue() {
+  Queue<ReadBuffer> getReadAheadQueue() {
     return readAheadQueue;
   }
 
@@ -224,7 +212,7 @@ public abstract class ReadBufferManager {
    *
    * @return the list of {@link ReadBuffer} objects that are currently being processed
    */
-  public LinkedList<ReadBuffer> getInProgressList() {
+  LinkedList<ReadBuffer> getInProgressList() {
     return inProgressList;
   }
 
@@ -233,7 +221,7 @@ public abstract class ReadBufferManager {
    *
    * @return the list of {@link ReadBuffer} objects that have been read and are available for use
    */
-  public LinkedList<ReadBuffer> getCompletedReadList() {
+  LinkedList<ReadBuffer> getCompletedReadList() {
     return completedReadList;
   }
 
@@ -244,9 +232,7 @@ public abstract class ReadBufferManager {
    * @return a list of free buffer indices
    */
   @VisibleForTesting
-  protected synchronized List<Integer> getFreeListCopy() {
-    return new ArrayList<>(freeList);
-  }
+  abstract List<Integer> getFreeListCopy();
 
   /**
    * Gets a copy of the read-ahead queue.
@@ -254,7 +240,7 @@ public abstract class ReadBufferManager {
    * @return a list of {@link ReadBuffer} objects in the read-ahead queue
    */
   @VisibleForTesting
-  protected synchronized List<ReadBuffer> getReadAheadQueueCopy() {
+  synchronized List<ReadBuffer> getReadAheadQueueCopy() {
     return new ArrayList<>(readAheadQueue);
   }
 
@@ -264,7 +250,7 @@ public abstract class ReadBufferManager {
    * @return a list of in-progress {@link ReadBuffer} objects
    */
   @VisibleForTesting
-  protected synchronized List<ReadBuffer> getInProgressCopiedList() {
+  synchronized List<ReadBuffer> getInProgressListCopy() {
     return new ArrayList<>(inProgressList);
   }
 
@@ -274,7 +260,7 @@ public abstract class ReadBufferManager {
    * @return a list of completed {@link ReadBuffer} objects
    */
   @VisibleForTesting
-  protected synchronized List<ReadBuffer> getCompletedReadListCopy() {
+  synchronized List<ReadBuffer> getCompletedReadListCopy() {
     return new ArrayList<>(completedReadList);
   }
 
@@ -284,7 +270,7 @@ public abstract class ReadBufferManager {
    * @return the number of completed read buffers
    */
   @VisibleForTesting
-  protected int getCompletedReadListSize() {
+  int getCompletedReadListSize() {
     return completedReadList.size();
   }
 
@@ -295,7 +281,9 @@ public abstract class ReadBufferManager {
    */
   @VisibleForTesting
   protected void testMimicFullUseAndAddFailedBuffer(ReadBuffer buf) {
-    freeList.clear();
+    clearFreeList();
     completedReadList.add(buf);
   }
+
+  abstract void clearFreeList();
 }

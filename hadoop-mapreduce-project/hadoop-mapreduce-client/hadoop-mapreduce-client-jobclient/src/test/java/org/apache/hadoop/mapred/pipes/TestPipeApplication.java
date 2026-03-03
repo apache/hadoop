@@ -519,8 +519,8 @@ public class TestPipeApplication {
     }
 
     @Override
-    public void run() {
-      super.run();
+    public void work() {
+      super.work();
     }
 
     protected void closeSocketInternal(Socket clientSocket) {

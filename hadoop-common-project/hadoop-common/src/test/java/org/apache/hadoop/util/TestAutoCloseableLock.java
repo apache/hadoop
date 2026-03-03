@@ -21,6 +21,8 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
+
 import org.junit.jupiter.api.Test;
 /**
  * A test class for AutoCloseableLock.
@@ -54,9 +56,9 @@ public class TestAutoCloseableLock {
     AutoCloseableLock lock = new AutoCloseableLock();
     lock.acquire();
     assertTrue(lock.isLocked());
-    Thread competingThread = new Thread() {
+    SubjectInheritingThread competingThread = new SubjectInheritingThread() {
       @Override
-      public void run() {
+      public void work() {
         assertTrue(lock.isLocked());
         assertFalse(lock.tryLock());
       }
@@ -79,9 +81,9 @@ public class TestAutoCloseableLock {
     try(AutoCloseableLock localLock = lock.acquire()) {
       assertEquals(localLock, lock);
       assertTrue(lock.isLocked());
-      Thread competingThread = new Thread() {
+      SubjectInheritingThread competingThread = new SubjectInheritingThread() {
         @Override
-        public void run() {
+        public void work() {
           assertTrue(lock.isLocked());
           assertFalse(lock.tryLock());
         }

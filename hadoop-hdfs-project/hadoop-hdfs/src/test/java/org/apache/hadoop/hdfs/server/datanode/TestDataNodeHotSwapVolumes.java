@@ -51,6 +51,7 @@ import org.apache.hadoop.io.MultipleIOException;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.Time;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -567,7 +568,7 @@ public class TestDataNodeHotSwapVolumes {
 
     // Thread to list all storage available at DataNode,
     // when the volumes are being added in parallel.
-    final Thread listStorageThread = new Thread(new Runnable() {
+    final SubjectInheritingThread listStorageThread = new SubjectInheritingThread(new Runnable() {
       @Override
       public void run() {
         while (addVolumeCompletionLatch.getCount() != newVolumeCount) {
@@ -591,7 +592,7 @@ public class TestDataNodeHotSwapVolumes {
       public Object answer(InvocationOnMock invocationOnMock) throws Throwable {
         final Random r = new Random();
         Thread addVolThread =
-            new Thread(new Runnable() {
+            new SubjectInheritingThread(new Runnable() {
               @Override
               public void run() {
                 try {
@@ -928,7 +929,7 @@ public class TestDataNodeHotSwapVolumes {
       final DataNode dataNode = dn;
       final CyclicBarrier reconfigBarrier = new CyclicBarrier(2);
 
-      Thread reconfigThread = new Thread(() -> {
+      Thread reconfigThread = new SubjectInheritingThread(() -> {
         try {
           reconfigBarrier.await();
 

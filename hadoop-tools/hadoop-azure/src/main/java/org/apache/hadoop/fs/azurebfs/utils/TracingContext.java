@@ -67,10 +67,13 @@ public class TracingContext {
   //final concatenated ID list set into x-ms-client-request-id header
   private String header = EMPTY_STRING;
   private String ingressHandler = EMPTY_STRING;
+  private Boolean fnsEndpointConverted = false;
+  // Represents endpoint was converted to Blob for FNS; "T" stands for "True"
+  private String fnsEndptConvertedIndicator = "T";
   private String position = EMPTY_STRING; // position of read/write in remote file
   private String metricResults = EMPTY_STRING;
-  private String metricHeader = EMPTY_STRING;
   private ReadType readType = ReadType.UNKNOWN_READ;
+  private String resourceUtilizationMetricResults = EMPTY_STRING;
 
   /**
    * If {@link #primaryRequestId} is null, this field shall be set equal
@@ -129,6 +132,14 @@ public class TracingContext {
     this.metricResults = metricResults;
   }
 
+  public TracingContext(String clientCorrelationID, String fileSystemID,
+      FSOperationType opType, boolean needsPrimaryReqId,
+      TracingHeaderFormat tracingHeaderFormat, Listener listener,
+      String metricResults, String resourceUtilizationMetricResults) {
+    this(clientCorrelationID, fileSystemID, opType, needsPrimaryReqId,
+        tracingHeaderFormat, listener, metricResults);
+    this.resourceUtilizationMetricResults = resourceUtilizationMetricResults;
+  }
 
   public TracingContext(TracingContext originalTracingContext) {
     this.fileSystemID = originalTracingContext.fileSystemID;
@@ -140,13 +151,16 @@ public class TracingContext {
     this.format = originalTracingContext.format;
     this.position = originalTracingContext.getPosition();
     this.ingressHandler = originalTracingContext.getIngressHandler();
+    this.fnsEndpointConverted = originalTracingContext.fnsEndpointConverted;
     this.operatedBlobCount = originalTracingContext.operatedBlobCount;
     if (originalTracingContext.listener != null) {
       this.listener = originalTracingContext.listener.getClone();
     }
     this.metricResults = originalTracingContext.metricResults;
     this.readType = originalTracingContext.readType;
+    this.resourceUtilizationMetricResults = originalTracingContext.resourceUtilizationMetricResults;
   }
+
   public static String validateClientCorrelationID(String clientCorrelationID) {
     if ((clientCorrelationID.length() > MAX_CLIENT_CORRELATION_ID_LENGTH)
         || (!clientCorrelationID.matches(CLIENT_CORRELATION_ID_PATTERN))) {
@@ -184,6 +198,10 @@ public class TracingContext {
     this.listener = listener;
   }
 
+  public boolean isMetricCall() {
+    return TracingHeaderFormat.AGGREGATED_METRICS_FORMAT.equals(format);
+  }
+
   /**
    * Concatenate all components separated by (:) into a string and set into
    * X_MS_CLIENT_REQUEST_ID header of the http operation
@@ -202,6 +220,7 @@ public class TracingContext {
    *   <li>operatedBlobCount - number of blobs operated on by this request</li>
    *   <li>operationSpecificHeader - different operation types can publish info relevant to that operation</li>
    *   <li>httpOperationHeader - suffix for network library used</li>
+   *   <li>fnsEndpointConverted - if endpoint was converted to Blob for FNS accounts</li>
    * </ul>
    * @param httpOperation AbfsHttpOperation instance to set header into
    *                      connection
@@ -226,28 +245,27 @@ public class TracingContext {
           + position + COLON
           + operatedBlobCount + COLON
           + getOperationSpecificHeader(opType) + COLON
-          + httpOperation.getTracingContextSuffix();
-
-      metricHeader += !(metricResults.trim().isEmpty()) ? metricResults  : EMPTY_STRING;
+          + httpOperation.getTracingContextSuffix() + COLON
+          + resourceUtilizationMetricResults + COLON
+          + (fnsEndpointConverted ? fnsEndptConvertedIndicator : EMPTY_STRING);
       break;
     case TWO_ID_FORMAT:
       header = TracingHeaderVersion.getCurrentVersion() + COLON
           + clientCorrelationID + COLON + clientRequestId;
-      metricHeader += !(metricResults.trim().isEmpty()) ? metricResults  : EMPTY_STRING;
+      break;
+    case AGGREGATED_METRICS_FORMAT:
+      header = TracingHeaderVersion.getMetricsCurrentVersion() + COLON
+          + metricResults;
       break;
     default:
       //case SINGLE_ID_FORMAT
       header = TracingHeaderVersion.getCurrentVersion() + COLON
           + clientRequestId;
-      metricHeader += !(metricResults.trim().isEmpty()) ? metricResults  : EMPTY_STRING;
     }
     if (listener != null) { //for testing
       listener.callTracingHeaderValidator(header, format);
     }
     httpOperation.setRequestProperty(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID, header);
-    if (!metricHeader.equals(EMPTY_STRING)) {
-      httpOperation.setRequestProperty(HttpHeaderConfigurations.X_MS_FECLIENT_METRICS, metricHeader);
-    }
     /*
     * In case the primaryRequestId is an empty-string and if it is the first try to
     * API call (previousFailure shall be null), maintain the last part of clientRequestId's
@@ -367,6 +385,17 @@ public class TracingContext {
     }
   }
 
+/**
+   * Marks that the endpoint was force converted to Blob for FNS account
+   * Sets the fnsEndpointConverted flag to true and notifies the listener if present.
+   */
+  public void setFNSEndpointConverted() {
+    this.fnsEndpointConverted = true;
+    if (listener != null) {
+      listener.updateFNSEndpointConverted();
+    }
+  }
+
   /**
    * Sets the position.
    *
@@ -388,5 +417,22 @@ public class TracingContext {
     if (listener != null) {
       listener.updateReadType(readType);
     }
+  }
+
+  /**
+   * Returns the read type for the current operation.
+   *
+   *  @return the read type for the request.
+   */
+  public ReadType getReadType() {
+    return readType;
+  }
+
+  /**
+   * Sets the resource utilization metric results string used for tracing or logging.
+   * @param resourceUtilizationMetricResults the formatted metric data to store.
+   */
+  public void setResourceUtilizationMetricResults(final String resourceUtilizationMetricResults) {
+    this.resourceUtilizationMetricResults = resourceUtilizationMetricResults;
   }
 }

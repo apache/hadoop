@@ -453,6 +453,19 @@ public class TestS3AExceptionTranslation extends AbstractHadoopTestBase {
                 sdkClientException(WFOPENSSL_0035_STREAM_IS_CLOSED, null))));
   }
 
+  @Test
+  public void testS3ExpressPreconditionFailure() throws Throwable {
+    AwsServiceException ase = AwsServiceException.builder()
+        .message("unwind")
+        .statusCode(SC_200_OK)
+        .awsErrorDetails(AwsErrorDetails.builder()
+            .errorCode(PRECONDITION_FAILED)
+            .build())
+        .build();
+    verifyExceptionClass(RemoteFileChangedException.class,
+        translateException("commit", "/path", ase));
+  }
+
   /**
    * Create a shaded NoHttpResponseException.
    * @return an exception.

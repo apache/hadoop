@@ -19,6 +19,7 @@ package org.apache.hadoop.tools.dynamometer;
 
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 import org.apache.hadoop.util.Lists;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.thirdparty.com.google.common.primitives.Ints;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -549,7 +550,7 @@ public class ApplicationMaster {
             + container.getNodeHttpAddress() + ", containerResourceMemory="
             + rsrc.getMemorySize() + ", containerResourceVirtualCores="
             + rsrc.getVirtualCores());
-        Thread launchThread = new Thread(containerLauncher);
+        Thread launchThread = new SubjectInheritingThread(containerLauncher);
 
         // launch and start the container on a separate thread to keep
         // the main thread unblocked

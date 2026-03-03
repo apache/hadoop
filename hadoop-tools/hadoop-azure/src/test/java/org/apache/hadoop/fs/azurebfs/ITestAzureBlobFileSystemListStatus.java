@@ -20,8 +20,10 @@ package org.apache.hadoop.fs.azurebfs;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.net.HttpURLConnection;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
+import java.net.URI;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -32,29 +34,32 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.mockito.stubbing.Stubber;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsDriverException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
+import org.apache.hadoop.fs.azurebfs.contracts.services.ContainerListEntrySchema;
+import org.apache.hadoop.fs.azurebfs.contracts.services.ContainerListResponseData;
 import org.apache.hadoop.fs.azurebfs.services.AbfsBlobClient;
+import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClientHandler;
+import org.apache.hadoop.fs.azurebfs.services.AbfsClientTestUtil;
 import org.apache.hadoop.fs.azurebfs.services.AbfsHttpHeader;
 import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperationType;
 import org.apache.hadoop.fs.azurebfs.services.ListResponseData;
-import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
-import org.apache.hadoop.fs.azurebfs.services.AbfsClientTestUtil;
 import org.apache.hadoop.fs.azurebfs.services.VersionedFileStatus;
 import org.apache.hadoop.fs.azurebfs.utils.DirectoryStateHelper;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
@@ -75,19 +80,17 @@ import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.CONNEC
 import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.CONNECTION_TIMEOUT_ABBREVIATION;
 import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.CONNECTION_TIMEOUT_JDK_MESSAGE;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertMkdirs;
-import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertPathExists;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.rename;
-
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.when;
-import static org.assertj.core.api.Assertions.assertThat;
-import org.junit.jupiter.api.Assertions;
 
 /**
  * Test listStatus operation.
@@ -888,5 +891,93 @@ public class ITestAzureBlobFileSystemListStatus extends
     testIsDirectory(true, "HDI_ISFOLDER", "Hdi_ISFOLDER", "Hdi_isfolder");
 
     testIsDirectory(true, "HDI_ISFOLDER", "Hdi_ISFOLDER1", "Test");
+  }
+
+  /**
+   * Tests container listing and deletion using {@link AbfsBlobClient}.
+   *
+   * Creates two containers, verifies they are returned by
+   * {@code listContainers} using a prefix filter, and then
+   * deletes them via the Blob endpoint.
+   *
+   * @throws Exception if any filesystem or container operation fails
+   */
+  @Test
+  public void testListAndDeleteContainers() throws Exception {
+    final AzureBlobFileSystem fs = getFileSystem();
+    final AbfsBlobClient blobClient =
+        fs.getAbfsStore().getClientHandler().getBlobClient();
+    final TracingContext tracingContext =
+        getTestTracingContext(fs, true);
+    // Blob/DFS-compliant container names
+    String container1 = "abfs-test-listtest1";
+    String container2 = "abfs-test-listtest2";
+    AzureBlobFileSystem fs1 = null;
+    AzureBlobFileSystem fs2 = null;
+
+    try {
+      // Resolve account name for constructing container URIs
+      String account = fs.getAbfsStore().getAbfsConfiguration().getAccountName();
+      // Create filesystem instances for both containers
+      fs1 = (AzureBlobFileSystem) FileSystem.get(
+          new URI("abfs://" + container1 + "@" + account), fs.getConf());
+      fs2 = (AzureBlobFileSystem) FileSystem.get(
+          new URI("abfs://" + container2 + "@" + account), fs.getConf());
+      // Create sample content to ensure containers are initialized
+      fs1.mkdirs(new Path("/dir1"));
+      fs1.create(new Path("/dir1/file1")).close();
+      fs2.mkdirs(new Path("/dir2"));
+      fs2.create(new Path("/dir2/file2")).close();
+      // List containers with prefix filter
+      ContainerListResponseData response =
+          blobClient.listContainers("abfs-test-", null, tracingContext);
+      assertThat(response)
+          .describedAs("listContainers response should not be null")
+          .isNotNull();
+      assertThat(response.getContainers())
+          .describedAs("Container list should contain created test containers")
+          .extracting(ContainerListEntrySchema::getName)
+          .contains(container1, container2);
+      // Delete containers
+      boolean deleted1 = deleteContainer(blobClient, container1, tracingContext);
+      boolean deleted2 = deleteContainer(blobClient, container2, tracingContext);
+      assertThat(deleted1)
+          .describedAs("First container should be deleted or already absent")
+          .isTrue();
+      assertThat(deleted2)
+          .describedAs("Second container should be deleted or already absent")
+          .isTrue();
+    } finally {
+      // Ensure filesystem instances are closed
+      if (fs1 != null) {
+        fs1.close();
+      }
+      if (fs2 != null) {
+        fs2.close();
+      }
+    }
+  }
+
+  /**
+   * Deletes a container using {@link AbfsBlobClient}.
+   *
+   * <p>Azure Blob delete semantics:
+   * <ul>
+   *   <li>202 (Accepted) – deletion request accepted</li>
+   *   <li>404 (Not Found) – container already deleted (idempotent success)</li>
+   * </ul>
+   *
+   * @return {@code true} if deletion is successful or container is already absent
+   * @throws Exception if the REST operation fails
+   */
+  private boolean deleteContainer(
+      AbfsBlobClient blobClient,
+      String container,
+      TracingContext tracingContext) throws Exception {
+    AbfsRestOperation op =
+        blobClient.deleteContainer(container, tracingContext);
+    int status = op.getResult().getStatusCode();
+    return status == HttpURLConnection.HTTP_ACCEPTED
+        || status == HttpURLConnection.HTTP_NOT_FOUND;
   }
 }

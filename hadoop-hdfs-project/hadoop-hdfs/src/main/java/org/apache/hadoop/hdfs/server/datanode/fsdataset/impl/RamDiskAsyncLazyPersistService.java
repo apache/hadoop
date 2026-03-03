@@ -19,6 +19,7 @@
 package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -82,7 +83,7 @@ class RamDiskAsyncLazyPersistService {
 
       @Override
       public Thread newThread(Runnable r) {
-        Thread t = new Thread(threadGroup, r);
+        Thread t = new SubjectInheritingThread(threadGroup, r);
         t.setName("Async RamDisk lazy persist worker " +
             " for volume with id " + storageId);
         return t;

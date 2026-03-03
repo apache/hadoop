@@ -105,6 +105,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_LOCK_DETAILED_METRICS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_MAX_DIRECTORY_ITEMS_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsAdmin.TRASH_PERMISSION;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -207,6 +208,8 @@ public class TestDFSAdmin {
   private void reconfigurationOutErrFormatter(String methodName,
       String nodeType, String address, final List<String> outs,
       final List<String> errs) throws IOException, InterruptedException {
+    // Start reconfiguration once and capture output directly to avoid
+    // triggering "Another reconfiguration task is running" error.
     ByteArrayOutputStream bufOut = new ByteArrayOutputStream();
     PrintStream outStream = new PrintStream(bufOut);
     ByteArrayOutputStream bufErr = new ByteArrayOutputStream();
@@ -449,7 +452,7 @@ public class TestDFSAdmin {
     final List<String> outs = Lists.newArrayList();
     final List<String> errs = Lists.newArrayList();
     getReconfigurableProperties("namenode", address, outs, errs);
-    assertEquals(29, outs.size());
+    assertEquals(30, outs.size());
     assertTrue(outs.get(0).contains("Reconfigurable properties:"));
     assertEquals(DFS_BLOCK_INVALIDATE_LIMIT_KEY, outs.get(1));
     assertEquals(DFS_BLOCK_PLACEMENT_EC_CLASSNAME_KEY, outs.get(2));
@@ -463,8 +466,9 @@ public class TestDFSAdmin {
     assertEquals(DFS_NAMENODE_BLOCKPLACEMENTPOLICY_MIN_BLOCKS_FOR_WRITE_KEY, outs.get(10));
     assertEquals(DFS_NAMENODE_DECOMMISSION_BACKOFF_MONITOR_PENDING_BLOCKS_PER_LOCK, outs.get(11));
     assertEquals(DFS_NAMENODE_DECOMMISSION_BACKOFF_MONITOR_PENDING_LIMIT, outs.get(12));
-    assertEquals(DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, outs.get(13));
-    assertEquals(DFS_NAMENODE_LOCK_DETAILED_METRICS_KEY, outs.get(14));
+    assertEquals(DFS_NAMENODE_MAX_DIRECTORY_ITEMS_KEY, outs.get(13));
+    assertEquals(DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, outs.get(14));
+    assertEquals(DFS_NAMENODE_LOCK_DETAILED_METRICS_KEY, outs.get(15));
     assertEquals(errs.size(), 0);
   }
 
@@ -1249,22 +1253,27 @@ public class TestDFSAdmin {
     when(reconfigurationUtil.parseChangedProperties(any(Configuration.class),
         any(Configuration.class))).thenReturn(changes);
 
-    int result = admin.startReconfiguration("datanode", "livenodes");
+    ByteArrayOutputStream bufOut = new ByteArrayOutputStream();
+    PrintStream outStream = new PrintStream(bufOut);
+    ByteArrayOutputStream bufErr = new ByteArrayOutputStream();
+    PrintStream errStream = new PrintStream(bufErr);
+    int result = admin.startReconfigurationUtil("datanode", "livenodes",
+        outStream, errStream);
     assertThat(result).isEqualTo(0);
     final List<String> outsForStartReconf = new ArrayList<>();
     final List<String> errsForStartReconf = new ArrayList<>();
-    reconfigurationOutErrFormatter("startReconfiguration", "datanode",
-        "livenodes", outsForStartReconf, errsForStartReconf);
+    scanIntoList(bufOut, outsForStartReconf);
+    scanIntoList(bufErr, errsForStartReconf);
     String started = "Started reconfiguration task on node";
     String starting =
-        "Starting of reconfiguration task successful on 2 nodes, failed on 0 nodes.";
-    assertThat(outsForStartReconf).hasSize(3);
-    assertThat(errsForStartReconf).hasSize(0);
-    assertThat(outsForStartReconf.get(0)).startsWith(started);
-    assertThat(outsForStartReconf.get(1)).startsWith(started);
-    assertThat(outsForStartReconf.get(2)).startsWith(starting);
-
-    Thread.sleep(1000);
+        "Starting of reconfiguration task successful on " + NUM_DATANODES
+            + " nodes, failed on 0 nodes.";
+    assertThat(errsForStartReconf).isEmpty();
+    assertThat(outsForStartReconf).hasSize(NUM_DATANODES + 1);
+    assertThat(outsForStartReconf.stream()
+        .filter(s -> s.startsWith(started))
+        .count()).isEqualTo(NUM_DATANODES);
+    assertThat(outsForStartReconf).contains(starting);
     final List<String> outs = new ArrayList<>();
     final List<String> errs = new ArrayList<>();
     awaitReconfigurationFinished("datanode", "livenodes", outs, errs);

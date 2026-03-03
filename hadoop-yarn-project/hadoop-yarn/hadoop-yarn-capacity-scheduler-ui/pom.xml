@@ -1,0 +1,263 @@
+<!--
+   Licensed to the Apache Software Foundation (ASF) under one or more
+   contributor license agreements.  See the NOTICE file distributed with
+   this work for additional information regarding copyright ownership.
+   The ASF licenses this file to You under the Apache License, Version 2.0
+   (the "License"); you may not use this file except in compliance with
+   the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+-->
+
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/maven-v4_0_0.xsd">
+  <parent>
+    <artifactId>hadoop-yarn</artifactId>
+    <groupId>org.apache.hadoop</groupId>
+    <version>3.6.0-SNAPSHOT</version>
+  </parent>
+  <modelVersion>4.0.0</modelVersion>
+  <artifactId>hadoop-yarn-capacity-scheduler-ui</artifactId>
+  <version>3.6.0-SNAPSHOT</version>
+  <name>Apache Hadoop YARN Capacity Scheduler UI</name>
+  <packaging>${packagingType}</packaging>
+
+  <properties>
+    <packagingType>pom</packagingType>
+    <webappDir>${basedir}/target/webapp</webappDir>
+    <nodeExecutable>${basedir}/target/webapp/node/node</nodeExecutable>
+    <packageManagerScript>node_modules/.bin/react-router</packageManagerScript>
+    <keepUIBuildCache>false</keepUIBuildCache>
+  </properties>
+
+  <build>
+    <plugins>
+      <!-- Pick the appropriate build script to use in package.json based on the OS -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-antrun-plugin</artifactId>
+        <version>1.8</version>
+        <executions>
+          <execution>
+            <phase>validate</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <exportAntProperties>true</exportAntProperties>
+              <target>
+                <!-- Set the Maven property buildScript to build:mvn:windows if this is
+                 running on Windows. Set it to build:mvn otherwise. -->
+                <condition property="buildScript" value="build:mvn:windows" else="build:mvn">
+                  <and>
+                    <os family="windows"/>
+                  </and>
+                </condition>
+                <echo>Build script to use = ${buildScript}</echo>
+              </target>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!-- Apache RAT -->
+      <plugin>
+        <groupId>org.apache.rat</groupId>
+        <artifactId>apache-rat-plugin</artifactId>
+        <configuration>
+          <excludes>
+            <exclude>src/main/webapp/package.json</exclude>
+            <exclude>src/main/webapp/package-lock.json</exclude>
+            <exclude>src/main/webapp/tsconfig.json</exclude>
+            <exclude>src/main/webapp/vite.config.ts</exclude>
+            <exclude>src/main/webapp/vitest.config.ts</exclude>
+            <exclude>src/main/webapp/react-router.config.ts</exclude>
+            <exclude>src/main/webapp/components.json</exclude>
+            <exclude>src/main/webapp/.env.example</exclude>
+            <exclude>src/main/webapp/.prettierrc</exclude>
+            <exclude>src/main/webapp/.prettierignore</exclude>
+            <exclude>src/main/webapp/public/**/*</exclude>
+            <exclude>src/main/webapp/WEB-INF/web.xml</exclude>
+          </excludes>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <artifactId>maven-clean-plugin</artifactId>
+        <configuration>
+          <skip>${keepUIBuildCache}</skip>
+          <followSymLinks>false</followSymLinks>
+          <filesets>
+            <fileset>
+              <directory>${webappDir}/node_modules</directory>
+            </fileset>
+            <fileset>
+              <directory>${webappDir}/build</directory>
+            </fileset>
+          </filesets>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+
+  <profiles>
+    <profile>
+      <id>yarn-ui</id>
+
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+
+      <properties>
+        <packagingType>war</packagingType>
+        <buildEnvironment>production</buildEnvironment>
+      </properties>
+
+      <build>
+        <plugins>
+          <!-- Copy files into target for build -->
+          <plugin>
+            <artifactId>maven-resources-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>copy-resources</id>
+                <phase>validate</phase>
+                <goals>
+                  <goal>copy-resources</goal>
+                </goals>
+                <configuration>
+                  <outputDirectory>${webappDir}</outputDirectory>
+                  <resources>
+                    <resource>
+                      <directory>${basedir}/src/main/webapp</directory>
+                      <filtering>false</filtering>
+                      <excludes>
+                        <exclude>node_modules/**/*</exclude>
+                        <exclude>build/**/*</exclude>
+                        <exclude>.react-router/**/*</exclude>
+                      </excludes>
+                    </resource>
+                  </resources>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+
+          <!-- Install Node and npm -->
+          <plugin>
+            <groupId>com.github.eirslett</groupId>
+            <artifactId>frontend-maven-plugin</artifactId>
+            <version>${frontend-maven-plugin.version}</version>
+            <configuration>
+              <workingDirectory>${webappDir}</workingDirectory>
+            </configuration>
+            <executions>
+              <!-- Install Node and npm (using Node 22 for this module) -->
+              <execution>
+                <phase>generate-resources</phase>
+                <id>install node and npm</id>
+                <goals>
+                  <goal>install-node-and-npm</goal>
+                </goals>
+                <configuration>
+                  <nodeVersion>v22.16.0</nodeVersion>
+                  <npmVersion>10.8.1</npmVersion>
+                </configuration>
+              </execution>
+
+              <!-- npm install -->
+              <execution>
+                <phase>generate-resources</phase>
+                <id>npm install</id>
+                <goals>
+                  <goal>npm</goal>
+                </goals>
+                <configuration>
+                  <arguments>ci</arguments>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+
+          <!-- Build the React application -->
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>exec-maven-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>react-router build</id>
+                <phase>generate-resources</phase>
+                <goals>
+                  <goal>exec</goal>
+                </goals>
+                <configuration>
+                  <workingDirectory>${webappDir}</workingDirectory>
+                  <executable>${nodeExecutable}</executable>
+                  <arguments>
+                    <argument>${packageManagerScript}</argument>
+                    <argument>build</argument>
+                  </arguments>
+                  <environmentVariables>
+                    <NODE_ENV>${buildEnvironment}</NODE_ENV>
+                  </environmentVariables>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+
+          <!-- Package into war -->
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-war-plugin</artifactId>
+            <executions>
+              <execution>
+                <phase>package</phase>
+              </execution>
+            </executions>
+            <configuration>
+              <webXml>${webappDir}/WEB-INF/web.xml</webXml>
+              <warSourceDirectory>${webappDir}/build/client</warSourceDirectory>
+            </configuration>
+          </plugin>
+
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-jar-plugin</artifactId>
+            <configuration>
+              <skipIfEmpty>true</skipIfEmpty>
+            </configuration>
+          </plugin>
+
+        </plugins>
+      </build>
+    </profile>
+
+    <!-- Development profile with mock data -->
+    <profile>
+      <id>yarn-ui-dev</id>
+
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+
+      <properties>
+        <packagingType>war</packagingType>
+        <buildEnvironment>development</buildEnvironment>
+      </properties>
+
+      <build>
+        <plugins>
+          <!-- Inherits all plugins from yarn-ui profile -->
+          <!-- Mock data will be included in the build -->
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+
+</project>

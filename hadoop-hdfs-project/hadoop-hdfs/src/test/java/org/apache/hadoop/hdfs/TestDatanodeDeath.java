@@ -34,6 +34,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.protocol.InterDatanodeProtocol;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.junit.jupiter.api.Test;
 import org.slf4j.event.Level;
 
@@ -61,7 +62,7 @@ public class TestDatanodeDeath {
   //
   // an object that does a bunch of transactions
   //
-  static class Workload extends Thread {
+  static class Workload extends SubjectInheritingThread {
     private final short replication;
     private final int numberOfFiles;
     private final int id;
@@ -81,7 +82,7 @@ public class TestDatanodeDeath {
 
     // create a bunch of files. Write to them and then verify.
     @Override
-    public void run() {
+    public void work() {
       System.out.println("Workload starting ");
       for (int i = 0; i < numberOfFiles; i++) {
         Path filename = new Path(id + "." + i);
@@ -210,7 +211,7 @@ public class TestDatanodeDeath {
    * a block do not get killed (otherwise the file will be corrupt and the
    * test will fail).
    */
-  class Modify extends Thread {
+  class Modify extends SubjectInheritingThread {
     volatile boolean running;
     final MiniDFSCluster cluster;
     final Configuration conf;
@@ -222,7 +223,7 @@ public class TestDatanodeDeath {
     }
 
     @Override
-    public void run() {
+    public void work() {
 
       while (running) {
         try {

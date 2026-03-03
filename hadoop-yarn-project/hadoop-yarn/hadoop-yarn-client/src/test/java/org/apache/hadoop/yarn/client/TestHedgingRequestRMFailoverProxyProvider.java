@@ -22,6 +22,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.HAServiceProtocol;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
@@ -107,8 +108,8 @@ public class TestHedgingRequestRMFailoverProxyProvider {
   }
 
   private void makeRMActive(final MiniYARNCluster cluster, final int index) {
-    Thread t = new Thread() {
-      @Override public void run() {
+    SubjectInheritingThread t = new SubjectInheritingThread() {
+      @Override public void work() {
         try {
           System.out.println("Transition rm" + index + " to active");
           cluster.getResourceManager(index).getRMContext().getRMAdminService()

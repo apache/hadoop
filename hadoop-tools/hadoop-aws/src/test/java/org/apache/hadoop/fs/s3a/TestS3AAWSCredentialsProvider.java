@@ -55,11 +55,13 @@ import org.apache.hadoop.fs.s3a.auth.AssumedRoleCredentialProvider;
 import org.apache.hadoop.fs.s3a.auth.CredentialProviderListFactory;
 import org.apache.hadoop.fs.s3a.auth.IAMInstanceCredentialsProvider;
 import org.apache.hadoop.fs.s3a.auth.NoAuthWithAWSException;
+import org.apache.hadoop.fs.s3a.auth.NoAwsCredentialsException;
 import org.apache.hadoop.fs.s3a.auth.ProfileAWSCredentialsProvider;
 import org.apache.hadoop.fs.s3a.auth.delegation.CountInvocationsProvider;
 import org.apache.hadoop.fs.s3a.impl.InstantiationIOException;
 import org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils;
 import org.apache.hadoop.io.retry.RetryPolicy;
+import org.apache.hadoop.test.HadoopTestBase;
 import org.apache.hadoop.util.Sets;
 
 import static org.apache.hadoop.fs.s3a.Constants.ASSUMED_ROLE_CREDENTIALS_PROVIDER;
@@ -79,7 +81,7 @@ import static org.apache.hadoop.util.StringUtils.STRING_COLLECTION_SPLIT_EQUALS_
 /**
  * Unit tests for {@link Constants#AWS_CREDENTIALS_PROVIDER} logic.
  */
-public class TestS3AAWSCredentialsProvider extends AbstractS3ATestBase {
+public class TestS3AAWSCredentialsProvider extends HadoopTestBase {
 
   /**
    * URI of the test file: this must be anonymously accessible.
@@ -921,4 +923,19 @@ public class TestS3AAWSCredentialsProvider extends AbstractS3ATestBase {
     }
   }
 
+  @Test
+  public void testIAMInstanceCredentialsProvider() throws Throwable {
+
+    final Configuration conf =
+        createProviderConfiguration(IAMInstanceCredentialsProvider.class);
+    Path testFile = getExternalData(conf);
+    try (AWSCredentialProviderList list = createAWSCredentialProviderList(testFile.toUri(), conf)) {
+      try {
+        list.resolveCredentials();
+      } catch (NoAwsCredentialsException e) {
+        ///  this is OK.
+      }
+
+    }
+  }
 }

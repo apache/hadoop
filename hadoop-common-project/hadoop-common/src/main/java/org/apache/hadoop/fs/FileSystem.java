@@ -81,6 +81,7 @@ import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.tracing.Tracer;
 import org.apache.hadoop.tracing.TraceScope;
 import org.apache.hadoop.util.Preconditions;
@@ -3519,9 +3520,13 @@ public abstract class FileSystem extends Configured
       if (!FILE_SYSTEMS_LOADED) {
         ServiceLoader<FileSystem> serviceLoader = ServiceLoader.load(FileSystem.class);
         Iterator<FileSystem> it = serviceLoader.iterator();
-        while (it.hasNext()) {
+        // both "hasNext()" and "next()" calls might trigger implementations loading.
+        while (true) {
           FileSystem fs;
           try {
+            if (!it.hasNext()) {
+              break;
+            }
             fs = it.next();
             try {
               SERVICE_FILE_SYSTEMS.put(fs.getScheme(), fs.getClass());
@@ -3535,7 +3540,7 @@ public abstract class FileSystem extends Configured
                   ClassUtil.findContainingJar(fs.getClass()));
               LOGGER.info("Full exception loading: {}", fs, e);
             }
-          } catch (ServiceConfigurationError ee) {
+          } catch (ServiceConfigurationError | LinkageError ee) {
             LOGGER.warn("Cannot load filesystem", ee);
           }
         }
@@ -4087,7 +4092,7 @@ public abstract class FileSystem extends Configured
     static {
       STATS_DATA_REF_QUEUE = new ReferenceQueue<>();
       // start a single daemon cleaner thread
-      STATS_DATA_CLEANER = new Thread(new StatisticsDataReferenceCleaner());
+      STATS_DATA_CLEANER = new SubjectInheritingThread(new StatisticsDataReferenceCleaner());
       STATS_DATA_CLEANER.
           setName(StatisticsDataReferenceCleaner.class.getName());
       STATS_DATA_CLEANER.setDaemon(true);

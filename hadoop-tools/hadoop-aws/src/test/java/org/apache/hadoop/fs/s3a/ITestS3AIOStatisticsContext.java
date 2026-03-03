@@ -38,14 +38,16 @@ import org.apache.hadoop.fs.statistics.StoreStatisticNames;
 import org.apache.hadoop.fs.statistics.IOStatisticsContext;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsContextImpl;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.util.functional.CloseableTaskPoolSubmitter;
 import org.apache.hadoop.util.functional.TaskPool;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertCapabilities;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.writeDataset;
+import static org.apache.hadoop.fs.s3a.Constants.INPUT_STREAM_TYPE;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.disablePrefetching;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfAnalyticsAcceleratorEnabled;
+import static org.apache.hadoop.fs.s3a.impl.streams.InputStreamType.Classic;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertThatStatisticCounter;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyStatisticCounterValue;
 import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_BYTES;
@@ -72,6 +74,7 @@ public class ITestS3AIOStatisticsContext extends AbstractS3ATestBase {
   protected Configuration createConfiguration() {
     Configuration configuration = super.createConfiguration();
     disablePrefetching(configuration);
+    configuration.setEnum(INPUT_STREAM_TYPE, Classic);
     enableIOStatisticsContext();
     return configuration;
   }
@@ -81,10 +84,7 @@ public class ITestS3AIOStatisticsContext extends AbstractS3ATestBase {
   public void setup() throws Exception {
     super.setup();
     executor = HadoopExecutors.newFixedThreadPool(SMALL_THREADS);
-    // Analytics accelerator currently does not support IOStatisticsContext, this will be added as
-    // part of https://issues.apache.org/jira/browse/HADOOP-19364
-    skipIfAnalyticsAcceleratorEnabled(getConfiguration(),
-        "Analytics Accelerator currently does not support IOStatisticsContext");
+
 
   }
 
@@ -457,7 +457,7 @@ public class ITestS3AIOStatisticsContext extends AbstractS3ATestBase {
    * If constructed with an IOStatisticsContext then
    * that context is switched to before performing the IO.
    */
-  private class TestWorkerThread extends Thread implements Runnable {
+  private class TestWorkerThread extends SubjectInheritingThread implements Runnable {
     private final Path workerThreadPath;
 
     private final IOStatisticsContext ioStatisticsContext;
@@ -475,7 +475,7 @@ public class ITestS3AIOStatisticsContext extends AbstractS3ATestBase {
     }
 
     @Override
-    public void run() {
+    public void work() {
       // Setting the worker thread's name.
       Thread.currentThread().setName("worker thread");
       S3AFileSystem fs = getFileSystem();

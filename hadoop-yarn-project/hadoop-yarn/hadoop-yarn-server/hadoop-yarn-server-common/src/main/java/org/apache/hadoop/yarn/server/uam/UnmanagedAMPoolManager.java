@@ -37,6 +37,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.service.AbstractService;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
@@ -105,7 +106,7 @@ public class UnmanagedAMPoolManager extends AbstractService {
   protected void serviceStop() throws Exception {
 
     if (!this.unmanagedAppMasterMap.isEmpty()) {
-      finishApplicationThread = new Thread(createForceFinishApplicationThread());
+      finishApplicationThread = new SubjectInheritingThread(createForceFinishApplicationThread());
       finishApplicationThread.setName(dispatcherThreadName);
       finishApplicationThread.start();
     }

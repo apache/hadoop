@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.ha;
 
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.slf4j.Logger;
 
 import java.io.BufferedReader;
@@ -50,7 +51,7 @@ class StreamPumper {
     this.stream = stream;
     this.type = type;
     
-    thread = new Thread(new Runnable() {
+    thread = new SubjectInheritingThread(new Runnable() {
       @Override
       public void run() {
         try {

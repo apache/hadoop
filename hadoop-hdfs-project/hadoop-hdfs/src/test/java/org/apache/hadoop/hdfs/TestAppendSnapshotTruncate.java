@@ -51,6 +51,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.util.Preconditions;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.slf4j.event.Level;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -448,7 +449,7 @@ public class TestAppendSnapshotTruncate {
       Preconditions.checkState(state.compareAndSet(State.IDLE, State.RUNNING));
       
       if (thread.get() == null) {
-        final Thread t = new Thread(null, new Runnable() {
+        final Thread t = new SubjectInheritingThread(null, new Runnable() {
           @Override
           public void run() {
             for(State s; !(s = checkErrorState()).isTerminated;) {

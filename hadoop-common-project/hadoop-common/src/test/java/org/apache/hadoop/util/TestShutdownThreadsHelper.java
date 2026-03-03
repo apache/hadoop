@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.util;
 
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
@@ -39,7 +40,7 @@ public class TestShutdownThreadsHelper {
   @Test
   @Timeout(value = 3)
   public void testShutdownThread() {
-    Thread thread = new Thread(sampleRunnable);
+    Thread thread = new SubjectInheritingThread(sampleRunnable);
     thread.start();
     boolean ret = ShutdownThreadsHelper.shutdownThread(thread);
     boolean isTerminated = !thread.isAlive();

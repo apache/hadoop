@@ -129,10 +129,12 @@ import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE
 import static org.apache.hadoop.fs.azurebfs.constants.FSOperationType.CREATE_FILESYSTEM;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.BLOCK_UPLOAD_ACTIVE_BLOCKS_DEFAULT;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DATA_BLOCKS_BUFFER_DEFAULT;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.ABFS_DFS_DOMAIN_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.InternalConstants.CAPABILITY_SAFE_READAHEAD;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_CREATE_ON_ROOT;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_INVALID_ABFS_STATE;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.UNAUTHORIZED_SAS;
+import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.UNAUTHORIZED_USER_BOUND_SAS;
 import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.logIOStatisticsAtLevel;
 import static org.apache.hadoop.util.functional.RemoteIterators.filteringRemoteIterator;
@@ -214,6 +216,7 @@ public class AzureBlobFileSystem extends FileSystem
             .withBlockFactory(blockFactory)
             .withBlockOutputActiveBlocks(blockOutputActiveBlocks)
             .withBackReference(new BackReference(this))
+            .withFileSystemId(this.fileSystemId)
             .build();
 
     this.abfsStore = new AzureBlobFileSystemStore(systemStoreBuilder);
@@ -271,6 +274,29 @@ public class AzureBlobFileSystem extends FileSystem
       throw new InvalidConfigurationValueException(FS_AZURE_ACCOUNT_IS_HNS_ENABLED, ex);
     }
 
+    /**
+     * Validates that User-bound SAS with OAuth is not used for FNS (non-hierarchical namespace) accounts.
+     * Throws an InvalidConfigurationValueException if this configuration is detected.
+     *
+     * @throws InvalidConfigurationValueException if User-bound SAS with OAuth is configured for FNS accounts
+     */
+    try {
+      if (abfsConfiguration.getAuthType(abfsConfiguration.getAccountName())
+          == AuthType.UserboundSASWithOAuth && // Auth type is User-bound SAS
+          !tryGetIsNamespaceEnabled(
+              new TracingContext(initFSTracingContext))) { // Account is FNS
+        throw new InvalidConfigurationValueException(UNAUTHORIZED_USER_BOUND_SAS);
+      }
+    } catch (InvalidConfigurationValueException ex) {
+      LOG.error("User-bound SAS not supported for FNS Accounts", ex);
+      throw ex;
+    } catch (AzureBlobFileSystemException ex) {
+      LOG.error("Failed to determine account type for auth type validation",
+          ex);
+      throw new InvalidConfigurationValueException(
+          FS_AZURE_ACCOUNT_IS_HNS_ENABLED, ex);
+    }
+
     /*
      * Non-hierarchical-namespace account can not have a customer-provided-key(CPK).
      * Fail initialization of filesystem if the configs are provided. CPK is of
@@ -289,6 +315,18 @@ public class AzureBlobFileSystem extends FileSystem
     } catch (AzureBlobFileSystemException ex) {
       LOG.debug("Failed to determine account type for service type validation", ex);
       throw new InvalidConfigurationValueException(FS_AZURE_ACCOUNT_IS_HNS_ENABLED, ex);
+    }
+
+    /*
+     * For FNS accounts, restrict the endpoint and service type to Blob
+     * For FNS-DFS, also update the tracing context to add metric to show endpoint conversion.
+     */
+    if (!tryGetIsNamespaceEnabled(new TracingContext(initFSTracingContext))) {
+      LOG.debug("FNS account detected; restricting service type to Blob.");
+      abfsStore.restrictServiceTypeToBlob();
+      if (uri.toString().contains(ABFS_DFS_DOMAIN_NAME)) {
+        initFSTracingContext.setFNSEndpointConverted();
+      }
     }
 
     // Create the file system if it does not exist.
@@ -803,18 +841,6 @@ public class AzureBlobFileSystem extends FileSystem
   public synchronized void close() throws IOException {
     if (isClosed()) {
       return;
-    }
-    if (getAbfsStore().getClient().isMetricCollectionEnabled()) {
-      TracingContext tracingMetricContext = new TracingContext(
-              clientCorrelationId,
-              fileSystemId, FSOperationType.GET_ATTR, true,
-              tracingHeaderFormat,
-              listener, abfsCounters.toString());
-      try {
-        getAbfsClient().getMetricCall(tracingMetricContext);
-      } catch (IOException e) {
-        throw new IOException(e);
-      }
     }
     // does all the delete-on-exit calls, and may be slow.
     super.close();
@@ -1837,4 +1863,3 @@ public class AzureBlobFileSystem extends FileSystem
     return abfsCounters != null ? abfsCounters.getIOStatistics() : null;
   }
 }
-

@@ -22,8 +22,12 @@ import java.io.DataOutputStream;
 import java.io.File;
 import java.nio.file.Files;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
+
+import org.apache.hadoop.test.AbstractHadoopTestBase;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -42,6 +46,7 @@ import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
+import org.glassfish.jersey.jettison.internal.entity.JettisonObjectProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -62,6 +67,7 @@ import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.DrainDispatcher;
 import org.apache.hadoop.yarn.event.Event;
 import org.apache.hadoop.yarn.event.EventHandler;
+import org.apache.hadoop.yarn.event.InlineDispatcher;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationStateData;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemoryRMStateStore;
@@ -76,9 +82,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
-import org.glassfish.jersey.jettison.internal.entity.JettisonObjectProvider;
 
-public class TestRMHA {
+public class TestRMHA extends AbstractHadoopTestBase {
   private static final Logger LOG = LoggerFactory.getLogger(TestRMHA.class);
   private Configuration configuration;
   private MockRM rm = null;
@@ -162,9 +167,9 @@ public class TestRMHA {
   private void checkActiveRMWebServices() throws JSONException {
 
     // Validate web-service
-    Client webServiceClient = ClientBuilder.
-        newClient().
-        register(new JettisonObjectProvider.App());
+    Client webServiceClient = ClientBuilder
+        .newClient()
+        .register(new JettisonObjectProvider.App());
     InetSocketAddress rmWebappAddr =
         NetUtils.getConnectAddress(rm.getWebapp().getListenerAddress());
     String webappURL =
@@ -487,6 +492,16 @@ public class TestRMHA {
     memStore.init(conf);
     rm = new MockRM(conf, memStore) {
       @Override
+      protected Dispatcher createDispatcher() {
+        return new InlineDispatcher();
+      }
+
+      @Override
+      public void drainEvents() {
+        // InlineDispatcher dispatches synchronously; nothing to drain here.
+      }
+
+      @Override
       void stopActiveServices() {
         try {
           Thread.sleep(10000);
@@ -515,7 +530,7 @@ public class TestRMHA {
     rm.adminService.transitionToActive(requestInfo);
 
     // 3. Try Transition to standby
-    Thread t = new Thread(new Runnable() {
+    Thread t = new SubjectInheritingThread(new Runnable() {
       @Override
       public void run() {
         try {
@@ -610,7 +625,7 @@ public class TestRMHA {
   }
 
   @Test
-  @Timeout(value = 9000)
+  @Timeout(value = 10, unit = TimeUnit.MINUTES)
   public void testTransitionedToActiveRefreshFail() throws Exception {
     configuration.setBoolean(YarnConfiguration.AUTO_FAILOVER_ENABLED, false);
     rm = new MockRM(configuration) {
