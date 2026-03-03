@@ -102,7 +102,6 @@ public final class SignerFactory {
 
   /**
    * Create an instance of the given signer.
-   *
    * If a signer is Configurable, call setConf on it with the passed in config.
    * @param signerType The signer type.
    * @param conf configuration to init with
