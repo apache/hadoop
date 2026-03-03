@@ -142,7 +142,7 @@ public final class SignerFactory {
    * @see SignerFactory#createSigner(conf, String, String)
    */
   public static Signer createSigner(String signerType, String configKey) throws IOException {
-    return createSigner(null, signerType, configKey);
+    return createSigner(signerType, null, configKey);
   }
 
   /**
