@@ -136,15 +136,6 @@ public final class SignerFactory {
   }
 
   /**
-   * {@code conf} defaults to null for backwards compatibility.
-   *
-   * @see SignerFactory#createSigner(conf, String, String)
-   */
-  public static Signer createSigner(String signerType, String configKey) throws IOException {
-    return createSigner(signerType, null, configKey);
-  }
-
-  /**
    * Create an auth scheme instance from an ID and a signer.
    * @param schemeId scheme id
    * @param signer signer
