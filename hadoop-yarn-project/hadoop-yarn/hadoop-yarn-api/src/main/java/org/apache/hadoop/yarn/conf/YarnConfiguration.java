@@ -3026,6 +3026,8 @@ public class YarnConfiguration extends Configuration {
   public static final String PROXY_BIND_HOST =
       PROXY_PREFIX + "bind-host";
 
+  public static final String PROXY_REDIRECT_FLAG = PROXY_PREFIX + "redirect-flag";
+
   /**
    * YARN Service Level Authorization
    */

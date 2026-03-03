@@ -2832,6 +2832,15 @@
     <value>60000</value>
   </property>
 
+  <property>
+    <description>Optional query parameter name that signals the YARN WebAppProxy to redirect
+      the user to the application's tracking URL instead of proxying the request.
+      When the tracking URL contains this flag with the value "true", the proxy
+      performs an HTTP redirect (302) to the tracking URL.</description>
+    <name>yarn.web-proxy.redirect-flag</name>
+    <value/>
+  </property>
+
   <!-- Applications' Configuration -->
 
   <property>
