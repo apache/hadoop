@@ -592,14 +592,12 @@ public class TestSignerManager extends AbstractHadoopTestBase {
 
   @Test
   public void testV2SignerRejected() throws Throwable {
-    Configuration config = new Configuration();
     intercept(InstantiationIOException.class, "no longer supported",
         () -> SignerFactory.createSigner(S3_V2_SIGNER, new Configuration(), "key"));
   }
 
   @Test
   public void testUnknownSignerRejected() throws Throwable {
-    Configuration config = new Configuration();
     intercept(InstantiationIOException.class, "unknownSigner",
         () -> SignerFactory.createSigner("unknownSigner", new Configuration(), "key"));
   }
