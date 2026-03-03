@@ -41,7 +41,7 @@ On Linux / Mac:
           To run an x86_64 container on arm machine, use this command:
           $ CPU_ARCH=x86_64 ./start-build-env.sh ubuntu_24
 
-   - [OS Platform] One of [rockylinux_8, debian_11, debian_12, debian_13, ubuntu_20, ubuntu_24, windows_10].
+   - [OS Platform] One of [rockylinux_8, debian_12, debian_13, ubuntu_24, windows_10].
         Default is 'ubuntu_24'.
         Note: Currently only ubuntu is supported on arm machine
 
@@ -65,9 +65,7 @@ Known issues:
   and run your IDE and Docker etc inside that VM.
 
 ----------------------------------------------------------------------------------
-Installing required packages for clean install of Ubuntu 18.04 LTS Desktop.
-(For Ubuntu 20.04, gcc/g++ and cmake bundled with Ubuntu can be used.
-Refer to  dev-support/docker/Dockerfile_ubuntu_20):
+Installing required packages for clean install of Ubuntu 24.04 LTS Desktop.
 
 * Open JDK 17
   $ sudo apt-get update
@@ -76,18 +74,6 @@ Refer to  dev-support/docker/Dockerfile_ubuntu_20):
   $ sudo apt-get -y install maven
 * Native libraries
   $ sudo apt-get -y install build-essential autoconf automake libtool cmake zlib1g-dev pkg-config libssl-dev libsasl2-dev
-* GCC 9.3.0
-  $ sudo apt-get -y install software-properties-common
-  $ sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
-  $ sudo apt-get update
-  $ sudo apt-get -y install g++-9 gcc-9
-  $ sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-9 60 --slave /usr/bin/g++ g++ /usr/bin/g++-9
-* CMake 3.19
-  $ curl -L https://cmake.org/files/v3.19/cmake-3.19.0.tar.gz > cmake-3.19.0.tar.gz
-  $ tar -zxvf cmake-3.19.0.tar.gz && cd cmake-3.19.0
-  $ ./bootstrap
-  $ make -j$(nproc)
-  $ sudo make install
 * Protocol Buffers 3.25.5 (required to build native code)
   $ curl -L https://github.com/protocolbuffers/protobuf/archive/refs/tags/v3.25.5.tar.gz > protobuf-3.25.5.tar.gz
   $ curl -L https://github.com/abseil/abseil-cpp/archive/refs/tags/20230802.1.tar.gz > abseil-cpp-20230802.1.tar.gz
@@ -552,13 +538,6 @@ Building on Rocky Linux 8
 * Install GCC 9.3.0
   $ sudo dnf -y install gcc-toolset-9-gcc gcc-toolset-9-gcc-c++
   $ source /opt/rh/gcc-toolset-9/enable
-
-* Install CMake 3.19
-  $ curl -L https://cmake.org/files/v3.19/cmake-3.19.0.tar.gz > cmake-3.19.0.tar.gz
-  $ tar -zxvf cmake-3.19.0.tar.gz && cd cmake-3.19.0
-  $ ./bootstrap
-  $ make -j$(nproc)
-  $ sudo make install
 
 * Install boost.
   $ curl -L -o boost-1.86.0.tar.gz https://github.com/boostorg/boost/releases/download/boost-1.86.0/boost-1.86.0-b2-nodocs.tar.gz
