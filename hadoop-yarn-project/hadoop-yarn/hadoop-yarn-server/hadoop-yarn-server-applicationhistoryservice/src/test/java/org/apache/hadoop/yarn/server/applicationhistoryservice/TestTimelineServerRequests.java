@@ -69,8 +69,7 @@ public class TestTimelineServerRequests {
       conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
       conf.setClass(YarnConfiguration.TIMELINE_SERVICE_STORE,
           MemoryTimelineStore.class, TimelineStore.class);
-      conf.set(YarnConfiguration.TIMELINE_SERVICE_WEBAPP_ADDRESS,
-          TIMELINE_SERVICE_WEBAPP_ADDRESS);
+      conf.set(YarnConfiguration.TIMELINE_SERVICE_WEBAPP_ADDRESS, TIMELINE_SERVICE_WEBAPP_ADDRESS);
       conf.setInt(YarnConfiguration.TIMELINE_SERVICE_CLIENT_MAX_RETRIES, 1);
 
       testTimelineServer.init(conf);
@@ -102,11 +101,9 @@ public class TestTimelineServerRequests {
       entityToStore.setEntityId(ENTITY_ID);
       entityToStore.setStartTime(System.currentTimeMillis());
       TimelinePutResponse putResponse = client.putEntities(entityToStore);
-      if (!putResponse.getErrors().isEmpty()) {
-        LOG.error("putResponse errors: {}", putResponse.getErrors());
-      }
       assertTrue(putResponse.getErrors().isEmpty(),
-          "There were some errors in the putResponse");
+          String.format("There were some errors in the putResponse: %s",
+              putResponse.getErrors()));
       TimelineEntity entityToRead =
           testTimelineServer.getTimelineStore().getEntity(ENTITY_ID, ENTITY_TYPE,
               null);
@@ -124,9 +121,8 @@ public class TestTimelineServerRequests {
   }
 
   private void getEntity() {
-    String appUrl = "http://" + HOST + ":" + testTimelineServer.getPort()
-        + "/ws/v1/timeline/" + ENTITY_TYPE + "/" + ENTITY_ID
-        + "?user.name=foo";
+    String appUrl = String.format("http://%s:%d/ws/v1/timeline/%s/%s?user.name=foo",
+        HOST, testTimelineServer.getPort(), ENTITY_TYPE, ENTITY_ID);
     LOG.info("Getting timeline entity: {}", appUrl);
 
     Client client = ClientBuilder.newClient();
