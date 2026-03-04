@@ -28,6 +28,7 @@ public class JsonProviderFeature implements Feature {
   public boolean configure(FeatureContext context) {
     //Auto discovery should be disabled to ensure the custom providers will be used
     context.property(CommonProperties.MOXY_JSON_FEATURE_DISABLE, true);
+    context.property("jersey.config.jsonFeature", "JsonProviderFeature");
     context.register(IncludeRootJSONProvider.class, 2001);
     context.register(ExcludeRootJSONProvider.class, 2002);
     return true;
