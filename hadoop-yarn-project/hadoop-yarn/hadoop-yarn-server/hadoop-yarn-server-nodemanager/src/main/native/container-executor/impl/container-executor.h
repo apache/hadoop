@@ -54,7 +54,8 @@ enum operations {
   RUN_AS_USER_SYNC_YARN_SYSFS = 15,
   EXEC_CONTAINER = 16,
   RUN_RUNC_CONTAINER = 17,
-  REAP_RUNC_LAYER_MOUNTS = 18
+  REAP_RUNC_LAYER_MOUNTS = 18,
+  RUN_JSTACK = 19
 };
 
 #define NM_GROUP_KEY "yarn.nodemanager.linux-container-executor.group"
@@ -368,3 +369,8 @@ int is_terminal_support_enabled();
  * Check if runC feature is enabled
  */
 int is_runc_support_enabled();
+
+/**
+* Run jstack as process owner
+*/
+int run_jstack_as_user(const char *user, const char *pid);

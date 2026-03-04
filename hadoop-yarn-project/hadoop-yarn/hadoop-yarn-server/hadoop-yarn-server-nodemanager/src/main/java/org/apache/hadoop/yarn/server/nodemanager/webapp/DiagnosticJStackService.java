@@ -19,9 +19,12 @@ package org.apache.hadoop.yarn.server.nodemanager.webapp;
 
 
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.Shell;
+import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
@@ -29,6 +32,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Cont
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -112,8 +116,21 @@ public class DiagnosticJStackService {
       throw new IOException("Process with PID " + pid + " is no longer exists");
     }
 
-    String processOwner = processHandle.get().info().user().orElse("root");
-    String[] jstackCommand = {"sudo", "-u", processOwner, "jstack", String.valueOf(pid)};
+    String nmUser = System.getProperty("user.name");
+
+    String processOwner = processHandle.get().info().user().orElse(nmUser);
+    Configuration conf = context.getConf();
+
+    String yarnHomeEnvVar = System.getenv(ApplicationConstants.Environment.HADOOP_YARN_HOME.key());
+    File hadoopBin = new File(yarnHomeEnvVar, "bin");
+    String defaultPath = new File(hadoopBin, "container-executor").getAbsolutePath();
+    String containerExecutorPath = conf.get(YarnConfiguration.NM_LINUX_CONTAINER_EXECUTOR_PATH, defaultPath);
+
+    String javaHome = System.getProperty("java.home");
+    String jstackPath = javaHome + "/bin/jstack";
+    String[] jstackCommand = {
+            containerExecutorPath, "--run-jstack", processOwner, String.valueOf(pid), jstackPath
+    };
 
     LOG.info("Running JStack command: {}", Arrays.toString(jstackCommand));
 
