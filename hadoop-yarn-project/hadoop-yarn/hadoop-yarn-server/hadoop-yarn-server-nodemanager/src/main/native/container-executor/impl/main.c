@@ -468,8 +468,8 @@ static int validate_arguments(int argc, char **argv , int *operation) {
   }
 
   if(strcmp("--run-jstack", argv[1]) == 0) {
-    if(argc != 4){
-      fprintf(ERRORFILE, "Usage: container-executor --run-jstack <user> <pid>\n");
+    if(argc != 5){
+      fprintf(ERRORFILE, "Usage: container-executor --run-jstack <user> <pid> <jstack_path>\n");
       return INVALID_ARGUMENT_NUMBER;
     }
 
@@ -836,7 +836,7 @@ int main(int argc, char **argv) {
     exit_code = reap_runc_layer_mounts(cmd_input.runc_layer_count);
     break;
   case RUN_JSTACK:
-    exit_code = run_jstack_as_user(argv[2], argv[3]);
+    exit_code = run_jstack_as_user(argv[2], argv[3], argv[4]);
     break;
   default:
     fprintf(ERRORFILE, "Unexpected operation code: %d\n", operation);

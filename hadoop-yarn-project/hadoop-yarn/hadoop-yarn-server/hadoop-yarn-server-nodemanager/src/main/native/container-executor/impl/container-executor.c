@@ -3320,8 +3320,8 @@ int run_jstack_as_user(const char *user, const char *pid, const char *jstack_pat
      return exit_code;
   }
 
-  // Have the permission to run as another user
-  execlp(jstack_path, "jstack", pid, NULL);
+  //Use exec "$0" "$1" yo prevents buffer overflow vulnerabilities
+  execlp("/bin/bash", "bash", "-c", "exec \"$0\" \"$1\"", jstack_path, pid, NULL);
 
   fprintf(LOGFILE, "Failed to execute jstack: %s\n", strerror(errno));
   return UNABLE_TO_EXECUTE_CONTAINER_SCRIPT;
