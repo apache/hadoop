@@ -126,7 +126,7 @@ public final class SignerFactory {
     LOG.debug("Signer class from {} and key {} is {}", signerType, configKey, className);
 
     Signer signer =
-        S3AUtils.getInstanceFromReflection(className, null, null, Signer.class, "create",
+        S3AUtils.getInstanceFromReflection(className, conf, null, Signer.class, "create",
             configKey);
     requireNonNull(conf);
     if (signer instanceof Configurable sc) {
