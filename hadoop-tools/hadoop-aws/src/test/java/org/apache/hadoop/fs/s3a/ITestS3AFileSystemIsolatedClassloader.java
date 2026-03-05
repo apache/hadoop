@@ -49,7 +49,7 @@ public class ITestS3AFileSystemIsolatedClassloader extends AbstractS3ATestBase {
 
   private static class CustomCredentialsProvider implements AwsCredentialsProvider {
 
-    public CustomCredentialsProvider() {
+    CustomCredentialsProvider() {
     }
 
     @Override
@@ -181,8 +181,8 @@ public class ITestS3AFileSystemIsolatedClassloader extends AbstractS3ATestBase {
   @Test
   public void notIsolatedClassloader() throws IOException {
     Map<String, String> confToSet =
-      mapOf(Constants.AWS_S3_CLASSLOADER_ISOLATION, "false",
-            Constants.AWS_CREDENTIALS_PROVIDER, customClassName);
+        mapOf(Constants.AWS_S3_CLASSLOADER_ISOLATION, "false",
+              Constants.AWS_CREDENTIALS_PROVIDER, customClassName);
     assertInNewFilesystem(confToSet, (fs) -> {
       Assertions.assertThat(fs.getConf().getClassLoader())
               .describedAs("The classloader used to load s3a fs extensions")
