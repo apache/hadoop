@@ -3312,15 +3312,14 @@ int remove_docker_container(char**argv, int argc) {
 }
 
 int run_jstack_as_user(const char *user, const char *pid, const char *jstack_path){
-  struct passwd *user_info = get_user_info(user); // Initialise user info as required by set_user
-
   int exit_code = set_user(user);
   if (exit_code != 0) {
      fprintf(ERRORFILE, "Failed to set user to %s\n", user);
      return exit_code;
   }
 
-  //Use exec "$0" "$1" yo prevents buffer overflow vulnerabilities
+  // Use exec "$0" "$1" to treat as positional arguments,
+  // preventing command injection vulnerability CVE-2023-25555
   execlp("/bin/bash", "bash", "-c", "exec \"$0\" \"$1\"", jstack_path, pid, NULL);
 
   fprintf(LOGFILE, "Failed to execute jstack: %s\n", strerror(errno));

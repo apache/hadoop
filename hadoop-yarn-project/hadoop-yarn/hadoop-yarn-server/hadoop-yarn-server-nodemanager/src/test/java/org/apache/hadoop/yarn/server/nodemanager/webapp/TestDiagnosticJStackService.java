@@ -75,14 +75,14 @@ public class TestDiagnosticJStackService {
         ){
             String result = diagnosticJStackService.collectNodeThreadDump(NUMBER_OF_JSTACKS);
 
-            assertEquals(1, mockedConstruction.constructed().size(),
-                    "ShellCommandExecutor should be instantiated once only");
+            assertEquals(NUMBER_OF_JSTACKS, mockedConstruction.constructed().size(),
+              "ShellCommandExecutor should be instantiated relative to Number of JStacks");
 
-            Shell.ShellCommandExecutor mockExecutor = mockedConstruction.constructed().get(0);
-
-            // Verify the number of method calls
-            verify(mockExecutor, times(NUMBER_OF_JSTACKS)).execute();
-            verify(mockExecutor, times(NUMBER_OF_JSTACKS)).getOutput();
+            // Verify each individual mock was used exactly once
+            for (Shell.ShellCommandExecutor mockExecutor : mockedConstruction.constructed()) {
+                verify(mockExecutor, times(1)).execute();
+                verify(mockExecutor, times(1)).getOutput();
+            }
 
             assertTrue(result.contains("--- JStack iteration 0"));
             assertTrue(result.contains("--- JStack iteration 1"));
@@ -119,13 +119,14 @@ public class TestDiagnosticJStackService {
 
             String result = diagnosticJStackService.collectApplicationThreadDump(applicationIdStr, NUMBER_OF_JSTACKS);
 
-            assertEquals(pids.size(), mockedConstruction.constructed().size(),
-                    "ShellCommandExecutor should be instantiated for each PID");
+            assertEquals(pids.size()*NUMBER_OF_JSTACKS, mockedConstruction.constructed().size(),
+              "ShellCommandExecutor should be instantiated for each PID time Number Of JStacks");
 
-            Shell.ShellCommandExecutor mockExecutor1 = mockedConstruction.constructed().get(0);
-            // Verify the number of method calls
-            verify(mockExecutor1, times(NUMBER_OF_JSTACKS)).execute();
-            verify(mockExecutor1, times(NUMBER_OF_JSTACKS)).getOutput();
+            // Verify each individual mock was used exactly once
+            for (Shell.ShellCommandExecutor mockExecutor : mockedConstruction.constructed()) {
+                verify(mockExecutor, times(1)).execute();
+                verify(mockExecutor, times(1)).getOutput();
+            }
 
             assertTrue(result.contains("--- JStack iteration 0 for PID: 23 ---"));
             assertTrue(result.contains("--- JStack iteration 0 for PID: 12 ---"));

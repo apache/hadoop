@@ -18,36 +18,35 @@
 package org.apache.hadoop.yarn.server.nodemanager.webapp;
 
 
-import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.Shell;
-import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperationExecutor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.Optional;
 import java.util.Arrays;
-import java.util.stream.Stream;
 
 public class DiagnosticJStackService {
 
   private static final Logger LOG = LoggerFactory.getLogger(DiagnosticJStackService.class);
+
+  private static final String NM_USER = System.getProperty("user.name");
+  private static final String JSTACK_PATH = System.getProperty("java.home") + "/bin/jstack";
   private final Context context;
+  private final Configuration conf;
 
   public DiagnosticJStackService(Context context) {
     this.context = context;
+    this.conf = context.getConf();
   }
 
   public String collectNodeThreadDump(int numberOfJStack) throws IOException {
@@ -103,43 +102,32 @@ public class DiagnosticJStackService {
     StringBuilder result = new StringBuilder();
 
     for(Long pid : pids){
-      result.append(runJStack(pid, numJStacks));
+      result.append(String.format(
+        "=== Thread Dumps for PID: %d ===%n%s%n", pid, runJStack(pid, numJStacks)));
     }
 
     return result.toString();
   }
 
   private String runJStack(long pid, int numJStacks) throws IOException {
-    Optional<ProcessHandle> processHandle = ProcessHandle.of(pid);
+    ProcessHandle processHandle = ProcessHandle.of(pid)
+            .orElseThrow(() -> new IOException("Process with PID " + pid + " is no longer exists"));
 
-    if (processHandle.isEmpty()){
-      throw new IOException("Process with PID " + pid + " is no longer exists");
-    }
+    String processOwner = processHandle.info().user().orElse(NM_USER);
+    String containerExecutorPath = PrivilegedOperationExecutor.getContainerExecutorExecutablePath(conf);
 
-    String nmUser = System.getProperty("user.name");
-
-    String processOwner = processHandle.get().info().user().orElse(nmUser);
-    Configuration conf = context.getConf();
-
-    String yarnHomeEnvVar = System.getenv(ApplicationConstants.Environment.HADOOP_YARN_HOME.key());
-    File hadoopBin = new File(yarnHomeEnvVar, "bin");
-    String defaultPath = new File(hadoopBin, "container-executor").getAbsolutePath();
-    String containerExecutorPath = conf.get(YarnConfiguration.NM_LINUX_CONTAINER_EXECUTOR_PATH, defaultPath);
-
-    String javaHome = System.getProperty("java.home");
-    String jstackPath = javaHome + "/bin/jstack";
     String[] jstackCommand = {
-            containerExecutorPath, "--run-jstack", processOwner, String.valueOf(pid), jstackPath
+      containerExecutorPath, "--run-jstack", processOwner, String.valueOf(pid), JSTACK_PATH
     };
 
     LOG.info("Running JStack command: {}", Arrays.toString(jstackCommand));
 
-    Shell.ShellCommandExecutor cmd =
-      new Shell.ShellCommandExecutor(jstackCommand, null, null, 60_000);
-
     StringBuilder result = new StringBuilder();
 
     for (int i = 0; i < numJStacks; i++) {
+      Shell.ShellCommandExecutor cmd =
+        new Shell.ShellCommandExecutor(jstackCommand, null, null, 60_000);
+
       cmd.execute();
       result.append(String.format(
         "--- JStack iteration %d for PID: %d ---%n%s%n", i, pid, cmd.getOutput()));
@@ -147,6 +135,5 @@ public class DiagnosticJStackService {
 
     return result.toString();
   }
-
 
 }
