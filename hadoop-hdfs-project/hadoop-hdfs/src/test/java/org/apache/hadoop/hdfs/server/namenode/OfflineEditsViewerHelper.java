@@ -136,23 +136,6 @@ public class OfflineEditsViewerHelper {
     DFSTestUtil.runOperations(cluster, dfs, cluster.getConfiguration(0),
         dfs.getDefaultBlockSize(), 0);
 
-    String client = "client";
-    String clientMachine = "clientMachine";
-    String src = "/test/testTruncate";
-    Path srcPath = new Path(src);
-    byte[] contents = AppendTestUtil.initBuffer(512);
-    FSDataOutputStream out = dfs.create(srcPath, true, 4, (short)3,
-            dfs.getDefaultBlockSize());
-    out.write(contents, 0, 511);
-    out.close();
-
-    INodesInPath iip = cluster.getNamesystem().getFSDirectory().getINodesInPath(src, FSDirectory.DirOp.WRITE);
-    cluster.getNamesystem().writeLock();
-    Block truncateBlock = FSDirTruncateOp.prepareFileForTruncate(cluster.getNamesystem(), iip,
-            client, clientMachine, 1, null);
-    cluster.getNamesystem().getEditLog().logTruncate(src, client, clientMachine, truncateBlock.getNumBytes()-1, Time.now(), truncateBlock);
-    cluster.getNamesystem().writeUnlock();
-    
     // OP_ROLLING_UPGRADE_START
     cluster.getNamesystem().getEditLog().logStartRollingUpgrade(Time.now());
     // OP_ROLLING_UPGRADE_FINALIZE
