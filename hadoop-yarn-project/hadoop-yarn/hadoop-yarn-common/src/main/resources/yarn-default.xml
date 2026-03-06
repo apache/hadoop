@@ -1074,15 +1074,6 @@
 
   <property>
     <description>The setting that controls whether yarn system metrics is
-    published to the Timeline server (version one) or not, by RM.
-    This configuration is now deprecated in favor of
-    yarn.system-metrics-publisher.enabled.</description>
-    <name>yarn.resourcemanager.system-metrics-publisher.enabled</name>
-    <value>false</value>
-  </property>
-
-  <property>
-    <description>The setting that controls whether yarn system metrics is
     published on the Timeline service or not by RM And NM.</description>
     <name>yarn.system-metrics-publisher.enabled</name>
     <value>false</value>
@@ -4631,6 +4622,17 @@
     </description>
     <name>yarn.scheduler.configuration.zk-store.parent-path</name>
     <value>/confstore</value>
+  </property>
+
+  <property>
+    <description>
+      ZK read-retry seconds when using zookeeper-based configuration store.
+      Should the ZK configuration store being formatted while one of the RM
+      is in the INIT state, allow retries using this interval in the hope that the store will be
+      re-populated with some data soon.
+    </description>
+    <name>yarn.scheduler.configuration.zk-store.read-retry-secs</name>
+    <value>3</value>
   </property>
 
   <property>

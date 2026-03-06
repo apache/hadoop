@@ -21,13 +21,13 @@ for the same.
 ## Introduction
 
 ABFS driver has now built support for
-FNS accounts (over BlobEndpoint that WASB Driver uses) using the ABFS scheme.
+FNS accounts (over BlobEndpoint that WASB Driver used to have) using the ABFS scheme.
 Refer to: [ABFS Driver for Namespace Disabled Accounts](./fns_blob.html) for more details.
 
-The legacy WASB driver has been **deprecated** and is no longer recommended for
-use. Refer to: [WASB Deprecation](./wasb.html) for more details.
+The legacy WASB driver has been **removed** and is no longer part of official hadoop releases.
+Refer to: [WASB Deprecation](./wasb.html) for more details.
 It's highly recommended for current WASB Driver users to migrate to ABFS driver,
-the only Microsoft driver for Azure Storage.
+the only Hadoop driver for Azure Storage from Microsoft.
 
 Microsoft recommends all Big Data and Analytics users to use
 Azure Data Lake Gen2 (ADLS Gen2) using the ABFS driver. It is thus preferred to

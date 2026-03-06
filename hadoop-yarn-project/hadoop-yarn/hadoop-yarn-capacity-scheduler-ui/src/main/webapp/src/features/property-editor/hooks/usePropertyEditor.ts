@@ -26,9 +26,50 @@ import type { PropertyDescriptor, ValidationRule } from '~/types/property-descri
 import { queuePropertyDefinitions } from '~/config/properties/queue-properties';
 import { toast } from 'sonner';
 import { useValidation } from '~/contexts/ValidationContext';
-import { validateQueue } from '~/features/validation/service';
+import { validateQueue, hasBlockingIssues, splitIssues } from '~/features/validation/service';
 import type { ValidationIssue } from '~/types';
 import { isBlockingError } from '~/features/validation/ruleCategories';
+import type { FieldErrors } from 'react-hook-form';
+
+type CombinedError = { type: string; message: string };
+
+function mergeFormAndValidationErrors(
+  zodErrors: FieldErrors,
+  queueIssues: Record<string, ValidationIssue[]>,
+  normalizeFieldName: (field: string) => string,
+): Record<string, CombinedError> {
+  const combined: Record<string, CombinedError> = {};
+
+  // Add Zod errors
+  Object.entries(zodErrors).forEach(([field, error]) => {
+    if (!error) return;
+    const normalizedField = normalizeFieldName(field);
+    combined[normalizedField] = {
+      type: typeof error.type === 'string' ? error.type : 'validation',
+      message: typeof error.message === 'string' ? error.message : 'Validation error',
+    };
+  });
+
+  // Merge validation errors
+  Object.entries(queueIssues).forEach(([field, issues]) => {
+    const { errors } = splitIssues(issues);
+    if (errors.length === 0) return;
+
+    const errorMessage = errors.map((e) => e.message).join('. ');
+    const existing = combined[field];
+
+    if (existing) {
+      combined[field] = {
+        ...existing,
+        message: existing.message ? `${existing.message}. ${errorMessage}` : errorMessage,
+      };
+    } else {
+      combined[field] = { type: 'business', message: errorMessage };
+    }
+  });
+
+  return combined;
+}
 import { validatePropertyChange } from '~/features/validation/crossQueue';
 import { buildPropertyKey } from '~/utils/propertyUtils';
 import { CONFIG_PREFIXES } from '~/types';
@@ -551,54 +592,10 @@ export function usePropertyEditor({
   // Get combined errors and validity state
   const zodErrors = form.formState.errors;
   const queueIssues = validationState[queuePath] ?? {};
-
-  const combinedErrorsTemp: Record<string, { type: string; message: string }> = {};
-
-  Object.entries(zodErrors).forEach(([field, error]) => {
-    if (!error) {
-      return;
-    }
-
-    const normalizedField = normalizeFieldName(field);
-    const message = typeof error.message === 'string' ? error.message : 'Validation error';
-
-    combinedErrorsTemp[normalizedField] = {
-      type: typeof error.type === 'string' ? error.type : 'validation',
-      message,
-    };
-  });
-
-  Object.entries(queueIssues).forEach(([field, issues]) => {
-    const errorMessages = issues
-      .filter((issue) => issue.severity === 'error')
-      .map((issue) => issue.message);
-
-    if (errorMessages.length === 0) {
-      return;
-    }
-
-    if (combinedErrorsTemp[field]) {
-      const existingMessage = combinedErrorsTemp[field].message || '';
-      combinedErrorsTemp[field] = {
-        ...combinedErrorsTemp[field],
-        message: existingMessage
-          ? `${existingMessage}. ${errorMessages.join('. ')}`
-          : errorMessages.join('. '),
-      };
-    } else {
-      combinedErrorsTemp[field] = {
-        type: 'business',
-        message: errorMessages.join('. '),
-      };
-    }
-  });
-
-  const combinedErrors = combinedErrorsTemp;
+  const combinedErrors = mergeFormAndValidationErrors(zodErrors, queueIssues, normalizeFieldName);
 
   const hasZodErrors = !form.formState.isValid;
-  const hasValidationErrors = Object.values(queueIssues).some((issues) =>
-    issues.some((issue) => issue.severity === 'error'),
-  );
+  const hasValidationErrors = Object.values(queueIssues).some(hasBlockingIssues);
   const isFormValid = !hasZodErrors && !hasValidationErrors;
 
   return {

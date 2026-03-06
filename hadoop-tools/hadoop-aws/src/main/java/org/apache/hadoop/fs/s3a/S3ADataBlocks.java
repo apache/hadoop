@@ -133,9 +133,8 @@ public final class S3ADataBlocks {
     public BlockUploadData(File file, final Supplier<Boolean> isOpen) {
       checkArgument(file.exists(), "No file: " + file);
       final long length = file.length();
-      checkArgument(length <= Integer.MAX_VALUE,
-          "File %s is too long to upload: %d", file, length);
-      this.contentProvider = fileContentProvider(file, 0, (int) length, isOpen);
+      checkArgument(length >= 0, "Length is negative for file %s (%d)", file, length);
+      this.contentProvider = fileContentProvider(file, 0, length, isOpen);
     }
 
     /**
@@ -169,7 +168,7 @@ public final class S3ADataBlocks {
      * Size as declared by the content provider.
      * @return size of the data
      */
-    int getSize() {
+    long getSize() {
       return contentProvider.getSize();
     }
 

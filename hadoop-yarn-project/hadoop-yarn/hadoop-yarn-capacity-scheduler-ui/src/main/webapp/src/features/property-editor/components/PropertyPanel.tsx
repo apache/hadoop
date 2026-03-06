@@ -17,8 +17,9 @@
  */
 
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useReducer, useState, useEffect, useRef } from 'react';
 import { Save, RotateCcw, GitBranch, Info, Settings, Edit, AlertTriangle } from 'lucide-react';
+import { useShallow } from 'zustand/react/shallow';
 import { useSchedulerStore } from '~/stores/schedulerStore';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '~/components/ui/sheet';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '~/components/ui/tabs';
@@ -39,27 +40,83 @@ import { AUTO_CREATION_PROPS } from '~/types/constants/auto-creation';
 import { useKeyboardShortcuts, getModifierKey } from '~/hooks/useKeyboardShortcuts';
 import { Kbd } from '~/components/ui/kbd';
 
+// -- Form lifecycle reducer --------------------------------------------------
+// Replaces individual useState calls for hasChanges, isFormDirty, isSubmitting,
+// showUnsavedDialog, and pendingClose with a single reducer that prevents
+// impossible state combinations (e.g. confirming-close without pendingClose).
+
+type FormState =
+  | { status: 'idle'; hasChanges: boolean; isFormDirty: boolean }
+  | { status: 'submitting'; hasChanges: boolean; isFormDirty: boolean }
+  | { status: 'confirming-close'; hasChanges: boolean; isFormDirty: boolean };
+
+type FormAction =
+  | { type: 'SET_HAS_CHANGES'; value: boolean }
+  | { type: 'SET_FORM_DIRTY'; value: boolean }
+  | { type: 'START_SUBMIT' }
+  | { type: 'END_SUBMIT' }
+  | { type: 'REQUEST_CLOSE' }
+  | { type: 'CANCEL_CLOSE' }
+  | { type: 'RESET' };
+
+const INITIAL_FORM_STATE: FormState = {
+  status: 'idle',
+  hasChanges: false,
+  isFormDirty: false,
+};
+
+function formReducer(state: FormState, action: FormAction): FormState {
+  switch (action.type) {
+    case 'SET_HAS_CHANGES':
+      return { ...state, hasChanges: action.value };
+    case 'SET_FORM_DIRTY':
+      return { ...state, isFormDirty: action.value };
+    case 'START_SUBMIT':
+      return { ...state, status: 'submitting' };
+    case 'END_SUBMIT':
+      return { ...state, status: state.status === 'submitting' ? 'idle' : state.status };
+    case 'REQUEST_CLOSE':
+      return { ...state, status: 'confirming-close' };
+    case 'CANCEL_CLOSE':
+      return { ...state, status: state.status === 'confirming-close' ? 'idle' : state.status };
+    case 'RESET':
+      return INITIAL_FORM_STATE;
+    default:
+      return state;
+  }
+}
+
 export const PropertyPanel: React.FC = () => {
+  // State values (trigger re-renders only when these specific values change)
   const {
     selectedQueuePath,
     isPropertyPanelOpen,
-    setPropertyPanelOpen,
-    getQueueByPath,
-    selectQueue,
     propertyPanelInitialTab,
     shouldOpenTemplateConfig,
-    clearTemplateConfigRequest,
-  } = useSchedulerStore();
+    stagedChanges,
+  } = useSchedulerStore(
+    useShallow((s) => ({
+      selectedQueuePath: s.selectedQueuePath,
+      isPropertyPanelOpen: s.isPropertyPanelOpen,
+      propertyPanelInitialTab: s.propertyPanelInitialTab,
+      shouldOpenTemplateConfig: s.shouldOpenTemplateConfig,
+      stagedChanges: s.stagedChanges,
+    })),
+  );
 
-  const getQueuePropertyValue = useSchedulerStore((state) => state.getQueuePropertyValue);
-  const stagedChanges = useSchedulerStore((state) => state.stagedChanges);
+  // Actions (stable references, never trigger re-renders)
+  const setPropertyPanelOpen = useSchedulerStore((s) => s.setPropertyPanelOpen);
+  const getQueueByPath = useSchedulerStore((s) => s.getQueueByPath);
+  const selectQueue = useSchedulerStore((s) => s.selectQueue);
+  const clearTemplateConfigRequest = useSchedulerStore((s) => s.clearTemplateConfigRequest);
+  const getQueuePropertyValue = useSchedulerStore((s) => s.getQueuePropertyValue);
+
+  const [formState, dispatch] = useReducer(formReducer, INITIAL_FORM_STATE);
+  const { hasChanges, isFormDirty } = formState;
+  const isSubmitting = formState.status === 'submitting';
+  const showUnsavedDialog = formState.status === 'confirming-close';
 
   const [tabValue, setTabValue] = useState('overview');
-  const [hasChanges, setHasChanges] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isFormDirty, setIsFormDirty] = useState(false);
-  const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
-  const [pendingClose, setPendingClose] = useState(false);
   const [isSummaryOpen, setIsSummaryOpen] = useState(false);
   const [isTemplateDialogOpen, setIsTemplateDialogOpen] = useState(false);
 
@@ -145,12 +202,10 @@ export const PropertyPanel: React.FC = () => {
 
   const handleClose = (force = false) => {
     if (!force && isFormDirty && tabValue === 'settings') {
-      setShowUnsavedDialog(true);
-      setPendingClose(true);
+      dispatch({ type: 'REQUEST_CLOSE' });
     } else {
       setPropertyPanelOpen(false);
       selectQueue(null); // Deselect queue when panel closes
-      setPendingClose(false);
     }
   };
 
@@ -181,15 +236,15 @@ export const PropertyPanel: React.FC = () => {
   };
 
   const handleHasChangesChange = (newHasChanges: boolean) => {
-    setHasChanges(newHasChanges);
+    dispatch({ type: 'SET_HAS_CHANGES', value: newHasChanges });
   };
 
   const handleFormDirtyChange = (newIsFormDirty: boolean) => {
-    setIsFormDirty(newIsFormDirty);
+    dispatch({ type: 'SET_FORM_DIRTY', value: newIsFormDirty });
   };
 
   const handleIsSubmittingChange = (newIsSubmitting: boolean) => {
-    setIsSubmitting(newIsSubmitting);
+    dispatch(newIsSubmitting ? { type: 'START_SUBMIT' } : { type: 'END_SUBMIT' });
   };
 
   const handleSaveAndClose = async () => {
@@ -201,23 +256,22 @@ export const PropertyPanel: React.FC = () => {
     }
 
     await handleSubmit();
-    if (pendingClose) {
+    if (showUnsavedDialog) {
       handleClose(true);
     }
-    setShowUnsavedDialog(false);
+    dispatch({ type: 'CANCEL_CLOSE' });
   };
 
   const handleDiscardAndClose = () => {
     handleReset();
     handleClose(true);
-    setShowUnsavedDialog(false);
+    dispatch({ type: 'CANCEL_CLOSE' });
   };
 
-  // Reset hasChanges and form dirty state when panel opens/closes or queue changes
+  // Reset form state when panel opens/closes or queue changes
   useEffect(() => {
     if (!isPropertyPanelOpen || !selectedQueuePath) {
-      setHasChanges(false);
-      setIsFormDirty(false);
+      dispatch({ type: 'RESET' });
       setIsSummaryOpen(false);
     }
   }, [isPropertyPanelOpen, selectedQueuePath]);
@@ -429,7 +483,9 @@ export const PropertyPanel: React.FC = () => {
 
       <UnsavedChangesDialog
         open={showUnsavedDialog}
-        onOpenChange={setShowUnsavedDialog}
+        onOpenChange={(open) => {
+          if (!open) dispatch({ type: 'CANCEL_CLOSE' });
+        }}
         onSave={handleSaveAndClose}
         onDiscard={handleDiscardAndClose}
         isSaving={isSubmitting}

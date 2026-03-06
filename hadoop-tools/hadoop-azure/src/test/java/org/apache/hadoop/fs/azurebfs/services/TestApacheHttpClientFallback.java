@@ -177,7 +177,8 @@ public class TestApacheHttpClientFallback extends AbstractAbfsTestWithTimeout {
 
     Mockito.doNothing()
         .when(op)
-        .signRequest(Mockito.any(AbfsHttpOperation.class), Mockito.anyInt());
+        .signRequest(Mockito.any(AbfsHttpOperation.class), Mockito.anyInt(),
+            Mockito.anyBoolean());
 
     Mockito.doAnswer(answer -> {
       AbfsHttpOperation operation = Mockito.spy(

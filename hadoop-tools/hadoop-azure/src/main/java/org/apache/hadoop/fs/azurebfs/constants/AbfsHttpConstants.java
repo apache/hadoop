@@ -137,6 +137,9 @@ public final class AbfsHttpConstants {
   public static final String HASH = "#";
   public static final String TRUE = "true";
   public static final String ZERO = "0";
+  public static final String UNDERSCORE = "_";
+  public static final String OPENING_SQUARE_BRACKET = "[";
+  public static final String CLOSING_SQUARE_BRACKET = "]";
 
   public static final String PLUS_ENCODE = "%20";
   public static final String FORWARD_SLASH_ENCODE = "%2F";
@@ -169,7 +172,7 @@ public final class AbfsHttpConstants {
   /**
    * HTTP status code indicating that the server has received too many requests and the client should
    * qualify for retrying the operation, as described in the Microsoft Azure documentation.
-   * {@link "https://learn.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/how-to-use-vm-token#error-handling"}.
+   * @see "https://learn.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/how-to-use-vm-token#error-handling"
    */
   public static final int HTTP_TOO_MANY_REQUESTS = 429;
 
@@ -180,8 +183,6 @@ public final class AbfsHttpConstants {
   public static final char CHAR_EQUALS = '=';
   public static final char CHAR_STAR = '*';
   public static final char CHAR_PLUS = '+';
-  public static final int LOW_HEAP_SPACE_FACTOR = 4;
-  public static final double MEDIUM_HEAP_SPACE_FACTOR = 8;
 
   public static final int SPLIT_NO_LIMIT = -1;
 
@@ -249,6 +250,22 @@ public final class AbfsHttpConstants {
   public static final String XML_TAG_COMMITTED_BLOCKS = "CommittedBlocks";
   public static final String XML_TAG_BLOCK_NAME = "Block";
   public static final String PUT_BLOCK_LIST = "PutBlockList";
+  // ===== List Containers (Blob Endpoint) XML Tags =====
+  public static final String XML_TAG_CONTAINERS = "Containers";
+  public static final String XML_TAG_CONTAINER = "Container";
+  public static final String XML_TAG_VERSION = "Version";
+  public static final String XML_TAG_DELETED = "Deleted";
+  public static final String XML_TAG_PREFIX = "Prefix";
+  public static final String XML_TAG_MARKER = "Marker";
+  public static final String XML_TAG_MAX_RESULTS = "MaxResults";
+  public static final String XML_TAG_LEASE_STATUS = "LeaseStatus";
+  public static final String XML_TAG_LEASE_STATE = "LeaseState";
+  public static final String XML_TAG_LEASE_DURATION = "LeaseDuration";
+  public static final String XML_TAG_PUBLIC_ACCESS = "PublicAccess";
+  public static final String XML_TAG_HAS_IMMUTABILITY_POLICY = "HasImmutabilityPolicy";
+  public static final String XML_TAG_HAS_LEGAL_HOLD = "HasLegalHold";
+  public static final String XML_TAG_DELETED_TIME = "DeletedTime";
+  public static final String XML_TAG_REMAINING_RETENTION_DAYS = "RemainingRetentionDays";
 
   /**
    * Value that differentiates categories of the HTTP status.

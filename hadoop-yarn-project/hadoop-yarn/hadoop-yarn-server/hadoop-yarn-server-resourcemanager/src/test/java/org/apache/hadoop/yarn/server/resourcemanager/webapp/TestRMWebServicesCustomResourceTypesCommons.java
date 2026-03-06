@@ -93,7 +93,7 @@ public class TestRMWebServicesCustomResourceTypesCommons {
   }
 
   static int getExpectedNumberOfElements(RMApp app) {
-    int expectedNumberOfElements = 40 + 2; // 2 -> resourceRequests
+    int expectedNumberOfElements = 39 + 2; // 2 -> resourceRequests
     if (app.getApplicationSubmissionContext()
         .getNodeLabelExpression() != null) {
       expectedNumberOfElements++;

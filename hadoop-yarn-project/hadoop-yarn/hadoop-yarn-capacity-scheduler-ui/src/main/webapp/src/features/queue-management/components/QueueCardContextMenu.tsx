@@ -93,7 +93,7 @@ export const QueueCardContextMenu: React.FC<QueueCardContextMenuProps> = ({
   };
 
   const contextMenuContent = (
-    <ContextMenuContent className="w-48">
+    <ContextMenuContent className="w-48" aria-label={`Queue options for ${queuePath}`}>
       <ContextMenuItem
         onClick={(e) => {
           e.stopPropagation();

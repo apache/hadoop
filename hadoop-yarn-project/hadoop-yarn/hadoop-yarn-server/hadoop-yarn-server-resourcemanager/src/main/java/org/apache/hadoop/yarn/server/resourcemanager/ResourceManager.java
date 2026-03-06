@@ -1418,9 +1418,7 @@ public class ResourceManager extends CompositeService
         false)) {
       String apiPackages = "org.apache.hadoop.yarn.service.webapp;" +
           "org.apache.hadoop.yarn.webapp";
-      params.put("com.sun.jersey.config.property.resourceConfigClass",
-          "com.sun.jersey.api.core.PackagesResourceConfig");
-      params.put("com.sun.jersey.config.property.packages", apiPackages);
+      params.put("jersey.config.server.provider.packages", apiPackages);
     }
 
     Builder<ResourceManager> builder =
@@ -1524,7 +1522,7 @@ public class ResourceManager extends CompositeService
 
     try {
       RMWebApp rmWebApp = new RMWebApp(this);
-      builder.withResourceConfig(rmWebApp.resourceConfig());
+      builder.withResourceConfig(rmWebApp.resourceConfig(conf));
       webApp = builder.start(rmWebApp, uiWebAppContext, schedulerUiWebAppContext);
     } catch (WebAppException e) {
       webApp = e.getWebApp();

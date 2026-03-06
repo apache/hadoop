@@ -21,7 +21,6 @@ export { PlacementRules } from './components/PlacementRules';
 export { PlacementRuleForm } from './components/PlacementRuleForm';
 export { PlacementRulesList } from './components/PlacementRulesList';
 export { PlacementRulesMigrationDialog } from './components/MigrationDialog';
-export { usePlacementRules } from './hooks/usePlacementRules';
 export {
   placementRuleFormSchema,
   type PlacementRuleFormData,

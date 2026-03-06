@@ -18,11 +18,11 @@
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-project</artifactId>
-    <version>3.5.0-SNAPSHOT</version>
+    <version>3.6.0-SNAPSHOT</version>
     <relativePath>../../hadoop-project</relativePath>
   </parent>
   <artifactId>hadoop-client-minicluster</artifactId>
-  <version>3.5.0-SNAPSHOT</version>
+  <version>3.6.0-SNAPSHOT</version>
   <packaging>jar</packaging>
 
   <description>Apache Hadoop Minicluster for Clients</description>
@@ -718,6 +718,13 @@
                       <artifact>*:*</artifact>
                       <excludes>
                         <exclude>**/*.java</exclude>
+                      </excludes>
+                    </filter>
+                    <!-- Some of our dependencies include html, so remove it. -->
+                    <filter>
+                      <artifact>*:*</artifact>
+                      <excludes>
+                        <exclude>**/*.html</exclude>
                       </excludes>
                     </filter>
                     <!-- We pull in several test jars; keep out the actual test classes -->

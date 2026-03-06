@@ -374,7 +374,7 @@ public class TestRMWebServicesDelegationTokenAuthentication {
         try {
           reader = new BufferedReader(new InputStreamReader(response, StandardCharsets.UTF_8));
           for (String line; (line = reader.readLine()) != null;) {
-            JSONObject obj = new JSONObject(line).getJSONObject("delegation-token");
+            JSONObject obj = new JSONObject(line);
             if (obj.has("token")) {
               token = obj.getString("token");
             }
@@ -457,7 +457,7 @@ public class TestRMWebServicesDelegationTokenAuthentication {
           String line;
           while ((line = reader.readLine()) != null) {
             String dtoken = line;
-            JSONObject obj = new JSONObject(dtoken).getJSONObject("delegation-token");
+            JSONObject obj = new JSONObject(dtoken);
             if (obj.has("token")) {
               reader.close();
               response.close();

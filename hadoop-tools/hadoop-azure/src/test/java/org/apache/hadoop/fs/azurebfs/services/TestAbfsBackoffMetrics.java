@@ -40,7 +40,7 @@ public class TestAbfsBackoffMetrics {
      */
     @BeforeEach
     public void setUp() {
-        metrics = new AbfsBackoffMetrics();
+        metrics = new AbfsBackoffMetrics(true);
     }
 
     /**

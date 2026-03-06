@@ -19,7 +19,6 @@ package org.apache.hadoop.nfs;
 
 import org.junit.jupiter.api.Assertions;
 
-import org.apache.hadoop.nfs.NfsTime;
 import org.apache.hadoop.oncrpc.XDR;
 import org.junit.jupiter.api.Test;
 

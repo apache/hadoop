@@ -184,6 +184,15 @@ public abstract class SecretManager<T extends TokenIdentifier> {
   }
 
   /**
+   * Validate the secretKey length is equal to the selected config.
+   * @param secretKey secretKey
+   * @return true if the secretKey length is equal to the currently configured length
+   */
+  protected boolean validateSecretKeyLength(byte[] secretKey) {
+    return secretKey.length * 8 == selectedLength;
+  }
+
+  /**
    * Compute HMAC of the identifier using the secret key and return the 
    * output as password
    * @param identifier the bytes of the identifier

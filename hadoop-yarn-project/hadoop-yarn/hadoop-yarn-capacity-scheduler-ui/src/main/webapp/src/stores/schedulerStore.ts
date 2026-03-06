@@ -74,6 +74,5 @@ export const createSchedulerStore = (apiClient: YarnApiClient) => {
   return create(createStoreImplementation(apiClient));
 };
 
-// Re-export types and utilities
+// Re-export types
 export type { SchedulerStore } from './slices';
-export { traverseQueueTree } from './slices/queueDataSlice';
