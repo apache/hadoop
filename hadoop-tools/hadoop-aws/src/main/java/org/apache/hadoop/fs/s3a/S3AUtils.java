@@ -663,7 +663,17 @@ public final class S3AUtils {
     try {
       ClassLoader classLoader;
       if (conf != null) {
-        classLoader = conf.getClassLoader();
+        if (conf.getBoolean(AWS_S3_CLASSLOADER_ISOLATION,
+            DEFAULT_AWS_S3_CLASSLOADER_ISOLATION)) {
+          classLoader = conf.getClassLoader();
+        } else {
+          ClassLoader confLoader = conf.getClassLoader();
+          classLoader = (confLoader != null) ? confLoader
+              : Thread.currentThread().getContextClassLoader();
+        }
+        if (classLoader == null) {
+          classLoader = S3AUtils.class.getClassLoader();
+        }
         LOG.debug("Loading class {} with Configuration classloader {}",
               className, classLoader);
       } else {
