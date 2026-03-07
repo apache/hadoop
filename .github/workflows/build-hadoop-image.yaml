@@ -15,8 +15,8 @@
 
 name: build-hadoop-image
 
-# This workflow builds the Hadoop docker image.
-# For non-PR runs, it also pushes the image to the registry, tagging it based on the branch name.
+# This workflow builds the Docker image if it does not exists already.
+# For non-PR runs, it also publishes the image to the registry, tagging it by the full SHA of the commit.
 
 on:
   pull_request:
@@ -25,9 +25,17 @@ on:
       - 'docker-hadoop-**'
       - '!docker-hadoop-runner-**'
   push:
-    branches:
+    branches-ignore:
       - 'docker-hadoop-**'
-      - '!docker-hadoop-runner-**'
+  workflow_call:
+    outputs:
+      image-id:
+        description: "Docker image ID in repo/owner/name:tag format"
+        value: ${{ jobs.build.outputs.image-id }}
+
+concurrency:
+  group: ${{ github.sha }}
+  cancel-in-progress: false
 
 permissions:
   contents: read
@@ -36,6 +44,8 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    outputs:
+      image-id: ${{ steps.meta.outputs.tags }}
     steps:
       - name: Generate image ID
         id: meta
@@ -44,19 +54,31 @@ jobs:
           images: |
             ghcr.io/${{ github.repository_owner }}/hadoop
           tags: |
-            type=match,pattern=docker-hadoop-(.*),value={{branch}},group=1
-          flavor: |
-            latest=false
+            # keep single item
+            # any further tags should be added only in build-and-tag-hadoop-image.yaml, not here
+            type=sha,prefix=,format=long
+
+      - name: Check if image exists
+        id: pull
+        run: |
+          success=false
+          if docker pull "$DOCKER_METADATA_OUTPUT_TAGS"; then
+            success=true
+          fi
+
+          echo "success=$success" >> $GITHUB_OUTPUT
 
       - name: Set up QEMU
+        if: ${{ steps.pull.outputs.success == 'false' }}
         uses: docker/setup-qemu-action@49b3bc8e6bdd4a60e6116a5414239cba5943d3cf
 
       - name: Set up Docker Buildx
+        if: ${{ steps.pull.outputs.success == 'false' }}
         uses: docker/setup-buildx-action@c47758b77c9736f4b2ef4073d4d51994fabfe349
 
       - name: Login to ghcr.io
         id: login
-        if: ${{ github.event_name != 'pull_request' }}
+        if: ${{ github.event_name != 'pull_request' && steps.pull.outputs.success == 'false' }}
         uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567
         with:
           registry: ghcr.io
@@ -65,6 +87,7 @@ jobs:
 
       - name: Build and push image
         id: build
+        if: ${{ steps.pull.outputs.success == 'false' }}
         uses: docker/build-push-action@4f58ea79222b3b9dc2c8bbdd6debcef730109a75
         with:
           platforms: linux/amd64,linux/arm64
