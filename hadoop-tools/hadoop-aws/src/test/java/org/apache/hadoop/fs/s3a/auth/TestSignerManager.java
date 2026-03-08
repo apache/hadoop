@@ -24,12 +24,20 @@ import java.security.PrivilegedExceptionAction;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
 
 import org.assertj.core.api.Assertions;
 import software.amazon.awssdk.core.interceptor.ExecutionAttributes;
 import software.amazon.awssdk.core.signer.Signer;
+import software.amazon.awssdk.http.auth.aws.signer.AwsV4HttpSigner;
+import software.amazon.awssdk.http.auth.spi.signer.AsyncSignRequest;
+import software.amazon.awssdk.http.auth.spi.signer.AsyncSignedRequest;
+import software.amazon.awssdk.http.auth.spi.signer.HttpSigner;
+import software.amazon.awssdk.http.auth.spi.signer.SignRequest;
+import software.amazon.awssdk.http.auth.spi.signer.SignedRequest;
 import software.amazon.awssdk.http.SdkHttpFullRequest;
 import software.amazon.awssdk.http.SdkHttpMethod;
+import software.amazon.awssdk.identity.spi.AwsCredentialsIdentity;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -47,6 +55,7 @@ import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 
 import static org.apache.hadoop.fs.s3a.Constants.CUSTOM_SIGNERS;
+import static org.apache.hadoop.fs.s3a.Constants.HTTP_SIGNER_CLASS_NAME;
 import static org.apache.hadoop.fs.s3a.auth.SignerFactory.S3_V2_SIGNER;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -71,6 +80,7 @@ public class TestSignerManager extends AbstractHadoopTestBase {
     SignerInitializerForTest.reset();
     SignerForInitializerTest.reset();
     SignerInitializer2ForTest.reset();
+    ConfigurableHttpSignerForTest.reset();
   }
 
   @Test
@@ -84,6 +94,22 @@ public class TestSignerManager extends AbstractHadoopTestBase {
     SignerManager signerManager = new SignerManager("dontcare", null, config,
         UserGroupInformation.getCurrentUser());
     signerManager.initCustomSigners();
+  }
+
+  /**
+   * HADOOP-19805: createHttpSigner must call setConf(conf) when the signer
+   * implements Configurable.
+   */
+  @Test
+  public void testCreateHttpSignerSetsConfWhenConfigurable() throws IOException {
+    ConfigurableHttpSignerForTest.reset();
+    Configuration conf = new Configuration();
+    conf.setClass(HTTP_SIGNER_CLASS_NAME, ConfigurableHttpSignerForTest.class,
+        HttpSigner.class);
+    SignerFactory.createHttpSigner(conf, "test", HTTP_SIGNER_CLASS_NAME);
+    assertThat(ConfigurableHttpSignerForTest.receivedConf)
+        .describedAs("createHttpSigner should call setConf on Configurable signer")
+        .isSameAs(conf);
   }
 
   @Test
@@ -361,6 +387,42 @@ public class TestSignerManager extends AbstractHadoopTestBase {
 
     public static void reset() {
       initialized = false;
+    }
+  }
+
+  /**
+   * HttpSigner that implements Configurable for HADOOP-19805 test.
+   * Records the Configuration passed to setConf.
+   */
+  @Private
+  public static class ConfigurableHttpSignerForTest extends Configured
+      implements HttpSigner<AwsCredentialsIdentity> {
+
+    static volatile Configuration receivedConf;
+
+    private final HttpSigner<AwsCredentialsIdentity> delegate =
+        AwsV4HttpSigner.create();
+
+    @Override
+    public void setConf(Configuration conf) {
+      super.setConf(conf);
+      receivedConf = conf;
+    }
+
+    @Override
+    public SignedRequest sign(
+        SignRequest<? extends AwsCredentialsIdentity> request) {
+      return delegate.sign(request);
+    }
+
+    @Override
+    public CompletableFuture<AsyncSignedRequest> signAsync(
+        AsyncSignRequest<? extends AwsCredentialsIdentity> request) {
+      return delegate.signAsync(request);
+    }
+
+    static void reset() {
+      receivedConf = null;
     }
   }
 
