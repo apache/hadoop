@@ -82,6 +82,32 @@ public class TestFSEditLogOp {
     assertEquals(9L, op.truncateBlock.getGenerationStamp());
   }
 
+  /**
+   * When stanza has multiple BLOCK children, fromXml uses the first one
+   * (st.getChildren("BLOCK").get(0)).
+   */
+  @Test
+  public void testFromXmlWithMultipleBlocksUsesFirst()
+      throws InvalidXmlException {
+    FSEditLogOp.TruncateOp op = new FSEditLogOp.TruncateOp();
+
+    Stanza root = new Stanza();
+    root.addChild("SRC", stanzaValue("/path"));
+    root.addChild("CLIENTNAME", stanzaValue("c"));
+    root.addChild("CLIENTMACHINE", stanzaValue("m"));
+    root.addChild("NEWLENGTH", stanzaValue("0"));
+    root.addChild("TIMESTAMP", stanzaValue("0"));
+    root.addChild("BLOCK", blockStanza(1L, 10L, 100L));
+    root.addChild("BLOCK", blockStanza(2L, 20L, 200L));
+
+    op.fromXml(root);
+
+    assertNotNull(op.truncateBlock);
+    assertEquals(1L, op.truncateBlock.getBlockId());
+    assertEquals(10L, op.truncateBlock.getNumBytes());
+    assertEquals(100L, op.truncateBlock.getGenerationStamp());
+  }
+
   private static Stanza stanzaValue(String value) {
     Stanza s = new Stanza();
     s.setValue(value);
