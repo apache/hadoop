@@ -14,8 +14,7 @@
 # limitations under the License.
 
 FROM ghcr.io/apache/hadoop-runner:jdk11-u2204
-ARG HADOOP_VERSION=3.4.2
-ARG HADOOP_FLAVOR=-lean
+ARG HADOOP_VERSION=3.4.3
 ARG BASE_URL=https://dlcdn.apache.org/hadoop/common
 ARG TARGETPLATFORM
 WORKDIR /opt/hadoop
@@ -26,7 +25,7 @@ RUN set -eux; \
         linux/arm64) HADOOP_ARCH='-aarch64' ;; \
         *) echo "Unsupported platform: ${TARGETPLATFORM}"; exit 1 ;; \
     esac; \
-    export HADOOP_URL="${BASE_URL}/hadoop-${HADOOP_VERSION}/hadoop-${HADOOP_VERSION}${HADOOP_ARCH}${HADOOP_FLAVOR}.tar.gz"; \
+    export HADOOP_URL="${BASE_URL}/hadoop-${HADOOP_VERSION}/hadoop-${HADOOP_VERSION}${HADOOP_ARCH}.tar.gz"; \
     curl -LSs "$HADOOP_URL" | tar -x -z --strip-components 1 && rm -rf /opt/hadoop/share/doc
 ADD log4j.properties /opt/hadoop/etc/hadoop/log4j.properties
 RUN sudo chown -R hadoop:users /opt/hadoop/etc/hadoop/*
