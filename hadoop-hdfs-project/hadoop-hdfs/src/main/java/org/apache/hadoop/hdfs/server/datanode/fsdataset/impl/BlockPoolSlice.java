@@ -1133,6 +1133,17 @@ public class BlockPoolSlice {
     return addReplicaThreadPool.getPoolSize();
   }
 
+  /**
+   * Return the configured parallelism of the fork pool used for adding replica.
+   * Use this instead of getAddReplicaForkPoolSize() when asserting configured
+   * pool size, since getPoolSize() can be less than parallelism until all
+   * worker threads have started.
+   */
+  @VisibleForTesting
+  public static int getAddReplicaForkPoolParallelism() {
+    return addReplicaThreadPool.getParallelism();
+  }
+
   @VisibleForTesting
   public ForkJoinPool getAddReplicaThreadPool() {
     return addReplicaThreadPool;

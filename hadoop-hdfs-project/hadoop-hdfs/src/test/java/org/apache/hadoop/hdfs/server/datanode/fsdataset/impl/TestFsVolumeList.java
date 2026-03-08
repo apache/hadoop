@@ -419,8 +419,8 @@ public class TestFsVolumeList {
     // ForkJoinPool recursively
     vol.getVolumeMap(bpid, volumeMap, ramDiskReplicaMap);
     assertTrue(volumeMap.replicas(bpid).size() == 1000, "Failed to add all the replica to map");
-    assertEquals(poolSize, BlockPoolSlice.getAddReplicaForkPoolSize(),
-        "Fork pool should be initialize with configured pool size");
+    assertEquals(poolSize, BlockPoolSlice.getAddReplicaForkPoolParallelism(),
+        "Fork pool should be initialized with configured pool size");
   }
 
   @Test
