@@ -821,6 +821,41 @@ public class TestDataNodeMetrics {
     }
   }
 
+  /**
+   * HDFS-17684: LocalBytesRead and LocalBytesWritten metrics must be
+   * incremented when local clients read and write data on the same host as
+   * the DataNode.  The corresponding remote metrics must remain zero.
+   */
+  @Test
+  @Timeout(value = 60)
+  public void testLocalBytesMetrics() throws IOException {
+    Configuration conf = new HdfsConfiguration();
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(1).build()) {
+      cluster.waitActive();
+      FileSystem fs = cluster.getFileSystem();
+
+      final Path testFile = new Path("/test-local-bytes.dat");
+      final int fileSize = 512;
+
+      // Write a file — triggers incrWritesFromClient(local=true, size).
+      DFSTestUtil.createFile(fs, testFile, fileSize, (short) 1, 0L);
+      // Read it back — triggers incrReadsFromClient(local=true, size).
+      DFSTestUtil.readFile(fs, testFile);
+
+      DataNode dn = cluster.getDataNodes().get(0);
+      MetricsRecordBuilder rb = getMetrics(dn.getMetrics().name());
+
+      // Local bytes must be non-zero.
+      assertCounterGt("LocalBytesWritten", 0L, rb);
+      assertCounterGt("LocalBytesRead", 0L, rb);
+
+      // Remote bytes must stay zero (no remote clients in this test).
+      assertCounter("RemoteBytesWritten", 0L, rb);
+      assertCounter("RemoteBytesRead", 0L, rb);
+    }
+  }
+
   @Test
   public void testDataNodeDatasetLockMetrics() throws IOException {
     Configuration conf = new HdfsConfiguration();
