@@ -756,6 +756,33 @@ public class TestDiskBalancerCommand {
     runCommand(cmdLine);
   }
 
+  /**
+   * HDFS-17809: "-help <command>" must display command-specific help text,
+   * not just the generic usage summary.
+   */
+  @Test
+  @Timeout(value = 60)
+  public void testHelpCommandWithSubCommand() throws Exception {
+    // Each sub-command help should contain its own option/keyword.
+    String[][] subCommands = {
+        {PLAN,    "plan"},
+        {EXECUTE, "execute"},
+        {QUERY,   "query"},
+        {CANCEL,  "cancel"},
+        {REPORT,  "report"},
+    };
+    for (String[] pair : subCommands) {
+      String subCmd = pair[0];
+      String expectedToken = pair[1];
+      String cmdLine = String.format("hdfs diskbalancer -%s %s", HELP, subCmd);
+      List<String> output = runCommand(cmdLine);
+      String joined = String.join("\n", output).toLowerCase();
+      assertTrue(joined.contains(expectedToken),
+          "Expected '" + expectedToken + "' in help output for '-help "
+              + subCmd + "', got:\n" + joined);
+    }
+  }
+
   @Test
   public void testPrintFullPathOfPlan()
       throws Exception {
