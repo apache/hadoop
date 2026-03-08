@@ -2946,7 +2946,7 @@ public abstract class FSEditLogOp {
       this.newLength = Long.parseLong(st.getValue("NEWLENGTH"));
       this.timestamp = Long.parseLong(st.getValue("TIMESTAMP"));
       if (st.hasChildren("BLOCK"))
-        this.truncateBlock = FSEditLogOp.blockFromXml(st);
+        this.truncateBlock = FSEditLogOp.blockFromXml(st.getChildren("BLOCK").get(0));
     }
 
     @Override
