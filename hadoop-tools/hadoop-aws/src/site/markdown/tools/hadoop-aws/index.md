@@ -162,9 +162,9 @@ the directory path, and returning them as the listing.
 1. When renaming a directory, taking such a listing and asking S3 to copying the
 individual objects to new objects with the destination filenames.
 1. When deleting a directory, taking such a listing and deleting the entries in
-batches.
-1. When renaming or deleting directories, taking such a listing and working
-on the individual files.
+batches. Some S3-compatible endpoints support deleting non-empty directories
+with a single request. See [How S3A deletes directories](#delete) for details.
+1. When renaming, taking such a listing and working on the individual files.
 
 
 Here are some of the consequences:
@@ -571,6 +571,17 @@ Here are some the S3A properties for use in production.
   <description>When enabled, multiple single-object delete requests are replaced by
     a single 'delete multiple objects'-request, reducing the number of requests.
     Beware: legacy S3-compatible object stores might not support this request.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.delete.non-empty-directory.enabled</name>
+  <value>false</value>
+  <description>Indicates the S3 endpoint is capable of deleting directories that are not empty.
+    Usually, a non-empty directory is deleted by listing all contained files (objects),
+    then deleting those files in bulk delete operations, and finally deleting the
+    (then) empty directory itself. Setting this option to true will only request the
+    deletion of the directory itself. The S3 endpoint has to support this feature.
   </description>
 </property>
 
@@ -1711,6 +1722,20 @@ rate.
 
 The best practise for using this option is to disable multipart purges in
 normal use of S3A, enabling only in manual/scheduled housekeeping operations.
+
+## <a name="delete"></a>How S3A deletes directories
+
+The S3A client deletes directories (prefixes) by listing all contained files (objects with
+matching prefix), then deleting those files (objects) in bulk delete requests, and finally
+deleting the (then) empty directory itself. The time taken for this deletion is proportional
+to the number of files (objects) in the directory.
+
+When `fs.s3a.delete.non-empty-directory.enabled=true`, only one delete request is sent for
+the directory (prefix). The S3 endpoint has to support this feature. Depending on the
+S3 endpoint implementation of this feature, deletes might be synchronous or asynchronous.
+
+The [VAST S3 endpoint](https://kb.vastdata.com/documentation/docs/using-trash-folder-for-s3-objects-6)
+supports such deletes.
 
 ## <a name="metrics"></a>Metrics
 
