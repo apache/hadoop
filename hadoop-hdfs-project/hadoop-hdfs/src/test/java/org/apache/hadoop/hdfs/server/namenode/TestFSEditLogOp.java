@@ -24,7 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.util.XMLUtils.InvalidXmlException;
 import org.apache.hadoop.hdfs.util.XMLUtils.Stanza;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class TestFSEditLogOp {
 
