@@ -629,14 +629,27 @@ public class MountTableResolver
   private MountTable findDeepest(final String path) {
     readLock.lock();
     try {
-      Entry<String, MountTable> entry = this.tree.floorEntry(path);
-      while (entry != null && !isParentEntry(path, entry.getKey())) {
-        entry = this.tree.lowerEntry(entry.getKey());
+      Entry<String, MountTable> floorEntry = this.tree.floorEntry(path);
+      if (floorEntry != null && isParentEntry(path, floorEntry.getKey())) {
+        return floorEntry.getValue();
       }
-      if (entry == null) {
+      if ("".equals(path)) {
         return null;
       }
-      return entry.getValue();
+      MountTable mountTable;
+      Path currentPath = new Path(path);
+      while (true) {
+        mountTable = tree.getOrDefault(currentPath.toUri().getPath(), null);
+        if (mountTable != null) {
+          break;
+        }
+        if (currentPath.isRoot()) {
+          break;
+        } else {
+          currentPath = currentPath.getParent();
+        }
+      }
+      return mountTable;
     } finally {
       readLock.unlock();
     }

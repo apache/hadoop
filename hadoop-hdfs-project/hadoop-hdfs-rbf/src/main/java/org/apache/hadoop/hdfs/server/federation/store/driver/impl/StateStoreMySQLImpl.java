@@ -33,6 +33,7 @@ import java.util.List;
 import java.util.Properties;
 import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.server.federation.metrics.StateStoreMetrics;
 import org.apache.hadoop.hdfs.server.federation.router.security.token.SQLConnectionFactory;
 import org.apache.hadoop.hdfs.server.federation.store.StateStoreUtils;
@@ -407,7 +408,8 @@ public class StateStoreMySQLImpl extends StateStoreSerializableImpl {
       Properties properties = new Properties();
       properties.setProperty("jdbcUrl", conf.get(StateStoreMySQLImpl.CONNECTION_URL));
       properties.setProperty("username", conf.get(StateStoreMySQLImpl.CONNECTION_USERNAME));
-      properties.setProperty("password", conf.get(StateStoreMySQLImpl.CONNECTION_PASSWORD));
+      properties.setProperty("password",
+          DFSUtil.getPassword(conf, StateStoreMySQLImpl.CONNECTION_PASSWORD));
       properties.setProperty("driverClassName", conf.get(StateStoreMySQLImpl.CONNECTION_DRIVER));
 
       // Include hikari connection properties

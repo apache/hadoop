@@ -37,6 +37,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.ResourcePluginManager;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.AuxiliaryServicesInfo;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.NMResourceInfo;
+import org.apache.hadoop.yarn.server.webapp.dao.ContainerLogsInfoes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,7 +50,6 @@ import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.WebApplicationException;
-import javax.ws.rs.core.GenericEntity;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.ResponseBuilder;
@@ -330,9 +330,11 @@ public class NMWebServices {
         // Skip it and do nothing
         LOG.debug("{}", ex);
       }
-      GenericEntity<List<ContainerLogsInfo>> meta = new GenericEntity<List<
-          ContainerLogsInfo>>(containersLogsInfo){};
-      ResponseBuilder resp = Response.ok().entity(meta);
+      // Wrapping the response with ContainerLogsInfoes class is needed to provide
+      // backward-compatibility with the Jersey 1 JSON response format.
+      // Previously Jersey 1 returned JSON object type in case the returned list had
+      // a single element, and with a wrapper object we can achieve the same behaviour.
+      ResponseBuilder resp = Response.ok().entity(new ContainerLogsInfoes(containersLogsInfo));
       // Sending the X-Content-Type-Options response header with the value
       // nosniff will prevent Internet Explorer from MIME-sniffing a response
       // away from the declared content-type.

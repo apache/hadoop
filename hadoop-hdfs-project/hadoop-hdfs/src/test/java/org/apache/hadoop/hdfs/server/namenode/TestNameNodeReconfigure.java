@@ -39,6 +39,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_LOCK_DETAILED_ME
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_READ_LOCK_REPORTING_THRESHOLD_MS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SLOWPEER_COLLECT_INTERVAL_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_WRITE_LOCK_REPORTING_THRESHOLD_MS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_MAX_DIRECTORY_ITEMS_KEY;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -863,6 +864,32 @@ public class TestNameNodeReconfigure {
     assertFalse(datanodeManager.isSlowPeerCollectorInitialized());
     // set to the value of the current system
     assertEquals(600000, datanodeManager.getSlowPeerCollectionInterval());
+  }
+
+  @Test
+  public void testReconfigureMaxDirItems() throws Exception {
+    final NameNode nameNode = cluster.getNameNode();
+    final FSDirectory fsd = nameNode.namesystem.getFSDirectory();
+
+    // By default, DFS_NAMENODE_MAX_DIRECTORY_ITEMS_KEY is 1024 * 1024.
+    assertEquals(1024 * 1024, fsd.getMaxDirItems());
+
+    // Reconfigure.
+    nameNode.reconfigureProperty(DFS_NAMENODE_MAX_DIRECTORY_ITEMS_KEY,
+        Integer.toString(1024 * 1024 * 2));
+
+    // Assert DFS_NAMENODE_MAX_SLOWPEER_COLLECT_NODES_KEY is 1024 * 1024 * 2.
+    assertEquals(1024 * 1024 * 2, fsd.getMaxDirItems());
+
+    // Reconfigure to negative, and expect failed.
+    LambdaTestUtils.intercept(ReconfigurationException.class,
+        "Could not change property dfs.namenode.fs-limits.max-directory-items from '"
+            + 1024 * 1024 * 2 + "' to '" + 1024 * 1024 * -1 + "'",
+        () -> nameNode.reconfigureProperty(DFS_NAMENODE_MAX_DIRECTORY_ITEMS_KEY,
+            Integer.toString(1024 * 1024 * -1)));
+
+    // Assert DFS_NAMENODE_MAX_SLOWPEER_COLLECT_NODES_KEY is also 1024 * 1024 * 2.
+    assertEquals(1024 * 1024 * 2, fsd.getMaxDirItems());
   }
 
   @AfterEach

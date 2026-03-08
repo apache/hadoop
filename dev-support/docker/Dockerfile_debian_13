@@ -90,7 +90,6 @@ ENV HADOOP_SKIP_YETUS_VERIFICATION=true
 # Install packages
 ####
 RUN pkg-resolver/install-maven.sh debian:13
-RUN pkg-resolver/install-cmake.sh debian:13
 RUN pkg-resolver/install-spotbugs.sh debian:13
 RUN pkg-resolver/install-boost.sh debian:13
 RUN pkg-resolver/install-protobuf.sh debian:13

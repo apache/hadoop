@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
+import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.toJson;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -26,7 +27,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
-import java.io.StringWriter;
 import java.security.Principal;
 import java.util.ArrayList;
 import java.util.List;
@@ -46,6 +46,7 @@ import javax.ws.rs.core.UriBuilder;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.Lists;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.http.JettyUtils;
@@ -59,9 +60,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsEntry;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsEntryList;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.reader.NodeLabelsInfoReader;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.reader.LabelsToNodesInfoReader;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.reader.NodeToLabelsInfoReader;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.jsonprovider.ExcludeRootJSONProvider;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.jsonprovider.IncludeRootJSONProvider;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.jsonprovider.JsonProviderFeature;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
@@ -71,9 +72,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import org.glassfish.jersey.internal.inject.AbstractBinder;
-import org.glassfish.jersey.jettison.JettisonFeature;
-import org.glassfish.jersey.jettison.JettisonJaxbContext;
-import org.glassfish.jersey.jettison.JettisonMarshaller;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.glassfish.jersey.test.TestProperties;
 public class TestRMWebServicesNodeLabels extends JerseyTestBase {
@@ -121,8 +119,8 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     config.register(RMWebServices.class);
     config.register(new JerseyBinder());
     config.register(GenericExceptionHandler.class);
-    config.register(NodeLabelsInfoReader.class);
-    config.register(new JettisonFeature()).register(JAXBContextResolver.class);
+    config.register(JsonProviderFeature.class);
+    config.register(JAXBContextResolver.class);
     forceSet(TestProperties.CONTAINER_PORT, JERSEY_RANDOM_PORT);
     return config;
   }
@@ -166,11 +164,10 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
   }
 
   private WebTarget getClusterWebResource() {
-    return targetWithJsonObject().
-        register(NodeLabelsInfoReader.class).
-        register(LabelsToNodesInfoReader.class).
-        register(NodeToLabelsInfoReader.class).
-        path(PATH_WS).path(PATH_V1).path(PATH_CLUSTER);
+    return targetWithJsonObject()
+        .register(new IncludeRootJSONProvider())
+        .register(new ExcludeRootJSONProvider())
+        .path(PATH_WS).path(PATH_V1).path(PATH_CLUSTER);
   }
 
   private Response get(String path) {
@@ -215,9 +212,11 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
         webTarget = webTarget.queryParam(param.getKey(), value);
       }
     }
-    return webTarget.request(MediaType.APPLICATION_JSON)
-        .post(Entity.entity(toJson(payload, payloadClass),
-        MediaType.APPLICATION_JSON), Response.class);
+    Entity<String> entity = payload == null
+        ? null
+        : Entity.entity(toJson(payload, payloadClass), MediaType.APPLICATION_JSON);
+
+    return webTarget.request(MediaType.APPLICATION_JSON).post(entity, Response.class);
   }
 
   @Test
@@ -696,17 +695,5 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     NodeIDsInfo nodes = labelsToNodesInfo.getLabelsToNodes().get(new NodeLabelInfo(LABEL_A));
     assertNotNull(nodes.getPartitionInfo());
     assertNotNull(nodes.getPartitionInfo().getResourceAvailable());
-  }
-
-  @SuppressWarnings("rawtypes")
-  private String toJson(Object obj, Class klass) throws Exception {
-    if (obj == null) {
-      return null;
-    }
-    JettisonJaxbContext jettisonJaxbContext = new JettisonJaxbContext(klass);
-    JettisonMarshaller jsonMarshaller = jettisonJaxbContext.createJsonMarshaller();
-    StringWriter stringWriter = new StringWriter();
-    jsonMarshaller.marshallToJSON(obj, stringWriter);
-    return stringWriter.toString();
   }
 }

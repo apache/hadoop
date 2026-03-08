@@ -26,7 +26,6 @@ import org.codehaus.jettison.json.JSONObject;
 import static org.apache.hadoop.yarn.webapp.WebServicesTestUtils.checkStringEqual;
 import static org.apache.hadoop.yarn.webapp.WebServicesTestUtils.checkStringMatch;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -88,8 +87,8 @@ public final class AppInfoJsonVerifications {
         "clusterUsagePerc doesn't match");
     assertEquals(1, info.getInt("runningContainers"),
         "numContainers doesn't match");
-    assertNotNull(info.get("preemptedResourceSecondsMap"),
-        "preemptedResourceSecondsMap should not be null");
+    assertTrue(info.isNull("preemptedResourceSecondsMap"),
+        "preemptedResourceSecondsMap should be null, cause it is empty");
     assertEquals(app.getRMAppMetrics().getResourcePreempted().getMemorySize(),
         info.getInt("preemptedResourceMB"), "preemptedResourceMB doesn't match");
     assertEquals(app.getRMAppMetrics().getResourcePreempted().getVirtualCores(),

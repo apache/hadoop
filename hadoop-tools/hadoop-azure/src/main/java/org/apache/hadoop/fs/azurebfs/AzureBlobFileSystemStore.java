@@ -45,7 +45,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.UUID;
 import java.util.WeakHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -77,7 +76,6 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidUriAuthorityExc
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidUriException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.TrileanConversionException;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
-import org.apache.hadoop.fs.azurebfs.services.ListResponseData;
 import org.apache.hadoop.fs.azurebfs.enums.Trilean;
 import org.apache.hadoop.fs.azurebfs.extensions.EncryptionContextProvider;
 import org.apache.hadoop.fs.azurebfs.extensions.ExtensionHelper;
@@ -90,6 +88,7 @@ import org.apache.hadoop.fs.azurebfs.security.ContextEncryptionAdapter;
 import org.apache.hadoop.fs.azurebfs.security.ContextProviderEncryptionAdapter;
 import org.apache.hadoop.fs.azurebfs.security.NoContextEncryptionAdapter;
 import org.apache.hadoop.fs.azurebfs.services.AbfsAclHelper;
+import org.apache.hadoop.fs.azurebfs.services.AbfsAdaptiveInputStream;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClientContext;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClientContextBuilder;
@@ -97,6 +96,7 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsClientHandler;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClientRenameResult;
 import org.apache.hadoop.fs.azurebfs.services.AbfsCounters;
 import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
+import org.apache.hadoop.fs.azurebfs.services.AbfsReadPolicy;
 import org.apache.hadoop.fs.azurebfs.services.AbfsInputStream;
 import org.apache.hadoop.fs.azurebfs.services.AbfsInputStreamContext;
 import org.apache.hadoop.fs.azurebfs.services.AbfsInputStreamStatisticsImpl;
@@ -107,10 +107,13 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsOutputStreamStatisticsImpl;
 import org.apache.hadoop.fs.azurebfs.services.AbfsPerfInfo;
 import org.apache.hadoop.fs.azurebfs.services.AbfsPerfTracker;
 import org.apache.hadoop.fs.azurebfs.services.AbfsPermission;
+import org.apache.hadoop.fs.azurebfs.services.AbfsPrefetchInputStream;
+import org.apache.hadoop.fs.azurebfs.services.AbfsRandomInputStream;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.fs.azurebfs.services.ExponentialRetryPolicy;
 import org.apache.hadoop.fs.azurebfs.services.ListingSupport;
+import org.apache.hadoop.fs.azurebfs.services.ListResponseData;
 import org.apache.hadoop.fs.azurebfs.services.SharedKeyCredentials;
 import org.apache.hadoop.fs.azurebfs.services.StaticRetryPolicy;
 import org.apache.hadoop.fs.azurebfs.services.TailLatencyRequestTimeoutRetryPolicy;
@@ -193,6 +196,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
   private final IdentityTransformerInterface identityTransformer;
   private final AbfsPerfTracker abfsPerfTracker;
   private final AbfsCounters abfsCounters;
+  private final String fileSystemId;
 
   /**
    * The set of directories where we should store files as append blobs.
@@ -205,7 +209,6 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
   private int blockOutputActiveBlocks;
   /** Bounded ThreadPool for this instance. */
   private ExecutorService boundedThreadPool;
-  private WriteThreadPoolSizeManager poolSizeManager;
 
   /** ABFS instance reference to be held by the store to avoid GC close. */
   private BackReference fsBackRef;
@@ -258,6 +261,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     boolean useHttps = (usingOauth || abfsConfiguration.isHttpsAlwaysUsed()) ? true : abfsStoreBuilder.isSecureScheme;
     this.abfsPerfTracker = new AbfsPerfTracker(fileSystemName, accountName, this.abfsConfiguration);
     this.abfsCounters = abfsStoreBuilder.abfsCounters;
+    this.fileSystemId = abfsStoreBuilder.fileSystemId;
     initializeClient(uri, fileSystemName, accountName, useHttps);
     final Class<? extends IdentityTransformerInterface> identityTransformerClass =
         abfsStoreBuilder.configuration.getClass(FS_AZURE_IDENTITY_TRANSFORM_CLASS, IdentityTransformer.class,
@@ -280,19 +284,11 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     }
     this.blockFactory = abfsStoreBuilder.blockFactory;
     this.blockOutputActiveBlocks = abfsStoreBuilder.blockOutputActiveBlocks;
-    if (abfsConfiguration.isDynamicWriteThreadPoolEnablement()) {
-      this.poolSizeManager = WriteThreadPoolSizeManager.getInstance(
-          getClient().getFileSystem() + "-" + UUID.randomUUID(),
-          abfsConfiguration);
-      poolSizeManager.startCPUMonitoring();
-      this.boundedThreadPool = poolSizeManager.getExecutorService();
-    } else {
-      this.boundedThreadPool = BlockingThreadPoolExecutorService.newInstance(
-          abfsConfiguration.getWriteConcurrentRequestCount(),
-          abfsConfiguration.getMaxWriteRequestsToQueue(),
-          10L, TimeUnit.SECONDS,
-          "abfs-bounded");
-    }
+    this.boundedThreadPool = BlockingThreadPoolExecutorService.newInstance(
+        abfsConfiguration.getWriteMaxConcurrentRequestCount(),
+        abfsConfiguration.getMaxWriteRequestsToQueue(),
+        10L, TimeUnit.SECONDS,
+        "abfs-bounded");
   }
 
   /**
@@ -331,19 +327,17 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     }
     try {
       Futures.allAsList(futures).get();
-      if (!abfsConfiguration.isDynamicWriteThreadPoolEnablement()) {
-        // shutdown the threadPool and set it to null.
-        HadoopExecutors.shutdown(boundedThreadPool, LOG,
-            30, TimeUnit.SECONDS);
-        boundedThreadPool = null;
-      }
+      // shutdown the threadPool and set it to null.
+      HadoopExecutors.shutdown(boundedThreadPool, LOG,
+          30, TimeUnit.SECONDS);
+      boundedThreadPool = null;
     } catch (InterruptedException e) {
       LOG.error("Interrupted freeing leases", e);
       Thread.currentThread().interrupt();
     } catch (ExecutionException e) {
       LOG.error("Error freeing leases", e);
     } finally {
-      IOUtils.cleanupWithLogger(LOG, poolSizeManager, getClientHandler());
+      IOUtils.cleanupWithLogger(LOG, getClientHandler());
     }
   }
 
@@ -799,9 +793,11 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       ContextEncryptionAdapter contextEncryptionAdapter,
       TracingContext tracingContext) {
     int bufferSize = abfsConfiguration.getWriteBufferSize();
+
     if (isAppendBlob && bufferSize > FileSystemConfigurations.APPENDBLOB_MAX_WRITE_BUFFER_SIZE) {
       bufferSize = FileSystemConfigurations.APPENDBLOB_MAX_WRITE_BUFFER_SIZE;
     }
+
     return new AbfsOutputStreamContext(abfsConfiguration.getSasTokenRenewPeriodForStreamsInSeconds())
             .withWriteBufferSize(bufferSize)
             .enableExpectHeader(abfsConfiguration.isExpectHeaderEnabled())
@@ -810,7 +806,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
             .disableOutputStreamFlush(abfsConfiguration.isOutputStreamFlushDisabled())
             .withStreamStatistics(new AbfsOutputStreamStatisticsImpl())
             .withAppendBlob(isAppendBlob)
-            .withWriteMaxConcurrentRequestCount(abfsConfiguration.getWriteConcurrentRequestCount())
+            .withWriteMaxConcurrentRequestCount(abfsConfiguration.getWriteMaxConcurrentRequestCount())
             .withMaxWriteRequestsToQueue(abfsConfiguration.getMaxWriteRequestsToQueue())
             .withLease(lease)
             .withEncryptionAdapter(contextEncryptionAdapter)
@@ -824,7 +820,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
                 blockOutputActiveBlocks, true))
             .withTracingContext(tracingContext)
             .withAbfsBackRef(fsBackRef)
-            .withIngressServiceType(abfsConfiguration.getIngressServiceType())
+            .withIngressServiceType(clientHandler.getIngressServiceType())
             .withDFSToBlobFallbackEnabled(abfsConfiguration.isDfsToBlobFallbackEnabled())
             .withETag(eTag)
             .build();
@@ -946,8 +942,37 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
       perfInfo.registerSuccess(true);
 
-      // Add statistics for InputStream
-      return new AbfsInputStream(getClient(), statistics, relativePath,
+      return getRelevantInputStream(statistics, relativePath, contentLength,
+          parameters, contextEncryptionAdapter, eTag, tracingContext);
+    }
+  }
+
+  private AbfsInputStream getRelevantInputStream(final FileSystem.Statistics statistics,
+      final String relativePath,
+      final long contentLength,
+      final Optional<OpenFileParameters> parameters,
+      final ContextEncryptionAdapter contextEncryptionAdapter,
+      final String eTag,
+      TracingContext tracingContext) {
+    AbfsReadPolicy inputPolicy = AbfsReadPolicy.getAbfsReadPolicy(getAbfsConfiguration().getAbfsReadPolicy());
+    switch (inputPolicy) {
+    case SEQUENTIAL:
+      return new AbfsPrefetchInputStream(getClient(), statistics, relativePath,
+          contentLength, populateAbfsInputStreamContext(
+          parameters.map(OpenFileParameters::getOptions),
+          contextEncryptionAdapter),
+          eTag, tracingContext);
+
+    case RANDOM:
+      return new AbfsRandomInputStream(getClient(), statistics, relativePath,
+          contentLength, populateAbfsInputStreamContext(
+          parameters.map(OpenFileParameters::getOptions),
+          contextEncryptionAdapter),
+          eTag, tracingContext);
+
+    case ADAPTIVE:
+    default:
+      return new AbfsAdaptiveInputStream(getClient(), statistics, relativePath,
           contentLength, populateAbfsInputStreamContext(
           parameters.map(OpenFileParameters::getOptions),
           contextEncryptionAdapter),
@@ -1754,11 +1779,20 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     } else if (authType == AuthType.SAS) {
       LOG.trace("Fetching SAS Token Provider");
       sasTokenProvider = abfsConfiguration.getSASTokenProvider();
+    } else if (authType == AuthType.UserboundSASWithOAuth) {
+      LOG.trace("Fetching SAS and OAuth Token Provider for user bound SAS");
+      AzureADAuthenticator.init(abfsConfiguration);
+      Object[] providers
+          = abfsConfiguration.getUserBoundSASBothTokenProviders();
+      tokenProvider = (AccessTokenProvider) providers[0];
+      sasTokenProvider = (SASTokenProvider) providers[1];
+      ExtensionHelper.bind(tokenProvider, uri,
+          abfsConfiguration.getRawConfiguration());
     } else {
       LOG.trace("Fetching token provider");
       tokenProvider = abfsConfiguration.getTokenProvider();
       ExtensionHelper.bind(tokenProvider, uri,
-            abfsConfiguration.getRawConfiguration());
+          abfsConfiguration.getRawConfiguration());
     }
 
     // Encryption setup
@@ -1782,16 +1816,11 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       }
     }
 
-    LOG.trace("Initializing AbfsClient for {}", baseUrl);
-    if (tokenProvider != null) {
-      this.clientHandler = new AbfsClientHandler(baseUrl, creds, abfsConfiguration,
-          tokenProvider, encryptionContextProvider,
-          populateAbfsClientContext());
-    } else {
-      this.clientHandler = new AbfsClientHandler(baseUrl, creds, abfsConfiguration,
-          sasTokenProvider, encryptionContextProvider,
-          populateAbfsClientContext());
-    }
+    LOG.trace("Initializing AbfsClientHandler for {}", baseUrl);
+    this.clientHandler = new AbfsClientHandler(baseUrl, creds,
+        abfsConfiguration,
+        tokenProvider, sasTokenProvider, encryptionContextProvider,
+        populateAbfsClientContext());
 
     this.setClient(getClientHandler().getClient());
     LOG.trace("AbfsClient init complete");
@@ -1822,6 +1851,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
             new TailLatencyRequestTimeoutRetryPolicy(abfsConfiguration))
         .withAbfsCounters(abfsCounters)
         .withAbfsPerfTracker(abfsPerfTracker)
+        .withFileSystemId(fileSystemId)
         .build();
   }
 
@@ -1903,6 +1933,17 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
   }
 
   /**
+   * Restricts all service types to BLOB when FNS account detected
+   * Updates the client to reflect the new default service type.
+   */
+  public void restrictServiceTypeToBlob() {
+    clientHandler.setDefaultServiceType(AbfsServiceType.BLOB);
+    clientHandler.setIngressServiceType(AbfsServiceType.BLOB);
+    getAbfsConfiguration().setFsConfiguredServiceType(AbfsServiceType.BLOB);
+    this.client = clientHandler.getClient();
+  }
+
+  /**
    * Permissions class contain provided permission and umask in octalNotation.
    * If the object is created for namespace-disabled account, the permission and
    * umask would be null.
@@ -1962,6 +2003,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     private DataBlocks.BlockFactory blockFactory;
     private int blockOutputActiveBlocks;
     private BackReference fsBackRef;
+    private String fileSystemId;
 
     public AzureBlobFileSystemStoreBuilder withUri(URI value) {
       this.uri = value;
@@ -2000,6 +2042,11 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     public AzureBlobFileSystemStoreBuilder withBackReference(
         BackReference fsBackRef) {
       this.fsBackRef = fsBackRef;
+      return this;
+    }
+
+    public AzureBlobFileSystemStoreBuilder withFileSystemId(String fileSystemId) {
+      this.fileSystemId = fileSystemId;
       return this;
     }
 

@@ -41,8 +41,10 @@ import javax.crypto.SecretKey;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.CallerContext;
+import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -778,6 +780,27 @@ public class RMStateStoreTestBase {
       secondMasterKeyData.getSecretKey());
 
     store.close();
+  }
+
+  public void testAMRMTokenSecretManagerStateStoreKeyLengthChange(
+      RMStateStoreHelper stateStoreHelper) throws Exception {
+    RMState rmState = stateStoreHelper.getRMStateStore().loadState();
+    AMRMTokenSecretManagerState state = rmState.getAMRMTokenSecretManagerState();
+    assertEquals(
+        CommonConfigurationKeysPublic.HADOOP_SECURITY_SECRET_MANAGER_KEY_LENGTH_DEFAULT,
+        state.getCurrentMasterKey().getBytes().array().length * 8
+    );
+    Configuration configuration = new Configuration();
+    configuration.setInt(
+        CommonConfigurationKeysPublic.HADOOP_SECURITY_SECRET_MANAGER_KEY_LENGTH_KEY, 256);
+    SecretManager.update(configuration);
+    RMContext rmContext = mock(RMContext.class);
+    when(rmContext.getStateStore()).thenReturn(stateStoreHelper.getRMStateStore());
+    Configuration conf = new YarnConfiguration();
+    AMRMTokenSecretManager appTokenMgr = new AMRMTokenSecretManager(conf, rmContext);
+    appTokenMgr.recover(rmState);
+    assertEquals(256,  rmState.getAMRMTokenSecretManagerState()
+        .getCurrentMasterKey().getBytes().array().length * 8);
   }
 
   public void testReservationStateStore(

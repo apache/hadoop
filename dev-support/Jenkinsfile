@@ -55,7 +55,7 @@ pipeline {
     environment {
         YETUS='yetus'
         // Branch or tag name.  Yetus release tags are 'rel/X.Y.Z'
-        YETUS_VERSION='rel/0.14.0'
+        YETUS_VERSION='a7d29a6a72750a0c5c39512f33945e773e69303e'
     }
 
     parameters {
@@ -71,7 +71,7 @@ pipeline {
                     checkout([
                         $class: 'GitSCM',
                         branches: [[name: "${env.YETUS_VERSION}"]],
-                        userRemoteConfigs: [[ url: 'https://github.com/apache/yetus.git']]]
+                        userRemoteConfigs: [[ url: 'https://github.com/ayushtkn/yetus.git']]]
                     )
                 }
             }
@@ -91,17 +91,17 @@ pipeline {
                     '''
                 }
 
-                dir("${WORKSPACE}/debian-11") {
+                dir("${WORKSPACE}/debian-13") {
                     sh '''#!/usr/bin/env bash
 
-                    cp -Rp ${WORKSPACE}/src ${WORKSPACE}/debian-11
+                    cp -Rp ${WORKSPACE}/src ${WORKSPACE}/debian-13
                     '''
                 }
 
-                dir("${WORKSPACE}/ubuntu-focal") {
+                dir("${WORKSPACE}/ubuntu-noble") {
                     sh '''#!/usr/bin/env bash
 
-                    cp -Rp ${WORKSPACE}/src ${WORKSPACE}/ubuntu-focal
+                    cp -Rp ${WORKSPACE}/src ${WORKSPACE}/ubuntu-noble
                     '''
                 }
             }
@@ -121,12 +121,14 @@ pipeline {
             }
 
             steps {
-                withCredentials(getGithubCreds()) {
+                catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
+                    withCredentials(getGithubCreds()) {
                         sh '''#!/usr/bin/env bash
 
                         chmod u+x "${SOURCEDIR}/dev-support/jenkins.sh"
                         "${SOURCEDIR}/dev-support/jenkins.sh" run_ci
                         '''
+                    }
                 }
             }
 
@@ -157,22 +159,24 @@ pipeline {
         // C++/C++ build/platform.
         // This stage serves as a means of cross platform validation, which is
         // really needed to ensure that any C++ related/platform change doesn't
-        // break the Hadoop build on Debian 11.
-        stage ('precommit-run Debian 11') {
+        // break the Hadoop build on Debian 13.
+        stage ('precommit-run Debian 13') {
             environment {
-                SOURCEDIR = "${WORKSPACE}/debian-11/src"
-                PATCHDIR = "${WORKSPACE}/debian-11/out"
-                DOCKERFILE = "${SOURCEDIR}/dev-support/docker/Dockerfile_debian_11"
+                SOURCEDIR = "${WORKSPACE}/debian-13/src"
+                PATCHDIR = "${WORKSPACE}/debian-13/out"
+                DOCKERFILE = "${SOURCEDIR}/dev-support/docker/Dockerfile_debian_13"
                 IS_OPTIONAL = 1
             }
 
             steps {
-                withCredentials(getGithubCreds()) {
-                    sh '''#!/usr/bin/env bash
+                catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
+                    withCredentials(getGithubCreds()) {
+                        sh '''#!/usr/bin/env bash
 
-                    chmod u+x "${SOURCEDIR}/dev-support/jenkins.sh"
-                    "${SOURCEDIR}/dev-support/jenkins.sh" run_ci
-                    '''
+                        chmod u+x "${SOURCEDIR}/dev-support/jenkins.sh"
+                        "${SOURCEDIR}/dev-support/jenkins.sh" run_ci
+                        '''
+                    }
                 }
             }
 
@@ -182,7 +186,7 @@ pipeline {
                 failure {
                     sh '''#!/usr/bin/env bash
 
-                    cp -Rp "${WORKSPACE}/debian-11/out" "${WORKSPACE}"
+                    cp -Rp "${WORKSPACE}/debian-13/out" "${WORKSPACE}"
                     '''
                     archiveArtifacts "out/**"
                 }
@@ -199,13 +203,13 @@ pipeline {
             }
         }
 
-        // We want to use Ubuntu Focal as our main CI and thus, this stage
+        // We want to use Ubuntu Noble as our main CI and thus, this stage
         // isn't optional (runs for all the PRs).
-        stage ('precommit-run Ubuntu focal') {
+        stage ('precommit-run Ubuntu Noble') {
             environment {
-                SOURCEDIR = "${WORKSPACE}/ubuntu-focal/src"
-                PATCHDIR = "${WORKSPACE}/ubuntu-focal/out"
-                DOCKERFILE = "${SOURCEDIR}/dev-support/docker/Dockerfile"
+                SOURCEDIR = "${WORKSPACE}/ubuntu-noble/src"
+                PATCHDIR = "${WORKSPACE}/ubuntu-noble/out"
+                DOCKERFILE = "${SOURCEDIR}/dev-support/docker/Dockerfile_ubuntu_24"
                 IS_OPTIONAL = 0
             }
 
@@ -229,8 +233,8 @@ pipeline {
                                               usernameVariable: 'GITHUB_USER')]) {
                             sh '''#!/usr/bin/env bash
 
-                            # Copy the artifacts of Ubuntu focal build to workspace
-                            cp -Rp "${WORKSPACE}/ubuntu-focal/out" "${WORKSPACE}"
+                            # Copy the artifacts of Ubuntu Noble build to workspace
+                            cp -Rp "${WORKSPACE}/ubuntu-noble/out" "${WORKSPACE}"
 
                             # Send Github status
                             chmod u+x "${SOURCEDIR}/dev-support/jenkins.sh"

@@ -26,6 +26,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azurebfs.services.AbfsAdaptiveInputStream;
 import org.apache.hadoop.fs.azurebfs.services.AbfsInputStream;
 import org.apache.hadoop.fs.azurebfs.services.AbfsInputStreamContext;
 import org.apache.hadoop.fs.azurebfs.services.AbfsInputStreamStatisticsImpl;
@@ -275,7 +276,7 @@ public class ITestAbfsInputStreamStatistics
               getTestTracingContext(fs, false), null);
 
       // AbfsInputStream with no StreamStatistics.
-      in = new AbfsInputStream(fs.getAbfsClient(), null,
+      in = new AbfsAdaptiveInputStream(fs.getAbfsClient(), null,
           nullStatFilePath.toUri().getPath(), ONE_KB, abfsInputStreamContext,
           abfsRestOperation.getResult().getResponseHeader("ETag"),
           getTestTracingContext(fs, false));

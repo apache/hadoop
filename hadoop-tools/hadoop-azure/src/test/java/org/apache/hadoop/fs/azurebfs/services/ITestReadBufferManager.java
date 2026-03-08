@@ -172,7 +172,7 @@ public class ITestReadBufferManager extends AbstractAbfsIntegrationTest {
     if (getConfiguration().isReadAheadV2Enabled()) {
       ReadBufferManagerV2.setReadBufferManagerConfigs(blockSize,
           getConfiguration());
-      return ReadBufferManagerV2.getBufferManager();
+      return ReadBufferManagerV2.getBufferManager(fs.getAbfsStore().getClient().getAbfsCounters());
     }
     ReadBufferManagerV1.setReadBufferManagerConfigs(blockSize);
     return ReadBufferManagerV1.getBufferManager();
