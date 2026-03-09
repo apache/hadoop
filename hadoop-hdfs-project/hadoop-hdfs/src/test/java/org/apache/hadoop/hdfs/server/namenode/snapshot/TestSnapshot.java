@@ -26,8 +26,10 @@ import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.io.PrintStream;
 import java.io.RandomAccessFile;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
@@ -253,8 +255,8 @@ public class TestSnapshot {
         FSImageTestUtil.getFSImage(
         cluster.getNameNode()).getStorage().getStorageDir(0));
     assertNotNull(originalFsimage, "Didn't generate or can't find fsimage");
-    PrintStream o = new PrintStream(NullOutputStream.INSTANCE);
-    PBImageXmlWriter v = new PBImageXmlWriter(new Configuration(), o);
+    OutputStreamWriter w = new OutputStreamWriter(NullOutputStream.INSTANCE, StandardCharsets.UTF_8);
+    PBImageXmlWriter v = new PBImageXmlWriter(new Configuration(), w);
     v.visit(new RandomAccessFile(originalFsimage, "r"));
   }
 
