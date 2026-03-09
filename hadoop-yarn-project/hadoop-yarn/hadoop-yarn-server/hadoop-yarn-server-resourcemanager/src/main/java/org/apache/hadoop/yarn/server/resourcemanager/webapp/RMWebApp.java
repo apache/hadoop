@@ -28,6 +28,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.jsonprovider.JsonProviderFeature;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.ui3.RMUI3Services;
 import org.apache.hadoop.yarn.util.RMHAUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
@@ -63,6 +64,7 @@ public class RMWebApp extends WebApp implements YarnWebParams {
     resourceConfig.register(webService);
     LOG.debug("Registered webservice class is {}", webService.getName());
 
+    resourceConfig.register(RMUI3Services.class);
     resourceConfig.register(GenericExceptionHandler.class);
     resourceConfig.register(JsonProviderFeature.class);
     resourceConfig.register(JAXBContextResolver.class);
