@@ -797,4 +797,29 @@ public class TestDFSStripedInputStream {
       DFSClientFaultInjector.set(old);
     }
   }
+
+  /**
+   * HDFS-17590: addToLocalDeadNodes(null) must not throw NullPointerException.
+   *
+   * When createBlockReader's refreshLocatedBlock() throws before
+   * getBestNodeDNAddrPair() is called, dnInfo.info is still null (from the
+   * initial DNAddrPair(null,null,null,null)). The subsequent
+   * addToLocalDeadNodes(null) call used to NPE inside ConcurrentHashMap.put().
+   * This test verifies that null is silently ignored.
+   */
+  @Test
+  public void testAddNullToLocalDeadNodesIsIgnored() throws Exception {
+    final int numBlocks = 1;
+    DFSTestUtil.createStripedFile(cluster, filePath, null, numBlocks,
+        stripesPerBlock, false, ecPolicy);
+    try (DFSStripedInputStream in = new DFSStripedInputStream(
+        fs.getClient(), filePath.toString(), false, ecPolicy, null)) {
+      // Simulate the scenario in createBlockReader where refreshLocatedBlock()
+      // throws before getBestNodeDNAddrPair() sets dnInfo: dnInfo.info is null.
+      // Before the fix this threw NullPointerException.
+      in.addToLocalDeadNodes(null);
+      assertEquals(0, in.getLocalDeadNodes().size(),
+          "null must not be added to dead nodes");
+    }
+  }
 }
