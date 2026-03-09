@@ -31,9 +31,10 @@ import org.slf4j.LoggerFactory;
 
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 
 public class DiagnosticJStackService {
 
@@ -61,9 +62,9 @@ public class DiagnosticJStackService {
     checkShellNotWindows();
 
     ApplicationId applicationId = ApplicationId.fromString(appId);
-    List<Long> applicationPids = getApplicationPids(applicationId);
+    Map<ContainerId, List<Long>> containerPids = getApplicationContainerPids(applicationId);
 
-    return runJStack(applicationPids, numberOfJStack);
+    return runJStack(containerPids, numberOfJStack);
   }
 
   private void checkShellNotWindows() {
@@ -72,38 +73,46 @@ public class DiagnosticJStackService {
     }
   }
 
-  protected List<Long> getApplicationPids(ApplicationId appId){
-    List<Long> pids = new ArrayList<>();
-
+  protected Map<ContainerId, List<Long>> getApplicationContainerPids(ApplicationId appId){
     Application app = context.getApplications().get(appId);
     if (app == null){
       throw new YarnRuntimeException("Application " + appId + " does not exist");
     }
 
+    Map<ContainerId, List<Long>> containerPids = new HashMap<>();
+
     for (ContainerId containerId : app.getContainers().keySet()){
       String pidForContainerIdStr = context.getContainerExecutor().getProcessId(containerId);
-      long pidForContainerId = Long.parseLong(pidForContainerIdStr);
+      long parentPid = Long.parseLong(pidForContainerIdStr);
 
-      ProcessHandle.of(pidForContainerId).ifPresent(handle ->
-        handle.descendants() // Get only the java processId of containerId's children
-          .filter(childProcess -> childProcess.info().command().orElse("").contains("java"))
-          .map(ProcessHandle::pid)
-          .forEach(pids::add)
-      );
+      List<Long> javaContainerPids = ProcessHandle.of(parentPid).stream()
+        .flatMap(ProcessHandle::descendants)
+        .filter(childProcess -> childProcess.info().command().orElse("").contains("java"))
+        .map(ProcessHandle::pid)
+        .toList();
 
+      if (!javaContainerPids.isEmpty()){
+        containerPids.put(containerId, javaContainerPids);
+      }
     }
 
-    LOG.info("Application PIDs: {}", pids);
+    LOG.info("Application PIDs by ContainerId: {}", containerPids);
 
-    return pids;
+    return containerPids;
   }
 
-  private String runJStack(List<Long> pids, int numJStacks) throws IOException {
+  private String runJStack(Map<ContainerId, List<Long>> containerPids, int numJStacks) throws IOException {
     StringBuilder result = new StringBuilder();
 
-    for(Long pid : pids){
-      result.append(String.format(
-        "=== Thread Dumps for PID: %d ===%n%s%n", pid, runJStack(pid, numJStacks)));
+    for(ContainerId containerPid : containerPids.keySet()){
+      List<Long> javaContainerPids = containerPids.get(containerPid);
+
+      for (Long pid : javaContainerPids){
+        result.append(String.format(
+          "=== Thread Dumps for ContainerId: %s, PID: %d ===%n%s%n",
+          containerPid.toString(), pid, runJStack(pid, numJStacks)));
+      }
+
     }
 
     return result.toString();
@@ -113,11 +122,11 @@ public class DiagnosticJStackService {
     ProcessHandle processHandle = ProcessHandle.of(pid)
             .orElseThrow(() -> new IOException("Process with PID " + pid + " is no longer exists"));
 
-    String processOwner = processHandle.info().user().orElse(NM_USER);
+    String runningUser = processHandle.info().user().orElse(NM_USER);
     String containerExecutorPath = PrivilegedOperationExecutor.getContainerExecutorExecutablePath(conf);
 
     String[] jstackCommand = {
-      containerExecutorPath, "--run-jstack", processOwner, String.valueOf(pid), JSTACK_PATH
+      containerExecutorPath, "--run-jstack", runningUser, String.valueOf(pid), JSTACK_PATH
     };
 
     LOG.info("Running JStack command: {}", Arrays.toString(jstackCommand));

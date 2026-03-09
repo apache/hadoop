@@ -108,6 +108,7 @@ public class NMWebServices {
   private static RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
   private String redirectWSUrl;
   private LogAggregationFileControllerFactory factory;
+  private DiagnosticJStackService diagnosticJStackService;
   private boolean filterAppsByUser = false;
   private boolean isJStackEndpointsEnable = false;
 
@@ -138,6 +139,7 @@ public class NMWebServices {
             YarnConfiguration.NM_JSTACK_ENDPOINTS_ENABLED,
             YarnConfiguration.DEFAULT_NM_JSTACK_ENDPOINTS_ENABLED
     );
+    this.diagnosticJStackService = new DiagnosticJStackService(this.nmContext);
   }
 
   public NMWebServices(final Context nm, final ResourceView view,
@@ -639,23 +641,22 @@ public class NMWebServices {
   @Path("/jstack/{numberOfJStack}")
   public Response getNodeThreadDump(@PathParam("numberOfJStack") int numberOfJStack)
   {
-    if (isJStackEndpointsEnable) {
-      try {
-        DiagnosticJStackService diagnosticJStackService = new DiagnosticJStackService(this.nmContext);
-        return Response.status(Status.OK)
-                .entity(diagnosticJStackService.collectNodeThreadDump(numberOfJStack))
-                .build();
-      } catch (IOException e){
-        throw new WebAppException("Shell command has failed: " + e.getMessage() + ". " +
-                "For more information please check the NodeManager logs.");
-      } catch (Exception e) {
-        throw new WebAppException(
-                "Unexpected error collection NodeManager JStack: " + e.getMessage() + ". " +
-                "For more information please check the NodeManager logs.");
-      }
-    } else {
+    if (!isJStackEndpointsEnable) {
       return Response.status(Status.METHOD_NOT_ALLOWED)
               .build();
+    }
+
+    try {
+      return Response.status(Status.OK)
+              .entity(diagnosticJStackService.collectNodeThreadDump(numberOfJStack))
+              .build();
+    } catch (IOException e){
+      throw new WebAppException("Shell command has failed: " + e.getMessage() + ". " +
+              "For more information please check the NodeManager logs.");
+    } catch (Exception e) {
+      throw new WebAppException(
+              "Unexpected error collection NodeManager JStack: " + e.getMessage() + ". " +
+                      "For more information please check the NodeManager logs.");
     }
   }
 
@@ -666,27 +667,25 @@ public class NMWebServices {
   public Response getApplicationJStack(@PathParam("appid") String appId,
                                        @PathParam("numberOfJStack") int numberOfJStack)
   {
-    if (isJStackEndpointsEnable) {
-      try {
-        DiagnosticJStackService diagnosticJStackService = new DiagnosticJStackService(this.nmContext);
-
-        return Response.status(Status.OK)
-                .entity(diagnosticJStackService.collectApplicationThreadDump(appId, numberOfJStack))
-                .build();
-      } catch (RuntimeException e){
-        throw new WebAppException(
-                "The applicationId is invalid: " + appId + "." + e.getMessage());
-      } catch (IOException e){
-        throw new WebAppException("Shell command has failed: " + e.getMessage() + ". " +
-                "For more information please check the NodeManager logs.");
-      } catch (Exception e) {
-        throw new WebAppException(
-                "Unexpected error collecting Application JStack: " + e.getMessage() + ". " +
-                "For more information please check the NodeManager logs.");
-      }
-    } else {
+    if (!isJStackEndpointsEnable) {
       return Response.status(Status.METHOD_NOT_ALLOWED)
               .build();
+    }
+
+    try {
+      return Response.status(Status.OK)
+              .entity(diagnosticJStackService.collectApplicationThreadDump(appId, numberOfJStack))
+              .build();
+    } catch (RuntimeException e){
+      throw new WebAppException(
+              "The applicationId is invalid: " + appId + "." + e.getMessage());
+    } catch (IOException e){
+      throw new WebAppException("Shell command has failed: " + e.getMessage() + ". " +
+              "For more information please check the NodeManager logs.");
+    } catch (Exception e) {
+      throw new WebAppException(
+              "Unexpected error collecting Application JStack: " + e.getMessage() + ". " +
+                      "For more information please check the NodeManager logs.");
     }
 
   }

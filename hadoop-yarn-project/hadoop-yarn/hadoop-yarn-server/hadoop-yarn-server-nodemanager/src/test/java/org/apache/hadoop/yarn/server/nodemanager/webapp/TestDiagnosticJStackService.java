@@ -20,13 +20,16 @@ package org.apache.hadoop.yarn.server.nodemanager.webapp;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedConstruction;
 import org.mockito.MockedStatic;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -48,6 +51,11 @@ public class TestDiagnosticJStackService {
     private static final int NUMBER_OF_JSTACKS = 3;
     private static final String DUMMY_JSTACK =
             "Full thread dump OpenJDK 64-Bit Server VM (17.0.15+6-Ubuntu-0ubuntu120.04...";
+    private static final String APPLICATION_ID_STR = "application_1771512066750_0001";
+    private static final ApplicationId APPLICATION_ID =
+            ApplicationId.fromString(APPLICATION_ID_STR);
+    private static final ContainerId CONTAINER_ID =
+            ContainerId.fromString("container_1771512066750_0001_01_000049");
 
     private static final NodeManager.NMContext nmContext = new NodeManager.NMContext(
             null, null, null
@@ -96,12 +104,11 @@ public class TestDiagnosticJStackService {
 
     @Test
     public void testCollectApplicationThreadDump_Success() {
-        String applicationIdStr = "application_1771512066750_0001";
-        ApplicationId applicationId = ApplicationId.fromString(applicationIdStr);
-
         List<Long> pids = List.of(23L, 12L, 531L);
 
-        doReturn(pids).when(diagnosticJStackService).getApplicationPids(applicationId);
+        Map<ContainerId, List<Long>> containerPids = Map.of(CONTAINER_ID, pids);
+
+        doReturn(containerPids).when(diagnosticJStackService).getApplicationContainerPids(APPLICATION_ID);
 
         ProcessHandle mockProcessHandle = mock(ProcessHandle.class);
         ProcessHandle.Info mockPhInfo = mock(ProcessHandle.Info.class);
@@ -117,7 +124,7 @@ public class TestDiagnosticJStackService {
         ){
             mockedStaticProcess.when(() -> ProcessHandle.of(anyLong())).thenReturn(Optional.of(mockProcessHandle));
 
-            String result = diagnosticJStackService.collectApplicationThreadDump(applicationIdStr, NUMBER_OF_JSTACKS);
+            String result = diagnosticJStackService.collectApplicationThreadDump(APPLICATION_ID_STR, NUMBER_OF_JSTACKS);
 
             assertEquals(pids.size()*NUMBER_OF_JSTACKS, mockedConstruction.constructed().size(),
               "ShellCommandExecutor should be instantiated for each PID time Number Of JStacks");
@@ -141,16 +148,15 @@ public class TestDiagnosticJStackService {
 
     @Test
     public void testCollectApplicationThreadDumpWhenProcessIdNotAlive() {
-        String applicationIdStr = "application_1771512066750_0001";
-        ApplicationId applicationId = ApplicationId.fromString(applicationIdStr);
-
         int numJStacks = 3;
-        List<Long> pids = List.of(23L);
+        List<Long> pids = List.of(23L, 12L, 531L);
 
-        doReturn(pids).when(diagnosticJStackService).getApplicationPids(applicationId);
+        Map<ContainerId, List<Long>> containerPids = Map.of(CONTAINER_ID, pids);
+
+        doReturn(containerPids).when(diagnosticJStackService).getApplicationContainerPids(APPLICATION_ID);
 
         assertThrows(IOException.class,
-                () -> diagnosticJStackService.collectApplicationThreadDump(applicationIdStr, numJStacks),
+                () -> diagnosticJStackService.collectApplicationThreadDump(APPLICATION_ID_STR, numJStacks),
         "Since we did not mock ProcessHandle.of to return non empty, it will consider this PID is dead");
 
     }
