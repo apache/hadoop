@@ -529,6 +529,13 @@ public class MountTableResolver
     String path = RouterAdmin.normalizeFileSystemPath(str);
     if (isTrashPath(path)) {
       path = subtractTrashCurrentPath(path);
+      if (path.isEmpty()) {
+        // The path is exactly the trash Current/checkpoint directory itself
+        // (e.g. /user/alice/.Trash/Current). There are no mount points under
+        // it in the RBF sense, so return null to allow operations such as
+        // recursive delete to proceed normally.
+        return null;
+      }
     }
     readLock.lock();
     try {

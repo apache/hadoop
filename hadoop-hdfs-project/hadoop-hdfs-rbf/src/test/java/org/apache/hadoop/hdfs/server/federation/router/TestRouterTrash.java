@@ -363,6 +363,51 @@ public class TestRouterTrash {
         "/.Trash/Current"));
   }
 
+  /**
+   * Test that deleting .Trash/Current and .Trash/checkpoint directories
+   * via the router works correctly (HDFS-17842).
+   * Before the fix, getMountPoints() on a trash-current path would incorrectly
+   * return all mount points after subtracting the trash prefix down to an
+   * empty string, causing AccessControlException in delete().
+   */
+  @Test
+  public void testDeleteTrashCurrentAndCheckpoint() throws Exception {
+    MountTable addEntry = MountTable.newInstance(MOUNT_POINT,
+        Collections.singletonMap(ns0, MOUNT_POINT));
+    assertTrue(addMountTable(addEntry));
+
+    DFSClient client = nnContext.getClient();
+    client.setOwner("/", TEST_USER, TEST_USER);
+    UserGroupInformation ugi = UserGroupInformation.createRemoteUser(TEST_USER);
+
+    client = nnContext.getClient(ugi);
+    client.mkdirs(MOUNT_POINT, new FsPermission("777"), true);
+    client.create(FILE, true);
+
+    Configuration routerConf = routerContext.getConf();
+    FileSystem fs = DFSTestUtil.getFileSystemAs(ugi, routerConf);
+    Trash trash = new Trash(fs, routerConf);
+    assertTrue(trash.moveToTrash(new Path(FILE)));
+
+    // Verify the file is in .Trash/Current
+    Path trashCurrentPath = new Path(TRASH_ROOT + CURRENT);
+    assertTrue(fs.exists(trashCurrentPath));
+
+    // Deleting .Trash/Current should succeed (HDFS-17842)
+    assertTrue(fs.delete(trashCurrentPath, true));
+    assertFalse(fs.exists(trashCurrentPath));
+
+    // Re-create a file and move to trash again
+    client.create(FILE, true);
+    assertTrue(trash.moveToTrash(new Path(FILE)));
+    assertTrue(fs.exists(trashCurrentPath));
+
+    // Deleting .Trash itself should also succeed
+    Path trashRootPath = new Path(TRASH_ROOT);
+    assertTrue(fs.delete(trashRootPath, true));
+    assertFalse(fs.exists(trashRootPath));
+  }
+
   @Test
   public void testSubtractTrashCurrentPath() throws IOException {
     UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
