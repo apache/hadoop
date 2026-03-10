@@ -38,7 +38,7 @@ public final class StabilityOptions {
   public static final String UNSTABLE_OPTION = "-unstable";
 
   enum Level { STABLE, EVOLVING, UNSTABLE }
-  private static volatile Level level = Level.STABLE;
+  private static volatile Level level = Level.UNSTABLE;
 
   static void setLevel(Level l) {
     if (l != null) {

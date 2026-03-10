@@ -20,10 +20,14 @@ package org.apache.hadoop.yarn.server.router.subcluster;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.MiniYARNCluster;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.File;
 
 import static org.apache.hadoop.yarn.server.router.subcluster.TestFederationSubCluster.ZK_FEDERATION_STATESTORE;
 
@@ -87,6 +91,10 @@ public class TestMockSubCluster {
     conf.set(YarnConfiguration.FEDERATION_STATESTORE_CLIENT_CLASS, ZK_FEDERATION_STATESTORE);
     conf.set(CommonConfigurationKeys.ZK_ADDRESS, pZkAddress);
     conf.set(YarnConfiguration.RM_CLUSTER_ID, pSubClusterId);
+    File nodeLabelsDir = GenericTestUtils.getTestDir(
+        "node-labels-" + pSubClusterId + "-" + Time.now());
+    conf.set(YarnConfiguration.FS_NODE_LABELS_STORE_ROOT_DIR,
+        nodeLabelsDir.toURI().toString());
     if (schedulerType.equals("fair-scheduler")) {
       conf.set("yarn.resourcemanager.scheduler.class",
           "org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler");

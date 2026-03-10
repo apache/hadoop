@@ -487,7 +487,9 @@ describe('QueueCardNode', () => {
 
     const card = screen.getByText('default').closest('.relative');
     if (!card) throw new Error('Card not found');
-    expect(card).toHaveClass('bg-blue-200');
+    // Selected state uses gradient background and subtle scale
+    expect(card).toHaveClass('scale-[1.01]');
+    expect(card).toHaveClass('ring-primary');
   });
 
   it('should show comparison state when queue is in comparison', () => {

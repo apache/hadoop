@@ -33,9 +33,9 @@ You can set this locally in your `.profile`/`.bashrc`, but note it won't
 propagate to jobs running in-cluster.
 
 See also:
-* [FNS (non-HNS)](./fns_blob.html)
-* [Legacy-Deprecated-WASB](./wasb.html)
-* [Testing](./testing_azure.html)
+* [ABFS Driver for FNS (non-HNS) Accounts](./fns_blob.html)
+* [Deprecated WASB Driver for FNS (non-HNS) Accounts](./wasb.html)
+* [Testing of ABFS Driver](./testing_azure.html)
 * [WASB Migration Config Support](./wasbToAbfsMigration.html)
 
 ## <a name="features"></a> Features of the ABFS connector.
@@ -102,6 +102,13 @@ Output:
 ```
 Blob API is not yet supported for hierarchical namespace accounts. ErrorCode: BlobApiNotYetSupportedForHierarchicalNamespaceAccounts
 ```
+
+## <a name="fnsblob"></a> Non-Hierarchical Namespaces
+
+The ABFS driver also has support for non-hierarchical namespace (FNS) accounts to help users
+migrating from the legacy WASB driver. See [FNS-Blob](./fns_blob.html) for more details.
+The service does not recommend using the DFS endpoint for FNS accounts. DFS endpoint over FNS account
+has now been **REMOVED**. All requests detected over FNS account are automatically switched to Blob endpoint.
 
 ### <a name="creating"></a> Creating an Azure Storage Account
 

@@ -19,12 +19,12 @@
 package org.apache.hadoop.fs.azurebfs.contract;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.azure.integration.AzureTestConstants;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.tools.contract.AbstractContractDistCpTest;
 import org.junit.jupiter.api.BeforeEach;
 
-import static org.apache.hadoop.fs.azure.integration.AzureTestUtils.assumeScaleTestsEnabled;
+import static org.apache.hadoop.fs.azurebfs.utils.AbfsTestUtils.SCALE_TEST_TIMEOUT_MILLIS;
+import static org.apache.hadoop.fs.azurebfs.utils.AbfsTestUtils.assumeScaleTestsEnabled;
 import static org.assertj.core.api.Assumptions.assumeThat;
 
 /**
@@ -35,7 +35,7 @@ public class ITestAbfsFileSystemContractDistCp extends AbstractContractDistCpTes
 
   @Override
   protected int getTestTimeoutMillis() {
-    return AzureTestConstants.SCALE_TEST_TIMEOUT_MILLIS;
+    return SCALE_TEST_TIMEOUT_MILLIS;
   }
 
   public ITestAbfsFileSystemContractDistCp() throws Exception {

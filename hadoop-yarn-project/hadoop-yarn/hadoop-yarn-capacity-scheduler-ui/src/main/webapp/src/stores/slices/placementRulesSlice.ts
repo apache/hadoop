@@ -25,7 +25,7 @@ import type { StateCreator } from 'zustand';
 import type { WritableDraft } from 'immer';
 import type { PlacementRule } from '~/types/features/placement-rules';
 import { extractPlacementRulesFromConfig } from '~/features/placement-rules/utils/placementRulesUtils';
-import { getMergedConfigData } from '~/utils/configUtils';
+import { mergeStagedConfig } from '~/utils/configUtils';
 import { SPECIAL_VALUES } from '~/types/constants/special-values';
 import { migrateLegacyRules } from '~/features/placement-rules/utils/migration';
 import type { SchedulerStore } from './types';
@@ -84,7 +84,7 @@ function autoStageFormatIfNeeded(
 ): void {
   const { stageGlobalChange, configData, stagedChanges, legacyRules } = get();
 
-  const mergedConfig = getMergedConfigData(configData, stagedChanges);
+  const mergedConfig = mergeStagedConfig(configData, stagedChanges);
   const formatValue = mergedConfig.get(SPECIAL_VALUES.MAPPING_RULE_FORMAT_PROPERTY);
   const normalizedFormat = formatValue?.trim().toLowerCase() ?? '';
 
@@ -132,7 +132,7 @@ export const createPlacementRulesSlice: StateCreator<
     try {
       const configData = get().configData;
       const stagedChanges = get().stagedChanges;
-      const mergedConfig = getMergedConfigData(configData, stagedChanges);
+      const mergedConfig = mergeStagedConfig(configData, stagedChanges);
 
       const formatValue = mergedConfig.get(SPECIAL_VALUES.MAPPING_RULE_FORMAT_PROPERTY);
       const formatWarning = getFormatWarningMessage(formatValue);

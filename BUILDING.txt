@@ -5,7 +5,7 @@ Requirements:
 
 * Unix System
 * JDK 17
-* Maven 3.3 or later
+* Maven 3.9.11 or later (optional, a compatible version is automatically downloaded if using ./mvnw)
 * Boost 1.86.0 (if compiling native code)
 * Protocol Buffers 3.25.5 (if compiling native code)
 * CMake 3.19 or newer (if compiling native code)
@@ -29,11 +29,21 @@ This requires a recent version of docker (1.4.1 and higher are known to work).
 On Linux / Mac:
     Install Docker and run this command:
 
-    $ ./start-build-env.sh [OS platform]
+    $ [CPU_ARCH=<arch>] ./start-build-env.sh [OS platform]
 
-   - [OS Platform] One of [rockylinux_8, debian_11, debian_12, debian_13, ubuntu_20, ubuntu_24, windows_10].
-        Default is 'ubuntu_20'.
-        Note: Currently only default ('ubuntu_20') is supported on arm machine
+   - [CPU_ARCH=<arch>] One of [x86_64, amd64, aarch64, arm64].
+        Default is output of 'uname -m'. Set to 'x86_64' on arm machine
+        (e.g. Apple M1) to create an x86_64 container.
+        Note:
+          CPU arch emulation may have significant performance overhead.
+          To enable cross-platform container support, run this command first:
+          $ docker run --rm --privileged tonistiigi/binfmt --install amd64,arm64
+          To run an x86_64 container on arm machine, use this command:
+          $ CPU_ARCH=x86_64 ./start-build-env.sh ubuntu_24
+
+   - [OS Platform] One of [rockylinux_8, debian_12, debian_13, ubuntu_24, windows_10].
+        Default is 'ubuntu_24'.
+        Note: Currently only ubuntu is supported on arm machine
 
 The prompt which is then presented is located at a mounted version of the source tree
 and all required tools for testing and building have been installed and configured.
@@ -55,9 +65,7 @@ Known issues:
   and run your IDE and Docker etc inside that VM.
 
 ----------------------------------------------------------------------------------
-Installing required packages for clean install of Ubuntu 18.04 LTS Desktop.
-(For Ubuntu 20.04, gcc/g++ and cmake bundled with Ubuntu can be used.
-Refer to  dev-support/docker/Dockerfile):
+Installing required packages for clean install of Ubuntu 24.04 LTS Desktop.
 
 * Open JDK 17
   $ sudo apt-get update
@@ -66,18 +74,6 @@ Refer to  dev-support/docker/Dockerfile):
   $ sudo apt-get -y install maven
 * Native libraries
   $ sudo apt-get -y install build-essential autoconf automake libtool cmake zlib1g-dev pkg-config libssl-dev libsasl2-dev
-* GCC 9.3.0
-  $ sudo apt-get -y install software-properties-common
-  $ sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
-  $ sudo apt-get update
-  $ sudo apt-get -y install g++-9 gcc-9
-  $ sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-9 60 --slave /usr/bin/g++ g++ /usr/bin/g++-9
-* CMake 3.19
-  $ curl -L https://cmake.org/files/v3.19/cmake-3.19.0.tar.gz > cmake-3.19.0.tar.gz
-  $ tar -zxvf cmake-3.19.0.tar.gz && cd cmake-3.19.0
-  $ ./bootstrap
-  $ make -j$(nproc)
-  $ sudo make install
 * Protocol Buffers 3.25.5 (required to build native code)
   $ curl -L https://github.com/protocolbuffers/protobuf/archive/refs/tags/v3.25.5.tar.gz > protobuf-3.25.5.tar.gz
   $ curl -L https://github.com/abseil/abseil-cpp/archive/refs/tags/20230802.1.tar.gz > abseil-cpp-20230802.1.tar.gz
@@ -88,8 +84,8 @@ Refer to  dev-support/docker/Dockerfile):
   $ cmake --build build --parallel $(nproc)
   $ sudo cmake --install build
 * Boost
-  $ curl -L https://sourceforge.net/projects/boost/files/boost/1.86.0/boost_1_86_0.tar.bz2/download > boost_1_86_0.tar.bz2
-  $ tar --bzip2 -xf boost_1_86_0.tar.bz2 && cd boost_1_86_0
+  $ curl -L https://github.com/boostorg/boost/releases/download/boost-1.86.0/boost-1.86.0-b2-nodocs.tar.gz > boost-1.86.0.tar.gz
+  $ tar -zxf boost-1.86.0.tar.gz && cd boost-1.86.0
   $ ./bootstrap.sh --prefix=/usr/
   $ ./b2 --without-python
   $ sudo ./b2 --without-python install
@@ -543,17 +539,10 @@ Building on Rocky Linux 8
   $ sudo dnf -y install gcc-toolset-9-gcc gcc-toolset-9-gcc-c++
   $ source /opt/rh/gcc-toolset-9/enable
 
-* Install CMake 3.19
-  $ curl -L https://cmake.org/files/v3.19/cmake-3.19.0.tar.gz > cmake-3.19.0.tar.gz
-  $ tar -zxvf cmake-3.19.0.tar.gz && cd cmake-3.19.0
-  $ ./bootstrap
-  $ make -j$(nproc)
-  $ sudo make install
-
 * Install boost.
-  $ curl -L -o boost_1_86_0.tar.bz2 https://sourceforge.net/projects/boost/files/boost/1.86.0/boost_1_86_0.tar.bz2/download
-  $ tar xjf boost_1_86_0.tar.bz2
-  $ cd boost_1_86_0
+  $ curl -L -o boost-1.86.0.tar.gz https://github.com/boostorg/boost/releases/download/boost-1.86.0/boost-1.86.0-b2-nodocs.tar.gz
+  $ tar -xzf boost-1.86.0.tar.gz
+  $ cd boost-1.86.0
   $ ./bootstrap.sh --prefix=/usr/local
   $ ./b2
   $ sudo ./b2 install
@@ -583,7 +572,7 @@ Requirements:
 
 * Windows 10
 * JDK 17
-* Maven 3.3 or later (maven.apache.org)
+* Maven 3.9.11 or later (maven.apache.org, optional, a compatible version is automatically downloaded if using mvnw.cmd)
 * Boost 1.86.0 (boost.org)
 * Protocol Buffers 3.25.5 (https://github.com/protocolbuffers/protobuf/tags)
 * CMake 3.19 or newer (cmake.org)

@@ -67,7 +67,6 @@ export const createStagedChangesSlice: StateCreator<
 > = (set, get) => ({
   stagedChanges: [],
   applyError: null,
-  orphanedValidationErrors: [],
 
   stageQueueChange: (queuePath, property, value, validationErrors) => {
     if (!queuePath || !queuePath.startsWith(SPECIAL_VALUES.ROOT_QUEUE_NAME)) {
@@ -513,7 +512,6 @@ export const createStagedChangesSlice: StateCreator<
     set((state) => {
       if (state.stagedChanges.length > 0) {
         state.stagedChanges = [];
-        state.orphanedValidationErrors = [];
         clearMutationError(state);
       }
     });

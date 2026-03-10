@@ -170,7 +170,7 @@ public class PendingSet extends PersistentCommitData<PendingSet> {
    * Validate the data: those fields which must be non empty, must be set.
    * @throws ValidationFailure if the data is invalid
    */
-  public void validate() throws ValidationFailure {
+  public final void validate() throws ValidationFailure {
     verify(version == VERSION, "Wrong version: %s", version);
     validateCollectionClass(extraData.keySet(), String.class);
     validateCollectionClass(extraData.values(), String.class);

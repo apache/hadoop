@@ -40,6 +40,7 @@ import type { PropertyDescriptor } from '~/types/property-descriptor';
 import { HighlightedText } from '~/components/search/HighlightedText';
 import { useValidation } from '~/contexts/ValidationContext';
 import { SPECIAL_VALUES } from '~/types';
+import { splitIssues } from '~/features/validation/service';
 
 interface PropertyInputProps {
   property: PropertyDescriptor;
@@ -64,12 +65,9 @@ export const PropertyInput: React.FC<PropertyInputProps> = ({
 
   const queueIssues = errors[SPECIAL_VALUES.GLOBAL_QUEUE_PATH] ?? {};
   const fieldIssues = queueIssues[property.name] ?? [];
-  const errorMessages = fieldIssues
-    .filter((issue) => issue.severity === 'error')
-    .map((issue) => issue.message);
-  const warningMessages = fieldIssues
-    .filter((issue) => issue.severity === 'warning')
-    .map((issue) => issue.message);
+  const { errors: fieldErrors, warnings: fieldWarnings } = splitIssues(fieldIssues);
+  const errorMessages = fieldErrors.map((issue) => issue.message);
+  const warningMessages = fieldWarnings.map((issue) => issue.message);
   const errorMessage = errorMessages.join(' ');
   const warningMessage = warningMessages.join(' ');
   const isDisabled = disabled;

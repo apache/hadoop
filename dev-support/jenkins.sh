@@ -18,7 +18,7 @@
 
 # This script is called from the Jenkinsfile, which ultimately runs
 # the CI through Yetus.
-# We use Ubuntu Focal as the main platform for building Hadoop, thus
+# We use Ubuntu Noble as the main platform for building Hadoop, thus
 # it runs for all the PRs. Additionally, we also ensure that
 # Hadoop builds across the supported platforms whenever there's a change
 # in any of the C/C++ files, C/C++ build files or platform changes.

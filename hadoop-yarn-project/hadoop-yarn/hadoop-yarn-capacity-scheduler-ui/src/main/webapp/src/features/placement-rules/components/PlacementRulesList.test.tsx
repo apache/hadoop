@@ -116,9 +116,16 @@ describe('PlacementRulesList', () => {
     applyError: null,
   };
 
+  function mockStore(overrides: Record<string, any> = {}) {
+    const state = { ...mockStoreFunctions, ...overrides };
+    vi.mocked(useSchedulerStore).mockImplementation((selector?: any) => {
+      return selector ? selector(state) : state;
+    });
+  }
+
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(useSchedulerStore).mockReturnValue(mockStoreFunctions);
+    mockStore();
   });
 
   it('should render empty state when no rules exist', () => {
@@ -132,10 +139,7 @@ describe('PlacementRulesList', () => {
   });
 
   it('should render table view when rules exist', () => {
-    vi.mocked(useSchedulerStore).mockReturnValue({
-      ...mockStoreFunctions,
-      rules: mockRules,
-    });
+    mockStore({ rules: mockRules });
 
     render(<PlacementRulesList />);
 
@@ -185,10 +189,7 @@ describe('PlacementRulesList', () => {
 
   it('should call deleteRule when delete is clicked on a rule', async () => {
     const user = userEvent.setup();
-    vi.mocked(useSchedulerStore).mockReturnValue({
-      ...mockStoreFunctions,
-      rules: mockRules,
-    });
+    mockStore({ rules: mockRules });
 
     render(<PlacementRulesList />);
 
@@ -200,10 +201,7 @@ describe('PlacementRulesList', () => {
   });
 
   it('should display info alert about rule evaluation order', () => {
-    vi.mocked(useSchedulerStore).mockReturnValue({
-      ...mockStoreFunctions,
-      rules: mockRules,
-    });
+    mockStore({ rules: mockRules });
 
     render(<PlacementRulesList />);
 
@@ -215,10 +213,7 @@ describe('PlacementRulesList', () => {
   });
 
   it('should display apply error alert when present', () => {
-    vi.mocked(useSchedulerStore).mockReturnValue({
-      ...mockStoreFunctions,
-      applyError: 'HTTP 400: Invalid configuration',
-    });
+    mockStore({ applyError: 'HTTP 400: Invalid configuration' });
 
     render(<PlacementRulesList />);
 
@@ -229,10 +224,7 @@ describe('PlacementRulesList', () => {
   it('should call loadPlacementRules on mount when configData is available', () => {
     // Set up configData with some content
     const configWithData = new Map([['some.property', 'value']]);
-    vi.mocked(useSchedulerStore).mockReturnValue({
-      ...mockStoreFunctions,
-      configData: configWithData,
-    });
+    mockStore({ configData: configWithData });
 
     render(<PlacementRulesList />);
 
@@ -248,8 +240,7 @@ describe('PlacementRulesList', () => {
 
   describe('legacy mode behavior', () => {
     it('should show legacy mode UI when isLegacyMode is true', () => {
-      vi.mocked(useSchedulerStore).mockReturnValue({
-        ...mockStoreFunctions,
+      mockStore({
         isLegacyMode: true,
         legacyRules: 'u:user1:root.default,u:user2:root.production',
       });
@@ -264,10 +255,7 @@ describe('PlacementRulesList', () => {
     });
 
     it('should show migrate button in legacy mode', () => {
-      vi.mocked(useSchedulerStore).mockReturnValue({
-        ...mockStoreFunctions,
-        isLegacyMode: true,
-      });
+      mockStore({ isLegacyMode: true });
 
       render(<PlacementRulesList />);
 
@@ -276,10 +264,7 @@ describe('PlacementRulesList', () => {
     });
 
     it('should not show add form in legacy mode', () => {
-      vi.mocked(useSchedulerStore).mockReturnValue({
-        ...mockStoreFunctions,
-        isLegacyMode: true,
-      });
+      mockStore({ isLegacyMode: true });
 
       render(<PlacementRulesList />);
 
@@ -288,11 +273,7 @@ describe('PlacementRulesList', () => {
     });
 
     it('should not show rules table in legacy mode', () => {
-      vi.mocked(useSchedulerStore).mockReturnValue({
-        ...mockStoreFunctions,
-        isLegacyMode: true,
-        rules: mockRules,
-      });
+      mockStore({ isLegacyMode: true, rules: mockRules });
 
       render(<PlacementRulesList />);
 

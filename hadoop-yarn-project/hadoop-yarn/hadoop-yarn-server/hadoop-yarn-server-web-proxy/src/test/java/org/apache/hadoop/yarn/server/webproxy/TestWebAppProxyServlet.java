@@ -38,6 +38,7 @@ import java.util.Map;
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
+import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -51,6 +52,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -331,6 +333,47 @@ public class TestWebAppProxyServlet {
 
     });
 
+  }
+
+  @Test
+  void testRedirectFlagProxyServlet() throws IOException, ServletException {
+    HttpServletRequest request = mock(HttpServletRequest.class);
+    when(request.getMethod()).thenReturn("GET");
+    when(request.getRemoteUser()).thenReturn("dr.who");
+    when(request.getPathInfo()).thenReturn("/application_00_0");
+    when(request.getHeaderNames()).thenReturn(Collections.emptyEnumeration());
+
+    HttpServletResponse response = mock(HttpServletResponse.class);
+    when(response.getOutputStream()).thenReturn(mock(ServletOutputStream.class));
+    when(response.getWriter()).thenReturn(mock(PrintWriter.class));
+    WebAppProxyServlet servlet = new WebAppProxyServlet();
+    ServletConfig config = mock(ServletConfig.class);
+    ServletContext context = mock(ServletContext.class);
+    when(config.getServletContext()).thenReturn(context);
+    AppReportFetcherForTest appReportFetcher =
+        new AppReportFetcherForTest(new YarnConfiguration());
+    servlet.init(config);
+    when(config.getServletContext()
+        .getAttribute(WebAppProxy.FETCHER_ATTRIBUTE))
+        .thenReturn(appReportFetcher);
+
+    appReportFetcher.answer = 8;
+
+    //Check if flag is on
+    YarnConfiguration conf = new YarnConfiguration();
+    conf.set(YarnConfiguration.PROXY_REDIRECT_FLAG, "yarn_knox_proxy");
+    servlet.setConf(conf);
+    servlet.doGet(request, response);
+
+    //Check if flag is off
+    conf.set(YarnConfiguration.PROXY_REDIRECT_FLAG, "");
+    servlet.setConf(conf);
+    servlet.doGet(request, response);
+
+    ArgumentCaptor<Integer> statusCaptor = ArgumentCaptor.forClass(Integer.class);
+    Mockito.verify(response, Mockito.times(2)).setStatus(statusCaptor.capture());
+    assertEquals(HttpServletResponse.SC_FOUND, statusCaptor.getAllValues().get(0));
+    assertEquals(HttpServletResponse.SC_OK, statusCaptor.getAllValues().get(1));
   }
 
   @Test
@@ -653,6 +696,11 @@ public class TestWebAppProxyServlet {
         FetchedAppReport result = getDefaultApplicationReport(appId);
         result.getApplicationReport().setOriginalTrackingUrl("localhost:"
             + originalPort + "/foo/timeout?a=b#main");
+        return result;
+      } else if (answer == 8) {
+        FetchedAppReport result = getDefaultApplicationReport(appId);
+        result.getApplicationReport().setOriginalTrackingUrl("localhost:"
+            + originalPort + "/foo/bar?yarn_knox_proxy=true");
         return result;
       }
       return null;

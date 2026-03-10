@@ -19,11 +19,11 @@
   <parent>
     <artifactId>hadoop-yarn-server</artifactId>
     <groupId>org.apache.hadoop</groupId>
-    <version>3.5.0-SNAPSHOT</version>
+    <version>3.6.0-SNAPSHOT</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
   <artifactId>hadoop-yarn-server-resourcemanager</artifactId>
-  <version>3.5.0-SNAPSHOT</version>
+  <version>3.6.0-SNAPSHOT</version>
   <name>Apache Hadoop YARN ResourceManager</name>
 
   <properties>
@@ -262,8 +262,16 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>org.glassfish.jersey.media</groupId>
-      <artifactId>jersey-media-json-jettison</artifactId>
+      <groupId>org.eclipse.persistence</groupId>
+      <artifactId>org.eclipse.persistence.moxy</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>jakarta.json</groupId>
+      <artifactId>jakarta.json-api</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.glassfish</groupId>
+      <artifactId>javax.json</artifactId>
     </dependency>
     <dependency>
       <groupId>org.mockito</groupId>

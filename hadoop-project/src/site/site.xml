@@ -152,6 +152,7 @@
       <item name="Using FPGA" href="hadoop-yarn/hadoop-yarn-site/UsingFPGA.html"/>
       <item name="Placement Constraints" href="hadoop-yarn/hadoop-yarn-site/PlacementConstraints.html"/>
       <item name="YARN UI2" href="hadoop-yarn/hadoop-yarn-site/YarnUI2.html"/>
+      <item name="YARN Capacity Scheduler UI" href="hadoop-yarn/hadoop-yarn-site/YarnCapacitySchedulerUI.html"/>
     </menu>
 
     <menu name="YARN REST APIs" inherit="top">

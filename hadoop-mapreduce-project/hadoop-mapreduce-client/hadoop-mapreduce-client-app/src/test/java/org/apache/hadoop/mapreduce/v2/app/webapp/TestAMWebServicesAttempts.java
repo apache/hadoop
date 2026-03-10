@@ -51,6 +51,7 @@ import org.apache.hadoop.mapreduce.v2.app.MockAppContext;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
 import org.apache.hadoop.mapreduce.v2.app.job.Task;
 import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
+import org.apache.hadoop.mapreduce.v2.app.webapp.jsonprovider.JsonProviderFeature;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.util.XMLUtils;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
@@ -66,7 +67,6 @@ import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 
 import org.glassfish.jersey.internal.inject.AbstractBinder;
-import org.glassfish.jersey.jettison.JettisonFeature;
 import org.glassfish.jersey.server.ResourceConfig;
 
 /**
@@ -88,7 +88,7 @@ public class TestAMWebServicesAttempts extends JerseyTestBase {
     config.register(new JerseyBinder());
     config.register(AMWebServices.class);
     config.register(GenericExceptionHandler.class);
-    config.register(new JettisonFeature());
+    config.register(JsonProviderFeature.class);
     config.register(JAXBContextResolver.class);
     return config;
   }
@@ -449,10 +449,7 @@ public class TestAMWebServicesAttempts extends JerseyTestBase {
       throws JSONException {
     assertEquals(1, json.length(), "incorrect number of elements");
     JSONObject attempts = json.getJSONObject("taskAttempts");
-    assertEquals(1, json.length(), "incorrect number of elements");
-    JSONObject taskAttempt = attempts.getJSONObject("taskAttempt");
-    JSONArray arr = new JSONArray();
-    arr.put(taskAttempt);
+    JSONArray arr = attempts.getJSONArray("taskAttempt");
     for (TaskAttempt att : task.getAttempts().values()) {
       TaskAttemptId id = att.getID();
       String attid = MRApps.toString(id);

@@ -34,6 +34,7 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -168,7 +169,7 @@ public class TestThrottledAsyncChecker {
       olf.get().get();
       fail("Failed to get expected ExecutionException");
     } catch(ExecutionException ee) {
-      assertTrue(ee.getCause() instanceof DummyException);
+      assertInstanceOf(DummyException.class, ee.getCause());
     }
   }
 

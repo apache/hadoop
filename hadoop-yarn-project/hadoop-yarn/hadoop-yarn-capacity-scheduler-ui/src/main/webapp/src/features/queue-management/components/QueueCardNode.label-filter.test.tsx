@@ -83,23 +83,34 @@ describe('QueueCardNode - Node Label Filtering', () => {
     deletable: false,
   };
 
+  const defaultStoreState: Record<string, any> = {
+    comparisonQueues: [],
+    selectedQueuePath: null,
+    selectQueue: vi.fn(),
+    setPropertyPanelOpen: vi.fn(),
+    isPropertyPanelOpen: false,
+    propertyPanelInitialTab: 'overview',
+    setPropertyPanelInitialTab: vi.fn(),
+    toggleComparisonQueue: vi.fn(),
+    selectedNodeLabelFilter: '',
+    getQueueLabelCapacity: mockGetQueueLabelCapacity,
+    hasPendingDeletion: vi.fn().mockReturnValue(false),
+    clearQueueChanges: vi.fn(),
+    requestTemplateConfigOpen: vi.fn(),
+    searchQuery: '',
+    isComparisonModeActive: false,
+  };
+
+  function mockStore(overrides: Record<string, any> = {}) {
+    const state = { ...defaultStoreState, ...overrides };
+    vi.mocked(useSchedulerStore).mockImplementation((selector?: any) => {
+      return selector ? selector(state) : state;
+    });
+  }
+
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(useSchedulerStore).mockReturnValue({
-      comparisonQueues: [],
-      selectedQueuePath: null,
-      selectQueue: vi.fn(),
-      setPropertyPanelOpen: vi.fn(),
-      isPropertyPanelOpen: false,
-      propertyPanelInitialTab: 'overview',
-      setPropertyPanelInitialTab: vi.fn(),
-      toggleComparisonQueue: vi.fn(),
-      selectedNodeLabelFilter: '',
-      getQueueLabelCapacity: mockGetQueueLabelCapacity,
-      hasPendingDeletion: vi.fn().mockReturnValue(false),
-      clearQueueChanges: vi.fn(),
-      requestTemplateConfigOpen: vi.fn(),
-    } as any);
+    mockStore();
   });
 
   describe('DEFAULT label (no filter)', () => {
@@ -144,21 +155,7 @@ describe('QueueCardNode - Node Label Filtering', () => {
 
   describe('Label-specific filtering', () => {
     beforeEach(() => {
-      vi.mocked(useSchedulerStore).mockReturnValue({
-        comparisonQueues: [],
-        selectedQueuePath: null,
-        selectQueue: vi.fn(),
-        setPropertyPanelOpen: vi.fn(),
-        isPropertyPanelOpen: false,
-        propertyPanelInitialTab: 'overview',
-        setPropertyPanelInitialTab: vi.fn(),
-        toggleComparisonQueue: vi.fn(),
-        selectedNodeLabelFilter: 'gpu',
-        getQueueLabelCapacity: mockGetQueueLabelCapacity,
-        hasPendingDeletion: vi.fn().mockReturnValue(false),
-        clearQueueChanges: vi.fn(),
-        requestTemplateConfigOpen: vi.fn(),
-      } as any);
+      mockStore({ selectedNodeLabelFilter: 'gpu' });
     });
 
     it('should show label-specific capacity when queue has access', () => {
@@ -257,18 +254,7 @@ describe('QueueCardNode - Node Label Filtering', () => {
 
   describe('Label badge tooltip', () => {
     it('should show tooltip for label badge', async () => {
-      vi.mocked(useSchedulerStore).mockReturnValue({
-        comparisonQueues: [],
-        selectedQueuePath: null,
-        selectQueue: vi.fn(),
-        setPropertyPanelOpen: vi.fn(),
-        toggleComparisonQueue: vi.fn(),
-        selectedNodeLabelFilter: 'gpu',
-        getQueueLabelCapacity: mockGetQueueLabelCapacity,
-        hasPendingDeletion: vi.fn().mockReturnValue(false),
-        clearQueueChanges: vi.fn(),
-        requestTemplateConfigOpen: vi.fn(),
-      } as any);
+      mockStore({ selectedNodeLabelFilter: 'gpu' });
 
       mockGetQueueLabelCapacity.mockReturnValue({
         capacity: '80',

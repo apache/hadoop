@@ -24,6 +24,8 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.List;
+import java.util.Stack;
 import java.util.concurrent.CountDownLatch;
 
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
@@ -42,6 +44,7 @@ public final class ReadBufferManagerV1 extends ReadBufferManager {
 
   private Thread[] threads = new Thread[NUM_THREADS];
   private byte[][] buffers;
+  private Stack<Integer> freeList = new Stack<>();   // indices in buffers[] array that are available
   private static ReadBufferManagerV1 bufferManager;
 
   // hide instance constructor
@@ -607,7 +610,21 @@ public final class ReadBufferManagerV1 extends ReadBufferManager {
     setBufferManager(null); // reset the singleton instance
   }
 
+  @Override
+  protected List<Integer> getFreeListCopy() {
+    return new ArrayList<>(freeList);
+  }
+
+  private Stack<Integer> getFreeList() {
+    return freeList;
+  }
+
   private static void setBufferManager(ReadBufferManagerV1 manager) {
     bufferManager = manager;
+  }
+
+  @Override
+  protected void clearFreeList() {
+    getFreeList().clear();
   }
 }

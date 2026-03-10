@@ -541,62 +541,6 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_APACHE_HTTP_CLIENT_MAX_IO_EXCEPTION_RETRIES)
   private int maxApacheHttpClientIoExceptionsRetries;
 
-  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_WRITE_DYNAMIC_THREADPOOL_ENABLEMENT,
-      DefaultValue = DEFAULT_WRITE_DYNAMIC_THREADPOOL_ENABLEMENT)
-  private boolean dynamicWriteThreadPoolEnablement;
-
-  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_WRITE_THREADPOOL_KEEP_ALIVE_TIME_MILLIS,
-      DefaultValue = DEFAULT_WRITE_THREADPOOL_KEEP_ALIVE_TIME_MILLIS)
-  private int writeThreadPoolKeepAliveTime;
-
-  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_WRITE_CPU_MONITORING_INTERVAL_MILLIS,
-      MinValue = MIN_WRITE_CPU_MONITORING_INTERVAL_MILLIS,
-      MaxValue = MAX_WRITE_CPU_MONITORING_INTERVAL_MILLIS,
-      DefaultValue = DEFAULT_WRITE_CPU_MONITORING_INTERVAL_MILLIS)
-  private int writeCpuMonitoringInterval;
-
-  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_WRITE_HIGH_CPU_THRESHOLD_PERCENT,
-      MinValue = MIN_WRITE_HIGH_CPU_THRESHOLD_PERCENT,
-      MaxValue = MAX_WRITE_HIGH_CPU_THRESHOLD_PERCENT,
-      DefaultValue = DEFAULT_WRITE_HIGH_CPU_THRESHOLD_PERCENT)
-  private int writeHighCpuThreshold;
-
-  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_WRITE_MEDIUM_CPU_THRESHOLD_PERCENT,
-      MinValue = MIN_WRITE_MEDIUM_CPU_THRESHOLD_PERCENT,
-      MaxValue = MAX_WRITE_MEDIUM_CPU_THRESHOLD_PERCENT,
-      DefaultValue = DEFAULT_WRITE_MEDIUM_CPU_THRESHOLD_PERCENT)
-  private int writeMediumCpuThreshold;
-
-  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_WRITE_LOW_CPU_THRESHOLD_PERCENT,
-      MaxValue = MAX_WRITE_LOW_CPU_THRESHOLD_PERCENT,
-      DefaultValue = DEFAULT_WRITE_LOW_CPU_THRESHOLD_PERCENT)
-  private int writeLowCpuThreshold;
-
-  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_WRITE_LOW_TIER_MEMORY_MULTIPLIER,
-      MinValue = MIN_WRITE_LOW_TIER_MEMORY_MULTIPLIER,
-      DefaultValue = DEFAULT_WRITE_LOW_TIER_MEMORY_MULTIPLIER)
-  private int lowTierMemoryMultiplier;
-
-  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_WRITE_MEDIUM_TIER_MEMORY_MULTIPLIER,
-      MinValue = MIN_WRITE_MEDIUM_TIER_MEMORY_MULTIPLIER,
-      DefaultValue = DEFAULT_WRITE_MEDIUM_TIER_MEMORY_MULTIPLIER)
-  private int mediumTierMemoryMultiplier;
-
-  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_WRITE_HIGH_TIER_MEMORY_MULTIPLIER,
-      MinValue = MIN_WRITE_HIGH_TIER_MEMORY_MULTIPLIER,
-      DefaultValue = DEFAULT_WRITE_HIGH_TIER_MEMORY_MULTIPLIER)
-  private int highTierMemoryMultiplier;
-
-  @IntegerConfigurationValidatorAnnotation(ConfigurationKey =
-      FS_AZURE_WRITE_HIGH_MEMORY_USAGE_THRESHOLD_PERCENT,
-      DefaultValue = DEFAULT_WRITE_HIGH_MEMORY_USAGE_THRESHOLD_PERCENT)
-  private int writeHighMemoryUsageThresholdPercent;
-
-  @IntegerConfigurationValidatorAnnotation(ConfigurationKey =
-      FS_AZURE_WRITE_LOW_MEMORY_USAGE_THRESHOLD_PERCENT,
-      DefaultValue = DEFAULT_WRITE_LOW_MEMORY_USAGE_THRESHOLD_PERCENT)
-  private int writeLowMemoryUsageThresholdPercent;
-
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey =
       FS_AZURE_APACHE_HTTP_CLIENT_MAX_CACHE_SIZE, DefaultValue = DEFAULT_APACHE_HTTP_CLIENT_MAX_CACHE_SIZE,
       MinValue = MIN_APACHE_HTTP_CLIENT_MAX_CACHE_SIZE, MaxValue = MAX_APACHE_HTTP_CLIENT_MAX_CACHE_SIZE)
@@ -678,6 +622,10 @@ public class AbfsConfiguration{
       MinValue = DEFAULT_FS_AZURE_STANDARD_REQUEST_PRIORITY_VALUE,
       DefaultValue = DEFAULT_FS_AZURE_LOWEST_REQUEST_PRIORITY_VALUE)
   private int prefetchRequestPriorityValue;
+
+  @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_READ_POLICY,
+          DefaultValue = DEFAULT_AZURE_READ_POLICY)
+  private String abfsReadPolicy;
 
   private String clientProvidedEncryptionKey;
   private String clientProvidedEncryptionKeySHA;
@@ -1434,6 +1382,14 @@ public class AbfsConfiguration{
   }
 
   /**
+   * Get the ABFS read policy set by user.
+   * @return the ABFS read policy.
+   */
+  public String getAbfsReadPolicy() {
+    return abfsReadPolicy;
+  }
+
+  /**
    * Enum config to allow user to pick format of x-ms-client-request-id header
    * @return tracingContextFormat config if valid, else default ALL_ID_FORMAT
    */
@@ -1943,60 +1899,16 @@ public class AbfsConfiguration{
         oauthTokenFetchRetryDeltaBackoff);
   }
 
-  public int getWriteConcurrentRequestCount() {
+  public int getWriteMaxConcurrentRequestCount() {
     if (this.writeMaxConcurrentRequestCount < 1) {
       return 4 * Runtime.getRuntime().availableProcessors();
     }
     return this.writeMaxConcurrentRequestCount;
   }
 
-  public int getWriteThreadPoolKeepAliveTime() {
-    return writeThreadPoolKeepAliveTime;
-  }
-
-  public int getWriteCpuMonitoringInterval() {
-    return writeCpuMonitoringInterval;
-  }
-
-  public boolean isDynamicWriteThreadPoolEnablement() {
-    return dynamicWriteThreadPoolEnablement;
-  }
-
-  public int getWriteLowCpuThreshold() {
-    return writeLowCpuThreshold;
-  }
-
-  public int getWriteMediumCpuThreshold() {
-    return writeMediumCpuThreshold;
-  }
-
-  public int getWriteHighCpuThreshold() {
-    return writeHighCpuThreshold;
-  }
-
-  public int getLowTierMemoryMultiplier() {
-    return lowTierMemoryMultiplier;
-  }
-
-  public int getMediumTierMemoryMultiplier() {
-    return mediumTierMemoryMultiplier;
-  }
-
-  public int getHighTierMemoryMultiplier() {
-    return highTierMemoryMultiplier;
-  }
-
-  public int getWriteHighMemoryUsageThresholdPercent() {
-    return writeHighMemoryUsageThresholdPercent;
-  }
-
-  public int getWriteLowMemoryUsageThresholdPercent() {
-    return writeLowMemoryUsageThresholdPercent;
-  }
-
   public int getMaxWriteRequestsToQueue() {
     if (this.maxWriteRequestsToQueue < 1) {
-      return 2 * getWriteConcurrentRequestCount();
+      return 2 * getWriteMaxConcurrentRequestCount();
     }
     return this.maxWriteRequestsToQueue;
   }
@@ -2137,6 +2049,15 @@ public class AbfsConfiguration{
   @VisibleForTesting
   public void setIsChecksumValidationEnabled(boolean isChecksumValidationEnabled) {
     this.isChecksumValidationEnabled = isChecksumValidationEnabled;
+  }
+
+  /**
+   * Sets the ABFS read policy for testing purposes.
+   * @param readPolicy the read policy to set.
+   */
+  @VisibleForTesting
+  public void setAbfsReadPolicy(String readPolicy) {
+    abfsReadPolicy = readPolicy;
   }
 
   public boolean isFullBlobChecksumValidationEnabled() {

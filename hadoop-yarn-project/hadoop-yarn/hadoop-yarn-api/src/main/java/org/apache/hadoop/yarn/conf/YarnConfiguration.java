@@ -1007,6 +1007,16 @@ public class YarnConfiguration extends Configuration {
   public static final String DEFAULT_RM_SCHEDCONF_STORE_ZK_PARENT_PATH =
       "/confstore";
 
+  /** Read-retry period for the ZKConfigurationStore. */
+  @Private
+  @Unstable
+  public static final String RM_SCHEDCONF_STORE_ZK_READ_RETRY_SECS =
+      YARN_PREFIX + "scheduler.configuration.zk-store.read-retry-secs";
+  @Private
+  @Unstable
+  public static final int DEFAULT_RM_SCHEDCONF_STORE_ZK_READ_RETRY_SECS = 3;
+
+
   @Private
   @Unstable
   public static final String RM_SCHEDULER_MUTATION_ACL_POLICY_CLASS =
@@ -3015,6 +3025,8 @@ public class YarnConfiguration extends Configuration {
   /** Binding address for the web proxy. */
   public static final String PROXY_BIND_HOST =
       PROXY_PREFIX + "bind-host";
+
+  public static final String PROXY_REDIRECT_FLAG = PROXY_PREFIX + "redirect-flag";
 
   /**
    * YARN Service Level Authorization

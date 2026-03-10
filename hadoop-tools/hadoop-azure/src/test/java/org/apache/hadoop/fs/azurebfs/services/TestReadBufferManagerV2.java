@@ -268,6 +268,7 @@ public class TestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
     ReadBufferManagerV2 bufferManagerV2 = ReadBufferManagerV2.getBufferManager(abfsClient.getAbfsCounters());
     int initialBuffers = bufferManagerV2.getMinBufferPoolSize();
     assertThat(bufferManagerV2.getNumBuffers()).isEqualTo(initialBuffers);
+    bufferManagerV2.setMinBufferPoolSize(initialBuffers - 5); // allow downscale
     running = true;
     Thread t = new Thread(() -> {
       while (running) {
@@ -314,6 +315,7 @@ public class TestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
           bufferManagerV2.getCurrentStats(ResourceUtilizationUtils.getJvmCpuLoad());
       int initialBuffers = bufferManagerV2.getMinBufferPoolSize();
       assertThat(bufferManagerV2.getNumBuffers()).isEqualTo(initialBuffers);
+      bufferManagerV2.setMinBufferPoolSize(initialBuffers - 5); // allow downscale
       running = true;
       Thread t = new Thread(() -> {
         while (running) {
