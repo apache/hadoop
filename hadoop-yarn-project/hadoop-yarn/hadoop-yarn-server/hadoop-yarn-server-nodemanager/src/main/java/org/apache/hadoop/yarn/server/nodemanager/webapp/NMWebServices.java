@@ -639,6 +639,7 @@ public class NMWebServices {
 
   @GET
   @Path("/jstack/{numberOfJStack}")
+  @Produces({ MediaType.TEXT_PLAIN})
   public Response getNodeThreadDump(@PathParam("numberOfJStack") int numberOfJStack)
   {
     if (!isJStackEndpointsEnable) {
@@ -653,11 +654,8 @@ public class NMWebServices {
     } catch (IOException e){
       throw new WebAppException("Shell command has failed: " + e.getMessage() + ". " +
               "For more information please check the NodeManager logs.");
-    } catch (Exception e) {
-      throw new WebAppException(
-              "Unexpected error collection NodeManager JStack: " + e.getMessage() + ". " +
-                      "For more information please check the NodeManager logs.");
     }
+
   }
 
 
@@ -676,16 +674,12 @@ public class NMWebServices {
       return Response.status(Status.OK)
               .entity(diagnosticJStackService.collectApplicationThreadDump(appId, numberOfJStack))
               .build();
-    } catch (RuntimeException e){
+    } catch (IllegalArgumentException e){
       throw new WebAppException(
               "The applicationId is invalid: " + appId + "." + e.getMessage());
     } catch (IOException e){
       throw new WebAppException("Shell command has failed: " + e.getMessage() + ". " +
               "For more information please check the NodeManager logs.");
-    } catch (Exception e) {
-      throw new WebAppException(
-              "Unexpected error collecting Application JStack: " + e.getMessage() + ". " +
-                      "For more information please check the NodeManager logs.");
     }
 
   }
