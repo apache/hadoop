@@ -2252,29 +2252,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
             dir, pc, srcArg, offset, length, true);
         inode = res.getIIp().getLastINode();
         if (isInSafeMode()) {
-          int minBlocks = 1;
-
-          ErasureCodingPolicy ecPolicy = res.blocks.getErasureCodingPolicy();
-          for (LocatedBlock b : res.blocks.getLocatedBlocks()) {
-            if (ecPolicy != null) {
-              // If the file is erasure coded, we need at least the number of data units of
-              // blocks available, unless the file is smaller than a full stripe of cells.
-              long numCells = (b.getBlockSize() - 1) / (long)ecPolicy.getCellSize() + 1;
-              minBlocks = (int)Math.min((long)ecPolicy.getNumDataUnits(), numCells);
-            }
-            // if safemode & no block locations yet then throw safemodeException
-            if ((b.getLocations() == null) || (b.getLocations().length < minBlocks)) {
-              SafeModeException se = newSafemodeException(
-                  "Not enough blocklocations for " + srcArg);
-              if (haEnabled && haContext != null &&
-                  (haContext.getState().getServiceState() == ACTIVE ||
-                      haContext.getState().getServiceState() == OBSERVER)) {
-                throw new RetriableException(se);
-              } else {
-                throw se;
-              }
-            }
-          }
+          checkBlockLocationsInSafeMode(res.blocks, srcArg);
         } else if (isObserver()) {
           checkBlockLocationsWhenObserver(res.blocks, srcArg);
         }
@@ -4366,11 +4344,15 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           if (dirListing == null) {
             throw new FileNotFoundException("Path " + src + " does not exist");
           }
-          if (needLocation && isObserver()) {
+          if (needLocation) {
             for (HdfsFileStatus fs : dirListing.getPartialListing()) {
               if (fs instanceof HdfsLocatedFileStatus) {
                 LocatedBlocks lbs = ((HdfsLocatedFileStatus) fs).getLocatedBlocks();
-                checkBlockLocationsWhenObserver(lbs, fs.toString());
+                if (isInSafeMode()) {
+                  checkBlockLocationsInSafeMode(lbs, fs.toString());
+                } else if (isObserver()) {
+                  checkBlockLocationsWhenObserver(lbs, fs.toString());
+                }
               }
             }
           }
@@ -9269,6 +9251,47 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     return haEnabled && haContext != null && haContext.getState().getServiceState() == OBSERVER;
   }
 
+  private boolean hasSufficientReplicas(LocatedBlock block,
+      ErasureCodingPolicy ecPolicy) {
+    DatanodeInfo[] locations = block.getLocations();
+    if (locations == null) {
+      return false;
+    }
+
+    int minBlocks = 1;
+    if (ecPolicy != null) {
+      // For erasure coded files, require enough data units to reconstruct
+      // the block, bounded by the number of cells in the block.
+      long numCells =
+          (block.getBlockSize() - 1) / (long) ecPolicy.getCellSize() + 1;
+      minBlocks = (int) Math.min((long) ecPolicy.getNumDataUnits(), numCells);
+    }
+    return locations.length >= minBlocks;
+  }
+
+  private void checkBlockLocationsInSafeMode(LocatedBlocks blocks, String src)
+      throws SafeModeException, RetriableException {
+    if (blocks == null) {
+      return;
+    }
+    List<LocatedBlock> locatedBlockList = blocks.getLocatedBlocks();
+    if (locatedBlockList != null) {
+      ErasureCodingPolicy ecPolicy = blocks.getErasureCodingPolicy();
+      for (LocatedBlock block : locatedBlockList) {
+        if (!hasSufficientReplicas(block, ecPolicy)) {
+          SafeModeException se = newSafemodeException(
+              "Not enough blocklocations for " + src);
+          if (haEnabled && haContext != null &&
+              (haContext.getState().getServiceState() == ACTIVE ||
+                  haContext.getState().getServiceState() == OBSERVER)) {
+            throw new RetriableException(se);
+          }
+          throw se;
+        }
+      }
+    }
+  }
+
   private void checkBlockLocationsWhenObserver(LocatedBlocks blocks, String src)
       throws ObserverRetryOnActiveException {
     if (blocks == null) {
@@ -9276,17 +9299,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     }
     List<LocatedBlock> locatedBlockList = blocks.getLocatedBlocks();
     if (locatedBlockList != null) {
-      int minBlocks = 1;
-
       ErasureCodingPolicy ecPolicy = blocks.getErasureCodingPolicy();
-      for (LocatedBlock b : locatedBlockList) {
-        if (ecPolicy != null) {
-          // If the file is erasure coded, we need at least the number of data units of
-          // blocks available, unless the file is smaller than a full stripe of cells.
-          long numCells = (b.getBlockSize() - 1) / (long)ecPolicy.getCellSize() + 1;
-          minBlocks = (int)Math.min((long)ecPolicy.getNumDataUnits(), numCells);
-        }
-        if (b.getLocations() == null || b.getLocations().length < minBlocks) {
+      for (LocatedBlock block : locatedBlockList) {
+        if (!hasSufficientReplicas(block, ecPolicy)) {
           throw new ObserverRetryOnActiveException("Not enough blocklocations for " + src);
         }
       }
