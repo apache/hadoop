@@ -345,7 +345,7 @@ public class TestRMWebServices extends JerseyTestBase {
       Exception {
     assertEquals(1, json.length(), "incorrect number of elements");
     JSONObject info = json.getJSONObject("clusterInfo");
-    assertEquals(12, info.length(), "incorrect number of elements");
+    assertEquals(13, info.length(), "incorrect number of elements");
     verifyClusterGeneric(info.getLong("id"), info.getLong("startedOn"),
         info.getString("state"), info.getString("haState"),
         info.getString("haZooKeeperConnectionState"),
@@ -354,7 +354,6 @@ public class TestRMWebServices extends JerseyTestBase {
         info.getString("resourceManagerVersionBuiltOn"),
         info.getString("resourceManagerBuildVersion"),
         info.getString("resourceManagerVersion"));
-
   }
 
   public void verifyClusterGeneric(long clusterid, long startedon,
