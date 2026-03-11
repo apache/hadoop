@@ -9258,15 +9258,32 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       return false;
     }
 
-    int minBlocks = 1;
     if (ecPolicy != null) {
+      LocatedStripedBlock stripedBlock = (LocatedStripedBlock) block;
       // For erasure coded files, require enough data units to reconstruct
       // the block, bounded by the number of cells in the block.
       long numCells =
           (block.getBlockSize() - 1) / (long) ecPolicy.getCellSize() + 1;
-      minBlocks = (int) Math.min((long) ecPolicy.getNumDataUnits(), numCells);
+      int minBlocks = (int) Math.min((long) ecPolicy.getNumDataUnits(), numCells);
+
+      // Units can be over-replicated, so need to account for unique indices
+      byte[] indices = stripedBlock.getBlockIndices();
+      boolean[] seen = new boolean[ecPolicy.getNumDataUnits() + ecPolicy.getNumParityUnits()];
+
+      int count = 0;
+      for (byte idx : indices) {
+        int i = idx & 0xFF;
+        if (!seen[i]) {
+          seen[i] = true;
+          if (++count >= minBlocks) {
+            return true;
+          }
+        }
+      }
+      return false;
+    } else {
+      return locations.length > 0;
     }
-    return locations.length >= minBlocks;
   }
 
   private void checkBlockLocationsInSafeMode(LocatedBlocks blocks, String src)
