@@ -217,13 +217,17 @@ public class ITestS3AFileSystemIsolatedClassloader extends AbstractS3ATestBase {
     Map<String, String> confToSet =
         mapOf(Constants.AWS_S3_CLASSLOADER_ISOLATION, "false");
     assertInNewFilesystem(confToSet, (fs) -> {
-      Configuration conf = fs.getConf();
-      AwsCredentialsProvider provider = S3AUtils.getInstanceFromReflection(
-          customClassName, conf, null, AwsCredentialsProvider.class, "create",
-          Constants.AWS_CREDENTIALS_PROVIDER);
-      Assertions.assertThat(provider)
-          .describedAs("getInstanceFromReflection with isolation=false")
-          .isInstanceOf(CustomCredentialsProvider.class);
+      try {
+        Configuration conf = fs.getConf();
+        AwsCredentialsProvider provider = S3AUtils.getInstanceFromReflection(
+            customClassName, conf, null, AwsCredentialsProvider.class, "create",
+            Constants.AWS_CREDENTIALS_PROVIDER);
+        Assertions.assertThat(provider)
+            .describedAs("getInstanceFromReflection with isolation=false")
+            .isInstanceOf(CustomCredentialsProvider.class);
+      } catch (IOException e) {
+        throw new AssertionError("getInstanceFromReflection threw", e);
+      }
     });
   }
 }
