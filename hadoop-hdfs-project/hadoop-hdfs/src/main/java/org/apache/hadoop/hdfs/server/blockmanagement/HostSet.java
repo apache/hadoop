@@ -76,9 +76,9 @@ public class HostSet implements Iterable<InetSocketAddress> {
   }
 
   void add(InetSocketAddress addr) {
-    LOG.debug("Adding address to set: {}", addr);
+    LOG.debug("Adding address to HostSet: {}", addr);
     if (addr.isUnresolved()) {
-      LOG.warn("Unresolved address not added to set: {}", addr);
+      LOG.warn("Unresolved address not added to HostSet: {}", addr);
       return;
     }
     addrs.put(addr.getAddress(), addr.getPort());
