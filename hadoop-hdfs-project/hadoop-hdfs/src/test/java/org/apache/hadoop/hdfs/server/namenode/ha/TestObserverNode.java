@@ -36,6 +36,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -57,11 +58,13 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
+import org.apache.hadoop.hdfs.protocol.LocatedStripedBlock;
 import org.apache.hadoop.hdfs.qjournal.MiniQJMHACluster;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLog;
@@ -423,6 +426,11 @@ public class TestObserverNode {
     // Set observer to safe mode.
     dfsCluster.getFileSystem(2).setSafeMode(SafeModeAction.ENTER);
 
+    DatanodeInfo fakeDatanodeInfo = new DatanodeInfo.DatanodeInfoBuilder()
+      // Stiped blocks need a UUID to be hashed
+      .setNodeID(new DatanodeID(UUID.randomUUID().toString(), DatanodeID.EMPTY_DATANODE_ID))
+      .build();
+
     // Mock block manager for observer to generate some fake blocks which
     // will trigger the (retriable) safe mode exception.
     BlockManager bmSpy =
@@ -449,8 +457,8 @@ public class TestObserverNode {
       List<LocatedBlock> fakeBlocks = new ArrayList<>();
       // Return a single location, which is enough for the small file but not for the large file
       ExtendedBlock b = new ExtendedBlock("fake-pool", new Block(12345L, 1, 0));
-      DatanodeInfo datanodeInfo = new DatanodeInfo.DatanodeInfoBuilder().build();
-      LocatedBlock fakeBlock = new LocatedBlock(b, new DatanodeInfo[] {datanodeInfo});
+      LocatedStripedBlock fakeBlock = new LocatedStripedBlock(b, new DatanodeInfo[] {fakeDatanodeInfo},
+        null, null, new byte[] {0}, 0, false, null);
       fakeBlocks.add(fakeBlock);
       return new LocatedBlocks(1, false, fakeBlocks, null, true, null, ecPolicy);
     }).when(bmSpy).createLocatedBlocks(Mockito.any(), anyLong(),
@@ -466,8 +474,8 @@ public class TestObserverNode {
       List<LocatedBlock> fakeBlocks = new ArrayList<>();
       // Return a single location, which is enough for the small file but not for the large file
       ExtendedBlock b = new ExtendedBlock("fake-pool", new Block(12345L, 1024 * 3, 0));
-      DatanodeInfo datanodeInfo = new DatanodeInfo.DatanodeInfoBuilder().build();
-      LocatedBlock fakeBlock = new LocatedBlock(b, new DatanodeInfo[] {datanodeInfo});
+      LocatedStripedBlock fakeBlock = new LocatedStripedBlock(b, new DatanodeInfo[] {fakeDatanodeInfo},
+        null, null, new byte[] {0}, 0, false, null);
       fakeBlocks.add(fakeBlock);
       return new LocatedBlocks(1024 * 3, false, fakeBlocks, null, true, null, ecPolicy);
     }).when(bmSpy).createLocatedBlocks(Mockito.any(), anyLong(),
@@ -494,6 +502,11 @@ public class TestObserverNode {
     assertSentTo(0);
 
     dfsCluster.rollEditLogAndTail(0);
+
+    DatanodeInfo fakeDatanodeInfo = new DatanodeInfo.DatanodeInfoBuilder()
+      // Stiped blocks need a UUID to be hashed
+      .setNodeID(new DatanodeID(UUID.randomUUID().toString(), DatanodeID.EMPTY_DATANODE_ID))
+      .build();
 
     // Mock block manager for observer to generate some fake blocks which
     // will trigger the block missing exception.
@@ -532,8 +545,8 @@ public class TestObserverNode {
       List<LocatedBlock> fakeBlocks = new ArrayList<>();
       // Return a single location, which is enough for the small file but not for the large file
       ExtendedBlock b = new ExtendedBlock("fake-pool", new Block(12345L, 1, 0));
-      DatanodeInfo datanodeInfo = new DatanodeInfo.DatanodeInfoBuilder().build();
-      LocatedBlock fakeBlock = new LocatedBlock(b, new DatanodeInfo[] {datanodeInfo});
+      LocatedStripedBlock fakeBlock = new LocatedStripedBlock(b, new DatanodeInfo[] {fakeDatanodeInfo},
+        null, null, new byte[] {0}, 0, false, null);
       fakeBlocks.add(fakeBlock);
       return new LocatedBlocks(1, false, fakeBlocks, null, true, null, ecPolicy);
     }).when(bmSpy).createLocatedBlocks(Mockito.any(), anyLong(),
@@ -559,8 +572,8 @@ public class TestObserverNode {
       List<LocatedBlock> fakeBlocks = new ArrayList<>();
       // Return a single location, which is enough for the small file but not for the large file
       ExtendedBlock b = new ExtendedBlock("fake-pool", new Block(12345L, 1024 * 3, 0));
-      DatanodeInfo datanodeInfo = new DatanodeInfo.DatanodeInfoBuilder().build();
-      LocatedBlock fakeBlock = new LocatedBlock(b, new DatanodeInfo[] {datanodeInfo});
+      LocatedStripedBlock fakeBlock = new LocatedStripedBlock(b, new DatanodeInfo[] {fakeDatanodeInfo},
+        null, null, new byte[] {0}, 0, false, null);
       fakeBlocks.add(fakeBlock);
       return new LocatedBlocks(1024 * 3, false, fakeBlocks, null, true, null, ecPolicy);
     }).when(bmSpy).createLocatedBlocks(Mockito.any(), anyLong(),

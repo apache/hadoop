@@ -9258,7 +9258,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       return false;
     }
 
-    if (ecPolicy != null) {
+    if (block.isStriped()) {
       LocatedStripedBlock stripedBlock = (LocatedStripedBlock) block;
       // For erasure coded files, require enough data units to reconstruct
       // the block, bounded by the number of cells in the block.
