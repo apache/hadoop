@@ -200,7 +200,7 @@ public final class ReadBufferManagerV1 extends ReadBufferManager {
        */
       if (isAlreadyQueued(stream, unit.getOffset())) {
         ReadBuffer existing = findQueuedBuffer(stream, unit.getOffset());
-        if (existing != null && stream.getETag()
+        if (existing != null && existing.getStream().getETag() != null && stream.getETag()
             .equals(existing.getStream().getETag())) {
           long end = existing.getOffset() + (
               existing.getStatus() == ReadBufferStatus.AVAILABLE
@@ -241,7 +241,7 @@ public final class ReadBufferManagerV1 extends ReadBufferManager {
       buffer.initVectoredUnits();
       buffer.addVectoredUnit(unit);
       buffer.setAllocator(allocator);
-      buffer.setTracingContext(tracingContext);
+      buffer.setTracingContext(readAheadTracingContext);
       /*
        * Perform a final free-list check before consuming pooled memory to
        * ensure buffer availability.
