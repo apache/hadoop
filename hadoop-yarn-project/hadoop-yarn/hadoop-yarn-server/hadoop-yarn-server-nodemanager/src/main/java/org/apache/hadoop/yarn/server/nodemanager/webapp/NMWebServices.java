@@ -662,8 +662,9 @@ public class NMWebServices {
   @GET
   @Path("/apps/{appid}/jstack/{numberOfJStack}")
   @Produces({MediaType.TEXT_PLAIN})
-  public Response getApplicationJStack(@PathParam("appid") String appId,
-                                       @PathParam("numberOfJStack") int numberOfJStack)
+  public Response getApplicationJStack(@javax.ws.rs.core.Context HttpServletRequest req,
+      @PathParam("appid") String appId,
+      @PathParam("numberOfJStack") int numberOfJStack)
   {
     if (!isJStackEndpointsEnable) {
       return Response.status(Status.METHOD_NOT_ALLOWED)
@@ -672,7 +673,7 @@ public class NMWebServices {
 
     try {
       return Response.status(Status.OK)
-              .entity(diagnosticJStackService.collectApplicationThreadDump(appId, numberOfJStack))
+              .entity(diagnosticJStackService.collectApplicationThreadDump(appId, numberOfJStack, req))
               .build();
     } catch (IllegalArgumentException e){
       throw new WebAppException(

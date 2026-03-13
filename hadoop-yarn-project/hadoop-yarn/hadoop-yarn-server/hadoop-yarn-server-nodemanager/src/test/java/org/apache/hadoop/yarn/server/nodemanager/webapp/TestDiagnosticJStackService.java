@@ -22,7 +22,9 @@ import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mock;
 import org.mockito.MockedConstruction;
 import org.mockito.MockedStatic;
 
@@ -70,7 +72,7 @@ public class TestDiagnosticJStackService {
         String applicationId = "app_29042";
 
         assertThrows(RuntimeException.class,
-                () -> diagnosticJStackService.collectApplicationThreadDump(applicationId, 3));
+                () -> diagnosticJStackService.collectApplicationThreadDump(applicationId, 3, null));
     }
 
     @Test
@@ -105,10 +107,12 @@ public class TestDiagnosticJStackService {
     @Test
     public void testCollectApplicationThreadDump_Success() {
         List<Long> pids = List.of(23L, 12L, 531L);
+        Application app = mock(Application.class);
+        when(nmContext.getApplications().get(APPLICATION_ID)).thenReturn(app);
 
         Map<ContainerId, List<Long>> containerPids = Map.of(CONTAINER_ID, pids);
 
-        doReturn(containerPids).when(diagnosticJStackService).getApplicationContainerPids(APPLICATION_ID);
+        doReturn(containerPids).when(diagnosticJStackService).getApplicationContainerPids(app);
 
         ProcessHandle mockProcessHandle = mock(ProcessHandle.class);
         ProcessHandle.Info mockPhInfo = mock(ProcessHandle.Info.class);
@@ -124,7 +128,7 @@ public class TestDiagnosticJStackService {
         ){
             mockedStaticProcess.when(() -> ProcessHandle.of(anyLong())).thenReturn(Optional.of(mockProcessHandle));
 
-            String result = diagnosticJStackService.collectApplicationThreadDump(APPLICATION_ID_STR, NUMBER_OF_JSTACKS);
+            String result = diagnosticJStackService.collectApplicationThreadDump(APPLICATION_ID_STR, NUMBER_OF_JSTACKS, null);
 
             assertEquals(pids.size()*NUMBER_OF_JSTACKS, mockedConstruction.constructed().size(),
               "ShellCommandExecutor should be instantiated for each PID time Number Of JStacks");
@@ -150,13 +154,15 @@ public class TestDiagnosticJStackService {
     public void testCollectApplicationThreadDumpWhenProcessIdNotAlive() {
         int numJStacks = 3;
         List<Long> pids = List.of(23L, 12L, 531L);
+        Application app = mock(Application.class);
+        when(nmContext.getApplications().get(APPLICATION_ID)).thenReturn(app);
 
         Map<ContainerId, List<Long>> containerPids = Map.of(CONTAINER_ID, pids);
 
-        doReturn(containerPids).when(diagnosticJStackService).getApplicationContainerPids(APPLICATION_ID);
+        doReturn(containerPids).when(diagnosticJStackService).getApplicationContainerPids(app);
 
         assertThrows(IOException.class,
-                () -> diagnosticJStackService.collectApplicationThreadDump(APPLICATION_ID_STR, numJStacks),
+                () -> diagnosticJStackService.collectApplicationThreadDump(APPLICATION_ID_STR, numJStacks, null),
         "Since we did not mock ProcessHandle.of to return non empty, it will consider this PID is dead");
 
     }

@@ -19,17 +19,21 @@ package org.apache.hadoop.yarn.server.nodemanager.webapp;
 
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Shell;
+import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperationExecutor;
+import org.apache.hadoop.yarn.webapp.WebAppException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 
+import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.util.List;
 import java.util.Arrays;
@@ -58,13 +62,44 @@ public class DiagnosticJStackService {
     return runJStack(nodeManagerPid, numberOfJStack);
   }
 
-  public String collectApplicationThreadDump(String appId, int numberOfJStack) throws IOException {
+  public String collectApplicationThreadDump(String appId, int numberOfJStack, HttpServletRequest req) throws IOException {
     checkShellNotWindows();
 
     ApplicationId applicationId = ApplicationId.fromString(appId);
-    Map<ContainerId, List<Long>> containerPids = getApplicationContainerPids(applicationId);
+
+    Application app = context.getApplications().get(applicationId);
+    if (app == null){
+      throw new YarnRuntimeException("Application " + applicationId + " does not exist");
+    }
+
+    checkApplicationACL(req, app);
+
+    Map<ContainerId, List<Long>> containerPids = getApplicationContainerPids(app);
 
     return runJStack(containerPids, numberOfJStack);
+  }
+
+  private void checkApplicationACL(HttpServletRequest req, Application app) throws IOException {
+    String remoteUser = req.getRemoteUser();
+    UserGroupInformation callerUGI;
+
+    if (remoteUser != null) {
+      callerUGI = UserGroupInformation.createRemoteUser(remoteUser);
+    } else {
+      callerUGI = UserGroupInformation.getCurrentUser(); // Fallback to the current OS User
+    }
+
+    LOG.info("Caller UGI: {}", callerUGI.toString());
+
+    boolean isAuthorized = context.getApplicationACLsManager().checkAccess(
+      callerUGI, ApplicationAccessType.VIEW_APP, app.getUser(), app.getAppId()
+    );
+
+    if(!isAuthorized){
+      throw new WebAppException("User " + callerUGI.getShortUserName() +
+        " is not authorized to view application " + app.getAppId());
+    }
+
   }
 
   private void checkShellNotWindows() {
@@ -73,12 +108,7 @@ public class DiagnosticJStackService {
     }
   }
 
-  protected Map<ContainerId, List<Long>> getApplicationContainerPids(ApplicationId appId){
-    Application app = context.getApplications().get(appId);
-    if (app == null){
-      throw new YarnRuntimeException("Application " + appId + " does not exist");
-    }
-
+  protected Map<ContainerId, List<Long>> getApplicationContainerPids(Application app){
     Map<ContainerId, List<Long>> containerPids = new HashMap<>();
 
     for (ContainerId containerId : app.getContainers().keySet()){
@@ -91,9 +121,9 @@ public class DiagnosticJStackService {
         .map(ProcessHandle::pid)
         .toList();
 
-      if (!javaContainerPids.isEmpty()){
-        containerPids.put(containerId, javaContainerPids);
-      }
+
+      containerPids.put(containerId, javaContainerPids);
+
     }
 
     LOG.info("Application PIDs by ContainerId: {}", containerPids);
@@ -107,10 +137,15 @@ public class DiagnosticJStackService {
     for(ContainerId containerPid : containerPids.keySet()){
       List<Long> javaContainerPids = containerPids.get(containerPid);
 
-      for (Long pid : javaContainerPids){
-        result.append(String.format(
-          "=== Thread Dumps for ContainerId: %s, PID: %d ===%n%s%n",
-          containerPid.toString(), pid, runJStack(pid, numJStacks)));
+      if (javaContainerPids.isEmpty()){
+       result.append(String.format("=== Thread Dumps for ContainerId: %s%n is skipped " +
+         "because no Java Process ID exist ===", containerPid.toString()));
+      } else {
+        for (Long pid : javaContainerPids) {
+          result.append(String.format(
+            "=== Thread Dumps for ContainerId: %s, PID: %d ===%n%s%n",
+            containerPid.toString(), pid, runJStack(pid, numJStacks)));
+        }
       }
 
     }
