@@ -59,7 +59,7 @@
           <excludeFilterFiles>
             <excludeFilterFile>${basedir}/dev-support/findbugs-exclude.xml
             </excludeFilterFile>
-            <excludeFilterFile>${repo.root}/dev-support/findbugs-exclude-global.xml
+            <excludeFilterFile>../../dev-support/findbugs-exclude-global.xml
             </excludeFilterFile>
           </excludeFilterFiles>
           <effort>Max</effort>
@@ -70,12 +70,12 @@
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-checkstyle-plugin</artifactId>
           <configuration>
-            <!-- To run with the default Sun ruleset, 
+            <!-- To run with the default Sun ruleset,
                  comment out the configLocation line -->
             <configLocation>src/config/checkstyle.xml</configLocation>
             <suppressionsLocation>src/config/checkstyle-suppressions.xml</suppressionsLocation>
           </configuration>
-          
+
       </plugin>
 
       <plugin>
@@ -153,7 +153,7 @@
       <artifactId>hadoop-common</artifactId>
       <scope>provided</scope>
     </dependency>
-    
+
     <dependency>
       <groupId>org.apache.httpcomponents</groupId>
       <artifactId>httpclient</artifactId>
@@ -205,7 +205,7 @@
       <scope>test</scope>
       <type>test-jar</type>
     </dependency>
-    
+
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-mapreduce-client-jobclient</artifactId>

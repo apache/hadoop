@@ -247,7 +247,7 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
         <configuration>
           <excludeFilterFiles>
             <excludeFilterFile>
-              ${repo.root}/dev-support/findbugs-exclude-global.xml
+              ../../dev-support/findbugs-exclude-global.xml
             </excludeFilterFile>
           </excludeFilterFiles>
         </configuration>

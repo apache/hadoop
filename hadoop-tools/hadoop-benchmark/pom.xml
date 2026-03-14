@@ -77,7 +77,7 @@
         <configuration>
           <excludeFilterFiles>
             <excludeFilterFile>${basedir}/src/main/findbugs/exclude.xml</excludeFilterFile>
-            <excludeFilterFile>${repo.root}/dev-support/findbugs-exclude-global.xml
+            <excludeFilterFile>../../dev-support/findbugs-exclude-global.xml
             </excludeFilterFile>
           </excludeFilterFiles>
         </configuration>
