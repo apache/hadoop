@@ -303,7 +303,9 @@ class DataXceiver extends Receiver implements Runnable {
     } catch (Throwable t) {
       String s = datanode.getDisplayName() + ":DataXceiver error processing "
           + ((op == null) ? "unknown" : op.name()) + " operation "
-          + " src: " + remoteAddress + " dst: " + localAddress;
+          + " src: " + remoteAddress + " dst: " + localAddress
+          + (previousOpClientName != null
+              ? " clientName: " + previousOpClientName : "");
       if (op == Op.WRITE_BLOCK && t instanceof ReplicaAlreadyExistsException) {
         // For WRITE_BLOCK, it is okay if the replica already exists since
         // client and replication may write the same block to the same datanode
@@ -645,8 +647,8 @@ class DataXceiver extends Receiver implements Runnable {
       datanode.metrics.incrTotalReadTime(TimeUnit.NANOSECONDS.toMillis(durationInNS));
       DFSUtil.addTransferRateMetric(datanode.metrics, read, durationInNS);
     } catch ( SocketException ignored ) {
-      LOG.trace("{}:Ignoring exception while serving {} to {}",
-          dnR, block, remoteAddress, ignored);
+      LOG.trace("{}:Ignoring exception while serving {} to {} for client {}",
+          dnR, block, remoteAddress, clientName, ignored);
       // Its ok for remote side to close the connection anytime.
       datanode.metrics.incrBlocksRead();
       IOUtils.closeStream(out);
@@ -655,8 +657,8 @@ class DataXceiver extends Receiver implements Runnable {
        * Earlier version shutdown() datanode if there is disk error.
        */
       if (!(ioe instanceof SocketTimeoutException)) {
-        LOG.warn("{}:Got exception while serving {} to {}",
-            dnR, block, remoteAddress, ioe);
+        LOG.warn("{}:Got exception while serving {} to {} for client {}",
+            dnR, block, remoteAddress, clientName, ioe);
         incrDatanodeNetworkErrors();
       }
       // Normally the client reports a bad block to the NN. However if the
@@ -949,8 +951,8 @@ class DataXceiver extends Receiver implements Runnable {
         size = block.getNumBytes();
       }
     } catch (IOException ioe) {
-      LOG.info("opWriteBlock {} received exception {}",
-          block, ioe.toString());
+      LOG.info("opWriteBlock {} received exception {} from client {}",
+          block, ioe.toString(), clientname);
       incrDatanodeNetworkErrors();
       throw ioe;
     } finally {
@@ -991,8 +993,8 @@ class DataXceiver extends Receiver implements Runnable {
           targetStorageTypes, targetStorageIds, clientName);
       writeResponse(Status.SUCCESS, null, out);
     } catch (IOException ioe) {
-      LOG.info("transferBlock {} received exception {}",
-          blk, ioe.toString());
+      LOG.info("transferBlock {} received exception {} from client {}",
+          blk, ioe.toString(), clientName);
       incrDatanodeNetworkErrors();
       throw ioe;
     } finally {
