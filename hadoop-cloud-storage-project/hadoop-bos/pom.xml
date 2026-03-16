@@ -1,0 +1,343 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License. See accompanying LICENSE file.
+-->
+
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>org.apache.hadoop</groupId>
+    <artifactId>hadoop-project</artifactId>
+    <version>3.6.0-SNAPSHOT</version>
+    <relativePath>../../hadoop-project</relativePath>
+  </parent>
+
+  <artifactId>hadoop-bos</artifactId>
+  <version>3.6.0-SNAPSHOT</version>
+  <name>Apache Hadoop Baidu Cloud Services support</name>
+  <description>
+    This module contains code to support integration with Baidu Cloud BOS.
+    It also declares the dependencies needed to work with Baidu Cloud services.
+  </description>
+  <packaging>jar</packaging>
+
+  <properties>
+    <file.encoding>UTF-8</file.encoding>
+    <bce-java-sdk.version>0.10.330</bce-java-sdk.version>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>com.baidubce</groupId>
+      <artifactId>bce-java-sdk</artifactId>
+      <version>${bce-java-sdk.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>ch.qos.logback</groupId>
+          <artifactId>logback-classic</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>ch.qos.logback</groupId>
+          <artifactId>logback-core</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.slf4j</groupId>
+          <artifactId>jcl-over-slf4j</artifactId>
+        </exclusion>
+        <exclusion>
+          <artifactId>fastjson</artifactId>
+          <groupId>com.alibaba</groupId>
+        </exclusion>
+        <exclusion>
+          <groupId>com.fasterxml.jackson.core</groupId>
+          <artifactId>jackson-core</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>com.fasterxml.jackson.core</groupId>
+          <artifactId>jackson-databind</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>com.fasterxml.jackson.core</groupId>
+          <artifactId>jackson-annotations</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-common</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>junit</groupId>
+          <artifactId>junit</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>com.google.guava</groupId>
+          <artifactId>guava</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.springframework</groupId>
+          <artifactId>spring-core</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.apache.hbase</groupId>
+          <artifactId>hbase-client</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-common</artifactId>
+      <scope>provided</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-common</artifactId>
+      <scope>test</scope>
+      <type>test-jar</type>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-mapreduce-client-core</artifactId>
+      <scope>provided</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-distcp</artifactId>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-distcp</artifactId>
+      <scope>test</scope>
+      <type>test-jar</type>
+    </dependency>
+
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-api</artifactId>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-engine</artifactId>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.assertj</groupId>
+      <artifactId>assertj-core</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <forkedProcessTimeoutInSeconds>3600</forkedProcessTimeoutInSeconds>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>deplist</id>
+            <phase>compile</phase>
+            <goals>
+              <goal>list</goal>
+            </goals>
+            <configuration>
+              <outputFile>${project.basedir}/target/hadoop-cloud-storage-deps/${project.artifactId}.cloud-storage-optional.txt</outputFile>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>com.github.spotbugs</groupId>
+        <artifactId>spotbugs-maven-plugin</artifactId>
+        <configuration>
+          <xmlOutput>true</xmlOutput>
+          <excludeFilterFiles>
+            <excludeFilterFile>${basedir}/dev-support/findbugs-exclude.xml
+            </excludeFilterFile>
+            <excludeFilterFile>${repo.root}/dev-support/findbugs-exclude-global.xml
+            </excludeFilterFile>
+          </excludeFilterFiles>
+          <effort>Max</effort>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+
+  <profiles>
+    <profile>
+      <id>tests-off</id>
+      <activation>
+        <file>
+          <missing>src/test/resources/auth-keys.xml</missing>
+        </file>
+      </activation>
+      <properties>
+        <maven.test.skip>true</maven.test.skip>
+      </properties>
+    </profile>
+    <profile>
+      <id>tests-on</id>
+      <activation>
+        <file>
+          <exists>src/test/resources/auth-keys.xml</exists>
+        </file>
+      </activation>
+      <properties>
+        <maven.test.skip>false</maven.test.skip>
+      </properties>
+    </profile>
+    <profile>
+      <id>parallel-tests</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-maven-plugins</artifactId>
+            <executions>
+              <execution>
+                <id>parallel-tests-createdir</id>
+                <goals>
+                  <goal>parallel-tests-createdir</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <configuration>
+              <forkCount>${testsThreadCount}</forkCount>
+              <reuseForks>false</reuseForks>
+              <argLine>${maven-surefire-plugin.argLine}</argLine>
+              <systemPropertyVariables>
+                <testsThreadCount>${testsThreadCount}</testsThreadCount>
+                <test.build.data>${test.build.data}/${surefire.forkNumber}</test.build.data>
+                <test.build.dir>${test.build.dir}/${surefire.forkNumber}</test.build.dir>
+                <hadoop.tmp.dir>${project.build.directory}/test/${surefire.forkNumber}</hadoop.tmp.dir>
+                <test.build.shared.data>${test.build.data}</test.build.shared.data>
+                <test.unique.fork.id>fork-${surefire.forkNumber}</test.unique.fork.id>
+              </systemPropertyVariables>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
+    <profile>
+      <id>shade</id>
+      <activation>
+        <property><name>!skipShade</name></property>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-shade-plugin</artifactId>
+            <executions>
+              <execution>
+                <phase>package</phase>
+                <goals>
+                  <goal>shade</goal>
+                </goals>
+                <configuration>
+                  <createDependencyReducedPom>true</createDependencyReducedPom>
+                  <transformers>
+                    <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer" />
+                  </transformers>
+                  <filters>
+                    <filter>
+                      <artifact>*:*</artifact>
+                      <excludes>
+                        <exclude>META-INF/*.SF</exclude>
+                        <exclude>META-INF/*.DSA</exclude>
+                        <exclude>META-INF/*.RSA</exclude>
+                        <exclude>mozilla/public-suffix-list.txt</exclude>
+                      </excludes>
+                    </filter>
+                  </filters>
+                  <relocations>
+                    <relocation>
+                      <pattern>com.fasterxml.jackson</pattern>
+                      <shadedPattern>bfs.com.fasterxml.jackson</shadedPattern>
+                    </relocation>
+                    <relocation>
+                      <pattern>org.json</pattern>
+                      <shadedPattern>bfs.org.json</shadedPattern>
+                    </relocation>
+                    <relocation>
+                      <pattern>org.apache.http</pattern>
+                      <shadedPattern>bfs.org.apache.http</shadedPattern>
+                    </relocation>
+                    <relocation>
+                      <pattern>org.apache.commons.logging</pattern>
+                      <shadedPattern>bfs.org.apache.commons.logging</shadedPattern>
+                    </relocation>
+                    <relocation>
+                      <pattern>org.apache.commons.codec</pattern>
+                      <shadedPattern>bfs.org.apache.commons.codec</shadedPattern>
+                    </relocation>
+                    <relocation>
+                      <pattern>org.joda</pattern>
+                      <shadedPattern>bfs.org.joda</shadedPattern>
+                    </relocation>
+                    <relocation>
+                      <pattern>com.google</pattern>
+                      <shadedPattern>bfs.com.google</shadedPattern>
+                    </relocation>
+                    <relocation>
+                      <pattern>com.baidubce</pattern>
+                      <shadedPattern>bfs.com.baidubce</shadedPattern>
+                    </relocation>
+                  </relocations>
+                  <artifactSet>
+                    <includes>
+                      <include>org.json:json</include>
+                      <include>joda-time:joda-time</include>
+                      <include>com.fasterxml.jackson.core:jackson-core</include>
+                      <include>com.fasterxml.jackson.core:jackson-databind</include>
+                      <include>com.fasterxml.jackson.core:jackson-annotations</include>
+                      <include>com.baidubce:bce-java-sdk</include>
+                      <include>org.apache.httpcomponents:*</include>
+                      <include>com.google.guava:guava</include>
+                      <include>com.google.guava:failureaccess</include>
+                      <include>commons-logging:commons-logging</include>
+                      <include>commons-codec:commons-codec</include>
+                    </includes>
+                  </artifactSet>
+                  <shadeSourcesContent>false</shadeSourcesContent>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+</project>
