@@ -31,6 +31,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.records.AuxServiceRecord;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.records.AuxServiceRecords;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.ResourcePlugin;
@@ -678,6 +679,8 @@ public class NMWebServices {
     } catch (IllegalArgumentException e){
       throw new WebAppException(
               "The applicationId is invalid: " + appId + "." + e.getMessage());
+    } catch (YarnRuntimeException e) {
+      throw new WebAppException(e.getMessage());
     } catch (IOException e){
       throw new WebAppException("Shell command has failed: " + e.getMessage() + ". " +
               "For more information please check the NodeManager logs.");

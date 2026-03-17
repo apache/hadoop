@@ -96,7 +96,7 @@ public class DiagnosticJStackService {
     );
 
     if(!isAuthorized){
-      throw new WebAppException("User " + callerUGI.getShortUserName() +
+      throw new YarnRuntimeException("User " + callerUGI.getShortUserName() +
         " is not authorized to view application " + app.getAppId());
     }
 
