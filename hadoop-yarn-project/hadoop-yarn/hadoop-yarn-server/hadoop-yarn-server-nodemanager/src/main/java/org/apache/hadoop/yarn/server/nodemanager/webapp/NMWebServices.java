@@ -653,8 +653,10 @@ public class NMWebServices {
               .entity(diagnosticJStackService.collectNodeThreadDump(numberOfJStack))
               .build();
     } catch (IOException e){
-      throw new WebAppException("Shell command has failed: " + e.getMessage() + ". " +
-              "For more information please check the NodeManager logs.");
+      return Response.status(Status.INTERNAL_SERVER_ERROR)
+              .entity("Shell command has failed: " + e.getMessage() + ". " +
+                      "For more information please check the NodeManager logs.")
+              .build();
     }
 
   }
@@ -677,13 +679,18 @@ public class NMWebServices {
               .entity(diagnosticJStackService.collectApplicationThreadDump(appId, numberOfJStack, req))
               .build();
     } catch (IllegalArgumentException e){
-      throw new WebAppException(
-              "The applicationId is invalid: " + appId + "." + e.getMessage());
+      return Response.status(Status.BAD_REQUEST)
+              .entity("The applicationId is invalid: " + appId + ". " + e.getMessage())
+              .build();
     } catch (YarnRuntimeException e) {
-      throw new WebAppException(e.getMessage());
+      return Response.status(Status.FORBIDDEN)
+              .entity(e.getMessage())
+              .build();
     } catch (IOException e){
-      throw new WebAppException("Shell command has failed: " + e.getMessage() + ". " +
-              "For more information please check the NodeManager logs.");
+      return Response.status(Status.INTERNAL_SERVER_ERROR)
+              .entity("Shell command has failed: " + e.getMessage() + ". " +
+                "For more information please check the NodeManager logs.")
+              .build();
     }
 
   }
