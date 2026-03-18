@@ -24,7 +24,7 @@ import { READ_ONLY_PROPERTY } from '~/config';
 // Base URL pattern that matches the API configuration
 
 const { baseUrl, mockMode } = API_CONFIG;
-const MOCK_ASSET_BASE = '/mock/ws/v1/cluster';
+const MOCK_ASSET_BASE = `${import.meta.env.BASE_URL}mock/ws/v1/cluster`;
 
 const staticHandlers: HttpHandler[] = [
   // Scheduler endpoints - serve local mock files

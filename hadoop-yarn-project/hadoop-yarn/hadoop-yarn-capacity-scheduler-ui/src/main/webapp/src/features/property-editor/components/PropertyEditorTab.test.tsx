@@ -89,6 +89,7 @@ const createMockPropertyEditor = () => ({
   handleFieldBlur: vi.fn(),
   getFieldErrors: vi.fn(() => []),
   getFieldWarnings: vi.fn(() => []),
+  getInheritanceInfo: vi.fn(() => null),
   properties: [
     {
       name: 'capacity',
