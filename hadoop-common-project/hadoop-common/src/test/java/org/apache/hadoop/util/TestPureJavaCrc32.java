@@ -206,15 +206,19 @@ public class TestPureJavaCrc32 {
       }
     }
   }
-  
+
   /**
    * Performance tests to compare performance of the Pure Java implementation
    * to the built-in java.util.zip implementation. This can be run from the
    * command line with:
+   * <pre><code>
+   *   ./mvnw clean install -pl :hadoop-common -am -DskipTests
    *
-   *   java -cp path/to/test/classes:path/to/common/classes \
-   *      'org.apache.hadoop.util.TestPureJavaCrc32$PerformanceTest'
-   *
+   *   ./mvnw exec:java \
+   *     -pl hadoop-common-project/hadoop-common \
+   *     -Dexec.classpathScope=test \
+   *     -Dexec.mainClass='org.apache.hadoop.util.TestPureJavaCrc32$PerformanceTest'
+   * </code></pre>
    * The output is in JIRA table format.
    */
   public static class PerformanceTest {
