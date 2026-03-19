@@ -1644,10 +1644,12 @@ public class RouterRpcClient {
         this.router.getRouterClientMetrics().incInvokedConcurrent(m);
       }
 
-      return getRemoteResults(method, timeOutMs, controller, orderedLocations, callables);
-    } finally {
+    } catch (IOException e) {
       releasePermit(CONCURRENT_NS, ugi, method, controller);
+      throw e;
     }
+
+    return getRemoteResults(method, timeOutMs, controller, orderedLocations, callables);
   }
 
   /**
