@@ -211,7 +211,7 @@ public class NodeAttributesManagerImpl extends NodeAttributesManager {
           new HashMap<String, Set<NodeAttribute>>();
       nodeAttributeMapping.forEach((k, v) -> {
         Host node = nodeCollections.get(k);
-        newNodeToAttributesMap.put(k, node.attributes.keySet());
+        newNodeToAttributesMap.put(k, new HashSet<>(node.attributes.keySet()));
       });
 
       // Notify RM
