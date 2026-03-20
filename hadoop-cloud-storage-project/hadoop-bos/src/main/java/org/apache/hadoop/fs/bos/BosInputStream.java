@@ -218,8 +218,9 @@ public class BosInputStream extends FSInputStream
             TimeUnit.SECONDS.sleep(
                 intervalSeconds);
           } catch (InterruptedException ite) {
-            // Just retry, so catch the exceptions
-            // thrown by sleep
+            Thread.currentThread().interrupt();
+            throw new IOException(
+                "Thread interrupted during retry", ite);
           }
           intervalSeconds *= 2;
           retry--;
@@ -246,7 +247,7 @@ public class BosInputStream extends FSInputStream
    *
    * @throws IOException if an I/O error occurs
    */
-  public void close() throws IOException {
+  public synchronized void close() throws IOException {
     if (!closed) {
       closed = true;
 
@@ -411,7 +412,7 @@ public class BosInputStream extends FSInputStream
           pos += skipped;
           // as these bytes have been read, they are
           // included in the counter
-          statistics.incrementBytesRead(diff);
+          statistics.incrementBytesRead(skipped);
         }
 
         if (pos == targetPos) {

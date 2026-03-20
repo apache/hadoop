@@ -20,7 +20,6 @@ package org.apache.hadoop.fs.bos.credentials;
 
 import com.baidubce.auth.DefaultBceSessionCredentials;
 import org.apache.hadoop.fs.bos.BaiduBosConstants;
-import org.apache.hadoop.fs.bos.BaiduBosFileSystem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,7 +41,7 @@ public class EnvironmentVariableCredentialsProvider
   /** Logger for this provider. */
   public static final Logger LOG =
       LoggerFactory.getLogger(
-          BaiduBosFileSystem.class);
+          EnvironmentVariableCredentialsProvider.class);
 
   /**
    * Gets credentials from environment variables.
@@ -61,11 +60,6 @@ public class EnvironmentVariableCredentialsProvider
     String sessionToken = System.getenv(
         BaiduBosConstants.BOS_STS_TOKEN_ENV);
 
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("accessKey:{}", accessKey);
-      LOG.debug("secretAccessKey:{}", secretAccessKey);
-      LOG.debug("sessionToken:{}", sessionToken);
-    }
     if (accessKey == null
         || secretAccessKey == null) {
       LOG.error(

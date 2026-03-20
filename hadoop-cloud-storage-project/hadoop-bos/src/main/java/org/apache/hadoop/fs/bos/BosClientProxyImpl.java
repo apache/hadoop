@@ -23,6 +23,7 @@ import com.baidubce.auth.DefaultBceCredentials;
 import com.baidubce.auth.DefaultBceSessionCredentials;
 import com.baidubce.services.bos.BosClient;
 import com.baidubce.services.bos.BosClientConfiguration;
+import com.baidubce.services.bos.model.AbortMultipartUploadRequest;
 import com.baidubce.services.bos.model.BosObject;
 import com.baidubce.services.bos.model.CompleteMultipartUploadRequest;
 import com.baidubce.services.bos.model.CompleteMultipartUploadResponse;
@@ -413,17 +414,16 @@ public class BosClientProxyImpl implements BosClientProxy {
       response =
           bosClient.completeMultipartUpload(request);
     } catch (BceServiceException e) {
-      if (e != null
-          && BOS_NO_SUCH_KEY_CODE == e.getStatusCode()
+      if (BOS_NO_SUCH_KEY_CODE == e.getStatusCode()
           && e.getErrorCode() != null
           && e.getErrorCode().trim()
               .equals("NoSuchUpload")) {
-        // ignore "The upload ID might be invalid, or
-        // the multipart upload might have been aborted
-        // or completed."
         LOG.warn("The upload ID might be invalid, or"
             + " the multipart upload might have been"
-            + " aborted or completed. skip it !!!");
+            + " aborted or completed.");
+        throw new IOException(
+            "NoSuchUpload: upload ID is invalid or"
+                + " the upload has been aborted", e);
       } else {
         handleBosServiceException(e);
       }
@@ -446,6 +446,21 @@ public class BosClientProxyImpl implements BosClientProxy {
       handleBosServiceException(e);
     }
     return response;
+  }
+
+  /** {@inheritDoc} */
+  @Override
+  public void abortMultipartUpload(
+      String bucketName, String key, String uploadId)
+      throws IOException {
+    try {
+      AbortMultipartUploadRequest request =
+          new AbortMultipartUploadRequest(
+              bucketName, key, uploadId);
+      bosClient.abortMultipartUpload(request);
+    } catch (BceServiceException e) {
+      handleBosServiceException(e);
+    }
   }
 
   /** {@inheritDoc} */

@@ -207,7 +207,10 @@ public abstract class BosNativeFileSystemStore {
     int activeTasks = conf.getInt(
         BaiduBosConstants.BOS_THREADS_MAX_NUM,
         BaiduBosConstants.BOS_THREADS_MAX_NUM_DEFAULT);
-    int waitingTasks = Integer.MAX_VALUE / 2;
+    int waitingTasks = conf.getInt(
+        BaiduBosConstants.BOS_THREADS_MAX_NUM,
+        BaiduBosConstants.BOS_THREADS_MAX_NUM_DEFAULT)
+        * 2;
     boundedThreadPool =
         BlockingThreadPoolExecutorService.newInstance(
             activeTasks,
@@ -259,6 +262,13 @@ public abstract class BosNativeFileSystemStore {
    * Closes the BOS client and releases resources.
    */
   public synchronized void close() {
+    try {
+      if (boundedThreadPool != null) {
+        boundedThreadPool.shutdownNow();
+      }
+    } catch (Exception e) {
+      log.error("thread pool shutdown fail:", e);
+    }
     try {
       if (bosClientProxy != null) {
         bosClientProxy.close();

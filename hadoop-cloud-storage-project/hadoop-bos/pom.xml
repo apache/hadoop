@@ -92,6 +92,14 @@
           <groupId>org.apache.hbase</groupId>
           <artifactId>hbase-client</artifactId>
         </exclusion>
+        <exclusion>
+          <groupId>org.eclipse.paho</groupId>
+          <artifactId>org.eclipse.paho.client.mqttv3</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.bouncycastle</groupId>
+          <artifactId>bcprov-jdk15on</artifactId>
+        </exclusion>
       </exclusions>
     </dependency>
 
@@ -199,7 +207,7 @@
         </file>
       </activation>
       <properties>
-        <maven.test.skip>true</maven.test.skip>
+        <skipITs>true</skipITs>
       </properties>
     </profile>
     <profile>
@@ -210,7 +218,7 @@
         </file>
       </activation>
       <properties>
-        <maven.test.skip>false</maven.test.skip>
+        <skipITs>false</skipITs>
       </properties>
     </profile>
     <profile>
@@ -284,50 +292,38 @@
                   </filters>
                   <relocations>
                     <relocation>
-                      <pattern>com.fasterxml.jackson</pattern>
-                      <shadedPattern>bfs.com.fasterxml.jackson</shadedPattern>
-                    </relocation>
-                    <relocation>
                       <pattern>org.json</pattern>
-                      <shadedPattern>bfs.org.json</shadedPattern>
+                      <shadedPattern>org.apache.hadoop.fs.bos.shaded.org.json</shadedPattern>
                     </relocation>
                     <relocation>
                       <pattern>org.apache.http</pattern>
-                      <shadedPattern>bfs.org.apache.http</shadedPattern>
-                    </relocation>
-                    <relocation>
-                      <pattern>org.apache.commons.logging</pattern>
-                      <shadedPattern>bfs.org.apache.commons.logging</shadedPattern>
+                      <shadedPattern>org.apache.hadoop.fs.bos.shaded.org.apache.http</shadedPattern>
                     </relocation>
                     <relocation>
                       <pattern>org.apache.commons.codec</pattern>
-                      <shadedPattern>bfs.org.apache.commons.codec</shadedPattern>
+                      <shadedPattern>org.apache.hadoop.fs.bos.shaded.org.apache.commons.codec</shadedPattern>
                     </relocation>
                     <relocation>
                       <pattern>org.joda</pattern>
-                      <shadedPattern>bfs.org.joda</shadedPattern>
+                      <shadedPattern>org.apache.hadoop.fs.bos.shaded.org.joda</shadedPattern>
                     </relocation>
                     <relocation>
                       <pattern>com.google</pattern>
-                      <shadedPattern>bfs.com.google</shadedPattern>
+                      <shadedPattern>org.apache.hadoop.fs.bos.shaded.com.google</shadedPattern>
                     </relocation>
                     <relocation>
                       <pattern>com.baidubce</pattern>
-                      <shadedPattern>bfs.com.baidubce</shadedPattern>
+                      <shadedPattern>org.apache.hadoop.fs.bos.shaded.com.baidubce</shadedPattern>
                     </relocation>
                   </relocations>
                   <artifactSet>
                     <includes>
                       <include>org.json:json</include>
                       <include>joda-time:joda-time</include>
-                      <include>com.fasterxml.jackson.core:jackson-core</include>
-                      <include>com.fasterxml.jackson.core:jackson-databind</include>
-                      <include>com.fasterxml.jackson.core:jackson-annotations</include>
                       <include>com.baidubce:bce-java-sdk</include>
                       <include>org.apache.httpcomponents:*</include>
                       <include>com.google.guava:guava</include>
                       <include>com.google.guava:failureaccess</include>
-                      <include>commons-logging:commons-logging</include>
                       <include>commons-codec:commons-codec</include>
                     </includes>
                   </artifactSet>

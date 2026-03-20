@@ -22,7 +22,7 @@ import org.apache.hadoop.io.retry.RetryPolicy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -40,7 +40,6 @@ public class BosRandomRetryPolicy implements RetryPolicy {
   private TimeUnit timeUnit;
   private int minSleep;
   private int maxSleep;
-  private Random random = new Random();
 
   /**
    * Constructs a BosRandomRetryPolicy.
@@ -100,7 +99,8 @@ public class BosRandomRetryPolicy implements RetryPolicy {
    */
   public long calculateSleepTime(int retries) {
     int sleepTime = minSleep
-        + (random.nextInt(maxSleep - minSleep));
+        + ThreadLocalRandom.current()
+            .nextInt(maxSleep - minSleep);
     LOG.warn("sleep random time : {}", sleepTime);
     return sleepTime * (retries + 1);
   }

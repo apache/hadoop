@@ -148,7 +148,8 @@ public class BaiduBosFileSystem extends FileSystem {
   @Override
   public FSDataOutputStream append(Path f, int bufferSize,
       Progressable progress) throws IOException {
-    throw new IOException("Not supported");
+    throw new UnsupportedOperationException(
+        "Append is not supported by BaiduBosFileSystem");
   }
 
   @Override
@@ -279,6 +280,11 @@ public class BaiduBosFileSystem extends FileSystem {
 
     FileStatus status = null;
     if (store.isHierarchy() && recursive) {
+      try {
+        status = getFileStatus(f);
+      } catch (FileNotFoundException e) {
+        return false;
+      }
       store.deleteDirs(key, recursive);
     } else {
       try {
@@ -480,7 +486,9 @@ public class BaiduBosFileSystem extends FileSystem {
     String key = pathToKey(absolutePath);
     FileStatus status = this.getFileStatus(f);
     if (status.isFile()) {
-      return new ContentSummary(status.getLen(), 1L, 0L);
+      return new ContentSummary.Builder()
+          .length(status.getLen()).fileCount(1L)
+          .directoryCount(0L).build();
     }
     if (store.isHierarchy()) {
       return multiThreadGetContentSummary(f);
@@ -507,8 +515,9 @@ public class BaiduBosFileSystem extends FileSystem {
         priorLastKey = listing.getPriorLastKey();
       }
     } while (priorLastKey != null && !priorLastKey.isEmpty());
-    return new ContentSummary(
-        summary[0], summary[1], summary[2]);
+    return new ContentSummary.Builder()
+        .length(summary[0]).fileCount(summary[1])
+        .directoryCount(summary[2]).build();
   }
 
   /**
@@ -553,8 +562,9 @@ public class BaiduBosFileSystem extends FileSystem {
       throw new IOException(
           "Exception while get content summary");
     }
-    return new ContentSummary(
-        summary[0], summary[1], summary[2]);
+    return new ContentSummary.Builder()
+        .length(summary[0]).fileCount(summary[1])
+        .directoryCount(summary[2]).build();
   }
 
   private void processDirectory(Path p,
@@ -580,8 +590,9 @@ public class BaiduBosFileSystem extends FileSystem {
         LOG.error(e.getMessage(), e);
         exceptionThrow.set(true);
       }
-      return new ContentSummary(
-          summary[0], summary[1], summary[2]);
+      return new ContentSummary.Builder()
+          .length(summary[0]).fileCount(summary[1])
+          .directoryCount(summary[2]).build();
     }));
   }
 
@@ -817,7 +828,8 @@ public class BaiduBosFileSystem extends FileSystem {
   @Override
   public boolean truncate(Path f, long newLength)
       throws IOException {
-    throw new IOException("Not supported");
+    throw new UnsupportedOperationException(
+        "Truncate is not supported by BaiduBosFileSystem");
   }
 
   /**
