@@ -297,8 +297,8 @@ public class NonHierarchyBosNativeFileSystemStore
       }
     } catch (InterruptedException
         | ExecutionException e) {
-      if (curFuture != null) {
-        curFuture.cancel(true);
+      for (Future<Void> f : futures) {
+        f.cancel(true);
       }
       throw new IOException(e);
     }

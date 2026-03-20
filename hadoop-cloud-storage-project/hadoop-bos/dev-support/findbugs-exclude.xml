@@ -15,35 +15,48 @@
    limitations under the License.
 -->
 <FindBugsFilter>
+  <!-- BosInputStream stores mutable configuration and statistics
+       objects passed from the caller; defensive copies are
+       unnecessary for internal use. -->
   <Match>
     <Class name="org.apache.hadoop.fs.bos.BosInputStream"/>
-    <or>
-      <Bug pattern="EI_EXPOSE_REP" />
-      <Bug pattern="EI_EXPOSE_REP2" />
-    </or>
+    <Or>
+      <Bug pattern="EI_EXPOSE_REP"/>
+      <Bug pattern="EI_EXPOSE_REP2"/>
+    </Or>
   </Match>
+  <!-- BosOutputStream stores mutable store and configuration
+       objects passed from the caller. -->
   <Match>
     <Class name="org.apache.hadoop.fs.bos.BosOutputStream"/>
-    <or>
-      <Bug pattern="EI_EXPOSE_REP" />
-      <Bug pattern="EI_EXPOSE_REP2" />
-    </or>
+    <Or>
+      <Bug pattern="EI_EXPOSE_REP"/>
+      <Bug pattern="EI_EXPOSE_REP2"/>
+    </Or>
   </Match>
+  <!-- FileMetadata exposes ObjectMetadata and attribute Set
+       without defensive copies for performance. -->
   <Match>
     <Class name="org.apache.hadoop.fs.bos.FileMetadata"/>
-    <or>
-      <Bug pattern="EI_EXPOSE_REP" />
-      <Bug pattern="EI_EXPOSE_REP2" />
-    </or>
+    <Or>
+      <Bug pattern="EI_EXPOSE_REP"/>
+      <Bug pattern="EI_EXPOSE_REP2"/>
+    </Or>
   </Match>
+  <!-- PartialListing stores and returns arrays without
+       defensive copies for performance in listing operations. -->
   <Match>
     <Class name="org.apache.hadoop.fs.bos.PartialListing"/>
-    <or>
-      <Bug pattern="EI_EXPOSE_REP" />
-      <Bug pattern="EI_EXPOSE_REP2" />
-    </or>
+    <Or>
+      <Bug pattern="EI_EXPOSE_REP"/>
+      <Bug pattern="EI_EXPOSE_REP2"/>
+    </Or>
   </Match>
+  <!-- BosCRC32CCheckSum uses unsigned right shift on an int
+       value to extract individual bytes; this is intentional. -->
   <Match>
-    <Bug pattern="ICAST_QUESTIONABLE_UNSIGNED_RIGHT_SHIFT" />
+    <Class name="org.apache.hadoop.fs.bos.utils.BosCRC32CCheckSum"/>
+    <Method name="writeInt"/>
+    <Bug pattern="ICAST_QUESTIONABLE_UNSIGNED_RIGHT_SHIFT"/>
   </Match>
 </FindBugsFilter>

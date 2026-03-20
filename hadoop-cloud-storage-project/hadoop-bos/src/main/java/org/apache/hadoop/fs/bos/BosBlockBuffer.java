@@ -21,12 +21,15 @@ package org.apache.hadoop.fs.bos;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
 
+import java.io.Closeable;
+import java.io.IOException;
+
 /**
  * A buffer that holds data for a single block during
  * multipart upload. Data is written to an output buffer and
  * then moved to an input buffer for uploading.
  */
-public class BosBlockBuffer {
+public class BosBlockBuffer implements Closeable {
 
   /** The output buffer for writing data. */
   DataOutputBuffer outBuffer;
@@ -93,5 +96,16 @@ public class BosBlockBuffer {
    */
   void clear() {
     inBuffer.reset(null, 0);
+  }
+
+  /** {@inheritDoc} */
+  @Override
+  public void close() throws IOException {
+    if (outBuffer != null) {
+      outBuffer.close();
+    }
+    if (inBuffer != null) {
+      inBuffer.close();
+    }
   }
 }

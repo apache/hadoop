@@ -50,62 +50,29 @@ public class BosOutputStream extends OutputStream {
   private static final Logger LOG =
       LoggerFactory.getLogger(BosOutputStream.class);
 
-  /** The backing native file system store. */
-  public final BosNativeFileSystemStore store;
-
-  /** Map of block index to block buffer. */
-  public final Map<Integer, BosBlockBuffer> blocksMap =
+  private final BosNativeFileSystemStore store;
+  private final Map<Integer, BosBlockBuffer> blocksMap =
       new HashMap<>();
-
   private final String bucketName;
   private final BosClientProxy bosClientProxy;
-
-  /** The object key for this output stream. */
-  public final String key;
-
-  /** The Hadoop configuration. */
-  public final Configuration conf;
-
-  /** The block size for multipart upload parts. */
-  public final int blockSize;
-
-  /** The current block buffer being written to. */
-  public BosBlockBuffer currBlock;
-
-  /** The current block index (1-based). */
-  public int blkIndex = 1;
-
-  /** Whether this stream has been closed. */
-  public boolean closed;
-
-  /** The total number of bytes written so far. */
-  public long filePos = 0;
-
-  /** The number of bytes written to the current block. */
-  public int bytesWrittenToBlock = 0;
-
-  /** The upload ID for the multipart upload. */
-  public String uploadId = null;
-
-  /** The number of concurrent upload threads. */
-  public final int uploadThreadSize;
-
-  /** The list of part ETags for multipart upload. */
-  public List<PartETag> eTags =
+  private final String key;
+  private final Configuration conf;
+  private final int blockSize;
+  private final int uploadThreadSize;
+  private final List<PartETag> eTags =
       Collections.synchronizedList(new ArrayList<>());
-
-  /** The list of futures for upload tasks. */
-  public List<Future> futureList = new LinkedList<>();
-
-  /** Map of block index to exceptions during upload. */
-  public Map<Integer, Exception> exceptionMap =
+  private final List<Future> futureList = new LinkedList<>();
+  private final Map<Integer, Exception> exceptionMap =
       new ConcurrentHashMap<>();
+  private final ArrayBlockingQueue<BosBlockBuffer> blocks;
 
-  /** Queue of available block buffers for reuse. */
-  public ArrayBlockingQueue<BosBlockBuffer> blocks;
-
-  /** The number of block buffers created so far. */
-  public int createBlockSize;
+  private BosBlockBuffer currBlock;
+  private int blkIndex = 1;
+  private boolean closed;
+  private long filePos = 0;
+  private int bytesWrittenToBlock = 0;
+  private String uploadId = null;
+  private int createBlockSize;
 
   /**
    * Constructs a BosOutputStream for writing to BOS.
@@ -414,6 +381,7 @@ public class BosOutputStream extends OutputStream {
               + " futureList size: {}",
           futureList.size());
       // wait UploadPartThread threads done
+      Exception uploadException = null;
       try {
         int index = 0;
         for (Future future : this.futureList) {
@@ -424,10 +392,17 @@ public class BosOutputStream extends OutputStream {
               index);
         }
       } catch (Exception e) {
+        uploadException = e;
         LOG.warn(
             "catch exception when waiting"
                 + " UploadPartThread done: ",
             e);
+      }
+
+      if (uploadException != null) {
+        abortMultipartUpload();
+        throw new IOException(
+            "Multipart upload failed", uploadException);
       }
 
       LOG.debug(
@@ -438,21 +413,37 @@ public class BosOutputStream extends OutputStream {
           this.eTags.size(), this.blkIndex);
 
       if (this.eTags.size() != this.blkIndex - 1) {
-        throw new IllegalStateException(
-            "Multipart failed!");
+        abortMultipartUpload();
+        throw new IOException(
+            "Multipart upload incomplete: expected "
+                + (this.blkIndex - 1) + " parts but got "
+                + this.eTags.size());
       }
 
       completeMultipartUpload(
           bucketName, this.key,
           this.uploadId, this.eTags);
-      if (this.eTags.size() != this.blkIndex - 1) {
-        throw new IllegalStateException(
-            "Multipart failed!");
-      }
     }
 
     super.close();
     this.closed = true;
+  }
+
+  /**
+   * Aborts the in-progress multipart upload to prevent
+   * storage leakage on failure.
+   */
+  private void abortMultipartUpload() {
+    if (this.uploadId != null) {
+      try {
+        bosClientProxy.abortMultipartUpload(
+            bucketName, this.key, this.uploadId);
+      } catch (IOException e) {
+        LOG.warn("Failed to abort multipart upload"
+            + " for key={}, uploadId={}",
+            this.key, this.uploadId, e);
+      }
+    }
   }
 
   /**

@@ -222,6 +222,18 @@ public interface BosClientProxy {
       throws IOException;
 
   /**
+   * Aborts a multipart upload.
+   *
+   * @param bucketName the name of the bucket
+   * @param key        the object key
+   * @param uploadId   the upload ID to abort
+   * @throws IOException if an I/O error occurs
+   */
+  void abortMultipartUpload(
+      String bucketName, String key, String uploadId)
+      throws IOException;
+
+  /**
    * Checks whether the specified bucket is a hierarchy
    * (namespace) bucket.
    *

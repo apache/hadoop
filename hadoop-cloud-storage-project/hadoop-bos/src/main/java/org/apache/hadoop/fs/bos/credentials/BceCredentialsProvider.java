@@ -60,12 +60,10 @@ public interface BceCredentialsProvider {
           Class.forName(className);
       BceCredentialsProvider provider =
           (BceCredentialsProvider) providerClass
-              .newInstance();
+              .getDeclaredConstructor().newInstance();
       provider.setConf(configuration);
       return provider;
-    } catch (InstantiationException
-        | IllegalAccessException
-        | ClassNotFoundException e) {
+    } catch (ReflectiveOperationException e) {
       throw new RuntimeException(e);
     }
   }
@@ -78,7 +76,8 @@ public interface BceCredentialsProvider {
    */
   default DefaultBceSessionCredentials getCredentials(
       String user) {
-    return this.getCredentials(null, user);
+    throw new UnsupportedOperationException(
+        "getCredentials(String) not implemented");
   }
 
   /**

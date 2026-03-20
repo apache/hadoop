@@ -22,7 +22,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.DelegateToFileSystem;
-import org.apache.hadoop.fs.FileSystem;
 
 import java.io.IOException;
 import java.net.URI;
@@ -48,27 +47,6 @@ public class BaiduBosFileSystemAdapter
    */
   public BaiduBosFileSystemAdapter(
       URI theUri, Configuration conf)
-      throws IOException, URISyntaxException {
-    super(theUri, new BaiduBosFileSystem(),
-        conf, "bos", false);
-  }
-
-  /**
-   * Constructs a BaiduBosFileSystemAdapter with an explicit
-   * filesystem implementation.
-   *
-   * @param theUri          the URI for this filesystem
-   * @param theFsImpl       the filesystem implementation
-   * @param conf            the Hadoop configuration
-   * @param supportedScheme the supported URI scheme
-   * @param authorityRequired whether authority is required
-   * @throws IOException        if an I/O error occurs
-   * @throws URISyntaxException if the URI is malformed
-   */
-  protected BaiduBosFileSystemAdapter(
-      URI theUri, FileSystem theFsImpl,
-      Configuration conf, String supportedScheme,
-      boolean authorityRequired)
       throws IOException, URISyntaxException {
     super(theUri, new BaiduBosFileSystem(),
         conf, "bos", false);
