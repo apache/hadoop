@@ -24,6 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.io.IOException;
 import java.util.EnumSet;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -122,7 +123,7 @@ public class TestAddBlockRetry {
     LocatedBlock newBlock;
     try {
       newBlock = FSDirWriteFileOp.storeAllocatedBlock(ns, src,
-          HdfsConstants.GRANDFATHER_INODE_ID, "clientName", null, targets);
+          HdfsConstants.GRANDFATHER_INODE_ID, "clientName", null, targets, new AtomicReference<>());
     } finally {
       ns.writeUnlock(RwLockMode.GLOBAL, "testRetryAddBlockWhileInChooseTarget");
     }

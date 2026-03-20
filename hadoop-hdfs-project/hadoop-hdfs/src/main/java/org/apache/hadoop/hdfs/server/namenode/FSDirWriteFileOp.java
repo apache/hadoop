@@ -67,6 +67,7 @@ import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot.CURRENT_STATE_ID;
 import static org.apache.hadoop.util.Time.now;
@@ -223,7 +224,7 @@ class FSDirWriteFileOp {
    */
   static LocatedBlock storeAllocatedBlock(FSNamesystem fsn, String src,
       long fileId, String clientName, ExtendedBlock previous,
-      DatanodeStorageInfo[] targets) throws IOException {
+      DatanodeStorageInfo[] targets, AtomicReference<BlockInfo> newBlockRef) throws IOException {
     long offset;
     // Run the full analysis again, since things could have changed
     // while chooseTarget() was executing.
@@ -256,7 +257,8 @@ class FSDirWriteFileOp {
     // allocate new block, record block locations in INode.
     Block newBlock = fsn.createNewBlock(blockType);
     INodesInPath inodesInPath = INodesInPath.fromINode(pendingFile);
-    saveAllocatedBlock(fsn, src, inodesInPath, newBlock, targets, blockType);
+    BlockInfo newBlockInfo = saveAllocatedBlock(fsn, src, inodesInPath, newBlock, targets, blockType);
+    newBlockRef.set(newBlockInfo);
 
     persistNewBlock(fsn, src, pendingFile);
     offset = pendingFile.computeFileSize();
@@ -781,17 +783,17 @@ class FSDirWriteFileOp {
    * @param targets target datanodes where replicas of the new block is placed
    * @throws QuotaExceededException If addition of block exceeds space quota
    */
-  static void saveAllocatedBlock(FSNamesystem fsn, String src,
+  static BlockInfo saveAllocatedBlock(FSNamesystem fsn, String src,
       INodesInPath inodesInPath, Block newBlock, DatanodeStorageInfo[] targets,
       BlockType blockType) throws IOException {
     assert fsn.hasWriteLock(RwLockMode.GLOBAL);
     BlockInfo b = addBlock(fsn.dir, src, inodesInPath, newBlock, targets,
         blockType);
-    logAllocatedBlock(src, b);
     DatanodeStorageInfo.incrementBlocksScheduled(targets);
+    return b;
   }
 
-  private static void logAllocatedBlock(String src, BlockInfo b) {
+  static void logAllocatedBlock(String src, BlockInfo b) {
     if (!NameNode.stateChangeLog.isInfoEnabled()) {
       return;
     }
@@ -803,7 +805,7 @@ class FSDirWriteFileOp {
     if (uc != null) {
       uc.appendUCPartsConcise(sb);
     }
-    sb.append(" for " + src);
+    sb.append(" for ").append(src);
     NameNode.stateChangeLog.info(sb.toString());
   }
 

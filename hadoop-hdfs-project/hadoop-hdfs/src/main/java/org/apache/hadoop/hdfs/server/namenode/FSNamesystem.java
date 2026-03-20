@@ -182,6 +182,7 @@ import java.util.TreeMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Supplier;
@@ -3111,14 +3112,18 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     checkOperation(OperationCategory.WRITE);
     writeLock(RwLockMode.GLOBAL);
     LocatedBlock lb;
+    AtomicReference<BlockInfo> newBlockRef = new AtomicReference<>();
     try {
       checkOperation(OperationCategory.WRITE);
       lb = FSDirWriteFileOp.storeAllocatedBlock(
-          this, src, fileId, clientName, previous, targets);
+          this, src, fileId, clientName, previous, targets, newBlockRef);
     } finally {
       writeUnlock(RwLockMode.GLOBAL, operationName);
     }
     getEditLog().logSync();
+    if (newBlockRef.get() != null) {
+      FSDirWriteFileOp.logAllocatedBlock(src, newBlockRef.get());
+    }
     return lb;
   }
 
