@@ -28,7 +28,6 @@ import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperationExecutor;
-import org.apache.hadoop.yarn.webapp.WebAppException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -117,7 +116,7 @@ public class DiagnosticJStackService {
 
       List<Long> javaContainerPids = ProcessHandle.of(parentPid).stream()
         .flatMap(ProcessHandle::descendants)
-        .filter(childProcess -> childProcess.info().command().orElse("").contains("java"))
+        .filter(childProcess -> childProcess.info().commandLine().orElse("").contains("java"))
         .map(ProcessHandle::pid)
         .toList();
 
@@ -172,9 +171,25 @@ public class DiagnosticJStackService {
       Shell.ShellCommandExecutor cmd =
         new Shell.ShellCommandExecutor(jstackCommand, null, null, 60_000);
 
-      cmd.execute();
-      result.append(String.format(
-        "--- JStack iteration %d for PID: %d ---%n%s%n", i, pid, cmd.getOutput()));
+      try {
+        cmd.execute();
+        result.append(String.format(
+                "--- JStack iteration %d for PID: %d ---%n%s%n", i, pid, cmd.getOutput()));
+      } catch (org.apache.hadoop.util.Shell.ExitCodeException e) {
+        LOG.warn("Failed to jstack PID {} (Process likely exited): {}", pid, e.getMessage());
+        result.append(String.format("--- JStack iteration %d for PID: %d ---%n", i, pid));
+        result.append("Status: Failed to collect thread dump. The process likely exited naturally before jstack could attach.\n");
+        result.append("Error details: ").append(e.getMessage()).append("\n");
+
+        break;
+      } catch (IOException e) {
+        LOG.warn("IO Error while running jstack for PID {}: {}", pid, e.getMessage());
+        result.append(String.format("--- JStack iteration %d for PID: %d ---%n", i, pid));
+        result.append("Status: Incomplete read (Premature EOF). The JVM likely shut down while writing the thread dump.\n");
+        esult.append("Error details: ").append(e.getMessage()).append("\n");
+
+        break;
+      }
     }
 
     return result.toString();
