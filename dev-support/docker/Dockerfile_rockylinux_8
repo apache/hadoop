@@ -114,7 +114,6 @@ ENV HADOOP_SKIP_YETUS_VERIFICATION=true
 # Install packages
 ######
 RUN pkg-resolver/install-maven.sh rockylinux:8
-RUN pkg-resolver/install-cmake.sh rockylinux:8
 RUN pkg-resolver/install-boost.sh rockylinux:8
 RUN pkg-resolver/install-spotbugs.sh rockylinux:8
 RUN pkg-resolver/install-protobuf.sh rockylinux:8

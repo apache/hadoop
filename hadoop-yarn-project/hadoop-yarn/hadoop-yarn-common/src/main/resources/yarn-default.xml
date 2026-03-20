@@ -2832,6 +2832,15 @@
     <value>60000</value>
   </property>
 
+  <property>
+    <description>Optional query parameter name that signals the YARN WebAppProxy to redirect
+      the user to the application's tracking URL instead of proxying the request.
+      When the tracking URL contains this flag with the value "true", the proxy
+      performs an HTTP redirect (302) to the tracking URL.</description>
+    <name>yarn.web-proxy.redirect-flag</name>
+    <value/>
+  </property>
+
   <!-- Applications' Configuration -->
 
   <property>
@@ -4622,6 +4631,17 @@
     </description>
     <name>yarn.scheduler.configuration.zk-store.parent-path</name>
     <value>/confstore</value>
+  </property>
+
+  <property>
+    <description>
+      ZK read-retry seconds when using zookeeper-based configuration store.
+      Should the ZK configuration store being formatted while one of the RM
+      is in the INIT state, allow retries using this interval in the hope that the store will be
+      re-populated with some data soon.
+    </description>
+    <name>yarn.scheduler.configuration.zk-store.read-retry-secs</name>
+    <value>3</value>
   </property>
 
   <property>

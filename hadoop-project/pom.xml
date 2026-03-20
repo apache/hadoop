@@ -49,7 +49,7 @@
     <!-- Version number for xerces used by JDiff -->
     <xerces.jdiff.version>2.12.2</xerces.jdiff.version>
 
-    <kafka.version>3.9.0</kafka.version>
+    <kafka.version>3.9.2</kafka.version>
 
     <commons-daemon.version>1.0.13</commons-daemon.version>
 
@@ -76,8 +76,8 @@
     <jaxb.version>2.3.9</jaxb.version>
 
     <!-- jackson versions -->
-    <jackson2.version>2.18.5</jackson2.version>
-    <jackson2.databind.version>2.18.5</jackson2.databind.version>
+    <jackson2.version>2.18.6</jackson2.version>
+    <jackson2.databind.version>2.18.6</jackson2.databind.version>
 
     <!-- httpcomponents versions -->
     <httpclient.version>4.5.13</httpclient.version>
@@ -112,7 +112,7 @@
     <hadoop-thirdparty-shaded-protobuf-prefix>${hadoop-thirdparty-shaded-prefix}.protobuf</hadoop-thirdparty-shaded-protobuf-prefix>
     <hadoop-thirdparty-shaded-guava-prefix>${hadoop-thirdparty-shaded-prefix}.com.google.common</hadoop-thirdparty-shaded-guava-prefix>
 
-    <zookeeper.version>3.8.4</zookeeper.version>
+    <zookeeper.version>3.8.6</zookeeper.version>
     <curator.version>5.2.0</curator.version>
     <findbugs.version>3.0.5</findbugs.version>
     <dnsjava.version>3.6.1</dnsjava.version>
@@ -152,9 +152,9 @@
     <jna.version>5.2.0</jna.version>
     <gson.version>2.9.0</gson.version>
     <metrics.version>3.2.4</metrics.version>
-    <netty4.version>4.1.127.Final</netty4.version>
+    <netty4.version>4.1.130.Final</netty4.version>
     <snappy-java.version>1.1.10.4</snappy-java.version>
-    <lz4-java.version>1.10.2</lz4-java.version>
+    <lz4-java.version>1.10.4</lz4-java.version>
     <byte-buddy.version>1.17.6</byte-buddy.version>
 
     <!-- Maven protoc compiler -->

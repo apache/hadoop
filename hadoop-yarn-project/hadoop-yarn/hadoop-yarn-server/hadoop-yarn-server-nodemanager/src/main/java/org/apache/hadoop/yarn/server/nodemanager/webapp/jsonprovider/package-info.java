@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,20 +16,10 @@
  * limitations under the License.
  */
 
-import DS from 'ember-data';
+/**
+ * Package org.apache.hadoop.yarn.server.nodemanager.webapp.jsonprovider contains classes
+ * for handling json response format mostly to provide backward-compatibility with jersey1.
+ */
 
-export default DS.Model.extend({
-  startedOn: DS.attr('string'),
-  state: DS.attr('string'),
-  haState: DS.attr('string'),
-  rmStateStoreName: DS.attr('string'),
-  resourceManagerVersion: DS.attr('string'),
-  resourceManagerBuildVersion: DS.attr('string'),
-  hadoopVersion: DS.attr('string'),
-  hadoopBuildVersion: DS.attr('string'),
-  hadoopVersionBuiltOn: DS.attr('string'),
-  getYARNBuildHash: function() {
-	return this.get("hadoopVersion") + " from " +  this.get("resourceManagerBuildVersion").split(" ")[2];
-  }.property("yarnHash"),
-  schedulerUiEnabled: DS.attr('string')
-});
+package org.apache.hadoop.yarn.server.nodemanager.webapp.jsonprovider;
+

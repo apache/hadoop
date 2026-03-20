@@ -529,6 +529,35 @@ public class WebAppProxyServlet extends HttpServlet {
         default:
           // fall out of the switch
       }
+
+      /*
+       * If the application registered its tracking URL with the configured
+       * redirect flag, the proxy should not attempt
+       * to fetch the resource itself. Instead, it performs an HTTP redirect
+       * to the tracking URL.
+       *
+       * This is required for deployments where the tracking URL is served
+       * behind an external reverse proxy (for example Apache Knox) that is
+       * responsible for routing requests to multiple backend services
+       * such as Spark History Server instances in an HA setup.
+       *
+       * In such environments the YARN WebAppProxy cannot correctly proxy the
+       * request because the reverse proxy expects the request to originate
+       * directly from the user's browser and may require authentication
+       * context (e.g. a JWT) that the YARN proxy must not forward for
+       * security reasons.
+       *
+       * By redirecting the user instead of proxying the request, the browser
+       * sends a new request to the external reverse proxy which can then
+       * handle authentication and route the request to the appropriate
+       * backend service.
+       */
+      String redirectFlagName = conf.get(YarnConfiguration.PROXY_REDIRECT_FLAG, "");
+      if (!redirectFlagName.isBlank() && toFetch.getQuery().equals(redirectFlagName + "=true")) {
+        ProxyUtils.sendRedirect(req, resp, toFetch.toString());
+        return;
+      }
+
       Cookie c = null;
       if (userWasWarned && userApproved) {
         c = makeCheckCookie(id, true);

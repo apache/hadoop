@@ -16,20 +16,28 @@
  * limitations under the License.
  */
 
-import DS from 'ember-data';
+package org.apache.hadoop.yarn.server.webapp.dao;
 
-export default DS.Model.extend({
-  startedOn: DS.attr('string'),
-  state: DS.attr('string'),
-  haState: DS.attr('string'),
-  rmStateStoreName: DS.attr('string'),
-  resourceManagerVersion: DS.attr('string'),
-  resourceManagerBuildVersion: DS.attr('string'),
-  hadoopVersion: DS.attr('string'),
-  hadoopBuildVersion: DS.attr('string'),
-  hadoopVersionBuiltOn: DS.attr('string'),
-  getYARNBuildHash: function() {
-	return this.get("hadoopVersion") + " from " +  this.get("resourceManagerBuildVersion").split(" ")[2];
-  }.property("yarnHash"),
-  schedulerUiEnabled: DS.attr('string')
-});
+import javax.xml.bind.annotation.XmlRootElement;
+import java.util.List;
+
+@XmlRootElement
+public class ContainerLogsInfoes {
+  private List<ContainerLogsInfo> containerLogsInfo;
+
+
+  public ContainerLogsInfoes(List<ContainerLogsInfo> containerLogsInfo) {
+    this.containerLogsInfo = containerLogsInfo;
+  }
+
+  public ContainerLogsInfoes() {
+  }
+
+  public List<ContainerLogsInfo> getContainerLogsInfo() {
+    return containerLogsInfo;
+  }
+
+  public void setContainerLogsInfo(List<ContainerLogsInfo> containerLogsInfo) {
+    this.containerLogsInfo = containerLogsInfo;
+  }
+}
