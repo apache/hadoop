@@ -564,24 +564,24 @@ public class BosInputStream extends FSInputStream
    * @param targetPos position of the read
    * @param length length of bytes requested; if less than
    *               zero "unknown"
-   * @param contentLength total length of file
-   * @param readahead current readahead value
+   * @param fileContentLength total length of file
+   * @param readaheadLen current readahead value
    * @return the absolute value of the limit of the request
    *         (inclusive, last byte index).
    */
   private long calculateRequestLimit(
       long targetPos,
       long length,
-      long contentLength,
-      long readahead) {
+      long fileContentLength,
+      long readaheadLen) {
     if (length < 0) {
       // For unknown length, read to end of file
       // (last byte index)
-      return contentLength - 1;
+      return fileContentLength - 1;
     }
 
     return Math.min(
-        contentLength,
-        targetPos + Math.max(readahead, length)) - 1;
+        fileContentLength,
+        targetPos + Math.max(readaheadLen, length)) - 1;
   }
 }

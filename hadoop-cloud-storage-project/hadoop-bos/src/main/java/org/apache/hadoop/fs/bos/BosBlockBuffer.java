@@ -32,10 +32,10 @@ import java.io.IOException;
 public class BosBlockBuffer implements Closeable {
 
   /** The output buffer for writing data. */
-  DataOutputBuffer outBuffer;
+  private DataOutputBuffer outBuffer;
 
   /** The input buffer for reading data during upload. */
-  DataInputBuffer inBuffer = new DataInputBuffer();
+  private DataInputBuffer inBuffer = new DataInputBuffer();
 
   private String key;
   private int blkId;
@@ -79,6 +79,24 @@ public class BosBlockBuffer implements Closeable {
    */
   public void setBlkId(int blkId) {
     this.blkId = blkId;
+  }
+
+  /**
+   * Returns the output buffer for writing data.
+   *
+   * @return the output buffer
+   */
+  DataOutputBuffer getOutBuffer() {
+    return outBuffer;
+  }
+
+  /**
+   * Returns the input buffer for reading data.
+   *
+   * @return the input buffer
+   */
+  DataInputBuffer getInBuffer() {
+    return inBuffer;
   }
 
   /**

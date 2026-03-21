@@ -374,17 +374,17 @@ public class NonHierarchyBosNativeFileSystemStore
   /**
    * Completes a multipart upload by assembling the parts.
    *
-   * @param bucketName the bucket name
-   * @param key        the object key
-   * @param uploadId   the upload ID
-   * @param eTags      the list of part ETags
+   * @param bucket   the bucket name
+   * @param objectKey the object key
+   * @param mpUploadId the upload ID
+   * @param partETags the list of part ETags
    * @throws IOException if the completion fails
    */
   private void completeMultipartUpload(
-      String bucketName, String key,
-      String uploadId, List<PartETag> eTags)
+      String bucket, String objectKey,
+      String mpUploadId, List<PartETag> partETags)
       throws IOException {
-    Collections.sort(eTags,
+    Collections.sort(partETags,
         new Comparator<PartETag>() {
           public int compare(
               PartETag arg1, PartETag arg2) {
@@ -396,7 +396,7 @@ public class NonHierarchyBosNativeFileSystemStore
         });
     CompleteMultipartUploadRequest request =
         new CompleteMultipartUploadRequest(
-            bucketName, key, uploadId, eTags);
+            bucket, objectKey, mpUploadId, partETags);
     bosClientProxy.completeMultipartUpload(request);
   }
 

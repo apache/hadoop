@@ -77,12 +77,12 @@ class UploadPartThread implements Runnable {
       ArrayBlockingQueue<BosBlockBuffer> blocks) {
     this.bucket = bucket;
     this.object = object;
-    this.size = block.inBuffer.getLength();
+    this.size = block.getInBuffer().getLength();
     this.eTags = eTags;
     this.partId = block.getBlkId();
     this.client = client;
     this.uploadId = uploadId;
-    this.in = block.inBuffer;
+    this.in = block.getInBuffer();
     this.dataMap = dataMap;
     this.exceptionMap = exceptionMap;
     this.conf = conf;
