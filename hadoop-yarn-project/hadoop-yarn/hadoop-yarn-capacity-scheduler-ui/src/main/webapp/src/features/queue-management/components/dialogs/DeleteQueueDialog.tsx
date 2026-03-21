@@ -17,7 +17,6 @@
  */
 
 
-import { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -27,10 +26,8 @@ import {
   DialogTitle,
 } from '~/components/ui/dialog';
 import { Button } from '~/components/ui/button';
-import { Input } from '~/components/ui/input';
-import { Field, FieldControl, FieldLabel } from '~/components/ui/field';
 import { Alert, AlertDescription } from '~/components/ui/alert';
-import { Trash2, AlertTriangle } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 import { useQueueActions } from '~/features/queue-management/hooks/useQueueActions';
 import { SPECIAL_VALUES } from '~/types';
 
@@ -43,26 +40,16 @@ interface DeleteQueueDialogProps {
 export function DeleteQueueDialog({ open, queuePath, onClose }: DeleteQueueDialogProps) {
   const { deleteQueue, canDeleteQueue } = useQueueActions();
   const queueName = queuePath.split('.').pop() || queuePath;
-  const [confirmText, setConfirmText] = useState('');
 
   const canDelete = canDeleteQueue(queuePath);
   const isRoot = queuePath === SPECIAL_VALUES.ROOT_QUEUE_NAME;
-  const isConfirmationValid = confirmText === queueName;
-
-  // Reset confirmation text when dialog opens/closes
-  useEffect(() => {
-    if (!open) {
-      setConfirmText('');
-    }
-  }, [open]);
 
   const handleDelete = () => {
-    if (!isConfirmationValid) return;
     try {
       deleteQueue(queuePath);
       onClose();
     } catch (error) {
-      console.error('Failed to delete queue:', error);
+      console.error('Failed to mark queue for deletion:', error);
     }
   };
 
@@ -70,11 +57,11 @@ export function DeleteQueueDialog({ open, queuePath, onClose }: DeleteQueueDialo
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md" onClick={(e) => e.stopPropagation()}>
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-red-600">
-            <Trash2 className="h-5 w-5" />
-            Delete Queue
+          <DialogTitle className="flex items-center gap-2 text-amber-600">
+            <AlertTriangle className="h-5 w-5" />
+            Mark for Deletion
           </DialogTitle>
-          <DialogDescription>Remove a queue from the scheduler configuration</DialogDescription>
+          <DialogDescription>Stage a queue for removal from the scheduler configuration</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
@@ -94,29 +81,15 @@ export function DeleteQueueDialog({ open, queuePath, onClose }: DeleteQueueDialo
           ) : (
             <>
               <p className="text-sm">
-                Are you sure you want to delete the queue <strong>{queueName}</strong>?
+                Are you sure you want to mark the queue <strong>{queueName}</strong> for deletion?
               </p>
-              <Alert>
+              <Alert className="border-l-amber-500 [&>svg]:text-amber-600">
                 <AlertTriangle className="h-4 w-4" />
                 <AlertDescription>
-                  This action cannot be undone. The queue and all its configurations will be
-                  removed.
+                  The queue will be marked for deletion and removed when you apply changes. You can
+                  undo this action before applying.
                 </AlertDescription>
               </Alert>
-              <Field>
-                <FieldLabel htmlFor="confirmDelete">
-                  Type <strong>{queueName}</strong> to confirm
-                </FieldLabel>
-                <FieldControl>
-                  <Input
-                    id="confirmDelete"
-                    placeholder={queueName}
-                    value={confirmText}
-                    onChange={(e) => setConfirmText(e.target.value)}
-                    autoComplete="off"
-                  />
-                </FieldControl>
-              </Field>
             </>
           )}
         </div>
@@ -126,9 +99,9 @@ export function DeleteQueueDialog({ open, queuePath, onClose }: DeleteQueueDialo
             Cancel
           </Button>
           {canDelete && !isRoot && (
-            <Button onClick={handleDelete} variant="destructive" disabled={!isConfirmationValid}>
-              <Trash2 className="mr-2 h-4 w-4" />
-              Delete Queue
+            <Button onClick={handleDelete} variant="default">
+              <AlertTriangle className="mr-2 h-4 w-4" />
+              Mark for Deletion
             </Button>
           )}
         </DialogFooter>

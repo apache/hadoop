@@ -32,7 +32,7 @@ import {
   ContextMenuTrigger,
 } from '~/components/ui/context-menu';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '~/components/ui/tooltip';
-import { Plus, Trash2, Edit, Play, Pause, SlidersHorizontal, FileCog } from 'lucide-react';
+import { Plus, Trash2, Edit, Play, Pause, SlidersHorizontal, FileCog, Undo2 } from 'lucide-react';
 import { QUEUE_STATES, SPECIAL_VALUES } from '~/types';
 
 type StagedStatus = 'new' | 'modified' | 'deleted';
@@ -55,6 +55,7 @@ interface QueueCardContextMenuProps {
   onToggleState: () => void;
   onAddChild: (event: React.MouseEvent) => void;
   onDelete: (event: React.MouseEvent) => void;
+  onUndoDelete: () => void;
   onRemoveStaged: (event: React.MouseEvent) => void;
   onOpenChange: (open: boolean) => void;
 }
@@ -77,6 +78,7 @@ export const QueueCardContextMenu: React.FC<QueueCardContextMenuProps> = ({
   onToggleState,
   onAddChild,
   onDelete,
+  onUndoDelete,
   onRemoveStaged,
   onOpenChange,
 }) => {
@@ -99,7 +101,7 @@ export const QueueCardContextMenu: React.FC<QueueCardContextMenuProps> = ({
           e.stopPropagation();
           onEditProperties(e);
         }}
-        disabled={stagedStatus === 'new' || isAutoCreatedQueue}
+        disabled={stagedStatus === 'new' || isAutoCreatedQueue || hasPendingDeletion}
       >
         <Edit className="mr-2 h-4 w-4" />
         Edit Properties
@@ -111,7 +113,7 @@ export const QueueCardContextMenu: React.FC<QueueCardContextMenuProps> = ({
             e.stopPropagation();
             onManageTemplate(e);
           }}
-          disabled={isTemplateActionDisabled}
+          disabled={isTemplateActionDisabled || hasPendingDeletion}
         >
           <FileCog className="mr-2 h-4 w-4" />
           Manage Template Properties
@@ -119,7 +121,7 @@ export const QueueCardContextMenu: React.FC<QueueCardContextMenuProps> = ({
       )}
 
       {!isRoot && (
-        <ContextMenuItem onClick={(e) => onEditCapacity(e)}>
+        <ContextMenuItem onClick={(e) => onEditCapacity(e)} disabled={hasPendingDeletion}>
           <SlidersHorizontal className="mr-2 h-4 w-4" />
           Edit Capacity
         </ContextMenuItem>
@@ -137,7 +139,7 @@ export const QueueCardContextMenu: React.FC<QueueCardContextMenuProps> = ({
           e.stopPropagation();
           onToggleState();
         }}
-        disabled={!canToggleState}
+        disabled={!canToggleState || hasPendingDeletion}
       >
         {isRunning ? (
           <>
@@ -176,7 +178,7 @@ export const QueueCardContextMenu: React.FC<QueueCardContextMenuProps> = ({
         </TooltipProvider>
       )}
 
-      {canDelete && stagedStatus !== 'new' && (
+      {canDelete && stagedStatus !== 'new' && !hasPendingDeletion && (
         <>
           <ContextMenuSeparator />
           <ContextMenuItem
@@ -187,7 +189,22 @@ export const QueueCardContextMenu: React.FC<QueueCardContextMenuProps> = ({
             className="text-red-600 focus:text-red-600"
           >
             <Trash2 className="mr-2 h-4 w-4" />
-            Delete Queue
+            Mark for Deletion
+          </ContextMenuItem>
+        </>
+      )}
+
+      {hasPendingDeletion && (
+        <>
+          <ContextMenuSeparator />
+          <ContextMenuItem
+            onClick={(e) => {
+              e.stopPropagation();
+              onUndoDelete();
+            }}
+          >
+            <Undo2 className="mr-2 h-4 w-4" />
+            Undo Delete
           </ContextMenuItem>
         </>
       )}

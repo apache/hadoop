@@ -219,7 +219,7 @@ const FlowInner: React.FC = () => {
             <AlertDescription>
               <span>
                 Filtering by partition: <strong>{selectedNodeLabelFilter}</strong>. Queues without
-                access are shown in gray.
+                configured capacity are shown in gray.
               </span>
             </AlertDescription>
           </Alert>

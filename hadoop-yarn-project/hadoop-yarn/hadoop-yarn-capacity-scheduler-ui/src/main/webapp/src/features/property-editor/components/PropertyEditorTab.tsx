@@ -26,8 +26,6 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '~/components/ui/accordion';
-import { Alert, AlertDescription } from '~/components/ui/alert';
-import { AlertTriangle } from 'lucide-react';
 import { usePropertyEditor } from '~/features/property-editor/hooks/usePropertyEditor';
 import { PropertyFormField } from './PropertyFormField';
 import type { QueueInfo } from '~/types';
@@ -364,18 +362,6 @@ export const PropertyEditorTab = ({
   return (
     <Form {...form}>
       <div className="flex flex-col h-full">
-        {/* Warning banner for queues pending deletion */}
-        {isPendingDeletion && (
-          <div className="p-4 pb-0">
-            <Alert variant="destructive">
-              <AlertTriangle className="h-4 w-4" />
-              <AlertDescription>
-                This queue is pending deletion and will be removed when changes are applied.
-              </AlertDescription>
-            </Alert>
-          </div>
-        )}
-
         {/* Loading State */}
         {isFormInitializing && (
           <div className="flex justify-center items-center min-h-[200px] p-4">
@@ -436,7 +422,7 @@ export const PropertyEditorTab = ({
                               property={prop}
                               control={control}
                               stagedStatus={getStagedStatus(prop.originalName || prop.name)}
-                              isEnabled={propertyState?.enabled ?? true}
+                              isEnabled={(propertyState?.enabled ?? true) && !isPendingDeletion}
                               onBlur={handleFieldBlur}
                               errors={getFieldErrors(prop.formFieldName || prop.name)}
                               warnings={getFieldWarnings(prop.formFieldName || prop.name)}
