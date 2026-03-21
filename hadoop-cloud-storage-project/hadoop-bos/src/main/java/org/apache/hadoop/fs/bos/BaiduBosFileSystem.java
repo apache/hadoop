@@ -278,15 +278,15 @@ public class BaiduBosFileSystem extends FileSystem {
     Path absolutePath = makeAbsolute(f);
     String key = pathToKey(absolutePath);
 
-    FileStatus status = null;
     if (store.isHierarchy() && recursive) {
       try {
-        status = getFileStatus(f);
+        getFileStatus(f);
       } catch (FileNotFoundException e) {
         return false;
       }
       store.deleteDirs(key, recursive);
     } else {
+      FileStatus status;
       try {
         status = getFileStatus(f);
       } catch (FileNotFoundException e) {

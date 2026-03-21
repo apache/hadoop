@@ -318,14 +318,14 @@ public abstract class BosNativeFileSystemStore {
   /**
    * Creates an output stream for writing a file to BOS.
    *
-   * @param key  the object key
-   * @param conf the Hadoop configuration
+   * @param key          the object key
+   * @param hadoopConf   the Hadoop configuration
    * @return an output stream for writing the file
    */
   public OutputStream createFile(
-      String key, Configuration conf) {
+      String key, Configuration hadoopConf) {
     return new BosOutputStream(
-        this, this.bucketName, key, conf);
+        this, this.bucketName, key, hadoopConf);
   }
 
   /**

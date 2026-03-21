@@ -169,7 +169,7 @@ public class BosOutputStream extends OutputStream {
     flush();
     createBlockBufferIfNull();
 
-    this.currBlock.outBuffer.write(b);
+    this.currBlock.getOutBuffer().write(b);
     this.bytesWrittenToBlock++;
     this.filePos++;
   }
@@ -198,7 +198,7 @@ public class BosOutputStream extends OutputStream {
       int remaining =
           this.blockSize - this.bytesWrittenToBlock;
       int toWrite = Math.min(remaining, len);
-      this.currBlock.outBuffer.write(b, off, toWrite);
+      this.currBlock.getOutBuffer().write(b, off, toWrite);
       this.bytesWrittenToBlock += toWrite;
       this.filePos += toWrite;
       off += toWrite;
@@ -256,7 +256,7 @@ public class BosOutputStream extends OutputStream {
     //
     // Move outBuffer to inBuffer
     //
-    this.currBlock.outBuffer.close();
+    this.currBlock.getOutBuffer().close();
     this.currBlock.moveData();
 
     //
@@ -328,12 +328,12 @@ public class BosOutputStream extends OutputStream {
 
     // Move outBuffer to inBuffer
     //
-    this.currBlock.outBuffer.close();
+    this.currBlock.getOutBuffer().close();
     this.currBlock.moveData();
 
     ObjectMetadata objectMeta = new ObjectMetadata();
     objectMeta.setContentLength(
-        this.currBlock.inBuffer.getLength());
+        this.currBlock.getInBuffer().getLength());
     objectMeta.addUserMetadata(
         BaiduBosConstants.BOS_FILE_PATH_USER_KEY,
         store.getEnvUserName());
@@ -342,7 +342,7 @@ public class BosOutputStream extends OutputStream {
         store.getEnvGroupName());
     bosClientProxy.putObject(
         bucketName, this.key,
-        this.currBlock.inBuffer, objectMeta);
+        this.currBlock.getInBuffer(), objectMeta);
     this.currBlock = null;
   }
 
@@ -449,15 +449,15 @@ public class BosOutputStream extends OutputStream {
   /**
    * Initiates a multipart upload for the given key.
    *
-   * @param key the object key
+   * @param objectKey the object key
    * @return the upload ID
    * @throws IOException if the initiation fails
    */
-  private String initMultipartUpload(String key)
+  private String initMultipartUpload(String objectKey)
       throws IOException {
     InitiateMultipartUploadRequest request =
         new InitiateMultipartUploadRequest(
-            bucketName, key);
+            bucketName, objectKey);
 
     InitiateMultipartUploadResponse result =
         bosClientProxy.initiateMultipartUpload(request);
@@ -468,17 +468,17 @@ public class BosOutputStream extends OutputStream {
    * Completes a multipart upload by assembling previously
    * uploaded parts.
    *
-   * @param bucketName the bucket name
-   * @param key        the object key
-   * @param uploadId   the upload ID
-   * @param eTags      the list of part ETags
+   * @param bucket   the bucket name
+   * @param objectKey the object key
+   * @param mpUploadId the upload ID
+   * @param partETags the list of part ETags
    * @throws IOException if the completion fails
    */
   private void completeMultipartUpload(
-      String bucketName, String key,
-      String uploadId, List<PartETag> eTags)
+      String bucket, String objectKey,
+      String mpUploadId, List<PartETag> partETags)
       throws IOException {
-    Collections.sort(eTags,
+    Collections.sort(partETags,
         Comparator.comparingInt(PartETag::getPartNumber));
     ObjectMetadata objectMeta = new ObjectMetadata();
     objectMeta.addUserMetadata(
@@ -489,8 +489,8 @@ public class BosOutputStream extends OutputStream {
         store.getEnvGroupName());
     CompleteMultipartUploadRequest request =
         new CompleteMultipartUploadRequest(
-            bucketName, key, uploadId,
-            eTags, objectMeta);
+            bucket, objectKey, mpUploadId,
+            partETags, objectMeta);
     bosClientProxy.completeMultipartUpload(request);
   }
 }
