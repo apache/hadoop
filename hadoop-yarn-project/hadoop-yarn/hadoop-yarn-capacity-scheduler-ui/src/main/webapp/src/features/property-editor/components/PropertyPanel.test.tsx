@@ -24,6 +24,7 @@ import userEvent from '@testing-library/user-event';
 import { useSchedulerStore } from '~/stores/schedulerStore';
 import type { SchedulerStore } from '~/stores/schedulerStore';
 import type { QueueInfo } from '~/types';
+import { SPECIAL_VALUES } from '~/types/constants/special-values';
 import { toast } from 'sonner';
 
 // Test helper
@@ -555,7 +556,7 @@ describe('PropertyPanel', () => {
           {
             id: 'removal-1',
             queuePath: 'root.default',
-            property: '__QUEUE_MARKER__',
+            property: SPECIAL_VALUES.QUEUE_MARKER,
             type: 'remove',
             oldValue: 'exists',
             newValue: undefined,
@@ -583,7 +584,7 @@ describe('PropertyPanel', () => {
           {
             id: 'removal-1',
             queuePath: 'root.default',
-            property: '__QUEUE_MARKER__',
+            property: SPECIAL_VALUES.QUEUE_MARKER,
             type: 'remove',
             oldValue: 'exists',
             newValue: undefined,
