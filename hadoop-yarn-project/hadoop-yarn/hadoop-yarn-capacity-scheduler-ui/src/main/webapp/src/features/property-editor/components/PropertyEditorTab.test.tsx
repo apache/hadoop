@@ -22,10 +22,27 @@ import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
 import { PropertyEditorTab } from './PropertyEditorTab';
 import { usePropertyEditor } from '~/features/property-editor/hooks/usePropertyEditor';
+import { useSchedulerStore } from '~/stores/schedulerStore';
 import type { QueueInfo, PropertyDescriptor } from '~/types';
 
 // Mock the hooks
 vi.mock('~/features/property-editor/hooks/usePropertyEditor');
+
+// Mock the scheduler store
+vi.mock('~/stores/schedulerStore', () => ({
+  useSchedulerStore: vi.fn((selector: any) => {
+    const state = {
+      getGlobalPropertyValue: vi.fn().mockReturnValue({ value: '' }),
+      getQueuePropertyValue: vi.fn().mockReturnValue({ value: '' }),
+      stagedChanges: [],
+      configData: new Map(),
+      schedulerData: null,
+      hasPendingDeletion: vi.fn().mockReturnValue(false),
+      revertQueueDeletion: vi.fn(),
+    };
+    return selector ? selector(state) : state;
+  }),
+}));
 
 // Mock toast
 vi.mock('sonner', () => ({
@@ -159,6 +176,28 @@ describe('PropertyEditorTab', () => {
     expect(screen.getByText('Capacity Configuration')).toBeInTheDocument();
     const capacityTrigger = screen.getByRole('button', { name: /Capacity Configuration/i });
     expect(within(capacityTrigger).getByText('1')).toBeInTheDocument();
+  });
+
+  describe('pending deletion state', () => {
+    it('should not show deletion banner in PropertyEditorTab (banner is in PropertyPanel)', () => {
+      vi.mocked(useSchedulerStore).mockImplementation((selector: any) => {
+        const state = {
+          getGlobalPropertyValue: vi.fn().mockReturnValue({ value: '' }),
+          getQueuePropertyValue: vi.fn().mockReturnValue({ value: '' }),
+          stagedChanges: [],
+          configData: new Map(),
+          schedulerData: null,
+          hasPendingDeletion: vi.fn().mockReturnValue(true),
+          revertQueueDeletion: vi.fn(),
+        };
+        return selector ? selector(state) : state;
+      });
+
+      render(<PropertyEditorTab queue={mockQueue} />);
+
+      expect(screen.queryByText(/marked for deletion/i)).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /undo delete/i })).not.toBeInTheDocument();
+    });
   });
 
   it('renders template configuration button when controls allow management', async () => {

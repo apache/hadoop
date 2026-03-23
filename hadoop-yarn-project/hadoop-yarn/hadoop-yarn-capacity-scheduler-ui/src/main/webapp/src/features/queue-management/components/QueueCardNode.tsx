@@ -76,7 +76,12 @@ export const QueueCardNode: React.FC<NodeProps> = ({ data }) => {
 
   // Actions (stable references, never trigger re-renders)
   const getQueueLabelCapacity = useSchedulerStore((s) => s.getQueueLabelCapacity);
-  const hasPendingDeletion = useSchedulerStore((s) => s.hasPendingDeletion);
+  const revertQueueDeletion = useSchedulerStore((state) => state.revertQueueDeletion);
+
+  // Derived state (re-renders when deletion status changes)
+  const isPendingDeletion = useSchedulerStore((s) =>
+    s.hasPendingDeletion((data as QueueCardData).queuePath),
+  );
 
   const { canAddChildQueue, canDeleteQueue } = useQueueActions();
 
@@ -304,7 +309,7 @@ export const QueueCardNode: React.FC<NodeProps> = ({ data }) => {
         isTemplateManageable={isTemplateManageable}
         canAdd={canAdd}
         canDelete={canDelete}
-        hasPendingDeletion={hasPendingDeletion(queuePath)}
+        hasPendingDeletion={isPendingDeletion}
         isSelectedQueue={isSelectedQueue}
         isPropertyPanelOpen={isPropertyPanelOpen}
         onEditProperties={(e) => openPropertyPanel(e, 'settings')}
@@ -313,6 +318,7 @@ export const QueueCardNode: React.FC<NodeProps> = ({ data }) => {
         onToggleState={handleToggleState}
         onAddChild={() => setAddDialogOpen(true)}
         onDelete={() => setDeleteDialogOpen(true)}
+        onUndoDelete={() => revertQueueDeletion(queuePath)}
         onRemoveStaged={handleRemoveStagedQueue}
         onOpenChange={handleContextMenuOpenChange}
       >

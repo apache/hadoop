@@ -24,6 +24,7 @@ import userEvent from '@testing-library/user-event';
 import { useSchedulerStore } from '~/stores/schedulerStore';
 import type { SchedulerStore } from '~/stores/schedulerStore';
 import type { QueueInfo } from '~/types';
+import { SPECIAL_VALUES } from '~/types/constants/special-values';
 import { toast } from 'sonner';
 
 // Test helper
@@ -147,6 +148,8 @@ function getBaseStoreState(): Partial<SchedulerStore> {
     stagedChanges: [],
     configData: new Map<string, string>(),
     schedulerData: null,
+    hasPendingDeletion: vi.fn().mockReturnValue(false),
+    revertQueueDeletion: vi.fn(),
     shouldOpenTemplateConfig: false,
     requestTemplateConfigOpen: () => {
       storeState = { ...storeState, shouldOpenTemplateConfig: true };
@@ -541,5 +544,60 @@ describe('PropertyPanel', () => {
 
     // Would need to set isSubmitting state through the PropertyEditorTab callbacks
     // This is tested through integration tests
+  });
+
+  describe('pending deletion state', () => {
+    it('should hide Stage Changes and Reset buttons when queue is pending deletion', async () => {
+      const user = userEvent.setup();
+      setStoreState({
+        selectedQueuePath: 'root.default',
+        isPropertyPanelOpen: true,
+        stagedChanges: [
+          {
+            id: 'removal-1',
+            queuePath: 'root.default',
+            property: SPECIAL_VALUES.QUEUE_MARKER,
+            type: 'remove',
+            oldValue: 'exists',
+            newValue: undefined,
+          },
+        ] as any,
+        revertQueueDeletion: vi.fn(),
+      });
+      mockGetQueueByPath.mockReturnValue(mockQueue);
+
+      render(<PropertyPanel />);
+
+      // Switch to settings tab to verify buttons are hidden
+      const settingsTab = screen.getByRole('tab', { name: /settings/i });
+      await user.click(settingsTab);
+
+      expect(screen.queryByText('Stage Changes')).not.toBeInTheDocument();
+      expect(screen.queryByText('Reset')).not.toBeInTheDocument();
+    });
+
+    it('should show deletion badge and undo button when queue is pending deletion', () => {
+      setStoreState({
+        selectedQueuePath: 'root.default',
+        isPropertyPanelOpen: true,
+        stagedChanges: [
+          {
+            id: 'removal-1',
+            queuePath: 'root.default',
+            property: SPECIAL_VALUES.QUEUE_MARKER,
+            type: 'remove',
+            oldValue: 'exists',
+            newValue: undefined,
+          },
+        ] as any,
+        revertQueueDeletion: vi.fn(),
+      });
+      mockGetQueueByPath.mockReturnValue(mockQueue);
+
+      render(<PropertyPanel />);
+
+      expect(screen.getByText(/marked for deletion/i)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /undo/i })).toBeInTheDocument();
+    });
   });
 });

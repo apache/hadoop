@@ -542,6 +542,15 @@ export const createStagedChangesSlice: StateCreator<
     return get().stagedChanges.some((c) => c.queuePath === queuePath && c.type === 'remove');
   },
 
+  revertQueueDeletion: (queuePath) => {
+    const removalChange = get().stagedChanges.find(
+      (c) => c.queuePath === queuePath && c.type === 'remove',
+    );
+    if (removalChange) {
+      get().revertChange(removalChange.id);
+    }
+  },
+
   getStagedChangeById: (changeId) => {
     return get().stagedChanges.find((c) => c.id === changeId);
   },
