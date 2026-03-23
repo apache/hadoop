@@ -531,10 +531,10 @@ public class MountTableResolver
       path = subtractTrashCurrentPath(path);
       if (path.isEmpty()) {
         // The path is exactly the trash Current/checkpoint directory itself
-        // (e.g. /user/alice/.Trash/Current). There are no mount points under
-        // it in the RBF sense, so return null to allow operations such as
-        // recursive delete to proceed normally.
-        return null;
+        // (e.g. /user/alice/.Trash/Current). Use "/" so the subMap covers all
+        // mount points, letting the router fan out to every sub-cluster for
+        // operations like listStatus on the trash root.
+        path = "/";
       }
     }
     readLock.lock();

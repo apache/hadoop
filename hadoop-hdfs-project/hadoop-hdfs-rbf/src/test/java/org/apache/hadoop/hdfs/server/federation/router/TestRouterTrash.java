@@ -133,9 +133,11 @@ public class TestRouterTrash {
 
   @AfterEach
   public void clearFile() throws IOException {
-    FileStatus[] fileStatuses = nnFs.listStatus(new Path("/"));
-    for (FileStatus file : fileStatuses) {
+    for (FileStatus file : nnFs.listStatus(new Path("/"))) {
       nnFs.delete(file.getPath(), true);
+    }
+    for (FileStatus file : nnFs1.listStatus(new Path("/"))) {
+      nnFs1.delete(file.getPath(), true);
     }
   }
 
