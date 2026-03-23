@@ -200,6 +200,34 @@ void test_get_app_directory() {
   free(app_dir);
 }
 
+/*
+In the directory structure:
+  /yarn-root/nm-local-dir/usercache/auser/appcache
+Where nodemanager is running:
+ user: yarn group: hadoop
+We require group +w permission as "auser" is owned auser.
+Otherwise nodemanager will not be able to create appcache
++*/
+void test_create_app_dirs(){
+  //precondition the user directory has been created
+  char * us = "bob";
+  char *user_dir = TEST_ROOT "/local-9/usercache/bob";
+  mkdirs(user_dir, 0770);
+  char* str_list[] = { TEST_ROOT "/local-9", NULL };
+  char* const* dirs_ptr = str_list;
+  char *app_dir = (char *) get_app_directory(TEST_ROOT "/local-9", us, "app_200906101234_0002");
+  char *created = create_app_dirs(us, "app_200906101234_0002", dirs_ptr);
+  ///tmp/test-container-executor/local-9/usercache/bob/appcache/app_200906101234_0002
+  printf("created %s", created);
+  struct stat exists;
+  int stat_res = stat(created, &exists);
+  if (stat_res !=0){
+    printf("Fail test_create_app_dir expected %s to exist but code: %d\n",
+               created, stat_res);
+  }
+}
+
+
 void test_get_container_work_directory() {
   char *expected_file = TEST_ROOT "/usercache/user/appcache/app_1/container_1";
   char *work_dir = get_container_work_directory(TEST_ROOT, "user", "app_1",
@@ -545,7 +573,7 @@ void test_yarn_sysfs() {
   char* const* local_dir_ptr;
   for (local_dir_ptr = local_dirs; *local_dir_ptr != 0; ++local_dir_ptr) {
     char *user_dir = make_string("%s/usercache/%s", *local_dir_ptr, username);
-    if (mkdirs(user_dir, 0750) != 0) {
+    if (mkdirs(user_dir, 0770) != 0) {
       printf("Can not make user directories: %s\n", user_dir);
       exit(1);
     }
@@ -1662,7 +1690,7 @@ int main(int argc, char **argv) {
     exit(1);
   }
 
-  printf("\nOur executable is %s\n",get_executable(argv[0]));
+  printf("\nOur executable is %s\n", get_executable(argv[0]));
 
   local_dirs = split(strdup(NM_LOCAL_DIRS));
   log_dirs = split(strdup(NM_LOG_DIRS));
@@ -1726,6 +1754,9 @@ int main(int argc, char **argv) {
 
   printf("\nTesting exec_container()\n");
   test_exec_container();
+
+  printf("\nTest test_create_app_dirs()\n");
+  test_create_app_dirs();
 
   test_check_user(0);
 

@@ -79,9 +79,13 @@ enum operations {
 #define ROOT_TMP_DIR "private_slash_tmp"
 #define ROOT_VAR_TMP_DIR "private_var_slash_tmp"
 #define COMMAND_FILE_SECTION "command-execution"
+#define CONTAINER_GROUP_MODE_KEY "container.group.mode"
 
 extern struct passwd *user_detail;
 extern struct section executor_cfg;
+
+// a group mode that dictates how some folders will be created
+mode_t get_container_group_mode();
 
 //function used to load the configurations present in the secure config
 void read_executor_config(const char* file_name);
@@ -241,6 +245,23 @@ int mkdirs(const char* path, mode_t perm);
  * Function to initialize the user directories of a user.
  */
 int initialize_user(const char *user, char* const* local_dirs);
+
+/**
+ * This function creates app directories. For each node
+ * manager local director (local_dir) it attempts to create an .
+ * the method will succeed if it successful in creating at
+ * lest one.
+ * Implementation note: It returns the first success
+ * as the primary. It would be better if we randomized the
+ * list to more evenly distribute the directories.
+ * It would also be better if we returned all the directories
+ * created instead of only the first, as application has
+ * no way of knowing the state of all the directories.
+ * Returns pointer to primary_app_dir or NULL on failure.
+ */
+char *create_app_dirs(const char *user,
+                             const char *app_id,
+                             char* const* local_dirs);
 
 /**
  * Create a top level directory for the user.
