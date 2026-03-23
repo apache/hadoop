@@ -34,7 +34,11 @@ import org.slf4j.LoggerFactory;
 
 import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
-import java.util.*;
+import java.util.Map;
+import java.util.List;
+import java.util.HashMap;
+import java.util.Optional;
+import java.util.Arrays;
 
 public class DiagnosticJStackService {
 
@@ -50,12 +54,25 @@ public class DiagnosticJStackService {
     this.conf = context.getConf();
   }
 
-  public String collectNodeThreadDump(int numberOfJStack) throws IOException {
+  public String collectNodeThreadDump(int numberOfJStack, HttpServletRequest req) throws IOException {
     checkShellNotWindows();
 
     long nodeManagerPid = ProcessHandle.current().pid();
 
+    checkAdminACL(req);
+
     return runJStack(nodeManagerPid, numberOfJStack);
+  }
+
+  private void checkAdminACL(HttpServletRequest req) throws IOException {
+    UserGroupInformation callerUGI = getUserGroupInformation(req);
+
+    boolean isAdmin = context.getApplicationACLsManager().isAdmin(callerUGI);
+
+    if (!isAdmin) {
+      throw new YarnRuntimeException("User " + callerUGI.getShortUserName() +
+              " is not authorized to run jstack on NodeManager ");
+    }
   }
 
   public String collectApplicationThreadDump(String appId, int numberOfJStack, HttpServletRequest req) throws IOException {
@@ -76,16 +93,7 @@ public class DiagnosticJStackService {
   }
 
   private void checkApplicationACL(HttpServletRequest req, Application app) throws IOException {
-    String remoteUser = req.getRemoteUser();
-    UserGroupInformation callerUGI;
-
-    if (remoteUser != null) {
-      callerUGI = UserGroupInformation.createRemoteUser(remoteUser);
-    } else {
-      callerUGI = UserGroupInformation.getCurrentUser(); // Fallback to the current OS User
-    }
-
-    LOG.info("Caller UGI: {}", callerUGI.toString());
+    UserGroupInformation callerUGI = getUserGroupInformation(req);
 
     boolean isAuthorized = context.getApplicationACLsManager().checkAccess(
       callerUGI, ApplicationAccessType.VIEW_APP, app.getUser(), app.getAppId()
@@ -182,6 +190,23 @@ public class DiagnosticJStackService {
     }
 
     return result.toString();
+  }
+
+  private UserGroupInformation getUserGroupInformation(HttpServletRequest req) throws IOException {
+
+    String remoteUser = req.getRemoteUser();
+    UserGroupInformation callerUGI;
+
+    if (remoteUser != null) {
+      callerUGI = UserGroupInformation.createRemoteUser(remoteUser);
+    } else {
+      callerUGI = UserGroupInformation.getCurrentUser(); // Fallback to current OS user
+    }
+
+    LOG.info("Checking ACL for Caller UGI: {}", callerUGI.toString());
+
+    return callerUGI;
+
   }
 
 }

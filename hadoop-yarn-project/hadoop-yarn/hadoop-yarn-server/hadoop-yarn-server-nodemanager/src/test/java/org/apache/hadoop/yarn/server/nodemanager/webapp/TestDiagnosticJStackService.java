@@ -88,7 +88,10 @@ public class TestDiagnosticJStackService {
                     (mock, context) -> when(mock.getOutput()).thenReturn(DUMMY_JSTACK)
                 ) // Wrap mockConstruction here to automatically close it
         ){
-            String result = diagnosticJStackService.collectNodeThreadDump(NUMBER_OF_JSTACKS);
+            HttpServletRequest mockRequest = mock(HttpServletRequest.class);
+            when(mockAclManager.isAdmin(any())).thenReturn(true);
+
+            String result = diagnosticJStackService.collectNodeThreadDump(NUMBER_OF_JSTACKS, mockRequest);
 
             assertEquals(NUMBER_OF_JSTACKS, mockedConstruction.constructed().size(),
               "ShellCommandExecutor should be instantiated relative to Number of JStacks");

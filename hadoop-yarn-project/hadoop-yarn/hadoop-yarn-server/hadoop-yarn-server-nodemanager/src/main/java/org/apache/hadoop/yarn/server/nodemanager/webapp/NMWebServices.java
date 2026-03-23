@@ -641,7 +641,8 @@ public class NMWebServices {
   @GET
   @Path("/jstack/{numberOfJStack}")
   @Produces({ MediaType.TEXT_PLAIN})
-  public Response getNodeThreadDump(@PathParam("numberOfJStack") int numberOfJStack)
+  public Response getNodeThreadDump(@javax.ws.rs.core.Context HttpServletRequest req,
+    @PathParam("numberOfJStack") int numberOfJStack)
   {
     if (!isJStackEndpointsEnable) {
       return Response.status(Status.METHOD_NOT_ALLOWED)
@@ -650,7 +651,11 @@ public class NMWebServices {
 
     try {
       return Response.status(Status.OK)
-              .entity(diagnosticJStackService.collectNodeThreadDump(numberOfJStack))
+              .entity(diagnosticJStackService.collectNodeThreadDump(numberOfJStack, req))
+              .build();
+    } catch (YarnRuntimeException e) {
+      return Response.status(Status.FORBIDDEN)
+              .entity(e.getMessage())
               .build();
     } catch (IOException e){
       return Response.status(Status.INTERNAL_SERVER_ERROR)
