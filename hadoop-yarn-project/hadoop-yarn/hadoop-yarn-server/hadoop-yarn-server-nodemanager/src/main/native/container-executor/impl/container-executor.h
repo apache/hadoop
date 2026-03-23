@@ -80,8 +80,21 @@ enum operations {
 #define ROOT_VAR_TMP_DIR "private_var_slash_tmp"
 #define COMMAND_FILE_SECTION "command-execution"
 
-extern struct passwd *user_detail;
 extern struct section executor_cfg;
+
+struct serialized_passwd {
+    char * pw_name;
+    uid_t pw_uid;
+    gid_t pw_gid;
+    char * pw_dir;
+    char * pw_shell;
+};
+
+//The user that launched the container executor typically (uid yarn/ group hadoop)
+extern struct serialized_passwd *user_detail;
+
+//function to make a deep clone of passwd to serialized_passwd
+void deep_copy_passwd(const struct passwd *src, struct serialized_passwd *dest);
 
 //function used to load the configurations present in the secure config
 void read_executor_config(const char* file_name);
@@ -196,7 +209,7 @@ void set_nm_uid(uid_t user, gid_t group);
  *   3. Not in banned user list
  * Returns NULL on failure
  */
-struct passwd* check_user(const char *user);
+struct serialized_passwd* check_user(const char *user);
 
 // set the user
 int set_user(const char *user);
