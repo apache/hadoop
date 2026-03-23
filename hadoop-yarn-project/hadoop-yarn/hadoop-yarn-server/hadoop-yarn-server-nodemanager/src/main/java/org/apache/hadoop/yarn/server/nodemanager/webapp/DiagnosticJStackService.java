@@ -34,10 +34,7 @@ import org.slf4j.LoggerFactory;
 
 import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
-import java.util.List;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 public class DiagnosticJStackService {
 
@@ -153,8 +150,15 @@ public class DiagnosticJStackService {
   }
 
   private String runJStack(long pid, int numJStacks) throws IOException {
-    ProcessHandle processHandle = ProcessHandle.of(pid)
-            .orElseThrow(() -> new IOException("Process with PID " + pid + " is no longer exists"));
+    Optional<ProcessHandle> processHandleOpt = ProcessHandle.of(pid);
+
+    if (processHandleOpt.isEmpty()){
+      String msg = String.format("Process with PID " + pid + " is no longer exists");
+      LOG.warn(msg);
+      return "Status: Skipped Process with PID " + msg;
+    }
+
+    ProcessHandle processHandle = processHandleOpt.get();
 
     String runningUser = processHandle.info().user().orElse(NM_USER);
     String containerExecutorPath = PrivilegedOperationExecutor.getContainerExecutorExecutablePath(conf);
@@ -171,25 +175,10 @@ public class DiagnosticJStackService {
       Shell.ShellCommandExecutor cmd =
         new Shell.ShellCommandExecutor(jstackCommand, null, null, 60_000);
 
-      try {
-        cmd.execute();
-        result.append(String.format(
-                "--- JStack iteration %d for PID: %d ---%n%s%n", i, pid, cmd.getOutput()));
-      } catch (org.apache.hadoop.util.Shell.ExitCodeException e) {
-        LOG.warn("Failed to jstack PID {} (Process likely exited): {}", pid, e.getMessage());
-        result.append(String.format("--- JStack iteration %d for PID: %d ---%n", i, pid));
-        result.append("Status: Failed to collect thread dump. The process likely exited naturally before jstack could attach.\n");
-        result.append("Error details: ").append(e.getMessage()).append("\n");
+      cmd.execute();
+      result.append(String.format(
+        "--- JStack iteration %d for PID: %d ---%n%s%n", i, pid, cmd.getOutput()));
 
-        break;
-      } catch (IOException e) {
-        LOG.warn("IO Error while running jstack for PID {}: {}", pid, e.getMessage());
-        result.append(String.format("--- JStack iteration %d for PID: %d ---%n", i, pid));
-        result.append("Status: Incomplete read (Premature EOF). The JVM likely shut down while writing the thread dump.\n");
-        result.append("Error details: ").append(e.getMessage()).append("\n");
-
-        break;
-      }
     }
 
     return result.toString();

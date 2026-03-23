@@ -161,7 +161,7 @@ public class TestDiagnosticJStackService {
 
 
     @Test
-    public void testCollectApplicationThreadDumpWhenProcessIdNotAlive() {
+    public void testCollectApplicationThreadDumpWhenProcessIdNotAlive() throws IOException {
         int numJStacks = 3;
         Application mockApp = mock(Application.class);
         nmContext.getApplications().put(APPLICATION_ID, mockApp);
@@ -174,8 +174,12 @@ public class TestDiagnosticJStackService {
 
         HttpServletRequest mockRequest = mock(HttpServletRequest.class);
 
-        assertThrows(IOException.class,
-          () -> diagnosticJStackService.collectApplicationThreadDump(APPLICATION_ID_STR, numJStacks, mockRequest),
+        String result = diagnosticJStackService.collectApplicationThreadDump(APPLICATION_ID_STR, numJStacks, mockRequest);
+
+        assertNotNull(result);
+        assertTrue(result.contains("Thread Dumps for ContainerId: " + CONTAINER_ID_STR),
+          "Output should contain the container ID");
+        assertTrue(result.contains("Status: Skipped Process with PID"),
           "Since we did not mock ProcessHandle.of to return non empty, it will consider this PID is dead");
 
         nmContext.getApplications().remove(APPLICATION_ID); // Clean up to avoid side effects on another test
