@@ -342,9 +342,9 @@ public class FederationQueryRunner {
 
   private String getTruncateStatement(DbType dbType, String tableName) {
     if (isMYSQL(dbType)) {
-      return ("DELETE FROM \"" + tableName + "\"");
+      return "DELETE FROM `" + tableName + "`";
     } else {
-      return("DELETE FROM " + tableName);
+      return "DELETE FROM " + tableName;
     }
   }
 
