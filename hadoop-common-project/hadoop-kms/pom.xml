@@ -247,7 +247,7 @@
           <excludeFilterFiles>
             <excludeFilterFile>${basedir}/dev-support/findbugsExcludeFile.xml
             </excludeFilterFile>
-            <excludeFilterFile>../../dev-support/findbugs-exclude-global.xml
+            <excludeFilterFile>${maven.multiModuleProjectDirectory}/dev-support/findbugs-exclude-global.xml
             </excludeFilterFile>
           </excludeFilterFiles>
         </configuration>

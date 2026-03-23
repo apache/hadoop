@@ -114,7 +114,7 @@
           <xmlOutput>true</xmlOutput>
           <excludeFilterFiles>
             <excludeFilterFile>${basedir}/dev-support/findbugs-exclude.xml</excludeFilterFile>
-            <excludeFilterFile>../../dev-support/findbugs-exclude-global.xml
+            <excludeFilterFile>${maven.multiModuleProjectDirectory}/dev-support/findbugs-exclude-global.xml
             </excludeFilterFile>
           </excludeFilterFiles>
           <effort>Max</effort>
