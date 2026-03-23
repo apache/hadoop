@@ -71,7 +71,13 @@ Installing required packages for clean install of Ubuntu 24.04 LTS Desktop.
   $ sudo apt-get update
   $ sudo apt-get -y install openjdk-17-jdk
 * Maven
-  $ sudo apt-get -y install maven
+  Most package managers do not as of January 2026 install an up to date version of Maven.
+  Install an up-to-date version of Maven manually, or use mvnw command, which will download one and validate it before execution.
+
+  Following commands can be used to download and install required version of Maven manually if mvnw is not used:
+  $ curl -L https://repo.maven.apache.org/maven2/org/apache/maven/apache-maven/3.9.11/apache-maven-3.9.11-bin.tar.gz > apache-maven-3.9.11-bin.tar.gz
+  $ tar -zxvf apache-maven-3.9.11-bin.tar.gz -C /opt
+  $ sudo ln -s /opt/apache-maven-3.9.11/bin/mvn /usr/bin
 * Native libraries
   $ sudo apt-get -y install build-essential autoconf automake libtool cmake zlib1g-dev pkg-config libssl-dev libsasl2-dev
 * Protocol Buffers 3.25.5 (required to build native code)
