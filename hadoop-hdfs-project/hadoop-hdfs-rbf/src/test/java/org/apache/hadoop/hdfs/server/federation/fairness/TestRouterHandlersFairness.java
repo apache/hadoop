@@ -215,19 +215,20 @@ public class TestRouterHandlersFairness {
     // Use renewLease test invokeConcurrent.
     Collection<RemoteLocation> locations = new ArrayList<>();
     locations.add(new RemoteLocation("ns0", "/", "/"));
+    locations.add(new RemoteLocation("ns1", "/", "/"));
     RemoteMethod renewLease = new RemoteMethod(
         "renewLease",
         new Class[]{java.lang.String.class, java.util.List.class},
         new Object[]{null, null});
     availablePermits =
-        rpcClient.getRouterRpcFairnessPolicyController().getAvailablePermits("ns0");
+        rpcClient.getRouterRpcFairnessPolicyController().getAvailablePermits(CONCURRENT_NS);
     LambdaTestUtils.intercept(IOException.class,  () -> {
       LOG.info("Use renewLease test invokeConcurrent.");
       rpcClient.invokeConcurrent(locations, renewLease);
     });
-    // Ensure that the semaphore is not acquired.
+    // Ensure that the concurrent semaphore is released.
     assertEquals(availablePermits,
-        rpcClient.getRouterRpcFairnessPolicyController().getAvailablePermits("ns0"));
+        rpcClient.getRouterRpcFairnessPolicyController().getAvailablePermits(CONCURRENT_NS));
   }
 
   /**
