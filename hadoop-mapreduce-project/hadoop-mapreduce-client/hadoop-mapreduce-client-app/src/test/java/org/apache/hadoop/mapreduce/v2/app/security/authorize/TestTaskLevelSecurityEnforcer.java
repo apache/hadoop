@@ -22,11 +22,12 @@ import org.junit.jupiter.api.Test;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.MRJobConfig;
+import org.apache.hadoop.test.AbstractHadoopTestBase;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-public class TestTaskLevelSecurityEnforcer {
+public class TestTaskLevelSecurityEnforcer extends AbstractHadoopTestBase {
 
   @Test
   public void testServiceDisabled() {
