@@ -73,6 +73,7 @@ function mergeFormAndValidationErrors(
 import { validatePropertyChange } from '~/features/validation/crossQueue';
 import { buildPropertyKey } from '~/utils/propertyUtils';
 import { CONFIG_PREFIXES } from '~/types';
+import { resolveInheritedValue, type InheritedValueInfo } from '~/utils/resolveInheritedValue';
 
 function createFormSchema(
   properties: Array<
@@ -247,6 +248,23 @@ export function usePropertyEditor({
   const getStagedStatus = (propertyName: string): 'new' | 'modified' | 'deleted' | undefined => {
     const { isStaged } = getQueuePropertyValue(queuePath, propertyName);
     return isStaged ? 'modified' : undefined;
+  };
+
+  const getInheritanceInfo = (propertyName: string): InheritedValueInfo | null => {
+    const property = allProperties.find(
+      (p) => p.originalName === propertyName || p.name === propertyName,
+    );
+    if (!property?.inheritanceResolver) {
+      return null;
+    }
+
+    return resolveInheritedValue({
+      queuePath,
+      propertyName,
+      configData,
+      stagedChanges,
+      inheritanceResolver: property.inheritanceResolver,
+    });
   };
 
   const stageChange = (
@@ -613,6 +631,7 @@ export function usePropertyEditor({
     propertiesByCategory,
 
     getStagedStatus,
+    getInheritanceInfo,
 
     properties: allProperties,
     formState: form.formState,

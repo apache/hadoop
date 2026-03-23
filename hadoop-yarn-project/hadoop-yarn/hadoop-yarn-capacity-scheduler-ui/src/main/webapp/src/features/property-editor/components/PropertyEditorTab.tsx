@@ -107,6 +107,7 @@ export const PropertyEditorTab = ({
     getFieldErrors,
     getFieldWarnings,
     properties,
+    getInheritanceInfo,
   } = usePropertyEditor({
     queuePath: queue.queuePath,
   });
@@ -443,6 +444,7 @@ export const PropertyEditorTab = ({
                               queueName={queue.queueName}
                               parentQueuePath={parentQueuePath}
                               currentValues={watchedValues}
+                              inheritanceInfo={getInheritanceInfo(prop.originalName || prop.name)}
                             />
                             {shouldRenderTemplateButton && (
                               <div className="pt-1">
