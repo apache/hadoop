@@ -24,7 +24,8 @@
  */
 
 import React from 'react';
-import { Info, AlertTriangle } from 'lucide-react';
+import { Info, AlertTriangle, ArrowDown, ArrowUp } from 'lucide-react';
+import type { InheritedValueInfo } from '~/utils/resolveInheritedValue';
 import { Badge } from '~/components/ui/badge';
 import { FieldLabel, FieldMessage } from '~/components/ui/field';
 import { Tooltip, TooltipContent, TooltipTrigger } from '~/components/ui/tooltip';
@@ -137,4 +138,57 @@ export const FieldErrorMessage: React.FC<FieldErrorMessageProps> = ({
     return null;
   }
   return <FieldMessage>{error ? String(error.message ?? '') : inlineBusinessError}</FieldMessage>;
+};
+
+export interface InheritedValueIndicatorProps {
+  inheritanceInfo: InheritedValueInfo | null;
+  hasExplicitValue?: boolean;
+}
+
+export const InheritedValueIndicator: React.FC<InheritedValueIndicatorProps> = ({
+  inheritanceInfo,
+  hasExplicitValue = false,
+}) => {
+  if (!inheritanceInfo) return null;
+
+  const sourceLabel =
+    inheritanceInfo.source === 'queue'
+      ? inheritanceInfo.sourcePath
+      : 'global default';
+
+  const scaledSuffix = inheritanceInfo.isScaled ? ' (scaled by queue capacity)' : '';
+
+  if (hasExplicitValue) {
+    return (
+      <div
+        className={cn(
+          'mt-1 flex items-center gap-1.5 rounded-sm border-l-2 px-2 py-1 text-xs',
+          'border-l-amber-500 bg-amber-500/10 text-amber-700 dark:text-amber-400',
+        )}
+      >
+        <ArrowUp className="h-3 w-3 shrink-0" />
+        <span>
+          Overrides {sourceLabel}:{' '}
+          <span className="font-medium">{inheritanceInfo.value}</span>
+          {scaledSuffix}
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={cn(
+        'mt-1 flex items-center gap-1.5 rounded-sm border-l-2 px-2 py-1 text-xs',
+        'border-l-blue-500 bg-blue-500/10 text-blue-700 dark:text-blue-400',
+      )}
+    >
+      <ArrowDown className="h-3 w-3 shrink-0" />
+      <span>
+        <span className="font-medium">{inheritanceInfo.value}</span>
+        {' '}&mdash; inherited from {sourceLabel}
+        {scaledSuffix}
+      </span>
+    </div>
+  );
 };
