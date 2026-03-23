@@ -43,16 +43,16 @@ This guide focuses on the second layer: business validation rules that enforce Y
 
 Add a business validation rule when:
 
-- ✅ The constraint involves multiple properties (e.g., max-capacity >= capacity)
-- ✅ The constraint involves multiple queues (e.g., sibling capacities must sum to 100%)
-- ✅ The constraint depends on scheduler state (e.g., legacy mode requirements)
-- ✅ The constraint enforces YARN scheduler semantics (e.g., absolute capacity mode inheritance)
-- ✅ The validation logic is too complex for schema-level rules
+- The constraint involves multiple properties (e.g., max-capacity >= capacity)
+- The constraint involves multiple queues (e.g., sibling capacities must sum to 100%)
+- The constraint depends on scheduler state (e.g., legacy mode requirements)
+- The constraint enforces YARN scheduler semantics (e.g., absolute capacity mode inheritance)
+- The validation logic is too complex for schema-level rules
 
 Do **not** add a business rule when:
 
-- ❌ A simple schema validation rule suffices (use `validationRules` in property descriptor instead)
-- ❌ The validation is purely formatting/parsing (use Zod schemas in `src/config/schemas/validation.ts`)
+- A simple schema validation rule suffices (use `validationRules` in property descriptor instead)
+- The validation is purely formatting/parsing (use Zod schemas in `src/config/schemas/validation.ts`)
 
 ## Step-by-Step Guide
 
@@ -370,11 +370,11 @@ function evaluateWithStagedChanges(context: ValidationContext): ValidationIssue[
 
 ### Error Messages
 
-- ✅ Be specific and actionable: "Child queue capacities must sum to 100% (current: 95%)"
-- ✅ Explain the constraint: "Maximum capacity must be greater than or equal to capacity"
-- ✅ Include context when helpful: "Parent queue uses absolute resources, child queue must also use absolute resources (legacy mode requirement)"
-- ❌ Don't be vague: "Invalid configuration"
-- ❌ Don't use technical jargon: "Constraint violation in capacity vector normalization"
+- Be specific and actionable: "Child queue capacities must sum to 100% (current: 95%)"
+- Explain the constraint: "Maximum capacity must be greater than or equal to capacity"
+- Include context when helpful: "Parent queue uses absolute resources, child queue must also use absolute resources (legacy mode requirement)"
+- Don't be vague: "Invalid configuration"
+- Don't use technical jargon: "Constraint violation in capacity vector normalization"
 
 ### Rule IDs
 
@@ -387,6 +387,10 @@ function evaluateWithStagedChanges(context: ValidationContext): ValidationIssue[
 - Return early when validation doesn't apply (template queues, wrong mode, etc.)
 - Cache expensive computations when possible
 - Avoid redundant config lookups - store in variables
+
+### Inherited Values
+
+Some queue properties inherit their effective value from a parent queue or a global default when not set explicitly (see `inheritanceResolver` in `docs/development/extending-scheduler-properties.md`). The `context.config` map already contains staged changes, but it does **not** resolve inheritance automatically. If your rule needs the effective value of a property that may be inherited, look up the config map for the queue first, and if absent, consider falling back to the parent or global key as YARN would. The helper functions `getQueueValue` and `getGlobalValue` from `src/utils/resolveInheritedValue.ts` can simplify these lookups.
 
 ### Legacy Mode Handling
 
