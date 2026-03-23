@@ -18,7 +18,7 @@
 
 
 import React, { useReducer, useState, useEffect, useRef } from 'react';
-import { Save, RotateCcw, GitBranch, Info, Settings, Edit, AlertTriangle } from 'lucide-react';
+import { Save, RotateCcw, GitBranch, Info, Settings, Edit, AlertTriangle, Undo2, Trash2 } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 import { useSchedulerStore } from '~/stores/schedulerStore';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '~/components/ui/sheet';
@@ -110,6 +110,7 @@ export const PropertyPanel: React.FC = () => {
   const selectQueue = useSchedulerStore((s) => s.selectQueue);
   const clearTemplateConfigRequest = useSchedulerStore((s) => s.clearTemplateConfigRequest);
   const getQueuePropertyValue = useSchedulerStore((s) => s.getQueuePropertyValue);
+  const revertQueueDeletion = useSchedulerStore((s) => s.revertQueueDeletion);
 
   const [formState, dispatch] = useReducer(formReducer, INITIAL_FORM_STATE);
   const { hasChanges, isFormDirty } = formState;
@@ -282,6 +283,10 @@ export const PropertyPanel: React.FC = () => {
     }
   }, [isPropertyPanelOpen]);
 
+  const isPendingDeletion = selectedQueuePath
+    ? stagedChanges.some((c) => c.queuePath === selectedQueuePath && c.type === 'remove')
+    : false;
+
   const queuePath = selectedQueue?.queuePath;
 
   const queueIssues = !queuePath ? {} : (validationState[queuePath] ?? {});
@@ -308,7 +313,7 @@ export const PropertyPanel: React.FC = () => {
 
   // Keyboard shortcuts - only active when panel is open and on settings tab
   useKeyboardShortcuts(
-    isPanelVisible && tabValue === 'settings'
+    isPanelVisible && tabValue === 'settings' && !isPendingDeletion
       ? [
           {
             key: 's',
@@ -366,13 +371,34 @@ export const PropertyPanel: React.FC = () => {
                     issues={issueList}
                     onIssueSelect={handleIssueSelect}
                   />
-                  {isFormDirty && (
+                  {isPendingDeletion && (
+                    <>
+                      <Badge
+                        variant="outline"
+                        className="text-xs border-amber-500/50 bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-400 dark:border-amber-500/30"
+                      >
+                        <Trash2 className="h-3 w-3 mr-1" />
+                        Marked for deletion
+                      </Badge>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-5 px-1.5 text-xs text-muted-foreground hover:text-foreground"
+                        onClick={() => revertQueueDeletion(selectedQueue.queuePath)}
+                      >
+                        <Undo2 className="h-3 w-3 mr-0.5" />
+                        Undo
+                      </Button>
+                    </>
+                  )}
+                  {!isPendingDeletion && isFormDirty && (
                     <Badge variant="outline" className="text-xs">
                       <Edit className="h-3 w-3 mr-1" />
                       Unsaved
                     </Badge>
                   )}
-                  {!isFormDirty && hasChanges && (
+                  {!isPendingDeletion && !isFormDirty && hasChanges && (
                     <Badge variant="default" className="text-xs">
                       <Edit className="h-3 w-3 mr-1" />
                       Staged
@@ -444,7 +470,7 @@ export const PropertyPanel: React.FC = () => {
             </Tabs>
 
             {/* Fixed Apply/Reset buttons - show on Settings tab */}
-            {tabValue === 'settings' && (
+            {tabValue === 'settings' && !isPendingDeletion && (
               <div className="sticky bottom-0 left-0 right-0 mt-auto p-4 bg-background border-t flex gap-2 justify-end">
                 <Button
                   variant="outline"
