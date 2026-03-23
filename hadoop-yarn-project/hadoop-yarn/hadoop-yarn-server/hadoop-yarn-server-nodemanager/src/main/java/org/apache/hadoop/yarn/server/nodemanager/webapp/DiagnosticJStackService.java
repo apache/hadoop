@@ -186,7 +186,7 @@ public class DiagnosticJStackService {
         LOG.warn("IO Error while running jstack for PID {}: {}", pid, e.getMessage());
         result.append(String.format("--- JStack iteration %d for PID: %d ---%n", i, pid));
         result.append("Status: Incomplete read (Premature EOF). The JVM likely shut down while writing the thread dump.\n");
-        esult.append("Error details: ").append(e.getMessage()).append("\n");
+        result.append("Error details: ").append(e.getMessage()).append("\n");
 
         break;
       }

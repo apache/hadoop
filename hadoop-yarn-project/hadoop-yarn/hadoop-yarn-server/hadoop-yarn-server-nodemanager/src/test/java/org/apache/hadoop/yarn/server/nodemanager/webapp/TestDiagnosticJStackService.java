@@ -21,22 +21,25 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
+import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockedConstruction;
 import org.mockito.MockedStatic;
 
+import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentMap;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -56,12 +59,14 @@ public class TestDiagnosticJStackService {
     private static final String APPLICATION_ID_STR = "application_1771512066750_0001";
     private static final ApplicationId APPLICATION_ID =
             ApplicationId.fromString(APPLICATION_ID_STR);
+    private static final String CONTAINER_ID_STR = "container_1771512066750_0001_01_000049";
     private static final ContainerId CONTAINER_ID =
-            ContainerId.fromString("container_1771512066750_0001_01_000049");
+            ContainerId.fromString(CONTAINER_ID_STR);
+    private static final ApplicationACLsManager mockAclManager = mock(ApplicationACLsManager.class);
 
     private static final NodeManager.NMContext nmContext = new NodeManager.NMContext(
             null, null, null
-            , null, null, false, new Configuration()
+            , mockAclManager, null, false, new Configuration()
     );
     private static final DiagnosticJStackService diagnosticJStackService
             = spy(new DiagnosticJStackService(nmContext));
@@ -107,12 +112,14 @@ public class TestDiagnosticJStackService {
     @Test
     public void testCollectApplicationThreadDump_Success() {
         List<Long> pids = List.of(23L, 12L, 531L);
-        Application app = mock(Application.class);
-        when(nmContext.getApplications().get(APPLICATION_ID)).thenReturn(app);
+
+        Application mockApp = mock(Application.class);
+        nmContext.getApplications().put(APPLICATION_ID, mockApp);
+
+        when(mockAclManager.checkAccess(any(), any(), any(), any())).thenReturn(true);
 
         Map<ContainerId, List<Long>> containerPids = Map.of(CONTAINER_ID, pids);
-
-        doReturn(containerPids).when(diagnosticJStackService).getApplicationContainerPids(app);
+        doReturn(containerPids).when(diagnosticJStackService).getApplicationContainerPids(mockApp);
 
         ProcessHandle mockProcessHandle = mock(ProcessHandle.class);
         ProcessHandle.Info mockPhInfo = mock(ProcessHandle.Info.class);
@@ -128,7 +135,8 @@ public class TestDiagnosticJStackService {
         ){
             mockedStaticProcess.when(() -> ProcessHandle.of(anyLong())).thenReturn(Optional.of(mockProcessHandle));
 
-            String result = diagnosticJStackService.collectApplicationThreadDump(APPLICATION_ID_STR, NUMBER_OF_JSTACKS, null);
+            HttpServletRequest mockRequest = mock(HttpServletRequest.class);
+            String result = diagnosticJStackService.collectApplicationThreadDump(APPLICATION_ID_STR, NUMBER_OF_JSTACKS, mockRequest);
 
             assertEquals(pids.size()*NUMBER_OF_JSTACKS, mockedConstruction.constructed().size(),
               "ShellCommandExecutor should be instantiated for each PID time Number Of JStacks");
@@ -147,23 +155,30 @@ public class TestDiagnosticJStackService {
             throw new RuntimeException(e);
         }
 
+        nmContext.getApplications().remove(APPLICATION_ID); // Clean up to avoid side effects on another test
+
     }
 
 
     @Test
     public void testCollectApplicationThreadDumpWhenProcessIdNotAlive() {
         int numJStacks = 3;
-        List<Long> pids = List.of(23L, 12L, 531L);
-        Application app = mock(Application.class);
-        when(nmContext.getApplications().get(APPLICATION_ID)).thenReturn(app);
+        Application mockApp = mock(Application.class);
+        nmContext.getApplications().put(APPLICATION_ID, mockApp);
 
-        Map<ContainerId, List<Long>> containerPids = Map.of(CONTAINER_ID, pids);
+        when(mockAclManager.checkAccess(any(), any(), any(), any())).thenReturn(true);
 
-        doReturn(containerPids).when(diagnosticJStackService).getApplicationContainerPids(app);
+        Map<ContainerId, List<Long>> fakeContainerPids = Map.of(CONTAINER_ID, List.of(23L));
+
+        doReturn(fakeContainerPids).when(diagnosticJStackService).getApplicationContainerPids(mockApp);
+
+        HttpServletRequest mockRequest = mock(HttpServletRequest.class);
 
         assertThrows(IOException.class,
-                () -> diagnosticJStackService.collectApplicationThreadDump(APPLICATION_ID_STR, numJStacks, null),
-        "Since we did not mock ProcessHandle.of to return non empty, it will consider this PID is dead");
+          () -> diagnosticJStackService.collectApplicationThreadDump(APPLICATION_ID_STR, numJStacks, mockRequest),
+          "Since we did not mock ProcessHandle.of to return non empty, it will consider this PID is dead");
+
+        nmContext.getApplications().remove(APPLICATION_ID); // Clean up to avoid side effects on another test
 
     }
 
