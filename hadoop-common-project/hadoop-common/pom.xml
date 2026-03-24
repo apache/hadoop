@@ -1152,13 +1152,13 @@
         </plugins>
       </build>
     </profile>
-    <!-- profile to use already generated protobuf code using 2.5.0 for aarch64-->
+    <!-- profile to use already generated protobuf code using 2.5.0 for non-x86_64-->
     <profile>
-      <id>aarch64</id>
+      <id>non-x86_64</id>
       <activation>
         <activeByDefault>false</activeByDefault>
         <os>
-          <arch>aarch64</arch>
+          <arch>!x86_64</arch>
         </os>
       </activation>
       <build>
@@ -1175,7 +1175,7 @@
                 </goals>
                 <configuration>
                   <sources>
-                    <source>${basedir}/src/main/arm-java</source>
+                    <source>${basedir}/src/main/proto2-generated</source>
                   </sources>
                 </configuration>
               </execution>
@@ -1187,7 +1187,7 @@
                 </goals>
                 <configuration>
                   <sources>
-                    <source>${basedir}/src/test/arm-java</source>
+                    <source>${basedir}/src/test/proto2-generated</source>
                   </sources>
                 </configuration>
               </execution>
@@ -1202,7 +1202,7 @@
       <activation>
         <activeByDefault>false</activeByDefault>
         <os>
-          <arch>!aarch64</arch>
+          <arch>x86_64</arch>
         </os>
       </activation>
       <build>
