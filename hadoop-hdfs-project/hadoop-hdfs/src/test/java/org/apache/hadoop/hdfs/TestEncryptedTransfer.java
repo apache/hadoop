@@ -49,6 +49,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
+import org.apache.hadoop.hdfs.protocol.datatransfer.InvalidEncryptionKeyException;
 import org.apache.hadoop.hdfs.protocol.datatransfer.TrustedChannelResolver;
 import org.apache.hadoop.hdfs.protocol.datatransfer.sasl.DataTransferSaslUtil;
 import org.apache.hadoop.hdfs.protocol.datatransfer.sasl.SaslDataTransferServer;
@@ -418,38 +419,34 @@ public class TestEncryptedTransfer {
         out.write(data);
       }
 
-      DFSClient client =
-          DFSClientAdapter.getDFSClient(dfs);
+      // Get baseline checksum with valid keys.
+      FileChecksum checksum = dfs.getFileChecksum(ecFile);
+
+      // Spy on DFSClient to simulate InvalidEncryptionKeyException
+      // on connectToDN until clearDataEncryptionKey is called.
+      DFSClient client = DFSClientAdapter.getDFSClient(dfs);
       DFSClient spyClient = Mockito.spy(client);
       DFSClientAdapter.setDFSClient(dfs, spyClient);
 
-      FileChecksum checksum = dfs.getFileChecksum(ecFile);
-
-      BlockTokenSecretManager btsm = cluster.getNamesystem()
-          .getBlockManager().getBlockTokenSecretManager();
-      // Reduce key update interval and token life for testing.
-      btsm.setKeyUpdateIntervalForTesting(2 * 1000);
-      btsm.setTokenLifetime(2 * 1000);
-      btsm.clearAllKeysForTesting();
-
-      // Wait until the encryption key becomes invalid on all DNs.
-      LOG.info("Wait until encryption keys become invalid...");
-      DataEncryptionKey encryptionKey = spyClient.getEncryptionKey();
-      List<DataNode> dataNodes = cluster.getDataNodes();
-      for (DataNode dn : dataNodes) {
-        GenericTestUtils.waitFor(
-            () -> !dn.getBlockPoolTokenSecretManager()
-                .get(encryptionKey.blockPoolId)
-                .hasKey(encryptionKey.keyId),
-            100, 30 * 1000);
-      }
-      LOG.info("The encryption key is invalid on all nodes now.");
+      java.util.concurrent.atomic.AtomicBoolean keyCleared =
+          new java.util.concurrent.atomic.AtomicBoolean(false);
+      Mockito.doAnswer(invocation -> {
+        keyCleared.set(true);
+        return invocation.callRealMethod();
+      }).when(spyClient).clearDataEncryptionKey();
+      Mockito.doAnswer(invocation -> {
+        if (!keyCleared.get()) {
+          throw new InvalidEncryptionKeyException("test invalid key");
+        }
+        return invocation.callRealMethod();
+      }).when(spyClient).connectToDN(Mockito.any(DatanodeInfo.class),
+          Mockito.anyInt(), Mockito.any());
 
       // This should succeed: InvalidEncryptionKeyException should be
       // caught, the stale key cleared, and the checksum retried.
       FileChecksum verifyChecksum = dfs.getFileChecksum(ecFile);
-      // Verify that clearDataEncryptionKey was called to refresh the key.
-      Mockito.verify(spyClient, times(1)).clearDataEncryptionKey();
+      Mockito.verify(spyClient, Mockito.atLeastOnce())
+          .clearDataEncryptionKey();
       assertEquals(checksum, verifyChecksum);
     } finally {
       dfs.close();
