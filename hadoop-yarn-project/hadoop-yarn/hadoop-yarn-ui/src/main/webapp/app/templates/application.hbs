@@ -71,6 +71,9 @@
               <span class="sr-only">(current)</span>
             {{/link-to}}
           {{/link-to}}
+          {{#if isSchedulerUiEnabled}}
+            <li><a href="/scheduler-ui" class="navigation-link ember-view">Scheduler UI</a></li>
+          {{/if}}
         </ul>
         {{#if userInfo}}
         <div class="loggedin-user">
