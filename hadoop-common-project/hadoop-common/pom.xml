@@ -624,7 +624,6 @@
             <exclude>src/test/resources/javakeystoreprovider.password</exclude>
             <exclude>src/test/resources/lz4/sequencefile</exclude>
             <exclude>dev-support/jdiff-workaround.patch</exclude>
-            <exclude>**/*-generated/**</exclude>
           </excludes>
         </configuration>
       </plugin>
