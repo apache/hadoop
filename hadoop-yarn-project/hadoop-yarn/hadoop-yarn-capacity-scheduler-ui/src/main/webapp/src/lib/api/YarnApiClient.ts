@@ -35,7 +35,7 @@ import type {
   YarnConfigResponse,
   ValidationResponse,
 } from '~/types';
-import { READ_ONLY_PROPERTY } from '~/config';
+import { HTTP_AUTH_PROPERTY, READ_ONLY_PROPERTY } from '~/config';
 
 export class YarnApiClient {
   private readonly baseUrl: string;
@@ -238,11 +238,13 @@ export class YarnApiClient {
   }
 
   /**
-   * Detect YARN security mode by checking hadoop.security.authentication
+   * Detect YARN security mode by checking the HTTP authentication type.
+   * This governs the REST API layer, which may differ from the cluster-wide
+   * hadoop.security.authentication setting (e.g. Kerberos RPC + simple HTTP).
    */
   private async detectSecurityMode(): Promise<void> {
     try {
-      const authMode = await this.getConfiguration('hadoop.security.authentication');
+      const authMode = await this.getConfiguration(HTTP_AUTH_PROPERTY);
       this.securityMode = authMode.toLowerCase() === 'simple' ? 'simple' : 'kerberos';
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);

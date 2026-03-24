@@ -25,3 +25,8 @@
  * When set to 'true', the UI will allow viewing and staging changes but prevent mutations.
  */
 export const READ_ONLY_PROPERTY = 'yarn.webapp.scheduler-ui.read-only.enable';
+
+/**
+ * YARN configuration property that controls HTTP authentication for web UIs and REST APIs.
+ */
+export const HTTP_AUTH_PROPERTY = 'hadoop.http.authentication.type';
