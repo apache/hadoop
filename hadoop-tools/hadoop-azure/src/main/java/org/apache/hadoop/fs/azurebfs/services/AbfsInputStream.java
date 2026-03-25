@@ -56,6 +56,7 @@ import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 
+import static org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore.extractEtagHeader;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.DIRECTORY;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.ROOT_PATH;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.TRUE;
@@ -88,7 +89,7 @@ public abstract class AbfsInputStream extends FSInputStream implements CanUnbuff
   private final int bufferSize; // default buffer size
   private final int footerReadSize; // default buffer size to read when reading footer
   private final int readAheadQueueDepth;         // initialized in constructor
-  private String eTag;                  // eTag of the path when InputStream are created
+  private String eTag;                  // eTag of the path when InputStream is created
   private final boolean tolerateOobAppends; // whether tolerate Oob Appends
   private final boolean readAheadEnabled; // whether enable readAhead;
   private final boolean readAheadV2Enabled; // whether enable readAhead V2;
@@ -578,7 +579,16 @@ public abstract class AbfsInputStream extends FSInputStream implements CanUnbuff
     }
   }
 
-   String getRelativePath(final Path path) {
+  /**
+   * Convert a {@link Path} to the relative path string used by ABFS.
+   *
+   * <p>This returns the URI path component of the supplied {@code path}. If the
+   * resulting path is empty, this method returns {@code ROOT_PATH}.
+   *
+   * @param path the {@link Path} to convert; must not be null
+   * @return the relative path as a {@link String}; never null
+   */
+  String getRelativePath(final Path path) {
     Preconditions.checkNotNull(path, "path");
     String relPath = path.toUri().getPath();
     if (relPath.isEmpty()) {
@@ -614,12 +624,21 @@ public abstract class AbfsInputStream extends FSInputStream implements CanUnbuff
             tracingContext,
             contextEncryptionAdapter).getResult();
 
-    String resourceType =
-            gpsOp.getResponseHeaderIgnoreCase(X_MS_META_HDI_ISFOLDER);
-
-    if (TRUE.equals(resourceType)) {
+    if (client.checkIsDir(gpsOp)) {
       throw directoryReadException();
     }
+  }
+
+  private long extractContentLength(AbfsHttpOperation op) {
+    // We need to use content range header instead of content length to take care of partial reads
+    String contentRange = op.getResponseHeader(HttpHeaderConfigurations.CONTENT_RANGE);
+    if (!StringUtils.isEmpty(contentRange)) {
+      contentLength = Long.parseLong(contentRange.split(AbfsHttpConstants.FORWARD_SLASH)[1]);
+    }
+    else {
+      contentLength = 0;
+    }
+    return contentLength;
   }
 
   int readRemote(long position, byte[] b, int offset, int length, TracingContext tracingContext) throws IOException {
@@ -655,13 +674,11 @@ public abstract class AbfsInputStream extends FSInputStream implements CanUnbuff
 
       // Update metadata on first read if restrictGpsOnOpenFile is enabled
       if (shouldRestrictGpsOnOpenFile() && isFirstRead()) {
-        String resourceType = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_RESOURCE_TYPE);
-        if (Objects.equals(resourceType, DIRECTORY)) {
+        if (client.checkIsDir(op.getResult())) {
           throw directoryReadException();
         }
-        contentLength = Long.parseLong(op.getResult().getResponseHeader(HttpHeaderConfigurations.CONTENT_RANGE).
-                split(AbfsHttpConstants.FORWARD_SLASH)[1]);
-        eTag = op.getResult().getResponseHeader("ETag");
+        contentLength = extractContentLength(op.getResult());
+        eTag = extractEtagHeader(op.getResult());
       }
 
       cachedSasToken.update(op.getSasToken());
@@ -673,7 +690,7 @@ public abstract class AbfsInputStream extends FSInputStream implements CanUnbuff
       if (ex instanceof AbfsRestOperationException) {
         AbfsRestOperationException ere = (AbfsRestOperationException) ex;
         int status = ere.getStatusCode();
-        if(ere.getErrorMessage().contains(readOnDirectoryErrorMsg)){
+        if (ere.getErrorMessage().contains(readOnDirectoryErrorMsg)) {
           throw ere;
         }
         boolean isHnsEnabled = client.getIsNamespaceEnabled();
@@ -695,7 +712,7 @@ public abstract class AbfsInputStream extends FSInputStream implements CanUnbuff
 
           } catch (AzureBlobFileSystemException gpsEx) {
             AbfsRestOperationException gpsEre = (AbfsRestOperationException) gpsEx;
-            if(gpsEre.getErrorMessage().contains(readOnDirectoryErrorMsg)){
+            if (gpsEre.getErrorMessage().contains(readOnDirectoryErrorMsg)) {
               throw gpsEre;
             }
             // The file does not exist
@@ -708,12 +725,11 @@ public abstract class AbfsInputStream extends FSInputStream implements CanUnbuff
           // Need to rule out if the path is an explicit directory
           checkIfDirPathInFNS();
         }
-
-        // Default: propagate original error
-        throw new IOException(ex);
       }
+      // Default: propagate original error
       throw new IOException(ex);
     }
+
     long bytesRead = op.getResult().getBytesReceived();
     if (streamStatistics != null) {
       streamStatistics.remoteBytesRead(bytesRead);

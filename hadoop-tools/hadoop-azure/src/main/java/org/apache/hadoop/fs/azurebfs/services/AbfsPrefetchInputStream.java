@@ -84,7 +84,7 @@ public class AbfsPrefetchInputStream extends AbfsInputStream {
         Skips prefetch for the first read if restrictGpsOnOpenFile config is enabled.
         This is required since contentLength is not available yet to determine prefetch block size.
        */
-      if(shouldRestrictGpsOnOpenFile() && isFirstRead()) {
+      if (shouldRestrictGpsOnOpenFile() && isFirstRead()) {
         getTracingContext().setReadType(ReadType.NORMAL_READ);
         LOG.debug("RestrictGpsOnOpenFile is enabled. Skip readahead for first read even for sequential input policy.");
         bytesRead = readInternal(getFCursor(), getBuffer(), 0, getBufferSize(), true);

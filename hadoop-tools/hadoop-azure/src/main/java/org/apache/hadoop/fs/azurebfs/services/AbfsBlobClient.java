@@ -502,6 +502,7 @@ public class AbfsBlobClient extends AbfsClient {
         AbfsRestOperation statusOp = null;
         try {
           // Check if the file already exists by calling GetPathStatus
+          //TODO: GBP
           statusOp = getPathStatus(path, tracingContext, null, false);
         } catch (AbfsRestOperationException ex) {
           // If the path does not exist, continue with file creation
@@ -2259,6 +2260,7 @@ public class AbfsBlobClient extends AbfsClient {
       // If the overwrite flag is true, we must verify whether an empty directory exists at the specified path.
       // However, if overwrite is false, we can skip this validation and proceed with blob creation,
       // which will fail with a conflict error if a file or directory already exists at the path.
+      //todo: GBP
       if (overwrite && isEmptyDirectory(path, tracingContext, false)) {
         throw new AbfsRestOperationException(HTTP_CONFLICT,
             AzureServiceErrorCode.PATH_CONFLICT.getErrorCode(),

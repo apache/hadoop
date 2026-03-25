@@ -868,10 +868,10 @@ private void mockClientForEncryptionContext(AbfsClient encryptedClient) throws I
                     any());
   }
 
-
   /**
    * Tests the behavior of openFileForRead with the FS_AZURE_RESTRICT_GPS_ON_OPENFILE configuration enabled.
-   * Verifies that irrespective of whether FileStatus is provided or not, getPathStatus is not invoked for read flow.
+   * Verifies that irrespective of whether FileStatus is provided (correct or incorrect status type) or not,
+   * getPathStatus is not invoked for read flow.
    *
    * @throws Exception if any error occurs during the test
    */
@@ -891,16 +891,23 @@ private void mockClientForEncryptionContext(AbfsClient encryptedClient) throws I
     setAbfsClient(abfsStore, mockClient);
     TracingContext tracingContext = getTestTracingContext(fs, false);
 
-    // NOTE: One call for GPS needs to come from openFileForWrite. If GPS were happening at openFileForRead, we would've seen 2 calls.
-
-    // Case 1: FileStatus is provided
-    abfsStore.openFileForRead(fileWithFileStatus, Optional.ofNullable(new OpenFileParameters().withStatus(fs.getFileStatus(fileWithFileStatus))), null, tracingContext);
-    verify(mockClient, times(1).description("FileStatus provided, restrict GPS: getPathStatus should NOT be invoked"))
+    // Case 1: FileStatus is not provided
+    abfsStore.openFileForRead(fileWithoutFileStatus, Optional.empty(), null, tracingContext);
+    verify(mockClient, times(0).description("FileStatus not provided, restrict GPS: getPathStatus should NOT be invoked"))
             .getPathStatus(any(String.class), any(Boolean.class), any(TracingContext.class), nullable(ContextEncryptionAdapter.class));
 
-    // Case 2: FileStatus is not provided
-    abfsStore.openFileForRead(fileWithoutFileStatus, Optional.empty(), null, tracingContext);
-    verify(mockClient, times(1).description("FileStatus not provided, restrict GPS: getPathStatus should NOT be invoked"))
+    // NOTE: One call for GPS will come from getFileStatus for both cases below.
+    // If GPS were happening at openFileForRead, we would've seen more than 2 calls.
+
+    // Case 2: FileStatus is provided (of wrong status type AbfsLocatedFileStatus)
+    abfsStore.openFileForRead(fileWithFileStatus, Optional.ofNullable(new OpenFileParameters().withStatus(
+            new AbfsLocatedFileStatus(fs.getFileStatus(fileWithFileStatus), null))), null, tracingContext);
+    verify(mockClient, times(1).description("Wrong FileStatus type provided, restrict GPS: getPathStatus still should NOT be invoked"))
+            .getPathStatus(any(String.class), any(Boolean.class), any(TracingContext.class), nullable(ContextEncryptionAdapter.class));
+
+    // Case 3: FileStatus is provided (correct status type VersionedFileStatus)
+    abfsStore.openFileForRead(fileWithFileStatus, Optional.ofNullable(new OpenFileParameters().withStatus(fs.getFileStatus(fileWithFileStatus))), null, tracingContext);
+    verify(mockClient, times(2).description("Correct type FileStatus provided, restrict GPS: getPathStatus should NOT be invoked"))
             .getPathStatus(any(String.class), any(Boolean.class), any(TracingContext.class), nullable(ContextEncryptionAdapter.class));
   }
 
@@ -916,7 +923,7 @@ private void mockClientForEncryptionContext(AbfsClient encryptedClient) throws I
     AzureBlobFileSystem fs = getFileSystemWithRestrictGpsEnabled();
 
     Path testFile = new Path("/testFile0");
-    writeBufferToNewFile(testFile, new byte[250]);
+    writeBufferToNewFile(testFile, new byte[6 * ONE_MB]);
 
     // Open the file and perform a read
     try (FSDataInputStream in = fs.open(testFile)) {
@@ -929,19 +936,19 @@ private void mockClientForEncryptionContext(AbfsClient encryptedClient) throws I
       assertThat(fileLengthPreRead).isEqualTo(0);
 
       // Trigger the first read
-      byte[] buf = new byte[100];
-      int n = abfsIn.read(buf);
-      assertThat(n).isGreaterThan(0);
+      byte[] buf = new byte[6 * ONE_MB];
+      int n = abfsIn.read(0, buf, 0, 2 * ONE_MB);
+      assertThat(n).isEqualTo(2 * ONE_MB);
 
       // After first read, eTag and content length should be set from the response
       String etagFirstRead = abfsIn.getETag();
       long fileLengthFirstRead = abfsIn.getContentLength();
       assertThat(etagFirstRead).isNotNull();
-      assertThat(fileLengthFirstRead).isEqualTo(250L);
+      assertThat(fileLengthFirstRead).isEqualTo(6 * ONE_MB);
 
       //Trigger the second read
-      n = abfsIn.read(100, buf, 0, 100);
-      assertThat(n).isGreaterThan(0);
+      n = abfsIn.read(2 * ONE_MB, buf, 2 * ONE_MB, 4 * ONE_MB);
+      assertThat(n).isEqualTo(4 * ONE_MB);
 
       // eTag and content length should remain same as first read for second read onwards
       String etagSecondRead = abfsIn.getETag();
@@ -1458,6 +1465,7 @@ private void mockClientForEncryptionContext(AbfsClient encryptedClient) throws I
         true,
         SIXTEEN_KB);
     testReadAheads(inputStream, FORTY_EIGHT_KB, SIXTEEN_KB);
+    resetReadBufferManager(FOUR_MB, REDUCED_READ_BUFFER_AGE_THRESHOLD); //reset for next set of tests
   }
 
   @Test

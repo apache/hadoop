@@ -893,6 +893,39 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
             null);
   }
 
+  /**
+   * Opens a file for read and returns an {@link AbfsInputStream}.
+   *
+   * <p>
+   * The method decides whether to call the server's GetPathStatus based on:
+   * <ul>
+   *   <li>the supplied {@code parameters} (if it contains a {@link VersionedFileStatus}
+   *       with a valid encryption context when required),</li>
+   *   <li>the client's encryption type ({@link EncryptionType#ENCRYPTION_CONTEXT}), and</li>
+   *   <li>the configuration flag returned by {@link AbfsConfiguration#shouldRestrictGpsOnOpenFile()}.</li>
+   * </ul>
+   * If the encryption type is {@code ENCRYPTION_CONTEXT} the server-supplied
+   * X-MS-ENCRYPTION-CONTEXT header will be required and used to construct a
+   * {@link ContextProviderEncryptionAdapter}. If that header is missing a
+   * {@link PathIOException} is thrown.
+   * </p>
+   *
+   * <p>
+   * Note: when {@link AbfsConfiguration#shouldRestrictGpsOnOpenFile()} is enabled,
+   * the implementation won't do the GetPathStatus call. In that case, if the file does not
+   * actually exist or read is attempted on a directory, {@code openFileForRead} will not fail immediately.
+   * It will only be detected when the returned stream performs its first read, at which point an appropriate error will be raised.
+   * </p>
+   *
+   * @param path the path to open (may be unqualified)
+   * @param parameters optional {@link OpenFileParameters} that may include a {@link FileStatus}
+   *                   (possibly a {@link VersionedFileStatus}) and other open parameters
+   * @param statistics filesystem statistics to associate with the returned stream
+   * @param tracingContext tracing context for remote calls
+   * @return an {@link AbfsInputStream} for reading the file
+   * @throws IOException on IO or server errors. A {@link PathIOException} is thrown when
+   *                     an expected encryption context header is missing.
+   */
   public AbfsInputStream openFileForRead(Path path,
       final Optional<OpenFileParameters> parameters,
       final FileSystem.Statistics statistics, TracingContext tracingContext)
@@ -905,7 +938,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       FileStatus fileStatus = parameters.map(OpenFileParameters::getStatus)
           .orElse(null);
       String relativePath = getRelativePath(path);
-      String resourceType, eTag = EMPTY_STRING;
+      String resourceType = EMPTY_STRING, eTag = EMPTY_STRING;
       long contentLength = 0;
       ContextEncryptionAdapter contextEncryptionAdapter = NoContextEncryptionAdapter.getInstance();
       /*
@@ -917,26 +950,23 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       *       ENCRYPTION_CONTEXT.
       */
       if ((fileStatus instanceof VersionedFileStatus) && (
-              getClient().getEncryptionType() != EncryptionType.ENCRYPTION_CONTEXT
-                      || ((VersionedFileStatus) fileStatus).getEncryptionContext()
-                      != null)) {
+          getClient().getEncryptionType() != EncryptionType.ENCRYPTION_CONTEXT
+               || ((VersionedFileStatus) fileStatus).getEncryptionContext()
+               != null)) {
         path = path.makeQualified(this.uri, path);
         Preconditions.checkArgument(fileStatus.getPath().equals(path),
-                String.format(
-                        "Filestatus path [%s] does not match with given path [%s]",
-                        fileStatus.getPath(), path));
+            String.format(
+                 "Filestatus path [%s] does not match with given path [%s]",
+                  fileStatus.getPath(), path));
         resourceType = fileStatus.isFile() ? FILE : DIRECTORY;
         contentLength = fileStatus.getLen();
         eTag = ((VersionedFileStatus) fileStatus).getVersion();
         final String encryptionContext
-                = ((VersionedFileStatus) fileStatus).getEncryptionContext();
+            = ((VersionedFileStatus) fileStatus).getEncryptionContext();
         if (getClient().getEncryptionType() == EncryptionType.ENCRYPTION_CONTEXT) {
           contextEncryptionAdapter = new ContextProviderEncryptionAdapter(
-                  getClient().getEncryptionContextProvider(), getRelativePath(path),
-                  encryptionContext.getBytes(StandardCharsets.UTF_8));
-        }
-        if (parseIsDirectory(resourceType)) {
-          throw openFileForReadDirectoryException();
+              getClient().getEncryptionContextProvider(), getRelativePath(path),
+              encryptionContext.getBytes(StandardCharsets.UTF_8));
         }
       }
       /*
@@ -954,30 +984,30 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
          */
         if (getClient().getEncryptionType() == EncryptionType.ENCRYPTION_CONTEXT) {
           final String fileEncryptionContext = op.getResponseHeader(
-                  X_MS_ENCRYPTION_CONTEXT);
+             HttpHeaderConfigurations.X_MS_ENCRYPTION_CONTEXT);
           if (fileEncryptionContext == null) {
             LOG.debug("EncryptionContext missing in GetPathStatus response");
             throw new PathIOException(path.toString(),
-                    "EncryptionContext not present in GetPathStatus response headers");
+                "EncryptionContext not present in GetPathStatus response headers");
           }
           contextEncryptionAdapter = new ContextProviderEncryptionAdapter(
-                  getClient().getEncryptionContextProvider(), getRelativePath(path),
-                  fileEncryptionContext.getBytes(StandardCharsets.UTF_8));
+              getClient().getEncryptionContextProvider(), getRelativePath(path),
+              fileEncryptionContext.getBytes(StandardCharsets.UTF_8));
         }
         resourceType = getClient().checkIsDir(op) ? DIRECTORY : FILE;
         contentLength = extractContentLength(op);
         eTag = op.getResponseHeader(HttpHeaderConfigurations.ETAG);
-
-        if (parseIsDirectory(resourceType)) {
-          throw openFileForReadDirectoryException();
-        }
       }
       /* The only remaining case is:
-       * - restrictGpsOnOpenFile config is enabled with null FileStatus and encryptionType not as ENCRYPTION_CONTEXT
+       * - restrictGpsOnOpenFile config is enabled with null/wrong FileStatus and encryptionType not as ENCRYPTION_CONTEXT
        * In this case, we don't need to call GetPathStatus API.
        */
       else {
         // do nothing
+      }
+
+      if (parseIsDirectory(resourceType)) {
+        throw openFileForReadDirectoryException();
       }
 
       perfInfo.registerSuccess(true);
