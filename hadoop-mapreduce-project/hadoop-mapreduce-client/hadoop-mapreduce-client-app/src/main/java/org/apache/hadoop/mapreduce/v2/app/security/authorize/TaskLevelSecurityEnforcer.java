@@ -27,6 +27,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.MRJobConfig;
+import org.apache.hadoop.security.UserGroupInformation;
 
 /**
  * Enforces task-level security rules for MapReduce jobs.
@@ -64,22 +65,27 @@ public final class TaskLevelSecurityEnforcer {
    *   <li>If a match is found, reject the job by throwing {@link TaskLevelSecurityException}.</li>
    * </ol>
    *
-   * @param conf the job configuration to validate
+   * @param conf        the job configuration to validate
+   * @param currentUser the user who running the AM container
    * @throws TaskLevelSecurityException if the user is not authorized to use one of the task classes
    */
-  public static void validate(JobConf conf) throws TaskLevelSecurityException {
+  public static void validate(JobConf conf, UserGroupInformation currentUser) throws TaskLevelSecurityException {
     if (!conf.getBoolean(MRConfig.SECURITY_ENABLED, MRConfig.DEFAULT_SECURITY_ENABLED)) {
       LOG.debug("The {} is disabled",  MRConfig.SECURITY_ENABLED);
       return;
     }
 
-    String currentUser = StringUtils.trim(conf.get(MRJobConfig.USER_NAME));
+    String currentUserName = UserGroupInformation.isSecurityEnabled()
+        ? currentUser.getShortUserName()
+        : StringUtils.trim(conf.get(MRJobConfig.USER_NAME));
+
     List<String> allowedUsers = Arrays.asList(conf.getTrimmedStrings(
         MRConfig.SECURITY_ALLOWED_USERS,
         MRConfig.DEFAULT_SECURITY_ALLOWED_USERS
     ));
-    if (allowedUsers.contains(currentUser)) {
-      LOG.debug("The {} is allowed to execute every task", currentUser);
+
+    if (allowedUsers.contains(currentUserName)) {
+      LOG.debug("The {} is allowed to execute every task", currentUserName);
       return;
     }
 
@@ -95,7 +101,8 @@ public final class TaskLevelSecurityEnforcer {
       String propertyValue = StringUtils.trim(conf.get(property, ""));
       for (String deniedTask : deniedTasks) {
         if (propertyValue.startsWith(deniedTask)) {
-          throw new TaskLevelSecurityException(currentUser, property, propertyValue, deniedTask);
+          throw new TaskLevelSecurityException(
+              currentUserName, property, propertyValue, deniedTask);
         }
       }
     }

@@ -1684,7 +1684,7 @@ public class MRAppMaster extends CompositeService {
       String jobUserName = System
           .getenv(ApplicationConstants.Environment.USER.name());
       conf.set(MRJobConfig.USER_NAME, jobUserName);
-      TaskLevelSecurityEnforcer.validate(conf);
+      TaskLevelSecurityEnforcer.validate(conf, UserGroupInformation.getCurrentUser());
       initAndStartAppMaster(appMaster, conf, jobUserName);
     } catch (Throwable t) {
       LOG.error("Error starting MRAppMaster", t);

@@ -22,6 +22,7 @@ import org.junit.jupiter.api.Test;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.MRJobConfig;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 
 import static org.assertj.core.api.Assertions.assertThatCode;
@@ -128,12 +129,14 @@ public class TestTaskLevelSecurityEnforcer extends AbstractHadoopTestBase {
   }
 
   private void assertPass(JobConf conf) {
-    assertThatCode(() -> TaskLevelSecurityEnforcer.validate(conf))
+    assertThatCode(() ->
+        TaskLevelSecurityEnforcer.validate(conf, UserGroupInformation.getCurrentUser()))
         .doesNotThrowAnyException();
   }
 
   private void assertDenied(JobConf conf) {
-    assertThatThrownBy(() -> TaskLevelSecurityEnforcer.validate(conf))
+    assertThatThrownBy(() ->
+        TaskLevelSecurityEnforcer.validate(conf, UserGroupInformation.getCurrentUser()))
         .isInstanceOf(TaskLevelSecurityException.class);
   }
 }
