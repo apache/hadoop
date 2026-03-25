@@ -23,6 +23,7 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.MRJobConfig;
@@ -72,7 +73,7 @@ public final class TaskLevelSecurityEnforcer {
       return;
     }
 
-    String currentUser = conf.get(MRJobConfig.USER_NAME).trim();
+    String currentUser = StringUtils.trim(conf.get(MRJobConfig.USER_NAME));
     List<String> allowedUsers = Arrays.asList(conf.getTrimmedStrings(
         MRConfig.SECURITY_ALLOWED_USERS,
         MRConfig.DEFAULT_SECURITY_ALLOWED_USERS
@@ -91,7 +92,7 @@ public final class TaskLevelSecurityEnforcer {
         MRConfig.DEFAULT_SECURITY_DENIED_TASKS
     );
     for (String property : propertyDomain) {
-      String propertyValue = conf.get(property, "").trim();
+      String propertyValue = StringUtils.trim(conf.get(property, ""));
       for (String deniedTask : deniedTasks) {
         if (propertyValue.startsWith(deniedTask)) {
           throw new TaskLevelSecurityException(currentUser, property, propertyValue, deniedTask);

@@ -24,8 +24,8 @@ import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class TestTaskLevelSecurityEnforcer extends AbstractHadoopTestBase {
 
@@ -128,14 +128,12 @@ public class TestTaskLevelSecurityEnforcer extends AbstractHadoopTestBase {
   }
 
   private void assertPass(JobConf conf) {
-    assertDoesNotThrow(
-        () -> TaskLevelSecurityEnforcer.validate(conf),
-        "Config denied but validation pass was expected");
+    assertThatCode(() -> TaskLevelSecurityEnforcer.validate(conf))
+        .doesNotThrowAnyException();
   }
 
   private void assertDenied(JobConf conf) {
-    assertThrows(TaskLevelSecurityException.class,
-        () -> TaskLevelSecurityEnforcer.validate(conf),
-        "Config validation pass but denied was expected");
+    assertThatThrownBy(() -> TaskLevelSecurityEnforcer.validate(conf))
+        .isInstanceOf(TaskLevelSecurityException.class);
   }
 }

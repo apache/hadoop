@@ -78,9 +78,9 @@ Administrators may override this list to expand or restrict the validation domai
   - mapreduce.outputcommitter.factory.scheme.gs
   - mapreduce.outputcommitter.factory.scheme.hdfs
   - mapreduce.outputcommitter.named.classname
-  - "mapred.mapper.class"
-  - "mapred.map.runner.class"
-  - "mapred.reducer.class"
+  - mapred.mapper.class
+  - mapred.map.runner.class
+  - mapred.reducer.class
 
 #### MapReduce Task-Level Security Enforcement: Denied Tasks
 Specifies the list of disallowed task implementation classes or packages.
