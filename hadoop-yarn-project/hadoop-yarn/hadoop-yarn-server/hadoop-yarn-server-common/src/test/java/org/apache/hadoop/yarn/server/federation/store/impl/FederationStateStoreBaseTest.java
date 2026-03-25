@@ -26,11 +26,13 @@ import java.util.ArrayList;
 import java.util.Set;
 import java.util.HashSet;
 import java.util.TimeZone;
+import java.util.stream.Collectors;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.test.LambdaTestUtils;
+import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ReservationId;
@@ -89,6 +91,8 @@ import org.apache.hadoop.yarn.server.federation.store.records.RouterRMTokenReque
 import org.apache.hadoop.yarn.server.federation.store.records.RouterRMTokenResponse;
 import org.apache.hadoop.yarn.server.records.Version;
 import org.apache.hadoop.yarn.util.MonotonicClock;
+
+import org.assertj.core.api.Assertions;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -96,7 +100,6 @@ import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
 
 /**
  * Base class for FederationMembershipStateStore implementations.
@@ -1198,7 +1201,7 @@ public abstract class FederationStateStoreBaseTest {
     setPolicyConf("Queue2", "PolicyType2");
 
     // with a PreparedStatement it is treated as a literal queue name that does not match.
-    List<String> queues = List.of("' OR '1'='1");
+    List<String> queues = Lists.newArrayList("' OR '1'='1");
     federationStateStore.deletePoliciesConfigurations(
         DeleteSubClusterPoliciesConfigurationsRequest.newInstance(queues));
 
@@ -1206,14 +1209,14 @@ public abstract class FederationStateStoreBaseTest {
     GetSubClusterPoliciesConfigurationsResponse response =
         federationStateStore.getPoliciesConfigurations(
             GetSubClusterPoliciesConfigurationsRequest.newInstance());
-    assertThat(response).describedAs("response").isNotNull();
+    Assertions.assertThat(response).describedAs("response").isNotNull();
     List<String> remaining = response.getPoliciesConfigs()
         .stream()
         .map(SubClusterPolicyConfiguration::getQueue)
-        .toList();
-    assertThat(remaining)
+        .collect(Collectors.toList());
+    Assertions.assertThat(remaining)
         .contains("Queue1");
-    assertThat(remaining)
+    Assertions.assertThat(remaining)
         .contains("Queue2");
   }
 
@@ -1221,7 +1224,7 @@ public abstract class FederationStateStoreBaseTest {
   public void testEmptyQueueNameRejected() throws Exception {
     // The input validator must reject a request that contains a blank queue name.
     DeleteSubClusterPoliciesConfigurationsRequest request =
-        DeleteSubClusterPoliciesConfigurationsRequest.newInstance(List.of("ValidQueue", ""));
+        DeleteSubClusterPoliciesConfigurationsRequest.newInstance(Lists.newArrayList("ValidQueue", ""));
     LambdaTestUtils.intercept(YarnException.class, "Missing Queue",
         () -> getStateStore().deletePoliciesConfigurations(request));
   }
