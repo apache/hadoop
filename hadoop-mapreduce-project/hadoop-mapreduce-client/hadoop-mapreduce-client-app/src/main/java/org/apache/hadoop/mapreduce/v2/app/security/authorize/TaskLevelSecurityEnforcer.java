@@ -77,7 +77,7 @@ public final class TaskLevelSecurityEnforcer {
 
     String currentUserName = UserGroupInformation.isSecurityEnabled()
         ? currentUser.getShortUserName()
-        : StringUtils.trim(conf.get(MRJobConfig.USER_NAME));
+        : conf.getTrimmed(MRJobConfig.USER_NAME);
 
     List<String> allowedUsers = Arrays.asList(conf.getTrimmedStrings(
         MRConfig.SECURITY_ALLOWED_USERS,
@@ -98,7 +98,7 @@ public final class TaskLevelSecurityEnforcer {
         MRConfig.DEFAULT_SECURITY_DENIED_TASKS
     );
     for (String property : propertyDomain) {
-      String propertyValue = StringUtils.trim(conf.get(property, ""));
+      String propertyValue = conf.getTrimmed(property, "");
       for (String deniedTask : deniedTasks) {
         if (propertyValue.startsWith(deniedTask)) {
           throw new TaskLevelSecurityException(
