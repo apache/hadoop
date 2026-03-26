@@ -350,7 +350,7 @@ org.apache.sshd:sshd-core:2.11.0
 org.apache.sshd:sshd-sftp:2.11.0
 org.apache.solr:solr-solrj:8.11.2
 org.apache.yetus:audience-annotations:0.5.0
-org.apache.zookeeper:zookeeper:3.8.4
+org.apache.zookeeper:zookeeper:3.8.6
 org.codehaus.jettison:jettison:1.5.4
 org.eclipse.jetty:jetty-annotations:9.4.57.v20241219
 org.eclipse.jetty:jetty-http:9.4.57.v20241219
