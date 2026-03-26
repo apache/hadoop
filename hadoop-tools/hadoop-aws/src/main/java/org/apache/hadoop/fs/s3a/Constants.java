@@ -704,6 +704,7 @@ public final class Constants {
   public static final String STORAGE_CLASS_GLACIER_INSTANT_RETRIEVAL = "glacier_ir";
 
   // should we try to purge old multipart uploads when starting up
+  @Deprecated
   public static final String PURGE_EXISTING_MULTIPART =
       "fs.s3a.multipart.purge";
   public static final boolean DEFAULT_PURGE_EXISTING_MULTIPART = false;
@@ -711,6 +712,7 @@ public final class Constants {
   /**
    * purge any multipart uploads older than this number of seconds.
    */
+  @Deprecated
   public static final String PURGE_EXISTING_MULTIPART_AGE =
       "fs.s3a.multipart.purge.age";
 

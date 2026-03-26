@@ -585,7 +585,7 @@ Here are some the S3A properties for use in production.
 <property>
   <name>fs.s3a.multipart.purge</name>
   <value>false</value>
-  <description>True if you want to purge existing multipart uploads that may not have been
+  <description>Deprecated. True if you want to purge existing multipart uploads that may not have been
     completed/aborted correctly. The corresponding purge age is defined in
     fs.s3a.multipart.purge.age.
     If set, when the filesystem is instantiated then all outstanding uploads
@@ -599,7 +599,7 @@ Here are some the S3A properties for use in production.
 <property>
   <name>fs.s3a.multipart.purge.age</name>
   <value>86400</value>
-  <description>Minimum age in seconds of multipart uploads to purge
+  <description>Deprecated. Minimum age in seconds of multipart uploads to purge
     on startup if "fs.s3a.multipart.purge" is true
   </description>
 </property>
@@ -1676,14 +1676,15 @@ intermediate partitions uploaded to S3 —data which will be billed for.
 If an S3A committer job is halted partway through, again, there may be
 many incomplete multipart uploads in the output directory.
 
-These charges can be reduced by enabling `fs.s3a.multipart.purge`,
-and setting a purge time in seconds, such as 24 hours.
+These charges can be reduced by enabling `fs.s3a.multipart.purge`
+(deprecated), and setting a purge time in seconds, such as 24 hours.
 When an S3A FileSystem instance is instantiated with the purge time greater
 than zero, it will, on startup, delete all outstanding partition requests
 older than this time. However, this makes filesystem instantiate slow, especially
 against very large buckets, as a full scan is made.
 
-Consider avoiding this in future.
+For this reason, the option is deprecated and will be removed in a future
+release.
 
 ```xml
 <property>
