@@ -93,17 +93,18 @@ public class TestDFSStripedInputStreamReadFailures {
   @Test
   public void testReadWithXceiverExhaustion() throws Exception {
     
+    // Write a little more than 1 stripe size
+    // worth of data to 10 files
     int numBytes = cellSize * dataBlocks + 123;
     int numFiles = 10;
     
-    // create some EC files
     byte[] content = StripedFileTestUtil.generateBytes(numBytes);
     Path[] files = new Path[numFiles];
     for (int i = 0; i < numFiles; i++) {
       files[i] = writeFile("/file_"+ i, content);
     }
     
-    // restart DNs with xceivers set to 2
+    // reconfigure DNs with xceivers set to 2
     for (DataNode dn : cluster.getDataNodes()) {
       dn.reconfigureProperty(DFSConfigKeys.DFS_DATANODE_MAX_RECEIVER_THREADS_KEY, "2");
     }
@@ -115,10 +116,12 @@ public class TestDFSStripedInputStreamReadFailures {
           break;
         }
       }
-      // All are 2
       reconfigurationComplete = true;
     }
     
+    // Start a thread for each file that we created
+    // and use StripedFileTestUtil.verifyStatefulRead
+    // to read from the file.
     final List<Throwable> exceptions = new ArrayList<>();
     final List<Thread> threads = new ArrayList<>(numFiles);
     final CyclicBarrier barrier = new CyclicBarrier(numFiles);
