@@ -76,14 +76,14 @@ public class TestViewFileSystemWithAuthorityLocalFileSystem extends ViewFileSyst
   @Override
   @Test
   public void testBasicPaths() {
-    assertEquals(Path.ensureDirectoryUri(schemeWithAuthority),
+    assertEquals(schemeWithAuthority,
         fsView.getUri());
-    Path expectedWd = fsView.makeQualified(
-        new Path("/user/" + System.getProperty("user.name")));
-    assertEquals(expectedWd.toUri().getPath(),
-        fsView.getWorkingDirectory().toUri().getPath().replaceAll("/$", ""));
-    assertEquals(expectedWd.toUri().getPath(),
-        fsView.getHomeDirectory().toUri().getPath().replaceAll("/$", ""));
+    assertEquals(fsView.makeQualified(
+        new Path("/user/" + System.getProperty("user.name"))),
+        fsView.getWorkingDirectory());
+    assertEquals(fsView.makeQualified(
+        new Path("/user/" + System.getProperty("user.name"))),
+        fsView.getHomeDirectory());
     assertEquals(
         new Path("/foo/bar").makeQualified(schemeWithAuthority, null),
         fsView.makeQualified(new Path("/foo/bar")));
