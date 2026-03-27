@@ -396,7 +396,7 @@ public class ViewFileSystem extends FileSystem {
 
   @Override
   public URI getUri() {
-    return myUri;
+    return Path.ensureDirectoryUri(myUri);
   }
 
   @Override
@@ -420,12 +420,12 @@ public class ViewFileSystem extends FileSystem {
           this.makeQualified(new Path(base + ugi.getShortUserName())):
           this.makeQualified(new Path(base + "/" + ugi.getShortUserName())));
     }
-    return homeDir;
+    return homeDir.asDirectory();
   }
 
   @Override
   public Path getWorkingDirectory() {
-    return workingDir;
+    return workingDir == null ? null : workingDir.asDirectory();
   }
 
   @Override

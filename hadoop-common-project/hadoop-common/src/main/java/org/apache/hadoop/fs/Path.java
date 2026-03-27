@@ -37,6 +37,18 @@ import org.apache.hadoop.conf.Configuration;
 /**
  * Names a file or directory in a {@link FileSystem}.
  * Path strings use slash as the directory separator.
+ * <p>
+ * <b>Trailing slash and URI resolution:</b> {@link URI#resolve(String) URI.resolve()} treats
+ * a trailing slash as significant: it resolves a relative path against the last path segment
+ * when the URI has no trailing slash, and against the path as a directory when it has a
+ * trailing slash. The {@link #Path(URI)} constructor preserves the provided URI (after
+ * {@link URI#normalize()}), including any trailing slash, so {@code path.toUri().resolve("x")}
+ * behaves correctly when the Path was built from a URI. The {@link #Path(String)} constructor
+ * (and other constructors that use string path components) normalize the path and
+ * <em>remove trailing slashes</em> from non-root paths, so resolution via
+ * {@code new Path("hdfs://host/dir/").toUri().resolve("x")} yields {@code hdfs://host/x}
+ * rather than {@code hdfs://host/dir/x}. When resolution behavior matters, construct the Path
+ * from a URI or use path concatenation methods instead of relying on {@code toUri().resolve()}.
  */
 @Stringable
 @InterfaceAudience.Public
@@ -178,6 +190,9 @@ public class Path
   /**
    * Construct a path from a String.  Path strings are URIs, but with
    * unescaped elements and some additional normalization.
+   * Trailing slashes are removed from non-root paths during normalization.
+   * For URI resolution behavior that preserves a trailing slash, use
+   * {@link #Path(URI)} instead.
    *
    * @param pathString the path string
    */
@@ -223,7 +238,9 @@ public class Path
   }
 
   /**
-   * Construct a path from a URI
+   * Construct a path from a URI. The URI is preserved after {@link URI#normalize()},
+   * including any trailing slash. This allows {@code path.toUri().resolve(relative)}
+   * to resolve correctly when the path represents a directory (trailing slash present).
    *
    * @param aUri the source URI
    */
@@ -360,6 +377,50 @@ public class Path
    * @return this Path as a URI
    */
   public URI toUri() { return uri; }
+
+  /**
+   * Return a URI for this path that is suitable for use as a directory base
+   * with {@link URI#resolve(String)}. The returned URI's path component
+   * ends with "/", so that {@code dirUri.resolve("child")} yields
+   * {@code .../dir/child} rather than replacing the last segment.
+   *
+   * @param uri a filesystem or path URI
+   * @return a URI with path ending in "/" (or "/" when path is empty)
+   */
+  @InterfaceStability.Evolving
+  public static URI ensureDirectoryUri(URI uri) {
+    String path = uri.getPath();
+    if (path == null) {
+      path = "";
+    }
+    if (path.endsWith(SEPARATOR)) {
+      return uri;
+    }
+    if (path.isEmpty()) {
+      path = SEPARATOR;
+    } else {
+      path = path + SEPARATOR;
+    }
+    try {
+      return new URI(uri.getScheme(), uri.getUserInfo(), uri.getHost(),
+          uri.getPort(), path, uri.getQuery(), uri.getFragment());
+    } catch (URISyntaxException e) {
+      throw new IllegalArgumentException(e);
+    }
+  }
+
+  /**
+   * Return a Path equivalent to this path but whose URI has a trailing "/"
+   * on the path component. Use when this path denotes a directory and you
+   * need to resolve relative names via {@link URI#resolve(String)} (e.g.
+   * {@code getWorkingDirectory().asDirectory().toUri().resolve("mytempdir")}).
+   *
+   * @return a Path with the same location and a directory-style URI
+   */
+  @InterfaceStability.Evolving
+  public Path asDirectory() {
+    return new Path(ensureDirectoryUri(uri));
+  }
 
   /**
    * Return the FileSystem that owns this Path.

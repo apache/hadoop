@@ -364,9 +364,12 @@ public abstract class FileSystem extends Configured
   }
 
   /**
-   * Returns a URI which identifies this FileSystem.
+   * Returns a URI which identifies this FileSystem. The returned URI
+   * has a path ending with "/" so it can be used as a directory base
+   * with {@link java.net.URI#resolve(String)} (e.g.
+   * {@code fs.getUri().resolve("user/me")} resolves correctly).
    *
-   * @return the URI of this filesystem.
+   * @return the URI of this filesystem (directory form, with trailing slash)
    */
   public abstract URI getUri();
 
@@ -2440,7 +2443,9 @@ public abstract class FileSystem extends Configured
 
   /** Return the current user's home directory in this FileSystem.
    * The default implementation returns {@code "/user/$USER/"}.
-   * @return the path.
+   * The returned Path's URI has a trailing "/" so
+   * {@code getHomeDirectory().toUri().resolve("rel")} resolves correctly.
+   * @return the path (directory form, with trailing slash in URI).
    */
   public Path getHomeDirectory() {
     String username;
@@ -2452,7 +2457,7 @@ public abstract class FileSystem extends Configured
       username = System.getProperty("user.name");
     }
     return this.makeQualified(
-        new Path(USER_HOME_PREFIX + "/" + username));
+        new Path(USER_HOME_PREFIX + "/" + username)).asDirectory();
   }
 
 
@@ -2465,8 +2470,10 @@ public abstract class FileSystem extends Configured
   public abstract void setWorkingDirectory(Path new_dir);
 
   /**
-   * Get the current working directory for the given FileSystem
-   * @return the directory pathname
+   * Get the current working directory for the given FileSystem. The returned
+   * Path's URI has a trailing "/" so
+   * {@code getWorkingDirectory().toUri().resolve("rel")} resolves correctly.
+   * @return the directory pathname (directory form, with trailing slash in URI)
    */
   public abstract Path getWorkingDirectory();
 

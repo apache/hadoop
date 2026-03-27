@@ -560,4 +560,52 @@ public class TestPath {
     assertNull(root.getParent());
     assertEquals(new Path("/bar"), root.suffix("bar"));
   }
+
+  /**
+   * HADOOP-19815: Path(String) strips trailing slash; Path(URI) preserves it.
+   * So URI.resolve() behavior differs: String-constructed dir path resolves
+   * "x" to host/x; URI-constructed dir path resolves "x" to host/dir/x.
+   */
+  @Test
+  @Timeout(value = 30)
+  public void testTrailingSlashAndUriResolve() throws URISyntaxException {
+    // Path from String: trailing slash is normalized away
+    Path fromString = new Path("hdfs://host/dir/");
+    assertEquals("hdfs://host/dir", fromString.toUri().toString());
+    assertEquals(URI.create("hdfs://host/x"),
+        fromString.toUri().resolve("x"));
+
+    // Path from URI: trailing slash is preserved
+    Path fromUri = new Path(new URI("hdfs://host/dir/"));
+    assertEquals("hdfs://host/dir/", fromUri.toUri().toString());
+    assertEquals(URI.create("hdfs://host/dir/x"),
+        fromUri.toUri().resolve("x"));
+  }
+
+  @Test
+  @Timeout(value = 30)
+  public void testEnsureDirectoryUri() throws URISyntaxException {
+    // Root path: empty or "/" becomes "/"
+    assertEquals("/", Path.ensureDirectoryUri(URI.create("file:///")).getPath());
+    assertEquals("/", Path.ensureDirectoryUri(URI.create("hdfs://host:8020")).getPath());
+    assertEquals("/", Path.ensureDirectoryUri(URI.create("hdfs://host:8020/")).getPath());
+    // Non-root: add trailing slash
+    URI withSlash = Path.ensureDirectoryUri(URI.create("hdfs://host:8020/user/me"));
+    assertTrue(withSlash.getPath().endsWith("/"));
+    assertEquals("/user/me/", withSlash.getPath());
+    // Already has trailing slash: unchanged
+    URI same = Path.ensureDirectoryUri(URI.create("hdfs://host:8020/user/me/"));
+    assertEquals("/user/me/", same.getPath());
+  }
+
+  @Test
+  @Timeout(value = 30)
+  public void testAsDirectoryAndResolve() throws URISyntaxException {
+    Path dir = new Path("/user/me").asDirectory();
+    assertTrue(dir.toUri().getPath().endsWith("/"));
+    // URI.resolve("mytempdir") should yield .../me/mytempdir not .../mytempdir
+    URI resolved = dir.toUri().resolve("mytempdir");
+    assertTrue(resolved.getPath().endsWith("me/mytempdir"));
+    assertEquals("/user/me/mytempdir", resolved.getPath());
+  }
 }

@@ -180,7 +180,8 @@ public class DistributedFileSystem extends FileSystem
   }
 
   @Override
-  public URI getUri() { return uri; }
+  @Override
+  public URI getUri() { return Path.ensureDirectoryUri(uri); }
 
   @Override
   public void initialize(URI uri, Configuration conf) throws IOException {
@@ -211,8 +212,9 @@ public class DistributedFileSystem extends FileSystem
   }
 
   @Override
+  @Override
   public Path getWorkingDirectory() {
-    return workingDir;
+    return workingDir.asDirectory();
   }
 
   @Override
@@ -236,9 +238,10 @@ public class DistributedFileSystem extends FileSystem
   }
 
   @Override
+  @Override
   public Path getHomeDirectory() {
     return makeQualified(
-        new Path(DFSUtilClient.getHomeDirectory(getConf(), dfs.ugi)));
+        new Path(DFSUtilClient.getHomeDirectory(getConf(), dfs.ugi))).asDirectory();
   }
 
   /**
