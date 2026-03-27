@@ -148,7 +148,7 @@ public class TestDFSStripedInputStreamReadFailures {
       }));
     }
     threads.forEach(t -> t.start());
-    completed.countDown();
+    completed.await();
     threads.forEach(t -> {
       try {
         t.join();
