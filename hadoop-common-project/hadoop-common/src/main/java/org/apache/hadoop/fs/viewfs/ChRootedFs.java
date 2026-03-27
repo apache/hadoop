@@ -123,7 +123,7 @@ class ChRootedFs extends AbstractFileSystem {
   
   @Override
   public URI getUri() {
-    return myUri;
+    return Path.ensureDirectoryUri(myUri);
   }
 
   
