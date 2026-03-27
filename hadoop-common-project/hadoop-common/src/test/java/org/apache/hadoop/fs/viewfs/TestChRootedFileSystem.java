@@ -80,21 +80,19 @@ public class TestChRootedFileSystem {
   @Test
   public void testURI() {
     URI uri = fSys.getUri();
-    // getUri() returns directory form (trailing slash) for URI.resolve() compatibility
-    assertEquals(Path.ensureDirectoryUri(chrootedTo.toUri()), uri);
+    assertEquals(chrootedTo.toUri(), uri);
   }
   
   @Test
   public void testBasicPaths() {
     URI uri = fSys.getUri();
-    assertEquals(Path.ensureDirectoryUri(chrootedTo.toUri()), uri);
-    // getWorkingDirectory/getHomeDirectory return directory form (trailing slash in URI)
-    Path expectedHome = fSys.makeQualified(
-        new Path(System.getProperty("user.home")));
-    assertEquals(expectedHome.toUri().getPath(),
-        fSys.getWorkingDirectory().toUri().getPath().replaceAll("/$", ""));
-    assertEquals(expectedHome.toUri().getPath(),
-        fSys.getHomeDirectory().toUri().getPath().replaceAll("/$", ""));
+    assertEquals(chrootedTo.toUri(), uri);
+    assertEquals(fSys.makeQualified(
+        new Path(System.getProperty("user.home"))),
+        fSys.getWorkingDirectory());
+    assertEquals(fSys.makeQualified(
+        new Path(System.getProperty("user.home"))),
+        fSys.getHomeDirectory());
     /*
      * ChRootedFs as its uri like file:///chrootRoot.
      * This is questionable since path.makequalified(uri, path) ignores
@@ -255,11 +253,6 @@ public class TestChRootedFileSystem {
     assertTrue(fs.isDirectory());
   }
   
-  private static String pathWithoutTrailingSlash(Path p) {
-    String path = p.toUri().getPath();
-    return path.endsWith("/") && path.length() > 1 ? path.substring(0, path.length() - 1) : path;
-  }
-
   @Test
   public void testWorkingDirectory() throws Exception {
 
@@ -267,31 +260,31 @@ public class TestChRootedFileSystem {
     fSys.mkdirs(new Path("/testWd"));
     Path workDir = new Path("/testWd");
     fSys.setWorkingDirectory(workDir);
-    assertEquals(pathWithoutTrailingSlash(workDir), pathWithoutTrailingSlash(fSys.getWorkingDirectory()));
+    assertEquals(workDir, fSys.getWorkingDirectory());
 
     fSys.setWorkingDirectory(new Path("."));
-    assertEquals(pathWithoutTrailingSlash(workDir), pathWithoutTrailingSlash(fSys.getWorkingDirectory()));
+    assertEquals(workDir, fSys.getWorkingDirectory());
 
     fSys.setWorkingDirectory(new Path(".."));
-    assertEquals(pathWithoutTrailingSlash(workDir.getParent()), pathWithoutTrailingSlash(fSys.getWorkingDirectory()));
+    assertEquals(workDir.getParent(), fSys.getWorkingDirectory());
     
     // cd using a relative path
 
     // Go back to our test root
     workDir = new Path("/testWd");
     fSys.setWorkingDirectory(workDir);
-    assertEquals(pathWithoutTrailingSlash(workDir), pathWithoutTrailingSlash(fSys.getWorkingDirectory()));
+    assertEquals(workDir, fSys.getWorkingDirectory());
     
     Path relativeDir = new Path("existingDir1");
     Path absoluteDir = new Path(workDir,"existingDir1");
     fSys.mkdirs(absoluteDir);
     fSys.setWorkingDirectory(relativeDir);
-    assertEquals(pathWithoutTrailingSlash(absoluteDir), pathWithoutTrailingSlash(fSys.getWorkingDirectory()));
+    assertEquals(absoluteDir, fSys.getWorkingDirectory());
     // cd using a absolute path
     absoluteDir = new Path("/test/existingDir2");
     fSys.mkdirs(absoluteDir);
     fSys.setWorkingDirectory(absoluteDir);
-    assertEquals(pathWithoutTrailingSlash(absoluteDir), pathWithoutTrailingSlash(fSys.getWorkingDirectory()));
+    assertEquals(absoluteDir, fSys.getWorkingDirectory());
     
     // Now open a file relative to the wd we just set above.
     Path absoluteFooPath = new Path(absoluteDir, "foo");
@@ -318,7 +311,7 @@ public class TestChRootedFileSystem {
     absoluteDir = new Path(LOCAL_FS_ROOT_URI + "/existingDir");
     fSys.mkdirs(absoluteDir);
     fSys.setWorkingDirectory(absoluteDir);
-    assertEquals(pathWithoutTrailingSlash(absoluteDir), pathWithoutTrailingSlash(fSys.getWorkingDirectory()));
+    assertEquals(absoluteDir, fSys.getWorkingDirectory());
 
   }
   

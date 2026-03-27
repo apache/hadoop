@@ -141,7 +141,7 @@ class ChRootedFileSystem extends FilterFileSystem {
 
   @Override
   public URI getUri() {
-    return Path.ensureDirectoryUri(myUri);
+    return myUri;
   }
   
   /**
@@ -182,7 +182,7 @@ class ChRootedFileSystem extends FilterFileSystem {
 
   @Override
   public Path getWorkingDirectory() {
-    return workingDir.asDirectory();
+    return workingDir;
   }
   
   @Override

@@ -229,13 +229,14 @@ abstract public class ViewFileSystemBaseTest {
 
   @Test
   public void testBasicPaths() {
-    assertEquals(fsView.getUri(), Path.ensureDirectoryUri(FsConstants.VIEWFS_URI));
-    Path expectedWd = fsView.makeQualified(
-        new Path("/user/" + System.getProperty("user.name")));
-    assertEquals(expectedWd.toUri().getPath(),
-        fsView.getWorkingDirectory().toUri().getPath().replaceAll("/$", ""));
-    assertEquals(expectedWd.toUri().getPath(),
-        fsView.getHomeDirectory().toUri().getPath().replaceAll("/$", ""));
+    assertEquals(fsView.getUri(), FsConstants.VIEWFS_URI);
+    assertEquals(fsView.getWorkingDirectory(),
+        fsView.makeQualified(
+            new Path("/user/" + System.getProperty("user.name"))));
+    assertEquals(
+        fsView.getHomeDirectory(),
+        fsView.makeQualified(
+        new Path("/user/" + System.getProperty("user.name"))));
     assertEquals(
         fsView.makeQualified(new Path("/foo/bar")),
         new Path("/foo/bar").makeQualified(FsConstants.VIEWFS_URI, null));
