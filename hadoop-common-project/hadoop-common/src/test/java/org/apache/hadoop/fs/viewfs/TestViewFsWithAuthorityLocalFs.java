@@ -63,13 +63,14 @@ public class TestViewFsWithAuthorityLocalFs extends ViewFsBaseTest {
   @Override
   @Test
   public void testBasicPaths() {
-    assertEquals(schemeWithAuthority, fcView.getDefaultFileSystem().getUri());
-    assertEquals(fcView.makeQualified(
-        new Path("/user/" + System.getProperty("user.name"))),
-        fcView.getWorkingDirectory());
-    assertEquals(fcView.makeQualified(
-        new Path("/user/" + System.getProperty("user.name"))),
-        fcView.getHomeDirectory());
+    assertEquals(Path.ensureDirectoryUri(schemeWithAuthority),
+        fcView.getDefaultFileSystem().getUri());
+    Path expectedWd = fcView.makeQualified(
+        new Path("/user/" + System.getProperty("user.name")));
+    assertEquals(expectedWd.toUri().getPath(),
+        fcView.getWorkingDirectory().toUri().getPath().replaceAll("/$", ""));
+    assertEquals(expectedWd.toUri().getPath(),
+        fcView.getHomeDirectory().toUri().getPath().replaceAll("/$", ""));
     assertEquals(
         new Path("/foo/bar").makeQualified(schemeWithAuthority, null),
         fcView.makeQualified(new Path("/foo/bar")));

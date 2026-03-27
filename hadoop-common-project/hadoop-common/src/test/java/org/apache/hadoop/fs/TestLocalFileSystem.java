@@ -219,7 +219,7 @@ public class TestLocalFileSystem {
     Path home = fileSys.makeQualified(
         new Path(System.getProperty("user.home")));
     Path fsHome = fileSys.getHomeDirectory();
-    assertEquals(home, fsHome);
+    assertEquals(home.asDirectory(), fsHome);
   }
 
   @Test
@@ -1003,5 +1003,33 @@ public class TestLocalFileSystem {
                 .recursive()
                 .build()),
         true);
+  }
+
+  /**
+   * Test that FileSystem returns directory-form URIs (trailing slash) so
+   * URI.resolve() works correctly (HADOOP-19815).
+   */
+  @Test
+  public void testFileSystemDirectoryUriForResolve() throws IOException {
+    // getUri() should have path ending with / for resolve
+    URI fsUri = fileSys.getUri();
+    assertTrue(fsUri.getPath().endsWith("/"),
+        "getUri() path should end with /: " + fsUri.getPath());
+
+    // getWorkingDirectory().toUri() with trailing slash: resolve("mytempdir") -> .../cwd/mytempdir
+    Path wd = fileSys.getWorkingDirectory();
+    assertTrue(wd.toUri().getPath().endsWith("/"),
+        "getWorkingDirectory() URI path should end with /");
+    URI resolved = wd.toUri().resolve("mytempdir");
+    assertTrue(resolved.getPath().endsWith("/mytempdir"),
+        "resolve(mytempdir) should yield .../cwd/mytempdir: " + resolved.getPath());
+
+    // getHomeDirectory() same
+    Path home = fileSys.getHomeDirectory();
+    assertTrue(home.toUri().getPath().endsWith("/"),
+        "getHomeDirectory() URI path should end with /");
+    URI homeResolved = home.toUri().resolve("mytempdir");
+    assertTrue(homeResolved.getPath().contains("mytempdir"),
+        "home resolve(mytempdir) should yield .../user/me/mytempdir: " + homeResolved.getPath());
   }
 }
