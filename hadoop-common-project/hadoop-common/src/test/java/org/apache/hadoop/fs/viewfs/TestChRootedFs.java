@@ -77,13 +77,13 @@ public class TestChRootedFs {
   @Test
   public void testBasicPaths() {
     URI uri = fc.getDefaultFileSystem().getUri();
-    assertEquals(Path.ensureDirectoryUri(chrootedTo.toUri()), uri);
-    Path expectedHome = fc.makeQualified(
-        new Path(System.getProperty("user.home")));
-    assertEquals(expectedHome.toUri().getPath(),
-        fc.getWorkingDirectory().toUri().getPath().replaceAll("/$", ""));
-    assertEquals(expectedHome.toUri().getPath(),
-        fc.getHomeDirectory().toUri().getPath().replaceAll("/$", ""));
+    assertEquals(chrootedTo.toUri(), uri);
+    assertEquals(fc.makeQualified(
+        new Path(System.getProperty("user.home"))),
+        fc.getWorkingDirectory());
+    assertEquals(fc.makeQualified(
+        new Path(System.getProperty("user.home"))),
+        fc.getHomeDirectory());
     /*
      * ChRootedFs as its uri like file:///chrootRoot.
      * This is questionable since path.makequalified(uri, path) ignores

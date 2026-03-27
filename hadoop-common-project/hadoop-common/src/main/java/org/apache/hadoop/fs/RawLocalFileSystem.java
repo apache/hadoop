@@ -131,7 +131,7 @@ public class RawLocalFileSystem extends FileSystem {
   }
 
   @Override
-  public URI getUri() { return Path.ensureDirectoryUri(NAME); }
+  public URI getUri() { return NAME; }
   
   @Override
   public void initialize(URI uri, Configuration conf) throws IOException {
@@ -923,7 +923,7 @@ public class RawLocalFileSystem extends FileSystem {
   
   @Override
   public Path getHomeDirectory() {
-    return this.makeQualified(new Path(System.getProperty("user.home"))).asDirectory();
+    return this.makeQualified(new Path(System.getProperty("user.home")));
   }
 
   /**
@@ -937,7 +937,7 @@ public class RawLocalFileSystem extends FileSystem {
   
   @Override
   public Path getWorkingDirectory() {
-    return workingDir == null ? null : workingDir.asDirectory();
+    return workingDir;
   }
   
   @Override

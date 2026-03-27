@@ -582,30 +582,4 @@ public class TestPath {
         fromUri.toUri().resolve("x"));
   }
 
-  @Test
-  @Timeout(value = 30)
-  public void testEnsureDirectoryUri() throws URISyntaxException {
-    // Root path: empty or "/" becomes "/"
-    assertEquals("/", Path.ensureDirectoryUri(URI.create("file:///")).getPath());
-    assertEquals("/", Path.ensureDirectoryUri(URI.create("hdfs://host:8020")).getPath());
-    assertEquals("/", Path.ensureDirectoryUri(URI.create("hdfs://host:8020/")).getPath());
-    // Non-root: add trailing slash
-    URI withSlash = Path.ensureDirectoryUri(URI.create("hdfs://host:8020/user/me"));
-    assertTrue(withSlash.getPath().endsWith("/"));
-    assertEquals("/user/me/", withSlash.getPath());
-    // Already has trailing slash: unchanged
-    URI same = Path.ensureDirectoryUri(URI.create("hdfs://host:8020/user/me/"));
-    assertEquals("/user/me/", same.getPath());
-  }
-
-  @Test
-  @Timeout(value = 30)
-  public void testAsDirectoryAndResolve() throws URISyntaxException {
-    Path dir = new Path("/user/me").asDirectory();
-    assertTrue(dir.toUri().getPath().endsWith("/"));
-    // URI.resolve("mytempdir") should yield .../me/mytempdir not .../mytempdir
-    URI resolved = dir.toUri().resolve("mytempdir");
-    assertTrue(resolved.getPath().endsWith("me/mytempdir"));
-    assertEquals("/user/me/mytempdir", resolved.getPath());
-  }
 }

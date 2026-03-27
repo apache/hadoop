@@ -379,50 +379,6 @@ public class Path
   public URI toUri() { return uri; }
 
   /**
-   * Return a URI for this path that is suitable for use as a directory base
-   * with {@link URI#resolve(String)}. The returned URI's path component
-   * ends with "/", so that {@code dirUri.resolve("child")} yields
-   * {@code .../dir/child} rather than replacing the last segment.
-   *
-   * @param uri a filesystem or path URI
-   * @return a URI with path ending in "/" (or "/" when path is empty)
-   */
-  @InterfaceStability.Evolving
-  public static URI ensureDirectoryUri(URI uri) {
-    String path = uri.getPath();
-    if (path == null) {
-      path = "";
-    }
-    if (path.endsWith(SEPARATOR)) {
-      return uri;
-    }
-    if (path.isEmpty()) {
-      path = SEPARATOR;
-    } else {
-      path = path + SEPARATOR;
-    }
-    try {
-      return new URI(uri.getScheme(), uri.getUserInfo(), uri.getHost(),
-          uri.getPort(), path, uri.getQuery(), uri.getFragment());
-    } catch (URISyntaxException e) {
-      throw new IllegalArgumentException(e);
-    }
-  }
-
-  /**
-   * Return a Path equivalent to this path but whose URI has a trailing "/"
-   * on the path component. Use when this path denotes a directory and you
-   * need to resolve relative names via {@link URI#resolve(String)} (e.g.
-   * {@code getWorkingDirectory().asDirectory().toUri().resolve("mytempdir")}).
-   *
-   * @return a Path with the same location and a directory-style URI
-   */
-  @InterfaceStability.Evolving
-  public Path asDirectory() {
-    return new Path(ensureDirectoryUri(uri));
-  }
-
-  /**
    * Return the FileSystem that owns this Path.
    *
    * @param conf the configuration to use when resolving the FileSystem
