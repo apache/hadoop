@@ -55,8 +55,7 @@ public class DiagnosticJStackService {
   }
 
   public String collectNodeThreadDump(int numberOfJStack, HttpServletRequest req)
-    throws IOException
-  {
+      throws IOException {
     checkShellNotWindows();
 
     long nodeManagerPid = ProcessHandle.current().pid();
@@ -78,8 +77,7 @@ public class DiagnosticJStackService {
   }
 
   public String collectApplicationThreadDump(String appId, int numberOfJStack, HttpServletRequest req)
-    throws IOException
-  {
+      throws IOException {
     checkShellNotWindows();
 
     ApplicationId applicationId = ApplicationId.fromString(appId);
@@ -100,7 +98,7 @@ public class DiagnosticJStackService {
     UserGroupInformation callerUGI = getUserGroupInformation(req);
 
     boolean isAuthorized = context.getApplicationACLsManager().checkAccess(
-      callerUGI, ApplicationAccessType.VIEW_APP, app.getUser(), app.getAppId()
+        callerUGI, ApplicationAccessType.VIEW_APP, app.getUser(), app.getAppId()
     );
 
     if(!isAuthorized){
@@ -124,17 +122,18 @@ public class DiagnosticJStackService {
       long parentPid = Long.parseLong(pidForContainerIdStr);
 
       List<Long> javaContainerPids = ProcessHandle.of(parentPid).stream()
-        .flatMap(ProcessHandle::descendants)
-        .filter(childProcess -> {
-          String cmdLine = childProcess.info().commandLine().orElse("").trim();
-          // Command Line: /usr/lib/jvm/jdk1.17.0.11.0-openjdk-cloudera/bin/java
-          // -Djava.net.preferIPv4Stack=true
-          if (cmdLine.isEmpty()){
-            return false;
-          }
+          .flatMap(ProcessHandle::descendants)
+          .filter(childProcess -> {
+            String cmdLine = childProcess.info().commandLine().orElse("").trim();
+            // Command Line: /usr/lib/jvm/jdk1.17.0.11.0-openjdk-cloudera/bin/java
+            // -Djava.net.preferIPv4Stack=true
+            if (cmdLine.isEmpty()){
+              return false;
+            }
 
-          String executable = cmdLine.split("\\s+")[0]; // The first token is always the executable binary
-          return executable.equals("java") || executable.endsWith("/java");
+            String executable = cmdLine.split("\\s+")[0];
+            // The first token is always the executable binary
+            return executable.equals("java") || executable.endsWith("/java");
         })
         .map(ProcessHandle::pid)
         .toList();
@@ -151,17 +150,18 @@ public class DiagnosticJStackService {
   private String runJStack(Map<ContainerId, List<Long>> containerPids, int numJStacks){
     StringBuilder result = new StringBuilder();
 
-    for(ContainerId containerPid : containerPids.keySet()){
-      List<Long> javaContainerPids = containerPids.get(containerPid);
+    for(Map.Entry<ContainerId, List<Long>> entry : containerPids.entrySet()){
+      ContainerId containerId = entry.getKey();
+      List<Long> javaContainerPids = entry.getValue();
 
       if (javaContainerPids.isEmpty()){
-       result.append(String.format("=== Thread Dumps for ContainerId: %s%n is skipped " +
-         "because no Java Process ID exist ===", containerPid.toString()));
+        result.append(String.format("=== Thread Dumps for ContainerId: %s%n is skipped " +
+           "because no Java Process ID exist ===", containerId.toString()));
       } else {
         for (Long pid : javaContainerPids) {
           result.append(String.format(
-            "=== Thread Dumps for ContainerId: %s, PID: %d ===%n%s%n",
-            containerPid.toString(), pid, runJStack(pid, numJStacks)));
+              "=== Thread Dumps for ContainerId: %s, PID: %d ===%n%s%n",
+              containerId.toString(), pid, runJStack(pid, numJStacks)));
         }
       }
 
@@ -183,10 +183,10 @@ public class DiagnosticJStackService {
 
     String runningUser = processHandle.info().user().orElse(NM_USER);
     String containerExecutorPath =
-      PrivilegedOperationExecutor.getContainerExecutorExecutablePath(conf);
+        PrivilegedOperationExecutor.getContainerExecutorExecutablePath(conf);
 
     String[] jstackCommand = {
-      containerExecutorPath, "--run-jstack", runningUser, String.valueOf(pid), JSTACK_PATH
+        containerExecutorPath, "--run-jstack", runningUser, String.valueOf(pid), JSTACK_PATH
     };
 
     LOG.info("Running JStack command: {}", Arrays.toString(jstackCommand));
@@ -195,16 +195,16 @@ public class DiagnosticJStackService {
 
     for (int i = 0; i < numJStacks; i++) {
       Shell.ShellCommandExecutor cmd =
-        new Shell.ShellCommandExecutor(jstackCommand, null, null, 60_000);
+          new Shell.ShellCommandExecutor(jstackCommand, null, null, 60_000);
 
       try {
         cmd.execute();
         result.append(String.format(
-          "--- JStack iteration %d for PID: %d ---%n%s%n", i, pid, cmd.getOutput()));
+            "--- JStack iteration %d for PID: %d ---%n%s%n", i, pid, cmd.getOutput()));
       } catch (IOException e) {
         result.append(String.format(
-          "Failed to run jstack on PID: " + pid + " at iteration: " + i +
-          " (Process likely exited before/during running jstack): " + e.getMessage()));
+            "Failed to run jstack on PID: " + pid + " at iteration: " + i +
+            " (Process likely exited before/during running jstack): " + e.getMessage()));
         break;
       }
     }

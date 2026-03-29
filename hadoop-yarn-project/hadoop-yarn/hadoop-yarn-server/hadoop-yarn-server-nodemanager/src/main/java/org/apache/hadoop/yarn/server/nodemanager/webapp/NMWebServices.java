@@ -39,7 +39,6 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin
 import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.AuxiliaryServicesInfo;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.NMResourceInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerLogsInfoes;
-import org.apache.hadoop.yarn.webapp.WebAppException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -642,8 +641,7 @@ public class NMWebServices {
   @Path("/jstack/{numberOfJStack}")
   @Produces({ MediaType.TEXT_PLAIN})
   public Response getNodeThreadDump(@javax.ws.rs.core.Context HttpServletRequest req,
-    @PathParam("numberOfJStack") int numberOfJStack)
-  {
+      @PathParam("numberOfJStack") int numberOfJStack) {
     if (!isJStackEndpointsEnable) {
       return Response.status(Status.METHOD_NOT_ALLOWED)
               .build();
@@ -672,8 +670,7 @@ public class NMWebServices {
   @Produces({MediaType.TEXT_PLAIN})
   public Response getApplicationJStack(@javax.ws.rs.core.Context HttpServletRequest req,
       @PathParam("appid") String appId,
-      @PathParam("numberOfJStack") int numberOfJStack)
-  {
+      @PathParam("numberOfJStack") int numberOfJStack) {
     if (!isJStackEndpointsEnable) {
       return Response.status(Status.METHOD_NOT_ALLOWED)
               .build();
@@ -681,7 +678,8 @@ public class NMWebServices {
 
     try {
       return Response.status(Status.OK)
-              .entity(diagnosticJStackService.collectApplicationThreadDump(appId, numberOfJStack, req))
+              .entity(diagnosticJStackService
+                      .collectApplicationThreadDump(appId, numberOfJStack, req))
               .build();
     } catch (IllegalArgumentException e){
       return Response.status(Status.BAD_REQUEST)
