@@ -141,6 +141,7 @@ public class BosClientProxyImpl implements BosClientProxy {
     // support ConsistencyView
     config.setConsistencyView(
         BosClientConfiguration.STRONG_CONSISTENCY_VIEW);
+    config.setEnableHttpAsyncPut(false);
 
     String endPoint = conf.get(
         "fs.bos.bucket." + uri.getHost() + ".endpoint",

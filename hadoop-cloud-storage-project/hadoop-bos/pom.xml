@@ -100,6 +100,18 @@
           <groupId>org.bouncycastle</groupId>
           <artifactId>bcprov-jdk15on</artifactId>
         </exclusion>
+        <exclusion>
+          <groupId>org.apache.httpcomponents</groupId>
+          <artifactId>httpasyncclient</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.apache.httpcomponents</groupId>
+          <artifactId>httpcore-nio</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>javax.validation</groupId>
+          <artifactId>validation-api</artifactId>
+        </exclusion>
       </exclusions>
     </dependency>
 
@@ -345,7 +357,8 @@
                       <include>org.json:json</include>
                       <include>joda-time:joda-time</include>
                       <include>com.baidubce:bce-java-sdk</include>
-                      <include>org.apache.httpcomponents:*</include>
+                      <include>org.apache.httpcomponents:httpclient</include>
+                      <include>org.apache.httpcomponents:httpcore</include>
                       <include>com.google.guava:guava</include>
                       <include>com.google.guava:failureaccess</include>
                       <include>commons-codec:commons-codec</include>
