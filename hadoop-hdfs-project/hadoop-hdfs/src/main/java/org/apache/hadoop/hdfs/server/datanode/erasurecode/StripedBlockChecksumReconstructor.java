@@ -52,7 +52,13 @@ public abstract class StripedBlockChecksumReconstructor
     assert targetIndices != null;
     this.checksumWriter = checksumWriter;
     this.requestedLen = requestedBlockLength;
-    init();
+    try {
+      init();
+    } catch (IOException e) {
+      getStripedReader().close();
+      cleanup();
+      throw e;
+    }
   }
 
   private void init() throws IOException {
