@@ -165,7 +165,6 @@
           <perCoreThreadCount>true</perCoreThreadCount>
           <rerunFailingTestsCount>2</rerunFailingTestsCount>
           <forkCount>8</forkCount>
-          <argLine>-Xmx2048m</argLine>
         </configuration>
       </plugin>
 
