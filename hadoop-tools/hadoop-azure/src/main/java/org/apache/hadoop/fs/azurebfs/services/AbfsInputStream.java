@@ -818,7 +818,10 @@ public abstract class AbfsInputStream extends FSInputStream implements CanUnbuff
 
   @Override
   public boolean hasCapability(String capability) {
-    return StreamCapabilities.UNBUFFER.equals(toLowerCase(capability));
+    return switch (toLowerCase(capability)) {
+      case StreamCapabilities.UNBUFFER, StreamCapabilities.VECTOREDIO -> true;
+      default -> false;
+    };
   }
 
   /**

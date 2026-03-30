@@ -24,6 +24,8 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.IntFunction;
 
 import org.slf4j.Logger;
@@ -59,6 +61,20 @@ class VectoredReadHandler {
   private final VectoredReadStrategy strategy;
 
   /**
+   * Shared reconstruction buffers for ranges that span multiple chunks.
+   * Keyed by the original FileRange instance.
+   */
+  private final ConcurrentHashMap<RangeKey, ByteBuffer> partialBuffers =
+      new ConcurrentHashMap<>();
+
+  /**
+   * Tracks remaining bytes to be received for each logical range.
+   * Keyed by the original FileRange instance.
+   */
+  private final ConcurrentHashMap<RangeKey, AtomicInteger> pendingBytes =
+      new ConcurrentHashMap<>();
+
+  /**
    * Creates a VectoredReadHandler using the provided ReadBufferManager.
    * The vectored read strategy is obtained from the manager to ensure
    * consistent configuration across the read pipeline.
@@ -91,8 +107,8 @@ class VectoredReadHandler {
       AbfsInputStream stream,
       List<? extends FileRange> ranges,
       IntFunction<ByteBuffer> allocator) {
-    LOG.debug("readVectored invoked: stream={}, ranges={}",
-        stream, ranges.size());
+    LOG.debug("readVectored invoked: path={}, rangeCount={}",
+        stream.getPath(), ranges.size());
 
     /* Initialize a future for each logical file range */
     for (FileRange r : ranges) {
@@ -105,38 +121,38 @@ class VectoredReadHandler {
             ? readBufferManager.getMaxSeekForVectoredReads()
             : readBufferManager.getMaxSeekForVectoredReadsThroughput();
 
-    LOG.debug("Using maxSpan={} for strategy={}", maxSpan, strategy);
+    LOG.debug("readVectored: path={}, strategy={}, maxSpan={}",
+        stream.getPath(), strategy, maxSpan);
 
     /* Merge logical ranges using a span-first coalescing strategy */
-    List<CombinedFileRange> merged =
-        mergeBySpanAndGap(ranges, maxSpan);
+    List<CombinedFileRange> merged = mergeBySpanAndGap(ranges, maxSpan);
 
-    LOG.debug("Merged logical ranges into {} combined ranges", merged.size());
+    LOG.debug("readVectored: path={}, mergedRangeCount={}",
+        stream.getPath(), merged.size());
 
     /* Read buffer size acts as a hard upper bound for physical reads */
     int readBufferSize = ReadBufferManager.getReadAheadBlockSize();
 
     /* Split merged ranges into buffer-sized chunks and queue each for read */
     for (CombinedFileRange unit : merged) {
-      List<CombinedFileRange> chunks =
-          splitByBufferSize(unit, readBufferSize);
+      List<CombinedFileRange> chunks = splitByBufferSize(unit, readBufferSize);
 
-      LOG.debug("Combined range offset={}, length={} split into {} chunks",
-          unit.getOffset(), unit.getLength(), chunks.size());
+      LOG.debug("readVectored: path={}, mergedOffset={}, mergedLength={}, chunkCount={}",
+          stream.getPath(), unit.getOffset(), unit.getLength(), chunks.size());
 
       for (CombinedFileRange chunk : chunks) {
         try {
           boolean queued = queueVectoredRead(stream, chunk, allocator);
           if (!queued) {
-            LOG.debug("Queue failed; falling back to directRead for offset={}, length={}",
-                chunk.getOffset(), chunk.getLength());
-            /* Fall back to direct read if no buffer is available */
+            LOG.debug("readVectored: buffer pool exhausted, falling back to directRead:"
+                    + " path={}, offset={}, length={}",
+                stream.getPath(), chunk.getOffset(), chunk.getLength());
             directRead(stream, chunk, allocator);
           }
         } catch (Exception e) {
-          LOG.debug("Exception during vectored read chunk offset={}, length={}",
-              chunk.getOffset(), chunk.getLength(), e);
-          /* Propagate failure to all logical ranges in this unit */
+          LOG.warn("readVectored: chunk read failed, failing underlying ranges:"
+                  + " path={}, offset={}, length={}",
+              stream.getPath(), chunk.getOffset(), chunk.getLength(), e);
           failUnit(chunk, e);
         }
       }
@@ -145,12 +161,14 @@ class VectoredReadHandler {
 
   /**
    * Queues a vectored read request with the buffer manager.
+   *
    * @return true if successfully queued, false if the queue is full and fallback is required.
    */
   @VisibleForTesting
-  boolean queueVectoredRead(AbfsInputStream stream, CombinedFileRange unit, IntFunction<ByteBuffer> allocator) {
-    LOG.debug("queueVectoredRead offset={}, length={}",
-        unit.getOffset(), unit.getLength());
+  boolean queueVectoredRead(AbfsInputStream stream, CombinedFileRange unit,
+      IntFunction<ByteBuffer> allocator) {
+    LOG.debug("queueVectoredRead: path={}, offset={}, length={}",
+        stream.getPath(), unit.getOffset(), unit.getLength());
     TracingContext tracingContext = stream.getTracingContext();
     tracingContext.setReadType(ReadType.VECTORED_READ);
     return getReadBufferManager().queueVectoredRead(stream, unit, tracingContext, allocator);
@@ -158,6 +176,7 @@ class VectoredReadHandler {
 
   /**
    * Accesses the shared manager responsible for coordinating asynchronous read buffers.
+   *
    * @return the {@link ReadBufferManager} instance.
    */
   public ReadBufferManager getReadBufferManager() {
@@ -165,59 +184,52 @@ class VectoredReadHandler {
   }
 
   /**
-   * Split a merged logical range into buffer-sized physical read units.
+   * Splits a merged logical {@link CombinedFileRange} into smaller
+   * buffer-sized physical read units.
    *
-   * <p>The input {@link CombinedFileRange} may span more bytes than the
-   * configured read buffer size. This method divides it into multiple
-   * {@link CombinedFileRange} instances, each limited to {@code bufferSize}
-   * and containing only the logical {@link FileRange}s that intersect its span.</p>
+   * <p>Each resulting unit will have a maximum size equal to the provided
+   * {@code bufferSize}. Any handling of multi-chunk ranges or reassembly
+   * of underlying {@link FileRange} data is delegated to the fan-out logic.</p>
    *
-   * @param unit       merged logical range to be split
-   * @param bufferSize maximum size (in bytes) of each physical read unit
+   * @param unit       the combined logical range to be split
+   * @param bufferSize the maximum size (in bytes) of each physical read unit
    * @return a list of buffer-sized {@link CombinedFileRange} instances
    */
   private List<CombinedFileRange> splitByBufferSize(
       CombinedFileRange unit,
       int bufferSize) {
-    LOG.debug("splitByBufferSize offset={}, length={}, bufferSize={}",
+    LOG.debug("splitByBufferSize: offset={}, length={}, bufferSize={}",
         unit.getOffset(), unit.getLength(), bufferSize);
 
     List<CombinedFileRange> parts = new ArrayList<>();
-
     long unitStart = unit.getOffset();
     long unitEnd = unitStart + unit.getLength();
     long start = unitStart;
 
-    /* Create buffer-sized slices covering the merged unit span */
     while (start < unitEnd) {
       long partEnd = Math.min(start + bufferSize, unitEnd);
 
-      /* Initialize a physical read unit for the span [start, partEnd) */
       CombinedFileRange part =
-          new CombinedFileRange(start, partEnd,
-              unit.getUnderlying().get(0));
-
-      /* Remove the constructor-added range and attach only overlapping ranges */
+          new CombinedFileRange(start, partEnd, unit.getUnderlying().get(0));
       part.getUnderlying().clear();
 
-      /* Attach logical ranges that intersect this physical read unit */
       for (FileRange r : unit.getUnderlying()) {
         long rStart = r.getOffset();
         long rEnd = rStart + r.getLength();
-
         if (rEnd > start && rStart < partEnd) {
           part.getUnderlying().add(r);
         }
       }
-
       parts.add(part);
       start = partEnd;
     }
-    LOG.debug("splitByBufferSize produced {} parts", parts.size());
+
+    LOG.debug("splitByBufferSize: offset={}, produced {} parts",
+        unit.getOffset(), parts.size());
     return parts;
   }
 
-   /**
+  /**
    * Merge logical {@link FileRange}s into {@link CombinedFileRange}s using a
    * span-first coalescing strategy.
    *
@@ -232,8 +244,8 @@ class VectoredReadHandler {
   private List<CombinedFileRange> mergeBySpanAndGap(
       List<? extends FileRange> ranges,
       int maxSpan) {
-    LOG.debug("mergeBySpanAndGap ranges={}, maxSpan={}",
-        ranges.size(), maxSpan);
+    LOG.debug("mergeBySpanAndGap: rangeCount={}, maxSpan={}", ranges.size(), maxSpan);
+
     List<FileRange> sortedRanges = new ArrayList<>(ranges);
     sortedRanges.sort(Comparator.comparingLong(FileRange::getOffset));
 
@@ -267,93 +279,211 @@ class VectoredReadHandler {
     if (current != null) {
       out.add(current);
     }
-    LOG.debug("mergeBySpanAndGap produced {} combined ranges", out.size());
+
+    LOG.debug("mergeBySpanAndGap: produced {} combined ranges", out.size());
     return out;
   }
 
-
   /**
-   * Fan out data from a completed physical read buffer to all logical
-   * {@link FileRange}s associated with the vectored read.
+   * Distributes data from a physical read buffer into the corresponding
+   * logical {@link FileRange}s.
    *
-   * <p>For each logical range, the corresponding slice of data is copied
-   * into a newly allocated {@link ByteBuffer} and the range's future is
-   * completed. Ranges whose futures are cancelled are skipped.</p>
+   * <p>This method performs a "fan-out" operation where a single physical
+   * read (represented by {@link ReadBuffer}) may contain data for multiple
+   * logical ranges. The relevant portions are copied into per-range buffers
+   * and completed once fully populated.</p>
    *
-   * @param buffer completed read buffer containing the physical data
-   * @param bytesRead number of bytes actually read into the buffer
+   * <p>Partial reads are accumulated using {@code partialBuffers} and
+   * {@code pendingBytes}. A range is only completed when all expected
+   * bytes have been received.</p>
+   *
+   * <p>Thread safety:
+   * <ul>
+   *   <li>Each logical range buffer is synchronized independently</li>
+   *   <li>Writes use {@code System.arraycopy} directly into the backing array
+   *       to avoid shared {@link ByteBuffer} position mutation</li>
+   * </ul>
+   * </p>
+   *
+   * @param buffer    the physical read buffer containing merged data
+   * @param bytesRead number of valid bytes in the buffer
    */
   void fanOut(ReadBuffer buffer, int bytesRead) {
+    LOG.debug("fanOut: path={}, bufferOffset={}, bytesRead={}",
+        buffer.getPath(), buffer.getOffset(), bytesRead);
+
     List<CombinedFileRange> units = buffer.getVectoredUnits();
     if (units == null) {
+      LOG.warn("fanOut: no vectored units found for path={}, offset={}",
+          buffer.getPath(), buffer.getOffset());
       return;
     }
-    LOG.debug("fanOut bufferOffset={}, bytesRead={}, units={}",
-        buffer.getOffset(), bytesRead, units.size());
-    /* Distribute buffer data to all logical ranges attached to this buffer */
+
+    long bufferStart = buffer.getOffset();
+    long bufferEnd = bufferStart + bytesRead;
+
+    /* Iterate over all combined logical units mapped to this buffer */
     for (CombinedFileRange unit : units) {
+      /* Each unit may contain multiple logical FileRanges */
       for (FileRange r : unit.getUnderlying()) {
-        /* Skip ranges whose futures have been cancelled */
-        if (r.getData().isCancelled()) {
+        CompletableFuture<ByteBuffer> future = r.getData();
+
+        /* Skip already completed or cancelled ranges */
+        if (future.isCancelled()) {
+          LOG.debug("fanOut: range cancelled, cleaning up: path={}, rangeOffset={}",
+              buffer.getPath(), r.getOffset());
+          RangeKey key = new RangeKey(r);
+          partialBuffers.remove(key);
+          pendingBytes.remove(key);
           continue;
         }
+        if (future.isDone()) {
+          continue;
+        }
+
         try {
-          /* Compute offset of the logical range relative to the buffer */
-          long rel = r.getOffset() - buffer.getOffset();
-          /* Determine how many bytes are available for this range */
-          int available =
-              (int) Math.max(
-                  0,
-                  Math.min(r.getLength(), bytesRead - rel));
-          /* Allocate output buffer and copy available data */
-          ByteBuffer bb = buffer.getAllocator().apply(r.getLength());
-          if (available > 0) {
-            bb.put(buffer.getBuffer(), (int) rel, available);
+          long rangeStart = r.getOffset();
+          long rangeEnd = rangeStart + r.getLength();
+
+          /* Compute overlap between buffer and logical range */
+          long overlapStart = Math.max(rangeStart, bufferStart);
+          long overlapEnd = Math.min(rangeEnd, bufferEnd);
+
+          /* No overlap nothing to copy */
+          if (overlapStart >= overlapEnd) {
+            LOG.debug("fanOut: no overlap for path={}, rangeOffset={}, bufferOffset={}",
+                buffer.getPath(), r.getOffset(), bufferStart);
+            continue;
           }
-          bb.flip();
-          r.getData().complete(bb);
-          LOG.debug("fanOut completed logical range offset={}, length={}",
-              r.getOffset(), r.getLength());
+
+          int srcOffset = (int) (overlapStart - bufferStart);
+          int destOffset = (int) (overlapStart - rangeStart);
+          int length = (int)(overlapEnd - overlapStart);
+
+          LOG.debug("fanOut: copying path={}, rangeOffset={}, rangeLength={},"
+                  + " bufferOffset={}, srcOffset={}, destOffset={}, length={}",
+              buffer.getPath(), r.getOffset(), r.getLength(),
+              bufferStart, srcOffset, destOffset, length);
+
+          RangeKey key = new RangeKey(r);
+
+          /* Allocate or reuse the full buffer for this logical range */
+          ByteBuffer fullBuf = partialBuffers.computeIfAbsent(
+              key, k -> buffer.getAllocator().apply(r.getLength()));
+
+          /* Track remaining bytes required to complete this range */
+          AtomicInteger pending = pendingBytes.computeIfAbsent(
+              key, k -> new AtomicInteger(r.getLength()));
+
+          synchronized (fullBuf) {
+            /* Double-check completion inside lock */
+            if (future.isDone()) {
+              continue;
+            }
+
+            ByteBuffer dst = fullBuf.duplicate();
+            dst.position(destOffset);
+            dst.put(buffer.getBuffer(), srcOffset, length);
+
+            int left = pending.addAndGet(-length);
+
+            LOG.debug("fanOut: wrote chunk: path={}, rangeOffset={}, destOffset={},"
+                    + " length={}, pendingBytes={}",
+                buffer.getPath(), r.getOffset(), destOffset, length, left);
+
+            if (left < 0) {
+              LOG.error("fanOut: pending bytes went negative  possible duplicate write:"
+                      + " path={}, rangeOffset={}, pending={}",
+                  buffer.getPath(), r.getOffset(), left);
+              future.completeExceptionally(new IllegalStateException(
+                  "Pending bytes negative for offset=" + r.getOffset()));
+              partialBuffers.remove(key);
+              pendingBytes.remove(key);
+              continue;
+            }
+
+            /* Complete future once all bytes are received */
+            if (left == 0 && !future.isDone()) {
+              /*
+               * Prepare buffer for reading.
+               * DO NOT use flip() because writes may arrive out-of-order.
+               * Instead explicitly expose the full buffer.
+               */
+              fullBuf.position(0);
+              fullBuf.limit(fullBuf.capacity());
+
+              if (fullBuf.limit() != r.getLength()) {
+                LOG.warn("fanOut: buffer size mismatch: path={}, rangeOffset={},"
+                        + " expected={}, actual={}",
+                    buffer.getPath(), r.getOffset(), r.getLength(), fullBuf.limit());
+              }
+
+              future.complete(fullBuf);
+              partialBuffers.remove(key);
+              pendingBytes.remove(key);
+
+              LOG.debug("fanOut: completed range: path={}, rangeOffset={}, rangeLength={}",
+                  buffer.getPath(), r.getOffset(), r.getLength());
+            }
+          }
         } catch (Exception e) {
-          LOG.debug("fanOut failed for logical range offset={}",
-              r.getOffset(), e);
-          /* Propagate failure to the affected logical range */
-          r.getData().completeExceptionally(e);
+          LOG.warn("fanOut: exception processing range: path={}, rangeOffset={}",
+              buffer.getPath(), r.getOffset(), e);
+          RangeKey key = new RangeKey(r);
+          partialBuffers.remove(key);
+          pendingBytes.remove(key);
+          if (!future.isDone()) {
+            future.completeExceptionally(e);
+          }
         }
       }
     }
   }
 
   /**
-   * Fail all logical {@link FileRange}s associated with a single combined
-   * vectored read unit.
+   * Fails all logical {@link FileRange}s associated with a given
+   * {@link CombinedFileRange}.
    *
-   * @param unit combined file range whose logical ranges should be failed
-   * @param t    failure cause to propagate to waiting futures
+   * <p>This method is invoked when a vectored read for the combined unit
+   * fails. It ensures that:
+   * <ul>
+   *   <li>Any partially accumulated buffers are cleaned up</li>
+   *   <li>Pending byte tracking state is removed</li>
+   *   <li>All corresponding {@link CompletableFuture}s are completed exceptionally</li>
+   * </ul>
+   * </p>
+   *
+   * @param unit the combined vectored read unit whose underlying ranges must be failed
+   * @param t    the exception that caused the failure
    */
   private void failUnit(CombinedFileRange unit, Throwable t) {
     for (FileRange r : unit.getUnderlying()) {
-      r.getData().completeExceptionally(t);
+      RangeKey key = new RangeKey(r);
+      partialBuffers.remove(key);
+      pendingBytes.remove(key);
+      CompletableFuture<ByteBuffer> future = r.getData();
+      if (future != null && !future.isDone()) {
+        future.completeExceptionally(t);
+      }
     }
   }
 
-
   /**
-   * Completes all logical {@link FileRange} futures associated with a vectored
-   * {@link ReadBuffer} exceptionally when the backend read fails.
+   * Fails all {@link FileRange} futures associated with the given
+   * {@link ReadBuffer} and clears any partial state.
    *
-   * @param buffer the vectored read buffer
-   * @param t      the failure cause to propagate to waiting futures
+   * @param buffer the read buffer whose ranges should be failed
+   * @param t      the exception causing the failure
    */
   void failBufferFutures(ReadBuffer buffer, Throwable t) {
     List<CombinedFileRange> units = buffer.getVectoredUnits();
-    if (units == null) {
-      return;
-    }
-    LOG.debug("failBufferFutures bufferOffset={}", buffer.getOffset(), t);
-    /* Propagate failure to all logical ranges attached to this buffer */
+    if (units == null) return;
+
     for (CombinedFileRange unit : units) {
       for (FileRange r : unit.getUnderlying()) {
+        RangeKey key = new RangeKey(r);
+        partialBuffers.remove(key);
+        pendingBytes.remove(key);
         CompletableFuture<ByteBuffer> future = r.getData();
         if (future != null && !future.isDone()) {
           future.completeExceptionally(t);
@@ -363,40 +493,152 @@ class VectoredReadHandler {
   }
 
   /**
-   * Perform a synchronous direct read for a vectored unit when no pooled
-   * read buffer is available.
+   * Performs a synchronous direct read for a {@link CombinedFileRange}
+   * when pooled buffering is not available.
    *
-   * <p>This method reads the required byte range directly from the backend
-   * and completes all associated logical {@link FileRange} futures. It is
-   * used as a fallback path when vectored buffering cannot be used.</p>
+   * <p>Data is accumulated into per-range partial buffers shared with
+   * {@link #fanOut}, ensuring that ranges spanning multiple chunks are
+   * correctly reassembled regardless of whether individual chunks were
+   * served via the async queue or this direct fallback path.</p>
    *
-   * @param stream    input stream for the file being read
-   * @param unit      combined file range to read directly
-   * @param allocator allocator used to create output buffers for logical ranges
-   * @throws IOException if memory pressure is high or the backend read fails
+   * @param stream    input stream to read from
+   * @param unit      combined range to read
+   * @param allocator buffer allocator for logical ranges
+   * @throws IOException if the read fails
    */
   void directRead(
       AbfsInputStream stream,
       CombinedFileRange unit,
       IntFunction<ByteBuffer> allocator) throws IOException {
-    LOG.debug("directRead offset={}, length={}",
-        unit.getOffset(), unit.getLength());
-    /* Read the entire combined range into a temporary buffer */
-    byte[] tmp = new byte[unit.getLength()];
-    stream.readRemote(unit.getOffset(), tmp, 0, unit.getLength(),
-        stream.getTracingContext());
 
-    /* Fan out data to individual logical ranges */
-    for (FileRange r : unit.getUnderlying()) {
-      ByteBuffer bb = allocator.apply(r.getLength());
-      bb.put(tmp,
-          (int) (r.getOffset() - unit.getOffset()),
-          r.getLength());
-      bb.flip();
-      r.getData().complete(bb);
+    LOG.debug("directRead: path={}, offset={}, length={}",
+        stream.getPath(), unit.getOffset(), unit.getLength());
+
+    /* Read entire combined range into a temporary buffer */
+    byte[] tmp = new byte[unit.getLength()];
+    TracingContext tracingContext = new TracingContext(stream.getTracingContext());
+    tracingContext.setReadType(ReadType.VECTORED_DIRECT_READ);
+
+    int total = 0;
+    int requested = unit.getLength();
+    while (total < requested) {
+      int n = stream.readRemote(unit.getOffset() + total, tmp, total,
+          requested - total, tracingContext);
+      if (n <= 0) {
+        throw new IOException(
+            "Unexpected end of stream during direct read: path=" + stream.getPath()
+                + ", offset=" + (unit.getOffset() + total)
+                + ", requested=" + requested);
+      }
+      total += n;
     }
-    LOG.debug("directRead completed offset={}, length={}",
-        unit.getOffset(), unit.getLength());
+
+    LOG.debug("directRead: read complete: path={}, offset={}, bytesRead={}",
+        stream.getPath(), unit.getOffset(), total);
+
+    long unitStart = unit.getOffset();
+    long unitEnd = unitStart + unit.getLength();
+
+    /* Distribute data to each logical FileRange */
+    for (FileRange r : unit.getUnderlying()) {
+      CompletableFuture<ByteBuffer> future = r.getData();
+      if (future == null || future.isDone()) continue;
+
+      long rangeStart = r.getOffset();
+      long rangeEnd = rangeStart + r.getLength();
+
+      /* Compute overlap between unit and logical range */
+      long overlapStart = Math.max(rangeStart, unitStart);
+      long overlapEnd = Math.min(rangeEnd, unitEnd);
+      if (overlapStart >= overlapEnd) continue;
+
+      int srcOffset = (int) (overlapStart - unitStart);
+      int destOffset = (int) (overlapStart - rangeStart);
+      int length = (int) (overlapEnd - overlapStart);
+
+      LOG.debug("directRead: copying: path={}, rangeOffset={}, rangeLength={},"
+              + " srcOffset={}, destOffset={}, length={}",
+          stream.getPath(), r.getOffset(), r.getLength(),
+          srcOffset, destOffset, length);
+
+      RangeKey key = new RangeKey(r);
+
+      /*
+       * Use the shared partialBuffers/pendingBytes maps so that ranges
+       * spanning multiple chunks are correctly reassembled even when some
+       * chunks are served via directRead and others via the async fanOut path.
+       */
+      ByteBuffer fullBuf = partialBuffers.computeIfAbsent(
+          key, k -> allocator.apply(r.getLength()));
+      AtomicInteger pending = pendingBytes.computeIfAbsent(
+          key, k -> new AtomicInteger(r.getLength()));
+
+      synchronized (fullBuf) {
+        /* Re-check inside lock in case another chunk already completed this range */
+        if (future.isDone()) continue;
+
+        System.arraycopy(tmp, srcOffset,
+            fullBuf.array(), fullBuf.arrayOffset() + destOffset,
+            length);
+
+        int left = pending.addAndGet(-length);
+
+        LOG.debug("directRead: wrote chunk: path={}, rangeOffset={}, destOffset={},"
+                + " length={}, pendingBytes={}",
+            stream.getPath(), r.getOffset(), destOffset, length, left);
+
+        if (left < 0) {
+          LOG.error("directRead: pending bytes went negative  possible duplicate write:"
+                  + " path={}, rangeOffset={}, pending={}",
+              stream.getPath(), r.getOffset(), left);
+          future.completeExceptionally(new IllegalStateException(
+              "Pending bytes negative in directRead for offset=" + r.getOffset()));
+          partialBuffers.remove(key);
+          pendingBytes.remove(key);
+          continue;
+        }
+
+        if (left == 0) {
+          fullBuf.position(0);
+          fullBuf.limit(r.getLength());
+          future.complete(fullBuf);
+          partialBuffers.remove(key);
+          pendingBytes.remove(key);
+          LOG.debug("directRead: completed range: path={}, rangeOffset={}, rangeLength={}",
+              stream.getPath(), r.getOffset(), r.getLength());
+        }
+      }
+    }
+  }
+
+  /**
+   * Identity-based key wrapper for {@link FileRange}.
+   *
+   * <p>This class ensures that {@link FileRange} instances are compared
+   * using reference equality rather than logical equality. It is used as
+   * a key in maps where multiple ranges may have identical offsets and
+   * lengths but must be treated as distinct objects.</p>
+   *
+   * <p>Equality and hash code are based on object identity
+   * ({@code ==}) via {@link System#identityHashCode(Object)}.</p>
+   */
+  static final class RangeKey {
+    private final FileRange range;
+
+    RangeKey(FileRange range) {
+      this.range = range;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      return this == o ||
+          (o instanceof RangeKey &&
+              this.range == ((RangeKey) o).range);
+    }
+
+    @Override
+    public int hashCode() {
+      return System.identityHashCode(range);
+    }
   }
 }
-

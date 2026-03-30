@@ -379,6 +379,10 @@ public abstract class ReadBufferManager {
           getVectoredReadHandler().fanOut(buffer, bytesActuallyRead);
         }
       } else {
+        LOGGER.debug(
+            "Handling vectored completion for buffer with path: {}, offset: {}, length: {}, result: {}, bytesActuallyRead: {}",
+            buffer.getPath(), buffer.getOffset(), buffer.getRequestedLength(),
+            result, bytesActuallyRead);
         throw new IOException(
             "Vectored read failed for path: " + buffer.getPath()
                 + ", status=" + buffer.getStatus());

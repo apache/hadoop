@@ -56,7 +56,7 @@ public class ReadBuffer {
   private AtomicInteger refCount = new AtomicInteger(0);
   private BufferType bufferType = BufferType.NORMAL;
   // list of combined file ranges for vectored read.
-  private List<CombinedFileRange> vectoredUnits;
+  private List<CombinedFileRange> vectoredUnits = new ArrayList<>();
   // Allocator used for vectored fan-out; captured at queue time */
   private IntFunction<ByteBuffer> allocator;
   // Tracks whether fanOut has already been executed
@@ -211,12 +211,6 @@ public class ReadBuffer {
 
   public boolean isFullyConsumed() {
     return isFirstByteConsumed() && isLastByteConsumed();
-  }
-
-  void initVectoredUnits() {
-    if (vectoredUnits == null) {
-      vectoredUnits = new ArrayList<>();
-    }
   }
 
   void addVectoredUnit(CombinedFileRange u) {

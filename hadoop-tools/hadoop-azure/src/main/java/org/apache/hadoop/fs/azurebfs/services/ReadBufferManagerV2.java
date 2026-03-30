@@ -387,20 +387,33 @@ VectoredReadHandler getVectoredReadHandler() {
        */
       if (isAlreadyQueued(stream.getETag(), unit.getOffset())) {
         ReadBuffer existing = findQueuedBuffer(stream, unit.getOffset());
-        if (existing != null && existing.getStream().getETag() != null && stream.getETag()
+        if (existing != null && existing.getStream().getETag() != null  && stream.getETag()
             .equals(existing.getStream().getETag())) {
           long end = existing.getOffset() + (
               existing.getStatus() == ReadBufferStatus.AVAILABLE
                   ? existing.getLength()
                   : existing.getRequestedLength());
           if (end >= unit.getOffset() + unit.getLength()) {
-            existing.initVectoredUnits();
             existing.addVectoredUnit(unit);
             existing.setAllocator(allocator);
             if (existing.getStatus() == ReadBufferStatus.AVAILABLE) {
-              handleVectoredCompletion(existing, existing.getStatus(),
+              /*
+               * Buffer is already AVAILABLE. Trigger completion immediately.
+               * Use getLength() (actual bytes) for coverage — redundant here
+               * since the outer check already used getLength() for AVAILABLE,
+               * but kept explicit for clarity.
+               */
+              LOGGER.debug("Hitchhiking onto AVAILABLE buffer {}, length {}",
+                  existing, existing.getLength());
+              handleVectoredCompletion(existing,
+                  existing.getStatus(),
                   existing.getLength());
             }
+            /*
+             * For READING_IN_PROGRESS: unit is attached and will be
+             * completed in doneReading once actual bytes are known.
+             * Short-read safety is enforced there via per-unit coverage check.
+             */
             return true;
           }
         }
@@ -425,7 +438,6 @@ VectoredReadHandler getVectoredReadHandler() {
       buffer.setBufferType(BufferType.VECTORED);
       buffer.setStatus(ReadBufferStatus.NOT_AVAILABLE);
       buffer.setLatch(new CountDownLatch(1));
-      buffer.initVectoredUnits();
       buffer.addVectoredUnit(unit);
       buffer.setAllocator(allocator);
       buffer.setTracingContext(readAheadTracingContext);
@@ -543,14 +555,64 @@ VectoredReadHandler getVectoredReadHandler() {
   public void doneReading(final ReadBuffer buffer,
       final ReadBufferStatus result,
       final int bytesActuallyRead) {
-    printTraceLog(
-        "ReadBufferWorker completed prefetch for file: {} with eTag: {}, for offset: {}, queued by stream: {}, with status: {} and bytes read: {}",
-        buffer.getPath(), buffer.getETag(), buffer.getOffset(),
-        buffer.getStream().hashCode(), result, bytesActuallyRead);
+    if (LOGGER.isTraceEnabled()) {
+      LOGGER.trace("ReadBufferWorker completed read file {} for offset {} outcome {} bytes {}",
+          buffer.getStream().getPath(), buffer.getOffset(), result, bytesActuallyRead);
+    }
     List<CombinedFileRange> vectoredUnits = buffer.getVectoredUnits();
-    if (buffer.getBufferType() == BufferType.VECTORED || (vectoredUnits != null
-        && !vectoredUnits.isEmpty())) {
-      handleVectoredCompletion(buffer, result, bytesActuallyRead);
+    if (result == ReadBufferStatus.AVAILABLE
+        && (buffer.getBufferType() == BufferType.VECTORED && !vectoredUnits.isEmpty())) {
+
+      /*
+       * Set length BEFORE handling vectored completion so that any
+       * hitchhiked units that call existing.getLength() see the correct
+       * actual value rather than 0.
+       */
+      buffer.setLength(bytesActuallyRead);
+      /*
+       * Guard against short reads: units hitchhiked while buffer was
+       * READING_IN_PROGRESS used requestedLength as coverage estimate.
+       * Now that actual bytes are known, fail any units not fully covered
+       * so their callers are not left hanging on the CompletableFuture.
+       */
+      long actualEnd = buffer.getOffset() + bytesActuallyRead;
+      /*
+       * Fast path: check if any unit exceeds actual bytes read before
+       * doing expensive stream/collect. Short reads are rare so this
+       * avoids unnecessary allocations in the common case.
+       */
+      boolean hasUncovered = false;
+      for (CombinedFileRange u : vectoredUnits) {
+        if ((u.getOffset() + u.getLength()) > actualEnd) {
+          hasUncovered = true;
+          break;
+        }
+      }
+      if (hasUncovered) {
+        /*
+         * Short read detected — fail uncovered units explicitly so callers
+         * are not left hanging on their CompletableFuture.
+         */
+        Iterator<CombinedFileRange> it = vectoredUnits.iterator();
+        while (it.hasNext()) {
+          CombinedFileRange u = it.next();
+          if ((u.getOffset() + u.getLength()) > actualEnd) {
+            it.remove();
+            LOGGER.debug(
+                "Vectored unit not covered by actual bytes read: unitEnd={} actualEnd={}, failing unit",
+                (u.getOffset() + u.getLength()), actualEnd);
+            u.getData().completeExceptionally(new IOException(
+                "Vectored read unit not covered by actual bytes read: "
+                    + "unitEnd=" + (u.getOffset() + u.getLength())
+                    + " actualEnd=" + actualEnd));
+          }
+        }
+      }
+      if (!vectoredUnits.isEmpty()) {
+        LOGGER.debug("Entering vectored read completion with buffer {}, result {}, bytesActuallyRead {}",
+            buffer, result, bytesActuallyRead);
+        handleVectoredCompletion(buffer, result, bytesActuallyRead);
+      }
     }
     synchronized (this) {
       // If this buffer has already been purged during
@@ -559,16 +621,18 @@ VectoredReadHandler getVectoredReadHandler() {
         getInProgressList().remove(buffer);
         if (result == ReadBufferStatus.AVAILABLE && bytesActuallyRead > 0) {
           // Successful read, so update the buffer status and length
-          buffer.setStatus(ReadBufferStatus.AVAILABLE);
-          buffer.setLength(bytesActuallyRead);
+          if (!buffer.isFanOutDone()) {
+            buffer.setStatus(ReadBufferStatus.AVAILABLE);
+            buffer.setLength(bytesActuallyRead);
+          }
         } else {
           // Failed read, reuse buffer for next read, this buffer will be
           // evicted later based on eviction policy.
           pushToFreeList(buffer.getBufferindex());
+          buffer.setStatus(result);
         }
         // completed list also contains FAILED read buffers
         // for sending exception message to clients.
-        buffer.setStatus(result);
         buffer.setTimeStamp(currentTimeMillis());
         getCompletedReadList().add(buffer);
       }
@@ -627,7 +691,7 @@ VectoredReadHandler getVectoredReadHandler() {
       final String eTag,
       final long requestedOffset) {
     for (ReadBuffer buffer : list) {
-      if (eTag.equals(buffer.getETag())) {
+      if (eTag != null && eTag.equals(buffer.getETag())) {
         if (buffer.getStatus() == ReadBufferStatus.AVAILABLE
             && requestedOffset >= buffer.getOffset()
             && requestedOffset < buffer.getOffset() + buffer.getLength()) {
@@ -870,7 +934,7 @@ VectoredReadHandler getVectoredReadHandler() {
     for (ReadBuffer buffer : getCompletedReadList()) {
       // Buffer is returned if the requestedOffset is at or above buffer's
       // offset but less than buffer's length or the actual requestedLength
-      if (eTag.equals(buffer.getETag())
+      if (eTag != null && eTag.equals(buffer.getETag())
           && (requestedOffset >= buffer.getOffset())
           && ((requestedOffset < buffer.getOffset() + buffer.getLength())
           || (requestedOffset
