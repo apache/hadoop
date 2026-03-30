@@ -38,6 +38,7 @@ import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -450,7 +451,7 @@ public class TestDFSNetworkTopology {
     dfsCluster.add(dns[1]);
 
     DatanodeInfo excludedInfo = new DatanodeInfoBuilder()
-        .setNodeID(new DatanodeID("", dns[0]))
+        .setNodeID(new DatanodeID(UUID.randomUUID().toString(), dns[0]))
         .setNetworkLocation(dns[0].getNetworkLocation())
         .build();
 
