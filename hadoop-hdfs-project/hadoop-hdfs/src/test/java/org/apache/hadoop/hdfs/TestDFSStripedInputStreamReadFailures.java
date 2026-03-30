@@ -25,7 +25,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class TestDFSStripedInputStreamReadFailures {
-  
+
   public static final Logger LOG =
       LoggerFactory.getLogger(TestDFSStripedInputStreamReadFailures.class);
 
@@ -69,7 +69,7 @@ public class TestDFSStripedInputStreamReadFailures {
     fs.getClient()
         .setErasureCodingPolicy("/", ecPolicy.getName());
   }
-  
+
   @AfterEach
   public void tearDown() {
     if (cluster != null) {
@@ -77,7 +77,7 @@ public class TestDFSStripedInputStreamReadFailures {
       cluster = null;
     }
   }
-  
+
   private Path writeFile(String name, byte[] bytes) throws Exception {
     Path path = new Path(name);
 
@@ -86,24 +86,24 @@ public class TestDFSStripedInputStreamReadFailures {
 
     StripedFileTestUtil.checkData(fs, path, bytes.length,
         new ArrayList<DatanodeInfo>(), null, blockSize * dataBlocks);
-    
+
     return path;
   }
-  
+
   @Test
   public void testReadWithXceiverExhaustion() throws Exception {
-    
+
     // Write a little more than 1 stripe size
     // worth of data to 10 files
     int numBytes = cellSize * dataBlocks + 123;
     int numFiles = 10;
-    
+
     byte[] content = StripedFileTestUtil.generateBytes(numBytes);
     Path[] files = new Path[numFiles];
     for (int i = 0; i < numFiles; i++) {
       files[i] = writeFile("/file_"+ i, content);
     }
-    
+
     // reconfigure DNs with xceivers set to 2
     for (DataNode dn : cluster.getDataNodes()) {
       dn.reconfigureProperty(DFSConfigKeys.DFS_DATANODE_MAX_RECEIVER_THREADS_KEY, "2");
@@ -118,7 +118,7 @@ public class TestDFSStripedInputStreamReadFailures {
       }
       reconfigurationComplete = true;
     }
-    
+
     // Start a thread for each file that we created
     // and use StripedFileTestUtil.verifyStatefulRead
     // to read from the file.
@@ -162,5 +162,4 @@ public class TestDFSStripedInputStreamReadFailures {
       fail("Exceptions occurred during test");
     }
   }
-  
 }
