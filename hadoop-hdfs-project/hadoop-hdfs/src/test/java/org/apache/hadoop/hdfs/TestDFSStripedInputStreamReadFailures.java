@@ -175,8 +175,12 @@ public class TestDFSStripedInputStreamReadFailures {
     });
     if (exceptions.size() > 0) {
       LOG.info("{} exceptions occurred", exceptions.size());
-      exceptions.forEach(t -> LOG.error("Exception details", t));
-      fail("Exceptions occurred during test");
+      exceptions.forEach(t -> {
+        LOG.error("Exception details:", t);
+        if (!(t instanceof IOException && t.getMessage().contains("missing blocks, the stripe is"))) {
+          fail("Unexpected exceptions occurred during test", t);
+        }
+      });
     }
   }
 }
