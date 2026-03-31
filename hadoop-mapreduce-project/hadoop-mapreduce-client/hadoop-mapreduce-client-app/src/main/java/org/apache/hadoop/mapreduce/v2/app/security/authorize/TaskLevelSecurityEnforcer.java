@@ -68,9 +68,13 @@ public final class TaskLevelSecurityEnforcer {
    * @param currentUser the user who running the AM container
    * @throws TaskLevelSecurityException if the user is not authorized to use one of the task classes
    */
-  public static void validate(JobConf conf, UserGroupInformation currentUser) throws TaskLevelSecurityException {
-    if (!conf.getBoolean(MRConfig.SECURITY_ENABLED, MRConfig.DEFAULT_SECURITY_ENABLED)) {
-      LOG.debug("The {} is disabled",  MRConfig.SECURITY_ENABLED);
+  public static void validate(JobConf conf, UserGroupInformation currentUser)
+      throws TaskLevelSecurityException {
+    if (!conf.getBoolean(
+        MRConfig.MAPREDUCE_TASK_SECURITY_ENABLED,
+        MRConfig.DEFAULT_SECURITY_ENABLED
+    )) {
+      LOG.debug("The {} is disabled",  MRConfig.MAPREDUCE_TASK_SECURITY_ENABLED);
       return;
     }
 

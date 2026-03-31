@@ -39,14 +39,14 @@ public class TestTaskLevelSecurityEnforcer extends AbstractHadoopTestBase {
   @Test
   public void testServiceEnabled() {
     JobConf conf = new JobConf();
-    conf.setBoolean(MRConfig.SECURITY_ENABLED, true);
+    conf.setBoolean(MRConfig.MAPREDUCE_TASK_SECURITY_ENABLED, true);
     assertPass(conf);
   }
 
   @Test
   public void testDeniedPackage() {
     JobConf conf = new JobConf();
-    conf.setBoolean(MRConfig.SECURITY_ENABLED, true);
+    conf.setBoolean(MRConfig.MAPREDUCE_TASK_SECURITY_ENABLED, true);
     conf.setStrings(MRConfig.SECURITY_DENIED_TASKS, "org.apache.hadoop.streaming");
     conf.set(MRJobConfig.MAP_CLASS_ATTR, "org.apache.hadoop.streaming.PipeMapper");
     assertDenied(conf);
@@ -55,7 +55,7 @@ public class TestTaskLevelSecurityEnforcer extends AbstractHadoopTestBase {
   @Test
   public void testDeniedClass() {
     JobConf conf = new JobConf();
-    conf.setBoolean(MRConfig.SECURITY_ENABLED, true);
+    conf.setBoolean(MRConfig.MAPREDUCE_TASK_SECURITY_ENABLED, true);
     conf.setStrings(MRConfig.SECURITY_DENIED_TASKS,
         "org.apache.hadoop.streaming",
         "org.apache.hadoop.examples.QuasiMonteCarlo$QmcReducer");
@@ -67,7 +67,7 @@ public class TestTaskLevelSecurityEnforcer extends AbstractHadoopTestBase {
   @Test
   public void testIgnoreReducer() {
     JobConf conf = new JobConf();
-    conf.setBoolean(MRConfig.SECURITY_ENABLED, true);
+    conf.setBoolean(MRConfig.MAPREDUCE_TASK_SECURITY_ENABLED, true);
     conf.setStrings(MRConfig.SECURITY_PROPERTY_DOMAIN,
         MRJobConfig.MAP_CLASS_ATTR,
         MRJobConfig.COMBINE_CLASS_ATTR);
@@ -82,7 +82,7 @@ public class TestTaskLevelSecurityEnforcer extends AbstractHadoopTestBase {
   @Test
   public void testDeniedUser() {
     JobConf conf = new JobConf();
-    conf.setBoolean(MRConfig.SECURITY_ENABLED, true);
+    conf.setBoolean(MRConfig.MAPREDUCE_TASK_SECURITY_ENABLED, true);
     conf.setStrings(MRConfig.SECURITY_DENIED_TASKS, "org.apache.hadoop.streaming");
     conf.setStrings(MRConfig.SECURITY_ALLOWED_USERS, "alice");
     conf.set(MRJobConfig.MAP_CLASS_ATTR, "org.apache.hadoop.streaming.PipeMapper");
@@ -93,7 +93,7 @@ public class TestTaskLevelSecurityEnforcer extends AbstractHadoopTestBase {
   @Test
   public void testAllowedUser() {
     JobConf conf = new JobConf();
-    conf.setBoolean(MRConfig.SECURITY_ENABLED, true);
+    conf.setBoolean(MRConfig.MAPREDUCE_TASK_SECURITY_ENABLED, true);
     conf.setStrings(MRConfig.SECURITY_DENIED_TASKS, "org.apache.hadoop.streaming");
     conf.setStrings(MRConfig.SECURITY_ALLOWED_USERS, "alice", "bob");
     conf.set(MRJobConfig.MAP_CLASS_ATTR, "org.apache.hadoop.streaming.PipeMapper");
@@ -104,7 +104,7 @@ public class TestTaskLevelSecurityEnforcer extends AbstractHadoopTestBase {
   @Test
   public void testTurnOff() {
     JobConf conf = new JobConf();
-    conf.setBoolean(MRConfig.SECURITY_ENABLED, false);
+    conf.setBoolean(MRConfig.MAPREDUCE_TASK_SECURITY_ENABLED, false);
     conf.setStrings(MRConfig.SECURITY_DENIED_TASKS, "org.apache.hadoop.streaming");
     conf.setStrings(MRConfig.SECURITY_ALLOWED_USERS, "alice");
     conf.set(MRJobConfig.MAP_CLASS_ATTR, "org.apache.hadoop.streaming.PipeMapper");
@@ -115,7 +115,7 @@ public class TestTaskLevelSecurityEnforcer extends AbstractHadoopTestBase {
   @Test
   public void testJobConfigCanNotOverwriteMapreduceConfig() {
     JobConf mapreduceConf = new JobConf();
-    mapreduceConf.setBoolean(MRConfig.SECURITY_ENABLED, true);
+    mapreduceConf.setBoolean(MRConfig.MAPREDUCE_TASK_SECURITY_ENABLED, true);
     mapreduceConf.setStrings(MRConfig.SECURITY_DENIED_TASKS, "org.apache.hadoop.streaming");
     mapreduceConf.setStrings(MRConfig.SECURITY_ALLOWED_USERS, "alice");
 

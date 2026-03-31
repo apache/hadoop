@@ -146,7 +146,7 @@ public interface MRConfig {
    * Default: {@value #DEFAULT_SECURITY_ENABLED}
    * Value: {@value}
    */
-  String SECURITY_ENABLED = "mapreduce.security.enabled";
+  String MAPREDUCE_TASK_SECURITY_ENABLED = "mapreduce.security.enabled";
   boolean DEFAULT_SECURITY_ENABLED = false;
 
   /**
