@@ -31,7 +31,6 @@ import java.util.UUID;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-import org.apache.hadoop.fs.azurebfs.WriteThreadPoolSizeManager;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsServiceType;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidConfigurationValueException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidIngressServiceException;
@@ -168,13 +167,6 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
    */
   private MessageDigest fullBlobContentMd5 = null;
 
-  /**
-   * Instance of {@link WriteThreadPoolSizeManager} used by this class
-   * to dynamically adjust the write thread pool size based on
-   * system resource utilization.
-   */
-  private final WriteThreadPoolSizeManager writeThreadPoolSizeManager;
-
   public AbfsOutputStream(AbfsOutputStreamContext abfsOutputStreamContext)
       throws IOException {
     this.statistics = abfsOutputStreamContext.getStatistics();
@@ -225,9 +217,6 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
     this.serviceTypeAtInit = abfsOutputStreamContext.getIngressServiceType();
     this.currentExecutingServiceType = abfsOutputStreamContext.getIngressServiceType();
     this.clientHandler = abfsOutputStreamContext.getClientHandler();
-    this.writeThreadPoolSizeManager = abfsOutputStreamContext.getWriteThreadPoolSizeManager();
-    // Initialize CPU monitoring if the pool size manager is present
-    initializeMonitoringIfNeeded();
     createIngressHandler(serviceTypeAtInit,
         abfsOutputStreamContext.getBlockFactory(), bufferSize, false, null);
     try {
@@ -252,21 +241,6 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
   private final Lock lock = new ReentrantLock();
 
   private volatile boolean switchCompleted = false;
-
-  /**
-   * Starts CPU monitoring in the thread pool size manager if it
-   * is initialized and not already monitoring.
-   */
-  private void initializeMonitoringIfNeeded() {
-    if (writeThreadPoolSizeManager != null && !writeThreadPoolSizeManager.isMonitoringStarted()) {
-      synchronized (this) {
-        // Re-check to avoid a race between threads
-        if (!writeThreadPoolSizeManager.isMonitoringStarted()) {
-          writeThreadPoolSizeManager.startCPUMonitoring();
-        }
-      }
-    }
-  }
 
   /**
    * Creates or retrieves an existing Azure ingress handler based on the service type and provided parameters.

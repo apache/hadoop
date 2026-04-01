@@ -54,12 +54,17 @@ import org.apache.hadoop.security.http.RestCsrfPreventionFilter;
 
 import org.glassfish.jersey.internal.inject.AbstractBinder;
 import org.glassfish.jersey.server.ResourceConfig;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Encapsulates the HTTP server started by the NameNode. 
  */
 @InterfaceAudience.Private
 public class NameNodeHttpServer {
+
+  private static final Logger LOG = LoggerFactory.getLogger(NameNodeHttpServer.class);
+
   private HttpServer2 httpServer;
   private final Configuration conf;
   private final NameNode nn;
@@ -185,14 +190,20 @@ public class NameNodeHttpServer {
     int connIdx = 0;
     if (policy.isHttpEnabled()) {
       httpAddress = httpServer.getConnectorAddress(connIdx++);
-      conf.set(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY,
-          NetUtils.getHostPortString(httpAddress));
+      if (httpAddress != null) {
+        conf.set(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY,
+            NetUtils.getHostPortString(httpAddress));
+        LOG.info("Listening for HTTP traffic on {}", httpAddress);
+      }
     }
 
     if (policy.isHttpsEnabled()) {
       httpsAddress = httpServer.getConnectorAddress(connIdx);
-      conf.set(DFSConfigKeys.DFS_NAMENODE_HTTPS_ADDRESS_KEY,
-          NetUtils.getHostPortString(httpsAddress));
+      if (httpsAddress != null) {
+        conf.set(DFSConfigKeys.DFS_NAMENODE_HTTPS_ADDRESS_KEY,
+            NetUtils.getHostPortString(httpsAddress));
+        LOG.info("Listening for HTTPS traffic on {}", httpsAddress);
+      }
     }
   }
 

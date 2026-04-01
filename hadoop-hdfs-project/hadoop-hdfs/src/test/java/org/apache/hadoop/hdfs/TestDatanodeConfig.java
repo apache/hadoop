@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs;
 
 import static org.apache.hadoop.hdfs.server.common.Util.fileAsURI;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -25,6 +26,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 
@@ -165,6 +167,27 @@ public class TestDatanodeConfig {
       }
       conf.setLong(DFSConfigKeys.DFS_DATANODE_MAX_LOCKED_MEMORY_KEY,
           prevLimit);
+    }
+  }
+
+  @Test
+  public void testDataNodeIpcAndHttpSeverConf() throws Exception {
+    Configuration conf = cluster.getConfiguration(0);
+    DataNode dn = null;
+    try {
+      dn = DataNode.createDataNode(new String[] {}, conf);
+      Configuration dnConf = dn.getConf();
+      InetSocketAddress listenerAddress = dn.ipcServer.getListenerAddress();
+      assertThat(listenerAddress.getHostName() + ":" + listenerAddress.getPort())
+          .describedAs("IPC Address is inconsistent")
+          .isEqualTo(dnConf.get(DFSConfigKeys.DFS_DATANODE_IPC_ADDRESS_KEY));
+      assertThat(listenerAddress.getHostName() + ":" + dn.getHttpPort())
+          .describedAs("HTTP Address is inconsistent")
+          .isEqualTo(dnConf.get(DFSConfigKeys.DFS_DATANODE_HTTP_ADDRESS_KEY));
+    } finally {
+      if (dn != null) {
+        dn.shutdown();
+      }
     }
   }
 }

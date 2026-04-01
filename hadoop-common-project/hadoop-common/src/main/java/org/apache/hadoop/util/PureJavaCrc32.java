@@ -17,78 +17,21 @@
  */
 package org.apache.hadoop.util;
 
-import java.util.zip.Checksum;
+import java.util.zip.CRC32;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
 /**
- * A pure-java implementation of the CRC32 checksum that uses
- * the same polynomial as the built-in native CRC32.
- *
- * This is to avoid the JNI overhead for certain uses of Checksumming
- * where many small pieces of data are checksummed in succession.
- *
- * The current version is ~10x to 1.8x as fast as Sun's native
- * java.util.zip.CRC32 in Java 1.6
+ * The legacy PureJavaCrc32 implemented in HADOOP-6148 is
+ * much slower than JDK native implementation in modern JDKs,
+ * HADOOP-19839 rewrites it to delegate to JDK native CRC32.
  *
  * @see java.util.zip.CRC32
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public class PureJavaCrc32 implements Checksum {
-
-  /** the current CRC value, bit-flipped */
-  private int crc;
-
-  /** Create a new PureJavaCrc32 object. */
-  public PureJavaCrc32() {
-    reset();
-  }
-
-  @Override
-  public long getValue() {
-    return (~crc) & 0xffffffffL;
-  }
-
-  @Override
-  public void reset() {
-    crc = 0xffffffff;
-  }
-
-  @Override
-  public void update(final byte[] b, final int offset, final int len) {
-    int localCrc = crc;
-
-    final int remainder = len & 0x7;
-    int i = offset;
-    for(final int end = offset + len - remainder; i < end; i += 8) {
-      final int x = localCrc
-          ^ ((((b[i  ] << 24) >>> 24) + ((b[i+1] << 24) >>> 16))
-           + (((b[i+2] << 24) >>> 8 ) +  (b[i+3] << 24)));
-
-      localCrc = ((T[((x << 24) >>> 24) + 0x700] ^ T[((x << 16) >>> 24) + 0x600])
-                ^ (T[((x <<  8) >>> 24) + 0x500] ^ T[ (x        >>> 24) + 0x400]))
-               ^ ((T[((b[i+4] << 24) >>> 24) + 0x300] ^ T[((b[i+5] << 24) >>> 24) + 0x200])
-                ^ (T[((b[i+6] << 24) >>> 24) + 0x100] ^ T[((b[i+7] << 24) >>> 24)]));
-    }
-
-    /* loop unroll - duff's device style */
-    switch(remainder) {
-      case 7: localCrc = (localCrc >>> 8) ^ T[((localCrc ^ b[i++]) << 24) >>> 24];
-      case 6: localCrc = (localCrc >>> 8) ^ T[((localCrc ^ b[i++]) << 24) >>> 24];
-      case 5: localCrc = (localCrc >>> 8) ^ T[((localCrc ^ b[i++]) << 24) >>> 24];
-      case 4: localCrc = (localCrc >>> 8) ^ T[((localCrc ^ b[i++]) << 24) >>> 24];
-      case 3: localCrc = (localCrc >>> 8) ^ T[((localCrc ^ b[i++]) << 24) >>> 24];
-      case 2: localCrc = (localCrc >>> 8) ^ T[((localCrc ^ b[i++]) << 24) >>> 24];
-      case 1: localCrc = (localCrc >>> 8) ^ T[((localCrc ^ b[i++]) << 24) >>> 24];
-      default:
-        /* nothing */
-    }
-    
-    // Publish crc out to object
-    crc = localCrc;
-  }
+public class PureJavaCrc32 extends CRC32 {
 
   /**
    * Compute x mod p, where p is the CRC32 polynomial.
@@ -100,11 +43,6 @@ public class PureJavaCrc32 implements Checksum {
     return (int)(x >> 32)
            ^ ((T[((y << 24) >>> 24) + 0x300] ^ T[((y << 16) >>> 24) + 0x200])
            ^  (T[((y <<  8) >>> 24) + 0x100] ^ T[((y /* */) >>> 24) /*   */]));
-  }
-
-  @Override
-  final public void update(int b) {
-    crc = (crc >>> 8) ^ T[(((crc ^ b) << 24) >>> 24)];
   }
 
   /*

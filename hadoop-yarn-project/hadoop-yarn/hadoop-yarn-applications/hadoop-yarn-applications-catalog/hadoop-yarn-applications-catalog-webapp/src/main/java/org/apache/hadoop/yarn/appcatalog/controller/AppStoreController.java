@@ -49,6 +49,7 @@ public class AppStoreController {
   /**
    * Display the most frequently used applications on YARN AppCatalog home page.
    *
+   * <pre>{@code
    * @apiGroup AppStoreController
    * @apiName get
    * @api {get} /app_store/recommended  Display recommended applications.
@@ -70,7 +71,9 @@ public class AppStoreController {
    *        ...
    *        }
    *     ]
-   * @return - List of YARN applications
+   * }</pre>
+   *
+   * @return List of YARN applications
    */
   @GET
   @Path("recommended")
@@ -83,6 +86,7 @@ public class AppStoreController {
   /**
    * Search for yarn applications from solr.
    *
+   * <pre>{@code
    * @apiGroup AppStoreController
    * @apiName search
    * @api {get} /app_store/search  Find application from appstore.
@@ -105,8 +109,10 @@ public class AppStoreController {
    *        ...
    *        }
    *     ]
-   * @param keyword - search for keyword
-   * @return - List of YARN applications matching keyword search.
+   * }</pre>
+   *
+   * @param keyword search for keyword
+   * @return List of YARN applications matching keyword search.
    */
   @GET
   @Path("search")
@@ -133,6 +139,7 @@ public class AppStoreController {
   /**
    * Register an application.
    *
+   * <pre>{@code
    * @apiGroup AppStoreController
    * @apiName register
    * @api {post} /app_store/register  Register an application in appstore.
@@ -171,7 +178,9 @@ public class AppStoreController {
    *     }
    * @apiSuccess {String} Response Application register result.
    * @apiError BadRequest Error in process application registration.
-   * @param app - Yarnfile in JSON form
+   * }</pre>
+   *
+   * @param app Yarnfile in JSON form
    * @return Web response
    */
   @POST

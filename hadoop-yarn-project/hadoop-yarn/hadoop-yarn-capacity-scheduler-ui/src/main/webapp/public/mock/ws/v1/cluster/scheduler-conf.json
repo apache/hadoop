@@ -293,6 +293,26 @@
       "value": "true"
     },
     {
+      "name": "yarn.scheduler.capacity.minimum-user-limit-percent",
+      "value": "100"
+    },
+    {
+      "name": "yarn.scheduler.capacity.user-limit-factor",
+      "value": "1"
+    },
+    {
+      "name": "yarn.scheduler.capacity.maximum-am-resource-percent",
+      "value": "0.1"
+    },
+    {
+      "name": "yarn.scheduler.capacity.root.production.maximum-applications",
+      "value": "10000"
+    },
+    {
+      "name": "yarn.scheduler.capacity.root.production.disable_preemption",
+      "value": "true"
+    },
+    {
       "name": "yarn.scheduler.capacity.root.marketing.test.auto-create-child-queue.enabled",
       "value": "true"
     },
@@ -343,6 +363,10 @@
     {
       "name": "yarn.scheduler.capacity.queue-mappings",
       "value": "u:user1:root.default,u:user2:root.production.prod02"
+    },
+    {
+      "name": "yarn.scheduler.capacity.global-queue-max-application",
+      "value": "5000"
     }
   ]
 }

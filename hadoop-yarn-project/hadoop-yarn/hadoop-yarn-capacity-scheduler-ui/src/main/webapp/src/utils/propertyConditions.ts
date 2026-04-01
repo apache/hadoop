@@ -24,12 +24,13 @@ import type {
   PropertyEvaluationScope,
 } from '~/types/property-descriptor';
 
-type BaseContextOptions = Omit<PropertyEvaluationContext, 'property' | 'propertyValue' | 'scope'>;
-
-export type PropertyConditionOptions = BaseContextOptions & {
+export type PropertyConditionOptions = Omit<
+  PropertyEvaluationContext,
+  'property' | 'propertyValue' | 'scope'
+> & {
   scope: PropertyEvaluationScope;
   property: PropertyDescriptor;
-  propertyValue: string;
+  propertyValue: string
 };
 
 function buildContext(options: PropertyConditionOptions): PropertyEvaluationContext {

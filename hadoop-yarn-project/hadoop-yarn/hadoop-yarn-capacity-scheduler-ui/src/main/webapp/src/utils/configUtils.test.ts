@@ -18,7 +18,7 @@
 
 
 import { describe, it, expect } from 'vitest';
-import { getMergedConfigData, getEffectivePropertyValue } from './configUtils';
+import { mergeStagedConfig, getEffectivePropertyValue } from './configUtils';
 import type { StagedChange } from '~/types';
 import { SPECIAL_VALUES } from '~/types';
 
@@ -37,14 +37,14 @@ const getMockStagedChange = (overrides?: Partial<StagedChange>): StagedChange =>
 };
 
 describe('configUtils', () => {
-  describe('getMergedConfigData', () => {
+  describe('mergeStagedConfig', () => {
     it('returns a copy when there are no staged changes', () => {
       const configData = new Map([
         ['yarn.scheduler.capacity.root.capacity', '100'],
         ['yarn.scheduler.capacity.root.queues', 'prod,dev'],
       ]);
 
-      const result = getMergedConfigData(configData, []);
+      const result = mergeStagedConfig(configData, []);
 
       expect(result).toEqual(configData);
       expect(result).not.toBe(configData);
@@ -71,7 +71,7 @@ describe('configUtils', () => {
         }),
       ];
 
-      const result = getMergedConfigData(configData, stagedChanges);
+      const result = mergeStagedConfig(configData, stagedChanges);
 
       expect(result.get('yarn.scheduler.capacity.root.prod.capacity')).toBe('70');
       expect(result.get('yarn.scheduler.capacity.root.dev.capacity')).toBe('30');
@@ -89,7 +89,7 @@ describe('configUtils', () => {
         }),
       ];
 
-      const result = getMergedConfigData(configData, stagedChanges);
+      const result = mergeStagedConfig(configData, stagedChanges);
 
       expect(result.get('yarn.scheduler.capacity.legacy-queue-mode.enabled')).toBe('false');
     });
@@ -106,7 +106,7 @@ describe('configUtils', () => {
         }),
       ];
 
-      const result = getMergedConfigData(configData, stagedChanges);
+      const result = mergeStagedConfig(configData, stagedChanges);
 
       expect(result.has('yarn.scheduler.capacity.root.prod.maximum-capacity')).toBe(false);
     });
@@ -129,7 +129,7 @@ describe('configUtils', () => {
         }),
       ];
 
-      const result = getMergedConfigData(configData, stagedChanges);
+      const result = mergeStagedConfig(configData, stagedChanges);
 
       expect(result.get('yarn.scheduler.capacity.root.prod.capacity')).toBe('80');
     });
@@ -147,7 +147,7 @@ describe('configUtils', () => {
         }),
       ];
 
-      const result = getMergedConfigData(configData, stagedChanges);
+      const result = mergeStagedConfig(configData, stagedChanges);
 
       expect(result.get('yarn.scheduler.capacity.root.new.capacity')).toBe('25%');
       expect(result.get('yarn.scheduler.capacity.root.existing.capacity')).toBe('100');
@@ -169,7 +169,7 @@ describe('configUtils', () => {
         }),
       ];
 
-      const result = getMergedConfigData(configData, stagedChanges);
+      const result = mergeStagedConfig(configData, stagedChanges);
 
       expect(result.has('yarn.scheduler.capacity.root.remove.capacity')).toBe(false);
       expect(result.has('yarn.scheduler.capacity.root.remove.maximum-capacity')).toBe(false);

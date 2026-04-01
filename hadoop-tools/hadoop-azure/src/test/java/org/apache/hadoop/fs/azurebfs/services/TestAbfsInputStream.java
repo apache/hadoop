@@ -326,37 +326,6 @@ public class TestAbfsInputStream extends AbstractAbfsIntegrationTest {
   }
 
   @Test
-  public void testReadFile() throws Exception {
-    Configuration conf = getRawConfiguration();
-    //conf.set(AZURE_READ_OPTIMIZE_FOOTER_READ, "false");
-    conf.set(FS_AZURE_RESTRICT_GPS_ON_OPENFILE, "true");
-    AzureBlobFileSystem fs = getFileSystem(conf);
-    Path testFile = new Path("/readFileTest");
-    byte[] data = "hello world".getBytes(StandardCharsets.UTF_8); //11bytes
-    writeBufferToNewFile(testFile, data);
-    int fileSize = Math.toIntExact(getFileSystem().getFileStatus(testFile).getLen());
-
-    try (FSDataInputStream in = fs.open(testFile)) {
-      byte[] buf = new byte[data.length];
-
-      //todo: check for available in validate()
-      int bytesRead = in.read(13, buf, 0, fileSize); // pos >=contentlength -> checks earlier itself (-1)
-
-//  in.seek(12);
-//  int bytesRead = in.read(buf); // fcursor >=contentlength -> fails earlier at seek (EOFException)
-
-      //read(long position, byte[] buffer, int offset, int length)
-    //  int bytesRead = in.read(13, buf, 0, fileSize); // pos >=contentlength -> checks earlier itself (-1)
-      //int bytesRead = in.read(buf, 0, fileSize+2); // len requested >=contentlength -> fails earlier itself (indexoutofbounds)
-
-      //int bytesRead = in.read();
-
-      Assertions.assertEquals(fileSize, bytesRead);
-      Assertions.assertArrayEquals(data, buf);
-    }
-  }
-
-  @Test
   public void testOpenFileWithOptions() throws Exception {
     AzureBlobFileSystem fs = getFileSystem();
     String testFolder = "/testFolder";

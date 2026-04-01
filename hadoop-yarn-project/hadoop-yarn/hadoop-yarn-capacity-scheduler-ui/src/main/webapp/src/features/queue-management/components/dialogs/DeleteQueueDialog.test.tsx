@@ -50,10 +50,13 @@ describe('DeleteQueueDialog', () => {
     render(<DeleteQueueDialog open={true} queuePath="root.production.team1" onClose={vi.fn()} />);
 
     expect(screen.getByRole('dialog')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: /delete queue/i })).toBeInTheDocument();
-    expect(screen.getByText(/Are you sure you want to delete the queue/)).toBeInTheDocument();
-    expect(screen.getByText('team1')).toBeInTheDocument();
-    expect(screen.getByText(/This action cannot be undone/)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /mark for deletion/i })).toBeInTheDocument();
+    expect(screen.getByText(/Are you sure you want to mark the queue/)).toBeInTheDocument();
+    // Queue name appears once (no longer in confirmation label)
+    expect(screen.getAllByText('team1')).toHaveLength(1);
+    expect(screen.getByText(/will be marked for deletion and removed when you apply/)).toBeInTheDocument();
+    // Confirmation input should NOT exist
+    expect(screen.queryByLabelText(/Type.*team1.*to confirm/)).not.toBeInTheDocument();
   });
 
   it('should stage queue removal on confirmation', async () => {
@@ -62,8 +65,10 @@ describe('DeleteQueueDialog', () => {
 
     render(<DeleteQueueDialog open={true} queuePath="root.production.team1" onClose={onClose} />);
 
-    const deleteButton = screen.getByRole('button', { name: /delete queue/i });
-    await user.click(deleteButton);
+    const markButton = screen.getByRole('button', { name: /mark for deletion/i });
+    // Button should be enabled immediately (no confirmation input)
+    expect(markButton).toBeEnabled();
+    await user.click(markButton);
 
     expect(mockDeleteQueue).toHaveBeenCalledWith('root.production.team1');
     expect(onClose).toHaveBeenCalled();
@@ -93,7 +98,7 @@ describe('DeleteQueueDialog', () => {
     expect(screen.getByText(/Please delete all child queues first/)).toBeInTheDocument();
 
     // Delete button should not exist when queue cannot be deleted
-    expect(screen.queryByRole('button', { name: /delete queue/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /mark for deletion/i })).not.toBeInTheDocument();
   });
 
   it('should handle root queue specially', () => {
@@ -102,7 +107,7 @@ describe('DeleteQueueDialog', () => {
     expect(screen.getByText('The root queue cannot be deleted.')).toBeInTheDocument();
 
     // Root queue should not have a delete button, only cancel
-    expect(screen.queryByRole('button', { name: /delete queue/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /mark for deletion/i })).not.toBeInTheDocument();
   });
 
   it('should close on escape key', async () => {
@@ -127,10 +132,11 @@ describe('DeleteQueueDialog', () => {
     ).toBeInTheDocument();
   });
 
-  it('should use danger variant for delete button', () => {
+  it('should use default variant for mark button', () => {
     render(<DeleteQueueDialog open={true} queuePath="root.default" onClose={vi.fn()} />);
 
-    const deleteButton = screen.getByRole('button', { name: /delete queue/i });
-    expect(deleteButton).toHaveClass('bg-destructive');
+    const markButton = screen.getByRole('button', { name: /mark for deletion/i });
+    expect(markButton).toBeEnabled();
+    expect(markButton).not.toHaveClass('from-destructive');
   });
 });

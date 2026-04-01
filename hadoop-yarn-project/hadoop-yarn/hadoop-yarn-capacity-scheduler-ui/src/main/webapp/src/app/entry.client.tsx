@@ -36,6 +36,9 @@ async function enableMocking() {
   // Start the worker
   return worker.start({
     onUnhandledRequest: 'bypass',
+    serviceWorker: {
+      url: '/scheduler-ui/mockServiceWorker.js',
+    },
   });
 }
 

@@ -57,22 +57,28 @@ export function AppSidebar() {
   return (
     <Sidebar variant="inset">
       <SidebarHeader>
-        <div className="flex h-14 items-center px-4">
-          <h1 className="text-lg font-semibold">Capacity Scheduler UI</h1>
+        <div className="flex h-16 items-center px-4 border-b border-sidebar-border/50">
+          <h1 className="text-lg font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
+          Capacity Scheduler UI
+        </h1>
         </div>
       </SidebarHeader>
-      <SidebarContent>
-        <SidebarMenu>
+      <SidebarContent className="px-2 pt-4">
+        <SidebarMenu className="space-y-1">
           {navigation.map((item) => {
             const Icon = item.icon;
             const isActive = location.pathname === item.path;
 
             return (
               <SidebarMenuItem key={item.path}>
-                <SidebarMenuButton asChild isActive={isActive}>
+                <SidebarMenuButton
+                  asChild
+                  isActive={isActive}
+                  className="transition-all duration-200 hover:translate-x-0.5"
+                >
                   <Link to={item.path}>
                     <Icon className="h-4 w-4" />
-                    <span>{item.title}</span>
+                    <span className="font-medium">{item.title}</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

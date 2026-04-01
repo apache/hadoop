@@ -20,10 +20,10 @@
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-main</artifactId>
-    <version>3.5.0-SNAPSHOT</version>
+    <version>3.6.0-SNAPSHOT</version>
   </parent>
   <artifactId>hadoop-project</artifactId>
-  <version>3.5.0-SNAPSHOT</version>
+  <version>3.6.0-SNAPSHOT</version>
   <description>Apache Hadoop Project POM</description>
   <name>Apache Hadoop Project POM</name>
   <packaging>pom</packaging>
@@ -49,7 +49,7 @@
     <!-- Version number for xerces used by JDiff -->
     <xerces.jdiff.version>2.12.2</xerces.jdiff.version>
 
-    <kafka.version>3.9.0</kafka.version>
+    <kafka.version>3.9.2</kafka.version>
 
     <commons-daemon.version>1.0.13</commons-daemon.version>
 
@@ -62,7 +62,7 @@
     <java.security.egd>file:///dev/urandom</java.security.egd>
 
     <!-- avro version -->
-    <avro.version>1.11.4</avro.version>
+    <avro.version>1.11.5</avro.version>
 
     <!-- jersey version -->
     <jersey2.version>2.46</jersey2.version>
@@ -76,8 +76,8 @@
     <jaxb.version>2.3.9</jaxb.version>
 
     <!-- jackson versions -->
-    <jackson2.version>2.18.5</jackson2.version>
-    <jackson2.databind.version>2.18.5</jackson2.databind.version>
+    <jackson2.version>2.18.6</jackson2.version>
+    <jackson2.databind.version>2.18.6</jackson2.databind.version>
 
     <!-- httpcomponents versions -->
     <httpclient.version>4.5.13</httpclient.version>
@@ -112,7 +112,7 @@
     <hadoop-thirdparty-shaded-protobuf-prefix>${hadoop-thirdparty-shaded-prefix}.protobuf</hadoop-thirdparty-shaded-protobuf-prefix>
     <hadoop-thirdparty-shaded-guava-prefix>${hadoop-thirdparty-shaded-prefix}.com.google.common</hadoop-thirdparty-shaded-guava-prefix>
 
-    <zookeeper.version>3.8.4</zookeeper.version>
+    <zookeeper.version>3.8.6</zookeeper.version>
     <curator.version>5.2.0</curator.version>
     <findbugs.version>3.0.5</findbugs.version>
     <dnsjava.version>3.6.1</dnsjava.version>
@@ -152,13 +152,14 @@
     <jna.version>5.2.0</jna.version>
     <gson.version>2.9.0</gson.version>
     <metrics.version>3.2.4</metrics.version>
-    <netty4.version>4.1.127.Final</netty4.version>
+    <netty4.version>4.1.130.Final</netty4.version>
     <snappy-java.version>1.1.10.4</snappy-java.version>
-    <lz4-java.version>1.10.2</lz4-java.version>
+    <lz4-java.version>1.10.4</lz4-java.version>
     <byte-buddy.version>1.17.6</byte-buddy.version>
 
     <!-- Maven protoc compiler -->
     <protobuf-maven-plugin.version>0.5.1</protobuf-maven-plugin.version>
+    <ascopes.protobuf-maven-plugin.version>4.1.3</ascopes.protobuf-maven-plugin.version>
     <maven-replacer-plugin.version>1.5.3</maven-replacer-plugin.version>
 
     <protobuf-compile.version>3.5.1</protobuf-compile.version>
@@ -2316,8 +2317,15 @@
           <version>${maven-javadoc-plugin.version}</version>
           <configuration>
             <doclint>all</doclint>
+            <additionalJOptions>
+              <!-- To fix doclet runtime error -->
+              <additionalJOption>-J--add-exports=jdk.javadoc/jdk.javadoc.internal.tool=ALL-UNNAMED</additionalJOption>
+            </additionalJOptions>
             <additionalOptions>
-                <additionalOption>-Xmaxwarns 10000</additionalOption>
+              <!-- To fix doclet compile error -->
+              <additionalOption>--add-exports</additionalOption>
+              <additionalOption>jdk.javadoc/jdk.javadoc.internal.tool=ALL-UNNAMED</additionalOption>
+              <additionalOption>-Xmaxwarns 10000</additionalOption>
             </additionalOptions>
           </configuration>
         </plugin>
@@ -2426,6 +2434,11 @@
               </configuration>
             </execution>
           </executions>
+        </plugin>
+        <plugin>
+          <groupId>io.github.ascopes</groupId>
+          <artifactId>protobuf-maven-plugin</artifactId>
+          <version>${ascopes.protobuf-maven-plugin.version}</version>
         </plugin>
         <!-- Modify the generated source to use our shaded protobuf -->
         <plugin>
@@ -2648,23 +2661,6 @@
         <groupId>com.google.code.maven-replacer-plugin</groupId>
         <artifactId>replacer</artifactId>
       </plugin>
-      <plugin>
-        <groupId>org.commonjava.maven.plugins</groupId>
-        <artifactId>directory-maven-plugin</artifactId>
-        <version>1.0</version>
-        <executions>
-          <execution>
-            <id>calc-repo-root</id>
-            <goals>
-              <goal>highest-basedir</goal>
-            </goals>
-            <phase>initialize</phase>
-            <configuration>
-              <property>repo.root</property>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
     </plugins>
   </build>
 
@@ -2824,16 +2820,6 @@
 
         </dependencies>
       </dependencyManagement>
-    </profile>
-    <profile>
-      <id>jdk17+</id>
-      <activation>
-        <jdk>[17,)</jdk>
-      </activation>
-      <properties>
-        <javac.version>17</javac.version>
-        <maven.compiler.release>${javac.version}</maven.compiler.release>
-      </properties>
     </profile>
     <profile>
       <id>quiet-surefire</id>

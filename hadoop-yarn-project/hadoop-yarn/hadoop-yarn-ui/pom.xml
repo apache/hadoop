@@ -20,11 +20,11 @@
   <parent>
     <artifactId>hadoop-yarn</artifactId>
     <groupId>org.apache.hadoop</groupId>
-    <version>3.5.0-SNAPSHOT</version>
+    <version>3.6.0-SNAPSHOT</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
   <artifactId>hadoop-yarn-ui</artifactId>
-  <version>3.5.0-SNAPSHOT</version>
+  <version>3.6.0-SNAPSHOT</version>
   <name>Apache Hadoop YARN UI</name>
   <packaging>${packagingType}</packaging>
 
@@ -75,9 +75,13 @@
             <exclude>src/main/webapp/jsconfig.json</exclude>
             <exclude>src/main/webapp/bower.json</exclude>
             <exclude>src/main/webapp/bower-shrinkwrap.json</exclude>
+            <exclude>src/main/webapp/bower_components/**</exclude>
+            <exclude>src/main/webapp/dist/**</exclude>
+            <exclude>src/main/webapp/node_modules/**</exclude>
             <exclude>src/main/webapp/package.json</exclude>
             <exclude>src/main/webapp/yarn.lock</exclude>
             <exclude>src/main/webapp/testem.json</exclude>
+            <exclude>src/main/webapp/testem.log</exclude>
             <exclude>src/main/webapp/public/assets/images/**/*</exclude>
             <exclude>src/main/webapp/public/assets/images/*</exclude>
             <exclude>src/main/webapp/public/robots.txt</exclude>

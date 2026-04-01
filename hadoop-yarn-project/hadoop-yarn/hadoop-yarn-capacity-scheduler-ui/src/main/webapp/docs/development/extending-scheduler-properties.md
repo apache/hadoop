@@ -142,6 +142,80 @@ export type DisplayFormat = {
 
 The `suffix` renders as muted gray text positioned inside the right side of the input field, providing an inline hint about the expected range or format. The `decimals` value controls the input's `step` attribute (0.01 for 2 decimals, 0.001 for 3 decimals, etc.).
 
+### Declaring inheritance behavior
+
+Queue-level properties can declare how their value is inherited when a queue does not set it explicitly. Adding an `inheritanceResolver` to the descriptor enables the UI to show an "inherited from …" badge (when no explicit value is set) or an "overrides …" badge (when the queue overrides an inherited value).
+
+The types are defined in `src/types/property-descriptor.ts`:
+
+```ts
+type InheritanceResolverContext = {
+  queuePath: string;
+  propertyName: string;
+  configData: Map<string, string>;
+  stagedChanges?: StagedChange[];
+};
+
+type InheritedValueInfo = {
+  value: string;
+  source: 'queue' | 'global';
+  sourcePath?: string;   // Parent queue path when source is 'queue'
+  isScaled?: boolean;     // True when the inherited value is scaled by queue capacity
+};
+
+type InheritanceResolver = (context: InheritanceResolverContext) => InheritedValueInfo | null;
+```
+
+`src/utils/resolveInheritedValue.ts` provides two built-in resolvers:
+
+- **`parentChainResolver`** — walks up the parent queue hierarchy and returns the nearest ancestor that has the property set. Use for properties that cascade down the queue tree (e.g. `disable_preemption`, `priority`).
+
+```ts
+import { parentChainResolver } from '~/utils/resolveInheritedValue';
+
+{
+  name: 'disable_preemption',
+  // ...
+  inheritanceResolver: parentChainResolver,
+}
+```
+
+- **`globalOnlyResolver`** — checks only the global `yarn.scheduler.capacity.<property>` key, skipping parent queues entirely. Use for properties where YARN falls back to a scheduler-wide default (e.g. `minimum-user-limit-percent`, `user-limit-factor`).
+
+```ts
+import { globalOnlyResolver } from '~/utils/resolveInheritedValue';
+
+{
+  name: 'minimum-user-limit-percent',
+  // ...
+  inheritanceResolver: globalOnlyResolver,
+}
+```
+
+For properties with non-standard inheritance logic, supply a custom inline function. For example, `maximum-applications` checks two different global keys, with the second marked as scaled:
+
+```ts
+import { getGlobalValue } from '~/utils/resolveInheritedValue';
+
+{
+  name: 'maximum-applications',
+  // ...
+  inheritanceResolver: ({ configData, stagedChanges }) => {
+    const perQueueGlobal = getGlobalValue('global-queue-max-application', configData, stagedChanges);
+    if (perQueueGlobal !== undefined) {
+      return { value: perQueueGlobal, source: 'global' };
+    }
+    const globalMax = getGlobalValue('maximum-applications', configData, stagedChanges);
+    if (globalMax !== undefined) {
+      return { value: globalMax, source: 'global', isScaled: true };
+    }
+    return null;
+  },
+}
+```
+
+> **Note:** `inheritanceResolver` is only meaningful for queue-level properties. Global properties do not inherit.
+
 2. **Adjust the UI if needed.** The global settings form renders inputs based on `PropertyDescriptor.type`. For bespoke widgets, extend `src/features/global-settings/components/PropertyInput.tsx`.
 3. **Update tests.** Extend `src/config/__tests__/propertyDefinitions.test.ts` if you need coverage for descriptor metadata.
 4. **Verify** by running the app or unit tests (`npm run test`) and confirming the new field renders with the expected validation feedback.
@@ -201,6 +275,7 @@ The hook returns a `validateGlobalProperty` function that takes a property key a
       },
     },
   ],
+  inheritanceResolver: globalOnlyResolver, // Falls back to the global scheduler default
 },
 ```
 
@@ -305,4 +380,5 @@ const enabled = isPropertyEnabled(property, {
 - [ ] UI renders the expected input type (extend components only if necessary).
 - [ ] Form-level `validationRules` cover formatting and basic range checks.
 - [ ] Declarative rule added to `src/config/validation-rules.ts` (and helper utilities or categories updated when needed).
+- [ ] `inheritanceResolver` set on queue-level properties that inherit from a parent queue or global default.
 - [ ] Tests updated or added, and `npm run test` completes successfully.

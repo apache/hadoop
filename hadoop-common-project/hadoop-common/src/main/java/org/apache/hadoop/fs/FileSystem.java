@@ -3520,9 +3520,13 @@ public abstract class FileSystem extends Configured
       if (!FILE_SYSTEMS_LOADED) {
         ServiceLoader<FileSystem> serviceLoader = ServiceLoader.load(FileSystem.class);
         Iterator<FileSystem> it = serviceLoader.iterator();
-        while (it.hasNext()) {
+        // both "hasNext()" and "next()" calls might trigger implementations loading.
+        while (true) {
           FileSystem fs;
           try {
+            if (!it.hasNext()) {
+              break;
+            }
             fs = it.next();
             try {
               SERVICE_FILE_SYSTEMS.put(fs.getScheme(), fs.getClass());
@@ -3536,7 +3540,7 @@ public abstract class FileSystem extends Configured
                   ClassUtil.findContainingJar(fs.getClass()));
               LOGGER.info("Full exception loading: {}", fs, e);
             }
-          } catch (ServiceConfigurationError ee) {
+          } catch (ServiceConfigurationError | LinkageError ee) {
             LOGGER.warn("Cannot load filesystem", ee);
           }
         }

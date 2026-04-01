@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.net.URI;
 import java.net.UnknownHostException;
+import java.nio.channels.ClosedByInterruptException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumSet;
@@ -1171,6 +1172,10 @@ public class NNStorage extends Storage implements Closeable,
     for (StorageDirectory sd : getStorageDirs()) {
       try {
         writeProperties(sd);
+      } catch (ClosedByInterruptException e) {
+        LOG.warn("Error during write properties to the VERSION file to {}",
+            sd, e);
+        return;
       } catch (Exception e) {
         LOG.warn("Error during write properties to the VERSION file to {}",
             sd, e);

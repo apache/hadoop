@@ -113,7 +113,6 @@ of incomplete uploads.
 
 This can be addressed in two ways
 * Command line: `hadoop s3guard uploads -abort -force \<path>`.
-* With `fs.s3a.multipart.purge` and a purge age set in `fs.s3a.multipart.purge.age`
 * In rename/delete `fs.s3a.directory.operations.purge.uploads = true`.
 
 #### S3Guard uploads command
@@ -126,7 +125,7 @@ hadoop s3guard uploads -abort -force s3a://bucket/
 
 Consult the [S3Guard documentation](s3guard.html) for the full set of parameters.
 
-#### In startup: `fs.s3a.multipart.purge`
+#### Deprecated: `fs.s3a.multipart.purge`
 
 This lists all uploads in a bucket when a filesystem is created and deletes
 all of those above a certain age.
@@ -135,8 +134,7 @@ This can hurt performance on a large bucket, as the purge scans the entire tree,
 and is executed whenever a filesystem is created -which can happen many times during
 hive, spark, distcp jobs.
 
-For this reason, this option may be deleted in future, however it has long been
-available in the S3A client and so guaranteed to work across versions.
+For this reason, this option is deprecated and will be deleted in future.
 
 #### During rename and delete: `fs.s3a.directory.operations.purge.uploads`
 

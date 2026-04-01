@@ -19,6 +19,7 @@
 
 import React, { useState } from 'react';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
+import { useShallow } from 'zustand/react/shallow';
 
 import {
   Card,
@@ -32,7 +33,6 @@ import { Checkbox } from '~/components/ui/checkbox';
 import type { QueueCardData } from '~/features/queue-management/hooks/useQueueTreeData';
 import { useQueueActions } from '~/features/queue-management/hooks/useQueueActions';
 import { useSchedulerStore } from '~/stores/schedulerStore';
-import { cn } from '~/utils/cn';
 import { HighlightedText } from '~/components/search/HighlightedText';
 import { AddQueueDialog } from './dialogs/AddQueueDialog';
 import { DeleteQueueDialog } from './dialogs/DeleteQueueDialog';
@@ -43,9 +43,9 @@ import { QueueValidationBadges } from './QueueValidationBadges';
 import { QueueVectorCapacityDisplay } from './QueueVectorCapacityDisplay';
 import { QueueCardContextMenu } from './QueueCardContextMenu';
 import { getCapacityDisplay } from '../utils/capacityDisplay';
-import { QUEUE_STATES, SPECIAL_VALUES } from '~/types';
 import { parseCapacityValue } from '~/utils/capacityUtils';
-import { useCapacityEditor } from '~/features/queue-management/hooks/useCapacityEditor';
+import { getQueueCardClassName } from '../utils/queueCardStyles';
+import { useQueueCardHandlers } from '../hooks/useQueueCardHandlers';
 import { QUEUE_CARD_HEIGHT, QUEUE_CARD_WIDTH } from '~/features/queue-management/constants';
 
 export const QueueCardNode: React.FC<NodeProps> = ({ data }) => {
@@ -55,25 +55,35 @@ export const QueueCardNode: React.FC<NodeProps> = ({ data }) => {
   // Cast data to QueueCardData type
   const queueData = data as QueueCardData;
 
+  // State values (trigger re-renders only when these specific values change)
   const {
     comparisonQueues,
     selectedQueuePath,
-    selectQueue,
-    setPropertyPanelOpen,
     isPropertyPanelOpen,
-    setPropertyPanelInitialTab,
-    requestTemplateConfigOpen,
-    toggleComparisonQueue,
     selectedNodeLabelFilter,
-    getQueueLabelCapacity,
-    clearQueueChanges,
-    hasPendingDeletion,
     searchQuery,
     isComparisonModeActive,
-  } = useSchedulerStore();
+  } = useSchedulerStore(
+    useShallow((s) => ({
+      comparisonQueues: s.comparisonQueues,
+      selectedQueuePath: s.selectedQueuePath,
+      isPropertyPanelOpen: s.isPropertyPanelOpen,
+      selectedNodeLabelFilter: s.selectedNodeLabelFilter,
+      searchQuery: s.searchQuery,
+      isComparisonModeActive: s.isComparisonModeActive,
+    })),
+  );
 
-  const { canAddChildQueue, canDeleteQueue, updateQueueProperty } = useQueueActions();
-  const { openCapacityEditor } = useCapacityEditor();
+  // Actions (stable references, never trigger re-renders)
+  const getQueueLabelCapacity = useSchedulerStore((s) => s.getQueueLabelCapacity);
+  const revertQueueDeletion = useSchedulerStore((state) => state.revertQueueDeletion);
+
+  // Derived state (re-renders when deletion status changes)
+  const isPendingDeletion = useSchedulerStore((s) =>
+    s.hasPendingDeletion((data as QueueCardData).queuePath),
+  );
+
+  const { canAddChildQueue, canDeleteQueue } = useQueueActions();
 
   const {
     queuePath,
@@ -126,113 +136,42 @@ export const QueueCardNode: React.FC<NodeProps> = ({ data }) => {
   const isTemplateManageable =
     autoCreationStatus?.status === 'legacy' || autoCreationStatus?.status === 'flexible';
 
-  const openPropertyPanel = (
-    event: React.MouseEvent,
-    initialTab: 'overview' | 'info' | 'settings' = 'overview',
-  ) => {
-    event.stopPropagation();
+  const {
+    openPropertyPanel,
+    handleOpenCapacityEditor,
+    handleRemoveStagedQueue,
+    handleComparisonToggle,
+    handleToggleState,
+    handleManageTemplate,
+    handleContextMenuOpenChange,
+    handleCardClick,
+  } = useQueueCardHandlers({
+    queuePath,
+    queueName,
+    state,
+    capacityConfig,
+    maxCapacityConfig,
+    stagedStatus,
+    isAutoCreatedQueue,
+    isComparisonModeActive,
+    isSelectedQueue,
+    isPropertyPanelOpen,
+  });
 
-    // Don't allow clicking on newly added queues that haven't been applied yet
-    if (stagedStatus === 'new') {
-      return;
-    }
-
-    const tabToOpen = isAutoCreatedQueue && initialTab === 'settings' ? 'overview' : initialTab;
-    setPropertyPanelInitialTab(tabToOpen);
-    // Set selected queue and open property panel
-    selectQueue(queuePath);
-    setPropertyPanelOpen(true);
-  };
-
-  const handleOpenCapacityEditor = (event: React.MouseEvent) => {
-    event.stopPropagation();
-    if (!queuePath || queuePath === SPECIAL_VALUES.ROOT_QUEUE_NAME) {
-      return;
-    }
-
-    const parentPath = queuePath.split('.').slice(0, -1).join('.');
-    if (!parentPath) {
-      return;
-    }
-
-    openCapacityEditor({
-      origin: 'context-menu',
-      parentQueuePath: parentPath,
-      originQueuePath: queuePath,
-      originQueueName: queueName,
-      capacityValue: capacityConfig,
-      maxCapacityValue: maxCapacityConfig,
-      queueState: state,
-      markOriginAsNew: stagedStatus === 'new',
-    });
-  };
-
-  const handleRemoveStagedQueue = (event: React.MouseEvent) => {
-    event.stopPropagation();
-    event.preventDefault();
-    if (queuePath) {
-      clearQueueChanges(queuePath);
-    }
-  };
-
-  const handleComparisonToggle = () => {
-    toggleComparisonQueue(queuePath);
-  };
-
-  const handleToggleState = () => {
-    const newState = state === QUEUE_STATES.RUNNING ? QUEUE_STATES.STOPPED : QUEUE_STATES.RUNNING;
-    updateQueueProperty(queuePath, 'state', newState);
-  };
-
-  const handleManageTemplate = (event: React.MouseEvent) => {
-    event.stopPropagation();
-    setPropertyPanelInitialTab('settings');
-    selectQueue(queuePath);
-    requestTemplateConfigOpen();
-  };
-
-  const handleContextMenuOpenChange = (open: boolean) => {
-    if (!open && isSelectedQueue && !isPropertyPanelOpen) {
-      selectQueue(null);
-    }
-  };
+  const cardClassName = getQueueCardClassName({
+    isAutoCreatedQueue,
+    stagedStatus,
+    isSelectedQueue,
+    isSelectedForComparison,
+    validationErrors,
+    isAffectedByErrors,
+    shouldGrayOut,
+  });
 
   const cardContent = (
     <Card
-      className={cn(
-        'relative transition-all duration-200 flex flex-col',
-        // Enhanced background and border for better contrast
-        'bg-gray-50 dark:bg-gray-900 border-gray-300 dark:border-gray-700',
-        isAutoCreatedQueue &&
-          'border-amber-400 dark:border-amber-500 border-2 border-dashed bg-amber-50/70 dark:bg-amber-900/30',
-        // Shadow for depth - stronger in light mode
-        'shadow-lg hover:shadow-xl dark:shadow-md dark:hover:shadow-lg',
-        // Cursor styling - not clickable for new queues
-        stagedStatus === 'new' ? 'opacity-75 cursor-default' : 'cursor-pointer',
-        // Border styling based on status
-        stagedStatus === 'new' && 'ring-2 ring-queue-new',
-        stagedStatus === 'deleted' && 'ring-2 ring-queue-deleted',
-        stagedStatus === 'modified' && 'ring-2 ring-queue-modified',
-        !stagedStatus && isSelectedQueue && 'ring-2 ring-primary',
-        // Validation error styling
-        validationErrors &&
-          validationErrors.some((e) => e.severity === 'error') &&
-          'ring-2 ring-destructive',
-        isAffectedByErrors && !validationErrors && 'ring-2 ring-amber-500',
-        // Background styling for states
-        isSelectedQueue && 'bg-blue-200 dark:bg-gray-800',
-        isSelectedForComparison && !isSelectedQueue && 'bg-gray-200 dark:bg-gray-700',
-        // Gray out inaccessible queues when filtered by label
-        shouldGrayOut && 'opacity-50 grayscale',
-        'gap-4 py-5',
-      )}
-      onClick={(event) => {
-        if (isComparisonModeActive) {
-          handleComparisonToggle();
-        } else {
-          openPropertyPanel(event, 'overview');
-        }
-      }}
+      className={cardClassName}
+      onClick={handleCardClick}
       style={{ width: QUEUE_CARD_WIDTH, height: QUEUE_CARD_HEIGHT }}
     >
       <CardHeader className="px-5 pb-3 gap-1">
@@ -304,14 +243,14 @@ export const QueueCardNode: React.FC<NodeProps> = ({ data }) => {
               />
             ) : (
               <>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-2xl font-bold">
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-2xl font-bold tracking-tight">
                     {parsedCapacityDisplay.type === 'percentage' ||
                     parsedCapacityDisplay.type === 'weight'
                       ? parsedCapacityDisplay.formatted
                       : 'N/A'}
                   </span>
-                  <span className="text-sm text-muted-foreground">capacity</span>
+                  <span className="text-sm text-muted-foreground font-medium">capacity</span>
                 </div>
                 <div className="text-xs text-muted-foreground">
                   Maximum capacity:{' '}
@@ -370,7 +309,7 @@ export const QueueCardNode: React.FC<NodeProps> = ({ data }) => {
         isTemplateManageable={isTemplateManageable}
         canAdd={canAdd}
         canDelete={canDelete}
-        hasPendingDeletion={hasPendingDeletion(queuePath)}
+        hasPendingDeletion={isPendingDeletion}
         isSelectedQueue={isSelectedQueue}
         isPropertyPanelOpen={isPropertyPanelOpen}
         onEditProperties={(e) => openPropertyPanel(e, 'settings')}
@@ -379,6 +318,7 @@ export const QueueCardNode: React.FC<NodeProps> = ({ data }) => {
         onToggleState={handleToggleState}
         onAddChild={() => setAddDialogOpen(true)}
         onDelete={() => setDeleteDialogOpen(true)}
+        onUndoDelete={() => revertQueueDeletion(queuePath)}
         onRemoveStaged={handleRemoveStagedQueue}
         onOpenChange={handleContextMenuOpenChange}
       >

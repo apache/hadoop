@@ -41,6 +41,7 @@ body {
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -81,7 +82,27 @@ body {
 }
 
 :root {
-  --radius: 0.65rem;
+  /* Base radius - increased for bolder look */
+  --radius: 0.75rem;
+
+  /* Typography scale */
+  --font-display: 1.875rem;
+  --font-heading-1: 1.5rem;
+  --font-heading-2: 1.25rem;
+  --font-heading-3: 1.125rem;
+
+  /* Animation tokens */
+  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-normal: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 400ms cubic-bezier(0.4, 0, 0.2, 1);
+  --spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+
+  /* Enhanced shadows */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+  --shadow-glow: 0 0 20px -5px var(--primary);
   --background: oklch(1 0 0);
   --foreground: oklch(0.141 0.005 285.823);
   --card: oklch(1 0 0);
@@ -116,14 +137,21 @@ body {
 
   /* Queue state colors for light mode */
   --queue-new: oklch(0.648 0.2 131.684); /* Green */
-  --queue-modified: oklch(0.646 0.222 41.116); /* Orange */
+  --queue-modified: oklch(0.75 0.17 70); /* Amber - clearly distinct from red */
   --queue-deleted: oklch(0.577 0.245 27.325); /* Red */
   --queue-running: oklch(0.648 0.2 131.684); /* Green */
   --queue-stopped: oklch(0.577 0.245 27.325); /* Red */
-  --queue-draining: oklch(0.646 0.222 41.116); /* Orange */
+  --queue-draining: oklch(0.75 0.17 70); /* Amber - clearly distinct from red */
 }
 
 .dark {
+  /* Dark mode shadows - softer */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.2);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.3), 0 2px 4px -2px rgb(0 0 0 / 0.2);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.35), 0 4px 6px -4px rgb(0 0 0 / 0.25);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.4), 0 8px 10px -6px rgb(0 0 0 / 0.3);
+  --shadow-glow: 0 0 25px -5px var(--primary);
+
   --background: oklch(0.141 0.005 285.823);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.21 0.006 285.885);
@@ -164,4 +192,80 @@ body {
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* Shimmer animation for skeleton loading */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.animate-shimmer {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.1) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+.dark .animate-shimmer {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.05) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+}
+
+/* Float animation for empty states and decorative elements */
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+/* Subtle pulse for attention without being distracting */
+@keyframes subtle-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+.animate-subtle-pulse {
+  animation: subtle-pulse 2s ease-in-out infinite;
+}
+
+/* Gradient text utility */
+.text-gradient {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--ring) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Decorative background pattern for empty states */
+.empty-state-bg {
+  background-image: radial-gradient(circle at 1px 1px, var(--muted-foreground) 1px, transparent 0);
+  background-size: 24px 24px;
+  opacity: 0.1;
 }

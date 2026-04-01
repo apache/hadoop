@@ -38,7 +38,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '~/components/ui/select';
-import { Plus, SlidersHorizontal } from 'lucide-react';
+import { Plus, Info } from 'lucide-react';
 import { useQueueActions } from '~/features/queue-management/hooks/useQueueActions';
 import { useCapacityEditor } from '~/features/queue-management/hooks/useCapacityEditor';
 
@@ -163,6 +163,15 @@ export function AddQueueDialog({ open, parentQueuePath, onClose }: AddQueueDialo
           <input type="hidden" {...register('capacity')} />
           <input type="hidden" {...register('maxCapacity')} />
 
+          {/* Workflow help text */}
+          <div className="flex items-start gap-2 p-3 rounded-md bg-muted/50 text-sm text-muted-foreground">
+            <Info className="h-4 w-4 mt-0.5 flex-shrink-0" />
+            <span>
+              After creating the queue, you will be able to set capacity for this queue and
+              adjust sibling capacities in the capacity editor.
+            </span>
+          </div>
+
           {/* State */}
           <Field>
             <FieldLabel htmlFor="state">State</FieldLabel>
@@ -187,8 +196,8 @@ export function AddQueueDialog({ open, parentQueuePath, onClose }: AddQueueDialo
               Cancel
             </Button>
             <Button type="submit" disabled={!isValid}>
-              <SlidersHorizontal className="mr-2 h-4 w-4" />
-              Adjust capacities
+              <Plus className="mr-2 h-4 w-4" />
+              Create Queue
             </Button>
           </DialogFooter>
         </form>
