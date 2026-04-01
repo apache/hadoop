@@ -164,6 +164,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.INFINITE_LEASE_DURATION;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.ABFS_BLOB_DOMAIN_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_ENCRYPTION_CONTEXT;
+import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_OPENFILE_ON_DIRECTORY;
 import static org.apache.hadoop.fs.azurebfs.utils.UriUtils.isKeyForDirectorySet;
 
 /**
@@ -889,7 +890,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     return new AbfsRestOperationException(
             AzureServiceErrorCode.PATH_NOT_FOUND.getStatusCode(),
             AzureServiceErrorCode.PATH_NOT_FOUND.getErrorCode(),
-            "openFileForRead must be used with files and not directories",
+            ERR_OPENFILE_ON_DIRECTORY,
             null);
   }
 
@@ -951,13 +952,13 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       */
       if ((fileStatus instanceof VersionedFileStatus) && (
           getClient().getEncryptionType() != EncryptionType.ENCRYPTION_CONTEXT
-               || ((VersionedFileStatus) fileStatus).getEncryptionContext()
-               != null)) {
+              || ((VersionedFileStatus) fileStatus).getEncryptionContext()
+              != null)) {
         path = path.makeQualified(this.uri, path);
         Preconditions.checkArgument(fileStatus.getPath().equals(path),
             String.format(
-                 "Filestatus path [%s] does not match with given path [%s]",
-                  fileStatus.getPath(), path));
+                "Filestatus path [%s] does not match with given path [%s]",
+                fileStatus.getPath(), path));
         resourceType = fileStatus.isFile() ? FILE : DIRECTORY;
         contentLength = fileStatus.getLen();
         eTag = ((VersionedFileStatus) fileStatus).getVersion();
@@ -1926,7 +1927,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         .build();
   }
 
-  public String getRelativePath(final Path path) {
+  public static String getRelativePath(final Path path) {
     Preconditions.checkNotNull(path, "path");
     String relPath = path.toUri().getPath();
     if (relPath.isEmpty()) {

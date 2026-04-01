@@ -22,7 +22,6 @@ import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.HttpURLConnection;
-import java.util.Objects;
 import java.util.UUID;
 
 import org.apache.commons.lang3.StringUtils;
@@ -57,15 +56,12 @@ import static java.lang.Math.max;
 import static java.lang.Math.min;
 
 import static org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore.extractEtagHeader;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.DIRECTORY;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.ROOT_PATH;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.TRUE;
+import static org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore.getRelativePath;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_KB;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.STREAM_ID_LEN;
-import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_META_HDI_ISFOLDER;
 import static org.apache.hadoop.fs.azurebfs.constants.InternalConstants.CAPABILITY_SAFE_READAHEAD;
 import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.INVALID_RANGE;
-import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.UNAUTHORIZED_BLOB_OVERWRITE;
+import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_READ_ON_DIRECTORY;
 import static org.apache.hadoop.io.Sizes.S_128K;
 import static org.apache.hadoop.io.Sizes.S_2M;
 import static org.apache.hadoop.util.StringUtils.toLowerCase;
@@ -85,7 +81,7 @@ public abstract class AbfsInputStream extends FSInputStream implements CanUnbuff
   private final Statistics statistics;
   private final String path;
 
-  private long contentLength;
+  private volatile long contentLength;
   private final int bufferSize; // default buffer size
   private final int footerReadSize; // default buffer size to read when reading footer
   private final int readAheadQueueDepth;         // initialized in constructor
@@ -146,7 +142,6 @@ public abstract class AbfsInputStream extends FSInputStream implements CanUnbuff
   /** ABFS instance to be held by the input stream to avoid GC close. */
   private final BackReference fsBackRef;
   private final ReadBufferManager readBufferManager;
-  private final String readOnDirectoryErrorMsg = "Read operation not permitted on a directory.";
 
   /**
    * Constructor for AbfsInputStream.
@@ -580,25 +575,6 @@ public abstract class AbfsInputStream extends FSInputStream implements CanUnbuff
   }
 
   /**
-   * Convert a {@link Path} to the relative path string used by ABFS.
-   *
-   * <p>This returns the URI path component of the supplied {@code path}. If the
-   * resulting path is empty, this method returns {@code ROOT_PATH}.
-   *
-   * @param path the {@link Path} to convert; must not be null
-   * @return the relative path as a {@link String}; never null
-   */
-  String getRelativePath(final Path path) {
-    Preconditions.checkNotNull(path, "path");
-    String relPath = path.toUri().getPath();
-    if (relPath.isEmpty()) {
-      // This means that path passed by user is absolute path of root without "/" at end.
-      relPath = ROOT_PATH;
-    }
-    return relPath;
-  }
-
-  /**
    * Creates an exception indicating that a read operation was attempted on a directory.
    *
    * @return an {@link AbfsRestOperationException} indicating the operation is not permitted on a directory
@@ -607,7 +583,7 @@ public abstract class AbfsInputStream extends FSInputStream implements CanUnbuff
     return new AbfsRestOperationException(
             AzureServiceErrorCode.PATH_NOT_FOUND.getStatusCode(),
             AzureServiceErrorCode.PATH_NOT_FOUND.getErrorCode(),
-            readOnDirectoryErrorMsg,
+            ERR_READ_ON_DIRECTORY,
             null);
   }
 
@@ -629,14 +605,20 @@ public abstract class AbfsInputStream extends FSInputStream implements CanUnbuff
     }
   }
 
+/**
+   * Extracts the content length from the HTTP response headers.
+   * Uses the Content-Range header to determine the total file size, which is necessary
+   * for handling partial reads correctly.
+   *
+   * @param op the ABFS HTTP operation containing the response headers
+   * @return the content length of the file
+   */
   private long extractContentLength(AbfsHttpOperation op) {
     // We need to use content range header instead of content length to take care of partial reads
     String contentRange = op.getResponseHeader(HttpHeaderConfigurations.CONTENT_RANGE);
+    contentLength = 0;
     if (!StringUtils.isEmpty(contentRange)) {
       contentLength = Long.parseLong(contentRange.split(AbfsHttpConstants.FORWARD_SLASH)[1]);
-    }
-    else {
-      contentLength = 0;
     }
     return contentLength;
   }
@@ -690,7 +672,7 @@ public abstract class AbfsInputStream extends FSInputStream implements CanUnbuff
       if (ex instanceof AbfsRestOperationException) {
         AbfsRestOperationException ere = (AbfsRestOperationException) ex;
         int status = ere.getStatusCode();
-        if (ere.getErrorMessage().contains(readOnDirectoryErrorMsg)) {
+        if (ere.getErrorMessage().contains(ERR_READ_ON_DIRECTORY)) {
           throw ere;
         }
         boolean isHnsEnabled = client.getIsNamespaceEnabled();
@@ -705,18 +687,21 @@ public abstract class AbfsInputStream extends FSInputStream implements CanUnbuff
             throw new FileNotFoundException(ere.getMessage());
           }
 
-          // FNS account with restrictGpsOnOpenFile enabled
           try {
-            // Need to rule out if the path is an implicit directory
+            /*
+             * For FNS account with restrictGpsOnOpenFile enabled,
+             * need to rule out if the path is an implicit directory
+             */
             checkIfDirPathInFNS();
-
           } catch (AzureBlobFileSystemException gpsEx) {
             AbfsRestOperationException gpsEre = (AbfsRestOperationException) gpsEx;
-            if (gpsEre.getErrorMessage().contains(readOnDirectoryErrorMsg)) {
+            if (gpsEre.getErrorMessage().contains(ERR_READ_ON_DIRECTORY)) {
               throw gpsEre;
             }
             // The file does not exist
-            else throw new FileNotFoundException(gpsEre.getMessage());
+            else {
+              throw new FileNotFoundException(gpsEre.getMessage());
+            }
           }
         }
 

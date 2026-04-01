@@ -74,7 +74,9 @@ import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_RE
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.COLON;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.SPLIT_NO_LIMIT;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_READ_OPTIMIZE_FOOTER_READ;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENABLE_PREFETCH_REQUEST_PRIORITY;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_RESTRICT_GPS_ON_OPENFILE;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_REQUEST_PRIORITY;
 import static org.apache.hadoop.fs.azurebfs.constants.ReadType.DIRECT_READ;
 import static org.apache.hadoop.fs.azurebfs.constants.ReadType.FOOTER_READ;
@@ -129,6 +131,8 @@ public class TestAbfsInputStream extends AbstractAbfsIntegrationTest {
   private static final int POSITION_INDEX = 9;
   private static final int OPERATION_INDEX = 6;
   private static final int READTYPE_INDEX = 11;
+  private static final int ENCRYPTION_KEY_SIZE = 32;
+  private static final int SMALL_BUFFER_SIZE = 100;
 
 
   @AfterEach
@@ -322,6 +326,37 @@ public class TestAbfsInputStream extends AbstractAbfsIntegrationTest {
   }
 
   @Test
+  public void testReadFile() throws Exception {
+    Configuration conf = getRawConfiguration();
+    //conf.set(AZURE_READ_OPTIMIZE_FOOTER_READ, "false");
+    conf.set(FS_AZURE_RESTRICT_GPS_ON_OPENFILE, "true");
+    AzureBlobFileSystem fs = getFileSystem(conf);
+    Path testFile = new Path("/readFileTest");
+    byte[] data = "hello world".getBytes(StandardCharsets.UTF_8); //11bytes
+    writeBufferToNewFile(testFile, data);
+    int fileSize = Math.toIntExact(getFileSystem().getFileStatus(testFile).getLen());
+
+    try (FSDataInputStream in = fs.open(testFile)) {
+      byte[] buf = new byte[data.length];
+
+      //todo: check for available in validate()
+      int bytesRead = in.read(13, buf, 0, fileSize); // pos >=contentlength -> checks earlier itself (-1)
+
+//  in.seek(12);
+//  int bytesRead = in.read(buf); // fcursor >=contentlength -> fails earlier at seek (EOFException)
+
+      //read(long position, byte[] buffer, int offset, int length)
+    //  int bytesRead = in.read(13, buf, 0, fileSize); // pos >=contentlength -> checks earlier itself (-1)
+      //int bytesRead = in.read(buf, 0, fileSize+2); // len requested >=contentlength -> fails earlier itself (indexoutofbounds)
+
+      //int bytesRead = in.read();
+
+      Assertions.assertEquals(fileSize, bytesRead);
+      Assertions.assertArrayEquals(data, buf);
+    }
+  }
+
+  @Test
   public void testOpenFileWithOptions() throws Exception {
     AzureBlobFileSystem fs = getFileSystem();
     String testFolder = "/testFolder";
@@ -408,7 +443,7 @@ private void mockClientForEncryptionContext(AbfsClient encryptedClient) throws I
   EncryptionContextProvider provider =
           mock(EncryptionContextProvider.class);
   when(provider.getEncryptionKey(anyString(), any()))
-          .thenReturn(new ABFSKey(new byte[32]));
+          .thenReturn(new ABFSKey(new byte[ENCRYPTION_KEY_SIZE]));
 
   doReturn(provider)
           .when(encryptedClient)
@@ -801,7 +836,7 @@ private void mockClientForEncryptionContext(AbfsClient encryptedClient) throws I
 
     try (FSDataInputStream in = fs.open(new Path(explicitTestFolder))) {
       AbfsInputStream abfsIn = (AbfsInputStream) in.getWrappedStream();
-      byte[] buf = new byte[100];
+      byte[] buf = new byte[SMALL_BUFFER_SIZE];
       AbfsRestOperationException ex = Assertions.assertThrows(AbfsRestOperationException.class, () -> abfsIn.read(buf));
       assertThat(ex.getStatusCode()).isEqualTo(AzureServiceErrorCode.PATH_NOT_FOUND.getStatusCode());
       assertThat(ex.getMessage()).contains("Read operation not permitted on a directory.");
@@ -817,7 +852,7 @@ private void mockClientForEncryptionContext(AbfsClient encryptedClient) throws I
     createAzCopyFolder(new Path(implicitTestFolder));
     try (FSDataInputStream in2 = fs.open(new Path(implicitTestFolder))) {
       AbfsInputStream abfsIn2 = (AbfsInputStream) in2.getWrappedStream();
-      byte[] buf2 = new byte[100];
+      byte[] buf2 = new byte[SMALL_BUFFER_SIZE];
       AbfsRestOperationException ex2 = Assertions.assertThrows(AbfsRestOperationException.class, () -> abfsIn2.read(buf2));
       assertThat(ex2.getStatusCode()).isEqualTo(AzureServiceErrorCode.PATH_NOT_FOUND.getStatusCode());
       assertThat(ex2.getMessage()).contains("Read operation not permitted on a directory.");
@@ -854,7 +889,7 @@ private void mockClientForEncryptionContext(AbfsClient encryptedClient) throws I
 
     try (FSDataInputStream in = fs.open(new Path(testFolder))) {
       AbfsInputStream abfsIn = (AbfsInputStream) in.getWrappedStream();
-      byte[] buf = new byte[100];
+      byte[] buf = new byte[SMALL_BUFFER_SIZE];
       AbfsRestOperationException ex = Assertions.assertThrows(AbfsRestOperationException.class, () -> abfsIn.read(buf));
       assertThat(ex.getStatusCode()).isEqualTo(AzureServiceErrorCode.PATH_NOT_FOUND.getStatusCode());
       assertThat(ex.getMessage()).contains("Read operation not permitted on a directory.");
@@ -893,22 +928,34 @@ private void mockClientForEncryptionContext(AbfsClient encryptedClient) throws I
 
     // Case 1: FileStatus is not provided
     abfsStore.openFileForRead(fileWithoutFileStatus, Optional.empty(), null, tracingContext);
-    verify(mockClient, times(0).description("FileStatus not provided, restrict GPS: getPathStatus should NOT be invoked"))
-            .getPathStatus(any(String.class), any(Boolean.class), any(TracingContext.class), nullable(ContextEncryptionAdapter.class));
+    verify(mockClient, times(0)
+            .description("FileStatus not provided, restrict GPS: getPathStatus should NOT be invoked"))
+            .getPathStatus(any(String.class), any(Boolean.class), any(TracingContext.class),
+                    nullable(ContextEncryptionAdapter.class));
 
     // NOTE: One call for GPS will come from getFileStatus for both cases below.
     // If GPS were happening at openFileForRead, we would've seen more than 2 calls.
 
     // Case 2: FileStatus is provided (of wrong status type AbfsLocatedFileStatus)
-    abfsStore.openFileForRead(fileWithFileStatus, Optional.ofNullable(new OpenFileParameters().withStatus(
-            new AbfsLocatedFileStatus(fs.getFileStatus(fileWithFileStatus), null))), null, tracingContext);
-    verify(mockClient, times(1).description("Wrong FileStatus type provided, restrict GPS: getPathStatus still should NOT be invoked"))
-            .getPathStatus(any(String.class), any(Boolean.class), any(TracingContext.class), nullable(ContextEncryptionAdapter.class));
+    abfsStore.openFileForRead(fileWithFileStatus,
+            Optional.ofNullable(new OpenFileParameters().withStatus(
+                    new AbfsLocatedFileStatus(fs.getFileStatus(fileWithFileStatus), null))),
+            null, tracingContext);
+    verify(mockClient, times(1)
+            .description("Wrong FileStatus type provided, restrict GPS: getPathStatus still should NOT be invoked"))
+            .getPathStatus(any(String.class), any(Boolean.class), any(TracingContext.class),
+                    nullable(ContextEncryptionAdapter.class));
 
     // Case 3: FileStatus is provided (correct status type VersionedFileStatus)
-    abfsStore.openFileForRead(fileWithFileStatus, Optional.ofNullable(new OpenFileParameters().withStatus(fs.getFileStatus(fileWithFileStatus))), null, tracingContext);
-    verify(mockClient, times(2).description("Correct type FileStatus provided, restrict GPS: getPathStatus should NOT be invoked"))
-            .getPathStatus(any(String.class), any(Boolean.class), any(TracingContext.class), nullable(ContextEncryptionAdapter.class));
+    abfsStore.openFileForRead(fileWithFileStatus,
+        Optional.ofNullable(new OpenFileParameters()
+            .withStatus(fs.getFileStatus(fileWithFileStatus))),
+        null, tracingContext);
+    verify(mockClient, times(2).description(
+        "Correct type FileStatus provided, restrict GPS: "
+            + "getPathStatus should NOT be invoked"))
+            .getPathStatus(any(String.class), any(Boolean.class),
+                any(TracingContext.class), nullable(ContextEncryptionAdapter.class));
   }
 
   /**
@@ -1163,7 +1210,6 @@ private void mockClientForEncryptionContext(AbfsClient encryptedClient) throws I
     // Stub :
     // Pass all readAheads and fail the post eviction request to
     // prove ReadAhead buffer is used
-    // for post eviction check, fail all read aheads
     doReturn(op)
         .doReturn(op)
         .doReturn(op)
@@ -1405,26 +1451,28 @@ private void mockClientForEncryptionContext(AbfsClient encryptedClient) throws I
             any(String.class), any(), any(TracingContext.class));
 
     AbfsInputStream inputStream = getAbfsInputStream(client, "testSuccessfulReadAhead.txt");
+    int beforeReadCompletedListSize = getBufferManager().getCompletedReadListSize();
 
-    queueReadAheads(inputStream);
-
-    // AbfsInputStream Read would have waited for the read-ahead for the requested offset
-    // as we are testing from ReadAheadManager directly, sleep for a sec to
-    // get the read ahead threads to complete
-    Thread.sleep(1000);
+    // First read request that triggers readAheads.
+    inputStream.read(new byte[ONE_KB]);
 
     // Only the 3 readAhead threads should have triggered client.read
     verifyReadCallCount(client, 3);
+    int newAdditionsToCompletedRead =
+        getBufferManager().getCompletedReadListSize()
+            - beforeReadCompletedListSize;
+    // read buffer might be dumped if the ReadBufferManager getblock preceded
+    // the action of buffer being picked for reading from readaheadqueue, so that
+    // inputstream can proceed with read and not be blocked on readahead thread
+    // availability. So the count of buffers in completedReadQueue for the stream
+    // can be same or lesser than the requests triggered to queue readahead.
+    assertThat(newAdditionsToCompletedRead)
+        .describedAs(
+            "New additions to completed reads should be same or less than as number of readaheads")
+        .isLessThanOrEqualTo(3);
 
-    // getBlock for a new read should return the buffer read-ahead
-    int bytesRead = getBufferManager().getBlock(
-        inputStream,
-        ONE_KB,
-        ONE_KB,
-        new byte[ONE_KB]);
-
-    Assertions.assertTrue(bytesRead > 0, "bytesRead should be non-zero from the "
-        + "buffer that was read-ahead");
+    // Another read request whose requested data is already read ahead.
+    inputStream.read(ONE_KB, new byte[ONE_KB], 0, ONE_KB);
 
     // Once created, mock will remember all interactions.
     // As the above read should not have triggered any server calls, total
