@@ -84,6 +84,22 @@ export type PropertyEvaluationContext = {
 
 export type PropertyCondition = (context: PropertyEvaluationContext) => boolean;
 
+export type InheritedValueInfo = {
+  value: string;
+  source: 'queue' | 'global';
+  sourcePath?: string;
+  isScaled?: boolean;
+};
+
+export type InheritanceResolverContext = {
+  queuePath: string;
+  propertyName: string;
+  configData: Map<string, string>;
+  stagedChanges?: StagedChange[];
+};
+
+export type InheritanceResolver = (context: InheritanceResolverContext) => InheritedValueInfo | null;
+
 export type PropertyDescriptor = {
   name: string;
   displayName: string;
@@ -103,4 +119,5 @@ export type PropertyDescriptor = {
   deprecationMessage?: string;
   formFieldName?: string; // Escaped name for React Hook Form
   originalName?: string; // Original name before escaping
+  inheritanceResolver?: InheritanceResolver;
 };

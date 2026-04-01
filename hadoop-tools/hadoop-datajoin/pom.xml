@@ -20,11 +20,11 @@
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-project</artifactId>
-    <version>3.5.0-SNAPSHOT</version>
+    <version>3.6.0-SNAPSHOT</version>
     <relativePath>../../hadoop-project</relativePath>
   </parent>
   <artifactId>hadoop-datajoin</artifactId>
-  <version>3.5.0-SNAPSHOT</version>
+  <version>3.6.0-SNAPSHOT</version>
   <description>Apache Hadoop Data Join</description>
   <name>Apache Hadoop Data Join</name>
   <packaging>jar</packaging>
@@ -136,7 +136,7 @@
           <excludeFilterFiles>
             <excludeFilterFile>${basedir}/dev-support/findbugs-exclude.xml
             </excludeFilterFile>
-            <excludeFilterFile>${repo.root}/dev-support/findbugs-exclude-global.xml
+            <excludeFilterFile>${maven.multiModuleProjectDirectory}/dev-support/findbugs-exclude-global.xml
             </excludeFilterFile>
           </excludeFilterFiles>
           <effort>Max</effort>

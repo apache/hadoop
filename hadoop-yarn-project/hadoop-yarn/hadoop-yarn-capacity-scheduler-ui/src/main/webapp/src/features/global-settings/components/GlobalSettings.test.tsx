@@ -17,7 +17,7 @@
  */
 
 
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { describe, it, expect, beforeEach, vi, type Mock } from 'vitest';
 import type { ReactNode } from 'react';
 import { GlobalSettings } from './GlobalSettings';
@@ -162,8 +162,8 @@ describe('GlobalSettings', () => {
 
       renderWithValidation(<GlobalSettings />);
 
-      expect(screen.getByText('Core Settings')).toBeInTheDocument();
-      expect(screen.getByText('Security & Access Control')).toBeInTheDocument();
+      expect(screen.getAllByText('Core Settings').length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText('Security & Access Control').length).toBeGreaterThanOrEqual(1);
     });
 
     it('should render all properties within their categories', () => {
@@ -284,11 +284,13 @@ describe('GlobalSettings', () => {
       renderWithValidation(<GlobalSettings />, { stagedChanges });
 
       // Find the general category heading and its badge
-      const generalHeading = screen.getByText('Core Settings').closest('div');
+      const generalHeading = screen.getByRole('heading', { name: 'Core Settings' }).closest('div');
       expect(generalHeading).toHaveTextContent('Has Changes');
 
       // Security category should not have the badge
-      const securityHeading = screen.getByText('Security & Access Control').closest('div');
+      const securityHeading = screen
+        .getByRole('heading', { name: 'Security & Access Control' })
+        .closest('div');
       expect(securityHeading).not.toHaveTextContent('Has Changes');
     });
 
@@ -300,7 +302,7 @@ describe('GlobalSettings', () => {
       (globalPropertyDefinitions as PropertyDescriptor[]).push(...properties);
       renderWithValidation(<GlobalSettings />);
 
-      const generalHeading = screen.getByText('Core Settings').closest('div');
+      const generalHeading = screen.getByRole('heading', { name: 'Core Settings' }).closest('div');
       expect(generalHeading).not.toHaveTextContent('Has Changes');
     });
   });
@@ -421,6 +423,53 @@ describe('GlobalSettings', () => {
     });
   });
 
+  describe('quick-jump navigation', () => {
+    it('should render quick-jump links when multiple categories exist', () => {
+      const properties = [
+        getMockPropertyDescriptor({ name: 'prop1', category: 'core' }),
+        getMockPropertyDescriptor({ name: 'prop2', category: 'security' }),
+      ];
+      (globalPropertyDefinitions as PropertyDescriptor[]).push(...properties);
+
+      renderWithValidation(<GlobalSettings />);
+
+      const nav = screen.getByRole('navigation', { name: /settings sections/i });
+      expect(nav).toBeInTheDocument();
+
+      const links = within(nav).getAllByRole('link');
+      expect(links).toHaveLength(2);
+      expect(links[0]).toHaveTextContent('Core Settings');
+      expect(links[1]).toHaveTextContent('Security & Access Control');
+    });
+
+    it('should not render quick-jump nav when only one category exists', () => {
+      const properties = [
+        getMockPropertyDescriptor({ name: 'prop1', category: 'core' }),
+        getMockPropertyDescriptor({ name: 'prop2', category: 'core' }),
+      ];
+      (globalPropertyDefinitions as PropertyDescriptor[]).push(...properties);
+
+      renderWithValidation(<GlobalSettings />);
+
+      expect(
+        screen.queryByRole('navigation', { name: /settings sections/i }),
+      ).not.toBeInTheDocument();
+    });
+
+    it('should add id attributes to accordion sections', () => {
+      const properties = [
+        getMockPropertyDescriptor({ name: 'prop1', category: 'core' }),
+        getMockPropertyDescriptor({ name: 'prop2', category: 'security' }),
+      ];
+      (globalPropertyDefinitions as PropertyDescriptor[]).push(...properties);
+
+      renderWithValidation(<GlobalSettings />);
+
+      expect(document.getElementById('section-core')).toBeInTheDocument();
+      expect(document.getElementById('section-security')).toBeInTheDocument();
+    });
+  });
+
   describe('accordion behavior', () => {
     it('should render all category accordions', () => {
       const properties = [
@@ -432,10 +481,10 @@ describe('GlobalSettings', () => {
 
       renderWithValidation(<GlobalSettings />);
 
-      // Verify all category accordions are rendered
-      expect(screen.getByText('Core Settings')).toBeInTheDocument();
-      expect(screen.getByText('Security & Access Control')).toBeInTheDocument();
-      expect(screen.getByText('Scheduling Policy')).toBeInTheDocument();
+      // Verify all category accordions are rendered (labels also appear in quick-jump nav)
+      expect(screen.getAllByText('Core Settings').length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText('Security & Access Control').length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText('Scheduling Policy').length).toBeGreaterThanOrEqual(1);
 
       // Verify correct number of accordion items
       const accordionItems = screen.getAllByTestId('accordion-item');

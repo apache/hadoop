@@ -27,7 +27,6 @@ import org.junit.jupiter.api.BeforeEach;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.azure.integration.AzureTestConstants;
 import org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes;
 import org.apache.hadoop.fs.azurebfs.contract.ABFSContractTestBinding;
 import org.apache.hadoop.fs.azurebfs.contract.AbfsFileSystemContract;
@@ -40,7 +39,8 @@ import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
 import org.apache.hadoop.util.DurationInfo;
 
 import static java.util.Objects.requireNonNull;
-import static org.apache.hadoop.fs.azure.integration.AzureTestUtils.assumeScaleTestsEnabled;
+import static org.apache.hadoop.fs.azurebfs.utils.AbfsTestUtils.SCALE_TEST_TIMEOUT_MILLIS;
+import static org.apache.hadoop.fs.azurebfs.utils.AbfsTestUtils.assumeScaleTestsEnabled;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_OVERRIDE_OWNER_SP;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_OVERRIDE_OWNER_SP_LIST;
@@ -76,7 +76,7 @@ public abstract class AbstractAbfsClusterITest extends
 
   @Override
   protected int getTestTimeoutMillis() {
-    return AzureTestConstants.SCALE_TEST_TIMEOUT_MILLIS;
+    return SCALE_TEST_TIMEOUT_MILLIS;
   }
 
   @BeforeEach

@@ -41,11 +41,17 @@ export const QueueCapacityProgress: React.FC<QueueCapacityProgressProps> = ({
 }) => {
   const getUsageColor = (used: number): string => {
     if (capacity === 0) return 'bg-muted-foreground/30';
-    if (used >= 90) return 'bg-destructive';
-    if (used >= 75) return 'bg-orange-500';
-    if (used >= 50) return 'bg-yellow-500';
-    if (used > 0) return 'bg-green-500';
-    return 'bg-green-600';
+    if (used >= 90) return 'bg-gradient-to-r from-destructive to-red-400';
+    if (used >= 75) return 'bg-gradient-to-r from-orange-500 to-orange-400';
+    if (used >= 50) return 'bg-gradient-to-r from-yellow-500 to-yellow-400';
+    if (used > 0) return 'bg-gradient-to-r from-green-500 to-emerald-400';
+    return 'bg-gradient-to-r from-green-600 to-green-500';
+  };
+
+  const getGlowClass = (used: number): string => {
+    if (used >= 90) return 'shadow-[0_0_8px_-2px] shadow-destructive/50';
+    if (used >= 75) return 'shadow-[0_0_6px_-2px] shadow-orange-500/40';
+    return '';
   };
 
   const showCapacityMarker = capacity > 5 && capacity < 95;
@@ -61,18 +67,19 @@ export const QueueCapacityProgress: React.FC<QueueCapacityProgressProps> = ({
         </div>
       )}
 
-      <div className="relative h-4 bg-secondary rounded-full overflow-visible mt-1">
+      <div className="relative h-4 bg-secondary rounded-full overflow-visible mt-1 shadow-inner">
         {/* Capacity bar (semi-transparent) */}
         <div
-          className="absolute h-full bg-primary/30 rounded-full transition-all duration-300"
+          className="absolute h-full bg-gradient-to-r from-primary/25 to-primary/20 rounded-full transition-all duration-500 ease-out"
           style={{ width: `${capacity}%` }}
         />
 
         {/* Usage bar (solid color based on usage level) */}
         <div
           className={cn(
-            'absolute h-full rounded-full transition-all duration-300',
+            'absolute h-full rounded-full transition-all duration-500 ease-out',
             getUsageColor(usedCapacity),
+            getGlowClass(usedCapacity),
           )}
           style={{ width: `${usedCapacity}%` }}
         />

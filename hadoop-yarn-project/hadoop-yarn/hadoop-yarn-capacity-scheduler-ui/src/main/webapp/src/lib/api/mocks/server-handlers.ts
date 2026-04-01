@@ -20,6 +20,7 @@
 import { http, HttpResponse } from 'msw';
 import { readFileSync } from 'fs';
 import { join } from 'path';
+import { HTTP_AUTH_PROPERTY } from '~/config';
 
 // Helper to load JSON files for server-side testing
 function loadMockData(filename: string) {
@@ -38,7 +39,7 @@ export const serverHandlers = [
     const url = new URL(request.url);
     const name = url.searchParams.get('name');
 
-    if (name === 'hadoop.security.authentication') {
+    if (name === HTTP_AUTH_PROPERTY) {
       return HttpResponse.json({ property: { value: 'simple' } });
     }
 
@@ -88,11 +89,6 @@ export const serverHandlers = [
 
   http.get('/ws/v1/cluster/get-node-to-labels', () => {
     const data = loadMockData('get-node-to-labels.json');
-    return HttpResponse.json(data);
-  }),
-
-  http.get('/ws/v1/cluster/get-labels-to-nodes', () => {
-    const data = loadMockData('get-labels-to-nodes.json');
     return HttpResponse.json(data);
   }),
 

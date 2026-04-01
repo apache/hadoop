@@ -1,57 +1,38 @@
 {
   "ant": {
-    "debian:11": "ant",
     "debian:12": "ant",
     "debian:13": "ant",
-    "ubuntu:focal": "ant",
-    "ubuntu:focal::arch64": "ant",
     "ubuntu:noble": "ant",
     "ubuntu:noble::arch64": "ant",
     "rockylinux:8": "ant"
   },
   "apt-utils": {
-    "debian:11": "apt-utils",
     "debian:12": "apt-utils",
     "debian:13": "apt-utils",
-    "ubuntu:focal": "apt-utils",
     "ubuntu:noble": "apt-utils",
-    "ubuntu:noble::arch64": "apt-utils",
-    "ubuntu:focal::arch64": "apt-utils"
+    "ubuntu:noble::arch64": "apt-utils"
   },
   "automake": {
-    "debian:11": "automake",
     "debian:12": "automake",
     "debian:13": "automake",
-    "ubuntu:focal": "automake",
     "ubuntu:noble": "automake",
     "ubuntu:noble::arch64": "automake",
-    "ubuntu:focal::arch64": "automake",
     "rockylinux:8": "automake"
   },
   "bats": {
-    "debian:11": "bats",
     "debian:12": "bats",
     "debian:13": "bats",
-    "ubuntu:focal": "bats",
     "ubuntu:noble": "bats",
     "ubuntu:noble::arch64": "bats",
-    "ubuntu:focal::arch64": "bats",
     "rockylinux:8": "bats"
   },
   "build-essential": {
-    "debian:11": "build-essential",
     "debian:12": "build-essential",
     "debian:13": "build-essential",
-    "ubuntu:focal": "build-essential",
     "ubuntu:noble": "build-essential",
-    "ubuntu:noble::arch64": "build-essential",
-    "ubuntu:focal::arch64": "build-essential"
+    "ubuntu:noble::arch64": "build-essential"
   },
   "bzip2": {
-    "debian:11": [
-      "bzip2",
-      "libbz2-dev"
-    ],
     "debian:12": [
       "bzip2",
       "libbz2-dev"
@@ -60,19 +41,11 @@
       "bzip2",
       "libbz2-dev"
     ],
-    "ubuntu:focal": [
-      "bzip2",
-      "libbz2-dev"
-    ],
     "ubuntu:noble": [
       "bzip2",
       "libbz2-dev"
     ],
     "ubuntu:noble::arch64": [
-      "bzip2",
-      "libbz2-dev"
-    ],
-    "ubuntu:focal::arch64": [
       "bzip2",
       "libbz2-dev"
     ],
@@ -82,29 +55,20 @@
     ]
   },
   "clang": {
-    "debian:11": "clang",
     "debian:12": "clang",
     "debian:13": "clang",
-    "ubuntu:focal": "clang",
     "ubuntu:noble": "clang",
     "ubuntu:noble::arch64": "clang",
-    "ubuntu:focal::arch64": "clang",
     "rockylinux:8": "clang"
   },
   "cmake": {
-    "debian:11": "cmake",
     "debian:12": "cmake",
     "debian:13": "cmake",
-    "ubuntu:focal": "cmake",
     "ubuntu:noble": "cmake",
     "ubuntu:noble::arch64": "cmake",
-    "ubuntu:focal::arch64": "cmake"
+    "rockylinux:8": "cmake"
   },
   "curl": {
-    "debian:11": [
-      "curl",
-      "libcurl4-openssl-dev"
-    ],
     "debian:12": [
       "curl",
       "libcurl4-openssl-dev"
@@ -113,19 +77,11 @@
       "curl",
       "libcurl4-openssl-dev"
     ],
-    "ubuntu:focal": [
-      "curl",
-      "libcurl4-openssl-dev"
-    ],
     "ubuntu:noble": [
       "curl",
       "libcurl4-openssl-dev"
     ],
     "ubuntu:noble::arch64": [
-      "curl",
-      "libcurl4-openssl-dev"
-    ],
-    "ubuntu:focal::arch64": [
       "curl",
       "libcurl4-openssl-dev"
     ],
@@ -135,31 +91,20 @@
     ]
   },
   "doxygen": {
-    "debian:11": "doxygen",
     "debian:12": "doxygen",
     "debian:13": "doxygen",
-    "ubuntu:focal": "doxygen",
     "ubuntu:noble": "doxygen",
-    "ubuntu:noble::arch64": "doxygen",
-    "ubuntu:focal::arch64": "doxygen"
+    "ubuntu:noble::arch64": "doxygen"
   },
   "dnf": {
     "rockylinux:8": "dnf"
   },
   "fuse": {
-    "debian:11": [
+    "debian:12": [
       "fuse",
       "libfuse-dev"
     ],
-    "debian:12": [
-      "fuse3",
-      "libfuse3-dev"
-    ],
     "debian:13": [
-      "fuse3",
-      "libfuse3-dev"
-    ],
-    "ubuntu:focal": [
       "fuse",
       "libfuse-dev"
     ],
@@ -168,10 +113,6 @@
       "libfuse-dev"
     ],
     "ubuntu:noble::arch64": [
-      "fuse",
-      "libfuse-dev"
-    ],
-    "ubuntu:focal::arch64": [
       "fuse",
       "libfuse-dev"
     ],
@@ -182,21 +123,11 @@
     ]
   },
   "gcc": {
-    "debian:11": {
-      "bullseye": [
-        "gcc",
-        "g++"
-      ]
-    },
     "debian:12": [
       "gcc",
       "g++"
     ],
     "debian:13": [
-      "gcc",
-      "g++"
-    ],
-    "ubuntu:focal": [
       "gcc",
       "g++"
     ],
@@ -207,67 +138,45 @@
     "ubuntu:noble::arch64": [
       "gcc",
       "g++"
-    ],
-    "ubuntu:focal::arch64": [
-      "gcc",
-      "g++"
     ]
   },
   "git": {
-    "debian:11": "git",
     "debian:12": "git",
     "debian:13": "git",
-    "ubuntu:focal": "git",
     "ubuntu:noble": "git",
     "ubuntu:noble::arch64": "git",
-    "ubuntu:focal::arch64": "git",
     "rockylinux:8": "git"
   },
   "gnupg-agent": {
-    "debian:11": "gnupg-agent",
     "debian:12": "gnupg-agent",
     "debian:13": "gnupg-agent",
-    "ubuntu:focal": "gnupg-agent",
     "ubuntu:noble": "gnupg-agent",
-    "ubuntu:noble::arch64": "gnupg-agent",
-    "ubuntu:focal::arch64": "gnupg-agent"
+    "ubuntu:noble::arch64": "gnupg-agent"
   },
   "hugo": {
-    "debian:11": "hugo",
     "debian:12": "hugo",
     "debian:13": "hugo",
-    "ubuntu:focal": "hugo",
     "ubuntu:noble": "hugo",
-    "ubuntu:noble::arch64": "hugo",
-    "ubuntu:focal::arch64": "hugo"
+    "ubuntu:noble::arch64": "hugo"
   },
   "libbcprov-java": {
-    "debian:11": "libbcprov-java",
     "debian:12": "libbcprov-java",
     "debian:13": "libbcprov-java",
-    "ubuntu:focal": "libbcprov-java",
     "ubuntu:noble": "libbcprov-java",
-    "ubuntu:noble::arch64": "libbcprov-java",
-    "ubuntu:focal::arch64": "libbcprov-java"
+    "ubuntu:noble::arch64": "libbcprov-java"
   },
   "libtool": {
-    "debian:11": "libtool",
     "debian:12": "libtool",
     "debian:13": "libtool",
-    "ubuntu:focal": "libtool",
     "ubuntu:noble": "libtool",
     "ubuntu:noble::arch64": "libtool",
-    "ubuntu:focal::arch64": "libtool",
     "rockylinux:8": "libtool"
   },
   "openssl": {
-    "debian:11": "libssl-dev",
     "debian:12": "libssl-dev",
     "debian:13": "libssl-dev",
-    "ubuntu:focal": "libssl-dev",
     "ubuntu:noble": "libssl-dev",
     "ubuntu:noble::arch64": "libssl-dev",
-    "ubuntu:focal::arch64": "libssl-dev",
     "rockylinux:8": "openssl-devel"
   },
   "perl": {
@@ -277,10 +186,6 @@
     ]
   },
   "protocol-buffers": {
-    "debian:11": [
-      "libprotobuf-dev",
-      "libprotoc-dev"
-    ],
     "debian:12": [
       "libprotobuf-dev",
       "libprotoc-dev"
@@ -289,52 +194,33 @@
       "libprotobuf-dev",
       "libprotoc-dev"
     ],
-    "ubuntu:focal": [
-      "libprotobuf-dev",
-      "libprotoc-dev"
-    ],
     "ubuntu:noble": [
       "libprotobuf-dev",
       "libprotoc-dev"
     ],
     "ubuntu:noble::arch64": [
-      "libprotobuf-dev",
-      "libprotoc-dev"
-    ],
-    "ubuntu:focal::arch64": [
       "libprotobuf-dev",
       "libprotoc-dev"
     ]
   },
   "procps": {
-    "debian:11": "procps",
     "debian:12": "procps",
     "debian:13": "procps"
   },
   "sasl": {
-    "debian:11": "libsasl2-dev",
     "debian:12": "libsasl2-dev",
     "debian:13": "libsasl2-dev",
-    "ubuntu:focal": "libsasl2-dev",
     "ubuntu:noble": "libsasl2-dev",
     "ubuntu:noble::arch64": "libsasl2-dev",
-    "ubuntu:focal::arch64": "libsasl2-dev",
     "rockylinux:8": "cyrus-sasl-devel"
   },
   "snappy": {
-    "debian:11": "libsnappy-dev",
     "debian:12": "libsnappy-dev",
     "debian:13": "libsnappy-dev",
-    "ubuntu:focal": "libsnappy-dev",
     "ubuntu:noble": "libsnappy-dev",
-    "ubuntu:noble::arch64": "libsnappy-dev",
-    "ubuntu:focal::arch64": "libsnappy-dev"
+    "ubuntu:noble::arch64": "libsnappy-dev"
   },
   "zlib": {
-    "debian:11": [
-      "libzstd-dev",
-      "zlib1g-dev"
-    ],
     "debian:12": [
       "libzstd-dev",
       "zlib1g-dev"
@@ -343,19 +229,11 @@
       "libzstd-dev",
       "zlib1g-dev"
     ],
-    "ubuntu:focal": [
-      "libzstd-dev",
-      "zlib1g-dev"
-    ],
     "ubuntu:noble": [
       "libzstd-dev",
       "zlib1g-dev"
     ],
     "ubuntu:noble::arch64": [
-      "libzstd-dev",
-      "zlib1g-dev"
-    ],
-    "ubuntu:focal::arch64": [
       "libzstd-dev",
       "zlib1g-dev"
     ],
@@ -365,13 +243,10 @@
     ]
   },
   "locales": {
-    "debian:11": "locales",
     "debian:12": "locales",
     "debian:13": "locales",
-    "ubuntu:focal": "locales",
     "ubuntu:noble": "locales",
-    "ubuntu:noble::arch64": "locales",
-    "ubuntu:focal::arch64": "locales"
+    "ubuntu:noble::arch64": "locales"
   },
   "libtirpc-devel": {
     "debian:12": "libtirpc-dev",
@@ -381,20 +256,13 @@
     "ubuntu:noble::arch64": "libtirpc-dev"
   },
   "make": {
-    "debian:11": "make",
     "debian:12": "make",
     "debian:13": "make",
-    "ubuntu:focal": "make",
     "ubuntu:noble": "make",
     "ubuntu:noble::arch64": "make",
-    "ubuntu:focal::arch64": "make",
     "rockylinux:8": "make"
   },
   "java": {
-    "debian:11": [
-      "openjdk-11-jdk",
-      "openjdk-17-jdk"
-    ],
     "debian:12": [
       "openjdk-17-jdk",
       "temurin-25-jdk"
@@ -404,64 +272,35 @@
       "openjdk-25-jdk"
     ],
     "rockylinux:8": [
-        "java-17-openjdk-devel",
-        "java-21-openjdk-devel"
-    ],
-    "ubuntu:focal": [
-      "temurin-25-jdk",
-      "openjdk-8-jdk",
-      "openjdk-11-jdk",
-      "openjdk-17-jdk",
-      "openjdk-21-jdk"
+      "java-17-openjdk-devel",
+      "java-21-openjdk-devel"
     ],
     "ubuntu:noble": [
-      "temurin-25-jdk",
-      "openjdk-11-jdk",
       "openjdk-17-jdk",
-      "openjdk-21-jdk"
+      "openjdk-21-jdk",
+      "openjdk-25-jdk"
     ],
     "ubuntu:noble::arch64": [
-      "temurin-25-jdk",
-      "openjdk-11-jdk",
       "openjdk-17-jdk",
-      "openjdk-21-jdk"
-    ],
-    "ubuntu:focal::arch64": [
-      "temurin-25-jdk",
-      "openjdk-8-jdk",
-      "openjdk-11-jdk",
-      "openjdk-17-jdk",
-      "openjdk-21-jdk"
+      "openjdk-21-jdk",
+      "openjdk-25-jdk"
     ]
   },
   "pinentry-curses": {
-    "debian:11": "pinentry-curses",
     "debian:12": "pinentry-curses",
     "debian:13": "pinentry-curses",
-    "ubuntu:focal": "pinentry-curses",
     "ubuntu:noble": "pinentry-curses",
     "ubuntu:noble::arch64": "pinentry-curses",
-    "ubuntu:focal::arch64": "pinentry-curses",
     "rockylinux:8": "pinentry-curses"
   },
   "pkg-config": {
-    "debian:11": "pkg-config",
     "debian:12": "pkg-config",
     "debian:13": "pkg-config",
-    "ubuntu:focal": "pkg-config",
     "ubuntu:noble": "pkg-config",
     "ubuntu:noble::arch64": "pkg-config",
-    "ubuntu:focal::arch64": "pkg-config",
     "rockylinux:8": "pkg-config"
   },
   "python": {
-    "debian:11": [
-      "python3",
-      "python3-pip",
-      "python3-pkg-resources",
-      "python3-setuptools",
-      "python3-wheel"
-    ],
     "debian:12": [
       "python3",
       "python3-pip",
@@ -476,13 +315,6 @@
       "python3-setuptools",
       "python3-wheel"
     ],
-    "ubuntu:focal": [
-      "python3",
-      "python3-pip",
-      "python3-pkg-resources",
-      "python3-setuptools",
-      "python3-wheel"
-    ],
     "ubuntu:noble": [
       "python3",
       "python3-pip",
@@ -491,14 +323,6 @@
       "python3-wheel"
     ],
     "ubuntu:noble::arch64": [
-      "python3",
-      "python3-pip",
-      "python3-pkg-resources",
-      "python3-setuptools",
-      "python3-wheel"
-    ],
-    "ubuntu:focal::arch64": [
-      "python2.7",
       "python3",
       "python3-pip",
       "python3-pkg-resources",
@@ -513,61 +337,43 @@
     ]
   },
   "rsync": {
-    "debian:11": "rsync",
     "debian:12": "rsync",
     "debian:13": "rsync",
-    "ubuntu:focal": "rsync",
     "ubuntu:noble": "rsync",
     "ubuntu:noble::arch64": "rsync",
-    "ubuntu:focal::arch64": "rsync",
     "rockylinux:8": "rsync"
   },
   "shellcheck": {
-    "debian:11": "shellcheck",
     "debian:12": "shellcheck",
     "debian:13": "shellcheck",
-    "ubuntu:focal": "shellcheck",
     "ubuntu:noble": "shellcheck",
-    "ubuntu:noble::arch64": "shellcheck",
-    "ubuntu:focal::arch64": "shellcheck"
+    "ubuntu:noble::arch64": "shellcheck"
   },
   "shasum": {
     "rockylinux:8": "perl-Digest-SHA"
   },
   "software-properties-common": {
-    "debian:11": "software-properties-common",
-    "ubuntu:focal": "software-properties-common",
     "ubuntu:noble": "software-properties-common",
-    "ubuntu:noble::arch64": "software-properties-common",
-    "ubuntu:focal::arch64": "software-properties-common"
+    "ubuntu:noble::arch64": "software-properties-common"
   },
   "sudo": {
-    "debian:11": "sudo",
     "debian:12": "sudo",
     "debian:13": "sudo",
-    "ubuntu:focal": "sudo",
     "ubuntu:noble": "sudo",
     "ubuntu:noble::arch64": "sudo",
-    "ubuntu:focal::arch64": "sudo",
     "rockylinux:8": "sudo"
   },
   "valgrind": {
-    "debian:11": "valgrind",
     "debian:12": "valgrind",
     "debian:13": "valgrind",
-    "ubuntu:focal": "valgrind",
     "ubuntu:noble": "valgrind",
     "ubuntu:noble::arch64": "valgrind",
-    "ubuntu:focal::arch64": "valgrind",
     "rockylinux:8": "valgrind"
   },
   "yasm": {
-    "debian:11": "yasm",
     "debian:12": "yasm",
     "debian:13": "yasm",
-    "ubuntu:focal": "yasm",
     "ubuntu:noble": "yasm",
-    "ubuntu:noble::arch64": "yasm",
-    "ubuntu:focal::arch64": "yasm"
+    "ubuntu:noble::arch64": "yasm"
   }
 }

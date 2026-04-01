@@ -33,6 +33,13 @@ describe('PlacementRulesMigrationDialog', () => {
     migrateLegacyRules: vi.fn(),
   };
 
+  function mockStore(overrides: Record<string, any> = {}) {
+    const state = { ...mockStoreState, ...overrides };
+    vi.mocked(useSchedulerStore).mockImplementation((selector?: any) => {
+      return selector ? selector(state) : state;
+    });
+  }
+
   const defaultProps = {
     open: true,
     onOpenChange: vi.fn(),
@@ -40,7 +47,7 @@ describe('PlacementRulesMigrationDialog', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(useSchedulerStore).mockReturnValue(mockStoreState);
+    mockStore();
   });
 
   it('should render when open is true', () => {
@@ -138,10 +145,7 @@ describe('PlacementRulesMigrationDialog', () => {
   });
 
   it('should handle missing legacy rules', async () => {
-    vi.mocked(useSchedulerStore).mockReturnValue({
-      ...mockStoreState,
-      legacyRules: null,
-    });
+    mockStore({ legacyRules: null });
 
     render(<PlacementRulesMigrationDialog {...defaultProps} />);
 

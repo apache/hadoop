@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
 import java.net.URLDecoder;
@@ -74,6 +75,8 @@ import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
 import org.apache.hadoop.fs.azurebfs.contracts.services.BlobListResultEntrySchema;
 import org.apache.hadoop.fs.azurebfs.contracts.services.BlobListResultSchema;
 import org.apache.hadoop.fs.azurebfs.contracts.services.BlobListXmlParser;
+import org.apache.hadoop.fs.azurebfs.contracts.services.ContainerListResponseData;
+import org.apache.hadoop.fs.azurebfs.contracts.services.ContainerListXmlParser;
 import org.apache.hadoop.fs.azurebfs.contracts.services.StorageErrorResponseSchema;
 import org.apache.hadoop.fs.azurebfs.extensions.EncryptionContextProvider;
 import org.apache.hadoop.fs.azurebfs.extensions.SASTokenProvider;
@@ -2358,5 +2361,107 @@ public class AbfsBlobClient extends AbfsClient {
             null);
       }
     } while (current != null && !current.isRoot());
+  }
+
+  /**
+   * Lists containers in the storage account using the Blob service endpoint.
+   *
+   * @param prefix optional prefix to filter container names
+   * @param continuation optional continuation token for paginated results
+   * @param tracingContext tracing context for the REST call
+   * @return response containing listed containers and continuation token
+   * @throws IOException if the operation fails or the response cannot be parsed
+   */
+  public ContainerListResponseData listContainers(
+      final String prefix,
+      final String continuation,
+      final TracingContext tracingContext) throws IOException {
+    final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
+    final AbfsUriQueryBuilder queryBuilder = createDefaultUriQueryBuilder();
+    queryBuilder.addQuery(QUERY_PARAM_COMP, LIST);
+    if (!StringUtils.isEmpty(prefix)) {
+      queryBuilder.addQuery(QUERY_PARAM_PREFIX, prefix);
+    }
+    queryBuilder.addQuery(HttpQueryParams.QUERY_PARAM_MARKER, continuation);
+    appendSASTokenToQuery(EMPTY_STRING, SASTokenProvider.LIST_CONTAINERS_OPERATION, queryBuilder);
+    URL accountUrl = new URL(getBaseUrl().getProtocol(), getBaseUrl().getHost(), ROOT_PATH);
+    final URL url = createRequestUrl(accountUrl, EMPTY_STRING, queryBuilder.toString());
+    final AbfsRestOperation op = getAbfsRestOperation(
+        AbfsRestOperationType.ListContainers,
+        HTTP_METHOD_GET,
+        url,
+        requestHeaders);
+    op.execute(tracingContext);
+    return parseListContainersResponse(op.getResult());
+  }
+
+  /**
+   * Parses the List Containers response returned by the Blob service.
+   *
+   * @param result HTTP operation containing the list containers response
+   * @return parsed container listing with continuation token
+   * @throws AzureBlobFileSystemException if response parsing fails
+   */
+  private ContainerListResponseData parseListContainersResponse(
+      final AbfsHttpOperation result)
+      throws AzureBlobFileSystemException {
+    try (InputStream stream = result.getListResultStream()) {
+      final SAXParser saxParser = saxParserThreadLocal.get();
+      saxParser.reset();
+      final ContainerListResponseData responseData =
+          new ContainerListResponseData();
+      saxParser.parse(stream, new ContainerListXmlParser(responseData));
+      LOG.debug("ListContainers listed {} containers with {} as continuation token",
+          responseData.getContainers().size(),
+          responseData.getContinuationToken());
+      return responseData;
+    } catch (AbfsDriverException ex) {
+      // Avoid multiple wrapping
+      LOG.error("Unable to deserialize list containers response", ex);
+      throw ex;
+    } catch (SAXException | IOException ex) {
+      LOG.error("Unable to deserialize list containers response", ex);
+      throw new AbfsDriverException(ERR_BLOB_LIST_PARSING, ex);
+    } catch (Exception ex) {
+      LOG.error("Unable to get stream for list containers response", ex);
+      throw new AbfsDriverException(ERR_BLOB_LIST_PARSING, ex);
+    }
+  }
+
+  /**
+   * Deletes a container from the storage account using the Blob service endpoint.
+   *
+   * @param container name of the container to delete (must be a single path segment)
+   * @param tracingContext tracing context for the REST call
+   * @return REST operation representing the delete request
+   * @throws AzureBlobFileSystemException if the delete operation fails
+   */
+  public AbfsRestOperation deleteContainer(
+      final String container,
+      final TracingContext tracingContext)
+      throws AzureBlobFileSystemException, MalformedURLException {
+    if (StringUtils.isEmpty(container)) {
+      throw new AbfsDriverException(
+          "Container name must not be null or empty",
+          new IllegalArgumentException("container"));
+    }
+    if (container.contains(FORWARD_SLASH)) {
+      throw new AbfsDriverException(
+          "Invalid container name (must not contain '/'): " + container,
+          new IllegalArgumentException(container));
+    }
+    final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
+    final AbfsUriQueryBuilder queryBuilder = createDefaultUriQueryBuilder();
+    queryBuilder.addQuery(QUERY_PARAM_RESTYPE, CONTAINER);
+    appendSASTokenToQuery(container, SASTokenProvider.DELETE_CONTAINERS_OPERATION, queryBuilder);
+    final URL accountUrl = new URL(getBaseUrl().getProtocol(), getBaseUrl().getHost(), ROOT_PATH);
+    final URL url = createRequestUrl(accountUrl, container, queryBuilder.toString());
+    final AbfsRestOperation op = getAbfsRestOperation(
+        AbfsRestOperationType.DeleteContainer,
+        HTTP_METHOD_DELETE,
+        url,
+        requestHeaders);
+    op.execute(tracingContext);
+    return op;
   }
 }

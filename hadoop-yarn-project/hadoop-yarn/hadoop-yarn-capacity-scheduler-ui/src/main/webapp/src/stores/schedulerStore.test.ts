@@ -18,7 +18,7 @@
 
 
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { createSchedulerStore, traverseQueueTree } from '~/stores/schedulerStore';
+import { createSchedulerStore } from '~/stores/schedulerStore';
 import { buildMutationRequest } from '~/features/staged-changes/utils/mutationBuilder';
 import type { YarnApiClient } from '~/lib/api/YarnApiClient';
 import type {
@@ -31,8 +31,45 @@ import type {
   VersionResponse,
   SchedulerResponse,
 } from '~/types';
-import { QUEUE_TYPES, SPECIAL_VALUES } from '~/types/constants';
+import { CONFIG_PREFIXES, QUEUE_TYPES, SPECIAL_VALUES } from '~/types/constants';
 import { AUTO_CREATION_PROPS } from '~/types/constants/auto-creation';
+
+/**
+ * Local helper: traverse queue tree and apply a visitor function.
+ * Combines queue info with configured properties from configData.
+ */
+function traverseQueueTree(
+  queueInfo: QueueInfo,
+  configData: Map<string, string>,
+  visitor: (queue: QueueInfo & { configured: Record<string, string> }) => void,
+): void {
+  const configured: Record<string, string> = {};
+
+  const prefix = `${CONFIG_PREFIXES.BASE}.${queueInfo.queuePath}.`;
+  for (const [key, value] of configData.entries()) {
+    if (key.startsWith(prefix)) {
+      const property = key.substring(prefix.length);
+      configured[property] = value;
+    }
+  }
+
+  const combinedQueue = {
+    ...queueInfo,
+    configured,
+  };
+
+  visitor(combinedQueue);
+
+  if (queueInfo.queues?.queue) {
+    const children = Array.isArray(queueInfo.queues.queue)
+      ? queueInfo.queues.queue
+      : [queueInfo.queues.queue];
+
+    for (const child of children) {
+      traverseQueueTree(child, configData, visitor);
+    }
+  }
+}
 
 const toEntryRecord = (entries?: Array<{ key: string; value: string }>) =>
   Object.fromEntries((entries ?? []).map(({ key, value }) => [key, value]));
@@ -756,6 +793,41 @@ describe('schedulerStore', () => {
 
         expect(store.getState().stagedChanges).toHaveLength(1);
         expect(store.getState().stagedChanges[0].queuePath).toBe('root.production');
+      });
+    });
+
+    describe('revertQueueDeletion', () => {
+      it('should revert a pending queue deletion', () => {
+        const store = createTestStore();
+        store.getState().stageQueueRemoval('root.test');
+
+        expect(store.getState().hasPendingDeletion('root.test')).toBe(true);
+
+        store.getState().revertQueueDeletion('root.test');
+
+        expect(store.getState().hasPendingDeletion('root.test')).toBe(false);
+        expect(store.getState().stagedChanges).toHaveLength(0);
+      });
+
+      it('should not affect other staged changes', () => {
+        const store = createTestStore();
+        store.getState().stageQueueChange('root.other', 'capacity', '50');
+        store.getState().stageQueueRemoval('root.test');
+
+        store.getState().revertQueueDeletion('root.test');
+
+        expect(store.getState().hasPendingDeletion('root.test')).toBe(false);
+        expect(store.getState().stagedChanges).toHaveLength(1);
+        expect(store.getState().stagedChanges[0].queuePath).toBe('root.other');
+      });
+
+      it('should be a no-op if queue has no pending deletion', () => {
+        const store = createTestStore();
+        store.getState().stageQueueChange('root.test', 'capacity', '50');
+
+        store.getState().revertQueueDeletion('root.test');
+
+        expect(store.getState().stagedChanges).toHaveLength(1);
       });
     });
 

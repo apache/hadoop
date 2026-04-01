@@ -72,6 +72,7 @@ export const ValidationIssuesPopover: React.FC<ValidationIssuesPopoverProps> = (
           size="sm"
           variant={errorIssues.length ? 'destructive' : 'secondary'}
           className="h-6 px-2 gap-1"
+          aria-label={`View validation issues: ${summaryLabel}`}
         >
           {errorIssues.length > 0 ? (
             <AlertCircle className="h-3.5 w-3.5" />
@@ -93,8 +94,9 @@ export const ValidationIssuesPopover: React.FC<ValidationIssuesPopoverProps> = (
                     key={issue.key}
                     className="w-full text-left text-xs px-2 py-1 rounded-md hover:bg-muted flex items-start gap-2"
                     onClick={() => onIssueSelect(issue.field)}
+                    aria-label={`Navigate to error: ${issue.field} - ${issue.message}`}
                   >
-                    <span className="mt-1 h-2 w-2 rounded-full bg-destructive flex-shrink-0" />
+                    <span aria-hidden="true" className="mt-1 h-2 w-2 rounded-full bg-destructive flex-shrink-0" />
                     <span>
                       <span className="font-medium">{issue.field}</span>
                       <span className="block text-muted-foreground">{issue.message}</span>
@@ -113,8 +115,9 @@ export const ValidationIssuesPopover: React.FC<ValidationIssuesPopoverProps> = (
                     key={issue.key}
                     className="w-full text-left text-xs px-2 py-1 rounded-md hover:bg-muted flex items-start gap-2"
                     onClick={() => onIssueSelect(issue.field)}
+                    aria-label={`Navigate to warning: ${issue.field} - ${issue.message}`}
                   >
-                    <span className="mt-1 h-2 w-2 rounded-full bg-amber-500 flex-shrink-0" />
+                    <span aria-hidden="true" className="mt-1 h-2 w-2 rounded-full bg-amber-500 flex-shrink-0" />
                     <span>
                       <span className="font-medium">{issue.field}</span>
                       <span className="block text-muted-foreground">{issue.message}</span>

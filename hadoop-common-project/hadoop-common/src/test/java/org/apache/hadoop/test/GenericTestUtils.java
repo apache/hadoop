@@ -221,8 +221,9 @@ public abstract class GenericTestUtils {
       prop = DEFAULT_TEST_DATA_DIR;
     }
     File dir = new File(prop).getAbsoluteFile();
-    dir.mkdirs();
-    assertExists(dir);
+    if (dir.mkdirs() && !dir.exists()) {
+      throw new IllegalStateException("Directory " + dir + " not created");
+    }
     return dir;
   }
 

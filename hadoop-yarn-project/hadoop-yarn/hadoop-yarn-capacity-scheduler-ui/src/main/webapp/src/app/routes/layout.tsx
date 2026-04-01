@@ -175,13 +175,13 @@ export default function Layout() {
           {/* Main content area */}
           <div className="flex-1 flex flex-col">
             {/* Header with page title */}
-            <header className="flex h-16 items-center gap-4 border-b px-6">
+            <header className="flex h-20 items-center gap-4 border-b bg-gradient-to-r from-background to-muted/20 px-6">
               <SidebarTrigger />
               <div className="flex-1">
-                <h1 className="text-xl font-semibold">{pageInfo.title}</h1>
+                <h1 className="text-2xl font-bold tracking-tight">{pageInfo.title}</h1>
                 <p className="text-sm text-muted-foreground">{pageInfo.description}</p>
               </div>
-              <SearchBar className="w-64" placeholder="Search" />
+              <SearchBar className="w-72" placeholder="Search" />
               {isReadOnly && (
                 <TooltipProvider>
                   <Tooltip>

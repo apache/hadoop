@@ -54,7 +54,6 @@ full details.
 ## <a name="overview"></a> Overview
 
 Apache Hadoop's `hadoop-aws` module provides support for AWS integration.
-applications to easily use this support.
 
 To include the S3A client in Apache Hadoop's default classpath:
 
@@ -232,7 +231,7 @@ Also, please check [S3 endpoint and region settings in detail](connecting.html#s
 
 ## <a name="authenticating"></a> Authenticating with S3
 
-See [Authenticating with S3](authentication.md).
+See [Authenticating with S3](authentication.html).
 
 ## <a name="hadoop_credential_providers"></a>Storing secrets with Hadoop Credential Providers
 
@@ -370,7 +369,7 @@ from placing its declaration on the command line.
 
 All S3A client options are configured with options with the prefix `fs.s3a.`.
 
-The client supports <a href="per_bucket_configuration">Per-bucket configuration</a>
+The client supports [Per-bucket configuration](#per_bucket_configuration)
 to allow different buckets to override the shared settings. This is commonly
 used to change the endpoint, encryption and authentication mechanisms of buckets.
 and various minor options.
@@ -379,7 +378,7 @@ Here are some the S3A properties for use in production.
 
 * See [Performance](./performance.html) for performance related settings including
   thread and network pool options.
-* Testing-related options are covered in [Testing](./testing.md).
+* Testing-related options are covered in [Testing](./testing.html).
 
 
 ```xml
@@ -586,7 +585,7 @@ Here are some the S3A properties for use in production.
 <property>
   <name>fs.s3a.multipart.purge</name>
   <value>false</value>
-  <description>True if you want to purge existing multipart uploads that may not have been
+  <description>Deprecated. True if you want to purge existing multipart uploads that may not have been
     completed/aborted correctly. The corresponding purge age is defined in
     fs.s3a.multipart.purge.age.
     If set, when the filesystem is instantiated then all outstanding uploads
@@ -600,7 +599,7 @@ Here are some the S3A properties for use in production.
 <property>
   <name>fs.s3a.multipart.purge.age</name>
   <value>86400</value>
-  <description>Minimum age in seconds of multipart uploads to purge
+  <description>Deprecated. Minimum age in seconds of multipart uploads to purge
     on startup if "fs.s3a.multipart.purge" is true
   </description>
 </property>
@@ -701,9 +700,9 @@ Here are some the S3A properties for use in production.
   <name>fs.s3a.readahead.range</name>
   <value>64K</value>
   <description>Bytes to read ahead during a seek() before closing and
-  re-opening the S3 HTTP connection. This option will be overridden if
-  any call to setReadahead() is made to an open stream.
-  A suffix from the set {K,M,G,T,P} may be used to scale the numeric value.
+    re-opening the S3 HTTP connection. This option will be overridden if
+    any call to setReadahead() is made to an open stream.
+    A suffix from the set {K,M,G,T,P} may be used to scale the numeric value.
   </description>
 </property>
 
@@ -969,8 +968,8 @@ Custom headers should be specified as key-value pairs, separated by `=`. Multipl
 </property>
 
 <property>
-<name>fs.s3a.client.sts.custom.headers</name>
-<value>Header1=Value1;Value2,Header2=Value1</value>
+    <name>fs.s3a.client.sts.custom.headers</name>
+    <value>Header1=Value1;Value2,Header2=Value1</value>
 </property>
 ```
 
@@ -1303,7 +1302,7 @@ Finally, the public `s3a://noaa-isd-pds/` bucket can be accessed anonymously:
 </property>
 ```
 
-#### per-bucket configuration and deprecated configuration options
+### per-bucket configuration and deprecated configuration options
 
 Per-bucket declaration of the deprecated encryption options
 will take priority over a global option -even when the
@@ -1381,8 +1380,8 @@ the storage class you want.
 
 ```xml
 <property>
-    <name>fs.s3a.create.storage.class</name>
-    <value>intelligent_tiering</value>
+  <name>fs.s3a.create.storage.class</name>
+  <value>intelligent_tiering</value>
 </property>
 ```
 
@@ -1677,14 +1676,15 @@ intermediate partitions uploaded to S3 —data which will be billed for.
 If an S3A committer job is halted partway through, again, there may be
 many incomplete multipart uploads in the output directory.
 
-These charges can be reduced by enabling `fs.s3a.multipart.purge`,
-and setting a purge time in seconds, such as 24 hours.
+These charges can be reduced by enabling `fs.s3a.multipart.purge`
+(deprecated), and setting a purge time in seconds, such as 24 hours.
 When an S3A FileSystem instance is instantiated with the purge time greater
 than zero, it will, on startup, delete all outstanding partition requests
 older than this time. However, this makes filesystem instantiate slow, especially
 against very large buckets, as a full scan is made.
 
-Consider avoiding this in future.
+For this reason, the option is deprecated and will be removed in a future
+release.
 
 ```xml
 <property>
