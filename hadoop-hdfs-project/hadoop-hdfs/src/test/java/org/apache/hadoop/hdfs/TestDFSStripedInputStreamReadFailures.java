@@ -57,7 +57,7 @@ public class TestDFSStripedInputStreamReadFailures {
   private int blockSize;
 
   @TempDir
-  java.nio.file.Path baseDir;
+  private java.nio.file.Path baseDir;
 
   @BeforeEach
   public void setup() throws IOException {
@@ -177,7 +177,8 @@ public class TestDFSStripedInputStreamReadFailures {
       LOG.info("{} exceptions occurred", exceptions.size());
       exceptions.forEach(t -> {
         LOG.error("Exception details:", t);
-        if (!(t instanceof IOException && t.getMessage().contains("missing blocks, the stripe is"))) {
+        if (!(t instanceof IOException &&
+            t.getMessage().contains("missing blocks, the stripe is"))) {
           fail("Unexpected exceptions occurred during test", t);
         }
       });
