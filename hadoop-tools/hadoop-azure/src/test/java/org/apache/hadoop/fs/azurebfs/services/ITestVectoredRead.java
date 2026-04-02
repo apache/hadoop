@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
+import java.io.FilterInputStream;
+import java.lang.reflect.Field;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -410,11 +412,6 @@ public class ITestVectoredRead extends AbstractAbfsIntegrationTest {
     }
   }
 
-  /**
-   * Validates that vectored reads can reuse an in-progress prefetch buffer.
-   * Ensures no redundant backend read is issued when data is already
-   * available via readahead.
-   */
   @Test
   public void testVectoredReadHitchhikesOnExistingPrefetch() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
@@ -424,31 +421,47 @@ public class ITestVectoredRead extends AbstractAbfsIntegrationTest {
 
     try (FSDataInputStream in = fs.openFile(testFilePath).build().get()) {
       AbfsInputStream abfsIn = (AbfsInputStream) in.getWrappedStream();
+
+      // Since client is final in AbfsInputStream, we cannot inject a spy into it.
+      // Instead, spy on abfsIn itself and stub readRemote to delegate to the real
+      // implementation while still being tracked by Mockito.
       AbfsInputStream spyIn = Mockito.spy(abfsIn);
+      Mockito.doCallRealMethod().when(spyIn).readRemote(
+          Mockito.anyLong(),
+          Mockito.any(byte[].class),
+          Mockito.anyInt(),
+          Mockito.anyInt(),
+          Mockito.any());
 
-      // 1. Trigger a normal read to start the prefetch logic
-      // Reading the first byte often triggers a larger readahead (e.g., 4MB)
+      // Replace the wrapped stream inside FSDataInputStream with our spy,
+      // so all subsequent calls go through spyIn.
+      Field wrappedField = FilterInputStream.class.getDeclaredField("in");
+      wrappedField.setAccessible(true);
+      wrappedField.set(in, spyIn);
+
+      // 1. Trigger sequential read → starts readahead covering [0, readAheadSize).
       byte[] seqBuf = new byte[1];
-      spyIn.read(seqBuf, 0, 1);
+      in.read(seqBuf, 0, 1);
 
-      // 2. Immediately queue a vectored read for an offset within that prefetch range
+      // 2. Queue a vectored read fully inside the readahead window.
       List<FileRange> vRanges = new ArrayList<>();
-      // Using 1MB offset, which should be inside the initial readahead buffer
       vRanges.add(FileRange.createFileRange(ONE_MB, (int) ONE_MB));
-
       IntFunction<ByteBuffer> allocator = ByteBuffer::allocate;
-      spyIn.readVectored(vRanges, allocator);
+      in.readVectored(vRanges, allocator);
 
-      // 3. Wait for the vectored read to complete
+      // 3. Wait for completion.
       vRanges.get(0).getData().get();
 
-      // 4. Validate Data Integrity
+      // 4. Validate data integrity.
       validateVectoredReadResult(vRanges, fileContent, ZERO);
 
       // 5. THE CRITICAL VALIDATION:
-      // Even though we did a manual read and a vectored read,
-      // there should only be ONE remote call if hitchhiking worked.
-      Mockito.verify(spyIn, Mockito.atMost(spyIn.getReadAheadQueueDepth()))
+      // Max 2 remote reads acceptable:
+      //   - Read #1: readahead triggered by the sequential read
+      //   - Read #2: only if vectored read just missed the prefetch window (race edge)
+      // 3+ means hitchhiking is broken — vectored read issued a redundant remote fetch.
+      final int MAX_EXPECTED_REMOTE_READS = 2;
+      Mockito.verify(spyIn, Mockito.atMost(MAX_EXPECTED_REMOTE_READS))
           .readRemote(
               Mockito.anyLong(),
               Mockito.any(byte[].class),
@@ -465,64 +478,95 @@ public class ITestVectoredRead extends AbstractAbfsIntegrationTest {
     byte[] fileContent = getRandomBytesArray(DATA_8_MB);
     Path testFilePath = createFileWithContent(fs, fileName, fileContent);
     CountDownLatch blockCompletion = new CountDownLatch(1);
+
     try (FSDataInputStream in = fs.openFile(testFilePath).build().get()) {
-      AbfsInputStream spyIn = Mockito.spy((AbfsInputStream) in.getWrappedStream());
+      AbfsInputStream abfsIn = (AbfsInputStream) in.getWrappedStream();
+      AbfsInputStream spyIn = Mockito.spy(abfsIn);
+
+      // Inject spy into FSDataInputStream so all calls go through spyIn,
+      // including those from background threads spawned during read().
+      Field wrappedField = FilterInputStream.class.getDeclaredField("in");
+      wrappedField.setAccessible(true);
+      wrappedField.set(in, spyIn);
+
       ReadBufferManager rbm = spyIn.getReadBufferManager();
       AtomicBoolean firstCall = new AtomicBoolean(true);
+
       Mockito.doAnswer(invocation -> {
-        if (firstCall.getAndSet(false)) {
-          blockCompletion.await();
-        }
-        return invocation.callRealMethod();
-      })
+            if (firstCall.getAndSet(false)) {
+              blockCompletion.await();
+            }
+            return invocation.callRealMethod();
+          })
           .when(spyIn)
           .readRemote(Mockito.anyLong(), Mockito.any(byte[].class),
               Mockito.anyInt(), Mockito.anyInt(), Mockito.any());
+
       ExecutorService exec = Executors.newFixedThreadPool(EXEC_THREADS);
-      Future<?> r1 = exec.submit(() -> {
-        try {
-          spyIn.read(new byte[1], 0, 1);
-        } catch (Exception e) {
-          throw new RuntimeException(e);
+      try {
+        // r1 triggers a readahead; the first readRemote call will block on
+        // blockCompletion, simulating an in-progress buffer.
+        Future<?> r1 = exec.submit(() -> {
+          try {
+            in.read(new byte[1], 0, 1);  // use 'in', not 'spyIn' directly
+          } catch (Exception e) {
+            throw new RuntimeException(e);
+          }
+        });
+
+        // Poll until the buffer appears in the inProgressList.
+        ReadBuffer inProgress = null;
+        for (int i = 0; i < LOOKUP_RETRIES; i++) {
+          synchronized (rbm) {
+            inProgress = rbm.findInList(rbm.getInProgressList(), spyIn, 0);
+          }
+          if (inProgress != null) {
+            break;
+          }
+          Thread.sleep(SLEEP_TIME);
         }
-      });
-      ReadBuffer inProgress = null;
-      for (int i = 0; i < LOOKUP_RETRIES; i++) {
-        synchronized (rbm) {
-          inProgress = rbm.findInList(rbm.getInProgressList(), spyIn, 0);
-        }
-        if (inProgress != null) {
-          break;
-        }
-        Thread.sleep(SLEEP_TIME);
+        assertNotNull(inProgress,
+            "Expected buffer to be in inProgressList while completion is blocked");
+
+        // r2 reads the same offset — should wait on the in-progress buffer,
+        // not issue a new remote read.
+        Future<?> r2 = exec.submit(() -> {
+          try {
+            in.read(new byte[1], 0, 1);
+          } catch (Exception e) {
+            throw new RuntimeException(e);
+          }
+        });
+
+        // Vectored read targeting the same in-progress buffer range —
+        // should hitchhike rather than issue a new remote read.
+        long bufferOffset = inProgress.getOffset();
+        int length = (int) Math.min(ONE_MB, DATA_8_MB - bufferOffset);
+        List<FileRange> ranges = new ArrayList<>();
+        ranges.add(FileRange.createFileRange(bufferOffset, length));
+        Future<?> vr = exec.submit(() -> {
+          try {
+            in.readVectored(ranges, ByteBuffer::allocate);
+          } catch (Exception e) {
+            throw new RuntimeException(e);
+          }
+        });
+
+        // Give r2 and vr time to reach their wait state before unblocking.
+        Thread.sleep(FUTURE_TIMEOUT_SEC);
+        blockCompletion.countDown();
+
+        r1.get(FUTURE_TIMEOUT_SEC, TimeUnit.SECONDS);
+        r2.get(FUTURE_TIMEOUT_SEC, TimeUnit.SECONDS);
+        vr.get(FUTURE_TIMEOUT_SEC, TimeUnit.SECONDS);
+        ranges.get(0).getData().get(FUTURE_TIMEOUT_SEC, TimeUnit.SECONDS);
+
+        validateVectoredReadResult(ranges, fileContent, bufferOffset);
+      } finally {
+        exec.shutdownNow();
+        // Restore original stream reference to avoid affecting shared state.
+        wrappedField.set(in, abfsIn);
       }
-      assertNotNull(inProgress, "Expected buffer to be in inProgressList while completion is blocked");
-      Future<?> r2 = exec.submit(() -> {
-        try {
-          spyIn.read(new byte[1], 0, 1);
-        } catch (Exception e) {
-          throw new RuntimeException(e);
-        }
-      });
-      long bufferOffset = inProgress.getOffset();
-      int length = (int) Math.min(ONE_MB, DATA_8_MB - bufferOffset);
-      List<FileRange> ranges = new ArrayList<>();
-      ranges.add(FileRange.createFileRange(bufferOffset, length));
-      Future<?> vr = exec.submit(() -> {
-        try {
-          spyIn.readVectored(ranges, ByteBuffer::allocate);
-        } catch (Exception e) {
-          throw new RuntimeException(e);
-        }
-      });
-      Thread.sleep(FUTURE_TIMEOUT_SEC);
-      blockCompletion.countDown();
-      r1.get(FUTURE_TIMEOUT_SEC, TimeUnit.SECONDS);
-      r2.get(FUTURE_TIMEOUT_SEC, TimeUnit.SECONDS);
-      vr.get(FUTURE_TIMEOUT_SEC, TimeUnit.SECONDS);
-      ranges.get(0).getData().get(FUTURE_TIMEOUT_SEC, TimeUnit.SECONDS);
-      validateVectoredReadResult(ranges, fileContent, bufferOffset);
-      exec.shutdownNow();
     }
   }
 

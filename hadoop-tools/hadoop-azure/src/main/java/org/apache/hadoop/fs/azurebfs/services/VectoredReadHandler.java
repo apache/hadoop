@@ -19,11 +19,9 @@
 package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.EOFException;
-import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -495,7 +493,11 @@ class VectoredReadHandler {
    */
   void failBufferFutures(ReadBuffer buffer, Throwable t) {
     List<CombinedFileRange> units = buffer.getVectoredUnits();
-    if (units == null) {return;}
+    if (units == null) {
+      LOG.warn("fanOut: no vectored units found for path={}, offset={}",
+          buffer.getPath(), buffer.getOffset());
+      return;
+    }
 
     for (CombinedFileRange unit : units) {
       for (FileRange r : unit.getUnderlying()) {
@@ -560,7 +562,9 @@ class VectoredReadHandler {
     /* Distribute data to each logical FileRange */
     for (FileRange r : unit.getUnderlying()) {
       CompletableFuture<ByteBuffer> future = r.getData();
-      if (future == null || future.isDone()) {continue;}
+      if (future == null || future.isDone()) {
+        continue;
+      }
 
       long rangeStart = r.getOffset();
       long rangeEnd = rangeStart + r.getLength();
@@ -568,7 +572,9 @@ class VectoredReadHandler {
       /* Compute overlap between unit and logical range */
       long overlapStart = Math.max(rangeStart, unitStart);
       long overlapEnd = Math.min(rangeEnd, unitEnd);
-      if (overlapStart >= overlapEnd) {continue;}
+      if (overlapStart >= overlapEnd) {
+        continue;
+      }
 
       int srcOffset = (int) (overlapStart - unitStart);
       int destOffset = (int) (overlapStart - rangeStart);
@@ -593,7 +599,9 @@ class VectoredReadHandler {
 
       synchronized (fullBuf) {
         /* Re-check inside lock in case another chunk already completed this range */
-        if (future.isDone()) {continue;}
+        if (future.isDone()) {
+          continue;
+        }
 
         System.arraycopy(tmp, srcOffset,
             fullBuf.array(), fullBuf.arrayOffset() + destOffset,
