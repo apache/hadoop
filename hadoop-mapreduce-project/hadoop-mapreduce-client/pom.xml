@@ -299,6 +299,7 @@
                     <classpath>
                       <path refid="maven.compile.classpath"/>
                     </classpath>
+                    <arg value="-J--add-opens=jdk.javadoc/jdk.javadoc.internal.tool=ALL-UNNAMED"/>
                   </javadoc>
                   <javadoc sourcepath="${basedir}/src/main/java"
                            destdir="${project.build.directory}/site/jdiff/xml"
@@ -319,6 +320,7 @@
                     <classpath>
                       <path refid="maven.compile.classpath"/>
                     </classpath>
+                    <arg value="-J--add-opens=jdk.javadoc/jdk.javadoc.internal.tool=ALL-UNNAMED"/>
                   </javadoc>
                   <property name="compile_classpath" refid="maven.compile.classpath"/>
 
