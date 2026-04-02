@@ -74,6 +74,7 @@ public abstract class AbfsInputStream extends FSInputStream implements CanUnbuff
   private final AbfsClient client;
   private final Statistics statistics;
   private final String path;
+
   private final long contentLength;
   private final int bufferSize; // default buffer size
   private final int footerReadSize; // default buffer size to read when reading footer
@@ -95,7 +96,8 @@ public abstract class AbfsInputStream extends FSInputStream implements CanUnbuff
   // User configured size of read ahead.
   private final int readAheadRange;
 
-  private boolean firstRead = true;
+  private boolean firstRead = true; // to identify first read for optimizations
+
   // SAS tokens can be re-used until they expire
   private CachedSASToken cachedSasToken;
   private byte[] buffer = null;            // will be initialized on first use
@@ -125,7 +127,6 @@ public abstract class AbfsInputStream extends FSInputStream implements CanUnbuff
   private final AbfsInputStreamContext context;
   private IOStatistics ioStatistics;
   private String filePathIdentifier;
-  private VectoredReadHandler vectoredReadHandler;
 
   /**
    * This is the actual position within the object, used by
