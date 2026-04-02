@@ -74,9 +74,7 @@ import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_RE
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.COLON;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.SPLIT_NO_LIMIT;
-import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_READ_OPTIMIZE_FOOTER_READ;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENABLE_PREFETCH_REQUEST_PRIORITY;
-import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_RESTRICT_GPS_ON_OPENFILE;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_REQUEST_PRIORITY;
 import static org.apache.hadoop.fs.azurebfs.constants.ReadType.DIRECT_READ;
 import static org.apache.hadoop.fs.azurebfs.constants.ReadType.FOOTER_READ;
@@ -151,6 +149,12 @@ public class TestAbfsInputStream extends AbstractAbfsIntegrationTest {
     return op;
   }
 
+  /**
+   * Creates a mock AbfsRestOperation with metadata headers for testing.
+   * The mock includes Content-Range and ETag headers in the response.
+   *
+   * @return a mocked AbfsRestOperation with response metadata
+   */
   AbfsRestOperation getMockRestOpWithMetadata() {
     AbfsRestOperation op = mock(AbfsRestOperation.class);
     AbfsHttpOperation httpOp = mock(AbfsHttpOperation.class);
@@ -806,8 +810,9 @@ private void mockClientForEncryptionContext(AbfsClient encryptedClient) throws I
     try (FSDataInputStream in = fs.open(new Path(explicitTestFolder))) {
       AbfsInputStream abfsIn = (AbfsInputStream) in.getWrappedStream();
       byte[] buf = new byte[SMALL_BUFFER_SIZE];
-      AbfsRestOperationException ex = Assertions.assertThrows(AbfsRestOperationException.class, () -> abfsIn.read(buf));
-      assertThat(ex.getStatusCode()).isEqualTo(AzureServiceErrorCode.PATH_NOT_FOUND.getStatusCode());
+      UnsupportedOperationException ex = Assertions.assertThrows(UnsupportedOperationException.class, () -> abfsIn.read(buf));
+      AbfsRestOperationException cause = (AbfsRestOperationException) ex.getCause();
+      assertThat(cause.getStatusCode()).isEqualTo(AzureServiceErrorCode.PATH_NOT_FOUND.getStatusCode());
       assertThat(ex.getMessage()).contains("Read operation not permitted on a directory.");
     }
     verify(spyClient, times(1))
@@ -822,8 +827,9 @@ private void mockClientForEncryptionContext(AbfsClient encryptedClient) throws I
     try (FSDataInputStream in2 = fs.open(new Path(implicitTestFolder))) {
       AbfsInputStream abfsIn2 = (AbfsInputStream) in2.getWrappedStream();
       byte[] buf2 = new byte[SMALL_BUFFER_SIZE];
-      AbfsRestOperationException ex2 = Assertions.assertThrows(AbfsRestOperationException.class, () -> abfsIn2.read(buf2));
-      assertThat(ex2.getStatusCode()).isEqualTo(AzureServiceErrorCode.PATH_NOT_FOUND.getStatusCode());
+      UnsupportedOperationException ex2 = Assertions.assertThrows(UnsupportedOperationException.class, () -> abfsIn2.read(buf2));
+      AbfsRestOperationException cause = (AbfsRestOperationException) ex2.getCause();
+      assertThat(cause.getStatusCode()).isEqualTo(AzureServiceErrorCode.PATH_NOT_FOUND.getStatusCode());
       assertThat(ex2.getMessage()).contains("Read operation not permitted on a directory.");
     }
     verify(spyClient, times(2))
@@ -859,11 +865,12 @@ private void mockClientForEncryptionContext(AbfsClient encryptedClient) throws I
     try (FSDataInputStream in = fs.open(new Path(testFolder))) {
       AbfsInputStream abfsIn = (AbfsInputStream) in.getWrappedStream();
       byte[] buf = new byte[SMALL_BUFFER_SIZE];
-      AbfsRestOperationException ex = Assertions.assertThrows(AbfsRestOperationException.class, () -> abfsIn.read(buf));
-      assertThat(ex.getStatusCode()).isEqualTo(AzureServiceErrorCode.PATH_NOT_FOUND.getStatusCode());
+      UnsupportedOperationException ex = Assertions.assertThrows(UnsupportedOperationException.class, () -> abfsIn.read(buf));
+      AbfsRestOperationException cause = (AbfsRestOperationException) ex.getCause();
+      assertThat(cause.getStatusCode()).isEqualTo(AzureServiceErrorCode.PATH_NOT_FOUND.getStatusCode());
       assertThat(ex.getMessage()).contains("Read operation not permitted on a directory.");
-
     }
+
     verify(spyClient, times(0))
             .getPathStatus(
                     anyString(),
@@ -1179,6 +1186,7 @@ private void mockClientForEncryptionContext(AbfsClient encryptedClient) throws I
     // Stub :
     // Pass all readAheads and fail the post eviction request to
     // prove ReadAhead buffer is used
+    // for post eviction check, fail all read aheads
     doReturn(op)
         .doReturn(op)
         .doReturn(op)
@@ -1420,28 +1428,26 @@ private void mockClientForEncryptionContext(AbfsClient encryptedClient) throws I
             any(String.class), any(), any(TracingContext.class));
 
     AbfsInputStream inputStream = getAbfsInputStream(client, "testSuccessfulReadAhead.txt");
-    int beforeReadCompletedListSize = getBufferManager().getCompletedReadListSize();
 
-    // First read request that triggers readAheads.
-    inputStream.read(new byte[ONE_KB]);
+    queueReadAheads(inputStream);
+
+    // AbfsInputStream Read would have waited for the read-ahead for the requested offset
+    // as we are testing from ReadAheadManager directly, sleep for a sec to
+    // get the read ahead threads to complete
+    Thread.sleep(1000);
 
     // Only the 3 readAhead threads should have triggered client.read
     verifyReadCallCount(client, 3);
-    int newAdditionsToCompletedRead =
-        getBufferManager().getCompletedReadListSize()
-            - beforeReadCompletedListSize;
-    // read buffer might be dumped if the ReadBufferManager getblock preceded
-    // the action of buffer being picked for reading from readaheadqueue, so that
-    // inputstream can proceed with read and not be blocked on readahead thread
-    // availability. So the count of buffers in completedReadQueue for the stream
-    // can be same or lesser than the requests triggered to queue readahead.
-    assertThat(newAdditionsToCompletedRead)
-        .describedAs(
-            "New additions to completed reads should be same or less than as number of readaheads")
-        .isLessThanOrEqualTo(3);
 
-    // Another read request whose requested data is already read ahead.
-    inputStream.read(ONE_KB, new byte[ONE_KB], 0, ONE_KB);
+    // getBlock for a new read should return the buffer read-ahead
+    int bytesRead = getBufferManager().getBlock(
+            inputStream,
+            ONE_KB,
+            ONE_KB,
+            new byte[ONE_KB]);
+
+    Assertions.assertTrue(bytesRead > 0, "bytesRead should be non-zero from the "
+            + "buffer that was read-ahead");
 
     // Once created, mock will remember all interactions.
     // As the above read should not have triggered any server calls, total

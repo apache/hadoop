@@ -577,14 +577,16 @@ public abstract class AbfsInputStream extends FSInputStream implements CanUnbuff
   /**
    * Creates an exception indicating that a read operation was attempted on a directory.
    *
-   * @return an {@link AbfsRestOperationException} indicating the operation is not permitted on a directory
+   * @return an {@link UnsupportedOperationException} indicating the operation is not permitted on a directory
    */
-  private IOException directoryReadException() {
-    return new AbfsRestOperationException(
-            AzureServiceErrorCode.PATH_NOT_FOUND.getStatusCode(),
-            AzureServiceErrorCode.PATH_NOT_FOUND.getErrorCode(),
+  private UnsupportedOperationException directoryReadException() {
+    return new UnsupportedOperationException(
             ERR_READ_ON_DIRECTORY,
-            null);
+            new AbfsRestOperationException(
+                    AzureServiceErrorCode.PATH_NOT_FOUND.getStatusCode(),
+                    AzureServiceErrorCode.PATH_NOT_FOUND.getErrorCode(),
+                    ERR_READ_ON_DIRECTORY,
+                    null));
   }
 
   /**
