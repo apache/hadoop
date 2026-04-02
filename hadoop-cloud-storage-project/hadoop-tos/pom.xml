@@ -159,13 +159,12 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>
-          <argLine>${maven-surefire-plugin.argLine}</argLine>
+          <argLine>${maven-surefire-plugin.argLine} -Xmx2048m</argLine>
           <parallel>classes</parallel>
           <threadCount>1</threadCount>
           <perCoreThreadCount>true</perCoreThreadCount>
           <rerunFailingTestsCount>2</rerunFailingTestsCount>
           <forkCount>8</forkCount>
-          <argLine>-Xmx2048m</argLine>
         </configuration>
       </plugin>
 
