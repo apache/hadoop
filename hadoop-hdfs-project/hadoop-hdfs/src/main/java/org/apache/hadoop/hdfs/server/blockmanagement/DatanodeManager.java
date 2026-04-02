@@ -24,6 +24,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.util.Preconditions;
 
+import org.apache.hadoop.thirdparty.com.google.common.cache.Cache;
+import org.apache.hadoop.thirdparty.com.google.common.cache.CacheBuilder;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hadoop.thirdparty.com.google.common.net.InetAddresses;
 
@@ -70,6 +72,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.*;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -230,6 +233,9 @@ public class DatanodeManager {
 
   private final boolean randomNodeOrderEnabled;
 
+  /** Cached map of DatanodeReportType -> list of DatanodeDescriptor for metrics purposes. */
+  private Cache<DatanodeReportType, List<DatanodeDescriptor>> datanodeListSnapshots = null;
+
   DatanodeManager(final BlockManager blockManager, final Namesystem namesystem,
       final Configuration conf) throws IOException {
     this.namesystem = namesystem;
@@ -364,6 +370,17 @@ public class DatanodeManager {
     this.randomNodeOrderEnabled = conf.getBoolean(
         DFSConfigKeys.DFS_NAMENODE_RANDOM_NODE_ORDER_ENABLED,
         DFSConfigKeys.DFS_NAMENODE_RANDOM_NODE_ORDER_ENABLED_DEFAULT);
+
+    long datanodeListCacheExpirationMs =
+        conf.getLong(DFSConfigKeys.DFS_NAMENODE_DATANODE_LIST_CACHE_EXPIRATION_MS_KEY,
+            DFSConfigKeys.DFS_NAMENODE_DATANODE_LIST_CACHE_EXPIRATION_MS_DEFAULT);
+    if (datanodeListCacheExpirationMs > 0) {
+      LOG.info("Using cached DN list for metrics, expiration time = {} ms.",
+          datanodeListCacheExpirationMs);
+      datanodeListSnapshots = CacheBuilder.newBuilder()
+          .expireAfterWrite(datanodeListCacheExpirationMs, TimeUnit.MILLISECONDS)
+          .build();
+    }
   }
 
   /**
@@ -963,6 +980,11 @@ public class DatanodeManager {
     synchronized (this) {
       host2DatanodeMap.remove(datanodeMap.remove(key));
     }
+    Cache<DatanodeReportType, List<DatanodeDescriptor>> tmpDatanodeListSnapshots =
+        datanodeListSnapshots;
+    if (tmpDatanodeListSnapshots != null) {
+      tmpDatanodeListSnapshots.invalidateAll();
+    }
     if (LOG.isDebugEnabled()) {
       LOG.debug("{}.wipeDatanode({}): storage {} is removed from datanodeMap.",
           getClass().getSimpleName(), node, key);
@@ -1438,7 +1460,7 @@ public class DatanodeManager {
 
   /** @return the number of dead datanodes. */
   public int getNumDeadDataNodes() {
-    return getDatanodeListForReport(DatanodeReportType.DEAD).size();
+    return getDatanodeListForReportWithCache(DatanodeReportType.DEAD).size();
   }
 
   /** @return the number of datanodes. */
@@ -1453,12 +1475,12 @@ public class DatanodeManager {
     // There is no need to take namesystem reader lock as
     // getDatanodeListForReport will synchronize on datanodeMap
     // A decommissioning DN may be "alive" or "dead".
-    return getDatanodeListForReport(DatanodeReportType.DECOMMISSIONING);
+    return getDatanodeListForReportWithCache(DatanodeReportType.DECOMMISSIONING);
   }
 
   /** @return list of datanodes that are entering maintenance. */
   public List<DatanodeDescriptor> getEnteringMaintenanceNodes() {
-    return getDatanodeListForReport(DatanodeReportType.ENTERING_MAINTENANCE);
+    return getDatanodeListForReportWithCache(DatanodeReportType.ENTERING_MAINTENANCE);
   }
 
   /* Getter and Setter for stale DataNodes related attributes */
@@ -1532,17 +1554,35 @@ public class DatanodeManager {
     this.numStaleStorages = numStaleStorages;
   }
 
-  /** Fetch live and dead datanodes. */
-  public void fetchDatanodes(final List<DatanodeDescriptor> live, 
+  public void fetchDatanodes(final List<DatanodeDescriptor> live,
       final List<DatanodeDescriptor> dead, final boolean removeDecommissionNode) {
+    fetchDatanodes(live, dead, removeDecommissionNode, false);
+  }
+
+  /**
+   * Fetches live and dead datanodes via cache maps. Generates and caches results
+   * on cache miss.
+   */
+  public void fetchDatanodesWithCache(final List<DatanodeDescriptor> live,
+      final List<DatanodeDescriptor> dead, final boolean removeDecommissionNode) {
+    fetchDatanodes(live, dead, removeDecommissionNode, true);
+  }
+
+  /** Fetch live and dead datanodes. */
+  private void fetchDatanodes(final List<DatanodeDescriptor> live,
+      final List<DatanodeDescriptor> dead, final boolean removeDecommissionNode, boolean useCache) {
     if (live == null && dead == null) {
       throw new HadoopIllegalArgumentException("Both live and dead lists are null");
     }
 
-    // There is no need to take namesystem reader lock as
-    // getDatanodeListForReport will synchronize on datanodeMap
-    final List<DatanodeDescriptor> results =
-        getDatanodeListForReport(DatanodeReportType.ALL);
+    List<DatanodeDescriptor> results;
+    if (useCache) {
+      results = getDatanodeListForReportWithCache(DatanodeReportType.ALL);
+    } else {
+      // There is no need to take namesystem reader lock as
+      // getDatanodeListForReport will synchronize on datanodeMap
+      results = getDatanodeListForReport(DatanodeReportType.ALL);
+    }
     for(DatanodeDescriptor node : results) {
       if (isDatanodeDead(node)) {
         if (dead != null) {
@@ -1633,6 +1673,25 @@ public class DatanodeManager {
           DFSConfigKeys.DFS_DATANODE_IPC_DEFAULT_PORT);
     }
     return dnId;
+  }
+
+  /**
+   * Low impact version of {@link #getDatanodeListForReport} with possible stale
+   * data for low impact usage (metrics).
+   */
+  public List<DatanodeDescriptor> getDatanodeListForReportWithCache(
+      final DatanodeReportType type) {
+    Cache<DatanodeReportType, List<DatanodeDescriptor>> tmpDatanodeListSnapshots =
+        datanodeListSnapshots;
+    if (tmpDatanodeListSnapshots == null) {
+      return getDatanodeListForReport(type);
+    }
+    try {
+      return tmpDatanodeListSnapshots.get(type, () -> getDatanodeListForReport(type));
+    } catch (ExecutionException e) {
+      // Fallback if cache fails
+      return getDatanodeListForReport(type);
+    }
   }
 
   /** For generating datanode reports */
