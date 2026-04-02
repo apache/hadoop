@@ -350,7 +350,7 @@ public abstract class AbfsInputStream extends FSInputStream implements CanUnbuff
    */
   @Override
   public void readVectored(List<? extends FileRange> ranges,
-      IntFunction<ByteBuffer> allocate) {
+      IntFunction<ByteBuffer> allocate) throws EOFException {
     getVectoredReadHandler().readVectored(this, ranges, allocate);
   }
 

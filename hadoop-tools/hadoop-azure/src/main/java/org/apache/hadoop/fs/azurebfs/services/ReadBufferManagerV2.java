@@ -394,6 +394,7 @@ VectoredReadHandler getVectoredReadHandler() {
                   ? existing.getLength()
                   : existing.getRequestedLength());
           if (end >= unit.getOffset() + unit.getLength()) {
+            existing.setBufferType(BufferType.VECTORED);
             existing.addVectoredUnit(unit);
             existing.setAllocator(allocator);
             if (existing.getStatus() == ReadBufferStatus.AVAILABLE) {

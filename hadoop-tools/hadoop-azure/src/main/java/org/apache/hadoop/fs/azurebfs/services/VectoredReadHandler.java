@@ -18,11 +18,14 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
+import java.io.EOFException;
+import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -33,6 +36,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.FileRange;
+import org.apache.hadoop.fs.VectoredReadUtils;
 import org.apache.hadoop.fs.azurebfs.constants.ReadType;
 import org.apache.hadoop.fs.azurebfs.enums.VectoredReadStrategy;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
@@ -106,13 +110,26 @@ class VectoredReadHandler {
   public void readVectored(
       AbfsInputStream stream,
       List<? extends FileRange> ranges,
-      IntFunction<ByteBuffer> allocator) {
+      IntFunction<ByteBuffer> allocator) throws EOFException {
     LOG.debug("readVectored invoked: path={}, rangeCount={}",
         stream.getPath(), ranges.size());
 
     /* Initialize a future for each logical file range */
+    /* Initialize a future for each logical file range */
+    long fileLength = stream.getContentLength();
+    List<FileRange> validRanges = new ArrayList<>();
     for (FileRange r : ranges) {
+      VectoredReadUtils.validateRangeRequest(r);
       r.setData(new CompletableFuture<>());
+      long offset = r.getOffset();
+      long length = r.getLength();
+
+      if (offset < 0 || length < 0 || offset > fileLength || length > fileLength - offset) {
+        r.getData().completeExceptionally(new EOFException(
+            "Invalid range: offset=" + offset + ", length=" + length + ", fileLength=" + fileLength));
+        continue;
+      }
+      validRanges.add(r);
     }
 
     /* Select the maximum allowed merge span based on the configured strategy */
@@ -125,7 +142,7 @@ class VectoredReadHandler {
         stream.getPath(), strategy, maxSpan);
 
     /* Merge logical ranges using a span-first coalescing strategy */
-    List<CombinedFileRange> merged = mergeBySpanAndGap(ranges, maxSpan);
+    List<CombinedFileRange> merged = mergeBySpanAndGap(validRanges, maxSpan, fileLength);
 
     LOG.debug("readVectored: path={}, mergedRangeCount={}",
         stream.getPath(), merged.size());
@@ -142,6 +159,7 @@ class VectoredReadHandler {
 
       for (CombinedFileRange chunk : chunks) {
         try {
+          VectoredReadUtils.validateRangeRequest(chunk);
           boolean queued = queueVectoredRead(stream, chunk, allocator);
           if (!queued) {
             LOG.debug("readVectored: buffer pool exhausted, falling back to directRead:"
@@ -243,11 +261,11 @@ class VectoredReadHandler {
    */
   private List<CombinedFileRange> mergeBySpanAndGap(
       List<? extends FileRange> ranges,
-      int maxSpan) {
-    LOG.debug("mergeBySpanAndGap: rangeCount={}, maxSpan={}", ranges.size(), maxSpan);
+      int maxSpan, long  fileLength) throws EOFException {
 
-    List<FileRange> sortedRanges = new ArrayList<>(ranges);
-    sortedRanges.sort(Comparator.comparingLong(FileRange::getOffset));
+    LOG.debug("mergeBySpanAndGap: rangeCount={}, maxSpan={}", ranges.size(), maxSpan);
+    List<? extends FileRange> sortedRanges = VectoredReadUtils.validateAndSortRanges(
+        ranges, Optional.of(fileLength));
 
     List<CombinedFileRange> out = new ArrayList<>();
     CombinedFileRange current = null;
