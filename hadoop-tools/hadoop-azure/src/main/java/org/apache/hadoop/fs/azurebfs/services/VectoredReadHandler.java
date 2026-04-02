@@ -376,7 +376,7 @@ class VectoredReadHandler {
 
           int srcOffset = (int) (overlapStart - bufferStart);
           int destOffset = (int) (overlapStart - rangeStart);
-          int length = (int)(overlapEnd - overlapStart);
+          int length = (int) (overlapEnd - overlapStart);
 
           LOG.debug("fanOut: copying path={}, rangeOffset={}, rangeLength={},"
                   + " bufferOffset={}, srcOffset={}, destOffset={}, length={}",
@@ -495,7 +495,7 @@ class VectoredReadHandler {
    */
   void failBufferFutures(ReadBuffer buffer, Throwable t) {
     List<CombinedFileRange> units = buffer.getVectoredUnits();
-    if (units == null) return;
+    if (units == null) {return;}
 
     for (CombinedFileRange unit : units) {
       for (FileRange r : unit.getUnderlying()) {
@@ -560,7 +560,7 @@ class VectoredReadHandler {
     /* Distribute data to each logical FileRange */
     for (FileRange r : unit.getUnderlying()) {
       CompletableFuture<ByteBuffer> future = r.getData();
-      if (future == null || future.isDone()) continue;
+      if (future == null || future.isDone()) {continue;}
 
       long rangeStart = r.getOffset();
       long rangeEnd = rangeStart + r.getLength();
@@ -568,7 +568,7 @@ class VectoredReadHandler {
       /* Compute overlap between unit and logical range */
       long overlapStart = Math.max(rangeStart, unitStart);
       long overlapEnd = Math.min(rangeEnd, unitEnd);
-      if (overlapStart >= overlapEnd) continue;
+      if (overlapStart >= overlapEnd) {continue;}
 
       int srcOffset = (int) (overlapStart - unitStart);
       int destOffset = (int) (overlapStart - rangeStart);
@@ -593,7 +593,7 @@ class VectoredReadHandler {
 
       synchronized (fullBuf) {
         /* Re-check inside lock in case another chunk already completed this range */
-        if (future.isDone()) continue;
+        if (future.isDone()) {continue;}
 
         System.arraycopy(tmp, srcOffset,
             fullBuf.array(), fullBuf.arrayOffset() + destOffset,
@@ -649,9 +649,7 @@ class VectoredReadHandler {
 
     @Override
     public boolean equals(Object o) {
-      return this == o ||
-          (o instanceof RangeKey &&
-              this.range == ((RangeKey) o).range);
+      return this == o || (o instanceof RangeKey && this.range == ((RangeKey) o).range);
     }
 
     @Override

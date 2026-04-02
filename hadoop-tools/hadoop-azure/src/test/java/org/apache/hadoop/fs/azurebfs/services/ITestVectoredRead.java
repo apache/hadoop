@@ -97,6 +97,8 @@ public class ITestVectoredRead extends AbstractAbfsIntegrationTest {
   private static final int SEQ_READ_ITERATIONS = 5;
   private static final int FUTURE_TIMEOUT_SEC = 50;
   public static final int SLEEP_TIME = 10;
+  private static final long SHUFFLE_SEED = 12345L;
+  private static final double PERFORMANCE_TOLERANCE_FACTOR = 1.2;
 
   public ITestVectoredRead() throws Exception {
   }
@@ -472,7 +474,10 @@ public class ITestVectoredRead extends AbstractAbfsIntegrationTest {
           blockCompletion.await();
         }
         return invocation.callRealMethod();
-      }).when(spyIn).readRemote(Mockito.anyLong(),Mockito.any(byte[].class),Mockito.anyInt(),Mockito.anyInt(),Mockito.any());
+      })
+          .when(spyIn)
+          .readRemote(Mockito.anyLong(), Mockito.any(byte[].class),
+              Mockito.anyInt(), Mockito.anyInt(), Mockito.any());
       ExecutorService exec = Executors.newFixedThreadPool(EXEC_THREADS);
       Future<?> r1 = exec.submit(() -> {
         try {
@@ -491,7 +496,7 @@ public class ITestVectoredRead extends AbstractAbfsIntegrationTest {
         }
         Thread.sleep(SLEEP_TIME);
       }
-      assertNotNull(inProgress,"Expected buffer to be in inProgressList while completion is blocked");
+      assertNotNull(inProgress, "Expected buffer to be in inProgressList while completion is blocked");
       Future<?> r2 = exec.submit(() -> {
         try {
           spyIn.read(new byte[1], 0, 1);
@@ -500,7 +505,7 @@ public class ITestVectoredRead extends AbstractAbfsIntegrationTest {
         }
       });
       long bufferOffset = inProgress.getOffset();
-      int length = (int)Math.min(ONE_MB, DATA_8_MB - bufferOffset);
+      int length = (int) Math.min(ONE_MB, DATA_8_MB - bufferOffset);
       List<FileRange> ranges = new ArrayList<>();
       ranges.add(FileRange.createFileRange(bufferOffset, length));
       Future<?> vr = exec.submit(() -> {
@@ -510,7 +515,7 @@ public class ITestVectoredRead extends AbstractAbfsIntegrationTest {
           throw new RuntimeException(e);
         }
       });
-      Thread.sleep(50);
+      Thread.sleep(FUTURE_TIMEOUT_SEC);
       blockCompletion.countDown();
       r1.get(FUTURE_TIMEOUT_SEC, TimeUnit.SECONDS);
       r2.get(FUTURE_TIMEOUT_SEC, TimeUnit.SECONDS);
@@ -603,7 +608,7 @@ public class ITestVectoredRead extends AbstractAbfsIntegrationTest {
       offsets.add(offset);
     }
     // Shuffle to simulate randomness without overlap
-    Collections.shuffle(offsets, new Random(12345L));
+    Collections.shuffle(offsets, new Random(SHUFFLE_SEED));
     // Limit to readCount
     offsets = offsets.subList(0, Math.min(readCount, offsets.size()));
 
@@ -644,7 +649,7 @@ public class ITestVectoredRead extends AbstractAbfsIntegrationTest {
        * Assertion (less flaky)
        * ---------------------------------------------------- */
       assertTrue(
-          vectoredTimeNs <= nonVectoredTimeNs * 1.2,
+          vectoredTimeNs <= nonVectoredTimeNs * PERFORMANCE_TOLERANCE_FACTOR,
           String.format(
               "Vectored read slower: vectored=%d ns, non-vectored=%d ns",
               vectoredTimeNs, nonVectoredTimeNs)
