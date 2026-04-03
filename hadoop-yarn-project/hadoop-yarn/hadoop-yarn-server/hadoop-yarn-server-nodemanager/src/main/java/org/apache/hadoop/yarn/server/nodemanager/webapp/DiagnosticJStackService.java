@@ -76,7 +76,8 @@ public class DiagnosticJStackService {
     }
   }
 
-  public String collectApplicationThreadDump(String appId, int numberOfJStack, HttpServletRequest req)
+  public String collectApplicationThreadDump(
+      String appId, int numberOfJStack, HttpServletRequest req)
       throws IOException {
     checkShellNotWindows();
 
@@ -125,7 +126,7 @@ public class DiagnosticJStackService {
           .flatMap(ProcessHandle::descendants)
           .filter(childProcess -> {
             String cmdLine = childProcess.info().commandLine().orElse("").trim();
-            // Command Line: /usr/lib/jvm/jdk1.17.0.11.0-openjdk-cloudera/bin/java
+            // Command Line: /usr/lib/jvm/jdk1.17.0.11.0-openjdk/bin/java
             // -Djava.net.preferIPv4Stack=true
             if (cmdLine.isEmpty()){
               return false;
@@ -134,9 +135,9 @@ public class DiagnosticJStackService {
             String executable = cmdLine.split("\\s+")[0];
             // The first token is always the executable binary
             return executable.equals("java") || executable.endsWith("/java");
-        })
-        .map(ProcessHandle::pid)
-        .toList();
+          })
+          .map(ProcessHandle::pid)
+          .toList();
 
       containerPids.put(containerId, javaContainerPids);
 
@@ -156,7 +157,7 @@ public class DiagnosticJStackService {
 
       if (javaContainerPids.isEmpty()){
         result.append(String.format("=== Thread Dumps for ContainerId: %s%n is skipped " +
-           "because no Java Process ID exist ===", containerId.toString()));
+            "because no Java Process ID exist ===", containerId.toString()));
       } else {
         for (Long pid : javaContainerPids) {
           result.append(String.format(
