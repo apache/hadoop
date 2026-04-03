@@ -456,6 +456,7 @@
                     <exclude>**/azurebfs/ITestSmallWriteOptimization.java</exclude>
                     <exclude>**/azurebfs/ITestAbfsStreamStatistics*.java</exclude>
                     <exclude>**/azurebfs/services/ITestReadBufferManager.java</exclude>
+                    <exclude>**/azurebfs/services/ITestVectoredRead.java</exclude>
                     <exclude>**/azurebfs/commit/*.java</exclude>
                   </excludes>
 
@@ -497,6 +498,7 @@
                     <include>**/azurebfs/ITestSmallWriteOptimization.java</include>
                     <include>**/azurebfs/services/ITestReadBufferManager.java</include>
                     <include>**/azurebfs/ITestAbfsStreamStatistics*.java</include>
+                    <include>**/azurebfs/services/ITestVectoredRead.java</include>
                     <include>**/azurebfs/commit/*.java</include>
                   </includes>
                 </configuration>

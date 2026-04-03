@@ -460,8 +460,8 @@ public class ITestVectoredRead extends AbstractAbfsIntegrationTest {
       //   - Read #1: readahead triggered by the sequential read
       //   - Read #2: only if vectored read just missed the prefetch window (race edge)
       // 3+ means hitchhiking is broken — vectored read issued a redundant remote fetch.
-      final int MAX_EXPECTED_REMOTE_READS = 2;
-      Mockito.verify(spyIn, Mockito.atMost(MAX_EXPECTED_REMOTE_READS))
+      final int maxExpectedRemoteReads = 2;
+      Mockito.verify(spyIn, Mockito.atMost(maxExpectedRemoteReads))
           .readRemote(
               Mockito.anyLong(),
               Mockito.any(byte[].class),
