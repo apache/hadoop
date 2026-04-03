@@ -1562,7 +1562,10 @@ public class DataNode extends ReconfigurableBase
     DFSUtil.addInternalPBProtocol(getConf(), InterDatanodeProtocolPB.class, service,
         ipcServer);
 
-    LOG.info("Opened IPC server at {}", ipcServer.getListenerAddress());
+    InetSocketAddress listenerAddress = ipcServer.getListenerAddress();
+    LOG.info("Opened IPC server at {}", listenerAddress);
+    dnConf.getConf().set(DFS_DATANODE_IPC_ADDRESS_KEY,
+        listenerAddress.getHostName() + ":" + listenerAddress.getPort());
 
     // set service-level authorization security policy
     if (getConf().getBoolean(
