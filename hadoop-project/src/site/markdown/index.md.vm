@@ -15,7 +15,7 @@
 Apache Hadoop ${project.version}
 ================================
 
-Apache Hadoop ${project.version} is an update to the Hadoop 3.4.x release branch.
+Apache Hadoop ${project.version} is the first stable release of the Apache Hadoop 3.5 line.
 
 Overview of Changes
 ===================
@@ -23,44 +23,46 @@ Overview of Changes
 Users are encouraged to read the full set of release notes.
 This page provides an overview of the major changes.
 
-New binary distribution
------------------------
+Java 17 Support
+---------------
 
-As of v3.4.2, Hadoop will only be distributed with a lean tarball, which excludes the full AWS SDK v2 bundle to reduce
-overall file size. This release has been tested with AWS SDK v2 2.29.52, which can be downloaded from Maven
-[here](https://mvnrepository.com/artifact/software.amazon.awssdk/aws-sdk-java/2.29.52).
+This is the first Hadoop release with full support for Java 17. On the server side, Java 17 is required. On the client
+side, Java 17 and Java 21 are supported.
 
-S3A improvements
-----------------
+HDFS Optimizations
+------------------
 
-**Improvement**
+HDFS has implemented new optimizations for finer-grained locking on concurrent NameNode operations and asynchronous RPC
+processing in router-based federation.
 
-[HADOOP-19363](https://issues.apache.org/jira/browse/HADOOP-19363) S3A: Support analytics-accelerator-s3 input streams
-for parquet read performance.
+GCS FileSystem
+--------------
 
-[HADOOP-19256](https://issues.apache.org/jira/browse/HADOOP-19256) S3A: Adds support for S3 Conditional Writes.
+Apache Hadoop now includes a `FileSystem` implementation that integrates with Google Cloud Storage buckets.
 
-ABFS improvements
------------------
+WASB Removed
+------------
 
-**Improvement**
+The WASB `FileSystem` that was previously deprecated has been removed from the codebase. Use ABFS instead.
 
-[HADOOP-19179](https://issues.apache.org/jira/browse/HADOOP-19179) ABFS: [FnsOverBlob] Support FNS Accounts over
-BlobEndpoint.
+YARN Capacity Scheduler UI
+--------------------------
 
-[HADOOP-19474](https://issues.apache.org/jira/browse/HADOOP-19474)  ABFS: [FnsOverBlob] Listing Optimizations to avoid
-multiple iteration over list response.
+This release adds a new modern UI for monitoring the Capacity Scheduler and dynamically editing its configuration.
 
-[HADOOP-19543](https://issues.apache.org/jira/browse/HADOOP-19543) ABFS: [FnsOverBlob] Remove Duplicates from Blob
-Endpoint Listing Across Iterations.
+JUnit 5 Upgrade
+---------------
+
+For developers working on the codebase, all tests have been upgraded from JUnit 4 to JUnit 5. All new tests must utilize
+JUnit 5 going forward.
 
 Transitive CVE fixes
 --------------------
 
 A lot of dependencies have been upgraded to address recent CVEs.
-Many of the CVEs were not actually exploitable through the Hadoop
+Many of the CVEs were not actually exploitable through Hadoop
 so much of this work is just due diligence.
-However, applications which have all the library is on a class path may
+However, applications which have all the libraries on a class path may
 be vulnerable, and the upgrades should also reduce the number of false
 positives security scanners report.
 
