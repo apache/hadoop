@@ -38,6 +38,7 @@ import org.apache.hadoop.fs.azurebfs.enums.Trilean;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
 import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
+import static java.net.HttpURLConnection.HTTP_CONFLICT;
 import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
 import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
 import static java.net.HttpURLConnection.HTTP_UNAVAILABLE;
@@ -47,6 +48,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.accountP
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.ABFS_BLOB_DOMAIN_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.ABFS_DFS_DOMAIN_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_ACCOUNT_KEY;
+import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_SOFT_DELETE_NOT_SUPPORTED;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doReturn;
@@ -266,6 +268,8 @@ public class ITestGetNameSpaceEnabled extends AbstractAbfsIntegrationTest {
         true, true);
     ensureGetAclDetermineHnsStatusAccuratelyInternal(HTTP_UNAVAILABLE,
         true, true);
+    ensureGetAclDetermineHnsStatusAccuratelyInternal(HTTP_CONFLICT,
+            false, false);
   }
 
   private void ensureGetAclDetermineHnsStatusAccuratelyInternal(int statusCode,
@@ -274,8 +278,11 @@ public class ITestGetNameSpaceEnabled extends AbstractAbfsIntegrationTest {
     AbfsClient mockClient = mock(AbfsClient.class);
     store.getAbfsConfiguration().setIsNamespaceEnabledAccountForTesting(Trilean.UNKNOWN);
     doReturn(mockClient).when(store).getClient(AbfsServiceType.DFS);
+    String errorMsg = statusCode == HTTP_CONFLICT
+            ? ERR_SOFT_DELETE_NOT_SUPPORTED
+            : Integer.toString(statusCode);
     AbfsRestOperationException ex = new AbfsRestOperationException(
-        statusCode, null, Integer.toString(statusCode), null);
+        statusCode, null, errorMsg, null);
     doThrow(ex).when(mockClient).getAclStatus(anyString(), any(TracingContext.class));
 
     if (isExceptionExpected) {
