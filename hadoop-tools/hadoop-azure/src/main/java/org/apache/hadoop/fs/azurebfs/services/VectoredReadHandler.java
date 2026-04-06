@@ -241,30 +241,49 @@ class VectoredReadHandler {
       int bufferSize) {
     LOG.debug("splitByBufferSize: offset={}, length={}, bufferSize={}",
         unit.getOffset(), unit.getLength(), bufferSize);
-
     List<CombinedFileRange> parts = new ArrayList<>();
     long unitStart = unit.getOffset();
     long unitEnd = unitStart + unit.getLength();
-    long start = unitStart;
+    // Underlying ranges are already sorted by offset
+    List<FileRange> ranges = unit.getUnderlying();
 
+    long start = unitStart;
+    int i = 0; // pointer to skip non-overlapping ranges
     while (start < unitEnd) {
       long partEnd = Math.min(start + bufferSize, unitEnd);
-
+      // Create new chunk
       CombinedFileRange part =
-          new CombinedFileRange(start, partEnd, unit.getUnderlying().get(0));
+          new CombinedFileRange(start, partEnd, ranges.get(0));
       part.getUnderlying().clear();
-
-      for (FileRange r : unit.getUnderlying()) {
+      // Advance pointer to first range that may overlap this chunk
+      while (i < ranges.size()) {
+        FileRange r = ranges.get(i);
+        long rEnd = r.getOffset() + r.getLength();
+        if (rEnd > start) {
+          break;
+        }
+        i++;
+      }
+      // Add overlapping ranges
+      int j = i;
+      while (j < ranges.size()) {
+        FileRange r = ranges.get(j);
         long rStart = r.getOffset();
         long rEnd = rStart + r.getLength();
-        if (rEnd > start && rStart < partEnd) {
+        // No further overlaps possible
+        if (rStart >= partEnd) {
+          break;
+        }
+        // Overlap condition
+        if (rEnd > start) {
           part.getUnderlying().add(r);
         }
+
+        j++;
       }
       parts.add(part);
       start = partEnd;
     }
-
     LOG.debug("splitByBufferSize: offset={}, produced {} parts",
         unit.getOffset(), parts.size());
     return parts;
@@ -406,20 +425,13 @@ class VectoredReadHandler {
               buffer.getPath(), r.getOffset(), r.getLength(),
               bufferStart, srcOffset, destOffset, length);
 
-          ByteBuffer fullBuf = partialBuffers.get(key);
-          AtomicInteger pending = pendingBytes.get(key);
+          /* Allocate or reuse the full buffer for this logical range */
+          ByteBuffer fullBuf = partialBuffers.computeIfAbsent(
+              key, k -> buffer.getAllocator().apply(r.getLength()));
 
-          if (fullBuf == null || pending == null) {
-            if (future.isCancelled()) {
-              continue;
-            }
-            /* Allocate or reuse the full buffer for this logical range */
-           fullBuf = partialBuffers.computeIfAbsent(
-                key, k -> buffer.getAllocator().apply(r.getLength()));
-            /* Track remaining bytes required to complete this range */
-            pending = pendingBytes.computeIfAbsent(
-                key, k -> new AtomicInteger(r.getLength()));
-          }
+          /* Track remaining bytes required to complete this range */
+          AtomicInteger pending = pendingBytes.computeIfAbsent(
+              key, k -> new AtomicInteger(r.getLength()));
 
           synchronized (fullBuf) {
             /* Double-check completion inside lock */
@@ -453,7 +465,7 @@ class VectoredReadHandler {
               /*
                * Prepare buffer for reading.
                * DO NOT use flip() because writes may arrive out-of-order.
-               * Instead explicitly expose the full buffer.
+               * Instead, explicitly expose the full buffer.
                */
               fullBuf.position(0);
               fullBuf.limit(fullBuf.capacity());
