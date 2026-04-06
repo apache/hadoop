@@ -245,7 +245,7 @@ public class ZStandardDecompressor implements Decompressor {
 
   @Override
   protected void finalize() {
-    reset();
+    end();
   }
 
   private void checkStream() {
