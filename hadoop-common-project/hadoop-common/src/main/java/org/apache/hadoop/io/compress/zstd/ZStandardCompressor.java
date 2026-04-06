@@ -196,50 +196,45 @@ public class ZStandardCompressor implements Compressor {
       return n;
     }
 
-    boolean allConsumed = (uncompressedDirectBufLen - uncompressedDirectBufOff <= 0);
+    // Always invoke the streaming API — even with empty input — so internally
+    // buffered bytes continue to be drained, matching native ZSTD_flushStream.
     // Use END only when finish=true, no more user data, and all direct-buffer
     // data consumed (mirrors ZSTD_endStream); otherwise FLUSH (mirrors
     // ZSTD_compressStream + ZSTD_flushStream).
+    boolean allConsumed = (uncompressedDirectBufLen - uncompressedDirectBufOff <= 0);
     boolean shouldEnd = finish && userBufLen == 0 && allConsumed;
-    if (!allConsumed || shouldEnd) {
-      // Re-initialize the output direct buffer
-      compressedDirectBuf.rewind();
-      compressedDirectBuf.limit(directBufferSize);
 
-      uncompressedDirectBuf.position(uncompressedDirectBufOff);
-      uncompressedDirectBuf.limit(uncompressedDirectBufLen);
-      compressedDirectBuf.position(0);
-      compressedDirectBuf.limit(directBufferSize);
+    uncompressedDirectBuf.position(uncompressedDirectBufOff);
+    uncompressedDirectBuf.limit(uncompressedDirectBufLen);
+    compressedDirectBuf.position(0);
+    compressedDirectBuf.limit(directBufferSize);
 
-      EndDirective endOp = shouldEnd ? EndDirective.END : EndDirective.FLUSH;
-      boolean done = zstdJniCtx.compressDirectByteBufferStream(
-          compressedDirectBuf, uncompressedDirectBuf, endOp);
+    EndDirective endOp = shouldEnd ? EndDirective.END : EndDirective.FLUSH;
+    boolean done = zstdJniCtx.compressDirectByteBufferStream(
+        compressedDirectBuf, uncompressedDirectBuf, endOp);
 
-      int newOff = uncompressedDirectBuf.position();
-      n = compressedDirectBuf.position();
+    int newOff = uncompressedDirectBuf.position();
+    n = compressedDirectBuf.position();
 
-      bytesRead += newOff - uncompressedDirectBufOff;
-      bytesWritten += n;
+    bytesRead += newOff - uncompressedDirectBufOff;
+    bytesWritten += n;
 
-      uncompressedDirectBufOff = newOff;
-      if (uncompressedDirectBufLen - uncompressedDirectBufOff <= 0) {
-        keepUncompressedBuf = false;
-        uncompressedDirectBuf.clear();
-        uncompressedDirectBufOff = 0;
-        uncompressedDirectBufLen = 0;
-      } else {
-        keepUncompressedBuf = true;
-      }
-
-      if (endOp == EndDirective.END && done) {
-        finished = true;
-      }
-
-      compressedDirectBuf.position(0);
-      compressedDirectBuf.limit(n);
+    uncompressedDirectBufOff = newOff;
+    if (uncompressedDirectBufLen - uncompressedDirectBufOff <= 0) {
+      keepUncompressedBuf = false;
+      uncompressedDirectBuf.clear();
+      uncompressedDirectBufOff = 0;
+      uncompressedDirectBufLen = 0;
     } else {
-      n = 0;
+      keepUncompressedBuf = true;
     }
+
+    if (endOp == EndDirective.END && done) {
+      finished = true;
+    }
+
+    compressedDirectBuf.position(0);
+    compressedDirectBuf.limit(n);
 
     // Get at most 'len' bytes
     n = Math.min(n, len);
