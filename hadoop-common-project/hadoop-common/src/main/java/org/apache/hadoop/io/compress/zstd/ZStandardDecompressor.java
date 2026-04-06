@@ -22,8 +22,6 @@ import com.github.luben.zstd.ZstdDecompressCtx;
 import com.github.luben.zstd.ZstdInputStream;
 import org.apache.hadoop.io.compress.Decompressor;
 import org.apache.hadoop.io.compress.DirectDecompressor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -33,8 +31,6 @@ import java.nio.ByteBuffer;
  * backed by the <a href="https://github.com/luben/zstd-jni">zstd-jni</a> library.
  */
 public class ZStandardDecompressor implements Decompressor {
-  private static final Logger LOG =
-      LoggerFactory.getLogger(ZStandardDecompressor.class);
 
   private int directBufferSize;
   private ByteBuffer compressedDirectBuf = null;
