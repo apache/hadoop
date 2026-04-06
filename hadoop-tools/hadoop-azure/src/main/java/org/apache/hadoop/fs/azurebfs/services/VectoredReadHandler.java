@@ -113,22 +113,8 @@ class VectoredReadHandler {
         stream.getPath(), ranges.size());
 
     /* Initialize a future for each logical file range */
-    /* Initialize a future for each logical file range */
     long fileLength = stream.getContentLength();
-    List<FileRange> validRanges = new ArrayList<>();
-    for (FileRange r : ranges) {
-      VectoredReadUtils.validateRangeRequest(r);
-      r.setData(new CompletableFuture<>());
-      long offset = r.getOffset();
-      long length = r.getLength();
-
-      if (offset < 0 || length < 0 || offset > fileLength || length > fileLength - offset) {
-        r.getData().completeExceptionally(new EOFException(
-            "Invalid range: offset=" + offset + ", length=" + length + ", fileLength=" + fileLength));
-        continue;
-      }
-      validRanges.add(r);
-    }
+    List<FileRange> validRanges = validateAndPrepareRanges(ranges, fileLength);
 
     /* Select the maximum allowed merge span based on the configured strategy */
     int maxSpan =
@@ -160,8 +146,7 @@ class VectoredReadHandler {
           VectoredReadUtils.validateRangeRequest(chunk);
           boolean queued = queueVectoredRead(stream, chunk, allocator);
           if (!queued) {
-            LOG.debug("readVectored: buffer pool exhausted, falling back to directRead:"
-                    + " path={}, offset={}, length={}",
+            LOG.debug("readVectored: buffer pool exhausted, falling back to directRead: path={}, offset={}, length={}",
                 stream.getPath(), chunk.getOffset(), chunk.getLength());
             directRead(stream, chunk, allocator);
           }
@@ -197,6 +182,46 @@ class VectoredReadHandler {
    */
   public ReadBufferManager getReadBufferManager() {
     return readBufferManager;
+  }
+
+  /**
+   * Validates and prepares a list of {@link FileRange} instances for vectored reads.
+   *
+   * <p>This method performs the following steps for each input range:
+   * <ul>
+   *   <li>Validates the range using {@link VectoredReadUtils#validateRangeRequest(FileRange)}</li>
+   *   <li>Initializes a {@link CompletableFuture} to hold the read result</li>
+   *   <li>Checks that the range falls within the bounds of the file</li>
+   * </ul>
+   *
+   * <p>Ranges that are invalid (e.g., negative offset/length or exceeding file bounds)
+   * are not included in the returned list. Instead, their associated future is
+   * completed exceptionally with an {@link EOFException}.
+   *
+   * @param ranges     the input list of logical file ranges to validate and prepare
+   * @param fileLength the total length of the file, used for bounds checking
+   * @return a list of valid {@link FileRange} instances ready for vectored read processing
+   */
+  private List<FileRange> validateAndPrepareRanges(
+      List<? extends FileRange> ranges, long fileLength) throws EOFException {
+
+    List<FileRange> validRanges = new ArrayList<>();
+
+    for (FileRange r : ranges) {
+      VectoredReadUtils.validateRangeRequest(r);
+      r.setData(new CompletableFuture<>());
+
+      long offset = r.getOffset();
+      long length = r.getLength();
+
+      if (offset < 0 || length < 0 || offset > fileLength || length > fileLength - offset) {
+        r.getData().completeExceptionally(new EOFException(
+            "Invalid range: offset=" + offset + ", length=" + length + ", fileLength=" + fileLength));
+        continue;
+      }
+      validRanges.add(r);
+    }
+    return validRanges;
   }
 
   /**
@@ -343,12 +368,12 @@ class VectoredReadHandler {
       /* Each unit may contain multiple logical FileRanges */
       for (FileRange r : unit.getUnderlying()) {
         CompletableFuture<ByteBuffer> future = r.getData();
+        RangeKey key = new RangeKey(r);
 
         /* Skip already completed or cancelled ranges */
         if (future.isCancelled()) {
           LOG.debug("fanOut: range cancelled, cleaning up: path={}, rangeOffset={}",
               buffer.getPath(), r.getOffset());
-          RangeKey key = new RangeKey(r);
           partialBuffers.remove(key);
           pendingBytes.remove(key);
           continue;
@@ -381,15 +406,20 @@ class VectoredReadHandler {
               buffer.getPath(), r.getOffset(), r.getLength(),
               bufferStart, srcOffset, destOffset, length);
 
-          RangeKey key = new RangeKey(r);
+          ByteBuffer fullBuf = partialBuffers.get(key);
+          AtomicInteger pending = pendingBytes.get(key);
 
-          /* Allocate or reuse the full buffer for this logical range */
-          ByteBuffer fullBuf = partialBuffers.computeIfAbsent(
-              key, k -> buffer.getAllocator().apply(r.getLength()));
-
-          /* Track remaining bytes required to complete this range */
-          AtomicInteger pending = pendingBytes.computeIfAbsent(
-              key, k -> new AtomicInteger(r.getLength()));
+          if (fullBuf == null || pending == null) {
+            if (future.isCancelled()) {
+              continue;
+            }
+            /* Allocate or reuse the full buffer for this logical range */
+           fullBuf = partialBuffers.computeIfAbsent(
+                key, k -> buffer.getAllocator().apply(r.getLength()));
+            /* Track remaining bytes required to complete this range */
+            pending = pendingBytes.computeIfAbsent(
+                key, k -> new AtomicInteger(r.getLength()));
+          }
 
           synchronized (fullBuf) {
             /* Double-check completion inside lock */
@@ -434,18 +464,22 @@ class VectoredReadHandler {
                     buffer.getPath(), r.getOffset(), r.getLength(), fullBuf.limit());
               }
 
-              future.complete(fullBuf);
-              partialBuffers.remove(key);
-              pendingBytes.remove(key);
-
-              LOG.debug("fanOut: completed range: path={}, rangeOffset={}, rangeLength={}",
-                  buffer.getPath(), r.getOffset(), r.getLength());
+              boolean completed = future.complete(fullBuf);
+              if (completed) {
+                // only cleanup if WE completed it
+                partialBuffers.remove(key);
+                pendingBytes.remove(key);
+                LOG.debug("fanOut: completed range: path={}, rangeOffset={}, rangeLength={}",
+                    buffer.getPath(), r.getOffset(), r.getLength());
+              } else {
+                LOG.debug("fanOut: completion lost race: path={}, rangeOffset={}",
+                    buffer.getPath(), r.getOffset());
+              }
             }
           }
         } catch (Exception e) {
           LOG.warn("fanOut: exception processing range: path={}, rangeOffset={}",
               buffer.getPath(), r.getOffset(), e);
-          RangeKey key = new RangeKey(r);
           partialBuffers.remove(key);
           pendingBytes.remove(key);
           if (!future.isDone()) {
@@ -603,9 +637,9 @@ class VectoredReadHandler {
           continue;
         }
 
-        System.arraycopy(tmp, srcOffset,
-            fullBuf.array(), fullBuf.arrayOffset() + destOffset,
-            length);
+        ByteBuffer dst = fullBuf.duplicate();
+        dst.position(destOffset);
+        dst.put(tmp, srcOffset, length);
 
         int left = pending.addAndGet(-length);
 
