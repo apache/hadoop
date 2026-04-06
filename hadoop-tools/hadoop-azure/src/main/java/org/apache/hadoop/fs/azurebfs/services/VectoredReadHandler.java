@@ -625,9 +625,15 @@ class VectoredReadHandler {
           continue;
         }
 
-        System.arraycopy(tmp, srcOffset,
-            fullBuf.array(), fullBuf.arrayOffset() + destOffset,
-            length);
+        if (fullBuf.hasArray()) {
+          System.arraycopy(tmp, srcOffset,
+              fullBuf.array(), fullBuf.arrayOffset() + destOffset,
+              length);
+        } else {
+          ByteBuffer dst = fullBuf.duplicate();
+          dst.position(destOffset);
+          dst.put(tmp, srcOffset, length);
+        }
 
         int left = pending.addAndGet(-length);
 
