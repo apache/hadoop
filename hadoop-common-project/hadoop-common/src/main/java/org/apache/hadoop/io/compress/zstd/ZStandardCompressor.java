@@ -291,9 +291,14 @@ public class ZStandardCompressor implements Compressor {
     }
   }
 
+  @Override
+  protected void finalize() {
+    end();
+  }
+
   private void checkStream() {
     if (zstdJniCtx == null) {
-      throw new NullPointerException();
+      throw new NullPointerException("ZstdCompressCtx is not initialized");
     }
   }
 }

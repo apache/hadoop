@@ -246,7 +246,7 @@ public class ZStandardDecompressor implements Decompressor {
 
   private void checkStream() {
     if (zstdJniCtx == null) {
-      throw new NullPointerException("Decompression context not initialized");
+      throw new NullPointerException("ZstdDecompressCtx is not initialized");
     }
   }
 
