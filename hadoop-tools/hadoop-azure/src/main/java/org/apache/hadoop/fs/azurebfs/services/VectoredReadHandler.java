@@ -241,49 +241,30 @@ class VectoredReadHandler {
       int bufferSize) {
     LOG.debug("splitByBufferSize: offset={}, length={}, bufferSize={}",
         unit.getOffset(), unit.getLength(), bufferSize);
+
     List<CombinedFileRange> parts = new ArrayList<>();
     long unitStart = unit.getOffset();
     long unitEnd = unitStart + unit.getLength();
-    // Underlying ranges are already sorted by offset
-    List<FileRange> ranges = unit.getUnderlying();
-
     long start = unitStart;
-    int i = 0; // pointer to skip non-overlapping ranges
+
     while (start < unitEnd) {
       long partEnd = Math.min(start + bufferSize, unitEnd);
-      // Create new chunk
+
       CombinedFileRange part =
-          new CombinedFileRange(start, partEnd, ranges.get(0));
+          new CombinedFileRange(start, partEnd, unit.getUnderlying().get(0));
       part.getUnderlying().clear();
-      // Advance pointer to first range that may overlap this chunk
-      while (i < ranges.size()) {
-        FileRange r = ranges.get(i);
-        long rEnd = r.getOffset() + r.getLength();
-        if (rEnd > start) {
-          break;
-        }
-        i++;
-      }
-      // Add overlapping ranges
-      int j = i;
-      while (j < ranges.size()) {
-        FileRange r = ranges.get(j);
+
+      for (FileRange r : unit.getUnderlying()) {
         long rStart = r.getOffset();
         long rEnd = rStart + r.getLength();
-        // No further overlaps possible
-        if (rStart >= partEnd) {
-          break;
-        }
-        // Overlap condition
-        if (rEnd > start) {
+        if (rEnd > start && rStart < partEnd) {
           part.getUnderlying().add(r);
         }
-
-        j++;
       }
       parts.add(part);
       start = partEnd;
     }
+
     LOG.debug("splitByBufferSize: offset={}, produced {} parts",
         unit.getOffset(), parts.size());
     return parts;
@@ -476,17 +457,12 @@ class VectoredReadHandler {
                     buffer.getPath(), r.getOffset(), r.getLength(), fullBuf.limit());
               }
 
-              boolean completed = future.complete(fullBuf);
-              if (completed) {
-                // only cleanup if WE completed it
-                partialBuffers.remove(key);
-                pendingBytes.remove(key);
-                LOG.debug("fanOut: completed range: path={}, rangeOffset={}, rangeLength={}",
-                    buffer.getPath(), r.getOffset(), r.getLength());
-              } else {
-                LOG.debug("fanOut: completion lost race: path={}, rangeOffset={}",
-                    buffer.getPath(), r.getOffset());
-              }
+              future.complete(fullBuf);
+              partialBuffers.remove(key);
+              pendingBytes.remove(key);
+
+              LOG.debug("fanOut: completed range: path={}, rangeOffset={}, rangeLength={}",
+                  buffer.getPath(), r.getOffset(), r.getLength());
             }
           }
         } catch (Exception e) {
@@ -649,9 +625,9 @@ class VectoredReadHandler {
           continue;
         }
 
-        ByteBuffer dst = fullBuf.duplicate();
-        dst.position(destOffset);
-        dst.put(tmp, srcOffset, length);
+        System.arraycopy(tmp, srcOffset,
+            fullBuf.array(), fullBuf.arrayOffset() + destOffset,
+            length);
 
         int left = pending.addAndGet(-length);
 
