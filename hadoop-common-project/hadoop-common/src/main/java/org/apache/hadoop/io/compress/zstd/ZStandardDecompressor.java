@@ -259,14 +259,15 @@ public class ZStandardDecompressor implements Decompressor {
   int inflateDirect(ByteBuffer src, ByteBuffer dst) {
     assert (this instanceof ZStandardDecompressor.ZStandardDirectDecompressor);
 
-    // zstd-jni: use streaming decompression directly on the provided buffers
     int origDstPos = dst.position();
     boolean done = zstdJniCtx.decompressDirectByteBufferStream(dst, src);
-    if (done) {
+    remaining = src.limit() - src.position();
+    // Mirror decompress(): only mark finished when the frame is done AND no
+    // more bytes remain (src may contain additional concatenated frames).
+    if (done && remaining == 0) {
       finished = true;
-      remaining = 0;
-    } else {
-      remaining = src.limit() - src.position();
+    } else if (remaining > 0 && finished) {
+      finished = false;
     }
     return dst.position() - origDstPos;
   }
