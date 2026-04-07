@@ -16,22 +16,21 @@
 
 ARG JAVA_VERSION=17
 
-# Ubuntu 22.04 LTS
-FROM eclipse-temurin:${JAVA_VERSION}-jammy
+# Ubuntu 24.04 LTS
+FROM eclipse-temurin:${JAVA_VERSION}-noble
 
 RUN apt update -q \
     && DEBIAN_FRONTEND=noninteractive apt install -y --no-install-recommends \
       jq \
       krb5-user \
       ncat \
-      python3-pip \
+      pipx \
       python-is-python3 \
       sudo \
     && apt clean
 
 # Robot Framework for testing
-RUN pip install robotframework \
-    && rm -fr ~/.cache/pip
+RUN pipx install robotframework
 
 #dumb init for proper init handling
 RUN set -eux; \
@@ -59,7 +58,7 @@ RUN curl -Lo /opt/byteman.jar https://repo.maven.apache.org/maven2/org/jboss/byt
 #async profiler for development profiling
 RUN set -eux; \
     ARCH="$(arch)"; \
-    v=2.8.3; \
+    v=4.3; \
     case "${ARCH}" in \
       x86_64) \
         url="https://github.com/jvm-profiling-tools/async-profiler/releases/download/v${v}/async-profiler-${v}-linux-x64.tar.gz" \
@@ -76,8 +75,8 @@ RUN set -eux; \
 RUN mkdir -p /etc/security/keytabs \
     && chmod -R a+wr /etc/security/keytabs
 
-RUN groupadd --gid 1000 hadoop \
-    && useradd --uid 1000 hadoop --gid 100 --home /opt/hadoop \
+RUN groupadd --gid 1001 hadoop \
+    && useradd --uid 1001 hadoop --gid 100 --home /opt/hadoop \
     && mkdir -p /opt/hadoop \
     && chown hadoop:users /opt/hadoop \
     && echo "hadoop ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
