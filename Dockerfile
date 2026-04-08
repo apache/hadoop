@@ -13,8 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM ghcr.io/apache/hadoop-runner:jdk11-u2204
-ARG HADOOP_VERSION=3.4.3
+FROM ghcr.io/apache/hadoop-runner:jdk17-u2404
+ARG HADOOP_VERSION=3.5.0
 ARG BASE_URL=https://dlcdn.apache.org/hadoop/common
 ARG TARGETPLATFORM
 WORKDIR /opt/hadoop
