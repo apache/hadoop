@@ -131,6 +131,7 @@ jobs:
           file: ./dev-support/docker/Dockerfile_${{ inputs.os }}
           push: true
           tags: ${{ needs.precondition.outputs.build_image_url }}-base
+          cache-from: type=registry,ref=ghcr.io/apache/hadoop/gha-build-${{ inputs.os }}-image-cache:${{ inputs.branch }}
       - name: User-specific Dockerfile
         run: |
           USER_ID=$(id -u "${USER}")
