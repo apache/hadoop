@@ -21,6 +21,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.UUID;
 
+import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.junit.jupiter.api.Test;
 import org.assertj.core.api.Assertions;
 import org.mockito.Mockito;
@@ -307,6 +308,99 @@ public class ITestGetNameSpaceEnabled extends AbstractAbfsIntegrationTest {
     Mockito.verify(mockClient, times(1))
         .getAclStatus(anyString(), any(TracingContext.class));
   }
+
+    /**
+     * Verify that for FNS accounts, the error code returned by the server
+     * is either HTTP 400 (Bad Request) or HTTP 409 (if soft-delete enabled). This validates the expected
+     * server behavior when getAcl is called on FNS accounts.
+     */
+    @Test
+    public void testFNSAccountReturnsExpectedErrorCodes() throws Exception {
+      assumeHnsDisabled();
+      Configuration config = getConfigurationWithoutHnsConfig();
+
+      // Spy on the client to capture the actual exception thrown
+      try (AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(config)) {
+        AzureBlobFileSystemStore spyStore = Mockito.spy(fs.getAbfsStore());
+        AbfsClient spyClient = Mockito.spy(spyStore.getClient(AbfsServiceType.DFS));
+
+        doReturn(spyClient).when(spyStore).getClient(AbfsServiceType.DFS);
+
+        // Force namespace to be unknown to trigger server call
+        spyStore.getAbfsConfiguration().setIsNamespaceEnabledAccountForTesting(Trilean.UNKNOWN);
+
+        // Capture any exception that might be thrown during getAclStatus
+        AbfsRestOperationException capturedException = null;
+        try {
+          spyClient.getAclStatus(AbfsHttpConstants.ROOT_PATH,
+              getTestTracingContext(fs, false));
+        } catch (AbfsRestOperationException ex) {
+          capturedException = ex;
+        }
+
+        // For FNS accounts, we expect either 400 or 409
+
+        // NOTE: 409 (soft-delete not supported error) would come explicitly when we have
+        // the test account's soft-delete enabled. If soft-delete is disabled for the test account,
+        // we should get 400 instead.
+        if (capturedException != null) {
+          int statusCode = capturedException.getStatusCode();
+          String errorMessage = capturedException.getMessage();
+
+          Assertions.assertThat(statusCode)
+              .describedAs("FNS account should return either 400 or 409 status code")
+              .isIn(HTTP_BAD_REQUEST, HTTP_CONFLICT);
+
+          // If it's 409, verify it contains unsupported soft delete error message
+          if (statusCode == HTTP_CONFLICT) {
+            Assertions.assertThat(errorMessage)
+                .describedAs("HTTP 409 response should contain soft delete error message")
+                .contains(ERR_SOFT_DELETE_NOT_SUPPORTED);
+          }
+        }
+
+        // Verify that namespace is set to false regardless of which error was returned
+        boolean isHnsEnabled = spyStore.getIsNamespaceEnabled(getTestTracingContext(fs, false));
+        Assertions.assertThat(isHnsEnabled)
+            .describedAs("FNS account should have namespace disabled")
+            .isFalse();
+      }
+    }
+
+    /**
+     * Verify behavior when getAcl call fails with unexpected error codes
+     * (neither 400 nor 409). In such cases, namespace should be set to true and exception
+     * should be propagated.
+     */
+    @Test
+    public void testErrorCodeSetsNamespaceToTrueAndThrowsException() throws Exception {
+      // Create mock setup to simulate unexpected error code
+      AzureBlobFileSystemStore store = Mockito.spy(getFileSystem().getAbfsStore());
+      AbfsClient mockClient = mock(AbfsClient.class);
+      store.getAbfsConfiguration().setIsNamespaceEnabledAccountForTesting(Trilean.UNKNOWN);
+      doReturn(mockClient).when(store).getClient(AbfsServiceType.DFS);
+
+      // Simulate 500 Internal Server Error (unexpected error code)
+      AbfsRestOperationException unexpectedException = new AbfsRestOperationException(
+          HTTP_INTERNAL_ERROR, null, "Internal Server Error", null);
+      doThrow(unexpectedException).when(mockClient)
+          .getAclStatus(anyString(), any(TracingContext.class));
+
+      // Attempt to get namespace status should throw the exception
+      try {
+        store.getIsNamespaceEnabled(getTestTracingContext(getFileSystem(), false));
+        Assertions.fail("Expected AbfsRestOperationException to be thrown");
+      } catch (AbfsRestOperationException ex) {
+        Assertions.assertThat(ex.getStatusCode())
+            .describedAs("Exception should have 500 status code")
+            .isEqualTo(HTTP_INTERNAL_ERROR);
+      }
+
+      // Even though exception was thrown, namespace should be set to true
+      Assertions.assertThat(store.getAbfsConfiguration().getIsNamespaceEnabledAccount())
+          .describedAs("Namespace should be set to TRUE for unexpected error codes")
+          .isEqualTo(Trilean.TRUE);
+    }
 
   @Test
   public void testAccountSpecificConfig() throws Exception {

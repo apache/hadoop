@@ -427,15 +427,17 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       String message = ex.getMessage();
 
       // Case 1: 409: Soft delete not supported
-      if (status == HttpURLConnection.HTTP_CONFLICT &&
-              message != null &&
-              message.contains(ERR_SOFT_DELETE_NOT_SUPPORTED)) {
+      if (status == HttpURLConnection.HTTP_CONFLICT
+              && message != null
+              && message.contains(ERR_SOFT_DELETE_NOT_SUPPORTED)) {
         /*
          * HTTP_CONFLICT with soft delete not supported error indicates a FNS account.
          * This occurs when:
-         * 1. FNS-Blob endpoint is used (used with DFS endpoint for getAcl call)
+         * 1. FNS-Blob endpoint is used (due to DFS endpoint usage for getAcl call)
          * 2. FNS-DFS endpoint is used (later internally converted to Blob)
-         * For both cases, namespace should be disabled. No need to throw exception.
+         * For both cases, namespace should be disabled. The exception is irrelevant here
+         * since we'll be using Blob endpoint ultimately for both the cases here.
+         * No need to throw the exception.
          */
         LOG.debug("Ignore soft-delete error. Setting namespace enabled to false.");
         setNamespaceEnabled(false);
