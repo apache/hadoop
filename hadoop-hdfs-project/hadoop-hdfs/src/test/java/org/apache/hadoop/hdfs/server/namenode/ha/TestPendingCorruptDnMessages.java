@@ -139,4 +139,56 @@ public class TestPendingCorruptDnMessages {
     return cluster.restartDataNode(dnProps, true);
   }
 
+  @Test
+  @Timeout(value = 60)
+  public void testRemoveBlockCleansUpPendingDNMessages() throws Exception {
+    HdfsConfiguration conf = new HdfsConfiguration();
+    conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, 1);
+    final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(1)
+        .nnTopology(MiniDFSNNTopology.simpleHATopology())
+        .build();
+
+    try {
+      cluster.transitionToActive(0);
+
+      FileSystem fs = HATestUtil.configureFailoverFs(cluster, conf);
+      OutputStream out = fs.create(filePath);
+      out.write("foo bar baz".getBytes());
+      out.close();
+
+      HATestUtil.waitForStandbyToCatchUp(cluster.getNameNode(0), cluster.getNameNode(1));
+
+      // Send genstamp to the future
+      ExtendedBlock block = DFSTestUtil.getFirstBlock(fs, filePath);
+      cluster.changeGenStampOfBlock(0, block, 4200);
+
+      // Run directory scanner to update Datanode's volumeMap
+      DataNodeTestUtils.runDirectoryScanner(cluster.getDataNodes().get(0));
+      // Stop the DN so the replica with the changed gen stamp will be reported
+      // when this DN starts up.
+      DataNodeProperties dnProps = cluster.stopDataNode(0);
+
+      // Restart the namenode so that when the DN comes up it will see an initial
+      // block report.
+      cluster.restartNameNode(1, false);
+      assertTrue(cluster.restartDataNode(dnProps, true));
+
+      // Wait until the standby NN queues up the future block in the pending DN
+      // message queue.
+      GenericTestUtils.waitFor((Supplier<Boolean>) () ->
+              cluster.getNamesystem(1).getBlockManager().getPendingDataNodeMessageCount() == 1, 1000,
+          30000);
+
+      // Delete the file on active, make standby tail the edit
+      fs.delete(filePath, false);
+      cluster.getNameNode(0).getRpcServer().rollEditLog();
+      cluster.getNameNode(1).getNamesystem().getEditLogTailer().doTailEdits();
+
+      // SB pendingDNMessage should be empty now, else there's a leak
+      assertEquals(0, cluster.getNamesystem(1).getBlockManager().getPendingDataNodeMessageCount());
+    } finally {
+      cluster.shutdown();
+    }
+  }
 }
