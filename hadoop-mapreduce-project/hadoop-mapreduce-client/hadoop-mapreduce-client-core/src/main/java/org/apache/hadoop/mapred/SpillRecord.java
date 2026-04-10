@@ -23,6 +23,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.LongBuffer;
+import java.util.zip.CRC32;
 import java.util.zip.CheckedInputStream;
 import java.util.zip.CheckedOutputStream;
 import java.util.zip.Checksum;
@@ -36,7 +37,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.SecureIOUtils;
-import org.apache.hadoop.util.PureJavaCrc32;
 
 @InterfaceAudience.LimitedPrivate({"MapReduce"})
 @InterfaceStability.Unstable
@@ -59,7 +59,7 @@ public class SpillRecord {
 
   public SpillRecord(Path indexFileName, JobConf job, String expectedIndexOwner)
     throws IOException {
-    this(indexFileName, job, new PureJavaCrc32(), expectedIndexOwner);
+    this(indexFileName, job, new CRC32(), expectedIndexOwner);
   }
 
   public SpillRecord(Path indexFileName, JobConf job, Checksum crc,
@@ -124,7 +124,7 @@ public class SpillRecord {
    */
   public void writeToFile(Path loc, JobConf job)
       throws IOException {
-    writeToFile(loc, job, new PureJavaCrc32());
+    writeToFile(loc, job, new CRC32());
   }
 
   public void writeToFile(Path loc, JobConf job, Checksum crc)

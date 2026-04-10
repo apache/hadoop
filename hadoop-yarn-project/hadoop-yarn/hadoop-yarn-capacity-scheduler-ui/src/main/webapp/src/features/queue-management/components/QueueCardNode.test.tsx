@@ -132,6 +132,7 @@ describe('QueueCardNode', () => {
         hasPendingDeletion: vi.fn().mockReturnValue(false),
         clearQueueChanges: vi.fn(),
         requestTemplateConfigOpen: vi.fn(),
+        revertQueueDeletion: vi.fn(),
       };
       return selector ? selector(state) : state;
     });
@@ -754,5 +755,45 @@ describe('QueueCardNode', () => {
       expect(startQueueItem).toBeInTheDocument();
       expect(startQueueItem).not.toHaveAttribute('data-disabled');
     });
+  });
+
+  it('should show "Undo Delete" instead of "Mark for Deletion" when queue has pending deletion', async () => {
+    (useSchedulerStore as any).mockImplementation((selector: any) => {
+      const state = {
+        comparisonQueues: [],
+        selectedQueuePath: null,
+        selectQueue: mockSelectQueue,
+        setPropertyPanelOpen: mockSetPropertyPanelOpen,
+        isPropertyPanelOpen: false,
+        propertyPanelInitialTab: 'overview' as const,
+        setPropertyPanelInitialTab: mockSetPropertyPanelInitialTab,
+        toggleComparisonQueue: mockToggleComparisonQueue,
+        getQueueByPath: vi.fn().mockReturnValue({ queueName: 'default' }),
+        getChildQueues: vi.fn().mockReturnValue([]),
+        selectedNodeLabelFilter: '',
+        getQueueLabelCapacity: vi.fn().mockReturnValue({
+          capacity: '10',
+          maxCapacity: '100',
+          absoluteCapacity: '10',
+          isLabelSpecific: false,
+          label: 'DEFAULT',
+          hasAccess: true,
+          canUseLabel: true,
+        }),
+        hasPendingDeletion: vi.fn().mockReturnValue(true),
+        clearQueueChanges: vi.fn(),
+        requestTemplateConfigOpen: vi.fn(),
+        revertQueueDeletion: vi.fn(),
+      };
+      return selector ? selector(state) : state;
+    });
+
+    renderWithProviders(<QueueCardNode {...createNodeProps(defaultNodeData)} />);
+
+    const card = screen.getByText('default');
+    await userEvent.pointer({ keys: '[MouseRight]', target: card });
+
+    expect(screen.queryByText('Mark for Deletion')).not.toBeInTheDocument();
+    expect(screen.getByText('Undo Delete')).toBeInTheDocument();
   });
 });

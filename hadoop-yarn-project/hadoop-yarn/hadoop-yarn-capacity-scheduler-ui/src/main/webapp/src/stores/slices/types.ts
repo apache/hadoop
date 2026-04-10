@@ -94,6 +94,7 @@ export interface StagedChangesSlice {
   ) => void;
   applyChanges: () => Promise<void>;
   revertChange: (changeId: string) => void;
+  revertQueueDeletion: (queuePath: string) => void;
   clearAllChanges: () => void;
   clearQueueChanges: (queuePath: string) => void;
   hasUnsavedChanges: () => boolean;

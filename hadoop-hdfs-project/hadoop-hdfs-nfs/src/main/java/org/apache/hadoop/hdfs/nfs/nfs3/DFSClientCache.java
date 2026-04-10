@@ -172,13 +172,17 @@ class DFSClientCache {
         LOG.info("Added export: {} FileSystem URI: {} with namenodeId: {}",
             exportPath, exportPath, namenodeId);
         namenodeUriMap.put(namenodeId, exportURI);
-      } else {
-        // if the nnid already exists, it better be the for the same namenode
+      } else if (!exportURI.getAuthority().equals(value.getAuthority())) {
+        // different namenode authorities hashed to the same namenodeId — real collision
         String msg = String.format("FS:%s, Namenode ID collision for path:%s "
                 + "nnid:%s uri being added:%s existing uri:%s", fs.getScheme(),
             exportPath, namenodeId, exportURI, value);
         LOG.error(msg);
         throw new FileSystemException(msg);
+      } else {
+        // same namenode authority (multiple export paths on the same namenode) — safe
+        LOG.debug("Export path: {} maps to an already-registered namenode URI: {}"
+            + " with namenodeId: {}", exportPath, exportURI, namenodeId);
       }
     }
   }

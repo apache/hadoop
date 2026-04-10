@@ -19,12 +19,12 @@
 
 import { http, HttpResponse, type HttpHandler } from 'msw';
 import { API_CONFIG } from '~/lib/api/config';
-import { READ_ONLY_PROPERTY } from '~/config';
+import { HTTP_AUTH_PROPERTY, READ_ONLY_PROPERTY } from '~/config';
 
 // Base URL pattern that matches the API configuration
 
 const { baseUrl, mockMode } = API_CONFIG;
-const MOCK_ASSET_BASE = '/mock/ws/v1/cluster';
+const MOCK_ASSET_BASE = `${import.meta.env.BASE_URL}mock/ws/v1/cluster`;
 
 const staticHandlers: HttpHandler[] = [
   // Scheduler endpoints - serve local mock files
@@ -114,11 +114,11 @@ const staticHandlers: HttpHandler[] = [
     const url = new URL(request.url);
     const configName = url.searchParams.get('name');
 
-    // Handle security authentication mode query
-    if (configName === 'hadoop.security.authentication') {
+    // Handle HTTP authentication mode query
+    if (configName === HTTP_AUTH_PROPERTY) {
       return HttpResponse.json({
         property: {
-          name: 'hadoop.security.authentication',
+          name: HTTP_AUTH_PROPERTY,
           value: 'simple',
         },
       });

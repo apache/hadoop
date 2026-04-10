@@ -1766,7 +1766,7 @@
 <property>
   <name>fs.s3a.multipart.purge</name>
   <value>false</value>
-  <description>True if you want to purge existing multipart uploads that may not have been
+  <description>Deprecated. True if you want to purge existing multipart uploads that may not have been
     completed/aborted correctly. The corresponding purge age is defined in
     fs.s3a.multipart.purge.age.
     If set, when the filesystem is instantiated then all outstanding uploads
@@ -1780,7 +1780,7 @@
 <property>
   <name>fs.s3a.multipart.purge.age</name>
   <value>24h</value>
-  <description>Minimum age in seconds of multipart uploads to purge
+  <description>Deprecated. Minimum age in seconds of multipart uploads to purge
     on startup if "fs.s3a.multipart.purge" is true
   </description>
 </property>

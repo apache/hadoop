@@ -70,6 +70,8 @@ new file named `abfs-converted-config.xml` in the same directory.
 It would have the necessary configuration changes made to make it compatible
 with the ABFS driver.
 
+Script path: `dev-support/testrun-scripts/configsupport.sh`
+
 Example to run the script:
 
 ```shell

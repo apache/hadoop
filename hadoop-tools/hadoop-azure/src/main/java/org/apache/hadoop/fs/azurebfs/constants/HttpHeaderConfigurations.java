@@ -39,6 +39,7 @@ public final class HttpHeaderConfigurations {
   public static final String CONTENT_MD5 = "Content-MD5";
   public static final String CONTENT_TYPE = "Content-Type";
   public static final String RANGE = "Range";
+  public static final String CONTENT_RANGE = "Content-Range";
   public static final String TRANSFER_ENCODING = "Transfer-Encoding";
   public static final String USER_AGENT = "User-Agent";
   public static final String X_HTTP_METHOD_OVERRIDE = "X-HTTP-Method-Override";

@@ -552,10 +552,13 @@ public class WebAppProxyServlet extends HttpServlet {
        * handle authentication and route the request to the appropriate
        * backend service.
        */
-      String redirectFlagName = conf.get(YarnConfiguration.PROXY_REDIRECT_FLAG, "");
-      if (!redirectFlagName.isBlank() && toFetch.getQuery().equals(redirectFlagName + "=true")) {
-        ProxyUtils.sendRedirect(req, resp, toFetch.toString());
-        return;
+      String toFetchQuery = toFetch.getQuery();
+      if (toFetchQuery != null) {
+        String redirectFlagName = conf.get(YarnConfiguration.PROXY_REDIRECT_FLAG, "");
+        if (!redirectFlagName.isBlank() && toFetchQuery.contains(redirectFlagName + "=true")) {
+          ProxyUtils.sendRedirect(req, resp, toFetch.toString());
+          return;
+        }
       }
 
       Cookie c = null;

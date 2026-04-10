@@ -359,21 +359,29 @@ public class TestWebAppProxyServlet {
 
     appReportFetcher.answer = 8;
 
-    //Check if flag is on
-    YarnConfiguration conf = new YarnConfiguration();
-    conf.set(YarnConfiguration.PROXY_REDIRECT_FLAG, "yarn_knox_proxy");
-    servlet.setConf(conf);
-    servlet.doGet(request, response);
-
     //Check if flag is off
+    YarnConfiguration conf = new YarnConfiguration();
     conf.set(YarnConfiguration.PROXY_REDIRECT_FLAG, "");
     servlet.setConf(conf);
     servlet.doGet(request, response);
 
+    //Check if flag is on
+    conf.set(YarnConfiguration.PROXY_REDIRECT_FLAG, "yarn_knox_proxy");
+    servlet.setConf(conf);
+    servlet.doGet(request, response);
+
+    appReportFetcher.answer = 9;
+    servlet.doGet(request, response);
+
+    appReportFetcher.answer = 10;
+    servlet.doGet(request, response);
+
     ArgumentCaptor<Integer> statusCaptor = ArgumentCaptor.forClass(Integer.class);
-    Mockito.verify(response, Mockito.times(2)).setStatus(statusCaptor.capture());
-    assertEquals(HttpServletResponse.SC_FOUND, statusCaptor.getAllValues().get(0));
-    assertEquals(HttpServletResponse.SC_OK, statusCaptor.getAllValues().get(1));
+    Mockito.verify(response, Mockito.times(4)).setStatus(statusCaptor.capture());
+    assertEquals(HttpServletResponse.SC_OK, statusCaptor.getAllValues().get(0));
+    assertEquals(HttpServletResponse.SC_FOUND, statusCaptor.getAllValues().get(1));
+    assertEquals(HttpServletResponse.SC_FOUND, statusCaptor.getAllValues().get(2));
+    assertEquals(HttpServletResponse.SC_NOT_FOUND, statusCaptor.getAllValues().get(3));
   }
 
   @Test
@@ -701,6 +709,16 @@ public class TestWebAppProxyServlet {
         FetchedAppReport result = getDefaultApplicationReport(appId);
         result.getApplicationReport().setOriginalTrackingUrl("localhost:"
             + originalPort + "/foo/bar?yarn_knox_proxy=true");
+        return result;
+      } else if (answer == 9) {
+        FetchedAppReport result = getDefaultApplicationReport(appId);
+        result.getApplicationReport().setOriginalTrackingUrl("localhost:"
+            + originalPort + "/foo/bar?parameter1=true&yarn_knox_proxy=true&doAs=user");
+        return result;
+      } else if (answer == 10) {
+        FetchedAppReport result = getDefaultApplicationReport(appId);
+        result.getApplicationReport().setOriginalTrackingUrl("localhost:"
+            + originalPort);
         return result;
       }
       return null;

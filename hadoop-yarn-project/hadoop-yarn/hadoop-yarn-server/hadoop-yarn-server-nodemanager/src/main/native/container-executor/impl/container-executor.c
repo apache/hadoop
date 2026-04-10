@@ -99,7 +99,7 @@ static const char* TC_READ_STATE_OPTS [] = { "-b", NULL};
 static const char* TC_READ_STATS_OPTS [] = { "-s",  "-b", NULL};
 
 //struct to store the user details
-struct passwd *user_detail = NULL;
+struct serialized_passwd *user_detail = NULL;
 
 FILE* LOGFILE = NULL;
 FILE* ERRORFILE = NULL;
@@ -118,6 +118,25 @@ char *concatenate(char *concat_pattern, char *return_path_name,
 void set_nm_uid(uid_t user, gid_t group) {
   nm_uid = user;
   nm_gid = group;
+}
+
+//function to make a deep clone of passwd to serialized_passwd
+void deep_copy_passwd(const struct passwd *src, struct serialized_passwd *dest) {
+  dest->pw_name = strdup(src->pw_name);
+  dest->pw_dir = strdup(src->pw_dir);
+  dest->pw_shell = strdup(src->pw_shell);
+  dest->pw_uid = src->pw_uid;
+  dest->pw_gid = src->pw_gid;
+}
+
+void free_serialized_passwd(struct serialized_passwd * passwd) {
+  if (passwd == NULL) {
+    return;
+  }
+  free(passwd->pw_name);
+  free(passwd->pw_dir);
+  free(passwd->pw_shell);
+  free(passwd);
 }
 
 //function used to load the configurations present in the secure config
@@ -915,26 +934,47 @@ cleanup:
 
 /**
  * Load the user information for a given user name.
+ * See <a href="https://linux.die.net/man/3/getpwnam_r">getpwname_r</a>
+ * Note: for user not found and some error conditions NULL is returned
  */
-static struct passwd* get_user_info(const char* user) {
-  size_t string_size = sysconf(_SC_GETPW_R_SIZE_MAX);
+static struct serialized_passwd* get_user_info(const char* user) {
+  struct passwd pwd;
   struct passwd *result = NULL;
-  if(string_size < 1024) {
-    string_size = 1024;
+  struct serialized_passwd *serialized_result;
+  char *buf;
+  size_t bufsize;
+  int s;
+  bufsize = sysconf(_SC_GETPW_R_SIZE_MAX);
+  if (bufsize == -1){
+    bufsize = 1024;
   }
-  struct passwd* buffer = malloc(sizeof(struct passwd) + string_size);
-  if (NULL == buffer) {
-    fprintf(LOGFILE, "Failed malloc in get_user_info\n");
+  buf = malloc(bufsize);
+  if (buf == NULL) {
+    exit(EXIT_FAILURE);
+  }
+  while ((s = getpwnam_r(user, &pwd, buf, bufsize, &result)) == ERANGE) {
+    bufsize = 2 * bufsize;
+    char *newbuffer = realloc(buf, bufsize);
+    if (newbuffer == NULL) {
+      exit(EXIT_FAILURE);
+    }
+    buf = newbuffer;
+  }
+  if (result == NULL) {
+    if (s == 0) {
+       fprintf(LOGFILE, "User not found %s\n", user);
+    } else {
+      errno = s;
+      fprintf(LOGFILE, "Can't get user information %s - %s\n", user,
+                 strerror(errno));
+      free(buf);
+    }
     return NULL;
   }
-  if (getpwnam_r(user, buffer, ((char*)buffer) + sizeof(struct passwd),
-        string_size, &result) != 0) {
-    free(buffer);
-    fprintf(LOGFILE, "Can't get user information %s - %s\n", user,
-           strerror(errno));
-    return NULL;
-  }
-  return result;
+  serialized_result = malloc(sizeof(struct serialized_passwd));
+  deep_copy_passwd(result, serialized_result);
+  free(buf);
+  return serialized_result;
 }
 
 int is_whitelisted(const char *user) {
@@ -960,7 +1000,7 @@ int is_whitelisted(const char *user) {
  *   3. Not in banned user list
  * Returns NULL on failure
  */
-struct passwd* check_user(const char *user) {
+struct serialized_passwd* check_user(const char *user) {
   if (strcmp(user, "root") == 0) {
     fprintf(LOGFILE, "Running as root is not allowed\n");
     return NULL;
@@ -978,7 +1018,7 @@ struct passwd* check_user(const char *user) {
     }
     free(min_uid_str);
   }
-  struct passwd *user_info = get_user_info(user);
+  struct serialized_passwd *user_info = get_user_info(user);
   if (NULL == user_info) {
     fprintf(LOGFILE, "User %s not found\n", user);
     return NULL;
@@ -986,7 +1026,7 @@ struct passwd* check_user(const char *user) {
   if (user_info->pw_uid < min_uid && !is_whitelisted(user)) {
     fprintf(LOGFILE, "Requested user %s is not whitelisted and has id %d,"
 	    "which is below the minimum allowed %d\n", user, user_info->pw_uid, min_uid);
-    free(user_info);
+    free_serialized_passwd(user_info);
     return NULL;
   }
   char **banned_users = get_section_values(BANNED_USERS_KEY, &executor_cfg);
@@ -995,7 +1035,7 @@ struct passwd* check_user(const char *user) {
   char **banned_user = banned_users;
   for(; *banned_user; ++banned_user) {
     if (strcmp(*banned_user, user) == 0) {
-      free(user_info);
+      free_serialized_passwd(user_info);
       if (banned_users != (char**)DEFAULT_BANNED_USERS) {
         free_values(banned_users);
       }
