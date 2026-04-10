@@ -140,10 +140,12 @@ public class NonHierarchyBosNativeFileSystemStore
             list(key, 1, null, null);
         if (listing != null) {
           if (listing.getFiles().length > 0) {
-            // rebuild dir
-            this.storeEmptyFile(key);
+            // rebuild dir marker with trailing slash to ensure it is
+            // treated as a directory, not a zero-byte file
+            String dirKey = prefixToDir(key);
+            this.storeEmptyFile(dirKey);
             return new FileMetadata(
-                key, 0, 0, true);
+                dirKey, 0, 0, true);
           }
         }
         throw new FileNotFoundException(

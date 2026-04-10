@@ -271,9 +271,14 @@ public class BosInputStream extends FSInputStream
     checkNotClosed();
 
     // Do not allow negative seek
-    if (targetPos < 0 || targetPos > contentLength) {
+    if (targetPos < 0) {
       throw new EOFException(
           FSExceptionMessages.NEGATIVE_SEEK
+              + " " + targetPos);
+    }
+    if (targetPos > contentLength) {
+      throw new EOFException(
+          FSExceptionMessages.CANNOT_SEEK_PAST_EOF
               + " " + targetPos);
     }
 
@@ -357,7 +362,7 @@ public class BosInputStream extends FSInputStream
     // re-open at specific location if needed
     if (in == null) {
       LOG.debug(
-          "re-open at specific locaition: {}",
+          "re-open at specific location: {}",
           targetPos);
       reopen("read from new offset", targetPos, len);
     }

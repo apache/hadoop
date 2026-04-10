@@ -71,8 +71,10 @@ Edit `contract-test-options.xml` and set your BOS configuration:
 **Recommended: Use Environment Variables**
 
 ```bash
-export BOS_ACCESS_KEY_ID=your_access_key_id
-export BOS_SECRET_ACCESS_KEY=your_secret_access_key
+export FS_BOS_ACCESS_KEY=your_access_key_id
+export FS_BOS_SECRET_ACCESS_KEY=your_secret_access_key
+# Optional: for STS/temporary credentials
+# export FS_BOS_SESSION_TOKEN_KEY=your_session_token
 ```
 
 Ensure the credentials provider is set to `EnvironmentVariableCredentialsProvider`:
@@ -209,7 +211,7 @@ These tests verify BOS-specific functionality:
 
 **Solutions**:
 1. Verify credentials are correct
-2. Check environment variables are set: `echo $BOS_ACCESS_KEY_ID`
+2. Check environment variables are set: `echo $FS_BOS_ACCESS_KEY`
 3. Ensure credentials provider class is correctly configured
 4. Verify network connectivity to BOS endpoint
 
@@ -316,8 +318,8 @@ For automated testing in CI/CD pipelines:
 
 ```bash
 # Example GitHub Actions / GitLab CI
-export BOS_ACCESS_KEY_ID=${{ secrets.BOS_ACCESS_KEY_ID }}
-export BOS_SECRET_ACCESS_KEY=${{ secrets.BOS_SECRET_ACCESS_KEY }}
+export FS_BOS_ACCESS_KEY=${{ secrets.FS_BOS_ACCESS_KEY }}
+export FS_BOS_SECRET_ACCESS_KEY=${{ secrets.FS_BOS_SECRET_ACCESS_KEY }}
 mvn test
 ```
 

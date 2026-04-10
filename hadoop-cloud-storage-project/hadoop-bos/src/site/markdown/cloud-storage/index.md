@@ -30,25 +30,28 @@ In quick start, we will use hadoop shell command to access a BOS bucket.
 
 ### Usage
 
-* Compile hadoop-bos bundle tar. The hadoop-bos bundle is not packaged in hadoop final tar file.
-So we have to compile it manually. Download the hadoop project, and build it with command below.
+* The `hadoop-bos` connector jar is included in the Hadoop cloud storage distribution
+(`hadoop-cloud-storage-dist`) and can be found in the release package at
+`$HADOOP_HOME/share/hadoop/tools/lib/hadoop-bos-{VERSION}.jar`.
+
+If you are building from source or need to build the module separately, use:
 ```bash
 mvn package -DskipTests -pl org.apache.hadoop:hadoop-bos
 ```
 
-* The bundle jar file is placed at
-`$HADOOP_HOME/hadoop-cloud-storage-project/hadoop-bos/target/hadoop-bos-{VERSION}.jar`.
+The bundle jar file will be placed at
+`hadoop-cloud-storage-project/hadoop-bos/target/hadoop-bos-{VERSION}.jar`.
 
-* Copy the bundle jar to hdfs lib path. The hdfs lib path is
-`$HADOOP_HOME/share/hadoop/hdfs/lib`. Remember copying to all hadoop nodes.
+* If the jar is not already present in `$HADOOP_HOME/share/hadoop/tools/lib/`,
+copy it there and add it to the classpath. Remember to copy to all hadoop nodes.
 ```bash
-cp hadoop-bos-{VERSION}.jar $HADOOP_HOME/share/hadoop/hdfs/lib/
+cp hadoop-bos-{VERSION}.jar $HADOOP_HOME/share/hadoop/tools/lib/
 ```
 
 * Configure properties below.
 
 ```xml
-<properties>
+<configuration>
   <property>
     <name>fs.defaultFS</name>
     <value>bos://{your_bucket_name}/</value>
@@ -96,7 +99,7 @@ cp hadoop-bos-{VERSION}.jar $HADOOP_HOME/share/hadoop/hdfs/lib/
       The secret key of the access key specified by 'fs.bos.access.key'.
     </description>
   </property>
-</properties>
+</configuration>
 ```
 
 * Use hadoop shell command to access BOS.
