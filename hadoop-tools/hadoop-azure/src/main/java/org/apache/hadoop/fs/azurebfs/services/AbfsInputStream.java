@@ -26,18 +26,22 @@ import java.util.UUID;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.fs.CanUnbuffer;
+import org.apache.hadoop.fs.FSExceptionMessages;
+import org.apache.hadoop.fs.FSInputStream;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.StreamCapabilities;
+import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
+import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.constants.ReadType;
+import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
 import org.apache.hadoop.fs.impl.BackReference;
 import org.apache.hadoop.util.Preconditions;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.fs.CanUnbuffer;
-import org.apache.hadoop.fs.FSExceptionMessages;
-import org.apache.hadoop.fs.FSInputStream;
 import org.apache.hadoop.fs.FileSystem.Statistics;
-import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
@@ -51,9 +55,13 @@ import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 
+import static org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore.extractEtagHeader;
+import static org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore.getRelativePath;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_KB;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.STREAM_ID_LEN;
 import static org.apache.hadoop.fs.azurebfs.constants.InternalConstants.CAPABILITY_SAFE_READAHEAD;
+import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.INVALID_RANGE;
+import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_READ_ON_DIRECTORY;
 import static org.apache.hadoop.io.Sizes.S_128K;
 import static org.apache.hadoop.io.Sizes.S_2M;
 import static org.apache.hadoop.util.StringUtils.toLowerCase;
@@ -73,11 +81,11 @@ public abstract class AbfsInputStream extends FSInputStream implements CanUnbuff
   private final Statistics statistics;
   private final String path;
 
-  private final long contentLength;
+  private volatile long contentLength;
   private final int bufferSize; // default buffer size
   private final int footerReadSize; // default buffer size to read when reading footer
   private final int readAheadQueueDepth;         // initialized in constructor
-  private final String eTag;                  // eTag of the path when InputStream are created
+  private String eTag;                  // eTag of the path when InputStream is created
   private final boolean tolerateOobAppends; // whether tolerate Oob Appends
   private final boolean readAheadEnabled; // whether enable readAhead;
   private final boolean readAheadV2Enabled; // whether enable readAhead V2;
@@ -293,9 +301,6 @@ public abstract class AbfsInputStream extends FSInputStream implements CanUnbuff
       // go back and read from buffer is fCursor - limit.
       // There maybe case that we read less than requested data.
       long filePosAtStartOfBuffer = fCursor - limit;
-      if (abfsReadFooterMetrics != null) {
-        abfsReadFooterMetrics.updateReadMetrics(filePathIdentifier, len, contentLength, nextReadPos);
-      }
       if (nextReadPos >= filePosAtStartOfBuffer && nextReadPos <= fCursor) {
         // Determining position in buffer from where data is to be read.
         bCursor = (int) (nextReadPos - filePosAtStartOfBuffer);
@@ -312,6 +317,9 @@ public abstract class AbfsInputStream extends FSInputStream implements CanUnbuff
         limit = 0;
         bCursor = 0;
       }
+
+      long nextReadPosForMetric = nextReadPos;
+
       if (shouldReadFully()) {
         lastReadBytes = readFileCompletely(b, currentOff, currentLen);
       } else if (shouldReadLastBlock()) {
@@ -319,6 +327,11 @@ public abstract class AbfsInputStream extends FSInputStream implements CanUnbuff
       } else {
         lastReadBytes = readOneBlock(b, currentOff, currentLen);
       }
+
+      if (abfsReadFooterMetrics != null) {
+        abfsReadFooterMetrics.updateReadMetrics(filePathIdentifier, len, contentLength, nextReadPosForMetric);
+      }
+
       if (lastReadBytes > 0) {
         currentOff += lastReadBytes;
         currentLen -= lastReadBytes;
@@ -332,13 +345,13 @@ public abstract class AbfsInputStream extends FSInputStream implements CanUnbuff
   }
 
   private boolean shouldReadFully() {
-    return this.firstRead && this.context.readSmallFilesCompletely()
+    return this.firstRead && !shouldRestrictGpsOnOpenFile() && this.context.readSmallFilesCompletely()
         && this.contentLength <= this.bufferSize;
   }
 
   private boolean shouldReadLastBlock() {
     long footerStart = max(0, this.contentLength - FOOTER_SIZE);
-    return this.firstRead && this.context.optimizeFooterRead()
+    return this.firstRead && !shouldRestrictGpsOnOpenFile() && this.context.optimizeFooterRead()
         && this.fCursor >= footerStart;
   }
 
@@ -561,11 +574,62 @@ public abstract class AbfsInputStream extends FSInputStream implements CanUnbuff
     }
   }
 
+  /**
+   * Creates an exception indicating that a read operation was attempted on a directory.
+   *
+   * @return an {@link UnsupportedOperationException} indicating the operation is not permitted on a directory
+   */
+  private UnsupportedOperationException directoryReadException() {
+    return new UnsupportedOperationException(
+            ERR_READ_ON_DIRECTORY,
+            new AbfsRestOperationException(
+                    AzureServiceErrorCode.PATH_NOT_FOUND.getStatusCode(),
+                    AzureServiceErrorCode.PATH_NOT_FOUND.getErrorCode(),
+                    ERR_READ_ON_DIRECTORY,
+                    null));
+  }
+
+  /**
+   * Checks if the current path is a directory (for both implicit and explicit) in FNS account.
+   * If the path is a directory, throws an exception indicating that read operations are not permitted.
+   *
+   * @throws IOException if the path is a directory or if there is an error accessing the path status
+   */
+  private void checkIfDirPathInFNS() throws IOException {
+    AbfsHttpOperation gpsOp = client.getPathStatus(
+            getRelativePath(new Path(path)),
+            false,
+            tracingContext,
+            contextEncryptionAdapter).getResult();
+
+    if (client.checkIsDir(gpsOp)) {
+      throw directoryReadException();
+    }
+  }
+
+/**
+   * Extracts the content length from the HTTP response headers.
+   * Uses the Content-Range header to determine the total file size, which is necessary
+   * for handling partial reads correctly.
+   *
+   * @param op the ABFS HTTP operation containing the response headers
+   * @return the content length of the file
+   */
+  private long extractContentLength(AbfsHttpOperation op) {
+    // We need to use content range header instead of content length to take care of partial reads
+    String contentRange = op.getResponseHeader(HttpHeaderConfigurations.CONTENT_RANGE);
+    contentLength = 0;
+    if (!StringUtils.isEmpty(contentRange)) {
+      contentLength = Long.parseLong(contentRange.split(AbfsHttpConstants.FORWARD_SLASH)[1]);
+    }
+    return contentLength;
+  }
+
   int readRemote(long position, byte[] b, int offset, int length, TracingContext tracingContext) throws IOException {
     if (position < 0) {
       throw new IllegalArgumentException("attempting to read from negative offset");
     }
-    if (position >= contentLength) {
+    if (!(shouldRestrictGpsOnOpenFile() && isFirstRead()) && position >= contentLength) {
       return -1;  // Hadoop prefers -1 to EOFException
     }
     if (b == null) {
@@ -591,6 +655,16 @@ public abstract class AbfsInputStream extends FSInputStream implements CanUnbuff
       op = client.read(path, position, b, offset, length,
           tolerateOobAppends ? "*" : eTag, cachedSasToken.get(),
           contextEncryptionAdapter, tracingContext);
+
+      // Update metadata on first read if restrictGpsOnOpenFile is enabled
+      if (shouldRestrictGpsOnOpenFile() && isFirstRead()) {
+        if (client.checkIsDir(op.getResult())) {
+          throw directoryReadException();
+        }
+        contentLength = extractContentLength(op.getResult());
+        eTag = extractEtagHeader(op.getResult());
+      }
+
       cachedSasToken.update(op.getSasToken());
       LOG.debug("issuing HTTP GET request params position = {} b.length = {} "
           + "offset = {} length = {}", position, b.length, offset, length);
@@ -599,12 +673,50 @@ public abstract class AbfsInputStream extends FSInputStream implements CanUnbuff
     } catch (AzureBlobFileSystemException ex) {
       if (ex instanceof AbfsRestOperationException) {
         AbfsRestOperationException ere = (AbfsRestOperationException) ex;
-        if (ere.getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND) {
-          throw new FileNotFoundException(ere.getMessage());
+        int status = ere.getStatusCode();
+        if (ere.getErrorMessage().contains(ERR_READ_ON_DIRECTORY)) {
+          throw ere;
+        }
+        boolean isHnsEnabled = client.getIsNamespaceEnabled();
+
+        // Case-1: 404 NOT FOUND
+        if (status == HttpURLConnection.HTTP_NOT_FOUND) {
+          /*
+           * If HNS account or restrictGpsOnOpenFile disabled,
+           * we dont need any further checks
+          */
+          if (isHnsEnabled || !shouldRestrictGpsOnOpenFile()) {
+            throw new FileNotFoundException(ere.getMessage());
+          }
+
+          try {
+            /*
+             * For FNS account with restrictGpsOnOpenFile enabled,
+             * need to rule out if the path is an implicit directory
+             */
+            checkIfDirPathInFNS();
+          } catch (AzureBlobFileSystemException gpsEx) {
+            AbfsRestOperationException gpsEre = (AbfsRestOperationException) gpsEx;
+            if (gpsEre.getErrorMessage().contains(ERR_READ_ON_DIRECTORY)) {
+              throw gpsEre;
+            }
+            // The file does not exist
+            else {
+              throw new FileNotFoundException(gpsEre.getMessage());
+            }
+          }
+        }
+
+        // Case-2: 416 INVALID RANGE
+        if (!isHnsEnabled && INVALID_RANGE.equals(ere.getErrorCode())) {
+          // Need to rule out if the path is an explicit directory
+          checkIfDirPathInFNS();
         }
       }
+      // Default: propagate original error
       throw new IOException(ex);
     }
+
     long bytesRead = op.getResult().getBytesReceived();
     if (streamStatistics != null) {
       streamStatistics.remoteBytesRead(bytesRead);
@@ -693,9 +805,12 @@ public abstract class AbfsInputStream extends FSInputStream implements CanUnbuff
       throw new IOException(
           FSExceptionMessages.STREAM_IS_CLOSED);
     }
-    final long remaining = this.contentLength - this.getPos();
-    return remaining <= Integer.MAX_VALUE
-        ? (int) remaining : Integer.MAX_VALUE;
+    if (!(shouldRestrictGpsOnOpenFile() && isFirstRead())) {
+      final long remaining = this.contentLength - this.getPos();
+      return remaining <= Integer.MAX_VALUE
+              ? (int) remaining : Integer.MAX_VALUE;
+    }
+    return Integer.MAX_VALUE;
   }
 
   /**
@@ -1087,5 +1202,9 @@ public abstract class AbfsInputStream extends FSInputStream implements CanUnbuff
    */
   protected long getContentLength() {
     return contentLength;
+  }
+
+  public boolean shouldRestrictGpsOnOpenFile() {
+    return context.shouldRestrictGpsOnOpenFile();
   }
 }

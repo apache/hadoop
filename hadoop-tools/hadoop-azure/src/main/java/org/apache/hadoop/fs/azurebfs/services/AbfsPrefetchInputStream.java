@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.azurebfs.services;
 import java.io.IOException;
 
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.azurebfs.constants.ReadType;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
 /**
@@ -66,7 +67,7 @@ public class AbfsPrefetchInputStream extends AbfsInputStream {
     // If buffer is empty, then fill the buffer.
     if (getBCursor() == getLimit()) {
       // If EOF, then return -1
-      if (getFCursor() >= getContentLength()) {
+      if (!(shouldRestrictGpsOnOpenFile() && isFirstRead()) && getFCursor() >= getContentLength()) {
         return -1;
       }
 
@@ -80,10 +81,22 @@ public class AbfsPrefetchInputStream extends AbfsInputStream {
       }
 
       /*
-       * Always start with Prefetch even from first read.
-       * Even if out of order seek comes, prefetches will be triggered for next set of blocks.
+        Skips prefetch for the first read if restrictGpsOnOpenFile config is enabled.
+        This is required since contentLength is not available yet to determine prefetch block size.
        */
-      bytesRead = readInternal(getFCursor(), getBuffer(), 0, getBufferSize(), false);
+      if (shouldRestrictGpsOnOpenFile() && isFirstRead()) {
+        getTracingContext().setReadType(ReadType.NORMAL_READ);
+        LOG.debug("RestrictGpsOnOpenFile is enabled. Skip readahead for first read even for sequential input policy.");
+        bytesRead = readInternal(getFCursor(), getBuffer(), 0, getBufferSize(), true);
+      }
+      else {
+        /*
+         * Always start with Prefetch even from first read UNLESS restrictGpsOnOpenFile config is enabled.
+         * Even if out of order seek comes, prefetches will be triggered for next set of blocks.
+         */
+        bytesRead = readInternal(getFCursor(), getBuffer(), 0, getBufferSize(), false);
+      }
+
       if (isFirstRead()) {
         setFirstRead(false);
       }

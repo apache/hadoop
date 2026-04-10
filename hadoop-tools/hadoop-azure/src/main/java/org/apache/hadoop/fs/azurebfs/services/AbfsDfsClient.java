@@ -1347,7 +1347,7 @@ public class AbfsDfsClient extends AbfsClient {
   public boolean checkIsDir(AbfsHttpOperation result) {
     String resourceType = result.getResponseHeader(
         HttpHeaderConfigurations.X_MS_RESOURCE_TYPE);
-    return StringUtils.equalsIgnoreCase(resourceType, DIRECTORY);
+    return resourceType != null && StringUtils.equalsIgnoreCase(resourceType, DIRECTORY);
   }
 
   /**
