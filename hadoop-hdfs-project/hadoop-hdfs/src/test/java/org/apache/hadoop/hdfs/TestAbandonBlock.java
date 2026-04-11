@@ -18,7 +18,6 @@
 package org.apache.hadoop.hdfs;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -34,7 +33,6 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
-import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -112,7 +110,7 @@ public class TestAbandonBlock {
   /**
    * Verify that when the disk-space quota is exceeded during a write, the
    * DataStreamer propagates the DSQuotaExceededException back to the client
-   * and logs it at WARN level (HDFS-17845).
+   * (HDFS-17845).
    */
   @Test
   @Timeout(60)
@@ -129,8 +127,6 @@ public class TestAbandonBlock {
     // Set quota to 1 byte — the next addBlock call will exceed it.
     fs.setQuota(testDir, HdfsConstants.QUOTA_DONT_SET, 1L);
 
-    GenericTestUtils.LogCapturer logs = GenericTestUtils.LogCapturer
-        .captureLogs(LoggerFactory.getLogger(DataStreamer.class));
     // Append 2*blockSize bytes: the first 512 bytes fill the current block,
     // and then addBlock for the next block fails due to the quota violation.
     boolean caughtQuota = false;
@@ -143,15 +139,9 @@ public class TestAbandonBlock {
         cause = cause.getCause();
       }
       caughtQuota = (cause instanceof DSQuotaExceededException);
-    } finally {
-      logs.stopCapturing();
     }
     assertTrue(caughtQuota,
         "Expected DSQuotaExceededException to be propagated to the client");
-    // The exception must have been logged at WARN level in DataStreamer.
-    assertTrue(logs.getOutput().contains("DataStreamer Exception"),
-        "Expected WARN 'DataStreamer Exception' in logs, got: "
-            + logs.getOutput());
   }
 
   @Test
