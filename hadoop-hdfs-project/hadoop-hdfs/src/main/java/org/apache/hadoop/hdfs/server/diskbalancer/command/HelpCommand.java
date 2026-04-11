@@ -57,15 +57,6 @@ public class HelpCommand extends Command {
     verifyCommandOptions(DiskBalancerCLI.HELP, cmd);
     String helpCommand = cmd.getOptionValue(DiskBalancerCLI.HELP);
     if (helpCommand == null || helpCommand.isEmpty()) {
-      // With optionalArg(true), space-separated form "-help <cmd>" leaves the
-      // sub-command as a positional arg rather than the option's value.
-      // Fall back to the first leftover arg so "-help plan" works as expected.
-      String[] leftoverArgs = cmd.getArgs();
-      if (leftoverArgs != null && leftoverArgs.length > 0) {
-        helpCommand = leftoverArgs[0];
-      }
-    }
-    if (helpCommand == null || helpCommand.isEmpty()) {
       this.printHelp();
       return;
     }

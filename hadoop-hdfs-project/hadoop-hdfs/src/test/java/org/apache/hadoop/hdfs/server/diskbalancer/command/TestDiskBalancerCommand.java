@@ -781,6 +781,15 @@ public class TestDiskBalancerCommand {
           "Expected '" + expectedToken + "' in help output for '-help "
               + subCmd + "', got:\n" + joined);
     }
+
+    // Negative case: unknown sub-command should fall back to generic help.
+    String unknownCmdLine = String.format("hdfs diskbalancer -%s %s",
+        HELP, "unknowncmd");
+    List<String> unknownOutput = runCommand(unknownCmdLine);
+    String unknownJoined = String.join("\n", unknownOutput).toLowerCase();
+    assertTrue(unknownJoined.contains("diskbalancer"),
+        "Expected generic help output for unknown sub-command, got:\n"
+            + unknownJoined);
   }
 
   @Test
