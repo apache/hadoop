@@ -247,7 +247,8 @@ public class TestBlockReportLease {
       HeartbeatResponse hbResponse = rpcServer.sendHeartbeat(
           dnRegistration, storages, 0, 0, 0, 0, 0, null, true,
           SlowPeerReports.EMPTY_REPORT, SlowDiskReports.EMPTY_REPORT);
-
+      assertTrue(hbResponse.getFullBlockReportLeaseId() != 0,
+          "Expected heartbeat to grant a non-zero full block report lease");
       // Remove the lease to simulate expiration
       spyBlockManager.getBlockReportLeaseManager()
           .removeLease(datanodeDescriptor);
