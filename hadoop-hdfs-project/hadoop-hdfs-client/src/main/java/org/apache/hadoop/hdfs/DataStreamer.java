@@ -859,13 +859,10 @@ class DataStreamer extends Daemon {
         if (!errorState.isNodeMarked()) {
           // Not a datanode issue
           streamerClosed = true;
-        }
-        // Quota exceptions are unrecoverable; close the streamer immediately
-        // so the client is notified without waiting for further retries.
-        if (e instanceof QuotaExceededException) {
-          streamerClosed = true;
-          synchronized (dataQueue) {
-            dataQueue.notifyAll();
+          if (e instanceof QuotaExceededException) {
+            synchronized (dataQueue) {
+              dataQueue.notifyAll();
+            }
           }
         }
       } finally {
