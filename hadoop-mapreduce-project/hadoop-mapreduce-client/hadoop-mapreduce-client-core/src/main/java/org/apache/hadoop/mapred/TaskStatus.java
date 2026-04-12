@@ -523,5 +523,32 @@ public abstract class TaskStatus implements Writable, Cloneable {
     return (isMap) ? new MapTaskStatus() : new ReduceTaskStatus();
   }
 
+  /**
+   * Write a TaskStatus to a DataOutput, prefixed by an isMap discriminator byte.
+   * Used by the Protobuf-based RPC layer to serialize TaskStatus values.
+   * @param out output stream
+   * @param status status to write (must not be null)
+   * @throws IOException on I/O error
+   */
+  public static void writeTaskStatusForPB(DataOutput out, TaskStatus status)
+      throws IOException {
+    out.writeBoolean(status.getIsMap());
+    status.write(out);
+  }
+
+  /**
+   * Read a TaskStatus that was written with {@link #writeTaskStatusForPB}.
+   * @param in input stream
+   * @return the deserialized TaskStatus
+   * @throws IOException on I/O error
+   */
+  public static TaskStatus readTaskStatusFromPB(DataInput in)
+      throws IOException {
+    boolean isMap = in.readBoolean();
+    TaskStatus status = createTaskStatus(isMap);
+    status.readFields(in);
+    return status;
+  }
+
 }
 
