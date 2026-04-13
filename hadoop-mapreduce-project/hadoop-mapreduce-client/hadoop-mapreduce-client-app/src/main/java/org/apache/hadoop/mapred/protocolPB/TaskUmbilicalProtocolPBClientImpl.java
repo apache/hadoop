@@ -20,7 +20,6 @@ package org.apache.hadoop.mapred.protocolPB;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.io.UncheckedIOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.ipc.ProtocolSignature;
@@ -54,10 +53,9 @@ import org.apache.hadoop.mapred.proto.TaskUmbilicalProtocolProtos.ShuffleErrorRe
 import org.apache.hadoop.mapred.proto.TaskUmbilicalProtocolProtos.StatusUpdateRequestProto;
 import org.apache.hadoop.mapred.proto.TaskUmbilicalProtocolProtos.StatusUpdateResponseProto;
 import org.apache.hadoop.mapreduce.checkpoint.TaskCheckpointID;
-import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 
 import static org.apache.hadoop.ipc.RPC.stopProxy;
-import static org.apache.hadoop.ipc.internal.ShadedProtobufHelper.getRemoteException;
+import static org.apache.hadoop.mapred.protocolPB.TaskUmbilicalProtocolUtils.service;
 
 /**
  * Client-side translator to translate calls from {@link TaskUmbilicalProtocol}
@@ -94,37 +92,35 @@ public class TaskUmbilicalProtocolPBClientImpl
 
   @Override
   public JvmTask getTask(JvmContext context) throws IOException {
-    try {
+    return service(() -> {
       GetTaskRequestProto.Builder builder = GetTaskRequestProto.newBuilder();
       if (context != null) {
         builder.setJvmContext(
-            TaskUmbilicalProtocolServerSideTranslatorPB.serialize(context));
+            TaskUmbilicalProtocolUtils.serialize(context));
       }
       GetTaskResponseProto response =
           proxy.getTask(null, builder.build());
       if (!response.hasJvmTask()) {
         return null;
       }
-      return TaskUmbilicalProtocolServerSideTranslatorPB.deserialize(
+      return TaskUmbilicalProtocolUtils.deserialize(
           new JvmTask(), response.getJvmTask());
-    } catch (ServiceException e) {
-      throw getRemoteException(e);
-    }
+    });
   }
 
   @Override
   public AMFeedback statusUpdate(TaskAttemptID taskId, TaskStatus taskStatus)
       throws IOException, InterruptedException {
-    try {
+    return service(() -> {
       StatusUpdateRequestProto.Builder builder =
           StatusUpdateRequestProto.newBuilder();
       if (taskId != null) {
         builder.setTaskId(
-            TaskUmbilicalProtocolServerSideTranslatorPB.serialize(taskId));
+            TaskUmbilicalProtocolUtils.serialize(taskId));
       }
       if (taskStatus != null) {
         builder.setTaskStatus(
-            TaskUmbilicalProtocolServerSideTranslatorPB.serializeTaskStatus(
+            TaskUmbilicalProtocolUtils.serializeTaskStatus(
                 taskStatus));
       }
       StatusUpdateResponseProto response =
@@ -133,237 +129,209 @@ public class TaskUmbilicalProtocolPBClientImpl
       feedback.setTaskFound(response.getTaskFound());
       feedback.setPreemption(response.getPreemption());
       return feedback;
-    } catch (ServiceException e) {
-      throw getRemoteException(e);
-    }
+    });
   }
 
   @Override
   public void reportDiagnosticInfo(TaskAttemptID taskid, String trace)
       throws IOException {
-    try {
+    service(() -> {
       ReportDiagnosticInfoRequestProto.Builder builder =
           ReportDiagnosticInfoRequestProto.newBuilder();
       if (taskid != null) {
         builder.setTaskId(
-            TaskUmbilicalProtocolServerSideTranslatorPB.serialize(taskid));
+            TaskUmbilicalProtocolUtils.serialize(taskid));
       }
       builder.setTrace(trace != null ? trace : "");
       proxy.reportDiagnosticInfo(null, builder.build());
-    } catch (ServiceException e) {
-      throw getRemoteException(e);
-    }
+    });
   }
 
   @Override
   public void reportNextRecordRange(TaskAttemptID taskid,
       SortedRanges.Range range) throws IOException {
-    try {
+    service(() -> {
       ReportNextRecordRangeRequestProto.Builder builder =
           ReportNextRecordRangeRequestProto.newBuilder();
       if (taskid != null) {
         builder.setTaskId(
-            TaskUmbilicalProtocolServerSideTranslatorPB.serialize(taskid));
+            TaskUmbilicalProtocolUtils.serialize(taskid));
       }
       if (range != null) {
         builder.setRange(
-            TaskUmbilicalProtocolServerSideTranslatorPB.serialize(range));
+            TaskUmbilicalProtocolUtils.serialize(range));
       }
       proxy.reportNextRecordRange(null, builder.build());
-    } catch (ServiceException e) {
-      throw getRemoteException(e);
-    }
+    });
   }
 
   @Override
   public void done(TaskAttemptID taskid) throws IOException {
-    try {
+    service(() -> {
       DoneRequestProto.Builder builder = DoneRequestProto.newBuilder();
       if (taskid != null) {
         builder.setTaskId(
-            TaskUmbilicalProtocolServerSideTranslatorPB.serialize(taskid));
+            TaskUmbilicalProtocolUtils.serialize(taskid));
       }
       proxy.done(null, builder.build());
-    } catch (ServiceException e) {
-      throw getRemoteException(e);
-    }
+    });
   }
 
   @Override
   public void commitPending(TaskAttemptID taskId, TaskStatus taskStatus)
       throws IOException, InterruptedException {
-    try {
+    service(() -> {
       CommitPendingRequestProto.Builder builder =
           CommitPendingRequestProto.newBuilder();
       if (taskId != null) {
         builder.setTaskId(
-            TaskUmbilicalProtocolServerSideTranslatorPB.serialize(taskId));
+            TaskUmbilicalProtocolUtils.serialize(taskId));
       }
       if (taskStatus != null) {
         builder.setTaskStatus(
-            TaskUmbilicalProtocolServerSideTranslatorPB.serializeTaskStatus(
+            TaskUmbilicalProtocolUtils.serializeTaskStatus(
                 taskStatus));
       }
       proxy.commitPending(null, builder.build());
-    } catch (ServiceException e) {
-      throw getRemoteException(e);
-    }
+    });
   }
 
   @Override
   public boolean canCommit(TaskAttemptID taskid) throws IOException {
-    try {
+    return service(() -> {
       CanCommitRequestProto.Builder builder =
           CanCommitRequestProto.newBuilder();
       if (taskid != null) {
         builder.setTaskId(
-            TaskUmbilicalProtocolServerSideTranslatorPB.serialize(taskid));
+            TaskUmbilicalProtocolUtils.serialize(taskid));
       }
       return proxy.canCommit(null, builder.build()).getCanCommit();
-    } catch (ServiceException e) {
-      throw getRemoteException(e);
-    }
+    });
   }
 
   @Override
   public void shuffleError(TaskAttemptID taskId, String message)
       throws IOException {
-    try {
+    service(() -> {
       ShuffleErrorRequestProto.Builder builder =
           ShuffleErrorRequestProto.newBuilder();
       if (taskId != null) {
         builder.setTaskId(
-            TaskUmbilicalProtocolServerSideTranslatorPB.serialize(taskId));
+            TaskUmbilicalProtocolUtils.serialize(taskId));
       }
       builder.setMessage(message != null ? message : "");
       proxy.shuffleError(null, builder.build());
-    } catch (ServiceException e) {
-      throw getRemoteException(e);
-    }
+    });
   }
 
   @Override
   public void fsError(TaskAttemptID taskId, String message) throws IOException {
-    try {
+    service(() -> {
       FsErrorRequestProto.Builder builder = FsErrorRequestProto.newBuilder();
       if (taskId != null) {
         builder.setTaskId(
-            TaskUmbilicalProtocolServerSideTranslatorPB.serialize(taskId));
+            TaskUmbilicalProtocolUtils.serialize(taskId));
       }
       builder.setMessage(message != null ? message : "");
       proxy.fsError(null, builder.build());
-    } catch (ServiceException e) {
-      throw getRemoteException(e);
-    }
+    });
   }
 
   @Override
   public void fatalError(TaskAttemptID taskId, String msg, boolean fastFail)
       throws IOException {
-    try {
+    service(() -> {
       FatalErrorRequestProto.Builder builder =
           FatalErrorRequestProto.newBuilder();
       if (taskId != null) {
         builder.setTaskId(
-            TaskUmbilicalProtocolServerSideTranslatorPB.serialize(taskId));
+            TaskUmbilicalProtocolUtils.serialize(taskId));
       }
       builder.setMessage(msg != null ? msg : "");
       builder.setFastFail(fastFail);
       proxy.fatalError(null, builder.build());
-    } catch (ServiceException e) {
-      throw getRemoteException(e);
-    }
+    });
   }
 
   @Override
   public MapTaskCompletionEventsUpdate getMapCompletionEvents(JobID jobId,
       int fromIndex, int maxLocs, TaskAttemptID id) throws IOException {
-    try {
+    return service(() -> {
       GetMapCompletionEventsRequestProto.Builder builder =
           GetMapCompletionEventsRequestProto.newBuilder();
       if (jobId != null) {
         builder.setJobId(
-            TaskUmbilicalProtocolServerSideTranslatorPB.serialize(jobId));
+            TaskUmbilicalProtocolUtils.serialize(jobId));
       }
       builder.setFromIndex(fromIndex);
       builder.setMaxLocs(maxLocs);
       if (id != null) {
         builder.setTaskAttemptId(
-            TaskUmbilicalProtocolServerSideTranslatorPB.serialize(id));
+            TaskUmbilicalProtocolUtils.serialize(id));
       }
       GetMapCompletionEventsResponseProto response =
           proxy.getMapCompletionEvents(null, builder.build());
       if (!response.hasEventsUpdate()) {
         return null;
       }
-      return TaskUmbilicalProtocolServerSideTranslatorPB.deserialize(
+      return TaskUmbilicalProtocolUtils.deserialize(
           new MapTaskCompletionEventsUpdate(), response.getEventsUpdate());
-    } catch (ServiceException e) {
-      throw getRemoteException(e);
-    }
+    });
   }
 
   @Override
   public void preempted(TaskAttemptID taskId, TaskStatus taskStatus)
       throws IOException, InterruptedException {
-    try {
+    service(() -> {
       PreemptedRequestProto.Builder builder = PreemptedRequestProto.newBuilder();
       if (taskId != null) {
         builder.setTaskId(
-            TaskUmbilicalProtocolServerSideTranslatorPB.serialize(taskId));
+            TaskUmbilicalProtocolUtils.serialize(taskId));
       }
       if (taskStatus != null) {
         builder.setTaskStatus(
-            TaskUmbilicalProtocolServerSideTranslatorPB.serializeTaskStatus(
+            TaskUmbilicalProtocolUtils.serializeTaskStatus(
                 taskStatus));
       }
       proxy.preempted(null, builder.build());
-    } catch (ServiceException e) {
-      throw getRemoteException(e);
-    }
+    });
   }
 
   @Override
   public TaskCheckpointID getCheckpointID(TaskID taskId) {
-    try {
+    return service(() -> {
       GetCheckpointIDRequestProto.Builder builder =
           GetCheckpointIDRequestProto.newBuilder();
       if (taskId != null) {
         builder.setTaskId(
-            TaskUmbilicalProtocolServerSideTranslatorPB.serialize(taskId));
+            TaskUmbilicalProtocolUtils.serialize(taskId));
       }
       GetCheckpointIDResponseProto response =
           proxy.getCheckpointID(null, builder.build());
       if (!response.hasCheckpointId()) {
         return null;
       }
-      return TaskUmbilicalProtocolServerSideTranslatorPB.deserialize(
+      return TaskUmbilicalProtocolUtils.deserialize(
           new TaskCheckpointID(), response.getCheckpointId());
-    } catch (ServiceException e) {
-      throw new RuntimeException(getRemoteException(e));
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
+    });
   }
 
   @Override
   public void setCheckpointID(TaskID taskId, TaskCheckpointID checkpointId) {
-    try {
+    service(() -> {
       SetCheckpointIDRequestProto.Builder builder =
           SetCheckpointIDRequestProto.newBuilder();
       if (taskId != null) {
         builder.setTaskId(
-            TaskUmbilicalProtocolServerSideTranslatorPB.serialize(taskId));
+            TaskUmbilicalProtocolUtils.serialize(taskId));
       }
       if (checkpointId != null) {
         builder.setCheckpointId(
-            TaskUmbilicalProtocolServerSideTranslatorPB.serialize(checkpointId));
+            TaskUmbilicalProtocolUtils.serialize(checkpointId));
       }
       proxy.setCheckpointID(null, builder.build());
-    } catch (ServiceException e) {
-      throw new RuntimeException(getRemoteException(e));
-    } catch (IOException e) {
-      throw new UncheckedIOException(e);
-    }
+    });
   }
+
+
 }
