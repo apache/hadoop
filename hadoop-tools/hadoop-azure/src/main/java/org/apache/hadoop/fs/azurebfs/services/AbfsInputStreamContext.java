@@ -59,6 +59,8 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
 
   private boolean bufferedPreadDisabled;
 
+  private boolean restrictGpsOnOpenFile;
+
   /** A BackReference to the FS instance that created this OutputStream. */
   private BackReference fsBackRef;
 
@@ -254,6 +256,18 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
     return this;
   }
 
+/**
+   * Sets restriction of GPS on open file.
+   *
+   * @param restrictGpsOnOpenFile whether to restrict GPS on open file.
+   * @return this instance.
+   */
+  public AbfsInputStreamContext shouldRestrictGpsOnOpenFile(
+          final boolean restrictGpsOnOpenFile) {
+    this.restrictGpsOnOpenFile = restrictGpsOnOpenFile;
+    return this;
+  }
+
   /**
    * Finalizes and validates the context configuration.
    * <p>
@@ -335,6 +349,11 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
   /** @return read-ahead block size. */
   public int getReadAheadBlockSize() {
     return readAheadBlockSize;
+  }
+
+  /** @return whether restrictGpsOnOpenFile is enabled. */
+  public boolean shouldRestrictGpsOnOpenFile() {
+    return this.restrictGpsOnOpenFile;
   }
 
   /** @return whether buffered pread is disabled. */

@@ -653,5 +653,11 @@ public final class ConfigurationKeys {
   public static final String FS_AZURE_MAX_SEEK_FOR_VECTORED_READS_THROUGHPUT =
       "fs.azure.max.seek.for.vectored.reads.throughput";
 
+  /**
+   * If true, restricts GPS (getPathStatus) calls on openFileforRead
+   * Default: false
+   */
+  public static final String FS_AZURE_RESTRICT_GPS_ON_OPENFILE = "fs.azure.restrict.gps.on.openfile";
+
   private ConfigurationKeys() {}
 }

@@ -23,8 +23,10 @@ import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
 import java.util.Random;
@@ -32,6 +34,13 @@ import java.util.concurrent.ExecutionException;
 
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.AbfsCountersImpl;
+import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
+import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
+import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
+import org.apache.hadoop.fs.azurebfs.extensions.EncryptionContextProvider;
+import org.apache.hadoop.fs.azurebfs.security.ABFSKey;
+import org.apache.hadoop.fs.azurebfs.utils.EncryptionType;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -78,13 +87,16 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -117,6 +129,8 @@ public class TestAbfsInputStream extends AbstractAbfsIntegrationTest {
   private static final int POSITION_INDEX = 9;
   private static final int OPERATION_INDEX = 6;
   private static final int READTYPE_INDEX = 11;
+  private static final int ENCRYPTION_KEY_SIZE = 32;
+  private static final int SMALL_BUFFER_SIZE = 100;
 
 
   @AfterEach
@@ -132,6 +146,24 @@ public class TestAbfsInputStream extends AbstractAbfsIntegrationTest {
     when(httpOp.getBytesReceived()).thenReturn(1024L);
     when(op.getResult()).thenReturn(httpOp);
     when(op.getSasToken()).thenReturn(TestCachedSASToken.getTestCachedSASTokenInstance().get());
+    return op;
+  }
+
+  /**
+   * Creates a mock AbfsRestOperation with metadata headers for testing.
+   * The mock includes Content-Range and ETag headers in the response.
+   *
+   * @return a mocked AbfsRestOperation with response metadata
+   */
+  AbfsRestOperation getMockRestOpWithMetadata() {
+    AbfsRestOperation op = mock(AbfsRestOperation.class);
+    AbfsHttpOperation httpOp = mock(AbfsHttpOperation.class);
+    when(httpOp.getBytesReceived()).thenReturn(1024L);
+    when(op.getResult()).thenReturn(httpOp);
+    when(op.getSasToken()).thenReturn(TestCachedSASToken.getTestCachedSASTokenInstance().get());
+    when(op.getResult().getResponseHeader(HttpHeaderConfigurations.CONTENT_RANGE)).thenReturn("bytes 0-1023/1024");
+    when(op.getResult().getResponseHeader(HttpHeaderConfigurations.ETAG)).thenReturn("etag");
+
     return op;
   }
 
@@ -348,6 +380,663 @@ public class TestAbfsInputStream extends AbstractAbfsIntegrationTest {
         () -> verifyOpenWithProvidedStatus(smallTestFile,
             getFileStatusResults[0], smallBuffer,
             AbfsRestOperationType.GetPathStatus));
+  }
+
+/**
+ * Mocks an {@link AbfsClient} to simulate encryption context behavior for testing.
+ * Sets up the client to return ENCRYPTION_CONTEXT as the encryption type and all the necessary
+ * mock responses to simulate reading a file with encryption context.
+ *
+ * @param encryptedClient the {@link AbfsClient} to mock
+ * @throws IOException if mocking fails
+ */
+private void mockClientForEncryptionContext(AbfsClient encryptedClient) throws IOException {
+  doReturn(EncryptionType.ENCRYPTION_CONTEXT)
+          .when(encryptedClient)
+          .getEncryptionType();
+
+  AbfsHttpOperation mockOp = mock(AbfsHttpOperation.class);
+  when(mockOp.getResponseHeader(HttpHeaderConfigurations.X_MS_ENCRYPTION_CONTEXT))
+          .thenReturn(Base64.getEncoder()
+                  .encodeToString("ctx".getBytes(StandardCharsets.UTF_8)));
+  when(mockOp.getResponseHeader(HttpHeaderConfigurations.CONTENT_LENGTH))
+          .thenReturn("10");
+
+  AbfsRestOperation mockResult = mock(AbfsRestOperation.class);
+  when(mockResult.getResult()).thenReturn(mockOp);
+
+  doReturn(mockResult)
+          .when(encryptedClient)
+          .getPathStatus(anyString(), anyBoolean(), any(), any());
+
+  doReturn(false)
+          .when(encryptedClient)
+          .checkIsDir(any());
+
+  EncryptionContextProvider provider =
+          mock(EncryptionContextProvider.class);
+  when(provider.getEncryptionKey(anyString(), any()))
+          .thenReturn(new ABFSKey(new byte[ENCRYPTION_KEY_SIZE]));
+
+  doReturn(provider)
+          .when(encryptedClient)
+          .getEncryptionContextProvider();
+}
+
+  /**
+   * Returns an instance of {@link AzureBlobFileSystem} with the
+   * FS_AZURE_RESTRICT_GPS_ON_OPENFILE configuration enabled.
+   * This setting restricts the use of GetPathStatus on open file operations.
+   *
+   * @return an AzureBlobFileSystem with restrictGpsOnOpenFile enabled
+   * @throws Exception if the file system cannot be created
+   */
+  private AzureBlobFileSystem getFileSystemWithRestrictGpsEnabled() throws Exception {
+    Configuration conf = getRawConfiguration();
+    conf.setBoolean(
+            ConfigurationKeys.FS_AZURE_RESTRICT_GPS_ON_OPENFILE,
+            true);
+
+    return getFileSystem(conf);
+  }
+
+  /**
+   * Tests opening encrypted and non-encrypted files under different clients.
+   * Verifies that even with restrictGpsOnOpenFile enabled, for files created with ENCRYPTION_CONTEXT, the client invokes
+   * getPathStatus, while for non-encrypted files, getPathStatus is not called.
+   *
+   * @throws Exception if any error occurs during the test
+   */
+  @Test
+  public void testEncryptedAndNonEncryptedOpenUnderDifferentClients()
+          throws Exception {
+    AzureBlobFileSystem fs = getFileSystemWithRestrictGpsEnabled();
+
+    Path encryptedFile = new Path("/enc/file1");
+    Path plainFile = new Path("/plain/file2");
+
+    fs.mkdirs(encryptedFile.getParent());
+    fs.mkdirs(plainFile.getParent());
+
+    writeBufferToNewFile(encryptedFile, new byte[10]);
+    writeBufferToNewFile(plainFile, new byte[10]);
+
+    TracingContext tracingContext = getTestTracingContext(fs, false);
+
+    /*
+     * =========================
+     * Client A — ENCRYPTED FILE
+     * =========================
+     */
+    AzureBlobFileSystemStore encryptedStore = getAbfsStore(fs);
+
+    AbfsClient encryptedRealClient =
+            getAbfsClient(encryptedStore);
+    AbfsClient encryptedClient =
+            spy(encryptedRealClient);
+
+    setAbfsClient(encryptedStore, encryptedClient);
+    mockClientForEncryptionContext(encryptedClient);
+
+    encryptedStore.openFileForRead(
+            encryptedFile, Optional.empty(), null, tracingContext);
+
+    // File created with ENCRYPTION_CONTEXT, so GPS should be invoked
+    verify(encryptedClient, times(1))
+            .getPathStatus(anyString(), anyBoolean(), any(), isNull());
+
+    /*
+     * =============================
+     * Client B — NON-ENCRYPTED FILE
+     * =============================
+     */
+    AzureBlobFileSystemStore plainStore = getAbfsStore(fs);
+
+    AbfsClient plainRealClient =
+            getAbfsClient(plainStore);
+    AbfsClient plainClient =
+            spy(plainRealClient);
+
+    setAbfsClient(plainStore, plainClient);
+
+    doReturn(EncryptionType.NONE)
+            .when(plainClient)
+            .getEncryptionType();
+
+    plainStore.openFileForRead(
+            plainFile, Optional.empty(), null, tracingContext);
+
+    verify(plainClient, never())
+            .getPathStatus(anyString(), anyBoolean(), any(), any());
+  }
+
+  /**
+   * Verifies the prefetch behavior of the input stream by performing two reads and checking
+   * the number of times the client's read method is invoked after each read.
+   *
+   * @param fs               the AzureBlobFileSystem instance
+   * @param store            the AzureBlobFileSystemStore instance
+   * @param config           the AbfsConfiguration instance
+   * @param file             the file path to read from
+   * @param restrictGps      whether to restrict GPS on open file
+   * @param readsAfterFirst  expected number of client.read invocations after the first read
+   * @param readsAfterSecond expected number of client.read invocations after the second read
+   * @throws Exception if any error occurs during verification
+   */
+  private void verifyPrefetchBehavior(
+          AzureBlobFileSystem fs,
+          AzureBlobFileSystemStore store,
+          AbfsConfiguration config,
+          Path file,
+          boolean restrictGps,
+          int readsAfterFirst,
+          int readsAfterSecond) throws Exception {
+
+    AbfsClient realClient = store.getClient();
+    AbfsClient spyClient = Mockito.spy(realClient);
+    Mockito.doReturn(spyClient).when(store).getClient();
+
+    Mockito.doReturn(restrictGps)
+            .when(config).shouldRestrictGpsOnOpenFile();
+
+    try (FSDataInputStream in = fs.open(file)) {
+      AbfsInputStream abfsIn =
+              (AbfsInputStream) in.getWrappedStream();
+
+      // First read. Sleep for a sec to get the readAhead threads to complete
+      abfsIn.read(new byte[ONE_MB]);
+      Thread.sleep(1000);
+
+      verify(spyClient, times(readsAfterFirst))
+              .read(anyString(), anyLong(), any(byte[].class),
+                      anyInt(), anyInt(),
+                      anyString(), nullable(String.class),
+                      any(ContextEncryptionAdapter.class),
+                      any(TracingContext.class));
+
+      // Second read. Sleep for a sec to get the readAhead threads to complete
+      abfsIn.read(ONE_MB, new byte[ONE_MB], 0, ONE_MB);
+      Thread.sleep(1000);
+
+      verify(spyClient, times(readsAfterSecond))
+              .read(anyString(), anyLong(), any(byte[].class),
+                      anyInt(), anyInt(),
+                      anyString(), nullable(String.class),
+                      any(ContextEncryptionAdapter.class),
+                      any(TracingContext.class));
+    }
+  }
+
+  /**
+   * Tests the prefetch behavior of the input stream when restrictGPSOnOpenFile is enabled.
+   * First read: only direct read is triggered.
+   * Second read: triggers readahead reads.
+   * Verifies the expected number of read invocations after each read operation
+   *
+   * @throws Exception if any error occurs during the test
+   */
+  @Test
+  public void testPrefetchBehaviourWithRestrictGPSOnOpenFile() throws Exception {
+    AzureBlobFileSystem fs = Mockito.spy(getFileSystem());
+    AzureBlobFileSystemStore store = Mockito.spy(fs.getAbfsStore());
+    AbfsConfiguration config = Mockito.spy(store.getAbfsConfiguration());
+
+    Mockito.doReturn(ONE_MB).when(config).getReadBufferSize();
+    Mockito.doReturn(ONE_MB).when(config).getReadAheadBlockSize();
+    Mockito.doReturn(3).when(config).getReadAheadQueueDepth();
+    Mockito.doReturn(true).when(config).isReadAheadEnabled();
+
+    Mockito.doReturn(store).when(fs).getAbfsStore();
+    Mockito.doReturn(config).when(store).getAbfsConfiguration();
+
+    Path file = createTestFile(fs, 4 * ONE_MB);
+
+    // restrictGPSOnOpenFile set as true
+    verifyPrefetchBehavior(
+            fs, store, config, file,
+            true,
+            1,  // only direct read
+            4   // second read triggers readaheads
+    );
+  }
+
+
+  /**
+   * Asserts that the correct read types are present in the tracing context headers
+   * when restrictGpsOnOpenFile is enabled.
+   *
+   * @param fs             the AzureBlobFileSystem instance
+   * @param numOfReadCalls the number of read calls to check for the specified read type
+   * @param totalReadCalls the total number of read calls expected
+   * @param readType       the expected ReadType for the calls (e.g., PREFETCH_READ, MISSEDCACHE_READ)
+   * @throws Exception if verification fails
+   */
+  private void assertReadTypeWithRestrictGpsOnOpenFileEnabled(AzureBlobFileSystem fs, int numOfReadCalls,
+                                                              int totalReadCalls, ReadType readType) throws Exception {
+    ArgumentCaptor<String> captor1 = ArgumentCaptor.forClass(String.class);
+    ArgumentCaptor<Long> captor2 = ArgumentCaptor.forClass(Long.class);
+    ArgumentCaptor<byte[]> captor3 = ArgumentCaptor.forClass(byte[].class);
+    ArgumentCaptor<Integer> captor4 = ArgumentCaptor.forClass(Integer.class);
+    ArgumentCaptor<Integer> captor5 = ArgumentCaptor.forClass(Integer.class);
+    ArgumentCaptor<String> captor6 = ArgumentCaptor.forClass(String.class);
+    ArgumentCaptor<String> captor7 = ArgumentCaptor.forClass(String.class);
+    ArgumentCaptor<ContextEncryptionAdapter> captor8 = ArgumentCaptor.forClass(ContextEncryptionAdapter.class);
+    ArgumentCaptor<TracingContext> captor9 = ArgumentCaptor.forClass(TracingContext.class);
+
+    verify(fs.getAbfsStore().getClient(), times(totalReadCalls)).read(
+            captor1.capture(), captor2.capture(), captor3.capture(),
+            captor4.capture(), captor5.capture(), captor6.capture(),
+            captor7.capture(), captor8.capture(), captor9.capture());
+    List<TracingContext> tracingContextList = captor9.getAllValues();
+
+    // Apart from random read policy, all policies will result in first read being normal read.
+    verifyHeaderForReadTypeInTracingContextHeader(tracingContextList.get(0), NORMAL_READ, 0);
+
+    if (readType == PREFETCH_READ) {
+      /*
+       * The first read was a normal read. Prefetching would have started from second read.
+       * Second read also could be a Normal or Missed Cache read, so we will assert for reads apart from these two.
+       * Since calls are asynchronous, we can not guarantee the order of calls.
+       * Therefore, we cannot assert on exact position here.
+       */
+      for (int i = tracingContextList.size() - (numOfReadCalls - 2); i < tracingContextList.size(); i++) {
+        verifyHeaderForReadTypeInTracingContextHeader(tracingContextList.get(i), readType, -1);
+      }
+    } else if (readType == MISSEDCACHE_READ) {
+      int expectedReadPos = ONE_MB;
+      for (int i = tracingContextList.size() - numOfReadCalls + 1; i < tracingContextList.size(); i++) {
+        verifyHeaderForReadTypeInTracingContextHeader(tracingContextList.get(i), readType, expectedReadPos);
+        expectedReadPos += ONE_MB;
+      }
+    } else {
+      int expectedReadPos = ONE_MB;
+      for (int i = tracingContextList.size() - numOfReadCalls + 1; i < tracingContextList.size(); i++) {
+        verifyHeaderForReadTypeInTracingContextHeader(tracingContextList.get(i), readType, expectedReadPos);
+        expectedReadPos += ONE_MB;
+      }
+    }
+  }
+
+  /**
+   * Helper method to test the read type behavior with FS_AZURE_RESTRICT_GPS_ON_OPENFILE enabled.
+   * <p>
+   * Creates a test file of the specified size, performs a read operation, and asserts that the number
+   * of bytes read matches the file size. Then verifies that the expected read types are present in the
+   * tracing context headers for the specified number of read calls.
+   *
+   * @param fs             the AzureBlobFileSystem instance
+   * @param fileSize       the size of the test file to create and read
+   * @param readType       the expected ReadType for the calls (e.g., PREFETCH_READ, MISSEDCACHE_READ)
+   * @param numOfReadCalls the number of read calls to check for the specified read type
+   * @param totalReadCalls the total number of read calls expected
+   * @throws Exception if verification fails
+   */
+  private void testReadTypeWithRestrictGpsOnOpenFile(AzureBlobFileSystem fs,
+                                                     int fileSize, ReadType readType, int numOfReadCalls, int totalReadCalls) throws Exception {
+    Path testPath = createTestFile(fs, fileSize);
+    try (FSDataInputStream iStream = fs.open(testPath)) {
+      int bytesRead = iStream.read(new byte[fileSize], 0,
+              fileSize);
+      Thread.sleep(1000); //Sleep for a sec to get the readAhead threads to complete
+      assertThat(fileSize)
+              .describedAs("Read size should match file size")
+              .isEqualTo(bytesRead);
+    }
+    assertReadTypeWithRestrictGpsOnOpenFileEnabled(fs, numOfReadCalls, totalReadCalls, readType);
+  }
+
+  /**
+   * Test to verify the read type behavior when FS_AZURE_RESTRICT_GPS_ON_OPENFILE is enabled.
+   * <p>
+   * This test covers multiple scenarios to ensure that the correct read type is set in the tracing context
+   * and that the expected number of client read calls are made for different configurations:
+   * <ul>
+   *   <li>Prefetch Read Type with adaptive policy (read ahead enabled, depth 2)</li>
+   *   <li>Missed Cache Read Type with adaptive policy (read ahead enabled, depth 0)</li>
+   *   <li>Footer Read Type (file size less than footer read size, small file optimization disabled)</li>
+   *   <li>Small File Read Type (file size less than block size, small file optimization enabled)</li>
+   *   <li>Missed Cache Read Type with sequential policy (read ahead enabled, depth 0, sequential policy)</li>
+   *   <li>Prefetch Read Type with sequential policy (read ahead enabled, depth 3, sequential policy)</li>
+   * </ul>
+   *
+   * @throws Exception if any error occurs during the test
+   */
+  @Test
+  public void testReadTypeWithRestrictGpsInOpenFileEnabled() throws Exception {
+    AzureBlobFileSystem spiedFs = Mockito.spy(getFileSystem());
+    AzureBlobFileSystemStore spiedStore = Mockito.spy(spiedFs.getAbfsStore());
+    AbfsConfiguration spiedConfig = Mockito.spy(spiedStore.getAbfsConfiguration());
+    AbfsClient spiedClient = Mockito.spy(spiedStore.getClient());
+    Mockito.doReturn(ONE_MB).when(spiedConfig).getReadBufferSize();
+    Mockito.doReturn(ONE_MB).when(spiedConfig).getReadAheadBlockSize();
+    Mockito.doReturn(true).when(spiedConfig).shouldRestrictGpsOnOpenFile();
+    Mockito.doReturn(false).when(spiedConfig).isReadAheadV2Enabled();
+    Mockito.doReturn(spiedClient).when(spiedStore).getClient();
+    Mockito.doReturn(spiedStore).when(spiedFs).getAbfsStore();
+    Mockito.doReturn(spiedConfig).when(spiedStore).getAbfsConfiguration();
+    int totalReadCalls = 0;
+    int fileSize;
+
+    /*
+     * Test to verify Prefetch Read Type with adaptive policy.
+     * Setting read ahead depth to 2 with prefetch enabled ensures that prefetch is done.
+     *
+     * Should give normal read for first read.
+     */
+    fileSize = 4 * ONE_MB; // To make sure multiple blocks are read.
+    totalReadCalls += 4;
+    doReturn(true).when(spiedConfig).isReadAheadEnabled();
+    Mockito.doReturn(2).when(spiedConfig).getReadAheadQueueDepth();
+    testReadTypeWithRestrictGpsOnOpenFile(spiedFs, fileSize, PREFETCH_READ, 4, totalReadCalls);
+
+    /*
+     * Test to verify Missed Cache Read Type with adaptive policy.
+     * Setting read ahead depth to 0 ensure that nothing can be got from prefetch.
+     * In such a case Input Stream will do a sequential read with missed cache read type.
+     *
+     * Should give normal read for first read.
+     */
+    fileSize = 3 * ONE_MB; // To make sure multiple blocks are read.
+    totalReadCalls += 3;
+    doReturn(true).when(spiedConfig).isReadAheadEnabled();
+    Mockito.doReturn(0).when(spiedConfig).getReadAheadQueueDepth();
+    testReadTypeWithRestrictGpsOnOpenFile(spiedFs, fileSize, MISSEDCACHE_READ, 3, totalReadCalls);
+
+    /*
+     * Test to verify Footer Read Type.
+     * Having file size less than footer read size and disabling small file opt
+     */
+    fileSize = 8 * ONE_KB;
+    totalReadCalls += 1; // Full file will be read along with footer.
+    doReturn(false).when(spiedConfig).readSmallFilesCompletely();
+    doReturn(true).when(spiedConfig).optimizeFooterRead();
+    testReadTypeWithRestrictGpsOnOpenFile(spiedFs, fileSize, NORMAL_READ, 1, totalReadCalls);
+
+    /*
+     * Test to verify Small File Read Type.
+     * Having file size less than block size and disabling footer read opt
+     */
+    totalReadCalls += 1; // Full file will be read along with footer.
+    doReturn(true).when(spiedConfig).readSmallFilesCompletely();
+    doReturn(false).when(spiedConfig).optimizeFooterRead();
+    testReadTypeWithRestrictGpsOnOpenFile(spiedFs, fileSize, NORMAL_READ, 1, totalReadCalls);
+
+    /*
+     * Test to verify Missed Cache Read Type with sequential policy.
+     * Setting read ahead depth to 0 ensure that nothing can be got from prefetch.
+     * In such a case Input Stream will do a sequential read with missed cache read type.
+     *
+     * Should give normal read for first read.
+     */
+    fileSize = 3 * ONE_MB; // To make sure multiple blocks are read.
+    totalReadCalls += 3;
+    Mockito.doReturn(0).when(spiedConfig).getReadAheadQueueDepth();
+    Mockito.doReturn(FS_OPTION_OPENFILE_READ_POLICY_SEQUENTIAL).when(spiedConfig).getAbfsReadPolicy();
+    doReturn(true).when(spiedConfig).isReadAheadEnabled();
+    testReadTypeWithRestrictGpsOnOpenFile(spiedFs, fileSize, MISSEDCACHE_READ, 3, totalReadCalls);
+
+    /*
+     * Test to verify Prefetch Read Type with sequential policy.
+     * Setting read ahead depth to 3 with prefetch enabled ensures that prefetch is done.
+     *
+     * Should give normal read for first read.
+     */
+    totalReadCalls += 3;
+    Mockito.doReturn(3).when(spiedConfig).getReadAheadQueueDepth();
+    doReturn(true).when(spiedConfig).isReadAheadEnabled();
+    testReadTypeWithRestrictGpsOnOpenFile(spiedFs, fileSize, PREFETCH_READ, 3, totalReadCalls);
+  }
+
+  /**
+   * Tests that for FNS accounts reading from a directory with FS_AZURE_RESTRICT_GPS_ON_OPENFILE enabled
+   * throws the expected exception with PATH_NOT_FOUND status code and respective error message.
+   * Verifies that getPathStatus is called for both explicit and implicit folders' confirmation.
+   *
+   * @throws Exception if any error occurs during the test
+   */
+  @Test
+  public void testFNSExceptionOnDirReadWithRestrictGpsConfig() throws Exception {
+    assumeHnsDisabled();
+    AzureBlobFileSystem fs = getFileSystemWithRestrictGpsEnabled();
+    AzureBlobFileSystemStore store = getAbfsStore(fs);
+
+    AbfsClient realClient = getAbfsClient(store);
+    AbfsClient spyClient = spy(realClient);
+    setAbfsClient(store, spyClient);
+
+    String explicitTestFolder = "/testExplFolderRestrictGps";
+    fs.mkdirs(new Path(explicitTestFolder));
+
+    try (FSDataInputStream in = fs.open(new Path(explicitTestFolder))) {
+      AbfsInputStream abfsIn = (AbfsInputStream) in.getWrappedStream();
+      byte[] buf = new byte[SMALL_BUFFER_SIZE];
+      UnsupportedOperationException ex = Assertions.assertThrows(UnsupportedOperationException.class, () -> abfsIn.read(buf));
+      AbfsRestOperationException cause = (AbfsRestOperationException) ex.getCause();
+      assertThat(cause.getStatusCode()).isEqualTo(AzureServiceErrorCode.PATH_NOT_FOUND.getStatusCode());
+      assertThat(ex.getMessage()).contains("Read operation not permitted on a directory.");
+    }
+    verify(spyClient, times(1))
+            .getPathStatus(
+                    anyString(),
+                    anyBoolean(),
+                    any(TracingContext.class),
+                    any());
+
+    String implicitTestFolder = "/testImplFolderRestrictGps";
+    createAzCopyFolder(new Path(implicitTestFolder));
+    try (FSDataInputStream in2 = fs.open(new Path(implicitTestFolder))) {
+      AbfsInputStream abfsIn2 = (AbfsInputStream) in2.getWrappedStream();
+      byte[] buf2 = new byte[SMALL_BUFFER_SIZE];
+      UnsupportedOperationException ex2 = Assertions.assertThrows(UnsupportedOperationException.class, () -> abfsIn2.read(buf2));
+      AbfsRestOperationException cause = (AbfsRestOperationException) ex2.getCause();
+      assertThat(cause.getStatusCode()).isEqualTo(AzureServiceErrorCode.PATH_NOT_FOUND.getStatusCode());
+      assertThat(ex2.getMessage()).contains("Read operation not permitted on a directory.");
+    }
+    verify(spyClient, times(2))
+            .getPathStatus(
+                    anyString(),
+                    anyBoolean(),
+                    any(TracingContext.class),
+                    any());
+  }
+
+  /**
+   * Tests that for HNS accounts reading from a directory when
+   * FS_AZURE_RESTRICT_GPS_ON_OPENFILE is set to true, throws an AbfsRestOperationException
+   * with PATH_NOT_FOUND status code and the correct error message.
+   * Also verifies that getPathStatus is not called.
+   *
+   * @throws Exception if any error occurs during the test
+   */
+  @Test
+  public void testHNSExceptionOnDirReadWithRestrictGpsConfig() throws Exception {
+    assumeHnsEnabled();
+    AzureBlobFileSystem fs = getFileSystemWithRestrictGpsEnabled();
+
+    AzureBlobFileSystemStore store = getAbfsStore(fs);
+
+    AbfsClient realClient = getAbfsClient(store);
+    AbfsClient spyClient = spy(realClient);
+    setAbfsClient(store, spyClient);
+
+    String testFolder = "/testFolderRestrictGps";
+    fs.mkdirs(new Path(testFolder));
+
+    try (FSDataInputStream in = fs.open(new Path(testFolder))) {
+      AbfsInputStream abfsIn = (AbfsInputStream) in.getWrappedStream();
+      byte[] buf = new byte[SMALL_BUFFER_SIZE];
+      UnsupportedOperationException ex = Assertions.assertThrows(UnsupportedOperationException.class, () -> abfsIn.read(buf));
+      AbfsRestOperationException cause = (AbfsRestOperationException) ex.getCause();
+      assertThat(cause.getStatusCode()).isEqualTo(AzureServiceErrorCode.PATH_NOT_FOUND.getStatusCode());
+      assertThat(ex.getMessage()).contains("Read operation not permitted on a directory.");
+    }
+
+    verify(spyClient, times(0))
+            .getPathStatus(
+                    anyString(),
+                    anyBoolean(),
+                    any(TracingContext.class),
+                    any());
+  }
+
+  /**
+   * Tests the behavior of openFileForRead with the FS_AZURE_RESTRICT_GPS_ON_OPENFILE configuration enabled.
+   * Verifies that irrespective of whether FileStatus is provided (correct or incorrect status type) or not,
+   * getPathStatus is not invoked for read flow.
+   *
+   * @throws Exception if any error occurs during the test
+   */
+  @Test
+  public void testOpenFileWithOptionsWithRestrictGpsOnOpenFile() throws Exception {
+    AzureBlobFileSystem fs = getFileSystemWithRestrictGpsEnabled();
+
+    Path fileWithFileStatus = new Path("/testFile0");
+    Path fileWithoutFileStatus = new Path("/testFile1");
+
+    // Create and write to both files, but we'll be sending FileStatus only for one of them
+    writeBufferToNewFile(fileWithFileStatus, new byte[5]);
+    writeBufferToNewFile(fileWithoutFileStatus, new byte[5]);
+
+    AzureBlobFileSystemStore abfsStore = getAbfsStore(fs);
+    AbfsClient mockClient = spy(getAbfsClient(abfsStore));
+    setAbfsClient(abfsStore, mockClient);
+    TracingContext tracingContext = getTestTracingContext(fs, false);
+
+    // Case 1: FileStatus is not provided
+    abfsStore.openFileForRead(fileWithoutFileStatus, Optional.empty(), null, tracingContext);
+    verify(mockClient, times(0)
+            .description("FileStatus not provided, restrict GPS: getPathStatus should NOT be invoked"))
+            .getPathStatus(any(String.class), any(Boolean.class), any(TracingContext.class),
+                    nullable(ContextEncryptionAdapter.class));
+
+    // NOTE: One call for GPS will come from getFileStatus for both cases below.
+    // If GPS were happening at openFileForRead, we would've seen more than 2 calls.
+
+    // Case 2: FileStatus is provided (of wrong status type AbfsLocatedFileStatus)
+    abfsStore.openFileForRead(fileWithFileStatus,
+            Optional.ofNullable(new OpenFileParameters().withStatus(
+                    new AbfsLocatedFileStatus(fs.getFileStatus(fileWithFileStatus), null))),
+            null, tracingContext);
+    verify(mockClient, times(1)
+            .description("Wrong FileStatus type provided, restrict GPS: getPathStatus still should NOT be invoked"))
+            .getPathStatus(any(String.class), any(Boolean.class), any(TracingContext.class),
+                    nullable(ContextEncryptionAdapter.class));
+
+    // Case 3: FileStatus is provided (correct status type VersionedFileStatus)
+    abfsStore.openFileForRead(fileWithFileStatus,
+        Optional.ofNullable(new OpenFileParameters()
+            .withStatus(fs.getFileStatus(fileWithFileStatus))),
+        null, tracingContext);
+    verify(mockClient, times(2).description(
+        "Correct type FileStatus provided, restrict GPS: "
+            + "getPathStatus should NOT be invoked"))
+            .getPathStatus(any(String.class), any(Boolean.class),
+                any(TracingContext.class), nullable(ContextEncryptionAdapter.class));
+  }
+
+  /**
+   * Tests that when FS_AZURE_RESTRICT_GPS_ON_OPENFILE is enabled,
+   * the eTag and content length metadata are correctly initialized
+   * after the first read operation, and remain consistent for subsequent reads.
+   *
+   * @throws Exception if any error occurs during the test
+   */
+  @Test
+  public void testMetadataFromReadForRestrictGpsOnOpenFile() throws Exception {
+    AzureBlobFileSystem fs = getFileSystemWithRestrictGpsEnabled();
+
+    Path testFile = new Path("/testFile0");
+    writeBufferToNewFile(testFile, new byte[6 * ONE_MB]);
+
+    // Open the file and perform a read
+    try (FSDataInputStream in = fs.open(testFile)) {
+      AbfsInputStream abfsIn = (AbfsInputStream) in.getWrappedStream();
+
+      // Before first read, eTag and content length aren't initialized
+      String etagPreRead = abfsIn.getETag();
+      long fileLengthPreRead = abfsIn.getContentLength();
+      assertThat(etagPreRead).isEmpty();
+      assertThat(fileLengthPreRead).isEqualTo(0);
+
+      // Trigger the first read
+      byte[] buf = new byte[6 * ONE_MB];
+      int n = abfsIn.read(0, buf, 0, 2 * ONE_MB);
+      assertThat(n).isEqualTo(2 * ONE_MB);
+
+      // After first read, eTag and content length should be set from the response
+      String etagFirstRead = abfsIn.getETag();
+      long fileLengthFirstRead = abfsIn.getContentLength();
+      assertThat(etagFirstRead).isNotNull();
+      assertThat(fileLengthFirstRead).isEqualTo(6 * ONE_MB);
+
+      //Trigger the second read
+      n = abfsIn.read(2 * ONE_MB, buf, 2 * ONE_MB, 4 * ONE_MB);
+      assertThat(n).isEqualTo(4 * ONE_MB);
+
+      // eTag and content length should remain same as first read for second read onwards
+      String etagSecondRead = abfsIn.getETag();
+      long fileLengthSecondRead = abfsIn.getContentLength();
+      assertThat(etagSecondRead).isEqualTo(etagFirstRead);
+      assertThat(fileLengthSecondRead).isEqualTo(fileLengthFirstRead);
+    }
+  }
+
+  /**
+   * Tests that when FS_AZURE_RESTRICT_GPS_ON_OPENFILE is enabled,
+   * metadata (eTag and content length) is not partially initialized if read requests fail with a timeout.
+   * Ensures that after failed reads, metadata remains unset, and only after a successful read
+   * are the metadata fields correctly initialized.
+   *
+   * @throws Exception if any error occurs during the test
+   */
+  @Test
+  public void testMetadataNotPartiallyInitializedOnReadWithRestrictGpsOnOpenFile()
+          throws Exception {
+    AzureBlobFileSystem fs = spy(getFileSystemWithRestrictGpsEnabled());
+
+    AzureBlobFileSystemStore store = Mockito.spy(fs.getAbfsStore());
+    Mockito.doReturn(store).when(fs).getAbfsStore();
+    AbfsClient client = Mockito.spy(store.getClient());
+    Mockito.doReturn(client).when(store).getClient();
+
+    AbfsRestOperation successOp = getMockRestOpWithMetadata();
+
+    doThrow(new TimeoutException("First-read-failure"))
+            .doThrow(new TimeoutException("Second-read-failure"))
+            .doReturn(successOp)
+            .when(client)
+            .read(any(String.class), any(Long.class), any(byte[].class),
+                    any(Integer.class), any(Integer.class), any(String.class),
+                    nullable(String.class), any(ContextEncryptionAdapter.class), any(TracingContext.class));
+
+    Path testFile = new Path("/testFile0");
+    byte[] fileContent = new byte[ONE_KB];
+    writeBufferToNewFile(testFile, fileContent);
+
+    try (FSDataInputStream in = fs.open(testFile)) {
+      AbfsInputStream abfsIn = (AbfsInputStream) in.getWrappedStream();
+
+      // Metadata not initialized before read
+      assertThat(abfsIn.getETag()).isEmpty();
+      assertThat(abfsIn.getContentLength()).isEqualTo(0);
+
+      // First read fails- metadata should not be initialized
+      intercept(IOException.class,
+              () -> abfsIn.read(fileContent));
+      assertThat(abfsIn.getETag()).isEmpty();
+      assertThat(abfsIn.getContentLength()).isEqualTo(0);
+
+      // Second read fails- metadata should not be initialized
+      intercept(IOException.class,
+              () -> abfsIn.read(fileContent));
+      assertThat(abfsIn.getETag()).isEmpty();
+      assertThat(abfsIn.getContentLength()).isEqualTo(0);
+
+      // Third read succeeds- metadata should be initialized
+      abfsIn.read(fileContent);
+      assertThat(abfsIn.getETag()).isEqualTo("etag");
+      assertThat(abfsIn.getContentLength()).isEqualTo(1024L);
+    }
   }
 
   /**
@@ -752,13 +1441,13 @@ public class TestAbfsInputStream extends AbstractAbfsIntegrationTest {
 
     // getBlock for a new read should return the buffer read-ahead
     int bytesRead = getBufferManager().getBlock(
-        inputStream,
-        ONE_KB,
-        ONE_KB,
-        new byte[ONE_KB]);
+            inputStream,
+            ONE_KB,
+            ONE_KB,
+            new byte[ONE_KB]);
 
     Assertions.assertTrue(bytesRead > 0, "bytesRead should be non-zero from the "
-        + "buffer that was read-ahead");
+            + "buffer that was read-ahead");
 
     // Once created, mock will remember all interactions.
     // As the above read should not have triggered any server calls, total
@@ -799,6 +1488,7 @@ public class TestAbfsInputStream extends AbstractAbfsIntegrationTest {
         true,
         SIXTEEN_KB);
     testReadAheads(inputStream, FORTY_EIGHT_KB, SIXTEEN_KB);
+    resetReadBufferManager(FOUR_MB, REDUCED_READ_BUFFER_AGE_THRESHOLD); //reset for next set of tests
   }
 
   @Test
