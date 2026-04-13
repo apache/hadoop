@@ -57,6 +57,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.ThreadPoolExecutor;
 
 import static org.apache.hadoop.hdfs.server.federation.router.async.utils.Async.warpCompletionException;
 import static org.apache.hadoop.hdfs.server.federation.router.async.utils.AsyncUtil.asyncApply;
@@ -173,13 +175,16 @@ public class RouterAsyncRpcClient extends RouterRpcClient{
           + router.getRouterId());
     }
     String nsid = namenodes.get(0).getNameserviceId();
+    final ThreadPoolExecutor nsExecutor = router.getRpcServer().getAsyncExecutorForNamespace(nsid);
+
     // transfer threadLocalContext to worker threads of executor.
     ThreadLocalContext threadLocalContext = new ThreadLocalContext();
     asyncComplete(null);
+    // Returns a CompletableFuture with RejectedExecutionException if nsExecutor is full.
     asyncApplyUseExecutor((AsyncApplyFunction<Object, Object>) o -> {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Async invoke method : {}, {}, {}, {}", method.getName(), useObserver,
-            namenodes.toString(), params);
+        LOG.debug("Async invoke method : {}, {}, {}, {}", method.getName(), useObserver, namenodes,
+            params);
       }
       threadLocalContext.transfer();
       RouterRpcFairnessPolicyController controller = getRouterRpcFairnessPolicyController();
@@ -190,8 +195,23 @@ public class RouterAsyncRpcClient extends RouterRpcClient{
         releasePermit(nsid, ugi, method, controller);
         return object;
       });
-    }, router.getRpcServer().getAsyncRouterHandlerExecutors().getOrDefault(nsid,
-        router.getRpcServer().getRouterAsyncHandlerDefaultExecutor()));
+    }, nsExecutor);
+
+    // Catch the RejectedExecutionException and convert it to StandbyException
+    asyncCatch((ret, e) -> {
+      int queueSize = nsExecutor.getQueue().size();
+      if (nsExecutor.isShutdown()) {
+        LOG.warn("Async handler executor for namespace '{}' is shutting down; task not scheduled"
+            + " (queue size: {})", nsid, queueSize, e);
+        throw new StandbyException(
+            "Namespace '" + nsid + "' async handler is shutting down (queue size: " + queueSize
+                + ")");
+      }
+      LOG.warn("Async handler executor rejected task for namespace '{}' (queue size: {}). {}", nsid,
+          queueSize, e.getMessage());
+      throw new StandbyException(
+          "Namespace '" + nsid + "' is overloaded (queue size: " + queueSize + ")");
+    }, RejectedExecutionException.class);
     return null;
   }
 
