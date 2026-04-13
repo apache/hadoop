@@ -897,7 +897,6 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
    * X-MS-ENCRYPTION-CONTEXT header will be required and used to construct a
    * {@link ContextProviderEncryptionAdapter}. If that header is missing a
    * {@link PathIOException} is thrown.
-   * </p>
    *
    * <p>
    * Note: when {@link AbfsConfiguration#shouldRestrictGpsOnOpenFile()} is enabled,
