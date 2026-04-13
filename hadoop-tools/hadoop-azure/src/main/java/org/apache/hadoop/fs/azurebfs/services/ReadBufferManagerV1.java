@@ -226,9 +226,11 @@ public final class ReadBufferManagerV1 extends ReadBufferManager {
                   existing.getLength());
             }
             /*
-             * For READING_IN_PROGRESS: unit is attached and will be
-             * completed in doneReading once actual bytes are known.
-             * Short-read safety is enforced there via per-unit coverage check.
+             * For AVAILABLE buffers use the actual bytes read (getLength()) for
+             * coverage check. For all other states (NOT_AVAILABLE or
+             * READING_IN_PROGRESS), use requestedLength as an estimate of the
+             * planned physical read coverage. The short-read guard will later be
+             * enforced in doneReading() once the actual bytes read are known.
              */
             return true;
           }

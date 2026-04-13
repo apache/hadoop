@@ -171,7 +171,7 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
     return bufferManager;
   }
 
-VectoredReadHandler getVectoredReadHandler() {
+  VectoredReadHandler getVectoredReadHandler() {
     return vectoredReadHandler;
   }
 
@@ -180,7 +180,7 @@ VectoredReadHandler getVectoredReadHandler() {
    * @param readAheadBlockSize the read-ahead block size to set for the ReadBufferManagerV2.
    * @param abfsConfiguration the configuration to set for the ReadBufferManagerV2.
    */
-  public static void setReadBufferManagerConfigs(int readAheadBlockSize,
+  public static void setReadBufferManagerConfigs(final int readAheadBlockSize,
       final AbfsConfiguration abfsConfiguration) {
     // Set Configs only before initializations.
     if (bufferManager == null && !isConfigured.get()) {
@@ -411,9 +411,11 @@ VectoredReadHandler getVectoredReadHandler() {
                   existing.getLength());
             }
             /*
-             * For READING_IN_PROGRESS: unit is attached and will be
-             * completed in doneReading once actual bytes are known.
-             * Short-read safety is enforced there via per-unit coverage check.
+             * For AVAILABLE buffers use the actual bytes read (getLength()) for
+             * coverage check. For all other states (NOT_AVAILABLE or
+             * READING_IN_PROGRESS), use requestedLength as an estimate of the
+             * planned physical read coverage. The short-read guard will later be
+             * enforced in doneReading() once the actual bytes read are known.
              */
             return true;
           }

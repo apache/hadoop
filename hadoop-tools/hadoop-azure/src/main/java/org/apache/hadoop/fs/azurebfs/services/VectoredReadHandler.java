@@ -431,7 +431,7 @@ class VectoredReadHandler {
                 buffer.getPath(), r.getOffset(), destOffset, length, left);
 
             if (left < 0) {
-              LOG.error("fanOut: pending bytes went negative  possible duplicate write:"
+              LOG.error("fanOut: pending bytes went negative possible duplicate write:"
                       + " path={}, rangeOffset={}, pending={}",
                   buffer.getPath(), r.getOffset(), left);
               future.completeExceptionally(new IllegalStateException(
