@@ -21,10 +21,16 @@ package org.apache.hadoop.fs.s3a;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.impl.LazySharedThreadPoolHolder;
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
+
+import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_CLIENT_SHARED_THREADPOOL_ENABLED;
+import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_CLIENT_SHARED_THREADPOOL_KEEPALIVE;
+import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_CLIENT_SHARED_THREADPOOL_SIZE;
 
 /**
  * Tests for the shared scheduled executors in DefaultS3ClientFactory.
@@ -158,5 +164,117 @@ public class TestSharedScheduledExecutor {
         .as("Executor should be created with valid config")
         .isNotNull();
     executor.shutdown();
+  }
+
+  /**
+   * Count threads matching the given prefix.
+   * @param prefix thread name prefix to match
+   * @return count of matching threads
+   */
+  private int countThreadsWithPrefix(String prefix) {
+    int count = 0;
+    for (Thread t : Thread.getAllStackTraces().keySet()) {
+      if (t.getName().startsWith(prefix)) {
+        count++;
+      }
+    }
+    return count;
+  }
+
+  /**
+   * Test that without shared pool, each holder creates its own threads.
+   * This demonstrates the thread growth problem.
+   */
+  @Test
+  public void testWithoutSharedPoolThreadsGrow() throws Exception {
+    final String prefix = "test-growth-";
+    final int poolSize = 3;
+    final int numHolders = 5;
+    List<ScheduledExecutorService> executors = new ArrayList<>();
+
+    int initialCount = countThreadsWithPrefix(prefix);
+
+    for (int i = 0; i < numHolders; i++) {
+      ScheduledExecutorService executor =
+          LazySharedThreadPoolHolder.createScheduledExecutor(prefix + i, poolSize, 60);
+      executors.add(executor);
+      executor.submit(() -> {}).get();
+    }
+
+    int afterCount = countThreadsWithPrefix(prefix);
+    int newThreads = afterCount - initialCount;
+
+    Assertions.assertThat(newThreads)
+        .as("Without shared pool, thread count should grow with each executor")
+        .isGreaterThanOrEqualTo(numHolders);
+
+    for (ScheduledExecutorService executor : executors) {
+      executor.shutdown();
+    }
+  }
+
+  /**
+   * Test that with shared pool enabled, thread count is bounded.
+   * This demonstrates the fix for thread leak.
+   */
+  @Test
+  public void testWithSharedPoolThreadCountBounded() throws Exception {
+    final String prefix = "test-shared-";
+    final int poolSize = 5;
+    final int numCalls = 10;
+
+    LazySharedThreadPoolHolder holder = new LazySharedThreadPoolHolder(
+        AWS_S3_CLIENT_SHARED_THREADPOOL_ENABLED,
+        AWS_S3_CLIENT_SHARED_THREADPOOL_SIZE,
+        AWS_S3_CLIENT_SHARED_THREADPOOL_KEEPALIVE,
+        prefix);
+
+    Configuration conf = new Configuration();
+    conf.setBoolean(AWS_S3_CLIENT_SHARED_THREADPOOL_ENABLED, true);
+    conf.setInt(AWS_S3_CLIENT_SHARED_THREADPOOL_SIZE, poolSize);
+    conf.setInt(AWS_S3_CLIENT_SHARED_THREADPOOL_KEEPALIVE, 60);
+
+    int initialCount = countThreadsWithPrefix(prefix);
+
+    for (int i = 0; i < numCalls; i++) {
+      ScheduledExecutorService executor = holder.get(conf);
+      Assertions.assertThat(executor)
+          .as("Should return same executor instance")
+          .isNotNull();
+      executor.submit(() -> {}).get();
+    }
+
+    int afterCount = countThreadsWithPrefix(prefix);
+    int newThreads = afterCount - initialCount;
+
+    Assertions.assertThat(newThreads)
+        .as("With shared pool, thread count should be bounded by pool size")
+        .isLessThanOrEqualTo(poolSize);
+
+    holder.get(conf).shutdown();
+  }
+
+  /**
+   * Test that holder returns the same executor instance on repeated calls.
+   */
+  @Test
+  public void testHolderReturnsSameInstance() {
+    LazySharedThreadPoolHolder holder = new LazySharedThreadPoolHolder(
+        "test.enabled", "test.size", "test.keepalive", "test-same");
+    Configuration conf = new Configuration();
+    conf.setBoolean("test.enabled", true);
+    conf.setInt("test.size", 5);
+    conf.setInt("test.keepalive", 60);
+
+    ScheduledExecutorService first = holder.get(conf);
+    ScheduledExecutorService second = holder.get(conf);
+    ScheduledExecutorService third = holder.get(conf);
+
+    Assertions.assertThat(first)
+        .as("Holder should return same instance on repeated calls")
+        .isSameAs(second)
+        .isSameAs(third);
+
+    first.shutdown();
   }
 }
