@@ -1948,4 +1948,91 @@ public final class Constants {
    *      AWS S3 PutObject API Documentation</a>
    */
   public static final String IF_NONE_MATCH_STAR = "*";
+
+  // ==================== AWS Client Shared Thread Pool Configuration ===========
+  // These settings control whether AWS SDK clients share a thread pool
+  // instead of each client creating its own. This prevents thread leaks
+  // when many S3A filesystem instances are created.
+
+  /**
+   * Default thread pool size for AWS client shared thread pools: {@value}.
+   */
+  public static final int AWS_CLIENT_SHARED_THREADPOOL_SIZE_DEFAULT = 5;
+
+  /**
+   * Default keepalive in seconds for AWS client shared thread pool: {@value}.
+   */
+  public static final int AWS_CLIENT_SHARED_THREADPOOL_KEEPALIVE_DEFAULT = 60;
+
+  /**
+   * Enable shared thread pool for AWS S3 sync client: {@value}.
+   */
+  public static final String AWS_S3_CLIENT_SHARED_THREADPOOL_ENABLED =
+      "fs.s3a.aws.s3.client.shared.threadpool.enabled";
+
+  /**
+   * Thread pool size for AWS S3 sync client shared thread pool: {@value}.
+   */
+  public static final String AWS_S3_CLIENT_SHARED_THREADPOOL_SIZE =
+      "fs.s3a.aws.s3.client.shared.threadpool.size";
+
+  /**
+   * Keepalive in seconds for AWS S3 sync client shared thread pool: {@value}.
+   */
+  public static final String AWS_S3_CLIENT_SHARED_THREADPOOL_KEEPALIVE =
+      "fs.s3a.aws.s3.client.shared.threadpool.keepalive.seconds";
+
+  /**
+   * Enable shared thread pool for AWS S3 async client: {@value}.
+   */
+  public static final String AWS_S3_ASYNC_CLIENT_SHARED_THREADPOOL_ENABLED =
+      "fs.s3a.aws.s3.async.client.shared.threadpool.enabled";
+
+  /**
+   * Thread pool size for AWS S3 async client shared thread pool: {@value}.
+   */
+  public static final String AWS_S3_ASYNC_CLIENT_SHARED_THREADPOOL_SIZE =
+      "fs.s3a.aws.s3.async.client.shared.threadpool.size";
+
+  /**
+   * Keepalive in seconds for AWS S3 async client shared thread pool: {@value}.
+   */
+  public static final String AWS_S3_ASYNC_CLIENT_SHARED_THREADPOOL_KEEPALIVE =
+      "fs.s3a.aws.s3.async.client.shared.threadpool.keepalive.seconds";
+
+  /**
+   * Enable shared thread pool for AWS STS client: {@value}.
+   */
+  public static final String AWS_STS_CLIENT_SHARED_THREADPOOL_ENABLED =
+      "fs.s3a.aws.sts.client.shared.threadpool.enabled";
+
+  /**
+   * Thread pool size for AWS STS client shared thread pool: {@value}.
+   */
+  public static final String AWS_STS_CLIENT_SHARED_THREADPOOL_SIZE =
+      "fs.s3a.aws.sts.client.shared.threadpool.size";
+
+  /**
+   * Keepalive in seconds for AWS STS client shared thread pool: {@value}.
+   */
+  public static final String AWS_STS_CLIENT_SHARED_THREADPOOL_KEEPALIVE =
+      "fs.s3a.aws.sts.client.shared.threadpool.keepalive.seconds";
+
+  /**
+   * Enable shared thread pool for AWS KMS client: {@value}.
+   */
+  public static final String AWS_KMS_CLIENT_SHARED_THREADPOOL_ENABLED =
+      "fs.s3a.aws.kms.client.shared.threadpool.enabled";
+
+  /**
+   * Thread pool size for AWS KMS client shared thread pool: {@value}.
+   */
+  public static final String AWS_KMS_CLIENT_SHARED_THREADPOOL_SIZE =
+      "fs.s3a.aws.kms.client.shared.threadpool.size";
+
+  /**
+   * Keepalive in seconds for AWS KMS client shared thread pool: {@value}.
+   */
+  public static final String AWS_KMS_CLIENT_SHARED_THREADPOOL_KEEPALIVE =
+      "fs.s3a.aws.kms.client.shared.threadpool.keepalive.seconds";
 }
