@@ -1202,6 +1202,33 @@ when there are too many writes from the same process.
 `fs.azure.analysis.period`: The time after which sleep duration is recomputed after analyzing metrics. The default value
 for the same is 10 seconds.
 
+### <a name="metadataconfigoptions"></a> Metadata Options
+
+The following configurations are related to metadata operations.
+
+`fs.azure.restrict.gps.on.openfile`: Controls whether the GetPathStatus (GPS) API call
+is restricted when opening a file for read. When enabled, this configuration reduces
+metadata overhead by skipping the GPS call during file open operations. The file
+existence checks are also delayed until the first read operation occurs.
+
+**Default:** `false` (disabled)
+
+**Behavior when enabled:**
+* The GetPathStatus call is skipped when opening a file, reducing metadata call overhead
+* File existence validation is deferred until the first read operation
+* Small file full read optimizations are not available
+* Footer read optimizations are not available
+* The first read operation will not be able to initiate prefetch
+
+**Exception:** If the file was created with an encryption context, the GetPathStatus call
+will still be performed even when this configuration is enabled, as the encryption metadata
+is required.
+
+**Recommended Alternative:** To reduce metadata calls while maintaining optimal read
+performance, provide the `FileStatus` object when opening the file using the
+`openFile()` builder pattern with the `.withFileStatus()` option. This approach avoids
+the GPS call while preserving all read optimizations.
+
 ### <a name="securityconfigoptions"></a> Security Options
 `fs.azure.always.use.https`: Enforces to use HTTPS instead of HTTP when the flag
 is made true. Irrespective of the flag, `AbfsClient` will use HTTPS if the secure
