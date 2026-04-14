@@ -23,6 +23,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.IntFunction;
 
@@ -60,7 +61,7 @@ public class ReadBuffer {
   // Allocator used for vectored fan-out; captured at queue time */
   private IntFunction<ByteBuffer> allocator;
   // Tracks whether fanOut has already been executed
-  private final AtomicInteger fanOutDone = new AtomicInteger(0);
+  private final AtomicBoolean fanOutDone = new AtomicBoolean(false);
 
   private IOException errException = null;
 
@@ -213,24 +214,68 @@ public class ReadBuffer {
     return isFirstByteConsumed() && isLastByteConsumed();
   }
 
+  /**
+   * Add a logical vectored read unit associated with this buffer.
+   *
+   * <p>Each {@link CombinedFileRange} represents a logical range requested
+   * by the caller that maps to this buffer-sized physical read. Multiple
+   * logical units may be attached to a single buffer when their ranges
+   * fall within the same physical read span.</p>
+   *
+   * @param u logical vectored read unit to associate with this buffer
+   */
   void addVectoredUnit(CombinedFileRange u) {
     vectoredUnits.add(u);
   }
 
+  /**
+   * Get all logical vectored read units attached to this buffer.
+   *
+   * <p>The returned list contains the {@link CombinedFileRange}s whose
+   * requested data resides within the physical data stored in this buffer.
+   * These units will receive slices of the buffer during vectored fan-out.</p>
+   *
+   * @return list of logical vectored units mapped to this buffer
+   */
   List<CombinedFileRange> getVectoredUnits() {
     return vectoredUnits;
   }
 
+  /**
+   * Clear all vectored units associated with this buffer.
+   *
+   * <p>This method removes all logical read units that were previously
+   * attached to this buffer. It is typically invoked when the buffer
+   * is being reset or returned to the buffer pool for reuse.</p>
+   */
   void clearVectoredUnits() {
     if (vectoredUnits != null) {
       vectoredUnits.clear();
     }
   }
 
+  /**
+   * Return the type of this buffer.
+   *
+   * <p>The buffer type indicates how the buffer is used during the
+   * read pipeline (for example, normal read buffers versus vectored
+   * read buffers).</p>
+   *
+   * @return the {@link BufferType} of this buffer
+   */
   public BufferType getBufferType() {
     return bufferType;
   }
 
+  /**
+   * Set the type of this buffer.
+   *
+   * <p>The buffer type determines the role of the buffer within the
+   * read pipeline, such as whether it is used for normal reads or
+   * vectored read operations.</p>
+   *
+   * @param bufferType buffer type to assign
+   */
   public void setBufferType(final BufferType bufferType) {
     this.bufferType = bufferType;
   }
@@ -265,7 +310,7 @@ public class ReadBuffer {
    *         if fan-out has already been executed
    */
   boolean tryFanOut() {
-    return fanOutDone.compareAndSet(0, 1);
+    return fanOutDone.compareAndSet(false, true);
   }
 
   /**
@@ -273,6 +318,6 @@ public class ReadBuffer {
    *         for this buffer; {@code false} otherwise
    */
   boolean isFanOutDone() {
-    return fanOutDone.get() == 1;
+    return fanOutDone.get();
   }
 }
