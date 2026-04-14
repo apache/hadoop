@@ -17,10 +17,13 @@
  */
 
 /**
- * This package contains the protobuf implementation of the MR TaskUmbilicalProtocol which was originally
+ * This package contains the protobuf implementation of the MR
+ * TaskUmbilicalProtocol which was originally
  * a {@code WritableRPC} protocol.
- * To marshall some of the complex MR datatypes, such as {@code Task}, some objects are serialized to bytes
- * and send in the RPC messages as binary objects, rather than fully defined in protobuf messages.
+ * To marshall some of the complex MR datatypes, such as {@code Task},
+ * some objects are serialized to bytes
+ * and send in the RPC messages as binary objects, rather than fully
+ * defined in protobuf messages.
  */
 
 @InterfaceAudience.Private

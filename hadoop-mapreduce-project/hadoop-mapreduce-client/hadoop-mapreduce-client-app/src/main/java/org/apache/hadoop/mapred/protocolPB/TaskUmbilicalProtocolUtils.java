@@ -140,7 +140,7 @@ final class TaskUmbilicalProtocolUtils {
   }
 
   /**
-   * Invoke a service with no result
+   * Invoke a service with no result.
    * @param callable callable
    * @throws UncheckedIOException wrapped IOE.
    */

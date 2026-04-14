@@ -58,7 +58,8 @@ import static org.slf4j.LoggerFactory.getLogger;
 /** Unit tests for using Job Token over RPC.
  *
  * System properties required:
- * -Djava.security.krb5.conf=.../hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-jobclient/target/test-classes/krb5.conf
+ * -Djava.security.krb5.conf=.../hadoop-mapreduce-client/
+ *   hadoop-mapreduce-client-jobclient/target/test-classes/krb5.conf
  * -Djava.net.preferIPv4Stack=true
  */
 public class TestUmbilicalProtocolWithJobToken {

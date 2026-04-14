@@ -473,8 +473,8 @@ public class TaskAttemptListenerImpl extends CompositeService
     //set the fetch failures
     if (taskStatus.getFetchFailedMaps() != null 
         && !taskStatus.getFetchFailedMaps().isEmpty()) {
-      taskAttemptStatus.fetchFailedMaps = 
-        new ArrayList<>();
+      taskAttemptStatus.fetchFailedMaps =
+          new ArrayList<>();
       for (TaskAttemptID failedMapId : taskStatus.getFetchFailedMaps()) {
         taskAttemptStatus.fetchFailedMaps.add(
             TypeConverter.toYarn(failedMapId));

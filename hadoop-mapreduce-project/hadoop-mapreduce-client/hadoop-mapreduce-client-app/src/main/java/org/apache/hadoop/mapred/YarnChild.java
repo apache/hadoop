@@ -121,14 +121,14 @@ class YarnChild {
       taskOwner.doAs(new PrivilegedExceptionAction<TaskUmbilicalProtocol>() {
       @Override
       public TaskUmbilicalProtocol run() throws Exception {
-        RPC.setProtocolEngine(job, TaskUmbilicalProtocolPB.class,
-            ProtobufRpcEngine2.class);
-        TaskUmbilicalProtocolPB proxy = RPC.getProxy(
-            TaskUmbilicalProtocolPB.class,
-            RPC.getProtocolVersion(TaskUmbilicalProtocolPB.class),
-            address, job);
-        return new TaskUmbilicalProtocolPBClientImpl(proxy);
-      }
+          RPC.setProtocolEngine(job, TaskUmbilicalProtocolPB.class,
+              ProtobufRpcEngine2.class);
+          TaskUmbilicalProtocolPB proxy = RPC.getProxy(
+              TaskUmbilicalProtocolPB.class,
+              RPC.getProtocolVersion(TaskUmbilicalProtocolPB.class),
+              address, job);
+          return new TaskUmbilicalProtocolPBClientImpl(proxy);
+        }
     });
 
     // report non-pid to application master
