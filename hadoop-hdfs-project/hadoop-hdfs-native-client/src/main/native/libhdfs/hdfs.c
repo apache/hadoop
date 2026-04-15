@@ -2805,8 +2805,6 @@ done:
     destroyLocalReference(env, jOldPath);
     destroyLocalReference(env, jNewPath);
     destroyLocalReference(env, jRenameOptionsNone);
-    destroyLocalReference(env, jOldPath);
-    destroyLocalReference(env, jNewPath);
     return ret;
 }
 
