@@ -2741,7 +2741,6 @@ int hdfsRename(hdfsFS fs, const char *oldPath, const char *newPath)
     jobjectArray jOptsArr = NULL;
     jclass enumClass = NULL;
     int ret = -1;
-    jvalue jVal;
 
     //Get the JNIEnv* corresponding to current thread
     JNIEnv* env = getJNIEnv();
