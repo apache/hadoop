@@ -41,7 +41,7 @@ jobs:
       REGISTRIES: ghcr.io
     steps:
       - name: Generate tags
-        uses: docker/metadata-action@8e5442c4ef9f78752691e2d8f8d19755c6f78e81
+        uses: docker/metadata-action@030e881283bb7a6894de51c315a6bfe6a94e05cf
         with:
           images: |
             ${{ github.repository_owner }}/hadoop
@@ -55,7 +55,7 @@ jobs:
           docker pull "$IMAGE_ID"
 
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567
+        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
