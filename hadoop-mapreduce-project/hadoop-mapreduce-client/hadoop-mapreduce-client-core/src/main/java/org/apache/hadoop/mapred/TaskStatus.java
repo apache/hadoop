@@ -519,12 +519,26 @@ public abstract class TaskStatus implements Writable, Cloneable {
                                           taskTracker, phase, counters);
   }
   
+  /**
+   * Enum identifying the concrete type of a {@link TaskStatus} for serialization.
+   */
+  public enum TaskStatusKind {
+    MapTaskStatus,
+    ReduceTaskStatus
+  }
+
   static TaskStatus createTaskStatus(boolean isMap) {
-    return (isMap) ? new MapTaskStatus() : new ReduceTaskStatus();
+    return createTaskStatus(
+        isMap ? TaskStatusKind.MapTaskStatus : TaskStatusKind.ReduceTaskStatus);
+  }
+
+  static TaskStatus createTaskStatus(TaskStatusKind kind) {
+    return kind == TaskStatusKind.MapTaskStatus
+        ? new MapTaskStatus() : new ReduceTaskStatus();
   }
 
   /**
-   * Write a TaskStatus to a DataOutput, prefixed by an isMap discriminator byte.
+   * Write a TaskStatus to a DataOutput, prefixed by a {@link TaskStatusKind} discriminator.
    * Used by the Protobuf-based RPC layer to serialize TaskStatus values.
    * @param out output stream
    * @param status status to write (must not be null)
@@ -532,7 +546,9 @@ public abstract class TaskStatus implements Writable, Cloneable {
    */
   public static void writeTaskStatusForPB(DataOutput out, TaskStatus status)
       throws IOException {
-    out.writeBoolean(status.getIsMap());
+    TaskStatusKind kind = status.getIsMap()
+        ? TaskStatusKind.MapTaskStatus : TaskStatusKind.ReduceTaskStatus;
+    out.writeByte(kind.ordinal());
     status.write(out);
   }
 
@@ -544,8 +560,9 @@ public abstract class TaskStatus implements Writable, Cloneable {
    */
   public static TaskStatus readTaskStatusFromPB(DataInput in)
       throws IOException {
-    boolean isMap = in.readBoolean();
-    TaskStatus status = createTaskStatus(isMap);
+    int ordinal = in.readByte() & 0xFF;
+    TaskStatusKind kind = TaskStatusKind.values()[ordinal];
+    TaskStatus status = createTaskStatus(kind);
     status.readFields(in);
     return status;
   }
