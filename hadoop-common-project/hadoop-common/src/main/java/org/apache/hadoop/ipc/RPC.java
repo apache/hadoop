@@ -89,7 +89,7 @@ public class RPC {
   final static int RPC_SERVICE_CLASS_DEFAULT = 0;
   public enum RpcKind {
     RPC_BUILTIN ((short) 1),         // Used for built in calls by tests
-    RPC_WRITABLE ((short) 2),        // WritableRpcEngine removed; value kept for wire-level detection only
+    RPC_WRITABLE((short) 2),         // WritableRpcEngine removed; kept for wire-level detection
     RPC_PROTOCOL_BUFFER ((short) 3); // Use ProtobufRpcEngine
     final static short MAX_SIZE = RPC_PROTOCOL_BUFFER.value; // used for array size
     private final short value;
