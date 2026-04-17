@@ -32,7 +32,7 @@ if [[ -n ${OS_PLATFORM} ]] && [[ "${OS_PLATFORM}" != "${DEFAULT_OS_PLATFORM}" ]]
 fi
 
 DOCKER_DIR=dev-support/docker
-DOCKER_FILE="${DOCKER_DIR}/Dockerfile"
+DOCKER_FILE="${DOCKER_DIR}/Dockerfile${OS_PLATFORM_SUFFIX}"
 
 CPU_ARCH=$(echo "$MACHTYPE" | cut -d- -f1)
 if [[ "$CPU_ARCH" == "aarch64" || "$CPU_ARCH" == "arm64" ]]; then
