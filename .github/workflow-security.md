@@ -80,7 +80,7 @@ According to _GitHub's docs_[^15]:
 
 > Workflows don't run in forked repositories by default. You must enable GitHub
 > Actions in the Actions tab of the forked repository.
-> 
+>
 > With the exception of GITHUB_TOKEN, secrets are not passed to the runner when a
 > workflow is triggered from a forked repository. The GITHUB_TOKEN has read-only
 > permissions in pull requests from forked repositories.
@@ -128,13 +128,13 @@ of another workflow.
 have write permissions, even if the previous workflow did not.
 
 This is good and bad from a security perspective. These are useful in when you
-have a non-privileged workflow that you need to follow with a priviliged one. This is 
+have a non-privileged workflow that you need to follow with a priviliged one. This is
 Since they are priviliged, though, you must be careful not to run untrusted
 code or depend on untrusted variables.
 
 #### Comparison
 
-| Trigger            | Context           | Secrets Access? | GITHUB_TOKEN Permissions | Risk Level 
+| Trigger            | Context           | Secrets Access? | GITHUB_TOKEN Permissions | Risk Level
 |--------------------|-------------------|-----------------|-------------------------|-----------
 | push               | The branch pushed to | Yes             | Write (usually)        | Low (Only trusted users push)
 | pull_request       | The merge commit  | No (from forks) | Read-only | Low (Safe for untrusted code)
