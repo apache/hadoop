@@ -113,7 +113,7 @@ repository compromise or secret exfiltration.
 
 Note that the behavior of this event recently changed: Prior to Dec. 2025,
 these events ran in the context of the PR's base branch, which could be used
-to target older versions of the codebase with vulnerablities. Now it always
+to target older versions of the codebase with vulnerabilities. Now it always
 uses the default base repo. branch.
 
 #### workflow_run
@@ -124,12 +124,12 @@ uses the default base repo. branch.
 These events allow you to execute a workflow based on execution or completion
 of another workflow.
 
-`workflow_run` events run in a priviliged context: They can access secrets, and
+`workflow_run` events run in a privileged context: They can access secrets, and
 have write permissions, even if the previous workflow did not.
 
 This is good and bad from a security perspective. These are useful in when you
-have a non-privileged workflow that you need to follow with a priviliged one. This is
-Since they are priviliged, though, you must be careful not to run untrusted
+have a non-privileged workflow that you need to follow with a privileged one. This is
+Since they are privileged, though, you must be careful not to run untrusted
 code or depend on untrusted variables.
 
 #### Comparison
@@ -162,7 +162,7 @@ _final writeup_[^12] contains good practices for mitigation.
 
 ## Further Reading
 
-We reccommend learning more about specific attack techniques and their
+We recommend learning more about specific attack techniques and their
 mitigations. This _openssf.org blog post_[^18] is a good overview, in addition
 to the rest of the links in this document.
 
