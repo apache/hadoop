@@ -163,8 +163,8 @@ _final writeup_[^12] contains good practices for mitigation.
 ## Further Reading
 
 We reccommend learning more about specific attack techniques and their
-mitigations. This _openssf.org blog post_ is a good overview, in addition to
-the rest of the links in this document.
+mitigations. This _openssf.org blog post_[^18] is a good overview, in addition
+to the rest of the links in this document.
 
 ## References
 
