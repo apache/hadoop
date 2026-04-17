@@ -24,6 +24,8 @@ on:
     branches: [ "trunk", "branch-*" ]
   pull_request:
     branches: [ "trunk", "branch-*" ]
+    paths:
+      - '.github/**'
   schedule:
     - cron: '22 4 * * 4'
 
