@@ -54,9 +54,9 @@
 struct ThreadLocalState {
   /* The JNIEnv associated with the current thread */
   JNIEnv *env;
-  /* The last exception stack trace that occured on this thread */
+  /* The last exception stack trace that occurred on this thread */
   char *lastExceptionStackTrace;
-  /* The last exception root cause that occured on this thread */
+  /* The last exception root cause that occurred on this thread */
   char *lastExceptionRootCause;
 };
 
