@@ -26,6 +26,7 @@
   <packaging>pom</packaging>
   <name>Apache Hadoop YARN Project</name>
   <url>https://hadoop.apache.org/yarn/</url>
+  <!-- ignore this line -->
 
   <properties>
     <test.logs>true</test.logs>

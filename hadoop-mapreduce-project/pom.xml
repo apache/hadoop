@@ -41,6 +41,7 @@
     <module>hadoop-mapreduce-examples</module>
   </modules>
 
+  <!-- ignore this line -->
   <!--
   Do not add 3rd party dependencies here, add them to the POM of the leaf module.
   The dependencies in this module are for the assembly plugin, packaging purposes.
