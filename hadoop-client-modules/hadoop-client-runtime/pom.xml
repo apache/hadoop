@@ -66,6 +66,11 @@
       <artifactId>snappy-java</artifactId>
       <scope>runtime</scope>
     </dependency>
+    <dependency>
+      <groupId>com.github.luben</groupId>
+      <artifactId>zstd-jni</artifactId>
+      <scope>runtime</scope>
+    </dependency>
     <!-- This comes from our parent pom. If we don't expressly change it here to get included,
          downstream will get warnings at compile time. -->
     <dependency>
@@ -170,6 +175,7 @@
                       <exclude>org.bouncycastle:*</exclude>
                       <!-- Leave snappy that includes native methods which cannot be relocated. -->
                       <exclude>org.xerial.snappy:*</exclude>
+                      <exclude>com.github.luben:zstd-jni</exclude>
                       <!-- leave out kotlin classes -->
                       <exclude>org.jetbrains.kotlin:*</exclude>
                       <exclude>org.glassfish.jersey.test-framework:*</exclude>
@@ -320,6 +326,9 @@
                         <exclude>com/sun/management/**/*</exclude>
                         <exclude>com/ibm/security/*</exclude>
                         <exclude>com/ibm/security/**/*</exclude>
+                        <!-- Exclude zstd-jni -->
+                        <exclude>com/github/luben/zstd/*</exclude>
+                        <exclude>com/github/luben/zstd/**/*</exclude>
                       </excludes>
                     </relocation>
                     <relocation>

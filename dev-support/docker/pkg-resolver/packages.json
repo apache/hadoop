@@ -222,19 +222,15 @@
   },
   "zlib": {
     "debian:12": [
-      "libzstd-dev",
       "zlib1g-dev"
     ],
     "debian:13": [
-      "libzstd-dev",
       "zlib1g-dev"
     ],
     "ubuntu:noble": [
-      "libzstd-dev",
       "zlib1g-dev"
     ],
     "ubuntu:noble::arch64": [
-      "libzstd-dev",
       "zlib1g-dev"
     ],
     "rockylinux:8": [

@@ -371,6 +371,11 @@
       <scope>provided</scope>
     </dependency>
     <dependency>
+      <groupId>com.github.luben</groupId>
+      <artifactId>zstd-jni</artifactId>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter-api</artifactId>
       <scope>test</scope>
@@ -696,10 +701,6 @@
       </activation>
       <properties>
         <require.bzip2>false</require.bzip2>
-        <zstd.prefix></zstd.prefix>
-        <zstd.lib></zstd.lib>
-        <zstd.include></zstd.include>
-        <require.zstd>false</require.zstd>
         <openssl.prefix></openssl.prefix>
         <openssl.lib></openssl.lib>
         <openssl.include></openssl.include>
@@ -749,10 +750,6 @@
                     <GENERATED_JAVAH>${project.build.directory}/native/javah</GENERATED_JAVAH>
                     <JVM_ARCH_DATA_MODEL>${sun.arch.data.model}</JVM_ARCH_DATA_MODEL>
                     <REQUIRE_BZIP2>${require.bzip2}</REQUIRE_BZIP2>
-                    <REQUIRE_ZSTD>${require.zstd}</REQUIRE_ZSTD>
-                    <CUSTOM_ZSTD_PREFIX>${zstd.prefix}</CUSTOM_ZSTD_PREFIX>
-                    <CUSTOM_ZSTD_LIB>${zstd.lib} </CUSTOM_ZSTD_LIB>
-                    <CUSTOM_ZSTD_INCLUDE>${zstd.include} </CUSTOM_ZSTD_INCLUDE>
                     <REQUIRE_ISAL>${require.isal} </REQUIRE_ISAL>
                     <CUSTOM_ISAL_PREFIX>${isal.prefix} </CUSTOM_ISAL_PREFIX>
                     <CUSTOM_ISAL_LIB>${isal.lib} </CUSTOM_ISAL_LIB>
@@ -807,11 +804,6 @@
         <require.isal>false</require.isal>
         <isal.prefix></isal.prefix>
         <isal.lib></isal.lib>
-        <zstd.prefix></zstd.prefix>
-        <zstd.lib></zstd.lib>
-        <zstd.include></zstd.include>
-        <require.zstd>false</require.zstd>
-        <bundle.zstd.in.bin>true</bundle.zstd.in.bin>
         <openssl.prefix></openssl.prefix>
         <openssl.lib></openssl.lib>
         <openssl.include></openssl.include>
@@ -961,10 +953,6 @@
                     <argument>/nologo</argument>
                     <argument>/p:Configuration=Release</argument>
                     <argument>/p:OutDir=${project.build.directory}/bin/</argument>
-                    <argument>/p:CustomZstdPrefix=${zstd.prefix}</argument>
-                    <argument>/p:CustomZstdLib=${zstd.lib}</argument>
-                    <argument>/p:CustomZstdInclude=${zstd.include}</argument>
-                    <argument>/p:RequireZstd=${require.zstd}</argument>
                     <argument>/p:CustomOpensslPrefix=${openssl.prefix}</argument>
                     <argument>/p:CustomOpensslLib=${openssl.lib}</argument>
                     <argument>/p:CustomOpensslInclude=${openssl.include}</argument>
@@ -989,10 +977,6 @@
                     <argument>/nologo</argument>
                     <argument>/p:Configuration=Release</argument>
                     <argument>/p:OutDir=${project.build.directory}/bin/</argument>
-                    <argument>/p:CustomZstdPrefix=${zstd.prefix}</argument>
-                    <argument>/p:CustomZstdLib=${zstd.lib}</argument>
-                    <argument>/p:CustomZstdInclude=${zstd.include}</argument>
-                    <argument>/p:RequireZstd=${require.zstd}</argument>
                     <argument>/p:CustomOpensslPrefix=${openssl.prefix}</argument>
                     <argument>/p:CustomOpensslLib=${openssl.lib}</argument>
                     <argument>/p:CustomOpensslInclude=${openssl.include}</argument>

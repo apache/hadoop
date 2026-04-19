@@ -18,24 +18,20 @@
 
 package org.apache.hadoop.io.compress.zstd;
 
+import com.github.luben.zstd.ZstdDecompressCtx;
+import com.github.luben.zstd.ZstdInputStream;
 import org.apache.hadoop.io.compress.Decompressor;
 import org.apache.hadoop.io.compress.DirectDecompressor;
-import org.apache.hadoop.util.NativeCodeLoader;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
 /**
- * A {@link Decompressor} based on the zStandard compression algorithm.
- * https://github.com/facebook/zstd
+ * A {@link Decompressor} based on the Zstandard compression algorithm.
+ * backed by the <a href="https://github.com/luben/zstd-jni">zstd-jni</a> library.
  */
 public class ZStandardDecompressor implements Decompressor {
-  private static final Logger LOG =
-      LoggerFactory.getLogger(ZStandardDecompressor.class);
 
-  private long stream;
   private int directBufferSize;
   private ByteBuffer compressedDirectBuf = null;
   private int compressedDirectBufOff, bytesInCompressedBuffer;
@@ -45,30 +41,16 @@ public class ZStandardDecompressor implements Decompressor {
   private boolean finished;
   private int remaining = 0;
 
-  private static boolean nativeZStandardLoaded = false;
-
-  static {
-    if (NativeCodeLoader.isNativeCodeLoaded()) {
-      try {
-        // Initialize the native library
-        initIDs();
-        nativeZStandardLoaded = true;
-      } catch (Throwable t) {
-        LOG.warn("Error loading zstandard native libraries: " + t);
-      }
-    }
-  }
-
-  public static boolean isNativeCodeLoaded() {
-    return nativeZStandardLoaded;
-  }
+  /** zstd-jni decompression context; non-null only when using zstd-jni backend. */
+  private ZstdDecompressCtx zstdJniCtx = null;
 
   public static int getRecommendedBufferSize() {
-    return getStreamSize();
+    // zstd-jni recommended input size for streaming (~128 KB)
+    return (int) ZstdInputStream.recommendedDInSize();
   }
 
   public ZStandardDecompressor() {
-    this(getStreamSize());
+    this(getRecommendedBufferSize());
   }
 
   /**
@@ -77,10 +59,10 @@ public class ZStandardDecompressor implements Decompressor {
    */
   public ZStandardDecompressor(int bufferSize) {
     this.directBufferSize = bufferSize;
+    zstdJniCtx = new ZstdDecompressCtx();
     compressedDirectBuf = ByteBuffer.allocateDirect(directBufferSize);
     uncompressedDirectBuf = ByteBuffer.allocateDirect(directBufferSize);
     uncompressedDirectBuf.position(directBufferSize);
-    stream = create();
     reset();
   }
 
@@ -184,22 +166,34 @@ public class ZStandardDecompressor implements Decompressor {
     uncompressedDirectBuf.rewind();
     uncompressedDirectBuf.limit(directBufferSize);
 
-    // Decompress data
-    n = inflateBytesDirect(
-        compressedDirectBuf,
-        compressedDirectBufOff,
-        bytesInCompressedBuffer,
-        uncompressedDirectBuf,
-        0,
-        directBufferSize
-    );
+    if (compressedDirectBufOff < bytesInCompressedBuffer) {
+      compressedDirectBuf.position(compressedDirectBufOff);
+      compressedDirectBuf.limit(bytesInCompressedBuffer);
+      uncompressedDirectBuf.position(0);
+      uncompressedDirectBuf.limit(directBufferSize);
 
-    // Set the finished to false when compressedDirectBuf still
-    // contains some bytes.
-    if (remaining > 0 && finished) {
-      finished = false;
+      boolean done = zstdJniCtx.decompressDirectByteBufferStream(
+          uncompressedDirectBuf, compressedDirectBuf);
+
+      compressedDirectBufOff = compressedDirectBuf.position();
+      remaining = bytesInCompressedBuffer - compressedDirectBufOff;
+      n = uncompressedDirectBuf.position();
+
+      // Mark finished only when the frame is done AND no more bytes remain
+      // (compressedDirectBuf may hold additional concatenated frames).
+      if (done && remaining == 0) {
+        finished = true;
+      } else if (remaining > 0 && finished) {
+        finished = false;
+      }
+
+      // Restore limit so setInputFromSavedData() can rewind+put on next call.
+      compressedDirectBuf.limit(directBufferSize);
+    } else {
+      n = 0;
     }
 
+    uncompressedDirectBuf.rewind();
     uncompressedDirectBuf.limit(n);
 
     // Get at most 'len' bytes
@@ -226,7 +220,7 @@ public class ZStandardDecompressor implements Decompressor {
   @Override
   public void reset() {
     checkStream();
-    init(stream);
+    zstdJniCtx.reset();
     remaining = 0;
     finished = false;
     compressedDirectBufOff = 0;
@@ -239,20 +233,20 @@ public class ZStandardDecompressor implements Decompressor {
 
   @Override
   public void end() {
-    if (stream != 0) {
-      free(stream);
-      stream = 0;
+    if (zstdJniCtx != null) {
+      zstdJniCtx.close();
+      zstdJniCtx = null;
     }
   }
 
   @Override
   protected void finalize() {
-    reset();
+    end();
   }
 
   private void checkStream() {
-    if (stream == 0) {
-      throw new NullPointerException("Stream not initialized");
+    if (zstdJniCtx == null) {
+      throw new NullPointerException("ZstdDecompressCtx is not initialized");
     }
   }
 
@@ -262,35 +256,25 @@ public class ZStandardDecompressor implements Decompressor {
     return n;
   }
 
-  private native static void initIDs();
-  private native static long create();
-  private native static void init(long stream);
-  private native int inflateBytesDirect(ByteBuffer src, int srcOffset,
-      int srcLen, ByteBuffer dst, int dstOffset, int dstLen);
-  private native static void free(long strm);
-  private native static int getStreamSize();
+  int inflateDirect(ByteBuffer src, ByteBuffer dst) {
+    assert (this instanceof ZStandardDecompressor.ZStandardDirectDecompressor);
 
-  int inflateDirect(ByteBuffer src, ByteBuffer dst) throws IOException {
-    assert
-        (this instanceof ZStandardDecompressor.ZStandardDirectDecompressor);
-
-    int originalPosition = dst.position();
-    int n = inflateBytesDirect(
-        src, src.position(), src.limit(), dst, dst.position(),
-        dst.limit()
-    );
-    dst.position(originalPosition + n);
-    if (bytesInCompressedBuffer > 0) {
-      src.position(compressedDirectBufOff);
-    } else {
-      src.position(src.limit());
+    int origDstPos = dst.position();
+    boolean done = zstdJniCtx.decompressDirectByteBufferStream(dst, src);
+    remaining = src.limit() - src.position();
+    // Mirror decompress(): only mark finished when the frame is done AND no
+    // more bytes remain (src may contain additional concatenated frames).
+    if (done && remaining == 0) {
+      finished = true;
+    } else if (remaining > 0 && finished) {
+      finished = false;
     }
-    return n;
+    return dst.position() - origDstPos;
   }
 
   /**
    * A {@link DirectDecompressor} for ZStandard
-   * https://github.com/facebook/zstd.
+   * <a href="https://github.com/facebook/zstd">Zstandard</a>
    */
   public static class ZStandardDirectDecompressor
       extends ZStandardDecompressor implements DirectDecompressor {
