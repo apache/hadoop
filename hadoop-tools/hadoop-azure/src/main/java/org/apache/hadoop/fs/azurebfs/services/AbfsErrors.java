@@ -59,6 +59,10 @@ public final class AbfsErrors {
       + "and cannot be appended to by the Azure Data Lake Storage Service API";
   public static final String CONDITION_NOT_MET = "The condition specified using "
       + "HTTP conditional header(s) is not met.";
+  public static final String ERR_READ_ON_DIRECTORY = "Read operation not permitted on a directory.";
+  public static final String ERR_OPENFILE_ON_DIRECTORY = "openFileForRead must be used with files and not directories";
+  public static final String ERR_SOFT_DELETE_NOT_SUPPORTED = "This endpoint does not support BlobStorageEvents or SoftDelete.";
+
   /**
    * Exception message on filesystem init if token-provider-auth-type configs are provided
    */
