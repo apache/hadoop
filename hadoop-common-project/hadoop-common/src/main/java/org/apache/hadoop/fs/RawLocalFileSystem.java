@@ -225,8 +225,7 @@ public class RawLocalFileSystem extends FileSystem {
         int value = fis.read();
         if (value >= 0) {
           this.position++;
-          statistics.incrementBytesRead(1);
-          bytesRead.addAndGet(1);
+          recordBytesRead(1);
         }
         return value;
       } catch (IOException e) {                 // unexpected exception
@@ -243,8 +242,7 @@ public class RawLocalFileSystem extends FileSystem {
         int value = fis.read(b, off, len);
         if (value > 0) {
           this.position += value;
-          statistics.incrementBytesRead(value);
-          bytesRead.addAndGet(value);
+          recordBytesRead(value);
         }
         return value;
       } catch (IOException e) {                 // unexpected exception
@@ -252,7 +250,12 @@ public class RawLocalFileSystem extends FileSystem {
         throw new FSError(e);                   // assume native fs error
       }
     }
-    
+
+    private void recordBytesRead(final int value) {
+      statistics.incrementBytesRead(value);
+      bytesRead.addAndGet(value);
+    }
+
     @Override
     public int read(long position, byte[] b, int off, int len)
       throws IOException {
@@ -266,8 +269,7 @@ public class RawLocalFileSystem extends FileSystem {
       try {
         int value = fis.getChannel().read(bb, position);
         if (value > 0) {
-          statistics.incrementBytesRead(value);
-          ioStatistics.incrementCounter(STREAM_READ_BYTES, value);
+          recordBytesRead(value);
         }
         return value;
       } catch (IOException e) {
@@ -341,7 +343,8 @@ public class RawLocalFileSystem extends FileSystem {
       // Initiate the asynchronous reads.
       new AsyncHandler(getAsyncChannel(),
           sortedRanges,
-          pool)
+          pool,
+          this::recordBytesRead)
           .initiateRead();
     }
   }
@@ -372,20 +375,24 @@ public class RawLocalFileSystem extends FileSystem {
     /** Buffers being read. */
     private final ByteBuffer[] buffers;
 
+    private final Consumer<Integer> statisticsUpdater;
+
     /**
      * Instantiate.
      * @param channel open channel.
      * @param ranges ranges to read.
      * @param allocateRelease pool for allocating buffers, and releasing on failure
+     * @param statisticsUpdater
      */
     AsyncHandler(
         final AsynchronousFileChannel channel,
         final List<? extends FileRange> ranges,
-        final ByteBufferPool allocateRelease) {
+        final ByteBufferPool allocateRelease, final Consumer<Integer> statisticsUpdater) {
       this.channel = channel;
       this.ranges = ranges;
       this.buffers = new ByteBuffer[ranges.size()];
       this.allocateRelease = allocateRelease;
+      this.statisticsUpdater = statisticsUpdater;
     }
 
     /**
@@ -428,6 +435,8 @@ public class RawLocalFileSystem extends FileSystem {
         } else {
           // Flip the buffer and declare success.
           buffer.flip();
+          statisticsUpdater.accept(range.getLength());
+
           range.getData().complete(buffer);
         }
       }

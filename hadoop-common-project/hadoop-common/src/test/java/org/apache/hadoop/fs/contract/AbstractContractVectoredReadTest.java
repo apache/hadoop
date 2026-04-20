@@ -207,7 +207,16 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
 
       validateVectoredReadResult(fileRanges, DATASET, 0);
       returnBuffersToPoolPostRead(fileRanges, pool);
+      assertionsWithinTestVectoredReadMultipleRanges(in);
     }
+  }
+
+  /**
+   * Place to add some custom assertions within {@link #testVectoredReadMultipleRanges()}.
+   * @param in active input stream.
+   */
+  protected void assertionsWithinTestVectoredReadMultipleRanges(final FSDataInputStream in) {
+
   }
 
   @Test
