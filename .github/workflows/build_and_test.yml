@@ -19,6 +19,8 @@
 
 name: "Build"
 
+# Security: write privileges are safe since this is triggered
+# only by `push` (implying user has write access).
 on:
   push:
     branches:

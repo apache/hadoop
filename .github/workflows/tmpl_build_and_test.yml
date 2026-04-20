@@ -42,6 +42,7 @@ on:
           Candidates: "build-only".
         default: '[ "build-only" ]'
 
+# Default to minimal permissions for workflow.
 permissions:
   packages: read
 
@@ -78,6 +79,9 @@ jobs:
     steps:
       - name: Set up Outputs
         id: variables
+        # Security: passing inputs.{os, branch} through workflow (above) inputs removes
+        # ability to do shell injection below.
+        # See: https://securitylab.github.com/resources/github-actions-untrusted-input/
         run: |
           # Convert to lowercase to meet Docker repo name requirement
           REPO_OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
@@ -86,6 +90,20 @@ jobs:
     name: Build Image ${{ inputs.os }}-${{ inputs.branch }}
     runs-on: ubuntu-24.04
     needs: [ precondition ]
+    # Security: this does not leak write access for our image repository to
+    # forked repos.
+    #
+    # We have `packages: write` permissions for our GITHUB_TOKEN below. However:
+    #
+    # - For `pull_request`, GitHub downgrades GITHUB_TOKEN permissions to
+    #   read-only.
+    # - For `push` triggers on a fork, the GITHUB_TOKEN retains write
+    #   permissions, but the `push` is happening in the context of the fork, not
+    #   the upstream repo.
+    # - For `pull_request_target` (risky), the write permission is
+    #   overridden by our repository's setting "Send write tokens to workflows
+    #   from pull requests" which should be disabled.
+    #   See https://issues.apache.org/jira/browse/INFRA-27839 for confirmation.
     permissions:
       packages: write
     outputs:

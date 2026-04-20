@@ -25,6 +25,11 @@
 
 name: "PR update"
 
+# Security: `pull_request_target` events can be risky, but we:
+# 1. Only grant write access for checks (a.k.a. check runs).
+# 2. We are careful with untrusted inputs (i.e. don't use user-supplied
+#    variables in ways vulnerable to shell injection, etc.)
+# 3. We don't check out the fork's head ref.
 on:
   pull_request_target:
     types: [opened, reopened, synchronize]
