@@ -251,9 +251,15 @@ public class RawLocalFileSystem extends FileSystem {
       }
     }
 
-    private void recordBytesRead(final int value) {
-      statistics.incrementBytesRead(value);
-      bytesRead.addAndGet(value);
+    /**
+     * Count the number of bytes read in fs and io statistics.
+     * @param count
+     */
+    private void recordBytesRead(final int count) {
+      if (count > 0) {
+        statistics.incrementBytesRead(count);
+        bytesRead.addAndGet(count);
+      }
     }
 
     @Override
@@ -375,6 +381,7 @@ public class RawLocalFileSystem extends FileSystem {
     /** Buffers being read. */
     private final ByteBuffer[] buffers;
 
+    /* Callback to update statistics. */
     private final Consumer<Integer> statisticsUpdater;
 
     /**
@@ -382,7 +389,7 @@ public class RawLocalFileSystem extends FileSystem {
      * @param channel open channel.
      * @param ranges ranges to read.
      * @param allocateRelease pool for allocating buffers, and releasing on failure
-     * @param statisticsUpdater
+     * @param statisticsUpdater callback to update statistics.
      */
     AsyncHandler(
         final AsynchronousFileChannel channel,
@@ -433,10 +440,10 @@ public class RawLocalFileSystem extends FileSystem {
           // issue a read for the rest of the buffer
           channel.read(buffer, range.getOffset() + buffer.position(), rangeIndex, this);
         } else {
+          // read finished
+          statisticsUpdater.accept(range.getLength());
           // Flip the buffer and declare success.
           buffer.flip();
-          statisticsUpdater.accept(range.getLength());
-
           range.getData().complete(buffer);
         }
       }
