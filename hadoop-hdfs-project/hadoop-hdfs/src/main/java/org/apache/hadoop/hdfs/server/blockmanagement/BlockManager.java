@@ -4982,6 +4982,8 @@ public class BlockManager implements BlockStatsMXBean {
       DatanodeStorageInfo.decrementBlocksScheduled(remove.getTargets()
           .toArray(new DatanodeStorageInfo[remove.getTargets().size()]));
     }
+    // Remove all pending messages for this deleted block from the queue
+    pendingDNMessages.takeBlockQueue(block);
     neededReconstruction.remove(block, LowRedundancyBlocks.LEVEL);
     postponedMisreplicatedBlocks.remove(block);
   }
