@@ -122,7 +122,7 @@ public class TestAddBlockRetry {
     LocatedBlock newBlock;
     try {
       newBlock = FSDirWriteFileOp.storeAllocatedBlock(ns, src,
-          HdfsConstants.GRANDFATHER_INODE_ID, "clientName", null, targets);
+          HdfsConstants.GRANDFATHER_INODE_ID, "clientName", null, targets).getLeft();
     } finally {
       ns.writeUnlock(RwLockMode.GLOBAL, "testRetryAddBlockWhileInChooseTarget");
     }

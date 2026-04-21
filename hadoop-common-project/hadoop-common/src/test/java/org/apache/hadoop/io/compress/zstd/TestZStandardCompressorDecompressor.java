@@ -28,7 +28,6 @@ import org.apache.hadoop.io.compress.Decompressor;
 import org.apache.hadoop.io.compress.DecompressorStream;
 import org.apache.hadoop.io.compress.ZStandardCodec;
 import org.apache.hadoop.test.MultithreadedTestUtil;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -51,7 +50,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class TestZStandardCompressorDecompressor {
   private final static char[] HEX_ARRAY = "0123456789ABCDEF".toCharArray();
@@ -67,11 +65,6 @@ public class TestZStandardCompressorDecompressor {
         .getResource("/zstd/test_file.txt").toURI());
     compressedFile = new File(TestZStandardCompressorDecompressor.class
         .getResource("/zstd/test_file.txt.zst").toURI());
-  }
-
-  @BeforeEach
-  public void before() throws Exception {
-    assumeTrue(ZStandardCodec.isNativeCodeLoaded());
   }
 
   @Test

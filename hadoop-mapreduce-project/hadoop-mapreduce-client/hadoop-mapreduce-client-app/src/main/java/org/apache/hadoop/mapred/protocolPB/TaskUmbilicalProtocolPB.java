@@ -16,14 +16,24 @@
  * limitations under the License.
  */
 
+package org.apache.hadoop.mapred.protocolPB;
+
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.ipc.ProtocolInfo;
+import org.apache.hadoop.mapred.proto.TaskUmbilicalProtocolProtos.TaskUmbilicalProtocolService;
+import org.apache.hadoop.mapreduce.security.token.JobTokenSelector;
+import org.apache.hadoop.security.token.TokenInfo;
+
 /**
- * Implementation of compression/decompression based on the Zstandard
- * compression algorithm.
- *
- * @see <a href="https://github.com/facebook/zstd">Zstandard</a>
+ * Protocol buffer based RPC interface for {@link org.apache.hadoop.mapred.TaskUmbilicalProtocol}.
+ * Protocol version 1 corresponds to the TaskUmbilicalProtocol.versionID used in
+ * the Writable-based RPC implementation.
  */
 @InterfaceAudience.Private
-@InterfaceStability.Unstable
-package org.apache.hadoop.io.compress.zstd;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+@ProtocolInfo(
+    protocolName = "org.apache.hadoop.mapred.TaskUmbilicalProtocol",
+    protocolVersion = 1)
+@TokenInfo(JobTokenSelector.class)
+public interface TaskUmbilicalProtocolPB
+    extends TaskUmbilicalProtocolService.BlockingInterface {
+}

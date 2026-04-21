@@ -19,7 +19,9 @@
 package org.apache.hadoop.mapred;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static org.apache.hadoop.io.IOUtils.closeStream;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
@@ -35,7 +37,10 @@ import org.apache.hadoop.fs.ClusterStorageCapacityExceededException;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.CallerContext;
+import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.mapred.protocolPB.TaskUmbilicalProtocolPB;
+import org.apache.hadoop.mapred.protocolPB.TaskUmbilicalProtocolPBClientImpl;
 import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TaskType;
@@ -116,9 +121,14 @@ class YarnChild {
       taskOwner.doAs(new PrivilegedExceptionAction<TaskUmbilicalProtocol>() {
       @Override
       public TaskUmbilicalProtocol run() throws Exception {
-        return (TaskUmbilicalProtocol)RPC.getProxy(TaskUmbilicalProtocol.class,
-            TaskUmbilicalProtocol.versionID, address, job);
-      }
+          RPC.setProtocolEngine(job, TaskUmbilicalProtocolPB.class,
+              ProtobufRpcEngine2.class);
+          TaskUmbilicalProtocolPB proxy = RPC.getProxy(
+              TaskUmbilicalProtocolPB.class,
+              RPC.getProtocolVersion(TaskUmbilicalProtocolPB.class),
+              address, job);
+          return new TaskUmbilicalProtocolPBClientImpl(proxy);
+        }
     });
 
     // report non-pid to application master
@@ -185,8 +195,7 @@ class YarnChild {
         umbilical.fsError(taskid, e.getMessage());
       }
     } catch (Exception exception) {
-      LOG.warn("Exception running child : "
-          + StringUtils.stringifyException(exception));
+      LOG.warn("Exception running child : {}", StringUtils.stringifyException(exception));
       try {
         if (task != null) {
           // do cleanup for the task
@@ -194,17 +203,14 @@ class YarnChild {
             task.taskCleanup(umbilical);
           } else {
             final Task taskFinal = task;
-            childUGI.doAs(new PrivilegedExceptionAction<Object>() {
-              @Override
-              public Object run() throws Exception {
-                taskFinal.taskCleanup(umbilical);
-                return null;
-              }
+            childUGI.doAs((PrivilegedExceptionAction<Object>) () -> {
+              taskFinal.taskCleanup(umbilical);
+              return null;
             });
           }
         }
       } catch (Exception e) {
-        LOG.info("Exception cleaning up: " + StringUtils.stringifyException(e));
+        LOG.info("Exception cleaning up: {}", StringUtils.stringifyException(e));
       }
       // Report back any failures, for diagnostic purposes
       if (taskid != null) {
@@ -213,8 +219,7 @@ class YarnChild {
         }
       }
     } catch (Throwable throwable) {
-      LOG.error("Error running child : "
-    	        + StringUtils.stringifyException(throwable));
+      LOG.error("Error running child : {}", StringUtils.stringifyException(throwable));
       if (taskid != null) {
         if (!ShutdownHookManager.get().isShutdownInProgress()) {
           Throwable tCause = throwable.getCause();
@@ -225,7 +230,11 @@ class YarnChild {
         }
       }
     } finally {
-      RPC.stopProxy(umbilical);
+      if (umbilical instanceof Closeable closeable) {
+        closeStream(closeable);
+      } else {
+        RPC.stopProxy(umbilical);
+      }
       DefaultMetricsSystem.shutdown();
       TaskLog.syncLogsShutdown(logSyncer);
     }
@@ -278,7 +287,7 @@ class YarnChild {
     String[] localSysDirs = StringUtils.getTrimmedStrings(
         System.getenv(Environment.LOCAL_DIRS.name()));
     job.setStrings(MRConfig.LOCAL_DIR, localSysDirs);
-    LOG.info(MRConfig.LOCAL_DIR + " for child: " + job.get(MRConfig.LOCAL_DIR));
+    LOG.info(MRConfig.LOCAL_DIR + " for child: {}", job.get(MRConfig.LOCAL_DIR));
     LocalDirAllocator lDirAlloc = new LocalDirAllocator(MRConfig.LOCAL_DIR);
     Path workDir = null;
     // First, try to find the JOB_LOCAL_DIR on this host.
@@ -318,7 +327,7 @@ class YarnChild {
     ApplicationAttemptId appAttemptId = ContainerId.fromString(
         System.getenv(Environment.CONTAINER_ID.name()))
         .getApplicationAttemptId();
-    LOG.debug("APPLICATION_ATTEMPT_ID: " + appAttemptId);
+    LOG.debug("APPLICATION_ATTEMPT_ID: {}", appAttemptId);
     // Set it in conf, so as to be able to be used the the OutputCommitter.
     job.setInt(MRJobConfig.APPLICATION_ATTEMPT_ID,
         appAttemptId.getAttemptId());
