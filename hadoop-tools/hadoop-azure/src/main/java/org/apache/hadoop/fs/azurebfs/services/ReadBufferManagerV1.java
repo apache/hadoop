@@ -60,10 +60,10 @@ public final class ReadBufferManagerV1 extends ReadBufferManager {
   // hide instance constructor
   private ReadBufferManagerV1() {
     this.vectoredReadHandler = new VectoredReadHandler(this);
-    LOGGER.trace("Creating readbuffer manager with HADOOP-18546 patch");
+    printTraceLog("Creating readbuffer manager with HADOOP-18546 patch");
   }
 
-  public VectoredReadHandler getVectoredReadHandler() {
+  VectoredReadHandler getVectoredReadHandler() {
     return vectoredReadHandler;
   }
 
@@ -133,10 +133,8 @@ public final class ReadBufferManagerV1 extends ReadBufferManager {
   @Override
   public void queueReadAhead(final AbfsInputStream stream, final long requestedOffset, final int requestedLength,
       TracingContext tracingContext) {
-    if (LOGGER.isTraceEnabled()) {
-      LOGGER.trace("Start Queueing readAhead for {} offset {} length {}",
-          stream.getPath(), requestedOffset, requestedLength);
-    }
+    printTraceLog("Start Queueing readAhead for {} offset {} length {}",
+        stream.getPath(), requestedOffset, requestedLength);
     ReadBuffer buffer;
     synchronized (this) {
       if (isAlreadyQueued(stream, requestedOffset)) {
@@ -161,10 +159,8 @@ public final class ReadBufferManagerV1 extends ReadBufferManager {
       buffer.setBufferindex(bufferIndex);
       getReadAheadQueue().add(buffer);
       notifyAll();
-      if (LOGGER.isTraceEnabled()) {
-        LOGGER.trace("Done q-ing readAhead for file {} offset {} buffer idx {}",
+      printTraceLog("Done q-ing readAhead for file {} offset {} buffer idx {}",
             stream.getPath(), requestedOffset, buffer.getBufferindex());
-      }
     }
   }
 
@@ -219,7 +215,7 @@ public final class ReadBufferManagerV1 extends ReadBufferManager {
                * since the outer check already used getLength() for AVAILABLE,
                * but kept explicit for clarity.
                */
-              LOGGER.debug("Hitchhiking onto AVAILABLE buffer {}, length {}",
+              printTraceLog("Hitchhiking onto AVAILABLE buffer {}, length {}",
                   existing, existing.getLength());
               handleVectoredCompletion(existing,
                   existing.getStatus(),
@@ -280,10 +276,9 @@ public final class ReadBufferManagerV1 extends ReadBufferManager {
 
       getReadAheadQueue().add(buffer);
       notifyAll();
-      if (LOGGER.isTraceEnabled()) {
-        LOGGER.trace("Done q-ing readAhead for file {} offset {} buffer idx {}",
-            stream.getPath(), unit.getOffset(), buffer.getBufferindex());
-      }
+      printTraceLog(
+          "Done q-ing vectored readAhead for file {} offset {} buffer idx {}",
+          stream.getPath(), unit.getOffset(), buffer.getBufferindex());
       return true;
     }
   }
@@ -292,13 +287,14 @@ public final class ReadBufferManagerV1 extends ReadBufferManager {
    * {@inheritDoc}
    */
   @Override
-  public int getBlock(final AbfsInputStream stream, final long position, final int length, final byte[] buffer)
+  public int getBlock(final AbfsInputStream stream,
+      final long position,
+      final int length,
+      final byte[] buffer)
       throws IOException {
     // not synchronized, so have to be careful with locking
-    if (LOGGER.isTraceEnabled()) {
-      LOGGER.trace("getBlock for file {}  position {}  thread {}",
-          stream.getPath(), position, Thread.currentThread().getName());
-    }
+    printTraceLog("getBlock for file {}  position {}  thread {}",
+        stream.getPath(), position, Thread.currentThread().getName());
 
     waitForProcess(stream, position);
 
@@ -307,10 +303,8 @@ public final class ReadBufferManagerV1 extends ReadBufferManager {
       bytesRead = getBlockFromCompletedQueue(stream, position, length, buffer);
     }
     if (bytesRead > 0) {
-      if (LOGGER.isTraceEnabled()) {
-        LOGGER.trace("Done read from Cache for {} position {} length {}",
-            stream.getPath(), position, bytesRead);
-      }
+      printTraceLog("Done read from Cache for {} position {} length {}",
+          stream.getPath(), position, bytesRead);
       return bytesRead;
     }
 
@@ -336,10 +330,8 @@ public final class ReadBufferManagerV1 extends ReadBufferManager {
       buffer.setStatus(ReadBufferStatus.READING_IN_PROGRESS);
       getInProgressList().add(buffer);
     }
-    if (LOGGER.isTraceEnabled()) {
-      LOGGER.trace("ReadBufferWorker picked file {} for offset {}",
+   printTraceLog("ReadBufferWorker picked file {} for offset {}",
           buffer.getStream().getPath(), buffer.getOffset());
-    }
     return buffer;
   }
 
@@ -347,15 +339,18 @@ public final class ReadBufferManagerV1 extends ReadBufferManager {
    * {@inheritDoc}
    */
   @Override
-  public void doneReading(final ReadBuffer buffer, final ReadBufferStatus result, final int bytesActuallyRead) {
-    if (LOGGER.isTraceEnabled()) {
-      LOGGER.trace("ReadBufferWorker completed read file {} for offset {} outcome {} bytes {}",
-          buffer.getStream().getPath(), buffer.getOffset(), result, bytesActuallyRead);
-    }
+  public void doneReading(final ReadBuffer buffer,
+      final ReadBufferStatus result,
+      final int bytesActuallyRead) {
+    printTraceLog(
+        "ReadBufferWorker completed read file {} for offset {} outcome {} bytes {}",
+        buffer.getStream().getPath(), buffer.getOffset(), result,
+        bytesActuallyRead);
 
     List<CombinedFileRange> vectoredUnits = buffer.getVectoredUnits();
     if (result == ReadBufferStatus.AVAILABLE
-        && (buffer.getBufferType() == BufferType.VECTORED && !vectoredUnits.isEmpty())) {
+        && (buffer.getBufferType() == BufferType.VECTORED
+        && !vectoredUnits.isEmpty())) {
 
       /*
        * Set length BEFORE handling vectored completion so that any
@@ -395,8 +390,7 @@ public final class ReadBufferManagerV1 extends ReadBufferManager {
           CombinedFileRange u = it.next();
           if ((u.getOffset() + u.getLength()) > actualEnd) {
             it.remove();
-            LOGGER.debug(
-                "Vectored unit not covered by actual bytes read: unitEnd={} actualEnd={}, failing unit",
+            printTraceLog("Vectored unit not covered by actual bytes read: unitEnd={} actualEnd={}, failing unit",
                 (u.getOffset() + u.getLength()), actualEnd);
             u.getData().completeExceptionally(new IOException(
                 "Vectored read unit not covered by actual bytes read: "
@@ -407,7 +401,8 @@ public final class ReadBufferManagerV1 extends ReadBufferManager {
       }
 
       if (!vectoredUnits.isEmpty()) {
-        LOGGER.debug("Entering vectored read completion with buffer {}, result {}, bytesActuallyRead {}",
+        printTraceLog(
+            "Entering vectored read completion with buffer {}, result {}, bytesActuallyRead {}",
             buffer, result, bytesActuallyRead);
         handleVectoredCompletion(buffer, result, bytesActuallyRead);
       }
@@ -463,10 +458,8 @@ public final class ReadBufferManagerV1 extends ReadBufferManager {
     }
     if (readBuf != null) {         // if in in-progress queue, then block for it
       try {
-        if (LOGGER.isTraceEnabled()) {
-          LOGGER.trace("got a relevant read buffer for file {} offset {} buffer idx {}",
+       printTraceLog("got a relevant read buffer for file {} offset {} buffer idx {}",
               stream.getPath(), readBuf.getOffset(), readBuf.getBufferindex());
-        }
         readBuf.getLatch().await();  // blocking wait on the caller stream's thread
         // Note on correctness: readBuf gets out of inProgressList only in 1 place: after worker thread
         // is done processing it (in doneReading). There, the latch is set after removing the buffer from
@@ -477,10 +470,8 @@ public final class ReadBufferManagerV1 extends ReadBufferManager {
       } catch (InterruptedException ex) {
         Thread.currentThread().interrupt();
       }
-      if (LOGGER.isTraceEnabled()) {
-        LOGGER.trace("latch done for file {} buffer idx {} length {}",
+      printTraceLog("latch done for file {} buffer idx {} length {}",
             stream.getPath(), readBuf.getBufferindex(), readBuf.getLength());
-      }
     }
   }
 
@@ -549,7 +540,7 @@ public final class ReadBufferManagerV1 extends ReadBufferManager {
       return evict(nodeToEvict);
     }
 
-    LOGGER.trace("No buffer eligible for eviction");
+    printTraceLog("No buffer eligible for eviction");
     // nothing can be evicted
     return false;
   }
@@ -569,10 +560,8 @@ public final class ReadBufferManagerV1 extends ReadBufferManager {
 
     getCompletedReadList().remove(buf);
     buf.setTracingContext(null);
-    if (LOGGER.isTraceEnabled()) {
-      LOGGER.trace("Evicting buffer idx {}; was used for file {} offset {} length {}",
+    printTraceLog("Evicting buffer idx {}; was used for file {} offset {} length {}",
           buf.getBufferindex(), buf.getStream().getPath(), buf.getOffset(), buf.getLength());
-    }
     return true;
   }
 

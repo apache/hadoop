@@ -29,6 +29,7 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
@@ -404,7 +405,7 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
                * since the outer check already used getLength() for AVAILABLE,
                * but kept explicit for clarity.
                */
-              LOGGER.debug("Hitchhiking onto AVAILABLE buffer {}, length {}",
+              printTraceLog("Hitchhiking onto AVAILABLE buffer {}, length {}",
                   existing, existing.getLength());
               handleVectoredCompletion(existing,
                   existing.getStatus(),
@@ -465,6 +466,11 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
 
       getReadAheadQueue().add(buffer);
       notifyAll();
+      printTraceLog(
+          "Done q-ing vectored readAhead for file: {}, with eTag:{}, offset: {}, "
+              + "buffer idx: {}, triggered by stream: {}",
+          stream.getPath(), stream.getETag(), unit.getOffset(),
+          buffer.getBufferindex(), stream.hashCode());
       return true;
     }
   }
@@ -558,10 +564,11 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
   public void doneReading(final ReadBuffer buffer,
       final ReadBufferStatus result,
       final int bytesActuallyRead) {
-    if (LOGGER.isTraceEnabled()) {
-      LOGGER.trace("ReadBufferWorker completed read file {} for offset {} outcome {} bytes {}",
-          buffer.getStream().getPath(), buffer.getOffset(), result, bytesActuallyRead);
-    }
+    printTraceLog("ReadBufferWorker completed read file {} for offset {} outcome {} bytes {}",
+        buffer.getStream().getPath(),
+        buffer.getOffset(),
+        result,
+        bytesActuallyRead);
     List<CombinedFileRange> vectoredUnits = buffer.getVectoredUnits();
     if (result == ReadBufferStatus.AVAILABLE
         && (buffer.getBufferType() == BufferType.VECTORED && !vectoredUnits.isEmpty())) {
@@ -601,8 +608,7 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
           CombinedFileRange u = it.next();
           if ((u.getOffset() + u.getLength()) > actualEnd) {
             it.remove();
-            LOGGER.debug(
-                "Vectored unit not covered by actual bytes read: unitEnd={} actualEnd={}, failing unit",
+            printTraceLog("Vectored unit not covered by actual bytes read: unitEnd={} actualEnd={}, failing unit",
                 (u.getOffset() + u.getLength()), actualEnd);
             u.getData().completeExceptionally(new IOException(
                 "Vectored read unit not covered by actual bytes read: "
@@ -612,7 +618,7 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
         }
       }
       if (!vectoredUnits.isEmpty()) {
-        LOGGER.debug("Entering vectored read completion with buffer {}, result {}, bytesActuallyRead {}",
+        printTraceLog("Entering vectored read completion with buffer {}, result {}, bytesActuallyRead {}",
             buffer, result, bytesActuallyRead);
         handleVectoredCompletion(buffer, result, bytesActuallyRead);
       }
@@ -694,7 +700,7 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
       final String eTag,
       final long requestedOffset) {
     for (ReadBuffer buffer : list) {
-      if (eTag != null && eTag.equals(buffer.getETag())) {
+      if (Objects.equals(eTag, buffer.getETag())) {
         if (buffer.getStatus() == ReadBufferStatus.AVAILABLE
             && requestedOffset >= buffer.getOffset()
             && requestedOffset < buffer.getOffset() + buffer.getLength()) {
@@ -937,7 +943,7 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
     for (ReadBuffer buffer : getCompletedReadList()) {
       // Buffer is returned if the requestedOffset is at or above buffer's
       // offset but less than buffer's length or the actual requestedLength
-      if (eTag != null && eTag.equals(buffer.getETag())
+      if (Objects.equals(eTag, buffer.getETag())
           && (requestedOffset >= buffer.getOffset())
           && ((requestedOffset < buffer.getOffset() + buffer.getLength())
           || (requestedOffset
@@ -1249,16 +1255,6 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
       return t;
     }
   };
-
-  private void printTraceLog(String message, Object... args) {
-    if (LOGGER.isTraceEnabled()) {
-      LOGGER.trace(message, args);
-    }
-  }
-
-  private void printDebugLog(String message, Object... args) {
-    LOGGER.debug(message, args);
-  }
 
   @VisibleForTesting
   synchronized static ReadBufferManagerV2 getInstance() {

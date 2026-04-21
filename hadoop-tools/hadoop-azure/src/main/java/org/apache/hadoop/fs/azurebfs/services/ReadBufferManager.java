@@ -400,4 +400,14 @@ public abstract class ReadBufferManager {
   }
 
   abstract void clearFreeList();
+
+  void printTraceLog(String message, Object... args) {
+    if (LOGGER.isTraceEnabled()) {
+      LOGGER.trace(message, args);
+    }
+  }
+
+  void printDebugLog(String message, Object... args) {
+    LOGGER.debug(message, args);
+  }
 }
