@@ -186,7 +186,7 @@ public class MRAppMaster extends CompositeService {
    * Priority of the MRAppMaster shutdown hook.
    */
   public static final int SHUTDOWN_HOOK_PRIORITY = 30;
-  public static final String INTERMEDIATE_DATA_ENCRYPTION_ALGO = "HmacSHA1";
+  public static final String INTERMEDIATE_DATA_ENCRYPTION_ALGO = "HmacSHA256";
 
   private Clock clock;
   private final long startTime;

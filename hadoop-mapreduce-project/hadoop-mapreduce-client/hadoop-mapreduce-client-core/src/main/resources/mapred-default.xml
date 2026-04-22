@@ -594,6 +594,16 @@
 </property>
 
 <property>
+  <name>mapreduce.shuffle-key-length</name>
+  <value>256</value>
+  <description>
+    The length in bits of the HMAC key used to authenticate shuffle transfers.
+    The default was changed from 64 to 256 bits to match the recommended key
+    size for HmacSHA256. This key is generated fresh for each job submission.
+  </description>
+</property>
+
+<property>
   <name>mapreduce.reduce.markreset.buffer.percent</name>
   <value>0.0</value>
   <description>The percentage of memory -relative to the maximum heap size- to

@@ -76,6 +76,8 @@ import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_SECRET_MANAGER_KEY_GENERATOR_ALGORITHM_DEFAULT;
+
 /** Implements MapReduce locally, in-process, for debugging. */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
@@ -91,7 +93,7 @@ public class LocalJobRunner implements ClientProtocol {
   public static final String LOCAL_MAX_REDUCES =
     "mapreduce.local.reduce.tasks.maximum";
 
-  public static final String INTERMEDIATE_DATA_ENCRYPTION_ALGO = "HmacSHA1";
+  public static final String INTERMEDIATE_DATA_ENCRYPTION_ALGO = HADOOP_SECURITY_SECRET_MANAGER_KEY_GENERATOR_ALGORITHM_DEFAULT;
 
   private FileSystem fs;
   private HashMap<JobID, Job> jobs = new HashMap<JobID, Job>();
