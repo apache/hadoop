@@ -17,32 +17,36 @@
 # under the License.
 #
 
-# Intentionally has a general name.
-# because the test status check created in GitHub Actions
-# currently randomly picks any associated workflow.
-# So, the name was changed to make sense in that context too.
-# See also https://github.community/t/specify-check-suite-when-creating-a-checkrun/118380/10
-
-name: "PR"
+name: "Build"
 
 on:
-  pull_request_target
-
-permissions:
-  contents: read
-  pull-requests: write
+  push:
+    branches:
+      - "**"
 
 jobs:
-  triage:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          sparse-checkout: |
-            .github
-      - uses: actions/labeler@v4.3.0
-        with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-          sync-labels: true
-          configuration-path: .github/labeler.yml
-          dot: true
+  default:
+    permissions:
+      packages: write
+    name: Run
+    uses: ./.github/workflows/tmpl_build_and_test.yml
+
+  rockylinux-8-java21-build-only:
+    permissions:
+      packages: write
+    name: Run
+    uses: ./.github/workflows/tmpl_build_and_test.yml
+    with:
+      java: 21
+      os: rockylinux_8
+      jobs: '[ "build-only" ]'
+
+  debian-13-java25-build-only:
+    permissions:
+      packages: write
+    name: Run
+    uses: ./.github/workflows/tmpl_build_and_test.yml
+    with:
+      java: 25
+      os: debian_13
+      jobs: '[ "build-only" ]'

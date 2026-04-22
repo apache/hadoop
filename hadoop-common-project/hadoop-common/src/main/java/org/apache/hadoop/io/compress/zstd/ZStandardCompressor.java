@@ -18,13 +18,15 @@
 
 package org.apache.hadoop.io.compress.zstd;
 
+import com.github.luben.zstd.EndDirective;
+import com.github.luben.zstd.ZstdCompressCtx;
+import com.github.luben.zstd.ZstdOutputStream;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.io.compress.Compressor;
 import org.apache.hadoop.io.compress.ZStandardCodec;
-import org.apache.hadoop.util.NativeCodeLoader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -32,15 +34,14 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 
 /**
- * A {@link Compressor} based on the zStandard compression algorithm.
- * https://github.com/facebook/zstd
+ * A {@link Compressor} based on the Zstandard compression algorithm,
+ * backed by the <a href="https://github.com/luben/zstd-jni">zstd-jni</a> library.
  */
 public class ZStandardCompressor implements Compressor {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(ZStandardCompressor.class);
 
-  private long stream;
   private int level;
   private int directBufferSize;
   private byte[] userBuf = null;
@@ -53,26 +54,11 @@ public class ZStandardCompressor implements Compressor {
   private long bytesRead = 0;
   private long bytesWritten = 0;
 
-  private static boolean nativeZStandardLoaded = false;
-
-  static {
-    if (NativeCodeLoader.isNativeCodeLoaded()) {
-      try {
-        // Initialize the native library
-        initIDs();
-        nativeZStandardLoaded = true;
-      } catch (Throwable t) {
-        LOG.warn("Error loading zstandard native libraries: " + t);
-      }
-    }
-  }
-
-  public static boolean isNativeCodeLoaded() {
-    return nativeZStandardLoaded;
-  }
+  private ZstdCompressCtx zstdJniCtx = null;
 
   public static int getRecommendedBufferSize() {
-    return getStreamSize();
+    // zstd-jni recommended output size for streaming (~128 KB)
+    return (int) ZstdOutputStream.recommendedCOutSize();
   }
 
   @VisibleForTesting
@@ -94,11 +80,11 @@ public class ZStandardCompressor implements Compressor {
   @VisibleForTesting
   ZStandardCompressor(int level, int inputBufferSize, int outputBufferSize) {
     this.level = level;
-    stream = create();
-    this.directBufferSize = outputBufferSize;
+    zstdJniCtx = new ZstdCompressCtx();
     uncompressedDirectBuf = ByteBuffer.allocateDirect(inputBufferSize);
+    directBufferSize = outputBufferSize;
     compressedDirectBuf = ByteBuffer.allocateDirect(outputBufferSize);
-    compressedDirectBuf.position(outputBufferSize);
+    compressedDirectBuf.position(directBufferSize);
     reset();
   }
 
@@ -210,31 +196,45 @@ public class ZStandardCompressor implements Compressor {
       return n;
     }
 
-    // Re-initialize the output direct buffer
-    compressedDirectBuf.rewind();
+    // Always invoke the streaming API — even with empty input — so internally
+    // buffered bytes continue to be drained, matching native ZSTD_flushStream.
+    // Use END only when finish=true, no more user data, and all direct-buffer
+    // data consumed (mirrors ZSTD_endStream); otherwise FLUSH (mirrors
+    // ZSTD_compressStream + ZSTD_flushStream).
+    boolean allConsumed = (uncompressedDirectBufLen - uncompressedDirectBufOff <= 0);
+    boolean shouldEnd = finish && userBufLen == 0 && allConsumed;
+
+    uncompressedDirectBuf.position(uncompressedDirectBufOff);
+    uncompressedDirectBuf.limit(uncompressedDirectBufLen);
+    compressedDirectBuf.position(0);
     compressedDirectBuf.limit(directBufferSize);
 
-    // Compress data
-    n = deflateBytesDirect(
-        uncompressedDirectBuf,
-        uncompressedDirectBufOff,
-        uncompressedDirectBufLen,
-        compressedDirectBuf,
-        directBufferSize
-    );
-    compressedDirectBuf.limit(n);
+    EndDirective endOp = shouldEnd ? EndDirective.END : EndDirective.FLUSH;
+    boolean done = zstdJniCtx.compressDirectByteBufferStream(
+        compressedDirectBuf, uncompressedDirectBuf, endOp);
 
-    // Check if we have consumed all input buffer
+    int newOff = uncompressedDirectBuf.position();
+    n = compressedDirectBuf.position();
+
+    bytesRead += newOff - uncompressedDirectBufOff;
+    bytesWritten += n;
+
+    uncompressedDirectBufOff = newOff;
     if (uncompressedDirectBufLen - uncompressedDirectBufOff <= 0) {
-      // consumed all input buffer
       keepUncompressedBuf = false;
       uncompressedDirectBuf.clear();
       uncompressedDirectBufOff = 0;
       uncompressedDirectBufLen = 0;
     } else {
-      //  did not consume all input buffer
       keepUncompressedBuf = true;
     }
+
+    if (endOp == EndDirective.END && done) {
+      finished = true;
+    }
+
+    compressedDirectBuf.position(0);
+    compressedDirectBuf.limit(n);
 
     // Get at most 'len' bytes
     n = Math.min(n, len);
@@ -267,7 +267,8 @@ public class ZStandardCompressor implements Compressor {
   @Override
   public void reset() {
     checkStream();
-    init(level, stream);
+    zstdJniCtx.reset();
+    zstdJniCtx.setLevel(level);
     finish = false;
     finished = false;
     bytesRead = 0;
@@ -284,24 +285,20 @@ public class ZStandardCompressor implements Compressor {
 
   @Override
   public void end() {
-    if (stream != 0) {
-      end(stream);
-      stream = 0;
+    if (zstdJniCtx != null) {
+      zstdJniCtx.close();
+      zstdJniCtx = null;
     }
+  }
+
+  @Override
+  protected void finalize() {
+    end();
   }
 
   private void checkStream() {
-    if (stream == 0) {
-      throw new NullPointerException();
+    if (zstdJniCtx == null) {
+      throw new NullPointerException("ZstdCompressCtx is not initialized");
     }
   }
-
-  private native static long create();
-  private native static void init(int level, long stream);
-  private native int deflateBytesDirect(ByteBuffer src, int srcOffset,
-      int srcLen, ByteBuffer dst, int dstLen);
-  private native static int getStreamSize();
-  private native static void end(long strm);
-  private native static void initIDs();
-  public native static String getLibraryName();
 }
