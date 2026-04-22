@@ -187,7 +187,7 @@ jobs:
       options: --user ${{ needs.build-image.outputs.uid }}
     strategy:
       fail-fast: false
-      max-parallel: 6
+      max-parallel: 8
       matrix:
         include:
           - comment: hdfs - slow
