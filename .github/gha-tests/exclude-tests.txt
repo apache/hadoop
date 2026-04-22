@@ -28,6 +28,7 @@
 **/org/apache/hadoop/hdfs/TestDFSUtil.java
 **/org/apache/hadoop/hdfs/TestFileCreation.java
 **/org/apache/hadoop/hdfs/TestPread.java
+**/org/apache/hadoop/hdfs/TestReconstructStripedFileWithRandomECPolicy.java
 **/org/apache/hadoop/hdfs/server/balancer/TestBalancer.java
 **/org/apache/hadoop/hdfs/server/balancer/TestBalancerRPCDelay.java
 **/org/apache/hadoop/hdfs/server/balancer/TestBalancerWithHANameNodes.java
