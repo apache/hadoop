@@ -24,7 +24,7 @@ on:
     - cron: "*/15 * * * *"
 
 # Security: privileged (can write) workflow is only triggered via schedule,
-#  so issues associated with forks do not apply.
+# so issues associated with forks do not apply.
 jobs:
   update:
     name: "Update Build Status"
