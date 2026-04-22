@@ -100,10 +100,9 @@ jobs:
     # - For `push` triggers on a fork, the GITHUB_TOKEN retains write
     #   permissions, but the `push` is happening in the context of the fork, not
     #   the upstream repo.
-    # - For `pull_request_target` (risky), the write permission is
-    #   overridden by our repository's setting "Send write tokens to workflows
-    #   from pull requests" which should be disabled.
-    #   See https://issues.apache.org/jira/browse/INFRA-27839 for confirmation.
+    # - For `pull_request_target` (not used here), image repo permissions are
+    #   scoped to the repository they run on. This prevents forks from writing
+    #   to our Apache Hadoop image repo.
     permissions:
       packages: write
     outputs:
