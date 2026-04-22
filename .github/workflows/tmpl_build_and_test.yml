@@ -100,9 +100,13 @@ jobs:
     # - For `push` triggers on a fork, the GITHUB_TOKEN retains write
     #   permissions, but the `push` is happening in the context of the fork, not
     #   the upstream repo.
-    # - For `pull_request_target` (not used here), image repo permissions are
-    #   scoped to the repository they run on. This prevents forks from writing
-    #   to our Apache Hadoop image repo.
+    # - `pull_request_target` events (not used here) use the base repo's
+    #   default branch. This prevents an attacker from adding code in a pull
+    #   request which prints / leaks secrets, etc.. Also the GITHUB_TOKEN we
+    #   use to grant access to writing to the image repo. is scoped to the
+    #   repository it runs on. Even if a fork were to gain access to a
+    #   GITHUB_TOKEN with write privileges, it doesn't grant access for other
+    #   repositories to write.
     permissions:
       packages: write
     outputs:
