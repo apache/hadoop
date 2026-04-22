@@ -34,6 +34,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
@@ -58,6 +59,7 @@ import java.util.concurrent.TimeUnit;
  * These tests check that after a single RPC call a client will have caught up
  * to the most recent alignment state of the server.
  */
+@Tag("slow")
 public class TestStateAlignmentContextWithHA {
   public static final Logger LOG =
       LoggerFactory.getLogger(TestStateAlignmentContextWithHA.class.getName());

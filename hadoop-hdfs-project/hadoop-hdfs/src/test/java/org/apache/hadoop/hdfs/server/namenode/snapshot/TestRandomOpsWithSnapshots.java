@@ -33,6 +33,7 @@ import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
@@ -56,6 +57,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * Testing random FileSystem operations with random Snapshot operations.
  */
+@Tag("slow")
 public class TestRandomOpsWithSnapshots {
 
   private static final Logger LOG =

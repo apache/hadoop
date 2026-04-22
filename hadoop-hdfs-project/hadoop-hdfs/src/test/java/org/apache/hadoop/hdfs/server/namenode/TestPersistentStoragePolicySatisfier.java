@@ -35,6 +35,7 @@ import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
 import org.apache.hadoop.hdfs.server.namenode.sps.StoragePolicySatisfier;
 import org.apache.hadoop.hdfs.server.sps.ExternalSPSContext;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -50,6 +51,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * Test persistence of satisfying files/directories.
  */
+@Tag("slow")
 public class TestPersistentStoragePolicySatisfier {
   private static Configuration conf;
 

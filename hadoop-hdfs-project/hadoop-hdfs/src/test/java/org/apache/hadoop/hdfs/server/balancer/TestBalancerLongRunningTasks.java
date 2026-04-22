@@ -51,6 +51,7 @@ import org.apache.hadoop.metrics2.MetricsSystem;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
@@ -84,6 +85,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * Some long running Balancer tasks.
  */
+@Tag("slow")
 public class TestBalancerLongRunningTasks {
 
   private static final Logger LOG =

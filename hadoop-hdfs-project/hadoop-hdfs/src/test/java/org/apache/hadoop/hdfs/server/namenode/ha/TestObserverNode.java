@@ -79,6 +79,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
@@ -87,6 +88,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Test main functionality of ObserverNode.
  */
+@Tag("slow")
 public class TestObserverNode {
   public static final Logger LOG =
       LoggerFactory.getLogger(TestObserverNode.class.getName());

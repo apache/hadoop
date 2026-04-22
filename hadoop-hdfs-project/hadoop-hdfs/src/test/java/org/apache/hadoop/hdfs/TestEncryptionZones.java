@@ -106,6 +106,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.util.XMLUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -158,6 +159,7 @@ import org.xml.sax.helpers.DefaultHandler;
 import javax.xml.parsers.SAXParser;
 
 @Timeout(120)
+@Tag("slow")
 public class TestEncryptionZones {
   static final Logger LOG = LoggerFactory.getLogger(TestEncryptionZones.class);
 

@@ -62,6 +62,7 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.Whitebox;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
@@ -79,6 +80,7 @@ import org.slf4j.event.Level;
  * Test class for re-encryption.
  */
 @Timeout(180)
+@Tag("slow")
 public class TestReencryption {
 
   protected static final org.slf4j.Logger LOG =

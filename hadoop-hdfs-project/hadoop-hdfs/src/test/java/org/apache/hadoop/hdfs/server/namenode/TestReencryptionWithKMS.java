@@ -26,6 +26,7 @@ import org.apache.hadoop.crypto.key.kms.server.MiniKMS;
 import org.apache.hadoop.fs.Path;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -38,6 +39,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * Test class for re-encryption with minikms.
  */
+@Tag("slow")
 public class TestReencryptionWithKMS extends TestReencryption{
 
   private MiniKMS miniKMS;

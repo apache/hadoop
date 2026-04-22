@@ -52,6 +52,7 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.ToolRunner;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -61,6 +62,7 @@ import java.util.function.Supplier;
 /**
  * This class tests node maintenance.
  */
+@Tag("slow")
 public class TestMaintenanceState extends AdminStatesBaseTest {
   public static final Logger LOG =
       LoggerFactory.getLogger(TestMaintenanceState.class);

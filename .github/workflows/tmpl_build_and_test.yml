@@ -190,9 +190,14 @@ jobs:
       max-parallel: 6
       matrix:
         include:
-          - comment: hdfs
+          - comment: hdfs - slow
             modules:
               -pl :hadoop-hdfs
+              -Dgroups=slow
+          - comment: hdfs - other
+            modules:
+              -pl :hadoop-hdfs
+              -DexcludedGroups=slow
           - comment: yarn-server-rm
             modules:
               -pl :hadoop-yarn-server-resourcemanager
