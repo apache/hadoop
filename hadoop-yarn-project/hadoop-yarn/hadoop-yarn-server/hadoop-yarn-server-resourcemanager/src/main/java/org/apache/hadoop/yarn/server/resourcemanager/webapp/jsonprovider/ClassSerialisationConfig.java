@@ -154,7 +154,7 @@ public class ClassSerialisationConfig {
           ClusterMetricsInfo.class, ConfigVersionInfo.class, ContainerInfo.class,
           FairSchedulerQueueInfoList.class, FifoSchedulerInfo.class, NewReservation.class,
           NodeInfo.class, NodesInfo.class, QueueAclInfo.class, QueueAclsInfo.class,
-          RMQueueAclInfo.class, RemoteExceptionData.class, ReservationDeleteRequestInfo.class,
+          RemoteExceptionData.class, ReservationDeleteRequestInfo.class,
           ReservationDeleteResponseInfo.class, ReservationSubmissionRequestInfo.class,
           ReservationUpdateRequestInfo.class, ReservationUpdateResponseInfo.class,
           ResourceInfo.class, ResourceInformationsInfo.class, SchedulerInfo.class,
@@ -167,7 +167,7 @@ public class ClassSerialisationConfig {
           ContainerLaunchContextInfo.class, DelegationToken.class, LabelsToNodesInfo.class,
           LocalResourceInfo.class, NewApplication.class, NodeLabelsInfo.class,
           NodeToLabelsEntryList.class, NodeToLabelsInfo.class, ReservationListInfo.class,
-          ResourceOptionInfo.class, SchedConfUpdateInfo.class);
+          ResourceOptionInfo.class, RMQueueAclInfo.class, SchedConfUpdateInfo.class);
 
   private final Set<Class<?>> wrappedClasses;
   private final Set<Class<?>> unWrappedClasses;
