@@ -214,7 +214,7 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
   /**
    * Place to add some custom assertions within {@link #testVectoredReadMultipleRanges()}.
    * @param in active input stream.
-   * @param fileRanges
+   * @param fileRanges ranges of files read.
    */
   protected void assertionsWithinTestVectoredReadMultipleRanges(final FSDataInputStream in,
       final List<FileRange> fileRanges) {

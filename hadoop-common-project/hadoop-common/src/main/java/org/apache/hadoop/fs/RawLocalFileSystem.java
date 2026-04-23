@@ -63,6 +63,7 @@ import org.apache.hadoop.fs.statistics.IOStatisticsAggregator;
 import org.apache.hadoop.fs.statistics.IOStatisticsContext;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import org.apache.hadoop.fs.statistics.BufferedIOStatisticsOutputStream;
+import org.apache.hadoop.fs.statistics.StreamStatisticNames;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 import org.apache.hadoop.io.ByteBufferPool;
 import org.apache.hadoop.io.IOUtils;
@@ -81,6 +82,7 @@ import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_E
 import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_SEEK_OPERATIONS;
 import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_SKIP_BYTES;
 import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_SKIP_OPERATIONS;
+import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_VECTORED_OPERATIONS;
 import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_WRITE_BYTES;
 import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_WRITE_EXCEPTIONS;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.iostatisticsStore;
@@ -158,7 +160,8 @@ public class RawLocalFileSystem extends FileSystem {
             STREAM_READ_EXCEPTIONS,
             STREAM_READ_SEEK_OPERATIONS,
             STREAM_READ_SKIP_OPERATIONS,
-            STREAM_READ_SKIP_BYTES)
+            STREAM_READ_SKIP_BYTES,
+            STREAM_READ_VECTORED_OPERATIONS)
         .build();
 
     /** Reference to the bytes read counter for slightly faster counting. */
@@ -336,6 +339,7 @@ public class RawLocalFileSystem extends FileSystem {
     public void readVectored(final List<? extends FileRange> ranges,
         final IntFunction<ByteBuffer> allocate,
         final Consumer<ByteBuffer> release) throws IOException {
+      ioStatistics.incrementCounter(STREAM_READ_VECTORED_OPERATIONS);
 
       // Validate, but do not pass in a file length as it may change.
       List<? extends FileRange> sortedRanges = sortRangeList(ranges);
