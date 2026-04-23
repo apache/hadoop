@@ -29,6 +29,7 @@
 **/org/apache/hadoop/hdfs/TestFileCreation.java
 **/org/apache/hadoop/hdfs/TestPread.java
 **/org/apache/hadoop/hdfs/TestDecommissionWithBackoffMonitor.java
+**/org/apache/hadoop/hdfs/TestMaintenanceState.java
 **/org/apache/hadoop/hdfs/TestReconstructStripedFile.java
 **/org/apache/hadoop/hdfs/TestReconstructStripedFileWithRandomECPolicy.java
 **/org/apache/hadoop/hdfs/TestReconstructStripedFileWithValidator.java
