@@ -126,12 +126,9 @@ public class DiagnosticJStackService {
           .flatMap(ProcessHandle::descendants)
           .filter(childProcess -> {
             String cmdLine = childProcess.info().commandLine().orElse("").trim();
-            // Command Line: /usr/lib/jvm/jdk1.17.0.11.0-openjdk/bin/java
-            // -Djava.net.preferIPv4Stack=true
             if (cmdLine.isEmpty()){
               return false;
             }
-
             String executable = cmdLine.split("\\s+")[0];
             // The first token is always the executable binary
             return executable.equals("java") || executable.endsWith("/java");
