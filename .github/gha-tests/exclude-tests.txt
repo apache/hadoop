@@ -73,6 +73,7 @@
 **/org/apache/hadoop/yarn/server/resourcemanager/TestRMRestart.java
 **/org/apache/hadoop/yarn/server/resourcemanager/monitor/invariants/TestMetricsInvariantChecker.java
 **/org/apache/hadoop/yarn/server/resourcemanager/recovery/TestLeveldbRMStateStore.java
+**/org/apache/hadoop/yarn/server/resourcemanager/reservation/TestCapacityOverTimePolicy.java
 **/org/apache/hadoop/yarn/server/resourcemanager/scheduler/TestSchedulingWithAllocationRequestId.java
 **/org/apache/hadoop/yarn/server/resourcemanager/scheduler/fair/TestContinuousScheduling.java
 **/org/apache/hadoop/yarn/server/resourcemanager/security/TestDelegationTokenRenewer.java
