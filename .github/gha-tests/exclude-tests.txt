@@ -19,8 +19,10 @@
 
 # hadoop-common
 **/org/apache/hadoop/ha/TestZKFailoverController.java
+**/org/apache/hadoop/ha/TestZKFailoverControllerStress.java
 **/org/apache/hadoop/ipc/TestRPC.java
 **/org/apache/hadoop/security/ssl/TestDelegatingSSLSocketFactory.java
+**/org/apache/hadoop/security/token/delegation/TestZKDelegationTokenSecretManager.java
 
 # hadoop-hdfs
 **/org/apache/hadoop/fs/viewfs/TestViewFileSystemHdfs.java
