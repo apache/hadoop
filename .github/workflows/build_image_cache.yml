@@ -17,6 +17,8 @@
 
 name: Image Cache
 
+# Security: write privileges are safe since this is triggered only by
+# `push` and `workflow_dispatch` (implying user has write access).
 on:
   # Run jobs when a commit is merged
   push:

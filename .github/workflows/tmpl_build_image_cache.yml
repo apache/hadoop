@@ -26,6 +26,7 @@ on:
         description: Operating system to create build image cache for.
         default: ubuntu_24
 
+# Default to minimal permissions for workflow.
 permissions:
   packages: read
 
