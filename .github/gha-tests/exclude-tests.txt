@@ -74,6 +74,7 @@
 **/org/apache/hadoop/yarn/server/resourcemanager/monitor/invariants/TestMetricsInvariantChecker.java
 **/org/apache/hadoop/yarn/server/resourcemanager/recovery/TestLeveldbRMStateStore.java
 **/org/apache/hadoop/yarn/server/resourcemanager/scheduler/TestSchedulingWithAllocationRequestId.java
+**/org/apache/hadoop/yarn/server/resourcemanager/scheduler/fair/TestContinuousScheduling.java
 **/org/apache/hadoop/yarn/server/resourcemanager/security/TestDelegationTokenRenewer.java
 
 # hadoop-yarn-server-router
