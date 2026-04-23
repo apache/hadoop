@@ -28,7 +28,6 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <description>Apache Hadoop HDFS Project</description>
   <name>Apache Hadoop HDFS Project</name>
   <packaging>pom</packaging>
-  <!-- ignore this line -->
 
   <modules>
     <module>hadoop-hdfs</module>
