@@ -40,6 +40,7 @@
 **/org/apache/hadoop/hdfs/server/blockmanagement/TestBlockReportLease.java
 **/org/apache/hadoop/hdfs/server/blockmanagement/TestBlockTokenWithShortCircuitRead.java
 **/org/apache/hadoop/hdfs/server/datanode/TestDataNodeErasureCodingMetrics.java
+**/org/apache/hadoop/hdfs/server/datanode/TestDataNodeVolumeFailureReporting.java
 **/org/apache/hadoop/hdfs/server/datanode/fsdataset/impl/TestFsVolumeList.java
 **/org/apache/hadoop/hdfs/server/namenode/TestEditLogRace.java
 **/org/apache/hadoop/hdfs/server/datanode/TestDirectoryScanner.java
@@ -144,6 +145,7 @@
 **/org/apache/hadoop/mapreduce/TestLargeSort.java
 
 # hadoop-hdfs-rbf
+**/org/apache/hadoop/hdfs/server/federation/router/TestConnectionManager.java
 **/org/apache/hadoop/hdfs/server/federation/router/TestRouterFaultTolerant.java
 **/org/apache/hadoop/hdfs/server/federation/router/TestRouterNamenodeHeartbeat.java
 **/org/apache/hadoop/hdfs/server/federation/router/async/TestRouterAsyncRpcClient.java
