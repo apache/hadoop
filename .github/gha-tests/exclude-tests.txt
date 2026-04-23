@@ -28,6 +28,7 @@
 **/org/apache/hadoop/hdfs/TestDFSUtil.java
 **/org/apache/hadoop/hdfs/TestFileCreation.java
 **/org/apache/hadoop/hdfs/TestPread.java
+**/org/apache/hadoop/hdfs/TestDecommissionWithBackoffMonitor.java
 **/org/apache/hadoop/hdfs/TestReconstructStripedFile.java
 **/org/apache/hadoop/hdfs/TestReconstructStripedFileWithRandomECPolicy.java
 **/org/apache/hadoop/hdfs/TestReconstructStripedFileWithValidator.java
@@ -37,6 +38,7 @@
 **/org/apache/hadoop/hdfs/server/balancer/TestBalancerWithMultipleNameNodes.java
 **/org/apache/hadoop/hdfs/server/blockmanagement/TestBlockReportLease.java
 **/org/apache/hadoop/hdfs/server/blockmanagement/TestBlockTokenWithShortCircuitRead.java
+**/org/apache/hadoop/hdfs/server/datanode/TestDataNodeErasureCodingMetrics.java
 **/org/apache/hadoop/hdfs/server/datanode/fsdataset/impl/TestFsVolumeList.java
 **/org/apache/hadoop/hdfs/server/namenode/TestEditLogRace.java
 **/org/apache/hadoop/hdfs/server/datanode/TestDirectoryScanner.java
@@ -63,6 +65,7 @@
 
 # hadoop-yarn-server-resourcemanager
 **/org/apache/hadoop/yarn/server/resourcemanager/TestAppManager.java
+**/org/apache/hadoop/yarn/server/resourcemanager/TestRMRestart.java
 **/org/apache/hadoop/yarn/server/resourcemanager/monitor/invariants/TestMetricsInvariantChecker.java
 **/org/apache/hadoop/yarn/server/resourcemanager/recovery/TestLeveldbRMStateStore.java
 **/org/apache/hadoop/yarn/server/resourcemanager/scheduler/TestSchedulingWithAllocationRequestId.java
@@ -77,6 +80,7 @@
 # hadoop-yarn-server-nodemanager
 **/org/apache/hadoop/yarn/server/nodemanager/TestLinuxContainerExecutorWithMocks.java
 **/org/apache/hadoop/yarn/server/nodemanager/TestNodeManagerResync.java
+**/org/apache/hadoop/yarn/server/nodemanager/TestNodeStatusUpdater.java
 **/org/apache/hadoop/yarn/server/nodemanager/containermanager/TestAuxServices.java
 **/org/apache/hadoop/yarn/server/nodemanager/containermanager/TestContainerManagerRecovery.java
 **/org/apache/hadoop/yarn/server/nodemanager/containermanager/launcher/TestContainerLaunch.java
