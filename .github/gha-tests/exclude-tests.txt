@@ -85,13 +85,14 @@
 **/org/apache/hadoop/yarn/server/nodemanager/TestLinuxContainerExecutorWithMocks.java
 **/org/apache/hadoop/yarn/server/nodemanager/TestNodeManagerResync.java
 **/org/apache/hadoop/yarn/server/nodemanager/TestNodeStatusUpdater.java
+**/org/apache/hadoop/yarn/server/nodemanager/amrmproxy/TestFederationInterceptor.java
 **/org/apache/hadoop/yarn/server/nodemanager/containermanager/TestAuxServices.java
 **/org/apache/hadoop/yarn/server/nodemanager/containermanager/TestContainerManagerRecovery.java
 **/org/apache/hadoop/yarn/server/nodemanager/containermanager/launcher/TestContainerLaunch.java
 **/org/apache/hadoop/yarn/server/nodemanager/containermanager/localizer/TestContainerLocalizer.java
+**/org/apache/hadoop/yarn/server/nodemanager/containermanager/logaggregation/TestLogAggregationService.java
 **/org/apache/hadoop/yarn/server/nodemanager/containermanager/monitor/TestContainersMonitor.java
 **/org/apache/hadoop/yarn/server/nodemanager/containermanager/resourceplugin/fpga/TestFpgaDiscoverer.java
-**/org/apache/hadoop/yarn/server/nodemanager/amrmproxy/TestFederationInterceptor.java
 
 # hadoop-yarn-server-tests
 **/org/apache/hadoop/yarn/server/TestRMNMSecretKeys.java
