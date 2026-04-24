@@ -22,8 +22,8 @@ import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_SERV
 import static org.apache.hadoop.hdfs.server.federation.router.FederationUtil.updateMountPointStatus;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.CryptoProtocolVersion;
-import org.apache.hadoop.fs.BatchedRemoteIterator;
 import org.apache.hadoop.fs.BatchedRemoteIterator.BatchedEntries;
+import org.apache.hadoop.fs.BatchedRemoteIterator.BatchedListEntries;
 import org.apache.hadoop.fs.CacheFlag;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.CreateFlag;
@@ -1997,11 +1997,11 @@ public class RouterClientProtocol implements ClientProtocol {
    * </pre>
    * then sorts the filtered results by id, in ascending order.
    * @param results invocation results of listOpenFiles from downstream namespaces
-   * @return {@link BatchedRemoteIterator.BatchedListEntries} object of merged entries
+   * @return {@link BatchedListEntries} object of merged entries
    * @throws IOException when one file appears in different namespaces,
    *                     and the path cannot resolve to a mount point
    */
-  protected BatchedRemoteIterator.BatchedListEntries<OpenFileEntry> mergeAndSortOpenFileListResults(
+  protected BatchedListEntries<OpenFileEntry> mergeAndSortOpenFileListResults(
       Map<RemoteLocation, BatchedEntries> results) throws IOException {
     // Get the largest inodeIds for each namespace, and the smallest inodeId of them
     // then ignore all entries above this id to keep a consistent prevId for the next listOpenFiles
@@ -2056,7 +2056,7 @@ public class RouterClientProtocol implements ClientProtocol {
     }
     List<OpenFileEntry> entryList = new ArrayList<>(routerEntries.values());
     entryList.sort(Comparator.comparingLong(OpenFileEntry::getId));
-    return new BatchedRemoteIterator.BatchedListEntries<>(entryList, hasMore);
+    return new BatchedListEntries<>(entryList, hasMore);
   }
 
   @Override

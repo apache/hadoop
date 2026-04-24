@@ -20,8 +20,8 @@ package org.apache.hadoop.hdfs.server.federation.router.async;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.CryptoProtocolVersion;
-import org.apache.hadoop.fs.BatchedRemoteIterator;
 import org.apache.hadoop.fs.BatchedRemoteIterator.BatchedEntries;
+import org.apache.hadoop.fs.BatchedRemoteIterator.BatchedListEntries;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FsServerDefaults;
@@ -845,22 +845,19 @@ public class RouterAsyncClientProtocol extends RouterClientProtocol {
 
   @Override
   public BatchedEntries<OpenFileEntry> listOpenFiles(long prevId,
-      EnumSet<OpenFilesIterator.OpenFilesType> openFilesTypes, String path)
-      throws IOException {
+      EnumSet<OpenFilesIterator.OpenFilesType> openFilesTypes, String path) throws IOException {
     rpcServer.checkOperation(NameNode.OperationCategory.READ, true);
     List<RemoteLocation> locations = rpcServer.getLocationsForPath(path, false, false);
     RemoteMethod method =
         new RemoteMethod("listOpenFiles", new Class<?>[] {long.class, EnumSet.class, String.class},
             prevId, openFilesTypes, new RemoteParam());
-    // Returns Map<RemoteLocation, BatchedEntries>
-    rpcClient.invokeConcurrent(locations, method, true, false, -1,
-        BatchedEntries.class);
+    rpcClient.invokeConcurrent(locations, method, true, false, -1, BatchedEntries.class);
 
     asyncApply(o -> {
       Map<RemoteLocation, BatchedEntries> results = (Map<RemoteLocation, BatchedEntries>) o;
       return mergeAndSortOpenFileListResults(results);
     });
-    return asyncReturn(BatchedRemoteIterator.BatchedListEntries.class);
+    return asyncReturn(BatchedListEntries.class);
   }
 
   @Override
