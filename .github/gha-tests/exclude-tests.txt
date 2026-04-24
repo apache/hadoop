@@ -43,6 +43,7 @@
 **/org/apache/hadoop/hdfs/server/balancer/TestBalancerWithHANameNodes.java
 **/org/apache/hadoop/hdfs/server/balancer/TestBalancerWithMultipleNameNodes.java
 **/org/apache/hadoop/hdfs/server/blockmanagement/TestBlockReportLease.java
+**/org/apache/hadoop/hdfs/server/blockmanagement/TestBlockTokenWithDFSStriped.java
 **/org/apache/hadoop/hdfs/server/blockmanagement/TestBlockTokenWithShortCircuitRead.java
 **/org/apache/hadoop/hdfs/server/datanode/TestDataNodeErasureCodingMetrics.java
 **/org/apache/hadoop/hdfs/server/datanode/TestDataNodeVolumeFailureReporting.java
