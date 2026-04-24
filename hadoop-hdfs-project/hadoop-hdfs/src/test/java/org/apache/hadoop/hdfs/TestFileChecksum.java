@@ -717,6 +717,48 @@ public class TestFileChecksum {
     }
   }
 
+  @MethodSource("getParameters")
+  @ParameterizedTest
+  @Timeout(value = 90)
+  public void testStripedChecksumReconCleanupOnInitFailure(String pMode)
+      throws Exception {
+    initTestFileChecksum(pMode);
+    String stripedFile = ecDir + "/stripedFileChecksumInitFail";
+    prepareTestFiles(fileSize, new String[]{stripedFile});
+
+    LocatedBlocks locatedBlocks = client.getLocatedBlocks(stripedFile, 0);
+    LocatedBlock locatedBlock = locatedBlocks.get(0);
+    DatanodeInfo[] blockDns = locatedBlock.getLocations();
+
+    int numToKill = parityBlocks + 1;
+    int[] killedIdx = new int[numToKill];
+    int killed = 0;
+    for (int i = 0; i < blockDns.length && killed < numToKill; i++) {
+      int idx = 0;
+      for (DataNode dn : cluster.getDataNodes()) {
+        if (dn.getInfoPort() == blockDns[i].getInfoPort()) {
+          shutdownDataNode(dn);
+          killedIdx[killed++] = idx;
+          break;
+        }
+        idx++;
+      }
+    }
+
+    try {
+      Exception ex = assertThrows(Exception.class, () -> {
+        fs.getFileChecksum(new Path(stripedFile));
+      });
+      LOG.info("Got expected failure when too many DNs are down: {}",
+          ex.getMessage());
+    } finally {
+      for (int i = 0; i < killed; i++) {
+        cluster.restartDataNode(killedIdx[i]);
+      }
+      cluster.waitActive();
+    }
+  }
+
   private FileChecksum getFileChecksum(String filePath, int range,
                                        boolean killDn) throws Exception {
     int dnIdxToDie = -1;
