@@ -27,15 +27,17 @@
 # hadoop-hdfs
 **/org/apache/hadoop/fs/viewfs/TestViewFileSystemHdfs.java
 **/org/apache/hadoop/hdfs/TestBlockStoragePolicy.java
+**/org/apache/hadoop/hdfs/TestDecommissionWithBackoffMonitor.java
+**/org/apache/hadoop/hdfs/TestDecommissionWithStriped.java
 **/org/apache/hadoop/hdfs/TestDFSClientRetries.java
 **/org/apache/hadoop/hdfs/TestDFSUtil.java
 **/org/apache/hadoop/hdfs/TestFileCreation.java
-**/org/apache/hadoop/hdfs/TestPread.java
-**/org/apache/hadoop/hdfs/TestDecommissionWithBackoffMonitor.java
 **/org/apache/hadoop/hdfs/TestMaintenanceState.java
+**/org/apache/hadoop/hdfs/TestPread.java
 **/org/apache/hadoop/hdfs/TestReconstructStripedFile.java
 **/org/apache/hadoop/hdfs/TestReconstructStripedFileWithRandomECPolicy.java
 **/org/apache/hadoop/hdfs/TestReconstructStripedFileWithValidator.java
+**/org/apache/hadoop/hdfs/TestReplaceDatanodeFailureReplication.java
 **/org/apache/hadoop/hdfs/server/balancer/TestBalancer.java
 **/org/apache/hadoop/hdfs/server/balancer/TestBalancerRPCDelay.java
 **/org/apache/hadoop/hdfs/server/balancer/TestBalancerWithHANameNodes.java
