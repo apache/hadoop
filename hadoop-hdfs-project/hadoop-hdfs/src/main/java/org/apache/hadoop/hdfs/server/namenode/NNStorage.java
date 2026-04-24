@@ -57,6 +57,8 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.Time;
+
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import org.eclipse.jetty.util.ajax.JSON;
 
 import org.apache.hadoop.classification.VisibleForTesting;
@@ -161,7 +163,7 @@ public class NNStorage extends Storage implements Closeable,
   /**
    * Name directories size for metric.
    */
-  private Map<String, Long> nameDirSizeMap = new HashMap<>();
+  private Map<String, Long> nameDirSizeMap;
 
   /**
    * Construct the NNStorage.
@@ -181,7 +183,7 @@ public class NNStorage extends Storage implements Closeable,
                           Lists.newArrayList(editsDirs),
                           FSNamesystem.getSharedEditsDirs(conf));
     //Update NameDirSize metric value after NN start
-    updateNameDirSize();
+    nameDirSizeMap = calculateNameDirSize();
   }
 
   @Override // Storage
@@ -1145,20 +1147,40 @@ public class NNStorage extends Storage implements Closeable,
     return new NamespaceInfo(this);
   }
 
+  /**
+   * Gets a string dump of {@link #nameDirSizeMap}. Recalculates the map if stale.
+   */
   public String getNNDirectorySize() {
-    return JSON.toString(nameDirSizeMap);
+    Map<String, Long> snapshot = nameDirSizeMap;
+    if (snapshot == null) {
+      snapshot = calculateNameDirSize();
+      nameDirSizeMap = snapshot;
+    }
+    return JSON.toString(snapshot);
   }
 
-  public void updateNameDirSize() {
+  /**
+   * Invalidates the metrics map result, making
+   * metric queries recalculate the map in {@link #getNNDirectorySize}.
+   */
+  public void invalidateNameDirSizeCache() {
+    nameDirSizeMap = null;
+  }
+
+  /**
+   * Scans all storage dirs and calculates their sizes.
+   * @return an immutable map of storage dir sizes
+   */
+  @VisibleForTesting
+  public ImmutableMap<String, Long> calculateNameDirSize() {
     Map<String, Long> nnDirSizeMap = new HashMap<>();
     for (Iterator<StorageDirectory> it = dirIterator(); it.hasNext();) {
       StorageDirectory sd = it.next();
       if (!sd.isShared()) {
-        nnDirSizeMap.put(sd.getRoot().getAbsolutePath(), sd.getDirecorySize());
+        nnDirSizeMap.put(sd.getRoot().getAbsolutePath(), sd.getDirectorySize());
       }
     }
-    nameDirSizeMap.clear();
-    nameDirSizeMap.putAll(nnDirSizeMap);
+    return ImmutableMap.copyOf(nnDirSizeMap);
   }
 
   /**
