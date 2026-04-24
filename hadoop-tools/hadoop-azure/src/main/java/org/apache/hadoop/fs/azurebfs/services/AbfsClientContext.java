@@ -29,18 +29,20 @@ public class AbfsClientContext {
   private final TailLatencyRequestTimeoutRetryPolicy tailLatencyRequestTimeoutRetryPolicy;
   private final AbfsPerfTracker abfsPerfTracker;
   private final AbfsCounters abfsCounters;
+  private final String fileSystemId;
 
   AbfsClientContext(
       ExponentialRetryPolicy exponentialRetryPolicy,
       StaticRetryPolicy staticRetryPolicy,
       TailLatencyRequestTimeoutRetryPolicy tailLatencyRequestTimeoutRetryPolicy,
       AbfsPerfTracker abfsPerfTracker,
-      AbfsCounters abfsCounters) {
+      AbfsCounters abfsCounters, String fileSystemId) {
     this.exponentialRetryPolicy = exponentialRetryPolicy;
     this.staticRetryPolicy = staticRetryPolicy;
     this.tailLatencyRequestTimeoutRetryPolicy = tailLatencyRequestTimeoutRetryPolicy;
     this.abfsPerfTracker = abfsPerfTracker;
     this.abfsCounters = abfsCounters;
+    this.fileSystemId = fileSystemId;
   }
 
   public ExponentialRetryPolicy getExponentialRetryPolicy() {
@@ -65,5 +67,9 @@ public class AbfsClientContext {
 
   AbfsCounters getAbfsCounters() {
     return abfsCounters;
+  }
+
+  public String getFileSystemId() {
+    return fileSystemId;
   }
 }

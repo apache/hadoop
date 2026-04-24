@@ -1,0 +1,48 @@
+{
+  "nodeToLabels": {
+    "entry": [
+      {
+        "key": "ccycloud-1.nightly7x-us-sq.root.comops.site:8041",
+        "value": {
+          "nodeLabelInfo": {
+            "name": "gpu",
+            "exclusivity": "true"
+          }
+        }
+      },
+      {
+        "key": "ccycloud-2.nightly7x-us-sq.root.comops.site:8041",
+        "value": {
+          "nodeLabelInfo": {
+            "name": "gpu",
+            "exclusivity": "true"
+          }
+        }
+      },
+      {
+        "key": "ccycloud-3.nightly7x-us-sq.root.comops.site:8041",
+        "value": {
+          "nodeLabelInfo": {
+            "name": "fpga",
+            "exclusivity": "true"
+          }
+        }
+      },
+      {
+        "key": "ccycloud-4.nightly7x-us-sq.root.comops.site:8041",
+        "value": {
+          "nodeLabelInfo": []
+        }
+      },
+      {
+        "key": "ccycloud-5.nightly7x-us-sq.root.comops.site:8041",
+        "value": {
+          "nodeLabelInfo": {
+            "name": "fpga",
+            "exclusivity": "true"
+          }
+        }
+      }
+    ]
+  }
+}

@@ -103,6 +103,7 @@ import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -252,7 +253,7 @@ public class TestIPC {
     }
   }
 
-  private static class SerialCaller extends Thread {
+  private static class SerialCaller extends SubjectInheritingThread {
     private Client client;
     private InetSocketAddress server;
     private int count;
@@ -265,7 +266,7 @@ public class TestIPC {
     }
 
     @Override
-    public void run() {
+    public void work() {
       for (int i = 0; i < count; i++) {
         try {
           final long param = RANDOM.nextLong();
@@ -996,7 +997,7 @@ public class TestIPC {
     // instantiate the threads, will start in batches
     Thread[] threads = new Thread[clients];
     for (int i=0; i<clients; i++) {
-      threads[i] = new Thread(new Runnable() {
+      threads[i] = new SubjectInheritingThread(new Runnable() {
         @Override
         public void run() {
           Client client = new Client(LongWritable.class, conf);
@@ -1129,7 +1130,7 @@ public class TestIPC {
       final Configuration clientConf = new Configuration();
       clientConf.setInt(CommonConfigurationKeysPublic.IPC_CLIENT_CONNECTION_MAXIDLETIME_KEY, 10000);
       for (int i=0; i < clients; i++) {
-        threads[i] = new Thread(new Runnable(){
+        threads[i] = new SubjectInheritingThread(new Runnable(){
           @Override
           public void run() {
             Client client = new Client(LongWritable.class, clientConf);
@@ -1607,7 +1608,7 @@ public class TestIPC {
   public void testMaxConnections() throws Exception {
     conf.setInt("ipc.server.max.connections", 6);
     Server server = null;
-    Thread connectors[] = new Thread[10];
+    SubjectInheritingThread connectors[] = new SubjectInheritingThread[10];
 
     try {
       server = new TestServer(3, false);
@@ -1616,9 +1617,9 @@ public class TestIPC {
       assertEquals(0, server.getNumOpenConnections());
 
       for (int i = 0; i < 10; i++) {
-        connectors[i] = new Thread() {
+        connectors[i] = new SubjectInheritingThread() {
           @Override
-          public void run() {
+          public void work() {
             Socket sock = null;
             try {
               sock = NetUtils.getDefaultSocketFactory(conf).createSocket();
@@ -1687,7 +1688,7 @@ public class TestIPC {
     final AtomicBoolean callStarted = new AtomicBoolean(false);
 
     // Call a random function asynchronously so that we can call stop()
-    new Thread(new Runnable() {
+    new SubjectInheritingThread(new Runnable() {
       public void run() {
         try {
           callStarted.set(true);

@@ -18,9 +18,11 @@
 
 package org.apache.hadoop.fs.azurebfs.constants;
 
+import org.apache.hadoop.fs.azurebfs.utils.MetricFormat;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Options.OpenFileOptions;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.DOT;
 
@@ -69,9 +71,59 @@ public final class ConfigurationKeys {
    */
   public static final String FS_AZURE_ACCOUNT_IS_EXPECT_HEADER_ENABLED = "fs.azure.account.expect.header.enabled";
   public static final String FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME = "fs.azure.account.key";
-  public static final String FS_AZURE_METRIC_ACCOUNT_NAME = "fs.azure.metric.account.name";
-  public static final String FS_AZURE_METRIC_ACCOUNT_KEY = "fs.azure.metric.account.key";
-  public static final String FS_AZURE_METRIC_URI = "fs.azure.metric.uri";
+
+  /**
+   * Config to set separate metrics account in case user don't want to use
+   * existing storage account for metrics collection.
+   * Value: {@value}.
+   */
+  public static final String FS_AZURE_METRICS_ACCOUNT_NAME = "fs.azure.metrics.account.name";
+  /**
+   * Config to set metrics account key for @FS_AZURE_METRICS_ACCOUNT_NAME.
+   * Value: {@value}.
+   */
+  public static final String FS_AZURE_METRICS_ACCOUNT_KEY = "fs.azure.metrics.account.key";
+  /**
+   * Config to set metrics format. Possible values are {@link MetricFormat}
+   * Value: {@value}.
+   */
+  public static final String FS_AZURE_METRICS_FORMAT = "fs.azure.metrics.format";
+  /**
+   * Config to enable or disable metrics collection.
+   * Value: {@value}.
+   */
+  public static final String FS_AZURE_METRICS_COLLECTION_ENABLED = "fs.azure.metrics.collection.enabled";
+  /**
+   * Config to enable or disable emitting metrics when idle time exceeds threshold.
+   * Value: {@value}.
+   */
+  public static final String FS_AZURE_METRICS_SHOULD_EMIT_ON_IDLE_TIME = "fs.azure.metrics.should.emit.on.idle.time";
+  /**
+   * Config to set threshold for emitting metrics when number of operations exceeds threshold.
+   * Value: {@value}.
+   */
+  public static final String FS_AZURE_METRICS_EMIT_THRESHOLD = "fs.azure.metrics.emit.threshold";
+  /**
+   * Config to set interval in seconds to check for threshold breach for emitting metrics.
+   * If the number of operations exceed threshold within this interval, metrics will be emitted.
+   * Value: {@value}.
+   */
+  public static final String FS_AZURE_METRICS_EMIT_THRESHOLD_INTERVAL_SECS = "fs.azure.metrics.emit.threshold.interval.secs";
+  /**
+   * Config to set interval in minutes for emitting metrics in regular time intervals.
+   * Value: {@value}.
+   */
+  public static final String FS_AZURE_METRICS_EMIT_INTERVAL_MINS = "fs.azure.metrics.emit.interval.mins";
+  /**
+   * Config to set maximum metrics calls per second.
+   * Value: {@value}.
+   */
+  public static final String FS_AZURE_METRICS_MAX_CALLS_PER_SECOND =  "fs.azure.metrics.max.calls.per.second";
+  /**
+   * Config to enable or disable backoff retry metrics collection.
+   * Value: {@value}.
+   */
+  public static final String FS_AZURE_METRICS_BACKOFF_RETRY_ENABLED = "fs.azure.metrics.backoff.retry.enabled";
 
   public static final String FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME_REGX = "fs\\.azure\\.account\\.key\\.(.*)";
   public static final String FS_AZURE_SECURE_MODE = "fs.azure.secure.mode";
@@ -215,6 +267,12 @@ public final class ConfigurationKeys {
   public static final String FS_AZURE_READ_AHEAD_QUEUE_DEPTH = "fs.azure.readaheadqueue.depth";
   public static final String FS_AZURE_ALWAYS_READ_BUFFER_SIZE = "fs.azure.read.alwaysReadBufferSize";
   public static final String FS_AZURE_READ_AHEAD_BLOCK_SIZE = "fs.azure.read.readahead.blocksize";
+  /**
+   * Provides hint for the read workload pattern.
+   * Possible Values Exposed in {@link OpenFileOptions#FS_OPTION_OPENFILE_READ_POLICIES}
+   */
+  public static final String FS_AZURE_READ_POLICY = "fs.azure.read.policy";
+
   /** Provides a config control to enable or disable ABFS Flush operations -
    *  HFlush and HSync. Default is true. **/
   public static final String FS_AZURE_ENABLE_FLUSH = "fs.azure.enable.flush";
@@ -231,7 +289,6 @@ public final class ConfigurationKeys {
    * character constraints are not satisfied. **/
   public static final String FS_AZURE_CLIENT_CORRELATIONID = "fs.azure.client.correlationid";
   public static final String FS_AZURE_TRACINGHEADER_FORMAT = "fs.azure.tracingheader.format";
-  public static final String FS_AZURE_METRIC_FORMAT = "fs.azure.metric.format";
   public static final String FS_AZURE_CLUSTER_NAME = "fs.azure.cluster.name";
   public static final String FS_AZURE_CLUSTER_TYPE = "fs.azure.cluster.type";
   public static final String FS_AZURE_SSL_CHANNEL_MODE_KEY = "fs.azure.ssl.channel.mode";
@@ -510,33 +567,6 @@ public final class ConfigurationKeys {
   /**Maximum number of thread per blob-delete orchestration: {@value}*/
   public static final String FS_AZURE_BLOB_DIR_DELETE_MAX_THREAD = "fs.azure.blob.dir.delete.max.thread";
 
-  /** Configuration key for the keep-alive time (ms) for the write thread pool. Value: {@value}. */
-  public static final String FS_AZURE_WRITE_THREADPOOL_KEEP_ALIVE_TIME_MILLIS = "fs.azure.write.threadpool.keep.alive.time.millis";
-
-  /** Configuration key for the CPU monitoring interval (ms) during write operations. Value: {@value}. */
-  public static final String FS_AZURE_WRITE_CPU_MONITORING_INTERVAL_MILLIS = "fs.azure.write.cpu.monitoring.interval.millis";
-
-  /** Configuration key to enable or disable dynamic write thread pool adjustment. Value: {@value}. */
-  public static final String FS_AZURE_WRITE_DYNAMIC_THREADPOOL_ENABLEMENT = "fs.azure.write.dynamic.threadpool.enablement";
-
-  /** Configuration key for the high CPU utilization threshold (%) for write scaling. Value: {@value}. */
-  public static final String FS_AZURE_WRITE_HIGH_CPU_THRESHOLD_PERCENT = "fs.azure.write.high.cpu.threshold.percent";
-
-  /** Configuration key for the medium CPU utilization threshold (%) for write scaling. Value: {@value}. */
-  public static final String FS_AZURE_WRITE_MEDIUM_CPU_THRESHOLD_PERCENT = "fs.azure.write.medium.cpu.threshold.percent";
-
-  /** Configuration key for the low CPU utilization threshold (%) for write scaling. Value: {@value}. */
-  public static final String FS_AZURE_WRITE_LOW_CPU_THRESHOLD_PERCENT = "fs.azure.write.low.cpu.threshold.percent";
-
-  /** Configuration key for the low-tier memory multiplier for write workloads. Value: {@value}. */
-  public static final String FS_AZURE_WRITE_LOW_TIER_MEMORY_MULTIPLIER = "fs.azure.write.low.tier.memory.multiplier";
-
-  /** Configuration key for the medium-tier memory multiplier for write workloads. Value: {@value}. */
-  public static final String FS_AZURE_WRITE_MEDIUM_TIER_MEMORY_MULTIPLIER = "fs.azure.write.medium.tier.memory.multiplier";
-
-  /** Configuration key for the high-tier memory multiplier for write workloads. Value: {@value}. */
-  public static final String FS_AZURE_WRITE_HIGH_TIER_MEMORY_MULTIPLIER = "fs.azure.write.high.tier.memory.multiplier";
-
   /**Flag to enable/disable sending client transactional ID during create/rename operations: {@value}*/
   public static final String FS_AZURE_ENABLE_CLIENT_TRANSACTION_ID = "fs.azure.enable.client.transaction.id";
   /**Flag to enable/disable create idempotency during create operation: {@value}*/
@@ -596,6 +626,12 @@ public final class ConfigurationKeys {
    * Maximum number of retries for an operation when tail latency based timeout occur: {@value}
    */
   public static final String FS_AZURE_TAIL_LATENCY_MAX_RETRY_COUNT = "fs.azure.tail.latency.max.retry.count";
+
+  /**
+   * If true, restricts GPS (getPathStatus) calls on openFileforRead
+   * Default: false
+   */
+  public static final String FS_AZURE_RESTRICT_GPS_ON_OPENFILE = "fs.azure.restrict.gps.on.openfile";
 
   private ConfigurationKeys() {}
 }

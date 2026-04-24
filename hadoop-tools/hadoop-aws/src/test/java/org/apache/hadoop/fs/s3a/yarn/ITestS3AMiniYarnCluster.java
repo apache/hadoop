@@ -46,6 +46,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.assumeMultipartUploads;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.FS_S3A_COMMITTER_NAME;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.FS_S3A_COMMITTER_STAGING_UNIQUE_FILENAMES;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants._SUCCESS;
@@ -74,6 +75,7 @@ public class ITestS3AMiniYarnCluster extends AbstractS3ATestBase {
     super.setup();
     S3AFileSystem fs = getFileSystem();
     Configuration conf = getConfiguration();
+    assumeMultipartUploads(fs.getConf());
     rootPath = path("MiniClusterWordCount");
     Path workingDir = path("working");
     fs.setWorkingDirectory(workingDir);

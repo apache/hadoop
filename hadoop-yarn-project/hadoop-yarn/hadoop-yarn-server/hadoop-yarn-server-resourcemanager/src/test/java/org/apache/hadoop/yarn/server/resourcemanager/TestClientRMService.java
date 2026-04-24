@@ -71,6 +71,7 @@ import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Sets;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.MockApps;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.ApplicationsRequestScope;
@@ -1532,9 +1533,9 @@ public class TestClientRMService {
     rmService.init(new Configuration());
 
     // submit an app and wait for it to block while in app submission
-    Thread t = new Thread() {
+    SubjectInheritingThread t = new SubjectInheritingThread() {
       @Override
-      public void run() {
+      public void work() {
         try {
           rmService.submitApplication(submitRequest1);
         } catch (YarnException | IOException e) {}

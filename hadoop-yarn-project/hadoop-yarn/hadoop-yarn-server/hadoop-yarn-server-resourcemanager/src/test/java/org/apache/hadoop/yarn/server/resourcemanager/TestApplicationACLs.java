@@ -55,6 +55,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.service.Service.STATE;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
@@ -150,8 +151,8 @@ public class TestApplicationACLs extends ParameterizedSchedulerTestBase {
             this.queueACLsManager, null);
       };
     };
-    new Thread() {
-      public void run() {
+    new SubjectInheritingThread() {
+      public void work() {
         UserGroupInformation.createUserForTesting(ENEMY, new String[] {});
         UserGroupInformation.createUserForTesting(FRIEND,
             new String[] { FRIENDLY_GROUP });

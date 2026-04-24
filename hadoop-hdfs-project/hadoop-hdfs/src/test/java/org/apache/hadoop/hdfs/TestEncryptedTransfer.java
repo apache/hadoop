@@ -46,7 +46,10 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
+import org.apache.hadoop.hdfs.protocol.datatransfer.InvalidEncryptionKeyException;
 import org.apache.hadoop.hdfs.protocol.datatransfer.TrustedChannelResolver;
 import org.apache.hadoop.hdfs.protocol.datatransfer.sasl.DataTransferSaslUtil;
 import org.apache.hadoop.hdfs.protocol.datatransfer.sasl.SaslDataTransferServer;
@@ -378,6 +381,76 @@ public class TestEncryptedTransfer {
     // Retry the operation after clearing the encryption key
     FileChecksum verifyChecksum = fs.getFileChecksum(TEST_PATH);
     assertEquals(checksum, verifyChecksum);
+  }
+
+  @MethodSource("data")
+  @ParameterizedTest
+  public void testStripedFileChecksumWithInvalidEncryptionKey(
+      String pResolverClazz)
+      throws IOException, InterruptedException, TimeoutException {
+    initTestEncryptedTransfer(pResolverClazz);
+    if (resolverClazz != null) {
+      // TestTrustedChannelResolver does not use encryption keys.
+      return;
+    }
+    setEncryptionConfigKeys();
+    // XOR-2-1 requires 3 DNs (2 data + 1 parity).
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
+    cluster.waitActive();
+
+    DistributedFileSystem dfs =
+        (DistributedFileSystem) getFileSystem(conf);
+    try {
+      // Enable XOR-2-1 EC policy and create an EC directory.
+      ErasureCodingPolicy ecPolicy = SystemErasureCodingPolicies.getByID(
+          SystemErasureCodingPolicies.XOR_2_1_POLICY_ID);
+      dfs.enableErasureCodingPolicy(ecPolicy.getName());
+      Path ecDir = new Path("/ec");
+      dfs.mkdirs(ecDir);
+      dfs.setErasureCodingPolicy(ecDir, ecPolicy.getName());
+
+      // Write a striped file.
+      Path ecFile = new Path(ecDir, "test-file");
+      int cellSize = ecPolicy.getCellSize();
+      // Write enough data to span at least one full stripe.
+      byte[] data = new byte[cellSize * ecPolicy.getNumDataUnits()];
+      Arrays.fill(data, (byte) 'a');
+      try (FSDataOutputStream out = dfs.create(ecFile)) {
+        out.write(data);
+      }
+
+      // Get baseline checksum with valid keys.
+      FileChecksum checksum = dfs.getFileChecksum(ecFile);
+
+      // Spy on DFSClient to simulate InvalidEncryptionKeyException
+      // on connectToDN until clearDataEncryptionKey is called.
+      DFSClient client = DFSClientAdapter.getDFSClient(dfs);
+      DFSClient spyClient = Mockito.spy(client);
+      DFSClientAdapter.setDFSClient(dfs, spyClient);
+
+      java.util.concurrent.atomic.AtomicBoolean keyCleared =
+          new java.util.concurrent.atomic.AtomicBoolean(false);
+      Mockito.doAnswer(invocation -> {
+        keyCleared.set(true);
+        return invocation.callRealMethod();
+      }).when(spyClient).clearDataEncryptionKey();
+      Mockito.doAnswer(invocation -> {
+        if (!keyCleared.get()) {
+          throw new InvalidEncryptionKeyException("test invalid key");
+        }
+        return invocation.callRealMethod();
+      }).when(spyClient).connectToDN(Mockito.any(DatanodeInfo.class),
+          Mockito.anyInt(), Mockito.any());
+
+      // This should succeed: InvalidEncryptionKeyException should be
+      // caught, the stale key cleared, and the checksum retried.
+      FileChecksum verifyChecksum = dfs.getFileChecksum(ecFile);
+      Mockito.verify(spyClient, Mockito.atLeastOnce())
+          .clearDataEncryptionKey();
+      assertEquals(checksum, verifyChecksum);
+    } finally {
+      dfs.close();
+    }
   }
 
   @MethodSource("data")

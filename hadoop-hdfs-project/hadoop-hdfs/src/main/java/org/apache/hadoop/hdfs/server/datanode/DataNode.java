@@ -262,6 +262,7 @@ import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.tracing.TraceUtils;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.tracing.Tracer;
 import org.eclipse.jetty.util.ajax.JSON;
 
@@ -1561,7 +1562,10 @@ public class DataNode extends ReconfigurableBase
     DFSUtil.addInternalPBProtocol(getConf(), InterDatanodeProtocolPB.class, service,
         ipcServer);
 
-    LOG.info("Opened IPC server at {}", ipcServer.getListenerAddress());
+    InetSocketAddress listenerAddress = ipcServer.getListenerAddress();
+    LOG.info("Opened IPC server at {}", listenerAddress);
+    dnConf.getConf().set(DFS_DATANODE_IPC_ADDRESS_KEY,
+        listenerAddress.getHostName() + ":" + listenerAddress.getPort());
 
     // set service-level authorization security policy
     if (getConf().getBoolean(
@@ -3855,8 +3859,8 @@ public class DataNode extends ReconfigurableBase
 
     // Asynchronously start the shutdown process so that the rpc response can be
     // sent back.
-    Thread shutdownThread = new Thread("Async datanode shutdown thread") {
-      @Override public void run() {
+    Thread shutdownThread = new SubjectInheritingThread("Async datanode shutdown thread") {
+      @Override public void work() {
         if (!shutdownForUpgrade) {
           // Delay the shutdown a bit if not doing for restart.
           try {

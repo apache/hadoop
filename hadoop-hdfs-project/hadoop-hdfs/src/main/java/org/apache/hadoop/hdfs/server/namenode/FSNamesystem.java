@@ -4107,6 +4107,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         boolean remove = iFile.removeLastBlock(blockToDel) != null;
         if (remove) {
           blockManager.removeBlock(storedBlock);
+          FSDirWriteFileOp.persistBlocks(dir, src, iFile, false);
         }
       } else {
         // update last block

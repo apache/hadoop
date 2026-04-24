@@ -36,6 +36,7 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.assertHasPathCapab
 import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_OPERATIONS_PURGE_UPLOADS;
 import static org.apache.hadoop.fs.s3a.MultipartTestUtils.clearAnyUploads;
 import static org.apache.hadoop.fs.s3a.MultipartTestUtils.createMagicFile;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.assumeMultipartUploads;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.Statistic.MULTIPART_UPLOAD_LIST;
 import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_MULTIPART_UPLOAD_ABORTED;
@@ -65,6 +66,7 @@ public class ITestUploadPurgeOnDirectoryOperations extends AbstractS3ACostTest {
   public void setup() throws Exception {
     super.setup();
     final S3AFileSystem fs = getFileSystem();
+    assumeMultipartUploads(fs.getConf());
     assertHasPathCapabilities(fs, new Path("/"),
         DIRECTORY_OPERATIONS_PURGE_UPLOADS);
     clearAnyUploads(fs, methodPath());

@@ -56,6 +56,8 @@ function personality_globals
   if [[ -z "${HADOOP_HOMEBREW_DIR}" ]]; then
     HADOOP_HOMEBREW_DIR=/usr/local
   fi
+  #shellcheck disable=SC2034
+  PROC_LIMIT=10000
 }
 
 function personality_parse_args
@@ -377,6 +379,7 @@ function personality_modules
     ;;
     mvninstall)
       extra="-DskipTests"
+      needflags=true
       if [[ "${repostatus}" = branch || "${BUILDMODE}" = full ]]; then
         ordering=.
       fi

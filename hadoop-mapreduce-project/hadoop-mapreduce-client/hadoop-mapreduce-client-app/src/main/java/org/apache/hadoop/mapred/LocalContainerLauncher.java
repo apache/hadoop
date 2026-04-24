@@ -64,6 +64,7 @@ import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 
@@ -151,7 +152,7 @@ public class LocalContainerLauncher extends AbstractService implements
         HadoopExecutors.newSingleThreadExecutor(new ThreadFactoryBuilder().
             setDaemon(true).setNameFormat("uber-SubtaskRunner").build());
     // create and start an event handling thread
-    eventHandler = new Thread(new EventHandler(), "uber-EventHandler");
+    eventHandler = new SubjectInheritingThread(new EventHandler(), "uber-EventHandler");
     // if the job classloader is specified, set it onto the event handler as the
     // thread context classloader so that it can be used by the event handler
     // as well as the subtask runner threads

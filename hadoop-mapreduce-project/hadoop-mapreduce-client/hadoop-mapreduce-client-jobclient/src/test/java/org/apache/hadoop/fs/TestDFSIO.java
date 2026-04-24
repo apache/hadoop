@@ -537,7 +537,9 @@ public class TestDFSIO implements Tool {
     JobConf job = new JobConf(config, TestDFSIO.class);
 
     FileInputFormat.setInputPaths(job, getControlDir(config));
-    job.setInputFormat(SequenceFileInputFormat.class);
+    if (null == job.getClass("mapred.input.format.class", null)) {
+      job.setInputFormat(SequenceFileInputFormat.class);
+    }
 
     job.setMapperClass(mapperClass);
     job.setReducerClass(AccumulatingReducer.class);

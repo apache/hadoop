@@ -36,7 +36,7 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
@@ -62,6 +62,7 @@ import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.DisallowedDatanodeException;
 import org.apache.hadoop.hdfs.server.protocol.HeartbeatResponse;
 import org.apache.hadoop.hdfs.server.protocol.InvalidBlockReportLeaseException;
+import org.apache.hadoop.hdfs.server.protocol.KeyUpdateCommand;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.SlowDiskReports;
 import org.apache.hadoop.hdfs.server.protocol.SlowPeerReports;
@@ -75,6 +76,7 @@ import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.VersionInfo;
 import org.apache.hadoop.util.VersionUtil;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.slf4j.Logger;
 
 import org.apache.hadoop.classification.VisibleForTesting;
@@ -599,7 +601,7 @@ class BPServiceActor implements Runnable {
       //Thread is started already
       return;
     }
-    bpThread = new Thread(this);
+    bpThread = new SubjectInheritingThread(this);
     bpThread.setDaemon(true); // needed for JUnit testing
 
     if (lifelineSender != null) {
@@ -740,7 +742,18 @@ class BPServiceActor implements Runnable {
             if (state == HAServiceState.ACTIVE) {
               handleRollingUpgradeStatus(resp);
             }
-            commandProcessingThread.enqueue(resp.getCommands());
+            DatanodeCommand[] cmds = resp.getCommands();
+            if (cmds != null && cmds.length != 0) {
+              int length = cmds.length;
+              for (int i = length - 1; i >= 0; i--) {
+                if (cmds[i] instanceof KeyUpdateCommand) {
+                  commandProcessingThread.enqueueFirst(cmds[i]);
+                  cmds[i] = null;
+                  break;
+                }
+              }
+              commandProcessingThread.enqueue(cmds);
+            }
             isSlownode = resp.getIsSlownode();
           }
         }
@@ -1078,7 +1091,7 @@ class BPServiceActor implements Runnable {
     }
 
     public void start() {
-      lifelineThread = new Thread(this,
+      lifelineThread = new SubjectInheritingThread(this,
           formatThreadName("lifeline", lifelineNnAddr));
       lifelineThread.setDaemon(true);
       lifelineThread.setUncaughtExceptionHandler(
@@ -1384,19 +1397,19 @@ class BPServiceActor implements Runnable {
   /**
    * CommandProcessingThread that process commands asynchronously.
    */
-  class CommandProcessingThread extends Thread {
+  class CommandProcessingThread extends SubjectInheritingThread {
     private final BPServiceActor actor;
     private final BlockingQueue<Runnable> queue;
 
     CommandProcessingThread(BPServiceActor actor) {
       super("Command processor");
       this.actor = actor;
-      this.queue = new LinkedBlockingQueue<>();
+      this.queue = new LinkedBlockingDeque<>();
       setDaemon(true);
     }
 
     @Override
-    public void run() {
+    public void work() {
       try {
         processQueue();
       } catch (Throwable t) {
@@ -1475,6 +1488,22 @@ class BPServiceActor implements Runnable {
         return;
       }
       queue.put(() -> processCommand(new DatanodeCommand[]{cmd}));
+      dn.getMetrics().incrActorCmdQueueLength(1);
+    }
+
+    /**
+     * Enqueue DatanodeCommand to the head of queue.
+     * @param cmd
+     * @throws InterruptedException
+     */
+    void enqueueFirst(DatanodeCommand cmd) throws InterruptedException {
+      if (cmd == null) {
+        return;
+      }
+      ((LinkedBlockingDeque<Runnable>) queue).putFirst(
+          () -> processCommand(new DatanodeCommand[]{cmd}));
+
+      LOG.info("Enqueue command: {} to the head of queue", cmd);
       dn.getMetrics().incrActorCmdQueueLength(1);
     }
 

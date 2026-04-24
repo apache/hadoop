@@ -26,6 +26,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -456,7 +457,7 @@ public class TestDeadNodeDetection {
     }
 
     private void startWaitForDeadNodeThread(DFSClient dfsClient, int size) {
-      new Thread(() -> {
+      new SubjectInheritingThread(() -> {
         DeadNodeDetector deadNodeDetector =
             dfsClient.getClientContext().getDeadNodeDetector();
         while (deadNodeDetector.clearAndGetDetectedDeadNodes().size() != size) {

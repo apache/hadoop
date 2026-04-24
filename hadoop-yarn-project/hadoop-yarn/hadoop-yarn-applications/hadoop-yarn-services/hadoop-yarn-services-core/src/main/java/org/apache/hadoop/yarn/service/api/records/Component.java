@@ -116,8 +116,6 @@ public class Component implements Serializable {
    * ON_FAILURE (Only restart component instance if instance exit code !&#x3D;
    * 0);
    * NEVER (Do not restart in any cases)
-   *
-   * @return restartPolicy
    **/
   @XmlType(name = "restart_policy")
   @XmlEnum

@@ -20,14 +20,22 @@ package org.apache.hadoop.fs.s3a;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
+import software.amazon.awssdk.auth.credentials.AwsCredentials;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.s3a.impl.InstantiationIOException;
+
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.spy;
 
 /**
  * Checks that classloader isolation for loading extension classes is applied
@@ -37,10 +45,33 @@ import org.apache.hadoop.fs.FileSystem;
  */
 public class ITestS3AFileSystemIsolatedClassloader extends AbstractS3ATestBase {
 
+  private static String customClassName = "custom.class.name";
+
+  private static class CustomCredentialsProvider implements AwsCredentialsProvider {
+
+    CustomCredentialsProvider() {
+    }
+
+    @Override
+    public AwsCredentials resolveCredentials() {
+      return null;
+    }
+
+  }
+
   private static class CustomClassLoader extends ClassLoader {
   }
 
-  private final ClassLoader customClassLoader = new CustomClassLoader();
+  private final ClassLoader customClassLoader = spy(new CustomClassLoader());
+  {
+    try {
+      doReturn(CustomCredentialsProvider.class)
+          .when(customClassLoader)
+          .loadClass(customClassName);
+    } catch (ClassNotFoundException ex) {
+      throw new RuntimeException(ex);
+    }
+  }
 
   private S3AFileSystem createNewTestFs(Configuration conf) throws IOException {
     S3AFileSystem fs = new S3AFileSystem();
@@ -87,8 +118,15 @@ public class ITestS3AFileSystemIsolatedClassloader extends AbstractS3ATestBase {
     return m;
   }
 
+  private Map<String, String> mapOf(String key1, String value1, String key2, String value2) {
+    HashMap<String, String> m = new HashMap<>();
+    m.put(key1, value1);
+    m.put(key2, value2);
+    return m;
+  }
+
   @Test
-  public void defaultIsolatedClassloader() throws IOException {
+  public void defaultIsolatedClassloader() throws Exception {
     assertInNewFilesystem(mapOf(), (fs) -> {
       Assertions.assertThat(fs.getConf().getClassLoader())
               .describedAs("The classloader used to load s3a fs extensions")
@@ -100,10 +138,21 @@ public class ITestS3AFileSystemIsolatedClassloader extends AbstractS3ATestBase {
               .isEqualTo(fs.getClass().getClassLoader())
               .describedAs("the classloader that loaded the fs");
     });
+
+    InstantiationIOException ex = intercept(
+            InstantiationIOException.class,
+            () -> assertInNewFilesystem(
+                    mapOf(Constants.AWS_CREDENTIALS_PROVIDER, customClassName),
+                    (fs) -> {}));
+
+    Assertions.assertThat(ex.getCause())
+            .describedAs("cause")
+            .isInstanceOf(ClassNotFoundException.class)
+            .hasMessageContaining(customClassName);
   }
 
   @Test
-  public void isolatedClassloader() throws IOException {
+  public void isolatedClassloader() throws Exception {
     assertInNewFilesystem(mapOf(Constants.AWS_S3_CLASSLOADER_ISOLATION, "true"), (fs) -> {
       Assertions.assertThat(fs.getConf().getClassLoader())
               .describedAs("The classloader used to load s3a fs extensions")
@@ -115,11 +164,26 @@ public class ITestS3AFileSystemIsolatedClassloader extends AbstractS3ATestBase {
               .isEqualTo(fs.getClass().getClassLoader())
               .describedAs("the classloader that loaded the fs");
     });
+
+    InstantiationIOException ex = intercept(
+            InstantiationIOException.class,
+            () -> assertInNewFilesystem(
+                    mapOf(Constants.AWS_S3_CLASSLOADER_ISOLATION, "true",
+                          Constants.AWS_CREDENTIALS_PROVIDER, customClassName),
+                    (fs) -> {}));
+
+    Assertions.assertThat(ex.getCause())
+            .describedAs("cause")
+            .isInstanceOf(ClassNotFoundException.class)
+            .hasMessageContaining(customClassName);
   }
 
   @Test
   public void notIsolatedClassloader() throws IOException {
-    assertInNewFilesystem(mapOf(Constants.AWS_S3_CLASSLOADER_ISOLATION, "false"), (fs) -> {
+    Map<String, String> confToSet =
+        mapOf(Constants.AWS_S3_CLASSLOADER_ISOLATION, "false",
+              Constants.AWS_CREDENTIALS_PROVIDER, customClassName);
+    assertInNewFilesystem(confToSet, (fs) -> {
       Assertions.assertThat(fs.getConf().getClassLoader())
               .describedAs("The classloader used to load s3a fs extensions")
               .isEqualTo(Thread.currentThread().getContextClassLoader())
@@ -129,6 +193,16 @@ public class ITestS3AFileSystemIsolatedClassloader extends AbstractS3ATestBase {
               .describedAs("The classloader used to load s3a fs extensions")
               .isNotEqualTo(fs.getClass().getClassLoader())
               .describedAs("the classloader that loaded the fs");
+
+      S3AFileSystem s3a = (S3AFileSystem) fs;
+      List<AwsCredentialsProvider> providers =
+              s3a.getS3AInternals().shareCredentials("test").getProviders();
+      Assertions.assertThat(providers)
+              .describedAs("providers")
+              .hasSize(1);
+      Assertions.assertThat(providers.get(0))
+              .describedAs("provider")
+              .isInstanceOf(CustomCredentialsProvider.class);
     });
   }
 }

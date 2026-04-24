@@ -74,7 +74,9 @@ import static org.apache.hadoop.test.LambdaTestUtils.eval;
  * Test partial failures of delete and rename operations,.
  *
  * All these test have a unique path for each run, with a roleFS having
- * full RW access to part of it, and R/O access to a restricted subdirectory
+ * full RW access to part of it, and R/O access to a restricted subdirectory.
+ * <p>
+ * Tests are skipped on S3Express buckets or if no assumed role is provided.
  *
  * <ol>
  *   <li>
@@ -221,6 +223,7 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
   public void setup() throws Exception {
     super.setup();
     assumeRoleTests();
+    skipIfS3ExpressBucket(getConfiguration());
     basePath = uniquePath();
     readOnlyDir = new Path(basePath, "readonlyDir");
     writableDir = new Path(basePath, "writableDir");

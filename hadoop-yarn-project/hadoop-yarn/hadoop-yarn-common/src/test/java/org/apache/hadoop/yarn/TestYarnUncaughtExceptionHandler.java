@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn;
 import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.util.ExitUtil;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -44,7 +45,7 @@ public class TestYarnUncaughtExceptionHandler {
     final YarnUncaughtExceptionHandler spyYarnHandler = spy(exHandler);
     final YarnRuntimeException yarnException = new YarnRuntimeException(
         "test-yarn-runtime-exception");
-    final Thread yarnThread = new Thread(new Runnable() {
+    final Thread yarnThread = new SubjectInheritingThread(new Runnable() {
       @Override
       public void run() {
         throw yarnException;
@@ -74,7 +75,7 @@ public class TestYarnUncaughtExceptionHandler {
     ExitUtil.disableSystemExit();
     final YarnUncaughtExceptionHandler spyErrorHandler = spy(exHandler);
     final java.lang.Error error = new java.lang.Error("test-error");
-    final Thread errorThread = new Thread(new Runnable() {
+    final Thread errorThread = new SubjectInheritingThread(new Runnable() {
       @Override
       public void run() {
         throw error;
@@ -103,7 +104,7 @@ public class TestYarnUncaughtExceptionHandler {
     ExitUtil.disableSystemHalt();
     final YarnUncaughtExceptionHandler spyOomHandler = spy(exHandler);
     final OutOfMemoryError oomError = new OutOfMemoryError("out-of-memory-error");
-    final Thread oomThread = new Thread(new Runnable() {
+    final Thread oomThread = new SubjectInheritingThread(new Runnable() {
       @Override
       public void run() {
         throw oomError;

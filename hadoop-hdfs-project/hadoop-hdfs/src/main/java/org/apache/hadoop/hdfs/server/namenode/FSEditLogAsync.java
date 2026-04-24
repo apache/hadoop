@@ -30,6 +30,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
 import org.apache.hadoop.util.Time;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -78,7 +79,7 @@ class FSEditLogAsync extends FSEditLog implements Runnable {
   private void startSyncThread() {
     synchronized(syncThreadLock) {
       if (!isSyncThreadAlive()) {
-        syncThread = new Thread(this, this.getClass().getSimpleName());
+        syncThread = new SubjectInheritingThread(this, this.getClass().getSimpleName());
         syncThread.start();
       }
     }

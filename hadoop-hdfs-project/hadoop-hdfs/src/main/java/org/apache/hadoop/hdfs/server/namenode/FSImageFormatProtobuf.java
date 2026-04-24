@@ -75,6 +75,7 @@ import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.util.LimitInputStream;
 import org.apache.hadoop.util.Time;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.util.Lists;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
@@ -184,7 +185,7 @@ public final class FSImageFormatProtobuf {
      * Thread to compute the MD5 of a file as this can be in parallel while
      * loading the image without interfering much.
      */
-    private static class DigestThread extends Thread {
+    private static class DigestThread extends SubjectInheritingThread {
 
       /**
        * Exception thrown when computing the digest if it cannot be calculated.
@@ -219,7 +220,7 @@ public final class FSImageFormatProtobuf {
       }
 
       @Override
-      public void run() {
+      public void work() {
         try {
           digest = MD5FileUtils.computeMd5ForFile(file);
         } catch (IOException e) {

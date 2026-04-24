@@ -90,6 +90,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -729,7 +730,7 @@ public class TestDFSClientRetries {
       Counter counter = new Counter(0);
       for (int i = 0; i < threads; ++i ) {
         DFSClientReader reader = new DFSClientReader(file1, cluster, hash_sha, fileLen, counter);
-        readers[i] = new Thread(reader);
+        readers[i] = new SubjectInheritingThread(reader);
         readers[i].start();
       }
       
@@ -1018,7 +1019,7 @@ public class TestDFSClientRetries {
       assertFalse(HdfsUtils.isHealthy(uri));
 
       //namenode is down, continue writing file4 in a thread
-      final Thread file4thread = new Thread(new Runnable() {
+      final Thread file4thread = new SubjectInheritingThread(new Runnable() {
         @Override
         public void run() {
           try {
@@ -1037,7 +1038,7 @@ public class TestDFSClientRetries {
       file4thread.start();
 
       //namenode is down, read the file in a thread
-      final Thread reader = new Thread(new Runnable() {
+      final Thread reader = new SubjectInheritingThread(new Runnable() {
         @Override
         public void run() {
           try {
@@ -1057,7 +1058,7 @@ public class TestDFSClientRetries {
 
       //namenode is down, create another file in a thread
       final Path file3 = new Path(dir, "file"); 
-      final Thread thread = new Thread(new Runnable() {
+      final Thread thread = new SubjectInheritingThread(new Runnable() {
         @Override
         public void run() {
           try {
@@ -1072,7 +1073,7 @@ public class TestDFSClientRetries {
       thread.start();
 
       //restart namenode in a new thread
-      new Thread(new Runnable() {
+      new SubjectInheritingThread(new Runnable() {
         @Override
         public void run() {
           try {
@@ -1125,7 +1126,7 @@ public class TestDFSClientRetries {
       assertFalse(HdfsUtils.isHealthy(uri));
       
       //leave safe mode in a new thread
-      new Thread(new Runnable() {
+      new SubjectInheritingThread(new Runnable() {
         @Override
         public void run() {
           try {
@@ -1306,7 +1307,7 @@ public class TestDFSClientRetries {
 
       out1.write(new byte[256]);
 
-      Thread closeThread = new Thread(new Runnable() {
+      Thread closeThread = new SubjectInheritingThread(new Runnable() {
         @Override public void run() {
           try {
             //1. trigger get LeaseRenewer lock

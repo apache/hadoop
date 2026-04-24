@@ -43,10 +43,12 @@ import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.Statistic;
 import org.apache.hadoop.fs.s3a.statistics.BlockOutputStreamStatistics;
+import org.apache.hadoop.test.LambdaTestUtils;
 
 import static org.apache.hadoop.fs.Options.CreateFileOptionKeys.FS_OPTION_CREATE_CONDITIONAL_OVERWRITE;
 import static org.apache.hadoop.fs.Options.CreateFileOptionKeys.FS_OPTION_CREATE_CONDITIONAL_OVERWRITE_ETAG;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
+import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_200_OK;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyStatisticCounterValue;
 import static org.apache.hadoop.fs.s3a.Constants.FAST_UPLOAD_BUFFER_ARRAY;
 import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_MULTIPART;
@@ -76,6 +78,8 @@ public class ITestS3APutIfMatchAndIfNoneMatch extends AbstractS3ATestBase {
   private static final byte[] SMALL_FILE_BYTES = dataset(TEST_FILE_LEN, 0, 255);
   private static final byte[] MULTIPART_FILE_BYTES = dataset(UPDATED_MULTIPART_THRESHOLD * 5, 'a', 'z' - 'a');
 
+  public static final String PRECONDITION_FAILED = "PreconditionFailed";
+
   private BlockOutputStreamStatistics statistics;
 
   @Override
@@ -101,22 +105,30 @@ public class ITestS3APutIfMatchAndIfNoneMatch extends AbstractS3ATestBase {
   @BeforeEach
   public void setup() throws Exception {
     super.setup();
-    Configuration conf = getConfiguration();
+    Configuration conf = getFileSystem().getConf();
     assumeConditionalCreateEnabled(conf);
   }
 
   /**
    * Asserts that an S3Exception has the expected HTTP status code.
-   *
    * @param code Expected HTTP status code.
-   * @param ex   Exception to validate.
+   * @param ex Exception to validate.
+   * @return the inner exception
+   * @throws AssertionError if the status code doesn't match.
    */
-  private static void assertS3ExceptionStatusCode(int code, Exception ex) {
-    S3Exception s3Exception = (S3Exception) ex.getCause();
-
+  private static S3Exception verifyS3ExceptionStatusCode(int code, Exception ex) {
+    final Throwable cause = ex.getCause();
+    if (cause == null) {
+      throw new AssertionError("No inner exception of" + ex, ex);
+    }
+    if (!(cause instanceof S3Exception)) {
+      throw new AssertionError("Inner exception is not S3Exception under " + ex, ex);
+    }
+    S3Exception s3Exception = (S3Exception) cause;
     if (s3Exception.statusCode() != code) {
       throw new AssertionError("Expected status code " + code + " from " + ex, ex);
     }
+    return s3Exception;
   }
 
   /**
@@ -296,12 +308,12 @@ public class ITestS3APutIfMatchAndIfNoneMatch extends AbstractS3ATestBase {
     // attempted overwrite fails
     RemoteFileChangedException firstException = intercept(RemoteFileChangedException.class,
             () -> createFileWithFlags(fs, testFile, SMALL_FILE_BYTES, true, null));
-    assertS3ExceptionStatusCode(SC_412_PRECONDITION_FAILED, firstException);
+    verifyS3ExceptionStatusCode(SC_412_PRECONDITION_FAILED, firstException);
 
     // second attempt also fails
     RemoteFileChangedException secondException = intercept(RemoteFileChangedException.class,
             () -> createFileWithFlags(fs, testFile, SMALL_FILE_BYTES, true, null));
-    assertS3ExceptionStatusCode(SC_412_PRECONDITION_FAILED, secondException);
+    verifyS3ExceptionStatusCode(SC_412_PRECONDITION_FAILED, secondException);
 
     // Delete file and verify an overwrite works again
     fs.delete(testFile, false);
@@ -320,13 +332,11 @@ public class ITestS3APutIfMatchAndIfNoneMatch extends AbstractS3ATestBase {
 
     createFileWithFlags(fs, testFile, MULTIPART_FILE_BYTES, true, null, true);
 
-    RemoteFileChangedException firstException = intercept(RemoteFileChangedException.class,
-            () -> createFileWithFlags(fs, testFile, MULTIPART_FILE_BYTES, true, null, true));
-    assertS3ExceptionStatusCode(SC_412_PRECONDITION_FAILED, firstException);
+    expectPreconditionFailure(() ->
+        createFileWithFlags(fs, testFile, MULTIPART_FILE_BYTES, true, null, true));
 
-    RemoteFileChangedException secondException = intercept(RemoteFileChangedException.class,
-            () -> createFileWithFlags(fs, testFile, MULTIPART_FILE_BYTES, true, null, true));
-    assertS3ExceptionStatusCode(SC_412_PRECONDITION_FAILED, secondException);
+    expectPreconditionFailure(() ->
+        createFileWithFlags(fs, testFile, MULTIPART_FILE_BYTES, true, null, true));
   }
 
   @Test
@@ -348,8 +358,7 @@ public class ITestS3APutIfMatchAndIfNoneMatch extends AbstractS3ATestBase {
     createFileWithFlags(fs, testFile, SMALL_FILE_BYTES, true, null);
 
     // Closing the first stream should throw RemoteFileChangedException
-    RemoteFileChangedException exception = intercept(RemoteFileChangedException.class, stream::close);
-    assertS3ExceptionStatusCode(SC_412_PRECONDITION_FAILED, exception);
+    expectPreconditionFailure(stream::close);
   }
 
   @Test
@@ -371,8 +380,24 @@ public class ITestS3APutIfMatchAndIfNoneMatch extends AbstractS3ATestBase {
     createFileWithFlags(fs, testFile, MULTIPART_FILE_BYTES, true, null, true);
 
     // Closing the first stream should throw RemoteFileChangedException
-    RemoteFileChangedException exception = intercept(RemoteFileChangedException.class, stream::close);
-    assertS3ExceptionStatusCode(SC_412_PRECONDITION_FAILED, exception);
+    // or or the S3 Express equivalent.
+    expectPreconditionFailure(stream::close);
+  }
+
+  /**
+   * Expect an operation to fail with an S3 classic or S3 Express precondition failure.
+   * @param eval closure to eval
+   * @throws Exception any other failure.
+   */
+  private static void expectPreconditionFailure(final LambdaTestUtils.VoidCallable eval)
+      throws Exception {
+    RemoteFileChangedException exception = intercept(RemoteFileChangedException.class, eval);
+    S3Exception s3Exception = (S3Exception) exception.getCause();
+    if (!(s3Exception.statusCode() == SC_412_PRECONDITION_FAILED
+        || (s3Exception.statusCode() == SC_200_OK)
+        && PRECONDITION_FAILED.equals(s3Exception.awsErrorDetails().errorCode()))) {
+      throw exception;
+    }
   }
 
   @Test
@@ -390,7 +415,7 @@ public class ITestS3APutIfMatchAndIfNoneMatch extends AbstractS3ATestBase {
 
     // close the stream, should throw RemoteFileChangedException
     RemoteFileChangedException exception = intercept(RemoteFileChangedException.class, stream::close);
-    assertS3ExceptionStatusCode(SC_412_PRECONDITION_FAILED, exception);
+    verifyS3ExceptionStatusCode(SC_412_PRECONDITION_FAILED, exception);
   }
 
   @Test
@@ -407,7 +432,7 @@ public class ITestS3APutIfMatchAndIfNoneMatch extends AbstractS3ATestBase {
     // overwrite with non-empty file, should throw RemoteFileChangedException
     RemoteFileChangedException exception = intercept(RemoteFileChangedException.class,
             () -> createFileWithFlags(fs, testFile, SMALL_FILE_BYTES, true, null));
-    assertS3ExceptionStatusCode(SC_412_PRECONDITION_FAILED, exception);
+    verifyS3ExceptionStatusCode(SC_412_PRECONDITION_FAILED, exception);
   }
 
   @Test
@@ -425,7 +450,7 @@ public class ITestS3APutIfMatchAndIfNoneMatch extends AbstractS3ATestBase {
     FSDataOutputStream stream2 = getStreamWithFlags(fs, testFile, true, null);
     assertHasCapabilityConditionalCreate(stream2);
     RemoteFileChangedException exception = intercept(RemoteFileChangedException.class, stream2::close);
-    assertS3ExceptionStatusCode(SC_412_PRECONDITION_FAILED, exception);
+    verifyS3ExceptionStatusCode(SC_412_PRECONDITION_FAILED, exception);
   }
 
   @Test
@@ -480,7 +505,7 @@ public class ITestS3APutIfMatchAndIfNoneMatch extends AbstractS3ATestBase {
     // overwrite file with outdated etag. Should throw RemoteFileChangedException
     RemoteFileChangedException exception = intercept(RemoteFileChangedException.class,
             () -> createFileWithFlags(fs, path, SMALL_FILE_BYTES, false, etag));
-    assertS3ExceptionStatusCode(SC_412_PRECONDITION_FAILED, exception);
+    verifyS3ExceptionStatusCode(SC_412_PRECONDITION_FAILED, exception);
   }
 
   @Test
@@ -504,7 +529,7 @@ public class ITestS3APutIfMatchAndIfNoneMatch extends AbstractS3ATestBase {
     // overwrite file with etag. Should throw FileNotFoundException
     FileNotFoundException exception = intercept(FileNotFoundException.class,
             () -> createFileWithFlags(fs, path, SMALL_FILE_BYTES, false, etag));
-    assertS3ExceptionStatusCode(SC_404_NOT_FOUND, exception);
+    verifyS3ExceptionStatusCode(SC_404_NOT_FOUND, exception);
   }
 
   @Test
@@ -553,8 +578,7 @@ public class ITestS3APutIfMatchAndIfNoneMatch extends AbstractS3ATestBase {
     stream1.close();
 
     // Close second stream, should fail due to etag mismatch
-    RemoteFileChangedException exception = intercept(RemoteFileChangedException.class, stream2::close);
-    assertS3ExceptionStatusCode(SC_412_PRECONDITION_FAILED, exception);
+    expectPreconditionFailure(stream2::close);
   }
 
   @Disabled("conditional_write statistics not yet fully implemented")

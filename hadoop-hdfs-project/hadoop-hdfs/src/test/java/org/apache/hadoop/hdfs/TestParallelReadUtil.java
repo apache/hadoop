@@ -33,6 +33,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.client.impl.BlockReaderTestUtil;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.util.Time;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.junit.jupiter.api.Test;
 import org.slf4j.event.Level;
 
@@ -189,7 +190,7 @@ public class TestParallelReadUtil {
   /**
    * A worker to do one "unit" of read.
    */
-  static class ReadWorker extends Thread {
+  static class ReadWorker extends SubjectInheritingThread {
 
     static public final int N_ITERATIONS = 1024;
 
@@ -215,7 +216,7 @@ public class TestParallelReadUtil {
      * Randomly do one of (1) Small read; and (2) Large Pread.
      */
     @Override
-    public void run() {
+    public void work() {
       for (int i = 0; i < N_ITERATIONS; ++i) {
         int startOff = rand.nextInt((int) fileSize);
         int len = 0;

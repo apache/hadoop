@@ -69,7 +69,7 @@ public abstract class ManifestStoreOperations implements Closeable {
 
   /**
    * Is a path a file? Used during directory creation.
-   * The is a copy & paste of FileSystem.isFile();
+   * The is a copy and paste of FileSystem.isFile();
    * {@code StoreOperationsThroughFileSystem} calls into
    * the FS direct so that stores which optimize their probes
    * can save on IO.

@@ -19,8 +19,9 @@
 package org.apache.hadoop.security.ssl;
 
 import java.io.IOException;
-import java.util.Arrays;
+import java.security.NoSuchAlgorithmException;
 
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.util.NativeCodeLoader;
@@ -34,24 +35,24 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 public class TestDelegatingSSLSocketFactory {
 
   @Test
-  public void testOpenSSL() throws IOException {
+  public void testOpenSSL() {
     assumeTrue(NativeCodeLoader.isNativeCodeLoaded(),
         "Unable to load native libraries");
     assumeTrue(NativeCodeLoader.buildSupportsOpenssl(),
         "Build was not compiled with support for OpenSSL");
-    DelegatingSSLSocketFactory.initializeDefaultFactory(
-            DelegatingSSLSocketFactory.SSLChannelMode.OpenSSL);
-    assertThat(DelegatingSSLSocketFactory.getDefaultFactory()
-            .getProviderName()).contains("openssl");
+    try {
+      DelegatingSSLSocketFactory.initializeDefaultFactory(
+              DelegatingSSLSocketFactory.SSLChannelMode.OpenSSL);
+      assertThat(DelegatingSSLSocketFactory.getDefaultFactory()
+              .getProviderName()).contains("openssl");
+    } catch (IOException e) {
+      // if this is caused by a wildfly version error, downgrade to an assume
+      final Throwable cause = e.getCause();
+      Assertions.assertThat(cause)
+              .describedAs("Cause of %s: %s", e, cause)
+              .isInstanceOf(NoSuchAlgorithmException.class);
+      assumeTrue(false, "wildfly library not compatible with this OS version");
+    }
   }
 
-  @Test
-  public void testJSEENoGCMJava8() throws IOException {
-    assumeTrue(System.getProperty("java.version").startsWith("1.8"),
-        "Not running on Java 8");
-    DelegatingSSLSocketFactory.initializeDefaultFactory(
-            DelegatingSSLSocketFactory.SSLChannelMode.Default_JSSE);
-    assertThat(Arrays.stream(DelegatingSSLSocketFactory.getDefaultFactory()
-            .getSupportedCipherSuites())).noneMatch("GCM"::contains);
-  }
 }

@@ -25,6 +25,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.io.retry.FailoverProxyProvider.ProxyInfo;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsRequest;
@@ -160,7 +161,7 @@ public class TestFederationRMFailoverProxyProvider {
         .getSubClusters(any(GetSubClustersInfoRequest.class));
 
     threadResponse = null;
-    Thread thread = new Thread(new Runnable() {
+    Thread thread = new SubjectInheritingThread(new Runnable() {
       @Override
       public void run() {
         try {

@@ -114,6 +114,7 @@ import org.apache.hadoop.mapreduce.v2.app.rm.RMContainerRequestor;
 import org.apache.hadoop.mapreduce.v2.app.rm.RMHeartbeatHandler;
 import org.apache.hadoop.mapreduce.v2.app.rm.preemption.AMPreemptionPolicy;
 import org.apache.hadoop.mapreduce.v2.app.rm.preemption.NoopAMPreemptionPolicy;
+import org.apache.hadoop.mapreduce.v2.app.security.authorize.TaskLevelSecurityEnforcer;
 import org.apache.hadoop.mapreduce.v2.app.speculate.DefaultSpeculator;
 import org.apache.hadoop.mapreduce.v2.app.speculate.Speculator;
 import org.apache.hadoop.mapreduce.v2.app.speculate.SpeculatorEvent;
@@ -134,6 +135,7 @@ import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.StringInterner;
+import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.YarnUncaughtExceptionHandler;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
@@ -739,10 +741,10 @@ public class MRAppMaster extends CompositeService {
     public void handle(JobFinishEvent event) {
       // Create a new thread to shutdown the AM. We should not do it in-line
       // to avoid blocking the dispatcher itself.
-      new Thread() {
+      new SubjectInheritingThread() {
         
         @Override
-        public void run() {
+        public void work() {
           shutDownJob();
         }
       }.start();
@@ -1682,6 +1684,7 @@ public class MRAppMaster extends CompositeService {
       String jobUserName = System
           .getenv(ApplicationConstants.Environment.USER.name());
       conf.set(MRJobConfig.USER_NAME, jobUserName);
+      TaskLevelSecurityEnforcer.validate(conf, UserGroupInformation.getCurrentUser());
       initAndStartAppMaster(appMaster, conf, jobUserName);
     } catch (Throwable t) {
       LOG.error("Error starting MRAppMaster", t);

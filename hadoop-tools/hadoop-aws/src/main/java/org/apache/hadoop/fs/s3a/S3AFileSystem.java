@@ -1173,10 +1173,15 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         .withTransferManagerExecutor(unboundedThreadPool)
         .withRegion(configuredRegion)
         .withFipsEnabled(fipsEnabled)
+        .withS3ExpressStore(s3ExpressStore)
         .withExpressCreateSession(
             conf.getBoolean(S3EXPRESS_CREATE_SESSION, S3EXPRESS_CREATE_SESSION_DEFAULT))
         .withChecksumValidationEnabled(
             conf.getBoolean(CHECKSUM_VALIDATION, CHECKSUM_VALIDATION_DEFAULT))
+        .withChecksumCalculationEnabled(
+            conf.getBoolean(CHECKSUM_GENERATION, DEFAULT_CHECKSUM_GENERATION))
+        .withMd5HeaderEnabled(conf.getBoolean(REQUEST_MD5_HEADER,
+            DEFAULT_REQUEST_MD5_HEADER))
         .withClientSideEncryptionEnabled(isCSEEnabled)
         .withClientSideEncryptionMaterials(cseMaterials)
         .withAnalyticsAcceleratorEnabled(isAnalyticsAcceleratorEnabled)

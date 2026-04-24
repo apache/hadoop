@@ -203,27 +203,31 @@
 
 --------------------------------------------------------------------------------
 This project bundles some components that are also licensed under the Apache
-License Version 2.0:
+License Version 2.0.
+Note: some of the listed artifacts may not be included in a given build of the binary
+distribution; it depends on the build options. This list intends
+to be inclusive of all which may be included:
 
 
 hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static/nvd3-1.8.5.* (css and js files)
-hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/checker/AbstractFuture.java
-hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/checker/TimeoutFuture.java
 
+at.yawk.lz4:lz4-java:1.10.4
 ch.qos.reload4j:reload4j:1.2.22
+com.aliyun:aliyun-java-core:0.2.11-beta
 com.aliyun:aliyun-java-sdk-core:4.5.10
 com.aliyun:aliyun-java-sdk-kms:2.11.0
 com.aliyun:aliyun-java-sdk-ram:3.1.0
 com.aliyun:aliyun-java-sdk-sts:3.0.0
+com.aliyun:java-trace-api:0.2.11-beta
 com.aliyun.oss:aliyun-sdk-oss:3.13.2
 com.cedarsoftware:java-util:1.9.0
 com.cedarsoftware:json-io:2.5.1
-com.fasterxml.jackson.core:jackson-annotations:2.14.3
-com.fasterxml.jackson.core:jackson-core:2.14.3
-com.fasterxml.jackson.core:jackson-databind:2.14.3
-com.fasterxml.jackson.jaxrs:jackson-jaxrs-base:2.14.3
-com.fasterxml.jackson.jaxrs:jackson-jaxrs-json-provider:2.14.3
-com.fasterxml.jackson.module:jackson-module-jaxb-annotations:2.14.3
+com.fasterxml.jackson.core:jackson-annotations:2.18.6
+com.fasterxml.jackson.core:jackson-core:2.18.6
+com.fasterxml.jackson.core:jackson-databind:2.18.6
+com.fasterxml.jackson.jaxrs:jackson-jaxrs-base:2.18.6
+com.fasterxml.jackson.jaxrs:jackson-jaxrs-json-provider:2.18.6
+com.fasterxml.jackson.module:jackson-module-jaxb-annotations:2.18.6
 com.fasterxml.uuid:java-uuid-generator:3.1.4
 com.fasterxml.woodstox:woodstox-core:5.4.0
 com.github.ben-manes.caffeine:caffeine:2.9.3
@@ -247,19 +251,17 @@ com.google.cloud:google-cloud-core-http:2.54.2
 com.google.cloud:google-cloud-core:2.54.2
 com.google.cloud:google-cloud-monitoring:3.52.0
 com.google.cloud.opentelemetry:exporter-metrics:0.33.0
+com.google.errorprone:error_prone_annotations:2.32.0
 com.google.errorprone:error_prone_annotations:2.36.0
 com.google:guice:5.1.0
 com.google:guice-servlet:5.1.0
 com.google.api.grpc:proto-google-common-protos:1.0.0
 com.google.code.gson:2.9.0
-com.google.errorprone:error_prone_annotations:2.5.1
 com.google.j2objc:j2objc-annotations:1.3
 com.google.json-simple:json-simple:1.1.1
 com.google.guava:failureaccess:1.0
 com.google.guava:failureaccess:1.0.2
-com.google.guava:guava:20.0
-com.google.guava:guava:32.0.1-jre
-com.google.guava:guava:33.1.0-jre
+com.google.guava:guava:33.4.8-jre
 com.google.guava:listenablefuture:9999.0-empty-to-avoid-conflict-with-guava
 com.google.http-client:google-http-client-apache-v2:1.46.3
 com.google.http-client:google-http-client-appengine:1.46.3
@@ -268,8 +270,13 @@ com.google.http-client:google-http-client-jackson2:1.46.3
 com.google.http-client:google-http-client:1.46.3
 com.google.j2objc:j2objc-annotations:3.0.0
 com.google.oauth-client:google-oauth-client:1.37.0
-com.microsoft.azure:azure-storage:7.0.0
+com.huaweicloud:esdk-obs-java:3.20.4.2
+com.jamesmurty.utils:java-xmlbuilder-1.2.jar
+com.microsoft.azure:azure-storage:7.0.1
 com.nimbusds:nimbus-jose-jwt:10.4
+com.squareup.okhttp3:okhttp:jar:3.14.2
+com.squareup.okio:okio:jar:1.17.2
+com.volcengine:ve-tos-java-sdk-hadoop:2.8.9.jar
 com.zaxxer:HikariCP:4.0.3
 commons-beanutils:commons-beanutils:1.9.4
 commons-cli:commons-cli:1.9.0
@@ -302,58 +309,61 @@ io.grpc:grpc-stub:1.69.0
 io.grpc:grpc-stub:1.70.0
 io.grpc:grpc-util:1.70.0
 io.grpc:grpc-xds:1.70.0
-io.netty:netty-all:4.1.127.Final
-io.netty:netty-buffer:4.1.127.Final
-io.netty:netty-codec:4.1.127.Final
-io.netty:netty-codec-dns:4.1.127.Final
-io.netty:netty-codec-haproxy:4.1.127.Final
-io.netty:netty-codec-http:4.1.127.Final
-io.netty:netty-codec-http2:4.1.127.Final
-io.netty:netty-codec-memcache:4.1.127.Final
-io.netty:netty-codec-mqtt:4.1.127.Final
-io.netty:netty-codec-redis:4.1.127.Final
-io.netty:netty-codec-smtp:4.1.127.Final
-io.netty:netty-codec-socks:4.1.127.Final
-io.netty:netty-codec-stomp:4.1.127.Final
-io.netty:netty-codec-xml:4.1.127.Final
-io.netty:netty-common:4.1.127.Final
-io.netty:netty-handler:4.1.127.Final
-io.netty:netty-handler-proxy:4.1.127.Final
-io.netty:netty-resolver:4.1.127.Final
-io.netty:netty-resolver-dns:4.1.127.Final
-io.netty:netty-transport:4.1.127.Final
-io.netty:netty-transport-rxtx:4.1.127.Final
-io.netty:netty-transport-sctp:4.1.127.Final
-io.netty:netty-transport-udt:4.1.127.Final
-io.netty:netty-transport-classes-epoll:4.1.127.Final
-io.netty:netty-transport-native-unix-common:4.1.127.Final
-io.netty:netty-transport-classes-kqueue:4.1.127.Final
-io.netty:netty-resolver-dns-classes-macos:4.1.127.Final
-io.netty:netty-transport-native-epoll:4.1.127.Final
-io.netty:netty-transport-native-kqueue:4.1.127.Final
-io.netty:netty-resolver-dns-native-macos:4.1.127.Final
+io.netty:netty-all:4.1.130.Final
+io.netty:netty-buffer:4.1.130.Final
+io.netty:netty-codec:4.1.130.Final
+io.netty:netty-codec-dns:4.1.130.Final
+io.netty:netty-codec-haproxy:4.1.130.Final
+io.netty:netty-codec-http:4.1.130.Final
+io.netty:netty-codec-http2:4.1.130.Final
+io.netty:netty-codec-memcache:4.1.130.Final
+io.netty:netty-codec-mqtt:4.1.130.Final
+io.netty:netty-codec-redis:4.1.130.Final
+io.netty:netty-codec-smtp:4.1.130.Final
+io.netty:netty-codec-socks:4.1.130.Final
+io.netty:netty-codec-stomp:4.1.130.Final
+io.netty:netty-codec-xml:4.1.130.Final
+io.netty:netty-common:4.1.130.Final
+io.netty:netty-handler:4.1.130.Final
+io.netty:netty-handler-proxy:4.1.130.Final
+io.netty:netty-resolver:4.1.130.Final
+io.netty:netty-resolver-dns:4.1.130.Final
+io.netty:netty-transport:4.1.130.Final
+io.netty:netty-transport-rxtx:4.1.130.Final
+io.netty:netty-transport-sctp:4.1.130.Final
+io.netty:netty-transport-udt:4.1.130.Final
+io.netty:netty-transport-classes-epoll:4.1.130.Final
+io.netty:netty-transport-native-unix-common:4.1.130.Final
+io.netty:netty-transport-classes-kqueue:4.1.130.Final
+io.netty:netty-resolver-dns-classes-macos:4.1.130.Final
+io.netty:netty-transport-native-epoll:4.1.130.Final
+io.netty:netty-transport-native-kqueue:4.1.130.Final
+io.netty:netty-resolver-dns-native-macos:4.1.130.Final
 io.opencensus:opencensus-api:0.12.3
 io.opencensus:opencensus-api:0.31.1
 io.opencensus:opencensus-contrib-grpc-metrics:0.12.3
 io.opencensus:opencensus-contrib-http-util:0.31.1
 io.opentelemetry.contrib:opentelemetry-gcp-resources:1.37.0-alpha
-io.opentelemetry:opentelemetry-api:1.47.0
-io.opentelemetry:opentelemetry-context:1.47.0
-io.opentelemetry:opentelemetry-sdk-common:1.47.0
-io.opentelemetry:opentelemetry-sdk-extension-autoconfigure-spi:1.47.0
-io.opentelemetry:opentelemetry-sdk:1.47.0
-io.opentelemetry:opentelemetry-sdk-logs:1.47.0
-io.opentelemetry:opentelemetry-sdk-metrics:1.47.0
-io.opentelemetry:opentelemetry-sdk-trace:1.47.0
+io.opentelemetry:opentelemetry-api:1.59.0
+io.opentelemetry:opentelemetry-context:1.59.0
+io.opentelemetry:opentelemetry-sdk-common:1.59.0
+io.opentelemetry:opentelemetry-sdk-extension-autoconfigure-spi:1.59.0
+io.opentelemetry:opentelemetry-sdk:1.59.0
+io.opentelemetry:opentelemetry-sdk-logs:1.59.0
+io.opentelemetry:opentelemetry-sdk-metrics:1.59.0
+io.opentelemetry:opentelemetry-sdk-trace:1.59.0
 io.opentelemetry.semconv:opentelemetry-semconv:1.29.0-alpha
+io.opentracing:opentracing-api:0.33.0.jar
+io.opentracing:opentracing-noop:0.33.0.jar
+io.opentracing:opentracing-util:0.33.0.jar
 io.reactivex:rxjava:1.3.8
 io.reactivex:rxjava-string:1.1.1
 io.reactivex:rxnetty:0.4.20
 io.swagger:swagger-annotations:1.5.4
 javax.inject:javax.inject:1
 net.java.dev.jna:jna:5.2.0
-net.minidev:accessors-smart:1.2
-org.apache.avro:avro:1.11.4
+net.minidev:accessors-smart:1.21
+org.apache.avro:avro:1.11.5
 org.apache.commons:commons-compress:1.26.1
 org.apache.commons:commons-configuration2:2.10.1
 org.apache.commons:commons-csv:1.9.0
@@ -373,7 +383,9 @@ org.apache.htrace:htrace-core:3.1.0-incubating
 org.apache.htrace:htrace-core4:4.1.0-incubating
 org.apache.httpcomponents:httpclient:4.5.13
 org.apache.httpcomponents:httpcore:4.4.13
-org.apache.kafka:kafka-clients:3.9.0
+org.apache.httpcomponents.client5:httpclient5:5.5
+org.apache.httpcomponents.core5:httpcore5:5.5
+org.apache.kafka:kafka-clients:3.9.2
 org.apache.kerby:kerb-admin:2.0.3
 org.apache.kerby:kerb-client:2.0.3
 org.apache.kerby:kerb-common:2.0.3
@@ -394,35 +406,39 @@ org.apache.sshd:sshd-core:2.11.0
 org.apache.sshd:sshd-sftp:2.11.0
 org.apache.solr:solr-solrj:8.11.2
 org.apache.yetus:audience-annotations:0.5.0
-org.apache.zookeeper:zookeeper:3.8.4
+org.apache.zookeeper:zookeeper:3.8.6
 org.codehaus.jettison:jettison:1.5.4
 org.conscrypt:conscrypt-openjdk-uber:2.5.2
-org.eclipse.jetty:jetty-annotations:9.4.57.v20241219
-org.eclipse.jetty:jetty-http:9.4.57.v20241219
-org.eclipse.jetty:jetty-io:9.4.57.v20241219
-org.eclipse.jetty:jetty-jndi:9.4.57.v20241219
-org.eclipse.jetty:jetty-plus:9.4.57.v20241219
-org.eclipse.jetty:jetty-security:9.4.57.v20241219
-org.eclipse.jetty:jetty-server:9.4.57.v20241219
-org.eclipse.jetty:jetty-servlet:9.4.57.v20241219
-org.eclipse.jetty:jetty-util:9.4.57.v20241219
-org.eclipse.jetty:jetty-util-ajax:9.4.57.v20241219
-org.eclipse.jetty:jetty-webapp:9.4.57.v20241219
-org.eclipse.jetty:jetty-xml:9.4.57.v20241219
-org.eclipse.jetty.websocket:javax-websocket-client-impl:9.4.57.v20241219
-org.eclipse.jetty.websocket:javax-websocket-server-impl:9.4.57.v20241219
+org.eclipse.jetty:jetty-annotations:9.4.58.v20250814
+org.eclipse.jetty:jetty-http:9.4.58.v20250814
+org.eclipse.jetty:jetty-io:9.4.58.v20250814
+org.eclipse.jetty:jetty-jndi:9.4.58.v20250814
+org.eclipse.jetty:jetty-plus:9.4.58.v20250814
+org.eclipse.jetty:jetty-security:9.4.58.v20250814
+org.eclipse.jetty:jetty-server:9.4.58.v20250814
+org.eclipse.jetty:jetty-servlet:9.4.58.v20250814
+org.eclipse.jetty:jetty-util:9.4.58.v20250814
+org.eclipse.jetty:jetty-util-ajax:9.4.58.v20250814
+org.eclipse.jetty:jetty-webapp:9.4.58.v20250814
+org.eclipse.jetty:jetty-xml:9.4.58.v20250814
+org.eclipse.jetty.websocket:javax-websocket-client-impl:9.4.58.v20250814
+org.eclipse.jetty.websocket:javax-websocket-server-impl:9.4.58.v20250814
 org.ehcache:ehcache:3.8.2
 org.ini4j:ini4j:0.5.4
-org.lz4:lz4-java:1.7.1
 org.objenesis:objenesis:2.6
 org.xerial.snappy:snappy-java:1.1.10.4
 org.yaml:snakeyaml:2.0
 org.wildfly.openssl:wildfly-openssl:2.2.5.Final
 ro.isdc.wro4j:wro4j-maven-plugin:1.8.0
-software.amazon.awssdk:bundle:2.29.52
-software.amazon.s3.analyticsaccelerator:analyticsaccelerator-s3:1.3.0
+software.amazon.awssdk:bundle:2.35.4
+software.amazon.s3.analyticsaccelerator:analyticsaccelerator-s3:1.3.1
 net.jodah:failsafe:2.4.4
 
+atlaskit/pragmatic-drag-and-drop 1.7.4
+atlaskit/pragmatic-drag-and-drop-auto-scroll 2.1.1
+atlaskit/pragmatic-drag-and-drop-hitbox 1.1.0
+typescript 5.8.3
+baseline-browser-mapping 2.10.0
 --------------------------------------------------------------------------------
 This product bundles various third-party components under other open source
 licenses. This section summarizes those components and their licenses.
@@ -496,13 +512,14 @@ hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-nodemanage
 bootstrap v3.3.6
 broccoli-asset-rev v2.4.2
 broccoli-funnel v1.0.1
+cos_api-bundle-5.6.19.jar
 datatables v1.11.5
 em-helpers v0.5.13
 em-table v0.1.6
 ember v2.2.0
 ember-array-contains-helper v1.0.2
 ember-bootstrap v0.5.1
-ember-cli v1.13.13
+ember-cli v2.6.0
 ember-cli-app-version v1.0.0
 ember-cli-babel v5.1.6
 ember-cli-content-security-policy v0.4.0
@@ -514,6 +531,7 @@ ember-cli-inject-live-reload v1.4.0
 ember-cli-jquery-ui v0.0.20
 ember-cli-qunit v1.2.1
 ember-cli-release v0.2.8
+ember-cli-sass v10.0.1
 ember-cli-shims v0.0.6
 ember-cli-sri v1.2.1
 ember-cli-test-loader v0.2.1
@@ -537,11 +555,52 @@ select2 v4.0.0
 snippet-ss v1.11.0
 spin.js v2.3.2
 
+hookform/resolvers 5.1.1
+radix-ui/react-accordion 1.2.11
+radix-ui/react-checkbox 1.3.2
+radix-ui/react-collapsible 1.1.11
+radix-ui/react-context-menu 2.2.15
+radix-ui/react-dialog 1.1.14
+radix-ui/react-dropdown-menu 2.1.15
+radix-ui/react-label 2.1.7
+radix-ui/react-popover 1.1.14
+radix-ui/react-progress 1.1.7
+radix-ui/react-scroll-area 1.2.9
+radix-ui/react-select 2.2.5
+radix-ui/react-separator 1.1.7
+radix-ui/react-slot 1.2.3
+radix-ui/react-switch 1.2.5
+radix-ui/react-tabs 1.1.12
+radix-ui/react-toggle 1.1.9
+radix-ui/react-toggle-group 1.1.10
+radix-ui/react-tooltip 1.2.7
+react-router/node 7.5.3
+react-router/serve 7.5.3
+xyflow/react 12.8.1
+clsx 2.1.1
+cmdk 1.1.1
+dagre 0.8.5
+es-toolkit 1.39.6
+eslint 9.18.0
+immer 10.0.0
+nanoid 5.1.5
+prettier 3.5.0
+react 19.1.0
+react-resizable-panels 3.0.3
+sonner 2.0.5
+tailwind-merge 3.3.1
+tailwindcss 4.1.4
+vaul 1.1.2
+vite 6.4.1
+vitest 3.2.4
+zod 3.25.71
+zustand 5.0.6
+
 com.microsoft.azure:azure-cosmosdb:2.4.5
 com.microsoft.azure:azure-cosmosdb-commons:2.4.5
 com.microsoft.azure:azure-cosmosdb-direct:2.4.5
 com.microsoft.azure:azure-cosmosdb-gateway:2.4.5
-com.microsoft.azure:azure-data-lake-store-sdk:2.3.3
+com.microsoft.azure:azure-data-lake-store-sdk:2.3.9
 com.microsoft.azure:azure-keyvault-core:1.0.0
 com.microsoft.sqlserver:mssql-jdbc:6.2.1.jre7
 org.bouncycastle:bcpkix-jdk18on:1.82
@@ -552,6 +611,7 @@ org.codehaus.mojo:animal-sniffer-annotations:1.24
 org.jruby.jcodings:jcodings:1.0.13
 org.jruby.joni:joni:2.1.2
 org.ojalgo:ojalgo:43.0
+org.reactivestreams:reactive-streams:1.0.3.jar
 org.slf4j:jul-to-slf4j:1.7.36
 org.slf4j:slf4j-api:1.7.36
 org.slf4j:slf4j-reload4j:1.7.36
@@ -566,7 +626,6 @@ javax.cache:cache-api:1.1.1
 javax.servlet:javax.servlet-api:3.1.0
 javax.servlet.jsp:jsp-api:2.1
 javax.websocket:javax.websocket-api:1.0
-javax.xml.bind:jaxb-api:2.3.1
 
 Eclipse Distribution License (EDL) 1.0
 --------------------------
@@ -618,7 +677,19 @@ JDOM License
 org.jdom:jdom2:2.0.6.1
 
 
+ISC License
+-----------
+
+lucide-react 0.525.0
+
+
 Public Domain
 -------------
 
 aopalliance:aopalliance:1.0
+isbot 5.1.27
+
+Dom4J license
+-------------
+
+org.dom4j:dom4j:2.1.4.jar

@@ -20,11 +20,11 @@
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-project</artifactId>
-    <version>3.5.0-SNAPSHOT</version>
+    <version>3.6.0-SNAPSHOT</version>
     <relativePath>../hadoop-project</relativePath>
   </parent>
   <artifactId>hadoop-project-dist</artifactId>
-  <version>3.5.0-SNAPSHOT</version>
+  <version>3.6.0-SNAPSHOT</version>
   <description>Apache Hadoop Project Dist POM</description>
   <name>Apache Hadoop Project Dist POM</name>
   <packaging>pom</packaging>
@@ -92,7 +92,10 @@
         <groupId>com.github.spotbugs</groupId>
         <artifactId>spotbugs-maven-plugin</artifactId>
         <configuration>
-          <excludeFilterFile>${basedir}/dev-support/findbugsExcludeFile.xml</excludeFilterFile>
+          <excludeFilterFiles>
+            <excludeFilterFile>${basedir}/dev-support/findbugsExcludeFile.xml</excludeFilterFile>
+            <excludeFilterFile>${maven.multiModuleProjectDirectory}/dev-support/findbugs-exclude-global.xml</excludeFilterFile>
+          </excludeFilterFiles>
           <maxHeap>2048</maxHeap>
         </configuration>
       </plugin>
@@ -134,7 +137,7 @@
         <activeByDefault>false</activeByDefault>
       </activation>
       <properties>
-        <jdiff.stable.api>3.4.0</jdiff.stable.api>
+        <jdiff.stable.api>3.5.0</jdiff.stable.api>
         <jdiff.stability>-unstable</jdiff.stability>
         <!-- Commented out for HADOOP-11776 -->
         <!-- Uncomment param name="${jdiff.compatibility}" in javadoc doclet if compatibility is not empty -->
@@ -175,7 +178,7 @@
                 <configuration>
                   <artifactItems>
                     <artifactItem>
-                      <groupId>jdiff</groupId>
+                      <groupId>io.github.zhtttylz</groupId>
                       <artifactId>jdiff</artifactId>
                       <version>${jdiff.version}</version>
                       <overWrite>false</overWrite>
@@ -287,6 +290,7 @@
                       <classpath>
                         <path refid="maven.compile.classpath"/>
                       </classpath>
+                      <arg value="-J--add-opens=jdk.javadoc/jdk.javadoc.internal.tool=ALL-UNNAMED"/>
                     </javadoc>
                     <javadoc sourcepath="${basedir}/src/main/java"
                              destdir="${project.build.directory}/site/jdiff/xml"
@@ -308,6 +312,7 @@
                       <classpath>
                         <path refid="maven.compile.classpath"/>
                       </classpath>
+                      <arg value="-J--add-opens=jdk.javadoc/jdk.javadoc.internal.tool=ALL-UNNAMED"/>
                     </javadoc>
                   </target>
                 </configuration>
@@ -438,6 +443,31 @@
       <id>doclet</id>
       <activation>
         <jdk>(,10)</jdk>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-javadoc-plugin</artifactId>
+            <configuration>
+              <doclet>org.apache.hadoop.classification.tools.ExcludePrivateAnnotationsStandardDoclet</doclet>
+              <docletArtifacts>
+                <docletArtifact>
+                  <groupId>org.apache.hadoop</groupId>
+                  <artifactId>hadoop-annotations</artifactId>
+                  <version>${hadoop.version}</version>
+                </docletArtifact>
+              </docletArtifacts>
+              <useStandardDocletOptions>true</useStandardDocletOptions>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <id>doclet-jdk17</id>
+      <activation>
+        <jdk>[17,)</jdk>
       </activation>
       <build>
         <plugins>

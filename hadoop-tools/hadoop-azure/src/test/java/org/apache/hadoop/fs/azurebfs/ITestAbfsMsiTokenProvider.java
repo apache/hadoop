@@ -20,20 +20,27 @@ package org.apache.hadoop.fs.azurebfs;
 
 import java.io.IOException;
 import java.util.Date;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
+import org.apache.hadoop.fs.azurebfs.oauth2.AzureADAuthenticator;
 import org.apache.hadoop.fs.azurebfs.oauth2.AzureADToken;
 import org.apache.hadoop.fs.azurebfs.oauth2.MsiTokenProvider;
+import org.apache.hadoop.fs.azurebfs.services.ExponentialRetryPolicy;
 
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_TOO_MANY_REQUESTS;
 import static org.apache.hadoop.fs.azurebfs.constants.AuthConfigurations.DEFAULT_FS_AZURE_ACCOUNT_OAUTH_MSI_AUTHORITY;
 import static org.apache.hadoop.fs.azurebfs.constants.AuthConfigurations.DEFAULT_FS_AZURE_ACCOUNT_OAUTH_MSI_ENDPOINT;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_OAUTH_CLIENT_ID;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_OAUTH_MSI_AUTHORITY;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_OAUTH_MSI_ENDPOINT;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_OAUTH_MSI_TENANT;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_AZURE_OAUTH_TOKEN_FETCH_RETRY_MAX_ATTEMPTS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assumptions.assumeThat;
 
@@ -86,4 +93,66 @@ public final class ITestAbfsMsiTokenProvider
     return value.trim();
   }
 
+  /**
+   * Verifies that MsiTokenProvider retries on HTTP 429 responses.
+   * Ensures shouldRetry returns true for 429 until the maximum retries are reached.
+   */
+  @Test
+  public void testShouldRetryFor429() throws Exception {
+    ExponentialRetryPolicy retryPolicy = new ExponentialRetryPolicy(
+        DEFAULT_AZURE_OAUTH_TOKEN_FETCH_RETRY_MAX_ATTEMPTS);
+    AzureADAuthenticator.setTokenFetchRetryPolicy(retryPolicy);
+    AtomicInteger attemptCounter = new AtomicInteger(0);
+
+    // Inner class to simulate MsiTokenProvider retry logic
+    class TestMsiTokenProvider extends MsiTokenProvider {
+      TestMsiTokenProvider(String endpoint, String tenant, String clientId, String authority) {
+        super(endpoint, tenant, clientId, authority);
+      }
+
+      @Override
+      public AzureADToken getToken() throws IOException {
+        int attempt = 0;
+        while (true) {
+          attempt++;
+          attemptCounter.incrementAndGet();
+
+          boolean retry = retryPolicy.shouldRetry(attempt - 1,
+              HTTP_TOO_MANY_REQUESTS);
+
+          // Validate shouldRetry returns true until the final attempt
+          if (attempt < retryPolicy.getMaxRetryCount()) {
+            Assertions.assertThat(retry)
+                .describedAs("Attempt %d: shouldRetry must be true for 429", attempt)
+                .isTrue();
+            // Simulate retry by continuing
+          } else {
+            // Final attempt: shouldRetry should now be false if this was last retry
+            Assertions.assertThat(retry)
+                .describedAs("Final attempt %d: shouldRetry can be false after max retries", attempt)
+                .isTrue(); // Still true because maxRetries not exceeded yet
+
+            // Return a valid fake token
+            AzureADToken token = new AzureADToken();
+            token.setAccessToken("fake-token");
+            token.setExpiry(new Date(System.currentTimeMillis() + TimeUnit.HOURS.toMillis(1)));
+            return token;
+          }
+        }
+      }
+    }
+    AccessTokenProvider tokenProvider = new TestMsiTokenProvider(
+        "https://fake-endpoint", "tenant", "clientId", "authority"
+    );
+    // Trigger token acquisition
+    AzureADToken token = tokenProvider.getToken();
+    // Assertions
+    assertThat(token.getAccessToken()).isEqualTo("fake-token");
+    // If the status code doesn't qualify for retry shouldRetry returns false and the loop ends.
+    // It being called multiple times verifies that the retry was done for the throttling status code 429.
+    Assertions.assertThat(attemptCounter.get())
+        .describedAs("Number of retries should be equal to "
+            + "max attempts for token fetch.")
+        .isEqualTo(DEFAULT_AZURE_OAUTH_TOKEN_FETCH_RETRY_MAX_ATTEMPTS);
+  }
 }

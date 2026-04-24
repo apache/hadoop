@@ -378,6 +378,21 @@ public class YarnConfiguration extends Configuration {
 
   public static final String YARN_WEBAPP_UI2_WARFILE_PATH = "yarn."
       + "webapp.ui2.war-file-path";
+
+  /**
+   * Enable YARN Capacity Scheduler UI.
+   */
+  public static final String YARN_WEBAPP_SCHEDULER_UI_ENABLE = "yarn."
+      + "webapp.scheduler-ui.enable";
+  public static final boolean DEFAULT_YARN_WEBAPP_SCHEDULER_UI_ENABLE = false;
+
+  public static final String YARN_WEBAPP_SCHEDULER_UI_WARFILE_PATH = "yarn."
+      + "webapp.scheduler-ui.war-file-path";
+
+  public static final String YARN_WEBAPP_SCHEDULER_UI_READ_ONLY_ENABLE = "yarn."
+      + "webapp.scheduler-ui.read-only.enable";
+  public static final boolean DEFAULT_YARN_WEBAPP_SCHEDULER_UI_READ_ONLY = false;
+
   public static final String YARN_API_SERVICES_ENABLE = "yarn."
       + "webapp.api-service.enable";
   public static final String YARN_WEBAPP_UI1_ENABLE_TOOLS = "yarn."
@@ -991,6 +1006,16 @@ public class YarnConfiguration extends Configuration {
   @Unstable
   public static final String DEFAULT_RM_SCHEDCONF_STORE_ZK_PARENT_PATH =
       "/confstore";
+
+  /** Read-retry period for the ZKConfigurationStore. */
+  @Private
+  @Unstable
+  public static final String RM_SCHEDCONF_STORE_ZK_READ_RETRY_SECS =
+      YARN_PREFIX + "scheduler.configuration.zk-store.read-retry-secs";
+  @Private
+  @Unstable
+  public static final int DEFAULT_RM_SCHEDCONF_STORE_ZK_READ_RETRY_SECS = 3;
+
 
   @Private
   @Unstable
@@ -3000,6 +3025,8 @@ public class YarnConfiguration extends Configuration {
   /** Binding address for the web proxy. */
   public static final String PROXY_BIND_HOST =
       PROXY_PREFIX + "bind-host";
+
+  public static final String PROXY_REDIRECT_FLAG = PROXY_PREFIX + "redirect-flag";
 
   /**
    * YARN Service Level Authorization
