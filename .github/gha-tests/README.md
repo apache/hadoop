@@ -15,11 +15,15 @@
    limitations under the License.
 -->
 
-### Initial test list for GitHub Actions (GHA)
+### Excluded tests for GitHub Actions (GHA)
 
-Run GHA workflow repeatedly, and if a test fail or abort one time, add it into `exclude-tests.txt`.
+Initial excluded tests: run the GHA workflow, if a test fails or aborts, add it
+to `exclude-tests.txt`. Repeat until 5 consecutive successes.
 
-Contributors are encouraged to diagnose and improve the excluded test cases, and remove them from the excluded list once they are stable.
+Contributors are encouraged to diagnose and improve the excluded tests, and remove
+them from the excluded list once they are stable. Stability assessment: when deleting
+tests from `exclude-tests.txt`, the GHA workflow was successfully executed 5 times
+consecutively.
 
 ### Run test locally
 
@@ -37,8 +41,8 @@ $ ./mvnw $MAVEN_ARGS -pl :hadoop-common -am clean install -DskipTests
 $ ./mvnw $MAVEN_ARGS -pl :hadoop-common test -Dtest=TestIPC
 ```
 
-Run all tests inside container and save the log to a file, then extract the failed test cases from the log file.
-This might take a dozen of hours, be patient.
+Run all tests inside container and save the log to a file, then extract the failed
+test cases from the log file. This might take a dozen of hours, be patient.
 ```
 $ export MAVEN_ARGS="-Pnative -Drequire.fuse -Drequire.openssl -Drequire.snappy -Drequire.valgrind -Drequire.test.libhadoop"
 $ ./mvnw $MAVEN_ARGS clean install -DskipTests
