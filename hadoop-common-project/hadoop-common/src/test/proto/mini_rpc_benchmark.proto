@@ -25,8 +25,8 @@ package hadoop.common;
 /**
  * Protobuf service used by {@code MiniRPCBenchmark}.
  *
- * Mirrors the legacy Writable-based MiniProtocol so the benchmark can
- * exercise RPC connection establishment over ProtobufRpcEngine2.
+ * Mirror the legacy WritableRPCEngine-based MiniProtocol so the benchmark
+ * can exercise RPC connection establishment over ProtobufRpcEngine2.
  *
  * Messages are inlined (rather than importing Security.proto) to keep
  * the test proto self contained and avoid additional proto path setup
