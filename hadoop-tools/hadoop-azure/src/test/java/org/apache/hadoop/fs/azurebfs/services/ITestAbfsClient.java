@@ -416,10 +416,12 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
 
     AbfsClientContext abfsClientContext =
         new AbfsClientContextBuilder().withAbfsPerfTracker(tracker)
-                                .withExponentialRetryPolicy(
-                                    new ExponentialRetryPolicy(abfsConfig.getMaxIoRetries()))
-                                .withAbfsCounters(abfsCounters)
-                                .build();
+            .withExponentialRetryPolicy(
+                new ExponentialRetryPolicy(abfsConfig.getMaxIoRetries()))
+            .withPrefetchExponentialRetryPolicy(
+                new ExponentialRetryPolicy(abfsConfig.getPrefetchMaxIoRetries()))
+            .withAbfsCounters(abfsCounters)
+            .build();
 
     // Create test AbfsClient
     AbfsClient testClient;

@@ -709,7 +709,7 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
     if (buf.getStatus() == ReadBufferStatus.READ_FAILED) {
       // To prevent new read requests to fail due to old read-ahead attempts,
       // return exception only from buffers that failed within last getThresholdAgeMilliseconds()
-      if ((currentTimeMillis() - (buf.getTimeStamp())
+      if (!isPrefetchRequestPriorityEnabled() && (currentTimeMillis() - (buf.getTimeStamp())
           < getThresholdAgeMilliseconds())) {
         throw buf.getErrException();
       } else {

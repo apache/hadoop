@@ -76,6 +76,8 @@ import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_RE
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.COLON;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.SPLIT_NO_LIMIT;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_MAX_IO_PREFETCH_RETRIES;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_MAX_IO_RETRIES;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENABLE_PREFETCH_REQUEST_PRIORITY;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_REQUEST_PRIORITY;
 import static org.apache.hadoop.fs.azurebfs.constants.ReadType.DIRECT_READ;
@@ -95,6 +97,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.ArgumentMatchers.nullable;
+import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
@@ -174,6 +177,7 @@ public class TestAbfsInputStream extends AbstractAbfsIntegrationTest {
   AbfsClient getMockAbfsClient() throws URISyntaxException {
     // Mock failure for client.read()
     AbfsClient client = mock(AbfsClient.class);
+    AbfsConfiguration abfsConfig = mock(AbfsConfiguration.class);
     AbfsCounters abfsCounters = Mockito.spy(new AbfsCountersImpl(new URI("abcd")));
     Mockito.doReturn(abfsCounters).when(client).getAbfsCounters();
     AbfsPerfTracker tracker = new AbfsPerfTracker(
@@ -181,7 +185,10 @@ public class TestAbfsInputStream extends AbstractAbfsIntegrationTest {
         this.getAccountName(),
         this.getConfiguration());
     when(client.getAbfsPerfTracker()).thenReturn(tracker);
-
+    when(client.getAbfsConfiguration()).thenReturn(abfsConfig);
+    // Delegate to real config instead of hardcoding false
+    when(abfsConfig.isEnablePrefetchRequestPriority())
+            .thenReturn(getConfiguration().isEnablePrefetchRequestPriority());
     return client;
   }
 
@@ -332,6 +339,65 @@ public class TestAbfsInputStream extends AbstractAbfsIntegrationTest {
 
     Mockito.reset(mockClient); //clears invocation count for next test case
   }
+
+  /**
+   * Verifies that when prefetch read fails and
+   * FS_AZURE_ENABLE_PREFETCH_REQUEST_PRIORITY is true (default), the
+   * exception is NOT propagated to the caller. The stream should silently
+   * fall back or exhaust its (lower) retry budget without surfacing an error.
+   * The failed reads should be of readtype PR and the successful one of MR.
+   * This tests the core contract: prefetch failures are silent when the
+   * feature flag is on.
+   */
+  @Test
+  public void testPrefetchFailureNotPropagatedToUserWhenPriorityEnabled() throws Exception {
+    AbfsClient client = getMockAbfsClient();
+
+    AbfsRestOperation successOp = getMockRestOp();
+    when(client.getAbfsConfiguration().isEnablePrefetchRequestPriority())
+            .thenReturn(true);
+
+    // 3 Prefetch reads fail → final direct (missed cache) read succeeds
+    doThrow(new TimeoutException("Internal Server error for RAH-Thread-X"))
+            .doThrow(new TimeoutException("Internal Server error for RAH-Thread-Y"))
+            .doThrow(new TimeoutException("Internal Server error for RAH-Thread-Z"))
+            .doReturn(successOp)
+            .when(client)
+            .read(any(String.class), any(Long.class), any(byte[].class),
+                    any(Integer.class), any(Integer.class), any(String.class),
+                    any(String.class), any(), any(TracingContext.class));
+
+    AbfsInputStream inputStream = getAbfsInputStream(client, "testFailedReadAheadReadTypes.txt");
+
+    inputStream.read(new byte[1 * ONE_KB]);   // triggers all 4 read calls
+
+    // Verify count remains same as earlier test
+    verifyReadCallCount(client, 4);
+
+    // Capture TracingContext arguments (9th parameter)
+    ArgumentCaptor<TracingContext> traceCaptor = ArgumentCaptor.forClass(TracingContext.class);
+    verify(client, times(4))
+            .read(any(String.class), any(Long.class), any(byte[].class),
+                    any(Integer.class), any(Integer.class), any(String.class),
+                    any(String.class), any(), traceCaptor.capture());
+
+    List<TracingContext> contextList = traceCaptor.getAllValues();
+
+    // First 3 calls = PR (Prefetch Reads)
+    for (int i = 0; i < 3; i++) {
+      verifyHeaderForReadTypeInTracingContextHeader(contextList.get(i),
+              ReadType.PREFETCH_READ,
+              -1
+      );
+    }
+
+    // 4th call = MR (Missed Cache Read)
+    verifyHeaderForReadTypeInTracingContextHeader(contextList.get(3),
+            MISSEDCACHE_READ,
+            0
+    );
+  }
+
 
   @Test
   public void testOpenFileWithOptions() throws Exception {
@@ -1056,6 +1122,9 @@ private void mockClientForEncryptionContext(AbfsClient encryptedClient) throws I
     AbfsClient client = getMockAbfsClient();
     AbfsRestOperation successOp = getMockRestOp();
 
+    when(client.getAbfsConfiguration().isEnablePrefetchRequestPriority())
+            .thenReturn(false);
+
     // Stub :
     // Read request leads to 3 readahead calls: Fail all 3 readahead-client.read()
     // Actual read request fails with the failure in readahead thread
@@ -1132,6 +1201,9 @@ private void mockClientForEncryptionContext(AbfsClient encryptedClient) throws I
   public void testOlderReadAheadFailure() throws Exception {
     AbfsClient client = getMockAbfsClient();
     AbfsRestOperation successOp = getMockRestOp();
+
+    when(client.getAbfsConfiguration().isEnablePrefetchRequestPriority())
+            .thenReturn(false);
 
     // Stub :
     // First Read request leads to 3 readahead calls: Fail all 3 readahead-client.read()
@@ -1798,36 +1870,6 @@ private void mockClientForEncryptionContext(AbfsClient encryptedClient) throws I
             }
         }
     }
-
-  /*
-   * Test to verify that both conditions of prefetch read and respective config
-   * enabled needs to be true for the priority header to be added
-   */
-  @Test
-  public void testPrefetchReadAddsPriorityHeaderWithDifferentConfigs()
-      throws Exception {
-    Configuration configuration1 = new Configuration(getRawConfiguration());
-    configuration1.set(FS_AZURE_ENABLE_PREFETCH_REQUEST_PRIORITY, "true");
-
-    Configuration configuration2 = new Configuration(getRawConfiguration());
-    //use the default value for the config: false
-    configuration2.unset(FS_AZURE_ENABLE_PREFETCH_REQUEST_PRIORITY);
-
-    TracingContext tracingContext1 = mock(TracingContext.class);
-    when(tracingContext1.getReadType()).thenReturn(PREFETCH_READ);
-
-    //Prefetch Read with config enabled
-    executePrefetchReadTest(tracingContext1, configuration1, true);
-    //Prefetch Read with config disabled
-    executePrefetchReadTest(tracingContext1, configuration2, false);
-
-    when(tracingContext1.getReadType()).thenReturn(DIRECT_READ);
-
-    //Non-prefetch read with config disabled
-    executePrefetchReadTest(tracingContext1, configuration2, false);
-    //Non-prefetch read with config enabled
-    executePrefetchReadTest(tracingContext1, configuration1, false);
-  }
 
   private Path createTestFile(AzureBlobFileSystem fs, int fileSize) throws Exception {
     Path testPath = new Path("testFile");

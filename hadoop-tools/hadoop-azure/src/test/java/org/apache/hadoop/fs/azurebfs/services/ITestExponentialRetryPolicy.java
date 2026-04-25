@@ -23,10 +23,12 @@ import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.DOT;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_BACKOFF_INTERVAL;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_MAX_BACKOFF_INTERVAL;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_MAX_IO_PREFETCH_RETRIES;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_MAX_IO_RETRIES;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_MIN_BACKOFF_INTERVAL;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_LEVEL_THROTTLING_ENABLED;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENABLE_AUTOTHROTTLING;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENABLE_PREFETCH_REQUEST_PRIORITY;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.MIN_BUFFER_SIZE;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_ABFS_ACCOUNT1_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_ACCOUNT_KEY;
@@ -54,6 +56,8 @@ import org.apache.hadoop.conf.Configuration;
 
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
+import org.apache.hadoop.fs.azurebfs.constants.ReadType;
+import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
 /**
  * Unit test ITestExponentialRetryPolicy.
@@ -339,5 +343,87 @@ public class ITestExponentialRetryPolicy extends AbstractAbfsIntegrationTest {
     Assertions.assertThat(localRetryCount)
         .describedAs("When all retries are exhausted, the retryCount will be same as max configured.")
         .isEqualTo(abfsConfig.getMaxIoRetries());
+  }
+
+  /**
+   * Test prefetch exponential retry policy max retries configuration.
+   * Validates that prefetch retry policy correctly uses the configured
+   * max prefetch IO retries value and respects retry limits.
+   *
+   * @throws Exception if test fails
+   */
+  @Test
+  public void testPrefetchExponentialRetryPolicyMaxRetries() throws Exception {
+    AbfsConfiguration abfsConfig = getAbfsConfig();
+    int prefetchRetries = 5;
+    abfsConfig.setMaxIoPrefetchRetries(prefetchRetries);
+    ExponentialRetryPolicy prefetchPolicy = new ExponentialRetryPolicy(abfsConfig, true);
+
+    Assertions.assertThat(prefetchPolicy.getMaxRetryCount())
+        .describedAs("Prefetch policy should use getPrefetchMaxIoRetries value")
+        .isEqualTo(prefetchRetries);
+
+    // Validate retry logic
+    for (int i = 0; i < prefetchRetries; i++) {
+      Assertions.assertThat(prefetchPolicy.shouldRetry(i, -1))
+          .describedAs("Should retry for attempts less than maxPrefetchIoRetries")
+          .isTrue();
+    }
+    Assertions.assertThat(prefetchPolicy.shouldRetry(prefetchRetries, -1))
+        .describedAs("Should not retry when attempts equal to maxPrefetchIoRetries")
+        .isFalse();
+  }
+
+  /**
+   * Test client getRetryPolicy returns correct policy based on configuration.
+   * Validates that:
+   * - When prefetch priority is enabled, prefetch retry policy is returned for PREFETCH_READ
+   * - When prefetch priority is disabled, default retry policy is returned
+   * - Retry counts are correctly configured for each policy type
+   *
+   * @throws Exception if test fails
+   */
+  @Test
+  public void testGetRetryPolicyBasedOnConfiguration() throws Exception {
+    AzureBlobFileSystem fs = getFileSystem();
+    TracingContext tc = mock(TracingContext.class);
+    when(tc.getReadType()).thenReturn(ReadType.PREFETCH_READ);
+
+    // Test with prefetch priority enabled
+    Configuration configWithPrefetch = new Configuration();
+    configWithPrefetch.set(FS_AZURE_ENABLE_PREFETCH_REQUEST_PRIORITY, "true");
+    configWithPrefetch.set(AZURE_MAX_IO_PREFETCH_RETRIES, "4");
+    AbfsConfiguration abfsConfigWithPrefetch = new AbfsConfiguration(configWithPrefetch,
+        DUMMY_ACCOUNT_NAME);
+    AbfsClient clientWithPrefetch = ITestAbfsClient.createTestClientFromCurrentContext(
+        fs.getAbfsStore().getClient(), abfsConfigWithPrefetch);
+
+    AbfsRetryPolicy prefetchPolicy = clientWithPrefetch.getRetryPolicy(tc, "");
+    Assertions.assertThat(prefetchPolicy)
+        .describedAs("Should return prefetchExponentialRetryPolicy for PREFETCH_READ when enabled")
+        .isEqualTo(clientWithPrefetch.getPrefetchRetryPolicy());
+    Assertions.assertThat(prefetchPolicy.getMaxRetryCount())
+        .describedAs("Prefetch policy should have correct max retry count")
+        .isEqualTo(4);
+    Assertions.assertThat(prefetchPolicy.shouldRetry(0, -1)).isTrue();
+    Assertions.assertThat(prefetchPolicy.shouldRetry(3, -1)).isTrue();
+    Assertions.assertThat(prefetchPolicy.shouldRetry(4, -1)).isFalse();
+
+    // Test with prefetch priority disabled
+    Configuration configWithoutPrefetch = new Configuration();
+    configWithoutPrefetch.set(FS_AZURE_ENABLE_PREFETCH_REQUEST_PRIORITY, "false");
+    configWithoutPrefetch.set(AZURE_MAX_IO_RETRIES, "7");
+    AbfsConfiguration abfsConfigWithoutPrefetch = new AbfsConfiguration(configWithoutPrefetch,
+        DUMMY_ACCOUNT_NAME);
+    AbfsClient clientWithoutPrefetch = ITestAbfsClient.createTestClientFromCurrentContext(
+        fs.getAbfsStore().getClient(), abfsConfigWithoutPrefetch);
+
+    AbfsRetryPolicy defaultPolicy = clientWithoutPrefetch.getRetryPolicy(tc, "anyFailureReason");
+    Assertions.assertThat(defaultPolicy)
+        .describedAs("Should return default exponentialRetryPolicy when prefetch priority is disabled")
+        .isEqualTo(clientWithoutPrefetch.getExponentialRetryPolicy());
+    Assertions.assertThat(defaultPolicy.getMaxRetryCount())
+        .describedAs("Default policy should have correct max retry count")
+        .isEqualTo(7);
   }
 }

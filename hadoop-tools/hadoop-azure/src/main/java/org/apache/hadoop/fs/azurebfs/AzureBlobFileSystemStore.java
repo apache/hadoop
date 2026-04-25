@@ -225,6 +225,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
   public AzureBlobFileSystemStore(
       AzureBlobFileSystemStoreBuilder abfsStoreBuilder) throws IOException {
     this.uri = abfsStoreBuilder.uri;
+    //todo: this
     String[] authorityParts = authorityParts(uri);
     final String fileSystemName = authorityParts[0];
     final String accountName = authorityParts[1];
@@ -1886,6 +1887,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     LOG.trace("AbfsClient init complete");
   }
 
+  //todo: here
   private AbfsServiceType getAbfsServiceTypeFromUrl() {
     if (uri.toString().contains(ABFS_BLOB_DOMAIN_NAME)) {
       return AbfsServiceType.BLOB;
@@ -1905,6 +1907,8 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     return new AbfsClientContextBuilder()
         .withExponentialRetryPolicy(
             new ExponentialRetryPolicy(abfsConfiguration))
+        .withPrefetchExponentialRetryPolicy(
+            new ExponentialRetryPolicy(abfsConfiguration, true))
         .withStaticRetryPolicy(
             new StaticRetryPolicy(abfsConfiguration))
         .withTailLatencyRequestTimeoutRetryPolicy(

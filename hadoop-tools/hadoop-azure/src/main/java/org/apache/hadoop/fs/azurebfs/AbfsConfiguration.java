@@ -189,6 +189,11 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_MAX_RETRY_ATTEMPTS)
   private int maxIoRetries;
 
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_MAX_IO_PREFETCH_RETRIES,
+      MinValue = 0,
+      DefaultValue = DEFAULT_PREFETCH_MAX_RETRY_ATTEMPTS)
+  private int maxIoPrefetchRetries;
+
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_CUSTOM_TOKEN_FETCH_RETRY_COUNT,
       MinValue = 0,
       DefaultValue = DEFAULT_CUSTOM_TOKEN_FETCH_RETRY_COUNT)
@@ -1142,6 +1147,10 @@ public class AbfsConfiguration{
     return this.maxIoRetries;
   }
 
+  public int getPrefetchMaxIoRetries() {
+    return this.maxIoPrefetchRetries;
+  }
+
   public int getCustomTokenFetchRetryCount() {
     return this.customTokenFetchRetryCount;
   }
@@ -1975,6 +1984,11 @@ public class AbfsConfiguration{
   @VisibleForTesting
   public void setMaxIoRetries(int maxIoRetries) {
     this.maxIoRetries = maxIoRetries;
+  }
+
+  @VisibleForTesting
+  public void setMaxIoPrefetchRetries(int maxIoPrefetchRetries) {
+    this.maxIoPrefetchRetries = maxIoPrefetchRetries;
   }
 
   @VisibleForTesting

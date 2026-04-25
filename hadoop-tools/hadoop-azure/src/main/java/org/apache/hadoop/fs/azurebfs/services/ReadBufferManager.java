@@ -47,6 +47,7 @@ public abstract class ReadBufferManager {
   private Queue<ReadBuffer> readAheadQueue = new LinkedList<>(); // queue of requests that are not picked up by any worker thread yet
   private LinkedList<ReadBuffer> inProgressList = new LinkedList<>(); // requests being processed by worker threads
   private LinkedList<ReadBuffer> completedReadList = new LinkedList<>(); // buffers available for reading
+  private boolean isPrefetchRequestPriorityEnabled;
 
   /**
    * Initializes the ReadBufferManager singleton instance. Creates the read buffers and threads.
@@ -199,6 +200,15 @@ public abstract class ReadBufferManager {
   }
 
   /**
+   * Sets prefetch request priority according to the config set
+   *
+   * @param isEnabled true if its enabled, false otherwise
+   */
+  protected void setPrefetchRequestPriorityEnabled(boolean isEnabled) {
+    isPrefetchRequestPriorityEnabled = isEnabled;
+  }
+
+  /**
    * Gets the queue of read-ahead requests.
    *
    * @return the queue of {@link ReadBuffer} objects in the read-ahead queue
@@ -272,6 +282,15 @@ public abstract class ReadBufferManager {
   @VisibleForTesting
   int getCompletedReadListSize() {
     return completedReadList.size();
+  }
+
+  /**
+   * Checks if prefetch request priority is enabled.
+   *
+   * @return true if prefetch request priority is enabled, false otherwise
+   */
+  boolean isPrefetchRequestPriorityEnabled() {
+    return isPrefetchRequestPriorityEnabled;
   }
 
   /**

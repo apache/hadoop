@@ -551,6 +551,8 @@ public abstract class AbfsInputStream extends FSInputStream implements CanUnbuff
         nextSize = min((long) readAheadBlockSize, contentLength - nextOffset);
       }
 
+      getReadBufferManager().setPrefetchRequestPriorityEnabled(client.getAbfsConfiguration().isEnablePrefetchRequestPriority());
+
       // try reading from buffers first
       receivedBytes = getReadBufferManager().getBlock(this, position, length, b);
       bytesFromReadAhead += receivedBytes;

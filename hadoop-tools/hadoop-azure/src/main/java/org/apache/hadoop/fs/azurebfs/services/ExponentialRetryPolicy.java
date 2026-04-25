@@ -97,6 +97,18 @@ public class ExponentialRetryPolicy extends AbfsRetryPolicy {
   /**
    * Initializes a new instance of the {@link ExponentialRetryPolicy} class.
    *
+   * @param conf The {@link AbfsConfiguration} from which to retrieve retry configuration.
+   */
+  public ExponentialRetryPolicy(AbfsConfiguration conf, Boolean isPrefetch) {
+    this(conf.getPrefetchMaxIoRetries(),
+        conf.getMinBackoffIntervalMilliseconds(),
+        conf.getMaxBackoffIntervalMilliseconds(),
+        conf.getBackoffIntervalMilliseconds());
+  }
+
+  /**
+   * Initializes a new instance of the {@link ExponentialRetryPolicy} class.
+   *
    * @param maxRetryCount The maximum number of retry attempts.
    * @param minBackoff The minimum backoff time.
    * @param maxBackoff The maximum backoff time.

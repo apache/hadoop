@@ -25,6 +25,7 @@ package org.apache.hadoop.fs.azurebfs.services;
 public class AbfsClientContextBuilder {
 
   private ExponentialRetryPolicy exponentialRetryPolicy;
+  private ExponentialRetryPolicy prefetchExponentialRetryPolicy;
   private StaticRetryPolicy staticRetryPolicy;
   private TailLatencyRequestTimeoutRetryPolicy tailLatencyRequestTimeoutRetryPolicy;
   private AbfsPerfTracker abfsPerfTracker;
@@ -34,6 +35,12 @@ public class AbfsClientContextBuilder {
   public AbfsClientContextBuilder withExponentialRetryPolicy(
       final ExponentialRetryPolicy exponentialRetryPolicy) {
     this.exponentialRetryPolicy = exponentialRetryPolicy;
+    return this;
+  }
+
+  public AbfsClientContextBuilder withPrefetchExponentialRetryPolicy(
+      final ExponentialRetryPolicy prefetchExponentialRetryPolicy) {
+    this.prefetchExponentialRetryPolicy = prefetchExponentialRetryPolicy;
     return this;
   }
 
@@ -74,6 +81,7 @@ public class AbfsClientContextBuilder {
     //validate the values
     return new AbfsClientContext(
         exponentialRetryPolicy,
+        prefetchExponentialRetryPolicy,
         staticRetryPolicy,
         tailLatencyRequestTimeoutRetryPolicy,
         abfsPerfTracker,
