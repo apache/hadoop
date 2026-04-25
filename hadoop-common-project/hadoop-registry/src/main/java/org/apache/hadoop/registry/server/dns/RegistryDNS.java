@@ -794,21 +794,12 @@ public class RegistryDNS extends AbstractService implements DNSOperations,
 
       buf.get(in, 0, messageLength);
 
-      Message query;
-      byte[] response;
-      try {
-        query = new Message(in);
-        LOG.info("received TCP query {}", query.getQuestion());
-        response = generateReply(query, ch.socket());
-        if (response == null) {
-          return;
-        }
-      } catch (IOException e) {
-        response = formErrorMessage(in);
+      byte[] response = generateTCPReply(in, ch.socket());
+      if (response == null) {
+        return;
       }
 
       ByteBuffer out = ByteBuffer.allocate(response.length + 2);
-      out.clear();
       byte[] data = new byte[2];
 
       data[1] = (byte)(response.length & 0xFF);
@@ -835,6 +826,24 @@ public class RegistryDNS extends AbstractService implements DNSOperations,
   }
 
   /**
+   * Parse a TCP query and produce a reply, falling back to a FORMERR
+   * response if the query cannot be parsed.
+   *
+   * @param in     the raw query bytes.
+   * @param socket the originating socket.
+   * @return the reply bytes, or {@code null} if no response should be sent.
+   */
+  private byte[] generateTCPReply(byte[] in, Socket socket) {
+    try {
+      Message query = new Message(in);
+      LOG.info("received TCP query {}", query.getQuestion());
+      return generateReply(query, socket);
+    } catch (IOException e) {
+      return formErrorMessage(in);
+    }
+  }
+
+  /**
    * Process a UDP request.
    *
    * @param channel the datagram channel for the request.
@@ -842,54 +851,71 @@ public class RegistryDNS extends AbstractService implements DNSOperations,
    * @param input the input ByteBuffer.
    * @throws IOException if the udp processing generates an issue.
    */
-  public void nioUDPClient(DatagramChannel channel, SocketAddress remoteAddress, ByteBuffer input) throws IOException {
-    ByteBuffer output = ByteBuffer.allocate(4096);
-    byte[] in = null;
-    byte[] response = null;
-    Message query = null;
+  public void nioUDPClient(DatagramChannel channel,
+                           SocketAddress remoteAddress,
+                           ByteBuffer input) throws IOException {
     try {
-      try {
-        int position = input.position();
-        in = new byte[position];
-        input.flip();
-        input.get(in);
-        query = new Message(in);
-        LOG.info("{}: received UDP query {}", remoteAddress,
-                query.getQuestion());
-        response = generateReply(query, null);
-        if (response.length > output.capacity()) {
-          LOG.warn("{}: Response of UDP query {} exceeds limit {}",
-                  remoteAddress, query.getQuestion(), output.limit());
-          query.getHeader().setFlag(Flags.TC);
-          response = query.toWire();
-        }
-        if (response == null) {
-          return;
-        }
-      } catch (IOException e) {
-        response = formErrorMessage(in);
-        if (response == null) {
-          LOG.debug("Error during create an error message."
-                  + " Failed to parse a header", e);
-          return;
-        }
+      int position = input.position();
+      byte[] in = new byte[position];
+      input.flip();
+      input.get(in);
+
+      byte[] response = generateUDPReply(in, remoteAddress, 4096);
+      if (response == null) {
+        return;
       }
-      output.clear();
+
+      ByteBuffer output = ByteBuffer.allocate(4096);
       output.put(response);
       output.flip();
 
       LOG.debug("{}:  sending response", remoteAddress);
       channel.send(output, remoteAddress);
-    } catch (Exception e) {
-      if (e instanceof IOException && remoteAddress != null) {
-        throw NetUtils.wrapException(channel.socket().getInetAddress().getHostName(),
-                channel.socket().getPort(),
-                ((InetSocketAddress) remoteAddress).getHostName(),
-                ((InetSocketAddress) remoteAddress).getPort(),
-                (IOException) e);
-      } else {
-        throw e;
+    } catch (IOException e) {
+      if (remoteAddress instanceof InetSocketAddress) {
+        InetSocketAddress isa = (InetSocketAddress) remoteAddress;
+        throw NetUtils.wrapException(
+            channel.socket().getInetAddress().getHostName(),
+            channel.socket().getPort(),
+            isa.getHostName(), isa.getPort(), e);
       }
+      throw e;
+    }
+  }
+
+  /**
+   * Parse a UDP query and produce a reply, truncating with the TC flag if
+   * the response exceeds {@code maxSize}, or falling back to a FORMERR
+   * response if the query cannot be parsed.
+   *
+   * @param in            the raw query bytes.
+   * @param remoteAddress the client address (for logging).
+   * @param maxSize       the maximum allowed response size.
+   * @return the reply bytes, or {@code null} if no response should be sent.
+   */
+  private byte[] generateUDPReply(byte[] in, SocketAddress remoteAddress,
+                                  int maxSize) {
+    try {
+      Message query = new Message(in);
+      LOG.info("{}: received UDP query {}", remoteAddress,
+          query.getQuestion());
+      byte[] response = generateReply(query, null);
+      if (response == null) {
+        return null;
+      }
+      if (response.length > maxSize) {
+        LOG.warn("{}: Response of UDP query {} exceeds limit {}",
+            remoteAddress, query.getQuestion(), maxSize);
+        query.getHeader().setFlag(Flags.TC);
+        response = query.toWire();
+      }
+      return response;
+    } catch (IOException e) {
+      byte[] err = formErrorMessage(in);
+      if (err == null) {
+        LOG.debug("Failed to parse header while creating error response", e);
+      }
+      return err;
     }
   }
 
