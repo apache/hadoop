@@ -885,7 +885,6 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
   /**
    * Opens a file for read and returns an {@link AbfsInputStream}.
    *
-   * <p>
    * The method decides whether to call the server's GetPathStatus based on:
    * <ul>
    *   <li>the supplied {@code parameters} (if it contains a {@link VersionedFileStatus}
@@ -897,7 +896,6 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
    * X-MS-ENCRYPTION-CONTEXT header will be required and used to construct a
    * {@link ContextProviderEncryptionAdapter}. If that header is missing a
    * {@link PathIOException} is thrown.
-   * </p>
    *
    * <p>
    * Note: when {@link AbfsConfiguration#shouldRestrictGpsOnOpenFile()} is enabled,
