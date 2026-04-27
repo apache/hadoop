@@ -70,20 +70,20 @@ public class TestRouterListOpenFiles {
   private static DFSClient routerClient;
   private final boolean useAsync;
 
-  public TestRouterListOpenFiles(boolean flag) throws Exception {
-    this.useAsync = flag;
-    setup(flag);
+  public TestRouterListOpenFiles(boolean useAsyncFlag) throws Exception {
+    this.useAsync = useAsyncFlag;
+    setup(useAsyncFlag);
   }
 
   public static Object[] getParameters() {
     return new Object[] {true, false};
   }
 
-  public void setup(boolean useAsync) throws Exception {
+  public void setup(boolean useAsyncFlag) throws Exception {
     cluster = new StateStoreDFSCluster(false, NUM_SUBCLUSTERS,
         MultipleDestinationMountTableResolver.class);
     Configuration conf = new RouterConfigBuilder().stateStore().heartbeat().admin().rpc().build();
-    conf.setBoolean(DFS_ROUTER_ASYNC_RPC_ENABLE_KEY, useAsync);
+    conf.setBoolean(DFS_ROUTER_ASYNC_RPC_ENABLE_KEY, useAsyncFlag);
     conf.set(RBFConfigKeys.DFS_ROUTER_MONITOR_NAMENODE, "ns0,ns1");
     conf.setBoolean(RBFConfigKeys.MOUNT_TABLE_CACHE_UPDATE, true);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_LIST_OPENFILES_NUM_RESPONSES, BATCH_SIZE);
