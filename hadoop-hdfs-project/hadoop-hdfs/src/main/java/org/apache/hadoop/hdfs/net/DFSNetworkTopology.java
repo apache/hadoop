@@ -387,12 +387,12 @@ public class DFSNetworkTopology extends NetworkTopology {
                   .getSubtreeStorageCount(type);
             } else if (excludedNode instanceof DatanodeInfo) {
               String nodeLocation = excludedNode.getNetworkLocation()
-                  + "/" + excludedNode.getName();
-              DatanodeDescriptor dn = (DatanodeDescriptor)getNode(nodeLocation);
+                  + NetworkTopology.PATH_SEPARATOR_STR + excludedNode.getName();
+              DatanodeDescriptor dn = (DatanodeDescriptor) getNode(nodeLocation);
               if (dn == null) {
                 continue;
               }
-              storageCount -= dn.hasStorageType(type)? 1 : 0;
+              storageCount -= dn.hasStorageType(type) ? 1 : 0;
             }
           }
         }
