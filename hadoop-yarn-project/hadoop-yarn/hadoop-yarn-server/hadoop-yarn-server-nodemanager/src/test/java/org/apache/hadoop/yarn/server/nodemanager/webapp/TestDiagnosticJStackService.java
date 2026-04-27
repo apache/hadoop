@@ -62,8 +62,8 @@ public class TestDiagnosticJStackService {
       mock(ApplicationACLsManager.class);
 
   private static final NodeManager.NMContext NM_CONTEXT = new NodeManager.NMContext(
-      null, null, null
-      , MOCK_ACLS_MANAGER , null , false, new Configuration()
+      null , null , null
+       , MOCK_ACLS_MANAGER , null , false , new Configuration()
   );
   private static final DiagnosticJStackService DIAGNOSTIC_JSTACK_SERVICE =
       spy(new DiagnosticJStackService(NM_CONTEXT));
@@ -89,7 +89,7 @@ public class TestDiagnosticJStackService {
       when(MOCK_ACLS_MANAGER.isAdmin(any())).thenReturn(true);
 
       String result =
-        DIAGNOSTIC_JSTACK_SERVICE.collectNodeThreadDump(NUMBER_OF_JSTACKS, mockRequest);
+          DIAGNOSTIC_JSTACK_SERVICE.collectNodeThreadDump(NUMBER_OF_JSTACKS, mockRequest);
 
       assertEquals(NUMBER_OF_JSTACKS, mockedConstruction.constructed().size(),
           "ShellCommandExecutor should be instantiated relative to Number of JStacks");
