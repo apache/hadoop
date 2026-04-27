@@ -52,6 +52,7 @@
 **/org/apache/hadoop/hdfs/server/datanode/TestDirectoryScanner.java
 **/org/apache/hadoop/hdfs/server/namenode/TestEditLogRace.java
 **/org/apache/hadoop/hdfs/server/namenode/TestFsck.java
+**/org/apache/hadoop/hdfs/server/namenode/TestNameNodeMXBean.java
 **/org/apache/hadoop/hdfs/server/datanode/TestIncrementalBlockReports.java
 **/org/apache/hadoop/hdfs/server/datanode/fsdataset/impl/TestFsVolumeList.java
 **/org/apache/hadoop/hdfs/server/namenode/TestCacheDirectivesWithViewDFS.java
@@ -74,6 +75,7 @@
 **/org/apache/hadoop/yarn/webapp/TestWebApp.java
 
 # hadoop-yarn-server-common
+**/org/apache/hadoop/yarn/server/federation/policies/router/TestPriorityRouterPolicy.java
 **/org/apache/hadoop/yarn/server/federation/store/sql/TestFederationSQLServerScriptAccuracy.java
 
 # hadoop-yarn-server-resourcemanager
