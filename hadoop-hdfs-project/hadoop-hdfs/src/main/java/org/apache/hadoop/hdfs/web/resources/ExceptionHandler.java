@@ -29,11 +29,13 @@ import javax.ws.rs.ext.Provider;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.apache.hadoop.fs.ClusterStorageCapacityExceededException;
 import org.apache.hadoop.hdfs.web.JsonUtil;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
+import org.apache.hadoop.util.DiskChecker.DiskOutOfSpaceException;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.glassfish.jersey.server.ContainerException;
@@ -45,6 +47,28 @@ import org.glassfish.hk2.api.MultiException;
 public class ExceptionHandler implements ExceptionMapper<Exception> {
   public static final Logger LOG =
       LoggerFactory.getLogger(ExceptionHandler.class);
+
+  /**
+   * HTTP 507 Insufficient Storage (RFC 4918). Not present in JAX-RS 2.1's
+   * {@link Response.Status} enum, so we define it here.
+   */
+  static final Response.StatusType INSUFFICIENT_STORAGE =
+      new Response.StatusType() {
+        @Override
+        public int getStatusCode() {
+          return 507;
+        }
+
+        @Override
+        public Response.Status.Family getFamily() {
+          return Response.Status.Family.SERVER_ERROR;
+        }
+
+        @Override
+        public String getReasonPhrase() {
+          return "Insufficient Storage";
+        }
+      };
 
   private static Exception toCause(Exception e) {
     final Throwable t = e.getCause();    
@@ -101,13 +125,16 @@ public class ExceptionHandler implements ExceptionMapper<Exception> {
     }
     
     //Map response status
-    final Response.Status s;
+    final Response.StatusType s;
     if (e instanceof SecurityException) {
       s = Response.Status.FORBIDDEN;
     } else if (e instanceof AuthorizationException) {
       s = Response.Status.FORBIDDEN;
     } else if (e instanceof FileNotFoundException) {
       s = Response.Status.NOT_FOUND;
+    } else if (e instanceof ClusterStorageCapacityExceededException
+        || e instanceof DiskOutOfSpaceException) {
+      s = INSUFFICIENT_STORAGE;
     } else if (e instanceof IOException) {
       s = Response.Status.FORBIDDEN;
     } else if (e instanceof UnsupportedOperationException) {
