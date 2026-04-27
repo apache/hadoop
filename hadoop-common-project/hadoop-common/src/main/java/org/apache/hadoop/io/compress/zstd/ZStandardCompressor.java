@@ -216,11 +216,9 @@ public class ZStandardCompressor implements Compressor {
       return n;
     }
 
-    // Always invoke the streaming API — even with empty input — so internally
-    // buffered bytes continue to be drained, matching native ZSTD_flushStream.
-    // Use END only when finish=true, no more user data, and all direct-buffer
-    // data consumed (mirrors ZSTD_endStream); otherwise FLUSH (mirrors
-    // ZSTD_compressStream + ZSTD_flushStream).
+    // Always invoke the streaming API - even with empty input - so internally
+    // buffered bytes continue to be drained. Use END only when finish=true, no
+    // more user data, and all direct-buffer data consumed; otherwise CONTINUE.
     boolean allConsumed = (uncompressedDirectBufLen - uncompressedDirectBufOff <= 0);
     boolean shouldEnd = finish && userBufLen == 0 && allConsumed;
 
@@ -230,13 +228,13 @@ public class ZStandardCompressor implements Compressor {
     compressedDirectBuf.limit(directBufferSize);
 
     // CONTINUE should be used for non-end case, to support multi-threaded:
-    // 1. CONTINUE + workers ≥ 1: non-blocking. The call copies as much input
+    // 1. CONTINUE + workers >= 1: non-blocking. The call copies as much input
     //      as it can into a job, dispatches to workers, drains whatever output
     //      is ready, and returns. Multiple jobs can be in flight in parallel.
-    // 2. FLUSH + workers ≥ 1: multi-threaded compression will block to flush
+    // 2. FLUSH + workers >= 1: multi-threaded compression will block to flush
     //      as much output as possible. The call won't return until every queued
     //      job has finished and its output has been drained to the dst buffer.
-    // 3. END + workers ≥ 1: same as FLUSH but also closes the frame. Same
+    // 3. END + workers >= 1: same as FLUSH but also closes the frame. Same
     //      blocking behavior.
     EndDirective endOp = shouldEnd ? EndDirective.END : EndDirective.CONTINUE;
     boolean done = zstdJniCtx.compressDirectByteBufferStream(
