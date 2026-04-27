@@ -229,7 +229,16 @@ public class ZStandardCompressor implements Compressor {
     compressedDirectBuf.position(0);
     compressedDirectBuf.limit(directBufferSize);
 
-    EndDirective endOp = shouldEnd ? EndDirective.END : EndDirective.FLUSH;
+    // CONTINUE should be used for non-end case, to support multi-threading:
+    // 1. CONTINUE + workers ≥ 1: non-blocking. The call copies as much input
+    //      as it can into a job, dispatches to workers, drains whatever output
+    //      is ready, and returns. Multiple jobs can be in flight in parallel.
+    // 2. FLUSH + workers ≥ 1: multithreaded compression will block to flush
+    //      as much output as possible. The call won't return until every queued
+    //      job has finished and its output has been drained to the dst buffer.
+    // 3. END + workers ≥ 1: same as FLUSH but also closes the frame. Same
+    //      blocking behavior.
+    EndDirective endOp = shouldEnd ? EndDirective.END : EndDirective.CONTINUE;
     boolean done = zstdJniCtx.compressDirectByteBufferStream(
         compressedDirectBuf, uncompressedDirectBuf, endOp);
 
