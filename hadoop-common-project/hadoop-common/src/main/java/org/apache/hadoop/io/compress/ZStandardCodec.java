@@ -68,6 +68,28 @@ public class ZStandardCodec implements
         CommonConfigurationKeys.IO_COMPRESSION_CODEC_ZSTD_LEVEL_DEFAULT);
   }
 
+  /**
+   * Returns the number of compression worker threads to be used by the
+   * ZStandard compressor. A value of 0 (the default) disables worker
+   * threads, matching the upstream zstd default. Negative values are
+   * rejected.
+   *
+   * @param conf the configuration to read from
+   * @return the configured number of zstd compression worker threads
+   * @throws IllegalArgumentException if the configured value is negative
+   */
+  public static int getCompressionWorkers(Configuration conf) {
+    int workers = conf.getInt(
+        CommonConfigurationKeys.IO_COMPRESSION_CODEC_ZSTD_WORKERS_KEY,
+        CommonConfigurationKeys.IO_COMPRESSION_CODEC_ZSTD_WORKERS_DEFAULT);
+    if (workers < 0) {
+      throw new IllegalArgumentException(
+          CommonConfigurationKeys.IO_COMPRESSION_CODEC_ZSTD_WORKERS_KEY
+              + " must be >= 0, got " + workers);
+    }
+    return workers;
+  }
+
   public static int getCompressionBufferSize(Configuration conf) {
     int bufferSize = getBufferSize(conf);
     return bufferSize == 0 ?
@@ -135,7 +157,9 @@ public class ZStandardCodec implements
   @Override
   public Compressor createCompressor() {
     return new ZStandardCompressor(
-        getCompressionLevel(conf), getCompressionBufferSize(conf));
+        getCompressionLevel(conf),
+        getCompressionWorkers(conf),
+        getCompressionBufferSize(conf));
   }
 
 

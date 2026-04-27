@@ -43,6 +43,7 @@ public class ZStandardCompressor implements Compressor {
       LoggerFactory.getLogger(ZStandardCompressor.class);
 
   private int level;
+  private int workers;
   private int directBufferSize;
   private byte[] userBuf = null;
   private int userBufOff = 0, userBufLen = 0;
@@ -74,12 +75,30 @@ public class ZStandardCompressor implements Compressor {
    * @param bufferSize bufferSize.
    */
   public ZStandardCompressor(int level, int bufferSize) {
-    this(level, bufferSize, bufferSize);
+    this(level,
+        CommonConfigurationKeys.IO_COMPRESSION_CODEC_ZSTD_WORKERS_DEFAULT,
+        bufferSize, bufferSize);
+  }
+
+  /**
+   * Creates a new compressor with the supplied compression level and number
+   * of compression worker threads. Compressed data will be generated in
+   * ZStandard format.
+   *
+   * @param level the zstd compression level
+   * @param workers number of zstd compression worker threads (0 disables
+   *                multi-threaded compression)
+   * @param bufferSize the input/output direct buffer size
+   */
+  public ZStandardCompressor(int level, int workers, int bufferSize) {
+    this(level, workers, bufferSize, bufferSize);
   }
 
   @VisibleForTesting
-  ZStandardCompressor(int level, int inputBufferSize, int outputBufferSize) {
+  ZStandardCompressor(int level, int workers, int inputBufferSize,
+      int outputBufferSize) {
     this.level = level;
+    this.workers = workers;
     zstdJniCtx = new ZstdCompressCtx();
     uncompressedDirectBuf = ByteBuffer.allocateDirect(inputBufferSize);
     directBufferSize = outputBufferSize;
@@ -101,6 +120,7 @@ public class ZStandardCompressor implements Compressor {
       return;
     }
     level = ZStandardCodec.getCompressionLevel(conf);
+    workers = ZStandardCodec.getCompressionWorkers(conf);
     reset();
     LOG.debug("Reinit compressor with new compression configuration");
   }
@@ -269,6 +289,7 @@ public class ZStandardCompressor implements Compressor {
     checkStream();
     zstdJniCtx.reset();
     zstdJniCtx.setLevel(level);
+    zstdJniCtx.setWorkers(workers);
     finish = false;
     finished = false;
     bytesRead = 0;
