@@ -198,8 +198,16 @@ public class TestZStandardCompressorDecompressor {
     byte[] bytes = generate(bytesSize);
     assertTrue(compressor.needsInput(), "needsInput error !!!");
     compressor.setInput(bytes, 0, bytes.length);
+    compressor.finish();
     byte[] emptyBytes = new byte[bytesSize];
-    int cSize = compressor.compress(emptyBytes, 0, bytes.length);
+    // Drive compress() in a loop until the compressor reports finished(),
+    // mirroring how CompressorStream drains the compressor.
+    int cSize = 0;
+    while (!compressor.finished() && cSize < emptyBytes.length) {
+      compressor.needsInput();
+      cSize += compressor.compress(emptyBytes, cSize,
+          emptyBytes.length - cSize);
+    }
     assertTrue(cSize > 0);
   }
 
@@ -330,13 +338,27 @@ public class TestZStandardCompressorDecompressor {
     assertEquals(0, compressor.getBytesRead());
     compressor.finish();
 
+    // Drive compress() in a loop until the compressor reports finished(),
+    // mirroring how CompressorStream drains the compressor.
     byte[] compressedResult = new byte[rawDataSize];
-    int cSize = compressor.compress(compressedResult, 0, rawDataSize);
+    int cSize = 0;
+    while (!compressor.finished() && cSize < compressedResult.length) {
+      cSize += compressor.compress(compressedResult, cSize,
+          compressedResult.length - cSize);
+    }
+    assertTrue(compressor.finished());
     assertEquals(rawDataSize, compressor.getBytesRead());
     assertTrue(cSize < rawDataSize);
     decompressor.setInput(compressedResult, 0, cSize);
+    // Drive decompress() in a loop until the decompressor reports finished()
+    // (see CompressDecompressTester#COMPRESS_DECOMPRESS_BLOCK).
     byte[] decompressedBytes = new byte[rawDataSize];
-    decompressor.decompress(decompressedBytes, 0, decompressedBytes.length);
+    int dSize = 0;
+    while (!decompressor.finished() && dSize < decompressedBytes.length) {
+      dSize += decompressor.decompress(decompressedBytes, dSize,
+          decompressedBytes.length - dSize);
+    }
+    assertEquals(rawDataSize, dSize);
     assertEquals(bytesToHex(rawData), bytesToHex(decompressedBytes));
     compressor.reset();
     decompressor.reset();
@@ -397,14 +419,28 @@ public class TestZStandardCompressorDecompressor {
     compressor.setInput(rawData, 0, rawData.length);
     compressor.finish();
 
+    // Drive compress() in a loop until the compressor reports finished(),
+    // mirroring how CompressorStream drains the compressor.
     byte[] compressedResult = new byte[rawDataSize];
-    int cSize = compressor.compress(compressedResult, 0, rawDataSize);
+    int cSize = 0;
+    while (!compressor.finished() && cSize < compressedResult.length) {
+      cSize += compressor.compress(compressedResult, cSize,
+          compressedResult.length - cSize);
+    }
+    assertTrue(compressor.finished());
     assertEquals(rawDataSize, compressor.getBytesRead());
     assertTrue(cSize < rawDataSize,
         "compressed size no less then original size");
     decompressor.setInput(compressedResult, 0, cSize);
+    // Drive decompress() in a loop until the decompressor reports finished()
+    // (see CompressDecompressTester#COMPRESS_DECOMPRESS_BLOCK).
     byte[] decompressedBytes = new byte[rawDataSize];
-    decompressor.decompress(decompressedBytes, 0, decompressedBytes.length);
+    int dSize = 0;
+    while (!decompressor.finished() && dSize < decompressedBytes.length) {
+      dSize += decompressor.decompress(decompressedBytes, dSize,
+          decompressedBytes.length - dSize);
+    }
+    assertEquals(rawDataSize, dSize);
     String decompressed = bytesToHex(decompressedBytes);
     String original = bytesToHex(rawData);
     assertEquals(original, decompressed);
