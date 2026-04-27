@@ -39,6 +39,7 @@
 **/org/apache/hadoop/hdfs/TestReconstructStripedFileWithRandomECPolicy.java
 **/org/apache/hadoop/hdfs/TestReconstructStripedFileWithValidator.java
 **/org/apache/hadoop/hdfs/TestReplaceDatanodeFailureReplication.java
+**/org/apache/hadoop/hdfs/client/impl/TestBlockReaderLocal.java
 **/org/apache/hadoop/hdfs/server/balancer/TestBalancer.java
 **/org/apache/hadoop/hdfs/server/balancer/TestBalancerRPCDelay.java
 **/org/apache/hadoop/hdfs/server/balancer/TestBalancerWithHANameNodes.java
@@ -50,6 +51,7 @@
 **/org/apache/hadoop/hdfs/server/datanode/TestDataNodeVolumeFailureReporting.java
 **/org/apache/hadoop/hdfs/server/datanode/TestDirectoryScanner.java
 **/org/apache/hadoop/hdfs/server/namenode/TestEditLogRace.java
+**/org/apache/hadoop/hdfs/server/namenode/TestFsck.java
 **/org/apache/hadoop/hdfs/server/datanode/TestIncrementalBlockReports.java
 **/org/apache/hadoop/hdfs/server/datanode/fsdataset/impl/TestFsVolumeList.java
 **/org/apache/hadoop/hdfs/server/namenode/TestCacheDirectivesWithViewDFS.java
@@ -95,6 +97,7 @@
 **/org/apache/hadoop/yarn/server/nodemanager/TestNodeManagerResync.java
 **/org/apache/hadoop/yarn/server/nodemanager/TestNodeStatusUpdater.java
 **/org/apache/hadoop/yarn/server/nodemanager/amrmproxy/TestFederationInterceptor.java
+**/org/apache/hadoop/yarn/server/nodemanager/amrmproxy/TestFederationInterceptorSecure.java
 **/org/apache/hadoop/yarn/server/nodemanager/containermanager/TestAuxServices.java
 **/org/apache/hadoop/yarn/server/nodemanager/containermanager/TestContainerManagerRecovery.java
 **/org/apache/hadoop/yarn/server/nodemanager/containermanager/launcher/TestContainerLaunch.java
