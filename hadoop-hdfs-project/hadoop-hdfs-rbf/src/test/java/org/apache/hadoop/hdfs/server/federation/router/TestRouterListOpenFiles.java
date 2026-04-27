@@ -70,9 +70,9 @@ public class TestRouterListOpenFiles {
   private static DFSClient routerClient;
   private final boolean useAsync;
 
-  public TestRouterListOpenFiles(boolean useAsync) throws Exception {
-    this.useAsync = useAsync;
-    setup(useAsync);
+  public TestRouterListOpenFiles(boolean flag) throws Exception {
+    this.useAsync = flag;
+    setup(flag);
   }
 
   public static Object[] getParameters() {
