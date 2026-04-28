@@ -54,6 +54,7 @@
 **/org/apache/hadoop/hdfs/server/namenode/TestEditLogRace.java
 **/org/apache/hadoop/hdfs/server/namenode/TestFsck.java
 **/org/apache/hadoop/hdfs/server/namenode/TestNameNodeMXBean.java
+**/org/apache/hadoop/hdfs/server/namenode/ha/TestUpdateBlockTailing.java
 **/org/apache/hadoop/hdfs/server/datanode/TestIncrementalBlockReports.java
 **/org/apache/hadoop/hdfs/server/datanode/fsdataset/impl/TestFsVolumeList.java
 **/org/apache/hadoop/hdfs/server/namenode/TestCacheDirectivesWithViewDFS.java
@@ -168,6 +169,7 @@
 **/org/apache/hadoop/hdfs/server/federation/router/TestRouterFaultTolerant.java
 **/org/apache/hadoop/hdfs/server/federation/router/TestRouterNamenodeHeartbeat.java
 **/org/apache/hadoop/hdfs/server/federation/router/async/TestRouterAsyncRpcClient.java
+**/org/apache/hadoop/hdfs/server/federation/router/async/TestRouterAsyncRPCMultipleDestinationMountTableResolver.java
 **/org/apache/hadoop/hdfs/server/federation/router/security/token/TestSQLDelegationTokenSecretManagerImpl.java
 
 # hadoop-yarn-server-timelineservice-documentstore
