@@ -886,12 +886,12 @@ Full thread dump OpenJDK 64-Bit Server VM (17.0.11+9-adhoc.root.jdk17u mixed mod
 ...............
 ...............
 Failed to run jstack on PID: 362652 at iteration: 3 (Process likely exited before/during running jstack): Exception in thread "main" java.io.IOException: Premature EOF
-	at jdk.attach/sun.tools.attach.HotSpotVirtualMachine.readInt(HotSpotVirtualMachine.java:341)
-	at jdk.attach/sun.tools.attach.VirtualMachineImpl.execute(VirtualMachineImpl.java:197)
-	at jdk.attach/sun.tools.attach.HotSpotVirtualMachine.executeCommand(HotSpotVirtualMachine.java:310)
-	at jdk.attach/sun.tools.attach.HotSpotVirtualMachine.remoteDataDump(HotSpotVirtualMachine.java:267)
-	at jdk.jcmd/sun.tools.jstack.JStack.runThreadDump(JStack.java:130)
-	at jdk.jcmd/sun.tools.jstack.JStack.main(JStack.java:109)
+at jdk.attach/sun.tools.attach.HotSpotVirtualMachine.readInt(HotSpotVirtualMachine.java:341)
+at jdk.attach/sun.tools.attach.VirtualMachineImpl.execute(VirtualMachineImpl.java:197)
+at jdk.attach/sun.tools.attach.HotSpotVirtualMachine.executeCommand(HotSpotVirtualMachine.java:310)
+at jdk.attach/sun.tools.attach.HotSpotVirtualMachine.remoteDataDump(HotSpotVirtualMachine.java:267)
+at jdk.jcmd/sun.tools.jstack.JStack.runThreadDump(JStack.java:130)
+at jdk.jcmd/sun.tools.jstack.JStack.main(JStack.java:109)
 
 === Thread Dumps for ContainerId: container_e09_1776934843524_0002_01_000038, PID: 362667 ===
 Failed to run jstack on PID: 362667 at iteration: 0 (Process likely exited before/during running jstack): 362667: No such process

@@ -62,8 +62,8 @@ public class TestDiagnosticJStackService {
       mock(ApplicationACLsManager.class);
 
   private static final NodeManager.NMContext NM_CONTEXT = new NodeManager.NMContext(
-      null , null , null
-       , MOCK_ACLS_MANAGER , null , false , new Configuration()
+      null, null, null,
+          MOCK_ACLS_MANAGER, null, false, new Configuration()
   );
   private static final DiagnosticJStackService DIAGNOSTIC_JSTACK_SERVICE =
       spy(new DiagnosticJStackService(NM_CONTEXT));
