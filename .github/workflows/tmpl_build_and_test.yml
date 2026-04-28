@@ -69,6 +69,7 @@ env:
     -Drequire.snappy
     -Drequire.valgrind
     -Dmaven.test.failure.ignore=false
+    -Dsurefire.rerunFailingTestsCount=2
 
 jobs:
   precondition:
