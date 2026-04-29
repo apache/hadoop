@@ -18,12 +18,8 @@
 #
 
 # hadoop-common
-**/org/apache/hadoop/ha/TestZKFailoverController.java
-**/org/apache/hadoop/ha/TestZKFailoverControllerStress.java
-**/org/apache/hadoop/io/wrappedio/impl/TestWrappedStatistics.java
 **/org/apache/hadoop/ipc/TestRPC.java
 **/org/apache/hadoop/security/ssl/TestDelegatingSSLSocketFactory.java
-**/org/apache/hadoop/security/token/delegation/TestZKDelegationTokenSecretManager.java
 
 # hadoop-hdfs
 **/org/apache/hadoop/fs/viewfs/TestViewFileSystemHdfs.java
@@ -48,6 +44,7 @@
 **/org/apache/hadoop/hdfs/server/blockmanagement/TestBlockReportLease.java
 **/org/apache/hadoop/hdfs/server/blockmanagement/TestBlockTokenWithDFSStriped.java
 **/org/apache/hadoop/hdfs/server/blockmanagement/TestBlockTokenWithShortCircuitRead.java
+**/org/apache/hadoop/hdfs/server/datanode/TestBPOfferService.java
 **/org/apache/hadoop/hdfs/server/datanode/TestDataNodeErasureCodingMetrics.java
 **/org/apache/hadoop/hdfs/server/datanode/TestDataNodeVolumeFailureReporting.java
 **/org/apache/hadoop/hdfs/server/datanode/TestDirectoryScanner.java
