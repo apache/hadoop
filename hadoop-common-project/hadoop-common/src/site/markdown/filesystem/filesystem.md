@@ -638,77 +638,38 @@ The path does not have to exist, but the path does need to be valid and reconcil
 
 ###  `TrashPolicy getTrashPolicy(Path path, Configuration conf)`
 
-Get the trash policy implementation used by this FileSystem.
+Get the initialized trash policy implementation used by this FileSystem.
 
-This method allows different FileSystem implementations to use different TrashPolicy
-implementations. This is important in environments where multiple FileSystem schemes
-are used (e.g., HDFS and Ozone), as each may require a distinct TrashPolicy.
+This method allows different FileSystem implementations to use different
+`TrashPolicy` implementations. This is important in environments where multiple
+FileSystem schemes are used, as each may require a distinct `TrashPolicy`.
+
+See [TrashPolicy](trashpolicy.html) for the definition and behavior of a trash
+policy.
 
 #### Preconditions
 
 #### Postconditions
 
-    result = a valid TrashPolicy instance associated with the FileSystem implementation
+    result = an initialized TrashPolicy instance associated with the FileSystem implementation
 
 The default implementation:
-1. Reads the configuration parameter `fs.trash.classname` (defaults to `TrashPolicyDefault`)
-2. Instantiates the specified TrashPolicy class
-3. Initializes the TrashPolicy with the given configuration
-4. Returns the initialized TrashPolicy
+
+1. Reads the configuration parameter `fs.trash.classname`, which defaults to
+   `TrashPolicyDefault`.
+1. Instantiates the specified `TrashPolicy` class.
+1. Initializes the `TrashPolicy` with the given configuration and filesystem.
+1. Returns the initialized `TrashPolicy`.
 
 #### Implementation Notes
 
-* FileSystem implementations MAY override this method to provide filesystem-specific
-  TrashPolicy implementations. For example, Ozone `getTrashPolicy` can return its custom trash policy,
-  while HDFS can still use `TrashPolicyDefault`.
-* The returned TrashPolicy should not be null.
-* FileSystem implementations with multiple child file systems (e.g. `ViewFileSystem`)
-  should NOT implement this method since the Hadoop trash mechanism should resolve to the underlying filesystem
-  before invoking `getTrashPolicy`.
-* Consistent trash behavior means that invoking the `TrashPolicy` methods in the
-  following order should not result in unexpected results such as files in trash that
-  will never be deleted by trash mechanism.
-  1. `getDeletionInterval()` should return 0 before
-     `initialize(Configuration, FileSystem)` is invoked.
-     The deletion interval should not return negative value. Zero value implies
-     that trash is disabled, which means `isEnabled()` should
-     return false.
-  2. `initialize(Configuration, FileSystem)` should be implemented
-     and ensure that the subsequent `TrashPolicy` operations should work properly
-  3. `isEnabled()` should return true after
-     `initialize(Configuration, FileSystem)` is invoked and
-     initialize the deletion interval to positive value. `isEnabled()`
-     should remain false if the `getDeletionInterval()` returns 0 even after
-     `initialize(Configuration, FileSystem)` has been invoked.
-  4. `moveToTrash(Path)` should move a file or directory to the
-     current trash directory defined `getCurrentTrashDir(Path)`
-     if it's not already in the trash. This implies that
-     the `FileSystem#exists(Path)` should return false for the original path, but
-     should return true for the current trash directory.
-  5. `moveToTrash(Path)` should return false if `isEnabled()` is false or
-     the path is already under `FileSystem#getTrashRoot(Path)`. There should not be any side
-     effect when `moveToTrash(Path)` returns false.
-  6. `createCheckpoint()` should create rename the current trash directory to
-     another trash directory which is not equal to `getCurrentTrashDir(Path)`.
-     `createCheckpoint()` is a no-op if there is no current trash directory.
-  7. `deleteCheckpoint()` should cleanup the all the current
-     and checkpoint directories under `FileSystem#getTrashRoots(boolean)` created before
-     `getDeletionInterval()` minutes ago.
-     Note that the current trash directory `getCurrentTrashDir()` should not be deleted.
-  8. `deleteCheckpointsImmediately()` should cleanup the checkpoint directories under
-     `FileSystem#getTrashRoots(boolean)` regardless of the checkpoint timestamp.
-     Note that the current trash directory `getCurrentTrashDir()` should not be deleted.
-  9. `getEmptier()` returns a runnable that will empty the trash.
-     The effective trash emptier interval should be [0, `getDeletionInterval()`].
-     Zero interval means that the runnable is a no-op and returns immediately.
-     Non-zero trash emptier interval means that the runnable is scheduled to run for
-     each interval (unless it is interrupted). For each interval, the trash emptier carry out the
-     following operations:
-     1. It checks all the trash root directories through `FileSystem getTrashRoots(boolean)` for all users.
-     2. For each trash root directory, it deletes the trash checkpoint directory with checkpoint time older than
-        `getDeletionInterval()`. Afterward, it creates a new trash checkpoint through
-        `createCheckpoint()`. Note that existing checkpoints which has not expired, will not
-        have any change.
+* FileSystem implementations MAY override this method to provide
+  filesystem-specific `TrashPolicy` implementations.
+* The returned `TrashPolicy` MUST NOT be null.
+* FileSystem implementations with multiple child filesystems, such as
+  `ViewFileSystem`, SHOULD NOT implement this method. The Hadoop trash
+  mechanism SHOULD resolve to the underlying filesystem before invoking
+  `getTrashPolicy`.
 
 ## <a name="state_changing_operations"></a> State Changing Operations
 
@@ -1830,4 +1791,3 @@ However -but there is no expectation of this and such marshalling is unlikely to
   a checksum value related to the etag of an object, if any value is returned.
 * If the same data is uploaded to the twice to the same or a different path,
   the etag of the second upload MAY NOT match that of the first upload.
-
