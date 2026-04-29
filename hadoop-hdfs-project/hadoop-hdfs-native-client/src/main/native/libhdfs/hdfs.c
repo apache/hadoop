@@ -2803,6 +2803,8 @@ int hdfsRename(hdfsFS fs, const char *oldPath, const char *newPath)
 done:
     destroyLocalReference(env, jOldPath);
     destroyLocalReference(env, jNewPath);
+    destroyLocalReference(env, jOptsArr);
+    destroyLocalReference(env, enumClass);
     destroyLocalReference(env, jRenameOptionsNone);
     return ret;
 }
