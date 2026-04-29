@@ -186,7 +186,7 @@ public class TestAbfsInputStream extends AbstractAbfsIntegrationTest {
         this.getConfiguration());
     when(client.getAbfsPerfTracker()).thenReturn(tracker);
     when(client.getAbfsConfiguration()).thenReturn(abfsConfig);
-    // Delegate to real config instead of hardcoding false
+
     when(abfsConfig.isEnablePrefetchRequestPriority())
             .thenReturn(getConfiguration().isEnablePrefetchRequestPriority());
     return client;
@@ -346,8 +346,6 @@ public class TestAbfsInputStream extends AbstractAbfsIntegrationTest {
    * exception is NOT propagated to the caller. The stream should silently
    * fall back or exhaust its (lower) retry budget without surfacing an error.
    * The failed reads should be of readtype PR and the successful one of MR.
-   * This tests the core contract: prefetch failures are silent when the
-   * feature flag is on.
    */
   @Test
   public void testPrefetchFailureNotPropagatedToUserWhenPriorityEnabled() throws Exception {
@@ -357,12 +355,13 @@ public class TestAbfsInputStream extends AbstractAbfsIntegrationTest {
     when(client.getAbfsConfiguration().isEnablePrefetchRequestPriority())
             .thenReturn(true);
 
-    // 3 Prefetch reads fail → final direct (missed cache) read succeeds
-    doThrow(new TimeoutException("Internal Server error for RAH-Thread-X"))
-            .doThrow(new TimeoutException("Internal Server error for RAH-Thread-Y"))
-            .doThrow(new TimeoutException("Internal Server error for RAH-Thread-Z"))
-            .doReturn(successOp)
-            .when(client)
+    doAnswer(invocation -> {
+      TracingContext tc = invocation.getArgument(8);
+      if (ReadType.PREFETCH_READ.equals(tc.getReadType())) {
+        throw new TimeoutException("Internal Server error for prefetch");
+      }
+      return successOp;
+    }).when(client)
             .read(any(String.class), any(Long.class), any(byte[].class),
                     any(Integer.class), any(Integer.class), any(String.class),
                     any(String.class), any(), any(TracingContext.class));
@@ -383,19 +382,28 @@ public class TestAbfsInputStream extends AbstractAbfsIntegrationTest {
 
     List<TracingContext> contextList = traceCaptor.getAllValues();
 
-    // First 3 calls = PR (Prefetch Reads)
-    for (int i = 0; i < 3; i++) {
-      verifyHeaderForReadTypeInTracingContextHeader(contextList.get(i),
-              ReadType.PREFETCH_READ,
-              -1
-      );
+    // Exactly 1 missed-cache read and 3 prefetch reads.
+    List<TracingContext> prefetchContexts = new ArrayList<>();
+    TracingContext missedCacheContext = null;
+    for (TracingContext ctx : contextList) {
+      if (MISSEDCACHE_READ.equals(ctx.getReadType())) {
+        missedCacheContext = ctx;
+      } else {
+        prefetchContexts.add(ctx);
+      }
     }
 
-    // 4th call = MR (Missed Cache Read)
-    verifyHeaderForReadTypeInTracingContextHeader(contextList.get(3),
-            MISSEDCACHE_READ,
-            0
-    );
+    assertThat(missedCacheContext)
+            .describedAs("Exactly one missed-cache read should have occurred")
+            .isNotNull();
+    assertThat(prefetchContexts.size())
+            .describedAs("Exactly 3 prefetch reads should have occurred")
+            .isEqualTo(3);
+
+    for (TracingContext ctx : prefetchContexts) {
+      verifyHeaderForReadTypeInTracingContextHeader(ctx, ReadType.PREFETCH_READ, -1);
+    }
+    verifyHeaderForReadTypeInTracingContextHeader(missedCacheContext, MISSEDCACHE_READ, 0);
   }
 
 

@@ -526,6 +526,8 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
         new ExponentialRetryPolicy(1));
     when(client.getRetryPolicy(any())).thenReturn(
         new ExponentialRetryPolicy(1));
+    when(client.getRetryPolicy(any(TracingContext.class), any())).thenReturn(
+        new ExponentialRetryPolicy(1));
 
     when(client.createDefaultUriQueryBuilder()).thenCallRealMethod();
     when(client.createRequestUrl(any(), any())).thenCallRealMethod();

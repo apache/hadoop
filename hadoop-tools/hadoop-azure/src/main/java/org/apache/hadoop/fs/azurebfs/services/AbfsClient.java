@@ -403,6 +403,12 @@ public abstract class AbfsClient implements Closeable {
     return getExponentialRetryPolicy();
   }
 
+  /**
+   * Returns the retry policy based on tracing context and failure reason.
+   * @param tc the tracing context containing read type information.
+   * @param failureReason the reason for the failure to determine retry policy.
+   * @return retry policy to be used, prefetch policy if enabled and prefetch read, otherwise standard policy.
+   */
   public AbfsRetryPolicy getRetryPolicy(TracingContext tc, final String failureReason){
     if (getAbfsConfiguration().isEnablePrefetchRequestPriority()
         && ReadType.PREFETCH_READ.equals(tc.getReadType())){
