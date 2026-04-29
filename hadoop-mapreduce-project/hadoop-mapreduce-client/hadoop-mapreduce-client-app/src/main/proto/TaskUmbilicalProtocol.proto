@@ -1,0 +1,187 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/**
+ * These .proto interfaces are private and subject to change.
+ * Please see https://issues.apache.org/jira/browse/MAPREDUCE-6706
+ */
+
+syntax = "proto2";
+option java_package = "org.apache.hadoop.mapred.proto";
+option java_outer_classname = "TaskUmbilicalProtocolProtos";
+option java_generic_services = true;
+option java_generate_equals_and_hash = true;
+package hadoop.mapreduce.app;
+
+/*
+ Writable-serialized types are carried as opaque bytes, for example jvm_context and
+ jvm_task.
+ TaskStatus is marshalled as a byte array which also includes a boolean to declare
+ what subclass of TaskStatus to instantiate.
+ All parameter bytes fields are optional to handle null values.
+ */
+
+// getTask
+message GetTaskRequestProto {
+  optional bytes jvm_context = 1;
+}
+message GetTaskResponseProto {
+  optional bytes jvm_task = 1;
+}
+
+// statusUpdate
+message StatusUpdateRequestProto {
+  optional bytes task_id = 1;
+  optional bytes task_status = 2;
+}
+message StatusUpdateResponseProto {
+  required bool task_found = 1;
+  required bool preemption = 2;
+}
+
+// reportDiagnosticInfo
+message ReportDiagnosticInfoRequestProto {
+  optional bytes task_id = 1;
+  required string trace = 2;
+}
+message ReportDiagnosticInfoResponseProto {
+}
+
+// reportNextRecordRange
+message ReportNextRecordRangeRequestProto {
+  optional bytes task_id = 1;
+  optional bytes range = 2;
+}
+message ReportNextRecordRangeResponseProto {
+}
+
+// done
+message DoneRequestProto {
+  optional bytes task_id = 1;
+}
+message DoneResponseProto {
+}
+
+// commitPending
+message CommitPendingRequestProto {
+  optional bytes task_id = 1;
+  optional bytes task_status = 2;
+}
+message CommitPendingResponseProto {
+}
+
+// canCommit
+message CanCommitRequestProto {
+  optional bytes task_id = 1;
+}
+message CanCommitResponseProto {
+  required bool can_commit = 1;
+}
+
+// shuffleError
+message ShuffleErrorRequestProto {
+  optional bytes task_id = 1;
+  required string message = 2;
+}
+message ShuffleErrorResponseProto {
+}
+
+// fsError
+message FsErrorRequestProto {
+  optional bytes task_id = 1;
+  required string message = 2;
+}
+message FsErrorResponseProto {
+}
+
+// fatalError
+message FatalErrorRequestProto {
+  optional bytes task_id = 1;
+  required string message = 2;
+  required bool fast_fail = 3;
+}
+message FatalErrorResponseProto {
+}
+
+// getMapCompletionEvents
+message GetMapCompletionEventsRequestProto {
+  optional bytes job_id = 1;
+  required int32 from_index = 2;
+  required int32 max_locs = 3;
+  optional bytes task_attempt_id = 4;
+}
+message GetMapCompletionEventsResponseProto {
+  optional bytes events_update = 1;
+}
+
+// preempted
+message PreemptedRequestProto {
+  optional bytes task_id = 1;
+  optional bytes task_status = 2;
+}
+message PreemptedResponseProto {
+}
+
+// getCheckpointID
+message GetCheckpointIDRequestProto {
+  optional bytes task_id = 1;
+}
+message GetCheckpointIDResponseProto {
+  optional bytes checkpoint_id = 1;
+}
+
+// setCheckpointID
+message SetCheckpointIDRequestProto {
+  optional bytes task_id = 1;
+  optional bytes checkpoint_id = 2;
+}
+message SetCheckpointIDResponseProto {
+}
+
+/* Task Umbilical Protocol. */
+
+service TaskUmbilicalProtocolService {
+  rpc getTask(GetTaskRequestProto)
+      returns (GetTaskResponseProto);
+  rpc statusUpdate(StatusUpdateRequestProto)
+      returns (StatusUpdateResponseProto);
+  rpc reportDiagnosticInfo(ReportDiagnosticInfoRequestProto)
+      returns (ReportDiagnosticInfoResponseProto);
+  rpc reportNextRecordRange(ReportNextRecordRangeRequestProto)
+      returns (ReportNextRecordRangeResponseProto);
+  rpc done(DoneRequestProto)
+      returns (DoneResponseProto);
+  rpc commitPending(CommitPendingRequestProto)
+      returns (CommitPendingResponseProto);
+  rpc canCommit(CanCommitRequestProto)
+      returns (CanCommitResponseProto);
+  rpc shuffleError(ShuffleErrorRequestProto)
+      returns (ShuffleErrorResponseProto);
+  rpc fsError(FsErrorRequestProto)
+      returns (FsErrorResponseProto);
+  rpc fatalError(FatalErrorRequestProto)
+      returns (FatalErrorResponseProto);
+  rpc getMapCompletionEvents(GetMapCompletionEventsRequestProto)
+      returns (GetMapCompletionEventsResponseProto);
+  rpc preempted(PreemptedRequestProto)
+      returns (PreemptedResponseProto);
+  rpc getCheckpointID(GetCheckpointIDRequestProto)
+      returns (GetCheckpointIDResponseProto);
+  rpc setCheckpointID(SetCheckpointIDRequestProto)
+      returns (SetCheckpointIDResponseProto);
+}

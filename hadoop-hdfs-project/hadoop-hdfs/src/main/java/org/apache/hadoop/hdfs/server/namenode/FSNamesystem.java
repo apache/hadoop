@@ -103,6 +103,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.commons.text.CaseUtils;
 import org.apache.hadoop.hdfs.protocol.ECTopologyVerifierResult;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
@@ -3111,14 +3112,20 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     checkOperation(OperationCategory.WRITE);
     writeLock(RwLockMode.GLOBAL);
     LocatedBlock lb;
+    BlockInfo blockInfo;
     try {
       checkOperation(OperationCategory.WRITE);
-      lb = FSDirWriteFileOp.storeAllocatedBlock(
+      Pair<LocatedBlock, BlockInfo> pair = FSDirWriteFileOp.storeAllocatedBlock(
           this, src, fileId, clientName, previous, targets);
+      lb = pair.getLeft();
+      blockInfo = pair.getRight();
     } finally {
       writeUnlock(RwLockMode.GLOBAL, operationName);
     }
     getEditLog().logSync();
+    if (blockInfo != null) {
+      FSDirWriteFileOp.logAllocatedBlock(src, blockInfo);
+    }
     return lb;
   }
 

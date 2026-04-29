@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
@@ -52,6 +53,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
@@ -205,6 +207,66 @@ public class TestBlockReportLease {
       }
       assertNotNull(exception);
       assertEquals(InvalidBlockReportLeaseException.class, exception.getCause().getClass());
+    }
+  }
+
+  /**
+   * Test that when dfs.blockreport.reject.invalid.lease is set to false,
+   * the NameNode does not throw InvalidBlockReportLeaseException for an
+   * expired lease. This is needed for rolling upgrade compatibility where
+   * old DataNodes cannot handle InvalidBlockReportLeaseException and would
+   * get stuck in an infinite loop of rejected block reports.
+   */
+  @Test
+  public void testNoExceptionWhenRejectInvalidLeaseDisabled() throws Exception {
+    HdfsConfiguration conf = new HdfsConfiguration();
+    conf.setBoolean(
+        DFSConfigKeys.DFS_BLOCKREPORT_REJECT_INVALID_LEASE_KEY, false);
+    Random rand = new Random();
+
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(1).build()) {
+      cluster.waitActive();
+
+      FSNamesystem fsn = cluster.getNamesystem();
+      BlockManager blockManager = fsn.getBlockManager();
+      BlockManager spyBlockManager = spy(blockManager);
+      fsn.setBlockManagerForTesting(spyBlockManager);
+      String poolId = cluster.getNamesystem().getBlockPoolId();
+
+      NamenodeProtocols rpcServer = cluster.getNameNodeRpc();
+
+      DataNode dn = cluster.getDataNodes().get(0);
+      DatanodeDescriptor datanodeDescriptor = spyBlockManager
+          .getDatanodeManager().getDatanode(dn.getDatanodeId());
+
+      DatanodeRegistration dnRegistration = dn.getDNRegistrationForBP(poolId);
+      StorageReport[] storages = dn.getFSDataset().getStorageReports(poolId);
+
+      // Send heartbeat and request full block report lease
+      HeartbeatResponse hbResponse = rpcServer.sendHeartbeat(
+          dnRegistration, storages, 0, 0, 0, 0, 0, null, true,
+          SlowPeerReports.EMPTY_REPORT, SlowDiskReports.EMPTY_REPORT);
+      assertTrue(hbResponse.getFullBlockReportLeaseId() != 0,
+          "Expected heartbeat to grant a non-zero full block report lease");
+      // Remove the lease to simulate expiration
+      spyBlockManager.getBlockReportLeaseManager()
+          .removeLease(datanodeDescriptor);
+
+      // Trigger sendBlockReport with the now-invalid lease
+      BlockReportContext brContext = new BlockReportContext(1, 0,
+          rand.nextLong(), hbResponse.getFullBlockReportLeaseId());
+      DatanodeStorage[] datanodeStorages
+          = new DatanodeStorage[storages.length];
+      for (int i = 0; i < storages.length; i++) {
+        datanodeStorages[i] = storages[i].getStorage();
+      }
+      StorageBlockReport[] reports = createReports(datanodeStorages, 100);
+
+      // Should NOT throw InvalidBlockReportLeaseException
+      DatanodeCommand cmd = rpcServer.blockReport(
+          dnRegistration, poolId, reports, brContext);
+      assertNull(cmd);
     }
   }
 
