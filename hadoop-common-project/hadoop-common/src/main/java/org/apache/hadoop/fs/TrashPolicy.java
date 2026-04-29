@@ -167,8 +167,6 @@ public abstract class TrashPolicy extends Configured {
    * @return an instance of TrashPolicy
    */
   public static TrashPolicy getInstance(Configuration conf, FileSystem fs) {
-    TrashPolicy trashPolicy = fs.getTrashPolicy(new Path("/"), conf);
-    trashPolicy.initialize(conf, fs); // initialize TrashPolicy
-    return trashPolicy;
+    return fs.getTrashPolicy(new Path("/"), conf);
   }
 }

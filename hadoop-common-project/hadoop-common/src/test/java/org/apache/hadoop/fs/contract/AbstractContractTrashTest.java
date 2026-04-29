@@ -84,13 +84,7 @@ public abstract class AbstractContractTrashTest extends AbstractFSContractTestBa
   public void testTrashPolicy() throws Throwable {
     final FileSystem fs = getFileSystem();
 
-    // TrashPolicy needs to be initialized with non-zero deletion interval before
-    // TrashPolicy#isEnabled returns true
     final TrashPolicy trashPolicy = fs.getTrashPolicy(new Path("/"), getContract().getConf());
-    assertFalse(trashPolicy.isEnabled());
-    assertEquals(0, trashPolicy.getDeletionInterval());
-    assertFalse(trashPolicy.moveToTrash(new Path("randomFile")));
-    trashPolicy.initialize(getContract().getConf(), fs);
     assertTrue(trashPolicy.isEnabled());
     assertTrue(trashPolicy.getDeletionInterval() > 0);
 
@@ -158,7 +152,6 @@ public abstract class AbstractContractTrashTest extends AbstractFSContractTestBa
 
     // Start Emptier in background
     final TrashPolicy trashPolicy = fs.getTrashPolicy(new Path("/"), getContract().getConf());
-    trashPolicy.initialize(getContract().getConf(), fs);
 
     Runnable emptier = trashPolicy.getEmptier();
     Thread emptierThread = new Thread(emptier);

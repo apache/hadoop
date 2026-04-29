@@ -5381,7 +5381,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   public TrashPolicy getTrashPolicy(Path path, Configuration conf) {
     Class<? extends TrashPolicy> trashClass = conf.getClass(
         FS_S3A_TRASH_CLASSNAME, EmptyTrashPolicy.class, TrashPolicy.class);
-    return ReflectionUtils.newInstance(trashClass, conf);
+    TrashPolicy trashPolicy = ReflectionUtils.newInstance(trashClass, conf);
+    trashPolicy.initialize(conf, this);
+    return trashPolicy;
   }
 
   @SuppressWarnings("deprecation")

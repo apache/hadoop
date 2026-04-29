@@ -48,6 +48,8 @@ public class SecureAzureBlobFileSystem extends AzureBlobFileSystem {
   public TrashPolicy getTrashPolicy(Path path, Configuration conf) {
     Class<? extends TrashPolicy> trashClass = conf.getClass(
         FS_AZURE_ABFSS_TRASH_CLASSNAME, EmptyTrashPolicy.class, TrashPolicy.class);
-    return ReflectionUtils.newInstance(trashClass, conf);
+    TrashPolicy trashPolicy = ReflectionUtils.newInstance(trashClass, conf);
+    trashPolicy.initialize(conf, this);
+    return trashPolicy;
   }
 }

@@ -3456,10 +3456,13 @@ public abstract class FileSystem extends Configured
   @InterfaceAudience.Public
   @InterfaceStability.Unstable
   public TrashPolicy getTrashPolicy(Path path, Configuration conf) {
-    LOG.debug("Default filesystem trash policy loaded policy");
     Class<? extends TrashPolicy> trashClass = conf.getClass(
         FS_TRASH_CLASSNAME_KEY, TrashPolicyDefault.class, TrashPolicy.class);
-    return ReflectionUtils.newInstance(trashClass, conf);
+    LOG.debug("Default filesystem trash policy loaded policy {}",
+        trashClass.getName());
+    TrashPolicy trashPolicy = ReflectionUtils.newInstance(trashClass, conf);
+    trashPolicy.initialize(conf, this);
+    return trashPolicy;
   }
 
   /**

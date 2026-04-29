@@ -652,6 +652,23 @@ public class TestTrash {
   }
 
   @Test
+  public void testFileSystemGetTrashPolicyReturnsInitializedPolicy()
+      throws IOException {
+    Configuration conf = new Configuration();
+    conf.set(FS_TRASH_INTERVAL_KEY, "10");
+    FileSystem fs = FileSystem.getLocal(conf);
+
+    TrashPolicy trashPolicy = fs.getTrashPolicy(TEST_DIR, conf);
+
+    assertThat(trashPolicy)
+        .isInstanceOf(TrashPolicyDefault.class);
+    assertThat(trashPolicy.isEnabled())
+        .isTrue();
+    assertThat(trashPolicy.getDeletionInterval())
+        .isGreaterThan(0);
+  }
+
+  @Test
   public void testCheckpointInterval() throws IOException {
     // Verify if fs.trash.checkpoint.interval is set to positive number
     // but bigger than fs.trash.interval,
@@ -899,7 +916,9 @@ public class TestTrash {
 
     @Override
     public TrashPolicy getTrashPolicy(Path path, Configuration conf) {
-      return new CustomTrashPolicy();
+      CustomTrashPolicy trashPolicy = new CustomTrashPolicy();
+      trashPolicy.initialize(conf, this);
+      return trashPolicy;
     }
 
     public static class CustomTrashPolicy extends TrashPolicyDefault {
