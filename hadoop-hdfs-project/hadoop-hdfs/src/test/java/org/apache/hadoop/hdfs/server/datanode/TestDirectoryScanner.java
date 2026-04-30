@@ -128,6 +128,34 @@ public class TestDirectoryScanner {
     LazyPersistTestCase.initCacheManipulator();
   }
 
+  /**
+   * HDFS-17824: When dfs.datanode.directoryscan.threads is 0 or negative,
+   * DirectoryScanner should use the default instead of throwing
+   * IllegalArgumentException from Executors.newFixedThreadPool(threads).
+   */
+  @Test
+  @Timeout(value = 30)
+  public void testInvalidDirectoryScanThreadsUsesDefault() throws Exception {
+    Configuration conf = getConfiguration();
+    conf.setInt(DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_THREADS_KEY, 0);
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+    try {
+      cluster.waitActive();
+      bpid = cluster.getNamesystem().getBlockPoolId();
+      fds = DataNodeTestUtils.getFSDataset(cluster.getDataNodes().get(0));
+      scanner = new DirectoryScanner(fds, conf);
+      scanner.start();
+      assertTrue(scanner.getRunStatus());
+    } finally {
+      if (scanner != null) {
+        scanner.shutdown();
+      }
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
   /** create a file with a length of <code>fileLen</code>. */
   private List<LocatedBlock> createFile(String fileNamePrefix, long fileLen,
       boolean isLazyPersist) throws IOException {
