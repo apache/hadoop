@@ -68,15 +68,26 @@ public abstract class AbstractContractTrashTest extends AbstractFSContractTestBa
   @AfterEach
   @Override
   public void teardown() throws Exception {
+    Exception cleanupException = null;
     try {
       final FileSystem fs = getFileSystem();
       Collection<FileStatus> trashRoots = fs.getTrashRoots(true);
       for (FileStatus trashRoot : trashRoots) {
         fs.delete(trashRoot.getPath(), true);
       }
+    } catch (Exception e) {
+      cleanupException = e;
+    }
+    try {
       super.teardown();
     } catch (Exception e) {
-      LOG.warn("Exception in teardown", e);
+      if (cleanupException != null) {
+        e.addSuppressed(cleanupException);
+      }
+      throw e;
+    }
+    if (cleanupException != null) {
+      throw cleanupException;
     }
   }
 
