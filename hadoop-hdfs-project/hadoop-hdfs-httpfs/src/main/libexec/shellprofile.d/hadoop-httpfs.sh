@@ -25,9 +25,9 @@ fi
 ## @replaceable  no
 function hdfs_subcommand_httpfs
 {
-  if [[ -f "${HADOOP_CONF_DIR}/httpfs-env.sh" ]]; then
+  if [[ -f "${HTTPFS_CONFIG:-${HADOOP_CONF_DIR}}/httpfs-env.sh" ]]; then
     # shellcheck disable=SC1090
-    . "${HADOOP_CONF_DIR}/httpfs-env.sh"
+    . "${HTTPFS_CONFIG:-${HADOOP_CONF_DIR}}/httpfs-env.sh"
   fi
 
   # shellcheck disable=SC2034
