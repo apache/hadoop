@@ -36,6 +36,7 @@ public class EmptyTrashPolicy extends TrashPolicy {
 
   }
 
+  @Override
   public void initialize(Configuration conf, FileSystem fs) {
 
   }
@@ -64,7 +65,11 @@ public class EmptyTrashPolicy extends TrashPolicy {
     return null;
   }
 
-  @Override public Runnable getEmptier() throws IOException {
+  @Override public Path getCurrentTrashDir(Path path) {
     return null;
+  }
+
+  @Override public Runnable getEmptier() throws IOException {
+    return () -> { };
   }
 }

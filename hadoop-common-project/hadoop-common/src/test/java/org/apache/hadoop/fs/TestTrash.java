@@ -660,6 +660,15 @@ public class TestTrash {
   }
 
   @Test
+  public void testEmptyTrashPolicyReturnsNoOpEmptier() throws IOException {
+    TrashPolicy trashPolicy = new EmptyTrashPolicy();
+    Runnable emptier = trashPolicy.getEmptier();
+
+    assertThat(emptier).isNotNull();
+    emptier.run();
+  }
+
+  @Test
   public void testFileSystemGetTrashPolicyReturnsInitializedPolicy()
       throws IOException {
     Configuration conf = new Configuration();
