@@ -649,6 +649,14 @@ public class TestTrash {
       Trash trash = new Trash(fs, conf);
       assertThat(trash.getTrashPolicy()).isInstanceOf(TestLFSWithCustomTrashPolicy.CustomTrashPolicy.class);
     }
+
+    {
+      FileSystem fs = FileSystem.getLocal(conf);
+      TrashPolicy trashPolicy =
+          TrashPolicy.getInstance(conf, fs, fs.getHomeDirectory());
+      assertThat(trashPolicy)
+          .isInstanceOf(TestLFSWithCustomTrashPolicy.CustomTrashPolicy.class);
+    }
   }
 
   @Test

@@ -21,8 +21,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
-import org.apache.hadoop.util.ReflectionUtils;
-
 import java.io.IOException;
 
 /** 
@@ -148,11 +146,7 @@ public abstract class TrashPolicy extends Configured {
    */
   @Deprecated
   public static TrashPolicy getInstance(Configuration conf, FileSystem fs, Path home) {
-    Class<? extends TrashPolicy> trashClass = conf.getClass(
-        CommonConfigurationKeysPublic.FS_TRASH_CLASSNAME_KEY, TrashPolicyDefault.class, TrashPolicy.class);
-    TrashPolicy trash = ReflectionUtils.newInstance(trashClass, conf);
-    trash.initialize(conf, fs, home); // initialize TrashPolicy
-    return trash;
+    return fs.getTrashPolicy(home, conf);
   }
 
   /**
