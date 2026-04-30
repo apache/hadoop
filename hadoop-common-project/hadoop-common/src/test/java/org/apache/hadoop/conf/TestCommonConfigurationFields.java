@@ -112,6 +112,8 @@ public class TestCommonConfigurationFields extends TestConfigurationFieldsBase {
     xmlPrefixToSkipCompare.add("fs.azure.");
     xmlPrefixToSkipCompare.add("fs.abfs.impl");
     xmlPrefixToSkipCompare.add("fs.abfss.impl");
+    xmlPropsToSkipCompare.add("fs.abfs.trash.classname");
+    xmlPropsToSkipCompare.add("fs.abfss.trash.classname");
 
     // ADL properties are in a different subtree
     // - org.apache.hadoop.hdfs.web.ADLConfKeys

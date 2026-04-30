@@ -1091,13 +1091,6 @@
 </property>
 
 <property>
-  <name>fs.default.name</name>
-  <value>file:///</value>
-  <description>Deprecated. Use (fs.defaultFS) property
-  instead</description>
-</property>
-
-<property>
   <name>fs.trash.classname</name>
   <value>org.apache.hadoop.fs.TrashPolicyDefault</value>
   <description>The base Hadoop FileSystem configuration parameter used to

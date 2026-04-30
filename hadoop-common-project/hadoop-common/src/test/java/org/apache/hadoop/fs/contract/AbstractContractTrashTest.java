@@ -52,8 +52,8 @@ public abstract class AbstractContractTrashTest extends AbstractFSContractTestBa
   @BeforeEach
   @Override
   public void setup() throws Exception {
-    super.setup();
     FileSystem.closeAll();
+    super.setup();
   }
 
   @Override
