@@ -175,6 +175,7 @@ public final class AbfsHttpConstants {
    * @see "https://learn.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/how-to-use-vm-token#error-handling"
    */
   public static final int HTTP_TOO_MANY_REQUESTS = 429;
+  public static final int HTTP_INVALID_RANGE = 416;
 
   public static final char CHAR_FORWARD_SLASH = '/';
   public static final char CHAR_EXCLAMATION_POINT = '!';

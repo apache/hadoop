@@ -627,5 +627,11 @@ public final class ConfigurationKeys {
    */
   public static final String FS_AZURE_TAIL_LATENCY_MAX_RETRY_COUNT = "fs.azure.tail.latency.max.retry.count";
 
+  /**
+   * If true, restricts GPS (getPathStatus) calls on openFileforRead
+   * Default: false
+   */
+  public static final String FS_AZURE_RESTRICT_GPS_ON_OPENFILE = "fs.azure.restrict.gps.on.openfile";
+
   private ConfigurationKeys() {}
 }

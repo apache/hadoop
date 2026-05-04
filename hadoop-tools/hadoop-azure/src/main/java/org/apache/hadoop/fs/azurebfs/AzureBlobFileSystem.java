@@ -402,6 +402,21 @@ public class AzureBlobFileSystem extends FileSystem
     return open(path, Optional.empty());
   }
 
+  /**
+   * Open a file for reading and return an {@link FSDataInputStream} that wraps
+   * the underlying {@link InputStream}.
+   *
+   * Note: when the filesystem is configured with `restrictGpsOnOpenFile` enabled
+   * (its disabled by default), existence check for the file path will be deferred
+   * and will not occur during this open call; it will happen when the first read
+   * is attempted on the returned stream.
+   *
+   * @param path the location of the file to open
+   * @param parameters optional {@link OpenFileParameters} which can include
+   *                   FileStatus, configuration, buffer size and mandatory keys
+   * @return an {@link FSDataInputStream} wrapping the opened InputStream
+   * @throws IOException if an I/O error occurs while opening the file
+   */
   private FSDataInputStream open(final Path path,
       final Optional<OpenFileParameters> parameters) throws IOException {
     statIncrement(CALL_OPEN);
