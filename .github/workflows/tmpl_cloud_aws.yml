@@ -1,0 +1,135 @@
+#
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+name: AWS Integration
+
+on:
+  workflow_call:
+    inputs:
+      java:
+        required: false
+        type: string
+        default: 17
+      branch:
+        required: false
+        type: string
+        description: Branch to run the build against
+        default: trunk
+      os:
+        required: false
+        type: string
+        description: Operating system to run the build on
+        default: ubuntu_24
+
+# Security: Default to minimal permissions for workflow.
+permissions: {}
+
+concurrency:
+  group: >-
+    cloud-aws
+    ${{ github.workflow }}
+    ${{ github.repository == 'apache/hadoop' && github.run_id || github.ref }}
+    ${{ inputs.java }}
+    ${{ inputs.branch }}
+    ${{ inputs.os }}
+  cancel-in-progress: true
+
+env:
+  BUCKET_NAME: hadoop-ci
+
+jobs:
+  precondition:
+    runs-on: ubuntu-24.04
+    outputs:
+      build_image_url: ${{ steps.img.outputs.build_image_url }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/build_image_url
+        id: img
+        with:
+          branch: ${{ inputs.branch }}
+          os: ${{ inputs.os }}
+
+  build-image:
+    runs-on: ubuntu-24.04
+    needs: [ precondition ]
+    permissions:
+      packages: write
+    outputs:
+      uid: ${{ steps.build_img.outputs.uid }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/build_image
+        id: build_img
+        with:
+          branch: ${{ inputs.branch }}
+          os: ${{ inputs.os }}
+          build_image_url: ${{ needs.precondition.outputs.build_image_url }}
+
+  test:
+    name: S3A Integration Tests (Java ${{ inputs.java }})
+    needs: [ precondition, build-image ]
+    runs-on: ubuntu-24.04
+    container:
+      image: ${{ needs.precondition.outputs.build_image_url }}
+      options: --user ${{ needs.build-image.outputs.uid }}
+    steps:
+      - uses: actions/checkout@v6
+      - name: Setup JDK ${{ inputs.java }}
+        uses: actions/setup-java@v5
+        with:
+          distribution: zulu
+          java-version: ${{ inputs.java }}
+          cache: 'maven'
+      - name: Localstack setup
+        # Security: 0.3.2 is an immutable commit, see:
+        # https://github.com/localstack/setup-localstack/commit/7c8a0cb3405bc58be4c8f763f812aa000bc46303
+        uses: LocalStack/setup-localstack@0.3.2
+        with:
+          image-tag: 'latest'
+          install-awslocal: 'true'
+        env:
+          AWS_REGION: us-west-2
+          LOCALSTACK_AUTH_TOKEN: ${{ secrets.LOCALSTACK_CI_KEY }}
+          AWS_ACCESS_KEY_ID: test
+          AWS_SECRET_ACCESS_KEY: test
+
+      - name: Maven Build
+        shell: bash
+        run: ./mvnw install -B -DskipTests -am -pl hadoop-tools/hadoop-aws
+      - name: Create localstack s3 bucket
+        shell: bash
+        run: awslocal s3 mb s3://${{ env.BUCKET_NAME }}
+
+      - name: S3A Integration Tests
+        shell: bash
+        env:
+          AWS_ACCESS_KEY_ID: test
+          AWS_SECRET_ACCESS_KEY: test
+          AWS_REGION: us-west-2
+        run: |
+          ./mvnw verify -B -pl hadoop-tools/hadoop-aws \
+            -DskipITs=false \
+            -Dtest=none \
+            -Dscale=true \
+            -Dfs.s3a.access.key=test \
+            -Dfs.s3a.secret.key=test \
+            -Dfs.s3a.endpoint=http://localhost:4566 \
+            -Dfs.s3a.connection.ssl.enabled=false \
+            -Dfs.s3a.path.style.access=true \
+            -Dfs.s3a.endpoint.region=us-west-2 \
+            -Dtest.fs.s3a.name=s3a://${{ env.BUCKET_NAME }}/
