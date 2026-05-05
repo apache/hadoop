@@ -20,6 +20,11 @@
 name: "Cloud - AWS integration tests"
 
 on:
+  # XXX TEMPORARY FOR TRIGGERING TEST
+  push:
+    branches:
+      - 'af/*'
+
   pull_request:
     paths:
       - 'hadoop-tools/hadoop-aws/**'
