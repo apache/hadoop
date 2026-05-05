@@ -22,6 +22,7 @@ import java.util.function.Supplier;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
+import java.util.Arrays;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
@@ -31,6 +32,9 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.eclipse.jetty.server.ServerConnector;
+import org.eclipse.jetty.server.SslConnectionFactory;
+import org.eclipse.jetty.util.ssl.SslContextFactory;
 
 import static org.apache.hadoop.http.TestSSLHttpServer.EXCLUDED_CIPHERS;
 import static org.apache.hadoop.http.TestSSLHttpServer.INCLUDED_PROTOCOLS;
@@ -114,6 +118,29 @@ public class TestSSLHttpServerConfigs {
         .build();
 
     return server;
+  }
+
+  private void assertServerAppliesEnabledProtocol(String protocol)
+      throws Exception {
+    HttpServer2 server = setupServer(SERVER_PWD, SERVER_PWD, TRUST_STORE_PWD);
+    try {
+      ServerConnector listener = server.getListeners().get(0);
+      SslConnectionFactory connectionFactory =
+          listener.getConnectionFactory(SslConnectionFactory.class);
+      Assert.assertNotNull("Expected HTTPS listener with an SSL connection factory",
+          connectionFactory);
+
+      SslContextFactory sslContextFactory =
+          connectionFactory.getSslContextFactory();
+
+      Assert.assertArrayEquals(new String[] {protocol},
+          sslContextFactory.getIncludeProtocols());
+
+      Assert.assertFalse("Configured enabled protocol should be removed from excluded protocols",
+          Arrays.asList(sslContextFactory.getExcludeProtocols()).contains(protocol));
+    } finally {
+      server.stop();
+    }
   }
 
   /**
@@ -264,5 +291,29 @@ public class TestSSLHttpServerConfigs {
       GenericTestUtils.assertExceptionContains("Password must not be null",
           e.getCause());
     }
+  }
+
+  @Test(timeout=120000)
+  public void testDefaultEnabledProtocolIsAppliedWhenConfigUnset()
+      throws Exception {
+    setupKeyStores(SERVER_PWD, CLIENT_PWD, TRUST_STORE_PWD);
+    conf.unset(SSLFactory.SSL_ENABLED_PROTOCOLS_KEY);
+    assertServerAppliesEnabledProtocol(SSLFactory.SSL_ENABLED_PROTOCOLS_DEFAULT);
+  }
+
+  @Test(timeout=120000)
+  public void testDefaultEnabledProtocolIsAppliedWhenConfigExplicitlySet()
+      throws Exception {
+    setupKeyStores(SERVER_PWD, CLIENT_PWD, TRUST_STORE_PWD);
+    conf.set(SSLFactory.SSL_ENABLED_PROTOCOLS_KEY,
+        SSLFactory.SSL_ENABLED_PROTOCOLS_DEFAULT);
+    assertServerAppliesEnabledProtocol(SSLFactory.SSL_ENABLED_PROTOCOLS_DEFAULT);
+  }
+
+  @Test(timeout=120000)
+  public void testNonDefaultEnabledProtocolIsApplied() throws Exception {
+    setupKeyStores(SERVER_PWD, CLIENT_PWD, TRUST_STORE_PWD);
+    conf.set(SSLFactory.SSL_ENABLED_PROTOCOLS_KEY, "TLSv1.3");
+    assertServerAppliesEnabledProtocol("TLSv1.3");
   }
 }
