@@ -1,0 +1,43 @@
+<!-- Localstack config for CI -->
+<configuration>
+  <property>
+    <name>test.fs.s3a.name</name>
+    <value>s3a://hadoop-ci/</value>
+  </property>
+  <property>
+    <name>fs.contract.test.fs.s3a</name>
+    <value>s3a://hadoop-ci/</value>
+  </property>
+  <property>
+    <name>fs.s3a.access.key</name>
+    <value>test</value>
+  </property>
+  <property>
+    <name>fs.s3a.secret.key</name>
+    <value>test</value>
+  </property>
+  <property>
+    <name>fs.s3a.endpoint</name>
+    <!-- hostname alias and /etc/hosts entry configured in tmpl_cloud_aws.yml -->
+    <value>http://s3.localstack:4566</value>
+  </property>
+  <!-- localstack needs path style access, or virtual-hosted style (above)
+  <property>
+    <name>fs.s3a.path.style.access</name>
+    <value>true</value>
+  </property>
+  -->
+  <property>
+    <name>fs.s3a.connection.ssl.enabled</name>
+    <value>false</value>
+  </property>
+  <property>
+    <name>fs.s3a.endpoint.region</name>
+    <value>us-west-2</value>
+  </property>
+  <property>
+    <!-- causes CORS failures with localstack by deafult -->
+    <name>fs.s3a.bucket.abd-bucket.audit.enabled</name>
+    <value>false</value>
+  </property>
+</configuration>
