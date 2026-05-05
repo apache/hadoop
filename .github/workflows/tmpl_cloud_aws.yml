@@ -96,9 +96,9 @@ jobs:
           java-version: ${{ inputs.java }}
           cache: 'maven'
       - name: Localstack setup
-        # Security: 0.3.2 is an immutable commit, see:
-        # https://github.com/localstack/setup-localstack/commit/7c8a0cb3405bc58be4c8f763f812aa000bc46303
-        uses: LocalStack/setup-localstack@0.3.2
+        # Security: 0.3.2 is an immutable tag, but ASF Infra policy still
+        # requires full SHA hashes.
+        uses: LocalStack/setup-localstack@7c8a0cb3405bc58be4c8f763f812aa000bc46303  # 0.3.2
         with:
           image-tag: 'latest'
           install-awslocal: 'true'
