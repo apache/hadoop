@@ -3533,9 +3533,13 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       logAuditEvent(false, operationName, src);
       throw e;
     }
-    if (needLocation && isObserver() && stat instanceof HdfsLocatedFileStatus) {
+    if (needLocation && stat instanceof HdfsLocatedFileStatus) {
       LocatedBlocks lbs = ((HdfsLocatedFileStatus) stat).getLocatedBlocks();
-      checkBlockLocationsWhenObserver(lbs, src);
+      if (isInSafeMode()) {
+        checkBlockLocationsInSafeMode(lbs, src);
+      } else if (isObserver()) {
+        checkBlockLocationsWhenObserver(lbs, src);
+      }
     }
     logAuditEvent(true, operationName, src);
     return stat;
@@ -4265,11 +4269,15 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       logAuditEvent(false, operationName, src);
       throw e;
     }
-    if (dl != null && needLocation && isObserver()) {
+    if (dl != null && needLocation) {
       for (HdfsFileStatus fs : dl.getPartialListing()) {
         if (fs instanceof HdfsLocatedFileStatus) {
           LocatedBlocks lbs = ((HdfsLocatedFileStatus) fs).getLocatedBlocks();
-          checkBlockLocationsWhenObserver(lbs, fs.toString());
+          if (isInSafeMode()) {
+            checkBlockLocationsInSafeMode(lbs, fs.toString());
+          } else if (isObserver()) {
+            checkBlockLocationsWhenObserver(lbs, fs.toString());
+          }
         }
       }
     }
@@ -9251,7 +9259,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     return haEnabled && haContext != null && haContext.getState().getServiceState() == OBSERVER;
   }
 
-  private boolean hasSufficientReplicas(LocatedBlock block,
+  private boolean hasSufficientBlockLocations(LocatedBlock block,
       ErasureCodingPolicy ecPolicy) {
     DatanodeInfo[] locations = block.getLocations();
     if (locations == null) {
@@ -9262,20 +9270,19 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       LocatedStripedBlock stripedBlock = (LocatedStripedBlock) block;
       // For erasure coded files, require enough data units to reconstruct
       // the block, bounded by the number of cells in the block.
-      long numCells =
-          (block.getBlockSize() - 1) / (long) ecPolicy.getCellSize() + 1;
-      int minBlocks = (int) Math.min((long) ecPolicy.getNumDataUnits(), numCells);
+      long numCells = (block.getBlockSize() - 1) / ecPolicy.getCellSize() + 1;
+      int minRequiredIndices = (int) Math.min(ecPolicy.getNumDataUnits(), numCells);
 
       // Units can be over-replicated, so need to account for unique indices
-      byte[] indices = stripedBlock.getBlockIndices();
-      boolean[] seen = new boolean[ecPolicy.getNumDataUnits() + ecPolicy.getNumParityUnits()];
+      byte[] blockIndices = stripedBlock.getBlockIndices();
+      boolean[] seenIndices = new boolean[ecPolicy.getNumDataUnits() + ecPolicy.getNumParityUnits()];
 
-      int count = 0;
-      for (byte idx : indices) {
-        int i = idx & 0xFF;
-        if (!seen[i]) {
-          seen[i] = true;
-          if (++count >= minBlocks) {
+      int uniqueIndexCount = 0;
+      for (byte idx : blockIndices) {
+        int index = idx & 0xFF;
+        if (!seenIndices[index]) {
+          seenIndices[index] = true;
+          if (++uniqueIndexCount >= minRequiredIndices) {
             return true;
           }
         }
@@ -9295,7 +9302,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     if (locatedBlockList != null) {
       ErasureCodingPolicy ecPolicy = blocks.getErasureCodingPolicy();
       for (LocatedBlock block : locatedBlockList) {
-        if (!hasSufficientReplicas(block, ecPolicy)) {
+        if (!hasSufficientBlockLocations(block, ecPolicy)) {
           SafeModeException se = newSafemodeException(
               "Not enough blocklocations for " + src);
           if (haEnabled && haContext != null &&
@@ -9318,7 +9325,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     if (locatedBlockList != null) {
       ErasureCodingPolicy ecPolicy = blocks.getErasureCodingPolicy();
       for (LocatedBlock block : locatedBlockList) {
-        if (!hasSufficientReplicas(block, ecPolicy)) {
+        if (!hasSufficientBlockLocations(block, ecPolicy)) {
           throw new ObserverRetryOnActiveException("Not enough blocklocations for " + src);
         }
       }

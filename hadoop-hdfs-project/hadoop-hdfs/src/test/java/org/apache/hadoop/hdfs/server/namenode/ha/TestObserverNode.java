@@ -449,6 +449,12 @@ public class TestObserverNode {
     dfs.open(testPath).close();
     assertSentTo(0);
 
+    dfs.getClient().listPaths("/", new byte[0], true);
+    assertSentTo(0);
+
+    dfs.getClient().getLocatedFileInfo(testPath.toString(), false);
+    assertSentTo(0);
+
     // Test erasure coded files
     ErasureCodingPolicy ecPolicy = new ErasureCodingPolicy(new ECSchema("rs", 3, 2), 1024);
 
@@ -469,6 +475,12 @@ public class TestObserverNode {
     dfs.open(testPath).close();
     assertSentTo(2);
 
+    dfs.getClient().listPaths("/", new byte[0], true);
+    assertSentTo(2);
+
+    dfs.getClient().getLocatedFileInfo(testPath.toString(), false);
+    assertSentTo(2);
+
     // Fake a larger file that needs all 3 data shards
     doAnswer((invocation) -> {
       List<LocatedBlock> fakeBlocks = new ArrayList<>();
@@ -484,6 +496,12 @@ public class TestObserverNode {
 
     // Large file should failover to the active
     dfs.open(testPath).close();
+    assertSentTo(0);
+
+    dfs.getClient().listPaths("/", new byte[0], true);
+    assertSentTo(0);
+
+    dfs.getClient().getLocatedFileInfo(testPath.toString(), false);
     assertSentTo(0);
 
     Mockito.reset(bmSpy);
