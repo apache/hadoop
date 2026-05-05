@@ -30,3 +30,6 @@ jobs:
       packages: write
     name: Run
     uses: ./.github/workflows/tmpl_cloud_aws.yml
+    with:
+      java: 25
+      os: ubuntu_24
