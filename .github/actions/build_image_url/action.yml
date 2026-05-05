@@ -1,0 +1,27 @@
+name: Get Build Image URL
+description:
+
+inputs:
+  branch:
+    description: Git branch to use.
+    required: true
+  os:
+    description: Operating system to run the build on
+    required: true
+
+outputs:
+  build_image_url:
+    description: URL of build (infra) image.
+    value: ${{ steps.compute.outputs.image_url }}
+
+runs:
+  using: composite
+  steps:
+    - id: compute
+      shell: bash
+      run: |
+        # Convert to lowercase to meet Docker repo name requirement
+        REPO_OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+        echo "image_url=ghcr.io/${REPO_OWNER}/gha-build-${{ inputs.os }}:${{ inputs.branch }}-${{ github.run_id }}" \
+        >> $GITHUB_OUTPUT
+

@@ -72,6 +72,7 @@ env:
     -Dsurefire.rerunFailingTestsCount=2
 
 jobs:
+  # TODO: use common composite actions in .github/actions/
   precondition:
     name: Preparation
     runs-on: ubuntu-24.04
