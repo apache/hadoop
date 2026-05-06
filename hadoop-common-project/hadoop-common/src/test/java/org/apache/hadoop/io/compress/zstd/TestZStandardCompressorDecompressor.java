@@ -198,8 +198,16 @@ public class TestZStandardCompressorDecompressor {
     byte[] bytes = generate(bytesSize);
     assertTrue(compressor.needsInput(), "needsInput error !!!");
     compressor.setInput(bytes, 0, bytes.length);
+    compressor.finish();
     byte[] emptyBytes = new byte[bytesSize];
-    int cSize = compressor.compress(emptyBytes, 0, bytes.length);
+    // Drive compress() in a loop until the compressor reports finished(),
+    // mirroring how CompressorStream drains the compressor.
+    int cSize = 0;
+    while (!compressor.finished() && cSize < emptyBytes.length) {
+      compressor.needsInput();
+      cSize += compressor.compress(emptyBytes, cSize,
+          emptyBytes.length - cSize);
+    }
     assertTrue(cSize > 0);
   }
 
@@ -330,13 +338,27 @@ public class TestZStandardCompressorDecompressor {
     assertEquals(0, compressor.getBytesRead());
     compressor.finish();
 
+    // Drive compress() in a loop until the compressor reports finished(),
+    // mirroring how CompressorStream drains the compressor.
     byte[] compressedResult = new byte[rawDataSize];
-    int cSize = compressor.compress(compressedResult, 0, rawDataSize);
+    int cSize = 0;
+    while (!compressor.finished() && cSize < compressedResult.length) {
+      cSize += compressor.compress(compressedResult, cSize,
+          compressedResult.length - cSize);
+    }
+    assertTrue(compressor.finished());
     assertEquals(rawDataSize, compressor.getBytesRead());
     assertTrue(cSize < rawDataSize);
     decompressor.setInput(compressedResult, 0, cSize);
+    // Drive decompress() in a loop until the decompressor reports finished()
+    // (see CompressDecompressTester#COMPRESS_DECOMPRESS_BLOCK).
     byte[] decompressedBytes = new byte[rawDataSize];
-    decompressor.decompress(decompressedBytes, 0, decompressedBytes.length);
+    int dSize = 0;
+    while (!decompressor.finished() && dSize < decompressedBytes.length) {
+      dSize += decompressor.decompress(decompressedBytes, dSize,
+          decompressedBytes.length - dSize);
+    }
+    assertEquals(rawDataSize, dSize);
     assertEquals(bytesToHex(rawData), bytesToHex(decompressedBytes));
     compressor.reset();
     decompressor.reset();
@@ -354,7 +376,7 @@ public class TestZStandardCompressorDecompressor {
 
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     Compressor compressor =
-        new ZStandardCompressor(3, IO_FILE_BUFFER_SIZE_DEFAULT, 1);
+        new ZStandardCompressor(3, 0, IO_FILE_BUFFER_SIZE_DEFAULT, 1);
     CompressionOutputStream outputStream =
         codec.createOutputStream(baos, compressor);
 
@@ -397,14 +419,28 @@ public class TestZStandardCompressorDecompressor {
     compressor.setInput(rawData, 0, rawData.length);
     compressor.finish();
 
+    // Drive compress() in a loop until the compressor reports finished(),
+    // mirroring how CompressorStream drains the compressor.
     byte[] compressedResult = new byte[rawDataSize];
-    int cSize = compressor.compress(compressedResult, 0, rawDataSize);
+    int cSize = 0;
+    while (!compressor.finished() && cSize < compressedResult.length) {
+      cSize += compressor.compress(compressedResult, cSize,
+          compressedResult.length - cSize);
+    }
+    assertTrue(compressor.finished());
     assertEquals(rawDataSize, compressor.getBytesRead());
     assertTrue(cSize < rawDataSize,
         "compressed size no less then original size");
     decompressor.setInput(compressedResult, 0, cSize);
+    // Drive decompress() in a loop until the decompressor reports finished()
+    // (see CompressDecompressTester#COMPRESS_DECOMPRESS_BLOCK).
     byte[] decompressedBytes = new byte[rawDataSize];
-    decompressor.decompress(decompressedBytes, 0, decompressedBytes.length);
+    int dSize = 0;
+    while (!decompressor.finished() && dSize < decompressedBytes.length) {
+      dSize += decompressor.decompress(decompressedBytes, dSize,
+          decompressedBytes.length - dSize);
+    }
+    assertEquals(rawDataSize, dSize);
     String decompressed = bytesToHex(decompressedBytes);
     String original = bytesToHex(rawData);
     assertEquals(original, decompressed);
@@ -519,6 +555,107 @@ public class TestZStandardCompressorDecompressor {
         new ZStandardDecompressor(IO_FILE_BUFFER_SIZE_DEFAULT);
     int result = decompressor.decompress(new byte[10], 0, 10);
     assertEquals(0, result);
+  }
+
+  // workers > 0 should produce data that round-trips correctly through the
+  // decompressor, matching the bytes produced with the default workers=0.
+  @Test
+  public void testCompressionWithWorkers() throws Exception {
+    byte[] bytes = FileUtils.readFileToByteArray(uncompressedFile);
+
+    Configuration conf = new Configuration();
+    conf.setInt("io.compression.codec.zstd.workers", 2);
+    ZStandardCodec codec = new ZStandardCodec();
+    codec.setConf(conf);
+
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    Compressor compressor = codec.createCompressor();
+    try (CompressionOutputStream outputStream =
+             codec.createOutputStream(baos, compressor)) {
+      outputStream.write(bytes);
+      outputStream.finish();
+    }
+    assertTrue(compressor.finished());
+    assertEquals(bytes.length, compressor.getBytesRead());
+
+    // Round-trip through the decompressor.
+    ByteArrayOutputStream decompressed = new ByteArrayOutputStream();
+    ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
+    Decompressor decompressor = codec.createDecompressor();
+    try (CompressionInputStream inputStream =
+             codec.createInputStream(bais, decompressor)) {
+      byte[] buf = new byte[4096];
+      int n;
+      while ((n = inputStream.read(buf, 0, buf.length)) != -1) {
+        decompressed.write(buf, 0, n);
+      }
+    }
+    assertArrayEquals(bytes, decompressed.toByteArray());
+  }
+
+  // A negative workers value must be rejected up-front by ZStandardCodec.
+  @Test
+  public void testNegativeWorkersIsRejected() {
+    Configuration conf = new Configuration();
+    conf.setInt("io.compression.codec.zstd.workers", -1);
+    ZStandardCodec codec = new ZStandardCodec();
+    codec.setConf(conf);
+    assertThrows(IllegalArgumentException.class, codec::createCompressor);
+  }
+
+  // The default value (workers=0) must keep behaviour identical to before.
+  @Test
+  public void testDefaultWorkersIsZero() throws Exception {
+    Configuration conf = new Configuration();
+    ZStandardCodec codec = new ZStandardCodec();
+    codec.setConf(conf);
+    assertEquals(0, ZStandardCodec.getCompressionWorkers(conf));
+
+    byte[] bytes = FileUtils.readFileToByteArray(uncompressedFile);
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    Compressor compressor = codec.createCompressor();
+    try (CompressionOutputStream outputStream =
+             codec.createOutputStream(baos, compressor)) {
+      outputStream.write(bytes);
+      outputStream.finish();
+    }
+    assertTrue(compressor.finished());
+    assertEquals(bytes.length, compressor.getBytesRead());
+  }
+
+  // reinit() should pick up an updated workers value for pooled compressors.
+  @Test
+  public void testReinitUpdatesWorkers() throws Exception {
+    byte[] bytes = FileUtils.readFileToByteArray(uncompressedFile);
+
+    ZStandardCodec codec = new ZStandardCodec();
+    codec.setConf(new Configuration());
+    Compressor compressor = codec.createCompressor();
+
+    Configuration newConf = new Configuration();
+    newConf.setInt("io.compression.codec.zstd.workers", 2);
+    compressor.reinit(newConf);
+
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    try (CompressionOutputStream outputStream =
+             codec.createOutputStream(baos, compressor)) {
+      outputStream.write(bytes);
+      outputStream.finish();
+    }
+
+    // Round-trip to confirm the output is still valid zstd data.
+    ByteArrayOutputStream decompressed = new ByteArrayOutputStream();
+    ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
+    Decompressor decompressor = codec.createDecompressor();
+    try (CompressionInputStream inputStream =
+             codec.createInputStream(bais, decompressor)) {
+      byte[] buf = new byte[4096];
+      int n;
+      while ((n = inputStream.read(buf, 0, buf.length)) != -1) {
+        decompressed.write(buf, 0, n);
+      }
+    }
+    assertArrayEquals(bytes, decompressed.toByteArray());
   }
 
   public static byte[] generate(int size) {

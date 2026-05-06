@@ -20,6 +20,8 @@ package org.apache.hadoop.hdfs.server.federation.router.async;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.CryptoProtocolVersion;
+import org.apache.hadoop.fs.BatchedRemoteIterator.BatchedEntries;
+import org.apache.hadoop.fs.BatchedRemoteIterator.BatchedListEntries;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FsServerDefaults;
@@ -34,6 +36,8 @@ import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LastBlockWithStatus;
+import org.apache.hadoop.hdfs.protocol.OpenFileEntry;
+import org.apache.hadoop.hdfs.protocol.OpenFilesIterator;
 import org.apache.hadoop.hdfs.protocol.ReplicatedBlockStats;
 import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
 import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
@@ -837,6 +841,23 @@ public class RouterAsyncClientProtocol extends RouterClientProtocol {
       return ReplicatedBlockStats.merge(ret.values());
     });
     return asyncReturn(ReplicatedBlockStats.class);
+  }
+
+  @Override
+  public BatchedEntries<OpenFileEntry> listOpenFiles(long prevId,
+      EnumSet<OpenFilesIterator.OpenFilesType> openFilesTypes, String path) throws IOException {
+    rpcServer.checkOperation(NameNode.OperationCategory.READ, true);
+    List<RemoteLocation> locations = rpcServer.getLocationsForPath(path, false, false);
+    RemoteMethod method =
+        new RemoteMethod("listOpenFiles", new Class<?>[] {long.class, EnumSet.class, String.class},
+            prevId, openFilesTypes, new RemoteParam());
+    rpcClient.invokeConcurrent(locations, method, true, false, -1, BatchedEntries.class);
+
+    asyncApply(o -> {
+      Map<RemoteLocation, BatchedEntries> results = (Map<RemoteLocation, BatchedEntries>) o;
+      return mergeAndSortOpenFileListResults(results);
+    });
+    return asyncReturn(BatchedListEntries.class);
   }
 
   @Override

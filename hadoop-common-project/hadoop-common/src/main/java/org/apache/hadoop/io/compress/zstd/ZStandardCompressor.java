@@ -43,6 +43,7 @@ public class ZStandardCompressor implements Compressor {
       LoggerFactory.getLogger(ZStandardCompressor.class);
 
   private int level;
+  private int workers;
   private int directBufferSize;
   private byte[] userBuf = null;
   private int userBufOff = 0, userBufLen = 0;
@@ -74,12 +75,30 @@ public class ZStandardCompressor implements Compressor {
    * @param bufferSize bufferSize.
    */
   public ZStandardCompressor(int level, int bufferSize) {
-    this(level, bufferSize, bufferSize);
+    this(level,
+        CommonConfigurationKeys.IO_COMPRESSION_CODEC_ZSTD_WORKERS_DEFAULT,
+        bufferSize, bufferSize);
+  }
+
+  /**
+   * Creates a new compressor with the supplied compression level and number
+   * of compression worker threads. Compressed data will be generated in
+   * ZStandard format.
+   *
+   * @param level the zstd compression level
+   * @param workers number of zstd compression worker threads (0 disables
+   *                multi-threaded compression)
+   * @param bufferSize the input/output direct buffer size
+   */
+  public ZStandardCompressor(int level, int workers, int bufferSize) {
+    this(level, workers, bufferSize, bufferSize);
   }
 
   @VisibleForTesting
-  ZStandardCompressor(int level, int inputBufferSize, int outputBufferSize) {
+  ZStandardCompressor(int level, int workers, int inputBufferSize,
+      int outputBufferSize) {
     this.level = level;
+    this.workers = workers;
     zstdJniCtx = new ZstdCompressCtx();
     uncompressedDirectBuf = ByteBuffer.allocateDirect(inputBufferSize);
     directBufferSize = outputBufferSize;
@@ -101,6 +120,7 @@ public class ZStandardCompressor implements Compressor {
       return;
     }
     level = ZStandardCodec.getCompressionLevel(conf);
+    workers = ZStandardCodec.getCompressionWorkers(conf);
     reset();
     LOG.debug("Reinit compressor with new compression configuration");
   }
@@ -196,11 +216,9 @@ public class ZStandardCompressor implements Compressor {
       return n;
     }
 
-    // Always invoke the streaming API — even with empty input — so internally
-    // buffered bytes continue to be drained, matching native ZSTD_flushStream.
-    // Use END only when finish=true, no more user data, and all direct-buffer
-    // data consumed (mirrors ZSTD_endStream); otherwise FLUSH (mirrors
-    // ZSTD_compressStream + ZSTD_flushStream).
+    // Always invoke the streaming API - even with empty input - so internally
+    // buffered bytes continue to be drained. Use END only when finish=true, no
+    // more user data, and all direct-buffer data consumed; otherwise CONTINUE.
     boolean allConsumed = (uncompressedDirectBufLen - uncompressedDirectBufOff <= 0);
     boolean shouldEnd = finish && userBufLen == 0 && allConsumed;
 
@@ -209,7 +227,16 @@ public class ZStandardCompressor implements Compressor {
     compressedDirectBuf.position(0);
     compressedDirectBuf.limit(directBufferSize);
 
-    EndDirective endOp = shouldEnd ? EndDirective.END : EndDirective.FLUSH;
+    // CONTINUE should be used for non-end case, to support multi-threaded:
+    // 1. CONTINUE + workers >= 1: non-blocking. The call copies as much input
+    //      as it can into a job, dispatches to workers, drains whatever output
+    //      is ready, and returns. Multiple jobs can be in flight in parallel.
+    // 2. FLUSH + workers >= 1: multi-threaded compression will block to flush
+    //      as much output as possible. The call won't return until every queued
+    //      job has finished and its output has been drained to the dst buffer.
+    // 3. END + workers >= 1: same as FLUSH but also closes the frame. Same
+    //      blocking behavior.
+    EndDirective endOp = shouldEnd ? EndDirective.END : EndDirective.CONTINUE;
     boolean done = zstdJniCtx.compressDirectByteBufferStream(
         compressedDirectBuf, uncompressedDirectBuf, endOp);
 
@@ -269,6 +296,7 @@ public class ZStandardCompressor implements Compressor {
     checkStream();
     zstdJniCtx.reset();
     zstdJniCtx.setLevel(level);
+    zstdJniCtx.setWorkers(workers);
     finish = false;
     finished = false;
     bytesRead = 0;

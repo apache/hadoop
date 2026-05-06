@@ -668,6 +668,57 @@ public class TestDatanodeManager {
   }
 
   @Test
+  public void testGetBlockLocationWithDeadDatanodeReader()
+      throws IOException, URISyntaxException {
+    Configuration conf = new Configuration();
+    conf.setBoolean(
+        DFSConfigKeys.DFS_NAMENODE_READ_CONSIDERLOAD_KEY, true);
+    conf.setBoolean(
+        DFSConfigKeys.DFS_NAMENODE_AVOID_STALE_DATANODE_FOR_READ_KEY, true);
+    conf.setLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 0);
+    conf.setInt(
+        DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 0);
+    FSNamesystem fsn = Mockito.mock(FSNamesystem.class);
+    Mockito.when(fsn.hasWriteLock()).thenReturn(true);
+    Mockito.when(fsn.hasWriteLock(RwLockMode.BM)).thenReturn(true);
+    URL shellScript = getClass().getResource(
+        "/" + Shell.appendScriptExtension("topology-script"));
+    Path resourcePath = Paths.get(shellScript.toURI());
+    FileUtil.setExecutable(resourcePath.toFile(), true);
+    conf.set(DFSConfigKeys.NET_TOPOLOGY_SCRIPT_FILE_NAME_KEY,
+        resourcePath.toString());
+    DatanodeManager dm = mockDatanodeManager(fsn, conf);
+
+    int totalDNs = 5;
+    DatanodeInfo[] locs = new DatanodeInfo[totalDNs];
+    for (int i = 0; i < totalDNs; i++) {
+      String uuid = "UUID-" + i;
+      String ip = "IP-" + i / 2 + "-" + i;
+      DatanodeRegistration dr = Mockito.mock(DatanodeRegistration.class);
+      Mockito.when(dr.getDatanodeUuid()).thenReturn(uuid);
+      Mockito.when(dr.getIpAddr()).thenReturn(ip);
+      dm.registerDatanode(dr);
+      locs[i] = dm.getDatanode(uuid);
+      locs[i].setXceiverCount(i);
+    }
+
+    locs[3].setLastUpdateMonotonic(0);
+    dm.removeDeadDatanode(locs[3], true);
+    assertThat(locs[3].getParent()).isNull();
+    assertThat(dm.getDatanodeByHost(locs[3].getIpAddr())).isSameAs(locs[3]);
+
+    ExtendedBlock b = new ExtendedBlock("somePoolID", 1234);
+    LocatedBlock block = new LocatedBlock(b,
+        new DatanodeInfo[] {locs[1], locs[2], locs[4]});
+    List<LocatedBlock> blocks = new ArrayList<>();
+    blocks.add(block);
+
+    dm.sortLocatedBlocks(locs[3].getIpAddr(), blocks);
+    DatanodeInfo[] sortedLocs = block.getLocations();
+    assertEquals(locs[2].getIpAddr(), sortedLocs[0].getIpAddr());
+  }
+
+  @Test
   public void testGetBlockLocationConsiderLoadWithNodesOfSameDistance()
       throws IOException, URISyntaxException {
     Configuration conf = new Configuration();

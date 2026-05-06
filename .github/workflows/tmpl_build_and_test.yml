@@ -1,0 +1,179 @@
+#
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+name: Build and Test
+
+on:
+  workflow_call:
+    inputs:
+      java:
+        required: false
+        type: string
+        default: 17
+      branch:
+        required: false
+        type: string
+        description: Branch to run the build against
+        default: trunk
+      os:
+        required: false
+        type: string
+        description: Operating system to run the build on
+        default: ubuntu_24
+      jobs:
+        required: false
+        type: string
+        description: >-
+          Jobs to run, and should be in JSON Array format.
+          Candidates: "build-only".
+        default: '[ "build-only" ]'
+
+# Default to minimal permissions for workflow.
+permissions:
+  packages: read
+
+concurrency:
+  group: >-
+    build-and-test
+    ${{ github.workflow }}
+    ${{ github.repository == 'apache/hadoop' && github.run_id || github.ref }}
+    ${{ inputs.java }}
+    ${{ inputs.branch }}
+    ${{ inputs.os }}
+    ${{ inputs.jobs }}
+  cancel-in-progress: true
+
+env:
+  MAVEN_ARGS:
+    --batch-mode
+    --no-transfer-progress
+    -Pyarn-ui
+    -Pnative
+    -Drequire.test.libhadoop
+    -Drequire.fuse
+    -Drequire.openssl
+    -Drequire.snappy
+    -Drequire.valgrind
+    -Dmaven.test.failure.ignore=false
+
+jobs:
+  precondition:
+    name: Preparation
+    runs-on: ubuntu-24.04
+    outputs:
+      build_image_url: ${{ steps.variables.outputs.build_image_url }}
+    steps:
+      - name: Set up Outputs
+        id: variables
+        # Security: passing inputs.{os, branch} through workflow (above) inputs removes
+        # ability to do shell injection below.
+        # See: https://securitylab.github.com/resources/github-actions-untrusted-input/
+        run: |
+          # Convert to lowercase to meet Docker repo name requirement
+          REPO_OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          echo "build_image_url=ghcr.io/${REPO_OWNER}/gha-build-${{ inputs.os }}:${{ inputs.branch }}-${{ github.run_id }}" >> $GITHUB_OUTPUT
+  build-image:
+    name: Build Image ${{ inputs.os }}-${{ inputs.branch }}
+    runs-on: ubuntu-24.04
+    needs: [ precondition ]
+    # Security: this does not leak write access for our image repository to
+    # forked repos.
+    #
+    # We have `packages: write` permissions for our GITHUB_TOKEN below. However:
+    #
+    # - For `pull_request`, GitHub downgrades GITHUB_TOKEN permissions to
+    #   read-only.
+    # - For `push` triggers on a fork, the GITHUB_TOKEN retains write
+    #   permissions, but the `push` is happening in the context of the fork, not
+    #   the upstream repo.
+    # - `pull_request_target` events (not used here) use the base repo's
+    #   default branch. This prevents an attacker from adding code in a pull
+    #   request which prints / leaks secrets, etc.. Also the GITHUB_TOKEN we
+    #   use to grant access to writing to the image repo. is scoped to the
+    #   repository it runs on. Even if a fork were to gain access to a
+    #   GITHUB_TOKEN with write privileges, it doesn't grant access for other
+    #   repositories to write.
+    permissions:
+      packages: write
+    outputs:
+      uid: ${{ steps.variables.outputs.uid }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@b45d80f862d83dbcd57f89517bcf500b2ab88fb2 # v4.0.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
+      - name: Build and push ${{ inputs.os }} base build image for ${{ inputs.branch }}
+        id: docker_build_base
+        uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 # v7.0.0
+        with:
+          context: ./dev-support/docker/
+          file: ./dev-support/docker/Dockerfile_${{ inputs.os }}
+          push: true
+          tags: ${{ needs.precondition.outputs.build_image_url }}-base
+          cache-from: type=registry,ref=ghcr.io/apache/hadoop/gha-build-${{ inputs.os }}-image-cache:${{ inputs.branch }}
+      - name: User-specific Dockerfile
+        run: |
+          USER_ID=$(id -u "${USER}")
+          GROUP_ID=$(id -g "${USER}")
+          cat > /tmp/Dockerfile.gha <<UserSpecificDocker
+          FROM ${{ needs.precondition.outputs.build_image_url }}-base
+          RUN rm -f /var/log/faillog /var/log/lastlog
+          RUN groupadd --non-unique -g ${GROUP_ID} ${USER}
+          RUN useradd -g ${GROUP_ID} -u ${USER_ID} -k /root -m ${USER}
+          RUN echo "${USER} ALL=NOPASSWD: ALL" > "/etc/sudoers.d/hadoop-build-${USER_ID}"
+          UserSpecificDocker
+      - name: Build and push ${{ inputs.os }} build image for ${{ inputs.branch }}
+        id: docker_build_gha
+        uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 # v7.0.0
+        with:
+          context: ./dev-support/docker/
+          file: /tmp/Dockerfile.gha
+          push: true
+          tags: ${{ needs.precondition.outputs.build_image_url }}
+      - name: Set up Outputs
+        id: variables
+        run: |
+          echo "uid=$(id -u "${USER}")" >> $GITHUB_OUTPUT
+  build-only:
+    name: Build Only (Java ${{ inputs.java }}) ${{ inputs.os }}-${{ inputs.branch }}
+    if: (!cancelled()) && contains(fromJSON(inputs.jobs), 'build-only')
+    runs-on: ubuntu-24.04
+    needs: [ precondition, build-image ]
+    container:
+      image: ${{ needs.precondition.outputs.build_image_url }}
+      options: --user ${{ needs.build-image.outputs.uid }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Setup JDK ${{ inputs.java }}
+        uses: actions/setup-java@v5
+        with:
+          distribution: zulu
+          java-version: ${{ inputs.java }}
+          cache: 'maven'
+          check-latest: false
+      - name: Build
+        shell: bash
+        run: ./mvnw $MAVEN_ARGS clean install -DskipTests

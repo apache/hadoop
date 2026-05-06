@@ -2939,6 +2939,13 @@ public abstract class Server {
     private void processRpcRequest(RpcRequestHeaderProto header,
         RpcWritable.Buffer buffer) throws RpcServerException,
         InterruptedException {
+      if (header.getRpcKind() == RpcKindProto.RPC_WRITABLE) {
+        final String err = "WritableRpcEngine is no longer supported."
+            + " Upgrade your Hadoop client to use ProtobufRpcEngine.";
+        LOG.warn(err + " Client: " + getHostAddress());
+        throw new FatalRpcServerException(
+            RpcErrorCodeProto.FATAL_INVALID_RPC_HEADER, err);
+      }
       Class<? extends Writable> rpcRequestClass = 
           getRpcRequestWrapper(header.getRpcKind());
       if (rpcRequestClass == null) {
@@ -3642,6 +3649,8 @@ public abstract class Server {
     call.setResponse(ByteBuffer.wrap(response));
   }
 
+
+
   private byte[] setupResponseForWritable(
       RpcResponseHeaderProto header, Writable rv) throws IOException {
     ResponseBuffer buf = responseBuffer.get().reset();
@@ -3659,7 +3668,6 @@ public abstract class Server {
       }
     }
   }
-
 
   // writing to a pre-allocated array is the most efficient way to construct
   // a protobuf response.

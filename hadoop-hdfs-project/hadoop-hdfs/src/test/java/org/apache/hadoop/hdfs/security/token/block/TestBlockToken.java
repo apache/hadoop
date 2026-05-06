@@ -397,8 +397,8 @@ public class TestBlockToken {
     // attempt to connect anywhere -- but it causes the refcount on the
     // RPC "Client" object to stay above 0 such that RPC.stopProxy doesn't
     // actually close the TCP connections to the real target DN.
-    ClientDatanodeProtocol proxyToNoWhere = RPC.getProxy(
-        ClientDatanodeProtocol.class, ClientDatanodeProtocol.versionID,
+    ClientDatanodeProtocolPB proxyToNoWhere = RPC.getProxy(
+        ClientDatanodeProtocolPB.class, ClientDatanodeProtocol.versionID,
         new InetSocketAddress("1.1.1.1", 1),
         UserGroupInformation.createRemoteUser("junk"), conf,
         NetUtils.getDefaultSocketFactory(conf));
