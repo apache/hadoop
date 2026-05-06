@@ -54,8 +54,8 @@ public final class ReadBufferManagerV1 extends ReadBufferManager {
   private static ReadBufferManagerV1 bufferManager;
   private final VectoredReadHandler vectoredReadHandler;
   private static VectoredReadStrategy vectoredReadStrategy;
-  private static int maxSeekForVectoredReads;
-  private static int maxSeekForeVectoredReadsThroughput;
+  private static int maxReadSizeForVectoredReads;
+  private static int maxReadSizeForeVectoredReadsThroughput;
 
   // hide instance constructor
   private ReadBufferManagerV1() {
@@ -80,9 +80,9 @@ public final class ReadBufferManagerV1 extends ReadBufferManager {
           "ReadBufferManagerV1 not initialized yet. Overriding readAheadBlockSize as {}",
           readAheadBlockSize);
       vectoredReadStrategy = abfsConfiguration.getVectoredReadStrategy();
-      maxSeekForVectoredReads = abfsConfiguration.getMaxSeekForVectoredReads();
-      maxSeekForeVectoredReadsThroughput
-          = abfsConfiguration.getMaxSeekForVectoredReadsThroughput();
+      maxReadSizeForVectoredReads = abfsConfiguration.getMaxReadSizeForVectoredReads();
+      maxReadSizeForeVectoredReadsThroughput
+          = abfsConfiguration.getMaxReadSizeForVectoredReadsThroughput();
       setReadAheadBlockSize(readAheadBlockSize);
       setThresholdAgeMilliseconds(DEFAULT_THRESHOLD_AGE_MILLISECONDS);
     }
@@ -821,13 +821,13 @@ public final class ReadBufferManagerV1 extends ReadBufferManager {
   }
 
   @VisibleForTesting
-  public int getMaxSeekForVectoredReads() {
-    return maxSeekForVectoredReads;
+  public int getMaxReadSizeForVectoredReads() {
+    return maxReadSizeForVectoredReads;
   }
 
   @VisibleForTesting
-  public int getMaxSeekForVectoredReadsThroughput() {
-    return maxSeekForeVectoredReadsThroughput;
+  public int getMaxReadSizeForeVectoredReadsThroughput() {
+    return maxReadSizeForeVectoredReadsThroughput;
   }
 
   @Override

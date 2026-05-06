@@ -119,8 +119,8 @@ class VectoredReadHandler {
     /* Select the maximum allowed merge span based on the configured strategy */
     int maxSpan =
         (strategy == VectoredReadStrategy.TPS_OPTIMIZED)
-            ? readBufferManager.getMaxSeekForVectoredReads()
-            : readBufferManager.getMaxSeekForVectoredReadsThroughput();
+            ? readBufferManager.getMaxReadSizeForVectoredReads()
+            : readBufferManager.getMaxReadSizeForeVectoredReadsThroughput();
 
     LOG.debug("readVectored: path={}, strategy={}, maxSpan={}",
         stream.getPath(), strategy, maxSpan);

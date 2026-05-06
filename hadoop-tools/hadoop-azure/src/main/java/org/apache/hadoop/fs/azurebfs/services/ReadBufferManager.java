@@ -148,9 +148,9 @@ public abstract class ReadBufferManager {
 
   abstract VectoredReadStrategy getVectoredReadStrategy();
 
-  abstract int getMaxSeekForVectoredReads();
+  abstract int getMaxReadSizeForVectoredReads();
 
-  abstract int getMaxSeekForVectoredReadsThroughput();
+  abstract int getMaxReadSizeForeVectoredReadsThroughput();
 
   /**
    * Attempts to evict buffers based on the eviction policy.

@@ -131,8 +131,8 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
   private volatile long maxJvmCpuUtilization = 0L;
   private final VectoredReadHandler vectoredReadHandler;
   private static VectoredReadStrategy vectoredReadStrategy;
-  private static int maxSeekForVectoredReads;
-  private static int maxSeekForeVectoredReadsThroughput;
+  private static int maxReadSizeForVectoredReads;
+  private static int maxReadSizeForeVectoredReadsThroughput;
 
   /**
    * Private constructor to prevent instantiation as this needs to be singleton.
@@ -211,8 +211,8 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
           isDynamicScalingEnabled
               = abfsConfiguration.isReadAheadV2DynamicScalingEnabled();
           vectoredReadStrategy = abfsConfiguration.getVectoredReadStrategy();
-          maxSeekForVectoredReads = abfsConfiguration.getMaxSeekForVectoredReads();
-          maxSeekForeVectoredReadsThroughput = abfsConfiguration.getMaxSeekForVectoredReadsThroughput();
+          maxReadSizeForVectoredReads = abfsConfiguration.getMaxReadSizeForVectoredReads();
+          maxReadSizeForeVectoredReadsThroughput = abfsConfiguration.getMaxReadSizeForVectoredReadsThroughput();
           setReadAheadBlockSize(readAheadBlockSize);
           setIsConfigured(true);
         }
@@ -1310,13 +1310,13 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
   }
 
   @VisibleForTesting
-  public int getMaxSeekForVectoredReads() {
-    return maxSeekForVectoredReads;
+  public int getMaxReadSizeForVectoredReads() {
+    return maxReadSizeForVectoredReads;
   }
 
   @VisibleForTesting
-  public int getMaxSeekForVectoredReadsThroughput() {
-    return maxSeekForeVectoredReadsThroughput;
+  public int getMaxReadSizeForeVectoredReadsThroughput() {
+    return maxReadSizeForeVectoredReadsThroughput;
   }
 
   /**

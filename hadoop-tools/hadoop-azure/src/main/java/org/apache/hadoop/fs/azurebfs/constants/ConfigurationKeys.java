@@ -643,15 +643,15 @@ public final class ConfigurationKeys {
    * Configuration key that defines the maximum gap between adjacent read ranges
    * for merging ranges during vectored reads in ABFS: {@value}.
    */
-  public static final String FS_AZURE_MAX_SEEK_FOR_VECTORED_READS =
-      "fs.azure.max.seek.for.vectored.reads";
+  public static final String FS_AZURE_MAX_MERGED_READ_SIZE_FOR_VECTORED_READS =
+      "fs.azure.vectored.read.max.merged.size";
 
   /**
    * Configuration key that defines the maximum gap between adjacent read ranges
    * for merging ranges during vectored reads in ABFS throughput optimized: {@value}.
    */
-  public static final String FS_AZURE_MAX_SEEK_FOR_VECTORED_READS_THROUGHPUT =
-      "fs.azure.max.seek.for.vectored.reads.throughput";
+  public static final String FS_AZURE_MAX_MERGED_READ_SIZE_FOR_VECTORED_READS_THROUGHPUT =
+      "fs.azure.vectored.read.max.merged.size.throughput";
 
   /**
    * If true, restricts GPS (getPathStatus) calls on openFileforRead

@@ -632,13 +632,13 @@ public class AbfsConfiguration{
   DefaultValue = DEFAULT_FS_AZURE_MIN_SEEK_FOR_VECTORED_READS)
   private int minSeekForVectoredReads;
 
-  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_MAX_SEEK_FOR_VECTORED_READS,
-      DefaultValue = DEFAULT_FS_AZURE_MAX_SEEK_FOR_VECTORED_READS)
-  private int maxSeekForVectoredReads;
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_MAX_MERGED_READ_SIZE_FOR_VECTORED_READS,
+      DefaultValue = DEFAULT_FS_AZURE_MAX_MERGED_READ_SIZE_FOR_VECTORED_READS)
+  private int maxReadSizeForVectoredReads;
 
-  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_MAX_SEEK_FOR_VECTORED_READS_THROUGHPUT,
-      DefaultValue = DEFAULT_FS_AZURE_MAX_SEEK_FOR_VECTORED_READS_THROUGHPUT)
-  private int maxSeekForVectoredReadsThroughput;
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_MAX_MERGED_READ_SIZE_FOR_VECTORED_READS_THROUGHPUT,
+      DefaultValue = DEFAULT_FS_AZURE_MAX_MERGED_READ_SIZE_FOR_VECTORED_READS_THROUGHPUT)
+  private int maxReadSizeForVectoredReadsThroughput;
 
   @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_READ_POLICY,
           DefaultValue = DEFAULT_AZURE_READ_POLICY)
@@ -2237,8 +2237,8 @@ public class AbfsConfiguration{
    *
    * @return maximum gap threshold for range merging
    */
-  public int getMaxSeekForVectoredReads() {
-    return maxSeekForVectoredReads;
+  public int getMaxReadSizeForVectoredReads() {
+    return maxReadSizeForVectoredReads;
   }
 
   /**
@@ -2247,7 +2247,7 @@ public class AbfsConfiguration{
    *
    * @return maximum gap threshold for range merging
    */
-  public int getMaxSeekForVectoredReadsThroughput() {
-    return maxSeekForVectoredReadsThroughput;
+  public int getMaxReadSizeForVectoredReadsThroughput() {
+    return maxReadSizeForVectoredReadsThroughput;
   }
 }

@@ -1218,7 +1218,7 @@ public abstract class AbfsInputStream extends FSInputStream implements CanUnbuff
    */
   @Override
   public int maxReadSizeForVectorReads() {
-    return client.getAbfsConfiguration().getMaxSeekForVectoredReads();
+    return client.getAbfsConfiguration().getMaxReadSizeForVectoredReads();
   }
 
   /**
