@@ -638,6 +638,9 @@ public class DatanodeManager {
     // here we should get node but not datanode only .
     boolean nonDatanodeReader = false;
     Node client = getDatanodeByHost(targetHost);
+    if (client != null && client.getParent() == null) {
+      client = null;
+    }
     if (client == null) {
       nonDatanodeReader = true;
       List<String> hosts = new ArrayList<>(1);
