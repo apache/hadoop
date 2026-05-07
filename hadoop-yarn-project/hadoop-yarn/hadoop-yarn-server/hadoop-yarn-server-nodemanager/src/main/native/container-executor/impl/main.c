@@ -653,6 +653,16 @@ static int validate_run_as_user_commands(int argc, char **argv, int *operation) 
   }
 }
 
+static int wrap_exit_code(int exit_code) {
+    if (exit_code == INVALID_CONTAINER_EXEC_PERMISSIONS || exit_code == INVALID_CONFIG_FILE) {
+        int wrap_code = WRAPPED_EXIT_CODE_USER_CONTAINER_FAILED;
+        fprintf(LOGFILE, "Wrapped exit code of user container from %d to %d to avoid NodeManager unhealthy...\n", exit_code, wrap_code);
+        return wrap_code;
+    } else {
+        return exit_code;
+    }
+}
+
 int main(int argc, char **argv) {
   open_log_files();
   assert_valid_setup(argv[0]);
@@ -743,6 +753,7 @@ int main(int argc, char **argv) {
                       split(cmd_input.local_dirs),
                       split(cmd_input.log_dirs),
                       cmd_input.command_file);
+      exit_code = wrap_exit_code(exit_code);
       break;
   case RUN_AS_USER_LAUNCH_CONTAINER:
     if (cmd_input.traffic_control_command_file != NULL) {
@@ -773,6 +784,7 @@ int main(int argc, char **argv) {
                     split(cmd_input.log_dirs),
                     cmd_input.resources_key,
                     cmd_input.resources_values);
+    exit_code = wrap_exit_code(exit_code);
     free(cmd_input.resources_key);
     free(cmd_input.resources_value);
     free(cmd_input.resources_values);
