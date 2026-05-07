@@ -22,7 +22,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.io.IOException;
 import java.net.BindException;
 import java.util.ArrayList;
 import java.util.List;
@@ -263,14 +262,15 @@ public class TestFrameDecoder {
 
   /**
    * Check whether the given exception indicates that the port is already
-   * bound by another process. Handles {@link ChannelException} thrown by
-   * Netty as well as {@link BindException} that may be sneaky-thrown from
-   * {@code ChannelFuture#sync()}.
+   * bound by another process. Netty may wrap bind failures in a
+   * {@link ChannelException}, so inspect the cause chain and only treat
+   * {@link BindException}s that indicate an address-in-use condition as
+   * retryable.
    */
   private static boolean isPortInUse(Throwable t) {
     Throwable cursor = t;
     while (cursor != null) {
-      if (cursor instanceof BindException || cursor instanceof ChannelException) {
+      if (cursor instanceof BindException) {
         return true;
       }
       cursor = cursor.getCause();
