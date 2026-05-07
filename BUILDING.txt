@@ -5,7 +5,7 @@ Requirements:
 
 * Unix System
 * JDK 17
-* Maven 3.9.11 or later (optional, a compatible version is automatically downloaded if using ./mvnw)
+* Maven 3.9.15 or later (optional, a compatible version is automatically downloaded if using ./mvnw)
 * Boost 1.86.0 (if compiling native code)
 * Protocol Buffers 3.25.5 (if compiling native code)
 * CMake 3.19 or newer (if compiling native code)
@@ -75,9 +75,9 @@ Installing required packages for clean install of Ubuntu 24.04 LTS Desktop.
   Install an up-to-date version of Maven manually, or use mvnw command, which will download one and validate it before execution.
 
   Following commands can be used to download and install required version of Maven manually if mvnw is not used:
-  $ curl -L https://repo.maven.apache.org/maven2/org/apache/maven/apache-maven/3.9.11/apache-maven-3.9.11-bin.tar.gz > apache-maven-3.9.11-bin.tar.gz
-  $ tar -zxvf apache-maven-3.9.11-bin.tar.gz -C /opt
-  $ sudo ln -s /opt/apache-maven-3.9.11/bin/mvn /usr/bin
+  $ curl -L https://repo.maven.apache.org/maven2/org/apache/maven/apache-maven/3.9.15/apache-maven-3.9.15-bin.tar.gz > apache-maven-3.9.15-bin.tar.gz
+  $ tar -zxvf apache-maven-3.9.15-bin.tar.gz -C /opt
+  $ sudo ln -s /opt/apache-maven-3.9.15/bin/mvn /usr/bin
 * Native libraries
   $ sudo apt-get -y install build-essential autoconf automake libtool cmake zlib1g-dev pkg-config libssl-dev libsasl2-dev
 * Protocol Buffers 3.25.5 (required to build native code)
@@ -549,7 +549,7 @@ Requirements:
 
 * Windows 10
 * JDK 17
-* Maven 3.9.11 or later (maven.apache.org, optional, a compatible version is automatically downloaded if using mvnw.cmd)
+* Maven 3.9.15 or later (maven.apache.org, optional, a compatible version is automatically downloaded if using mvnw.cmd)
 * Boost 1.86.0 (boost.org)
 * Protocol Buffers 3.25.5 (https://github.com/protocolbuffers/protobuf/tags)
 * CMake 3.19 or newer (cmake.org)
