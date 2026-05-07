@@ -20,9 +20,12 @@ package org.apache.hadoop.yarn.client.api.impl;
 
 import java.io.IOException;
 import java.net.ConnectException;
+import java.net.ServerSocket;
+import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.security.PrivilegedExceptionAction;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.ws.rs.client.Client;
 import javax.ws.rs.core.Response;
@@ -539,6 +542,48 @@ public class TestTimelineClient {
     client.connector.client = mockJerseyClient;
     client.stop();
     verify(mockJerseyClient, times(1)).close();
+  }
+
+  @Test
+  public void testReadTimeout() throws Exception {
+    ServerSocket server = new ServerSocket(0);
+    AtomicBoolean running = new AtomicBoolean(true);
+
+    Thread t = new Thread(() -> {
+      try (Socket socket = server.accept()) {
+        while (running.get()) {
+          Thread.sleep(100);
+        }
+      } catch (Exception ignored) {}
+    });
+    t.start();
+
+    try {
+      YarnConfiguration conf = new YarnConfiguration();
+      conf.setInt(YarnConfiguration.TIMELINE_SERVICE_CLIENT_MAX_RETRIES, 0);
+      conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
+      conf.setInt(YarnConfiguration.TIMELINE_SERVICE_CLIENT_TIMEOUT_MS, 2_000);
+      conf.set(YarnConfiguration.TIMELINE_SERVICE_WEBAPP_ADDRESS, "localhost:" + server.getLocalPort());
+
+      TimelineClientImpl client = createTimelineClient(conf);
+      long start = System.currentTimeMillis();
+      try {
+        // This call should fail due to a timeout
+        client.putEntities(generateEntity());
+        fail("Timeout expected, but the call succeeded.");
+      } catch (RuntimeException ce) {
+        assertTrue(ce.getMessage().contains("java.net.SocketTimeoutException: Read timed out"),
+                "Handler exception for reason other than retry: " + ce);
+      } finally {
+        long elapsed = System.currentTimeMillis() - start;
+        assertTrue(elapsed >= 2_000 && elapsed < 30_000);
+      }
+    } finally {
+      server.close();
+      running.set(false);
+      t.interrupt();
+      t.join(3000);
+    }
   }
 
   private void setupSSLConfig(YarnConfiguration conf) throws Exception {

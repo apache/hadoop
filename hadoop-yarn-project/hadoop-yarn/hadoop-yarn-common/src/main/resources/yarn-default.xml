@@ -3061,6 +3061,14 @@
 
   <property>
     <description>
+      Timeout in milliseconds for TimelineClient HTTP connect and read operations.
+    </description>
+    <name>yarn.timeline-service.client.timeout-ms</name>
+    <value>60000</value>
+  </property>
+
+  <property>
+    <description>
     The time period for which timeline v2 client will wait for draining
     leftover entities after stop.
     </description>
