@@ -26,31 +26,24 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Hadoop trunk
-        uses: actions/checkout@v3
-        with:
-          repository: apache/hadoop
+        uses: actions/checkout@v6
       - name: Set up JDK 17
         uses: actions/setup-java@v5
         with:
           java-version: '17'
           distribution: 'temurin'
-      - name: Cache local Maven repository
-        uses: actions/cache@v3
-        with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |
-            ${{ runner.os }}-maven-
+          cache: 'maven'
+          check-latest: false
       - name: Build Hadoop maven plugins
-        run: cd hadoop-maven-plugins && mvn --batch-mode install
+        run: ./mvnw --batch-mode -f hadoop-maven-plugins/pom.xml install
       - name: Build Hadoop
-        run: mvn clean install -DskipTests -DskipShade
+        run: ./mvnw --batch-mode clean install -DskipTests -DskipShade
       - name: Build document
-        run: mvn clean site
+        run: ./mvnw --batch-mode clean site
       - name: Stage document
-        run: mvn site:stage -DstagingDirectory=${GITHUB_WORKSPACE}/staging/
+        run: ./mvnw --batch-mode site:stage -DstagingDirectory=${GITHUB_WORKSPACE}/staging/
       - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
+        uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./staging/hadoop-project
