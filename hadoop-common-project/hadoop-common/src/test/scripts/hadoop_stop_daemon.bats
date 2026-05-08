@@ -31,7 +31,9 @@ load hadoop-functions_test_helper
 }
 
 @test "hadoop_stop_daemon_force_kill" {
-  skip "Skip on GitHub Actions now"
+  if [ "${GITHUB_ACTIONS:-}" = "true" ]; then
+    skip "Skipped on GitHub Actions"
+  fi
 
   HADOOP_STOP_TIMEOUT=4
 
