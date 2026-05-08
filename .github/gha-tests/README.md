@@ -25,6 +25,14 @@ them from the excluded list once they are stable. Stability assessment: when del
 tests from `exclude-tests.txt`, the GHA workflow was successfully executed 5 times
 consecutively.
 
+### Slow tests
+
+Test classes takes more than 60s to complete in module `hadoop-hdfs-project/hadoop-hdfs`
+are marked as slow tests, by adding JUnit5 annotation `@Tag("slow")` to the test class.
+
+Slow tests are executed in a dedicated GHA job and roughly take 2.5 hours to complete.
+Contributors are encouraged to diagnose and improve the slow tests to speed up the CI.
+
 ### Run test locally
 
 Create a standard build environment using Docker.
