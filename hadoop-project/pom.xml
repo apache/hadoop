@@ -155,7 +155,7 @@
     <netty4.version>4.1.130.Final</netty4.version>
     <snappy-java.version>1.1.10.4</snappy-java.version>
     <lz4-java.version>1.10.4</lz4-java.version>
-    <zstd-jni.version>1.5.6-4</zstd-jni.version>
+    <zstd-jni.version>1.5.7-8</zstd-jni.version>
     <byte-buddy.version>1.17.6</byte-buddy.version>
 
     <!-- Maven protoc compiler -->
