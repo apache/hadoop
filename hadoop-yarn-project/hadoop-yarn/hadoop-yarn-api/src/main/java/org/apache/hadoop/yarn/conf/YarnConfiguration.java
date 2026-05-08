@@ -3881,7 +3881,7 @@ public class YarnConfiguration extends Configuration {
   public static final boolean
       DEFAULT_TIMELINE_SERVICE_CLIENT_BEST_EFFORT = false;
 
-  /** Timeout in milliseconds for TimelineClient HTTP connect and read operations */
+  /** Timeout in milliseconds for TimelineClient HTTP connect and read operations. */
   public static final String TIMELINE_SERVICE_CLIENT_TIMEOUT_MS =
       TIMELINE_SERVICE_CLIENT_PREFIX + "timeout-ms";
 

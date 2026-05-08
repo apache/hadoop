@@ -563,13 +563,14 @@ public class TestTimelineClient {
       conf.setInt(YarnConfiguration.TIMELINE_SERVICE_CLIENT_MAX_RETRIES, 0);
       conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
       conf.setInt(YarnConfiguration.TIMELINE_SERVICE_CLIENT_TIMEOUT_MS, 2_000);
-      conf.set(YarnConfiguration.TIMELINE_SERVICE_WEBAPP_ADDRESS, "localhost:" + server.getLocalPort());
+      conf.set(YarnConfiguration.TIMELINE_SERVICE_WEBAPP_ADDRESS,
+          "localhost:" + server.getLocalPort());
 
-      TimelineClientImpl client = createTimelineClient(conf);
+      TimelineClientImpl timelineClient = createTimelineClient(conf);
       long start = System.currentTimeMillis();
       try {
         // This call should fail due to a timeout
-        client.putEntities(generateEntity());
+        timelineClient.putEntities(generateEntity());
         fail("Timeout expected, but the call succeeded.");
       } catch (RuntimeException ce) {
         assertTrue(ce.getMessage().contains("java.net.SocketTimeoutException: Read timed out"),

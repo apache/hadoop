@@ -155,7 +155,8 @@ public class TimelineClientImpl extends TimelineClient {
     if (YarnConfiguration.useHttps(getConfig())) {
       protoPrefix = "https://";
     }
-    LOG.info("Timeline service address: " + protoPrefix + getTimelineServiceAddress() + " (" + connector + ")");
+    LOG.info("Timeline service address: "
+        + protoPrefix + getTimelineServiceAddress() + " (" + connector + ")");
     timelineWriter = createTimelineWriter(getConfig(), authUgi,
         connector.getClient(), TimelineConnector.constructResURI(getConfig(),
             timelineServiceAddress, RESOURCE_URI_STR_V1), connector.getRetryPolicy());
