@@ -2966,7 +2966,7 @@ public abstract class Server {
         LOG.warn("Unknown rpc kind {} from client {}", header.getRpcKind(), getHostAddress());
         throw new FatalRpcServerException(
             RpcErrorCodeProto.FATAL_INVALID_RPC_HEADER,
-            "Unknown rpc kind in rpc header" + header.getRpcKind());
+            "Unknown rpc kind in rpc header " + header.getRpcKind());
       }
       Writable rpcRequest;
       try { //Read the rpc request
@@ -2975,7 +2975,7 @@ public abstract class Server {
         throw rse;
       } catch (Throwable t) { // includes runtime exception from newInstance
         LOG.warn(
-            "Unable to read call parameters for client {}on connection protocol {} for rpcKind {}",
+            "Unable to read call parameters for client {} on connection protocol {} for rpcKind {}",
             getHostAddress(), this.protocolName, header.getRpcKind(), t);
         throw new FatalRpcServerException(
             RpcErrorCodeProto.FATAL_DESERIALIZING_REQUEST,
