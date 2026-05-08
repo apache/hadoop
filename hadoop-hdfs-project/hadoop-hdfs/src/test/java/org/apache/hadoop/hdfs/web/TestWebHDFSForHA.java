@@ -22,6 +22,7 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
@@ -56,6 +57,7 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.Whitebox;
 import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.junit.jupiter.api.Test;
@@ -325,6 +327,50 @@ public class TestWebHDFSForHA {
           this.wait();
         }
         assertTrue(resultMap.get("mkdirs"));
+      }
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  /**
+   * Make sure a StandbyException is thrown when rpcServer is null in
+   * NamenodeWebHdfsMethods in HA Setup.
+   */
+  @Test
+  @Timeout(120)
+  public void testThrowStandbyExceptionWhileNNStartup() throws Exception {
+    final Configuration conf = DFSTestUtil.newHAConfiguration(LOGICAL_NAME);
+    MiniDFSCluster cluster = null;
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).nnTopology(topo)
+          .numDataNodes(0).build();
+      HATestUtil.setFailoverConfigurations(cluster, conf, LOGICAL_NAME);
+      cluster.waitActive();
+      cluster.transitionToActive(1);
+
+      final NameNode namenode = cluster.getNameNode(0);
+      final NamenodeProtocols rpcServer = namenode.getRpcServer();
+      Whitebox.setInternalState(namenode, "rpcServer", null);
+
+      String standbyHttpAddress = namenode.getHttpAddress().getHostName() + ":" + namenode.getHttpAddress().getPort();
+      URI webhdfsUri = URI.create(WebHdfsConstants.WEBHDFS_SCHEME + "://" + standbyHttpAddress);
+      FileSystem fs = FileSystem.get(webhdfsUri, conf);
+
+      Path foo = new Path("/foo");
+      try {
+        fs.mkdirs(foo);
+        fail("Expected StandbyException");
+      } catch (Exception e) {
+        if (e instanceof StandbyException) {
+          GenericTestUtils.assertExceptionContains("Namenode is in startup mode", e);
+        } else {
+          fail("Expected StandbyException");
+        }
+      } finally {
+        Whitebox.setInternalState(namenode, "rpcServer", rpcServer);
       }
     } finally {
       if (cluster != null) {

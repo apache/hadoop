@@ -65,6 +65,7 @@ import org.apache.hadoop.fs.InvalidPathException;
 import org.apache.hadoop.fs.QuotaUsage;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.server.namenode.NameNodeUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -186,7 +187,7 @@ public class NamenodeWebHdfsMethods {
       throws IOException {
      final NamenodeProtocols np = namenode.getRpcServer();
      if (np == null) {
-       throw new RetriableException("Namenode is in startup mode");
+       NameNodeUtils.throwNamenodeStartupModeException(namenode);
      }
      return np;
   }
@@ -195,7 +196,7 @@ public class NamenodeWebHdfsMethods {
     final NameNode namenode = (NameNode)context.getAttribute("name.node");
     final ClientProtocol cp = namenode.getRpcServer();
     if (cp == null) {
-      throw new RetriableException("Namenode is in startup mode");
+      NameNodeUtils.throwNamenodeStartupModeException(namenode);
     }
     return cp;
   }

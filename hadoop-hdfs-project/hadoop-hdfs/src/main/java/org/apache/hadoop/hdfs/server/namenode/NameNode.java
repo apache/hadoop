@@ -521,7 +521,7 @@ public class NameNode extends ReconfigurableBase implements
   public void queueExternalCall(ExternalCall<?> extCall)
       throws IOException, InterruptedException {
     if (rpcServer == null) {
-      throw new RetriableException("Namenode is in startup mode");
+      NameNodeUtils.throwNamenodeStartupModeException(this);
     }
     rpcServer.getClientRpcServer().queueCall(extCall);
   }

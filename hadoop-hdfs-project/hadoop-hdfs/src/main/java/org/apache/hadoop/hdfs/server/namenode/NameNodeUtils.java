@@ -24,9 +24,12 @@ import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSUtilClient;
+import org.apache.hadoop.ipc.RetriableException;
+import org.apache.hadoop.ipc.StandbyException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.net.URI;
 import java.util.Collection;
 
@@ -116,6 +119,14 @@ public final class NameNodeUtils {
     } else {
       // the port is missing or 0. Figure out real bind address later.
       return null;
+    }
+  }
+
+  public static void throwNamenodeStartupModeException(NameNode namenode) throws IOException {
+    if (namenode.isStandbyState()){
+      throw new StandbyException("Namenode is in startup mode");
+    } else {
+      throw new RetriableException("Namenode is in startup mode");
     }
   }
 
