@@ -2979,7 +2979,7 @@ public abstract class Server {
             getHostAddress(), this.protocolName, header.getRpcKind(), t);
         throw new FatalRpcServerException(
             RpcErrorCodeProto.FATAL_DESERIALIZING_REQUEST,
-            "IPC server unable to read call parameters: "+ t.getMessage());
+            "IPC server unable to read call parameters: " + t.getMessage());
       }
 
       Span span = null;
