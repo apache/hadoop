@@ -28,6 +28,7 @@ import org.apache.hadoop.hdfs.server.namenode.SafeModeException;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.Mockito;
@@ -39,9 +40,7 @@ import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.InlineDispatcher;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class TestFileSystemNodeLabelsStore extends NodeLabelTestBase {
   MockNodeLabelManager mgr = null;
@@ -421,8 +420,8 @@ public class TestFileSystemNodeLabelsStore extends NodeLabelTestBase {
     mgr.start();
 
     // Verify state after first restart
-    Assert.assertEquals(2, mgr.getClusterNodeLabelNames().size());
-    Assert.assertTrue(mgr.getClusterNodeLabelNames().containsAll(
+    assertEquals(2, mgr.getClusterNodeLabelNames().size());
+    assertTrue(mgr.getClusterNodeLabelNames().containsAll(
         Arrays.asList("p1", "p2")));
     assertMapContains(mgr.getNodeLabels(), ImmutableMap.of(
         toNodeId("n1"), toSet("p1"),
@@ -446,8 +445,8 @@ public class TestFileSystemNodeLabelsStore extends NodeLabelTestBase {
 
     // Step 6: Verify final state after second restart
     // Expected: p1 (kept), p3 (added), p4 (added), p5 (added), p2 (removed)
-    Assert.assertEquals(4, mgr.getClusterNodeLabelNames().size());
-    Assert.assertTrue(mgr.getClusterNodeLabelNames().containsAll(
+    assertEquals(4, mgr.getClusterNodeLabelNames().size());
+    assertTrue(mgr.getClusterNodeLabelNames().containsAll(
         Arrays.asList("p1", "p3", "p4", "p5")));
 
     // Node-to-labels mapping should be correctly merged
@@ -456,7 +455,7 @@ public class TestFileSystemNodeLabelsStore extends NodeLabelTestBase {
         toNodeId("n1"), toSet("p1"),
         toNodeId("n3"), toSet("p4"),
         toNodeId("n4"), toSet("p5")));
-    Assert.assertFalse("n2 should not have any labels after p2 removal",
-        mgr.getNodeLabels().containsKey(toNodeId("n2")));
+    assertFalse(mgr.getNodeLabels().containsKey(toNodeId("n2")),
+        "n2 should not have any labels after p2 removal");
   }
 }
