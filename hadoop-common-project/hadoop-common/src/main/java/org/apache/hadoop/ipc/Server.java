@@ -350,13 +350,13 @@ public abstract class Server {
    * after the call returns.
    */
   private static final ThreadLocal<Call> CurCall = new ThreadLocal<Call>();
-  
+
   /** @return Get the current call. */
   @VisibleForTesting
   public static ThreadLocal<Call> getCurCall() {
     return CurCall;
   }
-  
+
   /**
    * Returns the currently active RPC call's sequential ID number.  A negative
    * call ID indicates an invalid value, such as if there is no currently active
@@ -2869,15 +2869,28 @@ public abstract class Server {
     private void processRpcRequest(RpcRequestHeaderProto header,
         RpcWritable.Buffer buffer) throws RpcServerException,
         InterruptedException {
-      Class<? extends Writable> rpcRequestClass = 
+      // Reject requests for RPC kinds with no registered protocols on this
+      // server instance. This prevents deserialization of untrusted payloads
+      // for unsupported kinds. See HADOOP-19864.
+      if (Server.this instanceof RPC.Server) {
+        RPC.Server server = (RPC.Server)Server.this;
+        final RPC.RpcKind kind = ProtoUtil.convert(header.getRpcKind());
+        if (!server.hasRegisteredProtocols(kind)) {
+          final String err = "No protocols registered on this server for RpcKind "
+              + header.getRpcKind()
+              + ". Rejecting request without deserialization.";
+          LOG.info("{} Client: {}", err, getHostAddress());
+          throw new FatalRpcServerException(
+              RpcErrorCodeProto.FATAL_INVALID_RPC_HEADER, err);
+        }
+      }
+      Class<? extends Writable> rpcRequestClass =
           getRpcRequestWrapper(header.getRpcKind());
       if (rpcRequestClass == null) {
-        LOG.warn("Unknown rpc kind "  + header.getRpcKind() + 
-            " from client " + getHostAddress());
-        final String err = "Unknown rpc kind in rpc header"  + 
-            header.getRpcKind();
+        LOG.warn("Unknown rpc kind {} from client {}", header.getRpcKind(), getHostAddress());
         throw new FatalRpcServerException(
-            RpcErrorCodeProto.FATAL_INVALID_RPC_HEADER, err);
+            RpcErrorCodeProto.FATAL_INVALID_RPC_HEADER,
+            "Unknown rpc kind in rpc header " + header.getRpcKind());
       }
       Writable rpcRequest;
       try { //Read the rpc request
@@ -2885,12 +2898,12 @@ public abstract class Server {
       } catch (RpcServerException rse) { // lets tests inject failures.
         throw rse;
       } catch (Throwable t) { // includes runtime exception from newInstance
-        LOG.warn("Unable to read call parameters for client " +
-                 getHostAddress() + "on connection protocol " +
-            this.protocolName + " for rpcKind " + header.getRpcKind(),  t);
-        String err = "IPC server unable to read call parameters: "+ t.getMessage();
+        LOG.warn(
+            "Unable to read call parameters for client {} on connection protocol {} for rpcKind {}",
+            getHostAddress(), this.protocolName, header.getRpcKind(), t);
         throw new FatalRpcServerException(
-            RpcErrorCodeProto.FATAL_DESERIALIZING_REQUEST, err);
+            RpcErrorCodeProto.FATAL_DESERIALIZING_REQUEST,
+            "IPC server unable to read call parameters: " + t.getMessage());
       }
 
       Span span = null;
