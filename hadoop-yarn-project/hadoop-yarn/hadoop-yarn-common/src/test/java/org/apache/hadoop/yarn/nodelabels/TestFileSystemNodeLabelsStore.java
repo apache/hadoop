@@ -391,4 +391,72 @@ public class TestFileSystemNodeLabelsStore extends NodeLabelTestBase {
         expectedNumOfCalls)).mkdirs(Mockito.any(Path
         .class));
   }
+
+  /**
+   * Test mergeMirrorAndEditLog correctly merges mirror and edit log.
+   *
+   * Test flow:
+   * 1. Add labels [p1, p2] and node-to-labels mapping
+   * 2. Stop manager to finalize current state to disk
+   * 3. Restart manager - this triggers mergeMirrorAndEditLog during init
+   * 4. Add more labels [p3, p4], remove label p2, and modify node-to-labels mapping
+   * 5. Stop and restart again
+   * 6. Verify final state has correct merged labels [p1, p3, p4, p5]
+   */
+  @SuppressWarnings("unchecked")
+  @Test
+  public void testMergeMirrorAndEditLog() throws Exception {
+    // Step 1: Add initial labels and node-to-labels mapping
+    mgr.addToCluserNodeLabelsWithDefaultExclusivity(toSet("p1", "p2"));
+    mgr.replaceLabelsOnNode(ImmutableMap.of(toNodeId("n1"), toSet("p1"),
+        toNodeId("n2"), toSet("p2")));
+
+    // Step 2: Stop manager
+    mgr.stop();
+
+    // Step 3: Restart manager - triggers mergeMirrorAndEditLog
+    conf.setBoolean(YarnConfiguration.FS_NODE_LABELS_STORE_MERGE_ENABLED, true);
+    mgr = new MockNodeLabelManager();
+    mgr.init(conf);
+    mgr.start();
+
+    // Verify state after first restart
+    Assert.assertEquals(2, mgr.getClusterNodeLabelNames().size());
+    Assert.assertTrue(mgr.getClusterNodeLabelNames().containsAll(
+        Arrays.asList("p1", "p2")));
+    assertMapContains(mgr.getNodeLabels(), ImmutableMap.of(
+        toNodeId("n1"), toSet("p1"),
+        toNodeId("n2"), toSet("p2")));
+
+    // Step 4: Add more labels, remove label, and modify node-to-labels mapping
+    mgr.addToCluserNodeLabelsWithDefaultExclusivity(toSet("p3", "p4", "p5"));
+    mgr.removeFromClusterNodeLabels(toSet("p2"));
+    // Modify node-to-labels: n1 keeps p1, n3 added with p4, n4 added with p5
+    mgr.replaceLabelsOnNode(ImmutableMap.of(
+        toNodeId("n1"), toSet("p1"),
+        toNodeId("n3"), toSet("p4"),
+        toNodeId("n4"), toSet("p5")));
+
+    // Step 5: Stop and restart again
+    mgr.stop();
+    mgr = new MockNodeLabelManager();
+    conf.setBoolean(YarnConfiguration.FS_NODE_LABELS_STORE_MERGE_ENABLED, true);
+    mgr.init(conf);
+    mgr.start();
+
+    // Step 6: Verify final state after second restart
+    // Expected: p1 (kept), p3 (added), p4 (added), p5 (added), p2 (removed)
+    Assert.assertEquals(4, mgr.getClusterNodeLabelNames().size());
+    Assert.assertTrue(mgr.getClusterNodeLabelNames().containsAll(
+        Arrays.asList("p1", "p3", "p4", "p5")));
+
+    // Node-to-labels mapping should be correctly merged
+    // n1 has p1; n3 has p4; n4 has p5; n2 should be removed (p2 was removed)
+    assertMapContains(mgr.getNodeLabels(), ImmutableMap.of(
+        toNodeId("n1"), toSet("p1"),
+        toNodeId("n3"), toSet("p4"),
+        toNodeId("n4"), toSet("p5")));
+    Assert.assertFalse("n2 should not have any labels after p2 removal",
+        mgr.getNodeLabels().containsKey(toNodeId("n2")));
+  }
 }
