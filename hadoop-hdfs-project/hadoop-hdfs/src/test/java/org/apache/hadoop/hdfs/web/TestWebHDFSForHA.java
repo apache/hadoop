@@ -355,7 +355,8 @@ public class TestWebHDFSForHA {
       final NamenodeProtocols rpcServer = namenode.getRpcServer();
       Whitebox.setInternalState(namenode, "rpcServer", null);
 
-      String standbyHttpAddress = namenode.getHttpAddress().getHostName() + ":" + namenode.getHttpAddress().getPort();
+      String standbyHttpAddress = namenode.getHttpAddress().getHostName()
+          + ":" + namenode.getHttpAddress().getPort();
       URI webhdfsUri = URI.create(WebHdfsConstants.WEBHDFS_SCHEME + "://" + standbyHttpAddress);
       FileSystem fs = FileSystem.get(webhdfsUri, conf);
 

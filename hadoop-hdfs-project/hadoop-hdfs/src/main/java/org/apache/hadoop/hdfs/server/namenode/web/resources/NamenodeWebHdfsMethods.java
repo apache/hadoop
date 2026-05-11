@@ -116,7 +116,6 @@ import org.apache.hadoop.hdfs.web.resources.*;
 import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.ExternalCall;
-import org.apache.hadoop.ipc.RetriableException;
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.security.Credentials;
@@ -185,11 +184,11 @@ public class NamenodeWebHdfsMethods {
 
   private static NamenodeProtocols getRPCServer(NameNode namenode)
       throws IOException {
-     final NamenodeProtocols np = namenode.getRpcServer();
-     if (np == null) {
-       NameNodeUtils.throwNamenodeStartupModeException(namenode);
-     }
-     return np;
+    final NamenodeProtocols np = namenode.getRpcServer();
+    if (np == null) {
+      NameNodeUtils.throwNamenodeStartupModeException(namenode);
+    }
+    return np;
   }
 
   protected ClientProtocol getRpcClientProtocol() throws IOException {
