@@ -656,7 +656,7 @@ static int validate_run_as_user_commands(int argc, char **argv, int *operation) 
 static int wrap_exit_code(int exit_code) {
     if (exit_code == INVALID_CONTAINER_EXEC_PERMISSIONS || exit_code == INVALID_CONFIG_FILE) {
         int wrap_code = WRAPPED_EXIT_CODE_USER_CONTAINER_FAILED;
-        fprintf(LOGFILE, "Wrapped exit code of user container from %d to %d to avoid NodeManager unhealthy...\n", exit_code, wrap_code);
+        fprintf(LOGFILE, "Wrapped exit code of user container from %d to %d to avoid NodeManager becoming unhealthy due to ConfigurationException in LinuxContainerExecutor for exit codes...\n", exit_code, wrap_code);
         return wrap_code;
     } else {
         return exit_code;
