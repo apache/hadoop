@@ -59,11 +59,9 @@ public class ITestS3AFileSystemIsolatedClassloader extends AbstractS3ATestBase {
   }
 
   private static class CustomClassLoader extends ClassLoader {
-    private final ClassLoader parent;
 
     CustomClassLoader(ClassLoader parent) {
       super(parent);
-      this.parent = parent;
     }
 
     @Override
@@ -71,7 +69,7 @@ public class ITestS3AFileSystemIsolatedClassloader extends AbstractS3ATestBase {
       if (customClassName.equals(name)) {
         return CustomCredentialsProvider.class;
       }
-      return parent.loadClass(name);
+      return super.loadClass(name);
     }
   }
 
