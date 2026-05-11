@@ -45,16 +45,16 @@ $ ./start-build-env.sh
 Run single test suite inside container
 ```
 $ export MAVEN_ARGS="-Pnative -Drequire.fuse -Drequire.openssl -Drequire.snappy -Drequire.valgrind -Drequire.test.libhadoop"
-$ ./mvnw -pl :hadoop-common -am clean install -DskipTests
-$ ./mvnw -pl :hadoop-common test -Dtest=TestIPC
+$ ./mvnw $MAVEN_ARGS -pl :hadoop-common -am clean install -DskipTests
+$ ./mvnw $MAVEN_ARGS -pl :hadoop-common test -Dtest=TestIPC
 ```
 
 Run all tests inside container and save the log to a file, then extract the failed
 test cases from the log file. This might take a dozen of hours, be patient.
 ```
 $ export MAVEN_ARGS="-Pnative -Drequire.fuse -Drequire.openssl -Drequire.snappy -Drequire.valgrind -Drequire.test.libhadoop"
-$ ./mvnw clean install -DskipTests
-$ ./mvnw test --fail-at-end -Dmaven.test.failure.ignore=true \
+$ ./mvnw $MAVEN_ARGS clean install -DskipTests
+$ ./mvnw $MAVEN_ARGS test --fail-at-end -Dmaven.test.failure.ignore=true \
     -Dsurefire.excludesFile=$PWD/.github/gha-tests/exclude-tests.txt \
     2>&1 | tee ~/hadoop-test.`date '+%Y%m%d'`.log
 $ cat hadoop-test.`date '+%Y%m%d'`.log | \
