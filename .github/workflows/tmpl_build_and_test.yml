@@ -177,7 +177,7 @@ jobs:
           check-latest: false
       - name: Build
         shell: bash
-        run: ./mvnw $MAVEN_ARGS clean install -DskipTests
+        run: ./mvnw clean install -DskipTests
   build-and-test:
     if: (!cancelled()) && contains(fromJSON(inputs.jobs), 'build-and-test')
     name: Test ${{ matrix.comment }} (Java ${{ inputs.java }}) ${{ inputs.os }}-${{ inputs.branch }}
@@ -309,10 +309,10 @@ jobs:
           check-latest: false
       - name: Build (Java ${{ inputs.java }}) ${{ inputs.os }}-${{ inputs.branch }}
         shell: bash
-        run: ./mvnw $MAVEN_ARGS ${{ matrix.modules }} clean install -am -DskipTests
+        run: ./mvnw ${{ matrix.modules }} clean install -am -DskipTests
       - name: Test (Java ${{ inputs.java }}) ${{ inputs.os }}-${{ inputs.branch }}
         shell: bash
-        run: ./mvnw $MAVEN_ARGS ${{ matrix.modules }} test -Dsurefire.excludesFile=$PWD/.github/gha-tests/exclude-tests.txt
+        run: ./mvnw ${{ matrix.modules }} test -Dsurefire.excludesFile=$PWD/.github/gha-tests/exclude-tests.txt
       - name: Upload test logs
         if: failure()
         uses: actions/upload-artifact@v7
