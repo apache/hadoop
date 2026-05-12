@@ -222,5 +222,20 @@ public interface MRConfig {
    */
   String SECURITY_ALLOWED_USERS = "mapreduce.security.allowed-users";
   String[] DEFAULT_SECURITY_ALLOWED_USERS = {};
+
+  /**
+   * MapReduce Task-Level Security Enforcement: Allowed Groups
+   *
+   * Group names whose members may bypass the deny list in {@link #SECURITY_DENIED_TASKS}.
+   * Same idea as {@link #SECURITY_ALLOWED_USERS}, but the AM checks group membership after
+   * the user list. Groups come from the cluster group mapping for the submitter, not from
+   * the job configuration. Names must match that mapping exactly (spelling and case).
+   *
+   * Property type: list of group names
+   * Default: empty (no bypass by group)
+   * Example: hadoop,hue
+   */
+  String SECURITY_ALLOWED_GROUPS = "mapreduce.security.allowed-groups";
+  String[] DEFAULT_SECURITY_ALLOWED_GROUPS = {};
 }
-  
+
