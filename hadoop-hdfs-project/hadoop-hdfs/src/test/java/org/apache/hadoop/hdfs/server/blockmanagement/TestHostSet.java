@@ -92,6 +92,6 @@ public class TestHostSet {
     hostSet.add(unresolved);  // Must not throw or abort.
     hostSet.add(resolved2);
 
-    assertEquals(2, hostSet.size(),"Only the two resolved addresses should be in the HostSet");
+    assertEquals(2, hostSet.size(), "Only the two resolved addresses should be in the HostSet");
   }
 }
