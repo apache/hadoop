@@ -27,6 +27,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hdfs.DFSClient;
+import org.apache.hadoop.hdfs.nfs.conf.NfsConfigKeys;
 import org.apache.hadoop.hdfs.nfs.conf.NfsConfiguration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.jupiter.api.AfterEach;
@@ -101,6 +102,24 @@ public class TestDFSClientCache {
     assertThat(ugiResult.getRealUser()).isEqualTo(currentUserUgi);
     assertThat(ugiResult.getAuthenticationMethod()).isEqualTo(
         UserGroupInformation.AuthenticationMethod.PROXY);
+  }
+
+  /**
+   * HDFS-17844: Multiple export paths pointing to the same namenode should
+   * not trigger a false namenode ID collision error.  Before the fix,
+   * prepareAddressMap() threw FileSystemException whenever the same namenodeId
+   * was seen a second time, even if both paths resolved to the same namenode
+   * authority.
+   */
+  @Test
+  public void testMultipleExportPointsSameNamenode() throws IOException {
+    NfsConfiguration conf = new NfsConfiguration();
+    conf.set(FileSystem.FS_DEFAULT_NAME_KEY, "hdfs://localhost");
+    // Two export paths on the same namenode produce the same namenodeId
+    // because getNamenodeId() is based solely on the host:port address.
+    // The cache constructor must not throw a FileSystemException.
+    conf.setStrings(NfsConfigKeys.DFS_NFS_EXPORT_POINT_KEY, "/path1", "/path2");
+    new DFSClientCache(conf);
   }
 
   private static boolean isDfsClientClose(DFSClient c) {

@@ -47,7 +47,7 @@ package hadoop.common;
  */
 enum RpcKindProto {
   RPC_BUILTIN          = 0;  // Used for built in calls by tests
-  RPC_WRITABLE         = 1;  // Use WritableRpcEngine 
+  RPC_WRITABLE         = 1;  // WritableRpcEngine removed; value kept for wire-level detection and rejection
   RPC_PROTOCOL_BUFFER  = 2;  // Use ProtobufRpcEngine
 }
 

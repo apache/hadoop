@@ -47,6 +47,7 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.sps.ExternalSPSContext;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
@@ -61,6 +62,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  * to be moved and finding its expected target locations in order to satisfy the
  * storage policy.
  */
+@Tag("slow")
 public class TestStoragePolicySatisfierWithStripedFile {
 
   private static final Logger LOG = LoggerFactory

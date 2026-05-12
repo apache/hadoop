@@ -40,9 +40,6 @@
     <hadoop.component>UNDEF</hadoop.component>
     <snappy.lib></snappy.lib>
     <bundle.snappy>false</bundle.snappy>
-    <zstd.lib></zstd.lib>
-    <bundle.zstd>false</bundle.zstd>
-    <bundle.zstd.in.bin>false</bundle.zstd.in.bin>
     <isal.lib></isal.lib>
     <bundle.isal>false</bundle.isal>
     <openssl.lib></openssl.lib>
@@ -94,7 +91,7 @@
         <configuration>
           <excludeFilterFiles>
             <excludeFilterFile>${basedir}/dev-support/findbugsExcludeFile.xml</excludeFilterFile>
-            <excludeFilterFile>${repo.root}/dev-support/findbugs-exclude-global.xml</excludeFilterFile>
+            <excludeFilterFile>${maven.multiModuleProjectDirectory}/dev-support/findbugs-exclude-global.xml</excludeFilterFile>
           </excludeFilterFiles>
           <maxHeap>2048</maxHeap>
         </configuration>
@@ -137,7 +134,7 @@
         <activeByDefault>false</activeByDefault>
       </activation>
       <properties>
-        <jdiff.stable.api>3.4.0</jdiff.stable.api>
+        <jdiff.stable.api>3.5.0</jdiff.stable.api>
         <jdiff.stability>-unstable</jdiff.stability>
         <!-- Commented out for HADOOP-11776 -->
         <!-- Uncomment param name="${jdiff.compatibility}" in javadoc doclet if compatibility is not empty -->
@@ -290,6 +287,7 @@
                       <classpath>
                         <path refid="maven.compile.classpath"/>
                       </classpath>
+                      <arg value="-J--add-opens=jdk.javadoc/jdk.javadoc.internal.tool=ALL-UNNAMED"/>
                     </javadoc>
                     <javadoc sourcepath="${basedir}/src/main/java"
                              destdir="${project.build.directory}/site/jdiff/xml"
@@ -311,6 +309,7 @@
                       <classpath>
                         <path refid="maven.compile.classpath"/>
                       </classpath>
+                      <arg value="-J--add-opens=jdk.javadoc/jdk.javadoc.internal.tool=ALL-UNNAMED"/>
                     </javadoc>
                   </target>
                 </configuration>
@@ -373,9 +372,6 @@
                     <argument>--openssllibbundle=${bundle.openssl}</argument>
                     <argument>--snappylib=${snappy.lib}</argument>
                     <argument>--snappylibbundle=${bundle.snappy}</argument>
-                    <argument>--zstdbinbundle=${bundle.zstd.in.bin}</argument>
-                    <argument>--zstdlib=${zstd.lib}</argument>
-                    <argument>--zstdlibbundle=${bundle.zstd}</argument>
                   </arguments>
                 </configuration>
               </execution>

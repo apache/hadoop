@@ -59,12 +59,14 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 
+@Tag("slow")
 public class TestBootstrapStandby {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestBootstrapStandby.class);

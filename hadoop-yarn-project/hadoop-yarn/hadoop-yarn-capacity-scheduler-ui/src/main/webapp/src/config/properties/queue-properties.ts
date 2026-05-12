@@ -25,8 +25,14 @@ import type {
   PropertyType,
   PropertyCondition,
   PropertyEvaluationContext,
+  InheritanceResolverContext,
 } from '~/types';
 import { getCapacityType } from '~/utils/capacityUtils';
+import {
+  getGlobalValue,
+  parentChainResolver,
+  globalOnlyResolver,
+} from '~/utils/resolveInheritedValue';
 
 const LEGACY_QUEUE_MODE_PROPERTY = 'yarn.scheduler.capacity.legacy-queue-mode.enabled';
 
@@ -182,6 +188,7 @@ export const queuePropertyDefinitions: PropertyDescriptor[] = [
     defaultValue: '',
     required: false,
     templateSupport: true,
+    inheritanceResolver: globalOnlyResolver,
     validationRules: [
       {
         type: 'range',
@@ -201,6 +208,7 @@ export const queuePropertyDefinitions: PropertyDescriptor[] = [
     defaultValue: '',
     required: false,
     templateSupport: true,
+    inheritanceResolver: globalOnlyResolver,
     validationRules: [
       {
         type: 'custom',
@@ -223,6 +231,19 @@ export const queuePropertyDefinitions: PropertyDescriptor[] = [
     defaultValue: '',
     required: false,
     templateSupport: true,
+    inheritanceResolver: ({ configData, stagedChanges }: InheritanceResolverContext) => {
+      // YARN checks global-queue-max-application first.
+      // Only when that is unset does it fall back to maximum-applications (scaled by capacity).
+      const perQueueGlobal = getGlobalValue('global-queue-max-application', configData, stagedChanges);
+      if (perQueueGlobal !== undefined) {
+        return { value: perQueueGlobal, source: 'global' };
+      }
+      const globalMax = getGlobalValue('maximum-applications', configData, stagedChanges);
+      if (globalMax !== undefined) {
+        return { value: globalMax, source: 'global', isScaled: true };
+      }
+      return null;
+    },
     validationRules: [
       {
         type: 'custom',
@@ -245,6 +266,7 @@ export const queuePropertyDefinitions: PropertyDescriptor[] = [
     defaultValue: '',
     required: false,
     templateSupport: true,
+    inheritanceResolver: globalOnlyResolver,
     validationRules: [
       {
         type: 'range',
@@ -266,6 +288,7 @@ export const queuePropertyDefinitions: PropertyDescriptor[] = [
     category: 'application-limits' as PropertyCategory,
     defaultValue: '',
     required: false,
+    inheritanceResolver: globalOnlyResolver,
     validationRules: [
       {
         type: 'custom',
@@ -387,6 +410,7 @@ export const queuePropertyDefinitions: PropertyDescriptor[] = [
     defaultValue: '',
     required: false,
     templateSupport: true,
+    inheritanceResolver: parentChainResolver,
     validationRules: [
       {
         type: 'custom',
@@ -404,6 +428,7 @@ export const queuePropertyDefinitions: PropertyDescriptor[] = [
     defaultValue: '',
     required: false,
     templateSupport: true,
+    inheritanceResolver: parentChainResolver,
     validationRules: [
       {
         type: 'custom',
@@ -422,6 +447,7 @@ export const queuePropertyDefinitions: PropertyDescriptor[] = [
     defaultValue: '',
     required: false,
     templateSupport: true,
+    inheritanceResolver: parentChainResolver,
     validationRules: [
       {
         type: 'custom',
@@ -444,6 +470,7 @@ export const queuePropertyDefinitions: PropertyDescriptor[] = [
     defaultValue: '',
     required: false,
     templateSupport: true,
+    inheritanceResolver: parentChainResolver,
     validationRules: [
       {
         type: 'custom',
@@ -466,6 +493,7 @@ export const queuePropertyDefinitions: PropertyDescriptor[] = [
     defaultValue: '',
     required: false,
     templateSupport: true,
+    inheritanceResolver: parentChainResolver,
   },
   {
     name: 'intra-queue-preemption.disable_preemption',
@@ -476,6 +504,7 @@ export const queuePropertyDefinitions: PropertyDescriptor[] = [
     defaultValue: '',
     required: false,
     templateSupport: true,
+    inheritanceResolver: parentChainResolver,
   },
   {
     name: 'priority',
@@ -557,6 +586,7 @@ export const queuePropertyDefinitions: PropertyDescriptor[] = [
     defaultValue: '',
     required: false,
     templateSupport: true,
+    inheritanceResolver: parentChainResolver,
     validationRules: [
       {
         type: 'custom',
@@ -584,6 +614,7 @@ export const queuePropertyDefinitions: PropertyDescriptor[] = [
     category: 'node-labels' as PropertyCategory,
     defaultValue: '',
     required: false,
+    inheritanceResolver: parentChainResolver,
     validationRules: [
       {
         type: 'custom',

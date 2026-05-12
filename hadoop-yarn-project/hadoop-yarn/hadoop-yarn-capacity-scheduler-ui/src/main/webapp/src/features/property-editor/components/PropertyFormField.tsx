@@ -28,6 +28,7 @@ import { FormField } from '~/components/ui/form';
 import { Field, FieldControl, FieldDescription } from '~/components/ui/field';
 import type { PropertyDescriptor } from '~/types/property-descriptor';
 import { SPECIAL_VALUES } from '~/types';
+import type { InheritedValueInfo } from '~/utils/resolveInheritedValue';
 import { EnumPropertyField } from './EnumPropertyField';
 import { CapacityPropertyField } from './CapacityPropertyField';
 import {
@@ -35,6 +36,7 @@ import {
   PropertyWarnings,
   BusinessErrorsList,
   FieldErrorMessage,
+  InheritedValueIndicator,
 } from './PropertyFieldHelpers';
 import { getCommonFieldClassName, parseFieldErrors } from '../utils/fieldHelpers';
 
@@ -57,6 +59,7 @@ interface PropertyFormFieldProps {
   parentQueuePath?: string;
   currentValues?: Partial<Record<string, string>>;
   setFormValue?: UseFormSetValue<Record<string, string>>;
+  inheritanceInfo?: InheritedValueInfo | null;
 }
 
 export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
@@ -72,6 +75,7 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
   parentQueuePath,
   currentValues,
   setFormValue: _setFormValue,
+  inheritanceInfo,
 }) => {
   void _setFormValue;
 
@@ -136,6 +140,9 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
               )}
               message={error ? String(error.message ?? '') : effectiveInlineError}
             />
+            <InheritedValueIndicator
+              inheritanceInfo={inheritanceInfo ?? null}
+            />
             <BusinessErrorsList fieldName={fieldName} messages={effectiveRemainingErrors} />
           </>
         );
@@ -175,6 +182,7 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                   disabled={!isEnabled}
                   aria-invalid={Boolean(error)}
                   className={commonClassName}
+                  placeholder={inheritanceInfo?.value || undefined}
                 />
                 {property.displayFormat?.suffix && (
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
@@ -183,6 +191,10 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                 )}
               </div>
             </FieldControl>
+            <InheritedValueIndicator
+              inheritanceInfo={inheritanceInfo ?? null}
+              hasExplicitValue={Boolean(field.value)}
+            />
             {property.description && (
               <FieldDescription className="text-xs text-muted-foreground">
                 {property.description}
@@ -251,7 +263,7 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                     onBlur?.(property.name, e.target.value);
                   }}
                   rows={2}
-                  placeholder={property.defaultValue || undefined}
+                  placeholder={inheritanceInfo?.value || property.defaultValue || undefined}
                   className={cn(
                     'flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
                     commonClassName,
@@ -268,7 +280,7 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                     field.onBlur();
                     onBlur?.(property.name, e.target.value);
                   }}
-                  placeholder={property.defaultValue || undefined}
+                  placeholder={inheritanceInfo?.value || property.defaultValue || undefined}
                   disabled={!isEnabled}
                   aria-invalid={Boolean(error)}
                   className={commonClassName}
@@ -295,6 +307,10 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                 )}
               </div>
             )}
+            <InheritedValueIndicator
+              inheritanceInfo={inheritanceInfo ?? null}
+              hasExplicitValue={Boolean(field.value)}
+            />
             {property.description && (
               <FieldDescription className="text-xs text-muted-foreground">
                 {property.description}

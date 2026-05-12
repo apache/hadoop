@@ -1,0 +1,206 @@
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+
+# hadoop-common
+**/org/apache/hadoop/ipc/TestRPC.java
+**/org/apache/hadoop/security/ssl/TestDelegatingSSLSocketFactory.java
+
+# hadoop-hdfs
+**/org/apache/hadoop/fs/viewfs/TestViewFileSystemHdfs.java
+**/org/apache/hadoop/hdfs/TestBlockStoragePolicy.java
+**/org/apache/hadoop/hdfs/TestDecommission.java
+**/org/apache/hadoop/hdfs/TestDecommissionWithBackoffMonitor.java
+**/org/apache/hadoop/hdfs/TestDecommissionWithStriped.java
+**/org/apache/hadoop/hdfs/TestDFSClientRetries.java
+**/org/apache/hadoop/hdfs/TestDFSUtil.java
+**/org/apache/hadoop/hdfs/TestFileCreation.java
+**/org/apache/hadoop/hdfs/TestMaintenanceState.java
+**/org/apache/hadoop/hdfs/TestPread.java
+**/org/apache/hadoop/hdfs/TestReconstructStripedFile.java
+**/org/apache/hadoop/hdfs/TestReconstructStripedFileWithRandomECPolicy.java
+**/org/apache/hadoop/hdfs/TestReconstructStripedFileWithValidator.java
+**/org/apache/hadoop/hdfs/TestReplaceDatanodeFailureReplication.java
+**/org/apache/hadoop/hdfs/client/impl/TestBlockReaderLocal.java
+**/org/apache/hadoop/hdfs/server/balancer/TestBalancer.java
+**/org/apache/hadoop/hdfs/server/balancer/TestBalancerRPCDelay.java
+**/org/apache/hadoop/hdfs/server/balancer/TestBalancerWithHANameNodes.java
+**/org/apache/hadoop/hdfs/server/balancer/TestBalancerWithMultipleNameNodes.java
+**/org/apache/hadoop/hdfs/server/blockmanagement/TestBlockReportLease.java
+**/org/apache/hadoop/hdfs/server/blockmanagement/TestBlockTokenWithDFSStriped.java
+**/org/apache/hadoop/hdfs/server/blockmanagement/TestBlockTokenWithShortCircuitRead.java
+**/org/apache/hadoop/hdfs/server/datanode/TestBPOfferService.java
+**/org/apache/hadoop/hdfs/server/datanode/TestDataNodeErasureCodingMetrics.java
+**/org/apache/hadoop/hdfs/server/datanode/TestDataNodeVolumeFailureReporting.java
+**/org/apache/hadoop/hdfs/server/datanode/TestDirectoryScanner.java
+**/org/apache/hadoop/hdfs/server/namenode/TestEditLogRace.java
+**/org/apache/hadoop/hdfs/server/namenode/TestFsck.java
+**/org/apache/hadoop/hdfs/server/namenode/TestNameNodeMXBean.java
+**/org/apache/hadoop/hdfs/server/namenode/ha/TestUpdateBlockTailing.java
+**/org/apache/hadoop/hdfs/server/datanode/TestIncrementalBlockReports.java
+**/org/apache/hadoop/hdfs/server/datanode/fsdataset/impl/TestFsVolumeList.java
+**/org/apache/hadoop/hdfs/server/namenode/TestCacheDirectivesWithViewDFS.java
+**/org/apache/hadoop/hdfs/server/namenode/TestCacheDirectives.java
+**/org/apache/hadoop/hdfs/server/namenode/TestReconstructStripedBlocks.java
+**/org/apache/hadoop/hdfs/server/namenode/TestFileTruncate.java
+**/org/apache/hadoop/hdfs/server/namenode/ha/TestBootstrapStandbyWithQJM.java
+**/org/apache/hadoop/hdfs/server/namenode/ha/TestDFSUpgradeWithHA.java
+**/org/apache/hadoop/hdfs/server/namenode/ha/TestHAStateTransitions.java
+**/org/apache/hadoop/hdfs/server/namenode/ha/TestObserverReadProxyProvider.java
+**/org/apache/hadoop/hdfs/server/namenode/web/resources/TestWebHdfsDataLocality.java
+**/org/apache/hadoop/hdfs/web/TestWebHdfsTimeouts.java
+**/org/apache/hadoop/hdfs/web/TestFSMainOperationsWebHdfs.java
+
+# hadoop-hdfs-httpfs
+**/org/apache/hadoop/fs/http/client/TestHttpFSWithHttpFSFileSystem.java
+
+# hadoop-yarn-common
+**/org/apache/hadoop/yarn/util/TestProcfsBasedProcessTree.java
+**/org/apache/hadoop/yarn/webapp/TestWebApp.java
+
+# hadoop-yarn-server-common
+**/org/apache/hadoop/yarn/server/federation/policies/router/TestPriorityRouterPolicy.java
+**/org/apache/hadoop/yarn/server/federation/store/sql/TestFederationSQLServerScriptAccuracy.java
+
+# hadoop-yarn-server-resourcemanager
+**/org/apache/hadoop/yarn/server/resourcemanager/TestAppManager.java
+**/org/apache/hadoop/yarn/server/resourcemanager/TestRMRestart.java
+**/org/apache/hadoop/yarn/server/resourcemanager/monitor/invariants/TestMetricsInvariantChecker.java
+**/org/apache/hadoop/yarn/server/resourcemanager/recovery/TestLeveldbRMStateStore.java
+**/org/apache/hadoop/yarn/server/resourcemanager/reservation/TestCapacityOverTimePolicy.java
+**/org/apache/hadoop/yarn/server/resourcemanager/scheduler/TestSchedulingWithAllocationRequestId.java
+**/org/apache/hadoop/yarn/server/resourcemanager/scheduler/fair/TestContinuousScheduling.java
+**/org/apache/hadoop/yarn/server/resourcemanager/security/TestDelegationTokenRenewer.java
+
+# hadoop-yarn-server-router
+**/org/apache/hadoop/yarn/server/router/webapp/TestFederationInterceptorREST.java
+**/org/apache/hadoop/yarn/server/router/webapp/TestFederationWebApp.java
+**/org/apache/hadoop/yarn/server/router/webapp/TestRouterWebServicesREST.java
+**/org/apache/hadoop/yarn/server/router/subcluster/fair/TestYarnFederationWithFairScheduler.java
+
+# hadoop-yarn-server-nodemanager
+**/org/apache/hadoop/yarn/server/nodemanager/TestLinuxContainerExecutorWithMocks.java
+**/org/apache/hadoop/yarn/server/nodemanager/TestNodeManagerResync.java
+**/org/apache/hadoop/yarn/server/nodemanager/TestNodeStatusUpdater.java
+**/org/apache/hadoop/yarn/server/nodemanager/amrmproxy/TestFederationInterceptor.java
+**/org/apache/hadoop/yarn/server/nodemanager/amrmproxy/TestFederationInterceptorSecure.java
+**/org/apache/hadoop/yarn/server/nodemanager/containermanager/TestAuxServices.java
+**/org/apache/hadoop/yarn/server/nodemanager/containermanager/TestContainerManagerRecovery.java
+**/org/apache/hadoop/yarn/server/nodemanager/containermanager/launcher/TestContainerLaunch.java
+**/org/apache/hadoop/yarn/server/nodemanager/containermanager/localizer/TestContainerLocalizer.java
+**/org/apache/hadoop/yarn/server/nodemanager/containermanager/logaggregation/TestLogAggregationService.java
+**/org/apache/hadoop/yarn/server/nodemanager/containermanager/monitor/TestContainersMonitor.java
+**/org/apache/hadoop/yarn/server/nodemanager/containermanager/resourceplugin/fpga/TestFpgaDiscoverer.java
+
+# hadoop-yarn-server-tests
+**/org/apache/hadoop/yarn/server/TestRMNMSecretKeys.java
+
+# hadoop-yarn-services-core
+**/org/apache/hadoop/yarn/service/TestYarnNativeServices.java
+
+# hadoop-yarn-client
+**/org/apache/hadoop/yarn/client/TestApplicationClientProtocolOnHA.java
+**/org/apache/hadoop/yarn/client/TestApplicationMasterServiceProtocolForTimelineV2.java
+**/org/apache/hadoop/yarn/client/TestApplicationMasterServiceProtocolOnHA.java
+**/org/apache/hadoop/yarn/client/TestResourceTrackerOnHA.java
+**/org/apache/hadoop/yarn/client/TestRMFailover.java
+**/org/apache/hadoop/yarn/client/api/impl/TestAMRMClient.java
+
+# hadoop-mapreduce-client-shuffle
+**/org/apache/hadoop/mapred/TestShuffleChannelHandler.java
+
+# hadoop-mapreduce-client-app
+**/org/apache/hadoop/mapreduce/v2/app/TestJobEndNotifier.java
+
+# hadoop-mapreduce-client-jobclient
+**/org/apache/hadoop/mapred/TestJobSysDirWithDFS.java
+**/org/apache/hadoop/mapred/TestMerge.java
+**/org/apache/hadoop/mapred/TestMiniMRChildTask.java
+**/org/apache/hadoop/mapred/TestClusterMapReduceTestCase.java
+**/org/apache/hadoop/mapred/TestReduceFetchFromPartialMem.java
+**/org/apache/hadoop/mapred/TestMiniMRWithDFSWithDistinctUsers.java
+**/org/apache/hadoop/mapred/TestLazyOutput.java
+**/org/apache/hadoop/mapred/TestJobName.java
+**/org/apache/hadoop/mapred/TestMiniMRClasspath.java
+**/org/apache/hadoop/mapred/TestJobCounters.java
+**/org/apache/hadoop/mapred/TestMRTimelineEventHandling.java
+**/org/apache/hadoop/mapred/TestMiniMRClientCluster.java
+**/org/apache/hadoop/mapred/TestClusterMRNotification.java
+**/org/apache/hadoop/mapred/TestJobCleanup.java
+**/org/apache/hadoop/mapred/TestReduceFetch.java
+**/org/apache/hadoop/mapred/pipes/TestPipeApplication.java
+**/org/apache/hadoop/mapreduce/TestMRJobClient.java
+**/org/apache/hadoop/mapreduce/lib/output/TestJobOutputCommitter.java
+**/org/apache/hadoop/mapreduce/TestChild.java
+**/org/apache/hadoop/mapreduce/v2/TestMROldApiJobs.java
+**/org/apache/hadoop/mapreduce/v2/TestMiniMRProxyUser.java
+**/org/apache/hadoop/mapreduce/v2/TestMRJobsWithHistoryService.java
+**/org/apache/hadoop/mapreduce/v2/TestMRAMWithNonNormalizedCapabilities.java
+**/org/apache/hadoop/mapreduce/v2/TestUberAM.java
+**/org/apache/hadoop/mapreduce/v2/TestSpeculativeExecution.java
+**/org/apache/hadoop/mapreduce/v2/TestMRJobsWithProfiler.java
+**/org/apache/hadoop/mapreduce/security/TestMRCredentials.java
+**/org/apache/hadoop/mapreduce/security/TestBinaryTokenFile.java
+**/org/apache/hadoop/mapreduce/security/ssl/TestEncryptedShuffle.java
+**/org/apache/hadoop/mapreduce/TestMapReduceLazyOutput.java
+**/org/apache/hadoop/mapreduce/TestLargeSort.java
+
+# hadoop-hdfs-rbf
+**/org/apache/hadoop/hdfs/server/federation/router/TestConnectionManager.java
+**/org/apache/hadoop/hdfs/server/federation/router/TestRouterClientRejectOverload.java
+**/org/apache/hadoop/hdfs/server/federation/router/TestRouterFaultTolerant.java
+**/org/apache/hadoop/hdfs/server/federation/router/TestRouterNamenodeHeartbeat.java
+**/org/apache/hadoop/hdfs/server/federation/router/async/TestRouterAsyncRpcClient.java
+**/org/apache/hadoop/hdfs/server/federation/router/async/TestRouterAsyncRPCMultipleDestinationMountTableResolver.java
+**/org/apache/hadoop/hdfs/server/federation/router/security/token/TestSQLDelegationTokenSecretManagerImpl.java
+
+# hadoop-yarn-server-timelineservice-documentstore
+**/org/apache/hadoop/yarn/server/timelineservice/documentstore/TestDocumentStoreTimelineWriterImpl.java
+**/org/apache/hadoop/yarn/server/timelineservice/documentstore/TestDocumentStoreCollectionCreator.java
+**/org/apache/hadoop/yarn/server/timelineservice/documentstore/reader/cosmosdb/TestCosmosDBDocumentStoreReader.java
+**/org/apache/hadoop/yarn/server/timelineservice/documentstore/writer/cosmosdb/TestCosmosDBDocumentStoreWriter.java
+**/org/apache/hadoop/yarn/server/timelineservice/documentstore/TestDocumentStoreTimelineReaderImpl.java
+
+# hadoop-yarn-applications-catalog-webapp
+# skip module because it uses com.github.searls:jasmine-maven-plugin:2.1:test and requires Web Browser
+
+# hadoop-streaming
+**/org/apache/hadoop/streaming/TestMultipleArchiveFiles.java
+**/org/apache/hadoop/streaming/TestMultipleCachefiles.java
+**/org/apache/hadoop/streaming/TestSymLink.java
+**/org/apache/hadoop/streaming/TestFileArgs.java
+
+# hadoop-gridmix
+**/org/apache/hadoop/mapred/gridmix/TestGridmixSubmission.java
+**/org/apache/hadoop/mapred/gridmix/TestLoadJob.java
+**/org/apache/hadoop/mapred/gridmix/TestSleepJob.java
+**/org/apache/hadoop/mapred/gridmix/TestDistCacheEmulation.java
+
+# hadoop-extras
+**/org/apache/hadoop/tools/TestDistCh.java
+
+# hadoop-sls
+**/org/apache/hadoop/yarn/sls/TestSLSDagAMSimulator.java
+**/org/apache/hadoop/yarn/sls/TestSLSGenericSynth.java
+**/org/apache/hadoop/yarn/sls/TestSLSStreamAMSynth.java
+**/org/apache/hadoop/yarn/sls/TestSLSRunner.java
+**/org/apache/hadoop/yarn/sls/TestReservationSystemInvariants.java
+**/org/apache/hadoop/yarn/sls/appmaster/TestAMSimulator.java
+
+# hadoop-aws
+**/org/apache/hadoop/fs/s3a/auth/TestIAMInstanceCredentialsProvider.java

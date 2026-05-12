@@ -62,6 +62,7 @@ import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotTestHelper;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.slf4j.event.Level;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.util.Preconditions;
@@ -74,6 +75,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 /**
  * Test the data migration tool (for Archival Storage)
  */
+@Tag("slow")
 public class TestStorageMover {
   static final Logger LOG = LoggerFactory.getLogger(TestStorageMover.class);
   static {

@@ -205,4 +205,29 @@ public class ITestS3AFileSystemIsolatedClassloader extends AbstractS3ATestBase {
               .isInstanceOf(CustomCredentialsProvider.class);
     });
   }
+
+  /**
+   * HADOOP-19833: When isolation=false, getInstanceFromReflection must use
+   * the context classloader (or conf's classloader) so that classes from the
+   * application classpath can be loaded. This test calls getInstanceFromReflection
+   * directly with isolation=false and verifies the custom class is instantiated.
+   */
+  @Test
+  public void testGetInstanceFromReflectionWithIsolationFalse() throws Exception {
+    Map<String, String> confToSet =
+        mapOf(Constants.AWS_S3_CLASSLOADER_ISOLATION, "false");
+    assertInNewFilesystem(confToSet, (fs) -> {
+      try {
+        Configuration conf = fs.getConf();
+        AwsCredentialsProvider provider = S3AUtils.getInstanceFromReflection(
+            customClassName, conf, null, AwsCredentialsProvider.class, "create",
+            Constants.AWS_CREDENTIALS_PROVIDER);
+        Assertions.assertThat(provider)
+            .describedAs("getInstanceFromReflection with isolation=false")
+            .isInstanceOf(CustomCredentialsProvider.class);
+      } catch (IOException e) {
+        throw new AssertionError("getInstanceFromReflection threw", e);
+      }
+    });
+  }
 }

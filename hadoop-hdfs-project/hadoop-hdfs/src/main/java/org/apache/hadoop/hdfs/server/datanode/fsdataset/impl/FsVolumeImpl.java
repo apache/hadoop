@@ -891,6 +891,8 @@ public class FsVolumeImpl implements FsVolumeSpi {
             }
           }
           state.curFinalizedSubDir = getNextFinalizedSubDir();
+          // Reset cursor so it doesn't carry over from last iteration
+          state.curEntry = null;
           if (state.curFinalizedSubDir == null) {
             state.curFinalizedDir = getNextFinalizedDir();
             if (state.curFinalizedDir == null) {

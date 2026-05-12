@@ -796,6 +796,41 @@ describe('schedulerStore', () => {
       });
     });
 
+    describe('revertQueueDeletion', () => {
+      it('should revert a pending queue deletion', () => {
+        const store = createTestStore();
+        store.getState().stageQueueRemoval('root.test');
+
+        expect(store.getState().hasPendingDeletion('root.test')).toBe(true);
+
+        store.getState().revertQueueDeletion('root.test');
+
+        expect(store.getState().hasPendingDeletion('root.test')).toBe(false);
+        expect(store.getState().stagedChanges).toHaveLength(0);
+      });
+
+      it('should not affect other staged changes', () => {
+        const store = createTestStore();
+        store.getState().stageQueueChange('root.other', 'capacity', '50');
+        store.getState().stageQueueRemoval('root.test');
+
+        store.getState().revertQueueDeletion('root.test');
+
+        expect(store.getState().hasPendingDeletion('root.test')).toBe(false);
+        expect(store.getState().stagedChanges).toHaveLength(1);
+        expect(store.getState().stagedChanges[0].queuePath).toBe('root.other');
+      });
+
+      it('should be a no-op if queue has no pending deletion', () => {
+        const store = createTestStore();
+        store.getState().stageQueueChange('root.test', 'capacity', '50');
+
+        store.getState().revertQueueDeletion('root.test');
+
+        expect(store.getState().stagedChanges).toHaveLength(1);
+      });
+    });
+
     describe('clearAllChanges', () => {
       it('should clear all staged changes', () => {
         const store = createTestStore();

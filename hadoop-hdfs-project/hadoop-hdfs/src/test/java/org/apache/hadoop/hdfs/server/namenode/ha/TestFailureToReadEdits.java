@@ -57,6 +57,7 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.ExitUtil.ExitException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -65,6 +66,7 @@ import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
 
 @MethodSource("data")
 @ParameterizedClass
+@Tag("slow")
 public class TestFailureToReadEdits {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestFailureToReadEdits.class);

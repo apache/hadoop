@@ -75,6 +75,27 @@ export const globalPropertyDefinitions: PropertyDescriptor[] = [
     ],
   },
   {
+    name: 'yarn.scheduler.capacity.global-queue-max-application',
+    displayName: 'Max Applications per Queue (Global)',
+    description:
+      'Global per-queue maximum applications. When set, each queue is capped at this flat value (no capacity scaling). When unset, per-queue limits are calculated from Maximum Applications scaled by queue capacity.',
+    type: 'number' as PropertyType,
+    category: 'application-limits' as PropertyCategory,
+    defaultValue: '',
+    required: false,
+    validationRules: [
+      {
+        type: 'custom',
+        message: 'Must be a positive integer or empty',
+        validator: (value: string) => {
+          if (!value.trim()) return true;
+          const num = parseFloat(value);
+          return !isNaN(num) && Number.isInteger(num) && num > 0;
+        },
+      },
+    ],
+  },
+  {
     name: 'yarn.scheduler.capacity.application.fail-fast',
     displayName: 'Application Fail Fast',
     description: 'Whether applications should fail fast if submitted to a non-existent queue.',
