@@ -405,6 +405,7 @@ public class TestFileSystemNodeLabelsStore extends NodeLabelTestBase {
   @SuppressWarnings("unchecked")
   @Test
   public void testMergeMirrorAndEditLog() throws Exception {
+    initTestFileSystemNodeLabelsStore(FileSystemNodeLabelsStore.class.getCanonicalName());
     // Step 1: Add initial labels and node-to-labels mapping
     mgr.addToCluserNodeLabelsWithDefaultExclusivity(toSet("p1", "p2"));
     mgr.replaceLabelsOnNode(ImmutableMap.of(toNodeId("n1"), toSet("p1"),

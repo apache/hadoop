@@ -85,7 +85,7 @@ public abstract class AbstractFSNodeStore<M> {
     }
 
     void setNodeLabels(Map<NodeId, Set<String>> newNodeToLabels) {
-       this.nodeToLabels = newNodeToLabels;
+      this.nodeToLabels = newNodeToLabels;
     }
 
     Map<NodeId, Set<String>> getNodeLabels() {
@@ -281,9 +281,9 @@ public abstract class AbstractFSNodeStore<M> {
   /**
    * Parse edit log and apply operations to merge state.
    */
-  private void parseEditLogToState(Path editLogPath, NodeLabelMergeState state)
+  private void parseEditLogToState(Path editLogFilePath, NodeLabelMergeState state)
       throws IOException {
-    try (FSDataInputStream is = fs.open(editLogPath)) {
+    try (FSDataInputStream is = fs.open(editLogFilePath)) {
       while (true) {
         try {
           int opCode = is.readInt();

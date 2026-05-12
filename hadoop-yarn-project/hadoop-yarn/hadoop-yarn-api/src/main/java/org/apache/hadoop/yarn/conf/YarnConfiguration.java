@@ -4877,7 +4877,7 @@ public class YarnConfiguration extends Configuration {
   public static final String FS_STORE_FILE_REPLICATION = YARN_PREFIX
       + "fs-store.file.replication";
   public static final int DEFAULT_FS_STORE_FILE_REPLICATION = 0;
-  /** Enable mergeMirrorAndEditLog on init */
+  /** Enable mergeMirrorAndEditLog on init. */
   public static final String FS_NODE_LABELS_STORE_MERGE_ENABLED = NODE_LABELS_PREFIX
       + "fs-store.merge-enabled";
   public static final boolean DEFAULT_FS_NODE_LABELS_STORE_MERGE_ENABLED = false;
