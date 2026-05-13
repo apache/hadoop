@@ -67,6 +67,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsInfo
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodesInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.QueueAclInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.QueueAclsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.RMQueueAclInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationDeleteRequestInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationDeleteResponseInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationListInfo;
@@ -166,7 +167,7 @@ public class ClassSerialisationConfig {
           ContainerLaunchContextInfo.class, DelegationToken.class, LabelsToNodesInfo.class,
           LocalResourceInfo.class, NewApplication.class, NodeLabelsInfo.class,
           NodeToLabelsEntryList.class, NodeToLabelsInfo.class, ReservationListInfo.class,
-          ResourceOptionInfo.class, SchedConfUpdateInfo.class);
+          ResourceOptionInfo.class, RMQueueAclInfo.class, SchedConfUpdateInfo.class);
 
   private final Set<Class<?>> wrappedClasses;
   private final Set<Class<?>> unWrappedClasses;
