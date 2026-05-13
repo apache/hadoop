@@ -34,7 +34,6 @@ jobs:
     # scoped to the repository the actions run on.
     permissions:
       packages: write
-      checks: write
       contents: read
     name: Run
     uses: ./.github/workflows/tmpl_cloud_aws.yml
