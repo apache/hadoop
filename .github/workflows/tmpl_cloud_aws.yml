@@ -104,7 +104,7 @@ jobs:
       contents: read
     services:
       localstack:
-        image: localstack/localstack:latest
+        image: localstack/localstack:2026.04.2
         # Despite examples showing a `ports:` section, "You don't need to
         # configure any ports for service containers. By default, all
         # containers that are part of the same Docker network expose all ports
