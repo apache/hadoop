@@ -1821,63 +1821,64 @@ private void mockClientForEncryptionContext(AbfsClient encryptedClient) throws I
     }
   }
 
-    /*
-     * Helper method to execute read and verify if priority header is added or not as expected
-     */
-    private void executePrefetchReadTest(TracingContext tracingContext,
-                                         Configuration rawConfig,
-                                         boolean shouldHaveHeader) throws Exception {
-        try (AzureBlobFileSystem azureFs = (AzureBlobFileSystem) FileSystem.newInstance(
-                rawConfig)) {
-            AzureBlobFileSystemStore store = Mockito.spy(azureFs.getAbfsStore());
+  /**
+   * Helper method to execute read and verify if priority header is added or not
+   * as expected
+   */
+  private void executePrefetchReadTest(TracingContext tracingContext,
+      Configuration rawConfig,
+      boolean shouldHaveHeader) throws Exception {
+    try (AzureBlobFileSystem azureFs = (AzureBlobFileSystem) FileSystem.newInstance(
+        rawConfig)) {
+      AzureBlobFileSystemStore store = Mockito.spy(azureFs.getAbfsStore());
 
-            AbfsClient abfsClient = Mockito.spy(store.getClient());
-            Mockito.doReturn(abfsClient).when(store).getClient();
+      AbfsClient abfsClient = Mockito.spy(store.getClient());
+      Mockito.doReturn(abfsClient).when(store).getClient();
 
-            List<AbfsHttpHeader> headersList = new ArrayList<>();
+      List<AbfsHttpHeader> headersList = new ArrayList<>();
 
-            doAnswer(invocation -> {
-                AbfsRestOperation realOp
-                        = (AbfsRestOperation) invocation.callRealMethod();
-                AbfsRestOperation spiedOp = spy(realOp);
+      doAnswer(invocation -> {
+        AbfsRestOperation realOp
+            = (AbfsRestOperation) invocation.callRealMethod();
+        AbfsRestOperation spiedOp = spy(realOp);
 
-                headersList.addAll(spiedOp.getRequestHeaders());
+        headersList.addAll(spiedOp.getRequestHeaders());
 
-                doNothing().when(spiedOp).execute(any(TracingContext.class));
-                return spiedOp;
-            })
-                    .when(abfsClient)
-                    .getAbfsRestOperation(
-                            any(AbfsRestOperationType.class),
-                            anyString(),
-                            any(URL.class),
-                            anyList(),
-                            any(byte[].class),
-                            anyInt(),
-                            anyInt(),
-                            nullable(String.class)
-                    );
+        doNothing().when(spiedOp).execute(any(TracingContext.class));
+        return spiedOp;
+      })
+          .when(abfsClient)
+          .getAbfsRestOperation(
+              any(AbfsRestOperationType.class),
+              anyString(),
+              any(URL.class),
+              anyList(),
+              any(byte[].class),
+              anyInt(),
+              anyInt(),
+              nullable(String.class)
+          );
 
-            abfsClient.read(
-                    "dummy-path", 0L, new byte[1], 0, 1,
-                    "etag", "leaseId", null, tracingContext);
+      abfsClient.read(
+          "dummy-path", 0L, new byte[1], 0, 1,
+          "etag", "leaseId", null, tracingContext);
 
-            AbfsConfiguration abfsConfig = store.getAbfsConfiguration();
-            if (shouldHaveHeader) {
-                assertThat(headersList)
-                        .anySatisfy(header -> {
-                            assertThat(header.getName()).isEqualTo(
-                                    X_MS_REQUEST_PRIORITY);
-                            assertThat(header.getValue()).isEqualTo(
-                                    abfsConfig.getPrefetchRequestPriorityValue());
-                        });
-            } else {
-                assertThat(headersList)
-                        .noneSatisfy(header -> assertThat(header.getName()).isEqualTo(
-                                X_MS_REQUEST_PRIORITY));
-            }
-        }
+      AbfsConfiguration abfsConfig = store.getAbfsConfiguration();
+      if (shouldHaveHeader) {
+        assertThat(headersList)
+            .anySatisfy(header -> {
+              assertThat(header.getName()).isEqualTo(
+                  X_MS_REQUEST_PRIORITY);
+              assertThat(header.getValue()).isEqualTo(
+                  abfsConfig.getPrefetchRequestPriorityValue());
+            });
+      } else {
+        assertThat(headersList)
+            .noneSatisfy(header -> assertThat(header.getName()).isEqualTo(
+                X_MS_REQUEST_PRIORITY));
+      }
     }
+  }
 
   private Path createTestFile(AzureBlobFileSystem fs, int fileSize) throws Exception {
     Path testPath = new Path("testFile");

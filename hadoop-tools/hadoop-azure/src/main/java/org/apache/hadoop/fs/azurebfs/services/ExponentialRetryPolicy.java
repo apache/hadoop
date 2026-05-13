@@ -101,7 +101,7 @@ public class ExponentialRetryPolicy extends AbfsRetryPolicy {
    * @param conf The {@link AbfsConfiguration} from which to retrieve prefetch retry configuration.
    * @return a new {@link ExponentialRetryPolicy} for prefetch operations.
    */
-  public static ExponentialRetryPolicy forPrefetch(AbfsConfiguration conf) {
+  public static ExponentialRetryPolicy prefetchRetryPolicy(AbfsConfiguration conf) {
     return new ExponentialRetryPolicy(
         conf.getPrefetchMaxIoRetries(),
         conf.getMinBackoffIntervalMilliseconds(),

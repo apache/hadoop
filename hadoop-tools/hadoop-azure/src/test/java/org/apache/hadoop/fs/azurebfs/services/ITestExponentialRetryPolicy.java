@@ -357,7 +357,7 @@ public class ITestExponentialRetryPolicy extends AbstractAbfsIntegrationTest {
     AbfsConfiguration abfsConfig = getAbfsConfig();
     int prefetchRetries = 5;
     abfsConfig.setMaxIoPrefetchRetries(prefetchRetries);
-    ExponentialRetryPolicy prefetchPolicy = ExponentialRetryPolicy.forPrefetch(abfsConfig);
+    ExponentialRetryPolicy prefetchPolicy = ExponentialRetryPolicy.prefetchRetryPolicy(abfsConfig);
 
     Assertions.assertThat(prefetchPolicy.getMaxRetryCount())
         .describedAs("Prefetch policy should use getPrefetchMaxIoRetries value")

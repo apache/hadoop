@@ -1924,7 +1924,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         .withExponentialRetryPolicy(
             new ExponentialRetryPolicy(abfsConfiguration))
         .withPrefetchExponentialRetryPolicy(
-            ExponentialRetryPolicy.forPrefetch(abfsConfiguration))
+            ExponentialRetryPolicy.prefetchRetryPolicy(abfsConfiguration))
         .withStaticRetryPolicy(
             new StaticRetryPolicy(abfsConfiguration))
         .withTailLatencyRequestTimeoutRetryPolicy(
