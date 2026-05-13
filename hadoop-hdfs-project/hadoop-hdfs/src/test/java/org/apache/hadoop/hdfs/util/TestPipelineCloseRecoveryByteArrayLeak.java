@@ -17,8 +17,7 @@
  */
 package org.apache.hadoop.hdfs.util;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -32,7 +31,6 @@ import org.apache.hadoop.hdfs.util.ByteArrayManager.ManagerMap;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
-import org.mockito.Mockito;
 
 /**
  * Regression test for HDFS-17916: when the streamer hits an error in the
@@ -46,10 +44,6 @@ public class TestPipelineCloseRecoveryByteArrayLeak {
   @Timeout(120)
   public void itReleasesEndOfBlockBufferAfterPipelineCloseRecovery()
       throws Exception {
-    DFSClientFaultInjector fault = Mockito.mock(DFSClientFaultInjector.class);
-    DFSClientFaultInjector original = DFSClientFaultInjector.get();
-    DFSClientFaultInjector.set(fault);
-
     Configuration conf = new HdfsConfiguration();
     conf.setBoolean(
         HdfsClientConfigKeys.Write.ByteArrayManager.ENABLED_KEY, true);
@@ -62,13 +56,21 @@ public class TestPipelineCloseRecoveryByteArrayLeak {
     conf.setInt(
         HdfsClientConfigKeys.BlockWrite.LOCATEFOLLOWINGBLOCK_RETRIES_KEY, 3);
 
-    // Force every last-in-block ack to be reported as failed; this is what
-    // drives the streamer through processDatanodeOrExternalError() with
-    // stage == PIPELINE_CLOSE.
-    Mockito.when(fault.failPacket()).thenReturn(true);
-
     MiniDFSCluster cluster = null;
+    DFSClientFaultInjector originalFaultInjector = null;
     try {
+      originalFaultInjector = DFSClientFaultInjector.get();
+      DFSClientFaultInjector faultInjector = new DFSClientFaultInjector() {
+        @Override
+        public boolean failPacket() {
+          // Force every last-in-block ack to be reported as failed; this is what
+          // drives the streamer through processDatanodeOrExternalError() with
+          // stage == PIPELINE_CLOSE.
+          return true;
+        }
+      };
+      DFSClientFaultInjector.set(faultInjector);
+
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
       cluster.waitActive();
       DistributedFileSystem fs = cluster.getFileSystem();
@@ -78,9 +80,9 @@ public class TestPipelineCloseRecoveryByteArrayLeak {
 
       ByteArrayManager bam =
           fs.getClient().getClientContext().getByteArrayManager();
-      assertTrue(bam instanceof ByteArrayManager.Impl,
-          "expected bounded ByteArrayManager but got "
-              + bam.getClass().getName());
+      assertThat(bam)
+          .describedAs("expected bounded ByteArrayManager")
+          .isInstanceOf(ByteArrayManager.Impl.class);
 
       ManagerMap managers = ((ByteArrayManager.Impl) bam).getManagers();
       // After the writer closes, every DFSPacket that the streamer pulled
@@ -90,11 +92,13 @@ public class TestPipelineCloseRecoveryByteArrayLeak {
       // release() is performed by the streamer thread, so allow a brief
       // moment for that thread to settle after close() returns.
       GenericTestUtils.waitFor(() -> managers.countAllocated() == 0, 50, 5000);
-      assertEquals(0, managers.countAllocated(),
-          "DFSPacket buffer was not returned to ByteArrayManager after "
-              + "PIPELINE_CLOSE recovery");
+      assertThat(managers.countAllocated())
+          .describedAs("count allocated")
+          .isEqualTo(0);
     } finally {
-      DFSClientFaultInjector.set(original);
+      if (originalFaultInjector != null) {
+        DFSClientFaultInjector.set(originalFaultInjector);
+      }
       if (cluster != null) {
         cluster.shutdown();
       }
