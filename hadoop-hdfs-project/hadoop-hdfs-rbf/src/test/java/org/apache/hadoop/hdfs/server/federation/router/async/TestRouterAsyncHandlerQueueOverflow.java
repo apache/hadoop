@@ -43,6 +43,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapterMockitoUtil;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
 
 import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.NAMENODES;
@@ -151,16 +152,14 @@ public class TestRouterAsyncHandlerQueueOverflow {
     // Downstream namespace processing this huge request
     asyncRpcClient.invokeMethod(ugi, namenodes, true, protocol, method.getMethod(), params);
     ThreadPoolExecutor nsExecutor = routerRpcServer.getAsyncExecutorForNamespace(ns0);
-    Thread.sleep(500);
-    assertEquals(0, nsExecutor.getQueue().size());
     // Successfully sent this request downstream, but all subsequent ones will get stuck
-    assertEquals(1, nsExecutor.getCompletedTaskCount());
+    GenericTestUtils.waitFor(() -> nsExecutor.getQueue().isEmpty(), 50, 500);
+    GenericTestUtils.waitFor(() -> nsExecutor.getCompletedTaskCount() == 1, 50, 500);
 
     // Async handler handling, blocking at acquirePermit
     asyncRpcClient.invokeMethod(ugi, namenodes, true, protocol, method.getMethod(), params);
-    Thread.sleep(500);
-    assertEquals(0, nsExecutor.getQueue().size());
-    assertEquals(1, nsExecutor.getCompletedTaskCount());
+    GenericTestUtils.waitFor(() -> nsExecutor.getQueue().isEmpty(), 50, 500);
+    GenericTestUtils.waitFor(() -> nsExecutor.getCompletedTaskCount() == 1, 50, 500);
     // Stuck in queue
     asyncRpcClient.invokeMethod(ugi, namenodes, true, protocol, method.getMethod(), params);
     assertEquals(1, nsExecutor.getQueue().size());
