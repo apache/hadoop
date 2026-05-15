@@ -3169,7 +3169,7 @@ public class DataNode extends ReconfigurableBase
     }
   }
 
-  private static boolean prepareRetryAfterInvalidEncryptionKey(
+  static boolean prepareRetryAfterInvalidEncryptionKey(
       DataEncryptionKeyFactory keyFactory, int retryCount) {
     if (retryCount > 1) {
       return false;
