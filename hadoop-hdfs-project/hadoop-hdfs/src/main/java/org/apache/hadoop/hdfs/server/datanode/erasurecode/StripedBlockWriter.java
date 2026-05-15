@@ -151,6 +151,7 @@ class StripedBlockWriter {
       success = true;
     } finally {
       if (!success) {
+        stripedWriter.getReconstructor().freeBuffer(targetBuffer);
         IOUtils.closeStream(out);
         IOUtils.closeStream(in);
         IOUtils.closeStream(socket);
