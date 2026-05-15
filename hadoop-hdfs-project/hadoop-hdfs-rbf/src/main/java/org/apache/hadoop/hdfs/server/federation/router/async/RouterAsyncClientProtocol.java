@@ -288,6 +288,7 @@ public class RouterAsyncClientProtocol extends RouterClientProtocol {
     RemoteParam dstParam = getRenameDestinations(locs, dstLocations);
     if (locs.isEmpty()) {
       rbfRename.routerFedRename(src, dst, srcLocations, dstLocations);
+      asyncComplete(null);
       return;
     }
     RemoteMethod method = new RemoteMethod("rename2",
