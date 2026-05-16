@@ -118,11 +118,16 @@ public class TestDiskError {
 
       // create files and make sure that first datanode will be down
       DataNode dn = cluster.getDataNodes().get(dnIndex);
+      long deadline = System.currentTimeMillis() + 60000;
       for (int i=0; dn.isDatanodeUp(); i++) {
+        if (System.currentTimeMillis() > deadline) {
+            org.junit.jupiter.api.Assertions.fail("DataNode stayed UP for 60s despite Disk Errors.");
+        }
         Path fileName = new Path("/test.txt"+i);
         DFSTestUtil.createFile(fs, fileName, 1024, (short)2, 1L);
         DFSTestUtil.waitReplication(fs, fileName, (short)2);
         fs.delete(fileName, true);
+        Thread.sleep(200);
       }
     } finally {
       // restore its old permission
