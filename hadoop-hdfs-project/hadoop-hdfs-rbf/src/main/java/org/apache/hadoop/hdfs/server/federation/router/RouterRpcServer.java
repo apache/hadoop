@@ -525,6 +525,9 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
     }
     int asyncHandlerCountDefault = configuration.getInt(DFS_ROUTER_ASYNC_RPC_HANDLER_COUNT_KEY,
         DFS_ROUTER_ASYNC_RPC_HANDLER_COUNT_DEFAULT);
+    if (asyncHandlerCountDefault < 1) {
+      throw new  IllegalArgumentException("Async handler count must be at least 1");
+    }
     for (String nsId : allConfiguredNS) {
       int dedicatedHandlers = nsAsyncHandlerCount.getOrDefault(nsId, 0);
       if (dedicatedHandlers <= 0) {
@@ -535,18 +538,16 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
         LOG.info("Dedicated handlers {} for ns {} to init Executors", dedicatedHandlers, nsId);
       }
 
-      if (dedicatedHandlers > 0) {
-        int finalDedicatedHandlers = dedicatedHandlers;
-        asyncRouterHandlerExecutors.computeIfAbsent(nsId,
-            id -> {
-              LinkedBlockingQueue<Runnable> queue = new LinkedBlockingQueue<>(asyncQueueSize);
-              return new ThreadPoolExecutor(finalDedicatedHandlers, finalDedicatedHandlers,
-                  0L, TimeUnit.MILLISECONDS, queue,
-                  new AsyncThreadFactory("Router Async Handler for " + nsId + " #"));
-            });
-        LOG.info("Assigned {} async handlers with queue size {} to nsId {}", dedicatedHandlers,
-            asyncQueueSize, nsId);
-      }
+      int finalDedicatedHandlers = dedicatedHandlers;
+      asyncRouterHandlerExecutors.computeIfAbsent(nsId,
+          id -> {
+            LinkedBlockingQueue<Runnable> queue = new LinkedBlockingQueue<>(asyncQueueSize);
+            return new ThreadPoolExecutor(finalDedicatedHandlers, finalDedicatedHandlers,
+                0L, TimeUnit.MILLISECONDS, queue,
+                new AsyncThreadFactory("Router Async Handler for " + nsId + " #"));
+          });
+      LOG.info("Assigned {} async handlers with queue size {} to nsId {}", dedicatedHandlers,
+          asyncQueueSize, nsId);
     }
 
     if (routerDefaultAsyncHandlerExecutor == null) {
@@ -576,7 +577,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
         DFS_ROUTER_ASYNC_RPC_NS_HANDLER_COUNT_DEFAULT);
     Map<String, Integer> nsAsyncHandlerCount = new HashMap<>();
     if (StringUtils.isEmpty(configNsHandler)) {
-      LOG.debug("No per-namespace async handler counts configured ({}). "
+      LOG.info("No per-namespace async handler counts configured ({}). "
               + "Will use default handler count for all namespaces.",
           DFS_ROUTER_ASYNC_RPC_NS_HANDLER_COUNT_KEY);
       return nsAsyncHandlerCount;
