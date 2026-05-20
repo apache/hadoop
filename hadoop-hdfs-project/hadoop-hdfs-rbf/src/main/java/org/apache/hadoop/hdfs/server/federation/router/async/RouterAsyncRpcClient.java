@@ -58,7 +58,6 @@ import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.ThreadPoolExecutor;
 
 import static org.apache.hadoop.hdfs.server.federation.router.async.utils.Async.warpCompletionException;
 import static org.apache.hadoop.hdfs.server.federation.router.async.utils.AsyncUtil.asyncApply;
@@ -175,7 +174,6 @@ public class RouterAsyncRpcClient extends RouterRpcClient{
           + router.getRouterId());
     }
     String nsid = namenodes.get(0).getNameserviceId();
-
     // transfer threadLocalContext to worker threads of executor.
     ThreadLocalContext threadLocalContext = new ThreadLocalContext();
     asyncComplete(null);
