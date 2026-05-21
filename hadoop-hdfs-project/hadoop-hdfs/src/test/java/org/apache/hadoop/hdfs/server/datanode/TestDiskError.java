@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.datanode;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.DataOutputStream;
 import java.io.File;
@@ -53,6 +54,7 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.DataChecksum;
+import org.apache.hadoop.util.Time;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -118,10 +120,10 @@ public class TestDiskError {
 
       // create files and make sure that first datanode will be down
       DataNode dn = cluster.getDataNodes().get(dnIndex);
-      long deadline = System.currentTimeMillis() + 60000;
+      long deadline = Time.monotonicNow() + 60000;
       for (int i=0; dn.isDatanodeUp(); i++) {
-        if (System.currentTimeMillis() > deadline) {
-            org.junit.jupiter.api.Assertions.fail("DataNode stayed UP for 60s despite Disk Errors.");
+        if (Time.monotonicNow() > deadline) {
+            fail("DataNode stayed UP for 60s despite Disk Errors.");
         }
         Path fileName = new Path("/test.txt"+i);
         DFSTestUtil.createFile(fs, fileName, 1024, (short)2, 1L);
