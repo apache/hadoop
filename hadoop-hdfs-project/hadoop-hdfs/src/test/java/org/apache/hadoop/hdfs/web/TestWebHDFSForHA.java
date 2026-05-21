@@ -26,6 +26,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
@@ -49,11 +50,13 @@ import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifie
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretManager;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
+import org.apache.hadoop.hdfs.server.namenode.NameNodeUtils;
 import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.web.resources.ExceptionHandler;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.ipc.RetriableException;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.Token;
@@ -366,7 +369,7 @@ public class TestWebHDFSForHA {
         fail("Expected StandbyException");
       } catch (Exception e) {
         if (e instanceof StandbyException) {
-          GenericTestUtils.assertExceptionContains("Namenode is in startup mode", e);
+          GenericTestUtils.assertExceptionContains(NameNodeUtils.STARTUP_MODE, e);
         } else {
           fail("Expected StandbyException");
         }
@@ -378,5 +381,21 @@ public class TestWebHDFSForHA {
         cluster.shutdown();
       }
     }
+  }
+
+  /**
+   * Active NameNode in startup mode must yield a RetriableException so the
+   * client keeps retrying the same node instead of failing over.
+   */
+  @Test
+  public void testStartupModeExceptionWhenActive() {
+    NameNode active = mock(NameNode.class);
+    when(active.isActiveState()).thenReturn(true);
+
+    IOException ex = NameNodeUtils.startupModeException(active);
+    assertTrue(ex instanceof RetriableException,
+        "Active NameNode in startup mode should yield RetriableException, got "
+            + ex.getClass().getName());
+    GenericTestUtils.assertExceptionContains(NameNodeUtils.STARTUP_MODE, ex);
   }
 }

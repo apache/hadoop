@@ -186,7 +186,7 @@ public class NamenodeWebHdfsMethods {
       throws IOException {
     final NamenodeProtocols np = namenode.getRpcServer();
     if (np == null) {
-      NameNodeUtils.throwNamenodeStartupModeException(namenode);
+      throw NameNodeUtils.startupModeException(namenode);
     }
     return np;
   }
@@ -195,7 +195,7 @@ public class NamenodeWebHdfsMethods {
     final NameNode namenode = (NameNode)context.getAttribute("name.node");
     final ClientProtocol cp = namenode.getRpcServer();
     if (cp == null) {
-      NameNodeUtils.throwNamenodeStartupModeException(namenode);
+      throw NameNodeUtils.startupModeException(namenode);
     }
     return cp;
   }

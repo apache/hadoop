@@ -44,6 +44,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY;
 public final class NameNodeUtils {
   public static final Logger LOG = LoggerFactory.getLogger(NameNodeUtils.class);
 
+  public static final String STARTUP_MODE = "Namenode is in startup mode";
+
   /**
    * Return the namenode address that will be used by clients to access this
    * namenode or name service. This needs to be called before the config
@@ -122,11 +124,18 @@ public final class NameNodeUtils {
     }
   }
 
-  public static void throwNamenodeStartupModeException(NameNode namenode) throws IOException {
-    if (namenode.isStandbyState()){
-      throw new StandbyException("Namenode is in startup mode");
+  /**
+   * Build the exception to throw when the NameNode receives a request while
+   * its RPC server is not yet available (e.g. fsimage loading). Returns a
+   * {@link StandbyException} when this NameNode is not in active state so the
+   * client fails over to the peer NameNode; otherwise a
+   * {@link RetriableException} so the client retries against the same node.
+   */
+  public static IOException startupModeException(NameNode namenode) {
+    if (!namenode.isActiveState()) {
+      return new StandbyException(STARTUP_MODE);
     } else {
-      throw new RetriableException("Namenode is in startup mode");
+      return new RetriableException(STARTUP_MODE);
     }
   }
 
