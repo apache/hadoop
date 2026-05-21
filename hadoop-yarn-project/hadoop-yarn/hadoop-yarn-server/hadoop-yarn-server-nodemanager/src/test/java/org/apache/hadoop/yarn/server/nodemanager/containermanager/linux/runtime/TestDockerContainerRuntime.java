@@ -118,7 +118,9 @@ import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.r
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.OCIContainerRuntime.CONTAINER_PID_NAMESPACE_SUFFIX;
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.OCIContainerRuntime.RUN_PRIVILEGED_CONTAINER_SUFFIX;
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.OCIContainerRuntime.formatOciEnvKey;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -2510,6 +2512,75 @@ public class TestDockerContainerRuntime {
       throws ContainerExecutionException, PrivilegedOperationException, IOException {
     initHttps(pHttps);
     testLaunchContainer(null, getDockerClientConfigFile());
+  }
+
+  @ParameterizedTest(name = "https={0}")
+  @MethodSource("data")
+  public void testLaunchContainerWithBigDockerClientConfig(boolean pHttps) throws Exception {
+    initHttps(pHttps);
+    int maxSize = YarnConfiguration.DEFAULT_NM_DOCKER_CLIENT_CONFIG_MAX_SIZE_BYTES;
+    int invalidSize = maxSize + 1;
+
+    File file = new File(tmpPath, "docker-client-config-big");
+    try (BufferedWriter bw = new BufferedWriter(new FileWriter(file))) {
+      bw.write("x".repeat(invalidSize));
+    }
+    initHttps(pHttps);
+    RuntimeException e = assertThrows(RuntimeException.class,
+        () -> testLaunchContainer(null, file));
+    assertNotNull(e.getCause(), "Wrapped IOException cause expected");
+    assertThat(e.getCause().getMessage())
+        .contains("(" + invalidSize + " bytes) is larger than maximum allowed size ("
+            + maxSize + " bytes)");
+  }
+
+  @ParameterizedTest(name = "https={0}")
+  @MethodSource("data")
+  public void testLaunchContainerWithDockerClientConfigAtMaxSize(boolean pHttps) throws Exception {
+    initHttps(pHttps);
+    int maxSize = YarnConfiguration.DEFAULT_NM_DOCKER_CLIENT_CONFIG_MAX_SIZE_BYTES;
+
+    // Exactly maxSize bytes must be accepted (boundary check). The content
+    // does not need to be valid JSON: readCredentialsFromConfigFile parses
+    // JSON only after the size gate, so a JSON-parse failure here would
+    // already prove the size gate let the file through.
+    File file = new File(tmpPath, "docker-client-config-boundary");
+    try (BufferedWriter bw = new BufferedWriter(new FileWriter(file))) {
+      bw.write(TestDockerClientConfigHandler.JSON);
+      bw.write("x".repeat(maxSize - TestDockerClientConfigHandler.JSON.length()));
+    }
+    // The handler should not reject on size. Any failure must come from
+    // downstream container launch wiring, not the size guard.
+    try {
+      testLaunchContainer(null, file);
+    } catch (RuntimeException re) {
+      if (re.getCause() != null && re.getCause().getMessage() != null) {
+        assertThat(re.getCause().getMessage())
+            .doesNotContain("is larger than maximum allowed size");
+      }
+    }
+  }
+
+  @ParameterizedTest(name = "https={0}")
+  @MethodSource("data")
+  public void testLaunchContainerWithInvalidMaxSizeFallsBackToDefault(boolean pHttps)
+      throws Exception {
+    initHttps(pHttps);
+
+    conf.setInt(YarnConfiguration.NM_DOCKER_CLIENT_CONFIG_MAX_SIZE_BYTES, -1);
+    int defaultMax = YarnConfiguration.DEFAULT_NM_DOCKER_CLIENT_CONFIG_MAX_SIZE_BYTES;
+    int invalidSize = defaultMax + 1;
+
+    File file = new File(tmpPath, "docker-client-neg-max");
+    try (BufferedWriter bw = new BufferedWriter(new FileWriter(file))) {
+      bw.write("x".repeat(invalidSize));
+    }
+    RuntimeException e = assertThrows(RuntimeException.class,
+        () -> testLaunchContainer(null, file));
+    assertNotNull(e.getCause(), "Wrapped IOException cause expected");
+    assertThat(e.getCause().getMessage())
+        .contains("(" + invalidSize + " bytes) is larger than maximum allowed size ("
+            + defaultMax + " bytes)");
   }
 
   public void testLaunchContainer(ByteBuffer tokens, File dockerConfigFile)

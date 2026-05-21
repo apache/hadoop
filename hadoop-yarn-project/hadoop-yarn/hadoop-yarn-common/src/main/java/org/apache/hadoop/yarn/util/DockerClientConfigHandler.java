@@ -19,6 +19,7 @@ package org.apache.hadoop.yarn.util;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.commons.io.IOUtils;
@@ -27,6 +28,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.security.DockerCredentialTokenIdentifier;
 
 import com.fasterxml.jackson.core.JsonFactory;
@@ -80,19 +82,37 @@ public final class DockerClientConfigHandler {
    */
   public static Credentials readCredentialsFromConfigFile(Path configFile,
       Configuration conf, String applicationId) throws IOException {
-    // Read the config file
-    String contents = null;
+
+    int configFileMaxSizeByte = conf.getInt(
+        YarnConfiguration.NM_DOCKER_CLIENT_CONFIG_MAX_SIZE_BYTES,
+        YarnConfiguration.DEFAULT_NM_DOCKER_CLIENT_CONFIG_MAX_SIZE_BYTES);
+    if (configFileMaxSizeByte <= 0) {
+      LOG.warn("Invalid value {} for {}, falling back to default {} bytes.",
+          configFileMaxSizeByte,
+          YarnConfiguration.NM_DOCKER_CLIENT_CONFIG_MAX_SIZE_BYTES,
+          YarnConfiguration.DEFAULT_NM_DOCKER_CLIENT_CONFIG_MAX_SIZE_BYTES);
+      configFileMaxSizeByte =
+          YarnConfiguration.DEFAULT_NM_DOCKER_CLIENT_CONFIG_MAX_SIZE_BYTES;
+    }
+
+    // Read the config file. Check the file size up front so
+    // a large config.json cannot OOM the NodeManager via IOUtils.toString.
     configFile = new Path(configFile.toUri());
     FileSystem fs = configFile.getFileSystem(conf);
-    if (fs != null) {
-      FSDataInputStream fileHandle = fs.open(configFile);
-      if (fileHandle != null) {
-        contents = IOUtils.toString(fileHandle, StandardCharsets.UTF_8);
-      }
+    FileStatus status = fs.getFileStatus(configFile);
+    if (status.getLen() > configFileMaxSizeByte) {
+      throw new IOException("Docker client config " + configFile + " ("
+          + status.getLen() + " bytes) is larger than maximum allowed size ("
+          + configFileMaxSizeByte + " bytes)");
+    }
+
+    String contents;
+    try (FSDataInputStream fileHandle = fs.open(configFile)) {
+      contents = IOUtils.toString(fileHandle, StandardCharsets.UTF_8);
     }
     if (contents == null) {
-      throw new IOException("Failed to read Docker client configuration: "
-          + configFile);
+      throw new IOException(
+          "Failed to read Docker client configuration: " + configFile);
     }
 
     // Parse the JSON and create the Tokens/Credentials.
