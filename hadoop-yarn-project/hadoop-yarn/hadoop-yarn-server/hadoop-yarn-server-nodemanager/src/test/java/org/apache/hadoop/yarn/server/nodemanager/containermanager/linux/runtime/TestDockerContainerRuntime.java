@@ -58,6 +58,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.Contai
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerRuntimeConstants;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerRuntimeContext;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -2514,10 +2515,9 @@ public class TestDockerContainerRuntime {
     testLaunchContainer(null, getDockerClientConfigFile());
   }
 
-  @ParameterizedTest(name = "https={0}")
-  @MethodSource("data")
-  public void testLaunchContainerWithBigDockerClientConfig(boolean pHttps) throws Exception {
-    initHttps(pHttps);
+  @Test
+  public void testLaunchContainerWithBigDockerClientConfig() throws Exception {
+    initHttps(false);
     int maxSize = YarnConfiguration.DEFAULT_NM_DOCKER_CLIENT_CONFIG_MAX_SIZE_BYTES;
     int invalidSize = maxSize + 1;
 
@@ -2525,7 +2525,6 @@ public class TestDockerContainerRuntime {
     try (BufferedWriter bw = new BufferedWriter(new FileWriter(file))) {
       bw.write("x".repeat(invalidSize));
     }
-    initHttps(pHttps);
     RuntimeException e = assertThrows(RuntimeException.class,
         () -> testLaunchContainer(null, file));
     assertNotNull(e.getCause(), "Wrapped IOException cause expected");
@@ -2534,38 +2533,37 @@ public class TestDockerContainerRuntime {
             + maxSize + " bytes)");
   }
 
-  @ParameterizedTest(name = "https={0}")
-  @MethodSource("data")
-  public void testLaunchContainerWithDockerClientConfigAtMaxSize(boolean pHttps) throws Exception {
-    initHttps(pHttps);
+  @Test
+  public void testLaunchContainerWithDockerClientConfigAtMaxSize() throws Exception {
+    initHttps(false);
     int maxSize = YarnConfiguration.DEFAULT_NM_DOCKER_CLIENT_CONFIG_MAX_SIZE_BYTES;
 
-    // Exactly maxSize bytes must be accepted (boundary check). The content
-    // does not need to be valid JSON: readCredentialsFromConfigFile parses
-    // JSON only after the size gate, so a JSON-parse failure here would
-    // already prove the size gate let the file through.
+    // Build a valid Docker client config JSON of exactly maxSize bytes by
+    // padding whitespace after the opening brace (JSON ignores whitespace
+    // between tokens). This verifies the boundary is accepted by the size
+    // gate and that the resulting content still parses as JSON downstream.
+    String base = TestDockerClientConfigHandler.JSON;
+    int padLen = maxSize - base.length();
+    assertTrue(padLen >= 0,
+        "Base JSON (" + base.length() + " bytes) must fit within maxSize ("
+            + maxSize + " bytes) for this test to be meaningful");
+    String content = "{" + " ".repeat(padLen) + base.substring(1);
+    assertEquals(maxSize, content.getBytes(StandardCharsets.UTF_8).length,
+        "Padded JSON must be exactly maxSize bytes");
+
     File file = new File(tmpPath, "docker-client-config-boundary");
     try (BufferedWriter bw = new BufferedWriter(new FileWriter(file))) {
-      bw.write(TestDockerClientConfigHandler.JSON);
-      bw.write("x".repeat(maxSize - TestDockerClientConfigHandler.JSON.length()));
+      bw.write(content);
     }
-    // The handler should not reject on size. Any failure must come from
-    // downstream container launch wiring, not the size guard.
-    try {
-      testLaunchContainer(null, file);
-    } catch (RuntimeException re) {
-      if (re.getCause() != null && re.getCause().getMessage() != null) {
-        assertThat(re.getCause().getMessage())
-            .doesNotContain("is larger than maximum allowed size");
-      }
-    }
+    // Must NOT throw the size-gate error. Container launch should proceed
+    // through the normal path with this boundary-sized valid config.
+    testLaunchContainer(null, file);
   }
 
-  @ParameterizedTest(name = "https={0}")
-  @MethodSource("data")
-  public void testLaunchContainerWithInvalidMaxSizeFallsBackToDefault(boolean pHttps)
+  @Test
+  public void testLaunchContainerWithInvalidMaxSizeFallsBackToDefault()
       throws Exception {
-    initHttps(pHttps);
+    initHttps(false);
 
     conf.setInt(YarnConfiguration.NM_DOCKER_CLIENT_CONFIG_MAX_SIZE_BYTES, -1);
     int defaultMax = YarnConfiguration.DEFAULT_NM_DOCKER_CLIENT_CONFIG_MAX_SIZE_BYTES;

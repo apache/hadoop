@@ -2729,11 +2729,12 @@ public class YarnConfiguration extends Configuration {
   /**
    * Maximum allowed file size in bytes for the Docker client configuration
    * file (config.json). If the file size exceeds this value, the container
-   * launch will be rejected. See yarn-default.xml for the default value.
+   * launch will be rejected.
    */
   public static final String NM_DOCKER_CLIENT_CONFIG_MAX_SIZE_BYTES =
       DOCKER_CONTAINER_RUNTIME_PREFIX + "client-config-file-max-size-bytes";
-  public static final int DEFAULT_NM_DOCKER_CLIENT_CONFIG_MAX_SIZE_BYTES = 1024;
+  public static final int DEFAULT_NM_DOCKER_CLIENT_CONFIG_MAX_SIZE_BYTES =
+      16 * 1024;
 
   /** The mode in which the Java Container Sandbox should run detailed by
    *  the JavaSandboxLinuxContainerRuntime. */

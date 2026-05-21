@@ -110,7 +110,7 @@ public final class DockerClientConfigHandler {
     try (FSDataInputStream fileHandle = fs.open(configFile)) {
       contents = IOUtils.toString(fileHandle, StandardCharsets.UTF_8);
     }
-    if (contents == null) {
+    if (contents == null || contents.trim().isEmpty()) {
       throw new IOException(
           "Failed to read Docker client configuration: " + configFile);
     }

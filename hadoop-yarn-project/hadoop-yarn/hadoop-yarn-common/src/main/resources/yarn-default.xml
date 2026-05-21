@@ -2340,10 +2340,10 @@
     <description>
       Maximum allowed file size in bytes for the Docker client configuration file
       (config.json). If the file size exceeds this value, the container launch
-      will be rejected. Default is 1024 bytes.
+      will be rejected. Default is 16 KiB.
     </description>
     <name>yarn.nodemanager.runtime.linux.docker.client-config-file-max-size-bytes</name>
-    <value>1024</value>
+    <value>16384</value>
   </property>
 
   <property>
