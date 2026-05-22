@@ -174,6 +174,12 @@ public class EditLogTailer {
   private final long maxTxnsPerLock;
 
   /**
+   * Directly controls whether {@link #triggerActiveLogRoll} is allowed to run
+   * or not under the current {@link HAState}.
+   */
+  private final boolean triggerRollEnabled;
+
+  /**
    * Timer instance to be set only using constructor.
    * Only tests can reassign this by using setTimerForTests().
    * For source code, this timer instance should be treated as final.
@@ -252,6 +258,11 @@ public class EditLogTailer {
           DFSConfigKeys.DFS_HA_TAILEDITS_ALL_NAMESNODES_RETRY_DEFAULT);
       maxRetries = DFSConfigKeys.DFS_HA_TAILEDITS_ALL_NAMESNODES_RETRY_DEFAULT;
     }
+
+    this.triggerRollEnabled = conf.getBoolean(DFSConfigKeys.DFS_HA_LOG_ROLL_ENABLED_KEY,
+        DFSConfigKeys.DFS_HA_LOG_ROLL_ENABLED_DEFAULT);
+    LOG.info("Rolling is {} on this NN state {}", triggerRollEnabled ? "enabled" : "disabled",
+        namesystem.getState());
 
     inProgressOk = conf.getBoolean(
         DFSConfigKeys.DFS_HA_TAILEDITS_INPROGRESS_KEY,
@@ -508,7 +519,7 @@ public class EditLogTailer {
           // read any more transactions since the last time a roll was
           // triggered.
           boolean triggeredLogRoll = false;
-          if (tooLongSinceLastLoad() &&
+          if (triggerRollEnabled && tooLongSinceLastLoad() &&
               lastRollTriggerTxId < lastLoadedTxnId) {
             triggerActiveLogRoll();
             triggeredLogRoll = true;

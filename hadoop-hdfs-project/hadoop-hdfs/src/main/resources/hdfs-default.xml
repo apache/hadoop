@@ -1948,6 +1948,16 @@
     Support multiple time unit suffix(case insensitive), as described
     in dfs.heartbeat.interval.If no time unit is specified then seconds
     is assumed.
+    Only works if dfs.ha.log-roll.enabled is set to true.
+  </description>
+</property>
+
+<property>
+  <name>dfs.ha.log-roll.enabled</name>
+  <value>true</value>
+  <description>
+    Whether Standby/Observer Namenodes are allowed to ask Active to roll edit logs.
+    Takes priority over dfs.ha.log-roll.period.
   </description>
 </property>
 
@@ -3157,6 +3167,15 @@
   <description>
     How often an active namenode will check if it needs to roll its edit log,
     in milliseconds.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.edit.log.autoroll.max.interval.ms</name>
+  <value>0</value>
+  <description>
+    How long can an active namenode go before rolling its edit log (if there is something to roll),
+    in milliseconds. Disabled by default.
   </description>
 </property>
 
