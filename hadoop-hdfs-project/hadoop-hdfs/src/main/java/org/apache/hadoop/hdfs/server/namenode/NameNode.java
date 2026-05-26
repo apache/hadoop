@@ -2357,6 +2357,8 @@ public class NameNode extends ReconfigurableBase implements
       return reconfCallerContextEnabled(newVal);
     } else if (property.equals(ipcClientRPCBackoffEnable)) {
       return reconfigureIPCBackoffEnabled(newVal);
+    } else if (property.equals(HomeDirectoryAutoCreator.DFS_NAMENODE_AUTO_CREATE_USER_HOME_QUOTA)) {
+      return rpcServer.getHomeDirectoryAutoCreator().reconfigUserHomeQuota(newVal);
     } else if (property.equals(DFS_STORAGE_POLICY_SATISFIER_MODE_KEY)) {
       return reconfigureSPSModeEvent(newVal, property);
     } else if (property.equals(DFS_NAMENODE_REPLICATION_MAX_STREAMS_KEY)
