@@ -43,6 +43,11 @@ class TestResource {
         Resource.castToIntSafely(Long.MAX_VALUE),
         "Cast to Integer.MAX_VALUE if the long is greater than "
             + "Integer.MAX_VALUE");
+
+    assertEquals(0, Resource.castToIntSafely(-1),
+        "Cast to 0 if the long is negative");
+    assertEquals(0, Resource.castToIntSafely(Long.MIN_VALUE),
+        "Cast to 0 if the long is negative");
   }
 
   @Test
