@@ -4665,9 +4665,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       } else {
         this.sleepIntervalMs = sleepIntervalMs;
       }
-      LOG.info(
-          "Initializing log roller with parameters rollThreshold={}, maxRollIntervalMs={}, sleepIntervalMs={}",
-          rollThreshold, maxRollIntervalMs, sleepIntervalMs);
+      LOG.info("Initializing log roller with parameters rollThreshold={}, maxRollIntervalMs={}, "
+          + "sleepIntervalMs={}", rollThreshold, maxRollIntervalMs, sleepIntervalMs);
     }
 
     @Override
@@ -4701,8 +4700,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       long timeSinceLastRollMs = Time.monotonicNow() - lastRollMs;
       if (numEdits > rollThreshold || (tooLongSinceLastRoll(timeSinceLastRollMs) && numEdits > 1)) {
         FSNamesystem.LOG.info(
-            "Rolling edit logs: numEdits={}, threshold={}, timeSinceLastRollMs={}",
-            numEdits, rollThreshold, timeSinceLastRollMs);
+            "Rolling edit logs: numEdits={}, threshold={}, timeSinceLastRollMs={}", numEdits,
+            rollThreshold, timeSinceLastRollMs);
         return true;
       }
       return false;
