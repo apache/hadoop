@@ -17,9 +17,10 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
+import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.DataOutputStream;
 import java.io.File;
@@ -28,12 +29,11 @@ import java.io.RandomAccessFile;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.concurrent.TimeUnit;
-
 import java.util.function.Supplier;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.StorageType;
@@ -54,7 +54,6 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.DataChecksum;
-import org.apache.hadoop.util.Time;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -94,47 +93,21 @@ public class TestDiskError {
    * Test to check that a DN goes down when all its volumes have failed.
    */
   @Test
+  @Timeout(value = 60)
   public void testShutdown() throws Exception {
-    if (System.getProperty("os.name").startsWith("Windows")) {
-      /**
-       * This test depends on OS not allowing file creations on a directory
-       * that does not have write permissions for the user. Apparently it is 
-       * not the case on Windows (at least under Cygwin), and possibly AIX.
-       * This is disabled on Windows.
-       */
-      return;
-    }
-    // Bring up two more datanodes
-    cluster.startDataNodes(conf, 2, true, null, null);
-    cluster.waitActive();
+    assumeNotWindows();
     final int dnIndex = 0;
-    String bpid = cluster.getNamesystem().getBlockPoolId();
-    File storageDir = cluster.getInstanceStorageDir(dnIndex, 0);
-    File dir1 = MiniDFSCluster.getRbwDir(storageDir, bpid);
-    storageDir = cluster.getInstanceStorageDir(dnIndex, 1);
-    File dir2 = MiniDFSCluster.getRbwDir(storageDir, bpid);
+    final File dir1 = cluster.getInstanceStorageDir(dnIndex, 0);
+    final File dir2 = cluster.getInstanceStorageDir(dnIndex, 1);
+    final DataNode dn = cluster.getDataNodes().get(dnIndex);
     try {
-      // make the data directory of the first datanode to be readonly
-      assertTrue(dir1.setReadOnly(), "Couldn't chmod local vol");
-      assertTrue(dir2.setReadOnly(), "Couldn't chmod local vol");
-
-      // create files and make sure that first datanode will be down
-      DataNode dn = cluster.getDataNodes().get(dnIndex);
-      long deadline = Time.monotonicNow() + 60000;
-      for (int i=0; dn.isDatanodeUp(); i++) {
-        if (Time.monotonicNow() > deadline) {
-            fail("DataNode stayed UP for 60s despite Disk Errors.");
-        }
-        Path fileName = new Path("/test.txt"+i);
-        DFSTestUtil.createFile(fs, fileName, 1024, (short)2, 1L);
-        DFSTestUtil.waitReplication(fs, fileName, (short)2);
-        fs.delete(fileName, true);
-        Thread.sleep(200);
-      }
+      DataNodeTestUtils.injectDataDirFailure(dir1, dir2);
+      dn.checkDiskError();
+      GenericTestUtils.waitFor(() -> !dn.isDatanodeUp(), 100, 30000);
+      assertFalse(dn.isDatanodeUp(),
+          "DataNode should exit when all volumes fail.");
     } finally {
-      // restore its old permission
-      FileUtil.setWritable(dir1, true);
-      FileUtil.setWritable(dir2, true);
+      DataNodeTestUtils.restoreDataDirFromFailure(dir1, dir2);
     }
   }
 
