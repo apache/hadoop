@@ -34,6 +34,7 @@ import javax.ws.rs.core.MediaType;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.http.HadoopJettyAuthentication;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
@@ -262,6 +263,19 @@ public abstract class DelegationTokenAuthenticationHandler
                   HttpServletResponse.SC_FORBIDDEN, ex);
               return false;
             }
+          }
+          if (requestUgi != null) {
+            // DT mgmt ops (GETDELEGATIONTOKEN/RENEW/CANCEL) write the
+            // response inline and skip filterChain.doFilter, so the
+            // global JettyAuthBridgeFilter never runs. Attach directly,
+            // matching the bridge's "effective/real" Kerberos
+            // principal-style format for proxy users.
+            String label = requestUgi.getShortUserName();
+            UserGroupInformation real = requestUgi.getRealUser();
+            if (real != null && !real.getShortUserName().equals(label)) {
+              label = label + "/" + real.getShortUserName();
+            }
+            HadoopJettyAuthentication.attach(request, label);
           }
           Map map = null;
           switch (dtOp) {

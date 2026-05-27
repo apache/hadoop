@@ -828,6 +828,11 @@ public final class HttpServer2 implements FilterContainer {
         c.initFilter(this, conf);
       }
     }
+    // Install last so it sits inside any user-configured auth filter wrap
+    // and can read the resolved user via the standard servlet API.
+    addGlobalFilter("jetty-auth-bridge",
+        JettyAuthBridgeFilter.class.getName(),
+        java.util.Collections.<String, String>emptyMap());
 
     addDefaultServlets(conf);
     addPrometheusServlet(conf);
