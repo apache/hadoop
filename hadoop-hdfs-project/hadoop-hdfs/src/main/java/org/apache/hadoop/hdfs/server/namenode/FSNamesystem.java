@@ -4692,13 +4692,14 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       }
     }
 
+    boolean tooLongSinceLastRoll(long timeSinceLastRollMs) {
+      return maxRollIntervalMs > 0 && timeSinceLastRollMs >= maxRollIntervalMs;
+    }
+
     private boolean shouldRoll() {
       long numEdits = getCorrectTransactionsSinceLastLogRoll();
       long timeSinceLastRollMs = Time.monotonicNow() - lastRollMs;
-      if (numEdits > rollThreshold || (
-          maxRollIntervalMs > 0 &&
-              timeSinceLastRollMs >= maxRollIntervalMs &&
-              numEdits > 1)) {
+      if (numEdits > rollThreshold || (tooLongSinceLastRoll(timeSinceLastRollMs) && numEdits > 1)) {
         FSNamesystem.LOG.info(
             "Rolling edit logs: numEdits={}, threshold={}, timeSinceLastRollMs={}",
             numEdits, rollThreshold, timeSinceLastRollMs);
