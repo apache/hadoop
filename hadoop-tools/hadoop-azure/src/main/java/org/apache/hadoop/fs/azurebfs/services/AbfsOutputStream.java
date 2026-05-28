@@ -793,8 +793,15 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
    */
   private synchronized void smallWriteOptimizedflushInternal(boolean isClose) throws IOException {
     // writeCurrentBufferToService will increment numOfAppendsToServerSinceLastFlush
-    uploadBlockAsync(getBlockManager().getActiveBlock(),
-        true, isClose);
+    try {
+      uploadBlockAsync(getBlockManager().getActiveBlock(),
+          true, isClose);
+    } finally {
+      if (getBlockManager().hasActiveBlock()) {
+        // The block has been consumed by upload; new writes need a new block.
+        getBlockManager().clearActiveBlock();
+      }
+    }
     waitForAppendsToComplete();
     shrinkWriteOperationQueue();
     maybeThrowLastError();
