@@ -292,6 +292,7 @@ jobs:
               -pl :hadoop-tos
               -pl :hadoop-huaweicloud
               -pl :hadoop-cloud-storage
+              -pl :hadoop-bos
               -pl :hadoop-dist
           # skipped modules
           # -pl :hadoop-yarn-applications-catalog-webapp
