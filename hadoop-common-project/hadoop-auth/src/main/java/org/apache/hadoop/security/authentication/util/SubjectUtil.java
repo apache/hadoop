@@ -67,6 +67,39 @@ public final class SubjectUtil {
   public static final boolean THREAD_INHERITS_SUBJECT = checkThreadInheritsSubject();
 
   /**
+   * Hadoop-managed {@link InheritableThreadLocal} that mirrors the active Subject for the
+   * duration of {@link #callAs} / {@link #doAs}. On JDK 22+ the JVM stopped propagating the
+   * Subject to newly-constructed Threads via {@code AccessControlContext} (JEP 411 / 486),
+   * and the new {@code ScopedValue}-based mechanism behind {@code Subject.current()} also
+   * does not inherit across {@code Thread.<init>}. Maintaining our own InheritableThreadLocal
+   * lets {@link #current()} restore the pre-JDK22 transitive cascade for any platform Thread
+   * regardless of class hierarchy (plain {@code Thread}, {@code ForkJoinWorkerThread}, Netty
+   * {@code FastThreadLocalThread}, etc.) — including Threads created by 3rd-party factories
+   * we don't own. A child Thread copies its parent's value at {@code Thread.<init>} time and
+   * keeps it for its entire lifetime, matching the historical {@code inheritedAccessControlContext}
+   * behaviour.
+   *
+   * <p>Only consulted when {@link #THREAD_INHERITS_SUBJECT} is {@code false}; on older JDKs the
+   * JVM still does the propagation natively and we don't need this layer.
+   *
+   * <p>Limitations:
+   * <ul>
+   *   <li>Virtual threads created via {@code Thread.ofVirtual().start(...)} default to
+   *       {@code inheritThreadLocals=false} and so will <em>not</em> see the value. To restore
+   *       inheritance for them, build with {@code .inheritInheritableThreadLocals(true)}, or
+   *       fork via {@code StructuredTaskScope} which propagates {@code ScopedValue} instead.
+   *       Hadoop and the typical Spark / HBase / HiveServer2 deployments use platform threads,
+   *       so this caveat does not apply today.</li>
+   *   <li>Code that calls {@code Subject.current()} directly (i.e. not via {@link #current()})
+   *       on an inherited thread will still see {@code null}. Hadoop / UGI consistently use
+   *       {@link #current()} so this is only a concern for downstream applications that bypass
+   *       Hadoop.</li>
+   * </ul>
+   */
+  private static final InheritableThreadLocal<Subject> CURRENT_SUBJECT_TL =
+      THREAD_INHERITS_SUBJECT ? null : new InheritableThreadLocal<>();
+
+  /**
    * Try to return the method handle for Subject#callAs()
    *
    * @return the method handle, or null if the Java version does not have it
@@ -98,10 +131,10 @@ public final class SubjectUtil {
     } else {
       // 24+ never inherits the Subject.
       // For 22 and 23 the behavior actually depends on whether the SecurityManager
-      // is enabled, but this check is only used to determine whether a doAs/callAs
-      // call can be optimized out in SubjectInheritingThread and Daemon.
-      // We accept that possible minor performance cost for those EOL non-LTS versions
-      // to avoid the extra complexity and to prevent the JVM from logging
+      // is enabled, but this check is only used to gate maintenance of our own
+      // InheritableThreadLocal cascade ({@link #CURRENT_SUBJECT_TL}). We accept
+      // that possible minor performance cost for those EOL non-LTS versions to
+      // avoid the extra complexity and to prevent the JVM from logging
       // SecurityManager warnings to the console.
       return false;
     }
@@ -225,6 +258,14 @@ public final class SubjectUtil {
   /**
    * Map to Subject.callAs() if available, otherwise maps to Subject.doAs().
    *
+   * <p>On JDK 22+ this method also maintains a Hadoop-managed
+   * {@link InheritableThreadLocal} ({@link #CURRENT_SUBJECT_TL}) for the duration of
+   * {@code action}, so that any platform Thread constructed inside {@code action} inherits
+   * the {@code subject} and a subsequent {@link #current()} call on the child sees it. This
+   * is what restores the pre-JDK22 transitive Subject cascade for plain {@link Thread} and
+   * any third-party {@code Thread} subclass without requiring a Hadoop-specific Thread
+   * subclass.
+   *
    * @param subject the subject this action runs as
    * @param action  the action to run
    * @return the result of the action
@@ -234,9 +275,30 @@ public final class SubjectUtil {
    *      The cause of the {@code CompletionException} is set to the exception
    *      thrown by {@code action.call()}.
    */
-  @SuppressWarnings("unchecked")
   public static <T> T callAs(Subject subject, Callable<T> action) throws CompletionException {
     Objects.requireNonNull(action);
+    if (THREAD_INHERITS_SUBJECT) {
+      return invokeCallAs(subject, action);
+    }
+    final Subject prev = CURRENT_SUBJECT_TL.get();
+    if (subject == null) {
+      CURRENT_SUBJECT_TL.remove();
+    } else if (subject != prev) {
+      CURRENT_SUBJECT_TL.set(subject);
+    }
+    try {
+      return invokeCallAs(subject, action);
+    } finally {
+      if (prev == null) {
+        CURRENT_SUBJECT_TL.remove();
+      } else if (prev != subject) {
+        CURRENT_SUBJECT_TL.set(prev);
+      }
+    }
+  }
+
+  @SuppressWarnings("unchecked")
+  private static <T> T invokeCallAs(Subject subject, Callable<T> action) throws CompletionException {
     if (HAS_CALL_AS) {
       try {
         return (T) CALL_AS.invoke(subject, action);
@@ -335,9 +397,31 @@ public final class SubjectUtil {
   /**
    * Maps to Subject.current() if available, otherwise maps to Subject.getSubject().
    *
+   * <p>On JDK 22+ also consults the Hadoop-managed
+   * {@link #CURRENT_SUBJECT_TL InheritableThreadLocal} so that platform Threads which
+   * inherited a Subject from a parent's {@link #callAs} scope continue to observe it.
+   * The JDK API {@code Subject.current()} (backed by {@code ScopedValue}) is consulted
+   * first, so any future virtual-thread / {@code StructuredTaskScope} usage that propagates
+   * the {@code ScopedValue} keeps working without falling back to the TLS layer.
+   *
    * @return the current subject
    */
   public static Subject current() {
+    if (!THREAD_INHERITS_SUBJECT) {
+      // Prefer the JDK ScopedValue source of truth (forward-compatible with virtual threads
+      // forked through StructuredTaskScope, which DO propagate ScopedValue).
+      Subject fromJdk = invokeJdkCurrent();
+      if (fromJdk != null) {
+        return fromJdk;
+      }
+      // Fallback: the Hadoop InheritableThreadLocal cascade for platform Threads that inherited
+      // a Subject at construction time but are no longer inside any callAs scope themselves.
+      return CURRENT_SUBJECT_TL.get();
+    }
+    return invokeJdkCurrent();
+  }
+
+  private static Subject invokeJdkCurrent() {
     try {
       return (Subject) CURRENT.invoke();
     } catch (Throwable t) {
