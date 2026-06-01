@@ -513,17 +513,13 @@ public abstract class Resource implements Comparable<Resource> {
   }
 
   /**
-   * Convert long to int for a resource value safely. Negative values are
-   * clamped to 0; values exceeding Integer.MAX_VALUE are clamped to
-   * Integer.MAX_VALUE.
+   * Convert long to int for a resource value safely. This method assumes
+   * resource value is positive.
    *
    * @param value long resource value
    * @return int resource value
    */
   protected static int castToIntSafely(long value) {
-    if (value < 0) {
-      return 0;
-    }
     if (value > Integer.MAX_VALUE) {
       return Integer.MAX_VALUE;
     }
