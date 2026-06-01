@@ -331,7 +331,9 @@ final class DefaultAMSProcessor implements ApplicationMasterServiceProcessor {
 
     response.setCompletedContainersStatuses(appAttempt
         .pullJustFinishedContainers());
-    response.setAvailableResources(allocation.getResourceLimit());
+    response.setAvailableResources(
+        Resources.componentwiseMax(allocation.getResourceLimit(),
+            Resources.none()));
 
     QueueMetrics queueMetrics =
         this.rmContext.getScheduler().getRootQueueMetrics();
