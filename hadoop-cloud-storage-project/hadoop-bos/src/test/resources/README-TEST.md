@@ -28,8 +28,8 @@ This document provides guidance on running and understanding the BOS FileSystem 
 
 ### Required
 
-- Java 8 or higher
-- Maven 3.3 or higher
+- Java 17 or higher
+- Maven 3.3 or higher (or use the Maven Wrapper `./mvnw` from the repo root)
 - Access to a Baidu BOS bucket for testing
 - BOS credentials (Access Key ID and Secret Access Key)
 
@@ -201,6 +201,7 @@ These tests verify BOS-specific functionality:
 - ❌ File truncation
 - ❌ Symbolic links
 - ❌ Extended attributes (xattr)
+- ❌ hflush/hsync operations (no-op; data is only persisted on close)
 - ❌ Full Unix permissions (limited support in namespace mode)
 
 ## Troubleshooting
