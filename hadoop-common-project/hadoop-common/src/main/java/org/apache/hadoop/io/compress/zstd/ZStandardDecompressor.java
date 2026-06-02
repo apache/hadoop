@@ -188,6 +188,9 @@ public class ZStandardDecompressor implements Decompressor {
       }
 
       // Restore limit so setInputFromSavedData() can rewind+put on next call.
+      // There is possible that `decompressDirectByteBufferStream` throws exception
+      // on decompressing corrupt data, code won't reach here, the caller must
+      // call `reset` to clear the state before resuing this decompressor.
       compressedDirectBuf.limit(directBufferSize);
     } else {
       n = 0;

@@ -15,6 +15,7 @@
  */
 package org.apache.hadoop.io.compress.zstd;
 
+import com.github.luben.zstd.ZstdException;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.DataInputBuffer;
@@ -50,6 +51,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class TestZStandardCompressorDecompressor {
   private final static char[] HEX_ARRAY = "0123456789ABCDEF".toCharArray();
@@ -598,7 +600,8 @@ public class TestZStandardCompressorDecompressor {
     decompressor.setInput(corrupted, 0, corrupted.length);
     try {
       decompressor.decompress(out, 0, out.length);
-    } catch (Exception e) {
+      fail("decompress should throw exception on corrupted data");
+    } catch (ZstdException e) {
       // Expected: corrupted data causes an exception.
     }
 
