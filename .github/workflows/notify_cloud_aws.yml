@@ -1,0 +1,120 @@
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+
+# Add a sticky comment to hadoop-aws PRs from forked repos with a hint that
+# integration tests must be manually triggered by a maintainer.
+#
+name: "Cloud-AWS PR Update"
+
+# Security: This privileged workflow uses pull_request_target but does not
+# check out or execute untrusted code. It only creates a check run and a PR
+# comment in the base repository.
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize]
+    paths:
+      - 'hadoop-tools/hadoop-aws/**'
+      - '.github/workflows/*cloud_aws.yml'
+      - '.github/actions/build_image**'
+      - '.github/gha-tests/hadoop-aws*excludes.txt'
+
+jobs:
+  notify:
+    if: github.event.pull_request.head.repo.full_name != github.repository
+    name: "Notify Cloud-AWS"
+    runs-on: ubuntu-slim
+    permissions:
+      checks: write
+      pull-requests: write
+    steps:
+      - name: Post approval-required check and sticky comment
+        uses: actions/github-script@v9
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const marker = '<!-- cloud-aws-fork-pr-note -->';
+            const pr = context.payload.pull_request;
+            const workflowUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/workflows/cloud_aws.yml`;
+            const dispatchCommand = `gh workflow run cloud_aws.yml -R ${context.repo.owner}/${context.repo.repo} -f pr_number=${pr.number}`;
+
+            const checkTitle = 'Maintainer action needed for S3A CI.';
+            const checkSummary = [
+              'Cloud-AWS tests must be manually triggered for fork pull requests.',
+              'A maintainer should:\n',
+              '- Confirm the PR does not contain questionable changes to actions in',
+              '  .github/workflows.\n',
+              '- *Approve workflows* for this fork PR if prompted.\n',
+              `- Run [Cloud-AWS workflow](${workflowUrl}) with \`pr_number=${pr.number}\``,
+              `  (or via CLI: \`${dispatchCommand}\`)\n`,
+              '\n',
+              `fork head: \`${pr.head.repo.full_name}@${pr.head.sha.slice(0, 12)}\``,
+            ].join(' ');
+
+            await github.rest.checks.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              name: 'Cloud-AWS / Approval Required',
+              head_sha: pr.head.sha,
+              status: 'completed',
+              conclusion: 'action_required',
+              output: {
+                title: checkTitle,
+                summary: checkSummary,
+              },
+            });
+
+            const commentBody = [
+              marker,
+              `**${checkTitle}** ${checkSummary}`,
+            ].join('\n');
+
+            try {
+              const comments = await github.paginate(github.rest.issues.listComments, {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pr.number,
+                per_page: 100,
+              });
+
+              const existing = comments.find(comment => comment.body && comment.body.includes(marker));
+              if (existing) {
+                await github.rest.issues.updateComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  comment_id: existing.id,
+                  body: commentBody,
+                });
+                core.info(`Updated sticky comment ${existing.id}`);
+              } else {
+                const created = await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: pr.number,
+                  body: commentBody,
+                });
+                core.info(`Created sticky comment ${created.data.id}`);
+              }
+            } catch (error) {
+              if (error.status === 403) {
+                core.warning('Unable to write sticky PR comment due to repo token policy.');
+                core.warning(`GitHub API message: ${error.message}`);
+              } else {
+                throw error;
+              }
+            }

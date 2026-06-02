@@ -20,12 +20,20 @@
 name: "Cloud-AWS"
 
 on:
+  # pull requests will automatically trigger S3A tests for non-forked PRs
   pull_request:
     paths:
       - 'hadoop-tools/hadoop-aws/**'
       - '.github/workflows/*cloud_aws.yml'
       - '.github/actions/build_image**'
       - '.github/gha-tests/hadoop-aws*excludes.txt'
+
+  # For fork PRs, S3A integration tests must be manually triggered.
+  # Although our auth. key for localstack is not a very sensitive secret,
+  # we don't want to leak it to PRs that we haven't reviewed yet.
+  # A maintainer should confirm that affected fork PRs don't
+  # include questionable changes to .github/workflows/  (i.e. that may leak
+  # secrets) before approving the workflow run.
   workflow_dispatch:
     inputs:
       pr_number:
@@ -49,6 +57,8 @@ on:
         default: ubuntu-24.04
 
 jobs:
+  # Stash the owner, repo, and PR number, so we can properly add a test summary
+  # in both the forked-repo, and non-forked case.
   resolve-fork-pr:
     if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-slim
