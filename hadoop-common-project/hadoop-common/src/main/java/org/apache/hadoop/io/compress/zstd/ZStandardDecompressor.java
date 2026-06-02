@@ -92,7 +92,7 @@ public class ZStandardDecompressor implements Decompressor {
       bytesInCompressedBuffer = directBufferSize;
     }
 
-    compressedDirectBuf.rewind();
+    compressedDirectBuf.clear();
     compressedDirectBuf.put(
         userBuf, userBufOff, bytesInCompressedBuffer);
 
@@ -225,6 +225,8 @@ public class ZStandardDecompressor implements Decompressor {
     finished = false;
     compressedDirectBufOff = 0;
     bytesInCompressedBuffer = 0;
+    compressedDirectBuf.limit(directBufferSize);
+    compressedDirectBuf.position(0);
     uncompressedDirectBuf.limit(directBufferSize);
     uncompressedDirectBuf.position(directBufferSize);
     userBufOff = 0;

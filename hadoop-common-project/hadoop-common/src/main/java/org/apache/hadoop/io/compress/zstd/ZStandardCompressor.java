@@ -301,7 +301,7 @@ public class ZStandardCompressor implements Compressor {
     finished = false;
     bytesRead = 0;
     bytesWritten = 0;
-    uncompressedDirectBuf.rewind();
+    uncompressedDirectBuf.clear();
     uncompressedDirectBufOff = 0;
     uncompressedDirectBufLen = 0;
     keepUncompressedBuf = false;
