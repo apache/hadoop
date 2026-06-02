@@ -169,7 +169,7 @@ public class TestRouterAsyncHandlerQueueOverflow {
     // Queue full, rejected
     asyncRpcClient.invokeMethod(ugi, namenodes, true, protocol, method.getMethod(), params);
     assertEquals(2, nsExecutor.getQueue().size());
-    String expectedMsg = "Namespace '" + ns0 + "' is overloaded (queue size: " + QUEUE_CAP + ")";
+    String expectedMsg = "Namespace '" + ns0 + "' async handler is busy.";
     LambdaTestUtils.intercept(StandbyException.class, expectedMsg,
         () -> syncReturn(FileStatus.class));
     // Unstuck the namenode so we can terminate this test
