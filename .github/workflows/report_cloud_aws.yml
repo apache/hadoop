@@ -32,8 +32,39 @@ permissions:
 jobs:
   report:
     runs-on: ubuntu-latest
-    if: github.event.workflow_run.event == 'pull_request'
+    if: (github.event.workflow_run.event == 'pull_request' || github.event.workflow_run.event == 'workflow_dispatch') && github.event.workflow_run.conclusion != 'skipped'
     steps:
+      - name: Download manual target metadata
+        if: github.event.workflow_run.event == 'workflow_dispatch'
+        uses: actions/download-artifact@v5
+        with:
+          name: cloud-aws-manual-target
+          run-id: ${{ github.event.workflow_run.id }}
+          path: manual-target
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Resolve status target SHA
+        id: target_sha
+        uses: actions/github-script@v9
+        env:
+          WORKFLOW_EVENT: ${{ github.event.workflow_run.event }}
+          WORKFLOW_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        with:
+          script: |
+            const fs = require('node:fs');
+
+            let targetSha = process.env.WORKFLOW_HEAD_SHA;
+            if (process.env.WORKFLOW_EVENT === 'workflow_dispatch') {
+              const payload = JSON.parse(fs.readFileSync('manual-target/manual-target.json', 'utf8'));
+              if (!payload.head_sha) {
+                throw new Error('manual-target.json is missing head_sha');
+              }
+              targetSha = payload.head_sha;
+            }
+
+            core.setOutput('value', targetSha);
+            console.log(`Status target SHA: ${targetSha}`);
+
       - name: S3A Test Report
         id: report
         uses: dorny/test-reporter@a43b3a5f7366b97d083190328d2c652e1a8b6aa2  # v3.0.0
@@ -78,7 +109,7 @@ jobs:
 
             const params = {
               ...context.repo,
-              sha:         context.payload.workflow_run.head_sha,
+              sha:         '${{ steps.target_sha.outputs.value }}',
               state,
               description,
               context:     'S3A Test Summary',

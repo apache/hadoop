@@ -38,6 +38,17 @@ on:
         type: string
         description: OS tag for runner (e.g., Linux, ubuntu-24.04)
         default: ubuntu_24.04
+      checkout_repository:
+        required: false
+        type: string
+        description: Repository to checkout for this run
+      checkout_ref:
+        required: false
+        type: string
+        description: Ref or SHA to checkout for this run
+    secrets:
+      LOCALSTACK_CI_KEY:
+        required: true
 
 # Security: Minimal defaults for workflow.
 permissions: {}
@@ -63,6 +74,8 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
+          repository: ${{ inputs.checkout_repository || github.repository }}
+          ref: ${{ inputs.checkout_ref || github.ref }}
           # Full fetch so build image URL can be computed for any branch
           fetch-depth: 0
       - uses: ./.github/actions/build_image_url
@@ -87,6 +100,9 @@ jobs:
         run: |
           echo "Build image URL: ${{ needs.precondition.outputs.build_image_url }}"
       - uses: actions/checkout@v6
+        with:
+          repository: ${{ inputs.checkout_repository || github.repository }}
+          ref: ${{ inputs.checkout_ref || github.ref }}
       - uses: ./.github/actions/build_image
         id: build_img
         with:
@@ -141,6 +157,9 @@ jobs:
         -Dcheckstyle.skip -Dspotbugs.skip -Denforcer.skip -Drat.skip
     steps:
       - uses: actions/checkout@v6
+        with:
+          repository: ${{ inputs.checkout_repository || github.repository }}
+          ref: ${{ inputs.checkout_ref || github.ref }}
       # Performance: Caching TODO: We need to create a centralized maven build cache that is
       # built on trunk. This will always miss on a new PR: Caches can't be
       # shared between PR branches. PR branches *can* access caches from their
