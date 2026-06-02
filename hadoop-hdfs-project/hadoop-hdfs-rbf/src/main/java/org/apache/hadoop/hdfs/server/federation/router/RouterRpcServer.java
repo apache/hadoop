@@ -724,9 +724,6 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
     if (routerDefaultAsyncHandlerExecutor != null) {
       routerDefaultAsyncHandlerExecutor.shutdownNow();
     }
-    if (routerAsyncResponderExecutor != null) {
-      routerAsyncResponderExecutor.shutdownNow();
-    }
     super.serviceStop();
   }
 
