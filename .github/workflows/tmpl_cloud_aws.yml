@@ -76,8 +76,6 @@ jobs:
         with:
           repository: ${{ inputs.checkout_repository || github.repository }}
           ref: ${{ inputs.checkout_ref || github.ref }}
-          # Full fetch so build image URL can be computed for any branch
-          fetch-depth: 0
       - uses: ./.github/actions/build_image_url
         id: img
         with:
