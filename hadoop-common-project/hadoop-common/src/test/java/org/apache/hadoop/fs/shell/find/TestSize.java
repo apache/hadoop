@@ -70,8 +70,8 @@ public class TestSize {
     assertEquals(Result.PASS, size.apply(fiveBlocks, -1));
     assertEquals(Result.FAIL, size.apply(sixBlocks, -1));
     assertEquals(Result.FAIL, size.apply(fourBlocks, -1));
-    assertEquals(Result.PASS, size.apply(fiveBlocksPlus, -1));
-    assertEquals(Result.FAIL, size.apply(fiveBlocksMinus, -1));
+    assertEquals(Result.FAIL, size.apply(fiveBlocksPlus, -1));
+    assertEquals(Result.PASS, size.apply(fiveBlocksMinus, -1));
   }
 
   // test greater than match in blocks
@@ -85,7 +85,7 @@ public class TestSize {
     assertEquals(Result.FAIL, size.apply(fiveBlocks, -1));
     assertEquals(Result.PASS, size.apply(sixBlocks, -1));
     assertEquals(Result.FAIL, size.apply(fourBlocks, -1));
-    assertEquals(Result.FAIL, size.apply(fiveBlocksPlus, -1));
+    assertEquals(Result.PASS, size.apply(fiveBlocksPlus, -1));
     assertEquals(Result.FAIL, size.apply(fiveBlocksMinus, -1));
   }
 
@@ -101,7 +101,7 @@ public class TestSize {
     assertEquals(Result.FAIL, size.apply(sixBlocks, -1));
     assertEquals(Result.PASS, size.apply(fourBlocks, -1));
     assertEquals(Result.FAIL, size.apply(fiveBlocksPlus, -1));
-    assertEquals(Result.PASS, size.apply(fiveBlocksMinus, -1));
+    assertEquals(Result.FAIL, size.apply(fiveBlocksMinus, -1));
   }
 
   // test exact match in bytes

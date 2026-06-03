@@ -35,9 +35,15 @@ public abstract class NumberExpression extends BaseExpression {
    */
   protected static final long MINUTE_IN_MILLISECONDS = 60000L;
 
-  private long max = -1L;
-  private long min = -1L;
+  private long max = Long.MIN_VALUE;
+  private long min = Long.MIN_VALUE;
   private long units = 1L;
+
+  protected enum MODE {
+    ROUND_UP, ROUND_DOWN,
+  }
+
+  private MODE mode = MODE.ROUND_DOWN;
 
   /**
    * Constructor specifying for size of units to used as the expression
@@ -58,6 +64,10 @@ public abstract class NumberExpression extends BaseExpression {
     this.units = units;
   }
 
+  protected void setMode(MODE mode) {
+    this.mode = mode;
+  }
+
   @Override
   public void prepare() throws IOException {
     parseArgument(getArgument(1));
@@ -75,13 +85,27 @@ public abstract class NumberExpression extends BaseExpression {
     } else if (arg.isEmpty()) {
       throw new IllegalArgumentException("Invalid empty argument");
     }
-    if (arg.startsWith("+")) {
-      min = (Long.parseLong(arg.substring(1)) * units) + units;
-    } else if (arg.startsWith("-")) {
-      max = (Long.parseLong(arg.substring(1)) * units) - 1L;
-    } else {
-      min = Long.parseLong(arg) * units;
-      max = min + units - 1L;
+    switch (mode) {
+    case ROUND_UP:
+      if (arg.startsWith("+")) {
+        min = (Long.parseLong(arg.substring(1)) * units) + 1L;
+      } else if (arg.startsWith("-")) {
+        max = (Long.parseLong(arg.substring(1)) * units) - units;
+      } else {
+        max = Long.parseLong(arg) * units;
+        min = max - units + 1L;
+      }
+      break;
+    case ROUND_DOWN:
+      if (arg.startsWith("+")) {
+        min = (Long.parseLong(arg.substring(1)) * units) + units;
+      } else if (arg.startsWith("-")) {
+        max = (Long.parseLong(arg.substring(1)) * units) - 1L;
+      } else {
+        min = Long.parseLong(arg) * units;
+        max = min + units - 1L;
+      }
+      break;
     }
   }
 
@@ -98,10 +122,10 @@ public abstract class NumberExpression extends BaseExpression {
    * {@link Result#FAIL} otherwise
    */
   protected Result applyNumber(long value) {
-    if ((min > -1L) && (min > value)) {
+    if ((min > Long.MIN_VALUE) && (min > value)) {
       return Result.FAIL;
     }
-    if ((max > -1L) && (max < value)) {
+    if ((max > Long.MIN_VALUE) && (max < value)) {
       return Result.FAIL;
     }
     return Result.PASS;

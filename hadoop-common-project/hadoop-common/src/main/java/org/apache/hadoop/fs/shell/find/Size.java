@@ -48,6 +48,7 @@ final class Size extends NumberExpression {
       arg = arg.substring(0, arg.length() - 1);
     } else {
       setUnits(512);
+      setMode(MODE.ROUND_UP);
     }
     super.parseArgument(arg);
   }
