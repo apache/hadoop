@@ -42,7 +42,7 @@ final class Perm extends BaseExpression {
       "The mode may be specified using either symbolic notation,",
       "eg 'u=rwx,g+x+w' or as an octal number."};
 
-  private int permission;
+  private int permission = 0;
   private boolean mask = false;
 
   Perm() {
@@ -80,10 +80,11 @@ final class Perm extends BaseExpression {
     } else {
       // the argument is a symbolic mode
       int shift;
-      Operator operator;
-      int value;
-      for (int i = 0; i < arg.length(); i++) {
-        switch (arg.charAt(i++)) {
+      Operator operator = null;
+      int value = 0;
+      for (String part : arg.split(",")) {
+        int position = 0;
+        switch (part.charAt(position++)) {
         case 'u':
           shift = 6;
           break;
@@ -99,8 +100,9 @@ final class Perm extends BaseExpression {
         default:
           throw new IllegalArgumentException("Invalid mode: " + argument);
         }
-        if (i < arg.length()) {
-          switch (arg.charAt(i++)) {
+        outer:
+        while (position < part.length()) {
+          switch (part.charAt(position++)) {
           case '=':
             operator = EQUALS;
             break;
@@ -113,35 +115,41 @@ final class Perm extends BaseExpression {
           default:
             throw new IllegalArgumentException("Invalid mode: " + argument);
           }
-        } else {
-          throw new IllegalArgumentException("Invalid mode: " + argument);
-        }
-
-        value = 0;
-        for (; (i < arg.length()) && (arg.charAt(i) != ','); i++) {
-          switch (arg.charAt(i)) {
-          case 'r':
-            value |= 4;
-            break;
-          case 'w':
-            value |= 2;
-            break;
-          case 'x':
-            value |= 1;
-            break;
-          default:
-            throw new IllegalArgumentException("Invalid mode: " + argument);
+          value = 0;
+          while (position < part.length()) {
+            switch (part.charAt(position)) {
+            case 'r':
+              value |= 4;
+              break;
+            case 'w':
+              value |= 2;
+              break;
+            case 'x':
+              value |= 1;
+              break;
+            default:
+               applyPermission(operator, shift, value);
+              continue outer;
+            }
+            position++;
           }
         }
-        if (shift != -1) {
-          permission = operator.apply(permission, shift, value);
-        } else {
-          permission = operator.apply(permission, 6, value);
-          permission = operator.apply(permission, 3, value);
-          permission = operator.apply(permission, 0, value);
+        if (operator == null || value == 0 ) {
+          throw new IllegalArgumentException("Invalid mode: " + argument);
         }
+        applyPermission(operator, shift, value);
       }
     }
+  }
+
+  private void applyPermission(Operator operator, int shift, int value) {
+    if (shift != -1) {
+      permission = operator.apply(permission, shift, value);
+      return;
+    }
+    permission = operator.apply(permission, 6, value);
+    permission = operator.apply(permission, 3, value);
+    permission = operator.apply(permission, 0, value);
   }
 
   @Override

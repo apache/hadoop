@@ -41,6 +41,7 @@ public class TestPerm {
   private PathData mode777;
   private PathData mode700;
   private PathData mode444;
+  private PathData mode730;
   private PathData mode740;
   private PathData mode123;
 
@@ -51,6 +52,7 @@ public class TestPerm {
     mode777 = createPathData("rwxrwxrwx", "-rwxrwxrwx");
     mode700 = createPathData("rwx______", "-rwx------");
     mode444 = createPathData("r__r__r__", "-r--r--r--");
+    mode730 = createPathData("rwx_wx___", "-rwx-wx---");
     mode740 = createPathData("rwxr_____", "-rwxr-----");
     mode123 = createPathData("__x_w__wx", "---x-w--wx");
   }
@@ -74,6 +76,7 @@ public class TestPerm {
     assertEquals(Result.FAIL, perm.apply(mode777, -1));
     assertEquals(Result.FAIL, perm.apply(mode700, -1));
     assertEquals(Result.FAIL, perm.apply(mode444, -1));
+    assertEquals(Result.FAIL, perm.apply(mode730, -1));
     assertEquals(Result.FAIL, perm.apply(mode740, -1));
     assertEquals(Result.PASS, perm.apply(mode123, -1));
   }
@@ -89,6 +92,7 @@ public class TestPerm {
     assertEquals(Result.PASS, perm.apply(mode777, -1));
     assertEquals(Result.FAIL, perm.apply(mode700, -1));
     assertEquals(Result.FAIL, perm.apply(mode444, -1));
+    assertEquals(Result.FAIL, perm.apply(mode730, -1));
     assertEquals(Result.FAIL, perm.apply(mode740, -1));
     assertEquals(Result.PASS, perm.apply(mode123, -1));
   }
@@ -104,6 +108,7 @@ public class TestPerm {
     assertEquals(Result.FAIL, perm.apply(mode777, -1));
     assertEquals(Result.FAIL, perm.apply(mode700, -1));
     assertEquals(Result.FAIL, perm.apply(mode444, -1));
+    assertEquals(Result.FAIL, perm.apply(mode730, -1));
     assertEquals(Result.FAIL, perm.apply(mode740, -1));
     assertEquals(Result.PASS, perm.apply(mode123, -1));
   }
@@ -119,8 +124,25 @@ public class TestPerm {
     assertEquals(Result.PASS, perm.apply(mode777, -1));
     assertEquals(Result.FAIL, perm.apply(mode700, -1));
     assertEquals(Result.FAIL, perm.apply(mode444, -1));
+    assertEquals(Result.FAIL, perm.apply(mode730, -1));
     assertEquals(Result.FAIL, perm.apply(mode740, -1));
     assertEquals(Result.PASS, perm.apply(mode123, -1));
+  }
+
+  // test a complex symbolic mode
+  @Test
+  public void applySymbolicMultipleOperator() throws IOException {
+    Perm perm = new Perm();
+    addArgument(perm, "u=rwx,g+x+w");
+    perm.setOptions(new FindOptions());
+    perm.prepare();
+
+    assertEquals(Result.FAIL, perm.apply(mode777, -1));
+    assertEquals(Result.FAIL, perm.apply(mode700, -1));
+    assertEquals(Result.FAIL, perm.apply(mode444, -1));
+    assertEquals(Result.PASS, perm.apply(mode730, -1));
+    assertEquals(Result.FAIL, perm.apply(mode740, -1));
+    assertEquals(Result.FAIL, perm.apply(mode123, -1));
   }
 
   // test a complex symbolic mode
@@ -134,6 +156,7 @@ public class TestPerm {
     assertEquals(Result.FAIL, perm.apply(mode777, -1));
     assertEquals(Result.FAIL, perm.apply(mode700, -1));
     assertEquals(Result.FAIL, perm.apply(mode444, -1));
+    assertEquals(Result.FAIL, perm.apply(mode730, -1));
     assertEquals(Result.FAIL, perm.apply(mode740, -1));
     assertEquals(Result.PASS, perm.apply(mode123, -1));
   }
@@ -149,6 +172,7 @@ public class TestPerm {
     assertEquals(Result.PASS, perm.apply(mode777, -1));
     assertEquals(Result.FAIL, perm.apply(mode700, -1));
     assertEquals(Result.FAIL, perm.apply(mode444, -1));
+    assertEquals(Result.FAIL, perm.apply(mode730, -1));
     assertEquals(Result.FAIL, perm.apply(mode740, -1));
     assertEquals(Result.FAIL, perm.apply(mode123, -1));
   }
@@ -164,6 +188,7 @@ public class TestPerm {
     assertEquals(Result.PASS, perm.apply(mode777, -1));
     assertEquals(Result.FAIL, perm.apply(mode700, -1));
     assertEquals(Result.PASS, perm.apply(mode444, -1));
+    assertEquals(Result.FAIL, perm.apply(mode730, -1));
     assertEquals(Result.FAIL, perm.apply(mode740, -1));
     assertEquals(Result.FAIL, perm.apply(mode123, -1));
   }
@@ -179,6 +204,7 @@ public class TestPerm {
     assertEquals(Result.FAIL, perm.apply(mode777, -1));
     assertEquals(Result.FAIL, perm.apply(mode700, -1));
     assertEquals(Result.FAIL, perm.apply(mode444, -1));
+    assertEquals(Result.FAIL, perm.apply(mode730, -1));
     assertEquals(Result.FAIL, perm.apply(mode740, -1));
     assertEquals(Result.PASS, perm.apply(mode123, -1));
   }
