@@ -109,7 +109,7 @@ class PendingDataNodeMessages {
   }
 
   void removeQueuedBlock(DatanodeStorageInfo storageInfo, Block block) {
-    if (storageInfo == null || block == null) {
+    if (count == 0 || storageInfo == null || block == null) {
       return;
     }
     Block blk = new Block(block);
