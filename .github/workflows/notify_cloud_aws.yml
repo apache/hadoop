@@ -53,9 +53,9 @@ jobs:
             const workflowUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/workflows/cloud_aws.yml`;
             const dispatchCommand = `gh workflow run cloud_aws.yml -R ${context.repo.owner}/${context.repo.repo} -f pr_number=${pr.number}`;
 
-            const checkTitle = 'Maintainer action needed for S3A CI.';
+            const checkTitle = 'Cloud-AWS manual trigger instructions';
             const checkSummary = [
-              'Cloud-AWS tests must be manually triggered for fork pull requests.',
+              'S3A tests must be manually triggered for fork pull requests.',
               'A maintainer should:\n',
               '- Confirm the PR does not contain questionable changes to actions in',
               '  .github/workflows.\n',
@@ -69,10 +69,10 @@ jobs:
             await github.rest.checks.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              name: 'Cloud-AWS / Approval Required',
+              name: 'Cloud-AWS / Manual Trigger Info',
               head_sha: pr.head.sha,
               status: 'completed',
-              conclusion: 'action_required',
+              conclusion: 'neutral',
               output: {
                 title: checkTitle,
                 summary: checkSummary,
@@ -81,7 +81,7 @@ jobs:
 
             const commentBody = [
               marker,
-              `**${checkTitle}** ${checkSummary}`,
+              `ℹ️ **${checkTitle}**: ${checkSummary}`,
             ].join('\n');
 
             try {
