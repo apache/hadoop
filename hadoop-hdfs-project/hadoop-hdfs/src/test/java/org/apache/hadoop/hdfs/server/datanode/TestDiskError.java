@@ -19,7 +19,6 @@ package org.apache.hadoop.hdfs.server.datanode;
 
 import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import java.io.DataOutputStream;
 import java.io.File;
@@ -102,8 +101,7 @@ public class TestDiskError {
     try {
       DataNodeTestUtils.injectDataDirFailure(dir1, dir2);
       dn.checkDiskError();
-      GenericTestUtils.waitFor(() -> !dn.isDatanodeUp(), 100, 30000);
-      assertFalse(dn.isDatanodeUp(),
+      GenericTestUtils.waitFor(() -> !dn.isDatanodeUp(), 100, 30000,
           "DataNode should exit when all volumes fail.");
     } finally {
       DataNodeTestUtils.restoreDataDirFromFailure(dir1, dir2);
