@@ -1061,7 +1061,7 @@ public class AbfsConfiguration{
         Class<?> clazz = rawConfig.getClassByName(keyProviderClass);
         keyProviderObject = clazz.newInstance();
       } catch (Exception e) {
-        throw new KeyProviderException("Unable to load key provider class.", e);
+        throw new KeyProviderException("Unable to load key provider class " + keyProviderClass, e);
       }
       if (!(keyProviderObject instanceof KeyProvider)) {
         throw new KeyProviderException(keyProviderClass
