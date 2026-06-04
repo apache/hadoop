@@ -15,6 +15,7 @@
  */
 package org.apache.hadoop.io.compress.zstd;
 
+import com.github.luben.zstd.ZstdException;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.DataInputBuffer;
@@ -50,6 +51,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class TestZStandardCompressorDecompressor {
   private final static char[] HEX_ARRAY = "0123456789ABCDEF".toCharArray();
@@ -555,6 +557,65 @@ public class TestZStandardCompressorDecompressor {
         new ZStandardDecompressor(IO_FILE_BUFFER_SIZE_DEFAULT);
     int result = decompressor.decompress(new byte[10], 0, 10);
     assertEquals(0, result);
+  }
+
+  /**
+   * Verify that {@code setInput()} does not throw {@code BufferOverflowException}
+   * after a previous {@code decompress()} call threw an exception.
+   *
+   * <p>When {@code decompress()} processes compressed data, it sets
+   * {@code compressedDirectBuf.limit(bytesInCompressedBuffer)} — a value that
+   * may be smaller than {@code directBufferSize}. If {@code decompressDirectByteBufferStream}
+   * throws (e.g. on corrupted input), the limit is never restored. A subsequent
+   * {@code reset()} also does not restore {@code compressedDirectBuf.limit}.
+   * So the next {@code setInput()} call will hit {@code BufferOverflowException}
+   * because {@code setInputFromSavedData()} tries to {@code put()} more bytes
+   * than the current limit allows.</p>
+   *
+   * <p>This scenario occurs in practice when reading multiple zstd-compressed
+   * files from a directory: a corrupted file causes an exception mid-decompress,
+   * the decompressor is returned to the pool and reset, but the limit stays
+   * small. The next file's {@code setInput()} then fails.</p>
+   */
+  @Test
+  public void testSetInputAfterDecompressThrowsOnCorruptedData() throws Exception {
+    byte[] rawData = generate(400);
+    int bufSize = IO_FILE_BUFFER_SIZE_DEFAULT;
+
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    try (CompressionOutputStream cos = new CompressorStream(baos,
+        new ZStandardCompressor(), bufSize)) {
+      cos.write(rawData);
+    }
+    byte[] compressed = baos.toByteArray();
+
+    // Corrupt the compressed data by dropping the first 10 bytes.
+    byte[] corrupted = new byte[compressed.length - 10];
+    System.arraycopy(compressed, 10, corrupted, 0, corrupted.length);
+
+    ZStandardDecompressor decompressor = new ZStandardDecompressor(bufSize);
+    byte[] out = new byte[bufSize];
+
+    // Feed corrupted data — decompress() sets limit to corrupted.length, then throws.
+    decompressor.setInput(corrupted, 0, corrupted.length);
+    try {
+      decompressor.decompress(out, 0, out.length);
+      fail("decompress should throw exception on corrupted data");
+    } catch (ZstdException e) {
+      // Expected: corrupted data causes an exception.
+    }
+
+    // Reset the decompressor (as the codec pool would).
+    decompressor.reset();
+
+    // Feed valid data — this must NOT throw BufferOverflowException.
+    decompressor.setInput(compressed, 0, compressed.length);
+    int n = decompressor.decompress(out, 0, out.length);
+    assertTrue(n >= 0, "decompress should return >= 0 after reset");
+
+    while (!decompressor.finished()) {
+      decompressor.decompress(out, 0, out.length);
+    }
   }
 
   // workers > 0 should produce data that round-trips correctly through the
