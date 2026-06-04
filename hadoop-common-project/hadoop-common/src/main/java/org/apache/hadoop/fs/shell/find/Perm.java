@@ -128,13 +128,13 @@ final class Perm extends BaseExpression {
               value |= 1;
               break;
             default:
-               applyPermission(operator, shift, value);
+              applyPermission(operator, shift, value);
               continue outer;
             }
             position++;
           }
         }
-        if (operator == null || value == 0 ) {
+        if (operator == null || value == 0) {
           throw new IllegalArgumentException("Invalid mode: " + argument);
         }
         applyPermission(operator, shift, value);

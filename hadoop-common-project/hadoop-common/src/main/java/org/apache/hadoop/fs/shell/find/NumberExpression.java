@@ -106,6 +106,8 @@ public abstract class NumberExpression extends BaseExpression {
         max = min + units - 1L;
       }
       break;
+    default:
+      throw new AssertionError("Unexpected mode: " + mode);
     }
   }
 
