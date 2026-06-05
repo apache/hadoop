@@ -110,6 +110,7 @@ public class TestBalancerLongRunningTasks {
       cluster.shutdown();
       cluster = null;
     }
+    DefaultMetricsSystem.shutdown();
   }
 
   private ClientProtocol client;
@@ -823,17 +824,20 @@ public class TestBalancerLongRunningTasks {
 
       // Throw an error when we double-initialize BalancerMetrics
       DefaultMetricsSystem.setMiniClusterMode(false);
-      MetricsSystem instance = DefaultMetricsSystem.instance();
-      // Avoid the impact of cluster metric, remove cluster JvmMetrics
-      instance.unregisterSource("JvmMetrics");
+      try {
+        MetricsSystem instance = DefaultMetricsSystem.instance();
+        // Avoid the impact of cluster metric, remove cluster JvmMetrics
+        instance.unregisterSource("JvmMetrics");
 
-      final BalancerParameters balancerParameters = Balancer.Cli.parse(new String[] {
-          "-policy", BalancingPolicy.Node.INSTANCE.getName(),
-          "-threshold", "10",
-      });
-      int r = Balancer.run(namenodes, nsIds, balancerParameters, conf);
-      assertEquals(ExitStatus.SUCCESS.getExitCode(), r);
-      DefaultMetricsSystem.setMiniClusterMode(true);
+        final BalancerParameters balancerParameters = Balancer.Cli.parse(new String[] {
+            "-policy", BalancingPolicy.Node.INSTANCE.getName(),
+            "-threshold", "10",
+        });
+        int r = Balancer.run(namenodes, nsIds, balancerParameters, conf);
+        assertEquals(ExitStatus.SUCCESS.getExitCode(), r);
+      } finally {
+        DefaultMetricsSystem.setMiniClusterMode(true);
+      }
     }
   }
 
