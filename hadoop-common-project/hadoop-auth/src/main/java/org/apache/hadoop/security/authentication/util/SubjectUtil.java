@@ -415,12 +415,12 @@ public final class SubjectUtil {
       // forked through StructuredTaskScope, which DO propagate ScopedValue).
       Subject fromJdk = invokeJdkCurrent();
       if (fromJdk != null) {
-        LOG.trace("Return current Subject from JDK API directly");
+        LOG.trace("Get current Subject from JDK API directly");
         return fromJdk;
       }
       // Fallback: the Hadoop InheritableThreadLocal cascade for platform Threads that inherited
       // a Subject at construction time but are no longer inside any callAs scope themselves.
-      LOG.trace("Return current Subject from Hadoop-managed InheritableThreadLocal");
+      LOG.trace("Get current Subject from Hadoop-managed InheritableThreadLocal");
       return CURRENT_SUBJECT_TL.get();
     }
     return invokeJdkCurrent();
