@@ -106,11 +106,14 @@ public class TestBalancerLongRunningTasks {
 
   @AfterEach
   public void shutdown() throws Exception {
-    if (cluster != null) {
-      cluster.shutdown();
+    try {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    } finally {
       cluster = null;
+      DefaultMetricsSystem.shutdown();
     }
-    DefaultMetricsSystem.shutdown();
   }
 
   private ClientProtocol client;
@@ -823,6 +826,7 @@ public class TestBalancerLongRunningTasks {
       assertEquals(1, namenodes.size());
 
       // Throw an error when we double-initialize BalancerMetrics
+      boolean oldValue = DefaultMetricsSystem.inMiniClusterMode();
       DefaultMetricsSystem.setMiniClusterMode(false);
       try {
         MetricsSystem instance = DefaultMetricsSystem.instance();
@@ -836,7 +840,7 @@ public class TestBalancerLongRunningTasks {
         int r = Balancer.run(namenodes, nsIds, balancerParameters, conf);
         assertEquals(ExitStatus.SUCCESS.getExitCode(), r);
       } finally {
-        DefaultMetricsSystem.setMiniClusterMode(true);
+        DefaultMetricsSystem.setMiniClusterMode(oldValue);
       }
     }
   }
