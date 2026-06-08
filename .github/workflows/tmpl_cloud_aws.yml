@@ -76,6 +76,7 @@ jobs:
         with:
           repository: ${{ inputs.checkout_repository || github.repository }}
           ref: ${{ inputs.checkout_ref || github.ref }}
+          persist-credentials: false
       - uses: ./.github/actions/build_image_url
         id: img
         with:
@@ -101,6 +102,7 @@ jobs:
         with:
           repository: ${{ inputs.checkout_repository || github.repository }}
           ref: ${{ inputs.checkout_ref || github.ref }}
+          persist-credentials: false
       - uses: ./.github/actions/build_image
         id: build_img
         with:
@@ -158,6 +160,7 @@ jobs:
         with:
           repository: ${{ inputs.checkout_repository || github.repository }}
           ref: ${{ inputs.checkout_ref || github.ref }}
+          persist-credentials: false
       # Performance: Caching TODO: We need to create a centralized maven build cache that is
       # built on trunk. This will always miss on a new PR: Caches can't be
       # shared between PR branches. PR branches *can* access caches from their

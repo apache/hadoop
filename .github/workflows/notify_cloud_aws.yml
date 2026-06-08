@@ -57,8 +57,8 @@ jobs:
             const checkSummary = [
               'S3A tests must be manually triggered for fork pull requests.',
               'A maintainer should:\n',
-              '- Confirm the PR does not contain questionable changes to actions in',
-              '  .github/workflows.\n',
+              '- Confirm the PR does not contain risky changes to actions in',
+              '  .github/workflows and .github/actions.\n',
               '- *Approve workflows* for this fork PR if prompted.\n',
               `- Run [Cloud-AWS workflow](${workflowUrl}) with \`pr_number=${pr.number}\``,
               `  (or via CLI: \`${dispatchCommand}\`)\n`,
