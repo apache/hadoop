@@ -31,6 +31,8 @@ import java.util.concurrent.CompletionException;
 import javax.security.auth.Subject;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * An utility class that adapts the Security Manager and APIs related to it for
@@ -49,6 +51,7 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
  */
 @Private
 public final class SubjectUtil {
+  private static final Logger LOG = LoggerFactory.getLogger(SubjectUtil.class);
   private static final MethodHandle CALL_AS = lookupCallAs();
   static final boolean HAS_CALL_AS = CALL_AS != null;
   private static final MethodHandle DO_AS = HAS_CALL_AS ? null : lookupDoAs();
@@ -412,10 +415,12 @@ public final class SubjectUtil {
       // forked through StructuredTaskScope, which DO propagate ScopedValue).
       Subject fromJdk = invokeJdkCurrent();
       if (fromJdk != null) {
+        LOG.trace("Return current Subject from JDK API directly");
         return fromJdk;
       }
       // Fallback: the Hadoop InheritableThreadLocal cascade for platform Threads that inherited
       // a Subject at construction time but are no longer inside any callAs scope themselves.
+      LOG.trace("Return current Subject from Hadoop-managed InheritableThreadLocal");
       return CURRENT_SUBJECT_TL.get();
     }
     return invokeJdkCurrent();
