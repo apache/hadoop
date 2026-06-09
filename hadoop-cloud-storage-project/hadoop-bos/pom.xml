@@ -311,10 +311,6 @@
                   </filters>
                   <relocations>
                     <relocation>
-                      <pattern>org.json</pattern>
-                      <shadedPattern>org.apache.hadoop.fs.bos.shaded.org.json</shadedPattern>
-                    </relocation>
-                    <relocation>
                       <pattern>org.apache.http</pattern>
                       <shadedPattern>org.apache.hadoop.fs.bos.shaded.org.apache.http</shadedPattern>
                     </relocation>
@@ -337,7 +333,6 @@
                   </relocations>
                   <artifactSet>
                     <includes>
-                      <include>org.json:json</include>
                       <include>joda-time:joda-time</include>
                       <include>com.baidubce:bce-java-sdk</include>
                       <include>org.apache.httpcomponents:httpclient</include>
