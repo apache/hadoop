@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.federation.metrics;
 
 import static org.apache.hadoop.hdfs.server.federation.router.async.utils.AsyncUtil.syncReturn;
 import static org.apache.hadoop.metrics2.impl.MsInfo.ProcessName;
+import static org.apache.hadoop.thirdparty.com.google.common.base.Strings.isNullOrEmpty;
 import static org.apache.hadoop.util.Time.now;
 
 import java.io.IOException;
@@ -343,6 +344,11 @@ public class RBFMetrics implements RouterMBean, FederationMBean {
     if (routerStore == null) {
       return "{}";
     }
+    int guessedWebPort = router.getConfig().getSocketAddr(
+        RBFConfigKeys.DFS_ROUTER_HTTP_BIND_HOST_KEY,
+        RBFConfigKeys.DFS_ROUTER_HTTP_ADDRESS_KEY,
+        RBFConfigKeys.DFS_ROUTER_HTTP_ADDRESS_DEFAULT,
+        RBFConfigKeys.DFS_ROUTER_HTTP_PORT_DEFAULT).getPort();
     try {
       // Get all the routers in order
       GetRouterRegistrationsRequest request =
@@ -361,6 +367,8 @@ public class RBFMetrics implements RouterMBean, FederationMBean {
         long dateModified = record.getDateModified();
         long lastHeartbeat = getSecondsSince(dateModified);
         innerInfo.put("lastHeartbeat", lastHeartbeat);
+        innerInfo.put("routerWebAddress",
+            guessRouterWebAddress(record.getAdminAddress(), guessedWebPort));
 
         StateStoreVersion stateStoreVersion = record.getStateStoreVersion();
         if (stateStoreVersion == null) {
@@ -377,6 +385,19 @@ public class RBFMetrics implements RouterMBean, FederationMBean {
       return "{}";
     }
     return JSON.toString(info);
+  }
+
+  private static String guessRouterWebAddress(String adminAddress, int webPort) {
+    try {
+      if (isNullOrEmpty(adminAddress)) {
+        return "";
+      }
+      String host = adminAddress.split(":")[0];
+      return "http://" + host + ":" + webPort;
+    } catch (Exception e) {
+      LOG.error("Cannot get router web address", e);
+      return "";
+    }
   }
 
   /**

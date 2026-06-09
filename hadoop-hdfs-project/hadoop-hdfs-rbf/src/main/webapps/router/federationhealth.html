@@ -303,7 +303,13 @@
     {#Routers}
     <tr>
       <td class="federationhealth-router-icon federationhealth-router-{iconState}" title="{title}"></td>
-      <td>{address}</td>
+      <td>
+        {?routerWebAddress}
+        <a href='{routerWebAddress}'>{address}</a>
+        {:else}
+        {address}
+        {/routerWebAddress}
+      </td>
       <td>{status}</td>
       <td>{lastHeartbeat} sec ago</td>
       <td>{lastMembershipUpdate}</td>
