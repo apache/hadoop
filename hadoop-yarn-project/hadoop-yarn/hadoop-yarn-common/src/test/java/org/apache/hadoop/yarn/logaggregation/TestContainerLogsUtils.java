@@ -149,6 +149,7 @@ public final class TestContainerLogsUtils {
             new AggregatedLogFormat.LogValue(rootLogDirs, containerId,
                 ugi.getShortUserName()));
       }
+      fileController.postWrite(context);
     } finally {
       fileController.closeWriter();
     }
