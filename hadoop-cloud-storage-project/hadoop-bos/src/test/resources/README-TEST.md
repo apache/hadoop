@@ -193,6 +193,7 @@ These tests verify BOS-specific functionality:
 - ✅ Random access (seek)
 - ✅ Content summary
 - ✅ Checksum verification
+- ✅ Hierarchical namespace buckets (atomic rename/delete)
 
 ### Unsupported Features (Tests Will Skip)
 

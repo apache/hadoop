@@ -368,8 +368,8 @@ If the option `fs.contract.test.fs.bos` is not defined in the file, all contract
 - File truncation
 - Symbolic links
 - Extended attributes (xattr)
-- Full Unix permissions (limited support in hierarchy mode)
-- hflush/hsync operations
+- hflush/hsync operations (no-op; data is only persisted on close)
+- Full Unix permissions (limited support in namespace mode)
 
 ## Performance Notes
 
