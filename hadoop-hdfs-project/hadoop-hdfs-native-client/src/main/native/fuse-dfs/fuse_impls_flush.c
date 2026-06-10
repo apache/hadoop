@@ -52,7 +52,7 @@ int dfs_flush(const char *path, struct fuse_file_info *fi) {
     assert(fh);
     hdfsFile file_handle = (hdfsFile)fh->hdfsFH;
     assert(file_handle);
-    if (hdfsFlush(hdfsConnGetFs(fh->conn), file_handle) != 0) {
+    if (hdfsHFlush(hdfsConnGetFs(fh->conn), file_handle) != 0) {
       ERROR("Could not flush %lx for %s\n",(long)file_handle, path);
       return -EIO;
     }
