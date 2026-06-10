@@ -38,7 +38,15 @@ int dfs_flush(const char *path, struct fuse_file_info *fi) {
   }
 
   // note that fuse calls flush on RO files too and hdfs does not like that and will return an error
-  if (fi->flags & O_WRONLY) {
+
+  // fi->flags is not reliable in flush(); it may be 0.
+  //if (fi->flags & O_WRONLY) {
+  
+  dfs_fh *fh = (dfs_fh*)fi->fh;
+  assert(fh);
+  if (fh->buf == NULL) {
+    hdfsFile file_handle = (hdfsFile)fh->hdfsFH;
+    assert(file_handle);
 
     dfs_fh *fh = (dfs_fh*)fi->fh;
     assert(fh);
