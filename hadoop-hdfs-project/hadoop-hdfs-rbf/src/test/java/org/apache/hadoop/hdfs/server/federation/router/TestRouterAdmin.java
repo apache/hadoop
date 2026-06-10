@@ -374,7 +374,8 @@ public class TestRouterAdmin {
     assertFalse(res.getStatus());
     assertEquals(2, res.getFailedEntries().size());
     for (RemoveMountTableEntriesResponse.EntryFailure f : res.getFailedEntries()) {
-      assertEquals(RemoveMountTableEntriesResponse.FailureReason.NONEXISTENT_MOUNT_POINT, f.getReason());
+      assertEquals(RemoveMountTableEntriesResponse.FailureReason.NONEXISTENT_MOUNT_POINT,
+          f.getReason());
     }
   }
 

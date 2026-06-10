@@ -52,21 +52,21 @@ public class RemoveMountTableEntriesResponsePBImpl extends RemoveMountTableEntri
   private static FailureReason convert(
       RemoveMountTableEntryFailureReasonProto proto) {
     return switch (proto) {
-      case NONEXISTENT_MOUNT_POINT -> FailureReason.NONEXISTENT_MOUNT_POINT;
-      case DRIVER_FAILURE -> FailureReason.DRIVER_FAILURE;
-      case ACCESS_DENIED -> FailureReason.ACCESS_DENIED;
-      default -> FailureReason.UNKNOWN_FAILURE;
+    case NONEXISTENT_MOUNT_POINT -> FailureReason.NONEXISTENT_MOUNT_POINT;
+    case DRIVER_FAILURE -> FailureReason.DRIVER_FAILURE;
+    case ACCESS_DENIED -> FailureReason.ACCESS_DENIED;
+    default -> FailureReason.UNKNOWN_FAILURE;
     };
   }
 
   private static RemoveMountTableEntryFailureReasonProto convert(
       FailureReason reason) {
     return switch (reason) {
-      case NONEXISTENT_MOUNT_POINT ->
-          RemoveMountTableEntryFailureReasonProto.NONEXISTENT_MOUNT_POINT;
-      case DRIVER_FAILURE -> RemoveMountTableEntryFailureReasonProto.DRIVER_FAILURE;
-      case ACCESS_DENIED -> RemoveMountTableEntryFailureReasonProto.ACCESS_DENIED;
-      default -> RemoveMountTableEntryFailureReasonProto.UNKNOWN_FAILURE;
+    case NONEXISTENT_MOUNT_POINT ->
+        RemoveMountTableEntryFailureReasonProto.NONEXISTENT_MOUNT_POINT;
+    case DRIVER_FAILURE -> RemoveMountTableEntryFailureReasonProto.DRIVER_FAILURE;
+    case ACCESS_DENIED -> RemoveMountTableEntryFailureReasonProto.ACCESS_DENIED;
+    default -> RemoveMountTableEntryFailureReasonProto.UNKNOWN_FAILURE;
     };
   }
 

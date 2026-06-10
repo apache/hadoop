@@ -918,10 +918,10 @@ public class RouterAdmin extends Configured implements Tool {
   private static String getFailureReasonString(
       RemoveMountTableEntriesResponse.FailureReason reason) {
     return switch (reason) {
-      case NONEXISTENT_MOUNT_POINT -> "mount point doesn't exist";
-      case DRIVER_FAILURE -> "driver failed";
-      case ACCESS_DENIED -> "access denied";
-      default -> "unknown failure";
+    case NONEXISTENT_MOUNT_POINT -> "mount point doesn't exist";
+    case DRIVER_FAILURE -> "driver failed";
+    case ACCESS_DENIED -> "access denied";
+    default -> "unknown failure";
     };
   }
 
