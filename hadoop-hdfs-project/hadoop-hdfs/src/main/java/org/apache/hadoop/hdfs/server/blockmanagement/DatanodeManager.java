@@ -346,7 +346,6 @@ public class DatanodeManager {
         DFSConfigKeys.DFS_NAMENODE_AVOID_STALE_DATANODE_FOR_WRITE_KEY,
         DFSConfigKeys.DFS_NAMENODE_AVOID_STALE_DATANODE_FOR_WRITE_DEFAULT);
     this.staleInterval = getStaleIntervalFromConf(conf, heartbeatExpireInterval);
-    refreshHeartbeatRecheckInterval();
     this.ratioUseStaleDataNodesForWrite = conf.getFloat(
         DFSConfigKeys.DFS_NAMENODE_USE_STALE_DATANODE_FOR_WRITE_RATIO_KEY,
         DFSConfigKeys.DFS_NAMENODE_USE_STALE_DATANODE_FOR_WRITE_RATIO_DEFAULT);
@@ -2214,18 +2213,7 @@ public class DatanodeManager {
     this.heartbeatExpireInterval = 2L * recheckInterval + 10 * 1000
         * intervalSeconds;
     this.blockInvalidateLimit = getBlockInvalidateLimit(blockInvalidateLimit);
-    refreshHeartbeatRecheckInterval();
-  }
-
-  public void refreshHeartbeatRecheckInterval() {
-    if (avoidStaleDataNodesForWrite && staleInterval < heartbeatRecheckInterval) {
-      heartbeatManager.setHeartbeatRecheckInterval(staleInterval);
-      LOG.info("Setting heartbeat recheck interval to {} since "
-              + DFSConfigKeys.DFS_NAMENODE_STALE_DATANODE_INTERVAL_KEY + " is less than {}",
-          staleInterval, heartbeatRecheckInterval);
-    } else {
-      heartbeatManager.setHeartbeatRecheckInterval(heartbeatRecheckInterval);
-    }
+    heartbeatManager.setHeartbeatRecheckInterval(heartbeatRecheckInterval);
   }
 
   private int getBlockInvalidateLimitFromHBInterval() {
