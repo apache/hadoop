@@ -67,6 +67,8 @@ class HeartbeatManager implements DatanodeStatistics {
   /** Statistics, which are synchronized by the heartbeat manager lock. */
   private final DatanodeStats stats = new DatanodeStats();
 
+  /** The time period to check for expired datanodes. Can be updated by {@link DatanodeManager}. */
+  private volatile long heartbeatRecheckInterval;
   /** Heartbeat monitor thread. */
   private final Daemon heartbeatThread = new Daemon(new Monitor());
   private final StopWatch heartbeatStopWatch = new StopWatch();
@@ -334,8 +336,7 @@ class HeartbeatManager implements DatanodeStatistics {
   @VisibleForTesting
   boolean shouldAbortHeartbeatCheck(long offset) {
     long elapsed = heartbeatStopWatch.now(TimeUnit.MILLISECONDS);
-    return elapsed + offset > blockManager.getDatanodeManager()
-        .getHeartbeatRecheckIntervalForMonitor();
+    return elapsed + offset > heartbeatRecheckInterval;
   }
 
   /**
@@ -514,6 +515,10 @@ class HeartbeatManager implements DatanodeStatistics {
     }
   }
 
+  public void setHeartbeatRecheckInterval(long interval) {
+    heartbeatRecheckInterval = interval;
+  }
+
   /** Periodically check heartbeat and update block key */
   private class Monitor implements Runnable {
     private long lastHeartbeatCheck;
@@ -525,8 +530,7 @@ class HeartbeatManager implements DatanodeStatistics {
         restartHeartbeatStopWatch();
         try {
           final long now = Time.monotonicNow();
-          if (lastHeartbeatCheck + blockManager.getDatanodeManager()
-              .getHeartbeatRecheckIntervalForMonitor() < now) {
+          if (lastHeartbeatCheck + heartbeatRecheckInterval < now) {
             heartbeatCheck();
             lastHeartbeatCheck = now;
           }

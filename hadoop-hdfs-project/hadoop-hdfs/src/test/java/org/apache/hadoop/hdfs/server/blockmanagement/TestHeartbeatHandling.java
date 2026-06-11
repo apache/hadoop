@@ -264,7 +264,7 @@ public class TestHeartbeatHandling {
     long recheck = 2000;
     conf.setLong(DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, recheck);
     BlockManager bm = new BlockManager(ns, false, conf);
-    HeartbeatManager monitor = new HeartbeatManager(ns, bm, conf);
+    HeartbeatManager monitor = bm.getDatanodeManager().getHeartbeatManager();
     monitor.restartHeartbeatStopWatch();
     assertFalse(monitor.shouldAbortHeartbeatCheck(0));
     // sleep shorter than recheck and verify shouldn't abort
