@@ -165,7 +165,7 @@ public class TestRouterAsyncHandlerQueueOverflow {
           asyncRpcClient.getOrderedNamenodes(ns0, true);
       // Downstream namespace processing this huge request
       asyncRpcClient.invokeMethod(ugi, namenodes, true, protocol, method.getMethod(), params);
-      ThreadPoolExecutor nsExecutor = routerRpcServer.getAsyncExecutorForNamespace(ns0);
+      ThreadPoolExecutor nsExecutor = routerRpcServer.getAsyncExecutorForNamespace(ns0, true);
       // Successfully sent this request downstream, but all subsequent ones will get stuck
       GenericTestUtils.waitFor(() -> nsExecutor.getQueue().isEmpty(), 50, 500);
       GenericTestUtils.waitFor(() -> nsExecutor.getCompletedTaskCount() == 1, 50, 500);

@@ -67,6 +67,24 @@
   </property>
 
   <property>
+    <name>dfs.federation.router.async.rpc.ns.observer.handler.count</name>
+    <value></value>
+    <description>
+      The number of asynchronous handlers for observer namenodes per nameservice, separated by commas,
+      internally separated by colons. The identifier of nameservice is in dfs.nameservices configuration entry.
+      Such as: ns1:count1,ns2:count2,ns3:count3.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.async.rpc.observer.handler.count</name>
+    <value>20</value>
+    <description>
+      The number of async handlers for the router to handle RPC client requests by observer namenodes.
+    </description>
+  </property>
+
+  <property>
     <name>dfs.federation.router.async.rpc.queue.size</name>
     <value>1000</value>
     <description>
@@ -150,7 +168,7 @@
     <name>dfs.federation.router.async.rpc.handler.count</name>
     <value>10</value>
     <description>
-      The number of async handler for the router to handle RPC client requests.
+      The number of async handlers for the router to handle RPC client requests by active namenodes.
     </description>
   </property>
 

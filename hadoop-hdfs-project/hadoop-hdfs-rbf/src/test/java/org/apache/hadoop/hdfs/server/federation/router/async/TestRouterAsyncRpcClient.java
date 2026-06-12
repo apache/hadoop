@@ -23,6 +23,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster;
 import org.apache.hadoop.hdfs.server.federation.MockResolver;
@@ -41,6 +42,7 @@ import org.apache.hadoop.ipc.RetriableException;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.AfterAll;
@@ -52,11 +54,13 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import static org.apache.hadoop.fs.permission.FsAction.ALL;
 import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.NAMENODES;
 import static org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.DEFAULT_HEARTBEAT_INTERVAL_MS;
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_ASYNC_RPC_ENABLE_KEY;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_ASYNC_RPC_HANDLER_COUNT_KEY;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_ASYNC_RPC_RESPONDER_COUNT_KEY;
 import static org.apache.hadoop.hdfs.server.federation.router.async.utils.AsyncUtil.syncReturn;
@@ -109,9 +113,13 @@ public class TestRouterAsyncRpcClient {
         .build();
 
     // Reduce the number of RPC clients threads to overload the Router easy
+    routerConf.setBoolean(DFS_ROUTER_ASYNC_RPC_ENABLE_KEY, true);
     routerConf.setInt(RBFConfigKeys.DFS_ROUTER_CLIENT_THREADS_SIZE, 1);
     routerConf.setInt(DFS_ROUTER_ASYNC_RPC_HANDLER_COUNT_KEY, 1);
     routerConf.setInt(DFS_ROUTER_ASYNC_RPC_RESPONDER_COUNT_KEY, 1);
+    routerConf.setBoolean(RBFConfigKeys.DFS_ROUTER_OBSERVER_READ_DEFAULT_KEY, true);
+    routerConf.set(RBFConfigKeys.DFS_ROUTER_MONITOR_NAMENODE,
+        String.join(",", cluster.getNameservices()));
     // We decrease the DN cache times to make the test faster
     routerConf.setTimeDuration(
         RBFConfigKeys.DN_REPORT_CACHE_EXPIRE, 1, TimeUnit.SECONDS);
@@ -283,6 +291,37 @@ public class TestRouterAsyncRpcClient {
         "Cannot get a connection",
         () -> syncReturn(FileStatus.class));
     assertEquals(1, rpcMetrics.getProxyOpFailureCommunicate());
+  }
+
+  @Test
+  public void testInvokeMethodsSeparateExecutors() throws Exception {
+    ThreadPoolExecutor activeExecutor = routerRpcServer.getAsyncExecutorForNamespace(ns0, false);
+    ThreadPoolExecutor observerExecutor = routerRpcServer.getAsyncExecutorForNamespace(ns0, true);
+    DFSClient routerClient = router.getClient();
+
+    // Send a mkdirs, it should be proxied to active
+    long activeTaskCount = activeExecutor.getCompletedTaskCount();
+    routerClient.mkdirs("/testDir");
+    long finalActiveTaskCount1 = activeTaskCount;
+    GenericTestUtils.waitFor(
+        () -> activeExecutor.getCompletedTaskCount() == finalActiveTaskCount1 + 1, 50, 1000);
+    activeTaskCount = activeExecutor.getCompletedTaskCount();
+
+    // Set a getFileInfo, it should be proxied to observer and not active
+    long observerTaskCount = observerExecutor.getCompletedTaskCount();
+    routerClient.getFileInfo("/testDir");
+    long finalObserverTaskCount1 = observerTaskCount;
+    GenericTestUtils.waitFor(
+        () -> observerExecutor.getCompletedTaskCount() == finalObserverTaskCount1 + 1, 50, 1000);
+    assertEquals(activeTaskCount, activeExecutor.getCompletedTaskCount());
+    observerTaskCount = observerExecutor.getCompletedTaskCount();
+
+    // Send a createFile, it should be proxied twice (once for mkdirs, once for create) to active
+    routerClient.create(testFile, true).close();
+    long finalActiveTaskCount2 = activeTaskCount;
+    GenericTestUtils.waitFor(
+        () -> activeExecutor.getCompletedTaskCount() == finalActiveTaskCount2 + 2, 50, 1000);
+    assertEquals(observerTaskCount, observerExecutor.getCompletedTaskCount());
   }
 
   /**
