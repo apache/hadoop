@@ -340,6 +340,47 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
 
   @MethodSource("getParameters")
   @ParameterizedTest(name = "{index}: legacy-queue-mode={0}")
+  public void testClusterMetricsWithPartitions(boolean pLegacyQueueMode)
+      throws Exception {
+    initTestRMWebServicesForCSWithPartitions(pLegacyQueueMode);
+    WebTarget r = targetWithJsonObject();
+    Response response = r.path("ws").path("v1").path("cluster")
+        .path("metrics").request(MediaType.APPLICATION_JSON).get(Response.class);
+    assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
+        response.getMediaType().toString());
+
+    JSONObject clusterMetrics = response.readEntity(JSONObject.class)
+        .getJSONObject("clusterMetrics");
+    assertEquals(2 * 1024 + 2 * 128 * 1024, clusterMetrics.getInt("totalMB"));
+    assertEquals(2 + 2 * 128, clusterMetrics.getInt("totalVirtualCores"));
+    assertEquals(2 * 1024 + 2 * 128 * 1024, clusterMetrics.getInt("availableMB"));
+    assertEquals(2 + 2 * 128, clusterMetrics.getInt("availableVirtualCores"));
+    assertEquals(0, clusterMetrics.getInt("allocatedMB"));
+    assertEquals(0, clusterMetrics.getInt("allocatedVirtualCores"));
+    assertEquals(0, clusterMetrics.getInt("reservedMB"));
+    assertEquals(0, clusterMetrics.getInt("reservedVirtualCores"));
+    assertEquals(0, clusterMetrics.getInt("pendingMB"));
+    assertEquals(0, clusterMetrics.getInt("pendingVirtualCores"));
+    assertTrue(clusterMetrics.getBoolean("crossPartitionMetricsAvailable"));
+
+    verifyResourceInfo(clusterMetrics.getJSONObject("totalClusterResourcesAcrossPartition"),
+        2 * 1024 + 2 * 128 * 1024, 2 + 2 * 128);
+    verifyResourceInfo(clusterMetrics.getJSONObject("totalUsedResourcesAcrossPartition"),
+        0, 0);
+    verifyResourceInfo(clusterMetrics.getJSONObject("totalReservedResourcesAcrossPartition"),
+        0, 0);
+    assertEquals(0, clusterMetrics.getInt("totalAllocatedContainersAcrossPartition"));
+
+    JSONArray partitionMetrics = clusterMetrics.getJSONArray("partitionClusterMetrics");
+    assertEquals(3, partitionMetrics.length());
+
+    verifyPartitionMetrics(partitionMetrics, DEFAULT_PARTITION, 128 * 1024, 128, 128 * 1024, 128);
+    verifyPartitionMetrics(partitionMetrics, LABEL_LX, 2 * 1024, 2, 2 * 1024, 2);
+    verifyPartitionMetrics(partitionMetrics, LABEL_LY, 128 * 1024, 128, 128 * 1024, 128);
+  }
+
+  @MethodSource("getParameters")
+  @ParameterizedTest(name = "{index}: legacy-queue-mode={0}")
   public void testPartitionInSchedulerActivities(boolean pLegacyQueueMode)
       throws Exception {
     initTestRMWebServicesForCSWithPartitions(pLegacyQueueMode);
@@ -410,6 +451,47 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
         queueCObj.get(0).optString(FN_ACT_ALLOCATION_STATE));
     assertEquals(ActivityDiagnosticConstant.QUEUE_DO_NOT_NEED_MORE_RESOURCE,
         queueCObj.get(0).optString(FN_ACT_DIAGNOSTIC));
+  }
+
+  private void verifyResourceInfo(JSONObject resourceInfo, long memory,
+      int vCores) throws JSONException {
+    assertEquals(memory, resourceInfo.getLong("memory"));
+    assertEquals(vCores, resourceInfo.getInt("vCores"));
+  }
+
+  private void verifyPartitionMetrics(JSONArray partitionMetrics,
+      String partitionName, long totalMB, int totalVirtualCores,
+      long availableMB, int availableVirtualCores) throws JSONException {
+    JSONObject partitionMetric = getPartitionMetrics(
+        partitionMetrics, partitionName);
+    assertEquals(partitionName, partitionMetric.getString("partitionName"));
+    assertEquals(totalMB, partitionMetric.getLong("totalMB"));
+    assertEquals(totalVirtualCores,
+        partitionMetric.getInt("totalVirtualCores"));
+    assertEquals(availableMB, partitionMetric.getLong("availableMB"));
+    assertEquals(availableVirtualCores,
+        partitionMetric.getInt("availableVirtualCores"));
+    assertEquals(0, partitionMetric.getLong("allocatedMB"));
+    assertEquals(0, partitionMetric.getInt("allocatedVirtualCores"));
+    assertEquals(0, partitionMetric.getLong("reservedMB"));
+    assertEquals(0, partitionMetric.getInt("reservedVirtualCores"));
+    assertEquals(0, partitionMetric.getLong("pendingMB"));
+    assertEquals(0, partitionMetric.getInt("pendingVirtualCores"));
+    assertEquals(0, partitionMetric.getInt("containersAllocated"));
+    assertEquals(0, partitionMetric.getInt("containersReserved"));
+    assertEquals(0, partitionMetric.getInt("containersPending"));
+  }
+
+  private JSONObject getPartitionMetrics(JSONArray partitionMetrics,
+      String partitionName) throws JSONException {
+    for (int i = 0; i < partitionMetrics.length(); i++) {
+      JSONObject partitionMetric = partitionMetrics.getJSONObject(i);
+      if (partitionName.equals(partitionMetric.getString("partitionName"))) {
+        return partitionMetric;
+      }
+    }
+    fail("Missing partition metrics for " + partitionName);
+    return null;
   }
 
   private void verifySchedulerInfoXML(Document dom) throws Exception {

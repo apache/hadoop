@@ -1275,6 +1275,18 @@ public class QueueMetrics implements MetricsSource {
   public int getReservedContainers() {
     return reservedContainers.value();
   }
+
+  public int getAllocatedContainers(String partition) {
+    return getPartitionMetrics(partition).getAllocatedContainers();
+  }
+
+  public int getPendingContainers(String partition) {
+    return getPartitionMetrics(partition).getPendingContainers();
+  }
+
+  public int getReservedContainers(String partition) {
+    return getPartitionMetrics(partition).getReservedContainers();
+  }
   
   public int getActiveUsers() {
     return activeUsers.value();
