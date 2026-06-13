@@ -569,8 +569,8 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
       executors.computeIfAbsent(nsId, id -> {
         LinkedBlockingQueue<Runnable> queue = new LinkedBlockingQueue<>(asyncQueueSize);
         return new ThreadPoolExecutor(finalDedicatedHandlers, finalDedicatedHandlers, 0L,
-            TimeUnit.MILLISECONDS, queue,
-            new AsyncThreadFactory("Router Async " + namenodeTypeForLogging + " Handler for " + nsId + " #"));
+            TimeUnit.MILLISECONDS, queue, new AsyncThreadFactory(
+            "Router Async " + namenodeTypeForLogging + " Handler for " + nsId + " #"));
       });
       LOG.info("Assigned {} async handlers with queue size {} to nsId {} for {}", dedicatedHandlers,
           asyncQueueSize, nsId, namenodeTypeForLogging);
