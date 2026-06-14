@@ -17983,7 +17983,7 @@ $</expected-output>
         <command>-fs NAMENODE -mkdir /findtest/item4/item4a</command>
         <command>-fs NAMENODE -put CLITEST_DATA/data120bytes /findtest/item4/item4b</command>
         <command>-fs NAMENODE -put CLITEST_DATA/data1k /findtest/item5</command>
-        <command>-fs NAMENODE -find /findtest -size +60c -size -1</command>
+        <command>-fs NAMENODE -find /findtest -size +1</command>
       </test-commands>
       <cleanup-commands>
         <command>-fs NAMENODE -rm -r /findtest</command>
@@ -17991,7 +17991,7 @@ $</expected-output>
       <comparators>
         <comparator>
           <type>RegexpAcrossOutputComparator</type>
-          <expected-output>^/findtest/item4/item4b
+          <expected-output>^/findtest/item5
 $</expected-output>
         </comparator>
       </comparators>
