@@ -79,10 +79,10 @@ final class Perm extends BaseExpression {
       permission = new FsPermission(arg).toShort();
     } else {
       // the argument is a symbolic mode
-      int shift;
-      Operator operator = null;
-      int value = 0;
       for (String part : arg.split(",")) {
+        int shift;
+        Operator operator = null;
+        int value = 0;
         int position = 0;
         switch (part.charAt(position++)) {
         case 'u':

@@ -222,7 +222,7 @@ public class TestPerm {
 
   // test an invalid perm throws an exception
   @ParameterizedTest
-  @ValueSource(strings = {"t=x,g=w,o=wx", "u^x,g=w,o=wx", "u", "u=v,g=w,o=wx"})
+  @ValueSource(strings = {"t=x,g=w,o=wx", "u^x,g=w,o=wx", "u", "u=v,g=w,o=wx", "u=rwx,g"})
   public void testInvalidPerm(String argument) throws IOException {
     Perm perm = new Perm();
     addArgument(perm, argument);
