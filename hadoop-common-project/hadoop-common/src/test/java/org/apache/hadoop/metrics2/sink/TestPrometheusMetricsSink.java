@@ -31,11 +31,16 @@ import org.apache.hadoop.metrics2.MetricsSystem;
 import org.apache.hadoop.metrics2.annotation.Metric;
 import org.apache.hadoop.metrics2.annotation.Metrics;
 import org.apache.hadoop.metrics2.annotation.Metric.Type;
+import org.apache.hadoop.metrics2.impl.MetricsSystemImpl;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.lib.Interns;
 import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -48,12 +53,41 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 public class TestPrometheusMetricsSink {
 
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestPrometheusMetricsSink.class);
+
+  /**
+   * A dedicated metrics system per test to keep the tests isolated from the
+   * JVM-global {@code DefaultMetricsSystem} singleton. Sharing the singleton
+   * across tests is flaky: if any test leaks registered sources (e.g. when an
+   * assertion fails before the inline cleanup runs), subsequent tests/reruns
+   * fail with errors such as "Metrics source TestMetrics already exists!".
+   */
+  private MetricsSystem metrics;
+
+  @BeforeEach
+  public void setUp() {
+    metrics = new MetricsSystemImpl();
+    metrics.init("test");
+  }
+
+  @AfterEach
+  public void tearDown() {
+    if (metrics != null) {
+      metrics.shutdown();
+      metrics = null;
+    }
+    // Source-name uniqueness is tracked in the JVM-global
+    // DefaultMetricsSystem registry, which the per-test instance above does
+    // not clear. Clear it here so it always runs, even when a test assertion
+    // fails before reaching its cleanup, keeping tests isolated from each
+    // other and from surefire reruns.
+    DefaultMetricsSystem.shutdown();
+  }
+
   @Test
   public void testPublish() throws IOException {
     //GIVEN
-    MetricsSystem metrics = DefaultMetricsSystem.instance();
-
-    metrics.init("test");
     PrometheusMetricsSink sink = new PrometheusMetricsSink();
     metrics.register("Prometheus", "Prometheus", sink);
     TestMetrics testMetrics = metrics
@@ -69,14 +103,10 @@ public class TestPrometheusMetricsSink {
     writer.flush();
 
     //THEN
-    String writtenMetrics = stream.toString(UTF_8.name());
-    System.out.println(writtenMetrics);
+    String writtenMetrics = stream.toString(UTF_8);
+    LOG.debug(writtenMetrics);
     assertTrue(writtenMetrics.contains("test_metrics_num_bucket_create_fails{context=\"dfs\""),
         "The expected metric line is missing from prometheus metrics output");
-
-    metrics.unregisterSource("TestMetrics");
-    metrics.stop();
-    metrics.shutdown();
   }
 
   /**
@@ -86,9 +116,6 @@ public class TestPrometheusMetricsSink {
   @Test
   public void testPublishMultiple() throws IOException {
     //GIVEN
-    MetricsSystem metrics = DefaultMetricsSystem.instance();
-
-    metrics.init("test");
     PrometheusMetricsSink sink = new PrometheusMetricsSink();
     metrics.register("Prometheus", "Prometheus", sink);
     TestMetrics testMetrics1 = metrics
@@ -107,19 +134,14 @@ public class TestPrometheusMetricsSink {
     writer.flush();
 
     //THEN
-    String writtenMetrics = stream.toString(UTF_8.name());
-    System.out.println(writtenMetrics);
+    String writtenMetrics = stream.toString(UTF_8);
+    LOG.debug(writtenMetrics);
     assertTrue(writtenMetrics.contains(
         "test_metrics_num_bucket_create_fails{context=\"dfs\",testtag=\"testTagValue1\""),
         "The expected first metric line is missing from prometheus metrics output");
     assertTrue(writtenMetrics.contains(
         "test_metrics_num_bucket_create_fails{context=\"dfs\",testtag=\"testTagValue2\""),
         "The expected second metric line is missing from prometheus metrics output");
-
-    metrics.unregisterSource("TestMetrics1");
-    metrics.unregisterSource("TestMetrics2");
-    metrics.stop();
-    metrics.shutdown();
   }
 
   /**
@@ -128,9 +150,6 @@ public class TestPrometheusMetricsSink {
   @Test
   public void testPublishFlush() throws IOException {
     //GIVEN
-    MetricsSystem metrics = DefaultMetricsSystem.instance();
-
-    metrics.init("test");
     PrometheusMetricsSink sink = new PrometheusMetricsSink();
     metrics.register("Prometheus", "Prometheus", sink);
     TestMetrics testMetrics = metrics
@@ -154,18 +173,14 @@ public class TestPrometheusMetricsSink {
     writer.flush();
 
     //THEN
-    String writtenMetrics = stream.toString(UTF_8.name());
-    System.out.println(writtenMetrics);
+    String writtenMetrics = stream.toString(UTF_8);
+    LOG.debug(writtenMetrics);
     assertFalse(writtenMetrics.contains(
         "test_metrics_num_bucket_create_fails{context=\"dfs\",testtag=\"testTagValue1\""),
         "The first metric should not exist after flushing");
     assertTrue(writtenMetrics.contains(
         "test_metrics_num_bucket_create_fails{context=\"dfs\",testtag=\"testTagValue2\""),
         "The expected metric line is missing from prometheus metrics output");
-
-    metrics.unregisterSource("TestMetrics");
-    metrics.stop();
-    metrics.shutdown();
   }
 
   @Test
@@ -223,10 +238,6 @@ public class TestPrometheusMetricsSink {
    */
   @Test
   public void testTopMetricsPublish() throws IOException {
-    MetricsSystem metrics = DefaultMetricsSystem.instance();
-
-    metrics.init("test");
-
     //GIVEN
     PrometheusMetricsSink sink = new PrometheusMetricsSink();
 
@@ -248,8 +259,8 @@ public class TestPrometheusMetricsSink {
     writer.flush();
 
     //THEN
-    String writtenMetrics = stream.toString(UTF_8.name());
-    System.out.println(writtenMetrics);
+    String writtenMetrics = stream.toString(UTF_8);
+    LOG.debug(writtenMetrics);
 
     assertThat(writtenMetrics)
         .contains(
@@ -260,9 +271,6 @@ public class TestPrometheusMetricsSink {
             "nn_top_user_op_counts_window_ms_1500000_count{")
         .contains(
             "op=\"rename\",user=\"hadoop/TEST_HOSTNAME.com@HOSTNAME.COM\"");
-
-    metrics.stop();
-    metrics.shutdown();
   }
 
   /**
