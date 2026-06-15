@@ -140,6 +140,9 @@ public class TestRouterAsyncHandlerQueueOverflow {
 
   @AfterAll
   public static void shutdownCluster() {
+    if (asyncRpcClient != null) {
+      asyncRpcClient.shutdown();
+    }
     if (cluster != null) {
       cluster.shutdown();
     }
