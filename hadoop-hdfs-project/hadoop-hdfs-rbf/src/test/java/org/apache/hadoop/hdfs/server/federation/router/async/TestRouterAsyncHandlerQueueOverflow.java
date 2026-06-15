@@ -59,7 +59,6 @@ import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_FAIRNESS_POLICY_CONTROLLER_CLASS;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_MONITOR_NAMENODE;
 import static org.apache.hadoop.hdfs.server.federation.router.async.utils.AsyncUtil.syncReturn;
-import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
 import static org.apache.hadoop.test.MetricsAsserts.assertGauge;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -131,7 +130,7 @@ public class TestRouterAsyncHandlerQueueOverflow {
     spyNamesystem.writeUnlock();
 
     testLatch = new CountDownLatch(1);
-    MiniRouterDFSCluster.RouterContext router = cluster.getRandomRouter();
+    MiniRouterDFSCluster.RouterContext router = cluster.getRouterContext(ns0, NAMENODES[0]);
     routerRpcServer = router.getRouterRpcServer();
     routerRpcServer.initAsyncThreadPools(routerConf);
     asyncRpcClient = new RouterAsyncRpcClient(routerConf, router.getRouter(),
