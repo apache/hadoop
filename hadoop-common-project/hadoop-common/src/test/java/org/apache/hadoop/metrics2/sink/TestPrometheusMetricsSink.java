@@ -31,7 +31,6 @@ import org.apache.hadoop.metrics2.MetricsSystem;
 import org.apache.hadoop.metrics2.annotation.Metric;
 import org.apache.hadoop.metrics2.annotation.Metrics;
 import org.apache.hadoop.metrics2.annotation.Metric.Type;
-import org.apache.hadoop.metrics2.impl.MetricsSystemImpl;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.lib.Interns;
 import org.apache.hadoop.metrics2.lib.MutableCounterLong;
@@ -57,31 +56,27 @@ public class TestPrometheusMetricsSink {
       LoggerFactory.getLogger(TestPrometheusMetricsSink.class);
 
   /**
-   * A dedicated metrics system per test to keep the tests isolated from the
-   * JVM-global {@code DefaultMetricsSystem} singleton. Sharing the singleton
-   * across tests is flaky: if any test leaks registered sources (e.g. when an
-   * assertion fails before the inline cleanup runs), subsequent tests/reruns
-   * fail with errors such as "Metrics source TestMetrics already exists!".
+   * Shared {@code DefaultMetricsSystem} singleton, set up fresh per test.
+   * Each test does exactly one balanced {@code init}/{@code shutdown} so the
+   * system (and the JVM-global source-name registry it owns) is fully reset
+   * between tests. This keeps tests isolated even when an assertion fails
+   * before the test body finishes, avoiding flaky failures such as
+   * "Metrics source TestMetrics already exists!" on later tests or reruns.
    */
   private MetricsSystem metrics;
 
   @BeforeEach
   public void setUp() {
-    metrics = new MetricsSystemImpl();
+    metrics = DefaultMetricsSystem.instance();
     metrics.init("test");
   }
 
   @AfterEach
   public void tearDown() {
-    if (metrics != null) {
-      metrics.shutdown();
-      metrics = null;
-    }
-    // Source-name uniqueness is tracked in the JVM-global
-    // DefaultMetricsSystem registry, which the per-test instance above does
-    // not clear. Clear it here so it always runs, even when a test assertion
-    // fails before reaching its cleanup, keeping tests isolated from each
-    // other and from surefire reruns.
+    // DefaultMetricsSystem.shutdown() shuts down the underlying metrics system
+    // and, once its refCount reaches 0, clears the JVM-global source-name and
+    // MBean-name registries. Running it in @AfterEach guarantees cleanup even
+    // when a test assertion fails before reaching the end of the test body.
     DefaultMetricsSystem.shutdown();
   }
 
