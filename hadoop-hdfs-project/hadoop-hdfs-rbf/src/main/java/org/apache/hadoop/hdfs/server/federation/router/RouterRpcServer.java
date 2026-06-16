@@ -301,6 +301,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
   private final boolean enableAsync;
   private final Map<String, ThreadPoolExecutor> asyncRouterHandlerExecutors =
       new ConcurrentHashMap<>();
+  private boolean useSeparateAsyncRouterOBHandlerExecutors = false;
   private final Map<String, ThreadPoolExecutor> asyncRouterOBHandlerExecutors =
       new ConcurrentHashMap<>();
   private ThreadPoolExecutor routerDefaultAsyncHandlerExecutor;
@@ -543,7 +544,6 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
   private void initAsyncHandlerThreadPools(Configuration configuration, Set<String> allConfiguredNS,
       boolean useObserver, String handlerCountKey, int handlerCountDefault,
       Map<String, Integer> nsAsyncHandlerCount, Map<String, ThreadPoolExecutor> executors) {
-    LOG.info("Initializing asynchronous handler thread pools");
     String namenodeTypeForLogging = useObserver ? "Observer Namenode" : "Active Namenode";
     int asyncQueueSize = configuration.getInt(DFS_ROUTER_ASYNC_RPC_QUEUE_SIZE,
         DFS_ROUTER_ASYNC_RPC_QUEUE_SIZE_DEFAULT);
@@ -551,9 +551,18 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
       throw new IllegalArgumentException("Async queue size must be at least 1");
     }
     int asyncHandlerCountDefault = configuration.getInt(handlerCountKey, handlerCountDefault);
-    if (asyncHandlerCountDefault < 1) {
-      throw new  IllegalArgumentException("Async handler count must be at least 1");
+    // Skip separate observer handlers and let them share with active if not configured
+    if (asyncHandlerCountDefault < 1 && nsAsyncHandlerCount.isEmpty() && useObserver) {
+      LOG.info("Async observer handlers are not configured, skipping...");
+      return;
+    } else {
+      useSeparateAsyncRouterOBHandlerExecutors = true;
     }
+
+    if (asyncHandlerCountDefault < 1) {
+      throw new IllegalArgumentException("Async handler count must be at least 1");
+    }
+    LOG.info("Initializing asynchronous handler thread pools");
     for (String nsId : allConfiguredNS) {
       int dedicatedHandlers = nsAsyncHandlerCount.getOrDefault(nsId, 0);
       if (dedicatedHandlers <= 0) {
@@ -636,7 +645,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
    * @return the corresponding thread pool
    */
   public ThreadPoolExecutor getAsyncExecutorForNamespace(String nsId, boolean useObserver) {
-    ThreadPoolExecutor executor = useObserver ?
+    ThreadPoolExecutor executor = useObserver && useSeparateAsyncRouterOBHandlerExecutors ?
             asyncRouterOBHandlerExecutors.getOrDefault(nsId, routerDefaultAsyncHandlerExecutor) :
             asyncRouterHandlerExecutors.getOrDefault(nsId, routerDefaultAsyncHandlerExecutor);
     if (rpcMonitor != null && executor != null) {

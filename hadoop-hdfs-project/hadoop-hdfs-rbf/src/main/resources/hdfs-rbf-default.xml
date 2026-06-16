@@ -78,9 +78,12 @@
 
   <property>
     <name>dfs.federation.router.async.rpc.observer.handler.count</name>
-    <value>20</value>
+    <value>0</value>
     <description>
       The number of async handlers for the router to handle RPC client requests by observer namenodes.
+      Disabled when set to 0 or negative, and dfs.federation.router.async.rpc.ns.observer.handler.count
+      is empty. When disabled, requests to observer namenodes will use the same handlers defined in
+      dfs.federation.router.async.rpc.handler.count.
     </description>
   </property>
 
@@ -168,7 +171,7 @@
     <name>dfs.federation.router.async.rpc.handler.count</name>
     <value>10</value>
     <description>
-      The number of async handlers for the router to handle RPC client requests by active namenodes.
+      The number of async handlers for the router to handle RPC client requests by namenodes.
     </description>
   </property>
 
