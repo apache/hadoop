@@ -1277,15 +1277,25 @@ public class QueueMetrics implements MetricsSource {
   }
 
   public int getAllocatedContainers(String partition) {
-    return getPartitionMetrics(partition).getAllocatedContainers();
+    QueueMetrics partitionMetrics = lookupPartitionMetrics(partition);
+    return partitionMetrics == null ? 0 : partitionMetrics.getAllocatedContainers();
   }
 
   public int getPendingContainers(String partition) {
-    return getPartitionMetrics(partition).getPendingContainers();
+    QueueMetrics partitionMetrics = lookupPartitionMetrics(partition);
+    return partitionMetrics == null ? 0 : partitionMetrics.getPendingContainers();
   }
 
   public int getReservedContainers(String partition) {
-    return getPartitionMetrics(partition).getReservedContainers();
+    QueueMetrics partitionMetrics = lookupPartitionMetrics(partition);
+    return partitionMetrics == null ? 0 : partitionMetrics.getReservedContainers();
+  }
+
+  private QueueMetrics lookupPartitionMetrics(String partition) {
+    if (partition == null || partition.equals(RMNodeLabelsManager.NO_LABEL)) {
+      partition = DEFAULT_PARTITION;
+    }
+    return getQueueMetrics().get(partition + METRIC_NAME_DELIMITER);
   }
   
   public int getActiveUsers() {
