@@ -2116,6 +2116,31 @@ public class TestRPC extends TestRpcBase {
   }
 
 
+  /**
+   * Test that a Protobuf-only RPC server rejects requests for RpcKinds
+   * that have no registered protocols, without deserializing the payload.
+   */
+  @Test
+  @Timeout(value = 30)
+  public void testUnregisteredRpcKindRejectedWithoutDeserialization()
+      throws Exception {
+    // Standard test server: only RPC_PROTOCOL_BUFFER protocols are registered.
+    RPC.Server server = setupTestServer(conf, 1);
+    try {
+      // RPC_PROTOCOL_BUFFER has registered protocols — must be accepted.
+      assertThat(server.hasRegisteredProtocols(RPC.RpcKind.RPC_PROTOCOL_BUFFER))
+          .as("RPC_PROTOCOL_BUFFER should have registered protocols")
+          .isTrue();
+
+      // RPC_BUILTIN has no protocols registered on this server — must be rejected.
+      assertThat(server.hasRegisteredProtocols(RPC.RpcKind.RPC_BUILTIN))
+          .as("RPC_BUILTIN should have no registered protocols on a Protobuf-only server")
+          .isFalse();
+    } finally {
+      server.stop();
+    }
+  }
+
   public static void main(String[] args) throws Exception {
     new TestRPC().testCallsInternal(conf);
   }

@@ -1,0 +1,230 @@
+#
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+name: s3a integration
+on:
+  workflow_call:
+    inputs:
+      java:
+        required: false
+        type: string
+        default: 17
+      toolchain_branch:
+        required: false
+        type: string
+        description: Branch to use for toolchain image build
+        default: trunk
+      os:
+        required: false
+        type: string
+        description: OS for container to run the build in
+        default: ubuntu_24
+      runner_os:
+        required: false
+        type: string
+        description: OS tag for runner (e.g., Linux, ubuntu-24.04)
+        default: ubuntu_24.04
+
+# Security: Minimal defaults for workflow.
+permissions: {}
+
+concurrency:
+  group: >-
+    cloud-aws
+    ${{ github.workflow }}
+    ${{ github.repository == 'apache/hadoop' && github.run_id || github.ref }}
+    ${{ inputs.java }}
+    ${{ inputs.toolchain_branch }}
+    ${{ inputs.os }}
+  cancel-in-progress: true
+
+env:
+  BUCKET_NAME: hadoop-ci
+
+jobs:
+  precondition:
+    runs-on: ${{ inputs.runner_os }}
+    outputs:
+      build_image_url: ${{ steps.img.outputs.build_image_url }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          # Full fetch so build image URL can be computed for any branch
+          fetch-depth: 0
+      - uses: ./.github/actions/build_image_url
+        id: img
+        with:
+          os: ${{ inputs.os }}
+          branch: ${{ inputs.toolchain_branch }}
+      - name: debug base_image_url
+        run: |
+          echo "precondition url: ${{ steps.img.outputs.build_image_url }}"
+
+  build-image:
+    name: Toolchain image (JDK${{ inputs.java }}, ${{ inputs.os }}-${{ inputs.toolchain_branch }})
+    runs-on: ${{ inputs.runner_os }}
+    needs: [ precondition ]
+    permissions:
+      packages: write
+    outputs:
+      uid: ${{ steps.build_img.outputs.uid }}
+    steps:
+      - name: debug build url
+        run: |
+          echo "Build image URL: ${{ needs.precondition.outputs.build_image_url }}"
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/build_image
+        id: build_img
+        with:
+          branch: ${{ inputs.toolchain_branch }}
+          os: ${{ inputs.os }}
+          build_image_url: ${{ needs.precondition.outputs.build_image_url }}
+
+  test:
+    name: S3A Integration Tests (Java ${{ inputs.java }})
+    needs: [ precondition, build-image ]
+    runs-on: ${{ inputs.runner_os }}
+    permissions:
+      # Security: Minimal permissions for the test runner. Reporting happens in
+      # report_cloud_aws.yml.
+      contents: read
+    services:
+      localstack:
+        image: localstack/localstack:2026.04.2
+        # Despite examples showing a `ports:` section, "You don't need to
+        # configure any ports for service containers. By default, all
+        # containers that are part of the same Docker network expose all ports
+        # to each other, and no ports are exposed outside of the Docker
+        # network." See:
+        # https://docs.github.com/en/actions/tutorials/use-containerized-services/use-docker-service-containers#running-jobs-in-a-container
+        env:
+          SERVICES: s3,kms
+          AWS_DEFAULT_REGION: us-west-2
+          AWS_ACCESS_KEY_ID: test
+          AWS_SECRET_ACCESS_KEY: test
+          LOCALSTACK_AUTH_TOKEN: ${{ secrets.LOCALSTACK_CI_KEY }}
+          LOCALSTACK_HOST: s3.localstack
+
+        # Performance: Disable image's health check (localstack readiness): it typically takes less
+        # than a minute, and the Maven build that runs first takes longer than that.
+        # Also need to specify a dummy health-cmd or the github runner fails.
+        options: >-
+          --health-cmd "exit 0"
+          --health-interval 1s
+          --health-retries 1
+          --network-alias s3.localstack
+
+    container:
+      image: ${{ needs.precondition.outputs.build_image_url }}
+      options: >-
+        --user ${{ needs.build-image.outputs.uid }}
+    env:
+      # mvn verify doesn't return failure exit code due to HADOOP-18040
+      # (which seems incorrect, but let's just override this for now)
+      MAVEN_OPTS: >-
+        -Dmaven.test.failure.ignore=false
+        -Dmaven.repo.local=.m2/repository
+        -Dcheckstyle.skip -Dspotbugs.skip -Denforcer.skip -Drat.skip
+    steps:
+      - uses: actions/checkout@v6
+      # Performance: Caching TODO: We need to create a centralized maven build cache that is
+      # built on trunk. This will always miss on a new PR: Caches can't be
+      # shared between PR branches. PR branches *can* access caches from their
+      # base branch, though. See:
+      # https://docs.github.com/en/actions/reference/workflows-and-actions/dependency-caching#restrictions-for-accessing-a-cache
+      # As-is, first run on a PR always misses. Subsequent cached builds see >100% speedup.
+      - name: Restore build cache
+        id: restore_cache
+        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: |
+            .m2/repository/
+          key: ${{ inputs.os }}-maven-${{ hashFiles('**/pom.xml') }}-${{ inputs.toolchain_branch }}
+          # falls back to less-specific caches if exact key not found
+          restore-keys: |
+            ${{ inputs.os }}-maven-${{ hashFiles('**/pom.xml') }}-
+            ${{ inputs.os }}-maven-
+      - name: Setup JDK ${{ inputs.java }}
+        uses: actions/setup-java@v5
+        with:
+          distribution: zulu
+          java-version: ${{ inputs.java }}
+
+      - name: Maven Build
+        shell: bash
+        run: |
+          mkdir -p .m2/repository
+          ./mvnw -B -T 1C --no-transfer-progress -DskipTests -am -pl hadoop-tools/hadoop-aws \
+            -Dmaven.javadoc.skip -Dcheckstyle.skip -Dspotbugs.skip -Denforcer.skip -Drat.skip install
+
+      - name: Check local maven repository
+        shell: bash
+        run: |
+          if [ -d ".m2/repository" ]; then
+            echo "👍 Maven repository at $(pwd)/.m2/repository"
+          else
+            echo "👎 .m2/repository not found in $(pwd)"
+            exit 1
+          fi
+
+      - name: Save build cache
+        uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        if: ${{ !cancelled() && steps.restore_cache.outputs.cache-hit != 'true' }}
+        with:
+          path: |
+            .m2/repository/
+          key: ${{ steps.restore_cache.outputs.cache-primary-key }}
+
+      - name: Create localstack s3 bucket
+        shell: bash
+        run: |
+          # Use curl to interact with localstack if awslocal is not in the container
+          curl -X PUT "http://localstack:4566/${{ env.BUCKET_NAME }}"
+
+      - name: Register bucket hostname
+        shell: bash
+        run: |
+          # Resolve s3.localstack IP and add entry for virtual-hosted bucket FQDN
+          LSIP=$(getent hosts s3.localstack | awk '{print $1}')
+          echo "Registering ${{ env.BUCKET_NAME }}.s3.localstack as ${LSIP}"
+          echo "${LSIP} ${{ env.BUCKET_NAME }}.s3.localstack" | sudo tee -a /etc/hosts
+
+      - name: S3A Integration Tests
+        shell: bash
+        env:
+          AWS_ACCESS_KEY_ID: test
+          AWS_SECRET_ACCESS_KEY: test
+          AWS_REGION: us-west-2
+          AWS_DEFAULT_REGION: us-west-2
+        run: |
+          cp .github/workflows/templates/auth-keys.xml.tmpl \
+            hadoop-tools/hadoop-aws/src/test/resources/auth-keys.xml
+          ./mvnw verify -B -pl hadoop-tools/hadoop-aws \
+            -Dparallel-tests \
+            -DskipITs=false \
+            -Dtest=none \
+            -Dscale=true \
+            -Dfailsafe.excludesFile=$PWD/.github/gha-tests/hadoop-aws-localstack-excludes.txt
+
+      - name: Upload Test Reports
+        uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: s3a-test-reports-java-${{ inputs.java }}-${{ inputs.os }}
+          path: |
+            **/target/failsafe-reports/*.xml
+            **/target/surefire-reports/*.xml

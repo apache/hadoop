@@ -28,9 +28,10 @@ import java.util.Map;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BatchedRemoteIterator;
@@ -49,10 +50,14 @@ import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntr
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 
 import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.getAdminClient;
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_ASYNC_RPC_ENABLE_KEY;
+import static org.apache.hadoop.hdfs.server.federation.router.async.utils.AsyncUtil.syncReturn;
 import static org.apache.hadoop.test.GenericTestUtils.getMethodName;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+@MethodSource("getParameters")
+@ParameterizedClass
 public class TestRouterListOpenFiles {
   final private static String TEST_DESTINATION_PATH = "/TestRouterListOpenFilesDst";
   final private static int NUM_SUBCLUSTERS = 2;
@@ -63,12 +68,22 @@ public class TestRouterListOpenFiles {
   private static DFSClient client0;
   private static DFSClient client1;
   private static DFSClient routerClient;
+  private final boolean useAsync;
 
-  @BeforeAll
-  public static void setup() throws Exception {
+  public TestRouterListOpenFiles(boolean useAsyncFlag) throws Exception {
+    this.useAsync = useAsyncFlag;
+    setup(useAsyncFlag);
+  }
+
+  public static Object[] getParameters() {
+    return new Object[] {true, false};
+  }
+
+  public void setup(boolean useAsyncFlag) throws Exception {
     cluster = new StateStoreDFSCluster(false, NUM_SUBCLUSTERS,
         MultipleDestinationMountTableResolver.class);
     Configuration conf = new RouterConfigBuilder().stateStore().heartbeat().admin().rpc().build();
+    conf.setBoolean(DFS_ROUTER_ASYNC_RPC_ENABLE_KEY, useAsyncFlag);
     conf.set(RBFConfigKeys.DFS_ROUTER_MONITOR_NAMENODE, "ns0,ns1");
     conf.setBoolean(RBFConfigKeys.MOUNT_TABLE_CACHE_UPDATE, true);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_LIST_OPENFILES_NUM_RESPONSES, BATCH_SIZE);
@@ -120,6 +135,9 @@ public class TestRouterListOpenFiles {
     BatchedRemoteIterator.BatchedEntries<OpenFileEntry> result =
         routerProtocol.listOpenFiles(0, EnumSet.of(OpenFilesIterator.OpenFilesType.ALL_OPEN_FILES),
             testPath);
+    if (useAsync) {
+      result = syncReturn(BatchedRemoteIterator.BatchedEntries.class);
+    }
     // Should list only the entry on ns0
     assertEquals(1, result.size());
     assertEquals(testPath + "/file0", result.get(0).getFilePath());
@@ -138,6 +156,9 @@ public class TestRouterListOpenFiles {
     BatchedRemoteIterator.BatchedEntries<OpenFileEntry> result =
         routerProtocol.listOpenFiles(0, EnumSet.of(OpenFilesIterator.OpenFilesType.ALL_OPEN_FILES),
             testPath);
+    if (useAsync) {
+      result = syncReturn(BatchedRemoteIterator.BatchedEntries.class);
+    }
     // Should list both entries on ns0 and ns1
     assertEquals(2, result.size());
     assertEquals(testPath + "/file0", result.get(0).getFilePath());
@@ -157,6 +178,9 @@ public class TestRouterListOpenFiles {
     result =
         routerProtocol.listOpenFiles(0, EnumSet.of(OpenFilesIterator.OpenFilesType.ALL_OPEN_FILES),
             testPath);
+    if (useAsync) {
+      result = syncReturn(BatchedRemoteIterator.BatchedEntries.class);
+    }
     // Should list one file only
     assertEquals(1, result.size());
     assertEquals(routerClient.getFileInfo(TEST_DESTINATION_PATH + "/file2").getFileId(),

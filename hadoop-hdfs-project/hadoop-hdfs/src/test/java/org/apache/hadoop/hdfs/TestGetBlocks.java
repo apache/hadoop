@@ -60,6 +60,7 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.test.LambdaTestUtils;
 
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -67,6 +68,7 @@ import org.slf4j.LoggerFactory;
 /**
  * This class tests if getblocks request works correctly.
  */
+@Tag("slow")
 public class TestGetBlocks {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestBlockManager.class);

@@ -69,6 +69,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
 import org.junit.jupiter.api.Timeout;
@@ -80,6 +81,7 @@ import org.slf4j.LoggerFactory;
  * This class tests the decommissioning of datanode with striped blocks.
  */
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
+@Tag("slow")
 public class TestDecommissionWithStriped {
   private static final Logger LOG = LoggerFactory
       .getLogger(TestDecommissionWithStriped.class);

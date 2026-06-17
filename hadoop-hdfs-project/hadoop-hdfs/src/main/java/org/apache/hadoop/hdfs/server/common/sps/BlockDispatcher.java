@@ -27,16 +27,19 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.InetSocketAddress;
 import java.net.Socket;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.datatransfer.BlockPinningException;
 import org.apache.hadoop.hdfs.protocol.datatransfer.DataTransferProtoUtil;
 import org.apache.hadoop.hdfs.protocol.datatransfer.IOStreamPair;
+import org.apache.hadoop.hdfs.protocol.datatransfer.InvalidEncryptionKeyException;
 import org.apache.hadoop.hdfs.protocol.datatransfer.Sender;
 import org.apache.hadoop.hdfs.protocol.datatransfer.sasl.DataEncryptionKeyFactory;
 import org.apache.hadoop.hdfs.protocol.datatransfer.sasl.SaslDataTransferClient;
@@ -110,25 +113,42 @@ public class BlockDispatcher {
     DataOutputStream out = null;
     DataInputStream in = null;
     try {
-      NetUtils.connect(sock,
-          NetUtils.createSocketAddr(
-              blkMovingInfo.getTarget().getXferAddr(connectToDnViaHostname)),
-          socketTimeout);
-      // Set read timeout so that it doesn't hang forever against
-      // unresponsive nodes. Datanode normally sends IN_PROGRESS response
-      // twice within the client read timeout period (every 30 seconds by
-      // default). Here, we make it give up after "socketTimeout * 5" period
-      // of no response.
-      sock.setSoTimeout(socketTimeout * 5);
-      sock.setKeepAlive(true);
-      OutputStream unbufOut = sock.getOutputStream();
-      InputStream unbufIn = sock.getInputStream();
-      LOG.debug("Connecting to datanode {}", blkMovingInfo.getTarget());
+      InetSocketAddress targetAddr = NetUtils.createSocketAddr(
+          blkMovingInfo.getTarget().getXferAddr(connectToDnViaHostname));
+      OutputStream unbufOut;
+      InputStream unbufIn;
+      int encryptionKeyRetryCount = 0;
+      while (true) {
+        try {
+          NetUtils.connect(sock, targetAddr, socketTimeout);
+          // Set read timeout so that it doesn't hang forever against
+          // unresponsive nodes. Datanode normally sends IN_PROGRESS response
+          // twice within the client read timeout period (every 30 seconds by
+          // default). Here, we make it give up after "socketTimeout * 5"
+          // period of no response.
+          sock.setSoTimeout(socketTimeout * 5);
+          sock.setKeepAlive(true);
+          unbufOut = sock.getOutputStream();
+          unbufIn = sock.getInputStream();
+          LOG.debug("Connecting to datanode {}", blkMovingInfo.getTarget());
 
-      IOStreamPair saslStreams = saslClient.socketSend(sock, unbufOut,
-          unbufIn, km, accessToken, blkMovingInfo.getTarget());
-      unbufOut = saslStreams.out;
-      unbufIn = saslStreams.in;
+          IOStreamPair saslStreams = saslClient.socketSend(sock, unbufOut,
+              unbufIn, km, accessToken, blkMovingInfo.getTarget());
+          unbufOut = saslStreams.out;
+          unbufIn = saslStreams.in;
+          break;
+        } catch (InvalidEncryptionKeyException e) {
+          IOUtils.closeSocket(sock);
+          if (++encryptionKeyRetryCount > 1) {
+            throw e;
+          }
+          LOG.info("Retrying connection to {} for block {} after "
+              + "InvalidEncryptionKeyException",
+              blkMovingInfo.getTarget(), blkMovingInfo.getBlock(), e);
+          km.clearDataEncryptionKey();
+          sock = newSocket();
+        }
+      }
       out = new DataOutputStream(
           new BufferedOutputStream(unbufOut, ioFileBufferSize));
       in = new DataInputStream(
@@ -174,5 +194,10 @@ public class BlockDispatcher {
     }
     String logInfo = "reportedBlock move is failed";
     DataTransferProtoUtil.checkBlockOpStatus(response, logInfo);
+  }
+
+  @VisibleForTesting
+  Socket newSocket() {
+    return new Socket();
   }
 }

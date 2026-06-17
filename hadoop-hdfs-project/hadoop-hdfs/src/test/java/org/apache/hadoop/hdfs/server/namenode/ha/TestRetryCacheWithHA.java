@@ -93,9 +93,11 @@ import org.apache.hadoop.util.LightWeightCache;
 import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
+@Tag("slow")
 public class TestRetryCacheWithHA {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestRetryCacheWithHA.class);

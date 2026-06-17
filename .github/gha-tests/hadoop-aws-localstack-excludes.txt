@@ -1,0 +1,79 @@
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+
+# Initial stab at excluding tests that won't run in our
+# CI container environment with Localstack mocks of AWS services.
+
+# TODO see if we can enable any of these...
+
+# tests that depend on public S3 buckets
+**/org/apache/hadoop/fs/s3a/scale/ITestS3AInputStreamPerformance.java
+**/org/apache/hadoop/fs/s3a/ITestS3ARequesterPays.java
+**/org/apache/hadoop/fs/s3a/s3guard/ITestS3GuardTool.java
+**/org/apache/hadoop/fs/s3a/tools/ITestMarkerTool.java
+**/ITestS3AAnalyticsAcceleratorStreamReading.java
+**/ITestS3AEndpointRegion.java
+
+
+# Tests requiring IAM roles / STS
+# We should be able to re-enable some of these. See:
+# https://docs.localstack.cloud/aws/services/sts/
+**/org/apache/hadoop/fs/s3a/auth/ITestAssumeRole.java
+**/org/apache/hadoop/fs/s3a/auth/delegation/ITestDelegatedMRJob.java
+**/org/apache/hadoop/fs/s3a/auth/delegation/ITestSessionDelegationInFilesystem.java
+**/org/apache/hadoop/fs/s3a/auth/delegation/ITestSessionDelegationTokens.java
+**/org/apache/hadoop/fs/s3a/ITestS3ATemporaryCredentials.java
+
+
+# failures that need to be investigated
+
+# Two methods fail: 1. testUpdateDeepDirectoryStructureNoChange():
+# AssertionFailedError: Files Skipped value 0 too below minimum 1 ==>
+#   expected: <true> but was: <false>
+# 2. testUpdateDeepDirectoryStructureToRemote():
+# AssertionFailedError: Files Copied value 2 above maximum 1 ==> expected: <true> but was: <false>
+**/org/apache/hadoop/fs/contract/s3a/ITestS3AContractDistCp.java
+
+# A number of failures with vectored read tests
+**/org/apache/hadoop/fs/contract/s3a/ITestS3AContractVectoredRead.java
+
+# Access key errors:
+# (test case)->AbstractS3ATestBase.setup:111->AbstractFSContractTestBase.setup:197->AbstractFSContractTestBase.mkdirs:355
+# » AccessDenied s3a://hadoop-ci/job-00/test: getFileStatus on
+# s3a://hadoop-ci/job-00/test:
+# software.amazon.awssdk.services.s3.model.S3Exception: The AWS Access Key Id you
+# provided does not exist in our records. (Service: S3, Status Code: 403
+**/org/apache/hadoop/fs/s3a/ITestS3APrefetchingCacheFiles.java
+**/org/apache/hadoop/fs/s3a/ITestS3AFailureHandling.java
+
+# Localstack issue (guessing lack of persistence of upload parts across sessions)
+**/org/apache/hadoop/fs/s3a/commit/ITestUploadRecovery.java
+**/org/apache/hadoop/fs/contract/s3a/ITestS3AContractMultipartUploader.java
+
+# Error:    ITestConnectionTimeouts.testObjectUploadTimeouts:258 Expected a
+# java.lang.Exception to be thrown, but got the result: : "01234567890123456789..."
+**/org/apache/hadoop/fs/s3a/impl/ITestConnectionTimeouts.java
+
+# ITestS3AAWSCredentialsProvider.testBadCredentials:183->lambda$testBadCredentials$0:184
+# ->createFailingFS:160 Expected exception - got S3AFileSystem{
+**/org/apache/hadoop/fs/s3a/ITestS3AAWSCredentialsProvider.java
+
+# testSeeksWithLruEviction java.util.concurrent.TimeoutException: timed out
+# after 180 seconds
+**/org/apache/hadoop/fs/s3a/ITestS3APrefetchingLruEviction.java

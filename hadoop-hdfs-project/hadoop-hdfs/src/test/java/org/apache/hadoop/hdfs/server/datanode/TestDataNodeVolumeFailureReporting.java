@@ -59,12 +59,14 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.slf4j.event.Level;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 /**
  * Test reporting of DN volume failure counts and metrics.
  */
 @Timeout(120)
+@Tag("slow")
 public class TestDataNodeVolumeFailureReporting {
 
   private static final Logger LOG =

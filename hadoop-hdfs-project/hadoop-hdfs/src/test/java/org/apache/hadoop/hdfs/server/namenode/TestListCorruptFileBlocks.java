@@ -46,6 +46,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.util.StringUtils;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
@@ -58,6 +59,7 @@ import org.slf4j.Logger;
  * with a block # from a previous call and validate that the subsequent
  * blocks/files are also returned.
  */
+@Tag("slow")
 public class TestListCorruptFileBlocks {
   static final Logger LOG = NameNode.stateChangeLog;
 

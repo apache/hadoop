@@ -192,6 +192,7 @@ import org.apache.hadoop.hdfs.protocol.ReconfigurationProtocol;
 import org.apache.hadoop.hdfs.protocol.datatransfer.BlockConstructionStage;
 import org.apache.hadoop.hdfs.protocol.datatransfer.DataTransferProtocol;
 import org.apache.hadoop.hdfs.protocol.datatransfer.IOStreamPair;
+import org.apache.hadoop.hdfs.protocol.datatransfer.InvalidEncryptionKeyException;
 import org.apache.hadoop.hdfs.protocol.datatransfer.PipelineAck;
 import org.apache.hadoop.hdfs.protocol.datatransfer.Sender;
 import org.apache.hadoop.hdfs.protocol.datatransfer.sasl.DataEncryptionKeyFactory;
@@ -3063,10 +3064,6 @@ public class DataNode extends ReconfigurableBase
         final String dnAddr = targets[0].getXferAddr(connectToDnViaHostname);
         InetSocketAddress curTarget = NetUtils.createSocketAddr(dnAddr);
         LOG.debug("Connecting to datanode {}", dnAddr);
-        sock = newSocket();
-        NetUtils.connect(sock, curTarget, dnConf.socketTimeout);
-        sock.setTcpNoDelay(dnConf.getDataTransferServerTcpNoDelay());
-        sock.setSoTimeout(targets.length * dnConf.socketTimeout);
 
         //
         // Header info
@@ -3077,15 +3074,38 @@ public class DataNode extends ReconfigurableBase
 
         long writeTimeout = dnConf.socketWriteTimeout + 
                             HdfsConstants.WRITE_TIMEOUT_EXTENSION * (targets.length-1);
-        OutputStream unbufOut = NetUtils.getOutputStream(sock, writeTimeout);
-        InputStream unbufIn = NetUtils.getInputStream(sock);
         DataEncryptionKeyFactory keyFactory =
           getDataEncryptionKeyFactoryForBlock(b);
-        IOStreamPair saslStreams = saslClient.socketSend(sock, unbufOut,
-          unbufIn, keyFactory, accessToken, bpReg);
-        unbufOut = saslStreams.out;
-        unbufIn = saslStreams.in;
-        
+        OutputStream unbufOut;
+        InputStream unbufIn;
+        int encryptionKeyRetryCount = 0;
+        while (true) {
+          try {
+            sock = newSocket();
+            NetUtils.connect(sock, curTarget, dnConf.socketTimeout);
+            sock.setTcpNoDelay(dnConf.getDataTransferServerTcpNoDelay());
+            sock.setSoTimeout(targets.length * dnConf.socketTimeout);
+
+            unbufOut = NetUtils.getOutputStream(sock, writeTimeout);
+            unbufIn = NetUtils.getInputStream(sock);
+            IOStreamPair saslStreams = saslClient.socketSend(sock, unbufOut,
+                unbufIn, keyFactory, accessToken, bpReg);
+            unbufOut = saslStreams.out;
+            unbufIn = saslStreams.in;
+            break;
+          } catch (InvalidEncryptionKeyException e) {
+            IOUtils.closeSocket(sock);
+            sock = null;
+            if (!prepareRetryAfterInvalidEncryptionKey(keyFactory,
+                ++encryptionKeyRetryCount)) {
+              throw e;
+            }
+            LOG.info("Retrying connection to {} for block {} after "
+                + "InvalidEncryptionKeyException",
+                curTarget, b, e);
+          }
+        }
+
         out = new DataOutputStream(new BufferedOutputStream(unbufOut,
             DFSUtilClient.getSmallBufferSize(getConf())));
         in = new DataInputStream(unbufIn);
@@ -3147,6 +3167,15 @@ public class DataNode extends ReconfigurableBase
     public String toString() {
       return "DataTransfer " + b + " to " + Arrays.asList(targets);
     }
+  }
+
+  private static boolean prepareRetryAfterInvalidEncryptionKey(
+      DataEncryptionKeyFactory keyFactory, int retryCount) {
+    if (retryCount > 1) {
+      return false;
+    }
+    keyFactory.clearDataEncryptionKey();
+    return true;
   }
 
   /***

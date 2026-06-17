@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,19 +16,17 @@
  * limitations under the License.
  */
 
+/**
+ * This package contains the protobuf implementation of the MR
+ * TaskUmbilicalProtocol which was originally
+ * a {@code WritableRPC} protocol.
+ * To marshall some of the complex MR datatypes, such as {@code Task},
+ * some objects are serialized to bytes
+ * and send in the RPC messages as binary objects, rather than fully
+ * defined in protobuf messages.
+ */
 
-#ifndef ORG_APACHE_HADOOP_IO_COMPRESS_ZSTD_ZSTD_H
-#define ORG_APACHE_HADOOP_IO_COMPRESS_ZSTD_ZSTD_H
+@InterfaceAudience.Private
+package org.apache.hadoop.mapred.protocolPB;
 
-#include "org_apache_hadoop.h"
-
-#ifdef UNIX
-#include <dlfcn.h>
-#endif
-
-#include <jni.h>
-#include <zstd.h>
-#include <stddef.h>
-
-
-#endif //ORG_APACHE_HADOOP_IO_COMPRESS_ZSTD_ZSTD_H
+import org.apache.hadoop.classification.InterfaceAudience;

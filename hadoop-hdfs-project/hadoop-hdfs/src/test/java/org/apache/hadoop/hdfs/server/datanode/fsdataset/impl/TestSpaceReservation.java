@@ -54,6 +54,7 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Daemon;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.mockito.Mockito;
@@ -74,6 +75,7 @@ import javax.management.ObjectName;
  * Ensure that the DN reserves disk space equivalent to a full block for
  * replica being written (RBW) & Replica being copied from another DN.
  */
+@Tag("slow")
 public class TestSpaceReservation {
   static final Logger LOG = LoggerFactory.getLogger(TestSpaceReservation.class);
 

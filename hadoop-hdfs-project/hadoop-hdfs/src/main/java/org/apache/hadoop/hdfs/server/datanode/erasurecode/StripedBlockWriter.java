@@ -31,6 +31,7 @@ import org.apache.hadoop.hdfs.protocol.datatransfer.Sender;
 import org.apache.hadoop.hdfs.protocol.datatransfer.sasl.DataEncryptionKeyFactory;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.server.datanode.DataNodeFaultInjector;
 import org.apache.hadoop.io.ByteBufferPool;
 import org.apache.hadoop.io.ElasticByteBufferPool;
 import org.apache.hadoop.io.IOUtils;
@@ -94,7 +95,10 @@ class StripedBlockWriter {
   }
 
   void freeTargetBuffer() {
-    targetBuffer = null;
+    if (targetBuffer != null) {
+      stripedWriter.getReconstructor().freeBuffer(targetBuffer);
+      targetBuffer = null;
+    }
   }
 
   /**
@@ -115,6 +119,7 @@ class StripedBlockWriter {
       socket.setTcpNoDelay(
           datanode.getDnConf().getDataTransferServerTcpNoDelay());
       socket.setSoTimeout(datanode.getDnConf().getSocketTimeout());
+      DataNodeFaultInjector.get().stripedBlockWriterInit(targetBuffer);
 
       Token<BlockTokenIdentifier> blockToken =
           datanode.getBlockAccessToken(block,
@@ -151,6 +156,7 @@ class StripedBlockWriter {
       success = true;
     } finally {
       if (!success) {
+        freeTargetBuffer();
         IOUtils.closeStream(out);
         IOUtils.closeStream(in);
         IOUtils.closeStream(socket);

@@ -22,39 +22,41 @@ import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.HttpURLConnection;
+import java.nio.ByteBuffer;
+import java.util.List;
 import java.util.UUID;
+import java.util.function.IntFunction;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.CanUnbuffer;
 import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.fs.FSInputStream;
+import org.apache.hadoop.fs.FileRange;
+import org.apache.hadoop.fs.FileSystem.Statistics;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
+import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.constants.ReadType;
-import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
-import org.apache.hadoop.fs.impl.BackReference;
-import org.apache.hadoop.util.Preconditions;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import org.apache.hadoop.fs.FileSystem.Statistics;
-import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
+import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
 import org.apache.hadoop.fs.azurebfs.security.ContextEncryptionAdapter;
 import org.apache.hadoop.fs.azurebfs.utils.CachedSASToken;
 import org.apache.hadoop.fs.azurebfs.utils.Listener;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
+import org.apache.hadoop.fs.impl.BackReference;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
+import org.apache.hadoop.util.Preconditions;
 
 import static java.lang.Math.max;
 import static java.lang.Math.min;
-
 import static org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore.extractEtagHeader;
 import static org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore.getRelativePath;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_KB;
@@ -62,8 +64,6 @@ import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.S
 import static org.apache.hadoop.fs.azurebfs.constants.InternalConstants.CAPABILITY_SAFE_READAHEAD;
 import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.INVALID_RANGE;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_READ_ON_DIRECTORY;
-import static org.apache.hadoop.io.Sizes.S_128K;
-import static org.apache.hadoop.io.Sizes.S_2M;
 import static org.apache.hadoop.util.StringUtils.toLowerCase;
 
 /**
@@ -133,6 +133,7 @@ public abstract class AbfsInputStream extends FSInputStream implements CanUnbuff
   private final AbfsInputStreamContext context;
   private IOStatistics ioStatistics;
   private String filePathIdentifier;
+
   /**
    * This is the actual position within the object, used by
    * lazy seek to decide whether to seek on the next read or not.
@@ -207,7 +208,7 @@ public abstract class AbfsInputStream extends FSInputStream implements CanUnbuff
           readAheadBlockSize, client.getAbfsConfiguration());
       readBufferManager = ReadBufferManagerV2.getBufferManager(client.getAbfsCounters());
     } else {
-      ReadBufferManagerV1.setReadBufferManagerConfigs(readAheadBlockSize);
+      ReadBufferManagerV1.setReadBufferManagerConfigs(readAheadBlockSize, client.getAbfsConfiguration());
       readBufferManager = ReadBufferManagerV1.getBufferManager();
     }
 
@@ -226,6 +227,14 @@ public abstract class AbfsInputStream extends FSInputStream implements CanUnbuff
 
   private String createInputStreamId() {
     return StringUtils.right(UUID.randomUUID().toString(), STREAM_ID_LEN);
+  }
+
+  /**
+   * Retrieves the handler responsible for processing vectored read requests.
+   * @return the {@link VectoredReadHandler} instance associated with the buffer manager.
+   */
+  VectoredReadHandler getVectoredReadHandler() {
+    return getReadBufferManager().getVectoredReadHandler();
   }
 
   @Override
@@ -342,6 +351,19 @@ public abstract class AbfsInputStream extends FSInputStream implements CanUnbuff
       }
     } while (lastReadBytes > 0);
     return totalReadBytes > 0 ? totalReadBytes : lastReadBytes;
+  }
+
+  /**
+   * {@inheritDoc}
+   * Vectored read implementation for AbfsInputStream.
+   *
+   * @param ranges the byte ranges to read.
+   * @param allocate the function to allocate ByteBuffer.
+   */
+  @Override
+  public void readVectored(List<? extends FileRange> ranges,
+      IntFunction<ByteBuffer> allocate) throws EOFException {
+    getVectoredReadHandler().readVectored(this, ranges, allocate);
   }
 
   private boolean shouldReadFully() {
@@ -910,7 +932,10 @@ public abstract class AbfsInputStream extends FSInputStream implements CanUnbuff
 
   @Override
   public boolean hasCapability(String capability) {
-    return StreamCapabilities.UNBUFFER.equals(toLowerCase(capability));
+    return switch (toLowerCase(capability)) {
+      case StreamCapabilities.UNBUFFER, StreamCapabilities.VECTOREDIO -> true;
+      default -> false;
+    };
   }
 
   /**
@@ -1184,7 +1209,7 @@ public abstract class AbfsInputStream extends FSInputStream implements CanUnbuff
    */
   @Override
   public int minSeekForVectorReads() {
-    return S_128K;
+    return client.getAbfsConfiguration().getMinSeekForVectoredReads();
   }
 
   /**
@@ -1193,7 +1218,7 @@ public abstract class AbfsInputStream extends FSInputStream implements CanUnbuff
    */
   @Override
   public int maxReadSizeForVectorReads() {
-    return S_2M;
+    return client.getAbfsConfiguration().getMaxReadSizeForVectoredReads();
   }
 
   /**

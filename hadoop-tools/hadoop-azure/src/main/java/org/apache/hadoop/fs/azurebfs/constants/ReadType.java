@@ -49,6 +49,16 @@ public enum ReadType {
    */
   SMALLFILE_READ("SR"),
   /**
+   * Read multiple disjoint ranges from the storage service using vectored reads.
+   * Used to coalesce and execute non-contiguous reads efficiently.
+   */
+  VECTORED_READ("VR"),
+  /**
+   * Performs a vectored direct read by fetching multiple non-contiguous
+   * ranges in a single operation.
+   */
+  VECTORED_DIRECT_READ("VDR"),
+  /**
    * Reads from Random Input Stream with read ahead up to readAheadRange
    */
   RANDOM_READ("RR"),

@@ -22,7 +22,6 @@ import static org.apache.hadoop.util.Time.monotonicNow;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URL;
-import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -31,7 +30,6 @@ import java.util.concurrent.*;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.ha.ServiceFailedException;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.server.namenode.CheckpointConf;
@@ -60,7 +58,7 @@ import org.slf4j.LoggerFactory;
  * Thread which runs inside the NN when it's in Standby state,
  * periodically waking up to take a checkpoint of the namespace.
  * When it takes a checkpoint, it saves it to its local
- * storage and then uploads it to the remote NameNode.
+ * storage and then uploads it to remote NameNodes.
  */
 @InterfaceAudience.Private
 public class StandbyCheckpointer {
@@ -73,7 +71,7 @@ public class StandbyCheckpointer {
   private long lastCheckpointTime;
   private final CheckpointerThread thread;
   private final ThreadFactory uploadThreadFactory;
-  private List<URL> activeNNAddresses;
+  private List<URL> remoteNNAddresses;
   private URL myNNAddress;
 
   private final Object cancelLock = new Object();
@@ -96,7 +94,7 @@ public class StandbyCheckpointer {
         .setNameFormat("TransferFsImageUpload-%d").build();
     setNameNodeAddresses(conf);
     this.checkpointReceivers = new HashMap<>();
-    for (URL address : activeNNAddresses) {
+    for (URL address : remoteNNAddresses) {
       this.checkpointReceivers.put(address.toString(),
           new CheckpointReceiverEntry());
     }
@@ -129,7 +127,7 @@ public class StandbyCheckpointer {
   }
 
   /**
-   * Determine the address of the NN we are checkpointing
+   * Determine the addresses of the NNs we are checkpointing
    * as well as our own HTTP address from the configuration.
    * @throws IOException 
    */
@@ -137,17 +135,17 @@ public class StandbyCheckpointer {
     // Look up our own address.
     myNNAddress = getHttpAddress(conf);
 
-    // Look up the active node's address
-    List<Configuration> confForActive = HAUtil.getConfForOtherNodes(conf);
-    activeNNAddresses = new ArrayList<URL>(confForActive.size());
-    for (Configuration activeConf : confForActive) {
-      URL activeNNAddress = getHttpAddress(activeConf);
+    // Look up the other nodes' addresses
+    List<Configuration> confForOtherNodes = HAUtil.getConfForOtherNodes(conf);
+    remoteNNAddresses = new ArrayList<>(confForOtherNodes.size());
+    for (Configuration remoteConf : confForOtherNodes) {
+      URL remoteNNAddress = getHttpAddress(remoteConf);
 
-      // sanity check each possible active NN
-      Preconditions.checkArgument(checkAddress(activeNNAddress),
-          "Bad address for active NN: %s", activeNNAddress);
+      // sanity check each possible remote NN
+      Preconditions.checkArgument(checkAddress(remoteNNAddress),
+          "Bad address for remote NN: %s", remoteNNAddress);
 
-      activeNNAddresses.add(activeNNAddress);
+      remoteNNAddresses.add(remoteNNAddress);
     }
 
     // Sanity-check.
@@ -172,8 +170,8 @@ public class StandbyCheckpointer {
 
   public void start() {
     LOG.info("Starting standby checkpoint thread...\n" +
-        "Checkpointing active NN to possible NNs: {}\n" +
-        "Serving checkpoints at {}", activeNNAddresses, myNNAddress);
+        "Uploading checkpoints to remote NNs: {}\n" +
+        "Serving checkpoints at {}", remoteNNAddresses, myNNAddress);
     thread.start();
   }
   
@@ -184,7 +182,7 @@ public class StandbyCheckpointer {
     try {
       thread.join();
     } catch (InterruptedException e) {
-      LOG.warn("Edit log tailer thread exited with an exception");
+      LOG.warn("Checkpointer thread exited with an exception");
       throw new IOException(e);
     }
   }
@@ -245,23 +243,23 @@ public class StandbyCheckpointer {
       namesystem.cpUnlock();
     }
 
-    // Upload the saved checkpoint back to the active
+    // Upload the saved checkpoint back to remote NNs
     // Do this in a separate thread to avoid blocking transition to active, but don't allow more
     // than the expected number of tasks to run or queue up
     // See HDFS-4816
-    int poolSize = checkpointConf.isParallelUploadEnabled() ? activeNNAddresses.size() : 0;
-    ExecutorService executor = new ThreadPoolExecutor(poolSize, activeNNAddresses.size(), 100,
-        TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>(activeNNAddresses.size()),
-        uploadThreadFactory);
+    int poolSize = checkpointConf.isParallelUploadEnabled() ? remoteNNAddresses.size() : 0;
+    ExecutorService executor =
+        new ThreadPoolExecutor(poolSize, remoteNNAddresses.size(), 100, TimeUnit.MILLISECONDS,
+            new LinkedBlockingQueue<>(remoteNNAddresses.size()), uploadThreadFactory);
     // for right now, just match the upload to the nn address by convention. There is no need to
     // directly tie them together by adding a pair class.
     HashMap<String, Future<TransferFsImage.TransferResult>> uploads =
         new HashMap<>();
-    for (final URL activeNNAddress : activeNNAddresses) {
+    for (final URL remoteNNAddress : remoteNNAddresses) {
       // Upload image if at least 1 of 2 following conditions met:
       // 1. has been quiet for long enough, try to contact the node.
       // 2. this standby IS the primary checkpointer of target NN.
-      String addressString = activeNNAddress.toString();
+      String addressString = remoteNNAddress.toString();
       assert checkpointReceivers.containsKey(addressString);
       CheckpointReceiverEntry receiverEntry =
           checkpointReceivers.get(addressString);
@@ -272,15 +270,10 @@ public class StandbyCheckpointer {
           secsSinceLastUpload >= checkpointConf.getQuietPeriod();
       if (shouldUpload) {
         Future<TransferFsImage.TransferResult> upload =
-            executor.submit(new Callable<TransferFsImage.TransferResult>() {
-              @Override
-              public TransferFsImage.TransferResult call()
-                  throws IOException, InterruptedException {
-                CheckpointFaultInjector.getInstance().duringUploadInProgess();
-                return TransferFsImage.uploadImageFromStorage(activeNNAddress,
-                    conf, namesystem.getFSImage().getStorage(), imageType, txid,
-                    canceler);
-              }
+            executor.submit(() -> {
+              CheckpointFaultInjector.getInstance().duringUploadInProgess();
+              return TransferFsImage.uploadImageFromStorage(remoteNNAddress, conf,
+                  namesystem.getFSImage().getStorage(), imageType, txid, canceler);
             });
         uploads.put(addressString, upload);
       }
@@ -344,7 +337,7 @@ public class StandbyCheckpointer {
       throw ie;
     }
 
-    if (ioes.size() > activeNNAddresses.size() / 2) {
+    if (ioes.size() > remoteNNAddresses.size() / 2) {
       throw MultipleIOException.createIOException(ioes);
     }
   }
@@ -354,7 +347,7 @@ public class StandbyCheckpointer {
    * and prevent any new checkpoints from starting for the next
    * minute or so.
    */
-  public void cancelAndPreventCheckpoints(String msg) throws ServiceFailedException {
+  public void cancelAndPreventCheckpoints(String msg) {
     synchronized (cancelLock) {
       // The checkpointer thread takes this lock and checks if checkpointing is
       // postponed. 
@@ -404,14 +397,10 @@ public class StandbyCheckpointer {
     public void work() {
       // We have to make sure we're logged in as far as JAAS
       // is concerned, in order to use kerberized SSL properly.
-      SecurityUtil.doAsLoginUserOrFatal(
-          new PrivilegedAction<Object>() {
-          @Override
-          public Object run() {
-            doWork();
-            return null;
-          }
-        });
+      SecurityUtil.doAsLoginUserOrFatal(() -> {
+        doWork();
+        return null;
+      });
     }
 
     /**
@@ -438,7 +427,7 @@ public class StandbyCheckpointer {
         if (!needRollbackCheckpoint) {
           try {
             Thread.sleep(checkPeriod);
-          } catch (InterruptedException ie) {
+          } catch (InterruptedException ignored) {
           }
           if (!shouldRun) {
             break;
@@ -518,7 +507,7 @@ public class StandbyCheckpointer {
   }
 
   @VisibleForTesting
-  List<URL> getActiveNNAddresses() {
-    return activeNNAddresses;
+  List<URL> getRemoteNNAddresses() {
+    return remoteNNAddresses;
   }
 }
