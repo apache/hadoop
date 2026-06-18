@@ -2637,6 +2637,15 @@ The switch to turn S3A auditing on or off.
 </property>
 
 <property>
+  <name>ipc.data.length.warn.threshold</name>
+  <value>67108864</value>
+  <description>Threshold in bytes above which the IPC server emits a WARN log
+    for a large incoming RPC request, even when the request is still within
+    ipc.maximum.data.length. Set to -1 to disable.
+  </description>
+</property>
+
+<property>
   <name>ipc.maximum.response.length</name>
   <value>134217728</value>
   <description>This indicates the maximum IPC message length (bytes) that can be

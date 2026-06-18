@@ -497,6 +497,7 @@ public abstract class Server {
   };
   private int socketSendBufferSize;
   private final int maxDataLength;
+  private final int warnDataLength;
   private final boolean tcpNoDelay; // if T then disable Nagle's Algorithm
 
   volatile private boolean running = true;         // true while server runs
@@ -2524,6 +2525,10 @@ public abstract class Server {
             maxDataLength + ".  RPC came from " + getHostAddress();
         LOG.warn(error);
         throw new IOException(error);
+      } else if (warnDataLength > 0 && dataLength > warnDataLength) {
+        LOG.warn(
+            "Requested data length {} exceeds warn threshold of {}. RPC came from {}",
+            dataLength, warnDataLength, getHostAddress());
       }
     }
 
@@ -3422,6 +3427,9 @@ public abstract class Server {
     this.auxiliaryListenerMap = null;
     this.maxDataLength = conf.getInt(CommonConfigurationKeys.IPC_MAXIMUM_DATA_LENGTH,
         CommonConfigurationKeys.IPC_MAXIMUM_DATA_LENGTH_DEFAULT);
+    this.warnDataLength = conf.getInt(
+        CommonConfigurationKeys.IPC_DATA_LENGTH_WARN_THRESHOLD,
+        CommonConfigurationKeys.IPC_DATA_LENGTH_WARN_THRESHOLD_DEFAULT);
     if (queueSizePerHandler != -1) {
       this.maxQueueSize = handlerCount * queueSizePerHandler;
     } else {
