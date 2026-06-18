@@ -35,6 +35,7 @@ import software.amazon.encryption.s3.materials.DefaultCryptoMaterialsManager;
 import software.amazon.encryption.s3.materials.Keyring;
 import software.amazon.encryption.s3.materials.KmsKeyring;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.DefaultS3ClientFactory;
 import org.apache.hadoop.util.Preconditions;
@@ -60,6 +61,16 @@ public class EncryptionS3ClientFactory extends DefaultS3ClientFactory {
           AWS_KMS_CLIENT_SHARED_THREADPOOL_SIZE,
           AWS_KMS_CLIENT_SHARED_THREADPOOL_KEEPALIVE,
           "s3a-kms-scheduler");
+
+  /**
+   * Get the shared executor holder for KMS clients.
+   * This is for testing only.
+   * @return the holder
+   */
+  @VisibleForTesting
+  public static LazySharedThreadPoolHolder kmsExecutorHolder() {
+    return KMS_EXECUTOR;
+  }
 
   /**
    * Encryption client class name.

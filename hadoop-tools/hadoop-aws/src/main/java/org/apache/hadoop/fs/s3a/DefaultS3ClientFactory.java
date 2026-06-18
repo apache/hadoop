@@ -126,6 +126,26 @@ public class DefaultS3ClientFactory extends Configured
           "s3a-s3-async-scheduler");
 
   /**
+   * Get the shared executor holder for S3 sync clients.
+   * This is for testing only.
+   * @return the holder
+   */
+  @VisibleForTesting
+  static LazySharedThreadPoolHolder s3SyncExecutorHolder() {
+    return S3_SYNC_EXECUTOR;
+  }
+
+  /**
+   * Get the shared executor holder for S3 async clients.
+   * This is for testing only.
+   * @return the holder
+   */
+  @VisibleForTesting
+  static LazySharedThreadPoolHolder s3AsyncExecutorHolder() {
+    return S3_ASYNC_EXECUTOR;
+  }
+
+  /**
    * Subclasses refer to this.
    */
   protected static final Logger LOG =

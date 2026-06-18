@@ -19,7 +19,10 @@
 package org.apache.hadoop.fs.s3a;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.s3a.auth.STSClientFactory;
+import org.apache.hadoop.fs.s3a.impl.EncryptionS3ClientFactory;
 import org.apache.hadoop.fs.s3a.impl.LazySharedThreadPoolHolder;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -27,10 +30,23 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
 
+import static org.apache.hadoop.fs.s3a.Constants.AWS_CLIENT_SHARED_THREADPOOL_KEEPALIVE_DEFAULT;
+import static org.apache.hadoop.fs.s3a.Constants.AWS_CLIENT_SHARED_THREADPOOL_SIZE_DEFAULT;
+import static org.apache.hadoop.fs.s3a.Constants.AWS_KMS_CLIENT_SHARED_THREADPOOL_ENABLED;
+import static org.apache.hadoop.fs.s3a.Constants.AWS_KMS_CLIENT_SHARED_THREADPOOL_KEEPALIVE;
+import static org.apache.hadoop.fs.s3a.Constants.AWS_KMS_CLIENT_SHARED_THREADPOOL_SIZE;
+import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_ASYNC_CLIENT_SHARED_THREADPOOL_ENABLED;
+import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_ASYNC_CLIENT_SHARED_THREADPOOL_KEEPALIVE;
+import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_ASYNC_CLIENT_SHARED_THREADPOOL_SIZE;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_CLIENT_SHARED_THREADPOOL_ENABLED;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_CLIENT_SHARED_THREADPOOL_KEEPALIVE;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_CLIENT_SHARED_THREADPOOL_SIZE;
+import static org.apache.hadoop.fs.s3a.Constants.AWS_STS_CLIENT_SHARED_THREADPOOL_ENABLED;
+import static org.apache.hadoop.fs.s3a.Constants.AWS_STS_CLIENT_SHARED_THREADPOOL_KEEPALIVE;
+import static org.apache.hadoop.fs.s3a.Constants.AWS_STS_CLIENT_SHARED_THREADPOOL_SIZE;
 
 /**
  * Tests for the shared scheduled executors in DefaultS3ClientFactory.
@@ -60,6 +76,9 @@ public class TestSharedScheduledExecutor {
     Assertions.assertThat(poolExecutor.getCorePoolSize())
         .as("Core pool size should be 10")
         .isEqualTo(10);
+    Assertions.assertThat(poolExecutor.getKeepAliveTime(TimeUnit.SECONDS))
+        .as("Keepalive should be 30 seconds")
+        .isEqualTo(30);
     Assertions.assertThat(poolExecutor.allowsCoreThreadTimeOut())
         .as("Core threads should be allowed to time out")
         .isTrue();
@@ -162,7 +181,17 @@ public class TestSharedScheduledExecutor {
     ScheduledExecutorService executor = holder.get(conf);
     Assertions.assertThat(executor)
         .as("Executor should be created with valid config")
-        .isNotNull();
+        .isNotNull()
+        .isInstanceOf(ScheduledThreadPoolExecutor.class);
+
+    ScheduledThreadPoolExecutor poolExecutor =
+        (ScheduledThreadPoolExecutor) executor;
+    Assertions.assertThat(poolExecutor.getCorePoolSize())
+        .as("Core pool size should match configured value")
+        .isEqualTo(5);
+    Assertions.assertThat(poolExecutor.getKeepAliveTime(TimeUnit.SECONDS))
+        .as("Keepalive should match configured value")
+        .isEqualTo(30);
     executor.shutdown();
   }
 
@@ -172,13 +201,8 @@ public class TestSharedScheduledExecutor {
    * @return count of matching threads
    */
   private int countThreadsWithPrefix(String prefix) {
-    int count = 0;
-    for (Thread t : Thread.getAllStackTraces().keySet()) {
-      if (t.getName().startsWith(prefix)) {
-        count++;
-      }
-    }
-    return count;
+    return GenericTestUtils.countThreadsMatching(
+        Pattern.compile(Pattern.quote(prefix) + ".*"));
   }
 
   /**
@@ -276,5 +300,151 @@ public class TestSharedScheduledExecutor {
         .isSameAs(third);
 
     first.shutdown();
+  }
+
+  /**
+   * Verify the production shared-thread-pool config keys for every AWS client
+   * type are well-formed: within each client the enabled/size/keepalive keys
+   * share a single base and differ only by the expected suffix, and all keys
+   * are globally unique. This guards against the copy/paste or swapped-argument
+   * mistakes that are easy to make across the near-identical client
+   * definitions, where the holder constructor takes only strings.
+   */
+  @Test
+  public void testProductionThreadPoolConfigKeysWellFormed() {
+    String[][] clients = {
+        {AWS_S3_CLIENT_SHARED_THREADPOOL_ENABLED,
+            AWS_S3_CLIENT_SHARED_THREADPOOL_SIZE,
+            AWS_S3_CLIENT_SHARED_THREADPOOL_KEEPALIVE},
+        {AWS_S3_ASYNC_CLIENT_SHARED_THREADPOOL_ENABLED,
+            AWS_S3_ASYNC_CLIENT_SHARED_THREADPOOL_SIZE,
+            AWS_S3_ASYNC_CLIENT_SHARED_THREADPOOL_KEEPALIVE},
+        {AWS_STS_CLIENT_SHARED_THREADPOOL_ENABLED,
+            AWS_STS_CLIENT_SHARED_THREADPOOL_SIZE,
+            AWS_STS_CLIENT_SHARED_THREADPOOL_KEEPALIVE},
+        {AWS_KMS_CLIENT_SHARED_THREADPOOL_ENABLED,
+            AWS_KMS_CLIENT_SHARED_THREADPOOL_SIZE,
+            AWS_KMS_CLIENT_SHARED_THREADPOOL_KEEPALIVE},
+    };
+
+    List<String> allKeys = new ArrayList<>();
+    for (String[] client : clients) {
+      String enabled = client[0];
+      String size = client[1];
+      String keepAlive = client[2];
+
+      Assertions.assertThat(enabled)
+          .as("Enabled key should end with .threadpool.enabled")
+          .endsWith(".threadpool.enabled");
+      String base =
+          enabled.substring(0, enabled.length() - ".enabled".length());
+      Assertions.assertThat(size)
+          .as("Size key should be base + .size for base %s", base)
+          .isEqualTo(base + ".size");
+      Assertions.assertThat(keepAlive)
+          .as("Keepalive key should be base + .keepalive.seconds for base %s",
+              base)
+          .isEqualTo(base + ".keepalive.seconds");
+
+      allKeys.add(enabled);
+      allKeys.add(size);
+      allKeys.add(keepAlive);
+    }
+
+    Assertions.assertThat(allKeys)
+        .as("All shared thread pool config keys should be unique")
+        .doesNotHaveDuplicates();
+  }
+
+  /**
+   * Verify the shared-thread-pool defaults declared in core-default.xml match
+   * the constants used by the lazy holders: every pool is disabled by default
+   * and the size/keepalive defaults are the documented values. This catches a
+   * typo in a core-default.xml name or a mismatch between Constants, the holder
+   * defaults and core-default.xml.
+   */
+  @Test
+  public void testProductionThreadPoolDefaultsInCoreDefaultXml() {
+    Configuration conf = new Configuration();
+    String[] enabledKeys = {
+        AWS_S3_CLIENT_SHARED_THREADPOOL_ENABLED,
+        AWS_S3_ASYNC_CLIENT_SHARED_THREADPOOL_ENABLED,
+        AWS_STS_CLIENT_SHARED_THREADPOOL_ENABLED,
+        AWS_KMS_CLIENT_SHARED_THREADPOOL_ENABLED,
+    };
+    String[] sizeKeys = {
+        AWS_S3_CLIENT_SHARED_THREADPOOL_SIZE,
+        AWS_S3_ASYNC_CLIENT_SHARED_THREADPOOL_SIZE,
+        AWS_STS_CLIENT_SHARED_THREADPOOL_SIZE,
+        AWS_KMS_CLIENT_SHARED_THREADPOOL_SIZE,
+    };
+    String[] keepAliveKeys = {
+        AWS_S3_CLIENT_SHARED_THREADPOOL_KEEPALIVE,
+        AWS_S3_ASYNC_CLIENT_SHARED_THREADPOOL_KEEPALIVE,
+        AWS_STS_CLIENT_SHARED_THREADPOOL_KEEPALIVE,
+        AWS_KMS_CLIENT_SHARED_THREADPOOL_KEEPALIVE,
+    };
+
+    for (String key : enabledKeys) {
+      Assertions.assertThat(conf.getBoolean(key, true))
+          .as("%s should default to false in core-default.xml", key)
+          .isFalse();
+    }
+    for (String key : sizeKeys) {
+      Assertions.assertThat(conf.getInt(key, -1))
+          .as("%s should match the documented default in core-default.xml", key)
+          .isEqualTo(AWS_CLIENT_SHARED_THREADPOOL_SIZE_DEFAULT);
+    }
+    for (String key : keepAliveKeys) {
+      Assertions.assertThat(conf.getInt(key, -1))
+          .as("%s should match the documented default in core-default.xml", key)
+          .isEqualTo(AWS_CLIENT_SHARED_THREADPOOL_KEEPALIVE_DEFAULT);
+    }
+  }
+
+  /**
+   * Verify each AWS client factory wires its shared-thread-pool holder with the
+   * config keys for that client, in the correct slots. The holder constructor
+   * takes only strings, so a swapped or mis-pasted key would otherwise be
+   * silent; this asserts the enabled/size/keepalive keys land where intended.
+   */
+  @Test
+  public void testFactoryExecutorHoldersWiredWithExpectedKeys() {
+    assertHolderKeys(DefaultS3ClientFactory.s3SyncExecutorHolder(),
+        AWS_S3_CLIENT_SHARED_THREADPOOL_ENABLED,
+        AWS_S3_CLIENT_SHARED_THREADPOOL_SIZE,
+        AWS_S3_CLIENT_SHARED_THREADPOOL_KEEPALIVE);
+    assertHolderKeys(DefaultS3ClientFactory.s3AsyncExecutorHolder(),
+        AWS_S3_ASYNC_CLIENT_SHARED_THREADPOOL_ENABLED,
+        AWS_S3_ASYNC_CLIENT_SHARED_THREADPOOL_SIZE,
+        AWS_S3_ASYNC_CLIENT_SHARED_THREADPOOL_KEEPALIVE);
+    assertHolderKeys(STSClientFactory.stsExecutorHolder(),
+        AWS_STS_CLIENT_SHARED_THREADPOOL_ENABLED,
+        AWS_STS_CLIENT_SHARED_THREADPOOL_SIZE,
+        AWS_STS_CLIENT_SHARED_THREADPOOL_KEEPALIVE);
+    assertHolderKeys(EncryptionS3ClientFactory.kmsExecutorHolder(),
+        AWS_KMS_CLIENT_SHARED_THREADPOOL_ENABLED,
+        AWS_KMS_CLIENT_SHARED_THREADPOOL_SIZE,
+        AWS_KMS_CLIENT_SHARED_THREADPOOL_KEEPALIVE);
+  }
+
+  /**
+   * Assert a holder is wired with the expected enabled/size/keepalive keys.
+   * @param holder the holder under test
+   * @param enabledKey expected enabled key
+   * @param sizeKey expected size key
+   * @param keepAliveKey expected keepalive key
+   */
+  private static void assertHolderKeys(LazySharedThreadPoolHolder holder,
+      String enabledKey, String sizeKey, String keepAliveKey) {
+    Assertions.assertThat(holder.getEnabledKey())
+        .as("enabled key")
+        .isEqualTo(enabledKey);
+    Assertions.assertThat(holder.getSizeKey())
+        .as("size key")
+        .isEqualTo(sizeKey);
+    Assertions.assertThat(holder.getKeepAliveKey())
+        .as("keepalive key")
+        .isEqualTo(keepAliveKey);
   }
 }

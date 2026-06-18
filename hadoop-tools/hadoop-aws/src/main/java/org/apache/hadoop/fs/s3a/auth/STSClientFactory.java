@@ -46,6 +46,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.Invoker;
 import org.apache.hadoop.fs.s3a.Retries;
@@ -77,6 +78,16 @@ public class STSClientFactory {
           AWS_STS_CLIENT_SHARED_THREADPOOL_SIZE,
           AWS_STS_CLIENT_SHARED_THREADPOOL_KEEPALIVE,
           "s3a-sts-scheduler");
+
+  /**
+   * Get the shared executor holder for STS clients.
+   * This is for testing only.
+   * @return the holder
+   */
+  @VisibleForTesting
+  public static LazySharedThreadPoolHolder stsExecutorHolder() {
+    return STS_EXECUTOR;
+  }
 
   /**
    * Create the builder ready for any final configuration options.

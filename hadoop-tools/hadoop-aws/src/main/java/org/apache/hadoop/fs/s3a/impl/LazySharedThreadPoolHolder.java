@@ -28,6 +28,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 
 import static org.apache.hadoop.fs.s3a.Constants.AWS_CLIENT_SHARED_THREADPOOL_KEEPALIVE_DEFAULT;
@@ -49,7 +50,7 @@ public class LazySharedThreadPoolHolder {
   private final String keepAliveKey;
   private final String namePrefix;
 
-  private volatile Optional<ScheduledExecutorService> executor;
+  private Optional<ScheduledExecutorService> executor;
 
   /**
    * Create a holder for a lazy shared thread pool.
@@ -64,6 +65,36 @@ public class LazySharedThreadPoolHolder {
     this.sizeKey = sizeKey;
     this.keepAliveKey = keepAliveKey;
     this.namePrefix = namePrefix;
+  }
+
+  /**
+   * Get the config key controlling whether the shared pool is enabled.
+   * This is for testing only.
+   * @return the enabled config key
+   */
+  @VisibleForTesting
+  public String getEnabledKey() {
+    return enabledKey;
+  }
+
+  /**
+   * Get the config key controlling the pool size.
+   * This is for testing only.
+   * @return the size config key
+   */
+  @VisibleForTesting
+  public String getSizeKey() {
+    return sizeKey;
+  }
+
+  /**
+   * Get the config key controlling the thread keep-alive.
+   * This is for testing only.
+   * @return the keep-alive config key
+   */
+  @VisibleForTesting
+  public String getKeepAliveKey() {
+    return keepAliveKey;
   }
 
   /**
@@ -95,6 +126,7 @@ public class LazySharedThreadPoolHolder {
    * @param keepAliveSeconds keepalive time in seconds
    * @return the executor
    */
+  @VisibleForTesting
   public static ScheduledExecutorService createScheduledExecutor(
       String namePrefix, int poolSize, int keepAliveSeconds) {
     ScheduledThreadPoolExecutor pool = new ScheduledThreadPoolExecutor(poolSize,
