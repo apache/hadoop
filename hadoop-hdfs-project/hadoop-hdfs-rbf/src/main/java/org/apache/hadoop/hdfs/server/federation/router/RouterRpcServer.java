@@ -555,12 +555,13 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
     if (asyncHandlerCountDefault < 1 && nsAsyncHandlerCount.isEmpty() && useObserver) {
       LOG.info("Async observer handlers are not configured, skipping...");
       return;
-    } else {
-      useSeparateAsyncRouterOBHandlerExecutors = true;
     }
 
     if (asyncHandlerCountDefault < 1) {
       throw new IllegalArgumentException("Async handler count must be at least 1");
+    }
+    if (useObserver) {
+      useSeparateAsyncRouterOBHandlerExecutors = true;
     }
     LOG.info("Initializing asynchronous handler thread pools");
     for (String nsId : allConfiguredNS) {
@@ -645,13 +646,21 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
    * @return the corresponding thread pool
    */
   public ThreadPoolExecutor getAsyncExecutorForNamespace(String nsId, boolean useObserver) {
-    ThreadPoolExecutor executor = useObserver && useSeparateAsyncRouterOBHandlerExecutors ?
-            asyncRouterOBHandlerExecutors.getOrDefault(nsId, routerDefaultAsyncHandlerExecutor) :
-            asyncRouterHandlerExecutors.getOrDefault(nsId, routerDefaultAsyncHandlerExecutor);
+    ThreadPoolExecutor executor = getAsyncExecutorForNamespaceInternal(nsId, useObserver);
     if (rpcMonitor != null && executor != null) {
       rpcMonitor.recordAsyncHandlerQueueSize(nsId, executor.getQueue().size());
     }
     return executor;
+  }
+
+  private ThreadPoolExecutor getAsyncExecutorForNamespaceInternal(String nsId, boolean useObserver) {
+    if (useObserver && useSeparateAsyncRouterOBHandlerExecutors) {
+      ThreadPoolExecutor observerExecutor = asyncRouterOBHandlerExecutors.get(nsId);
+      if (observerExecutor != null) {
+        return observerExecutor;
+      }
+    }
+    return asyncRouterHandlerExecutors.getOrDefault(nsId, routerDefaultAsyncHandlerExecutor);
   }
 
   /**
