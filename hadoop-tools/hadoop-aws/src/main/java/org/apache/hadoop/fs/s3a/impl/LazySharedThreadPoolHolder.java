@@ -33,7 +33,7 @@ import org.apache.hadoop.conf.Configuration;
 
 import static org.apache.hadoop.fs.s3a.Constants.AWS_CLIENT_SHARED_THREADPOOL_KEEPALIVE_DEFAULT;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_CLIENT_SHARED_THREADPOOL_SIZE_DEFAULT;
-import static org.apache.hadoop.util.Preconditions.checkArgument;
+import static org.apache.hadoop.fs.s3a.S3AUtils.intOption;
 
 /**
  * Holder for a lazily initialized shared ScheduledExecutorService.
@@ -105,12 +105,10 @@ public class LazySharedThreadPoolHolder {
   public synchronized ScheduledExecutorService get(Configuration conf) {
     if (executor == null) {
       if (conf.getBoolean(enabledKey, false)) {
-        int poolSize = conf.getInt(sizeKey, AWS_CLIENT_SHARED_THREADPOOL_SIZE_DEFAULT);
-        int keepAlive = conf.getInt(keepAliveKey, AWS_CLIENT_SHARED_THREADPOOL_KEEPALIVE_DEFAULT);
-        checkArgument(poolSize > 0,
-            "Value of %s must be positive, got: %s", sizeKey, poolSize);
-        checkArgument(keepAlive > 0,
-            "Value of %s must be positive, got: %s", keepAliveKey, keepAlive);
+        int poolSize = intOption(conf, sizeKey,
+            AWS_CLIENT_SHARED_THREADPOOL_SIZE_DEFAULT, 1);
+        int keepAlive = intOption(conf, keepAliveKey,
+            AWS_CLIENT_SHARED_THREADPOOL_KEEPALIVE_DEFAULT, 1);
         executor = Optional.of(createScheduledExecutor(namePrefix, poolSize, keepAlive));
       } else {
         executor = Optional.empty();

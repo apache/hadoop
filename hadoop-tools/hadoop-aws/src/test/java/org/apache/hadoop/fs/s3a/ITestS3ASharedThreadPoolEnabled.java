@@ -44,9 +44,9 @@ import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_CLIENT_SHARED_THREADPOOL
  * {@link ITestS3ASharedThreadPoolDisabled} is the control proving the opposite
  * (pool disabled, threads grow). The two must be separate classes: the holders
  * are private static final and memoize on first use, so the first configuration
- * to reach them wins for the JVM. They stay isolated because hadoop-aws runs
- * tests with reuseForks=false (a fresh JVM per test class); do not merge them
- * into one class.
+ * to reach them wins for the JVM. They therefore cannot share a fork; each must
+ * run in its own JVM. hadoop-aws sets reuseForks=false, which these tests
+ * require (do not enable fork reuse for them); do not merge them into one class.
  * <p>
  * Exact thread counts depend on AWS SDK internals, so the assertion is on the
  * bound (not exceeding the pool sizes), not an exact number.
@@ -70,6 +70,15 @@ public class ITestS3ASharedThreadPoolEnabled extends AbstractS3ATestBase {
   @Override
   protected Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
+    // Strip any base or per-bucket overrides for these keys so the values set
+    // below win: a bucket override would otherwise take precedence and
+    // silently invalidate the test.
+    S3ATestUtils.removeBaseAndBucketOverrides(
+        S3ATestUtils.getTestBucketName(conf), conf,
+        AWS_S3_CLIENT_SHARED_THREADPOOL_ENABLED,
+        AWS_S3_ASYNC_CLIENT_SHARED_THREADPOOL_ENABLED,
+        AWS_S3_CLIENT_SHARED_THREADPOOL_SIZE,
+        AWS_S3_ASYNC_CLIENT_SHARED_THREADPOOL_SIZE);
     // Enable the shared pools before any client is built, so the static
     // holders memoize in the enabled state for this JVM.
     conf.setBoolean(AWS_S3_CLIENT_SHARED_THREADPOOL_ENABLED, true);

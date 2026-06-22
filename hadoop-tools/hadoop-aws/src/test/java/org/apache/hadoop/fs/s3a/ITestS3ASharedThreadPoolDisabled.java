@@ -23,12 +23,19 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.conf.Configuration;
+
+import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_ASYNC_CLIENT_SHARED_THREADPOOL_ENABLED;
+import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_CLIENT_SHARED_THREADPOOL_ENABLED;
+
 /**
  * Control case for {@link ITestS3ASharedThreadPoolEnabled}: with the shared
  * pool disabled (the default), each S3AFileSystem's AWS SDK clients create their
  * own sdk-ScheduledExecutor pool, so thread count grows with the number of
- * instances. Kept a separate class so it runs in its own JVM (hadoop-aws uses
- * reuseForks=false) and the static holders never memoize in the enabled state.
+ * instances. Must run in its own JVM: the static pool holder is single-state
+ * per JVM, so this control (pools off) and {@link ITestS3ASharedThreadPoolEnabled}
+ * (pools on) cannot share a fork. hadoop-aws sets reuseForks=false, which these
+ * tests require; do not enable fork reuse for them.
  * <p>
  * The sdk-ScheduledExecutor pools are created lazily as the clients schedule
  * work, so the exact count varies; the assertion is only that it clearly
@@ -46,6 +53,21 @@ public class ITestS3ASharedThreadPoolDisabled extends AbstractS3ATestBase {
 
   /** Thread name prefix the AWS SDK uses for its per-client default pool. */
   private static final String SDK_POOL_PREFIX = "sdk-ScheduledExecutor";
+
+  @Override
+  protected Configuration createConfiguration() {
+    Configuration conf = super.createConfiguration();
+    // Strip any base/per-bucket override, then pin the pools explicitly off, so
+    // this control is deterministic regardless of the default: it must run with
+    // the shared pools disabled to exercise the per-client leak.
+    S3ATestUtils.removeBaseAndBucketOverrides(
+        S3ATestUtils.getTestBucketName(conf), conf,
+        AWS_S3_CLIENT_SHARED_THREADPOOL_ENABLED,
+        AWS_S3_ASYNC_CLIENT_SHARED_THREADPOOL_ENABLED);
+    conf.setBoolean(AWS_S3_CLIENT_SHARED_THREADPOOL_ENABLED, false);
+    conf.setBoolean(AWS_S3_ASYNC_CLIENT_SHARED_THREADPOOL_ENABLED, false);
+    return conf;
+  }
 
   @Test
   public void testWithoutSharedPoolThreadsLeakPastGc() throws Exception {

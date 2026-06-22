@@ -125,7 +125,7 @@ public class TestSharedScheduledExecutor {
     Assertions.assertThatThrownBy(() -> holder.get(conf))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("test.size")
-        .hasMessageContaining("must be positive");
+        .hasMessageContaining("below the minimum value");
   }
 
   @Test
@@ -139,7 +139,7 @@ public class TestSharedScheduledExecutor {
     Assertions.assertThatThrownBy(() -> holder.get(conf))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("test.size")
-        .hasMessageContaining("must be positive");
+        .hasMessageContaining("below the minimum value");
   }
 
   @Test
@@ -153,7 +153,7 @@ public class TestSharedScheduledExecutor {
     Assertions.assertThatThrownBy(() -> holder.get(conf))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("test.keepalive")
-        .hasMessageContaining("must be positive");
+        .hasMessageContaining("below the minimum value");
   }
 
   @Test
@@ -167,7 +167,7 @@ public class TestSharedScheduledExecutor {
     Assertions.assertThatThrownBy(() -> holder.get(conf))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("test.keepalive")
-        .hasMessageContaining("must be positive");
+        .hasMessageContaining("below the minimum value");
   }
 
   @Test
