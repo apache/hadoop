@@ -155,12 +155,13 @@ public class ClusterMetricsInfo {
 
         Resource available = Resources.subtractFromNonNegative(
             totalClusterResourcesAcrossPartition.getResource(),
-            Resources.add(totalUsedResourcesAcrossPartition.getResource(),
-                totalReservedResourcesAcrossPartition.getResource()));
+            totalUsedResourcesAcrossPartition.getResource());
         this.totalMB = totalClusterResourcesAcrossPartition.getMemorySize();
         this.totalVirtualCores = totalClusterResourcesAcrossPartition.getvCores();
-        this.allocatedMB = totalUsedResourcesAcrossPartition.getMemorySize();
-        this.allocatedVirtualCores = totalUsedResourcesAcrossPartition.getvCores();
+        this.allocatedMB = totalUsedResourcesAcrossPartition.getMemorySize()
+            - totalReservedResourcesAcrossPartition.getMemorySize();
+        this.allocatedVirtualCores = totalUsedResourcesAcrossPartition.getvCores()
+            - totalReservedResourcesAcrossPartition.getvCores();
         this.reservedMB = totalReservedResourcesAcrossPartition.getMemorySize();
         this.reservedVirtualCores = totalReservedResourcesAcrossPartition.getvCores();
         this.availableMB = available.getMemorySize();
@@ -225,9 +226,10 @@ public class ClusterMetricsInfo {
           partitionName, cs.getClusterResource());
       Resource reserved = usage.getReserved(partitionName);
       Resource pending = usage.getPending(partitionName);
-      Resource allocated = usage.getUsed(partitionName);
+      Resource used = usage.getUsed(partitionName);
+      Resource allocated = Resources.subtract(used, reserved);
       Resource available = Resources.subtractFromNonNegative(
-          Resources.clone(total), Resources.add(allocated, reserved));
+          Resources.clone(total), used);
       partitionMetrics.add(new PartitionClusterMetricsInfo(
           partitionName, total, allocated, reserved, pending, available,
           metrics.getAllocatedContainers(partitionName),
