@@ -1,0 +1,453 @@
+<!---
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License. See accompanying LICENSE file.
+-->
+
+# Apache Hadoop Security Model
+
+The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL
+NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED",  "MAY", and
+"OPTIONAL" in this document are to be interpreted as described in
+RFC 2119.
+
+This document defines the security model of Apache Hadoop: the deployments it is
+designed to protect, the boundaries it defends, and — equally importantly — the
+things which are *not* vulnerabilities. It exists for human reporters and for
+anyone using automated or AI-assisted tooling to look for security issues.
+
+**TL;DR: Hadoop's security model defends a Kerberos-secured cluster running on a
+trusted operating system, behind a network perimeter, with a valid site
+configuration. Findings which only apply outside that model are bugs, not
+vulnerabilities.**
+
+## Before Filing a Report (Including AI-Assisted Reports)
+
+The deployment Hadoop's security model defends is a **Kerberos-secured cluster**.
+Many findings that look like vulnerabilities in other contexts are not
+vulnerabilities here, because the surrounding deployment is trusted by design.
+
+You *MUST NOT* file a security report for:
+
+- Issues that require the operator to edit their own Hadoop site configuration,
+  place malicious files on their own classpath, or pass malicious arguments to
+  their own command invocation.
+- **Job submission running user-supplied code.** Submitting work to YARN or
+  MapReduce executes the submitter's code as the submitter's identity. That is
+  the product, not a vulnerability. See the threat model below.
+- **Denial of service at scale.** A large Hadoop cluster exists to execute jobs
+  at scale; such a cluster can itself be used to mount distributed attacks, and
+  authenticated users can exhaust resources. Resource exhaustion and performance
+  degradation from legitimate authenticated use are out of scope.
+- Issues that require the attacker to already hold cluster or remote-store
+  credentials, a valid Kerberos principal, or local disk access.
+- Anything against the **default insecure (non-Kerberos) mode** — it is insecure
+  by design (see the deployment model below).
+- **Transitive CVEs** in dependencies Hadoop builds or ships against. See
+  [Third Party Modules](#third-party-modules).
+- Raw **scanner output** (Snyk, Dependabot, Trivy, Zizmor, etc.) without a
+  reproducer against the current `trunk` branch.
+- Theoretical findings ("an attacker who could X might then Y") without a
+  reproduction.
+
+
+A valid report includes:
+
+- The Hadoop version, and ideally the git SHA it was reproduced against.
+- The exact steps, configuration, and commands used to reproduce it.
+- The observed in-scope failure, and what was expected instead.
+- Where a CVE/CVSS score is claimed, the reasoning behind that score.
+
+### For Partly/Fully AI-Generated Reports
+
+AI-assisted reports are accepted **only** if the submitter has verified the
+finding by hand against current source and includes a runnable reproducer.
+
+In addition, the submitter of an AI-generated report is 
+
+1. REQUIRED to understand what Hadoop is, to understand the claimed vulnerability,
+and to be able to explain it in their own words — including justifying any claimed CVE or CVSS
+scores. If the submitter is unable to do this, then any credit for a resulting
+CVE will be assigned to the AI tool alone, and not to the submitter.
+
+2. MUST declare the AI tool used, and provide the prompt.
+   The prompt is a key part of AI tool reports, and we need to be able to track/replicate these.
+
+*Unverified LLM-generated reports waste maintainer time and will be closed
+without further response.*
+
+
+## Reporting a Vulnerability
+
+Report security vulnerabilities in Apache Hadoop privately to
+**security@hadoop.apache.org**. Do **not** open a public JIRA issue, GitHub
+issue, or pull request for an unfixed vulnerability.
+
+See the Apache Software Foundation's
+[guidelines for reporting security issues](https://www.apache.org/security/) for
+the responsible-disclosure process that applies to all ASF projects.
+
+## Third Party Modules
+
+### Reporting a Known CVE in a Hadoop Dependency
+
+Do not report the existence of a published CVE in a Hadoop dependency
+to the security list. These are published and do not need to be treated as
+confidential.
+
+These are considered improvements in the project, and are managed in
+the project's [issue tracker](https://issues.apache.org/jira/issues/).
+1. Search for any existing issue covering the dependency upgrade.
+2. If it exists, read it, its discussion, the PRs etc, and see what versions
+   it has been merged to.
+3. If it hasn't been merged, look at why and get involved: major work is likely to be
+   needed.
+4. If there isn't an issue, create one and start work on the PR!
+
+Tip: an easy way to check for the version of a library to ship in the trunk
+release of hadoop is the [LICENSE-binary](./LICENSE-binary) file.
+
+Please do not send an email listing the CVEs an automated scan
+tool reported and requesting updates, timelines etc.
+Open source development is a community process, and addressing this is done
+in the [developer mailing lists](https://hadoop.apache.org/mailing_lists.html).
+Join the community to help get your needs addressed.
+
+### Providing Advance Warning of a Critical CVE in a Hadoop Dependency
+
+If a team providing a library which Hadoop bundles has a critical CVE which
+a forthcoming fix will correct, they are encouraged to notify the hadoop security
+list so we can co-ordinate releases.
+
+We treat all such reports as confidential.
+
+### Reporting a Newly-Discovered Vulnerability in a Third-Party Module
+
+Security bugs in third-party modules (the JVM, the Kerberos infrastructure, cloud
+SDKs, connectors, or any other dependency) should be reported to their respective
+maintainers, through their own security-reporting mechanisms — after verifying
+the issue is in scope of *their* threat model and reproduces against *their*
+current release.
+
+
+## Supported Versions
+
+Security fixes are made only to the most recent Apache Hadoop release line(s).
+Older release lines are end-of-life and do not receive security updates; the
+remedy for a vulnerability in an old line is to upgrade. Refer to the
+[Apache Hadoop release and download policy](https://hadoop.apache.org/releases.html)
+for which lines are currently maintained. A report MUST be reproducible against a
+maintained release or the current `trunk` branch.
+
+## The Hadoop Threat Model
+
+In the Hadoop threat model there are **trusted elements**. Vulnerabilities that
+require the compromise of these trusted elements are outside the scope of the
+model:
+
+- **The underlying operating system is trusted.** Hadoop relies on OS process
+  isolation, file permissions, and (where required) OS-level disk encryption.
+  An attack that first requires the OS to be compromised or misconfigured is out
+  of scope.
+- **Valid site configuration is trusted.** We expect `core-site.xml`,
+  `hdfs-site.xml`, `yarn-site.xml` and the rest of the site configuration to be
+  valid and to be writable only by trusted administrators. If an attacker can
+  manipulate the site configuration, the game is already over — that is out of
+  scope.
+
+Within that model, the boundary Hadoop **defends** is **privilege escalation
+across an authenticated boundary within a Kerberos-secured cluster**.
+Examples of in-scope issues are:
+
+- A user acting as another user, as a service, or as a superuser without the
+  authorization to do so.
+- Bypassing service-level authorization / ACLs
+  (see [Service Level Authorization](hadoop-common-project/hadoop-common/src/site/markdown/ServiceLevelAuth.md)).
+- Forging, leaking, or improperly reusing delegation tokens.
+- Defeating the constraints on proxy/superuser impersonation
+  (see [Proxy user - Superusers Acting On Behalf Of Other Users](hadoop-common-project/hadoop-common/src/site/markdown/Superusers.md)).
+
+Further properties of the model:
+
+- **Hadoop clusters are never web-facing.** They are deployed behind a network
+  perimeter; network rules are expected to prevent access by untrusted
+  principals. A report which assumes a cluster is directly exposed to the public
+  internet is not in scope.
+- **Wire encryption is optional and controlled by site configuration.** Network
+  traffic between Hadoop components may or may not be encrypted, depending on the
+  deployment's configuration. The absence of wire encryption when it has not been
+  enabled is not a vulnerability.
+
+Relevant operational security documentation:
+
+- [Hadoop in Secure Mode](hadoop-common-project/hadoop-common/src/site/markdown/SecureMode.md)
+- [Service Level Authorization](hadoop-common-project/hadoop-common/src/site/markdown/ServiceLevelAuth.md)
+- [Authentication for Hadoop HTTP web-consoles](hadoop-common-project/hadoop-common/src/site/markdown/HttpAuthentication.md)
+- [Proxy user - Superusers](hadoop-common-project/hadoop-common/src/site/markdown/Superusers.md)
+- [Credential Provider API](hadoop-common-project/hadoop-common/src/site/markdown/CredentialProviderAPI.md)
+- [YARN Application Security](hadoop-yarn-project/hadoop-yarn/hadoop-yarn-site/src/site/markdown/YarnApplicationSecurity.md)
+- [Transparent Encryption in HDFS](hadoop-hdfs-project/hadoop-hdfs/src/site/markdown/TransparentEncryption.md)
+
+## Deployment Threat Model
+
+Hadoop is deployed in a number of ways, with different security boundaries.
+
+### Standalone (Insecure) Mode
+
+In its standalone configuration Hadoop performs no real authentication. Anyone with
+network access to the cluster has full access to its data and can submit work.
+
+This mode is *intended* to run only on a trusted, network-isolated host or
+network. It is insecure **by design**. "The unsecured cluster has no security" is
+not a vulnerability, and arbitrary data access against a non-Kerberos cluster is
+inherent in security being disabled.
+
+It should only be used for standalone development/test environments, with firewalls preventing remote access.
+It can then be used to test Hadoop and applications running on top of it.
+
+
+### Secure (Kerberos) Clusters
+
+This is the deployment the security model defends, as described in
+[The Hadoop threat model](#the-hadoop-threat-model) above: Kerberos
+authentication, service-level authorization, delegation tokens, and constrained
+proxy/superuser impersonation.
+
+It is the expected deployment of production physical clusters.
+1. A trusted kerberos system is used to authenticate principals.
+2. Services have been issued with credentials in files, which are secured on the physical hosts.
+3. Users of the cluster all authenticate with the kerberos system for their access
+4. Access to the cluster may be via a proxy mechanism.
+5. The HDFS filesystem uses kerberos to authenticate hdfs nodes and services themselves, other cluster services (YARN, Apache ZooKeeper etc) and callers.
+6. HDFS block tokens are issued by the HDFS Name Node to grant data access to authenticated principals;
+   the possessor of a token may access a block of data on a data node with the permissions in that token,
+   without the need to supply any further authentication information.
+
+Hadoop services issue _delegation tokens_: an authenticated principal obtains a token directly from a service such as HDFS, Apache HBase, Apache Hive, Apache Knox and more.
+YARN distributes these tokens to an application's containers and renews them on the application's behalf, so tasks can authenticate to those services without holding Kerberos credentials themselves.
+These tokens have an independent life from the kerberos credentials
+* They have a limited lifespan of a number of hours.
+* They can be cancelled: the issuing service MUST then reject requests using them as authentication.
+* They can be renewed: before their lifespan expires the renewer requests the issuing service to extend their lifespan.
+
+The details of these tokens or how issuing, cancellation and renewal are managed are not covered in this document.
+Hadoop and applications MUST safely marshall and store these tokens; if they are published in any form then permissions are being leaked.
+
+### Transient Cloud Deployments
+
+Hadoop is frequently deployed as a transient cluster in a cloud environment:
+
+- Cloud credentials are supplied to the deployment by the hosting infrastructure
+  — for example AWS IAM roles attached to the VMs/containers, or equivalent
+  mechanisms on other clouds. **These supplied credentials, and the access they
+  grant, are the trust boundary.** Using credentials provided to the VM or
+  container the code runs in is not a vulnerability.
+- The cluster is **transient** and typically single-tenant: it is created for a
+  workload and destroyed afterwards.
+- **Network rules prevent access by untrusted principals.** As with on-premises
+  clusters, the deployment is not web-facing; the network perimeter is part of
+  the model.
+
+Hadoop clusters MUST NOT be deployed in cloud without network rules to isolate them from the public internet.
+
+
+## Data at Rest and Temporary Files
+
+- **Persisting data encrypted requires HDFS encryption** (see
+  [Transparent Encryption in HDFS](hadoop-hdfs-project/hadoop-hdfs/src/site/markdown/TransparentEncryption.md)).
+  Where encryption has been configured, a failure of the code to actually
+  encrypt the persisted data **is a vulnerability** and should be reported.
+- **Temporary data** is written to local-filesystem temporary directories. The
+  requirement is that the operating system secures and, where required, encrypts
+  these directories — this is part of the trusted-OS assumption. Within that:
+  - Code that creates temporary files and directories **MUST create them and set
+    their permissions atomically.** Creating a file or directory with permissive
+    defaults and then narrowing the permissions in a later step leaves a window
+    in which another local principal can act on it.
+  - A failure to create files/directories and set their permissions atomically
+    **is an issue** and should be reported.
+
+## Secrets and Logging
+
+Leaking secrets into logs is [CWE-532: Insertion of Sensitive Information into
+Log File](https://cwe.mitre.org/data/definitions/532.html). The following rules
+apply to Hadoop code:
+
+- Secrets *SHOULD NOT* be logged.
+- **Persistent secrets, long-lived credentials, and encryption secrets (keys,
+  key material, passwords) *MUST NOT* be logged at any level.**
+- **Transient secrets** (for example short-lived tokens) *MUST NOT* be logged at
+  `INFO`, `WARN`, or `ERROR` level, and *SHOULD NOT* be logged at `DEBUG` or
+  `TRACE` level.
+
+Transient secrets are called out specifically because secrets sometimes surface in HTTP/web
+request logs (URLs, headers, query parameters) and are visible
+when third-party components including JDK classes are configured to log at TRACE.
+Preventing logging of these is best-effort.
+
+
+## Development and CI Threat Model
+
+The project is built on developer systems and in CI systems, and **we do care
+about attacks on these.** Development and CI are explicitly in scope.
+
+See [Important Security Information for GitHub Actions](.github/workflow-security.md)
+for the detailed CI/workflow security guidance. In summary:
+
+- All inputs from external pull requests — titles, comments, author metadata, and
+  code — *SHALL* be considered untrusted, and *MUST NOT* be fed directly or
+  indirectly to shell commands without sanitization.
+- Upstream dependencies from non-ASF projects *MAY* be subverted by supply-chain
+  attacks; a cooldown period *MUST* be observed before adopting a new or
+  updated dependency.
+- ASF projects are considered trusted, as their manual release-vote process
+  provides an implicit buffer against package-ecosystem worms, and there's an implicit
+  level of interdependent trust between projects.
+- Maven plugins, and third-party libraries that production code compiles against,
+  execute code on developer and CI systems (the latter during testing). Their
+  security *MUST* be evaluated before adoption.
+- IDE trust mechanisms are sensitive: for example a
+  [VS Code trusted workspace](https://code.visualstudio.com/docs/editing/workspaces/workspace-trust)
+  allows files in the tree (`.env`, `tasks.json`, etc.) to declare executables.
+  PRs that add such code-execution mechanisms *SHALL* be rejected.
+- **CI build output is publicly visible.** Unobfuscated logging of any cloud
+  credentials or other secrets provided to CI runs is therefore in scope.
+- GitHub Actions hardening:
+  - Actions *MUST* be pinned by commit SHA (with the version as a comment so
+    Dependabot can track them), not by tag.
+  - PR triggers *MUST NOT* be ones which grant unrestricted GitHub tokens to the
+    workflow — there *MUST NOT* be `pull_request_target`, `workflow_run`, or
+    `issue_comment` triggers used in that way.
+  - Workflows *SHALL* follow GitHub's
+    [secure use](https://docs.github.com/en/actions/reference/security/secure-use)
+    guidelines, in particular using intermediate environment variables to safely
+    process untrusted input, and *SHALL* be audited with [Zizmor](https://zizmor.sh/).
+
+Note that test resource files such as `auth-keys.xml` (and any equivalent under a
+module's test tree) contain live secrets. They *MUST NOT* be read out, printed,
+or committed to version control.
+
+## Not in the Threat Model
+
+The following are explicitly **not** vulnerabilities:
+
+- Any attack which accesses arbitrary data against an HDFS cluster for which
+  Kerberos is not enabled.
+- Any attack against cloud storage where the credentials are supplied by the
+  VM/container within which Hadoop is executing.
+- **Job submission executing user-supplied code** — this is the core of YARN
+  and MapReduce.
+- Any attack which requires the user to manually enter credentials or
+  configuration options.
+- Any attack which requires the operating system to be misconfigured or
+  configured in a non-standard way as a step in the process.
+- Any attack which requires a Hadoop site reconfiguration.
+- Any attack which requires the download and execution of external binaries.
+- Any attack which makes an assumption about artifacts on the classpath that is
+  not true in production deployments.
+- Vulnerabilities in dependencies (transitive CVEs) without a reproducer against
+  the current `trunk` branch.
+- Any attack which grants more privileges accessing remote storage or HDFS than
+  the client already holds through its credentials and/or Kerberos principal.
+- **Denial of service or resource exhaustion at scale** from authenticated use.
+- Performance regressions — file these as normal bugs.
+- Any vulnerability which cannot be reproduced on the latest maintained release,
+  or on a build of the `trunk` branch.
+- Bugs in test runs which do not leak secrets — file these as normal bugs.
+
+## Scanner Calibration Rules
+
+A scanner (or AI tool) SHOULD treat a finding as higher-confidence only if it
+plausibly shows one of the following:
+
+- Exposure of a secret or delegated credential to a new audience.
+- The creation of a new unauthorized capability in a component owned by this
+  project.
+- The existence of the issue on `HEAD` of the `trunk` branch.
+
+A finding SHOULD be downgraded or rejected by default if it instead depends
+primarily on:
+
+- Malformed-input robustness or denial-of-service behaviour.
+- A malicious external service, catalog, or metastore.
+- A principal that already has equivalent power through legitimate
+  authentication, write, or maintenance capabilities.
+- A vulnerability that only exists in previous releases.
+
+
+## Special Topics
+
+### `org.apache.hadoop.io.Writable`
+
+`Writable` is very similar to `java.io.Serializable`, but unlike Java's built-in serialization mechanism,
+marshalling and unmarshalling is explicitly performed in the interface's implementation.
+
+LLMs often conflate the two and consider their use an immediate vulnerability.
+For any CVE related to Writable to be accepted, the submitter MUST show a valid exploit chain using
+extant gadgets in the classpath of Hadoop and/or the latest versions of major applications built on top
+of it.
+Writing new classes as part of an exploit *does not count*.
+
+### Compressors
+
+Do report "decompression bombs" as bugs rather than security issues, as they generally lead to service
+disruption, especially that of the specific worker thread reading untrusted data.
+
+### The `hadoop-client` Libraries
+
+The `hadoop-client-api` and `hadoop-client-runtime` artifacts (and the aggregate
+`hadoop-client`/`hadoop-client-minicluster` modules under `hadoop-client-modules/`) are
+**shaded, relocated aggregates** of many third-party dependencies. The classes they bundle —
+and the embedded copies of those libraries' metadata — belong to those upstream projects, not
+to Hadoop itself.
+
+As a consequence:
+
+- If a scanner reports a CVE "in `hadoop-client-runtime`" (or another `hadoop-client-*`
+  artifact), the finding is almost always against a **third-party artifact** that has been
+  shaded into it, not against Hadoop code. Such findings are handled as third-party
+  dependencies — see [Third Party Modules](#third-party-modules) — and the remedy is a
+  dependency upgrade in a Hadoop release, not a Hadoop CVE.
+- These artifacts exist for **client-side** use. **Server-side vulnerabilities** in bundled
+  dependencies such as Netty, Apache HttpClient, or a Thrift IPC protocol implementation are
+  **not direct issues for the `hadoop-client` libraries**, because the vulnerable server-side
+  code paths are not the ones a Hadoop client exercises. A reproducer MUST show the issue being
+  reachable through Hadoop client usage on the current `trunk` branch.
+
+### `org.apache.hadoop.conf.Configuration`
+
+#### Restricted Evaluation
+
+The class `org.apache.hadoop.conf.Configuration` has the option to restrict system properties;
+it can be set/unset on an instance by a call to `setRestrictSystemProperties(boolean)`.
+When true, all references to system properties or environment variables within a configuration string
+MUST NOT resolve.
+There is a static method to change the default on new instances
+```java
+public static void setRestrictSystemPropertiesDefault(boolean val);
+```
+After a call `Configuration.setRestrictSystemPropertiesDefault(true)`, all new `Configuration()` instances
+SHALL be restricted by default, unless and until `setRestrictSystemPropertiesDefault(false)` is invoked.
+
+This is used in some services to restrict configuration loading for specific jobs/users from accessing
+information about the deployed system.
+
+If system properties or environment variables are resolvable via `${}` and `${env.}` references within
+a restricted `Configuration` instance, this is a security vulnerability.
+
+#### Passwords
+
+It is possible to store secrets, such as cloud credentials, in Hadoop XML configuration files.
+If this is explicitly done, it SHALL NOT be considered a vulnerability.
+
+The correct way to store such secrets is through a JCEKS file or other credentials provider service.
+Application code reading in secrets from configurations MUST use `Configuration.getPassword()` to ensure
+these can be used as a store of secrets.
