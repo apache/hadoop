@@ -451,3 +451,41 @@ If this is explicitly done, it SHALL NOT be considered a vulnerability.
 The correct way to store such secrets is through a JCEKS file or other credentials provider service.
 Application code reading in secrets from configurations MUST use `Configuration.getPassword()` to ensure
 these can be used as a store of secrets.
+
+### IPC
+
+Hadoop supports an IPC protocol with multiple transport options.
+It is used by Hadoop and applications which run on it, including Apache HBase and Apache Tez.
+
+Hadoop's current RPC uses protobuf 3.x, shaded as `org.apache.hadoop.thirdparty.protobuf`
+and shipped via `hadoop-thirdparty`.
+To provide wire-compatibility with old releases, the legacy
+`org.apache.hadoop.ipc.ProtobufRpcEngine` still compiles against the protobuf 2.5.0 API
+(`com.google.protobuf`); that 2.5.0 artifact is `provided`-scope and **not packaged** with
+Hadoop, so a deployment needing the legacy engine must supply it.
+A scanner flagging protobuf 2.5.0 is therefore flagging an un-shipped dependency.
+
+Hadoop services expose IPC endpoints for remote access.
+
+In a secure cluster IPC endpoints SHALL support authentication/authorization using Kerberos and MAY
+support service-specific delegation tokens.
+If they support delegation tokens they SHOULD support token cancellation and SHOULD support token renewal.
+
+In a secure cluster access to service endpoints SHALL be restricted to callers by an ACL site configuration option or similar mechanism.
+If the service is an application launched as a YARN application, the authentication SHOULD be restricted
+to the principal who submitted the job. An ACL configuration option MAY provide extra access.
+
+As IPC endpoints are not exposed to the internet, the security model does not need to be resilient
+to the full scope of attacks a public-facing endpoint may experience, especially resilience to DoS/DDoS
+attacks.
+The key threats to defend against are
+- Unauthorized access: log and reject.
+- Privilege escalation: log and reject.
+- Service vulnerability to failures from malformed messages.
+  Logging and rejection of malformed messages is considered the correct handling of such messages.
+
+Client applications communicate with IPC endpoints as configured or through explicit user configurations, such
+as on the CLI.
+There is an implicit trust boundary.
+Clients SHOULD be resilient to malformed responses from service endpoints; a failure to do so SHALL be considered a bug, not a security issue.
+
