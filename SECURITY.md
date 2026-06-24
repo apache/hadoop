@@ -1,16 +1,4 @@
-<!---
-  Licensed under the Apache License, Version 2.0 (the "License");
-  you may not use this file except in compliance with the License.
-  You may obtain a copy of the License at
-
-   http://www.apache.org/licenses/LICENSE-2.0
-
-  Unless required by applicable law or agreed to in writing, software
-  distributed under the License is distributed on an "AS IS" BASIS,
-  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  See the License for the specific language governing permissions and
-  limitations under the License. See accompanying LICENSE file.
--->
+SPDX-License-Identifier: Apache-2.0
 
 # Apache Hadoop Security Model
 
@@ -71,7 +59,7 @@ A valid report includes:
 AI-assisted reports are accepted **only** if the submitter has verified the
 finding by hand against current source and includes a runnable reproducer.
 
-In addition, the submitter of an AI-generated report is 
+In addition, the submitter of an AI-generated report is
 
 1. REQUIRED to understand what Hadoop is, to understand the claimed vulnerability,
 and to be able to explain it in their own words — including justifying any claimed CVE or CVSS
@@ -88,8 +76,14 @@ without further response.*
 ## Reporting a Vulnerability
 
 Report security vulnerabilities in Apache Hadoop privately to
-**security@hadoop.apache.org**. Do **not** open a public JIRA issue, GitHub
+**security@hadoop.apache.org**.
+
+* Do not cc: any public mailing list.
+* Do **not** open a public JIRA issue, GitHub
 issue, or pull request for an unfixed vulnerability.
+
+For vulnerabilities in CI pipelines, see
+[Reporting Vulnerabilities in CI Pipelines](#reporting-vulnerabilities-in-ci-pipelines).
 
 See the Apache Software Foundation's
 [guidelines for reporting security issues](https://www.apache.org/security/) for
@@ -137,7 +131,6 @@ maintainers, through their own security-reporting mechanisms — after verifying
 the issue is in scope of *their* threat model and reproduces against *their*
 current release.
 
-
 ## Supported Versions
 
 Security fixes are made only to the most recent Apache Hadoop release line(s).
@@ -153,6 +146,17 @@ In the Hadoop threat model there are **trusted elements**. Vulnerabilities that
 require the compromise of these trusted elements are outside the scope of the
 model:
 
+- **Cluster Administrators are trusted.**
+- **DNS is trusted.**
+- **The network perimeter is trusted to keep the public internet out, but the
+  wire is not assumed confidential.** The perimeter does not authenticate callers —
+  Kerberos authentication does that at the service level; the perimeter's job is to
+  keep the cluster off the public internet (Hadoop clusters are never web-facing).
+  Within that, Hadoop may run with optional wire encryption (RPC `privacy` QOP;
+  HDFS block-transfer encryption). Running without encryption is by design and not
+  a vulnerability; but when encryption is enabled, a failure to actually protect
+  traffic — no-op encryption, silent downgrade, or MITM bypass — is in scope.
+- **Any hosting cloud or infrastructure provider is trusted.**
 - **The underlying operating system is trusted.** Hadoop relies on OS process
   isolation, file permissions, and (where required) OS-level disk encryption.
   An attack that first requires the OS to be compromised or misconfigured is out
@@ -178,9 +182,10 @@ Examples of in-scope issues are:
 Further properties of the model:
 
 - **Hadoop clusters are never web-facing.** They are deployed behind a network
-  perimeter; network rules are expected to prevent access by untrusted
-  principals. A report which assumes a cluster is directly exposed to the public
-  internet is not in scope.
+  perimeter; network rules are expected to keep the cluster off the public
+  internet. The perimeter does not authenticate callers — Kerberos does that at
+  the service level. A report which assumes a cluster is directly exposed to the
+  public internet is not in scope.
 - **Wire encryption is optional and controlled by site configuration.** Network
   traffic between Hadoop components may or may not be encrypted, depending on the
   deployment's configuration. The absence of wire encryption when it has not been
@@ -335,6 +340,12 @@ Note that test resource files such as `auth-keys.xml` (and any equivalent under 
 module's test tree) contain live secrets. They *MUST NOT* be read out, printed,
 or committed to version control.
 
+### Reporting Vulnerabilities in CI Pipelines
+
+Reporters MUST e-mail security@infra.apache.org and only Cc security@hadoop.apache.org.
+
+If the threat is credible, the ASF infrastructure team will disable the affected workflow and notify the project.
+
 ## Not in the Threat Model
 
 The following are explicitly **not** vulnerabilities:
@@ -385,23 +396,57 @@ primarily on:
 
 ## Special Topics
 
-### `org.apache.hadoop.io.Writable`
+### Client-Side Resilience to Malicious Services
 
-`Writable` is very similar to `java.io.Serializable`, but unlike Java's built-in serialization mechanism,
-marshalling and unmarshalling is explicitly performed in the interface's implementation.
+Clients are expected to be correctly configured to talk to correct service endpoints, including any web proxies.
+Lack of resilience to malformed responses SHALL be considered bugs, not CVEs.
+This applies to cloud storage services and FTP and HTTP URLs used as filesystem paths.
 
-LLMs often conflate the two and consider their use an immediate vulnerability.
-For any CVE related to Writable to be accepted, the submitter MUST show a valid exploit chain using
-extant gadgets in the classpath of Hadoop and/or the latest versions of major applications built on top
-of it.
-Writing new classes as part of an exploit *does not count*.
+If a malicious remote service can trigger RCE on a client, this SHALL be considered a CVE.
 
 ### Compressors
 
 Do report "decompression bombs" as bugs rather than security issues, as they generally lead to service
 disruption, especially that of the specific worker thread reading untrusted data.
 
-### The `hadoop-client` Libraries
+### Concurrency
+
+There's a lot of concurrency in the Hadoop codebase; it can often be a source of bugs.
+If a race condition leads to privilege escalation or other exploit within the security model,
+it is a CVE.
+
+### Configuration: `org.apache.hadoop.conf.Configuration`
+
+#### Restricted Configurations
+
+The class `org.apache.hadoop.conf.Configuration` has the option to restrict system properties;
+it can be set/unset on an instance by a call to `setRestrictSystemProperties(boolean)`.
+When true, all references to system properties or environment variables within a configuration string
+MUST NOT resolve.
+There is a static method to change the default on new instances
+```java
+public static void setRestrictSystemPropertiesDefault(boolean val);
+```
+After a call `Configuration.setRestrictSystemPropertiesDefault(true)`, all new `Configuration()` instances
+SHALL be restricted by default, unless and until `setRestrictSystemPropertiesDefault(false)` is invoked.
+
+This is used in some services to restrict configuration loading for specific jobs/users from accessing
+information about the deployed system.
+
+If system properties or environment variables are resolvable via `${}` and `${env.}` references within
+a restricted `Configuration` instance, this is a security vulnerability.
+
+#### Passwords in Configurations
+
+It is possible to store secrets, such as cloud credentials, in Hadoop XML configuration files.
+If this is explicitly done, it SHALL NOT be considered a vulnerability.
+
+The correct way to store such secrets is through a JCEKS file or other credentials provider service.
+Application code reading in secrets from configurations MUST use `Configuration.getPassword()` to ensure
+these can be used as a store of secrets.
+
+
+### `hadoop-client` Libraries
 
 The `hadoop-client-api` and `hadoop-client-runtime` artifacts (and the aggregate
 `hadoop-client`/`hadoop-client-minicluster` modules under `hadoop-client-modules/`) are
@@ -422,35 +467,6 @@ As a consequence:
   code paths are not the ones a Hadoop client exercises. A reproducer MUST show the issue being
   reachable through Hadoop client usage on the current `trunk` branch.
 
-### `org.apache.hadoop.conf.Configuration`
-
-#### Restricted Evaluation
-
-The class `org.apache.hadoop.conf.Configuration` has the option to restrict system properties;
-it can be set/unset on an instance by a call to `setRestrictSystemProperties(boolean)`.
-When true, all references to system properties or environment variables within a configuration string
-MUST NOT resolve.
-There is a static method to change the default on new instances
-```java
-public static void setRestrictSystemPropertiesDefault(boolean val);
-```
-After a call `Configuration.setRestrictSystemPropertiesDefault(true)`, all new `Configuration()` instances
-SHALL be restricted by default, unless and until `setRestrictSystemPropertiesDefault(false)` is invoked.
-
-This is used in some services to restrict configuration loading for specific jobs/users from accessing
-information about the deployed system.
-
-If system properties or environment variables are resolvable via `${}` and `${env.}` references within
-a restricted `Configuration` instance, this is a security vulnerability.
-
-#### Passwords
-
-It is possible to store secrets, such as cloud credentials, in Hadoop XML configuration files.
-If this is explicitly done, it SHALL NOT be considered a vulnerability.
-
-The correct way to store such secrets is through a JCEKS file or other credentials provider service.
-Application code reading in secrets from configurations MUST use `Configuration.getPassword()` to ensure
-these can be used as a store of secrets.
 
 ### IPC
 
@@ -478,7 +494,7 @@ to the principal who submitted the job. An ACL configuration option MAY provide 
 As IPC endpoints are not exposed to the internet, the security model does not need to be resilient
 to the full scope of attacks a public-facing endpoint may experience, especially resilience to DoS/DDoS
 attacks.
-The key threats to defend against are
+The key threats to defend against are:
 - Unauthorized access: log and reject.
 - Privilege escalation: log and reject.
 - Service vulnerability to failures from malformed messages.
@@ -489,3 +505,50 @@ as on the CLI.
 There is an implicit trust boundary.
 Clients SHOULD be resilient to malformed responses from service endpoints; a failure to do so SHALL be considered a bug, not a security issue.
 
+### Native Code
+
+Anything which can trigger failures in Hadoop's own native code in supported operating systems SHALL be
+considered for CVEs.
+This includes
+- pointer, memory and stack issues.
+- OS calls
+- Process launch and cross-process IPC (especially native OS mechanisms).
+- JNI binding
+As per the policy on third-party libraries, issues with native libraries such as libssl are out of scope unless it is actually how hadoop invokes the native code which is at fault.
+
+### Resource Exhaustion
+
+Anything which consumes resources such as memory, threads, file handles or disk storage, SHALL be considered bugs.
+
+There is a special case: rapid resource exhaustion which can be triggered on HDFS and YARN services
+by remote requests from non-administrative callers.
+Where a single low-cost request forces a disproportionate resource cost on a service and so degrades
+it for other users (an amplification attack), this SHALL be considered a vulnerability rather than a
+bug, and reported as such — even though general resilience to denial-of-service is not part of the
+threat model.
+
+### Test Code
+
+Test code is expected to be executed in controlled environments.
+- Dedicated developer systems.
+- CI containers/VMs.
+
+All reports of vulnerabilities in test code SHALL be downgraded to bugs or treated as BY-DESIGN/
+WONTFIX issues except when secrets are logged or if it is possible for malicious code to be executed in CI/CD workflows.
+
+### TLS/SSL
+
+Hadoop services support TLS of service hosts; certificate management is out of scope.
+
+Validation of TLS certificates is in scope, including verifying the hostname matches the certificate, along with the entire certificate chain.
+
+### Writable: `org.apache.hadoop.io.Writable`
+
+`Writable` is very similar to `java.io.Serializable`, but unlike Java's built-in serialization mechanism,
+marshalling and unmarshalling is explicitly performed in the interface's implementation.
+
+LLMs often conflate the two and consider their use an immediate vulnerability.
+For any CVE related to Writable to be accepted, the submitter MUST show a valid exploit chain using
+extant gadgets in the classpath of Hadoop and/or the latest versions of major applications built on top
+of it.
+Writing new classes as part of an exploit *does not count*.
