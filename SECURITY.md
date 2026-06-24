@@ -148,6 +148,12 @@ model:
 
 - **Cluster Administrators are trusted.**
 - **DNS is trusted.**
+- **The Kerberos authentication infrastructure is trusted.** Active Directory,
+  FreeIPA, or whichever other Key Distribution Center (KDC) is in use is trusted
+  and required to be well-configured — including synchronized clocks (NTP/chrony)
+  across the KDC, services, and clients, within the Kerberos clock-skew window.
+  Authentication failures caused by clock drift are operational bugs, not
+  vulnerabilities.
 - **The network perimeter is trusted to keep the public internet out, but the
   wire is not assumed confidential.** The perimeter does not authenticate callers —
   Kerberos authentication does that at the service level; the perimeter's job is to
@@ -156,7 +162,13 @@ model:
   HDFS block-transfer encryption). Running without encryption is by design and not
   a vulnerability; but when encryption is enabled, a failure to actually protect
   traffic — no-op encryption, silent downgrade, or MITM bypass — is in scope.
-- **Any hosting cloud or infrastructure provider is trusted.**
+- **Any hosting cloud or infrastructure provider is trusted, as is the
+  underlying hardware.** This includes the CPU, memory, storage, and network
+  hardware, even on shared/multi-tenant cloud systems where that hardware is
+  physically shared with other tenants. Attacks that require malicious or
+  compromised hardware, hypervisor escape, or cross-tenant side channels
+  (speculative-execution, Rowhammer, and similar) are the responsibility of the
+  hardware and infrastructure provider, and are out of scope.
 - **The underlying operating system is trusted.** Hadoop relies on OS process
   isolation, file permissions, and (where required) OS-level disk encryption.
   An attack that first requires the OS to be compromised or misconfigured is out
@@ -227,18 +239,18 @@ authentication, service-level authorization, delegation tokens, and constrained
 proxy/superuser impersonation.
 
 It is the expected deployment of production physical clusters.
-1. A trusted kerberos system is used to authenticate principals.
-2. Services have been issued with credentials in files, which are secured on the physical hosts.
-3. Users of the cluster all authenticate with the kerberos system for their access
+1. A trusted Kerberos system is used to authenticate principals.
+2. Services have been issued with credentials (keytabs) in files, secured on the physical hosts via OS file permissions.
+3. Users of the cluster all authenticate with the Kerberos system for their access.
 4. Access to the cluster may be via a proxy mechanism.
-5. The HDFS filesystem uses kerberos to authenticate hdfs nodes and services themselves, other cluster services (YARN, Apache ZooKeeper etc) and callers.
+5. The HDFS filesystem uses Kerberos to authenticate HDFS nodes and services themselves, other cluster services (YARN, Apache ZooKeeper etc) and callers.
 6. HDFS block tokens are issued by the HDFS Name Node to grant data access to authenticated principals;
    the possessor of a token may access a block of data on a data node with the permissions in that token,
    without the need to supply any further authentication information.
 
 Hadoop services issue _delegation tokens_: an authenticated principal obtains a token directly from a service such as HDFS, Apache HBase, Apache Hive, Apache Knox and more.
 YARN distributes these tokens to an application's containers and renews them on the application's behalf, so tasks can authenticate to those services without holding Kerberos credentials themselves.
-These tokens have an independent life from the kerberos credentials
+These tokens have an independent life from the Kerberos credentials
 * They have a limited lifespan of a number of hours.
 * They can be cancelled: the issuing service MUST then reject requests using them as authentication.
 * They can be renewed: before their lifespan expires the renewer requests the issuing service to extend their lifespan.
