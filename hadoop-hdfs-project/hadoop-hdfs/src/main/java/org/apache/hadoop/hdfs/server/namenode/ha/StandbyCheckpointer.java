@@ -247,7 +247,10 @@ public class StandbyCheckpointer {
     // Do this in a separate thread to avoid blocking transition to active, but don't allow more
     // than the expected number of tasks to run or queue up
     // See HDFS-4816
-    int poolSize = checkpointConf.isParallelUploadEnabled() ? remoteNNAddresses.size() : 0;
+    int poolSize = checkpointConf.isParallelUploadEnabled() ?
+        Math.min(remoteNNAddresses.size(), checkpointConf.getParallelUploadMaxThreads()) : 0;
+    LOG.info("Fsimage upload concurrency: {}, remote namenodes count: {}, maxThreads: {}", poolSize,
+        remoteNNAddresses.size(), checkpointConf.getParallelUploadMaxThreads());
     ExecutorService executor =
         new ThreadPoolExecutor(poolSize, remoteNNAddresses.size(), 100, TimeUnit.MILLISECONDS,
             new LinkedBlockingQueue<>(remoteNNAddresses.size()), uploadThreadFactory);

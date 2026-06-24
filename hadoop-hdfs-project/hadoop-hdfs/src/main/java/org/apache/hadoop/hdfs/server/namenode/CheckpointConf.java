@@ -23,6 +23,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.util.Preconditions;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
 
@@ -60,6 +61,11 @@ public class CheckpointConf {
    */
   private final boolean parallelUploadEnabled;
 
+  /**
+   * Max number of concurrent fsimage uploads from standby checkpointer.
+   */
+  private final int parallelUploadMaxThreads;
+
   public CheckpointConf(Configuration conf) {
     checkpointCheckPeriod = conf.getTimeDuration(
         DFS_NAMENODE_CHECKPOINT_CHECK_PERIOD_KEY,
@@ -77,6 +83,11 @@ public class CheckpointConf {
     parallelUploadEnabled = conf.getBoolean(
         DFS_NAMENODE_CHECKPOINT_PARALLEL_UPLOAD_ENABLED_KEY,
         DFS_NAMENODE_CHECKPOINT_PARALLEL_UPLOAD_ENABLED_DEFAULT);
+    parallelUploadMaxThreads = conf.getInt(
+        DFS_NAMENODE_CHECKPOINT_PARALLEL_UPLOAD_MAX_THREADS_KEY,
+        DFS_NAMENODE_CHECKPOINT_PARALLEL_UPLOAD_MAX_THREADS_DEFAULT);
+    Preconditions.checkArgument(parallelUploadMaxThreads > 0,
+        DFS_NAMENODE_CHECKPOINT_PARALLEL_UPLOAD_MAX_THREADS_KEY + " must be greater than 0");
     warnForDeprecatedConfigs(conf);
   }
   
@@ -118,5 +129,9 @@ public class CheckpointConf {
 
   public boolean isParallelUploadEnabled() {
     return parallelUploadEnabled;
+  }
+
+  public int getParallelUploadMaxThreads() {
+    return parallelUploadMaxThreads;
   }
 }

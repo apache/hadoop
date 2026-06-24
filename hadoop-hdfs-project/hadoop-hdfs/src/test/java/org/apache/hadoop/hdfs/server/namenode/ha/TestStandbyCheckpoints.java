@@ -29,6 +29,7 @@ import java.net.URL;
 import java.util.List;
 import java.util.Random;
 import java.util.function.Supplier;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -511,6 +512,8 @@ public class TestStandbyCheckpoints {
           DFSConfigKeys.DFS_IMAGE_TRANSFER_RATE_KEY, 100);
       cluster.getConfiguration(i).setBoolean(
           DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_PARALLEL_UPLOAD_ENABLED_KEY, true);
+      cluster.getConfiguration(i).setInt(
+          DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_PARALLEL_UPLOAD_MAX_THREADS_KEY, NUM_NNS);
     }
     for (int i = 0; i < NUM_NNS; i++) {
       cluster.restartNameNode(i);
@@ -827,6 +830,60 @@ public class TestStandbyCheckpoints {
     // Make sure that standby namenode checkpoint success and update the lastCheckpointTime
     // even though it send fsimage to nn2 failed because nn2 is shut down.
     assertTrue(snnCheckpointTime2 > snnCheckpointTime1);
+  }
+
+  @Test
+  @Timeout(value = 300)
+  public void testCheckpointParallelUploadRespectsMaxThreads() throws Exception {
+    final int maxThreads = 1;
+    final AtomicInteger inFlightUploads = new AtomicInteger(0);
+    final AtomicInteger peakInFlightUploads = new AtomicInteger(0);
+
+    for (int i = 1; i < NUM_NNS; i++) {
+      cluster.getConfiguration(i)
+          .setBoolean(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_PARALLEL_UPLOAD_ENABLED_KEY, true);
+      cluster.getConfiguration(i)
+          .setInt(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_PARALLEL_UPLOAD_MAX_THREADS_KEY,
+              maxThreads);
+      cluster.getConfiguration(i).setLong(DFSConfigKeys.DFS_IMAGE_TRANSFER_RATE_KEY, 100);
+    }
+
+    CheckpointFaultInjector oldInjector = CheckpointFaultInjector.getInstance();
+    CheckpointFaultInjector.set(new CheckpointFaultInjector() {
+      @Override
+      public void duringUploadInProgess() throws InterruptedException {
+        int currentInFlight = inFlightUploads.incrementAndGet();
+        peakInFlightUploads.updateAndGet(previousPeak -> Math.max(previousPeak, currentInFlight));
+        try {
+          Thread.sleep(100);
+        } finally {
+          inFlightUploads.decrementAndGet();
+        }
+      }
+    });
+
+    try {
+      for (int i = 0; i < NUM_NNS; i++) {
+        cluster.restartNameNode(i);
+      }
+      setNNs();
+
+      cluster.transitionToActive(0);
+      doEdits(0, 100);
+
+      for (int i = 1; i < NUM_NNS; i++) {
+        HATestUtil.waitForStandbyToCatchUp(nns[0], nns[i]);
+        HATestUtil.waitForCheckpoint(cluster, i, ImmutableList.of(104));
+      }
+
+      assertTrue(peakInFlightUploads.get() > 0,
+          "Expected at least one fsimage upload to be observed.");
+      assertTrue(peakInFlightUploads.get() <= maxThreads,
+          "Observed upload concurrency " + peakInFlightUploads.get()
+              + " exceeds configured max threads " + maxThreads);
+    } finally {
+      CheckpointFaultInjector.set(oldInjector);
+    }
   }
 
   /**
