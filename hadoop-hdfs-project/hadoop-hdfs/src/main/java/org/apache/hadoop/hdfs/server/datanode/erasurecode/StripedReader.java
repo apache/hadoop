@@ -202,11 +202,9 @@ class StripedReader {
 
     BitSet bitset = reconstructor.getLiveBitSet();
     int k = 0;
-    for (int i = 0; i < dataBlkNum + parityBlkNum; i++) {
-      if (!bitset.get(i)) {
-        if (reconstructor.getBlockLen(i) <= 0) {
-          zeroStripeIndices[k++] = (short)i;
-        }
+    for (int i = 0; i < dataBlkNum; i++) {
+      if (!bitset.get(i) && reconstructor.getBlockLen(i) <= 0) {
+        zeroStripeIndices[k++] = (short)i;
       }
     }
   }
