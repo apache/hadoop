@@ -301,7 +301,8 @@ public final class SubjectUtil {
   }
 
   @SuppressWarnings("unchecked")
-  private static <T> T invokeCallAs(Subject subject, Callable<T> action) throws CompletionException {
+  private static <T> T invokeCallAs(Subject subject, Callable<T> action)
+      throws CompletionException {
     if (HAS_CALL_AS) {
       try {
         return (T) CALL_AS.invoke(subject, action);
@@ -405,7 +406,7 @@ public final class SubjectUtil {
    * inherited a Subject from a parent's {@link #callAs} scope continue to observe it.
    * The JDK API {@code Subject.current()} (backed by {@code ScopedValue}) is consulted
    * first, so any future virtual-thread / {@code StructuredTaskScope} usage that propagates
-   * the {@code ScopedValue} keeps working without falling back to the TLS layer.
+   * the {@code ScopedValue} keeps working without falling back to the ThreadLocal layer.
    *
    * @return the current subject
    */

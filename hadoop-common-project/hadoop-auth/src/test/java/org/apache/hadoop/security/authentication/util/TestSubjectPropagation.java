@@ -18,8 +18,7 @@
 
 package org.apache.hadoop.security.authentication.util;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
 
@@ -54,8 +53,9 @@ public class TestSubjectPropagation {
       t.join(50000);
       return null;
     });
-    assertEquals(parent, seen.get(),
-        "A plain Thread (no Hadoop wrapper) constructed inside callAs must see the parent's Subject");
+    assertThat(seen.get()).as(
+        "plain Thread inside callAs must see parent's Subject")
+        .isEqualTo(parent);
   }
 
   /**
@@ -78,8 +78,9 @@ public class TestSubjectPropagation {
       pool.shutdownNow();
       pool.awaitTermination(5, TimeUnit.SECONDS);
     }
-    assertEquals(parent, seen.get(),
-        "A plain Thread pool worker must see the parent's Subject via InheritableThreadLocal cascade");
+    assertThat(seen.get()).as(
+        "pool worker must see parent's Subject via InheritableThreadLocal cascade")
+        .isEqualTo(parent);
   }
 
   /**
@@ -94,7 +95,7 @@ public class TestSubjectPropagation {
     AtomicReference<Subject> seen = new AtomicReference<>();
     ExecutorService pool = Executors.newFixedThreadPool(1, r -> new Thread(r, "plain-pool"));
     try {
-      // Step 1: create the worker INSIDE the callAs scope so it inherits the Subject's TLS.
+      // Step 1: create the worker INSIDE the callAs scope so it inherits the Subject's ThreadLocal.
       SubjectUtil.callAs(parent, () -> {
         pool.submit(() -> { /* warm worker, no-op */ }).get(5, TimeUnit.SECONDS);
         return null;
@@ -116,8 +117,9 @@ public class TestSubjectPropagation {
       pool.shutdownNow();
       pool.awaitTermination(5, TimeUnit.SECONDS);
     }
-    assertEquals(parent, seen.get(),
-        "Subject must cascade transitively even after the original callAs scope has exited");
+    assertThat(seen.get()).as(
+        "Subject must cascade transitively even after the original callAs scope has exited")
+        .isEqualTo(parent);
   }
 
   @Test
@@ -134,17 +136,18 @@ public class TestSubjectPropagation {
       insideOuterAfterInner.set(SubjectUtil.current());
       return null;
     });
-    assertEquals(s2, insideInner.get(), "inner callAs must shadow outer Subject");
-    assertEquals(s1, insideOuterAfterInner.get(),
-        "outer Subject must be restored after the inner callAs exits");
+    assertThat(insideInner.get()).as("inner callAs must shadow outer Subject").isEqualTo(s2);
+    assertThat(insideOuterAfterInner.get()).as(
+        "outer Subject must be restored after the inner callAs exits").isEqualTo(s1);
   }
 
   @Test
   public void testCallAsClearsTlStateOnExit() {
     Subject s = new Subject();
     SubjectUtil.callAs(s, () -> null);
-    assertNull(SubjectUtil.current(),
-        "After callAs exits with no enclosing scope, current() must return null, not stale TL state");
+    assertThat(SubjectUtil.current()).as(
+        "after callAs exits, current() must return null, not stale ThreadLocal state")
+        .isNull();
   }
 
   @Test
@@ -159,8 +162,9 @@ public class TestSubjectPropagation {
       });
       return null;
     });
-    assertNull(seen.get(),
-        "callAs(null, ...) inside an outer callAs must produce a null current Subject inside the inner action");
+    assertThat(seen.get()).as(
+        "callAs(null, ...) inside outer callAs must produce null current Subject")
+        .isNull();
   }
 
   @Test
@@ -173,7 +177,8 @@ public class TestSubjectPropagation {
       after.set(SubjectUtil.current());
       return null;
     });
-    assertEquals(s, after.get(),
-        "Re-entering callAs with the same Subject must keep current() returning that Subject");
+    assertThat(after.get()).as(
+        "Re-entering callAs with the same Subject must keep current() returning that Subject")
+        .isEqualTo(s);
   }
 }
