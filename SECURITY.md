@@ -1,4 +1,4 @@
-SPDX-License-Identifier: Apache-2.0
+<!-- SPDX-License-Identifier: Apache-2.0 -->
 
 # Apache Hadoop Security Model
 
@@ -66,8 +66,8 @@ and to be able to explain it in their own words — including justifying any cla
 scores. If the submitter is unable to do this, then any credit for a resulting
 CVE will be assigned to the AI tool alone, and not to the submitter.
 
-2. MUST declare the AI tool used, and provide the prompt.
-   The prompt is a key part of AI tool reports, and we need to be able to track/replicate these.
+2. MUST declare the AI tool used, and be willing to provide the log.
+   The log is a key part of AI tool reports, and we need to be able to track/replicate these.
 
 *Unverified LLM-generated reports waste maintainer time and will be closed
 without further response.*
@@ -115,13 +115,23 @@ Open source development is a community process, and addressing this is done
 in the [developer mailing lists](https://hadoop.apache.org/mailing_lists.html).
 Join the community to help get your needs addressed.
 
+If you cannot find existing information on whether the project is affected by the issue in the advisory,
+it may be up to you, as a part of the project community, to participate in its handling.
+Ensure you provide detailed information when starting a discussion - review how the project uses the dependency and have your opinion on the priority to upgrade,
+or even remove, the dependency.
+Contributions upgrading the dependency to a version that is not affected by the problem are generally welcomed, though will not typically expedite the release schedule.
+
+Actively participating in the release process, especially qualifying pre-release artifacts in your
+own deployments, is the most effective way of accelerating the release timetable.
+
 ### Providing Advance Warning of a Critical CVE in a Hadoop Dependency
 
 If a team providing a library which Hadoop bundles has a critical CVE which
 a forthcoming fix will correct, they are encouraged to notify the hadoop security
-list so we can co-ordinate releases.
+list so we can identify whether the project is exposed, help review and validate fixes and
+co-ordinate releases.
 
-We treat all such reports as confidential.
+We SHALL treat all such reports as confidential.
 
 ### Reporting a Newly-Discovered Vulnerability in a Third-Party Module
 
@@ -178,6 +188,11 @@ model:
   valid and to be writable only by trusted administrators. If an attacker can
   manipulate the site configuration, the game is already over — that is out of
   scope.
+- **The classpath is trusted.** We expect no malicious JAR files to be on the classpath.
+  If an attacker can add a malicious JAR to the classpath, then it is the ability to add the
+  JAR to a process launched by a higher-privilege which is the exploit.
+  Launching a process as the current principal with a malicious JAR is not an exploit,
+  nor is any attack which makes the ability to manipulate the classpath a pre-requisite.
 
 Within that model, the boundary Hadoop **defends** is **privilege escalation
 across an authenticated boundary within a Kerberos-secured cluster**.
@@ -190,6 +205,7 @@ Examples of in-scope issues are:
 - Forging, leaking, or improperly reusing delegation tokens.
 - Defeating the constraints on proxy/superuser impersonation
   (see [Proxy user - Superusers Acting On Behalf Of Other Users](hadoop-common-project/hadoop-common/src/site/markdown/Superusers.md)).
+- Failure of clients to detect and reject malicious service endpoints/MITM attacks.
 
 Further properties of the model:
 
@@ -275,10 +291,31 @@ Hadoop is frequently deployed as a transient cluster in a cloud environment:
 
 Hadoop clusters MUST NOT be deployed in cloud without network rules to isolate them from the public internet.
 
+### Client-only Deployments
+
+The hadoop client libraries can be used as part of an application communicating with remote
+kerberos-authenticated services or to cloud infrastructure:
+
+- No service endpoints are created.
+- HTTP, HTTPS and IPC connections are set up to communicate with remote services.
+- Credentials are stored on the client, either for direct authentication,
+  or via authentication services such as Kerberos or OAuth 2, services which provide shorter-lived credentials.
+- The shorter-lived credentials are used for communication with the remote services themselves.
+
+In client-side use, the following is trusted
+- The underlying operating system and its configuration.
+- The principal and the host administrator are trusted.
+- The application classpath.
+- The client-side configuration and CLI arguments.
+
+Whether or not the network is trusted to the extent that DNS is trusted and network encryption is mandatory for HDFS, cluster service and cloud service communication
+along with TLS where appropriate, is a matter for client configuration and out of scope of this security model.
+
+
 
 ## Data at Rest and Temporary Files
 
-- **Persisting data encrypted requires HDFS encryption** (see
+- **Persisting data in the cluster filesystem encrypted requires HDFS encryption** (see
   [Transparent Encryption in HDFS](hadoop-hdfs-project/hadoop-hdfs/src/site/markdown/TransparentEncryption.md)).
   Where encryption has been configured, a failure of the code to actually
   encrypt the persisted data **is a vulnerability** and should be reported.
@@ -292,11 +329,33 @@ Hadoop clusters MUST NOT be deployed in cloud without network rules to isolate t
   - A failure to create files/directories and set their permissions atomically
     **is an issue** and should be reported.
 
-## Secrets and Logging
+## Logging
+
+Logs are expected to be kept private.
+
+That is, users and administrators are _expected_ not to share them with untrusted entities.
+This is consistent with the [Log4j Security Model](https://logging.apache.org/security.html),
+which is the logging framework Hadoop uses.
+
+Services MUST restrict access to logs.
+- Non-administrator principals MUST NOT be able to access logs of applications launched by other principals.
+- Non-administrator principals MUST NOT be able to access logs of services.
+
+Preventing log overflow attacks is a matter of configuring logging, and out of scope.
+Default/example log configurations SHOULD define a rollover policy which limits the size of log files created.
+
+Limiting log size may permit failed attempts to authenticate with a service to be logged.
+Log4J does support log aggregation across systems; services can be configured to feed selective logs
+to central services.
+
+Services SHOULD assist central security logging by providing specific logs for reporting authentication
+failures/privilege rejections.
+
+### Secrets and Logging
 
 Leaking secrets into logs is [CWE-532: Insertion of Sensitive Information into
-Log File](https://cwe.mitre.org/data/definitions/532.html). The following rules
-apply to Hadoop code:
+Log File](https://cwe.mitre.org/data/definitions/532.html).
+The following rules apply to Hadoop code:
 
 - Secrets *SHOULD NOT* be logged.
 - **Persistent secrets, long-lived credentials, and encryption secrets (keys,
@@ -401,7 +460,7 @@ primarily on:
 
 - Malformed-input robustness or denial-of-service behaviour.
 - A malicious external service, catalog, or metastore.
-- A principal that already has equivalent power through legitimate
+- A principal who already has equivalent power through legitimate
   authentication, write, or maintenance capabilities.
 - A vulnerability that only exists in previous releases.
 
