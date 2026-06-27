@@ -250,7 +250,7 @@ public class DeadNodeDetector extends Daemon {
   }
 
   @Override
-  public void work() {
+  public void run() {
     while (!Thread.currentThread().isInterrupted()) {
       clearAndGetDetectedDeadNodes();
       LOG.debug("Current detector state {}, the detected nodes: {}.", state,

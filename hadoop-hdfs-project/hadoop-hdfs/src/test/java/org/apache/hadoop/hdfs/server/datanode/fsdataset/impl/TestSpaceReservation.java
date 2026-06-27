@@ -554,7 +554,7 @@ public class TestSpaceReservation {
     }
 
     @Override
-    public void work() {
+    public void run() {
       /**
        * Create a file, write up to 3 blocks of data and close the file.
        * Do this in a loop until we are told to stop.

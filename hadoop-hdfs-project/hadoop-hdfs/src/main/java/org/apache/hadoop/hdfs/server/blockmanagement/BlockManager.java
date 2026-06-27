@@ -3965,7 +3965,7 @@ public class BlockManager implements BlockStatsMXBean {
     reconstructionQueuesInitializer = new Daemon() {
 
       @Override
-      public void work() {
+      public void run() {
         try {
           processMisReplicatesAsync();
         } catch (InterruptedException ie) {
