@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.io;
 
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -94,9 +93,9 @@ public class TestMD5Hash {
     assertTrue(closeHash1.hashCode() != closeHash2.hashCode(),
         "hash collision");
      
-    SubjectInheritingThread t1 = new SubjectInheritingThread() {
+    Thread t1 = new Thread() {      
       @Override
-      public void work() {
+      public void run() {
         for (int i = 0; i < 100; i++) {
           MD5Hash hash = new MD5Hash(DFF);
           assertEquals(hash, md5HashFF);
@@ -104,9 +103,9 @@ public class TestMD5Hash {
       }
     };
     
-    SubjectInheritingThread t2 = new SubjectInheritingThread() {
+    Thread t2 = new Thread() {
       @Override
-      public void work() {
+      public void run() {
         for (int i = 0; i < 100; i++) {
           MD5Hash hash = new MD5Hash(D00);
           assertEquals(hash, md5Hash00);

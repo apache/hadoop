@@ -35,7 +35,6 @@ import com.microsoft.azure.cosmosdb.SqlQuerySpec;
 import com.microsoft.azure.cosmosdb.rx.AsyncDocumentClient;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.Time;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.server.timelineservice.metrics.PerNodeAggTimelineCollectorMetrics;
 import org.apache.hadoop.yarn.server.timelineservice.documentstore.DocumentStoreUtils;
 import org.apache.hadoop.yarn.server.timelineservice.documentstore.collection.CollectionType;
@@ -280,7 +279,7 @@ public class CosmosDBDocumentStoreWriter<TimelineDoc extends TimelineDocument>
   }
 
   private void addShutdownHook() {
-    Runtime.getRuntime().addShutdownHook(new SubjectInheritingThread(() -> {
+    Runtime.getRuntime().addShutdownHook(new Thread(() -> {
       if (executorService != null) {
         executorService.shutdown();
       }

@@ -28,7 +28,6 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -326,7 +325,7 @@ public class KMSBenchmark implements Tool {
   /**
    * One of the threads that perform stats operations.
    */
-  private class StatsDaemon extends SubjectInheritingThread {
+  private class StatsDaemon extends Thread {
     private final int daemonId;
     private int opsPerThread;
     private String arg1;      // argument passed to executeOp()
@@ -342,7 +341,7 @@ public class KMSBenchmark implements Tool {
     }
 
     @Override
-    public void work() {
+    public void run() {
       localNumOpsExecuted = 0;
       localCumulativeTime = 0;
       arg1 = statsOp.getExecutionArgument(daemonId);

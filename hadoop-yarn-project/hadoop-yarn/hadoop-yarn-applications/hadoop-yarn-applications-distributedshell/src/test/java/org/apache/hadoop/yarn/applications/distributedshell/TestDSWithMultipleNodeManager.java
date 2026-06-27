@@ -40,7 +40,6 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.client.api.YarnClient;
@@ -321,7 +320,7 @@ public class TestDSWithMultipleNodeManager {
           new Client(
               new Configuration(distShellTest.getYarnClusterConfiguration()));
       dsClient.init(argsA);
-      Thread dsClientRunner = new SubjectInheritingThread(() -> {
+      Thread dsClientRunner = new Thread(() -> {
         try {
           dsClient.run();
         } catch (Exception e) {
@@ -456,7 +455,7 @@ public class TestDSWithMultipleNodeManager {
   /**
    * Monitor containers running on NMs.
    */
-  class NMContainerMonitor extends SubjectInheritingThread {
+  class NMContainerMonitor extends Thread {
     // The interval of milliseconds of sampling (500ms)
     private final static int SAMPLING_INTERVAL_MS = 500;
 
@@ -466,7 +465,7 @@ public class TestDSWithMultipleNodeManager {
     private volatile boolean isRunning = true;
 
     @Override
-    public void work() {
+    public void run() {
       while (isRunning) {
         for (int i = 0; i < NUM_NMS; i++) {
           int nContainers =

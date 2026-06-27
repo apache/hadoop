@@ -41,7 +41,6 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.metrics2.impl.ConfigBuilder;
 import org.apache.hadoop.metrics2.impl.TestMetricsConfig;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.eclipse.jetty.util.ajax.JSON;
@@ -56,10 +55,10 @@ public class TestFSNamesystemMBean {
    * JMX properties. If it can access all the properties, the test is
    * considered successful.
    */
-  private static class MBeanClient extends SubjectInheritingThread {
+  private static class MBeanClient extends Thread {
     private boolean succeeded = false;
     @Override
-    public void work() {
+    public void run() {
       try {
         MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
 

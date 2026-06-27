@@ -41,7 +41,6 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.tools.rumen.JobStory;
 import org.apache.hadoop.tools.rumen.ResourceUsageMetrics;
 import org.apache.hadoop.tools.rumen.TaskInfo;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.util.ResourceCalculatorPlugin;
 
 import java.io.IOException;
@@ -144,7 +143,7 @@ class LoadJob extends GridmixJob {
    * This is a progress based resource usage matcher.
    */
   @SuppressWarnings("unchecked")
-  static class ResourceUsageMatcherRunner extends SubjectInheritingThread
+  static class ResourceUsageMatcherRunner extends Thread 
   implements Progressive {
     private final ResourceUsageMatcher matcher;
     private final BoostingProgress progress;
@@ -200,7 +199,7 @@ class LoadJob extends GridmixJob {
     }
     
     @Override
-    public void work() {
+    public void run() {
       LOG.info("Resource usage matcher thread started.");
       try {
         while (progress.getProgress() < 1) {
@@ -235,7 +234,7 @@ class LoadJob extends GridmixJob {
   
   // Makes sure that the TaskTracker doesn't kill the map/reduce tasks while
   // they are emulating
-  private static class StatusReporter extends SubjectInheritingThread {
+  private static class StatusReporter extends Thread {
     private final TaskAttemptContext context;
     private final Progressive progress;
     
@@ -245,7 +244,7 @@ class LoadJob extends GridmixJob {
     }
     
     @Override
-    public void work() {
+    public void run() {
       LOG.info("Status reporter thread started.");
       try {
         while (!isInterrupted() && progress.getProgress() < 1) {

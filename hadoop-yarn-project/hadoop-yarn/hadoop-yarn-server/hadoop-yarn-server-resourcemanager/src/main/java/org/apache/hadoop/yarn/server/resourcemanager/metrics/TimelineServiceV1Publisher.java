@@ -29,7 +29,6 @@ import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
@@ -537,13 +536,13 @@ public class TimelineServiceV1Publisher extends AbstractSystemMetricsPublisher {
     }
   }
 
-  private class PutEventThread extends SubjectInheritingThread {
+  private class PutEventThread extends Thread {
     PutEventThread() {
       super("PutEventThread");
     }
 
     @Override
-    public void work() {
+    public void run() {
       LOG.info("System metrics publisher will put events every " +
           String.valueOf(putEventInterval) + " milliseconds");
       while (!stopped && !Thread.currentThread().isInterrupted()) {

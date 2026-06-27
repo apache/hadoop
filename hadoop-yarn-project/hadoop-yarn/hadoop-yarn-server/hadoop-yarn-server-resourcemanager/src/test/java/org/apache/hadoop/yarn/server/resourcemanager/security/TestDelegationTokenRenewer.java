@@ -74,7 +74,6 @@ import org.apache.hadoop.security.token.TokenRenewer;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -995,9 +994,9 @@ public class TestDelegationTokenRenewer {
     localDtr.init(conf);
     localDtr.start();
     // submit a job that blocks during renewal                                 
-    SubjectInheritingThread submitThread = new SubjectInheritingThread() {
+    Thread submitThread = new Thread() {                                       
       @Override                                                                
-      public void work() {
+      public void run() {
         localDtr.addApplicationAsync(mock(ApplicationId.class),
             creds1, false, "user", new Configuration());
       }                                                                        

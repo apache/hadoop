@@ -124,8 +124,6 @@ import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.ProtoUtil;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
-
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.tracing.Span;
 import org.apache.hadoop.tracing.SpanContext;
@@ -1473,7 +1471,7 @@ public abstract class Server {
   }
 
   /** Listens on the socket. Creates jobs for the handler threads*/
-  private class Listener extends SubjectInheritingThread {
+  private class Listener extends Thread {
     
     private ServerSocketChannel acceptChannel = null; //the accept channel
     private Selector selector = null; //the selector that we use for the server
@@ -1522,7 +1520,7 @@ public abstract class Server {
       this.isOnAuxiliaryPort = true;
     }
     
-    private class Reader extends SubjectInheritingThread {
+    private class Reader extends Thread {
       final private BlockingQueue<Connection> pendingConnections;
       private final Selector readSelector;
 
@@ -1535,7 +1533,7 @@ public abstract class Server {
       }
       
       @Override
-      public void work() {
+      public void run() {
         LOG.info("Starting " + Thread.currentThread().getName());
         try {
           doRunLoop();
@@ -1614,7 +1612,7 @@ public abstract class Server {
     }
 
     @Override
-    public void work() {
+    public void run() {
       LOG.info(Thread.currentThread().getName() + ": starting");
       SERVER.set(Server.this);
       connectionManager.startIdleScan();
@@ -1762,7 +1760,7 @@ public abstract class Server {
   }
 
   // Sends responses of RPC back to clients.
-  private class Responder extends SubjectInheritingThread {
+  private class Responder extends Thread {
     private final Selector writeSelector;
     private int pending;         // connections waiting to register
 
@@ -1774,7 +1772,7 @@ public abstract class Server {
     }
 
     @Override
-    public void work() {
+    public void run() {
       LOG.info(Thread.currentThread().getName() + ": starting");
       SERVER.set(Server.this);
       try {
@@ -3240,7 +3238,7 @@ public abstract class Server {
   }
 
   /** Handles queued calls . */
-  private class Handler extends SubjectInheritingThread {
+  private class Handler extends Thread {
     public Handler(int instanceNumber) {
       this.setDaemon(true);
       this.setName("IPC Server handler "+ instanceNumber +
@@ -3248,7 +3246,7 @@ public abstract class Server {
     }
 
     @Override
-    public void work() {
+    public void run() {
       LOG.debug("{}: starting", Thread.currentThread().getName());
       SERVER.set(Server.this);
       while (running) {

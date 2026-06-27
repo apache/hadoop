@@ -30,7 +30,6 @@ import java.util.List;
 import java.util.Random;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
-
 import java.util.function.Supplier;
 
 import org.apache.hadoop.conf.Configuration;
@@ -57,7 +56,7 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
+
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -524,8 +523,8 @@ public class TestClientProtocolForPipelineRecovery {
           .getWrappedStream();
       final AtomicBoolean running = new AtomicBoolean(true);
       final AtomicBoolean failed = new AtomicBoolean(false);
-      SubjectInheritingThread t = new SubjectInheritingThread() {
-        public void work() {
+      Thread t = new Thread() {
+        public void run() {
           while (running.get()) {
             try {
               out.write("test".getBytes());
@@ -869,7 +868,7 @@ public class TestClientProtocolForPipelineRecovery {
       dataNodes[0].shutdown();
 
       // Shutdown the second datanode when the pipeline is closing.
-      new SubjectInheritingThread(() -> {
+      new Thread(() -> {
         try {
           GenericTestUtils.waitFor(new Supplier<Boolean>() {
             @Override

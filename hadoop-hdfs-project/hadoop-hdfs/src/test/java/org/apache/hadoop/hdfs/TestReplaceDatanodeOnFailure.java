@@ -37,7 +37,6 @@ import org.apache.hadoop.hdfs.protocol.datatransfer.ReplaceDatanodeOnFailure;
 import org.apache.hadoop.hdfs.protocol.datatransfer.ReplaceDatanodeOnFailure.Policy;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.slf4j.event.Level;
@@ -223,7 +222,7 @@ public class TestReplaceDatanodeOnFailure {
     Thread.sleep(waittime * 1000L);
   }
 
-  static class SlowWriter extends SubjectInheritingThread {
+  static class SlowWriter extends Thread {
     final Path filepath;
     final HdfsDataOutputStream out;
     final long sleepms;
@@ -238,7 +237,7 @@ public class TestReplaceDatanodeOnFailure {
     }
 
     @Override
-    public void work() {
+    public void run() {
       int i = 0;
 
       try {
