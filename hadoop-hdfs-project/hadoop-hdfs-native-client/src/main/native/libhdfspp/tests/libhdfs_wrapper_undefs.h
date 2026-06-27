@@ -59,6 +59,7 @@
 #undef hdfsTruncateFile
 #undef hdfsUnbufferFile
 #undef hdfsCloseFile
+#undef hdfsCloneFile
 #undef hdfsExists
 #undef hdfsSeek
 #undef hdfsTell
