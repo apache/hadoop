@@ -114,7 +114,7 @@ jobs:
     outputs:
       uid: ${{ steps.variables.outputs.uid }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
         with:
           fetch-depth: 0
       - name: Login to GitHub Container Registry
@@ -166,11 +166,11 @@ jobs:
       image: ${{ needs.precondition.outputs.build_image_url }}
       options: --user ${{ needs.build-image.outputs.uid }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
         with:
           fetch-depth: 0
       - name: Setup JDK ${{ inputs.java }}
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@1bcf9fb12cf4aa7d266a90ae39939e61372fe520 # v5
         with:
           distribution: zulu
           java-version: ${{ inputs.java }}
@@ -297,12 +297,12 @@ jobs:
           # -pl :hadoop-yarn-applications-catalog-webapp
     steps:
       - name: Checkout Hadoop repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
         # In order to fetch changed files
         with:
           fetch-depth: 0
       - name: Setup JDK ${{ inputs.java }}
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@1bcf9fb12cf4aa7d266a90ae39939e61372fe520 # v5
         with:
           distribution: zulu
           java-version: ${{ inputs.java }}
@@ -316,7 +316,7 @@ jobs:
         run: ./mvnw $MAVEN_ARGS ${{ matrix.modules }} test -Dsurefire.excludesFile=$PWD/.github/gha-tests/exclude-tests.txt
       - name: Upload test logs
         if: failure()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: unit-test-logs-${{ matrix.comment }}-java${{ inputs.java }})-${{ inputs.os }}-${{ inputs.branch }}
           path: |
