@@ -61,7 +61,7 @@ jobs:
     outputs:
       build_image_url: ${{ steps.img.outputs.build_image_url }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
         with:
           # Full fetch so build image URL can be computed for any branch
           fetch-depth: 0
@@ -86,7 +86,7 @@ jobs:
       - name: debug build url
         run: |
           echo "Build image URL: ${{ needs.precondition.outputs.build_image_url }}"
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
       - uses: ./.github/actions/build_image
         id: build_img
         with:
@@ -140,7 +140,7 @@ jobs:
         -Dmaven.repo.local=.m2/repository
         -Dcheckstyle.skip -Dspotbugs.skip -Denforcer.skip -Drat.skip
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
       # Performance: Caching TODO: We need to create a centralized maven build cache that is
       # built on trunk. This will always miss on a new PR: Caches can't be
       # shared between PR branches. PR branches *can* access caches from their
@@ -159,7 +159,7 @@ jobs:
             ${{ inputs.os }}-maven-${{ hashFiles('**/pom.xml') }}-
             ${{ inputs.os }}-maven-
       - name: Setup JDK ${{ inputs.java }}
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@1bcf9fb12cf4aa7d266a90ae39939e61372fe520 # v5
         with:
           distribution: zulu
           java-version: ${{ inputs.java }}
@@ -221,7 +221,7 @@ jobs:
             -Dfailsafe.excludesFile=$PWD/.github/gha-tests/hadoop-aws-localstack-excludes.txt
 
       - name: Upload Test Reports
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: ${{ !cancelled() }}
         with:
           name: s3a-test-reports-java-${{ inputs.java }}-${{ inputs.os }}
