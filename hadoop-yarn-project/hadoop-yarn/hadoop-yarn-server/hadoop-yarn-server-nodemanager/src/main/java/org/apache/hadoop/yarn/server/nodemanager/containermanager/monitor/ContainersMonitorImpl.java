@@ -204,7 +204,18 @@ public class ContainersMonitorImpl extends AbstractService implements
     elasticMemoryEnforcement = this.conf.getBoolean(
         YarnConfiguration.NM_ELASTIC_MEMORY_CONTROL_ENABLED,
         YarnConfiguration.DEFAULT_NM_ELASTIC_MEMORY_CONTROL_ENABLED);
+    // CGroup-based strict memory enforcement (relying on the kernel OOM
+    // killer) is only in effect when the CGroups memory controller is actually
+    // enabled via yarn.nodemanager.resource.memory.enabled. The "enforced"
+    // flag alone (which defaults to true) does not write any CGroups memory
+    // hard limit unless the memory controller is enabled. Gating
+    // strictMemoryEnforcement on both flags prevents the polling-based memory
+    // check from being skipped (see checkLimit) when no CGroups memory limit
+    // is actually applied, which would otherwise leave containers unbounded.
     strictMemoryEnforcement = conf.getBoolean(
+        YarnConfiguration.NM_MEMORY_RESOURCE_ENABLED,
+        YarnConfiguration.DEFAULT_NM_MEMORY_RESOURCE_ENABLED)
+        && conf.getBoolean(
         YarnConfiguration.NM_MEMORY_RESOURCE_ENFORCED,
         YarnConfiguration.DEFAULT_NM_MEMORY_RESOURCE_ENFORCED);
     LOG.info("Physical memory check enabled: {}", pmemCheckEnabled);
@@ -1048,6 +1059,20 @@ public class ContainersMonitorImpl extends AbstractService implements
   @Override
   public boolean isVmemCheckEnabled() {
     return this.vmemCheckEnabled;
+  }
+
+  /**
+   * Is CGroup-based strict memory enforcement in effect? This is true only
+   * when both {@code yarn.nodemanager.resource.memory.enabled} and
+   * {@code yarn.nodemanager.resource.memory.enforced} are true. When it is
+   * true, the kernel OOM killer enforces the limit and the polling-based
+   * memory check is skipped.
+   *
+   * @return true if CGroup-based strict memory enforcement is in effect.
+   */
+  @VisibleForTesting
+  boolean isStrictMemoryEnforcementEnabled() {
+    return this.strictMemoryEnforcement;
   }
 
   @Override
