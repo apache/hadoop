@@ -143,7 +143,7 @@ class LoadJob extends GridmixJob {
    * This is a progress based resource usage matcher.
    */
   @SuppressWarnings("unchecked")
-  static class ResourceUsageMatcherRunner extends Thread 
+  static class ResourceUsageMatcherRunner extends Thread
   implements Progressive {
     private final ResourceUsageMatcher matcher;
     private final BoostingProgress progress;

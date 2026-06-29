@@ -165,7 +165,7 @@ public class TestFileAppend4 {
       // write 1/2 block
       AppendTestUtil.write(stm, 0, 4096);
       final AtomicReference<Throwable> err = new AtomicReference<Throwable>();
-      Thread t = new Thread() { 
+      Thread t = new Thread() {
           @Override
           public void run() {
             try {
@@ -237,7 +237,7 @@ public class TestFileAppend4 {
       // write 1/2 block
       AppendTestUtil.write(stm, 0, 4096);
       final AtomicReference<Throwable> err = new AtomicReference<Throwable>();
-      Thread t = new Thread() { 
+      Thread t = new Thread() {
           @Override
           public void run() {
             try {

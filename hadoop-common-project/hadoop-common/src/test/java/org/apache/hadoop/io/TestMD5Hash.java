@@ -93,7 +93,7 @@ public class TestMD5Hash {
     assertTrue(closeHash1.hashCode() != closeHash2.hashCode(),
         "hash collision");
      
-    Thread t1 = new Thread() {      
+    Thread t1 = new Thread() {
       @Override
       public void run() {
         for (int i = 0; i < 100; i++) {

@@ -144,7 +144,7 @@ public class TeraInputFormat extends FileInputFormat<Text,Text> {
     // take N samples from different parts of the input
     for(int i=0; i < samples; ++i) {
       final int idx = i;
-      samplerReader[i] = 
+      samplerReader[i] =
         new Thread (threadGroup,"Sampler Reader " + idx) {
         {
           setDaemon(true);
