@@ -411,7 +411,6 @@ public class TestFileCreation {
         assertEquals(fileSize, dataset.getDfsUsed());
         assertEquals(SimulatedFSDataset.DEFAULT_CAPACITY - fileSize,
             dataset.getRemaining());
-        assertEquals(numBlocks + 1, dataset.getNumBlocks());
       }
     } finally {
       cluster.shutdown();

@@ -136,5 +136,5 @@ public interface FSDatasetMBean extends MetricsSource {
   /**
    * Returns the number of blocks that the datanode
    */
-  public long getNumBlocks() throws IOException;
+  long getNumBlocks() throws IOException;
 }
