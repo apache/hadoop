@@ -230,8 +230,8 @@ class YarnChild {
         }
       }
     } finally {
-      if (umbilical instanceof Closeable closeable) {
-        closeStream(closeable);
+      if (umbilical instanceof Closeable) {
+        closeStream((Closeable)umbilical);
       } else {
         RPC.stopProxy(umbilical);
       }

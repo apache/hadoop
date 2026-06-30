@@ -127,8 +127,8 @@ public class TestUmbilicalProtocolWithJobToken {
           proxy.statusUpdate(null, null);
         } finally {
           server.stop();
-          if (proxy instanceof Closeable closeable) {
-            closeable.close();
+          if (proxy instanceof Closeable) {
+            ((Closeable)proxy).close();
           }
         }
         return null;
