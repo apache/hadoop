@@ -26,8 +26,8 @@ vulnerabilities here, because the surrounding deployment is trusted by design.
 You *MUST NOT* file a security report for:
 
 - Issues that require the operator to edit their own Hadoop site configuration,
-  place malicious files on their own classpath, or pass malicious arguments to
-  their own command invocation.
+  place malicious/vulnerabile libraries on their own classpath,
+  or pass malicious arguments to their own command invocation.
 - **Job submission running user-supplied code.** Submitting work to YARN or
   MapReduce executes the submitter's code as the submitter's identity. That is
   the product, not a vulnerability. See the threat model below.
@@ -45,7 +45,6 @@ You *MUST NOT* file a security report for:
   reproducer against the current `trunk` branch.
 - Theoretical findings ("an attacker who could X might then Y") without a
   reproduction.
-
 
 A valid report includes:
 
@@ -246,7 +245,6 @@ inherent in security being disabled.
 It should only be used for standalone development/test environments, with firewalls preventing remote access.
 It can then be used to test Hadoop and applications running on top of it.
 
-
 ### Secure (Kerberos) Clusters
 
 This is the deployment the security model defends, as described in
@@ -311,8 +309,6 @@ In client-side use, the following is trusted
 Whether or not the network is trusted to the extent that DNS is trusted and network encryption is mandatory for HDFS, cluster service and cloud service communication
 along with TLS where appropriate, is a matter for client configuration and out of scope of this security model.
 
-
-
 ## Data at Rest and Temporary Files
 
 - **Persisting data in the cluster filesystem encrypted requires HDFS encryption** (see
@@ -369,11 +365,11 @@ request logs (URLs, headers, query parameters) and are visible
 when third-party components including JDK classes are configured to log at TRACE.
 Preventing logging of these is best-effort.
 
-
 ## Development and CI Threat Model
 
 The project is built on developer systems and in CI systems, and **we do care
-about attacks on these.** Development and CI are explicitly in scope.
+about attacks on these.**
+Development and CI are explicitly in scope.
 
 See [Important Security Information for GitHub Actions](.github/workflow-security.md)
 for the detailed CI/workflow security guidance. In summary:
@@ -407,13 +403,13 @@ for the detailed CI/workflow security guidance. In summary:
     guidelines, in particular using intermediate environment variables to safely
     process untrusted input, and *SHALL* be audited with [Zizmor](https://zizmor.sh/).
 
-Note that test resource files such as `auth-keys.xml` (and any equivalent under a
-module's test tree) contain live secrets. They *MUST NOT* be read out, printed,
+Test resource files such as `auth-keys.xml` (and any equivalent under a
+module's test tree) may contain live secrets. They *MUST NOT* be read out, printed,
 or committed to version control.
 
 ### Reporting Vulnerabilities in CI Pipelines
 
-Reporters MUST e-mail security@infra.apache.org and only Cc security@hadoop.apache.org.
+Reporters MUST e-mail security@infra.apache.org and only CC security@hadoop.apache.org.
 
 If the threat is credible, the ASF infrastructure team will disable the affected workflow and notify the project.
 
@@ -463,7 +459,6 @@ primarily on:
 - A principal who already has equivalent power through legitimate
   authentication, write, or maintenance capabilities.
 - A vulnerability that only exists in previous releases.
-
 
 ## Special Topics
 
@@ -537,7 +532,6 @@ As a consequence:
   **not direct issues for the `hadoop-client` libraries**, because the vulnerable server-side
   code paths are not the ones a Hadoop client exercises. A reproducer MUST show the issue being
   reachable through Hadoop client usage on the current `trunk` branch.
-
 
 ### IPC
 
@@ -620,6 +614,7 @@ marshalling and unmarshalling is explicitly performed in the interface's impleme
 
 LLMs often conflate the two and consider their use an immediate vulnerability.
 For any CVE related to Writable to be accepted, the submitter MUST show a valid exploit chain using
-extant gadgets in the classpath of Hadoop and/or the latest versions of major applications built on top
-of it.
-Writing new classes as part of an exploit *does not count*.
+extant gadgets in the classpath of Hadoop or the latest versions of major applications built on top
+of it, from the entry point to the outcome.
+
+Implementing new `Writable` classes as part of an exploit *does not count*.
