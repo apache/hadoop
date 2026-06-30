@@ -519,8 +519,52 @@ public abstract class TaskStatus implements Writable, Cloneable {
                                           taskTracker, phase, counters);
   }
   
+  /**
+   * Enum identifying the concrete type of a {@link TaskStatus} for serialization.
+   */
+  public enum TaskStatusKind {
+    MapTaskStatus,
+    ReduceTaskStatus
+  }
+
   static TaskStatus createTaskStatus(boolean isMap) {
-    return (isMap) ? new MapTaskStatus() : new ReduceTaskStatus();
+    return createTaskStatus(
+        isMap ? TaskStatusKind.MapTaskStatus : TaskStatusKind.ReduceTaskStatus);
+  }
+
+  static TaskStatus createTaskStatus(TaskStatusKind kind) {
+    return kind == TaskStatusKind.MapTaskStatus
+        ? new MapTaskStatus() : new ReduceTaskStatus();
+  }
+
+  /**
+   * Write a TaskStatus to a DataOutput, prefixed by a {@link TaskStatusKind} discriminator.
+   * Used by the Protobuf-based RPC layer to serialize TaskStatus values.
+   * @param out output stream
+   * @param status status to write (must not be null)
+   * @throws IOException on I/O error
+   */
+  public static void writeTaskStatusForPB(DataOutput out, TaskStatus status)
+      throws IOException {
+    TaskStatusKind kind = status.getIsMap()
+        ? TaskStatusKind.MapTaskStatus : TaskStatusKind.ReduceTaskStatus;
+    out.writeByte(kind.ordinal());
+    status.write(out);
+  }
+
+  /**
+   * Read a TaskStatus that was written with {@link #writeTaskStatusForPB}.
+   * @param in input stream
+   * @return the deserialized TaskStatus
+   * @throws IOException on I/O error
+   */
+  public static TaskStatus readTaskStatusFromPB(DataInput in)
+      throws IOException {
+    int ordinal = in.readByte() & 0xFF;
+    TaskStatusKind kind = TaskStatusKind.values()[ordinal];
+    TaskStatus status = createTaskStatus(kind);
+    status.readFields(in);
+    return status;
   }
 
 }
