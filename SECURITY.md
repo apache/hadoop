@@ -69,8 +69,7 @@ CVE will be assigned to the AI tool alone, and not to the submitter.
    The log is a key part of AI tool reports, and we need to be able to track/replicate these.
 
 *Unverified LLM-generated reports waste maintainer time and will be closed
-without further response.*
-
+without further response.* Repeat offenders may be banned for an extended period of time. 
 
 ## Reporting a Vulnerability
 
@@ -618,3 +617,15 @@ extant gadgets in the classpath of Hadoop or the latest versions of major applic
 of it, from the entry point to the outcome.
 
 Implementing new `Writable` classes as part of an exploit *does not count*.
+
+### Java Serialization Attacks in Downstream Applications
+
+Hadoop IPC does *not* use Java serialization; it uses `Writable` and protobuf.
+
+Some applications and services which include the libraries do use upon Java serialization.
+
+We do care if any `org.apache.hadoop` class that is not a shaded third-party class can be used
+as a "gadget" in an attack on Java object deserialization.
+
+Please notify the security team if you discover such a vulnerability even if it is not part of
+our own threat model.
