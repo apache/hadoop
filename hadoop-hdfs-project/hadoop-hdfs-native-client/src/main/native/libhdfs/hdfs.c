@@ -1885,6 +1885,79 @@ int hdfsCloseFile(hdfsFS fs, hdfsFile file)
     return 0;
 }
 
+hdfsFile hdfsCloneFile(hdfsFS fs, hdfsFile file)
+{
+    // JAVA EQUIVALENT:
+    //  ((DistributedFileSystem) fs).cloneDataInputStream(file)
+    int ret = 0;
+    jthrowable jthr;
+    jvalue jVal;
+    jobject jFS = (jobject)fs;
+    jobject jClonedStream = NULL;
+    hdfsFile clonedFile = NULL;
+
+    JNIEnv* env = getJNIEnv();
+    if (env == NULL) {
+        errno = EINTERNAL;
+        return NULL;
+    }
+
+    if (!file || file->type != HDFS_STREAM_INPUT) {
+        fprintf(stderr, "hdfsCloneFile: can only clone input streams\n");
+        errno = EINVAL;
+        return NULL;
+    }
+
+    if (!(*env)->IsInstanceOf(env, jFS,
+            getJclass(JC_DISTRIBUTED_FILE_SYSTEM))) {
+        fprintf(stderr,
+            "hdfsCloneFile: not a DistributedFileSystem\n");
+        errno = ENOTSUP;
+        return NULL;
+    }
+
+    jthr = invokeMethod(env, &jVal, INSTANCE, jFS,
+            JC_DISTRIBUTED_FILE_SYSTEM, "cloneDataInputStream",
+            JMETHOD1(JPARAM(HADOOP_FSDISTRM), JPARAM(HADOOP_FSDISTRM)),
+            file->file);
+    if (jthr) {
+        ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
+            "hdfsCloneFile: DistributedFileSystem#cloneDataInputStream");
+        goto done;
+    }
+    jClonedStream = jVal.l;
+
+    clonedFile = calloc(1, sizeof(struct hdfsFile_internal));
+    if (!clonedFile) {
+        fprintf(stderr, "hdfsCloneFile: OOM\n");
+        ret = ENOMEM;
+        goto done;
+    }
+    clonedFile->file = (*env)->NewGlobalRef(env, jClonedStream);
+    if (!clonedFile->file) {
+        ret = printPendingExceptionAndFree(env, PRINT_EXC_ALL,
+            "hdfsCloneFile: NewGlobalRef");
+        goto done;
+    }
+    clonedFile->type = HDFS_STREAM_INPUT;
+    clonedFile->flags = 0;
+    setFileFlagCapabilities(clonedFile, jClonedStream);
+
+done:
+    destroyLocalReference(env, jClonedStream);
+    if (ret) {
+        if (clonedFile) {
+            if (clonedFile->file) {
+                (*env)->DeleteGlobalRef(env, clonedFile->file);
+            }
+            free(clonedFile);
+        }
+        errno = ret;
+        return NULL;
+    }
+    return clonedFile;
+}
+
 int hdfsExists(hdfsFS fs, const char *path)
 {
     JNIEnv *env = getJNIEnv();
