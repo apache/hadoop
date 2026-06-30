@@ -1513,6 +1513,10 @@
 
   <property>
     <description>Whether YARN CGroups strict memory enforcement is enabled.
+    This only takes effect when the CGroups memory controller is enabled via
+    yarn.nodemanager.resource.memory.enabled. When CGroups memory is disabled
+    (the default), this flag has no effect and container memory limits are
+    enforced (if at all) by the polling-based ContainersMonitor.
     </description>
     <name>yarn.nodemanager.resource.memory.enforced</name>
     <value>true</value>

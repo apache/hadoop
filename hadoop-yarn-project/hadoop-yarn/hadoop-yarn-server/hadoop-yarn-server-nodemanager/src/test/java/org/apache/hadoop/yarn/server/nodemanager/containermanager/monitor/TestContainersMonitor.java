@@ -566,6 +566,52 @@ public class TestContainersMonitor extends BaseContainerManagerTest {
     assertEquals(true, cm.isVmemCheckEnabled());
   }
 
+  /**
+   * Verifies that CGroup-based strict memory enforcement (which skips the
+   * polling-based memory check) is only considered active when the CGroups
+   * memory controller is actually enabled via
+   * {@code yarn.nodemanager.resource.memory.enabled}. Historically,
+   * {@code yarn.nodemanager.resource.memory.enforced} alone (defaulting to
+   * true) was enough to skip the polling check, which left containers
+   * unbounded when CGroups memory was not enabled.
+   */
+  @Test(timeout = 20000)
+  public void testStrictMemoryEnforcementRequiresMemoryEnabled() {
+    // memory.enabled defaults to false, memory.enforced defaults to true.
+    // Strict enforcement must NOT be considered active in this case, otherwise
+    // the polling-based memory check would be wrongly skipped.
+    ContainersMonitorImpl cm =
+        new ContainersMonitorImpl(mock(ContainerExecutor.class),
+            mock(AsyncDispatcher.class), mock(Context.class));
+    cm.init(getConfForCM(true, false, 8192, 2.1f));
+    assertFalse("Strict memory enforcement must be off when "
+            + "yarn.nodemanager.resource.memory.enabled is false, "
+            + "even if yarn.nodemanager.resource.memory.enforced is true",
+        cm.isStrictMemoryEnforcementEnabled());
+
+    // memory.enabled = true, memory.enforced = true -> active.
+    cm = new ContainersMonitorImpl(mock(ContainerExecutor.class),
+        mock(AsyncDispatcher.class), mock(Context.class));
+    YarnConfiguration conf = getConfForCM(true, false, 8192, 2.1f);
+    conf.setBoolean(YarnConfiguration.NM_MEMORY_RESOURCE_ENABLED, true);
+    conf.setBoolean(YarnConfiguration.NM_MEMORY_RESOURCE_ENFORCED, true);
+    cm.init(conf);
+    assertTrue("Strict memory enforcement must be on when both memory.enabled "
+            + "and memory.enforced are true",
+        cm.isStrictMemoryEnforcementEnabled());
+
+    // memory.enabled = true, memory.enforced = false -> not active.
+    cm = new ContainersMonitorImpl(mock(ContainerExecutor.class),
+        mock(AsyncDispatcher.class), mock(Context.class));
+    conf = getConfForCM(true, false, 8192, 2.1f);
+    conf.setBoolean(YarnConfiguration.NM_MEMORY_RESOURCE_ENABLED, true);
+    conf.setBoolean(YarnConfiguration.NM_MEMORY_RESOURCE_ENFORCED, false);
+    cm.init(conf);
+    assertFalse("Strict memory enforcement must be off when "
+            + "memory.enforced is false",
+        cm.isStrictMemoryEnforcementEnabled());
+  }
+
   private YarnConfiguration getConfForCM(boolean pMemEnabled,
       boolean vMemEnabled, int nmPmem, float vMemToPMemRatio) {
     YarnConfiguration conf = new YarnConfiguration();
