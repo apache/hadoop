@@ -19,7 +19,7 @@ package org.apache.hadoop.mapreduce.v2.app.security.authorize;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.mapred.TaskUmbilicalProtocol;
+import org.apache.hadoop.mapred.protocolPB.TaskUmbilicalProtocolPB;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.v2.api.MRClientProtocolPB;
 import org.apache.hadoop.security.authorize.PolicyProvider;
@@ -36,7 +36,7 @@ public class MRAMPolicyProvider extends PolicyProvider {
       new Service[] {
     new Service(
         MRJobConfig.MR_AM_SECURITY_SERVICE_AUTHORIZATION_TASK_UMBILICAL,
-        TaskUmbilicalProtocol.class),
+        TaskUmbilicalProtocolPB.class),
     new Service(
         MRJobConfig.MR_AM_SECURITY_SERVICE_AUTHORIZATION_CLIENT,
         MRClientProtocolPB.class)
