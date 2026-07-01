@@ -59,6 +59,7 @@
 #define hdfsTruncateFile libhdfs_hdfsTruncateFile
 #define hdfsUnbufferFile libhdfs_hdfsUnbufferFile
 #define hdfsCloseFile libhdfs_hdfsCloseFile
+#define hdfsCloneFile libhdfs_hdfsCloneFile
 #define hdfsExists libhdfs_hdfsExists
 #define hdfsSeek libhdfs_hdfsSeek
 #define hdfsTell libhdfs_hdfsTell

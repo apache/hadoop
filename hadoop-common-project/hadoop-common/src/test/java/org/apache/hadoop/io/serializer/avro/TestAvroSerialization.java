@@ -18,8 +18,9 @@
 
 package org.apache.hadoop.io.serializer.avro;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import java.util.Objects;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.serializer.SerializationFactory;
@@ -35,7 +36,7 @@ public class TestAvroSerialization {
     AvroRecord before = new AvroRecord();
     before.setIntField(5);
     AvroRecord after = SerializationTestUtil.testSerialization(conf, before);
-    assertEquals(before, after);
+    assertThat(after).isEqualTo(before);
   }
 
   @Test
@@ -45,14 +46,14 @@ public class TestAvroSerialization {
     conf.set(AvroReflectSerialization.AVRO_REFLECT_PACKAGES, 
         before.getClass().getPackage().getName());
     Record after = SerializationTestUtil.testSerialization(conf, before);
-    assertEquals(before, after);
+    assertThat(after).isEqualTo(before);
   }
 
   @Test
   public void testAcceptHandlingPrimitivesAndArrays() throws Exception {
     SerializationFactory factory = new SerializationFactory(conf);
-    assertNull(factory.getSerializer(byte[].class));
-    assertNull(factory.getSerializer(byte.class));
+    assertThat(factory.getSerializer(byte[].class)).isNull();
+    assertThat(factory.getSerializer(byte.class)).isNull();
   }
 
   @Test
@@ -62,18 +63,34 @@ public class TestAvroSerialization {
     conf.set(AvroReflectSerialization.AVRO_REFLECT_PACKAGES, 
         before.getClass().getPackage().getName());
     InnerRecord after = SerializationTestUtil.testSerialization(conf, before);
-    assertEquals(before, after);
+    assertThat(after).isEqualTo(before);
   }
 
   @Test
   public void testReflect() throws Exception {
     RefSerializable before = new RefSerializable();
     before.x = 10;
-    RefSerializable after = 
+    RefSerializable after =
       SerializationTestUtil.testSerialization(conf, before);
-    assertEquals(before, after);
+    assertThat(after).isEqualTo(before);
   }
-  
+
+  /**
+   * Round-trip a reflect-serializable record that carries a String field.
+   * String handling is the part of the Avro API most affected by changes to
+   * {@code org.apache.avro.util.Utf8}, so this guards the reflect serialization
+   * path across Avro upgrades.
+   */
+  @Test
+  public void testReflectStringField() throws Exception {
+    StringRecord before = new StringRecord();
+    before.x = 10;
+    before.s = "value";
+    StringRecord after =
+        SerializationTestUtil.testSerialization(conf, before);
+    assertThat(after).isEqualTo(before);
+  }
+
   public static class InnerRecord {
     public int x = 7;
 
@@ -84,20 +101,21 @@ public class TestAvroSerialization {
 
     @Override
     public boolean equals(Object obj) {
-      if (this == obj)
+      if (this == obj) {
         return true;
-      if (obj == null)
+      }
+      if (obj == null) {
         return false;
-      if (getClass() != obj.getClass())
+      }
+      if (getClass() != obj.getClass()) {
         return false;
+      }
       final InnerRecord other = (InnerRecord) obj;
-      if (x != other.x)
-        return false;
-      return true;
+      return x == other.x;
     }
   }
 
-  public static class RefSerializable implements AvroReflectSerializable {
+  public static final class RefSerializable implements AvroReflectSerializable {
     public int x = 7;
 
     @Override
@@ -107,16 +125,45 @@ public class TestAvroSerialization {
 
     @Override
     public boolean equals(Object obj) {
-      if (this == obj)
+      if (this == obj) {
         return true;
-      if (obj == null)
+      }
+      if (obj == null) {
         return false;
-      if (getClass() != obj.getClass())
+      }
+      if (getClass() != obj.getClass()) {
         return false;
+      }
       final RefSerializable other = (RefSerializable) obj;
-      if (x != other.x)
+      return x == other.x;
+    }
+  }
+
+  public static final class StringRecord implements AvroReflectSerializable {
+    public int x = 7;
+    public String s = "";
+
+    @Override
+    public int hashCode() {
+      return x * 31 + (s == null ? 0 : s.hashCode());
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+      if (this == obj) {
+        return true;
+      }
+      if (obj == null) {
         return false;
-      return true;
+      }
+      if (getClass() != obj.getClass()) {
+        return false;
+      }
+      final StringRecord other = (StringRecord) obj;
+      if (x != other.x) {
+        return false;
+      }
+      return Objects.equals(s, other.s);
     }
   }
 }
