@@ -370,6 +370,14 @@ The project is built on developer systems and in CI systems, and **we do care
 about attacks on these.**
 Development and CI are explicitly in scope.
 
+- We trust the `javac` compiler and other tools from Oracle.
+- We trust the Linux [docker images](dev-support/docker) we use to build our releases,
+  including `gcc`, `gpg` and other applications installed.
+- We trust our build tools, especially Apache Maven.
+- We trust other ASF projects, and for their manual release-vote process
+  to provide a buffer against package-ecosystem worms. We do not require
+  a cool-down period after a release of an ASF artifact before upgrading our dependency.
+
 See [Important Security Information for GitHub Actions](.github/workflow-security.md)
 for the detailed CI/workflow security guidance. In summary:
 
@@ -379,9 +387,6 @@ for the detailed CI/workflow security guidance. In summary:
 - Upstream dependencies from non-ASF projects *MAY* be subverted by supply-chain
   attacks; a cooldown period *MUST* be observed before adopting a new or
   updated dependency.
-- ASF projects are considered trusted, as their manual release-vote process
-  provides an implicit buffer against package-ecosystem worms, and there's an implicit
-  level of interdependent trust between projects.
 - Maven plugins, and third-party libraries that production code compiles against,
   execute code on developer and CI systems (the latter during testing). Their
   security *MUST* be evaluated before adoption.
@@ -617,6 +622,16 @@ extant gadgets in the classpath of Hadoop or the latest versions of major applic
 of it, from the entry point to the outcome.
 
 Implementing new `Writable` classes as part of an exploit *does not count*.
+
+### Tokens 
+
+Hadoop Tokens are used for authenticating IPC channels; these use Writables to marshall data, and
+are are unmarshalled before callers are authenticated.
+
+It is *critical* that implementations of `org.apache.hadoop.security.token.TokenIdentifier` in
+production code and declared in a metadata resource file
+`hadoop-tools/hadoop-aws/src/main/resources/META-INF/services/org.apache.hadoop.security.token.TokenIdentifier`
+are resilient to attack by malicious clients, such that denial-of-service attacks are possible or authentication can be bypassed/spoofed.
 
 ### Java Serialization Attacks in Downstream Applications
 
