@@ -834,7 +834,7 @@ public class TestStandbyCheckpoints {
 
   @Test
   @Timeout(value = 300)
-  public void testCheckpointParallelUploadRespectsMaxThreads() throws Exception {
+  public void testCheckpointParallelUploadWithMaxThreads() throws Exception {
     final int maxThreads = 1;
     final AtomicInteger inFlightUploads = new AtomicInteger(0);
     final AtomicInteger peakInFlightUploads = new AtomicInteger(0);

@@ -86,8 +86,9 @@ public class CheckpointConf {
     parallelUploadMaxThreads = conf.getInt(
         DFS_NAMENODE_CHECKPOINT_PARALLEL_UPLOAD_MAX_THREADS_KEY,
         DFS_NAMENODE_CHECKPOINT_PARALLEL_UPLOAD_MAX_THREADS_DEFAULT);
-    Preconditions.checkArgument(parallelUploadMaxThreads > 0,
-        DFS_NAMENODE_CHECKPOINT_PARALLEL_UPLOAD_MAX_THREADS_KEY + " must be greater than 0");
+    Preconditions.checkArgument(parallelUploadMaxThreads >= 0,
+        DFS_NAMENODE_CHECKPOINT_PARALLEL_UPLOAD_MAX_THREADS_KEY
+            + " must be greater than or equal to 0");
     warnForDeprecatedConfigs(conf);
   }
   

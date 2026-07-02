@@ -1431,12 +1431,14 @@
 
 <property>
   <name>dfs.namenode.checkpoint.parallel.upload.max-threads</name>
-  <value>1</value>
+  <value>0</value>
   <description>
     This config sets the maximum number of concurrent threads used to upload fsimage
     from StandbyCheckpointer to other NameNodes.
     It takes effect only when dfs.namenode.checkpoint.parallel.upload.enabled is true.
     A smaller value reduces upload concurrency pressure on both the local standby.
+    If set to 0, the concurrency equals the number of remote NameNodes.
+    If greater than 0, the concurrency is the smaller of the remote NameNodes count and maxThreads.
   </description>
 </property>
 

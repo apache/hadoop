@@ -264,7 +264,7 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final boolean DFS_NAMENODE_CHECKPOINT_PARALLEL_UPLOAD_ENABLED_DEFAULT = false;
   public static final String DFS_NAMENODE_CHECKPOINT_PARALLEL_UPLOAD_MAX_THREADS_KEY =
       "dfs.namenode.checkpoint.parallel.upload.max-threads";
-  public static final int DFS_NAMENODE_CHECKPOINT_PARALLEL_UPLOAD_MAX_THREADS_DEFAULT = 1;
+  public static final int DFS_NAMENODE_CHECKPOINT_PARALLEL_UPLOAD_MAX_THREADS_DEFAULT = 0;
   public static final String  DFS_NAMENODE_MISSING_CHECKPOINT_PERIODS_BEFORE_SHUTDOWN_KEY = "dfs.namenode.missing.checkpoint.periods.before.shutdown";
   public static final int     DFS_NAMENODE_MISSING_CHECKPOINT_PERIODS_BEFORE_SHUTDOWN_DEFAULT = 3;
   public static final String  DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY =
