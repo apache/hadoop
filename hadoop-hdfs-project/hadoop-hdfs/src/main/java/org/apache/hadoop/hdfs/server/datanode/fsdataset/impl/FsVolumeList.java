@@ -557,4 +557,16 @@ class FsVolumeList {
       }
     }
   }
+
+  long getNumBlocks() throws IOException {
+    long numBlocks = 0L;
+    for (FsVolumeImpl v : volumes) {
+      try(FsVolumeReference ref = v.obtainReference()) {
+        numBlocks += v.getNumBlocks();
+      } catch (ClosedChannelException e) {
+        // ignore.
+      }
+    }
+    return numBlocks;
+  }
 }

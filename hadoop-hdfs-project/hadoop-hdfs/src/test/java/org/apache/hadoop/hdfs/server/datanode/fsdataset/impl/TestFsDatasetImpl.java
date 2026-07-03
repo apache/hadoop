@@ -2165,4 +2165,33 @@ public class TestFsDatasetImpl {
       }
     }
   }
+
+  @Test
+  @Timeout(value = 30)
+  public void testGetNumBlocks() throws Exception {
+    Configuration config = new HdfsConfiguration();
+    config.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 1024);
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(config)
+        .numDataNodes(1)
+        .storagesPerDatanode(1)
+        .build()) {
+      cluster.waitActive();
+      FileSystem fs = cluster.getFileSystem();
+      DataNode dataNode = cluster.getDataNodes().get(0);
+      FsDatasetImpl fsDataSetImpl = (FsDatasetImpl) dataNode.getFSDataset();
+
+      long initialBlocks = fsDataSetImpl.getNumBlocks();
+
+      int numFiles = 5;
+      int fileSize = 2048;
+      for (int i = 0; i < numFiles; i++) {
+        Path filePath = new Path("/testFile" + i);
+        DFSTestUtil.createFile(fs, filePath, fileSize, (short) 1, 0);
+      }
+
+      long expectedBlocks = initialBlocks + numFiles * (fileSize / 1024);
+      assertEquals(expectedBlocks, fsDataSetImpl.getNumBlocks(),
+          "Number of blocks should match expected count");
+    }
+  }
 }
