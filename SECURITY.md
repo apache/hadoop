@@ -645,3 +645,29 @@ as a "gadget" in an attack on Java object deserialization.
 
 Please notify the security team if you discover such a vulnerability even if it is not part of
 our own threat model.
+
+## Hadoop's own use of Java Serialization
+
+Java serialization is used in some internal places as a way of persisting information.
+
+| File | Daemon / process | Direction | Mechanism | Filter / guard | Byte source | Notes |
+|------|------------------|-----------|-----------|----------------|-------------|-------|
+| yarn-nodemanager `containermanager/container/ResourceMappings.java:93` (`AssignedResources.fromBytes`) | **NodeManager** | read | commons-lang3 `SerializationUtils.deserialize` | **none** | NM recovery state store (LevelDB) | `List<Serializable>` (GPU/FPGA/numa device values) — open-ended types, awkward to allow-list |
+| yarn-common `logaggregation/filecontroller/ifile/LogAggregationIndexedFileController.java:971` | NM (write) / **JHS·ATS/AHS reader** | read | commons-lang3 `SerializationUtils.deserialize` | **none** | aggregated log file in **HDFS** | Deserializes `IndexedLogsMeta`; HDFS-sourced → wider exposure |
+| yarn-resourcemanager `scheduler/capacity/conf/ZKConfigurationStore.java:347` | **ResourceManager** | read | commons-io `ValidatingObjectInputStream` | **allow-listed** (LinkedList, LogMutation, HashMap, String) | ZooKeeper | Already guarded |
+| yarn-resourcemanager `scheduler/capacity/conf/LeveldbConfigurationStore.java:242` | **ResourceManager** | read | `java.io.ObjectInputStream` | **none** | local LevelDB | Mutable-config store; local-state threat model |
+| yarn-router `RouterServerUtil.java` | Router | write | `ObjectOutputStream` | n/a | — | Serialize-only |
+
+We are aware of these.
+
+1.Do notify us if any gadget chain appears on our services' classpaths from our own or third party libraries which can be used as an attack from untrusted
+sources over the network which are not guarded by mechanisms such as
+* HDFS file access permissions.
+* Local filesystem access permissions.
+
+In such a situation as well as issuing a code fix, it is possible to restrict/block java class deserialization through selective use of [Java serialization filters](https://docs.oracle.com/en/java/javase/25/core/creating-pattern-based-filters.html) and the `jdk.serialFilter` property, which can be set on the command line to block deserialization of some or all classes from deserialization, as well as the deserialization depth:
+```
+-Djdk.serialFilter=!*
+```
+
+Do also notify us if our own implementations of `Serializable` or `Externalizable` can be used as gadgets in a larger attack.
