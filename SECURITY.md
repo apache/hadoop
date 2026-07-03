@@ -49,6 +49,7 @@ You *MUST NOT* file a security report for:
 A valid report includes:
 
 - The Hadoop version, and ideally the git SHA it was reproduced against.
+- The OS and version, Java version, and other environment information considered relevant.
 - The exact steps, configuration, and commands used to reproduce it.
 - The observed in-scope failure, and what was expected instead.
 - Where a CVE/CVSS score is claimed, the reasoning behind that score.
@@ -69,7 +70,7 @@ CVE will be assigned to the AI tool alone, and not to the submitter.
    The log is a key part of AI tool reports, and we need to be able to track/replicate these.
 
 *Unverified LLM-generated reports waste maintainer time and will be closed
-without further response.* Repeat offenders may be banned for an extended period of time. 
+without further response.* Repeat offenders may be banned for an extended period. 
 
 ## Reporting a Vulnerability
 
@@ -635,9 +636,9 @@ are resilient to attack by malicious clients, such that denial-of-service attack
 
 ### Java Serialization Attacks in Downstream Applications
 
-Hadoop IPC does *not* use Java serialization; it uses `Writable` and protobuf.
+Hadoop IPC does *not* use Java Serialization; it uses `Writable` and protobuf.
 
-Some applications and services which include the libraries do use upon Java serialization.
+Some applications and services which include the libraries do use Java Serialization.
 
 We do care if any `org.apache.hadoop` class that is not a shaded third-party class can be used
 as a "gadget" in an attack on Java object deserialization.
