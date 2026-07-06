@@ -486,6 +486,20 @@ There's a lot of concurrency in the Hadoop codebase; it can often be a source of
 If a race condition leads to privilege escalation or other exploit within the security model,
 it is a CVE.
 
+
+### We trust hadoop configuration files
+
+We trust them to have been saved to the local filesystem with permissions such that they can only be written to by trusted users, read by all users whot  wished to interact with the cluster.
+
+They are XML files. They SHALL be well-formed. They MAY use XInclude; resolution is performed by the user/process parsing the file. 
+Administrators may put secrets in them, but they should not as they then become visible to all: JCECKs files or other KMS service is the way to provide secrets. If an administrator has chosen to embed secrets such as cloud credentials in a shared configuration: that is their choice.
+
+When XML configuration files are read they also evaluate JVM properties, including standard ones (`${user.name}`, `${java.home}`) and environment variables (`${env.PATH}`). We trust these properties and environment variables to be well-formed and valid. If A bobby-tables attack on `${user.name}` or escaped quotations in an environment variable result in some problem downstream -these are bugs not CVEs.
+
+We also trust all other files in `/etc/hadoop/conf`; they are created by administrators and expected to be correct; this includes log4j settings.
+
+In Kerberized clusters, we trust file permissions to Kerberos keytab files to restricted so daemon processes can read and so use these credentials, but unprivileged users cannot. 
+
 ### Configuration: `org.apache.hadoop.conf.Configuration`
 
 #### Restricted Configurations
@@ -660,8 +674,8 @@ Java serialization is used in some internal places as a way of persisting inform
 
 We are aware of these.
 
-1.Do notify us if any gadget chain appears on our services' classpaths from our own or third party libraries which can be used as an attack from untrusted
-sources over the network which are not guarded by mechanisms such as
+Do notify us if any gadget chain appears on our services' classpaths from our own or third party libraries which can be used as an attack from untrusted
+sources over the network which are not guarded by mechanisms such as:
 * HDFS file access permissions.
 * Local filesystem access permissions.
 
