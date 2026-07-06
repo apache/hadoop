@@ -1439,6 +1439,9 @@
     A smaller value reduces upload concurrency pressure on both the local standby.
     If set to 0, the concurrency equals the number of remote NameNodes.
     If greater than 0, the concurrency is the smaller of the remote NameNodes count and maxThreads.
+    Note: A lower max-threads value may slow fsimage uploads and extend the effective
+    checkpoint interval (dfs.namenode.checkpoint.period), tune this setting according to
+    your deployment environment.
   </description>
 </property>
 
