@@ -103,7 +103,6 @@ import org.apache.hadoop.util.GcTimeMonitor;
 import org.apache.hadoop.util.GcTimeMonitor.Builder;
 import org.apache.hadoop.tracing.Tracer;
 import org.apache.hadoop.util.Timer;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -1080,7 +1079,7 @@ public class NameNode extends ReconfigurableBase implements
             return dfs;
           }
         });
-    this.emptier = new SubjectInheritingThread(new Trash(fs, conf).getEmptier(), "Trash Emptier");
+    this.emptier = new Thread(new Trash(fs, conf).getEmptier(), "Trash Emptier");
     this.emptier.setDaemon(true);
     this.emptier.start();
   }

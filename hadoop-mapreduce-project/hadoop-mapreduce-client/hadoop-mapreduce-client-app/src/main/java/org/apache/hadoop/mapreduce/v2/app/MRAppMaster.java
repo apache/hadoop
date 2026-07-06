@@ -134,7 +134,6 @@ import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.StringInterner;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.YarnUncaughtExceptionHandler;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
@@ -740,10 +739,10 @@ public class MRAppMaster extends CompositeService {
     public void handle(JobFinishEvent event) {
       // Create a new thread to shutdown the AM. We should not do it in-line
       // to avoid blocking the dispatcher itself.
-      new SubjectInheritingThread() {
+      new Thread() {
         
         @Override
-        public void work() {
+        public void run() {
           shutDownJob();
         }
       }.start();

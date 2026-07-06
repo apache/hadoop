@@ -59,7 +59,7 @@ import org.apache.hadoop.net.Node;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.DelayAnswer;
 import org.apache.hadoop.test.Whitebox;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.mockito.Mockito;
@@ -109,7 +109,7 @@ public class TestDeleteRace {
             "/"), "s1");
       }
 
-      SubjectInheritingThread deleteThread = new DeleteThread(fs, filePath);
+      Thread deleteThread = new DeleteThread(fs, filePath);
       deleteThread.start();
 
       try {
@@ -149,7 +149,7 @@ public class TestDeleteRace {
     }
   }
 
-  private class DeleteThread extends SubjectInheritingThread {
+  private class DeleteThread extends Thread {
     private FileSystem fs;
     private Path path;
 
@@ -159,7 +159,7 @@ public class TestDeleteRace {
     }
 
     @Override
-    public void work() {
+    public void run() {
       try {
         Thread.sleep(1000);
         LOG.info("Deleting" + path);
@@ -178,7 +178,7 @@ public class TestDeleteRace {
     }
   }
 
-  private class RenameThread extends SubjectInheritingThread {
+  private class RenameThread extends Thread {
     private FileSystem fs;
     private Path from;
     private Path to;
@@ -190,7 +190,7 @@ public class TestDeleteRace {
     }
 
     @Override
-    public void work() {
+    public void run() {
       try {
         Thread.sleep(1000);
         LOG.info("Renaming " + from + " to " + to);
@@ -457,14 +457,14 @@ public class TestDeleteRace {
       // 6.release writeLock, it's fair lock so open thread gets read lock.
       // 7.open thread unlocks, rename gets write lock and does rename.
       // 8.rename thread unlocks, open thread gets write lock and update time.
-      Thread open = new SubjectInheritingThread(() -> {
+      Thread open = new Thread(() -> {
         try {
           openSem.release();
           fsn.getBlockLocations("foo", src, 0, 5);
         } catch (IOException e) {
         }
       });
-      Thread rename = new SubjectInheritingThread(() -> {
+      Thread rename = new Thread(() -> {
         try {
           openSem.acquire();
           renameSem.release();

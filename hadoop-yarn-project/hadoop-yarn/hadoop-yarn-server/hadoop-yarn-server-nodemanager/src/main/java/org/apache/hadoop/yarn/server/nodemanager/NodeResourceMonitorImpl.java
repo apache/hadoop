@@ -20,7 +20,6 @@ package org.apache.hadoop.yarn.server.nodemanager;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.service.AbstractService;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.api.records.ResourceUtilization;
@@ -150,7 +149,7 @@ public class NodeResourceMonitorImpl extends AbstractService implements
   /**
    * Thread that monitors the resource utilization of this node.
    */
-  private class MonitoringThread extends SubjectInheritingThread {
+  private class MonitoringThread extends Thread {
     /**
      * Initialize the node resource monitoring thread.
      */
@@ -163,7 +162,7 @@ public class NodeResourceMonitorImpl extends AbstractService implements
      * Periodically monitor the resource utilization of the node.
      */
     @Override
-    public void work() {
+    public void run() {
       while (true) {
         // Get node utilization and save it into the health status
         long pmem = resourceCalculatorPlugin.getPhysicalMemorySize() -

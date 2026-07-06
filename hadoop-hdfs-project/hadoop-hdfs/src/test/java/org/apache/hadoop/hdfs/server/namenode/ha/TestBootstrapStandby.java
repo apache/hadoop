@@ -63,7 +63,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 
 public class TestBootstrapStandby {
   private static final Logger LOG =
@@ -410,7 +409,7 @@ public class TestBootstrapStandby {
     final int timeOut = (int)(imageFile.length() / minXferRatePerMS) + 1;
     // A very low DFS_IMAGE_TRANSFER_RATE_KEY value won't affect bootstrapping
     final AtomicBoolean bootStrapped = new AtomicBoolean(false);
-    new SubjectInheritingThread(
+    new Thread(
         new Runnable() {
           @Override
           public void run() {
@@ -440,7 +439,7 @@ public class TestBootstrapStandby {
     // A very low DFS_IMAGE_TRANSFER_BOOTSTRAP_STANDBY_RATE_KEY value should
     // cause timeout
     bootStrapped.set(false);
-    new SubjectInheritingThread(
+    new Thread(
         new Runnable() {
           @Override
           public void run() {

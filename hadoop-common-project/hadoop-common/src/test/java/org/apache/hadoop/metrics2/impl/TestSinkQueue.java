@@ -21,7 +21,6 @@ package org.apache.hadoop.metrics2.impl;
 import java.util.ConcurrentModificationException;
 import java.util.concurrent.CountDownLatch;
 
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -80,8 +79,8 @@ public class TestSinkQueue {
     final SinkQueue<Integer> q = new SinkQueue<Integer>(2);
     final Runnable trigger = mock(Runnable.class);
     // try consuming emtpy equeue and blocking
-    SubjectInheritingThread t = new SubjectInheritingThread() {
-      @Override public void work() {
+    Thread t = new Thread() {
+      @Override public void run() {
         try {
           assertEquals(1, (int) q.dequeue(), "element");
           q.consume(new Consumer<Integer>() {
@@ -256,8 +255,8 @@ public class TestSinkQueue {
       q.enqueue(i);
     }
     final CountDownLatch barrier = new CountDownLatch(1);
-    SubjectInheritingThread t = new SubjectInheritingThread() {
-      @Override public void work() {
+    Thread t = new Thread() {
+      @Override public void run() {
         try {
           Thread.sleep(10); // causes failure without barrier
           q.consume(new Consumer<Integer>() {

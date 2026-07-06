@@ -37,7 +37,6 @@ import org.apache.hadoop.registry.client.impl.zk.RegistrySecurity;
 import org.apache.hadoop.registry.client.types.RegistryPathStatus;
 import org.apache.hadoop.registry.client.types.ServiceRecord;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.ZooDefs;
 import org.apache.zookeeper.data.ACL;
@@ -116,7 +115,7 @@ public class RegistryAdminService extends RegistryOperationsService {
 
           @Override
           public Thread newThread(Runnable r) {
-            return new SubjectInheritingThread(r,
+            return new Thread(r,
                 "RegistryAdminService " + counter.getAndIncrement());
           }
         });

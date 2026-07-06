@@ -31,7 +31,6 @@ import java.util.Map;
 import javax.ws.rs.core.Response;
 
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ActivitiesInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppActivitiesInfo;
@@ -298,9 +297,9 @@ public class TestRouterWebServices extends BaseRouterWebServicesTest {
      * ClientTestThread is a thread to simulate a client request to get a
      * RESTRequestInterceptor for the user.
      */
-    class ClientTestThread extends SubjectInheritingThread {
+    class ClientTestThread extends Thread {
       private RESTRequestInterceptor interceptor;
-      @Override public void work() {
+      @Override public void run() {
         try {
           interceptor = pipeline();
         } catch (IOException | InterruptedException e) {

@@ -23,7 +23,6 @@ import org.apache.hadoop.tools.util.ProducerConsumer;
 import org.apache.hadoop.tools.util.WorkReport;
 import org.apache.hadoop.tools.util.WorkRequest;
 import org.apache.hadoop.tools.util.WorkRequestProcessor;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -147,8 +146,8 @@ public class TestProducerConsumer {
 
     // starts two thread: a source thread which put in work, and a sink thread
     // which takes a piece of work from ProducerConsumer
-    class SourceThread extends SubjectInheritingThread {
-      public void work() {
+    class SourceThread extends Thread {
+      public void run() {
         while (true) {
           try {
             worker.put(new WorkRequest<Integer>(42));
@@ -162,8 +161,8 @@ public class TestProducerConsumer {
     // The source thread put requests into producer-consumer.
     SourceThread source = new SourceThread();
     source.start();
-    class SinkThread extends SubjectInheritingThread {
-      public void work() {
+    class SinkThread extends Thread {
+      public void run() {
         try {
           while (true) {
             WorkReport<Integer> report = worker.take();

@@ -37,7 +37,6 @@ import java.util.concurrent.TimeoutException;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Iterators;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.util.Timer;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -476,7 +475,7 @@ public class EditLogTailer {
    * The thread which does the actual work of tailing edits journals and
    * applying the transactions to the FSNS.
    */
-  private class EditLogTailerThread extends SubjectInheritingThread {
+  private class EditLogTailerThread extends Thread {
     private volatile boolean shouldRun = true;
     
     private EditLogTailerThread() {
@@ -488,7 +487,7 @@ public class EditLogTailer {
     }
     
     @Override
-    public void work() {
+    public void run() {
       SecurityUtil.doAsLoginUserOrFatal(
           new PrivilegedAction<Object>() {
           @Override

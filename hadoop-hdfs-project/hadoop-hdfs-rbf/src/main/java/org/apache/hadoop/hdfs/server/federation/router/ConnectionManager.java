@@ -36,7 +36,6 @@ import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Time;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.eclipse.jetty.util.ajax.JSON;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -459,7 +458,7 @@ public class ConnectionManager {
   /**
    * Thread that creates connections asynchronously.
    */
-  static class ConnectionCreator extends SubjectInheritingThread {
+  static class ConnectionCreator extends Thread {
     /** If the creator is running. */
     private boolean running = true;
     /** Queue to push work to. */
@@ -471,7 +470,7 @@ public class ConnectionManager {
     }
 
     @Override
-    public void work() {
+    public void run() {
       while (this.running) {
         try {
           ConnectionPool pool = this.queue.take();

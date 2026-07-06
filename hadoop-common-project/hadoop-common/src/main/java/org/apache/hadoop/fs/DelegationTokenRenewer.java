@@ -30,7 +30,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.Time;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,7 +38,7 @@ import org.slf4j.LoggerFactory;
  */
 @InterfaceAudience.Private
 public class DelegationTokenRenewer
-    extends SubjectInheritingThread {
+    extends Thread {
   private static final Logger LOG = LoggerFactory
       .getLogger(DelegationTokenRenewer.class);
 
@@ -264,7 +263,7 @@ public class DelegationTokenRenewer
   }
 
   @Override
-  public void work() {
+  public void run() {
     for(;;) {
       RenewAction<?> action = null;
       try {

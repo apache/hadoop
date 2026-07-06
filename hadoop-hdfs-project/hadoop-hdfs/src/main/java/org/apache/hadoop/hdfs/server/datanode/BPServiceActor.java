@@ -76,7 +76,6 @@ import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.VersionInfo;
 import org.apache.hadoop.util.VersionUtil;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.slf4j.Logger;
 
 import org.apache.hadoop.classification.VisibleForTesting;
@@ -601,7 +600,7 @@ class BPServiceActor implements Runnable {
       //Thread is started already
       return;
     }
-    bpThread = new SubjectInheritingThread(this);
+    bpThread = new Thread(this);
     bpThread.setDaemon(true); // needed for JUnit testing
 
     if (lifelineSender != null) {
@@ -1091,7 +1090,7 @@ class BPServiceActor implements Runnable {
     }
 
     public void start() {
-      lifelineThread = new SubjectInheritingThread(this,
+      lifelineThread = new Thread(this,
           formatThreadName("lifeline", lifelineNnAddr));
       lifelineThread.setDaemon(true);
       lifelineThread.setUncaughtExceptionHandler(
@@ -1397,7 +1396,7 @@ class BPServiceActor implements Runnable {
   /**
    * CommandProcessingThread that process commands asynchronously.
    */
-  class CommandProcessingThread extends SubjectInheritingThread {
+  class CommandProcessingThread extends Thread {
     private final BPServiceActor actor;
     private final BlockingQueue<Runnable> queue;
 
@@ -1409,7 +1408,7 @@ class BPServiceActor implements Runnable {
     }
 
     @Override
-    public void work() {
+    public void run() {
       try {
         processQueue();
       } catch (Throwable t) {

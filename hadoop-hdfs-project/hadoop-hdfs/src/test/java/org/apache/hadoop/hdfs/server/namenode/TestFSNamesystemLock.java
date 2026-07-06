@@ -29,7 +29,6 @@ import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
 import org.apache.hadoop.test.MetricsAsserts;
 import org.apache.hadoop.util.FakeTimer;
 import org.apache.hadoop.util.Time;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -269,9 +268,9 @@ public class TestFSNamesystemLock {
     // Track but do not Report if it's held for a long time when re-entering
     // read lock but time since last report does not exceed the suppress
     // warning interval
-    SubjectInheritingThread tLong = new SubjectInheritingThread() {
+    Thread tLong = new Thread() {
       @Override
-      public void work() {
+      public void run() {
         fsnLock.readLock();
         // Add one lock hold which is the longest, but occurs under a different
         // stack trace, to ensure this is the one that gets logged
@@ -299,7 +298,7 @@ public class TestFSNamesystemLock {
     fsnLock.readUnlock();
     // Assert that stack trace eventually logged is the one for the longest hold
     String stackTracePatternString =
-        String.format("INFO.+%s(.+\n){5}\\Q%%s\\E\\.work", readLockLogStmt);
+        String.format("INFO.+%s(.+\n){5}\\Q%%s\\E\\.run", readLockLogStmt);
     Pattern tLongPattern = Pattern.compile(
         String.format(stackTracePatternString, tLong.getClass().getName()));
     assertTrue(tLongPattern.matcher(logs.getOutput()).find());
@@ -319,9 +318,9 @@ public class TestFSNamesystemLock {
     logs.clearOutput();
     final CountDownLatch barrier = new CountDownLatch(1);
     final CountDownLatch barrier2 = new CountDownLatch(1);
-    SubjectInheritingThread t1 = new SubjectInheritingThread() {
+    Thread t1 = new Thread() {
       @Override
-      public void work() {
+      public void run() {
         try {
           fsnLock.readLock();
           timer.advance(readLockReportingThreshold + 1);
@@ -333,9 +332,9 @@ public class TestFSNamesystemLock {
         }
       }
     };
-    SubjectInheritingThread t2 = new SubjectInheritingThread() {
+    Thread t2 = new Thread() {
       @Override
-      public void work () {
+      public void run() {
         try {
           barrier.await(); // Wait until t1 finishes sleeping
           fsnLock.readLock();

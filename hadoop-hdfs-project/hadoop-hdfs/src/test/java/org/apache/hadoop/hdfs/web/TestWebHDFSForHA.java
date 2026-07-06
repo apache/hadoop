@@ -57,7 +57,6 @@ import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.test.Whitebox;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.eclipse.jetty.util.ajax.JSON;
@@ -297,9 +296,9 @@ public class TestWebHDFSForHA {
       final NamenodeProtocols rpcServer = namenode.getRpcServer();
       Whitebox.setInternalState(namenode, "rpcServer", null);
 
-      new SubjectInheritingThread() {
+      new Thread() {
         @Override
-        public void work() {
+        public void run() {
           boolean result = false;
           FileSystem fs = null;
           try {

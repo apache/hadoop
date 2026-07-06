@@ -23,7 +23,6 @@ import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.server.KerberosAuthenticationHandler;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptReportRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptReportResponse;
@@ -292,10 +291,10 @@ public class TestYarnClient extends ParameterizedSchedulerTestBase {
       client.start();
       // Submit the application and then interrupt it while its waiting
       // for submission to be successful.
-      final class SubmitThread extends SubjectInheritingThread {
+      final class SubmitThread extends Thread {
         private boolean isInterrupted  = false;
         @Override
-        public void work() {
+        public void run() {
           ApplicationSubmissionContext context =
               mock(ApplicationSubmissionContext.class);
           ApplicationId applicationId = ApplicationId.newInstance(

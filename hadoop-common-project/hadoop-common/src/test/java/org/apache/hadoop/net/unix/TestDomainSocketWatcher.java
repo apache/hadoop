@@ -32,7 +32,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.Uninterruptibles;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -129,7 +128,7 @@ public class TestDomainSocketWatcher {
     final ArrayList<DomainSocket[]> pairs = new ArrayList<DomainSocket[]>();
     final AtomicInteger handled = new AtomicInteger(0);
 
-    final Thread adderThread = new SubjectInheritingThread(new Runnable() {
+    final Thread adderThread = new Thread(new Runnable() {
       @Override
       public void run() {
         try {
@@ -156,7 +155,7 @@ public class TestDomainSocketWatcher {
       }
     });
     
-    final Thread removerThread = new SubjectInheritingThread(new Runnable() {
+    final Thread removerThread = new Thread(new Runnable() {
       @Override
       public void run() {
         final Random random = new Random();
@@ -200,7 +199,7 @@ public class TestDomainSocketWatcher {
     final ArrayList<DomainSocket[]> pairs = new ArrayList<DomainSocket[]>();
     final AtomicInteger handled = new AtomicInteger(0);
 
-    final Thread adderThread = new SubjectInheritingThread(new Runnable() {
+    final Thread adderThread = new Thread(new Runnable() {
       @Override
       public void run() {
         try {
@@ -228,7 +227,7 @@ public class TestDomainSocketWatcher {
       }
     });
 
-    final Thread removerThread = new SubjectInheritingThread(new Runnable() {
+    final Thread removerThread = new Thread(new Runnable() {
       @Override
       public void run() {
         final Random random = new Random();

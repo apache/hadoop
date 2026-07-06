@@ -288,11 +288,11 @@ public class TestableFederationInterceptor extends FederationInterceptor {
     }
 
     @Override
-    public void work() {
+    public void run() {
       try {
         getUGIWithToken(getAttemptId())
             .doAs((PrivilegedExceptionAction<Object>) () -> {
-              TestableAMRequestHandlerThread.super.work();
+              TestableAMRequestHandlerThread.super.run();
               return null;
             });
       } catch (Exception e) {
