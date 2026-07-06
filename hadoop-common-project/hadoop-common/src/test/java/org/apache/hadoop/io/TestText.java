@@ -27,7 +27,6 @@ import java.util.Random;
 
 import org.apache.hadoop.constants.ConfigConstants;
 import org.apache.hadoop.thirdparty.com.google.common.primitives.Bytes;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -301,13 +300,13 @@ public class TestText {
     assertEquals(8, a.copyBytes().length);
   }
   
-  private class ConcurrentEncodeDecodeThread extends SubjectInheritingThread {
+  private class ConcurrentEncodeDecodeThread extends Thread {
     public ConcurrentEncodeDecodeThread(String name) {
       super(name);
     }
 
     @Override
-    public void work() {
+    public void run() {
       final String name = this.getName();
       DataOutputBuffer out = new DataOutputBuffer();
       DataInputBuffer in = new DataInputBuffer();

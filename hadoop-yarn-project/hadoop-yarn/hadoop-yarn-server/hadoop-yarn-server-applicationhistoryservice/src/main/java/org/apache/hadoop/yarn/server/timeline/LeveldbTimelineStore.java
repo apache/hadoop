@@ -20,7 +20,6 @@ package org.apache.hadoop.yarn.server.timeline;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.util.Preconditions;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.commons.collections4.map.LRUMap;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -284,7 +283,7 @@ public class LeveldbTimelineStore extends AbstractService
     }
   }
 
-  private class EntityDeletionThread extends SubjectInheritingThread {
+  private class EntityDeletionThread extends Thread {
     private final long ttl;
     private final long ttlInterval;
 
@@ -299,7 +298,7 @@ public class LeveldbTimelineStore extends AbstractService
     }
 
     @Override
-    public void work() {
+    public void run() {
       while (true) {
         long timestamp = System.currentTimeMillis() - ttl;
         try {

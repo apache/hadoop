@@ -19,7 +19,6 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -40,7 +39,7 @@ import java.util.concurrent.locks.Lock;
 /**
  * Thread that handles FairScheduler preemption.
  */
-class FSPreemptionThread extends SubjectInheritingThread {
+class FSPreemptionThread extends Thread {
   private static final Logger LOG = LoggerFactory.
       getLogger(FSPreemptionThread.class);
   protected final FSContext context;
@@ -72,7 +71,7 @@ class FSPreemptionThread extends SubjectInheritingThread {
   }
 
   @Override
-  public void work() {
+  public void run() {
     while (!Thread.interrupted()) {
       try {
         FSAppAttempt starvedApp = context.getStarvedApps().take();

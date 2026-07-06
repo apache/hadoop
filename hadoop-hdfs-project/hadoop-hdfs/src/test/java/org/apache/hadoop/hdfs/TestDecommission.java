@@ -86,7 +86,6 @@ import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.ToolRunner;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Tag;
@@ -867,7 +866,7 @@ public class TestDecommission extends AdminStatesBaseTest {
         closedFileSet, openFilesMap, maxDnOccurance);
 
     final AtomicBoolean stopRedundancyMonitor = new AtomicBoolean(false);
-    Thread monitorThread = new SubjectInheritingThread(new Runnable() {
+    Thread monitorThread = new Thread(new Runnable() {
       @Override
       public void run() {
         while (!stopRedundancyMonitor.get()) {

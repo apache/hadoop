@@ -39,7 +39,6 @@ import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -201,8 +200,8 @@ public class ReliabilityTest extends Configured implements Tool {
   private void runTest(final JobClient jc, final Configuration conf,
       final String jobClass, final String[] args, KillTaskThread killTaskThread,
       KillTrackerThread killTrackerThread) throws Exception {
-    SubjectInheritingThread t = new SubjectInheritingThread("Job Test") {
-      public void work() {
+    Thread t = new Thread("Job Test") {
+      public void run() {
         try {
           Class<?> jobClassObj = conf.getClassByName(jobClass);
           int status = ToolRunner.run(conf, (Tool)(jobClassObj.newInstance()),
@@ -250,7 +249,7 @@ public class ReliabilityTest extends Configured implements Tool {
     t.join();
   }
 
-  private class KillTrackerThread extends SubjectInheritingThread {
+  private class KillTrackerThread extends Thread {
     private volatile boolean killed = false;
     private JobClient jc;
     private RunningJob rJob;
@@ -282,7 +281,7 @@ public class ReliabilityTest extends Configured implements Tool {
     public void kill() {
       killed = true;
     }
-    public void work() {
+    public void run() {
       stopStartTrackers(true);
       if (!onlyMapsProgress) {
         stopStartTrackers(false);
@@ -393,7 +392,7 @@ public class ReliabilityTest extends Configured implements Tool {
 
   }
 
-  private class KillTaskThread extends SubjectInheritingThread {
+  private class KillTaskThread extends Thread {
 
     private volatile boolean killed = false;
     private RunningJob rJob;
@@ -417,7 +416,7 @@ public class ReliabilityTest extends Configured implements Tool {
     public void kill() {
       killed = true;
     }
-    public void work() {
+    public void run() {
       killBasedOnProgress(true);
       if (!onlyMapsProgress) {
         killBasedOnProgress(false);

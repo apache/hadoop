@@ -42,7 +42,6 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.junit.jupiter.api.Test;
 import org.slf4j.event.Level;
 
@@ -373,7 +372,7 @@ public class TestFileAppend2 {
   //
   // an object that does a bunch of appends to files
   //
-  class Workload extends SubjectInheritingThread {
+  class Workload extends Thread {
     private final int id;
     private final MiniDFSCluster cluster;
     private final boolean appendToNewBlock;
@@ -386,7 +385,7 @@ public class TestFileAppend2 {
 
     // create a bunch of files. Write to them and then verify.
     @Override
-    public void work() {
+    public void run() {
       System.out.println("Workload " + id + " starting... ");
       for (int i = 0; i < numAppendsPerThread; i++) {
    

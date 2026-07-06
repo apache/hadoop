@@ -25,7 +25,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.HadoopTestCase;
 import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -116,7 +115,7 @@ public class TestLocalJobControl extends HadoopTestCase {
     theControl.addJob(job_3);
     theControl.addJob(job_4);
 
-    Thread theController = new SubjectInheritingThread(theControl);
+    Thread theController = new Thread(theControl);
     theController.start();
     while (!theControl.allFinished()) {
       LOG.debug("Jobs in waiting state: " + theControl.getWaitingJobs().size());

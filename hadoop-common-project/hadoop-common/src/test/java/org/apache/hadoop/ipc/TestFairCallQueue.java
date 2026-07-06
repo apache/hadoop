@@ -50,7 +50,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.mockito.Mockito;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.CallQueueManager.CallQueueOverflowException;
@@ -685,7 +684,7 @@ public class TestFairCallQueue {
 
     CountDownLatch latch = new CountDownLatch(numberOfTakes);
     Taker taker = new Taker(cq, takeAttempts, "default", latch);
-    Thread t = new SubjectInheritingThread(taker);
+    Thread t = new Thread(taker);
     t.start();
     latch.await();
 
@@ -699,7 +698,7 @@ public class TestFairCallQueue {
 
     CountDownLatch latch = new CountDownLatch(numberOfPuts);
     Putter putter = new Putter(cq, putAttempts, null, latch);
-    Thread t = new SubjectInheritingThread(putter);
+    Thread t = new Thread(putter);
     t.start();
     latch.await();
 

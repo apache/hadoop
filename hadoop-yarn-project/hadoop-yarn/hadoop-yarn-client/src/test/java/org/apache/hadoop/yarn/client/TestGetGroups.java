@@ -29,7 +29,6 @@ import org.apache.hadoop.service.Service.STATE;
 import org.apache.hadoop.service.ServiceStateChangeListener;
 import org.apache.hadoop.tools.GetGroupsTestBase;
 import org.apache.hadoop.util.Tool;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.junit.jupiter.api.AfterAll;
@@ -71,8 +70,8 @@ public class TestGetGroups extends GetGroupsTestBase {
     resourceManager.registerServiceListener(rmStateChangeListener);
 
     resourceManager.init(conf);
-    new SubjectInheritingThread() {
-      public void work() {
+    new Thread() {
+      public void run() {
         resourceManager.start();
       };
     }.start();

@@ -36,7 +36,6 @@ import org.apache.hadoop.fs.azurebfs.enums.BufferType;
 import org.apache.hadoop.fs.azurebfs.enums.VectoredReadStrategy;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.impl.CombinedFileRange;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 
 /**
  * The Read Buffer Manager for Rest AbfsClient.
@@ -118,7 +117,7 @@ public final class ReadBufferManagerV1 extends ReadBufferManager {
       getFreeList().add(i);
     }
     for (int i = 0; i < NUM_THREADS; i++) {
-      Thread t = new SubjectInheritingThread(new ReadBufferWorker(i, this));
+      Thread t = new Thread(new ReadBufferWorker(i, this));
       t.setDaemon(true);
       threads[i] = t;
       t.setName("ABFS-prefetch-" + i);

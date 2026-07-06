@@ -25,14 +25,13 @@ import org.apache.hadoop.hdfs.server.federation.store.protocol.RefreshMountTable
 import org.apache.hadoop.hdfs.server.federation.store.protocol.RefreshMountTableEntriesResponse;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Base class for updating mount table cache on all the router.
  */
-public class MountTableRefresherThread extends SubjectInheritingThread {
+public class MountTableRefresherThread extends Thread {
   private static final Logger LOG =
       LoggerFactory.getLogger(MountTableRefresherThread.class);
   private boolean success;
@@ -62,7 +61,7 @@ public class MountTableRefresherThread extends SubjectInheritingThread {
    * update cache on R2 and R3.
    */
   @Override
-  public void work() {
+  public void run() {
     try {
       SecurityUtil.doAsLoginUser(() -> {
         if (UserGroupInformation.isSecurityEnabled()) {

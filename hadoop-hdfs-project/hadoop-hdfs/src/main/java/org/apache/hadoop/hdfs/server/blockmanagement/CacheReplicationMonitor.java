@@ -53,7 +53,6 @@ import org.apache.hadoop.hdfs.util.ReadOnlyList;
 import org.apache.hadoop.hdfs.util.RwLockMode;
 import org.apache.hadoop.util.GSet;
 import org.apache.hadoop.util.Time;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -66,7 +65,7 @@ import org.apache.hadoop.util.Preconditions;
  * starts up, and at configurable intervals afterwards.
  */
 @InterfaceAudience.LimitedPrivate({"HDFS"})
-public class CacheReplicationMonitor extends SubjectInheritingThread implements Closeable {
+public class CacheReplicationMonitor extends Thread implements Closeable {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(CacheReplicationMonitor.class);
@@ -160,7 +159,7 @@ public class CacheReplicationMonitor extends SubjectInheritingThread implements 
   }
 
   @Override
-  public void work() {
+  public void run() {
     long startTimeMs = 0;
     Thread.currentThread().setName("CacheReplicationMonitor(" +
         System.identityHashCode(this) + ")");
