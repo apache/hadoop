@@ -56,7 +56,7 @@ public class TestCertificatesGetCNs {
   }
 
   /**
-   * Assert Common Name is as expected
+   * Assert Common Name is as expected.
    * @param dn Distinguished Name.
    * @param expected expected common name
    */
@@ -68,7 +68,7 @@ public class TestCertificatesGetCNs {
   }
 
   /**
-   * Assert Common Name array is null
+   * Assert Common Name array is null.
    * @param dn Distinguished Name.
    */
   private void assertNullCommonNames(final String dn) throws Exception {

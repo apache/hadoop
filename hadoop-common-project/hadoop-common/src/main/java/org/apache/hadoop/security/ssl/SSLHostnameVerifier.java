@@ -531,7 +531,7 @@ public interface SSLHostnameVerifier extends javax.net.ssl.HostnameVerifier {
        * @return Array of CN values stored in the subject, null if none.
        */
       public static String[] getCNs(X509Certificate cert) {
-        final List<String> cnList = new LinkedList<String>();
+        final List<String> cnList = new LinkedList<>();
         try {
           LdapName dn =
               new LdapName(cert.getSubjectX500Principal().getName());
