@@ -35,6 +35,7 @@ import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.SequenceFile;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -513,22 +514,20 @@ public class TestTextCommand {
 
   private static void createEmptySequenceFile(String fileName, Configuration conf)
       throws IOException {
-    conf.set("io.serializations", "org.apache.hadoop.io.serializer.JavaSerialization");
     Path path = new Path(fileName);
     SequenceFile.Writer writer = SequenceFile.createWriter(conf, SequenceFile.Writer.file(path),
-        SequenceFile.Writer.keyClass(String.class), SequenceFile.Writer.valueClass(String.class));
+        SequenceFile.Writer.keyClass(Text.class), SequenceFile.Writer.valueClass(Text.class));
     writer.close();
   }
 
   private static void createNonWritableSequenceFile(String fileName, Configuration conf)
       throws IOException {
-    conf.set("io.serializations", "org.apache.hadoop.io.serializer.JavaSerialization");
     Path path = new Path(fileName);
     try (SequenceFile.Writer writer = SequenceFile.createWriter(conf,
-        SequenceFile.Writer.file(path), SequenceFile.Writer.keyClass(String.class),
-        SequenceFile.Writer.valueClass(String.class))) {
-      writer.append("Key1", "Value1");
-      writer.append("Key2", "Value2");
+        SequenceFile.Writer.file(path), SequenceFile.Writer.keyClass(Text.class),
+        SequenceFile.Writer.valueClass(Text.class))) {
+      writer.append(new Text("Key1"), new Text("Value1"));
+      writer.append(new Text("Key2"), new Text("Value2"));
     }
   }
 
