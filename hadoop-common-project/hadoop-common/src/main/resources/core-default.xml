@@ -940,9 +940,13 @@
 
 <property>
   <name>io.compression.codec.lzo.buffersize</name>
-  <value>65536</value>
+  <value>262144</value>
   <description>
     Internal buffer size for Lzo compressor/decompressors.
+    This matches the native hadoop-lzo library's default buffer size.
+    Using a smaller value here (previously 65536) than the LZO native
+    library's own default can result in "Corrupted uncompressed block"
+    errors during decompression, as the buffer sizes must be consistent.
   </description>
 </property>
 
