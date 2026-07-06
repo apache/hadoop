@@ -512,8 +512,6 @@ public class TestStandbyCheckpoints {
           DFSConfigKeys.DFS_IMAGE_TRANSFER_RATE_KEY, 100);
       cluster.getConfiguration(i).setBoolean(
           DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_PARALLEL_UPLOAD_ENABLED_KEY, true);
-      cluster.getConfiguration(i).setInt(
-          DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_PARALLEL_UPLOAD_MAX_THREADS_KEY, NUM_NNS);
     }
     for (int i = 0; i < NUM_NNS; i++) {
       cluster.restartNameNode(i);
