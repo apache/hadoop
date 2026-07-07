@@ -102,7 +102,7 @@ AWS SDK requires the name of a region is supplied for signing, and that region m
 Third-party stores don't normally care about the name of a region, *only that a region is supplied*.
 
 You should set `fs.s3a.endpoint.region` to anything except the following reserved names: `sdk`, `ec2` and `auto`.
-We have plans for those.
+Recommended: `external`
 
 ## Other issues
 
@@ -443,7 +443,6 @@ The S3A client's creation of an endpoint URL generates an unknown host.
   </property>
 ```
 
-
 ```
 ls: software.amazon.awssdk.core.exception.SdkClientException:
     Received an UnknownHostException when attempting to interact with a service.
@@ -489,7 +488,7 @@ at [ECS Test Drive](https://portal.ecstestdrive.com/) were
 ```xml
 <property>
   <name>fs.s3a.endpoint.region</name>
-  <value>dell</value>
+  <value>external</value>
   <description>arbitrary name other than sdk, ec2, auto or null</description>
 </property>
 
@@ -562,7 +561,7 @@ this makes renaming and deleting significantly slower.
   <!-- any value except sdk, auto and ec2 is allowed here, using "gcs" is more informative -->
   <property>
     <name>fs.s3a.endpoint.region</name>
-    <value>gcs</value>
+    <value>external</value>
   </property>
 
   <property>
@@ -638,3 +637,67 @@ It is also a way to regression test foundational S3A third-party store compatibi
 _Note_ If anyone is set up to test this regularly, please let the hadoop developer team know if regressions do surface,
 as it is not a common test configuration.
 We do use it to help test compatibility during SDK updates.
+
+## RustFS localhost with no https
+
+RustFS is an easy to deploy S3 store.
+
+In tests of the S3A connector in December 2025 we observed:
+1. Eventual consistency in path deletion (LIST responses included recently deleted objects; HEAD correctly returned 404)
+2. Eventual consistency in lists of multipart object uploads (`s3guard uploads` command, *and* s3a committer cleanup)
+3. Case inconsistency when running on a MacOS system; not tested elsewhere.
+4. Other minor issues in niche API calls (`getBucketMetadata()`) which don't affect normal use.
+
+Listing inconsistency after directory deletion is the key issue which may break applications as it means that
+* Newly deleted directories may still return objects.
+* Newly renamed objects may still be listable at the source paths.
+* The logic which determines whether an empty directory marker should be reinserted after a child path deletion may not behave correctly.
+
+It may be safe for use with tables which are designed to work on inconsistent object stores (Apache Iceberg and rivals), but
+it does not, as of December 2025 appear safe for use with classic Hive directory structured tables, through Hive, Spark or other applications.
+Nor are the S3A committers guaranteed to work safely.
+
+Use at your own risk. Running the `hadoop-aws` test suite against your store would be the ideal way to see if later
+versions have changed their behavior.
+
+Example settings for a local rust bucket. Note that `fs.s3a.bucket.rustybucket.connection.ssl.enabled` has been set to false
+as the SDK doesn't look at the http/https prefix of the endpoint to determine which protocol to use.
+
+```xml
+  <property>
+    <name>fs.s3a.bucket.rustybucket.access.key</name>
+    <value>rustfsadmin</value>
+  </property>
+
+  <property>
+    <name>fs.s3a.bucket.rustybucket.secret.key</name>
+    <value>rustfsadmin</value>
+  </property>
+
+  <property>
+    <name>fs.s3a.bucket.rustybucket.endpoint</name>
+    <value>http://localhost:9000</value>
+  </property>
+
+  <!-- this is critical to stop the SDK using TLS encryption even though the endpoint is declared as HTTP -->
+  <property>
+    <name>fs.s3a.bucket.rustybucket.connection.ssl.enabled</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <name>fs.s3a.bucket.rustybucket.endpoint.region</name>
+    <value>external</value>
+  </property>
+
+  <property>
+    <name>fs.s3a.bucket.rustybucket.path.style.access</name>
+    <value>true</value>
+  </property>
+
+  <property>
+    <name>fs.s3a.bucket.rustybucket.create.conditional.enabled</name>
+    <value>false</value>
+  </property>
+```
+

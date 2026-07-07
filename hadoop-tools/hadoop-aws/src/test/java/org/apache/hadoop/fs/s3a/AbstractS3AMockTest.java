@@ -27,6 +27,7 @@ import software.amazon.awssdk.services.s3.S3Client;
 import java.net.URI;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.test.AbstractHadoopTestBase;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -35,7 +36,7 @@ import org.junit.jupiter.api.BeforeEach;
 /**
  * Abstract base class for S3A unit tests using a mock S3 client.
  */
-public abstract class AbstractS3AMockTest {
+public abstract class AbstractS3AMockTest extends AbstractHadoopTestBase {
 
   protected static final String BUCKET = "mock-bucket";
   protected static final AwsServiceException NOT_FOUND =
