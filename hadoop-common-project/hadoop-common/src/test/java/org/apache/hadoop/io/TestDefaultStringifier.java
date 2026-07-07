@@ -73,7 +73,7 @@ public class TestDefaultStringifier {
     Text text = new Text("uninteresting test string");
     String keyName = "test.defaultstringifier.key1";
 
-    DefaultStringifier.store(CONF,text, keyName);
+    DefaultStringifier.store(CONF, text, keyName);
 
     Text claimedText = DefaultStringifier.load(CONF, keyName, Text.class);
     assertThat(claimedText)

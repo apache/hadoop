@@ -23,7 +23,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.NullWritable;
@@ -34,9 +33,9 @@ import org.apache.hadoop.io.WritableComparator;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.mapreduce.MRJobConfig;
-import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import org.assertj.core.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class TestTotalOrderPartitioner {
 
@@ -88,20 +87,15 @@ public class TestTotalOrderPartitioner {
     Path p = new Path(testdir, testname + "/_partition.lst");
     TotalOrderPartitioner.setPartitionFile(conf, p);
     conf.setInt(MRJobConfig.NUM_REDUCES, splits.length + 1);
-    SequenceFile.Writer w = null;
-    try {
-      w = SequenceFile.createWriter(
-          conf,
-          SequenceFile.Writer.file(p),
-          SequenceFile.Writer.keyClass(splits[0].getClass()),
-          SequenceFile.Writer.valueClass(NullWritable.class),
-          SequenceFile.Writer.compression(CompressionType.NONE));
-      for (int i = 0; i < splits.length; ++i) {
-        w.append(splits[i], NullWritable.get());
+    try (SequenceFile.Writer w = SequenceFile.createWriter(
+        conf,
+        SequenceFile.Writer.file(p),
+        SequenceFile.Writer.keyClass(splits[0].getClass()),
+        SequenceFile.Writer.valueClass(NullWritable.class),
+        SequenceFile.Writer.compression(CompressionType.NONE))) {
+      for (T split : splits) {
+        w.append(split, NullWritable.get());
       }
-    } finally {
-      if (null != w)
-        w.close();
     }
     return p;
   }
@@ -118,8 +112,9 @@ public class TestTotalOrderPartitioner {
       partitioner.setConf(conf);
       NullWritable nw = NullWritable.get();
       for (Check<Text> chk : testStrings) {
-        assertEquals(chk.part,
-            partitioner.getPartition(chk.data, nw, splitStrings.length + 1), chk.data.toString());
+        Assertions.assertThat(partitioner.getPartition(chk.data, nw, splitStrings.length + 1))
+            .describedAs("Expected %s", chk.data)
+            .isEqualTo(chk.part);
       }
     } finally {
       p.getFileSystem(conf).delete(p, true);
@@ -139,8 +134,9 @@ public class TestTotalOrderPartitioner {
       partitioner.setConf(conf);
       NullWritable nw = NullWritable.get();
       for (Check<Text> chk : testStrings) {
-        assertEquals(chk.part,
-            partitioner.getPartition(chk.data, nw, splitStrings.length + 1), chk.data.toString());
+        Assertions.assertThat(partitioner.getPartition(chk.data, nw, splitStrings.length + 1))
+            .describedAs("Expected %s", chk.data)
+            .isEqualTo(chk.part);
       }
     } finally {
       p.getFileSystem(conf).delete(p, true);
@@ -188,8 +184,9 @@ public class TestTotalOrderPartitioner {
       partitioner.setConf(conf);
       NullWritable nw = NullWritable.get();
       for (Check<Text> chk : revCheck) {
-        assertEquals(chk.part,
-            partitioner.getPartition(chk.data, nw, splitStrings.length + 1), chk.data.toString());
+        Assertions.assertThat(partitioner.getPartition(chk.data, nw, splitStrings.length + 1))
+            .describedAs("Expected %s", chk.data)
+            .isEqualTo(chk.part);
       }
     } finally {
       p.getFileSystem(conf).delete(p, true);
