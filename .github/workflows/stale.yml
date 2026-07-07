@@ -27,7 +27,7 @@ jobs:
     if: github.repository == 'apache/hadoop'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/stale@v1
+      - uses: actions/stale@0649bd81195b7ac109fbf9dde113af7e58a78b8e # v1
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           stale-pr-message: >
