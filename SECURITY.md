@@ -81,6 +81,8 @@ Report security vulnerabilities in Apache Hadoop privately to
 * Do **not** open a public JIRA issue, GitHub
 issue, or pull request for an unfixed vulnerability.
 
+By sending your report to this address you agree that information from this report may be made public after triage (for invalid issues) or after the release of the fix, unless you explicitly request otherwise.
+
 For vulnerabilities in CI pipelines, see
 [Reporting Vulnerabilities in CI Pipelines](#reporting-vulnerabilities-in-ci-pipelines).
 
@@ -465,7 +467,9 @@ primarily on:
   authentication, write, or maintenance capabilities.
 - A vulnerability that only exists in previous releases.
 
-## Special Topics
+<!-- Keep in alphabetical order -->
+
+## Hadoop-Specific Topics
 
 ### Client-Side Resilience to Malicious Services
 
@@ -486,15 +490,17 @@ There's a lot of concurrency in the Hadoop codebase; it can often be a source of
 If a race condition leads to privilege escalation or other exploit within the security model,
 it is a CVE.
 
+### Configuration files
 
-### We trust hadoop configuration files
+We trust Hadoop XML configuration files have been saved to the local filesystem with permissions such that they can only be written to by trusted users, read by all users whot  wished to interact with the cluster.
 
-We trust them to have been saved to the local filesystem with permissions such that they can only be written to by trusted users, read by all users whot  wished to interact with the cluster.
-
-They are XML files. They SHALL be well-formed. They MAY use XInclude; resolution is performed by the user/process parsing the file. 
+They are XML files.
+They SHALL be well-formed. They MAY use XInclude; resolution is performed by the user/process parsing the file. 
 Administrators may put secrets in them, but they should not as they then become visible to all: JCECKs files or other KMS service is the way to provide secrets. If an administrator has chosen to embed secrets such as cloud credentials in a shared configuration: that is their choice.
 
-When XML configuration files are read they also evaluate JVM properties, including standard ones (`${user.name}`, `${java.home}`) and environment variables (`${env.PATH}`). We trust these properties and environment variables to be well-formed and valid. If A bobby-tables attack on `${user.name}` or escaped quotations in an environment variable result in some problem downstream -these are bugs not CVEs.
+When XML configuration files are read they also evaluate JVM properties, including standard ones (`${user.name}`, `${java.home}`) and environment variables (`${env.PATH}`).
+We trust these properties and environment variables to be well-formed and valid.
+If a bobby-tables attack on `${user.name}` or escaped quotations in an environment variable result in some problem downstream -these are bugs not CVEs.
 
 We also trust all other files in `/etc/hadoop/conf`; they are created by administrators and expected to be correct; this includes log4j settings.
 
@@ -530,6 +536,20 @@ The correct way to store such secrets is through a JCEKS file or other credentia
 Application code reading in secrets from configurations MUST use `Configuration.getPassword()` to ensure
 these can be used as a store of secrets.
 
+### FileSystem Class Implementations.
+
+Applications using the Hadoop classes may be multi-tenant; Apache Hive is an example of this.
+
+Hadoop FileSystem implementation classes MUST be designed to run within such an application.
+Here they will be cached on a per-user basis.
+
+FileSystem implementations must collect and cache the `UserGroupInformation` instance containing java subject information from within
+the `initialize()` method; this contains the storage and encryption credentials required to authenticate with the remote store as the
+chosen principal.
+Other methods, when invoked, MUST use those stored values.
+
+When `FileSystem.closeAllForUGI()` is invoked, all FileSystem instances belonging to that user are closed then removed from the cache.
+FileSystem implementations MUST release all memory, thread pools and other resources in `close()`.
 
 ### `hadoop-client` Libraries
 
@@ -589,16 +609,63 @@ as on the CLI.
 There is an implicit trust boundary.
 Clients SHOULD be resilient to malformed responses from service endpoints; a failure to do so SHALL be considered a bug, not a security issue.
 
+### Java Serialization
+
+Java serialization is used in some internal places as a way of persisting information.
+
+| File | Daemon / process | Direction | Mechanism | Filter / guard | Byte source | Notes |
+|------|------------------|-----------|-----------|----------------|-------------|-------|
+| yarn-nodemanager `containermanager/container/ResourceMappings.java:93` (`AssignedResources.fromBytes`) | **NodeManager** | read | commons-lang3 `SerializationUtils.deserialize` | **none** | NM recovery state store (LevelDB) | `List<Serializable>` (GPU/FPGA/numa device values) — open-ended types, awkward to allow-list |
+| yarn-common `logaggregation/filecontroller/ifile/LogAggregationIndexedFileController.java:971` | NM (write) / **JHS·ATS/AHS reader** | read | commons-lang3 `SerializationUtils.deserialize` | **none** | aggregated log file in **HDFS** | Deserializes `IndexedLogsMeta`; HDFS-sourced → wider exposure |
+| yarn-resourcemanager `scheduler/capacity/conf/ZKConfigurationStore.java:347` | **ResourceManager** | read | commons-io `ValidatingObjectInputStream` | **allow-listed** (LinkedList, LogMutation, HashMap, String) | ZooKeeper | Already guarded |
+| yarn-resourcemanager `scheduler/capacity/conf/LeveldbConfigurationStore.java:242` | **ResourceManager** | read | `java.io.ObjectInputStream` | **none** | local LevelDB | Mutable-config store; local-state threat model |
+| yarn-router `RouterServerUtil.java` | Router | write | `ObjectOutputStream` | n/a | — | Serialize-only |
+
+We are aware of these.
+
+Do notify us if any gadget chain appears on our services' classpaths from our own or third party libraries which can be used as an attack from untrusted
+sources over the network which are not guarded by mechanisms such as:
+* HDFS file access permissions.
+* Local filesystem access permissions.
+
+In such a situation as well as issuing a code fix, it is possible to restrict/block java class deserialization through selective use of [Java serialization filters](https://docs.oracle.com/en/java/javase/25/core/creating-pattern-based-filters.html) and the `jdk.serialFilter` property, which can be set on the command line to block deserialization of some or all classes from deserialization, as well as the deserialization depth:
+```
+-Djdk.serialFilter=!*
+```
+
+Do also notify us if our own implementations of `Serializable` or `Externalizable` can be used as gadgets in a larger attack.
+
+
+### Java Serialization Downstream
+
+Hadoop IPC does *not* use Java Serialization; it uses `Writable` and protobuf.
+
+Some applications and services which include the libraries do use Java Serialization.
+
+We do care if any `org.apache.hadoop` class that is not a shaded third-party class can be used
+as a "gadget" in an attack on Java object deserialization.
+
+Please notify the security team if you discover such a vulnerability even if it is not part of
+our own threat model.
+
+### Job Submission
+
+Any exploit with a step which includes submitting work to a kerberized yarn cluster and which executes this work under the identity of the principal submitting the work, is called _job submission_.
+A CVE report including such a step will be immediately rejected.
+
 ### Native Code
 
 Anything which can trigger failures in Hadoop's own native code in supported operating systems SHALL be
 considered for CVEs.
 This includes
-- pointer, memory and stack issues.
-- OS calls
+- Pointer, memory and stack issues.
+- OS calls.
 - Process launch and cross-process IPC (especially native OS mechanisms).
-- JNI binding
+- JNI binding.
+
 As per the policy on third-party libraries, issues with native libraries such as libssl are out of scope unless it is actually how hadoop invokes the native code which is at fault.
+
+For CVEs related to native code, please provide as much information about the native libraries as you can, especially their versions.
 
 ### Resource Exhaustion
 
@@ -626,18 +693,6 @@ Hadoop services support TLS of service hosts; certificate management is out of s
 
 Validation of TLS certificates is in scope, including verifying the hostname matches the certificate, along with the entire certificate chain.
 
-### Writable: `org.apache.hadoop.io.Writable`
-
-`Writable` is very similar to `java.io.Serializable`, but unlike Java's built-in serialization mechanism,
-marshalling and unmarshalling is explicitly performed in the interface's implementation.
-
-LLMs often conflate the two and consider their use an immediate vulnerability.
-For any CVE related to Writable to be accepted, the submitter MUST show a valid exploit chain using
-extant gadgets in the classpath of Hadoop or the latest versions of major applications built on top
-of it, from the entry point to the outcome.
-
-Implementing new `Writable` classes as part of an exploit *does not count*.
-
 ### Tokens 
 
 Hadoop Tokens are used for authenticating IPC channels; these use Writables to marshall data, and
@@ -648,40 +703,14 @@ production code and declared in a metadata resource file
 `hadoop-tools/hadoop-aws/src/main/resources/META-INF/services/org.apache.hadoop.security.token.TokenIdentifier`
 are resilient to attack by malicious clients, such that denial-of-service attacks are possible or authentication can be bypassed/spoofed.
 
-### Java Serialization Attacks in Downstream Applications
+### Writable: `org.apache.hadoop.io.Writable`
 
-Hadoop IPC does *not* use Java Serialization; it uses `Writable` and protobuf.
+`Writable` is very similar to `java.io.Serializable`, but unlike Java's built-in serialization mechanism,
+marshalling and unmarshalling is explicitly performed in the interface's implementation.
 
-Some applications and services which include the libraries do use Java Serialization.
+LLMs often conflate the two and consider their use an immediate vulnerability.
+For any CVE related to `Writable` to be accepted, the submitter MUST show a valid exploit chain using
+extant gadgets in the classpath of Hadoop or the latest versions of major applications built on top
+of it, from the entry point to the outcome.
 
-We do care if any `org.apache.hadoop` class that is not a shaded third-party class can be used
-as a "gadget" in an attack on Java object deserialization.
-
-Please notify the security team if you discover such a vulnerability even if it is not part of
-our own threat model.
-
-## Hadoop's own use of Java Serialization
-
-Java serialization is used in some internal places as a way of persisting information.
-
-| File | Daemon / process | Direction | Mechanism | Filter / guard | Byte source | Notes |
-|------|------------------|-----------|-----------|----------------|-------------|-------|
-| yarn-nodemanager `containermanager/container/ResourceMappings.java:93` (`AssignedResources.fromBytes`) | **NodeManager** | read | commons-lang3 `SerializationUtils.deserialize` | **none** | NM recovery state store (LevelDB) | `List<Serializable>` (GPU/FPGA/numa device values) — open-ended types, awkward to allow-list |
-| yarn-common `logaggregation/filecontroller/ifile/LogAggregationIndexedFileController.java:971` | NM (write) / **JHS·ATS/AHS reader** | read | commons-lang3 `SerializationUtils.deserialize` | **none** | aggregated log file in **HDFS** | Deserializes `IndexedLogsMeta`; HDFS-sourced → wider exposure |
-| yarn-resourcemanager `scheduler/capacity/conf/ZKConfigurationStore.java:347` | **ResourceManager** | read | commons-io `ValidatingObjectInputStream` | **allow-listed** (LinkedList, LogMutation, HashMap, String) | ZooKeeper | Already guarded |
-| yarn-resourcemanager `scheduler/capacity/conf/LeveldbConfigurationStore.java:242` | **ResourceManager** | read | `java.io.ObjectInputStream` | **none** | local LevelDB | Mutable-config store; local-state threat model |
-| yarn-router `RouterServerUtil.java` | Router | write | `ObjectOutputStream` | n/a | — | Serialize-only |
-
-We are aware of these.
-
-Do notify us if any gadget chain appears on our services' classpaths from our own or third party libraries which can be used as an attack from untrusted
-sources over the network which are not guarded by mechanisms such as:
-* HDFS file access permissions.
-* Local filesystem access permissions.
-
-In such a situation as well as issuing a code fix, it is possible to restrict/block java class deserialization through selective use of [Java serialization filters](https://docs.oracle.com/en/java/javase/25/core/creating-pattern-based-filters.html) and the `jdk.serialFilter` property, which can be set on the command line to block deserialization of some or all classes from deserialization, as well as the deserialization depth:
-```
--Djdk.serialFilter=!*
-```
-
-Do also notify us if our own implementations of `Serializable` or `Externalizable` can be used as gadgets in a larger attack.
+Implementing new `Writable` classes as part of an exploit *does not count*.
