@@ -2258,6 +2258,125 @@ The switch to turn S3A auditing on or off.
   </description>
 </property>
 
+<!--
+AWS SDK client shared thread pool settings. When enabled, AWS SDK clients of a
+given type share a single scheduled thread pool instead of each client creating
+its own. This bounds thread growth when many S3A filesystem instances are
+created. Each pool is opt-in and disabled by default.
+
+The default size of 5 matches the per-client default the AWS SDK would otherwise
+use (Executors.newScheduledThreadPool(5)). Unlike that SDK default, which keeps
+its core threads for the client's lifetime, the shared pool reaps threads that
+are idle beyond the keepalive window.
+-->
+<property>
+  <name>fs.s3a.aws.s3.client.shared.threadpool.enabled</name>
+  <value>false</value>
+  <description>
+    Enable a shared scheduled thread pool for the AWS S3 synchronous client.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.aws.s3.client.shared.threadpool.size</name>
+  <value>5</value>
+  <description>
+    Core pool size of the shared thread pool for the AWS S3 synchronous client.
+    Only used when fs.s3a.aws.s3.client.shared.threadpool.enabled is true.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.aws.s3.client.shared.threadpool.keepalive.seconds</name>
+  <value>60</value>
+  <description>
+    Keepalive time in seconds for idle threads in the shared thread pool for the
+    AWS S3 synchronous client. Only used when
+    fs.s3a.aws.s3.client.shared.threadpool.enabled is true.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.aws.s3.async.client.shared.threadpool.enabled</name>
+  <value>false</value>
+  <description>
+    Enable a shared scheduled thread pool for the AWS S3 asynchronous client.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.aws.s3.async.client.shared.threadpool.size</name>
+  <value>5</value>
+  <description>
+    Core pool size of the shared thread pool for the AWS S3 asynchronous client.
+    Only used when fs.s3a.aws.s3.async.client.shared.threadpool.enabled is true.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.aws.s3.async.client.shared.threadpool.keepalive.seconds</name>
+  <value>60</value>
+  <description>
+    Keepalive time in seconds for idle threads in the shared thread pool for the
+    AWS S3 asynchronous client. Only used when
+    fs.s3a.aws.s3.async.client.shared.threadpool.enabled is true.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.aws.sts.client.shared.threadpool.enabled</name>
+  <value>false</value>
+  <description>
+    Enable a shared scheduled thread pool for the AWS STS client.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.aws.sts.client.shared.threadpool.size</name>
+  <value>5</value>
+  <description>
+    Core pool size of the shared thread pool for the AWS STS client.
+    Only used when fs.s3a.aws.sts.client.shared.threadpool.enabled is true.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.aws.sts.client.shared.threadpool.keepalive.seconds</name>
+  <value>60</value>
+  <description>
+    Keepalive time in seconds for idle threads in the shared thread pool for the
+    AWS STS client. Only used when
+    fs.s3a.aws.sts.client.shared.threadpool.enabled is true.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.aws.kms.client.shared.threadpool.enabled</name>
+  <value>false</value>
+  <description>
+    Enable a shared scheduled thread pool for the AWS KMS client.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.aws.kms.client.shared.threadpool.size</name>
+  <value>5</value>
+  <description>
+    Core pool size of the shared thread pool for the AWS KMS client.
+    Only used when fs.s3a.aws.kms.client.shared.threadpool.enabled is true.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.aws.kms.client.shared.threadpool.keepalive.seconds</name>
+  <value>60</value>
+  <description>
+    Keepalive time in seconds for idle threads in the shared thread pool for the
+    AWS KMS client. Only used when
+    fs.s3a.aws.kms.client.shared.threadpool.enabled is true.
+  </description>
+</property>
+
   <!-- Azure file system properties -->
 <property>
   <name>fs.AbstractFileSystem.wasb.impl</name>
