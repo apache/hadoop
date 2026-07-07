@@ -26,7 +26,7 @@ vulnerabilities here, because the surrounding deployment is trusted by design.
 You *MUST NOT* file a security report for:
 
 - Issues that require the operator to edit their own Hadoop site configuration,
-  place malicious/vulnerabile libraries on their own classpath,
+  place malicious/vulnerable libraries on their own classpath,
   or pass malicious arguments to their own command invocation.
 - **Job submission running user-supplied code.** Submitting work to YARN or
   MapReduce executes the submitter's code as the submitter's identity. That is
@@ -70,7 +70,8 @@ CVE will be assigned to the AI tool alone, and not to the submitter.
    The log is a key part of AI tool reports, and we need to be able to track/replicate these.
 
 *Unverified LLM-generated reports waste maintainer time and will be closed
-without further response.* Repeat offenders may be banned for an extended period. 
+without further response.*
+Repeat offenders may be banned for an extended period.
 
 ## Reporting a Vulnerability
 
@@ -268,7 +269,7 @@ Hadoop services issue _delegation tokens_: an authenticated principal obtains a 
 YARN distributes these tokens to an application's containers and renews them on the application's behalf, so tasks can authenticate to those services without holding Kerberos credentials themselves.
 These tokens have an independent life from the Kerberos credentials
 * They have a limited lifespan of a number of hours.
-* They can be cancelled: the issuing service MUST then reject requests using them as authentication.
+* They can be canceled: the issuing service MUST then reject requests using them as authentication.
 * They can be renewed: before their lifespan expires the renewer requests the issuing service to extend their lifespan.
 
 The details of these tokens or how issuing, cancellation and renewal are managed are not covered in this document.
@@ -308,8 +309,9 @@ In client-side use, the following is trusted
 - The application classpath.
 - The client-side configuration and CLI arguments.
 
-Whether or not the network is trusted to the extent that DNS is trusted and network encryption is mandatory for HDFS, cluster service and cloud service communication
-along with TLS where appropriate, is a matter for client configuration and out of scope of this security model.
+Network trust in client-only use — whether DNS is trusted, and whether wire encryption
+(along with TLS where appropriate) is mandatory for HDFS, cluster-service, and cloud-service
+communication — is a matter for client configuration. It is out of scope of this security model.
 
 ## Data at Rest and Temporary Files
 
@@ -461,7 +463,7 @@ plausibly shows one of the following:
 A finding SHOULD be downgraded or rejected by default if it instead depends
 primarily on:
 
-- Malformed-input robustness or denial-of-service behaviour.
+- Malformed-input robustness or denial-of-service behavior.
 - A malicious external service, catalog, or metastore.
 - A principal who already has equivalent power through legitimate
   authentication, write, or maintenance capabilities.
@@ -492,19 +494,21 @@ it is a CVE.
 
 ### Configuration files
 
-We trust Hadoop XML configuration files have been saved to the local filesystem with permissions such that they can only be written to by trusted users, read by all users whot  wished to interact with the cluster.
+We trust Hadoop XML configuration files have been saved to the local filesystem with permissions such that they can only be written to by trusted users, and are readable by all users who wish to interact with the cluster.
 
 They are XML files.
-They SHALL be well-formed. They MAY use XInclude; resolution is performed by the user/process parsing the file. 
-Administrators may put secrets in them, but they should not as they then become visible to all: JCECKs files or other KMS service is the way to provide secrets. If an administrator has chosen to embed secrets such as cloud credentials in a shared configuration: that is their choice.
+They SHALL be well-formed.
+They MAY use XInclude; resolution is performed by the user/process parsing the file.
+Administrators may put secrets in them, but they should not as they then become visible to all: JCEKS files or other KMS service is the way to provide secrets.
+If an administrator has chosen to embed secrets such as cloud credentials in a shared configuration: that is their choice.
 
 When XML configuration files are read they also evaluate JVM properties, including standard ones (`${user.name}`, `${java.home}`) and environment variables (`${env.PATH}`).
 We trust these properties and environment variables to be well-formed and valid.
-If a bobby-tables attack on `${user.name}` or escaped quotations in an environment variable result in some problem downstream -these are bugs not CVEs.
+If a Bobby Tables attack on `${user.name}` or escaped quotations in an environment variable result in some problem downstream — these are bugs not CVEs.
 
 We also trust all other files in `/etc/hadoop/conf`; they are created by administrators and expected to be correct; this includes log4j settings.
 
-In Kerberized clusters, we trust file permissions to Kerberos keytab files to restricted so daemon processes can read and so use these credentials, but unprivileged users cannot. 
+In Kerberized clusters, we trust the file permissions on Kerberos keytab files to be restricted such that daemon processes can read and use these credentials, but unprivileged users cannot.
 
 ### Configuration: `org.apache.hadoop.conf.Configuration`
 
@@ -689,19 +693,19 @@ WONTFIX issues except when secrets are logged or if it is possible for malicious
 
 ### TLS/SSL
 
-Hadoop services support TLS of service hosts; certificate management is out of scope.
+Hadoop services support TLS on their service endpoints; certificate management is out of scope.
 
 Validation of TLS certificates is in scope, including verifying the hostname matches the certificate, along with the entire certificate chain.
 
-### Tokens 
+### Tokens
 
 Hadoop Tokens are used for authenticating IPC channels; these use Writables to marshall data, and
-are are unmarshalled before callers are authenticated.
+are unmarshalled before callers are authenticated.
 
 It is *critical* that implementations of `org.apache.hadoop.security.token.TokenIdentifier` in
 production code and declared in a metadata resource file
 `hadoop-tools/hadoop-aws/src/main/resources/META-INF/services/org.apache.hadoop.security.token.TokenIdentifier`
-are resilient to attack by malicious clients, such that denial-of-service attacks are possible or authentication can be bypassed/spoofed.
+are resilient to attack by malicious clients, so that neither denial-of-service attacks are possible nor authentication can be bypassed/spoofed.
 
 ### Writable: `org.apache.hadoop.io.Writable`
 
