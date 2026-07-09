@@ -17,8 +17,6 @@
 
 package org.apache.hadoop.io.file.tfile;
 
-import static org.junit.jupiter.api.Assertions.fail;
-
 import java.io.IOException;
 
 import org.junit.jupiter.api.AfterEach;
@@ -31,6 +29,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.file.tfile.TFile.Writer;
 import org.apache.hadoop.test.GenericTestUtils;
+
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
  * 
@@ -73,45 +73,28 @@ public class TestTFileComparators {
 
   // bad comparator format
   @Test
-  public void testFailureBadComparatorNames() throws IOException {
-    try {
-      writer = new Writer(out, BLOCK_SIZE, compression, "badcmp", conf);
-      fail("Failed to catch unsupported comparator names");
-    }
-    catch (Exception e) {
-      // noop, expecting exceptions
-      e.printStackTrace();
-    }
+  public void testFailureBadComparatorNames() throws Exception {
+    intercept(IllegalArgumentException.class, "Unsupported comparator", () ->
+        new Writer(out, BLOCK_SIZE, compression, "badcmp", conf));
   }
 
-  // jclass that doesn't exist
+  // jclass that doesn't exist: fails to instantiate, not because the feature
+  // is disabled.
   @Test
-  public void testFailureBadJClassNames() throws IOException {
-    try {
-      writer =
-          new Writer(out, BLOCK_SIZE, compression,
-              "jclass: some.non.existence.clazz", conf);
-      fail("Failed to catch unsupported comparator names");
-    }
-    catch (Exception e) {
-      // noop, expecting exceptions
-      e.printStackTrace();
-    }
+  public void testFailureBadJClassNames() throws Exception {
+    conf.setBoolean(TFile.TFILE_COMPARATOR_JCLASS_ENABLED, true);
+    intercept(IllegalArgumentException.class, "Failed to instantiate comparator",
+        () -> new Writer(out, BLOCK_SIZE, compression,
+            "jclass: some.non.existence.clazz", conf));
   }
 
-  // class exists but not a RawComparator
+  // class exists but is not a RawComparator
   @Test
-  public void testFailureBadJClasses() throws IOException {
-    try {
-      writer =
-          new Writer(out, BLOCK_SIZE, compression,
-              "jclass:org.apache.hadoop.io.file.tfile.Chunk", conf);
-      fail("Failed to catch unsupported comparator names");
-    }
-    catch (Exception e) {
-      // noop, expecting exceptions
-      e.printStackTrace();
-    }
+  public void testFailureBadJClasses() throws Exception {
+    conf.setBoolean(TFile.TFILE_COMPARATOR_JCLASS_ENABLED, true);
+    intercept(IllegalArgumentException.class, "Failed to instantiate comparator",
+        () -> new Writer(out, BLOCK_SIZE, compression,
+            "jclass:org.apache.hadoop.io.file.tfile.Chunk", conf));
   }
 
   private void closeOutput() throws IOException {
