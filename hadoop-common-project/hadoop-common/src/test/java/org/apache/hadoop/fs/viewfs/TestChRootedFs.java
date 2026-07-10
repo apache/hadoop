@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.EnumSet;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.apache.hadoop.fs.FileContextTestHelper.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -77,13 +78,11 @@ public class TestChRootedFs {
   @Test
   public void testBasicPaths() {
     URI uri = fc.getDefaultFileSystem().getUri();
-    assertEquals(chrootedTo.toUri(), uri);
-    assertEquals(fc.makeQualified(
-        new Path(System.getProperty("user.home"))),
-        fc.getWorkingDirectory());
-    assertEquals(fc.makeQualified(
-        new Path(System.getProperty("user.home"))),
-        fc.getHomeDirectory());
+    assertThat(uri).isEqualTo(chrootedTo.toUri());
+    assertThat(fc.getWorkingDirectory()).isEqualTo(
+        fc.makeQualified(new Path(System.getProperty("user.home"))));
+    assertThat(fc.getHomeDirectory()).isEqualTo(
+        fc.makeQualified(new Path(System.getProperty("user.home"))));
     /*
      * ChRootedFs as its uri like file:///chrootRoot.
      * This is questionable since path.makequalified(uri, path) ignores
