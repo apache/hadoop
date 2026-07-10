@@ -77,7 +77,8 @@ public class TestTFileComparator2 {
     }
     final long len = fs.getFileStatus(path).getLen();
 
-    try (FSDataInputStream in = fs.open(path); TFile.Reader reader = new TFile.Reader(in, len, conf)) {
+    try (FSDataInputStream in = fs.open(path);
+         TFile.Reader reader = new TFile.Reader(in, len, conf)) {
       TFile.Reader.Scanner scanner = reader.createScanner();
       long i = 0;
       BytesWritable value = new BytesWritable();

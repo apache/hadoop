@@ -2063,12 +2063,7 @@ public class TFile {
     private final BytesComparator comparator;
 
     // ctor for writes
-    public TFileMeta(String comparator) {
-      this(comparator, new Configuration());
-    }
-
-    // ctor for writes
-    public TFileMeta(String comparator, Configuration conf) {
+    TFileMeta(String comparator, Configuration conf) {
       // set fileVersion to API version when we create it.
       version = TFile.API_VERSION;
       recordCount = 0;
@@ -2077,12 +2072,7 @@ public class TFile {
     }
 
     // ctor for reads
-    public TFileMeta(DataInput in) throws IOException {
-      this(in, new Configuration());
-    }
-
-    // ctor for reads
-    public TFileMeta(DataInput in, Configuration conf) throws IOException {
+    TFileMeta(DataInput in, Configuration conf) throws IOException {
       version = new Version(in);
       if (!version.compatibleWith(TFile.API_VERSION)) {
         throw new RuntimeException("Incompatible TFile fileVersion.");

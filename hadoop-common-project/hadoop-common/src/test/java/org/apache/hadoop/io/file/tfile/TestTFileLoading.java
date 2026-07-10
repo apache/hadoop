@@ -45,14 +45,19 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Test TFile loading resilience.
  */
 public class TestTFileLoading {
+
   private static final String ROOT =
       GenericTestUtils.getTestDir().getAbsolutePath();
+
   private static final int BLOCK_SIZE = 512;
+
   private static final String COMPRESSION = Compression.Algorithm.NONE.getName();
+
   private static final String JCLASS_COMPARATOR =
       TFile.COMPARATOR_JCLASS + LongWritable.Comparator.class.getName();
 
   private FileSystem fs;
+
   private Path path;
 
   @BeforeEach
@@ -102,17 +107,17 @@ public class TestTFileLoading {
     // write a valid, sorted file naming a jclass comparator.
     try (FSDataOutputStream out = fs.create(path);
          Writer writer = new Writer(out, BLOCK_SIZE, COMPRESSION, JCLASS_COMPARATOR,
-              enableJclass())) {
-        LongWritable key = new LongWritable(0);
-        for (long i = 0; i < 4; ++i) {
-          key.set(i);
-          try (DataOutputStream dos = writer.prepareAppendKey(-1)) {
-            key.write(dos);
-          }
-          try (DataOutputStream dos = writer.prepareAppendValue(-1)) {
-            dos.write(("value-" + i).getBytes());
-          }
+             enableJclass())) {
+      LongWritable key = new LongWritable(0);
+      for (long i = 0; i < 4; ++i) {
+        key.set(i);
+        try (DataOutputStream dos = writer.prepareAppendKey(-1)) {
+          key.write(dos);
         }
+        try (DataOutputStream dos = writer.prepareAppendValue(-1)) {
+          dos.write(("value-" + i).getBytes());
+        }
+      }
     }
 
     long len = fs.getFileStatus(path).getLen();
