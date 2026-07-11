@@ -250,11 +250,16 @@ public class PlanCommand extends Command {
   }
 
   /**
-   * Sets user specified plan parameters.
+   * Sets user specified plan parameters (bandwidth, maxError, tolerancePercent).
+   * tolerancePercent is read from config so the plan propagated to the DataNode
+   * uses the same value (HDFS-17872).
    *
    * @param plans - list of plans.
    */
   private void setPlanParams(List<NodePlan> plans) {
+    int tolerancePercent = getConf().getInt(
+        DFSConfigKeys.DFS_DISK_BALANCER_BLOCK_TOLERANCE,
+        DFSConfigKeys.DFS_DISK_BALANCER_BLOCK_TOLERANCE_DEFAULT);
     for (NodePlan plan : plans) {
       for (Step step : plan.getVolumeSetPlans()) {
         if (this.bandwidth > 0) {
@@ -264,6 +269,10 @@ public class PlanCommand extends Command {
         if (this.maxError > 0) {
           LOG.debug("Setting max error to {}", this.maxError);
           step.setMaxDiskErrors(this.maxError);
+        }
+        if (tolerancePercent > 0) {
+          LOG.debug("Setting tolerance percent to {}", tolerancePercent);
+          step.setTolerancePercent(tolerancePercent);
         }
       }
     }
