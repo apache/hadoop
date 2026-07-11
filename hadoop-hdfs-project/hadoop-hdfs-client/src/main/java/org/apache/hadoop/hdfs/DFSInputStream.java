@@ -73,6 +73,7 @@ import org.apache.hadoop.hdfs.protocol.datatransfer.InvalidEncryptionKeyExceptio
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.block.InvalidBlockTokenException;
 import org.apache.hadoop.hdfs.server.datanode.CachingStrategy;
+import org.apache.hadoop.hdfs.server.datanode.CorruptMetaHeaderException;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaNotFoundException;
 import org.apache.hadoop.hdfs.shortcircuit.ClientMmap;
 import org.apache.hadoop.hdfs.util.IOUtilsClient;
@@ -804,6 +805,12 @@ public class DFSInputStream extends FSInputStream
         retryCurrentNode = false;
         // we want to remember which block replicas we have tried
         corruptedBlocks.addCorruptedBlock(getCurrentBlock(), currentNode);
+      } catch (CorruptMetaHeaderException cme) {
+        DFSClient.LOG.warn("Found corrupt block meta header for "
+            + getCurrentBlock() + " from " + currentNode + ": " + cme.getMessage());
+        ioe = cme;
+        retryCurrentNode = false;
+        corruptedBlocks.addCorruptedBlock(getCurrentBlock(), currentNode);
       } catch (IOException e) {
         String msg = String.format("Failed to read block %s for file %s from datanode %s. "
                 + "Exception is %s. Retry with the current or next available datanode.",
@@ -829,7 +836,17 @@ public class DFSInputStream extends FSInputStream
       } else {
         addToLocalDeadNodes(currentNode);
         dfsClient.addNodeToDeadNodeDetector(this, currentNode);
-        sourceFound = seekToNewSource(pos);
+        try {
+          sourceFound = seekToNewSource(pos);
+        } catch (IOException seekEx) {
+          // If the root cause was corrupt block metadata, surface that so
+          // callers see CorruptMetaHeaderException (HDFS-17179). Otherwise
+          // they would only see "No live nodes" from blockSeekTo.
+          if (isOrCausedByCorruptMetaHeader(ioe)) {
+            throw ioe;
+          }
+          throw seekEx;
+        }
       }
       if (!sourceFound) {
         throw ioe;
@@ -1163,6 +1180,20 @@ public class DFSInputStream extends FSInputStream
     return errMsgr.toString();
   }
 
+  /**
+   * Returns true if the given exception is or has a cause that is
+   * CorruptMetaHeaderException (e.g. when the only replica failed due to
+   * corrupt block metadata).
+   */
+  private static boolean isOrCausedByCorruptMetaHeader(Throwable t) {
+    for (Throwable cur = t; cur != null; cur = cur.getCause()) {
+      if (cur instanceof CorruptMetaHeaderException) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   protected void fetchBlockByteRange(LocatedBlock block, long start, long end, ByteBuffer buf,
       CorruptedBlocks corruptedBlocks, final Map<InetSocketAddress, List<IOException>> exceptionMap)
       throws IOException {
@@ -1255,6 +1286,14 @@ public class DFSInputStream extends FSInputStream
             + datanode.info;
         DFSClient.LOG.warn(msg);
         // we want to remember what we have tried
+        corruptedBlocks.addCorruptedBlock(block.getBlock(), datanode.info);
+        addToLocalDeadNodes(datanode.info);
+        throw new IOException(msg);
+      } catch (CorruptMetaHeaderException e) {
+        String msg = "fetchBlockByteRange(). Got corrupt meta header for "
+            + src + " at " + block.getBlock() + " from " + datanode.info + ": "
+            + e.getMessage();
+        DFSClient.LOG.warn(msg);
         corruptedBlocks.addCorruptedBlock(block.getBlock(), datanode.info);
         addToLocalDeadNodes(datanode.info);
         throw new IOException(msg);
