@@ -18,11 +18,14 @@
 package org.apache.hadoop.hdfs.tools.offlineImageViewer;
 
 import java.io.BufferedInputStream;
+import java.io.EOFException;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
 import java.io.RandomAccessFile;
+import java.nio.channels.FileChannel;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -30,6 +33,11 @@ import java.util.Comparator;
 import java.util.Date;
 import java.util.Map;
 import java.util.TimeZone;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.codec.binary.Hex;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -68,7 +76,10 @@ import org.apache.hadoop.hdfs.util.XMLUtils;
 import org.apache.hadoop.io.erasurecode.ECSchema;
 import org.apache.hadoop.util.LimitInputStream;
 import org.apache.hadoop.util.Lists;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.VersionInfo;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hadoop.thirdparty.protobuf.ByteString;
@@ -86,6 +97,9 @@ import static org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode.XATTR_
  */
 @InterfaceAudience.Private
 public final class PBImageXmlWriter {
+  private static final Logger LOG =
+      LoggerFactory.getLogger(PBImageXmlWriter.class);
+
   public static final String NAME_SECTION_NAME = "NameSection";
   public static final String ERASURE_CODING_SECTION_NAME =
       "ErasureCodingSection";
@@ -270,6 +284,9 @@ public final class PBImageXmlWriter {
   private final Configuration conf;
   private final PrintStream out;
   private final SimpleDateFormat isoDateFormat;
+  private final int numThreads;
+  private final String parallelOutputFile;
+  private File filename;
   private SerialNumberManager.StringTable stringTable;
 
   public static SimpleDateFormat createSimpleDateFormat() {
@@ -280,9 +297,23 @@ public final class PBImageXmlWriter {
   }
 
   public PBImageXmlWriter(Configuration conf, PrintStream out) {
+    this(conf, out, 1, "-");
+  }
+
+  PBImageXmlWriter(Configuration conf, PrintStream out, int numThreads,
+      String parallelOutputFile) {
     this.conf = conf;
     this.out = out;
+    this.numThreads = numThreads;
+    this.parallelOutputFile = parallelOutputFile;
     this.isoDateFormat = createSimpleDateFormat();
+  }
+
+  public void visit(String filePath) throws IOException {
+    filename = new File(filePath);
+    try (RandomAccessFile file = new RandomAccessFile(filename, "r")) {
+      visit(file);
+    }
   }
 
   public void visit(RandomAccessFile file) throws IOException {
@@ -320,6 +351,8 @@ public final class PBImageXmlWriter {
           }
         }
       });
+      ArrayList<FileSummary.Section> inodeSubSections =
+          getSubSections(sections, SectionName.INODE_SUB);
 
       for (FileSummary.Section s : sections) {
         fin.getChannel().position(s.getOffset());
@@ -342,7 +375,11 @@ public final class PBImageXmlWriter {
           dumpErasureCodingSection(is);
           break;
         case INODE:
-          dumpINodeSection(is);
+          if (shouldOutputINodeSectionInParallel(inodeSubSections)) {
+            dumpINodeSectionInParallel(summary, inodeSubSections);
+          } else {
+            dumpINodeSection(is);
+          }
           break;
         case INODE_REFERENCE:
           dumpINodeReferenceSection(is);
@@ -618,12 +655,151 @@ public final class PBImageXmlWriter {
     out.print("<" + INODE_SECTION_NAME + ">");
     o(INODE_SECTION_LAST_INODE_ID, s.getLastInodeId());
     o(INODE_SECTION_NUM_INODES, s.getNumInodes());
-    for (int i = 0; i < s.getNumInodes(); ++i) {
+    dumpINodes(in, s.getNumInodes());
+    out.print("</" + INODE_SECTION_NAME + ">\n");
+  }
+
+  private long dumpINodes(InputStream in) throws IOException {
+    long count = 0;
+    while (true) {
       INodeSection.INode p = INodeSection.INode.parseDelimitedFrom(in);
-      out.print("<" + INODE_SECTION_INODE + ">");
-      dumpINodeFields(p);
-      out.print("</" + INODE_SECTION_INODE + ">\n");
+      if (p == null) {
+        break;
+      }
+      dumpINode(p);
+      count++;
     }
+    return count;
+  }
+
+  private long dumpINodes(InputStream in, long numINodes) throws IOException {
+    long count = 0;
+    for (long i = 0; i < numINodes; ++i) {
+      INodeSection.INode p = INodeSection.INode.parseDelimitedFrom(in);
+      if (p == null) {
+        throw new EOFException("Unexpected end of INode section.");
+      }
+      dumpINode(p);
+      count++;
+    }
+    return count;
+  }
+
+  private void dumpINode(INodeSection.INode p) {
+    out.print("<" + INODE_SECTION_INODE + ">");
+    dumpINodeFields(p);
+    out.print("</" + INODE_SECTION_INODE + ">\n");
+  }
+
+  private boolean shouldOutputINodeSectionInParallel(
+      ArrayList<FileSummary.Section> subSections) {
+    boolean parallel = numThreads > 1 && !parallelOutputFile.equals("-") &&
+        filename != null && subSections.size() > 1;
+    if (!parallel) {
+      LOG.info("Serial XML output due to threads num: {}, parallel output " +
+          "file: {}, input file: {}, subSections: {}.", numThreads,
+          parallelOutputFile, filename, subSections.size());
+    }
+    return parallel;
+  }
+
+  /**
+   * Process INode sub-sections in parallel and merge the XML inode elements
+   * back into the current INodeSection in sub-section order.
+   */
+  private void dumpINodeSectionInParallel(FileSummary summary,
+      ArrayList<FileSummary.Section> subSections) throws IOException {
+    int nThreads = Integer.min(numThreads, subSections.size());
+    LOG.info("Outputting XML INode section in parallel with {} sub-sections " +
+        "using {} threads", subSections.size(), nThreads);
+    final CopyOnWriteArrayList<IOException> exceptions =
+        new CopyOnWriteArrayList<>();
+    CountDownLatch latch = new CountDownLatch(subSections.size());
+    ExecutorService executorService = Executors.newFixedThreadPool(nThreads);
+    AtomicLong expectedINodes = new AtomicLong(0);
+    AtomicLong lastInodeId = new AtomicLong(0);
+    AtomicLong totalParsed = new AtomicLong(0);
+    String[] paths = new String[subSections.size()];
+
+    for (int i = 0; i < subSections.size(); i++) {
+      paths[i] = parallelOutputFile + ".tmp." + i;
+      int index = i;
+      executorService.submit(() -> {
+        LOG.info("Output XML INodes of section-{}", index);
+        InputStream is = null;
+        try (PrintStream outStream = new PrintStream(paths[index], "UTF-8")) {
+          long startTime = Time.monotonicNow();
+          is = getInputStreamForSection(subSections.get(index),
+              summary.getCodec());
+          if (index == 0) {
+            INodeSection s = INodeSection.parseDelimitedFrom(is);
+            lastInodeId.set(s.getLastInodeId());
+            expectedINodes.set(s.getNumInodes());
+          }
+          PBImageXmlWriter writer = new PBImageXmlWriter(conf, outStream);
+          writer.stringTable = stringTable;
+          totalParsed.addAndGet(writer.dumpINodes(is));
+          outStream.flush();
+          if (outStream.checkError()) {
+            throw new IOException("Failed to write parallel XML output file "
+                + paths[index]);
+          }
+          long timeTaken = Time.monotonicNow() - startTime;
+          LOG.info("Time to output XML INodes of section-{}: {} ms",
+              index, timeTaken);
+        } catch (Exception e) {
+          exceptions.add(new IOException(e));
+        } finally {
+          latch.countDown();
+          try {
+            if (is != null) {
+              is.close();
+            }
+          } catch (IOException ioe) {
+            LOG.warn("Failed to close the input stream, ignoring", ioe);
+          }
+        }
+      });
+    }
+
+    try {
+      latch.await();
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new IOException(e);
+    } finally {
+      executorService.shutdown();
+    }
+
+    if (exceptions.size() != 0) {
+      LOG.error("Failed to output XML INode sub-sections, {} exception(s) " +
+          "occurred.", exceptions.size());
+      cleanupTmpFiles(paths);
+      throw exceptions.get(0);
+    }
+    if (totalParsed.get() != expectedINodes.get()) {
+      cleanupTmpFiles(paths);
+      throw new IOException("Expected to parse " + expectedINodes.get() +
+          " XML INodes in parallel, but parsed " + totalParsed.get() +
+          ". The image may be corrupt.");
+    }
+
+    LOG.info("Completed outputting all INode sub-sections to {} tmp files.",
+            subSections.size());
+
+    out.print("<" + INODE_SECTION_NAME + ">");
+    o(INODE_SECTION_LAST_INODE_ID, lastInodeId.get());
+    o(INODE_SECTION_NUM_INODES, expectedINodes.get());
+
+    long startTime = Time.monotonicNow();
+    try {
+      mergeFilesToOutput(paths, out);
+    } finally {
+      cleanupTmpFiles(paths);
+    }
+    long timeTaken = Time.monotonicNow() - startTime;
+    LOG.info("Completed all stages. Time to merge files: {} ms", timeTaken);
+
     out.print("</" + INODE_SECTION_NAME + ">\n");
   }
 
@@ -857,6 +1033,72 @@ public final class PBImageXmlWriter {
 
   private void loadStringTable(InputStream in) throws IOException {
     stringTable = FSImageLoader.loadStringTable(in);
+  }
+
+  private ArrayList<FileSummary.Section> getSubSections(
+      ArrayList<FileSummary.Section> sections, SectionName sectionName) {
+    ArrayList<FileSummary.Section> subSections = new ArrayList<>();
+    for (FileSummary.Section section : sections) {
+      if (SectionName.fromString(section.getName()) == sectionName) {
+        subSections.add(section);
+      }
+    }
+    return subSections;
+  }
+
+  /**
+   * Given a FSImage FileSummary.section, return a LimitInput stream set to
+   * the starting position of the section and limited to the section length.
+   */
+  private InputStream getInputStreamForSection(FileSummary.Section section,
+      String compressionCodec) throws IOException {
+    FileInputStream fin = new FileInputStream(filename);
+    try {
+      FileChannel channel = fin.getChannel();
+      channel.position(section.getOffset());
+      InputStream in = new BufferedInputStream(new LimitInputStream(fin,
+          section.getLength()));
+      return FSImageUtil.wrapInputStreamForCompression(conf, compressionCodec,
+          in);
+    } catch (IOException e) {
+      fin.close();
+      throw e;
+    }
+  }
+
+  private void mergeFilesToOutput(String[] srcPaths, PrintStream out)
+          throws IOException {
+    if (srcPaths == null || srcPaths.length < 1) {
+      LOG.warn("no source files to merge.");
+      return;
+    }
+
+    File[] files = new File[srcPaths.length];
+    for (int i = 0; i < srcPaths.length; i++) {
+      files[i] = new File(srcPaths[i]);
+    }
+
+    byte[] buffer = new byte[64 * 1024];
+    for (File file : files) {
+      try (InputStream in = new FileInputStream(file)) {
+        int n;
+        while ((n = in.read(buffer)) > 0) {
+          out.write(buffer, 0, n);
+        }
+      }
+      if (out.checkError()) {
+        throw new IOException("Failed to merge XML output file " + file);
+      }
+    }
+  }
+
+  private void cleanupTmpFiles(String[] paths) {
+    for (String path : paths) {
+      File file = new File(path);
+      if (!file.delete() && file.exists()) {
+        LOG.warn("delete tmp file: {} returned false", file);
+      }
+    }
   }
 
   private PBImageXmlWriter o(final String e, final Object v) {
