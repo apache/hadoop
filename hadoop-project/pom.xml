@@ -76,7 +76,7 @@
     <jaxb.version>2.3.9</jaxb.version>
 
     <!-- jackson versions -->
-    <jackson2.version>2.18.8</jackson2.version>
+    <jackson2.version>2.18.9</jackson2.version>
     <jackson2.databind.version>${jackson2.version}</jackson2.databind.version>
 
     <!-- httpcomponents versions -->
