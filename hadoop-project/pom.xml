@@ -185,6 +185,9 @@
       --add-opens=java.base/sun.security.x509=ALL-UNNAMED
       --enable-native-access=ALL-UNNAMED
     </extraJavaTestArgs>
+    <!-- Skip JaCoCo instrumentation by default; enable with -Dhadoop.skip-jacoco=false -->
+    <hadoop.skip-jacoco>true</hadoop.skip-jacoco>
+
     <!-- Plugin versions and config -->
     <maven-surefire-plugin.argLine>-Xmx4096m -Xss4m -XX:+HeapDumpOnOutOfMemoryError ${extraJavaTestArgs}</maven-surefire-plugin.argLine>
     <maven-surefire-plugin.version>3.5.3</maven-surefire-plugin.version>
@@ -2313,7 +2316,7 @@
           <artifactId>maven-failsafe-plugin</artifactId>
           <version>${maven-failsafe-plugin.version}</version>
           <configuration>
-            <argLine>${maven-surefire-plugin.argLine}</argLine>
+            <argLine>${maven-surefire-plugin.argLine} @{argLine}</argLine>
           </configuration>
         </plugin>
         <plugin>
@@ -2591,7 +2594,7 @@
         <configuration>
           <reuseForks>false</reuseForks>
           <forkedProcessTimeoutInSeconds>${surefire.fork.timeout}</forkedProcessTimeoutInSeconds>
-          <argLine>${maven-surefire-plugin.argLine}</argLine>
+          <argLine>${maven-surefire-plugin.argLine} @{argLine}</argLine>
           <environmentVariables>
             <HADOOP_COMMON_HOME>${hadoop.common.build.dir}</HADOOP_COMMON_HOME>
             <!-- HADOOP_HOME required for tests on Windows to find winutils -->
@@ -2626,6 +2629,33 @@
             <exclude>**/Test*$*.java</exclude>
           </excludes>
         </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.jacoco</groupId>
+        <artifactId>jacoco-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>prepare-agent</id>
+            <goals>
+              <goal>prepare-agent</goal>
+            </goals>
+            <configuration>
+              <skip>${hadoop.skip-jacoco}</skip>
+              <!-- Exclude generated/example classes from instrumentation so
+                   the agent does not spend time weaving them in every forked
+                   test JVM. These are also filtered from the coverage numbers
+                   in the report-aggregate configuration (hadoop-coverage/pom.xml);
+                   keep the two exclude lists in sync. -->
+              <excludes>
+                <exclude>**/generated/**/*.class</exclude>
+                <exclude>**/examples/**/*.class</exclude>
+                <exclude>**/hamlet/*.class</exclude>
+                <exclude>**/proto/*.class</exclude>
+                <exclude>**/protobuf/*.class</exclude>
+              </excludes>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>

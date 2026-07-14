@@ -149,7 +149,9 @@ Maven build goals:
  * Run checkstyle            : mvn compile checkstyle:checkstyle
  * Install JAR in M2 cache   : mvn install
  * Deploy JAR to Maven repo  : mvn deploy
- * Run clover                : mvn test -Pclover
+ * Run JaCoCo coverage       : mvn verify -Dhadoop.skip-jacoco=false -Dmaven.test.failure.ignore=true
+                               (aggregate report: hadoop-coverage/target/site/jacoco-aggregate/index.html;
+                                must be a full-reactor build, not -pl hadoop-coverage)
  * Run Rat                   : mvn apache-rat:check
  * Build javadocs            : mvn javadoc:javadoc
  * Build distribution        : mvn package [-Pdist][-Pdocs][-Psrc][-Pnative][-Dtar][-Preleasedocs][-Pyarn-ui]

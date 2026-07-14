@@ -23,17 +23,6 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
   <name>Apache Hadoop Main</name>
   <packaging>pom</packaging>
 
-  <dependencyManagement>
-    <dependencies>
-      <dependency>
-        <groupId>com.cenqua.clover</groupId>
-        <artifactId>clover</artifactId>
-        <!-- Use the version needed by maven-clover-plugin -->
-        <version>3.0.2</version>
-      </dependency>
-    </dependencies>
-  </dependencyManagement>
-
   <distributionManagement>
     <repository>
       <id>${distMgmtStagingId}</id>
@@ -85,6 +74,12 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
     <!-- required as child projects with different version can't use ${project.version} -->
     <hadoop.version>3.6.0-SNAPSHOT</hadoop.version>
 
+    <!-- Skip JaCoCo instrumentation/reporting by default; enable with
+         -Dhadoop.skip-jacoco=false. Defined here (not only in hadoop-project)
+         so modules that inherit directly from hadoop-main, such as
+         hadoop-coverage, resolve the property too. -->
+    <hadoop.skip-jacoco>true</hadoop.skip-jacoco>
+
     <docker.image>apache/hadoop:${project.version}</docker.image>
 
     <distMgmtSnapshotsId>apache.snapshots.https</distMgmtSnapshotsId>
@@ -113,7 +108,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
     <maven-resources-plugin.version>3.0.1</maven-resources-plugin.version>
     <apache-rat-plugin.version>0.12</apache-rat-plugin.version>
     <wagon-ssh.version>2.4</wagon-ssh.version>
-    <clover-maven-plugin.version>4.4.1</clover-maven-plugin.version>
+    <jacoco-maven-plugin.version>0.8.15</jacoco-maven-plugin.version>
     <maven-bundle-plugin.version>2.5.0</maven-bundle-plugin.version>
     <lifecycle-mapping.version>1.0.0</lifecycle-mapping.version>
     <maven-checkstyle-plugin.version>3.6.0</maven-checkstyle-plugin.version>
@@ -165,6 +160,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
     <module>hadoop-build-tools</module>
     <module>hadoop-cloud-storage-project</module>
     <module>hadoop-dist</module>
+    <module>hadoop-coverage</module>
   </modules>
 
   <build>
@@ -489,9 +485,9 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
           </configuration>
         </plugin>
         <plugin>
-          <groupId>org.openclover</groupId>
-          <artifactId>clover-maven-plugin</artifactId>
-          <version>${clover-maven-plugin.version}</version>
+          <groupId>org.jacoco</groupId>
+          <artifactId>jacoco-maven-plugin</artifactId>
+          <version>${jacoco-maven-plugin.version}</version>
         </plugin>
         <plugin>
           <groupId>org.apache.felix</groupId>
@@ -868,78 +864,6 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
                 <phase>verify</phase>
                 <goals>
                   <goal>sign</goal>
-                </goals>
-              </execution>
-            </executions>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
-    <profile>
-      <id>clover</id>
-      <activation>
-        <activeByDefault>false</activeByDefault>
-        <property>
-          <name>clover</name>
-        </property>
-      </activation>
-      <properties>
-        <cloverDatabase>${project.build.directory}/clover/hadoop-coverage.db</cloverDatabase>
-        <!-- NB: This additional parametrization is made in order
-             to be able to re-define these properties with "-Dk=v" maven options.
-             By some reason the expressions declared in clover
-             docs like "${maven.clover.generateHtml}" do not work in that way.
-             However, the below properties are confirmed to work: e.g.
-             -DcloverGenHtml=false switches off the Html generation.
-             The default values provided here exactly correspond to Clover defaults, so
-             the behavior is 100% backwards compatible. -->
-        <cloverAlwaysReport>true</cloverAlwaysReport>
-        <cloverGenHtml>true</cloverGenHtml>
-        <cloverGenXml>true</cloverGenXml>
-        <cloverGenHistorical>false</cloverGenHistorical>
-      </properties>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>org.openclover</groupId>
-            <artifactId>clover-maven-plugin</artifactId>
-            <configuration>
-              <includesAllSourceRoots>false</includesAllSourceRoots>
-              <includesTestSourceRoots>true</includesTestSourceRoots>
-              <cloverDatabase>${cloverDatabase}</cloverDatabase>
-              <targetPercentage>50%</targetPercentage>
-              <outputDirectory>${project.build.directory}/clover</outputDirectory>
-              <alwaysReport>${cloverAlwaysReport}</alwaysReport>
-              <generateHtml>${cloverGenHtml}</generateHtml>
-              <generateXml>${cloverGenXml}</generateXml>
-              <generateHistorical>${cloverGenHistorical}</generateHistorical>
-              <excludes>
-                <exclude>**/examples/**/*.java</exclude>
-                <exclude>**/hamlet/*.java</exclude>
-                <exclude>**/ha/proto/*.java</exclude>
-                <exclude>**/protocol/proto/*.java</exclude>
-                <exclude>**/compiler/generated/*.java</exclude>
-                <exclude>**/protobuf/*.java</exclude>
-                <exclude>**/v2/proto/*.java</exclude>
-                <exclude>**/yarn/proto/*.java</exclude>
-                <exclude>**/security/proto/*.java</exclude>
-                <exclude>**/tools/proto/*.java</exclude>
-                <exclude>**/hs/proto/*.java</exclude>
-              </excludes>
-            </configuration>
-            <executions>
-              <execution>
-                <id>clover-setup</id>
-                <phase>process-sources</phase>
-                <goals>
-                  <goal>setup</goal>
-                </goals>
-              </execution>
-              <execution>
-                <id>clover</id>
-                <phase>test</phase>
-                <goals>
-                  <goal>clover</goal>
                 </goals>
               </execution>
             </executions>
