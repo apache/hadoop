@@ -3525,8 +3525,8 @@ public class BlockManager implements BlockStatsMXBean {
    * standby node. @see PendingDataNodeMessages.
    */
   private void removeQueuedBlock(DatanodeStorageInfo storageInfo, Block block) {
-    LOG.debug("Removing queued block {} from datanode {} from pending queue.",
-        block, storageInfo.getDatanodeDescriptor());
+    LOG.debug("Removing queued block {} from datanode {} from pending queue (size = {}).",
+        block, storageInfo.getDatanodeDescriptor(), pendingDNMessages.count());
     pendingDNMessages.removeQueuedBlock(storageInfo, block);
   }
 
