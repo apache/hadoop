@@ -510,6 +510,16 @@ public class AbfsConfiguration{
       FS_AZURE_ENABLE_PAGINATED_DELETE, DefaultValue = DEFAULT_ENABLE_PAGINATED_DELETE)
   private boolean isPaginatedDeleteEnabled;
 
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey =
+      FS_AZURE_ENABLE_PHOTON, DefaultValue = DEFAULT_ENABLE_PHOTON)
+  private boolean isPhotonEnabled;
+
+  @LongConfigurationValidatorAnnotation(ConfigurationKey =
+      FS_AZURE_PHOTON_ARROW_MEMORY_LIMIT,
+      MinValue = 1,
+      DefaultValue = DEFAULT_PHOTON_ARROW_MEMORY_LIMIT)
+  private long photonArrowMemoryLimit;
+
   @LongConfigurationValidatorAnnotation(ConfigurationKey =
       FS_AZURE_BLOB_COPY_PROGRESS_WAIT_MILLIS, DefaultValue = DEFAULT_AZURE_BLOB_COPY_PROGRESS_WAIT_MILLIS)
   private long blobCopyProgressPollWaitMillis;
@@ -2069,6 +2079,23 @@ public class AbfsConfiguration{
 
   public boolean isPaginatedDeleteEnabled() {
     return isPaginatedDeleteEnabled;
+  }
+
+  /**
+   * Whether Photon (Apache Arrow based ListBlob) listing is enabled.
+   * @return true if Photon is enabled, false otherwise.
+   */
+  public boolean isPhotonEnabled() {
+    return isPhotonEnabled;
+  }
+
+  /**
+   * Maximum off-heap memory in bytes the Apache Arrow allocator may use while
+   * parsing a single Photon (Arrow) ListBlobs response.
+   * @return the configured Arrow allocator memory limit in bytes.
+   */
+  public long getPhotonArrowMemoryLimit() {
+    return photonArrowMemoryLimit;
   }
 
   public boolean getIsChecksumValidationEnabled() {

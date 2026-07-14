@@ -150,6 +150,16 @@ public final class AbfsHttpConstants {
   public static final String APPLICATION_JSON = "application/json";
   public static final String APPLICATION_OCTET_STREAM = "application/octet-stream";
   public static final String APPLICATION_XML = "application/xml";
+  /**
+   * Apache Arrow IPC stream media type requested from and returned by the
+   * Photon (Arrow-based ListBlob) listing path.
+   */
+  public static final String APPLICATION_APACHE_ARROW_STREAM =
+      "application/vnd.apache.arrow.stream";
+  /**
+   * Token used to detect an Arrow response from the returned Content-Type.
+   */
+  public static final String CONTENT_TYPE_ARROW_TOKEN = "arrow";
   public static final String APPLICATION_X_WWW_FORM_URLENCODED = "application/x-www-form-urlencoded";
   public static final String XMS_PROPERTIES_ENCODING_ASCII = "ISO-8859-1";
   public static final String XMS_PROPERTIES_ENCODING_UNICODE = "UTF-8";
@@ -199,7 +209,8 @@ public final class AbfsHttpConstants {
     APR_10_2021("2021-04-10"),
     AUG_03_2023("2023-08-03"),
     NOV_04_2024("2024-11-04"),
-    JUL_05_2025("2025-07-05");
+    JUL_05_2025("2025-07-05"),
+    JUN_06_2026("2026-06-06");
 
     private final String xMsApiVersion;
 
@@ -213,7 +224,7 @@ public final class AbfsHttpConstants {
     }
 
     public static ApiVersion getCurrentVersion() {
-      return NOV_04_2024;
+      return JUN_06_2026;
     }
   }
 
@@ -267,6 +278,42 @@ public final class AbfsHttpConstants {
   public static final String XML_TAG_HAS_LEGAL_HOLD = "HasLegalHold";
   public static final String XML_TAG_DELETED_TIME = "DeletedTime";
   public static final String XML_TAG_REMAINING_RETENTION_DAYS = "RemainingRetentionDays";
+
+  // ===== Photon (Arrow-based ListBlob) column names =====
+  // Column names expected in the Arrow ListBlobs schema. Matching is done
+  // case-insensitively so minor casing differences in the service schema are
+  // tolerated. Unknown columns are ignored and missing columns are treated as
+  // absent values.
+  public static final String ARROW_COL_NAME = "Name";
+  public static final String ARROW_COL_ETAG = "Etag";
+  public static final String ARROW_COL_CONTENT_LENGTH = "Content-Length";
+  public static final String ARROW_COL_LAST_MODIFIED = "Last-Modified";
+  public static final String ARROW_COL_CREATION_TIME = "Creation-Time";
+  public static final String ARROW_COL_RESOURCE_TYPE = "ResourceType";
+  public static final String ARROW_COL_IS_DIRECTORY = "IsDirectory";
+  public static final String ARROW_COL_OWNER = "Owner";
+  public static final String ARROW_COL_GROUP = "Group";
+  public static final String ARROW_COL_PERMISSIONS = "Permissions";
+  public static final String ARROW_COL_ACL = "Acl";
+  // Column carrying the blob user metadata as an Arrow map of key/value pairs.
+  // On the Blob endpoint an empty directory is a zero-byte marker blob whose
+  // only directory indicator is the hdi_isfolder entry inside this map.
+  public static final String ARROW_COL_METADATA = "Metadata";
+  // Copy-related columns, mirrored from the XML ListBlobs Properties so the
+  // Arrow (Photon) path populates the same fields as the XML path.
+  public static final String ARROW_COL_COPY_ID = "CopyId";
+  public static final String ARROW_COL_COPY_STATUS = "CopyStatus";
+  public static final String ARROW_COL_COPY_SOURCE = "CopySource";
+  public static final String ARROW_COL_COPY_PROGRESS = "CopyProgress";
+  public static final String ARROW_COL_COPY_COMPLETION_TIME = "CopyCompletionTime";
+  public static final String ARROW_COL_COPY_STATUS_DESCRIPTION =
+      "CopyStatusDescription";
+  // ResourceType value used by the Arrow response for an implicit directory
+  // (the equivalent of an XML <BlobPrefix> entry).
+  public static final String ARROW_RESOURCE_TYPE_BLOB_PREFIX = "blobprefix";
+  // Key under which the continuation token is expected in the Arrow schema
+  // custom metadata.
+  public static final String ARROW_METADATA_NEXT_MARKER = "NextMarker";
 
   /**
    * Value that differentiates categories of the HTTP status.

@@ -58,6 +58,25 @@ Rest API Documentation: [Get Container Properties](https://docs.microsoft.com/en
 The List Blobs operation returns a list of the blobs under the specified container.
 Rest API Documentation: [List Blobs](https://docs.microsoft.com/en-us/rest/api/storageservices/list-blobs)
 
+### Photon (Apache Arrow based) List Blobs
+By default the List Blobs response is parsed as XML. When Photon is enabled the
+driver additionally advertises the Apache Arrow IPC stream media type in the
+`Accept` header (`application/vnd.apache.arrow.stream,application/xml`) so the
+service may return a compact Apache Arrow response instead of XML. The response
+format is detected from the returned `Content-Type`: an Arrow response is parsed
+by the Arrow parser while any other (or missing) content type falls back to the
+existing XML parser. Both paths produce identical `FileStatus` results, so the
+public filesystem APIs are unchanged.
+
+Photon is controlled by a single configuration and is disabled by default:
+
+```xml
+<property>
+  <name>fs.azure.photon.enabled</name>
+  <value>false</value>
+</property>
+```
+
 ## Put Blob
 The Put Blob operation creates a new block blob, or updates the content of an existing block blob.
 The Put Blob operation will overwrite all contents of an existing blob with the same name.
