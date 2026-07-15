@@ -94,6 +94,7 @@ import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.log4j.AppenderSkeleton;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.spi.LoggingEvent;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedClass;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -112,6 +113,7 @@ import org.slf4j.LoggerFactory;
  */
 @MethodSource("data")
 @ParameterizedClass
+@Tag("slow")
 public class TestEditLog {
 
   static {

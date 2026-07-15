@@ -122,6 +122,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.io.TempDir;
@@ -130,6 +131,7 @@ import org.slf4j.LoggerFactory;
 /**
  * A JUnit test for doing fsck.
  */
+@Tag("slow")
 public class TestFsck {
   private static final org.slf4j.Logger LOG =
       LoggerFactory.getLogger(TestFsck.class.getName());

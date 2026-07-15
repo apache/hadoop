@@ -982,6 +982,21 @@
 </property>
 
 <property>
+  <name>io.compression.codec.zstd.workers</name>
+  <value>0</value>
+  <description>
+    Number of worker threads used by the ZStandard compressor for
+    multi-threaded compression. The default value 0 disables worker
+    threads and runs compression on the calling thread, matching the
+    upstream zstd default. Setting this to a positive value enables
+    parallel compression with the specified number of background
+    workers; the value is capped internally by the zstd library.
+    Negative values are rejected. This setting only affects compression;
+    decompression is unaffected.
+  </description>
+</property>
+
+<property>
   <name>io.serializations</name>
   <value>org.apache.hadoop.io.serializer.WritableSerialization, org.apache.hadoop.io.serializer.avro.AvroSpecificSerialization, org.apache.hadoop.io.serializer.avro.AvroReflectSerialization</value>
   <description>A list of serialization classes that can be used for

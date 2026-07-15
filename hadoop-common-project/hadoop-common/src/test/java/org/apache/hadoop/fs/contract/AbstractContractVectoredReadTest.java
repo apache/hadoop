@@ -206,8 +206,19 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
       combinedFuture.get();
 
       validateVectoredReadResult(fileRanges, DATASET, 0);
+      assertionsWithinTestVectoredReadMultipleRanges(in, fileRanges);
       returnBuffersToPoolPostRead(fileRanges, pool);
     }
+  }
+
+  /**
+   * Place to add some custom assertions within {@link #testVectoredReadMultipleRanges()}.
+   * @param in active input stream.
+   * @param fileRanges ranges of files read.
+   */
+  protected void assertionsWithinTestVectoredReadMultipleRanges(final FSDataInputStream in,
+      final List<FileRange> fileRanges) {
+
   }
 
   @Test

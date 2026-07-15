@@ -1180,7 +1180,7 @@ public abstract class AbfsClient implements Closeable {
       } catch (Exception ex) {
         throw new SASTokenProviderException(String.format(
             "Failed to acquire a SAS token for %s on %s due to %s", operation, path,
-            ex.toString()));
+            ex.toString()), ex);
       }
     }
     return sasToken;

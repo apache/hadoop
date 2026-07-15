@@ -19,7 +19,7 @@ package org.apache.hadoop.util;
 
 import java.util.Objects;
 import java.util.Random;
-import java.util.function.ToIntFunction;
+import java.util.function.LongToIntFunction;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -91,7 +91,7 @@ public class TestCrcUtil {
    */
   private static void doTestComposeCrc(
       byte[] data, DataChecksum.Type type, int chunkSize, boolean useMonomial) {
-    final ToIntFunction<Long> mod = DataChecksum.getModFunction(type);
+    final LongToIntFunction mod = DataChecksum.getModFunction(type);
 
     // Get full end-to-end CRC in a single shot first.
     DataChecksum checksum = DataChecksum.newDataChecksum(
@@ -142,7 +142,7 @@ public class TestCrcUtil {
     // Without loss of generality, we can pick any integer as our fake crcA
     // even if we don't happen to know the preimage.
     int crcA = 0xCAFEBEEF;
-    final ToIntFunction<Long> mod = DataChecksum.getModFunction(type);
+    final LongToIntFunction mod = DataChecksum.getModFunction(type);
     DataChecksum checksum = DataChecksum.newDataChecksum(
         type, Integer.MAX_VALUE);
     Objects.requireNonNull(checksum, "checksum");
@@ -230,7 +230,7 @@ public class TestCrcUtil {
   private static long[] runTestMultiplyMod(int n, DataChecksum.Type type) {
     System.out.printf("Run %s with %d computations%n", type, n);
     final int polynomial = getCrcPolynomialForType(type);
-    final ToIntFunction<Long> mod = DataChecksum.getModFunction(type);
+    final LongToIntFunction mod = DataChecksum.getModFunction(type);
 
     final int[] p = new int[n];
     final int[] q = new int[n];
@@ -256,8 +256,8 @@ public class TestCrcUtil {
     }
     times[1] = System.currentTimeMillis() - t1;
     final double ops1 = n * 1000.0 / times[1];
-    System.out.printf("multiplyCrc32      : %.3fs (%.2f ops)%n", times[1] / 1000.0, ops1);
-    System.out.printf("multiplyCrc32 is %.2f%% faster%n", (ops1 - ops0) * 100.0 / ops0);
+    System.out.printf("tableMultiply      : %.3fs (%.2f ops)%n", times[1] / 1000.0, ops1);
+    System.out.printf("tableMultiply ops is %.2f%% faster%n", (ops1 - ops0) * 100.0 / ops0);
 
     for (int i = 0; i < n; i++) {
       if (expected[i] != computed[i]) {
@@ -354,11 +354,11 @@ public class TestCrcUtil {
       }
 
       System.out.printf("%nResult) %d x %d computations:%n", m, n);
-      final double ops0 = n * 1000.0 / times[0];
+      final double ops0 = m * n * 1000.0 / times[0];
       System.out.printf("galoisFieldMultiply: %.3fs (%.2f ops)%n", times[0] / 1000.0, ops0);
-      final double ops1 = n * 1000.0 / times[1];
-      System.out.printf("multiplyCrc32      : %.3fs (%.2f ops)%n", times[1] / 1000.0, ops1);
-      System.out.printf("multiplyCrc32 is %.2f%% faster%n", (ops1 - ops0) * 100.0 / ops0);
+      final double ops1 = m * n * 1000.0 / times[1];
+      System.out.printf("tableMultiply      : %.3fs (%.2f ops)%n", times[1] / 1000.0, ops1);
+      System.out.printf("tableMultiply ops is %.2f%% faster%n", (ops1 - ops0) * 100.0 / ops0);
     }
   }
 }

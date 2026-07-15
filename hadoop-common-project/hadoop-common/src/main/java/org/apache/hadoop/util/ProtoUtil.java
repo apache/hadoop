@@ -153,6 +153,7 @@ public abstract class ProtoUtil {
   static RpcKindProto convert(RPC.RpcKind kind) {
     switch (kind) {
     case RPC_BUILTIN: return RpcKindProto.RPC_BUILTIN;
+    // RPC_WRITABLE: kept for wire-level detection; WritableRpcEngine is removed
     case RPC_WRITABLE: return RpcKindProto.RPC_WRITABLE;
     case RPC_PROTOCOL_BUFFER: return RpcKindProto.RPC_PROTOCOL_BUFFER;
     }
@@ -163,6 +164,7 @@ public abstract class ProtoUtil {
   public static RPC.RpcKind convert( RpcKindProto kind) {
     switch (kind) {
     case RPC_BUILTIN: return RPC.RpcKind.RPC_BUILTIN;
+    // RPC_WRITABLE: kept for wire-level detection; server rejects these connections
     case RPC_WRITABLE: return RPC.RpcKind.RPC_WRITABLE;
     case RPC_PROTOCOL_BUFFER: return RPC.RpcKind.RPC_PROTOCOL_BUFFER;
     }

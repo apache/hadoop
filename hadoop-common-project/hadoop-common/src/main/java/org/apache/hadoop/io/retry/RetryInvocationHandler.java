@@ -132,7 +132,7 @@ public class RetryInvocationHandler<T> implements RpcInvocationHandler {
           callId, retryInfo, waitTime);
       if (waitTime != null && waitTime > 0) {
         try {
-          Thread.sleep(retryInfo.delay);
+          Thread.sleep(waitTime);
         } catch (InterruptedException e) {
           Thread.currentThread().interrupt();
           if (LOG.isDebugEnabled()) {

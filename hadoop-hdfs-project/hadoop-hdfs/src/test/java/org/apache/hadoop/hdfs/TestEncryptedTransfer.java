@@ -62,7 +62,9 @@ import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
 import org.junit.jupiter.api.AfterEach;
 import org.mockito.Mockito;
 import org.slf4j.event.Level;
+import org.junit.jupiter.api.Tag;
 
+@Tag("slow")
 public class TestEncryptedTransfer {
   {
     GenericTestUtils.setLogLevel(

@@ -100,6 +100,7 @@ import org.apache.hadoop.util.ExitUtil;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
@@ -112,6 +113,7 @@ import java.util.function.Supplier;
 /**
  * Tests the external sps service plugins.
  */
+@Tag("slow")
 public class TestExternalStoragePolicySatisfier {
   private static final String ONE_SSD = "ONE_SSD";
   private static final String COLD = "COLD";

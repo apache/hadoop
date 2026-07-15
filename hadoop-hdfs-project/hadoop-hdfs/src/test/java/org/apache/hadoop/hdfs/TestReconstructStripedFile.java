@@ -40,6 +40,9 @@ import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+
+import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.datanode.erasurecode.ErasureCodingTestHelper;
 import org.apache.hadoop.io.ElasticByteBufferPool;
@@ -51,6 +54,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo.DatanodeInfoBuilder;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
@@ -63,6 +67,7 @@ import org.apache.hadoop.hdfs.server.datanode.DataNodeFaultInjector;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.BlockECReconstructionCommand.BlockECReconstructionInfo;
+import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.hdfs.util.StripedBlockUtil;
 import org.apache.hadoop.io.erasurecode.CodecUtil;
 import org.apache.hadoop.io.erasurecode.ErasureCodeNative;
@@ -493,6 +498,93 @@ public class TestReconstructStripedFile {
     List<BlockECReconstructionInfo> ecTasks = new ArrayList<>();
     ecTasks.add(invalidECInfo);
     dataNode.getErasureCodingWorker().processErasureCodingTasks(ecTasks);
+  }
+
+  @Test
+  @Timeout(value = 120)
+  public void testTargetBufferLeakWhenBlockWriterInitFails() throws Exception {
+    int fileLen = 1;
+    String testFile = "/buffer-leak";
+    Path path = new Path(testFile);
+    writeFile(fs, testFile, fileLen);
+
+    LocatedBlocks locatedBlocks = StripedFileTestUtil.getLocatedBlocks(path, fs);
+    LocatedStripedBlock lastBlock = (LocatedStripedBlock) locatedBlocks.getLastLocatedBlock();
+    DatanodeInfo[] storageInfos = lastBlock.getLocations();
+    byte[] indices = lastBlock.getBlockIndices();
+
+    DatanodeInfo[] sources = new DatanodeInfo[storageInfos.length - 1];
+    byte[] liveBlockIndices = new byte[indices.length - 1];
+    for (int i = 1; i < storageInfos.length; i++) {
+      sources[i - 1] = storageInfos[i];
+      liveBlockIndices[i - 1] = indices[i];
+    }
+
+    int targetDN = dnMap.get(storageInfos[0]);
+    DataNode targetDataNode = cluster.getDataNodes().get(targetDN);
+    DatanodeInfo target =
+        new DatanodeInfoBuilder().setNodeID(targetDataNode.getDatanodeId()).build();
+    StorageReport[] storageReports =
+        targetDataNode.getFSDataset().getStorageReports(lastBlock.getBlock().getBlockPoolId());
+    assertTrue(storageReports.length > 0);
+    DatanodeStorage targetStorage = storageReports[0].getStorage();
+
+    ElasticByteBufferPool bufferPool =
+        (ElasticByteBufferPool) ErasureCodingTestHelper.getBufferPool();
+    emptyBufferPool(bufferPool, true);
+    emptyBufferPool(bufferPool, false);
+
+    DataNodeFaultInjector oldInjector = DataNodeFaultInjector.get();
+    AtomicReference<ByteBuffer> bufferRef = new AtomicReference<>();
+    DataNodeFaultInjector injector = new DataNodeFaultInjector() {
+      @Override
+      public void stripedBlockWriterInit(ByteBuffer targetBuffer) throws IOException {
+        bufferRef.set(targetBuffer);
+        throw new IOException("Failed to init writer");
+      }
+    };
+
+    DataNode dataNode = cluster.getDataNode(sources[0].getIpcPort());
+    BlockECReconstructionInfo reconstructionInfo =
+        new BlockECReconstructionInfo(lastBlock.getBlock(), sources,
+            new DatanodeInfo[] {target},
+            new String[] {targetStorage.getStorageID()},
+            new StorageType[] {targetStorage.getStorageType()},
+            liveBlockIndices, new byte[0], ecPolicy);
+    List<BlockECReconstructionInfo> ecTasks = new ArrayList<>();
+    ecTasks.add(reconstructionInfo);
+
+    DataNodeFaultInjector.set(injector);
+    try {
+      dataNode.getErasureCodingWorker().processErasureCodingTasks(ecTasks);
+      GenericTestUtils.waitFor(() -> {
+        ByteBuffer expectedBuffer = bufferRef.get();
+        if (expectedBuffer == null) {
+          return false;
+        }
+
+        List<ByteBuffer> buffs = new ArrayList<>();
+        try {
+          boolean isDirectBuff = expectedBuffer.isDirect();
+          while (bufferPool.size(isDirectBuff) > 0) {
+            ByteBuffer buff = bufferPool.getBuffer(isDirectBuff, 1);
+            buffs.add(buff);
+            if (buff == expectedBuffer) {
+              // The allocated buffer has been returned to the buffer pool
+              return true;
+            }
+          }
+          return false;
+        } finally {
+          // Put the buffers back
+          for (ByteBuffer buff : buffs) {
+            bufferPool.putBuffer(buff);
+          }
+        }
+      }, 100, 30000);
+    } finally {
+      DataNodeFaultInjector.set(oldInjector);
+    }
   }
 
   // HDFS-12044

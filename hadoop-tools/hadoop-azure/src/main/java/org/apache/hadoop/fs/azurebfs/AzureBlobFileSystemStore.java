@@ -164,6 +164,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.I
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.ABFS_BLOB_DOMAIN_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_ENCRYPTION_CONTEXT;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_OPENFILE_ON_DIRECTORY;
+import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_SOFT_DELETE_NOT_SUPPORTED;
 import static org.apache.hadoop.fs.azurebfs.utils.UriUtils.isKeyForDirectorySet;
 
 /**
@@ -424,17 +425,35 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     } catch (AbfsRestOperationException ex) {
       // Get ACL status is a HEAD request, its response doesn't contain errorCode
       // So can only rely on its status code to determine account type.
-      if (HttpURLConnection.HTTP_BAD_REQUEST != ex.getStatusCode()) {
+      int status = ex.getStatusCode();
+      String message = ex.getMessage();
+
+      // Case 1: 409: Soft delete not supported
+      if (status == HttpURLConnection.HTTP_CONFLICT
+              && message != null
+              && message.contains(ERR_SOFT_DELETE_NOT_SUPPORTED)) {
+        /*
+         * HTTP_CONFLICT with soft delete not supported error indicates a FNS account.
+         * This occurs when:
+         * 1. FNS-Blob endpoint is used (due to DFS endpoint usage for getAcl call)
+         * 2. FNS-DFS endpoint is used (later internally converted to Blob)
+         * For both cases, namespace should be disabled. The exception is irrelevant here
+         * since we'll be using Blob endpoint ultimately for both the cases here.
+         * No need to throw the exception.
+         */
+        LOG.debug("Ignore soft-delete error. Setting namespace enabled to false.");
+        setNamespaceEnabled(false);
+      } else if (status == HttpURLConnection.HTTP_BAD_REQUEST) { // Case 2: 400
+        // If getAcl fails with 400, namespace is disabled.
+        LOG.debug("Failed to get ACL status with 400. Inferring namespace disabled and ignoring error", ex);
+        setNamespaceEnabled(false);
+      } else {
         // If getAcl fails with anything other than 400, namespace is enabled.
         setNamespaceEnabled(true);
         // Continue to throw exception as earlier.
         LOG.debug("Failed to get ACL status with non 400. Inferring namespace enabled", ex);
         throw ex;
       }
-      // If getAcl fails with 400, namespace is disabled.
-      LOG.debug("Failed to get ACL status with 400. "
-          + "Inferring namespace disabled and ignoring error", ex);
-      setNamespaceEnabled(false);
     } catch (AzureBlobFileSystemException ex) {
       throw ex;
     }

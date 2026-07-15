@@ -132,6 +132,7 @@ import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.apache.hadoop.util.functional.RemoteIterators;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.mockito.InOrder;
@@ -140,6 +141,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.event.Level;
 
+@Tag("slow")
 public class TestDistributedFileSystem {
   private static final Random RAN = new Random();
   private static final Logger LOG = LoggerFactory.getLogger(

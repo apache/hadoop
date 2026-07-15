@@ -47,6 +47,7 @@ import org.apache.hadoop.test.TestName;
 import org.apache.hadoop.util.Lists;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -59,6 +60,7 @@ import java.util.Random;
 /**
  * Unit test for Journal Node formatting upon re-installation and syncing.
  */
+@Tag("slow")
 public class TestJournalNodeSync {
   private Configuration conf;
   private MiniQJMHACluster qjmhaCluster;

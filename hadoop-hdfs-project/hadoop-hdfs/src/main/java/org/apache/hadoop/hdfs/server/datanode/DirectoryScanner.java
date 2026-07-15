@@ -313,6 +313,14 @@ public class DirectoryScanner implements Runnable {
         conf.getInt(DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_THREADS_KEY,
             DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_THREADS_DEFAULT);
 
+    if (threads <= 0) {
+      LOG.warn("Invalid value configured for "
+          + DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_THREADS_KEY
+          + " ({}), must be greater than 0. Using default ({}).",
+          threads, DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_THREADS_DEFAULT);
+      threads = DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_THREADS_DEFAULT;
+    }
+
     reportCompileThreadPool =
         Executors.newFixedThreadPool(threads, new Daemon.DaemonFactory());
 

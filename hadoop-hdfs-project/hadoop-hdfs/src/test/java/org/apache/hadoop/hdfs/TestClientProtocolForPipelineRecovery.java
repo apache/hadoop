@@ -58,6 +58,7 @@ import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.mockito.Mockito;
@@ -67,6 +68,7 @@ import org.slf4j.LoggerFactory;
 /**
  * This tests pipeline recovery related client protocol works correct or not.
  */
+@Tag("slow")
 public class TestClientProtocolForPipelineRecovery {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestClientProtocolForPipelineRecovery.class);

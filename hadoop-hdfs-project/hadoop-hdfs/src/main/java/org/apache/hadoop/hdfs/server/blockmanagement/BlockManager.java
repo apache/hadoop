@@ -205,6 +205,7 @@ public class BlockManager implements BlockStatsMXBean {
 
   private final long startupDelayBlockDeletionInMs;
   private final BlockReportLeaseManager blockReportLeaseManager;
+  private final boolean rejectInvalidBlockReportLease;
   private ObjectName mxBeanName;
 
   /** Used by metrics */
@@ -596,6 +597,10 @@ public class BlockManager implements BlockStatsMXBean {
     this.pendingRecoveryBlocks = new PendingRecoveryBlocks(blockRecoveryTimeout);
 
     this.blockReportLeaseManager = new BlockReportLeaseManager(conf);
+
+    this.rejectInvalidBlockReportLease = conf.getBoolean(
+        DFSConfigKeys.DFS_BLOCKREPORT_REJECT_INVALID_LEASE_KEY,
+        DFSConfigKeys.DFS_BLOCKREPORT_REJECT_INVALID_LEASE_DEFAULT);
 
     this.bmSafeMode = new BlockManagerSafeMode(this, namesystem, haEnabled,
         conf);
@@ -4977,6 +4982,8 @@ public class BlockManager implements BlockStatsMXBean {
       DatanodeStorageInfo.decrementBlocksScheduled(remove.getTargets()
           .toArray(new DatanodeStorageInfo[remove.getTargets().size()]));
     }
+    // Remove all pending messages for this deleted block from the queue
+    pendingDNMessages.takeBlockQueue(block);
     neededReconstruction.remove(block, LowRedundancyBlocks.LEVEL);
     postponedMisreplicatedBlocks.remove(block);
   }
@@ -5535,6 +5542,10 @@ public class BlockManager implements BlockStatsMXBean {
 
   public BlockReportLeaseManager getBlockReportLeaseManager() {
     return blockReportLeaseManager;
+  }
+
+  public boolean shouldRejectInvalidBlockReportLease() {
+    return rejectInvalidBlockReportLease;
   }
 
   @Override // BlockStatsMXBean

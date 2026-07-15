@@ -42,8 +42,6 @@ public class DataNodeFaultInjector {
     instance = injector;
   }
 
-  public void getHdfsBlocksMetadata() {}
-
   public void writeBlockAfterFlush() throws IOException {}
 
   public void sendShortCircuitShmResponse() throws IOException {}
@@ -112,6 +110,12 @@ public class DataNodeFaultInjector {
    * process.
    */
   public void stripedBlockReconstruction() throws IOException {}
+
+  /**
+   * Used as a hook to inject failure when initializing a striped block writer.
+   */
+  public void stripedBlockWriterInit(ByteBuffer targetBuffer) throws IOException {
+  }
 
   /**
    * Used as a hook to inject failure in erasure coding checksum reconstruction

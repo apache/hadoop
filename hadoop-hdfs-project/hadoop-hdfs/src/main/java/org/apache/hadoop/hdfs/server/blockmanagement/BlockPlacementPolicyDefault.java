@@ -1287,7 +1287,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
     final DatanodeStorageInfo delNodeHintStorage =
         DatanodeStorageInfo.getDatanodeStorageInfo(delCandidates, delNodeHint);
     final DatanodeStorageInfo addedNodeStorage =
-        DatanodeStorageInfo.getDatanodeStorageInfo(delCandidates, addedNode);
+        DatanodeStorageInfo.getDatanodeStorageInfo(availableReplicas, addedNode);
 
     while (delCandidates.size() - expectedNumOfReplicas > excessReplicas.size()) {
       final DatanodeStorageInfo cur;

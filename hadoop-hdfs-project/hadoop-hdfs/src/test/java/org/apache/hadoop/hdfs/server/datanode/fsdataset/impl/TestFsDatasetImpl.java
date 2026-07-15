@@ -87,6 +87,7 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -140,6 +141,7 @@ import javax.management.MalformedObjectNameException;
 import javax.management.ObjectName;
 import javax.management.ReflectionException;
 
+@Tag("slow")
 public class TestFsDatasetImpl {
 
   private static final Logger LOG = LoggerFactory.getLogger(
