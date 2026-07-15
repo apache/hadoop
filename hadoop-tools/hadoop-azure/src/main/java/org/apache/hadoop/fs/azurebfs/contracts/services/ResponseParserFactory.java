@@ -23,7 +23,7 @@ import java.util.function.Supplier;
 
 import javax.xml.parsers.SAXParser;
 
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CONTENT_TYPE_ARROW_TOKEN;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.APPLICATION_APACHE_ARROW_STREAM;
 
 /**
  * Factory that selects the appropriate {@link ListBlobResponseParser} for a
@@ -68,13 +68,25 @@ public final class ResponseParserFactory {
   /**
    * Determine whether the given response Content-Type indicates an Apache Arrow
    * (Photon) response.
+   * <p>
+   * ABFS negotiates the specific Arrow IPC stream media type
+   * ({@code application/vnd.apache.arrow.stream}), so matching is anchored to
+   * that media type rather than a loose substring search. Any structured-suffix
+   * or parameter portion (e.g. {@code ; charset=...}) is tolerated, while
+   * unrelated content types that merely contain the word "arrow" are not
+   * misclassified as Arrow.
    *
    * @param contentType the value of the response Content-Type header (may be
    *                    {@code null}).
    * @return {@code true} if the response should be parsed as Arrow.
    */
   public static boolean isArrowResponse(final String contentType) {
-    return contentType != null
-        && contentType.toLowerCase(Locale.ROOT).contains(CONTENT_TYPE_ARROW_TOKEN);
+    if (contentType == null) {
+      return false;
+    }
+    final String mediaType =
+        contentType.trim().toLowerCase(Locale.ROOT);
+    return mediaType.equals(APPLICATION_APACHE_ARROW_STREAM)
+        || mediaType.startsWith(APPLICATION_APACHE_ARROW_STREAM + ";");
   }
 }

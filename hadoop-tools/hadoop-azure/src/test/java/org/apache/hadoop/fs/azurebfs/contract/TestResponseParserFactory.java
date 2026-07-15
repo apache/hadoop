@@ -77,6 +77,17 @@ public class TestResponseParserFactory {
   }
 
   @Test
+  public void testUnrelatedContentTypeContainingArrowDoesNotSelectArrow() {
+    // Content types that merely contain the word "arrow" (e.g. a different
+    // vendor media type or a parameter value) must not be routed to the Arrow
+    // parser; only the negotiated Arrow IPC stream media type qualifies.
+    assertThat(ResponseParserFactory.isArrowResponse(
+        "application/x-arrowhead")).isFalse();
+    assertThat(ResponseParserFactory.isArrowResponse(
+        "application/json; profile=arrow")).isFalse();
+  }
+
+  @Test
   public void testNullContentTypeFallsBackToXml() {
     assertThat(ResponseParserFactory.isArrowResponse(null)).isFalse();
   }

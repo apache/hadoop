@@ -156,10 +156,6 @@ public final class AbfsHttpConstants {
    */
   public static final String APPLICATION_APACHE_ARROW_STREAM =
       "application/vnd.apache.arrow.stream";
-  /**
-   * Token used to detect an Arrow response from the returned Content-Type.
-   */
-  public static final String CONTENT_TYPE_ARROW_TOKEN = "arrow";
   public static final String APPLICATION_X_WWW_FORM_URLENCODED = "application/x-www-form-urlencoded";
   public static final String XMS_PROPERTIES_ENCODING_ASCII = "ISO-8859-1";
   public static final String XMS_PROPERTIES_ENCODING_UNICODE = "UTF-8";

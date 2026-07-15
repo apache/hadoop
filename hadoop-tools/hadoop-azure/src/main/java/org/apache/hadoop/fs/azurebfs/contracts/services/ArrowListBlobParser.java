@@ -91,6 +91,14 @@ public class ArrowListBlobParser implements ListBlobResponseParser {
       LoggerFactory.getLogger(ArrowListBlobParser.class);
 
   /**
+   * Upper bound, in bytes, on the heap staging buffer allocated per read when
+   * copying into a direct (non-array-backed) {@link ByteBuffer}. Caps transient
+   * allocations for large reader requests; the reader simply issues additional
+   * reads for anything beyond this chunk.
+   */
+  private static final int NON_INTERRUPTIBLE_READ_CHUNK = 8192;
+
+  /**
    * Base URL for which the ListBlobs API is called, used to build the absolute
    * URL for each entry (mirrors the XML parser behavior).
    */
@@ -206,8 +214,13 @@ public class ArrowListBlobParser implements ListBlobResponseParser {
           }
           return n;
         }
-        final byte[] tmp = new byte[toRead];
-        final int n = in.read(tmp, 0, toRead);
+        // For a direct (non-array-backed) ByteBuffer we must stage bytes in a
+        // heap buffer first. ArrowStreamReader can request very large reads, so
+        // cap the staging buffer to a fixed size and let the reader issue
+        // further reads for the remainder, avoiding large transient allocations.
+        final int chunk = Math.min(toRead, NON_INTERRUPTIBLE_READ_CHUNK);
+        final byte[] tmp = new byte[chunk];
+        final int n = in.read(tmp, 0, chunk);
         if (n > 0) {
           dst.put(tmp, 0, n);
         }
