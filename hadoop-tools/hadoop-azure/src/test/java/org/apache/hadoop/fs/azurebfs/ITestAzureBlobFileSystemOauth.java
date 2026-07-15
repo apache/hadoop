@@ -69,6 +69,7 @@ public class ITestAzureBlobFileSystemOauth extends AbstractAbfsIntegrationTest{
   private static final String EXISTED_FOLDER_PATH = "/existedFolder";
   private static final Logger LOG =
       LoggerFactory.getLogger(ITestAbfsStreamStatistics.class);
+  private static final FsPermission RBAC_ONLY_TEST_PERMISSION = new FsPermission((short) 0755);
 
   public ITestAzureBlobFileSystemOauth() throws Exception {
     assumeThat(this.getAuthType()).isEqualTo(AuthType.OAuth);
@@ -284,7 +285,7 @@ public class ITestAzureBlobFileSystemOauth extends AbstractAbfsIntegrationTest{
     // error code.
     AccessDeniedException ex = assertThrows(
         AccessDeniedException.class,
-        () -> fs.setPermission(filePath, new FsPermission((short) 0755)),
+        () -> fs.setPermission(filePath, RBAC_ONLY_TEST_PERMISSION),
         "setPermission is expected to fail for Contributor when "
             + "fs.azure.rbac.only=false on an HNS-enabled account");
 
@@ -327,7 +328,7 @@ public class ITestAzureBlobFileSystemOauth extends AbstractAbfsIntegrationTest{
 
     // Must not throw. This is the pure no-op path.
     assertThatCode(() ->
-        fs.setPermission(filePath, new FsPermission((short) 0755)))
+        fs.setPermission(filePath, RBAC_ONLY_TEST_PERMISSION))
         .as("setPermission must succeed as a no-op for Contributor when "
             + "fs.azure.rbac.only=true on an HNS-enabled account")
         .doesNotThrowAnyException();
@@ -363,7 +364,7 @@ public class ITestAzureBlobFileSystemOauth extends AbstractAbfsIntegrationTest{
     Path missing = path("/rbac-only-missing-" + UUID.randomUUID());
     // Path is intentionally NOT created; pure no-op must not throw.
     assertThatCode(() ->
-        fs.setPermission(missing, new FsPermission((short) 0755)))
+        fs.setPermission(missing, RBAC_ONLY_TEST_PERMISSION))
         .as("setPermission on a non-existent path must be a pure no-op "
             + "when fs.azure.rbac.only=true (documented in abfs.md)")
         .doesNotThrowAnyException();

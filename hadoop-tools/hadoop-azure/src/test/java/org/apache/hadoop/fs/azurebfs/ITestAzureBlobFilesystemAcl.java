@@ -107,6 +107,8 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
 
   private static Path testRoot = new Path("/test");
 
+  private static final FsPermission RBAC_ONLY_TEST_PERMISSION = new FsPermission((short) 0557);
+
   private Path path;
 
   public ITestAzureBlobFilesystemAcl() throws Exception {
@@ -1604,7 +1606,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
     assertPathExists(fs, "This path should exist", path);
 
     // Should not throw. Behavior identical to today on non-HNS accounts.
-    fs.setPermission(path, FsPermission.createImmutable((short) 0557));
+    fs.setPermission(path, FsPermission.createImmutable(RWX_RX_RX));
   }
 
   /**
