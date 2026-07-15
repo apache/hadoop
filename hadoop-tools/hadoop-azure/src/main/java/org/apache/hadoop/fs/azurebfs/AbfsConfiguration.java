@@ -648,6 +648,11 @@ public class AbfsConfiguration{
   DefaultValue = DEFAULT_FS_AZURE_RESTRICT_GPS_ON_OPENFILE)
   private boolean restrictGpsOnOpenFile;
 
+
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_RBAC_ONLY_MODE,
+      DefaultValue = DEFAULT_FS_AZURE_RBAC_ONLY_MODE)
+  private boolean rbacOnlyMode;
+
   private String clientProvidedEncryptionKey;
   private String clientProvidedEncryptionKeySHA;
 
@@ -2249,5 +2254,15 @@ public class AbfsConfiguration{
    */
   public int getMaxReadSizeForVectoredReadsThroughput() {
     return maxReadSizeForVectoredReadsThroughput;
+  }
+
+  /**
+   * Returns whether the filesystem is configured to operate in RBAC-only mode.
+   * When true, setPermission call will be a no-op on HNS-enabled accounts.
+   *
+   * @return true if RBAC-only mode is enabled; false otherwise.
+   */
+  public boolean isRbacOnlyMode() {
+    return this.rbacOnlyMode;
   }
 }

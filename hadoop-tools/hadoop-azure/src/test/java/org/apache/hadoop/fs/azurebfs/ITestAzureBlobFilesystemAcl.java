@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.azurebfs;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsServiceType;
 import org.apache.hadoop.util.Lists;
 
@@ -40,6 +41,7 @@ import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_RBAC_ONLY_MODE;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertPathExists;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
@@ -1528,5 +1530,282 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
   private void assertPermission(FileSystem fs, Path pathToCheck, short perm)
       throws Exception {
     AclTestHelpers.assertPermission(fs, pathToCheck, perm);
+  }
+
+  // =========================================================================
+  // Tests for fs.azure.rbac.only mode.
+  //
+  // When fs.azure.rbac.only=true on an HNS-enabled account:
+  //   - setPermission() must be a no-op (permission is not updated on the
+  //     backend) so RBAC-only workloads are not blocked by lack of
+  //     ACL-management permissions.
+  //   - Explicit ACL management APIs (setAcl, modifyAclEntries,
+  //     removeAclEntries, removeDefaultAcl, removeAcl) must be unaffected.
+  //
+  // On non-HNS accounts the flag must have no effect (existing behavior).
+  // =========================================================================
+
+  /**
+   * When RBAC-only mode is enabled on an HNS-enabled account, setPermission
+   * must be treated as a no-op: the on-storage permission stays at whatever
+   * it was before the setPermission() call.
+   */
+  @Test
+  public void testSetPermissionNoOpWhenRbacOnlyEnabledOnHns() throws Exception {
+    final AzureBlobFileSystem fs = getRbacOnlyFileSystem(true);
+    assumeTrue(getIsNamespaceEnabled(fs));
+
+    path = new Path(testRoot, UUID.randomUUID().toString());
+    FileSystem.mkdirs(fs, path, FsPermission.createImmutable((short) RWX_RX));
+
+    // Capture the current permission before the (should-be no-op) call.
+    FsPermission before = fs.getFileStatus(path).getPermission();
+
+    // This must NOT touch the backend ACL/permission.
+    fs.setPermission(path, FsPermission.createImmutable((short) RWX));
+
+    FsPermission after = fs.getFileStatus(path).getPermission();
+    assertEquals(before, after,
+        "setPermission() must be a no-op when fs.azure.rbac.only=true "
+            + "on an HNS-enabled account");
+  }
+
+  /**
+   * When RBAC-only mode is disabled on an HNS-enabled account, setPermission
+   * must continue to update the on-storage permission as it does today.
+   */
+  @Test
+  public void testSetPermissionAppliedWhenRbacOnlyDisabledOnHns()
+      throws Exception {
+    final AzureBlobFileSystem fs = getRbacOnlyFileSystem(false);
+    assumeTrue(getIsNamespaceEnabled(fs));
+
+    path = new Path(testRoot, UUID.randomUUID().toString());
+    FileSystem.mkdirs(fs, path, FsPermission.createImmutable((short) RWX_RX));
+
+    fs.setPermission(path, FsPermission.createImmutable((short) RWX));
+
+    assertPermission(fs, (short) RWX);
+  }
+
+  /**
+   * On non-HNS accounts the RBAC-only flag has no effect: existing driver
+   * behavior for setPermission (which delegates to super.setPermission and
+   * is effectively a no-op at the store level) must continue to work
+   * without throwing.
+   */
+  @Test
+  public void testSetPermissionRbacOnlyHasNoEffectOnNonHns() throws Exception {
+    final AzureBlobFileSystem fs = getRbacOnlyFileSystem(true);
+    assumeTrue(!getIsNamespaceEnabled(fs));
+
+    path = new Path(testRoot, UUID.randomUUID().toString());
+    fs.create(path).close();
+    assertPathExists(fs, "This path should exist", path);
+
+    // Should not throw. Behavior identical to today on non-HNS accounts.
+    fs.setPermission(path, FsPermission.createImmutable((short) 0557));
+  }
+
+  /**
+   * Explicit ACL APIs must NOT be gated by fs.azure.rbac.only. setAcl,
+   * modifyAclEntries, removeAclEntries, removeDefaultAcl, and removeAcl
+   * must continue to update the backend ACL.
+   */
+  @Test
+  public void testExplicitAclApisNotAffectedByRbacOnlyMode() throws Exception {
+    final AzureBlobFileSystem fs = getRbacOnlyFileSystem(true);
+    assumeTrue(getIsNamespaceEnabled(fs));
+
+    path = new Path(testRoot, UUID.randomUUID().toString());
+    FileSystem.mkdirs(fs, path, FsPermission.createImmutable((short) RWX_RX));
+
+    // setAcl must apply.
+    List<AclEntry> aclSpec = Lists.newArrayList(
+        aclEntry(ACCESS, USER, ALL),
+        aclEntry(ACCESS, USER, FOO, ALL),
+        aclEntry(ACCESS, GROUP, READ_EXECUTE),
+        aclEntry(ACCESS, OTHER, NONE),
+        aclEntry(DEFAULT, USER, FOO, ALL));
+    fs.setAcl(path, aclSpec);
+
+    AclEntry[] afterSetAcl =
+        fs.getAclStatus(path).getEntries().toArray(new AclEntry[0]);
+    assertArrayEquals(new AclEntry[]{
+            aclEntry(ACCESS, USER, FOO, ALL),
+            aclEntry(ACCESS, GROUP, READ_EXECUTE),
+            aclEntry(DEFAULT, USER, ALL),
+            aclEntry(DEFAULT, USER, FOO, ALL),
+            aclEntry(DEFAULT, GROUP, READ_EXECUTE),
+            aclEntry(DEFAULT, MASK, ALL),
+            aclEntry(DEFAULT, OTHER, NONE)
+        },
+        afterSetAcl);
+
+    // modifyAclEntries must apply.
+    fs.modifyAclEntries(path, Lists.newArrayList(
+        aclEntry(ACCESS, USER, FOO, READ_EXECUTE),
+        aclEntry(DEFAULT, USER, FOO, READ_EXECUTE)));
+    AclEntry[] afterModify =
+        fs.getAclStatus(path).getEntries().toArray(new AclEntry[0]);
+    assertArrayEquals(new AclEntry[]{
+            aclEntry(ACCESS, USER, FOO, READ_EXECUTE),
+            aclEntry(ACCESS, GROUP, READ_EXECUTE),
+            aclEntry(DEFAULT, USER, ALL),
+            aclEntry(DEFAULT, USER, FOO, READ_EXECUTE),
+            aclEntry(DEFAULT, GROUP, READ_EXECUTE),
+            aclEntry(DEFAULT, MASK, READ_EXECUTE),
+            aclEntry(DEFAULT, OTHER, NONE)
+        },
+        afterModify);
+
+    // removeAclEntries must apply.
+    fs.removeAclEntries(path, Lists.newArrayList(
+        aclEntry(ACCESS, USER, FOO),
+        aclEntry(DEFAULT, USER, FOO)));
+    AclEntry[] afterRemoveEntries =
+        fs.getAclStatus(path).getEntries().toArray(new AclEntry[0]);
+    assertArrayEquals(new AclEntry[]{
+            aclEntry(ACCESS, GROUP, READ_EXECUTE),
+            aclEntry(DEFAULT, USER, ALL),
+            aclEntry(DEFAULT, GROUP, READ_EXECUTE),
+            aclEntry(DEFAULT, MASK, READ_EXECUTE),
+            aclEntry(DEFAULT, OTHER, NONE)
+        },
+        afterRemoveEntries);
+
+    // removeDefaultAcl must apply.
+    fs.removeDefaultAcl(path);
+    AclEntry[] afterRemoveDefault =
+        fs.getAclStatus(path).getEntries().toArray(new AclEntry[0]);
+    assertArrayEquals(new AclEntry[]{
+        aclEntry(ACCESS, GROUP, READ_EXECUTE)
+    }, afterRemoveDefault);
+
+    // removeAcl must apply.
+    fs.removeAcl(path);
+    AclEntry[] afterRemoveAcl =
+        fs.getAclStatus(path).getEntries().toArray(new AclEntry[0]);
+    assertArrayEquals(new AclEntry[]{}, afterRemoveAcl);
+  }
+
+  /**
+   * Interaction test: a prior setAcl sets a specific mode; a subsequent
+   * setPermission() while in RBAC-only mode must NOT alter that mode.
+   * Confirms the no-op path does not silently strip ACL-derived state.
+   */
+  @Test
+  public void testSetPermissionNoOpPreservesPriorAclState() throws Exception {
+    final AzureBlobFileSystem fs = getRbacOnlyFileSystem(true);
+    assumeTrue(getIsNamespaceEnabled(fs));
+
+    path = new Path(testRoot, UUID.randomUUID().toString());
+    FileSystem.mkdirs(fs, path, FsPermission.createImmutable((short) RWX_RX));
+
+    // setAcl is NOT gated by the flag - this still applies.
+    List<AclEntry> aclSpec = Lists.newArrayList(
+        aclEntry(ACCESS, USER, ALL),
+        aclEntry(ACCESS, USER, FOO, ALL),
+        aclEntry(ACCESS, GROUP, READ_EXECUTE),
+        aclEntry(ACCESS, OTHER, NONE),
+        aclEntry(DEFAULT, USER, FOO, ALL));
+    fs.setAcl(path, aclSpec);
+
+    AclStatus before = fs.getAclStatus(path);
+
+    // Attempt to change mode via setPermission while RBAC-only is on.
+    // This must be a no-op; ACL entries and mode must remain unchanged.
+    fs.setPermission(path, FsPermission.createImmutable((short) RWX));
+
+    AclStatus after = fs.getAclStatus(path);
+    assertArrayEquals(before.getEntries().toArray(new AclEntry[0]),
+        after.getEntries().toArray(new AclEntry[0]),
+        "ACL entries must be unchanged by a no-op setPermission()");
+    assertEquals(before.getPermission(), after.getPermission(),
+        "Permission bits must be unchanged by a no-op setPermission()");
+  }
+
+  /**
+   * Creates a new AzureBlobFileSystem instance with fs.azure.rbac.only set
+   * to the provided value. A fresh instance is required so the config is
+   * picked up during initialization.
+   */
+  private AzureBlobFileSystem getRbacOnlyFileSystem(boolean rbacOnly)
+      throws Exception {
+    Configuration conf = new Configuration(getRawConfiguration());
+    conf.setBoolean(FS_AZURE_RBAC_ONLY_MODE, rbacOnly);
+    return (AzureBlobFileSystem) FileSystem.newInstance(
+        getFileSystem().getUri(), conf);
+  }
+
+  /**
+   * Default value of fs.azure.rbac.only must be false: an FS created without
+   * setting the key must behave exactly as today (setPermission applies).
+   */
+  @Test
+  public void testRbacOnlyDefaultIsFalse() throws Exception {
+    final AzureBlobFileSystem fs = this.getFileSystem();
+    assumeTrue(getIsNamespaceEnabled(fs));
+
+    path = new Path(testRoot, UUID.randomUUID().toString());
+    FileSystem.mkdirs(fs, path, FsPermission.createImmutable((short) RWX_RX));
+
+    fs.setPermission(path, FsPermission.createImmutable((short) RWX));
+    assertPermission(fs, (short) RWX);
+  }
+
+  /**
+   * The null-permission contract must be preserved even when RBAC-only mode
+   * is enabled. The IllegalArgumentException must trigger before the no-op
+   * short-circuit.
+   */
+  @Test
+  public void testSetPermissionNullPermissionStillThrowsInRbacOnly()
+      throws Exception {
+    final AzureBlobFileSystem fs = getRbacOnlyFileSystem(true);
+    assumeTrue(getIsNamespaceEnabled(fs));
+
+    path = new Path(testRoot, UUID.randomUUID().toString());
+    FileSystem.mkdirs(fs, path, FsPermission.createImmutable((short) RWX_RX));
+
+    Assertions.assertThrows(IllegalArgumentException.class,
+        () -> fs.setPermission(path, null));
+  }
+
+  /**
+   * Pure no-op semantics: setPermission on a non-existent path in RBAC-only
+   * mode returns successfully without contacting the backend. This is an
+   * intentional behavior change vs. the default path.
+   */
+  @Test
+  public void testSetPermissionNonExistentPathIsNoOpInRbacOnly()
+      throws Exception {
+    final AzureBlobFileSystem fs = getRbacOnlyFileSystem(true);
+    assumeTrue(getIsNamespaceEnabled(fs));
+
+    Path missing = new Path(testRoot, UUID.randomUUID().toString());
+    // Path is intentionally NOT created; pure no-op must not throw.
+    fs.setPermission(missing, FsPermission.createImmutable((short) RWX));
+  }
+
+  /**
+   * Read-side ACL APIs and setOwner must NOT be gated by fs.azure.rbac.only.
+   */
+  @Test
+  public void testReadApisAndSetOwnerUnaffectedByRbacOnly() throws Exception {
+    final AzureBlobFileSystem fs = getRbacOnlyFileSystem(true);
+    assumeTrue(getIsNamespaceEnabled(fs));
+
+    path = new Path(testRoot, UUID.randomUUID().toString());
+    fs.create(path).close();
+
+    // getAclStatus must work.
+    fs.getAclStatus(path);
+
+    // setOwner must apply and NOT be gated.
+    fs.setOwner(path, TEST_OWNER, TEST_GROUP);
+    FileStatus st = fs.getFileStatus(path);
+    assertEquals(TEST_OWNER, st.getOwner());
+    assertEquals(TEST_GROUP, st.getGroup());
   }
 }

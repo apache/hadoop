@@ -20,7 +20,10 @@ package org.apache.hadoop.fs.azurebfs;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.AccessDeniedException;
+import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -39,10 +42,12 @@ import org.apache.hadoop.fs.azurebfs.security.ContextEncryptionAdapter;
 import org.apache.hadoop.fs.azurebfs.services.AbfsBlobClient;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.IOUtils;
 
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_OAUTH_CLIENT_ID;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_OAUTH_CLIENT_SECRET;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_RBAC_ONLY_MODE;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_BLOB_DATA_CONTRIBUTOR_CLIENT_ID;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_BLOB_DATA_CONTRIBUTOR_CLIENT_SECRET;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_BLOB_DATA_READER_CLIENT_ID;
@@ -224,6 +229,211 @@ public class ITestAzureBlobFileSystemOauth extends AbstractAbfsIntegrationTest{
     abfsConfig.set(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ID + "." + this.getAccountName(), abfsConfig.get(FS_AZURE_BLOB_DATA_READER_CLIENT_ID));
     abfsConfig.set(FS_AZURE_ACCOUNT_OAUTH_CLIENT_SECRET + "." + this.getAccountName(), abfsConfig.get(FS_AZURE_BLOB_DATA_READER_CLIENT_SECRET));
     Configuration rawConfig = abfsConfig.getRawConfiguration();
+    return getFileSystem(rawConfig);
+  }
+
+  // =========================================================================
+  // Tests for fs.azure.rbac.only mode under OAuth (RBAC) authentication.
+  //
+  // Storage Blob Data Contributor has full data-plane access but does NOT
+  // include ACL-management permissions on HNS-enabled ADLS Gen2 accounts.
+  // Therefore setPermission(), which calls SetAccessControl on HNS, fails
+  // with AUTHORIZATION_PERMISSION_MISS_MATCH (403) unless the caller also
+  // holds Storage Blob Data Owner (or an equivalent ACL-management role).
+  //
+  // fs.azure.rbac.only=true short-circuits setPermission() to a pure no-op
+  // on HNS, unblocking Spark/Hadoop workloads that use RBAC-only auth.
+  //
+  // These tests prove:
+  //   1. Without the flag, Contributor cannot call setPermission (baseline).
+  //   2. With the flag, Contributor's setPermission succeeds as a no-op.
+  //   3. The flag does NOT grant any additional backend permission - explicit
+  //      ACL APIs (setAcl) continue to fail for Contributor even with the
+  //      flag on.
+  // =========================================================================
+
+  /**
+   * Blob Data Contributor + fs.azure.rbac.only=false (default):
+   * setPermission must fail with AUTHORIZATION_PERMISSION_MISS_MATCH on an
+   * HNS-enabled account, because Contributor lacks ACL-management permissions.
+   * This documents the exact failure mode this feature is designed to unblock.
+   */
+  @Test
+  public void testSetPermissionFailsForContributorWithoutRbacOnly()
+      throws Exception {
+    String clientId = this.getConfiguration()
+        .get(FS_AZURE_BLOB_DATA_CONTRIBUTOR_CLIENT_ID);
+    assumeThat(clientId).as("Contributor client id not provided").isNotNull();
+    String secret = this.getConfiguration()
+        .get(FS_AZURE_BLOB_DATA_CONTRIBUTOR_CLIENT_SECRET);
+    assumeThat(secret).as("Contributor client secret not provided").isNotNull();
+
+    final AzureBlobFileSystem fs = getBlobContributorWithRbacOnly(false);
+    assumeThat(getIsNamespaceEnabled(fs))
+        .as("This test requires an HNS-enabled account")
+        .isTrue();
+
+    Path filePath = path("/rbac-only-contributor-off");
+    try (FSDataOutputStream stream = fs.create(filePath)) {
+      stream.write(0);
+    }
+
+    // AzureBlobFileSystem.checkException() wraps AbfsRestOperationException
+    // into java.nio.file.AccessDeniedException for 403 responses, so we
+    // must assert on the wrapper and then unwrap to check the service
+    // error code.
+    AccessDeniedException ex = assertThrows(
+        AccessDeniedException.class,
+        () -> fs.setPermission(filePath, new FsPermission((short) 0755)),
+        "setPermission is expected to fail for Contributor when "
+            + "fs.azure.rbac.only=false on an HNS-enabled account");
+
+    Throwable cause = ex.getCause();
+    assertTrue(cause instanceof AbfsRestOperationException,
+        "AccessDeniedException must wrap an AbfsRestOperationException, "
+            + "but was: " + (cause == null ? "null" : cause.getClass()));
+    assertEquals(AzureServiceErrorCode.AUTHORIZATION_PERMISSION_MISS_MATCH,
+        ((AbfsRestOperationException) cause).getErrorCode(),
+        "Underlying failure must be AUTHORIZATION_PERMISSION_MISS_MATCH "
+            + "(403), confirming the ACL-management permission gap that "
+            + "fs.azure.rbac.only is designed to bypass");
+  }
+
+  /**
+   * Blob Data Contributor + fs.azure.rbac.only=true:
+   * setPermission must succeed as a pure no-op. No backend request is made,
+   * so the Contributor's lack of ACL-management permissions is irrelevant.
+   * This is the primary success path for RBAC-only deployments.
+   */
+  @Test
+  public void testSetPermissionSucceedsForContributorWithRbacOnly()
+      throws Exception {
+    String clientId = this.getConfiguration()
+        .get(FS_AZURE_BLOB_DATA_CONTRIBUTOR_CLIENT_ID);
+    assumeThat(clientId).as("Contributor client id not provided").isNotNull();
+    String secret = this.getConfiguration()
+        .get(FS_AZURE_BLOB_DATA_CONTRIBUTOR_CLIENT_SECRET);
+    assumeThat(secret).as("Contributor client secret not provided").isNotNull();
+
+    final AzureBlobFileSystem fs = getBlobContributorWithRbacOnly(true);
+    assumeThat(getIsNamespaceEnabled(fs))
+        .as("This test requires an HNS-enabled account")
+        .isTrue();
+
+    Path filePath = path("/rbac-only-contributor-on");
+    try (FSDataOutputStream stream = fs.create(filePath)) {
+      stream.write(0);
+    }
+
+    // Must not throw. This is the pure no-op path.
+    assertThatCode(() ->
+        fs.setPermission(filePath, new FsPermission((short) 0755)))
+        .as("setPermission must succeed as a no-op for Contributor when "
+            + "fs.azure.rbac.only=true on an HNS-enabled account")
+        .doesNotThrowAnyException();
+
+    // Data-plane operations must still work normally under Contributor.
+    try (FSDataOutputStream stream = fs.append(filePath)) {
+      stream.write(0);
+    }
+    assertEquals(2, fs.getFileStatus(filePath).getLen(),
+        "Data-plane operations must remain functional when "
+            + "fs.azure.rbac.only=true");
+  }
+
+  /**
+   * Pure no-op semantics under RBAC: setPermission on a non-existent path
+   * must NOT contact the backend and must return successfully.
+   */
+  @Test
+  public void testSetPermissionOnNonExistentPathIsNoOpForContributor()
+      throws Exception {
+    String clientId = this.getConfiguration()
+        .get(FS_AZURE_BLOB_DATA_CONTRIBUTOR_CLIENT_ID);
+    assumeThat(clientId).as("Contributor client id not provided").isNotNull();
+    String secret = this.getConfiguration()
+        .get(FS_AZURE_BLOB_DATA_CONTRIBUTOR_CLIENT_SECRET);
+    assumeThat(secret).as("Contributor client secret not provided").isNotNull();
+
+    final AzureBlobFileSystem fs = getBlobContributorWithRbacOnly(true);
+    assumeThat(getIsNamespaceEnabled(fs))
+        .as("This test requires an HNS-enabled account")
+        .isTrue();
+
+    Path missing = path("/rbac-only-missing-" + UUID.randomUUID());
+    // Path is intentionally NOT created; pure no-op must not throw.
+    assertThatCode(() ->
+        fs.setPermission(missing, new FsPermission((short) 0755)))
+        .as("setPermission on a non-existent path must be a pure no-op "
+            + "when fs.azure.rbac.only=true (documented in abfs.md)")
+        .doesNotThrowAnyException();
+  }
+
+  /**
+   * fs.azure.rbac.only must NOT grant any additional backend permission.
+   * Explicit ACL APIs (setAcl) are not gated by the flag and must continue
+   * to fail with AUTHORIZATION_PERMISSION_MISS_MATCH for Contributor,
+   * proving the flag is not a security bypass.
+   */
+  @Test
+  public void testExplicitSetAclStillFailsForContributorWithRbacOnly()
+      throws Exception {
+    String clientId = this.getConfiguration()
+        .get(FS_AZURE_BLOB_DATA_CONTRIBUTOR_CLIENT_ID);
+    assumeThat(clientId).as("Contributor client id not provided").isNotNull();
+    String secret = this.getConfiguration()
+        .get(FS_AZURE_BLOB_DATA_CONTRIBUTOR_CLIENT_SECRET);
+    assumeThat(secret).as("Contributor client secret not provided").isNotNull();
+
+    final AzureBlobFileSystem fs = getBlobContributorWithRbacOnly(true);
+    assumeThat(getIsNamespaceEnabled(fs))
+        .as("This test requires an HNS-enabled account")
+        .isTrue();
+
+    Path filePath = path("/rbac-only-setacl-still-fails");
+    try (FSDataOutputStream stream = fs.create(filePath)) {
+      stream.write(0);
+    }
+
+    List<org.apache.hadoop.fs.permission.AclEntry> aclSpec =
+        org.apache.hadoop.util.Lists.newArrayList(
+            org.apache.hadoop.fs.azurebfs.utils.AclTestHelpers.aclEntry(
+                org.apache.hadoop.fs.permission.AclEntryScope.ACCESS,
+                org.apache.hadoop.fs.permission.AclEntryType.USER,
+                org.apache.hadoop.fs.permission.FsAction.ALL));
+
+    AccessDeniedException ex = assertThrows(
+        AccessDeniedException.class,
+        () -> fs.setAcl(filePath, aclSpec),
+        "setAcl must NOT be gated by fs.azure.rbac.only and must still "
+            + "require ACL-management permissions");
+
+    Throwable cause = ex.getCause();
+    assertTrue(cause instanceof AbfsRestOperationException,
+        "AccessDeniedException must wrap an AbfsRestOperationException, "
+            + "but was: " + (cause == null ? "null" : cause.getClass()));
+    assertEquals(AzureServiceErrorCode.AUTHORIZATION_PERMISSION_MISS_MATCH,
+        ((AbfsRestOperationException) cause).getErrorCode(),
+        "Explicit ACL APIs must continue to enforce ACL-management "
+            + "permissions even when fs.azure.rbac.only=true. The flag "
+            + "is not a security bypass.");
+  }
+
+  /**
+   * Helper: builds a Blob Data Contributor filesystem with the requested
+   * fs.azure.rbac.only setting applied at initialization time.
+   */
+  private AzureBlobFileSystem getBlobContributorWithRbacOnly(boolean rbacOnly)
+      throws Exception {
+    AbfsConfiguration abfsConfig = this.getConfiguration();
+    abfsConfig.set(
+        FS_AZURE_ACCOUNT_OAUTH_CLIENT_ID + "." + this.getAccountName(),
+        abfsConfig.get(FS_AZURE_BLOB_DATA_CONTRIBUTOR_CLIENT_ID));
+    abfsConfig.set(
+        FS_AZURE_ACCOUNT_OAUTH_CLIENT_SECRET + "." + this.getAccountName(),
+        abfsConfig.get(FS_AZURE_BLOB_DATA_CONTRIBUTOR_CLIENT_SECRET));
+    Configuration rawConfig = abfsConfig.getRawConfiguration();
+    rawConfig.setBoolean(FS_AZURE_RBAC_ONLY_MODE, rbacOnly);
     return getFileSystem(rawConfig);
   }
 }

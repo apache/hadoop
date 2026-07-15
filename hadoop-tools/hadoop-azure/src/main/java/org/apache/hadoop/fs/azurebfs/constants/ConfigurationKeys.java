@@ -659,5 +659,13 @@ public final class ConfigurationKeys {
    */
   public static final String FS_AZURE_RESTRICT_GPS_ON_OPENFILE = "fs.azure.restrict.gps.on.openfile";
 
+  /**
+   * If true, skips the backend SetAccessControl call in setPermission()
+   * on HNS-enabled accounts. Intended for RBAC-only deployments.
+   * Explicit ACL APIs (setAcl, modifyAclEntries, etc.) are unaffected.
+   * Default: false
+   */
+  public static final String FS_AZURE_RBAC_ONLY_MODE = "fs.azure.rbac.only";
+
   private ConfigurationKeys() {}
 }
