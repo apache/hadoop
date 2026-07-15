@@ -220,6 +220,12 @@ public final class AbfsHttpConstants {
     }
 
     public static ApiVersion getCurrentVersion() {
+      // Bumped to JUN_06_2026 to support the Photon (Apache Arrow) ListBlobs
+      // changes, which require this newer REST (x-ms-version) contract. This
+      // intentionally raises the default x-ms-version for the whole ABFS driver
+      // rather than only the Photon/ListBlobs path. This has been validated
+      // across all endpoint/operation combinations, so bumping the global
+      // default is safe.
       return JUN_06_2026;
     }
   }

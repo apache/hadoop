@@ -247,7 +247,7 @@ public final class DateTimeUtils {
       }
       return ((LocalDateTime) parsed).toInstant(ZoneOffset.UTC);
     } catch (DateTimeException e) {
-      LOG.error("Failed to parse Arrow date-time {}", value);
+      LOG.error("Failed to parse Arrow date-time {}", value, e);
       return null;
     }
   }

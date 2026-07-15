@@ -199,6 +199,10 @@ public class ArrowListBlobParser implements ListBlobResponseParser {
       final InputStream in) {
     return new ReadableByteChannel() {
       private volatile boolean open = true;
+      // Fixed staging buffer reused across reads for direct ByteBuffers. Arrow
+      // parsing drives this channel from a single thread, so a per-instance
+      // buffer is safe and avoids per-read allocation/GC churn.
+      private final byte[] staging = new byte[NON_INTERRUPTIBLE_READ_CHUNK];
 
       @Override
       public int read(final ByteBuffer dst) throws IOException {
@@ -216,13 +220,13 @@ public class ArrowListBlobParser implements ListBlobResponseParser {
         }
         // For a direct (non-array-backed) ByteBuffer we must stage bytes in a
         // heap buffer first. ArrowStreamReader can request very large reads, so
-        // cap the staging buffer to a fixed size and let the reader issue
-        // further reads for the remainder, avoiding large transient allocations.
-        final int chunk = Math.min(toRead, NON_INTERRUPTIBLE_READ_CHUNK);
-        final byte[] tmp = new byte[chunk];
-        final int n = in.read(tmp, 0, chunk);
+        // read at most one staging-buffer worth per call and let the reader
+        // issue further reads for the remainder (its readFully loops on partial
+        // reads). This bounds allocation and reuses a single buffer.
+        final int chunk = Math.min(toRead, staging.length);
+        final int n = in.read(staging, 0, chunk);
         if (n > 0) {
-          dst.put(tmp, 0, n);
+          dst.put(staging, 0, n);
         }
         return n;
       }
