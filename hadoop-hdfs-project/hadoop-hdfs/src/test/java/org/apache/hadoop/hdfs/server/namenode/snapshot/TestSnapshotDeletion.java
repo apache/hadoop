@@ -68,6 +68,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
@@ -76,6 +77,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Tests snapshot deletion.
  */
+@Tag("slow")
 public class TestSnapshotDeletion {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestSnapshotDeletion.class);

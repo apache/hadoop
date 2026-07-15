@@ -1,0 +1,80 @@
+#
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+name: Create hadoop build image
+
+inputs:
+  branch:
+    description: Git branch to use.
+    required: true
+  os:
+    description: Runner OS name
+    required: true
+  build_image_url:
+    description: URL of build (infra) image.
+    required: true
+
+outputs:
+  uid:
+    description: User ID this action ran as.
+    value: ${{ steps.variables.outputs.uid }}
+
+runs:
+  using: composite
+  steps:
+    - name: Login to GitHub Container Registry
+      uses: docker/login-action@b45d80f862d83dbcd57f89517bcf500b2ab88fb2 # v4.0.0
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ github.token }}
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
+    - name: Build and push ${{ inputs.os }} base build image for ${{ inputs.branch }}
+      id: docker_build_base
+      uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 # v7.0.0
+      with:
+        context: ./dev-support/docker/
+        file: ./dev-support/docker/Dockerfile_${{ inputs.os }}
+        push: true
+        tags: ${{ inputs.build_image_url }}-base
+        cache-from: type=registry,ref=ghcr.io/apache/hadoop/gha-build-${{ inputs.os }}-image-cache:${{ inputs.branch }}
+    - name: User-specific Dockerfile
+      shell: bash
+      run: |
+        USER_ID=$(id -u "${USER}")
+        GROUP_ID=$(id -g "${USER}")
+        cat > /tmp/Dockerfile.gha <<UserSpecificDocker
+        FROM ${{ inputs.build_image_url }}-base
+        RUN rm -f /var/log/faillog /var/log/lastlog
+        RUN groupadd --non-unique -g ${GROUP_ID} ${USER}
+        RUN useradd -g ${GROUP_ID} -u ${USER_ID} -k /root -m ${USER}
+        RUN echo "${USER} ALL=NOPASSWD: ALL" > "/etc/sudoers.d/hadoop-build-${USER_ID}"
+        UserSpecificDocker
+    - name: Build and push ${{ inputs.os }} build image for ${{ inputs.branch }}
+      id: docker_build_gha
+      uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 # v7.0.0
+      with:
+        context: ./dev-support/docker/
+        file: /tmp/Dockerfile.gha
+        push: true
+        tags: ${{ inputs.build_image_url }}
+    - name: Set up Outputs
+      id: variables
+      shell: bash
+      run: |
+        echo "uid=$(id -u "${USER}")" >> $GITHUB_OUTPUT

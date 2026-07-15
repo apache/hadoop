@@ -89,6 +89,7 @@ import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 
 import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.eclipse.jetty.util.ajax.JSON;
 import org.slf4j.Logger;
@@ -98,6 +99,7 @@ import org.slf4j.event.Level;
 /**
  * This class tests the decommissioning of nodes.
  */
+@Tag("slow")
 public class TestDecommission extends AdminStatesBaseTest {
   public static final Logger LOG = LoggerFactory.getLogger(TestDecommission
       .class);

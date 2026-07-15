@@ -424,6 +424,9 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       DFS_NAMENODE_EDIT_LOG_AUTOROLL_MULTIPLIER_THRESHOLD_DEFAULT = 0.5f;
   public static final String  DFS_NAMENODE_EDIT_LOG_AUTOROLL_CHECK_INTERVAL_MS = "dfs.namenode.edit.log.autoroll.check.interval.ms";
   public static final int     DFS_NAMENODE_EDIT_LOG_AUTOROLL_CHECK_INTERVAL_MS_DEFAULT = 5*60*1000;
+  public static final String DFS_NAMENODE_EDIT_LOG_AUTOROLL_MAX_INTERVAL_MS =
+      "dfs.namenode.edit.log.autoroll.max.interval.ms";
+  public static final long DFS_NAMENODE_EDIT_LOG_AUTOROLL_MAX_INTERVAL_MS_DEFAULT = 0;
 
   public static final String  DFS_NAMENODE_LAZY_PERSIST_FILE_SCRUB_INTERVAL_SEC = "dfs.namenode.lazypersist.file.scrub.interval.sec";
   public static final int     DFS_NAMENODE_LAZY_PERSIST_FILE_SCRUB_INTERVAL_SEC_DEFAULT = 5 * 60;
@@ -1376,6 +1379,8 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final boolean DFS_HA_STANDBY_CHECKPOINTS_DEFAULT = true;
   public static final String DFS_HA_LOGROLL_PERIOD_KEY = "dfs.ha.log-roll.period";
   public static final int DFS_HA_LOGROLL_PERIOD_DEFAULT = 2 * 60; // 2m
+  public static final String DFS_HA_LOG_ROLL_ENABLED_KEY = "dfs.ha.log-roll.enabled";
+  public static final boolean DFS_HA_LOG_ROLL_ENABLED_DEFAULT = true;
   public static final String DFS_HA_TAILEDITS_PERIOD_KEY = "dfs.ha.tail-edits.period";
   public static final int DFS_HA_TAILEDITS_PERIOD_DEFAULT = 60; // 1m
   public static final String DFS_HA_TAILEDITS_PERIOD_BACKOFF_MAX_KEY = "dfs.ha.tail-edits.period.backoff-max";

@@ -17,11 +17,15 @@
  */
 package org.apache.hadoop.hdfs.server.balancer;
 
+import java.lang.reflect.Proxy;
+import java.util.concurrent.atomic.AtomicInteger;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager;
 import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
+import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.test.Whitebox;
 import org.apache.hadoop.util.FakeTimer;
@@ -31,6 +35,9 @@ import org.junit.jupiter.api.Timeout;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -81,5 +88,104 @@ public class TestKeyManager {
         "KeyManager should generate a new data encryption key");
     assertTrue(dekAfterExpiration.expiryDate > fakeTimer.now(),
         "KeyManager has an expired DataEncryptionKey!");
+  }
+
+  @Test
+  public void testClearDataEncryptionKey() throws Exception {
+    final Configuration conf = new HdfsConfiguration();
+    conf.setBoolean(DFSConfigKeys.DFS_ENCRYPT_DATA_TRANSFER_KEY, true);
+    conf.setBoolean(DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY, true);
+
+    final long keyUpdateInterval = 2 * 1000;
+    final long tokenLifeTime = keyUpdateInterval;
+    final String blockPoolId = "bp-foo";
+    FakeTimer fakeTimer = new FakeTimer();
+    BlockTokenSecretManager btsm = new BlockTokenSecretManager(
+        keyUpdateInterval, tokenLifeTime, 0, 1, blockPoolId, null, false);
+    Whitebox.setInternalState(btsm, "timer", fakeTimer);
+
+    NamenodeProtocol namenode = createNamenode(btsm.exportKeys(), null);
+
+    KeyManager keyManager = new KeyManager(blockPoolId, namenode,
+        true, conf);
+    Whitebox.setInternalState(keyManager, "timer", fakeTimer);
+    Whitebox.setInternalState(
+        Whitebox.getInternalState(keyManager, "blockTokenSecretManager"),
+        "timer", fakeTimer);
+
+    // Get initial encryption key
+    final DataEncryptionKey dek1 = keyManager.newDataEncryptionKey();
+    assertNotNull(dek1, "Encryption key should not be null");
+
+    // Same cached key should be returned when not expired
+    final DataEncryptionKey dek1Again = keyManager.newDataEncryptionKey();
+    assertSame(dek1, dek1Again,
+        "Should return cached key when not expired");
+
+    // Clear the cached encryption key
+    keyManager.clearDataEncryptionKey();
+
+    // After clearing, a new key should be generated
+    final DataEncryptionKey dek2 = keyManager.newDataEncryptionKey();
+    assertNotNull(dek2, "New encryption key should not be null");
+    assertNotSame(dek1, dek2,
+        "Should generate a new key after clearing cached key");
+    assertTrue(dek2.expiryDate > fakeTimer.now(),
+        "New encryption key should not be expired");
+  }
+
+  @Test
+  public void testUpdateBlockKeysThenClearDataEncryptionKey()
+      throws Exception {
+    final Configuration conf = new HdfsConfiguration();
+    conf.setBoolean(DFSConfigKeys.DFS_ENCRYPT_DATA_TRANSFER_KEY, true);
+    conf.setBoolean(DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY, true);
+
+    final long keyUpdateInterval = 2 * 1000;
+    final long tokenLifeTime = keyUpdateInterval;
+    final String blockPoolId = "bp-foo";
+    FakeTimer fakeTimer = new FakeTimer();
+    BlockTokenSecretManager btsm = new BlockTokenSecretManager(
+        keyUpdateInterval, tokenLifeTime, 0, 1, blockPoolId, null, false);
+    Whitebox.setInternalState(btsm, "timer", fakeTimer);
+
+    AtomicInteger getBlockKeysCount = new AtomicInteger();
+    NamenodeProtocol namenode =
+        createNamenode(btsm.exportKeys(), getBlockKeysCount);
+
+    KeyManager keyManager = new KeyManager(blockPoolId, namenode,
+        true, conf);
+    Whitebox.setInternalState(keyManager, "timer", fakeTimer);
+    Whitebox.setInternalState(
+        Whitebox.getInternalState(keyManager, "blockTokenSecretManager"),
+        "timer", fakeTimer);
+
+    final DataEncryptionKey dek1 = keyManager.newDataEncryptionKey();
+    assertNotNull(dek1, "Encryption key should not be null");
+
+    keyManager.updateBlockKeys();
+    keyManager.clearDataEncryptionKey();
+
+    final DataEncryptionKey dek2 = keyManager.newDataEncryptionKey();
+    assertNotNull(dek2, "New encryption key should not be null");
+    assertNotSame(dek1, dek2,
+        "Should generate a new key after updating block keys and clearing");
+    assertEquals(2, getBlockKeysCount.get());
+  }
+
+  private static NamenodeProtocol createNamenode(ExportedBlockKeys blockKeys,
+      AtomicInteger getBlockKeysCount) {
+    return (NamenodeProtocol) Proxy.newProxyInstance(
+        NamenodeProtocol.class.getClassLoader(),
+        new Class<?>[]{NamenodeProtocol.class},
+        (proxy, method, args) -> {
+          if ("getBlockKeys".equals(method.getName())) {
+            if (getBlockKeysCount != null) {
+              getBlockKeysCount.incrementAndGet();
+            }
+            return blockKeys;
+          }
+          throw new UnsupportedOperationException(method.getName());
+        });
   }
 }

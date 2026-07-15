@@ -45,7 +45,7 @@ public class ShellDecryptionKeyProvider extends SimpleKeyProvider {
     try {
       abfsConfig = new AbfsConfiguration(rawConfig, accountName);
     } catch(IllegalAccessException | IOException e) {
-      throw new KeyProviderException("Unable to get key from credential providers.", e);
+      throw new KeyProviderException("Unable to get key from credential provider for account " + accountName, e);
     }
 
     final String command = abfsConfig.get(ConfigurationKeys.AZURE_KEY_ACCOUNT_SHELLKEYPROVIDER_SCRIPT);

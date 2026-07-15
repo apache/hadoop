@@ -26,7 +26,7 @@
 
 project (libhdfspp)
 
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.5)
 
 find_package (Boost 1.86.0 REQUIRED COMPONENTS date_time)
 

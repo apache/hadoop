@@ -1,0 +1,44 @@
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+
+name: "Cloud-AWS"
+
+on:
+  pull_request:
+    paths:
+      - 'hadoop-tools/hadoop-aws/**'
+      - '.github/workflows/*cloud_aws.yml'
+      - '.github/actions/build_image**'
+      - '.github/gha-tests/hadoop-aws*excludes.txt'
+
+jobs:
+  run-aws-integration:
+    # Security: write privileges are needed to update PR status and upload test results.
+    # Package write is for building toolchain container images on demand, but ghcr.io access is
+    # scoped to the repository the actions run on.
+    permissions:
+      packages: write
+      contents: read
+    name: Run
+    uses: ./.github/workflows/tmpl_cloud_aws.yml
+    secrets: inherit    # inherit LOCALSTACK_CI_KEY
+    with:
+      java: 25
+      os: ubuntu_24
+      runner_os: ubuntu-24.04

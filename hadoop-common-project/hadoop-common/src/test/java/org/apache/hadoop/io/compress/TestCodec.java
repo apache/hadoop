@@ -526,7 +526,6 @@ public class TestCodec {
   @Test
   @Timeout(value = 20)
   public void testSequenceFileZStandardCodec() throws Exception {
-    assumeTrue(ZStandardCodec.isNativeCodeLoaded());
     Configuration conf = new Configuration();
     sequenceFileCodecTest(conf, 0,
         "org.apache.hadoop.io.compress.ZStandardCodec", 100);

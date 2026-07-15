@@ -31,6 +31,7 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
 
   <properties>
     <hadoop.component>hdfs</hadoop.component>
+    <surefire.fork.timeout>3600</surefire.fork.timeout>
   </properties>
 
   <dependencies>

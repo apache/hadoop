@@ -168,6 +168,17 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
   public static final int
       IO_COMPRESSION_CODEC_ZSTD_BUFFER_SIZE_DEFAULT = 0;
 
+  /** ZStandard number of compression worker threads.
+   * A value of 0 (the default) disables worker threads and runs
+   * compression on the calling thread, matching the upstream zstd
+   * default. A positive value enables multi-threaded compression with
+   * the specified number of background workers. */
+  public static final String IO_COMPRESSION_CODEC_ZSTD_WORKERS_KEY =
+      "io.compression.codec.zstd.workers";
+
+  /** Default value for IO_COMPRESSION_CODEC_ZSTD_WORKERS_KEY (disabled). */
+  public static final int IO_COMPRESSION_CODEC_ZSTD_WORKERS_DEFAULT = 0;
+
   /** Internal buffer size for Lz4 compressor/decompressors */
   public static final String IO_COMPRESSION_CODEC_LZ4_BUFFERSIZE_KEY =
       "io.compression.codec.lz4.buffersize";

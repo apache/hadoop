@@ -61,6 +61,7 @@ import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -72,6 +73,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 /**
  * This class tests rolling upgrade.
  */
+@Tag("slow")
 public class TestRollingUpgrade {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestRollingUpgrade.class);

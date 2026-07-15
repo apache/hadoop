@@ -60,6 +60,7 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.DelayAnswer;
 import org.apache.hadoop.test.Whitebox;
 import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.mockito.Mockito;
@@ -77,6 +78,7 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
  * whole duration.
  */
 @Timeout(60 * 3)
+@Tag("slow")
 public class TestDeleteRace {
   private static final int BLOCK_SIZE = 4096;
   private static final Logger LOG = LoggerFactory.getLogger(TestDeleteRace.class);

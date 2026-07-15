@@ -57,6 +57,7 @@ import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.log4j.spi.LoggingEvent;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.mockito.Mockito;
@@ -73,6 +74,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 
+@Tag("slow")
 public class TestStandbyCheckpoints {
   private static final int NUM_DIRS_IN_LOG = 200000;
   protected static int NUM_NNS = 3;

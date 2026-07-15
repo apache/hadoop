@@ -33,6 +33,7 @@ import org.apache.hadoop.hdfs.protocol.datatransfer.ReplaceDatanodeOnFailure.Pol
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -47,6 +48,7 @@ import org.junit.jupiter.api.Test;
  * MIN_REPLICATION is set to 0 or less than zero, an exception will be thrown
  * if a replacement could not be found.
  */
+@Tag("slow")
 public class TestReplaceDatanodeFailureReplication {
   static final Logger LOG = LoggerFactory
       .getLogger(TestReplaceDatanodeFailureReplication.class);
