@@ -24,7 +24,6 @@ import org.glassfish.jersey.test.TestProperties;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
@@ -1735,7 +1734,7 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
     }
   }
 
-  private class RESTClient extends SubjectInheritingThread {
+  private class RESTClient extends Thread {
 
     private int expectedCount;
     private boolean done = false;
@@ -1754,7 +1753,7 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
     }
 
     @Override
-    public void work() {
+    public void run() {
       WebTarget r = targetWithJsonObject();
 
       Response response = r.path("ws").path("v1").path("cluster")

@@ -17,11 +17,6 @@
  */
 package org.apache.hadoop.fs.azurebfs.services;
 
-import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
-import org.apache.hadoop.fs.azurebfs.JvmUniqueIdProvider;
-import org.apache.hadoop.fs.azurebfs.constants.ReadType;
-import org.apache.hadoop.fs.azurebfs.contracts.services.ReadBufferStatus;
-
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -43,13 +38,16 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.IntFunction;
 
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
+import org.apache.hadoop.fs.azurebfs.JvmUniqueIdProvider;
+import org.apache.hadoop.fs.azurebfs.constants.ReadType;
+import org.apache.hadoop.fs.azurebfs.contracts.services.ReadBufferStatus;
 import org.apache.hadoop.fs.azurebfs.enums.BufferType;
 import org.apache.hadoop.fs.azurebfs.enums.VectoredReadStrategy;
 import org.apache.hadoop.fs.azurebfs.utils.ResourceUtilizationUtils;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
-import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.impl.CombinedFileRange;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.HUNDRED_D;
@@ -1250,7 +1248,7 @@ public final class ReadBufferManagerV2 extends ReadBufferManager {
 
     @Override
     public Thread newThread(Runnable r) {
-      Thread t = new SubjectInheritingThread(r, "ReadAheadV2-WorkerThread-" + count++);
+      Thread t = new Thread(r, "ReadAheadV2-WorkerThread-" + count++);
       t.setDaemon(true);
       return t;
     }

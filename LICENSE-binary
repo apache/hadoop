@@ -220,6 +220,7 @@ com.aliyun:aliyun-java-sdk-ram:3.1.0
 com.aliyun:aliyun-java-sdk-sts:3.0.0
 com.aliyun:java-trace-api:0.2.11-beta
 com.aliyun.oss:aliyun-sdk-oss:3.13.2
+com.baidubce:bce-java-sdk:0.10.330
 com.cedarsoftware:java-util:1.9.0
 com.cedarsoftware:json-io:2.5.1
 com.fasterxml.jackson.core:jackson-annotations:2.18.8
@@ -361,9 +362,10 @@ io.reactivex:rxjava-string:1.1.1
 io.reactivex:rxnetty:0.4.20
 io.swagger:swagger-annotations:1.5.4
 javax.inject:javax.inject:1
+joda-time:joda-time:2.3
 net.java.dev.jna:jna:5.2.0
 net.minidev:accessors-smart:1.21
-org.apache.avro:avro:1.11.5
+org.apache.avro:avro:1.12.1
 org.apache.commons:commons-compress:1.26.1
 org.apache.commons:commons-configuration2:2.10.1
 org.apache.commons:commons-csv:1.9.0

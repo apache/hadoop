@@ -1448,11 +1448,18 @@ public final class HttpServer2 implements FilterContainer {
           // Create metrics source for each HttpServer2 instance.
           // Use port number to make the metrics source name unique.
           int port = -1;
+          int acceptorThreads = 0;
+          int selectorThreads = 0;
           for (ServerConnector connector : listeners) {
-            port = connector.getLocalPort();
-            break;
+            if (port == -1) {
+              port = connector.getLocalPort();
+            }
+            acceptorThreads += connector.getAcceptors();
+            selectorThreads += connector.getSelectorManager().getSelectorCount();
           }
-          metrics = HttpServer2Metrics.create(statsHandler, port);
+          metrics = HttpServer2Metrics.create(statsHandler, port,
+              (QueuedThreadPool) webServer.getThreadPool(),
+              acceptorThreads, selectorThreads);
         }
       } catch (IOException ex) {
         LOG.info("HttpServer.start() threw a non Bind IOException", ex);

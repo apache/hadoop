@@ -26,7 +26,6 @@ import org.apache.hadoop.yarn.server.api.records.NodeStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -102,8 +101,8 @@ public class TestNMExpiry {
     resourceTrackerService.start();
   }
 
-  private class ThirdNodeHeartBeatThread extends SubjectInheritingThread {
-    public void work() {
+  private class ThirdNodeHeartBeatThread extends Thread {
+    public void run() {
       int lastResponseID = 0;
       while (!stopT) {
         try {

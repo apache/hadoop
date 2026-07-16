@@ -20,7 +20,9 @@ package org.apache.hadoop.fs.s3a.impl;
 
 import java.io.IOException;
 import java.net.URI;
+import java.util.concurrent.ScheduledExecutorService;
 
+import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.kms.KmsClient;
 import software.amazon.awssdk.services.kms.KmsClientBuilder;
@@ -33,18 +35,42 @@ import software.amazon.encryption.s3.materials.DefaultCryptoMaterialsManager;
 import software.amazon.encryption.s3.materials.Keyring;
 import software.amazon.encryption.s3.materials.KmsKeyring;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.DefaultS3ClientFactory;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.functional.LazyAtomicReference;
 
+import static org.apache.hadoop.fs.s3a.Constants.AWS_KMS_CLIENT_SHARED_THREADPOOL_ENABLED;
+import static org.apache.hadoop.fs.s3a.Constants.AWS_KMS_CLIENT_SHARED_THREADPOOL_KEEPALIVE;
+import static org.apache.hadoop.fs.s3a.Constants.AWS_KMS_CLIENT_SHARED_THREADPOOL_SIZE;
 import static org.apache.hadoop.fs.s3a.impl.InstantiationIOException.unavailable;
 
 /**
  * Factory class to create encrypted s3 client and encrypted async s3 client.
  */
 public class EncryptionS3ClientFactory extends DefaultS3ClientFactory {
+
+  /**
+   * Shared executor for KMS clients.
+   */
+  private static final LazySharedThreadPoolHolder KMS_EXECUTOR =
+      new LazySharedThreadPoolHolder(
+          AWS_KMS_CLIENT_SHARED_THREADPOOL_ENABLED,
+          AWS_KMS_CLIENT_SHARED_THREADPOOL_SIZE,
+          AWS_KMS_CLIENT_SHARED_THREADPOOL_KEEPALIVE,
+          "s3a-kms-scheduler");
+
+  /**
+   * Get the shared executor holder for KMS clients.
+   * This is for testing only.
+   * @return the holder
+   */
+  @VisibleForTesting
+  public static LazySharedThreadPoolHolder kmsExecutorHolder() {
+    return KMS_EXECUTOR;
+  }
 
   /**
    * Encryption client class name.
@@ -201,6 +227,13 @@ public class EncryptionS3ClientFactory extends DefaultS3ClientFactory {
   private Keyring createKmsKeyring(S3ClientCreationParameters parameters,
       CSEMaterials cseMaterials) {
     KmsClientBuilder kmsClientBuilder = KmsClient.builder();
+    ScheduledExecutorService executor = KMS_EXECUTOR.get(cseMaterials.getConf());
+    if (executor != null) {
+      kmsClientBuilder.overrideConfiguration(
+          ClientOverrideConfiguration.builder()
+              .scheduledExecutorService(executor)
+              .build());
+    }
     if (parameters.getCredentialSet() != null) {
       kmsClientBuilder.credentialsProvider(parameters.getCredentialSet());
     }

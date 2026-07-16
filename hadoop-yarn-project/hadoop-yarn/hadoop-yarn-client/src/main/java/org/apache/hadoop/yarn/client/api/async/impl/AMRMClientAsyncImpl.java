@@ -30,7 +30,6 @@ import java.util.concurrent.LinkedBlockingQueue;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.records.Container;
@@ -294,12 +293,12 @@ extends AMRMClientAsync<T> {
     client.updateTrackingUrl(trackingUrl);
   }
   
-  private class HeartbeatThread extends SubjectInheritingThread {
+  private class HeartbeatThread extends Thread {
     public HeartbeatThread() {
       super("AMRM Heartbeater thread");
     }
     
-    public void work() {
+    public void run() {
       while (true) {
         Object response = null;
         // synchronization ensures we don't send heartbeats after unregistering
@@ -338,12 +337,12 @@ extends AMRMClientAsync<T> {
     }
   }
   
-  private class CallbackHandlerThread extends SubjectInheritingThread {
+  private class CallbackHandlerThread extends Thread {
     public CallbackHandlerThread() {
       super("AMRM Callback Handler Thread");
     }
     
-    public void work() {
+    public void run() {
       while (true) {
         if (!keepRunning) {
           return;

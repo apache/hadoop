@@ -289,6 +289,38 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     assertThat(after).isGreaterThan(before);
   }
 
+  @Test
+  public void testHttpServer2ThreadPoolMetrics() throws Exception {
+    final int maxThreads = 32;
+    final int acceptorCount = 2;
+    final int selectorCount = 4;
+    final Configuration conf = new Configuration();
+    conf.setInt(HttpServer2.HTTP_MAX_THREADS_KEY, maxThreads);
+    conf.setInt(HttpServer2.HTTP_ACCEPTOR_COUNT_KEY, acceptorCount);
+    conf.setInt(HttpServer2.HTTP_SELECTOR_COUNT_KEY, selectorCount);
+    conf.setBoolean(
+        CommonConfigurationKeysPublic.HADOOP_HTTP_METRICS_ENABLED, true);
+    final HttpServer2 testServer = createTestServer(conf);
+    try {
+      testServer.start();
+      final HttpServer2Metrics metrics = testServer.getMetrics();
+
+      assertThat(metrics.maxThreads()).isEqualTo(maxThreads);
+      assertThat(metrics.acceptorThreads()).isEqualTo(acceptorCount);
+      assertThat(metrics.selectorThreads()).isEqualTo(selectorCount);
+
+      // Worker gauges are defined as the pool counts minus acceptors+selectors.
+      assertThat(metrics.maxWorkerThreads())
+          .isEqualTo(maxThreads - acceptorCount - selectorCount);
+      assertThat(metrics.workerThreads())
+          .isEqualTo(metrics.threads() - acceptorCount - selectorCount);
+      assertThat(metrics.busyWorkerThreads())
+          .isEqualTo(metrics.busyThreads() - acceptorCount - selectorCount);
+    } finally {
+      testServer.stop();
+    }
+  }
+
   /**
    * Jetty StatisticsHandler must be inserted via Server#insertHandler
    * instead of Server#setHandler. The server fails to start if

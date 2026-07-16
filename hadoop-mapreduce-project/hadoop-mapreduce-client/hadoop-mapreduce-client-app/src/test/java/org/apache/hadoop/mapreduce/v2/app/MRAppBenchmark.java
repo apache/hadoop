@@ -39,7 +39,6 @@ import org.apache.hadoop.mapreduce.v2.app.rm.preemption.NoopAMPreemptionPolicy;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
@@ -138,7 +137,7 @@ public class MRAppBenchmark {
       }
       @Override
       protected void serviceStart() throws Exception {
-        thread = new SubjectInheritingThread(new Runnable() {
+        thread = new Thread(new Runnable() {
           @Override
           @SuppressWarnings("unchecked")
           public void run() {

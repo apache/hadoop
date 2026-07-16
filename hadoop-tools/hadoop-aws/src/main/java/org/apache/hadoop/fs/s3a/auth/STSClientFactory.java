@@ -22,6 +22,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
@@ -35,6 +36,7 @@ import software.amazon.awssdk.services.sts.StsClientBuilder;
 import software.amazon.awssdk.services.sts.model.AssumeRoleRequest;
 import software.amazon.awssdk.services.sts.model.Credentials;
 import software.amazon.awssdk.services.sts.model.GetSessionTokenRequest;
+import org.apache.hadoop.fs.s3a.impl.LazySharedThreadPoolHolder;
 import org.apache.hadoop.fs.s3a.impl.AWSClientConfig;
 import org.apache.hadoop.util.Preconditions;
 
@@ -44,6 +46,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.Invoker;
 import org.apache.hadoop.fs.s3a.Retries;
@@ -51,6 +54,9 @@ import org.apache.hadoop.fs.s3a.Retries;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_SERVICE_IDENTIFIER_STS;
+import static org.apache.hadoop.fs.s3a.Constants.AWS_STS_CLIENT_SHARED_THREADPOOL_ENABLED;
+import static org.apache.hadoop.fs.s3a.Constants.AWS_STS_CLIENT_SHARED_THREADPOOL_KEEPALIVE;
+import static org.apache.hadoop.fs.s3a.Constants.AWS_STS_CLIENT_SHARED_THREADPOOL_SIZE;
 import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.*;
 
 /**
@@ -62,6 +68,26 @@ public class STSClientFactory {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(STSClientFactory.class);
+
+  /**
+   * Shared executor for STS clients.
+   */
+  private static final LazySharedThreadPoolHolder STS_EXECUTOR =
+      new LazySharedThreadPoolHolder(
+          AWS_STS_CLIENT_SHARED_THREADPOOL_ENABLED,
+          AWS_STS_CLIENT_SHARED_THREADPOOL_SIZE,
+          AWS_STS_CLIENT_SHARED_THREADPOOL_KEEPALIVE,
+          "s3a-sts-scheduler");
+
+  /**
+   * Get the shared executor holder for STS clients.
+   * This is for testing only.
+   * @return the holder
+   */
+  @VisibleForTesting
+  public static LazySharedThreadPoolHolder stsExecutorHolder() {
+    return STS_EXECUTOR;
+  }
 
   /**
    * Create the builder ready for any final configuration options.
@@ -139,6 +165,10 @@ public class STSClientFactory {
     final ProxyConfiguration proxyConfig = AWSClientConfig.createProxyConfiguration(conf, bucket);
 
     clientOverrideConfigBuilder.retryPolicy(retryPolicyBuilder.build());
+    ScheduledExecutorService executor = STS_EXECUTOR.get(conf);
+    if (executor != null) {
+      clientOverrideConfigBuilder.scheduledExecutorService(executor);
+    }
     httpClientBuilder.proxyConfiguration(proxyConfig);
 
     stsClientBuilder.httpClientBuilder(httpClientBuilder)

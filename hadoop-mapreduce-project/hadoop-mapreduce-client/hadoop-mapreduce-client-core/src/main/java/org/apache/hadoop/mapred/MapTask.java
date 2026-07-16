@@ -74,7 +74,6 @@ import org.apache.hadoop.util.QuickSort;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringInterner;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -1550,10 +1549,10 @@ public class MapTask extends Task {
 
     public void close() { }
 
-    protected class SpillThread extends SubjectInheritingThread {
+    protected class SpillThread extends Thread {
 
       @Override
-      public void work() {
+      public void run() {
         spillLock.lock();
         spillThreadRunning = true;
         try {

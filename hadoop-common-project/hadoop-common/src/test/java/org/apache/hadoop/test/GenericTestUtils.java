@@ -739,6 +739,28 @@ public abstract class GenericTestUtils {
   }
 
   /**
+   * Count the live threads whose name matches the given pattern.
+   * @param pattern a Pattern object used to match thread names
+   * @return the number of live threads whose name matches the pattern
+   */
+  public static int countThreadsMatching(Pattern pattern) {
+    ThreadMXBean threadBean = ManagementFactory.getThreadMXBean();
+
+    ThreadInfo[] infos =
+        threadBean.getThreadInfo(threadBean.getAllThreadIds(), 20);
+    int count = 0;
+    for (ThreadInfo info : infos) {
+      if (info == null) {
+        continue;
+      }
+      if (pattern.matcher(info.getThreadName()).matches()) {
+        count++;
+      }
+    }
+    return count;
+  }
+
+  /**
    * Assert that there are no threads running whose name matches the
    * given regular expression.
    * @param regex the regex to match against

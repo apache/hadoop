@@ -24,7 +24,6 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.hadoop.util.Preconditions;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -117,7 +116,7 @@ public class InterruptEscalator implements IrqHandler.Interrupted {
       //start an async shutdown thread with a timeout
       ServiceForcedShutdown shutdown =
           new ServiceForcedShutdown(service, shutdownTimeMillis);
-      Thread thread = new SubjectInheritingThread(shutdown);
+      Thread thread = new Thread(shutdown);
       thread.setDaemon(true);
       thread.setName("Service Forced Shutdown");
       thread.start();

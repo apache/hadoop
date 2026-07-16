@@ -45,7 +45,6 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.GroupMappingServiceProvider;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -319,7 +318,7 @@ public class TestRouterFederationRename extends TestRouterFederationRenameBase {
     int expectedSchedulerCount = rpcServer.getSchedulerJobCount() + 1;
     AtomicInteger maxSchedulerCount = new AtomicInteger();
     AtomicBoolean watch = new AtomicBoolean(true);
-    Thread watcher = new SubjectInheritingThread(() -> {
+    Thread watcher = new Thread(() -> {
       while (watch.get()) {
         int schedulerCount = rpcServer.getSchedulerJobCount();
         if (schedulerCount > maxSchedulerCount.get()) {

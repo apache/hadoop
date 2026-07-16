@@ -23,7 +23,6 @@ import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -60,7 +59,7 @@ public class TestTimedOutTestsListener {
       }
     }
   
-    class DeadlockThread extends SubjectInheritingThread {
+    class DeadlockThread extends Thread {
       private Lock lock1 = null;
   
       private Lock lock2 = null;
@@ -85,7 +84,7 @@ public class TestTimedOutTestsListener {
         this.useSync = false;
       }
   
-      public void work() {
+      public void run() {
         if (useSync) {
           syncLock();
         } else {

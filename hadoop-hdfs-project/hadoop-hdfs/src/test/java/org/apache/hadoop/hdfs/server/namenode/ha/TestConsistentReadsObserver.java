@@ -56,7 +56,6 @@ import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -153,7 +152,7 @@ public class TestConsistentReadsObserver {
     dfs.mkdir(testPath, FsPermission.getDefault());
     assertSentTo(0);
 
-    Thread reader = new SubjectInheritingThread(() -> {
+    Thread reader = new Thread(() -> {
       try {
         // this read will block until roll and tail edits happen.
         dfs.getFileStatus(testPath);
@@ -203,7 +202,7 @@ public class TestConsistentReadsObserver {
     dfs.mkdir(testPath, FsPermission.getDefault());
     assertSentTo(0);
 
-    Thread reader = new SubjectInheritingThread(() -> {
+    Thread reader = new Thread(() -> {
       try {
         // After msync, client should have the latest state ID from active.
         // Therefore, the subsequent getFileStatus call should succeed.
@@ -294,7 +293,7 @@ public class TestConsistentReadsObserver {
           (DistributedFileSystem) FileSystem.get(conf2);
       dfs2.getClient().getHAServiceState();
 
-      Thread reader = new SubjectInheritingThread(() -> {
+      Thread reader = new Thread(() -> {
         try {
           dfs2.getFileStatus(testPath);
           readStatus.set(1);
@@ -335,7 +334,7 @@ public class TestConsistentReadsObserver {
     AtomicInteger readStatus = new AtomicInteger(0);
 
     // create a separate thread to make a blocking read.
-    Thread reader = new SubjectInheritingThread(() -> {
+    Thread reader = new Thread(() -> {
       try {
         // this read call will block until server state catches up. But due to
         // configuration, this will take a very long time.
@@ -440,7 +439,7 @@ public class TestConsistentReadsObserver {
     dfs.mkdir(testPath, FsPermission.getDefault());
     assertSentTo(0);
 
-    Thread reader = new SubjectInheritingThread(new Runnable() {
+    Thread reader = new Thread(new Runnable() {
       @Override
       public void run() {
         try {

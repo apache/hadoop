@@ -31,7 +31,6 @@ import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.Replica;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -176,11 +175,11 @@ public class TestReplicaCachingGetSpaceUsed {
     modifyThread.setShouldRun(false);
   }
 
-  private class ModifyThread extends SubjectInheritingThread {
+  private class ModifyThread extends Thread {
     private boolean shouldRun = true;
 
     @Override
-    public void work() {
+    public void run() {
       FSDataOutputStream os = null;
       while (shouldRun) {
         try {

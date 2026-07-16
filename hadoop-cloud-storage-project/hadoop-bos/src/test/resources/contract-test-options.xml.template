@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+<!--
+  ~ Licensed to the Apache Software Foundation (ASF) under one
+  ~ or more contributor license agreements.  See the NOTICE file
+  ~ distributed with this work for additional information
+  ~ regarding copyright ownership.  The ASF licenses this file
+  ~ to you under the Apache License, Version 2.0 (the
+  ~ "License"); you may not use this file except in compliance
+  ~ with the License.  You may obtain a copy of the License at
+  ~
+  ~     http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+
+<!--
+  Baidu BOS auth-keys.xml Template
+
+  IMPORTANT:
+  1. Copy this file to auth-keys.xml in the same directory
+  2. Fill in your BOS credentials and bucket information
+  3. DO NOT commit auth-keys.xml to version control
+
+  Usage:
+    cp contract-test-options.xml.template auth-keys.xml
+    # Edit auth-keys.xml with your settings
+    mvn test
+-->
+<configuration>
+
+  <property>
+    <name>fs.contract.test.fs.bos</name>
+    <value>bos://your-bucket-name/test</value>
+    <description>
+      The BOS bucket URI to use for contract tests.
+      Format: bos://bucket-name/path
+    </description>
+  </property>
+
+  <property>
+    <name>fs.bos.endpoint</name>
+    <value>http://bj.bcebos.com</value>
+    <description>
+      BOS service endpoint.
+
+      Common endpoints:
+        - Beijing: http://bj.bcebos.com
+        - Guangzhou: http://gz.bcebos.com
+        - Shanghai: http://su.bcebos.com
+        - Hong Kong: http://hkg.bcebos.com
+        - Baoding: http://bd.bcebos.com
+    </description>
+  </property>
+
+  <property>
+    <name>fs.bos.access.key</name>
+    <value>YOUR_ACCESS_KEY_HERE</value>
+    <description>BOS Access Key ID.</description>
+  </property>
+
+  <property>
+    <name>fs.bos.secret.access.key</name>
+    <value>YOUR_SECRET_KEY_HERE</value>
+    <description>BOS Secret Access Key.</description>
+  </property>
+
+</configuration>

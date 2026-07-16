@@ -1653,5 +1653,10 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
   public void setLastDirScannerFinishTime(long time) {
     throw new UnsupportedOperationException();
   }
+
+  @Override
+  public long getNumBlocks() throws IOException {
+    return 0L;
+  }
 }
 

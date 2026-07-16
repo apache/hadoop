@@ -39,7 +39,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Iterators;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContextImpl;
@@ -423,8 +422,8 @@ public class TestCapacitySchedulerMultiNodes {
             .build());
 
     final AtomicBoolean result = new AtomicBoolean(false);
-    Thread t = new SubjectInheritingThread() {
-      public void work() {
+    Thread t = new Thread() {
+      public void run() {
         try {
           MockAM am3 = MockRM.launchAndRegisterAM(app3, rm1, nm1);
           result.set(true);

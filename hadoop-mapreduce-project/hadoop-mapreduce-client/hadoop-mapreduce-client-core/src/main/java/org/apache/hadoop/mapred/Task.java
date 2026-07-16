@@ -72,7 +72,6 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.StringInterner;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -953,7 +952,7 @@ abstract public class Task implements Writable, Configurable {
     }
     public void startCommunicationThread() {
       if (pingThread == null) {
-        pingThread = new SubjectInheritingThread(this, "communication thread");
+        pingThread = new Thread(this, "communication thread");
         pingThread.setDaemon(true);
         pingThread.start();
       }
@@ -964,7 +963,7 @@ abstract public class Task implements Writable, Configurable {
           MRJobConfig.JOB_SINGLE_DISK_LIMIT_BYTES,
           MRJobConfig.DEFAULT_JOB_SINGLE_DISK_LIMIT_BYTES) >= 0) {
         try {
-          diskLimitCheckThread = new SubjectInheritingThread(new DiskLimitCheck(conf),
+          diskLimitCheckThread = new Thread(new DiskLimitCheck(conf),
               "disk limit check thread");
           diskLimitCheckThread.setDaemon(true);
           diskLimitCheckThread.start();
