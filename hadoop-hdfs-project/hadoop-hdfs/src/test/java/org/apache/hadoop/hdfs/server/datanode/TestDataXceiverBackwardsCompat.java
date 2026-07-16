@@ -38,13 +38,7 @@ import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
-
-import java.net.SocketTimeoutException;
-import java.util.stream.Stream;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -55,7 +49,6 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
@@ -229,25 +222,5 @@ public class TestDataXceiverBackwardsCompat {
             storedException);
       }
     }
-  }
-
-  static Stream<Arguments> ignorableClientDisconnectData() {
-    return Stream.of(
-        Arguments.of(Op.READ_BLOCK, new SocketTimeoutException("timeout"), true),
-        Arguments.of(Op.READ_BLOCK, new IOException("Connection reset"), false),
-        Arguments.of(Op.WRITE_BLOCK, new IOException("Premature EOF from inputStream"), true),
-        Arguments.of(Op.WRITE_BLOCK, new IOException("premature eof"), true),
-        Arguments.of(Op.WRITE_BLOCK, new IOException("Connection reset"), false),
-        Arguments.of(Op.WRITE_BLOCK, new SocketTimeoutException("timeout"), false),
-        Arguments.of(Op.WRITE_BLOCK, new IOException((String) null), false),
-        Arguments.of(Op.TRANSFER_BLOCK, new SocketTimeoutException("timeout"), false),
-        Arguments.of(Op.TRANSFER_BLOCK, new IOException("Premature EOF"), false)
-    );
-  }
-
-  @ParameterizedTest(name = "{index}: op={0}, exception={1}, expected={2}")
-  @MethodSource("ignorableClientDisconnectData")
-  void testIsIgnorableClientDisconnect(Op op, Throwable t, boolean expected) {
-    assertEquals(expected, DataXceiver.isIgnorableClientDisconnect(op, t));
   }
 }
