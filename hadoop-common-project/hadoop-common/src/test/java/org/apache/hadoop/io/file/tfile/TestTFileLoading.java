@@ -98,12 +98,11 @@ public class TestTFileLoading {
   }
 
   /**
-   * A file that declares a jclass comparator (written with the feature
-   * enabled) is not honored by a reader that has not enabled it; the named
-   * class is only resolved and constructed when the feature is turned on.
+   * When jclass support is disabled, tfile readers fail to load files
+   * containing them.
    */
   @Test
-  public void testReaderIgnoresJClassWhenDisabled() throws Exception {
+  public void testReaderRejectsJClassWhenDisabled() throws Exception {
     // write a valid, sorted file naming a jclass comparator.
     try (FSDataOutputStream out = fs.create(path);
          Writer writer = new Writer(out, BLOCK_SIZE, COMPRESSION, JCLASS_COMPARATOR,
@@ -184,7 +183,7 @@ public class TestTFileLoading {
     Utils.writeVInt(new DataOutputStream(bos), 1 << 20);
     DataInputStream in =
         new DataInputStream(new ByteArrayInputStream(bos.toByteArray()));
-    intercept(IOException.class,
-        () -> new TFile.TFileIndexEntry(in));
+    intercept(IOException.class, () ->
+        new TFile.TFileIndexEntry(in));
   }
 }
