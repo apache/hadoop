@@ -36,16 +36,15 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.test.AbstractHadoopTestBase;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 
 /**
  * This class tests the logic for displaying the binary formats supported
  * by the Text command.
  */
-@Timeout(30)
-public class TestTextCommand {
+public class TestTextCommand extends AbstractHadoopTestBase {
   private static final File TEST_ROOT_DIR =
       GenericTestUtils.getTestDir("testText");
   private static final String AVRO_FILENAME =
@@ -203,7 +202,7 @@ public class TestTextCommand {
   @Test
   public void testDisplayForNonWritableSequenceFile() throws Exception {
     Configuration conf = new Configuration();
-    createNonWritableSequenceFile(SEQUENCE_FILENAME, conf);
+    createTextSequenceFile(SEQUENCE_FILENAME, conf);
     URI uri = new URI(SEQUENCE_FILENAME);
     String output = readUsingTextCommand(uri, conf);
     assertThat(output).describedAs("output").isEqualTo(SEQUENCE_FILE_EXPECTED_OUTPUT);
@@ -213,7 +212,7 @@ public class TestTextCommand {
   public void testDisplayForSequenceFileSmallMultiByteReads() throws Exception {
     Configuration conf = new Configuration();
     conf.setInt(IO_FILE_BUFFER_SIZE_KEY, 2);
-    createNonWritableSequenceFile(SEQUENCE_FILENAME, conf);
+    createTextSequenceFile(SEQUENCE_FILENAME, conf);
     URI uri = new URI(SEQUENCE_FILENAME);
     String output = readUsingTextCommand(uri, conf);
     assertThat(output).describedAs("output").isEqualTo(SEQUENCE_FILE_EXPECTED_OUTPUT);
@@ -232,7 +231,7 @@ public class TestTextCommand {
   public void testSequenceFileInputStreamNullBuffer() throws Exception {
     assertThrows(NullPointerException.class, () -> {
       Configuration conf = new Configuration();
-      createNonWritableSequenceFile(SEQUENCE_FILENAME, conf);
+      createTextSequenceFile(SEQUENCE_FILENAME, conf);
       URI uri = new URI(SEQUENCE_FILENAME);
       try (InputStream is = getInputStream(uri, conf)) {
         is.read(null, 0, 10);
@@ -244,7 +243,7 @@ public class TestTextCommand {
   public void testSequenceFileInputStreamNegativePosition() throws Exception {
     assertThrows(IndexOutOfBoundsException.class, () -> {
       Configuration conf = new Configuration();
-      createNonWritableSequenceFile(SEQUENCE_FILENAME, conf);
+      createTextSequenceFile(SEQUENCE_FILENAME, conf);
       URI uri = new URI(SEQUENCE_FILENAME);
       try (InputStream is = getInputStream(uri, conf)) {
         is.read(new byte[10], -1, 10);
@@ -256,7 +255,7 @@ public class TestTextCommand {
   public void testSequenceFileInputStreamTooLong() throws Exception {
     assertThrows(IndexOutOfBoundsException.class, () -> {
       Configuration conf = new Configuration();
-      createNonWritableSequenceFile(SEQUENCE_FILENAME, conf);
+      createTextSequenceFile(SEQUENCE_FILENAME, conf);
       URI uri = new URI(SEQUENCE_FILENAME);
       try (InputStream is = getInputStream(uri, conf)) {
         is.read(new byte[10], 0, 11);
@@ -267,7 +266,7 @@ public class TestTextCommand {
   @Test
   public void testSequenceFileInputStreamZeroLengthRead() throws Exception {
     Configuration conf = new Configuration();
-    createNonWritableSequenceFile(SEQUENCE_FILENAME, conf);
+    createTextSequenceFile(SEQUENCE_FILENAME, conf);
     URI uri = new URI(SEQUENCE_FILENAME);
     try (InputStream is = getInputStream(uri, conf)) {
       assertThat(is.read(new byte[10], 0, 0)).describedAs("bytes read").isEqualTo(0);
@@ -277,7 +276,7 @@ public class TestTextCommand {
   @Test
   public void testSequenceFileInputStreamConsistentEOF() throws Exception {
     Configuration conf = new Configuration();
-    createNonWritableSequenceFile(SEQUENCE_FILENAME, conf);
+    createTextSequenceFile(SEQUENCE_FILENAME, conf);
     URI uri = new URI(SEQUENCE_FILENAME);
     try (InputStream is = getInputStream(uri, conf)) {
       inputStreamToString(is);
@@ -290,7 +289,7 @@ public class TestTextCommand {
   @Test
   public void testSequenceFileInputStreamSingleAndMultiByteReads() throws Exception {
     Configuration conf = new Configuration();
-    createNonWritableSequenceFile(SEQUENCE_FILENAME, conf);
+    createTextSequenceFile(SEQUENCE_FILENAME, conf);
     URI uri = new URI(SEQUENCE_FILENAME);
     try (InputStream is1 = getInputStream(uri, conf);
         InputStream is2 = getInputStream(uri, conf)) {
@@ -520,7 +519,7 @@ public class TestTextCommand {
     writer.close();
   }
 
-  private static void createNonWritableSequenceFile(String fileName, Configuration conf)
+  private static void createTextSequenceFile(String fileName, Configuration conf)
       throws IOException {
     Path path = new Path(fileName);
     try (SequenceFile.Writer writer = SequenceFile.createWriter(conf,
