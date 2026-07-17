@@ -866,8 +866,7 @@ public class DfsClientConf {
           DFS_DOMAIN_SOCKET_DISABLE_INTERVAL_SECOND_KEY,
           DFS_DOMAIN_SOCKET_DISABLE_INTERVAL_SECOND_DEFAULT);
       Preconditions.checkArgument(domainSocketDisableIntervalSeconds >= 0,
-          DFS_DOMAIN_SOCKET_DISABLE_INTERVAL_SECOND_KEY
-              + " can't be negative.");
+          DFS_DOMAIN_SOCKET_DISABLE_INTERVAL_SECOND_KEY + " can't be negative.");
 
       keyProviderCacheExpiryMs = conf.getLong(
           DFS_CLIENT_KEY_PROVIDER_CACHE_EXPIRY_MS,
