@@ -1,0 +1,21 @@
+# Modules that ARE test-bearing (jar packaging with a src/test/java directory)
+# but are deliberately excluded from the hadoop-coverage aggregate report.
+#
+# Every other test-bearing module MUST be listed as a <dependency> in
+# hadoop-coverage/pom.xml, or the build fails. See:
+#   dev-support/bin/check-coverage-modules.sh
+#
+# Non-test-bearing modules (dist/assembly, shaded client jars, native-only,
+# stub/alias, benchmark, war/ui) do NOT need to be listed here: the guard only
+# considers jar modules that have a src/test/java directory.
+#
+# Format: one artifactId per line; blank lines and lines starting with # ignored.
+
+# Example code, already excluded from coverage via the **/examples/** class
+# pattern in hadoop-project/pom.xml (jacoco prepare-agent) and the matching
+# exclude in hadoop-coverage/pom.xml (report-aggregate).
+hadoop-mapreduce-examples
+
+# Test-only module (no main classes of its own); it exercises the shaded client
+# jars rather than contributing coverage for its own code.
+hadoop-client-integration-tests

@@ -26,8 +26,8 @@
   <groupId>org.apache.hadoop</groupId>
   <artifactId>hadoop-coverage</artifactId>
   <version>3.6.0-SNAPSHOT</version>
-  <description>Hadoop JaCoCo Aggregate Coverage</description>
-  <name>Hadoop JaCoCo Aggregate Coverage</name>
+  <description>Hadoop Aggregate Code Coverage</description>
+  <name>Hadoop Aggregate Code Coverage</name>
   <packaging>pom</packaging>
 
   <properties>
@@ -419,7 +419,7 @@
       <version>${project.version}</version>
     </dependency>
     <dependency>
-      <groupId>org.apache.hadoop</groupId>
+      <groupId>org.apache.hadoop.applications.mawo</groupId>
       <artifactId>hadoop-yarn-applications-mawo-core</artifactId>
       <version>${project.version}</version>
     </dependency>
@@ -432,6 +432,34 @@
 
   <build>
     <plugins>
+      <!--
+        Guard against silent drift of the dependency list above: every
+        test-bearing module must be aggregated here (or explicitly allowlisted),
+        otherwise its coverage is silently dropped from the report. This check
+        runs regardless of hadoop.skip-jacoco, since list correctness is
+        independent of whether coverage data is collected.
+      -->
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>check-coverage-modules</id>
+            <phase>validate</phase>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+            <configuration>
+              <executable>${shell-executable}</executable>
+              <arguments>
+                <argument>${project.basedir}/../dev-support/bin/check-coverage-modules.sh</argument>
+                <argument>${project.basedir}/..</argument>
+                <argument>${project.basedir}/pom.xml</argument>
+              </arguments>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
       <plugin>
         <groupId>org.jacoco</groupId>
         <artifactId>jacoco-maven-plugin</artifactId>
