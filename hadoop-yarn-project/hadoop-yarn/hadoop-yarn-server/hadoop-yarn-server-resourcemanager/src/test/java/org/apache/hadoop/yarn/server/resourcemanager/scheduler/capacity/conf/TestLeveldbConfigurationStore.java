@@ -36,10 +36,17 @@ import org.junit.jupiter.api.Test;
 import org.iq80.leveldb.DB;
 import org.iq80.leveldb.DBIterator;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.Serializable;
 import java.nio.charset.StandardCharsets;
+import java.util.LinkedList;
 import java.util.Map;
 
+import static org.fusesource.leveldbjni.JniDBFactory.bytes;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
@@ -146,6 +153,48 @@ public class TestLeveldbConfigurationStore extends
     assertEquals("val", ((MutableConfScheduler) rm2.getResourceScheduler())
         .getConfiguration().get("key"));
     rm2.close();
+  }
+
+  /**
+   * A type that is not part of a configuration log. Its readObject hook
+   * records that it ran, standing in for the side effect a gadget chain
+   * would have.
+   */
+  public static class UnexpectedType implements Serializable {
+    private static final long serialVersionUID = 1L;
+    private static boolean deserialized = false;
+
+    private void readObject(ObjectInputStream in)
+        throws IOException, ClassNotFoundException {
+      in.defaultReadObject();
+      deserialized = true;
+    }
+  }
+
+  /**
+   * The configuration log is read back out of the store as a serialized
+   * object graph, so only the types a LogMutation list is made of may be
+   * instantiated from it.
+   */
+  @Test
+  public void testDeserializationIsNotVulnerable() throws Exception {
+    confStore.initialize(conf, schedConf, rmContext);
+    UnexpectedType.deserialized = false;
+
+    LinkedList<Object> logs = new LinkedList<>();
+    logs.add(new UnexpectedType());
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    try (ObjectOutputStream oos = new ObjectOutputStream(baos)) {
+      oos.writeObject(logs);
+    }
+    ((LeveldbConfigurationStore) confStore).getDB()
+        .put(bytes("log"), baos.toByteArray());
+
+    assertThrows(IOException.class,
+        () -> ((LeveldbConfigurationStore) confStore).getLogs());
+    assertFalse(UnexpectedType.deserialized,
+        "A type outside the configuration log must not be deserialized");
+    confStore.close();
   }
 
   @Override
