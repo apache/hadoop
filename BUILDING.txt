@@ -149,9 +149,18 @@ Maven build goals:
  * Run checkstyle            : mvn compile checkstyle:checkstyle
  * Install JAR in M2 cache   : mvn install
  * Deploy JAR to Maven repo  : mvn deploy
- * Run JaCoCo coverage       : mvn verify -Dhadoop.skip-jacoco=false -Dmaven.test.failure.ignore=true
+ * Run JaCoCo coverage       : mvn verify -Dhadoop.skip-jacoco=false -Dmaven.test.failure.ignore=true --fail-at-end
                                (aggregate report: hadoop-coverage/target/site/jacoco-aggregate/index.html;
-                                must be a full-reactor build, not -pl hadoop-coverage)
+                                must be a full-reactor build, not -pl hadoop-coverage.
+                                --fail-at-end keeps the reactor building/testing the modules
+                                that don't depend on a hard-failing one (each writing its
+                                target/jacoco.exec) instead of stopping at the first failure;
+                                hadoop-coverage does not depend on the catalog-webapp war, so
+                                it still runs report-aggregate at the verify phase.
+                                -Dmaven.test.failure.ignore=true only tolerates surefire *test*
+                                failures; a plugin-level hard failure (e.g. the catalog-webapp
+                                jasmine/PhantomJS browser test in a headless container) would
+                                otherwise stop the reactor before the report is produced.)
  * Run Rat                   : mvn apache-rat:check
  * Build javadocs            : mvn javadoc:javadoc
  * Build distribution        : mvn package [-Pdist][-Pdocs][-Psrc][-Pnative][-Dtar][-Preleasedocs][-Pyarn-ui]
