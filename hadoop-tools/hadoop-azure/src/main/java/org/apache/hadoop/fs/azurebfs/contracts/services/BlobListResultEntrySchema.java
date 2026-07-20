@@ -80,14 +80,6 @@ public class BlobListResultEntrySchema implements ListResultEntrySchema {
     return creationTime;
   }
 
-  public String lastModifiedTime() {
-    return lastModifiedTime;
-  }
-
-  public String creationTime() {
-    return creationTime;
-  }
-
   @Override
   public Long contentLength() {
     return contentLength;

@@ -59,6 +59,9 @@ import static org.mockito.Mockito.withSettings;
  */
 public class TestAbfsBlobClientPhotonHeaders {
 
+  /** Row count large enough to exhaust the tiny allocator limit. */
+  private static final int OVER_LIMIT_ROW_COUNT = 2000;
+
   private AbfsBlobClient clientWithPhoton(final boolean photonEnabled) {
     AbfsConfiguration configuration = mock(AbfsConfiguration.class);
     doReturn(photonEnabled).when(configuration).isPhotonEnabled();
@@ -129,7 +132,7 @@ public class TestAbfsBlobClientPhotonHeaders {
   @Test
   public void testArrowOverAllocatorLimitSurfacesDriverException()
       throws Exception {
-    byte[] arrowStream = buildArrowNameStream(2000);
+    byte[] arrowStream = buildArrowNameStream(OVER_LIMIT_ROW_COUNT);
 
     AbfsConfiguration configuration = mock(AbfsConfiguration.class);
     doReturn(1024L).when(configuration).getPhotonArrowMemoryLimit();

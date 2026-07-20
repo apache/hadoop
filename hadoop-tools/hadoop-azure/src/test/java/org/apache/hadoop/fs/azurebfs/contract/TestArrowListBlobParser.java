@@ -95,6 +95,19 @@ public class TestArrowListBlobParser {
   /** Deliberately tiny allocator limit used to force an over-limit failure. */
   private static final long TINY_MEMORY_LIMIT = 1024L;
 
+  /** Arrow integer bit width used for the content-length column. */
+  private static final int ARROW_INT_BIT_WIDTH = 64;
+
+  /** Row count large enough to exhaust the tiny allocator limit. */
+  private static final int OVER_LIMIT_ROW_COUNT = 2000;
+
+  // Sample content-length values shared between builder rows and assertions.
+  private static final long CONTENT_LENGTH_A = 20L;
+  private static final long CONTENT_LENGTH_B = 30L;
+  private static final long CONTENT_LENGTH_C = 40L;
+  private static final long CONTENT_LENGTH_D = 42L;
+  private static final long CONTENT_LENGTH_SAMPLE = 1234L;
+
   /**
    * Verify an Arrow response with a single blob is parsed correctly and all
    * common blob properties are populated.
@@ -102,7 +115,7 @@ public class TestArrowListBlobParser {
   @Test
   public void testSingleBlob() throws Exception {
     byte[] stream = new ArrowStreamBuilder()
-        .addRow("file1.txt", "0x8DB6668EAB50E67", 1234L,
+        .addRow("file1.txt", "0x8DB6668EAB50E67", CONTENT_LENGTH_SAMPLE,
             "Tue, 06 Jun 2023 08:35:00 GMT",
             "Tue, 06 Jun 2023 08:34:28 GMT", false)
         .build();
@@ -115,9 +128,9 @@ public class TestArrowListBlobParser {
     assertThat(entry.path().toUri().getPath()).isEqualTo("/file1.txt");
     assertThat(entry.url()).isEqualTo(URL + "/file1.txt");
     assertThat(entry.eTag()).isEqualTo("0x8DB6668EAB50E67");
-    assertThat(entry.contentLength()).isEqualTo(1234L);
-    assertThat(entry.lastModifiedTime()).isEqualTo("Tue, 06 Jun 2023 08:35:00 GMT");
-    assertThat(entry.creationTime()).isEqualTo("Tue, 06 Jun 2023 08:34:28 GMT");
+    assertThat(entry.contentLength()).isEqualTo(CONTENT_LENGTH_SAMPLE);
+    assertThat(entry.lastModified()).isEqualTo("Tue, 06 Jun 2023 08:35:00 GMT");
+    assertThat(entry.creation()).isEqualTo("Tue, 06 Jun 2023 08:34:28 GMT");
     assertThat(entry.isDirectory()).isFalse();
   }
 
@@ -137,13 +150,13 @@ public class TestArrowListBlobParser {
     BlobListResultSchema result = parse(stream);
 
     BlobListResultEntrySchema entry = result.paths().get(0);
-    assertThat(entry.lastModifiedTime())
+    assertThat(entry.lastModified())
         .isEqualTo("Mon, 06 Jul 2026 10:31:19 GMT");
-    assertThat(entry.creationTime())
+    assertThat(entry.creation())
         .isEqualTo("Mon, 06 Jul 2026 10:30:00 GMT");
 
     long arrowEpoch = DateTimeUtils.parseLastModifiedTime(
-        entry.lastModifiedTime());
+        entry.lastModified());
     long xmlEpoch = DateTimeUtils.parseLastModifiedTime(
         "Mon, 06 Jul 2026 10:31:19 GMT");
     assertThat(arrowEpoch).isEqualTo(xmlEpoch);
@@ -168,8 +181,6 @@ public class TestArrowListBlobParser {
 
     BlobListResultEntrySchema entry = result.paths().get(0);
     assertThat(entry.name()).isEqualTo("dir1");
-    assertThat(entry.lastModifiedTime()).isNull();
-    assertThat(entry.creationTime()).isNull();
     assertThat(entry.lastModified()).isNull();
     assertThat(entry.creation()).isNull();
   }
@@ -181,7 +192,7 @@ public class TestArrowListBlobParser {
   public void testMultipleBlobs() throws Exception {
     byte[] stream = new ArrowStreamBuilder()
         .addRow("a.txt", "etagA", 10L, "lmA", "ctA", false)
-        .addRow("b.txt", "etagB", 20L, "lmB", "ctB", false)
+        .addRow("b.txt", "etagB", CONTENT_LENGTH_A, "lmB", "ctB", false)
         .addRow("dir1", "etagC", 0L, "lmC", "ctC", true)
         .build();
 
@@ -189,7 +200,7 @@ public class TestArrowListBlobParser {
 
     assertThat(result.paths()).hasSize(3);
     assertThat(result.paths().get(0).name()).isEqualTo("a.txt");
-    assertThat(result.paths().get(1).contentLength()).isEqualTo(20L);
+    assertThat(result.paths().get(1).contentLength()).isEqualTo(CONTENT_LENGTH_A);
     assertThat(result.paths().get(2).isDirectory()).isTrue();
   }
 
@@ -337,7 +348,7 @@ public class TestArrowListBlobParser {
     byte[] stream = new BlobEndpointStreamBuilder()
         .addRow("emptydir", "0x8DEE", 0L, "2026-07-13T07:06:45",
             "2026-07-13T07:06:45", "blob", markerMetadata)
-        .addRow("file.txt", "0x8DEF", 1234L, "2026-07-13T07:06:46",
+        .addRow("file.txt", "0x8DEF", CONTENT_LENGTH_SAMPLE, "2026-07-13T07:06:46",
             "2026-07-13T07:06:46", "blob", Collections.emptyMap())
         .build();
 
@@ -352,7 +363,7 @@ public class TestArrowListBlobParser {
     assertThat(marker.contentLength()).isEqualTo(0L);
     assertThat(marker.eTag()).isEqualTo("0x8DEE");
     assertThat(marker.metadata()).containsEntry(XML_TAG_HDI_ISFOLDER, "true");
-    assertThat(marker.lastModifiedTime())
+    assertThat(marker.lastModified())
         .as("TimeStampSec value must be normalized to RFC 1123 GMT")
         .isEqualTo(DateTimeUtils.formatArrowDateTimeToRfc1123(
             "2026-07-13T07:06:45"));
@@ -364,7 +375,7 @@ public class TestArrowListBlobParser {
         .isFalse();
     assertThat(file.contentLength())
         .as("UInt8 content length must be read as a long")
-        .isEqualTo(1234L);
+        .isEqualTo(CONTENT_LENGTH_SAMPLE);
   }
 
   /**
@@ -498,11 +509,11 @@ public class TestArrowListBlobParser {
     byte[] page1 = new ArrowStreamBuilder()
         .withNextMarker("page-2-marker")
         .addRow("a.txt", "etagA", 10L, "lm", "ct", false)
-        .addRow("b.txt", "etagB", 20L, "lm", "ct", false)
+        .addRow("b.txt", "etagB", CONTENT_LENGTH_A, "lm", "ct", false)
         .build();
     byte[] page2 = new ArrowStreamBuilder()
-        .addRow("c.txt", "etagC", 30L, "lm", "ct", false)
-        .addRow("d.txt", "etagD", 40L, "lm", "ct", false)
+        .addRow("c.txt", "etagC", CONTENT_LENGTH_B, "lm", "ct", false)
+        .addRow("d.txt", "etagD", CONTENT_LENGTH_C, "lm", "ct", false)
         .build();
 
     BlobListResultSchema first = parse(page1);
@@ -595,7 +606,7 @@ public class TestArrowListBlobParser {
 
     assertThat(result.paths()).hasSize(1);
     assertThat(result.paths().get(0).name()).isEqualTo("a.txt");
-    assertThat(result.paths().get(0).contentLength()).isEqualTo(42L);
+    assertThat(result.paths().get(0).contentLength()).isEqualTo(CONTENT_LENGTH_D);
   }
 
   /**
@@ -649,7 +660,7 @@ public class TestArrowListBlobParser {
   @Test
   public void testOverAllocatorLimitFails() throws Exception {
     ArrowStreamBuilder builder = new ArrowStreamBuilder();
-    for (int i = 0; i < 2000; i++) {
+    for (int i = 0; i < OVER_LIMIT_ROW_COUNT; i++) {
       builder.addRow("some-reasonably-long-blob-name-" + i, "etag-" + i,
           1024L, "last-modified", "creation-time", false);
     }
@@ -729,7 +740,7 @@ public class TestArrowListBlobParser {
       fields.add(new Field(ARROW_COL_ETAG,
           FieldType.nullable(new ArrowType.Utf8()), null));
       fields.add(new Field(ARROW_COL_CONTENT_LENGTH,
-          FieldType.nullable(new ArrowType.Int(64, true)), null));
+          FieldType.nullable(new ArrowType.Int(ARROW_INT_BIT_WIDTH, true)), null));
       fields.add(new Field(ARROW_COL_LAST_MODIFIED,
           FieldType.nullable(new ArrowType.Utf8()), null));
       fields.add(new Field(ARROW_COL_CREATION_TIME,
@@ -882,7 +893,7 @@ public class TestArrowListBlobParser {
       fields.add(new Field(ARROW_COL_ETAG,
           FieldType.nullable(new ArrowType.Utf8()), null));
       fields.add(new Field(ARROW_COL_CONTENT_LENGTH,
-          FieldType.nullable(new ArrowType.Int(64, false)), null));
+          FieldType.nullable(new ArrowType.Int(ARROW_INT_BIT_WIDTH, false)), null));
       fields.add(new Field(ARROW_COL_LAST_MODIFIED,
           FieldType.nullable(new ArrowType.Timestamp(TimeUnit.SECOND, null)),
           null));

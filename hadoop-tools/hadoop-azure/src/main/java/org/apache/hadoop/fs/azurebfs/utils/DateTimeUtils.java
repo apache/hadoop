@@ -73,6 +73,40 @@ public final class DateTimeUtils {
   /** Minimum length of a canonical ISO local date-time ({@code yyyy-MM-ddTHH:mm:ss}). */
   private static final int ISO_LOCAL_DATE_TIME_LENGTH = 19;
 
+  // Field offsets and widths within a canonical ISO local date-time
+  // ({@code yyyy-MM-ddTHH:mm:ss}) used by the fast positional parser.
+  private static final int ISO_YEAR_OFFSET = 0;
+  private static final int ISO_YEAR_WIDTH = 4;
+  private static final int ISO_MONTH_OFFSET = 5;
+  private static final int ISO_DAY_OFFSET = 8;
+  private static final int ISO_HOUR_OFFSET = 11;
+  private static final int ISO_MINUTE_OFFSET = 14;
+  private static final int ISO_SECOND_OFFSET = 17;
+  private static final int ISO_FIELD_WIDTH = 2;
+  private static final int ISO_DASH_YEAR_MONTH_POS = 4;
+  private static final int ISO_DASH_MONTH_DAY_POS = 7;
+  private static final int ISO_DATE_TIME_SEP_POS = 10;
+  private static final int ISO_COLON_HOUR_MINUTE_POS = 13;
+  private static final int ISO_COLON_MINUTE_SECOND_POS = 16;
+
+  // Inclusive bounds for validating the extracted date-time fields.
+  private static final int MAX_MONTH = 12;
+  private static final int MAX_DAY = 31;
+  private static final int MAX_HOUR = 23;
+  private static final int MAX_MINUTE = 59;
+  private static final int MAX_SECOND = 60;
+
+  // Rendering helpers.
+  private static final int RFC_1123_BUFFER_LENGTH = 29;
+  private static final int DECIMAL_RADIX = 10;
+  private static final int MAX_DECIMAL_DIGIT = 9;
+
+  // Constants for Sakamoto's day-of-week algorithm.
+  private static final int GREGORIAN_CENTURY = 100;
+  private static final int GREGORIAN_LEAP_CYCLE = 400;
+  private static final int LEAP_YEAR_DIVISOR = 4;
+  private static final int DAYS_IN_WEEK = 7;
+
   public static long parseLastModifiedTime(final String lastModifiedTime) {
     long parsedTime = 0;
     try {
@@ -139,23 +173,26 @@ public final class DateTimeUtils {
     if (length < ISO_LOCAL_DATE_TIME_LENGTH) {
       return null;
     }
-    if (value.charAt(4) != '-' || value.charAt(7) != '-'
-        || value.charAt(10) != 'T' || value.charAt(13) != ':'
-        || value.charAt(16) != ':' || !isUtcRemainder(value, length)) {
+    if (value.charAt(ISO_DASH_YEAR_MONTH_POS) != '-'
+        || value.charAt(ISO_DASH_MONTH_DAY_POS) != '-'
+        || value.charAt(ISO_DATE_TIME_SEP_POS) != 'T'
+        || value.charAt(ISO_COLON_HOUR_MINUTE_POS) != ':'
+        || value.charAt(ISO_COLON_MINUTE_SECOND_POS) != ':'
+        || !isUtcRemainder(value, length)) {
       return null;
     }
-    int year = parseDigits(value, 0, 4);
-    int month = parseDigits(value, 5, 2);
-    int day = parseDigits(value, 8, 2);
-    int hour = parseDigits(value, 11, 2);
-    int minute = parseDigits(value, 14, 2);
-    int second = parseDigits(value, 17, 2);
-    if (year < 0 || month < 1 || month > 12 || day < 1 || day > 31
-        || hour < 0 || hour > 23 || minute < 0 || minute > 59
-        || second < 0 || second > 60) {
+    int year = parseDigits(value, ISO_YEAR_OFFSET, ISO_YEAR_WIDTH);
+    int month = parseDigits(value, ISO_MONTH_OFFSET, ISO_FIELD_WIDTH);
+    int day = parseDigits(value, ISO_DAY_OFFSET, ISO_FIELD_WIDTH);
+    int hour = parseDigits(value, ISO_HOUR_OFFSET, ISO_FIELD_WIDTH);
+    int minute = parseDigits(value, ISO_MINUTE_OFFSET, ISO_FIELD_WIDTH);
+    int second = parseDigits(value, ISO_SECOND_OFFSET, ISO_FIELD_WIDTH);
+    if (year < 0 || month < 1 || month > MAX_MONTH || day < 1 || day > MAX_DAY
+        || hour < 0 || hour > MAX_HOUR || minute < 0 || minute > MAX_MINUTE
+        || second < 0 || second > MAX_SECOND) {
       return null;
     }
-    StringBuilder sb = new StringBuilder(29);
+    StringBuilder sb = new StringBuilder(RFC_1123_BUFFER_LENGTH);
     sb.append(RFC_1123_WEEKDAYS[sakamotoDayOfWeek(year, month, day)])
         .append(", ");
     appendTwoDigits(sb, day);
@@ -203,16 +240,16 @@ public final class DateTimeUtils {
     int result = 0;
     for (int i = start; i < start + count; i++) {
       int digit = value.charAt(i) - '0';
-      if (digit < 0 || digit > 9) {
+      if (digit < 0 || digit > MAX_DECIMAL_DIGIT) {
         return -1;
       }
-      result = result * 10 + digit;
+      result = result * DECIMAL_RADIX + digit;
     }
     return result;
   }
 
   private static void appendTwoDigits(final StringBuilder sb, final int value) {
-    if (value < 10) {
+    if (value < DECIMAL_RADIX) {
       sb.append('0');
     }
     sb.append(value);
@@ -226,7 +263,8 @@ public final class DateTimeUtils {
       final int day) {
     final int[] monthOffset = {0, 3, 2, 5, 0, 3, 5, 1, 4, 6, 2, 4};
     int y = month < 3 ? year - 1 : year;
-    return (y + y / 4 - y / 100 + y / 400 + monthOffset[month - 1] + day) % 7;
+    return (y + y / LEAP_YEAR_DIVISOR - y / GREGORIAN_CENTURY
+        + y / GREGORIAN_LEAP_CYCLE + monthOffset[month - 1] + day) % DAYS_IN_WEEK;
   }
 
   /**

@@ -401,11 +401,11 @@ public class ArrowListBlobParser implements ListBlobResponseParser {
         || metadata.isNull(row)) {
       return result;
     }
-    Object entries = metadata.getObject(row);
-    if (!(entries instanceof List)) {
+    List<?> entries = metadata.getObject(row);
+    if (entries == null) {
       return result;
     }
-    for (Object element : (List<?>) entries) {
+    for (Object element : entries) {
       if (element instanceof Map) {
         Map<?, ?> keyValue = (Map<?, ?>) element;
         Object key = keyValue.get(MapVector.KEY_NAME);
