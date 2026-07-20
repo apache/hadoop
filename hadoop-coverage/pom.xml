@@ -452,7 +452,7 @@
             <configuration>
               <executable>${shell-executable}</executable>
               <arguments>
-                <argument>${project.basedir}/../dev-support/bin/check-coverage-modules.sh</argument>
+                <argument>${project.basedir}/src/test/resources/check-coverage-modules.sh</argument>
                 <argument>${project.basedir}/..</argument>
                 <argument>${project.basedir}/pom.xml</argument>
               </arguments>

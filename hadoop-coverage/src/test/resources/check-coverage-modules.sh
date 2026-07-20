@@ -20,8 +20,9 @@
 # Guards the hadoop-coverage aggregate module against silent drift: every
 # "test-bearing" Maven module (jar packaging with a src/test/java directory)
 # must either be listed as a dependency in hadoop-coverage/pom.xml or be named
-# in dev-support/coverage-modules-allowlist.txt. If a test-bearing module is in
-# neither, its coverage would be silently dropped from the aggregate report, so
+# in the coverage-modules-allowlist.txt sitting next to this script. If a
+# test-bearing module is in neither, its coverage would be silently dropped from
+# the aggregate report, so
 # the build fails with a message telling the developer which module to add and
 # where.
 #
@@ -48,7 +49,10 @@ fi
 
 repo_root="$1"
 coverage_pom="$2"
-allowlist="${repo_root}/dev-support/coverage-modules-allowlist.txt"
+# The allowlist lives next to this script so the two move together; locate it
+# relative to the script rather than the repo root.
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+allowlist="${script_dir}/coverage-modules-allowlist.txt"
 
 if [[ ! -f "${coverage_pom}" ]]; then
   echo "check-coverage-modules: coverage pom not found: ${coverage_pom}" >&2
@@ -127,7 +131,7 @@ stale="$(comm -13 "${test_bearing_file}" "${allowed_file}")"
 if [[ -n "${stale}" ]]; then
   echo "check-coverage-modules: WARNING: stale allowlist entries (no longer a" \
        "test-bearing jar module); consider removing from" \
-       "dev-support/coverage-modules-allowlist.txt:" >&2
+       "hadoop-coverage/src/test/resources/coverage-modules-allowlist.txt:" >&2
   while IFS= read -r module; do echo "  - ${module}" >&2; done <<< "${stale}"
 fi
 
@@ -140,7 +144,8 @@ if [[ -n "${missing}" ]]; then
   echo "" >&2
   echo "Add each as a <dependency> in hadoop-coverage/pom.xml so its coverage" >&2
   echo "is aggregated, or, if it is intentionally excluded, add it to" >&2
-  echo "dev-support/coverage-modules-allowlist.txt (with a reason)." >&2
+  echo "hadoop-coverage/src/test/resources/coverage-modules-allowlist.txt" >&2
+  echo "(with a reason)." >&2
   exit 1
 fi
 
