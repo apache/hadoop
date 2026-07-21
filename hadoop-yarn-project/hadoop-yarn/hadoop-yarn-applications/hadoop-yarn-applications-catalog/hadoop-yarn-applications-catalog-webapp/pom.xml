@@ -37,6 +37,12 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <dependency.locations.enabled>false</dependency.locations.enabled>
         <javascript.test>*Spec</javascript.test>
+        <!-- Skip the browser-driven jasmine tests independently of -DskipTests.
+             Defaults to ${skipTests} so normal builds are unchanged; a headless CI
+             run (no PhantomJS browser available) can pass -DskipJasmineTests=true to
+             avoid the hard build failure while still compiling and covering the
+             module's Java/JS. -->
+        <skipJasmineTests>${skipTests}</skipJasmineTests>
     </properties>
 
   <dependencies>
@@ -484,7 +490,7 @@
                     </execution>
                 </executions>
                 <configuration>
-                    <skipJasmineTests>${skipTests}</skipJasmineTests>
+                    <skipJasmineTests>${skipJasmineTests}</skipJasmineTests>
                     <webDriverClassName>org.openqa.selenium.phantomjs.PhantomJSDriver</webDriverClassName>
                     <webDriverCapabilities>
                         <capability>
