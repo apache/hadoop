@@ -53,7 +53,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Time;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
@@ -639,7 +638,7 @@ public class CapacityScheduler extends
     this.asyncSchedulingConf = conf;
   }
 
-  static class AsyncScheduleThread extends SubjectInheritingThread {
+  static class AsyncScheduleThread extends Thread {
 
     private final CapacityScheduler cs;
     private AtomicBoolean runSchedules = new AtomicBoolean(false);
@@ -651,7 +650,7 @@ public class CapacityScheduler extends
     }
 
     @Override
-    public void work() {
+    public void run() {
       int debuggingLogCounter = 0;
       while (!Thread.currentThread().isInterrupted()) {
         try {
@@ -692,7 +691,7 @@ public class CapacityScheduler extends
 
   }
 
-  static class ResourceCommitterService extends SubjectInheritingThread {
+  static class ResourceCommitterService extends Thread {
     private final CapacityScheduler cs;
     private BlockingQueue<ResourceCommitRequest<FiCaSchedulerApp, FiCaSchedulerNode>>
         backlogs = new LinkedBlockingQueue<>();
@@ -703,7 +702,7 @@ public class CapacityScheduler extends
     }
 
     @Override
-    public void work() {
+    public void run() {
       while (!Thread.currentThread().isInterrupted()) {
         try {
           ResourceCommitRequest<FiCaSchedulerApp, FiCaSchedulerNode> request =

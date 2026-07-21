@@ -38,7 +38,6 @@ import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
@@ -222,7 +221,7 @@ public class TestFileConcurrentReader {
     final AtomicReference<String> errorMessage = new AtomicReference<String>();
     final FSDataOutputStream out = fileSystem.create(file);
     
-    final Thread writer = new SubjectInheritingThread(new Runnable() {
+    final Thread writer = new Thread(new Runnable() {
       @Override
       public void run() {
         try {
@@ -242,7 +241,7 @@ public class TestFileConcurrentReader {
       }
     });
     
-    Thread opener = new SubjectInheritingThread(new Runnable() {
+    Thread opener = new Thread(new Runnable() {
       @Override
       public void run() {
         try {
@@ -347,7 +346,7 @@ public class TestFileConcurrentReader {
     final AtomicBoolean writerStarted = new AtomicBoolean(false);
     final AtomicBoolean error = new AtomicBoolean(false);
 
-    final Thread writer = new SubjectInheritingThread(new Runnable() {
+    final Thread writer = new Thread(new Runnable() {
       @Override
       public void run() {
         try {
@@ -380,7 +379,7 @@ public class TestFileConcurrentReader {
         }
       }
     });
-    Thread tailer = new SubjectInheritingThread(new Runnable() {
+    Thread tailer = new Thread(new Runnable() {
       @Override
       public void run() {
         try {

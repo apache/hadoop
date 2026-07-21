@@ -80,7 +80,6 @@ import org.apache.hadoop.util.DiskValidatorFactory;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.apache.hadoop.util.concurrent.HadoopScheduledThreadPoolExecutor;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.LocalResource;
@@ -862,7 +861,7 @@ public class ResourceLocalizationService extends CompositeService
   }
 
 
-  class PublicLocalizer extends SubjectInheritingThread {
+  class PublicLocalizer extends Thread {
 
     final FileContext lfs;
     final Configuration conf;
@@ -976,7 +975,7 @@ public class ResourceLocalizationService extends CompositeService
     }
 
     @Override
-    public void work() {
+    public void run() {
       try {
         // TODO shutdown, better error handling esp. DU
         while (!Thread.currentThread().isInterrupted()) {
@@ -1031,7 +1030,7 @@ public class ResourceLocalizationService extends CompositeService
    * access to user's credentials. One {@link LocalizerRunner} per localizerId.
    * 
    */
-  class LocalizerRunner extends SubjectInheritingThread {
+  class LocalizerRunner extends Thread {
 
     final LocalizerContext context;
     final String localizerId;
@@ -1255,7 +1254,7 @@ public class ResourceLocalizationService extends CompositeService
 
     @Override
     @SuppressWarnings("unchecked") // dispatcher not typed
-    public void work() {
+    public void run() {
       Path nmPrivateCTokensPath = null;
       Throwable exception = null;
       try {
@@ -1406,7 +1405,7 @@ public class ResourceLocalizationService extends CompositeService
     return fingerprint.toString();
   }
 
-  static class CacheCleanup extends SubjectInheritingThread {
+  static class CacheCleanup extends Thread {
 
     private final Dispatcher dispatcher;
 
@@ -1417,7 +1416,7 @@ public class ResourceLocalizationService extends CompositeService
 
     @Override
     @SuppressWarnings("unchecked") // dispatcher not typed
-    public void work() {
+    public void run() {
       dispatcher.getEventHandler().handle(
           new LocalizationEvent(LocalizationEventType.CACHE_CLEANUP));
     }

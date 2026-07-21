@@ -48,7 +48,6 @@ import org.apache.hadoop.util.Lists;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.util.Preconditions;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import org.slf4j.Logger;
@@ -381,7 +380,7 @@ public class StandbyCheckpointer {
       img.getStorage().getMostRecentCheckpointTxId();
   }
 
-  private class CheckpointerThread extends SubjectInheritingThread {
+  private class CheckpointerThread extends Thread {
     private volatile boolean shouldRun = true;
     private volatile long preventCheckpointsUntil = 0;
 
@@ -394,7 +393,7 @@ public class StandbyCheckpointer {
     }
 
     @Override
-    public void work() {
+    public void run() {
       // We have to make sure we're logged in as far as JAAS
       // is concerned, in order to use kerberized SSL properly.
       SecurityUtil.doAsLoginUserOrFatal(() -> {

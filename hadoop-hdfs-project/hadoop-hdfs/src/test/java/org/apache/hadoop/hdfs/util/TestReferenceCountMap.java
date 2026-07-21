@@ -19,7 +19,6 @@
 package org.apache.hadoop.hdfs.util;
 
 import org.apache.hadoop.hdfs.server.namenode.AclFeature;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -86,13 +85,13 @@ public class TestReferenceCountMap {
     assertEquals(LOOP_COUNTER, countMap.getReferenceCount(aclFeature2));
   }
 
-  class PutThread extends SubjectInheritingThread {
+  class PutThread extends Thread {
     private ReferenceCountMap<AclFeature> referenceCountMap;
     PutThread(ReferenceCountMap<AclFeature> referenceCountMap) {
       this.referenceCountMap = referenceCountMap;
     }
     @Override
-    public void work() {
+    public void run() {
       for (int i = 0; i < LOOP_COUNTER; i++) {
         referenceCountMap.put(aclFeature1);
         referenceCountMap.put(aclFeature2);
@@ -100,13 +99,13 @@ public class TestReferenceCountMap {
     }
   };
 
-  class RemoveThread extends SubjectInheritingThread {
+  class RemoveThread extends Thread {
     private ReferenceCountMap<AclFeature> referenceCountMap;
     RemoveThread(ReferenceCountMap<AclFeature> referenceCountMap) {
       this.referenceCountMap = referenceCountMap;
     }
     @Override
-    public void work() {
+    public void run() {
       for (int i = 0; i < LOOP_COUNTER; i++) {
         referenceCountMap.remove(aclFeature1);
         referenceCountMap.remove(aclFeature2);

@@ -40,7 +40,6 @@ import org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys;
 import org.apache.hadoop.hdfs.server.federation.router.RemoteMethod;
 import org.apache.hadoop.hdfs.server.federation.router.RouterRpcClient;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_FAIR_HANDLER_COUNT_KEY_PREFIX;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -134,7 +133,7 @@ public class TestRouterRefreshFairnessPolicyController {
     // Spawn 100 concurrent refresh requests
     Thread[] threads = new Thread[100];
     for (int i = 0; i < 100; i++) {
-      threads[i] = new SubjectInheritingThread(() ->
+      threads[i] = new Thread(() ->
           client.refreshFairnessPolicyController(routerContext.getConf()));
     }
 
@@ -183,7 +182,7 @@ public class TestRouterRefreshFairnessPolicyController {
     final int newNs1Permits = 4;
     conf.setInt(DFS_ROUTER_FAIR_HANDLER_COUNT_KEY_PREFIX + "ns0", newNs0Permits);
     conf.setInt(DFS_ROUTER_FAIR_HANDLER_COUNT_KEY_PREFIX + "ns1", newNs1Permits);
-    Thread threadRefreshController = new SubjectInheritingThread(() -> client.
+    Thread threadRefreshController = new Thread(() -> client.
         refreshFairnessPolicyController(routerContext.getConf()));
     threadRefreshController.start();
     threadRefreshController.join();
@@ -219,7 +218,7 @@ public class TestRouterRefreshFairnessPolicyController {
     RemoteMethod dummyMethod = Mockito.mock(RemoteMethod.class);
     List<Thread> threadAcquirePermits = new ArrayList<>();
     for (int i = 0; i < nThreads; i++) {
-      Thread threadAcquirePermit = new SubjectInheritingThread(() -> {
+      Thread threadAcquirePermit = new Thread(() -> {
         try {
           client.invokeSingle(namespace, dummyMethod);
         } catch (IOException e) {

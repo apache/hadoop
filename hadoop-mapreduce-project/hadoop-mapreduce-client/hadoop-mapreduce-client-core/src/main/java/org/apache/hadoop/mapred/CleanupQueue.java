@@ -26,7 +26,6 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 
 class CleanupQueue {
 
@@ -101,7 +100,7 @@ class CleanupQueue {
     return (cleanupThread.queue.size() == 0);
   }
 
-  private static class PathCleanupThread extends SubjectInheritingThread {
+  private static class PathCleanupThread extends Thread {
 
     // cleanup queue which deletes files/directories of the paths queued up.
     private LinkedBlockingQueue<PathDeletionContext> queue =
@@ -121,7 +120,7 @@ class CleanupQueue {
       }
     }
 
-    public void work() {
+    public void run() {
       if (LOG.isDebugEnabled()) {
         LOG.debug(getName() + " started.");
       }

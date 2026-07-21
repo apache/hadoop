@@ -99,7 +99,7 @@ public class LocatedBlocksRefresher extends Daemon {
   }
 
   @Override
-  public void work() {
+  public void run() {
     while (!Thread.currentThread().isInterrupted()) {
 
       if (!waitForInterval()) {

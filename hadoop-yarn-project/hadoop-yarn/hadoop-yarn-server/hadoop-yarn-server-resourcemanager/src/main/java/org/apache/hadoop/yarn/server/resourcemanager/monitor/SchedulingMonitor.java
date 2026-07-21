@@ -27,7 +27,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.service.AbstractService;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 
 import org.apache.hadoop.classification.VisibleForTesting;
@@ -71,7 +70,7 @@ public class SchedulingMonitor extends AbstractService {
     assert !stopped : "starting when already stopped";
     ses = Executors.newSingleThreadScheduledExecutor(new ThreadFactory() {
       public Thread newThread(Runnable r) {
-        Thread t = new SubjectInheritingThread(r);
+        Thread t = new Thread(r);
         t.setName(getName());
         return t;
       }

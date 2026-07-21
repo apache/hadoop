@@ -40,7 +40,6 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.YarnUncaughtExceptionHandler;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -535,9 +534,9 @@ public class NodeManager extends CompositeService
   }
 
   protected void shutDown(final int exitCode) {
-    new SubjectInheritingThread() {
+    new Thread() {
       @Override
-      public void work() {
+      public void run() {
         try {
           NodeManager.this.stop();
         } catch (Throwable t) {
@@ -560,9 +559,9 @@ public class NodeManager extends CompositeService
       // Some other thread is already created for resyncing, do nothing
     } else {
       // We have got the lock, create a new thread
-      new SubjectInheritingThread() {
+      new Thread() {
         @Override
-        public void work() {
+        public void run() {
           try {
             if (!rmWorkPreservingRestartEnabled) {
               LOG.info("Cleaning up running containers on resync");

@@ -48,7 +48,6 @@ import org.apache.hadoop.mapred.Reducer;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.TextOutputFormat;
 import org.apache.hadoop.util.ToolRunner;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -309,7 +308,7 @@ public class LoadGeneratorMR extends LoadGenerator {
       getArgsFromConfiguration(jobConf);
     }
 
-    private class ProgressThread extends SubjectInheritingThread {
+    private class ProgressThread extends Thread {
 
       boolean keepGoing; // while this is true, thread runs.
       private Reporter reporter;
@@ -319,7 +318,7 @@ public class LoadGeneratorMR extends LoadGenerator {
         this.keepGoing = true;
       }
 
-      public void work() {
+      public void run() {
         while (keepGoing) {
           if (!ProgressThread.interrupted()) {
             try {

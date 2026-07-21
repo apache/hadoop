@@ -30,7 +30,6 @@ import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.Job;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -149,7 +148,7 @@ public class TestMapReduceJobControlWithMocks {
   }
 
   private void runJobControl(JobControl jobControl) {
-    Thread controller = new SubjectInheritingThread(jobControl);
+    Thread controller = new Thread(jobControl);
     controller.start();
     waitTillAllFinished(jobControl);
   }

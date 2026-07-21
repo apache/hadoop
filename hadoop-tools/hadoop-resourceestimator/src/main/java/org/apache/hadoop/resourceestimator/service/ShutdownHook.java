@@ -20,14 +20,13 @@
 
 package org.apache.hadoop.resourceestimator.service;
 
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Simple shutdown hook for {@link ResourceEstimatorServer}.
  */
-public class ShutdownHook extends SubjectInheritingThread {
+public class ShutdownHook extends Thread {
   private static final Logger LOGGER =
       LoggerFactory.getLogger(ShutdownHook.class);
   private final ResourceEstimatorServer server;
@@ -36,7 +35,7 @@ public class ShutdownHook extends SubjectInheritingThread {
     this.server = server;
   }
 
-  public void work() {
+  public void run() {
     try {
       server.shutdown();
     } catch (Exception e) {

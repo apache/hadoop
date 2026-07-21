@@ -39,7 +39,6 @@ import org.apache.hadoop.service.ServiceOperations;
 import org.apache.hadoop.service.ServiceStateException;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.JvmPauseMonitor;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.junit.jupiter.api.Timeout;
 
 import java.util.ArrayList;
@@ -297,11 +296,11 @@ public class TestJvmMetrics {
     }
   }
 
-  static class TestThread extends SubjectInheritingThread {
+  static class TestThread extends Thread {
     private volatile boolean exit = false;
     private boolean exited = false;
     @Override
-    public void work() {
+    public void run() {
       while (!exit) {
         try {
           Thread.sleep(1000);
