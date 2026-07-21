@@ -435,9 +435,10 @@
       <!--
         Guard against silent drift of the dependency list above: every
         test-bearing module must be aggregated here (or explicitly allowlisted),
-        otherwise its coverage is silently dropped from the report. This check
-        runs regardless of hadoop.skip-jacoco, since list correctness is
-        independent of whether coverage data is collected.
+        otherwise its coverage is silently dropped from the report. This module
+        is only in the reactor when coverage is requested (-Dhadoop.skip-jacoco=false;
+        see the "coverage" profile in the root pom), so the check runs on every
+        coverage build, at the validate phase before report-aggregate.
       -->
       <plugin>
         <groupId>org.codehaus.mojo</groupId>

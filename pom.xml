@@ -161,7 +161,6 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
     <module>hadoop-build-tools</module>
     <module>hadoop-cloud-storage-project</module>
     <module>hadoop-dist</module>
-    <module>hadoop-coverage</module>
   </modules>
 
   <build>
@@ -775,6 +774,25 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
   </reporting>
 
   <profiles>
+    <!-- The coverage aggregate module joins the reactor only when coverage is
+         explicitly requested (-Dhadoop.skip-jacoco=false). Keeping it out of the
+         unconditional <modules> means normal install/site/deploy/package builds
+         neither resolve its (reactor-wide) dependency list nor run its guard,
+         so the default build is unaffected and coverage stays opt-in. The
+         documented coverage command already passes -Dhadoop.skip-jacoco=false,
+         so it still builds as a full reactor that includes hadoop-coverage. -->
+    <profile>
+      <id>coverage</id>
+      <activation>
+        <property>
+          <name>hadoop.skip-jacoco</name>
+          <value>false</value>
+        </property>
+      </activation>
+      <modules>
+        <module>hadoop-coverage</module>
+      </modules>
+    </profile>
     <profile>
       <id>src</id>
       <activation>
