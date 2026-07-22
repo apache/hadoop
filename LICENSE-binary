@@ -284,7 +284,7 @@ commons-cli:commons-cli:1.9.0
 commons-codec:commons-codec:1.15
 org.apache.commons:commons-collections4:4.4
 commons-daemon:commons-daemon:1.0.13
-commons-io:commons-io:2.16.1
+commons-io:commons-io:2.22.0
 commons-net:commons-net:3.9.0
 de.ruedigermoeller:fst:2.50
 io.grpc:grpc-alts:1.70.0
@@ -367,10 +367,10 @@ net.java.dev.jna:jna:5.2.0
 net.minidev:accessors-smart:1.21
 org.apache.avro:avro:1.12.1
 org.apache.commons:commons-compress:1.26.1
-org.apache.commons:commons-configuration2:2.10.1
+org.apache.commons:commons-configuration2:2.15.0
 org.apache.commons:commons-csv:1.9.0
 org.apache.commons:commons-digester:1.8.1
-org.apache.commons:commons-lang3:3.18.0
+org.apache.commons:commons-lang3:3.20.0
 org.apache.commons:commons-math3:3.6.1
 org.apache.commons:commons-text:1.14.0
 org.apache.commons:commons-validator:1.6
