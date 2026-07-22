@@ -22,7 +22,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.tracing.TraceScope;
-import org.apache.hadoop.util.Preconditions;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -53,11 +52,32 @@ abstract public class FSOutputSummer extends OutputStream implements
   
   protected FSOutputSummer(DataChecksum sum) {
     this.sum = sum;
-    Preconditions.checkArgument(
-            sum.getBytesPerChecksum() * BUFFER_NUM_CHUNKS > 0,
-            "Buffer size for FSOutputSummer should be a positive integer.");
-    this.buf = new byte[sum.getBytesPerChecksum() * BUFFER_NUM_CHUNKS];
-    this.checksum = new byte[getChecksumSize() * BUFFER_NUM_CHUNKS];
+    int bufSize;
+    try {
+      bufSize = Math.multiplyExact(sum.getBytesPerChecksum(), BUFFER_NUM_CHUNKS);
+    } catch (ArithmeticException ae) {
+      throw new IllegalArgumentException(
+          "The calculated buffer array size for FSOutputSummer is too large", ae);
+    }
+    if (bufSize < 0) {
+      throw new IllegalArgumentException(
+          "The calculated buffer array size for FSOutputSummer is negative");
+    }
+    this.buf = new byte[bufSize];
+
+    int checksumBufSize;
+    try {
+      checksumBufSize = Math.multiplyExact(getChecksumSize(), BUFFER_NUM_CHUNKS);
+    } catch (ArithmeticException ae) {
+      throw new IllegalArgumentException(
+          "The calculated checksum buffer array size for FSOutputSummer is too large", ae);
+    }
+    if (checksumBufSize < 0) {
+      throw new IllegalArgumentException(
+          "The calculated checksum buffer array size for FSOutputSummer is negative");
+    }
+    this.checksum = new byte[checksumBufSize];
+
     this.count = 0;
   }
   
