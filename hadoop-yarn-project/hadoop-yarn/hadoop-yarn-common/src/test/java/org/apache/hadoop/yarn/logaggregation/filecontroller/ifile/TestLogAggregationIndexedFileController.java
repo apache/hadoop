@@ -27,11 +27,17 @@ import java.io.Writer;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -61,6 +67,7 @@ import org.apache.hadoop.yarn.logaggregation.ContainerLogMeta;
 import org.apache.hadoop.yarn.logaggregation.ContainerLogsRequest;
 import org.apache.hadoop.yarn.logaggregation.ExtendedLogMetaRequest;
 import org.apache.hadoop.yarn.logaggregation.LogAggregationUtils;
+import org.apache.hadoop.yarn.logaggregation.TestContainerLogsUtils;
 import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileController;
 import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileControllerContext;
 import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileControllerFactory;
@@ -132,7 +139,7 @@ public class TestLogAggregationIndexedFileController
   }
 
   @Test
-  @Timeout(15000)
+  @Timeout(value = 15, unit = TimeUnit.SECONDS)
   void testLogAggregationIndexFileFormat() throws Exception {
     if (fs.exists(rootLocalLogDirPath)) {
       fs.delete(rootLocalLogDirPath, true);
@@ -384,7 +391,7 @@ public class TestLogAggregationIndexedFileController
   }
 
   @Test
-  @Timeout(15000)
+  @Timeout(value = 15, unit = TimeUnit.SECONDS)
   void testFetchApplicationLogsHar() throws Exception {
     List<String> newLogTypes = new ArrayList<>();
     newLogTypes.add("syslog");
@@ -473,6 +480,303 @@ public class TestLogAggregationIndexedFileController
 
   private String logMessage(ContainerId containerId, String logType) {
     return "Hello " + containerId + " in " + logType + "!";
+  }
+
+  @Test
+  @Timeout(value = 15, unit = TimeUnit.SECONDS)
+  void testReadAggregatedLogsMetaForMultipleAppsWithReusedController()
+      throws Exception {
+    TwoAppIFileFixture fixture = prepareTwoAppIFileFixture();
+    LogAggregationFileController controller =
+        fixture.factory.getFileControllerForRead(fixture.appId1, fixture.user);
+
+    assertReadAggregatedLogsMeta(controller, fixture.appId1, fixture.user,
+        fixture.containerId1);
+    assertReadAggregatedLogsMeta(controller, fixture.appId2, fixture.user,
+        fixture.containerId2);
+  }
+
+  @Test
+  @Timeout(value = 15, unit = TimeUnit.SECONDS)
+  void testGetApplicationOwnerAndAclsForMultipleAppsWithReusedController()
+      throws Exception {
+    TwoAppIFileFixture fixture = prepareTwoAppIFileFixture();
+    LogAggregationFileController controller =
+        fixture.factory.getFileControllerForRead(fixture.appId1, fixture.user);
+
+    Path app1LogFile = findAggregatedLogFile(
+        controller.getRemoteAppLogDir(fixture.appId1, fixture.user));
+    Path app2LogFile = findAggregatedLogFile(
+        controller.getRemoteAppLogDir(fixture.appId2, fixture.user));
+
+    assertEquals(fixture.user,
+        controller.getApplicationOwner(app1LogFile, fixture.appId1),
+        "Application owner mismatch for app1");
+    assertNotNull(controller.getApplicationAcls(app1LogFile, fixture.appId1),
+        "Application ACLs should not be null for app1");
+    assertEquals(fixture.user,
+        controller.getApplicationOwner(app2LogFile, fixture.appId2),
+        "Application owner mismatch for app2");
+    assertNotNull(controller.getApplicationAcls(app2LogFile, fixture.appId2),
+        "Application ACLs should not be null for app2");
+  }
+
+  @Test
+  @Timeout(value = 15, unit = TimeUnit.SECONDS)
+  void testReadAggregatedLogsMetaReverseOrderWithReusedController()
+      throws Exception {
+    TwoAppIFileFixture fixture = prepareTwoAppIFileFixture();
+    LogAggregationFileController controller =
+        fixture.factory.getFileControllerForRead(fixture.appId1, fixture.user);
+
+    assertReadAggregatedLogsMeta(controller, fixture.appId2, fixture.user,
+        fixture.containerId2);
+    assertReadAggregatedLogsMeta(controller, fixture.appId1, fixture.user,
+        fixture.containerId1);
+  }
+
+  @Test
+  @Timeout(value = 15, unit = TimeUnit.SECONDS)
+  void testConcurrentReadAggregatedLogsMetaWithReusedController()
+      throws Exception {
+    TwoAppIFileFixture fixture = prepareTwoAppIFileFixture();
+    LogAggregationFileController controller =
+        fixture.factory.getFileControllerForRead(fixture.appId1, fixture.user);
+
+    ContainerLogsRequest app1Request = new ContainerLogsRequest();
+    app1Request.setAppId(fixture.appId1);
+    app1Request.setAppOwner(fixture.user);
+    ContainerLogsRequest app2Request = new ContainerLogsRequest();
+    app2Request.setAppId(fixture.appId2);
+    app2Request.setAppOwner(fixture.user);
+
+    // Use a barrier to guarantee both threads are in-flight simultaneously.
+    CountDownLatch barrier = new CountDownLatch(2);
+    ExecutorService executor = Executors.newFixedThreadPool(2);
+    try {
+      Future<List<ContainerLogMeta>> app1Future = executor.submit(() -> {
+        barrier.countDown();
+        barrier.await();
+        return controller.readAggregatedLogsMeta(app1Request);
+      });
+      Future<List<ContainerLogMeta>> app2Future = executor.submit(() -> {
+        barrier.countDown();
+        barrier.await();
+        return controller.readAggregatedLogsMeta(app2Request);
+      });
+      List<ContainerLogMeta> app1Meta = app1Future.get();
+      List<ContainerLogMeta> app2Meta = app2Future.get();
+      assertEquals(1, app1Meta.size(),
+          "Expected one container log meta entry for app1");
+      assertEquals(fixture.containerId1.toString(), app1Meta.get(0).getContainerId(),
+          "Unexpected container id for app1");
+      assertEquals(1, app2Meta.size(),
+          "Expected one container log meta entry for app2");
+      assertEquals(fixture.containerId2.toString(), app2Meta.get(0).getContainerId(),
+          "Unexpected container id for app2");
+    } finally {
+      executor.shutdownNow();
+    }
+  }
+
+  @Test
+  @Timeout(value = 15, unit = TimeUnit.SECONDS)
+  void testWriteSessionResetForMultipleAppsWithReusedController()
+      throws Exception {
+    Configuration ifileConf = newIFileConfiguration();
+    ApplicationId appId1 = ApplicationId.newInstance(20, 1);
+    ApplicationId appId2 = ApplicationId.newInstance(20, 2);
+    ContainerId containerId1 = ContainerId.newContainerId(
+        ApplicationAttemptId.newInstance(appId1, 1), 1);
+    ContainerId containerId2 = ContainerId.newContainerId(
+        ApplicationAttemptId.newInstance(appId2, 1), 1);
+    String user = USER_UGI.getShortUserName();
+
+    LogAggregationIndexedFileController controller =
+        new LogAggregationIndexedFileController();
+    controller.initialize(ifileConf, "IFile");
+    uploadAppLogsWithController(controller, appId1, containerId1, user, true);
+    uploadAppLogsWithController(controller, appId2, containerId2, user, false);
+
+    LogAggregationFileControllerFactory factory =
+        new LogAggregationFileControllerFactory(ifileConf);
+    LogAggregationFileController reader =
+        factory.getFileControllerForRead(appId1, user);
+    assertReadAggregatedLogsMeta(reader, appId1, user, containerId1);
+    assertReadAggregatedLogsMeta(reader, appId2, user, containerId2);
+  }
+
+  @Test
+  @Timeout(value = 15, unit = TimeUnit.SECONDS)
+  void testLoadUUIDFromLogFilePreservesValidAggregatedLogFile()
+      throws Exception {
+    Configuration ifileConf = newIFileConfiguration();
+    ApplicationId appId1 = ApplicationId.newInstance(30, 1);
+    ContainerId containerId1 = ContainerId.newContainerId(
+        ApplicationAttemptId.newInstance(appId1, 1), 1);
+    String user = USER_UGI.getShortUserName();
+
+    LogAggregationIndexedFileController writer1 =
+        new LogAggregationIndexedFileController();
+    writer1.initialize(ifileConf, "IFile");
+    uploadAppLogsWithController(writer1, appId1, containerId1, user, true);
+
+    Path logFile = findAggregatedLogFile(
+        writer1.getRemoteAppLogDir(appId1, user));
+    assertTrue(fs.exists(logFile),
+        "Aggregated log file should exist before rolling init");
+
+    LogAggregationIndexedFileController writer2 =
+        new LogAggregationIndexedFileController();
+    writer2.initialize(ifileConf, "IFile");
+    Path nodePath = new Path(writer2.getRemoteAppLogDir(appId1, user),
+        LogAggregationUtils.getNodeString(nodeId));
+    Map<ApplicationAccessType, String> appAcls = new HashMap<>();
+    LogAggregationFileControllerContext context =
+        new LogAggregationFileControllerContext(
+            nodePath, nodePath, true, 1000, appId1, appAcls, nodeId, USER_UGI);
+    writer2.initializeWriter(context);
+    writer2.closeWriter();
+
+    assertTrue(fs.exists(logFile),
+        "Aggregated log file should exist after rolling init");
+    ContainerLogsRequest request = new ContainerLogsRequest();
+    request.setAppId(appId1);
+    request.setAppOwner(user);
+    assertEquals(1, writer1.readAggregatedLogsMeta(request).size(),
+        "Expected one container log meta entry after rolling init");
+  }
+
+  private Configuration newIFileConfiguration() {
+    Configuration ifileConf = new YarnConfiguration();
+    ifileConf.setBoolean(YarnConfiguration.LOG_AGGREGATION_ENABLED, true);
+    ifileConf.setStrings(YarnConfiguration.LOG_AGGREGATION_FILE_FORMATS, "IFile");
+    ifileConf.setClass(String.format(
+        YarnConfiguration.LOG_AGGREGATION_FILE_CONTROLLER_FMT, "IFile"),
+        LogAggregationIndexedFileController.class,
+        LogAggregationFileController.class);
+    ifileConf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR, remoteLogDir);
+    ifileConf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR_SUFFIX, "logs");
+    return ifileConf;
+  }
+
+  private static final class TwoAppIFileFixture {
+    private final LogAggregationFileControllerFactory factory;
+    private final ApplicationId appId1;
+    private final ApplicationId appId2;
+    private final ContainerId containerId1;
+    private final ContainerId containerId2;
+    private final String user;
+
+    private TwoAppIFileFixture(LogAggregationFileControllerFactory factory,
+        ApplicationId appId1, ApplicationId appId2, ContainerId containerId1,
+        ContainerId containerId2, String user) {
+      this.factory = factory;
+      this.appId1 = appId1;
+      this.appId2 = appId2;
+      this.containerId1 = containerId1;
+      this.containerId2 = containerId2;
+      this.user = user;
+    }
+  }
+
+  private TwoAppIFileFixture prepareTwoAppIFileFixture() throws Exception {
+    Configuration ifileConf = newIFileConfiguration();
+    // Use cluster-time 100/101 to avoid colliding with the IDs used by
+    // TestHsWebServicesIFileAggregatedLogs (1,1) and (10,2).
+    ApplicationId appId1 = ApplicationId.newInstance(100, 1);
+    ApplicationId appId2 = ApplicationId.newInstance(101, 2);
+    ApplicationAttemptId attemptId1 =
+        ApplicationAttemptId.newInstance(appId1, 1);
+    ApplicationAttemptId attemptId2 =
+        ApplicationAttemptId.newInstance(appId2, 1);
+    ContainerId containerId1 =
+        ContainerId.newContainerId(attemptId1, 1);
+    ContainerId containerId2 =
+        ContainerId.newContainerId(attemptId2, 1);
+    String user = USER_UGI.getShortUserName();
+    String fileName = "syslog";
+
+    Map<ContainerId, String> app1Logs = new HashMap<>();
+    app1Logs.put(containerId1, logMessage(containerId1, fileName));
+    TestContainerLogsUtils.createContainerLogFileInRemoteFS(ifileConf, fs,
+        rootLocalLogDir, appId1, app1Logs, nodeId, fileName, user, true);
+    Map<ContainerId, String> app2Logs = new HashMap<>();
+    app2Logs.put(containerId2, logMessage(containerId2, fileName));
+    TestContainerLogsUtils.createContainerLogFileInRemoteFS(ifileConf, fs,
+        rootLocalLogDir, appId2, app2Logs, nodeId, fileName, user, false);
+
+    LogAggregationFileControllerFactory factory =
+        new LogAggregationFileControllerFactory(ifileConf);
+    return new TwoAppIFileFixture(factory, appId1, appId2, containerId1,
+        containerId2, user);
+  }
+
+  private void assertReadAggregatedLogsMeta(
+      LogAggregationFileController controller, ApplicationId targetAppId, String user,
+      ContainerId expectedContainerId) throws IOException {
+    ContainerLogsRequest request = new ContainerLogsRequest();
+    request.setAppId(targetAppId);
+    request.setAppOwner(user);
+    List<ContainerLogMeta> meta = controller.readAggregatedLogsMeta(request);
+    assertEquals(1, meta.size(), "Expected one container log meta entry");
+    assertEquals(expectedContainerId.toString(), meta.get(0).getContainerId(),
+        "Unexpected container id");
+  }
+
+  private void uploadAppLogsWithController(
+      LogAggregationIndexedFileController controller, ApplicationId targetAppId,
+      ContainerId targetContainerId, String user, boolean deleteRemoteLogDir)
+      throws Exception {
+    Path localAppDir = new Path(rootLocalLogDirPath, targetAppId.toString());
+    if (fs.exists(localAppDir)) {
+      fs.delete(localAppDir, true);
+    }
+    assertTrue(fs.mkdirs(localAppDir), "Failed to create local app log directory");
+    Path containerLogDir = new Path(localAppDir, targetContainerId.toString());
+    assertTrue(fs.mkdirs(containerLogDir),
+        "Failed to create local container log directory");
+    createAndWriteLocalLogFile(containerLogDir, "syslog",
+        logMessage(targetContainerId, "syslog"));
+
+    List<String> rootLogDirList = Collections.singletonList(rootLocalLogDir);
+    Path appDir = controller.getRemoteAppLogDir(targetAppId, user);
+    if (fs.exists(appDir) && deleteRemoteLogDir) {
+      fs.delete(appDir, true);
+    }
+    assertTrue(fs.mkdirs(appDir), "Failed to create remote app log directory");
+    Path nodePath = new Path(appDir, LogAggregationUtils.getNodeString(nodeId));
+
+    Map<ApplicationAccessType, String> appAcls = new HashMap<>();
+    appAcls.put(ApplicationAccessType.VIEW_APP, user);
+    LogAggregationFileControllerContext context =
+        new LogAggregationFileControllerContext(
+            nodePath, nodePath, true, 1000, targetAppId, appAcls, nodeId, USER_UGI);
+    try {
+      controller.initializeWriter(context);
+      controller.write(new LogKey(targetContainerId.toString()),
+          new LogValue(rootLogDirList, targetContainerId, user));
+      controller.postWrite(context);
+    } finally {
+      controller.closeWriter();
+    }
+  }
+
+  private Path findAggregatedLogFile(Path appDir) throws IOException {
+    for (FileStatus nodeDir : fs.listStatus(appDir)) {
+      String nodeName = nodeDir.getPath().getName();
+      if (nodeName.endsWith(LogAggregationIndexedFileController
+          .CHECK_SUM_FILE_SUFFIX)) {
+        continue;
+      }
+      for (FileStatus logFile : fs.listStatus(nodeDir.getPath())) {
+        if (!logFile.getPath().getName().endsWith(
+            LogAggregationIndexedFileController.CHECK_SUM_FILE_SUFFIX)) {
+          return logFile.getPath();
+        }
+      }
+    }
+    throw new IOException("No aggregated log file found under " + appDir);
   }
 
   @Test

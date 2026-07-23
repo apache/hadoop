@@ -126,7 +126,7 @@ public class LogAggregationIndexedFileController
   private long logAggregationTimeInThisCycle;
   private FSDataOutputStream fsDataOStream;
   private Algorithm compressAlgo;
-  private CachedIndexedLogsMeta cachedIndexedLogsMeta = null;
+  private ApplicationId currentWriteAppId = null;
   private boolean logAggregationSuccessfullyInThisCyCle = false;
   private long currentOffSet = 0;
   private Path remoteLogCheckSumFile;
@@ -162,6 +162,13 @@ public class LogAggregationIndexedFileController
     final ApplicationId appId = context.getAppId();
     final Path remoteLogFile = context.getRemoteNodeLogFileForApp();
     this.ugi = userUgi;
+    // Controller instances may be reused across applications (e.g. singleton
+    // web services after HADOOP-15984). Reset per-app write state on app change.
+    if (currentWriteAppId == null || !currentWriteAppId.equals(appId)) {
+      currentWriteAppId = appId;
+      indexedLogsMeta = null;
+      uuid = null;
+    }
     logAggregationSuccessfullyInThisCyCle = false;
     logsMetaInThisCycle = new IndexedPerAggregationLogMeta();
     logAggregationTimeInThisCycle = this.sysClock.getTime();
@@ -263,7 +270,7 @@ public class LogAggregationIndexedFileController
     // has invalid uuid.
     if (uuid == null) {
       uuid = loadUUIDFromLogFile(fc, remoteLogFile.getParent(),
-            appId, nodeId);
+          appId, nodeId);
     }
     Path currentRemoteLogFile = getCurrentRemoteLogFile(
         fc, remoteLogFile.getParent(), nodeId);
@@ -880,25 +887,13 @@ public class LogAggregationIndexedFileController
   public String getApplicationOwner(Path aggregatedLogPath,
       ApplicationId appId)
       throws IOException {
-    if (this.cachedIndexedLogsMeta == null
-        || !this.cachedIndexedLogsMeta.getRemoteLogPath()
-            .equals(aggregatedLogPath)) {
-      this.cachedIndexedLogsMeta = new CachedIndexedLogsMeta(
-          loadIndexedLogsMeta(aggregatedLogPath, appId), aggregatedLogPath);
-    }
-    return this.cachedIndexedLogsMeta.getCachedIndexedLogsMeta().getUser();
+    return loadIndexedLogsMeta(aggregatedLogPath, appId).getUser();
   }
 
   @Override
   public Map<ApplicationAccessType, String> getApplicationAcls(
       Path aggregatedLogPath, ApplicationId appId) throws IOException {
-    if (this.cachedIndexedLogsMeta == null
-        || !this.cachedIndexedLogsMeta.getRemoteLogPath()
-            .equals(aggregatedLogPath)) {
-      this.cachedIndexedLogsMeta = new CachedIndexedLogsMeta(
-          loadIndexedLogsMeta(aggregatedLogPath, appId), aggregatedLogPath);
-    }
-    return this.cachedIndexedLogsMeta.getCachedIndexedLogsMeta().getAcls();
+    return loadIndexedLogsMeta(aggregatedLogPath, appId).getAcls();
   }
 
   @Override
@@ -942,15 +937,16 @@ public class LogAggregationIndexedFileController
       byte[] uuidRead = new byte[UUID_LENGTH];
       fsDataIStream.readFully(uuidRead);
       int uuidReadLen = uuidRead.length;
-      if (this.uuid == null) {
-        this.uuid = createUUID(appId);
-      }
-      if (uuidReadLen != UUID_LENGTH || !Arrays.equals(this.uuid, uuidRead)) {
+      // Derive the expected UUID from the application being read. Do not use
+      // the instance field, which may hold a UUID from a different application
+      // when this controller is reused across requests.
+      byte[] expectedUuid = createUUID(appId);
+      if (uuidReadLen != UUID_LENGTH || !Arrays.equals(expectedUuid, uuidRead)) {
         if (LOG.isDebugEnabled()) {
           LOG.debug("the length of loaded UUID:{}", uuidReadLen);
           LOG.debug("the loaded UUID:{}", new String(uuidRead,
               StandardCharsets.UTF_8));
-          LOG.debug("the expected UUID:{}", new String(this.uuid,
+          LOG.debug("the expected UUID:{}", new String(expectedUuid,
               StandardCharsets.UTF_8));
         }
         throw new IOException("The UUID from "
@@ -1218,24 +1214,6 @@ public class LogAggregationIndexedFileController
     }
   }
 
-  private static class CachedIndexedLogsMeta {
-    private final Path remoteLogPath;
-    private final IndexedLogsMeta indexedLogsMeta;
-    CachedIndexedLogsMeta(IndexedLogsMeta indexedLogsMeta,
-        Path remoteLogPath) {
-      this.indexedLogsMeta = indexedLogsMeta;
-      this.remoteLogPath = remoteLogPath;
-    }
-
-    public Path getRemoteLogPath() {
-      return this.remoteLogPath;
-    }
-
-    public IndexedLogsMeta getCachedIndexedLogsMeta() {
-      return this.indexedLogsMeta;
-    }
-  }
-
   @Private
   public static int getFSOutputBufferSize(Configuration conf) {
     return conf.getInt(FS_OUTPUT_BUF_SIZE_ATTR, 256 * 1024);
@@ -1318,6 +1296,7 @@ public class LogAggregationIndexedFileController
     FSDataInputStream fsDataInputStream = null;
     byte[] uuid = createUUID(appId);
     while(files.hasNext()) {
+      fsDataInputStream = null;
       try {
         Path checkPath = files.next().getPath();
         if (checkPath.getName().contains(LogAggregationUtils
@@ -1327,10 +1306,10 @@ public class LogAggregationIndexedFileController
           byte[] b = new byte[uuid.length];
           fsDataInputStream.readFully(b);
           int actual = b.length;
-          if (actual != uuid.length || Arrays.equals(b, uuid)) {
+          if (actual != uuid.length || !Arrays.equals(b, uuid)) {
             deleteFileWithRetries(fc, checkPath);
-          } else if (id == null){
-            id = uuid;
+          } else if (id == null) {
+            id = b;
           }
         }
       } finally {
