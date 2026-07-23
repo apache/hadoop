@@ -113,6 +113,7 @@ public class DNConf {
   volatile boolean diskStatsEnabled;
   volatile long outliersReportIntervalMs;
   final long ibrInterval;
+  final long ibrMaxPendingBlocks;
   volatile long initialBlockReportDelayMs;
   volatile long cacheReportInterval;
   private volatile long datanodeSlowIoWarningThresholdMs;
@@ -206,6 +207,9 @@ public class DNConf {
     this.ibrInterval = getConf().getLong(
         DFSConfigKeys.DFS_BLOCKREPORT_INCREMENTAL_INTERVAL_MSEC_KEY,
         DFSConfigKeys.DFS_BLOCKREPORT_INCREMENTAL_INTERVAL_MSEC_DEFAULT);
+    this.ibrMaxPendingBlocks = getConf().getLong(
+        DFSConfigKeys.DFS_DATANODE_IBR_MAX_PENDING_BLOCKS_KEY,
+        DFSConfigKeys.DFS_DATANODE_IBR_MAX_PENDING_BLOCKS_DEFAULT);
     this.blockReportSplitThreshold = getConf().getLong(
         DFS_BLOCKREPORT_SPLIT_THRESHOLD_KEY,
         DFS_BLOCKREPORT_SPLIT_THRESHOLD_DEFAULT);

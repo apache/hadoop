@@ -141,6 +141,7 @@ class BPServiceActor implements Runnable {
     this.dnConf = dn.getDnConf();
     this.ibrManager = new IncrementalBlockReportManager(
         dnConf.ibrInterval,
+        dnConf.ibrMaxPendingBlocks,
         dn.getMetrics());
     prevBlockReportId = ThreadLocalRandom.current().nextLong();
     fullBlockReportLeaseId = 0;
@@ -760,6 +761,14 @@ class BPServiceActor implements Runnable {
             (ibrManager.sendImmediately()|| sendHeartbeat)) {
           ibrManager.sendIBRs(bpNamenode, bpRegistration,
               bpos.getBlockPoolId(), getRpcMetricSuffix());
+        }
+
+        // Guard against unbounded IBR growth when this NameNode is
+        // unreachable: if the queue was cleared to prevent OOM, schedule a
+        // full block report so the NameNode gets a consistent view once it
+        // becomes reachable again.
+        if (ibrManager.clearIBRsIfNeeded()) {
+          scheduler.forceFullBlockReportNow();
         }
 
         List<DatanodeCommand> cmds = null;

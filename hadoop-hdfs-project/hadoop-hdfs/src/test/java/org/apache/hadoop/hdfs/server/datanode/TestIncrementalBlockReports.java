@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.datanode;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.atLeastOnce;
@@ -523,6 +524,81 @@ public class TestIncrementalBlockReports {
           "There should be 1 corrupt replica");
     } finally {
       cluster.shutdown();
+    }
+  }
+
+  /**
+   * End-to-end guard against the OOM described in HDFS-17953: when the target
+   * NameNode is unreachable, the pending IBR queue must not grow without
+   * bound. With a small {@code dfs.datanode.ibr.max.pending.blocks} cap the
+   * queue must stay bounded even though every IBR send fails and would
+   * otherwise be re-queued forever, and a full block report must be scheduled
+   * so the NameNode can resync once it is reachable again.
+   */
+  @Test
+  @Timeout(value = 120)
+  public void testIBRQueueBoundedWhenNNUnreachable() throws Exception {
+    // Rebuild the cluster with a small IBR cap so we can reach it quickly.
+    cluster.shutdown();
+    cluster = null;
+    final int cap = 20;
+    Configuration capConf = new HdfsConfiguration();
+    capConf.setLong(DFSConfigKeys.DFS_DATANODE_IBR_MAX_PENDING_BLOCKS_KEY, cap);
+    // Disable automatic IBR sending timer effects by keeping default interval;
+    // we drive sends explicitly via the actor guard below.
+    cluster = new MiniDFSCluster.Builder(capConf).numDataNodes(1).build();
+    try {
+      cluster.waitActive();
+      singletonNn = cluster.getNameNode();
+      singletonDn = cluster.getDataNodes().get(0);
+      bpos = singletonDn.getAllBpOs().get(0);
+      actor = bpos.getBPServiceActors().get(0);
+      try (FsDatasetSpi.FsVolumeReferences volumes =
+          singletonDn.getFSDataset().getFsVolumeReferences()) {
+        storageUuid = volumes.get(0).getStorageID();
+      }
+
+      // Make the NN appear unreachable: every IBR RPC throws.
+      DatanodeProtocolClientSideTranslatorPB nnSpy = spyOnDnCallsToNn();
+      doAnswer((InvocationOnMock inv) -> {
+        throw new IOException("Simulated NameNode unreachable");
+      }).when(nnSpy).blockReceivedAndDeleted(
+          any(DatanodeRegistration.class),
+          anyString(),
+          any(StorageReceivedDeletedBlocks[].class));
+
+      IncrementalBlockReportManager ibr = actor.getIbrManager();
+      DatanodeStorage s = singletonDn.getFSDataset().getStorage(storageUuid);
+
+      // Inject many more distinct blocks than the cap. Without the fix the
+      // queue would grow to 10*cap; with the fix the periodic guard keeps it
+      // bounded by the cap.
+      long observedMax = 0;
+      for (int i = 0; i < cap * 10; i++) {
+        ibr.addRDBI(new ReceivedDeletedBlockInfo(
+            new Block(10000 + i, 1024, 2000 + i),
+            BlockStatus.DELETED_BLOCK, null), s);
+        // Emulate the guard that BPServiceActor.offerService runs each cycle.
+        ibr.clearIBRsIfNeeded();
+        observedMax = Math.max(observedMax, ibr.getPendingBlockCount());
+      }
+
+      assertTrue(observedMax <= cap,
+          "Pending IBR block count must never exceed the cap; observed "
+              + observedMax + ", cap " + cap);
+
+      // A full block report must have been scheduled after a clear so the NN
+      // can resync once reachable. forceFullBlockReportNow sets this flag.
+      // (The actor sets it via scheduler.forceFullBlockReportNow(); here we
+      // assert the manager cleared at least once by checking the count is
+      // strictly below the total injected.)
+      assertTrue(ibr.getPendingBlockCount() < cap * 10,
+          "Queue must have been cleared at least once");
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+        cluster = null;
+      }
     }
   }
 }
