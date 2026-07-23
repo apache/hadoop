@@ -32,6 +32,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.file.tfile.TFile.Writer;
 import org.apache.hadoop.test.GenericTestUtils;
 
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+
 /**
  * 
  * Byte arrays test case class using GZ compression codec, base class of none
@@ -39,79 +41,56 @@ import org.apache.hadoop.test.GenericTestUtils;
  * 
  */
 public class TestTFileComparators {
-  private static String ROOT = GenericTestUtils.getTestDir().getAbsolutePath();
-  private final static int BLOCK_SIZE = 512;
+  private static final String ROOT = GenericTestUtils.getTestDir().getAbsolutePath();
+  private static final int BLOCK_SIZE = 512;
   private FileSystem fs;
   private Configuration conf;
   private Path path;
   private FSDataOutputStream out;
   private Writer writer;
 
-  private String compression = Compression.Algorithm.GZ.getName();
-  private String outputFile = "TFileTestComparators";
-  /*
-   * pre-sampled numbers of records in one block, based on the given the
-   * generated key and value strings
-   */
-  // private int records1stBlock = 4314;
-  // private int records2ndBlock = 4108;
-  private int records1stBlock = 4480;
-  private int records2ndBlock = 4263;
+  private static final String COMPRESSION = Compression.Algorithm.GZ.getName();
+  private static final String OUTPUT_FILE = "TFileTestComparators";
+
 
   @Before
   public void setUp() throws IOException {
     conf = new Configuration();
-    path = new Path(ROOT, outputFile);
+    path = new Path(ROOT, OUTPUT_FILE);
     fs = path.getFileSystem(conf);
     out = fs.create(path);
   }
 
   @After
   public void tearDown() throws IOException {
+    closeOutput();
     fs.delete(path, true);
   }
 
   // bad comparator format
   @Test
-  public void testFailureBadComparatorNames() throws IOException {
-    try {
-      writer = new Writer(out, BLOCK_SIZE, compression, "badcmp", conf);
-      Assert.fail("Failed to catch unsupported comparator names");
-    }
-    catch (Exception e) {
-      // noop, expecting exceptions
-      e.printStackTrace();
-    }
+  public void testFailureBadComparatorNames() throws Exception {
+    intercept(IllegalArgumentException.class, "Unsupported comparator", () ->
+        new Writer(out, BLOCK_SIZE, COMPRESSION, "badcmp", conf));
   }
 
-  // jclass that doesn't exist
+  // jclass that doesn't exist: fails to instantiate, not because the feature
+  // is disabled.
   @Test
-  public void testFailureBadJClassNames() throws IOException {
-    try {
-      writer =
-          new Writer(out, BLOCK_SIZE, compression,
-              "jclass: some.non.existence.clazz", conf);
-      Assert.fail("Failed to catch unsupported comparator names");
-    }
-    catch (Exception e) {
-      // noop, expecting exceptions
-      e.printStackTrace();
-    }
+  public void testFailureBadJClassNames() throws Exception {
+    conf.setBoolean(TFile.TFILE_COMPARATOR_JCLASS_ENABLED, true);
+    intercept(IllegalArgumentException.class, "Failed to instantiate comparator",
+        () -> new Writer(out, BLOCK_SIZE, COMPRESSION,
+            "jclass: some.non.existence.clazz", conf));
   }
 
-  // class exists but not a RawComparator
+  // class exists but is not a RawComparator
   @Test
-  public void testFailureBadJClasses() throws IOException {
-    try {
-      writer =
-          new Writer(out, BLOCK_SIZE, compression,
-              "jclass:org.apache.hadoop.io.file.tfile.Chunk", conf);
-      Assert.fail("Failed to catch unsupported comparator names");
-    }
-    catch (Exception e) {
-      // noop, expecting exceptions
-      e.printStackTrace();
-    }
+  public void testFailureBadJClasses() throws Exception {
+    conf.setBoolean(TFile.TFILE_COMPARATOR_JCLASS_ENABLED, true);
+    intercept(IllegalArgumentException.class, "Failed to instantiate comparator",
+        () -> new Writer(out, BLOCK_SIZE, COMPRESSION,
+            "jclass:org.apache.hadoop.io.file.tfile.Chunk", conf));
   }
 
   private void closeOutput() throws IOException {
