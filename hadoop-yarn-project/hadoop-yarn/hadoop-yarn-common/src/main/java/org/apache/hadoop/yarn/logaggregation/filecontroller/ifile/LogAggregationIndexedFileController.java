@@ -121,21 +121,40 @@ public class LogAggregationIndexedFileController
   private int fsNumRetries = 3;
   private long fsRetryInterval = 1000L;
   private static final int VERSION = 1;
-  private IndexedLogsMeta indexedLogsMeta = null;
-  private IndexedPerAggregationLogMeta logsMetaInThisCycle;
-  private long logAggregationTimeInThisCycle;
-  private FSDataOutputStream fsDataOStream;
   private Algorithm compressAlgo;
-  private ApplicationId currentWriteAppId = null;
-  private boolean logAggregationSuccessfullyInThisCyCle = false;
-  private long currentOffSet = 0;
-  private Path remoteLogCheckSumFile;
-  private FileContext fc;
-  private UserGroupInformation ugi;
-  private byte[] uuid = null;
   private final int UUID_LENGTH = 32;
   private long logRollOverMaxFileSize;
   private Clock sysClock;
+
+  /**
+   * All mutable state that belongs to a single write session
+   * (one {@link #initializeWriter} / {@link #write} / {@link #postWrite} /
+   * {@link #closeWriter} lifecycle). Bundling it here means the read path
+   * cannot accidentally touch write-path state, regardless of whether the
+   * controller instance is shared across applications.
+   */
+  private static final class WriteSession {
+    /** UUID derived from the application being written. */
+    private final byte[] uuid;
+    /** Accumulated log metadata for the current aggregated file. */
+    private IndexedLogsMeta indexedLogsMeta;
+    /** Log metadata accumulated within this single write cycle. */
+    private IndexedPerAggregationLogMeta logsMetaInThisCycle;
+    private long logAggregationTimeInThisCycle;
+    private boolean logAggregationSuccessfullyInThisCyCle = false;
+    private long currentOffSet = 0;
+    private Path remoteLogCheckSumFile;
+    private FileContext fc;
+    private UserGroupInformation ugi;
+    private FSDataOutputStream fsDataOStream;
+
+    WriteSession(byte[] uuid) {
+      this.uuid = uuid;
+    }
+  }
+
+  /** Non-null while a write session is in progress; null otherwise. */
+  private WriteSession writeSession = null;
 
   public LogAggregationIndexedFileController() {}
 
@@ -161,37 +180,36 @@ public class LogAggregationIndexedFileController
     final String nodeId = context.getNodeId().toString();
     final ApplicationId appId = context.getAppId();
     final Path remoteLogFile = context.getRemoteNodeLogFileForApp();
-    this.ugi = userUgi;
-    // Controller instances may be reused across applications (e.g. singleton
-    // web services after HADOOP-15984). Reset per-app write state on app change.
-    if (currentWriteAppId == null || !currentWriteAppId.equals(appId)) {
-      currentWriteAppId = appId;
-      indexedLogsMeta = null;
-      uuid = null;
-    }
-    logAggregationSuccessfullyInThisCyCle = false;
-    logsMetaInThisCycle = new IndexedPerAggregationLogMeta();
-    logAggregationTimeInThisCycle = this.sysClock.getTime();
-    logsMetaInThisCycle.setUploadTimeStamp(logAggregationTimeInThisCycle);
-    logsMetaInThisCycle.setRemoteNodeFile(remoteLogFile.getName());
+
+    // Allocate a fresh WriteSession for every initializeWriter call so that
+    // all write-path state is completely isolated from other applications.
+    // This is safe whether the controller is used by a single NM aggregation
+    // thread or reused across requests by a singleton web service.
+    final WriteSession session = new WriteSession(createUUID(appId));
+    session.ugi = userUgi;
+    session.logAggregationSuccessfullyInThisCyCle = false;
+    session.logsMetaInThisCycle = new IndexedPerAggregationLogMeta();
+    session.logAggregationTimeInThisCycle = this.sysClock.getTime();
+    session.logsMetaInThisCycle.setUploadTimeStamp(
+        session.logAggregationTimeInThisCycle);
+    session.logsMetaInThisCycle.setRemoteNodeFile(remoteLogFile.getName());
     try {
       userUgi.doAs(new PrivilegedExceptionAction<Object>() {
         @Override
         public Object run() throws Exception {
-          fc = FileContext.getFileContext(
+          session.fc = FileContext.getFileContext(
               remoteRootLogDir.toUri(), conf);
-          fc.setUMask(APP_LOG_FILE_UMASK);
-          if (indexedLogsMeta == null) {
-            indexedLogsMeta = new IndexedLogsMeta();
-            indexedLogsMeta.setVersion(VERSION);
-            indexedLogsMeta.setUser(userUgi.getShortUserName());
-            indexedLogsMeta.setAcls(appAcls);
-            indexedLogsMeta.setNodeId(nodeId);
-            String compressName = conf.get(
-                YarnConfiguration.NM_LOG_AGG_COMPRESSION_TYPE,
-                YarnConfiguration.DEFAULT_NM_LOG_AGG_COMPRESSION_TYPE);
-            indexedLogsMeta.setCompressName(compressName);
-          }
+          session.fc.setUMask(APP_LOG_FILE_UMASK);
+          session.indexedLogsMeta = new IndexedLogsMeta();
+          session.indexedLogsMeta.setVersion(VERSION);
+          session.indexedLogsMeta.setUser(userUgi.getShortUserName());
+          session.indexedLogsMeta.setAcls(appAcls);
+          session.indexedLogsMeta.setNodeId(nodeId);
+          String compressName = conf.get(
+              YarnConfiguration.NM_LOG_AGG_COMPRESSION_TYPE,
+              YarnConfiguration.DEFAULT_NM_LOG_AGG_COMPRESSION_TYPE);
+          session.indexedLogsMeta.setCompressName(compressName);
+
           Path aggregatedLogFile = null;
           Pair<Path, Boolean> initializationResult = null;
           boolean createdNew;
@@ -200,42 +218,39 @@ public class LogAggregationIndexedFileController
             // In rolling log aggregation we need special initialization
             // done in initializeWriterInRolling.
             initializationResult = initializeWriterInRolling(
-                remoteLogFile, appId, nodeId);
+                session, remoteLogFile, appId, nodeId);
             aggregatedLogFile = initializationResult.getLeft();
             createdNew = initializationResult.getRight();
           } else {
             aggregatedLogFile = remoteLogFile;
-            fsDataOStream = fc.create(remoteLogFile,
+            session.fsDataOStream = session.fc.create(remoteLogFile,
                 EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE),
                 new Options.CreateOpts[] {});
-            if (uuid == null) {
-              uuid = createUUID(appId);
-            }
-            fsDataOStream.write(uuid);
-            fsDataOStream.flush();
+            session.fsDataOStream.write(session.uuid);
+            session.fsDataOStream.flush();
             createdNew = true;
           }
 
           // If we have created a new file, we know that the offset is zero.
           // Otherwise we should get this information through getFileStatus.
           if (createdNew) {
-            currentOffSet = 0;
+            session.currentOffSet = 0;
           } else {
-            long aggregatedLogFileLength = fc.getFileStatus(
+            long aggregatedLogFileLength = session.fc.getFileStatus(
                 aggregatedLogFile).getLen();
             // append a simple character("\n") to move the writer cursor, so
             // we could get the correct position when we call
             // fsOutputStream.getStartPos()
             final byte[] dummyBytes = "\n".getBytes(StandardCharsets.UTF_8);
-            fsDataOStream.write(dummyBytes);
-            fsDataOStream.flush();
+            session.fsDataOStream.write(dummyBytes);
+            session.fsDataOStream.flush();
 
-            if (fsDataOStream.getPos() < (aggregatedLogFileLength
+            if (session.fsDataOStream.getPos() < (aggregatedLogFileLength
                 + dummyBytes.length)) {
-              currentOffSet = fc.getFileStatus(
+              session.currentOffSet = session.fc.getFileStatus(
                       aggregatedLogFile).getLen();
             } else {
-              currentOffSet = 0;
+              session.currentOffSet = 0;
             }
           }
           return null;
@@ -244,12 +259,14 @@ public class LogAggregationIndexedFileController
     } catch (Exception e) {
       throw new IOException(e);
     }
+    this.writeSession = session;
   }
 
   /**
    * Initializes the write for the log aggregation controller in the
    * rolling case. It sets up / modifies checksum and meta files if needed.
    *
+   * @param session the current write session
    * @param remoteLogFile the Path of the remote log file
    * @param appId the application id
    * @param nodeId the node id
@@ -259,33 +276,31 @@ public class LogAggregationIndexedFileController
    * @throws Exception
    */
   private Pair<Path, Boolean> initializeWriterInRolling(
+      final WriteSession session,
       final Path remoteLogFile, final ApplicationId appId,
       final String nodeId) throws Exception {
     boolean createdNew = false;
     Path aggregatedLogFile = null;
-    // check uuid
-    // if we can not find uuid, we would load the uuid
-    // from previous aggregated log files, and at the same
-    // time, we would delete any aggregated log files which
-    // has invalid uuid.
-    if (uuid == null) {
-      uuid = loadUUIDFromLogFile(fc, remoteLogFile.getParent(),
-          appId, nodeId);
-    }
+    // Validate existing log files for this node: delete any whose stored UUID
+    // does not match this application's UUID. The session UUID is always the
+    // deterministic SHA-256 of the ApplicationId string, so existing valid
+    // files will match and corrupt/stale files will be removed.
+    loadUUIDFromLogFile(session.fc, remoteLogFile.getParent(), appId, nodeId);
     Path currentRemoteLogFile = getCurrentRemoteLogFile(
-        fc, remoteLogFile.getParent(), nodeId);
+        session.fc, remoteLogFile.getParent(), nodeId);
     // check checksum file
     boolean overwriteCheckSum = true;
-    remoteLogCheckSumFile = new Path(remoteLogFile.getParent(),
+    session.remoteLogCheckSumFile = new Path(remoteLogFile.getParent(),
         (remoteLogFile.getName() + CHECK_SUM_FILE_SUFFIX));
-    if(fc.util().exists(remoteLogCheckSumFile)) {
+    if(session.fc.util().exists(session.remoteLogCheckSumFile)) {
       // if the checksum file exists, we should reset cached
       // indexedLogsMeta.
-      indexedLogsMeta.getLogMetas().clear();
+      session.indexedLogsMeta.getLogMetas().clear();
       if (currentRemoteLogFile != null) {
         FSDataInputStream checksumFileInputStream = null;
         try {
-          checksumFileInputStream = fc.open(remoteLogCheckSumFile);
+          checksumFileInputStream = session.fc.open(
+              session.remoteLogCheckSumFile);
           int nameLength = checksumFileInputStream.readInt();
           byte[] b = new byte[nameLength];
           checksumFileInputStream.readFully(b);
@@ -300,7 +315,7 @@ public class LogAggregationIndexedFileController
               IndexedLogsMeta recoveredLogsMeta = loadIndexedLogsMeta(
                   currentRemoteLogFile, endIndex, appId);
               if (recoveredLogsMeta != null) {
-                indexedLogsMeta = recoveredLogsMeta;
+                session.indexedLogsMeta = recoveredLogsMeta;
               }
             }
           }
@@ -311,21 +326,21 @@ public class LogAggregationIndexedFileController
     }
     // check whether we need roll over old logs
     if (currentRemoteLogFile == null || isRollover(
-        fc, currentRemoteLogFile)) {
-      indexedLogsMeta.getLogMetas().clear();
+        session.fc, currentRemoteLogFile)) {
+      session.indexedLogsMeta.getLogMetas().clear();
       overwriteCheckSum = true;
       aggregatedLogFile = new Path(remoteLogFile.getParent(),
           remoteLogFile.getName() + "_" + sysClock.getTime());
-      fsDataOStream = fc.create(aggregatedLogFile,
+      session.fsDataOStream = session.fc.create(aggregatedLogFile,
           EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE),
           new Options.CreateOpts[] {});
       // writes the uuid
-      fsDataOStream.write(uuid);
-      fsDataOStream.flush();
+      session.fsDataOStream.write(session.uuid);
+      session.fsDataOStream.flush();
       createdNew = true;
     } else {
       aggregatedLogFile = currentRemoteLogFile;
-      fsDataOStream = fc.create(currentRemoteLogFile,
+      session.fsDataOStream = session.fc.create(currentRemoteLogFile,
           EnumSet.of(CreateFlag.CREATE, CreateFlag.APPEND),
           new Options.CreateOpts[] {});
     }
@@ -335,12 +350,13 @@ public class LogAggregationIndexedFileController
       if (createdNew) {
         currentAggregatedLogFileLength = 0;
       } else {
-        currentAggregatedLogFileLength = fc
+        currentAggregatedLogFileLength = session.fc
             .getFileStatus(aggregatedLogFile).getLen();
       }
       FSDataOutputStream checksumFileOutputStream = null;
       try {
-        checksumFileOutputStream = fc.create(remoteLogCheckSumFile,
+        checksumFileOutputStream = session.fc.create(
+            session.remoteLogCheckSumFile,
             EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE),
             new Options.CreateOpts[] {});
         String fileName = aggregatedLogFile.getName();
@@ -360,7 +376,9 @@ public class LogAggregationIndexedFileController
 
   @Override
   public void closeWriter() {
-    IOUtils.cleanupWithLogger(LOG, this.fsDataOStream);
+    if (writeSession != null) {
+      IOUtils.cleanupWithLogger(LOG, writeSession.fsDataOStream);
+    }
   }
 
   @Override
@@ -382,7 +400,8 @@ public class LogAggregationIndexedFileController
       IndexedFileOutputStreamState outputStreamState = null;
       try {
         outputStreamState = new IndexedFileOutputStreamState(
-            this.compressAlgo, this.fsDataOStream, conf, this.currentOffSet);
+            this.compressAlgo, writeSession.fsDataOStream, conf,
+            writeSession.currentOffSet);
         byte[] buf = new byte[65535];
         int len = 0;
         long bytesLeft = fileLength;
@@ -403,7 +422,7 @@ public class LogAggregationIndexedFileController
           LOG.warn("Aggregated logs truncated by approximately "+
               (newLength-fileLength) +" bytes.");
         }
-        logAggregationSuccessfullyInThisCyCle = true;
+        writeSession.logAggregationSuccessfullyInThisCyCle = true;
       } catch (IOException e) {
         String message = logErrorMessage(logFile, e);
         if (outputStreamState != null &&
@@ -427,7 +446,7 @@ public class LogAggregationIndexedFileController
       meta.setLastModifiedTime(logFile.lastModified());
       metas.add(meta);
     }
-    logsMetaInThisCycle.addContainerLogMeta(containerId, metas);
+    writeSession.logsMetaInThisCycle.addContainerLogMeta(containerId, metas);
   }
 
   @Override
@@ -435,15 +454,16 @@ public class LogAggregationIndexedFileController
       throws Exception {
     // always aggregate the previous logsMeta, and append them together
     // at the end of the file
-    indexedLogsMeta.addLogMeta(logsMetaInThisCycle);
-    byte[] b = SerializationUtils.serialize(indexedLogsMeta);
-    this.fsDataOStream.write(b);
+    writeSession.indexedLogsMeta.addLogMeta(writeSession.logsMetaInThisCycle);
+    byte[] b = SerializationUtils.serialize(writeSession.indexedLogsMeta);
+    writeSession.fsDataOStream.write(b);
     int length = b.length;
-    this.fsDataOStream.writeInt(length);
-    this.fsDataOStream.write(uuid);
-    if (logAggregationSuccessfullyInThisCyCle &&
+    writeSession.fsDataOStream.writeInt(length);
+    writeSession.fsDataOStream.write(writeSession.uuid);
+    if (writeSession.logAggregationSuccessfullyInThisCyCle &&
         record.isLogAggregationInRolling()) {
-      deleteFileWithRetries(fc, ugi, remoteLogCheckSumFile);
+      deleteFileWithRetries(writeSession.fc, writeSession.ugi,
+          writeSession.remoteLogCheckSumFile);
     }
   }
 
