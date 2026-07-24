@@ -20,6 +20,7 @@
 name: "Cloud-AWS"
 
 on:
+  # pull requests will automatically trigger S3A tests for non-forked PRs
   pull_request:
     paths:
       - 'hadoop-tools/hadoop-aws/**'
@@ -27,8 +28,88 @@ on:
       - '.github/actions/build_image**'
       - '.github/gha-tests/hadoop-aws*excludes.txt'
 
+  # For fork PRs, S3A integration tests must be manually triggered.
+  # Although our auth. key for localstack is not a very sensitive secret,
+  # we don't want to leak it to PRs that we haven't reviewed yet.
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: Pull request number from a fork repository
+        required: true
+        type: string
+      java:
+        description: Java version for the Cloud-AWS run
+        required: false
+        type: string
+        default: '25'
+      os:
+        description: OS image key for the test container
+        required: false
+        type: string
+        default: ubuntu_24
+      runner_os:
+        description: Runner label used to execute jobs
+        required: false
+        type: string
+        default: ubuntu-24.04
+
 jobs:
+  # Stash PR's repository and commit, so we can properly add a test summary
+  # in both the forked-repo, and non-forked case.
+  resolve-fork-pr:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-slim
+    permissions:
+      pull-requests: read
+    outputs:
+      head_repo: ${{ steps.pr.outputs.head_repo }}
+      head_sha: ${{ steps.pr.outputs.head_sha }}
+    steps:
+      - name: Resolve PR head SHA and repository
+        id: pr
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
+        with:
+          script: |
+            const prNumber = Number('${{ inputs.pr_number }}');
+            if (!Number.isInteger(prNumber) || prNumber <= 0) {
+              throw new Error(`Invalid pull request number: '${{ inputs.pr_number }}'`);
+            }
+
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber,
+            });
+
+            if (!pr.head.repo.fork) {
+              throw new Error(`PR #${prNumber} is not from a fork repository. Use the pull_request-triggered Cloud-AWS workflow instead.`);
+            }
+
+            core.setOutput('head_repo', pr.head.repo.full_name);
+            core.setOutput('head_sha', pr.head.sha);
+
+            console.log(`Resolved PR #${prNumber}: ${pr.head.repo.full_name}@${pr.head.sha}`);
+
+      - name: Write manual target metadata
+        shell: bash
+        run: |
+          cat > manual-target.json <<EOF
+          {
+            "pr_number": "${{ inputs.pr_number }}",
+            "head_repo": "${{ steps.pr.outputs.head_repo }}",
+            "head_sha": "${{ steps.pr.outputs.head_sha }}"
+          }
+          EOF
+
+      - name: Upload manual target metadata
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: cloud-aws-manual-target
+          path: manual-target.json
+          retention-days: 7
+
   run-aws-integration:
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
     # Security: write privileges are needed to update PR status and upload test results.
     # Package write is for building toolchain container images on demand, but ghcr.io access is
     # scoped to the repository the actions run on.
@@ -37,8 +118,26 @@ jobs:
       contents: read
     name: Run
     uses: ./.github/workflows/tmpl_cloud_aws.yml
-    secrets: inherit    # inherit LOCALSTACK_CI_KEY
+    secrets:
+      LOCALSTACK_CI_KEY: ${{ secrets.LOCALSTACK_CI_KEY }}
     with:
       java: 25
       os: ubuntu_24
       runner_os: ubuntu-24.04
+
+  run-aws-integration-manual:
+    if: github.event_name == 'workflow_dispatch'
+    needs: [ resolve-fork-pr ]
+    permissions:
+      packages: write
+      contents: read
+    name: Run (manual fork PR)
+    uses: ./.github/workflows/tmpl_cloud_aws.yml
+    secrets:
+      LOCALSTACK_CI_KEY: ${{ secrets.LOCALSTACK_CI_KEY }}
+    with:
+      java: ${{ inputs.java }}
+      os: ${{ inputs.os }}
+      runner_os: ${{ inputs.runner_os }}
+      checkout_repository: ${{ needs.resolve-fork-pr.outputs.head_repo }}
+      checkout_ref: ${{ needs.resolve-fork-pr.outputs.head_sha }}
