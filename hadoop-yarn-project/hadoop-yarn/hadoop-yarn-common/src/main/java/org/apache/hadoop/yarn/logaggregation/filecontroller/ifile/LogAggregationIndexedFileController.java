@@ -181,10 +181,14 @@ public class LogAggregationIndexedFileController
     final ApplicationId appId = context.getAppId();
     final Path remoteLogFile = context.getRemoteNodeLogFileForApp();
 
-    // Allocate a fresh WriteSession for every initializeWriter call so that
-    // all write-path state is completely isolated from other applications.
-    // This is safe whether the controller is used by a single NM aggregation
-    // thread or reused across requests by a singleton web service.
+    // Allocate a fresh WriteSession for every initializeWriter call.
+    // The write lifecycle (initializeWriter → write → postWrite → closeWriter)
+    // is always single-threaded: the NodeManager's AppLogAggregatorImpl calls
+    // these methods sequentially within one thread per application, so
+    // concurrent write sessions for the same controller instance are not
+    // possible in practice. The read-path methods (readAggregatedLogsMeta,
+    // readAggregatedLogs, getApplicationOwner, getApplicationAcls) do not
+    // access writeSession at all, so reads and writes are also independent.
     final WriteSession session = new WriteSession(createUUID(appId));
     session.ugi = userUgi;
     session.logAggregationSuccessfullyInThisCyCle = false;
