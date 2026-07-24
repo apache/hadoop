@@ -60,7 +60,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
@@ -211,17 +211,15 @@ public class TestHsWebServicesIFileAggregatedLogs extends JerseyTestBase {
         .queryParam(YarnWebServiceParams.APP_ID, appId.toString())
         .request(MediaType.APPLICATION_JSON)
         .get(Response.class);
-    assertThat(response.getStatus())
-        .as("aggregated logs meta HTTP status for " + appId)
-        .isEqualTo(200);
+    assertEquals(200, response.getStatus(),
+        "aggregated logs meta HTTP status for " + appId);
     List<ContainerLogsInfo> responseList =
         response.readEntity(new GenericType<List<ContainerLogsInfo>>(){});
-    assertThat(responseList.size())
-        .as("aggregated logs meta entry count for " + appId)
-        .isEqualTo(1);
-    assertThat(responseList.get(0).getContainerId())
-        .as("aggregated logs container id for " + appId)
-        .isEqualTo(expectedContainerId.toString());
+    assertEquals(1, responseList.size(),
+        "aggregated logs meta entry count for " + appId);
+    assertEquals(expectedContainerId.toString(),
+        responseList.get(0).getContainerId(),
+        "aggregated logs container id for " + appId);
   }
 
   private static ApplicationReport newApplicationReport(ApplicationId appId,
