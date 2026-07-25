@@ -33,8 +33,8 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class TestTFileComparator2 {
-  private static String ROOT = GenericTestUtils.getTestDir().getAbsolutePath();
-  private static final String name = "test-tfile-comparator2";
+  private static final String ROOT = GenericTestUtils.getTestDir().getAbsolutePath();
+  private static final String NAME = "test-tfile-comparator2";
   private final static int BLOCK_SIZE = 512;
   private static final String VALUE = "value";
   private static final String jClassLongWritableComparator = "jclass:"
@@ -52,55 +52,42 @@ public class TestTFileComparator2 {
   @Test
   public void testSortedLongWritable() throws IOException {
     Configuration conf = new Configuration();
-    Path path = new Path(ROOT, name);
+    conf.setBoolean(TFile.TFILE_COMPARATOR_JCLASS_ENABLED, true);
+    Path path = new Path(ROOT, NAME);
     FileSystem fs = path.getFileSystem(conf);
-    FSDataOutputStream out = fs.create(path);
-    try {
-    TFile.Writer writer = new Writer(out, BLOCK_SIZE, "gz",
-        jClassLongWritableComparator, conf);
-      try {
-        LongWritable key = new LongWritable(0);
-        for (long i=0; i<NENTRY; ++i) {
-          key.set(cube(i-NENTRY/2));
-          DataOutputStream dos = writer.prepareAppendKey(-1);
-          try {
-            key.write(dos);
-          } finally {
-            dos.close();
-          }
-          dos = writer.prepareAppendValue(-1);
-          try {
-            dos.write(buildValue(i).getBytes());
-          } finally {
-            dos.close();
-          }
+    try (FSDataOutputStream out = fs.create(path);
+         Writer writer = new Writer(out, BLOCK_SIZE, "gz",
+             jClassLongWritableComparator, conf)) {
+      LongWritable key = new LongWritable(0);
+      for (long i = 0; i < NENTRY; ++i) {
+        key.set(cube(i - NENTRY / 2));
+        DataOutputStream dos = writer.prepareAppendKey(-1);
+        try {
+          key.write(dos);
+        } finally {
+          dos.close();
         }
-      } finally {
-        writer.close();
-      } 
-    } finally {
-      out.close();
-    }
-    
-    FSDataInputStream in = fs.open(path);
-    try {
-      TFile.Reader reader = new TFile.Reader(in, fs.getFileStatus(path)
-          .getLen(), conf);
-      try {
-        TFile.Reader.Scanner scanner = reader.createScanner();
-        long i=0;
-        BytesWritable value = new BytesWritable();
-        for (; !scanner.atEnd(); scanner.advance()) {
-          scanner.entry().getValue(value);
-          assertEquals(buildValue(i), new String(value.getBytes(), 0, value
-              .getLength()));
-          ++i;
+        dos = writer.prepareAppendValue(-1);
+        try {
+          dos.write(buildValue(i).getBytes());
+        } finally {
+          dos.close();
         }
-      } finally {
-        reader.close();
       }
-    } finally {
-      in.close();
+    }
+    final long len = fs.getFileStatus(path).getLen();
+
+    try (FSDataInputStream in = fs.open(path);
+         TFile.Reader reader = new TFile.Reader(in, len, conf)) {
+      TFile.Reader.Scanner scanner = reader.createScanner();
+      long i = 0;
+      BytesWritable value = new BytesWritable();
+      for (; !scanner.atEnd(); scanner.advance()) {
+        scanner.entry().getValue(value);
+        assertEquals(buildValue(i), new String(value.getBytes(), 0, value
+            .getLength()));
+        ++i;
+      }
     }
   }
 }
