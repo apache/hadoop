@@ -439,6 +439,22 @@ describe('nodeLabelsSlice', () => {
       expect(store.getState().nodeToLabels).toEqual([{ nodeId: 'node1', nodeLabels: [] }]);
     });
 
+    it('should clear host:0 as well that was created by CLI when unassigning label from a node', async () => {
+      const mockResponse: NodeToLabelsResponse = {
+        nodeToLabels: { entry: [] },
+      };
+
+      vi.mocked(store.getState().apiClient.replaceNodeToLabels).mockResolvedValue(undefined);
+      vi.mocked(store.getState().apiClient.getNodeToLabels).mockResolvedValue(mockResponse);
+
+      await store.getState().assignNodeToLabel('ccycloud-2.example.com:8041', null);
+
+      expect(store.getState().apiClient.replaceNodeToLabels).toHaveBeenCalledWith([
+        { nodeId: 'ccycloud-2.example.com:8041', labels: [] },
+        { nodeId: 'ccycloud-2.example.com:0', labels: [] },
+      ]);
+    });
+
     it('should throw error in read-only mode', async () => {
       store = createTestStore({ isReadOnly: true });
 

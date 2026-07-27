@@ -33,6 +33,16 @@ import { normalizeNodeLabels, normalizeNodeToLabels } from '~/lib/normalizers/no
 import { validateLabelRemoval } from '~/features/node-labels/utils/labelValidation';
 import type { NodeLabelsSlice, SchedulerStore } from './types';
 
+const constructPortZeroHostCreatedByCLI = (nodeId: string): string | null => {
+  const [host, port] = nodeId.split(':');
+
+  if (!port || port === '0') {  // Safety check to prevent duplicate port 0 entries
+    return null;
+  }
+
+  return `${host}:0`;
+};
+
 export const createNodeLabelsSlice: StateCreator<
   SchedulerStore,
   [['zustand/immer', never]],
@@ -209,10 +219,17 @@ export const createNodeLabelsSlice: StateCreator<
     });
 
     try {
-      // Replace with new label or empty array if null
-      const newLabels = labelName ? [labelName] : [];
+      const labels = labelName ? [labelName] : [];
+      const nodeToLabelsReplacement = [{ nodeId, labels }];
 
-      await get().apiClient.replaceNodeToLabels([{ nodeId, labels: newLabels }]);
+      if(!labelName) {
+        const leftOverHostFromCLI = constructPortZeroHostCreatedByCLI(nodeId);
+        if (leftOverHostFromCLI) {
+          nodeToLabelsReplacement.push({ nodeId: leftOverHostFromCLI, labels: [] });
+        }
+      }
+      
+      await get().apiClient.replaceNodeToLabels(nodeToLabelsReplacement);
 
       // Refresh node-to-label mappings
       const nodeToLabels = await get().apiClient.getNodeToLabels();
