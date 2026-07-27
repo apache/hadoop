@@ -1,0 +1,62 @@
+<!--
+   Licensed to the Apache Software Foundation (ASF) under one or more
+   contributor license agreements.  See the NOTICE file distributed with
+   this work for additional information regarding copyright ownership.
+   The ASF licenses this file to You under the Apache License, Version 2.0
+   (the "License"); you may not use this file except in compliance with
+   the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+-->
+<FindBugsFilter>
+  <!-- BosInputStream stores mutable configuration and statistics
+       objects passed from the caller; defensive copies are
+       unnecessary for internal use. -->
+  <Match>
+    <Class name="org.apache.hadoop.fs.bos.BosInputStream"/>
+    <Or>
+      <Bug pattern="EI_EXPOSE_REP"/>
+      <Bug pattern="EI_EXPOSE_REP2"/>
+    </Or>
+  </Match>
+  <!-- BosOutputStream stores mutable store and configuration
+       objects passed from the caller. -->
+  <Match>
+    <Class name="org.apache.hadoop.fs.bos.BosOutputStream"/>
+    <Or>
+      <Bug pattern="EI_EXPOSE_REP"/>
+      <Bug pattern="EI_EXPOSE_REP2"/>
+    </Or>
+  </Match>
+  <!-- FileMetadata exposes ObjectMetadata and attribute Set
+       without defensive copies for performance. -->
+  <Match>
+    <Class name="org.apache.hadoop.fs.bos.FileMetadata"/>
+    <Or>
+      <Bug pattern="EI_EXPOSE_REP"/>
+      <Bug pattern="EI_EXPOSE_REP2"/>
+    </Or>
+  </Match>
+  <!-- PartialListing stores and returns arrays without
+       defensive copies for performance in listing operations. -->
+  <Match>
+    <Class name="org.apache.hadoop.fs.bos.PartialListing"/>
+    <Or>
+      <Bug pattern="EI_EXPOSE_REP"/>
+      <Bug pattern="EI_EXPOSE_REP2"/>
+    </Or>
+  </Match>
+  <!-- BosCRC32CCheckSum uses unsigned right shift on an int
+       value to extract individual bytes; this is intentional. -->
+  <Match>
+    <Class name="org.apache.hadoop.fs.bos.utils.BosCRC32CCheckSum"/>
+    <Method name="writeInt"/>
+    <Bug pattern="ICAST_QUESTIONABLE_UNSIGNED_RIGHT_SHIFT"/>
+  </Match>
+</FindBugsFilter>

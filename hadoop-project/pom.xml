@@ -76,7 +76,7 @@
     <jaxb.version>2.3.9</jaxb.version>
 
     <!-- jackson versions -->
-    <jackson2.version>2.18.8</jackson2.version>
+    <jackson2.version>2.18.9</jackson2.version>
     <jackson2.databind.version>${jackson2.version}</jackson2.databind.version>
 
     <!-- httpcomponents versions -->
@@ -120,7 +120,7 @@
     <guava.version>33.4.8-jre</guava.version>
     <guice.version>5.1.0</guice.version>
 
-    <bouncycastle.version>1.84</bouncycastle.version>
+    <bouncycastle.version>1.85</bouncycastle.version>
 
     <!-- Required for testing LDAP integration -->
     <apacheds.version>2.0.0.AM27</apacheds.version>
@@ -775,6 +775,12 @@
 
       <dependency>
         <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-bos</artifactId>
+        <version>${hadoop.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-huaweicloud</artifactId>
         <version>${hadoop.version}</version>
       </dependency>
@@ -1158,7 +1164,7 @@
       <dependency>
         <groupId>org.apache.mina</groupId>
         <artifactId>mina-core</artifactId>
-        <version>2.0.28</version>
+        <version>2.0.29</version>
       </dependency>
       <dependency>
         <groupId>org.apache.sshd</groupId>
