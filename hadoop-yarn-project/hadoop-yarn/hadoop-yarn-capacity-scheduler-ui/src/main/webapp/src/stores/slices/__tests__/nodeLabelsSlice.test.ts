@@ -440,6 +440,13 @@ describe('nodeLabelsSlice', () => {
     });
 
     it('should clear host:0 as well that was created by CLI when unassigning label from a node', async () => {
+      store.setState({
+        nodeToLabels: [
+          { nodeId: 'localhost:8041', nodeLabels: ['label3'] },
+          { nodeId: 'localhost:0', nodeLabels: ['label3'] },
+        ],
+      });
+
       const mockResponse: NodeToLabelsResponse = {
         nodeToLabels: { entry: [] },
       };
@@ -450,8 +457,27 @@ describe('nodeLabelsSlice', () => {
       await store.getState().assignNodeToLabel('ccycloud-2.example.com:8041', null);
 
       expect(store.getState().apiClient.replaceNodeToLabels).toHaveBeenCalledWith([
-        { nodeId: 'ccycloud-2.example.com:8041', labels: [] },
-        { nodeId: 'ccycloud-2.example.com:0', labels: [] },
+        { nodeId: 'localhost:8041', labels: [] },
+        { nodeId: 'localhost:0', labels: [] },
+      ]);
+    });
+
+    it('should not clear host:0 when unassigning a UI-assigned node', async () => {
+      store.setState({
+        nodeToLabels: [{ nodeId: 'localhost:8041', nodeLabels: ['label3'] }],
+      });
+
+      const mockResponse: NodeToLabelsResponse = {
+        nodeToLabels: { entry: [] },
+      };
+
+      vi.mocked(store.getState().apiClient.replaceNodeToLabels).mockResolvedValue(undefined);
+      vi.mocked(store.getState().apiClient.getNodeToLabels).mockResolvedValue(mockResponse);
+
+      await store.getState().assignNodeToLabel('ccycloud-2.example.com:8041', null);
+
+      expect(store.getState().apiClient.replaceNodeToLabels).toHaveBeenCalledWith([
+        { nodeId: 'localhost:8041', labels: [] },
       ]);
     });
 

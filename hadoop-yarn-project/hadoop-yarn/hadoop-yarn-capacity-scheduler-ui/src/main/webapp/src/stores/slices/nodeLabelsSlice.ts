@@ -222,10 +222,18 @@ export const createNodeLabelsSlice: StateCreator<
       const labels = labelName ? [labelName] : [];
       const nodeToLabelsReplacement = [{ nodeId, labels }];
 
-      if(!labelName) {
-        const leftOverHostFromCLI = constructPortZeroHostCreatedByCLI(nodeId);
-        if (leftOverHostFromCLI) {
-          nodeToLabelsReplacement.push({ nodeId: leftOverHostFromCLI, labels: [] });
+      if (!labelName) {
+        const [host, port] = nodeId.split(':');
+        if (host && port && port !== '0') {
+          const portZeroHostCreatedByCLI = `${host}:0`;
+          const hasPortZeroHostCreatedByCLIAssignment =
+            get().nodeToLabels.some(
+              (mapping) =>
+                  mapping.nodeId === portZeroHostCreatedByCLI && mapping.nodeLabels.length > 0,
+            );
+          if (hasPortZeroHostCreatedByCLIAssignment) {
+            nodeToLabelsReplacement.push({ nodeId: portZeroHostCreatedByCLI, labels: [] });
+          }
         }
       }
       
