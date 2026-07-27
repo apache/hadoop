@@ -777,6 +777,13 @@
                         <exclude>org/objenesis/*.class</exclude>
                       </excludes>
                     </filter>
+                    <filter>
+                      <artifact>*:*</artifact>
+                      <excludes>
+                        <exclude>win32-x86/**</exclude>
+                        <exclude>win32-x86-64/**</exclude>
+                      </excludes>
+                    </filter>
                     <!-- skip grizzly internals we don't need to run. -->
                     <filter>
                       <artifact>org.glassfish.grizzly:grizzly-http-servlet</artifact>
