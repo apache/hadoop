@@ -35,6 +35,7 @@ import org.junit.jupiter.api.Timeout;
 
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -63,6 +64,27 @@ public class TestDefaultAMSProcessor {
     }
   }
 
+  /**
+   * Simulates a scheduler that does not compute a resource limit,
+   * returning null from {@link Allocation#getResourceLimit()}.
+   */
+  public static class NullHeadroomScheduler extends FifoScheduler {
+    @Override
+    public Allocation allocate(ApplicationAttemptId applicationAttemptId,
+        List<ResourceRequest> ask,
+        List<SchedulingRequest> schedulingRequests,
+        List<ContainerId> release,
+        List<String> blacklistAdditions,
+        List<String> blacklistRemovals,
+        ContainerUpdates updateRequests) {
+      Allocation allocation = super.allocate(applicationAttemptId, ask,
+          schedulingRequests, release, blacklistAdditions,
+          blacklistRemovals, updateRequests);
+      allocation.setResourceLimit(null);
+      return allocation;
+    }
+  }
+
   @Test
   @Timeout(60)
   public void testAvailableResourcesClampedToNonNegative() throws Exception {
@@ -86,6 +108,29 @@ public class TestDefaultAMSProcessor {
     assertTrue(available.getVirtualCores() >= 0,
         "Available vCores must be non-negative, but was: "
             + available.getVirtualCores());
+
+    rm.stop();
+  }
+
+  @Test
+  @Timeout(60)
+  public void testNullResourceLimitDoesNotThrow() throws Exception {
+    YarnConfiguration conf = new YarnConfiguration();
+    conf.setClass(YarnConfiguration.RM_SCHEDULER,
+        NullHeadroomScheduler.class, ResourceScheduler.class);
+
+    MockRM rm = new MockRM(conf);
+    rm.start();
+    MockNM nm = rm.registerNode("127.0.0.1:1234", 8 * 1024, 8);
+
+    RMApp app = MockRMAppSubmitter.submitWithMemory(1024, rm);
+    MockAM am = MockRM.launchAndRegisterAM(app, rm, nm);
+
+    AllocateResponse response = am.doHeartbeat();
+
+    assertNull(response.getAvailableResources(),
+        "Available resources must remain null when the scheduler "
+            + "returns a null resource limit");
 
     rm.stop();
   }
