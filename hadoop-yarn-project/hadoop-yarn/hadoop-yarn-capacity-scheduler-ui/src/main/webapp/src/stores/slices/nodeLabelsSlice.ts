@@ -33,16 +33,6 @@ import { normalizeNodeLabels, normalizeNodeToLabels } from '~/lib/normalizers/no
 import { validateLabelRemoval } from '~/features/node-labels/utils/labelValidation';
 import type { NodeLabelsSlice, SchedulerStore } from './types';
 
-const constructPortZeroHostCreatedByCLI = (nodeId: string): string | null => {
-  const [host, port] = nodeId.split(':');
-
-  if (!port || port === '0') {  // Safety check to prevent duplicate port 0 entries
-    return null;
-  }
-
-  return `${host}:0`;
-};
-
 export const createNodeLabelsSlice: StateCreator<
   SchedulerStore,
   [['zustand/immer', never]],
@@ -238,7 +228,6 @@ export const createNodeLabelsSlice: StateCreator<
       }
       
       await get().apiClient.replaceNodeToLabels(nodeToLabelsReplacement);
-
       // Refresh node-to-label mappings
       const nodeToLabels = await get().apiClient.getNodeToLabels();
 
