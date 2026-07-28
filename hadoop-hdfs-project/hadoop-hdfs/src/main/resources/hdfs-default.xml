@@ -650,7 +650,12 @@
 <property>
   <name>dfs.block.access.token.lifetime</name>
   <value>600</value>
-  <description>The lifetime of access tokens in minutes.</description>
+  <description>The lifetime of access tokens in minutes. Must be greater than
+    zero. A non-positive value makes every block access token expire at the
+    instant it is created, which causes DataNodes to reject them and all write
+    pipelines to fail. When block access tokens are enabled, the NameNode
+    rejects a non-positive value and will neither format nor start.
+  </description>
 </property>
 
 <property>
