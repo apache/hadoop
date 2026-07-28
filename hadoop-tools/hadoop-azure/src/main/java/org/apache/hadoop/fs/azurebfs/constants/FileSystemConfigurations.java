@@ -311,6 +311,11 @@ public final class FileSystemConfigurations {
   public static final int DEFAULT_FS_AZURE_MAX_MERGED_READ_SIZE_FOR_VECTORED_READS = 4 * ONE_MB;
   public static final int DEFAULT_FS_AZURE_MAX_MERGED_READ_SIZE_FOR_VECTORED_READS_THROUGHPUT = 8 * ONE_MB;
   public static final boolean DEFAULT_FS_AZURE_RESTRICT_GPS_ON_OPENFILE = false;
+  /**
+   * Default value for {@link ConfigurationKeys#FS_AZURE_RBAC_ONLY_MODE}.
+   * Disabled by default to preserve existing behavior.
+   */
+  public static final boolean DEFAULT_FS_AZURE_RBAC_ONLY_MODE = false;
 
   private FileSystemConfigurations() {}
 }
