@@ -73,23 +73,14 @@ public class TestHdfsConfigFields extends TestConfigurationFieldsBase {
     configurationPropsToSkipCompare
         .add(DFSConfigKeys.DFS_DATANODE_XCEIVER_STOP_TIMEOUT_MILLIS_KEY);
 
-    // Fully deprecated properties?
+    // dfs.corruptfilesreturned.max is read into BlockManager but the
+    // resulting field is never consulted; it has no effect.
     configurationPropsToSkipCompare
         .add("dfs.corruptfilesreturned.max");
+    // dfs.metrics.session-id is a deprecated alias
+    // (see HdfsClientConfigKeys.DeprecatedKeys).
     configurationPropsToSkipCompare
         .add("dfs.metrics.session-id");
-    configurationPropsToSkipCompare
-        .add("dfs.datanode.synconclose");
-    configurationPropsToSkipCompare
-        .add("dfs.datanode.non.local.lazy.persist");
-    configurationPropsToSkipCompare
-        .add("dfs.namenode.tolerate.heartbeat.multiplier");
-    configurationPropsToSkipCompare
-        .add("dfs.namenode.replqueue.threshold-pct");
-
-    // Removed by HDFS-6440
-    configurationPropsToSkipCompare
-        .add("dfs.ha.log-roll.rpc.timeout");
 
     // Example (not real) property in hdfs-default.xml
     configurationPropsToSkipCompare.add("dfs.ha.namenodes");
@@ -139,6 +130,26 @@ public class TestHdfsConfigFields extends TestConfigurationFieldsBase {
 
     // Kept in the NfsConfiguration class in the hadoop-hdfs-nfs module
     xmlPrefixToSkipCompare.add("nfs");
+
+    // Kept in BlackListBasedTrustedChannelResolver and
+    // WhitelistBasedTrustedChannelResolver, not in DFSConfigKeys
+    xmlPrefixToSkipCompare.add("dfs.datatransfer.server");
+    xmlPrefixToSkipCompare.add("dfs.datatransfer.client");
+
+    // Kept in EditLogTailer, not in DFSConfigKeys
+    xmlPropsToSkipCompare.add("dfs.ha.tail-edits.max-txns-per-lock");
+
+    // Kept in CredentialBasedAccessTokenProvider and
+    // ConfRefreshTokenBasedAccessTokenProvider, not in HdfsClientConfigKeys
+    xmlPropsToSkipCompare.add("dfs.webhdfs.oauth2.credential");
+    xmlPropsToSkipCompare.add("dfs.webhdfs.oauth2.refresh.token");
+    xmlPropsToSkipCompare
+        .add("dfs.webhdfs.oauth2.refresh.token.expires.ms.since.epoch");
+
+    // Kept in HdfsClientConfigKeys.Read.ShortCircuit, which is not in
+    // configurationClasses and has no mirror constant in DFSConfigKeys
+    xmlPropsToSkipCompare
+        .add("dfs.client.read.shortcircuit.metrics.sampling.percentage");
 
     // Not a hardcoded property.  Used by SaslRpcClient
     xmlPrefixToSkipCompare.add("dfs.namenode.kerberos.principal.pattern");
