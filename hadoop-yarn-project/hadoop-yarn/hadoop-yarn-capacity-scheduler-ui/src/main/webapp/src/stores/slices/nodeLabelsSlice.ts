@@ -215,14 +215,14 @@ export const createNodeLabelsSlice: StateCreator<
       if (!labelName) {
         const [host, port] = nodeId.split(':');
         if (host && port && port !== '0') {
-          const portZeroHostCreatedByCLI = `${host}:0`;
-          const hasPortZeroHostCreatedByCLIAssignment =
+          const hostWithPortZeroCreatedByCLI = `${host}:0`;
+          const hasHostWithPortZeroCreatedByCLIAssignment =
             get().nodeToLabels.some(
               (mapping) =>
-                  mapping.nodeId === portZeroHostCreatedByCLI && mapping.nodeLabels.length > 0,
+                  mapping.nodeId === hostWithPortZeroCreatedByCLI && mapping.nodeLabels.length > 0,
             );
-          if (hasPortZeroHostCreatedByCLIAssignment) {
-            nodeToLabelsReplacement.push({ nodeId: portZeroHostCreatedByCLI, labels: [] });
+          if (hasHostWithPortZeroCreatedByCLIAssignment) {
+            nodeToLabelsReplacement.push({ nodeId: hostWithPortZeroCreatedByCLI, labels: [] });
           }
         }
       }
