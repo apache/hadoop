@@ -37,12 +37,6 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <dependency.locations.enabled>false</dependency.locations.enabled>
         <javascript.test>*Spec</javascript.test>
-        <!-- Skip the browser-driven jasmine tests independently of -DskipTests.
-             Defaults to ${skipTests} so normal builds are unchanged; a headless CI
-             run (no PhantomJS browser available) can pass -DskipJasmineTests=true to
-             avoid the hard build failure while still compiling and covering the
-             module's Java/JS. -->
-        <skipJasmineTests>${skipTests}</skipJasmineTests>
     </properties>
 
   <dependencies>
@@ -490,7 +484,14 @@
                     </execution>
                 </executions>
                 <configuration>
-                    <skipJasmineTests>${skipJasmineTests}</skipJasmineTests>
+                    <!-- No explicit skipJasmineTests element: the plugin already
+                         binds skipTests, maven.test.skip and skipJasmineTests to the
+                         matching command-line properties and skips when any is true.
+                         Setting the element here would override those bindings, so
+                         -DskipJasmineTests would be ignored. Omitting it lets
+                         -DskipTests skip jasmine (as before) while -DskipJasmineTests=true
+                         skips only the browser-driven specs (e.g. on a headless box
+                         with no PhantomJS) without disabling the module's other tests. -->
                     <webDriverClassName>org.openqa.selenium.phantomjs.PhantomJSDriver</webDriverClassName>
                     <webDriverCapabilities>
                         <capability>
