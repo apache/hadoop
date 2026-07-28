@@ -226,7 +226,6 @@ export const createNodeLabelsSlice: StateCreator<
           }
         }
       }
-      
       await get().apiClient.replaceNodeToLabels(nodeToLabelsReplacement);
       // Refresh node-to-label mappings
       const nodeToLabels = await get().apiClient.getNodeToLabels();
