@@ -17,14 +17,20 @@
 
 # Usage: check-coverage-modules.sh <repo-root> <coverage-pom>
 #
-# Guards the hadoop-coverage aggregate module against silent drift: every
-# "test-bearing" Maven module (jar packaging with a src/test/java directory)
-# must either be listed as a dependency in hadoop-coverage/pom.xml or be named
-# in the coverage-modules-allowlist.txt sitting next to this script. If a
-# test-bearing module is in neither, its coverage would be silently dropped from
-# the aggregate report, so
-# the build fails with a message telling the developer which module to add and
-# where.
+# Guards the hadoop-coverage aggregate module against two silent coverage gaps:
+#
+#   1. Missing module: every "test-bearing" Maven module (jar packaging with a
+#      src/test/java directory) must either be a <dependency> in
+#      hadoop-coverage/pom.xml or be named in the coverage-modules-allowlist.txt
+#      sitting next to this script. A test-bearing module in neither is silently
+#      dropped from the aggregate report.
+#
+#   2. Dropped instrumentation: a test-bearing module that overrides the
+#      Surefire/Failsafe <argLine> must keep the @{argLine} token. A module-level
+#      <argLine> fully replaces the inherited one, so omitting @{argLine} detaches
+#      the JaCoCo agent and the module reports empty coverage with no error.
+#
+# Either problem fails the build with a message telling the developer what to fix.
 #
 # The check inspects the source tree (not the Maven reactor), so it behaves the
 # same under a full-reactor build and a partial `-pl` build.
@@ -37,8 +43,9 @@
 #   - "Covered" artifactIds are read from the coverage pom's top-level
 #     <dependencies>. The coverage pom deliberately has no <dependencyManagement>
 #     or plugin-level <dependencies>; if that changes, revisit the awk below.
-#   - <artifactId>/<packaging>/<parent> tags are assumed to sit on a single line
-#     each (the Hadoop pom convention); a multi-line element would be misparsed.
+#   - <artifactId>/<packaging>/<parent> and <argLine> tags are assumed to sit on
+#     a single line each (the Hadoop pom convention); a multi-line element would
+#     be misparsed.
 
 set -euo pipefail
 
@@ -88,7 +95,8 @@ module_packaging() {
 test_bearing_file="$(mktemp)"
 covered_file="$(mktemp)"
 allowed_file="$(mktemp)"
-trap 'rm -f "${test_bearing_file}" "${covered_file}" "${allowed_file}"' EXIT
+argline_bad_file="$(mktemp)"
+trap 'rm -f "${test_bearing_file}" "${covered_file}" "${allowed_file}" "${argline_bad_file}"' EXIT
 
 while IFS= read -r pom; do
   dir="$(dirname "${pom}")"
@@ -122,6 +130,26 @@ else
   : > "${allowed_file}"
 fi
 
+# Instrumentation check: a module-level <argLine> fully replaces the inherited
+# Surefire/Failsafe argLine, so a test-bearing module that overrides <argLine>
+# but omits the @{argLine} token silently detaches the JaCoCo agent and reports
+# empty coverage. Flag any such module; allowlisted (excluded) modules are skipped
+# since they are not aggregated anyway.
+while IFS= read -r pom; do
+  dir="$(dirname "${pom}")"
+  [[ -d "${dir}/src/test/java" ]] || continue
+  [[ "$(module_packaging "${pom}")" == "jar" ]] || continue
+  grep -q '<argLine>' "${pom}" || continue
+  # Offending if any <argLine> override lacks the @{argLine} token.
+  if grep '<argLine>' "${pom}" | grep -Fqv '@{argLine}'; then
+    aid="$(module_artifact_id "${pom}")"
+    [[ -n "${aid}" ]] && echo "${aid}"
+  fi
+done < <(find "${repo_root}" -name pom.xml -not -path '*/target/*') \
+  | sort -u > "${argline_bad_file}"
+
+argline_missing="$(comm -23 "${argline_bad_file}" "${allowed_file}")"
+
 # Missing = test-bearing modules that are neither covered nor allowlisted.
 missing="$(comm -23 "${test_bearing_file}" \
              <(sort -u "${covered_file}" "${allowed_file}"))"
@@ -135,6 +163,8 @@ if [[ -n "${stale}" ]]; then
   while IFS= read -r module; do echo "  - ${module}" >&2; done <<< "${stale}"
 fi
 
+failed=0
+
 if [[ -n "${missing}" ]]; then
   echo "" >&2
   echo "check-coverage-modules: FAILED" >&2
@@ -146,8 +176,28 @@ if [[ -n "${missing}" ]]; then
   echo "is aggregated, or, if it is intentionally excluded, add it to" >&2
   echo "hadoop-coverage/src/test/resources/coverage-modules-allowlist.txt" >&2
   echo "(with a reason)." >&2
+  failed=1
+fi
+
+if [[ -n "${argline_missing}" ]]; then
+  echo "" >&2
+  echo "check-coverage-modules: FAILED" >&2
+  echo "The following test-bearing modules override the Surefire/Failsafe" \
+       "<argLine> without the @{argLine} token, so JaCoCo cannot instrument" \
+       "them and their coverage is silently empty:" >&2
+  while IFS= read -r module; do echo "  - ${module}" >&2; done <<< "${argline_missing}"
+  echo "" >&2
+  echo "Append @{argLine} to each module's <argLine>, e.g." >&2
+  echo "  <argLine>\${maven-surefire-plugin.argLine} @{argLine}</argLine>" >&2
+  echo "or, if the module is intentionally excluded from coverage, add it to" >&2
+  echo "hadoop-coverage/src/test/resources/coverage-modules-allowlist.txt." >&2
+  failed=1
+fi
+
+if [[ "${failed}" -ne 0 ]]; then
   exit 1
 fi
 
 count="$(wc -l < "${test_bearing_file}" | tr -d ' ')"
-echo "check-coverage-modules: OK (${count} test-bearing modules accounted for)"
+echo "check-coverage-modules: OK (${count} test-bearing modules accounted for," \
+     "all instrumented)"

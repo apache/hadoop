@@ -442,12 +442,14 @@
   <build>
     <plugins>
       <!--
-        Guard against silent drift of the dependency list above: every
-        test-bearing module must be aggregated here (or explicitly allowlisted),
-        otherwise its coverage is silently dropped from the report. This module
-        is only in the reactor when coverage is requested (-Djacoco.skip=false;
-        see the "coverage" profile in the root pom), so the check runs on every
-        coverage build, at the validate phase before report-aggregate.
+        Guard against two silent coverage gaps: (1) every test-bearing module
+        must be aggregated here (or explicitly allowlisted), and (2) any module
+        that overrides the Surefire/Failsafe <argLine> must keep the @{argLine}
+        token, or JaCoCo does not instrument it. Either gap fails the build.
+        This module is only in the reactor when coverage is requested
+        (-Djacoco.skip=false; see the "coverage" profile in the root pom), so the
+        check runs on every coverage build, at the validate phase before
+        report-aggregate.
       -->
       <plugin>
         <groupId>org.codehaus.mojo</groupId>

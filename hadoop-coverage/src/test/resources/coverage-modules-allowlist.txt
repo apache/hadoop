@@ -16,6 +16,8 @@
 
 # Modules that ARE test-bearing (jar packaging with a src/test/java directory)
 # but are deliberately excluded from the hadoop-coverage aggregate report.
+# Modules listed here are also exempt from the guard's <argLine>/@{argLine}
+# instrumentation check, since they are not aggregated.
 #
 # Every other test-bearing module MUST be listed as a <dependency> in
 # hadoop-coverage/pom.xml, or the build fails. See:
