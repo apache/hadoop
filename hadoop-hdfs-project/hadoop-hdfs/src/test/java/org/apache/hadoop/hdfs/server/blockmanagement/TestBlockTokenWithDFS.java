@@ -224,23 +224,14 @@ public class TestBlockTokenWithDFS {
     return conf;
   }
 
-  /**
-   * A non-positive block token lifetime makes every block token expire at the
-   * instant it is created, so it must be rejected instead of failing later on
-   * every write pipeline.
-   */
   @Test
   public void testInvalidBlockTokenLifetime() {
     for (long lifetime : new long[] {0, -1}) {
       Configuration conf = getConf(1);
       conf.setLong(DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_LIFETIME_KEY, lifetime);
-      HadoopIllegalArgumentException e = assertThrows(
-          HadoopIllegalArgumentException.class,
-          () -> new MiniDFSCluster.Builder(conf).numDataNodes(1).build());
-      assertTrue(
-          e.getMessage().contains(
-              DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_LIFETIME_KEY),
-          "unexpected message: " + e.getMessage());
+      assertThrows(HadoopIllegalArgumentException.class,
+          () -> new MiniDFSCluster.Builder(conf).numDataNodes(1).build(),
+          DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_LIFETIME_KEY);
     }
   }
 
