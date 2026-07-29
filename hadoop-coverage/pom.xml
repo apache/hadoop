@@ -339,6 +339,11 @@
     <!-- hadoop-cloud-storage-project -->
     <dependency>
       <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-bos</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-cos</artifactId>
       <version>${project.version}</version>
     </dependency>
