@@ -34,6 +34,10 @@
     <!-- Coverage-only helper module; never publish it to a Maven repository. -->
     <maven.deploy.skip>true</maven.deploy.skip>
     <maven.install.skip>true</maven.install.skip>
+    <!-- This module's parent is hadoop-main, not hadoop-project, so it does not
+         inherit hadoop-project's plugin version management. Pin the one plugin
+         it uses (exec-maven-plugin, for the module-list guard below) here. -->
+    <exec-maven-plugin.version>1.3.1</exec-maven-plugin.version>
   </properties>
 
   <!--
@@ -443,6 +447,7 @@
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>exec-maven-plugin</artifactId>
+        <version>${exec-maven-plugin.version}</version>
         <executions>
           <execution>
             <id>check-coverage-modules</id>
