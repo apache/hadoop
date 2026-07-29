@@ -213,7 +213,9 @@ export const createNodeLabelsSlice: StateCreator<
       const nodeToLabelsReplacement = [{ nodeId, labels }];
 
       if (!labelName) {
-        const [host, port] = nodeId.split(':');
+        const lastColonIndex = nodeId.lastIndexOf(':'); // supports IPv6
+        const host = nodeId.slice(0, lastColonIndex);
+        const port = nodeId.slice(lastColonIndex + 1);
         if (host && port && port !== '0') {
           const hostWithPortZeroCreatedByCLI = `${host}:0`;
           const hasHostWithPortZeroCreatedByCLIAssignment =

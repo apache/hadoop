@@ -481,6 +481,52 @@ describe('nodeLabelsSlice', () => {
       ]);
     });
 
+    it('should clear host:0 for bracketed IPv6 node IDs when unassigning', async () => {
+      store.setState({
+        nodeToLabels: [
+          { nodeId: '[2001:db8::1]:8041', nodeLabels: ['label3'] },
+          { nodeId: '[2001:db8::1]:0', nodeLabels: ['label3'] },
+        ],
+      });
+
+      const mockResponse: NodeToLabelsResponse = {
+        nodeToLabels: { entry: [] },
+      };
+
+      vi.mocked(store.getState().apiClient.replaceNodeToLabels).mockResolvedValue(undefined);
+      vi.mocked(store.getState().apiClient.getNodeToLabels).mockResolvedValue(mockResponse);
+
+      await store.getState().assignNodeToLabel('[2001:db8::1]:8041', null);
+
+      expect(store.getState().apiClient.replaceNodeToLabels).toHaveBeenCalledWith([
+        { nodeId: '[2001:db8::1]:8041', labels: [] },
+        { nodeId: '[2001:db8::1]:0', labels: [] },
+      ]);
+    });
+
+    it('should clear host:0 for unbracketed IPv6 node IDs when unassigning', async () => {
+      store.setState({
+        nodeToLabels: [
+          { nodeId: '2001:db8::1:8041', nodeLabels: ['label3'] },
+          { nodeId: '2001:db8::1:0', nodeLabels: ['label3'] },
+        ],
+      });
+
+      const mockResponse: NodeToLabelsResponse = {
+        nodeToLabels: { entry: [] },
+      };
+
+      vi.mocked(store.getState().apiClient.replaceNodeToLabels).mockResolvedValue(undefined);
+      vi.mocked(store.getState().apiClient.getNodeToLabels).mockResolvedValue(mockResponse);
+
+      await store.getState().assignNodeToLabel('2001:db8::1:8041', null);
+
+      expect(store.getState().apiClient.replaceNodeToLabels).toHaveBeenCalledWith([
+        { nodeId: '2001:db8::1:8041', labels: [] },
+        { nodeId: '2001:db8::1:0', labels: [] },
+      ]);
+    });
+
     it('should throw error in read-only mode', async () => {
       store = createTestStore({ isReadOnly: true });
 
