@@ -454,7 +454,7 @@ describe('nodeLabelsSlice', () => {
       vi.mocked(store.getState().apiClient.replaceNodeToLabels).mockResolvedValue(undefined);
       vi.mocked(store.getState().apiClient.getNodeToLabels).mockResolvedValue(mockResponse);
 
-      await store.getState().assignNodeToLabel('ccycloud-2.example.com:8041', null);
+      await store.getState().assignNodeToLabel('localhost:8041', null);
 
       expect(store.getState().apiClient.replaceNodeToLabels).toHaveBeenCalledWith([
         { nodeId: 'localhost:8041', labels: [] },
@@ -474,7 +474,7 @@ describe('nodeLabelsSlice', () => {
       vi.mocked(store.getState().apiClient.replaceNodeToLabels).mockResolvedValue(undefined);
       vi.mocked(store.getState().apiClient.getNodeToLabels).mockResolvedValue(mockResponse);
 
-      await store.getState().assignNodeToLabel('ccycloud-2.example.com:8041', null);
+      await store.getState().assignNodeToLabel('localhost:8041', null);
 
       expect(store.getState().apiClient.replaceNodeToLabels).toHaveBeenCalledWith([
         { nodeId: 'localhost:8041', labels: [] },
