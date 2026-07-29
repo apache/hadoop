@@ -484,14 +484,9 @@
                     </execution>
                 </executions>
                 <configuration>
-                    <!-- No explicit skipJasmineTests element: the plugin already
-                         binds skipTests, maven.test.skip and skipJasmineTests to the
-                         matching command-line properties and skips when any is true.
-                         Setting the element here would override those bindings, so
-                         -DskipJasmineTests would be ignored. Omitting it lets
-                         -DskipTests skip jasmine (as before) while -DskipJasmineTests=true
-                         skips only the browser-driven specs (e.g. on a headless box
-                         with no PhantomJS) without disabling the module's other tests. -->
+                    <!-- Jasmine tests are skipped if any one of -Dmaven.test.skip=true,
+                         -DskipTests, -DskipJasmineTests=true is set. Don't declare
+                         skipJasmineTests here: it would override those command-line flags. -->
                     <webDriverClassName>org.openqa.selenium.phantomjs.PhantomJSDriver</webDriverClassName>
                     <webDriverCapabilities>
                         <capability>
