@@ -722,16 +722,12 @@ public class BlockManager implements BlockStatsMXBean {
         DFSConfigKeys.DFS_BLOCK_ACCESS_KEY_UPDATE_INTERVAL_KEY, 
         DFSConfigKeys.DFS_BLOCK_ACCESS_KEY_UPDATE_INTERVAL_DEFAULT);
     final long lifetimeMin = conf.getLong(
-        DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_LIFETIME_KEY,
+        DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_LIFETIME_KEY, 
         DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_LIFETIME_DEFAULT);
     if (lifetimeMin <= 0) {
       throw new HadoopIllegalArgumentException(
-          DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_LIFETIME_KEY + " = "
-              + lifetimeMin + " is invalid. It must be a positive number of"
-              + " minutes. A non-positive lifetime makes every block access"
-              + " token expire at the instant it is created, so DataNodes"
-              + " reject all of them and no write pipeline can be"
-              + " established.");
+          DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_LIFETIME_KEY + " = '"
+              + lifetimeMin + "' is invalid. It should be a positive value.");
     }
     final String encryptionAlgorithm = conf.get(
         DFSConfigKeys.DFS_DATA_ENCRYPTION_ALGORITHM_KEY);
