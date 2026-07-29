@@ -149,18 +149,8 @@ Maven build goals:
  * Run checkstyle            : mvn compile checkstyle:checkstyle
  * Install JAR in M2 cache   : mvn install
  * Deploy JAR to Maven repo  : mvn deploy
- * Run JaCoCo coverage       : mvn verify -Dhadoop.skip-jacoco=false -Dmaven.test.failure.ignore=true --fail-at-end
-                               (aggregate report: hadoop-coverage/target/site/jacoco-aggregate/index.html;
-                                must be a full-reactor build, not -pl hadoop-coverage.
-                                --fail-at-end keeps the reactor building/testing the modules
-                                that don't depend on a hard-failing one (each writing its
-                                target/jacoco.exec) instead of stopping at the first failure;
-                                hadoop-coverage does not depend on the catalog-webapp war, so
-                                it still runs report-aggregate at the verify phase.
-                                -Dmaven.test.failure.ignore=true only tolerates surefire *test*
-                                failures; a plugin-level hard failure (e.g. the catalog-webapp
-                                jasmine/PhantomJS browser test in a headless container) would
-                                otherwise stop the reactor before the report is produced.)
+ * Run JaCoCo coverage       : mvn verify -Djacoco.skip=false -Dmaven.test.failure.ignore=true --fail-at-end
+                               (see 'Special plugins: JaCoCo code coverage' below)
  * Run Rat                   : mvn apache-rat:check
  * Build javadocs            : mvn javadoc:javadoc
  * Build distribution        : mvn package [-Pdist][-Pdocs][-Psrc][-Pnative][-Dtar][-Preleasedocs][-Pyarn-ui]
@@ -270,6 +260,24 @@ Maven build goals:
    of this project for known CVEs (security vulnerabilities against them).
    It will produce a report in target/dependency-check-report.html. To
    invoke, run 'mvn dependency-check:aggregate'.
+
+ Special plugins: JaCoCo code coverage:
+
+   Coverage is opt-in and off by default. Enable it with -Djacoco.skip=false
+   (jacoco.skip is the jacoco-maven-plugin's own skip property); the aggregate
+   report is written to hadoop-coverage/target/site/jacoco-aggregate/index.html.
+
+   It must be a full-reactor build (not -pl hadoop-coverage): report-aggregate
+   only sees modules that are part of the same reactor.
+
+   --fail-at-end keeps the reactor building/testing the modules that do not
+   depend on a hard-failing one (each writing its target/jacoco.exec) instead
+   of stopping at the first failure, so hadoop-coverage still runs
+   report-aggregate at the verify phase. -Dmaven.test.failure.ignore=true only
+   tolerates surefire *test* failures; a plugin-level hard failure (e.g. the
+   catalog-webapp jasmine/PhantomJS browser test, which cannot start a browser
+   in a headless container) would otherwise stop the reactor before the report
+   is produced.
 
  PMDK library build options:
 

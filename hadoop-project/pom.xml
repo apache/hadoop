@@ -185,8 +185,6 @@
       --add-opens=java.base/sun.security.x509=ALL-UNNAMED
       --enable-native-access=ALL-UNNAMED
     </extraJavaTestArgs>
-    <!-- Skip JaCoCo instrumentation by default; enable with -Dhadoop.skip-jacoco=false -->
-    <hadoop.skip-jacoco>true</hadoop.skip-jacoco>
 
     <!-- Plugin versions and config -->
     <maven-surefire-plugin.argLine>-Xmx4096m -Xss4m -XX:+HeapDumpOnOutOfMemoryError ${extraJavaTestArgs}</maven-surefire-plugin.argLine>
@@ -2315,6 +2313,8 @@
           <artifactId>maven-failsafe-plugin</artifactId>
           <version>${maven-failsafe-plugin.version}</version>
           <configuration>
+            <!-- @{argLine} injects the JaCoCo agent when coverage is enabled;
+                 see the maven-surefire-plugin configuration below for details. -->
             <argLine>${maven-surefire-plugin.argLine} @{argLine}</argLine>
           </configuration>
         </plugin>
@@ -2588,6 +2588,15 @@
         <configuration>
           <reuseForks>false</reuseForks>
           <forkedProcessTimeoutInSeconds>${surefire.fork.timeout}</forkedProcessTimeoutInSeconds>
+          <!-- @{argLine} is Surefire's late (deferred) property substitution: it
+               is replaced at test-run time with the value of the "argLine"
+               property. jacoco:prepare-agent sets that property to the
+               -javaagent:...jacocoagent.jar=... option when coverage is enabled
+               (see jacoco-maven-plugin above), so the agent is injected into the
+               forked test JVM. When coverage is off (jacoco.skip=true, the
+               default) prepare-agent is skipped, argLine is unset, and @{argLine}
+               resolves to empty. ${maven-surefire-plugin.argLine} is our own
+               static JVM args, kept separate. -->
           <argLine>${maven-surefire-plugin.argLine} @{argLine}</argLine>
           <environmentVariables>
             <HADOOP_COMMON_HOME>${hadoop.common.build.dir}</HADOOP_COMMON_HOME>
@@ -2634,7 +2643,8 @@
               <goal>prepare-agent</goal>
             </goals>
             <configuration>
-              <skip>${hadoop.skip-jacoco}</skip>
+              <!-- skip is inherited from the jacoco.skip property (default true
+                   in the root pom); no explicit <skip> needed here. -->
               <!-- Exclude generated/example classes from instrumentation so
                    the agent does not spend time weaving them in every forked
                    test JVM. These are also filtered from the coverage numbers

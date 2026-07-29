@@ -46,7 +46,7 @@
     reactor and produce an empty report). Run tests and the report in a
     single reactor pass:
 
-      mvn verify -Dhadoop.skip-jacoco=false -Dmaven.test.failure.ignore=true
+      mvn verify -Djacoco.skip=false -Dmaven.test.failure.ignore=true
 
     hadoop-coverage builds last (it depends on every module), so the aggregate
     report is generated after all tests have run. -Dmaven.test.failure.ignore=true
@@ -436,7 +436,7 @@
         Guard against silent drift of the dependency list above: every
         test-bearing module must be aggregated here (or explicitly allowlisted),
         otherwise its coverage is silently dropped from the report. This module
-        is only in the reactor when coverage is requested (-Dhadoop.skip-jacoco=false;
+        is only in the reactor when coverage is requested (-Djacoco.skip=false;
         see the "coverage" profile in the root pom), so the check runs on every
         coverage build, at the validate phase before report-aggregate.
       -->
@@ -472,7 +472,6 @@
               <goal>report-aggregate</goal>
             </goals>
             <configuration>
-              <skip>${hadoop.skip-jacoco}</skip>
               <excludes>
                 <exclude>**/generated/**/*.class</exclude>
                 <exclude>**/examples/**/*.class</exclude>

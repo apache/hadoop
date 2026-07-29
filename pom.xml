@@ -75,10 +75,11 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
     <hadoop.version>3.6.0-SNAPSHOT</hadoop.version>
 
     <!-- Skip JaCoCo instrumentation/reporting by default; enable with
-         -Dhadoop.skip-jacoco=false. Defined here (not only in hadoop-project)
-         so modules that inherit directly from hadoop-main, such as
-         hadoop-coverage, resolve the property too. -->
-    <hadoop.skip-jacoco>true</hadoop.skip-jacoco>
+         -Djacoco.skip=false. jacoco.skip is the jacoco-maven-plugin's own skip
+         property; we only set its default here. Defined in hadoop-main (not
+         only in hadoop-project) so modules that inherit directly from
+         hadoop-main, such as hadoop-coverage, resolve it too. -->
+    <jacoco.skip>true</jacoco.skip>
 
     <docker.image>apache/hadoop:${project.version}</docker.image>
 
@@ -108,8 +109,8 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
     <maven-resources-plugin.version>3.0.1</maven-resources-plugin.version>
     <apache-rat-plugin.version>0.12</apache-rat-plugin.version>
     <wagon-ssh.version>2.4</wagon-ssh.version>
-    <jacoco-maven-plugin.version>0.8.15</jacoco-maven-plugin.version>
     <exec-maven-plugin.version>1.3.1</exec-maven-plugin.version>
+    <jacoco-maven-plugin.version>0.8.15</jacoco-maven-plugin.version>
     <maven-bundle-plugin.version>2.5.0</maven-bundle-plugin.version>
     <lifecycle-mapping.version>1.0.0</lifecycle-mapping.version>
     <maven-checkstyle-plugin.version>3.6.0</maven-checkstyle-plugin.version>
@@ -488,11 +489,11 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
           <groupId>org.jacoco</groupId>
           <artifactId>jacoco-maven-plugin</artifactId>
           <version>${jacoco-maven-plugin.version}</version>
-        </plugin>
         <plugin>
           <groupId>org.codehaus.mojo</groupId>
           <artifactId>exec-maven-plugin</artifactId>
           <version>${exec-maven-plugin.version}</version>
+        </plugin>
         </plugin>
         <plugin>
           <groupId>org.apache.felix</groupId>
@@ -775,17 +776,17 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
 
   <profiles>
     <!-- The coverage aggregate module joins the reactor only when coverage is
-         explicitly requested (-Dhadoop.skip-jacoco=false). Keeping it out of the
+         explicitly requested (-Djacoco.skip=false). Keeping it out of the
          unconditional <modules> means normal install/site/deploy/package builds
          neither resolve its (reactor-wide) dependency list nor run its guard,
          so the default build is unaffected and coverage stays opt-in. The
-         documented coverage command already passes -Dhadoop.skip-jacoco=false,
+         documented coverage command already passes -Djacoco.skip=false,
          so it still builds as a full reactor that includes hadoop-coverage. -->
     <profile>
       <id>coverage</id>
       <activation>
         <property>
-          <name>hadoop.skip-jacoco</name>
+          <name>jacoco.skip</name>
           <value>false</value>
         </property>
       </activation>
