@@ -20,17 +20,18 @@ import { describe, expect, it } from 'vitest';
 import type { CapacityRowDraft } from '~/stores/slices/capacityEditorSlice';
 import {
   getLabelPartitionAccessIssues,
-  queueListsAccessibleNodeLabel,
+  getAccessibleLabelRemovalIssues,
+  isLabelListedInQueue,
 } from './capacityValidation';
 
-describe('queueListsAccessibleNodeLabel', () => {
+describe('isLabelListedInQueue', () => {
   it('returns false when the queue has no accessible-node-labels property', () => {
     const store = {
       hasQueueProperty: () => false,
       getQueuePropertyValue: () => ({ value: '', isStaged: false }),
     };
 
-    expect(queueListsAccessibleNodeLabel('root.default', 'gpu', store)).toBe(false);
+    expect(isLabelListedInQueue('root.default', 'gpu', store)).toBe(false);
   });
 
   it('returns false when accessible-node-labels is empty', () => {
@@ -39,7 +40,7 @@ describe('queueListsAccessibleNodeLabel', () => {
       getQueuePropertyValue: () => ({ value: '', isStaged: false }),
     };
 
-    expect(queueListsAccessibleNodeLabel('root.default', 'gpu', store)).toBe(false);
+    expect(isLabelListedInQueue('root.default', 'gpu', store)).toBe(false);
   });
 
   it('returns true when the label is listed on the queue', () => {
@@ -48,7 +49,7 @@ describe('queueListsAccessibleNodeLabel', () => {
       getQueuePropertyValue: () => ({ value: 'gpu,label3', isStaged: false }),
     };
 
-    expect(queueListsAccessibleNodeLabel('root.default', 'label3', store)).toBe(true);
+    expect(isLabelListedInQueue('root.default', 'label3', store)).toBe(true);
   });
 
   it('returns true when the queue lists all labels via wildcard', () => {
@@ -57,7 +58,7 @@ describe('queueListsAccessibleNodeLabel', () => {
       getQueuePropertyValue: () => ({ value: '*', isStaged: false }),
     };
 
-    expect(queueListsAccessibleNodeLabel('root.default', 'label3', store)).toBe(true);
+    expect(isLabelListedInQueue('root.default', 'label3', store)).toBe(true);
   });
 });
 
@@ -119,5 +120,41 @@ describe('getLabelPartitionAccessIssues', () => {
     expect(issues).toHaveLength(2);
     expect(issues[0]?.field).toBe('accessible-node-labels.gpu.capacity');
     expect(issues[1]?.field).toBe('accessible-node-labels.gpu.maximum-capacity');
+  });
+});
+
+describe('getAccessibleLabelRemovalIssues', () => {
+  it('blocks removing a label that still has partition capacity configured', () => {
+    const config = new Map<string, string>([
+      [
+        'yarn.scheduler.capacity.root.default.accessible-node-labels.gpu.capacity',
+        '50',
+      ],
+    ]);
+
+    const issues = getAccessibleLabelRemovalIssues('root.default', 'fpga', config);
+
+    expect(issues).toHaveLength(1);
+    expect(issues[0]?.field).toBe('accessible-node-labels');
+    expect(issues[0]?.message).toContain('gpu');
+  });
+
+  it('allows removing access when partition capacity is cleared', () => {
+    const issues = getAccessibleLabelRemovalIssues('root.default', 'fpga', new Map());
+
+    expect(issues).toEqual([]);
+  });
+
+  it('allows wildcard access even when partition capacity is configured', () => {
+    const config = new Map<string, string>([
+      [
+        'yarn.scheduler.capacity.root.default.accessible-node-labels.gpu.capacity',
+        '50',
+      ],
+    ]);
+
+    const issues = getAccessibleLabelRemovalIssues('root.default', '*', config);
+
+    expect(issues).toEqual([]);
   });
 });

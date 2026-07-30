@@ -36,36 +36,123 @@ import type { ValidationIssue, StagedChange, SchedulerInfo } from '~/types';
 
 const ACCESSIBLE_NODE_LABELS_PROPERTY = 'accessible-node-labels';
 const LABEL_PARTITION_ACCESS_RULE = 'label-partition-access';
+const LABEL_PARTITION_CAPACITY_REQUIRES_ACCESS_RULE =
+  'label-partition-capacity-requires-access';
+
+type AccessibleLabelAccess = 'all' | 'none' | Set<string>;
 
 export type QueuePropertyReader = Pick<SchedulerStore, 'hasQueueProperty' | 'getQueuePropertyValue'>;
 
-export interface DraftCacheEntry {
-  drafts: Record<string, CapacityRowDraft>;
-  draftOrder: string[];
-}
+export const parseAccessibleNodeLabels = (value: string): AccessibleLabelAccess => {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return 'none';
+  }
+  if (trimmed === '*') {
+    return 'all';
+  }
+  return new Set(trimmed.split(',').map((label) => label.trim()).filter(Boolean));
+};
+
+export const isLabelInAccessibleList = (
+  label: string,
+  accessibleLabels: AccessibleLabelAccess,
+): boolean => {
+  if (accessibleLabels === 'all') {
+    return true;
+  }
+  if (accessibleLabels === 'none') {
+    return false;
+  }
+  return accessibleLabels.has(label);
+};
+
+const parseQueueAccessibleNodeLabelsProperty = (
+  queuePath: string,
+  store: QueuePropertyReader,
+): AccessibleLabelAccess | null => {
+  if (!store.hasQueueProperty(queuePath, ACCESSIBLE_NODE_LABELS_PROPERTY)) {
+    return null;
+  }
+
+  return parseAccessibleNodeLabels(
+    store.getQueuePropertyValue(queuePath, ACCESSIBLE_NODE_LABELS_PROPERTY).value,
+  );
+};
 
 /**
  * Returns whether a queue lists the label in its own accessible-node-labels property.
  * Parent inheritance is intentionally not considered.
  */
-export function queueListsAccessibleNodeLabel(
+export function isLabelListedInQueue(
   queuePath: string,
   label: string,
   store: QueuePropertyReader,
 ): boolean {
-  if (!store.hasQueueProperty(queuePath, ACCESSIBLE_NODE_LABELS_PROPERTY)) {
+  const accessibleLabels = parseQueueAccessibleNodeLabelsProperty(queuePath, store);
+  if (accessibleLabels === null) {
     return false;
   }
 
-  const accessibleLabels = store
-    .getQueuePropertyValue(queuePath, ACCESSIBLE_NODE_LABELS_PROPERTY)
-    .value.trim();
-  if (!accessibleLabels) {
-    return false;
-  }
+  return isLabelInAccessibleList(label, accessibleLabels);
+};
 
-  const labels = accessibleLabels.split(',').map((entry) => entry.trim());
-  return labels.includes('*') || labels.includes(label);
+/** Labels with non-empty label-partition capacity configured on the queue. */
+export const getLabelsWithPartitionCapacityConfigured = (
+  queuePath: string,
+  config: Map<string, string>,
+): Set<string> => {
+  const prefix = buildPropertyKey(queuePath, `${ACCESSIBLE_NODE_LABELS_PROPERTY}.`);
+  const labels = new Set<string>();
+
+  config.forEach((value, key) => {
+    if (!key.startsWith(prefix) || !value.trim()) {
+      return;
+    }
+
+    const remainder = key.slice(prefix.length);
+    const match = remainder.match(/^([^.]+)\.(capacity|maximum-capacity)$/);
+    if (match?.[1]) {
+      labels.add(match[1]);
+    }
+  });
+
+  return labels;
+};
+
+/**
+ * Block removing a label from accessible-node-labels while label-partition capacity
+ * for that label remains configured on the queue.
+ */
+export function getAccessibleLabelRemovalIssues(
+  queuePath: string,
+  newAccessibleNodeLabels: string,
+  config: Map<string, string>,
+): ValidationIssue[] {
+  const accessibleLabels = parseAccessibleNodeLabels(newAccessibleNodeLabels);
+  const configuredLabels = getLabelsWithPartitionCapacityConfigured(queuePath, config);
+  const issues: ValidationIssue[] = [];
+
+  configuredLabels.forEach((label) => {
+    if (isLabelInAccessibleList(label, accessibleLabels)) {
+      return;
+    }
+
+    issues.push({
+      queuePath,
+      field: ACCESSIBLE_NODE_LABELS_PROPERTY,
+      severity: 'error',
+      rule: LABEL_PARTITION_CAPACITY_REQUIRES_ACCESS_RULE,
+      message: `Cannot remove "${label}" from accessible-node-labels while label partition capacity is configured. Clear label partition capacity first.`,
+    });
+  });
+
+  return issues;
+}
+
+export interface DraftCacheEntry {
+  drafts: Record<string, CapacityRowDraft>;
+  draftOrder: string[];
 }
 
 const getDraftCapacityValues = (draft: CapacityRowDraft) => ({
@@ -110,7 +197,7 @@ export function getLabelPartitionAccessIssues(
   const issues: ValidationIssue[] = [];
 
   rows.forEach((row) => {
-    if (queueListsAccessibleNodeLabel(row.queuePath, selectedNodeLabel, store)) {
+    if (isLabelListedInQueue(row.queuePath, selectedNodeLabel, store)) {
       return;
     }
 

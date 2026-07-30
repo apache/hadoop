@@ -1200,4 +1200,31 @@ describe('CAPACITY_SUM validation rule', () => {
     // Should skip because absolute capacity doesn't have sum-to-100% requirement
     expect(capacitySumIssues).toHaveLength(0);
   });
+
+  it('blocks removing accessible labels while label partition capacity remains', () => {
+    const config = new Map([
+      [
+        'yarn.scheduler.capacity.root.default.accessible-node-labels.gpu.capacity',
+        '50',
+      ],
+    ]);
+
+    const context: ValidationContext = {
+      queuePath: 'root.default',
+      fieldName: 'accessible-node-labels',
+      fieldValue: 'fpga',
+      config,
+      schedulerData: createMockSchedulerData(),
+      stagedChanges: [],
+      legacyModeEnabled: false,
+    };
+
+    const issues = runFieldValidation(context);
+    const removalIssues = issues.filter(
+      (issue) => issue.rule === 'label-partition-capacity-requires-access',
+    );
+
+    expect(removalIssues).toHaveLength(1);
+    expect(removalIssues[0]?.message).toContain('gpu');
+  });
 });
