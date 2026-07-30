@@ -48,7 +48,6 @@ import org.apache.hadoop.io.file.tfile.Chunk.ChunkEncoder;
 import org.apache.hadoop.io.file.tfile.CompareUtils.BytesComparator;
 import org.apache.hadoop.io.file.tfile.CompareUtils.MemcmpRawComparator;
 import org.apache.hadoop.io.file.tfile.Utils.Version;
-import org.apache.hadoop.io.serializer.JavaSerializationComparator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -283,8 +282,7 @@ public class TFile {
      *          Currently, we only support RawComparators that can be
      *          constructed through the default constructor (with no
      *          parameters). Parameterized RawComparators such as
-     *          {@link WritableComparator} or
-     *          {@link JavaSerializationComparator} may not be directly used.
+     *          {@link WritableComparator} may not be directly used.
      *          One should write a wrapper class that inherits from such classes
      *          and use its default constructor to perform proper
      *          initialization.

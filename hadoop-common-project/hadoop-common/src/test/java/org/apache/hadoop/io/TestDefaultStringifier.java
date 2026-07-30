@@ -27,20 +27,20 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
-import static org.junit.Assert.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestDefaultStringifier {
 
-  private static Configuration conf = new Configuration();
+  private static final Configuration CONF = new Configuration();
   private static final Logger LOG =
       LoggerFactory.getLogger(TestDefaultStringifier.class);
 
-  private char[] alphabet = "abcdefghijklmnopqrstuvwxyz".toCharArray();
+  private static final char[] ALPHABET = "abcdefghijklmnopqrstuvwxyz".toCharArray();
 
   @Test
   public void testWithWritable() throws Exception {
 
-    conf.set("io.serializations", "org.apache.hadoop.io.serializer.WritableSerialization");
+    CONF.set("io.serializations", "org.apache.hadoop.io.serializer.WritableSerialization");
 
     LOG.info("Testing DefaultStringifier with Text");
 
@@ -52,70 +52,54 @@ public class TestDefaultStringifier {
       StringBuilder builder = new StringBuilder();
       int strLen = random.nextInt(40);
       for(int j=0; j< strLen; j++) {
-        builder.append(alphabet[random.nextInt(alphabet.length)]);
+        builder.append(ALPHABET[random.nextInt(ALPHABET.length)]);
       }
       Text text = new Text(builder.toString());
-      DefaultStringifier<Text> stringifier = new DefaultStringifier<Text>(conf, Text.class);
+      DefaultStringifier<Text> stringifier = new DefaultStringifier<>(CONF, Text.class);
 
       String str = stringifier.toString(text);
       Text claimedText = stringifier.fromString(str);
-      LOG.info("Object: " + text);
-      LOG.info("String representation of the object: " + str);
-      assertEquals(text, claimedText);
+      LOG.info("Object: {}", text);
+      LOG.info("String representation of the object: {}", str);
+      assertThat(claimedText).isEqualTo(text);
     }
-  }
-
-  @Test
-  public void testWithJavaSerialization() throws Exception {
-    conf.set("io.serializations", "org.apache.hadoop.io.serializer.JavaSerialization");
-
-    LOG.info("Testing DefaultStringifier with Serializable Integer");
-
-    //Integer implements Serializable
-    Integer testInt = Integer.valueOf(42);
-    DefaultStringifier<Integer> stringifier = new DefaultStringifier<Integer>(conf, Integer.class);
-
-    String str = stringifier.toString(testInt);
-    Integer claimedInt = stringifier.fromString(str);
-    LOG.info("String representation of the object: " + str);
-
-    assertEquals(testInt, claimedInt);
   }
 
   @Test
   public void testStoreLoad() throws IOException {
 
     LOG.info("Testing DefaultStringifier#store() and #load()");
-    conf.set("io.serializations", "org.apache.hadoop.io.serializer.WritableSerialization");
+    CONF.set("io.serializations", "org.apache.hadoop.io.serializer.WritableSerialization");
     Text text = new Text("uninteresting test string");
     String keyName = "test.defaultstringifier.key1";
 
-    DefaultStringifier.store(conf,text, keyName);
+    DefaultStringifier.store(CONF, text, keyName);
 
-    Text claimedText = DefaultStringifier.load(conf, keyName, Text.class);
-    assertEquals("DefaultStringifier#load() or #store() might be flawed"
-        , text, claimedText);
-
+    Text claimedText = DefaultStringifier.load(CONF, keyName, Text.class);
+    assertThat(claimedText)
+        .describedAs("DefaultStringifier round trip")
+        .isEqualTo(text);
   }
 
   @Test
   public void testStoreLoadArray() throws Exception {
     LOG.info("Testing DefaultStringifier#storeArray() and #loadArray()");
-    conf.set("io.serializations", "org.apache.hadoop.io.serializer.JavaSerialization");
+    CONF.set("io.serializations", "org.apache.hadoop.io.serializer.WritableSerialization");
 
     String keyName = "test.defaultstringifier.key2";
 
-    Integer[] array = new Integer[] {1,2,3,4,5};
+    IntWritable[] array = new IntWritable[] {
+        new IntWritable(1), new IntWritable(2), new IntWritable(3),
+        new IntWritable(4), new IntWritable(5)};
 
 
     intercept(IndexOutOfBoundsException.class, () ->
-        DefaultStringifier.storeArray(conf, new Integer[] {}, keyName));
-    DefaultStringifier.storeArray(conf, array, keyName);
+        DefaultStringifier.storeArray(CONF, new IntWritable[] {}, keyName));
+    DefaultStringifier.storeArray(CONF, array, keyName);
 
-    Integer[] claimedArray = DefaultStringifier.<Integer>loadArray(conf, keyName, Integer.class);
-    for (int i = 0; i < array.length; i++) {
-      assertEquals("two arrays are not equal", array[i], claimedArray[i]);
-    }
+    IntWritable[] claimedArray =
+        DefaultStringifier.loadArray(CONF, keyName, IntWritable.class);
+    assertThat(claimedArray).isEqualTo(array);
 
   }
 

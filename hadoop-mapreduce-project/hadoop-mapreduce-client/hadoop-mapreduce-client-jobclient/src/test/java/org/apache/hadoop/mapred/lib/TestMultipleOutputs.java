@@ -23,7 +23,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.serializer.JavaSerializationComparator;
 import org.apache.hadoop.mapred.Counters;
 import org.apache.hadoop.mapred.FileInputFormat;
 import org.apache.hadoop.mapred.FileOutputFormat;
@@ -67,13 +66,11 @@ public class TestMultipleOutputs extends HadoopTestCase {
   @Test
   public void testWithoutCounters() throws Exception {
     _testMultipleOutputs(false);
-    _testMOWithJavaSerialization(false);
   }
 
   @Test
   public void testWithCounters() throws Exception {
     _testMultipleOutputs(true);
-    _testMOWithJavaSerialization(true);
   }
 
   @SuppressWarnings("unchecked")
@@ -127,94 +124,6 @@ public class TestMultipleOutputs extends HadoopTestCase {
     super.tearDown();
   }
   
-  protected void _testMOWithJavaSerialization(boolean withCounters) throws Exception {
-    Path inDir = getDir(IN_DIR);
-    Path outDir = getDir(OUT_DIR);
-
-    JobConf conf = createJobConf();
-    FileSystem fs = FileSystem.get(conf);
-
-    DataOutputStream file = fs.create(new Path(inDir, "part-0"));
-    file.writeBytes("a\nb\n\nc\nd\ne");
-    file.close();
-
-    fs.delete(inDir, true);
-    fs.delete(outDir, true);
-
-    file = fs.create(new Path(inDir, "part-1"));
-    file.writeBytes("a\nb\n\nc\nd\ne");
-    file.close();
-
-    conf.setJobName("mo");
-
-    conf.set("io.serializations",
-    "org.apache.hadoop.io.serializer.JavaSerialization," +
-    "org.apache.hadoop.io.serializer.WritableSerialization");
-
-    conf.setInputFormat(TextInputFormat.class);
-
-    conf.setMapOutputKeyClass(Long.class);
-    conf.setMapOutputValueClass(String.class);
-    conf.setOutputKeyComparatorClass(JavaSerializationComparator.class);
-
-    conf.setOutputKeyClass(Long.class);
-    conf.setOutputValueClass(String.class);
-    
-    conf.setOutputFormat(TextOutputFormat.class);
-
-    MultipleOutputs.addNamedOutput(conf, "text", TextOutputFormat.class,
-      Long.class, String.class);
-
-    MultipleOutputs.setCountersEnabled(conf, withCounters);
-
-    conf.setMapperClass(MOJavaSerDeMap.class);
-    conf.setReducerClass(MOJavaSerDeReduce.class);
-
-    FileInputFormat.setInputPaths(conf, inDir);
-    FileOutputFormat.setOutputPath(conf, outDir);
-
-    JobClient jc = new JobClient(conf);
-    RunningJob job = jc.submitJob(conf);
-    while (!job.isComplete()) {
-      Thread.sleep(100);
-    }
-
-    // assert number of named output part files
-    int namedOutputCount = 0;
-    FileStatus[] statuses = fs.listStatus(outDir);
-    for (FileStatus status : statuses) {
-      if (status.getPath().getName().equals("text-m-00000") ||
-        status.getPath().getName().equals("text-r-00000")) {
-        namedOutputCount++;
-      }
-    }
-    assertEquals(2, namedOutputCount);
-
-    // assert TextOutputFormat files correctness
-    BufferedReader reader = new BufferedReader(
-      new InputStreamReader(fs.open(
-        new Path(FileOutputFormat.getOutputPath(conf), "text-r-00000"))));
-    int count = 0;
-    String line = reader.readLine();
-    while (line != null) {
-      assertTrue(line.endsWith("text"));
-      line = reader.readLine();
-      count++;
-    }
-    reader.close();
-    assertFalse(count == 0);
-
-    Counters.Group counters =
-      job.getCounters().getGroup(MultipleOutputs.class.getName());
-    if (!withCounters) {
-      assertEquals(0, counters.size());
-    }
-    else {
-      assertEquals(1, counters.size());
-      assertEquals(2, counters.getCounter("text"));
-    }
-  }
-
   protected void _testMultipleOutputs(boolean withCounters) throws Exception {
     Path inDir = getDir(IN_DIR);
     Path outDir = getDir(OUT_DIR);
@@ -389,61 +298,5 @@ public class TestMultipleOutputs extends HadoopTestCase {
       mos.close();
     }
   }
-  
-  @SuppressWarnings({"unchecked"})
-  public static class MOJavaSerDeMap implements Mapper<LongWritable, Text, Long,
-    String> {
-
-    private MultipleOutputs mos;
-
-    public void configure(JobConf conf) {
-      mos = new MultipleOutputs(conf);
-    }
-
-    public void map(LongWritable key, Text value,
-                    OutputCollector<Long, String> output,
-                    Reporter reporter)
-      throws IOException {
-      if (!value.toString().equals("a")) {
-        output.collect(key.get(), value.toString());
-      } else {
-        mos.getCollector("text", reporter).collect(key, "text");
-      }
-    }
-
-    public void close() throws IOException {
-      mos.close();
-    }
-  }
-
-  @SuppressWarnings({"unchecked"})
-  public static class MOJavaSerDeReduce implements Reducer<Long, String,
-    Long, String> {
-
-    private MultipleOutputs mos;
-
-    public void configure(JobConf conf) {
-      mos = new MultipleOutputs(conf);
-    }
-
-    public void reduce(Long key, Iterator<String> values,
-                       OutputCollector<Long, String> output,
-                       Reporter reporter)
-      throws IOException {
-      while (values.hasNext()) {
-        String value = values.next();
-        if (!value.equals("b")) {
-          output.collect(key, value);
-        } else {
-          mos.getCollector("text", reporter).collect(key, "text");
-        }
-      }
-    }
-
-    public void close() throws IOException {
-      mos.close();
-    }
-  }
-
 
 }
