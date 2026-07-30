@@ -80,8 +80,8 @@ describe('useCapacityEditor', () => {
       originQueuePath: 'root.department.new',
       originQueueName: 'new',
       originQueueState: 'RUNNING',
-      originInitialCapacity: '10',
-      originInitialMaxCapacity: '50',
+      originInitialCapacity: null,
+      originInitialMaxCapacity: null,
       originIsNew: true,
       selectedNodeLabel: 'sales',
     });

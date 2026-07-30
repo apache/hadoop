@@ -76,16 +76,18 @@ export const useCapacityEditor = () => {
         originQueueName,
       );
 
+      const resolvedLabel = selectedNodeLabel ?? selectedNodeLabelFilter ?? null;
+
       openCapacityEditorAction({
         origin,
         parentQueuePath,
         originQueuePath: resolvedOriginPath,
         originQueueName,
         originQueueState: queueState,
-        originInitialCapacity: capacityValue,
-        originInitialMaxCapacity: maxCapacityValue,
+        originInitialCapacity: resolvedLabel ? null : capacityValue,
+        originInitialMaxCapacity: resolvedLabel ? null : maxCapacityValue,
         originIsNew: Boolean(markOriginAsNew),
-        selectedNodeLabel: selectedNodeLabel ?? selectedNodeLabelFilter ?? null,
+        selectedNodeLabel: resolvedLabel,
       });
     },
   };
