@@ -1130,7 +1130,7 @@ public class BlockPoolSlice {
    */
   @VisibleForTesting
   public static int getAddReplicaForkPoolSize() {
-    return addReplicaThreadPool.getPoolSize();
+    return addReplicaThreadPool.getParallelism();
   }
 
   @VisibleForTesting
