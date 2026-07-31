@@ -20,6 +20,7 @@
 import { SPECIAL_VALUES } from '~/types';
 import { useSchedulerStore } from '~/stores/schedulerStore';
 import type { CapacityEditorOrigin } from '~/stores/slices/capacityEditorSlice';
+import { a } from 'vitest/dist/chunks/suite.d.FvehnV49.js';
 
 const resolveOriginQueuePath = (
   parentQueuePath: string,
@@ -76,7 +77,7 @@ export const useCapacityEditor = () => {
         originQueueName,
       );
 
-      const resolvedLabel = selectedNodeLabel ?? selectedNodeLabelFilter ?? null;
+      const activeNodeLabel = selectedNodeLabel ?? selectedNodeLabelFilter ?? null;
 
       openCapacityEditorAction({
         origin,
@@ -84,10 +85,10 @@ export const useCapacityEditor = () => {
         originQueuePath: resolvedOriginPath,
         originQueueName,
         originQueueState: queueState,
-        originInitialCapacity: resolvedLabel ? null : capacityValue,
-        originInitialMaxCapacity: resolvedLabel ? null : maxCapacityValue,
+        originInitialCapacity: activeNodeLabel ? null : capacityValue,
+        originInitialMaxCapacity: activeNodeLabel ? null : maxCapacityValue,
         originIsNew: Boolean(markOriginAsNew),
-        selectedNodeLabel: resolvedLabel,
+        selectedNodeLabel: activeNodeLabel,
       });
     },
   };

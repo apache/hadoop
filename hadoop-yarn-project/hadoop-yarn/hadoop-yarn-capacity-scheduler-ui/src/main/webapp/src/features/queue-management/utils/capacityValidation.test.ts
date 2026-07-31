@@ -110,7 +110,7 @@ describe('getLabelPartitionAccessIssues', () => {
     expect(issues).toEqual([]);
   });
 
-  it('blocks non-empty label partition capacity when the queue does not list the label', () => {
+  it('blocks filling queue-partition capacity when the queue does not have the label', () => {
     const issues = getLabelPartitionAccessIssues(
       [createRow({ capacityValue: '50', maxCapacityValue: '100' })],
       'gpu',
@@ -139,13 +139,13 @@ describe('getAccessibleLabelRemovalIssues', () => {
     expect(issues[0]?.message).toContain('gpu');
   });
 
-  it('allows removing access when partition capacity is cleared', () => {
+  it('allows removing access when queue-partition capacity is not there', () => {
     const issues = getAccessibleLabelRemovalIssues('root.default', 'fpga', new Map());
 
     expect(issues).toEqual([]);
   });
 
-  it('allows wildcard access even when partition capacity is configured', () => {
+  it('allows wildcard access even when queue-partition capacity is configured', () => {
     const config = new Map<string, string>([
       [
         'yarn.scheduler.capacity.root.default.accessible-node-labels.gpu.capacity',

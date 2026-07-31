@@ -82,7 +82,6 @@ const parseQueueAccessibleNodeLabelsProperty = (
 
 /**
  * Returns whether a queue lists the label in its own accessible-node-labels property.
- * Parent inheritance is intentionally not considered.
  */
 export function isLabelListedInQueue(
   queuePath: string,
