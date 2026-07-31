@@ -30,6 +30,9 @@ import {
 } from '~/lib/errors';
 import { createReadOnlyBlockedError } from '~/lib/errors/readOnlyGuard';
 import { normalizeNodeLabels, normalizeNodeToLabels } from '~/lib/normalizers/nodeDataNormalizers';
+import {
+  getHostWildcardToClearOnUnassign
+} from '~/features/node-labels/utils/hostWildcardLabels';
 import { validateLabelRemoval } from '~/features/node-labels/utils/labelValidation';
 import type { NodeLabelsSlice, SchedulerStore } from './types';
 
@@ -213,19 +216,9 @@ export const createNodeLabelsSlice: StateCreator<
       const nodeToLabelsReplacement = [{ nodeId, labels }];
 
       if (!labelName) {
-        const lastColonIndex = nodeId.lastIndexOf(':'); // supports IPv6
-        const host = nodeId.slice(0, lastColonIndex);
-        const port = nodeId.slice(lastColonIndex + 1);
-        if (host && port && port !== '0') {
-          const hostWithPortZeroCreatedByCLI = `${host}:0`;
-          const hasHostWithPortZeroCreatedByCLIAssignment =
-            get().nodeToLabels.some(
-              (mapping) =>
-                  mapping.nodeId === hostWithPortZeroCreatedByCLI && mapping.nodeLabels.length > 0,
-            );
-          if (hasHostWithPortZeroCreatedByCLIAssignment) {
-            nodeToLabelsReplacement.push({ nodeId: hostWithPortZeroCreatedByCLI, labels: [] });
-          }
+        const hostWildcardToClearOnUnassign = getHostWildcardToClearOnUnassign(nodeId, get().nodeToLabels)
+        if (hostWildcardToClearOnUnassign) {
+          nodeToLabelsReplacement.push({ nodeId: hostWildcardToClearOnUnassign, labels: [] });
         }
       }
       await get().apiClient.replaceNodeToLabels(nodeToLabelsReplacement);
