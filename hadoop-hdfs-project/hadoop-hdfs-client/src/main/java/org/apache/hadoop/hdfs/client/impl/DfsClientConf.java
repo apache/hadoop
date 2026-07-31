@@ -841,6 +841,8 @@ public class DfsClientConf {
       shortCircuitStreamsCacheSize = conf.getInt(
           Read.ShortCircuit.STREAMS_CACHE_SIZE_KEY,
           Read.ShortCircuit.STREAMS_CACHE_SIZE_DEFAULT);
+      Preconditions.checkArgument(shortCircuitStreamsCacheSize >= 0,
+          Read.ShortCircuit.STREAMS_CACHE_SIZE_KEY + " can't be negative.");
       shortCircuitStreamsCacheExpiryMs = conf.getLong(
           Read.ShortCircuit.STREAMS_CACHE_EXPIRY_MS_KEY,
           Read.ShortCircuit.STREAMS_CACHE_EXPIRY_MS_DEFAULT);
