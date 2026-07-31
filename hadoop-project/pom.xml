@@ -207,6 +207,7 @@
     <exec-maven-plugin.version>1.3.1</exec-maven-plugin.version>
     <make-maven-plugin.version>1.0-beta-1</make-maven-plugin.version>
     <surefire.fork.timeout>900</surefire.fork.timeout>
+    <surefire.fork.exitTimeout>60</surefire.fork.exitTimeout>
     <aws-java-sdk.version>1.12.720</aws-java-sdk.version>
     <aws-java-sdk-v2.version>2.35.4</aws-java-sdk-v2.version>
     <amazon-s3-encryption-client-java.version>4.0.0</amazon-s3-encryption-client-java.version>
@@ -2594,6 +2595,7 @@
         <configuration>
           <reuseForks>false</reuseForks>
           <forkedProcessTimeoutInSeconds>${surefire.fork.timeout}</forkedProcessTimeoutInSeconds>
+          <forkedProcessExitTimeoutInSeconds>${surefire.fork.exitTimeout}</forkedProcessExitTimeoutInSeconds>
           <!-- @{argLine} is Surefire's late (deferred) property substitution: it
                is replaced at test-run time with the value of the "argLine"
                property. jacoco:prepare-agent sets that property to the
