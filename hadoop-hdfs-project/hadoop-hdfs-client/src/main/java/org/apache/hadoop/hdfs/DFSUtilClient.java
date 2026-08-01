@@ -1118,7 +1118,12 @@ public class DFSUtilClient {
           HdfsClientConfigKeys.DFS_USER_HOME_DIR_PREFIX_KEY,
           HdfsClientConfigKeys.DFS_USER_HOME_DIR_PREFIX_DEFAULT);
     }
-    return userHomePrefix + Path.SEPARATOR + ugi.getShortUserName();
+    String homeDirectory =
+        userHomePrefix + Path.SEPARATOR + ugi.getShortUserName();
+    Preconditions.checkArgument(new Path(homeDirectory).isAbsolute(),
+        "Invalid value of %s: %s; must be an absolute path",
+        HdfsClientConfigKeys.DFS_USER_HOME_DIR_PREFIX_KEY, userHomePrefix);
+    return homeDirectory;
   }
 
   /**
