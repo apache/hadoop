@@ -262,9 +262,9 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.tracing.TraceUtils;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
+import org.apache.hadoop.util.HadoopJsonUtils;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.apache.hadoop.tracing.Tracer;
-import org.eclipse.jetty.util.ajax.JSON;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
@@ -3763,7 +3763,7 @@ public class DataNode extends ReconfigurableBase
         }
       }
     }
-    return JSON.toString(info);
+    return HadoopJsonUtils.toString(info);
   }
 
  /**
@@ -3781,7 +3781,7 @@ public class DataNode extends ReconfigurableBase
    */
   @Override // DataNodeMXBean
   public String getBPServiceActorInfo() {
-    return JSON.toString(getBPServiceActorInfoMap());
+    return HadoopJsonUtils.toString(getBPServiceActorInfoMap());
   }
 
   @VisibleForTesting
@@ -3808,7 +3808,7 @@ public class DataNode extends ReconfigurableBase
       LOG.debug("Storage not yet initialized.");
       return "";
     }
-    return JSON.toString(data.getVolumeInfoMap());
+    return HadoopJsonUtils.toString(data.getVolumeInfoMap());
   }
   
   @Override // DataNodeMXBean
@@ -4339,7 +4339,7 @@ public class DataNode extends ReconfigurableBase
       return null;
     }
     Set<String> slowDisks = diskMetrics.getDiskOutliersStats().keySet();
-    return JSON.toString(slowDisks);
+    return HadoopJsonUtils.toString(slowDisks);
   }
 
 

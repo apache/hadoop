@@ -41,9 +41,9 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.metrics2.impl.ConfigBuilder;
 import org.apache.hadoop.metrics2.impl.TestMetricsConfig;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.HadoopJsonUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
-import org.eclipse.jetty.util.ajax.JSON;
 
 /**
  * Class for testing {@link NameNodeMXBean} implementation

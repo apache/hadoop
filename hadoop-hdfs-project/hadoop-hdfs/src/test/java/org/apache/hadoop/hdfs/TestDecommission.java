@@ -84,13 +84,13 @@ import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStatistics;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.HadoopJsonUtils;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.ToolRunner;
 
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
-import org.eclipse.jetty.util.ajax.JSON;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.event.Level;
@@ -1570,7 +1570,7 @@ public class TestDecommission extends AdminStatesBaseTest {
       Thread.sleep(2000);
 
       // min NodeUsage should not be 0.00%
-      usage = (Map<String, Map<String, String>>) JSON.parse(ns.getNodeUsage());
+      usage = (Map<String, Map<String, String>>) HadoopJsonUtils.parse(ns.getNodeUsage());
       String minUsageBeforeDecom = usage.get("nodeUsage").get("min");
       assertTrue(!minUsageBeforeDecom.equalsIgnoreCase(zeroNodeUsage));
 
@@ -1583,14 +1583,14 @@ public class TestDecommission extends AdminStatesBaseTest {
         // NodeUsage should not include DECOMMISSION_INPROGRESS node
         // (minUsage should be 0.00%)
         usage = (Map<String, Map<String, String>>)
-            JSON.parse(ns.getNodeUsage());
+            HadoopJsonUtils.parse(ns.getNodeUsage());
         assertTrue(usage.get("nodeUsage").get("min").
             equalsIgnoreCase(zeroNodeUsage));
       }
       // Recommission node
       putNodeInService(0, decommissionedNodeInfo);
 
-      usage = (Map<String, Map<String, String>>) JSON.parse(ns.getNodeUsage());
+      usage = (Map<String, Map<String, String>>) HadoopJsonUtils.parse(ns.getNodeUsage());
       String nodeusageAfterRecommi =
           decommissionState == AdminStates.DECOMMISSION_INPROGRESS
               ? minUsageBeforeDecom

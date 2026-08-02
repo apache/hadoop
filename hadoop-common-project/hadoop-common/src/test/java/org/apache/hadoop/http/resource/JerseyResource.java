@@ -31,7 +31,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 import org.apache.hadoop.http.JettyUtils;
-import org.eclipse.jetty.util.ajax.JSON;
+import org.apache.hadoop.util.HadoopJsonUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -59,7 +59,7 @@ public class JerseyResource {
     final Map<String, Object> m = new TreeMap<String, Object>();
     m.put(PATH, path);
     m.put(OP, op);
-    final String js = JSON.toString(m);
+    final String js = HadoopJsonUtils.toString(m);
     return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
   }
 }

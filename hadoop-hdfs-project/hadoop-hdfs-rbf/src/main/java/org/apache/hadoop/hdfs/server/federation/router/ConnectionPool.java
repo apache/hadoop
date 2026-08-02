@@ -60,8 +60,8 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.protocolPB.RefreshUserMappingsProtocolPB;
 import org.apache.hadoop.tools.GetUserMappingsProtocol;
 import org.apache.hadoop.tools.protocolPB.GetUserMappingsProtocolPB;
+import org.apache.hadoop.util.HadoopJsonUtils;
 import org.apache.hadoop.util.Time;
-import org.eclipse.jetty.util.ajax.JSON;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -400,7 +400,7 @@ public class ConnectionPool {
         info.put(i + " closed", Boolean.toString(connection.isClosed()));
       }
     }
-    return JSON.toString(info);
+    return HadoopJsonUtils.toString(info);
   }
 
   /**

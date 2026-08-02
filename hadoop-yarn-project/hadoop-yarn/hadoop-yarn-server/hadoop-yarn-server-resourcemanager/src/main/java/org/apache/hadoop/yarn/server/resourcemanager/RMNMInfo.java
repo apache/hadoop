@@ -32,9 +32,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
+import org.apache.hadoop.util.HadoopJsonUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNodeReport;
-import org.eclipse.jetty.util.ajax.JSON;
 
 /**
  * JMX bean listing statuses of all node managers.
@@ -108,6 +108,6 @@ public class RMNMInfo implements RMNMInfoBeans {
         nodesInfo.add(info);
     }
 
-    return JSON.toString(nodesInfo);
+    return HadoopJsonUtils.toString(nodesInfo);
   }
 }

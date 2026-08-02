@@ -43,8 +43,8 @@ import org.apache.hadoop.hdfs.protocol.datatransfer.sasl.SaslDataTransferTestCas
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.HadoopJsonUtils;
 import org.junit.jupiter.api.Test;
-import org.eclipse.jetty.util.ajax.JSON;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -261,7 +261,7 @@ public class TestDataNodeMXBean extends SaslDataTransferTestCase {
           throws Exception {
     int totalBlocks = 0;
     String volumeInfo = (String) mbs.getAttribute(mxbeanName, "VolumeInfo");
-    Map<?, ?> m = (Map<?, ?>) JSON.parse(volumeInfo);
+    Map<?, ?> m = (Map<?, ?>) HadoopJsonUtils.parse(volumeInfo);
     Collection<Map<String, Long>> values =
             (Collection<Map<String, Long>>) m.values();
     for (Map<String, Long> volumeInfoMap : values) {

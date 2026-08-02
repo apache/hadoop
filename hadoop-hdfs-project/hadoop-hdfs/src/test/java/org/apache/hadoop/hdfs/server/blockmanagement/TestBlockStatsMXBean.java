@@ -45,10 +45,10 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.HadoopJsonUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.eclipse.jetty.util.ajax.JSON;
 import org.junit.jupiter.api.Timeout;
 
 /**
@@ -130,7 +130,7 @@ public class TestBlockStatsMXBean {
     URL baseUrl = new URL (cluster.getHttpUri(0));
     String result = readOutput(new URL(baseUrl, "/jmx"));
 
-    Map<String, Object> stat = (Map<String, Object>) JSON.parse(result);
+    Map<String, Object> stat = (Map<String, Object>) HadoopJsonUtils.parse(result);
     Object[] beans =(Object[]) stat.get("beans");
     Map<String, Object> blockStats  = null;
     for (Object bean : beans) {
@@ -294,7 +294,7 @@ public class TestBlockStatsMXBean {
     URL baseUrl = new URL(cluster.getHttpUri(0));
     String result = readOutput(new URL(baseUrl, "/jmx"));
 
-    Map<String, Object> stat = (Map<String, Object>) JSON.parse(result);
+    Map<String, Object> stat = (Map<String, Object>) HadoopJsonUtils.parse(result);
     Object[] beans = (Object[]) stat.get("beans");
     Map<String, Object> blockStats = null;
     for (Object bean : beans) {
