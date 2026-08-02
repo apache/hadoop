@@ -19,9 +19,8 @@
 package org.apache.hadoop.util;
 
 import java.io.IOException;
-import java.io.StringWriter;
 
-import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -30,6 +29,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 /**
  * Simple JSON utility to replace usage of the removed
  * {@code org.eclipse.jetty.util.ajax.JSON} class.
+ * Only used in tests and is not a public API.
  *
  * Uses Jackson {@link ObjectMapper} under the hood.
  */
@@ -43,13 +43,37 @@ public final class HadoopJsonUtils {
   }
 
   /**
-   * Parse a JSON string into a Java object (typically a Map or List).
+   * Parse a JSON string into a Java object of the given type.
+   * This method replaces {@code org.eclipse.jetty.util.ajax.JSON.parse}
+   * which did not throw checked exceptions.
    * @param json the JSON string
+   * @param clazz the target class to deserialize into
+   * @param <T> the type of the parsed object
    * @return the parsed object
-   * @throws IOException if the string is not valid JSON
    */
-  public static Object parse(String json) throws IOException {
-    return MAPPER.readValue(json, Object.class);
+  public static <T> T parse(String json, Class<T> clazz) {
+    try {
+      return MAPPER.readValue(json, clazz);
+    } catch (IOException e) {
+      throw new RuntimeException("Failed to parse JSON", e);
+    }
+  }
+
+  /**
+   * Parse a JSON string into a Java object with full generic type info.
+   * Use this overload when the target type has generic parameters,
+   * e.g. {@code new TypeReference<Map<String, Object>>() {}}.
+   * @param json the JSON string
+   * @param typeRef the type reference describing the target type
+   * @param <T> the type of the parsed object
+   * @return the parsed object
+   */
+  public static <T> T parse(String json, TypeReference<T> typeRef) {
+    try {
+      return MAPPER.readValue(json, typeRef);
+    } catch (IOException e) {
+      throw new RuntimeException("Failed to parse JSON", e);
+    }
   }
 
   /**
@@ -59,11 +83,7 @@ public final class HadoopJsonUtils {
    */
   public static String toString(Object obj) {
     try {
-      StringWriter writer = new StringWriter();
-      try (JsonGenerator gen = MAPPER.getFactory().createGenerator(writer)) {
-        gen.writeObject(obj);
-      }
-      return writer.toString();
+      return MAPPER.writeValueAsString(obj);
     } catch (IOException e) {
       throw new RuntimeException("Failed to serialize object to JSON", e);
     }

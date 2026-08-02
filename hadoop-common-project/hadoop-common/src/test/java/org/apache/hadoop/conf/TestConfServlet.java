@@ -40,6 +40,7 @@ import org.xml.sax.InputSource;
 import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
 
 import org.apache.hadoop.http.HttpServer2;
+import com.fasterxml.jackson.core.type.TypeReference;
 import org.apache.hadoop.util.HadoopJsonUtils;
 import org.apache.hadoop.util.XMLUtils;
 
@@ -208,8 +209,9 @@ public class TestConfServlet {
     ConfServlet.writeResponse(getTestConf(), sw, "json");
     String json = sw.toString();
     boolean foundSetting = false;
-    Object parsed = HadoopJsonUtils.parse(json);
-    Object[] properties = ((Map<String, Object[]>)parsed).get("properties");
+    Map<String, Object[]> parsed = HadoopJsonUtils.parse(json,
+        new TypeReference<Map<String, Object[]>>() {});
+    Object[] properties = parsed.get("properties");
     for (Object o : properties) {
       Map<String, Object> propertyInfo = (Map<String, Object>)o;
       String key = (String)propertyInfo.get("key");

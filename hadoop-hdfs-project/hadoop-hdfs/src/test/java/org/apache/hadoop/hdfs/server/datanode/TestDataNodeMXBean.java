@@ -22,13 +22,13 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -256,15 +256,13 @@ public class TestDataNodeMXBean extends SaslDataTransferTestCase {
     }
   }
 
-  @SuppressWarnings("unchecked")
   private int getTotalNumBlocks(MBeanServer mbs, ObjectName mxbeanName)
           throws Exception {
     int totalBlocks = 0;
     String volumeInfo = (String) mbs.getAttribute(mxbeanName, "VolumeInfo");
-    Map<?, ?> m = (Map<?, ?>) HadoopJsonUtils.parse(volumeInfo);
-    Collection<Map<String, Long>> values =
-            (Collection<Map<String, Long>>) m.values();
-    for (Map<String, Long> volumeInfoMap : values) {
+    Map<String, Map<String, Long>> m = HadoopJsonUtils.parse(volumeInfo,
+        new TypeReference<Map<String, Map<String, Long>>>() {});
+    for (Map<String, Long> volumeInfoMap : m.values()) {
       totalBlocks += volumeInfoMap.get("numBlocks");
     }
     return totalBlocks;

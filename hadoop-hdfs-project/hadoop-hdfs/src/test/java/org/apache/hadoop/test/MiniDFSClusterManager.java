@@ -162,7 +162,7 @@ public class MiniDFSClusterManager {
       }
 
       FileWriter fw = new FileWriter(new File(writeDetails));
-      fw.write(new JSON().toJSON(map));
+      fw.write(HadoopJsonUtils.toString(map));
       fw.close();
     }
   }

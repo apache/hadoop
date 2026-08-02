@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.util.Optional;
@@ -179,7 +180,8 @@ public class TestNameNodeMXBean {
       String alivenodeinfo = (String) (mbs.getAttribute(mxbeanName,
           "LiveNodes"));
       Map<String, Map<String, Object>> liveNodes =
-          (Map<String, Map<String, Object>>) HadoopJsonUtils.parse(alivenodeinfo);
+          HadoopJsonUtils.parse(alivenodeinfo,
+              new TypeReference<Map<String, Map<String, Object>>>() {});
       assertTrue(liveNodes.size() == 4);
       for (Map<String, Object> liveNode : liveNodes.values()) {
         assertTrue(liveNode.containsKey("nonDfsUsedSpace"));
@@ -220,7 +222,8 @@ public class TestNameNodeMXBean {
       String alivenodeinfo1 = (String) (mbs.getAttribute(mxbeanName,
               "LiveNodes"));
       Map<String, Map<String, Object>> liveNodes1 =
-              (Map<String, Map<String, Object>>) HadoopJsonUtils.parse(alivenodeinfo1);
+              HadoopJsonUtils.parse(alivenodeinfo1,
+                  new TypeReference<Map<String, Map<String, Object>>>() {});
       for (Map<String, Object> liveNode : liveNodes1.values()) {
         assertTrue(liveNode.containsKey("location"));
         assertTrue(liveNode.containsKey("uuid"));
@@ -260,7 +263,8 @@ public class TestNameNodeMXBean {
           "NameDirStatuses"));
       assertEquals(fsn.getNameDirStatuses(), nameDirStatuses);
       Map<String, Map<String, String>> statusMap =
-        (Map<String, Map<String, String>>) HadoopJsonUtils.parse(nameDirStatuses);
+        HadoopJsonUtils.parse(nameDirStatuses,
+            new TypeReference<Map<String, Map<String, String>>>() {});
       Collection<URI> nameDirUris = cluster.getNameDirs(0);
       for (URI nameDirUri : nameDirUris) {
         File nameDir = new File(nameDirUri);
@@ -279,7 +283,8 @@ public class TestNameNodeMXBean {
 
       nameDirStatuses = (String) (mbs.getAttribute(mxbeanName,
           "NameDirStatuses"));
-      statusMap = (Map<String, Map<String, String>>) HadoopJsonUtils.parse(nameDirStatuses);
+      statusMap = HadoopJsonUtils.parse(nameDirStatuses,
+          new TypeReference<Map<String, Map<String, String>>>() {});
       for (URI nameDirUri : nameDirUris) {
         File nameDir = new File(nameDirUri);
         String expectedStatus =
@@ -346,7 +351,8 @@ public class TestNameNodeMXBean {
         "DeadNodes"));
       assertEquals(fsn.getDeadNodes(), deadNodeInfo);
       Map<String, Map<String, Object>> deadNodes =
-          (Map<String, Map<String, Object>>) HadoopJsonUtils.parse(deadNodeInfo);
+          HadoopJsonUtils.parse(deadNodeInfo,
+              new TypeReference<Map<String, Map<String, Object>>>() {});
       assertTrue(deadNodes.size() > 0);
       for (Map<String, Object> deadNode : deadNodes.values()) {
         assertTrue(deadNode.containsKey("lastContact"));
@@ -392,7 +398,8 @@ public class TestNameNodeMXBean {
       String liveNodesInfo = (String) (mbs.getAttribute(mxbeanName,
           "LiveNodes"));
       Map<String, Map<String, Object>> liveNodes =
-          (Map<String, Map<String, Object>>) HadoopJsonUtils.parse(liveNodesInfo);
+          HadoopJsonUtils.parse(liveNodesInfo,
+              new TypeReference<Map<String, Map<String, Object>>>() {});
       assertEquals(fsn.getLiveNodes(), liveNodesInfo);
       assertEquals(fsn.getNumLiveDataNodes(), liveNodes.size());
 
@@ -414,7 +421,8 @@ public class TestNameNodeMXBean {
             String decomNodesInfo = (String) (mbs.getAttribute(mxbeanName,
                 "DecomNodes"));
             Map<String, Map<String, Object>> decomNodes =
-                (Map<String, Map<String, Object>>) HadoopJsonUtils.parse(decomNodesInfo);
+                HadoopJsonUtils.parse(decomNodesInfo,
+                    new TypeReference<Map<String, Map<String, Object>>>() {});
             if (decomNodes.size() > 0) {
               return true;
             }
@@ -429,7 +437,8 @@ public class TestNameNodeMXBean {
       String decomNodesInfo = (String) (mbs.getAttribute(mxbeanName,
           "DecomNodes"));
       Map<String, Map<String, Object>> decomNodes =
-          (Map<String, Map<String, Object>>) HadoopJsonUtils.parse(decomNodesInfo);
+          HadoopJsonUtils.parse(decomNodesInfo,
+              new TypeReference<Map<String, Map<String, Object>>>() {});
       assertEquals(fsn.getDecomNodes(), decomNodesInfo);
       assertEquals(fsn.getNumDecommissioningDataNodes(), decomNodes.size());
       assertEquals(0, fsn.getNumDecomLiveDataNodes());
@@ -449,7 +458,8 @@ public class TestNameNodeMXBean {
       // 3. Verify Decommissioned nodes
       decomNodesInfo = (String) (mbs.getAttribute(mxbeanName, "DecomNodes"));
       decomNodes =
-          (Map<String, Map<String, Object>>) HadoopJsonUtils.parse(decomNodesInfo);
+          HadoopJsonUtils.parse(decomNodesInfo,
+              new TypeReference<Map<String, Map<String, Object>>>() {});
       assertEquals(0, decomNodes.size());
       assertEquals(fsn.getDecomNodes(), decomNodesInfo);
       assertEquals(1, fsn.getNumDecomLiveDataNodes());
@@ -597,7 +607,8 @@ public class TestNameNodeMXBean {
           "LiveNodes"));
       LOG.info("Live Nodes: " + liveNodesInfo);
       Map<String, Map<String, Object>> liveNodes =
-          (Map<String, Map<String, Object>>) HadoopJsonUtils.parse(liveNodesInfo);
+          HadoopJsonUtils.parse(liveNodesInfo,
+              new TypeReference<Map<String, Map<String, Object>>>() {});
       assertEquals(fsn.getLiveNodes(), liveNodesInfo);
       assertEquals(fsn.getNumLiveDataNodes(), liveNodes.size());
 
@@ -619,8 +630,8 @@ public class TestNameNodeMXBean {
         String enteringMaintenanceNodesInfo =
             (String) (mbs.getAttribute(mxbeanName, "EnteringMaintenanceNodes"));
         Map<String, Map<String, Object>> enteringMaintenanceNodes =
-            (Map<String, Map<String, Object>>) HadoopJsonUtils.parse(
-                enteringMaintenanceNodesInfo);
+            HadoopJsonUtils.parse(enteringMaintenanceNodesInfo,
+                new TypeReference<Map<String, Map<String, Object>>>() {});
         if (enteringMaintenanceNodes.size() <= 0) {
           LOG.info("Waiting for a node to Enter Maintenance state!");
           Uninterruptibles.sleepUninterruptibly(1, TimeUnit.SECONDS);
@@ -644,8 +655,8 @@ public class TestNameNodeMXBean {
       String enteringMaintenanceNodesInfo =
           (String) (mbs.getAttribute(mxbeanName, "EnteringMaintenanceNodes"));
       Map<String, Map<String, Object>> enteringMaintenanceNodes =
-          (Map<String, Map<String, Object>>) HadoopJsonUtils.parse(
-              enteringMaintenanceNodesInfo);
+          HadoopJsonUtils.parse(enteringMaintenanceNodesInfo,
+              new TypeReference<Map<String, Map<String, Object>>>() {});
       assertEquals(0, enteringMaintenanceNodes.size());
       assertEquals(fsn.getEnteringMaintenanceNodes(), enteringMaintenanceNodesInfo);
       assertEquals(1, fsn.getNumInMaintenanceLiveDataNodes());
@@ -851,7 +862,8 @@ public class TestNameNodeMXBean {
   @SuppressWarnings("unchecked")
   private void checkNNDirSize(Collection<URI> nameDirUris, String metric){
     Map<String, Long> nnDirMap =
-        (Map<String, Long>) HadoopJsonUtils.parse(metric);
+        HadoopJsonUtils.parse(metric,
+            new TypeReference<Map<String, Long>>() {});
     assertEquals(nameDirUris.size(), nnDirMap.size());
     for (URI dirUrl : nameDirUris) {
       File dir = new File(dirUrl);
@@ -1016,7 +1028,7 @@ public class TestNameNodeMXBean {
 
       String corruptFiles = (String) (mbs.getAttribute(namenodeMXBeanName,
           "CorruptFiles"));
-      int numCorruptFiles = ((Object[]) HadoopJsonUtils.parse(corruptFiles)).length;
+      int numCorruptFiles = (HadoopJsonUtils.parse(corruptFiles, Object[].class)).length;
       assertEquals(1, numCorruptFiles);
     } finally {
       if (fs != null) {
@@ -1174,7 +1186,8 @@ public class TestNameNodeMXBean {
       assertEquals(fsn.getDeadNodes(), deadNodeInfo);
       LOG.info("Get deadNode info: {}", deadNodeInfo);
       Map<String, Map<String, Object>> deadNodes =
-          (Map<String, Map<String, Object>>) HadoopJsonUtils.parse(deadNodeInfo);
+          HadoopJsonUtils.parse(deadNodeInfo,
+              new TypeReference<Map<String, Map<String, Object>>>() {});
       assertEquals(1, deadNodes.size());
       for (Map<String, Object> deadNode : deadNodes.values()) {
         assertTrue(deadNode.containsKey("lastContact"));

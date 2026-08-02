@@ -45,6 +45,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
+import com.fasterxml.jackson.core.type.TypeReference;
 import org.apache.hadoop.util.HadoopJsonUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -130,7 +131,8 @@ public class TestBlockStatsMXBean {
     URL baseUrl = new URL (cluster.getHttpUri(0));
     String result = readOutput(new URL(baseUrl, "/jmx"));
 
-    Map<String, Object> stat = (Map<String, Object>) HadoopJsonUtils.parse(result);
+    Map<String, Object> stat = HadoopJsonUtils.parse(result,
+        new TypeReference<Map<String, Object>>() {});
     Object[] beans =(Object[]) stat.get("beans");
     Map<String, Object> blockStats  = null;
     for (Object bean : beans) {
@@ -294,7 +296,8 @@ public class TestBlockStatsMXBean {
     URL baseUrl = new URL(cluster.getHttpUri(0));
     String result = readOutput(new URL(baseUrl, "/jmx"));
 
-    Map<String, Object> stat = (Map<String, Object>) HadoopJsonUtils.parse(result);
+    Map<String, Object> stat = HadoopJsonUtils.parse(result,
+        new TypeReference<Map<String, Object>>() {});
     Object[] beans = (Object[]) stat.get("beans");
     Map<String, Object> blockStats = null;
     for (Object bean : beans) {

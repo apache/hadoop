@@ -29,6 +29,7 @@ import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.security.ShellBasedUnixGroupsMapping;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
+import com.fasterxml.jackson.core.type.TypeReference;
 import org.apache.hadoop.util.HadoopJsonUtils;
 
 import org.eclipse.jetty.server.HttpConfiguration;
@@ -595,7 +596,8 @@ public class TestHttpServer extends HttpServerFunctionalTest {
 
   @SuppressWarnings("unchecked")
   private static Map<String, Object> parse(String jsonString) {
-    return (Map<String, Object>) HadoopJsonUtils.parse(jsonString);
+    return HadoopJsonUtils.parse(jsonString,
+        new TypeReference<Map<String, Object>>() {});
   }
 
   @Test public void testJersey() throws Exception {

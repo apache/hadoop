@@ -196,7 +196,7 @@ public class MiniHadoopClusterManager {
             YarnConfiguration.RM_ADDRESS).split(":")[1]);
       }
       FileWriter fw = new FileWriter(new File(writeDetails));
-      fw.write(new JSON().toJSON(map));
+      fw.write(HadoopJsonUtils.toString(map));
       fw.close();
     }
   }
