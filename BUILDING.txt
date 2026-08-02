@@ -241,6 +241,9 @@ Maven build goals:
 
   * Use -DskipTests to skip tests when running the following Maven goals:
     'package',  'install', 'deploy' or 'verify'
+  * Use -DskipJasmineTests=true to skip only the browser-driven jasmine tests in
+    hadoop-yarn-applications-catalog-webapp (e.g. on a headless machine with no
+    browser) while still running the module's other tests.
   * -Dtest=<TESTCLASSNAME>,<TESTCLASSNAME#METHODNAME>,....
   * -Dtest.exclude=<TESTCLASSNAME>
   * -Dtest.exclude.pattern=**/<TESTCLASSNAME1>.java,**/<TESTCLASSNAME2>.java
