@@ -386,7 +386,7 @@
                 <configuration>
                   <forkCount>${testsThreadCount}</forkCount>
                   <reuseForks>false</reuseForks>
-                  <argLine>${maven-surefire-plugin.argLine} -DminiClusterDedicatedDirs=true</argLine>
+                  <argLine>${maven-surefire-plugin.argLine} @{argLine} -DminiClusterDedicatedDirs=true</argLine>
                   <forkedProcessTimeoutInSeconds>${fs.azure.scale.test.timeout}</forkedProcessTimeoutInSeconds>
                   <systemPropertyVariables>
                     <test.build.data>${test.build.data}/${surefire.forkNumber}</test.build.data>
@@ -423,7 +423,7 @@
                   <reuseForks>true</reuseForks>
                   <parallel>both</parallel>
                   <threadCount>${testsThreadCount}</threadCount>
-                  <argLine>${maven-surefire-plugin.argLine} -DminiClusterDedicatedDirs=true</argLine>
+                  <argLine>${maven-surefire-plugin.argLine} @{argLine} -DminiClusterDedicatedDirs=true</argLine>
                   <forkedProcessTimeoutInSeconds>${fs.azure.scale.test.timeout}</forkedProcessTimeoutInSeconds>
                   <systemPropertyVariables>
                     <!-- Tell tests that they are being executed in parallel -->
@@ -472,7 +472,7 @@
                   <forkCount>${testsThreadCount}</forkCount>
                   <reuseForks>false</reuseForks>
                   <!--NOTICE: hadoop contract tests methods can not be ran in parallel-->
-                  <argLine>${maven-surefire-plugin.argLine} -DminiClusterDedicatedDirs=true</argLine>
+                  <argLine>${maven-surefire-plugin.argLine} @{argLine} -DminiClusterDedicatedDirs=true</argLine>
                   <forkedProcessTimeoutInSeconds>${fs.azure.scale.test.timeout}</forkedProcessTimeoutInSeconds>
                   <systemPropertyVariables>
                     <!-- Tell tests that they are being executed in parallel -->
@@ -569,7 +569,7 @@
                 <configuration>
                   <forkCount>${testsThreadCount}</forkCount>
                   <reuseForks>false</reuseForks>
-                  <argLine>${maven-surefire-plugin.argLine} -DminiClusterDedicatedDirs=true</argLine>
+                  <argLine>${maven-surefire-plugin.argLine} @{argLine} -DminiClusterDedicatedDirs=true</argLine>
                   <forkedProcessTimeoutInSeconds>${fs.azure.scale.test.timeout}</forkedProcessTimeoutInSeconds>
                   <systemPropertyVariables>
                     <test.build.data>${test.build.data}/${surefire.forkNumber}</test.build.data>
@@ -603,7 +603,7 @@
                 <configuration>
                   <forkCount>${testsThreadCount}</forkCount>
                   <reuseForks>false</reuseForks>
-                  <argLine>${maven-surefire-plugin.argLine} -DminiClusterDedicatedDirs=true</argLine>
+                  <argLine>${maven-surefire-plugin.argLine} @{argLine} -DminiClusterDedicatedDirs=true</argLine>
                   <forkedProcessTimeoutInSeconds>${fs.azure.scale.test.timeout}</forkedProcessTimeoutInSeconds>
                   <systemPropertyVariables>
                     <!-- Tell tests that they are being executed in parallel -->

@@ -1,0 +1,39 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Modules that ARE test-bearing (jar packaging with a src/test/java directory)
+# but are deliberately excluded from the hadoop-coverage aggregate report.
+# Modules listed here are also exempt from the guard's <argLine>/@{argLine}
+# instrumentation check, since they are not aggregated.
+#
+# Every other test-bearing module MUST be listed as a <dependency> in
+# hadoop-coverage/pom.xml, or the build fails. See:
+#   hadoop-coverage/src/test/resources/check-coverage-modules.sh
+#
+# Non-test-bearing modules (dist/assembly, shaded client jars, native-only,
+# stub/alias, benchmark, war/ui) do NOT need to be listed here: the guard only
+# considers jar modules that have a src/test/java directory.
+#
+# Format: one artifactId per line; blank lines and lines starting with # ignored.
+
+# Example code, already excluded from coverage via the **/examples/** class
+# pattern in hadoop-project/pom.xml (jacoco prepare-agent) and the matching
+# exclude in hadoop-coverage/pom.xml (report-aggregate).
+hadoop-mapreduce-examples
+
+# Test-only module (no main classes of its own); it exercises the shaded client
+# jars rather than contributing coverage for its own code.
+hadoop-client-integration-tests

@@ -185,6 +185,7 @@
       --add-opens=java.base/sun.security.x509=ALL-UNNAMED
       --enable-native-access=ALL-UNNAMED
     </extraJavaTestArgs>
+
     <!-- Plugin versions and config -->
     <maven-surefire-plugin.argLine>-Xmx4096m -Xss4m -XX:+HeapDumpOnOutOfMemoryError ${extraJavaTestArgs}</maven-surefire-plugin.argLine>
     <maven-surefire-plugin.version>3.5.3</maven-surefire-plugin.version>
@@ -2313,7 +2314,9 @@
           <artifactId>maven-failsafe-plugin</artifactId>
           <version>${maven-failsafe-plugin.version}</version>
           <configuration>
-            <argLine>${maven-surefire-plugin.argLine}</argLine>
+            <!-- @{argLine} injects the JaCoCo agent when coverage is enabled;
+                 see the maven-surefire-plugin configuration below for details. -->
+            <argLine>${maven-surefire-plugin.argLine} @{argLine}</argLine>
           </configuration>
         </plugin>
         <plugin>
@@ -2591,7 +2594,16 @@
         <configuration>
           <reuseForks>false</reuseForks>
           <forkedProcessTimeoutInSeconds>${surefire.fork.timeout}</forkedProcessTimeoutInSeconds>
-          <argLine>${maven-surefire-plugin.argLine}</argLine>
+          <!-- @{argLine} is Surefire's late (deferred) property substitution: it
+               is replaced at test-run time with the value of the "argLine"
+               property. jacoco:prepare-agent sets that property to the
+               -javaagent:...jacocoagent.jar=... option when coverage is enabled
+               (see jacoco-maven-plugin above), so the agent is injected into the
+               forked test JVM. When coverage is off (jacoco.skip=true, the
+               default) prepare-agent is skipped, argLine is unset, and @{argLine}
+               resolves to empty. ${maven-surefire-plugin.argLine} is our own
+               static JVM args, kept separate. -->
+          <argLine>${maven-surefire-plugin.argLine} @{argLine}</argLine>
           <environmentVariables>
             <HADOOP_COMMON_HOME>${hadoop.common.build.dir}</HADOOP_COMMON_HOME>
             <!-- HADOOP_HOME required for tests on Windows to find winutils -->
@@ -2626,6 +2638,34 @@
             <exclude>**/Test*$*.java</exclude>
           </excludes>
         </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.jacoco</groupId>
+        <artifactId>jacoco-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>prepare-agent</id>
+            <goals>
+              <goal>prepare-agent</goal>
+            </goals>
+            <configuration>
+              <!-- skip is inherited from the jacoco.skip property (default true
+                   in the root pom); no explicit <skip> needed here. -->
+              <!-- Exclude generated/example classes from instrumentation so
+                   the agent does not spend time weaving them in every forked
+                   test JVM. These are also filtered from the coverage numbers
+                   in the report-aggregate configuration (hadoop-coverage/pom.xml);
+                   keep the two exclude lists in sync. -->
+              <excludes>
+                <exclude>**/generated/**/*.class</exclude>
+                <exclude>**/examples/**/*.class</exclude>
+                <exclude>**/hamlet/*.class</exclude>
+                <exclude>**/proto/*.class</exclude>
+                <exclude>**/protobuf/*.class</exclude>
+              </excludes>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
