@@ -484,7 +484,9 @@
                     </execution>
                 </executions>
                 <configuration>
-                    <skipJasmineTests>${skipTests}</skipJasmineTests>
+                    <!-- Jasmine tests are skipped if any one of -Dmaven.test.skip=true,
+                         -DskipTests, -DskipJasmineTests=true is set. Don't declare
+                         skipJasmineTests here: it would override those command-line flags. -->
                     <webDriverClassName>org.openqa.selenium.phantomjs.PhantomJSDriver</webDriverClassName>
                     <webDriverCapabilities>
                         <capability>
