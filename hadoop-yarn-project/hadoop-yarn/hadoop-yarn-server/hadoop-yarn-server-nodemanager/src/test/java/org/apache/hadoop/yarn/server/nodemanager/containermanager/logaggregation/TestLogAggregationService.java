@@ -71,6 +71,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.function.Supplier;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -156,9 +157,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
-import org.eclipse.jetty.util.MultiException;
-
-import java.util.function.Supplier;
 import org.slf4j.LoggerFactory;
 
 public class TestLogAggregationService extends BaseContainerManagerTest {
@@ -1456,7 +1454,7 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
     List<T> actualEvents = eventCaptor.getAllValues();
 
     // batch up exceptions so junit presents them as one
-    MultiException failures = new MultiException();
+    List<Throwable> failures = new ArrayList<>();
     try {
       assertEquals(expectedEvents.length, actualEvents.size(), "expected events");
     } catch (Throwable e) {
@@ -1499,7 +1497,16 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
         }
       }
     }
-    failures.ifExceptionThrow();
+    if (!failures.isEmpty()) {
+      Throwable first = failures.get(0);
+      for (int i = 1; i < failures.size(); i++) {
+        first.addSuppressed(failures.get(i));
+      }
+      if (first instanceof RuntimeException) {
+        throw (RuntimeException) first;
+      }
+      throw new RuntimeException(first);
+    }
   }
   
   private static String eventToString(Event<?> event, String[] methods) throws Exception {

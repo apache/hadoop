@@ -19,8 +19,8 @@ package org.apache.hadoop.yarn.webapp;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 
-import javax.ws.rs.WebApplicationException;
-import javax.ws.rs.core.Response;
+import jakarta.ws.rs.WebApplicationException;
+import jakarta.ws.rs.core.Response;
 
 @InterfaceAudience.LimitedPrivate({"YARN", "MapReduce"})
 public class ConflictException extends WebApplicationException {

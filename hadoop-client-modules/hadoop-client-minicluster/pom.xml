@@ -136,6 +136,10 @@
           <artifactId>jaxb-api</artifactId>
         </exclusion>
         <exclusion>
+          <groupId>jakarta.xml.bind</groupId>
+          <artifactId>jakarta.xml.bind-api</artifactId>
+        </exclusion>
+        <exclusion>
           <groupId>xml-apis</groupId>
           <artifactId>xml-apis</artifactId>
         </exclusion>
@@ -539,6 +543,10 @@
           <groupId>javax.xml.bind</groupId>
           <artifactId>jaxb-api</artifactId>
         </exclusion>
+        <exclusion>
+          <groupId>jakarta.xml.bind</groupId>
+          <artifactId>jakarta.xml.bind-api</artifactId>
+        </exclusion>
       </exclusions>
     </dependency>
     <dependency>
@@ -707,8 +715,8 @@
                       <exclude>junit:junit</exclude>
                       <exclude>com.google.code.findbugs:jsr305</exclude>
                       <exclude>ch.qos.reload4j:reload4j</exclude>
-                      <exclude>org.eclipse.jetty.websocket:websocket-common</exclude>
-                      <exclude>org.eclipse.jetty.websocket:websocket-api</exclude>
+                      <exclude>org.eclipse.jetty.websocket:jetty-websocket-core</exclude>
+                      <exclude>org.eclipse.jetty.websocket:jetty-websocket-api</exclude>
                       <!-- We need a filter that matches just those things that are included in the above artiacts -->
                       <!-- Leave bouncycastle unshaded because it's signed with a special Oracle certificate so it can be a custom JCE security provider -->
                       <exclude>org.bouncycastle:*</exclude>
@@ -836,13 +844,13 @@
                       </excludes>
                     </filter>
                     <filter>
-                      <artifact>org.eclipse.jetty.websocket:javax-websocket-server-impl</artifact>
+                      <artifact>org.eclipse.jetty.ee10.websocket:jetty-ee10-websocket-jakarta-server</artifact>
                       <excludes>
                         <exclude>*/**</exclude>
                       </excludes>
                     </filter>
                     <filter>
-                      <artifact>org.eclipse.jetty.websocket:websocket-client</artifact>
+                      <artifact>org.eclipse.jetty.websocket:jetty-websocket-jetty-client</artifact>
                       <excludes>
                         <exclude>*/**</exclude>
                       </excludes>
@@ -853,7 +861,7 @@
                         <exclude>*/**</exclude>
                       </excludes>
                     </filter>
-                    <!-- Jetty 9.4.x: jetty-client and jetty-xml are depended by org.eclipse.jetty.websocket:websocket-client.-->
+                    <!-- jetty-client and jetty-xml are transitive deps of websocket-client. -->
                     <filter>
                       <artifact>org.eclipse.jetty:jetty-client</artifact>
                       <excludes>
@@ -1015,15 +1023,8 @@
                       </excludes>
                     </relocation>
                     <relocation>
-                      <pattern>javax/websocket/</pattern>
-                      <shadedPattern>${shaded.dependency.prefix}.javax.websocket.</shadedPattern>
-                      <excludes>
-                        <exclude>**/pom.xml</exclude>
-                      </excludes>
-                    </relocation>
-                    <relocation>
                       <pattern>javax/annotation/</pattern>
-                      <shadedPattern>${shaded.dependency.prefix}.javax.websocket.</shadedPattern>
+                      <shadedPattern>${shaded.dependency.prefix}.javax.annotation.</shadedPattern>
                       <excludes>
                         <exclude>**/pom.xml</exclude>
                       </excludes>

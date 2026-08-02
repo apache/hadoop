@@ -26,7 +26,7 @@ import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.WebApp;
 import org.apache.hadoop.yarn.webapp.YarnWebParams;
 
-import javax.servlet.Filter;
+import jakarta.servlet.Filter;
 
 public class AHSWebApp extends WebApp implements YarnWebParams {
 

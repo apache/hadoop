@@ -16,17 +16,17 @@ package org.apache.hadoop.security.authentication.examples;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.servlet.Filter;
-import javax.servlet.FilterChain;
-import javax.servlet.FilterConfig;
-import javax.servlet.ServletException;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
-import javax.servlet.http.Cookie;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletRequestWrapper;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpServletResponseWrapper;
+import jakarta.servlet.Filter;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.FilterConfig;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.ServletRequest;
+import jakarta.servlet.ServletResponse;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequestWrapper;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServletResponseWrapper;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Enumeration;
@@ -146,19 +146,7 @@ public class RequestLoggerFilter implements Filter {
      *
      * @param sc the status code
      * @param msg the status message
-     * @deprecated {@link HttpServletResponseWrapper#setStatus(int, String)} is
-     * deprecated. To set a status code use {@link #setStatus(int)}, to send an
-     * error with a description use {@link #sendError(int, String)}
      */
-    @Override
-    @Deprecated
-    @SuppressWarnings("deprecation")
-    public void setStatus(int sc, String msg) {
-      super.setStatus(sc, msg);
-      status = sc;
-      message = msg;
-    }
-
     @Override
     public void setHeader(String name, String value) {
       super.setHeader(name, value);

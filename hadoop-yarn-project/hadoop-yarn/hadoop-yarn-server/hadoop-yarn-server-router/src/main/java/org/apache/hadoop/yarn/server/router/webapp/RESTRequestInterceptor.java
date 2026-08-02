@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.yarn.server.router.webapp;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWebServiceProtocol;

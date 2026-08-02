@@ -37,7 +37,7 @@ import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
 import com.google.inject.Inject;
 
-import javax.ws.rs.client.Client;
+import jakarta.ws.rs.client.Client;
 import java.util.Date;
 
 import static org.apache.hadoop.yarn.webapp.YarnWebParams.NODE_SC;
