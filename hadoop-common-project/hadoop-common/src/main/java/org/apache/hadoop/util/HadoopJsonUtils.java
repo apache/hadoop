@@ -29,7 +29,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 /**
  * Simple JSON utility to replace usage of the removed
  * {@code org.eclipse.jetty.util.ajax.JSON} class.
- * Only used in tests and is not a public API.
+ * Mainly used in tests and is not a public API.
  *
  * Uses Jackson {@link ObjectMapper} under the hood.
  */
