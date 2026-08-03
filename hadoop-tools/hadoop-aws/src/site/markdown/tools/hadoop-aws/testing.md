@@ -25,15 +25,16 @@ convention `Test*.java`.  Integration tests follow the naming convention
 
 ## <a name="policy"></a> Policy for submitting patches which affect the `hadoop-aws` module.
 
-The Apache Jenkins infrastructure does not run any S3 integration tests,
-due to the need to keep credentials secure.
+The Apache Jenkins infrastructure runs a limited set of S3 integration tests
+with mock implementations of S3. Actual S3 testing is currently limited by
+infrastructure costs and the need to keep credentials secure.
 
 ### The submitter of any patch is required to run all the integration tests and declare which S3 region/implementation they used.
 
 This is important: **patches which do not include this declaration will be ignored**
 
 This policy has proven to be the only mechanism to guarantee full regression
-testing of code changes. Why the declaration of region? Two reasons
+testing of code changes. Why the declaration of region? Two reasons:
 
 1. It helps us identify regressions which only surface against specific endpoints
 or third-party implementations of the S3 protocol.
