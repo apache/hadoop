@@ -90,7 +90,7 @@ public class RMNMInfo implements RMNMInfoBeans {
         info.put("HostName", ni.getHostName());
         info.put("Rack", ni.getRackName());
         info.put("State", ni.getState().toString());
-        info.put("NodeId", ni.getNodeID());
+        info.put("NodeId", ni.getNodeID().toString());
         info.put("NodeHTTPAddress", ni.getHttpAddress());
         info.put("LastHealthUpdate",
                         ni.getLastHealthReportTime());
