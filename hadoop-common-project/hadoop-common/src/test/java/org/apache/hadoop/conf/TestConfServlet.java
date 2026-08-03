@@ -30,17 +30,17 @@ import javax.servlet.ServletContext;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
-import org.apache.hadoop.thirdparty.com.google.common.net.HttpHeaders;
+import com.fasterxml.jackson.core.type.TypeReference;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 
+import org.apache.hadoop.thirdparty.com.google.common.net.HttpHeaders;
 import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
 
 import org.apache.hadoop.http.HttpServer2;
-import com.fasterxml.jackson.core.type.TypeReference;
 import org.apache.hadoop.util.HadoopJsonUtils;
 import org.apache.hadoop.util.XMLUtils;
 
