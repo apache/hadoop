@@ -45,6 +45,7 @@ import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 import static org.apache.hadoop.yarn.api.records.ResourceInformation.GPU_URI;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -734,5 +735,80 @@ public class TestCapacitySchedulerConfigValidator {
     }
 
     return csConf;
+  }
+
+  private static final String ACCESSIBLE_LABELS_CAPACITY_ERROR =
+      "must have accessible-node-labels and its capacity together";
+
+  @Test
+  public void testValidateQueueAccessibleLabelsAllowsListedLabel() throws IOException {
+    CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
+    QueuePath queue = new QueuePath("root.test1");
+    conf.setQueues(new QueuePath(CapacitySchedulerConfiguration.ROOT),
+        new String[] {"test1"});
+    conf.setCapacity(queue, 100);
+    conf.setAccessibleNodeLabels(queue, Set.of("gpu"));
+    conf.setCapacityByLabel(queue, "gpu", 50);
+
+    CapacitySchedulerConfigValidator.validateQueueAccessibleLabels(conf);
+  }
+
+  @Test
+  public void testValidateQueueAccessibleLabelsAllowsWildcardAccess() throws IOException {
+    CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
+    QueuePath queue = new QueuePath("root.test1");
+    conf.setQueues(new QueuePath(CapacitySchedulerConfiguration.ROOT),
+        new String[] {"test1"});
+    conf.setCapacity(queue, 100);
+    conf.setAccessibleNodeLabels(queue, Set.of("*"));
+    conf.setCapacityByLabel(queue, "gpu", 50);
+
+    CapacitySchedulerConfigValidator.validateQueueAccessibleLabels(conf);
+  }
+
+  @Test
+  public void testValidateQueueAccessibleLabelsRejectsUnlistedLabelCapacity(){
+    CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
+    QueuePath queue = new QueuePath("root.test1");
+    conf.setQueues(new QueuePath(CapacitySchedulerConfiguration.ROOT),
+        new String[] {"test1"});
+    conf.setCapacity(queue, 100);
+    conf.setCapacityByLabel(queue, "gpu", 50);
+
+    IOException exception = assertThrows(IOException.class, () ->
+        CapacitySchedulerConfigValidator.validateQueueAccessibleLabels(conf));
+    assertTrue(exception.getMessage().contains(ACCESSIBLE_LABELS_CAPACITY_ERROR));
+    assertTrue(exception.getMessage().contains("root.test1"));
+  }
+
+  @Test
+  public void testValidateQueueAccessibleLabelsRejectsRemovedAccessibleLabel(){
+    CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
+    QueuePath queue = new QueuePath("root.test1");
+    conf.setQueues(new QueuePath(CapacitySchedulerConfiguration.ROOT),
+        new String[] {"test1"});
+    conf.setCapacity(queue, 100);
+    conf.setAccessibleNodeLabels(queue, Set.of("cpu"));
+    conf.setCapacityByLabel(queue, "gpu", 50);
+
+    IOException exception = assertThrows(IOException.class, () ->
+        CapacitySchedulerConfigValidator.validateQueueAccessibleLabels(conf));
+    assertTrue(exception.getMessage().contains(ACCESSIBLE_LABELS_CAPACITY_ERROR));
+    assertTrue(exception.getMessage().contains("root.test1"));
+  }
+
+  @Test
+  public void testValidateQueueAccessibleLabelsRejectsUnlistedMaxCapacity(){
+    CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
+    QueuePath queue = new QueuePath("root.test1");
+    conf.setQueues(new QueuePath(CapacitySchedulerConfiguration.ROOT),
+        new String[] {"test1"});
+    conf.setCapacity(queue, 100);
+    conf.setMaximumCapacityByLabel(queue, "gpu", 100);
+
+    IOException exception = assertThrows(IOException.class, () ->
+        CapacitySchedulerConfigValidator.validateQueueAccessibleLabels(conf));
+    assertTrue(exception.getMessage().contains(ACCESSIBLE_LABELS_CAPACITY_ERROR));
+    assertTrue(exception.getMessage().contains("root.test1"));
   }
 }
