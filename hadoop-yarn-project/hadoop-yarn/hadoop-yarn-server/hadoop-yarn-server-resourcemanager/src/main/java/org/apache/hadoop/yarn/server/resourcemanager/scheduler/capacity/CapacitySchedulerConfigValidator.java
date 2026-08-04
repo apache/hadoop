@@ -137,9 +137,9 @@ public final class CapacitySchedulerConfigValidator {
         continue;
       }
 
-      for (String label : csConf.getConfiguredNodeLabels(queue)) { // return NO_LABEL if queue does not have any labels
+      for (String label : csConf.getConfiguredNodeLabels(queue)) {
         if (RMNodeLabelsManager.NO_LABEL.equals(label)
-            || !hasNonEmptyPartitionCapacity(csConf, queue, label)
+            || !hasQueuePartitionCapacity(csConf, queue, label)
             || isLabelAccessibleByQueue(csConf, queue, label)) {
           continue;
         }
@@ -149,7 +149,7 @@ public final class CapacitySchedulerConfigValidator {
     }
   }
 
-  private static boolean hasNonEmptyPartitionCapacity(
+  private static boolean hasQueuePartitionCapacity(
       CapacitySchedulerConfiguration conf, QueuePath queue, String label) {
     String labelPrefix = QueuePrefixes.getNodeLabelPrefix(queue, label);
     String capacity = conf.get(labelPrefix + CAPACITY);
@@ -162,12 +162,18 @@ public final class CapacitySchedulerConfigValidator {
 
   private static boolean isLabelAccessibleByQueue(
       CapacitySchedulerConfiguration conf, QueuePath queue, String label) {
-    Set<String> accessibleLabels = conf.getAccessibleNodeLabels(queue);
-    if (accessibleLabels == null) {
-      return false;
+    QueuePath currentQueue = queue;
+    while (currentQueue != null && !currentQueue.isRoot()) {
+      String accessibleNodeLabelsKey = getQueuePrefix(currentQueue) + ACCESSIBLE_NODE_LABELS;
+      if (conf.get(accessibleNodeLabelsKey) != null) {
+        Set<String> accessibleLabels = conf.getAccessibleNodeLabels(currentQueue);
+        return accessibleLabels.contains(RMNodeLabelsManager.ANY)
+            || accessibleLabels.contains(label);
+      }
+      currentQueue = currentQueue.getParentObject();
     }
-    return accessibleLabels.contains(RMNodeLabelsManager.ANY)
-        || accessibleLabels.contains(label);
+    // No queue on the path declared accessible-node-labels; treat like root (*).
+    return true;
   }
 
   /**

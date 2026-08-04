@@ -774,11 +774,27 @@ public class TestCapacitySchedulerConfigValidator {
         new String[] {"test1"});
     conf.setCapacity(queue, 100);
     conf.setCapacityByLabel(queue, "gpu", 50);
+    conf.setAccessibleNodeLabels(queue, Set.of());
 
     IOException exception = assertThrows(IOException.class, () ->
         CapacitySchedulerConfigValidator.validateQueueAccessibleLabels(conf));
     assertTrue(exception.getMessage().contains(ACCESSIBLE_LABELS_CAPACITY_ERROR));
     assertTrue(exception.getMessage().contains("root.test1"));
+  }
+
+  @Test
+  public void testValidateQueueAccessibleLabelsAllowsInheritedAccessibleLabel()
+      throws IOException {
+    CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
+    QueuePath parent = new QueuePath("root.c");
+    QueuePath template = new QueuePath("root.c.leaf-queue-template");
+    conf.setQueues(new QueuePath(CapacitySchedulerConfiguration.ROOT),
+        new String[] {"c"});
+    conf.setCapacity(parent, 100);
+    conf.setAccessibleNodeLabels(parent, Set.of("gpu"));
+    conf.setCapacityByLabel(template, "gpu", 50);
+
+    CapacitySchedulerConfigValidator.validateQueueAccessibleLabels(conf);
   }
 
   @Test
@@ -804,6 +820,7 @@ public class TestCapacitySchedulerConfigValidator {
     conf.setQueues(new QueuePath(CapacitySchedulerConfiguration.ROOT),
         new String[] {"test1"});
     conf.setCapacity(queue, 100);
+    conf.setAccessibleNodeLabels(queue, Set.of());
     conf.setMaximumCapacityByLabel(queue, "gpu", 100);
 
     IOException exception = assertThrows(IOException.class, () ->
