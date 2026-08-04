@@ -1451,47 +1451,48 @@ public class TestMover {
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
     conf.setLong(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, blockSize);
 
-    final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
         .numDataNodes(2)
         .storageTypes(
             new StorageType[][] {{StorageType.DISK, StorageType.DISK},
                 {StorageType.ARCHIVE, StorageType.ARCHIVE}})
-        .build();
+        .build()) {
 
-    cluster.waitActive();
-    final DistributedFileSystem fs = cluster.getFileSystem();
+      cluster.waitActive();
+      final DistributedFileSystem fs = cluster.getFileSystem();
 
-    final String file = "/testMaxIterationTime.dat";
-    final Path path = new Path(file);
-    short repFactor = 1;
-    int seed = 0xFAFAFA;
-    // write to DISK
-    DFSTestUtil.createFile(fs, path, 4L * blockSize, repFactor, seed);
+      final String file = "/testMaxIterationTime.dat";
+      final Path path = new Path(file);
+      short repFactor = 1;
+      int seed = 0xFAFAFA;
+      // write to DISK
+      DFSTestUtil.createFile(fs, path, 4L * blockSize, repFactor, seed);
 
-    // move to ARCHIVE
-    fs.setStoragePolicy(new Path(file), "COLD");
+      // move to ARCHIVE
+      fs.setStoragePolicy(new Path(file), "COLD");
 
-    Map<URI, List<Path>> nnWithPath = new HashMap<>();
-    List<Path> paths = new ArrayList<>();
-    paths.add(path);
-    nnWithPath
-        .put(DFSUtil.getInternalNsRpcUris(conf).iterator().next(), paths);
+      Map<URI, List<Path>> nnWithPath = new HashMap<>();
+      List<Path> paths = new ArrayList<>();
+      paths.add(path);
+      nnWithPath
+          .put(DFSUtil.getInternalNsRpcUris(conf).iterator().next(), paths);
 
-    Mover.run(nnWithPath, conf);
+      Mover.run(nnWithPath, conf);
 
-    final String moverMetricsName = "Mover-"
-        + cluster.getNameNode(0).getNamesystem().getBlockPoolId();
-    MetricsSource moverMetrics =
-        DefaultMetricsSystem.instance().getSource(moverMetricsName);
-    assertNotNull(moverMetrics);
+      final String moverMetricsName = "Mover-"
+          + cluster.getNameNode(0).getNamesystem().getBlockPoolId();
+      MetricsSource moverMetrics =
+          DefaultMetricsSystem.instance().getSource(moverMetricsName);
+      assertNotNull(moverMetrics);
 
-    MetricsRecordBuilder rb = MetricsAsserts.getMetrics(moverMetricsName);
-    // Check metrics
-    assertEquals(4, MetricsAsserts.getLongCounter("BlocksScheduled", rb));
-    assertEquals(1, MetricsAsserts.getLongCounter("FilesProcessed", rb));
-    assertEquals(41943040, MetricsAsserts.getLongGauge("BytesMoved", rb));
-    assertEquals(4, MetricsAsserts.getLongGauge("BlocksMoved", rb));
-    assertEquals(0, MetricsAsserts.getLongGauge("BlocksFailed", rb));
+      MetricsRecordBuilder rb = MetricsAsserts.getMetrics(moverMetricsName);
+      // Check metrics
+      assertEquals(4, MetricsAsserts.getLongCounter("BlocksScheduled", rb));
+      assertEquals(1, MetricsAsserts.getLongCounter("FilesProcessed", rb));
+      assertEquals(41943040, MetricsAsserts.getLongGauge("BytesMoved", rb));
+      assertEquals(4, MetricsAsserts.getLongGauge("BlocksMoved", rb));
+      assertEquals(0, MetricsAsserts.getLongGauge("BlocksFailed", rb));
+    }
   }
 
   private void createFileWithFavoredDatanodes(final Configuration conf,

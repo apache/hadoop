@@ -30,6 +30,7 @@ import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.eclipse.jetty.util.ajax.JSON;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -71,6 +72,14 @@ public class TestStorageBlockPoolUsageStdDev {
         .storageCapacities(capacities).build();
     cluster.waitActive();
     fs = cluster.getFileSystem();
+  }
+
+  @AfterEach
+  public void tearDown() {
+    if (cluster != null) {
+      cluster.shutdown();
+      cluster = null;
+    }
   }
 
   /**
