@@ -87,7 +87,7 @@ import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.net.ConnectTimeoutException;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.util.HadoopJsonUtils;
+import org.apache.hadoop.util.JsonUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
@@ -380,7 +380,7 @@ public class RouterRpcClient {
       info.put("total", executorService.getPoolSize());
       info.put("max", executorService.getMaximumPoolSize());
     }
-    return HadoopJsonUtils.toString(info);
+    return JsonUtils.toString(info);
   }
 
   /**
@@ -389,7 +389,7 @@ public class RouterRpcClient {
    * @return String representation of the rejected permits for each nameservice.
    */
   public String getRejectedPermitsPerNsJSON() {
-    return HadoopJsonUtils.toString(rejectedPermitsPerNs);
+    return JsonUtils.toString(rejectedPermitsPerNs);
   }
 
   /**
@@ -398,7 +398,7 @@ public class RouterRpcClient {
    * @return String representation of the accepted permits for each nameservice.
    */
   public String getAcceptedPermitsPerNsJSON() {
-    return HadoopJsonUtils.toString(acceptedPermitsPerNs);
+    return JsonUtils.toString(acceptedPermitsPerNs);
   }
   /**
    * Get ClientProtocol proxy client for a NameNode. Each combination of user +

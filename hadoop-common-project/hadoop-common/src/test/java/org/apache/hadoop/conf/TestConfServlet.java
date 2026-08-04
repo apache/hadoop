@@ -41,7 +41,7 @@ import org.apache.hadoop.thirdparty.com.google.common.net.HttpHeaders;
 import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
 
 import org.apache.hadoop.http.HttpServer2;
-import org.apache.hadoop.util.HadoopJsonUtils;
+import org.apache.hadoop.util.JsonUtils;
 import org.apache.hadoop.util.XMLUtils;
 
 import org.junit.jupiter.api.BeforeAll;
@@ -209,7 +209,7 @@ public class TestConfServlet {
     ConfServlet.writeResponse(getTestConf(), sw, "json");
     String json = sw.toString();
     boolean foundSetting = false;
-    Map<String, Object[]> parsed = HadoopJsonUtils.parse(json,
+    Map<String, Object[]> parsed = JsonUtils.parse(json,
         new TypeReference<Map<String, Object[]>>() {});
     Object[] properties = parsed.get("properties");
     for (Object o : properties) {

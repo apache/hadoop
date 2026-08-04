@@ -35,11 +35,11 @@ import org.apache.hadoop.classification.InterfaceStability;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-public final class HadoopJsonUtils {
+public final class JsonUtils {
 
   private static final ObjectMapper MAPPER = new ObjectMapper();
 
-  private HadoopJsonUtils() {
+  private JsonUtils() {
   }
 
   /**

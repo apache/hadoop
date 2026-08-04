@@ -42,7 +42,7 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.tracing.TraceUtils;
 import org.apache.hadoop.util.DiskChecker;
-import org.apache.hadoop.util.HadoopJsonUtils;
+import org.apache.hadoop.util.JsonUtils;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_JOURNALNODE_HTTP_BIND_HOST_KEY;
 import static org.apache.hadoop.util.ExitUtil.terminate;
@@ -402,7 +402,7 @@ public class JournalNode implements Tool, Configurable, JournalNodeMXBean {
       }
     }
 
-    return HadoopJsonUtils.toString(status);
+    return JsonUtils.toString(status);
   }
 
   @Override // JournalNodeMXBean

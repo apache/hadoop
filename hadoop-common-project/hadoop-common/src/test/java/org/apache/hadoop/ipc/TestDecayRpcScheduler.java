@@ -38,7 +38,7 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.util.HadoopJsonUtils;
+import org.apache.hadoop.util.JsonUtils;
 
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
@@ -489,7 +489,7 @@ public class TestDecayRpcScheduler {
     scheduler.forceDecay();
     // Check priorities on cache
     String summary = scheduler.getSchedulingDecisionSummary();
-    Map<String, Integer> summaryMap = HadoopJsonUtils.parse(summary,
+    Map<String, Integer> summaryMap = JsonUtils.parse(summary,
         new TypeReference<Map<String, Integer>>() {});
     assertNotEquals(0, summaryMap.get("user1"));
     assertEquals(0, summaryMap.get("service1"));

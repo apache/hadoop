@@ -41,7 +41,7 @@ import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MiniMRClientCluster;
 import org.apache.hadoop.mapred.MiniMRClientClusterFactory;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
-import org.apache.hadoop.util.HadoopJsonUtils;
+import org.apache.hadoop.util.JsonUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.MiniYARNCluster;
 import org.slf4j.Logger;
@@ -196,7 +196,7 @@ public class MiniHadoopClusterManager {
             YarnConfiguration.RM_ADDRESS).split(":")[1]);
       }
       FileWriter fw = new FileWriter(new File(writeDetails));
-      fw.write(HadoopJsonUtils.toString(map));
+      fw.write(JsonUtils.toString(map));
       fw.close();
     }
   }
