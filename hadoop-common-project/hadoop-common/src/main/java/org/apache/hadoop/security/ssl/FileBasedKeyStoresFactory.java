@@ -29,6 +29,7 @@ import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.TrustManager;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.security.GeneralSecurityException;
 import java.security.KeyStore;
@@ -268,7 +269,14 @@ public class FileBasedKeyStoresFactory implements KeyStoresFactory {
         conf.get(resolvePropertyName(mode, SSL_KEYSTORE_TYPE_TPL_KEY),
                  DEFAULT_KEYSTORE_TYPE);
 
-    if (requireClientCert || mode == SSLFactory.Mode.SERVER) {
+    String keystoreLocationProperty =
+        resolvePropertyName(mode, SSL_KEYSTORE_LOCATION_TPL_KEY);
+    String keystoreLocation = conf.get(keystoreLocationProperty, "");
+    boolean keystoreFilePresent = !keystoreLocation.isEmpty()
+        && Files.exists(Paths.get(keystoreLocation));
+
+    if (requireClientCert || mode == SSLFactory.Mode.SERVER
+        || keystoreFilePresent) {
       createKeyManagersFromConfiguration(mode, keystoreType, storesReloadInterval);
     } else {
       KeyStore keystore = KeyStore.getInstance(keystoreType);
@@ -322,11 +330,9 @@ public class FileBasedKeyStoresFactory implements KeyStoresFactory {
     if (fileMonitoringTimer != null) {
       fileMonitoringTimer.cancel();
     }
-    if (trustManager != null) {
-      trustManager = null;
-      keyManagers = null;
-      trustManagers = null;
-    }
+    trustManager = null;
+    keyManagers = null;
+    trustManagers = null;
   }
 
   /**
