@@ -239,6 +239,33 @@ public class TestMappingRuleMatchers  {
   }
 
   @Test
+  public void testUserMatcherFromMatches() {
+    VariableContext aliceContext = new VariableContext();
+    aliceContext.put("%user", "alice");
+
+    VariableContext bobContext = new VariableContext();
+    bobContext.put("%user", "bob");
+
+    VariableContext carolContext = new VariableContext();
+    carolContext.put("%user", "carol");
+
+    MappingRuleMatcher matcher =
+        MappingRuleMatchers.createUserMatcherFromMatches("alice,bob");
+
+    assertTrue(matcher.match(aliceContext));
+    assertTrue(matcher.match(bobContext));
+    assertFalse(matcher.match(carolContext));
+  }
+
+  @Test
+  public void testUserMatcherFromMatchesAllUsers() {
+    VariableContext context = new VariableContext();
+    context.put("%user", "anyone");
+
+    assertTrue(MappingRuleMatchers.createUserMatcherFromMatches("*").match(context));
+  }
+
+  @Test
   public void testToStrings() {
     MappingRuleMatcher var = new MappingRuleMatchers.VariableMatcher("%a", "b");
     MappingRuleMatcher all = MappingRuleMatchers.createAllMatcher();
