@@ -24,10 +24,7 @@ import java.io.InvalidObjectException;
 import java.io.ObjectInputValidation;
 import java.io.Serializable;
 
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.databind.JsonSerializer;
-import com.fasterxml.jackson.databind.SerializerProvider;
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.annotation.JsonValue;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -43,7 +40,6 @@ import org.slf4j.LoggerFactory;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-@JsonSerialize(using = FsPermission.FsPermissionSerializer.class)
 public class FsPermission implements Writable, Serializable,
     ObjectInputValidation {
   private static final Logger LOG = LoggerFactory.getLogger(FsPermission.class);
@@ -274,6 +270,7 @@ public class FsPermission implements Writable, Serializable,
   @Override
   public int hashCode() {return toShort();}
 
+  @JsonValue // For Jackson serialization, use the toString() method to represent this object as a JSON string.
   @Override
   public String toString() {
     String str = useraction.SYMBOL + groupaction.SYMBOL + otheraction.SYMBOL;
@@ -285,19 +282,6 @@ public class FsPermission implements Writable, Serializable,
     }
 
     return str;
-  }
-
-  /**
-   * Custom Jackson serializer for FsPermission.
-   * Serializes as the symbolic string (e.g. {@code rwxr-xr-x})
-   * to match the old Jetty JSON utility behavior.
-   */
-  public static class FsPermissionSerializer extends JsonSerializer<FsPermission> {
-    @Override
-    public void serialize(FsPermission permission, JsonGenerator gen,
-        SerializerProvider provider) throws IOException {
-      gen.writeString(permission.toString());
-    }
   }
 
   /**
