@@ -19,30 +19,9 @@
 
 import { describe, it, expect } from 'vitest';
 import type { NodeToLabelMapping } from '~/types';
-import {
-  getHostWildcardNodeId,
-  getHostWildcardToClearOnUnassign,
-} from './hostWildcardLabels';
+import { getHostWildcardToClearOnUnassign } from './hostWildcardValidation';
 
 describe('hostWildcardLabels', () => {
-  describe('getHostWildcardNodeId', () => {
-    it('returns host:0 for a standard node id', () => {
-      expect(getHostWildcardNodeId('localhost:8041')).toBe('localhost:0');
-    });
-
-    it('returns null for host wildcard node ids', () => {
-      expect(getHostWildcardNodeId('localhost:0')).toBeNull();
-    });
-
-    it('supports bracketed IPv6 node ids', () => {
-      expect(getHostWildcardNodeId('[2001:db8::1]:8041')).toBe('[2001:db8::1]:0');
-    });
-
-    it('supports unbracketed IPv6 node ids', () => {
-      expect(getHostWildcardNodeId('2001:db8::1:8041')).toBe('2001:db8::1:0');
-    });
-  });
-
   describe('getHostWildcardToClearOnUnassign', () => {
     it('returns host:0 when it mirrors the only labeled NM on the host', () => {
       const nodeToLabels: NodeToLabelMapping[] = [

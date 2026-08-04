@@ -18,5 +18,5 @@
 
 
 // Export node-label utilities that remain in use
-export * from './hostWildcardLabels';
+export * from './hostWildcardValidation';
 export * from './labelValidation';

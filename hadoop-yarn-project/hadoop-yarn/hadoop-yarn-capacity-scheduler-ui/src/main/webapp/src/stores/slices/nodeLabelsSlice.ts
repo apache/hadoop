@@ -32,7 +32,7 @@ import { createReadOnlyBlockedError } from '~/lib/errors/readOnlyGuard';
 import { normalizeNodeLabels, normalizeNodeToLabels } from '~/lib/normalizers/nodeDataNormalizers';
 import {
   getHostWildcardToClearOnUnassign
-} from '~/features/node-labels/utils/hostWildcardLabels';
+} from '~/features/node-labels/utils/hostWildcardValidation';
 import { validateLabelRemoval } from '~/features/node-labels/utils/labelValidation';
 import type { NodeLabelsSlice, SchedulerStore } from './types';
 

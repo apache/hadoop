@@ -19,8 +19,14 @@
 
 import type { NodeToLabelMapping } from '~/types';
 
+/**
+ * Get the host wildcard to remove from the node-to-labels mapping when unassigning a node.
+ *
+ * - Returns the host wildcard to clear when unassigning nodeId, or null when host:0 should be preserved.
+ */
+
 /** YARN host-wide wildcard port in CommonNodeLabelsManager. */
-export const HOST_WILDCARD_PORT = '0';
+const HOST_WILDCARD_PORT = '0';
 
 function getHostFromNodeId(nodeId: string): string | null {
   const lastColonIndex = nodeId.lastIndexOf(':');
@@ -38,7 +44,7 @@ function getPortFromNodeId(nodeId: string): string | null {
   return nodeId.slice(lastColonIndex + 1);
 }
 
-export function getHostWildcardNodeId(nodeId: string): string | null {
+function getHostWildcard(nodeId: string): string | null {
   const host = getHostFromNodeId(nodeId);
   const port = getPortFromNodeId(nodeId);
 
@@ -56,13 +62,13 @@ export function getHostWildcardToClearOnUnassign(
   nodeToLabels: ReadonlyArray<NodeToLabelMapping>,
 ): string | null {
   const host = getHostFromNodeId(nodeId);
-  const hostWildcardId = getHostWildcardNodeId(nodeId);
-  if (!host || !hostWildcardId) {
+  const hostWildcard = getHostWildcard(nodeId);
+  if (!host || !hostWildcard) {
     return null;
   }
 
   const nmLabel = nodeToLabels.find((mapping) => mapping.nodeId === nodeId)?.nodeLabels[0];
-  const wildcardLabel = nodeToLabels.find((mapping) => mapping.nodeId === hostWildcardId)
+  const wildcardLabel = nodeToLabels.find((mapping) => mapping.nodeId === hostWildcard)
     ?.nodeLabels[0];
 
   if (!wildcardLabel || nmLabel !== wildcardLabel) { // label doesn't match
@@ -70,7 +76,7 @@ export function getHostWildcardToClearOnUnassign(
   }
 
   const isOtherLabeledNMOnSameHost = nodeToLabels.some((mapping) => {
-    if (mapping.nodeId === nodeId || mapping.nodeId === hostWildcardId) {
+    if (mapping.nodeId === nodeId || mapping.nodeId === hostWildcard) {
       return false;
     }
     if (mapping.nodeLabels.length === 0) {
@@ -79,5 +85,5 @@ export function getHostWildcardToClearOnUnassign(
     return getHostFromNodeId(mapping.nodeId) === host;
   });
 
-  return isOtherLabeledNMOnSameHost ? null : hostWildcardId;
+  return isOtherLabeledNMOnSameHost ? null : hostWildcard;
 }
