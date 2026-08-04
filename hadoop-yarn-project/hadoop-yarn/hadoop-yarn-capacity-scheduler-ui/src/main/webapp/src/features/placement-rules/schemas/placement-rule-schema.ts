@@ -86,8 +86,16 @@ export const placementRuleFormSchema = z
       }
       return true;
     },
+  .refine(
+    (data) => {
+      if (data.type !== 'user' || data.matches.trim() === '*') {
+        return true;
+      }
+      const users = data.matches.split(',');
+      return users.every((user) => user.trim().length > 0);
+    },
     {
-      message: 'Wildcard "*" is not supported for group rules',
+      message: 'User match pattern must not contain empty usernames between commas',
       path: ['matches'],
     },
   );

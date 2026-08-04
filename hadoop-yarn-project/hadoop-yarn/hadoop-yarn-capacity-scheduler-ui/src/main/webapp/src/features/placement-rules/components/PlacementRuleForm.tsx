@@ -63,7 +63,7 @@ const PARENT_QUEUE_POLICIES = [
 ] as const;
 
 const MATCH_PLACEHOLDERS: Record<PlacementRule['type'], string> = {
-  user: '* for all, or specify usernames',
+  user: '* for all, or comma-separated usernames',
   group: 'Enter group names (wildcard not supported)',
   application: '* for all apps, or patterns like spark-*',
 };
@@ -179,7 +179,7 @@ export function PlacementRuleForm({ rule, ruleIndex, onSubmit, onCancel }: Place
                       />
                     </FieldControl>
                     <FieldDescription>
-                      {selectedType === 'user' && 'Use * to match all users, or specify usernames'}
+                      {selectedType === 'user' && 'Use * for all users, or enter one or more usernames separated by commas'}
                       {selectedType === 'group' &&
                         'Specify explicit group names; * wildcard is not supported'}
                       {selectedType === 'application' &&
