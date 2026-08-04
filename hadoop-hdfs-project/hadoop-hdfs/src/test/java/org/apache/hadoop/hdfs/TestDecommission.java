@@ -85,7 +85,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStatistics;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.apache.hadoop.test.GenericTestUtils;
 import com.fasterxml.jackson.core.type.TypeReference;
-import org.apache.hadoop.util.HadoopJsonUtils;
+import org.apache.hadoop.util.JsonUtils;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -1571,7 +1571,7 @@ public class TestDecommission extends AdminStatesBaseTest {
       Thread.sleep(2000);
 
       // min NodeUsage should not be 0.00%
-      usage = HadoopJsonUtils.parse(ns.getNodeUsage(),
+      usage = JsonUtils.parse(ns.getNodeUsage(),
           new TypeReference<Map<String, Map<String, String>>>() {});
       String minUsageBeforeDecom = usage.get("nodeUsage").get("min");
       assertTrue(!minUsageBeforeDecom.equalsIgnoreCase(zeroNodeUsage));
@@ -1584,7 +1584,7 @@ public class TestDecommission extends AdminStatesBaseTest {
             decommissioningNodes, decommissionState);
         // NodeUsage should not include DECOMMISSION_INPROGRESS node
         // (minUsage should be 0.00%)
-        usage = HadoopJsonUtils.parse(ns.getNodeUsage(),
+        usage = JsonUtils.parse(ns.getNodeUsage(),
           new TypeReference<Map<String, Map<String, String>>>() {});
         assertTrue(usage.get("nodeUsage").get("min").
             equalsIgnoreCase(zeroNodeUsage));
@@ -1592,7 +1592,7 @@ public class TestDecommission extends AdminStatesBaseTest {
       // Recommission node
       putNodeInService(0, decommissionedNodeInfo);
 
-      usage = HadoopJsonUtils.parse(ns.getNodeUsage(),
+      usage = JsonUtils.parse(ns.getNodeUsage(),
           new TypeReference<Map<String, Map<String, String>>>() {});
       String nodeusageAfterRecommi =
           decommissionState == AdminStates.DECOMMISSION_INPROGRESS

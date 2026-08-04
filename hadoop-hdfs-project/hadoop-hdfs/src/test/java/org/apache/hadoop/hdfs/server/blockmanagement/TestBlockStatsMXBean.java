@@ -46,7 +46,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.util.HadoopJsonUtils;
+import org.apache.hadoop.util.JsonUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -131,7 +131,7 @@ public class TestBlockStatsMXBean {
     URL baseUrl = new URL (cluster.getHttpUri(0));
     String result = readOutput(new URL(baseUrl, "/jmx"));
 
-    Map<String, Object> stat = HadoopJsonUtils.parse(result,
+    Map<String, Object> stat = JsonUtils.parse(result,
         new TypeReference<Map<String, Object>>() {});
     Object[] beans =(Object[]) stat.get("beans");
     Map<String, Object> blockStats  = null;
@@ -296,7 +296,7 @@ public class TestBlockStatsMXBean {
     URL baseUrl = new URL(cluster.getHttpUri(0));
     String result = readOutput(new URL(baseUrl, "/jmx"));
 
-    Map<String, Object> stat = HadoopJsonUtils.parse(result,
+    Map<String, Object> stat = JsonUtils.parse(result,
         new TypeReference<Map<String, Object>>() {});
     Object[] beans = (Object[]) stat.get("beans");
     Map<String, Object> blockStats = null;

@@ -36,7 +36,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.StartupProgress;
-import org.apache.hadoop.util.HadoopJsonUtils;
+import org.apache.hadoop.util.JsonUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -103,7 +103,7 @@ public class TestStartupProgressServlet {
           .build()))
       .build();
 
-    assertEquals(HadoopJsonUtils.toString(expected), filterJson(respBody));
+    assertEquals(JsonUtils.toString(expected), filterJson(respBody));
   }
 
   @Test
@@ -161,7 +161,7 @@ public class TestStartupProgressServlet {
           .build()))
       .build();
 
-    assertEquals(HadoopJsonUtils.toString(expected), filterJson(respBody));
+    assertEquals(JsonUtils.toString(expected), filterJson(respBody));
   }
 
   @Test
@@ -235,7 +235,7 @@ public class TestStartupProgressServlet {
           .build()))
       .build();
 
-    assertEquals(HadoopJsonUtils.toString(expected), filterJson(respBody));
+    assertEquals(JsonUtils.toString(expected), filterJson(respBody));
   }
 
   /**

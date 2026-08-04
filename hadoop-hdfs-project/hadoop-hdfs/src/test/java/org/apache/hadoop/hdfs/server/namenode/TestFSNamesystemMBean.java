@@ -42,7 +42,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.metrics2.impl.ConfigBuilder;
 import org.apache.hadoop.metrics2.impl.TestMetricsConfig;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.util.HadoopJsonUtils;
+import org.apache.hadoop.util.JsonUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -115,7 +115,7 @@ public class TestFSNamesystemMBean {
           "SnapshotStats"));
 
       @SuppressWarnings("unchecked")
-      Map<String, Object> stat = HadoopJsonUtils.parse(snapshotStats,
+      Map<String, Object> stat = JsonUtils.parse(snapshotStats,
           new TypeReference<Map<String, Object>>() {});
 
       assertTrue(stat.containsKey("SnapshottableDirectories")
