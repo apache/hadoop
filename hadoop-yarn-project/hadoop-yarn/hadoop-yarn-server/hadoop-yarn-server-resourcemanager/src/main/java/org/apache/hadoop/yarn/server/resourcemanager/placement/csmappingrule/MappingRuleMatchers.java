@@ -257,7 +257,7 @@ public class MappingRuleMatchers {
       return createAllMatcher();
     }
 
-    String[] users = StringUtils.split(matches, ',');
+    String[] users = StringUtils.splitPreserveAllTokens(matches, ',');
     if (users.length == 1) {
       String user = StringUtils.trim(users[0]);
       if (user.isEmpty()) {

@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.placement.csmappingrule;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.VariableContext;
@@ -263,6 +264,13 @@ public class TestMappingRuleMatchers  {
     context.put("%user", "anyone");
 
     assertTrue(MappingRuleMatchers.createUserMatcherFromMatches("*").match(context));
+  }
+
+  @Test
+  public void testUserMatcherFromMatchesRejectsEmptyToken() {
+    IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
+        MappingRuleMatchers.createUserMatcherFromMatches("alice,,bob"));
+    assertTrue(ex.getMessage().contains("empty username"));
   }
 
   @Test
