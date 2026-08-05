@@ -515,6 +515,7 @@ public abstract class FileSystem extends Configured
    * <ol>
    * <li>
    *   If the configuration has the property
+   *   {@link CommonConfigurationKeysPublic#FS_IMPL_DISABLE_CACHE} or
    *   {@code "fs.$SCHEME.impl.disable.cache"} set to true,
    *   a new instance will be created, initialized with the supplied URI and
    *   configuration, then returned without being cached.
@@ -549,7 +550,8 @@ public abstract class FileSystem extends Configured
       }
     }
     String disableCacheName = String.format("fs.%s.impl.disable.cache", scheme);
-    if (conf.getBoolean(disableCacheName, false)) {
+    if (conf.getBoolean(FS_IMPL_DISABLE_CACHE, FS_IMPL_DISABLE_CACHE_DEFAULT)
+        || conf.getBoolean(disableCacheName, false)) {
       LOGGER.debug("Bypassing cache to create filesystem {}", uri);
       return createFileSystem(uri, conf);
     }

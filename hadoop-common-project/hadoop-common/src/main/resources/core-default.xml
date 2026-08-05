@@ -1110,6 +1110,15 @@
 </property>
 
 <property>
+  <name>fs.impl.disable.cache</name>
+  <value>false</value>
+  <description>Whether to disable the FileSystem instance cache for all
+  schemes. When true, FileSystem.get creates a new instance for every call.
+  Individual schemes can disable caching with
+  fs.SCHEME.impl.disable.cache.</description>
+</property>
+
+<property>
   <name>fs.trash.interval</name>
   <value>0</value>
   <description>Number of minutes after which the checkpoint
