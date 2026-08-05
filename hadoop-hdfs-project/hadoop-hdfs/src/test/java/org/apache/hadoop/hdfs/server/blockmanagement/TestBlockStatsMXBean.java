@@ -28,6 +28,8 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -133,24 +135,25 @@ public class TestBlockStatsMXBean {
 
     Map<String, Object> stat = JsonUtils.parse(result,
         new TypeReference<Map<String, Object>>() {});
-    Object[] beans =(Object[]) stat.get("beans");
+    List<Object> beans = toList(stat.get("beans"));
     Map<String, Object> blockStats  = null;
     for (Object bean : beans) {
-      Map<String, Object> map = (Map<String, Object>) bean;
-      if (map.get("name").equals("Hadoop:service=NameNode,name=BlockStats")) {
-        blockStats = map;
+      if (bean instanceof Map<String, Object> map) {
+        if (map.get("name").equals("Hadoop:service=NameNode,name=BlockStats")) {
+          blockStats = map;
+        }
       }
     }
     assertNotNull(blockStats);
-    Object[] storageTypeStatsList =
-        (Object[])blockStats.get("StorageTypeStats");
+    List<Object> storageTypeStatsList =
+        toList(blockStats.get("StorageTypeStats"));
     assertNotNull(storageTypeStatsList);
-    assertEquals(4, storageTypeStatsList.length);
+    assertEquals(4, storageTypeStatsList.size());
 
     Set<String> typesPresent = new HashSet<> ();
     for (Object obj : storageTypeStatsList) {
       Map<String, Object> entry = (Map<String, Object>)obj;
-      String storageType = (String)entry.get("key");
+      String storageType = entry.get("key").toString();
       Map<String,Object> storageTypeStats = (Map<String,Object>)entry.get("value");
       typesPresent.add(storageType);
       switch (storageType) {
@@ -298,23 +301,39 @@ public class TestBlockStatsMXBean {
 
     Map<String, Object> stat = JsonUtils.parse(result,
         new TypeReference<Map<String, Object>>() {});
-    Object[] beans = (Object[]) stat.get("beans");
+    List<Object> beans = toList(stat.get("beans"));
     Map<String, Object> blockStats = null;
     for (Object bean : beans) {
-      Map<String, Object> map = (Map<String, Object>) bean;
-      if (map.get("name").equals("Hadoop:service=NameNode,name=BlockStats")) {
-        blockStats = map;
+      if (bean instanceof Map<String, Object> map) {
+        if (map.get("name").equals("Hadoop:service=NameNode,name=BlockStats")) {
+          blockStats = map;
+        }
       }
     }
     assertNotNull(blockStats);
-    Object[] storageTypeStatsList =
-        (Object[]) blockStats.get("StorageTypeStats");
+    List<Object> storageTypeStatsList =
+        toList(blockStats.get("StorageTypeStats"));
     assertNotNull(storageTypeStatsList);
-    Map<String, Object> entry = (Map<String, Object>) storageTypeStatsList[0];
+    Map<String, Object> entry = (Map<String, Object>) storageTypeStatsList.get(0);
     Map<String, Object> storageTypeStats = (Map<String, Object>) entry.get("value");
 
     assertTrue(storageTypeStats.containsKey("percentUsed"));
     assertTrue(storageTypeStats.containsKey("percentBlockPoolUsed"));
     assertTrue(storageTypeStats.containsKey("percentRemaining"));
+  }
+
+  private List<Object> toList(Object o) {
+    if (o == null) {
+      return null;
+    }
+    if (o instanceof List<?> list) {
+      return (List<Object>) list;
+    }
+    if (o instanceof Object[] array) {
+      ArrayList<Object> list = new ArrayList<>();
+      Collections.addAll(list, array);
+      return list;
+    }
+    throw new IllegalArgumentException("Cannot convert " + o.getClass() + " to List");
   }
 }
