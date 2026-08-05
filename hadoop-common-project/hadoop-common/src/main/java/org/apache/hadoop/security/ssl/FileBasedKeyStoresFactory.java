@@ -274,6 +274,10 @@ public class FileBasedKeyStoresFactory implements KeyStoresFactory {
     String keystoreLocation = conf.get(keystoreLocationProperty, "");
     boolean keystoreFilePresent = !keystoreLocation.isEmpty()
         && Files.exists(Paths.get(keystoreLocation));
+    if (!keystoreLocation.isEmpty() && !keystoreFilePresent) {
+      LOG.warn("The property '" + keystoreLocationProperty + "' is set to '"
+          + keystoreLocation + "', but the keystore file does not exist.");
+    }
 
     if (requireClientCert || mode == SSLFactory.Mode.SERVER
         || keystoreFilePresent) {
