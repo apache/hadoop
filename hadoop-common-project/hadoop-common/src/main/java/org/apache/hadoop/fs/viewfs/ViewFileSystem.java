@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.fs.viewfs;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_IMPL_DISABLE_CACHE;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_IMPL_DISABLE_CACHE_DEFAULT;
 import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
 import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_ENABLE_INNER_CACHE;
 import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_ENABLE_INNER_CACHE_DEFAULT;
@@ -1960,7 +1962,9 @@ public class ViewFileSystem extends FileSystem {
         if (child != null) {
           String disableCacheName = String.format("fs.%s.impl.disable.cache",
               child.getUri().getScheme());
-          if (config.getBoolean(disableCacheName, false)) {
+          if (config.getBoolean(FS_IMPL_DISABLE_CACHE,
+              FS_IMPL_DISABLE_CACHE_DEFAULT)
+              || config.getBoolean(disableCacheName, false)) {
             try {
               child.close();
             } catch (IOException e) {
