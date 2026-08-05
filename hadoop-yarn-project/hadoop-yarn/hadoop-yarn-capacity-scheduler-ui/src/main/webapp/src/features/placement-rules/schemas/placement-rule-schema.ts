@@ -86,6 +86,11 @@ export const placementRuleFormSchema = z
       }
       return true;
     },
+    {
+      message: 'Wildcard "*" is not supported for group rules',
+      path: ['matches'],
+    },
+  )
   .refine(
     (data) => {
       if (data.type !== 'user' || data.matches.trim() === '*') {
