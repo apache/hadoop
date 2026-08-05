@@ -59,25 +59,8 @@ abstract public class FSOutputSummer extends OutputStream implements
       throw new IllegalArgumentException(
           "The calculated buffer array size for FSOutputSummer is too large", ae);
     }
-    if (bufSize < 0) {
-      throw new IllegalArgumentException(
-          "The calculated buffer array size for FSOutputSummer is negative");
-    }
     this.buf = new byte[bufSize];
-
-    int checksumBufSize;
-    try {
-      checksumBufSize = Math.multiplyExact(getChecksumSize(), BUFFER_NUM_CHUNKS);
-    } catch (ArithmeticException ae) {
-      throw new IllegalArgumentException(
-          "The calculated checksum buffer array size for FSOutputSummer is too large", ae);
-    }
-    if (checksumBufSize < 0) {
-      throw new IllegalArgumentException(
-          "The calculated checksum buffer array size for FSOutputSummer is negative");
-    }
-    this.checksum = new byte[checksumBufSize];
-
+    this.checksum = new byte[getChecksumSize() * BUFFER_NUM_CHUNKS];
     this.count = 0;
   }
   
@@ -285,7 +268,7 @@ abstract public class FSOutputSummer extends OutputStream implements
   }
 
   protected synchronized void resetChecksumBufSize() {
-    setChecksumBufSize(sum.getBytesPerChecksum() * BUFFER_NUM_CHUNKS);
+    setChecksumBufSize(Math.multiplyExact(sum.getBytesPerChecksum(), BUFFER_NUM_CHUNKS));
   }
 
   @Override
