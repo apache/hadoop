@@ -26,6 +26,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
 
 import static java.lang.Thread.sleep;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.SERVICE_SHUTDOWN_TIMEOUT;
@@ -172,8 +173,19 @@ public class TestShutdownHookManager {
     long shutdownTimeout = 50;
     conf.setTimeDuration(SERVICE_SHUTDOWN_TIMEOUT,
         shutdownTimeout, TimeUnit.NANOSECONDS);
-    assertEquals(ShutdownHookManager.TIMEOUT_MINIMUM,
-        ShutdownHookManager.getShutdownTimeout(conf), SERVICE_SHUTDOWN_TIMEOUT);
+    LogCapturer logCapturer = LogCapturer.captureLogs(
+        LoggerFactory.getLogger(ShutdownHookManager.class));
+    try {
+      assertEquals(ShutdownHookManager.TIMEOUT_MINIMUM,
+          ShutdownHookManager.getShutdownTimeout(conf),
+          SERVICE_SHUTDOWN_TIMEOUT);
+      assertTrue(logCapturer.getOutput().contains(
+          "Configured hadoop.service.shutdown.timeout value of 0 seconds "
+              + "is below the minimum of 1 seconds; using 1 seconds"),
+          logCapturer.getOutput());
+    } finally {
+      logCapturer.stopCapturing();
+    }
   }
 
   /**
