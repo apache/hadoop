@@ -783,6 +783,23 @@ public class TestCapacitySchedulerConfigValidator {
   }
 
   @Test
+  public void testValidateQueueAccessibleLabelsRejectsCapacityWithoutAccessibleLabelsProperty() {
+    CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
+    QueuePath sibling = new QueuePath("root.sibling");
+    conf.setQueues(new QueuePath(CapacitySchedulerConfiguration.ROOT),
+            new String[] {"default", "sibling"});
+    conf.setCapacity(new QueuePath("root.default"), 50);
+    conf.setCapacity(sibling, 50);
+    conf.setCapacityByLabel(sibling, "label3", 100);
+    conf.setMaximumCapacityByLabel(sibling, "label3", 100);
+
+    IOException exception = assertThrows(IOException.class, () ->
+            CapacitySchedulerConfigValidator.validateQueueAccessibleLabels(conf));
+    assertTrue(exception.getMessage().contains(ACCESSIBLE_LABELS_CAPACITY_ERROR));
+    assertTrue(exception.getMessage().contains("root.sibling"));
+  }
+
+  @Test
   public void testValidateQueueAccessibleLabelsAllowsInheritedAccessibleLabel()
       throws IOException {
     CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();

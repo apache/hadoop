@@ -161,19 +161,19 @@ public final class CapacitySchedulerConfigValidator {
   }
 
   private static boolean isLabelAccessibleByQueue(
-      CapacitySchedulerConfiguration conf, QueuePath queue, String label) {
+          CapacitySchedulerConfiguration conf, QueuePath queue, String label) {
     QueuePath currentQueue = queue;
     while (currentQueue != null && !currentQueue.isRoot()) {
       String accessibleNodeLabelsKey = getQueuePrefix(currentQueue) + ACCESSIBLE_NODE_LABELS;
       if (conf.get(accessibleNodeLabelsKey) != null) {
         Set<String> accessibleLabels = conf.getAccessibleNodeLabels(currentQueue);
         return accessibleLabels.contains(RMNodeLabelsManager.ANY)
-            || accessibleLabels.contains(label);
+                || accessibleLabels.contains(label);
       }
       currentQueue = currentQueue.getParentObject();
     }
-    // No queue on the path declared accessible-node-labels; treat like root (*).
-    return true;
+    // No queue on the path declared accessible-node-labels; label is not accessible.
+    return false;
   }
 
   /**
