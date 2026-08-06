@@ -58,6 +58,7 @@ import org.junit.jupiter.api.Timeout;
 @Timeout(300)
 public class TestBlockStatsMXBean {
 
+  private static final ObjectMapper MAPPER = new ObjectMapper();
   private MiniDFSCluster cluster;
 
   @BeforeEach
@@ -130,7 +131,7 @@ public class TestBlockStatsMXBean {
     URL baseUrl = new URL (cluster.getHttpUri(0));
     String result = readOutput(new URL(baseUrl, "/jmx"));
 
-    JsonNode stat = new ObjectMapper().readTree(result);
+    JsonNode stat = MAPPER.readTree(result);
     JsonNode beans = stat.get("beans");
     assertNotNull(beans);
     JsonNode blockStats = null;
@@ -293,7 +294,7 @@ public class TestBlockStatsMXBean {
     URL baseUrl = new URL(cluster.getHttpUri(0));
     String result = readOutput(new URL(baseUrl, "/jmx"));
 
-    JsonNode stat = new ObjectMapper().readTree(result);
+    JsonNode stat = MAPPER.readTree(result);
     JsonNode beans = stat.get("beans");
     assertNotNull(beans);
     JsonNode blockStats = null;
