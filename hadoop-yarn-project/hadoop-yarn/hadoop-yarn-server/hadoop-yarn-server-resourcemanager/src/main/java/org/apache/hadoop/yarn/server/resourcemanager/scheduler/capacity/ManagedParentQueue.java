@@ -262,6 +262,26 @@ public class ManagedParentQueue extends AbstractManagedParentQueue {
     }
   }
 
+/**
+ * Recomputes leaf queue template capacities in ABSOLUTE_RESOURCE mode.
+ * This handles the case where a queue is recreated during RM recovery
+ * before any NodeManager has registered, causing the initial capacity
+ * to be computed as 0. The periodic queue management policy recalculates
+ * the template once cluster resources become available. No operation for other
+ * queue modes.
+ */
+  public void updateTemplateCapacitiesForAbsoluteResource() {
+    writeLock.lock();
+    try {
+      if (this.capacityConfigType.equals(
+          CapacityConfigType.ABSOLUTE_RESOURCE)) {
+        updateQueueCapacities(getLeafQueueTemplate().getQueueCapacities());
+      }
+    } finally {
+      writeLock.unlock();
+    }
+  }
+
   protected void validate(final CSQueue newlyParsedQueue) throws IOException {
     // Sanity check
     if (!(newlyParsedQueue instanceof ManagedParentQueue) || !newlyParsedQueue

@@ -484,7 +484,9 @@
                     </execution>
                 </executions>
                 <configuration>
-                    <skipJasmineTests>${skipTests}</skipJasmineTests>
+                    <!-- Jasmine tests are skipped if any one of -Dmaven.test.skip=true,
+                         -DskipTests, -DskipJasmineTests=true is set. Don't declare
+                         skipJasmineTests here: it would override those command-line flags. -->
                     <webDriverClassName>org.openqa.selenium.phantomjs.PhantomJSDriver</webDriverClassName>
                     <webDriverCapabilities>
                         <capability>
@@ -560,7 +562,7 @@
               <configuration>
                 <forkCount>${testsThreadCount}</forkCount>
                 <reuseForks>false</reuseForks>
-                <argLine>${maven-surefire-plugin.argLine} -DminiClusterDedicatedDirs=true</argLine>
+                <argLine>${maven-surefire-plugin.argLine} @{argLine} -DminiClusterDedicatedDirs=true</argLine>
                 <systemPropertyVariables>
                   <testsThreadCount>${testsThreadCount}</testsThreadCount>
                   <test.build.data>${test.build.data}/${surefire.forkNumber}</test.build.data>

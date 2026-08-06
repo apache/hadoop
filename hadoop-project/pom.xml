@@ -76,7 +76,7 @@
     <jaxb.version>2.3.9</jaxb.version>
 
     <!-- jackson versions -->
-    <jackson2.version>2.18.8</jackson2.version>
+    <jackson2.version>2.18.9</jackson2.version>
     <jackson2.databind.version>${jackson2.version}</jackson2.databind.version>
 
     <!-- httpcomponents versions -->
@@ -132,8 +132,8 @@
     <commons-collections4.version>4.4</commons-collections4.version>
     <commons-compress.version>1.26.1</commons-compress.version>
     <commons-csv.version>1.9.0</commons-csv.version>
-    <commons-io.version>2.16.1</commons-io.version>
-    <commons-lang3.version>3.18.0</commons-lang3.version>
+    <commons-io.version>2.22.0</commons-io.version>
+    <commons-lang3.version>3.20.0</commons-lang3.version>
     <commons-logging.version>1.3.0</commons-logging.version>
     <commons-math3.version>3.6.1</commons-math3.version>
     <commons-net.version>3.9.0</commons-net.version>
@@ -154,7 +154,7 @@
     <metrics.version>3.2.4</metrics.version>
     <netty4.version>4.1.135.Final</netty4.version>
     <snappy-java.version>1.1.10.4</snappy-java.version>
-    <lz4-java.version>1.10.4</lz4-java.version>
+    <lz4-java.version>1.11.1</lz4-java.version>
     <zstd-jni.version>1.5.7-8</zstd-jni.version>
     <byte-buddy.version>1.17.6</byte-buddy.version>
 
@@ -185,6 +185,7 @@
       --add-opens=java.base/sun.security.x509=ALL-UNNAMED
       --enable-native-access=ALL-UNNAMED
     </extraJavaTestArgs>
+
     <!-- Plugin versions and config -->
     <maven-surefire-plugin.argLine>-Xmx4096m -Xss4m -XX:+HeapDumpOnOutOfMemoryError ${extraJavaTestArgs}</maven-surefire-plugin.argLine>
     <maven-surefire-plugin.version>3.5.3</maven-surefire-plugin.version>
@@ -1164,7 +1165,7 @@
       <dependency>
         <groupId>org.apache.mina</groupId>
         <artifactId>mina-core</artifactId>
-        <version>2.0.28</version>
+        <version>2.0.29</version>
       </dependency>
       <dependency>
         <groupId>org.apache.sshd</groupId>
@@ -1239,7 +1240,7 @@
       <dependency>
         <groupId>org.apache.commons</groupId>
         <artifactId>commons-configuration2</artifactId>
-        <version>2.10.1</version>
+        <version>2.15.0</version>
         <exclusions>
           <exclusion>
             <groupId>org.apache.commons</groupId>
@@ -2313,7 +2314,9 @@
           <artifactId>maven-failsafe-plugin</artifactId>
           <version>${maven-failsafe-plugin.version}</version>
           <configuration>
-            <argLine>${maven-surefire-plugin.argLine}</argLine>
+            <!-- @{argLine} injects the JaCoCo agent when coverage is enabled;
+                 see the maven-surefire-plugin configuration below for details. -->
+            <argLine>${maven-surefire-plugin.argLine} @{argLine}</argLine>
           </configuration>
         </plugin>
         <plugin>
@@ -2591,7 +2594,16 @@
         <configuration>
           <reuseForks>false</reuseForks>
           <forkedProcessTimeoutInSeconds>${surefire.fork.timeout}</forkedProcessTimeoutInSeconds>
-          <argLine>${maven-surefire-plugin.argLine}</argLine>
+          <!-- @{argLine} is Surefire's late (deferred) property substitution: it
+               is replaced at test-run time with the value of the "argLine"
+               property. jacoco:prepare-agent sets that property to the
+               -javaagent:...jacocoagent.jar=... option when coverage is enabled
+               (see jacoco-maven-plugin above), so the agent is injected into the
+               forked test JVM. When coverage is off (jacoco.skip=true, the
+               default) prepare-agent is skipped, argLine is unset, and @{argLine}
+               resolves to empty. ${maven-surefire-plugin.argLine} is our own
+               static JVM args, kept separate. -->
+          <argLine>${maven-surefire-plugin.argLine} @{argLine}</argLine>
           <environmentVariables>
             <HADOOP_COMMON_HOME>${hadoop.common.build.dir}</HADOOP_COMMON_HOME>
             <!-- HADOOP_HOME required for tests on Windows to find winutils -->
@@ -2626,6 +2638,34 @@
             <exclude>**/Test*$*.java</exclude>
           </excludes>
         </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.jacoco</groupId>
+        <artifactId>jacoco-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>prepare-agent</id>
+            <goals>
+              <goal>prepare-agent</goal>
+            </goals>
+            <configuration>
+              <!-- skip is inherited from the jacoco.skip property (default true
+                   in the root pom); no explicit <skip> needed here. -->
+              <!-- Exclude generated/example classes from instrumentation so
+                   the agent does not spend time weaving them in every forked
+                   test JVM. These are also filtered from the coverage numbers
+                   in the report-aggregate configuration (hadoop-coverage/pom.xml);
+                   keep the two exclude lists in sync. -->
+              <excludes>
+                <exclude>**/generated/**/*.class</exclude>
+                <exclude>**/examples/**/*.class</exclude>
+                <exclude>**/hamlet/*.class</exclude>
+                <exclude>**/proto/*.class</exclude>
+                <exclude>**/protobuf/*.class</exclude>
+              </excludes>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>

@@ -88,7 +88,7 @@
               <forkCount>${testsThreadCount}</forkCount>
               <reuseForks>false</reuseForks>
               <trimStackTrace>false</trimStackTrace>
-              <argLine>${maven-surefire-plugin.argLine} -DminiClusterDedicatedDirs=true</argLine>
+              <argLine>${maven-surefire-plugin.argLine} @{argLine} -DminiClusterDedicatedDirs=true</argLine>
               <systemPropertyVariables>
                 <testsThreadCount>${testsThreadCount}</testsThreadCount>
                 <test.build.data>${test.build.data}/${surefire.forkNumber}</test.build.data>
@@ -111,7 +111,7 @@
                 <configuration>
                   <forkCount>${testsThreadCount}</forkCount>
                   <reuseForks>false</reuseForks>
-                  <argLine>${maven-surefire-plugin.argLine} -DminiClusterDedicatedDirs=true</argLine>
+                  <argLine>${maven-surefire-plugin.argLine} @{argLine} -DminiClusterDedicatedDirs=true</argLine>
                   <forkedProcessTimeoutInSeconds>${fs.gs.scale.test.timeout}</forkedProcessTimeoutInSeconds>
                   <trimStackTrace>false</trimStackTrace>
                   <systemPropertyVariables>

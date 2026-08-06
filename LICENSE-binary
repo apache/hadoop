@@ -211,7 +211,7 @@ to be inclusive of all which may be included:
 
 hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static/nvd3-1.8.5.* (css and js files)
 
-at.yawk.lz4:lz4-java:1.10.4
+at.yawk.lz4:lz4-java:1.11.1
 ch.qos.reload4j:reload4j:1.2.22
 com.aliyun:aliyun-java-core:0.2.11-beta
 com.aliyun:aliyun-java-sdk-core:4.5.10
@@ -223,12 +223,12 @@ com.aliyun.oss:aliyun-sdk-oss:3.13.2
 com.baidubce:bce-java-sdk:0.10.330
 com.cedarsoftware:java-util:1.9.0
 com.cedarsoftware:json-io:2.5.1
-com.fasterxml.jackson.core:jackson-annotations:2.18.8
-com.fasterxml.jackson.core:jackson-core:2.18.8
-com.fasterxml.jackson.core:jackson-databind:2.18.8
-com.fasterxml.jackson.jaxrs:jackson-jaxrs-base:2.18.8
-com.fasterxml.jackson.jaxrs:jackson-jaxrs-json-provider:2.18.8
-com.fasterxml.jackson.module:jackson-module-jaxb-annotations:2.18.8
+com.fasterxml.jackson.core:jackson-annotations:2.18.9
+com.fasterxml.jackson.core:jackson-core:2.18.9
+com.fasterxml.jackson.core:jackson-databind:2.18.9
+com.fasterxml.jackson.jaxrs:jackson-jaxrs-base:2.18.9
+com.fasterxml.jackson.jaxrs:jackson-jaxrs-json-provider:2.18.9
+com.fasterxml.jackson.module:jackson-module-jaxb-annotations:2.18.9
 com.fasterxml.uuid:java-uuid-generator:3.1.4
 com.fasterxml.woodstox:woodstox-core:5.4.0
 com.github.ben-manes.caffeine:caffeine:2.9.3
@@ -284,7 +284,7 @@ commons-cli:commons-cli:1.9.0
 commons-codec:commons-codec:1.15
 org.apache.commons:commons-collections4:4.4
 commons-daemon:commons-daemon:1.0.13
-commons-io:commons-io:2.16.1
+commons-io:commons-io:2.22.0
 commons-net:commons-net:3.9.0
 de.ruedigermoeller:fst:2.50
 io.grpc:grpc-alts:1.70.0
@@ -367,10 +367,10 @@ net.java.dev.jna:jna:5.2.0
 net.minidev:accessors-smart:1.21
 org.apache.avro:avro:1.12.1
 org.apache.commons:commons-compress:1.26.1
-org.apache.commons:commons-configuration2:2.10.1
+org.apache.commons:commons-configuration2:2.15.0
 org.apache.commons:commons-csv:1.9.0
 org.apache.commons:commons-digester:1.8.1
-org.apache.commons:commons-lang3:3.18.0
+org.apache.commons:commons-lang3:3.20.0
 org.apache.commons:commons-math3:3.6.1
 org.apache.commons:commons-text:1.14.0
 org.apache.commons:commons-validator:1.6
