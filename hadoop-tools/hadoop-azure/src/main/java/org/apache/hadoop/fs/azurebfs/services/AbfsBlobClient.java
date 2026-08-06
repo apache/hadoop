@@ -239,17 +239,28 @@ public class AbfsBlobClient extends AbfsClient {
    * remains part of the accepted media types and response parsing is driven by
    * the returned Content-Type. The change is scoped to the ListBlobs path only.
    *
+   * <p>Photon is only requested on non-HNS (flat namespace) accounts. The Blob
+   * endpoint rejects an Arrow ListBlobs request on a hierarchical-namespace
+   * (HNS) account with {@code 409 Conflict}; that status short-circuits before
+   * {@link ResponseParserFactory} runs, so the Content-Type driven XML fallback
+   * cannot recover it and every listing would fail hard. Gating on the account
+   * type keeps HNS accounts on the XML path.
+   *
    * @param requestHeaders the request headers to update in place.
    * @return {@code true} if Arrow (Photon) was requested, {@code false} when
-   * Photon is disabled and the headers were left unchanged.
+   * Photon is disabled or the account is HNS and the headers were left
+   * unchanged.
+   * @throws AzureBlobFileSystemException if the account namespace type cannot be
+   * determined.
    */
   @VisibleForTesting
   boolean applyPhotonRequestHeadersIfEnabled(
-      final List<AbfsHttpHeader> requestHeaders) {
-    if (!getAbfsConfiguration().isPhotonEnabled()) {
+      final List<AbfsHttpHeader> requestHeaders)
+      throws AzureBlobFileSystemException {
+    if (!getAbfsConfiguration().isPhotonEnabled() || getIsNamespaceEnabled()) {
       return false;
     }
-    requestHeaders.removeIf(header -> ACCEPT.equals(header.getName()));
+    requestHeaders.removeIf(header -> ACCEPT.equalsIgnoreCase(header.getName()));
     requestHeaders.add(new AbfsHttpHeader(ACCEPT,
         APPLICATION_APACHE_ARROW_STREAM + COMMA + SINGLE_WHITE_SPACE
             + APPLICATION_XML));
@@ -425,6 +436,11 @@ public class AbfsBlobClient extends AbfsClient {
               HTTP_METHOD_GET,
               url,
               requestHeaders);
+          // The retry issues a second ListBlobs request whose response is also
+          // classified below, so count it as a request too; otherwise
+          // PHOTON_RESPONSE_COUNT + PHOTON_FALLBACK_COUNT could exceed
+          // PHOTON_REQUEST_COUNT and break the metric invariant.
+          updatePhotonRequestMetric(photonRequested);
           retryListOp.execute(tracingContext);
           listResponseData =
               parseListPathResultsWithMetrics(retryListOp, uri, photonRequested);
@@ -1807,7 +1823,14 @@ public class AbfsBlobClient extends AbfsClient {
    */
   private void updatePhotonResponseMetrics(final boolean photonRequested,
       final AbfsHttpOperation result) {
-    if (!photonRequested || getAbfsCounters() == null) {
+    if (!photonRequested || getAbfsCounters() == null || result == null) {
+      return;
+    }
+    // Only classify successful (HTTP 200) listings. A non-200 response carries
+    // an XML error body rather than a genuine XML fallback, so counting it as a
+    // fallback would make the "service fell back to XML" signal unusable for
+    // rollout decisions.
+    if (result.getStatusCode() != HTTP_OK) {
       return;
     }
     if (isArrowListResponse(result)) {

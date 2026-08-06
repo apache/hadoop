@@ -77,6 +77,29 @@ Photon is controlled by a single configuration and is disabled by default:
 </property>
 ```
 
+Photon applies only to non-HNS (flat namespace) accounts; on hierarchical
+namespace (HNS) accounts the Arrow request is not sent and listing stays on the
+XML path.
+
+#### Java 17+ runtime requirement (`--add-opens`)
+
+Apache Arrow's off-heap allocator reflectively accesses `java.nio` internals,
+which the Java module system closes by default from Java 9 onwards. On Java 17+
+the JVM running the driver (the client application, e.g. Spark or Hive
+executors, not just the test harness) must therefore open the `java.nio`
+package to Arrow, otherwise Arrow fails to initialise and any listing that
+receives an Arrow response fails:
+
+```
+--add-opens=java.base/java.nio=ALL-UNNAMED
+```
+
+Add this flag to the launching JVM (for example via `spark.driver.extraJavaOptions`
+and `spark.executor.extraJavaOptions`, `HADOOP_OPTS`, or the container's
+`JAVA_TOOL_OPTIONS`). If you cannot guarantee the flag is present on every JVM
+that runs the driver, keep `fs.azure.photon.enabled` set to `false` so listing
+uses the always-available XML path.
+
 ## Put Blob
 The Put Blob operation creates a new block blob, or updates the content of an existing block blob.
 The Put Blob operation will overwrite all contents of an existing blob with the same name.

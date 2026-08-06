@@ -107,6 +107,20 @@ public final class DateTimeUtils {
   private static final int LEAP_YEAR_DIVISOR = 4;
   private static final int DAYS_IN_WEEK = 7;
 
+  /**
+   * Formats an {@link Instant} into the RFC 1123 GMT representation used by the
+   * XML ListBlobs response (for example {@code Mon, 06 Jul 2026 10:31:19 GMT}).
+   * Used by the Arrow (Photon) path when a timestamp column is a timezone-aware
+   * Arrow vector whose {@code getObject()} returns an epoch value rather than a
+   * local date-time string.
+   *
+   * @param instant the instant to format
+   * @return the equivalent RFC 1123 GMT date-time string
+   */
+  public static String formatInstantToRfc1123(final Instant instant) {
+    return RFC_1123_GMT_FORMATTER.format(instant);
+  }
+
   public static long parseLastModifiedTime(final String lastModifiedTime) {
     long parsedTime = 0;
     try {

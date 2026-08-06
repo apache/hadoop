@@ -49,6 +49,12 @@ public class TestAggregateMetricsManager extends AbstractAbfsIntegrationTest {
   // Number of nanoseconds in one millisecond.
   private static final long NANOS_PER_MILLISECOND = 1_000_000L;
 
+  // System property naming the home directory of the running JDK.
+  private static final String JAVA_HOME_PROPERTY = "java.home";
+
+  // Sub-directory of a JDK home that holds its executable tools.
+  private static final String JDK_BIN_DIR = "bin";
+
   // The manager under test
   private final AggregateMetricsManager manager;
 
@@ -682,9 +688,9 @@ public class TestAggregateMetricsManager extends AbstractAbfsIntegrationTest {
    * @return an absolute path to the tool inside the running JDK, or {@code name}.
    */
   private static String jdkTool(String name) {
-    String javaHome = System.getProperty("java.home");
+    String javaHome = System.getProperty(JAVA_HOME_PROPERTY);
     if (javaHome != null && !javaHome.isEmpty()) {
-      File tool = new File(new File(javaHome, "bin"), name);
+      File tool = new File(new File(javaHome, JDK_BIN_DIR), name);
       if (tool.exists()) {
         return tool.getAbsolutePath();
       }

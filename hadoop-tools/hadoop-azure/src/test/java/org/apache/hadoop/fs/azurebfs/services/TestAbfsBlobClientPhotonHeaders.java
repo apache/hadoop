@@ -40,6 +40,7 @@ import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsDriverException;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.APPLICATION_APACHE_ARROW_STREAM;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.APPLICATION_XML;
@@ -63,11 +64,21 @@ public class TestAbfsBlobClientPhotonHeaders {
   private static final int OVER_LIMIT_ROW_COUNT = 2000;
 
   private AbfsBlobClient clientWithPhoton(final boolean photonEnabled) {
+    return clientWithPhoton(photonEnabled, false);
+  }
+
+  private AbfsBlobClient clientWithPhoton(final boolean photonEnabled,
+      final boolean namespaceEnabled) {
     AbfsConfiguration configuration = mock(AbfsConfiguration.class);
     doReturn(photonEnabled).when(configuration).isPhotonEnabled();
     AbfsBlobClient client = mock(AbfsBlobClient.class,
         withSettings().defaultAnswer(CALLS_REAL_METHODS));
     doReturn(configuration).when(client).getAbfsConfiguration();
+    try {
+      doReturn(namespaceEnabled).when(client).getIsNamespaceEnabled();
+    } catch (AzureBlobFileSystemException e) {
+      throw new RuntimeException(e);
+    }
     return client;
   }
 
@@ -89,7 +100,7 @@ public class TestAbfsBlobClientPhotonHeaders {
    * Verify Arrow request headers are added when Photon is enabled.
    */
   @Test
-  public void testAcceptHeaderOverriddenWhenPhotonEnabled() {
+  public void testAcceptHeaderOverriddenWhenPhotonEnabled() throws Exception {
     AbfsBlobClient client = clientWithPhoton(true);
     List<AbfsHttpHeader> headers = defaultHeaders();
 
@@ -107,10 +118,29 @@ public class TestAbfsBlobClientPhotonHeaders {
   }
 
   /**
+   * Verify Arrow is not requested on a hierarchical-namespace (HNS) account
+   * even when Photon is enabled, since the Blob endpoint rejects an Arrow
+   * ListBlobs request on HNS with a 409 that the XML fallback cannot recover.
+   */
+  @Test
+  public void testAcceptHeaderUnchangedOnHnsAccount() throws Exception {
+    AbfsBlobClient client = clientWithPhoton(true, true);
+    List<AbfsHttpHeader> headers = defaultHeaders();
+
+    boolean photonRequested = client.applyPhotonRequestHeadersIfEnabled(headers);
+
+    assertThat(photonRequested)
+        .as("Arrow should not be requested on an HNS account")
+        .isFalse();
+    assertThat(acceptValue(headers))
+        .isEqualTo("application/json, application/xml");
+  }
+
+  /**
    * Verify the existing Accept header is left unchanged when Photon is disabled.
    */
   @Test
-  public void testAcceptHeaderUnchangedWhenPhotonDisabled() {
+  public void testAcceptHeaderUnchangedWhenPhotonDisabled() throws Exception {
     AbfsBlobClient client = clientWithPhoton(false);
     List<AbfsHttpHeader> headers = defaultHeaders();
 
@@ -162,9 +192,9 @@ public class TestAbfsBlobClientPhotonHeaders {
     Field nameField = new Field("Name",
         FieldType.nullable(new ArrowType.Utf8()), null);
     Schema schema = new Schema(Collections.singletonList(nameField));
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
     try (BufferAllocator allocator = new RootAllocator(Long.MAX_VALUE);
         VectorSchemaRoot root = VectorSchemaRoot.create(schema, allocator);
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
         ArrowStreamWriter writer = new ArrowStreamWriter(root, null, out)) {
       VarCharVector nameVector = (VarCharVector) root.getVector("Name");
       nameVector.allocateNew(rows);
@@ -176,7 +206,9 @@ public class TestAbfsBlobClientPhotonHeaders {
       writer.start();
       writer.writeBatch();
       writer.end();
-      return out.toByteArray();
     }
+    // Read the bytes only after the writer has been closed so the Arrow stream
+    // is guaranteed to be fully flushed and terminated.
+    return out.toByteArray();
   }
 }

@@ -39,6 +39,7 @@ import org.apache.arrow.memory.BufferAllocator;
 import org.apache.arrow.memory.RootAllocator;
 import org.apache.arrow.vector.BigIntVector;
 import org.apache.arrow.vector.BitVector;
+import org.apache.arrow.vector.TimeStampMilliTZVector;
 import org.apache.arrow.vector.TimeStampSecVector;
 import org.apache.arrow.vector.UInt8Vector;
 import org.apache.arrow.vector.VarCharVector;
@@ -610,8 +611,11 @@ public class TestArrowListBlobParser {
   }
 
   /**
-   * Verify a row missing the mandatory Name column is skipped rather than
-   * producing a broken entry.
+   * Verify that when the Name column is entirely absent from the Arrow schema
+   * the parser fails loudly rather than silently returning an empty listing.
+   * Name is the one column {@code buildEntry()} cannot proceed without, so a
+   * schema lacking it would otherwise be indistinguishable from a genuinely
+   * empty directory and surface later as missing data in Spark/Hive.
    */
   @Test
   public void testMissingMandatoryNameColumn() throws Exception {
@@ -622,9 +626,34 @@ public class TestArrowListBlobParser {
         add(row);
       }}, null);
 
+    assertThatThrownBy(() -> parse(stream))
+        .isInstanceOf(IOException.class)
+        .hasMessageContaining(ARROW_COL_NAME);
+  }
+
+  /**
+   * Verify a row whose Name column is present but null is skipped (rather than
+   * failing the whole listing), matching the XML parser which ignores an entry
+   * without a name.
+   */
+  @Test
+  public void testNullNameValueRowSkipped() throws Exception {
+    Map<String, String> withName = new LinkedHashMap<>();
+    withName.put(ARROW_COL_NAME, "a.txt");
+    withName.put(ARROW_COL_CONTENT_LENGTH, "42");
+    Map<String, String> withoutName = new LinkedHashMap<>();
+    withoutName.put(ARROW_COL_NAME, null);
+    withoutName.put(ARROW_COL_CONTENT_LENGTH, "10");
+    byte[] stream = buildStringColumnStream(
+        new ArrayList<Map<String, String>>() {{
+          add(withName);
+          add(withoutName);
+        }}, null);
+
     BlobListResultSchema result = parse(stream);
 
-    assertThat(result.paths()).isEmpty();
+    assertThat(result.paths()).hasSize(1);
+    assertThat(result.paths().get(0).name()).isEqualTo("a.txt");
   }
 
   /**
@@ -704,6 +733,125 @@ public class TestArrowListBlobParser {
       // Clear the interrupt flag so it cannot leak into other tests.
       Thread.interrupted();
     }
+  }
+
+  /**
+   * A timezone-aware Arrow timestamp vector exposes an epoch number (not a
+   * date-time object) via {@code getObject()}. Verify such a column is still
+   * normalized to the RFC 1123 GMT string the XML path produces, rather than
+   * passing the raw epoch through as a bogus modification time. The service
+   * could switch to a TZ column without that being a breaking change.
+   */
+  @Test
+  public void testTimeZoneTimestampNormalizedToRfc1123() throws Exception {
+    long epochMillis = LocalDateTime.parse("2026-07-06T10:31:19")
+        .toEpochSecond(ZoneOffset.UTC) * 1000L;
+    byte[] stream = buildTimeZoneTimestampStream("file.txt", epochMillis);
+
+    BlobListResultSchema result = parse(stream);
+
+    BlobListResultEntrySchema entry = result.paths().get(0);
+    assertThat(entry.lastModified()).isEqualTo("Mon, 06 Jul 2026 10:31:19 GMT");
+    assertThat(DateTimeUtils.parseLastModifiedTime(entry.lastModified()))
+        .isEqualTo(DateTimeUtils.parseLastModifiedTime(
+            "Mon, 06 Jul 2026 10:31:19 GMT"));
+  }
+
+  /**
+   * Verify a single Arrow stream carrying two record batches is fully drained:
+   * the {@code while (loadNextBatch())} loop must iterate for every batch and
+   * the column references resolved once before the loop must stay valid across
+   * batches.
+   */
+  @Test
+  public void testTwoBatchesInOneStream() throws Exception {
+    byte[] stream = buildTwoBatchNameStream();
+
+    BlobListResultSchema result = parse(stream);
+
+    assertThat(result.paths()).hasSize(3);
+    assertThat(result.paths().get(0).name()).isEqualTo("batch1-a");
+    assertThat(result.paths().get(1).name()).isEqualTo("batch1-b");
+    assertThat(result.paths().get(2).name()).isEqualTo("batch2-a");
+  }
+
+  /**
+   * An unsigned 64-bit ({@code UInt8}) content length above {@code Long.MAX_VALUE}
+   * comes back negative from {@code getObject()}. Verify such a malformed length
+   * is rejected so a FileStatus can never surface with a negative length; the
+   * entry falls back to the default zero length instead.
+   */
+  @Test
+  public void testNegativeContentLengthRejected() throws Exception {
+    byte[] stream = new BlobEndpointStreamBuilder()
+        .addRow("blob.txt", "etag", -1L, "2026-07-06T10:31:19",
+            "2026-07-06T10:30:00", "blob", new LinkedHashMap<String, String>())
+        .build();
+
+    BlobListResultSchema result = parse(stream);
+
+    assertThat(result.paths().get(0).contentLength()).isEqualTo(0L);
+  }
+
+  /**
+   * Verify a non-numeric textual content length is ignored (leaving the default
+   * zero length) rather than failing parsing, matching the XML path's handling
+   * of an unparseable {@code Content-Length}.
+   */
+  @Test
+  public void testNonNumericContentLengthIgnored() throws Exception {
+    Map<String, String> row = new LinkedHashMap<>();
+    row.put(ARROW_COL_NAME, "blob.txt");
+    row.put(ARROW_COL_CONTENT_LENGTH, "not-a-number");
+    byte[] stream = buildStringColumnStream(
+        new ArrayList<Map<String, String>>() {{
+          add(row);
+        }}, null);
+
+    BlobListResultSchema result = parse(stream);
+
+    assertThat(result.paths()).hasSize(1);
+    assertThat(result.paths().get(0).contentLength()).isEqualTo(0L);
+  }
+
+  /**
+   * Verify a directory marker carried as a flattened {@code hdi_isfolder}
+   * column with the numeric-true value {@code "1"} is recognized as a directory.
+   */
+  @Test
+  public void testHdiIsFolderNumericTrueColumn() throws Exception {
+    Map<String, String> row = new LinkedHashMap<>();
+    row.put(ARROW_COL_NAME, "dir1");
+    row.put(XML_TAG_HDI_ISFOLDER, "1");
+    byte[] stream = buildStringColumnStream(
+        new ArrayList<Map<String, String>>() {{
+          add(row);
+        }}, null);
+
+    BlobListResultSchema result = parse(stream);
+
+    assertThat(result.paths()).hasSize(1);
+    assertThat(result.paths().get(0).isDirectory()).isTrue();
+  }
+
+  /**
+   * Verify a blob name consisting solely of {@code "/"} is handled without
+   * error. The trailing slash is stripped (as for any directory name), leaving
+   * an entry rooted at the container root.
+   */
+  @Test
+  public void testNameThatIsOnlySlash() throws Exception {
+    Map<String, String> row = new LinkedHashMap<>();
+    row.put(ARROW_COL_NAME, "/");
+    byte[] stream = buildStringColumnStream(
+        new ArrayList<Map<String, String>>() {{
+          add(row);
+        }}, null);
+
+    BlobListResultSchema result = parse(stream);
+
+    assertThat(result.paths()).hasSize(1);
+    assertThat(result.paths().get(0).name()).isEmpty();
   }
 
   private BlobListResultSchema parse(byte[] stream) throws IOException {
@@ -969,6 +1117,77 @@ public class TestArrowListBlobParser {
         buffer.setBytes(0, bytes);
         writer.writeVarChar(0, bytes.length, buffer);
       }
+    }
+  }
+
+  /**
+   * Build a single-row Arrow stream whose {@code Last-Modified} column is a
+   * timezone-aware millisecond timestamp vector, whose {@code getObject()}
+   * returns a raw epoch-millis {@link Long} rather than a local date-time.
+   */
+  private static byte[] buildTimeZoneTimestampStream(String name,
+      long epochMillis) throws IOException {
+    Field nameField = new Field(ARROW_COL_NAME,
+        FieldType.nullable(new ArrowType.Utf8()), null);
+    Field lmField = new Field(ARROW_COL_LAST_MODIFIED,
+        FieldType.nullable(new ArrowType.Timestamp(TimeUnit.MILLISECOND, "UTC")),
+        null);
+    Schema schema = new Schema(Arrays.asList(nameField, lmField));
+
+    try (BufferAllocator allocator = new RootAllocator(Long.MAX_VALUE);
+        VectorSchemaRoot root = VectorSchemaRoot.create(schema, allocator);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        ArrowStreamWriter writer = new ArrowStreamWriter(root, null,
+            Channels.newChannel(out))) {
+      VarCharVector nameVector =
+          (VarCharVector) root.getVector(ARROW_COL_NAME);
+      TimeStampMilliTZVector lmVector =
+          (TimeStampMilliTZVector) root.getVector(ARROW_COL_LAST_MODIFIED);
+      nameVector.allocateNew(1);
+      lmVector.allocateNew(1);
+      nameVector.setSafe(0, name.getBytes(StandardCharsets.UTF_8));
+      lmVector.setSafe(0, epochMillis);
+      root.setRowCount(1);
+      writer.start();
+      writer.writeBatch();
+      writer.end();
+      return out.toByteArray();
+    }
+  }
+
+  /**
+   * Build a single Arrow stream containing two record batches (2 rows then 1
+   * row) sharing one {@code Name} column, reusing the same
+   * {@link VectorSchemaRoot} across batches as {@code ArrowStreamReader} does on
+   * read.
+   */
+  private static byte[] buildTwoBatchNameStream() throws IOException {
+    Field nameField = new Field(ARROW_COL_NAME,
+        FieldType.nullable(new ArrowType.Utf8()), null);
+    Schema schema = new Schema(Collections.singletonList(nameField));
+
+    try (BufferAllocator allocator = new RootAllocator(Long.MAX_VALUE);
+        VectorSchemaRoot root = VectorSchemaRoot.create(schema, allocator);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        ArrowStreamWriter writer = new ArrowStreamWriter(root, null,
+            Channels.newChannel(out))) {
+      VarCharVector name = (VarCharVector) root.getVector(ARROW_COL_NAME);
+      writer.start();
+
+      name.allocateNew(2);
+      name.setSafe(0, "batch1-a".getBytes(StandardCharsets.UTF_8));
+      name.setSafe(1, "batch1-b".getBytes(StandardCharsets.UTF_8));
+      root.setRowCount(2);
+      writer.writeBatch();
+
+      name.reset();
+      name.allocateNew(1);
+      name.setSafe(0, "batch2-a".getBytes(StandardCharsets.UTF_8));
+      root.setRowCount(1);
+      writer.writeBatch();
+
+      writer.end();
+      return out.toByteArray();
     }
   }
 }

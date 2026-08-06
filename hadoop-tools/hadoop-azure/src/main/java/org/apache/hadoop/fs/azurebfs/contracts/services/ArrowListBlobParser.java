@@ -23,6 +23,7 @@ import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -36,6 +37,8 @@ import org.apache.arrow.vector.VarCharVector;
 import org.apache.arrow.vector.VectorSchemaRoot;
 import org.apache.arrow.vector.complex.MapVector;
 import org.apache.arrow.vector.ipc.ArrowStreamReader;
+import org.apache.arrow.vector.types.TimeUnit;
+import org.apache.arrow.vector.types.pojo.ArrowType;
 import org.apache.arrow.vector.types.pojo.Schema;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -98,6 +101,18 @@ public class ArrowListBlobParser implements ListBlobResponseParser {
    */
   private static final int NON_INTERRUPTIBLE_READ_CHUNK = 8192;
 
+  /** Microseconds in one second, for epoch-to-Instant conversion. */
+  private static final long MICROS_PER_SECOND = 1_000_000L;
+
+  /** Nanoseconds in one microsecond, for epoch-to-Instant conversion. */
+  private static final long NANOS_PER_MICRO = 1_000L;
+
+  /** Nanoseconds in one second, for epoch-to-Instant conversion. */
+  private static final long NANOS_PER_SECOND = 1_000_000_000L;
+
+  /** Numeric textual representation of a {@code true} boolean value. */
+  private static final String NUMERIC_TRUE = "1";
+
   /**
    * Base URL for which the ListBlobs API is called, used to build the absolute
    * URL for each entry (mirrors the XML parser behavior).
@@ -145,8 +160,21 @@ public class ArrowListBlobParser implements ListBlobResponseParser {
             (nextMarker == null || nextMarker.isEmpty()) ? null : nextMarker);
       }
 
+      // ArrowStreamReader loads every batch into the same VectorSchemaRoot and
+      // reuses the same FieldVector instances, so the column references resolved
+      // here stay valid for the whole stream; resolve once rather than rescanning
+      // every field vector per batch on this performance-sensitive path.
+      BatchColumns columns = BatchColumns.resolve(root);
+      // Name is the one column buildEntry() cannot proceed without: without it
+      // every row yields null and parse() would complete "successfully" with zero
+      // entries, indistinguishable from an empty directory and with no
+      // PHOTON_PARSE_FAILURE_COUNT. Treat a missing Name column as a parse error.
+      if (columns.name == null) {
+        throw new IOException(ERR_ARROW_LIST_PARSING
+            + " Required column '" + ARROW_COL_NAME + "' is missing.");
+      }
+
       while (reader.loadNextBatch()) {
-        BatchColumns columns = BatchColumns.resolve(root);
         int rowCount = root.getRowCount();
         for (int row = 0; row < rowCount; row++) {
           BlobListResultEntrySchema entry = buildEntry(columns, row);
@@ -325,9 +353,19 @@ public class ArrowListBlobParser implements ListBlobResponseParser {
   private void setContentLength(final BlobListResultEntrySchema entry,
       final FieldVector contentLength, final int row) {
     Long value = readLong(contentLength, row);
-    if (value != null) {
-      entry.setContentLength(value);
+    if (value == null) {
+      return;
     }
+    // A UInt8Vector holds an unsigned 64-bit value; getObject() returns it as a
+    // signed Long, so a value above Long.MAX_VALUE (or a malformed numeric
+    // string such as "-1") surfaces as a negative number. A negative content
+    // length is never valid, so reject it rather than let it reach FileStatus.
+    if (value < 0) {
+      LOG.debug("Ignoring negative content length {} for blob {}", value,
+          entry.name());
+      return;
+    }
+    entry.setContentLength(value);
   }
 
   /**
@@ -420,9 +458,13 @@ public class ArrowListBlobParser implements ListBlobResponseParser {
 
   /**
    * Read a timestamp column for the given row and convert it to the RFC 1123
-   * GMT representation used by the XML path. Native Arrow timestamp vectors
-   * expose an ISO-8601 local date-time via {@link FieldVector#getObject(int)};
-   * a textual (VarChar) timestamp column is also tolerated. Returns
+   * GMT representation used by the XML path. Native (zone-less) Arrow timestamp
+   * vectors (e.g. {@link org.apache.arrow.vector.TimeStampSecVector}) expose an
+   * ISO-8601 local date-time via {@link FieldVector#getObject(int)}, whereas the
+   * timezone-aware variants (e.g. {@code TimeStampSecTZVector},
+   * {@code TimeStampMilliTZVector}, {@code TimeStampMicroTZVector}) return a
+   * {@link Number} epoch value in the vector's {@link TimeUnit}. Both forms are
+   * handled here, as is a textual (VarChar) timestamp column. Returns
    * {@code null} when the column is absent or the value is null.
    */
   private String readTimestampAsRfc1123(final FieldVector vector,
@@ -435,7 +477,45 @@ public class ArrowListBlobParser implements ListBlobResponseParser {
     if (value == null) {
       return null;
     }
+    // A timezone-aware Arrow timestamp vector hands back a raw epoch number
+    // instead of a date-time object; convert it using the column's declared time
+    // unit so it does not pass through unrecognized (and silently yield a wrong
+    // or zero modification time).
+    if (value instanceof Number) {
+      Instant instant = arrowEpochToInstant(vector, ((Number) value).longValue());
+      if (instant != null) {
+        return DateTimeUtils.formatInstantToRfc1123(instant);
+      }
+    }
     return DateTimeUtils.formatArrowDateTimeToRfc1123(value.toString());
+  }
+
+  /**
+   * Convert an epoch value read from a timezone-aware Arrow timestamp vector to
+   * an {@link Instant} using the column's declared {@link TimeUnit}. Returns
+   * {@code null} when the vector is not a timestamp column so the caller can fall
+   * back to the textual path.
+   */
+  private static Instant arrowEpochToInstant(final FieldVector vector,
+      final long epoch) {
+    ArrowType type = vector.getField().getType();
+    if (!(type instanceof ArrowType.Timestamp)) {
+      return null;
+    }
+    switch (((ArrowType.Timestamp) type).getUnit()) {
+    case SECOND:
+      return Instant.ofEpochSecond(epoch);
+    case MILLISECOND:
+      return Instant.ofEpochMilli(epoch);
+    case MICROSECOND:
+      return Instant.ofEpochSecond(Math.floorDiv(epoch, MICROS_PER_SECOND),
+          Math.floorMod(epoch, MICROS_PER_SECOND) * NANOS_PER_MICRO);
+    case NANOSECOND:
+      return Instant.ofEpochSecond(Math.floorDiv(epoch, NANOS_PER_SECOND),
+          Math.floorMod(epoch, NANOS_PER_SECOND));
+    default:
+      return null;
+    }
   }
 
   /**
@@ -459,7 +539,10 @@ public class ArrowListBlobParser implements ListBlobResponseParser {
         try {
           return Long.parseLong(text);
         } catch (NumberFormatException ignored) {
-          // Leave unset if the value is not numeric.
+          // A non-numeric length is a data-integrity signal rather than a benign
+          // absence; log it (the XML path likewise leaves the length unset for an
+          // unparseable value) and leave the length unset so it falls back to 0.
+          LOG.debug("Ignoring non-numeric length value '{}'", text);
         }
       }
     }
@@ -485,7 +568,7 @@ public class ArrowListBlobParser implements ListBlobResponseParser {
       String value = readString((VarCharVector) vector, row);
       if (value != null && !value.isEmpty()) {
         String trimmed = value.trim();
-        return Boolean.parseBoolean(trimmed) || "1".equals(trimmed);
+        return Boolean.parseBoolean(trimmed) || NUMERIC_TRUE.equals(trimmed);
       }
     }
     return false;
