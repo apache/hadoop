@@ -139,9 +139,9 @@ public class TestBlockStatsMXBean {
     List<Object> beans = toList(stat.get("beans"));
     Map<String, Object> blockStats  = null;
     for (Object bean : beans) {
-      if (bean instanceof Map<String, Object> map) {
+      if (bean instanceof Map<?, ?> map) {
         if (map.get("name").equals("Hadoop:service=NameNode,name=BlockStats")) {
-          blockStats = map;
+          blockStats = (Map<String, Object>)map;
         }
       }
     }
@@ -155,7 +155,7 @@ public class TestBlockStatsMXBean {
     for (Object obj : storageTypeStatsList) {
       Map<String, Object> entry = (Map<String, Object>)obj;
       String storageType = entry.get("key").toString();
-      Map<String,Object> storageTypeStats = (Map<String,Object>)entry.get("value");
+      Map<String, Object> storageTypeStats = (Map<String, Object>)entry.get("value");
       typesPresent.add(storageType);
       switch (storageType) {
       case "ARCHIVE":
@@ -305,9 +305,9 @@ public class TestBlockStatsMXBean {
     List<Object> beans = toList(stat.get("beans"));
     Map<String, Object> blockStats = null;
     for (Object bean : beans) {
-      if (bean instanceof Map<String, Object> map) {
+      if (bean instanceof Map<?, ?> map) {
         if (map.get("name").equals("Hadoop:service=NameNode,name=BlockStats")) {
-          blockStats = map;
+          blockStats = (Map<String, Object>)map;
         }
       }
     }
