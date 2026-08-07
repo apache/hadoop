@@ -160,6 +160,10 @@ public final class CapacitySchedulerConfigValidator {
     return maxCapacity != null && !maxCapacity.trim().isEmpty();
   }
 
+  /***
+   * Requires queue in the queue-path to declare accessible-node-labels explicitly. 
+   * The inheritance from root’s implicit * label is not accepted here.
+   */
   private static boolean isLabelAccessibleByQueue(
           CapacitySchedulerConfiguration conf, QueuePath queue, String label) {
     QueuePath currentQueue = queue;
@@ -172,7 +176,7 @@ public final class CapacitySchedulerConfigValidator {
       }
       currentQueue = currentQueue.getParentObject();
     }
-    // No queue on the path declared accessible-node-labels; label is not accessible.
+
     return false;
   }
 
