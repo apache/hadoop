@@ -121,8 +121,9 @@ public final class CapacitySchedulerConfigValidator {
   }
 
   /**
-   * Validates that queue's partition capacity could only be configured if the queue is accessible by that label
-   * and vice versa, the label that is accessible by the queue could not be removed if
+   * Validates that queue's partition capacity.
+   * It could only be configured if the queue is accessible by that label and vice versa,
+   * the label that is accessible by the queue could not be removed if
    * it has capacity or max-capacity configured in queue's partition
    *
    * @param conf Capacity Scheduler configuration to validate
@@ -144,7 +145,8 @@ public final class CapacitySchedulerConfigValidator {
           continue;
         }
 
-        throw new IOException("Queue: " + queuePath + " must have accessible-node-labels and its capacity together");
+        throw new IOException("Queue: " + queuePath +
+          " must have accessible-node-labels and its capacity together");
       }
     }
   }
@@ -160,8 +162,8 @@ public final class CapacitySchedulerConfigValidator {
     return maxCapacity != null && !maxCapacity.trim().isEmpty();
   }
 
-  /***
-   * Requires queue in the queue-path to declare accessible-node-labels explicitly. 
+  /**
+   * Requires queue in the queue-path to declare accessible-node-labels explicitly.
    * The inheritance from root’s implicit * label is not accepted here.
    */
   private static boolean isLabelAccessibleByQueue(
