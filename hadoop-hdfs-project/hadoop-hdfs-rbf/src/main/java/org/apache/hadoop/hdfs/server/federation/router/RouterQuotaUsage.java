@@ -133,7 +133,7 @@ public final class RouterQuotaUsage extends QuotaUsage {
     }
   }
 
-  @JsonValue // For Jackson serialization, use the toString() method to represent this object as a JSON string.
+  @JsonValue // For Jackson serialization, use the toString() to represent this object as JSON.
   @Override
   public String toString() {
     String nsQuota = "-";
