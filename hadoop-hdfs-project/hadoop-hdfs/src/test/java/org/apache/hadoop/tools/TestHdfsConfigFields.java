@@ -74,13 +74,10 @@ public class TestHdfsConfigFields extends TestConfigurationFieldsBase {
         .add(DFSConfigKeys.DFS_DATANODE_XCEIVER_STOP_TIMEOUT_MILLIS_KEY);
 
     // dfs.corruptfilesreturned.max is read into BlockManager but the
-    // resulting field is never consulted; it has no effect.
+    // resulting field is never consulted; it has no effect. The live
+    // equivalent is dfs.namenode.max-corrupt-file-blocks-returned.
     configurationPropsToSkipCompare
         .add("dfs.corruptfilesreturned.max");
-    // dfs.metrics.session-id is a deprecated alias
-    // (see HdfsClientConfigKeys.DeprecatedKeys).
-    configurationPropsToSkipCompare
-        .add("dfs.metrics.session-id");
 
     // Example (not real) property in hdfs-default.xml
     configurationPropsToSkipCompare.add("dfs.ha.namenodes");

@@ -2324,16 +2324,14 @@
   <name>dfs.namenode.tolerate.heartbeat.multiplier</name>
   <value>4</value>
   <description>
-    When there are excess replicas of a block that need to be deleted,
-    the default block placement policy prefers to keep the replica on the
-    datanode that has sent the most recent heartbeat. This property scales
-    dfs.heartbeat.interval to define how many missed heartbeats' worth of
-    time a datanode's last heartbeat may lag behind and still be
-    considered as recent as the others for this comparison; datanodes
-    whose heartbeat is older than
-    dfs.heartbeat.interval * dfs.namenode.tolerate.heartbeat.multiplier
-    are treated as equally stale candidates for replica deletion, and the
-    one with the least free space is chosen instead.
+    When choosing which replica of an over-replicated block to delete,
+    the default block placement policy scales dfs.heartbeat.interval by
+    this multiplier to define a tolerance window for heartbeat lag. If
+    any candidate datanode's last heartbeat is older than
+    dfs.heartbeat.interval * dfs.namenode.tolerate.heartbeat.multiplier,
+    the replica on the datanode with the oldest heartbeat is deleted.
+    Only when all candidates' heartbeats fall within the window is the
+    replica on the datanode with the least free space deleted instead.
   </description>
 </property>
 
@@ -2395,31 +2393,12 @@
 </property>
 
 <property>
-  <name>nfs.http.port</name>
-  <value>50079</value>
-  <description>
-    The default HTTP port for the NFS gateway web UI. Note that the
-    effective bind port is taken from nfs.http.address; this value is
-    used only when that address omits a port.
-  </description>
-</property>
-
-<property>
   <name>nfs.http.address</name>
   <value>0.0.0.0:50079</value>
   <description>
     The HTTP address (host:port) for the NFS gateway web UI. If the port
-    is 0, then the server will start on a free port.
-  </description>
-</property>
-
-<property>
-  <name>nfs.https.port</name>
-  <value>50579</value>
-  <description>
-    The default HTTPS port for the NFS gateway web UI. Note that the
-    effective bind port is taken from nfs.https.address; this value is
-    used only when that address omits a port.
+    is 0, then the server will start on a free port. If the port is
+    omitted, the default port 50079 is used.
   </description>
 </property>
 
@@ -2436,10 +2415,11 @@
   <name>nfs.file.dump</name>
   <value>true</value>
   <description>
-    Whether to enable dumping out-of-order writes to a local dump directory
-    (see nfs.dump.dir) before writing them to HDFS once the missing, earlier
-    part of the sequence arrives. Disabling this discards out-of-order writes
-    instead of buffering them to disk.
+    Whether to enable dumping large, non-sequential writes to a local dump
+    directory (see nfs.dump.dir) while waiting for the missing, earlier
+    part of the write sequence to arrive. When disabled, out-of-order
+    writes accumulate in the NFS gateway's memory instead, which can
+    significantly increase the gateway's memory usage.
   </description>
 </property>
 
@@ -2497,8 +2477,8 @@
   <value>256</value>
   <description>
     The maximum number of files the NFS gateway can hold concurrently
-    open per export. When exceeded, the least recently used open file
-    is closed and evicted to make room for the new one.
+    open. When exceeded, the least recently used open file is closed
+    and evicted to make room for the new one.
   </description>
 </property>
 
@@ -2660,9 +2640,21 @@
   <name>dfs.metrics.percentiles.intervals</name>
   <value></value>
   <description>
-    Comma-delimited set of integers denoting the desired rollover intervals 
+    Comma-delimited set of integers denoting the desired rollover intervals
     (in seconds) for percentile latency metrics on the Namenode and Datanode.
     By default, percentile latency metrics are disabled.
+  </description>
+</property>
+
+<property>
+  <name>dfs.metrics.session-id</name>
+  <value></value>
+  <description>
+    An optional identifier that HDFS daemons (NameNode, DataNode,
+    JournalNode, Balancer, Mover and others) record in the metrics they
+    emit, to correlate those metrics with a particular session or
+    workload. Empty by default. This property replaces the deprecated
+    session.id.
   </description>
 </property>
 
