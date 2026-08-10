@@ -241,6 +241,9 @@ public class NetUtils {
     URI uri = createURI(target, hasScheme, helpText, useCacheIfPresent);
 
     String host = uri.getHost();
+    if (host != null && host.startsWith("[") && host.endsWith("]")) {
+      host = host.substring(1, host.length() - 1);
+    }
     int port = uri.getPort();
     if (port == -1) {
       port = defaultPort;
@@ -763,10 +766,29 @@ public class NetUtils {
    * Compose a "host:port" string from the address.
    *
    * @param addr address.
-   * @return hort port string.
+   * @return host port string.
    */
   public static String getHostPortString(InetSocketAddress addr) {
-    return addr.getHostName() + ":" + addr.getPort();
+    return getHostPortString(addr.getHostName(), addr.getPort());
+  }
+
+  /**
+   * Compose a "host:port" string, bracketing IPv6 literals.
+   *
+   * @param host host name or IP address.
+   * @param port port number.
+   * @return host port string.
+   */
+  public static String getHostPortString(String host, int port) {
+    String normalizedHost = host;
+    if (normalizedHost != null && normalizedHost.startsWith("[")
+        && normalizedHost.endsWith("]")) {
+      normalizedHost = normalizedHost.substring(1, normalizedHost.length() - 1);
+    }
+    if (normalizedHost != null && normalizedHost.contains(":")) {
+      return "[" + normalizedHost + "]:" + port;
+    }
+    return normalizedHost + ":" + port;
   }
 
   /**

@@ -297,7 +297,7 @@ public class TestSecurityUtil {
     String serviceHost = useIp ? ip : StringUtils.toLowerCase(host);
     
     Token<?> token = new Token<TokenIdentifier>();
-    Text service = new Text(serviceHost+":"+port);
+    Text service = new Text(NetUtils.getHostPortString(serviceHost, port));
     
     assertEquals(service, SecurityUtil.buildTokenService(addr));
     SecurityUtil.setTokenService(token, addr);
@@ -364,6 +364,14 @@ public class TestSecurityUtil {
     String staticHost = "127.0.0.1";
     NetUtils.addStaticResolution(staticHost, "localhost");
     verifyServiceAddr(staticHost, "127.0.0.1");
+  }
+
+  @Test
+  public void testSocketAddrWithIPv6() throws Exception {
+    SecurityUtil.setTokenServiceUseIp(false);
+    String host = "::1";
+    InetSocketAddress addr = NetUtils.createSocketAddr("[::1]:123");
+    verifyAddress(addr, host, InetAddress.getByName(host).getHostAddress(), 123);
   }
 
   @Test
