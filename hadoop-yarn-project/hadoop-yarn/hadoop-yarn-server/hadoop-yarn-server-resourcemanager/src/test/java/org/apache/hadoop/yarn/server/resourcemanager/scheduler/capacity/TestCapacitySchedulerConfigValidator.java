@@ -783,6 +783,22 @@ public class TestCapacitySchedulerConfigValidator {
   }
 
   @Test
+  public void testValidateQueueAccessibleLabelsRejectsAbsoluteMinResourceWithoutAccessibleLabels() {
+    CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
+    QueuePath queue = new QueuePath("root.queueC");
+    conf.setQueues(new QueuePath(CapacitySchedulerConfiguration.ROOT),
+        new String[] {"queueC"});
+    conf.setCapacity(queue, 25);
+    conf.setMinimumResourceRequirement("x", queue, Resource.newInstance(10 * 1024, 2));
+    conf.setMaximumResourceRequirement("x", queue, Resource.newInstance(20 * 1024, 4));
+
+    IOException exception = assertThrows(IOException.class, () ->
+        CapacitySchedulerConfigValidator.validateQueueAccessibleLabels(conf));
+    assertTrue(exception.getMessage().contains(ACCESSIBLE_LABELS_CAPACITY_ERROR));
+    assertTrue(exception.getMessage().contains("root.queueC"));
+  }
+
+  @Test
   public void testValidateQueueAccessibleLabelsRejectsCapacityWithoutAccessibleLabelsProperty() {
     CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
     QueuePath sibling = new QueuePath("root.sibling");
