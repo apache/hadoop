@@ -37,6 +37,7 @@ import {
   QUEUE_CARD_WIDTH,
 } from '~/features/queue-management/constants';
 import type { ValidationIssue } from '~/types';
+import { resolveAutoCreatedQueueCapacityConfigs } from '~/utils/templateUtils';
 
 export type QueueCardData = QueueInfo & {
   stagedStatus?: 'new' | 'modified' | 'deleted';
@@ -249,8 +250,11 @@ function getAutoCreationStatus(
 function transformToCardData(queueInfo: QueueInfo, stagedChanges: StagedChange[]): QueueCardData {
   const getQueuePropertyValue = useSchedulerStore.getState().getQueuePropertyValue;
 
-  const capacityDisplay = getQueuePropertyValue(queueInfo.queuePath, 'capacity');
-  const maxCapacityDisplay = getQueuePropertyValue(queueInfo.queuePath, 'maximum-capacity');
+  const { capacityConfig, maxCapacityConfig } = resolveAutoCreatedQueueCapacityConfigs(
+    queueInfo.queuePath,
+    queueInfo.creationMethod,
+    getQueuePropertyValue,
+  );
 
   const stateDisplay = getQueuePropertyValue(queueInfo.queuePath, 'state');
 
@@ -292,8 +296,8 @@ function transformToCardData(queueInfo: QueueInfo, stagedChanges: StagedChange[]
       !queueInfo.queues?.queue ||
       (Array.isArray(queueInfo.queues.queue) ? queueInfo.queues.queue.length === 0 : false),
 
-    capacityConfig: capacityDisplay.value || '0',
-    maxCapacityConfig: maxCapacityDisplay.value || '100',
+    capacityConfig,
+    maxCapacityConfig,
 
     stagedState: stateDisplay.isStaged ? stateDisplay.value : undefined,
 
