@@ -1177,6 +1177,10 @@ function hadoop_add_profile
 ## @return       1 = failure (doesn't exist or some other reason)
 function hadoop_add_classpath
 {
+  declare -a classpath_entries
+  declare idx
+  declare rebuilt_classpath=""
+
   # However, with classpath (& JLP), we can do dedupe
   # along with some sanity checking (e.g., missing directories)
   # since we have a better idea of what is legal
@@ -1209,7 +1213,26 @@ function hadoop_add_classpath
       hadoop_debug "Append CLASSPATH: $1"
     fi
   else
-    hadoop_debug "Dupe CLASSPATH: $1"
+    if [[ "$2" = "before" ]] && [[ "${CLASSPATH%%:*}" != "$1" ]]; then
+      IFS=':' read -r -a classpath_entries <<< "${CLASSPATH}"
+      for idx in "${classpath_entries[@]}"; do
+        if [[ "${idx}" != "$1" ]]; then
+          if [[ -z "${rebuilt_classpath}" ]]; then
+            rebuilt_classpath="${idx}"
+          else
+            rebuilt_classpath="${rebuilt_classpath}:${idx}"
+          fi
+        fi
+      done
+      if [[ -n "${rebuilt_classpath}" ]]; then
+        CLASSPATH="$1:${rebuilt_classpath}"
+      else
+        CLASSPATH="$1"
+      fi
+      hadoop_debug "Moved CLASSPATH to front: $1"
+    else
+      hadoop_debug "Dupe CLASSPATH: $1"
+    fi
   fi
   return 0
 }
