@@ -31,6 +31,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.apache.hadoop.hdfs.server.namenode.top.TopConf;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.slf4j.Logger;
@@ -249,8 +250,23 @@ public class RollingWindowManager {
    */
   public void recordMetric(long time, String command,
       String user, long delta) {
-    RollingWindow window = getRollingWindow(command, user);
-    window.incAt(time, delta);
+    RollingWindowMap rwMap = metricMap.computeIfAbsent(
+        command, key -> new RollingWindowMap());
+
+    rwMap.compute(user, (key, window) -> {
+      if (window == null) {
+        window = new RollingWindow(windowLenMs, bucketsPerWindow);
+      }
+      window.incAt(time, delta);
+      return window;
+    });
+  }
+
+  @VisibleForTesting
+  void setRollingWindowForTesting(String metric, String user,
+      RollingWindow window) {
+    metricMap.computeIfAbsent(metric, key -> new RollingWindowMap())
+        .put(user, window);
   }
 
   /**
@@ -298,54 +314,23 @@ public class RollingWindowManager {
   private UserCounts getTopUsersForMetric(long time, String metricName,
       RollingWindowMap rollingWindows) {
     UserCounts topN = new UserCounts(topUsersCnt);
-    Iterator<Map.Entry<String, RollingWindow>> iterator =
-        rollingWindows.entrySet().iterator();
-    while (iterator.hasNext()) {
-      Map.Entry<String, RollingWindow> entry = iterator.next();
-      String userName = entry.getKey();
-      RollingWindow aWindow = entry.getValue();
-      long windowSum = aWindow.getSum(time);
-      // do the gc here
-      if (windowSum == 0) {
-        LOG.debug("gc window of metric: {} userName: {}",
-            metricName, userName);
-        iterator.remove();
-        continue;
-      }
-      LOG.debug("offer window of metric: {} userName: {} sum: {}",
-          metricName, userName, windowSum);
-      topN.add(new User(userName, windowSum));
+    for (String userName : rollingWindows.keySet()) {
+      rollingWindows.computeIfPresent(userName, (key, window) -> {
+        long windowSum = window.getSum(time);
+        if (windowSum == 0) {
+          LOG.debug("gc window of metric: {} userName: {}",
+              metricName, userName);
+          return null;
+        }
+
+        LOG.debug("offer window of metric: {} userName: {} sum: {}",
+            metricName, userName, windowSum);
+        topN.add(new User(userName, windowSum));
+        return window;
+      });
     }
     LOG.debug("topN users size for command {} is: {}",
         metricName, topN.size());
     return topN;
-  }
-
-  /**
-   * Get the rolling window specified by metric and user.
-   *
-   * @param metric the updated metric
-   * @param user the user that updated the metric
-   * @return the rolling window
-   */
-  private RollingWindow getRollingWindow(String metric, String user) {
-    RollingWindowMap rwMap = metricMap.get(metric);
-    if (rwMap == null) {
-      rwMap = new RollingWindowMap();
-      RollingWindowMap prevRwMap = metricMap.putIfAbsent(metric, rwMap);
-      if (prevRwMap != null) {
-        rwMap = prevRwMap;
-      }
-    }
-    RollingWindow window = rwMap.get(user);
-    if (window != null) {
-      return window;
-    }
-    window = new RollingWindow(windowLenMs, bucketsPerWindow);
-    RollingWindow prevWindow = rwMap.putIfAbsent(user, window);
-    if (prevWindow != null) {
-      window = prevWindow;
-    }
-    return window;
   }
 }
