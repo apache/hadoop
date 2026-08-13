@@ -19,7 +19,8 @@ package org.apache.hadoop.yarn.server.router.subcluster;
 
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
-import org.apache.hadoop.io.retry.RetryPolicy;
+import org.apache.hadoop.service.CompositeService.CompositeServiceShutdownHook;
+import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.MiniYARNCluster;
@@ -30,7 +31,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Tests {@link Router}.
+ * Process entry point that starts a {@link Router} for the federation
+ * end-to-end suites. This is not a test: it declares no test methods.
+ * {@link TestFederationSubCluster} launches it as a separate JVM and stops it
+ * with Process#destroy.
  */
 public class TestMockRouter {
 
@@ -73,18 +77,40 @@ public class TestMockRouter {
     conf.set(YarnConfiguration.ROUTER_WEBAPP_ADDRESS,
         getHostNameAndPort(pRouterWebAddressPort));
 
-    RetryPolicy retryPolicy = FederationStateStoreFacade.createRetryPolicy(conf);
-
+    // This class is launched as its own JVM by JavaProcess, and the parent test
+    // terminates it with Process#destroy: SIGTERM on Linux and macOS, which runs
+    // shutdown hooks. (On Windows destroy maps to TerminateProcess, which runs
+    // none, so there this is inert.) Router#main registers this hook itself;
+    // starting the Router directly, as here, skips it, so without this the JVM
+    // exits with the Router's services still running and none of them ever
+    // stopped.
+    ShutdownHookManager.get().addShutdownHook(
+        new CompositeServiceShutdownHook(router), Router.SHUTDOWN_HOOK_PRIORITY);
     router.init(conf);
     router.start();
 
-    FederationStateStore stateStore = (FederationStateStore)
-        FederationStateStoreFacade.createRetryInstance(conf,
-        YarnConfiguration.FEDERATION_STATESTORE_CLIENT_CLASS,
-        YarnConfiguration.DEFAULT_FEDERATION_STATESTORE_CLIENT_CLASS,
-        FederationStateStore.class, retryPolicy);
-    stateStore.init(conf);
-    FederationStateStoreFacade.getInstance().reinitialize(stateStore, conf);
+    // Starting the Router has already created and initialized the facade's
+    // store: RouterClientRMService#serviceStart builds a
+    // RouterDelegationTokenSecretManager whose constructor calls
+    // FederationStateStoreFacade#getInstance(Configuration). Building a second
+    // store here and handing it to reinitialize() would orphan that first one -
+    // reinitialize swaps the reference, it does not close what it replaces - so
+    // take the store the facade is already using.
+    FederationStateStore stateStore =
+        FederationStateStoreFacade.getInstance(conf).getStateStore();
+
+    // The facade holds this store but never closes it, so its ZooKeeper
+    // connection outlives the process unless we close it ourselves. Registered
+    // at a lower priority than the Router hook above: ShutdownHookManager runs
+    // the highest priority first, so the Router is fully stopped before the
+    // store it may still be using goes away.
+    ShutdownHookManager.get().addShutdownHook(() -> {
+      try {
+        stateStore.close();
+      } catch (Exception e) {
+        LOG.warn("Error closing FederationStateStore.", e);
+      }
+    }, Router.SHUTDOWN_HOOK_PRIORITY - 5);
   }
 
   private static String getHostNameAndPort(int port) {

@@ -20,20 +20,33 @@ package org.apache.hadoop.yarn.server.router.subcluster;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.service.CompositeService.CompositeServiceShutdownHook;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.MiniYARNCluster;
+import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.util.concurrent.TimeUnit;
 
 import static org.apache.hadoop.yarn.server.router.subcluster.TestFederationSubCluster.ZK_FEDERATION_STATESTORE;
 
 public class TestMockSubCluster {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestMockSubCluster.class);
+
+  /**
+   * Shutdown budget for the whole sub-cluster. Each NodeManager spends a
+   * hardcoded 10s in DeletionService#serviceStop on top of its container grace
+   * period, so three of them do not fit ShutdownHookManager's 30s default and
+   * the hook would be abandoned part-way through the teardown.
+   */
+  private static final long SHUTDOWN_TIMEOUT_SECONDS = 60;
+
   private Configuration conf;
   private String subClusterId;
 
@@ -51,6 +64,16 @@ public class TestMockSubCluster {
 
   public void startYarnSubCluster() {
     MiniYARNCluster yrCluster = new MiniYARNCluster(subClusterId, 3, 1, 1, false);
+    // This class is launched as its own JVM by JavaProcess, and the parent test
+    // terminates it with Process#destroy: SIGTERM on Linux and macOS, which runs
+    // shutdown hooks. (On Windows destroy maps to TerminateProcess, which runs
+    // none, so there this is inert.) MiniYARNCluster registers no hook of its
+    // own, so without this the JVM exits with its ResourceManager and
+    // NodeManagers still running and no service ever stopped. Registered before
+    // init/start so a failure part-way through startup still tears down
+    // whatever came up.
+    ShutdownHookManager.get().addShutdownHook(new CompositeServiceShutdownHook(yrCluster),
+        ResourceManager.SHUTDOWN_HOOK_PRIORITY, SHUTDOWN_TIMEOUT_SECONDS, TimeUnit.SECONDS);
     yrCluster.init(conf);
     yrCluster.start();
   }
@@ -87,6 +110,12 @@ public class TestMockSubCluster {
         getHostNameAndPort(pRmTrackerAddressPort));
     conf.set(YarnConfiguration.RM_WEBAPP_ADDRESS, getHostNameAndPort(pRmWebAddressPort));
     conf.setBoolean(YarnConfiguration.YARN_MINICLUSTER_FIXED_PORTS, true);
+    // These sub-clusters keep applications running for the lifetime of the
+    // suite, so on shutdown every NodeManager would otherwise wait out its full
+    // container grace period - 250ms + 5000ms + 1s of slop, rounded up to 7s by
+    // the one-second poll in ContainerManagerImpl - before it stops.
+    conf.setLong(YarnConfiguration.NM_SLEEP_DELAY_BEFORE_SIGKILL_MS, 0);
+    conf.setLong(YarnConfiguration.NM_PROCESS_KILL_WAIT_MS, 0);
     conf.setBoolean(YarnConfiguration.FEDERATION_ENABLED, true);
     conf.set(YarnConfiguration.FEDERATION_STATESTORE_CLIENT_CLASS, ZK_FEDERATION_STATESTORE);
     conf.set(CommonConfigurationKeys.ZK_ADDRESS, pZkAddress);
