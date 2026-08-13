@@ -162,6 +162,14 @@ public class TestFederationSubCluster {
   }
 
   public void stop() throws Exception {
+    // Each child JVM runs its shutdown hooks on SIGTERM, and a sub-cluster takes
+    // a while to stop its ResourceManager and NodeManagers. Signal all of them
+    // first so they shut down concurrently, then wait for each to exit.
+    for (JavaProcess process : new JavaProcess[] {subCluster1, subCluster2, router}) {
+      if (process != null) {
+        process.destroy();
+      }
+    }
     if (subCluster1 != null) {
       subCluster1.stop();
     }
