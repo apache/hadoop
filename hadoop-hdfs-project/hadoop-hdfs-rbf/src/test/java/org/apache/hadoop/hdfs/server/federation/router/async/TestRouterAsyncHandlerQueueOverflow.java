@@ -202,7 +202,7 @@ public class TestRouterAsyncHandlerQueueOverflow {
     GenericTestUtils.waitFor(() -> {
       try {
         // Ping getAsyncExecutorForNamespace for metrics recording
-        routerRpcServer.getAsyncExecutorForNamespace(ns0);
+        routerRpcServer.getAsyncExecutorForNamespace(ns0, true);
         assertGauge("AsyncHandlerQueueSize", size,
             getMetrics(NAMESERVICE_RPC_METRICS_PREFIX + ns0));
         return true;
