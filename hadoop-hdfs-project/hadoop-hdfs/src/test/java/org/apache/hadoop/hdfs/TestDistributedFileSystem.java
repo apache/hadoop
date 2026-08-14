@@ -1292,11 +1292,11 @@ public class TestDistributedFileSystem {
       System.out.println("webhdfsuri=" + webhdfsuri);
       final FileSystem webhdfs = ugi.doAs(
           new PrivilegedExceptionAction<FileSystem>() {
-        @Override
-        public FileSystem run() throws Exception {
-          return new Path(webhdfsuri).getFileSystem(conf);
-        }
-      });
+            @Override
+            public FileSystem run() throws Exception {
+              return new Path(webhdfsuri).getFileSystem(conf);
+            }
+          });
 
       final Path dir = new Path("/filechecksum");
       final int block_size = 1024;
