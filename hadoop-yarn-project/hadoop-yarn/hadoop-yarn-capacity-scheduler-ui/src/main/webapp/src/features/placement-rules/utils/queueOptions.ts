@@ -18,6 +18,7 @@
 
 
 import type { QueueInfo, SchedulerInfo } from '~/types';
+import { AUTO_CREATION_PROPS } from '~/types/constants/auto-creation';
 import { mapQueueTree } from '~/utils/treeUtils';
 
 export interface QueueOption {
@@ -26,13 +27,53 @@ export interface QueueOption {
 }
 
 /**
- * Check if a queue has children (is a parent queue)
+ * Accessor for a queue's effective property value. Matches the store's getQueuePropertyValue.
  */
-function isParentQueue(queue: QueueInfo): boolean {
-  return !!(
+export type QueuePropertyAccessor = (
+  queuePath: string,
+  property: string,
+) => { value: string; isStaged: boolean };
+
+/**
+ * Check whether Dynamic Queue Creation is enabled for a queue. A queue with
+ * auto queue creation enabled acts as a parent even though it currently has no
+ * static child queues, so it must be selectable as a parent queue in placement rules.
+ */
+function hasAutoQueueCreation(
+  queue: QueueInfo,
+  getQueuePropertyValue?: QueuePropertyAccessor,
+): boolean {
+  const eligibility = queue.autoCreationEligibility;
+  if (
+    eligibility === AUTO_CREATION_PROPS.ELIGIBILITY_FLEXIBLE ||
+    eligibility === AUTO_CREATION_PROPS.ELIGIBILITY_LEGACY
+  ) {
+    return true;
+  }
+
+  if (getQueuePropertyValue) {
+    const flexibleEnabled =
+      getQueuePropertyValue(queue.queuePath, AUTO_CREATION_PROPS.FLEXIBLE_ENABLED).value === 'true';
+    const legacyEnabled =
+      getQueuePropertyValue(queue.queuePath, AUTO_CREATION_PROPS.LEGACY_ENABLED).value === 'true';
+    if (flexibleEnabled || legacyEnabled) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Check if a queue can act as a parent queue. This is true when the queue already
+ * has static child queues, or when Dynamic Queue Creation is enabled for it.
+ */
+function isParentQueue(queue: QueueInfo, getQueuePropertyValue?: QueuePropertyAccessor): boolean {
+  const hasChildren = !!(
     queue.queues?.queue &&
     (Array.isArray(queue.queues.queue) ? queue.queues.queue.length > 0 : true)
   );
+  return hasChildren || hasAutoQueueCreation(queue, getQueuePropertyValue);
 }
 
 /**
@@ -78,9 +119,17 @@ function getQueues(
 /**
  * Get all parent queue paths from the scheduler data
  * Returns an array of queue options suitable for use in a combobox
+ *
+ * Queues with Dynamic Queue Creation enabled are included even when they have
+ * no static children, since dynamic child queues will be created under them.
+ * Pass getQueuePropertyValue to also recognise queues whose Dynamic Queue
+ * Creation toggle is staged but not yet applied.
  */
-export function getAllParentQueues(schedulerData: SchedulerInfo | null): QueueOption[] {
-  return getQueues(schedulerData, isParentQueue);
+export function getAllParentQueues(
+  schedulerData: SchedulerInfo | null,
+  getQueuePropertyValue?: QueuePropertyAccessor,
+): QueueOption[] {
+  return getQueues(schedulerData, (queue) => isParentQueue(queue, getQueuePropertyValue));
 }
 
 /**
