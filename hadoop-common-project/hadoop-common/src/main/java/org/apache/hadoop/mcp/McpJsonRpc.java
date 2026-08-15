@@ -30,6 +30,9 @@ public final class McpJsonRpc {
 
   public static final String VERSION = "2.0";
 
+  /** MCP protocol version implemented by this server. */
+  public static final String PROTOCOL_VERSION = "2025-06-18";
+
   /** JSON-RPC 2.0 parse error. */
   public static final int PARSE_ERROR = -32700;
   /** JSON-RPC 2.0 invalid request. */

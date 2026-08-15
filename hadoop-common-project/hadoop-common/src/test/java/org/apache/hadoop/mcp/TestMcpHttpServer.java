@@ -100,7 +100,7 @@ public class TestMcpHttpServer {
       conn.setDoOutput(true);
       conn.setRequestProperty("Content-Type", "application/json");
       byte[] body = ("{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\","
-          + "\"params\":{\"protocolVersion\":\"2024-11-05\",\"capabilities\":{},"
+          + "\"params\":{\"protocolVersion\":\"2025-06-18\",\"capabilities\":{},"
           + "\"clientInfo\":{\"name\":\"t\",\"version\":\"1\"}}}").getBytes(
           StandardCharsets.UTF_8);
       try (OutputStream out = conn.getOutputStream()) {
@@ -113,6 +113,8 @@ public class TestMcpHttpServer {
         response = OBJECT_MAPPER.readTree(in);
       }
       assertEquals("2.0", response.get("jsonrpc").asText());
+      assertEquals(McpJsonRpc.PROTOCOL_VERSION,
+          response.get("result").get("protocolVersion").asText());
       assertEquals("test-server",
           response.get("result").get("serverInfo").get("name").asText());
       assertNotNull(conn.getHeaderField(McpRequestHandler.SESSION_HEADER));
@@ -137,7 +139,7 @@ public class TestMcpHttpServer {
       conn.setDoOutput(true);
       conn.setRequestProperty("Content-Type", "application/json");
       byte[] body = ("{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\","
-          + "\"params\":{\"protocolVersion\":\"2024-11-05\",\"capabilities\":{},"
+          + "\"params\":{\"protocolVersion\":\"2025-06-18\",\"capabilities\":{},"
           + "\"clientInfo\":{\"name\":\"t\",\"version\":\"1\"}}}").getBytes(
           StandardCharsets.UTF_8);
       try (OutputStream out = conn.getOutputStream()) {
@@ -150,6 +152,8 @@ public class TestMcpHttpServer {
         response = OBJECT_MAPPER.readTree(in);
       }
       assertEquals("2.0", response.get("jsonrpc").asText());
+      assertEquals(McpJsonRpc.PROTOCOL_VERSION,
+          response.get("result").get("protocolVersion").asText());
       assertEquals("test-server",
           response.get("result").get("serverInfo").get("name").asText());
       assertNotNull(conn.getHeaderField(McpRequestHandler.SESSION_HEADER));

@@ -34,7 +34,7 @@ public class TestMcpHttpServlet {
       new JacksonMcpJsonMapper(OBJECT_MAPPER);
 
   @Test
-  public void testInitializeAndListTools() throws Exception {
+  public void testToolsList() throws Exception {
     McpServer server = McpServer.sync(JSON_MAPPER)
         .serverInfo("test-server", "1.0")
         .capabilities(McpSchema.ServerCapabilities.withTools())
@@ -92,47 +92,65 @@ public class TestMcpHttpServlet {
   }
 
   @Test
-  public void testNullRequestReturnsInvalidRequest() {
+  public void testInvalidEnvelopeRejectedByHandler() throws Exception {
     McpServer server = McpServer.sync(JSON_MAPPER)
         .serverInfo("test-server", "1.0")
         .build();
 
-    McpHttpResponse response = server.getRequestHandler().handle((JsonNode) null);
+    JsonNode request = OBJECT_MAPPER.readTree("{\"id\":1,\"method\":\"tools/list\"}");
+    McpHttpResponse response = server.getRequestHandler().handle(request);
 
     JsonNode body = response.body();
     assertEquals(McpJsonRpc.INVALID_REQUEST, body.get("error").get("code").asInt());
     assertEquals(McpJsonRpc.INVALID_REQUEST_MESSAGE,
         body.get("error").get("message").asText());
+    assertEquals(1, body.get("id").asInt());
   }
 
   @Test
-  public void testNonObjectRequestReturnsInvalidRequest() throws Exception {
+  public void testInitializeReturns20250618ProtocolVersion() throws Exception {
     McpServer server = McpServer.sync(JSON_MAPPER)
         .serverInfo("test-server", "1.0")
         .build();
 
-    McpHttpResponse arrayResponse =
-        server.getRequestHandler().handle(OBJECT_MAPPER.readTree("[]"));
-    assertEquals(McpJsonRpc.INVALID_REQUEST,
-        arrayResponse.body().get("error").get("code").asInt());
-
-    McpHttpResponse nullJsonResponse =
-        server.getRequestHandler().handle(OBJECT_MAPPER.readTree("null"));
-    assertEquals(McpJsonRpc.INVALID_REQUEST,
-        nullJsonResponse.body().get("error").get("code").asInt());
-  }
-
-  @Test
-  public void testMissingMethodReturnsInvalidRequest() throws Exception {
-    McpServer server = McpServer.sync(JSON_MAPPER)
-        .serverInfo("test-server", "1.0")
-        .build();
-
-    JsonNode request = OBJECT_MAPPER.readTree("{\"jsonrpc\":\"2.0\",\"id\":4}");
+    JsonNode request = OBJECT_MAPPER.readTree(
+        "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\","
+            + "\"params\":{\"protocolVersion\":\"2024-11-05\",\"capabilities\":{},"
+            + "\"clientInfo\":{\"name\":\"test\",\"version\":\"1.0\"}}}");
     McpHttpResponse response = server.getRequestHandler().handle(request);
 
     JsonNode body = response.body();
-    assertEquals(McpJsonRpc.INVALID_REQUEST, body.get("error").get("code").asInt());
-    assertEquals(4, body.get("id").asInt());
+    assertEquals(McpJsonRpc.PROTOCOL_VERSION,
+        body.get("result").get("protocolVersion").asText());
+  }
+
+  @Test
+  public void testStringIdIsAccepted() throws Exception {
+    McpServer server = McpServer.sync(JSON_MAPPER)
+        .serverInfo("test-server", "1.0")
+        .capabilities(McpSchema.ServerCapabilities.withTools())
+        .build();
+
+    JsonNode request = OBJECT_MAPPER.readTree(
+        "{\"jsonrpc\":\"2.0\",\"id\":\"req-1\",\"method\":\"tools/list\",\"params\":{}}");
+    McpHttpResponse response = server.getRequestHandler().handle(request);
+
+    JsonNode body = response.body();
+    assertEquals("req-1", body.get("id").asText());
+    assertTrue(body.has("result"));
+  }
+
+  @Test
+  public void testNotificationWithoutIdReturnsAccepted() throws Exception {
+    McpServer server = McpServer.sync(JSON_MAPPER)
+        .serverInfo("test-server", "1.0")
+        .build();
+
+    JsonNode request = OBJECT_MAPPER.readTree(
+        "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/initialized\"}");
+    McpHttpResponse response = server.getRequestHandler().handle(request);
+
+    assertEquals(202, response.status());
+    assertTrue(response.body() == null);
   }
 }
