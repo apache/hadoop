@@ -92,6 +92,100 @@ public class TestMcpHttpServlet {
   }
 
   @Test
+  public void testToolHandlerExceptionReturnsErrorResult() throws Exception {
+    McpServer server = McpServer.sync(JSON_MAPPER)
+        .serverInfo("test-server", "1.0")
+        .capabilities(McpSchema.ServerCapabilities.withTools())
+        .toolCall(McpSchema.Tool.of("boom", "Throws", JSON_MAPPER,
+                "{\"type\":\"object\",\"properties\":{}}"),
+            (context, args) -> {
+              throw new RuntimeException("boom");
+            })
+        .build();
+
+    JsonNode request = OBJECT_MAPPER.readTree(
+        "{\"jsonrpc\":\"2.0\",\"id\":8,\"method\":\"tools/call\","
+            + "\"params\":{\"name\":\"boom\",\"arguments\":{}}}");
+    McpHttpResponse response = server.getRequestHandler().handle(request);
+
+    assertEquals(200, response.status());
+    JsonNode body = response.body();
+    assertEquals(8, body.get("id").asInt());
+    assertTrue(body.has("result"));
+    assertTrue(!body.has("error"));
+    assertTrue(body.get("result").get("isError").asBoolean());
+    assertTrue(body.get("result").get("content").get(0).get("text").asText().contains("boom"));
+  }
+
+  @Test
+  public void testNonObjectArgumentsReturnsInvalidParams() throws Exception {
+    McpServer server = buildEchoServer();
+
+    JsonNode stringArgsRequest = OBJECT_MAPPER.readTree(
+        "{\"jsonrpc\":\"2.0\",\"id\":5,\"method\":\"tools/call\","
+            + "\"params\":{\"name\":\"echo\",\"arguments\":\"oops\"}}");
+    McpHttpResponse stringArgsResponse = server.getRequestHandler().handle(stringArgsRequest);
+    JsonNode stringArgsBody = stringArgsResponse.body();
+    assertEquals(McpJsonRpc.INVALID_PARAMS, stringArgsBody.get("error").get("code").asInt());
+    assertEquals("arguments must be a JSON object",
+        stringArgsBody.get("error").get("message").asText());
+    assertEquals(5, stringArgsBody.get("id").asInt());
+
+    JsonNode arrayArgsRequest = OBJECT_MAPPER.readTree(
+        "{\"jsonrpc\":\"2.0\",\"id\":6,\"method\":\"tools/call\","
+            + "\"params\":{\"name\":\"echo\",\"arguments\":[]}}");
+    McpHttpResponse arrayArgsResponse = server.getRequestHandler().handle(arrayArgsRequest);
+    JsonNode arrayArgsBody = arrayArgsResponse.body();
+    assertEquals(McpJsonRpc.INVALID_PARAMS, arrayArgsBody.get("error").get("code").asInt());
+    assertEquals("arguments must be a JSON object",
+        arrayArgsBody.get("error").get("message").asText());
+    assertEquals(6, arrayArgsBody.get("id").asInt());
+  }
+
+  @Test
+  public void testOmittedArgumentsUsesEmptyMap() throws Exception {
+    McpServer server = buildEchoServer();
+
+    JsonNode request = OBJECT_MAPPER.readTree(
+        "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\","
+            + "\"params\":{\"name\":\"echo\"}}");
+    McpHttpResponse response = server.getRequestHandler().handle(request);
+
+    assertEquals(200, response.status());
+    JsonNode body = response.body();
+    assertEquals(7, body.get("id").asInt());
+    assertTrue(body.has("result"));
+  }
+
+  private static McpServer buildEchoServer() {
+    return McpServer.sync(JSON_MAPPER)
+        .serverInfo("test-server", "1.0")
+        .capabilities(McpSchema.ServerCapabilities.withTools())
+        .toolCall(McpSchema.Tool.of("echo", "Echo input", JSON_MAPPER,
+                "{\"type\":\"object\",\"properties\":{}}"),
+            (context, args) -> McpSchema.CallToolResult.text("ok"))
+        .build();
+  }
+
+  @Test
+  public void testNonObjectParamsReturnsInvalidParams() throws Exception {
+    McpServer server = McpServer.sync(JSON_MAPPER)
+        .serverInfo("test-server", "1.0")
+        .capabilities(McpSchema.ServerCapabilities.withTools())
+        .build();
+
+    JsonNode request = OBJECT_MAPPER.readTree(
+        "{\"jsonrpc\":\"2.0\",\"id\":4,\"method\":\"tools/list\",\"params\":[]}");
+    McpHttpResponse response = server.getRequestHandler().handle(request);
+
+    assertEquals(200, response.status());
+    JsonNode body = response.body();
+    assertEquals(McpJsonRpc.INVALID_PARAMS, body.get("error").get("code").asInt());
+    assertEquals("params must be a JSON object", body.get("error").get("message").asText());
+    assertEquals(4, body.get("id").asInt());
+  }
+
+  @Test
   public void testInvalidEnvelopeRejectedByHandler() throws Exception {
     McpServer server = McpServer.sync(JSON_MAPPER)
         .serverInfo("test-server", "1.0")

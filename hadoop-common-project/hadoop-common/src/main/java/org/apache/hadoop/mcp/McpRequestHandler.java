@@ -94,6 +94,10 @@ public final class McpRequestHandler {
 
     JsonNode idNode = requestNode.get("id");
     JsonNode paramsNode = requestNode.get("params");
+    if (paramsNode != null && !paramsNode.isNull() && !paramsNode.isObject()) {
+      return jsonRpcResponses.error(idNode, McpJsonRpc.INVALID_PARAMS,
+          "params must be a JSON object");
+    }
     Map<String, Object> params = paramsNode == null || paramsNode.isNull()
         ? Collections.emptyMap()
         : objectMapper.convertValue(paramsNode, PARAMS_TYPE);
@@ -154,11 +158,24 @@ public final class McpRequestHandler {
     }
 
     Object argumentsObject = params.get("arguments");
-    Map<String, Object> arguments = argumentsObject instanceof Map
-        ? objectMapper.convertValue(objectMapper.valueToTree(argumentsObject), PARAMS_TYPE)
-        : Collections.emptyMap();
+    Map<String, Object> arguments;
+    if (argumentsObject == null) {
+      arguments = Collections.emptyMap();
+    } else if (!(argumentsObject instanceof Map)) {
+      return jsonRpcResponses.error(idNode, McpJsonRpc.INVALID_PARAMS,
+          "arguments must be a JSON object");
+    } else {
+      arguments = objectMapper.convertValue(
+          objectMapper.valueToTree(argumentsObject), PARAMS_TYPE);
+    }
 
-    return jsonRpcResponses.success(idNode, McpJsonRpcResponses.toResultMap(
-        registeredTool.call(context, arguments)));
+    final McpSchema.CallToolResult callResult;
+    try {
+      callResult = registeredTool.call(context, arguments);
+    } catch (Exception e) {
+      return jsonRpcResponses.success(idNode, McpJsonRpcResponses.toResultMap(
+          McpSchema.CallToolResult.error(e.getMessage())));
+    }
+    return jsonRpcResponses.success(idNode, McpJsonRpcResponses.toResultMap(callResult));
   }
 }
