@@ -237,11 +237,11 @@ public final class McpHttpServer implements AutoCloseable {
 
   private static String getPasswordString(Configuration conf, String name)
       throws IOException {
-    char[] passchars = conf.getPassword(name);
-    if (passchars == null) {
+    char[] password = conf.getPassword(name);
+    if (password == null) {
       return null;
     }
-    return new String(passchars);
+    return new String(password);
   }
 
   /** Local port of the connector (useful when bind port was 0). */

@@ -108,10 +108,6 @@ public final class McpSchema {
       return isError;
     }
 
-    public String firstText() {
-      return content.isEmpty() ? null : content.get(0).text();
-    }
-
     public static CallToolResult text(String text) {
       return new CallToolResult(Collections.singletonList(new TextContent(text)), false);
     }
