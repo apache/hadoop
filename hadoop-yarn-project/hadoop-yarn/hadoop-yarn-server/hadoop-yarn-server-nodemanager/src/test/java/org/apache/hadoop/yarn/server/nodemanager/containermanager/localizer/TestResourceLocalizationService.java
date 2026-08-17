@@ -70,6 +70,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerState;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.deletion.task.FileDeletionMatcher;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.deletion.task.FileDeletionTask;
 import org.apache.hadoop.yarn.server.nodemanager.executor.LocalizerStartContext;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -102,9 +103,12 @@ import org.apache.hadoop.yarn.api.records.SerializedException;
 import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
+import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.DrainDispatcher;
+import org.apache.hadoop.yarn.event.Event;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.DefaultContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
@@ -816,6 +820,56 @@ public class TestResourceLocalizationService {
       dispatcher.stop();
       delService.stop();
     }
+  }
+
+  @Test
+  @Timeout(value = 10)
+  @SuppressWarnings("unchecked") // mocked generics
+  public void testDownloadingResourcesCleanedUpWhenDispatchFails()
+      throws Exception {
+    Dispatcher dispatcher = mock(Dispatcher.class);
+    EventHandler<Event> eventHandler = mock(EventHandler.class);
+    when(dispatcher.getEventHandler()).thenReturn(eventHandler);
+    // Simulate the localizer thread being interrupted by a container kill:
+    // dispatching the failure event throws instead of completing.
+    Mockito.doThrow(new YarnRuntimeException(new InterruptedException()))
+        .when(eventHandler).handle(isA(ContainerResourceFailedEvent.class));
+
+    ContainerExecutor exec = mock(ContainerExecutor.class);
+    DeletionService delService = mock(DeletionService.class);
+    LocalDirsHandlerService dirsHandlerSpy = spy(new LocalDirsHandlerService());
+    dirsHandlerSpy.init(conf);
+    // Fail localization so LocalizerRunner.run() takes the error path.
+    Mockito.doThrow(new IOException("Simulated disk failure"))
+        .when(dirsHandlerSpy).getLocalPathForWrite(isA(String.class));
+
+    ResourceLocalizationService rls =
+        new ResourceLocalizationService(dispatcher, exec, delService,
+            dirsHandlerSpy, nmContext, metrics);
+
+    final ApplicationId appId =
+        BuilderUtils.newApplicationId(314159265358979L, 3);
+    final Container c = getMockContainer(appId, 42, "user0");
+    LocalizerRunner runner = rls.new LocalizerRunner(
+        new LocalizerContext("user0", c.getContainerId(), null),
+        c.getContainerId().toString());
+
+    // A resource that was in DOWNLOADING state when the localizer died.
+    LocalizedResource rsrc = mock(LocalizedResource.class);
+    when(rsrc.getLocalPath()).thenReturn(
+        new Path("/local/usercache/user0/filecache/10/foo.jar"));
+    LocalizerResourceRequestEvent scheduledEvent =
+        mock(LocalizerResourceRequestEvent.class);
+    when(scheduledEvent.getResource()).thenReturn(rsrc);
+    runner.scheduled.put(mock(LocalResourceRequest.class), scheduledEvent);
+
+    // Must not propagate the dispatch failure, and must still unlock the
+    // DOWNLOADING resource and schedule the deletion tasks.
+    runner.run();
+
+    verify(rsrc).unlock();
+    verify(delService, Mockito.atLeastOnce())
+        .delete(isA(FileDeletionTask.class));
   }
 
   @Test

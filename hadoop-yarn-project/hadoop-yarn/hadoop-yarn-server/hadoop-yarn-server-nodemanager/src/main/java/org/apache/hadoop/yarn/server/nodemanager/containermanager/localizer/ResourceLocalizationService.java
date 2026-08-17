@@ -1294,8 +1294,12 @@ public class ResourceLocalizationService extends CompositeService
           // On error, report failure to Container and signal ABORT
           // Notify resource of failed localization
           ContainerId cId = context.getContainerId();
-          dispatcher.getEventHandler().handle(new ContainerResourceFailedEvent(
-              cId, null, exception.getMessage()));
+          try {
+            dispatcher.getEventHandler().handle(new ContainerResourceFailedEvent(
+                cId, null, exception.getMessage()));
+          } catch (Exception e) {
+            LOG.info("Failed to send container resource failed event for " + cId.toString(), e);
+          }
         }
         List<Path> paths = new ArrayList<Path>();
         for (LocalizerResourceRequestEvent event : scheduled.values()) {
