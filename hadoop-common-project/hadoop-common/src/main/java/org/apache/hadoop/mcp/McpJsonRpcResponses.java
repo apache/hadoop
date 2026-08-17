@@ -63,14 +63,20 @@ final class McpJsonRpcResponses {
   McpHttpResponse error(JsonNode idNode, int code, String message) {
     ObjectNode response = objectMapper.createObjectNode();
     response.put("jsonrpc", McpJsonRpc.VERSION);
-    if (idNode != null && !idNode.isNull()) {
-      response.set("id", idNode);
-    }
+    setErrorResponseId(response, idNode);
     ObjectNode error = objectMapper.createObjectNode();
     error.put("code", code);
     error.put("message", message);
     response.set("error", error);
     return McpHttpResponse.ok(response, Collections.emptyMap());
+  }
+
+  private void setErrorResponseId(ObjectNode response, JsonNode idNode) {
+    if (idNode != null && !idNode.isNull()) {
+      response.set("id", idNode);
+    } else {
+      response.putNull("id");
+    }
   }
 
   static Map<String, Object> toResultMap(CallToolResult callResult) {

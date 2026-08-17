@@ -118,6 +118,29 @@ public class TestMcpHttpServlet {
   }
 
   @Test
+  public void testToolHandlerExceptionWithoutMessageUsesFallback() throws Exception {
+    McpServer server = McpServer.sync(JSON_MAPPER)
+        .serverInfo("test-server", "1.0")
+        .capabilities(McpSchema.ServerCapabilities.withTools())
+        .toolCall(McpSchema.Tool.of("fail", "Throws without message", JSON_MAPPER,
+                "{\"type\":\"object\",\"properties\":{}}"),
+            (context, args) -> {
+              throw new RuntimeException();
+            })
+        .build();
+
+    JsonNode request = OBJECT_MAPPER.readTree(
+        "{\"jsonrpc\":\"2.0\",\"id\":9,\"method\":\"tools/call\","
+            + "\"params\":{\"name\":\"fail\",\"arguments\":{}}}");
+    McpHttpResponse response = server.getRequestHandler().handle(request);
+
+    JsonNode body = response.body();
+    assertTrue(body.get("result").get("isError").asBoolean());
+    assertEquals("Tool execution failed",
+        body.get("result").get("content").get(0).get("text").asText());
+  }
+
+  @Test
   public void testNonObjectArgumentsReturnsInvalidParams() throws Exception {
     McpServer server = buildEchoServer();
 

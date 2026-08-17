@@ -49,6 +49,8 @@ public final class McpRequestHandler {
   public static final String METHOD_TOOLS_LIST = "tools/list";
   public static final String METHOD_TOOLS_CALL = "tools/call";
 
+  private static final String TOOL_EXECUTION_FAILED_MESSAGE = "Tool execution failed";
+
   private static final TypeReference<Map<String, Object>> PARAMS_TYPE = new TypeReference<>() {};
 
   private final ObjectMapper objectMapper;
@@ -173,8 +175,12 @@ public final class McpRequestHandler {
     try {
       callResult = registeredTool.call(context, arguments);
     } catch (Exception e) {
+      String message = e.getMessage();
+      if (message == null || message.isEmpty()) {
+        message = TOOL_EXECUTION_FAILED_MESSAGE;
+      }
       return jsonRpcResponses.success(idNode, McpJsonRpcResponses.toResultMap(
-          McpSchema.CallToolResult.error(e.getMessage())));
+          McpSchema.CallToolResult.error(message)));
     }
     return jsonRpcResponses.success(idNode, McpJsonRpcResponses.toResultMap(callResult));
   }

@@ -20,6 +20,7 @@ package org.apache.hadoop.mcp;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.io.InputStream;
@@ -181,6 +182,8 @@ public class TestMcpHttpServer {
         response = OBJECT_MAPPER.readTree(in);
       }
       assertEquals(McpJsonRpc.PARSE_ERROR, response.get("error").get("code").asInt());
+      assertTrue(response.has("id"));
+      assertTrue(response.get("id").isNull());
     }
   }
 
@@ -208,6 +211,8 @@ public class TestMcpHttpServer {
         response = OBJECT_MAPPER.readTree(in);
       }
       assertEquals(McpJsonRpc.PARSE_ERROR, response.get("error").get("code").asInt());
+      assertTrue(response.has("id"));
+      assertTrue(response.get("id").isNull());
     }
   }
 }

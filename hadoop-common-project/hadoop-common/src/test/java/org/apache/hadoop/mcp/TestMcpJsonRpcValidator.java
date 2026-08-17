@@ -126,6 +126,16 @@ public class TestMcpJsonRpcValidator {
   }
 
   @Test
+  public void testErrorResponseIncludesNullIdWhenRequestIdUnknown() {
+    McpHttpResponse response = responses.error(null, McpJsonRpc.PARSE_ERROR,
+        McpJsonRpc.PARSE_ERROR_MESSAGE);
+    JsonNode body = response.body();
+    assertTrue(body.has("id"));
+    assertTrue(body.get("id").isNull());
+    assertEquals(McpJsonRpc.PARSE_ERROR, body.get("error").get("code").asInt());
+  }
+
+  @Test
   public void testIsNotification() {
     assertTrue(McpJsonRpcValidator.isNotification("notifications/initialized"));
     assertTrue(McpJsonRpcValidator.isNotification("notifications/tools/list_changed"));
@@ -136,7 +146,8 @@ public class TestMcpJsonRpcValidator {
     JsonNode body = response.body();
     assertEquals(McpJsonRpc.INVALID_REQUEST, body.get("error").get("code").asInt());
     if (expectedId == null) {
-      assertTrue(!body.has("id") || body.get("id").isNull());
+      assertTrue(body.has("id"));
+      assertTrue(body.get("id").isNull());
     } else {
       assertEquals(expectedId.intValue(), body.get("id").asInt());
     }
