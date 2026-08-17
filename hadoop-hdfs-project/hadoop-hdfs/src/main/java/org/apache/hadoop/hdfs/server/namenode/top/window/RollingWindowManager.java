@@ -252,6 +252,7 @@ public class RollingWindowManager {
     RollingWindowMap rwMap = metricMap.computeIfAbsent(
         command, key -> new RollingWindowMap());
 
+    // Use compute to make action on RollingWindow atomic
     rwMap.compute(user, (key, window) -> {
       if (window == null) {
         window = new RollingWindow(windowLenMs, bucketsPerWindow);
@@ -314,6 +315,7 @@ public class RollingWindowManager {
       RollingWindowMap rollingWindows) {
     UserCounts topN = new UserCounts(topUsersCnt);
     for (String userName : rollingWindows.keySet()) {
+      // Use computeIfPresent to make action on RollingWindow atomic
       rollingWindows.computeIfPresent(userName, (key, window) -> {
         long windowSum = window.getSum(time);
         if (windowSum == 0) {
