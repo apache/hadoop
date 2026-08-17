@@ -38,30 +38,30 @@ export type QueuePropertyAccessor = (
  * Check whether Dynamic Queue Creation is enabled for a queue. A queue with
  * auto queue creation enabled acts as a parent even though it currently has no
  * static child queues, so it must be selectable as a parent queue in placement rules.
+ *
+ * Staged, not yet applied changes take precedence, if the operator has staged an
+ * override for either auto creation property, that staged view is the source of
+ * truth. Only when neither property has a staged override do we fall back to the
+ * live scheduler view
  */
 function hasAutoQueueCreation(
   queue: QueueInfo,
   getQueuePropertyValue?: QueuePropertyAccessor,
 ): boolean {
-  const eligibility = queue.autoCreationEligibility;
-  if (
-    eligibility === AUTO_CREATION_PROPS.ELIGIBILITY_FLEXIBLE ||
-    eligibility === AUTO_CREATION_PROPS.ELIGIBILITY_LEGACY
-  ) {
-    return true;
-  }
-
   if (getQueuePropertyValue) {
-    const flexibleEnabled =
-      getQueuePropertyValue(queue.queuePath, AUTO_CREATION_PROPS.FLEXIBLE_ENABLED).value === 'true';
-    const legacyEnabled =
-      getQueuePropertyValue(queue.queuePath, AUTO_CREATION_PROPS.LEGACY_ENABLED).value === 'true';
-    if (flexibleEnabled || legacyEnabled) {
-      return true;
+    const flexible = getQueuePropertyValue(queue.queuePath, AUTO_CREATION_PROPS.FLEXIBLE_ENABLED);
+    const legacy = getQueuePropertyValue(queue.queuePath, AUTO_CREATION_PROPS.LEGACY_ENABLED);
+
+    if (flexible.isStaged || legacy.isStaged) {
+      return flexible.value === 'true' || legacy.value === 'true';
     }
   }
 
-  return false;
+  const eligibility = queue.autoCreationEligibility;
+  return (
+    eligibility === AUTO_CREATION_PROPS.ELIGIBILITY_FLEXIBLE ||
+    eligibility === AUTO_CREATION_PROPS.ELIGIBILITY_LEGACY
+  );
 }
 
 /**
