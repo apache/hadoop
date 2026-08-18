@@ -17,17 +17,11 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import {
-  resolveRootCapacityStagingForFlexibleAutoCreation,
-  resolveRootCapacityStagingWhenEnablingFlexibleAutoCreation,
-  resolveRootCapacityStagingWhenDisablingFlexibleAutoCreation,
-  ROOT_FLEXIBLE_AUTO_CREATION_WEIGHT_CAPACITY,
-  ROOT_FLEXIBLE_AUTO_CREATION_PERCENTAGE_CAPACITY,
-} from './rootFlexibleAutoCreation';
+import { resolveRootCapacityStagingForFlexibleAutoCreation } from './rootFlexibleAutoCreation';
 import { AUTO_CREATION_PROPS } from '~/types/constants/auto-creation';
 import { SPECIAL_VALUES } from '~/types/constants/special-values';
 
-describe('root flexible auto-creation capacity staging', () => {
+describe('resolveRootCapacityStagingForFlexibleAutoCreation', () => {
   const createGetQueuePropertyValue =
     (values: Record<string, string>) => (_queuePath: string, propertyName: string) => ({
       value: values[propertyName] ?? '',
@@ -36,151 +30,95 @@ describe('root flexible auto-creation capacity staging', () => {
 
   const legacyConfig = new Map([[SPECIAL_VALUES.LEGACY_MODE_PROPERTY, 'true']]);
 
-  describe('resolveRootCapacityStagingWhenEnablingFlexibleAutoCreation', () => {
-    it('returns 1w when enabling on root with percentage capacity', () => {
-      const result = resolveRootCapacityStagingWhenEnablingFlexibleAutoCreation({
-        queuePath: SPECIAL_VALUES.ROOT_QUEUE_NAME,
-        changedData: { [AUTO_CREATION_PROPS.FLEXIBLE_ENABLED]: 'true' },
-        getQueuePropertyValue: createGetQueuePropertyValue({ capacity: '100' }),
-        configData: legacyConfig,
-      });
-
-      expect(result).toEqual({
-        capacity: ROOT_FLEXIBLE_AUTO_CREATION_WEIGHT_CAPACITY,
-        direction: 'to-weight',
-      });
+  it('returns 1w when enabling flexible auto-creation on root with percentage capacity', () => {
+    const result = resolveRootCapacityStagingForFlexibleAutoCreation({
+      queuePath: SPECIAL_VALUES.ROOT_QUEUE_NAME,
+      changedData: { [AUTO_CREATION_PROPS.FLEXIBLE_ENABLED]: 'true' },
+      getQueuePropertyValue: createGetQueuePropertyValue({ capacity: '100' }),
+      configData: legacyConfig,
     });
 
-    it('returns null when root already uses weight capacity', () => {
-      const result = resolveRootCapacityStagingWhenEnablingFlexibleAutoCreation({
-        queuePath: SPECIAL_VALUES.ROOT_QUEUE_NAME,
-        changedData: { [AUTO_CREATION_PROPS.FLEXIBLE_ENABLED]: 'true' },
-        getQueuePropertyValue: createGetQueuePropertyValue({ capacity: '2w' }),
-        configData: legacyConfig,
-      });
-
-      expect(result).toBeNull();
-    });
-
-    it('returns null when disabling flexible auto-creation', () => {
-      const result = resolveRootCapacityStagingWhenEnablingFlexibleAutoCreation({
-        queuePath: SPECIAL_VALUES.ROOT_QUEUE_NAME,
-        changedData: { [AUTO_CREATION_PROPS.FLEXIBLE_ENABLED]: 'false' },
-        getQueuePropertyValue: createGetQueuePropertyValue({ capacity: '100' }),
-        configData: legacyConfig,
-      });
-
-      expect(result).toBeNull();
+    expect(result).toEqual({
+      capacity: '1w',
+      direction: 'to-weight',
     });
   });
 
-  describe('resolveRootCapacityStagingWhenDisablingFlexibleAutoCreation', () => {
-    it('returns 100 when disabling on root with weight capacity', () => {
-      const result = resolveRootCapacityStagingWhenDisablingFlexibleAutoCreation({
-        queuePath: SPECIAL_VALUES.ROOT_QUEUE_NAME,
-        changedData: { [AUTO_CREATION_PROPS.FLEXIBLE_ENABLED]: 'false' },
-        getQueuePropertyValue: createGetQueuePropertyValue({
-          capacity: '1w',
-          [AUTO_CREATION_PROPS.FLEXIBLE_ENABLED]: 'true',
-        }),
-        configData: legacyConfig,
-      });
-
-      expect(result).toEqual({
-        capacity: ROOT_FLEXIBLE_AUTO_CREATION_PERCENTAGE_CAPACITY,
-        direction: 'to-percentage',
-      });
+  it('returns 100 when disabling flexible auto-creation on root with weight capacity', () => {
+    const result = resolveRootCapacityStagingForFlexibleAutoCreation({
+      queuePath: SPECIAL_VALUES.ROOT_QUEUE_NAME,
+      changedData: { [AUTO_CREATION_PROPS.FLEXIBLE_ENABLED]: 'false' },
+      getQueuePropertyValue: createGetQueuePropertyValue({
+        capacity: '1w',
+        [AUTO_CREATION_PROPS.FLEXIBLE_ENABLED]: 'true',
+      }),
+      configData: legacyConfig,
     });
 
-    it('returns null when flexible auto-creation was not enabled', () => {
-      const result = resolveRootCapacityStagingWhenDisablingFlexibleAutoCreation({
-        queuePath: SPECIAL_VALUES.ROOT_QUEUE_NAME,
-        changedData: { [AUTO_CREATION_PROPS.FLEXIBLE_ENABLED]: 'false' },
-        getQueuePropertyValue: createGetQueuePropertyValue({
-          capacity: '1w',
-          [AUTO_CREATION_PROPS.FLEXIBLE_ENABLED]: 'false',
-        }),
-        configData: legacyConfig,
-      });
-
-      expect(result).toBeNull();
-    });
-
-    it('returns null when root already uses percentage capacity', () => {
-      const result = resolveRootCapacityStagingWhenDisablingFlexibleAutoCreation({
-        queuePath: SPECIAL_VALUES.ROOT_QUEUE_NAME,
-        changedData: { [AUTO_CREATION_PROPS.FLEXIBLE_ENABLED]: 'false' },
-        getQueuePropertyValue: createGetQueuePropertyValue({
-          capacity: '100',
-          [AUTO_CREATION_PROPS.FLEXIBLE_ENABLED]: 'true',
-        }),
-        configData: legacyConfig,
-      });
-
-      expect(result).toBeNull();
+    expect(result).toEqual({
+      capacity: '100%',
+      direction: 'to-percentage',
     });
   });
 
-  describe('resolveRootCapacityStagingForFlexibleAutoCreation', () => {
-    it('delegates to the enable handler when turning flexible auto-creation on', () => {
-      const result = resolveRootCapacityStagingForFlexibleAutoCreation({
-        queuePath: SPECIAL_VALUES.ROOT_QUEUE_NAME,
-        changedData: { [AUTO_CREATION_PROPS.FLEXIBLE_ENABLED]: 'true' },
-        getQueuePropertyValue: createGetQueuePropertyValue({ capacity: '100' }),
-        configData: legacyConfig,
-      });
-
-      expect(result?.direction).toBe('to-weight');
+  it('returns null for non-root queues', () => {
+    const result = resolveRootCapacityStagingForFlexibleAutoCreation({
+      queuePath: 'root.default',
+      changedData: { [AUTO_CREATION_PROPS.FLEXIBLE_ENABLED]: 'true' },
+      getQueuePropertyValue: createGetQueuePropertyValue({ capacity: '2w' }),
+      configData: legacyConfig,
     });
 
-    it('delegates to the disable handler when turning flexible auto-creation off', () => {
-      const result = resolveRootCapacityStagingForFlexibleAutoCreation({
-        queuePath: SPECIAL_VALUES.ROOT_QUEUE_NAME,
-        changedData: { [AUTO_CREATION_PROPS.FLEXIBLE_ENABLED]: 'false' },
-        getQueuePropertyValue: createGetQueuePropertyValue({
-          capacity: '1w',
-          [AUTO_CREATION_PROPS.FLEXIBLE_ENABLED]: 'true',
-        }),
-        configData: legacyConfig,
-      });
+    expect(result).toBeNull();
+  });
 
-      expect(result?.direction).toBe('to-percentage');
+  it('returns null when legacy mode is disabled', () => {
+    const result = resolveRootCapacityStagingForFlexibleAutoCreation({
+      queuePath: SPECIAL_VALUES.ROOT_QUEUE_NAME,
+      changedData: { [AUTO_CREATION_PROPS.FLEXIBLE_ENABLED]: 'true' },
+      getQueuePropertyValue: createGetQueuePropertyValue({ capacity: '100' }),
+      configData: new Map([[SPECIAL_VALUES.LEGACY_MODE_PROPERTY, 'false']]),
     });
 
-    it('returns null for non-root queues', () => {
-      const result = resolveRootCapacityStagingForFlexibleAutoCreation({
-        queuePath: 'root.default',
-        changedData: { [AUTO_CREATION_PROPS.FLEXIBLE_ENABLED]: 'true' },
-        getQueuePropertyValue: createGetQueuePropertyValue({ capacity: '2w' }),
-        configData: legacyConfig,
-      });
+    expect(result).toBeNull();
+  });
 
-      expect(result).toBeNull();
+  it('returns null when root already uses weight capacity while enabling', () => {
+    const result = resolveRootCapacityStagingForFlexibleAutoCreation({
+      queuePath: SPECIAL_VALUES.ROOT_QUEUE_NAME,
+      changedData: { [AUTO_CREATION_PROPS.FLEXIBLE_ENABLED]: 'true' },
+      getQueuePropertyValue: createGetQueuePropertyValue({ capacity: '2w' }),
+      configData: legacyConfig,
     });
 
-    it('returns null when legacy mode is disabled', () => {
-      const result = resolveRootCapacityStagingForFlexibleAutoCreation({
-        queuePath: SPECIAL_VALUES.ROOT_QUEUE_NAME,
-        changedData: { [AUTO_CREATION_PROPS.FLEXIBLE_ENABLED]: 'true' },
-        getQueuePropertyValue: createGetQueuePropertyValue({ capacity: '100' }),
-        configData: new Map([[SPECIAL_VALUES.LEGACY_MODE_PROPERTY, 'false']]),
-      });
+    expect(result).toBeNull();
+  });
 
-      expect(result).toBeNull();
+  it('returns null when flexible auto-creation was not enabled while disabling', () => {
+    const result = resolveRootCapacityStagingForFlexibleAutoCreation({
+      queuePath: SPECIAL_VALUES.ROOT_QUEUE_NAME,
+      changedData: { [AUTO_CREATION_PROPS.FLEXIBLE_ENABLED]: 'false' },
+      getQueuePropertyValue: createGetQueuePropertyValue({
+        capacity: '1w',
+        [AUTO_CREATION_PROPS.FLEXIBLE_ENABLED]: 'false',
+      }),
+      configData: legacyConfig,
     });
 
-    it('returns null when capacity is already being changed explicitly', () => {
-      const result = resolveRootCapacityStagingForFlexibleAutoCreation({
-        queuePath: SPECIAL_VALUES.ROOT_QUEUE_NAME,
-        changedData: {
-          [AUTO_CREATION_PROPS.FLEXIBLE_ENABLED]: 'true',
-          capacity: '2w',
-        },
-        getQueuePropertyValue: createGetQueuePropertyValue({ capacity: '100' }),
-        configData: legacyConfig,
-      });
+    expect(result).toBeNull();
+  });
 
-      expect(result).toBeNull();
+  it('returns null when root already uses percentage capacity while disabling', () => {
+    const result = resolveRootCapacityStagingForFlexibleAutoCreation({
+      queuePath: SPECIAL_VALUES.ROOT_QUEUE_NAME,
+      changedData: { [AUTO_CREATION_PROPS.FLEXIBLE_ENABLED]: 'false' },
+      getQueuePropertyValue: createGetQueuePropertyValue({
+        capacity: '100',
+        [AUTO_CREATION_PROPS.FLEXIBLE_ENABLED]: 'true',
+      }),
+      configData: legacyConfig,
     });
+
+    expect(result).toBeNull();
   });
 });

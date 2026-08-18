@@ -20,14 +20,10 @@ import { AUTO_CREATION_PROPS } from '~/types/constants/auto-creation';
 import { SPECIAL_VALUES } from '~/types/constants/special-values';
 import { getCapacityType } from '~/utils/capacityUtils';
 
-export const ROOT_FLEXIBLE_AUTO_CREATION_WEIGHT_CAPACITY = '1w';
-export const ROOT_FLEXIBLE_AUTO_CREATION_PERCENTAGE_CAPACITY = '100';
-
-export type RootCapacityAutoStagingDirection = 'to-weight' | 'to-percentage';
 
 export interface RootCapacityAutoStagingResult {
   capacity: string;
-  direction: RootCapacityAutoStagingDirection;
+  direction: 'to-weight' | 'to-percentage';
 }
 
 export interface ResolveRootCapacityStagingOptions {
@@ -56,11 +52,7 @@ function canAutoStageRootCapacity({
   return configData.get(SPECIAL_VALUES.LEGACY_MODE_PROPERTY) !== 'false';
 }
 
-/**
- * Legacy mode requires root to use weight capacity when flexible auto-creation is enabled.
- * Convert 100% -> 1w when the toggle is turned on.
- */
-export function resolveRootCapacityStagingWhenEnablingFlexibleAutoCreation(
+function resolveRootCapacityStagingWhenEnablingFlexibleAutoCreation(
   options: ResolveRootCapacityStagingOptions,
 ): RootCapacityAutoStagingResult | null {
   if (!canAutoStageRootCapacity(options)) {
@@ -77,16 +69,12 @@ export function resolveRootCapacityStagingWhenEnablingFlexibleAutoCreation(
   }
 
   return {
-    capacity: ROOT_FLEXIBLE_AUTO_CREATION_WEIGHT_CAPACITY,
+    capacity: '1w',
     direction: 'to-weight',
   };
 }
 
-/**
- * Restore root to percentage capacity when flexible auto-creation is turned off.
- * Convert 1w -> 100%.
- */
-export function resolveRootCapacityStagingWhenDisablingFlexibleAutoCreation(
+function resolveRootCapacityStagingWhenDisablingFlexibleAutoCreation(
   options: ResolveRootCapacityStagingOptions,
 ): RootCapacityAutoStagingResult | null {
   if (!canAutoStageRootCapacity(options)) {
@@ -112,11 +100,16 @@ export function resolveRootCapacityStagingWhenDisablingFlexibleAutoCreation(
   }
 
   return {
-    capacity: ROOT_FLEXIBLE_AUTO_CREATION_PERCENTAGE_CAPACITY,
+    capacity: '100%',
     direction: 'to-percentage',
   };
 }
 
+/**
+ * Restore root capacity when flexible auto-creation is toggled.
+ * Convert 100% -> 1w when the toggle is turned on.
+ * onvert 1w -> 100% when the toggle is turned off.
+ */
 export function resolveRootCapacityStagingForFlexibleAutoCreation(
   options: ResolveRootCapacityStagingOptions,
 ): RootCapacityAutoStagingResult | null {
