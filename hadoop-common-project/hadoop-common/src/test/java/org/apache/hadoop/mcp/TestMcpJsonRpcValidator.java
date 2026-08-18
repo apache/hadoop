@@ -70,6 +70,20 @@ public class TestMcpJsonRpcValidator {
   }
 
   @Test
+  public void testNullParamsIsInvalid() throws Exception {
+    JsonNode request = OBJECT_MAPPER.readTree(
+        "{\"jsonrpc\":\"2.0\",\"id\":3,\"method\":\"tools/list\",\"params\":null}");
+    assertInvalid(request, 3);
+  }
+
+  @Test
+  public void testNullParamsOnNotificationIsInvalid() throws Exception {
+    JsonNode request = OBJECT_MAPPER.readTree(
+        "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/initialized\",\"params\":null}");
+    assertInvalid(request, null);
+  }
+
+  @Test
   public void testValidRequestAccepted() throws Exception {
     JsonNode request = OBJECT_MAPPER.readTree(
         "{\"jsonrpc\":\"2.0\",\"id\":4,\"method\":\"tools/list\"}");
@@ -84,10 +98,10 @@ public class TestMcpJsonRpcValidator {
   }
 
   @Test
-  public void testMissingRequestIdIsInvalid() throws Exception {
+  public void testMissingRequestIdAcceptedAsNotification() throws Exception {
     JsonNode request = OBJECT_MAPPER.readTree(
         "{\"jsonrpc\":\"2.0\",\"method\":\"tools/list\"}");
-    assertInvalid(request, null);
+    assertNull(McpJsonRpcValidator.validate(request, responses));
   }
 
   @Test
@@ -112,10 +126,10 @@ public class TestMcpJsonRpcValidator {
   }
 
   @Test
-  public void testNotificationWithIdIsInvalid() throws Exception {
+  public void testNotificationWithIdAcceptedAsRequest() throws Exception {
     JsonNode request = OBJECT_MAPPER.readTree(
         "{\"jsonrpc\":\"2.0\",\"id\":5,\"method\":\"notifications/initialized\"}");
-    assertInvalid(request, 5);
+    assertNull(McpJsonRpcValidator.validate(request, responses));
   }
 
   @Test
@@ -136,9 +150,13 @@ public class TestMcpJsonRpcValidator {
   }
 
   @Test
-  public void testIsNotification() {
-    assertTrue(McpJsonRpcValidator.isNotification("notifications/initialized"));
-    assertTrue(McpJsonRpcValidator.isNotification("notifications/tools/list_changed"));
+  public void testIsJsonRpcNotification() throws Exception {
+    JsonNode notification = OBJECT_MAPPER.readTree(
+        "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/initialized\"}");
+    JsonNode request = OBJECT_MAPPER.readTree(
+        "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}");
+    assertTrue(McpJsonRpcValidator.isJsonRpcNotification(notification));
+    assertTrue(!McpJsonRpcValidator.isJsonRpcNotification(request));
   }
 
   private void assertInvalid(JsonNode request, Integer expectedId) {

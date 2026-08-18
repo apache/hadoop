@@ -166,6 +166,21 @@ public class TestMcpHttpServlet {
   }
 
   @Test
+  public void testNullArgumentsReturnsInvalidParams() throws Exception {
+    McpServer server = buildEchoServer();
+
+    JsonNode request = OBJECT_MAPPER.readTree(
+        "{\"jsonrpc\":\"2.0\",\"id\":8,\"method\":\"tools/call\","
+            + "\"params\":{\"name\":\"echo\",\"arguments\":null}}");
+    McpHttpResponse response = server.getRequestHandler().handle(request);
+    JsonNode body = response.body();
+    assertEquals(McpJsonRpc.INVALID_PARAMS, body.get("error").get("code").asInt());
+    assertEquals("arguments must be a JSON object",
+        body.get("error").get("message").asText());
+    assertEquals(8, body.get("id").asInt());
+  }
+
+  @Test
   public void testOmittedArgumentsUsesEmptyMap() throws Exception {
     McpServer server = buildEchoServer();
 
@@ -255,6 +270,21 @@ public class TestMcpHttpServlet {
     JsonNode body = response.body();
     assertEquals("req-1", body.get("id").asText());
     assertTrue(body.has("result"));
+  }
+
+  @Test
+  public void testRequestMethodWithoutIdReturnsAccepted() throws Exception {
+    McpServer server = McpServer.sync(JSON_MAPPER)
+        .serverInfo("test-server", "1.0")
+        .capabilities(McpSchema.ServerCapabilities.withTools())
+        .build();
+
+    JsonNode request = OBJECT_MAPPER.readTree(
+        "{\"jsonrpc\":\"2.0\",\"method\":\"tools/list\",\"params\":{}}");
+    McpHttpResponse response = server.getRequestHandler().handle(request);
+
+    assertEquals(202, response.status());
+    assertTrue(response.body() == null);
   }
 
   @Test

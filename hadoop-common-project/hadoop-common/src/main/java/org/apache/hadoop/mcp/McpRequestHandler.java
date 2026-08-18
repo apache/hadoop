@@ -89,18 +89,18 @@ public final class McpRequestHandler {
       return error;
     }
 
-    String method = requestNode.get("method").asText();
-    if (McpJsonRpcValidator.isNotification(method)) {
+    if (McpJsonRpcValidator.isJsonRpcNotification(requestNode)) {
       return McpHttpResponse.notification();
     }
 
+    String method = requestNode.get("method").asText();
     JsonNode idNode = requestNode.get("id");
     JsonNode paramsNode = requestNode.get("params");
     if (paramsNode != null && !paramsNode.isNull() && !paramsNode.isObject()) {
       return jsonRpcResponses.error(idNode, McpJsonRpc.INVALID_PARAMS,
           "params must be a JSON object");
     }
-    Map<String, Object> params = paramsNode == null || paramsNode.isNull()
+    Map<String, Object> params = paramsNode == null
         ? Collections.emptyMap()
         : objectMapper.convertValue(paramsNode, PARAMS_TYPE);
 
@@ -161,8 +161,11 @@ public final class McpRequestHandler {
 
     Object argumentsObject = params.get("arguments");
     Map<String, Object> arguments;
-    if (argumentsObject == null) {
+    if (!params.containsKey("arguments")) {
       arguments = Collections.emptyMap();
+    } else if (argumentsObject == null) {
+      return jsonRpcResponses.error(idNode, McpJsonRpc.INVALID_PARAMS,
+          "arguments must be a JSON object");
     } else if (!(argumentsObject instanceof Map)) {
       return jsonRpcResponses.error(idNode, McpJsonRpc.INVALID_PARAMS,
           "arguments must be a JSON object");

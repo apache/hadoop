@@ -56,12 +56,13 @@ final class McpJsonRpcValidator {
           McpJsonRpc.INVALID_REQUEST_MESSAGE);
     }
 
-    String method = methodNode.asText();
-    if (isNotification(method)) {
-      if (requestNode.has("id")) {
-        return responses.error(responseId(requestNode), McpJsonRpc.INVALID_REQUEST,
-            McpJsonRpc.INVALID_REQUEST_MESSAGE);
-      }
+    JsonNode paramsNode = requestNode.get("params");
+    if (paramsNode != null && paramsNode.isNull()) {
+      return responses.error(responseId(requestNode), McpJsonRpc.INVALID_REQUEST,
+          McpJsonRpc.INVALID_REQUEST_MESSAGE);
+    }
+
+    if (isJsonRpcNotification(requestNode)) {
       return null;
     }
 
@@ -71,8 +72,8 @@ final class McpJsonRpcValidator {
     return null;
   }
 
-  static boolean isNotification(String method) {
-    return method.startsWith("notifications/");
+  static boolean isJsonRpcNotification(JsonNode requestNode) {
+    return !requestNode.has("id");
   }
 
   private static boolean isValidRequestId(JsonNode idNode) {
