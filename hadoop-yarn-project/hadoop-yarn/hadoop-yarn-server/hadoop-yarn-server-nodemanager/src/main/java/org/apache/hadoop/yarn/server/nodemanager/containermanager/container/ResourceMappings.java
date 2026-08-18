@@ -18,9 +18,11 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.container;
 
+import org.apache.commons.io.serialization.ValidatingObjectInputStream;
 import org.apache.commons.lang3.SerializationException;
 import org.apache.commons.lang3.SerializationUtils;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -89,9 +91,24 @@ public class ResourceMappings {
     public static AssignedResources fromBytes(byte[] bytes)
         throws IOException {
       final List<Serializable> resources;
-      try {
-        resources = SerializationUtils.deserialize(bytes);
-      } catch (SerializationException e) {
+      // The bytes come from the NM recovery state store and are read back
+      // during container recovery on restart. Deserialize through a
+      // ValidatingObjectInputStream so a tampered record cannot instantiate
+      // arbitrary serializable classes on the NodeManager classpath. The
+      // allowed graph is the assigned-resource value objects the resource
+      // plugins store (device / NUMA descriptors, plain strings) plus the
+      // collection types that wrap them.
+      try (ByteArrayInputStream bais = new ByteArrayInputStream(bytes);
+          ValidatingObjectInputStream ois =
+              new ValidatingObjectInputStream(bais)) {
+        ois.accept(
+            "org.apache.hadoop.yarn.server.nodemanager.*",
+            "org.apache.hadoop.thirdparty.com.google.common.collect.*",
+            "java.util.*",
+            "java.lang.*",
+            "[Ljava.lang.Object;");
+        resources = (List<Serializable>) ois.readObject();
+      } catch (ClassNotFoundException e) {
         throw new IOException(e);
       }
       AssignedResources ar = new AssignedResources();
