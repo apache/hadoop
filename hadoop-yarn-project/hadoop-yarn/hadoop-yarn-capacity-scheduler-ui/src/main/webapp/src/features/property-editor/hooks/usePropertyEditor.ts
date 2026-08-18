@@ -74,6 +74,7 @@ import { validatePropertyChange } from '~/features/validation/crossQueue';
 import { buildPropertyKey } from '~/utils/propertyUtils';
 import { CONFIG_PREFIXES } from '~/types';
 import { resolveInheritedValue, type InheritedValueInfo } from '~/utils/resolveInheritedValue';
+import { resolveRootCapacityStagingForFlexibleAutoCreation } from '~/features/property-editor/utils/rootFlexibleAutoCreation';
 
 function createFormSchema(
   properties: Array<
@@ -461,6 +462,16 @@ export function usePropertyEditor({
         }
       });
 
+      const stagedRootCapacity = resolveRootCapacityStagingForFlexibleAutoCreation({
+        queuePath,
+        changedData,
+        getQueuePropertyValue,
+        configData,
+      });
+      if (stagedRootCapacity) {
+        changedData.capacity = stagedRootCapacity.capacity;
+      }
+
       const pendingEntries = Object.entries(changedData);
 
       const previewConfigData = new Map(configData);
@@ -549,6 +560,12 @@ export function usePropertyEditor({
         success: true,
         message: `${stagedCount} change${stagedCount !== 1 ? 's' : ''} staged successfully!`,
       };
+
+      if (stagedRootCapacity?.direction === 'to-weight') {
+        toast.info('Root queue capacity was automatically converted from 100% to 1w for weight mode.');
+      } else if (stagedRootCapacity?.direction === 'to-percentage') {
+        toast.info('Root queue capacity was automatically converted from 1w to 100%.');
+      }
 
       if (stagedCount > 0) {
         const latestValues = form.getValues();
