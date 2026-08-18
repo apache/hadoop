@@ -558,8 +558,9 @@ public class TestZKDelegationTokenSecretManager {
         .build();
     curatorFramework.start();
     ZKDelegationTokenSecretManager.setCurator(curatorFramework);
+    DelegationTokenManager tm1 = null;
     try {
-      DelegationTokenManager tm1 = new DelegationTokenManager(conf, new Text("foo"));
+      tm1 = new DelegationTokenManager(conf, new Text("foo"));
 
       // When the init method is called,
       // the ZKDelegationTokenSecretManager#startThread method will be called,
@@ -572,9 +573,10 @@ public class TestZKDelegationTokenSecretManager {
       // Check if the created NameSpace exists.
       Stat stat = curatorFramework.checkExists().forPath(workingPath);
       assertNotNull(stat);
-
-      tm1.destroy();
     } finally {
+      if (tm1 != null) {
+        tm1.destroy();
+      }
       // Restore the default curator so later tests do not see a closed client.
       ZKDelegationTokenSecretManager.setCurator(null);
       curatorFramework.close();
@@ -628,11 +630,12 @@ public class TestZKDelegationTokenSecretManager {
 
     DelegationTokenManager tm1 = new DelegationTokenManager(conf, new Text("foo"));
     DelegationTokenManager tm2 = new DelegationTokenManager(conf, new Text("bar"));
+    ExecutorService executorService = null;
     try {
       // When the init method is called,
       // the ZKDelegationTokenSecretManager#startThread method will be called,
       // and the creatingParentContainersIfNeeded will be called to create the nameSpace.
-      ExecutorService executorService = Executors.newFixedThreadPool(2);
+      executorService = Executors.newFixedThreadPool(2);
 
       Callable<Boolean> tm1Callable = () -> {
         tm1.init();
@@ -647,10 +650,6 @@ public class TestZKDelegationTokenSecretManager {
       for (Future<Boolean> future : futures) {
         assertTrue(future.get());
       }
-      executorService.shutdownNow();
-      assertTrue(executorService.awaitTermination(1, TimeUnit.SECONDS));
-      tm1.destroy();
-      tm2.destroy();
 
       String workingPath = "/" + conf.get(ZKDelegationTokenSecretManager.ZK_DTSM_ZNODE_WORKING_PATH,
           ZKDelegationTokenSecretManager.ZK_DTSM_ZNODE_WORKING_PATH_DEAFULT) + "/ZKDTSMRoot";
@@ -659,6 +658,12 @@ public class TestZKDelegationTokenSecretManager {
       Stat stat = curatorFramework.checkExists().forPath(workingPath);
       assertNotNull(stat);
     } finally {
+      if (executorService != null) {
+        executorService.shutdownNow();
+        executorService.awaitTermination(1, TimeUnit.SECONDS);
+      }
+      tm1.destroy();
+      tm2.destroy();
       // Restore the default curator so later tests do not see a closed client.
       ZKDelegationTokenSecretManager.setCurator(null);
       curatorFramework.close();
