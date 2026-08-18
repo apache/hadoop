@@ -656,86 +656,89 @@ public class TestDFSUpgradeFromImage {
      */
     Configuration conf = new HdfsConfiguration();
     conf = UpgradeUtilities.initializeStorageStateConf(1, conf);
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0)
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(0)
         .format(false)
         .manageDataDfsDirs(false)
         .manageNameDfsDirs(false)
         .startupOption(StartupOption.UPGRADE)
-        .build();
-    DFSInotifyEventInputStream ieis =
-        cluster.getFileSystem().getInotifyEventStream(0);
+        .build()) {
+      DFSInotifyEventInputStream ieis =
+          cluster.getFileSystem().getInotifyEventStream(0);
 
-    EventBatch batch;
-    Event.CreateEvent ce;
-    Event.RenameEvent re;
+      EventBatch batch;
+      Event.CreateEvent ce;
+      Event.RenameEvent re;
 
-    // mkdir /input
-    batch = TestDFSInotifyEventInputStream.waitForNextEvents(ieis);
-    assertEquals(1, batch.getEvents().length);
-    assertTrue(batch.getEvents()[0].getEventType() == Event.EventType.CREATE);
-    ce = (Event.CreateEvent) batch.getEvents()[0];
-    assertEquals(ce.getPath(), "/input");
-
-    // mkdir /input/dir1~5
-    for (int i = 1; i <= 5; i++) {
+      // mkdir /input
       batch = TestDFSInotifyEventInputStream.waitForNextEvents(ieis);
       assertEquals(1, batch.getEvents().length);
       assertTrue(batch.getEvents()[0].getEventType() == Event.EventType.CREATE);
       ce = (Event.CreateEvent) batch.getEvents()[0];
-      assertEquals(ce.getPath(), "/input/dir" + i);
-    }
-    // copyFromLocal randome_file_1~2 /input/dir1~2
-    for (int i = 1; i <= 2; i++) {
-      batch = TestDFSInotifyEventInputStream.waitForNextEvents(ieis);
-      assertEquals(1, batch.getEvents().length);
-      if (batch.getEvents()[0].getEventType() != Event.EventType.CREATE) {
-        FSImage.LOG.debug("");
+      assertEquals(ce.getPath(), "/input");
+
+      // mkdir /input/dir1~5
+      for (int i = 1; i <= 5; i++) {
+        batch = TestDFSInotifyEventInputStream.waitForNextEvents(ieis);
+        assertEquals(1, batch.getEvents().length);
+        assertTrue(
+            batch.getEvents()[0].getEventType() == Event.EventType.CREATE);
+        ce = (Event.CreateEvent) batch.getEvents()[0];
+        assertEquals(ce.getPath(), "/input/dir" + i);
       }
-      assertTrue(batch.getEvents()[0].getEventType() == Event.EventType.CREATE);
+      // copyFromLocal randome_file_1~2 /input/dir1~2
+      for (int i = 1; i <= 2; i++) {
+        batch = TestDFSInotifyEventInputStream.waitForNextEvents(ieis);
+        assertEquals(1, batch.getEvents().length);
+        if (batch.getEvents()[0].getEventType() != Event.EventType.CREATE) {
+          FSImage.LOG.debug("");
+        }
+        assertTrue(
+            batch.getEvents()[0].getEventType() == Event.EventType.CREATE);
 
-      // copyFromLocal randome_file_1 /input/dir1, CLOSE
+        // copyFromLocal randome_file_1 /input/dir1, CLOSE
+        batch = TestDFSInotifyEventInputStream.waitForNextEvents(ieis);
+        assertEquals(1, batch.getEvents().length);
+        assertTrue(
+            batch.getEvents()[0].getEventType() == Event.EventType.CLOSE);
+
+        // copyFromLocal randome_file_1 /input/dir1, CLOSE
+        batch = TestDFSInotifyEventInputStream.waitForNextEvents(ieis);
+        assertEquals(1, batch.getEvents().length);
+        assertTrue(batch.getEvents()[0].getEventType() ==
+            Event.EventType.RENAME);
+        re = (Event.RenameEvent) batch.getEvents()[0];
+        assertEquals(re.getDstPath(), "/input/dir" + i + "/randome_file_" + i);
+      }
+
+      // mv /input/dir1/randome_file_1 /input/dir3/randome_file_3
+      long txIDBeforeRename = batch.getTxid();
       batch = TestDFSInotifyEventInputStream.waitForNextEvents(ieis);
       assertEquals(1, batch.getEvents().length);
-      assertTrue(batch.getEvents()[0].getEventType() == Event.EventType.CLOSE);
-
-      // copyFromLocal randome_file_1 /input/dir1, CLOSE
-      batch = TestDFSInotifyEventInputStream.waitForNextEvents(ieis);
-      assertEquals(1, batch.getEvents().length);
-      assertTrue(batch.getEvents()[0].getEventType() ==
-          Event.EventType.RENAME);
+      assertTrue(batch.getEvents()[0].getEventType() == Event.EventType.RENAME);
       re = (Event.RenameEvent) batch.getEvents()[0];
-      assertEquals(re.getDstPath(), "/input/dir" + i + "/randome_file_" + i);
+      assertEquals(re.getDstPath(), "/input/dir3/randome_file_3");
+
+
+      // rmdir /input/dir1
+      batch = TestDFSInotifyEventInputStream.waitForNextEvents(ieis);
+      assertEquals(1, batch.getEvents().length);
+      assertTrue(batch.getEvents()[0].getEventType() == Event.EventType.UNLINK);
+      assertEquals(((Event.UnlinkEvent) batch.getEvents()[0]).getPath(),
+          "/input/dir1");
+      long lastTxID = batch.getTxid();
+
+      // Start inotify from the tx before rename /input/dir1/randome_file_1
+      ieis = cluster.getFileSystem().getInotifyEventStream(txIDBeforeRename);
+      batch = TestDFSInotifyEventInputStream.waitForNextEvents(ieis);
+      assertEquals(1, batch.getEvents().length);
+      assertTrue(batch.getEvents()[0].getEventType() == Event.EventType.RENAME);
+      re = (Event.RenameEvent) batch.getEvents()[0];
+      assertEquals(re.getDstPath(), "/input/dir3/randome_file_3");
+
+      // Try to read beyond available edits
+      ieis = cluster.getFileSystem().getInotifyEventStream(lastTxID + 1);
+      assertNull(ieis.poll());
     }
-
-    // mv /input/dir1/randome_file_1 /input/dir3/randome_file_3
-    long txIDBeforeRename = batch.getTxid();
-    batch = TestDFSInotifyEventInputStream.waitForNextEvents(ieis);
-    assertEquals(1, batch.getEvents().length);
-    assertTrue(batch.getEvents()[0].getEventType() == Event.EventType.RENAME);
-    re = (Event.RenameEvent) batch.getEvents()[0];
-    assertEquals(re.getDstPath(), "/input/dir3/randome_file_3");
-
-
-    // rmdir /input/dir1
-    batch = TestDFSInotifyEventInputStream.waitForNextEvents(ieis);
-    assertEquals(1, batch.getEvents().length);
-    assertTrue(batch.getEvents()[0].getEventType() == Event.EventType.UNLINK);
-    assertEquals(((Event.UnlinkEvent) batch.getEvents()[0]).getPath(),
-        "/input/dir1");
-    long lastTxID = batch.getTxid();
-
-    // Start inotify from the tx before rename /input/dir1/randome_file_1
-    ieis = cluster.getFileSystem().getInotifyEventStream(txIDBeforeRename);
-    batch = TestDFSInotifyEventInputStream.waitForNextEvents(ieis);
-    assertEquals(1, batch.getEvents().length);
-    assertTrue(batch.getEvents()[0].getEventType() == Event.EventType.RENAME);
-    re = (Event.RenameEvent) batch.getEvents()[0];
-    assertEquals(re.getDstPath(), "/input/dir3/randome_file_3");
-
-    // Try to read beyond available edits
-    ieis = cluster.getFileSystem().getInotifyEventStream(lastTxID + 1);
-    assertNull(ieis.poll());
-
-    cluster.shutdown();
   }
 }

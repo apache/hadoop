@@ -102,7 +102,12 @@ public class TestMountTableProcedure {
 
   @AfterAll
   public static void tearDown() {
-    cluster.stopRouter(routerContext);
+    try {
+      cluster.stopRouter(routerContext);
+    } finally {
+      cluster.shutdown();
+      cluster = null;
+    }
   }
 
   @BeforeEach

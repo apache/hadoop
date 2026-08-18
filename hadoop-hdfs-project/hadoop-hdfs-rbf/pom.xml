@@ -203,6 +203,15 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
         <configuration>
           <systemPropertyVariables>
             <derby.stream.error.file>${project.build.directory}/derby.log</derby.stream.error.file>
+            <!-- Fail hung tests as named, per-method timeouts well before
+                 Surefire's forkedProcessTimeoutInSeconds kills the fork
+                 and loses the class's results.  See hadoop-hdfs/pom.xml.
+                 1800s rather than hadoop-hdfs's 600s: this module's fork
+                 budget is 3600s precisely because RBF methods and
+                 lifecycle setups legitimately run long, and a default
+                 below their honest runtime would convert slow tests into
+                 new named flakes. -->
+            <junit.jupiter.execution.timeout.default>1800 s</junit.jupiter.execution.timeout.default>
           </systemPropertyVariables>
         </configuration>
       </plugin>

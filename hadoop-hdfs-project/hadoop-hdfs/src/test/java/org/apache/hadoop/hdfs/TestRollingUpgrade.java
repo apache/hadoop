@@ -221,7 +221,7 @@ public class TestRollingUpgrade {
         final Path baz = new Path("/baz");
 
         final RollingUpgradeInfo info1;
-        {
+        try {
           final DistributedFileSystem dfs = cluster.getFileSystem();
           dfs.mkdirs(foo);
 
@@ -235,6 +235,7 @@ public class TestRollingUpgrade {
           assertEquals(info1, dfs.rollingUpgrade(RollingUpgradeAction.QUERY));
 
           dfs.mkdirs(bar);
+        } finally {
           cluster.shutdown();
         }
 
