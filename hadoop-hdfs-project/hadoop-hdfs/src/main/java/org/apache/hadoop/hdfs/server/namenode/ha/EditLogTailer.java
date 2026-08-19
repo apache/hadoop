@@ -546,9 +546,8 @@ public class EditLogTailer {
             NameNode.getNameNodeMetrics().addEditLogTailTime(
                 timer.monotonicNow() - startTime);
           }
-          //Update NameDirSize Metric
           if (triggeredLogRoll) {
-            namesystem.getFSImage().getStorage().updateNameDirSize();
+            namesystem.getFSImage().getStorage().invalidateNameDirSizeCache();
           }
         } catch (EditLogInputException elie) {
           LOG.warn("Error while reading edits from disk. Will try again.", elie);

@@ -402,7 +402,7 @@ public abstract class Storage extends StorageInfo {
     /**
      * Get storage directory size.
      */
-    public long getDirecorySize() {
+    public long getDirectorySize() {
       try {
         if (!isShared() && root != null && root.exists()) {
           return FileUtils.sizeOfDirectory(root);

@@ -1185,8 +1185,7 @@ public class FSImage implements Closeable {
     } finally {
       removeFromCheckpointing(imageTxId);
     }
-    //Update NameDirSize Metric
-    getStorage().updateNameDirSize();
+    getStorage().invalidateNameDirSizeCache();
 
     if (exitAfterSave.get()) {
       LOG.error("NameNode process will exit now... The saved FsImage " +
@@ -1385,8 +1384,7 @@ public class FSImage implements Closeable {
     // we won't miss this log segment on a restart if the edits directories
     // go missing.
     storage.writeTransactionIdFileToStorage(getEditLog().getCurSegmentTxId());
-    //Update NameDirSize Metric
-    getStorage().updateNameDirSize();
+    getStorage().invalidateNameDirSizeCache();
     return new CheckpointSignature(this);
   }
 

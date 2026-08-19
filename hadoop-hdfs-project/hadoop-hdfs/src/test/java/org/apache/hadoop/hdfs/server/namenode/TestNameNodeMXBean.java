@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
@@ -58,12 +59,14 @@ import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.io.nativeio.NativeIO.POSIX.NoMlockCacheManipulator;
 import org.apache.hadoop.net.ServerSocketUtil;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.Whitebox;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.VersionInfo;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.eclipse.jetty.util.ajax.JSON;
 import org.junit.jupiter.api.io.TempDir;
+import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -88,6 +91,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.mockito.Mockito.spy;
 
 /**
  * Class for testing {@link NameNodeMXBean} implementation
@@ -832,17 +836,30 @@ public class TestNameNodeMXBean {
       fs = cluster.getFileSystem(0);
       DFSTestUtil.createFile(fs, new Path("/file"), 0, (short) 1, 0L);
 
+      final AtomicInteger recalculations = new AtomicInteger(0);
+      NNStorage spyStorage = spy(nn0.getFSImage().getStorage());
+      Mockito.doAnswer(invocation -> {
+        recalculations.incrementAndGet();
+        return invocation.callRealMethod();
+      }).when(spyStorage).calculateNameDirSize();
+      Whitebox.setInternalState(nn0.getFSImage(), "storage", spyStorage);
       //rollEditLog
       HATestUtil.waitForStandbyToCatchUp(cluster.getNameNode(0),
           cluster.getNameNode(1));
+      // Expensive IO bound nnDirSizeMap calculation should not run during rollEditLog
+      assertEquals(0, recalculations.get());
       checkNNDirSize(cluster.getNameDirs(0), nn0.getNameDirSize());
+      // And should only run during metrics query
+      assertEquals(1, recalculations.get());
       checkNNDirSize(cluster.getNameDirs(1), nn1.getNameDirSize());
 
       //Test metric after call saveNamespace
       DFSTestUtil.createFile(fs, new Path("/file"), 0, (short) 1, 0L);
       nn0.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
       nn0.saveNamespace(0, 0);
+      assertEquals(1, recalculations.get());
       checkNNDirSize(cluster.getNameDirs(0), nn0.getNameDirSize());
+      assertEquals(2, recalculations.get());
     } finally {
       cluster.shutdown();
     }
