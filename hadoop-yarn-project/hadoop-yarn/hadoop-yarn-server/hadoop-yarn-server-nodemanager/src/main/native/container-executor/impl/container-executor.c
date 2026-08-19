@@ -2782,22 +2782,27 @@ static int delete_path(const char *full_path,
     return -1;
   }
 
-  /*
-   * If required, do the final rmdir as root on the top level.
-   * That handles the case where the top level directory is in a directory
-   * owned by the node manager.
-   */
-  if (needs_tt_user) {
-    return rmdir_as_nm(full_path);
-  }
-  /* Otherwise rmdir the top level as the current user. */
+  /* rmdir the top level as the current user. */
   if (rmdir(full_path) != 0) {
     ret = errno;
-    if (ret != ENOENT) {
-      fprintf(LOGFILE, "Couldn't delete directory %s - %s\n",
-              full_path, strerror(ret));
-      return -1;
+    if (ret == ENOENT) {
+      return 0;
     }
+    /*
+     * If required, retry the final rmdir as the node manager user.
+     * That handles the case where the top level directory is in a directory
+     * owned by the node manager, e.g. usercache/<user>. The first attempt
+     * as the current user handles the opposite case where the top level
+     * directory is in a directory owned by the run-as user but not writable
+     * by the node manager user, e.g. the private file cache
+     * usercache/<user>/filecache/<id>.
+     */
+    if (needs_tt_user && (ret == EACCES || ret == EPERM)) {
+      return rmdir_as_nm(full_path);
+    }
+    fprintf(LOGFILE, "Couldn't delete directory %s - %s\n",
+            full_path, strerror(ret));
+    return -1;
   }
   return 0;
 }
