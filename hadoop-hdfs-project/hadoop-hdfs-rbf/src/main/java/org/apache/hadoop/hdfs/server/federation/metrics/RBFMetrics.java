@@ -53,6 +53,10 @@ import javax.management.NotCompliantMBeanException;
 import javax.management.ObjectName;
 import javax.management.StandardMBean;
 
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.databind.JsonSerializer;
+import com.fasterxml.jackson.databind.SerializerProvider;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import org.apache.commons.math3.stat.descriptive.moment.StandardDeviation;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSUtil;
@@ -98,7 +102,6 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.JsonUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.VersionInfo;
-import org.codehaus.jettison.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -999,7 +1002,7 @@ public class RBFMetrics implements RouterMBean, FederationMBean {
             BaseRecord recordField = (BaseRecord) value;
             json.putAll(getJson(recordField));
           } else {
-            json.put(fieldName, value == null ? JSONObject.NULL : value);
+            json.put(fieldName, value == null ? JsonNull.NULL : value);
           }
         } catch (Exception e) {
           throw new IllegalArgumentException(
@@ -1065,5 +1068,23 @@ public class RBFMetrics implements RouterMBean, FederationMBean {
       }
     }
     return null;
+  }
+
+  @JsonSerialize(using = JsonNull.NullSerializer.class)
+  static final class JsonNull {
+
+    final static  JsonNull NULL = new JsonNull();
+
+    @Override
+    public String toString() {
+      return "null";
+    }
+
+    static final class NullSerializer extends JsonSerializer<JsonNull> {
+      @Override
+      public void serialize(JsonNull value, JsonGenerator gen, SerializerProvider provider) throws IOException {
+        gen.writeNull();
+      }
+    }
   }
 }
