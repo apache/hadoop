@@ -26,8 +26,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.math.BigInteger;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 import javax.management.MalformedObjectNameException;
 
@@ -39,6 +41,7 @@ import org.apache.hadoop.hdfs.server.federation.store.records.MembershipStats;
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 import org.apache.hadoop.hdfs.server.federation.store.records.RouterState;
 import org.apache.hadoop.hdfs.server.federation.store.records.StateStoreVersion;
+import org.apache.hadoop.util.JsonUtils;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
@@ -263,6 +266,14 @@ public class TestRBFMetrics extends TestMetricsBase {
     }
 
     assertEquals(getMockRouters().size(), routersFound);
+  }
+
+  @Test
+  public void testJsonNull() {
+    Map<String, Object> map = new HashMap<>();
+    map.put("null-value", RBFMetrics.JsonNull.NULL);
+    String json = JsonUtils.toString(map);
+    assertEquals("{\"null-value\":null}",  json);
   }
 
   private void assertNotNullAndNotEmpty(String field) {
