@@ -252,8 +252,8 @@ function transformToCardData(queueInfo: QueueInfo, stagedChanges: StagedChange[]
   const capacityDisplay = getQueuePropertyValue(queueInfo.queuePath, 'capacity');
   const maxCapacityDisplay = getQueuePropertyValue(queueInfo.queuePath, 'maximum-capacity');
 
-  let capacityConfig = capacityDisplay.value || '0';
-  let maxCapacityConfig = maxCapacityDisplay.value || '100';
+  let capacityConfig = capacityDisplay.value;
+  let maxCapacityConfig = maxCapacityDisplay.value;
 
   const isAutoCreatedQueue =
     queueInfo.creationMethod === 'dynamicLegacy' ||
@@ -285,8 +285,10 @@ function transformToCardData(queueInfo: QueueInfo, stagedChanges: StagedChange[]
       maxCapacityConfig = maxCapacityDisplay.value;
     } else {
       const configuredMaxCapacity =
-        queueInfo.maxCapacity ?? defaultResourcePartition?.maxCapacity ?? 100;
-      maxCapacityConfig = String(configuredMaxCapacity);
+        queueInfo.maxCapacity ?? defaultResourcePartition?.maxCapacity;
+      if (configuredMaxCapacity !== undefined) {
+        maxCapacityConfig = String(configuredMaxCapacity);
+      }
     }
   }
 
@@ -330,8 +332,8 @@ function transformToCardData(queueInfo: QueueInfo, stagedChanges: StagedChange[]
       !queueInfo.queues?.queue ||
       (Array.isArray(queueInfo.queues.queue) ? queueInfo.queues.queue.length === 0 : false),
 
-    capacityConfig,
-    maxCapacityConfig,
+    capacityConfig: capacityConfig || '0',
+    maxCapacityConfig: maxCapacityConfig || '100',
 
     stagedState: stateDisplay.isStaged ? stateDisplay.value : undefined,
 
@@ -342,9 +344,7 @@ function transformToCardData(queueInfo: QueueInfo, stagedChanges: StagedChange[]
       queueInfo.autoCreationEligibility,
       stagedChanges,
     ),
-    isAutoCreatedQueue:
-      queueInfo.creationMethod === 'dynamicLegacy' ||
-      queueInfo.creationMethod === 'dynamicFlexible',
+    isAutoCreatedQueue,
 
     validationErrors: directErrors.length > 0 ? directErrors : undefined,
     isAffectedByErrors,
