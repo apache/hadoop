@@ -286,9 +286,9 @@ public class FileBasedKeyStoresFactory implements KeyStoresFactory {
     } else if (keystoreFileReadable) {
       createKeyManagersFromConfiguration(mode, keystoreType, storesReloadInterval);
     } else if (keystoreFilePresent) {
-      LOG.warn("The client keystore '{}' exists but is not readable by the current process. " +
-          "Proceeding without client keystore (no client certificate will be presented).",
-          keystoreLocation);
+      LOG.warn("Client keystore '{}' is not readable by user '{}'. " +
+          "Proceeding without client certificate.",
+          keystoreLocation, System.getProperty("user.name"));
       KeyStore keystore = KeyStore.getInstance(keystoreType);
       keystore.load(null, null);
       KeyManagerFactory keyMgrFactory = KeyManagerFactory.getInstance(
@@ -314,7 +314,15 @@ public class FileBasedKeyStoresFactory implements KeyStoresFactory {
       resolvePropertyName(mode, SSL_TRUSTSTORE_LOCATION_TPL_KEY);
     String truststoreLocation = conf.get(locationProperty, "");
     if (!truststoreLocation.isEmpty()) {
-      createTrustManagersFromConfiguration(mode, truststoreType, truststoreLocation, storesReloadInterval);
+      if (mode == SSLFactory.Mode.SERVER
+          || Files.isReadable(Paths.get(truststoreLocation))) {
+        createTrustManagersFromConfiguration(mode, truststoreType, truststoreLocation, storesReloadInterval);
+      } else {
+        LOG.warn("Client truststore '{}' is not readable by user '{}'. " +
+            "Falling back to JVM default truststore.",
+            truststoreLocation, System.getProperty("user.name"));
+        trustManagers = null;
+      }
     } else {
       if (LOG.isDebugEnabled()) {
         LOG.debug("The property '" + locationProperty + "' has not been set, " +
@@ -333,8 +341,17 @@ public class FileBasedKeyStoresFactory implements KeyStoresFactory {
       }
     }
     catch (IOException ioe) {
-      LOG.warn("Exception while trying to get password for alias " + alias +
-          ": " + ioe.getMessage());
+      // The credential provider may be inaccessible (e.g. a container process
+      // running as the container user cannot read the NodeManager process dir).
+      // Fall back to the raw configuration value so that passwords written
+      // directly into the XML (e.g. ssl.client.truststore.password) are still
+      // usable when the credential store is unavailable.
+      LOG.warn("Could not read password for alias '{}' from credential provider: {}. " +
+          "Falling back to config value.", alias, ioe.getMessage());
+      String configValue = conf.get(alias);
+      if (configValue != null && !configValue.isEmpty()) {
+        password = configValue;
+      }
     }
     return password;
   }
