@@ -36,6 +36,7 @@ import org.apache.hadoop.hdfs.protocolPB.RouterClientProtocolTranslatorPB;
 import org.apache.hadoop.hdfs.protocolPB.RouterGetUserMappingsProtocolTranslatorPB;
 import org.apache.hadoop.hdfs.protocolPB.RouterNamenodeProtocolTranslatorPB;
 import org.apache.hadoop.hdfs.protocolPB.RouterRefreshUserMappingsProtocolTranslatorPB;
+import org.apache.hadoop.hdfs.server.federation.metrics.JSON;
 import org.apache.hadoop.ipc.AlignmentContext;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -60,7 +61,6 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.protocolPB.RefreshUserMappingsProtocolPB;
 import org.apache.hadoop.tools.GetUserMappingsProtocol;
 import org.apache.hadoop.tools.protocolPB.GetUserMappingsProtocolPB;
-import org.apache.hadoop.util.JsonUtils;
 import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -400,7 +400,7 @@ public class ConnectionPool {
         info.put(i + " closed", Boolean.toString(connection.isClosed()));
       }
     }
-    return JsonUtils.toString(info);
+    return JSON.getDefault().toJSON(info);
   }
 
   /**

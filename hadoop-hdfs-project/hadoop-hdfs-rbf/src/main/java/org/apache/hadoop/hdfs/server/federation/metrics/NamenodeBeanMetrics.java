@@ -61,7 +61,6 @@ import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.util.JsonUtils;
 import org.apache.hadoop.util.VersionInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -519,7 +518,7 @@ public class NamenodeBeanMetrics
     } catch (Exception e) {
       LOG.error("Cannot get " + type + " nodes", e);
     }
-    return JsonUtils.toString(info);
+    return JSON.getDefault().toJSON(info);
   }
 
   @Override

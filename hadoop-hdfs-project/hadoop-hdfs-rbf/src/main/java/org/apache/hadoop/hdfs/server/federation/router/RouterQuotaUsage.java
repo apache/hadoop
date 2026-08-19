@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hdfs.server.federation.router;
 
-import com.fasterxml.jackson.annotation.JsonValue;
 import org.apache.hadoop.fs.QuotaUsage;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
@@ -133,7 +132,6 @@ public final class RouterQuotaUsage extends QuotaUsage {
     }
   }
 
-  @JsonValue // For Jackson serialization, use the toString() to represent this object as JSON.
   @Override
   public String toString() {
     String nsQuota = "-";

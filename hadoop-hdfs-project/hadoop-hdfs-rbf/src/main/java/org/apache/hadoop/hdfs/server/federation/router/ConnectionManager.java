@@ -34,8 +34,8 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.server.federation.metrics.JSON;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.util.JsonUtils;
 import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -361,7 +361,7 @@ public class ConnectionManager {
     } finally {
       readLock.unlock();
     }
-    return JsonUtils.toString(info);
+    return JSON.getDefault().toJSON(info);
   }
 
   @VisibleForTesting
