@@ -274,14 +274,27 @@ public class FileBasedKeyStoresFactory implements KeyStoresFactory {
     String keystoreLocation = conf.get(keystoreLocationProperty, "");
     boolean keystoreFilePresent = !keystoreLocation.isEmpty()
         && Files.exists(Paths.get(keystoreLocation));
+    boolean keystoreFileReadable = keystoreFilePresent
+        && Files.isReadable(Paths.get(keystoreLocation));
     if (!keystoreLocation.isEmpty() && !keystoreFilePresent) {
       LOG.warn("The property '" + keystoreLocationProperty + "' is set to '"
           + keystoreLocation + "', but the keystore file does not exist.");
     }
 
-    if (requireClientCert || mode == SSLFactory.Mode.SERVER
-        || keystoreFilePresent) {
+    if (requireClientCert || mode == SSLFactory.Mode.SERVER) {
       createKeyManagersFromConfiguration(mode, keystoreType, storesReloadInterval);
+    } else if (keystoreFileReadable) {
+      createKeyManagersFromConfiguration(mode, keystoreType, storesReloadInterval);
+    } else if (keystoreFilePresent) {
+      LOG.warn("The client keystore '{}' exists but is not readable by the current process. " +
+          "Proceeding without client keystore (no client certificate will be presented).",
+          keystoreLocation);
+      KeyStore keystore = KeyStore.getInstance(keystoreType);
+      keystore.load(null, null);
+      KeyManagerFactory keyMgrFactory = KeyManagerFactory.getInstance(
+          SSLFactory.KEY_MANAGER_SSLCERTIFICATE);
+      keyMgrFactory.init(keystore, null);
+      keyManagers = keyMgrFactory.getKeyManagers();
     } else {
       KeyStore keystore = KeyStore.getInstance(keystoreType);
       keystore.load(null, null);
