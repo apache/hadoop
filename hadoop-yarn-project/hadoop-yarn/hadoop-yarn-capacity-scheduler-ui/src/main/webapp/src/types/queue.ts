@@ -104,9 +104,10 @@ export type QueueInfo = {
   numSchedulableApplications?: number;
   numNonSchedulableApplications?: number;
 
-  // Capacity details
+  // Capacity details (from scheduler REST)
   maxEffectiveCapacity?: ResourceInfo;
   minEffectiveCapacity?: ResourceInfo;
+  weight?: number;
   normalizedWeight?: number;
   isAbsoluteResource?: boolean;
   effectiveMinResource?: ResourceInfo;

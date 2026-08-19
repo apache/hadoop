@@ -37,7 +37,6 @@ import {
   QUEUE_CARD_WIDTH,
 } from '~/features/queue-management/constants';
 import type { ValidationIssue } from '~/types';
-import { resolveAutoCreatedQueueCapacityConfigs } from '~/utils/templateUtils';
 
 export type QueueCardData = QueueInfo & {
   stagedStatus?: 'new' | 'modified' | 'deleted';
@@ -250,11 +249,46 @@ function getAutoCreationStatus(
 function transformToCardData(queueInfo: QueueInfo, stagedChanges: StagedChange[]): QueueCardData {
   const getQueuePropertyValue = useSchedulerStore.getState().getQueuePropertyValue;
 
-  const { capacityConfig, maxCapacityConfig } = resolveAutoCreatedQueueCapacityConfigs(
-    queueInfo.queuePath,
-    queueInfo.creationMethod,
-    getQueuePropertyValue,
-  );
+  const capacityDisplay = getQueuePropertyValue(queueInfo.queuePath, 'capacity');
+  const maxCapacityDisplay = getQueuePropertyValue(queueInfo.queuePath, 'maximum-capacity');
+
+  let capacityConfig = capacityDisplay.value || '0';
+  let maxCapacityConfig = maxCapacityDisplay.value || '100';
+
+  const isAutoCreatedQueue =
+    queueInfo.creationMethod === 'dynamicLegacy' ||
+    queueInfo.creationMethod === 'dynamicFlexible';
+
+  if (isAutoCreatedQueue) {
+    const resourcePartitions = queueInfo.capacities?.queueCapacitiesByPartition;
+    const defaultResourcePartition = resourcePartitions?.length
+      ? (resourcePartitions.find((entry) => !entry.partitionName) ?? resourcePartitions[0])
+      : undefined;
+
+    if (capacityDisplay.isStaged) {
+      // Pending local edit from Edit Capacity — not yet applied to the cluster.
+      capacityConfig = capacityDisplay.value;
+    } else {
+      const configuredWeight = queueInfo.weight ?? defaultResourcePartition?.weight;
+      if (configuredWeight !== undefined && configuredWeight > 0) {
+        capacityConfig = `${configuredWeight}w`;
+      } else {
+        const configuredCapacity =
+          queueInfo.capacity ?? defaultResourcePartition?.capacity ?? 0;
+        if (configuredCapacity > 0) {
+          capacityConfig = String(configuredCapacity);
+        }
+      }
+    }
+
+    if (maxCapacityDisplay.isStaged) {
+      maxCapacityConfig = maxCapacityDisplay.value;
+    } else {
+      const configuredMaxCapacity =
+        queueInfo.maxCapacity ?? defaultResourcePartition?.maxCapacity ?? 100;
+      maxCapacityConfig = String(configuredMaxCapacity);
+    }
+  }
 
   const stateDisplay = getQueuePropertyValue(queueInfo.queuePath, 'state');
 
