@@ -123,8 +123,8 @@ public class TestResourceMappings {
     // A tampered record whose top-level list is fine but which carries an
     // element of a type the resource plugins never store. This stands in for a
     // serialization gadget (e.g. a commons-beanutils BeanComparator): the
-    // allowlist rejects it by class name during readObject, before the class
-    // is loaded or any of its logic runs.
+    // allowlist rejects it by class name during readObject, before the object
+    // is instantiated and any of its logic runs.
     byte[] payload = toBytes(ImmutableList.<Serializable>of(
         new File("/etc/passwd")));
     assertThrows(IOException.class,
