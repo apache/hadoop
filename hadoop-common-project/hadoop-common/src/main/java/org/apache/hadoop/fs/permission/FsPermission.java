@@ -24,7 +24,6 @@ import java.io.InvalidObjectException;
 import java.io.ObjectInputValidation;
 import java.io.Serializable;
 
-import com.fasterxml.jackson.annotation.JsonValue;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -270,7 +269,6 @@ public class FsPermission implements Writable, Serializable,
   @Override
   public int hashCode() {return toShort();}
 
-  @JsonValue // For Jackson serialization, use the toString() to represent this object as JSON.
   @Override
   public String toString() {
     String str = useraction.SYMBOL + groupaction.SYMBOL + otheraction.SYMBOL;
