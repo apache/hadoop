@@ -310,7 +310,10 @@ public class WebAppProxyServlet extends HttpServlet {
         base.setHeader(name, value);
       }
     }
-
+    // Tell the AM/history server to close the connection after the response
+    // so that the proxied connection is not left in CLOSE_WAIT state on the
+    // proxy side (SOHU-HADOOP-11).
+    base.setHeader("Connection", "close");
     String user = req.getRemoteUser();
     if (user != null && !user.isEmpty()) {
       base.setHeader("Cookie",
