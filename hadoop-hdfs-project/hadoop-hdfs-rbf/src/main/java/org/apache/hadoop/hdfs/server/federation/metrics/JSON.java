@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.hdfs.server.federation.metrics;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
 import java.io.IOException;
 import java.lang.reflect.Array;
 import java.util.Collection;
@@ -44,6 +46,7 @@ import java.util.Map;
  *   Object --&gt; string (dubious!)
  * </pre>
  */
+@InterfaceAudience.Private
 public class JSON {
     private static final JSON DEFAULT = new JSON();
     private static final int _stringBufferSize = 1024;

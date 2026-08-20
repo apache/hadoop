@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.web;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.ContentSummary;
@@ -49,6 +50,7 @@ import java.io.IOException;
 import java.util.*;
 
 /** JSON Utilities */
+@InterfaceAudience.Private
 public class JsonUtil {
   private static final Object[] EMPTY_OBJECT_ARRAY = {};
 

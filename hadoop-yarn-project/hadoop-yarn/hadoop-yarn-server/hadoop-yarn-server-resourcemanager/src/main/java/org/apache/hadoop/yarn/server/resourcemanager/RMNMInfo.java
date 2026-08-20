@@ -85,27 +85,27 @@ public class RMNMInfo implements RMNMInfoBeans {
     List<InfoMap> nodesInfo = new ArrayList<InfoMap>();
 
     for (final RMNode ni : nodes) {
-        SchedulerNodeReport report = scheduler.getNodeReport(ni.getNodeID());
-        InfoMap info = new InfoMap();
-        info.put("HostName", ni.getHostName());
-        info.put("Rack", ni.getRackName());
-        info.put("State", ni.getState().toString());
-        info.put("NodeId", ni.getNodeID().toString());
-        info.put("NodeHTTPAddress", ni.getHttpAddress());
-        info.put("LastHealthUpdate",
-                        ni.getLastHealthReportTime());
-        info.put("HealthReport",
-                        ni.getHealthReport());
-        info.put("NodeManagerVersion",
-                ni.getNodeManagerVersion());
-        if(report != null) {
-          info.put("NumContainers", report.getNumContainers());
-          info.put("UsedMemoryMB", report.getUsedResource().getMemorySize());
-          info.put("AvailableMemoryMB",
-              report.getAvailableResource().getMemorySize());
-        }
+      SchedulerNodeReport report = scheduler.getNodeReport(ni.getNodeID());
+      InfoMap info = new InfoMap();
+      info.put("HostName", ni.getHostName());
+      info.put("Rack", ni.getRackName());
+      info.put("State", ni.getState().toString());
+      info.put("NodeId", ni.getNodeID().toString());
+      info.put("NodeHTTPAddress", ni.getHttpAddress());
+      info.put("LastHealthUpdate",
+                    ni.getLastHealthReportTime());
+      info.put("HealthReport",
+                    ni.getHealthReport());
+      info.put("NodeManagerVersion",
+            ni.getNodeManagerVersion());
+      if(report != null) {
+        info.put("NumContainers", report.getNumContainers());
+        info.put("UsedMemoryMB", report.getUsedResource().getMemorySize());
+        info.put("AvailableMemoryMB",
+                      report.getAvailableResource().getMemorySize());
+      }
 
-        nodesInfo.add(info);
+      nodesInfo.add(info);
     }
 
     return JsonUtils.toString(nodesInfo);
