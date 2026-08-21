@@ -625,6 +625,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
             <exclude>dev-support/docker/pkg-resolver/packages.json</exclude>
             <exclude>dev-support/docker/pkg-resolver/platforms.json</exclude>
             <exclude>dev-support/docker/vcpkg/vcpkg.json</exclude>
+            <exclude>hadoop-hdfs-project/hadoop-hdfs-rbf/src/main/java/org/apache/hadoop/hdfs/server/federation/metrics/JSON.java</exclude>
             <exclude>**/target/**</exclude>
          </excludes>
        </configuration>
