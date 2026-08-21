@@ -37,6 +37,8 @@
     <maven.test.failure.ignore>true</maven.test.failure.ignore>
     <maven.test.redirectTestOutputToFile>true</maven.test.redirectTestOutputToFile>
     <jetty.version>12.0.37</jetty.version>
+    <!-- must match the asm.version imported by jetty-project ${jetty.version} -->
+    <asm.version>9.10.1</asm.version>
     <test.exclude>_</test.exclude>
     <test.exclude.pattern>_</test.exclude.pattern>
 
@@ -946,10 +948,8 @@
         <artifactId>jetty-ee10-websocket-jakarta-server</artifactId>
         <version>${jetty.version}</version>
         <exclusions>
-          <exclusion>
-            <groupId>org.ow2.asm</groupId>
-            <artifactId>asm</artifactId>
-          </exclusion>
+          <!-- asm/asm-commons are required by jetty-ee10-annotations for
+               AnnotationConfiguration; do not exclude them. -->
           <exclusion>
             <groupId>org.eclipse.jetty.ee10</groupId>
             <artifactId>jetty-ee10-webapp</artifactId>
@@ -978,10 +978,17 @@
         <version>1.5.5</version>
       </dependency>
 
+      <!-- Keep in sync with the asm.version used by jetty-project;
+           jetty-ee10-annotations requires both asm and asm-commons. -->
       <dependency>
         <groupId>org.ow2.asm</groupId>
         <artifactId>asm</artifactId>
-        <version>5.0.4</version>
+        <version>${asm.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.ow2.asm</groupId>
+        <artifactId>asm-commons</artifactId>
+        <version>${asm.version}</version>
       </dependency>
       <dependency>
           <groupId>org.ojalgo</groupId>
@@ -2722,7 +2729,7 @@
                     <!-- for JDK 8 support -->
                     <include>cglib:cglib:3.2.0</include>
                     <include>com.google.inject:guice:7.0.0</include>
-                    <include>org.ow2.asm:asm:5.0.0</include>
+                    <include>org.ow2.asm:asm:${asm.version}</include>
                   </includes>
                 </bannedDependencies>
               </rules>
