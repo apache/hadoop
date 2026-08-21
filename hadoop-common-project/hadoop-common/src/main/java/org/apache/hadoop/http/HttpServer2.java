@@ -26,8 +26,11 @@ import java.net.BindException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
+import java.net.SocketOption;
+import java.net.StandardSocketOptions;
 import java.net.URI;
 import java.net.URL;
+import java.nio.channels.ServerSocketChannel;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -70,6 +73,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configuration.IntegerRanges;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.jmx.JMXJsonServlet;
 import org.apache.hadoop.log.LogLevel;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
@@ -1513,7 +1517,55 @@ public final class HttpServer2 implements FilterContainer {
     // failed to open w/o issuing a close first, even if the port is changed
     listener.close();
     listener.open();
+    if (listener.getLocalPort() < 0) {
+      // Jetty 12's ServerConnector.close() only stops the connector accepting
+      // new connections: it leaves the accept channel in place, and open() is a
+      // no-op while that channel is set. Only the connector's stop lifecycle
+      // clears it, so a listener that was opened without the server ever being
+      // started cannot re-bind on its own. Hand it a freshly bound channel.
+      listener.open(openAcceptChannel(listener));
+    }
     LOG.info("Jetty bound to port " + listener.getLocalPort());
+  }
+
+  /**
+   * Open and bind a channel equivalent to the one
+   * {@link ServerConnector} would have opened for itself.
+   *
+   * @param listener the listener the channel is bound for.
+   * @return a bound server socket channel.
+   * @throws IOException if the channel cannot be bound.
+   */
+  private static ServerSocketChannel openAcceptChannel(ServerConnector listener)
+      throws IOException {
+    InetSocketAddress bindAddress = listener.getHost() == null
+        ? new InetSocketAddress(listener.getPort())
+        : new InetSocketAddress(listener.getHost(), listener.getPort());
+    ServerSocketChannel channel = ServerSocketChannel.open();
+    try {
+      setSocketOption(channel, StandardSocketOptions.SO_REUSEADDR,
+          listener.getReuseAddress());
+      setSocketOption(channel, StandardSocketOptions.SO_REUSEPORT,
+          listener.isReusePort());
+      channel.bind(bindAddress, listener.getAcceptQueueSize());
+    } catch (IOException e) {
+      IOUtils.cleanupWithLogger(LOG, channel);
+      throw e;
+    }
+    return channel;
+  }
+
+  /**
+   * Best effort socket option, matching Jetty's own handling: options that the
+   * platform does not support are ignored.
+   */
+  private static <T> void setSocketOption(ServerSocketChannel channel,
+      SocketOption<T> option, T value) {
+    try {
+      channel.setOption(option, value);
+    } catch (Exception e) {
+      LOG.debug("Could not set {} to {} on {}", option, value, channel, e);
+    }
   }
 
   /**

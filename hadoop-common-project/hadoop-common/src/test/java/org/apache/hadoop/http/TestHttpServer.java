@@ -324,8 +324,9 @@ public class TestHttpServer extends HttpServerFunctionalTest {
 
   /**
    * Jetty StatisticsHandler must be inserted via Server#insertHandler
-   * instead of Server#setHandler. The server fails to start if
-   * the handler is added by setHandler.
+   * instead of Server#setHandler. Under Jetty 12 setHandler replaces the
+   * server's whole handler tree rather than failing the start, so the web
+   * application is silently dropped and never becomes available.
    */
   @Test
   public void testSetStatisticsHandler() throws Exception {
@@ -337,8 +338,12 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     testServer.webServer.setHandler(new StatisticsHandler());
     try {
       testServer.start();
-      fail("IOException should be thrown.");
-    } catch (IOException ignore) {
+      assertFalse(testServer.webAppContext.isStarted(),
+          "setHandler must drop the web app context");
+      assertFalse(testServer.webAppContext.isAvailable(),
+          "web app context must not be available");
+    } finally {
+      testServer.stop();
     }
   }
 
