@@ -110,9 +110,22 @@ public class CGroupsV2ResourceCalculator extends AbstractCGroupsResourceCalculat
     super(
         pid,
         Collections.singletonList(CPU_STAT),
-        MEM_STAT,
-        MEMSW_STAT
+        MEM_STAT
     );
+  }
+
+  @Override
+  protected long calculateVirtualMemory() {
+    // Unlike cgroup v1, cgroup v2 does not expose a combined memory+swap
+    // counter. The virtual memory has to be derived by adding the swap usage
+    // (memory.swap.current) to the resident anonymous memory
+    // (memory.stat#anon).
+    long anon = getStat(MEM_STAT);
+    long swap = getStat(MEMSW_STAT);
+    if (anon == UNAVAILABLE || swap == UNAVAILABLE) {
+      return UNAVAILABLE;
+    }
+    return anon + swap;
   }
 
   @Override

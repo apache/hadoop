@@ -87,7 +87,10 @@ public class TestCGroupsV2ResourceCalculator {
 
     assertEquals(333000L, calculator.getCumulativeCpuTime(), 0L);
     assertEquals(22000L, calculator.getRssMemorySize(), 0L);
-    assertEquals(11000L, calculator.getVirtualMemorySize(), 0L);
+    // Virtual memory in cgroup v2 is the resident anonymous memory
+    // (memory.stat#anon = 22000) plus the swap usage
+    // (memory.swap.current = 11000).
+    assertEquals(33000L, calculator.getVirtualMemorySize(), 0L);
     assertEquals(-1L, calculator.getRssMemorySize(2), 0L);
     assertEquals(-1L, calculator.getVirtualMemorySize(2), 0L);
   }
