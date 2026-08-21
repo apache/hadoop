@@ -212,11 +212,14 @@ class IncrementalBlockReportManager {
       namenode.blockReceivedAndDeleted(registration, bpid, reports);
       success = true;
     } finally {
-
+      // Always update lastIBR so the configured ibrInterval is respected
+      // even on failure.  Without this, a failed RPC leaves lastIBR stale and
+      // every subsequent heartbeat immediately retries, creating a feedback
+      // loop that amplifies NameNode contention rather than backing off.
+      lastIBR = startTime;
       if (success) {
         dnMetrics.addIncrementalBlockReport(monotonicNow() - startTime,
             nnRpcLatencySuffix);
-        lastIBR = startTime;
       } else {
         // If we didn't succeed in sending the report, put all of the
         // blocks back onto our queue, but only in the case where we

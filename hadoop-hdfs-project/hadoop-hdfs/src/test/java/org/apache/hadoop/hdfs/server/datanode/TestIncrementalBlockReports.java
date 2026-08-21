@@ -23,6 +23,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 
 import java.io.IOException;
@@ -53,6 +55,8 @@ import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo;
 import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo.BlockStatus;
 
+import org.apache.hadoop.hdfs.server.datanode.metrics.DataNodeMetrics;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.StorageReceivedDeletedBlocks;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -524,5 +528,51 @@ public class TestIncrementalBlockReports {
     } finally {
       cluster.shutdown();
     }
+  }
+
+  /**
+   * HDFS-17780: After a failed blockReceivedAndDeleted RPC, lastIBR must be
+   * updated so the next retry waits for the full ibrInterval.  Without the
+   * fix, lastIBR stays stale and sendImmediately() returns true on every
+   * subsequent heartbeat, creating a retry storm that amplifies NameNode load.
+   */
+  @Test
+  @Timeout(value = 30)
+  public void testFailedIBRRespectsInterval() throws Exception {
+    // Use a large interval (60 s) so we can tell definitively whether the
+    // interval is being respected immediately after a failure.
+    final long ibrIntervalMs = 60_000L;
+
+    DataNodeMetrics mockMetrics = mock(DataNodeMetrics.class);
+    IncrementalBlockReportManager ibrManager =
+        new IncrementalBlockReportManager(ibrIntervalMs, mockMetrics);
+
+    // Add a pending block so generateIBRs() produces a non-empty report.
+    DatanodeStorage storage = new DatanodeStorage("test-storage-uuid");
+    ReceivedDeletedBlockInfo rdbi = new ReceivedDeletedBlockInfo(
+        getDummyBlock(), BlockStatus.RECEIVED_BLOCK, null);
+    ibrManager.notifyNamenodeBlock(rdbi, storage, false);
+
+    // Mock a NameNode whose blockReceivedAndDeleted always throws.
+    DatanodeProtocol mockNn = mock(DatanodeProtocol.class);
+    doThrow(new IOException("Simulated NN RPC failure"))
+        .when(mockNn).blockReceivedAndDeleted(
+            any(DatanodeRegistration.class),
+            anyString(),
+            any(StorageReceivedDeletedBlocks[].class));
+
+    DatanodeRegistration mockReg = mock(DatanodeRegistration.class);
+    try {
+      ibrManager.sendIBRs(mockNn, mockReg, "BP-test", "");
+    } catch (IOException e) {
+      // Expected — the RPC failed.
+    }
+
+    // With the fix, lastIBR is updated to the time of the failed attempt.
+    // Since ibrInterval is 60 s and almost no time has elapsed, the manager
+    // must NOT be ready to send again immediately.
+    assertFalse(ibrManager.sendImmediately(),
+        "After a failed IBR, sendImmediately() must return false so that " +
+        "the retry respects the configured ibrInterval (HDFS-17780).");
   }
 }
