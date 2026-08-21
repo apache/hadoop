@@ -29,6 +29,7 @@ import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.security.ShellBasedUnixGroupsMapping;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.JsonUtils;
 
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -286,8 +287,12 @@ public class TestHttpServer extends HttpServerFunctionalTest {
         (HttpURLConnection)servletUrl.openConnection();
     conn.connect();
     assertThat(conn.getResponseCode()).isEqualTo(200);
-    final int after = metrics.responses2xx();
-    assertThat(after).isGreaterThan(before);
+    // Drain the response so the server side of the exchange can complete.
+    conn.getInputStream().readAllBytes();
+    // Jetty 12's StatisticsHandler records a response when the exchange
+    // completes on the server, which can lag the client seeing the status
+    // line, so the counter is not guaranteed to have moved yet.
+    GenericTestUtils.waitFor(() -> metrics.responses2xx() > before, 10, 10000);
   }
 
   @Test
