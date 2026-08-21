@@ -99,8 +99,8 @@ public class TestWebAppProxyServlet {
   private static boolean hasUnknownHeader = false;
   // Value of the Connection header received by the proxied server (the
   // embedded TestServlet backend). Used to verify the proxy sends
-  // 'Connection: close' (SOHU-HADOOP-11).
-  private static String proxiedConnectionHeader = null;
+  // 'Connection: close' (YARN-11845).
+  private static volatile String proxiedConnectionHeader = null;
   Configuration configuration = new Configuration();
 
 
@@ -509,7 +509,7 @@ public class TestWebAppProxyServlet {
    * HttpClient per request, so if the backend connection is kept alive the
    * socket is left in CLOSE_WAIT state on the proxy host until GC reclaims
    * it. Setting the 'Connection: close' request header makes the backend
-   * close the connection as soon as the response is sent (SOHU-HADOOP-11).
+   * close the connection as soon as the response is sent (YARN-11845).
    */
   @Test
   @Timeout(5000)
@@ -526,6 +526,7 @@ public class TestWebAppProxyServlet {
 
     try {
       // GET: the proxied request must carry 'Connection: close'
+      proxiedConnectionHeader = null;
       URL url = new URL("http://localhost:" + proxyPort
           + "/proxy/application_00_0");
       HttpURLConnection proxyConn = (HttpURLConnection) url.openConnection();
@@ -535,38 +536,44 @@ public class TestWebAppProxyServlet {
       assertEquals(HttpURLConnection.HTTP_OK, proxyConn.getResponseCode());
       assertNotNull(proxiedConnectionHeader,
           "The proxied server did not receive a Connection header at all");
-      assertEquals("close", proxiedConnectionHeader.trim().toLowerCase(),
+      assertEquals("close", StringUtils.toLowerCase(proxiedConnectionHeader.trim()),
           "The proxy must send 'Connection: close' to the proxied server "
               + "so the backend closes the connection instead of leaving it "
-              + "in CLOSE_WAIT state (SOHU-HADOOP-11)");
+              + "in CLOSE_WAIT state (YARN-11845)");
 
       // even if the incoming client request asked for keep-alive, the proxy
       // must still ask the backend to close the connection
+      proxiedConnectionHeader = null;
       proxyConn = (HttpURLConnection) url.openConnection();
       proxyConn.setRequestProperty("Cookie",
           "checked_application_0_0000=true");
       proxyConn.setRequestProperty("Connection", "keep-alive");
       proxyConn.connect();
       assertEquals(HttpURLConnection.HTTP_OK, proxyConn.getResponseCode());
-      assertEquals("close", proxiedConnectionHeader.trim().toLowerCase(),
+      assertNotNull(proxiedConnectionHeader,
+          "The proxied server did not receive a Connection header at all");
+      assertEquals("close", StringUtils.toLowerCase(proxiedConnectionHeader.trim()),
           "The proxy must override a client 'Connection: keep-alive' "
-              + "request header with 'close' (SOHU-HADOOP-11)");
+              + "request header with 'close' (YARN-11845)");
 
       // PUT: the header must be set on PUT requests as well
+      proxiedConnectionHeader = null;
       proxyConn = (HttpURLConnection) url.openConnection();
       proxyConn.setRequestMethod("PUT");
       proxyConn.setDoOutput(true);
       proxyConn.setRequestProperty("Cookie",
           "checked_application_0_0000=true");
       proxyConn.connect();
-      byte[] body = "SOHU-HADOOP-11".getBytes(StandardCharsets.UTF_8);
+      byte[] body = "test-body".getBytes(StandardCharsets.UTF_8);
       try (OutputStream os = proxyConn.getOutputStream()) {
         os.write(body);
       }
       assertEquals(HttpURLConnection.HTTP_OK, proxyConn.getResponseCode());
-      assertEquals("close", proxiedConnectionHeader.trim().toLowerCase(),
+      assertNotNull(proxiedConnectionHeader,
+          "The proxied server did not receive a Connection header at all");
+      assertEquals("close", StringUtils.toLowerCase(proxiedConnectionHeader.trim()),
           "The proxy must send 'Connection: close' on PUT requests too "
-              + "(SOHU-HADOOP-11)");
+              + "(YARN-11845)");
     } finally {
       proxy.close();
     }
