@@ -625,7 +625,6 @@ CDDL 1.1 + GPLv2 with classpath exception
 com.sun.xml.bind:jaxb-impl:2.2.3-1
 javax.annotation:javax.annotation-api:1.3.2
 javax.cache:cache-api:1.1.1
-javax.servlet:javax.servlet-api:3.1.0
 javax.servlet.jsp:jsp-api:2.1
 javax.websocket:javax.websocket-api:1.0
 
@@ -645,7 +644,6 @@ Eclipse Public License (EPL) 2.0
 --------------------------
 
 jakarta.ws.rs-api:jakarta.ws.rs-api:2.1.6
-jakarta.servlet.jsp:jakarta.servlet.jsp-api:2.3.6
 jakarta.servlet:jakarta.servlet-api:4.0.4
 
 Eclipse Public License (EPL) 2.0 with some parts being
