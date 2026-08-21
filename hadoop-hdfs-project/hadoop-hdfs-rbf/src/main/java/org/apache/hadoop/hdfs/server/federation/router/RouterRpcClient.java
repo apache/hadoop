@@ -69,6 +69,7 @@ import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.SnapshotException;
 import org.apache.hadoop.hdfs.server.federation.fairness.RouterRpcFairnessPolicyController;
+import org.apache.hadoop.hdfs.server.federation.metrics.JSON;
 import org.apache.hadoop.hdfs.server.federation.resolver.ActiveNamenodeResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamenodeContext;
 import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamenodeServiceState;
@@ -89,7 +90,6 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
-import org.eclipse.jetty.util.ajax.JSON;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -380,7 +380,7 @@ public class RouterRpcClient {
       info.put("total", executorService.getPoolSize());
       info.put("max", executorService.getMaximumPoolSize());
     }
-    return JSON.toString(info);
+    return JSON.getDefault().toJSON(info);
   }
 
   /**
@@ -389,7 +389,7 @@ public class RouterRpcClient {
    * @return String representation of the rejected permits for each nameservice.
    */
   public String getRejectedPermitsPerNsJSON() {
-    return JSON.toString(rejectedPermitsPerNs);
+    return JSON.getDefault().toJSON(rejectedPermitsPerNs);
   }
 
   /**
@@ -398,7 +398,7 @@ public class RouterRpcClient {
    * @return String representation of the accepted permits for each nameservice.
    */
   public String getAcceptedPermitsPerNsJSON() {
-    return JSON.toString(acceptedPermitsPerNs);
+    return JSON.getDefault().toJSON(acceptedPermitsPerNs);
   }
   /**
    * Get ClientProtocol proxy client for a NameNode. Each combination of user +

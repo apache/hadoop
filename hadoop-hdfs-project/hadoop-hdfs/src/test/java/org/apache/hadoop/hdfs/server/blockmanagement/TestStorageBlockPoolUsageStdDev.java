@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -29,7 +30,7 @@ import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
-import org.eclipse.jetty.util.ajax.JSON;
+import org.apache.hadoop.util.JsonUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -127,7 +128,8 @@ public class TestStorageBlockPoolUsageStdDev {
     // and Datanode are the same.
     String liveNodes = cluster.getNameNode().getNamesystem().getLiveNodes();
     Map<String, Map<String, Object>> info =
-        (Map<String, Map<String, Object>>) JSON.parse(liveNodes);
+        JsonUtils.parse(liveNodes,
+            new TypeReference<Map<String, Map<String, Object>>>() {});
 
     // Create storageReports for datanodes.
     FSNamesystem namesystem = cluster.getNamesystem();

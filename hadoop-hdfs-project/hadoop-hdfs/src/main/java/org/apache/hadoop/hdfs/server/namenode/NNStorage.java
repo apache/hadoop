@@ -55,9 +55,9 @@ import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.util.PersistentLongFile;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.DNS;
+import org.apache.hadoop.util.JsonUtils;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.Time;
-import org.eclipse.jetty.util.ajax.JSON;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.util.Preconditions;
@@ -1146,7 +1146,7 @@ public class NNStorage extends Storage implements Closeable,
   }
 
   public String getNNDirectorySize() {
-    return JSON.toString(nameDirSizeMap);
+    return JsonUtils.toString(nameDirSizeMap);
   }
 
   public void updateNameDirSize() {
