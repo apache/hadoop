@@ -909,7 +909,36 @@
             <groupId>org.eclipse.jetty</groupId>
             <artifactId>javax.servlet-api</artifactId>
           </exclusion>
+          <!--
+            The exclusion above names a group jetty-server has never used, so it
+            matches nothing. The real coordinates are javax.servlet, and without
+            this that API lands on the classpath beside the managed
+            jakarta.servlet-api; both publish the javax.servlet packages, so
+            which one a module compiles and runs against comes down to the order
+            of the jars.
+          -->
+          <exclusion>
+            <groupId>javax.servlet</groupId>
+            <artifactId>javax.servlet-api</artifactId>
+          </exclusion>
         </exclusions>
+      </dependency>
+      <dependency>
+        <groupId>org.eclipse.jetty</groupId>
+        <artifactId>jetty-http</artifactId>
+        <version>${jetty.version}</version>
+      </dependency>
+      <!--
+        Not declared by any Hadoop module. It is managed here because
+        jersey-test-framework-provider-jetty drags it onto the test classpath of
+        around twenty modules at its own, older Jetty release, and Jersey's
+        JettyHttpContainer needs the class at run time so it cannot simply be
+        excluded. Managing it keeps every module on ${jetty.version}.
+      -->
+      <dependency>
+        <groupId>org.eclipse.jetty</groupId>
+        <artifactId>jetty-continuation</artifactId>
+        <version>${jetty.version}</version>
       </dependency>
       <dependency>
         <groupId>org.eclipse.jetty</groupId>
@@ -939,17 +968,17 @@
             <groupId>org.eclipse.jetty</groupId>
             <artifactId>jetty-webapp</artifactId>
           </exclusion>
+          <!-- Reaches the servlet API again through websocket-servlet. -->
+          <exclusion>
+            <groupId>javax.servlet</groupId>
+            <artifactId>javax.servlet-api</artifactId>
+          </exclusion>
         </exclusions>
       </dependency>
       <dependency>
         <groupId>org.eclipse.jetty.websocket</groupId>
         <artifactId>websocket-client</artifactId>
         <version>${jetty.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>jakarta.servlet.jsp</groupId>
-        <artifactId>jakarta.servlet.jsp-api</artifactId>
-        <version>2.3.6</version>
       </dependency>
       <dependency>
         <groupId>jakarta.servlet</groupId>
