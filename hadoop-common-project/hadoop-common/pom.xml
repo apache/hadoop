@@ -395,11 +395,6 @@
       <artifactId>jaxb-runtime</artifactId>
       <scope>runtime</scope>
     </dependency>
-    <dependency>
-      <groupId>jakarta.activation</groupId>
-      <artifactId>jakarta.activation-api</artifactId>
-      <scope>test</scope>
-    </dependency>
   </dependencies>
 
   <build>
