@@ -967,6 +967,11 @@ public final class HttpServer2 implements FilterContainer {
         CommonConfigurationKeys.HADOOP_HTTP_LOGS_ENABLED,
         CommonConfigurationKeys.HADOOP_HTTP_LOGS_ENABLED_DEFAULT);
     if (logDir != null && logsEnabled) {
+      // Jetty 12 checks will fail if the logDir is missing while Jetty 9.4 did not
+      File logDirFile = new File(logDir);
+      if (!logDirFile.exists()) {
+        logDirFile.mkdirs();
+      }
       ServletContextHandler logContext =
           new ServletContextHandler("/logs");
       parent.addHandler(logContext);
