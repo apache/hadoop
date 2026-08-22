@@ -867,9 +867,29 @@ public class TestResourceLocalizationService {
     // DOWNLOADING resource and schedule the deletion tasks.
     runner.run();
 
+    // The interrupt status must be restored after the dispatch failure was
+    // swallowed. Thread.interrupted() also clears it for the test thread.
+    assertTrue(Thread.interrupted());
+
     verify(rsrc).unlock();
-    verify(delService, Mockito.atLeastOnce())
-        .delete(isA(FileDeletionTask.class));
+    ArgumentCaptor<FileDeletionTask> captor =
+        ArgumentCaptor.forClass(FileDeletionTask.class);
+    verify(delService, times(2)).delete(captor.capture());
+    List<FileDeletionTask> tasks = captor.getAllValues();
+    // Localization dir and _tmp download dir of the DOWNLOADING resource.
+    FileDeletionTask rsrcTask = tasks.get(0);
+    assertEquals("user0", rsrcTask.getUser());
+    assertNull(rsrcTask.getSubDir());
+    assertEquals(Arrays.asList(
+        new Path("/local/usercache/user0/filecache/10"),
+        new Path("/local/usercache/user0/filecache/10_tmp")),
+        rsrcTask.getBaseDirs());
+    // nmPrivate token file; the path is null here because localization
+    // failed before it was resolved.
+    FileDeletionTask tokenTask = tasks.get(1);
+    assertNull(tokenTask.getUser());
+    assertNull(tokenTask.getSubDir());
+    assertNull(tokenTask.getBaseDirs());
   }
 
   @Test
