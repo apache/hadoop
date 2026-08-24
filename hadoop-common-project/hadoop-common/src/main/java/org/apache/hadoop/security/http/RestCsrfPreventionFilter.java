@@ -37,7 +37,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 
-import org.eclipse.jetty.server.Response;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -272,10 +271,8 @@ public class RestCsrfPreventionFilter implements Filter {
 
     @Override
     public void sendError(int code, String message) throws IOException {
-      if (httpResponse instanceof Response) {
-        ((Response)httpResponse).setStatusWithReason(code, message);
-      }
-
+      // Jetty 12 never puts a reason phrase on the wire, so the detail is
+      // left to sendError, which writes it into the response body.
       httpResponse.sendError(code, message);
     }
   }

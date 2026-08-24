@@ -27,7 +27,7 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.YarnJacksonJaxbJsonProvider;
-import org.eclipse.jetty.webapp.Configuration;
+import org.eclipse.jetty.ee8.webapp.Configuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

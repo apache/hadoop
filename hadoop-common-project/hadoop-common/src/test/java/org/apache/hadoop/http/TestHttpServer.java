@@ -34,6 +34,8 @@ import org.apache.hadoop.util.JsonUtils;
 import com.fasterxml.jackson.core.type.TypeReference;
 import org.eclipse.jetty.server.HttpConfiguration;
 import org.eclipse.jetty.server.ServerConnector;
+import org.apache.hadoop.test.GenericTestUtils;
+import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.handler.StatisticsHandler;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -277,6 +279,29 @@ public class TestHttpServer extends HttpServerFunctionalTest {
         conn.getContentType());
   }
 
+  /**
+   * /static must never list what is in it. The setting that stops it is a
+   * context init parameter, which the DefaultServlet reads under a prefix of
+   * its own choosing: get the prefix wrong and the parameter is not rejected,
+   * it is ignored, and dirAllowed falls back to its default of true. That is
+   * silent, so the endpoint is asserted rather than the setting.
+   */
+  @Test
+  public void testStaticContextDoesNotListDirectories() throws Exception {
+    URL staticUrl = new URL(baseUrl, "/static/");
+    HttpURLConnection conn = (HttpURLConnection) staticUrl.openConnection();
+    conn.connect();
+    assertEquals(HttpServletResponse.SC_FORBIDDEN, conn.getResponseCode(),
+        "/static served a directory listing");
+
+    // The context is otherwise working, so the 403 above is dirAllowed doing
+    // its job and not the whole context being broken.
+    URL cssUrl = new URL(baseUrl, "/static/test.css");
+    conn = (HttpURLConnection) cssUrl.openConnection();
+    conn.connect();
+    assertEquals(HttpServletResponse.SC_OK, conn.getResponseCode());
+  }
+
   @Test
   public void testHttpServer2Metrics() throws Exception {
     final HttpServer2Metrics metrics = server.getMetrics();
@@ -286,8 +311,10 @@ public class TestHttpServer extends HttpServerFunctionalTest {
         (HttpURLConnection)servletUrl.openConnection();
     conn.connect();
     assertThat(conn.getResponseCode()).isEqualTo(200);
-    final int after = metrics.responses2xx();
-    assertThat(after).isGreaterThan(before);
+    // Jetty 12 books the response when the exchange completes on the server,
+    // which can be after the client has read the status line, so the counter
+    // is given a moment rather than read straight away.
+    GenericTestUtils.waitFor(() -> metrics.responses2xx() > before, 50, 10000);
   }
 
   @Test
@@ -323,9 +350,12 @@ public class TestHttpServer extends HttpServerFunctionalTest {
   }
 
   /**
-   * Jetty StatisticsHandler must be inserted via Server#insertHandler
-   * instead of Server#setHandler. The server fails to start if
-   * the handler is added by setHandler.
+   * Jetty StatisticsHandler must be inserted via Server#insertHandler instead
+   * of Server#setHandler. On 9.4 the difference showed up as a server that
+   * refused to start, so the test could assert the failure; Jetty 12 starts a
+   * childless handler quite happily and serves 404s from it, which is worse.
+   * So the assertion is that the server still serves after the handler goes
+   * in - the reason to prefer insertHandler in the first place.
    */
   @Test
   public void testSetStatisticsHandler() throws Exception {
@@ -334,11 +364,30 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     conf.setBoolean(
         CommonConfigurationKeysPublic.HADOOP_HTTP_METRICS_ENABLED, false);
     final HttpServer2 testServer = createTestServer(conf);
-    testServer.webServer.setHandler(new StatisticsHandler());
+    testServer.addServlet("echo", "/echo", EchoServlet.class);
+
+    final Handler tree = testServer.webServer.getHandler();
+    assertThat(tree).isNotNull();
+    final StatisticsHandler statistics = new StatisticsHandler();
+    testServer.webServer.insertHandler(statistics);
+    assertThat(statistics.getHandler())
+        .as("insertHandler keeps the handler tree underneath")
+        .isSameAs(tree);
+
     try {
       testServer.start();
-      fail("IOException should be thrown.");
-    } catch (IOException ignore) {
+      final URL echoUrl = new URL(getServerURL(testServer), "/echo?a=b");
+      final HttpURLConnection conn =
+          (HttpURLConnection) echoUrl.openConnection();
+      conn.connect();
+      assertThat(conn.getResponseCode())
+          .as("the webapp stopped serving once StatisticsHandler was inserted")
+          .isEqualTo(HttpServletResponse.SC_OK);
+      // Booked when the exchange completes on the server, which can be after
+      // the client has read the status line - see testHttpServer2Metrics.
+      GenericTestUtils.waitFor(() -> statistics.getRequests() > 0, 50, 10000);
+    } finally {
+      testServer.stop();
     }
   }
 

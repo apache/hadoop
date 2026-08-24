@@ -89,6 +89,15 @@ import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
+import org.eclipse.jetty.ee8.nested.ErrorHandler;
+import org.eclipse.jetty.ee8.nested.SessionHandler;
+import org.eclipse.jetty.ee8.servlet.FilterHolder;
+import org.eclipse.jetty.ee8.servlet.FilterMapping;
+import org.eclipse.jetty.ee8.servlet.ServletContextHandler;
+import org.eclipse.jetty.ee8.servlet.ServletHandler;
+import org.eclipse.jetty.ee8.servlet.ServletHolder;
+import org.eclipse.jetty.ee8.servlet.ServletMapping;
+import org.eclipse.jetty.ee8.webapp.WebAppContext;
 import org.eclipse.jetty.http.HttpVersion;
 import org.eclipse.jetty.server.ConnectionFactory;
 import org.eclipse.jetty.server.Connector;
@@ -102,21 +111,11 @@ import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.server.SslConnectionFactory;
 import org.eclipse.jetty.server.SymlinkAllowedResourceAliasChecker;
 import org.eclipse.jetty.server.handler.ContextHandlerCollection;
-import org.eclipse.jetty.server.handler.HandlerCollection;
-import org.eclipse.jetty.server.handler.RequestLogHandler;
 import org.eclipse.jetty.server.handler.StatisticsHandler;
-import org.eclipse.jetty.server.session.SessionHandler;
-import org.eclipse.jetty.servlet.FilterHolder;
-import org.eclipse.jetty.servlet.FilterMapping;
-import org.eclipse.jetty.servlet.ServletContextHandler;
-import org.eclipse.jetty.servlet.ServletHandler;
-import org.eclipse.jetty.servlet.ServletHolder;
-import org.eclipse.jetty.servlet.ServletMapping;
 import org.eclipse.jetty.util.ArrayUtil;
-import org.eclipse.jetty.util.MultiException;
+import org.eclipse.jetty.util.ExceptionUtil;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
-import org.eclipse.jetty.webapp.WebAppContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -173,6 +172,19 @@ public final class HttpServer2 implements FilterContainer {
       = "hadoop.http.sni.host.check.enabled";
   public static final boolean HTTP_SNI_HOST_CHECK_ENABLED_DEFAULT = false;
 
+  /**
+   * Prefix under which a context init parameter reaches Jetty's DefaultServlet.
+   * <p>
+   * This is not the package the servlet lives in: ee8 moved the class to
+   * org.eclipse.jetty.ee8.servlet but DefaultServlet#getInitParameter still
+   * reads the 9.4 name. Spelling it the other way costs nothing at startup and
+   * silently drops the setting - dirAllowed then falls back to its default of
+   * true and /static starts listing directories - so the prefix is written
+   * once here rather than at each call site.
+   */
+  private static final String DEFAULT_SERVLET_INIT_PREFIX =
+      "org.eclipse.jetty.servlet.Default.";
+
   // The ServletContext attribute where the daemon Configuration
   // gets stored.
   public static final String CONF_CONTEXT_ATTRIBUTE = "hadoop.conf";
@@ -186,7 +198,7 @@ public final class HttpServer2 implements FilterContainer {
 
   protected final Server webServer;
 
-  private final HandlerCollection handlers;
+  private final Handler.Sequence handlers;
 
   private final List<ServerConnector> listeners = Lists.newArrayList();
 
@@ -739,7 +751,7 @@ public final class HttpServer2 implements FilterContainer {
     final String appDir = getWebAppsPath(b.name);
     this.webServer = new Server();
     this.adminsAcl = b.adminsAcl;
-    this.handlers = new HandlerCollection();
+    this.handlers = new Handler.Sequence();
     this.webAppContext = createWebAppContext(b, adminsAcl, appDir);
     this.xFrameOptionIsEnabled = b.xFrameEnabled;
     this.xFrameOption = b.xFrameOption;
@@ -767,7 +779,19 @@ public final class HttpServer2 implements FilterContainer {
       throws IOException {
 
     Preconditions.checkNotNull(webAppContext);
-    webAppContext.getErrorHandler().setShowStacks(LOG.isTraceEnabled());
+    // Jetty only builds an error page for GET, HEAD and POST, so an error on a
+    // PUT or a DELETE goes back with no body at all. That did not show on 9.4
+    // because the detail also travelled in the reason phrase, which Jetty 12
+    // no longer puts on the wire, and losing both leaves a client with nothing
+    // but the status code.
+    ErrorHandler errorHandler = new ErrorHandler() {
+      @Override
+      public boolean errorPageForMethod(String method) {
+        return true;
+      }
+    };
+    errorHandler.setShowStacks(LOG.isTraceEnabled());
+    webAppContext.setErrorHandler(errorHandler);
 
     int maxThreads = conf.getInt(HTTP_MAX_THREADS_KEY, -1);
     // If HTTP_MAX_THREADS is not configured, QueueThreadPool() will use the
@@ -788,10 +812,13 @@ public final class HttpServer2 implements FilterContainer {
 
     handlers.addHandler(contexts);
     if (requestLog != null) {
-      RequestLogHandler requestLogHandler = new RequestLogHandler();
-      requestLogHandler.setRequestLog(requestLog);
-      handlers.addHandler(requestLogHandler);
+      // Jetty 12 removed RequestLogHandler. A request log is now a property of
+      // the server and covers every request it handles, which is what wrapping
+      // the whole handler list amounted to before.
+      webServer.setRequestLog(requestLog);
     }
+    // An ee8 context is not a core Handler; it supplies one. Handler.Collection
+    // takes the Supplier directly and adds the core handler behind it.
     handlers.addHandler(webAppContext);
     final String appDir = getWebAppsPath(name);
     addDefaultApps(contexts, appDir, conf);
@@ -804,9 +831,8 @@ public final class HttpServer2 implements FilterContainer {
       // The tree might look like this:
       //
       // - StatisticsHandler (for all requests)
-      //   - HandlerList
+      //   - Handler.Sequence
       //     - ContextHandlerCollection
-      //     - RequestLogHandler (if enabled)
       //     - WebAppContext
       //       - SessionHandler
       //       - Servlets
@@ -971,6 +997,16 @@ public final class HttpServer2 implements FilterContainer {
     boolean logsEnabled = conf.getBoolean(
         CommonConfigurationKeys.HADOOP_HTTP_LOGS_ENABLED,
         CommonConfigurationKeys.HADOOP_HTTP_LOGS_ENABLED_DEFAULT);
+    // Jetty 9.4 let a context start on a base resource that was not there and
+    // served 404s from it. Jetty 12 rejects it in ContextHandler#doStart, which
+    // turns a missing log directory into a server that will not come up at all,
+    // so the context is left out rather than allowed to fail the daemon. The
+    // endpoint answers 404 either way.
+    if (logDir != null && logsEnabled && !new File(logDir).isDirectory()) {
+      LOG.warn("Not adding the /logs context: hadoop.log.dir is set to {},"
+          + " which is not a directory.", logDir);
+      logsEnabled = false;
+    }
     if (logDir != null && logsEnabled) {
       ServletContextHandler logContext =
           new ServletContextHandler(parent, "/logs");
@@ -981,14 +1017,15 @@ public final class HttpServer2 implements FilterContainer {
           CommonConfigurationKeys.DEFAULT_HADOOP_JETTY_LOGS_SERVE_ALIASES)) {
         @SuppressWarnings("unchecked")
         Map<String, String> params = logContext.getInitParams();
-        params.put("org.eclipse.jetty.servlet.Default.aliases", "true");
+        params.put(DEFAULT_SERVLET_INIT_PREFIX + "aliases", "true");
       }
       logContext.setDisplayName("logs");
       SessionHandler handler = new SessionHandler();
       handler.setHttpOnly(true);
       handler.getSessionCookieConfig().setSecure(true);
       logContext.setSessionHandler(handler);
-      logContext.addAliasCheck(new SymlinkAllowedResourceAliasChecker(logContext));
+      logContext.addAliasCheck(
+          new SymlinkAllowedResourceAliasChecker(logContext.getCoreContextHandler()));
       setContextAttributes(logContext, conf);
       addNoCacheFilter(logContext);
       defaultContexts.put(logContext, true);
@@ -1001,13 +1038,14 @@ public final class HttpServer2 implements FilterContainer {
     staticContext.setDisplayName("static");
     @SuppressWarnings("unchecked")
     Map<String, String> params = staticContext.getInitParams();
-    params.put("org.eclipse.jetty.servlet.Default.dirAllowed", "false");
-    params.put("org.eclipse.jetty.servlet.Default.gzip", "true");
+    params.put(DEFAULT_SERVLET_INIT_PREFIX + "dirAllowed", "false");
+    params.put(DEFAULT_SERVLET_INIT_PREFIX + "gzip", "true");
     SessionHandler handler = new SessionHandler();
     handler.setHttpOnly(true);
     handler.getSessionCookieConfig().setSecure(true);
     staticContext.setSessionHandler(handler);
-    staticContext.addAliasCheck(new SymlinkAllowedResourceAliasChecker(staticContext));
+    staticContext.addAliasCheck(new SymlinkAllowedResourceAliasChecker(
+        staticContext.getCoreContextHandler()));
     setContextAttributes(staticContext, conf);
     defaultContexts.put(staticContext, true);
   }
@@ -1208,8 +1246,8 @@ public final class HttpServer2 implements FilterContainer {
    * @param handler The handler to add
    */
   public void addHandlerAtFront(Handler handler) {
-    Handler[] h = ArrayUtil.prependToArray(
-        handler, this.handlers.getHandlers(), Handler.class);
+    List<Handler> h = new ArrayList<>(this.handlers.getHandlers());
+    h.add(0, handler);
     handlers.setHandlers(h);
   }
 
@@ -1464,13 +1502,9 @@ public final class HttpServer2 implements FilterContainer {
       } catch (IOException ex) {
         LOG.info("HttpServer.start() threw a non Bind IOException", ex);
         throw ex;
-      } catch (MultiException ex) {
-        LOG.info("HttpServer.start() threw a MultiException", ex);
-        throw ex;
       }
       // Make sure there is no handler failures.
-      Handler[] hs = webServer.getHandlers();
-      for (Handler handler : hs) {
+      for (Handler handler : webServer.getHandlers()) {
         if (handler.isFailed()) {
           throw new IOException(
               "Problem in starting http server. Server handlers failed");
@@ -1619,7 +1653,7 @@ public final class HttpServer2 implements FilterContainer {
    * @throws Exception exception.
    */
   public void stop() throws Exception {
-    MultiException exception = null;
+    ExceptionUtil.MultiException exception = null;
     if (this.configurationChangeMonitor.isPresent()) {
       try {
         this.configurationChangeMonitor.get().cancel();
@@ -1670,9 +1704,10 @@ public final class HttpServer2 implements FilterContainer {
 
   }
 
-  private MultiException addMultiException(MultiException exception, Exception e) {
+  private ExceptionUtil.MultiException addMultiException(
+      ExceptionUtil.MultiException exception, Exception e) {
     if(exception == null){
-      exception = new MultiException();
+      exception = new ExceptionUtil.MultiException();
     }
     exception.add(e);
     return exception;
@@ -1960,9 +1995,7 @@ public final class HttpServer2 implements FilterContainer {
      */
     private String inferMimeType(ServletRequest request) {
       String path = ((HttpServletRequest)request).getRequestURI();
-      ServletContextHandler.Context sContext =
-          (ServletContextHandler.Context)config.getServletContext();
-      String mime = sContext.getMimeType(path);
+      String mime = config.getServletContext().getMimeType(path);
       return (mime == null) ? null : mime;
     }
 

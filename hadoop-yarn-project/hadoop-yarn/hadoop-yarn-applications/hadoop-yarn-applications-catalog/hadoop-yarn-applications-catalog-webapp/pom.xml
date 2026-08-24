@@ -87,24 +87,30 @@
           <scope>test</scope>
       </dependency>
 
+      <!--
+          Jetty 12 renamed the HTTP/2 artifacts with a jetty- prefix, and
+          http2-http-client-transport became jetty-http2-client-transport. The
+          exclusions on solr-solrj and solr-core below keep the old names,
+          because those match what Solr itself depends on.
+      -->
       <dependency>
           <groupId>org.eclipse.jetty.http2</groupId>
-          <artifactId>http2-hpack</artifactId>
+          <artifactId>jetty-http2-hpack</artifactId>
           <version>${jetty.version}</version>
       </dependency>
       <dependency>
           <groupId>org.eclipse.jetty.http2</groupId>
-          <artifactId>http2-client</artifactId>
+          <artifactId>jetty-http2-client</artifactId>
           <version>${jetty.version}</version>
       </dependency>
       <dependency>
           <groupId>org.eclipse.jetty.http2</groupId>
-          <artifactId>http2-common</artifactId>
+          <artifactId>jetty-http2-common</artifactId>
           <version>${jetty.version}</version>
       </dependency>
       <dependency>
           <groupId>org.eclipse.jetty.http2</groupId>
-          <artifactId>http2-http-client-transport</artifactId>
+          <artifactId>jetty-http2-client-transport</artifactId>
           <version>${jetty.version}</version>
       </dependency>
 
@@ -195,6 +201,10 @@
                   weight. It also lags Hadoop's managed Jetty by several releases,
                   which is what put two Jetty releases on this module's test
                   classpath. Excluding it leaves only ${jetty.version}.
+
+                  Maven has no way to share an exclusion set, so this block is
+                  repeated verbatim on the other Solr dependency in this file.
+                  Keep the two in step.
                 -->
                 <exclusion>
                     <groupId>org.eclipse.jetty</groupId>
@@ -227,6 +237,21 @@
                 <exclusion>
                     <groupId>org.eclipse.jetty</groupId>
                     <artifactId>jetty-servlets</artifactId>
+                </exclusion>
+                <!--
+                  jetty-servlet and jetty-webapp do not exist on the Jetty 12
+                  line, so managing them no longer pulls Solr's copies up to
+                  ${jetty.version} the way it did on 9.4; without these they
+                  arrive at Solr's own release and put a second Jetty on this
+                  module's test classpath.
+                -->
+                <exclusion>
+                    <groupId>org.eclipse.jetty</groupId>
+                    <artifactId>jetty-servlet</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.eclipse.jetty</groupId>
+                    <artifactId>jetty-webapp</artifactId>
                 </exclusion>
                 <exclusion>
                     <groupId>org.eclipse.jetty.http2</groupId>
@@ -295,6 +320,10 @@
                   weight. It also lags Hadoop's managed Jetty by several releases,
                   which is what put two Jetty releases on this module's test
                   classpath. Excluding it leaves only ${jetty.version}.
+
+                  Maven has no way to share an exclusion set, so this block is
+                  repeated verbatim on the other Solr dependency in this file.
+                  Keep the two in step.
                 -->
                 <exclusion>
                     <groupId>org.eclipse.jetty</groupId>
@@ -327,6 +356,21 @@
                 <exclusion>
                     <groupId>org.eclipse.jetty</groupId>
                     <artifactId>jetty-servlets</artifactId>
+                </exclusion>
+                <!--
+                  jetty-servlet and jetty-webapp do not exist on the Jetty 12
+                  line, so managing them no longer pulls Solr's copies up to
+                  ${jetty.version} the way it did on 9.4; without these they
+                  arrive at Solr's own release and put a second Jetty on this
+                  module's test classpath.
+                -->
+                <exclusion>
+                    <groupId>org.eclipse.jetty</groupId>
+                    <artifactId>jetty-servlet</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.eclipse.jetty</groupId>
+                    <artifactId>jetty-webapp</artifactId>
                 </exclusion>
                 <exclusion>
                     <groupId>org.eclipse.jetty.http2</groupId>

@@ -42,7 +42,6 @@ import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.security.SecurityUtil;
-import org.eclipse.jetty.server.Response;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -703,10 +702,8 @@ public class ImageServlet extends HttpServlet {
 
   private void sendError(HttpServletResponse response, int code, String message)
       throws IOException {
-    if (response instanceof Response) {
-      ((Response)response).setStatusWithReason(code, message);
-    }
-
+    // Jetty 12 never puts a reason phrase on the wire, so the detail is left
+    // to sendError, which writes it into the response body.
     response.sendError(code, message);
   }
 
