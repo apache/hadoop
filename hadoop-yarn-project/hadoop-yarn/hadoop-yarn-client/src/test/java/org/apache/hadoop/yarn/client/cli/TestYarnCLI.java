@@ -106,7 +106,6 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.C
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
-import org.eclipse.jetty.util.log.Log;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -385,11 +384,11 @@ public class TestYarnCLI {
         "http://host:2345", "");
     pw.close();
     String appReportStr = baos.toString("UTF-8");
-    Log.getLog().info("ExpectedOutput");
-    Log.getLog().info("["+appReportStr+"]");
-    Log.getLog().info("OutputFrom command");
+    LOG.info("ExpectedOutput");
+    LOG.info("["+appReportStr+"]");
+    LOG.info("OutputFrom command");
     String actualOutput = sysOutStream.toString("UTF-8");
-    Log.getLog().info("["+actualOutput+"]");
+    LOG.info("["+actualOutput+"]");
     assertEquals(appReportStr, actualOutput);
   }
   

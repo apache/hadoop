@@ -40,6 +40,7 @@ import org.apache.hadoop.yarn.webapp.WebApp;
 import org.apache.hadoop.yarn.webapp.WebApps;
 import org.apache.hadoop.yarn.webapp.YarnWebParams;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
+import org.eclipse.jetty.ee8.websocket.server.config.JettyWebSocketServletContainerInitializer;
 
 import javax.servlet.Filter;
 import org.glassfish.jersey.internal.inject.AbstractBinder;
@@ -138,6 +139,16 @@ public class WebServer extends AbstractService {
           .at(bindAddress)
           .withServlet("ContainerShellWebSocket", "/container/*",
            ContainerShellWebSocketServlet.class, params, false)
+          // Jetty 9.4 let a WebSocketServlet bootstrap itself from init().
+          // Jetty 12 keeps the WebSocket components on the context and expects
+          // a ServletContainerInitializer to have put them there, which only
+          // runs if jetty-ee8-annotations is on the classpath - it is excluded
+          // here because it drags in a banned asm. Installing them directly is
+          // the same work without the scan, and has to happen while the
+          // context is still stopped.
+          .withServerConfigurer(server ->
+           JettyWebSocketServletContainerInitializer.configure(
+               server.getWebAppContext(), null))
           .withServlet("Terminal", "/terminal/*",
            TerminalServlet.class, terminalParams, false)
           .with(conf)

@@ -26,7 +26,8 @@ import org.apache.hadoop.fs.FsConstants;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.viewfs.ConfigUtil;
 import org.apache.hadoop.util.Shell;
-import org.eclipse.jetty.util.log.Log;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 /**
@@ -46,6 +47,9 @@ import org.eclipse.jetty.util.log.Log;
  * We also set the view file system's wd to point to the wd. 
  */
 public class ViewFileSystemTestSetup {
+  private static final Logger LOG =
+      LoggerFactory.getLogger(ViewFileSystemTestSetup.class);
+
   
   static public String ViewFSTestDir = "/testDir";
 
@@ -83,7 +87,7 @@ public class ViewFileSystemTestSetup {
 
     FileSystem fsView = FileSystem.get(FsConstants.VIEWFS_URI, conf);
     fsView.setWorkingDirectory(new Path(wdDir)); // in case testdir relative to wd.
-    Log.getLog().info("Working dir is: " + fsView.getWorkingDirectory());
+    LOG.info("Working dir is: " + fsView.getWorkingDirectory());
     return fsView;
   }
 
@@ -117,12 +121,12 @@ public class ViewFileSystemTestSetup {
     } else { // home dir is at root. Just link the home dir itse
       URI linkTarget = fsTarget.makeQualified(new Path(homeDir)).toUri();
       ConfigUtil.addLink(conf, homeDir, linkTarget);
-      Log.getLog().info("Added link for home dir " + homeDir + "->" + linkTarget);
+      LOG.info("Added link for home dir " + homeDir + "->" + linkTarget);
     }
     // Now set the root of the home dir for viewfs
     String homeDirRoot = fsTarget.getHomeDirectory().getParent().toUri().getPath();
     ConfigUtil.setHomeDirConf(conf, homeDirRoot);
-    Log.getLog().info("Home dir base for viewfs" + homeDirRoot);
+    LOG.info("Home dir base for viewfs" + homeDirRoot);
   }
   
   /*
@@ -137,7 +141,7 @@ public class ViewFileSystemTestSetup {
     String firstComponent = path.substring(0, indexOfEnd);
     URI linkTarget = fsTarget.makeQualified(new Path(firstComponent)).toUri();
     ConfigUtil.addLink(conf, firstComponent, linkTarget);
-    Log.getLog().info("Added link for " + info + " "
+    LOG.info("Added link for " + info + " "
         + firstComponent + "->" + linkTarget);    
   }
 }
