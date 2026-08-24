@@ -21,6 +21,8 @@ import static org.apache.hadoop.yarn.service.utils.ServiceApiUtil.jsonSerDeser;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.text.MessageFormat;
 import java.util.List;
 import java.util.Map;
@@ -62,7 +64,6 @@ import org.apache.hadoop.yarn.service.api.records.ServiceStatus;
 import org.apache.hadoop.yarn.service.conf.RestApiConstants;
 import org.apache.hadoop.yarn.service.utils.ServiceApiUtil;
 import org.apache.hadoop.yarn.util.RMHAUtils;
-import org.eclipse.jetty.util.UrlEncoded;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -226,8 +227,8 @@ public class ApiServiceClient extends AppAdminClient {
         .equalsIgnoreCase("simple")) {
       String username = UserGroupInformation.getCurrentUser()
             .getShortUserName();
-      builder.append("?user.name=").append(UrlEncoded
-          .encodeString(username));
+      builder.append("?user.name=").append(
+          URLEncoder.encode(username, StandardCharsets.UTF_8));
     }
   }
 
