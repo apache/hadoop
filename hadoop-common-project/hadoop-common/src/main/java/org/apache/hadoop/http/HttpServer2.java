@@ -28,6 +28,7 @@ import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
+import java.nio.channels.ServerSocketChannel;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -611,7 +612,7 @@ public final class HttpServer2 implements FilterContainer {
 
     private ServerConnector createHttpChannelConnector(
         Server server, HttpConfiguration httpConfig) {
-      ServerConnector conn = new ServerConnector(server,
+      ServerConnector conn = new ReopenableServerConnector(server,
           conf.getInt(HTTP_ACCEPTOR_COUNT_KEY, HTTP_ACCEPTOR_COUNT_DEFAULT),
           conf.getInt(HTTP_SELECTOR_COUNT_KEY, HTTP_SELECTOR_COUNT_DEFAULT));
       ConnectionFactory connFactory = new HttpConnectionFactory(httpConfig);
@@ -1545,7 +1546,73 @@ public final class HttpServer2 implements FilterContainer {
     // failed to open w/o issuing a close first, even if the port is changed
     listener.close();
     listener.open();
+    if (listener.getLocalPort() < 0) {
+      // open() came back without an exception and without a socket. That is
+      // not a port conflict, so it must not be retried on the next port: the
+      // retry would no-op in exactly the same way, forever. See
+      // ReopenableServerConnector for the one case that used to get here.
+      throw new IllegalStateException(
+          "Jetty reported no error but did not bind " + listener);
+    }
     LOG.info("Jetty bound to port " + listener.getLocalPort());
+  }
+
+  /**
+   * A ServerConnector whose listen socket can be reopened after it is closed.
+   * <p>
+   * Jetty 9.4's ServerConnector#close released the accept channel as well as
+   * closing it, so a close/open pair rebound the same port. Jetty 12 closes
+   * the channel but keeps the reference, and ServerConnector#open does nothing
+   * at all while that reference is set - it neither rebinds nor complains, and
+   * getLocalPort stays at -2. Only doStop clears it.
+   * <p>
+   * That is enough for a server that is started, because stopping it clears
+   * the channel on the way down. It is not enough here: openListeners binds
+   * before the Server is started, so a caller that opens listeners, stops, and
+   * opens them again gets a connector that silently never comes back.
+   * <p>
+   * The public open(ServerSocketChannel) overload assigns the channel
+   * unconditionally, so handing it a fresh one restores the 9.4 behaviour
+   * without reaching into Jetty's internals. That is done only after Jetty's
+   * own open() has been given the first go and turned out to be a no-op, so
+   * the ordinary first bind runs the stock path unchanged; the replacement
+   * path does not fire the connector's open callbacks, which is a step up
+   * from the nothing it does today and the reason to keep it to that one
+   * case.
+   */
+  private static final class ReopenableServerConnector extends ServerConnector {
+
+    private ReopenableServerConnector(Server server, int acceptors,
+        int selectors) {
+      super(server, acceptors, selectors);
+    }
+
+    @Override
+    public void open() throws IOException {
+      // Always give Jetty the first go, so a connector that has never been
+      // opened takes the stock path and nothing - the open callbacks it fires
+      // among them - is skipped.
+      super.open();
+      if (isStarted() || getLocalPort() != -2 || isOpen()) {
+        return;
+      }
+      // super.open() returned having bound nothing: the connector is holding
+      // a channel it closed. isOpen() being false is what says the channel is
+      // spent - Jetty only closes it from close() when the connector has
+      // acceptors, and binding a second channel to a port the first one still
+      // holds would fail and leak the first.
+      ServerSocketChannel channel = openAcceptChannel();
+      try {
+        open(channel);
+      } catch (Throwable t) {
+        try {
+          channel.close();
+        } catch (IOException suppressed) {
+          t.addSuppressed(suppressed);
+        }
+        throw t;
+      }
+    }
   }
 
   /**
