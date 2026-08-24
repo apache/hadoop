@@ -928,18 +928,6 @@
         <artifactId>jetty-http</artifactId>
         <version>${jetty.version}</version>
       </dependency>
-      <!--
-        Not declared by any Hadoop module. It is managed here because
-        jersey-test-framework-provider-jetty drags it onto the test classpath of
-        around twenty modules at its own, older Jetty release, and Jersey's
-        JettyHttpContainer needs the class at run time so it cannot simply be
-        excluded. Managing it keeps every module on ${jetty.version}.
-      -->
-      <dependency>
-        <groupId>org.eclipse.jetty</groupId>
-        <artifactId>jetty-continuation</artifactId>
-        <version>${jetty.version}</version>
-      </dependency>
       <dependency>
         <groupId>org.eclipse.jetty</groupId>
         <artifactId>jetty-util</artifactId>
@@ -2206,14 +2194,8 @@
       </dependency>
       <dependency>
         <groupId>org.glassfish.jersey.test-framework.providers</groupId>
-        <artifactId>jersey-test-framework-provider-jetty</artifactId>
+        <artifactId>jersey-test-framework-provider-jdk-http</artifactId>
         <version>${jersey2.version}</version>
-        <exclusions>
-          <exclusion>
-            <groupId>javax.servlet</groupId>
-            <artifactId>javax.servlet-api</artifactId>
-          </exclusion>
-        </exclusions>
       </dependency>
       <dependency>
         <groupId>org.glassfish.jersey.media</groupId>
