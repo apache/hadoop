@@ -247,7 +247,7 @@ function getAutoCreationStatus(
 }
 
 function transformToCardData(queueInfo: QueueInfo, stagedChanges: StagedChange[]): QueueCardData {
-  const getQueuePropertyValue = useSchedulerStore.getState().getQueuePropertyValue;
+  const { getQueuePropertyValue, getQueuePartitionCapacities } = useSchedulerStore.getState();
 
   const capacityDisplay = getQueuePropertyValue(queueInfo.queuePath, 'capacity');
   const maxCapacityDisplay = getQueuePropertyValue(queueInfo.queuePath, 'maximum-capacity');
@@ -257,36 +257,44 @@ function transformToCardData(queueInfo: QueueInfo, stagedChanges: StagedChange[]
 
   const isAutoCreatedQueue =
     queueInfo.creationMethod === 'dynamicLegacy' ||
-    queueInfo.creationMethod === 'dynamicFlexible';
+    queueInfo.creationMethod === 'dynamicFlexible' ||
+    (queueInfo as { isAutoCreatedLeafQueue?: boolean }).isAutoCreatedLeafQueue === true;
 
   if (isAutoCreatedQueue) {
-    const resourcePartitions = queueInfo.capacities?.queueCapacitiesByPartition;
-    const defaultResourcePartition = resourcePartitions?.length
-      ? (resourcePartitions.find((entry) => !entry.partitionName) ?? resourcePartitions[0])
-      : undefined;
+    const defaultResourcePartition =
+      getQueuePartitionCapacities(queueInfo.queuePath, '') ??
+      queueInfo.capacities?.queueCapacitiesByPartition?.find((entry) => !entry.partitionName) ??
+      queueInfo.capacities?.queueCapacitiesByPartition?.[0];
+    const configuredMinResource = defaultResourcePartition?.configuredMinResource;
 
-    if (capacityDisplay.isStaged) {
-      // Pending local edit from Edit Capacity — not yet applied to the cluster.
-      capacityConfig = capacityDisplay.value;
-    } else {
+    if (!capacityDisplay.isStaged) {
       const configuredWeight = queueInfo.weight ?? defaultResourcePartition?.weight;
+      const configuredCapacity =
+        queueInfo.capacity ?? defaultResourcePartition?.capacity ?? 0;
+
       if (configuredWeight !== undefined && configuredWeight > 0) {
         capacityConfig = `${configuredWeight}w`;
-      } else {
-        const configuredCapacity =
-          queueInfo.capacity ?? defaultResourcePartition?.capacity ?? 0;
-        if (configuredCapacity > 0) {
-          capacityConfig = String(configuredCapacity);
-        }
+      } else if (
+        configuredMinResource &&
+        (configuredMinResource.memory > 0 || configuredMinResource.vCores > 0)
+      ) {
+        capacityConfig = `[memory-mb=${configuredMinResource.memory},vcores=${configuredMinResource.vCores}]`;
+      } else if (configuredCapacity > 0) {
+        capacityConfig = String(configuredCapacity);
       }
     }
 
-    if (maxCapacityDisplay.isStaged) {
-      maxCapacityConfig = maxCapacityDisplay.value;
-    } else {
+    if (!maxCapacityDisplay.isStaged) {
       const configuredMaxCapacity =
-        queueInfo.maxCapacity ?? defaultResourcePartition?.maxCapacity;
-      if (configuredMaxCapacity !== undefined) {
+        queueInfo.maxCapacity ?? defaultResourcePartition?.maxCapacity ?? 0;
+      const configuredMaxResource = defaultResourcePartition?.configuredMaxResource;
+
+      if (
+        configuredMaxResource &&
+        (configuredMaxResource.memory > 0 || configuredMaxResource.vCores > 0)
+      ) {
+        maxCapacityConfig = `[memory-mb=${configuredMaxResource.memory},vcores=${configuredMaxResource.vCores}]`;
+      } else if (configuredMaxCapacity > 0) {
         maxCapacityConfig = String(configuredMaxCapacity);
       }
     }
