@@ -19,6 +19,8 @@
 package org.apache.hadoop.mcp;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -156,11 +158,12 @@ public class TestMcpJsonRpcValidator {
     JsonNode request = OBJECT_MAPPER.readTree(
         "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}");
     assertTrue(McpJsonRpcValidator.isJsonRpcNotification(notification));
-    assertTrue(!McpJsonRpcValidator.isJsonRpcNotification(request));
+    assertFalse(McpJsonRpcValidator.isJsonRpcNotification(request));
   }
 
   private void assertInvalid(JsonNode request, Integer expectedId) {
     McpHttpResponse response = McpJsonRpcValidator.validate(request, responses);
+    assertNotNull(response, "response should not be null");
     JsonNode body = response.body();
     assertEquals(McpJsonRpc.INVALID_REQUEST, body.get("error").get("code").asInt());
     if (expectedId == null) {
