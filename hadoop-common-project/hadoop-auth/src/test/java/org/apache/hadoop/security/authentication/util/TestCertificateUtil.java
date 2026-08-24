@@ -22,6 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
+import java.security.cert.CertificateException;
 import java.security.interfaces.RSAPublicKey;
 
 import javax.servlet.ServletException;
@@ -45,9 +46,9 @@ public class TestCertificateUtil {
         + "9aTyR+HGHCfvwoCegc9rAVw/DLaRriSO/jnEXzYK6XLVKH+hx5UXrJ7Oyc7JjZUc3g9kCWORThCX"
         + "Mzc1xA==" + "\n-----END CERTIFICATE-----";
     try {
-      CertificateUtil.parseRSAPublicKey(pem);
-      fail("Should not have thrown ServletException");
-    } catch (ServletException se) {
+      CertificateUtil.toRSAPublicKey(pem);
+      fail("Should not have thrown CertificateException");
+    } catch (CertificateException se) {
       assertTrue(se.getMessage().contains("PEM header"));
     }
   }
@@ -66,9 +67,9 @@ public class TestCertificateUtil {
         + "9aTyR+HGHCfvwoCegc9rAVw/DLaRriSO/jnEXzYK6XLVKH+hx5UXrJ7Oyc7JjZUc3g9kCWORThCX"
         + "Mzc1xA++";
     try {
-      CertificateUtil.parseRSAPublicKey(pem);
-      fail("Should not have thrown ServletException");
-    } catch (ServletException se) {
+      CertificateUtil.toRSAPublicKey(pem);
+      fail("Should not have thrown CertificateException");
+    } catch (CertificateException se) {
       assertTrue(se.getMessage().contains("corrupt"));
     }
   }
@@ -87,11 +88,29 @@ public class TestCertificateUtil {
         + "9aTyR+HGHCfvwoCegc9rAVw/DLaRriSO/jnEXzYK6XLVKH+hx5UXrJ7Oyc7JjZUc3g9kCWORThCX"
         + "Mzc1xA==";
     try {
-      RSAPublicKey pk = CertificateUtil.parseRSAPublicKey(pem);
+      RSAPublicKey pk = CertificateUtil.toRSAPublicKey(pem);
       assertNotNull(pk);
       assertEquals("RSA", pk.getAlgorithm());
-    } catch (ServletException se) {
+    } catch (CertificateException se) {
+      fail("Should not have thrown CertificateException");
+    }
+  }
+
+  /**
+   * The deprecated entry point still reports a ServletException, so callers
+   * written against it keep compiling and keep catching what they caught
+   * before.
+   */
+  @Test
+  @SuppressWarnings("deprecation")
+  public void testDeprecatedEntryPointStillThrowsServletException() {
+    String pem = "not a certificate";
+    try {
+      CertificateUtil.parseRSAPublicKey(pem);
       fail("Should not have thrown ServletException");
+    } catch (ServletException se) {
+      assertTrue(se.getMessage().contains("corrupt"));
+      assertTrue(se.getCause() instanceof CertificateException);
     }
   }
 
