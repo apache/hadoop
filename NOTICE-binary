@@ -465,7 +465,6 @@ https://glassfish.dev.java.net/nonav/public/CDDL+GPL.html
 
  * javax.annotation:javax.annotation-api
  * javax.transaction:javax.transaction-api
- * javax.websocket:javax.websocket-api
 
 ------
 Oracle OpenJDK

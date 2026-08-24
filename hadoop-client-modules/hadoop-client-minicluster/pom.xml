@@ -128,6 +128,10 @@
           <artifactId>jetty-servlet-api</artifactId>
         </exclusion>
         <exclusion>
+          <groupId>org.eclipse.jetty.toolchain</groupId>
+          <artifactId>jetty-servlet-api</artifactId>
+        </exclusion>
+        <exclusion>
           <groupId>jakarta.ws.rs</groupId>
           <artifactId>jakarta.ws.rs-api</artifactId>
         </exclusion>
@@ -480,6 +484,10 @@
           <artifactId>jetty-servlet-api</artifactId>
         </exclusion>
         <exclusion>
+          <groupId>org.eclipse.jetty.toolchain</groupId>
+          <artifactId>jetty-servlet-api</artifactId>
+        </exclusion>
+        <exclusion>
           <groupId>jakarta.ws.rs</groupId>
           <artifactId>jakarta.ws.rs-api</artifactId>
         </exclusion>
@@ -555,6 +563,10 @@
           <artifactId>jetty-servlet-api</artifactId>
         </exclusion>
         <exclusion>
+          <groupId>org.eclipse.jetty.toolchain</groupId>
+          <artifactId>jetty-servlet-api</artifactId>
+        </exclusion>
+        <exclusion>
           <groupId>jakarta.ws.rs</groupId>
           <artifactId>jakarta.ws.rs-api</artifactId>
         </exclusion>
@@ -624,6 +636,10 @@
           <artifactId>jakarta.servlet-api</artifactId>
         </exclusion>
         <exclusion>
+          <groupId>org.eclipse.jetty.toolchain</groupId>
+          <artifactId>jetty-servlet-api</artifactId>
+        </exclusion>
+        <exclusion>
           <artifactId>junit-jupiter</artifactId>
           <groupId>org.junit.jupiter</groupId>
         </exclusion>
@@ -634,6 +650,15 @@
       <groupId>org.glassfish.jersey.test-framework.providers</groupId>
       <artifactId>jersey-test-framework-provider-jdk-http</artifactId>
       <exclusions>
+        <!-- skip jakarta.servlet:jakarta.servlet-api because it's in client -->
+        <exclusion>
+          <groupId>jakarta.servlet</groupId>
+          <artifactId>jakarta.servlet-api</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.eclipse.jetty.toolchain</groupId>
+          <artifactId>jetty-servlet-api</artifactId>
+        </exclusion>
         <exclusion>
           <groupId>jakarta.ws.rs</groupId>
           <artifactId>jakarta.ws.rs-api</artifactId>
@@ -707,8 +732,14 @@
                       <exclude>junit:junit</exclude>
                       <exclude>com.google.code.findbugs:jsr305</exclude>
                       <exclude>ch.qos.reload4j:reload4j</exclude>
-                      <exclude>org.eclipse.jetty.websocket:websocket-common</exclude>
-                      <exclude>org.eclipse.jetty.websocket:websocket-api</exclude>
+                      <!--
+                        WebSocket is hadoop-client-runtime's to ship. Jetty 12
+                        renamed both of these and split the Jetty-flavoured API
+                        out per EE environment, so the two names become three.
+                      -->
+                      <exclude>org.eclipse.jetty.websocket:jetty-websocket-core-common</exclude>
+                      <exclude>org.eclipse.jetty.ee8.websocket:jetty-ee8-websocket-jetty-api</exclude>
+                      <exclude>org.eclipse.jetty.ee8.websocket:jetty-ee8-websocket-jetty-common</exclude>
                       <!-- We need a filter that matches just those things that are included in the above artiacts -->
                       <!-- Leave bouncycastle unshaded because it's signed with a special Oracle certificate so it can be a custom JCE security provider -->
                       <exclude>org.bouncycastle:*</exclude>

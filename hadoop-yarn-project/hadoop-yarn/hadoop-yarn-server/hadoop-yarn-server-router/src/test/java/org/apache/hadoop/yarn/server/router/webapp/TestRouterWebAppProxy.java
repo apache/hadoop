@@ -41,8 +41,8 @@ import org.apache.hadoop.yarn.server.router.clientrm.RouterClientRMService.Reque
 import org.apache.hadoop.yarn.server.webproxy.FedAppReportFetcher;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
-import org.eclipse.jetty.servlet.ServletContextHandler;
-import org.eclipse.jetty.servlet.ServletHolder;
+import org.eclipse.jetty.ee8.servlet.ServletContextHandler;
+import org.eclipse.jetty.ee8.servlet.ServletHolder;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;

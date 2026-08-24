@@ -41,12 +41,13 @@ import org.apache.hadoop.yarn.sls.scheduler.SchedulerMetrics;
 import org.apache.hadoop.yarn.sls.scheduler.SchedulerWrapper;
 
 import org.apache.hadoop.yarn.sls.utils.NodeUsageRanges;
+import org.eclipse.jetty.ee8.nested.AbstractHandler;
+import org.eclipse.jetty.ee8.nested.ContextHandler;
+import org.eclipse.jetty.ee8.nested.Handler;
+import org.eclipse.jetty.ee8.nested.Request;
+import org.eclipse.jetty.ee8.nested.ResourceHandler;
 import org.eclipse.jetty.http.MimeTypes;
-import org.eclipse.jetty.server.Handler;
-import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.server.handler.AbstractHandler;
-import org.eclipse.jetty.server.handler.ResourceHandler;
 import com.codahale.metrics.Counter;
 import com.codahale.metrics.Gauge;
 import com.codahale.metrics.Histogram;
@@ -179,8 +180,11 @@ public class SLSWebApp extends HttpServlet {
       }
     };
 
+    ContextHandler context = new ContextHandler("/");
+    context.setHandler(handler);
+
     server = new Server(port);
-    server.setHandler(handler);
+    server.setHandler(context);
 
     server.start();
   }

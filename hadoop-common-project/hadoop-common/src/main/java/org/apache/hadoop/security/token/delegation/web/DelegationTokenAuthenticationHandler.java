@@ -302,7 +302,15 @@ public abstract class DelegationTokenAuthenticationHandler
                       requestUgi.getShortUserName());
                   map = Collections.singletonMap("long", expirationTime);
                 } catch (IOException ex) {
-                  throw new AuthenticationException(ex.toString(), ex);
+                  // Reported the same way as the authorization failure above,
+                  // rather than thrown for AuthenticationFilter to turn into a
+                  // bare status. Letting it out used to be survivable because
+                  // the reason phrase carried the detail; Jetty 12 does not
+                  // send one, and the container's error page is HTML, which is
+                  // not what the client on the other end parses.
+                  HttpExceptionUtils.createServletExceptionResponse(response,
+                      HttpServletResponse.SC_FORBIDDEN, ex);
+                  requestContinues = false;
                 }
               }
               break;
