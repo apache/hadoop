@@ -260,11 +260,9 @@ function transformToCardData(queueInfo: QueueInfo, stagedChanges: StagedChange[]
     queueInfo.creationMethod === 'dynamicFlexible';
 
   if (isAutoCreatedQueue) {
-    const defaultResourcePartition =
-      getQueuePartitionCapacities(queueInfo.queuePath, '') ??
-      queueInfo.capacities?.queueCapacitiesByPartition?.find((entry) => !entry.partitionName) ??
-      queueInfo.capacities?.queueCapacitiesByPartition?.[0];
-    const configuredMinResource = defaultResourcePartition?.configuredMinResource;
+    const defaultResourcePartition = getQueuePartitionCapacities(queueInfo.queuePath, '');
+    const configuredCapacityVector =
+      defaultResourcePartition?.queueCapacityVectorInfo?.configuredCapacityVector;
 
     if (!capacityDisplay.isStaged) {
       const configuredWeight = queueInfo.weight ?? defaultResourcePartition?.weight;
@@ -273,11 +271,8 @@ function transformToCardData(queueInfo: QueueInfo, stagedChanges: StagedChange[]
 
       if (configuredWeight !== undefined && configuredWeight > 0) {
         capacityConfig = `${configuredWeight}w`;
-      } else if (
-        configuredMinResource &&
-        (configuredMinResource.memory > 0 || configuredMinResource.vCores > 0)
-      ) {
-        capacityConfig = `[memory-mb=${configuredMinResource.memory},vcores=${configuredMinResource.vCores}]`;
+      } else if (configuredCapacityVector && configuredCapacityVector !== '[]') {
+        capacityConfig = String(configuredCapacityVector);
       } else if (configuredCapacity > 0) {
         capacityConfig = String(configuredCapacity);
       }
