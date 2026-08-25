@@ -257,8 +257,7 @@ function transformToCardData(queueInfo: QueueInfo, stagedChanges: StagedChange[]
 
   const isAutoCreatedQueue =
     queueInfo.creationMethod === 'dynamicLegacy' ||
-    queueInfo.creationMethod === 'dynamicFlexible' ||
-    (queueInfo as { isAutoCreatedLeafQueue?: boolean }).isAutoCreatedLeafQueue === true;
+    queueInfo.creationMethod === 'dynamicFlexible';
 
   if (isAutoCreatedQueue) {
     const defaultResourcePartition =
