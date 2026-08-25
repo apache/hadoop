@@ -552,17 +552,24 @@ public final class HttpServer2 implements FilterContainer {
       httpConfig.setRequestHeaderSize(requestHeaderSize);
       httpConfig.setResponseHeaderSize(responseHeaderSize);
       httpConfig.setSendServerVersion(false);
-      // Jetty 12 rejects a path with an empty segment - //tmp//file - at the
-      // connector, with a bare 400 and no body, so the request never reaches
-      // the servlet. WebHDFS has always taken those paths and answered with
-      // its own JSON RemoteException, which is what its clients parse, and
-      // Jetty 9.4 let them through to do it. The one violation is allowed back
-      // so that Hadoop keeps deciding what a path means; every other ambiguity
-      // DEFAULT rejects - an encoded separator, an ambiguous segment or
-      // parameter - stays rejected, because those are the ones that let a
-      // request read as one path to a filter and another to a servlet.
-      httpConfig.setUriCompliance(UriCompliance.DEFAULT.with(
-          "hadoop", UriCompliance.Violation.AMBIGUOUS_EMPTY_SEGMENT));
+      // Jetty 12 rejects two kinds of path at the connector that 9.4 handed to
+      // the servlet, with a bare 400 and no body, so the request never reaches
+      // the code that knows what a Hadoop path is:
+      //
+      //  - an empty segment, //tmp//file. WebHDFS takes those and answers with
+      //    its own JSON RemoteException, which is what its clients parse.
+      //  - an encoded percent, %25, which is how a file whose name contains a
+      //    '%' is written on the wire. Names like that are ordinary in HDFS
+      //    and YARN routes carry them too.
+      //
+      // Both are allowed back so that Hadoop keeps deciding what a path means.
+      // The ambiguities that let a request read as one path to a filter and
+      // another to a servlet stay rejected: an encoded separator (a%2Fb) and
+      // an encoded dot-segment (a%2E%2E%2Fb) are still refused, and .. still
+      // cannot climb out of the context.
+      httpConfig.setUriCompliance(UriCompliance.DEFAULT.with("hadoop",
+          UriCompliance.Violation.AMBIGUOUS_EMPTY_SEGMENT,
+          UriCompliance.Violation.AMBIGUOUS_PATH_ENCODING));
 
       int backlogSize = conf.getInt(HTTP_SOCKET_BACKLOG_SIZE_KEY,
           HTTP_SOCKET_BACKLOG_SIZE_DEFAULT);
