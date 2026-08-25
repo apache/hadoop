@@ -560,7 +560,7 @@ public class TestSSLFactory {
     try {
       sslFactory.init();
       javax.net.ssl.KeyManager[] kms =
-          ((FileBasedKeyStoresFactory) getKeystoresFactory(sslFactory))
+          ((FileBasedKeyStoresFactory) sslFactory.getKeystoresFactory())
               .getKeyManagers();
       assertNotNull(kms, "KeyManagers must be loaded when keystore location"
           + " is set in CLIENT mode");
@@ -568,14 +568,6 @@ public class TestSSLFactory {
     } finally {
       sslFactory.destroy();
     }
-  }
-
-  private KeyStoresFactory getKeystoresFactory(SSLFactory factory)
-      throws Exception {
-    java.lang.reflect.Field f =
-        SSLFactory.class.getDeclaredField("keystoresFactory");
-    f.setAccessible(true);
-    return (KeyStoresFactory) f.get(factory);
   }
 
   @Test
