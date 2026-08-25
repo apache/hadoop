@@ -21,6 +21,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.minikdc.MiniKdc;
+import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.KerberosTestUtils;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
@@ -78,6 +79,7 @@ import java.util.UUID;
 import java.util.concurrent.Callable;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -344,6 +346,28 @@ public class TestWebDelegationToken {
     testDelegationTokenAuthenticatorCalls(true);
   }
 
+  /**
+   * A renewal refused by the server has to reach the caller as the exception
+   * the server raised, carrying the reason it gave.
+   * <p>
+   * The handler reports this through HttpExceptionUtils, which writes the
+   * error as JSON and lets the client rebuild the original type. These calls
+   * used to assert that the message contained "403" instead, which only held
+   * while the body was unparseable: the client fell back to a generic
+   * IOException that quoted the status line. That fallback is what the
+   * assertion was really pinning, so it went on passing while the detail the
+   * caller needed was being thrown away.
+   *
+   * @param ex the exception the client raised
+   */
+  private static void assertRenewRefused(Exception ex) {
+    assertInstanceOf(AccessControlException.class, ex,
+        "renewal refusal did not survive the round trip as the server's own"
+            + " exception; got " + ex.getClass().getName() + ": "
+            + ex.getMessage());
+    assertTrue(ex.getMessage().contains("renew"),
+        "refusal lost the server's reason: " + ex.getMessage());
+  }
 
   private void testDelegationTokenAuthenticatorCalls(final boolean useQS)
       throws Exception {
@@ -394,7 +418,7 @@ public class TestWebDelegationToken {
         aUrl.renewDelegationToken(authURL2, token);
         fail();
       } catch (Exception ex) {
-        assertTrue(ex.getMessage().contains("403"));
+        assertRenewRefused(ex);
       }
 
       aUrl.getDelegationToken(authURL, token, FOO_USER);
@@ -817,7 +841,7 @@ public class TestWebDelegationToken {
                 aUrl.renewDelegationToken(url, token, doAsUser);
                 fail();
               } catch (Exception ex) {
-                assertTrue(ex.getMessage().contains("403"));
+                assertRenewRefused(ex);
               }
 
               aUrl.getDelegationToken(url, token, FOO_USER, doAsUser);
