@@ -100,6 +100,7 @@ import org.eclipse.jetty.ee8.servlet.ServletHolder;
 import org.eclipse.jetty.ee8.servlet.ServletMapping;
 import org.eclipse.jetty.ee8.webapp.WebAppContext;
 import org.eclipse.jetty.http.HttpVersion;
+import org.eclipse.jetty.http.UriCompliance;
 import org.eclipse.jetty.server.ConnectionFactory;
 import org.eclipse.jetty.server.Connector;
 import org.eclipse.jetty.server.Handler;
@@ -551,6 +552,17 @@ public final class HttpServer2 implements FilterContainer {
       httpConfig.setRequestHeaderSize(requestHeaderSize);
       httpConfig.setResponseHeaderSize(responseHeaderSize);
       httpConfig.setSendServerVersion(false);
+      // Jetty 12 rejects a path with an empty segment - //tmp//file - at the
+      // connector, with a bare 400 and no body, so the request never reaches
+      // the servlet. WebHDFS has always taken those paths and answered with
+      // its own JSON RemoteException, which is what its clients parse, and
+      // Jetty 9.4 let them through to do it. The one violation is allowed back
+      // so that Hadoop keeps deciding what a path means; every other ambiguity
+      // DEFAULT rejects - an encoded separator, an ambiguous segment or
+      // parameter - stays rejected, because those are the ones that let a
+      // request read as one path to a filter and another to a servlet.
+      httpConfig.setUriCompliance(UriCompliance.DEFAULT.with(
+          "hadoop", UriCompliance.Violation.AMBIGUOUS_EMPTY_SEGMENT));
 
       int backlogSize = conf.getInt(HTTP_SOCKET_BACKLOG_SIZE_KEY,
           HTTP_SOCKET_BACKLOG_SIZE_DEFAULT);

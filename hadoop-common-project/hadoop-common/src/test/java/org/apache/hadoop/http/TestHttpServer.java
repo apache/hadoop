@@ -111,6 +111,20 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     }    
   }
 
+  /** Writes back the path info exactly as the container parsed it. */
+  @SuppressWarnings("serial")
+  public static class PathInfoServlet extends HttpServlet {
+    @Override
+    public void doGet(HttpServletRequest request, HttpServletResponse response)
+        throws IOException {
+      response.setContentType("text/plain; charset=utf-8");
+      response.setStatus(HttpServletResponse.SC_OK);
+      try (PrintWriter out = response.getWriter()) {
+        out.println(request.getPathInfo());
+      }
+    }
+  }
+
   @SuppressWarnings("serial")
   public static class EchoServlet extends HttpServlet {
     @SuppressWarnings("unchecked")
@@ -156,6 +170,7 @@ public class TestHttpServer extends HttpServerFunctionalTest {
         CommonConfigurationKeysPublic.HADOOP_HTTP_METRICS_ENABLED, true);
     server = createTestServer(conf);
     server.addServlet("echo", "/echo", EchoServlet.class);
+    server.addServlet("pathinfo", "/pathinfo/*", PathInfoServlet.class);
     server.addServlet("echomap", "/echomap", EchoMapServlet.class);
     server.addServlet("htmlcontent", "/htmlcontent", HtmlContentServlet.class);
     server.addServlet("longheader", "/longheader", LongHeaderServlet.class);
@@ -300,6 +315,34 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     conn = (HttpURLConnection) cssUrl.openConnection();
     conn.connect();
     assertEquals(HttpServletResponse.SC_OK, conn.getResponseCode());
+  }
+
+  /**
+   * A path with an empty segment has to reach the servlet, which is where
+   * Hadoop decides what it means. Jetty 12 rejects one at the connector by
+   * default, with a bare 400 and no body - WebHDFS clients parse a JSON
+   * RemoteException out of that response, and there is nothing there to parse.
+   * The ambiguities that actually matter stay rejected, so an encoded
+   * separator is asserted here too.
+   */
+  @Test
+  public void testEmptyPathSegmentReachesTheServlet() throws Exception {
+    URL url = new URL(baseUrl, "/pathinfo//tmp//file");
+    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+    conn.connect();
+    assertEquals(HttpServletResponse.SC_OK, conn.getResponseCode(),
+        "an empty path segment was rejected before the servlet ran");
+    assertEquals("//tmp//file", readOutput(url).trim(),
+        "the servlet did not see the path as sent");
+
+    // An encoded separator is a different question and must still be refused.
+    URL encoded = new URL(baseUrl, "/pathinfo/tmp%2Ffile");
+    HttpURLConnection encodedConn =
+        (HttpURLConnection) encoded.openConnection();
+    encodedConn.connect();
+    assertThat(encodedConn.getResponseCode())
+        .as("an encoded path separator must not be accepted")
+        .isNotEqualTo(HttpServletResponse.SC_OK);
   }
 
   @Test
