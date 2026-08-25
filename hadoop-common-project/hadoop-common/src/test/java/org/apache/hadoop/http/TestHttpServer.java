@@ -326,22 +326,41 @@ public class TestHttpServer extends HttpServerFunctionalTest {
    * separator is asserted here too.
    */
   @Test
-  public void testEmptyPathSegmentReachesTheServlet() throws Exception {
-    URL url = new URL(baseUrl, "/pathinfo//tmp//file");
+  public void testHadoopPathsReachTheServlet() throws Exception {
+    assertPathInfo("//tmp//file", "/pathinfo//tmp//file");
+    // A file whose name contains a '%' arrives as %25.
+    assertPathInfo("/a%b", "/pathinfo/a%25b");
+    assertPathInfo("/@;%$", "/pathinfo/%40%3B%25%24");
+  }
+
+  /**
+   * The other half of the same setting: a path that would read as one thing
+   * to a filter and another to a servlet still has to be refused.
+   */
+  @Test
+  public void testAmbiguousPathsAreStillRejected() throws Exception {
+    assertNotServed("an encoded path separator", "/pathinfo/tmp%2Ffile");
+    assertNotServed("an encoded dot-segment", "/pathinfo/a%2E%2E%2Fb");
+  }
+
+  private static void assertPathInfo(String expected, String path)
+      throws Exception {
+    URL url = new URL(baseUrl, path);
     HttpURLConnection conn = (HttpURLConnection) url.openConnection();
     conn.connect();
     assertEquals(HttpServletResponse.SC_OK, conn.getResponseCode(),
-        "an empty path segment was rejected before the servlet ran");
-    assertEquals("//tmp//file", readOutput(url).trim(),
-        "the servlet did not see the path as sent");
+        path + " was rejected before the servlet ran");
+    assertEquals(expected, readOutput(url).trim(),
+        path + " did not reach the servlet as sent");
+  }
 
-    // An encoded separator is a different question and must still be refused.
-    URL encoded = new URL(baseUrl, "/pathinfo/tmp%2Ffile");
-    HttpURLConnection encodedConn =
-        (HttpURLConnection) encoded.openConnection();
-    encodedConn.connect();
-    assertThat(encodedConn.getResponseCode())
-        .as("an encoded path separator must not be accepted")
+  private static void assertNotServed(String what, String path)
+      throws Exception {
+    URL url = new URL(baseUrl, path);
+    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+    conn.connect();
+    assertThat(conn.getResponseCode())
+        .as(what + " must not be served")
         .isNotEqualTo(HttpServletResponse.SC_OK);
   }
 
