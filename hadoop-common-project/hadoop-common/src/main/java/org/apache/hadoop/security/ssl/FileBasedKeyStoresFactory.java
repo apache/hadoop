@@ -314,13 +314,19 @@ public class FileBasedKeyStoresFactory implements KeyStoresFactory {
       resolvePropertyName(mode, SSL_TRUSTSTORE_LOCATION_TPL_KEY);
     String truststoreLocation = conf.get(locationProperty, "");
     if (!truststoreLocation.isEmpty()) {
-      if (mode == SSLFactory.Mode.SERVER
-          || Files.isReadable(Paths.get(truststoreLocation))) {
+      boolean truststoreFilePresent = Files.exists(Paths.get(truststoreLocation));
+      boolean truststoreFileReadable = truststoreFilePresent
+          && Files.isReadable(Paths.get(truststoreLocation));
+      if (mode == SSLFactory.Mode.SERVER || truststoreFileReadable) {
         createTrustManagersFromConfiguration(mode, truststoreType, truststoreLocation, storesReloadInterval);
-      } else {
+      } else if (truststoreFilePresent) {
         LOG.warn("Client truststore '{}' is not readable by user '{}'. " +
             "Falling back to JVM default truststore.",
             truststoreLocation, System.getProperty("user.name"));
+        trustManagers = null;
+      } else {
+        LOG.warn("Client truststore '{}' does not exist. " +
+            "Falling back to JVM default truststore.", truststoreLocation);
         trustManagers = null;
       }
     } else {
