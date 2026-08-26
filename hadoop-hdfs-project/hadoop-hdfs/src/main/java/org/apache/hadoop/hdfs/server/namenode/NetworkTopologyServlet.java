@@ -31,7 +31,9 @@ import org.apache.hadoop.util.StringUtils;
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -57,28 +59,48 @@ public class NetworkTopologyServlet extends DfsServlet {
       throws IOException {
     final ServletContext context = getServletContext();
 
-    String format = parseAcceptHeader(request);
-    if (FORMAT_TEXT.equals(format)) {
-      response.setContentType("text/plain; charset=UTF-8");
-    } else if (FORMAT_JSON.equals(format)) {
-      response.setContentType("application/json; charset=UTF-8");
-    }
-
     NameNode nn = NameNodeHttpServer.getNameNodeFromContext(context);
     BlockManager bm = nn.getNamesystem().getBlockManager();
     List<Node> leaves = bm.getDatanodeManager().getNetworkTopology()
         .getLeaves(NodeBase.ROOT);
 
-    try (PrintStream out = new PrintStream(
-            response.getOutputStream(), false, "UTF-8")) {
+    sendTopology(response, leaves, parseAcceptHeader(request));
+  }
+
+  /**
+   * Renders the topology and sends it, or reports why it could not be sent.
+   * <p>
+   * The rendering happens before the response is touched. Writing it straight
+   * to the response stream commits the response as soon as that stream is
+   * closed, and once the status line is on the wire a later failure cannot be
+   * reported at all: sendError has nothing left to set, so a topology that
+   * failed half way through goes out as 200 OK with a truncated body.
+   *
+   * @param response the response to send on
+   * @param leaves the nodes to render
+   * @param format the response format, from {@link #parseAcceptHeader}
+   * @throws IOException if the topology could not be rendered or sent
+   */
+  protected void sendTopology(HttpServletResponse response, List<Node> leaves,
+      String format) throws IOException {
+    ByteArrayOutputStream rendered = new ByteArrayOutputStream();
+    try (PrintStream out = new PrintStream(rendered, false, "UTF-8")) {
       printTopology(out, leaves, format);
     } catch (Throwable t) {
       String errMsg = "Print network topology failed. "
               + StringUtils.stringifyException(t);
       response.sendError(HttpServletResponse.SC_GONE, errMsg);
       throw new IOException(errMsg);
-    } finally {
-      response.getOutputStream().close();
+    }
+
+    if (FORMAT_TEXT.equals(format)) {
+      response.setContentType("text/plain; charset=UTF-8");
+    } else if (FORMAT_JSON.equals(format)) {
+      response.setContentType("application/json; charset=UTF-8");
+    }
+    response.setContentLength(rendered.size());
+    try (OutputStream out = response.getOutputStream()) {
+      rendered.writeTo(out);
     }
   }
 
