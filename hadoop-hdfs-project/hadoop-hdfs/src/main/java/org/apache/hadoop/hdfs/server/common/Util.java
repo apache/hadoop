@@ -21,14 +21,12 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.UnknownHostException;
-import java.nio.charset.StandardCharsets;
 import java.security.DigestInputStream;
 import java.security.MessageDigest;
 import java.util.ArrayList;
@@ -51,6 +49,7 @@ import org.apache.hadoop.net.DomainNameResolverFactory;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
+import org.apache.hadoop.util.HttpExceptionUtils;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
@@ -172,7 +171,8 @@ public final class Util {
     if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) {
       throw new HttpGetFailedException("Image transfer servlet at " + url +
               " failed with status code " + connection.getResponseCode() +
-              "\nResponse message:\n" + getResponseDetail(connection),
+              "\nResponse message:\n"
+              + HttpExceptionUtils.getResponseDetail(connection),
           connection);
     }
 
@@ -192,76 +192,6 @@ public final class Util {
     return receiveFile(url.toExternalForm(), localPaths, dstStorage,
         getChecksum, advertisedSize, advertisedDigest, fsImageName, stream,
         throttler);
-  }
-
-  /** How much of a failed response body is worth quoting back. */
-  private static final int MAX_RESPONSE_DETAIL_CHARS = 4096;
-
-  /**
-   * Describes why a request failed, preferring the response body over the
-   * HTTP reason phrase.
-   * <p>
-   * The servlets on the other end of these transfers report their reason
-   * through {@link javax.servlet.http.HttpServletResponse#sendError}. That
-   * detail used to travel in the reason phrase, which
-   * {@link HttpURLConnection#getResponseMessage()} returns. Jetty 12 never
-   * puts a reason phrase on the wire, so the phrase is now always the
-   * canonical text for the status code - "Forbidden", "Gone" - and the
-   * detail is in the body instead. Read the body, and fall back to the
-   * phrase when there is none.
-   *
-   * @param connection a connection whose response status has been read
-   * @return a description of the failure, never null
-   */
-  public static String getResponseDetail(HttpURLConnection connection) {
-    String body = "";
-    try (InputStream err = connection.getErrorStream()) {
-      if (err != null) {
-        body = toPlainText(readCapped(err));
-      }
-    } catch (IOException e) {
-      LOG.debug("Could not read the error response body from {}",
-          connection.getURL(), e);
-    }
-    if (!body.isEmpty()) {
-      return body;
-    }
-    try {
-      String phrase = connection.getResponseMessage();
-      return phrase == null ? "" : phrase;
-    } catch (IOException e) {
-      return "";
-    }
-  }
-
-  private static String readCapped(InputStream in) throws IOException {
-    InputStreamReader reader =
-        new InputStreamReader(in, StandardCharsets.UTF_8);
-    StringBuilder sb = new StringBuilder();
-    char[] buf = new char[1024];
-    int n;
-    while (sb.length() < MAX_RESPONSE_DETAIL_CHARS
-        && (n = reader.read(buf)) != -1) {
-      sb.append(buf, 0, Math.min(n, MAX_RESPONSE_DETAIL_CHARS - sb.length()));
-    }
-    return sb.toString();
-  }
-
-  /**
-   * Reduces a response body to something readable in a log line. A container
-   * that renders sendError as an HTML page buries the message in markup; strip
-   * it out rather than quoting the page.
-   */
-  private static String toPlainText(String body) {
-    String text = body;
-    if (text.indexOf('<') >= 0) {
-      text = text.replaceAll("(?s)<(script|style)\\b.*?</\\1>", " ")
-          .replaceAll("(?s)<[^>]*>", " ");
-    }
-    text = text.replace("&lt;", "<").replace("&gt;", ">")
-        .replace("&quot;", "\"").replace("&#39;", "'")
-        .replace("&amp;", "&");
-    return text.replaceAll("\\s+", " ").trim();
   }
 
   /**

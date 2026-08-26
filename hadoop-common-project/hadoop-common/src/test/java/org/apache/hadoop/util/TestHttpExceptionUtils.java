@@ -37,6 +37,8 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -177,5 +179,47 @@ public class TestHttpExceptionUtils {
         Arrays.asList(Integer.toString(HttpURLConnection.HTTP_BAD_REQUEST),
         "java.lang.String", "EX"),
         () -> HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_CREATED));
+  }
+
+  private static HttpURLConnection connectionReturning(String body,
+      String phrase) throws IOException {
+    HttpURLConnection conn = mock(HttpURLConnection.class);
+    when(conn.getErrorStream()).thenReturn(body == null ? null
+        : new ByteArrayInputStream(body.getBytes(StandardCharsets.UTF_8)));
+    when(conn.getResponseMessage()).thenReturn(phrase);
+    return conn;
+  }
+
+  @Test
+  public void testResponseDetailPrefersTheBody() throws Exception {
+    assertEquals("the real reason", HttpExceptionUtils.getResponseDetail(
+        connectionReturning("the real reason", "Forbidden")));
+  }
+
+  @Test
+  public void testResponseDetailStripsAnErrorPage() throws Exception {
+    // what a container renders for sendError(403, "the real reason")
+    String page = "<html>\n<head>\n<title>Error 403 the real reason</title>\n"
+        + "</head>\n<body><h2>HTTP ERROR 403</h2>\n"
+        + "<table><tr><th>MESSAGE:</th><td>the real reason</td></tr></table>\n"
+        + "</body>\n</html>\n";
+    String detail = HttpExceptionUtils.getResponseDetail(
+        connectionReturning(page, "Forbidden"));
+    assertTrue(detail.contains("the real reason"), detail);
+    assertFalse(detail.contains("<"), "markup survived: " + detail);
+  }
+
+  @Test
+  public void testResponseDetailFallsBackToThePhrase() throws Exception {
+    assertEquals("Forbidden", HttpExceptionUtils.getResponseDetail(
+        connectionReturning(null, "Forbidden")));
+    assertEquals("Forbidden", HttpExceptionUtils.getResponseDetail(
+        connectionReturning("   \n  ", "Forbidden")));
+  }
+
+  @Test
+  public void testResponseDetailIsNeverNull() throws Exception {
+    assertEquals("", HttpExceptionUtils.getResponseDetail(
+        connectionReturning(null, null)));
   }
 }
