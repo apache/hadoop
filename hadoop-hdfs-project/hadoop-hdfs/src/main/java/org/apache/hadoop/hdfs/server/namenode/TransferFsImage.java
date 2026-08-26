@@ -54,6 +54,7 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
+import org.apache.hadoop.util.HttpExceptionUtils;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.Time;
 import org.apache.http.client.utils.URIBuilder;
@@ -317,7 +318,8 @@ public class TransferFsImage {
       if (responseCode != HttpURLConnection.HTTP_OK) {
         throw new HttpPutFailedException(String.format(
             "Image uploading failed, status: %d, url: %s, message: %s",
-            responseCode, urlWithParams, Util.getResponseDetail(connection)),
+            responseCode, urlWithParams,
+            HttpExceptionUtils.getResponseDetail(connection)),
             responseCode);
       }
     } catch (AuthenticationException | URISyntaxException e) {
