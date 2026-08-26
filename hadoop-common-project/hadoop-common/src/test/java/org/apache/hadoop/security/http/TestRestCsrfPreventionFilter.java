@@ -70,10 +70,8 @@ public class TestRestCsrfPreventionFilter {
       thenReturn(BROWSER_AGENT);
 
     // Objects to verify interactions based on request
-    HttpServletResponse mockRes = Mockito.mock(HttpServletResponse.class);
     StringWriter writer = new StringWriter();
-    Mockito.when(mockRes.getWriter())
-        .thenReturn(new PrintWriter(writer));
+    HttpServletResponse mockRes = mockResponse(writer);
     FilterChain mockChain = Mockito.mock(FilterChain.class);
 
     // Object under test
@@ -107,10 +105,8 @@ public class TestRestCsrfPreventionFilter {
       thenReturn("curl");
 
     // Objects to verify interactions based on request
-    HttpServletResponse mockRes = Mockito.mock(HttpServletResponse.class);
     StringWriter writer = new StringWriter();
-    Mockito.when(mockRes.getWriter())
-        .thenReturn(new PrintWriter(writer));
+    HttpServletResponse mockRes = mockResponse(writer);
     FilterChain mockChain = Mockito.mock(FilterChain.class);
 
     // Object under test
@@ -141,7 +137,8 @@ public class TestRestCsrfPreventionFilter {
       thenReturn(NON_BROWSER);
 
     // Objects to verify interactions based on request
-    HttpServletResponse mockRes = Mockito.mock(HttpServletResponse.class);
+    StringWriter writer = new StringWriter();
+    HttpServletResponse mockRes = mockResponse(writer);
     FilterChain mockChain = Mockito.mock(FilterChain.class);
 
     // Object under test
@@ -169,7 +166,8 @@ public class TestRestCsrfPreventionFilter {
       thenReturn("valueUnimportant");
 
     // Objects to verify interactions based on request
-    HttpServletResponse mockRes = Mockito.mock(HttpServletResponse.class);
+    StringWriter writer = new StringWriter();
+    HttpServletResponse mockRes = mockResponse(writer);
     FilterChain mockChain = Mockito.mock(FilterChain.class);
 
     // Object under test
@@ -198,7 +196,8 @@ public class TestRestCsrfPreventionFilter {
       thenReturn("valueUnimportant");
 
     // Objects to verify interactions based on request
-    HttpServletResponse mockRes = Mockito.mock(HttpServletResponse.class);
+    StringWriter writer = new StringWriter();
+    HttpServletResponse mockRes = mockResponse(writer);
     FilterChain mockChain = Mockito.mock(FilterChain.class);
 
     // Object under test
@@ -229,7 +228,8 @@ public class TestRestCsrfPreventionFilter {
       thenReturn(null);
 
     // Objects to verify interactions based on request
-    HttpServletResponse mockRes = Mockito.mock(HttpServletResponse.class);
+    StringWriter writer = new StringWriter();
+    HttpServletResponse mockRes = mockResponse(writer);
     FilterChain mockChain = Mockito.mock(FilterChain.class);
 
     // Object under test
@@ -261,7 +261,8 @@ public class TestRestCsrfPreventionFilter {
       thenReturn("GET");
 
     // Objects to verify interactions based on request
-    HttpServletResponse mockRes = Mockito.mock(HttpServletResponse.class);
+    StringWriter writer = new StringWriter();
+    HttpServletResponse mockRes = mockResponse(writer);
     FilterChain mockChain = Mockito.mock(FilterChain.class);
 
     // Object under test
@@ -293,7 +294,8 @@ public class TestRestCsrfPreventionFilter {
       thenReturn("GET");
 
     // Objects to verify interactions based on request
-    HttpServletResponse mockRes = Mockito.mock(HttpServletResponse.class);
+    StringWriter writer = new StringWriter();
+    HttpServletResponse mockRes = mockResponse(writer);
     FilterChain mockChain = Mockito.mock(FilterChain.class);
 
     // Object under test
@@ -325,7 +327,8 @@ public class TestRestCsrfPreventionFilter {
       thenReturn("OPTIONS");
 
     // Objects to verify interactions based on request
-    HttpServletResponse mockRes = Mockito.mock(HttpServletResponse.class);
+    StringWriter writer = new StringWriter();
+    HttpServletResponse mockRes = mockResponse(writer);
     FilterChain mockChain = Mockito.mock(FilterChain.class);
 
     // Object under test
@@ -357,7 +360,8 @@ public class TestRestCsrfPreventionFilter {
       thenReturn("PUT");
 
     // Objects to verify interactions based on request
-    HttpServletResponse mockRes = Mockito.mock(HttpServletResponse.class);
+    StringWriter writer = new StringWriter();
+    HttpServletResponse mockRes = mockResponse(writer);
     FilterChain mockChain = Mockito.mock(FilterChain.class);
 
     // Object under test
@@ -380,5 +384,21 @@ public class TestRestCsrfPreventionFilter {
     verify(res, atLeastOnce()).setStatus(HttpServletResponse.SC_BAD_REQUEST);
     assertTrue(body.toString().contains(EXPECTED_MESSAGE),
         "refusal did not carry the reason: " + body);
+  }
+
+  /**
+   * A mock response the filter can write a refusal into. Every caller gets a
+   * writer whether or not it looks at one, because the filter now reports a
+   * refusal by writing the error rather than by calling sendError.
+   *
+   * @param body collects whatever the filter writes
+   * @return the mock response
+   * @throws IOException never, but getWriter declares it
+   */
+  private static HttpServletResponse mockResponse(StringWriter body)
+      throws IOException {
+    HttpServletResponse res = Mockito.mock(HttpServletResponse.class);
+    Mockito.when(res.getWriter()).thenReturn(new PrintWriter(body));
+    return res;
   }
 }
