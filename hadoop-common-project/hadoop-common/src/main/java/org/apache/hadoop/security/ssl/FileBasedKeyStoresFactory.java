@@ -347,11 +347,7 @@ public class FileBasedKeyStoresFactory implements KeyStoresFactory {
       }
     }
     catch (IOException ioe) {
-      // The credential provider may be inaccessible (e.g. a container process
-      // running as the container user cannot read the NodeManager process dir).
-      // Fall back to the raw configuration value so that passwords written
-      // directly into the XML (e.g. ssl.client.truststore.password) are still
-      // usable when the credential store is unavailable.
+      // Credential provider unavailable; fall back to the config value.
       LOG.warn("Could not read password for alias '{}' from credential provider: {}. " +
           "Falling back to config value.", alias, ioe.getMessage());
       String configValue = conf.get(alias);
