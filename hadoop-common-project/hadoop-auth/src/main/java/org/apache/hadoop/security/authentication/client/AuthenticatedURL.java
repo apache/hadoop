@@ -19,11 +19,13 @@ import org.slf4j.LoggerFactory;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.CookieHandler;
 import java.net.HttpCookie;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -74,6 +76,9 @@ public class AuthenticatedURL {
    * Name of the HTTP cookie used for the authentication token between the client and the server.
    */
   public static final String AUTH_COOKIE = "hadoop.auth";
+
+  /** How much of a failed response body is worth quoting back. */
+  private static final int MAX_RESPONSE_DETAIL_BYTES = 4096;
 
   // a lightweight cookie handler that will be attached to url connections.
   // client code is not required to extract or inject auth cookies.
@@ -403,7 +408,44 @@ public class AuthenticatedURL {
       throw new AuthenticationException("Authentication failed" +
           ", URL: " + conn.getURL() +
           ", status: " + conn.getResponseCode() +
-          ", message: " + conn.getResponseMessage());
+          ", message: " + responseDetail(conn));
+    }
+  }
+
+  /**
+   * Why the server turned the request down.
+   * <p>
+   * {@link AuthenticationFilter} reports its reason through
+   * {@link javax.servlet.http.HttpServletResponse#sendError}, which used to
+   * reach the caller in the HTTP reason phrase. Jetty 12 does not put a reason
+   * phrase on the wire, so {@link HttpURLConnection#getResponseMessage()} now
+   * only ever returns the canonical text for the status code and the reason is
+   * in the body. Read the body, and fall back to the phrase when it is empty.
+   */
+  private static String responseDetail(HttpURLConnection conn) {
+    try (InputStream es = conn.getErrorStream()) {
+      if (es != null) {
+        byte[] body = new byte[MAX_RESPONSE_DETAIL_BYTES];
+        int read = 0, n;
+        while (read < body.length
+            && (n = es.read(body, read, body.length - read)) != -1) {
+          read += n;
+        }
+        // A container renders sendError as an HTML page; the reason is in
+        // there among the markup, which is no use in a one-line message.
+        String text = new String(body, 0, read, StandardCharsets.UTF_8)
+            .replaceAll("(?s)<[^>]*>", " ").replaceAll("\\s+", " ").trim();
+        if (!text.isEmpty()) {
+          return text;
+        }
+      }
+    } catch (IOException ex) {
+      // nothing to add: fall through to the reason phrase
+    }
+    try {
+      return conn.getResponseMessage();
+    } catch (IOException ex) {
+      return null;
     }
   }
 

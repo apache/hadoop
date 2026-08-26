@@ -25,11 +25,13 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.Writer;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.net.HttpURLConnection;
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -188,6 +190,79 @@ public class HttpExceptionUtils {
       }
       throwEx(toThrow);
     }
+  }
+
+  /** How much of a failed response body is worth quoting back. */
+  private static final int MAX_RESPONSE_DETAIL_CHARS = 4096;
+
+  /**
+   * Describes why a request failed, preferring the response body over the HTTP
+   * reason phrase.
+   * <p>
+   * A servlet reports its reason through
+   * {@link HttpServletResponse#sendError}, and that detail used to reach the
+   * caller in the reason phrase, which
+   * {@link HttpURLConnection#getResponseMessage()} returns. Jetty 12 never
+   * puts a reason phrase on the wire: the phrase is now always the canonical
+   * text for the status code - "Forbidden", "Gone" - and the detail is in the
+   * body instead. Read the body, and fall back to the phrase when there is
+   * none.
+   * <p>
+   * For a response that carries the JSON envelope this class writes, prefer
+   * {@link #validateResponse}, which rebuilds the original exception. This is
+   * for everything else: a container's error page, or a plain-text reason.
+   *
+   * @param conn a connection whose response status has been read
+   * @return a description of the failure, never null
+   */
+  public static String getResponseDetail(HttpURLConnection conn) {
+    String body = "";
+    try (InputStream es = conn.getErrorStream()) {
+      if (es != null) {
+        body = toPlainText(readCapped(es));
+      }
+    } catch (IOException ex) {
+      // nothing to add: fall through to the reason phrase
+    }
+    if (!body.isEmpty()) {
+      return body;
+    }
+    try {
+      String phrase = conn.getResponseMessage();
+      return phrase == null ? "" : phrase;
+    } catch (IOException ex) {
+      return "";
+    }
+  }
+
+  private static String readCapped(InputStream in) throws IOException {
+    InputStreamReader reader =
+        new InputStreamReader(in, StandardCharsets.UTF_8);
+    StringBuilder sb = new StringBuilder();
+    char[] buf = new char[1024];
+    int n;
+    while (sb.length() < MAX_RESPONSE_DETAIL_CHARS
+        && (n = reader.read(buf)) != -1) {
+      sb.append(buf, 0, Math.min(n, MAX_RESPONSE_DETAIL_CHARS - sb.length()));
+    }
+    return sb.toString();
+  }
+
+  /**
+   * Reduces a response body to something readable in a log line. A container
+   * that renders sendError as an HTML page buries the message in markup; strip
+   * it out rather than quoting the page.
+   */
+  private static String toPlainText(String body) {
+    String text = body;
+    if (text.indexOf('<') >= 0) {
+      text = text.replaceAll("(?s)<(script|style)\\b.*?</\\1>", " ")
+          .replaceAll("(?s)<[^>]*>", " ");
+    }
+    text = text.replace("&lt;", "<").replace("&gt;", ">")
+        .replace("&quot;", "\"").replace("&#39;", "'")
+        .replace("&amp;", "&");
+    return text.replaceAll("\\s+", " ").trim();
   }
 
 }

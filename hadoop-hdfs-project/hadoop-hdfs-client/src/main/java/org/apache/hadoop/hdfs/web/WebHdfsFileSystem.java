@@ -130,6 +130,7 @@ import org.apache.hadoop.security.token.DelegationTokenIssuer;
 import org.apache.hadoop.thirdparty.com.google.common.net.HttpHeaders;
 import org.apache.hadoop.util.JsonSerialization;
 import org.apache.hadoop.util.KMSUtil;
+import org.apache.hadoop.util.HttpExceptionUtils;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.StringUtils;
@@ -514,7 +515,12 @@ public class WebHdfsFileSystem extends FileSystem
     // server is demanding an authentication we don't support
     if (code == HttpURLConnection.HTTP_UNAUTHORIZED) {
       // match hdfs/rpc exception
-      throw new AccessControlException(conn.getResponseMessage());
+      //
+      // The reason comes from the body, not the reason phrase: what
+      // AuthenticationFilter passes to sendError no longer reaches the wire as
+      // a phrase, and the phrase is now always "Unauthorized".
+      throw new AccessControlException(
+          HttpExceptionUtils.getResponseDetail(conn));
     }
     if (code != op.getExpectedHttpResponseCode()) {
       final Map<?, ?> m;
