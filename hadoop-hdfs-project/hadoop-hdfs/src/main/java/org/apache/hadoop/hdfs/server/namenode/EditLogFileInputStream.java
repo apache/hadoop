@@ -39,6 +39,7 @@ import org.apache.hadoop.hdfs.protocol.LayoutVersion;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.HttpGetFailedException;
 import org.apache.hadoop.hdfs.server.common.Storage;
+import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.hdfs.web.URLConnectionFactory;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.SecurityUtil;
@@ -494,7 +495,7 @@ public class EditLogFileInputStream extends EditLogInputStream {
                 throw new HttpGetFailedException(
                     "Fetch of " + url +
                     " failed with status code " + connection.getResponseCode() +
-                    "\nResponse message:\n" + connection.getResponseMessage(),
+                    "\nResponse message:\n" + Util.getResponseDetail(connection),
                     connection);
               }
         
