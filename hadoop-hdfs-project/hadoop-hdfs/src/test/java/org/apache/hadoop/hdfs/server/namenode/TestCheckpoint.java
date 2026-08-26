@@ -87,7 +87,6 @@ import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.ExitUtil.ExitException;
 import org.apache.hadoop.util.Lists;
-import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
 import org.slf4j.event.Level;
 import org.junit.jupiter.api.AfterEach;
@@ -654,9 +653,16 @@ public class TestCheckpoint {
     
     Mockito.doReturn(true).when(faultInjector)
       .shouldSendShortFile(filePathContaining("fsimage"));
-    String expectedText = Shell.isJavaVersionAtLeast(24) ? "Premature EOF"
-        : "is not of the advertised size";
-    doSendFailTest(expectedText);
+    // Where a short send is caught decides how it reads. Jetty 12 fails the
+    // servlet's own write as soon as it delivers fewer bytes than the
+    // Content-Length it announced, so the namenode reports the shortfall
+    // ("written 200 < 399 content-length") rather than putting a truncated
+    // body on the wire for the secondary to notice. Under Jetty 9.4 the
+    // truncated body did go out, and the secondary reported it - as "is not
+    // of the advertised size", or "Premature EOF" on JDK 24 and later. The
+    // checkpoint fails either way without corrupting the namenode, which is
+    // what this test guards.
+    doSendFailTest("content-length");
   }
 
   /**
