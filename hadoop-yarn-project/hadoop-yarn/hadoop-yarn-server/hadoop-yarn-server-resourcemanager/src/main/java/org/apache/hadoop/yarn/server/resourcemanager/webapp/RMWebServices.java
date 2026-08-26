@@ -328,8 +328,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
    * initForReadableEndpoints does the init for all readable REST end points.
    */
   private void initForReadableEndpoints() {
-    // clear content type
-    response.setContentType(null);
+    JettyUtils.clearContentType(response);
   }
 
   /**
@@ -345,8 +344,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
    */
   private void initForWritableEndpoints(UserGroupInformation callerUGI,
       boolean doAdminACLsCheck) throws AuthorizationException {
-    // clear content type
-    response.setContentType(null);
+    JettyUtils.clearContentType(response);
 
     if (callerUGI == null) {
       String msg = "Unable to obtain user name, user not authenticated";
