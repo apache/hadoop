@@ -297,32 +297,31 @@ public class TestHadoopArchiveLogs {
     assertEquals("if [ \"$YARN_SHELL_ID\" == \"1\" ]; then", lines[3]);
     boolean oneBefore = true;
     if (lines[4].contains(app1.toString())) {
-      assertEquals("\tappId=\"" + app1.toString() + "\"", lines[4]);
-      assertEquals("\tappId=\"" + app2.toString() + "\"", lines[10]);
+      assertEquals("\tappId=" + Shell.bashQuote(app1.toString()), lines[4]);
+      assertEquals("\tappId=" + Shell.bashQuote(app2.toString()), lines[10]);
     } else {
       oneBefore = false;
-      assertEquals("\tappId=\"" + app2.toString() + "\"", lines[4]);
-      assertEquals("\tappId=\"" + app1.toString() + "\"", lines[10]);
+      assertEquals("\tappId=" + Shell.bashQuote(app2.toString()), lines[4]);
+      assertEquals("\tappId=" + Shell.bashQuote(app1.toString()), lines[10]);
     }
-    assertEquals("\tuser=\"" + USER + "\"", lines[5]);
-    assertEquals("\tworkingDir=\"" + (oneBefore ? workingDir.toString()
-        : workingDir2.toString()) + "\"", lines[6]);
-    assertEquals("\tremoteRootLogDir=\"" + (oneBefore
-        ? remoteRootLogDir.toString() : remoteRootLogDir2.toString())
-        + "\"", lines[7]);
-    assertEquals("\tsuffix=\"" + (oneBefore ? suffix : suffix2)
-        + "\"", lines[8]);
+    assertEquals("\tuser=" + Shell.bashQuote(USER), lines[5]);
+    assertEquals("\tworkingDir=" + Shell.bashQuote(oneBefore
+        ? workingDir.toString() : workingDir2.toString()), lines[6]);
+    assertEquals("\tremoteRootLogDir=" + Shell.bashQuote(oneBefore
+        ? remoteRootLogDir.toString() : remoteRootLogDir2.toString()),
+        lines[7]);
+    assertEquals("\tsuffix=" + Shell.bashQuote(oneBefore ? suffix : suffix2),
+        lines[8]);
     assertEquals("elif [ \"$YARN_SHELL_ID\" == \"2\" ]; then",
         lines[9]);
-    assertEquals("\tuser=\"" + USER + "\"", lines[11]);
-    assertEquals("\tworkingDir=\"" + (oneBefore
-        ? workingDir2.toString() : workingDir.toString()) + "\"",
-        lines[12]);
-    assertEquals("\tremoteRootLogDir=\"" + (oneBefore
-        ? remoteRootLogDir2.toString() : remoteRootLogDir.toString())
-        + "\"", lines[13]);
-    assertEquals("\tsuffix=\"" + (oneBefore ? suffix2 : suffix)
-        + "\"", lines[14]);
+    assertEquals("\tuser=" + Shell.bashQuote(USER), lines[11]);
+    assertEquals("\tworkingDir=" + Shell.bashQuote(oneBefore
+        ? workingDir2.toString() : workingDir.toString()), lines[12]);
+    assertEquals("\tremoteRootLogDir=" + Shell.bashQuote(oneBefore
+        ? remoteRootLogDir2.toString() : remoteRootLogDir.toString()),
+        lines[13]);
+    assertEquals("\tsuffix=" + Shell.bashQuote(oneBefore ? suffix2 : suffix),
+        lines[14]);
     assertEquals("else", lines[15]);
     assertEquals("\techo \"Unknown Mapping!\"", lines[16]);
     assertEquals("\texit 1", lines[17]);
@@ -344,6 +343,37 @@ public class TestHadoopArchiveLogs {
               "\"$remoteRootLogDir\" -suffix \"$suffix\" -noProxy",
           lines[21]);
     }
+  }
+
+  @Test
+  @Timeout(value = 10)
+  public void testGenerateScriptQuotesUntrustedValues() throws Exception {
+    Configuration conf = new Configuration();
+    HadoopArchiveLogs hal = new HadoopArchiveLogs(conf);
+    // The per-user log directory name is attacker-influenced: the remote root
+    // log dir is world-writable on a shared cluster, so the directory name can
+    // carry a double quote and shell metacharacters. It must stay inside the
+    // assignment instead of starting a new command.
+    String maliciousUser = "victim\";touch /tmp/pwned #";
+    ApplicationId app = ApplicationId.newInstance(CLUSTER_TIMESTAMP, 1);
+    HadoopArchiveLogs.AppInfo appInfo =
+        new HadoopArchiveLogs.AppInfo(app.toString(), maliciousUser);
+    appInfo.setSuffix("logs");
+    appInfo.setRemoteRootLogDir(new Path("/tmp", "logs"));
+    appInfo.setWorkingDir(new Path("/tmp", "working"));
+    hal.eligibleApplications.add(appInfo);
+
+    File localScript = new File("target", "script-inject.sh");
+    localScript.delete();
+    hal.generateScript(localScript);
+    String script =
+        IOUtils.toString(localScript.toURI(), StandardCharsets.UTF_8);
+    localScript.delete();
+    assertTrue(script.contains("\tuser=" + Shell.bashQuote(maliciousUser)),
+        "user value should be emitted as a single bash-quoted token, "
+            + "script was:\n" + script);
+    assertFalse(script.contains("touch /tmp/pwned #\""),
+        "payload broke out of the quoted assignment:\n" + script);
   }
 
   /**
