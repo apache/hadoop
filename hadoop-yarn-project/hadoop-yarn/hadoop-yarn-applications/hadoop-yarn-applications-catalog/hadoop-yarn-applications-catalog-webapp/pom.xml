@@ -327,6 +327,36 @@
         <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-common</artifactId>
+            <!--
+                Hadoop's Jetty has no business on this classpath. The module is
+                packaged as a war and served by someone else's container, so it
+                never starts an HttpServer2, and the dependencyManagement block
+                above has already pinned everything else to the Jetty 9.4 that
+                Solr calls. Leaving Jetty 12's ee8 classes on top of that would
+                work only for as long as nothing touched them.
+
+                Repeated on every Hadoop dependency that carries them: Maven has
+                no way to share an exclusion set, and excluding on one of these
+                achieves nothing while the others still bring it. Keep in step.
+            -->
+            <exclusions>
+                <exclusion>
+                    <groupId>org.eclipse.jetty.ee8</groupId>
+                    <artifactId>jetty-ee8-servlet</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.eclipse.jetty.ee8</groupId>
+                    <artifactId>jetty-ee8-webapp</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.eclipse.jetty.ee8.websocket</groupId>
+                    <artifactId>jetty-ee8-websocket-jetty-server</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.eclipse.jetty.ee8.websocket</groupId>
+                    <artifactId>jetty-ee8-websocket-jetty-client</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <dependency>
@@ -337,16 +367,70 @@
         <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-yarn-common</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.eclipse.jetty.ee8</groupId>
+                    <artifactId>jetty-ee8-servlet</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.eclipse.jetty.ee8</groupId>
+                    <artifactId>jetty-ee8-webapp</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.eclipse.jetty.ee8.websocket</groupId>
+                    <artifactId>jetty-ee8-websocket-jetty-server</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.eclipse.jetty.ee8.websocket</groupId>
+                    <artifactId>jetty-ee8-websocket-jetty-client</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-yarn-services-core</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.eclipse.jetty.ee8</groupId>
+                    <artifactId>jetty-ee8-servlet</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.eclipse.jetty.ee8</groupId>
+                    <artifactId>jetty-ee8-webapp</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.eclipse.jetty.ee8.websocket</groupId>
+                    <artifactId>jetty-ee8-websocket-jetty-server</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.eclipse.jetty.ee8.websocket</groupId>
+                    <artifactId>jetty-ee8-websocket-jetty-client</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-yarn-services-api</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.eclipse.jetty.ee8</groupId>
+                    <artifactId>jetty-ee8-servlet</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.eclipse.jetty.ee8</groupId>
+                    <artifactId>jetty-ee8-webapp</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.eclipse.jetty.ee8.websocket</groupId>
+                    <artifactId>jetty-ee8-websocket-jetty-server</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.eclipse.jetty.ee8.websocket</groupId>
+                    <artifactId>jetty-ee8-websocket-jetty-client</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <dependency>
