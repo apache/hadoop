@@ -34,6 +34,7 @@ import org.apache.hadoop.util.JsonUtils;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import org.apache.commons.io.IOUtils;
+import org.eclipse.jetty.http.UriCompliance;
 import org.eclipse.jetty.server.HttpConfiguration;
 import org.eclipse.jetty.server.ServerConnector;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -69,6 +70,7 @@ import java.net.URI;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -402,6 +404,8 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     // A file whose name contains a '%' arrives as %25.
     assertPathInfo("/a%b", "/pathinfo/a%25b");
     assertPathInfo("/@;%$", "/pathinfo/%40%3B%25%24");
+    // A '\' is a path separator on Windows and just a character on HDFS.
+    assertPathInfo("/a\\b", "/pathinfo/a%5Cb");
   }
 
   /**
@@ -412,6 +416,87 @@ public class TestHttpServer extends HttpServerFunctionalTest {
   public void testAmbiguousPathsAreStillRejected() throws Exception {
     assertNotServed("an encoded path separator", "/pathinfo/tmp%2Ffile");
     assertNotServed("an encoded dot-segment", "/pathinfo/a%2E%2E%2Fb");
+  }
+
+  /**
+   * The violations let through are configurable, so a deployment can refuse
+   * at the connector what it has no use for. An empty value is Jetty's
+   * DEFAULT mode, which refuses every path the default setting admits; taking
+   * SUSPICIOUS_PATH_CHARACTERS out refuses an encoded backslash and nothing
+   * else that Hadoop's paths need.
+   */
+  @Test
+  public void testUriComplianceIsConfigurable() throws Exception {
+    Configuration conf = new Configuration();
+    conf.set(HttpServer2.HTTP_URI_COMPLIANCE_VIOLATIONS_KEY, "");
+    HttpServer2 strict = createTestServer(conf);
+    strict.addServlet("pathinfo", "/pathinfo/*", PathInfoServlet.class);
+    try {
+      strict.start();
+      URL strictUrl = getServerURL(strict);
+      assertStatus(HttpServletResponse.SC_BAD_REQUEST, strictUrl,
+          "/pathinfo//tmp//file");
+      assertStatus(HttpServletResponse.SC_BAD_REQUEST, strictUrl,
+          "/pathinfo/a%25b");
+      assertStatus(HttpServletResponse.SC_BAD_REQUEST, strictUrl,
+          "/pathinfo/a%5Cb");
+      assertStatus(HttpServletResponse.SC_OK, strictUrl, "/pathinfo/a/b");
+    } finally {
+      strict.stop();
+    }
+
+    conf.set(HttpServer2.HTTP_URI_COMPLIANCE_VIOLATIONS_KEY,
+        "ambiguous_empty_segment, AMBIGUOUS_PATH_ENCODING");
+    HttpServer2 noBackslash = createTestServer(conf);
+    noBackslash.addServlet("pathinfo", "/pathinfo/*", PathInfoServlet.class);
+    try {
+      noBackslash.start();
+      URL noBackslashUrl = getServerURL(noBackslash);
+      assertStatus(HttpServletResponse.SC_OK, noBackslashUrl,
+          "/pathinfo//tmp//file");
+      assertStatus(HttpServletResponse.SC_OK, noBackslashUrl,
+          "/pathinfo/a%25b");
+      assertStatus(HttpServletResponse.SC_BAD_REQUEST, noBackslashUrl,
+          "/pathinfo/a%5Cb");
+    } finally {
+      noBackslash.stop();
+    }
+  }
+
+  /**
+   * A Configuration built without core-default.xml, as MiniDFSCluster and
+   * the Router and HttpFS tests build theirs, leaves the key unset. It must
+   * get the same violations as one that loads core-default.xml.
+   */
+  @Test
+  public void testUriComplianceDefaultWithoutCoreDefault() {
+    Set<UriCompliance.Violation> expected = EnumSet.of(
+        UriCompliance.Violation.AMBIGUOUS_EMPTY_SEGMENT,
+        UriCompliance.Violation.AMBIGUOUS_PATH_ENCODING,
+        UriCompliance.Violation.SUSPICIOUS_PATH_CHARACTERS);
+    assertEquals(expected,
+        HttpServer2.getUriCompliance(new Configuration(false)).getAllowed());
+    assertEquals(expected,
+        HttpServer2.getUriCompliance(new Configuration()).getAllowed());
+  }
+
+  @Test
+  public void testUnknownUriComplianceViolationIsRefused() {
+    Configuration conf = new Configuration();
+    conf.set(HttpServer2.HTTP_URI_COMPLIANCE_VIOLATIONS_KEY,
+        "AMBIGUOUS_EMPTY_SEGMENT,NOT_A_VIOLATION");
+    IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+        () -> HttpServer2.getUriCompliance(conf));
+    assertThat(e.getMessage()).contains("NOT_A_VIOLATION")
+        .contains(HttpServer2.HTTP_URI_COMPLIANCE_VIOLATIONS_KEY);
+  }
+
+  private static void assertStatus(int expected, URL base, String path)
+      throws Exception {
+    HttpURLConnection conn =
+        (HttpURLConnection) new URL(base, path).openConnection();
+    conn.connect();
+    assertEquals(expected, conn.getResponseCode(), path);
   }
 
   private static void assertPathInfo(String expected, String path)
