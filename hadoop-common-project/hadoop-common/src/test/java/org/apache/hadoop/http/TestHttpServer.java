@@ -162,6 +162,23 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     }
   }
 
+  /**
+   * Stands in for a JAX-RS resource that picks its own content type: it drops
+   * whatever QuotingInputFilter left on the response, then sets the type the
+   * way Jersey does, through a header.
+   */
+  @SuppressWarnings("serial")
+  public static class OwnContentTypeServlet extends HttpServlet {
+    @Override
+    public void doGet(HttpServletRequest request,
+                      HttpServletResponse response
+                      ) throws ServletException, IOException {
+      JettyUtils.clearContentType(response);
+      response.addHeader("Content-Type", request.getParameter("type"));
+      response.setStatus(HttpServletResponse.SC_OK);
+    }
+  }
+
   @BeforeAll
   public static void setup() throws Exception {
     Configuration conf = new Configuration();
@@ -174,6 +191,8 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     server.addServlet("echomap", "/echomap", EchoMapServlet.class);
     server.addServlet("htmlcontent", "/htmlcontent", HtmlContentServlet.class);
     server.addServlet("longheader", "/longheader", LongHeaderServlet.class);
+    server.addServlet("owncontenttype", "/owncontenttype",
+        OwnContentTypeServlet.class);
     server.addJerseyResourcePackage(
         JerseyResource.class.getPackage().getName(), "/jersey/*");
     server.start();
@@ -292,6 +311,30 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     assertEquals(200, conn.getResponseCode());
     assertEquals(MediaType.TEXT_HTML + ";" + JettyUtils.UTF_8,
         conn.getContentType());
+  }
+
+  /**
+   * A resource that clears the content type QuotingInputFilter set, then picks
+   * its own, must not be given a charset back.
+   * <p>
+   * Jetty 12 remembers that a charset had been set explicitly even after the
+   * content type carrying it is cleared, and appends that memory to the next
+   * content type - as ";charset=null" for a type with no charset of its own.
+   * Only types that assume a charset, application/json among them, escape it,
+   * which is why octet-stream and xml are the ones asserted here.
+   */
+  @Test
+  public void testClearedContentTypeCarriesNoCharset() throws Exception {
+    for (String type : new String[] {MediaType.APPLICATION_OCTET_STREAM,
+        MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON}) {
+      URL url = new URL(baseUrl, "/owncontenttype?type=" + type);
+      HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+      conn.connect();
+      assertEquals(HttpServletResponse.SC_OK, conn.getResponseCode());
+      assertEquals(type, conn.getContentType(),
+          "the cleared charset came back for " + type);
+      conn.disconnect();
+    }
   }
 
   /**

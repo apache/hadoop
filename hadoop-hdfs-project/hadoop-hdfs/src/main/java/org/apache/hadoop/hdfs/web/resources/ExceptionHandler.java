@@ -30,6 +30,7 @@ import javax.ws.rs.ext.Provider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hdfs.web.JsonUtil;
+import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.security.authorize.AuthorizationException;
@@ -75,8 +76,7 @@ public class ExceptionHandler implements ExceptionMapper<Exception> {
       LOG.trace("GOT EXCEPITION", e);
     }
 
-    //clear content type
-    response.setContentType(null);
+    JettyUtils.clearContentType(response);
 
     //Convert exception
     if (e instanceof ParamException) {

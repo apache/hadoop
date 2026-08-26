@@ -32,6 +32,7 @@ import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.WebApplicationException;
 
 import org.apache.commons.lang3.Range;
+import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.util.StringUtils;
@@ -418,8 +419,7 @@ public class WebServices implements AppInfoProvider {
   }
 
   protected void initForReadableEndpoints(HttpServletResponse response) {
-    // clear content type
-    response.setContentType(null);
+    JettyUtils.clearContentType(response);
   }
 
   public static Set<String>
