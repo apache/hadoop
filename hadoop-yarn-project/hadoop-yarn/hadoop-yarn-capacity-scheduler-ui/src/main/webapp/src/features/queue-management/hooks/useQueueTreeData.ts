@@ -247,52 +247,17 @@ function getAutoCreationStatus(
 }
 
 function transformToCardData(queueInfo: QueueInfo, stagedChanges: StagedChange[]): QueueCardData {
-  const { getQueuePropertyValue, getQueuePartitionCapacities } = useSchedulerStore.getState();
+  const getQueuePropertyValue = useSchedulerStore.getState().getQueuePropertyValue;
 
   const capacityDisplay = getQueuePropertyValue(queueInfo.queuePath, 'capacity');
   const maxCapacityDisplay = getQueuePropertyValue(queueInfo.queuePath, 'maximum-capacity');
 
-  let capacityConfig = capacityDisplay.value;
-  let maxCapacityConfig = maxCapacityDisplay.value;
+  const capacityConfig = capacityDisplay.value;
+  const maxCapacityConfig = maxCapacityDisplay.value;
 
   const isAutoCreatedQueue =
     queueInfo.creationMethod === 'dynamicLegacy' ||
     queueInfo.creationMethod === 'dynamicFlexible';
-
-  if (isAutoCreatedQueue) {
-    const defaultResourcePartition = getQueuePartitionCapacities(queueInfo.queuePath, '');
-    const configuredCapacityVector =
-      defaultResourcePartition?.queueCapacityVectorInfo?.configuredCapacityVector;
-
-    if (!capacityDisplay.isStaged) {
-      const configuredWeight = queueInfo.weight ?? defaultResourcePartition?.weight;
-      const configuredCapacity =
-        queueInfo.capacity ?? defaultResourcePartition?.capacity ?? 0;
-
-      if (configuredWeight !== undefined && configuredWeight > 0) {
-        capacityConfig = `${configuredWeight}w`;
-      } else if (configuredCapacityVector && configuredCapacityVector !== '[]') {
-        capacityConfig = String(configuredCapacityVector);
-      } else if (configuredCapacity > 0) {
-        capacityConfig = String(configuredCapacity);
-      }
-    }
-
-    if (!maxCapacityDisplay.isStaged) {
-      const configuredMaxCapacity =
-        queueInfo.maxCapacity ?? defaultResourcePartition?.maxCapacity ?? 0;
-      const configuredMaxResource = defaultResourcePartition?.configuredMaxResource;
-
-      if (
-        configuredMaxResource &&
-        (configuredMaxResource.memory > 0 || configuredMaxResource.vCores > 0)
-      ) {
-        maxCapacityConfig = `[memory-mb=${configuredMaxResource.memory},vcores=${configuredMaxResource.vCores}]`;
-      } else if (configuredMaxCapacity > 0) {
-        maxCapacityConfig = String(configuredMaxCapacity);
-      }
-    }
-  }
 
   const stateDisplay = getQueuePropertyValue(queueInfo.queuePath, 'state');
 
