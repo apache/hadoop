@@ -28,6 +28,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_TXNS_
 import static org.apache.hadoop.util.Time.monotonicNow;
 
 import java.net.HttpURLConnection;
+import java.nio.charset.StandardCharsets;
 import java.security.PrivilegedExceptionAction;
 import java.util.*;
 import java.io.*;
@@ -702,9 +703,25 @@ public class ImageServlet extends HttpServlet {
 
   private void sendError(HttpServletResponse response, int code, String message)
       throws IOException {
-    // Jetty 12 never puts a reason phrase on the wire, so the detail is left
-    // to sendError, which writes it into the response body.
-    response.sendError(code, message);
+    // Write the reason into the body rather than leaving it to sendError.
+    //
+    // Jetty 12 no longer puts a reason phrase on the wire, so sendError's
+    // message survives only in the error page the container renders. This
+    // servlet closes its output stream on the way out of every request, which
+    // commits an empty response before that page is ever produced - the
+    // client then sees a bare status code and no reason at all. Writing the
+    // body here keeps the detail, and does not depend on how the container
+    // renders errors.
+    if (response.isCommitted()) {
+      LOG.warn("Could not report \"{}\": the response is already committed.",
+          message);
+      return;
+    }
+    byte[] body = message.getBytes(StandardCharsets.UTF_8);
+    response.setStatus(code);
+    response.setContentType("text/plain; charset=utf-8");
+    response.setContentLength(body.length);
+    response.getOutputStream().write(body);
   }
 
   /*

@@ -317,7 +317,7 @@ public class TransferFsImage {
       if (responseCode != HttpURLConnection.HTTP_OK) {
         throw new HttpPutFailedException(String.format(
             "Image uploading failed, status: %d, url: %s, message: %s",
-            responseCode, urlWithParams, connection.getResponseMessage()),
+            responseCode, urlWithParams, Util.getResponseDetail(connection)),
             responseCode);
       }
     } catch (AuthenticationException | URISyntaxException e) {
