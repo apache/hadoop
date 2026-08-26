@@ -561,15 +561,22 @@ public final class HttpServer2 implements FilterContainer {
       //  - an encoded percent, %25, which is how a file whose name contains a
       //    '%' is written on the wire. Names like that are ordinary in HDFS
       //    and YARN routes carry them too.
+      //  - an encoded backslash, %5C. Jetty treats it as suspicious because
+      //    it separates paths on Windows; on HDFS it is just a character in a
+      //    name, and TestWebHdfsUrl creates files containing one. Measured
+      //    rather than assumed: of every character in that test's filename,
+      //    %5C is the only one this violation gates.
       //
-      // Both are allowed back so that Hadoop keeps deciding what a path means.
-      // The ambiguities that let a request read as one path to a filter and
-      // another to a servlet stay rejected: an encoded separator (a%2Fb) and
-      // an encoded dot-segment (a%2E%2E%2Fb) are still refused, and .. still
-      // cannot climb out of the context.
+      // All three are allowed back so that Hadoop keeps deciding what a path
+      // means. The ambiguities that let a request read as one path to a filter
+      // and another to a servlet stay rejected: an encoded separator (a%2Fb)
+      // and an encoded dot-segment (a%2E%2E%2Fb) are still refused, .. still
+      // cannot climb out of the context, and a%252Fb still decodes once, to
+      // the literal a%2Fb rather than to a separator.
       httpConfig.setUriCompliance(UriCompliance.DEFAULT.with("hadoop",
           UriCompliance.Violation.AMBIGUOUS_EMPTY_SEGMENT,
-          UriCompliance.Violation.AMBIGUOUS_PATH_ENCODING));
+          UriCompliance.Violation.AMBIGUOUS_PATH_ENCODING,
+          UriCompliance.Violation.SUSPICIOUS_PATH_CHARACTERS));
 
       int backlogSize = conf.getInt(HTTP_SOCKET_BACKLOG_SIZE_KEY,
           HTTP_SOCKET_BACKLOG_SIZE_DEFAULT);

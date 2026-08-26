@@ -331,6 +331,8 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     // A file whose name contains a '%' arrives as %25.
     assertPathInfo("/a%b", "/pathinfo/a%25b");
     assertPathInfo("/@;%$", "/pathinfo/%40%3B%25%24");
+    // A '\' is a path separator on Windows and just a character on HDFS.
+    assertPathInfo("/a\\b", "/pathinfo/a%5Cb");
   }
 
   /**
