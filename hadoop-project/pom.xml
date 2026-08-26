@@ -241,6 +241,12 @@
     <jline.version>3.9.0</jline.version>
     <mockito.version>4.11.0</mockito.version>
     <solr.version>8.11.2</solr.version>
+    <!--
+      The Jetty 9.4 release the catalog webapp runs Solr 8 on; see its pom.
+      Solr 8.11.2 was built against 9.4.44, but any 9.4 release serves it, and
+      this is the one trunk shipped in the war before the move to Jetty 12.
+    -->
+    <solr.jetty.version>9.4.58.v20250814</solr.jetty.version>
     <openssl-wildfly.version>2.2.5.Final</openssl-wildfly.version>
     <jsonschema2pojo.version>1.0.2</jsonschema2pojo.version>
     <woodstox.version>5.4.0</woodstox.version>
