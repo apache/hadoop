@@ -36,6 +36,7 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.util.HttpExceptionUtils;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -271,9 +272,21 @@ public class RestCsrfPreventionFilter implements Filter {
 
     @Override
     public void sendError(int code, String message) throws IOException {
-      // Jetty 12 never puts a reason phrase on the wire, so the detail is
-      // left to sendError, which writes it into the response body.
-      httpResponse.sendError(code, message);
+      // Reported as the JSON envelope HttpExceptionUtils writes, rather than
+      // handed to sendError for the container to render.
+      //
+      // The message used to travel in the reason phrase. Jetty 12 does not
+      // send one, and what sendError leaves in its place is the container's
+      // HTML error page - which WebHdfsFileSystem refuses on its content type
+      // and reports as a bare "Bad Request", losing the one thing the caller
+      // needed to know. The envelope is what the rest of Hadoop's HTTP
+      // surface already answers refusals with, and what its clients parse.
+      //
+      // Only the servlet side moves. The two Netty implementations of
+      // HttpInteraction that serve the DataNode build their own responses and
+      // never went through a reason phrase.
+      HttpExceptionUtils.createServletExceptionResponse(httpResponse, code,
+          new IOException(message));
     }
   }
 }

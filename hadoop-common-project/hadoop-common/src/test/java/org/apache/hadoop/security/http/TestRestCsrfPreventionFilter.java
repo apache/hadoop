@@ -18,10 +18,13 @@
 
 package org.apache.hadoop.security.http;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.verify;
 
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 
 import javax.servlet.FilterChain;
 import javax.servlet.FilterConfig;
@@ -68,6 +71,9 @@ public class TestRestCsrfPreventionFilter {
 
     // Objects to verify interactions based on request
     HttpServletResponse mockRes = Mockito.mock(HttpServletResponse.class);
+    StringWriter writer = new StringWriter();
+    Mockito.when(mockRes.getWriter())
+        .thenReturn(new PrintWriter(writer));
     FilterChain mockChain = Mockito.mock(FilterChain.class);
 
     // Object under test
@@ -75,8 +81,7 @@ public class TestRestCsrfPreventionFilter {
     filter.init(filterConfig);
     filter.doFilter(mockReq, mockRes, mockChain);
 
-    verify(mockRes, atLeastOnce()).sendError(
-        HttpServletResponse.SC_BAD_REQUEST, EXPECTED_MESSAGE);
+    assertRejected(mockRes, writer);
     verifyZeroInteractions(mockChain);
   }
 
@@ -103,6 +108,9 @@ public class TestRestCsrfPreventionFilter {
 
     // Objects to verify interactions based on request
     HttpServletResponse mockRes = Mockito.mock(HttpServletResponse.class);
+    StringWriter writer = new StringWriter();
+    Mockito.when(mockRes.getWriter())
+        .thenReturn(new PrintWriter(writer));
     FilterChain mockChain = Mockito.mock(FilterChain.class);
 
     // Object under test
@@ -110,8 +118,7 @@ public class TestRestCsrfPreventionFilter {
     filter.init(filterConfig);
     filter.doFilter(mockReq, mockRes, mockChain);
 
-    verify(mockRes, atLeastOnce()).sendError(
-        HttpServletResponse.SC_BAD_REQUEST, EXPECTED_MESSAGE);
+    assertRejected(mockRes, writer);
     verifyZeroInteractions(mockChain);
   }
 
@@ -359,5 +366,19 @@ public class TestRestCsrfPreventionFilter {
     filter.doFilter(mockReq, mockRes, mockChain);
 
     verifyZeroInteractions(mockChain);
+  }
+
+  /**
+   * A refusal is reported as the JSON envelope HttpExceptionUtils writes, not
+   * handed to sendError, so what is asserted is the status and the message the
+   * caller will actually be able to read.
+   *
+   * @param res the mocked response the filter wrote to
+   * @param body what the filter wrote into it
+   */
+  private static void assertRejected(HttpServletResponse res, StringWriter body) {
+    verify(res, atLeastOnce()).setStatus(HttpServletResponse.SC_BAD_REQUEST);
+    assertTrue(body.toString().contains(EXPECTED_MESSAGE),
+        "refusal did not carry the reason: " + body);
   }
 }
