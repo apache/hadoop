@@ -47,6 +47,7 @@ import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.security.Principal;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -411,7 +412,9 @@ public class TestJspHelper {
     if (doAs != null) {
       when(request.getParameter(DoAsParam.NAME)).thenReturn(doAs);
     }
-    when(request.getRemoteUser()).thenReturn(remoteUser);
+    Principal principal = mock(Principal.class);
+    when(principal.getName()).thenReturn(remoteUser);
+    when(request.getUserPrincipal()).thenReturn(principal);
     return request;
   }
   
@@ -518,4 +521,3 @@ public class TestJspHelper {
     return JspHelper.getRemoteAddr(req);
   }
 }
-
