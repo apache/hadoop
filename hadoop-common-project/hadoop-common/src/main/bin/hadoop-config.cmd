@@ -220,6 +220,17 @@ if exist %HADOOP_COMMON_HOME%\bin (
 @rem
 set TOOL_PATH=%HADOOP_HOME%\share\hadoop\tools\lib\*
 
+@rem
+@rem Default the stack preference to IPv4 only when the operator has not set
+@rem HADOOP_OPTS, mirroring ${HADOOP_OPTS:-...} in hadoop-functions.sh. Must run
+@rem before the -Dhadoop.* options below, while HADOOP_OPTS holds only the
+@rem operator's value.
+@rem
+
+if not defined HADOOP_OPTS (
+  set HADOOP_OPTS=-Djava.net.preferIPv4Stack=true
+)
+
 set HADOOP_OPTS=%HADOOP_OPTS% -Dhadoop.log.dir=%HADOOP_LOG_DIR%
 set HADOOP_OPTS=%HADOOP_OPTS% -Dhadoop.log.file=%HADOOP_LOGFILE%
 set HADOOP_OPTS=%HADOOP_OPTS% -Dhadoop.home.dir=%HADOOP_HOME%
@@ -230,12 +241,6 @@ if defined JAVA_LIBRARY_PATH (
   set HADOOP_OPTS=%HADOOP_OPTS% -Djava.library.path=%JAVA_LIBRARY_PATH%
 )
 set HADOOP_OPTS=%HADOOP_OPTS% -Dhadoop.policy.file=%HADOOP_POLICYFILE%
-
-@rem
-@rem Disable ipv6 as it can cause issues
-@rem
-
-set HADOOP_OPTS=%HADOOP_OPTS% -Djava.net.preferIPv4Stack=true
 
 @rem
 @rem put hdfs in classpath if present
