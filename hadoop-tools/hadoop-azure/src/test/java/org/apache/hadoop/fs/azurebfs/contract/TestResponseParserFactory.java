@@ -19,11 +19,14 @@
 package org.apache.hadoop.fs.azurebfs.contract;
 
 import java.util.function.Supplier;
+import java.util.concurrent.atomic.AtomicInteger;
 
+import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
 
 import org.junit.jupiter.api.Test;
+import org.xml.sax.SAXException;
 
 import org.apache.hadoop.fs.azurebfs.contracts.services.ArrowListBlobParser;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ListBlobResponseParser;
@@ -48,7 +51,7 @@ public class TestResponseParserFactory {
   private static final Supplier<SAXParser> SAX_PARSER_SUPPLIER = () -> {
     try {
       return SAXParserFactory.newInstance().newSAXParser();
-    } catch (Exception e) {
+    } catch (ParserConfigurationException | SAXException e) {
       throw new RuntimeException(e);
     }
   };
@@ -66,9 +69,37 @@ public class TestResponseParserFactory {
   }
 
   @Test
+  public void testArrowContentTypeWithSpaceBeforeSemicolonSelectsArrow() {
+    // RFC 9110 permits optional whitespace around the ';' separating the media
+    // type from its parameters. Such a header must still route to Arrow rather
+    // than fall through to the XML parser (which would then try to SAX-parse an
+    // Arrow body).
+    assertThat(ResponseParserFactory.isArrowResponse(
+        "application/vnd.apache.arrow.stream ; charset=utf-8")).isTrue();
+  }
+
+  @Test
   public void testArrowContentTypeIsCaseInsensitive() {
     assertThat(ResponseParserFactory.isArrowResponse(
         "APPLICATION/VND.APACHE.ARROW.STREAM")).isTrue();
+  }
+
+  @Test
+  public void testArrowContentTypeCaseInsensitiveWithParametersSelectsArrow() {
+    // The combination a real service response is most likely to send: mixed
+    // case media type carrying parameters.
+    assertThat(ResponseParserFactory.isArrowResponse(
+        "Application/VND.Apache.Arrow.Stream; charset=UTF-8")).isTrue();
+  }
+
+  @Test
+  public void testArrowStructuredSuffixDoesNotSelectArrow() {
+    // Only the exact negotiated media type qualifies. A structured suffix such
+    // as "+ipc" is a different media type and must fall back to the XML parser,
+    // matching the javadoc which no longer claims structured suffixes are
+    // tolerated.
+    assertThat(ResponseParserFactory.isArrowResponse(
+        "application/vnd.apache.arrow.stream+ipc")).isFalse();
   }
 
   @Test
@@ -117,5 +148,27 @@ public class TestResponseParserFactory {
     ListBlobResponseParser parser = ResponseParserFactory.getParser(
         null, BASE_URL, SAX_PARSER_SUPPLIER, ARROW_MEMORY_LIMIT);
     assertThat(parser).isInstanceOf(XmlListBlobResponseParser.class);
+  }
+
+  @Test
+  public void testSaxSupplierNotInvokedForArrowContentType() {
+    // The SAX parser supplier creates a SAXParser on every invocation, so the
+    // Arrow path must never call it. A counting supplier locks in that lazy
+    // contract so a future change that eagerly resolves the XML parser cannot
+    // regress it silently.
+    AtomicInteger invocations = new AtomicInteger();
+    Supplier<SAXParser> countingSupplier = () -> {
+      invocations.incrementAndGet();
+      return SAX_PARSER_SUPPLIER.get();
+    };
+
+    ListBlobResponseParser parser = ResponseParserFactory.getParser(
+        APPLICATION_APACHE_ARROW_STREAM, BASE_URL, countingSupplier,
+        ARROW_MEMORY_LIMIT);
+
+    assertThat(parser).isInstanceOf(ArrowListBlobParser.class);
+    assertThat(invocations.get())
+        .as("SAX parser supplier must not be invoked on the Arrow path")
+        .isZero();
   }
 }

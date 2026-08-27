@@ -151,13 +151,15 @@ public class ArrowListBlobParser implements ListBlobResponseParser {
 
       // Continuation token is carried in the Arrow schema custom metadata.
       // The service emits an empty string when there is no continuation token,
-      // whereas the XML path leaves it null; normalize an absent or empty
-      // marker to null so both formats produce identical values.
+      // whereas the XML path leaves it null; normalize an absent, empty or
+      // blank (whitespace-only) marker to null so both formats produce identical
+      // values and a blank token is never echoed back as a continuation cursor.
       Map<String, String> customMetadata = schema.getCustomMetadata();
       if (customMetadata != null) {
         String nextMarker = customMetadata.get(ARROW_METADATA_NEXT_MARKER);
         listResultSchema.setNextMarker(
-            (nextMarker == null || nextMarker.isEmpty()) ? null : nextMarker);
+            (nextMarker == null || nextMarker.trim().isEmpty())
+                ? null : nextMarker);
       }
 
       // ArrowStreamReader loads every batch into the same VectorSchemaRoot and
@@ -165,17 +167,26 @@ public class ArrowListBlobParser implements ListBlobResponseParser {
       // here stay valid for the whole stream; resolve once rather than rescanning
       // every field vector per batch on this performance-sensitive path.
       BatchColumns columns = BatchColumns.resolve(root);
-      // Name is the one column buildEntry() cannot proceed without: without it
-      // every row yields null and parse() would complete "successfully" with zero
-      // entries, indistinguishable from an empty directory and with no
-      // PHOTON_PARSE_FAILURE_COUNT. Treat a missing Name column as a parse error.
-      if (columns.name == null) {
-        throw new IOException(ERR_ARROW_LIST_PARSING
-            + " Required column '" + ARROW_COL_NAME + "' is missing.");
-      }
 
       while (reader.loadNextBatch()) {
         int rowCount = root.getRowCount();
+        // An empty listing (e.g. an empty container) arrives as a stream with no
+        // data rows - the service may even omit the columns entirely, leaving no
+        // Name column. That is not an error: it must return an empty result, the
+        // same way the XML path returns an empty EnumerationResults without
+        // failing. Skip empty batches before touching any column.
+        if (rowCount == 0) {
+          continue;
+        }
+        // Name is the one column buildEntry() cannot proceed without: without it
+        // every row yields null and parse() would complete "successfully" with
+        // zero entries, indistinguishable from an empty directory and with no
+        // PHOTON_PARSE_FAILURE_COUNT. A batch that actually carries rows but has
+        // no Name column is a malformed response, so fail the parse.
+        if (columns.name == null) {
+          throw new IOException(ERR_ARROW_LIST_PARSING
+              + " Required column '" + ARROW_COL_NAME + "' is missing.");
+        }
         for (int row = 0; row < rowCount; row++) {
           BlobListResultEntrySchema entry = buildEntry(columns, row);
           if (entry != null) {
@@ -286,6 +297,11 @@ public class ArrowListBlobParser implements ListBlobResponseParser {
     if (name.endsWith(FORWARD_SLASH)) {
       name = name.substring(0, name.length() - 1);
     }
+    // A name that was only "/" reduces to an empty string here. This mirrors the
+    // XML parser (BlobListXmlParser), which likewise strips the trailing slash
+    // and sets an empty name rather than skipping the row, so the empty-name
+    // entry is deliberate and keeps the two parsers in agreement. (The null-name
+    // row skipped above is a distinct case: an absent name, not an empty one.)
 
     BlobListResultEntrySchema entry = new BlobListResultEntrySchema();
     entry.setName(name);
@@ -399,7 +415,7 @@ public class ArrowListBlobParser implements ListBlobResponseParser {
       return true;
     }
     String hdiIsFolder = metadataValueIgnoreCase(metadata, XML_TAG_HDI_ISFOLDER);
-    if (hdiIsFolder != null && Boolean.parseBoolean(hdiIsFolder.trim())) {
+    if (isTrueFlag(hdiIsFolder)) {
       return true;
     }
     // Fallback for a schema that flattens the marker metadata into a dedicated
@@ -566,12 +582,28 @@ public class ArrowListBlobParser implements ListBlobResponseParser {
     }
     if (vector instanceof VarCharVector) {
       String value = readString((VarCharVector) vector, row);
-      if (value != null && !value.isEmpty()) {
-        String trimmed = value.trim();
-        return Boolean.parseBoolean(trimmed) || NUMERIC_TRUE.equals(trimmed);
-      }
+      return isTrueFlag(value);
     }
     return false;
+  }
+
+  /**
+   * Whether a textual flag value denotes {@code true}. Accepts the boolean
+   * {@code true} literal (case-insensitively, via {@link Boolean#parseBoolean})
+   * as well as the numeric {@code 1} form. Applied to both the flattened
+   * {@code hdi_isfolder} column and the {@code hdi_isfolder} entry inside the
+   * metadata map so the two directory-marker paths share a single predicate and
+   * cannot disagree (for example classifying a map-carried {@code "1"} as a file
+   * while a flattened column {@code "1"} is a directory). Returns {@code false}
+   * for a null, empty or unrecognized value.
+   */
+  private static boolean isTrueFlag(final String value) {
+    if (value == null) {
+      return false;
+    }
+    String trimmed = value.trim();
+    return !trimmed.isEmpty()
+        && (Boolean.parseBoolean(trimmed) || NUMERIC_TRUE.equals(trimmed));
   }
 
   /**

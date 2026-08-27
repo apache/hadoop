@@ -71,10 +71,11 @@ public final class ResponseParserFactory {
    * <p>
    * ABFS negotiates the specific Arrow IPC stream media type
    * ({@code application/vnd.apache.arrow.stream}), so matching is anchored to
-   * that media type rather than a loose substring search. Any structured-suffix
-   * or parameter portion (e.g. {@code ; charset=...}) is tolerated, while
-   * unrelated content types that merely contain the word "arrow" are not
-   * misclassified as Arrow.
+   * that media type rather than a loose substring search. Any parameter portion
+   * (e.g. {@code ; charset=...}, with or without surrounding whitespace as
+   * allowed by RFC 9110) is stripped before comparison, while unrelated content
+   * types that merely contain the word "arrow", or that carry a structured
+   * suffix such as {@code +ipc}, are not misclassified as Arrow.
    *
    * @param contentType the value of the response Content-Type header (may be
    *                    {@code null}).
@@ -84,9 +85,14 @@ public final class ResponseParserFactory {
     if (contentType == null) {
       return false;
     }
-    final String mediaType =
-        contentType.trim().toLowerCase(Locale.ROOT);
-    return mediaType.equals(APPLICATION_APACHE_ARROW_STREAM)
-        || mediaType.startsWith(APPLICATION_APACHE_ARROW_STREAM + ";");
+    // Split off any parameter portion (everything from the first ';') and trim
+    // the remaining media type, so a header written with optional whitespace
+    // around the ';' - e.g. "application/vnd.apache.arrow.stream ; charset=utf-8"
+    // - still matches instead of falling through to the XML parser.
+    final int paramSeparator = contentType.indexOf(';');
+    final String mediaType = (paramSeparator >= 0
+        ? contentType.substring(0, paramSeparator)
+        : contentType).trim().toLowerCase(Locale.ROOT);
+    return mediaType.equals(APPLICATION_APACHE_ARROW_STREAM);
   }
 }

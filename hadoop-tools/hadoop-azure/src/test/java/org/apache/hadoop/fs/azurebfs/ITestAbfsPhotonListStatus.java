@@ -46,6 +46,7 @@ import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.PHOTON_RESPONSE_COUNT;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_LIST_MAX_RESULTS;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENABLE_PHOTON;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.within;
 
 /**
  * Live integration tests for the Photon (Apache Arrow based ListBlob) listing
@@ -150,6 +151,13 @@ public class ITestAbfsPhotonListStatus extends AbstractAbfsIntegrationTest {
         assertThat(photon.getLen())
             .as("length parity for %s", xml.getPath())
             .isEqualTo(xml.getLen());
+        // Modification-time parity is the only end-to-end guard on the
+        // hand-written fastIsoUtcToRfc1123() / Sakamoto weekday math. Allow a
+        // second of tolerance in case the XML and Arrow paths differ in
+        // sub-second precision.
+        assertThat(photon.getModificationTime())
+            .as("modification time parity for %s", xml.getPath())
+            .isCloseTo(xml.getModificationTime(), within(1000L));
       }
     }
   }
@@ -213,25 +221,37 @@ public class ITestAbfsPhotonListStatus extends AbstractAbfsIntegrationTest {
     Path baseDir = path("photonMetrics-" + getMethodName());
     createTree(getFileSystem(), baseDir);
 
-    // Force small pages so the listing spans multiple Photon responses.
-    try (AzureBlobFileSystem photonFs = newFileSystem(true, 2)) {
+    // Force small pages so the listing spans multiple Photon responses. With
+    // CHILD_FILES.length files plus one subdirectory listed PAGE_SIZE at a time,
+    // the service must return exactly ceil(entries / PAGE_SIZE) pages.
+    final int pageSize = 2;
+    final int totalEntries = CHILD_FILES.length + 1;
+    final int expectedPages = (totalEntries + pageSize - 1) / pageSize;
+    try (AzureBlobFileSystem photonFs = newFileSystem(true, pageSize)) {
       FileStatus[] statuses = photonFs.listStatus(baseDir);
       assertThat(statuses)
           .as("listing must return every child")
-          .hasSize(CHILD_FILES.length + 1);
+          .hasSize(totalEntries);
 
       Map<String, Long> metrics = photonFs.getInstrumentationMap();
-      long requests = metrics.get(PHOTON_REQUEST_COUNT.getStatName());
-      long responses = metrics.get(PHOTON_RESPONSE_COUNT.getStatName());
-      long fallbacks = metrics.get(PHOTON_FALLBACK_COUNT.getStatName());
-      long parseFailures = metrics.get(PHOTON_PARSE_FAILURE_COUNT.getStatName());
+      assertThat(metrics.keySet())
+          .as("Photon counters must be registered")
+          .contains(PHOTON_REQUEST_COUNT.getStatName(),
+              PHOTON_RESPONSE_COUNT.getStatName(),
+              PHOTON_FALLBACK_COUNT.getStatName(),
+              PHOTON_PARSE_FAILURE_COUNT.getStatName());
+      long requests = metrics.getOrDefault(PHOTON_REQUEST_COUNT.getStatName(), -1L);
+      long responses = metrics.getOrDefault(PHOTON_RESPONSE_COUNT.getStatName(), -1L);
+      long fallbacks = metrics.getOrDefault(PHOTON_FALLBACK_COUNT.getStatName(), -1L);
+      long parseFailures =
+          metrics.getOrDefault(PHOTON_PARSE_FAILURE_COUNT.getStatName(), -1L);
 
       assertThat(requests)
-          .as("Photon must be requested and pagination must span multiple pages")
-          .isGreaterThanOrEqualTo(2);
+          .as("Photon must be requested once per page")
+          .isEqualTo(expectedPages);
       assertThat(responses + fallbacks)
           .as("every Photon request must be classified as Arrow or XML fallback")
-          .isGreaterThanOrEqualTo(requests);
+          .isEqualTo(requests);
       assertThat(parseFailures)
           .as("no Arrow parse failures expected on a healthy listing")
           .isZero();

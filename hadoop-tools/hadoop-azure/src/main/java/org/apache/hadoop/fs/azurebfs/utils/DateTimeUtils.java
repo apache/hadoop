@@ -96,6 +96,10 @@ public final class DateTimeUtils {
   private static final int MAX_MINUTE = 59;
   private static final int MAX_SECOND = 60;
 
+  // Calendar constants used to reject impossible dates on the fast ISO path.
+  private static final int FEBRUARY = 2;
+  private static final int DAYS_IN_LEAP_FEBRUARY = 29;
+
   // Rendering helpers.
   private static final int RFC_1123_BUFFER_LENGTH = 29;
   private static final int DECIMAL_RADIX = 10;
@@ -206,6 +210,14 @@ public final class DateTimeUtils {
         || second < 0 || second > MAX_SECOND) {
       return null;
     }
+    // Loose per-field bounds (day <= 31) are not enough: an impossible calendar
+    // date such as 2026-02-31 would otherwise produce a confident but bogus
+    // RFC 1123 string with a wrong weekday (e.g. "Tue, 31 Feb 2026"). Reject it
+    // on the fast path so it falls back to parseToInstant(), which resolves the
+    // date via java.time rather than the fast path inventing a weekday.
+    if (day > daysInMonth(year, month)) {
+      return null;
+    }
     StringBuilder sb = new StringBuilder(RFC_1123_BUFFER_LENGTH);
     sb.append(RFC_1123_WEEKDAYS[sakamotoDayOfWeek(year, month, day)])
         .append(", ");
@@ -279,6 +291,25 @@ public final class DateTimeUtils {
     int y = month < 3 ? year - 1 : year;
     return (y + y / LEAP_YEAR_DIVISOR - y / GREGORIAN_CENTURY
         + y / GREGORIAN_LEAP_CYCLE + monthOffset[month - 1] + day) % DAYS_IN_WEEK;
+  }
+
+  /**
+   * Number of days in the given (1-based) month of the given year, accounting
+   * for leap years under the proleptic Gregorian calendar. Used by the fast ISO
+   * path to reject impossible calendar dates before rendering.
+   */
+  private static int daysInMonth(final int year, final int month) {
+    final int[] daysPerMonth = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+    if (month == FEBRUARY && isLeapYear(year)) {
+      return DAYS_IN_LEAP_FEBRUARY;
+    }
+    return daysPerMonth[month - 1];
+  }
+
+  /** Whether the given year is a leap year in the proleptic Gregorian calendar. */
+  private static boolean isLeapYear(final int year) {
+    return (year % LEAP_YEAR_DIVISOR == 0 && year % GREGORIAN_CENTURY != 0)
+        || year % GREGORIAN_LEAP_CYCLE == 0;
   }
 
   /**

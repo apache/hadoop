@@ -19,38 +19,38 @@
 package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
-import org.apache.arrow.memory.BufferAllocator;
-import org.apache.arrow.memory.RootAllocator;
-import org.apache.arrow.vector.VarCharVector;
-import org.apache.arrow.vector.VectorSchemaRoot;
-import org.apache.arrow.vector.ipc.ArrowStreamWriter;
-import org.apache.arrow.vector.types.pojo.ArrowType;
-import org.apache.arrow.vector.types.pojo.Field;
-import org.apache.arrow.vector.types.pojo.FieldType;
-import org.apache.arrow.vector.types.pojo.Schema;
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.parsers.SAXParser;
+import javax.xml.parsers.SAXParserFactory;
+
 import org.junit.jupiter.api.Test;
+import org.xml.sax.SAXException;
 
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsDriverException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
+import org.apache.hadoop.fs.azurebfs.contract.ArrowListBlobTestStreams;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.APPLICATION_APACHE_ARROW_STREAM;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.APPLICATION_XML;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.ACCEPT;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.CONTENT_TYPE;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_ARROW_LIST_PARSING;
+import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_BLOB_LIST_PARSING;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.withSettings;
 
@@ -60,8 +60,7 @@ import static org.mockito.Mockito.withSettings;
  */
 public class TestAbfsBlobClientPhotonHeaders {
 
-  /** Row count large enough to exhaust the tiny allocator limit. */
-  private static final int OVER_LIMIT_ROW_COUNT = 2000;
+  private static final long ARROW_MEMORY_LIMIT = 256L * 1024 * 1024;
 
   private AbfsBlobClient clientWithPhoton(final boolean photonEnabled) {
     return clientWithPhoton(photonEnabled, false);
@@ -90,7 +89,7 @@ public class TestAbfsBlobClientPhotonHeaders {
 
   private String acceptValue(final List<AbfsHttpHeader> headers) {
     return headers.stream()
-        .filter(header -> ACCEPT.equals(header.getName()))
+        .filter(header -> ACCEPT.equalsIgnoreCase(header.getName()))
         .map(AbfsHttpHeader::getValue)
         .findFirst()
         .orElse(null);
@@ -151,6 +150,11 @@ public class TestAbfsBlobClientPhotonHeaders {
         .isFalse();
     assertThat(acceptValue(headers))
         .isEqualTo("application/json, application/xml");
+    // The condition is !isPhotonEnabled() || getIsNamespaceEnabled(): when
+    // Photon is off the namespace probe (a potential live network call) must be
+    // short-circuited, otherwise every listPath on an existing customer would
+    // trigger it.
+    verify(client, never()).getIsNamespaceEnabled();
   }
 
   /**
@@ -162,7 +166,7 @@ public class TestAbfsBlobClientPhotonHeaders {
   @Test
   public void testArrowOverAllocatorLimitSurfacesDriverException()
       throws Exception {
-    byte[] arrowStream = buildArrowNameStream(OVER_LIMIT_ROW_COUNT);
+    byte[] arrowStream = ArrowListBlobTestStreams.overAllocatorLimitNameStream();
 
     AbfsConfiguration configuration = mock(AbfsConfiguration.class);
     doReturn(1024L).when(configuration).getPhotonArrowMemoryLimit();
@@ -185,30 +189,121 @@ public class TestAbfsBlobClientPhotonHeaders {
   }
 
   /**
-   * Build a valid single-column ("Name") Arrow IPC stream carrying the given
-   * number of rows, used to drive the allocator limit test.
+   * Mirror of {@link #testArrowOverAllocatorLimitSurfacesDriverException()} for
+   * the XML path: an XML Content-Type with a malformed body must surface the XML
+   * parsing error, not the Arrow one. Without this a regression that always
+   * selected the Arrow parser would pass every other test in this file.
    */
-  private static byte[] buildArrowNameStream(final int rows) throws IOException {
-    Field nameField = new Field("Name",
-        FieldType.nullable(new ArrowType.Utf8()), null);
-    Schema schema = new Schema(Collections.singletonList(nameField));
-    ByteArrayOutputStream out = new ByteArrayOutputStream();
-    try (BufferAllocator allocator = new RootAllocator(Long.MAX_VALUE);
-        VectorSchemaRoot root = VectorSchemaRoot.create(schema, allocator);
-        ArrowStreamWriter writer = new ArrowStreamWriter(root, null, out)) {
-      VarCharVector nameVector = (VarCharVector) root.getVector("Name");
-      nameVector.allocateNew(rows);
-      for (int i = 0; i < rows; i++) {
-        nameVector.setSafe(i, ("some-reasonably-long-blob-name-" + i)
-            .getBytes(StandardCharsets.UTF_8));
+  @Test
+  public void testXmlMalformedBodySurfacesXmlDriverException() throws Exception {
+    AbfsConfiguration configuration = mock(AbfsConfiguration.class);
+    doReturn(ARROW_MEMORY_LIMIT).when(configuration).getPhotonArrowMemoryLimit();
+
+    AbfsBlobClient client = mock(AbfsBlobClient.class,
+        withSettings().defaultAnswer(CALLS_REAL_METHODS));
+    doReturn(configuration).when(client).getAbfsConfiguration();
+    doReturn(new URL("https://account.blob.core.windows.net/container"))
+        .when(client).getBaseUrl();
+    injectSaxParser(client);
+
+    AbfsHttpOperation result = mock(AbfsHttpOperation.class);
+    doReturn(APPLICATION_XML)
+        .when(result).getResponseHeaderIgnoreCase(CONTENT_TYPE);
+    doReturn(new ByteArrayInputStream(
+        "<EnumerationResults><Blobs><Blob>".getBytes(StandardCharsets.UTF_8)))
+        .when(result).getListResultStream();
+
+    AbfsDriverException ex = intercept(AbfsDriverException.class,
+        () -> client.parseListPathResults(result, null));
+    assertThat(ex.getErrorMessage())
+        .as("a malformed XML body must surface the XML parsing error")
+        .contains(ERR_BLOB_LIST_PARSING)
+        .doesNotContain(ERR_ARROW_LIST_PARSING);
+  }
+
+  /**
+   * Verify a pre-existing Accept header written in a different casing
+   * ({@code accept}) is still removed, since production removes with
+   * {@code equalsIgnoreCase}. Proves the removal is genuinely case-insensitive.
+   */
+  @Test
+  public void testAcceptHeaderRemovalIsCaseInsensitive() throws Exception {
+    AbfsBlobClient client = clientWithPhoton(true);
+    List<AbfsHttpHeader> headers = new ArrayList<>();
+    headers.add(new AbfsHttpHeader("accept", "application/json, application/xml"));
+
+    boolean photonRequested = client.applyPhotonRequestHeadersIfEnabled(headers);
+
+    assertThat(photonRequested).isTrue();
+    long acceptCount = headers.stream()
+        .filter(header -> ACCEPT.equalsIgnoreCase(header.getName()))
+        .count();
+    assertThat(acceptCount)
+        .as("the pre-existing lower-case accept header must be removed")
+        .isEqualTo(1);
+    assertThat(acceptValue(headers))
+        .isEqualTo(APPLICATION_APACHE_ARROW_STREAM + ", " + APPLICATION_XML);
+  }
+
+  /**
+   * Verify the Arrow Accept header is added even when the request carried no
+   * Accept header to remove (e.g. if {@code createDefaultHeaders()} stops
+   * setting one).
+   */
+  @Test
+  public void testArrowAcceptAddedWhenNoExistingHeader() throws Exception {
+    AbfsBlobClient client = clientWithPhoton(true);
+    List<AbfsHttpHeader> headers = new ArrayList<>();
+
+    boolean photonRequested = client.applyPhotonRequestHeadersIfEnabled(headers);
+
+    assertThat(photonRequested).isTrue();
+    assertThat(acceptValue(headers))
+        .as("Arrow Accept must be added even when there was none to remove")
+        .isEqualTo(APPLICATION_APACHE_ARROW_STREAM + ", " + APPLICATION_XML);
+  }
+
+  /**
+   * Verify a namespace-detection failure while Photon is enabled propagates out
+   * of {@code applyPhotonRequestHeadersIfEnabled} (the method declares
+   * {@link AzureBlobFileSystemException}) rather than being swallowed - pinning
+   * the intended behaviour for a failing namespace probe.
+   */
+  @Test
+  public void testNamespaceProbeFailurePropagatesWhenPhotonEnabled()
+      throws Exception {
+    AbfsConfiguration configuration = mock(AbfsConfiguration.class);
+    doReturn(true).when(configuration).isPhotonEnabled();
+    AbfsBlobClient client = mock(AbfsBlobClient.class,
+        withSettings().defaultAnswer(CALLS_REAL_METHODS));
+    doReturn(configuration).when(client).getAbfsConfiguration();
+    AzureBlobFileSystemException failure =
+        new AbfsDriverException("namespace probe failed", new IOException());
+    doThrow(failure).when(client).getIsNamespaceEnabled();
+
+    AzureBlobFileSystemException thrown = intercept(
+        AzureBlobFileSystemException.class,
+        () -> client.applyPhotonRequestHeadersIfEnabled(defaultHeaders()));
+    assertThat(thrown).isSameAs(failure);
+  }
+
+  /**
+   * Inject a working {@link SAXParser} {@link ThreadLocal} into a Mockito mock
+   * of {@link AbfsBlobClient}. Mocks skip field initializers, so the real
+   * {@code saxParserThreadLocal} field is {@code null}; the XML parse path needs
+   * it populated.
+   */
+  private static void injectSaxParser(final AbfsBlobClient client)
+      throws Exception {
+    Field field = AbfsBlobClient.class.getDeclaredField("saxParserThreadLocal");
+    field.setAccessible(true);
+    ThreadLocal<SAXParser> threadLocal = ThreadLocal.withInitial(() -> {
+      try {
+        return SAXParserFactory.newInstance().newSAXParser();
+      } catch (ParserConfigurationException | SAXException e) {
+        throw new RuntimeException(e);
       }
-      root.setRowCount(rows);
-      writer.start();
-      writer.writeBatch();
-      writer.end();
-    }
-    // Read the bytes only after the writer has been closed so the Arrow stream
-    // is guaranteed to be fully flushed and terminated.
-    return out.toByteArray();
+    });
+    field.set(client, threadLocal);
   }
 }
